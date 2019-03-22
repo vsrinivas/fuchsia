@@ -5,40 +5,28 @@
 use {
     crate::{
         appendable::Appendable,
-        mac::{self, Addr4, DataHdr, FrameControl, HtControl, QosControl},
+        mac::{self, Addr4, DataHdr, FrameControl, HtControl, QosControl, SequenceControl},
     },
     failure::{ensure, Error},
 };
 
 type MacAddr = [u8; 6];
 
-#[derive(PartialEq)]
-pub struct FixedFields {
-    pub frame_ctrl: FrameControl,
-    pub addr1: MacAddr,
-    pub addr2: MacAddr,
-    pub addr3: MacAddr,
-    pub seq_ctrl: u16,
-}
-impl FixedFields {
-    pub fn sent_from_client(
-        mut frame_ctrl: FrameControl,
-        bssid: MacAddr,
-        client_addr: MacAddr,
-        seq_ctrl: u16,
-    ) -> FixedFields {
-        frame_ctrl.set_to_ds(true);
-        FixedFields { frame_ctrl, addr1: bssid.clone(), addr2: client_addr, addr3: bssid, seq_ctrl }
-    }
-}
-impl std::fmt::Debug for FixedFields {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        writeln!(
-            f,
-            "fc: {:#b}, addr1: {:02X?}, addr2: {:02X?}, addr3: {:02X?}, seq: {}",
-            self.frame_ctrl.0, self.addr1, self.addr2, self.addr3, self.seq_ctrl
-        )?;
-        Ok(())
+pub fn data_hdr_client_to_ap(
+    mut frame_ctrl: FrameControl,
+    bssid: MacAddr,
+    client_addr: MacAddr,
+    seq_ctrl: SequenceControl,
+) -> DataHdr {
+    frame_ctrl.set_to_ds(true);
+    frame_ctrl.set_from_ds(false);
+    DataHdr {
+        frame_ctrl,
+        duration: 0,
+        addr1: bssid.clone(),
+        addr2: client_addr,
+        addr3: bssid,
+        seq_ctrl,
     }
 }
 
@@ -53,42 +41,43 @@ impl OptionalFields {
     }
 }
 
-pub fn write_data_hdr<B: Appendable>(
-    w: &mut B,
-    mut fixed: FixedFields,
-    optional: OptionalFields,
-) -> Result<(), Error> {
-    fixed.frame_ctrl.set_frame_type(mac::FRAME_TYPE_DATA);
+fn make_new_frame_ctrl(
+    mut fc: FrameControl,
+    optional: &OptionalFields,
+) -> Result<FrameControl, Error> {
+    fc.set_frame_type(mac::FRAME_TYPE_DATA);
     if optional.addr4.is_some() {
-        fixed.frame_ctrl.set_from_ds(true);
-        fixed.frame_ctrl.set_to_ds(true);
+        fc.set_from_ds(true);
+        fc.set_to_ds(true);
     } else {
         ensure!(
-            fixed.frame_ctrl.from_ds() != fixed.frame_ctrl.to_ds(),
+            !(fc.from_ds() && fc.to_ds()),
             "addr4 is absent but to- and from-ds bit are present"
         );
     }
     if optional.qos_ctrl.is_some() {
-        fixed.frame_ctrl.set_frame_subtype(fixed.frame_ctrl.frame_subtype() | mac::BITMASK_QOS);
+        fc.set_frame_subtype(fc.frame_subtype() | mac::BITMASK_QOS);
     } else {
         ensure!(
-            fixed.frame_ctrl.frame_subtype() & mac::BITMASK_QOS == 0,
+            fc.frame_subtype() & mac::BITMASK_QOS == 0,
             "QoS bit set while QoS-Control is absent"
         );
     }
     if optional.ht_ctrl.is_some() {
-        fixed.frame_ctrl.set_htc_order(true);
+        fc.set_htc_order(true);
     } else {
-        ensure!(!fixed.frame_ctrl.htc_order(), "htc_order bit set while HT-Control is absent");
+        ensure!(!fc.htc_order(), "htc_order bit set while HT-Control is absent");
     }
+    Ok(fc)
+}
 
-    let mut data_hdr = w.append_value_zeroed::<DataHdr>()?;
-    data_hdr.set_frame_ctrl(fixed.frame_ctrl.0);
-    data_hdr.addr1 = fixed.addr1;
-    data_hdr.addr2 = fixed.addr2;
-    data_hdr.addr3 = fixed.addr3;
-    data_hdr.set_seq_ctrl(fixed.seq_ctrl);
-
+pub fn write_data_hdr<B: Appendable>(
+    w: &mut B,
+    mut fixed: DataHdr,
+    optional: OptionalFields,
+) -> Result<(), Error> {
+    fixed.frame_ctrl = make_new_frame_ctrl(fixed.frame_ctrl, &optional)?;
+    w.append_value(&fixed)?;
     if let Some(addr4) = optional.addr4.as_ref() {
         w.append_value(addr4)?;
     }
@@ -116,15 +105,20 @@ mod tests {
     use {super::*, crate::buffer_writer::BufferWriter};
 
     #[test]
-    fn fixed_fields_sent_from_client() {
-        let got =
-            FixedFields::sent_from_client(FrameControl(0b00110000_00110000), [1; 6], [2; 6], 4321);
-        let expected = FixedFields {
+    fn client_to_ap() {
+        let got = data_hdr_client_to_ap(
+            FrameControl(0b00110000_00110000),
+            [1; 6],
+            [2; 6],
+            SequenceControl(4321),
+        );
+        let expected = DataHdr {
             frame_ctrl: FrameControl(0b00110001_00110000),
+            duration: 0,
             addr1: [1; 6],
             addr2: [2; 6],
             addr3: [1; 6],
-            seq_ctrl: 4321,
+            seq_ctrl: SequenceControl(4321),
         };
         assert_eq!(got, expected);
     }
@@ -134,12 +128,13 @@ mod tests {
         let mut bytes = vec![0u8; 20];
         let result = write_data_hdr(
             &mut BufferWriter::new(&mut bytes[..]),
-            FixedFields {
+            DataHdr {
                 frame_ctrl: FrameControl(0b00110001_00110000),
+                duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
                 addr3: [3; 6],
-                seq_ctrl: 0b11000000_10010000,
+                seq_ctrl: SequenceControl(0b11000000_10010000),
             },
             OptionalFields::none(),
         );
@@ -150,12 +145,13 @@ mod tests {
     fn invalid_ht_configuration() {
         let result = write_data_hdr(
             &mut vec![],
-            FixedFields {
+            DataHdr {
                 frame_ctrl: FrameControl(0b10110001_00110000),
+                duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
                 addr3: [3; 6],
-                seq_ctrl: 0b11000000_10010000,
+                seq_ctrl: SequenceControl(0b11000000_10010000),
             },
             OptionalFields::none(),
         );
@@ -166,12 +162,13 @@ mod tests {
     fn invalid_addr4_configuration() {
         let result = write_data_hdr(
             &mut vec![],
-            FixedFields {
+            DataHdr {
                 frame_ctrl: FrameControl(0b00110011_00110000),
+                duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
                 addr3: [3; 6],
-                seq_ctrl: 0b11000000_10010000,
+                seq_ctrl: SequenceControl(0b11000000_10010000),
             },
             OptionalFields::none(),
         );
@@ -182,12 +179,13 @@ mod tests {
     fn invalid_qos_configuration() {
         let result = write_data_hdr(
             &mut vec![],
-            FixedFields {
+            DataHdr {
                 frame_ctrl: FrameControl(0b00110000_10110000),
+                duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
                 addr3: [3; 6],
-                seq_ctrl: 0b11000000_10010000,
+                seq_ctrl: SequenceControl(0b11000000_10010000),
             },
             OptionalFields::none(),
         );
@@ -199,12 +197,13 @@ mod tests {
         let mut bytes = vec![];
         write_data_hdr(
             &mut bytes,
-            FixedFields {
+            DataHdr {
                 frame_ctrl: FrameControl(0b00110001_0011_00_00),
+                duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
                 addr3: [3; 6],
-                seq_ctrl: 0b11000000_10010000,
+                seq_ctrl: SequenceControl(0b11000000_10010000),
             },
             OptionalFields::none(),
         )
@@ -230,12 +229,13 @@ mod tests {
         let mut bytes = vec![];
         write_data_hdr(
             &mut bytes,
-            FixedFields {
+            DataHdr {
                 frame_ctrl: FrameControl(0b00110001_00111000),
+                duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
                 addr3: [3; 6],
-                seq_ctrl: 0b11000000_10010000,
+                seq_ctrl: SequenceControl(0b11000000_10010000),
             },
             OptionalFields {
                 addr4: Some([4u8; 6]),
@@ -269,12 +269,13 @@ mod tests {
         let mut bytes = vec![];
         write_data_hdr(
             &mut bytes,
-            FixedFields {
+            DataHdr {
                 frame_ctrl: FrameControl(0b00110001_00111000),
+                duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
                 addr3: [3; 6],
-                seq_ctrl: 0b11000000_10010000,
+                seq_ctrl: SequenceControl(0b11000000_10010000),
             },
             OptionalFields {
                 addr4: None,

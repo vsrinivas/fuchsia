@@ -32,7 +32,7 @@ pub fn write_open_auth_frame<B: Appendable>(
     seq_ctrl.set_seq_num(seq_mgr.next_sns1(&bssid) as u16);
     mgmt_writer::write_mgmt_hdr(
         buf,
-        mgmt_writer::FixedFields::sent_from_client(frame_ctrl, bssid, client_addr, seq_ctrl.0),
+        mgmt_writer::mgmt_hdr_client_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
         None,
     )?;
 
@@ -54,7 +54,7 @@ pub fn write_deauth_frame<B: Appendable>(
     seq_ctrl.set_seq_num(seq_mgr.next_sns1(&bssid) as u16);
     mgmt_writer::write_mgmt_hdr(
         buf,
-        mgmt_writer::FixedFields::sent_from_client(frame_ctrl, bssid, client_addr, seq_ctrl.0),
+        mgmt_writer::mgmt_hdr_client_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
         None,
     )?;
 
@@ -76,7 +76,7 @@ pub fn write_keep_alive_resp_frame<B: Appendable>(
     seq_ctrl.set_seq_num(seq_mgr.next_sns1(&bssid) as u16);
     data_writer::write_data_hdr(
         buf,
-        data_writer::FixedFields::sent_from_client(frame_ctrl, bssid, client_addr, seq_ctrl.0),
+        data_writer::data_hdr_client_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
         data_writer::OptionalFields::none(),
     )?;
     Ok(())
@@ -145,7 +145,7 @@ pub fn write_eapol_data_frame<B: Appendable>(
     seq_ctrl.set_seq_num(seq_mgr.next_sns1(&dest) as u16);
     data_writer::write_data_hdr(
         buf,
-        data_writer::FixedFields::sent_from_client(frame_ctrl, dest, src, seq_ctrl.0),
+        data_writer::data_hdr_client_to_ap(frame_ctrl, dest, src, seq_ctrl),
         data_writer::OptionalFields::none(),
     )?;
 

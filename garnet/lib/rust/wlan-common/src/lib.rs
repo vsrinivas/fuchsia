@@ -5,9 +5,6 @@
 //! Crate wlan-common hosts common libraries
 //! to be used for WLAN SME, MLME, and binaries written in Rust.
 
-#[macro_use]
-mod utils;
-
 pub mod appendable;
 pub mod buffer_reader;
 pub mod buffer_writer;

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::{buffer_reader::BufferReader, utils::skip},
+    crate::{buffer_reader::BufferReader, unaligned_view::UnalignedView},
     byteorder::{BigEndian, ByteOrder, LittleEndian},
     num::Unsigned,
     num_derive::{FromPrimitive, ToPrimitive},
-    std::{marker::PhantomData, ops::Deref},
+    std::marker::PhantomData,
     wlan_bitfields::bitfields,
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
@@ -68,35 +68,18 @@ pub const MAX_ETH_FRAME_LEN: usize = 2048;
     14      protected,
     15      htc_order
 )]
-#[derive(PartialEq)]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy, Debug)]
+#[repr(C)]
 pub struct FrameControl(pub u16);
-
-impl FrameControl {
-    pub fn from_bytes(bytes: &[u8]) -> Option<FrameControl> {
-        if bytes.len() < 2 {
-            None
-        } else {
-            Some(FrameControl(LittleEndian::read_u16(bytes)))
-        }
-    }
-}
 
 // IEEE Std 802.11-2016, 9.2.4.4
 #[bitfields(
     0..=3   frag_num,
     4..=15  seq_num,
 )]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy, Debug)]
+#[repr(C)]
 pub struct SequenceControl(pub u16);
-
-impl SequenceControl {
-    pub fn from_bytes(bytes: &[u8]) -> Option<SequenceControl> {
-        if bytes.len() < 2 {
-            None
-        } else {
-            Some(SequenceControl(LittleEndian::read_u16(bytes)))
-        }
-    }
-}
 
 // IEEE Std 802.11-2016, 9.2.4.6
 #[bitfields(
@@ -146,6 +129,12 @@ pub struct QosControl(pub u16);
 #[derive(PartialEq, Eq)]
 pub struct Presence<T: ?Sized>(bool, PhantomData<T>);
 
+impl<T: ?Sized> Presence<T> {
+    pub fn from_bool(present: bool) -> Self {
+        Self(present, PhantomData)
+    }
+}
+
 pub trait OptionalField {
     const PRESENT: Presence<Self> = Presence::<Self>(true, PhantomData);
     const ABSENT: Presence<Self> = Presence::<Self>(false, PhantomData);
@@ -153,48 +142,24 @@ pub trait OptionalField {
 impl<T: ?Sized> OptionalField for T {}
 
 // IEEE Std 802.11-2016, 9.3.3.2
-#[derive(FromBytes, AsBytes, Unaligned)]
+#[derive(FromBytes, AsBytes, Unaligned, PartialEq, Eq, Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct MgmtHdr {
-    pub frame_ctrl: [u8; 2],
-    pub duration: [u8; 2],
+    pub frame_ctrl: FrameControl,
+    pub duration: u16,
     pub addr1: MacAddr,
     pub addr2: MacAddr,
     pub addr3: MacAddr,
-    pub seq_ctrl: [u8; 2],
+    pub seq_ctrl: SequenceControl,
 }
 
 impl MgmtHdr {
-    pub fn frame_ctrl(&self) -> u16 {
-        LittleEndian::read_u16(&self.frame_ctrl)
-    }
-
-    pub fn duration(&self) -> u16 {
-        LittleEndian::read_u16(&self.duration)
-    }
-
-    pub fn seq_ctrl(&self) -> u16 {
-        LittleEndian::read_u16(&self.seq_ctrl)
-    }
-
-    pub fn set_frame_ctrl(&mut self, val: u16) {
-        LittleEndian::write_u16(&mut self.frame_ctrl, val)
-    }
-
-    pub fn set_duration(&mut self, val: u16) {
-        LittleEndian::write_u16(&mut self.duration, val)
-    }
-
-    pub fn set_seq_ctrl(&mut self, val: u16) {
-        LittleEndian::write_u16(&mut self.seq_ctrl, val)
-    }
-
     /// Returns the length in bytes of a mgmt header including all its fixed and optional
     /// fields (if they are present).
     pub fn len(has_ht_ctrl: Presence<HtControl>) -> usize {
         let mut bytes = std::mem::size_of::<DataHdr>();
         bytes += match has_ht_ctrl {
-            HtControl::PRESENT => std::mem::size_of::<RawHtControl>(),
+            HtControl::PRESENT => std::mem::size_of::<HtControl>(),
             HtControl::ABSENT => 0,
         };
         bytes
@@ -204,42 +169,18 @@ impl MgmtHdr {
 pub type Addr4 = MacAddr;
 
 // IEEE Std 802.11-2016, 9.3.2.1
-#[derive(FromBytes, AsBytes, Unaligned)]
+#[derive(FromBytes, AsBytes, Unaligned, PartialEq, Eq, Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct DataHdr {
-    pub frame_ctrl: [u8; 2],
-    pub duration: [u8; 2],
+    pub frame_ctrl: FrameControl,
+    pub duration: u16,
     pub addr1: MacAddr,
     pub addr2: MacAddr,
     pub addr3: MacAddr,
-    pub seq_ctrl: [u8; 2],
+    pub seq_ctrl: SequenceControl,
 }
 
 impl DataHdr {
-    pub fn frame_ctrl(&self) -> u16 {
-        LittleEndian::read_u16(&self.frame_ctrl)
-    }
-
-    pub fn duration(&self) -> u16 {
-        LittleEndian::read_u16(&self.duration)
-    }
-
-    pub fn seq_ctrl(&self) -> u16 {
-        LittleEndian::read_u16(&self.seq_ctrl)
-    }
-
-    pub fn set_frame_ctrl(&mut self, val: u16) {
-        LittleEndian::write_u16(&mut self.frame_ctrl, val)
-    }
-
-    pub fn set_duration(&mut self, val: u16) {
-        LittleEndian::write_u16(&mut self.duration, val)
-    }
-
-    pub fn set_seq_ctrl(&mut self, val: u16) {
-        LittleEndian::write_u16(&mut self.seq_ctrl, val)
-    }
-
     /// Returns the length in bytes of a data header including all its fixed and optional
     /// fields (if they are present).
     pub fn len(
@@ -253,11 +194,11 @@ impl DataHdr {
             Addr4::ABSENT => 0,
         };
         bytes += match has_qos_ctrl {
-            QosControl::PRESENT => std::mem::size_of::<RawQosControl>(),
+            QosControl::PRESENT => std::mem::size_of::<QosControl>(),
             QosControl::ABSENT => 0,
         };
         bytes += match has_ht_ctrl {
-            HtControl::PRESENT => std::mem::size_of::<RawHtControl>(),
+            HtControl::PRESENT => std::mem::size_of::<HtControl>(),
             HtControl::ABSENT => 0,
         };
         bytes
@@ -266,7 +207,7 @@ impl DataHdr {
 
 // IEEE Std 802.11-2016, Table 9-26 defines DA, SA, RA, TA, BSSID
 pub fn data_dst_addr(hdr: &DataHdr) -> MacAddr {
-    let fc = FrameControl(hdr.frame_ctrl());
+    let fc = hdr.frame_ctrl;
     if fc.to_ds() {
         hdr.addr3
     } else {
@@ -275,7 +216,7 @@ pub fn data_dst_addr(hdr: &DataHdr) -> MacAddr {
 }
 
 pub fn data_src_addr(hdr: &DataHdr, addr4: Option<MacAddr>) -> Option<MacAddr> {
-    let fc = FrameControl(hdr.frame_ctrl());
+    let fc = hdr.frame_ctrl;
     match (fc.to_ds(), fc.from_ds()) {
         (_, false) => Some(hdr.addr2),
         (false, true) => Some(hdr.addr3),
@@ -293,7 +234,7 @@ pub fn data_receiver_addr(hdr: &DataHdr) -> MacAddr {
 
 /// BSSID: basic service set ID
 pub fn data_bssid(hdr: &DataHdr) -> Option<MacAddr> {
-    let fc = FrameControl(hdr.frame_ctrl());
+    let fc = hdr.frame_ctrl;
     match (fc.to_ds(), fc.from_ds()) {
         (false, false) => Some(hdr.addr3),
         (false, true) => Some(hdr.addr2),
@@ -302,55 +243,12 @@ pub fn data_bssid(hdr: &DataHdr) -> Option<MacAddr> {
     }
 }
 
-#[derive(FromBytes, AsBytes, Unaligned)]
-#[repr(C, packed)]
-pub struct RawHtControl([u8; 4]);
-
-impl RawHtControl {
-    pub fn get(&self) -> u32 {
-        LittleEndian::read_u32(&self.0)
-    }
-
-    pub fn set(&mut self, val: u32) {
-        LittleEndian::write_u32(&mut self.0, val)
-    }
-}
-impl Deref for RawHtControl {
-    type Target = [u8; 4];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-#[derive(FromBytes, AsBytes, Unaligned)]
-#[repr(C, packed)]
-pub struct RawQosControl([u8; 2]);
-
-impl RawQosControl {
-    pub fn get(&self) -> u16 {
-        LittleEndian::read_u16(&self.0)
-    }
-
-    pub fn set(&mut self, val: u16) {
-        LittleEndian::write_u16(&mut self.0, val)
-    }
-}
-
-impl Deref for RawQosControl {
-    type Target = [u8; 2];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 pub enum MacFrame<B> {
     Mgmt {
         // Management Header: fixed fields
         mgmt_hdr: LayoutVerified<B, MgmtHdr>,
         // Management Header: optional fields
-        ht_ctrl: Option<LayoutVerified<B, RawHtControl>>,
+        ht_ctrl: Option<UnalignedView<B, HtControl>>,
         // Body
         body: B,
     },
@@ -359,8 +257,8 @@ pub enum MacFrame<B> {
         data_hdr: LayoutVerified<B, DataHdr>,
         // Data Header: optional fields
         addr4: Option<LayoutVerified<B, Addr4>>,
-        qos_ctrl: Option<LayoutVerified<B, RawQosControl>>,
-        ht_ctrl: Option<LayoutVerified<B, RawHtControl>>,
+        qos_ctrl: Option<UnalignedView<B, QosControl>>,
+        ht_ctrl: Option<UnalignedView<B, HtControl>>,
         // Body
         body: B,
     },
@@ -372,106 +270,70 @@ pub enum MacFrame<B> {
 impl<B: ByteSlice> MacFrame<B> {
     /// If `body_aligned` is |true| the frame's body is expected to be 4 byte aligned.
     pub fn parse(bytes: B, body_aligned: bool) -> Option<MacFrame<B>> {
-        let fc = FrameControl::from_bytes(&bytes[..])?;
+        let mut reader = BufferReader::new(bytes);
+        let fc = FrameControl(reader.peek_value()?);
         match fc.frame_type() {
             FRAME_TYPE_MGMT => {
-                // Parse fixed header fields:
-                let (mgmt_hdr, body) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                // Parse fixed header fields
+                let mgmt_hdr = reader.read()?;
 
-                // Parse optional header fields:
-                let (ht_ctrl, body) = parse_ht_ctrl_if_present(&fc, body)?;
-
+                // Parse optional header fields
+                let ht_ctrl = if fc.htc_order() { Some(reader.read_unaligned()?) } else { None };
                 // Skip optional padding if body alignment is used.
-                let body = if body_aligned {
-                    let full_hdr_len = MgmtHdr::len(if ht_ctrl.is_some() {
-                        HtControl::PRESENT
-                    } else {
-                        HtControl::ABSENT
-                    });
-                    skip_body_alignment_padding(full_hdr_len, body)?
-                } else {
-                    body
-                };
-
-                Some(MacFrame::Mgmt { mgmt_hdr, ht_ctrl, body })
+                if body_aligned {
+                    let full_hdr_len =
+                        MgmtHdr::len(Presence::<HtControl>::from_bool(ht_ctrl.is_some()));
+                    skip_body_alignment_padding(full_hdr_len, &mut reader)?
+                }
+                Some(MacFrame::Mgmt { mgmt_hdr, ht_ctrl, body: reader.into_remaining() })
             }
             FRAME_TYPE_DATA => {
-                // Parse fixed header fields:
-                let (data_hdr, body) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                // Parse fixed header fields
+                let data_hdr = reader.read()?;
 
-                // Parse optional header fields:
-                let (addr4, body) = parse_addr4_if_present(&fc, body)?;
-                let (qos_ctrl, body) = parse_qos_if_present(&fc, body)?;
-                let (ht_ctrl, body) = parse_ht_ctrl_if_present(&fc, body)?;
+                // Parse optional header fields
+                let addr4 = if fc.to_ds() && fc.from_ds() { Some(reader.read()?) } else { None };
 
-                // Skip optional padding if body alignment is used.
-                let body = if body_aligned {
-                    let full_hdr_len = DataHdr::len(
-                        if addr4.is_some() { Addr4::PRESENT } else { Addr4::ABSENT },
-                        if qos_ctrl.is_some() { QosControl::PRESENT } else { QosControl::ABSENT },
-                        if ht_ctrl.is_some() { HtControl::PRESENT } else { HtControl::ABSENT },
-                    );
-                    skip_body_alignment_padding(full_hdr_len, body)?
+                let qos_ctrl = if fc.frame_subtype() & BITMASK_QOS != 0 {
+                    Some(reader.read_unaligned()?)
                 } else {
-                    body
+                    None
                 };
 
-                Some(MacFrame::Data { data_hdr, addr4, qos_ctrl, ht_ctrl, body })
+                let ht_ctrl = if fc.htc_order() { Some(reader.read_unaligned()?) } else { None };
+
+                // Skip optional padding if body alignment is used.
+                if body_aligned {
+                    let full_hdr_len = DataHdr::len(
+                        Presence::<Addr4>::from_bool(addr4.is_some()),
+                        Presence::<QosControl>::from_bool(qos_ctrl.is_some()),
+                        Presence::<HtControl>::from_bool(ht_ctrl.is_some()),
+                    );
+                    skip_body_alignment_padding(full_hdr_len, &mut reader)?
+                };
+                Some(MacFrame::Data {
+                    data_hdr,
+                    addr4,
+                    qos_ctrl,
+                    ht_ctrl,
+                    body: reader.into_remaining(),
+                })
             }
             type_ => Some(MacFrame::Unsupported { type_ }),
         }
     }
 }
 
-/// Returns |None| if parsing fails. Otherwise returns |Some(tuple)| with `tuple` holding a
-/// `MacAddr` if it is present and the remaining bytes.
-fn parse_addr4_if_present<B: ByteSlice>(
-    fc: &FrameControl,
-    bytes: B,
-) -> Option<(Option<LayoutVerified<B, Addr4>>, B)> {
-    if fc.to_ds() && fc.from_ds() {
-        let (addr4, bytes) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-        Some((Some(addr4), bytes))
-    } else {
-        Some((None, bytes))
-    }
-}
-
-/// Returns |None| if parsing fails. Otherwise returns |Some(tuple)| with `tuple` holding the
-/// `QosControl` if it is present and the remaining bytes.
-fn parse_qos_if_present<B: ByteSlice>(
-    fc: &FrameControl,
-    bytes: B,
-) -> Option<(Option<LayoutVerified<B, RawQosControl>>, B)> {
-    if fc.frame_subtype() & BITMASK_QOS != 0 {
-        let (qos_ctrl, bytes) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-        Some((Some(qos_ctrl), bytes))
-    } else {
-        Some((None, bytes))
-    }
-}
-
-/// Returns |None| if parsing fails. Otherwise returns |Some(tuple)| with `tuple` holding the
-/// `HtControl` if it is present and the remaining bytes.
-fn parse_ht_ctrl_if_present<B: ByteSlice>(
-    fc: &FrameControl,
-    bytes: B,
-) -> Option<(Option<LayoutVerified<B, RawHtControl>>, B)> {
-    if fc.htc_order() {
-        let (ht_ctrl, bytes) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-        Some((Some(ht_ctrl), bytes))
-    } else {
-        Some((None, bytes))
-    }
-}
-
 /// Skips optional padding required for body alignment.
-fn skip_body_alignment_padding<B: ByteSlice>(hdr_len: usize, bytes: B) -> Option<B> {
+fn skip_body_alignment_padding<B: ByteSlice>(
+    hdr_len: usize,
+    reader: &mut BufferReader<B>,
+) -> Option<()> {
     const OPTIONAL_BODY_ALIGNMENT_BYTES: usize = 4;
 
     let padded_len = round_up(hdr_len, OPTIONAL_BODY_ALIGNMENT_BYTES);
     let padding = padded_len - hdr_len;
-    skip(bytes, padding)
+    reader.read_bytes(padding).map(|_| ())
 }
 
 // IEEE Std 802.11-2016, 9.3.3.3
@@ -835,24 +697,18 @@ pub enum DataSubtype<B> {
 }
 
 impl<B: ByteSlice> DataSubtype<B> {
-    pub fn parse(
-        subtype: u16,
-        qos_ctrl: Option<LayoutVerified<B, RawQosControl>>,
-        bytes: B,
-    ) -> Option<DataSubtype<B>> {
-        match subtype {
-            DATA_SUBTYPE_DATA | DATA_SUBTYPE_QOS_DATA => {
-                let is_qos = subtype == DATA_SUBTYPE_QOS_DATA;
-                if is_qos {
-                    let qos_ctrl = QosControl(qos_ctrl?.get());
-                    if qos_ctrl.amsdu_present() {
-                        return Some(DataSubtype::Data(DataFrameBody::Amsdu { amsdu: bytes }));
-                    }
+    pub fn parse(subtype: u16, qos_ctrl: Option<QosControl>, bytes: B) -> Option<DataSubtype<B>> {
+        Some(match subtype {
+            DATA_SUBTYPE_DATA => DataSubtype::Data(DataFrameBody::Llc { llc_frame: bytes }),
+            DATA_SUBTYPE_QOS_DATA => {
+                if qos_ctrl?.amsdu_present() {
+                    DataSubtype::Data(DataFrameBody::Amsdu { amsdu: bytes })
+                } else {
+                    DataSubtype::Data(DataFrameBody::Llc { llc_frame: bytes })
                 }
-                Some(DataSubtype::Data(DataFrameBody::Llc { llc_frame: bytes }))
             }
-            subtype => Some(DataSubtype::Unsupported { subtype }),
-        }
+            subtype => DataSubtype::Unsupported { subtype },
+        })
     }
 }
 
@@ -861,8 +717,8 @@ impl<B: ByteSlice> MsduIterator<B> {
     pub fn from_raw_data_frame(data_frame: B, body_aligned: bool) -> Option<MsduIterator<B>> {
         match MacFrame::parse(data_frame, body_aligned)? {
             MacFrame::Data { data_hdr, addr4, qos_ctrl, body, .. } => {
-                let fc = FrameControl(data_hdr.frame_ctrl());
-                match DataSubtype::parse(fc.frame_subtype(), qos_ctrl, body)? {
+                let fc = data_hdr.frame_ctrl;
+                match DataSubtype::parse(fc.frame_subtype(), qos_ctrl.map(|x| x.get()), body)? {
                     DataSubtype::Data(DataFrameBody::Llc { llc_frame }) => {
                         Some(MsduIterator::Llc {
                             dst_addr: data_dst_addr(&data_hdr),
@@ -1024,12 +880,12 @@ mod tests {
         let bytes = make_mgmt_frame(false);
         match MacFrame::parse(&bytes[..], false) {
             Some(MacFrame::Mgmt { mgmt_hdr, ht_ctrl, body }) => {
-                assert_eq!([1, 1], mgmt_hdr.frame_ctrl);
-                assert_eq!([2, 2], mgmt_hdr.duration);
+                assert_eq!(0x0101, { mgmt_hdr.frame_ctrl.0 });
+                assert_eq!(0x0202, { mgmt_hdr.duration });
                 assert_eq!([3, 3, 3, 3, 3, 3], mgmt_hdr.addr1);
                 assert_eq!([4, 4, 4, 4, 4, 4], mgmt_hdr.addr2);
                 assert_eq!([5, 5, 5, 5, 5, 5], mgmt_hdr.addr3);
-                assert_eq!([6, 6], mgmt_hdr.seq_ctrl);
+                assert_eq!(0x0606, { mgmt_hdr.seq_ctrl.0 });
                 assert!(ht_ctrl.is_none());
                 assert_eq!(&body[..], &[9, 9, 9]);
             }
@@ -1074,17 +930,17 @@ mod tests {
         let bytes = make_data_frame_single_llc(None, None);
         match MacFrame::parse(&bytes[..], false) {
             Some(MacFrame::Data { data_hdr, addr4, qos_ctrl, ht_ctrl, body }) => {
-                assert_eq!([0b10001000, 0], data_hdr.frame_ctrl);
-                assert_eq!([2, 2], data_hdr.duration);
+                assert_eq!(0b00000000_10001000, { data_hdr.frame_ctrl.0 });
+                assert_eq!(0x0202, { data_hdr.duration });
                 assert_eq!([3, 3, 3, 3, 3, 3], data_hdr.addr1);
                 assert_eq!([4, 4, 4, 4, 4, 4], data_hdr.addr2);
                 assert_eq!([5, 5, 5, 5, 5, 5], data_hdr.addr3);
-                assert_eq!([6, 6], data_hdr.seq_ctrl);
+                assert_eq!(0x0606, { data_hdr.seq_ctrl.0 });
                 assert!(addr4.is_none());
                 match qos_ctrl {
                     None => panic!("qos_ctrl expected to be present"),
                     Some(qos_ctrl) => {
-                        assert_eq!(&[1, 1][..], &qos_ctrl[..]);
+                        assert_eq!(0x0101, qos_ctrl.get().0);
                     }
                 };
                 assert!(ht_ctrl.is_none());
@@ -1118,7 +974,7 @@ mod tests {
         let bytes = make_data_frame_with_padding();
         match MacFrame::parse(&bytes[..], true) {
             Some(MacFrame::Data { qos_ctrl, body, .. }) => {
-                assert_eq!([1, 1], qos_ctrl.expect("qos_ctrl not present").0);
+                assert_eq!(0x0101, qos_ctrl.expect("qos_ctrl not present").get().0);
                 assert_eq!(&[7, 7, 7, 8, 8, 8, 9, 10, 11, 11, 11, 11, 11], &body[..]);
             }
             _ => panic!("failed parsing data frame"),
@@ -1149,8 +1005,8 @@ mod tests {
         let bytes = make_data_frame_single_llc(Some([1, 2, 3, 4, 5, 6]), Some([4, 3, 2, 1]));
         match MacFrame::parse(&bytes[..], false) {
             Some(MacFrame::Data { data_hdr, qos_ctrl, body, .. }) => {
-                let fc = FrameControl(data_hdr.frame_ctrl());
-                match DataSubtype::parse(fc.frame_subtype(), qos_ctrl, &body[..]) {
+                let fc = data_hdr.frame_ctrl;
+                match DataSubtype::parse(fc.frame_subtype(), qos_ctrl.map(|x| x.get()), &body[..]) {
                     Some(DataSubtype::Data(DataFrameBody::Llc { llc_frame })) => {
                         let llc = LlcFrame::parse(llc_frame).expect("LLC frame too short");
                         assert_eq!(7, llc.hdr.dsap);
@@ -1259,10 +1115,10 @@ mod tests {
                 .expect("invalid data header");
         let mut fc = FrameControl(0);
         fc.set_to_ds(true);
-        data_hdr.set_frame_ctrl(fc.0);
+        data_hdr.frame_ctrl = fc;
         assert_eq!(data_dst_addr(&data_hdr), [5; 6]); // Addr3
         fc.set_to_ds(false);
-        data_hdr.set_frame_ctrl(fc.0);
+        data_hdr.frame_ctrl = fc;
         assert_eq!(data_dst_addr(&data_hdr), [3; 6]); // Addr1
     }
 
@@ -1274,22 +1130,22 @@ mod tests {
                 .expect("invalid data header");
         let mut fc = FrameControl(0);
         // to_ds == false && from_ds == false
-        data_hdr.set_frame_ctrl(fc.0);
+        data_hdr.frame_ctrl = fc;
         assert_eq!(data_src_addr(&data_hdr, None), Some([4; 6])); // Addr2
 
         fc.set_to_ds(true);
         // to_ds == true && from_ds == false
-        data_hdr.set_frame_ctrl(fc.0);
+        data_hdr.frame_ctrl = fc;
         assert_eq!(data_src_addr(&data_hdr, None), Some([4; 6])); // Addr2
 
         fc.set_from_ds(true);
         // to_ds == true && from_ds == true;
-        data_hdr.set_frame_ctrl(fc.0);
+        data_hdr.frame_ctrl = fc;
         assert_eq!(data_src_addr(&data_hdr, Some([11; 6])), Some([11; 6])); // Addr4
 
         fc.set_to_ds(false);
         // to_ds == false && from_ds == true;
-        data_hdr.set_frame_ctrl(fc.0);
+        data_hdr.frame_ctrl = fc;
         assert_eq!(data_src_addr(&data_hdr, None), Some([5; 6])); // Addr3
     }
 
@@ -1319,22 +1175,22 @@ mod tests {
                 .expect("invalid data header");
         let mut fc = FrameControl(0);
         // to_ds == false && from_ds == false
-        data_hdr.set_frame_ctrl(fc.0);
+        data_hdr.frame_ctrl = fc;
         assert_eq!(data_bssid(&data_hdr), Some([5; 6])); // Addr3
 
         fc.set_to_ds(true);
         // to_ds == true && from_ds == false
-        data_hdr.set_frame_ctrl(fc.0);
+        data_hdr.frame_ctrl = fc;
         assert_eq!(data_bssid(&data_hdr), Some([3; 6])); // Addr1
 
         fc.set_from_ds(true);
         // to_ds == true && from_ds == true;
-        data_hdr.set_frame_ctrl(fc.0);
+        data_hdr.frame_ctrl = fc;
         assert_eq!(data_bssid(&data_hdr), None);
 
         fc.set_to_ds(false);
         // to_ds == false && from_ds == true;
-        data_hdr.set_frame_ctrl(fc.0);
+        data_hdr.frame_ctrl = fc;
         assert_eq!(data_bssid(&data_hdr), Some([4; 6])); // Addr2
     }
 }
