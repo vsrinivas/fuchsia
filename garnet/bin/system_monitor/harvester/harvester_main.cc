@@ -20,6 +20,7 @@
 #include "lib/fxl/command_line.h"
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 
 namespace {
 
@@ -61,13 +62,20 @@ int main(int argc, char** argv) {
   // A broad 'something went wrong' error.
   constexpr int EXIT_CODE_GENERAL_ERROR = 1;
 
-  constexpr char VERSION_OUTPUT[] = "System Monitor Harvester - wip 8";
+  // The wip number is incremented arbitrarily.
+  // TODO(dschuyler) replace wip number with real version number.
+  constexpr char VERSION_OUTPUT[] = "System Monitor Harvester - wip 9";
 
-  constexpr char COMMAND_VERSION[] = "version";
+  // Command line options.
+  constexpr char COMMAND_INSPECT[] = "inspect";
+  constexpr char COMMAND_RATE[] = "msec-rate";
   constexpr char COMMAND_LOCAL[] = "local";
+  constexpr char COMMAND_VERSION[] = "version";
 
   bool use_grpc = true;
+  int cycle_msec_rate = 100;
 
+  // Parse command line.
   FXL_LOG(INFO) << VERSION_OUTPUT;
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
@@ -81,6 +89,22 @@ int main(int argc, char** argv) {
     FXL_LOG(INFO) << "Option: local only, not using transport to Dockyard.";
     use_grpc = false;
   }
+  if (command_line.HasOption(COMMAND_INSPECT)) {
+    FXL_LOG(INFO) << "Enabled component framework inspection (wip)";
+    // TODO(dschuyler): actually do component framework inspection.
+  }
+  if (command_line.HasOption(COMMAND_RATE)) {
+    std::string rate;
+    command_line.GetOptionValue(COMMAND_RATE, &rate);
+    if (fxl::StringToNumberWithError(rate, &cycle_msec_rate)) {
+      FXL_LOG(INFO) << "Gathering data at a cycle rate of " << cycle_msec_rate;
+    } else {
+      std::cerr << "Error: Unable to parse `--rate` value." << std::endl;
+      exit(EXIT_CODE_GENERAL_ERROR);
+    }
+  }
+
+  // Set up.
   std::unique_ptr<harvester::Harvester> harvester;
   if (use_grpc) {
     const auto& positional_args = command_line.positional_args();
@@ -109,12 +133,14 @@ int main(int argc, char** argv) {
     exit(EXIT_CODE_GENERAL_ERROR);
   }
 
+  // The main loop.
   while (true) {
     harvester::GatherCpuSamples(root_resource, harvester);
     harvester::GatherMemorySamples(root_resource, harvester);
     harvester::GatherThreadSamples(root_resource, harvester);
-    // TODO(dschuyler): Make delay configurable (100 msec is arbitrary).
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // TODO(dschuyler): make this actually run at rate (i.e. remove drift from
+    // execution time).
+    std::this_thread::sleep_for(std::chrono::milliseconds(cycle_msec_rate));
   }
   FXL_LOG(INFO) << "System Monitor Harvester - exiting";
   return 0;
