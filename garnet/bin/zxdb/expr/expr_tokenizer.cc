@@ -6,6 +6,8 @@
 
 #include <ctype.h>
 
+#include <type_traits>
+
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -28,6 +30,31 @@ bool IsIntegerFirstChar(char c) { return isdigit(c); }
 // is to find the extent of the literal.
 bool IsIntegerContinuingChar(char c) { return isalnum(c); }
 
+// Returns a list of all tokens sharing the given first character.
+const std::vector<const ExprTokenRecord*>& TokensWithFirstChar(char c) {
+  // Lookup table for all 7-bit characters.
+  constexpr unsigned char kMaxLookupChar = 0x80;
+  static std::vector<const ExprTokenRecord*> mapping[kMaxLookupChar];
+  static bool initialized = false;
+
+  if (!initialized) {
+    // Construct the lookup table.
+    initialized = true;
+    for (size_t i = 0; i < kNumExprTokenTypes; i++) {
+      const ExprTokenRecord& record =
+          RecordForTokenType(static_cast<ExprTokenType>(i));
+      if (!record.static_value.empty())
+        mapping[static_cast<size_t>(record.static_value[0])].push_back(&record);
+    }
+  }
+
+  if (static_cast<unsigned char>(c) >= kMaxLookupChar) {
+    static std::vector<const ExprTokenRecord*> empty_records;
+    return empty_records;
+  }
+  return mapping[static_cast<size_t>(c)];
+}
+
 }  // namespace
 
 ExprTokenizer::ExprTokenizer(const std::string& input) : input_(input) {}
@@ -38,18 +65,18 @@ bool ExprTokenizer::Tokenize() {
     if (done())
       break;
 
-    ExprTokenType type = ClassifyCurrent();
+    const ExprTokenRecord& record = ClassifyCurrent();
     if (has_error())
       break;
 
     size_t token_begin = cur_;
-    AdvanceToEndOfToken(type);
+    AdvanceToEndOfToken(record);
     if (has_error())
       break;
 
     size_t token_end = cur_;
     std::string token_value(&input_[token_begin], token_end - token_begin);
-    tokens_.emplace_back(type, token_value, token_begin);
+    tokens_.emplace_back(record.type, token_value, token_begin);
   }
   return !has_error();
 }
@@ -83,8 +110,17 @@ void ExprTokenizer::AdvanceToNextToken() {
     AdvanceOneChar();
 }
 
-void ExprTokenizer::AdvanceToEndOfToken(ExprTokenType type) {
-  switch (type) {
+void ExprTokenizer::AdvanceToEndOfToken(const ExprTokenRecord& record) {
+  if (!record.static_value.empty()) {
+    // Known sizes. Because the token matched we should always have enough
+    // characters.
+    FXL_DCHECK(input_.size() >= cur_ + record.static_value.size());
+    cur_ += record.static_value.size();
+    return;
+  }
+
+  // Manually advance over variable-length tokens.
+  switch (record.type) {
     case ExprTokenType::kInteger:
       do {
         AdvanceOneChar();
@@ -97,54 +133,7 @@ void ExprTokenizer::AdvanceToEndOfToken(ExprTokenType type) {
       } while (!at_end() && IsNameContinuingChar(cur_char()));
       break;
 
-    case ExprTokenType::kArrow:
-    case ExprTokenType::kColonColon:
-    case ExprTokenType::kEquality:
-    case ExprTokenType::kDoubleAnd:
-    case ExprTokenType::kLogicalOr:
-      // The classification code should already have validated there were two
-      // characters available.
-      AdvanceOneChar();
-      AdvanceOneChar();
-      break;
-
-    case ExprTokenType::kEquals:
-    case ExprTokenType::kDot:
-    case ExprTokenType::kComma:
-    case ExprTokenType::kStar:
-    case ExprTokenType::kAmpersand:
-    case ExprTokenType::kBitwiseOr:
-    case ExprTokenType::kLeftSquare:
-    case ExprTokenType::kRightSquare:
-    case ExprTokenType::kLeftParen:
-    case ExprTokenType::kRightParen:
-    case ExprTokenType::kLess:
-    case ExprTokenType::kGreater:
-    case ExprTokenType::kMinus:
-    case ExprTokenType::kPlus:
-      AdvanceOneChar();  // All are one char.
-      break;
-
-    // If we add too many more keywords we should have a more flexible system
-    // rather than hardcoding all lengths here.
-    case ExprTokenType::kTrue:
-      AdvanceChars(4);
-      break;
-    case ExprTokenType::kFalse:
-      AdvanceChars(5);
-      break;
-    case ExprTokenType::kConst:
-      AdvanceChars(5);
-      break;
-    case ExprTokenType::kVolatile:
-      AdvanceChars(8);
-      break;
-    case ExprTokenType::kRestrict:
-      AdvanceChars(8);
-      break;
-
-    case ExprTokenType::kInvalid:
-    case ExprTokenType::kNumTypes:
+    default:
       FXL_NOTREACHED();
       err_ = Err("Internal parser error.");
       error_location_ = cur_;
@@ -152,21 +141,24 @@ void ExprTokenizer::AdvanceToEndOfToken(ExprTokenType type) {
   }
 }
 
-bool ExprTokenizer::IsCurrentString(std::string_view s) const {
-  if (!can_advance(s.size() - 1))
-    return false;
-  for (size_t i = 0; i < s.size(); i++) {
-    if (input_[cur_ + i] != s[i])
-      return false;
-  }
-  return true;
-}
+bool ExprTokenizer::CurrentMatchesTokenRecord(
+    const ExprTokenRecord& record) const {
+  // Non-statically-known tokens shouldn't use this code path.
+  FXL_DCHECK(!record.static_value.empty());
 
-bool ExprTokenizer::IsCurrentName(std::string_view s) const {
-  if (!IsCurrentString(s))
-    return false;
-  return input_.size() == cur_ + s.size() ||              // End of buffer.
-         !IsNameContinuingChar(input_[cur_ + s.size()]);  // Non-name char.
+  const size_t size = record.static_value.size();
+  if (!can_advance(size))
+    return false;  // Not enought room.
+
+  if (std::string_view(&input_[cur_], size) != record.static_value)
+    return false;  // Doesn't match the token static value.
+
+  if (record.is_alphanum) {
+    if (cur_ + size < input_.size() && isalnum(input_[cur_ + size]))
+      return false;  // Alphanumeric character follows so won't match.
+  }
+
+  return true;
 }
 
 bool ExprTokenizer::IsCurrentWhitespace() const {
@@ -175,99 +167,35 @@ bool ExprTokenizer::IsCurrentWhitespace() const {
   return c == 0x0A || c == 0x0D || c == 0x20;
 }
 
-ExprTokenType ExprTokenizer::ClassifyCurrent() {
+const ExprTokenRecord& ExprTokenizer::ClassifyCurrent() {
   FXL_DCHECK(!at_end());
   char cur = cur_char();
 
+  const ExprTokenRecord* longest = nullptr;
+  for (const ExprTokenRecord* match : TokensWithFirstChar(cur)) {
+    if (!CurrentMatchesTokenRecord(*match))
+      continue;
+
+    if (!longest || match->static_value.size() > longest->static_value.size())
+      longest = match;
+  }
+
+  if (longest)
+    return *longest;
+
   // Numbers.
   if (IsIntegerFirstChar(cur))
-    return ExprTokenType::kInteger;
+    return RecordForTokenType(ExprTokenType::kInteger);
 
-  // Words.
+  // Everything else is a general name.
   if (IsNameFirstChar(cur)) {
-    // Check for special keywords.
-    if (IsCurrentName("true"))
-      return ExprTokenType::kTrue;
-    else if (IsCurrentName("false"))
-      return ExprTokenType::kFalse;
-    else if (IsCurrentName("const"))
-      return ExprTokenType::kConst;
-    else if (IsCurrentName("volatile"))
-      return ExprTokenType::kVolatile;
-    else if (IsCurrentName("restrict"))
-      return ExprTokenType::kRestrict;
-
-    // Everything else is a general name.
-    return ExprTokenType::kName;
+    return RecordForTokenType(ExprTokenType::kName);
   }
 
-  // Punctuation.
-  switch (cur) {
-    case '-':
-      // Hyphen could be itself or an arrow, look ahead.
-      if (can_advance()) {
-        if (input_[cur_ + 1] == '>')
-          return ExprTokenType::kArrow;
-      }
-      // Anything else is a standalone hyphen.
-      return ExprTokenType::kMinus;
-    case '=':
-      // Check for "==".
-      if (can_advance()) {
-        if (input_[cur_ + 1] == '=')
-          return ExprTokenType::kEquality;
-      }
-      return ExprTokenType::kEquals;
-    case '.':
-      return ExprTokenType::kDot;
-    case ',':
-      return ExprTokenType::kComma;
-    case '*':
-      return ExprTokenType::kStar;
-    case '&':
-      // Check for "&&".
-      if (can_advance()) {
-        if (input_[cur_ + 1] == '&')
-          return ExprTokenType::kDoubleAnd;
-      }
-      return ExprTokenType::kAmpersand;
-    case '|':
-      // Check for "||".
-      if (can_advance()) {
-        if (input_[cur_ + 1] == '|')
-          return ExprTokenType::kLogicalOr;
-      }
-      return ExprTokenType::kBitwiseOr;
-    case '[':
-      return ExprTokenType::kLeftSquare;
-    case ']':
-      return ExprTokenType::kRightSquare;
-    case '(':
-      return ExprTokenType::kLeftParen;
-    case ')':
-      return ExprTokenType::kRightParen;
-    case '<':
-      return ExprTokenType::kLess;
-    case '>':
-      return ExprTokenType::kGreater;
-    case ':':
-      // Currently only support colons as part of "::", look ahead.
-      if (can_advance()) {
-        if (input_[cur_ + 1] == ':')
-          return ExprTokenType::kColonColon;
-      }
-      // Any other use of colon is an error.
-      error_location_ = cur_;
-      err_ = Err("Invalid standalone ':' in expression.\n" +
-                 GetErrorContext(input_, cur_));
-      return ExprTokenType::kInvalid;
-    default:
-      error_location_ = cur_;
-      err_ = Err(
-          fxl::StringPrintf("Invalid character '%c' in expression.\n", cur) +
-          GetErrorContext(input_, cur_));
-      return ExprTokenType::kInvalid;
-  }
+  error_location_ = cur_;
+  err_ = Err(fxl::StringPrintf("Invalid character '%c' in expression.\n", cur) +
+             GetErrorContext(input_, cur_));
+  return RecordForTokenType(ExprTokenType::kInvalid);
 }
 
 }  // namespace zxdb

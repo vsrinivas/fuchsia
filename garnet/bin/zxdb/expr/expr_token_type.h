@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <string_view>
+
 namespace zxdb {
 
 // This type must start at 0 and increment monotonically since it is used
@@ -33,14 +35,38 @@ enum class ExprTokenType : size_t {
   kColonColon,   // ::
 
   // Special keywords.
-  kTrue,         // true
-  kFalse,        // false
-  kConst,        // const
-  kVolatile,     // volatile
-  kRestrict,     // restrict
+  kTrue,      // true
+  kFalse,     // false
+  kConst,     // const
+  kVolatile,  // volatile
+  kRestrict,  // restrict
 
   // Keep last. Not a token, but the count of tokens.
   kNumTypes
 };
+
+constexpr size_t kNumExprTokenTypes =
+    static_cast<size_t>(ExprTokenType::kNumTypes);
+
+struct ExprTokenRecord {
+  constexpr ExprTokenRecord() = default;
+  constexpr ExprTokenRecord(ExprTokenType t,
+                            std::string_view static_val = std::string_view());
+
+  ExprTokenType type = ExprTokenType::kInvalid;
+
+  // Nonempty when this token type contains a known string, e.g. "&&" rather
+  // than some arbitrary name.
+  std::string_view static_value;
+
+  // Set to true when the static value of this token is alphanumeric such that
+  // to separate it from another token requires a non-alphanumeric character.
+  bool is_alphanum = false;
+
+  // We will likely need more stuff here such as what languages this token
+  // applies to (C, Rust, etc.).
+};
+
+const ExprTokenRecord& RecordForTokenType(ExprTokenType);
 
 }  // namespace zxdb

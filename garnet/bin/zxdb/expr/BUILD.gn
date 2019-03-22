@@ -18,6 +18,7 @@ static_library("expr") {
     "expr_parser.cc",
     "expr_parser.h",
     "expr_token.h",
+    "expr_token_type.cc",
     "expr_token_type.h",
     "expr_tokenizer.cc",
     "expr_tokenizer.h",
