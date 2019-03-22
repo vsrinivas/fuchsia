@@ -17,7 +17,7 @@ class AudioRenderer : public Renderer {
   ~AudioRenderer() override {}
 
   virtual void BindGainControl(
-      fidl::InterfaceRequest<fuchsia::media::audio::GainControl>
+      fidl::InterfaceRequest<fuchsia::media::GainControl>
           gain_control_request) = 0;
 };
 

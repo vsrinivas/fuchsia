@@ -51,9 +51,8 @@ class FidlAudioRenderer : public AudioRenderer {
   void SetTimelineFunction(media::TimelineFunction timeline_function,
                            fit::closure callback) override;
 
-  void BindGainControl(
-      fidl::InterfaceRequest<fuchsia::media::audio::GainControl>
-          gain_control_request) override;
+  void BindGainControl(fidl::InterfaceRequest<fuchsia::media::GainControl>
+                           gain_control_request) override;
 
  protected:
   // Renderer overrides.
