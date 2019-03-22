@@ -23,7 +23,7 @@ Runner::Runner(async_dispatcher_t* dispatcher) {
   }
   dispatcher_ = dispatcher;
 
-  component_context_ = sys::ComponentContext::CreateFromStartupInfo();
+  component_context_ = sys::ComponentContext::Create();
   component_context_->svc()->Connect(launcher_.NewRequest(dispatcher_));
   component_context_->svc()->Connect(loader_.NewRequest(dispatcher_));
   component_context_->outgoing().AddPublicService(

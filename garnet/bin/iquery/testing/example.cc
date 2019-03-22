@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
 
   // Exposing objects requires a loop and the startup context.
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto component_context = sys::ComponentContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
 
   // Legacy work required to expose an object tree over FIDL.
   auto root = component::ObjectDir::Make("root");

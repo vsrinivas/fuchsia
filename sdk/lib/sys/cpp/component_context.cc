@@ -25,7 +25,7 @@ ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
 
 ComponentContext::~ComponentContext() = default;
 
-std::unique_ptr<ComponentContext> ComponentContext::CreateFromStartupInfo() {
+std::unique_ptr<ComponentContext> ComponentContext::Create() {
   zx_handle_t directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
   return std::make_unique<ComponentContext>(
       ServiceDirectory::CreateFromNamespace(), zx::channel(directory_request));

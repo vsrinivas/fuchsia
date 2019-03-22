@@ -69,7 +69,7 @@ void FakeSubComponent::PublishService(::std::string service_name,
 
 MockRunner::MockRunner()
     : loop_(&kAsyncLoopConfigAttachToThread),
-      context_(sys::ComponentContext::CreateFromStartupInfo()),
+      context_(sys::ComponentContext::Create()),
       mock_binding_(this),
       component_id_counter_(0) {
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));

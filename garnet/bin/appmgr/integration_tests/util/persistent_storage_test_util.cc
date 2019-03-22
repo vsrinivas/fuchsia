@@ -48,7 +48,7 @@ class IsolatedStorageTestUtil
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = sys::ComponentContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   IsolatedStorageTestUtil server(context->outgoing());
   loop.Run();
   return 0;

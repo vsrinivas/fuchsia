@@ -36,7 +36,7 @@ int main(int argc, const char** argv) {
   launch_info.url = server_url;
   launch_info.directory_request = directory.NewRequest().TakeChannel();
   fuchsia::sys::LauncherPtr launcher;
-  auto context = sys::ComponentContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   context->svc()->Connect(launcher.NewRequest());
   fuchsia::sys::ComponentControllerPtr controller;
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());

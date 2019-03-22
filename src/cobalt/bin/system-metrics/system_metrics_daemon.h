@@ -24,7 +24,7 @@
 //
 // async::Loop loop(&kAsyncLoopConfigAttachToThread);
 // std::unique_ptr<sys::ComponentContext> context(
-//     sys::ComponentContext::CreateFromStartupInfo());
+//     sys::ComponentContext::Create());
 // SystemMetricsDaemon daemon(loop.dispatcher(), context.get());
 // daemon.Work();
 // loop.Run();

@@ -43,7 +43,7 @@ TEST_F(TestSysmgr, ServiceStartup) {
 })";
   sysmgr_args.push_back(kSysmgrConfig);
 
-  auto context = sys::ComponentContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
 
   component::AppmgrArgs args{
       .pa_directory_request = h2.release(),

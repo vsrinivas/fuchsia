@@ -28,7 +28,7 @@ class TtsClient {
 TtsClient::TtsClient(fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
-  auto app_ctx = sys::ComponentContext::CreateFromStartupInfo();
+  auto app_ctx = sys::ComponentContext::Create();
   tts_service_ =
       app_ctx->svc()->Connect<fuchsia::tts::TtsService>();
   tts_service_.set_error_handler([this](zx_status_t status) {

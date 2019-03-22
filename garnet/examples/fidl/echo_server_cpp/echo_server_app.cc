@@ -9,7 +9,7 @@
 namespace echo {
 
 EchoServerApp::EchoServerApp(bool quiet)
-    : EchoServerApp(sys::ComponentContext::CreateFromStartupInfo(), quiet) {
+    : EchoServerApp(sys::ComponentContext::Create(), quiet) {
 }
 
 EchoServerApp::EchoServerApp(std::unique_ptr<sys::ComponentContext> context,

@@ -163,7 +163,7 @@ void MediaApp::Shutdown() {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = sys::ComponentContext::CreateFromStartupInfo();
+  auto startup_context = sys::ComponentContext::Create();
 
   examples::MediaApp media_app([&loop]() {
     async::PostTask(loop.dispatcher(), [&loop]() { loop.Quit(); });

@@ -53,7 +53,7 @@ int main(int argc, const char** argv) {
   auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
   // Create tiles with a token for its root view.
-  auto startup_context = sys::ComponentContext::CreateFromStartupInfo();
+  auto startup_context = sys::ComponentContext::Create();
   tiles::Tiles tiles(startup_context.get(), std::move(view_token),
                      command_line.positional_args(), border);
 

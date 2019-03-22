@@ -38,7 +38,7 @@ namespace sys {
 // ```
 // int main(int argc, const char** argv) {
 //   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-//   auto context = sys::ComponentContext::CreateFromStartupInfo();
+//   auto context = sys::ComponentContext::Create();
 //   my::App app(std::move(context))
 //   loop.Run();
 //   return 0;
@@ -49,7 +49,7 @@ class ComponentContext {
   // Create a startup context.
   //
   // This constructor is rarely used directly. Instead, most clients create a
-  // startup context using the |CreateFromStartupInfo()| static method.
+  // startup context using the |Create()| static method.
   ComponentContext(std::shared_ptr<ServiceDirectory> svc,
                    zx::channel directory_request,
                    async_dispatcher_t* dispatcher = nullptr);
@@ -80,13 +80,17 @@ class ComponentContext {
   // ```
   // int main(int argc, const char** argv) {
   //   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  //   auto context = sys::ComponentContext::CreateFromStartupInfo();
+  //   auto context = sys::ComponentContext::Create();
   //   my::App app(std::move(context))
   //   loop.Run();
   //   return 0;
   // }
   // ```
-  static std::unique_ptr<ComponentContext> CreateFromStartupInfo();
+  static std::unique_ptr<ComponentContext> Create();
+  // DEPRECATED
+  static std::unique_ptr<ComponentContext> CreateFromStartupInfo() {
+    return Create();
+  }
 
   // Creates a startup context from |fuchsia::sys::StartupInfo|.
   //

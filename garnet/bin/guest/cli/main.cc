@@ -114,7 +114,7 @@ static bool parse_args(int argc, const char** argv, async::Loop* loop,
 int main(int argc, const char** argv) {
   fit::closure func;
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = sys::ComponentContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   if (!parse_args(argc, argv, &loop, context.get(), &func)) {
     usage();
     return ZX_ERR_INVALID_ARGS;

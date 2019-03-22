@@ -48,7 +48,7 @@ class Table {
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = sys::ComponentContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
   auto inspector = inspect::ComponentInspector::Initialize(context.get());
   auto& root = inspector->root_tree()->GetRoot();
 

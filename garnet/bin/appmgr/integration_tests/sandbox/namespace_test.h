@@ -18,7 +18,7 @@
 class NamespaceTest : public sys::testing::TestWithEnvironment {
  protected:
   NamespaceTest()
-      : component_context_(sys::ComponentContext::CreateFromStartupInfo()) {}
+      : component_context_(sys::ComponentContext::Create()) {}
 
   // Connects to a service provided by the environment.
   template <typename Interface>

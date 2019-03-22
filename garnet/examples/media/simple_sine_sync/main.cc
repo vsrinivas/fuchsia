@@ -27,7 +27,7 @@ int main(int argc, const char** argv) {
   // loop is needed by StartupContext.
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   examples::MediaApp media_app(
-      sys::ComponentContext::CreateFromStartupInfo());
+      sys::ComponentContext::Create());
 
   if (command_line.HasOption("v") || command_line.HasOption("verbose")) {
     media_app.set_verbose(true);

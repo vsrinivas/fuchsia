@@ -79,7 +79,7 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   intl_wisdom::IntlWisdomClient client(
-      sys::ComponentContext::CreateFromStartupInfo());
+      sys::ComponentContext::Create());
   client.Start(server_url);
   client.SendRequest(timestamp, *time_zone, [&loop](fidl::StringPtr response) {
     printf("Response:\n%s\n", response->data());

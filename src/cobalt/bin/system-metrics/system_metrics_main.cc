@@ -14,7 +14,7 @@
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = sys::ComponentContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
 
   // Create the SystemMetricsDaemon and start it.
   SystemMetricsDaemon daemon(loop.dispatcher(), context.get());

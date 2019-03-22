@@ -21,7 +21,7 @@ class EchoServerApp : public Echo {
  public:
   explicit EchoServerApp(async::Loop* loop)
       : loop_(loop),
-        context_(sys::ComponentContext::CreateFromStartupInfo()) {
+        context_(sys::ComponentContext::Create()) {
     context_->outgoing().AddPublicService(bindings_.GetHandler(this));
   }
 

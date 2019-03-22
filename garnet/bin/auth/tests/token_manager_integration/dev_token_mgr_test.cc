@@ -73,7 +73,7 @@ class DevTokenManagerAppTest
       fuchsia::auth::AuthenticationContextProvider {
  public:
   DevTokenManagerAppTest()
-      : startup_context_(sys::ComponentContext::CreateFromStartupInfo()),
+      : startup_context_(sys::ComponentContext::Create()),
         auth_context_provider_binding_(this) {}
 
   ~DevTokenManagerAppTest() {}
@@ -424,7 +424,7 @@ int main(int argc, char** argv) {
 
   {
     async::Loop loop(&kAsyncLoopConfigAttachToThread);
-    auto context = sys::ComponentContext::CreateFromStartupInfo();
+    auto context = sys::ComponentContext::Create();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

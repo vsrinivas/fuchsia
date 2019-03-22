@@ -17,7 +17,7 @@ namespace camera {
 
 using namespace fuchsia::camera;
 
-Client::Client() : Client(sys::ComponentContext::CreateFromStartupInfo()) {}
+Client::Client() : Client(sys::ComponentContext::Create()) {}
 
 Client::Client(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {}

@@ -22,7 +22,7 @@ namespace bt_beacon_reader {
 
 App::App(async::Loop* loop, bool just_tilts)
     : loop_(loop),
-      context_(sys::ComponentContext::CreateFromStartupInfo()),
+      context_(sys::ComponentContext::Create()),
       central_delegate_(this),
       just_tilts_(just_tilts) {
   FXL_DCHECK(context_);

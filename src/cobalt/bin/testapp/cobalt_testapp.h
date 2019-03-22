@@ -33,7 +33,7 @@ class CobaltTestApp {
   CobaltTestApp(bool use_network, bool do_environment_test,
                 int num_observations_per_batch)
       : do_environment_test_(do_environment_test),
-        context_(sys::ComponentContext::CreateFromStartupInfo()),
+        context_(sys::ComponentContext::Create()),
         logger_(use_network, num_observations_per_batch, &cobalt_controller_) {}
 
   // We have multiple testing strategies based on the method we use to

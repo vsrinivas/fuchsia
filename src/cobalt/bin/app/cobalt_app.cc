@@ -55,7 +55,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                      const std::string& product_name,
                      const std::string& board_name)
     : system_data_(product_name, board_name),
-      context_(sys::ComponentContext::CreateFromStartupInfo()),
+      context_(sys::ComponentContext::Create()),
       shuffler_client_(kCloudShufflerUri, true),
       send_retryer_(&shuffler_client_),
       network_wrapper_(

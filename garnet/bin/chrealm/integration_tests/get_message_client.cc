@@ -19,7 +19,7 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = sys::ComponentContext::CreateFromStartupInfo();
+  auto startup_context = sys::ComponentContext::Create();
   fuchsia::testing::chrealm::TestServicePtr test_svc;
   startup_context->svc()->Connect(test_svc.NewRequest());
 

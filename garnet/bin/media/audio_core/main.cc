@@ -10,7 +10,7 @@
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   media::audio::AudioCoreImpl impl(
-      sys::ComponentContext::CreateFromStartupInfo());
+      sys::ComponentContext::Create());
   loop.Run();
   return 0;
 }

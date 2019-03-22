@@ -23,7 +23,7 @@
 
 class CrashAnalyzer {
  public:
-  CrashAnalyzer() : context_(sys::ComponentContext::CreateFromStartupInfo()) {
+  CrashAnalyzer() : context_(sys::ComponentContext::Create()) {
     FXL_DCHECK(context_);
   }
 
@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   fuchsia::net::ConnectivityPtr connectivity =
-      sys::ComponentContext::CreateFromStartupInfo()
+      sys::ComponentContext::Create()
           ->svc()
           ->Connect<fuchsia::net::Connectivity>();
   connectivity.events().OnNetworkReachable = [&crashlog_vmo](bool reachable) {

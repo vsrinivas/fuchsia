@@ -27,7 +27,7 @@ class A11yToggler {
 A11yToggler::A11yToggler(fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
-  auto context_ = sys::ComponentContext::CreateFromStartupInfo();
+  auto context_ = sys::ComponentContext::Create();
   context_->svc()->Connect(a11y_toggler_.NewRequest());
   a11y_toggler_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Connection error connecting to a11y toggler.";
