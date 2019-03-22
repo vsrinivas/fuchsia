@@ -102,6 +102,7 @@ public:
         ctx_ = nullptr;
         ops_ = nullptr;
     }
+
     void MoveTo(const point_t* p) const {
         ops_->move_to(ctx_, p);
     }

@@ -15,12 +15,15 @@ namespace internal {
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_func, Interfacefunc,
         void (C::*)(bool x));
 
+
 template <typename D>
 constexpr void CheckInterfaceProtocolSubclass() {
     static_assert(internal::has_interface_protocol_func<D>::value,
         "InterfaceProtocol subclasses must implement "
         "void Interfacefunc(bool x);");
+
 }
+
 
 } // namespace internal
 } // namespace ddk

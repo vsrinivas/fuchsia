@@ -101,6 +101,7 @@ public:
         ctx_ = nullptr;
         ops_ = nullptr;
     }
+
     void func(bool x) const {
         ops_->func(ctx_, x);
     }

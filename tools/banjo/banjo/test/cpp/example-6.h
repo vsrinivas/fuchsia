@@ -101,6 +101,7 @@ public:
         ctx_ = nullptr;
         ops_ = nullptr;
     }
+
     void Say(const char* req, char* out_response, size_t response_capacity) const {
         ops_->say(ctx_, req, out_response, response_capacity);
     }

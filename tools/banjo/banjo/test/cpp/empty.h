@@ -18,6 +18,7 @@
 
 // DDK empty-protocol support
 //
+
 namespace ddk {
 
 } // namespace ddk

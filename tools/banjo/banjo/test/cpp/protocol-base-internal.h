@@ -148,5 +148,6 @@ constexpr void CheckAsyncBaseProtocolSubclass() {
 
 }
 
+
 } // namespace internal
 } // namespace ddk

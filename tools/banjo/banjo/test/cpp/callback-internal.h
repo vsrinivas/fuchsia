@@ -52,5 +52,6 @@ constexpr void CheckDrawingProtocolSubclass() {
 
 }
 
+
 } // namespace internal
 } // namespace ddk

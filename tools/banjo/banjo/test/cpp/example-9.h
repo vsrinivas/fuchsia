@@ -140,21 +140,27 @@ public:
         ctx_ = nullptr;
         ops_ = nullptr;
     }
+
     uint32_t Echo32(uint32_t uint32) const {
         return ops_->echo32(ctx_, uint32);
     }
+
     uint64_t Echo64(uint64_t uint64) const {
         return ops_->echo64(ctx_, uint64);
     }
+
     echo_me_t EchoEnum(echo_me_t req) const {
         return ops_->echo_enum(ctx_, req);
     }
+
     void EchoHandle(zx::handle req, zx::handle* out_response) const {
         ops_->echo_handle(ctx_, req.release(), out_response->reset_and_get_address());
     }
+
     void EchoChannel(zx::channel req, zx::channel* out_response) const {
         ops_->echo_channel(ctx_, req.release(), out_response->reset_and_get_address());
     }
+
     void EchoStruct(const echo_more_t* req, echo_more_t* out_response) const {
         ops_->echo_struct(ctx_, req, out_response);
     }

@@ -7,6 +7,7 @@
 
 #pragma once
 
+
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -16,5 +17,6 @@ __BEGIN_CDECLS;
 
 
 // Declarations
+
 
 __END_CDECLS;

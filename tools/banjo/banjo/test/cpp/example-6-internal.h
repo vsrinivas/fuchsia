@@ -15,12 +15,15 @@ namespace internal {
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_hello_protocol_say, HelloSay,
         void (C::*)(const char* req, char* out_response, size_t response_capacity));
 
+
 template <typename D>
 constexpr void CheckHelloProtocolSubclass() {
     static_assert(internal::has_hello_protocol_say<D>::value,
         "HelloProtocol subclasses must implement "
         "void HelloSay(const char* req, char* out_response, size_t response_capacity);");
+
 }
+
 
 } // namespace internal
 } // namespace ddk

@@ -176,5 +176,6 @@ constexpr void CheckAsyncPrimitiveProtocolSubclass() {
 
 }
 
+
 } // namespace internal
 } // namespace ddk

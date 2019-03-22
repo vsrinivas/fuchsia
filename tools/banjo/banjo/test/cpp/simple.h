@@ -122,15 +122,19 @@ public:
         ctx_ = nullptr;
         ops_ = nullptr;
     }
+
     void Draw(const point_t* p, direction_t d) const {
         ops_->draw(ctx_, p, d);
     }
+
     zx_status_t DrawLots(zx::vmo commands, point_t* out_p) const {
         return ops_->draw_lots(ctx_, commands.release(), out_p);
     }
+
     zx_status_t DrawArray(const point_t points[4]) const {
         return ops_->draw_array(ctx_, points);
     }
+
     void Describe(const char* one, char* out_two, size_t two_capacity) const {
         ops_->describe(ctx_, one, out_two, two_capacity);
     }

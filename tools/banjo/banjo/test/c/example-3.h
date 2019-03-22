@@ -7,20 +7,20 @@
 
 #pragma once
 
+
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS;
 
 // Forward declarations
-
 typedef struct point point_t;
 
 // Declarations
-
 struct point {
     int64_t x;
     int64_t y;
 };
+
 
 __END_CDECLS;

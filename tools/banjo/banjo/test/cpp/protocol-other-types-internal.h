@@ -219,5 +219,6 @@ constexpr void CheckInterfaceProtocolSubclass() {
 
 }
 
+
 } // namespace internal
 } // namespace ddk

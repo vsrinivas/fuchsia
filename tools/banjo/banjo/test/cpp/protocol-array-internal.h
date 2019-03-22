@@ -279,5 +279,6 @@ constexpr void CheckArrayofArraysProtocolSubclass() {
 
 }
 
+
 } // namespace internal
 } // namespace ddk

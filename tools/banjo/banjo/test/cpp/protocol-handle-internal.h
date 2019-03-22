@@ -274,5 +274,6 @@ constexpr void CheckAsyncHandleProtocolSubclass() {
 
 }
 
+
 } // namespace internal
 } // namespace ddk
