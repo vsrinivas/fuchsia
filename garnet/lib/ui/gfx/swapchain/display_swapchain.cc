@@ -90,7 +90,9 @@ DisplaySwapchain::DisplaySwapchain(DisplayManager* display_manager,
     frames_.resize(kSwapchainImageCount);
 
     if (!InitializeFramebuffers(escher_->resource_recycler())) {
-      FXL_LOG(ERROR) << "Initializing buffers for display swapchain failed.";
+      FXL_LOG(FATAL)
+          << "Initializing buffers for display swapchain failed - check "
+             "whether fuchsia.sysmem.Allocator is available in this sandbox";
     }
   } else {
     device_ = vk::Device();
@@ -159,14 +161,17 @@ bool DisplaySwapchain::InitializeFramebuffers(
     fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token =
         display_manager_->CreateBufferCollection();
     if (!local_token) {
+      FXL_LOG(ERROR) << "Sysmem tokens couldn't be allocated";
       return false;
     }
     zx_status_t status;
 
     auto tokens = DuplicateToken(local_token, 2);
 
-    if (tokens.empty())
+    if (tokens.empty()) {
+      FXL_LOG(ERROR) << "Sysmem tokens failed to be duped.";
       return false;
+    }
 
     // Set display buffer constraints.
     uint64_t display_collection_id =
