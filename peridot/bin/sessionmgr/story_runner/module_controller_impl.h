@@ -36,7 +36,6 @@ class ModuleControllerImpl : fuchsia::modular::ModuleController {
                        const fuchsia::modular::ModuleData* module_data,
                        fuchsia::sys::ServiceListPtr service_list,
                        fuchsia::ui::views::ViewToken view_token);
-
   ~ModuleControllerImpl() override;
 
   void Connect(

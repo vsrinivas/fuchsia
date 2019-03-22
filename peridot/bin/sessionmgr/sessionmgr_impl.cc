@@ -12,12 +12,15 @@
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
 
@@ -779,11 +782,11 @@ void SessionmgrImpl::RunSessionShell(
     Shutdown();
   });
 
-  fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
-  fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+  fuchsia::ui::app::ViewProviderPtr view_provider;
   session_shell_app_->services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateView(view_owner.NewRequest(), nullptr);
-  session_shell_view_host_->ConnectView(std::move(view_owner));
+  view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
+  session_shell_view_host_->ConnectView(std::move(view_holder_token.value));
 }
 
 void SessionmgrImpl::TerminateSessionShell(fit::function<void()> done) {

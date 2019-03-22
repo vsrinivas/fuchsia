@@ -4,16 +4,9 @@
 
 #include "peridot/bin/basemgr/presentation_container.h"
 
-#include <cmath>
-
-#include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <lib/fidl/cpp/interface_handle.h>
-#include <lib/fidl/cpp/interface_request.h>
 #include <lib/fxl/logging.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <cmath>
 
 #include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 
@@ -27,15 +20,13 @@ constexpr char kSwapSessionShellKeyboardBinding = ' ';
 
 PresentationContainer::PresentationContainer(
     fuchsia::ui::policy::Presenter* const presenter,
-    fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
+    fuchsia::ui::views::ViewHolderToken view_holder_token,
     const SessionShellSettings& shell_settings,
     fit::function<void()> on_swap_session_shell)
     : presenter_(presenter),
       on_swap_session_shell_(std::move(on_swap_session_shell)) {
-  presenter_->PresentView(scenic::ToViewHolderToken(zx::eventpair(
-                              view_owner.TakeChannel().release())),
+  presenter_->PresentView(std::move(view_holder_token),
                           presentation_state_.presentation.NewRequest());
-
   AddGlobalKeyboardShortcuts(presentation_state_.presentation);
 
   SetShadowTechnique(presentation_state_.shadow_technique);

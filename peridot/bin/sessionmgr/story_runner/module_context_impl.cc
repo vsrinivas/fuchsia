@@ -8,6 +8,7 @@
 
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fxl/strings/join_strings.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 #include "peridot/bin/sessionmgr/story/systems/story_visibility_system.h"
@@ -82,7 +83,8 @@ void ModuleContextImpl::EmbedModule(
   params.surface_relation = nullptr;
   params.is_embedded = true;
   story_controller_impl_->EmbedModule(
-      std::move(params), std::move(module_controller), std::move(view_owner),
+      std::move(params), std::move(module_controller),
+      scenic::ToViewToken(zx::eventpair(view_owner.TakeChannel().release())),
       std::move(callback));
 }
 

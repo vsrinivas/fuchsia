@@ -65,6 +65,7 @@ executable_package("sessionmgr") {
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/fidl/fuchsia.speech",
+    "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",

@@ -6,12 +6,10 @@
 #define PERIDOT_BIN_BASEMGR_PRESENTATION_CONTAINER_H_
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
-#include <lib/fidl/cpp/binding.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fxl/logging.h>
+#include <lib/fxl/macros.h>
 
 #include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 
@@ -26,7 +24,7 @@ class PresentationContainer : fuchsia::ui::policy::KeyboardCaptureListenerHACK {
   // (this is a hack to keep SwapSessionShell working).
   explicit PresentationContainer(
       fuchsia::ui::policy::Presenter* const presenter,
-      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
+      fuchsia::ui::views::ViewHolderToken view_holder_token,
       const SessionShellSettings& shell_settings,
       fit::function<void()> on_swap_session_shell);
 

@@ -4,24 +4,13 @@
 
 #include "peridot/bin/basemgr/basemgr_impl.h"
 
-#include <memory>
-
-#include <fuchsia/auth/cpp/fidl.h>
-#include <fuchsia/modular/auth/cpp/fidl.h>
-#include <fuchsia/modular/cpp/fidl.h>
-#include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
-#include <lib/async/cpp/future.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/fidl/cpp/interface_request.h>
-#include <lib/fidl/cpp/string.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/eventpair.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/session_provider.h"
@@ -95,25 +84,23 @@ void BasemgrImpl::StartBaseShell() {
 
   base_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       launcher_, CloneStruct(settings_.base_shell));
-  base_shell_app_->services().ConnectToService(base_shell_.NewRequest());
 
-  fuchsia::ui::viewsv1::ViewProviderPtr base_shell_view_provider;
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+
+  fuchsia::ui::app::ViewProviderPtr base_shell_view_provider;
   base_shell_app_->services().ConnectToService(
       base_shell_view_provider.NewRequest());
-
-  // We still need to pass a request for root view to base shell since
-  // dev_base_shell (which mimics flutter behavior) blocks until it receives
-  // the root view request.
-  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> root_view;
-  base_shell_view_provider->CreateView(root_view.NewRequest(), nullptr);
+  base_shell_view_provider->CreateView(std::move(view_token.value), nullptr,
+                                       nullptr);
 
   presentation_container_ = std::make_unique<PresentationContainer>(
-      presenter_.get(), std::move(root_view),
+      presenter_.get(), std::move(view_holder_token),
       /* shell_settings= */ GetActiveSessionShellSettings(),
       /* on_swap_session_shell= */ [this] { SwapSessionShell(); });
 
   // TODO(alexmin): Remove BaseShellParams.
   fuchsia::modular::BaseShellParams params;
+  base_shell_app_->services().ConnectToService(base_shell_.NewRequest());
   base_shell_->Initialize(base_shell_context_binding_.NewBinding(),
                           /* base_shell_params= */ std::move(params));
 
@@ -275,12 +262,9 @@ void BasemgrImpl::GetAuthenticationUIContext(
 void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
                           fuchsia::auth::TokenManagerPtr ledger_token_manager,
                           fuchsia::auth::TokenManagerPtr agent_token_manager) {
-  if (session_shell_view_owner_.is_bound()) {
-    session_shell_view_owner_.Unbind();
-  }
-  auto view_owner = session_shell_view_owner_.NewRequest();
+  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner;
 
-  session_provider_->StartSession(std::move(view_owner), std::move(account),
+  session_provider_->StartSession(view_owner.NewRequest(), std::move(account),
                                   std::move(ledger_token_manager),
                                   std::move(agent_token_manager));
 
@@ -296,7 +280,9 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
   // that enable presenter, and production code.
   if (!settings_.test || settings_.enable_presenter) {
     presentation_container_ = std::make_unique<PresentationContainer>(
-        presenter_.get(), std::move(session_shell_view_owner_),
+        presenter_.get(),
+        scenic::ToViewHolderToken(
+            zx::eventpair(view_owner.TakeChannel().release())),
         /* shell_settings= */ GetActiveSessionShellSettings(),
         /* on_swap_session_shell= */ [this] { SwapSessionShell(); });
   }

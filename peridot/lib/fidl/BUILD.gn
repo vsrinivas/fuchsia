@@ -98,8 +98,6 @@ source_set("single_service_app") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
-    "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/zx",
   ]

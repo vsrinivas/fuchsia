@@ -20,6 +20,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/fidl/cpp/binding.h>
@@ -114,8 +115,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
       AddModParams add_mod_params,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
           module_controller_request,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
+      fuchsia::ui::views::ViewToken view_token,
       fit::function<void(fuchsia::modular::StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl.

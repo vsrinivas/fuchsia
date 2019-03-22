@@ -14,7 +14,6 @@
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/connect.h>
@@ -30,6 +29,8 @@
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/join_strings.h>
 #include <lib/fxl/strings/split_string.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/eventpair.h>
 
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
@@ -369,10 +370,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     operation_queue_.Add(std::make_unique<LaunchModuleCall>(
         story_controller_impl_, fidl::Clone(module_data_),
         std::move(module_controller_request_),
-        fuchsia::ui::views::ViewToken({
-            .value =
-                zx::eventpair(view_owner_.NewRequest().TakeChannel().release()),
-        }),
+        scenic::ToViewToken(
+            zx::eventpair(view_owner_.NewRequest().TakeChannel().release())),
         [this, flow] { LoadModuleManifest(flow); }));
     view_owner_.set_error_handler([module_url =
                                        module_data_.module_url](zx_status_t) {
@@ -996,19 +995,18 @@ class StoryControllerImpl::UpdateSnapshotCall : public Operation<> {
 
 class StoryControllerImpl::StartSnapshotLoaderCall : public Operation<> {
  public:
-  StartSnapshotLoaderCall(
-      StoryControllerImpl* const story_controller_impl,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request)
+  StartSnapshotLoaderCall(StoryControllerImpl* const story_controller_impl,
+                          fuchsia::ui::views::ViewToken view_token)
       : Operation("StoryControllerImpl::StartSnapshotLoaderCall", [] {}),
         story_controller_impl_(story_controller_impl),
-        request_(std::move(request)) {}
+        view_token_(std::move(view_token)) {}
 
  private:
   void Run() override {
     FlowToken flow{this};
 
     story_controller_impl_->story_provider_impl_->StartSnapshotLoader(
-        std::move(request_),
+        std::move(view_token_),
         story_controller_impl_->snapshot_loader_.NewRequest());
 
     story_controller_impl_->session_storage_
@@ -1027,7 +1025,7 @@ class StoryControllerImpl::StartSnapshotLoaderCall : public Operation<> {
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
-  fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> request_;
+  fuchsia::ui::views::ViewToken view_token_;
 };
 
 StoryControllerImpl::StoryControllerImpl(
@@ -1183,15 +1181,11 @@ void StoryControllerImpl::EmbedModule(
     AddModParams add_mod_params,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
         module_controller_request,
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
+    fuchsia::ui::views::ViewToken view_token,
     fit::function<void(fuchsia::modular::StartModuleStatus)> callback) {
   operation_queue_.Add(std::make_unique<AddIntentCall>(
       this, std::move(add_mod_params), std::move(module_controller_request),
-      fuchsia::ui::views::ViewToken({
-          .value = zx::eventpair(view_owner_request.TakeChannel().release()),
-      }),
-      std::move(callback)));
+      std::move(view_token), std::move(callback)));
 }
 
 void StoryControllerImpl::AddModuleToStory(
@@ -1310,8 +1304,9 @@ void StoryControllerImpl::TakeAndLoadSnapshot(
   // Currently we start a new snapshot view on every TakeAndLoadSnapshot
   // invocation. We can optimize later by connecting the snapshot loader on
   // start and re-using it for the lifetime of the story.
-  operation_queue_.Add(
-      std::make_unique<StartSnapshotLoaderCall>(this, std::move(request)));
+  operation_queue_.Add(std::make_unique<StartSnapshotLoaderCall>(
+      this,
+      scenic::ToViewToken(zx::eventpair(request.TakeChannel().release()))));
   operation_queue_.Add(
       std::make_unique<UpdateSnapshotCall>(this, std::move(done)));
 }
@@ -1374,11 +1369,14 @@ void StoryControllerImpl::GetLink(
 
 void StoryControllerImpl::StartStoryShell() {
   fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
-  auto view_request = view_owner.NewRequest();
-  story_provider_impl_->AttachView(story_id_, std::move(view_owner));
 
   story_shell_holder_ = story_provider_impl_->StartStoryShell(
-      story_id_, std::move(view_request), story_shell_.NewRequest());
+      story_id_,
+      scenic::ToViewToken(
+          zx::eventpair(view_owner.NewRequest().TakeChannel().release())),
+      story_shell_.NewRequest());
+
+  story_provider_impl_->AttachView(story_id_, std::move(view_owner));
 
   fuchsia::modular::StoryShellContextPtr story_shell_context;
   story_shell_context_impl_.Connect(story_shell_context.NewRequest());

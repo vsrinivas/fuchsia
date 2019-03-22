@@ -13,13 +13,10 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <fuchsia/wlan/service/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fxl/macros.h>
@@ -168,8 +165,6 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   bool base_shell_running_{};
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> base_shell_app_;
   fuchsia::modular::BaseShellPtr base_shell_;
-
-  fuchsia::ui::viewsv1token::ViewOwnerPtr session_shell_view_owner_;
 
   AsyncHolder<SessionProvider> session_provider_;
 

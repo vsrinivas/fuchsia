@@ -14,6 +14,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
@@ -116,8 +117,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
 
   // Called by StoryControllerImpl.
   std::unique_ptr<AsyncHolderBase> StartStoryShell(
-      fidl::StringPtr story_id,
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_request,
+      fidl::StringPtr story_id, fuchsia::ui::views::ViewToken view_token,
       fidl::InterfaceRequest<fuchsia::modular::StoryShell> story_shell_request);
 
   // Called by StoryControllerImpl.
@@ -133,8 +133,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
   // fuchsia::modular::FocusProvider
   void RequestStoryFocus(fidl::StringPtr story_id);
 
-  // Called by StoryControllerImpl. Sends, using AttachView(), the view of the
-  // story identified by |story_id| to the current session shell.
+  // Called by StoryControllerImpl. Sends, using AttachView(), a token for the
+  // view of the story identified by |story_id| to the current session shell.
   void AttachView(fidl::StringPtr story_id,
                   fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner);
 
@@ -165,11 +165,10 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider,
                     fit::function<void(fuchsia::mem::Buffer)> callback);
 
   // Called by StoryControllerImpl. Creates a new view with the given
-  // |view_owner_request| and connects the snapshot loader with the given
+  // |view_token| and connects the snapshot loader with the given
   // |loader_request|.
   void StartSnapshotLoader(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-          view_owner_request,
+      fuchsia::ui::views::ViewToken view_token,
       fidl::InterfaceRequest<fuchsia::scenic::snapshot::Loader> loader_request);
 
   // Creates an entity with the specified |type| and |data| in the story with

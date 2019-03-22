@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <fuchsia/scenic/snapshot/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/array.h>
@@ -390,10 +390,9 @@ void StoryProviderImpl::Watch(
   for (const auto& item : story_runtime_containers_) {
     const auto& container = item.second;
     FXL_CHECK(container.current_data->has_story_info());
-    watcher_ptr->OnChange(
-        CloneStruct(container.current_data->story_info()),
-        container.model_observer->model().runtime_state(),
-        container.model_observer->model().visibility_state());
+    watcher_ptr->OnChange(CloneStruct(container.current_data->story_info()),
+                          container.model_observer->model().runtime_state(),
+                          container.model_observer->model().visibility_state());
   }
   watchers_.AddInterfacePtr(std::move(watcher_ptr));
 }
@@ -412,8 +411,7 @@ void StoryProviderImpl::WatchActivity(
 }
 
 std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
-    fidl::StringPtr story_id,
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_request,
+    fidl::StringPtr story_id, fuchsia::ui::views::ViewToken view_token,
     fidl::InterfaceRequest<fuchsia::modular::StoryShell> story_shell_request) {
   // When we're supplied a StoryShellFactory, use it to get StoryShells instead
   // of launching the story shell as a separate component. In this case, there
@@ -434,12 +432,12 @@ std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
 
   // TODO(SCN-1019): This is a temporary hack to cache the endpoint ID of the
   // view so that framework can make snapshot requests.
-  view_endpoints_[story_id] = fsl::GetKoid(view_request.channel().get());
+  view_endpoints_[story_id] = fsl::GetKoid(view_token.value.get());
 
-  fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
+  fuchsia::ui::app::ViewProviderPtr view_provider;
   preloaded_story_shell_app_->services().ConnectToService(
       view_provider.NewRequest());
-  view_provider->CreateView(std::move(view_request), nullptr);
+  view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
   preloaded_story_shell_app_->services().ConnectToService(
       std::move(story_shell_request));
@@ -798,8 +796,7 @@ void StoryProviderImpl::TakeSnapshot(
 }
 
 void StoryProviderImpl::StartSnapshotLoader(
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
-        view_owner_request,
+    fuchsia::ui::views::ViewToken view_token,
     fidl::InterfaceRequest<fuchsia::scenic::snapshot::Loader> loader_request) {
   if (!snapshot_loader_app_) {
     fuchsia::modular::AppConfig snapshot_loader_config;
@@ -812,10 +809,10 @@ void StoryProviderImpl::StartSnapshotLoader(
   }
 
   fuchsia::sys::ServiceProviderPtr service_provider;
-  fuchsia::ui::viewsv1::ViewProviderPtr view_provider;
+  fuchsia::ui::app::ViewProviderPtr view_provider;
   snapshot_loader_app_->services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateView(std::move(view_owner_request),
-                            service_provider.NewRequest());
+  view_provider->CreateView(std::move(view_token.value),
+                            service_provider.NewRequest(), nullptr);
 
   service_provider->ConnectToService(fuchsia::scenic::snapshot::Loader::Name_,
                                      loader_request.TakeChannel());
