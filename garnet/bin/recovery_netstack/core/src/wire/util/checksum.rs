@@ -11,9 +11,62 @@
 //!
 //! [RFC 1071]: https://tools.ietf.org/html/rfc1071
 
-use byteorder::{ByteOrder, NetworkEndian};
 #[cfg(target_arch = "x86_64")]
 use std::arch::x86_64;
+use std::convert::TryInto;
+
+use byteorder::{ByteOrder, NetworkEndian};
+use specialize_ip_macro::specialize_ip_address;
+
+use crate::ip::{IpAddress, IpProto};
+
+/// Compute the checksum used by TCP and UDP.
+///
+/// `compute_transport_checksum` computes the checksum used by TCP and UDP. For
+/// IPv4, the total packet length must fit in a `u16`, and for IPv6, a `u32`. If
+/// the provided packet is too big, `compute_transport_checksum` returns `None`.
+#[specialize_ip_address]
+pub(crate) fn compute_transport_checksum<A: IpAddress>(
+    src_ip: A,
+    dst_ip: A,
+    proto: IpProto,
+    packet: &[u8],
+) -> Option<u16> {
+    // See for details:
+    // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation
+    #[ipv4addr]
+    let pseudo_header = {
+        // 4 bytes for src_ip + 4 bytes for dst_ip + 1 byte of zeros + 1 byte
+        // for protocol + 2 bytes for total_len
+        let mut pseudo_header = [0u8; 12];
+        (&mut pseudo_header[..4]).copy_from_slice(src_ip.bytes());
+        (&mut pseudo_header[4..8]).copy_from_slice(dst_ip.bytes());
+        pseudo_header[9] = proto.into();
+        NetworkEndian::write_u16(&mut pseudo_header[10..12], packet.len().try_into().ok()?);
+        pseudo_header
+    };
+
+    #[ipv6addr]
+    let pseudo_header = {
+        // 16 bytes for src_ip + 16 bytes for dst_ip + 4 bytes for total_len + 3
+        // bytes of zeroes + 1 byte for next header
+        let mut pseudo_header = [0u8; 40];
+        (&mut pseudo_header[..16]).copy_from_slice(src_ip.bytes());
+        (&mut pseudo_header[16..32]).copy_from_slice(dst_ip.bytes());
+        NetworkEndian::write_u32(&mut pseudo_header[32..36], packet.len().try_into().ok()?);
+        pseudo_header[39] = proto.into();
+        pseudo_header
+    };
+
+    let mut checksum = Checksum::new();
+    // add_bytes contains some branching logic at the beginning which is a bit
+    // more expensive than the main loop of the algorithm. In order to make sure
+    // we go through that logic as few times as possible, we construct the
+    // entire pseudo-header first, and then add it to the checksum all at once.
+    checksum.add_bytes(&pseudo_header[..]);
+    checksum.add_bytes(packet);
+    Some(checksum.checksum())
+}
 
 // TODO(joshlf):
 // - Speed this up by only doing the endianness swap at the end as described

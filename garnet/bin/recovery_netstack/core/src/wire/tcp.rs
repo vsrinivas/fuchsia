@@ -15,15 +15,15 @@ use packet::{
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 
 use crate::error::{ParseError, ParseResult};
-use crate::ip::{Ip, IpAddress, IpProto};
+use crate::ip::{IpAddress, IpProto};
 use crate::transport::tcp::TcpOption;
-use crate::wire::util::checksum::Checksum;
+use crate::wire::util::checksum::compute_transport_checksum;
 use crate::wire::util::records::options::Options;
-use crate::wire::util::{fits_in_u16, fits_in_u32};
 
 use self::options::TcpOptionsImpl;
 
 const HDR_PREFIX_LEN: usize = 20;
+const CHECKSUM_OFFSET: usize = 16;
 pub(crate) const TCP_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
 #[cfg(test)]
 pub(crate) const TCP_MAX_HDR_LEN: usize = 60;
@@ -94,6 +94,13 @@ impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, TcpParseArgs<A>> for TcpSegme
     fn parse<BV: BufferView<B>>(mut buffer: BV, args: TcpParseArgs<A>) -> ParseResult<Self> {
         // See for details: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
 
+        let checksum =
+            compute_transport_checksum(args.src_ip, args.dst_ip, IpProto::Tcp, buffer.as_ref())
+                .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?;
+        if checksum != 0 {
+            return debug_err!(Err(ParseError::Checksum), "invalid checksum");
+        }
+
         let hdr_prefix = buffer
             .take_obj_front::<HeaderPrefix>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
@@ -115,14 +122,6 @@ impl<B: ByteSlice, A: IpAddress> ParsablePacket<B, TcpParseArgs<A>> for TcpSegme
             return debug_err!(Err(ParseError::Format), "zero source or destination port");
         }
 
-        let checksum = NetworkEndian::read_u16(&segment.hdr_prefix.checksum);
-        if segment
-            .compute_checksum(args.src_ip, args.dst_ip)
-            .ok_or_else(debug_err_fn!(ParseError::Format, "segment too large"))?
-            != checksum
-        {
-            return debug_err!(Err(ParseError::Checksum), "invalid checksum");
-        }
         Ok(segment)
     }
 }
@@ -131,41 +130,6 @@ impl<B: ByteSlice> TcpSegment<B> {
     /// Iterate over the TCP header options.
     pub(crate) fn iter_options<'a>(&'a self) -> impl 'a + Iterator<Item = TcpOption> {
         self.options.iter()
-    }
-
-    // Compute the TCP checksum, skipping the checksum field itself. Returns
-    // None if the segment size is too large.
-    fn compute_checksum<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> Option<u16> {
-        // See for details: https://en.wikipedia.org/wiki/Transmission_Control_Protocol#Checksum_computation
-        let mut checksum = Checksum::new();
-        checksum.add_bytes(src_ip.bytes());
-        checksum.add_bytes(dst_ip.bytes());
-        let total_len = self.total_segment_len();
-        if A::Version::VERSION.is_v4() {
-            checksum.add_bytes(&[0, IpProto::Tcp.into()]);
-            // For IPv4, the "TCP length" field in the pseudo-header is 16 bits.
-            if !fits_in_u16(total_len) {
-                return None;
-            }
-            let mut l = [0; 2];
-            NetworkEndian::write_u16(&mut l, total_len as u16);
-            checksum.add_bytes(&l);
-        } else {
-            // For IPv6, the "TCP length" field in the pseudo-header is 32 bits.
-            if !fits_in_u32(total_len) {
-                return None;
-            }
-            let mut l = [0; 4];
-            NetworkEndian::write_u32(&mut l, total_len as u32);
-            checksum.add_bytes(&l);
-            checksum.add_bytes(&[0, 0, 0, IpProto::Tcp.into()]);
-        }
-        // the checksum is at bytes 16 and 17; skip it
-        checksum.add_bytes(&self.hdr_prefix.bytes()[..16]);
-        checksum.add_bytes(&self.hdr_prefix.bytes()[18..]);
-        checksum.add_bytes(self.options.bytes());
-        checksum.add_bytes(&self.body);
-        Some(checksum.checksum())
     }
 
     /// The segment body.
@@ -262,7 +226,7 @@ impl<B: ByteSlice> TcpSegment<B> {
 // always has a valid checksum.
 
 /// A builder for TCP segments.
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub(crate) struct TcpSegmentBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
@@ -346,8 +310,9 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         // implements BufferViewMut, giving us take_obj_xxx_zero methods
         let mut header = &mut header;
 
-        // SECURITY: Use _zero constructor to ensure we zero memory to prevent
-        // leaking information from packets previously stored in this buffer.
+        // SECURITY: Use _zero constructor to ensure we zero memory to
+        // prevent leaking information from packets previously stored in
+        // this buffer.
         let hdr_prefix =
             header.take_obj_front_zero::<HeaderPrefix>().expect("too few bytes for TCP header");
         // create a 0-byte slice for the options since we don't support
@@ -360,25 +325,31 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         NetworkEndian::write_u16(&mut segment.hdr_prefix.dst_port, self.dst_port);
         NetworkEndian::write_u32(&mut segment.hdr_prefix.seq_num, self.seq_num);
         NetworkEndian::write_u32(&mut segment.hdr_prefix.ack, self.ack_num);
-        // Data Offset is hard-coded to 5 until we support serializing options
+        // Data Offset is hard-coded to 5 until we support serializing
+        // options.
         NetworkEndian::write_u16(
             &mut segment.hdr_prefix.data_offset_reserved_flags,
             (5u16 << 12) | self.flags,
         );
         NetworkEndian::write_u16(&mut segment.hdr_prefix.window_size, self.window_size);
-        // we don't support setting the Urgent Pointer
+        // We don't support setting the Urgent Pointer.
         NetworkEndian::write_u16(&mut segment.hdr_prefix.urg_ptr, 0);
+        // Initialize the checksum to 0 so that we will get the correct
+        // value when we compute it below.
+        NetworkEndian::write_u16(&mut segment.hdr_prefix.checksum, 0);
 
-        let segment_len = segment.total_segment_len();
-        // This ignores the checksum field in the header, so it's fine that we
-        // haven't set it yet, and so it could be filled with arbitrary bytes.
-        let checksum = segment.compute_checksum(self.src_ip, self.dst_ip).unwrap_or_else(|| {
-            panic!(
-                "total TCP segment length of {} bytes overflows length field of pseudo-header",
-                segment_len
-            )
-        });
-        NetworkEndian::write_u16(&mut segment.hdr_prefix.checksum, checksum);
+        // NOTE: We stop using segment at this point so that it no longer
+        // borrows the buffer, and we can use the buffer directly.
+        let segment_len = buffer.as_ref().len();
+        let checksum =
+            compute_transport_checksum(self.src_ip, self.dst_ip, IpProto::Tcp, buffer.as_ref())
+                .unwrap_or_else(|| {
+                    panic!(
+                    "total TCP segment length of {} bytes overflows length field of pseudo-header",
+                    segment_len
+                )
+                });
+        NetworkEndian::write_u16(&mut buffer.as_mut()[CHECKSUM_OFFSET..], checksum);
     }
 }
 
@@ -560,8 +531,16 @@ mod tests {
     #[test]
     fn test_parse_error() {
         // Assert that parsing a particular header prefix results in an error.
+        // This function is responsible for ensuring that the checksum is
+        // correct so that checksum errors won't hide the errors we're trying to
+        // test.
         fn assert_header_err(hdr_prefix: HeaderPrefix, err: ParseError) {
             let mut buf = &mut hdr_prefix_to_bytes(hdr_prefix)[..];
+            NetworkEndian::write_u16(&mut buf[CHECKSUM_OFFSET..], 0);
+            let checksum =
+                compute_transport_checksum(TEST_SRC_IPV4, TEST_DST_IPV4, IpProto::Tcp, buf)
+                    .unwrap();
+            NetworkEndian::write_u16(&mut buf[CHECKSUM_OFFSET..], checksum);
             assert_eq!(
                 buf.parse_with::<_, TcpSegment<_>>(TcpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4))
                     .unwrap_err(),
@@ -674,5 +653,53 @@ mod tests {
             .encapsulate(new_builder(TEST_SRC_IPV6, TEST_DST_IPV6))
             .serialize_outer()
             .unwrap();
+    }
+}
+
+#[cfg(all(test, feature = "benchmark"))]
+mod benchmarks {
+    use std::num::NonZeroU16;
+
+    use packet::{ParseBuffer, Serializer};
+    use test::{black_box, Bencher};
+
+    use super::*;
+    use crate::ip::Ipv4;
+    use crate::testutil::parse_ip_packet_in_ethernet_frame;
+
+    #[bench]
+    fn bench_parse(b: &mut Bencher) {
+        use crate::wire::testdata::tls_client_hello::*;
+        let bytes = parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME_BYTES).unwrap().0;
+
+        b.iter(|| {
+            let mut buf = bytes;
+            black_box(
+                black_box(buf)
+                    .parse_with::<_, TcpSegment<_>>(TcpParseArgs::new(IP_SRC_IP, IP_DST_IP))
+                    .unwrap(),
+            );
+        })
+    }
+
+    #[bench]
+    fn bench_serialize(b: &mut Bencher) {
+        use crate::wire::testdata::tls_client_hello::*;
+
+        let builder = TcpSegmentBuilder::new(
+            IP_SRC_IP,
+            IP_DST_IP,
+            NonZeroU16::new(TCP_SRC_PORT).unwrap(),
+            NonZeroU16::new(TCP_DST_PORT).unwrap(),
+            0,
+            None,
+            0,
+        );
+        let mut buf = vec![0; builder.header_len() + TCP_BODY.len()];
+        buf[builder.header_len()..].copy_from_slice(TCP_BODY);
+
+        b.iter(|| {
+            black_box(black_box((&mut buf[..]).encapsulate(builder.clone())).serialize_outer());
+        })
     }
 }
