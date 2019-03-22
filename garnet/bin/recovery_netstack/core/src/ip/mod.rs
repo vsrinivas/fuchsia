@@ -24,6 +24,7 @@ use packet::{
 use specialize_ip_macro::specialize_ip_address;
 
 use crate::device::{DeviceId, FrameDestination};
+use crate::error::ExistsError;
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::{Context, EventDispatcher};
 
@@ -368,34 +369,36 @@ fn lookup_route<A: IpAddress>(state: &IpLayerState, dst_ip: A) -> Option<Destina
     return state.v6.table.lookup(dst_ip);
 }
 
-/// Add a route to the forwarding table.
+/// Add a route to the forwarding table, returning `Err` if the subnet
+/// is already in the table.
 #[specialize_ip_address]
 pub(crate) fn add_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     next_hop: A,
-) {
+) -> Result<(), ExistsError> {
     let state = &mut ctx.state_mut().ip;
 
     #[ipv4addr]
-    state.v4.table.add_route(subnet, next_hop);
+    return state.v4.table.add_route(subnet, next_hop);
     #[ipv6addr]
-    state.v6.table.add_route(subnet, next_hop);
+    return state.v6.table.add_route(subnet, next_hop);
 }
 
-/// Add a device route to the forwarding table.
+/// Add a device route to the forwarding table, returning `Err` if the
+/// subnet is already in the table.
 #[specialize_ip_address]
 pub(crate) fn add_device_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     device: DeviceId,
-) {
+) -> Result<(), ExistsError> {
     let state = &mut ctx.state_mut().ip;
 
     #[ipv4addr]
-    state.v4.table.add_device_route(subnet, device);
+    return state.v4.table.add_device_route(subnet, device);
     #[ipv6addr]
-    state.v6.table.add_device_route(subnet, device);
+    return state.v6.table.add_device_route(subnet, device);
 }
 
 /// Return the routes for the provided `IpAddress` type

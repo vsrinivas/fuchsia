@@ -52,14 +52,32 @@ pub(crate) struct ForwardingTable<I: Ip> {
 }
 
 impl<I: Ip> ForwardingTable<I> {
-    pub(crate) fn add_route(&mut self, subnet: Subnet<I::Addr>, next_hop: I::Addr) {
+    pub(crate) fn add_route(
+        &mut self,
+        subnet: Subnet<I::Addr>,
+        next_hop: I::Addr,
+    ) -> Result<(), ExistsError> {
         debug!("adding route: {} -> {}", subnet, next_hop);
-        self.entries.push(Entry { subnet, dest: EntryDest::Remote { next_hop } });
+        if self.entries.iter().any(|entry| entry.subnet == subnet) {
+            Err(ExistsError)
+        } else {
+            self.entries.push(Entry { subnet, dest: EntryDest::Remote { next_hop } });
+            Ok(())
+        }
     }
 
-    pub(crate) fn add_device_route(&mut self, subnet: Subnet<I::Addr>, device: DeviceId) {
+    pub(crate) fn add_device_route(
+        &mut self,
+        subnet: Subnet<I::Addr>,
+        device: DeviceId,
+    ) -> Result<(), ExistsError> {
         debug!("adding device route: {} -> {}", subnet, device);
-        self.entries.push(Entry { subnet, dest: EntryDest::Local { device } });
+        if self.entries.iter().any(|entry| entry.subnet == subnet) {
+            Err(ExistsError)
+        } else {
+            self.entries.push(Entry { subnet, dest: EntryDest::Local { device } });
+            Ok(())
+        }
     }
 
     /// Look up an address in the table.

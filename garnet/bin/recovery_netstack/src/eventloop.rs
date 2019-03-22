@@ -105,8 +105,8 @@ use log::{error, info};
 use netstack_core::{
     add_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout, receive_frame,
     set_ip_addr_subnet, AddrSubnet, AddrSubnetEither, Context, DeviceId,
-    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, Mac, StackState, Subnet,
-    SubnetEither, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
+    DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, Mac, NetstackError,
+    StackState, Subnet, SubnetEither, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
 };
 
 /// The message that is sent to the main event loop to indicate that an
@@ -536,9 +536,22 @@ impl EventLoop {
                         fidl_net_ext::IpAddress::from(entry.subnet.addr).0.into(),
                         entry.subnet.prefix_len,
                     ) {
-                        add_device_route(&mut self.ctx, subnet, device_id);
+                        match add_device_route(&mut self.ctx, subnet, device_id) {
+                            Ok(_) => None,
+                            Err(NetstackError::Exists) => {
+                                // Subnet already in routing table.
+                                Some(fidl_net_stack::Error {
+                                    type_: fidl_net_stack::ErrorType::AlreadyExists,
+                                })
+                            }
+                            Err(_) => unreachable!(),
+                        }
+                    } else {
+                        // Invalid subnet
+                        Some(fidl_net_stack::Error {
+                            type_: fidl_net_stack::ErrorType::InvalidArgs,
+                        })
                     }
-                    None
                 } else {
                     // Invalid device ID
                     Some(fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::NotFound })

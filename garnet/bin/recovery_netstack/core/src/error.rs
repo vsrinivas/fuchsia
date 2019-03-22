@@ -14,17 +14,21 @@ pub(crate) type ParseResult<T> = std::result::Result<T, ParseError>;
 
 /// Top-level error type the netstack.
 #[derive(Fail, Debug)]
-pub(crate) enum NetstackError {
+pub enum NetstackError {
     #[fail(display = "{}", _0)]
     /// Errors related to packet parsing.
     Parse(#[cause] ParseError),
+
+    /// Error when item already exists.
+    #[fail(display = "Item already exists")]
+    Exists,
     // Add error types here as we add more to the stack
 }
 
 /// Error type for packet parsing.
 #[derive(Fail, Debug, PartialEq)]
 #[allow(missing_docs)]
-pub(crate) enum ParseError {
+pub enum ParseError {
     #[fail(display = "Operation is not supported")]
     NotSupported,
     #[fail(display = "Operation was not expected in this context")]
@@ -33,4 +37,14 @@ pub(crate) enum ParseError {
     Checksum,
     #[fail(display = "Packet is not formatted properly")]
     Format,
+}
+
+/// Error when something exists unexpectedly, such as trying to add an
+/// element when the element is already present.
+pub(crate) struct ExistsError;
+
+impl From<ExistsError> for NetstackError {
+    fn from(_: ExistsError) -> NetstackError {
+        NetstackError::Exists
+    }
 }

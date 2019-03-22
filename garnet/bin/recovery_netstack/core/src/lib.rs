@@ -36,6 +36,7 @@ mod wire;
 pub use crate::device::{
     ethernet::Mac, get_ip_addr_subnet, receive_frame, DeviceId, DeviceLayerEventDispatcher,
 };
+pub use crate::error::NetstackError;
 pub use crate::ip::{AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, Subnet, SubnetEither};
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
@@ -227,8 +228,9 @@ pub fn add_device_route<D: EventDispatcher>(
     ctx: &mut Context<D>,
     subnet: SubnetEither,
     device: DeviceId,
-) {
-    map_addr_version!(SubnetEither, subnet, crate::ip::add_device_route(ctx, subnet, device));
+) -> Result<(), error::NetstackError> {
+    map_addr_version!(SubnetEither, subnet, crate::ip::add_device_route(ctx, subnet, device))
+        .map_err(From::from)
 }
 
 /// Get all the routes.

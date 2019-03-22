@@ -389,7 +389,7 @@ impl DummyEventDispatcherBuilder {
             match subnet {
                 SubnetEither::V4(subnet) => crate::ip::add_device_route(&mut ctx, subnet, device),
                 SubnetEither::V6(subnet) => crate::ip::add_device_route(&mut ctx, subnet, device),
-            }
+            };
         }
         for (subnet, next_hop) in routes {
             match (subnet, next_hop) {
@@ -400,7 +400,7 @@ impl DummyEventDispatcherBuilder {
                     crate::ip::add_route(&mut ctx, subnet, next_hop)
                 }
                 _ => unreachable!(),
-            }
+            };
         }
 
         ctx
