@@ -4,11 +4,12 @@
 
 declare_args() {
   # Maximum number of CPUs the kernel will run on (others will be ignored).
-  smp_max_cpus = 16
+  smp_max_cpus = 32
 
   if (current_cpu == "arm64") {
     # Maximum number of CPU clusters the kernel will support.
     # The kernel will panic at boot on hardware with more clusters.
+    smp_max_cpus = 16
     smp_max_clusters = 2
   }
 
