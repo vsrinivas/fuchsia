@@ -133,13 +133,13 @@ static zx_status_t mmc_switch_freq(sdmmc_device_t* dev, uint32_t new_freq) {
 }
 
 static zx_status_t mmc_decode_cid(sdmmc_device_t* dev, const uint8_t* raw_cid) {
-    printf("mmc: product name=%c%c%c%c%c%c\n",
+    zxlogf(INFO, "mmc: product name=%c%c%c%c%c%c\n",
             raw_cid[MMC_CID_PRODUCT_NAME_START], raw_cid[MMC_CID_PRODUCT_NAME_START + 1],
             raw_cid[MMC_CID_PRODUCT_NAME_START + 2], raw_cid[MMC_CID_PRODUCT_NAME_START + 3],
             raw_cid[MMC_CID_PRODUCT_NAME_START + 4], raw_cid[MMC_CID_PRODUCT_NAME_START + 5]);
-    printf("       revision=%u.%u\n", (raw_cid[MMC_CID_REVISION] >> 4) & 0xf,
+    zxlogf(INFO, "       revision=%u.%u\n", (raw_cid[MMC_CID_REVISION] >> 4) & 0xf,
             raw_cid[MMC_CID_REVISION] & 0xf);
-    printf("       serial=%u\n", *((uint32_t*)&raw_cid[MMC_CID_SERIAL]));
+    zxlogf(INFO, "       serial=%u\n", *((uint32_t*)&raw_cid[MMC_CID_SERIAL]));
     return ZX_OK;
 }
 

@@ -142,7 +142,7 @@ zx_status_t sdmmc_probe_sd(sdmmc_device_t* dev) {
     dev->block_info.block_count = (c_size + 1ul) * 1024ul;
     dev->block_info.block_size = 512ul;
     dev->capacity = dev->block_info.block_size * dev->block_info.block_count;
-    printf("sd: found card with capacity = %"PRIu64"B\n", dev->capacity);
+    zxlogf(INFO, "sd: found card with capacity = %"PRIu64"B\n", dev->capacity);
 
     if ((st = sd_select_card(dev)) != ZX_OK) {
         zxlogf(ERROR, "sd: SELECT_CARD failed with retcode = %d\n", st);
