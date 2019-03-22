@@ -56,7 +56,7 @@ to indicate the handler is finished processing the exception.
 ```cpp
   while (true) {
     zx_port_packet_t packet;
-    auto status = zx_port_wait(eport, ZX_TIME_INFINITE, packet);
+    auto status = zx_port_wait(eport, ZX_TIME_INFINITE, &packet);
     // ... check status ...
     if (packet.key != child_key) {
       // ... do something else, depending on what else the port is used for ...
