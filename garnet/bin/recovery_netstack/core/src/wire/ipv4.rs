@@ -15,7 +15,6 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProto, Ipv4Addr, Ipv4Option};
 use crate::wire::util::checksum::Checksum;
-use crate::wire::util::fits_in_u16;
 use crate::wire::util::records::options::Options;
 
 use self::options::Ipv4OptionsImpl;
@@ -399,7 +398,7 @@ impl PacketBuilder for Ipv4PacketBuilder {
         // fine because, with debug assertions disabled, we'll just write an
         // incorrect header value, which is acceptable if the caller has
         // violated their contract.
-        debug_assert!(fits_in_u16(packet.total_packet_len()));
+        debug_assert!(packet.total_packet_len() <= std::u16::MAX as usize);
         let total_len = packet.total_packet_len() as u16;
         NetworkEndian::write_u16(&mut packet.hdr_prefix.total_len, total_len);
         NetworkEndian::write_u16(&mut packet.hdr_prefix.id, self.id);

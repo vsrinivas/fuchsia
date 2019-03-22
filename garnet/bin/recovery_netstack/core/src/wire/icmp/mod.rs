@@ -19,7 +19,7 @@ pub(crate) use self::icmpv4::*;
 pub(crate) use self::icmpv6::*;
 
 use std::cmp;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug};
 use std::marker::PhantomData;
 use std::mem;
@@ -34,7 +34,6 @@ use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddress, IpProto, Ipv4, Ipv6};
 use crate::wire::ipv4;
 use crate::wire::util::checksum::Checksum;
-use crate::wire::util::fits_in_u32;
 use crate::wire::util::records::options::{Options, OptionsImpl};
 
 #[derive(Default, Debug, FromBytes, AsBytes, Unaligned)]
@@ -433,12 +432,8 @@ impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
             c.add_bytes(src_ip.bytes());
             c.add_bytes(dst_ip.bytes());
             let icmpv6_len = mem::size_of::<Header>() + message.len() + message_body.len();
-            // For IPv6, the "ICMPv6 length" field in the pseudo-header is 32 bits.
-            if !fits_in_u32(icmpv6_len) {
-                return None;
-            }
             let mut len_bytes = [0; 4];
-            NetworkEndian::write_u32(&mut len_bytes, icmpv6_len as u32);
+            NetworkEndian::write_u32(&mut len_bytes, icmpv6_len.try_into().ok()?);
             c.add_bytes(&len_bytes[..]);
             c.add_bytes(&[0, 0, 0]);
             c.add_bytes(&[IpProto::Icmpv6.into()]);

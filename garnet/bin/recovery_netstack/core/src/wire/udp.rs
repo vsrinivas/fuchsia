@@ -4,6 +4,7 @@
 
 //! Parsing and serialization of UDP packets.
 
+use std::convert::TryInto;
 #[cfg(test)]
 use std::fmt::{self, Debug, Formatter};
 use std::num::NonZeroU16;
@@ -17,7 +18,6 @@ use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{Ip, IpAddress, IpProto};
 use crate::wire::util::checksum::compute_transport_checksum;
-use crate::wire::util::fits_in_u16;
 
 pub(crate) const HEADER_BYTES: usize = 8;
 const LENGTH_OFFSET: usize = 4;
@@ -278,17 +278,16 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
         packet.header.set_src_port(self.src_port.map(NonZeroU16::get).unwrap_or(0));
         packet.header.set_dst_port(self.dst_port.get());
         let total_len = packet.total_packet_len();
-        let len_field = if fits_in_u16(total_len) {
-            total_len as u16
-        } else if A::Version::VERSION.is_v6() {
-            // See comment in max_body_len
-            0u16
-        } else {
-            panic!(
+        let len_field = total_len.try_into().unwrap_or_else(|_| {
+            if A::Version::VERSION.is_v6() {
+                // See comment in max_body_len
+                0u16
+            } else {
+                panic!(
                 "total UDP packet length of {} bytes overflows 16-bit length field of UDP header",
-                total_len
-            );
-        };
+                total_len)
+            }
+        });
         NetworkEndian::write_u16(&mut packet.header.length, len_field);
         // Initialize the checksum to 0 so that we will get the correct
         // value when we compute it below.

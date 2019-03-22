@@ -15,7 +15,6 @@ use zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unal
 
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{IpProto, Ipv6Addr};
-use crate::wire::util::fits_in_u16;
 
 pub(crate) const IPV6_FIXED_HDR_LEN: usize = 40;
 
@@ -289,7 +288,7 @@ impl PacketBuilder for Ipv6PacketBuilder {
         // fine because, with debug assertions disabled, we'll just write an
         // incorrect header value, which is acceptable if the caller has
         // violated their contract.
-        debug_assert!(fits_in_u16(packet.payload_len()));
+        debug_assert!(packet.payload_len() <= std::u16::MAX as usize);
         let payload_len = packet.payload_len() as u16;
         NetworkEndian::write_u16(&mut packet.fixed_hdr.payload_len, payload_len);
         packet.fixed_hdr.next_hdr = self.next_hdr;
