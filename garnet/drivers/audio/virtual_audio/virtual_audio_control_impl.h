@@ -11,7 +11,6 @@
 #include <ddk/device.h>
 #include <fbl/unique_ptr.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/zx/channel.h>
 
 namespace virtual_audio {
 
@@ -19,7 +18,10 @@ class VirtualAudioDeviceImpl;
 
 class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
  public:
-  VirtualAudioControlImpl() = default;
+  VirtualAudioControlImpl(async_dispatcher_t* dispatcher)
+      : dev_host_dispatcher_(dispatcher) {
+    ZX_ASSERT(dev_host_dispatcher_ != nullptr);
+  }
 
   // Always called after DdkRelease unless object is prematurely freed. This
   // would be a reference error: DevHost holds a reference until DdkRelease.
@@ -33,6 +35,8 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
   static void DdkUnbind(void* ctx);
   // Delivers C-binding-FIDL Forwarder calls to the driver.
   static zx_status_t DdkMessage(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
+
+  void PostToDispatcher(fit::closure task_to_post) const;
 
   //
   // virtualaudio.Forwarder interface
@@ -50,12 +54,15 @@ class VirtualAudioControlImpl : public fuchsia::virtualaudio::Control {
   void ReleaseBindings();
   bool enabled() const { return enabled_; }
   zx_device_t* dev_node() const { return dev_node_; }
+  async_dispatcher_t* dispatcher() const { return dev_host_dispatcher_; }
 
  private:
   friend class VirtualAudioBus;
   friend class VirtualAudioDeviceImpl;
 
   static fuchsia_virtualaudio_Forwarder_ops_t fidl_ops_;
+
+  async_dispatcher_t* dev_host_dispatcher_ = nullptr;
 
   zx_device_t* dev_node_ = nullptr;
   bool enabled_ = true;

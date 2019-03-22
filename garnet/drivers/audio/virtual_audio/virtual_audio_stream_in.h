@@ -6,7 +6,6 @@
 #define GARNET_DRIVERS_AUDIO_VIRTUAL_AUDIO_VIRTUAL_AUDIO_STREAM_IN_H_
 
 #include <fbl/ref_ptr.h>
-#include <lib/simple-audio-stream/simple-audio-stream.h>
 
 #include "garnet/drivers/audio/virtual_audio/virtual_audio_stream.h"
 

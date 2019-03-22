@@ -63,11 +63,15 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   static fbl::unique_ptr<VirtualAudioDeviceImpl> Create(
       VirtualAudioControlImpl* owner, bool is_input);
 
-  void Init();
+  // Execute the given task on the FIDL channel's main dispatcher thread.
+  // Used to deliver callbacks or events, from the driver execution domain.
+  void PostToDispatcher(fit::closure task_to_post);
 
   virtual bool CreateStream(zx_device_t* devnode);
   void RemoveStream();
   void ClearStream();
+
+  void Init();
 
   //
   // virtualaudio.Configuration interface
@@ -76,9 +80,11 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   void SetManufacturer(std::string manufacturer_name) override;
   void SetProduct(std::string product_name) override;
   void SetUniqueId(fidl::Array<uint8_t, 16> unique_id) override;
+
   void AddFormatRange(uint32_t format_flags, uint32_t min_rate,
                       uint32_t max_rate, uint8_t min_chans, uint8_t max_chans,
                       uint16_t rate_family_flags) override;
+
   void SetFifoDepth(uint32_t fifo_depth_bytes) override;
   void SetExternalDelay(zx_duration_t external_delay) override;
   void SetRingBufferRestrictions(uint32_t min_frames, uint32_t max_frames,
@@ -87,8 +93,10 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
                          float gain_step_db, float current_gain_db,
                          bool can_mute, bool current_mute, bool can_agc,
                          bool current_agc) override;
+
   void SetPlugProperties(zx_time_t plug_change_time, bool plugged,
                          bool hardwired, bool can_notify) override;
+
   void ResetConfiguration() override;
 
   //

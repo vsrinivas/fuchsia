@@ -5,8 +5,6 @@
 #include "garnet/drivers/audio/virtual_audio/virtual_audio_stream.h"
 
 #include <ddk/debug.h>
-#include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
 #include <cmath>
 
 #include "garnet/drivers/audio/virtual_audio/virtual_audio_device_impl.h"
@@ -82,7 +80,6 @@ zx_status_t VirtualAudioStream::InitPost() {
   if (plug_change_wakeup_ == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
-
   dispatcher::WakeupEvent::ProcessHandler plug_wake_handler(
       [this](dispatcher::WakeupEvent* event) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
@@ -100,7 +97,6 @@ zx_status_t VirtualAudioStream::InitPost() {
   if (notify_timer_ == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
-
   dispatcher::Timer::ProcessHandler timer_handler(
       [this](dispatcher::Timer* timer) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
@@ -138,15 +134,26 @@ void VirtualAudioStream::HandlePlugChange(PlugType plug_change) {
     case PlugType::Unplug:
       SetPlugState(false);
       break;
-    default:
-      zxlogf(TRACE, "%s - Unknown message type\n", __PRETTY_FUNCTION__);
-      break;
+      // Intentionally omitting default, so new enums surface a logic error.
   }
+}
+
+void VirtualAudioStream::EnqueuePlugChange(bool plugged) {
+  {
+    fbl::AutoLock lock(&wakeup_queue_lock_);
+    PlugType plug_change = (plugged ? PlugType::Plug : PlugType::Unplug);
+    plug_queue_.push_back(plug_change);
+  }
+
+  plug_change_wakeup_->Signal();
 }
 
 // Upon success, drivers should return a valid VMO with appropriate
 // permissions (READ | MAP | TRANSFER for inputs, WRITE as well for outputs)
 // as well as reporting the total number of usable frames in the ring.
+//
+// Format must already be set: a ring buffer channel (over which this command
+// arrived) is provided as the return value from a successful SetFormat call.
 zx_status_t VirtualAudioStream::GetBuffer(
     const ::audio::audio_proto::RingBufGetBufferReq& req,
     uint32_t* out_num_rb_frames, zx::vmo* out_buffer) {
@@ -180,21 +187,33 @@ zx_status_t VirtualAudioStream::GetBuffer(
   }
 
   zx_status_t status = ring_buffer_mapper_.CreateAndMap(
-      ring_buffer_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, out_buffer,
-      ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
+      ring_buffer_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
+      &ring_buffer_vmo_,
+      ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE |
+          ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s failed to create ring buffer vmo - %d\n", __func__,
            status);
     return status;
   }
+  status = ring_buffer_vmo_.duplicate(
+      ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
+      out_buffer);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to duplicate VMO handle for out param - %d\n",
+           __func__, status);
+    return status;
+  }
 
-  if (req.notifications_per_ring == 0) {
+  notifications_per_ring_ = req.notifications_per_ring;
+
+  if (notifications_per_ring_ == 0) {
     us_per_notification_ = 0u;
   } else {
     us_per_notification_ = static_cast<uint32_t>(
         (ZX_SEC(1) * num_ring_buffer_frames_) /
-        (ZX_USEC(1) * frame_rate_ * req.notifications_per_ring));
+        (ZX_USEC(1) * frame_rate_ * notifications_per_ring_));
   }
 
   if (kTestPosition) {
@@ -215,21 +234,13 @@ zx_status_t VirtualAudioStream::ChangeFormat(
   frame_rate_ = req.frames_per_second;
   ZX_DEBUG_ASSERT(frame_rate_);
 
+  sample_format_ = req.sample_format;
+
   num_channels_ = req.channels;
   bytes_per_sec_ = frame_rate_ * frame_size_;
 
   // (Re)set external_delay_nsec_ and fifo_depth_ before leaving, if needed.
   return ZX_OK;
-}
-
-void VirtualAudioStream::EnqueuePlugChange(bool plugged) {
-  {
-    fbl::AutoLock lock(&wakeup_queue_lock_);
-    PlugType plug_change = (plugged ? PlugType::Plug : PlugType::Unplug);
-    plug_queue_.push_back(plug_change);
-  }
-
-  plug_change_wakeup_->Signal();
 }
 
 zx_status_t VirtualAudioStream::SetGain(
@@ -266,7 +277,7 @@ zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
 
   // Set the timer here (if notifications are enabled).
   if (us_per_notification_) {
-    ProcessRingNotification();
+    notify_timer_->Arm(*out_start_time);
   }
 
   return ZX_OK;
@@ -285,7 +296,9 @@ zx_status_t VirtualAudioStream::ProcessRingNotification() {
   zx::duration duration_ns = now - start_time_;
   // TODO(mpuryear): use a proper Timeline object here. Reference MTWN-57.
   uint64_t frames = (duration_ns.get() * frame_rate_) / ZX_SEC(1);
-  resp.ring_buffer_pos = (frames % num_ring_buffer_frames_) * frame_size_;
+  uint32_t ring_buffer_position =
+      (frames % num_ring_buffer_frames_) * frame_size_;
+  resp.ring_buffer_pos = ring_buffer_position;
 
   if (kTestPosition) {
     zxlogf(TRACE, "%s at %08x, %ld\n", __PRETTY_FUNCTION__,

@@ -6,7 +6,6 @@
 
 #include <ddk/debug.h>
 
-#include "garnet/drivers/audio/virtual_audio/virtual_audio_control_impl.h"
 #include "garnet/drivers/audio/virtual_audio/virtual_audio_stream.h"
 
 namespace virtual_audio {
@@ -31,6 +30,10 @@ VirtualAudioDeviceImpl::VirtualAudioDeviceImpl(VirtualAudioControlImpl* owner,
 // If we have not already destroyed our child stream, do so now.
 VirtualAudioDeviceImpl::~VirtualAudioDeviceImpl() { RemoveStream(); }
 
+void VirtualAudioDeviceImpl::PostToDispatcher(fit::closure task_to_post) {
+  owner_->PostToDispatcher(std::move(task_to_post));
+}
+
 bool VirtualAudioDeviceImpl::CreateStream(zx_device_t* devnode) {
   stream_ = VirtualAudioStream::CreateStream(this, devnode, is_input_);
   return (stream_ != nullptr);
@@ -42,16 +45,23 @@ void VirtualAudioDeviceImpl::ClearStream() { stream_ = nullptr; }
 // Removes this device's child stream by calling its Unbind method. This may
 // already have occurred, so first check it for null.
 //
-// TODO(mpuryear): This is not quite the right way to safely unwind in all
+// TODO(mpuryear): This may not be the right way to safely unwind in all
 // cases: it makes some threading assumptions that cannot necessarily be
 // enforced. But until ZX-3461 is addressed, the current VAD code appears to
-// be safe (all Unbind callers are on the devhost primary thread).
+// be safe -- all RemoveStream callers are on the devhost primary thread:
+//   ~VirtualAudioDeviceImpl from DevHost removing parent,
+//   ~VirtualAudioDeviceImpl from Input|Output FIDL channel disconnecting
+//   fuchsia.virtualaudio.Control.Disable
+//   fuchsia.virtualaudio.Input|Output.Remove
 void VirtualAudioDeviceImpl::RemoveStream() {
   if (stream_ != nullptr) {
     // This bool tells the stream that its Unbind is originating from us (the
     // parent), so that it doesn't call us back.
     stream_->shutdown_by_parent_ = true;
     stream_->DdkUnbind();
+
+    // Now that the stream has done its shutdown, we release our reference.
+    stream_ = nullptr;
   }
 }
 

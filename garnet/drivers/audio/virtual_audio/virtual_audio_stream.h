@@ -66,6 +66,7 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
 
   // Accessed in GetBuffer, defended by token.
   fzl::VmoMapper ring_buffer_mapper_ __TA_GUARDED(domain_->token());
+  zx::vmo ring_buffer_vmo_ __TA_GUARDED(domain_->token());
   uint32_t num_ring_buffer_frames_ __TA_GUARDED(domain_->token()) = 0;
 
   uint32_t max_buffer_frames_ __TA_GUARDED(domain_->token());
@@ -79,6 +80,7 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
 
   uint32_t bytes_per_sec_ __TA_GUARDED(domain_->token()) = 0;
   uint32_t frame_rate_ __TA_GUARDED(domain_->token()) = 0;
+  audio_sample_format_t sample_format_ __TA_GUARDED(domain_->token()) = 0;
   uint32_t num_channels_ __TA_GUARDED(domain_->token()) = 0;
 
   VirtualAudioDeviceImpl* parent_ __TA_GUARDED(domain_->token());

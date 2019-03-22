@@ -5,7 +5,7 @@
 #include "garnet/drivers/audio/virtual_audio/virtual_audio_control_impl.h"
 
 #include <ddk/debug.h>
-#include <lib/async/default.h>
+#include <lib/async/cpp/task.h>
 
 #include "garnet/drivers/audio/virtual_audio/virtual_audio_device_impl.h"
 #include "garnet/drivers/audio/virtual_audio/virtual_audio_stream.h"
@@ -98,9 +98,7 @@ zx_status_t VirtualAudioControlImpl::SendControl(
   // We should ensure there are no long VirtualAudioControl operations.
   bindings_.AddBinding(this,
                        fidl::InterfaceRequest<fuchsia::virtualaudio::Control>(
-                           std::move(control_request_channel)),
-                       async_get_default_dispatcher());
-
+                           std::move(control_request_channel)));
   return ZX_OK;
 }
 
@@ -120,8 +118,7 @@ zx_status_t VirtualAudioControlImpl::SendInput(
   input_bindings_.AddBinding(
       VirtualAudioDeviceImpl::Create(this, true),
       fidl::InterfaceRequest<fuchsia::virtualaudio::Input>(
-          std::move(input_request_channel)),
-      async_get_default_dispatcher());
+          std::move(input_request_channel)));
 
   return ZX_OK;
 }
@@ -140,8 +137,7 @@ zx_status_t VirtualAudioControlImpl::SendOutput(
   output_bindings_.AddBinding(
       VirtualAudioDeviceImpl::Create(this, false),
       fidl::InterfaceRequest<fuchsia::virtualaudio::Output>(
-          std::move(output_request_channel)),
-      async_get_default_dispatcher());
+          std::move(output_request_channel)));
 
   return ZX_OK;
 }
@@ -160,12 +156,18 @@ void VirtualAudioControlImpl::ReleaseBindings() {
          output_bindings_.size());
 }
 
+void VirtualAudioControlImpl::PostToDispatcher(
+    fit::closure task_to_post) const {
+  async::PostTask(dispatcher(), std::move(task_to_post));
+}
+
 // Allow subsequent new stream creation -- but do not automatically reactivate
 // any streams that may have been deactivated (removed) by the previous Disable.
 // Upon construction, the default state of this object is Enabled. The (empty)
 // callback is used to synchronize with other in-flight asynchronous operations.
 void VirtualAudioControlImpl::Enable(EnableCallback enable_callback) {
   enabled_ = true;
+
   enable_callback();
 }
 
