@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -35,6 +36,13 @@ void TestServer::SetUp() {
 }
 
 void TestServer::TearDown() {
+  // Before we close the exception port, make sure we've detached.
+  Process* inferior = current_process();
+  if (inferior && inferior->IsAttached()) {
+    inferior->Kill();
+    inferior->Detach();
+  }
+
   if (exception_port_started_) {
     // Tell the exception port to quit and wait for it to finish.
     exception_port_.Quit();
@@ -46,9 +54,10 @@ void TestServer::TearDown() {
 
 bool TestServer::Run() {
   // Start the main loop.
-  message_loop_.Run();
+  zx_status_t status = message_loop_.Run();
 
-  FXL_LOG(INFO) << "Main loop exited";
+  FXL_LOG(INFO) << "Main loop exited, status "
+                << debugger_utils::ZxErrorString(status);
 
   // |run_status_| is checked by TearDown().
   return true;
@@ -56,7 +65,14 @@ bool TestServer::Run() {
 
 bool TestServer::SetupInferior(const std::vector<std::string>& argv) {
   auto inferior = new Process(this, this, services_);
-  inferior->set_argv(argv);
+
+  // Transfer our log settings to the inferior.
+  std::vector<std::string> inferior_argv{argv};
+  for (auto arg : fxl::LogSettingsToArgv(fxl::GetLogSettings())) {
+    inferior_argv.push_back(arg);
+  }
+  inferior->set_argv(inferior_argv);
+
   // We take over ownership of |inferior| here.
   set_current_process(inferior);
   return true;
@@ -101,6 +117,8 @@ bool TestServer::TestSuccessfulExit() {
     return false;
   }
   if (inferior->IsAttached()) {
+    // The program should have terminated some how, in which case we would
+    // have detached. So it's likely the program is still running.
     FXL_LOG(ERROR) << "inferior still attached";
     return false;
   }
@@ -126,6 +144,8 @@ bool TestServer::TestFailureExit() {
     return false;
   }
   if (inferior->IsAttached()) {
+    // The program should have terminated some how, in which case we would
+    // have detached. So it's likely the program is still running.
     FXL_LOG(ERROR) << "inferior still attached";
     return false;
   }
@@ -171,8 +191,9 @@ void TestServer::OnThreadExiting(Process* process, Thread* thread,
 void TestServer::OnProcessTermination(Process* process) {
   FXL_DCHECK(process);
 
-  printf("Process %s is gone, rc %d\n", process->GetName().c_str(),
-         process->return_code());
+  FXL_LOG(INFO) << fxl::StringPrintf("Process %s is gone, rc %d",
+                                     process->GetName().c_str(),
+                                     process->return_code());
 
   // Process is gone, exit main loop.
   PostQuitMessageLoop(true);

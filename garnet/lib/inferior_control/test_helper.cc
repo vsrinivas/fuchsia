@@ -6,12 +6,15 @@
 #include <cstring>
 #include <thread>
 
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/log_settings.h>
+#include <lib/fxl/log_settings_command_line.h>
+#include <lib/zx/event.h>
+#include <lib/zx/port.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
-#include <lib/zx/event.h>
-#include <lib/zx/port.h>
 
 #include "garnet/lib/debugger_utils/breakpoints.h"
 #include "garnet/lib/debugger_utils/util.h"
@@ -113,29 +116,31 @@ static int TriggerSoftwareBreakpoint(zx_handle_t channel, bool with_handler) {
 }
 
 int main(int argc, char* argv[]) {
-  if (argc > 2) {
-    fprintf(stderr, "Usage: %s [command]\n", argv[0]);
+  auto cl = fxl::CommandLineFromArgcArgv(argc, argv);
+  if (!fxl::SetLogSettingsFromCommandLine(cl)) {
     return 1;
   }
 
-  zx_handle_t channel = zx_take_startup_handle(PA_HND(PA_USER0, 0));
-  // If no channel was passed we're running standalone.
-  if (channel == ZX_HANDLE_INVALID) {
-    FXL_LOG(INFO) << "No handle provided";
-  }
+  const std::vector<std::string>& args = cl.positional_args();
 
-  if (argc == 2) {
-    const char* cmd = argv[1];
-    if (strcmp(cmd, "wait-peer-closed") == 0) {
+  if (!args.empty()) {
+    zx_handle_t channel = zx_take_startup_handle(PA_HND(PA_USER0, 0));
+    // If no channel was passed we're running standalone.
+    if (channel == ZX_HANDLE_INVALID) {
+      FXL_LOG(WARNING) << "No handle provided";
+    }
+
+    const std::string& cmd = args[0];
+    if (cmd == "wait-peer-closed") {
       return PerformWaitPeerClosed(channel);
     }
-    if (strcmp(cmd, "trigger-sw-bkpt") == 0) {
+    if (cmd == "trigger-sw-bkpt") {
       return TriggerSoftwareBreakpoint(channel, false);
     }
-    if (strcmp(cmd, "trigger-sw-bkpt-with-handler") == 0) {
+    if (cmd == "trigger-sw-bkpt-with-handler") {
       return TriggerSoftwareBreakpoint(channel, true);
     }
-    fprintf(stderr, "Unrecognized command: %s\n", cmd);
+    FXL_LOG(ERROR) << "Unrecognized command: " << cmd;
     return 1;
   }
 
