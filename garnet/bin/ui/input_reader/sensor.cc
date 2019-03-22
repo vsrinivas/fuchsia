@@ -154,7 +154,6 @@ bool Sensor::ParseReport(const uint8_t* data, size_t len,
   double z = 0;
   double scalar = 0;
 
-  hid::Report hid_report = {data, len};
   if (report_size_ != len) {
     FXL_LOG(ERROR) << "Sensor report: Expected size " << report_size_
                    << "Recieved size " << len;
@@ -162,25 +161,25 @@ bool Sensor::ParseReport(const uint8_t* data, size_t len,
   }
 
   if (capabilities_ & Capabilities::X) {
-    if (!hid::ExtractAsUnit(hid_report, x_, &x)) {
+    if (!hid::ExtractAsUnit(data, len, x_, &x)) {
       FXL_LOG(ERROR) << "Sensor report: Failed to parse X";
       return false;
     }
   }
   if (capabilities_ & Capabilities::Y) {
-    if (!hid::ExtractAsUnit(hid_report, y_, &y)) {
+    if (!hid::ExtractAsUnit(data, len, y_, &y)) {
       FXL_LOG(ERROR) << "Sensor report: Failed to parse Y";
       return false;
     }
   }
   if (capabilities_ & Capabilities::Z) {
-    if (!hid::ExtractAsUnit(hid_report, z_, &z)) {
+    if (!hid::ExtractAsUnit(data, len, z_, &z)) {
       FXL_LOG(ERROR) << "Sensor report: Failed to parse Z";
       return false;
     }
   }
   if (capabilities_ & Capabilities::SCALAR) {
-    if (!hid::ExtractAsUnit(hid_report, scalar_, &scalar)) {
+    if (!hid::ExtractAsUnit(data, len, scalar_, &scalar)) {
       FXL_LOG(ERROR) << "Sensor report: Failed to parse Scalar";
       return false;
     }

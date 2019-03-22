@@ -78,7 +78,6 @@ bool Buttons::ParseReport(const uint8_t* data, size_t len,
   double volume = 0;
   double mic_mute = 0;
 
-  hid::Report hid_report = {data, len};
   if (report_size_ != len) {
     FXL_LOG(ERROR) << "Sensor report: Expected size " << report_size_
                    << "Received size " << len;
@@ -86,13 +85,13 @@ bool Buttons::ParseReport(const uint8_t* data, size_t len,
   }
 
   if (capabilities_ & Capabilities::VOLUME) {
-    if (!hid::ExtractAsUnit(hid_report, volume_, &volume)) {
+    if (!hid::ExtractAsUnit(data, len, volume_, &volume)) {
       FXL_LOG(ERROR) << "Sensor report: Failed to parse volume";
       return false;
     }
   }
   if (capabilities_ & Capabilities::PHONE_MUTE) {
-    if (!hid::ExtractAsUnit(hid_report, phone_mute_, &mic_mute)) {
+    if (!hid::ExtractAsUnit(data, len, phone_mute_, &mic_mute)) {
       FXL_LOG(ERROR) << "Sensor report: Failed to parse phone_mute";
       return false;
     }

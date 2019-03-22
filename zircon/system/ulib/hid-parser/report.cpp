@@ -26,8 +26,8 @@ constexpr int32_t SignExtendFromNBits(uint32_t data, int32_t n_bits) {
     return static_cast<int32_t>((data ^ msb) - msb);
 }
 
-inline bool FieldFits(const Report& report, const Attributes& attr) {
-    return (attr.offset + attr.bit_sz) <= (report.len * 8);
+inline bool FieldFits(size_t report_len, const Attributes& attr) {
+    return (attr.offset + attr.bit_sz) <= (report_len * 8);
 }
 
 // Extracts bits from a byte and returns them.
@@ -43,12 +43,13 @@ inline uint8_t ExtractBitsFromByte(uint8_t val, uint32_t begin, uint8_t count) {
 
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 template <typename T>
-bool ExtractUint(const Report& report, const hid::Attributes& attr, T* value_out) {
+bool ExtractUint(const uint8_t* report, size_t report_len, const hid::Attributes& attr,
+                 T* value_out) {
     static_assert(std::is_pod<T>::value, "not POD");
     if (attr.bit_sz > sizeof(T) * 8) {
         return false;
     }
-    if (!FieldFits(report, attr)) {
+    if (!FieldFits(report_len, attr)) {
         return false;
     }
     T val = 0;
@@ -61,7 +62,7 @@ bool ExtractUint(const Report& report, const hid::Attributes& attr, T* value_out
         uint8_t bit_count = static_cast<uint8_t>(MIN(bits_till_byte_end, end_bit - index_bit));
 
         uint8_t extracted_bits =
-            ExtractBitsFromByte(report.data[index_bit / 8u], index_bit % 8u, bit_count);
+            ExtractBitsFromByte(report[index_bit / 8u], index_bit % 8u, bit_count);
 
         val = static_cast<T>(val | (extracted_bits << (index_bit - start_bit)));
 
@@ -73,25 +74,29 @@ bool ExtractUint(const Report& report, const hid::Attributes& attr, T* value_out
 }
 #undef MIN
 
-bool ExtractUint(const Report& report, const hid::Attributes& attr, uint8_t* value_out) {
-    return ExtractUint<uint8_t>(report, attr, value_out);
+bool ExtractUint(const uint8_t* report, size_t report_len, const hid::Attributes& attr,
+                 uint8_t* value_out) {
+    return ExtractUint<uint8_t>(report, report_len, attr, value_out);
 }
 
-bool ExtractUint(const Report& report, const hid::Attributes& attr, uint16_t* value_out) {
-    return ExtractUint<uint16_t>(report, attr, value_out);
+bool ExtractUint(const uint8_t* report, size_t report_len, const hid::Attributes& attr,
+                 uint16_t* value_out) {
+    return ExtractUint<uint16_t>(report, report_len, attr, value_out);
 }
 
-bool ExtractUint(const Report& report, const hid::Attributes& attr, uint32_t* value_out) {
-    return ExtractUint<uint32_t>(report, attr, value_out);
+bool ExtractUint(const uint8_t* report, size_t report_len, const hid::Attributes& attr,
+                 uint32_t* value_out) {
+    return ExtractUint<uint32_t>(report, report_len, attr, value_out);
 }
 
-bool ExtractAsUnit(const Report& report, const hid::Attributes& attr, double* value_out) {
+bool ExtractAsUnit(const uint8_t* report, size_t report_len, const hid::Attributes& attr,
+                   double* value_out) {
     if (value_out == nullptr) {
         return false;
     }
 
     uint32_t uint_out;
-    bool ret = ExtractUint(report, attr, &uint_out);
+    bool ret = ExtractUint(report, report_len, attr, &uint_out);
     if (!ret) {
         return false;
     }
@@ -104,8 +109,8 @@ bool ExtractAsUnit(const Report& report, const hid::Attributes& attr, double* va
     int64_t phys_max =
         (attr.phys_mm.min < 0) ? attr.phys_mm.max : static_cast<uint32_t>(attr.phys_mm.max);
     double val = (attr.logc_mm.min < 0)
-                    ? static_cast<double>(SignExtendFromNBits(uint_out, attr.bit_sz))
-                    : uint_out;
+                     ? static_cast<double>(SignExtendFromNBits(uint_out, attr.bit_sz))
+                     : uint_out;
 
     if (val < static_cast<double>(attr.logc_mm.min) || val > static_cast<double>(attr.logc_mm.max)) {
         return false;
@@ -124,10 +129,10 @@ bool ExtractAsUnit(const Report& report, const hid::Attributes& attr, double* va
     return true;
 }
 
-bool ExtractWithUnit(const Report& report, const hid::Attributes& attr,
+bool ExtractWithUnit(const uint8_t* report, size_t report_len, const hid::Attributes& attr,
                      const Unit& unit_out, double* value_out) {
     double val = 0;
-    if (!ExtractAsUnit(report, attr, &val)) {
+    if (!ExtractAsUnit(report, report_len, attr, &val)) {
         return false;
     }
 

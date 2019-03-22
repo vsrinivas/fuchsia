@@ -139,7 +139,6 @@ bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor &desc) {
 bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
   assert(report != nullptr);
 
-  hid::Report hid_report = {data, len};
   if (len != report_size_) {
     FXL_LOG(ERROR) << "Touch HID Report is not correct size, (" << len
                    << " != " << report_size_ << ")";
@@ -159,7 +158,7 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
     if (config->capabilities & Capabilities::TIP_SWITCH) {
       uint8_t tip_switch;
       bool success =
-          hid::ExtractUint(hid_report, config->tip_switch, &tip_switch);
+          hid::ExtractUint(data, len, config->tip_switch, &tip_switch);
       if (!success || !tip_switch) {
         continue;
       }
@@ -169,14 +168,14 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
 
     // XXX(konkers): Add 32 bit generic field extraction helpers.
     if (config->capabilities & Capabilities::CONTACT_ID) {
-      if (!hid::ExtractUint(hid_report, config->contact_id, &contact->id)) {
+      if (!hid::ExtractUint(data, len, config->contact_id, &contact->id)) {
         FXL_LOG(ERROR) << "Touch report: Failed to parse CONTACT_ID";
         return false;
       }
     }
     if (config->capabilities & Capabilities::X) {
       double x;
-      if (!hid::ExtractAsUnit(hid_report, config->x, &x)) {
+      if (!hid::ExtractAsUnit(data, len, config->x, &x)) {
         FXL_LOG(ERROR) << "Touch report: Failed to parse X";
         return false;
       }
@@ -187,7 +186,7 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
     }
     if (config->capabilities & Capabilities::Y) {
       double y;
-      if (!hid::ExtractAsUnit(hid_report, config->y, &y)) {
+      if (!hid::ExtractAsUnit(data, len, config->y, &y)) {
         FXL_LOG(ERROR) << "Touchpad report: Failed to parse Y";
         return false;
       }
@@ -206,7 +205,7 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
 
   if (capabilities_ & Capabilities::BUTTON) {
     uint8_t button;
-    if (!hid::ExtractUint(hid_report, button_, &button)) {
+    if (!hid::ExtractUint(data, len, button_, &button)) {
       FXL_LOG(ERROR) << "Touchpad report: Failed to parse BUTTON";
       return false;
     }
@@ -216,12 +215,12 @@ bool Touch::ParseReport(const uint8_t *data, size_t len, Report *report) const {
   if (capabilities_ & Capabilities::SCAN_TIME) {
     // If we don't have a unit, extract the raw data
     if (scan_time_.unit.type == 0) {
-      if (!hid::ExtractUint(hid_report, scan_time_, &report->scan_time)) {
+      if (!hid::ExtractUint(data, len, scan_time_, &report->scan_time)) {
         return false;
       }
     } else {
       double scan_time;
-      if (!hid::ExtractAsUnit(hid_report, scan_time_, &scan_time)) {
+      if (!hid::ExtractAsUnit(data, len, scan_time_, &scan_time)) {
         FXL_LOG(ERROR) << "Touchpad report: Failed to parse SCAN_TIME";
         return false;
       }

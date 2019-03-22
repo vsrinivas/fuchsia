@@ -111,7 +111,6 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
   }
 
   Report mouse_report = {};
-  hid::Report hid_report = {data, len};
   if (len != report_size_) {
     FXL_LOG(ERROR) << "Mouse HID Report is not correct size, (" << len
                    << " != " << report_size_ << ")";
@@ -120,21 +119,21 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
 
   uint32_t clicked;
   if (capabilities_ & Capabilities::LEFT_CLICK) {
-    if (!hid::ExtractUint(hid_report, left_click_, &clicked)) {
+    if (!hid::ExtractUint(data, len, left_click_, &clicked)) {
       FXL_LOG(ERROR) << "Mouse report: Failed to parse LEFT_CLICK";
       return false;
     }
     mouse_report.left_click = (clicked == 1);
   }
   if (capabilities_ & Capabilities::MIDDLE_CLICK) {
-    if (!hid::ExtractUint(hid_report, middle_click_, &clicked)) {
+    if (!hid::ExtractUint(data, len, middle_click_, &clicked)) {
       FXL_LOG(ERROR) << "Mouse report: Failed to parse MIDDLE_CLICK";
       return false;
     }
     mouse_report.middle_click = (clicked == 1);
   }
   if (capabilities_ & Capabilities::RIGHT_CLICK) {
-    if (!hid::ExtractUint(hid_report, right_click_, &clicked)) {
+    if (!hid::ExtractUint(data, len, right_click_, &clicked)) {
       FXL_LOG(ERROR) << "Mouse report: Failed to parse RIGHT_CLICK";
       return false;
     }
@@ -149,7 +148,7 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
 
   if (capabilities_ & Capabilities::X) {
     double x;
-    if (!hid::ExtractAsUnit(hid_report, x_, &x)) {
+    if (!hid::ExtractAsUnit(data, len, x_, &x)) {
       FXL_LOG(ERROR) << "Mouse report: Failed to parse X";
       return false;
     }
@@ -162,7 +161,7 @@ bool Mouse::ParseReport(const uint8_t* data, size_t len,
   }
   if (capabilities_ & Capabilities::Y) {
     double y;
-    if (!hid::ExtractAsUnit(hid_report, y_, &y)) {
+    if (!hid::ExtractAsUnit(data, len, y_, &y)) {
       FXL_LOG(ERROR) << "Mouse report: Failed to parse Y";
       return false;
     }

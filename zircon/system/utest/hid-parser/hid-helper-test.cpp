@@ -177,73 +177,73 @@ bool usage_operators() {
 
 bool extract_tests() {
     BEGIN_TEST;
-    uint8_t data[] = {0x0F, 0x0F, 0x0F, 0x0F, 0x0F};
-    hid::Report report = {data, 5};
+    uint8_t report[] = {0x0F, 0x0F, 0x0F, 0x0F, 0x0F};
+    size_t report_len = sizeof(report);
     hid::Attributes attr;
     bool ret;
 
     uint8_t int8;
     attr.offset = 0;
     attr.bit_sz = 8;
-    ret = ExtractUint(report, attr, &int8);
+    ret = ExtractUint(report, report_len, attr, &int8);
     EXPECT_TRUE(ret);
     EXPECT_EQ(int8, 0x0F);
 
     attr.offset = 2;
     attr.bit_sz = 6;
-    ret = ExtractUint(report, attr, &int8);
+    ret = ExtractUint(report, report_len, attr, &int8);
     EXPECT_TRUE(ret);
     EXPECT_EQ(int8, 0x03);
 
     attr.offset = 3;
     attr.bit_sz = 2;
-    ret = ExtractUint(report, attr, &int8);
+    ret = ExtractUint(report, report_len, attr, &int8);
     EXPECT_TRUE(ret);
     EXPECT_EQ(int8, 0x01);
 
     // Test over a byte boundary
     attr.offset = 4;
     attr.bit_sz = 8;
-    ret = ExtractUint(report, attr, &int8);
+    ret = ExtractUint(report, report_len, attr, &int8);
     EXPECT_TRUE(ret);
     EXPECT_EQ(int8, 0xF0);
 
     uint16_t int16;
     attr.offset = 0;
     attr.bit_sz = 16;
-    ret = ExtractUint(report, attr, &int16);
+    ret = ExtractUint(report, report_len, attr, &int16);
     EXPECT_TRUE(ret);
     EXPECT_EQ(int16, 0x0F0F);
 
     attr.offset = 4;
     attr.bit_sz = 16;
-    ret = ExtractUint(report, attr, &int16);
+    ret = ExtractUint(report, report_len, attr, &int16);
     EXPECT_TRUE(ret);
     EXPECT_EQ(int16, 0xF0F0);
 
     uint32_t int32;
     attr.offset = 0;
     attr.bit_sz = 32;
-    ret = ExtractUint(report, attr, &int32);
+    ret = ExtractUint(report, report_len, attr, &int32);
     EXPECT_TRUE(ret);
     EXPECT_EQ(int32, 0x0F0F0F0F);
 
     attr.offset = 4;
     attr.bit_sz = 32;
-    ret = ExtractUint(report, attr, &int32);
+    ret = ExtractUint(report, report_len, attr, &int32);
     EXPECT_TRUE(ret);
     EXPECT_EQ(int32, 0xF0F0F0F0);
 
     // Test that it fails if the attr is too large
     attr.offset = 0;
     attr.bit_sz = 9;
-    ret = ExtractUint(report, attr, &int8);
+    ret = ExtractUint(report, report_len, attr, &int8);
     EXPECT_FALSE(ret);
 
     // Test that it fails if it goes past the end of the report
     attr.offset = 36;
     attr.bit_sz = 16;
-    ret = ExtractUint(report, attr, &int16);
+    ret = ExtractUint(report, report_len, attr, &int16);
     EXPECT_FALSE(ret);
 
     END_TEST;
@@ -252,8 +252,8 @@ bool extract_tests() {
 bool extract_as_unit_tests() {
     BEGIN_TEST;
 
-    uint8_t data[] = {0x0F, 10, 0x0F, 0x0F, 0x0F};
-    hid::Report report = {data, 5};
+    uint8_t report[] = {0x0F, 10, 0x0F, 0x0F, 0x0F};
+    size_t report_len = sizeof(report);
     hid::Attributes attr = {};
     bool ret;
     double val_out;
@@ -267,7 +267,7 @@ bool extract_as_unit_tests() {
     attr.phys_mm.max = 100;
     attr.phys_mm.min = -100;
 
-    ret = ExtractAsUnit(report, attr, &val_out);
+    ret = ExtractAsUnit(report, report_len, attr, &val_out);
     EXPECT_TRUE(ret);
     EXPECT_EQ(static_cast<int32_t>(val_out), 0x0F);
 
@@ -280,7 +280,7 @@ bool extract_as_unit_tests() {
     attr.phys_mm.max = 10;
     attr.phys_mm.min = -10;
 
-    ret = ExtractAsUnit(report, attr, &val_out);
+    ret = ExtractAsUnit(report, report_len, attr, &val_out);
     EXPECT_TRUE(ret);
     EXPECT_EQ(static_cast<int32_t>(val_out), -1);
 
@@ -293,7 +293,7 @@ bool extract_as_unit_tests() {
     attr.phys_mm.max = 100;
     attr.phys_mm.min = 0;
 
-    ret = ExtractAsUnit(report, attr, &val_out);
+    ret = ExtractAsUnit(report, report_len, attr, &val_out);
     EXPECT_TRUE(ret);
     EXPECT_EQ(static_cast<uint32_t>(val_out), 0xF);
 
@@ -306,7 +306,7 @@ bool extract_as_unit_tests() {
     attr.phys_mm.max = 30;
     attr.phys_mm.min = -30;
 
-    ret = ExtractAsUnit(report, attr, &val_out);
+    ret = ExtractAsUnit(report, report_len, attr, &val_out);
     EXPECT_TRUE(ret);
     EXPECT_EQ(static_cast<int32_t>(val_out), -3);
 
@@ -319,7 +319,7 @@ bool extract_as_unit_tests() {
     attr.phys_mm.max = 25;
     attr.phys_mm.min = 0;
 
-    ret = ExtractAsUnit(report, attr, &val_out);
+    ret = ExtractAsUnit(report, report_len, attr, &val_out);
     EXPECT_TRUE(ret);
     EXPECT_EQ(static_cast<int32_t>(val_out), 25);
 
@@ -332,7 +332,7 @@ bool extract_as_unit_tests() {
     attr.phys_mm.max = 0;
     attr.phys_mm.min = 0;
 
-    ret = ExtractAsUnit(report, attr, &val_out);
+    ret = ExtractAsUnit(report, report_len, attr, &val_out);
     EXPECT_TRUE(ret);
     EXPECT_EQ(static_cast<int32_t>(val_out), 10);
 
@@ -360,7 +360,7 @@ bool extract_as_unit_tests() {
 
     attr.unit = unit_in;
 
-    ret = ExtractWithUnit(report, attr, unit_out, &val_out);
+    ret = ExtractWithUnit(report, report_len, attr, unit_out, &val_out);
     EXPECT_TRUE(ret);
     EXPECT_EQ(static_cast<int32_t>(val_out), 250);
 
