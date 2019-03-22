@@ -172,7 +172,7 @@ func (c *Client) RemoteFileExists(t *testing.T, path string) bool {
 
 // RegisterAmberSource adds the repository as a source inside the device's amber.
 func (c *Client) RegisterAmberSource(repoDir string, localHostname string, port int) error {
-	log.Printf("registering devhost as update source: %s", repoDir)
+	log.Printf("registering update source: %s", repoDir)
 
 	configURL, configHash, err := amber.WriteConfig(repoDir, localHostname, port)
 	if err != nil {

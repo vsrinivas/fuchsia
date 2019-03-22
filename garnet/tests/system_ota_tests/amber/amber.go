@@ -100,10 +100,10 @@ func WriteConfig(repoDir string, localHostname string, port int) (configURL stri
 
 	hostname := strings.SplitN(localHostname, "%", 2)[0]
 	repoURL := fmt.Sprintf("http://[%s]:%d", hostname, port)
-	configURL = fmt.Sprintf("%s/devhost/config.json", repoURL)
+	configURL = fmt.Sprintf("%s/system_ota_tests/config.json", repoURL)
 
 	config, err := json.Marshal(&sourceConfig{
-		ID:          "devhost",
+		ID:          "system_ota_tests",
 		RepoURL:     repoURL,
 		BlobRepoURL: fmt.Sprintf("%s/blobs", repoURL),
 		RootKeys:    rootKeys,
@@ -117,7 +117,7 @@ func WriteConfig(repoDir string, localHostname string, port int) (configURL stri
 	h := sha256.Sum256(config)
 	configHash = hex.EncodeToString(h[:])
 
-	configDir := filepath.Join(repoDir, "devhost")
+	configDir := filepath.Join(repoDir, "system_ota_tests")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return "", "", err
 	}
