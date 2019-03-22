@@ -1193,4 +1193,14 @@ mod tests {
         data_hdr.frame_ctrl = fc;
         assert_eq!(data_bssid(&data_hdr), Some([4; 6])); // Addr2
     }
+
+    #[test]
+    fn round_up_to_4() {
+        assert_eq!(0, round_up(0u32, 4));
+        assert_eq!(4, round_up(1u32, 4));
+        assert_eq!(4, round_up(2u32, 4));
+        assert_eq!(4, round_up(3u32, 4));
+        assert_eq!(4, round_up(4u32, 4));
+        assert_eq!(8, round_up(5u32, 4));
+    }
 }
