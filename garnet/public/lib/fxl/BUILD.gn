@@ -141,7 +141,6 @@ static_library("fxl") {
     "observer_list.h",
     "synchronization/thread_annotations.h",
     "synchronization/thread_checker.h",
-    "type_converter.h",
   ]
 
   public_deps = [

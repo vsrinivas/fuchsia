@@ -21,22 +21,3 @@ fidl::StringPtr TypeConverter<fidl::StringPtr, std::string>::Convert(
 }
 
 }  // namespace fidl
-
-// TODO(dalesat): Remove the fxl versions once topaz no longer depends on them.
-namespace fxl {
-
-std::string TypeConverter<std::string, fidl::StringPtr>::Convert(
-    const fidl::StringPtr& value) {
-  std::string result;
-  if (!value.is_null()) {
-    result = *value;
-  }
-  return result;
-}
-
-fidl::StringPtr TypeConverter<fidl::StringPtr, std::string>::Convert(
-    const std::string& value) {
-  return fidl::StringPtr(value.c_str(), value.size());
-}
-
-}  // namespace fxl
