@@ -21,7 +21,8 @@ void LogImporter::Start() {
   if (log_)
     return;
 
-  zx_status_t status = zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &log_);
+  zx_status_t status =
+      zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &log_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to open kernel log: status=" << status;
     return;
@@ -55,7 +56,8 @@ void LogImporter::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
   zx_log_record_t* log_record = reinterpret_cast<zx_log_record_t*>(log_buffer);
 
   for (;;) {
-    zx_status_t status = log_.read(ZX_LOG_RECORD_MAX, log_record, 0);
+    zx_status_t status = log_.read(/*options=*/0, /*buffer=*/log_record,
+                                   /*buffer_size=*/ZX_LOG_RECORD_MAX);
     if (status == ZX_ERR_SHOULD_WAIT)
       break;
     FXL_CHECK(status >= ZX_OK) << "status=" << status;
