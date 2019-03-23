@@ -527,19 +527,26 @@ config("integer-paranoia") {
 }
 
 config("static-libc++") {
-  if (current_os == "linux") {
-    ldflags = [ "-static-libstdc++" ]
-    # TODO(TC-74): The implicitly linked static libc++.a depends on these.
-    libs = [
-      "dl",
-      "pthread",
-    ]
-  } else if (current_os == "mac") {
+  if (current_os == "mac") {
+    # The macOS driver doesn't support -static-libstdc++ properly, so pass
+    # the libraries directly.  This has to locate the files explicitly in
+    # the toolchain, because -lc++ would look for the shared library.
     ldflags = [ "-nostdlib++" ]
+    libcxx_dir = "${toolchain.tool_dir}/../lib"
     libs = [
-      "${toolchain.tool_dir}/../lib/libc++abi.a",
-      "${toolchain.tool_dir}/../lib/libc++.a",
+      "$libcxx_dir/libc++abi.a",
+      "$libcxx_dir/libc++.a",
     ]
+  } else {
+    ldflags = [ "-static-libstdc++" ]
+
+    # TODO(TC-74): The implicitly linked static libc++.a depends on these.
+    if (current_os == "linux") {
+      libs = [
+        "dl",
+        "pthread",
+      ]
+    }
   }
 }
 
