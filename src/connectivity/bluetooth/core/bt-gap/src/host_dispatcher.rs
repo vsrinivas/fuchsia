@@ -510,6 +510,9 @@ impl HostDispatcher {
             .collect();
         for id in &ids {
             hd.host_devices.remove(id);
+            hd.notify_event_listeners(|listener| {
+                let _ = listener.send_on_adapter_removed(id);
+            })
         }
 
         // Reset the active ID if it got removed.
