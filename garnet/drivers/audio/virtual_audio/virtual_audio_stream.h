@@ -21,6 +21,18 @@ class VirtualAudioDeviceImpl;
 class VirtualAudioStream : public ::audio::SimpleAudioStream {
  public:
   void EnqueuePlugChange(bool plugged) __TA_EXCLUDES(wakeup_queue_lock_);
+  void EnqueueGainRequest(
+      fuchsia::virtualaudio::Device::GetGainCallback gain_callback)
+      __TA_EXCLUDES(wakeup_queue_lock_);
+  void EnqueueFormatRequest(
+      fuchsia::virtualaudio::Device::GetFormatCallback format_callback)
+      __TA_EXCLUDES(wakeup_queue_lock_);
+  void EnqueueBufferRequest(
+      fuchsia::virtualaudio::Device::GetBufferCallback buffer_callback)
+      __TA_EXCLUDES(wakeup_queue_lock_);
+  void EnqueuePositionRequest(
+      fuchsia::virtualaudio::Device::GetPositionCallback position_callback)
+      __TA_EXCLUDES(wakeup_queue_lock_);
 
   static fbl::RefPtr<VirtualAudioStream> CreateStream(
       VirtualAudioDeviceImpl* owner, zx_device_t* devnode, bool is_input);
@@ -64,6 +76,15 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
       __TA_EXCLUDES(wakeup_queue_lock_);
   void HandlePlugChange(PlugType plug_change) __TA_REQUIRES(domain_->token());
 
+  void HandleGainRequests() __TA_REQUIRES(domain_->token())
+      __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandleFormatRequests() __TA_REQUIRES(domain_->token())
+      __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandleBufferRequests() __TA_REQUIRES(domain_->token())
+      __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandlePositionRequests() __TA_REQUIRES(domain_->token())
+      __TA_EXCLUDES(wakeup_queue_lock_);
+
   // Accessed in GetBuffer, defended by token.
   fzl::VmoMapper ring_buffer_mapper_ __TA_GUARDED(domain_->token());
   zx::vmo ring_buffer_vmo_ __TA_GUARDED(domain_->token());
@@ -87,8 +108,25 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
 
   fbl::Mutex wakeup_queue_lock_ __TA_ACQUIRED_AFTER(domain_->token());
 
+  // TODO(mpuryear): Refactor to a single queue of lambdas to dedupe this code.
   fbl::RefPtr<::dispatcher::WakeupEvent> plug_change_wakeup_;
   std::deque<PlugType> plug_queue_ __TA_GUARDED(wakeup_queue_lock_);
+
+  fbl::RefPtr<::dispatcher::WakeupEvent> gain_request_wakeup_;
+  std::deque<fuchsia::virtualaudio::Device::GetGainCallback> gain_queue_
+      __TA_GUARDED(wakeup_queue_lock_);
+
+  fbl::RefPtr<::dispatcher::WakeupEvent> format_request_wakeup_;
+  std::deque<fuchsia::virtualaudio::Device::GetFormatCallback> format_queue_
+      __TA_GUARDED(wakeup_queue_lock_);
+
+  fbl::RefPtr<::dispatcher::WakeupEvent> buffer_request_wakeup_;
+  std::deque<fuchsia::virtualaudio::Device::GetBufferCallback> buffer_queue_
+      __TA_GUARDED(wakeup_queue_lock_);
+
+  fbl::RefPtr<::dispatcher::WakeupEvent> position_request_wakeup_;
+  std::deque<fuchsia::virtualaudio::Device::GetPositionCallback> position_queue_
+      __TA_GUARDED(wakeup_queue_lock_);
 };
 
 }  // namespace virtual_audio

@@ -9,10 +9,10 @@ using zx;
 // fuchsia.virtualaudio.Forwarder
 //
 
-/// Using this Simple Layout (C-bound) interface, an intermediary (such as the
-/// virtual audio service) forwards FIDL interface requests to the virtual audio
+/// Using this Simple Layout (C-bound) protocol, an intermediary (such as the
+/// virtual audio service) forwards FIDL protocol requests to the virtual audio
 /// driver, which enables clients to use more full-featured (C++ based) bindings
-/// with this driver -- specifically the Control, Input and Output interfaces.
+/// with this driver -- specifically the Control, Input and Output protocols.
 [Layout = "Simple"]
 protocol Forwarder {
     SendControl(request<Control> control);
@@ -95,7 +95,7 @@ protocol Device {
     /// device node will be published and detected by the AudioDeviceManager,
     /// and a driver for the virtual device will be loaded and queried. Device
     /// arrivals are exposed to clients by the
-    /// `fuchsia.media.AudioDeviceEnumerator` interface, in `GetDevices()` and
+    /// `fuchsia.media.AudioDeviceEnumerator` protocol, in `GetDevices()` and
     /// the `->OnDeviceAdded()` event.
     Add();
 
@@ -106,6 +106,58 @@ protocol Device {
     /// `GetDevices()` and `->OnDeviceRemoved()`.
     Remove();
 
+    /// Return the format selected by the client, when that client issued an
+    /// `AUDIO_STREAM_CMD_SET_FORMAT` command. This can only occur after a
+    /// device has been added, and is only allowed to occur before the device's
+    /// ring buffer has been returned (i.e., before an
+    /// `AUDIO_RB_CMD_GET_BUFFER` command).
+    GetFormat() -> (uint32 frames_per_second, uint32 sample_format,
+                    uint32 num_channels, zx.duration external_delay);
+
+    /// Notify all listeners, when the above format is set or changed.
+    -> OnSetFormat(uint32 frames_per_second, uint32 sample_format,
+                   uint32 num_channels, zx.duration external_delay);
+
+    /// Return the current gain state for this device. After a device has been
+    /// added, a client can call this at any time -- even before the ring buffer
+    /// has been established, or before the format has been set.
+    GetGain() -> (bool current_mute, bool current_agc, float32 current_gain_db);
+
+    /// Notify all listeners, when the above gain is set or changed.
+    -> OnSetGain(bool current_mute, bool current_agc, float32 current_gain_db);
+
+    /// Return details about the ring buffer that was established in response
+    /// to a client `AUDIO_RB_CMD_GET_BUFFER` command. This will only occur
+    /// after the format is set and other information is retrieved from the
+    /// driver.
+    GetBuffer() -> (handle<vmo> ring_buffer, uint32 num_ring_buffer_frames,
+                    uint32 notifications_per_ring);
+
+    /// Notify all listeners, when the above buffer has been requested (and
+    /// thus at that time has been established).
+    -> OnBufferCreated(handle<vmo> ring_buffer, uint32 num_ring_buffer_frames,
+                       uint32 notifications_per_ring);
+
+    /// Notify a test client when the device is commanded to Start streaming.
+    /// This can only occur after a device is fully configured (format is set;
+    /// ring buffer is established and fetched).
+    -> OnStart(zx.time start_time);
+
+    /// Notify a test client when the device is commanded to Stop streaming.
+    /// This can only occur when the device is currently Started. Stop returns
+    /// the device to a fully-configured state. Restated, upon this command,
+    /// the already-set format and ring buffer are retained without change.
+    -> OnStop(zx.time stop_time, uint32 ring_position);
+
+    /// Return the current position (in bytes) within the ring buffer. This can
+    /// only be called after the ring buffer is established. If the device has
+    /// not yet Started streaming, then zero will always be returned.
+    GetPosition() -> (uint32 ring_position, zx.time clock_time);
+
+    /// Notify all listeners, when any `AUDIO_RB_POSITION_NOTIFY` position
+    /// notification is proactively issued to the client.
+    -> OnPositionNotify(uint32 ring_position, zx.time clock_time);
+
     /// Hot-plug or hot-unplug an active virtual device, at the specified time.
     /// For devices marked as capable of asynchronously notifying the system of
     /// plug changes, the driver will now send the values using
@@ -113,7 +165,7 @@ protocol Device {
     /// the driver is next sent an `AUDIO_STREAM_CMD_PLUG_DETECT` command. This
     /// information is used by the system when determining which device is
     /// default. This, in turn, is exposed to clients by the
-    /// `fuchsia.media.AudioDeviceEnumerator` interface: in `GetDevices()`,
+    /// `fuchsia.media.AudioDeviceEnumerator` protocol: in `GetDevices()`,
     /// `GetDefaultInputDevice()`/`GetDefaultOutputDevice()` and the
     /// `->OnDefaultDeviceChanged()` event.
     ChangePlugState(zx.time plug_change_time, bool plugged);
@@ -125,7 +177,7 @@ protocol Device {
 /// This protocol is conceptually a base protocol to Device. It exposes the
 /// methods used to specify the properties of a virtual audio device (its
 /// configuration), before the virtual device is instantiated by the call to
-/// `Add()`. Although the non-Add methods on this interface can be called after
+/// `Add()`. Although the non-Add methods on this protocol can be called after
 /// calling `Add()` (i.e., after Configuration has been converted into active
 /// Device), this only changes how future Devices will be created; it has no
 /// effect on already-created Devices.
@@ -141,7 +193,7 @@ protocol Configuration {
     /// this value is returned by the driver in response to an
     /// `AUDIO_STREAM_CMD_GET_STRING` command of string ID
     /// `AUDIO_STREAM_STR_ID_MANUFACTURER`. This information is exposed to
-    /// clients by the `fuchsia.media.AudioDeviceEnumerator` interface: returned
+    /// clients by the `fuchsia.media.AudioDeviceEnumerator` protocol: returned
     /// in an `AudioDeviceInfo` struct by `GetDevices()` and the
     /// `->OnDeviceAdded()` event.
     SetManufacturer(string manufacturer_name);
@@ -151,7 +203,7 @@ protocol Configuration {
     /// value is returned by the driver in response to an
     /// `AUDIO_STREAM_CMD_GET_STRING` command of string ID
     /// `AUDIO_STREAM_STR_ID_PRODUCT`. This information is exposed to clients by
-    /// the `fuchsia.media.AudioDeviceEnumerator` interface: returned in an
+    /// the `fuchsia.media.AudioDeviceEnumerator` protocol: returned in an
     /// `AudioDeviceInfo` struct by `GetDevices()` and the `->OnDeviceAdded()`
     /// event.
     SetProduct(string product_name);
@@ -160,7 +212,7 @@ protocol Configuration {
     /// must be called before calling `Add()`, or after `Remove()`. Once the
     /// device is activated, this value is returned by the driver in response
     /// to an `AUDIO_STREAM_CMD_GET_UNIQUE_ID` command. This value is exposed
-    /// to clients by the `fuchsia.media.AudioDeviceEnumerator` interface:
+    /// to clients by the `fuchsia.media.AudioDeviceEnumerator` protocol:
     /// returned in an `AudioDeviceInfo` struct by `GetDevices()` or
     /// `->OnDeviceAdded()`.
     SetUniqueId(array<uint8>:16 unique_id);
@@ -174,6 +226,11 @@ protocol Configuration {
     AddFormatRange(uint32 sample_format_flags, uint32 min_frame_rate,
                    uint32 max_frame_rate, uint8 min_channels,
                    uint8 max_channels, uint16 rate_family_flags);
+
+    /// Remove the minimal format range that is added by default to all
+    /// configurations. As with `AddFormatRange()`, this method must be called
+    /// before calling `Add()`, or after `Remove()`.
+    ClearFormatRanges();
 
     /// Set the virtual audio device's fifo depth, in bytes. This must be called
     /// before calling `Add()`, or after `Remove()`. Once the device is
@@ -203,7 +260,7 @@ protocol Configuration {
     /// information is returned by the driver in an
     /// `audio_stream_cmd_get_gain_resp` struct, in response to an
     /// `AUDIO_STREAM_CMD_GET_GAIN` command. This information is exposed to
-    /// clients by the `fuchsia.media.AudioDeviceEnumerator` interface: returned
+    /// clients by the `fuchsia.media.AudioDeviceEnumerator` protocol: returned
     /// in an `AudioGainInfo` struct by `GetDeviceGain()` and the
     /// `->OnDeviceGainChanged()` event.
     SetGainProperties(float32 min_gain_db, float32 max_gain_db,
@@ -216,7 +273,7 @@ protocol Configuration {
     /// information is returned by the driver in response to an
     /// `AUDIO_STREAM_CMD_PLUG_DETECT `command. This information is used by the
     /// system when determining which device is default. This in turn is exposed
-    /// to clients by the `fuchsia.media.AudioDeviceEnumerator` interface: in
+    /// to clients by the `fuchsia.media.AudioDeviceEnumerator` protocol: in
     /// `GetDevices()`, `GetDefaultInputDevice()`/`GetDefaultOutputDevice()` and
     /// the `->OnDefaultDeviceChanged()` event.
     SetPlugProperties(zx.time plug_change_time, bool plugged, bool hardwired,

@@ -67,6 +67,15 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   // Used to deliver callbacks or events, from the driver execution domain.
   void PostToDispatcher(fit::closure task_to_post);
 
+  void SetBinding(
+      fidl::Binding<fuchsia::virtualaudio::Input,
+                    fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>*
+          binding);
+  void SetBinding(
+      fidl::Binding<fuchsia::virtualaudio::Output,
+                    fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>*
+          binding);
+
   virtual bool CreateStream(zx_device_t* devnode);
   void RemoveStream();
   void ClearStream();
@@ -84,11 +93,13 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   void AddFormatRange(uint32_t format_flags, uint32_t min_rate,
                       uint32_t max_rate, uint8_t min_chans, uint8_t max_chans,
                       uint16_t rate_family_flags) override;
+  void ClearFormatRanges() override;
 
   void SetFifoDepth(uint32_t fifo_depth_bytes) override;
   void SetExternalDelay(zx_duration_t external_delay) override;
   void SetRingBufferRestrictions(uint32_t min_frames, uint32_t max_frames,
                                  uint32_t modulo_frames) override;
+
   void SetGainProperties(float min_gain_db, float max_gain_db,
                          float gain_step_db, float current_gain_db,
                          bool can_mute, bool current_mute, bool can_agc,
@@ -104,6 +115,32 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   //
   void Add() override;
   void Remove() override;
+
+  void GetFormat(
+      fuchsia::virtualaudio::Device::GetFormatCallback callback) override;
+  virtual void NotifySetFormat(uint32_t frames_per_second,
+                               uint32_t sample_format, uint32_t num_channels,
+                               zx_duration_t external_delay);
+
+  void GetGain(
+      fuchsia::virtualaudio::Device::GetGainCallback callback) override;
+  virtual void NotifySetGain(bool current_mute, bool current_agc,
+                             float current_gain_db);
+
+  void GetBuffer(
+      fuchsia::virtualaudio::Device::GetBufferCallback callback) override;
+  virtual void NotifyBufferCreated(zx::vmo ring_buffer_vmo,
+                                   uint32_t num_ring_buffer_frames,
+                                   uint32_t notifications_per_ring);
+
+  virtual void NotifyStart(zx_time_t start_time);
+  virtual void NotifyStop(zx_time_t stop_time, uint32_t ring_buffer_position);
+
+  void GetPosition(
+      fuchsia::virtualaudio::Device::GetPositionCallback callback) override;
+  virtual void NotifyPosition(uint32_t ring_buffer_position,
+                              zx_time_t start_time);
+
   void ChangePlugState(zx_time_t plug_change_time, bool plugged) override;
 
  protected:
@@ -117,9 +154,21 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   fbl::RefPtr<VirtualAudioStream> stream_;
   bool is_input_;
 
-  char device_name_[32];
-  char mfr_name_[64];
-  char prod_name_[64];
+  // When the binding is closed, it is removed from the (ControlImpl-owned)
+  // BindingSet that contains it, which in turn deletes the associated impl
+  // (since the binding holds a unique_ptr<impl>, not an impl*). Something might
+  // get dispatched from another thread at around this time, so we always check
+  // the binding __once we get to our main thread__, wherever these are used.
+  fidl::Binding<fuchsia::virtualaudio::Input,
+                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>*
+      input_binding_ = nullptr;
+  fidl::Binding<fuchsia::virtualaudio::Output,
+                fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>*
+      output_binding_ = nullptr;
+
+  std::string device_name_;
+  std::string mfr_name_;
+  std::string prod_name_;
   uint8_t unique_id_[16];
 
   std::vector<audio_stream_format_range_t> supported_formats_;
@@ -137,8 +186,6 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   bool plugged_;
   bool hardwired_;
   bool async_plug_notify_;
-
-  bool default_range_ = true;
 };
 
 }  // namespace virtual_audio

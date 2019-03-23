@@ -55,9 +55,10 @@ any previously active devices).
 ### virtualaudio.Input and virtualaudio.Output
 
 These FIDL interfaces are used to configure and add virtual audio input and
-output devices. virtualaudio.Config is a subset of the top-level input and
-output interfaces, and includes methods to statically configure these virtual
-devices before they are created, specifically to set the following properties:
+output devices. virtualaudio.Configuration is a subset of the top-level input
+and output interfaces, and includes methods to statically configure these
+virtual devices before they are created, specifically to set the following
+properties:
 * Device name
 * Manufacturer name
 * Product name
@@ -86,8 +87,9 @@ devices before they are created, specifically to set the following properties:
   - Plugged
   - Plug time
 Together, these properties comprise a virtual audio device _config_. Finally,
-the virtualaudio.Config interface contains a method to:
+the virtualaudio.Configuration interface contains methods to:
 * Reset the device configuration, returning it to a default state.
+* Clear the previously-added format ranges, retaining other configuration state.
 
 The virtualaudio.Device interface (another subset of Input and Output) contains
 methods to make the following dynamic changes:

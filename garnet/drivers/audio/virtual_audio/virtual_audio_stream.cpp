@@ -32,15 +32,16 @@ VirtualAudioStream::~VirtualAudioStream() {
 }
 
 zx_status_t VirtualAudioStream::Init() {
-  if (!strlcpy(device_name_, parent_->device_name_, sizeof(device_name_))) {
+  if (!strlcpy(device_name_, parent_->device_name_.c_str(),
+               sizeof(device_name_))) {
     return ZX_ERR_INTERNAL;
   }
 
-  if (!strlcpy(mfr_name_, parent_->mfr_name_, sizeof(mfr_name_))) {
+  if (!strlcpy(mfr_name_, parent_->mfr_name_.c_str(), sizeof(mfr_name_))) {
     return ZX_ERR_INTERNAL;
   }
 
-  if (!strlcpy(prod_name_, parent_->prod_name_, sizeof(prod_name_))) {
+  if (!strlcpy(prod_name_, parent_->prod_name_.c_str(), sizeof(prod_name_))) {
     return ZX_ERR_INTERNAL;
   }
 
@@ -93,6 +94,74 @@ zx_status_t VirtualAudioStream::InitPost() {
     return status;
   }
 
+  gain_request_wakeup_ = dispatcher::WakeupEvent::Create();
+  if (gain_request_wakeup_ == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  dispatcher::WakeupEvent::ProcessHandler gain_wake_handler(
+      [this](dispatcher::WakeupEvent* event) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
+        HandleGainRequests();
+        return ZX_OK;
+      });
+  status =
+      gain_request_wakeup_->Activate(domain_, std::move(gain_wake_handler));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "GetGain WakeupEvent activate failed (%d)\n", status);
+    return status;
+  }
+
+  format_request_wakeup_ = dispatcher::WakeupEvent::Create();
+  if (format_request_wakeup_ == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  dispatcher::WakeupEvent::ProcessHandler format_wake_handler(
+      [this](dispatcher::WakeupEvent* event) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
+        HandleFormatRequests();
+        return ZX_OK;
+      });
+  status =
+      format_request_wakeup_->Activate(domain_, std::move(format_wake_handler));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "GetFormat WakeupEvent activate failed (%d)\n", status);
+    return status;
+  }
+
+  buffer_request_wakeup_ = dispatcher::WakeupEvent::Create();
+  if (buffer_request_wakeup_ == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  dispatcher::WakeupEvent::ProcessHandler buffer_wake_handler(
+      [this](dispatcher::WakeupEvent* event) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
+        HandleBufferRequests();
+        return ZX_OK;
+      });
+  status =
+      buffer_request_wakeup_->Activate(domain_, std::move(buffer_wake_handler));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "GetBuffer WakeupEvent activate failed (%d)\n", status);
+    return status;
+  }
+
+  position_request_wakeup_ = dispatcher::WakeupEvent::Create();
+  if (position_request_wakeup_ == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  dispatcher::WakeupEvent::ProcessHandler position_wake_handler(
+      [this](dispatcher::WakeupEvent* event) -> zx_status_t {
+        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
+        HandlePositionRequests();
+        return ZX_OK;
+      });
+  status = position_request_wakeup_->Activate(domain_,
+                                              std::move(position_wake_handler));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "GetPosition WakeupEvent activate failed (%d)\n", status);
+    return status;
+  }
+
   notify_timer_ = dispatcher::Timer::Create();
   if (notify_timer_ == nullptr) {
     return ZX_ERR_NO_MEMORY;
@@ -109,6 +178,56 @@ zx_status_t VirtualAudioStream::InitPost() {
   }
 
   return ZX_OK;
+}
+
+void VirtualAudioStream::EnqueuePlugChange(bool plugged) {
+  {
+    fbl::AutoLock lock(&wakeup_queue_lock_);
+    PlugType plug_change = (plugged ? PlugType::Plug : PlugType::Unplug);
+    plug_queue_.push_back(plug_change);
+  }
+
+  plug_change_wakeup_->Signal();
+}
+
+void VirtualAudioStream::EnqueueGainRequest(
+    fuchsia::virtualaudio::Device::GetGainCallback gain_callback) {
+  {
+    fbl::AutoLock lock(&wakeup_queue_lock_);
+    gain_queue_.push_back(std::move(gain_callback));
+  }
+
+  gain_request_wakeup_->Signal();
+}
+
+void VirtualAudioStream::EnqueueFormatRequest(
+    fuchsia::virtualaudio::Device::GetFormatCallback format_callback) {
+  {
+    fbl::AutoLock lock(&wakeup_queue_lock_);
+    format_queue_.push_back(std::move(format_callback));
+  }
+
+  format_request_wakeup_->Signal();
+}
+
+void VirtualAudioStream::EnqueueBufferRequest(
+    fuchsia::virtualaudio::Device::GetBufferCallback buffer_callback) {
+  {
+    fbl::AutoLock lock(&wakeup_queue_lock_);
+    buffer_queue_.push_back(std::move(buffer_callback));
+  }
+
+  buffer_request_wakeup_->Signal();
+}
+
+void VirtualAudioStream::EnqueuePositionRequest(
+    fuchsia::virtualaudio::Device::GetPositionCallback position_callback) {
+  {
+    fbl::AutoLock lock(&wakeup_queue_lock_);
+    position_queue_.push_back(std::move(position_callback));
+  }
+
+  position_request_wakeup_->Signal();
 }
 
 void VirtualAudioStream::HandlePlugChanges() {
@@ -138,14 +257,139 @@ void VirtualAudioStream::HandlePlugChange(PlugType plug_change) {
   }
 }
 
-void VirtualAudioStream::EnqueuePlugChange(bool plugged) {
-  {
-    fbl::AutoLock lock(&wakeup_queue_lock_);
-    PlugType plug_change = (plugged ? PlugType::Plug : PlugType::Unplug);
-    plug_queue_.push_back(plug_change);
-  }
+void VirtualAudioStream::HandleGainRequests() {
+  while (true) {
+    bool current_mute, current_agc;
+    float current_gain_db;
+    fuchsia::virtualaudio::Device::GetGainCallback gain_callback;
 
-  plug_change_wakeup_->Signal();
+    if (fbl::AutoLock lock(&wakeup_queue_lock_); !gain_queue_.empty()) {
+      current_mute = cur_gain_state_.cur_mute;
+      current_agc = cur_gain_state_.cur_agc;
+      current_gain_db = cur_gain_state_.cur_gain;
+
+      gain_callback = std::move(gain_queue_.front());
+      gain_queue_.pop_front();
+    } else {
+      break;
+    }
+
+    parent_->PostToDispatcher([gain_callback = std::move(gain_callback),
+                               current_mute, current_agc, current_gain_db]() {
+      gain_callback(current_mute, current_agc, current_gain_db);
+    });
+  }
+}
+
+void VirtualAudioStream::HandleFormatRequests() {
+  while (true) {
+    uint32_t frames_per_second, sample_format, num_channels;
+    zx_duration_t external_delay;
+    fuchsia::virtualaudio::Device::GetFormatCallback format_callback;
+
+    if (fbl::AutoLock lock(&wakeup_queue_lock_); !format_queue_.empty()) {
+      frames_per_second = frame_rate_;
+      sample_format = sample_format_;
+      num_channels = num_channels_;
+      external_delay = external_delay_nsec_;
+
+      format_callback = std::move(format_queue_.front());
+      format_queue_.pop_front();
+    } else {
+      break;
+    }
+
+    if (frames_per_second == 0) {
+      zxlogf(TRACE, "Format is not set - should not be calling GetFormat\n");
+      return;
+    }
+
+    parent_->PostToDispatcher([format_callback = std::move(format_callback),
+                               frames_per_second, sample_format, num_channels,
+                               external_delay]() {
+      format_callback(frames_per_second, sample_format, num_channels,
+                      external_delay);
+    });
+  }
+}
+
+void VirtualAudioStream::HandleBufferRequests() {
+  while (true) {
+    zx_status_t status;
+    zx::vmo ring_buffer_vmo;
+    uint32_t num_ring_buffer_frames;
+    uint32_t notifications_per_ring;
+    fuchsia::virtualaudio::Device::GetBufferCallback buffer_callback;
+
+    if (fbl::AutoLock lock(&wakeup_queue_lock_); !buffer_queue_.empty()) {
+      status = ring_buffer_vmo_.duplicate(
+          ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
+          &ring_buffer_vmo);
+      num_ring_buffer_frames = num_ring_buffer_frames_;
+      notifications_per_ring = notifications_per_ring_;
+
+      buffer_callback = std::move(buffer_queue_.front());
+      buffer_queue_.pop_front();
+    } else {
+      break;
+    }
+
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s failed to duplicate VMO handle - %d\n", __func__,
+             status);
+      return;
+    }
+    if (!ring_buffer_vmo.is_valid()) {
+      zxlogf(TRACE,
+             "Buffer is not set - should not be retrieving ring buffer\n");
+      return;
+    }
+
+    parent_->PostToDispatcher([buffer_callback = std::move(buffer_callback),
+                               rb_vmo = std::move(ring_buffer_vmo),
+                               num_ring_buffer_frames,
+                               notifications_per_ring]() mutable {
+      buffer_callback(std::move(rb_vmo), num_ring_buffer_frames,
+                      notifications_per_ring);
+    });
+  }
+}
+
+void VirtualAudioStream::HandlePositionRequests() {
+  while (true) {
+    zx::time start_time;
+    uint32_t num_rb_frames, frame_size, frame_rate;
+    fuchsia::virtualaudio::Device::GetPositionCallback position_callback;
+
+    if (fbl::AutoLock lock(&wakeup_queue_lock_); !position_queue_.empty()) {
+      start_time = start_time_;
+      num_rb_frames = num_ring_buffer_frames_;
+      frame_size = frame_size_;
+      frame_rate = frame_rate_;
+
+      position_callback = std::move(position_queue_.front());
+      position_queue_.pop_front();
+    } else {
+      break;
+    }
+
+    if (start_time.get() == 0) {
+      zxlogf(TRACE,
+             "Stream is not started -- should not be calling GetPosition\n");
+      return;
+    }
+
+    zx::time now = zx::clock::get_monotonic();
+    zx::duration duration_ns = now - start_time;
+    uint64_t frames = (duration_ns.get() * frame_rate) / ZX_SEC(1);
+    uint32_t ring_buffer_position = (frames % num_rb_frames) * frame_size;
+    zx_time_t time_for_position = now.get();
+
+    parent_->PostToDispatcher([position_callback = std::move(position_callback),
+                               ring_buffer_position, time_for_position]() {
+      position_callback(ring_buffer_position, time_for_position);
+    });
+  }
 }
 
 // Upon success, drivers should return a valid VMO with appropriate
@@ -223,6 +467,19 @@ zx_status_t VirtualAudioStream::GetBuffer(
 
   *out_num_rb_frames = num_ring_buffer_frames_;
 
+  zx::vmo duplicate_vmo;
+  status = ring_buffer_vmo_.duplicate(
+      ZX_RIGHT_TRANSFER | ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP,
+      &duplicate_vmo);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to duplicate VMO handle for notification - %d\n",
+           __func__, status);
+    return status;
+  }
+  parent_->NotifyBufferCreated(std::move(duplicate_vmo),
+                               num_ring_buffer_frames_,
+                               notifications_per_ring_);
+
   return ZX_OK;
 }
 
@@ -240,6 +497,10 @@ zx_status_t VirtualAudioStream::ChangeFormat(
   bytes_per_sec_ = frame_rate_ * frame_size_;
 
   // (Re)set external_delay_nsec_ and fifo_depth_ before leaving, if needed.
+
+  parent_->NotifySetFormat(frame_rate_, sample_format_, num_channels_,
+                           external_delay_nsec_);
+
   return ZX_OK;
 }
 
@@ -257,6 +518,9 @@ zx_status_t VirtualAudioStream::SetGain(
   if (req.flags & AUDIO_SGF_AGC_VALID) {
     cur_gain_state_.cur_agc = req.flags & AUDIO_SGF_AGC;
   }
+
+  parent_->NotifySetGain(cur_gain_state_.cur_mute, cur_gain_state_.cur_agc,
+                         cur_gain_state_.cur_gain);
 
   return ZX_OK;
 }
@@ -280,14 +544,19 @@ zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
     notify_timer_->Arm(*out_start_time);
   }
 
+  parent_->NotifyStart(*out_start_time);
+
   return ZX_OK;
 }
 
 // Timer handler for sending out position notifications
+// TODO(mpuryear): Establish a notification cadence at the requested ring
+// positions, such as 0, 1000, 0, 1000,... instead of 4, 1006, 8, 1010, 12,...
 zx_status_t VirtualAudioStream::ProcessRingNotification() {
   ZX_DEBUG_ASSERT(us_per_notification_ > 0);
 
   zx::time now = zx::clock::get_monotonic();
+
   notify_timer_->Arm(now.get() + ZX_USEC(us_per_notification_));
 
   ::audio::audio_proto::RingBufPositionNotify resp = {};
@@ -305,16 +574,27 @@ zx_status_t VirtualAudioStream::ProcessRingNotification() {
            resp.ring_buffer_pos, now.get());
   }
 
-  return NotifyPosition(resp);
+  zx_status_t status = NotifyPosition(resp);
+
+  parent_->NotifyPosition(ring_buffer_position, now.get());
+
+  return status;
 }
 
 zx_status_t VirtualAudioStream::Stop() {
+  auto stop_time = zx::clock::get_monotonic();
+
   if (kTestPosition) {
-    zxlogf(TRACE, "%s at %ld\n", __PRETTY_FUNCTION__,
-           zx_clock_get(ZX_CLOCK_MONOTONIC));
+    zxlogf(TRACE, "%s at %ld\n", __PRETTY_FUNCTION__, stop_time.get());
   }
 
   notify_timer_->Cancel();
+
+  zx::duration duration_ns = stop_time - start_time_;
+  uint64_t frames = (duration_ns.get() * frame_rate_) / ZX_SEC(1);
+  uint32_t ring_buf_position = (frames % num_ring_buffer_frames_) * frame_size_;
+  parent_->NotifyStop(stop_time.get(), ring_buf_position);
+
   start_time_ = zx::time(0);
 
   return ZX_OK;

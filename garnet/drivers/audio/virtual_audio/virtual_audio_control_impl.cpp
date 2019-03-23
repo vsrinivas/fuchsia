@@ -120,6 +120,9 @@ zx_status_t VirtualAudioControlImpl::SendInput(
       fidl::InterfaceRequest<fuchsia::virtualaudio::Input>(
           std::move(input_request_channel)));
 
+  auto* binding = input_bindings_.bindings().back().get();
+  binding->impl()->SetBinding(binding);
+
   return ZX_OK;
 }
 
@@ -138,6 +141,9 @@ zx_status_t VirtualAudioControlImpl::SendOutput(
       VirtualAudioDeviceImpl::Create(this, false),
       fidl::InterfaceRequest<fuchsia::virtualaudio::Output>(
           std::move(output_request_channel)));
+
+  auto* binding = output_bindings_.bindings().back().get();
+  binding->impl()->SetBinding(binding);
 
   return ZX_OK;
 }
