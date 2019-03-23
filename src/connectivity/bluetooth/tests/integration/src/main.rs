@@ -50,9 +50,13 @@ fn main() -> Result<(), Error> {
         run_test!(test_add_bonded_devices_no_ltk_fails),
         run_test!(test_add_bonded_devices_duplicate_entry),
         run_test!(test_add_bonded_devices_invalid_entry),
-        run_test!(set_active_host),
-        run_test!(enable_scan),
-        run_test!(enable_and_disable_scan),
+        // Disabled whilst investigating FLK-106
+        //run_test!(set_active_host),
+        //run_test!(enable_scan),
+        //run_test!(enable_and_disable_scan),
     ])?;
+    let _ = set_active_host;
+    let _ = enable_scan;
+    let _ = enable_and_disable_scan;
     Ok(())
 }
