@@ -66,6 +66,9 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: fuchsia_hardware_thermal_ThermalDeviceInfo
 #define DEVICE_METADATA_THERMAL_CONFIG            0x54485243 // THRC
 
+// type: array of gpio_pin_t
+#define DEVICE_METADATA_GPIO_PINS                 0x4F495047 // GPIO
+
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
 // This allows creating metadata types to be defined local to a particular

@@ -49,9 +49,8 @@ public:
 };
 
 zx_status_t TestGpioDevice::Init() {
-    zx_status_t status;
     pbus_protocol_t pbus;
-    status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
+    auto status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d\n", __func__, status);
         return status;
@@ -86,7 +85,6 @@ zx_status_t TestGpioDevice::Create(zx_device_t* parent) {
         zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __func__, status);
         return status;
     }
-
     // devmgr is now in charge of dev.
     auto ptr = dev.release();
 

@@ -81,11 +81,11 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
     const zx_bind_inst_t root_match[] = {
         BI_MATCH(),
     };
-    const zx_bind_inst_t child2_match[]  = {
+    const zx_bind_inst_t gpio_impl_match[]  = {
         BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
         BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
         BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-        BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_2),
+        BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_GPIO),
     };
     const zx_bind_inst_t child3_match[]  = {
         BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
@@ -94,14 +94,15 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
         BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_3),
     };
     const zx_bind_inst_t gpio_match[] = {
-        BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+        BI_MATCH_IF(EQ, BIND_GPIO_PIN, 3),
     };
     const zx_bind_inst_t i2c_match[] = {
         BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
     };
     device_component_part_t composite1_1[] = {
         { fbl::count_of(root_match), root_match },
-        { fbl::count_of(child2_match), child2_match },
+        { fbl::count_of(gpio_impl_match), gpio_impl_match },
         { fbl::count_of(gpio_match), gpio_match },
     };
     device_component_part_t composite1_2[] = {

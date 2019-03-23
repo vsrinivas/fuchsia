@@ -121,8 +121,11 @@ __BEGIN_CDECLS
 #define BIND_SDIO_VID 0x0900
 #define BIND_SDIO_PID 0x0901
 
-// I2C binding variables at 0x0AXX
+// I2C binding variables at 0x0A0X
 #define BIND_I2C_CLASS 0x0A00
+
+// GPIO binding variables at 0x0A1X
+#define BIND_GPIO_PIN       0x0A10
 
 // Fuchsia-defined topological path properties are at 0x0B00 through 0x0B7F.
 // Vendor-defined topological path properties are at 0x0B80 to 0x0BFF.

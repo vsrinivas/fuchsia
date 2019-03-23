@@ -6,6 +6,7 @@ group("gpio") {
   deps = [
     "aml-axg-gpio",
     "aml-gxl-gpio",
+    "gpio",
     "gpio-test",
     "imx8",
     "mt-8167",
