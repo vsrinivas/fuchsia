@@ -206,6 +206,13 @@ for_each_package() {
       single_file=true
       package_suffix="/${PLATFORM}"
       ;;
+    sysroot/*)
+      # These are the same for every host platform.
+      # The $os-$cpu gets rewritten from CIPD names (amd64) to GN names (x64).
+      download_file="${package/%amd64/x64}.zip"
+      single_file=false
+      package_suffix=''
+      ;;
     */${PLATFORM})
       package="${package%/*}"
       # Subdirectories are packed in .zip files.

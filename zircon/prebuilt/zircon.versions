@@ -22,12 +22,12 @@ fuchsia/gcc/mac-amd64
 	91ce4adeea757742fe77183cff9c246dd190dd97
 
 fuchsia/sysroot/linux-amd64
-	git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
-	ae0677829357edb199c21e76b1ea31eb8ef62817
+	git_revision:a4aaacde9d37ccf91a0f8dc8267cb7ad5d9be283
+	qIDZyI1rOQR7INRUL5vxltcQ9sAmdu3-FrI-Wcf_OVwC
 
 fuchsia/sysroot/linux-arm64
-	git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
-	f116a841ddf6d1755bde918b8f07763bdee5e06d
+	git_revision:a4aaacde9d37ccf91a0f8dc8267cb7ad5d9be283
+	B1w-KMj3c3107ZQ3i05ID0Keq_kDPXLmwAkwzn2LmTIC
 
 fuchsia/third_party/qemu/linux-amd64
 	git_revision:533bf2563d0213a7e002d9fcde75519d30ffa70f

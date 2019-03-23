@@ -2,22 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/config/standard.gni")
 import("levels.gni")
-
-# TODO: download all host sysroot prebuilts
-if (host_os == "mac") {
-  _prebuilt_sysroot =
-      exec_script("/usr/bin/xcrun", [ "--show-sdk-path" ], "trim string")
-} else {
-  _prebuilt_sysroot = "$zx/prebuilt/downloads/sysroot"
-}
 
 declare_args() {
   # The `--sysroot` directory for host compilations.
   # This can be a string, which only applies to $host_os-$host_cpu.
   # Or it can be a list of scopes containing `cpu`, `os`, and `sysroot`.
   # The empty list (or empty string) means don't use `--sysroot` at all.
-  sysroot = _prebuilt_sysroot
+  sysroot = standard_sysroot
 }
 
 # Convert a string to a list.

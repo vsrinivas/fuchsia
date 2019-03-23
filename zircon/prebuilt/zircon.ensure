@@ -30,9 +30,13 @@ fuchsia/clang/${platform} git_revision:93e15dfacce02969c803593a298d3becfd1ae4b4
 @Subdir gcc
 fuchsia/gcc/${os}-${arch=amd64} git_revision:fb02152947d8ef666961e3b8b6527ed39de18334,653a4ab26cb08800c45b8c3446c3753d6f2102df
 
-# sysroot
-@Subdir sysroot
-fuchsia/sysroot/${os=linux}-${arch} git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
+# sysroot/linux-arm64
+@Subdir sysroot/linux-arm64
+fuchsia/sysroot/linux-arm64 git_revision:a4aaacde9d37ccf91a0f8dc8267cb7ad5d9be283
+
+# sysroot/linux-x64
+@Subdir sysroot/linux-x64
+fuchsia/sysroot/linux-amd64 git_revision:a4aaacde9d37ccf91a0f8dc8267cb7ad5d9be283
 
 # Symbolizer tool.  This is a standalone executable, not a subdirectory.
 @Subdir

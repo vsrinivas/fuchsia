@@ -22,14 +22,37 @@ standard_build_hosts = [
   },
 ]
 
+# Default value for $sysroot build argument.
+standard_sysroot = []
+foreach(host, standard_build_hosts) {
+  standard_sysroot += [
+    {
+      cpu = host.cpu
+      os = host.os
+      sysroot = "$zx/prebuilt/downloads/sysroot/$os-$cpu"
+    },
+  ]
+}
+
 # Cross-compiling to Mac isn't possible because of the Mach-O linker.
 if (host_os == "mac") {
   standard_build_hosts += [
     {
-      cpu = "x64"
+      cpu = host_cpu
       os = "mac"
     },
   ]
+  _xcode_sysroot =
+      exec_script("/usr/bin/xcrun", [ "--show-sdk-path" ], "trim string")
+  if (_xcode_sysroot != "") {
+    standard_sysroot += [
+      {
+        cpu = host_cpu
+        os = "mac"
+        sysroot = _xcode_sysroot
+      },
+    ]
+  }
 }
 
 # Universal configs that apply to all code in the build.
