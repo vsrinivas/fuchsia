@@ -218,18 +218,23 @@ template("test_spec") {
     dims = []  # Clear from previous iteration.
     dims = env.dimensions
 
+    # TODO(joshuaseaton): Delete once we have softly transition off of labels.
+    if (defined(env.label) && !defined(env.tags)) {
+      env.tags = [ env.label ]
+    }
+
     # TODO(IN-876): Delete this block once astros are ready to be targeted.
     if (defined(dims.device_type) && dims.device_type == "Astro") {
-      assert(defined(env.label) &&
-                 (env.label == "astro" || env.label == "system-ota-tests"),
-             "astros may not yet be targeted.")
+      assert(
+          defined(env.tags) && [ "astro" ] + env.tags - env.tags == [],
+          "astros may not yet be targeted.")
     }
 
     # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
     if (defined(dims.device_type) && dims.device_type == "Khadas Vim2 Max") {
-      assert(defined(env.label) &&
-                 (env.label == "vim2" || env.label == "system-ota-tests"),
-             "vim2s may not yet be targeted.")
+      assert(
+          defined(env.tags) && [ "vim2" ] + env.tags - env.tags == [],
+          "vim2s may not yet be targeted.")
     }
   }
 

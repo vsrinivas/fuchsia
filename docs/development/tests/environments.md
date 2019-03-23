@@ -26,7 +26,7 @@ environments = [
        <dimension key> = <value>
        ...
     }
-    label = "<environment label>"
+    tags = ["<environment tags...>"]
   },
   ...
 ]
@@ -34,7 +34,7 @@ environments = [
 
 See
 [guest_integration_tests](https://fuchsia.git.corp.google.com/garnet/+/5579ab6d62cb400d5392df2a883dc1abf1da5510/bin/guest/integration/BUILD.gn#42)
-for an example - and below for definitions of 'dimension' and 'label'
+for an example - and below for definitions of 'dimension' and 'tags'
 
 ### Default Behavior
 
@@ -66,13 +66,13 @@ dimensions, where Swarming is the task distribution system used by the infra. A
 dimension is effectively a key-value pair that describes a bot property that can
 be targeted.
 
-### Labels
+### Tags
 
-A label is an arbitrary string that may be attached to an environment. Setting
+Tags are arbitrary strings that may be attached to an environment. Setting
 it amounts to removing the corresponding test from the normal testing pipeline;
 in order then for that test to run, infra support for a new builder (to run
-tests for a particular label) must be added. Labels are used for special tests
-that require different configurations. Before using a label, please consult with
+tests for particular tags) must be added. Labels are used for special tests
+that require different configurations. Before using tags, please consult with
 fuchsia-infra-team@google.com"
 
 ## Validation

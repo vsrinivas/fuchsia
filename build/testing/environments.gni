@@ -14,8 +14,9 @@ astro_env = {
   dimensions = {
     device_type = "Astro"
   }
+
   # TODO(IN-876): Delete after bring-up.
-  label = "astro"
+  tags = [ "astro" ]
 }
 
 nuc_env = {
@@ -28,8 +29,9 @@ vim2_env = {
   dimensions = {
     device_type = "Khadas Vim2 Max"
   }
+
   # TODO(IN-571): Delete after bring-up.
-  label = "vim2"
+  tags = [ "vim2" ]
 }
 
 linux_env = {
@@ -50,6 +52,7 @@ mac_env = {
 
 # The basic, freely usable test environments supported by the infrastructure.
 basic_envs = [ qemu_env ]
+
 # TODO(INTK-749): only add NUCs for debug to alleviate shortage.
 if (current_cpu == "x64" && is_debug) {
   basic_envs += [ nuc_env ]
