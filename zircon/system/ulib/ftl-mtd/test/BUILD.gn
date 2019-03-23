@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":ftl-mtd",
+  ]
+}
+
+source_set("common") {
+  testonly = true
+
+  sources = [
+    "fake-nand-interface.cpp",
+  ]
+
+  deps = [
+    "$zx/system/ulib/mtd:headers",
+  ]
+}
+
+test("ftl-mtd") {
+  sources = [
+    "nand-volume-driver-tests.cpp",
+  ]
+
+  deps = [
+    ":common",
+    "$zx/system/ulib/ftl-mtd",
+    "$zx/system/ulib/mtd",
+    "$zx/system/ulib/zxtest",
+  ]
+}
