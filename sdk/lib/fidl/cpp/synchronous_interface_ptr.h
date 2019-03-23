@@ -139,7 +139,7 @@ class SynchronousInterfacePtr {
   // After this method returns, a subsequent call to |Bind| is required before
   // calling any additional |Interface| methods.
   InterfaceHandle<Interface> Unbind() {
-    InterfaceHandle<Interface> handle(proxy_->proxy().TakeChannel());
+    InterfaceHandle<Interface> handle(proxy_->proxy_.TakeChannel());
     proxy_.reset();
     return handle;
   }

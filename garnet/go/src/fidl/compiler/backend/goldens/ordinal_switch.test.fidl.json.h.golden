@@ -72,7 +72,7 @@ class SwitchingOrdinals_Proxy : public ::fidl::internal::Proxy, public Switching
 
 class SwitchingOrdinals_Stub : public ::fidl::internal::Stub, public SwitchingOrdinals_EventSender {
  public:
-  typedef class SwitchingOrdinals SwitchingOrdinals_clazz;
+  typedef class ::test::name::SwitchingOrdinals SwitchingOrdinals_clazz;
   explicit SwitchingOrdinals_Stub(SwitchingOrdinals_clazz* impl);
   ~SwitchingOrdinals_Stub() override;
 
@@ -89,13 +89,12 @@ class SwitchingOrdinals_SyncProxy : public SwitchingOrdinals_Sync {
  public:
   explicit SwitchingOrdinals_SyncProxy(::zx::channel channel);
   ~SwitchingOrdinals_SyncProxy() override;
-
-  ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
   zx_status_t OrdinalFive() override;
   zx_status_t OnlyGeneratedOrdinal() override;
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<SwitchingOrdinals>;
 };
 #endif // __Fuchsia__
 }  // namespace name

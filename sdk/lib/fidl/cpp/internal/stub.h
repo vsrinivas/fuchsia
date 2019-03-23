@@ -38,11 +38,11 @@ class Stub {
   //
   // The controller must be set to a non-null value before sending events
   // through this stub.
-  StubController* controller() const { return controller_; }
-  void set_controller(StubController* controller) { controller_ = controller; }
+  StubController* controller_() const { return stub_controller_; }
+  void set_controller(StubController* controller) { stub_controller_ = controller; }
 
  private:
-  StubController* controller_ = nullptr;
+  StubController* stub_controller_ = nullptr;
 };
 
 }  // namespace internal

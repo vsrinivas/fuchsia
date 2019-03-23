@@ -5,12 +5,16 @@
 
 import datetime
 import os
+import subprocess
 import sys
 
 from typing import List
 
 # Where is this script?
 DIR = os.path.dirname(os.path.realpath(__file__))
+
+# Where is gn?
+GN = os.path.realpath(os.path.join(DIR, '../../../buildtools/gn'))
 
 # Define ways that identifiers may be rendered
 STYLES = []
@@ -146,6 +150,54 @@ def table_fields(f, idents):
     f.write('  %d: uint32 %s;\n' % (i + 1, ident))
   f.write('};\n')
 
+@use
+def protocol_names(f, idents):
+  # a protocols with every dangerous name
+  for ident in idents:
+    f.write('protocol %s { JustOneMethod(); };\n' % ident)
+
+@use
+def method_names(f, idents):
+  # a protocol with every dangerous name as a method name
+  f.write('protocol DangerousMethods {\n');
+  for ident in idents:
+    f.write('  %s();\n' % ident)
+  f.write('};\n')
+
+@use
+def event_names(f, idents):
+  # a protocol with every dangerous name as an event name
+  f.write('protocol DangerousEvents {\n');
+  for ident in idents:
+    f.write('  -> %s();\n' % ident)
+  f.write('};\n')
+
+@use
+def method_request_arguments(f, idents):
+  # a protocol with every dangerous name as a request argument
+  f.write('using argtype = uint32;\n')
+  f.write('protocol DangerousRequestArguments {\n');
+  for i, ident in enumerate(idents):
+    f.write('  Method%d(argtype %s);\n' % (i, ident))
+  f.write('};\n')
+
+@use
+def method_response_arguments(f, idents):
+  # a protocol with every dangerous name as a response argument
+  f.write('using argtype = uint32;\n')
+  f.write('protocol DangerousResponseArguments {\n');
+  for i, ident in enumerate(idents):
+    f.write('  Method%d() -> (argtype %s);\n' % (i, ident))
+  f.write('};\n')
+
+@use
+def method_event_arguments(f, idents):
+  # a protocol with every dangerous name as a event argument
+  f.write('using argtype = uint32;\n')
+  f.write('protocol DangerousResponseArguments {\n');
+  for i, ident in enumerate(idents):
+    f.write('  -> Event%d(argtype %s);\n' % (i, ident))
+  f.write('};\n')
 
 def generated(prefix):
   """Return a header line indicating that this is a generated file."""
@@ -184,7 +236,7 @@ def dangerous_identifiers() -> List[List[str]]:
 def generate_fidl(identifiers: List[str]) -> List[str]:
   """Generate FIDL libraries for the specified identifiers.
 
-  Return the list of lbirary names.
+  Return the list of library names.
   """
   directory = os.path.join(DIR, 'fidl')
   os.makedirs(directory, exist_ok=True)
@@ -201,13 +253,15 @@ def generate_fidl(identifiers: List[str]) -> List[str]:
       library_names.append(library_name)
 
   # generate BUILD.gn for FIDL libraries
-  with open(os.path.join(directory, 'BUILD.gn'), 'w') as build_gn:
+  build_file = os.path.join(directory, 'BUILD.gn')
+  with open(build_file, 'w') as build_gn:
     build_gn.write(generated('#'))
     build_gn.write('import("//build/fidl/fidl.gni")\n\n')
     for library_name in library_names:
       build_gn.write(
           'fidl("%s") {\n  sources = [ "%s.fidl" ]\n  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }\n\n'
           % (library_name, library_name))
+  subprocess.check_output([GN, 'format', build_file])
 
   return library_names
 
@@ -223,7 +277,8 @@ def generate_cpp(identifiers: List[str], libraries: List[str]) -> None:
     f.write('\nint main() {\n  return 0;\n}\n')
 
   # generate BUILD.gn for C++ test
-  with open(os.path.join(directory, 'BUILD.gn'), 'w') as build_gn:
+  build_file = os.path.join(directory, 'BUILD.gn')
+  with open(build_file, 'w') as build_gn:
     build_gn.write(generated('#'))
     build_gn.write("""source_set("cpp") {
     output_name = "cpp_fidl_dangerous_identifiers_test"
@@ -233,6 +288,7 @@ def generate_cpp(identifiers: List[str], libraries: List[str]) -> None:
     for library_name in libraries:
       build_gn.write('    "%s",\n' % library_target(library_name))
     build_gn.write('  ]\n}\n')
+  subprocess.check_output([GN, 'format', build_file])
 
 
 if __name__ == '__main__':

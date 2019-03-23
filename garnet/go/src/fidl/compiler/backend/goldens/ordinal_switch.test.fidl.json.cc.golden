@@ -130,11 +130,11 @@ zx_status_t SwitchingOrdinals_Stub::Dispatch_(
 }
 void SwitchingOrdinals_Stub::EventOrdinalFifteen() {
   ::fidl::Encoder _encoder(kSwitchingOrdinals_EventOrdinalFifteen_Ordinal);
-  controller()->Send(&test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable, _encoder.GetMessage());
+  controller_()->Send(&test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable, _encoder.GetMessage());
 }
 void SwitchingOrdinals_Stub::EventOnlyGeneratedOrdinal() {
   ::fidl::Encoder _encoder(kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal);
-  controller()->Send(&test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable, _encoder.GetMessage());
+  controller_()->Send(&test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable, _encoder.GetMessage());
 }
 
 SwitchingOrdinals_SyncProxy::SwitchingOrdinals_SyncProxy(::zx::channel channel)

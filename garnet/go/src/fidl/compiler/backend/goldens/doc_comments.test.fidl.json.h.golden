@@ -69,7 +69,7 @@ class Interface_Proxy : public ::fidl::internal::Proxy, public Interface {
 
 class Interface_Stub : public ::fidl::internal::Stub, public Interface_EventSender {
  public:
-  typedef class Interface Interface_clazz;
+  typedef class ::test::name::Interface Interface_clazz;
   explicit Interface_Stub(Interface_clazz* impl);
   ~Interface_Stub() override;
 
@@ -84,12 +84,11 @@ class Interface_SyncProxy : public Interface_Sync {
  public:
   explicit Interface_SyncProxy(::zx::channel channel);
   ~Interface_SyncProxy() override;
-
-  ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
   zx_status_t Method() override;
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<Interface>;
 };
 #endif // __Fuchsia__
 

@@ -110,7 +110,7 @@ class KitchenSink_Proxy : public ::fidl::internal::Proxy, public KitchenSink {
 
 class KitchenSink_Stub : public ::fidl::internal::Stub, public KitchenSink_EventSender {
  public:
-  typedef class KitchenSink KitchenSink_clazz;
+  typedef class ::test::name::KitchenSink KitchenSink_clazz;
   explicit KitchenSink_Stub(KitchenSink_clazz* impl);
   ~KitchenSink_Stub() override;
 
@@ -126,13 +126,12 @@ class KitchenSink_SyncProxy : public KitchenSink_Sync {
  public:
   explicit KitchenSink_SyncProxy(::zx::channel channel);
   ~KitchenSink_SyncProxy() override;
-
-  ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
   zx_status_t MethodA(int64_t a, int64_t b) override;
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<KitchenSink>;
 };
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
@@ -187,7 +186,7 @@ class KitchenSink_Proxy : public ::fidl::internal::Proxy, public KitchenSink {
 
 class KitchenSink_Stub : public ::fidl::internal::Stub, public KitchenSink_EventSender {
  public:
-  typedef class KitchenSink KitchenSink_clazz;
+  typedef class ::test::name::KitchenSink KitchenSink_clazz;
   explicit KitchenSink_Stub(KitchenSink_clazz* impl);
   ~KitchenSink_Stub() override;
 
@@ -203,13 +202,12 @@ class KitchenSink_SyncProxy : public KitchenSink_Sync {
  public:
   explicit KitchenSink_SyncProxy(::zx::channel channel);
   ~KitchenSink_SyncProxy() override;
-
-  ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
   zx_status_t MethodA(int64_t a, int64_t b) override;
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<KitchenSink>;
 };
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
@@ -264,7 +262,7 @@ class ChannelProtocol_Proxy : public ::fidl::internal::Proxy, public ChannelProt
 
 class ChannelProtocol_Stub : public ::fidl::internal::Stub, public ChannelProtocol_EventSender {
  public:
-  typedef class ChannelProtocol ChannelProtocol_clazz;
+  typedef class ::test::name::ChannelProtocol ChannelProtocol_clazz;
   explicit ChannelProtocol_Stub(ChannelProtocol_clazz* impl);
   ~ChannelProtocol_Stub() override;
 
@@ -280,13 +278,12 @@ class ChannelProtocol_SyncProxy : public ChannelProtocol_Sync {
  public:
   explicit ChannelProtocol_SyncProxy(::zx::channel channel);
   ~ChannelProtocol_SyncProxy() override;
-
-  ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
   zx_status_t MethodA(int64_t a, int64_t b) override;
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
 };
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
@@ -341,7 +338,7 @@ class SocketControlProtocol_Proxy : public ::fidl::internal::Proxy, public Socke
 
 class SocketControlProtocol_Stub : public ::fidl::internal::Stub, public SocketControlProtocol_EventSender {
  public:
-  typedef class SocketControlProtocol SocketControlProtocol_clazz;
+  typedef class ::test::name::SocketControlProtocol SocketControlProtocol_clazz;
   explicit SocketControlProtocol_Stub(SocketControlProtocol_clazz* impl);
   ~SocketControlProtocol_Stub() override;
 
@@ -357,13 +354,12 @@ class SocketControlProtocol_SyncProxy : public SocketControlProtocol_Sync {
  public:
   explicit SocketControlProtocol_SyncProxy(::zx::channel channel);
   ~SocketControlProtocol_SyncProxy() override;
-
-  ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
   zx_status_t MethodA(int64_t a, int64_t b) override;
   zx_status_t MethodB(int64_t a, int64_t b, int64_t* out_result) override;
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<SocketControlProtocol>;
 };
 #endif // __Fuchsia__
 #ifdef __Fuchsia__
@@ -444,7 +440,7 @@ class WithAndWithoutRequestResponse_Proxy : public ::fidl::internal::Proxy, publ
 
 class WithAndWithoutRequestResponse_Stub : public ::fidl::internal::Stub, public WithAndWithoutRequestResponse_EventSender {
  public:
-  typedef class WithAndWithoutRequestResponse WithAndWithoutRequestResponse_clazz;
+  typedef class ::test::name::WithAndWithoutRequestResponse WithAndWithoutRequestResponse_clazz;
   explicit WithAndWithoutRequestResponse_Stub(WithAndWithoutRequestResponse_clazz* impl);
   ~WithAndWithoutRequestResponse_Stub() override;
 
@@ -461,8 +457,6 @@ class WithAndWithoutRequestResponse_SyncProxy : public WithAndWithoutRequestResp
  public:
   explicit WithAndWithoutRequestResponse_SyncProxy(::zx::channel channel);
   ~WithAndWithoutRequestResponse_SyncProxy() override;
-
-  ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
   zx_status_t NoRequestNoResponse() override;
   zx_status_t NoRequestEmptyResponse() override;
   zx_status_t NoRequestWithResponse(::std::string* out_ret) override;
@@ -472,6 +466,7 @@ class WithAndWithoutRequestResponse_SyncProxy : public WithAndWithoutRequestResp
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<WithAndWithoutRequestResponse>;
 };
 #endif // __Fuchsia__
 }  // namespace name

@@ -41,6 +41,7 @@ struct DangerousMembers {
   uint32 ConstCast;
   uint32 Constexpr;
   uint32 Continue;
+  uint32 Controller;
   uint32 Crate;
   uint32 Decltype;
   uint32 Decoder;
@@ -117,6 +118,7 @@ struct DangerousMembers {
   uint32 Private;
   uint32 Proc;
   uint32 Protected;
+  uint32 Proxy;
   uint32 Pub;
   uint32 Public;
   uint32 Pure;
@@ -132,6 +134,7 @@ struct DangerousMembers {
   uint32 Select;
   uint32 Self;
   uint32 Send;
+  uint32 SetController;
   uint32 Short;
   uint32 Signed;
   uint32 Sizeof;
@@ -142,6 +145,7 @@ struct DangerousMembers {
   uint32 Stream;
   uint32 String;
   uint32 Struct;
+  uint32 Stub;
   uint32 Super;
   uint32 Switch;
   uint32 Synchronized;

@@ -41,6 +41,7 @@ struct DangerousMembers {
   uint32 CONST_CAST;
   uint32 CONSTEXPR;
   uint32 CONTINUE;
+  uint32 CONTROLLER;
   uint32 CRATE;
   uint32 DECLTYPE;
   uint32 DECODER;
@@ -117,6 +118,7 @@ struct DangerousMembers {
   uint32 PRIVATE;
   uint32 PROC;
   uint32 PROTECTED;
+  uint32 PROXY;
   uint32 PUB;
   uint32 PUBLIC;
   uint32 PURE;
@@ -132,6 +134,7 @@ struct DangerousMembers {
   uint32 SELECT;
   uint32 SELF;
   uint32 SEND;
+  uint32 SET_CONTROLLER;
   uint32 SHORT;
   uint32 SIGNED;
   uint32 SIZEOF;
@@ -142,6 +145,7 @@ struct DangerousMembers {
   uint32 STREAM;
   uint32 STRING;
   uint32 STRUCT;
+  uint32 STUB;
   uint32 SUPER;
   uint32 SWITCH;
   uint32 SYNCHRONIZED;

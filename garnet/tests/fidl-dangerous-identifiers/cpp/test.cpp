@@ -11,6 +11,12 @@
 #include <fidl/test/dangerous/union/types/lower/cpp/fidl.h>
 #include <fidl/test/dangerous/table/names/lower/cpp/fidl.h>
 #include <fidl/test/dangerous/table/fields/lower/cpp/fidl.h>
+#include <fidl/test/dangerous/protocol/names/lower/cpp/fidl.h>
+#include <fidl/test/dangerous/method/names/lower/cpp/fidl.h>
+#include <fidl/test/dangerous/event/names/lower/cpp/fidl.h>
+#include <fidl/test/dangerous/method/request/arguments/lower/cpp/fidl.h>
+#include <fidl/test/dangerous/method/response/arguments/lower/cpp/fidl.h>
+#include <fidl/test/dangerous/method/event/arguments/lower/cpp/fidl.h>
 #include <fidl/test/dangerous/constants/upper/cpp/fidl.h>
 #include <fidl/test/dangerous/using/upper/cpp/fidl.h>
 #include <fidl/test/dangerous/enums/upper/cpp/fidl.h>
@@ -20,6 +26,12 @@
 #include <fidl/test/dangerous/union/types/upper/cpp/fidl.h>
 #include <fidl/test/dangerous/table/names/upper/cpp/fidl.h>
 #include <fidl/test/dangerous/table/fields/upper/cpp/fidl.h>
+#include <fidl/test/dangerous/protocol/names/upper/cpp/fidl.h>
+#include <fidl/test/dangerous/method/names/upper/cpp/fidl.h>
+#include <fidl/test/dangerous/event/names/upper/cpp/fidl.h>
+#include <fidl/test/dangerous/method/request/arguments/upper/cpp/fidl.h>
+#include <fidl/test/dangerous/method/response/arguments/upper/cpp/fidl.h>
+#include <fidl/test/dangerous/method/event/arguments/upper/cpp/fidl.h>
 #include <fidl/test/dangerous/constants/camel/cpp/fidl.h>
 #include <fidl/test/dangerous/using/camel/cpp/fidl.h>
 #include <fidl/test/dangerous/enums/camel/cpp/fidl.h>
@@ -29,6 +41,12 @@
 #include <fidl/test/dangerous/union/types/camel/cpp/fidl.h>
 #include <fidl/test/dangerous/table/names/camel/cpp/fidl.h>
 #include <fidl/test/dangerous/table/fields/camel/cpp/fidl.h>
+#include <fidl/test/dangerous/protocol/names/camel/cpp/fidl.h>
+#include <fidl/test/dangerous/method/names/camel/cpp/fidl.h>
+#include <fidl/test/dangerous/event/names/camel/cpp/fidl.h>
+#include <fidl/test/dangerous/method/request/arguments/camel/cpp/fidl.h>
+#include <fidl/test/dangerous/method/response/arguments/camel/cpp/fidl.h>
+#include <fidl/test/dangerous/method/event/arguments/camel/cpp/fidl.h>
 
 int main() {
   return 0;

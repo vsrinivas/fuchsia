@@ -180,7 +180,7 @@ void KitchenSink_Stub::EventA(int64_t a, int64_t b) {
   _encoder.Alloc(32 - sizeof(fidl_message_header_t));
   ::fidl::Encode(&_encoder, &a, 16);
   ::fidl::Encode(&_encoder, &b, 24);
-  controller()->Send(&test_name_KitchenSinkEventAEventTable, _encoder.GetMessage());
+  controller_()->Send(&test_name_KitchenSinkEventAEventTable, _encoder.GetMessage());
 }
 
 KitchenSink_SyncProxy::KitchenSink_SyncProxy(::zx::channel channel)
@@ -385,7 +385,7 @@ void KitchenSink_Stub::EventA(int64_t a, int64_t b) {
   _encoder.Alloc(32 - sizeof(fidl_message_header_t));
   ::fidl::Encode(&_encoder, &a, 16);
   ::fidl::Encode(&_encoder, &b, 24);
-  controller()->Send(&test_name_KitchenSinkEventAEventTable, _encoder.GetMessage());
+  controller_()->Send(&test_name_KitchenSinkEventAEventTable, _encoder.GetMessage());
 }
 
 KitchenSink_SyncProxy::KitchenSink_SyncProxy(::zx::channel channel)
@@ -590,7 +590,7 @@ void ChannelProtocol_Stub::EventA(int64_t a, int64_t b) {
   _encoder.Alloc(32 - sizeof(fidl_message_header_t));
   ::fidl::Encode(&_encoder, &a, 16);
   ::fidl::Encode(&_encoder, &b, 24);
-  controller()->Send(&test_name_ChannelProtocolEventAEventTable, _encoder.GetMessage());
+  controller_()->Send(&test_name_ChannelProtocolEventAEventTable, _encoder.GetMessage());
 }
 
 ChannelProtocol_SyncProxy::ChannelProtocol_SyncProxy(::zx::channel channel)
@@ -795,7 +795,7 @@ void SocketControlProtocol_Stub::EventA(int64_t a, int64_t b) {
   _encoder.Alloc(32 - sizeof(fidl_message_header_t));
   ::fidl::Encode(&_encoder, &a, 16);
   ::fidl::Encode(&_encoder, &b, 24);
-  controller()->Send(&test_name_SocketControlProtocolEventAEventTable, _encoder.GetMessage());
+  controller_()->Send(&test_name_SocketControlProtocolEventAEventTable, _encoder.GetMessage());
 }
 
 SocketControlProtocol_SyncProxy::SocketControlProtocol_SyncProxy(::zx::channel channel)
@@ -1220,13 +1220,13 @@ zx_status_t WithAndWithoutRequestResponse_Stub::Dispatch_(
 }
 void WithAndWithoutRequestResponse_Stub::OnEmptyResponse() {
   ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal);
-  controller()->Send(&test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable, _encoder.GetMessage());
+  controller_()->Send(&test_name_WithAndWithoutRequestResponseOnEmptyResponseEventTable, _encoder.GetMessage());
 }
 void WithAndWithoutRequestResponse_Stub::OnWithResponse(::std::string ret) {
   ::fidl::Encoder _encoder(kWithAndWithoutRequestResponse_OnWithResponse_Ordinal);
   _encoder.Alloc(32 - sizeof(fidl_message_header_t));
   ::fidl::Encode(&_encoder, &ret, 16);
-  controller()->Send(&test_name_WithAndWithoutRequestResponseOnWithResponseEventTable, _encoder.GetMessage());
+  controller_()->Send(&test_name_WithAndWithoutRequestResponseOnWithResponseEventTable, _encoder.GetMessage());
 }
 
 WithAndWithoutRequestResponse_SyncProxy::WithAndWithoutRequestResponse_SyncProxy(::zx::channel channel)

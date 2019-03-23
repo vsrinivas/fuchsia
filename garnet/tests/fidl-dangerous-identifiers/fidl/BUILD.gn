@@ -5,110 +5,406 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fidl.test.dangerous.constants.lower") {
-  sources = [ "fidl.test.dangerous.constants.lower.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.constants.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.using.lower") {
-  sources = [ "fidl.test.dangerous.using.lower.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.using.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.enums.lower") {
-  sources = [ "fidl.test.dangerous.enums.lower.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.enums.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.struct.types.lower") {
-  sources = [ "fidl.test.dangerous.struct.types.lower.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.struct.types.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.struct.names.lower") {
-  sources = [ "fidl.test.dangerous.struct.names.lower.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.struct.names.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.union.names.lower") {
-  sources = [ "fidl.test.dangerous.union.names.lower.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.union.names.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.union.types.lower") {
-  sources = [ "fidl.test.dangerous.union.types.lower.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.union.types.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.table.names.lower") {
-  sources = [ "fidl.test.dangerous.table.names.lower.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.table.names.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.table.fields.lower") {
-  sources = [ "fidl.test.dangerous.table.fields.lower.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.table.fields.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.protocol.names.lower") {
+  sources = [
+    "fidl.test.dangerous.protocol.names.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.names.lower") {
+  sources = [
+    "fidl.test.dangerous.method.names.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.event.names.lower") {
+  sources = [
+    "fidl.test.dangerous.event.names.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.request.arguments.lower") {
+  sources = [
+    "fidl.test.dangerous.method.request.arguments.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.response.arguments.lower") {
+  sources = [
+    "fidl.test.dangerous.method.response.arguments.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.event.arguments.lower") {
+  sources = [
+    "fidl.test.dangerous.method.event.arguments.lower.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.constants.upper") {
-  sources = [ "fidl.test.dangerous.constants.upper.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.constants.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.using.upper") {
-  sources = [ "fidl.test.dangerous.using.upper.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.using.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.enums.upper") {
-  sources = [ "fidl.test.dangerous.enums.upper.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.enums.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.struct.types.upper") {
-  sources = [ "fidl.test.dangerous.struct.types.upper.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.struct.types.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.struct.names.upper") {
-  sources = [ "fidl.test.dangerous.struct.names.upper.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.struct.names.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.union.names.upper") {
-  sources = [ "fidl.test.dangerous.union.names.upper.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.union.names.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.union.types.upper") {
-  sources = [ "fidl.test.dangerous.union.types.upper.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.union.types.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.table.names.upper") {
-  sources = [ "fidl.test.dangerous.table.names.upper.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.table.names.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.table.fields.upper") {
-  sources = [ "fidl.test.dangerous.table.fields.upper.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.table.fields.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.protocol.names.upper") {
+  sources = [
+    "fidl.test.dangerous.protocol.names.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.names.upper") {
+  sources = [
+    "fidl.test.dangerous.method.names.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.event.names.upper") {
+  sources = [
+    "fidl.test.dangerous.event.names.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.request.arguments.upper") {
+  sources = [
+    "fidl.test.dangerous.method.request.arguments.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.response.arguments.upper") {
+  sources = [
+    "fidl.test.dangerous.method.response.arguments.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.event.arguments.upper") {
+  sources = [
+    "fidl.test.dangerous.method.event.arguments.upper.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.constants.camel") {
-  sources = [ "fidl.test.dangerous.constants.camel.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.constants.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.using.camel") {
-  sources = [ "fidl.test.dangerous.using.camel.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.using.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.enums.camel") {
-  sources = [ "fidl.test.dangerous.enums.camel.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.enums.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.struct.types.camel") {
-  sources = [ "fidl.test.dangerous.struct.types.camel.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.struct.types.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.struct.names.camel") {
-  sources = [ "fidl.test.dangerous.struct.names.camel.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.struct.names.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.union.names.camel") {
-  sources = [ "fidl.test.dangerous.union.names.camel.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.union.names.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.union.types.camel") {
-  sources = [ "fidl.test.dangerous.union.types.camel.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.union.types.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.table.names.camel") {
-  sources = [ "fidl.test.dangerous.table.names.camel.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.table.names.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
 fidl("fidl.test.dangerous.table.fields.camel") {
-  sources = [ "fidl.test.dangerous.table.fields.camel.fidl" ]
-  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }
+  sources = [
+    "fidl.test.dangerous.table.fields.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
 
+fidl("fidl.test.dangerous.protocol.names.camel") {
+  sources = [
+    "fidl.test.dangerous.protocol.names.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.names.camel") {
+  sources = [
+    "fidl.test.dangerous.method.names.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.event.names.camel") {
+  sources = [
+    "fidl.test.dangerous.event.names.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.request.arguments.camel") {
+  sources = [
+    "fidl.test.dangerous.method.request.arguments.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.response.arguments.camel") {
+  sources = [
+    "fidl.test.dangerous.method.response.arguments.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}
+
+fidl("fidl.test.dangerous.method.event.arguments.camel") {
+  sources = [
+    "fidl.test.dangerous.method.event.arguments.camel.fidl",
+  ]
+  deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}

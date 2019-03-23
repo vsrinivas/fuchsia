@@ -41,6 +41,7 @@ const
 const_cast
 constexpr
 continue
+controller
 crate
 decltype
 decoder
@@ -117,6 +118,7 @@ priv
 private
 proc
 protected
+proxy
 pub
 public
 pure
@@ -132,6 +134,7 @@ rune
 select
 self
 send
+set_controller
 short
 signed
 sizeof
@@ -142,6 +145,7 @@ static_cast
 stream
 string
 struct
+stub
 super
 switch
 synchronized

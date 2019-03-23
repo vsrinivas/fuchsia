@@ -139,7 +139,7 @@ class {{ .ProxyName }} : public ::fidl::internal::Proxy, public {{ .Name }} {
 
 class {{ .StubName }} : public ::fidl::internal::Stub, public {{ .EventSenderName }} {
  public:
-  typedef class {{ .Name }} {{ .ClassName }};
+  typedef class {{ .Namespace }}::{{ .Name }} {{ .ClassName }};
   explicit {{ .StubName }}({{ .ClassName }}* impl);
   ~{{ .StubName }}() override;
 
@@ -163,8 +163,6 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
   explicit {{ .SyncProxyName }}(::zx::channel channel);
   ~{{ .SyncProxyName }}() override;
 
-  ::fidl::internal::SynchronousProxy& proxy() { return proxy_; }
-
   {{- range .Methods }}
     {{- if .HasRequest }}
   zx_status_t {{ template "SyncRequestMethodSignature" . }} override;
@@ -173,6 +171,7 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
 
   private:
   ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
 };
 #endif // __Fuchsia__
 {{- end }}
@@ -409,7 +408,7 @@ void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
   ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
       {{- end }}
     {{- end }}
-  controller()->Send(&{{ .ResponseTypeName }}, _encoder.GetMessage());
+  controller_()->Send(&{{ .ResponseTypeName }}, _encoder.GetMessage());
 }
     {{- end }}
   {{- end }}
