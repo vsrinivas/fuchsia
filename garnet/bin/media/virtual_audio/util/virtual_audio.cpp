@@ -31,6 +31,7 @@ class VirtualAudioUtil {
     SET_PRODUCT_NAME,
     SET_UNIQUE_ID,
     ADD_FORMAT_RANGE,
+    CLEAR_FORMAT_RANGES,
     SET_FIFO_DEPTH,
     SET_EXTERNAL_DELAY,
     SET_RING_BUFFER_RESTRICTIONS,
@@ -42,6 +43,10 @@ class VirtualAudioUtil {
     REMOVE_DEVICE,
     PLUG,
     UNPLUG,
+    GET_GAIN,
+    GET_FORMAT,
+    RETRIEVE_BUFFER,
+    GET_POSITION,
 
     SET_IN,
     SET_OUT,
@@ -61,6 +66,7 @@ class VirtualAudioUtil {
       {"prod", Command::SET_PRODUCT_NAME},
       {"id", Command::SET_UNIQUE_ID},
       {"add-format", Command::ADD_FORMAT_RANGE},
+      {"clear-format", Command::CLEAR_FORMAT_RANGES},
       {"fifo", Command::SET_FIFO_DEPTH},
       {"delay", Command::SET_EXTERNAL_DELAY},
       {"rb", Command::SET_RING_BUFFER_RESTRICTIONS},
@@ -73,6 +79,10 @@ class VirtualAudioUtil {
 
       {"plug", Command::PLUG},
       {"unplug", Command::UNPLUG},
+      {"get-gain", Command::GET_GAIN},
+      {"get-format", Command::GET_FORMAT},
+      {"get-rb", Command::RETRIEVE_BUFFER},
+      {"get-pos", Command::GET_POSITION},
 
       {"in", Command::SET_IN},
       {"out", Command::SET_OUT},
@@ -107,6 +117,7 @@ class VirtualAudioUtil {
   bool ConnectToDevice();
   bool ConnectToInput();
   bool ConnectToOutput();
+  void SetUpEvents();
 
   void ParseAndExecute(fxl::CommandLine* cmdline);
   bool ExecuteCommand(Command cmd, const std::string& value);
@@ -120,6 +131,7 @@ class VirtualAudioUtil {
   bool SetProductName(const std::string& name);
   bool SetUniqueId(const std::string& unique_id);
   bool AddFormatRange(const std::string& format_str);
+  bool ClearFormatRanges();
   bool SetFifoDepth(const std::string& fifo_str);
   bool SetExternalDelay(const std::string& delay_str);
   bool SetRingBufferRestrictions(const std::string& rb_restr_str);
@@ -132,6 +144,10 @@ class VirtualAudioUtil {
   // Methods using the FIDL Device interface
   bool RemoveDevice();
   bool ChangePlugState(const std::string& plug_time_str, bool plugged);
+  bool GetGain();
+  bool GetFormat();
+  bool GetBuffer();
+  bool GetPosition();
 
   std::unique_ptr<component::StartupContext> startup_context_;
   ::async::Loop* loop_;
@@ -144,6 +160,28 @@ class VirtualAudioUtil {
 
   bool configuring_output_ = true;
 };
+
+void DisplayFormat(uint32_t fps, uint32_t fmt, uint32_t chans,
+                   zx_duration_t delay, bool out);
+void DisplayFormatOut(uint32_t fps, uint32_t fmt, uint32_t chans,
+                      zx_duration_t delay);
+void DisplayFormatIn(uint32_t fps, uint32_t fmt, uint32_t chans,
+                     zx_duration_t delay);
+void DisplayGain(bool current_mute, bool current_agc, float gain_db, bool out);
+void DisplayGainOut(bool current_mute, bool current_agc, float gain_db);
+void DisplayGainIn(bool current_mute, bool current_agc, float gain_db);
+void DisplayBuffer(zx::vmo buff, uint32_t rb_frames, uint32_t notifs, bool out);
+void DisplayBufferOut(zx::vmo buff, uint32_t rb_frames, uint32_t notifs);
+void DisplayBufferIn(zx::vmo buff, uint32_t rb_frames, uint32_t notifs);
+void DisplayStart(zx_time_t start_time, bool out);
+void DisplayStartOut(zx_time_t start_time);
+void DisplayStartIn(zx_time_t start_time);
+void DisplayStop(zx_time_t stop_time, uint32_t ring_position, bool out);
+void DisplayStopOut(zx_time_t stop_time, uint32_t ring_position);
+void DisplayStopIn(zx_time_t stop_time, uint32_t ring_position);
+void DisplayPosition(uint32_t ring_position, zx_time_t clock_time, bool out);
+void DisplayPositionOut(uint32_t ring_position, zx_time_t clock_time);
+void DisplayPositionIn(uint32_t ring_position, zx_time_t clock_time);
 
 // VirtualAudioUtil implementation
 //
@@ -253,6 +291,8 @@ bool VirtualAudioUtil::ConnectToInput() {
     QuitLoop();
   });
 
+  SetUpEvents();
+
   // let VirtualAudio disconnect if all is not well.
   bool success = (WaitForNoCallback() && input_.is_bound());
 
@@ -274,6 +314,8 @@ bool VirtualAudioUtil::ConnectToOutput() {
     QuitLoop();
   });
 
+  SetUpEvents();
+
   // let VirtualAudio disconnect if all is not well.
   bool success = (WaitForNoCallback() && output_.is_bound());
 
@@ -281,6 +323,24 @@ bool VirtualAudioUtil::ConnectToOutput() {
     printf("Failed to establish channel to output\n");
   }
   return success;
+}
+
+void VirtualAudioUtil::SetUpEvents() {
+  if (configuring_output_) {
+    output_.events().OnSetFormat = DisplayFormatOut;
+    output_.events().OnSetGain = DisplayGainOut;
+    output_.events().OnBufferCreated = DisplayBufferOut;
+    output_.events().OnStart = DisplayStartOut;
+    output_.events().OnStop = DisplayStopOut;
+    output_.events().OnPositionNotify = DisplayPositionOut;
+  } else {
+    input_.events().OnSetFormat = DisplayFormatIn;
+    input_.events().OnSetGain = DisplayGainIn;
+    input_.events().OnBufferCreated = DisplayBufferIn;
+    input_.events().OnStart = DisplayStartIn;
+    input_.events().OnStop = DisplayStopIn;
+    input_.events().OnPositionNotify = DisplayPositionIn;
+  }
 }
 
 void VirtualAudioUtil::ParseAndExecute(fxl::CommandLine* cmdline) {
@@ -345,6 +405,9 @@ bool VirtualAudioUtil::ExecuteCommand(Command cmd, const std::string& value) {
     case Command::ADD_FORMAT_RANGE:
       success = AddFormatRange(value);
       break;
+    case Command::CLEAR_FORMAT_RANGES:
+      success = ClearFormatRanges();
+      break;
     case Command::SET_FIFO_DEPTH:
       success = SetFifoDepth(value);
       break;
@@ -376,6 +439,18 @@ bool VirtualAudioUtil::ExecuteCommand(Command cmd, const std::string& value) {
       break;
     case Command::UNPLUG:
       success = ChangePlugState(value, false);
+      break;
+    case Command::GET_GAIN:
+      success = GetGain();
+      break;
+    case Command::GET_FORMAT:
+      success = GetFormat();
+      break;
+    case Command::RETRIEVE_BUFFER:
+      success = GetBuffer();
+      break;
+    case Command::GET_POSITION:
+      success = GetPosition();
       break;
 
     case Command::SET_IN:
@@ -543,6 +618,19 @@ bool VirtualAudioUtil::AddFormatRange(const std::string& format_range_str) {
   return WaitForNoCallback();
 }
 
+bool VirtualAudioUtil::ClearFormatRanges() {
+  if (!ConnectToDevice()) {
+    return false;
+  }
+
+  if (configuring_output_) {
+    output_->ClearFormatRanges();
+  } else {
+    input_->ClearFormatRanges();
+  }
+  return WaitForNoCallback();
+}
+
 bool VirtualAudioUtil::SetFifoDepth(const std::string& fifo_str) {
   if (!ConnectToDevice()) {
     return false;
@@ -583,9 +671,12 @@ struct BufferSpec {
   uint32_t mod_frames;
 };
 
-constexpr BufferSpec kBufferSpecs[2] = {
-    {.min_frames = 50000, .max_frames = 70000, .mod_frames = 10000},
-    {.min_frames = 40000, .max_frames = 50000, .mod_frames = 1000}};
+// Buffer sizes (at default 48kHz rate): [0] 1.0-1.5 sec, in steps of 0.125;
+// [1] 0.2-0.6 sec, in steps of 0.01;    [2] exactly 6 secs.
+constexpr BufferSpec kBufferSpecs[] = {
+    {.min_frames = 48000, .max_frames = 72000, .mod_frames = 6000},
+    {.min_frames = 9600, .max_frames = 28800, .mod_frames = 480},
+    {.min_frames = 288000, .max_frames = 288000, .mod_frames = 288000}};
 
 bool VirtualAudioUtil::SetRingBufferRestrictions(
     const std::string& rb_restr_str) {
@@ -806,6 +897,143 @@ bool VirtualAudioUtil::ChangePlugState(const std::string& plug_time_str,
   }
 
   return WaitForNoCallback();
+}
+
+bool VirtualAudioUtil::GetFormat() {
+  if (!ConnectToDevice()) {
+    return false;
+  }
+
+  if (configuring_output_) {
+    output_->GetFormat(DisplayFormatIn);
+  } else {
+    input_->GetFormat(DisplayFormatIn);
+  }
+
+  WaitForCallback();
+  return true;
+}
+
+bool VirtualAudioUtil::GetGain() {
+  if (!ConnectToDevice()) {
+    return false;
+  }
+
+  if (configuring_output_) {
+    output_->GetGain(DisplayGainIn);
+  } else {
+    input_->GetGain(DisplayGainIn);
+  }
+
+  WaitForCallback();
+  return true;
+}
+
+bool VirtualAudioUtil::GetBuffer() {
+  if (!ConnectToDevice()) {
+    return false;
+  }
+
+  if (configuring_output_) {
+    output_->GetBuffer(DisplayBufferIn);
+  } else {
+    input_->GetBuffer(DisplayBufferIn);
+  }
+
+  WaitForCallback();
+  return true;
+}
+
+bool VirtualAudioUtil::GetPosition() {
+  if (!ConnectToDevice()) {
+    return false;
+  }
+
+  if (configuring_output_) {
+    output_->GetPosition(DisplayPositionIn);
+  } else {
+    input_->GetPosition(DisplayPositionIn);
+  }
+
+  WaitForCallback();
+  return true;
+}
+
+void DisplayFormat(uint32_t fps, uint32_t fmt, uint32_t chans,
+                   zx_duration_t delay, bool is_out) {
+  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  printf("%zu \tReceived Format (%u fps, %x fmt, %u chan, %zu delay) for %s\n",
+         now, fps, fmt, chans, delay, (is_out ? "output" : "input"));
+}
+void DisplayFormatOut(uint32_t fps, uint32_t fmt, uint32_t chans,
+                      zx_duration_t delay) {
+  DisplayFormat(fps, fmt, chans, delay, true);
+}
+void DisplayFormatIn(uint32_t fps, uint32_t fmt, uint32_t chans,
+                     zx_duration_t delay) {
+  DisplayFormat(fps, fmt, chans, delay, false);
+}
+
+void DisplayGain(bool mute, bool agc, float gain_db, bool is_out) {
+  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  printf("%zu \tReceived Gain (mute: %u, agc: %u, gain: %f dB) for %s\n", now,
+         mute, agc, gain_db, (is_out ? "output" : "input"));
+}
+void DisplayGainOut(bool mute, bool agc, float gain_db) {
+  DisplayGain(mute, agc, gain_db, true);
+}
+void DisplayGainIn(bool mute, bool agc, float gain_db) {
+  DisplayGain(mute, agc, gain_db, false);
+}
+
+void DisplayBuffer(zx::vmo ring_buffer_vmo, uint32_t num_ring_buffer_frames,
+                   uint32_t notifications_per_ring, bool is_out) {
+  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  uint64_t vmo_size;
+  ring_buffer_vmo.get_size(&vmo_size);
+
+  printf(
+      "%zu \tReceived SetBuffer (size: %zu, frames: %u, notifs: %u) for %s\n",
+      now, vmo_size, num_ring_buffer_frames, notifications_per_ring,
+      (is_out ? "output" : "input"));
+}
+void DisplayBufferOut(zx::vmo buff, uint32_t rb_frames, uint32_t notifs) {
+  DisplayBuffer(std::move(buff), rb_frames, notifs, true);
+}
+void DisplayBufferIn(zx::vmo buff, uint32_t rb_frames, uint32_t notifs) {
+  DisplayBuffer(std::move(buff), rb_frames, notifs, false);
+}
+
+void DisplayStart(zx_time_t start_time, bool is_out) {
+  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  printf("%zu \tReceived Start (time: %zu) for %s\n", now, start_time,
+         (is_out ? "output" : "input"));
+}
+void DisplayStartOut(zx_time_t start_time) { DisplayStart(start_time, true); }
+void DisplayStartIn(zx_time_t start_time) { DisplayStart(start_time, false); }
+
+void DisplayStop(zx_time_t stop_time, uint32_t rb_pos, bool is_out) {
+  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  printf("%zu \tReceived Stop (time: %zu, pos: %u) for %s\n", now, stop_time,
+         rb_pos, (is_out ? "output" : "input"));
+}
+void DisplayStopOut(zx_time_t stop_time, uint32_t rb_pos) {
+  DisplayStop(stop_time, rb_pos, true);
+}
+void DisplayStopIn(zx_time_t stop_time, uint32_t rb_pos) {
+  DisplayStop(stop_time, rb_pos, false);
+}
+
+void DisplayPosition(uint32_t rb_pos, zx_time_t time_for_pos, bool is_out) {
+  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  printf("%zu \tReceived Position (pos: %u, time: %zu) for %s\n", now, rb_pos,
+         time_for_pos, (is_out ? "output" : "input"));
+}
+void DisplayPositionOut(uint32_t rb_pos, zx_time_t time_for_pos) {
+  DisplayPosition(rb_pos, time_for_pos, true);
+}
+void DisplayPositionIn(uint32_t rb_pos, zx_time_t time_for_pos) {
+  DisplayPosition(rb_pos, time_for_pos, false);
 }
 
 }  // namespace virtual_audio
