@@ -63,69 +63,36 @@ public:
         BEGIN_HELPER;
 
         ASSERT_LE(target_woke_count, total_thread_count);
-        uint32_t woke_count = 0;
 
-        // TODO(johngro): Come back here and fix this.  In a perfect world, all
-        // we would need to do here is count the number of threads who were not
-        // blocked-by-futex and we would be done.
-        //
-        // Unfortunately, the way that the user-mode thread state tracking works
-        // in the kernel, this is not possible.  In the kernel, when a thread is
-        // about to become blocked, it sets its user mode state to the blocked
-        // reason while inside of the thread_lock, and then enters its
-        // wait_queue and becomes blocked, transferring control to the
-        // scheduler.  When something else removes it from the wait queue
-        // (because of a timeout, or becoming signalled, or whatever), the wait
-        // queue code restores the _kernel mode state_ to runnable, but does not
-        // touch the user mode state.  It is not until the now runnable thread
-        // gets scheduled on a core and runs that the thread itself will restore
-        // its state to not-blocked.
-        //
-        // This leads to a situation where the kernel thread state (visible only
-        // in the kernel) says "runnable", and disagrees with the user mode
-        // thread state which still says "blocked".
-        //
-        // For us, this means that if we have N threads blocked on a futex, and
-        // we say "wake 3 threads", we cannot simply count the number of threads
-        // which are no longer blocked-on-futex to determine the number of
-        // threads which were woken.  The threads may have become unblocked, but
-        // still need to run in order to update the state that we can observe.
-        // Likewise, if we did wait some time for 3 threads to become unblocked,
-        // we still have to keep waiting, because we don't know if suddenly a
-        // 4th or 5th thread is going to become unblocked as well.
-        //
-        // The fix for this resides down in the kernel implementation.
-        // Specifically, the user-mode thread state and the kernel-mode thread
-        // state need to merge into the same thing.  The wait_queue code needs
-        // to provide the blocked reason for the thread from inside the safety
-        // of the thread_lock, and restore it to runnable any time the thread is
-        // removed from the wait queue for any reason.  Note that this is
-        // already the case for the kernel-mode thread state.
-        //
-        // Once this is done, any manipulation of a thread's state caused by
-        // operations like futex_wake should become atomic.  Even if the thread
-        // has not had a chance to be scheduled and return to user mode, the
-        // state that we can observe will no longer indicate blocked-by-futex
-        // after the futex_wake syscall completes.
-        //
-        // Until then, however, we need to put this unfortunate arbitrary delay
-        // in place; both to give threads some time to achieve the unblocked
-        // state we are expecting, and to make sure that extra threads do not
-        // become unblocked as well.
-#if 1
-        zx::nanosleep(zx::deadline_after(zx::msec(100)));
-#endif
-        for (uint32_t i = 0; i < total_thread_count; ++i) {
-            zx_thread_state_t state;
-
-            ASSERT_TRUE(threads[i].GetThreadState(&state));
-
-            if (state != ZX_THREAD_STATE_BLOCKED_FUTEX) {
-                ++woke_count;
+        auto CountWoken = [&threads, total_thread_count]() -> uint32_t {
+            uint32_t ret = 0;
+            for (uint32_t i = 0; i < total_thread_count; ++i) {
+                if (threads[i].state() == State::WAIT_RETURNED) {
+                    ++ret;
+                }
             }
-        }
+            return ret;
+        };
 
-        EXPECT_EQ(woke_count, target_woke_count);
+        // Wait forever until we achieve the target count.  If threads are not
+        // waking up as they should, the test framework should eventually kill
+        // us.
+        uint32_t woken;
+        do {
+            woken = CountWoken();
+        } while (woken < target_woke_count);
+
+        ASSERT_EQ(CountWoken(), target_woke_count);
+
+        // Wait an arbitrary amount of time to be sure that no one else wakes
+        // up.
+        //
+        // TODO(johngro) : It would be really nice if we didn't have to have an
+        // arbitrary wait here.  Unfortunately, I'm not sure that there is any
+        // amount of time that we can wait and prove that a thread might not
+        // spuriously wake up in the future.
+        zx::nanosleep(zx::deadline_after(zx::msec(300)));
+        ASSERT_EQ(CountWoken(), target_woke_count);
 
         END_HELPER;
     }
