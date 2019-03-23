@@ -61,7 +61,6 @@ test_package("wlan-hw-sim-tests") {
     {
       name = "wlan_hw_sim_bin_test"
       environments = [
-        qemu_env,
         nuc_env,
       ]
     },
