@@ -86,6 +86,7 @@ protocol DangerousMethods {
   INTERFACE();
   LET();
   LHS();
+  LIST();
   LONG();
   LOOP();
   MACRO();
@@ -154,6 +155,7 @@ protocol DangerousMethods {
   THIS();
   THREAD_LOCAL();
   THROW();
+  TO_STRING();
   TRAIT();
   TRUE();
   TRY();
@@ -173,7 +175,10 @@ protocol DangerousMethods {
   USE();
   USING();
   VALUE();
+  VALUE_OF();
   VALUE_UNION();
+  VALUES();
+  VALUES_MAP();
   VAR();
   VEC();
   VIRTUAL();

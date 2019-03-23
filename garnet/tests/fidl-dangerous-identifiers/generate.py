@@ -257,6 +257,10 @@ def generate_fidl(identifiers: List[str]) -> List[str]:
   with open(build_file, 'w') as build_gn:
     build_gn.write(generated('#'))
     build_gn.write('import("//build/fidl/fidl.gni")\n\n')
+    build_gn.write('group("fidl") {\ndeps=[\n')
+    for library_name in library_names:
+      build_gn.write('  ":%s",\n' % library_name)
+    build_gn.write(']}\n')
     for library_name in library_names:
       build_gn.write(
           'fidl("%s") {\n  sources = [ "%s.fidl" ]\n  deps = [ "//zircon/public/fidl/fuchsia-mem" ] }\n\n'

@@ -86,6 +86,7 @@ protocol DangerousMethods {
   interface();
   let();
   lhs();
+  list();
   long();
   loop();
   macro();
@@ -154,6 +155,7 @@ protocol DangerousMethods {
   this();
   thread_local();
   throw();
+  to_string();
   trait();
   true();
   try();
@@ -173,7 +175,10 @@ protocol DangerousMethods {
   use();
   using();
   value();
+  value_of();
   value_union();
+  values();
+  values_map();
   var();
   vec();
   virtual();
