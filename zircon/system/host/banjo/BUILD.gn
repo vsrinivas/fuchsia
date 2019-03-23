@@ -1,0 +1,11 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/prebuilt_host_tool.gni")
+
+# Used by banjo_library() in a host_tool_action() to supply a GN target for redirection
+# to prebuilt_host_tool() or host_tool().
+prebuilt_host_tool("compiler") {
+  script = "$zx/prebuilt/downloads/banjo/banjo_bin"
+}

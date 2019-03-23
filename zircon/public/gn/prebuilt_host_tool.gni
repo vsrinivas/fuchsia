@@ -2,90 +2,56 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/toolchain/environment_redirect.gni")
+# Declare a prebuilt tool for use with host_tool_action().
+#
+# Parameters
+#
+#   script
+#     - Optional: Path of a prebuilt binary. (Required unless $args is defined.
+#       Omitted if not an explicit file path.)
+#     - Type: file
+#   args
+#     - Optional: Additional arguments to pass to the $script. When $script is
+#       omitted, this is the full command.
+#     - Type: list(string)
+#   inputs
+#     - Optional: Dependencies for the pre-built. All implicit dependencies to
+#       $args must be listed ($script is always a dependency).
+#     - Type: list(file)
 
-# Subroutine of prebuilt_host_tool() and prebuilt_host_tool_foreach().
-template("_prebuilt_host_tool_target") {
-  action_target = target_name
-  assert(defined(invoker.tool), "tool must be defined for $target_name")
-  assert(defined(invoker.outputs), "outputs must be defined for $target_name")
+template("prebuilt_host_tool") {
+  assert(defined(invoker.args) || defined(invoker.script),
+         "A script or args must be defined for $target_name")
 
-  target(invoker._target_type, action_target) {
+  # A no-op group that only propogates metadata.
+  group(target_name) {
     forward_variables_from(invoker,
                            [
-                             "assert_no_deps",
-                             "data_deps",
-                             "deps",
                              "inputs",
-                             "outputs",
-                             "public_deps",
-                             "sources",
                              "testonly",
                              "visibility",
                            ])
-    if (!defined(deps)) {
-      deps = []
-    }
+
     if (!defined(inputs)) {
       inputs = []
     }
-    script = invoker.tool
 
-    args = []
-    if (defined(invoker.args)) {
-      args += invoker.args
+    if (defined(invoker.script)) {
+      inputs += [ invoker.script ]
     }
 
     metadata = {
-      # Never follow the deps to find link outputs from invoker.tool.
-      # TODO: Maybe should still follow invoker.deps?
-      link_barrier = []
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, "*")
+      # Dependencies come before the "--".
+      host_tool_rspfile = rebase_path(inputs, root_build_dir)
+      host_tool_rspfile += [ "--" ]
+
+      # The command line to run comes after the "--".
+      if (defined(invoker.script)) {
+        host_tool_rspfile += [ rebase_path(invoker.script, root_build_dir) ]
+      }
+      if (defined(invoker.args)) {
+        host_tool_rspfile += invoker.args
       }
     }
-  }
-}
-
-# Run an action() using a host_tool() compiled for the build host.
-#
-# This takes all the same parameters as action() except that $script is
-# replaced by $tool.  See also prebuilt_host_tool_foreach().
-#
-# Parameters
-#
-#   tool
-#     Required: Label (without toolchain) of a host_tool() target.
-#     The tool will be built for the build host if necessary, and
-#     then run with the $args list just like $script runs in action().
-#     Type: label_no_toolchain
-#
-# Other parameters are as for action().
-template("prebuilt_host_tool") {
-  _prebuilt_host_tool_target(target_name) {
-    _target_type = "action"
-    forward_variables_from(invoker, "*")
-  }
-}
-
-# Run an action_foreach() using a host_tool() compiled for the build host.
-#
-# This takes all the same parameters as action_foreach() except that
-# $script is replaced by $tool.  prebuilt_host_tool_foreach() is to as
-# action_foreach() as prebuilt_host_tool() is to action().
-#
-# Parameters
-#
-#   tool
-#     Required: Label (without toolchain) of a host_tool() target.
-#     The tool will be built for the build host if necessary, and
-#     then run with the $args list just like $script runs in action().
-#     Type: label_no_toolchain
-#
-# Other parameters are as for action_foreach().
-template("prebuilt_host_tool_foreach") {
-  _prebuilt_host_tool_target(target_name) {
-    _target_type = "action_foreach"
-    forward_variables_from(invoker, "*")
   }
 }

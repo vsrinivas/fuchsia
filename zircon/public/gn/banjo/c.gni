@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/banjo/banjoc.gni")
+import("$zx/public/gn/fidl/fidlc.gni")
 import("$zx/public/gn/subtarget_aliases.gni")
 
 # This is the $banjo_support module for C bindings.  See banjo_library() for
@@ -31,9 +31,11 @@ template("banjo_c_library") {
                            "target_gen_dir") + "/$library_target"
   gen_sources = [ "$gen_dir/include/ddk/protocol/${invoker.banjo_name}.h" ]
 
-  banjoc(gen_target) {
+  fidlc(gen_target) {
     visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
+
+    tool = "$zx/system/host/banjo:compiler"
 
     deps = [
       ":$banjo_target",

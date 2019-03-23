@@ -5,7 +5,7 @@
 # TODO(mcgrathr): This is heavily based on banjo.gni though they don't
 # share much code.  Try to converge these more in the future.
 
-import("$zx/public/gn/banjo/banjoc.gni")
+import("$zx/public/gn/fidl/fidlc.gni")
 import("$zx/public/gn/legacy_pkg.gni")  # TODO(BLD-353): temporary hack
 
 # List of BANJO support modules.  Each of these defines its own version of
@@ -110,8 +110,8 @@ template("banjo_library") {
     }
   }
 
-  # This is called _banjo_library... to share the banjoc() code.
-  files_rspfile_target = "_banjo_library.files.$banjo_target.rsp"
+  # This is called _fidl_library... to share the fidlc() code.
+  files_rspfile_target = "_fidl_library.files.$banjo_target.rsp"
   banjo_gen_dir =
       get_label_info(":$banjo_target($default_toolchain)", "target_gen_dir")
   files_rspfile = "$banjo_gen_dir/$banjo_target.rsp"
@@ -168,7 +168,7 @@ template("banjo_library") {
     }
 
     # Produce a metadata response file from all the banjo_rspfile lists.
-    # banjoc() uses this file.
+    # fidlc() uses this file.
     generated_file(files_rspfile_target) {
       forward_variables_from(invoker, [ "testonly" ])
       deps = [

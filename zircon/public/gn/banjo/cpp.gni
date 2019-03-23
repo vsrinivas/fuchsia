@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/banjo/banjoc.gni")
+import("$zx/public/gn/fidl/fidlc.gni")
 import("$zx/public/gn/subtarget_aliases.gni")
 
 # This is the $banjo_support module for C++ bindings.  See banjo_library() for
@@ -49,10 +49,11 @@ template("banjo_cpp_library") {
   foreach(gen, gen_backends) {
     gen_deps += [ ":$gen_target.${gen.backend}($default_toolchain)" ]
     gen_sources += gen.sources
-    banjoc("$gen_target.${gen.backend}") {
+    fidlc("$gen_target.${gen.backend}") {
       visibility = [ ":*" ]
       forward_variables_from(invoker, [ "testonly" ])
 
+      tool = "$zx/system/host/banjo:compiler"
       deps = [
         ":$banjo_target",
       ]
