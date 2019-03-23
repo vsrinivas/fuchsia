@@ -1,4 +1,4 @@
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 {declarations}
@@ -6,4 +6,4 @@ __BEGIN_CDECLS;
 // Declarations
 {definitions}
 
-__END_CDECLS;
+__END_CDECLS

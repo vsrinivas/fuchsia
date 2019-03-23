@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 typedef void (*async_base_status_callback)(void* ctx, zx_status_t status, zx_status_t status_2);
@@ -138,4 +138,4 @@ static inline zx_off_t synchronous_base_off(const synchronous_base_protocol_t* p
 
 
 
-__END_CDECLS;
+__END_CDECLS

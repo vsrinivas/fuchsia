@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 typedef int16_t int16_enum_t;
@@ -66,4 +66,4 @@ typedef uint8_t uint8_enum_t;
 // Declarations
 
 
-__END_CDECLS;
+__END_CDECLS

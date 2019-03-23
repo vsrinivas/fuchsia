@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 #define x INT32_C(23)
@@ -34,4 +34,4 @@ static inline void hello_say(const hello_protocol_t* proto, const char* req, cha
 
 
 
-__END_CDECLS;
+__END_CDECLS

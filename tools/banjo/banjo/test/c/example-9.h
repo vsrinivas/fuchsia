@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 typedef struct echo_more echo_more_t;
@@ -68,4 +68,4 @@ static inline void echo_echo_struct(const echo_protocol_t* proto, const echo_mor
 
 
 
-__END_CDECLS;
+__END_CDECLS

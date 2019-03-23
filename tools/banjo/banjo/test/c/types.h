@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 typedef struct arrays arrays_t;
@@ -452,4 +452,4 @@ struct interfaces {
 };
 
 
-__END_CDECLS;
+__END_CDECLS

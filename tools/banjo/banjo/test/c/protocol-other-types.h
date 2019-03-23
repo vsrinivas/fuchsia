@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 typedef struct this_is_astruct this_is_astruct_t;
@@ -248,4 +248,4 @@ static inline void interface_async_refernce(const interface_protocol_t* proto, v
 
 
 
-__END_CDECLS;
+__END_CDECLS

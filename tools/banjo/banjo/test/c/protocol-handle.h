@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 typedef void (*async_handle_handle_callback)(void* ctx, zx_handle_t h, zx_handle_t h2);
@@ -237,4 +237,4 @@ static inline void synchronous_handle_profile(const synchronous_handle_protocol_
 
 
 
-__END_CDECLS;
+__END_CDECLS

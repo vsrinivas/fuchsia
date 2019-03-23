@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 typedef struct view_protocol view_protocol_t;
@@ -33,4 +33,4 @@ static inline void view_move_to(const view_protocol_t* proto, const point_t* p) 
 
 
 
-__END_CDECLS;
+__END_CDECLS

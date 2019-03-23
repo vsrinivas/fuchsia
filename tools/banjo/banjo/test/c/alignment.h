@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 typedef struct packing_0 packing_0_t;
@@ -49,4 +49,4 @@ struct packing_3 {
 };
 
 
-__END_CDECLS;
+__END_CDECLS

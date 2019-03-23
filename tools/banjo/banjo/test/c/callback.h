@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 typedef struct point point_t;
@@ -70,4 +70,4 @@ struct draw {
 };
 
 
-__END_CDECLS;
+__END_CDECLS

@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 typedef void (*async_primitive_bool_callback)(void* ctx, bool b, bool b_2);
@@ -160,4 +160,4 @@ static inline double synchronous_primitive_float64(const synchronous_primitive_p
 
 
 
-__END_CDECLS;
+__END_CDECLS

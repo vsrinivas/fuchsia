@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 #define vector_size UINT32_C(32)
@@ -231,4 +231,4 @@ static inline void vector_of_vectors_handle(const vector_of_vectors_protocol_t* 
 
 
 
-__END_CDECLS;
+__END_CDECLS

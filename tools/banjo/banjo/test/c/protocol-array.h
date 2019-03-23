@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 #define array_size UINT32_C(32)
@@ -231,4 +231,4 @@ static inline void arrayof_arrays_handle(const arrayof_arrays_protocol_t* proto,
 
 
 
-__END_CDECLS;
+__END_CDECLS

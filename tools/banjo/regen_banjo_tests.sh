@@ -10,7 +10,7 @@ BANJO_FILES="$BANJO_DIR/test/banjo"
 C_FILES="$BANJO_DIR/test/c"
 CPP_FILES="$BANJO_DIR/test/cpp"
 RUST_FILES="$BANJO_DIR/test/rust"
-BANJO_BIN="$FUCHSIA/zircon/prebuilt/downloads/banjo/banjo_bin"
+BANJO_BIN=${BANJO_BIN:-"$FUCHSIA/zircon/prebuilt/downloads/banjo/banjo_bin"}
 
 for f in $BANJO_FILES/*
 do
@@ -46,4 +46,3 @@ do
   fi
   # $BANJO_BIN --backend rust $zx --output "$RUST_FILES/$filename.rs" $dependencies --files $f
 done
-

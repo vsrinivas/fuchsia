@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Forward declarations
 typedef uint32_t cookie_kind_t;
@@ -82,4 +82,4 @@ static inline void baker_de_register(const baker_protocol_t* proto) {
 
 
 
-__END_CDECLS;
+__END_CDECLS

@@ -155,7 +155,7 @@ The first part has some boilerplate which we'll show without further comment:
 [10] #include <zircon/compiler.h>
 [11] #include <zircon/types.h>
 [12]
-[13] __BEGIN_CDECLS;
+[13] __BEGIN_CDECLS
 ```
 
 ### Forward declarations
@@ -803,4 +803,3 @@ these callbacks in order to prevent mistakes.
 
 > Ok, one more caveat with `[Async]` &mdash; the `[Async]` attribute applies *only*
 > to the immediately following method; not any other methods.
-
