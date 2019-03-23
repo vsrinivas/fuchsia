@@ -74,7 +74,7 @@ The fair scheduler emits flow events including the following:
 
 A NOTE ABOUT FLOW EVENTS: Sometimes displaying flow events is not enabled by
 default in Chromium Trace Viewer. Use the `View Options` menu in the upper right
-corner of the page and make sure the `Flow events` check box is checked.
+corner of the page and make sure the `Flow events` checkbox is checked.
 
 You can also disable flow events display if there are too many and the rendering
 becomes too slow. Try zooming into a smaller region before enabling flow event
@@ -97,9 +97,9 @@ Briefly, these properties are:
   the other thread over time. Whereas, a thread with the same weight as another
   will receive approximately the same CPU time, relative to the other thread
   over time.
-* **Starvation free for all threads**: Proportinal bandwidth division ensures
+* **Starvation free for all threads**: Proportional bandwidth division ensures
   that all competing threads receive CPU time in a timely manner, regardless of
-  how low the thread weight is relative to other threads. Notably, this proprty
+  how low the thread weight is relative to other threads. Notably, this property
   prevents unbounded priority inversion.
 * **Fair response to system overload**: When the system is overloaded, all
   threads share proportionally in the slowdown. Solving overload conditions is
@@ -111,8 +111,8 @@ Briefly, these properties are:
 A NOTE ABOUT DEADLINES: While fair scheduling is appropriate for the vast
 majority of workloads, there are some tasks that require very specific timing
 and/or do not adapt well to overload conditions. For example, these workloads
-include low-latency audio / graphics, high-frequencey sensors, and high-rate /
-/ low-latency networking. These specialized tasks are better served with a
+include low-latency audio / graphics, high-frequency sensors, and high-rate /
+low-latency networking. These specialized tasks are better served with a
 deadline scheduler, which is planned for later in the Zircon scheduler
 development cycle.
 
@@ -124,8 +124,7 @@ Adopting aspects of the Worst-Case Fair Weighted Fair Queuing (WF2Q) discipline,
 a modification of WFQ, is planned to improve control over tuning of latency
 versus throughput.
 
-The following subsections outline the the algorithm as implemented in Zircon to
-aid in understanding the scheduler's behavior and impact on the system. From
+The following subsections outline the algorithm as implemented in Zircon. From
 here on, "fair scheduler" and "Zircon fair scheduler" are used interchangeably.
 
 ### Ordering Thread Execution
@@ -186,13 +185,13 @@ For each CPU **C[j]** we define the following state:
   CPU.
 * Scheduling Period **p[j]**: The period in which all competing threads on the
   CPU execute approximately once.
-* Total Weights **W[j]**: The sum of the weights of the threads competing on the
+* Total Weight **W[j]**: The sum of the weights of the threads competing on the
   CPU.
 
 When a thread enters competition for a CPU, its weight is added to the CPU's
-total weights. Likewise, when a thread blocks or is migrated to another CPU the
-thread's weight is subtraced from the CPU's total weights. The total incudes the
-weights of the _ready_ threads and the current _running_ thread.
+total weight. Likewise, when a thread blocks or is migrated to another CPU the
+thread's weight is subtracted from the CPU's total weight. The total includes
+the weights of the _ready_ threads and the current _running_ thread.
 
 ### Tunable State
 
@@ -211,13 +210,14 @@ We define the following relationships for the key scheduler variables:
 The scheduling period controls the size of time slices. When there are few
 threads competing, the scheduling period defaults to the _target latency_. This
 results in larger time slices and fewer preemptions, improving throughput and
-potentially power consumption. When the number of threads is too great the
+potentially power consumption. When the number of threads is too large the
 scheduling period stretches such that each task receives at least the _minimum
 granularity_ time slice.
 
 Let **N** be the maximum number of competing threads before period stretching.
 
 **N** = floor(**L** / **M**)
+
 **p[j]** = **n[j]** > **N** --> **M** * **n[j]**, **L**
 
 #### Virtual Timeline
@@ -235,25 +235,29 @@ on the total weight of the CPU (see below), a value that changes as threads ente
 competition. The Zircon fair scheduler instead uses the scheduling period as an
 idealized uniform time slice for the _virtual timeline_, because its value
 changes less dramatically. Using a uniform value for all threads avoids skewing
-the _virtual timeline_ for threads that join early.
+the _virtual timeline_ unfairly in favor threads that join early.
 
 Let **T** be the system time of CPU **C[j]** when thread **P[i]** enters the run
 queue.
 
 **s[i]** = **T**
+
 **f[i]** = **s[i]** + **p[j]** / **w[i]**
 
 ### Time Slice
 
-When a thread is selecte to run, its time slice is calculated based on its
+When a thread is selected to run, its time slice is calculated based on its
 relative rate and the scheduling period.
 
-Let **g** be the integer number of _minimu granularity_ units **M** in the
-_scheduling period_ **p[j]** of CPU **C[j]**.
+Let **g** be the integer number of _minimum granularity_ units **M** in the
+current _scheduling period_ **p[j]** of CPU **C[j]**.
+
 Let **R** be the relative rate of thread **P[i]**.
 
 **g** = floor(**p[j]** / **M**)
+
 **R** = **w[i]** / **W[j]**
+
 **t[i]** = ceil(**g** * **R**) * **M**
 
 This definition ensures that **t[i]** is an integer multiple of the _minimum
