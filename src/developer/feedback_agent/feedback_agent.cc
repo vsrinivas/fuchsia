@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 
 #include "src/developer/feedback_agent/annotations.h"
+#include "src/developer/feedback_agent/attachments.h"
 #include "src/developer/feedback_agent/image_conversion.h"
 
 namespace fuchsia {
@@ -24,6 +25,7 @@ FeedbackAgent::FeedbackAgent(::sys::ComponentContext* startup_context)
 void FeedbackAgent::GetData(GetDataCallback callback) {
   DataProvider_GetData_Response response;
   response.data.set_annotations(GetAnnotations());
+  response.data.set_attachments(GetAttachments());
   DataProvider_GetData_Result result;
   result.set_response(std::move(response));
   callback(std::move(result));

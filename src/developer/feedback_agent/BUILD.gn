@@ -40,6 +40,8 @@ source_set("src") {
   sources = [
     "annotations.cc",
     "annotations.h",
+    "attachments.cc",
+    "attachments.h",
     "feedback_agent.cc",
     "feedback_agent.h",
     "image_conversion.cc",

@@ -19,7 +19,7 @@ namespace feedback {
 namespace {
 
 // Returns true if gMock |arg|.key matches |expected_key|.
-MATCHER_P(MatchesAnnotationKey, expected_key,
+MATCHER_P(MatchesKey, expected_key,
           "matches an annotation with key \"" + std::string(expected_key) +
               "\"") {
   return arg.key == expected_key;
@@ -57,23 +57,28 @@ VK_TEST_F(FeedbackAgentIntegrationTest, GetScreenshot_SmokeTest) {
   // return a screenshot or not depending on which device the test runs.
 }
 
-TEST_F(FeedbackAgentIntegrationTest, GetData_CheckAnnotationKeys) {
+TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   DataProvider_GetData_Result out_result;
   ASSERT_EQ(feedback_data_provider_->GetData(&out_result), ZX_OK);
   ASSERT_TRUE(out_result.is_response());
 
-  // We cannot expect a particular value for each annotation because values
-  // might depend on which device the test runs (e.g., board name) or what
-  // happened prior to running this test (e.g., logs).
-  // But we should expect the keys to be present.
+  // We cannot expect a particular value for each annotation or attachment
+  // because values might depend on which device the test runs (e.g., board
+  // name) or what happened prior to running this test (e.g., logs). But we
+  // should expect the keys to be present.
   ASSERT_TRUE(out_result.response().data.has_annotations());
   EXPECT_THAT(out_result.response().data.annotations(),
               testing::UnorderedElementsAreArray({
-                  MatchesAnnotationKey("device.board-name"),
-                  MatchesAnnotationKey("build.last-update"),
-                  MatchesAnnotationKey("build.version"),
-                  MatchesAnnotationKey("build.board"),
-                  MatchesAnnotationKey("build.product"),
+                  MatchesKey("device.board-name"),
+                  MatchesKey("build.last-update"),
+                  MatchesKey("build.version"),
+                  MatchesKey("build.board"),
+                  MatchesKey("build.product"),
+              }));
+  ASSERT_TRUE(out_result.response().data.has_attachments());
+  EXPECT_THAT(out_result.response().data.attachments(),
+              testing::UnorderedElementsAreArray({
+                  MatchesKey("build.snapshot"),
               }));
 }
 
