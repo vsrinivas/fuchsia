@@ -75,8 +75,7 @@ create a persistent tun/tap device ahead of time (which does require you be root
 On Linux:
 
 ```
-sudo apt-get install uml-utilities
-sudo tunctl -u $USER -t qemu
+sudo ip tuntap add dev qemu mode tap user $USER
 sudo ifconfig qemu up
 ```
 

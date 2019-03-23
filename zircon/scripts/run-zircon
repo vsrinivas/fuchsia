@@ -301,13 +301,10 @@ if [[ $NET == 2 ]]; then
         fi
         ARGS+=" -netdev type=tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,id=net0"
     else
-        CHECK=$(tunctl -b -u $USER -t $IFNAME 2>/dev/null)
-        if [[ "$CHECK" != "$IFNAME" ]]; then
+        TAP_IFS=$(ip tuntap show 2>/dev/null)
+        if [[ ! "$TAP_IFS" =~ "${IFNAME}:" ]]; then
           echo "To use qemu with networking on Linux, configure tun/tap:"
-          if [[ ! -x "/usr/sbin/tunctl" ]]; then
-            echo "sudo apt-get install uml-utilities"
-          fi
-          echo "sudo tunctl -u $USER -t $IFNAME"
+          echo "sudo ip tuntap add dev $IFNAME mode tap user $USER"
           echo "sudo ifconfig $IFNAME up"
           exit 1
         fi
