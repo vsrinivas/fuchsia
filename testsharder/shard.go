@@ -34,11 +34,7 @@ func MakeShards(specs []TestSpec, mode Mode, tags []string) []*Shard {
 	envs := []Environment{}
 	for _, spec := range specs {
 		for _, env := range spec.Envs {
-			envTags := env.Tags
-			if env.Label != "" {
-				envTags = append(envTags, env.Label)
-			}
-			if !stringSlicesEq(tags, envTags) {
+			if !stringSlicesEq(tags, env.Tags) {
 				continue
 			}
 			if mode == Restricted && env.ServiceAccount != "" {
