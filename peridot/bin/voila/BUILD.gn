@@ -44,7 +44,6 @@ rustc_binary("bin") {
 }
 
 package("voila") {
-  deprecated_global_persistent_storage = "//build"
   deps = [
     ":bin",
   ]

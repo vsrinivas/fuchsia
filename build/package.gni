@@ -517,7 +517,7 @@ template("package") {
             extra_schemas = [
               {
                 schema = "//build/cmx/block_deprecated_global_persistent_storage.json"
-                error_msg = "The 'deprecated-global-persistent-storage' feature is deprecated and guarded by a whitelist. Use 'isolated-persistent-storage' instead."
+                error_msg = "The 'deprecated-global-persistent-storage' feature is deprecated and guarded by an allowlist. Use 'isolated-persistent-storage' instead."
               },
             ]
           }
@@ -821,11 +821,11 @@ template("package") {
         data_deps = pkg.data_deps
         public_deps = pkg.public_deps
 
-        # Add the dep on the whitelist here rather than in pkg.deps earlier so that we can whitelist
+        # Add the dep on the allowlist here rather than in pkg.deps earlier so that we can allow
         # specific targets by the package target's name using visibility.
         # TODO(bryanhenry,CF-28): Remove along with deprecated-global-persistent-storage feature
         if (defined(pkg.deprecated_global_persistent_storage)) {
-          deps += [ "${pkg.deprecated_global_persistent_storage}:deprecated_global_persistent_storage_whitelist" ]
+          deps += [ "${pkg.deprecated_global_persistent_storage}:deprecated_global_persistent_storage_allowlist" ]
         }
       }
     }

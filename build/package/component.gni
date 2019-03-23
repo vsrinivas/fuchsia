@@ -155,7 +155,7 @@ template("fuchsia_component") {
             {
               schema =
                   "//build/cmx/block_deprecated_global_persistent_storage.json"
-              error_msg = "The 'deprecated-global-persistent-storage' feature is deprecated and guarded by a whitelist. Use 'isolated-persistent-storage' instead."
+              error_msg = "The 'deprecated-global-persistent-storage' feature is deprecated and guarded by an allowlist. Use 'isolated-persistent-storage' instead."
             },
           ]
         }
@@ -240,15 +240,13 @@ template("fuchsia_component") {
       response_file_contents = manifest_args
       deps = component.deps
       public_deps = component.public_deps
-    }
 
-    # This dep is added at the end so that only this target depends on the
-    # visibility whitelist, which lets us whitelist specific targets instead of
-    # whole paths. If we did it above this dep would also get added to targets
-    # above that use 'pkg.deps' as their own deps.
-    # TODO(bryanhenry,CF-28): Remove along with deprecated-global-persistent-storage feature
-    if (defined(component.deprecated_global_persistent_storage)) {
-      component.deps += [ "${component.deprecated_global_persistent_storage}:deprecated_global_persistent_storage_whitelist" ]
+      # Add the dep on the allowlist here rather than in pkg.deps earlier so that we can allow
+      # specific targets by the package target's name using visibility.
+      # TODO(bryanhenry,CF-28): Remove along with deprecated-global-persistent-storage feature
+      if (defined(component.deprecated_global_persistent_storage)) {
+        deps += [ "${component.deprecated_global_persistent_storage}:deprecated_global_persistent_storage_allowlist" ]
+      }
     }
   } else {
     group(target_name) {
