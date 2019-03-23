@@ -13,6 +13,7 @@
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
+#include <lib/zx/eventpair.h>
 #include <lib/zx/port.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -137,19 +138,20 @@ static void ReadUint64Packet(const zx::channel& channel,
   FXL_CHECK(packet == expected_value);
 }
 
-static void StartNThreadsThreadFunc(zx_handle_t done_event) {
+static void StartNThreadsThreadFunc(zx_handle_t eventpair) {
+  // The main thread will close its side of |eventpair| when it's done.
   zx_signals_t pending;
-  zx_status_t status = zx_object_wait_one(done_event, ZX_EVENT_SIGNALED,
+  zx_status_t status = zx_object_wait_one(eventpair, ZX_EVENTPAIR_PEER_CLOSED,
                                           ZX_TIME_INFINITE, &pending);
-  FXL_CHECK(status == ZX_ERR_CANCELED);
+  FXL_CHECK(status == ZX_OK);
 }
 
 static int StartNThreads(const zx::channel& channel, int num_iterations) {
   std::vector<std::thread> threads;
 
-  // When this is closed the threads will exit.
-  zx::event done_event;
-  FXL_CHECK(zx::event::create(0, &done_event) == ZX_OK);
+  // When our side of the event pair is closed the threads will exit.
+  zx::eventpair our_event, their_event;
+  FXL_CHECK(zx::eventpair::create(0, &our_event, &their_event) == ZX_OK);
 
   // What we want to do here is start a new thread and then wait for the
   // test to do its thing, and repeat.
@@ -158,14 +160,14 @@ static int StartNThreads(const zx::channel& channel, int num_iterations) {
     FXL_VLOG(1) << "StartNThreads iteration " << i + 1;
 
     threads.emplace_back(
-        std::thread{StartNThreadsThreadFunc, done_event.get()});
+        std::thread{StartNThreadsThreadFunc, their_event.get()});
 
     WaitChannelReadable(channel);
     ReadUint64Packet(channel, inferior_control::kUint64MagicPacketValue);
   }
 
-  // Terminate the threads;
-  done_event.reset();
+  // Terminate the threads.
+  our_event.reset();
   for (auto& thread : threads) {
     thread.join();
   }

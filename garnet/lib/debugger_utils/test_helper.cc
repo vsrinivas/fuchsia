@@ -13,6 +13,7 @@
 #include <lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
+#include <lib/zx/eventpair.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/types.h>
@@ -39,38 +40,39 @@ static void WriteUint64Packet(const zx::channel& channel, uint64_t value) {
   FXL_CHECK(channel.write(0, &packet, sizeof(packet), nullptr, 0) == ZX_OK);
 }
 
-static void StartNThreadsThreadFunc(zx_handle_t event, int num_threads) {
+static void StartNThreadsThreadFunc(zx_handle_t eventpair, int num_threads) {
   zx_status_t status;
 
   // When all threads are running notify the main loop.
   if (g_num_threads_running.fetch_add(1) == num_threads - 1) {
     FXL_LOG(INFO) << "All threads started";
-    status = zx_object_signal(event, 0, ZX_USER_SIGNAL_0);
+    status = zx_object_signal_peer(eventpair, 0, ZX_USER_SIGNAL_0);
     FXL_CHECK(status == ZX_OK);
   }
 
+  // The main thread will close its side of |eventpair| when it's done.
   zx_signals_t pending;
-  status = zx_object_wait_one(event, ZX_EVENT_SIGNALED, ZX_TIME_INFINITE,
-                              &pending);
-  FXL_CHECK(status == ZX_ERR_CANCELED);
+  status = zx_object_wait_one(eventpair, ZX_EVENTPAIR_PEER_CLOSED,
+                              ZX_TIME_INFINITE, &pending);
+  FXL_CHECK(status == ZX_OK);
 }
 
 static int StartNThreads(zx::channel channel, int num_threads) {
   std::vector<std::thread> threads;
 
-  // When this is closed the threads will exit.
-  zx::event event;
-  FXL_CHECK(zx::event::create(0, &event) == ZX_OK);
+  // When our side of the event pair is closed the threads will exit.
+  zx::eventpair our_event, their_event;
+  FXL_CHECK(zx::eventpair::create(0, &our_event, &their_event) == ZX_OK);
 
   for (int i = 0; i < num_threads; ++i) {
     threads.emplace_back(std::thread{
-        StartNThreadsThreadFunc, event.get(), num_threads});
+        StartNThreadsThreadFunc, their_event.get(), num_threads});
   }
 
   // Wait for all threads to start.
   zx_signals_t pending;
   zx_status_t status =
-      event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), &pending);
+      our_event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), &pending);
   FXL_CHECK(status == ZX_OK);
 
   // Notify test all threads are running.
@@ -79,7 +81,7 @@ static int StartNThreads(zx::channel channel, int num_threads) {
   WaitPeerClosed(channel);
 
   // Terminate the threads;
-  event.reset();
+  our_event.reset();
   for (auto& thread : threads) {
     thread.join();
   }
