@@ -35,10 +35,9 @@ class MockSessionUpdater : public SessionUpdater {
   MockSessionUpdater() : weak_factory_(this) {}
 
   bool UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
-                      uint64_t frame_number, zx_time_t presentation_time,
-                      zx_duration_t presentation_interval) override {
+                      uint64_t frame_number, uint64_t presentation_time,
+                      uint64_t presentation_interval) override {
     ++update_sessions_call_count_;
-    last_requested_updates_ = std::move(sessions_to_update);
     return update_sessions_return_value_;
   };
 
@@ -47,9 +46,6 @@ class MockSessionUpdater : public SessionUpdater {
     update_sessions_return_value_ = new_value;
   }
   uint32_t update_sessions_call_count() { return update_sessions_call_count_; }
-  const std::vector<SessionUpdate>& last_requested_updates() {
-    return last_requested_updates_;
-  }
 
   fxl::WeakPtr<MockSessionUpdater> GetWeakPtr() {
     return weak_factory_.GetWeakPtr();
@@ -58,7 +54,6 @@ class MockSessionUpdater : public SessionUpdater {
  private:
   bool update_sessions_return_value_ = true;
   uint32_t update_sessions_call_count_ = 0;
-  std::vector<SessionUpdate> last_requested_updates_;
 
   fxl::WeakPtrFactory<MockSessionUpdater> weak_factory_;  // must be last
 };
@@ -68,8 +63,8 @@ class MockFrameRenderer : public FrameRenderer {
   MockFrameRenderer() : weak_factory_(this) {}
 
   bool RenderFrame(const FrameTimingsPtr& frame_timings,
-                   zx_time_t presentation_time,
-                   zx_duration_t presentation_interval) override {
+                   uint64_t presentation_time,
+                   uint64_t presentation_interval) override {
     ++render_frame_call_count_;
     last_frame_timings_ = frame_timings.get();
     return render_frame_return_value_;
@@ -79,7 +74,7 @@ class MockFrameRenderer : public FrameRenderer {
   // FrameScheduler, but is not valid to do until after RenderFrame has returned
   // to FrameScheduler. Hence this separate method.
   void EndFrame() {
-    if (last_frame_timings_) {
+    if(last_frame_timings_) {
       last_frame_timings_->AddSwapchain(nullptr);
       last_frame_timings_->OnFrameRendered(/*swapchain index*/ 0, /*time*/ 1);
       last_frame_timings_->OnFramePresented(/*swapchain index*/ 0, /*time*/ 1);

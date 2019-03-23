@@ -17,7 +17,17 @@
 namespace scenic_impl {
 namespace gfx {
 
-DefaultFrameScheduler::DefaultFrameScheduler(const Display* display)
+namespace {
+
+// Generates a unique ID, used for flow trace events.
+static uint64_t NextFlowId() {
+  static std::atomic<uint64_t> counter(0);
+  return ++counter;
+}
+
+}  // anonymous namespace
+
+DefaultFrameScheduler::DefaultFrameScheduler(Display* const display)
     : dispatcher_(async_get_default_dispatcher()),
       display_(display),
       weak_factory_(this) {
@@ -31,16 +41,26 @@ void DefaultFrameScheduler::OnFrameRendered(const FrameTimings& timings) {
                 TRACE_SCOPE_PROCESS, "Timestamp",
                 timings.rendering_finished_time(), "Frame number",
                 timings.frame_number());
-  currently_rendering_ = false;
-  if (render_pending_) {
-    RequestFrame();
+}
+
+void DefaultFrameScheduler::RequestFrame(zx_time_t presentation_time) {
+  if (frame_number_ < 5) {
+    FXL_LOG(INFO) << "DefaultFrameScheduler::RequestFrame presentation_time="
+                  << presentation_time;
+  }
+  const bool should_schedule_frame =
+      requested_presentation_times_.empty() ||
+      requested_presentation_times_.top() > presentation_time;
+  requested_presentation_times_.push(presentation_time);
+  if (should_schedule_frame) {
+    ScheduleFrame();
   }
 }
 
 void DefaultFrameScheduler::SetRenderContinuously(bool render_continuously) {
   render_continuously_ = render_continuously;
   if (render_continuously_) {
-    RequestFrame();
+    RequestFrame(0);
   }
 }
 
@@ -53,7 +73,14 @@ zx_time_t DefaultFrameScheduler::PredictRequiredFrameRenderTime() const {
 }
 
 std::pair<zx_time_t, zx_time_t>
-DefaultFrameScheduler::ComputePresentationAndWakeupTimesForTargetTime(
+DefaultFrameScheduler::ComputeNextPresentationAndWakeupTimes() const {
+  FXL_DCHECK(!requested_presentation_times_.empty());
+  return ComputeTargetPresentationAndWakeupTimes(
+      requested_presentation_times_.top());
+}
+
+std::pair<zx_time_t, zx_time_t>
+DefaultFrameScheduler::ComputeTargetPresentationAndWakeupTimes(
     const zx_time_t requested_presentation_time) const {
   const zx_time_t last_vsync_time = display_->GetLastVsyncTime();
   const zx_duration_t vsync_interval = display_->GetVsyncInterval();
@@ -134,49 +161,62 @@ DefaultFrameScheduler::ComputePresentationAndWakeupTimesForTargetTime(
 #endif
 }
 
-void DefaultFrameScheduler::RequestFrame() {
-  FXL_CHECK(!updatable_sessions_.empty() || render_continuously_ ||
-            render_pending_);
-
-  // Logging the first few frames to find common startup bugs.
+void DefaultFrameScheduler::ScheduleFrame() {
+  FXL_DCHECK(!requested_presentation_times_.empty());
   if (frame_number_ < 5) {
-    FXL_LOG(INFO) << "DefaultFrameScheduler::RequestFrame";
+    FXL_LOG(INFO) << "DefaultFrameScheduler::ScheduleFrame";
   }
 
-  auto requested_presentation_time =
-      render_continuously_ || render_pending_
-          ? 0
-          : updatable_sessions_.top().requested_presentation_time;
+  auto times = ComputeNextPresentationAndWakeupTimes();
+  zx_time_t presentation_time = times.first;
+  zx_time_t wakeup_time = times.second;
 
-  auto next_times = ComputePresentationAndWakeupTimesForTargetTime(
-      requested_presentation_time);
-  auto new_presentation_time = next_times.first;
-  auto new_wakeup_time = next_times.second;
+  TRACE_DURATION("gfx", "FrameScheduler::ScheduleFrame",
+                 "next requested present time",
+                 requested_presentation_times_.top(), "presentation time",
+                 presentation_time, "wakeup_time", wakeup_time);
 
-  // If there is no render waiting we should schedule a frame.
-  // Likewise, if newly predicted wake up time is earlier than the current one
-  // then we need to reschedule the next wake up.
-  if (!frame_render_task_.is_pending() || new_wakeup_time < wakeup_time_) {
-    frame_render_task_.Cancel();
+  uint64_t flow_id = NextFlowId();
+  TRACE_FLOW_BEGIN("gfx", "FrameScheduler_Request", flow_id);
 
-    wakeup_time_ = new_wakeup_time;
-    next_presentation_time_ = new_presentation_time;
-    frame_render_task_.PostForTime(dispatcher_, zx::time(wakeup_time_));
-  }
+  async::PostTaskForTime(
+      dispatcher_,
+      [weak = weak_factory_.GetWeakPtr(), presentation_time, wakeup_time,
+       flow_id] {
+        if (weak)
+          weak->MaybeRenderFrame(presentation_time, wakeup_time, flow_id);
+      },
+      zx::time(0) + zx::nsec(wakeup_time));
 }
 
-void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
-                                             async::TaskBase*, zx_status_t) {
-  auto presentation_time = next_presentation_time_;
+void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
+                                             zx_time_t wakeup_time,
+                                             uint64_t flow_id) {
   TRACE_DURATION("gfx", "FrameScheduler::MaybeRenderFrame", "presentation_time",
                  presentation_time);
-
-  // Logging the first few frames to find common startup bugs.
+  TRACE_FLOW_END("gfx", "FrameScheduler_Request", flow_id);
   if (frame_number_ < 5) {
     FXL_LOG(INFO)
         << "DefaultFrameScheduler::MaybeRenderFrame presentation_time="
-        << presentation_time << " wakeup_time=" << wakeup_time_
+        << presentation_time << " wakeup_time=" << wakeup_time
         << " frame_number=" << frame_number_;
+  }
+
+  if (requested_presentation_times_.empty()) {
+    // No frame was requested, so none needs to be rendered.  More precisely, a
+    // frame must have been requested (otherwise ScheduleFrame() would not
+    // have invoked this method), and coalesced with other requests that were
+    // handled by a previous invocation of MaybeRenderFrame().
+    return;
+  }
+
+  if (TooMuchBackPressure()) {
+    // No need to request another frame; ScheduleFrame() will be called
+    // when the back-pressure is relieved.
+    FXL_VLOG(2)
+        << "DefaultFrameScheduler::MaybeRenderFrame(): dropping frame, too "
+           "much back-pressure.";
+    return;
   }
 
   // TODO(MZ-400): Check whether there is enough time to render.  If not, drop
@@ -190,6 +230,13 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
   // increase in the estimated time required to render the frame (well, not
   // currently: the estimate is a hard-coded constant.  Figure out what
   // happened, and log it appropriately.
+
+  // We are about to render a frame for the next scheduled presentation time, so
+  // keep only the presentation requests for later times.
+  while (!requested_presentation_times_.empty() &&
+         presentation_time >= requested_presentation_times_.top()) {
+    requested_presentation_times_.pop();
+  }
 
   // TODO(SCN-124): We should derive an appropriate value from the rendering
   // targets, in particular giving priority to couple to the display refresh
@@ -210,51 +257,40 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
         ApplyScheduledSessionUpdates(frame_timings->frame_number(),
                                      presentation_time, presentation_interval);
 
-    if (!any_updates_were_applied && !render_pending_ &&
-        !render_continuously_) {
+    if (!any_updates_were_applied && !render_continuously_) {
       return;
     }
 
-    if (currently_rendering_) {
-      render_pending_ = true;
-      return;
-    }
-
-    // Logging the first few frames to find common startup bugs.
     if (frame_number_ < 5) {
       FXL_LOG(INFO)
           << "DefaultFrameScheduler: calling RenderFrame presentation_time="
           << presentation_time << " frame_number=" << frame_number_;
     }
-
     // Render the frame
-    currently_rendering_ = delegate_.frame_renderer->RenderFrame(
-        frame_timings, presentation_time, presentation_interval);
-    if (currently_rendering_) {
+    if (delegate_.frame_renderer->RenderFrame(frame_timings, presentation_time,
+                                              presentation_interval)) {
       outstanding_frames_.push_back(frame_timings);
-      render_pending_ = false;
     }
   }
 
   // If necessary, schedule another frame.
-  if (!updatable_sessions_.empty()) {
-    RequestFrame();
+  if (!requested_presentation_times_.empty()) {
+    ScheduleFrame();
   }
 }
 
 void DefaultFrameScheduler::ScheduleUpdateForSession(
-    zx_time_t presentation_time, scenic_impl::SessionId session_id) {
+    uint64_t presentation_time, scenic_impl::SessionId session_id) {
   updatable_sessions_.push({.session_id = session_id,
                             .requested_presentation_time = presentation_time});
-  RequestFrame();
+  RequestFrame(presentation_time);
 }
 
 bool DefaultFrameScheduler::ApplyScheduledSessionUpdates(
-    uint64_t frame_number, zx_time_t presentation_time,
-    zx_duration_t presentation_interval) {
+    uint64_t frame_number, uint64_t presentation_time,
+    uint64_t presentation_interval) {
   FXL_DCHECK(delegate_.session_updater);
 
-  // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 5) {
     FXL_LOG(INFO) << "DefaultFrameScheduler::ApplyScheduledSessionUpdates "
                      "presentation_time="
@@ -319,9 +355,28 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
   }
   outstanding_frames_.resize(outstanding_frames_.size() - 1);
 
-  if (render_continuously_) {
-    RequestFrame();
+  // If a frame was not scheduled due to back-pressure, try again.
+  if (back_pressure_applied_) {
+    // This will be reset if the next scheduled frame fails to render due to
+    // back-pressure.
+    back_pressure_applied_ = false;
+
+    if (!requested_presentation_times_.empty()) {
+      ScheduleFrame();
+    }
   }
+
+  if (render_continuously_) {
+    RequestFrame(0);
+  }
+}
+
+bool DefaultFrameScheduler::TooMuchBackPressure() {
+  if (outstanding_frames_.size() >= kMaxOutstandingFrames) {
+    back_pressure_applied_ = true;
+    return true;
+  }
+  return false;
 }
 
 }  // namespace gfx
