@@ -202,10 +202,7 @@ if (current_cpu != "") {
       deps += [
         "$zx/system/dev/usb/usb-peripheral-test",
         "$zx/system/ulib/ftl-mtd/test",
-
-        # We can't run this test in CQ as it requires real/emulated MTD.
-        # Uncomment for local testing.
-        # "mtd",
+        "mtd",
       ]
     }
   }
