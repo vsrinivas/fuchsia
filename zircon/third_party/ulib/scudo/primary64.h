@@ -247,6 +247,7 @@ private:
       if (UNLIKELY(RegionBase + MappedUser + UserMapSize > RegionSize)) {
         if (!Region->Exhausted) {
           Region->Exhausted = true;
+          printStats();
           Printf(
               "Scudo OOM: The process has Exhausted %zuM for size class %zu.\n",
               RegionSize >> 20, Size);
