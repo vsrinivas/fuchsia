@@ -17,6 +17,9 @@ namespace {
 using ::component::testing::FakeLauncher;
 using SessionContextImplTest = gtest::TestLoopFixture;
 
+// Unique identifier for a test session.
+constexpr char kSessionId[] = "session_id";
+
 TEST_F(SessionContextImplTest, StartSessionmgrWithTokenManagers) {
   FakeLauncher launcher;
   std::string url = "test_url_string";
@@ -35,7 +38,7 @@ TEST_F(SessionContextImplTest, StartSessionmgrWithTokenManagers) {
   fuchsia::auth::TokenManagerPtr agent_token_manager;
 
   SessionContextImpl impl(
-      &launcher, CloneStruct(app_config) /* sessionmgr_config */,
+      &launcher, kSessionId, CloneStruct(app_config) /* sessionmgr_config */,
       CloneStruct(app_config) /* session_shell_config */,
       CloneStruct(app_config) /* story_shell_config */,
       false, /* use_session_shell_for_story_shell_factory */
@@ -68,7 +71,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
 
   bool done_callback_called = false;
   SessionContextImpl impl(
-      &launcher, /* sessionmgr_config= */ CloneStruct(app_config),
+      &launcher, kSessionId, /* sessionmgr_config= */ CloneStruct(app_config),
       /* session_shell_config= */ CloneStruct(app_config),
       /* story_shell_config= */ CloneStruct(app_config),
       /* use_session_shell_for_story_shell_factory= */ false,

@@ -150,6 +150,7 @@ impl VoilaViewAssistant {
 
         sessionmgr
             .initialize(
+                "session_id", /* session_id */
                 Some(OutOfLine(&mut account)),
                 &mut session_shell_config,
                 &mut story_shell_config,

@@ -69,7 +69,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
  private:
   // |Sessionmgr|
   void Initialize(
-      fuchsia::modular::auth::AccountPtr account,
+      std::string session_id, fuchsia::modular::auth::AccountPtr account,
       fuchsia::modular::AppConfig session_shell_config,
       fuchsia::modular::AppConfig story_shell_config,
       bool use_session_shell_for_story_shell_factory,
@@ -85,6 +85,9 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                         SwapSessionShellCallback callback) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
+  // TODO(MF-279): Remove |account| and |agent_token_manager| once sessions
+  // start receiving persona handles.
+  void InitializeSessionEnvironment(std::string session_id);
   void InitializeUser(
       fuchsia::modular::auth::AccountPtr account,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager);
@@ -188,6 +191,10 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   void ConnectSessionShellToStoryProvider();
 
+  // The device-local unique identifier for this session. The uniqueness
+  // is enforced by basemgr which vends sessions.
+  std::string session_id_;
+
   component::StartupContext* const startup_context_;
   fuchsia::modular::internal::SessionmgrConfigPtr config_;
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> memfs_for_ledger_;
@@ -211,7 +218,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // Provides services to the Ledger
   component::ServiceProviderImpl ledger_service_provider_;
 
-  std::unique_ptr<Environment> user_environment_;
+  std::unique_ptr<Environment> session_environment_;
 
   fuchsia::modular::auth::AccountPtr account_;
 

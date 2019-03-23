@@ -65,7 +65,7 @@ constexpr char kContextEngineComponentNamespace[] = "context_engine";
 constexpr char kModuleResolverUrl[] =
     "fuchsia-pkg://fuchsia.com/module_resolver#meta/module_resolver.cmx";
 
-constexpr char kUserEnvironmentLabelPrefix[] = "user-";
+constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
 
 constexpr char kMessageQueuePath[] = "/data/MESSAGE_QUEUES/v1/";
 
@@ -88,10 +88,6 @@ fuchsia::ledger::cloud::firestore::Config GetLedgerFirestoreConfig(
   config.api_key = kFirebaseApiKey;
   config.user_profile_id = user_profile_id;
   return config;
-}
-
-std::string GetAccountId(const fuchsia::modular::auth::AccountPtr& account) {
-  return !account ? "GUEST" : account->id;
 }
 
 // Creates a function that can be used as termination action passed to AtEnd(),
@@ -186,7 +182,7 @@ SessionmgrImpl::SessionmgrImpl(
 SessionmgrImpl::~SessionmgrImpl() = default;
 
 void SessionmgrImpl::Initialize(
-    fuchsia::modular::auth::AccountPtr account,
+    std::string session_id, fuchsia::modular::auth::AccountPtr account,
     fuchsia::modular::AppConfig session_shell_config,
     fuchsia::modular::AppConfig story_shell_config,
     bool use_session_shell_for_story_shell_factory,
@@ -227,6 +223,7 @@ void SessionmgrImpl::Initialize(
   session_context_ = session_context.Bind();
   AtEnd(Reset(&session_context_));
 
+  InitializeSessionEnvironment(session_id);
   InitializeUser(std::move(account), std::move(agent_token_manager));
   InitializeSessionShell(
       std::move(session_shell_config),
@@ -239,6 +236,18 @@ void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
   story_provider_impl_->SetSessionShell(std::move(session_shell));
 }
 
+void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
+  session_id_ = session_id;
+
+  static const auto* const kEnvServices = new std::vector<std::string>{
+      fuchsia::modular::DeviceMap::Name_, fuchsia::modular::Clipboard::Name_};
+  session_environment_ = std::make_unique<Environment>(
+      startup_context_->environment(),
+      std::string(kSessionEnvironmentLabelPrefix) + session_id_, *kEnvServices,
+      /* kill_on_oom = */ true);
+  AtEnd(Reset(&session_environment_));
+}
+
 void SessionmgrImpl::InitializeUser(
     fuchsia::modular::auth::AccountPtr account,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager) {
@@ -247,15 +256,6 @@ void SessionmgrImpl::InitializeUser(
 
   account_ = std::move(account);
   AtEnd(Reset(&account_));
-
-  static const auto* const kEnvServices = new std::vector<std::string>{
-      fuchsia::modular::DeviceMap::Name_, fuchsia::modular::Clipboard::Name_};
-  user_environment_ = std::make_unique<Environment>(
-      startup_context_->environment(),
-      std::string(kUserEnvironmentLabelPrefix) + GetAccountId(account_),
-      *kEnvServices,
-      /* kill_on_oom = */ true);
-  AtEnd(Reset(&user_environment_));
 }
 
 zx::channel SessionmgrImpl::GetLedgerRepositoryDirectory() {
@@ -290,7 +290,7 @@ void SessionmgrImpl::InitializeLedger(
 
   ledger_app_ =
       std::make_unique<AppClient<fuchsia::ledger::internal::LedgerController>>(
-          user_environment_->GetLauncher(), std::move(ledger_config), "",
+          session_environment_->GetLauncher(), std::move(ledger_config), "",
           nullptr);
   ledger_app_->SetAppErrorHandler([this] {
     FXL_LOG(ERROR) << "Ledger seems to have crashed unexpectedly." << std::endl
@@ -355,19 +355,19 @@ void SessionmgrImpl::InitializeLedger(
 
 void SessionmgrImpl::InitializeDeviceMap() {
   // fuchsia::modular::DeviceMap service
-  const std::string device_id = LoadDeviceID(GetAccountId(account_));
-  device_name_ = LoadDeviceName(GetAccountId(account_));
+  const std::string device_id = LoadDeviceID(session_id_);
+  device_name_ = LoadDeviceName(session_id_);
   const std::string device_profile = LoadDeviceProfile();
 
   device_map_impl_ = std::make_unique<DeviceMapImpl>(
       device_name_, device_id, device_profile, ledger_client_.get(),
       fuchsia::ledger::PageId());
-  user_environment_->AddService<fuchsia::modular::DeviceMap>(
+  session_environment_->AddService<fuchsia::modular::DeviceMap>(
       [this](fidl::InterfaceRequest<fuchsia::modular::DeviceMap> request) {
         if (terminating_) {
           return;
         }
-        // device_map_impl_ may be reset before user_environment_.
+        // device_map_impl_ may be reset before session_environment_.
         if (device_map_impl_) {
           device_map_impl_->Connect(std::move(request));
         }
@@ -379,7 +379,7 @@ void SessionmgrImpl::InitializeClipboard() {
   agent_runner_->ConnectToAgent(kAppId, kClipboardAgentUrl,
                                 services_from_clipboard_agent_.NewRequest(),
                                 clipboard_agent_controller_.NewRequest());
-  user_environment_->AddService<fuchsia::modular::Clipboard>(
+  session_environment_->AddService<fuchsia::modular::Clipboard>(
       [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
         if (terminating_) {
           return;
@@ -391,7 +391,7 @@ void SessionmgrImpl::InitializeClipboard() {
 
 void SessionmgrImpl::InitializeMessageQueueManager() {
   std::string message_queue_path = kMessageQueuePath;
-  message_queue_path.append(GetAccountId(account_));
+  message_queue_path.append(session_id_);
   if (!files::CreateDirectory(message_queue_path)) {
     FXL_LOG(FATAL) << "Failed to create message queue directory: "
                    << message_queue_path;
@@ -475,7 +475,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   AtEnd(Reset(&agent_runner_storage_));
 
   agent_runner_.reset(new AgentRunner(
-      user_environment_->GetLauncher(), message_queue_manager_.get(),
+      session_environment_->GetLauncher(), message_queue_manager_.get(),
       ledger_repository_.get(), agent_runner_storage_.get(),
       agent_token_manager_.get(), user_intelligence_provider_impl_.get(),
       entity_provider_runner_.get()));
@@ -510,8 +510,9 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
 
     context_engine_app_ =
         std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-            user_environment_->GetLauncher(), std::move(context_engine_config),
-            "" /* data_origin */, std::move(service_list));
+            session_environment_->GetLauncher(),
+            std::move(context_engine_config), "" /* data_origin */,
+            std::move(service_list));
     context_engine_app_->services().ConnectToService(
         std::move(context_engine_request));
     AtEnd(Reset(&context_engine_app_));
@@ -568,8 +569,9 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
     // isolate the data it reads to a subdir of /data and map that in here.
     module_resolver_app_ =
         std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-            user_environment_->GetLauncher(), std::move(module_resolver_config),
-            "" /* data_origin */, std::move(service_list));
+            session_environment_->GetLauncher(),
+            std::move(module_resolver_config), "" /* data_origin */,
+            std::move(service_list));
     AtEnd(Reset(&module_resolver_app_));
     AtEnd(Teardown(kBasicTimeout, "Resolver", module_resolver_app_.get()));
   }
@@ -617,7 +619,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
       startup_context_->ConnectToEnvironmentService<fuchsia::sys::Loader>()));
 
   story_provider_impl_.reset(new StoryProviderImpl(
-      user_environment_.get(), device_map_impl_->current_device_id(),
+      session_environment_.get(), device_map_impl_->current_device_id(),
       session_storage_.get(), std::move(story_shell_config),
       std::move(story_shell_factory_ptr), component_context_info,
       std::move(focus_provider_story_provider),
@@ -773,7 +775,7 @@ void SessionmgrImpl::RunSessionShell(
   }
 
   session_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      user_environment_->GetLauncher(), std::move(session_shell_config),
+      session_environment_->GetLauncher(), std::move(session_shell_config),
       /* data_origin = */ "", std::move(service_list));
 
   session_shell_app_->SetAppErrorHandler([this] {
@@ -942,7 +944,7 @@ fuchsia::ledger::cloud::CloudProviderPtr SessionmgrImpl::LaunchCloudProvider(
   cloud_provider_app_config.url = kCloudProviderFirestoreAppUrl;
   cloud_provider_app_ =
       std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-          user_environment_->GetLauncher(),
+          session_environment_->GetLauncher(),
           std::move(cloud_provider_app_config));
   cloud_provider_app_->services().ConnectToService(
       cloud_provider_factory_.NewRequest());

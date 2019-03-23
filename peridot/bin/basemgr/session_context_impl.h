@@ -34,8 +34,8 @@ namespace modular {
 class SessionContextImpl : fuchsia::modular::internal::SessionContext {
  public:
   // Called after perfoming shutdown of the session, to signal our completion
-  // (and deletion of our instance) to our owner, we do it using a callback
-  // supplied to us in our constructor. (The alternative is to take in a
+  // (and deletion of our instance) to our owner, this is done using a callback
+  // supplied in the constructor. (The alternative is to take in a
   // SessionProvider*, which seems a little specific and overscoped).
   using OnSessionShutdownCallback = fit::function<void(bool logout_users)>;
 
@@ -43,8 +43,12 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   using GetPresentationCallback = fit::function<void(
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request)>;
 
+  // |session_id| is the device-local unique identifier for this session. Caller
+  // must ensure its uniqueness. sessionmgr creates an Environment namespace
+  // with the given |session_id|, and this will crash if it tries to create an
+  // environment with a pre-existing name.
   SessionContextImpl(
-      fuchsia::sys::Launcher* const launcher,
+      fuchsia::sys::Launcher* const launcher, std::string session_id,
       fuchsia::modular::AppConfig sessionmgr_config,
       fuchsia::modular::AppConfig session_shell_config,
       fuchsia::modular::AppConfig story_shell_config,

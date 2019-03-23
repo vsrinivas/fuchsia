@@ -11,15 +11,20 @@ using fuchsia.ui.policy;
 using fuchsia.ui.viewsv1token;
 
 // The basemgr application (there is no |Basemgr| service) requests
-// an instance of this service in order to launch and display a |Sessionmgr| per
-// user.
-// TODO(alexmin): Re-word this bit once the Sessionmgr implementation is landed.
+// an instance of this service in order to launch and display a |Sessionmgr|.
 [Discoverable] // Created by sessionmgr application.
 protocol Sessionmgr {
-    // Launches a sessionmgr instance for a user identified by |user_id| and
-    // specific TokenManager handles for ledger and agent_runner.
-    // TODO(alhaad): Fold paramters into |UserContext|.
-    Initialize(fuchsia.modular.auth.Account? account,
+    // Launches a sessionmgr instance identified by a unique device-local
+    // |session_id|. The uniqueness of |session_id| must be guaranteed by the
+    // caller, because |sessionmgr| creates an Environment namespace with the
+    // given |session_id|, and this will crash if we try to create an
+    // environment with a pre-existing name, because the services sessionmgr
+    // tries to access won't be available.
+    //
+    // TODO(MF-287): Address issues around client-generated session_id and
+    // initialization pattern of sessionmgr.
+    Initialize(string session_id,
+               fuchsia.modular.auth.Account? account,
                fuchsia.modular.AppConfig session_shell,
                fuchsia.modular.AppConfig story_shell,
                bool use_session_shell_for_story_shell_factory,

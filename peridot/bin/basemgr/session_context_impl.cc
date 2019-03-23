@@ -16,7 +16,7 @@
 namespace modular {
 
 SessionContextImpl::SessionContextImpl(
-    fuchsia::sys::Launcher* const launcher,
+    fuchsia::sys::Launcher* const launcher, std::string session_id,
     fuchsia::modular::AppConfig sessionmgr_config,
     fuchsia::modular::AppConfig session_shell_config,
     fuchsia::modular::AppConfig story_shell_config,
@@ -34,19 +34,10 @@ SessionContextImpl::SessionContextImpl(
   FXL_CHECK(get_presentation_);
   FXL_CHECK(on_session_shutdown_);
 
+  // TODO(MF-280): We should replace USER* with SESSION* below. However, this
+  // will force users to re-authenticate, so the timing needs to be considered.
   // 0. Generate the path to map '/data' for the sessionmgr we are starting.
-  std::string data_origin;
-  if (!account) {
-    // Guest user.
-    // Generate a random number to be used in this case.
-    uint32_t random_number = 0;
-    zx_cprng_draw(&random_number, sizeof random_number);
-    data_origin = std::string("/data/modular/USER_GUEST_") +
-                  std::to_string(random_number);
-  } else {
-    // Non-guest user.
-    data_origin = std::string("/data/modular/USER_") + std::string(account->id);
-  }
+  std::string data_origin = std::string("/data/modular/USER_") + session_id;
 
   FXL_LOG(INFO) << "SESSIONMGR DATA ORIGIN IS " << data_origin;
 
@@ -57,7 +48,7 @@ SessionContextImpl::SessionContextImpl(
   // 2. Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
   sessionmgr_->Initialize(
-      std::move(account), std::move(session_shell_config),
+      session_id, std::move(account), std::move(session_shell_config),
       std::move(story_shell_config), use_session_shell_for_story_shell_factory,
       std::move(ledger_token_manager), std::move(agent_token_manager),
       session_context_binding_.NewBinding(), std::move(view_owner_request));
