@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	usage = `Usage: %s publish (-a|-ps) -f file [-r <repo_path>]
-		Pass any one of the mode flags (-a|-ps), and at least one file to pubish.
+	usage = `Usage: %s publish (-a|-ps) -C -f file [-r <repo_path>]
+
+Pass any one of the mode flags (-a|-ps), and at least one file to pubish.
 `
 	serverBase = "amber-files"
 	metaFar    = "meta.far"
@@ -61,6 +62,8 @@ func Run(cfg *build.Config, args []string) error {
 
 	filePaths := RepeatedArg{}
 	fs.Var(&filePaths, "f", "Path(s) of the file(s) to publish")
+
+	clean := fs.Bool("C", false, "\"clean\" the repository. only new publications remain.")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
@@ -115,6 +118,16 @@ func Run(cfg *build.Config, args []string) error {
 	}
 	if *verbose {
 		fmt.Printf("initialized repo %s\n", config.RepoDir)
+	}
+	if *clean {
+		// Remove any staged items from the repository that are yet to be published.
+		if err := repo.Clean(); err != nil {
+			return err
+		}
+		// Removes all existing published targets from the repository.
+		if err := repo.RemoveTargets([]string{}); err != nil {
+			return err
+		}
 	}
 
 	switch {
