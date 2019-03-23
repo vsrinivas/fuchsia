@@ -35,10 +35,10 @@ import("//build/testing/platforms.gni")
 #         element-wise subsets of the test platform entries defined in
 #         //build/testing/platforms.gni.
 #
-#       label (optional)
-#         [string] A key on which tests may be grouped. Tests with a given
-#         label will be run (1) together, and (2) only with support from the
-#         Infrastructure team. Labels are used as an escape hatch from the
+#       tags (optional)
+#         [list of strings] keys on which tests may be grouped. Tests with
+#         given tags will be run (1) together, and (2) only with support from
+#         the Infrastructure team. Labels are used as an escape hatch from the
 #         default testing pipeline for special tests or environments.
 #
 template("test_spec") {
@@ -217,11 +217,6 @@ template("test_spec") {
   foreach(env, target_envs) {
     dims = []  # Clear from previous iteration.
     dims = env.dimensions
-
-    # TODO(joshuaseaton): Delete once we have softly transition off of labels.
-    if (defined(env.label) && !defined(env.tags)) {
-      env.tags = [ env.label ]
-    }
 
     # TODO(IN-876): Delete this block once astros are ready to be targeted.
     if (defined(dims.device_type) && dims.device_type == "Astro") {

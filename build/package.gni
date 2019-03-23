@@ -315,11 +315,11 @@ template("pm_build_package") {
 #             element-wise subsets of the test platform entries defined in
 #             //build/testing/platforms.gni.
 #
-#           label (optional)
-#             [string] A key on which tests may be grouped. Tests with a given
-#             label will be run (1) together, and (2) only with support from
-#             the Infrastructure team. Labels are used as an escape hatch from
-#             the default testing pipeline for special tests or environments.
+#           tags (optional)
+#             [list of strings] Keys on which tests may be grouped. Tests with
+#             given keys will be run (1) together, and (2) only with support
+#             from the Infrastructure team. Labels are used as an escape hatch
+#             from the default testing pipeline for special tests or environments.
 #
 #   drivers (optional)
 #     [list of scopes] Defines the drivers in the package. A driver is

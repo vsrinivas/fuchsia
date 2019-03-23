@@ -7,11 +7,6 @@ import("//build/testing/test_spec.gni")
 _default_system_ota_tests =
     [ "//garnet/tests/system_ota_tests:system_ota_tests_upgrade" ]
 
-# The system OTA tests replaces the device kernel, so it cannot be run
-# concurrently with other tests. We'll accomplish this by restricting
-# ourselves to only run on test builders that use our custom label.
-_environment_label = "system-ota-tests"
-
 # The service account that allows the test to download build artifacts.
 _environment_service_account =
     "internal-artifacts-readers@fuchsia-infra.iam.gserviceaccount.com"
@@ -70,7 +65,6 @@ template("system_ota_test_suite") {
 
       environments = []
       foreach(env, invoker.environments) {
-        env.label = _environment_label
         env.service_account = _environment_service_account
         environments += [ env ]
       }
