@@ -14,7 +14,7 @@ template("fidl_example") {
     name = "fidl.examples.$nick"
 
     sources = [
-      "//zircon/system/host/fidl/examples/${target_name}.fidl",
+      "//zircon/system/host/fidl/examples/${target_name}.test.fidl",
     ]
   }
 }
@@ -71,7 +71,7 @@ fidl("point") {
   name = "fidl.examples.librarya"
 
   sources = [
-    "//zircon/system/host/fidl/examples/library-a/point.fidl",
+    "//zircon/system/host/fidl/examples/library-a/point.test.fidl",
   ]
 }
 
@@ -79,7 +79,7 @@ fidl("view") {
   name = "fidl.examples.libraryb"
 
   sources = [
-    "//zircon/system/host/fidl/examples/library-b/view.fidl",
+    "//zircon/system/host/fidl/examples/library-b/view.test.fidl",
   ]
 
   deps = [
