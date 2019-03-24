@@ -123,8 +123,9 @@ class PciDevice {
   zx_status_t ReadConfig(uint64_t reg, IoValue* value) const;
   zx_status_t WriteConfig(uint64_t reg, const IoValue& value);
 
-  // Send the configured interrupt for this device.
-  virtual zx_status_t Interrupt();
+  // If interrupts are enabled and the device has one pending, send it to the
+  // bus.
+  zx_status_t Interrupt();
 
   // Determines if the given base address register is implemented for this
   // device.
@@ -166,14 +167,15 @@ class PciDevice {
   const pci_cap_t* FindCapability(uint8_t addr, uint8_t* cap_index,
                                   uint32_t* cap_base) const;
 
+  // Returns true when an interrupt is active.
+  virtual bool HasPendingInterrupt() const = 0;
+
   mutable std::mutex mutex_;
 
   // Static attributes for this device.
   const Attributes attrs_;
   // Command register.
   uint16_t command_ __TA_GUARDED(mutex_) = 0;
-  // An IRQ was asserted while INT signalling is suppressed.
-  bool pending_irq_ __TA_GUARDED(mutex_) = false;
   // Array of capabilities for this device.
   const pci_cap_t* capabilities_ = nullptr;
   // Size of |capabilities|.
@@ -204,6 +206,14 @@ class PciEcamHandler : public IoHandler {
   PciBus* bus_;
 };
 
+class PciRootComplex : public PciDevice {
+ public:
+  PciRootComplex(const Attributes attrs) : PciDevice(attrs) {}
+
+ private:
+  bool HasPendingInterrupt() const override { return false; }
+};
+
 class PciBus : public PlatformDevice {
  public:
   PciBus(Guest* guest, InterruptController* interrupt_controller);
@@ -231,7 +241,7 @@ class PciBus : public PlatformDevice {
   zx_status_t WriteIoPort(uint64_t port, const IoValue& value);
 
   // Raise an interrupt for the given device.
-  zx_status_t Interrupt(PciDevice& device);
+  zx_status_t Interrupt(PciDevice& device) const;
 
   // Returns true if |bus|, |device|, |function| corresponds to a valid
   // device address.
@@ -244,7 +254,7 @@ class PciBus : public PlatformDevice {
   uint32_t config_addr();
   void set_config_addr(uint32_t addr);
 
-  PciDevice& root_complex() { return root_complex_; }
+  PciDevice* root_complex() { return &root_complex_; }
 
   zx_status_t ConfigureDtb(void* dtb) const override;
 
@@ -263,7 +273,7 @@ class PciBus : public PlatformDevice {
   // IO APIC for use with interrupt redirects.
   InterruptController* interrupt_controller_ = nullptr;
   // Embedded root complex device.
-  PciDevice root_complex_;
+  PciRootComplex root_complex_;
   // Next mmio window to be allocated to connected devices.
   uint64_t mmio_base_;
   // Pointer to the next open PCI slot.

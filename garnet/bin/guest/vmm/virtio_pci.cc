@@ -126,13 +126,9 @@ zx_status_t VirtioPci::WriteBar(uint8_t bar, uint64_t offset,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t VirtioPci::Interrupt() {
-  bool should_interrupt;
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    should_interrupt = isr_status_ > 0;
-  }
-  return should_interrupt ? PciDevice::Interrupt() : ZX_OK;
+bool VirtioPci::HasPendingInterrupt() const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  return isr_status_ > 0;
 }
 
 // Handle reads to the common configuration structure as defined in

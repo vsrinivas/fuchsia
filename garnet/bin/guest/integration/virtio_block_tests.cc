@@ -5,9 +5,9 @@
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <gmock/gmock.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
@@ -218,7 +218,7 @@ using RawGuestTypes = ::testing::Types<
                           fuchsia::guest::BlockFormat::RAW>>;
 TYPED_TEST_SUITE(RawVirtioBlockGuestTest, RawGuestTypes);
 
-TYPED_TEST(RawVirtioBlockGuestTest, DISABLED_BlockDeviceExists) {
+TYPED_TEST(RawVirtioBlockGuestTest, BlockDeviceExists) {
   std::string args =
       fxl::StringPrintf("%lu %u check", kBlockSectorSize, kVirtioBlockCount);
   std::string result;
@@ -226,7 +226,7 @@ TYPED_TEST(RawVirtioBlockGuestTest, DISABLED_BlockDeviceExists) {
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
-TYPED_TEST(RawVirtioBlockGuestTest, DISABLED_Read) {
+TYPED_TEST(RawVirtioBlockGuestTest, Read) {
   fbl::unique_fd fd(open(this->FilePath().c_str(), O_RDWR));
   ASSERT_TRUE(fd);
 
@@ -246,7 +246,7 @@ TYPED_TEST(RawVirtioBlockGuestTest, DISABLED_Read) {
   }
 }
 
-TYPED_TEST(RawVirtioBlockGuestTest, DISABLED_Write) {
+TYPED_TEST(RawVirtioBlockGuestTest, Write) {
   fbl::unique_fd fd(open(this->FilePath().c_str(), O_RDWR));
   ASSERT_TRUE(fd);
 
@@ -322,7 +322,7 @@ using QcowGuestTypes = ::testing::Types<
                           fuchsia::guest::BlockFormat::QCOW>>;
 TYPED_TEST_SUITE(QcowVirtioBlockGuestTest, QcowGuestTypes);
 
-TYPED_TEST(QcowVirtioBlockGuestTest, DISABLED_BlockDeviceExists) {
+TYPED_TEST(QcowVirtioBlockGuestTest, BlockDeviceExists) {
   std::string args = fxl::StringPrintf("%lu %u check", kBlockSectorSize,
                                        kVirtioQcowBlockCount);
   std::string result;
@@ -330,7 +330,7 @@ TYPED_TEST(QcowVirtioBlockGuestTest, DISABLED_BlockDeviceExists) {
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
-TYPED_TEST(QcowVirtioBlockGuestTest, DISABLED_ReadMappedCluster) {
+TYPED_TEST(QcowVirtioBlockGuestTest, ReadMappedCluster) {
   for (off_t offset = 0; offset != kClusterSize / kBlockSectorSize;
        offset += kVirtioTestStep) {
     std::string args = fxl::StringPrintf("%lu %u read %d %d", kBlockSectorSize,
@@ -342,7 +342,7 @@ TYPED_TEST(QcowVirtioBlockGuestTest, DISABLED_ReadMappedCluster) {
   }
 }
 
-TYPED_TEST(QcowVirtioBlockGuestTest, DISABLED_ReadUnmappedCluster) {
+TYPED_TEST(QcowVirtioBlockGuestTest, ReadUnmappedCluster) {
   for (off_t offset = kClusterSize;
        offset != kClusterSize + (kClusterSize / kBlockSectorSize);
        offset += kVirtioTestStep) {
@@ -355,7 +355,7 @@ TYPED_TEST(QcowVirtioBlockGuestTest, DISABLED_ReadUnmappedCluster) {
   }
 }
 
-TYPED_TEST(QcowVirtioBlockGuestTest, DISABLED_Write) {
+TYPED_TEST(QcowVirtioBlockGuestTest, Write) {
   for (off_t offset = kClusterSize;
        offset != kClusterSize + (kClusterSize / kBlockSectorSize);
        offset += kVirtioTestStep) {

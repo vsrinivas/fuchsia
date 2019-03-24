@@ -361,15 +361,7 @@ zx_status_t PciBus::WriteIoPort(uint64_t port, const IoValue& value) {
   }
 }
 
-zx_status_t PciBus::Interrupt(PciDevice& device) {
-  {
-    std::lock_guard<std::mutex> lock(device.mutex_);
-    if (!pci_irq_enabled(device.command_)) {
-      device.pending_irq_ = true;
-      return ZX_OK;
-    }
-    device.pending_irq_ = false;
-  }
+zx_status_t PciBus::Interrupt(PciDevice& device) const {
   return interrupt_controller_->Interrupt(device.global_irq_);
 }
 
@@ -583,19 +575,13 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
       if (value.access_size != 2) {
         return ZX_ERR_NOT_SUPPORTED;
       }
-
-      bool fire_pending_irq = false;
       {
         std::lock_guard<std::mutex> lock(mutex_);
         command_ = value.u16;
-        // If we have a pending IRQ and this write will enable interrupts for
-        // this device, we'll inject that pending IRQ now.
-        fire_pending_irq = pending_irq_ && pci_irq_enabled(command_);
       }
-      if (fire_pending_irq) {
-        return Interrupt();
-      }
-      return ZX_OK;
+      // If this write enables interrupts, send any pending interrupts to the
+      // bus.
+      return Interrupt();
     }
     case kPciRegisterBar0:
     case kPciRegisterBar1:
@@ -656,6 +642,12 @@ zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell,
 zx_status_t PciDevice::Interrupt() {
   if (!bus_) {
     return ZX_ERR_BAD_STATE;
+  }
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!pci_irq_enabled(command_) || !HasPendingInterrupt()) {
+      return ZX_OK;
+    }
   }
   return bus_->Interrupt(*this);
 }

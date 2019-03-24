@@ -24,12 +24,12 @@ TEST(PciDeviceTest, ReadConfigRegister) {
   Guest guest;
   PciBus bus(&guest, nullptr);
   bus.Init(async_get_default_dispatcher());
-  PciDevice& device = bus.root_complex();
+  PciDevice* device = bus.root_complex();
 
   // Access Vendor/Device ID as a single 32bit read.
   IoValue value = {};
   value.access_size = 4;
-  EXPECT_EQ(device.ReadConfig(PCI_CONFIG_VENDOR_ID, &value), ZX_OK);
+  EXPECT_EQ(device->ReadConfig(PCI_CONFIG_VENDOR_ID, &value), ZX_OK);
   EXPECT_EQ(value.u32, PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16));
 }
 
@@ -38,7 +38,7 @@ TEST(PciDeviceTest, ReadConfigRegisterBytewise) {
   Guest guest;
   PciBus bus(&guest, nullptr);
   bus.Init(async_get_default_dispatcher());
-  PciDevice& device = bus.root_complex();
+  PciDevice* device = bus.root_complex();
 
   uint32_t expected_device_vendor =
       PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16);
@@ -46,7 +46,7 @@ TEST(PciDeviceTest, ReadConfigRegisterBytewise) {
     uint16_t reg = static_cast<uint16_t>(PCI_CONFIG_VENDOR_ID + i);
     IoValue value = {};
     value.access_size = 1;
-    EXPECT_EQ(device.ReadConfig(reg, &value), ZX_OK);
+    EXPECT_EQ(device->ReadConfig(reg, &value), ZX_OK);
     EXPECT_EQ(value.u32, bits_shift(expected_device_vendor, i * 8 + 7, i * 8));
   }
 }
@@ -62,15 +62,15 @@ TEST(PciDeviceTest, ReadBarSize) {
   Guest guest;
   PciBus bus(&guest, nullptr);
   bus.Init(async_get_default_dispatcher());
-  PciDevice& device = bus.root_complex();
+  PciDevice* device = bus.root_complex();
 
   // Set all bits in the BAR register. The device will ignore writes to the
   // LSBs which we can read out to determine the size.
   IoValue value;
   value.access_size = 4;
   value.u32 = UINT32_MAX;
-  EXPECT_EQ(device.WriteConfig(PCI_CONFIG_BASE_ADDRESSES + 0, value), ZX_OK);
-  EXPECT_EQ(device.WriteConfig(PCI_CONFIG_BASE_ADDRESSES + 4, value), ZX_OK);
+  EXPECT_EQ(device->WriteConfig(PCI_CONFIG_BASE_ADDRESSES + 0, value), ZX_OK);
+  EXPECT_EQ(device->WriteConfig(PCI_CONFIG_BASE_ADDRESSES + 4, value), ZX_OK);
 
   // PCI Express Base Specification, Rev. 4.0 Version 1.0, Section 7.5.1.2.1:
   // Base Address Registers
@@ -95,14 +95,14 @@ TEST(PciDeviceTest, ReadBarSize) {
   // Read out BAR and compute size.
   value.access_size = 4;
   value.u32 = 0;
-  EXPECT_EQ(device.ReadConfig(PCI_CONFIG_BASE_ADDRESSES + 0, &value), ZX_OK);
+  EXPECT_EQ(device->ReadConfig(PCI_CONFIG_BASE_ADDRESSES + 0, &value), ZX_OK);
   uint64_t reg = value.u32;
-  EXPECT_EQ(device.ReadConfig(PCI_CONFIG_BASE_ADDRESSES + 4, &value), ZX_OK);
+  EXPECT_EQ(device->ReadConfig(PCI_CONFIG_BASE_ADDRESSES + 4, &value), ZX_OK);
   reg |= static_cast<uint64_t>(value.u32) << 32;
 
   EXPECT_EQ(reg & ~kPciBarMmioAddrMask,
             kPciBarMmioType64Bit | kPciBarMmioAccessSpace);
-  const PciBar* bar = device.bar(0);
+  const PciBar* bar = device->bar(0);
   EXPECT_TRUE(bar != nullptr);
   EXPECT_EQ(~(reg & kPciBarMmioAddrMask) + 1, bar->size);
 }
@@ -113,7 +113,7 @@ TEST(PciDeviceTest, ReadCapability) {
   Guest guest;
   PciBus bus(&guest, nullptr);
   bus.Init(async_get_default_dispatcher());
-  PciDevice& device = bus.root_complex();
+  PciDevice* device = bus.root_complex();
 
   // Create and install a simple capability. First two bytes are ignored.
   uint8_t cap_data[] = {0, 0, 0xf, 0xa};
@@ -122,7 +122,7 @@ TEST(PciDeviceTest, ReadCapability) {
       .data = cap_data,
       .len = sizeof(cap_data),
   };
-  device.set_capabilities(&cap, 1);
+  device->set_capabilities(&cap, 1);
 
   // PCI Local Bus Spec 3.0 Table 6-2: Status Register Bits
   //
@@ -135,7 +135,7 @@ TEST(PciDeviceTest, ReadCapability) {
   IoValue status;
   status.access_size = 2;
   status.u16 = 0;
-  EXPECT_EQ(device.ReadConfig(PCI_CONFIG_STATUS, &status), ZX_OK);
+  EXPECT_EQ(device->ReadConfig(PCI_CONFIG_STATUS, &status), ZX_OK);
   EXPECT_TRUE(status.u16 & PCI_STATUS_NEW_CAPS);
 
   // Read the cap pointer from config space. Here just verify it points to
@@ -143,7 +143,7 @@ TEST(PciDeviceTest, ReadCapability) {
   IoValue cap_ptr;
   cap_ptr.access_size = 1;
   cap_ptr.u8 = 0;
-  EXPECT_EQ(device.ReadConfig(PCI_CONFIG_CAPABILITIES, &cap_ptr), ZX_OK);
+  EXPECT_EQ(device->ReadConfig(PCI_CONFIG_CAPABILITIES, &cap_ptr), ZX_OK);
   EXPECT_LT(0x40u, cap_ptr.u8);
 
   // Read the capability. This will be the Cap ID, next pointer (0), followed
@@ -151,7 +151,7 @@ TEST(PciDeviceTest, ReadCapability) {
   IoValue cap_value;
   cap_value.access_size = 4;
   cap_value.u32 = 0;
-  EXPECT_EQ(device.ReadConfig(cap_ptr.u8, &cap_value), ZX_OK);
+  EXPECT_EQ(device->ReadConfig(cap_ptr.u8, &cap_value), ZX_OK);
   EXPECT_EQ(0x0a0f0009u, cap_value.u32);
 }
 
@@ -162,7 +162,7 @@ TEST(PciDeviceTest, ReadChainedCapability) {
   Guest guest;
   PciBus bus(&guest, nullptr);
   bus.Init(async_get_default_dispatcher());
-  PciDevice& device = bus.root_complex();
+  PciDevice* device = bus.root_complex();
 
   // Build list of caps.
   pci_cap_t caps[5];
@@ -171,19 +171,19 @@ TEST(PciDeviceTest, ReadChainedCapability) {
     caps[i].id = i;
     caps[i].len = 2;
   }
-  device.set_capabilities(caps, num_caps);
+  device->set_capabilities(caps, num_caps);
 
   IoValue cap_ptr;
   cap_ptr.access_size = 1;
   cap_ptr.u8 = 0;
-  EXPECT_EQ(device.ReadConfig(PCI_CONFIG_CAPABILITIES, &cap_ptr), ZX_OK);
+  EXPECT_EQ(device->ReadConfig(PCI_CONFIG_CAPABILITIES, &cap_ptr), ZX_OK);
   for (uint8_t i = 0; i < num_caps; ++i) {
     IoValue cap_header;
     cap_header.access_size = 4;
     cap_header.u32 = 0;
 
     // Read the current capability.
-    EXPECT_EQ(device.ReadConfig(cap_ptr.u8, &cap_header), ZX_OK);
+    EXPECT_EQ(device->ReadConfig(cap_ptr.u8, &cap_header), ZX_OK);
     // ID is the first byte.
     EXPECT_EQ(i, cap_header.u32 & UINT8_MAX);
     // Next pointer is the second byte.

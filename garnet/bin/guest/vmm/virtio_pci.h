@@ -124,8 +124,6 @@ class VirtioPci : public PciDevice {
   zx_status_t WriteBar(uint8_t bar, uint64_t offset,
                        const IoValue& value) override;
 
-  zx_status_t Interrupt() override;
-
   // ISR flag values.
   enum IsrFlags : uint8_t {
     // Interrupt is caused by a queue.
@@ -157,6 +155,8 @@ class VirtioPci : public PciDevice {
   }
 
  private:
+  bool HasPendingInterrupt() const override;
+
   // Handle accesses to the general configuration BAR.
   zx_status_t ConfigBarRead(uint64_t addr, IoValue* value) const;
   zx_status_t ConfigBarWrite(uint64_t addr, const IoValue& value);

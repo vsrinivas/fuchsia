@@ -58,7 +58,7 @@ TYPED_TEST(GuestTest, VirtioRng) {
   EXPECT_THAT(result, HasSubstr("PASS"));
 }
 
-TYPED_TEST(GuestTest, DISABLED_VirtioConsole) {
+TYPED_TEST(GuestTest, VirtioConsole) {
   // Test many small packets.
   std::string result;
   for (size_t i = 0; i != kVirtioConsoleMessageCount; ++i) {
