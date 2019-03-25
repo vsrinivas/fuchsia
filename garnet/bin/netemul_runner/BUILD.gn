@@ -36,7 +36,6 @@ source_set("src") {
     "//garnet/public/lib/netemul/fidl:sandbox",
     "//garnet/public/lib/netemul/fidl:sync",
     "//garnet/public/lib/netemul/network:netdump",
-    "//garnet/public/lib/netemul/network:network_service",
     "//garnet/public/lib/netemul/sync:sync_service",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
@@ -48,6 +47,12 @@ source_set("src") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/memfs-cpp",
     "//zircon/public/lib/zx",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/netemul/network:network_service",
+    "//zircon/public/fidl/fuchsia-io",
   ]
 }
 

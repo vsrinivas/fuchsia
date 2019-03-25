@@ -218,6 +218,7 @@ source_set("gfx") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
+    "//zircon/public/fidl/fuchsia-hardware-display",
     "//zircon/public/lib/fit",
   ]
 
@@ -226,7 +227,6 @@ source_set("gfx") {
     "//garnet/lib/ui/scenic/util",
     "//garnet/public/lib/escher/util:check_vulkan_support",
     "//garnet/public/lib/ui/scenic/cpp",
-    "//zircon/public/fidl/fuchsia-hardware-display",
     "//zircon/public/fidl/fuchsia-scheduler",
     "//zircon/public/fidl/fuchsia-sysmem",
     "//zircon/public/lib/trace",

@@ -133,16 +133,20 @@ source_set("lib") {
     "//peridot/lib/fidl:environment",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/public/lib/async/cpp:future",
-    "//sdk/fidl/fuchsia.auth.account",
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.modular.auth",
-    "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/trace",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.auth",
+    "//sdk/fidl/fuchsia.auth.account",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.auth",
+    "//sdk/fidl/fuchsia.modular.internal",
   ]
 
   if (auto_login_to_guest && use_account_manager) {

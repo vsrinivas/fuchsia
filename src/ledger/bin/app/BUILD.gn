@@ -107,9 +107,6 @@ source_set("lib") {
     "//peridot/lib/base64url:base64url",
     "//peridot/lib/convert",
     "//peridot/lib/socket",
-    "//sdk/fidl/fuchsia.ledger",
-    "//sdk/fidl/fuchsia.modular.auth",
-    "//sdk/fidl/fuchsia.netconnector",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/cloud_sync/impl",
     "//src/ledger/bin/cloud_sync/public",
@@ -135,6 +132,9 @@ source_set("lib") {
   public_deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/inspect",
+    "//sdk/fidl/fuchsia.ledger",
+    "//sdk/fidl/fuchsia.modular.auth",
+    "//sdk/fidl/fuchsia.netconnector",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

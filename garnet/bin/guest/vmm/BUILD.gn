@@ -92,12 +92,11 @@ source_set("lib") {
 
   deps = [
     "//garnet/bin/guest/third_party/fdt",
-    "//sdk/fidl/fuchsia.guest.device",
-    "//sdk/fidl/fuchsia.guest.vmm",
-    "//sdk/fidl/fuchsia.guest",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.guest",
+    "//sdk/fidl/fuchsia.guest",
+    "//sdk/fidl/fuchsia.guest.device",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-sysinfo",
     "//zircon/public/lib/fbl",
@@ -108,6 +107,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/bin/guest/vmm/device",
     "//garnet/public/lib/component/cpp",
+    "//sdk/fidl/fuchsia.guest.vmm",
     "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/virtio",

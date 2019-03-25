@@ -35,6 +35,7 @@ source_set("tests") {
     ":fidl",
     ":json_for_test",
     ":lib",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp:test_support",
     "//sdk/lib/fidl/cpp/test",
     "//third_party/googletest:gtest",

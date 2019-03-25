@@ -52,8 +52,12 @@ source_set("page_client") {
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:clone",
     "//peridot/public/lib/async/cpp:operation",
-    "//sdk/fidl/fuchsia.ledger",
     "//sdk/lib/fidl/cpp",
+    "//src/ledger/bin/fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ledger",
     "//src/ledger/bin/fidl",
   ]
 }

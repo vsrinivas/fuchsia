@@ -11,11 +11,14 @@ source_set("lib") {
     "monitor.h",
   ]
 
+  public_deps = [
+    "//sdk/fidl/fuchsia.memory",
+  ]
+
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
-    "//sdk/fidl/fuchsia.memory",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",

@@ -37,8 +37,6 @@ source_set("lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.net.oldhttp",
-    "//sdk/fidl/fuchsia.netstack",
     "//src/lib/url",
     "//third_party/asio",
     "//third_party/boringssl:boringssl",
@@ -49,6 +47,8 @@ source_set("lib") {
     ":errors",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.net.oldhttp",
+    "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",

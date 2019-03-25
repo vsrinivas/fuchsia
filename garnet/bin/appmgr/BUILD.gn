@@ -134,6 +134,8 @@ executable("tests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/vfs/cpp",
     "//third_party/googletest:gmock",
+    "//zircon/public/fidl/fuchsia-device-manager",
+    "//zircon/public/fidl/fuchsia-kernel",
   ]
 }
 

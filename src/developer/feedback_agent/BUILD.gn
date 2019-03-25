@@ -51,6 +51,7 @@ source_set("src") {
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/sys/cpp",
     "//zircon/public/fidl/fuchsia-mem",
   ]
@@ -60,7 +61,6 @@ source_set("src") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
-    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fidl/cpp",
     "//src/lib/files",
     "//third_party/libpng",

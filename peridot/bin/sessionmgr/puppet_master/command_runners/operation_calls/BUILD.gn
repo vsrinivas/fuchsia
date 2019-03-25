@@ -34,6 +34,7 @@ source_set("add_mod_call") {
     "//peridot/bin/sessionmgr/storage:story_storage",
     "//peridot/lib/fidl:clone",
     "//peridot/public/lib/async/cpp:operation",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 

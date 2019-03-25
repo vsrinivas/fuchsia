@@ -120,10 +120,12 @@ source_set("story_storage") {
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/ledger_client:operations",
-    "//peridot/lib/ledger_client:page_client",
     "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
+  ]
+  public_deps = [
+    "//peridot/lib/ledger_client:page_client",
     "//sdk/fidl/fuchsia.modular.internal",
   ]
 }

@@ -31,13 +31,13 @@ source_set("cobalt_logger") {
   public_deps = [
     "//garnet/public/lib/fxl",
     "//sdk/lib/sys/cpp",
+    "//zircon/public/fidl/fuchsia-cobalt",
     "//zircon/public/lib/fit",
   ]
 
   deps = [
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
-    "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }
 
@@ -71,9 +71,11 @@ source_set("project_profile") {
     "project_profile.h",
   ]
   configs += [ "//third_party/cobalt:cobalt_config" ]
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-cobalt",
+  ]
   deps = [
     "//garnet/public/lib/fsl",
     "//third_party/cobalt/util/crypto_util",
-    "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }

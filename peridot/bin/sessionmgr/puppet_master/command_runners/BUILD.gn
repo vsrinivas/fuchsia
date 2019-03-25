@@ -155,11 +155,8 @@ source_set("focus_mod_command_runner") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.modular",
-  ]
-
-  deps = [
     ":command_runner",
+    "//sdk/fidl/fuchsia.modular",
   ]
 }
 

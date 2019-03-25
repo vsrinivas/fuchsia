@@ -34,6 +34,7 @@ executable("test") {
     "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gmock",
+    "//zircon/public/fidl/fuchsia-inspect",
   ]
 }
 
