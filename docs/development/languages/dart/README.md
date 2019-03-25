@@ -62,5 +62,5 @@ my_package/
 [target-app]: https://fuchsia.googlesource.com/topaz/+/master/runtime/dart_runner/dart_app.gni "dart_app target"
 [target-tool]: https://fuchsia.googlesource.com/fuchsia/+/master/build/dart/dart_tool.gni "dart_tool target"
 [target-flutter]: https://fuchsia.googlesource.com/topaz/+/master/runtime/flutter_runner/flutter_app.gni "flutter_app target"
-[target-test]: https://fuchsia.googlesource.com/topaz/+/master/build/dart/test.gni "dart_test target"
+[target-test]: https://fuchsia.googlesource.com/fuchsia/+/master/build/dart/dart.gni "dart_test target"
 [flutter]: https://flutter.io/ "Flutter"

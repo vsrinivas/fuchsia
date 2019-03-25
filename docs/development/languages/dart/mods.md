@@ -8,7 +8,7 @@ fuchsia build and included in the bootfs.
 
 ## Hello
 
-(located in `//topaz/examples/ui/hello_mod/`)
+(More samples located in `//topaz/examples/ui/`)
 
 This example demonstrates how to create a minimal flutter module and implement
 the `Module` interface. It shows a simple flutter text widget displaying "hello"
@@ -17,7 +17,7 @@ on the screen.
 ## Running the Examples on Fuchsia
 
 You can run an example module without going through the full-blown session shell.
-The available URLs for for flutter module examples are:
+The available URLs for flutter module examples are:
 
 *   `hello_mod`
 
@@ -33,9 +33,7 @@ basemgr --session_shell=dev_session_shell --session_shell_args=--root_module=hel
 
 A flutter module is a flutter app which use [ModuleDriver](
 https://fuchsia.googlesource.com/topaz/+/master/public/lib/app_driver/dart/lib/src/module_driver.dart)
-. An example of a minimal
-flutter module is available in [//topaz/examples/ui/hello_mod/](
-https://fuchsia.googlesource.com/topaz/+/master/examples/ui/hello_mod/).
+.
 
 Below we reproduce the contents of `main()` from that example:
 

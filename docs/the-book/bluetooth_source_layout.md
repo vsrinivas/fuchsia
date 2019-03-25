@@ -1,7 +1,6 @@
 # Bluetooth Source Layout
 
-The [Bluetooth
-System](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/bluetooth_architecture.md)
+The [Bluetooth System](bluetooth_architecture.md)
 comprises many components, such as drivers, profiles, and client
 applications. This document provides an overview of where the various components
 live in the source tree.

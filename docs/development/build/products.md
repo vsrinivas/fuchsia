@@ -1,14 +1,9 @@
 # Products
 
-**Products** are defined in JSON files which can be found at:
-
-* Garnet Layer Products: [`//garnet/products/`][garnet-products-source].
-* Peridot Layer Products: [`//peridot/products/`][peridot-products-source].
-* Topaz Layer Products: [`//topaz/products/`][topaz-products-source].
-
-Products are a Fuchsia-specific feature built on top of GN to help customize
-Fuchsia builds. Products reference [packages](packages.md) and coarsely
-define which build artifacts the packages are added to.
+[**Products**][products-source] are a Fuchsia-specific feature built on
+top of GN to help customize Fuchsia builds. Products reference
+[packages](packages.md) and coarsely define which build artifacts the
+packages are added to.
 
 ## Package Sets
 
@@ -68,7 +63,5 @@ produces this for the build and can be run by hand:
 $ python build/gn/preprocess_products.py --products '["garnet/products/default"]'
 ```
 
-[garnet-products-source]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/products/
-[peridot-products-source]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/products/
-[topaz-products-source]: https://fuchsia.googlesource.com/topaz/+/master/products/
+[products-source]: https://fuchsia.googlesource.com/fuchsia/+/master/products/
 [preprocess-products-py]: https://fuchsia.googlesource.com/fuchsia/+/master/build/gn/preprocess_products.py

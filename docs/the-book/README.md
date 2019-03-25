@@ -103,7 +103,7 @@ also provides core drivers and Fuchsia's libc implementation.
 [framework-agent]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/modular/agent.md
 [ledger]: https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/docs/README.md
 [bluetooth]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/bluetooth/README.md
-[telephony]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/telephony/README.md
+[telephony]: https://fuchsia.googlesource.com/fuchsia/+/master/src/connectivity/telephony/
 [magma]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/lib/magma/
 [escher]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/escher/
 [scenic]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/ui/scenic.md

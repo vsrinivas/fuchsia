@@ -221,7 +221,7 @@ You likely forgot to run **A** before running **B**.
 
 > TODO(pylaligand): .gn, default target, mkbootfs, GN labels insertion
 
-[gn-main]: https://chromium.googlesource.com/chromium/src/tools/gn/+/HEAD/README.md
+[gn-main]: https://gn.googlesource.com/gn/
 [gn-preso]: https://docs.google.com/presentation/d/15Zwb53JcncHfEwHpnG_PoIbbzQ3GQi_cpujYwbpcbZo/
 [ninja-main]: https://ninja-build.org/
 [gn-reference]: https://gn.googlesource.com/gn/+/master/docs/reference.md
