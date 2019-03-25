@@ -11,7 +11,7 @@
 #include <ddk/debug.h>
 #include <stdio.h>
 
-#include "hi3660.h"
+#include "hikey960.h"
 
 #define I2C1_ENABLE_REG_OFFSET          0x10
 #define I2C1_ENABLE_REG_BIT             0x4

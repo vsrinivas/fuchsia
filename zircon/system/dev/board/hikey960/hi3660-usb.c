@@ -9,7 +9,7 @@
 #include <soc/hi3660/hi3660-regs.h>
 #include <zircon/syscalls.h>
 
-#include "hi3660.h"
+#include "hikey960.h"
 
 zx_status_t hi3660_usb_init(hi3660_t* hi3660) {
     volatile void* usb3otg_bc = hi3660->usb3otg_bc.vaddr;

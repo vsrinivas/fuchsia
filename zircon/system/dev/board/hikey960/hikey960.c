@@ -30,9 +30,7 @@
 static void hikey960_release(void* ctx) {
     hikey960_t* hikey = ctx;
 
-    if (hikey->hi3660) {
-        hi3660_release(hikey->hi3660);
-    }
+    hi3660_release(hikey);
     zx_handle_close(hikey->bti_handle);
     free(hikey);
 }
@@ -46,11 +44,7 @@ static zx_protocol_device_t hikey960_device_protocol = {
 static int hikey960_start_thread(void* arg) {
     hikey960_t* hikey = arg;
 
-    zx_status_t status = hi3660_get_protocol(hikey->hi3660, ZX_PROTOCOL_GPIO_IMPL, &hikey->gpio);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-    status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO_IMPL, &hikey->gpio,
+    zx_status_t status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO_IMPL, &hikey->gpio,
                                     sizeof(hikey->gpio));
     if (status != ZX_OK) {
         goto fail;
@@ -67,7 +61,7 @@ static int hikey960_start_thread(void* arg) {
     }
 
     // must be after hikey960_i2c_init
-    status = hi3660_dsi_init(hikey->hi3660);
+    status = hi3660_dsi_init(hikey);
     if (status != ZX_OK) {
         zxlogf(ERROR, "hi3660_dsi_init failed\n");
     }
@@ -112,7 +106,7 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
 
     // TODO(voydanoff) get from platform bus driver somehow
     zx_handle_t resource = get_root_resource();
-    status = hi3660_init(resource, &hikey->hi3660);
+    status = hi3660_init(hikey, resource);
     if (status != ZX_OK) {
         zxlogf(ERROR, "hikey960_bind: hi3660_init failed %d\n", status);
         goto fail;

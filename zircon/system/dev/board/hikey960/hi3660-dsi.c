@@ -9,7 +9,7 @@
 #include <hw/reg.h>
 #include <soc/hi3660/hi3660-regs.h>
 
-#include "hi3660.h"
+#include "hikey960.h"
 
 zx_status_t hi3660_dsi_init(hi3660_t* hi3660) {
     volatile void* peri_crg = hi3660->peri_crg.vaddr;

@@ -25,18 +25,14 @@
 #include <soc/hi3660/hi3660-regs.h>
 #include <hw/reg.h>
 
-#include "hi3660.h"
+#include "hikey960.h"
 
 zx_status_t hi3660_enable_ldo3(hi3660_t* hi3660) {
     writel(LDO3_ENABLE_BIT, hi3660->pmu_ssio.vaddr + LDO3_ENABLE_REG);
     return ZX_OK;
 }
 
-zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out) {
-    hi3660_t* hi3660 = calloc(1, sizeof(hi3660_t));
-    if (!hi3660) {
-        return ZX_ERR_NO_MEMORY;
-    }
+zx_status_t hi3660_init(hi3660_t* hi3660, zx_handle_t resource) {
     list_initialize(&hi3660->gpios);
 
     zx_status_t status;
@@ -92,23 +88,12 @@ zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out) {
         goto fail;
     }
 
-    *out = hi3660;
     return ZX_OK;
 
 fail:
     zxlogf(ERROR, "hi3660_init failed %d\n", status);
     hi3660_release(hi3660);
     return status;
-}
-
-zx_status_t hi3660_get_protocol(hi3660_t* hi3660, uint32_t proto_id, void* out) {
-    switch (proto_id) {
-    case ZX_PROTOCOL_GPIO_IMPL:
-        memcpy(out, &hi3660->gpio, sizeof(hi3660->gpio));
-        return ZX_OK;
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
 }
 
 void hi3660_release(hi3660_t* hi3660) {
@@ -120,5 +105,4 @@ void hi3660_release(hi3660_t* hi3660) {
     mmio_buffer_release(&hi3660->pmu_ssio);
     mmio_buffer_release(&hi3660->iomcu);
     mmio_buffer_release(&hi3660->ufs_sctrl);
-    free(hi3660);
 }

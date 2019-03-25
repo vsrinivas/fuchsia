@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <zircon/syscalls.h>
 
-#include "hi3660.h"
+#include "hikey960.h"
 
 #define BIT(pos) (1U << (pos))
 #define set_bits(v, a) writel(readl(a) | (v), (a))

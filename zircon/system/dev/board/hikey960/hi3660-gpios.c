@@ -7,7 +7,7 @@
 
 #include <stdlib.h>
 
-#include "hi3660.h"
+#include "hikey960.h"
 
 // TODO(voydanoff) Move hard coded values to a header file
 
