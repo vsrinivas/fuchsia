@@ -90,4 +90,9 @@ EOF
 
 systemctl enable telnet.socket
 
+# Mount the test utils on start up.
+cat >> /etc/fstab << EOF
+/dev/vdb /test_utils ext2 ro 0 0
+EOF
+
 apt clean
