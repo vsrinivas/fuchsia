@@ -5,16 +5,13 @@
 driver("hikey960") {
   sources = [
     "hikey960-devices.c",
+    "hikey960-dsi.c",
+    "hikey960-gpios.c",
     "hikey960-i2c.c",
     "hikey960-sysmem.c",
     "hikey960-usb.c",
+    "hikey960-ufs.c",
     "hikey960.c",
-    "hi3660-dsi.c",
-    "hi3660-gpios.c",
-    "hi3660-i2c.c",
-    "hi3660-ufs.c",
-    "hi3660-usb.c",
-    "hi3660.c",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-gpio",
