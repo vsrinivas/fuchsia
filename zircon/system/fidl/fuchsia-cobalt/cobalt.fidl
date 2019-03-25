@@ -590,13 +590,11 @@ protocol Logger {
     // methods defined above. The reason to use this method is that a
     // CobaltEvent allows multiple event codes to be specified whereas the
     // methods above allow only a single event code.
-    [Transitional]
     LogCobaltEvent(CobaltEvent event) -> (Status status);
 
     // Logs a list of CobaltEvents. This method is equivalent to invoking
     // LogCobaltEvent() multiple times but is more efficient as it requires only
     // a single FIDL call.
-    [Transitional]
     LogCobaltEvents(vector<CobaltEvent> events) -> (Status status);
 };
 
