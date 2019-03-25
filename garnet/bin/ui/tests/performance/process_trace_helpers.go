@@ -19,7 +19,7 @@ const OneSecInUsecs float64 = 1000000
 const OneMsecInUsecs float64 = 1000
 
 // ByStartTime sorting helpers
-type ByStartTime []benchmarking.Event
+type ByStartTime []*benchmarking.Event
 
 func (a ByStartTime) Len() int           { return len(a) }
 func (a ByStartTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
@@ -37,7 +37,7 @@ func getProcessesWithPrefix(model benchmarking.Model, prefix string) []benchmark
 }
 
 // Project |events| to just their durations, i.e. |events[i].Dur|.
-func extractDurations(events []benchmarking.Event) []float64 {
+func extractDurations(events []*benchmarking.Event) []float64 {
 	result := make([]float64, len(events))
 	for i, e := range events {
 		result[i] = e.Dur
@@ -164,8 +164,8 @@ func calculateFps(model benchmarking.Model, fpsEventCat string, fpsEventName str
 	return calculateFpsForEvents(fpsEvents)
 }
 
-func calculateFpsForEvents(fpsEvents []benchmarking.Event) (fps float64, fpsPerWindow []float64) {
-	events := make([]benchmarking.Event, len(fpsEvents))
+func calculateFpsForEvents(fpsEvents []*benchmarking.Event) (fps float64, fpsPerWindow []float64) {
+	events := make([]*benchmarking.Event, len(fpsEvents))
 	copy(events, fpsEvents)
 	sort.Sort(ByStartTime(events))
 	baseTime := events[0].Start
@@ -201,7 +201,7 @@ func calculateFpsForEvents(fpsEvents []benchmarking.Event) (fps float64, fpsPerW
 	return fps, fpsPerWindow
 }
 
-func averageGap(events []benchmarking.Event, cat1 string, name1 string, cat2 string, name2 string) float64 {
+func averageGap(events []*benchmarking.Event, cat1 string, name1 string, cat2 string, name2 string) float64 {
 	gapStart := 0.0
 	totalTime := 0.0
 	numOfGaps := 0.0

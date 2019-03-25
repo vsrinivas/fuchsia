@@ -56,7 +56,7 @@ func reportFlutterToScenicLatencies(model benchmarking.Model, testSuite string, 
 }
 
 // Calculates and reports the latency between call to Present() in Flutter to a ScheduleUpdate() call in Scenic for a single Flutter instance.
-func reportFlutterPresentToScenicScheduleLatency(testSuite string, testResultsFile *benchmarking.TestResultsFile, instance flutterInstance, updateSchedulingEvents []benchmarking.Event) {
+func reportFlutterPresentToScenicScheduleLatency(testSuite string, testResultsFile *benchmarking.TestResultsFile, instance flutterInstance, updateSchedulingEvents []*benchmarking.Event) {
 	presentCallName := "SessionPresent"
 	presentCallEvents := instance.gpuThread.FindEvents(benchmarking.EventsFilter{Name: &presentCallName})
 

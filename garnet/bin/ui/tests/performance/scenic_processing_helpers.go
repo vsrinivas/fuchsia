@@ -33,10 +33,10 @@ type sessionKey struct {
 	id        float64
 }
 
-func getEventsPerSession(model benchmarking.Model, eventCat string, eventName string) map[sessionKey][]benchmarking.Event {
+func getEventsPerSession(model benchmarking.Model, eventCat string, eventName string) map[sessionKey][]*benchmarking.Event {
 	events := model.FindEvents(
 		benchmarking.EventsFilter{Cat: &eventCat, Name: &eventName})
-	eventsPerSession := make(map[sessionKey][]benchmarking.Event)
+	eventsPerSession := make(map[sessionKey][]*benchmarking.Event)
 
 	for _, event := range events {
 		sessionName, ok := event.Args["session_debug_name"].(string)
@@ -234,7 +234,7 @@ func calculatePerSessionLatency(model benchmarking.Model) map[sessionKey]session
 	return latencyPerSession
 }
 
-func calculateSessionLatency(scheduleEvents []benchmarking.Event, applyEvents []benchmarking.Event, presentEvents []benchmarking.Event, startOfGpuWorkEvents []benchmarking.Event, endOfGpuWorkEvents []benchmarking.Event, vsyncEvents []benchmarking.Event, frameLengthInMillis float64) sessionLatencies {
+func calculateSessionLatency(scheduleEvents []*benchmarking.Event, applyEvents []*benchmarking.Event, presentEvents []*benchmarking.Event, startOfGpuWorkEvents []*benchmarking.Event, endOfGpuWorkEvents []*benchmarking.Event, vsyncEvents []*benchmarking.Event, frameLengthInMillis float64) sessionLatencies {
 	sort.Sort(ByStartTime(scheduleEvents))
 	sort.Sort(ByStartTime(applyEvents))
 

@@ -33,10 +33,24 @@ int main(int argc, const char** argv) {
       "zircon_benchmarks",
       "/pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks");
 
+  std::string benchmarks_bot_name = benchmarks_runner.benchmarks_bot_name();
+
+  // TODO(PT-118): Input latency tests are only currently supported on NUC.
+  if (benchmarks_bot_name == "garnet-x64-perf-dawson_canyon") {
+    constexpr const char* kLabel = "fuchsia.input_latency.simplest_app";
+    std::string out_file = benchmarks_runner.MakeTempFile();
+    benchmarks_runner.AddCustomBenchmark(
+        kLabel,
+        {"/bin/run",
+         "fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/"
+         "run_simplest_app_benchmark.cmx",
+         "--out_file", out_file, "--benchmark_label", kLabel},
+        out_file);
+  }
+
   AddGraphicsBenchmarks(&benchmarks_runner);
 
   // Test storage performance.
-  std::string benchmarks_bot_name = benchmarks_runner.benchmarks_bot_name();
   if (benchmarks_bot_name == "garnet-x64-perf-dawson_canyon") {
     constexpr const char* block_device =
         "/dev/sys/pci/00:17.0/ahci/sata2/block";

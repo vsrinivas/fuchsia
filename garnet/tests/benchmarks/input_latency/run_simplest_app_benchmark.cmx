@@ -1,0 +1,23 @@
+{
+    "program": {
+        "binary": "bin/run_simplest_app_benchmark.sh"
+    },
+    "sandbox": {
+        "features": [
+            "shell"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.process.Resolver",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracelink.Provider",
+            "fuchsia.tracing.TraceController",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input.InputDeviceRegistry",
+            "fuchsia.ui.input.InputDispatcher"
+        ]
+    }
+}

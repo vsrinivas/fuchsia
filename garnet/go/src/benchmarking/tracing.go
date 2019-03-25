@@ -6,7 +6,15 @@ package benchmarking
 
 import (
 	"encoding/json"
+	"sort"
 )
+
+// Sorting helpers.
+type ByStartTime []traceEvent
+
+func (a ByStartTime) Len() int           { return len(a) }
+func (a ByStartTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByStartTime) Less(i, j int) bool { return a[i].Ts < a[j].Ts }
 
 // Structs for parsing trace files (JSON).
 
@@ -100,13 +108,49 @@ type Event struct {
 	Dur   float64
 	Id    uint64 // Used for async events.
 	Args  map[string]interface{}
+
+	// The parent event of the event.
+	//
+	// For durations: The duration event's parent duration, unless the
+	// duration event is a top level duration, in which case it will be set to
+	// nil.
+	// So for example, in:
+	//   (======foo==========)
+	//   (==bar==) (===baz===)
+	// bar will have parent foo, baz will have parent foo, and foo will have
+	// parent nil.
+	//
+	// For flow events: The enclosing duration of the flow event.  Will never be
+	// nil.
+	//
+	// Nil for all other events.
+	//
+	Parent *Event
+
+	// All children events of the event.
+	//
+	// For durations: All child durations (durations that have us set as the
+	// parent), *and* all flow events that have us as the enclosing duration.
+	// So for example, in:
+	//   (======foo=======)
+	//   (==bar==)(==baz==)
+	// foo will have children [bar, baz], bar will have children [], and baz
+	// will have children [].
+	//
+	// For flow events: If the flow event is of flow type "start" or "step", the
+	// next flow event in the flow sequence.  [] if the flow event is of flow
+	// type "end".
+	//
+	// [] for all other events.
+	//
+	Children []*Event
 }
 
 // A struct that represents a Thread in the model.
 type Thread struct {
 	Name   string
 	Tid    uint64
-	Events []Event
+	Events []*Event
 }
 
 // A struct that represents a Process in the model.
@@ -182,6 +226,21 @@ func combineArgs(event1 traceEvent, event2 traceEvent) map[string]interface{} {
 	return combinedArgs
 }
 
+// Similar to |combineArgs|, but for applying additional |Args| on a
+// |traceEvent| to an existing |Event|.
+func combineArgsEventTraceEvent(e *Event, te *traceEvent) {
+	if e.Args == nil {
+		e.Args = te.Args
+	}
+	if te.Args == nil {
+		return
+	}
+
+	for k, v := range te.Args {
+		e.Args[k] = v
+	}
+}
+
 // Structs used to match beginning and end of trace events.
 
 // Used to match sync events
@@ -196,48 +255,77 @@ type catAndID struct {
 	Id  uint64
 }
 
-func (m *Model) processTraceEvents(traceEvents []traceEvent) {
-	eventStacks := make(map[pidAndTid][]traceEvent)
-	asyncEvents := make(map[catAndID]traceEvent)
+type FlowId struct {
+	Id   uint64
+	Cat  string
+	Name string
+}
 
-	for _, traceEvent := range traceEvents {
+func (m *Model) processTraceEvents(traceEvents []traceEvent) {
+	// Create synthetic "E" events for all complete events, in order to assist
+	// with maintaining a stack.
+	extendedEvents := make([]traceEvent, len(traceEvents))
+	copy(extendedEvents, traceEvents)
+	n := len(traceEvents)
+	i := 0
+	for i < n {
+		event := traceEvents[i]
+		if event.Ph == "X" {
+			syntheticEnd := event
+			syntheticEnd.Ph = "E"
+			syntheticEnd.Ts = syntheticEnd.Ts + syntheticEnd.Dur
+			syntheticEnd.Dur = -1.0
+			extendedEvents = append(extendedEvents, syntheticEnd)
+		}
+		i++
+	}
+
+	sort.Sort(ByStartTime(extendedEvents))
+
+	asyncEvents := make(map[catAndID]traceEvent)
+	durationStacks := make(map[pidAndTid][]*Event)
+	liveFlowEvents := make(map[FlowId]*Event)
+
+	for _, traceEvent := range extendedEvents {
 		pidAndTid := pidAndTid{traceEvent.Pid, traceEvent.Tid}
+		thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
+
 		switch ph := traceEvent.Ph; ph {
 		case "X":
 			// Complete event.
 			durationEvent := Event{DurationEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid,
-				traceEvent.Tid, traceEvent.Ts, traceEvent.Dur, traceEvent.Id, traceEvent.Args}
-			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
-			thread.Events = append(thread.Events, durationEvent)
+				traceEvent.Tid, traceEvent.Ts, traceEvent.Dur, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
+			thread.Events = append(thread.Events, &durationEvent)
+			durationStacks[pidAndTid] = append(durationStacks[pidAndTid], thread.Events[len(thread.Events)-1])
+			if len(durationStacks[pidAndTid]) > 1 {
+				top := durationStacks[pidAndTid][len(durationStacks[pidAndTid])-1]
+				topParent := durationStacks[pidAndTid][len(durationStacks[pidAndTid])-2]
+				top.Parent = topParent
+				topParent.Children = append(topParent.Children, top)
+			}
 		case "B":
-			// Begin duration event.
-			eventStacks[pidAndTid] = append(eventStacks[pidAndTid], traceEvent)
+			durationEvent := Event{DurationEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid,
+				traceEvent.Tid, traceEvent.Ts, -1.0, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
+			thread.Events = append(thread.Events, &durationEvent)
+			durationStacks[pidAndTid] = append(durationStacks[pidAndTid], thread.Events[len(thread.Events)-1])
+			if len(durationStacks[pidAndTid]) > 1 {
+				top := durationStacks[pidAndTid][len(durationStacks[pidAndTid])-1]
+				topParent := durationStacks[pidAndTid][len(durationStacks[pidAndTid])-2]
+				top.Parent = topParent
+				topParent.Children = append(topParent.Children, top)
+			}
 		case "E":
-			// End duration event.
-			eventStack := eventStacks[pidAndTid]
-			if eventStack != nil && len(eventStack) > 0 {
-				// Peek at last event
-				beginEvent := eventStack[len(eventStack)-1]
-
-				if beginEvent.Cat != traceEvent.Cat || beginEvent.Name != traceEvent.Name {
-					// This is possible since events are not necessarily in
-					// chronological order; they are grouped by source. So, when
-					// processing a new batch of events, it's possible that we
-					// get an end event that didn't have a begin event because
-					// we started tracing mid-event.
-					eventStacks[pidAndTid] = nil
-					continue
+			if len(durationStacks[pidAndTid]) > 0 {
+				top := durationStacks[pidAndTid][len(durationStacks[pidAndTid])-1]
+				// In the case where the top of the duration durationStacks[pidAndTid] came from a
+				// begin event (rather than a complete event), fill in its
+				// duration using the current end event.
+				if top.Dur == -1.0 {
+					top.Dur = traceEvent.Ts - top.Start
 				}
-
-				// Pop last event from event stack.
-				eventStacks[pidAndTid] = eventStack[:len(eventStack)-1]
-
-				durationEvent := Event{DurationEvent, beginEvent.Cat,
-					beginEvent.Name, beginEvent.Pid, beginEvent.Tid,
-					beginEvent.Ts, traceEvent.Ts - beginEvent.Ts, beginEvent.Id,
-					combineArgs(beginEvent, traceEvent)}
-				thread := m.getOrCreateThreadById(beginEvent.Pid, beginEvent.Tid)
-				thread.Events = append(thread.Events, durationEvent)
+				combineArgsEventTraceEvent(top, &traceEvent)
+				// Pop the last event from the duration stack.
+				durationStacks[pidAndTid] = durationStacks[pidAndTid][:len(durationStacks[pidAndTid])-1]
 			}
 		case "b":
 			// Async begin duration event
@@ -255,16 +343,69 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 				asyncEvent := Event{AsyncEvent, beginEvent.Cat,
 					beginEvent.Name, beginEvent.Pid, beginEvent.Tid,
 					beginEvent.Ts, traceEvent.Ts - beginEvent.Ts, beginEvent.Id,
-					combineArgs(beginEvent, traceEvent)}
+					combineArgs(beginEvent, traceEvent), nil, make([]*Event, 0)}
 				thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
-				thread.Events = append(thread.Events, asyncEvent)
+				thread.Events = append(thread.Events, &asyncEvent)
 			}
 		case "i":
 			// Instant event
 			instantEvent := Event{InstantEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid,
-				traceEvent.Tid, traceEvent.Ts, 0, traceEvent.Id, traceEvent.Args}
+				traceEvent.Tid, traceEvent.Ts, 0, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
 			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
-			thread.Events = append(thread.Events, instantEvent)
+			thread.Events = append(thread.Events, &instantEvent)
+		case "s":
+			flowId := FlowId{traceEvent.Id, traceEvent.Cat, traceEvent.Name}
+			if _, found := liveFlowEvents[flowId]; found {
+				// Drop flow begins that already have flow ids in progress.
+				continue
+			}
+
+			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
+			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
+			thread.Events = append(thread.Events, &flowEvent)
+			liveFlowEvents[flowId] = thread.Events[len(thread.Events)-1]
+
+			if len(durationStacks[pidAndTid]) > 0 {
+				top := durationStacks[pidAndTid][len(durationStacks[pidAndTid])-1]
+				thread.Events[len(thread.Events)-1].Parent = top
+				top.Children = append(top.Children, thread.Events[len(thread.Events)-1])
+			}
+		case "t":
+			flowId := FlowId{traceEvent.Id, traceEvent.Cat, traceEvent.Name}
+			if _, found := liveFlowEvents[flowId]; !found {
+				// Drop flow steps that are not in progress.
+				continue
+			}
+			previousFlowEvent := liveFlowEvents[flowId]
+			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
+			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
+			thread.Events = append(thread.Events, &flowEvent)
+			liveFlowEvents[flowId] = thread.Events[len(thread.Events)-1]
+
+			previousFlowEvent.Children = append(previousFlowEvent.Children, thread.Events[len(thread.Events)-1])
+
+			if len(durationStacks[pidAndTid]) > 0 {
+				top := durationStacks[pidAndTid][len(durationStacks[pidAndTid])-1]
+				thread.Events[len(thread.Events)-1].Parent = top
+				top.Children = append(top.Children, thread.Events[len(thread.Events)-1])
+			}
+		case "f":
+			flowId := FlowId{traceEvent.Id, traceEvent.Cat, traceEvent.Name}
+			if _, found := liveFlowEvents[flowId]; !found {
+				// Drop flow ends that are not in progress.
+				continue
+			}
+			previousFlowEvent := liveFlowEvents[flowId]
+			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
+			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
+			thread.Events = append(thread.Events, &flowEvent)
+			previousFlowEvent.Children = append(previousFlowEvent.Children, thread.Events[len(thread.Events)-1])
+			if len(durationStacks[pidAndTid]) > 0 {
+				top := durationStacks[pidAndTid][len(durationStacks[pidAndTid])-1]
+				thread.Events[len(thread.Events)-1].Parent = top
+				top.Children = append(top.Children, thread.Events[len(thread.Events)-1])
+			}
+			delete(liveFlowEvents, flowId)
 		}
 	}
 }
@@ -309,8 +450,8 @@ type EventsFilter struct {
 }
 
 // A method that finds events in the given thread, filtered by |filter|.
-func (t Thread) FindEvents(filter EventsFilter) []Event {
-	var events []Event
+func (t Thread) FindEvents(filter EventsFilter) []*Event {
+	var events []*Event
 	for _, event := range t.Events {
 		if (filter.Cat == nil || event.Cat == *filter.Cat) &&
 			(filter.Name == nil || event.Name == *filter.Name) {
@@ -321,8 +462,8 @@ func (t Thread) FindEvents(filter EventsFilter) []Event {
 }
 
 // A method that finds events in the given process, filtered by |filter|.
-func (p Process) FindEvents(filter EventsFilter) []Event {
-	var events []Event
+func (p Process) FindEvents(filter EventsFilter) []*Event {
+	var events []*Event
 	if filter.Tid != nil {
 		threadPtr := p.getThreadById(*filter.Tid)
 		if threadPtr != nil {
@@ -337,8 +478,8 @@ func (p Process) FindEvents(filter EventsFilter) []Event {
 }
 
 // A method that finds events in the given model, filtered by |filter|.
-func (m Model) FindEvents(filter EventsFilter) []Event {
-	var events []Event
+func (m Model) FindEvents(filter EventsFilter) []*Event {
+	var events []*Event
 	if filter.Pid != nil {
 		processPtr := m.getProcessById(*filter.Pid)
 		if processPtr != nil {
@@ -355,7 +496,7 @@ func (m Model) FindEvents(filter EventsFilter) []Event {
 
 // For the given set of |events|, find the average duration of all instances of
 // events with matching |cat| and |name|.
-func AvgDuration(events []Event) float64 {
+func AvgDuration(events []*Event) float64 {
 	totalTime := 0.0
 	numEvents := 0.0
 

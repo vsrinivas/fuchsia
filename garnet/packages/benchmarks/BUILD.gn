@@ -29,6 +29,7 @@ group("garnet") {
     "//garnet/packages/examples:scenic",
     "//garnet/packages/tests:scenic",
     "//garnet/tests/benchmarks:garnet_benchmarks",
+    "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
   ]
 }
 
