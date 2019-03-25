@@ -40,12 +40,12 @@
 #define PAGE_MASK (PAGE_SIZE - 1ull)
 
 // port is implemented by the controller
-#define AHCI_PORT_FLAG_IMPLEMENTED (1 << 0)
+#define AHCI_PORT_FLAG_IMPLEMENTED (1u << 0)
 // a device is present on port
-#define AHCI_PORT_FLAG_PRESENT     (1 << 1)
+#define AHCI_PORT_FLAG_PRESENT     (1u << 1)
 // port is paused (no queued transactions will be processed)
 // until pending transactions are done
-#define AHCI_PORT_FLAG_SYNC_PAUSED (1 << 2)
+#define AHCI_PORT_FLAG_SYNC_PAUSED (1u << 2)
 
 //clang-format on
 
@@ -191,9 +191,9 @@ static void ahci_port_reset(ahci_port_t* port) {
 
 static bool ahci_port_cmd_busy(ahci_port_t* port, int slot) {
     // a command slot is busy if a transaction is in flight or pending to be completed
-    return ((ahci_read(&port->regs->sact) | ahci_read(&port->regs->ci)) & (1 << slot)) ||
+    return ((ahci_read(&port->regs->sact) | ahci_read(&port->regs->ci)) & (1u << slot)) ||
            (port->commands[slot] != NULL) ||
-           (port->running & (1 << slot)) || (port->completed & (1 << slot));
+           (port->running & (1u << slot)) || (port->completed & (1u << slot));
 }
 
 static bool cmd_is_read(uint8_t cmd) {
@@ -222,11 +222,17 @@ static bool cmd_is_queued(uint8_t cmd) {
 
 static void ahci_port_complete_txn(ahci_device_t* dev, ahci_port_t* port, zx_status_t status) {
     mtx_lock(&port->lock);
-    uint32_t sact = ahci_read(&port->regs->sact);
-    uint32_t running = port->running;
-    uint32_t done = sact ^ running;
-    // assert if a command slot without an outstanding transaction is active
-    ZX_DEBUG_ASSERT(!(done & sact));
+    uint32_t active = ahci_read(&port->regs->sact); // Transactions active in hardware.
+    uint32_t running = port->running;               // Transactions tagged as running.
+    // Transactions active in hardware but not tagged as running.
+    uint32_t unaccounted = active & ~running;
+    // Remove transactions that have been completed by the watchdog.
+    unaccounted &= ~port->completed;
+    // assert if a command slot without an outstanding transaction is active.
+    ZX_DEBUG_ASSERT(unaccounted == 0);
+
+    // Transactions tagged as running but completed by hardware.
+    uint32_t done = running & ~active;
     port->completed |= done;
     mtx_unlock(&port->lock);
     // hit the worker thread to complete commands
@@ -345,7 +351,7 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
         prd += 1;
     }
 
-    port->running |= (1 << slot);
+    port->running |= (1u << slot);
     port->commands[slot] = txn;
 
     zxlogf(SPEW, "ahci.%d: do_txn txn %p (%c) offset 0x%" PRIx64 " length 0x%" PRIx64
@@ -362,9 +368,9 @@ static zx_status_t ahci_do_txn(ahci_device_t* dev, ahci_port_t* port, int slot, 
 
     // start command
     if (cmd_is_queued(cmd)) {
-        ahci_write(&port->regs->sact, (1 << slot));
+        ahci_write(&port->regs->sact, (1u << slot));
     }
-    ahci_write(&port->regs->ci, (1 << slot));
+    ahci_write(&port->regs->ci, (1u << slot));
 
     // set the watchdog
     // TODO: general timeout mechanism
@@ -526,8 +532,7 @@ static int ahci_worker_thread(void* arg) {
                 unsigned slot = 32 - __builtin_clz(port->completed) - 1;
                 txn = port->commands[slot];
                 if (txn == NULL) {
-                    zxlogf(ERROR, "ahci.%d: illegal state, completing slot %d but txn == NULL\n",
-                            port->nr, slot);
+                    // Transaction was completed by watchdog.
                 } else {
                     mtx_unlock(&port->lock);
                     if (txn->pmt != ZX_HANDLE_INVALID) {
@@ -537,8 +542,8 @@ static int ahci_worker_thread(void* arg) {
                     block_complete(txn, ZX_OK);
                     mtx_lock(&port->lock);
                 }
-                port->completed &= ~(1 << slot);
-                port->running &= ~(1 << slot);
+                port->completed &= ~(1u << slot);
+                port->running &= ~(1u << slot);
                 port->commands[slot] = NULL;
                 // resume the port if paused for sync and no outstanding transactions
                 if ((port->flags & AHCI_PORT_FLAG_SYNC_PAUSED) && !port->running) {
@@ -627,20 +632,37 @@ static int ahci_watchdog_thread(void* arg) {
                 idle = false;
                 unsigned slot = 32 - __builtin_clz(pending) - 1;
                 sata_txn_t* txn = port->commands[slot];
+                pending &= ~(1u << slot);
                 if (!txn) {
                     zxlogf(ERROR, "ahci: command %u pending but txn is NULL\n", slot);
-                } else {
-                    if (txn->timeout < now) {
-                        // time out
-                        zxlogf(ERROR, "ahci: txn time out on port %d txn %p\n", port->nr, txn);
-                        port->running &= ~(1 << slot);
-                        port->commands[slot] = NULL;
-                        mtx_unlock(&port->lock);
-                        block_complete(txn, ZX_ERR_TIMED_OUT);
-                        mtx_lock(&port->lock);
-                    }
+                    continue;
                 }
-                pending &= ~(1 << slot);
+                if (txn->timeout >= now) {
+                    continue;
+                }
+                // Check whether this is a real timeout.
+                uint32_t active = ahci_read(&port->regs->sact);
+                if ((active & (1u << slot)) == 0) {
+                    // Command is no longer active, it has completed but not yet serviced by
+                    // IRQ thread. Get the time this event happened, compare to time
+                    // watchdog loop started to determine whether it has blocked for too
+                    // long.
+                    zx_time_t watchtime = zx_clock_get_monotonic() - now;
+                    zxlogf(ERROR,
+                           "ahci: spurious watchdog timeout port %u txn %p, time in watchdog = %lu\n",
+                           port->nr, txn, watchtime);
+                    // Assert if we've been blocked for more than 100ms.
+                    ZX_DEBUG_ASSERT(watchtime < ZX_MSEC(100));
+                } else {
+                    // time out
+                    zxlogf(ERROR, "ahci: txn time out on port %d txn %p\n", port->nr, txn);
+                    port->running &= ~(1u << slot);
+                    port->completed |= (1u << slot);
+                    port->commands[slot] = NULL;
+                    mtx_unlock(&port->lock);
+                    block_complete(txn, ZX_ERR_TIMED_OUT);
+                    mtx_lock(&port->lock);
+                }
             }
             mtx_unlock(&port->lock);
         }
@@ -657,17 +679,17 @@ static int ahci_watchdog_thread(void* arg) {
 static void ahci_port_irq(ahci_device_t* dev, int nr) {
     ahci_port_t* port = &dev->ports[nr];
     // clear interrupt
-    uint32_t is = ahci_read(&port->regs->is);
-    ahci_write(&port->regs->is, is);
+    uint32_t int_status = ahci_read(&port->regs->is);
+    ahci_write(&port->regs->is, int_status);
 
-    if (is & AHCI_PORT_INT_PRC) { // PhyRdy change
+    if (int_status & AHCI_PORT_INT_PRC) { // PhyRdy change
         uint32_t serr = ahci_read(&port->regs->serr);
         ahci_write(&port->regs->serr, serr & ~0x1);
     }
-    if (is & AHCI_PORT_INT_ERROR) { // error
-        zxlogf(ERROR, "ahci.%d: error is=0x%08x\n", nr, is);
+    if (int_status & AHCI_PORT_INT_ERROR) { // error
+        zxlogf(ERROR, "ahci.%d: error is=0x%08x\n", nr, int_status);
         ahci_port_complete_txn(dev, port, ZX_ERR_INTERNAL);
-    } else if (is) {
+    } else if (int_status) {
         ahci_port_complete_txn(dev, port, ZX_OK);
     }
 }
@@ -732,7 +754,7 @@ static int ahci_init_thread(void* arg) {
         port = &dev->ports[i];
         port->nr = i;
 
-        if (!(port_map & (1 << i))) continue; // port not implemented
+        if (!(port_map & (1u << i))) continue; // port not implemented
 
         port->flags = AHCI_PORT_FLAG_IMPLEMENTED;
         port->regs = &dev->regs->ports[i];
