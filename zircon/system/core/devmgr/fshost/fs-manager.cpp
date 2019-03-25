@@ -16,6 +16,7 @@
 #include <fs/vfs.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/fdio/directory.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/fdio/io.h>
 #include <zircon/device/vfs.h>
@@ -67,53 +68,81 @@ zx_status_t AddVmofile(fbl::RefPtr<memfs::VnodeDir> vnb, const char* path, zx_ha
 
 } // namespace
 
-// TODO: For operations which can fail, we should use a private constructor
-// pattern and create FsManager with error validation prior to calling
-// the real constructor.
-FsManager::FsManager() {
+// Must appear in the devmgr namespace.
+// Expected dependency of "shared/fdio.h".
+//
+// This is currently exposed in a somewhat odd location to also be
+// visible to unit tests, avoiding linkage errors.
+zx::channel fs_clone(const char* path) {
+    if (strcmp(path, "svc") == 0) {
+        path = "/svc";
+    } else if (strcmp(path, "data") == 0) {
+        path = "/fs/data";
+    } else if (strcmp(path, "blob") == 0) {
+        path = "/fs/blob";
+    } else {
+        printf("%s: Cannot clone: %s\n", __FUNCTION__, path);
+        return zx::channel();
+    }
+
+    zx::channel client, server;
+    zx_status_t status = zx::channel::create(0, &client, &server);
+    if (status != ZX_OK) {
+        return zx::channel();
+    }
+    status = fdio_service_connect(path, server.release());
+    if (status != ZX_OK) {
+        printf("%s: Failed to connect to %s: %d\n", __FUNCTION__, path, status);
+        return zx::channel();
+    }
+    return client;
+}
+
+FsManager::FsManager(zx::event fshost_event)
+    : event_(std::move(fshost_event)),
+      global_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToThread)),
+      registry_(global_loop_.get()) {
     ZX_ASSERT(global_root_ == nullptr);
+}
+
+zx_status_t FsManager::Create(zx::event fshost_event, fbl::unique_ptr<FsManager>* out) {
+    auto fs_manager = fbl::unique_ptr<FsManager>(new FsManager(std::move(fshost_event)));
+    zx_status_t status = fs_manager->Initialize();
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out = std::move(fs_manager);
+    return ZX_OK;
+}
+
+zx_status_t FsManager::Initialize() {
     zx_status_t status = CreateFilesystem("<root>", &root_vfs_, &global_root_);
-    ZX_ASSERT(status == ZX_OK);
+    if (status != ZX_OK) {
+        return status;
+    }
 
-    fbl::RefPtr<memfs::VnodeDir> bootfs_root;
-    status = CreateFilesystem("boot", &root_vfs_, &bootfs_root);
-    ZX_ASSERT(status == ZX_OK);
-    root_vfs_.MountSubtree(global_root_.get(), std::move(bootfs_root));
-
-    status = CreateFilesystem("tmp", &root_vfs_, &memfs_root_);
-    ZX_ASSERT(status == ZX_OK);
-    root_vfs_.MountSubtree(global_root_.get(), memfs_root_);
-
+    fbl::RefPtr<fs::Vnode> vn;
+    if ((status = global_root_->Create(&vn, "boot", S_IFDIR)) != ZX_OK) {
+        return status;
+    }
+    if ((status = global_root_->Create(&vn, "tmp", S_IFDIR)) != ZX_OK) {
+        return status;
+    }
     for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {
         fbl::StringPiece pathout;
         status = root_vfs_.Open(global_root_, &mount_nodes[n], fbl::StringPiece(kMountPoints[n]),
                                 &pathout,
                                 ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CREATE,
                                 S_IFDIR);
-        ZX_ASSERT(status == ZX_OK);
+        if (status != ZX_OK) {
+            return status;
+        }
     }
 
-    global_loop_.reset(new async::Loop(&kAsyncLoopConfigNoAttachToThread));
     global_loop_->StartThread("root-dispatcher");
     root_vfs_.SetDispatcher(global_loop_->dispatcher());
     system_vfs_.SetDispatcher(global_loop_->dispatcher());
-}
-
-zx_status_t FsManager::SystemfsAddFile(const char* path, zx_handle_t vmo, zx_off_t off,
-                                       size_t len) {
-    return AddVmofile(systemfs_root_, path, vmo, off, len);
-}
-
-zx_status_t FsManager::MountSystem() {
-    ZX_ASSERT(systemfs_root_ == nullptr);
-    zx_status_t status = CreateFilesystem("system", &system_vfs_, &systemfs_root_);
-    ZX_ASSERT(status == ZX_OK);
-    return LocalMountReadOnly(global_root_.get(), "system", systemfs_root_);
-}
-
-void FsManager::SystemfsSetReadonly(bool value) {
-    ZX_ASSERT(systemfs_root_ == nullptr);
-    systemfs_root_->vfs()->SetReadonly(value);
+    return ZX_OK;
 }
 
 zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
@@ -125,42 +154,8 @@ zx_status_t FsManager::InstallFs(const char* path, zx::channel h) {
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t FsManager::InitializeConnections(zx::channel root, zx::channel devfs_root,
-                                             zx::channel svc_root, zx::event fshost_event) {
-    // Serve devmgr's root handle using our own root directory.
-    zx_status_t status = ConnectRoot(std::move(root));
-    if (status != ZX_OK) {
-        printf("fshost: Cannot connect to fshost root: %d\n", status);
-    }
-
-    zx::channel fs_root;
-    if ((status = ServeRoot(&fs_root)) != ZX_OK) {
-        printf("fshost: cannot create global root: %d\n", status);
-    }
-
-    connections_ = std::make_unique<FshostConnections>(std::move(devfs_root), std::move(svc_root),
-                                                       std::move(fs_root), std::move(fshost_event));
-    // Now that we've initialized our connection to the outside world,
-    // monitor for external shutdown events.
-    WatchExit();
-    return connections_->CreateNamespace();
-}
-
-zx_status_t FsManager::ConnectRoot(zx::channel server) {
+zx_status_t FsManager::ServeRoot(zx::channel server) {
     return ServeVnode(global_root_, std::move(server));
-}
-
-zx_status_t FsManager::ServeRoot(zx::channel* out) {
-    zx::channel client, server;
-    zx_status_t status = zx::channel::create(0, &client, &server);
-    if (status != ZX_OK) {
-        return ZX_OK;
-    }
-    if ((status = ServeVnode(global_root_, std::move(server))) != ZX_OK) {
-        return status;
-    }
-    *out = std::move(client);
-    return ZX_OK;
 }
 
 void FsManager::WatchExit() {
@@ -168,10 +163,10 @@ void FsManager::WatchExit() {
                                         zx_status_t status, const zx_packet_signal_t* signal) {
         root_vfs_.UninstallAll(ZX_TIME_INFINITE);
         system_vfs_.UninstallAll(ZX_TIME_INFINITE);
-        connections_->Event().signal(0, FSHOST_SIGNAL_EXIT_DONE);
+        event_.signal(0, FSHOST_SIGNAL_EXIT_DONE);
     });
 
-    global_shutdown_.set_object(connections_->Event().get());
+    global_shutdown_.set_object(event_.get());
     global_shutdown_.set_trigger(FSHOST_SIGNAL_EXIT);
     global_shutdown_.Begin(global_loop_->dispatcher());
 }

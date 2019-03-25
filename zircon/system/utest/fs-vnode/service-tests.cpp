@@ -35,7 +35,6 @@ bool test_service() {
     EXPECT_EQ(ZX_OK, svc->ValidateFlags(ZX_FS_RIGHT_READABLE));
     EXPECT_EQ(ZX_OK, svc->Open(ZX_FS_RIGHT_READABLE, &redirect));
     EXPECT_NULL(redirect);
-    EXPECT_EQ(ZX_ERR_NOT_DIR, svc->ValidateFlags(ZX_FS_FLAG_DIRECTORY));
 
     // get attr
     vnattr_t attr;

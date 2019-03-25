@@ -49,8 +49,6 @@ public:
 
     void FuchsiaStart() const { fshost_->FuchsiaStart(); }
 
-    bool IsSystemMounted() const { return fshost_->IsSystemMounted(); }
-
     zx_status_t InstallFs(const char* path, zx::channel h) {
         return fshost_->InstallFs(path, std::move(h));
     }
@@ -665,7 +663,7 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
 
 } // namespace
 
-void block_device_watcher(fbl::unique_ptr<FsManager> fshost, zx::unowned_job job, bool netboot) {
+void BlockDeviceWatcher(fbl::unique_ptr<FsManager> fshost, zx::unowned_job job, bool netboot) {
     g_job = job;
     BlockWatcher watcher(std::move(fshost), std::move(job), netboot);
 

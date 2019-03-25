@@ -395,7 +395,8 @@ zx_status_t fuchsia_create_job() {
     return ZX_OK;
 }
 
-zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator) {
+zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator,
+                          zx::channel fshost_client) {
     const auto& root_resource = coordinator->root_resource();
     zx::channel dir_request, svchost_local;
     zx::debuglog logger;
@@ -491,8 +492,15 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator)
         launchpad_add_handle(lp, root_resource_copy.release(), PA_HND(PA_USER0, 2));
     }
 
+    // TODO(smklein): Merge "fidl_client" (proxying requests to devmgr) and
+    // "fshost_client" (proxying requests to fshost) into one service provider
+    // PseudoDirectory.
+
     // Add handle to channel to allow svchost to proxy fidl services to us.
     launchpad_add_handle(lp, fidl_client.release(), PA_HND(PA_USER0, 3));
+
+    // Add a handle to allow svchost to proxy services to fshost.
+    launchpad_add_handle(lp, fshost_client.release(), PA_HND(PA_USER0, 4));
 
     // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
     // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
@@ -526,25 +534,27 @@ zx_status_t svchost_start(bool require_system, devmgr::Coordinator* coordinator)
     return fdio_service_connect_at(svchost_local.get(), "public", svchost_public_remote.release());
 }
 
-void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args) {
+void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
+                  zx::channel fshost_server) {
     // assemble handles to pass down to fshost
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t types[fbl::count_of(handles)];
     size_t n = 0;
     zx_handle_t ldsvc;
 
-    // pass /, /svc, and ldsvc handles to fshost
-    if (zx_channel_create(0, g_handles.fs_root.reset_and_get_address(), &handles[0]) == ZX_OK) {
+    // Pass "fs_root", and ldsvc handles to fshost.
+    if (zx_channel_create(0, g_handles.fs_root.reset_and_get_address(), &handles[n]) == ZX_OK) {
         types[n++] = PA_HND(PA_USER0, 0);
-    }
-    if ((handles[n] = devmgr::fs_clone("svc").release()) != ZX_HANDLE_INVALID) {
-        types[n++] = PA_HND(PA_USER0, 1);
     }
     if (zx_channel_create(0, &ldsvc, &handles[n]) == ZX_OK) {
         types[n++] = PA_HND(PA_USER0, 2);
     } else {
         ldsvc = ZX_HANDLE_INVALID;
     }
+
+    // The "public directory" of the fshost service.
+    handles[n] = fshost_server.release();
+    types[n++] = PA_HND(PA_USER0, 3);
 
     // pass fuchsia start event to fshost
     zx::event fshost_event_duplicate;
@@ -604,7 +614,7 @@ void fshost_start(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& de
 }
 
 void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs& devmgr_args,
-                     bool needs_svc_mount) {
+                     bool needs_svc_mount, zx::channel fshost_server) {
     fdio_ns_t* ns;
     zx_status_t r;
     r = fdio_ns_get_installed(&ns);
@@ -620,7 +630,7 @@ void devmgr_vfs_init(devmgr::Coordinator* coordinator, const devmgr::DevmgrArgs&
     }
 
     // Start fshost before binding /system, since it publishes it.
-    fshost_start(coordinator, devmgr_args);
+    fshost_start(coordinator, devmgr_args, std::move(fshost_server));
 
     if ((r = fdio_ns_bind(ns, "/system", devmgr::fs_clone("system").release())) != ZX_OK) {
         printf("devcoordinator: cannot bind /system to namespace: %d\n", r);
@@ -954,6 +964,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    zx::channel fshost_client, fshost_server;
+    zx::channel::create(0, &fshost_client, &fshost_server);
     zx::channel::create(0, &g_handles.appmgr_client, &g_handles.appmgr_server);
 
     if (devmgr_args.use_system_svchost) {
@@ -969,7 +981,7 @@ int main(int argc, char** argv) {
             return 1;
         }
     } else {
-        status = svchost_start(require_system, &coordinator);
+        status = svchost_start(require_system, &coordinator, std::move(fshost_client));
         if (status != ZX_OK) {
             fprintf(stderr, "devcoordinator: failed to start svchost: %d", status);
             return 1;
@@ -977,7 +989,7 @@ int main(int argc, char** argv) {
     }
 
     const bool needs_svc_mount = !devmgr_args.use_system_svchost;
-    devmgr_vfs_init(&coordinator, devmgr_args, needs_svc_mount);
+    devmgr_vfs_init(&coordinator, devmgr_args, needs_svc_mount, std::move(fshost_server));
 
     // If this is not a full Fuchsia build, do not setup appmgr services, as
     // this will delay startup.

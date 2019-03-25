@@ -2,14 +2,41 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("common") {
+  sources = [
+    "fs-manager.cpp",
+    "registry.cpp",
+    "vnode.cpp",
+  ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-fshost:c",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fs",
+    "$zx/system/ulib/memfs",
+    "$zx/system/ulib/zx",
+    "../shared",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fidl-utils",
+    "$zx/system/ulib/memfs:memfs-cpp",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
 executable("fshost") {
   sources = [
     "block-watcher.cpp",
     "main.cpp",
-    "vfs-rpc.cpp",
   ]
   deps = [
+    ":common",
     "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-zxcrypt:c",
     "$zx/system/ulib/async-loop:async-loop-cpp",
@@ -21,18 +48,25 @@ executable("fshost") {
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/gpt",
     "$zx/system/ulib/loader-service",
-    "$zx/system/ulib/memfs",
-    "$zx/system/ulib/memfs:memfs-cpp",
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/trace",
     "$zx/system/ulib/trace-engine",
     "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxcrypt",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/lz4",
-    "../shared",
+  ]
+}
+
+test("fshost-test") {
+  test_group = "ddk"
+  sources = [
+    "fshost-test.cpp",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/ulib/zxtest",
   ]
 }

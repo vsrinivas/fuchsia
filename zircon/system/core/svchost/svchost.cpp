@@ -5,7 +5,10 @@
 #include "sysmem.h"
 
 #include <fbl/algorithm.h>
+#include <fbl/string_printf.h>
+#include <fs/remote-dir.h>
 #include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/fshost/c/fidl.h>
 #include <fuchsia/net/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fd.h>
@@ -138,14 +141,62 @@ static constexpr const char* deprecated_services[] = {
     // they should run in containers that have their own service instances.
 };
 
-void publish_deprecated_services(const fbl::RefPtr<fs::PseudoDir>& dir) {
-    for (size_t i = 0; deprecated_services[i]; ++i) {
-        const char* service_name = deprecated_services[i];
-        dir->AddEntry(
-            service_name,
-            fbl::MakeRefCounted<fs::Service>([service_name](zx::channel request) {
-                return fdio_service_connect_at(appmgr_svc, service_name, request.release());
-            }));
+// List of services which are re-routed to the fshost service provider handle.
+static constexpr const char* fshost_services[] = {
+    fuchsia_fshost_Filesystems_Name,
+    fuchsia_fshost_Registry_Name,
+    nullptr,
+};
+
+// The ServiceProxy is a Vnode which, if opened, connects to a service.
+// However, if treated like a directory, the service proxy will attempt to
+// relay the underlying request to the connected service channel.
+class ServiceProxy : public fs::Service {
+public:
+    ServiceProxy(zx::unowned_channel svc, fbl::StringPiece svc_name)
+        : Service([this](zx::channel request) {
+            return fdio_service_connect_at(svc_->get(), svc_name_.data(), request.release());
+        }), svc_(std::move(svc)), svc_name_(svc_name) {}
+
+    // This proxy may be a directory. Attempt to connect to the requested object,
+    // and return a RemoteDir representing the connection.
+    //
+    // If the underlying service does not speak the directory protocol, then attempting
+    // to connect to the service will close the connection. This is expected.
+    zx_status_t Lookup(fbl::RefPtr<Vnode>* out, fbl::StringPiece name) final {
+        fbl::String path(fbl::StringPrintf("%s/%.*s", svc_name_.data(),
+                                           static_cast<int>(name.length()), name.data()));
+        zx::channel client, server;
+        zx_status_t status = zx::channel::create(0, &client, &server);
+        if (status != ZX_OK) {
+            return status;
+        }
+        status = fdio_service_connect_at(svc_->get(), path.data(), server.release());
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        *out = fbl::MakeRefCounted<fs::RemoteDir>(std::move(client));
+        return ZX_OK;
+    }
+
+private:
+    zx::unowned_channel svc_;
+    fbl::StringPiece svc_name_;
+};
+
+void publish_service(const fbl::RefPtr<fs::PseudoDir>& dir,
+                     const char* name, zx::unowned_channel svc) {
+    dir->AddEntry(
+        name,
+        fbl::MakeRefCounted<ServiceProxy>(std::move(svc), name));
+}
+
+void publish_services(const fbl::RefPtr<fs::PseudoDir>& dir,
+                      const char* const* names, zx::unowned_channel svc) {
+    for (size_t i = 0; names[i] != nullptr; ++i) {
+        const char* service_name = names[i];
+        publish_service(dir, service_name, zx::unowned_channel(svc->get()));
     }
 }
 
@@ -172,6 +223,7 @@ int main(int argc, char** argv) {
     root_job = zx_take_startup_handle(PA_HND(PA_USER0, 1));
     root_resource = zx_take_startup_handle(PA_HND(PA_USER0, 2));
     zx::channel devmgr_proxy_channel = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 3)));
+    zx::channel fshost_svc = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 4)));
 
     zx_status_t status = outgoing.ServeFromStartupInfo();
     if (status != ZX_OK) {
@@ -225,7 +277,8 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    publish_deprecated_services(outgoing.public_dir());
+    publish_services(outgoing.public_dir(), deprecated_services, zx::unowned_channel(appmgr_svc));
+    publish_services(outgoing.public_dir(), fshost_services, zx::unowned_channel(fshost_svc));
 
     publish_proxy_service(outgoing.public_dir(),
                           fuchsia_device_manager_DebugDumper_Name,

@@ -14,6 +14,7 @@ if (current_cpu != "") {
       ":host",  # TODO(mcgrathr): reach this differently?
       "$zx/system/core/bootsvc:bootsvc-tests",
       "$zx/system/core/devmgr/devcoordinator:devcoordinator-test",
+      "$zx/system/core/devmgr/fshost:fshost-test",
       "$zx/system/core/virtcon:virtual-console-test",
       "$zx/system/dev/backlight/sg-micro:sgm37603a-test",
       "$zx/system/dev/block/ftl/test",
