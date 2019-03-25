@@ -15,7 +15,7 @@
 #include "hikey960.h"
 #include "hikey960-hw.h"
 
-zx_status_t hi3660_usb_init(hikey960_t* hikey) {
+zx_status_t hikey960_usb_phy_init(hikey960_t* hikey) {
     volatile void* usb3otg_bc = hikey->usb3otg_bc.vaddr;
     volatile void* peri_crg = hikey->peri_crg.vaddr;
     volatile void* pctrl = hikey->pctrl.vaddr;
@@ -134,7 +134,10 @@ const pbus_dev_t hikey_usb_dev = {
 };
 
 zx_status_t hikey960_usb_init(hikey960_t* hikey) {
-    zx_status_t status;
+    zx_status_t status = hikey960_usb_phy_init(hikey);
+    if (status != ZX_OK) {
+        return status;
+    }
 
     if ((status = pbus_device_add(&hikey->pbus, &hikey_usb_dev)) != ZX_OK) {
         zxlogf(ERROR, "hikey960_add_devices could not add hikey_usb_dev: %d\n", status);

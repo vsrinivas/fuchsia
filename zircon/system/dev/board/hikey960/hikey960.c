@@ -29,13 +29,12 @@
 #include "hikey960.h"
 #include "hikey960-hw.h"
 
-static zx_status_t hi3660_enable_ldo3(hikey960_t* hikey) {
+static zx_status_t hikey960_enable_ldo3(hikey960_t* hikey) {
     writel(LDO3_ENABLE_BIT, hikey->pmu_ssio.vaddr + LDO3_ENABLE_REG);
     return ZX_OK;
 }
 
-static void hi3660_release(hikey960_t* hikey) {
-    hi3660_gpio_release(hikey);
+static void hikey960_mmio_release(hikey960_t* hikey) {
     mmio_buffer_release(&hikey->usb3otg_bc);
     mmio_buffer_release(&hikey->peri_crg);
     mmio_buffer_release(&hikey->pctrl);
@@ -45,7 +44,7 @@ static void hi3660_release(hikey960_t* hikey) {
     mmio_buffer_release(&hikey->ufs_sctrl);
 }
 
-static zx_status_t hi3660_init(hikey960_t* hikey, zx_handle_t resource) {
+static zx_status_t hikey960_init(hikey960_t* hikey, zx_handle_t resource) {
     list_initialize(&hikey->gpios);
 
     zx_status_t status;
@@ -72,31 +71,27 @@ static zx_status_t hi3660_init(hikey960_t* hikey, zx_handle_t resource) {
         goto fail;
     }
 
-    status = hi3660_gpio_init(hikey);
-    if (status != ZX_OK) {
-        goto fail;
-    }
-    status = hi3660_usb_init(hikey);
+    status = hikey960_gpio_init(hikey);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    status = hi3660_ufs_init(hikey);
+    status = hikey960_ufs_init(hikey);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    status = hi3660_i2c1_init(hikey);
+    status = hikey960_i2c1_init(hikey);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    status = hi3660_enable_ldo3(hikey);
+    status = hikey960_enable_ldo3(hikey);
     if (status != ZX_OK) {
       goto fail;
     }
 
-    status = hi3660_i2c_pinmux(hikey);
+    status = hikey960_i2c_pinmux(hikey);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -104,15 +99,17 @@ static zx_status_t hi3660_init(hikey960_t* hikey, zx_handle_t resource) {
     return ZX_OK;
 
 fail:
-    zxlogf(ERROR, "hi3660_init failed %d\n", status);
-    hi3660_release(hikey);
+    zxlogf(ERROR, "hikey960_init failed %d\n", status);
+    hikey960_gpio_release(hikey);
+    hikey960_mmio_release(hikey);
     return status;
 }
 
 static void hikey960_release(void* ctx) {
     hikey960_t* hikey = ctx;
 
-    hi3660_release(hikey);
+    hikey960_gpio_release(hikey);
+    hikey960_mmio_release(hikey);
     zx_handle_close(hikey->bti_handle);
     free(hikey);
 }
@@ -143,13 +140,13 @@ static int hikey960_start_thread(void* arg) {
     }
 
     // must be after hikey960_i2c_init
-    status = hi3660_dsi_init(hikey);
+    status = hikey960_dsi_init(hikey);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "hi3660_dsi_init failed\n");
+        zxlogf(ERROR, "hikey960_dsi_init failed\n");
     }
 
     if ((status = hikey960_add_devices(hikey)) != ZX_OK) {
-        zxlogf(ERROR, "hikey960_bind: hi3660_add_devices failed!\n");;
+        zxlogf(ERROR, "hikey960_bind: hikey960_add_devices failed!\n");;
     }
 
     return ZX_OK;
@@ -188,9 +185,9 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
 
     // TODO(voydanoff) get from platform bus driver somehow
     zx_handle_t resource = get_root_resource();
-    status = hi3660_init(hikey, resource);
+    status = hikey960_init(hikey, resource);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "hikey960_bind: hi3660_init failed %d\n", status);
+        zxlogf(ERROR, "hikey960_bind: hikey960_init failed %d\n", status);
         goto fail;
     }
 

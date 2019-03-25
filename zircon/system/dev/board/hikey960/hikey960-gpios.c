@@ -30,7 +30,7 @@ static pl061_gpios_t* find_gpio(hikey960_t* hikey, uint32_t index) {
     return NULL;
 }
 
-static zx_status_t hi3660_gpio_config_in(void* ctx, uint32_t index, uint32_t flags) {
+static zx_status_t hikey960_gpio_config_in(void* ctx, uint32_t index, uint32_t flags) {
     hikey960_t* hikey = ctx;
     pl061_gpios_t* gpios = find_gpio(hikey, index);
     if (!gpios) {
@@ -39,7 +39,7 @@ static zx_status_t hi3660_gpio_config_in(void* ctx, uint32_t index, uint32_t fla
     return pl061_proto_ops.config_in(gpios, index, flags);
 }
 
-static zx_status_t hi3660_gpio_config_out(void* ctx, uint32_t index, uint8_t initial_value) {
+static zx_status_t hikey960_gpio_config_out(void* ctx, uint32_t index, uint8_t initial_value) {
     hikey960_t* hikey = ctx;
     pl061_gpios_t* gpios = find_gpio(hikey, index);
     if (!gpios) {
@@ -48,11 +48,11 @@ static zx_status_t hi3660_gpio_config_out(void* ctx, uint32_t index, uint8_t ini
     return pl061_proto_ops.config_out(gpios, index, initial_value);
 }
 
-static zx_status_t hi3660_gpio_set_alt_function(void* ctx, uint32_t index, uint64_t function) {
+static zx_status_t hikey960_gpio_set_alt_function(void* ctx, uint32_t index, uint64_t function) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t hi3660_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
+static zx_status_t hikey960_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
     hikey960_t* hikey = ctx;
     pl061_gpios_t* gpios = find_gpio(hikey, index);
     if (!gpios) {
@@ -61,7 +61,7 @@ static zx_status_t hi3660_gpio_read(void* ctx, uint32_t index, uint8_t* out_valu
     return pl061_proto_ops.read(gpios, index, out_value);
 }
 
-static zx_status_t hi3660_gpio_write(void* ctx, uint32_t index, uint8_t value) {
+static zx_status_t hikey960_gpio_write(void* ctx, uint32_t index, uint8_t value) {
     hikey960_t* hikey = ctx;
     pl061_gpios_t* gpios = find_gpio(hikey, index);
     if (!gpios) {
@@ -70,28 +70,28 @@ static zx_status_t hi3660_gpio_write(void* ctx, uint32_t index, uint8_t value) {
     return pl061_proto_ops.write(gpios, index, value);
 }
 
-static zx_status_t hi3660_gpio_get_interrupt(void* ctx, uint32_t pin, uint32_t flags,
+static zx_status_t hikey960_gpio_get_interrupt(void* ctx, uint32_t pin, uint32_t flags,
                                              zx_handle_t* out_handle) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t hi3660_gpio_release_interrupt(void* ctx, uint32_t pin) {
+static zx_status_t hikey960_gpio_release_interrupt(void* ctx, uint32_t pin) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static zx_status_t hi3660_gpio_set_polarity(void* ctx, uint32_t pin, uint32_t polarity) {
+static zx_status_t hikey960_gpio_set_polarity(void* ctx, uint32_t pin, uint32_t polarity) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
 static gpio_impl_protocol_ops_t gpio_ops = {
-    .config_in = hi3660_gpio_config_in,
-    .config_out = hi3660_gpio_config_out,
-    .set_alt_function = hi3660_gpio_set_alt_function,
-    .read = hi3660_gpio_read,
-    .write = hi3660_gpio_write,
-    .get_interrupt = hi3660_gpio_get_interrupt,
-    .release_interrupt = hi3660_gpio_release_interrupt,
-    .set_polarity = hi3660_gpio_set_polarity,
+    .config_in = hikey960_gpio_config_in,
+    .config_out = hikey960_gpio_config_out,
+    .set_alt_function = hikey960_gpio_set_alt_function,
+    .read = hikey960_gpio_read,
+    .write = hikey960_gpio_write,
+    .get_interrupt = hikey960_gpio_get_interrupt,
+    .release_interrupt = hikey960_gpio_release_interrupt,
+    .set_polarity = hikey960_gpio_set_polarity,
 };
 
 typedef struct {
@@ -171,7 +171,7 @@ static const gpio_block_t gpio_blocks[] = {
     },
 };
 
-zx_status_t hi3660_gpio_init(hikey960_t* hikey) {
+zx_status_t hikey960_gpio_init(hikey960_t* hikey) {
     zx_status_t status;
     zx_handle_t resource = get_root_resource();
 
@@ -186,7 +186,7 @@ zx_status_t hi3660_gpio_init(hikey960_t* hikey) {
         status = mmio_buffer_init_physical(&gpios->buffer, block->base, block->length,
                                            resource, ZX_CACHE_POLICY_UNCACHED_DEVICE);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "hi3660_gpio_init: mmio_buffer_init_physical failed %d\n", status);
+            zxlogf(ERROR, "hikey960_gpio_init: mmio_buffer_init_physical failed %d\n", status);
             free(gpios);
             return status;
         }
@@ -205,7 +205,7 @@ zx_status_t hi3660_gpio_init(hikey960_t* hikey) {
     return ZX_OK;
 }
 
-void hi3660_gpio_release(hikey960_t* hikey) {
+void hikey960_gpio_release(hikey960_t* hikey) {
     pl061_gpios_t* gpios;
 
     while ((gpios = list_remove_head_type(&hikey->gpios, pl061_gpios_t, node)) != NULL) {

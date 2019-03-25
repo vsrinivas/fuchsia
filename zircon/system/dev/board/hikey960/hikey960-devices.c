@@ -139,7 +139,7 @@ static const pbus_mmio_t clk_mmios[] = {
     },
 };
 
-static const pbus_dev_t hi3660_clk_dev = {
+static const pbus_dev_t hikey960_clk_dev = {
     .name = "hi3660-clk",
     .vid = PDEV_VID_96BOARDS,
     .did = PDEV_DID_HI3660_CLK,
@@ -210,7 +210,7 @@ static const pbus_dev_t hi_display_dev = {
 zx_status_t hikey960_add_devices(hikey960_t* hikey) {
     zx_status_t status;
 
-    if ((status = pbus_protocol_device_add(&hikey->pbus, ZX_PROTOCOL_CLOCK_IMPL, &hi3660_clk_dev))
+    if ((status = pbus_protocol_device_add(&hikey->pbus, ZX_PROTOCOL_CLOCK_IMPL, &hikey960_clk_dev))
             != ZX_OK) {
         zxlogf(ERROR, "hikey960_add_devices could not add clk_dev: %d\n", status);
     }

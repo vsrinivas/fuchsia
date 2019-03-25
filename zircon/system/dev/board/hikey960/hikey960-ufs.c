@@ -13,7 +13,7 @@
 #define set_bits(v, a) writel(readl(a) | (v), (a))
 #define clr_bits(v, a) writel(readl(a) & (uint32_t) ~(v), (a))
 
-zx_status_t hi3660_ufs_clock_init(hikey960_t* hikey) {
+zx_status_t hikey960_ufs_clock_init(hikey960_t* hikey) {
     volatile void* ufs_sctrl = hikey->ufs_sctrl.vaddr;
     volatile void* peri_crg = hikey->peri_crg.vaddr;
     volatile void* pctrl = hikey->pctrl.vaddr;
@@ -38,7 +38,7 @@ zx_status_t hi3660_ufs_clock_init(hikey960_t* hikey) {
     return ZX_OK;
 }
 
-zx_status_t hi3660_ufs_soc_init(hikey960_t* hikey) {
+zx_status_t hikey960_ufs_soc_init(hikey960_t* hikey) {
     volatile void* ufs_sctrl = hikey->ufs_sctrl.vaddr;
     volatile void* peri_crg = hikey->peri_crg.vaddr;
     uint32_t val;
@@ -112,15 +112,15 @@ zx_status_t hi3660_ufs_soc_init(hikey960_t* hikey) {
     return ZX_OK;
 }
 
-zx_status_t hi3660_ufs_init(hikey960_t* hikey) {
+zx_status_t hikey960_ufs_init(hikey960_t* hikey) {
     zx_status_t status;
 
-    status = hi3660_ufs_clock_init(hikey);
+    status = hikey960_ufs_clock_init(hikey);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    status = hi3660_ufs_soc_init(hikey);
+    status = hikey960_ufs_soc_init(hikey);
     if (status != ZX_OK) {
         goto fail;
     }
