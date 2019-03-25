@@ -18,10 +18,10 @@
 #define GPIO_22_ADDR    0xfff0b000
 #define GPIO_28_ADDR    0xfff1d000
 
-static pl061_gpios_t* find_gpio(hi3660_t* hi3660, uint32_t index) {
+static pl061_gpios_t* find_gpio(hikey960_t* hikey, uint32_t index) {
     pl061_gpios_t* gpios;
     // TODO(voydanoff) consider using a fancier data structure here
-    list_for_every_entry(&hi3660->gpios, gpios, pl061_gpios_t, node) {
+    list_for_every_entry(&hikey->gpios, gpios, pl061_gpios_t, node) {
         if (index >= gpios->gpio_start && index < gpios->gpio_start + gpios->gpio_count) {
             return gpios;
         }
@@ -31,8 +31,8 @@ static pl061_gpios_t* find_gpio(hi3660_t* hi3660, uint32_t index) {
 }
 
 static zx_status_t hi3660_gpio_config_in(void* ctx, uint32_t index, uint32_t flags) {
-    hi3660_t* hi3660 = ctx;
-    pl061_gpios_t* gpios = find_gpio(hi3660, index);
+    hikey960_t* hikey = ctx;
+    pl061_gpios_t* gpios = find_gpio(hikey, index);
     if (!gpios) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -40,8 +40,8 @@ static zx_status_t hi3660_gpio_config_in(void* ctx, uint32_t index, uint32_t fla
 }
 
 static zx_status_t hi3660_gpio_config_out(void* ctx, uint32_t index, uint8_t initial_value) {
-    hi3660_t* hi3660 = ctx;
-    pl061_gpios_t* gpios = find_gpio(hi3660, index);
+    hikey960_t* hikey = ctx;
+    pl061_gpios_t* gpios = find_gpio(hikey, index);
     if (!gpios) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -53,8 +53,8 @@ static zx_status_t hi3660_gpio_set_alt_function(void* ctx, uint32_t index, uint6
 }
 
 static zx_status_t hi3660_gpio_read(void* ctx, uint32_t index, uint8_t* out_value) {
-    hi3660_t* hi3660 = ctx;
-    pl061_gpios_t* gpios = find_gpio(hi3660, index);
+    hikey960_t* hikey = ctx;
+    pl061_gpios_t* gpios = find_gpio(hikey, index);
     if (!gpios) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -62,8 +62,8 @@ static zx_status_t hi3660_gpio_read(void* ctx, uint32_t index, uint8_t* out_valu
 }
 
 static zx_status_t hi3660_gpio_write(void* ctx, uint32_t index, uint8_t value) {
-    hi3660_t* hi3660 = ctx;
-    pl061_gpios_t* gpios = find_gpio(hi3660, index);
+    hikey960_t* hikey = ctx;
+    pl061_gpios_t* gpios = find_gpio(hikey, index);
     if (!gpios) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -171,7 +171,7 @@ static const gpio_block_t gpio_blocks[] = {
     },
 };
 
-zx_status_t hi3660_gpio_init(hi3660_t* hi3660) {
+zx_status_t hi3660_gpio_init(hikey960_t* hikey) {
     zx_status_t status;
     zx_handle_t resource = get_root_resource();
 
@@ -196,19 +196,19 @@ zx_status_t hi3660_gpio_init(hi3660_t* hi3660) {
         gpios->gpio_count = block->pin_count;
         gpios->irqs = block->irqs;
         gpios->irq_count = block->irq_count;
-        list_add_tail(&hi3660->gpios, &gpios->node);
+        list_add_tail(&hikey->gpios, &gpios->node);
     }
 
-    hi3660->gpio.ops = &gpio_ops;
-    hi3660->gpio.ctx = hi3660;
+    hikey->gpio.ops = &gpio_ops;
+    hikey->gpio.ctx = hikey;
 
     return ZX_OK;
 }
 
-void hi3660_gpio_release(hi3660_t* hi3660) {
+void hi3660_gpio_release(hikey960_t* hikey) {
     pl061_gpios_t* gpios;
 
-    while ((gpios = list_remove_head_type(&hi3660->gpios, pl061_gpios_t, node)) != NULL) {
+    while ((gpios = list_remove_head_type(&hikey->gpios, pl061_gpios_t, node)) != NULL) {
         mmio_buffer_release(&gpios->buffer);
         free(gpios);
     }

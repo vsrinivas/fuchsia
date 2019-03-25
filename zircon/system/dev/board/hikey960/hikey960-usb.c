@@ -15,10 +15,10 @@
 #include "hikey960.h"
 #include "hikey960-hw.h"
 
-zx_status_t hi3660_usb_init(hi3660_t* hi3660) {
-    volatile void* usb3otg_bc = hi3660->usb3otg_bc.vaddr;
-    volatile void* peri_crg = hi3660->peri_crg.vaddr;
-    volatile void* pctrl = hi3660->pctrl.vaddr;
+zx_status_t hi3660_usb_init(hikey960_t* hikey) {
+    volatile void* usb3otg_bc = hikey->usb3otg_bc.vaddr;
+    volatile void* peri_crg = hikey->peri_crg.vaddr;
+    volatile void* pctrl = hikey->pctrl.vaddr;
     uint32_t temp;
 
     writel(PERI_CRG_ISODIS_REFCLK_ISO_EN, peri_crg + PERI_CRG_ISODIS);

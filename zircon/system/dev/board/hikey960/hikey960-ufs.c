@@ -13,10 +13,10 @@
 #define set_bits(v, a) writel(readl(a) | (v), (a))
 #define clr_bits(v, a) writel(readl(a) & (uint32_t) ~(v), (a))
 
-zx_status_t hi3660_ufs_clock_init(hi3660_t* hi3660) {
-    volatile void* ufs_sctrl = hi3660->ufs_sctrl.vaddr;
-    volatile void* peri_crg = hi3660->peri_crg.vaddr;
-    volatile void* pctrl = hi3660->pctrl.vaddr;
+zx_status_t hi3660_ufs_clock_init(hikey960_t* hikey) {
+    volatile void* ufs_sctrl = hikey->ufs_sctrl.vaddr;
+    volatile void* peri_crg = hikey->peri_crg.vaddr;
+    volatile void* pctrl = hikey->pctrl.vaddr;
 
     writel(PERI_CRG_UFS_IO, peri_crg + PERI_CRG_UFS_ISODIS);
 
@@ -38,9 +38,9 @@ zx_status_t hi3660_ufs_clock_init(hi3660_t* hi3660) {
     return ZX_OK;
 }
 
-zx_status_t hi3660_ufs_soc_init(hi3660_t* hi3660) {
-    volatile void* ufs_sctrl = hi3660->ufs_sctrl.vaddr;
-    volatile void* peri_crg = hi3660->peri_crg.vaddr;
+zx_status_t hi3660_ufs_soc_init(hikey960_t* hikey) {
+    volatile void* ufs_sctrl = hikey->ufs_sctrl.vaddr;
+    volatile void* peri_crg = hikey->peri_crg.vaddr;
     uint32_t val;
 
     /* HC reset_n enable */
@@ -112,15 +112,15 @@ zx_status_t hi3660_ufs_soc_init(hi3660_t* hi3660) {
     return ZX_OK;
 }
 
-zx_status_t hi3660_ufs_init(hi3660_t* hi3660) {
+zx_status_t hi3660_ufs_init(hikey960_t* hikey) {
     zx_status_t status;
 
-    status = hi3660_ufs_clock_init(hi3660);
+    status = hi3660_ufs_clock_init(hikey);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    status = hi3660_ufs_soc_init(hi3660);
+    status = hi3660_ufs_soc_init(hikey);
     if (status != ZX_OK) {
         goto fail;
     }

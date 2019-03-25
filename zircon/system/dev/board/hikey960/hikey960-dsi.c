@@ -11,8 +11,8 @@
 
 #include "hikey960.h"
 
-zx_status_t hi3660_dsi_init(hi3660_t* hi3660) {
-    volatile void* peri_crg = hi3660->peri_crg.vaddr;
+zx_status_t hi3660_dsi_init(hikey960_t* hikey) {
+    volatile void* peri_crg = hikey->peri_crg.vaddr;
     uint32_t temp;
 
     writel(0x30000000, peri_crg + PERRSTDIS3);

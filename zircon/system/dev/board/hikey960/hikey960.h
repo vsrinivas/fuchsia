@@ -38,9 +38,6 @@ typedef struct {
     mmio_buffer_t ufs_sctrl;
 } hikey960_t;
 
-// temporary.
-typedef hikey960_t hi3660_t;
-
 // hikey960-devices.c
 zx_status_t hikey960_add_devices(hikey960_t* bus);
 
@@ -48,21 +45,21 @@ zx_status_t hikey960_add_devices(hikey960_t* bus);
 zx_status_t hikey960_sysmem_init(hikey960_t* hikey);
 
 // hikey960-i2c.c
-zx_status_t hi3660_i2c1_init(hi3660_t* hi3660);
-zx_status_t hi3660_i2c_pinmux(hi3660_t* hi3660);
-zx_status_t hi3660_enable_ldo(hi3660_t* hi3660);
+zx_status_t hi3660_i2c1_init(hikey960_t* hikey);
+zx_status_t hi3660_i2c_pinmux(hikey960_t* hikey);
+zx_status_t hi3660_enable_ldo(hikey960_t* hikey);
 zx_status_t hikey960_i2c_init(hikey960_t* bus);
 
 // hikey960-usb.c
-zx_status_t hi3660_usb_init(hi3660_t* hi3660);
+zx_status_t hi3660_usb_init(hikey960_t* hikey);
 zx_status_t hikey960_usb_init(hikey960_t* hikey);
 
 // hikey960-gpios.c
-zx_status_t hi3660_gpio_init(hi3660_t* hi3660);
-void hi3660_gpio_release(hi3660_t* hi3660);
+zx_status_t hi3660_gpio_init(hikey960_t* hikey);
+void hi3660_gpio_release(hikey960_t* hikey);
 
 // hikey960-dsi.c
-zx_status_t hi3660_dsi_init(hi3660_t* hi3660);
+zx_status_t hi3660_dsi_init(hikey960_t* hikey);
 
 // hikey960-ufs.c
-zx_status_t hi3660_ufs_init(hi3660_t* hi3660);
+zx_status_t hi3660_ufs_init(hikey960_t* hikey);
