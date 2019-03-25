@@ -16,7 +16,7 @@
 
    ```shell
    export FUCHSIA_DIR=/path/to/fuchsia-dir
-   fx set x64
+   fx set core.x64
    ```
 
 1. Update your vim startup file

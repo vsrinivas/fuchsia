@@ -46,11 +46,10 @@ At this point, you're ready to build Fuchsia and test that your benchmark runs
 successfully. Run the following in a shell:
 
 ```sh
-fx set-petal $layer
 jiri update -gc
 # Benchmarks are not included in production packages, so use $layer/packages/kitchen_sink
 # or they will not be built.
-fx set <arch> --monolith $layer/packages/kitchen_sink
+fx set core.<board> --with //bundles:kitchen_sink
 fx full-build && fx run
 ```
 

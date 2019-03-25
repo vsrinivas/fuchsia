@@ -10,16 +10,16 @@ To access this data, add the feature "build-info" to the [component manifest](..
 `/config/build-info/product`
 
 ## Description
-String describing the product configuration used at build time.  Defaults to the value passed to “--products” in fx set.
-Example: “garnet/products/default.gni”, “topaz/products/dashboard.gni”
+String describing the product configuration used at build time.  Defaults to the value passed as PRODUCT in fx set.
+Example: “products/core.gni”, “products/workstation.gni”
 
 # Board
 ## Location
 `/config/build-info/board`
 
 ## Description
-String describing the board configuration used at build time to specify the target hardware.  Defaults to the value passed to “--boards” in fx set.
-Example: “garnet/boards/x64.gni”
+String describing the board configuration used at build time to specify the target hardware.  Defaults to the value passed as BOARD in fx set.
+Example: “boards/x64.gni”
 
 # Version
 ## Location

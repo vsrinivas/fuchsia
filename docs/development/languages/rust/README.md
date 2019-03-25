@@ -19,7 +19,7 @@ If you want to test out Fuchsia with your own custom-built versions of rustc or
 cargo, you can set the `rustc_prefix` argument to `fx set`, like this:
 
 ```
-fx set x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
+fx set core.x64 --release --args "rustc_prefix=\"/path/to/bin/dir\""
 ```
 
 ## Cargo.toml

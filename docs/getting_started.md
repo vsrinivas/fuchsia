@@ -54,7 +54,7 @@ the `fx` command should already be in your path. If not, the command is also
 available as `scripts/fx`.
 
 ```
-fx set x64 --available bundles/kitchen_sink
+fx set core.x64 --with //bundles:kitchen_sink
 fx full-build
 ```
 
@@ -79,9 +79,9 @@ you want something else.
 Run `fx set` to see a list of build options. Some examples:
 
 ```
-fx set x64                 # x64 debug build
-fx set arm64               # arm64 debug build
-fx set x64 --release       # x64 release build
+fx set workstation.x64     # x64 debug build
+fx set core.arm64          # arm64 debug build
+fx set core.x64 --release  # x64 release build
 ```
 
 #### [optional] Accelerate builds with `ccache` and `goma`

@@ -42,11 +42,9 @@ rm -f -- "${FUCHSIA_DIR}/.jiri_manifest"
 "${jiri}" import -name=integration flower https://fuchsia.googlesource.com/integration
 "${jiri}" override "${petal}" "https://fuchsia.googlesource.com/${petal}"
 
-echo "Configured jiri for ${petal}. Run these commands to update your build:"
+echo "Configured jiri for ${petal}. Run these commands to update your tree:"
 
 cat <<END
  * jiri update -gc     # Updates your source tree to contain ${petal} and
                        # removes unneeded repositories.
- * fx set x64          # Updates your build directory to build ${petal}.
- * fx full-build       # Actually builds ${petal}
 END

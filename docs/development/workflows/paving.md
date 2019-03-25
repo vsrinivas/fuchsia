@@ -99,4 +99,4 @@ system paved on the target between local booting and Zedboot for network
 booting. By default the system boots locally with a 1-second delay in Gigaboot
 to allow you to select a different mode. To change this default to Zedboot,
 supply the `always_zedboot` argument when calling your set command, for example
-`fx set <target_type> --args "always_zedboot=true"`.
+`fx set <goal> --args "always_zedboot=true"`.

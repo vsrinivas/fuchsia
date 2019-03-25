@@ -8,7 +8,7 @@
 ## usage: fx list-products
 ##
 ## Lists all products that are available for building. These are names that
-## can be passed to `fx set --product`
+## can be passed to `fx set`
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 

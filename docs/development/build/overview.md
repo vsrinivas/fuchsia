@@ -81,19 +81,17 @@ For a list of all options, run `build-zircon.sh -h`. See Zircon's
 Then configure the content of the generated image by choosing the top level
 product to build:
 ```
-# --product can be omitted to use the defaults, which is
-# $layer/products/default.gni.
-$ buildtools/gn gen out/x64 --args='import("//products/core.gni") monolith+=["garnet/packages/my_stuff"]'
+$ buildtools/gn gen out/default --args='import("//boards/x64.gni") import("//products/core.gni")'
 ```
 
-This will create an `out/x64` directory containing Ninja files.
+This will create an `out/default` directory containing Ninja files.
 
 The equivalent fx set command is:
 ```
-$ scripts/fx set x64 --product core --monolith garnet/packages/my_stuff
+$ scripts/fx set core.x64
 ```
 
-For a list of all GN build arguments, run `buildtools/gn args out/x64 --list`.
+For a list of all GN build arguments, run `buildtools/gn args out/default --list`.
 For documentation on the `select_variant` argument, see [Variants](variants.md).
 
 ### C
@@ -136,13 +134,13 @@ $ dot -Tpng tree.dot -o tree.png
 ### Inspecting the content of a GN target
 
 ```bash
-$ buildtools/gn desc out/x64 //path/to/my:target
+$ buildtools/gn desc out/default //path/to/my:target
 ```
 
 ### Finding references to a GN target
 
 ```bash
-$ buildtools/gn refs out/x64 //path/to/my:target
+$ buildtools/gn refs out/default //path/to/my:target
 ```
 
 ### Referencing targets for the build host
@@ -165,7 +163,7 @@ file:
 If a target is defined in a GN build file as `//foo/bar/blah:dash`, that target
 (and its dependencies) can be built with:
 ```bash
-$ buildtools/ninja -C out/x64 -j64 foo/bar/blah:dash
+$ buildtools/ninja -C out/default -j64 foo/bar/blah:dash
 ```
 Note that this only works for targets in the default toolchain.
 
@@ -180,7 +178,7 @@ $ buildtools/gn help ninja_rules
 You can also browse the set of Ninja targets currently defined in your output
 directory with:
 ```bash
-$ buildtools/ninja -C out/x64 -t browse
+$ buildtools/ninja -C out/default -t browse
 ```
 Note that the presence of a Ninja target does not mean it will be built - for
 that it needs to depend on the “default” target.

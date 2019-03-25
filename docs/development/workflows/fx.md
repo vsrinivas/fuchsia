@@ -53,7 +53,6 @@ build Fuchsia, and then get it onto a device. `fx` has some commands to help
 with this:
 
 * `fx set` [configure a build](#configure-a-build)
-* `fx set2` [configure a build (BETA)](#configure-a-build-beta)
 * `fx full-build` [execute a build](#execute-a-build)
 * `fx flash ; fx mkzedboot` [flash a target; or prepare a zedboot USB key](#flash-a-board)
 * `fx serve` [serve a build](#serve-a-build)
@@ -72,15 +71,6 @@ First let's configure the build. To do this we need to make a few choices:
 
 ## Configure a build
 
-Armed with our above choices (if you didn't read above, do so now), you are
-ready to configure your build:
-
-```shell
-$ fx set x64 --product workstation --board x64 --preinstall bundles/tools --available bundles/tests
-```
-
-## Configure a build (BETA)
-
 *We are working on a new command for configuring a build. This section describes
 the new command, which is currently being beta-tested.*
 
@@ -88,7 +78,7 @@ Armed with our above choices (if you didn't read above, do so now), you are
 ready to configure your build:
 
 ```shell
-$ fx set2 workstation.x64 --with //bundles:tools,//bundles:tests
+$ fx set workstation.x64 --with //bundles:tools,//bundles:tests
 ```
 
 This command stores the configuration in an `args.gn` file in the build
@@ -449,11 +439,11 @@ keep several different devices in several build configurations, and could be
 setup as follows:
 
 ```shell
-$ fx set x64 out/workstation --product workstation
+$ fx set workstation.x64 --build-dir out/workstation
 $ fx full-build
 $ fx set-device <workstation-node-name>
 
-$ fx set arm64 out/core --product core
+$ fx set core.arm64 --build-dir out/core
 $ fx full-build
 $ fx set-device <core-node-name>
 
@@ -463,14 +453,6 @@ $ fx --dir=out/workstation serve
 # connect to a shell on that device:
 $ fx use out/core
 $ fx shell
-```
-
-If you are using the `fx set2` command, which will eventually replace `fx set`,
-the corresponding commands are below:
-
-```shell
-$ fx set2 workstation.x64 --build-dir out/workstation
-$ fx set2 core.arm64 --build-dir out/core
 ```
 
 Additionally, for users who wish to execute a command against a single

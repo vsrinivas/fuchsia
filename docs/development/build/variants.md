@@ -19,15 +19,15 @@ detailed GN syntax.  For simple cases, this can just be a list of strings.
 Using `fx set`:
 
 ```sh
-fx set x64 --variant={host_asan,asan/cat,asan/ledger} --board=topaz/boards/x64.gni
+fx set core.x64 --variant={host_asan,asan/cat,asan/ledger}
 ```
 
 Alternatively, you can add or modify the variants on an existing build by
 editing the GN args (substituting your build's GN output directory
-for `out/x64` as necessary):
+for `out/default` as necessary):
 
 ```sh
-./buildtools/gn args out/x64
+./buildtools/gn args out/default
 ```
 
 That command will bring up an editor. Append to that file:

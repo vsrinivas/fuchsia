@@ -107,13 +107,13 @@ under `//out/<build-type>/sdk/archive/<sdk-name>.tar.gz`.
 For example, to build the topaz SDK for x64:
 
 ```sh
-$ fx set x64 --product sdk_image --available //topaz/packages/sdk:topaz \
+$ fx set sdk_image.x64 --with //topaz/packages/sdk:topaz \
   --args build_sdk_archives=true
 $ fx build-zircon
 $ fx build topaz/public/sdk:topaz
 ```
 
-Then the archive file will be in `out/x64/sdk/archive/topaz.tar.gz`.
+Then the archive file will be in `out/default/sdk/archive/topaz.tar.gz`.
 
 ### Adding content to an SDK
 

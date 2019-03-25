@@ -8,7 +8,7 @@ data to your library.
   * Fuchsia: Add a [`fuzz-target`][gn fuzz target] and [`fuzz-package`][gn fuzz package] to the
   library's BUILD.gn
   * Zircon: Add a [`fuzztest`](#q-how-do-i-create-a-zircon-fuzzer-) to the library's rules.mk.
-1. `fx set --fuzz-with asan`, `fx build`, and boot.
+1. `fx set core.x64 --fuzz-with asan`, `fx build`, and boot.
 1. Run `fx fuzz list` to display fuzzers.
 1. Run `fx fuzz start <fuzzer>` to start a fuzzer.
 1. Run `fx fuzz check <fuzzer>` to see if the fuzzer found crashes.
@@ -260,7 +260,7 @@ __IMPORTANT__: The build system will build the fuzz targets __only__ if it is ex
 instrument them for fuzzing with an appropriate sanitizer.  The easiest way to achieve this is using
 the `--fuzz-with <sanitizer>` flag with `fx set`, e.g:
 ```
-$ fx set x64 --fuzz-with asan --monolith garnet/packages/tests/all
+$ fx set core.x64 --fuzz-with asan --with //bundles:tests
 $ fx full-build
 ```
 
@@ -328,7 +328,7 @@ Build this package as you would any other fuzz package, and finally use the `fx 
 include the correct dependencies for you Zircon fuzzer in a Fuchsia build:
 
 ```sh
-$ fx set x64 --fuzz-with asan --monolith garnet/packages/garnet --monolith garnet/packages/tests/zircon
+$ fx set core.x64 --fuzz-with asan --with //garnet/packages/tests:zircon
 $ fx full-build
 $ fx fuzz zbi
 ```

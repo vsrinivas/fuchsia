@@ -8,8 +8,10 @@ have options for less common situations; see `fx help <command>` for details.
 
 The initial build and deploy workflow using `fx` is as follows:
 
-1.  `fx set <arch>`
-    Configures the build for <arch>: one of [x64, arm64].
+1.  `fx set core.x64`
+    Configures the build to build the "core" product on a generic x64 board.
+    See `fx list-products` and `fx list-boards` for lists of available products
+    and boards, respectively.
 1.  `fx full-build`
     Builds Zircon, then the rest of Fuchsia.
 1.  `fx mkzedboot <usb_drive_device_path>`

@@ -280,20 +280,20 @@ combination you pick, we just need to start building Zircon.
 
 ```shell
 # We start with bringup, because it's small, but it doesn't matter which you start with:
-$ fx set x64 out/bringup.x64 --product bringup
+$ fx set bringup.x64 out/bringup.x64
 $ fx --dir=out/bringup.x64 full-build
 ```
 
 Now you have Zircon built, you can start building several other builds concurrently:
 
 ```shell
-$ fx set x64 out/workstation.x64 --product workstation
+$ fx set workstation.x64 out/workstation.x64
 $ fx --dir out/workstation.x64 full-build > workstation.x64.build.log &
 
-$ fx set arm64 out/core.vim2 --product core
+$ fx set core.arm64 out/core.vim2
 $ fx --dir out/core.vim2 full-build > core.vim2.build.log &
 
-$ fx set arm64 out/workstation.vim2 --product workstation
+$ fx set workstation.arm64 out/workstation.vim2
 $ fx --dir out/workstation.vim2 full-build > workstation.vim2.build.log &
 ```
 
