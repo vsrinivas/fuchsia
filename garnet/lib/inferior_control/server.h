@@ -9,8 +9,11 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fxl/macros.h>
 #include <lib/fxl/strings/string_view.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/job.h>
 #include <src/lib/files/unique_fd.h>
+
+#include "garnet/lib/process/process_builder.h"
 
 #include "delegate.h"
 #include "exception_port.h"
@@ -71,6 +74,24 @@ class Server : public Delegate {
   // TODO(PT-105): Delete when exceptions have handles themselves.
   zx_handle_t exception_port_handle() const { return exception_port_.handle(); }
 
+  // Utility to create a new inferior via |process::ProcessBuilder|.
+  // Returns false if there is an error.
+  // |*out_builder| is returned in case the caller wants to add anything
+  // further to the new process. A typical example is to call
+  // |builder->CloneAll()| as no cloning is done yet. |*out_builder| is
+  // intended to be passed to |Process::InitializeFromBuilder|.
+  // TODO(dje): InferiorManager class to manage multiple inferiors, and
+  // creating them.
+  bool CreateProcessViaBuilder(
+      const std::string& path, const debugger_utils::Argv& argv,
+      std::unique_ptr<process::ProcessBuilder>* out_builder);
+
+  // Return a handle to a running process that can be used for debugging.
+  // Returns an invalid object if the process is not found or the handle is
+  // unobtainable.
+  // |pid| is looked up via |job_to_search()|.
+  zx::process FindProcess(zx_koid_t pid);
+
   // Call this to schedule termination of the server.
   // N.B. The Server will exit its main loop asynchronously so any
   // subsequently posted tasks will be dropped.
@@ -94,8 +115,14 @@ class Server : public Delegate {
   // not allowed.
   zx::job job_for_launch_;
 
+  // The services to pass to processes created with
+  // |CreateProcessViaBuilder()|.
+  std::shared_ptr<sys::ServiceDirectory> services_;
+
  protected:
-  Server(zx::job job_for_search, zx::job job_for_launch);
+  Server(zx::job job_for_search, zx::job job_for_launch,
+         std::shared_ptr<sys::ServiceDirectory> services);
+
   virtual ~Server();
 
   // Sets the run status and quits the main message loop.
@@ -131,7 +158,8 @@ class Server : public Delegate {
 // An example use-case is debugserver for gdb.
 class ServerWithIO : public Server, public IOLoop::Delegate {
  protected:
-  ServerWithIO(zx::job job_for_search, zx::job job_for_launch);
+  ServerWithIO(zx::job job_for_search, zx::job job_for_launch,
+               std::shared_ptr<sys::ServiceDirectory> services);
   virtual ~ServerWithIO();
 
   // The IOLoop used for blocking I/O operations over |client_sock_|.

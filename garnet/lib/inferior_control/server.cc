@@ -13,6 +13,7 @@
 #include <lib/fxl/strings/string_printf.h>
 
 #include "garnet/lib/debugger_utils/breakpoints.h"
+#include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/threads.h"
 #include "garnet/lib/debugger_utils/util.h"
 
@@ -20,10 +21,12 @@
 
 namespace inferior_control {
 
-Server::Server(zx::job job_for_search, zx::job job_for_launch)
+Server::Server(zx::job job_for_search, zx::job job_for_launch,
+               std::shared_ptr<sys::ServiceDirectory> services)
     : Delegate(this),
       job_for_search_(std::move(job_for_search)),
       job_for_launch_(std::move(job_for_launch)),
+      services_(std::move(services)),
       message_loop_(&kAsyncLoopConfigNoAttachToThread),
       exception_port_(message_loop_.dispatcher(),
                       fit::bind_member(this, &Server::OnProcessException),
@@ -31,6 +34,34 @@ Server::Server(zx::job job_for_search, zx::job job_for_launch)
       run_status_(true) {}
 
 Server::~Server() {}
+
+bool Server::CreateProcessViaBuilder(
+    const std::string& path, const debugger_utils::Argv& argv,
+    std::unique_ptr<process::ProcessBuilder>* out_builder) {
+  FXL_DCHECK(!argv.empty());
+  zx_status_t status = debugger_utils::CreateProcessBuilder(
+      job_for_launch_, argv[0], argv, services_, out_builder);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Unable to initialize process builder: "
+                   << debugger_utils::ZxErrorString(status);
+    return false;
+  }
+
+  return true;
+}
+
+zx::process Server::FindProcess(zx_koid_t pid) {
+  if (!job_for_search_) {
+    FXL_LOG(ERROR) << "No job for searching processes";
+    return zx::process{};
+  }
+
+  zx::process process = debugger_utils::FindProcess(job_for_search_, pid);
+  if (!process) {
+    FXL_LOG(ERROR) << "Cannot find process " << pid;
+  }
+  return process;
+}
 
 void Server::SetCurrentThread(Thread* thread) {
   if (!thread)
@@ -160,7 +191,10 @@ void Server::OnProcessSignal(const zx_port_packet_t& packet) {
 
   Thread* thread = process->FindThreadById(key);
   if (thread == nullptr) {
-    FXL_LOG(WARNING) << "Unexpected signal key: " << key;
+    // If the process is gone this is expected.
+    if (process->state() != Process::State::kGone) {
+      FXL_LOG(WARNING) << "Unexpected signal, key " << key;
+    }
     return;
   }
   thread->OnSignal(packet.signal.observed);
@@ -170,8 +204,10 @@ void Server::OnProcessSignal(const zx_port_packet_t& packet) {
   }
 }
 
-ServerWithIO::ServerWithIO(zx::job job_for_search, zx::job job_for_launch)
-    : Server(std::move(job_for_search), std::move(job_for_launch)),
+ServerWithIO::ServerWithIO(zx::job job_for_search, zx::job job_for_launch,
+                           std::shared_ptr<sys::ServiceDirectory> services)
+    : Server(std::move(job_for_search), std::move(job_for_launch),
+             std::move(services)),
       client_sock_(-1) {}
 
 ServerWithIO::~ServerWithIO() {

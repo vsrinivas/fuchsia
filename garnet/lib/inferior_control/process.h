@@ -9,7 +9,9 @@
 #include <string>
 #include <unordered_map>
 
+#include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
+#include <lib/zx/process.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/time.h>
 #include <zircon/syscalls/exception.h>
@@ -36,26 +38,18 @@ class Process final {
  public:
   enum class State { kNew, kStarting, kRunning, kGone };
 
+  using StartCallback = fit::function<zx_status_t(Process*)>;
+
   // This value is used as the return code if something prevents us from
   // obtaining it from the process.
   static constexpr int kDefaultFailureReturnCode = -1;
 
   static const char* StateName(Process::State state);
 
-  explicit Process(Server* server, Delegate* delegate_,
-                   std::shared_ptr<sys::ServiceDirectory> services);
+  explicit Process(Server* server, Delegate* delegate_);
   ~Process();
 
   std::string GetName() const;
-
-  // Note: This includes the program in |argv[0]|.
-  const debugger_utils::Argv& argv() { return argv_; }
-  void set_argv(const debugger_utils::Argv& argv) { argv_ = argv; }
-
-  // Add extra handles to the process.
-  //
-  // Must be called before |Initialize|.
-  void AddStartupHandle(fuchsia::process::HandleInfo handle);
 
   // Returns the current state of this process.
   State state() const { return state_; }
@@ -64,24 +58,23 @@ class Process final {
   void set_state(State new_state);
 
   int return_code() const { return return_code_; }
-  bool return_code_set() const { return return_code_set_; }
+  bool return_code_is_set() const { return return_code_is_set_; }
 
-  // Creates and initializes the inferior process, via ProcessBuilder, but does
-  // not start it. set_argv() must have already been called.
-  // This also "attaches" to the inferior: A debug-capable process handle is
-  // obtained and the debugger exception port is bound to.
+  // Initialize a new inferior process that was built using |ProcessBuilder|.
   // Returns false if there is an error.
   // Do not call this if the process is currently live (state is kStarting or
   // kRunning).
-  bool Initialize();
+  bool InitializeFromBuilder(std::unique_ptr<process::ProcessBuilder> builder);
 
-  // Attach to running program with pid |pid|.
-  // A debug-capable process handle is obtained and the debugger exception
-  // port is bound to.
+  // Attach to newly created process |process|.
+  // |start_callback| is called by |Start()| to start execution of the process.
+  bool AttachToNew(zx::process process, StartCallback start_callback);
+
+  // Attach to running program |process|.
   // Returns false if there is an error.
   // Do not call this if the process is currently live (state is kStarting or
   // kRunning).
-  bool Attach(zx_koid_t pid);
+  bool AttachToRunning(zx::process process);
 
   // Detach from an attached process, and return to pre-attached state.
   // This includes unbinding from the exception port and closing the process
@@ -100,7 +93,8 @@ class Process final {
   bool Detach();
 
   // Starts running the process. Returns false in case of an error.
-  // Initialize() MUST be called successfully before calling Start().
+  // |AttachToNew()| MUST be called successfully before calling Start().
+  // |InitializeFromBuilder| does this implicitly.
   bool Start();
 
   // Terminate the process.
@@ -125,7 +119,7 @@ class Process final {
 
   // Returns the process handle. This handle is owned and managed by this
   // Process instance, thus the caller should not close the handle.
-  zx_handle_t handle() const { return handle_; }
+  const zx::process& process() const { return process_; }
 
   // Returns the process ID.
   zx_koid_t id() const { return id_; }
@@ -276,20 +270,20 @@ class Process final {
   friend class Server;
   void OnExceptionOrSignal(const zx_port_packet_t& packet);
 
-  // Debug handle mgmt.
-  bool AllocDebugHandle(process::ProcessBuilder* builder);
-  bool AllocDebugHandle(zx_koid_t pid);
-  void CloseDebugHandle();
-
   // Exception port mgmt.
   bool BindExceptionPort();
   void UnbindExceptionPort();
+
+  // Helper routine to implement |AttachToNew(),AttachToRunning()|.
+  bool AttachWorker(zx::process process, bool attach_running);
 
   // Detach from the inferior, but don't clear out any data structures.
   void RawDetach();
 
   // Release all resources held by the process.
   // Called after all other processing of a process exit has been done.
+  // This does not clear |id_|, that is still retrievable after the process
+  // has terminated.
   void Clear();
 
   // Record new thread |thread_handle,thread_id|.
@@ -304,20 +298,11 @@ class Process final {
   // The delegate that we send life-cycle notifications to (non-owning).
   Delegate* delegate_;
 
-  // Handle containing services available to this process.
-  std::shared_ptr<sys::ServiceDirectory> services_;
-
-  // The argv that this process was initialized with.
-  debugger_utils::Argv argv_;
-
-  // Extra handles to pass to process during creation.
-  std::vector<fuchsia::process::HandleInfo> extra_handles_;
-
-  // The process::ProcessBuilder instance used to bootstrap and run the process.
+  // The process::ProcessBuilder instance used to create and run the process.
   std::unique_ptr<process::ProcessBuilder> builder_;
 
   // The debug-capable handle that we use to invoke zx_debug_* syscalls.
-  zx_handle_t handle_ = ZX_HANDLE_INVALID;
+  zx::process process_;
 
   // The current state of this process.
   State state_ = State::kNew;
@@ -356,6 +341,9 @@ class Process final {
   // Otherwise we're launching a program from scratch.
   bool attached_running_ = false;
 
+  // This callback is invoked by |Start()|.
+  StartCallback start_callback_;
+
   // Suspend token when entire process is suspended.
   zx::suspend_token suspend_token_;
 
@@ -386,7 +374,7 @@ class Process final {
   // Processes are detached from when they exit.
   // Save the return code for later testing.
   int return_code_ = kDefaultFailureReturnCode;
-  bool return_code_set_ = false;
+  bool return_code_is_set_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Process);
 };

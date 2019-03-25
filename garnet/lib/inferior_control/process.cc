@@ -23,44 +23,6 @@
 #include "server.h"
 
 namespace inferior_control {
-namespace {
-
-std::unique_ptr<process::ProcessBuilder> CreateProcessBuilder(
-    zx_handle_t job, const debugger_utils::Argv& argv,
-    std::shared_ptr<sys::ServiceDirectory>& services) {
-  FXL_DCHECK(argv.size() > 0);
-  zx::job builder_job;
-  zx_status_t status = zx_handle_duplicate(job, ZX_RIGHT_SAME_RIGHTS,
-                                           builder_job.reset_and_get_address());
-  if (status != ZX_OK)
-    return nullptr;
-
-  auto builder = std::make_unique<process::ProcessBuilder>(
-      std::move(builder_job), services);
-
-  builder->AddArgs(argv);
-  builder->CloneAll();
-
-  return builder;
-}
-
-zx_koid_t GetProcessId(zx_handle_t process) {
-  zx_info_handle_basic_t info;
-  zx_status_t status = zx_object_get_info(process, ZX_INFO_HANDLE_BASIC, &info,
-                                          sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_object_get_info failed: "
-                   << debugger_utils::ZxErrorString(status);
-    return ZX_KOID_INVALID;
-  }
-
-  FXL_DCHECK(info.type == ZX_OBJ_TYPE_PROCESS);
-  FXL_DCHECK(info.koid != ZX_KOID_INVALID);
-
-  return info.koid;
-}
-
-}  // namespace
 
 // static
 const char* Process::StateName(Process::State state) {
@@ -79,11 +41,9 @@ const char* Process::StateName(Process::State state) {
   return "(unknown)";
 }
 
-Process::Process(Server* server, Delegate* delegate,
-                 std::shared_ptr<sys::ServiceDirectory> services)
+Process::Process(Server* server, Delegate* delegate)
     : server_(server),
       delegate_(delegate),
-      services_(services),
       memory_(
           std::shared_ptr<debugger_utils::ByteBlock>(new ProcessMemory(this))),
       breakpoints_(this) {
@@ -109,32 +69,58 @@ std::string Process::GetName() const {
   return fxl::StringPrintf("%" PRId64, id());
 }
 
-void Process::AddStartupHandle(fuchsia::process::HandleInfo handle) {
-  extra_handles_.push_back(std::move(handle));
+bool Process::InitializeFromBuilder(
+    std::unique_ptr<process::ProcessBuilder> builder) {
+  std::string error_message;
+  zx_status_t status = builder->Prepare(&error_message);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Unable to initialize process: "
+                   << debugger_utils::ZxErrorString(status) << ": "
+                   << error_message;
+    return false;
+  }
+
+  base_address_ = builder->data().base;
+  entry_address_ = builder->data().entry;
+
+  zx::process process;
+  status = builder->data().process.duplicate(ZX_RIGHT_SAME_RIGHTS, &process);
+  FXL_DCHECK(status == ZX_OK);
+
+  if (!AttachToNew(std::move(process),
+                   [builder = std::move(builder)](Process* p) -> zx_status_t {
+        return builder->Start(nullptr);
+      })) {
+    FXL_LOG(ERROR) << "Unable to attach to inferior process";
+    return false;
+  }
+
+  return true;
 }
 
-bool Process::Initialize() {
+bool Process::AttachToNew(zx::process process, StartCallback start_callback) {
+  FXL_DCHECK(process);
+  FXL_DCHECK(start_callback);
+  if (!AttachWorker(std::move(process), false)) {
+    return false;
+  }
+  start_callback_ = std::move(start_callback);
+  return true;
+}
+
+bool Process::AttachToRunning(zx::process process) {
+  FXL_DCHECK(process);
+  return AttachWorker(std::move(process), true);
+}
+
+bool Process::AttachWorker(zx::process process, bool attach_running) {
+  FXL_DCHECK(process);
+
   if (IsAttached()) {
     FXL_LOG(ERROR) << "Cannot initialize, already attached to a process";
     return false;
   }
-
-  if (argv_.size() == 0 || argv_[0].size() == 0) {
-    FXL_LOG(ERROR) << "No program specified";
-    return false;
-  }
-
-  zx_handle_t job = server_->job_for_launch();
-  if (job == ZX_HANDLE_INVALID) {
-    FXL_LOG(ERROR) << "No job in which to launch process";
-    return false;
-  }
-
-  FXL_DCHECK(!builder_);
-  FXL_DCHECK(!handle_);
   FXL_DCHECK(!eport_bound_);
-
-  zx_status_t status;
 
   // The Process object survives run-after-run. Switch Gone back to New.
   switch (state_) {
@@ -148,189 +134,55 @@ bool Process::Initialize() {
       FXL_DCHECK(false);
   }
 
-  FXL_LOG(INFO) << "Initializing process";
+  zx_koid_t pid = debugger_utils::GetKoid(process);
 
-  attached_running_ = false;
-  // There is no thread map yet.
-  thread_map_stale_ = false;
-
-  FXL_LOG(INFO) << "argv: " << debugger_utils::ArgvToString(argv_);
-
-  std::string error_message;
-  builder_ = CreateProcessBuilder(job, argv_, services_);
-
-  if (!builder_) {
-    FXL_LOG(ERROR) << "Failed to create process builder";
-    return false;
+  if (attach_running) {
+    FXL_LOG(INFO) << "Attaching to process " << pid;
+  } else {
+    FXL_LOG(INFO) << "Attaching to new process " << pid;
   }
 
-  builder_->AddHandles(std::move(extra_handles_));
-
-  status = builder_->LoadPath(argv_[0]);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to load binary: " << argv_[0]
-                   << ": " << debugger_utils::ZxErrorString(status);
-    goto fail;
-  }
-
-  FXL_VLOG(1) << "Binary loaded";
-
-  status = builder_->Prepare(&error_message);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to start inferior process: "
-                   << debugger_utils::ZxErrorString(status) << ": "
-                   << error_message;
-    goto fail;
-  }
-
-  if (!AllocDebugHandle(builder_.get())) {
-    goto fail;
-  }
-
-  if (!SetLdsoDebugTrigger()) {
-    goto fail;
-  }
+  FXL_DCHECK(!process_);
+  process_ = std::move(process);
+  id_ = pid;
 
   if (!BindExceptionPort()) {
     goto fail;
   }
-
-  FXL_LOG(INFO) << fxl::StringPrintf("Process created: pid %" PRIu64, id_);
-
-  base_address_ = builder_->data().base;
-  entry_address_ = builder_->data().entry;
-
   FXL_DCHECK(IsAttached());
 
-  FXL_LOG(INFO) << fxl::StringPrintf("Process %" PRIu64
-                                     ": base load address 0x%" PRIxPTR
-                                     ", entry address 0x%" PRIxPTR,
-                                     id_, base_address_, entry_address_);
+  if (!attach_running) {
+    if (!SetLdsoDebugTrigger()) {
+      goto fail;
+    }
+  } else {
+    set_state(State::kRunning);
+    // TODO(dje): Update ldso state (debug_addr_property_, etc.).
+  }
+
+  attached_running_ = attach_running;
+  if (attach_running) {
+    thread_map_stale_ = true;
+  } else {
+    // There is no thread map yet.
+    thread_map_stale_ = false;
+  }
+
+  FXL_VLOG(2) << "Attach complete, pid " << id_;
 
   return true;
 
 fail:
-  // Unbind the eport before closing our process handle so that we have a
-  // handle to unbind with.
   if (eport_bound_) {
     UnbindExceptionPort();
   }
-  if (handle_ != ZX_HANDLE_INVALID) {
-    CloseDebugHandle();
-  }
+  process_.reset();
   id_ = ZX_KOID_INVALID;
-  builder_.reset();
   return false;
 }
 
-// TODO(dje): Merge common parts with Initialize() after things settle down.
-
-bool Process::Attach(zx_koid_t pid) {
-  if (IsAttached()) {
-    FXL_LOG(ERROR) << "Cannot attach, already attached to a process";
-    return false;
-  }
-  if (server_->job_for_search() == ZX_HANDLE_INVALID) {
-    FXL_LOG(ERROR) << "Cannot attach, no job for searching processes";
-    return false;
-  }
-
-  FXL_DCHECK(!builder_);
-  FXL_DCHECK(!handle_);
-  FXL_DCHECK(!eport_bound_);
-
-  // The Process object survives run-after-run. Switch Gone back to New.
-  switch (state_) {
-    case State::kNew:
-      break;
-    case State::kGone:
-      set_state(State::kNew);
-      break;
-    default:
-      // Shouldn't get here if process is currently live.
-      FXL_DCHECK(false);
-  }
-
-  FXL_LOG(INFO) << "Attaching to process " << pid;
-
-  if (!AllocDebugHandle(pid))
-    return false;
-
-  if (!BindExceptionPort()) {
-    CloseDebugHandle();
-    return false;
-  }
-
-  // TODO(dje): Update ldso state (debug_addr_property_, etc.).
-
-  attached_running_ = true;
-  set_state(State::kRunning);
-  thread_map_stale_ = true;
-
-  FXL_DCHECK(IsAttached());
-
-  FXL_LOG(INFO) << fxl::StringPrintf("Attach complete, pid %" PRIu64, id_);
-
-  return true;
-}
-
-bool Process::AllocDebugHandle(process::ProcessBuilder* builder) {
-  FXL_DCHECK(builder);
-
-  zx_handle_t process = builder->data().process.get();
-  FXL_DCHECK(process);
-
-  // |process| is owned by |builder|.
-  // We need our own copy, and ProcessBuilder will give us one, but we need
-  // it before we call ProcessBuilder::Start in order to attach to the debugging
-  // exception port.
-  zx_handle_t debug_process;
-  auto status =
-      zx_handle_duplicate(process, ZX_RIGHT_SAME_RIGHTS, &debug_process);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "zx_handle_duplicate failed: "
-                   << debugger_utils::ZxErrorString(status);
-    return false;
-  }
-
-  id_ = GetProcessId(debug_process);
-  handle_ = debug_process;
-  return true;
-}
-
-bool Process::AllocDebugHandle(zx_koid_t pid) {
-  FXL_DCHECK(pid != ZX_KOID_INVALID);
-  zx_handle_t job = server_->job_for_search();
-  FXL_DCHECK(job != ZX_HANDLE_INVALID);
-  auto process = debugger_utils::FindProcess(job, pid);
-  if (!process.is_valid()) {
-    FXL_LOG(ERROR) << "Cannot find process " << pid;
-    return false;
-  }
-  // TODO(dje): It might be useful to use zx::foo throughout. Baby steps.
-  auto handle = process.release();
-
-  // TODO(armansito): Check that |handle| has ZX_RIGHT_DEBUG (this seems
-  // not to be set by anything at the moment but eventually we should check)?
-
-  // Syscalls shouldn't return ZX_HANDLE_INVALID in the case of ZX_OK.
-  FXL_DCHECK(handle != ZX_HANDLE_INVALID);
-
-  FXL_VLOG(1) << "Handle " << handle << " obtained for process " << pid;
-
-  handle_ = handle;
-  id_ = pid;
-  return true;
-}
-
-void Process::CloseDebugHandle() {
-  FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
-  zx_handle_close(handle_);
-  handle_ = ZX_HANDLE_INVALID;
-}
-
 bool Process::BindExceptionPort() {
-  if (!server_->exception_port().Bind(handle_, id_)) {
+  if (!server_->exception_port().Bind(process_, id_)) {
     FXL_LOG(ERROR) << "Unable to bind process " << id_ << " to exception port";
     return false;
   }
@@ -341,23 +193,22 @@ bool Process::BindExceptionPort() {
 
 void Process::UnbindExceptionPort() {
   FXL_DCHECK(eport_bound_);
-  FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
-  bool success = server_->exception_port().Unbind(handle_, id_);
+  FXL_DCHECK(process_);
+  __UNUSED bool success = server_->exception_port().Unbind(process_, id_);
   FXL_DCHECK(success);
   eport_bound_ = false;
 }
 
 void Process::RawDetach() {
-  // A copy of the handle is kept in ExceptionPort.BindData.
   // We can't close the process handle until we unbind the exception port,
   // so verify it's still open.
-  FXL_DCHECK(handle_);
+  FXL_DCHECK(process_);
   FXL_DCHECK(IsAttached());
 
   FXL_LOG(INFO) << "Detaching from process " << id();
 
   UnbindExceptionPort();
-  CloseDebugHandle();
+  process_.reset();
 }
 
 bool Process::Detach() {
@@ -392,16 +243,15 @@ bool Process::Detach() {
 }
 
 bool Process::Start() {
-  FXL_DCHECK(builder_);
-  FXL_DCHECK(handle_);
+  FXL_DCHECK(process_);
 
   if (state_ != State::kNew) {
     FXL_LOG(ERROR) << "Process already started";
     return false;
   }
 
-  zx_status_t status = builder_->Start(nullptr);
-  builder_.reset();
+  FXL_DCHECK(start_callback_);
+  zx_status_t status = start_callback_(this);
 
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start inferior process: "
@@ -409,6 +259,7 @@ bool Process::Start() {
     return false;
   }
 
+  start_callback_ = StartCallback{};
   set_state(State::kStarting);
   return true;
 }
@@ -430,8 +281,8 @@ bool Process::Kill() {
   // Request the process be killed. Cleanup is handled by the async loop
   // when it receives ZX_PROCESS_TERMINATED.
 
-  FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
-  auto status = zx_task_kill(handle_);
+  FXL_DCHECK(process_);
+  auto status = process_.kill();
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Kill request failed for process " << id() << ": "
                    << debugger_utils::ZxErrorString(status);
@@ -454,8 +305,8 @@ bool Process::RequestSuspend() {
 
   FXL_LOG(INFO) << "Suspending process " << id();
 
-  FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
-  auto status = zx_task_suspend(handle_, suspend_token_.reset_and_get_address());
+  FXL_DCHECK(process_);
+  auto status = process_.suspend(&suspend_token_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to suspend process " << id() << ": "
                    << debugger_utils::ZxErrorString(status);
@@ -497,20 +348,22 @@ void Process::Clear() {
   threads_.clear();
   thread_map_stale_ = false;
 
-  id_ = ZX_KOID_INVALID;
+  // Note: |id_| is intentionally not reset here.
+  process_.reset();
+
   debug_addr_property_ = 0;
   ldso_debug_data_has_initialized_ = false;
   ldso_debug_break_addr_ = 0;
   ldso_debug_map_addr_ = 0;
+
   base_address_ = 0;
   entry_address_ = 0;
   attached_running_ = false;
+  start_callback_ = StartCallback{};
 
   dso_free_list(dsos_);
   dsos_ = nullptr;
   dsos_build_failed_ = false;
-
-  builder_.reset();
 
   // The process may have just exited or whatever. Force the state to kGone.
   set_state(State::kGone);
@@ -534,10 +387,10 @@ bool Process::IsLive() const {
 
 bool Process::IsAttached() const {
   if (eport_bound_) {
-    FXL_DCHECK(handle_ != ZX_HANDLE_INVALID);
+    FXL_DCHECK(process_);
     return true;
   } else {
-    FXL_DCHECK(handle_ == ZX_HANDLE_INVALID);
+    FXL_DCHECK(!process_);
     return false;
   }
 }
@@ -561,7 +414,7 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
     return nullptr;
   }
 
-  FXL_DCHECK(handle_);
+  FXL_DCHECK(process_);
   EnsureThreadMapFresh();
 
   const auto iter = threads_.find(thread_id);
@@ -577,9 +430,9 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
 
   // Try to get a debug capable handle to the child of the current process with
   // a kernel object ID that matches |thread_id|.
-  zx_handle_t thread_handle;
-  zx_status_t status = zx_object_get_child(
-      handle_, thread_id, ZX_RIGHT_SAME_RIGHTS, &thread_handle);
+  zx::thread thread;
+  zx_status_t status = process_.get_child(
+      thread_id, ZX_RIGHT_SAME_RIGHTS, &thread);
   if (status != ZX_OK) {
     // If the process just exited then the thread will be gone. So this is
     // just a debug message, not a warning or error.
@@ -588,7 +441,7 @@ Thread* Process::FindThreadById(zx_koid_t thread_id) {
     return nullptr;
   }
 
-  return AddThread(thread_handle, thread_id);
+  return AddThread(thread.release(), thread_id);
 }
 
 Thread* Process::PickOneThread() {
@@ -601,13 +454,13 @@ Thread* Process::PickOneThread() {
 }
 
 void Process::RefreshAllThreads() {
-  FXL_DCHECK(handle_);
+  FXL_DCHECK(process_);
 
   std::vector<zx_koid_t> threads;
   size_t num_available_threads;
 
   __UNUSED zx_status_t status =
-      debugger_utils::GetProcessThreadKoids(handle_, kRefreshThreadsTryCount,
+      debugger_utils::GetProcessThreadKoids(process_, kRefreshThreadsTryCount,
           kNumExtraRefreshThreads, &threads, &num_available_threads);
   // The only way this can fail is if we have a bug (or the kernel runs out
   // of memory, but we don't try to cope with that case).
@@ -623,16 +476,15 @@ void Process::RefreshAllThreads() {
       // We already have this thread.
       continue;
     }
-    zx_handle_t thread_handle = ZX_HANDLE_INVALID;
-    status = zx_object_get_child(handle_, tid, ZX_RIGHT_SAME_RIGHTS,
-                                 &thread_handle);
+    zx::thread thread_obj;
+    status = process_.get_child(tid, ZX_RIGHT_SAME_RIGHTS, &thread_obj);
     // The only way this can otherwise fail is if we have a bug.
     FXL_DCHECK(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
     if (status == ZX_ERR_NOT_FOUND) {
       // Thread died in the interim.
       continue;
     }
-    __UNUSED Thread* thread = AddThread(thread_handle, tid);
+    __UNUSED Thread* thread = AddThread(thread_obj.release(), tid);
   }
 
   thread_map_stale_ = false;
@@ -665,8 +517,8 @@ bool Process::WriteMemory(uintptr_t address, const void* data, size_t length) {
 
 bool Process::GetDebugAddrProperty(zx_vaddr_t* out_debug_addr) {
   zx_status_t status =
-      zx_object_get_property(handle_, ZX_PROP_PROCESS_DEBUG_ADDR,
-                             out_debug_addr, sizeof(*out_debug_addr));
+      process_.get_property(ZX_PROP_PROCESS_DEBUG_ADDR,
+                            out_debug_addr, sizeof(*out_debug_addr));
   if (status != ZX_OK) {
     FXL_LOG(ERROR)
         << "zx_object_get_property failed, unable to fetch DEBUG_ADDR: "
@@ -678,8 +530,8 @@ bool Process::GetDebugAddrProperty(zx_vaddr_t* out_debug_addr) {
 
 bool Process::SetDebugAddrProperty(zx_vaddr_t debug_addr) {
   zx_status_t status =
-      zx_object_set_property(handle_, ZX_PROP_PROCESS_DEBUG_ADDR,
-                             &debug_addr, sizeof(debug_addr));
+      process_.set_property(ZX_PROP_PROCESS_DEBUG_ADDR,
+                            &debug_addr, sizeof(debug_addr));
   if (status != ZX_OK) {
     FXL_LOG(ERROR)
         << "zx_object_set_property failed, unable to set DEBUG_ADDR: "
@@ -841,10 +693,10 @@ void Process::OnTermination() {
 
 void Process::RecordReturnCode() {
   FXL_DCHECK(state_ == State::kGone);
-  zx_status_t status = debugger_utils::GetProcessReturnCode(handle_,
+  zx_status_t status = debugger_utils::GetProcessReturnCode(process_.get(),
                                                             &return_code_);
   if (status == ZX_OK) {
-    return_code_set_ = true;
+    return_code_is_set_ = true;
     FXL_VLOG(2) << "Process " << GetName() << " exited with return code "
                 << return_code_;
   } else {

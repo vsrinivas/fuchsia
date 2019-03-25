@@ -13,6 +13,7 @@
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/string_view.h"
 
+#include "garnet/lib/debugger_utils/argv.h"
 #include "garnet/lib/inferior_control/exception_port.h"
 #include "garnet/lib/inferior_control/process.h"
 #include "garnet/lib/inferior_control/server.h"
@@ -91,7 +92,7 @@ struct IptConfig {
 // calling methods which modify the internal state of a IptServer instance.
 class IptServer final : public inferior_control::Server {
  public:
-  IptServer(const IptConfig& config);
+  IptServer(const IptConfig& config, const debugger_utils::Argv& argv);
 
   bool Run() override;
 
@@ -117,6 +118,8 @@ class IptServer final : public inferior_control::Server {
                             const zx_exception_context_t& context) override;
 
   IptConfig config_;
+
+  debugger_utils::Argv inferior_argv_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(IptServer);
 };

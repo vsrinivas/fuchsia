@@ -75,7 +75,7 @@ void ExceptionPort::Quit() {
   FXL_DCHECK(eport_);
   FXL_DCHECK(keep_running_);
 
-  FXL_LOG(INFO) << "Quitting exception port loop";
+  FXL_VLOG(2) << "Quitting exception port loop";
 
   keep_running_ = false;
 
@@ -89,19 +89,18 @@ void ExceptionPort::Quit() {
 
   port_thread_.join();
 
-  FXL_LOG(INFO) << "Exception port loop exited";
+  FXL_VLOG(2) << "Exception port loop exited";
 }
 
-bool ExceptionPort::Bind(zx_handle_t process, Key key) {
-  FXL_DCHECK(process != ZX_HANDLE_INVALID);
+bool ExceptionPort::Bind(const zx::process& process, Key key) {
+  FXL_DCHECK(process);
   FXL_DCHECK(key != 0);
   FXL_DCHECK(eport_);
 
   zx_koid_t pid = debugger_utils::GetKoid(process);
 
   zx_status_t status =
-    zx_task_bind_exception_port(process, eport_.get(), key,
-                                ZX_EXCEPTION_PORT_DEBUGGER);
+    process.bind_exception_port(eport_, key, ZX_EXCEPTION_PORT_DEBUGGER);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to bind exception port to process " << pid
                    << ": " << debugger_utils::ZxErrorString(status);
@@ -109,8 +108,8 @@ bool ExceptionPort::Bind(zx_handle_t process, Key key) {
   }
 
   // Also watch for process terminated signals.
-  status = zx_object_wait_async(process, eport_.get(), key,
-                                ZX_TASK_TERMINATED, ZX_WAIT_ASYNC_ONCE);
+  status = process.wait_async(eport_, key, ZX_TASK_TERMINATED,
+                              ZX_WAIT_ASYNC_ONCE);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to async wait for process " << pid << ": "
                    << debugger_utils::ZxErrorString(status);
@@ -124,10 +123,10 @@ bool ExceptionPort::Bind(zx_handle_t process, Key key) {
   return true;
 }
 
-bool ExceptionPort::Unbind(zx_handle_t process, Key key) {
-  FXL_DCHECK(process != ZX_HANDLE_INVALID);
+bool ExceptionPort::Unbind(const zx::process& process, Key key) {
+  FXL_DCHECK(process);
   zx_status_t status =
-    zx_task_bind_exception_port(process, ZX_HANDLE_INVALID, key,
+    process.bind_exception_port(zx::port(), key,
                                 ZX_EXCEPTION_PORT_DEBUGGER);
   if (status != ZX_OK) {
     zx_koid_t pid = debugger_utils::GetKoid(process);

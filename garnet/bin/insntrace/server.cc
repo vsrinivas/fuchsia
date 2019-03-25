@@ -93,15 +93,18 @@ uint64_t IptConfig::AddrEnd(unsigned i) const {
   return addr_range[i].end;
 }
 
-IptServer::IptServer(const IptConfig& config)
-    : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob()),
-      config_(config) {}
+IptServer::IptServer(const IptConfig& config,
+                     const debugger_utils::Argv& argv)
+    : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob(),
+             sys::ServiceDirectory::CreateFromNamespace()),
+      config_(config), inferior_argv_(argv) {}
 
 bool IptServer::StartInferior() {
-  inferior_control::Process* process = current_process();
-  const debugger_utils::Argv& argv = process->argv();
+  inferior_control::Process* inferior = current_process();
+  std::unique_ptr<process::ProcessBuilder> builder;
 
-  FXL_LOG(INFO) << "Starting program: " << argv[0];
+  FXL_DCHECK(!inferior_argv_.empty());
+  FXL_LOG(INFO) << "Starting program: " << inferior_argv_[0];
 
   if (!AllocTrace(config_))
     return false;
@@ -118,8 +121,15 @@ bool IptServer::StartInferior() {
   // don't want the inferior to inherit the open descriptor: the device can
   // only be opened once at a time.
 
-  if (!process->Initialize()) {
-    FXL_LOG(ERROR) << "failed to set up inferior";
+  if (!CreateProcessViaBuilder(inferior_argv_[0], inferior_argv_, &builder)) {
+    FXL_LOG(ERROR) << "Unable to initialize process builder";
+    goto Fail;
+  }
+
+  builder->CloneAll();
+
+  if (!inferior->InitializeFromBuilder(std::move(builder))) {
+    FXL_LOG(ERROR) << "Unable to initialize inferior process";
     goto Fail;
   }
 
@@ -135,14 +145,14 @@ bool IptServer::StartInferior() {
       goto Fail;
   }
 
-  FXL_DCHECK(!process->IsLive());
-  if (!process->Start()) {
-    FXL_LOG(ERROR) << "failed to start process";
+  FXL_DCHECK(!inferior->IsLive());
+  if (!inferior->Start()) {
+    FXL_LOG(ERROR) << "Unable to start process";
     if (config_.mode == IPT_MODE_CPUS)
       StopTrace(config_);
     goto Fail;
   }
-  FXL_DCHECK(process->IsLive());
+  FXL_DCHECK(inferior->IsLive());
 
   return true;
 

@@ -38,7 +38,14 @@ class RspServer final : public inferior_control::ServerWithIO {
   // |port| is the tcp port to listen on.
   // |initial_attach_pid|, if not ZX_KOID_INVALID, is the koid of a process to
   // attach to in Run() before entering the main loop.
-  explicit RspServer(uint16_t port, zx_koid_t initial_attach_pid);
+  // |argv| is passed to the inferior if ran from scratch.
+  explicit RspServer(uint16_t port, zx_koid_t initial_attach_pid,
+                     debugger_utils::Argv argv);
+
+  void set_inferior_argv(const debugger_utils::Argv& argv) {
+    inferior_argv_ = argv;
+  }
+  const debugger_utils::Argv& inferior_argv() const { return inferior_argv_; }
 
   // Starts the main loop. This will first block and wait for an incoming
   // connection. Once there is a connection, this will start an event loop for
@@ -151,6 +158,9 @@ class RspServer final : public inferior_control::ServerWithIO {
   // If this is non-ZX_KOID_INVALID, attach to this process before
   // entering the main loop.
   zx_koid_t initial_attach_pid_;
+
+  // The argv to pass to the inferior.
+  debugger_utils::Argv inferior_argv_;
 
   // File descriptor for the socket used for listening for incoming
   // connections (e.g. from gdb or lldb).

@@ -38,8 +38,9 @@ class TestServer : public Server, public ::testing::Test {
   // Server overrides
   bool Run() override;
 
-  bool SetupInferior(const std::vector<std::string>& argv);
-  bool RunHelperProgram(zx::channel channel);
+  bool SetupInferior(const std::vector<std::string>& argv,
+                     zx::channel channel);
+  bool RunHelperProgram();
   bool TestSuccessfulExit();
   bool TestFailureExit();
 

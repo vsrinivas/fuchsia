@@ -37,7 +37,7 @@ class TryNextThreadTest : public TestServer {
       // Record the fact for the test, and terminate the inferior, we don't
       // want the exception propagating to the system exception handler.
       got_unexpected_exception_ = true;
-      zx_task_kill(process->handle());
+      process->process().kill();
     }
   }
 
@@ -51,12 +51,12 @@ TEST_F(TryNextThreadTest, ResumeTryNextTest) {
     kTestHelperPath,
     "trigger-sw-bkpt-with-handler",
   };
-  ASSERT_TRUE(SetupInferior(argv));
 
   zx::channel our_channel, their_channel;
-  auto status = zx::channel::create(0, &our_channel, &their_channel);
-  ASSERT_EQ(status, ZX_OK);
-  EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
+  ASSERT_EQ(zx::channel::create(0, &our_channel, &their_channel), ZX_OK);
+  ASSERT_TRUE(SetupInferior(argv, std::move(their_channel)));
+
+  EXPECT_TRUE(RunHelperProgram());
 
   // The inferior is waiting for us to close our side of the channel.
   our_channel.reset();
@@ -107,7 +107,7 @@ class SuspendResumeThreadTest : public TestServer {
       // Record the fact for the test, and terminate the inferior, we don't
       // want the exception propagating to the system exception handler.
       got_unexpected_exception_ = true;
-      zx_task_kill(process->handle());
+      process->process().kill();
     }
   }
 
@@ -158,12 +158,12 @@ TEST_F(SuspendResumeThreadTest, SuspendResumeTest) {
     kTestHelperPath,
     "trigger-sw-bkpt-with-handler",
   };
-  ASSERT_TRUE(SetupInferior(argv));
 
   zx::channel our_channel, their_channel;
-  auto status = zx::channel::create(0, &our_channel, &their_channel);
-  ASSERT_EQ(status, ZX_OK);
-  EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
+  ASSERT_EQ(zx::channel::create(0, &our_channel, &their_channel), ZX_OK);
+  ASSERT_TRUE(SetupInferior(argv, std::move(their_channel)));
+
+  EXPECT_TRUE(RunHelperProgram());
 
   // The inferior is waiting for us to close our side of the channel.
   our_channel.reset();
@@ -197,7 +197,7 @@ class ResumeAfterSwBreakThreadTest : public TestServer {
       // Record the fact for the test, and terminate the inferior, we don't
       // want the exception propagating to the system exception handler.
       got_unexpected_exception_ = true;
-      zx_task_kill(process->handle());
+      process->process().get();
     }
   }
 
@@ -212,12 +212,12 @@ TEST_F(ResumeAfterSwBreakThreadTest, ResumeAfterSwBreakTest) {
     kTestHelperPath,
     "trigger-sw-bkpt",
   };
-  ASSERT_TRUE(SetupInferior(argv));
 
   zx::channel our_channel, their_channel;
-  auto status = zx::channel::create(0, &our_channel, &their_channel);
-  ASSERT_EQ(status, ZX_OK);
-  EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
+  ASSERT_EQ(zx::channel::create(0, &our_channel, &their_channel), ZX_OK);
+  ASSERT_TRUE(SetupInferior(argv, std::move(their_channel)));
+
+  EXPECT_TRUE(RunHelperProgram());
 
   // The inferior is waiting for us to close our side of the channel.
   our_channel.reset();

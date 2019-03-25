@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
 #include <limits>
@@ -27,8 +26,9 @@
 namespace inferior_control {
 
 TestServer::TestServer()
-    : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob()),
-      services_(sys::ServiceDirectory::CreateFromNamespace()) {}
+    : Server(debugger_utils::GetRootJob(), debugger_utils::GetDefaultJob(),
+             sys::ServiceDirectory::CreateFromNamespace()) {
+}
 
 void TestServer::SetUp() {
   ASSERT_TRUE(exception_port_.Run());
@@ -63,45 +63,52 @@ bool TestServer::Run() {
   return true;
 }
 
-bool TestServer::SetupInferior(const std::vector<std::string>& argv) {
-  auto inferior = new Process(this, this, services_);
+bool TestServer::SetupInferior(const std::vector<std::string>& argv,
+                               zx::channel channel) {
+  FXL_LOG(INFO) << "Initializing program: " << argv[0];
+
+  auto inferior = new Process(this, this);
+
+  // We take over ownership of |inferior| here.
+  set_current_process(inferior);
 
   // Transfer our log settings to the inferior.
   std::vector<std::string> inferior_argv{argv};
   for (auto arg : fxl::LogSettingsToArgv(fxl::GetLogSettings())) {
     inferior_argv.push_back(arg);
   }
-  inferior->set_argv(inferior_argv);
 
-  // We take over ownership of |inferior| here.
-  set_current_process(inferior);
+  std::unique_ptr<process::ProcessBuilder> builder;
+  if (!CreateProcessViaBuilder(argv[0], inferior_argv, &builder)) {
+    FXL_LOG(ERROR) << "Unable to create process builder";
+    return false;
+  }
+
+  builder->CloneAll();
+
+  if (channel) {
+    builder->AddHandle(PA_HND(PA_USER0, 0), std::move(channel));
+  }
+
+  if (!inferior->InitializeFromBuilder(std::move(builder))) {
+    FXL_LOG(ERROR) << "Unable to initialize inferior";
+    return false;
+  }
+
   return true;
 }
 
-bool TestServer::RunHelperProgram(zx::channel channel) {
-  Process* process = current_process();
-  const debugger_utils::Argv& argv = process->argv();
+bool TestServer::RunHelperProgram() {
+  Process* inferior = current_process();
 
-  FXL_LOG(INFO) << "Starting program: " << argv[0];
+  FXL_LOG(INFO) << "Starting program: " << inferior->GetName();
 
-  if (channel.is_valid()) {
-    process->AddStartupHandle({
-        .id = PA_HND(PA_USER0, 0),
-        .handle = std::move(channel),
-    });
-  }
-
-  if (!process->Initialize()) {
-    FXL_LOG(ERROR) << "failed to set up inferior";
-    return false;
-  }
-
-  FXL_DCHECK(!process->IsLive());
-  if (!process->Start()) {
+  FXL_DCHECK(!inferior->IsLive());
+  if (!inferior->Start()) {
     FXL_LOG(ERROR) << "failed to start process";
     return false;
   }
-  FXL_DCHECK(process->IsLive());
+  FXL_DCHECK(inferior->IsLive());
 
   return true;
 }
@@ -126,7 +133,7 @@ bool TestServer::TestSuccessfulExit() {
     FXL_LOG(ERROR) << "inferior still live";
     return false;
   }
-  if (!inferior->return_code_set() || inferior->return_code() != 0) {
+  if (!inferior->return_code_is_set() || inferior->return_code() != 0) {
     FXL_LOG(ERROR) << "inferior didn't cleanly exit";
     return false;
   }
@@ -153,7 +160,7 @@ bool TestServer::TestFailureExit() {
     FXL_LOG(ERROR) << "inferior still live";
     return false;
   }
-  if (inferior->return_code_set() && inferior->return_code() == 0) {
+  if (inferior->return_code_is_set() && inferior->return_code() == 0) {
     FXL_LOG(ERROR) << "inferior successfully exited";
     return false;
   }

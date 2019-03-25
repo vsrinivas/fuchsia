@@ -110,10 +110,28 @@ executable("test_helper") {
   libs = [ "zircon" ]
 }
 
+executable("run-inferior") {
+  testonly = true
+  output_name = "run-inferior"
+
+  sources = [
+    "run_inferior.cc",
+  ]
+
+  deps = [
+    ":inferior_control",
+    "//garnet/lib/debugger_utils",
+    "//garnet/public/lib/fxl",
+  ]
+
+  libs = [ "zircon" ]
+}
+
 package("inferior_control_tests") {
   testonly = true
 
   deps = [
+    ":run-inferior",
     ":test_helper",
     ":tests",
   ]
@@ -122,6 +140,10 @@ package("inferior_control_tests") {
     {
       name = "inferior_control_test_helper"
       dest = "test_helper"
+    },
+    {
+      name = "run-inferior"
+      shell = true
     },
   ]
 
@@ -136,6 +158,10 @@ package("inferior_control_tests") {
     {
       path = rebase_path("meta/inferior_control_tests.cmx")
       dest = "inferior_control_tests.cmx"
+    },
+    {
+      path = rebase_path("meta/run-inferior.cmx")
+      dest = "run-inferior.cmx"
     },
   ]
 }

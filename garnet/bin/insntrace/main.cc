@@ -24,8 +24,6 @@
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
-#include "lib/svc/cpp/services.h"
-#include "lib/sys/cpp/service_directory.h"
 
 #ifdef __x86_64__  // for other arches we're just a stub, TO-128
 
@@ -430,15 +428,15 @@ static bool ControlIpt(const insntrace::IptConfig& config,
 }
 
 static bool RunProgram(const insntrace::IptConfig& config,
-                       const fxl::CommandLine& cl,
-                       std::shared_ptr<sys::ServiceDirectory>& services) {
-  debugger_utils::Argv inferior_argv(cl.positional_args().begin(),
-                                     cl.positional_args().end());
-
-  if (inferior_argv.size() == 0) {
+                       const fxl::CommandLine& cl) {
+  debugger_utils::Argv inferior_argv{cl.positional_args().begin(),
+                                     cl.positional_args().end()};
+  if (inferior_argv.empty()) {
     FXL_LOG(ERROR) << "Missing program";
     return false;
   }
+
+  insntrace::IptServer ipt(config, inferior_argv);
 
   // We need details of where the program and its dsos are loaded.
   // This data is obtained from the dynamic linker.
@@ -446,10 +444,7 @@ static bool RunProgram(const insntrace::IptConfig& config,
   // can write to at the moment is the kernel debug log.
   setenv(ldso_trace_env_var, ldso_trace_value, 1);
 
-  insntrace::IptServer ipt(config);
-
-  auto inferior = new inferior_control::Process(&ipt, &ipt, services);
-  inferior->set_argv(inferior_argv);
+  auto inferior = new inferior_control::Process(&ipt, &ipt);
 
   ipt.set_current_process(inferior);
 
@@ -481,13 +476,11 @@ int main(int argc, char* argv[]) {
 
   FXL_LOG(INFO) << "insntrace control program starting";
 
-  auto services = sys::ServiceDirectory::CreateFromNamespace();
-
   bool success;
   if (cl.HasOption("control", nullptr)) {
     success = ControlIpt(config, cl);
   } else {
-    success = RunProgram(config, cl, services);
+    success = RunProgram(config, cl);
   }
 
   if (!success) {

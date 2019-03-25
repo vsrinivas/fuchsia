@@ -80,8 +80,8 @@ bool StartsWith(const fxl::StringView& str, const fxl::StringView& prefix) {
   return str.substr(0, prefix.size()) == prefix;
 }
 
-std::vector<std::string> BuildArgvFor_vRun(const fxl::StringView& packet) {
-  std::vector<std::string> argv;
+debugger_utils::Argv BuildArgvFor_vRun(const fxl::StringView& packet) {
+  debugger_utils::Argv argv;
   size_t len = packet.size();
   size_t s = 0;
 
@@ -1089,11 +1089,8 @@ bool CommandHandler::HandleQueryXfer(const fxl::StringView& params,
 
 bool CommandHandler::Handle_vAttach(const fxl::StringView& packet,
                                     ResponseCallback callback) {
-  // TODO(dje): The terminology we use makes this confusing.
-  // Here when you see "process" think "inferior". An inferior must be created
-  // first, and then we can attach the inferior to a process.
-  inferior_control::Process* current_process = server_->current_process();
-  if (!current_process) {
+  inferior_control::Process* inferior = server_->current_process();
+  if (!inferior) {
     FXL_LOG(ERROR) << "vAttach: no inferior selected";
     return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
@@ -1104,7 +1101,7 @@ bool CommandHandler::Handle_vAttach(const fxl::StringView& packet,
     return ReplyWithError(ErrorCode::INVAL, std::move(callback));
   }
 
-  switch (current_process->state()) {
+  switch (inferior->state()) {
     case inferior_control::Process::State::kNew:
     case inferior_control::Process::State::kGone:
       break;
@@ -1114,14 +1111,19 @@ bool CommandHandler::Handle_vAttach(const fxl::StringView& packet,
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
-  if (!current_process->Attach(pid)) {
-    FXL_LOG(ERROR) << "vAttach: failed to attach to inferior " << pid;
+  zx::process process = server_->FindProcess(pid);
+  if (!process) {
+    FXL_LOG(ERROR) << "vAttach: cannot find process " << pid;
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
+  }
+  if (!inferior->AttachToRunning(std::move(process))) {
+    FXL_LOG(ERROR) << "vAttach: failed to attach to inferior";
     return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   // It's Attach()'s job to mark the process as live, since it knows we just
   // attached to an already running program.
-  FXL_DCHECK(current_process->IsLive());
+  FXL_DCHECK(inferior->IsLive());
 
   return ReplyOK(std::move(callback));
 }
@@ -1267,19 +1269,22 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
                                  ResponseCallback callback) {
   FXL_VLOG(2) << "Handle_vRun: " << packet;
 
-  inferior_control::Process* current_process = server_->current_process();
-  if (!current_process) {
+  inferior_control::Process* inferior = server_->current_process();
+  if (!inferior) {
     // This can't happen today, but it might eventually.
     FXL_LOG(ERROR) << "vRun: no current process to run!";
     return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
   if (!packet.empty()) {
-    std::vector<std::string> argv = BuildArgvFor_vRun(packet);
-    current_process->set_argv(argv);
+    server_->set_inferior_argv(BuildArgvFor_vRun(packet));
+  }
+  if (server_->inferior_argv().empty()) {
+    FXL_LOG(ERROR) << "vRun: no program to run";
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
-  switch (current_process->state()) {
+  switch (inferior->state()) {
     case inferior_control::Process::State::kNew:
     case inferior_control::Process::State::kGone:
       break;
@@ -1289,8 +1294,18 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
-  if (!current_process->Initialize()) {
-    FXL_LOG(ERROR) << "Failed to set up inferior";
+  std::unique_ptr<process::ProcessBuilder> builder;
+  if (!server_->CreateProcessViaBuilder(server_->inferior_argv()[0],
+                                        server_->inferior_argv(),
+                                        &builder)) {
+    FXL_LOG(ERROR) << "vRun: unable to initialize process builder";
+    return ReplyWithError(ErrorCode::PERM, std::move(callback));
+  }
+
+  builder->CloneAll();
+
+  if (!inferior->InitializeFromBuilder(std::move(builder))) {
+    FXL_LOG(ERROR) << "vRun: unable to initialize inferior process";
     return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
 
@@ -1299,12 +1314,11 @@ bool CommandHandler::Handle_vRun(const fxl::StringView& packet,
   // synthetic exception of type ZX_EXCP_START if a debugger is attached to the
   // process and halts until a call to zx_task_resume_from_exception (i.e.
   // called by Thread::Resume() in gdbserver).
-  if (!current_process->Start()) {
-    FXL_LOG(ERROR) << "vRun: Failed to start process";
+  if (!inferior->Start()) {
+    FXL_LOG(ERROR) << "vRun: unable to start process";
     return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }
-
-  FXL_DCHECK(current_process->IsLive());
+  FXL_DCHECK(inferior->IsLive());
 
   // We defer sending a stop-reply packet. Server will send it out when it
   // receives an OnThreadStarting() event from |current_process|.

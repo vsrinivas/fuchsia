@@ -14,8 +14,6 @@
 #include "lib/fxl/log_settings_command_line.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/svc/cpp/services.h"
-#include "lib/sys/cpp/service_directory.h"
 
 #include "server.h"
 
@@ -83,28 +81,22 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  auto services = sys::ServiceDirectory::CreateFromNamespace();
-
   FXL_LOG(INFO) << "Starting server.";
 
   // Give this thread an identifiable name for debugging purposes.
   fsl::SetCurrentThreadName("server (main)");
 
-  debugserver::RspServer server(port, attach_pid);
+  debugserver::RspServer server(
+      port, attach_pid,
+      debugger_utils::Argv{cl.positional_args().begin() + 1,
+                           cl.positional_args().end()});
 
-  std::vector<std::string> inferior_argv(cl.positional_args().begin() + 1,
-                                         cl.positional_args().end());
-  auto inferior = new inferior_control::Process(&server, &server, services);
+  auto inferior = new inferior_control::Process(&server, &server);
 
   // Are we passed a pid or a program?
-  if (attach_pid != ZX_KOID_INVALID && !inferior_argv.empty()) {
+  if (attach_pid != ZX_KOID_INVALID && !server.inferior_argv().empty()) {
     FXL_LOG(ERROR) << "Cannot specify both --attach=pid and a program";
     return EXIT_FAILURE;
-  }
-
-  // If inferior_argv is empty, it must be supplied by the debugger.
-  if (!inferior_argv.empty()) {
-    inferior->set_argv(inferior_argv);
   }
 
   // It's simpler to set the current process here since we don't support

@@ -15,6 +15,7 @@
 #include <lib/zx/port.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
+#include <zx/process.h>
 
 namespace inferior_control {
 
@@ -50,11 +51,11 @@ class ExceptionPort final {
   // The callbacks will be posted on |dispatcher| (args to our constructor).
   //
   // This must be called AFTER a successful call to Run().
-  bool Bind(zx_handle_t process, Key key);
+  bool Bind(const zx::process& process, Key key);
 
   // Unbinds a previously bound exception port and returns true on success.
   // This must be called AFTER a successful call to Run().
-  bool Unbind(zx_handle_t process, Key key);
+  bool Unbind(const zx::process& process, Key key);
 
   // Async-wait for signals on |thread|.
   // The signals we wait for is determined by the thread's current state.

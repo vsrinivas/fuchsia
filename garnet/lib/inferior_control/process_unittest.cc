@@ -22,9 +22,9 @@ TEST_F(ProcessTest, Launch) {
   std::vector<std::string> argv{
       kTestHelperPath,
   };
-  ASSERT_TRUE(SetupInferior(argv));
 
-  EXPECT_TRUE(RunHelperProgram(zx::channel()));
+  ASSERT_TRUE(SetupInferior(argv, zx::channel{}));
+  EXPECT_TRUE(RunHelperProgram());
   EXPECT_TRUE(Run());
   EXPECT_TRUE(TestSuccessfulExit());
 }
@@ -59,26 +59,33 @@ class AttachTest : public TestServer {
 
   void DoDetachAttach(bool thread_starting) {
     auto inferior = current_process();
-    auto pid = inferior->id();
 
-    // The inferior will send us a packet. Wait for it so that we know it has
-    // gone past the ld.so breakpoint.
     if (!thread_starting) {
+      // The inferior will send us a packet. Wait for it so that we know it has
+      // gone past the ld.so breakpoint.
       zx_signals_t pending;
       EXPECT_EQ(channel_.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
-                                    &pending),
+                                  &pending),
                 ZX_OK);
     }
 
+    // Make a copy of the process handle, we use it to re-attach to shortly.
+    zx::process dup;
+    ASSERT_EQ(inferior->process().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup),
+              ZX_OK);
+
     EXPECT_TRUE(inferior->Detach());
     EXPECT_FALSE(inferior->IsAttached());
-    EXPECT_EQ(inferior->handle(), ZX_HANDLE_INVALID);
+    EXPECT_FALSE(inferior->process());
 
     // Sleep a little to hopefully give the inferior a chance to run.
     // We want it to trip over the ld.so breakpoint if we forgot to remove it.
     zx::nanosleep(zx::deadline_after(zx::msec(10)));
-    EXPECT_TRUE(inferior->Attach(pid));
+
+    EXPECT_TRUE(inferior->AttachToRunning(std::move(dup)));
     EXPECT_TRUE(inferior->IsAttached());
+    EXPECT_TRUE(inferior->process());
+
     // If attaching failed we'll hang since we won't see the inferior exiting.
     if (!inferior->IsAttached()) {
       QuitMessageLoop(true);
@@ -103,13 +110,12 @@ TEST_F(AttachTest, Attach) {
       kTestHelperPath,
       "wait-peer-closed",
   };
-  ASSERT_TRUE(SetupInferior(argv));
 
   zx::channel our_channel, their_channel;
-  auto status = zx::channel::create(0, &our_channel, &their_channel);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(zx::channel::create(0, &our_channel, &their_channel), ZX_OK);
+  ASSERT_TRUE(SetupInferior(argv, std::move(their_channel)));
 
-  EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
+  EXPECT_TRUE(RunHelperProgram());
   set_channel(std::move(our_channel));
 
   EXPECT_TRUE(Run());
@@ -142,9 +148,10 @@ TEST_F(FindThreadByIdTest, FindThreadById) {
   std::vector<std::string> argv{
       kTestHelperPath,
   };
-  ASSERT_TRUE(SetupInferior(argv));
 
-  EXPECT_TRUE(RunHelperProgram(zx::channel{}));
+  ASSERT_TRUE(SetupInferior(argv, zx::channel{}));
+
+  EXPECT_TRUE(RunHelperProgram());
 
   EXPECT_TRUE(Run());
   EXPECT_TRUE(TestSuccessfulExit());
@@ -195,8 +202,9 @@ class LdsoBreakpointTest : public TestServer {
       }
 
       // Terminate the inferior, we don't want the exception propagating to
-      // the system exception handler.
-      zx_task_kill(process->handle());
+      // the system exception handler. We don't check the result here. If it
+      // fails we'll timeout.
+      process->Kill();
     } else {
       EXPECT_TRUE(thread->TryNext(eport));
     }
@@ -213,13 +221,12 @@ TEST_F(LdsoBreakpointTest, LdsoBreakpoint) {
     kTestHelperPath,
     "trigger-sw-bkpt",
   };
-  ASSERT_TRUE(SetupInferior(argv));
 
   zx::channel our_channel, their_channel;
-  auto status = zx::channel::create(0, &our_channel, &their_channel);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(zx::channel::create(0, &our_channel, &their_channel), ZX_OK);
+  ASSERT_TRUE(SetupInferior(argv, std::move(their_channel)));
 
-  EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
+  EXPECT_TRUE(RunHelperProgram());
 
   // The inferior is waiting for us to close our side of the channel.
   our_channel.reset();
@@ -254,13 +261,12 @@ TEST_F(KillTest, Kill) {
       kTestHelperPath,
       "wait-peer-closed",
   };
-  ASSERT_TRUE(SetupInferior(argv));
 
   zx::channel our_channel, their_channel;
-  auto status = zx::channel::create(0, &our_channel, &their_channel);
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(zx::channel::create(0, &our_channel, &their_channel), ZX_OK);
+  ASSERT_TRUE(SetupInferior(argv, std::move(their_channel)));
 
-  EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
+  EXPECT_TRUE(RunHelperProgram());
 
   EXPECT_TRUE(Run());
   EXPECT_TRUE(TestFailureExit());
@@ -304,16 +310,16 @@ TEST_F(RefreshTest, RefreshWithNewThreads) {
       "start-n-threads",
       fxl::StringPrintf("%zu", kNumIterations),
   };
-  ASSERT_TRUE(SetupInferior(argv));
 
   zx::channel our_channel, their_channel;
   auto status = zx::channel::create(0, &our_channel, &their_channel);
   ASSERT_EQ(status, ZX_OK);
 
-  EXPECT_TRUE(RunHelperProgram(std::move(their_channel)));
+  ASSERT_TRUE(SetupInferior(argv, std::move(their_channel)));
+
+  EXPECT_TRUE(RunHelperProgram());
 
   Process* inferior = current_process();
-  zx_koid_t pid = inferior->id();
 
   // This can't test new threads appearing while we're building the list,
   // that is tested by the unittest for |GetProcessThreadKoids()|. But we
@@ -325,10 +331,15 @@ TEST_F(RefreshTest, RefreshWithNewThreads) {
     // This won't return until the new thread is running.
     EXPECT_TRUE(Run());
 
+    // Make a copy of the process handle, we use it to re-attach to shortly.
+    zx::process dup;
+    ASSERT_EQ(inferior->process().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup),
+              ZX_OK);
+
     // Detaching and re-attaching will cause us to discard the previously
     // collected set of threads.
     EXPECT_TRUE(inferior->Detach());
-    EXPECT_TRUE(inferior->Attach(pid));
+    EXPECT_TRUE(inferior->AttachToRunning(std::move(dup)));
 
     inferior->EnsureThreadMapFresh();
     // There should be the main thread plus one new thread each iteration.

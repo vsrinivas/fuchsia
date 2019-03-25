@@ -306,7 +306,7 @@ void Thread::ResumeForExit(zx_handle_t eport) {
     // we can do.
     zx_info_process_t info;
     auto info_status =
-        zx_object_get_info(process()->handle(), ZX_INFO_PROCESS, &info,
+        zx_object_get_info(process()->process().get(), ZX_INFO_PROCESS, &info,
                            sizeof(info), nullptr, nullptr);
     if (info_status != ZX_OK) {
       FXL_LOG(ERROR) << "Error getting process info for thread "
@@ -397,7 +397,12 @@ zx_status_t Thread::GetExceptionReport(zx_exception_report_t* report) const {
   // This could fail if the process terminates before we get a chance to
   // look at it.
   if (status == ZX_ERR_BAD_STATE) {
-    FXL_LOG(WARNING) << "No exception report for thread " << id_;
+    // The signal notifying us the thread/process death may not have been
+    // processed yet, so get the thread's state directly.
+    zx_thread_state_t state = debugger_utils::GetThreadOsState(handle_);
+    if (state != ZX_THREAD_STATE_DEAD) {
+      FXL_LOG(WARNING) << "No exception report for thread " << id_;
+    }
   }
 
   return status;
@@ -407,7 +412,7 @@ void Thread::Dump() {
   if (state_ == State::kInException ||
       state_ == State::kSuspended) {
     FXL_LOG(INFO) << "Thread " << GetDebugName() << " dump";
-    debugger_utils::DumpThread(process()->handle(), handle(),
+    debugger_utils::DumpThread(process()->process().get(), handle(),
                                state_ == State::kInException);
   } else {
     FXL_LOG(INFO) << "Thread " << id_ << " not stopped, skipping dump";

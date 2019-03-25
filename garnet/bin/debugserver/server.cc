@@ -44,11 +44,14 @@ RspServer::PendingNotification::PendingNotification(
       event(event.data(), event.size()),
       timeout(timeout) {}
 
-RspServer::RspServer(uint16_t port, zx_koid_t initial_attach_pid)
+RspServer::RspServer(uint16_t port, zx_koid_t initial_attach_pid,
+                     debugger_utils::Argv argv)
     : ServerWithIO(debugger_utils::GetRootJob(),
-                   debugger_utils::GetDefaultJob()),
+                   debugger_utils::GetDefaultJob(),
+                   sys::ServiceDirectory::CreateFromNamespace()),
       port_(port),
       initial_attach_pid_(initial_attach_pid),
+      inferior_argv_(std::move(argv)),
       server_sock_(-1),
       command_handler_(this) {}
 
@@ -71,13 +74,18 @@ bool RspServer::Run() {
   if (initial_attach_pid_ != ZX_KOID_INVALID) {
     auto inferior = current_process();
     FXL_DCHECK(!inferior->IsAttached());
-    if (!inferior->Attach(initial_attach_pid_)) {
+    zx::process process = FindProcess(initial_attach_pid_);
+    if (!process) {
+      FXL_LOG(ERROR) << "Cannot find process " << initial_attach_pid_;
+      return false;
+    }
+    if (!inferior->AttachToRunning(std::move(process))) {
       FXL_LOG(ERROR) << "Failed to attach to inferior";
       return false;
     }
     FXL_DCHECK(inferior->IsAttached());
-    // It's Attach()'s job to mark the process as live, since it knows we just
-    // attached to an already running program.
+    // It's AttachToRunning()'s job to mark the process as live, since it knows
+    // we just attached to an already running program.
     FXL_DCHECK(inferior->IsLive());
   }
 

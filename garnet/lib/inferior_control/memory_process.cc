@@ -21,7 +21,7 @@ bool ProcessMemory::Read(uintptr_t address, void* out_buffer,
                          size_t length) const {
   FXL_DCHECK(out_buffer);
 
-  zx_handle_t handle = process_->handle();
+  zx_handle_t handle = process_->process().get();
   FXL_DCHECK(handle != ZX_HANDLE_INVALID);
 
   size_t bytes_read;
@@ -50,7 +50,7 @@ bool ProcessMemory::Write(uintptr_t address, const void* buffer,
 
   // We could be trying to remove a breakpoint after the process has exited.
   // So if the process is gone just return.
-  zx_handle_t handle = process_->handle();
+  zx_handle_t handle = process_->process().get();
   if (handle == ZX_HANDLE_INVALID) {
     FXL_VLOG(2) << "No process memory to write to";
     return false;
