@@ -41,7 +41,7 @@ Builds on [terminal](#terminal).
 
 ## Speaker
 
-A modular, emphermal system for devices that have audio input and output. Lacks
+A modular, ephemeral system for devices that have audio input and output. Lacks
 a graphical user interface.
 
 Builds on [core](#core).
