@@ -4,12 +4,12 @@
 
 use {
     std::marker::PhantomData,
-    wlan_bitfields::bitfields,
+    wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes},
 };
 
 // IEEE Std 802.11-2016, 9.2.4.1.1
-#[bitfields(
+#[bitfield(
     0..=1   protocol_version,
     2..=3   frame_type,
     4..=7   frame_subtype,
@@ -27,7 +27,7 @@ use {
 pub struct FrameControl(pub u16);
 
 // IEEE Std 802.11-2016, 9.2.4.4
-#[bitfields(
+#[bitfield(
     0..=3   frag_num,
     4..=15  seq_num,
 )]
@@ -36,7 +36,7 @@ pub struct FrameControl(pub u16);
 pub struct SequenceControl(pub u16);
 
 // IEEE Std 802.11-2016, 9.2.4.6
-#[bitfields(
+#[bitfield(
     0       vht,
     1..=29  middle, // see 9.2.4.6.2 for HT and 9.2.4.6.3 for VHT
     30      ac_constraint,

@@ -4,12 +4,12 @@
 
 use {
     crate::mac::{FrameControl, HtControl, MacAddr, OptionalField, Presence, SequenceControl},
-    wlan_bitfields::bitfields,
+    wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
 
 // IEEE Std 802.11-2016, 9.2.4.5.1, Table 9-6
-#[bitfields(
+#[bitfield(
     0..=3   tid,
     4       eosp,
     5..=6   ack_policy,

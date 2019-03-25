@@ -4,9 +4,9 @@
 
 #[cfg(test)]
 mod tests {
-    use wlan_bitfields::bitfields;
+    use wlan_bitfield::bitfield;
 
-    #[bitfields(
+    #[bitfield(
         0       a,
         1..=4   b,
         5       c,
@@ -82,7 +82,7 @@ mod tests {
         assert_eq!(0b10_1_1001_0, foo.0);
     }
 
-    #[bitfields(
+    #[bitfield(
         0..=79      head,
         80..=127    tail,
     )]

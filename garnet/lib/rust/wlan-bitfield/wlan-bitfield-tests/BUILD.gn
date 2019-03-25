@@ -5,28 +5,28 @@
 import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 
-rustc_library("wlan-bitfields-wrapper") {
-  name = "wlan-bitfields-wrapper"
+rustc_library("wlan-bitfield-wrapper") {
+  name = "wlan-bitfield-wrapper"
   version = "0.1.0"
   edition = "2018"
 
   with_unit_tests = true
 
   deps = [
-    "//garnet/lib/rust/wlan-bitfields/",
+    "//garnet/lib/rust/wlan-bitfield/",
   ]
 }
 
-package("wlan-bitfields-tests") {
+package("wlan-bitfield-tests") {
   testonly = true
 
   deps = [
-    ":wlan-bitfields-wrapper",
+    ":wlan-bitfield-wrapper",
   ]
 
   tests = [
     {
-      name = "wlan_bitfields_wrapper_lib_test"
+      name = "wlan_bitfield_wrapper_lib_test"
       environments = basic_envs
     },
   ]

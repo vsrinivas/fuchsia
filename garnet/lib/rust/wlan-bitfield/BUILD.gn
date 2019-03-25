@@ -4,8 +4,8 @@
 
 import("//build/rust/rustc_macro.gni")
 
-rustc_macro("wlan-bitfields") {
-  name = "wlan_bitfields"
+rustc_macro("wlan-bitfield") {
+  name = "wlan_bitfield"
   version = "0.1.0"
   edition = "2018"
 

@@ -22,7 +22,7 @@ use {
 /// (`u8`, `u16`, `u32`, `u64` or `u128`.) Example:
 ///
 /// ```
-/// #[bitfields(
+/// #[bitfield(
 ///     0..=3   foo,
 ///     4       bar,
 ///     5..=31  baz,
@@ -64,7 +64,7 @@ use {
 /// covered. If some of the bits are actually unused, you can use `_` in place of the field name:
 ///
 /// ```
-/// #[bitfields(
+/// #[bitfield(
 ///     0..=3   foo,
 ///     4..=6   _, // reserved
 ///     7       bar,
@@ -73,7 +73,7 @@ use {
 /// ```
 ///
 #[proc_macro_attribute]
-pub fn bitfields(
+pub fn bitfield(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -217,7 +217,7 @@ fn get_underlying_bit_len(struct_def: &DeriveInput) -> Result<usize, Error> {
         _ => {
             return Err(Error::new(
                 struct_def.span(),
-                "bitfields macro only supports tuple-style structs".to_string(),
+                "bitfield macro only supports tuple-style structs".to_string(),
             ))
         }
     })

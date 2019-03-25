@@ -5,14 +5,14 @@
 use {
     crate::mac::{FrameControl, HtControl, MacAddr, OptionalField, Presence, SequenceControl},
     byteorder::{ByteOrder, LittleEndian},
-    wlan_bitfields::bitfields,
+    wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
 
 pub type RawCapabilityInfo = [u8; 2];
 
 // IEEE Std 802.11-2016, 9.4.1.4
-#[bitfields(
+#[bitfield(
     0       ess,
     1       ibss,
     2       cf_pollable,

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    wlan_bitfields::bitfields,
+    wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned},
 };
 
 // IEEE Std 802.11-2016, 9.4.2.3
-#[bitfields(
+#[bitfield(
     0..=6   rate,
     7       basic,
 )]
@@ -24,7 +24,7 @@ pub struct DsssParamSet {
 }
 
 // IEEE Std 802.11-2016, 9.2.4.6
-#[bitfields(
+#[bitfield(
     0       group_traffic,
     1..=7   offset,
 )]
