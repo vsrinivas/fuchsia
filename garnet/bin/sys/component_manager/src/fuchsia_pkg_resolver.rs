@@ -147,7 +147,7 @@ mod tests {
                 return Err(zx::Status::NOT_FOUND);
             }
             let path = Path::new("/pkg");
-            io_util::connect_directory_in_namespace(path.to_str().unwrap(), dir)
+            io_util::connect_in_namespace(path.to_str().unwrap(), dir.into_channel())
         }
     }
 

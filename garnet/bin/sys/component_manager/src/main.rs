@@ -7,6 +7,8 @@
 // Temporarily allow dead code during early development since not all
 // features are fully exercised.
 #![allow(dead_code)]
+// This is needed for the pseudo_directory nesting in crate::model::tests
+#![recursion_limit = "128"]
 
 mod data;
 mod directory_broker;

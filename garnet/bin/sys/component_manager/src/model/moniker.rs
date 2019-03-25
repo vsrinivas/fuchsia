@@ -72,6 +72,12 @@ impl AbsoluteMoniker {
             Some(AbsoluteMoniker { path: self.path[..l].to_vec() })
         }
     }
+
+    pub fn child(&self, child: ChildMoniker) -> AbsoluteMoniker {
+        let mut path = self.path.clone();
+        path.push(child);
+        AbsoluteMoniker { path }
+    }
 }
 
 impl fmt::Display for AbsoluteMoniker {

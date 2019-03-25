@@ -6,10 +6,10 @@ use {
     failure::{err_msg, format_err, Error},
     fdio,
     fidl::endpoints::create_proxy,
-    fidl::endpoints::{Proxy, ServerEnd},
+    fidl::endpoints::Proxy,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, FileProxy, NodeProxy, MAX_BUF, MODE_TYPE_DIRECTORY,
-        MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
+        DirectoryProxy, FileProxy, NodeProxy, MAX_BUF, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
+        OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
     },
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, HandleBased},
@@ -52,11 +52,8 @@ pub fn open_file<'a>(dir: &'a DirectoryProxy, path: &'a PathBuf) -> Result<FileP
 // TODO: this function will block on the FDIO calls. This should be rewritten/wrapped/whatever to
 // be asynchronous.
 
-/// Connect a directory server endpoint to a path in the namespace.
-pub fn connect_directory_in_namespace(
-    path: &str,
-    server_end: ServerEnd<DirectoryMarker>,
-) -> Result<(), zx::Status> {
+/// Connect a zx::Channel to a path in the namespace.
+pub fn connect_in_namespace(path: &str, server_chan: zx::Channel) -> Result<(), zx::Status> {
     let mut ns_ptr: *mut fdio::fdio_sys::fdio_ns_t = ptr::null_mut();
     let status = unsafe { fdio::fdio_sys::fdio_ns_get_installed(&mut ns_ptr) };
     if status != zx::sys::ZX_OK {
@@ -69,7 +66,7 @@ pub fn connect_directory_in_namespace(
             ns_ptr,
             cstr.as_ptr(),
             OPEN_RIGHT_READABLE,
-            server_end.into_raw(),
+            server_chan.into_raw(),
         )
     };
     if status != zx::sys::ZX_OK {
@@ -154,6 +151,16 @@ pub fn clone_directory(dir: &DirectoryProxy) -> Result<DirectoryProxy, Error> {
     let (node_clone, server_end) = create_proxy()?;
     dir.clone(OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE, server_end)?;
     node_to_directory(node_clone)
+}
+
+/// canonicalize_path will remove a leading `/` if it exists, since it's always unnecessary and in
+/// some cases disallowed (US-569).
+pub fn canonicalize_path(path: &str) -> String {
+    let mut res = path.to_string();
+    if res.starts_with("/") {
+        res.remove(0);
+    }
+    res
 }
 
 #[cfg(test)]
