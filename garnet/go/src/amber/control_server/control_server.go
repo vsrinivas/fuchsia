@@ -204,15 +204,18 @@ func (c *ControlServer) PackagesFailed(merkle []string, status int32, blobMerkle
 }
 
 func (c *ControlServer) SetSrcEnabled(id string, enabled bool) (amber.Status, error) {
+	var err error
 	if enabled {
-		if err := c.daemon.EnableSource(id); err != nil {
-			return amber.StatusErr, nil
-		}
+		err = c.daemon.EnableSource(id)
 	} else {
-		if err := c.daemon.DisableSource(id); err != nil {
-			return amber.StatusErr, nil
-		}
+		err = c.daemon.DisableSource(id)
 	}
+
+	if err != nil {
+		log.Printf("control_server: ERROR: SetSrcEnabled(%s, %v) -> %v", id, enabled, err)
+		return amber.StatusErr, nil
+	}
+
 	return amber.StatusOk, nil
 }
 

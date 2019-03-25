@@ -170,19 +170,25 @@ func (d *Daemon) EnableSource(srcID string) error {
 	defer d.muSrcs.Unlock()
 
 	// Nothing to do if the source is already enabled.
-	if _, ok := d.srcs[srcID]; ok {
+	if src, ok := d.srcs[srcID]; ok {
+		cfg := src.GetConfig()
+		log.Printf("already enabled source: %s %v", srcID, cfg.RepoUrl)
 		return nil
 	}
 
 	// Persist the enabled bit.
 	src, err := d.setSrcEnablementLocked(srcID, true)
 	if err != nil {
+		// logged in control server / other callers
 		return err
 	}
 
 	// Add the source to the running service.
 	src.Start()
 	d.srcs[srcID] = src
+
+	cfg := src.GetConfig()
+	log.Printf("enabled source: %s %v", srcID, cfg.RepoUrl)
 
 	return nil
 }
