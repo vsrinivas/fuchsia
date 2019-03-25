@@ -29,11 +29,6 @@ public:
     FutexContext();
     ~FutexContext();
 
-    enum class OwnerAction {
-        RELEASE,
-        ASSIGN_WOKEN,
-    };
-
     // FutexWait first verifies that the integer pointed to by |value_ptr|
     // still equals |current_value|. If the test fails, FutexWait returns ZX_ERR_BAD_STATE.
     // Otherwise it will block the current thread until the |deadline| passes, or until the thread
@@ -48,7 +43,7 @@ public:
     // the futex's owner will be set to the thread which was woken during the operation, or nullptr
     // if no thread was woken.
     zx_status_t FutexWake(user_in_ptr<const zx_futex_t> value_ptr, uint32_t wake_count,
-                          OwnerAction owner_action);
+                          FutexNode::OwnerAction owner_action);
 
     // FutexWait first verifies that the integer pointed to by |wake_ptr|
     // still equals |current_value|. If the test fails, FutexWait returns ZX_ERR_BAD_STATE.
@@ -64,7 +59,7 @@ public:
     zx_status_t FutexRequeue(user_in_ptr<const zx_futex_t> wake_ptr,
                              uint32_t wake_count,
                              zx_futex_t current_value,
-                             OwnerAction owner_action,
+                             FutexNode::OwnerAction owner_action,
                              user_in_ptr<const zx_futex_t> requeue_ptr,
                              uint32_t requeue_count,
                              zx_handle_t new_requeue_owner);
@@ -79,8 +74,11 @@ private:
     FutexContext& operator=(const FutexContext&) = delete;
 
     void QueueNodesLocked(FutexNode* head) TA_REQ(lock_);
-
     bool UnqueueNodeLocked(FutexNode* node) TA_REQ(lock_);
+    FutexNode* FindFutexQueue(uintptr_t key) TA_REQ(lock_) {
+        auto iter = futex_table_.find(key);
+        return iter.IsValid() ? iter.CopyPointer() : nullptr;
+    }
 
     // protects futex_table_
     DECLARE_MUTEX(FutexContext) lock_;

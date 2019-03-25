@@ -100,6 +100,7 @@ if (current_cpu != "") {
       "fs-management",
       "fs-test-utils",
       "fs-vnode",
+      "futex-ownership",
       "fuzz-utils",
       "fvm",
       "fzl",

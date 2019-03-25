@@ -16,7 +16,6 @@
 #include <object/channel_dispatcher.h>
 #include <object/dispatcher.h>
 #include <object/excp_port.h>
-#include <object/futex_node.h>
 #include <object/thread_state.h>
 
 #include <zircon/compiler.h>
@@ -164,6 +163,9 @@ public:
     // For ChannelDispatcher use.
     ChannelDispatcher::MessageWaiter* GetMessageWaiter() { return &channel_waiter_; }
 
+    // For FutexContext/FutexNode use.
+    uintptr_t& blocking_futex_id() { return blocking_futex_id_; }
+
     // Blocking syscalls, once they commit to a path that will likely block the
     // thread, use this helper class to properly set/restore |blocked_reason_|.
     class AutoBlocked final {
@@ -269,4 +271,14 @@ private:
     // If true and ancestor job has a debugger attached, thread will block on
     // start and will send a process start exception.
     bool is_initial_thread_ = false;
+
+    // The ID of the futex we are currently waiting on, or 0 if we are not
+    // waiting on any futex at the moment.
+    //
+    // TODO(johngro): figure out some way to apply clang static thread analysis
+    // to this.  Right now, there is no good (cost free) way for the compiler to
+    // figure out that this thread belongs to a specific process/futex-context,
+    // and therefor the thread's futex-context lock can be used to guard this
+    // futex ID.
+    uintptr_t blocking_futex_id_ = 0;
 };

@@ -17,14 +17,21 @@
 
 #define LOCAL_TRACE 0
 
-FutexNode::FutexNode() {
+FutexNode::FutexNode(fbl::RefPtr<ThreadDispatcher> futex_owner)
+    : futex_owner_(ktl::move(futex_owner)) {
     LTRACE_ENTRY;
+    auto current = ThreadDispatcher::GetCurrent();
+    DEBUG_ASSERT(current != nullptr);
+    DEBUG_ASSERT(current->blocking_futex_id() == 0u);
+
+    waiting_thread_ = fbl::WrapRefPtr(current);
 }
 
 FutexNode::~FutexNode() {
     LTRACE_ENTRY;
 
     DEBUG_ASSERT(!IsInQueue());
+    DEBUG_ASSERT(futex_owner_ == nullptr);
 }
 
 bool FutexNode::IsInQueue() const {
@@ -39,6 +46,15 @@ void FutexNode::SetAsSingletonList() {
 }
 
 void FutexNode::AppendList(FutexNode* head) {
+    // We are adding a new list of waiters to an existing futex waiter list.
+    // This is the result of either a wait operation, or a requeue operation.
+    // In either case, the user mode code is responsible for telling us
+    // explicitly what the current futex owner is.
+    //
+    // The current futex owner (if any) is maintained by the head of the list.
+    // Move any owner passed in |head| to the this node (the current head of the
+    // list)
+    futex_owner_ = ktl::move(head->futex_owner_);
     SpliceNodes(this, head);
 }
 
@@ -53,8 +69,10 @@ FutexNode* FutexNode::RemoveNodeFromList(FutexNode* list_head,
         list_head = nullptr;
     } else {
         if (node == list_head) {
-            // This node is the list head, so adjust the list head to be
-            // the next node.
+            // This node is the list head, so adjust the list head to be the
+            // next node.  Transfer the futex owner in the process.
+            DEBUG_ASSERT(node->queue_next_->futex_owner_ == nullptr);
+            node->queue_next_->futex_owner_ = ktl::move(list_head->futex_owner_);
             list_head = node->queue_next_;
         }
 
@@ -63,6 +81,7 @@ FutexNode* FutexNode::RemoveNodeFromList(FutexNode* list_head,
         node->queue_prev_->queue_next_ = node->queue_next_;
     }
     node->MarkAsNotInQueue();
+    node->set_hash_key(0u);
     return list_head;
 }
 
@@ -75,19 +94,46 @@ FutexNode* FutexNode::RemoveNodeFromList(FutexNode* list_head,
 //
 // RemoveFromHead() is similar, except that it produces a list of removed
 // threads without waking them.
-FutexNode* FutexNode::WakeThreads(FutexNode* node, uint32_t count,
-                                  uintptr_t old_hash_key) {
+FutexNode* FutexNode::WakeThreads(FutexNode* node,
+                                  uint32_t count,
+                                  uintptr_t old_hash_key,
+                                  OwnerAction owner_action) {
     ASSERT(node);
     ASSERT(count != 0);
+
+    // It is only legal to assign the new queue owner to the woken thread if we
+    // are waking exactly one thread.  The syscall thunks should have already
+    // guaranteed this invariant.
+    DEBUG_ASSERT((owner_action != FutexNode::OwnerAction::ASSIGN_WOKEN) || (count == 1));
+
+    // No matter what, the caller should have removed any previous futex owner
+    // from the head of this queue.
+    DEBUG_ASSERT(node->futex_owner() == nullptr);
 
     FutexNode* const list_end = node->queue_prev_;
     for (uint32_t i = 0; i < count; i++) {
         DEBUG_ASSERT(node->GetKey() == old_hash_key);
+        DEBUG_ASSERT(node->waiting_thread_->blocking_futex_id() == old_hash_key);
         // Clear this field to avoid any possible confusion.
         node->set_hash_key(0);
 
         const bool is_last_node = (node == list_end);
         FutexNode* next = node->queue_next_;
+
+        // If there is at least one more waiter, and we were asked to assign
+        // ownership of the futex to the thread that we woke, do so by
+        // transfering the waiting_thread_ reference from the node we are about
+        // to wake over to the futex_owner_ reference of the next thread in the
+        // queue.
+        //
+        // Otherwise, just leave the reference in place.  It will be released
+        // when the FutexNode goes out of scope as FutexContext::FutexWait
+        // unwinds.
+        if ((owner_action == OwnerAction::ASSIGN_WOKEN) && !is_last_node) {
+            DEBUG_ASSERT(next->futex_owner_ == nullptr);
+            next->futex_owner_ = ktl::move(node->waiting_thread_);
+        }
+
         // This call can cause |node| to be freed, so we must not
         // dereference |node| after this.
         node->WakeThread();
@@ -134,12 +180,21 @@ FutexNode* FutexNode::RemoveFromHead(FutexNode* list_head, uint32_t count,
             // We have reached the end of the list, so we are removing all
             // the entries from the list.  Return an empty list of
             // remaining nodes.
+            //
+            // Do _not_ release any futex_owner reference here.  Let the caller
+            // handle that so that they can relese the reference outside of the
+            // main futex guard.
             return nullptr;
         }
     }
 
     // Split the list into two lists.
     SpliceNodes(list_head, node);
+
+    // Transfer any futex_owner reference from the old head of the list to the
+    // new one.
+    DEBUG_ASSERT(node->futex_owner_ == nullptr);
+    node->futex_owner_ = ktl::move(list_head->futex_owner_);
     return node;
 }
 
