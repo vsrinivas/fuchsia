@@ -57,7 +57,7 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
       [this](const ::dispatcher::Channel* channel) {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
         FXL_DCHECK(stream_channel_.get() == channel);
-        ShutdownSelf("Stream channel closed unexpectedly");
+        ShutdownSelf("Stream channel closed unexpectedly", ZX_ERR_PEER_CLOSED);
       });
 
   res = stream_channel_->Activate(
@@ -74,7 +74,7 @@ zx_status_t AudioDriver::Init(zx::channel stream_channel) {
       [this](::dispatcher::Timer* timer) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
         FXL_DCHECK(cmd_timeout_.get() == timer);
-        ShutdownSelf("Unexpected command timeout");
+        ShutdownSelf("Unexpected command timeout", ZX_ERR_TIMED_OUT);
         return ZX_OK;
       });
 
@@ -455,7 +455,7 @@ zx_status_t AudioDriver::ReadMessage(
     FXL_LOG(ERROR) << "Channel response is too small to hold even a "
                    << "message header (" << *bytes_read_out << " < "
                    << sizeof(audio_cmd_hdr_t) << ").";
-    ShutdownSelf();
+    ShutdownSelf("Channel response too small", ZX_ERR_INVALID_ARGS);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -559,9 +559,9 @@ zx_status_t AudioDriver::ProcessStreamChannelMessage() {
       break;
 
     case AUDIO_STREAM_PLUG_DETECT_NOTIFY:
-      CHECK_RESP(AUDIO_STREAM_CMD_PLUG_DETECT, pd_resp, false, true);
-      plug_state = ((msg.pd_resp.flags & AUDIO_PDNF_PLUGGED) != 0);
-      ReportPlugStateChange(plug_state, msg.pd_resp.plug_state_time);
+      CHECK_RESP(AUDIO_STREAM_CMD_PLUG_DETECT_NOTIFY, pd_notify, false, true);
+      plug_state = ((msg.pd_notify.flags & AUDIO_PDNF_PLUGGED) != 0);
+      ReportPlugStateChange(plug_state, msg.pd_notify.plug_state_time);
       break;
 
     default:
@@ -587,6 +587,7 @@ zx_status_t AudioDriver::ProcessRingBufferChannelMessage() {
     audio_rb_cmd_get_buffer_resp_t get_buffer;
     audio_rb_cmd_start_resp_t start;
     audio_rb_cmd_stop_resp_t stop;
+    audio_rb_position_notify_t pos_notify;
   } msg;
   static_assert(sizeof(msg) <= 256,
                 "Message buffer is becoming too large to hold on the stack!");
@@ -616,6 +617,15 @@ zx_status_t AudioDriver::ProcessRingBufferChannelMessage() {
     case AUDIO_RB_CMD_STOP:
       CHECK_RESP(AUDIO_RB_CMD_STOP, stop, false, false);
       res = ProcessStopResponse(msg.stop);
+      break;
+
+    // Currently we ignore driver-reported position, instead using the system-
+    // internal clock. This message is benign and can be safely ignored, but
+    // because we did not request it, this may indicate some other problem in
+    // the driver state machine. We issue a warning, eat the msg and continue.
+    case AUDIO_RB_POSITION_NOTIFY:
+      CHECK_RESP(AUDIO_RB_POSITION_NOTIFY, pos_notify, false, true);
+      res = ProcessPositionNotify(msg.pos_notify);
       break;
 
     default:
@@ -708,17 +718,22 @@ zx_status_t AudioDriver::ProcessGetFormatsResponse(
   }
 
   // Sanity checks
+  if (resp.format_range_count == 0) {
+    FXL_LOG(ERROR) << "Driver reported that it supports no format ranges!";
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   if (resp.first_format_range_ndx >= resp.format_range_count) {
-    FXL_LOG(ERROR) << "Bad format range index in get formats response! ("
-                   << resp.first_format_range_ndx
-                   << " >= " << resp.format_range_count;
+    FXL_LOG(ERROR) << "Bad format range index in get formats response! (index "
+                   << resp.first_format_range_ndx << " should be < total "
+                   << resp.format_range_count << ")";
     return ZX_ERR_INVALID_ARGS;
   }
 
   if (resp.first_format_range_ndx != format_ranges_.size()) {
-    FXL_LOG(ERROR) << "Out of order message in get formats response! ("
-                   << resp.first_format_range_ndx
-                   << " != " << format_ranges_.size();
+    FXL_LOG(ERROR) << "Out of order message in get formats response! (index "
+                   << resp.first_format_range_ndx << " != the expected "
+                   << format_ranges_.size() << ")";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -768,7 +783,7 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(
       [this](const ::dispatcher::Channel* channel) {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
         FXL_DCHECK(rb_channel_.get() == channel);
-        ShutdownSelf("Ring buffer channel closed unexpectedly");
+        ShutdownSelf("Ring buffer channel closed");
       });
 
   zx_status_t res;
@@ -886,8 +901,9 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(
                                             resp.num_ring_buffer_frames,
                                             owner_->is_input());
     if (ring_buffer_ == nullptr) {
-      ShutdownSelf("Failed to allocate and map driver ring buffer");
-      return ZX_ERR_INTERNAL;
+      ShutdownSelf("Failed to allocate and map driver ring buffer",
+                   ZX_ERR_NO_MEMORY);
+      return ZX_ERR_NO_MEMORY;
     }
     FXL_DCHECK(!clock_mono_to_ring_pos_bytes_.invertable());
 
@@ -957,17 +973,25 @@ zx_status_t AudioDriver::ProcessStopResponse(
   return ZX_OK;
 }
 
-void AudioDriver::ShutdownSelf(const char* debug_reason,
-                               zx_status_t debug_status) {
+zx_status_t AudioDriver::ProcessPositionNotify(
+    const audio_rb_position_notify_t& notify) {
+  FXL_DLOG(INFO) << "Unsolicited ring buffer position notification!  Time:"
+                 << zx_clock_get(ZX_CLOCK_MONOTONIC)
+                 << " Pos:" << notify.ring_buffer_pos;
+
+  // Although this notification was unsolicited and unexpected, we only complain
+  // (and only on debug builds), rather than abort-closing the channel.
+  return ZX_OK;
+}
+
+void AudioDriver::ShutdownSelf(const char* reason, zx_status_t status) {
   if (state_ == State::Shutdown) {
     return;
   }
 
-  if (debug_reason != nullptr) {
-    FXL_LOG(INFO) << "AudioDriver ("
-                  << (owner_->is_input() ? "input" : "output")
-                  << ") shutting down: reason = \"" << debug_reason
-                  << "\" (status = " << debug_status << ")";
+  if (reason != nullptr) {
+    FXL_LOG(INFO) << (owner_->is_input() ? " Input" : "Output")
+                  << " shutting down '" << reason << "', status:" << status;
   }
 
   // Our owner will call our Cleanup function within this call.
@@ -1007,7 +1031,7 @@ void AudioDriver::ReportPlugStateChange(bool plugged, zx_time_t plug_time) {
 zx_status_t AudioDriver::OnDriverInfoFetched(uint32_t info) {
   // We should never fetch the same info twice.
   if (fetched_driver_info_ & info) {
-    ShutdownSelf("Duplicate driver info fetch\n");
+    ShutdownSelf("Duplicate driver info fetch\n", ZX_ERR_BAD_STATE);
     return ZX_ERR_BAD_STATE;
   }
 

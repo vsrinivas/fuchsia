@@ -76,9 +76,7 @@ void AudioInput::OnDriverInfoFetched() {
     return;
   }
 
-  FXL_LOG(INFO) << "AudioInput Configuring for " << pref_fps << " Hz "
-                << pref_chan << " channel(s) sample format(0x" << std::hex
-                << static_cast<uint32_t>(pref_fmt) << ")";
+  // TODO(mpuryear): Save to the hub the configured format for this input.
 
   // Send config request; recompute distance between start|end sampling fences.
   driver_->Configure(pref_fps, pref_chan, pref_fmt, kMaxFenceDistance);

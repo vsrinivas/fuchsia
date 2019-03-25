@@ -315,10 +315,7 @@ void DriverOutput::OnDriverInfoFetched() {
     return;
   }
 
-  FXL_LOG(INFO) << "Output: configuring the following best-fit format: "
-                << pref_fps << " Hz, " << pref_chan
-                << "-channel, sample format 0x" << std::hex
-                << static_cast<uint32_t>(pref_fmt);
+  // TODO(mpuryear): Save to the hub the configured format for this output.
 
   TimelineRate ns_to_frames(pref_fps, ZX_SEC(1));
   int64_t retention_frames = ns_to_frames.Scale(kDefaultMaxRetentionNsec);

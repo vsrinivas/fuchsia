@@ -170,6 +170,8 @@ class AudioDriver {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
   zx_status_t ProcessStopResponse(const audio_rb_cmd_stop_resp_t& resp)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
+  zx_status_t ProcessPositionNotify(const audio_rb_position_notify_t& notify)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain_->token());
 
   // Transition to the Shutdown state and begin the process of shutting down.
   void ShutdownSelf(const char* debug_reason = nullptr,
