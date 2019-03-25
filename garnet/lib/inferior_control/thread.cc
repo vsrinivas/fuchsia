@@ -272,10 +272,7 @@ bool Thread::ResumeAfterSoftwareBreakpointInstruction(zx_handle_t eport) {
   zx_vaddr_t pc = registers_->GetPC();
   zx_vaddr_t new_pc = debugger_utils::IncrementPcAfterBreak(pc);
   FXL_VLOG(4) << "Changing pc 0x" << std::hex << pc << " -> 0x" << new_pc;
-  int pc_regno = GetPCRegisterNumber();
-  if (!registers_->SetRegister(pc_regno, &new_pc, sizeof(new_pc))) {
-    return false;
-  }
+  registers_->SetPC(new_pc);
   if (!registers_->WriteGeneralRegisters()) {
     return false;
   }

@@ -12,79 +12,22 @@
 
 #include "garnet/lib/debugger_utils/util.h"
 
-#include "registers_x64.h"
 #include "registers.h"
 #include "arch_x64.h"
 #include "thread.h"
 
 namespace inferior_control {
 
-int GetPCRegisterNumber() { return static_cast<int>(X64Register::RIP); }
-
-int GetFPRegisterNumber() { return static_cast<int>(X64Register::RBP); }
-
-int GetSPRegisterNumber() { return static_cast<int>(X64Register::RSP); }
-
 namespace {
-
-// Includes all registers if |register_number| is -1.
-// TODO: Here as elsewhere: more regsets.
-std::string GetRegisterAsStringHelper(const zx_thread_state_general_regs& gregs,
-                                      int regno) {
-  FXL_DCHECK(regno >= -1 &&
-             regno < static_cast<int>(X64Register::NUM_REGISTERS));
-
-  // Based on the value of |regno|, we either need to fit in all
-  // registers or just a single one.
-  const size_t kDataSize = regno < 0 ? sizeof(gregs) : sizeof(uint64_t);
-  const uint8_t* greg_bytes = reinterpret_cast<const uint8_t*>(&gregs);
-
-  greg_bytes += regno < 0 ? 0 : regno * sizeof(uint64_t);
-
-  return debugger_utils::EncodeByteArrayString(greg_bytes, kDataSize);
-}
 
 class RegistersX64 final : public Registers {
  public:
-  RegistersX64(Thread* thread) : Registers(thread) {
-    memset(&gregs_, 0, sizeof(gregs_));
-  }
+  static constexpr int kNumGeneralRegisters = 18;
 
-  ~RegistersX64() = default;
-
-  bool IsSupported() override { return true; }
-
-  bool RefreshRegset(int regset) override {
-    FXL_DCHECK(regset == 0);
-    return RefreshRegsetHelper(regset, &gregs_, sizeof(gregs_));
-  }
-
-  bool WriteRegset(int regset) override {
-    FXL_DCHECK(regset == 0);
-    return WriteRegsetHelper(regset, &gregs_, sizeof(gregs_));
-  }
-
-  std::string GetRegsetAsString(int regset) override {
-    FXL_DCHECK(regset == 0);
-    return GetRegisterAsStringHelper(gregs_, -1);
-  }
-
-  bool SetRegsetFromString(int regset, const fxl::StringView& value) override {
-    FXL_DCHECK(regset == 0);
-    return SetRegsetFromStringHelper(regset, &gregs_, sizeof(gregs_), value);
-  }
-
-  std::string GetRegisterAsString(int regno) override {
-    if (regno < 0 || regno >= static_cast<int>(X64Register::NUM_REGISTERS)) {
-      FXL_LOG(ERROR) << "Bad register number: " << regno;
-      return "";
-    }
-
-    return GetRegisterAsStringHelper(gregs_, regno);
-  }
+  RegistersX64(Thread* thread) : Registers(thread) {}
 
   bool GetRegister(int regno, void* buffer, size_t buf_size) override {
-    if (regno < 0 || regno >= static_cast<int>(X64Register::NUM_REGISTERS)) {
+    if (regno < 0 || regno >= kNumGeneralRegisters) {
       FXL_LOG(ERROR) << "Bad register_number: " << regno;
       return false;
     }
@@ -93,7 +36,7 @@ class RegistersX64 final : public Registers {
       return false;
     }
 
-    auto greg_bytes = reinterpret_cast<const uint8_t*>(&gregs_);
+    auto greg_bytes = reinterpret_cast<const uint8_t*>(&general_regs_);
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(buffer, greg_bytes, buf_size);
     FXL_VLOG(2) << "Get register " << regno << " = (raw) "
@@ -102,7 +45,7 @@ class RegistersX64 final : public Registers {
   }
 
   bool SetRegister(int regno, const void* value, size_t value_size) override {
-    if (regno < 0 || regno >= static_cast<int>(X64Register::NUM_REGISTERS)) {
+    if (regno < 0 || regno >= kNumGeneralRegisters) {
       FXL_LOG(ERROR) << "Invalid X64 register number: " << regno;
       return false;
     }
@@ -112,7 +55,7 @@ class RegistersX64 final : public Registers {
       return false;
     }
 
-    auto greg_bytes = reinterpret_cast<uint8_t*>(&gregs_);
+    auto greg_bytes = reinterpret_cast<uint8_t*>(&general_regs_);
     greg_bytes += regno * sizeof(uint64_t);
     std::memcpy(greg_bytes, value, value_size);
     FXL_VLOG(2) << "Set register " << regno << " = "
@@ -121,11 +64,27 @@ class RegistersX64 final : public Registers {
     return true;
   }
 
+  zx_vaddr_t GetPC() override {
+    return general_regs_.rip;
+  }
+
+  zx_vaddr_t GetSP() override {
+    return general_regs_.rsp;
+  }
+
+  zx_vaddr_t GetFP() override {
+    return general_regs_.rbp;
+  }
+
+  void SetPC(zx_vaddr_t pc) override {
+    general_regs_.rip = pc;
+  }
+
   bool SetSingleStep(bool enable) override {
     if (enable)
-      gregs_.rflags |= X86_EFLAGS_TF_MASK;
+      general_regs_.rflags |= X86_EFLAGS_TF_MASK;
     else
-      gregs_.rflags &= ~static_cast<uint64_t>(X86_EFLAGS_TF_MASK);
+      general_regs_.rflags &= ~static_cast<uint64_t>(X86_EFLAGS_TF_MASK);
     FXL_VLOG(4) << "rflags.TF set to " << enable;
     return true;
   }
@@ -140,27 +99,26 @@ class RegistersX64 final : public Registers {
  private:
   std::string FormatGeneralRegisters() {
     std::string result;
+    const zx_thread_state_general_regs_t* gr = &general_regs_;
 
     result += fxl::StringPrintf("  CS: %#18llx RIP: %#18" PRIx64
                                 " EFL: %#18" PRIx64 "\n",
-                                0ull, gregs_.rip, gregs_.rflags);
+                                0ull, gr->rip, gr->rflags);
     result += fxl::StringPrintf(" RAX: %#18" PRIx64 " RBX: %#18" PRIx64
                                 " RCX: %#18" PRIx64 " RDX: %#18" PRIx64 "\n",
-                                gregs_.rax, gregs_.rbx, gregs_.rcx, gregs_.rdx);
+                                gr->rax, gr->rbx, gr->rcx, gr->rdx);
     result += fxl::StringPrintf(" RSI: %#18" PRIx64 " RDI: %#18" PRIx64
                                 " RBP: %#18" PRIx64 " RSP: %#18" PRIx64 "\n",
-                                gregs_.rsi, gregs_.rdi, gregs_.rbp, gregs_.rsp);
+                                gr->rsi, gr->rdi, gr->rbp, gr->rsp);
     result += fxl::StringPrintf("  R8: %#18" PRIx64 "  R9: %#18" PRIx64
                                 " R10: %#18" PRIx64 " R11: %#18" PRIx64 "\n",
-                                gregs_.r8, gregs_.r9, gregs_.r10, gregs_.r11);
+                                gr->r8, gr->r9, gr->r10, gr->r11);
     result += fxl::StringPrintf(" R12: %#18" PRIx64 " R13: %#18" PRIx64
                                 " R14: %#18" PRIx64 " R15: %#18" PRIx64 "\n",
-                                gregs_.r12, gregs_.r13, gregs_.r14, gregs_.r15);
+                                gr->r12, gr->r13, gr->r14, gr->r15);
 
     return result;
   }
-
-  zx_thread_state_general_regs gregs_;
 };
 
 }  // namespace
@@ -169,13 +127,5 @@ class RegistersX64 final : public Registers {
 std::unique_ptr<Registers> Registers::Create(Thread* thread) {
   return std::unique_ptr<Registers>(new RegistersX64(thread));
 }
-
-// static
-std::string Registers::GetUninitializedGeneralRegistersAsString() {
-  return std::string(sizeof(zx_thread_state_general_regs) * 2, '0');
-}
-
-// static
-size_t Registers::GetRegisterSize() { return sizeof(uint64_t); }
 
 }  // namespace inferior_control

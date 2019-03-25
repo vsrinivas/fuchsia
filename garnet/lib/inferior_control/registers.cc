@@ -21,6 +21,16 @@ Registers::Registers(Thread* thread) : thread_(thread) {
   FXL_DCHECK(thread->handle() != ZX_HANDLE_INVALID);
 }
 
+bool Registers::RefreshRegset(int regset) {
+  FXL_DCHECK(regset == 0);
+  return RefreshRegsetHelper(regset, &general_regs_, sizeof(general_regs_));
+}
+
+bool Registers::WriteRegset(int regset) {
+  FXL_DCHECK(regset == 0);
+  return WriteRegsetHelper(regset, &general_regs_, sizeof(general_regs_));
+}
+
 bool Registers::RefreshGeneralRegisters() {
   return RefreshRegset(ZX_THREAD_STATE_GENERAL_REGS);
 }
@@ -29,12 +39,8 @@ bool Registers::WriteGeneralRegisters() {
   return WriteRegset(ZX_THREAD_STATE_GENERAL_REGS);
 }
 
-std::string Registers::GetGeneralRegistersAsString() {
-  return GetRegsetAsString(ZX_THREAD_STATE_GENERAL_REGS);
-}
-
-bool Registers::SetGeneralRegistersFromString(const fxl::StringView& value) {
-  return SetRegsetFromString(ZX_THREAD_STATE_GENERAL_REGS, value);
+zx_thread_state_general_regs_t* Registers::GetGeneralRegisters() {
+  return &general_regs_;
 }
 
 bool Registers::RefreshRegsetHelper(int regset, void* buf, size_t buf_size) {
@@ -69,33 +75,5 @@ bool Registers::WriteRegsetHelper(int regset, const void* buf,
   FXL_VLOG(4) << "Regset " << regset << " written";
   return true;
 }
-
-bool Registers::SetRegsetFromStringHelper(int regset, void* buffer,
-                                          size_t buf_size,
-                                          const fxl::StringView& value) {
-  auto bytes = debugger_utils::DecodeByteArrayString(value);
-  if (bytes.size() != buf_size) {
-    FXL_LOG(ERROR) << "|value| doesn't match regset " << regset << " size of "
-                   << buf_size << ": " << value;
-    return false;
-  }
-
-  memcpy(buffer, bytes.data(), buf_size);
-  FXL_VLOG(2) << "Regset " << regset << " cache written";
-  return true;
-}
-
-zx_vaddr_t Registers::GetIntRegister(int regno) {
-  zx_vaddr_t value;
-  bool success = GetRegister(regno, &value, sizeof(value));
-  FXL_DCHECK(success);
-  return value;
-}
-
-zx_vaddr_t Registers::GetPC() { return GetIntRegister(GetPCRegisterNumber()); }
-
-zx_vaddr_t Registers::GetSP() { return GetIntRegister(GetSPRegisterNumber()); }
-
-zx_vaddr_t Registers::GetFP() { return GetIntRegister(GetFPRegisterNumber()); }
 
 }  // namespace inferior_control

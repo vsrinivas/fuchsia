@@ -17,6 +17,8 @@ executable("bin") {
     "io_loop.cc",
     "io_loop.h",
     "main.cc",
+    "registers.cc",
+    "registers.h",
     "server.cc",
     "server.h",
     "stop_reply_packet.cc",
@@ -26,6 +28,12 @@ executable("bin") {
     "util.cc",
     "util.h",
   ]
+
+  if (current_cpu == "x64") {
+    sources += [ "registers_x64.cc" ]
+  } else if (current_cpu == "arm64") {
+    sources += [ "registers_arm64.cc" ]
+  }
 
   deps = [
     "//garnet/lib/debugger_utils",

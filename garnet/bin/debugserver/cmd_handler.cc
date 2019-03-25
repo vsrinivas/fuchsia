@@ -19,6 +19,7 @@
 #include "lib/fxl/strings/string_number_conversions.h"
 #include "lib/fxl/strings/string_printf.h"
 
+#include "registers.h"
 #include "server.h"
 #include "thread_action_list.h"
 #include "util.h"
@@ -221,7 +222,7 @@ bool CommandHandler::Handle_c(const fxl::StringView& packet,
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
     if (!current_thread->registers()->SetRegister(
-            inferior_control::GetPCRegisterNumber(), &addr, sizeof(addr))) {
+            GetPCRegisterNumber(), &addr, sizeof(addr))) {
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
     if (!current_thread->registers()->WriteGeneralRegisters()) {
@@ -321,7 +322,7 @@ bool CommandHandler::Handle_C(const fxl::StringView& packet,
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
     if (!current_thread->registers()->SetRegister(
-            inferior_control::GetPCRegisterNumber(), &addr, sizeof(addr))) {
+            GetPCRegisterNumber(), &addr, sizeof(addr))) {
       return ReplyWithError(ErrorCode::PERM, std::move(callback));
     }
     if (!current_thread->registers()->WriteGeneralRegisters()) {
@@ -397,12 +398,9 @@ bool CommandHandler::Handle_g(ResponseCallback callback) {
   // registers.
   std::string result;
   if (!server_->current_thread()) {
-    result =
-        inferior_control::Registers::GetUninitializedGeneralRegistersAsString();
+    result = GetUninitializedGeneralRegistersAsString();
   } else {
-    inferior_control::Registers* regs = server_->current_thread()->registers();
-    FXL_DCHECK(regs);
-    result = regs->GetGeneralRegistersAsString();
+    result = GetGeneralRegistersAsString(server_->current_thread());
   }
 
   if (result.empty()) {
@@ -436,7 +434,7 @@ bool CommandHandler::Handle_G(const fxl::StringView& packet,
   // registers, not just the general registers. We'll have to take this into
   // account in the future, though for now we're just supporting general
   // registers.
-  if (!current_thread->registers()->SetGeneralRegistersFromString(packet)) {
+  if (SetGeneralRegistersFromString(current_thread, packet)) {
     FXL_LOG(ERROR) << "G: Failed to write to general registers";
     return ReplyWithError(ErrorCode::PERM, std::move(callback));
   }

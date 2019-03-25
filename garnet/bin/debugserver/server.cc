@@ -25,6 +25,7 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/string_view.h"
 
+#include "registers.h"
 #include "stop_reply_packet.h"
 #include "util.h"
 
@@ -484,12 +485,12 @@ void RspServer::ExceptionHelper(inferior_control::Process* process,
 
   // Registers.
   if (thread->registers()->RefreshGeneralRegisters()) {
-    std::array<int, 3> regnos{{inferior_control::GetFPRegisterNumber(),
-                               inferior_control::GetSPRegisterNumber(),
-                               inferior_control::GetPCRegisterNumber()}};
+    std::array<int, 3> regnos{{GetFPRegisterNumber(),
+                               GetSPRegisterNumber(),
+                               GetPCRegisterNumber()}};
     for (int regno : regnos) {
       FXL_DCHECK(regno < std::numeric_limits<uint8_t>::max() && regno >= 0);
-      std::string regval = thread->registers()->GetRegisterAsString(regno);
+      std::string regval = GetRegisterAsString(thread, regno); //thread->registers()->GetRegisterAsString(regno);
       stop_reply.AddRegisterValue(regno, regval);
     }
   } else {
