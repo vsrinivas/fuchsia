@@ -139,6 +139,7 @@ fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
   // If we're running on Fuchsia, make sure we have our semaphore extensions.
   params.extension_names.insert(
       VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME);
+  params.extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   params.extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
 #endif
 

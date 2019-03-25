@@ -12,12 +12,12 @@
 #endif
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
-#include <lib/zx/channel.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
@@ -317,15 +317,15 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool linear)
     // Use first supported type
     uint32_t memory_type = __builtin_ctz(memory_reqs.memoryTypeBits);
 
-    VkImportMemoryFuchsiaHandleInfoKHR fuchsia_handle_info = {
-        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_FUCHSIA_HANDLE_INFO_KHR,
+    VkImportMemoryZirconHandleInfoFUCHSIA handle_info = {
+        .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
         .pNext = nullptr,
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR,
+        VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
         buffer_collection_info.buffers[0].vmo.release()};
 
     VkMemoryAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .pNext = &fuchsia_handle_info,
+        .pNext = &handle_info,
         .allocationSize = memory_reqs.size,
         .memoryTypeIndex = memory_type,
     };

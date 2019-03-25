@@ -104,13 +104,13 @@ void DemoHarnessFuchsia::InitWindowSystem() { input_reader_.Start(); }
 
 vk::SurfaceKHR DemoHarnessFuchsia::CreateWindowAndSurface(
     const WindowParams& params) {
-    VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
+  VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
       .pNext = nullptr,
   };
   VkSurfaceKHR surface;
-  VkResult err =
-      vkCreateImagePipeSurfaceFUCHSIA(instance(), &create_info, nullptr, &surface);
+  VkResult err = vkCreateImagePipeSurfaceFUCHSIA(instance(), &create_info,
+                                                 nullptr, &surface);
   FXL_CHECK(!err);
   return surface;
 }
@@ -119,14 +119,17 @@ void DemoHarnessFuchsia::AppendPlatformSpecificInstanceExtensionNames(
     InstanceParams* params) {
   params->extension_names.insert(VK_KHR_SURFACE_EXTENSION_NAME);
   params->extension_names.insert(VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME);
-  params->extension_names.insert(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
-  params->extension_names.insert(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+  params->extension_names.insert(
+      VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+  params->extension_names.insert(
+      VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
   params->layer_names.insert("VK_LAYER_FUCHSIA_imagepipe_swapchain_fb");
 }
 
 void DemoHarnessFuchsia::AppendPlatformSpecificDeviceExtensionNames(
     std::set<std::string>* names) {
   names->insert(VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME);
+  names->insert(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
 }
 
 void DemoHarnessFuchsia::ShutdownWindowSystem() {}
@@ -154,7 +157,8 @@ void DemoHarnessFuchsia::RenderFrameOrQuit() {
     device().waitIdle();
   } else {
     demo_->MaybeDrawFrame();
-    async::PostDelayedTask(loop_->dispatcher(),
-                           [this] { this->RenderFrameOrQuit(); }, zx::msec(1));
+    async::PostDelayedTask(
+        loop_->dispatcher(), [this] { this->RenderFrameOrQuit(); },
+        zx::msec(1));
   }
 }

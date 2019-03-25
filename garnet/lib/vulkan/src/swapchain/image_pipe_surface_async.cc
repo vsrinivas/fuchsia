@@ -70,14 +70,14 @@ bool ImagePipeSurfaceAsync::CreateImage(
     }
     zx::vmo vmo;
     // Export the vkDeviceMemory to a VMO.
-    VkMemoryGetFuchsiaHandleInfoKHR get_handle_info = {
-        VK_STRUCTURE_TYPE_MEMORY_GET_FUCHSIA_HANDLE_INFO_KHR, nullptr, memory,
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR};
+    VkMemoryGetZirconHandleInfoFUCHSIA get_handle_info = {
+        VK_STRUCTURE_TYPE_TEMP_MEMORY_GET_ZIRCON_HANDLE_INFO_FUCHSIA, nullptr,
+        memory, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
 
-    result = pDisp->GetMemoryFuchsiaHandleKHR(device, &get_handle_info,
-                                              vmo.reset_and_get_address());
+    result = pDisp->GetMemoryZirconHandleFUCHSIA(device, &get_handle_info,
+                                                 vmo.reset_and_get_address());
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "vkGetMemoryFuchsiaHandleKHR failed: %d", result);
+      fprintf(stderr, "GetMemoryZirconHandleFUCHSIA failed: %d", result);
       return false;
     }
 

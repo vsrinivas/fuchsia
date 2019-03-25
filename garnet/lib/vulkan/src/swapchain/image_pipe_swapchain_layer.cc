@@ -264,19 +264,21 @@ VkResult ImagePipeSwapchain::AcquireNextImage(uint64_t timeout_ns,
       wait_for_release_fence = true;
     }
 
-    VkImportSemaphoreFuchsiaHandleInfoKHR import_info = {
-        .sType = VK_STRUCTURE_TYPE_IMPORT_SEMAPHORE_FUCHSIA_HANDLE_INFO_KHR,
+    VkImportSemaphoreZirconHandleInfoFUCHSIA import_info = {
+        .sType =
+            VK_STRUCTURE_TYPE_TEMP_IMPORT_SEMAPHORE_ZIRCON_HANDLE_INFO_FUCHSIA,
         .pNext = nullptr,
         .semaphore = semaphore,
         .flags = VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR,
-        .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR,
+        .handleType =
+            VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
         .handle = handle};
 
     VkLayerDispatchTable* pDisp =
         GetLayerDataPtr(get_dispatch_key(device_), layer_data_map)
             ->device_dispatch_table;
     VkResult result =
-        pDisp->ImportSemaphoreFuchsiaHandleKHR(device_, &import_info);
+        pDisp->ImportSemaphoreZirconHandleFUCHSIA(device_, &import_info);
     if (result != VK_SUCCESS) {
       fprintf(stderr, "semaphore import failed: %d", result);
       return VK_SUCCESS;
@@ -343,15 +345,16 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index,
 
   zx::event acquire_fence;
 
-  VkSemaphoreGetFuchsiaHandleInfoKHR semaphore_info = {
-      .sType = VK_STRUCTURE_TYPE_SEMAPHORE_GET_FUCHSIA_HANDLE_INFO_KHR,
+  VkSemaphoreGetZirconHandleInfoFUCHSIA semaphore_info = {
+      .sType = VK_STRUCTURE_TYPE_TEMP_SEMAPHORE_GET_ZIRCON_HANDLE_INFO_FUCHSIA,
       .pNext = nullptr,
       .semaphore = semaphores_[index],
-      .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR};
-  result = pDisp->GetSemaphoreFuchsiaHandleKHR(
+      .handleType =
+          VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA};
+  result = pDisp->GetSemaphoreZirconHandleFUCHSIA(
       device_, &semaphore_info, acquire_fence.reset_and_get_address());
   if (result != VK_SUCCESS) {
-    fprintf(stderr, "GetSemaphoreFuchsiaHandleKHR failed with result %d",
+    fprintf(stderr, "GetSemaphoreZirconHandleFUCHSIA failed with result %d",
             result);
     return VK_ERROR_SURFACE_LOST_KHR;
   }
@@ -585,11 +588,11 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
             gpu, nullptr, &device_extension_count, device_extensions.data());
     if (result == VK_SUCCESS) {
       for (uint32_t i = 0; i < device_extension_count; i++) {
-        if (!strcmp(VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME,
+        if (!strcmp(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME,
                     device_extensions[i].extensionName)) {
           external_memory_extension_available = true;
         }
-        if (!strcmp(VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME,
+        if (!strcmp(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
                     device_extensions[i].extensionName)) {
           external_semaphore_extension_available = true;
         }
@@ -602,11 +605,11 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
   }
   if (!external_memory_extension_available) {
     fprintf(stderr, "Device extension not available: %s\n",
-            VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME);
+            VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
   }
   if (!external_semaphore_extension_available) {
     fprintf(stderr, "Device extension not available: %s\n",
-            VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME);
+            VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   }
 #if USE_IMAGEPIPE_SURFACE_FB
   if (!fuchsia_buffer_collection_extension_available) {
@@ -623,9 +626,8 @@ CreateDevice(VkPhysicalDevice gpu, const VkDeviceCreateInfo* pCreateInfo,
   for (uint32_t i = 0; i < create_info.enabledExtensionCount; i++) {
     enabled_extensions.push_back(create_info.ppEnabledExtensionNames[i]);
   }
-  enabled_extensions.push_back(VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME);
-  enabled_extensions.push_back(
-      VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME);
+  enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
+  enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
 #if USE_IMAGEPIPE_SURFACE_FB
   enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
 #endif

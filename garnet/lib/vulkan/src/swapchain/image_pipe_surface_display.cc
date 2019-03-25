@@ -5,10 +5,10 @@
 #include "image_pipe_surface_display.h"
 #include <fcntl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/directory.h>
 #include <zircon/device/display-controller.h>
 #include <zircon/pixelformat.h>
 #include <cstdio>
-#include <lib/fdio/directory.h>
 #include "vk_dispatch_table_helper.h"
 #include "vulkan/vk_layer.h"
 
@@ -285,10 +285,12 @@ bool ImagePipeSurfaceDisplay::CreateImage(
     uint32_t memory_type_index =
         __builtin_ctz(memory_requirements.memoryTypeBits);
 
-    VkImportMemoryFuchsiaHandleInfoKHR import_allocate_info = {
-        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_FUCHSIA_HANDLE_INFO_KHR,
+    VkImportMemoryZirconHandleInfoFUCHSIA import_allocate_info = {
+        .sType =
+            VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
         .pNext = nullptr,
-        .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR,
+        .handleType =
+            VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
         .handle = buffer_collection_info.buffers[i].vmo.release(),
     };
 

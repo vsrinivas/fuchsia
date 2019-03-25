@@ -35,8 +35,10 @@ int main(int argc, const char** argv) {
         vulkan_instance, {{
                               VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
                               VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME,
+                              VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME,
                               VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
                               VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME,
+                              VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
                           },
                           vk::SurfaceKHR()});
 
