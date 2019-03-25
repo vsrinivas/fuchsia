@@ -26,8 +26,19 @@ union NodeInfo {
 struct Service {
 };
 
+/// Indicates the file is ready for reading.
+const uint32 FILE_SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
+/// Indicates the file is ready for writing.
+const uint32 FILE_SIGNAL_WRITABLE = 0x02000000; // ZX_USER_SIGNAL_1
+
 /// The object may be cast to interface 'File'.
 struct FileObject {
+    /// An optional event which transmits information about an object's readability
+    /// or writability. This event relays information about the underlying object, not
+    /// the capability granted to client: this event may be signalled "readable" on a
+    /// connection that does not have the capability to read.
+    ///
+    /// The "FILE_SIGNAL_" values may be observed on this event.
     handle<event>? event;
 };
 
@@ -40,15 +51,35 @@ struct Pipe {
     handle<socket> socket;
 };
 
-/// The object is accompanied by a VMO.
+/// The object is a file which is represented as an immutable VMO.
+/// Although a VMO is returned as a part of this structure, this underlying object
+/// may represent multiple Vmofiles. To identify the logical portion of the VMO
+/// that represents the single file, an offset and length parameter are also supplied.
 struct Vmofile {
+    /// The VMO which backs this file.
     handle<vmo> vmo;
+    /// The index into |vmo| which represents the first byte of the file.
     uint64 offset;
+    /// The number of bytes, starting at |offset|, which may be used to represent this file.
     uint64 length;
 };
 
+/// Indicates the device is ready for reading.
+const uint32 DEVICE_SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
+/// Indicates the device is ready for writing.
+const uint32 DEVICE_SIGNAL_WRITABLE = 0x02000000; // ZX_USER_SIGNAL_1
+/// Indicates the device has encountered an error state.
+const uint32 DEVICE_SIGNAL_ERROR = 0x04000000; // ZX_USER_SIGNAL_2
+/// Indicates the device has hung up on the current connection.
+const uint32 DEVICE_SIGNAL_HANGUP = 0x08000000; // ZX_USER_SIGNAL_3
+/// Indicates an out-of-band state transition has occurred.
+const uint32 DEVICE_SIGNAL_OOB = 0x10000000; // ZX_USER_SIGNAL_4
+
 /// The object may be cast to interface 'Device'.
 struct Device {
+    /// An optional event which transmits information about a device's state.
+    ///
+    /// The "DEVICE_SIGNAL_" values may be observed on this event.
     handle<event>? event;
 };
 
@@ -149,7 +180,7 @@ protocol Node {
     /// This method does not require any rights.
     Describe() -> (NodeInfo info);
 
-    /// An event produced eagerly by a fidl server if requested by |OPEN_FLAG_DESCRIBE|.
+    /// An event produced eagerly by a FIDL server if requested by |OPEN_FLAG_DESCRIBE|.
     ///
     /// Indicates the success or failure of the open operation, and optionally describes the
     /// object. If the status is |ZX_OK|, |info| contains descriptive information about the object
@@ -183,7 +214,7 @@ protocol Node {
 /// definitions.
 const uint32 MODE_PROTECTION_MASK = 0x00FFF;
 /// Bits indicating node type. The canonical mechanism to check
-/// for a node type is to take 'mode', bitwise and it with the
+/// for a node type is to take 'mode', bitwise AND it with the
 /// MODE_TYPE_MASK, and check exact equality against a mode type.
 const uint32 MODE_TYPE_MASK = 0xFF000;
 const uint32 MODE_TYPE_DIRECTORY = 0x04000;
@@ -211,8 +242,15 @@ struct NodeAttributes {
 };
 
 const uint64 MAX_IOCTL_HANDLES = 2;
+
+/// The maximal buffer size which can be transmitted for buffered operations.
+/// This capacity is currently set somewhat arbitrarily.
 const uint64 MAX_BUF = 8192;
+/// The maximum length, in bytes, of a filesystem string.
+// TODO(smklein): Update to 4095. +1 is for null-terminator, which shouldn't be
+// part of the FIDL length.
 const uint64 MAX_PATH = 4096;
+/// The maximum length, in bytes, of a single filesystem component.
 const uint64 MAX_FILENAME = 255;
 
 /// The fields of 'attributes' which are used to update the Node are indicated
@@ -254,25 +292,25 @@ const uint32 VMO_FLAG_EXACT = 0x00020000;
 protocol File {
     compose Node;
 
-    /// Read 'count' bytes at the seek offset.
+    /// Reads 'count' bytes at the seek offset.
     /// The seek offset is moved forward by the number of bytes read.
     ///
     /// This method requires following rights: OPEN_RIGHT_READABLE.
     Read(uint64 count) -> (zx.status s, vector<uint8>:MAX_BUF data);
 
-    /// Read 'count' bytes at the provided offset.
+    /// Reads 'count' bytes at the provided offset.
     /// Does not affect the seek offset.
     ///
     /// This method requires following rights: OPEN_RIGHT_READABLE.
     ReadAt(uint64 count, uint64 offset) -> (zx.status s, vector<uint8>:MAX_BUF data);
 
-    /// Write data at the seek offset.
+    /// Writes data at the seek offset.
     /// The seek offset is moved forward by the number of bytes written.
     ///
     /// This method requires following rights: OPEN_RIGHT_WRITABLE.
     Write(vector<uint8>:MAX_BUF data) -> (zx.status s, uint64 actual);
 
-    /// Write data to the provided offset.
+    /// Writes data to the provided offset.
     /// Does not affect the seek offset.
     ///
     /// This method requires following rights: OPEN_RIGHT_WRITABLE.
@@ -284,24 +322,24 @@ protocol File {
     /// This method does not require any rights.
     Seek(int64 offset, SeekOrigin start) -> (zx.status s, uint64 offset);
 
-    /// Shrink the file size to 'length' bytes.
+    /// Shrinks the file size to 'length' bytes.
     ///
     /// This method requires following rights: OPEN_RIGHT_WRITABLE.
     Truncate(uint64 length) -> (zx.status s);
 
-    /// Acquire the Directory::Open rights and flags used to access this file.
+    /// Acquires the Directory::Open rights and flags used to access this file.
     ///
     /// This method does not require any rights.
     GetFlags() -> (zx.status s, uint32 flags);
 
-    /// Change the Directory::Open flags used to access the file.
+    /// Changes the Directory::Open flags used to access the file.
     /// Supported flags which can be turned on / off:
     /// - OPEN_FLAG_APPEND
     ///
     /// This method does not require any rights.
     SetFlags(uint32 flags) -> (zx.status s);
 
-    /// Acquire a VMO representing this file, if there is one, with the
+    /// Acquires a buffer representing this file, if there is one, with the
     /// requested access rights.
     ///
     /// |flags| may be any of VMO_FLAG_*.
@@ -312,12 +350,20 @@ protocol File {
     GetBuffer(uint32 flags) -> (zx.status s, fuchsia.mem.Buffer? buffer);
 };
 
-/// Dirent type information associated with the results of ReadDirents.
+// Dirent type information associated with the results of ReadDirents.
+// The following values are aligned with the values from libc's "dirent.h" "DT_...".
+
+/// A dirent with an unknown type.
 const uint8 DIRENT_TYPE_UNKNOWN = 0;
+/// A dirent representing a directory object.
 const uint8 DIRENT_TYPE_DIRECTORY = 4;
+/// A dirent representing a block device object.
 const uint8 DIRENT_TYPE_BLOCK_DEVICE = 6;
+/// A dirent representing a file object.
 const uint8 DIRENT_TYPE_FILE = 8;
+/// A dirent representing a socket object.
 const uint8 DIRENT_TYPE_SOCKET = 12;
+/// A dirent representing a service object.
 const uint8 DIRENT_TYPE_SERVICE = 16;
 
 /// Nodes which do not have ino values should return this value
@@ -335,17 +381,20 @@ const uint8 WATCH_EVENT_EXISTING = 3;
 /// Identifies that no more WATCH_EVENT_EXISTING events will be sent.
 const uint8 WATCH_EVENT_IDLE = 4;
 
-/// The following are bitmasks corresponding to the "watch events".
-/// They may be used as arguments to the Directory Watch method, to
-/// specify which events should receive notifications.
+/// Used by Directory::Watch. Requests transmission of WATCH_EVENT_DELETED.
 const uint32 WATCH_MASK_DELETED = 0x00000001;
+/// Used by Directory::Watch. Requests transmission of WATCH_EVENT_ADDED.
 const uint32 WATCH_MASK_ADDED = 0x00000002;
+/// Used by Directory::Watch. Requests transmission of WATCH_EVENT_REMOVED.
 const uint32 WATCH_MASK_REMOVED = 0x00000004;
+/// Used by Directory::Watch. Requests transmission of WATCH_EVENT_EXISTING.
 const uint32 WATCH_MASK_EXISTING = 0x00000008;
+/// Used by Directory::Watch. Requests transmission of WATCH_EVENT_IDLE.
 const uint32 WATCH_MASK_IDLE = 0x00000010;
+/// Used by Directory::Watch. Requests transmission of all watcher events.
 const uint32 WATCH_MASK_ALL = 0x0000001F;
 
-/// WARNING(ZX-2645): Unused.
+/// TODO(ZX-2645): Unused.
 ///
 /// WatchedEvent describes events returned from a DirectoryWatcher.
 struct WatchedEvent {
@@ -354,7 +403,7 @@ struct WatchedEvent {
     vector<uint8>:MAX_FILENAME name;
 };
 
-/// WARNING(ZX-2645): Unused.
+/// TODO(ZX-2645): Unused.
 ///
 /// DirectoryWatcher transmits messages from a filesystem server
 /// about events happening in the filesystem. Clients can register
@@ -376,6 +425,10 @@ protocol Directory {
     /// Flags may be any of the OPEN_FLAG_* and OPEN_RIGHT_* values, bitwise ORed together.
     /// The OPEN_FLAG_DESCRIBE flag may cause an |OnOpen| event to be transmitted
     /// on the |object| handle, indicating the type of object opened.
+    ///
+    /// If an unknown value is sent for either flags or mode, the connection should
+    /// be closed.
+    // TODO(smklein): Who uses mode? Can it be removed?
     Open(uint32 flags, uint32 mode, string:MAX_PATH path, request<Node> object);
 
     /// Detaches an object from this directory object.
@@ -422,21 +475,25 @@ protocol Directory {
     ///   // Unterminated name of entry.
     ///   char name[0];
     /// }
+    ///
+    // TODO(smklein): Convert to a vector of variable-length objects, when
+    // llcpp arrives.
+    // TODO(smklein): Get rid of "max_bytes".
+    // TODO(smklein): Document the behavior when the seek pointer reaches the end of the directory.
     ReadDirents(uint64 max_bytes) -> (zx.status s, vector<uint8>:MAX_BUF dirents);
 
-    /// Reset the directory seek offset.
+    /// Resets the directory seek offset.
     Rewind() -> (zx.status s);
 
-    /// Acquire a token to a Directory which can be used to identify
+    /// Acquires a token to a Directory which can be used to identify
     /// access to it at a later point in time.
     GetToken() -> (zx.status s, handle? token);
 
-    /// Within the directory, rename an object named src to the name dst, in
-    /// a directory represented by token.
+    /// Renames an object named src to the name dst, in a directory represented by token.
     Rename(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
-    /// Within the directory, create a link to an object named src by the name
-    /// dst, within a directory represented by token.
+    /// Creates a link to an object named src by the name dst, within a directory represented by
+    /// token.
     Link(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
     /// Watches a directory, receiving events of added messages on the
@@ -450,7 +507,7 @@ protocol Directory {
     /// };
     /// Where names are NOT null-terminated.
     ///
-    /// This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
+    /// TODO: This API is unstable; in the future, watcher will be a "DirectoryWatcher" client.
     ///
     /// Mask specifies a bitmask of events to observe.
     /// Options must be zero; it is reserved.
