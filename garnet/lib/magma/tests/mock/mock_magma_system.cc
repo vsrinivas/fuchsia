@@ -22,11 +22,6 @@ private:
     uint32_t next_context_id_ = 1;
 };
 
-magma_status_t magma_create_connection2(int32_t fd, magma_connection_t* connection_out)
-{
-    return magma_create_connection(fd, connection_out);
-}
-
 magma_status_t magma_create_connection(int32_t fd, magma_connection_t* connection_out)
 {
     *connection_out = new MockConnection();

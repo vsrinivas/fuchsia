@@ -17,11 +17,6 @@
 #include <chrono>
 #include <vector>
 
-magma_status_t magma_create_connection2(int32_t file_descriptor, magma_connection_t* connection_out)
-{
-    return magma_create_connection(file_descriptor, connection_out);
-}
-
 magma_status_t magma_create_connection(int32_t file_descriptor, magma_connection_t* connection_out)
 {
     uint32_t primary_channel;

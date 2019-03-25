@@ -23,10 +23,6 @@ magma_status_t magma_query(int32_t file_descriptor, uint64_t id, uint64_t* value
 // |file_descriptor| must correspond to an open device of class gpu.
 magma_status_t magma_create_connection(int32_t file_descriptor, magma_connection_t* connection_out);
 
-// TODO(MA-543): remove this
-magma_status_t magma_create_connection2(int32_t file_descriptor,
-                                        magma_connection_t* connection_out);
-
 // Releases the given |connection|.
 void magma_release_connection(magma_connection_t connection);
 
