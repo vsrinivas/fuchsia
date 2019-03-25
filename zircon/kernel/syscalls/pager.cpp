@@ -32,8 +32,14 @@ zx_status_t sys_pager_create(uint32_t options, user_out_handle* out) {
 zx_status_t sys_pager_create_vmo(zx_handle_t pager, uint32_t options, zx_handle_t port,
                                  uint64_t key, uint64_t size, user_out_handle* out) {
     auto up = ProcessDispatcher::GetCurrent();
+
+    zx_status_t status = up->QueryBasicPolicy(ZX_POL_NEW_VMO);
+    if (status != ZX_OK) {
+        return status;
+    }
+
     fbl::RefPtr<PagerDispatcher> pager_dispatcher;
-    zx_status_t status = up->GetDispatcher(pager, &pager_dispatcher);
+    status = up->GetDispatcher(pager, &pager_dispatcher);
     if (status != ZX_OK) {
         return status;
     }

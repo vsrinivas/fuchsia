@@ -37,6 +37,8 @@ __BEGIN_CDECLS
 #define MINIP_CMD_EXIT_NORMAL                (1 << 7)
 // The process calls zx_object_info( ZX_INFO_HANDLE_VALID) on a closed handle.
 #define MINIP_CMD_VALIDATE_CLOSED_HANDLE     (1 << 8)
+// The process creates a pager vmo and sends it back on |handle|.
+#define MINIP_CMD_CREATE_PAGER_VMO           (1 << 9)
 
 // Create and run a minimal process with one thread that blocks forever.
 // Does not require a host binary.

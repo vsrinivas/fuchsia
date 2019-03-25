@@ -209,6 +209,16 @@ static bool EnforceDenyChannel() {
     END_TEST;
 }
 
+static bool EnforceDenyPagerVmo() {
+    BEGIN_TEST;
+
+    zx_policy_basic_t policy[] = {{ZX_POL_NEW_VMO, ZX_POL_ACTION_DENY}};
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+                       MINIP_CMD_CREATE_PAGER_VMO, ZX_ERR_ACCESS_DENIED);
+
+    END_TEST;
+}
+
 static bool EnforceDenyAny() {
     BEGIN_TEST;
 
@@ -454,6 +464,7 @@ RUN_TEST(AbsThenRel)
 RUN_TEST(EnforceDenyEvent)
 RUN_TEST(EnforceDenyProfile)
 RUN_TEST(EnforceDenyChannel)
+RUN_TEST(EnforceDenyPagerVmo)
 RUN_TEST(EnforceDenyAny)
 RUN_TEST(EnforceAllowAny)
 RUN_TEST(EnforceDenyButEvent)

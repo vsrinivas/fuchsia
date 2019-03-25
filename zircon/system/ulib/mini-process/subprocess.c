@@ -149,6 +149,18 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                         event, ZX_INFO_HANDLE_VALID, NULL, 0, NULL, NULL);
                     goto reply;
                 }
+                if (what & MINIP_CMD_CREATE_PAGER_VMO) {
+                    what &= ~MINIP_CMD_CREATE_PAGER_VMO;
+
+                    zx_handle_t pager;
+                    if (ctx.pager_create(0u, &pager) != ZX_OK)
+                        __builtin_trap();
+                    zx_handle_t port;
+                    if (ctx.port_create(0u, &port) != ZX_OK)
+                        __builtin_trap();
+                    cmd.status = ctx.pager_create_vmo(pager, 0u, port, 0u, 0u, &handle[0]);
+                    goto reply;
+                }
 
                 // Neither MINIP_CMD_BUILTIN_TRAP nor MINIP_CMD_EXIT_NORMAL send a
                 // message so the client will get ZX_CHANNEL_PEER_CLOSED.
