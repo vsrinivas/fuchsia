@@ -28,7 +28,8 @@ static bool is_skl_y(uint16_t device_id) {
 }
 
 static bool is_kbl_u(uint16_t device_id) {
-    return device_id == 0x5916 || device_id == 0x5926 || device_id == 0x5906 || device_id == 0x5927;
+    return device_id == 0x5916 || device_id == 0x5926 || device_id == 0x5906
+            || device_id == 0x5927 || device_id == 0x3ea5;
 }
 
 static bool is_kbl_y(uint16_t device_id) {
