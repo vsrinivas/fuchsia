@@ -20,9 +20,8 @@ std::unique_ptr<SessionForTest> VkSessionTest::CreateSession() {
   auto vulkan_instance =
       escher::VulkanInstance::New(std::move(instance_params));
   auto vulkan_device = escher::VulkanDeviceQueues::New(
-      vulkan_instance, {{VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME,
-                         VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME},
-                        vk::SurfaceKHR()});
+      vulkan_instance,
+      {{VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME}, vk::SurfaceKHR()});
 
   escher_ = std::make_unique<escher::Escher>(vulkan_device);
   release_fence_signaller_ = std::make_unique<escher::ReleaseFenceSignaller>(

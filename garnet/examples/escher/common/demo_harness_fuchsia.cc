@@ -128,7 +128,6 @@ void DemoHarnessFuchsia::AppendPlatformSpecificInstanceExtensionNames(
 
 void DemoHarnessFuchsia::AppendPlatformSpecificDeviceExtensionNames(
     std::set<std::string>* names) {
-  names->insert(VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME);
   names->insert(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
 }
 

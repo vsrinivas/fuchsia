@@ -32,8 +32,6 @@ void SetUpEscher() {
 
 #ifdef OS_FUCHSIA
     device_params.extension_names.insert(
-        VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME);
-    device_params.extension_names.insert(
         VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
 #endif
 

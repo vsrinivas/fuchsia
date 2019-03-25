@@ -101,10 +101,8 @@ std::unique_ptr<escher::Escher> GfxSystem::InitializeEscher() {
   escher::VulkanDeviceQueues::Params device_queues_params(
       {{
            VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME,
-           VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME,
            VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME,
            VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
-           VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME,
            VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
            VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME,
        },
