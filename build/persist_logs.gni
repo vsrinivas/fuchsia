@@ -32,12 +32,18 @@ declare_args() {
 #       [string] This persist_logs usage will be guaranteed to not use more than
 #       this amount of bytes on disk space. The default is 64,000.
 #
+#   startup_sleep (optional):
+#       [string] This persist_logs usage will sleep for the given number of
+#       milliseconds before doing any work. Used to simulate early boot phase,
+#       and will be removed at a future date.
+#
 # Example:
 #
 #   persist_logs("amber_logs") {
 #     log_tags = [ "amber" ]
 #     ignore_log_tags = [ "klog" ]
 #     max_disk_usage = "10000"
+#     startup_sleep = "5000"
 #   }
 
 template("persist_logs") {
@@ -46,6 +52,7 @@ template("persist_logs") {
                            "log_tags",
                            "ignore_log_tags",
                            "max_disk_usage",
+                           "startup_sleep",
                          ])
 
   pkg_resources = []
@@ -84,6 +91,12 @@ template("persist_logs") {
       args += [
         "--file-capacity",
         max_disk_usage,
+      ]
+    }
+    if (defined(startup_sleep)) {
+      args += [
+        "--startup-sleep",
+        startup_sleep,
       ]
     }
   }

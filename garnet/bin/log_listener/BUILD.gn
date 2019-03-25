@@ -11,6 +11,7 @@ declare_args() {
   # Controls how many bytes of space on disk are used to persist device logs.
   # Should be a string value that only contains digits.
   max_log_disk_usage = "0"
+  log_startup_sleep = "30000"
 }
 
 rustc_binary("bin") {
@@ -75,4 +76,5 @@ package("log_listener_tests") {
 
 persist_logs("all_logs") {
   max_disk_usage = max_log_disk_usage
+  startup_sleep = log_startup_sleep
 }

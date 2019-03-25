@@ -16,6 +16,8 @@ use std::env;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
+use std::thread;
+use std::time;
 
 // Include the generated FIDL bindings for the `Logger` service.
 use fidl_fuchsia_logger::{
@@ -175,6 +177,7 @@ impl Default for LogListenerOptions {
 struct LocalOptions {
     file: Option<String>,
     file_capacity: u64,
+    startup_sleep: u64,
     ignore_tags: HashSet<String>,
     clock: Clock,
     time_format: String,
@@ -190,6 +193,7 @@ impl Default for LocalOptions {
         LocalOptions {
             file: None,
             file_capacity: DEFAULT_FILE_CAPACITY,
+            startup_sleep: 0,
             ignore_tags: HashSet::new(),
             clock: Clock::Monotonic,
             time_format: "%Y-%m-%d %H:%M:%S".to_string(),
@@ -350,6 +354,10 @@ fn help(name: &str) -> String {
             Defaults to {default_capacity}. Does nothing if --file is not specified. Setting this
             to 0 disables this functionality.
 
+        --startup_sleep <integer>:
+            Sleep for this number of milliseconds on program startup. Used to simulate early boot
+            from upcoming boot phases implementation, will be removed in the future.
+
         --clock <Monotonic|UTC|Local>:
             Select clock to use for timestamps.
             Monotonic (default): same as ZX_CLOCK_MONOTONIC.
@@ -501,6 +509,19 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                     ));
                 }
             },
+            "--startup_sleep" => {
+                match args[i + 1].parse::<u64>() {
+                    Ok(n) => {
+                        options.local.startup_sleep = n;
+                    }
+                    Err(_) => {
+                        return Err(format!(
+                            "Invalid startup_sleep: '{}', should be a positive integer.",
+                            args[i + 1]
+                        ));
+                    }
+                }
+            }
             "--clock" => match args[i + 1].to_lowercase().as_ref() {
                 "monotonic" => options.local.clock = Clock::Monotonic,
                 "utc" => options.local.clock = Clock::UTC,
@@ -736,6 +757,9 @@ fn main() {
         }
         Ok(o) => o,
     };
+
+    let sleep_time = time::Duration::from_millis(options.local.startup_sleep);
+    thread::sleep(sleep_time);
 
     if let Err(e) = run_log_listener(Some(&mut options)) {
         eprintln!("LogListener: Error: {:?}", e);
