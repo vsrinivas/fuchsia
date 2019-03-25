@@ -219,6 +219,26 @@ static bool EnforceDenyPagerVmo() {
     END_TEST;
 }
 
+static bool EnforceDenyVmoContiguous() {
+    BEGIN_TEST;
+
+    zx_policy_basic_t policy[] = {{ZX_POL_NEW_VMO, ZX_POL_ACTION_DENY}};
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+                       MINIP_CMD_CREATE_VMO_CONTIGUOUS, ZX_ERR_ACCESS_DENIED);
+
+    END_TEST;
+}
+
+static bool EnforceDenyVmoPhysical() {
+    BEGIN_TEST;
+
+    zx_policy_basic_t policy[] = {{ZX_POL_NEW_VMO, ZX_POL_ACTION_DENY}};
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+                       MINIP_CMD_CREATE_VMO_PHYSICAL, ZX_ERR_ACCESS_DENIED);
+
+    END_TEST;
+}
+
 static bool EnforceDenyAny() {
     BEGIN_TEST;
 
@@ -465,6 +485,8 @@ RUN_TEST(EnforceDenyEvent)
 RUN_TEST(EnforceDenyProfile)
 RUN_TEST(EnforceDenyChannel)
 RUN_TEST(EnforceDenyPagerVmo)
+RUN_TEST(EnforceDenyVmoContiguous)
+RUN_TEST(EnforceDenyVmoPhysical)
 RUN_TEST(EnforceDenyAny)
 RUN_TEST(EnforceAllowAny)
 RUN_TEST(EnforceDenyButEvent)

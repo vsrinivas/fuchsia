@@ -63,8 +63,13 @@ zx_status_t sys_vmo_create_contiguous(zx_handle_t bti, size_t size, uint32_t ali
     }
 
     auto up = ProcessDispatcher::GetCurrent();
+    zx_status_t status = up->QueryBasicPolicy(ZX_POL_NEW_VMO);
+    if (status != ZX_OK) {
+        return status;
+    }
+
     fbl::RefPtr<BusTransactionInitiatorDispatcher> bti_dispatcher;
-    zx_status_t status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
+    status = up->GetDispatcherWithRights(bti, ZX_RIGHT_MAP, &bti_dispatcher);
     if (status != ZX_OK) {
         return status;
     }
@@ -95,10 +100,15 @@ zx_status_t sys_vmo_create_physical(zx_handle_t hrsrc, zx_paddr_t paddr, size_t 
                                     user_out_handle* out) {
     LTRACEF("size 0x%zu\n", size);
 
+    auto up = ProcessDispatcher::GetCurrent();
+    zx_status_t status = up->QueryBasicPolicy(ZX_POL_NEW_VMO);
+    if (status != ZX_OK) {
+        return status;
+    }
+
     // Memory should be subtracted from the PhysicalAspace allocators, so it's
     // safe to assume that if the caller has access to a resource for this specified
     // region of MMIO space then it is safe to allow the vmo to be created.
-    zx_status_t status;
     if ((status = validate_resource_mmio(hrsrc, paddr, size)) != ZX_OK) {
         return status;
     }

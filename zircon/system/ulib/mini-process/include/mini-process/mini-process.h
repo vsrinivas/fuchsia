@@ -39,6 +39,12 @@ __BEGIN_CDECLS
 #define MINIP_CMD_VALIDATE_CLOSED_HANDLE     (1 << 8)
 // The process creates a pager vmo and sends it back on |handle|.
 #define MINIP_CMD_CREATE_PAGER_VMO           (1 << 9)
+// The process attempts to create a contiguous vmo and send it back on |handle|.
+// This will always fail because we don't supply a bti handle.
+#define MINIP_CMD_CREATE_VMO_CONTIGUOUS      (1 << 10)
+// The process attempts to create a physical vmo and send it back on |handle|.
+// This will always fail because we don't supply a mmio resource.
+#define MINIP_CMD_CREATE_VMO_PHYSICAL        (1 << 11)
 
 // Create and run a minimal process with one thread that blocks forever.
 // Does not require a host binary.

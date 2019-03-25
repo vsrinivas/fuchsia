@@ -161,6 +161,23 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                     cmd.status = ctx.pager_create_vmo(pager, 0u, port, 0u, 0u, &handle[0]);
                     goto reply;
                 }
+                if (what & MINIP_CMD_CREATE_VMO_CONTIGUOUS) {
+                    what &= ~MINIP_CMD_CREATE_VMO_CONTIGUOUS;
+
+                    // This call will fail because we don't have a bti handle, but that's OK because
+                    // we only care about *how* it fails.
+                    cmd.status =
+                        ctx.vmo_contiguous_create(ZX_HANDLE_INVALID, ZX_PAGE_SIZE, 0u, &handle[0]);
+                    goto reply;
+                }
+                if (what & MINIP_CMD_CREATE_VMO_PHYSICAL) {
+                    what &= ~MINIP_CMD_CREATE_VMO_PHYSICAL;
+
+                    // This call will fail because we don't have a mmio resource, but that's OK
+                    // because we only care about *how* it fails.
+                    cmd.status = ctx.vmo_physical_create(ZX_HANDLE_INVALID, 0u, 0u, &handle[0]);
+                    goto reply;
+                }
 
                 // Neither MINIP_CMD_BUILTIN_TRAP nor MINIP_CMD_EXIT_NORMAL send a
                 // message so the client will get ZX_CHANNEL_PEER_CLOSED.
