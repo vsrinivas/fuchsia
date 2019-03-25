@@ -702,7 +702,6 @@ group("media") {
   testonly = true
   public_deps = [
     "//garnet/bin/media/audio_core/mixer:audio_mixer_tests",
-    "//garnet/bin/media/audio_core/test:audio_device_tests",
     "//garnet/bin/media/audio_core/test:audio_fidl_tests",
     "//garnet/bin/media/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg_tests",
     "//garnet/bin/media/codecs/test:raw_frames_test",
