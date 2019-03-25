@@ -13,6 +13,7 @@ library("object") {
     "event_dispatcher.cpp",
     "event_pair_dispatcher.cpp",
     "exception.cpp",
+    "exceptionate.cpp",
     "excp_port.cpp",
     "fifo_dispatcher.cpp",
     "futex_context.cpp",
@@ -86,6 +87,7 @@ source_set("tests") {
   # TODO: testonly = true
   sources = [
     "buffer_chain_tests.cpp",
+    "exceptionate_tests.cpp",
     "handle_tests.cpp",
     "job_policy_tests.cpp",
     "mbuf_tests.cpp",

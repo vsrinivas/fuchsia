@@ -374,6 +374,13 @@ public:
         }
     }
 
+    // Returns true if the peer has closed. Once the peer has closed it
+    // will never re-open.
+    bool PeerHasClosed() const {
+        Guard<fbl::Mutex> guard{get_lock()};
+        return peer_ == nullptr;
+    }
+
     Lock<fbl::Mutex>* get_lock() const final { return holder_->get_lock(); }
 
 protected:
