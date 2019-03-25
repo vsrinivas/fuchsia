@@ -12,6 +12,7 @@
 class Logger {
  public:
   static Logger& Get();
+  void Reset() { buffer_.clear(); }
   void Write(const char* s, size_t count);
   const std::string& Buffer() { return buffer_; }
 

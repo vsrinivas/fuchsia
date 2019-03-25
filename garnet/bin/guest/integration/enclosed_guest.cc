@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "garnet/bin/guest/integration/enclosed_guest.h"
+#include "garnet/bin/guest/integration/logger.h"
 
 static constexpr char kGuestManagerUrl[] =
     "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";
@@ -35,6 +36,8 @@ static bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition) {
 }
 
 zx_status_t EnclosedGuest::Start() {
+  Logger::Get().Reset();
+
   real_services_->Connect(real_env_.NewRequest());
   auto services =
       sys::testing::EnvironmentServices::Create(real_env_, loop_.dispatcher());
