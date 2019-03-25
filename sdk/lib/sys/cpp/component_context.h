@@ -87,10 +87,6 @@ class ComponentContext {
   // }
   // ```
   static std::unique_ptr<ComponentContext> Create();
-  // DEPRECATED
-  static std::unique_ptr<ComponentContext> CreateFromStartupInfo() {
-    return Create();
-  }
 
   // Creates a startup context from |fuchsia::sys::StartupInfo|.
   //
