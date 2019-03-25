@@ -17,6 +17,8 @@ rustc_library("fuchsia-inspect") {
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
     "//zircon/public/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
   ]
