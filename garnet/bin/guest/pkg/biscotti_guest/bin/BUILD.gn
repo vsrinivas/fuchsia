@@ -53,7 +53,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.guest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/fidl/fuchsia.wayland",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",

@@ -8,8 +8,6 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/outgoing.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -22,7 +20,6 @@ namespace biscotti {
 
 // Represents a single linux mod with an associated ViewProvider.
 class LinuxComponent : public fuchsia::sys::ComponentController,
-                       public fuchsia::ui::viewsv1::ViewProvider,
                        public fuchsia::ui::app::ViewProvider {
  public:
   using TerminationCallback = fit::function<void(const LinuxComponent*)>;
@@ -41,7 +38,6 @@ class LinuxComponent : public fuchsia::sys::ComponentController,
   component::Outgoing outgoing_;
   std::unique_ptr<component::StartupContext> startup_context_;
   fidl::BindingSet<fuchsia::ui::app::ViewProvider> view_bindings_;
-  fidl::BindingSet<fuchsia::ui::viewsv1::ViewProvider> v1_view_bindings_;
   fuchsia::ui::app::ViewProviderPtr remote_view_provider_;
 
   LinuxComponent(
@@ -53,11 +49,6 @@ class LinuxComponent : public fuchsia::sys::ComponentController,
   // |fuchsia::sys::ComponentController|
   void Kill() override;
   void Detach() override;
-
-  // |fuchsia::ui::viewsv1::ViewProvider|
-  void CreateView(
-      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) override;
 
   // |fuchsia::ui::app::ViewProvider|
   void CreateView(

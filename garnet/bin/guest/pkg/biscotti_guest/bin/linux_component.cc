@@ -40,8 +40,6 @@ LinuxComponent::LinuxComponent(
   }
   outgoing_.AddPublicService<fuchsia::ui::app::ViewProvider>(
       view_bindings_.GetHandler(this));
-  outgoing_.AddPublicService<fuchsia::ui::viewsv1::ViewProvider>(
-      v1_view_bindings_.GetHandler(this));
 }
 
 LinuxComponent::~LinuxComponent() = default;
@@ -59,14 +57,6 @@ void LinuxComponent::Kill() {
 // |fuchsia::sys::ComponentController|
 void LinuxComponent::Detach() {
   application_controller_.set_error_handler(nullptr);
-}
-
-// |fuchsia::ui::viewsv1::ViewProvider|
-void LinuxComponent::CreateView(
-    fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> services) {
-  CreateView(zx::eventpair(view_owner.TakeChannel().release()),
-             std::move(services), nullptr);
 }
 
 // |fuchsia::ui::app::ViewProvider|
