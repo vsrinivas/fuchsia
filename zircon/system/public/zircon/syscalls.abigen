@@ -531,7 +531,7 @@ syscall port_create
     (options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
 
-#^ Queue a packet to an port.
+#^ Queue a packet to a port.
 #! handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
 syscall port_queue
     (handle: zx_handle_t, packet: zx_port_packet_t[1] IN)
