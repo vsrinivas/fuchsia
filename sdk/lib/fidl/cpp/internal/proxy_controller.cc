@@ -89,8 +89,10 @@ zx_status_t ProxyController::OnMessage(Message message) {
 void ProxyController::OnChannelGone() { ClearPendingHandlers(); }
 
 void ProxyController::ClearPendingHandlers() {
-  handlers_.clear();
+  // Avoid reentrancy problems by first copying the handlers map.
+  auto doomed = std::move(handlers_);
   next_txid_ = 1;
+  doomed.clear();
 }
 
 }  // namespace internal

@@ -25,6 +25,20 @@ class CallbackMessageHandler : public MessageHandler {
   }
 };
 
+class DestructorMessageHandler : public MessageHandler {
+ public:
+  fit::function<void()> destructor;
+
+  ~DestructorMessageHandler() {
+    printf("\ngoing to call destructor callback\n");
+    destructor();
+  }
+
+  zx_status_t OnMessage(Message message) override {
+    return ZX_OK;
+  }
+};
+
 TEST(ProxyController, Trivial) { ProxyController controller; }
 
 TEST(ProxyController, Send) {
@@ -323,6 +337,52 @@ TEST(ProxyController, Reset) {
   EXPECT_EQ(0, callback_count);
   loop.RunUntilIdle();
   EXPECT_EQ(0, callback_count);
+}
+
+TEST(ProxyController, ReentrantDestructor) {
+  zx::channel h1, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+
+  fidl::test::AsyncLoopForTest loop;
+
+  ProxyController controller;
+  EXPECT_EQ(ZX_OK, controller.reader().Bind(std::move(h1)));
+
+  Encoder encoder(3u);
+  StringPtr string("hello!");
+  string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+
+  int destructor_count = 0;
+  auto handler = std::make_unique<DestructorMessageHandler>();
+  handler->destructor = [&destructor_count, &controller]() {
+    ++destructor_count;
+    EXPECT_EQ(destructor_count, 1);
+
+    Encoder encoder(3u);
+    StringPtr string("world!");
+    string.Encode(&encoder, encoder.Alloc(sizeof(fidl_string_t)));
+    auto callback_handler = std::make_unique<CallbackMessageHandler>();
+    callback_handler->callback = [](Message message) {
+      return ZX_OK;
+    };
+    zx_status_t status = controller.Send(&unbounded_nonnullable_string_message_type, encoder.GetMessage(), std::move(callback_handler));
+    EXPECT_EQ(ZX_ERR_BAD_HANDLE, status);
+
+    controller.Reset();
+  };
+
+  EXPECT_EQ(ZX_OK, controller.Send(&unbounded_nonnullable_string_message_type,
+                                   encoder.GetMessage(), std::move(handler)));
+
+  loop.RunUntilIdle();
+
+  EXPECT_EQ(destructor_count, 0);
+  controller.Reset();
+  EXPECT_EQ(destructor_count, 1);
+  EXPECT_FALSE(controller.reader().is_bound());
+
+  loop.RunUntilIdle();
+  EXPECT_EQ(destructor_count, 1);
 }
 
 }  // namespace
