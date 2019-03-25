@@ -253,7 +253,7 @@ mod internal {
             prefix: 128,
         };
         const MULTICAST_SUBNET: Subnet<Ipv6Addr> = Subnet {
-            network: Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            network: Ipv6Addr::new([0xff, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
             prefix: 8,
         };
         type Addr = Ipv6Addr;
@@ -484,6 +484,22 @@ mod internal {
         /// version of `self`.
         pub(crate) fn destination_matches(&self, dst: &Self) -> bool {
             self == dst || self.to_solicited_node_address() == *dst
+        }
+
+        /// Checks whether `self` is a link local IPv6 address, as defined
+        /// in [RFC 4291 section 2.5.6].
+        ///
+        /// [RFC 4291 section 2.5.6]: https://tools.ietf.org/html/rfc4291#section-2.5.6
+        pub(crate) fn is_linklocal(&self) -> bool {
+            self.0[0] == 0xFE && self.0[1] & 0xC0 == 0x80
+        }
+
+        /// Checks whether `self` is a valid unicast address.
+        ///
+        /// A valid unicast address is any unicast address that can be bound to
+        /// an interface (Not the unspecified or loopback addresses).
+        pub(crate) fn is_valid_unicast(&self) -> bool {
+            !(self.is_loopback() || self.is_unspecified() || self.is_multicast())
         }
     }
 
@@ -1048,6 +1064,7 @@ mod internal {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use crate::testutil::set_logger_for_test;
 
         #[test]
         fn test_subnet_new() {
@@ -1118,6 +1135,30 @@ mod internal {
             assert_eq!(addr.to_solicited_node_address(), solicited);
             assert!(addr.destination_matches(&addr));
             assert!(addr.destination_matches(&solicited));
+        }
+
+        #[test]
+        fn test_ipv6_address_types() {
+            set_logger_for_test();
+            assert!(Ipv6Addr::new([0; 16]).is_unspecified());
+            assert!(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]).is_loopback());
+            let link_local = Ipv6Addr::new([
+                0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x52, 0xe5, 0x49, 0xff, 0xfe, 0xb5, 0x5a, 0xa0,
+            ]);
+            assert!(link_local.is_linklocal());
+            assert!(link_local.is_valid_unicast());
+            assert!(link_local.to_solicited_node_address().is_multicast());
+            let global_unicast = Ipv6Addr::new([
+                0x00, 0x80, 0, 0, 0, 0, 0, 0, 0x52, 0xe5, 0x49, 0xff, 0xfe, 0xb5, 0x5a, 0xa0,
+            ]);
+            assert!(global_unicast.is_valid_unicast());
+            assert!(global_unicast.to_solicited_node_address().is_multicast());
+
+            let multi = Ipv6Addr::new([
+                0xff, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x01, 0xff, 0xb5, 0x5a, 0xa0,
+            ]);
+            assert!(multi.is_multicast());
+            assert!(!multi.is_valid_unicast());
         }
     }
 }
