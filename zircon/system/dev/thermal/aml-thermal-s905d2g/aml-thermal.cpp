@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "aml-thermal.h"
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <fbl/auto_call.h>
@@ -133,11 +134,11 @@ zx_status_t AmlThermal::Create(zx_device_t* device) {
     }
 
     auto thermal_device = fbl::make_unique_checked<AmlThermal>(&ac, device,
-                                                                   std::move(tsensor),
-                                                                   std::move(voltage_regulator),
-                                                                   std::move(cpufreq_scaling),
-                                                                   std::move(opp_info),
-                                                                   std::move(thermal_config));
+                                                               std::move(tsensor),
+                                                               std::move(voltage_regulator),
+                                                               std::move(cpufreq_scaling),
+                                                               std::move(opp_info),
+                                                               std::move(thermal_config));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -230,8 +231,22 @@ void AmlThermal::DdkRelease() {
     delete this;
 }
 
-} // namespace thermal
-
-extern "C" zx_status_t aml_thermal(void* ctx, zx_device_t* device) {
+zx_status_t aml_thermal_bind(void* ctx, zx_device_t* device) {
     return thermal::AmlThermal::Create(device);
 }
+
+static zx_driver_ops_t driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = aml_thermal_bind;
+    return ops;
+}();
+
+} // namespace thermal
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "aml-thermal", "0.1", 3)
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S905D2),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL),
+ZIRCON_DRIVER_END(aml_thermal)

@@ -33,6 +33,7 @@ enum {
     BTI_AUDIO_OUT,
     BTI_AUDIO_IN,
     BTI_SYSMEM,
+    BTI_THERMAL,
 };
 
 // MAC address metadata indices
@@ -91,6 +92,7 @@ private:
     zx_status_t ButtonsInit();
     zx_status_t DisplayInit();
     zx_status_t AudioInit();
+    zx_status_t ThermalInit();
     int Thread();
 
     ddk::PBusProtocolClient pbus_;

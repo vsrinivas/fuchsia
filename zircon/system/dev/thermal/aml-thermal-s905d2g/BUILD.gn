@@ -7,7 +7,6 @@ driver("aml-thermal-s905d2g") {
     "aml-cpufreq.cpp",
     "aml-fclk-rates.c",
     "aml-pwm.cpp",
-    "aml-thermal.c",
     "aml-thermal.cpp",
     "aml-tsensor.cpp",
     "aml-voltage.cpp",

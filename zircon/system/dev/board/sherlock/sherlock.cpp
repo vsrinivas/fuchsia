@@ -86,6 +86,10 @@ int Sherlock::Thread() {
         zxlogf(ERROR, "CanvasInit() failed\n");
     }
 
+    if (ThermalInit() != ZX_OK) {
+        zxlogf(ERROR, "ThermalInit() failed\n");
+    }
+
     if (DisplayInit() != ZX_OK) {
         zxlogf(ERROR, "DisplayInit()failed\n");
     }

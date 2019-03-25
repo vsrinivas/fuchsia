@@ -97,6 +97,9 @@
 #define T931_MALI_BASE                  0xffe40000
 #define T931_MALI_LENGTH                0x40000
 
+#define T931_TEMP_SENSOR_BASE           0xff634000
+#define T931_TEMP_SENSOR_LENGTH         0x1000
+
 // MIPI CSI & Adapter
 #define T931_CSI_PHY0_BASE              0xff650000
 #define T931_CSI_PHY0_LENGTH            0x2000
@@ -168,6 +171,7 @@
 #define T931_UART_A_IRQ                 58
 #define T931_USB0_IRQ                   62
 #define T931_PARSER_IRQ                 64
+#define T931_TS_PLL_IRQ                 67
 #define T931_I2C3_IRQ                   71
 #define T931_DOS_MBOX_0_IRQ             75
 #define T931_DOS_MBOX_1_IRQ             76
