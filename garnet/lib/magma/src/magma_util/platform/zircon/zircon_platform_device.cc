@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 #include <ddk/device.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
 #include <zircon/process.h>
+#include <zx/vmo.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
@@ -16,6 +17,21 @@
 #include "zircon_platform_mmio.h"
 
 namespace magma {
+
+Status ZirconPlatformDevice::LoadFirmware(const char* filename,
+                                          std::unique_ptr<PlatformBuffer>* firmware_out,
+                                          uint64_t* size_out)
+{
+    zx::vmo vmo;
+    size_t size;
+    zx_status_t status = load_firmware(zx_device_, filename, vmo.reset_and_get_address(), &size);
+    if (status != ZX_OK) {
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failure to load firmware: %d", status);
+    }
+    *firmware_out = PlatformBuffer::Import(vmo.release());
+    *size_out = size;
+    return MAGMA_STATUS_OK;
+}
 
 std::unique_ptr<PlatformMmio>
 ZirconPlatformDevice::CpuMapMmio(unsigned int index, PlatformMmio::CachePolicy cache_policy)

@@ -107,6 +107,7 @@ source_set("device") {
   public_configs = [ ":platform_include_config" ]
 
   public_deps = [
+    ":buffer",
     ":handle",
     "$magma_build_root/src/magma_util:common",
   ]

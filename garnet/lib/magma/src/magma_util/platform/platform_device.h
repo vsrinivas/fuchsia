@@ -6,6 +6,8 @@
 #define PLATFORM_DEVICE_H
 
 #include "magma_util/dlog.h"
+#include "magma_util/status.h"
+#include "platform_buffer.h"
 #include "platform_handle.h"
 #include "platform_interrupt.h"
 #include "platform_mmio.h"
@@ -20,6 +22,9 @@ public:
     virtual void* GetDeviceHandle() = 0;
 
     virtual std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() = 0;
+
+    virtual Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
+                                uint64_t* size_out) = 0;
 
     // Map an MMIO listed at |index| in the MDI for this device.
     virtual std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,

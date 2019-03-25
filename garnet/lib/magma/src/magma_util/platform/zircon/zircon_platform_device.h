@@ -23,6 +23,9 @@ public:
 
     std::unique_ptr<PlatformHandle> GetBusTransactionInitiator() override;
 
+    Status LoadFirmware(const char* filename, std::unique_ptr<PlatformBuffer>* firmware_out,
+                        uint64_t* size_out) override;
+
     std::unique_ptr<PlatformMmio> CpuMapMmio(unsigned int index,
                                              PlatformMmio::CachePolicy cache_policy) override;
 
