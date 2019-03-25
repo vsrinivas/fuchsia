@@ -7,13 +7,16 @@
 #include <unistd.h>
 
 #include <ddk/debug.h>
-#include <ddk/io-buffer.h>
-#include <ddk/mmio-buffer.h>
 #include <hw/reg.h>
 
 #include "ufs.h"
 
-static void ufs_get_cmd(uint32_t opcode, uint32_t lba, uint32_t size, uint8_t* cmd) {
+#define INACTIVE_LUN -1
+#define BLOCK_OP(op) ((op) & BLOCK_OP_MASK)
+#define GET_UFSHC_DEV(dev, lun_idx) (containerof(dev - lun_idx, ufshc_dev_t, lun_blk_devs))
+
+static void ufs_get_cmd(uint8_t opcode, uint32_t lba,
+                        uint32_t size, uint8_t* cmd) {
     memset(cmd, 0x0, UPIU_CDB_MAX_LEN);
     switch (opcode) {
     case TEST_UNIT_OPCODE:
@@ -22,8 +25,24 @@ static void ufs_get_cmd(uint32_t opcode, uint32_t lba, uint32_t size, uint8_t* c
     case INQUIRY_OPCODE:
         cmd[0] = opcode;
         cmd[3] = (uint8_t)((size & 0xFF00) >> 8);
-        cmd[4] = (uint8_t)(size & 0xff);
+        cmd[4] = (uint8_t)(size & 0xFF);
         break;
+    case READ_CAPA16_OPCODE:
+        cmd[0] = opcode;
+        cmd[1] = UFS_READ_CAPA16_SACT;
+        cmd[13] = (uint8_t)(size & 0xFF);
+        break;
+    case READ10_OPCODE: {
+        uint32_t num_blocks = size / UFS_DEV_SECT_SIZE;
+        cmd[0] = opcode;
+        cmd[2] = (uint8_t)((lba & 0xFF000000) >> 24);
+        cmd[3] = (uint8_t)((lba & 0xFF0000) >> 16);
+        cmd[4] = (uint8_t)((lba & 0xFF00) >> 8);
+        cmd[5] = (uint8_t)(lba & 0xFF);
+        cmd[7] = (uint8_t)((num_blocks & 0xFF00) >> 8);
+        cmd[8] = (uint8_t)(num_blocks & 0xFF);
+        break;
+    }
     default:
         break;
     };
@@ -138,7 +157,7 @@ static void ufshc_flush_and_invalidate_descs(ufs_hba_t* hba) {
 }
 
 static void ufs_create_cmd_upiu(ufs_hba_t* hba, uint8_t opcode,
-                                enum dma_direction dirn,
+                                enum dma_direction dirn, uint64_t lba,
                                 uint32_t size, uint8_t free_slot) {
     ufs_utp_cmd_upiu_t* cmd_upiu;
     utp_tfr_req_desc_t* utrd;
@@ -146,7 +165,6 @@ static void ufs_create_cmd_upiu(ufs_hba_t* hba, uint8_t opcode,
     ufshcd_prd_t* prdt;
     zx_paddr_t req_buf_phys;
     uint32_t data_dirn;
-    uint32_t off;
     uint8_t upiu_flags;
 
     ucmd = hba->cmd_desc;
@@ -182,7 +200,7 @@ static void ufs_create_cmd_upiu(ufs_hba_t* hba, uint8_t opcode,
     cmd_upiu->res2 = 0x0;
     cmd_upiu->data_seg_len = 0x0;
     cmd_upiu->exp_data_xfer_len = htobe32(size);
-    ufs_get_cmd(opcode, 0, size, cmd_upiu->cdb);
+    ufs_get_cmd(opcode, lba, size, cmd_upiu->cdb);
 
     utrd->prd_table_len = (uint16_t)((size & (PRDT_BUF_SIZE - 1)) ?
                           ((size / PRDT_BUF_SIZE) + 1 ) :
@@ -190,8 +208,7 @@ static void ufs_create_cmd_upiu(ufs_hba_t* hba, uint8_t opcode,
 
     if (dirn != UFS_DMA_NONE) {
         prdt = hba->lrb_buf[free_slot].prdt;
-        off = hba->active_lun * size;
-        req_buf_phys = io_buffer_phys(&hba->req_dma_buf) + off;
+        req_buf_phys = io_buffer_phys(&hba->req_dma_buf);
 
         for (uint32_t i = 0; size; i++) {
             prdt[i].base_addr = LOWER_32_BITS(req_buf_phys + (i * PRDT_BUF_SIZE));
@@ -607,17 +624,17 @@ static zx_status_t ufs_handle_scsi_completion(ufs_hba_t* hba) {
             if (utrd->ocs == 0x0) {
                 resp_status = resp_upiu->status;
                 if (resp_status == SCSI_CMD_STATUS_CHK_COND) {
-                    UFS_ERROR("Resp Fail! Check condition!\n");
+                    UFS_DBG("Resp Fail! Check condition!\n");
                     status = UPIU_RESP_COND_FAIL;
                     // TODO: Read error information from sense data
                     // We do not return here so as to continue reading all slots.
                 } else if (resp_status != SCSI_CMD_STATUS_GOOD) {
-                    UFS_ERROR("Resp Fail! resp_status=0x%x\n", resp_status);
+                    UFS_DBG("Resp Fail! resp_status=0x%x\n", resp_status);
                     status = UPIU_RESP_STAT_FAIL;
                     // TODO: Read error information from sense data
                 }
             } else {
-                UFS_ERROR("Resp Fail! utrd->ocs=0x%x\n", utrd->ocs);
+                UFS_DBG("Resp Fail! utrd->ocs=0x%x\n", utrd->ocs);
                 status = ZX_ERR_BAD_STATE;
             }
         }
@@ -1016,41 +1033,27 @@ static void ufshc_release(ufshc_dev_t* dev) {
     io_buffer_release(&hba->utmrl_dma_buf);
 }
 
-static zx_status_t ufs_send_inquiry(ufshc_dev_t* dev) {
-    uint8_t* inq_data[UFS_MAX_WLUN];
+static zx_status_t ufs_send_scsi_cmd(ufshc_dev_t* dev, uint8_t lun,
+                                     uint8_t opcode, uint64_t lba,
+                                     enum dma_direction dirn, uint32_t size) {
     ufs_hba_t* hba = &dev->ufs_hba;
     volatile void* regs = dev->ufshc_mmio.vaddr;
-    uint32_t lun;
-    uint32_t slot_mask = 0;
     zx_status_t status;
     uint8_t free_slot;
 
-    memset(hba->req_buf, 0, UFS_MAX_WLUN * UFS_INQUIRY_TFR_LEN);
-    for (lun = 0; lun < UFS_MAX_WLUN; lun++) {
-        inq_data[lun] = (uint8_t*)hba->req_buf + (lun * UFS_INQUIRY_TFR_LEN);
-    }
+    free_slot = ufshc_get_xfer_free_slot(hba);
+    if (BAD_SLOT == free_slot)
+        return ZX_ERR_NO_RESOURCES;
 
-    for (lun = 0; lun < UFS_MAX_WLUN; lun++) {
-        free_slot = ufshc_get_xfer_free_slot(hba);
-        if (BAD_SLOT == free_slot) {
-            if (slot_mask) {
-                // Release xfer requests
-                hba->outstanding_xfer_reqs &= ~(slot_mask);
-            }
-            return ZX_ERR_NO_RESOURCES;
-        }
-
-        slot_mask |= UFS_BIT(free_slot);
-        hba->active_lun = (uint8_t)lun;
-        ufs_create_cmd_upiu(hba, INQUIRY_OPCODE, UFS_DMA_FROM_DEVICE,
-                            UFS_INQUIRY_TFR_LEN, free_slot);
-    }
+    memset(hba->req_buf, 0, size);
+    hba->active_lun = lun;
+    ufs_create_cmd_upiu(hba, opcode, dirn, lba, size, free_slot);
 
     // Flush and invalidate cache before we start transfer
     ufshc_flush_and_invalidate_descs(hba);
     io_buffer_cache_flush_invalidate(&hba->req_dma_buf, 0, DATA_REQ_SIZE);
 
-    status = ufshc_wait_for_cmd_completion(hba, slot_mask, regs);
+    status = ufshc_wait_for_cmd_completion(hba, 1 << free_slot, regs);
     if (status != ZX_OK)
         return status;
 
@@ -1058,68 +1061,227 @@ static zx_status_t ufs_send_inquiry(ufshc_dev_t* dev) {
     if (status != ZX_OK)
         return status;
 
-    for (lun = 0; lun < UFS_MAX_WLUN; lun++) {
-        UFS_DBG("UFS device vendor:%s model:%s\n",
-                inq_data[lun] + UFS_INQUIRY_VENDOR_OFF,
-                inq_data[lun] + UFS_INQUIRY_MODEL_OFF);
-        dump_buffer(inq_data[lun], UFS_INQUIRY_TFR_LEN, "inquiry");
-    }
-
     return status;
 }
 
-static zx_status_t ufs_check_luns_ready(ufshc_dev_t* dev) {
-    ufs_hba_t* hba = &dev->ufs_hba;
-    volatile void* regs = dev->ufshc_mmio.vaddr;
-    uint32_t slot_mask = 0;
+static zx_status_t ufs_send_inquiry(ufshc_dev_t* dev, uint8_t lun) {
     zx_status_t status;
-    uint8_t free_slot;
+    uint8_t* cdb_data_buf;
+    ufs_hba_t* hba = &dev->ufs_hba;
 
-    for (uint32_t lun = 0; lun < UFS_MAX_WLUN; lun++) {
-        hba->active_lun = (uint8_t)lun;
-
-        free_slot = ufshc_get_xfer_free_slot(hba);
-        if (BAD_SLOT == free_slot) {
-            if (slot_mask) {
-                // Release xfer requests
-                hba->outstanding_xfer_reqs &= ~(slot_mask);
-            }
-            return ZX_ERR_NO_RESOURCES;
-        }
-
-        slot_mask |= UFS_BIT(free_slot);
-        ufs_create_cmd_upiu(hba, TEST_UNIT_OPCODE,
-                            UFS_DMA_NONE, 0x0, free_slot);
-    }
-
-    // Flush and invalidate cache before we start transfer
-    ufshc_flush_and_invalidate_descs(hba);
-    io_buffer_cache_flush_invalidate(&hba->req_dma_buf, 0, DATA_REQ_SIZE);
-
-    status = ufshc_wait_for_cmd_completion(hba, slot_mask, regs);
+    status = ufs_send_scsi_cmd(dev, lun, INQUIRY_OPCODE, 0,
+                               UFS_DMA_FROM_DEVICE, UFS_INQUIRY_TFR_LEN);
     if (status != ZX_OK)
         return status;
 
-    return ufs_handle_scsi_completion(hba);
+    cdb_data_buf = hba->req_buf;
+    UFS_DBG("UFS device vendor:%s model:%s\n",
+            cdb_data_buf + UFS_INQUIRY_VENDOR_OFF,
+            cdb_data_buf + UFS_INQUIRY_MODEL_OFF);
+    dbg_dump_buffer(cdb_data_buf, UFS_INQUIRY_TFR_LEN, "inquiry");
+
+    return ZX_OK;
 }
 
-zx_status_t ufs_activate_luns(ufshc_dev_t* dev) {
+static zx_status_t ufs_check_lun_ready(ufshc_dev_t* dev, uint8_t lun) {
+    return (ufs_send_scsi_cmd(dev, lun, TEST_UNIT_OPCODE, 0,
+                              UFS_DMA_NONE, 0x0));
+}
+
+static zx_status_t ufs_read_lun_capacity(ufshc_dev_t* dev, uint8_t lun) {
+    return (ufs_send_scsi_cmd(dev, lun, READ_CAPA16_OPCODE, 0,
+                              UFS_DMA_FROM_DEVICE, UFS_READ_CAPA16_LEN));
+}
+
+static zx_off_t ufs_lun_get_size(void* ctx) {
+    ufs_lun_blk_dev_t* dev = ctx;
+    return dev->block_info.block_count * dev->block_info.block_size;
+}
+
+static void ufs_lun_blk_query(void* ctx, block_info_t* info_out,
+                              size_t* block_op_size_out) {
+    ufs_lun_blk_dev_t* dev = ctx;
+
+    memcpy(info_out, &dev->block_info, sizeof(*info_out));
+    *block_op_size_out = sizeof(block_op_t);
+}
+
+static void ufs_lun_blk_queue(void* ctx, block_op_t* btxn,
+                              block_impl_queue_callback completion_cb,
+                              void* cookie) {
+    ufs_lun_blk_dev_t* dev = ctx;
+    ufshc_dev_t* ufshc_dev = GET_UFSHC_DEV(dev, dev->lun_id);
+    uint32_t block_size = dev->block_info.block_size;
+    uint32_t tfr_size = btxn->rw.length * block_size;
+    zx_status_t status = ZX_OK;
+    uint8_t opcode;
+
+    switch (BLOCK_OP(btxn->command)) {
+    case BLOCK_OP_READ: {
+        opcode = READ10_OPCODE;
+        UFS_DBG("block_cmd:0x%x offset_dev:0x%lx length:0x%x blocksize:0x%x "
+                "max_transfer_size:0x%x\n", btxn->command,
+                btxn->rw.offset_dev, btxn->rw.length,
+                dev->block_info.block_size,
+                dev->block_info.max_transfer_size);
+
+        status = ufs_send_scsi_cmd(ufshc_dev, dev->lun_id, opcode,
+                                   btxn->rw.offset_dev, UFS_DMA_FROM_DEVICE,
+                                   tfr_size);
+        if (status == ZX_OK) {
+            uint8_t* data = ufshc_dev->ufs_hba.req_buf;
+            status = zx_vmo_write(btxn->rw.vmo, data, btxn->rw.offset_vmo * block_size,
+                                  tfr_size);
+        } else {
+            UFS_DBG("ufs_send_scsi_cmd fail! status=%d\n", status);
+            completion_cb(cookie, status, btxn);
+            return;
+        }
+        break;
+    }
+    case BLOCK_OP_WRITE: {
+        uint64_t max = dev->block_info.block_count;
+
+        if ((btxn->rw.offset_dev >= max) ||
+            ((max - btxn->rw.offset_dev) < btxn->rw.length)) {
+            UFS_DBG("BLOCK_OP_RD_WRITE- Out of Range!\n");
+            completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, btxn);
+            return;
+        }
+
+        if (btxn->rw.length == 0) {
+            UFS_DBG("BLOCK_OP_RD_WRITE- Len=0.\n");
+            completion_cb(cookie, ZX_OK, btxn);
+            return;
+        }
+        break;
+        // TODO: Implement SCSI cmd Write
+    }
+    case BLOCK_OP_FLUSH:
+        UFS_DBG("BLOCK_OP_FLUSH \n");
+        break;
+    default:
+        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, btxn);
+        return;
+    }
+
+    completion_cb(cookie, status, btxn);
+}
+
+static zx_protocol_device_t ufs_lun_dev_proto = {
+    .version = DEVICE_OPS_VERSION,
+    .get_size = ufs_lun_get_size,
+};
+
+static block_impl_protocol_ops_t ufs_lun_blk_ops = {
+    .query = ufs_lun_blk_query,
+    .queue = ufs_lun_blk_queue,
+};
+
+static zx_status_t ufs_add_lun_blk_dev(ufshc_dev_t* dev, uint8_t lun) {
+    char disk_name[20] = {0};
     zx_status_t status;
+    ufs_hba_t* hba = &dev->ufs_hba;
+    ufs_readcapa16_data_t* rd_capa16_buf;
+    ufs_lun_blk_dev_t* lun_blk_dev = &dev->lun_blk_devs[lun];
 
-    status = ufs_send_inquiry(dev);
+    status = ufs_read_lun_capacity(dev, lun);
     if (status != ZX_OK) {
-        UFS_ERROR("Failed to inqure LUN, status = %d\n", status);
+        UFS_ERROR("Failed to read LUN:%d capacity, status=%d\n",
+                  lun, status);
         return status;
     }
 
-    status = ufs_check_luns_ready(dev);
+    rd_capa16_buf = (ufs_readcapa16_data_t*)hba->req_buf;
+    UFS_DBG("UFS device LUN:%d log_blk_addr:0x%lx log_blk_len=0x%x\n",
+            lun, htobe64(rd_capa16_buf->log_blk_addr),
+            htobe32(rd_capa16_buf->blk_len));
+
+    dbg_dump_buffer((uint8_t*)rd_capa16_buf, UFS_READ_CAPA16_LEN, "read_capacity16");
+    lun_blk_dev->block_info.block_count = htobe64(rd_capa16_buf->log_blk_addr);
+    lun_blk_dev->block_info.block_size = htobe32(rd_capa16_buf->blk_len);
+    lun_blk_dev->block_info.max_transfer_size = lun_blk_dev->block_info.block_size;
+    lun_blk_dev->block_info.flags = 0;
+
+    snprintf(disk_name, sizeof(disk_name), "ufs-disk-%d", lun);
+    device_add_args_t block_args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = disk_name,
+        .ctx = lun_blk_dev,
+        .ops = &ufs_lun_dev_proto,
+        .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
+        .flags = DEVICE_ADD_INVISIBLE,
+        .proto_ops = &ufs_lun_blk_ops,
+    };
+
+    status = device_add(dev->zxdev, &block_args, &lun_blk_dev->zxdev);
     if (status != ZX_OK) {
-        UFS_ERROR("Failed to inqure LUN, status = %d\n", status);
+        UFS_ERROR("Failed to create ufs_disk for LUN=%d, status=%d\n",
+                  lun, status);
         return status;
     }
 
-    // TODO: Add block device for all identified LUNs
-    return status;
+    // Set lun_id to indicate that it is active now.
+    lun_blk_dev->lun_id = lun;
+
+    return ZX_OK;
+}
+
+uint8_t ufs_activate_luns(ufshc_dev_t* dev) {
+    ufs_lun_blk_dev_t* lun_blk_dev;
+    zx_status_t status;
+    uint8_t num_lun_active = 0;
+
+    for (uint32_t lun = 0; lun < UFS_MAX_WLUN; lun++) {
+        lun_blk_dev = &dev->lun_blk_devs[lun];
+        // Set lun_id to LUN_INACTIVE to begin
+        lun_blk_dev->lun_id = INACTIVE_LUN;
+        status = ufs_send_inquiry(dev, lun);
+        if (status != ZX_OK) {
+            UFS_ERROR("Failed to inquire LUN:%d, status=%d\n", lun, status);
+            continue;
+        }
+
+        status = ufs_check_lun_ready(dev, lun);
+        if (status != ZX_OK) {
+            UFS_ERROR("LUN:%d not ready!, status=%d\n", lun, status);
+            continue;
+        }
+
+        status = ufs_add_lun_blk_dev(dev, lun);
+        if (status != ZX_OK)
+            continue;
+
+        num_lun_active++;
+    }
+
+    return num_lun_active;
+}
+
+static zx_status_t ufs_worker_thread(void* arg) {
+    ufshc_dev_t* dev = (ufshc_dev_t*)arg;
+    ufs_lun_blk_dev_t* lun_blk_dev;
+    uint8_t num_luns_active;
+
+    num_luns_active = ufs_activate_luns(dev);
+    if (!num_luns_active) {
+        UFS_ERROR("Failed to activate LUN!\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
+    for (uint8_t lun = 0; lun < UFS_MAX_WLUN; lun++) {
+        lun_blk_dev = &dev->lun_blk_devs[lun];
+        if (lun_blk_dev->lun_id != INACTIVE_LUN)
+            device_make_visible(lun_blk_dev->zxdev);
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t ufs_create_worker_thread(ufshc_dev_t* dev) {
+    return (thrd_create_with_name(&dev->worker_thread,
+                                  ufs_worker_thread, dev,
+                                  "ufs_worker_thread"));
 }
 
 zx_status_t ufshc_init(ufshc_dev_t* dev,

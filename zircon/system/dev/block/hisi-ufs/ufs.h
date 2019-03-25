@@ -7,8 +7,8 @@
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
+#include <ddk/protocol/block.h>
 #include <ddk/protocol/platform/bus.h>
-
 #include <threads.h>
 #include <zircon/compiler.h>
 
@@ -64,6 +64,8 @@
 // UFS SCSI command codes
 #define TEST_UNIT_OPCODE   0x00
 #define INQUIRY_OPCODE     0x12
+#define READ_CAPA16_OPCODE 0x9E
+#define READ10_OPCODE      0x28
 
 #define FLAG_ID_FDEVICE_INIT 0x01
 
@@ -81,6 +83,9 @@
 #define UFS_INQUIRY_TFR_LEN 36
 #define UFS_INQUIRY_VENDOR_OFF 8
 #define UFS_INQUIRY_MODEL_OFF 16
+#define UFS_READ_CAPA16_LEN 32
+#define UFS_READ_CAPA16_SACT 0x10
+#define UFS_DEV_SECT_SIZE 0x1000
 
 // UFSHC UPRO configurations
 #define UPRO_MPHY_CTRL      0xD0C10000
@@ -227,6 +232,15 @@ enum ufs_link_change_stage {
     PRE_CHANGE,
     POST_CHANGE,
 };
+
+typedef struct {
+    uint64_t log_blk_addr;
+    uint32_t blk_len;
+    uint8_t prot_info;
+    uint8_t log_blk_per_phys_blk_exp;
+    uint16_t low_align_log_blk_addr;
+    uint8_t res[16];
+} ufs_readcapa16_data_t;
 
 // UFSHCI PRD Entry
 typedef struct {
@@ -453,10 +467,18 @@ typedef struct ufs_hba {
     ufs_hba_variant_ops_t* vops;
 } ufs_hba_t;
 
+// UFS LUN Block device
+typedef struct ufs_lun_blk_dev {
+    zx_device_t* zxdev;
+    block_info_t block_info;
+    int lun_id;
+} ufs_lun_blk_dev_t;
+
 // UFS device
-typedef struct {
+typedef struct ufshc_dev {
     pdev_protocol_t pdev;
     zx_device_t* zxdev;
+    ufs_lun_blk_dev_t lun_blk_devs[UFS_MAX_WLUN];
     mmio_buffer_t ufshc_mmio;
     zx_handle_t bti;
     ufs_hba_t ufs_hba;
@@ -476,7 +498,7 @@ static inline int32_t find_first_zero_bit(ulong* addr, uint8_t bits) {
 }
 
 #ifdef UFS_DEBUG
-static inline void dump_buffer(uint8_t* buf, uint32_t len, const char* name) {
+static inline void dbg_dump_buffer(uint8_t* buf, uint32_t len, const char* name) {
     zxlogf(INFO, "%s_buffer:\n", name);
     for (uint32_t index = 0; index < len; index++) {
         zxlogf(INFO, "buf[%d]=0x%x ", index, buf[index]);
@@ -486,7 +508,7 @@ static inline void dump_buffer(uint8_t* buf, uint32_t len, const char* name) {
     zxlogf(INFO, "\n");
 }
 #else
-static inline void dump_buffer(uint8_t* buf, uint32_t len, const char* name) {}
+static inline void dbg_dump_buffer(uint8_t* buf, uint32_t len, const char* name) {}
 #endif
 
 zx_status_t ufshc_send_uic_command(volatile void* regs,
@@ -497,4 +519,4 @@ uint32_t ufshc_uic_cmd_read(volatile void* regs, uint32_t command, uint32_t arg1
 void ufshc_disable_auto_h8(volatile void* regs);
 void ufshc_check_h8(volatile void* regs);
 zx_status_t ufshc_init(ufshc_dev_t* dev, ufs_hba_variant_ops_t* ufs_hi3660_vops);
-zx_status_t ufs_activate_luns(ufshc_dev_t* dev);
+zx_status_t ufs_create_worker_thread(ufshc_dev_t* dev);

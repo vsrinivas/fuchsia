@@ -197,14 +197,6 @@ static void hisi_ufs_release(void* ctx) {
     free(dev);
 }
 
-static zx_status_t ufs_worker_thread(void* arg) {
-    ufshc_dev_t* dev = (ufshc_dev_t*)arg;
-
-    // TODO: Add block device for all identified LUNs
-    // and implement Block queue and transaction support.
-    return ufs_activate_luns(dev);
-}
-
 static zx_protocol_device_t hisi_ufs_device_proto = {
     .version = DEVICE_OPS_VERSION,
     .release = hisi_ufs_release,
@@ -267,11 +259,9 @@ static zx_status_t hisi_ufs_bind(void* ctx, zx_device_t* parent) {
         }
     }
 
-    status = thrd_create_with_name(&dev->worker_thread,
-                                   ufs_worker_thread, dev,
-                                   "ufs_worker_thread");
-    if (status != thrd_success) {
-        UFS_ERROR("UFS worker_thread create fail! status: %d\n", status);
+    status = ufs_create_worker_thread(dev);
+    if (status != ZX_OK) {
+        UFS_ERROR("UFS worker_thread create fail! status:%d\n", status);
         device_remove(dev->zxdev);
         goto fail;
     }
