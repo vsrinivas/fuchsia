@@ -88,7 +88,7 @@ fuchsia_virtualaudio_Forwarder_ops_t VirtualAudioControlImpl::fidl_ops_ = {
 zx_status_t VirtualAudioControlImpl::SendControl(
     zx::channel control_request_channel) {
   if (!control_request_channel.is_valid()) {
-    zxlogf(TRACE, "%s: channel from request handle is invalid\n", __func__);
+    zxlogf(ERROR, "%s: channel from request handle is invalid\n", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -107,7 +107,7 @@ zx_status_t VirtualAudioControlImpl::SendControl(
 zx_status_t VirtualAudioControlImpl::SendInput(
     zx::channel input_request_channel) {
   if (!input_request_channel.is_valid()) {
-    zxlogf(TRACE, "%s: channel from request handle is invalid\n", __func__);
+    zxlogf(ERROR, "%s: channel from request handle is invalid\n", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -129,7 +129,7 @@ zx_status_t VirtualAudioControlImpl::SendInput(
 zx_status_t VirtualAudioControlImpl::SendOutput(
     zx::channel output_request_channel) {
   if (!output_request_channel.is_valid()) {
-    zxlogf(TRACE, "%s: channel from request handle is invalid\n", __func__);
+    zxlogf(ERROR, "%s: channel from request handle is invalid\n", __func__);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -155,11 +155,6 @@ void VirtualAudioControlImpl::ReleaseBindings() {
   bindings_.CloseAll();
   input_bindings_.CloseAll();
   output_bindings_.CloseAll();
-
-  zxlogf(TRACE,
-         "%s for %p: now we have %lu/%lu/%lu control/input/output bindings\n",
-         __func__, this, bindings_.size(), input_bindings_.size(),
-         output_bindings_.size());
 }
 
 void VirtualAudioControlImpl::PostToDispatcher(

@@ -33,6 +33,8 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
   void EnqueuePositionRequest(
       fuchsia::virtualaudio::Device::GetPositionCallback position_callback)
       __TA_EXCLUDES(wakeup_queue_lock_);
+  void EnqueueNotificationOverride(uint32_t notifications_per_ring)
+      __TA_EXCLUDES(wakeup_queue_lock_);
 
   static fbl::RefPtr<VirtualAudioStream> CreateStream(
       VirtualAudioDeviceImpl* owner, zx_device_t* devnode, bool is_input);
@@ -69,6 +71,7 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
   // RingBufferShutdown() is unneeded: no hardware shutdown tasks needed...
 
   zx_status_t ProcessRingNotification() __TA_REQUIRES(domain_->token());
+  zx_status_t ProcessAltRingNotification() __TA_REQUIRES(domain_->token());
 
   enum class PlugType { Plug, Unplug };
 
@@ -84,6 +87,8 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
       __TA_EXCLUDES(wakeup_queue_lock_);
   void HandlePositionRequests() __TA_REQUIRES(domain_->token())
       __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandleSetNotifications() __TA_REQUIRES(domain_->token())
+      __TA_EXCLUDES(wakeup_queue_lock_);
 
   // Accessed in GetBuffer, defended by token.
   fzl::VmoMapper ring_buffer_mapper_ __TA_GUARDED(domain_->token());
@@ -95,9 +100,21 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
   uint32_t modulo_buffer_frames_ __TA_GUARDED(domain_->token());
 
   fbl::RefPtr<dispatcher::Timer> notify_timer_;
-  uint32_t us_per_notification_ __TA_GUARDED(domain_->token()) = 0;
-  uint32_t notifications_per_ring_ __TA_GUARDED(domain_->token()) = 0;
+  fbl::RefPtr<dispatcher::Timer> alt_notify_timer_;
+
   zx::time start_time_ __TA_GUARDED(domain_->token());
+  zx::duration notification_period_ __TA_GUARDED(domain_->token()) =
+      zx::duration(0);
+  uint32_t notifications_per_ring_ __TA_GUARDED(domain_->token()) = 0;
+  zx::time target_notification_time_ __TA_GUARDED(domain_->token()) =
+      zx::time(0);
+
+  bool using_alt_notifications_ __TA_GUARDED(domain_->token());
+  zx::duration alt_notification_period_ __TA_GUARDED(domain_->token()) =
+      zx::duration(0);
+  uint32_t alt_notifications_per_ring_ __TA_GUARDED(domain_->token()) = 0;
+  zx::time target_alt_notification_time_ __TA_GUARDED(domain_->token()) =
+      zx::time(0);
 
   uint32_t bytes_per_sec_ __TA_GUARDED(domain_->token()) = 0;
   uint32_t frame_rate_ __TA_GUARDED(domain_->token()) = 0;
@@ -127,6 +144,9 @@ class VirtualAudioStream : public ::audio::SimpleAudioStream {
   fbl::RefPtr<::dispatcher::WakeupEvent> position_request_wakeup_;
   std::deque<fuchsia::virtualaudio::Device::GetPositionCallback> position_queue_
       __TA_GUARDED(wakeup_queue_lock_);
+
+  fbl::RefPtr<::dispatcher::WakeupEvent> set_notifications_wakeup_;
+  std::deque<uint32_t> notifs_queue_ __TA_GUARDED(wakeup_queue_lock_);
 };
 
 }  // namespace virtual_audio

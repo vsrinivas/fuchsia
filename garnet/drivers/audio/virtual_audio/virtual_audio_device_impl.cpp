@@ -20,6 +20,8 @@ fbl::unique_ptr<VirtualAudioDeviceImpl> VirtualAudioDeviceImpl::Create(
       new VirtualAudioDeviceImpl(owner, is_input));
 }
 
+// We initialize no member variables here, nor in the class declaration -- we do
+// everything within Init() so that ResetConfiguration() has the same effect.
 VirtualAudioDeviceImpl::VirtualAudioDeviceImpl(VirtualAudioControlImpl* owner,
                                                bool is_input)
     : owner_(owner), is_input_(is_input) {
@@ -114,7 +116,10 @@ void VirtualAudioDeviceImpl::Init() {
   async_plug_notify_ = kDefaultPlugCanNotify;
   plugged_ = kDefaultPlugged;
 
-  plug_time_ = zx_clock_get(CLOCK_MONOTONIC);  // time of Configuration creation
+  // The time this Configuration was created / reset.
+  plug_time_ = zx::clock::get_monotonic().get();
+
+  override_notification_frequency_ = false;
 }
 
 //
@@ -209,12 +214,12 @@ void VirtualAudioDeviceImpl::ResetConfiguration() { Init(); };
 // Create a virtual audio device using the currently-specified configuration.
 void VirtualAudioDeviceImpl::Add() {
   if (!owner_->enabled()) {
-    zxlogf(TRACE, "%s: Disabled, cannot add stream\n", __PRETTY_FUNCTION__);
+    zxlogf(WARN, "%s: Disabled, cannot add stream\n", __func__);
     return;
   }
 
   if (stream_ != nullptr) {
-    zxlogf(TRACE, "%s: %p already has stream %p\n", __PRETTY_FUNCTION__, this,
+    zxlogf(WARN, "%s: %p already has stream %p\n", __func__, this,
            stream_.get());
     return;
   }
@@ -228,15 +233,13 @@ void VirtualAudioDeviceImpl::Add() {
 // Remove the associated virtual audio device.
 void VirtualAudioDeviceImpl::Remove() {
   if (!owner_->enabled()) {
-    zxlogf(TRACE, "%s: Disabled, no streams for removal\n",
-           __PRETTY_FUNCTION__);
+    zxlogf(WARN, "%s: Disabled, no streams for removal\n", __func__);
     ZX_DEBUG_ASSERT(stream_ == nullptr);
     return;
   }
 
   if (stream_ == nullptr) {
-    zxlogf(TRACE, "%s: %p has no stream to remove\n", __PRETTY_FUNCTION__,
-           this);
+    zxlogf(WARN, "%s: %p has no stream to remove\n", __func__, this);
     return;
   }
 
@@ -250,8 +253,7 @@ void VirtualAudioDeviceImpl::Remove() {
 void VirtualAudioDeviceImpl::GetFormat(
     fuchsia::virtualaudio::Device::GetFormatCallback format_callback) {
   if (stream_ == nullptr) {
-    zxlogf(TRACE, "%s: %p has no stream for this request\n",
-           __PRETTY_FUNCTION__, this);
+    zxlogf(WARN, "%s: %p has no stream for this request\n", __func__, this);
     return;
   }
 
@@ -278,8 +280,7 @@ void VirtualAudioDeviceImpl::NotifySetFormat(uint32_t frames_per_second,
 void VirtualAudioDeviceImpl::GetGain(
     fuchsia::virtualaudio::Device::GetGainCallback gain_callback) {
   if (stream_ == nullptr) {
-    zxlogf(TRACE, "%s: %p has no stream for this request\n",
-           __PRETTY_FUNCTION__, this);
+    zxlogf(WARN, "%s: %p has no stream for this request\n", __func__, this);
     return;
   }
 
@@ -303,8 +304,7 @@ void VirtualAudioDeviceImpl::NotifySetGain(bool current_mute, bool current_agc,
 void VirtualAudioDeviceImpl::GetBuffer(
     fuchsia::virtualaudio::Device::GetBufferCallback buffer_callback) {
   if (stream_ == nullptr) {
-    zxlogf(TRACE, "%s: %p has no stream for this request\n",
-           __PRETTY_FUNCTION__, this);
+    zxlogf(WARN, "%s: %p has no stream for this request\n", __func__, this);
     return;
   }
 
@@ -327,6 +327,20 @@ void VirtualAudioDeviceImpl::NotifyBufferCreated(
                                                 notifications_per_ring);
     }
   });
+}
+
+// Override the systemwide position notification cadence set by AudioCore, in
+// favor of this per-stream notification cadence.
+// Update the static config, and if active, tell device to dynamically change.
+void VirtualAudioDeviceImpl::SetNotificationFrequency(
+    uint32_t notifications_per_ring) {
+  // This is a DeviceImpl property (stream has a property with same name)
+  override_notification_frequency_ = true;
+  notifications_per_ring_ = notifications_per_ring;
+
+  if (stream_ != nullptr) {
+    stream_->EnqueueNotificationOverride(notifications_per_ring);
+  }
 }
 
 // Deliver Start notification on binding's thread, if binding is valid.
@@ -355,8 +369,7 @@ void VirtualAudioDeviceImpl::NotifyStop(zx_time_t stop_time,
 void VirtualAudioDeviceImpl::GetPosition(
     fuchsia::virtualaudio::Device::GetPositionCallback position_callback) {
   if (stream_ == nullptr) {
-    zxlogf(TRACE, "%s: %p has no stream for this request\n",
-           __PRETTY_FUNCTION__, this);
+    zxlogf(WARN, "%s: %p has no stream for this request\n", __func__, this);
     return;
   }
 
@@ -381,8 +394,7 @@ void VirtualAudioDeviceImpl::NotifyPosition(uint32_t ring_buffer_position,
 void VirtualAudioDeviceImpl::ChangePlugState(zx_time_t plug_change_time,
                                              bool plugged) {
   if (!owner_->enabled()) {
-    zxlogf(TRACE, "%s: Disabled, cannot change plug state\n",
-           __PRETTY_FUNCTION__);
+    zxlogf(WARN, "%s: Disabled, cannot change plug state\n", __func__);
     return;
   }
 
@@ -391,8 +403,8 @@ void VirtualAudioDeviceImpl::ChangePlugState(zx_time_t plug_change_time,
   plugged_ = plugged;
 
   if (stream_ == nullptr) {
-    zxlogf(TRACE, "%s: %p has no stream; cannot change dynamic plug state\n",
-           __PRETTY_FUNCTION__, this);
+    zxlogf(WARN, "%s: %p has no stream; cannot change dynamic plug state\n",
+           __func__, this);
     return;
   }
 

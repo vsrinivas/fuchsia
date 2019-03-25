@@ -40,16 +40,16 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   static constexpr uint32_t kDefaultFifoDepthBytes = 192;
   static constexpr zx_time_t kDefaultExternalDelayNsec = 0;
 
-  // At default rate 48k, this is 50 msec
-  static constexpr uint32_t kDefaultMinBufferFrames = 2400;
+  // At default rate 48k, this is 250 msec
+  static constexpr uint32_t kDefaultMinBufferFrames = 12000;
   // At default rate 48k, this is 10+ sec!
   static constexpr uint32_t kDefaultMaxBufferFrames = 1 << 19;
-  static constexpr uint32_t kDefaultModuloBufferFrames = 4;
+  static constexpr uint32_t kDefaultModuloBufferFrames = 1;
 
   static constexpr ::audio::audio_proto::GetGainResp kDefaultGainState = {
       .cur_mute = false,
       .cur_agc = false,
-      .cur_gain = 0.0f,
+      .cur_gain = -0.75f,
       .can_mute = true,
       .can_agc = false,
       .min_gain = -160.0f,
@@ -133,6 +133,8 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
                                    uint32_t num_ring_buffer_frames,
                                    uint32_t notifications_per_ring);
 
+  void SetNotificationFrequency(uint32_t notifications_per_ring) override;
+
   virtual void NotifyStart(zx_time_t start_time);
   virtual void NotifyStop(zx_time_t stop_time, uint32_t ring_buffer_position);
 
@@ -166,6 +168,8 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
                 fbl::unique_ptr<virtual_audio::VirtualAudioDeviceImpl>>*
       output_binding_ = nullptr;
 
+  // We initialize no member variables here, nor in the constructor -- we do
+  // everything within Init() so that ResetConfiguration() has the same effect.
   std::string device_name_;
   std::string mfr_name_;
   std::string prod_name_;
@@ -186,6 +190,9 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   bool plugged_;
   bool hardwired_;
   bool async_plug_notify_;
+
+  bool override_notification_frequency_;
+  uint32_t notifications_per_ring_;
 };
 
 }  // namespace virtual_audio

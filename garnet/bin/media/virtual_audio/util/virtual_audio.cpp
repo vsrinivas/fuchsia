@@ -47,6 +47,7 @@ class VirtualAudioUtil {
     GET_FORMAT,
     RETRIEVE_BUFFER,
     GET_POSITION,
+    SET_NOTIFICATION_FREQUENCY,
 
     SET_IN,
     SET_OUT,
@@ -83,6 +84,7 @@ class VirtualAudioUtil {
       {"get-format", Command::GET_FORMAT},
       {"get-rb", Command::RETRIEVE_BUFFER},
       {"get-pos", Command::GET_POSITION},
+      {"notifs", Command::SET_NOTIFICATION_FREQUENCY},
 
       {"in", Command::SET_IN},
       {"out", Command::SET_OUT},
@@ -104,6 +106,7 @@ class VirtualAudioUtil {
 
   static constexpr uint8_t kDefaultGainPropsOption = 0;
   static constexpr uint8_t kDefaultPlugPropsOption = 0;
+  static constexpr uint32_t kDefaultNotificationFrequency = 4;
 
   void QuitLoop();
   bool RunLoopWithTimeout(zx::duration timeout);
@@ -148,6 +151,7 @@ class VirtualAudioUtil {
   bool GetFormat();
   bool GetBuffer();
   bool GetPosition();
+  bool SetNotificationFrequency(const std::string& override_notifs_str);
 
   std::unique_ptr<component::StartupContext> startup_context_;
   ::async::Loop* loop_;
@@ -452,6 +456,9 @@ bool VirtualAudioUtil::ExecuteCommand(Command cmd, const std::string& value) {
     case Command::GET_POSITION:
       success = GetPosition();
       break;
+    case Command::SET_NOTIFICATION_FREQUENCY:
+      success = SetNotificationFrequency(value);
+      break;
 
     case Command::SET_IN:
       configuring_output_ = false;
@@ -479,7 +486,7 @@ bool VirtualAudioUtil::Enable(bool enable) {
   zx_status_t status =
       (enable ? controller_->Enable() : controller_->Disable());
   if (status != ZX_OK) {
-    printf("ControlSync::%sable failed (%d)!\n", (enable ? "En" : "Dis"),
+    printf("ControlSync::%s failed (%d)!\n", (enable ? "Enable" : "Disable"),
            status);
     return false;
   }
@@ -688,8 +695,8 @@ bool VirtualAudioUtil::SetRingBufferRestrictions(
       (rb_restr_str == "" ? kDefaultRingBufferOption
                           : fxl::StringToNumber<uint8_t>(rb_restr_str));
   if (rb_option >= fbl::count_of(kBufferSpecs)) {
-    printf("Ring buffer option must be %lu or less. Using value of %u.\n",
-           fbl::count_of(kBufferSpecs) - 1, rb_option);
+    printf("Ring buffer option must be %lu or less.\n",
+           fbl::count_of(kBufferSpecs) - 1);
     return false;
   }
 
@@ -719,12 +726,12 @@ struct GainSpec {
 
 // The utility defines two preset groups of gain options. Although arbitrarily
 // chosen, they exercise the available range through SetGainProperties:
-// 0.Can and is mute.    Cannot AGC.       Gain -1, range [-60, 0] in 2.0dB.
-// 1.Can but isn't mute. Can AGC, enabled. Gain -12,range [-30,+2] in 0.5db.
+// 0.Can and is mute.    Cannot AGC.       Gain -2, range [-60, 0] in 2.0dB.
+// 1.Can but isn't mute. Can AGC, enabled. Gain -7.5,range [-30,+2] in 0.5db.
 // 2 and above represent invalid combinations.
 constexpr GainSpec kGainSpecs[4] = {{.cur_mute = true,
                                      .cur_agc = false,
-                                     .cur_gain_db = -1.0,
+                                     .cur_gain_db = -2.0,
                                      .can_mute = true,
                                      .can_agc = false,
                                      .min_gain_db = -60.0,
@@ -732,7 +739,7 @@ constexpr GainSpec kGainSpecs[4] = {{.cur_mute = true,
                                      .gain_step_db = 2.0},
                                     {.cur_mute = false,
                                      .cur_agc = true,
-                                     .cur_gain_db = -12.0,
+                                     .cur_gain_db = -7.5,
                                      .can_mute = true,
                                      .can_agc = true,
                                      .min_gain_db = -30.0,
@@ -816,8 +823,8 @@ bool VirtualAudioUtil::SetPlugProperties(const std::string& plug_props_str) {
                             : fxl::StringToNumber<uint8_t>(plug_props_str));
 
   if (plug_props_option >= fbl::count_of(kPlugFlags)) {
-    printf("Plug properties option must be %lu or less. Using value of %u.\n",
-           fbl::count_of(kPlugFlags) - 1, plug_props_option);
+    printf("Plug properties option must be %lu or less.\n",
+           fbl::count_of(kPlugFlags) - 1);
     return false;
   }
 
@@ -959,11 +966,27 @@ bool VirtualAudioUtil::GetPosition() {
   return true;
 }
 
+bool VirtualAudioUtil::SetNotificationFrequency(const std::string& notifs_str) {
+  if (!ConnectToDevice()) {
+    return false;
+  }
+
+  uint32_t notifications_per_ring =
+      (notifs_str == "" ? kDefaultNotificationFrequency
+                        : fxl::StringToNumber<uint32_t>(notifs_str));
+  if (configuring_output_) {
+    output_->SetNotificationFrequency(notifications_per_ring);
+  } else {
+    input_->SetNotificationFrequency(notifications_per_ring);
+  }
+
+  return WaitForNoCallback();
+}
+
 void DisplayFormat(uint32_t fps, uint32_t fmt, uint32_t chans,
                    zx_duration_t delay, bool is_out) {
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-  printf("%zu \tReceived Format (%u fps, %x fmt, %u chan, %zu delay) for %s\n",
-         now, fps, fmt, chans, delay, (is_out ? "output" : "input"));
+  printf("--Received Format (%u fps, %x fmt, %u chan, %zu delay) for %s\n", fps,
+         fmt, chans, delay, (is_out ? "output" : "input"));
 }
 void DisplayFormatOut(uint32_t fps, uint32_t fmt, uint32_t chans,
                       zx_duration_t delay) {
@@ -975,9 +998,8 @@ void DisplayFormatIn(uint32_t fps, uint32_t fmt, uint32_t chans,
 }
 
 void DisplayGain(bool mute, bool agc, float gain_db, bool is_out) {
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-  printf("%zu \tReceived Gain (mute: %u, agc: %u, gain: %f dB) for %s\n", now,
-         mute, agc, gain_db, (is_out ? "output" : "input"));
+  printf("--Received Gain (mute: %u, agc: %u, gain: %f dB) for %s\n", mute, agc,
+         gain_db, (is_out ? "output" : "input"));
 }
 void DisplayGainOut(bool mute, bool agc, float gain_db) {
   DisplayGain(mute, agc, gain_db, true);
@@ -988,14 +1010,12 @@ void DisplayGainIn(bool mute, bool agc, float gain_db) {
 
 void DisplayBuffer(zx::vmo ring_buffer_vmo, uint32_t num_ring_buffer_frames,
                    uint32_t notifications_per_ring, bool is_out) {
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
   uint64_t vmo_size;
   ring_buffer_vmo.get_size(&vmo_size);
 
-  printf(
-      "%zu \tReceived SetBuffer (size: %zu, frames: %u, notifs: %u) for %s\n",
-      now, vmo_size, num_ring_buffer_frames, notifications_per_ring,
-      (is_out ? "output" : "input"));
+  printf("--Received SetBuffer (size: %zu, frames: %u, notifs: %u) for %s\n",
+         vmo_size, num_ring_buffer_frames, notifications_per_ring,
+         (is_out ? "output" : "input"));
 }
 void DisplayBufferOut(zx::vmo buff, uint32_t rb_frames, uint32_t notifs) {
   DisplayBuffer(std::move(buff), rb_frames, notifs, true);
@@ -1005,17 +1025,15 @@ void DisplayBufferIn(zx::vmo buff, uint32_t rb_frames, uint32_t notifs) {
 }
 
 void DisplayStart(zx_time_t start_time, bool is_out) {
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-  printf("%zu \tReceived Start (time: %zu) for %s\n", now, start_time,
+  printf("--Received Start (time: %zu) for %s\n", start_time,
          (is_out ? "output" : "input"));
 }
 void DisplayStartOut(zx_time_t start_time) { DisplayStart(start_time, true); }
 void DisplayStartIn(zx_time_t start_time) { DisplayStart(start_time, false); }
 
 void DisplayStop(zx_time_t stop_time, uint32_t rb_pos, bool is_out) {
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-  printf("%zu \tReceived Stop (time: %zu, pos: %u) for %s\n", now, stop_time,
-         rb_pos, (is_out ? "output" : "input"));
+  printf("--Received Stop (time: %zu, pos: %u) for %s\n", stop_time, rb_pos,
+         (is_out ? "output" : "input"));
 }
 void DisplayStopOut(zx_time_t stop_time, uint32_t rb_pos) {
   DisplayStop(stop_time, rb_pos, true);
@@ -1025,8 +1043,7 @@ void DisplayStopIn(zx_time_t stop_time, uint32_t rb_pos) {
 }
 
 void DisplayPosition(uint32_t rb_pos, zx_time_t time_for_pos, bool is_out) {
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-  printf("%zu \tReceived Position (pos: %u, time: %zu) for %s\n", now, rb_pos,
+  printf("--Received Position (pos: %u, time: %zu) for %s\n", rb_pos,
          time_for_pos, (is_out ? "output" : "input"));
 }
 void DisplayPositionOut(uint32_t rb_pos, zx_time_t time_for_pos) {

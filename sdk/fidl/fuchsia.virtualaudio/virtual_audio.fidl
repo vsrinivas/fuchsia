@@ -114,7 +114,7 @@ protocol Device {
     GetFormat() -> (uint32 frames_per_second, uint32 sample_format,
                     uint32 num_channels, zx.duration external_delay);
 
-    /// Notify all listeners, when the above format is set or changed.
+    /// Notify all subscribed listeners when the above format is set or changed.
     -> OnSetFormat(uint32 frames_per_second, uint32 sample_format,
                    uint32 num_channels, zx.duration external_delay);
 
@@ -123,30 +123,37 @@ protocol Device {
     /// has been established, or before the format has been set.
     GetGain() -> (bool current_mute, bool current_agc, float32 current_gain_db);
 
-    /// Notify all listeners, when the above gain is set or changed.
+    /// Notify all subscribed listeners when the above gain is set or changed.
     -> OnSetGain(bool current_mute, bool current_agc, float32 current_gain_db);
 
     /// Return details about the ring buffer that was established in response
     /// to a client `AUDIO_RB_CMD_GET_BUFFER` command. This will only occur
-    /// after the format is set and other information is retrieved from the
-    /// driver.
+    /// after the client sets the format and retrieves other driver information.
     GetBuffer() -> (handle<vmo> ring_buffer, uint32 num_ring_buffer_frames,
                     uint32 notifications_per_ring);
 
-    /// Notify all listeners, when the above buffer has been requested (and
-    /// thus at that time has been established).
+    /// Notify all subscribed listeners when the above buffer has been created.
     -> OnBufferCreated(handle<vmo> ring_buffer, uint32 num_ring_buffer_frames,
                        uint32 notifications_per_ring);
 
-    /// Notify a test client when the device is commanded to Start streaming.
-    /// This can only occur after a device is fully configured (format is set;
-    /// ring buffer is established and fetched).
+    /// Override the position notification frequency set by AudioCore for this
+    /// stream, with the given value. Although this method can be called at any
+    /// time (including before this Input|Output is added, or after it is
+    /// started), logically it makes most sense to call this immediately after
+    /// receiving details about the just-created ring buffer, via `GetBuffer` or
+    /// the `->OnBufferCreated` event.
+    SetNotificationFrequency(uint32 notifications_per_ring);
+
+    /// Notify all subscribed listeners when the device is commanded to Start
+    /// streaming. This can only occur after a device is fully configured
+    /// (format is set; ring buffer is established and fetched).
     -> OnStart(zx.time start_time);
 
-    /// Notify a test client when the device is commanded to Stop streaming.
-    /// This can only occur when the device is currently Started. Stop returns
-    /// the device to a fully-configured state. Restated, upon this command,
-    /// the already-set format and ring buffer are retained without change.
+    /// Notify all subscribed listeners when the device is commanded to Stop
+    /// streaming. This can only occur when the device is already Started. Stop
+    /// returns the device to a fully-configured state. Upon this command, the
+    /// already-set format and ring buffer are retained without change, but
+    /// position will re-begin at 0, if the device is again Started.
     -> OnStop(zx.time stop_time, uint32 ring_position);
 
     /// Return the current position (in bytes) within the ring buffer. This can
@@ -154,8 +161,12 @@ protocol Device {
     /// not yet Started streaming, then zero will always be returned.
     GetPosition() -> (uint32 ring_position, zx.time clock_time);
 
-    /// Notify all listeners, when any `AUDIO_RB_POSITION_NOTIFY` position
-    /// notification is proactively issued to the client.
+    /// Notify all subscribed listeners, when any `AUDIO_RB_POSITION_NOTIFY`
+    /// position notification is issued by the driver. The frequency of these
+    /// per-stream notifications is set by AudioCore, reported to VAD clients
+    /// via `GetBuffer` or the `->OnBufferCreated` event. VirtualAudioDevice
+    /// clients can enable an alternate notification frequency for a given
+    /// stream by calling `SetNotificationFrequency`.
     -> OnPositionNotify(uint32 ring_position, zx.time clock_time);
 
     /// Hot-plug or hot-unplug an active virtual device, at the specified time.
