@@ -28,6 +28,11 @@ struct UsbResponse {
     zx.status status;
     /// Number of bytes actually transferred (on success).
     zx.off actual;
+    /// Number of consecutive requests that were silently completed immediately prior to this
+    /// request.
+    /// This only needs to be checked if the client has set |cb_on_error_only| on any requests,
+    /// otherwise it will always be zero.
+    uint64 silent_completions_count;
 };
 
 struct UsbRequest {
@@ -64,11 +69,13 @@ struct UsbRequest {
     /// The requester is in charge of keeping track of the order of queued requests and
     /// requeuing silently completed requests.
     ///
-    /// If the requester receives a success callback, they may assume requests queued
-    /// prior to it at the same endpoint have silently completed successfully.
-    /// If the requester receives an error callback, they will receive an additional
-    /// callback when the request queued prior to the erroneous request completes, if any.
-    /// This is as errors are reported as soon as possible rather than preserving queue order.
+    /// There may be cases where a request completes out of order. For example, errors
+    /// are reported as soon as possible, rather than preserving queue order.
+    /// Due to this, the requester may receive additional callbacks on top of those requested.
+    ///
+    /// If the requester receives a callback, they should check the response's
+    /// |silent_completions_count| to know how many consecutive requests prior to this one
+    /// (in relation to queue order for the endpoint) have completed successfully.
     bool cb_on_error_only;
 };
 

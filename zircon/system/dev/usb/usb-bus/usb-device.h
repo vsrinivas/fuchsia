@@ -104,6 +104,7 @@ private:
         // True if the request is ready to be processed by the client during the next callback.
         bool ready_for_client;
         bool require_callback;
+        size_t silent_completions_count;
     };
 
     using Request = usb::Request<void>;
@@ -129,10 +130,10 @@ private:
     // get a callback. If that prior request has also already completed,
     // |out_additional_callback| will be populated.
     // Returns true if a callback is required.
-    bool UpdateEndpoint(usb_request_t* completed_req,
-                        std::optional<UnownedRequest>* out_additional_callback);
+    bool UpdateEndpoint(Endpoint* ep, usb_request_t* completed_req) __TA_REQUIRES(ep->lock);
 
     void RequestComplete(usb_request_t* req);
+    void QueueCallback(usb_request_t* req);
     static void ControlComplete(void* ctx, usb_request_t* req);
      zx_status_t Control(uint8_t request_type, uint8_t request, uint16_t value, uint16_t index,
                          zx_time_t timeout, const void* write_buffer, size_t write_size,

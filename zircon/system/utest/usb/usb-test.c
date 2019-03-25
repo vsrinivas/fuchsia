@@ -286,9 +286,9 @@ static bool usb_callbacks_on_error_test(void) {
         .packet_size = 1024,
         .packet_opts = {
             { .set_cb = false, .set_error = false, .expect_cb = false },
-            { .set_cb = false, .set_error = false, .expect_cb = false },
+            { .set_cb = false, .set_error = true, .expect_cb = true },
             { .set_cb = false, .set_error = false, .expect_cb = true },
-            { .set_cb = false, .set_error = true, .expect_cb = true }
+            { .set_cb = true, .set_error = true, .expect_cb = true }
         },
         .packet_opts_len = 4
     };
@@ -324,7 +324,7 @@ static bool usb_callbacks_on_multiple_errors_test(void) {
             { .set_cb = false, .set_error = false, .expect_cb = true },
             { .set_cb = false, .set_error = true, .expect_cb = true },
             { .set_cb = true, .set_error = true, .expect_cb = true },
-            { .set_cb = false, .set_error = true, .expect_cb = true },
+            { .set_cb = false, .set_error = false, .expect_cb = false },
             { .set_cb = false, .set_error = true, .expect_cb = true },
             { .set_cb = false, .set_error = false, .expect_cb = false },
             { .set_cb = true, .set_error = false, .expect_cb = true },

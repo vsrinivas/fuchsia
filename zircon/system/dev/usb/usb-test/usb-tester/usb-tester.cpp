@@ -370,6 +370,7 @@ zx_status_t UsbTester::VerifyLoopback(const fbl::Vector<TestRequest>& out_reqs,
 zx_status_t UsbTester::VerifyCallbacks(const fbl::Vector<TestRequest>& reqs) {
     size_t num_cbs = 0;
     size_t i = 0;
+    size_t num_completions = 0;
     for (auto& req : reqs) {
         if (req.Get()->response.status == ZX_OK) {
             if (req.expect_cb() != req.got_cb()) {
@@ -387,8 +388,13 @@ zx_status_t UsbTester::VerifyCallbacks(const fbl::Vector<TestRequest>& reqs) {
         }
         if (req.got_cb()) {
             num_cbs++;
+            num_completions += (1 + req.Get()->response.silent_completions_count);
         }
         i++;
+    }
+    if (num_completions != reqs.size()) {
+        zxlogf(ERROR, "wanted %lu completions, got %lu\n", reqs.size(), num_completions);
+        return ZX_ERR_IO;
     }
     zxlogf(TRACE, "got %lu/%lu callbacks\n", num_cbs, i);
     return ZX_OK;

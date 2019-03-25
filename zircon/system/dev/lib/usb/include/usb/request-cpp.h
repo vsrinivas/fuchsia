@@ -290,12 +290,13 @@ struct CallbackTraits {
     }
 
     static void Callback(CallbackType* callback, void* cookie, usb_request_t* op,
-                         zx_status_t status, zx_off_t actual) {
+                         zx_status_t status, zx_off_t actual,
+                         size_t silent_completions_count = 0) {
         usb_request_complete_t complete_cb = {
             .callback = callback,
             .ctx = cookie,
         };
-        usb_request_complete(op, status, actual, &complete_cb);
+        usb_request_complete_base(op, status, actual, silent_completions_count, &complete_cb);
     }
 };
 
