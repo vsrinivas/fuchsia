@@ -4,9 +4,10 @@
 
 #include <hw/reg.h>
 #include <soc/hi3660/hi3660-regs.h>
-#include <soc/hi3660/hi3660.h>
 #include <stdio.h>
 #include <zircon/syscalls.h>
+
+#include "hi3660.h"
 
 #define BIT(pos) (1U << (pos))
 #define set_bits(v, a) writel(readl(a) | (v), (a))

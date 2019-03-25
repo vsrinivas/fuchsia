@@ -4,11 +4,10 @@
 
 #include <ddk/debug.h>
 #include <gpio/pl061/pl061.h>
-#include <soc/hi3660/hi3660.h>
 
-#include <assert.h>
 #include <stdlib.h>
-#include <stdio.h>
+
+#include "hi3660.h"
 
 // TODO(voydanoff) Move hard coded values to a header file
 

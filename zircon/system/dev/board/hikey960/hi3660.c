@@ -21,10 +21,11 @@
 #include <zircon/syscalls.h>
 #include <zircon/assert.h>
 
-#include <soc/hi3660/hi3660.h>
 #include <soc/hi3660/hi3660-hw.h>
 #include <soc/hi3660/hi3660-regs.h>
 #include <hw/reg.h>
+
+#include "hi3660.h"
 
 zx_status_t hi3660_enable_ldo3(hi3660_t* hi3660) {
     writel(LDO3_ENABLE_BIT, hi3660->pmu_ssio.vaddr + LDO3_ENABLE_REG);

@@ -6,11 +6,12 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/gpio.h>
 #include <hw/reg.h>
-#include <soc/hi3660/hi3660.h>
 #include <soc/hi3660/hi3660-regs.h>
 #include <soc/hi3660/hi3660-pinmux.h>
 #include <ddk/debug.h>
 #include <stdio.h>
+
+#include "hi3660.h"
 
 #define I2C1_ENABLE_REG_OFFSET          0x10
 #define I2C1_ENABLE_REG_BIT             0x4

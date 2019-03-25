@@ -3,22 +3,5 @@
 # found in the LICENSE file.
 
 library("hi3660") {
-  sources = [
-    "hi3660-dsi.c",
-    "hi3660-gpios.c",
-    "hi3660-i2c.c",
-    "hi3660-ufs.c",
-    "hi3660-usb.c",
-    "hi3660.c",
-  ]
-  deps = [
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-gpioimpl",
-    "$zx/system/banjo/ddk-protocol-platform-device",
-    "$zx/system/dev/gpio/pl061",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/driver",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zircon",
-  ]
+  sources = []
 }
