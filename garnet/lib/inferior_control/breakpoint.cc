@@ -14,16 +14,16 @@
 
 namespace inferior_control {
 
-Breakpoint::Breakpoint(uintptr_t address, size_t size)
+Breakpoint::Breakpoint(zx_vaddr_t address, size_t size)
     : address_(address), size_(size) {}
 
-ProcessBreakpoint::ProcessBreakpoint(uintptr_t address, size_t size,
+ProcessBreakpoint::ProcessBreakpoint(zx_vaddr_t address, size_t size,
                                      ProcessBreakpointSet* owner)
     : Breakpoint(address, size), owner_(owner) {
   FXL_DCHECK(owner_);
 }
 
-SoftwareBreakpoint::SoftwareBreakpoint(uintptr_t address,
+SoftwareBreakpoint::SoftwareBreakpoint(zx_vaddr_t address,
                                        ProcessBreakpointSet* owner)
     : ProcessBreakpoint(address, Size(), owner) {}
 
@@ -93,7 +93,7 @@ ProcessBreakpointSet::ProcessBreakpointSet(Process* process)
   FXL_DCHECK(process_);
 }
 
-bool ProcessBreakpointSet::InsertSoftwareBreakpoint(uintptr_t address) {
+bool ProcessBreakpointSet::InsertSoftwareBreakpoint(zx_vaddr_t address) {
   if (breakpoints_.find(address) != breakpoints_.end()) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
         "Breakpoint already inserted at address: 0x%" PRIxPTR, address);
@@ -111,7 +111,7 @@ bool ProcessBreakpointSet::InsertSoftwareBreakpoint(uintptr_t address) {
   return true;
 }
 
-bool ProcessBreakpointSet::RemoveSoftwareBreakpoint(uintptr_t address) {
+bool ProcessBreakpointSet::RemoveSoftwareBreakpoint(zx_vaddr_t address) {
   auto iter = breakpoints_.find(address);
   if (iter == breakpoints_.end()) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
@@ -128,13 +128,13 @@ bool ProcessBreakpointSet::RemoveSoftwareBreakpoint(uintptr_t address) {
   return true;
 }
 
-ThreadBreakpoint::ThreadBreakpoint(uintptr_t address, size_t size,
+ThreadBreakpoint::ThreadBreakpoint(zx_vaddr_t address, size_t size,
                                    ThreadBreakpointSet* owner)
     : Breakpoint(address, size), owner_(owner) {
   FXL_DCHECK(owner_);
 }
 
-SingleStepBreakpoint::SingleStepBreakpoint(uintptr_t address,
+SingleStepBreakpoint::SingleStepBreakpoint(zx_vaddr_t address,
                                            ThreadBreakpointSet* owner)
     : ThreadBreakpoint(address, 0 /*TODO:type?*/, owner) {}
 
@@ -147,7 +147,7 @@ ThreadBreakpointSet::ThreadBreakpointSet(Thread* thread) : thread_(thread) {
   FXL_DCHECK(thread_);
 }
 
-bool ThreadBreakpointSet::InsertSingleStepBreakpoint(uintptr_t address) {
+bool ThreadBreakpointSet::InsertSingleStepBreakpoint(zx_vaddr_t address) {
   if (single_step_breakpoint_) {
     FXL_LOG(ERROR) << fxl::StringPrintf(
         "S/S bkpt already inserted at 0x%" PRIxPTR

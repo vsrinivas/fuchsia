@@ -95,9 +95,9 @@ static void inline TriggerSoftwareBreakpoint() {
 #endif
 }
 
-// Resume |thread| after it has executed a s/w breakpoint instruction.
-
 #ifdef __Fuchsia__
+
+// Resume |thread| after it has executed a s/w breakpoint instruction.
 
 zx_status_t ResumeAfterSoftwareBreakpointInstruction(zx_handle_t thread,
                                                      zx_handle_t eport);
