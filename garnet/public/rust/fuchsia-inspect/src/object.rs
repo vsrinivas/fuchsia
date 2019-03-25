@@ -22,11 +22,7 @@ pub trait ObjectUtil {
 impl ObjectUtil for Object {
     /// Creates a new Object with the given name and no properties or metrics.
     fn new(name: String) -> Object {
-        Object {
-            name,
-            properties: None,
-            metrics: None,
-        }
+        Object { name, properties: None, metrics: None }
     }
 
     /// clone will create a copy of the given Object. This is necessary because
@@ -62,21 +58,14 @@ impl ObjectUtil for Object {
             }
             metrics = Some(mvec);
         }
-        Object {
-            name,
-            properties,
-            metrics,
-        }
+        Object { name, properties, metrics }
     }
 
     /// Adds the given property to the given Object. If a property with this key already exists, it is
     /// replaced and the old value is returned.
     fn add_property(&mut self, prop: Property) -> Option<Property> {
         let properties = self.properties.get_or_insert(Vec::new());
-        if let Some(i) = properties
-            .iter()
-            .position(|old_prop| old_prop.key == prop.key)
-        {
+        if let Some(i) = properties.iter().position(|old_prop| old_prop.key == prop.key) {
             properties.push(prop);
             Some(properties.swap_remove(i))
         } else {
@@ -120,10 +109,7 @@ impl ObjectUtil for Object {
     /// replaced and the old value is returned.
     fn add_metric(&mut self, metric: Metric) -> Option<Metric> {
         let metrics = self.metrics.get_or_insert(Vec::new());
-        if let Some(i) = metrics
-            .iter()
-            .position(|old_metric| old_metric.key == metric.key)
-        {
+        if let Some(i) = metrics.iter().position(|old_metric| old_metric.key == metric.key) {
             metrics.push(metric);
             Some(metrics.swap_remove(i))
         } else {
@@ -199,11 +185,7 @@ mod tests {
     fn new_test() {
         assert_eq!(
             Object::new("test".to_string()),
-            Object {
-                name: "test".to_string(),
-                properties: None,
-                metrics: None,
-            }
+            Object { name: "test".to_string(), properties: None, metrics: None }
         );
     }
 
@@ -222,18 +204,9 @@ mod tests {
                 },
             ]),
             metrics: Some(vec![
-                Metric {
-                    key: "metric0".to_string(),
-                    value: MetricValue::IntValue(0),
-                },
-                Metric {
-                    key: "metric1".to_string(),
-                    value: MetricValue::UintValue(1),
-                },
-                Metric {
-                    key: "metric2".to_string(),
-                    value: MetricValue::DoubleValue(2.0),
-                },
+                Metric { key: "metric0".to_string(), value: MetricValue::IntValue(0) },
+                Metric { key: "metric1".to_string(), value: MetricValue::UintValue(1) },
+                Metric { key: "metric2".to_string(), value: MetricValue::DoubleValue(2.0) },
             ]),
         };
         let cloned = original.clone();
@@ -357,16 +330,10 @@ mod tests {
     #[test]
     fn add_metric_test() {
         let mut obj = Object::new("test".to_string());
-        obj.add_metric(Metric {
-            key: "metric0".to_string(),
-            value: MetricValue::IntValue(0),
-        });
+        obj.add_metric(Metric { key: "metric0".to_string(), value: MetricValue::IntValue(0) });
         assert_eq!(
             obj.metrics.as_ref().unwrap(),
-            &vec![Metric {
-                key: "metric0".to_string(),
-                value: MetricValue::IntValue(0),
-            },]
+            &vec![Metric { key: "metric0".to_string(), value: MetricValue::IntValue(0) },]
         );
         obj.add_metric(Metric {
             key: "metric1".to_string(),
@@ -375,14 +342,8 @@ mod tests {
         assert_eq!(
             obj.metrics.unwrap(),
             vec![
-                Metric {
-                    key: "metric0".to_string(),
-                    value: MetricValue::IntValue(0),
-                },
-                Metric {
-                    key: "metric1".to_string(),
-                    value: MetricValue::DoubleValue(3.14),
-                },
+                Metric { key: "metric0".to_string(), value: MetricValue::IntValue(0) },
+                Metric { key: "metric1".to_string(), value: MetricValue::DoubleValue(3.14) },
             ]
         );
     }
@@ -390,10 +351,7 @@ mod tests {
     #[test]
     fn get_metric_test() {
         let mut obj = Object::new("test".to_string());
-        obj.add_metric(Metric {
-            key: "metric0".to_string(),
-            value: MetricValue::IntValue(0),
-        });
+        obj.add_metric(Metric { key: "metric0".to_string(), value: MetricValue::IntValue(0) });
         obj.add_metric(Metric {
             key: "metric1".to_string(),
             value: MetricValue::DoubleValue(3.14),
@@ -402,67 +360,43 @@ mod tests {
         assert!(obj.get_metric("metric0").is_some());
         assert_eq!(
             obj.get_metric("metric0").unwrap(),
-            &Metric {
-                key: "metric0".to_string(),
-                value: MetricValue::IntValue(0),
-            }
+            &Metric { key: "metric0".to_string(), value: MetricValue::IntValue(0) }
         );
 
         assert!(obj.get_metric("metric1").is_some());
         assert_eq!(
             obj.get_metric("metric1").unwrap(),
-            &Metric {
-                key: "metric1".to_string(),
-                value: MetricValue::DoubleValue(3.14),
-            }
+            &Metric { key: "metric1".to_string(), value: MetricValue::DoubleValue(3.14) }
         );
     }
 
     #[test]
     fn get_metric_mut_test() {
         let mut obj = Object::new("test".to_string());
-        obj.add_metric(Metric {
-            key: "metric0".to_string(),
-            value: MetricValue::IntValue(0),
-        });
+        obj.add_metric(Metric { key: "metric0".to_string(), value: MetricValue::IntValue(0) });
 
         assert!(obj.get_metric_mut("metric0").is_some());
         obj.get_metric_mut("metric0").unwrap().key = "metric1".to_string();
 
         assert_eq!(
             obj.get_metric("metric1").unwrap(),
-            &Metric {
-                key: "metric1".to_string(),
-                value: MetricValue::IntValue(0),
-            }
+            &Metric { key: "metric1".to_string(), value: MetricValue::IntValue(0) }
         );
     }
 
     #[test]
     fn remove_metric_test() {
         let mut obj = Object::new("test".to_string());
-        obj.add_metric(Metric {
-            key: "metric0".to_string(),
-            value: MetricValue::UintValue(0),
-        });
-        obj.add_metric(Metric {
-            key: "metric1".to_string(),
-            value: MetricValue::IntValue(-1),
-        });
+        obj.add_metric(Metric { key: "metric0".to_string(), value: MetricValue::UintValue(0) });
+        obj.add_metric(Metric { key: "metric1".to_string(), value: MetricValue::IntValue(-1) });
         assert_eq!(None, obj.remove_metric("metric-1"));
         assert_eq!(
-            Some(Metric {
-                key: "metric0".to_string(),
-                value: MetricValue::UintValue(0),
-            }),
+            Some(Metric { key: "metric0".to_string(), value: MetricValue::UintValue(0) }),
             obj.remove_metric("metric0")
         );
         assert_eq!(None, obj.remove_metric("metric0"));
         assert_eq!(
-            Some(Metric {
-                key: "metric1".to_string(),
-                value: MetricValue::IntValue(-1),
-            }),
+            Some(Metric { key: "metric1".to_string(), value: MetricValue::IntValue(-1) }),
             obj.remove_metric("metric1")
         );
         assert_eq!(None, obj.remove_metric("metric1"));

@@ -22,6 +22,7 @@ use self::objectwrapper::{MetricValueWrapper, ObjectWrapper, PropertyValueWrappe
 
 pub mod object;
 mod objectwrapper;
+mod vmo;
 
 pub use self::objectwrapper::{MetricValueGenerator, PropertyValueGenerator};
 
@@ -62,18 +63,11 @@ impl InspectService {
                         responder.send(&mut service.current_node.lock().evaluate())?;
                     }
                     InspectRequest::ListChildren { responder } => responder.send(Some(
-                        &mut service
-                            .current_node
-                            .lock()
-                            .get_children_names()
-                            .iter()
-                            .map(|x| &**x),
+                        &mut service.current_node.lock().get_children_names().iter().map(|x| &**x),
                     ))?,
-                    InspectRequest::OpenChild {
-                        child_name,
-                        child_channel,
-                        responder,
-                    } => responder.send(service.open_child(&child_name, child_channel)?)?,
+                    InspectRequest::OpenChild { child_name, child_channel, responder } => {
+                        responder.send(service.open_child(&child_name, child_channel)?)?
+                    }
                 }
             }
             Ok(())
@@ -86,7 +80,9 @@ impl InspectService {
     // Serves a new connection on the given ServerEnd that can be used to interact with the named
     // child.
     fn open_child(
-        &self, child_name: &str, server_end: ServerEnd<InspectMarker>,
+        &self,
+        child_name: &str,
+        server_end: ServerEnd<InspectMarker>,
     ) -> Result<bool, Error> {
         match self.current_node.lock().get_child(child_name) {
             None => Ok(false),
@@ -141,14 +137,11 @@ impl ObjectTreeNode {
     /// properties or metrics. If a child with the given name already exists, it will be removed
     /// from the tree and returned. Note that this ignores dynamic children.
     pub fn add_child_tree(
-        &mut self, otn: Arc<Mutex<ObjectTreeNode>>,
+        &mut self,
+        otn: Arc<Mutex<ObjectTreeNode>>,
     ) -> Option<Arc<Mutex<ObjectTreeNode>>> {
         let name = otn.lock().get_name();
-        if let Some(i) = self
-            .children
-            .iter()
-            .position(|child| child.lock().get_name() == name)
-        {
+        if let Some(i) = self.children.iter().position(|child| child.lock().get_name() == name) {
             self.children.push(otn);
             Some(self.children.swap_remove(i))
         } else {
@@ -181,16 +174,11 @@ impl ObjectTreeNode {
 
     /// Gets the names of all the children of this node.
     pub fn get_children_names(&mut self) -> Vec<String> {
-        let names: HashSet<String> = self
-            .children
-            .iter()
-            .map(|child| child.lock().get_name())
-            .collect();
+        let names: HashSet<String> =
+            self.children.iter().map(|child| child.lock().get_name()).collect();
         if let Some(child_gen) = &mut self.child_generator {
-            let dyn_names: HashSet<String> = child_gen()
-                .iter_mut()
-                .map(|child| child.lock().get_name())
-                .collect();
+            let dyn_names: HashSet<String> =
+                child_gen().iter_mut().map(|child| child.lock().get_name()).collect();
             return names.union(&dyn_names).cloned().collect();
         }
         names.iter().cloned().collect()
@@ -235,17 +223,13 @@ impl ObjectTreeNode {
 
     /// Adds the given property. If a property with this key already exists, it is replaced.
     pub fn add_property(&mut self, prop: Property) {
-        self.object
-            .properties
-            .insert(prop.key, PropertyValueWrapper::Static(prop.value));
+        self.object.properties.insert(prop.key, PropertyValueWrapper::Static(prop.value));
     }
 
     /// Adds a property to the Object held by this node, whose value is lazily generated when
     /// needed. If a property with this key already exists, it is replaced.
     pub fn add_dynamic_property(&mut self, key: String, value_func: PropertyValueGenerator) {
-        self.object
-            .properties
-            .insert(key, PropertyValueWrapper::Dynamic(value_func));
+        self.object.properties.insert(key, PropertyValueWrapper::Dynamic(value_func));
     }
 
     /// Removes the property with the given key. Returns true if the removed value existed.
@@ -256,17 +240,13 @@ impl ObjectTreeNode {
     /// Adds a metric to the Object held by this node. If a metric with this key already exists, it
     /// is replaced.
     pub fn add_metric(&mut self, metric: Metric) {
-        self.object
-            .metrics
-            .insert(metric.key, MetricValueWrapper::Static(metric.value));
+        self.object.metrics.insert(metric.key, MetricValueWrapper::Static(metric.value));
     }
 
     /// Adds a metric to the Object held by this node, whose value is lazily generated when needed.
     /// If a metric with this key already exists, it is replaced.
     pub fn add_dynamic_metric(&mut self, key: String, value_func: MetricValueGenerator) {
-        self.object
-            .metrics
-            .insert(key, MetricValueWrapper::Dynamic(value_func));
+        self.object.metrics.insert(key, MetricValueWrapper::Dynamic(value_func));
     }
 
     /// Removes the metric with the given key. Returns true if the removed value existed.
@@ -290,9 +270,7 @@ mod tests {
             obj.properties
                 .as_mut()
                 .map(|properties| properties.sort_unstable_by(|a, b| a.key.cmp(&b.key)));
-            obj.metrics
-                .as_mut()
-                .map(|metrics| metrics.sort_unstable_by(|a, b| a.key.cmp(&b.key)));
+            obj.metrics.as_mut().map(|metrics| metrics.sort_unstable_by(|a, b| a.key.cmp(&b.key)));
             obj
         }
 
@@ -333,10 +311,7 @@ mod tests {
                 Box::new(|| PropertyValue::Str("2".to_string())),
             );
 
-            otn.add_metric(Metric {
-                key: "3".to_string(),
-                value: MetricValue::UintValue(3),
-            });
+            otn.add_metric(Metric { key: "3".to_string(), value: MetricValue::UintValue(3) });
             otn.add_dynamic_metric("4".to_string(), Box::new(|| MetricValue::IntValue(4)));
 
             let mut expected_object = Object::new("test".to_string());
@@ -348,14 +323,10 @@ mod tests {
                 key: "2".to_string(),
                 value: PropertyValue::Str("2".to_string()),
             });
-            expected_object.add_metric(Metric {
-                key: "3".to_string(),
-                value: MetricValue::UintValue(3),
-            });
-            expected_object.add_metric(Metric {
-                key: "4".to_string(),
-                value: MetricValue::IntValue(4),
-            });
+            expected_object
+                .add_metric(Metric { key: "3".to_string(), value: MetricValue::UintValue(3) });
+            expected_object
+                .add_metric(Metric { key: "4".to_string(), value: MetricValue::IntValue(4) });
 
             assert_eq!(expected_object, sort_keys(otn.evaluate()));
         }
@@ -373,10 +344,7 @@ mod tests {
             assert_eq!("test_child_2", otn.children[1].lock().get_name());
 
             let res = otn.add_child("test_child_1".to_string());
-            assert_eq!(
-                res.unwrap().lock().evaluate(),
-                Object::new("test_child_1".to_string())
-            );
+            assert_eq!(res.unwrap().lock().evaluate(), Object::new("test_child_1".to_string()));
         }
 
         #[test]
@@ -402,10 +370,7 @@ mod tests {
             });
 
             let res = otn.add_child_tree(ObjectTreeNode::new(obj));
-            assert_eq!(
-                res.unwrap().lock().evaluate(),
-                Object::new("test_child_1".to_string())
-            );
+            assert_eq!(res.unwrap().lock().evaluate(), Object::new("test_child_1".to_string()));
         }
 
         #[test]
@@ -487,35 +452,15 @@ mod tests {
             }));
 
             assert!(otn.get_child("-1").is_none());
-            assert_eq!(
-                otn.get_child("0").unwrap().lock().object.name,
-                "0".to_string()
-            );
-            assert_eq!(
-                otn.get_child("1").unwrap().lock().object.name,
-                "1".to_string()
-            );
-            assert_eq!(
-                otn.get_child("2").unwrap().lock().object.name,
-                "2".to_string()
-            );
-            assert_eq!(
-                otn.get_child("3").unwrap().lock().object.name,
-                "3".to_string()
-            );
-            assert_eq!(
-                otn.get_child("4").unwrap().lock().object.name,
-                "4".to_string()
-            );
+            assert_eq!(otn.get_child("0").unwrap().lock().object.name, "0".to_string());
+            assert_eq!(otn.get_child("1").unwrap().lock().object.name, "1".to_string());
+            assert_eq!(otn.get_child("2").unwrap().lock().object.name, "2".to_string());
+            assert_eq!(otn.get_child("3").unwrap().lock().object.name, "3".to_string());
+            assert_eq!(otn.get_child("4").unwrap().lock().object.name, "4".to_string());
 
-            otn.get_child("1")
-                .unwrap()
-                .lock()
-                .add_child("test_child".to_string());
+            otn.get_child("1").unwrap().lock().add_child("test_child".to_string());
             assert_eq!(
-                otn.get_child("1").unwrap().lock().children[0]
-                    .lock()
-                    .evaluate(),
+                otn.get_child("1").unwrap().lock().children[0].lock().evaluate(),
                 Object::new("test_child".to_string())
             )
         }
@@ -525,26 +470,17 @@ mod tests {
             let otn = ObjectTreeNode::new(Object::new("test".to_string()));
             let mut otn = otn.lock();
             initialize_children(&mut otn, vec!["0", "1", "2"]);
-            assert_eq!(
-                None,
-                otn.remove_child("-1").map(|child| child.lock().evaluate())
-            );
+            assert_eq!(None, otn.remove_child("-1").map(|child| child.lock().evaluate()));
             assert_eq!(
                 Some(Object::new("0".to_string())),
                 otn.remove_child("0").map(|child| child.lock().evaluate())
             );
-            assert_eq!(
-                None,
-                otn.remove_child("0").map(|child| child.lock().evaluate())
-            );
+            assert_eq!(None, otn.remove_child("0").map(|child| child.lock().evaluate()));
             assert_eq!(
                 Some(Object::new("2".to_string())),
                 otn.remove_child("2").map(|child| child.lock().evaluate())
             );
-            assert_eq!(
-                None,
-                otn.remove_child("2").map(|child| child.lock().evaluate())
-            );
+            assert_eq!(None, otn.remove_child("2").map(|child| child.lock().evaluate()));
             assert_eq!(vec!["1"], otn.get_children_names());
         }
 
@@ -552,9 +488,7 @@ mod tests {
         fn get_name() {
             assert_eq!(
                 "test",
-                &ObjectTreeNode::new(Object::new("test".to_string()))
-                    .lock()
-                    .get_name()
+                &ObjectTreeNode::new(Object::new("test".to_string())).lock().get_name()
             );
         }
 
@@ -618,16 +552,11 @@ mod tests {
         fn add_metric() {
             let otn = ObjectTreeNode::new(Object::new("test".to_string()));
             let mut otn = otn.lock();
-            otn.add_metric(Metric {
-                key: "1".to_string(),
-                value: MetricValue::IntValue(1),
-            });
+            otn.add_metric(Metric { key: "1".to_string(), value: MetricValue::IntValue(1) });
 
             let mut expected_object = Object::new("test".to_string());
-            expected_object.add_metric(Metric {
-                key: "1".to_string(),
-                value: MetricValue::IntValue(1),
-            });
+            expected_object
+                .add_metric(Metric { key: "1".to_string(), value: MetricValue::IntValue(1) });
 
             assert_eq!(expected_object, otn.evaluate());
         }
@@ -639,10 +568,8 @@ mod tests {
             otn.add_dynamic_metric("1".to_string(), Box::new(|| MetricValue::UintValue(1)));
 
             let mut expected_object = Object::new("test".to_string());
-            expected_object.add_metric(Metric {
-                key: "1".to_string(),
-                value: MetricValue::UintValue(1),
-            });
+            expected_object
+                .add_metric(Metric { key: "1".to_string(), value: MetricValue::UintValue(1) });
 
             assert_eq!(expected_object, otn.evaluate());
         }
@@ -651,10 +578,7 @@ mod tests {
         fn remove_metric() {
             let otn = ObjectTreeNode::new(Object::new("test".to_string()));
             let mut otn = otn.lock();
-            otn.add_metric(Metric {
-                key: "1".to_string(),
-                value: MetricValue::IntValue(1),
-            });
+            otn.add_metric(Metric { key: "1".to_string(), value: MetricValue::IntValue(1) });
             otn.add_dynamic_metric("2".to_string(), Box::new(|| MetricValue::UintValue(2)));
 
             assert!(otn.remove_metric("1"));
@@ -739,10 +663,8 @@ mod tests {
             );
 
             // There should be one child with the name "test_child"
-            let mut names = exec
-                .run_singlethreaded(inspect_proxy.list_children())
-                .unwrap()
-                .unwrap();
+            let mut names =
+                exec.run_singlethreaded(inspect_proxy.list_children()).unwrap().unwrap();
             names.sort_unstable();
             assert_eq!(
                 vec![
@@ -770,16 +692,11 @@ mod tests {
             );
 
             // We should be able to call read_data to get the child's Object
-            let expected_object = root_node
-                .lock()
-                .get_child("test_child")
-                .unwrap()
-                .lock()
-                .evaluate();
+            let expected_object =
+                root_node.lock().get_child("test_child").unwrap().lock().evaluate();
             assert_eq!(
                 expected_object,
-                exec.run_singlethreaded(child_inspect_proxy.read_data())
-                    .unwrap()
+                exec.run_singlethreaded(child_inspect_proxy.read_data()).unwrap()
             );
 
             // If the child we've opened is removed, we should still be able to read its data
@@ -787,15 +704,13 @@ mod tests {
             assert!(root_node.lock().remove_child("test_child").is_some());
             assert_eq!(
                 expected_object,
-                exec.run_singlethreaded(child_inspect_proxy.read_data())
-                    .unwrap()
+                exec.run_singlethreaded(child_inspect_proxy.read_data()).unwrap()
             );
 
             // There should be no children of this child
             assert_eq!(
                 Some(vec![]),
-                exec.run_singlethreaded(child_inspect_proxy.list_children())
-                    .unwrap()
+                exec.run_singlethreaded(child_inspect_proxy.list_children()).unwrap()
             );
 
             // We shouldn't be able to open any of the nonexistent children
@@ -824,9 +739,7 @@ mod tests {
                 .clone();
             assert_eq!(
                 expected_object,
-                &exec
-                    .run_singlethreaded(child_inspect_proxy.read_data())
-                    .unwrap()
+                &exec.run_singlethreaded(child_inspect_proxy.read_data()).unwrap()
             );
 
             // We should be able to open a dynamic child and read its data, which includes a
@@ -840,18 +753,11 @@ mod tests {
                 )
                 .unwrap()
             );
-            let expected_object = &root_node
-                .lock()
-                .get_child("dynamic_child")
-                .unwrap()
-                .lock()
-                .evaluate()
-                .clone();
+            let expected_object =
+                &root_node.lock().get_child("dynamic_child").unwrap().lock().evaluate().clone();
             assert_eq!(
                 expected_object,
-                &exec
-                    .run_singlethreaded(dynamic_child_inspect_proxy.read_data())
-                    .unwrap()
+                &exec.run_singlethreaded(dynamic_child_inspect_proxy.read_data()).unwrap()
             );
 
             // We should be able to open a dynamic child of that last dynamic child and read its
@@ -878,9 +784,7 @@ mod tests {
                 .clone();
             assert_eq!(
                 expected_object,
-                &exec
-                    .run_singlethreaded(sub_dynamic_child_inspect_proxy.read_data())
-                    .unwrap()
+                &exec.run_singlethreaded(sub_dynamic_child_inspect_proxy.read_data()).unwrap()
             );
         }
 
