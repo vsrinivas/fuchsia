@@ -3,10 +3,17 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/fidl/echo_client_cpp/echo_client_app.h"
-#include "lib/component/cpp/testing/fake_component.h"
-#include "lib/component/cpp/testing/test_with_context.h"
 
-// This test file demostrates how to use |TestWithContext|.
+#include <lib/async/dispatcher.h>
+#include <lib/component/cpp/testing/fake_component.h>
+#include <lib/component/cpp/testing/fake_launcher.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
+#include <memory>
+
+// This test file demonstrates how to use |ComponentContextProvider|.
 
 namespace echo {
 namespace testing {
@@ -48,25 +55,28 @@ const char FakeEcho::kURL[] = "fake-echo";
 class EchoClientAppForTest : public EchoClientApp {
  public:
   // Expose injecting constructor so we can pass an instrumented Context
-  EchoClientAppForTest(std::unique_ptr<component::StartupContext> context)
+  EchoClientAppForTest(std::unique_ptr<sys::ComponentContext> context)
       : EchoClientApp(std::move(context)) {}
 };
 
-class TestWithContextExampleTest : public component::testing::TestWithContext {
+class TestWithContextExampleTest : public gtest::TestLoopFixture {
  public:
   // Creates a fake echo component and registers it with fake launcher so that
   // when app under test tries to launch echo server, it launches our fake
   // component.
   void SetUp() override {
-    TestWithContext::SetUp();
-    echoClientApp_.reset(new EchoClientAppForTest(TakeContext()));
+    TestLoopFixture::SetUp();
+    echoClientApp_.reset(new EchoClientAppForTest(provider_.TakeContext()));
+    provider_.service_directory_provider()->AddService(
+        fake_launcher_.GetHandler());
+
     fake_echo_.reset(new FakeEcho());
-    fake_echo_->Register(controller().fake_launcher());
+    fake_echo_->Register(fake_launcher_);
   }
 
   void TearDown() override {
     echoClientApp_.reset();
-    TestWithContext::TearDown();
+    TestLoopFixture::TearDown();
   }
 
  protected:
@@ -77,6 +87,8 @@ class TestWithContextExampleTest : public component::testing::TestWithContext {
  private:
   std::unique_ptr<EchoClientAppForTest> echoClientApp_;
   std::unique_ptr<FakeEcho> fake_echo_;
+  component::testing::FakeLauncher fake_launcher_;
+  sys::testing::ComponentContextProvider provider_;
 };
 
 // Demonstrates use of fake component and launcher when component is not
@@ -104,34 +116,33 @@ TEST_F(TestWithContextExampleTest, EchoString_NoStart) {
 
 // This fixture will directly put fake service inside incoming service of mocked
 // start up context. This way client under test can directly connect to that
-// service using startup context.
-class FakeEchoInContextExampleTest
-    : public component::testing::TestWithContext {
+// service using component context.
+class FakeEchoInContextExampleTest : public gtest::TestLoopFixture {
  public:
-  // Adds a fake echo service to incoming service of mocked startup context.
+  // Adds a fake echo service to incoming service of mocked component context.
   void SetUp() override {
-    TestWithContext::SetUp();
+    TestLoopFixture::SetUp();
     fake_echo_.reset(new FakeEcho());
-    context_ = TakeContext();
-    controller().AddService(fake_echo_->GetHandler());
+    provider_.service_directory_provider()->AddService(
+        fake_echo_->GetHandler());
   }
 
-  void TearDown() override { TestWithContext::TearDown(); }
+  void TearDown() override { TestLoopFixture::TearDown(); }
 
  protected:
   void SetAnswer(fidl::StringPtr answer) { fake_echo_->SetAnswer(answer); }
-  EchoPtr echo() { return context_->ConnectToEnvironmentService<Echo>(); }
+  EchoPtr echo() { return provider_.context()->svc()->Connect<Echo>(); }
 
  private:
   std::unique_ptr<FakeEcho> fake_echo_;
-  std::unique_ptr<component::StartupContext> context_;
+  sys::testing::ComponentContextProvider provider_;
 };
 
 // Demonstrates how to directly add fake services to incoming directory of
 // mocked out context and then how to connect to it to use it.
 //
-// This example can be used to test apps which connect to services using startup
-// context.
+// This example can be used to test apps which connect to services using
+// component context.
 TEST_F(FakeEchoInContextExampleTest, EchoString_HelloWorld_GoodbyeWorld) {
   fidl::StringPtr message = "bogus";
   SetAnswer("Goodbye World!");

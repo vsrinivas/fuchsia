@@ -8,8 +8,12 @@ source_set("unit") {
   sources = [
     "component_context_for_test.cc",
     "component_context_for_test.h",
+    "component_context_provider.cc",
+    "component_context_provider.h",
     "service_directory_for_test.cc",
     "service_directory_for_test.h",
+    "service_directory_provider.cc",
+    "service_directory_provider.h",
     "test_with_context.cc",
     "test_with_context.h",
   ]

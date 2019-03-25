@@ -7,7 +7,9 @@
 namespace component {
 namespace testing {
 
-FakeLauncher::FakeLauncher() : binding_(this) {}
+using fuchsia::sys::Launcher;
+
+FakeLauncher::FakeLauncher() {}
 
 FakeLauncher::~FakeLauncher() = default;
 
@@ -26,7 +28,13 @@ void FakeLauncher::RegisterComponent(std::string url,
 }
 
 void FakeLauncher::Bind(fidl::InterfaceRequest<Launcher> request) {
-  binding_.Bind(std::move(request));
+  binding_set_.AddBinding(this, std::move(request));
+}
+
+fidl::InterfaceRequestHandler<Launcher> FakeLauncher::GetHandler() {
+  return [this](fidl::InterfaceRequest<Launcher> request) {
+    binding_set_.AddBinding(this, std::move(request));
+  };
 }
 
 }  // namespace testing

@@ -233,7 +233,7 @@ group("debugserver") {
 group("examples") {
   testonly = true
   public_deps = [
-    "//garnet/examples/testing:test_with_context_example_test",
+    "//garnet/examples/testing:component_context_provider_example",
     "//garnet/examples/testing/test_with_environment:test_with_environment_example_test",
   ]
 }

@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "echo_server_app.h"
-#include "lib/sys/cpp/testing/test_with_context.h"
+
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 
 namespace echo {
 namespace testing {
@@ -17,27 +19,28 @@ class EchoServerAppForTest : public EchoServerApp {
       : EchoServerApp(std::move(context), false) {}
 };
 
-class EchoServerAppTest : public sys::testing::TestWithContext {
+class EchoServerAppTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
-    TestWithContext::SetUp();
-    echoServerApp_.reset(new EchoServerAppForTest(TakeContext()));
+    TestLoopFixture::SetUp();
+    echoServerApp_.reset(new EchoServerAppForTest(provider_.TakeContext()));
   }
 
   void TearDown() override {
     echoServerApp_.reset();
-    TestWithContext::TearDown();
+    TestLoopFixture::TearDown();
   }
 
  protected:
   EchoPtr echo() {
     EchoPtr echo;
-    controller().context().ConnectToPublicService(echo.NewRequest());
+    provider_.ConnectToPublicService(echo.NewRequest());
     return echo;
   }
 
  private:
   std::unique_ptr<EchoServerAppForTest> echoServerApp_;
+  sys::testing::ComponentContextProvider provider_;
 };
 
 // Answer "Hello World" with "Hello World"

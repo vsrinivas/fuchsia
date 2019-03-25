@@ -9,7 +9,8 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
 
-#include "lib/fidl/cpp/binding.h"
+#include "lib/fidl/cpp/binding_set.h"
+#include "lib/fidl/cpp/interface_request.h"
 
 namespace component {
 namespace testing {
@@ -45,9 +46,11 @@ class FakeLauncher : public fuchsia::sys::Launcher {
                        fidl::InterfaceRequest<fuchsia::sys::ComponentController>
                            controller) override;
 
+  fidl::InterfaceRequestHandler<fuchsia::sys::Launcher> GetHandler();
+
  private:
   std::map<std::string, ComponentConnector> connectors_;
-  fidl::Binding<Launcher> binding_;
+  fidl::BindingSet<Launcher> binding_set_;
   friend class StartupContextForTest;
 
   void Bind(fidl::InterfaceRequest<Launcher> request);

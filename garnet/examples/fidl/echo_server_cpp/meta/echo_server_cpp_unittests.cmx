@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/echo_server_cpp_unittests"
+    }
+}
