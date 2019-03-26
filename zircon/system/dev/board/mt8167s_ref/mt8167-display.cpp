@@ -169,11 +169,31 @@ public:
 
 zx_status_t Mt8167::DisplayInit() {
 
-    // Enable Backlight on reference board only. Cleo has blacklight through I2C
-    gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO55_DISP_PWM, MT8167_GPIO_GPIO_FN);
-    gpio_impl_config_out(&gpio_impl_, MT8167_GPIO55_DISP_PWM, 1);
+    if (board_info_.pid != PDEV_PID_CLEO && board_info_.pid != PDEV_PID_MEDIATEK_8167S_REF) {
+        zxlogf(ERROR, "Unsupported product\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+        // Enable Backlight on reference board only. Cleo has blacklight through I2C
+        gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO55_DISP_PWM, MT8167_GPIO_GPIO_FN);
+        gpio_impl_config_out(&gpio_impl_, MT8167_GPIO55_DISP_PWM, 1);
+    }
 
     // Enable LCD voltage rails
+    uint32_t kVpg2VoSel = 0;
+    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+        kVpg2VoSel = 0x60; // 3 << 5
+    } else if (board_info_.pid == PDEV_PID_CLEO) {
+        kVpg2VoSel = 0xA0; // 5 << 5
+    } else {
+        // make sure proper LCD voltage rail is set for any new PID
+        ZX_DEBUG_ASSERT(false);
+    }
+    constexpr uint32_t kDigLdoCon29 = 0x0532;
+    constexpr uint32_t kDigLdoCon8 = 0x050C;
+    constexpr uint32_t kVpg2En = 0x8000; // 1 << 15;
+
     zx::unowned_resource root_resource(get_root_resource());
     std::optional<ddk::MmioBuffer> pmic_mmio;
     auto status = ddk::MmioBuffer::Create(MT8167_PMIC_WRAP_BASE, MT8167_PMIC_WRAP_SIZE,
@@ -188,16 +208,10 @@ zx_status_t Mt8167::DisplayInit() {
     while (WACS2_RDATA::Get().ReadFrom(&(*pmic_mmio)).status() != WACS2_RDATA::kStateIdle) {
     }
 
-    constexpr uint32_t kDigLdoCon29 = 0x0532;
-    constexpr uint32_t kVpg2VoSel = 0x60; // 3 << 5
-    constexpr uint32_t kDigLdoCon8 = 0x050C;
-    constexpr uint32_t kVpg2En = 0x8000; // 1 << 15;
-
     auto pmic = WACS2_CMD::Get().ReadFrom(&(*pmic_mmio));
     // From the documentation "Wrapper access: Address[15:1]" hence the >> 1.
     pmic.set_WACS2_WRITE(1).set_WACS2_ADR(kDigLdoCon29 >> 1).set_WACS2_WDATA(kVpg2VoSel);
     pmic.WriteTo(&(*pmic_mmio));
-
     pmic.set_WACS2_WRITE(1).set_WACS2_ADR(kDigLdoCon8 >> 1).set_WACS2_WDATA(kVpg2En);
     pmic.WriteTo(&(*pmic_mmio));
 

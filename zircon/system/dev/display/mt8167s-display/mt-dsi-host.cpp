@@ -54,7 +54,7 @@ zx_status_t MtDsiHost::Init(zx_device_t* parent) {
     }
 
     // Load LCD Init values while in command mode
-    lcd_ = fbl::make_unique_checked<mt8167s_display::Lcd>(&ac, (uint8_t)0);
+    lcd_ = fbl::make_unique_checked<mt8167s_display::Lcd>(&ac, panel_type_);
     if (!ac.check()) {
         DISP_ERROR("Failed to create LCD object\n");
         return ZX_ERR_NO_MEMORY;
@@ -379,8 +379,9 @@ void MtDsiHost::PowerOffMipiTx() {
 
 zx_status_t MtDsiHost::Shutdown(fbl::unique_ptr<MtSysConfig>& syscfg) {
     ZX_DEBUG_ASSERT(initialized_);
+    //TODO(payamm): comment out for now since it causes unexpected behavior.
+    // PowerOffMipiTx();
     syscfg->PowerDown(MODULE_DSI0);
-    PowerOffMipiTx();
     return ZX_OK;
 }
 
@@ -395,6 +396,7 @@ zx_status_t MtDsiHost::Start() {
 
 zx_status_t MtDsiHost::Config(const display_setting_t& disp_setting) {
     ZX_DEBUG_ASSERT(initialized_);
+
     // First, configure the DSI PHY
     ConfigMipiPll(disp_setting.lcd_clock, disp_setting.lane_num);
 

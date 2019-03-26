@@ -31,7 +31,8 @@ namespace mt8167s_display {
 
 class MtDsiHost {
 public:
-    MtDsiHost(uint32_t height, uint32_t width): height_(height), width_(width) {
+    MtDsiHost(uint32_t height, uint32_t width, uint8_t panel_type)
+        : height_(height), width_(width), panel_type_(panel_type) {
         ZX_ASSERT(height_ < kMaxHeight);
         ZX_ASSERT(width_ < kMaxWidth);
     }
@@ -52,6 +53,7 @@ private:
     zx::bti bti_;
     ddk::DsiImplProtocolClient dsiimpl_;
     fbl::unique_ptr<Lcd> lcd_;
+    uint8_t panel_type_;
     bool initialized_ = false;
 };
 

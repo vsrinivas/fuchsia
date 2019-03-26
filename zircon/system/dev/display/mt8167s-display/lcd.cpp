@@ -27,7 +27,14 @@ constexpr uint8_t lcd_shutdown_sequence[] = {
     DELAY_CMD,150,
 };
 
-constexpr uint8_t lcd_init_sequence[] = {
+constexpr uint8_t lcd_init_sequence_ST7701S[] = {
+    DCS_CMD,1,0x11,
+    DELAY_CMD,120,
+    DCS_CMD,1,0x29,
+    DELAY_CMD,20,
+};
+
+constexpr uint8_t lcd_init_sequence_ILI9881C[] = {
     DCS_CMD,4,0xFF,0x98,0x81,0x03,
     DCS_CMD,2,0x01,0x00,
     DCS_CMD,2,0x02,0x00,
@@ -277,17 +284,19 @@ zx_status_t Lcd::Enable() {
         return ZX_OK;
     }
 
-    // reset LCD panel via GPIO according to vendor doc
-    gpio_config_out(&gpio_, 1);
-    gpio_write(&gpio_, 1);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
-    gpio_write(&gpio_, 0);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
-    gpio_write(&gpio_, 1);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
-
     // load table
-    zx_status_t status = LoadInitTable(lcd_init_sequence, sizeof(lcd_init_sequence));
+    zx_status_t status;
+    if (panel_type_ == PANEL_ILI9881C) {
+        status = LoadInitTable(lcd_init_sequence_ILI9881C,
+                               sizeof(lcd_init_sequence_ILI9881C));
+    } else if (panel_type_ == PANEL_ST7701S) {
+        status = LoadInitTable(lcd_init_sequence_ST7701S,
+                               sizeof(lcd_init_sequence_ST7701S));
+    } else {
+        DISP_ERROR("Unsupported panel detected\n");
+        status = ZX_ERR_NOT_SUPPORTED;
+    }
+
     if (status == ZX_OK) {
         // LCD is on now.
         enabled_ = true;
@@ -316,6 +325,19 @@ zx_status_t Lcd::Init(zx_device_t* parent) {
         return status;
     }
 
+    //TODO(payamm): For some reason on Cleo, toggling the LCD RST pin if LCD was already
+    // initialized will cause unexpectd behavior. For now, we can just not toggle the pin
+    // if it's already high (i.e. already initialized).
+    uint8_t val;
+    gpio_read(&gpio_, &val);
+    if (val == 0) {
+        gpio_config_out(&gpio_, 1);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+        gpio_write(&gpio_, 0);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+        gpio_write(&gpio_, 1);
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+    }
     initialized_ = true;
     return ZX_OK;
 }

@@ -98,12 +98,8 @@ int Mt8167::Thread() {
     if (Msdc2Init() != ZX_OK) {
         zxlogf(ERROR, "Msdc2Init() failed\n");
     }
-    // display driver is only supported on the ref board only
-    if (board_info_.vid == PDEV_VID_MEDIATEK &&
-        board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
-        if (DisplayInit() != ZX_OK) {
-            zxlogf(ERROR, "DisplayInit() failed\n");
-        }
+    if (DisplayInit() != ZX_OK) {
+        zxlogf(ERROR, "DisplayInit() failed\n");
     }
     if (ButtonsInit() != ZX_OK) {
         zxlogf(ERROR, "ButtonsInit() failed\n");

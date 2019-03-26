@@ -39,6 +39,23 @@ constexpr display_setting_t kDisplaySettingIli9881c = {
     .vsync_pol = 0, // unused
 };
 
+constexpr display_setting_t kDisplaySettingSt7701s = {
+    .lane_num = 2,
+    .bit_rate_max = 0, // unused
+    .clock_factor = 0, // unused
+    .lcd_clock = 228,
+    .h_active = 480,
+    .v_active = 800,
+    .h_period = 740,  //Vendor provides front porch of 100. calculate period manually
+    .v_period = 848, //Vendor provides front porch of 20. calculate period manually
+    .hsync_width = 60,
+    .hsync_bp = 100,
+    .hsync_pol = 0, // unused
+    .vsync_width = 8,
+    .vsync_bp = 20,
+    .vsync_pol = 0, // unused
+};
+
 struct ImageInfo {
     zx::pmt pmt;
     zx_paddr_t paddr;
@@ -400,7 +417,8 @@ zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
     }
 
     // Create and initialize DSI Host object
-    dsi_host_ = fbl::make_unique_checked<mt8167s_display::MtDsiHost>(&ac, height_, width_);
+    dsi_host_ = fbl::make_unique_checked<mt8167s_display::MtDsiHost>(&ac, height_, width_,
+                                                                     panel_type_);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -499,9 +517,19 @@ zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
 zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
     zx_status_t status;
 
-    // Select the appropriate display table. For now, we only support the lcd
-    // on the mt8167s reference board.
-    init_disp_table_ = &kDisplaySettingIli9881c;
+    // Select the appropriate display table.
+    // TODO(payamm): This should really be done via display ID GPIO pins
+    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+        panel_type_ = PANEL_ILI9881C;
+        init_disp_table_ = &kDisplaySettingIli9881c;
+    } else if (board_info_.pid == PDEV_PID_CLEO) {
+        panel_type_ = PANEL_ST7701S;
+        init_disp_table_ = &kDisplaySettingSt7701s;
+    } else {
+        DISP_ERROR("Unsupport Hardware Detected\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     CopyDisplaySettings();
 
     // Create and Initialize the various display subsystems
@@ -569,6 +597,36 @@ zx_status_t Mt8167sDisplay::Bind() {
         return status;
     }
 
+    // Get board info
+    status = pdev_get_board_info(&pdev_, &board_info_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not obtain board info\n");
+        return status;
+    }
+
+    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+        width_ = MTKREF_DISPLAY_WIDTH;
+        height_ = MTKREF_DISPLAY_HEIGHT;
+        dsiimpl_ = parent_;
+        hasDsi_ = true;
+    } else if (board_info_.pid == PDEV_PID_CLEO) {
+        width_ = CLEO_DISPLAY_WIDTH;
+        height_ = CLEO_DISPLAY_HEIGHT;
+        dsiimpl_ = parent_;
+        hasDsi_ = true;
+    } else {
+        DISP_ERROR("Unsupport Hardware Detected\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    // Make sure DSI IMPL is valid
+    if (hasDsi_) {
+        if (!dsiimpl_.is_valid()) {
+            DISP_ERROR("DSI Protocol Not implemented\n");
+            return ZX_ERR_NO_RESOURCES;
+        }
+    }
+
     status = device_get_protocol(parent_, ZX_PROTOCOL_SYSMEM, &sysmem_);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get Display SYSMEM protocol\n");
@@ -631,9 +689,7 @@ zx_status_t Mt8167sDisplay::Bind() {
 // main bind function called from dev manager
 zx_status_t display_bind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
-    auto dev = fbl::make_unique_checked<mt8167s_display::Mt8167sDisplay>(&ac, parent,
-                                                                         DISPLAY_WIDTH,
-                                                                         DISPLAY_HEIGHT);
+    auto dev = fbl::make_unique_checked<mt8167s_display::Mt8167sDisplay>(&ac, parent);
     if (!ac.check()) {
         DISP_ERROR("no bind\n");
         return ZX_ERR_NO_MEMORY;
@@ -655,8 +711,7 @@ static zx_driver_ops_t display_ops = [](){
 } // namespace mt8167s_display
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(mt8167s_display, mt8167s_display::display_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(mt8167s_display, mt8167s_display::display_ops, "zircon", "0.1", 2)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_MEDIATEK_8167S_REF),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_DISPLAY),
 ZIRCON_DRIVER_END(mt8167s_display)

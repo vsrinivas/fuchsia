@@ -15,7 +15,6 @@
 #include <lib/mmio/mmio.h>
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/dsiimpl.h>
-#include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
@@ -45,8 +44,7 @@ class Mt8167sDisplay : public DeviceType,
                        public ddk::DisplayControllerImplProtocol<Mt8167sDisplay,
                                                                  ddk::base_protocol> {
 public:
-    Mt8167sDisplay(zx_device_t* parent, uint32_t width, uint32_t height)
-        : DeviceType(parent), width_(width), height_(height) {}
+    Mt8167sDisplay(zx_device_t* parent) : DeviceType(parent) {}
 
     // This function is called from the c-bind function upon driver matching
     zx_status_t Bind();
@@ -103,6 +101,9 @@ private:
     pdev_protocol_t pdev_ = {};
     sysmem_protocol_t sysmem_ = {};
 
+    // Board Info
+    pdev_board_info_t board_info_;
+
     // Interrupts
     zx::interrupt vsync_irq_;
 
@@ -111,12 +112,14 @@ private:
     fbl::Mutex image_lock_;   // used for accessing imported_images_
 
     // display dimensions and format
-    const uint32_t width_;
-    const uint32_t height_;
+    uint32_t width_;
+    uint32_t height_;
 
     const display_setting_t* init_disp_table_ = nullptr;
 
     bool full_init_done_ = false;
+
+    uint8_t panel_type_;
 
     // Display structure used by various layers of display controller
     display_setting_t disp_setting_;
@@ -129,6 +132,11 @@ private:
 
     // SMI
     fbl::unique_ptr<ddk::MmioBuffer> smi_mmio_;
+
+    // DSIIMPL Protocol
+    bool hasDsi_ = false;
+    ddk::DsiImplProtocolClient dsiimpl_;
+
 
     // Objects
     fbl::unique_ptr<mt8167s_display::MtSysConfig> syscfg_;

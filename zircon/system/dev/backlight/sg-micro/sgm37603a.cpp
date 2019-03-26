@@ -67,7 +67,7 @@ zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t status = device->DisableBacklight();
+    zx_status_t status = device->SetBacklightState(true, 255);
     if (status != ZX_OK) {
         return status;
     }

@@ -37,6 +37,7 @@ constexpr uint32_t kTaGoMultiplier = 0x4;
 constexpr uint32_t kClkTrailParam = 0x64;
 constexpr uint32_t kContDet = 0;
 constexpr uint32_t kClkZeroParam = 0x190;
+constexpr uint32_t kClkPrepParam = 0x40;
 constexpr uint32_t kClkExitLpxMultiplier = 0x2;
 constexpr uint32_t kClkPostParam = 0x3c;
 constexpr uint32_t kClkPostUiMultiplier = 0x80;
@@ -295,7 +296,7 @@ void DsiMt::DsiImplPhyPowerUp() {
     //           Data Lane has transitioned to LP mode
     // clk_prep: Time that the transmitter drives the clock lane lp-00 line state immidiately
     //           before the hs-0 line state starting the hs transmission
-    uint32_t clk_prep = MAX(NsToCycle(kClkZeroParam), 1);
+    uint32_t clk_prep = MAX(NsToCycle(kClkPrepParam), 1);
     uint32_t clk_exit = kClkExitLpxMultiplier * lpx;
     uint32_t clk_post = NsToCycle(kClkPostParam + kClkPostUiMultiplier * ui_);
 
