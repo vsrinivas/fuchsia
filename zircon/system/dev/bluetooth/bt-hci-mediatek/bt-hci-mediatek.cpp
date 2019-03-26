@@ -843,11 +843,14 @@ zx_status_t BtHciMediatek::HandleCardInterrupt() {
 
     if (recv_size == 0) {
         return ZX_OK;
+    } else if (recv_size > kMaxPacketSize) {
+        zxlogf(ERROR, "%s: Received packet too big for buffer\n", __FILE__);
+        return ZX_ERR_IO;
     }
 
     sdio_rw_txn txn;
     txn.addr = kCrdrAddress;
-    txn.data_size = recv_size;
+    txn.data_size = fbl::round_up<uint32_t, uint32_t>(recv_size, kBlockSize);
     txn.incr = false;
     txn.write = false;
     txn.use_dma = true;
@@ -870,7 +873,6 @@ zx_status_t BtHciMediatek::HandleCardInterrupt() {
     case kPacketTypeAcl:
         channel = &acl_channel_;
         snoop_type = BT_HCI_SNOOP_TYPE_ACL;
-
 
         // The MT7668 rounds packets up to a multiple of four bytes, so decode the actual packet
         // size and only send that much data over the channel.
