@@ -196,6 +196,14 @@ class PageStorageImpl : public PageStorage {
                           int64_t current_position,
                           fit::function<void(Status)> callback);
 
+  // Treating the |object| as FileIndex, initializes a VMO of a needed size and
+  // calls FillBufferWithObjectContent on it.
+  // |offset| and |max_size| are used to denote partial mapping (see
+  // GetObjectPart for details).
+  void GetIndexObject(std::unique_ptr<const Object> object, int64_t offset,
+                      int64_t max_size, Location location,
+                      fit::function<void(Status, fsl::SizedVmo)> callback);
+
   // Notifies the registered watchers of |new_commits|.
   void NotifyWatchersOfNewCommits(
 

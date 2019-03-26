@@ -458,100 +458,65 @@ void PageStorageImpl::GetObjectPart(
     ObjectIdentifier object_identifier, int64_t offset, int64_t max_size,
     Location location, fit::function<void(Status, fsl::SizedVmo)> callback) {
   FXL_DCHECK(IsDigestValid(object_identifier.object_digest()));
-  GetPiece(
-      object_identifier,
-      [this, object_identifier, offset, max_size, location,
-       callback = std::move(callback)](
-          Status status, std::unique_ptr<const Object> object) mutable {
-        if (status == Status::INTERNAL_NOT_FOUND) {
-          // The root piece is missing; download it (if we have network), as
-          // well as all the descendent pieces that we might need to read the
-          // requested part.
-          if (location == Location::NETWORK) {
-            DownloadObjectPart(
-                object_identifier, offset, max_size, 0,
-                [this, object_identifier, offset, max_size, location,
-                 callback = std::move(callback)](Status status) mutable {
-                  if (status != Status::OK) {
-                    callback(status, nullptr);
-                    return;
-                  }
+  GetPiece(object_identifier,
+           [this, object_identifier, offset, max_size, location,
+            callback = std::move(callback)](
+               Status status, std::unique_ptr<const Object> object) mutable {
+             if (status == Status::INTERNAL_NOT_FOUND) {
+               // The root piece is missing; download the whole object (if we
+               // have network).
+               if (location == Location::NETWORK) {
+                 DownloadObjectPart(
+                     object_identifier, offset, max_size, 0,
+                     [this, object_identifier, offset, max_size, location,
+                      callback = std::move(callback)](Status status) mutable {
+                       if (status != Status::OK) {
+                         callback(status, nullptr);
+                         return;
+                       }
 
-                  GetObjectPart(object_identifier, offset, max_size, location,
-                                std::move(callback));
-                });
-          } else {
-            callback(Status::INTERNAL_NOT_FOUND, nullptr);
-          }
-          return;
-        }
+                       GetObjectPart(object_identifier, offset, max_size,
+                                     location, std::move(callback));
+                     });
+               } else {
+                 callback(Status::INTERNAL_NOT_FOUND, nullptr);
+               }
+               return;
+             }
 
-        if (status != Status::OK) {
-          callback(status, nullptr);
-          return;
-        }
+             if (status != Status::OK) {
+               callback(status, nullptr);
+               return;
+             }
 
-        FXL_DCHECK(object);
-        ObjectDigestInfo digest_info =
-            GetObjectDigestInfo(object_identifier.object_digest());
-        fxl::StringView data;
-        Status get_data_status = object->GetData(&data);
-        if (get_data_status != Status::OK) {
-          callback(get_data_status, nullptr);
-          return;
-        }
+             FXL_DCHECK(object);
+             ObjectDigestInfo digest_info =
+                 GetObjectDigestInfo(object_identifier.object_digest());
+             fxl::StringView data;
+             Status get_data_status = object->GetData(&data);
+             if (get_data_status != Status::OK) {
+               callback(get_data_status, nullptr);
+               return;
+             }
 
-        if (digest_info.is_inlined() || digest_info.is_chunk()) {
-          fsl::SizedVmo buffer;
-          int64_t start = GetObjectPartStart(offset, data.size());
-          int64_t length = GetObjectPartLength(max_size, data.size(), start);
+             if (digest_info.is_inlined() || digest_info.is_chunk()) {
+               fsl::SizedVmo buffer;
+               int64_t start = GetObjectPartStart(offset, data.size());
+               int64_t length =
+                   GetObjectPartLength(max_size, data.size(), start);
 
-          if (!fsl::VmoFromString(data.substr(start, length), &buffer)) {
-            callback(Status::INTERNAL_ERROR, nullptr);
-            return;
-          }
-          callback(Status::OK, std::move(buffer));
-          return;
-        }
+               if (!fsl::VmoFromString(data.substr(start, length), &buffer)) {
+                 callback(Status::INTERNAL_ERROR, nullptr);
+                 return;
+               }
+               callback(Status::OK, std::move(buffer));
+               return;
+             }
 
-        FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
-        const FileIndex* file_index;
-        status = FileIndexSerialization::ParseFileIndex(data, &file_index);
-        if (status != Status::OK) {
-          callback(Status::FORMAT_ERROR, nullptr);
-          return;
-        }
-        int64_t start = GetObjectPartStart(offset, file_index->size());
-        int64_t length =
-            GetObjectPartLength(max_size, file_index->size(), start);
-
-        zx::vmo raw_vmo;
-        zx_status_t zx_status = zx::vmo::create(length, 0, &raw_vmo);
-        if (zx_status != ZX_OK) {
-          FXL_LOG(WARNING) << "Unable to create VMO of size: " << length;
-          callback(Status::INTERNAL_ERROR, nullptr);
-          return;
-        }
-        fsl::SizedVmo vmo(std::move(raw_vmo), length);
-
-        if (length == 0) {
-          callback(Status::OK, std::move(vmo));
-        }
-
-        fsl::SizedVmo vmo_copy;
-        zx_status = vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
-        if (zx_status != ZX_OK) {
-          FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << zx_status;
-          callback(Status::INTERNAL_ERROR, nullptr);
-          return;
-        }
-
-        FillBufferWithObjectContent(
-            std::move(object), std::move(vmo_copy), start, length, 0,
-            file_index->size(), location,
-            [vmo = std::move(vmo), callback = std::move(callback)](
-                Status status) mutable { callback(status, std::move(vmo)); });
-      });
+             FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
+             GetIndexObject(std::move(object), offset, max_size, location,
+                            std::move(callback));
+           });
 }
 
 void PageStorageImpl::GetObject(
@@ -559,14 +524,66 @@ void PageStorageImpl::GetObject(
     fit::function<void(Status, std::unique_ptr<const Object>)> callback) {
   auto traced_callback =
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_get_object");
-  GetObjectPart(object_identifier, 0, -1, location,
-                [object_identifier = std::move(object_identifier),
-                 callback = std::move(traced_callback)](
-                    Status status, fsl::SizedVmo vmo) mutable {
-                  callback(status,
-                           std::make_unique<VmoObject>(
-                               std::move(object_identifier), std::move(vmo)));
-                });
+  FXL_DCHECK(IsDigestValid(object_identifier.object_digest()));
+  GetPiece(object_identifier,
+           [this, object_identifier, location,
+            callback = std::move(traced_callback)](
+               Status status, std::unique_ptr<const Object> object) mutable {
+             if (status == Status::INTERNAL_NOT_FOUND) {
+               // The root piece is missing; download it (if we have network),
+               // as well as all the descendent pieces that we might need to
+               // read the requested part.
+               if (location == Location::NETWORK) {
+                 DownloadObjectPart(
+                     object_identifier, 0, -1, 0,
+                     [this, object_identifier, location,
+                      callback = std::move(callback)](Status status) mutable {
+                       if (status != Status::OK) {
+                         callback(status, nullptr);
+                         return;
+                       }
+
+                       GetObject(object_identifier, location,
+                                 std::move(callback));
+                     });
+               } else {
+                 callback(Status::INTERNAL_NOT_FOUND, nullptr);
+               }
+               return;
+             }
+
+             if (status != Status::OK) {
+               callback(status, nullptr);
+               return;
+             }
+
+             FXL_DCHECK(object);
+             ObjectDigestInfo digest_info =
+                 GetObjectDigestInfo(object_identifier.object_digest());
+
+             if (digest_info.is_inlined() || digest_info.is_chunk()) {
+               callback(Status::OK, std::move(object));
+               return;
+             }
+
+             fxl::StringView data;
+             Status get_data_status = object->GetData(&data);
+             if (get_data_status != Status::OK) {
+               callback(get_data_status, nullptr);
+               return;
+             }
+
+             FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
+             GetIndexObject(std::move(object), 0, -1, location,
+                            [object_identifier, callback = std::move(callback)](
+                                Status status, fsl::SizedVmo vmo) {
+                              callback(status, std::make_unique<VmoObject>(
+                                                   std::move(object_identifier),
+                                                   std::move(vmo)));
+                            }
+
+             );
+           });
 }
 
 void PageStorageImpl::GetPiece(
@@ -790,6 +807,55 @@ void PageStorageImpl::ObjectIsUntracked(
         Status status =
             db_->GetObjectStatus(handler, object_identifier, &object_status);
         callback(status, object_status == PageDbObjectStatus::TRANSIENT);
+      });
+}
+
+void PageStorageImpl::GetIndexObject(
+    std::unique_ptr<const Object> object, int64_t offset, int64_t max_size,
+    Location location, fit::function<void(Status, fsl::SizedVmo)> callback) {
+  ObjectIdentifier object_identifier = object->GetIdentifier();
+  ObjectDigestInfo digest_info =
+      GetObjectDigestInfo(object_identifier.object_digest());
+
+  FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
+  fxl::StringView content;
+  Status status = object->GetData(&content);
+  if (status != Status::OK) {
+    callback(status, nullptr);
+    return;
+  }
+  const FileIndex* file_index;
+  status = FileIndexSerialization::ParseFileIndex(content, &file_index);
+  if (status != Status::OK) {
+    callback(Status::FORMAT_ERROR, nullptr);
+    return;
+  }
+
+  int64_t start = GetObjectPartStart(offset, file_index->size());
+  int64_t length = GetObjectPartLength(max_size, file_index->size(), start);
+  zx::vmo raw_vmo;
+  zx_status_t zx_status = zx::vmo::create(length, 0, &raw_vmo);
+  if (zx_status != ZX_OK) {
+    FXL_LOG(WARNING) << "Unable to create VMO of size: " << length;
+    callback(Status::INTERNAL_ERROR, nullptr);
+    return;
+  }
+  fsl::SizedVmo vmo(std::move(raw_vmo), length);
+
+  fsl::SizedVmo vmo_copy;
+  zx_status = vmo.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_WRITE, &vmo_copy);
+  if (zx_status != ZX_OK) {
+    FXL_LOG(ERROR) << "Unable to duplicate vmo. Status: " << zx_status;
+    callback(Status::INTERNAL_ERROR, nullptr);
+    return;
+  }
+
+  FillBufferWithObjectContent(
+      std::move(object), std::move(vmo_copy), start, length, 0,
+      file_index->size(), location,
+      [object_identifier = std::move(object_identifier), vmo = std::move(vmo),
+       callback = std::move(callback)](Status status) mutable {
+        callback(status, std::move(vmo));
       });
 }
 
