@@ -6,8 +6,6 @@ source_set("util") {
   sources = [
     "error_reporter.cc",
     "error_reporter.h",
-    "print_command.cc",
-    "print_command.h",
     "print_event.cc",
     "print_event.h",
   ]

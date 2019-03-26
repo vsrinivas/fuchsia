@@ -7,6 +7,15 @@ import("//garnet/public/build/fostr/fostr_fidl.gni")
 fostr_fidl("fuchsia.ui.gfx") {
   fidl_target = "//sdk/fidl/fuchsia.ui.gfx"
 
+  additional_include = "lib/ui/gfx/cpp/formatting.h"
+
+  amendments_path =
+      "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx/amendments.json"
+
+  public_deps = [
+    "//garnet/public/lib/ui/gfx/cpp:formatting",
+  ]
+
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//garnet/public/lib/fostr/fidl/fuchsia.math",

@@ -14,3 +14,19 @@ source_set("cpp") {
     "//sdk/fidl/fuchsia.ui.gfx",
   ]
 }
+
+source_set("formatting") {
+  sources = [
+    "formatting.cc",
+    "formatting.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.ui.gfx",
+  ]
+}

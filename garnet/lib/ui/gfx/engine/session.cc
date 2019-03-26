@@ -4,12 +4,13 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 
-#include <memory>
-#include <utility>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <trace/event.h>
+
+#include <memory>
+#include <utility>
 
 #include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"
 #include "garnet/lib/ui/gfx/engine/hit_tester.h"
@@ -20,7 +21,6 @@
 #include "garnet/lib/ui/gfx/util/time.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/gfx/util/wrap.h"
-#include "garnet/lib/ui/scenic/util/print_command.h"
 #include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/shape/mesh.h"
@@ -292,7 +292,6 @@ bool Session::ApplyUpdate(CommandContext* command_context,
   TRACE_DURATION("gfx", "Session::ApplyUpdate");
   for (auto& command : commands) {
     if (!ApplyCommand(command_context, std::move(command))) {
-      using ::operator<<;  // From print_commands.h
       error_reporter_->ERROR() << "scenic_impl::gfx::Session::ApplyCommand() "
                                   "failed to apply Command: "
                                << command;

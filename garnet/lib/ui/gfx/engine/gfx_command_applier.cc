@@ -5,6 +5,7 @@
 #include "garnet/lib/ui/gfx/engine/gfx_command_applier.h"
 
 #include <lib/async/default.h>
+#include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/resource_linker.h"
@@ -42,7 +43,6 @@
 #include "garnet/lib/ui/gfx/util/time.h"
 #include "garnet/lib/ui/gfx/util/unwrap.h"
 #include "garnet/lib/ui/gfx/util/wrap.h"
-#include "garnet/lib/ui/scenic/util/print_command.h"
 #include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/shape/mesh.h"
@@ -68,7 +68,6 @@ bool GfxCommandApplier::AssertValueIsOfType(
     const fuchsia::ui::gfx::Value& value,
     const fuchsia::ui::gfx::Value::Tag* tags, size_t tag_count,
     Session* session) {
-  using ::operator<<;  // From print_commands.h
   FXL_DCHECK(tag_count > 0);
   for (size_t i = 0; i < tag_count; ++i) {
     if (value.Which() == tags[i]) {
@@ -239,7 +238,6 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(
     fuchsia::ui::gfx::CreateResourceCmd command) {
   const ResourceId id = command.id;
   if (id == 0) {
-    using ::operator<<;  // From print_commands.h
     session->error_reporter()->ERROR()
         << "scenic_impl::gfx::GfxCommandApplier::"
            "ApplyCreateResourceCmd(): invalid ID: "
@@ -1317,8 +1315,7 @@ bool GfxCommandApplier::ApplyCreateViewHolder(
          ": no token provided.";
 
   if (auto view_holder = CreateViewHolder(session, id, std::move(args))) {
-    view_holder->As<ViewHolder>()
-        ->Connect();  // Initiate the ViewHolder link.
+    view_holder->As<ViewHolder>()->Connect();  // Initiate the ViewHolder link.
     session->resources()->AddResource(id, std::move(view_holder));
     return true;
   }

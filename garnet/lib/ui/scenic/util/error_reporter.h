@@ -7,7 +7,6 @@
 
 #include <sstream>
 
-#include "garnet/lib/ui/scenic/util/print_command.h"
 #include "lib/fxl/logging.h"
 
 namespace scenic_impl {
@@ -26,7 +25,6 @@ class ErrorReporter {
     // Append the value to the output stream.
     template <typename T>
     Report& operator<<(const T& val) {
-      using ::operator<<;  // From print_commands.h
       stream_ << val;
       return *this;
     }
