@@ -4,8 +4,10 @@
 
 import("//build/config/clang/clang.gni")
 
-# This is $root_build_dir in the Zircon GN build.
-zircon_root_build_dir = "//out/build-zircon"
+declare_args() {
+  # This is $root_build_dir in the Zircon GN build.
+  zircon_root_build_dir = "//out/build-zircon"
+}
 
 # The top-level `tools` Ninja target in Zircon puts the tool binaries here.
 zircon_tools_dir = "$zircon_root_build_dir/tools"

@@ -13,8 +13,6 @@ export FUCHSIA_OUT_DIR="${FUCHSIA_OUT_DIR:-${FUCHSIA_DIR}/out}"
 export FUCHSIA_CONFIG="${FUCHSIA_CONFIG:-${FUCHSIA_DIR}/.config}"
 unset devshell_lib_dir
 
-export ZIRCON_TOOLS_DIR="${FUCHSIA_OUT_DIR}/build-zircon/tools"
-
 if [[ "${FUCHSIA_DEVSHELL_VERBOSITY}" -eq 1 ]]; then
   set -x
 fi
@@ -82,6 +80,8 @@ function fx-config-read-if-present {
 
   export ZIRCON_BUILDROOT="${ZIRCON_BUILDROOT:-${FUCHSIA_OUT_DIR}/build-zircon}"
   export ZIRCON_BUILD_DIR="${ZIRCON_BUILD_DIR:-${ZIRCON_BUILDROOT}/build-${FUCHSIA_ARCH}}"
+  export ZIRCON_TOOLS_DIR="${ZIRCON_BUILDROOT}/tools"
+
   return 0
 }
 
