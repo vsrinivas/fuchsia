@@ -44,7 +44,7 @@ namespace sys {
 //   return 0;
 // }
 // ```
-class ComponentContext {
+class ComponentContext final {
  public:
   // Create a startup context.
   //
@@ -54,8 +54,7 @@ class ComponentContext {
                    zx::channel directory_request,
                    async_dispatcher_t* dispatcher = nullptr);
 
-  // Subclasses are typically created for testing.
-  virtual ~ComponentContext();
+  ~ComponentContext();
 
   // ComponentContext objects cannot be copied.
   ComponentContext(const ComponentContext&) = delete;

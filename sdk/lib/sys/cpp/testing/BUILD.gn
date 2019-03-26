@@ -6,20 +6,14 @@ source_set("unit") {
   testonly = true
 
   sources = [
-    "component_context_for_test.cc",
-    "component_context_for_test.h",
     "component_context_provider.cc",
     "component_context_provider.h",
     "fake_component.cc",
     "fake_component.h",
     "fake_launcher.cc",
     "fake_launcher.h",
-    "service_directory_for_test.cc",
-    "service_directory_for_test.h",
     "service_directory_provider.cc",
     "service_directory_provider.h",
-    "test_with_context.cc",
-    "test_with_context.h",
   ]
 
   public_deps = [

@@ -22,7 +22,7 @@ namespace sys {
 // specifically through the "/svc" entry.
 //
 // Instances of this class are thread-safe.
-class ServiceDirectory {
+class ServiceDirectory final {
  public:
   // Create an empty directory of services.
   ServiceDirectory();
@@ -36,7 +36,7 @@ class ServiceDirectory {
   explicit ServiceDirectory(
       fidl::InterfaceHandle<fuchsia::io::Directory> directory);
 
-  virtual ~ServiceDirectory();
+  ~ServiceDirectory();
 
   // ServiceDirectory objects cannot be copied.
   ServiceDirectory(const ServiceDirectory&) = delete;
