@@ -23,7 +23,6 @@
 #include <lib/fzl/fdio.h>
 #include <lib/zx/channel.h>
 #include <port/port.h>
-#include <zircon/device/pty.h>
 #include <zircon/device/vfs.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
@@ -207,11 +206,16 @@ static zx_status_t session_create(vc_t** out, int* out_fd, bool make_active, boo
         return r;
     }
 
-    pty_window_size_t wsz = {
-        .width = vc->columns,
-        .height = vc->rows,
-    };
-    ioctl_pty_set_window_size(fd.get(), &wsz);
+    if (isatty(fd.get())) {
+        fuchsia_hardware_pty_WindowSize wsz = {
+            .width = vc->columns,
+            .height = vc->rows,
+        };
+
+        io = fdio_unsafe_fd_to_io(fd.get());
+        fuchsia_hardware_pty_DeviceSetWindowSize(fdio_unsafe_borrow_channel(io), &wsz, &status);
+        fdio_unsafe_release(io);
+    }
 
     vc->fd = fd.release();
     if (make_active) {

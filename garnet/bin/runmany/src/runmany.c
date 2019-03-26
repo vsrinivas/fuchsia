@@ -8,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/pty.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
