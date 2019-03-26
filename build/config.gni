@@ -20,16 +20,20 @@ import("//build/package.gni")
 template("config_data") {
   group(target_name) {
     forward_variables_from(invoker,
-                           "*",
                            [
                              "data_deps",
                              "deps",
                              "metadata",
-                             "outputs",
                              "public_deps",
-                             "sources",
                              "testonly",
                            ])
+
+    # If sources and outputs are empty, mark them as not_needed otherwise GN
+    # will complain there was no side effect.
+    if (invoker.sources == [] && invoker.outputs == []) {
+      not_needed(invoker, ["sources", "outputs"])
+    }
+
     metadata = {
       config_package_entries = []
       if (defined(invoker.metadata)) {
