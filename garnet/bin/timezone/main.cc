@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/logging.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "garnet/bin/timezone/timezone.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/logging.h"
 
 namespace time_zone {
 
@@ -17,8 +17,7 @@ constexpr char kTzIdPath[] = "/data/tz_id";
 class MainService {
  public:
   MainService()
-      : timezone_(component::StartupContext::CreateFromStartupInfo(),
-                  kIcuDataPath, kTzIdPath) {}
+      : timezone_(sys::ComponentContext::Create(), kIcuDataPath, kTzIdPath) {}
 
  private:
   TimezoneImpl timezone_;

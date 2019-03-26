@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/timezone/timezone.h"
+
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
+
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_with_context.h"
 
 namespace time_zone {
 namespace test {
@@ -15,25 +18,25 @@ using namespace time_zone;
 constexpr char kIcuDataPath[] = "/pkg/data/icudtl.dat";
 constexpr char kTzIdPath[] = "/tmp/timezone-unittest-tz_id_path";
 
-class TimezoneUnitTest : public component::testing::TestWithContext {
+class TimezoneUnitTest : public gtest::TestLoopFixture {
  protected:
   TimezoneUnitTest()
-      : timezone_(std::make_unique<TimezoneImpl>(TakeContext(), kIcuDataPath,
-                                                 kTzIdPath)) {}
+      : timezone_(std::make_unique<TimezoneImpl>(
+            context_provider_.TakeContext(), kIcuDataPath, kTzIdPath)) {}
   void TearDown() override {
     timezone_.reset();
     remove(kTzIdPath);
-    TestWithContext::TearDown();
+    TestLoopFixture::TearDown();
   }
 
   TimezonePtr timezone() {
     TimezonePtr timezone;
-    controller().outgoing_public_services().ConnectToService(
-        timezone.NewRequest());
+    context_provider_.ConnectToPublicService(timezone.NewRequest());
     return timezone;
   }
 
  private:
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<TimezoneImpl> timezone_;
 };
 

@@ -4,13 +4,14 @@
 
 #include "garnet/bin/timezone/timezone.h"
 
+#include <lib/fsl/vmo/file.h>
+#include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/string_number_conversions.h>
+#include <lib/sys/cpp/component_context.h>
 #include <zircon/syscalls.h>
 #include <fstream>
 
-#include "lib/fsl/vmo/file.h"
-#include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_number_conversions.h"
 #include "third_party/icu/source/common/unicode/errorcode.h"
 #include "third_party/icu/source/common/unicode/udata.h"
 #include "third_party/icu/source/i18n/unicode/timezone.h"
@@ -20,7 +21,7 @@ constexpr int32_t kMillisecondsInMinute = 60000;
 
 namespace time_zone {
 
-TimezoneImpl::TimezoneImpl(std::unique_ptr<component::StartupContext> context,
+TimezoneImpl::TimezoneImpl(std::unique_ptr<sys::ComponentContext> context,
                            const char icu_data_path[], const char tz_id_path[])
     : context_(std::move(context)),
       icu_data_path_(icu_data_path),
