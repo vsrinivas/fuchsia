@@ -67,4 +67,8 @@ The default is 0xfff which enables all trace categories (or groups in
 ktrace parlance).
 
 For more information on Zircon command line options see
-[kernel\_cmdline.md](../../../zircon/docs/kernel_cmdline.md).
+[kernel\_cmdline][kernel_cmdline].
+
+
+[kernel_cmdline]: https://fuchsia.googlesource.com/fuchsia/+/master/
+zircon/docs/kernel_cmdline.md
