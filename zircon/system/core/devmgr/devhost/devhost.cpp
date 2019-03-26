@@ -922,9 +922,16 @@ static zx_status_t devhost_log_write(zxio_t* io, const void* buffer, size_t capa
     return ZX_OK;
 }
 
+static zx_status_t devhost_log_isatty(zxio_t* io, bool* tty) {
+    // Claim to be a TTY to get line buffering
+    *tty = true;
+    return ZX_OK;
+}
+
 static constexpr zxio_ops_t devhost_log_ops = []() {
     zxio_ops_t ops = zxio_default_ops;
     ops.write = devhost_log_write;
+    ops.isatty = devhost_log_isatty;
     return ops;
 }();
 
