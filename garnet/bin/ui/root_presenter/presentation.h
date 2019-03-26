@@ -135,6 +135,9 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   // ambient needs to be dimmed so that other lights don't "overbrighten".
   void UpdateLightsForShadowTechnique(fuchsia::ui::gfx::ShadowTechnique tech);
 
+  // Set a single RendererParam, unless this value is overridden.
+  void SetRendererParam(fuchsia::ui::gfx::RendererParam param);
+
   void PresentScene();
 
   fuchsia::ui::scenic::Scenic* const scenic_;

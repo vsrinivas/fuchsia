@@ -88,16 +88,21 @@ Presentation::Presentation(
   scene_.AddLight(ambient_light_);
   scene_.AddLight(directional_light_);
   scene_.AddLight(point_light_);
-
-  ambient_light_.SetColor(kAmbient, kAmbient, kAmbient);
-  directional_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
-  point_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
   directional_light_.SetDirection(1.f, 1.f, 2.f);
   point_light_.SetPosition(300.f, 300.f, -2000.f);
   point_light_.SetFalloff(0.f);
 
+  // Explicitly set "UNSHADOWED" as the default shadow type. In addition to
+  // setting the param, this sets appropriate light intensities.
+  {
+    fuchsia::ui::gfx::RendererParam param;
+    param.set_shadow_technique(fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED);
+    SetRendererParam(std::move(param));
+  }
+
   cursor_material_.SetColor(0xff, 0x00, 0xff, 0xff);
 
+  // NOTE: This invokes Present(); all initial scene setup should happen before.
   OverrideRendererParams(renderer_params, false);
 
   // Link ourselves to the presentation interface once screen dimensions are
@@ -773,46 +778,54 @@ void Presentation::UpdateLightsForShadowTechnique(
     fuchsia::ui::gfx::ShadowTechnique tech) {
   if (tech == fuchsia::ui::gfx::ShadowTechnique::UNSHADOWED) {
     ambient_light_.SetColor(1.f, 1.f, 1.f);
+    directional_light_.SetColor(0.f, 0.f, 0.f);
+    point_light_.SetColor(0.f, 0.f, 0.f);
   } else {
     ambient_light_.SetColor(kAmbient, kAmbient, kAmbient);
+    directional_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
+    point_light_.SetColor(kNonAmbient, kNonAmbient, kNonAmbient);
   }
 }
 
 void Presentation::SetRendererParams(
     ::std::vector<fuchsia::ui::gfx::RendererParam> params) {
   for (size_t i = 0; i < params.size(); ++i) {
-    switch (params.at(i).Which()) {
-      case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
-        if (renderer_params_override_.shadow_technique.has_value()) {
-          FXL_LOG(WARNING)
-              << "Presentation::SetRendererParams: Cannot change "
-                 "shadow technique, default was overriden in root_presenter";
-          continue;
-        }
-        UpdateLightsForShadowTechnique(params.at(i).shadow_technique());
-        break;
-      case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
-        if (renderer_params_override_.render_frequency.has_value()) {
-          FXL_LOG(WARNING)
-              << "Presentation::SetRendererParams: Cannot change "
-                 "render frequency, default was overriden in root_presenter";
-          continue;
-        }
-        break;
-      case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
-        if (renderer_params_override_.debug_enabled.has_value()) {
-          FXL_LOG(WARNING)
-              << "Presentation::SetRendererParams: Cannot change "
-                 "debug enabled, default was overriden in root_presenter";
-          continue;
-        }
-        break;
-      case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
-        continue;
-    }
-    renderer_.SetParam(std::move(params.at(i)));
+    SetRendererParam(std::move(params[i]));
   }
   session_->Present(0, [](fuchsia::images::PresentationInfo info) {});
+}
+
+void Presentation::SetRendererParam(fuchsia::ui::gfx::RendererParam param) {
+  switch (param.Which()) {
+    case ::fuchsia::ui::gfx::RendererParam::Tag::kShadowTechnique:
+      if (renderer_params_override_.shadow_technique.has_value()) {
+        FXL_LOG(WARNING)
+            << "Presentation::SetRendererParams: Cannot change "
+               "shadow technique, default was overriden in root_presenter";
+        return;
+      }
+      UpdateLightsForShadowTechnique(param.shadow_technique());
+      break;
+    case fuchsia::ui::gfx::RendererParam::Tag::kRenderFrequency:
+      if (renderer_params_override_.render_frequency.has_value()) {
+        FXL_LOG(WARNING)
+            << "Presentation::SetRendererParams: Cannot change "
+               "render frequency, default was overriden in root_presenter";
+        return;
+      }
+      break;
+    case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
+      if (renderer_params_override_.debug_enabled.has_value()) {
+        FXL_LOG(WARNING)
+            << "Presentation::SetRendererParams: Cannot change "
+               "debug enabled, default was overriden in root_presenter";
+        return;
+      }
+      break;
+    case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
+      return;
+  }
+  renderer_.SetParam(std::move(param));
 }
 
 }  // namespace root_presenter
