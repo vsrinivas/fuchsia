@@ -224,7 +224,7 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
     }
   }
 
-  void ExpectCalledOnceWith(EventType type, const Event* expected) {
+  void ExpectCalledOnceWith(EventType type, const BaseEvent* expected) {
     ASSERT_EQ(1U, calls_[type].size());
     switch (type) {
       case EventType::EVENT_OCCURRED:
@@ -280,11 +280,11 @@ class FakeLoggerImpl : public fuchsia::cobalt::Logger {
   }
 
  private:
-  void RecordCall(EventType type, std::unique_ptr<Event> event) {
+  void RecordCall(EventType type, std::unique_ptr<BaseEvent> event) {
     calls_[type].push_back(std::move(event));
   }
 
-  std::map<EventType, std::vector<std::unique_ptr<Event>>> calls_;
+  std::map<EventType, std::vector<std::unique_ptr<BaseEvent>>> calls_;
 };
 
 class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
@@ -361,7 +361,7 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
           launcher_request_ = std::move(request);
         });
     return std::make_unique<sys::ComponentContext>(service_directory,
-                                                 zx::channel());
+                                                   zx::channel());
   }
 
   virtual void SetUp() override {

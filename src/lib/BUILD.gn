@@ -5,5 +5,7 @@
 group("tests") {
   testonly = true
 
-  data_deps = []
+  data_deps = [
+    "cobalt:tests",
+  ]
 }

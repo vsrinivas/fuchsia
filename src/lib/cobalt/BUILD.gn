@@ -38,3 +38,11 @@ package("cobalt_lib_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+
+  data_deps = [
+    ":cobalt_lib_tests",
+  ]
+}
