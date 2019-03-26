@@ -660,7 +660,7 @@ small:
   * Both will represent the value out-of-line, and therefore require a pointer
     indirection.
 
-### Using the error syntax
+#### Using the error syntax
 
 Methods can take an optional `error <type>` specifier to indicate that they
 return a value, or error out and produce `<type>`. Here is an example:
