@@ -23,7 +23,7 @@ void MockInputDeviceRegistry::RegisterDevice(
   std::unique_ptr<MockInputDevice> input_device =
       std::make_unique<MockInputDevice>(device_id, std::move(descriptor),
                                         std::move(input_device_request),
-                                        std::move(on_report_callback_));
+                                        on_report_callback_.share());
 
   MockInputDevice* input_device_ptr = input_device.get();
   devices_by_id_.emplace(device_id, std::move(input_device));
