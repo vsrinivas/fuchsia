@@ -404,3 +404,18 @@ uint32_t ImageFormatSampleAlignment(
     ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
     return 0u;
 }
+
+bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* constraints,
+                                uint32_t width, uint32_t* minimum_row_bytes_out) {
+    // Bytes per row is not well-defined for tiled types.
+    ZX_DEBUG_ASSERT(!constraints->pixel_format.has_format_modifier);
+    if (width < constraints->min_coded_width || width > constraints->max_coded_width) {
+        return false;
+    }
+    *minimum_row_bytes_out = fbl::round_up(
+        fbl::max(ImageFormatStrideBytesPerWidthPixel(&constraints->pixel_format) * width,
+                 constraints->min_bytes_per_row),
+        constraints->bytes_per_row_divisor);
+    ZX_ASSERT(*minimum_row_bytes_out <= constraints->max_bytes_per_row);
+    return true;
+}

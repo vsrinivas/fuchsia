@@ -146,6 +146,8 @@ public:
 private:
     void HandleImportVmoImage(const fuchsia_hardware_display_ControllerImportVmoImageRequest* req,
                               fidl::Builder* resp_builder, const fidl_type_t** resp_table);
+    void HandleImportImage(const fuchsia_hardware_display_ControllerImportImageRequest* req,
+                           fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleReleaseImage(const fuchsia_hardware_display_ControllerReleaseImageRequest* req,
                             fidl::Builder* resp_builder, const fidl_type_t** resp_table);
     void HandleImportEvent(const fuchsia_hardware_display_ControllerImportEventRequest* req,
@@ -233,7 +235,15 @@ private:
     uint32_t client_apply_count_ = 0;
 
     zx::channel sysmem_allocator_;
-    std::map<uint64_t, zx::handle> collection_map_;
+
+    struct Collections {
+        // Sent to the hardware driver.
+        zx::channel driver;
+        // If the VC is using this, |kernel| is the collection used for setting
+        // it as kernel framebuffer.
+        zx::channel kernel;
+    };
+    std::map<uint64_t, Collections> collection_map_;
 
     Fence::Map fences_ __TA_GUARDED(fence_mtx_);
     // Mutex held when creating or destroying fences.

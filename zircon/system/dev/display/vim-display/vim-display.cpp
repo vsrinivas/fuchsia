@@ -175,6 +175,11 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
     return ZX_OK;
 }
 
+zx_status_t vim_import_image(void* ctx, image_t* image, zx_unowned_handle_t handle,
+                             uint32_t index) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 static void vim_release_image(void* ctx, image_t* image) {
     vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
     mtx_lock(&display->image_lock);
@@ -398,6 +403,7 @@ static zx_status_t get_single_buffer_framebuffer(void* ctx, zx_handle_t* out_vmo
 static display_controller_impl_protocol_ops_t display_controller_ops = {
     .set_display_controller_interface = vim_set_display_controller_interface,
     .import_vmo_image = vim_import_vmo_image,
+    .import_image = vim_import_image,
     .release_image = vim_release_image,
     .check_configuration = vim_check_configuration,
     .apply_configuration = vim_apply_configuration,

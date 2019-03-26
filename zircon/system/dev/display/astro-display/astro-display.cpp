@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include "astro-display.h"
+#include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
+#include <fbl/vector.h>
 #include <fuchsia/sysmem/c/fidl.h>
-#include <ddk/binding.h>
+#include <lib/image-format/image_format.h>
 
 namespace astro_display {
 
@@ -277,6 +279,75 @@ zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx
         status = ZX_ERR_NO_RESOURCES;
         return status;
     }
+    if (imported_images_.GetOne(local_canvas_idx)) {
+        DISP_INFO("Reusing previously allocated canvas (index = %d)\n", local_canvas_idx);
+    }
+    imported_images_.SetOne(local_canvas_idx);
+    image->handle = local_canvas_idx;
+    return status;
+}
+
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
+zx_status_t AstroDisplay::DisplayControllerImplImportImage(image_t* image,
+                                                           zx_unowned_handle_t handle,
+                                                           uint32_t index) {
+    zx_status_t status = ZX_OK;
+
+    if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != format_) {
+        status = ZX_ERR_INVALID_ARGS;
+        return status;
+    }
+
+    zx_status_t status2;
+    fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
+    status =
+        fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(handle, &status2, &collection_info);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (status2 != ZX_OK) {
+        return status2;
+    }
+
+    fbl::Vector<zx::vmo> vmos;
+    for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
+        vmos.push_back(zx::vmo(collection_info.buffers[i].vmo));
+    }
+
+    if (!collection_info.settings.has_image_format_constraints || index >= vmos.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
+                    fuchsia_sysmem_PixelFormatType_BGRA32);
+    ZX_DEBUG_ASSERT(
+        !collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
+
+    uint32_t minimum_row_bytes;
+    if (!ImageFormatMinimumRowBytes(&collection_info.settings.image_format_constraints,
+                                    image->width, &minimum_row_bytes)) {
+        DISP_ERROR("Invalid image width %d for collection\n", image->width);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    canvas_info_t canvas_info;
+    canvas_info.height = image->height;
+    canvas_info.stride_bytes = minimum_row_bytes;
+    canvas_info.wrap = 0;
+    canvas_info.blkmode = 0;
+    canvas_info.endianness = 0;
+    canvas_info.flags = CANVAS_FLAGS_READ;
+
+    uint8_t local_canvas_idx;
+    status = amlogic_canvas_config(&canvas_, vmos[index].release(),
+                                   collection_info.buffers[index].vmo_usable_start, &canvas_info,
+                                   &local_canvas_idx);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not configure canvas: %d\n", status);
+        status = ZX_ERR_NO_RESOURCES;
+        return status;
+    }
+    fbl::AutoLock lock(&image_lock_);
     if (imported_images_.GetOne(local_canvas_idx)) {
         DISP_INFO("Reusing previously allocated canvas (index = %d)\n", local_canvas_idx);
     }

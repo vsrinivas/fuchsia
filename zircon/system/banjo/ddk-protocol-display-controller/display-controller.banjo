@@ -340,6 +340,11 @@ interface DisplayControllerImpl {
     /// driver does not own the vmo handle passed to this function.
     ImportVmoImage(Image? image, handle<vmo> vmo, usize offset) -> (zx.status s);
 
+    /// Imports an image from a buffer collection into the driver. The driver should set
+    /// image->handle.
+    ImportImage(Image? image, ZxUnownedHandle collection, uint32 index)
+        -> (zx.status s);
+
     /// Releases any driver state associated with the given image. The client guarantees that
     /// any images passed to apply_config will not be released until a vsync occurs with a
     /// more recent image.

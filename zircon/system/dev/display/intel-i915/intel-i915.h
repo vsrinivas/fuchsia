@@ -83,6 +83,10 @@ public:
     void DisplayControllerImplSetDisplayControllerInterface(
             const display_controller_interface* intf);
     zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
+    zx_status_t DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t handle,
+                                                 uint32_t index) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
     void DisplayControllerImplReleaseImage(image_t* image);
     uint32_t DisplayControllerImplCheckConfiguration(const display_config_t** display_config,
                                                      size_t display_count,

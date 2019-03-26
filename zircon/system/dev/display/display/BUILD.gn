@@ -24,6 +24,7 @@ driver("display") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/image-format",
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

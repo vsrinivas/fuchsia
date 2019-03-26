@@ -13,8 +13,10 @@
 
 namespace display {
 
-Image::Image(Controller* controller, const image_t& image_config, zx::vmo handle)
-        : info_(image_config), controller_(controller), vmo_(std::move(handle)) { }
+Image::Image(Controller* controller, const image_t& image_config, zx::vmo handle,
+             uint32_t stride_px)
+    : info_(image_config), stride_px_(stride_px), controller_(controller), vmo_(std::move(handle)) {
+}
 
 Image::~Image() {
     ZX_DEBUG_ASSERT(!std::atomic_load(&in_use_));

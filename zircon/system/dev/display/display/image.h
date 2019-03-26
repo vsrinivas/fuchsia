@@ -27,10 +27,12 @@ typedef struct image_node {
 
 class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image>> {
 public:
-    Image(Controller* controller, const image_t& info, zx::vmo vmo);
+    Image(Controller* controller, const image_t& info, zx::vmo vmo, uint32_t stride_px);
     ~Image();
 
     image_t& info() { return info_; }
+    uint32_t stride_px() const { return stride_px_; }
+
     // Marks the image as in use.
     bool Acquire();
     // Marks the image as not in use. Should only be called before PrepareFences.
@@ -87,6 +89,7 @@ public:
 
 private:
     image_t info_;
+    uint32_t stride_px_;
     Controller* const controller_;
 
     // z_index is set/read by controller.cpp under its lock

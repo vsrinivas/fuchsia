@@ -205,6 +205,14 @@ protocol Controller {
     // outside the scope of this API.
     ImportVmoImage(ImageConfig image_config, handle<vmo> vmo, int32 offset) -> (zx.status res, uint64 image_id);
 
+    // Imports a Buffer-Collection backed image. If tiling is not typeSimple,
+    // it is up to the driver and client to agree on its meaning through some
+    // mechanism outside the scope of this API. The ImageConfig must be
+    // compatible with that passed through SetBufferCollectionConstraints on
+    // the collection id.
+    ImportImage(ImageConfig image_config, uint64 collection_id, uint32 index)
+        -> (zx.status res, uint64 image_id);
+
     // Releases an image.
     //
     // It is safe to call this at any time. When an image is released, it

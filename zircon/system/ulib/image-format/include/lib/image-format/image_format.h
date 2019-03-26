@@ -62,6 +62,12 @@ uint32_t ImageFormatCodedHeightMinDivisor(
 uint32_t ImageFormatSampleAlignment(
     const fuchsia_sysmem_PixelFormat* pixel_format);
 
+// Gets the minimum number of bytes per row possible for an image with a
+// specific width and specific constraints. Returns false if the width would not
+// be valid.
+bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* constraints,
+                                uint32_t width, uint32_t* minimum_row_bytes_out);
+
 #if defined(__cplusplus)
 }  // extern "C"
 #endif
