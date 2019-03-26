@@ -59,6 +59,7 @@ void FakeTokenManager::GetFirebaseToken(AppConfig /*app_config*/,
 
 void FakeTokenManager::DeleteAllTokens(AppConfig /*app_config*/,
                                        std::string /*user_profile_id*/,
+                                       bool /*force*/,
                                        DeleteAllTokensCallback callback) {
   FXL_NOTIMPLEMENTED() << "FakeTokenManager::DeleteAllTokens not implemented";
   callback(fuchsia::auth::Status::INTERNAL_ERROR);

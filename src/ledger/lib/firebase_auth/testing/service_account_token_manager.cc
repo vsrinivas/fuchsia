@@ -84,7 +84,7 @@ void ServiceAccountTokenManager::GetFirebaseToken(
 }
 
 void ServiceAccountTokenManager::DeleteAllTokens(
-    AppConfig app_config, std::string /*user_profile_id*/,
+    AppConfig app_config, std::string /*user_profile_id*/, bool /*force*/,
     DeleteAllTokensCallback callback /*callback*/) {
   FXL_NOTIMPLEMENTED();
   callback(fuchsia::auth::Status::INTERNAL_ERROR /*Not implemented*/);

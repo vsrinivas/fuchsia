@@ -121,7 +121,7 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
 
   // |fuchsia::auth::TokenManager|
   void DeleteAllTokens(fuchsia::auth::AppConfig app_config,
-                       std::string user_profile_id,
+                       std::string user_profile_id, bool force,
                        DeleteAllTokensCallback callback) override;
 
   // |fuchsia::auth::TokenManager|

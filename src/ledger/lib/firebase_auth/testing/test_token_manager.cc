@@ -60,6 +60,7 @@ void TestTokenManager::GetFirebaseToken(AppConfig /*app_config*/,
 
 void TestTokenManager::DeleteAllTokens(AppConfig /*app_config*/,
                                        std::string /*user_profile_id*/,
+                                       bool /*force*/,
                                        DeleteAllTokensCallback callback) {
   FXL_NOTIMPLEMENTED();
 }

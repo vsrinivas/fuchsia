@@ -128,9 +128,16 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
                 audience,
                 firebase_api_key
             ))),
-            TokenManagerRequest::DeleteAllTokens { app_config, user_profile_id, responder } => {
-                responder.send_result(await!(self.delete_all_tokens(app_config, user_profile_id)))
-            }
+            TokenManagerRequest::DeleteAllTokens {
+                app_config,
+                user_profile_id,
+                force,
+                responder,
+            } => responder.send_result(await!(self.delete_all_tokens(
+                app_config,
+                user_profile_id,
+                force
+            ))),
             TokenManagerRequest::ListProfileIds { app_config, responder } => {
                 responder.send_result(self.list_profile_ids(app_config))
             }
@@ -506,6 +513,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         &self,
         app_config: AppConfig,
         user_profile_id: String,
+        force: bool,
     ) -> TokenManagerResult<()> {
         let (db_key, cache_key) = Self::create_keys(&app_config, &user_profile_id)?;
 
@@ -527,13 +535,12 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
                     TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
                 })?;
 
-        // TODO(ukode, jsankey): In the case of probably-temporary AuthProvider failures we
-        // log a warning and delete local state from cache and store. For other AuthProvider
-        // failures we continue to delete our copy of the credential even if the server can't
-        // revoke it. Note this means it will never be possible to ask the server to revoke
-        // the token in the future, but it does let us clean up broken tokens from our database.
-        if status == AuthProviderStatus::NetworkError {
-            warn!("Network not reachable for revoking tokens, still deleting local state.");
+        if status != AuthProviderStatus::Ok {
+            if force {
+                warn!("Removing stored tokens even though revocation failed with {:?}", status)
+            } else {
+                return Err(TokenManagerError::from(status));
+            }
         }
 
         match self.token_cache.lock().delete(&cache_key) {

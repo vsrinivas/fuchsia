@@ -410,11 +410,13 @@ void UserProviderImpl::RemoveUserInternal(
   fuchsia::auth::AppConfig fuchsia_app_config;
   fuchsia_app_config.auth_provider_type = kGoogleAuthProviderType;
   token_manager->DeleteAllTokens(
-      fuchsia_app_config, account->profile_id,
+      // Note: We ask the token manager to force its deletion even if revocation
+      // fails since we don't have a way to retry gracefully.
+      fuchsia_app_config, account->profile_id, true,
       [this, account_id, token_manager = std::move(token_manager),
        callback = std::move(callback)](fuchsia::auth::Status status) {
         if (status != fuchsia::auth::Status::OK) {
-          FXL_LOG(ERROR) << "Token Manager Authorize() call returned error";
+          FXL_LOG(ERROR) << "Token Manager DeleteAllTokens() call returned error";
         }
 
         std::string error;

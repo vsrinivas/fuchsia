@@ -55,7 +55,7 @@ class ServiceAccountTokenManager : public fuchsia::auth::TokenManager {
                         GetFirebaseTokenCallback callback) override;
 
   void DeleteAllTokens(AppConfig app_config, std::string user_profile_id,
-                       DeleteAllTokensCallback callback) override;
+                       bool force, DeleteAllTokensCallback callback) override;
 
   void ListProfileIds(AppConfig app_config,
                       ListProfileIdsCallback callback) override;

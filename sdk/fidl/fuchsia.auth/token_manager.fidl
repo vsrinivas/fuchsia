@@ -206,10 +206,16 @@ protocol TokenManager {
     // ListProfileIds() calls.
     //
     // Deletion of tokens involves three steps:
-    //     - revoking credentials remotely at the auth provider.
-    //     - deleting short lived tokens from the in-memory cache.
-    //     - deleting persistent credentials stored locally on disk.
-    DeleteAllTokens(AppConfig app_config, string user_profile_id)
+    //   1. Revoking credentials remotely at the auth provider.
+    //   2. Deleting short lived tokens from the in-memory cache.
+    //   3. Deleting persistent credentials stored locally on disk.
+    //
+    // If |force| is false then a failure at step 1 will terminate the method,
+    // ensuring client and server state remain consistent. If |force| is true
+    // then steps 2&3 will be performed and the method will return OK even if
+    // step 1 fails, ensuring the local credentials are wiped in all
+    // circumstances.
+    DeleteAllTokens(AppConfig app_config, string user_profile_id, bool force)
         -> (Status status);
 
     // Returns a vector of all currently authorized user_profile_ids for a

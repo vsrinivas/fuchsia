@@ -322,7 +322,7 @@ void AgentContextImpl::GetFirebaseToken(fuchsia::auth::AppConfig app_config,
 }
 
 void AgentContextImpl::DeleteAllTokens(fuchsia::auth::AppConfig app_config,
-                                       std::string user_profile_id,
+                                       std::string user_profile_id, bool force,
                                        DeleteAllTokensCallback callback) {
   FXL_LOG(ERROR) << "AgentContextImpl::DeleteAllTokens() not supported from "
                  << "agent context";

@@ -5,9 +5,10 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.auth") {
-  # TODO(ukode): Split auth interface into public and internal and remove
+  # TODO(jsankey): Split auth interface into public and internal and remove
   # partner sdk dependency for internal interfaces.
   sdk_category = "partner"
+  api = "fuchsia.auth.api"
 
   sources = [
     "attestation_signer.fidl",

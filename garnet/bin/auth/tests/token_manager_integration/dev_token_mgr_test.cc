@@ -42,6 +42,7 @@ const std::string kTestUserId = "tq_auth_user_1";
 const std::string kTestAppUrl = "/pkgfs/packages/test_auth_client/bin/app";
 const std::string kDevIdp = "Dev";
 const std::string kDevIotIDIdp = "DevIotID";
+const bool kForce = true;
 
 const TestComponentParam kTestComponentParams[] = {
     {{kDevIdp,
@@ -121,7 +122,8 @@ class DevTokenManagerAppTest
     // deletion should not impact test accuracy.
     if (token_mgr_.is_bound() && !user_profile_id_.is_null()) {
       Status status;
-      token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id_, &status);
+      token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id_, kForce,
+                                  &status);
     }
   }
 
@@ -293,7 +295,8 @@ TEST_P(DevTokenManagerAppTest, EraseAllTokens) {
                                &status, &firebase_token);
   ASSERT_EQ(Status::OK, status);
 
-  token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id_, &status);
+  token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id_, kForce,
+                              &status);
   ASSERT_EQ(Status::OK, status);
 
   token_mgr_->GetIdToken(dev_app_config_, user_profile_id_, "", &status,
@@ -384,7 +387,8 @@ TEST_P(DevTokenManagerAppTest, Reauthorize) {
   ASSERT_EQ(Status::OK, status);
   std::string credential = token->substr(0, token->find(":"));
 
-  token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id, &status);
+  token_mgr_->DeleteAllTokens(dev_app_config_, user_profile_id, kForce,
+                              &status);
   ASSERT_EQ(Status::OK, status);
 
   // Verify that the credential and cache should now be cleared
