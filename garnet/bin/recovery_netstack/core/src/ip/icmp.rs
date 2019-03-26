@@ -546,7 +546,7 @@ mod tests {
     use super::*;
     use crate::device::{DeviceId, FrameDestination};
     use crate::ip::{receive_ip_packet, IpExt, Ipv4, Ipv4Addr};
-    use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG};
+    use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
     use crate::wire::icmp::{
         IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode, MessageBody,
     };
@@ -581,7 +581,7 @@ mod tests {
         crate::testutil::set_logger_for_test();
         let buffer = BufferSerializer::new_vec(Buf::new(body, ..))
             .encapsulate(<Ipv4 as IpExt<&[u8]>>::PacketBuilder::new(
-                DUMMY_CONFIG.remote_ip,
+                DUMMY_CONFIG_V4.remote_ip,
                 dst_ip,
                 ttl,
                 proto,
@@ -589,7 +589,7 @@ mod tests {
             .serialize_outer()
             .unwrap();
 
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG).build();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4).build();
         // currently only used by test_ttl_exceeded
         ctx.state_mut().ip.v4.forward = true;
         receive_ip_packet::<_, _, Ipv4>(
@@ -611,10 +611,10 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(src_mac, DUMMY_CONFIG.local_mac);
-        assert_eq!(dst_mac, DUMMY_CONFIG.remote_mac);
-        assert_eq!(src_ip, DUMMY_CONFIG.local_ip);
-        assert_eq!(dst_ip, DUMMY_CONFIG.remote_ip);
+        assert_eq!(src_mac, DUMMY_CONFIG_V4.local_mac);
+        assert_eq!(dst_mac, DUMMY_CONFIG_V4.remote_mac);
+        assert_eq!(src_ip, DUMMY_CONFIG_V4.local_ip);
+        assert_eq!(dst_ip, DUMMY_CONFIG_V4.remote_ip);
         assert_eq!(message, expect_message);
         assert_eq!(code, expect_code);
     }
@@ -627,8 +627,8 @@ mod tests {
         let req_body = &[1, 2, 3, 4];
         let mut buffer = BufferSerializer::new_vec(Buf::new(req_body.to_vec(), ..))
             .encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
-                DUMMY_CONFIG.remote_ip,
-                DUMMY_CONFIG.local_ip,
+                DUMMY_CONFIG_V4.remote_ip,
+                DUMMY_CONFIG_V4.local_ip,
                 IcmpUnusedCode,
                 req,
             ))
@@ -636,7 +636,7 @@ mod tests {
             .unwrap();
         test_receive_ip_packet(
             buffer.as_mut(),
-            DUMMY_CONFIG.local_ip,
+            DUMMY_CONFIG_V4.local_ip,
             64,
             IpProto::Icmp,
             &["receive_icmp_packet::echo_request", "send_ip_packet"],
@@ -655,7 +655,7 @@ mod tests {
         // IPv6 networks.
         test_receive_ip_packet(
             &mut [0u8; 128],
-            DUMMY_CONFIG.local_ip,
+            DUMMY_CONFIG_V4.local_ip,
             64,
             IpProto::Other(255),
             &["send_icmp_protocol_unreachable", "send_icmp_response"],
@@ -682,15 +682,15 @@ mod tests {
         let mut buf = [0u8; 128];
         let mut buffer = BufferSerializer::new_vec(Buf::new(&mut buf[..], ..))
             .encapsulate(UdpPacketBuilder::new(
-                DUMMY_CONFIG.remote_ip,
-                DUMMY_CONFIG.local_ip,
+                DUMMY_CONFIG_V4.remote_ip,
+                DUMMY_CONFIG_V4.local_ip,
                 None,
                 NonZeroU16::new(1234).unwrap(),
             ))
             .serialize_outer();
         test_receive_ip_packet(
             buffer.as_mut(),
-            DUMMY_CONFIG.local_ip,
+            DUMMY_CONFIG_V4.local_ip,
             64,
             IpProto::Udp,
             &["send_icmp_port_unreachable", "send_icmp_response"],
@@ -730,7 +730,7 @@ mod tests {
         // IPv6 networks.
         test_receive_ip_packet(
             &mut [0u8; 128],
-            DUMMY_CONFIG.remote_ip,
+            DUMMY_CONFIG_V4.remote_ip,
             1,
             IpProto::Udp,
             &["send_icmp_ttl_expired", "send_icmp_response"],

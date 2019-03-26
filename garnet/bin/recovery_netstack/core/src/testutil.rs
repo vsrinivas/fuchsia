@@ -18,14 +18,16 @@ use crate::device::ethernet::{EtherType, Mac};
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
 use crate::error::{ParseError, ParseResult};
 use crate::ip::{
-    AddrSubnet, Ip, IpAddr, IpAddress, IpExt, IpPacket, IpProto, Ipv4Addr, Subnet, SubnetEither,
-    IPV6_MIN_MTU,
+    AddrSubnet, Ip, IpAddr, IpAddress, IpExt, IpPacket, IpProto, Ipv4Addr, Ipv6Addr, Subnet,
+    SubnetEither, IPV6_MIN_MTU,
 };
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::EthernetFrame;
 use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpParseArgs};
 use crate::{handle_timeout, Context, EventDispatcher, TimerId};
+
+use specialize_ip_macro::specialize_ip_address;
 
 /// Create a new deterministic RNG from a seed.
 pub(crate) fn new_rng(mut seed: u64) -> XorShiftRng {
@@ -262,30 +264,59 @@ where
 
 /// A configuration for a simple network.
 ///
-/// `DummyEventDispatcherConfig` describes a simple network with two IPv4 hosts
+/// `DummyEventDispatcherConfig` describes a simple network with two IP hosts
 /// - one remote and one local - both on the same Ethernet network.
-pub(crate) struct DummyEventDispatcherConfig {
+pub(crate) struct DummyEventDispatcherConfig<A: IpAddress> {
     /// The subnet of the local Ethernet network.
-    pub(crate) subnet: Subnet<Ipv4Addr>,
+    pub(crate) subnet: Subnet<A>,
     /// The IP address of our interface to the local network (must be in
     /// subnet).
-    pub(crate) local_ip: Ipv4Addr,
+    pub(crate) local_ip: A,
     /// The MAC address of our interface to the local network.
     pub(crate) local_mac: Mac,
-    /// The remote host's IP address (must be in subnet).
-    pub(crate) remote_ip: Ipv4Addr,
+    /// The remote host's IP address (must be in subnet if provided).
+    pub(crate) remote_ip: A,
     /// The remote host's MAC address.
     pub(crate) remote_mac: Mac,
 }
 
-/// A `DummyEventDispatcherConfig` with reasonable values.
-pub(crate) const DUMMY_CONFIG: DummyEventDispatcherConfig = DummyEventDispatcherConfig {
-    subnet: unsafe { Subnet::new_unchecked(Ipv4Addr::new([192, 168, 0, 0]), 16) },
-    local_ip: Ipv4Addr::new([192, 168, 0, 1]),
-    local_mac: Mac::new([0, 1, 2, 3, 4, 5]),
-    remote_ip: Ipv4Addr::new([192, 168, 0, 2]),
-    remote_mac: Mac::new([6, 7, 8, 9, 10, 11]),
-};
+/// A `DummyEventDispatcherConfig` with reasonable values for an IPv4 network.
+pub(crate) const DUMMY_CONFIG_V4: DummyEventDispatcherConfig<Ipv4Addr> =
+    DummyEventDispatcherConfig {
+        subnet: unsafe { Subnet::new_unchecked(Ipv4Addr::new([192, 168, 0, 0]), 16) },
+        local_ip: Ipv4Addr::new([192, 168, 0, 1]),
+        local_mac: Mac::new([0, 1, 2, 3, 4, 5]),
+        remote_ip: Ipv4Addr::new([192, 168, 0, 2]),
+        remote_mac: Mac::new([6, 7, 8, 9, 10, 11]),
+    };
+
+/// A `DummyEventDispatcherConfig` with reasonable values for an IPv6 network.
+pub(crate) const DUMMY_CONFIG_V6: DummyEventDispatcherConfig<Ipv6Addr> =
+    DummyEventDispatcherConfig {
+        subnet: unsafe {
+            Subnet::new_unchecked(
+                Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 0]),
+                112,
+            )
+        },
+        local_ip: Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 1]),
+        local_mac: Mac::new([0, 1, 2, 3, 4, 5]),
+        remote_ip: Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 2]),
+        remote_mac: Mac::new([6, 7, 8, 9, 10, 11]),
+    };
+
+impl<A: IpAddress> DummyEventDispatcherConfig<A> {
+    /// Creates a copy of `self` with all the remote and local fields reversed.
+    pub(crate) fn swap(&self) -> Self {
+        Self {
+            subnet: self.subnet,
+            local_ip: self.remote_ip,
+            local_mac: self.remote_mac,
+            remote_ip: self.local_ip,
+            remote_mac: self.local_mac,
+        }
+    }
+}
 
 /// A builder for `DummyEventDispatcher`s.
 ///
@@ -298,6 +329,7 @@ pub(crate) const DUMMY_CONFIG: DummyEventDispatcherConfig = DummyEventDispatcher
 pub(crate) struct DummyEventDispatcherBuilder {
     devices: Vec<(Mac, Option<(IpAddr, SubnetEither)>)>,
     arp_table_entries: Vec<(usize, Ipv4Addr, Mac)>,
+    ndp_table_entries: Vec<(usize, Ipv6Addr, Mac)>,
     // usize refers to index into devices Vec
     device_routes: Vec<(SubnetEither, usize)>,
     routes: Vec<(SubnetEither, IpAddr)>,
@@ -305,13 +337,29 @@ pub(crate) struct DummyEventDispatcherBuilder {
 
 impl DummyEventDispatcherBuilder {
     /// Construct a `DummyEventDispatcherBuilder` from a `DummyEventDispatcherConfig`.
-    pub(crate) fn from_config(cfg: DummyEventDispatcherConfig) -> DummyEventDispatcherBuilder {
+    #[specialize_ip_address]
+    pub(crate) fn from_config<A: IpAddress>(
+        cfg: DummyEventDispatcherConfig<A>,
+    ) -> DummyEventDispatcherBuilder {
         assert!(cfg.subnet.contains(cfg.local_ip));
         assert!(cfg.subnet.contains(cfg.remote_ip));
 
         let mut builder = DummyEventDispatcherBuilder::default();
         builder.devices.push((cfg.local_mac, Some((cfg.local_ip.into(), cfg.subnet.into()))));
+
+        #[ipv4addr]
         builder.arp_table_entries.push((0, cfg.remote_ip, cfg.remote_mac));
+        #[ipv6addr]
+        builder.ndp_table_entries.push((0, cfg.remote_ip, cfg.remote_mac));
+
+        // even with fixed ipv4 address we can have ipv6 link local addresses
+        // pre-cached.
+        builder.ndp_table_entries.push((
+            0,
+            cfg.remote_mac.to_ipv6_link_local(None),
+            cfg.remote_mac,
+        ));
+
         builder.device_routes.push((cfg.subnet.into(), 0));
         builder
     }
@@ -346,6 +394,11 @@ impl DummyEventDispatcherBuilder {
         self.arp_table_entries.push((device, ip, mac));
     }
 
+    /// Add an NDP table entry for a device's NDP table.
+    pub(crate) fn add_ndp_table_entry(&mut self, device: usize, ip: Ipv6Addr, mac: Mac) {
+        self.ndp_table_entries.push((device, ip, mac));
+    }
+
     /// Add a route to the forwarding table.
     pub(crate) fn add_route<A: IpAddress>(&mut self, subnet: Subnet<A>, next_hop: A) {
         self.routes.push((subnet.into(), next_hop.into()));
@@ -360,8 +413,13 @@ impl DummyEventDispatcherBuilder {
     pub(crate) fn build(self) -> Context<DummyEventDispatcher> {
         let mut ctx = Context::default();
 
-        let DummyEventDispatcherBuilder { devices, arp_table_entries, device_routes, routes } =
-            self;
+        let DummyEventDispatcherBuilder {
+            devices,
+            arp_table_entries,
+            ndp_table_entries,
+            device_routes,
+            routes,
+        } = self;
         let mut idx_to_device_id =
             HashMap::<_, _, std::collections::hash_map::RandomState>::default();
         for (idx, (mac, ip_subnet)) in devices.into_iter().enumerate() {
@@ -383,6 +441,10 @@ impl DummyEventDispatcherBuilder {
         for (idx, ip, mac) in arp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
             crate::device::ethernet::insert_arp_table_entry(&mut ctx, device.id(), ip, mac);
+        }
+        for (idx, ip, mac) in ndp_table_entries {
+            let device = *idx_to_device_id.get(&idx).unwrap();
+            crate::device::ethernet::insert_ndp_table_entry(&mut ctx, device.id(), ip, mac);
         }
         for (subnet, idx) in device_routes {
             let device = *idx_to_device_id.get(&idx).unwrap();
@@ -431,6 +493,23 @@ impl DummyEventDispatcher {
     /// Get the current (fake) time
     pub(crate) fn current_time(self) -> Instant {
         self.current_time
+    }
+
+    /// Forwards all the frames kept in the `self` to another context.
+    ///
+    /// This function  drains all the events in `self` and moves the data to
+    /// another context. `mapper` is used to map a `DeviceId` from the current
+    /// context to a `DeviceId` in `other`.
+    pub(crate) fn forward_frames<D: EventDispatcher, F>(
+        &mut self,
+        other: &mut Context<D>,
+        mapper: F,
+    ) where
+        F: Fn(DeviceId) -> DeviceId,
+    {
+        for (device_id, mut data) in self.frames_sent.drain(..) {
+            crate::receive_frame(other, mapper(device_id), &mut data);
+        }
     }
 }
 

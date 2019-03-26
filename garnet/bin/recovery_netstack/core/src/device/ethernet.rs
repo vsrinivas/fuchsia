@@ -380,6 +380,16 @@ pub(crate) fn insert_arp_table_entry<D: EventDispatcher>(
     crate::device::arp::insert::<D, Ipv4Addr, EthernetArpDevice>(ctx, device_id, addr, mac);
 }
 
+/// Insert an entry into this device's NDP table.
+pub(crate) fn insert_ndp_table_entry<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device_id: u64,
+    addr: Ipv6Addr,
+    mac: Mac,
+) {
+    crate::ip::ndp::insert_neighbor::<D, EthernetNdpDevice>(ctx, device_id, addr, mac)
+}
+
 fn get_device_state<D: EventDispatcher>(
     ctx: &mut Context<D>,
     device_id: u64,
@@ -488,7 +498,7 @@ mod tests {
     use packet::{Buf, BufferSerializer};
 
     use super::*;
-    use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG};
+    use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
 
     #[test]
     fn test_mac_to_eui() {
@@ -524,11 +534,11 @@ mod tests {
         // and that we don't send an Ethernet frame whose size is greater than
         // the MTU.
         fn test(size: usize, expect_frames_sent: usize) {
-            let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG).build();
+            let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4).build();
             send_ip_frame(
                 &mut ctx,
                 1,
-                DUMMY_CONFIG.remote_ip,
+                DUMMY_CONFIG_V4.remote_ip,
                 BufferSerializer::new_vec(Buf::new(&mut vec![0; size], ..)),
             );
             assert_eq!(ctx.dispatcher().frames_sent().len(), expect_frames_sent);
