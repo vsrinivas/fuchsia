@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 # Test `run` with a stubbed launcher implementation
@@ -15,11 +15,10 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/component/cpp/testing:fake_launcher",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
@@ -74,19 +73,10 @@ package("run_test_exiter") {
   binary = "run_test_exiter"
 }
 
-package("run_tests") {
-  testonly = true
-
+test_package("run_tests") {
   deps = [
     ":bin",
     ":run_return_value_test",
-  ]
-
-  meta = [
-    {
-      dest = "run_return_value_test.cmx"
-      path = rebase_path(dest)
-    },
   ]
 
   tests = [

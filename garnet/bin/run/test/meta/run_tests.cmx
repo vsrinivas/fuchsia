@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/run_tests"
+    },
+    "sandbox": {
+        "features": [
+            "shell"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

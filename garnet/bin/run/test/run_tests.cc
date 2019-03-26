@@ -4,14 +4,12 @@
 
 #include "gtest/gtest.h"
 
-#include "fs/pseudo-dir.h"
-#include "fs/service.h"
-#include "fuchsia/sys/cpp/fidl.h"
-#include "lib/async-loop/cpp/loop.h"
-#include "lib/component/cpp/outgoing.h"
-#include "lib/component/cpp/testing/fake_launcher.h"
-#include "lib/fdio/spawn.h"
-#include "lib/fidl/cpp/binding_set.h"
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/spawn.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/testing/fake_launcher.h>
+#include <lib/sys/cpp/testing/service_directory_provider.h>
 
 TEST(Run, Daemonize) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -29,7 +27,7 @@ TEST(Run, Daemonize) {
   fuchsia::sys::LaunchInfo received_launch_info;
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> received_controller;
 
-  component::testing::FakeLauncher test_launcher;
+  sys::testing::FakeLauncher test_launcher;
   test_launcher.RegisterComponent(
       "test_program_name",
       [&launcher_create_calls, &received_launch_info, &received_controller](
@@ -41,25 +39,18 @@ TEST(Run, Daemonize) {
         received_controller = std::move(controller);
       });
 
-  component::Outgoing outgoing_services;
-
-  fs::SynchronousVfs vfs(loop.dispatcher());
-
+  sys::testing::ServiceDirectoryProvider service_provider(loop.dispatcher());
   fidl::BindingSet<fuchsia::sys::Launcher> launcher_bindings;
-  outgoing_services.AddPublicService(
-      launcher_bindings.GetHandler(&test_launcher));
-
-  zx::channel svc_req, svc_dir;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0u, &svc_req, &svc_dir));
-
-  auto public_dir = outgoing_services.public_dir();
-  ASSERT_EQ(ZX_OK, vfs.ServeDirectory(public_dir, std::move(svc_req)));
+  service_provider.AddService(test_launcher.GetHandler(loop.dispatcher()));
 
   std::vector<fdio_spawn_action_t> actions{
       {.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
        .ns = {
            "/svc",
-           svc_dir.release(),
+           service_provider.service_directory()
+               ->CloneChannel()
+               .TakeChannel()
+               .release(),
        }}};
 
   zx::process run_process;
