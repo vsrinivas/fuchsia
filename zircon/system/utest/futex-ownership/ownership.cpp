@@ -851,6 +851,9 @@ static bool RequeueOwnershipTest() {
 }  // anon namespace
 
 BEGIN_TEST_CASE(futex_ownership_tests)
+//  TODO(johngro) : re-enable these tests once FLK-129 has been debugged and
+//  fixed.
+#if 0
 RUN_TEST(BasicGetOwnerTest);
 RUN_TEST(WaitOwnershipTest);
 RUN_TEST(WakeOwnershipTest<OpType::kStandard>);
@@ -858,4 +861,5 @@ RUN_TEST(WakeOwnershipTest<OpType::kRequeue>);
 RUN_TEST(WakeZeroOwnershipTest<OpType::kStandard>);
 RUN_TEST(WakeZeroOwnershipTest<OpType::kRequeue>);
 RUN_TEST(RequeueOwnershipTest);
+#endif
 END_TEST_CASE(futex_ownership_tests)
