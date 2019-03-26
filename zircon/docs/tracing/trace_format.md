@@ -660,7 +660,7 @@ context switch.  By definition, the new state of the incoming thread is
 ##### Format
 
 _header word_
-- `[0 .. 3]`: record type (4)
+- `[0 .. 3]`: record type (8)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 23]`: cpu number
 - `[24 .. 27]`: outgoing thread state (any of the values below except “running”)
