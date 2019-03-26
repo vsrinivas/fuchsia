@@ -3,10 +3,15 @@
         "binary": "bin/system_updater"
     },
     "sandbox": {
-        "features": [ "shell", "deprecated-global-persistent-storage" ],
-        "pkgfs": [ "packages" ],
+        "features": [
+            "shell",
+            "deprecated-global-persistent-storage"
+        ],
+        "pkgfs": [
+            "packages"
+        ],
         "services": [
-            "fuchsia.amber.Control",
+            "fuchsia.pkg.PackageResolver",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher"

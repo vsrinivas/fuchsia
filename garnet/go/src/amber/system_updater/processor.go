@@ -14,10 +14,10 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall/zx"
-	"syscall/zx/zxwait"
 
 	"app/context"
-	"fidl/fuchsia/amber"
+	fuchsiaio "fidl/fuchsia/io"
+	"fidl/fuchsia/pkg"
 	"syslog/logger"
 )
 
@@ -26,9 +26,9 @@ type Package struct {
 	merkle  string
 }
 
-func ConnectToUpdateSrvc() (*amber.ControlInterface, error) {
+func ConnectToPackageResolver() (*pkg.PackageResolverInterface, error) {
 	context := context.CreateFromStartupInfo()
-	req, pxy, err := amber.NewControlInterfaceRequest()
+	req, pxy, err := pkg.NewPackageResolverInterfaceRequest()
 
 	if err != nil {
 		logger.Errorf("control interface could not be acquired: %s", err)
@@ -84,10 +84,10 @@ func ParseRequirements(pkgSrc io.ReadCloser, imgSrc io.ReadCloser) ([]*Package, 
 	return pkgs, imgs, nil
 }
 
-func FetchPackages(pkgs []*Package, amber *amber.ControlInterface) error {
+func FetchPackages(pkgs []*Package, resolver *pkg.PackageResolverInterface) error {
 	var errCount int
 	for _, pkg := range pkgs {
-		if err := fetchPackage(pkg, amber); err != nil {
+		if err := fetchPackage(pkg, resolver); err != nil {
 			logger.Errorf("fetch error: %s", err)
 			errCount++
 		}
@@ -100,11 +100,8 @@ func FetchPackages(pkgs []*Package, amber *amber.ControlInterface) error {
 	return nil
 }
 
-func fetchPackage(p *Package, amber *amber.ControlInterface) error {
-	parts := strings.SplitN(p.namever, "/", 2)
-	name, version := parts[0], parts[1]
-
-	b, err := ioutil.ReadFile(filepath.Join("/pkgfs/packages", name, version, "meta"))
+func fetchPackage(p *Package, resolver *pkg.PackageResolverInterface) error {
+	b, err := ioutil.ReadFile(filepath.Join("/pkgfs/packages", p.namever, "meta"))
 	if err == nil {
 		// package is already installed, skip
 		if string(b) == p.merkle {
@@ -112,31 +109,22 @@ func fetchPackage(p *Package, amber *amber.ControlInterface) error {
 		}
 	}
 
-	logger.Infof("requesting %s/%s from update system", p.namever, p.merkle)
-	ch, err := amber.GetUpdateComplete(name, &version, &p.merkle)
+	pkgUri := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s?hash=%s", p.namever, p.merkle)
+	selectors := []string{}
+	updatePolicy := pkg.UpdatePolicy{}
+	dirReq, dirPxy, err := fuchsiaio.NewDirectoryInterfaceRequest()
+	defer dirPxy.Close()
+
+	logger.Infof("requesting %s from update system", pkgUri)
+
+	status, err := resolver.Resolve(pkgUri, selectors, updatePolicy, dirReq)
 	if err != nil {
-		return fmt.Errorf("fetch: GetUpdateComplete error: %s", err)
+		return fmt.Errorf("fetch: Resolve error: %s", err)
 	}
 
-	signals, err := zxwait.Wait(*ch.Handle(),
-		zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
-		zx.TimensecInfinite)
-	if err != nil {
-		return fmt.Errorf("fetch: wait failure: %s", err)
-	}
-
-	if signals&zx.SignalChannelReadable != 0 {
-		var buf [64 * 1024]byte
-		n, _, err := ch.Read(buf[:], []zx.Handle{}, 0)
-		if err != nil {
-			return fmt.Errorf("fetch: error reading channel %s", err)
-		}
-		if signals&zx.SignalUser0 != 0 {
-			return fmt.Errorf("fetch: error from daemon: %s", buf[:n])
-		}
-		logger.Infof("package %q installed at %q", p.namever, string(buf[:n]))
-	} else {
-		return fmt.Errorf("fetch: channel closed prematurely")
+	statusErr := zx.Status(status)
+	if statusErr != zx.ErrOk {
+		return fmt.Errorf("fetch: Resolve status: %s", statusErr)
 	}
 
 	return nil

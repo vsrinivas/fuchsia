@@ -90,13 +90,14 @@ func run() (err error) {
 		return fmt.Errorf("could not parse requirements: %s", err)
 	}
 
-	amber, err := ConnectToUpdateSrvc()
+	resolver, err := ConnectToPackageResolver()
 	if err != nil {
 		return fmt.Errorf("unable to connect to update service: %s", err)
 	}
+	defer resolver.Close()
 
 	phase = metrics.PhasePackageDownload
-	if err := FetchPackages(pkgs, amber); err != nil {
+	if err := FetchPackages(pkgs, resolver); err != nil {
 		return fmt.Errorf("failed getting packages: %s", err)
 	}
 
@@ -156,7 +157,10 @@ func (i InitiatorValue) Set(s string) error {
 
 func Main() {
 	ctx := context.CreateFromStartupInfo()
-	logger.InitDefaultLoggerWithTags(ctx.Connector(), "system_updater")
+	if err := logger.InitDefaultLoggerWithTags(ctx.Connector(), "system_updater"); err != nil {
+		fmt.Printf("error initializing syslog interface: %s\n", err)
+	}
+
 	metrics.Register(ctx)
 
 	flag.Var(&InitiatorValue{&initiator}, "initiator", "what started this update: manual or automatic")
