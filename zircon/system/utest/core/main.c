@@ -4,14 +4,21 @@
 
 #include <errno.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <sys/uio.h>
+#include <unistd.h>
 
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
 #include <unittest/unittest.h>
+
+// Explicitly include zxtest c wrappers, and avoid macro collision with
+// unitttest. This is safe, because all macros exported by this header
+// are internal, except for RUN_ALL_TESTS. The entry point is public though.
+// TODO(gevalentino): Once core-tests are fully migrated remove this comment and
+// unittest library import.
+#include <zxtest/c/zxtest.h>
 
 // output via debuglog syscalls
 
@@ -27,7 +34,6 @@ static void log_write(const void* data, size_t len) {
         len -= xfer;
     }
 }
-
 
 // libc init and io stubs
 // The reason these are here is that the "core" tests intentionally do not
@@ -81,7 +87,11 @@ ssize_t writev(int fd, const struct iovec* iov, int num) {
     return count;
 }
 
-#define ERROR() do { errno = ENOSYS; return -1; } while (0)
+#define ERROR()                                                                                    \
+    do {                                                                                           \
+        errno = ENOSYS;                                                                            \
+        return -1;                                                                                 \
+    } while (0)
 
 off_t lseek(int fd, off_t offset, int whence) {
     ERROR();
@@ -109,6 +119,11 @@ int main(int argc, char** argv) {
 
     const bool success = unittest_run_all_tests(argc, argv);
     if (!success) {
+        return EXIT_FAILURE;
+    }
+
+    const bool zxtest_success = RUN_ALL_TESTS(argc, argv) == 0;
+    if (!zxtest_success) {
         return EXIT_FAILURE;
     }
 

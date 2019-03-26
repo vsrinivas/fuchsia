@@ -74,6 +74,7 @@ executable("core-tests") {
   deps += [
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
   ]
 }
 
@@ -83,6 +84,7 @@ foreach(test_name, core_tests) {
     test_group = "core"
     deps = [
       "$zx/system/ulib/unittest",
+      "$zx/system/ulib/zxtest",
       test_name,
     ]
   }
