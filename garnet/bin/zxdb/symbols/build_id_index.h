@@ -73,7 +73,7 @@ class BuildIDIndex {
   // Returns the number of items loaded.
   static int ParseIDs(const std::string& input,
                       const std::filesystem::path& containing_dir,
-                      IDMap* output);
+                      IDMap* output, IDMap* untruncate);
 
   const std::vector<std::string>& build_id_files() const {
     return build_id_files_;
@@ -119,6 +119,10 @@ class BuildIDIndex {
   // Indicates if build_id_to_file_ is up-to-date. This is necessary to
   // disambiguate whether an empty cache means "not scanned" or "nothing found".
   bool cache_dirty_ = true;
+
+  // We occasionally encounter build IDs truncated to fit 128 bits. This
+  // mapping undoes that truncation.
+  IDMap untruncate_;
 
   // Manually-added build ID mappings. This is not cleared when the cache is
   // cleared, and these are added to the mappings when the cache is rebuilt.

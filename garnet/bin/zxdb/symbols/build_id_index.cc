@@ -6,6 +6,7 @@
 
 #include <algorithm>
 
+#include "garnet/bin/zxdb/common/string_util.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/string_view.h"
 #include "lib/fxl/strings/trim.h"
@@ -15,24 +16,44 @@ namespace zxdb {
 
 namespace {
 
-std::filesystem::path BuildIdToDebugPath(const std::string& build_id) {
-  std::string build_id_clean = build_id;
-
-  build_id_clean.erase(
-      std::remove(build_id_clean.begin(), build_id_clean.end(), '-'),
-      build_id_clean.end());
-  std::transform(build_id_clean.begin(), build_id_clean.end(),
-                 build_id_clean.begin(), ::tolower);
-
-  if (build_id_clean.length() < 3) {
-    return std::filesystem::path();
+std::optional<std::string> FindInRepoFolder(const std::string& build_id,
+                                            const std::filesystem::path& path) {
+  if (build_id.size() <= 2) {
+    return std::nullopt;
   }
 
-  const std::string& folder = build_id_clean.substr(0, 2);
-  const std::string& file =
-      build_id_clean.substr(2, build_id_clean.size() - 2) + ".debug";
+  auto prefix = build_id.substr(0, 2);
+  auto tail = build_id.substr(2);
 
-  return std::filesystem::path(folder) / file;
+  std::error_code ec;
+
+  auto direct = path / prefix / (tail + ".debug");
+  if (std::filesystem::exists(direct, ec)) {
+    return direct;
+  }
+
+  // Our truncated paths are always this long.
+  if (build_id.size() != 32) {
+    return std::nullopt;
+  }
+
+  auto prefix_folder = path / prefix;
+  if (!std::filesystem::is_directory(prefix_folder, ec)) {
+    return std::nullopt;
+  }
+
+  for (const auto& child :
+       std::filesystem::directory_iterator(prefix_folder, ec)) {
+    if (child.path().extension() != ".debug") {
+      continue;
+    }
+
+    if (StringBeginsWith(std::string(child.path().stem()), tail)) {
+      return child.path();
+    }
+  }
+
+  return std::nullopt;
 }
 
 }  // namespace
@@ -43,24 +64,26 @@ BuildIDIndex::~BuildIDIndex() = default;
 std::string BuildIDIndex::FileForBuildID(const std::string& build_id) {
   EnsureCacheClean();
 
-  auto found = build_id_to_file_.find(build_id);
+  const std::string* to_find = &build_id;
+
+  auto longer = untruncate_.find(build_id);
+  if (longer != untruncate_.end()) {
+    to_find = &longer->second;
+  }
+
+  auto found = build_id_to_file_.find(*to_find);
   if (found == build_id_to_file_.end())
     return SearchRepoSources(build_id);
   return found->second;
 }
 
 std::string BuildIDIndex::SearchRepoSources(const std::string& build_id) {
-  auto local_path = BuildIdToDebugPath(build_id);
-
-  if (local_path.empty()) {
-    return std::string();
-  }
-
   for (const auto& source : repo_sources_) {
-    const auto& path = std::filesystem::path(source) / ".build-id" / local_path;
+    const auto& path = std::filesystem::path(source) / ".build-id";
 
-    if (std::filesystem::exists(path)) {
-      return path;
+    auto got = FindInRepoFolder(build_id, path);
+    if (got) {
+      return *got;
     }
   }
 
@@ -69,6 +92,12 @@ std::string BuildIDIndex::SearchRepoSources(const std::string& build_id) {
 
 void BuildIDIndex::AddBuildIDMapping(const std::string& build_id,
                                      const std::string& file_name) {
+  if (build_id.size() > 32) {
+    auto short_build_id = build_id;
+    short_build_id.resize(32);
+    untruncate_[short_build_id] = build_id;
+  }
+
   // This map saves the manual mapping across cache updates.
   manual_mappings_[build_id] = file_name;
 
@@ -114,7 +143,7 @@ void BuildIDIndex::ClearCache() {
 // static
 int BuildIDIndex::ParseIDs(const std::string& input,
                            const std::filesystem::path& containing_dir,
-                           IDMap* output) {
+                           IDMap* output, IDMap* untruncate) {
   int added = 0;
   for (size_t line_begin = 0; line_begin < input.size(); line_begin++) {
     size_t newline = input.find('\n', line_begin);
@@ -145,6 +174,13 @@ int BuildIDIndex::ParseIDs(const std::string& input,
         output->emplace(std::piecewise_construct,
                         std::forward_as_tuple(build_id.data(), build_id.size()),
                         std::forward_as_tuple(path));
+
+        if (build_id.size() > 32) {
+          untruncate->emplace(
+              std::piecewise_construct,
+              std::forward_as_tuple(build_id.data(), 32),
+              std::forward_as_tuple(build_id.data(), build_id.size()));
+        }
       }
     }
 
@@ -199,7 +235,8 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
 
   fclose(id_file);
 
-  int added = ParseIDs(contents, containing_dir, &build_id_to_file_);
+  int added =
+      ParseIDs(contents, containing_dir, &build_id_to_file_, &untruncate_);
   status_.emplace_back(file_name, added);
   if (!added)
     LogMessage("No mappings found in build ID file: " + file_name);
@@ -210,11 +247,14 @@ void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
   if (std::filesystem::is_directory(path, ec)) {
     // Iterate through all files in this directory, but don't recurse.
     int indexed = 0;
-    for (const auto& child : std::filesystem::directory_iterator(path)) {
+    for (const auto& child : std::filesystem::directory_iterator(path, ec)) {
       if (IndexOneSourceFile(child.path()))
         indexed++;
     }
-    status_.emplace_back(path, indexed);
+
+    if (!ec) {
+      status_.emplace_back(path, indexed);
+    }
   } else if (!ec) {
     if (IndexOneSourceFile(path)) {
       status_.emplace_back(path, 1);
@@ -234,6 +274,12 @@ bool BuildIDIndex::IndexOneSourceFile(const std::string& file_path) {
   fclose(file);
 
   if (!build_id.empty()) {
+    if (build_id.size() > 32) {
+      auto short_build_id = std::string(build_id);
+      short_build_id.resize(32);
+      untruncate_[short_build_id] = build_id;
+    }
+
     build_id_to_file_[build_id] = file_path;
     return true;
   }
