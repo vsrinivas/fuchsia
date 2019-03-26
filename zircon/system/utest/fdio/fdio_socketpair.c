@@ -597,6 +597,59 @@ bool socketpair_wait_begin_end(void) {
     END_TEST;
 }
 
+#define WRITE_DATA_SIZE 1024*1024
+
+struct full_read_args {
+    int fd;
+};
+int full_read_thread(void *arg) {
+    struct full_read_args *args = arg;
+    int status;
+    size_t progress = 0;
+    static char buf[WRITE_DATA_SIZE];
+    while (progress < WRITE_DATA_SIZE) {
+        size_t n = WRITE_DATA_SIZE - progress;
+        if (n > sizeof(buf))
+            n = sizeof(buf);
+        fflush(stdout);
+        status = read(args->fd, buf, n);
+        if (status < 0)
+            break;
+        progress += status;
+    }
+    if (status < 0)
+        return status;
+    return progress;
+}
+
+bool socketpair_partial_write_test(void) {
+    BEGIN_TEST;
+
+    int fds[2];
+    int status = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+    ASSERT_EQ(status, 0, "socketpair(AF_UNIX, SOCK_STREAM, 0, fds) failed");
+
+    // Start a thread that reads everything we write.
+    thrd_t t;
+    struct full_read_args args = {.fd = fds[1]};
+    int thrd_create_result = thrd_create(&t, full_read_thread, &args);
+    ASSERT_EQ(thrd_create_result, thrd_success, "create reading thread");
+
+    // Write more data that can fit in the socket send buffer.
+    char *data = malloc(WRITE_DATA_SIZE);
+    memset(data, 'A', WRITE_DATA_SIZE);
+    int aa = write(fds[0], data, WRITE_DATA_SIZE);
+    EXPECT_EQ(aa, WRITE_DATA_SIZE, "write did not fully succeed");
+    free(data);
+
+    // Make sure the other thread read everything.
+    int size_read;
+    ASSERT_EQ(thrd_join(t, &size_read), 0, "join reading thread");
+    ASSERT_EQ(size_read, WRITE_DATA_SIZE, "other thread did not read everything");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(fdio_socketpair_test)
 RUN_TEST(socketpair_test);
 RUN_TEST(socketpair_shutdown_rd_test);
@@ -612,4 +665,5 @@ RUN_TEST(socketpair_clone_or_unwrap_and_wrap_test);
 RUN_TEST(socketpair_recvmsg_nonblock_boundary_test);
 RUN_TEST(socketpair_sendmsg_nonblock_boundary_test);
 RUN_TEST(socketpair_wait_begin_end);
+RUN_TEST_MEDIUM(socketpair_partial_write_test)
 END_TEST_CASE(fdio_socketpair_test)

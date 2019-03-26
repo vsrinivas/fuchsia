@@ -1053,17 +1053,26 @@ ssize_t write(int fd, const void* buf, size_t count) {
         return ERRNO(EBADF);
     }
     bool nonblocking = *fdio_get_ioflag(io) & IOFLAG_NONBLOCK;
-    size_t actual = 0u;
+    size_t progress = 0u;
     zx_status_t status;
-    for (;;) {
-        status = zxio_write(fdio_get_zxio(io), buf, count, &actual);
-        if ((status != ZX_ERR_SHOULD_WAIT) || nonblocking) {
+    do {
+        size_t actual = 0u;
+        status = zxio_write(fdio_get_zxio(io), (char *) buf + progress, count - progress, &actual);
+        progress += actual;
+        if (nonblocking) {
             break;
         }
-        fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
-    }
+        if (status == ZX_ERR_SHOULD_WAIT) {
+            fdio_wait(io, FDIO_EVT_WRITABLE | FDIO_EVT_PEER_CLOSED, ZX_TIME_INFINITE, NULL);
+            continue;
+        }
+        if (actual == 0u) {
+            // Either an error occurred, or zxio_write did nothing and there's no point trying it again.
+            break;
+        }
+    } while (progress < count);
     fdio_release(io);
-    return status != ZX_OK ? ERROR(status) : (ssize_t)actual;
+    return status != ZX_OK ? ERROR(status) : (ssize_t)progress;
 }
 
 __EXPORT
