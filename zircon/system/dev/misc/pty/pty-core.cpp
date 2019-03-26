@@ -11,8 +11,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/auto_lock.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/device/pty.h>
 #include <zircon/errors.h>

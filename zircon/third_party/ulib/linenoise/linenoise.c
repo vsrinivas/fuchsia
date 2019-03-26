@@ -118,9 +118,8 @@
 #include "linenoise.h"
 
 #ifdef __Fuchsia__
-#include <fuchsia/hardware/pty/c/fidl.h>
+#include <zircon/device/pty.h>
 #include <lib/fdio/io.h>
-#include <lib/fdio/unsafe.h>
 #endif
 
 #define LINENOISE_DEFAULT_HISTORY_MAX_LEN 100
@@ -307,17 +306,9 @@ static int getCursorPosition(int ifd, int ofd) {
  * if it fails. */
 static int getColumns(int ifd, int ofd) {
 #ifdef __Fuchsia__
-    int tty = isatty(STDIN_FILENO);
-    zx_status_t status;
-    zx_status_t call_status;
-    fuchsia_hardware_pty_WindowSize wsz;
-    if (tty) {
-        fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-        call_status = fuchsia_hardware_pty_DeviceGetWindowSize(
-            fdio_unsafe_borrow_channel(io), &status, &wsz);
-        fdio_unsafe_release(io);
-    }
-    if (!tty || call_status != ZX_OK || status != ZX_OK) {
+    pty_window_size_t wsz;
+    ssize_t r = ioctl_pty_get_window_size(0, &wsz);
+    if (r != sizeof(wsz)) {
 #else
     struct winsize ws;
 

@@ -8,7 +8,6 @@ library("linenoise") {
   ]
   include_dirs = [ "include/linenoise" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-pty:c",
     "$zx/system/ulib/fdio",
   ]
 }

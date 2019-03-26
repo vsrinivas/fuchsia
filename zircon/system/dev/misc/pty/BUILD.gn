@@ -10,7 +10,6 @@ driver("pty") {
   ]
   deps = [
     "$zx/kernel/lib/fbl",
-    "$zx/system/fidl/fuchsia-device:c",
     "$zx/system/fidl/fuchsia-hardware-pty:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fidl",

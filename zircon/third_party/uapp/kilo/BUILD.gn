@@ -8,7 +8,6 @@ executable("kilo") {
   ]
   configs += [ ":config" ]
   deps = [
-    "$zx/system/fidl/fuchsia-hardware-pty:c",
     "$zx/system/ulib/fdio",
   ]
 }

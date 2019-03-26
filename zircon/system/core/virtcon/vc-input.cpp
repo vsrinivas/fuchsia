@@ -6,8 +6,7 @@
 #include <hid/usages.h>
 #include <string.h>
 #include <sys/param.h>
-#include <lib/fdio/unsafe.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
+#include <zircon/device/pty.h>
 
 #include "keyboard-vt100.h"
 #include "keyboard.h"
@@ -149,16 +148,12 @@ void vc_show_active() {
     vc_t* vc = NULL;
     list_for_every_entry (&g_vc_list, vc, vc_t, node) {
         vc_attach_gfx(vc);
-        if ((vc->fd >= 0) && isatty(vc->fd)) {
-            fuchsia_hardware_pty_WindowSize wsz = {
+        if (vc->fd >= 0) {
+            pty_window_size_t wsz = {
                 .width = vc->columns,
                 .height = vc->rows,
             };
-
-            fdio_t* io = fdio_unsafe_fd_to_io(vc->fd);
-            zx_status_t status;
-            fuchsia_hardware_pty_DeviceSetWindowSize(fdio_unsafe_borrow_channel(io), &wsz, &status);
-            fdio_unsafe_release(io);
+            ioctl_pty_set_window_size(vc->fd, &wsz);
         }
         if (vc == g_active_vc) {
             vc_full_repaint(vc);

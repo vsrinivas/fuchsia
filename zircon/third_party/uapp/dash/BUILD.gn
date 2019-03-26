@@ -43,7 +43,6 @@ executable("dash") {
   configs += [ ":config" ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager:c",
-    "$zx/system/fidl/fuchsia-hardware-pty:c",
     "$zx/system/fidl/fuchsia-kernel:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fdio",

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fuchsia/hardware/pty/c/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fdio/unsafe.h>
 #include <poll.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/device/pty.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -26,14 +26,8 @@ static zx_status_t launch(const char* filename, const char* const* argv,
                           const char* const* envp, zx_handle_t* process,
                           zx_handle_t job, char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH]) {
     // cancel any ^c generated before running the command
-    if (isatty(STDIN_FILENO)) {
-        uint32_t events = 0;
-        zx_status_t status;
-        fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-        fuchsia_hardware_pty_DeviceReadEvents(fdio_unsafe_borrow_channel(io), &status,
-                                              &events); // ignore any error
-        fdio_unsafe_release(io);
-    }
+    uint32_t events = 0;
+    ioctl_pty_read_events(STDIN_FILENO, &events); // ignore any error
 
     // TODO(abarth): Including FDIO_SPAWN_DEFAULT_LDSVC doesn't fully make sense.
     // We should find a library loader that's appropriate for this program
@@ -147,13 +141,37 @@ int process_launch(const char* const* argv, const char* path, int index,
     }
 }
 
+// TODO(ZX-972) When isatty correctly examines the fd, use that instead
+int isapty(int fd) {
+    fdio_t* io = fdio_unsafe_fd_to_io(fd);
+    if (io == NULL) {
+        errno = EBADF;
+        return 0;
+    }
+
+    // if we can find the window size, it's a tty
+    int ret;
+    pty_window_size_t ws;
+    int noread = ioctl_pty_get_window_size(fd, &ws);
+    if (noread == sizeof(ws)) {
+        ret = 1;
+    } else {
+        ret = 0;
+        errno = ENOTTY;
+    }
+
+    fdio_unsafe_release(io);
+
+    return ret;
+}
+
 /* Check for process termination (block if requested). When not blocking,
    returns ZX_ERR_TIMED_OUT if process hasn't exited yet.  */
 int process_await_termination(zx_handle_t process, zx_handle_t job, bool blocking) {
     zx_time_t timeout = blocking ? ZX_TIME_INFINITE : 0;
     zx_status_t status;
     zx_wait_item_t wait_objects[2];
-    fdio_t* tty = (isatty(STDIN_FILENO) ? fdio_unsafe_fd_to_io(STDIN_FILENO) : NULL);
+    fdio_t* tty = (isapty(STDIN_FILENO) ? fdio_unsafe_fd_to_io(STDIN_FILENO) : NULL);
 
     bool running = true;
     while (running) {
@@ -187,11 +205,8 @@ int process_await_termination(zx_handle_t process, zx_handle_t job, bool blockin
         } else if (tty && (interrupt_event & POLLPRI)) {
             // interrupted - kill process
             uint32_t events = 0;
-            zx_status_t pty_status;
-
-            fuchsia_hardware_pty_DeviceReadEvents(fdio_unsafe_borrow_channel(tty), &pty_status,
-                                                  &events); // ignore any error
-            if (events & fuchsia_hardware_pty_EVENT_INTERRUPT) {
+            int noread = ioctl_pty_read_events(STDIN_FILENO, &events);
+            if (noread == sizeof(events) && (events & PTY_EVENT_INTERRUPT)) {
                 // process belongs to job, so killing the job kills the process
                 status = zx_task_kill(job);
                 // If the kill failed status is going to be ZX_ERR_ACCESS_DENIED
