@@ -4,6 +4,7 @@
 
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
 
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -49,6 +50,11 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
   grpc::Status Init(grpc::ServerContext* context,
                     const dockyard_proto::InitRequest* request,
                     dockyard_proto::InitReply* reply) override {
+    auto now = std::chrono::system_clock::now();
+    auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                           now.time_since_epoch())
+                           .count();
+    dockyard_->SetDeviceTimeDeltaNs(nanoseconds - request->device_time_ns());
     if (request->version() != DOCKYARD_VERSION) {
       return grpc::Status::CANCELLED;
     }
@@ -81,13 +87,9 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
                                dockyard_proto::RawSamples>* stream) override {
     dockyard_proto::RawSamples samples;
     while (stream->Read(&samples)) {
-      FXL_LOG(INFO) << "Received samples at " << samples.time() << ", size "
-                    << samples.sample_size();
       int limit = samples.sample_size();
       for (int i = 0; i < limit; ++i) {
         auto sample = samples.sample(i);
-        FXL_LOG(INFO) << "  " << i << ", key " << sample.key() << ": "
-                      << sample.value();
         dockyard_->AddSample(sample.key(),
                              Sample(samples.time(), sample.value()));
       }
@@ -147,19 +149,23 @@ std::ostream& operator<<(std::ostream& out, const StreamSetsRequest& request) {
   out << "StreamSetsRequest {" << std::endl;
   out << "  request_id: " << request.request_id << std::endl;
   out << "  start_time_ns: " << request.start_time_ns << std::endl;
-  out << "  end_time_ns: " << request.end_time_ns << std::endl;
+  out << "  end_time_ns:   " << request.end_time_ns << std::endl;
+  out << "    delta time in seconds: "
+      << double(request.end_time_ns - request.start_time_ns) /
+             kNanosecondsPerSecond
+      << std::endl;
   out << "  sample_count: " << request.sample_count << std::endl;
-  out << "  min: " << request.min << std::endl;
-  out << "  max: " << request.max << std::endl;
+  out << "  min: " << request.min;
+  out << "  max: " << request.max;
   out << "  reserved: " << request.reserved << std::endl;
-  out << "  render_style: " << request.render_style << std::endl;
+  out << "  render_style: " << request.render_style;
   out << "  flags: " << request.flags << std::endl;
-  out << "  stream_ids: {";
+  out << "  stream_ids (" << request.stream_ids.size() << "): [";
   for (auto iter = request.stream_ids.begin(); iter != request.stream_ids.end();
        ++iter) {
     out << " " << *iter;
   }
-  out << " }" << std::endl;
+  out << " ]" << std::endl;
   out << "}" << std::endl;
   return out;
 }
@@ -170,20 +176,24 @@ std::ostream& operator<<(std::ostream& out,
   out << "  request_id: " << response.request_id << std::endl;
   out << "  lowest_value: " << response.lowest_value << std::endl;
   out << "  highest_value: " << response.highest_value << std::endl;
+  out << "  data_sets (" << response.data_sets.size() << "): [";
   for (auto list = response.data_sets.begin(); list != response.data_sets.end();
        ++list) {
     out << "  data_set: {";
     for (auto data = list->begin(); data != list->end(); ++data) {
       out << " " << *data;
     }
-    out << " }" << std::endl;
+    out << " }, " << std::endl;
   }
+  out << "]" << std::endl;
   out << "}" << std::endl;
   return out;
 }
 
 Dockyard::Dockyard()
-    : stream_name_handler_(nullptr),
+    : device_time_delta_ns_(0ULL),
+      latest_sample_time_ns_(0ULL),
+      stream_name_handler_(nullptr),
       stream_sets_handler_(nullptr),
       next_context_id_(0ULL) {}
 
@@ -199,6 +209,18 @@ Dockyard::~Dockyard() {
   }
 }
 
+SampleTimeNs Dockyard::DeviceDeltaTimeNs() const {
+  return device_time_delta_ns_;
+}
+
+void Dockyard::SetDeviceTimeDeltaNs(SampleTimeNs delta_ns) {
+  device_time_delta_ns_ = delta_ns;
+}
+
+SampleTimeNs Dockyard::LatestSampleTimeNs() const {
+  return latest_sample_time_ns_;
+}
+
 void Dockyard::AddSample(SampleStreamId stream_id, Sample sample) {
   std::lock_guard<std::mutex> guard(mutex_);
   // Find or create a sample_stream for this stream_id.
@@ -210,6 +232,7 @@ void Dockyard::AddSample(SampleStreamId stream_id, Sample sample) {
   } else {
     sample_stream = search->second;
   }
+  latest_sample_time_ns_ = sample.time;
   sample_stream->emplace(sample.time, sample.value);
 
   // Track the overall lowest and highest values encountered.
@@ -272,6 +295,8 @@ SampleStreamId Dockyard::GetSampleStreamId(const std::string& name) {
   SampleStreamId id = stream_ids_.size();
   stream_ids_.emplace(name, id);
   stream_names_.emplace(id, name);
+  FXL_LOG(INFO) << "SampleStreamId " << name << ": " << id;
+  assert(stream_ids_.find(name) != stream_ids_.end());
   return id;
 }
 

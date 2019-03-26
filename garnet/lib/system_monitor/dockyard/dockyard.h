@@ -27,6 +27,9 @@ typedef uint64_t SampleValue;
 // framing out the API.
 typedef std::map<SampleTimeNs, SampleValue> SampleStream;
 
+// This is clearer than using the raw number.
+constexpr SampleTimeNs kNanosecondsPerSecond = 1000000000;
+
 // Special value for missing sample stream.
 constexpr SampleValue NO_STREAM = (SampleValue)-1ULL;
 // Special value for missing data.
@@ -191,6 +194,33 @@ class Dockyard {
   // the GUI.
   void AddSamples(SampleStreamId stream_id, std::vector<Sample> samples);
 
+  // The *approximate* difference between host time and device time. This value
+  // is negotiated at connection time and not reevaluated. If either clock is
+  // altered this value may be wildly inaccurate. The intended use of this value
+  // is to hint the GUI when displaying sample times (not for doing CI analysis
+  // or similar computations).
+  // If the value is positive then the device clock is ahead of the host clock.
+  // Given a sample, subtract this value to get the host time.
+  // Given a host time, add this value to get device (sample) time.
+  // See: LatestSampleTimeNs()
+  SampleTimeNs DeviceDeltaTimeNs() const;
+
+  // Helper functions to compute time. Read important details in the description
+  // of |DeviceDeltaTimeNs|.
+  SampleTimeNs DeviceTimeToHostTime(SampleTimeNs device_time_ns) const {
+    return device_time_ns - device_time_delta_ns_;
+  }
+  SampleTimeNs HostTimeToDeviceTime(SampleTimeNs host_time_ns) const {
+    return host_time_ns + device_time_delta_ns_;
+  };
+
+  void SetDeviceTimeDeltaNs(SampleTimeNs delta_ns);
+
+  // The time stamp for the most recent batch of samples to arrive. The time is
+  // device time (not host time) in nanoseconds.
+  // See: DeviceDeltaTimeNs()
+  SampleTimeNs LatestSampleTimeNs() const;
+
   // Get sample stream identifier for a given name. The ID values are stable
   // throughout execution, so they may be cached.
   //
@@ -237,6 +267,10 @@ class Dockyard {
   // TODO(dschuyler): avoid having a global mutex. Use a queue to update data.
   mutable std::mutex mutex_;
   std::thread server_thread_;
+
+  // The time (clock) on the device will likely differ from the host.
+  SampleTimeNs device_time_delta_ns_;
+  SampleTimeNs latest_sample_time_ns_;
 
   // Communication with the GUI.
   StreamNamesCallback stream_name_handler_;

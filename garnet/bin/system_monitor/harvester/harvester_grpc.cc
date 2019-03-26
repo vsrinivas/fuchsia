@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -27,6 +28,11 @@ HarvesterStatus HarvesterGrpc::Init() {
   dockyard_proto::InitRequest request;
   request.set_name("TODO SET DEVICE NAME");
   request.set_version(dockyard::DOCKYARD_VERSION);
+  auto now = std::chrono::system_clock::now();
+  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             now.time_since_epoch())
+                             .count();
+  request.set_device_time_ns(nanoseconds);
   dockyard_proto::InitReply reply;
 
   grpc::ClientContext context;

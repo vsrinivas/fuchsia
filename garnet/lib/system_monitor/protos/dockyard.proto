@@ -32,6 +32,8 @@ message InitRequest {
   string name = 1;
   // Use `dockyard::DOCKYARD_VERSION` for this value.
   uint32 version = 2;
+  // Current time on the device, in nanoseconds.
+  uint64 device_time_ns = 3;
 }
 
 // Introduction from the Dockyard to the Harvester
