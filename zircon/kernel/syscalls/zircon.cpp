@@ -136,12 +136,12 @@ zx_status_t sys_event_create(uint32_t options, user_out_handle* event_out) {
     if (res != ZX_OK)
         return res;
 
-    fbl::RefPtr<Dispatcher> dispatcher;
+    KernelHandle<EventDispatcher> handle;
     zx_rights_t rights;
 
-    zx_status_t result = EventDispatcher::Create(options, &dispatcher, &rights);
+    zx_status_t result = EventDispatcher::Create(options, &handle, &rights);
     if (result == ZX_OK)
-        result = event_out->make(ktl::move(dispatcher), rights);
+        result = event_out->make(ktl::move(handle), rights);
     return result;
 }
 

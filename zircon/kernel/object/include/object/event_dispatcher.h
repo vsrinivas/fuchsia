@@ -11,13 +11,14 @@
 
 #include <fbl/canary.h>
 #include <object/dispatcher.h>
+#include <object/handle.h>
 
 #include <sys/types.h>
 
 class EventDispatcher final :
     public SoloDispatcher<EventDispatcher, ZX_DEFAULT_EVENT_RIGHTS, ZX_EVENT_SIGNALED> {
 public:
-    static zx_status_t Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
+    static zx_status_t Create(uint32_t options, KernelHandle<EventDispatcher>* handle,
                               zx_rights_t* rights);
 
     ~EventDispatcher() final;

@@ -15,15 +15,15 @@
 KCOUNTER(dispatcher_event_create_count, "dispatcher.event.create");
 KCOUNTER(dispatcher_event_destroy_count, "dispatcher.event.destroy");
 
-zx_status_t EventDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
+zx_status_t EventDispatcher::Create(uint32_t options, KernelHandle<EventDispatcher>* handle,
                                     zx_rights_t* rights) {
     fbl::AllocChecker ac;
-    auto disp = new (&ac) EventDispatcher(options);
+    KernelHandle event(fbl::AdoptRef(new (&ac) EventDispatcher(options)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
     *rights = default_rights();
-    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+    *handle = ktl::move(event);
     return ZX_OK;
 }
 
