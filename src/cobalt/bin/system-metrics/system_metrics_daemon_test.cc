@@ -8,7 +8,6 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/test_with_context.h>
 
 #include "gtest/gtest.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
@@ -25,7 +24,7 @@ using std::chrono::hours;
 using std::chrono::minutes;
 using std::chrono::seconds;
 
-class SystemMetricsDaemonTest : public sys::testing::TestWithContext {
+class SystemMetricsDaemonTest : public gtest::TestLoopFixture {
  public:
   // Note that we first save an unprotected pointer in fake_clock_ and then
   // give ownership of the pointer to daemon_.

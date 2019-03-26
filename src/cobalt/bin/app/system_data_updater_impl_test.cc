@@ -4,9 +4,10 @@
 
 #include "src/cobalt/bin/app/system_data_updater_impl.h"
 
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/sys/cpp/component_context.h"
-#include "lib/sys/cpp/testing/test_with_context.h"
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 
 namespace cobalt {
 
@@ -39,23 +40,22 @@ class CobaltAppForTest {
       system_data_updater_bindings_;
 };
 
-class SystemDataUpdaterImplTests : public sys::testing::TestWithContext {
+class SystemDataUpdaterImplTests : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
-    TestWithContext::SetUp();
-    cobalt_app_.reset(new CobaltAppForTest(TakeContext()));
+    TestLoopFixture::SetUp();
+    cobalt_app_.reset(new CobaltAppForTest(context_provider_.TakeContext()));
   }
 
   void TearDown() override {
     cobalt_app_.reset();
-    TestWithContext::TearDown();
+    TestLoopFixture::TearDown();
   }
 
  protected:
   SystemDataUpdaterPtr GetSystemDataUpdater() {
     SystemDataUpdaterPtr system_data_updater;
-    controller().context().ConnectToPublicService(
-        system_data_updater.NewRequest());
+    context_provider_.ConnectToPublicService(system_data_updater.NewRequest());
     return system_data_updater;
   }
 
@@ -75,6 +75,7 @@ class SystemDataUpdaterImplTests : public sys::testing::TestWithContext {
   }
 
  private:
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<CobaltAppForTest> cobalt_app_;
 };
 
