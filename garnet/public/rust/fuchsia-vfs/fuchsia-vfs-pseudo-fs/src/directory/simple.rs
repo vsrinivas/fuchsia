@@ -7,8 +7,10 @@
 use {
     crate::common::send_on_open_with_error,
     crate::directory::{
+        connection::DirectoryConnection,
         controllable::Controllable,
         entry::{DirectoryEntry, EntryInfo},
+        traversal_position::AlphabeticalTraversal,
         watcher_connection::WatcherConnection,
         DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES,
     },
@@ -16,10 +18,10 @@ use {
     fidl::encoding::OutOfLine,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes,
-        NodeInfo, NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MAX_FILENAME,
-        MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
-        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        DirectoryMarker, DirectoryObject, DirectoryRequest, NodeAttributes, NodeInfo, NodeMarker,
+        DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MAX_FILENAME, MODE_PROTECTION_MASK,
+        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
+        OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE, WATCH_EVENT_ADDED, WATCH_EVENT_REMOVED, WATCH_MASK_ADDED,
         WATCH_MASK_REMOVED,
@@ -31,7 +33,7 @@ use {
     },
     futures::{
         future::{FusedFuture, FutureExt},
-        stream::{FuturesUnordered, Stream, StreamExt, StreamFuture},
+        stream::{FuturesUnordered, StreamExt, StreamFuture},
         task::Waker,
         Future, Poll,
     },
@@ -41,6 +43,9 @@ use {
     },
     void::Void,
 };
+
+/// When in a "simple" directory is traversed, entries are returned in an alphanumeric order.
+type SimpleDirectoryConnection = DirectoryConnection<AlphabeticalTraversal>;
 
 /// An implementation of a pseudo directory.  Most clients will probably just use the
 /// DirectoryEntry trait to deal with the pseudo directories uniformly.
@@ -57,58 +62,9 @@ pub struct Simple<'entries> {
 
     entries: BTreeMap<String, Box<DirectoryEntry + 'entries>>,
 
-    connections: FuturesUnordered<StreamFuture<DirectoryConnection>>,
+    connections: FuturesUnordered<StreamFuture<SimpleDirectoryConnection>>,
 
     watchers: Vec<WatcherConnection>,
-}
-
-/// Seek position for this connection to the directory.  We just store the element that was
-/// returned last from ReadDirents for this connection.  Next call will look for the next element
-/// in alphabetical order after the one returned and resume from there.  An alternative is to use
-/// an intrusive tree to have a dual index in both names and IDs that are assigned to the entries
-/// in insertion order.  Then we can store an ID instead of the full entry name.  This is what the
-/// C++ version is doing currently.
-///
-/// It should be possible to do the same intrusive dual-indexing using, for example,
-///
-///     https://docs.rs/intrusive-collections/0.7.6/intrusive_collections/
-///
-/// but, as, I think, at least for the pseudo directories, this approach is fine, and it simple
-/// enough.
-#[derive(Clone)]
-enum DirectoryReadPos {
-    Start,
-    Dot,
-    Name(String),
-    End,
-}
-
-struct DirectoryConnection {
-    requests: DirectoryRequestStream,
-    flags: u32,
-
-    /// Seek position for this connection to the directory.  We just store the element that was
-    /// returned last by ReadDirents for this connection.  Next call will look for the next element
-    /// in alphabetical order and resume from there.
-    seek: DirectoryReadPos,
-}
-
-impl DirectoryConnection {
-    fn into_stream_future(
-        requests: DirectoryRequestStream,
-        flags: u32,
-    ) -> StreamFuture<DirectoryConnection> {
-        (DirectoryConnection { requests, flags, seek: DirectoryReadPos::Start }).into_future()
-    }
-}
-
-impl Stream for DirectoryConnection {
-    // We are just proxying the DirectoryRequestStream requests.
-    type Item = <DirectoryRequestStream as Stream>::Item;
-
-    fn poll_next(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Option<Self::Item>> {
-        self.requests.poll_next_unpin(lw)
-    }
 }
 
 /// We assume that usize/isize and u64/i64 are of the same size in a few locations in code.  This
@@ -245,7 +201,7 @@ impl<'entries> Simple<'entries> {
         let (request_stream, control_handle) =
             ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
                 .into_stream_and_control_handle()?;
-        let conn = DirectoryConnection::into_stream_future(request_stream, flags);
+        let conn = SimpleDirectoryConnection::into_stream_future(request_stream, flags);
         self.connections.push(conn);
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
@@ -283,7 +239,7 @@ impl<'entries> Simple<'entries> {
     fn handle_request(
         &mut self,
         req: DirectoryRequest,
-        connection: &mut DirectoryConnection,
+        connection: &mut SimpleDirectoryConnection,
     ) -> Result<ConnectionState, failure::Error> {
         match req {
             DirectoryRequest::Clone { flags, object, control_handle: _ } => {
@@ -333,7 +289,7 @@ impl<'entries> Simple<'entries> {
                 })?;
             }
             DirectoryRequest::Rewind { responder } => {
-                connection.seek = DirectoryReadPos::Start;
+                connection.seek = Default::default();
                 responder.send(ZX_OK)?;
             }
             DirectoryRequest::GetToken { responder } => {
@@ -429,7 +385,7 @@ impl<'entries> Simple<'entries> {
 
     fn handle_read_dirents<R>(
         &mut self,
-        connection: &mut DirectoryConnection,
+        connection: &mut SimpleDirectoryConnection,
         max_bytes: u64,
         responder: R,
     ) -> Result<(), fidl::Error>
@@ -440,7 +396,7 @@ impl<'entries> Simple<'entries> {
         let mut fit_one = false;
 
         let (entries_iter, mut last_returned) = match &connection.seek {
-            DirectoryReadPos::Start => {
+            AlphabeticalTraversal::Start => {
                 if !Simple::encode_dirent(
                     &mut buf,
                     max_bytes,
@@ -464,18 +420,20 @@ impl<'entries> Simple<'entries> {
                 //   error[E0283]: type annotations required: cannot resolve `_: std::cmp::Ord`
                 //
                 // pointing to "range".  Same for two the other "range()" invocations below.
-                (self.entries.range::<String, _>(..), DirectoryReadPos::Dot)
+                (self.entries.range::<String, _>(..), AlphabeticalTraversal::Dot)
             }
 
-            DirectoryReadPos::Dot => (self.entries.range::<String, _>(..), DirectoryReadPos::Dot),
+            AlphabeticalTraversal::Dot => {
+                (self.entries.range::<String, _>(..), AlphabeticalTraversal::Dot)
+            }
 
-            DirectoryReadPos::Name(last_returned_name) => (
+            AlphabeticalTraversal::Name(last_returned_name) => (
                 self.entries
                     .range::<String, _>((Bound::Excluded(last_returned_name), Bound::Unbounded)),
                 connection.seek.clone(),
             ),
 
-            DirectoryReadPos::End => {
+            AlphabeticalTraversal::End => {
                 return responder(Status::OK, &mut buf.iter().cloned());
             }
         };
@@ -489,10 +447,10 @@ impl<'entries> Simple<'entries> {
                 );
             }
             fit_one = true;
-            last_returned = DirectoryReadPos::Name(name.clone());
+            last_returned = AlphabeticalTraversal::Name(name.clone());
         }
 
-        connection.seek = DirectoryReadPos::End;
+        connection.seek = AlphabeticalTraversal::End;
         return responder(Status::OK, &mut buf.iter().cloned());
     }
 }
