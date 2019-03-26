@@ -64,8 +64,12 @@ fn run() -> Result<(), Error> {
         let hd = watch_hd.clone();
         async {
             let result = match msg {
-                AdapterAdded(device_path) => await!(hd.add_adapter(device_path)).context("Error adding host"),
-                AdapterRemoved(device_path) => hd.rm_adapter(device_path).context("Error removing host"),
+                AdapterAdded(device_path) => {
+                    await!(hd.add_adapter(device_path)).context("Error adding host")
+                }
+                AdapterRemoved(device_path) => {
+                    hd.rm_adapter(device_path).context("Error removing host")
+                }
             };
             if let Err(err) = result {
                 fx_log_warn!("{:?}", err);

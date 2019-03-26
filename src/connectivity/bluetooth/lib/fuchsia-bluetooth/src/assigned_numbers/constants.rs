@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::assigned_number;
 use super::AssignedNumber;
+use crate::assigned_number;
 
 pub(super) const SERVICE_UUIDS: [AssignedNumber; 40] = [
     assigned_number!("1800", "GAP", "Generic Access"),

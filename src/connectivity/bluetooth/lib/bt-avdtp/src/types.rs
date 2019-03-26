@@ -46,18 +46,12 @@ pub enum Error {
     /// The Remote end rejected a set configuration or reconfigure command we sent,
     /// indicating this ServiceCategory (code).
     /// The indicated ServiceCategory can be retrieved using `ServiceCategory::try_from`
-    #[fail(
-        display = "Remote end rejected the command (Category = {:}, code = {:}",
-        _0, _1
-    )]
+    #[fail(display = "Remote end rejected the command (Category = {:}, code = {:}", _0, _1)]
     RemoteConfigRejected(u8, u8),
 
     /// The Remote end rejected a start or suspend command we sent, indicating this SEID and error
     /// code.
-    #[fail(
-        display = "Remote end rejected the command (SEID = {:}, code = {:}",
-        _0, _1
-    )]
+    #[fail(display = "Remote end rejected the command (SEID = {:}, code = {:}", _0, _1)]
     RemoteStreamRejected(u8, u8),
 
     /// When a message hasn't been implemented yet, the parser will return this.
@@ -344,7 +338,9 @@ pub(crate) struct SignalingHeader {
 
 impl SignalingHeader {
     pub fn new(
-        label: TxLabel, signal: SignalIdentifier, message_type: SignalingMessageType,
+        label: TxLabel,
+        signal: SignalIdentifier,
+        message_type: SignalingMessageType,
     ) -> SignalingHeader {
         SignalingHeader {
             label: label,
@@ -529,11 +525,7 @@ pub enum ServiceCapability {
     Reporting,
     /// Indicates the end point can provide recovery service as outlined in section 7.4
     /// Defined in section 8.21.4
-    Recovery {
-        recovery_type: u8,
-        max_recovery_window_size: u8,
-        max_number_media_packets: u8,
-    },
+    Recovery { recovery_type: u8, max_recovery_window_size: u8, max_number_media_packets: u8 },
     /// Indicates the codec which is supported by this end point. |codec_extra| is defined within
     /// the relevant profiles (A2DP for Audio, etc).
     /// Defined in section 8.21.5
@@ -656,10 +648,7 @@ impl Decodable for ServiceCapability {
                 let extra_len = length_of_capability - 2;
                 let mut extra = vec![0; extra_len];
                 extra.copy_from_slice(&from[4..4 + extra_len]);
-                ServiceCapability::ContentProtection {
-                    protection_type,
-                    extra,
-                }
+                ServiceCapability::ContentProtection { protection_type, extra }
             }
             Ok(ServiceCategory::MediaCodec) => {
                 let format_err = Err(Error::RequestInvalid(ErrorCode::BadPayloadFormat));
@@ -677,11 +666,7 @@ impl Decodable for ServiceCapability {
                 let extra_len = length_of_capability - 2;
                 let mut codec_extra = vec![0; extra_len];
                 codec_extra.copy_from_slice(&from[4..4 + extra_len]);
-                ServiceCapability::MediaCodec {
-                    media_type,
-                    codec_type,
-                    codec_extra,
-                }
+                ServiceCapability::MediaCodec { media_type, codec_type, codec_extra }
             }
             Ok(ServiceCategory::DelayReporting) => match length_of_capability {
                 0 => ServiceCapability::DelayReporting,
@@ -706,10 +691,7 @@ impl Encodable for ServiceCapability {
         }
         let mut cursor = Cursor::new(buf);
         cursor
-            .write(&[
-                self.to_category_byte(),
-                self.length_of_service_capabilities(),
-            ])
+            .write(&[self.to_category_byte(), self.length_of_service_capabilities()])
             .map_err(|_| Error::Encoding)?;
         match self {
             ServiceCapability::Recovery {
@@ -717,32 +699,17 @@ impl Encodable for ServiceCapability {
                 max_recovery_window_size: max_size,
                 max_number_media_packets: max_packets,
             } => {
-                cursor
-                    .write(&[*t, *max_size, *max_packets])
-                    .map_err(|_| Error::Encoding)?;
+                cursor.write(&[*t, *max_size, *max_packets]).map_err(|_| Error::Encoding)?;
             }
-            ServiceCapability::MediaCodec {
-                media_type,
-                codec_type,
-                codec_extra,
-            } => {
+            ServiceCapability::MediaCodec { media_type, codec_type, codec_extra } => {
                 cursor
                     .write(&[u8::from(media_type) << 4, codec_type.0])
                     .map_err(|_| Error::Encoding)?;
-                cursor
-                    .write(codec_extra.as_slice())
-                    .map_err(|_| Error::Encoding)?;
+                cursor.write(codec_extra.as_slice()).map_err(|_| Error::Encoding)?;
             }
-            ServiceCapability::ContentProtection {
-                protection_type,
-                extra,
-            } => {
-                cursor
-                    .write(&protection_type.to_le_bytes())
-                    .map_err(|_| Error::Encoding)?;
-                cursor
-                    .write(extra.as_slice())
-                    .map_err(|_| Error::Encoding)?;
+            ServiceCapability::ContentProtection { protection_type, extra } => {
+                cursor.write(&protection_type.to_le_bytes()).map_err(|_| Error::Encoding)?;
+                cursor.write(extra.as_slice()).map_err(|_| Error::Encoding)?;
             }
             _ => {}
         }
@@ -764,7 +731,10 @@ impl StreamInformation {
     /// Create a new StreamInformation from an ID.
     /// This will only fail if the ID given is out of the range of valid SEIDs (0x01 - 0x3E)
     pub fn new(
-        id: StreamEndpointId, in_use: bool, media_type: MediaType, endpoint_type: EndpointType,
+        id: StreamEndpointId,
+        in_use: bool,
+        media_type: MediaType,
+        endpoint_type: EndpointType,
     ) -> StreamInformation {
         StreamInformation {
             id: id,

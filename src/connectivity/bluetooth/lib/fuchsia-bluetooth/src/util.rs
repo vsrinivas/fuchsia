@@ -4,19 +4,9 @@
 
 use {
     fidl_fuchsia_bluetooth::{self, Int8},
-    fidl_fuchsia_bluetooth_control::{
-        AdapterInfo,
-        AdapterState,
-        RemoteDevice,
-    },
+    fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice},
     fidl_fuchsia_bluetooth_host::{
-        BondingData,
-        Key,
-        LeConnectionParameters,
-        LeData,
-        BredrData,
-        Ltk,
-        SecurityProperties,
+        BondingData, BredrData, Key, LeConnectionParameters, LeData, Ltk, SecurityProperties,
     },
 };
 
@@ -113,35 +103,28 @@ pub fn clone_bonding_data(bd: &BondingData) -> BondingData {
 }
 
 fn clone_le_conn_params(cp: &LeConnectionParameters) -> LeConnectionParameters {
-    LeConnectionParameters {
-        ..*cp
-    }
+    LeConnectionParameters { ..*cp }
 }
 
 fn clone_security_props(sp: &SecurityProperties) -> SecurityProperties {
-    SecurityProperties {
-        ..*sp
-    }
+    SecurityProperties { ..*sp }
 }
 
 fn clone_key(key: &Key) -> Key {
-    Key {
-        security_properties: clone_security_props(&key.security_properties),
-        ..*key
-    }
+    Key { security_properties: clone_security_props(&key.security_properties), ..*key }
 }
 
 fn clone_ltk(ltk: &Ltk) -> Ltk {
-    Ltk {
-        key: clone_key(&ltk.key),
-        ..*ltk
-    }
+    Ltk { key: clone_key(&ltk.key), ..*ltk }
 }
 
 fn clone_le_data(le: &LeData) -> LeData {
     LeData {
         address: le.address.clone(),
-        connection_parameters: le.connection_parameters.as_ref().map(|v| Box::new(clone_le_conn_params(&v))),
+        connection_parameters: le
+            .connection_parameters
+            .as_ref()
+            .map(|v| Box::new(clone_le_conn_params(&v))),
         services: le.services.clone(),
         ltk: le.ltk.as_ref().map(|v| Box::new(clone_ltk(&v))),
         irk: le.irk.as_ref().map(|v| Box::new(clone_key(&v))),
@@ -163,8 +146,8 @@ fn clone_bredr_data(bredr: &BredrData) -> BredrData {
 pub fn clone_remote_device(d: &RemoteDevice) -> RemoteDevice {
     fn copy_option_int8(opt: &Option<Box<Int8>>) -> Option<Box<Int8>> {
         match opt {
-            Some(i) => Some(Box::new(Int8{ value: i.value })),
-            None => None
+            Some(i) => Some(Box::new(Int8 { value: i.value })),
+            None => None,
         }
     }
     RemoteDevice {

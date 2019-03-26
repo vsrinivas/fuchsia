@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    failure::Fail,
-    fidl_fuchsia_bluetooth as bt,
-};
+use {failure::Fail, fidl_fuchsia_bluetooth as bt};
 
 /// Error type that can be constructed from a Bluetooth FIDL Error or from on its own.
 #[derive(Debug, Fail)]
@@ -17,9 +14,7 @@ pub struct Error {
 impl Error {
     /// Constructs an Error with a message.
     pub fn new(msg: &str) -> Error {
-        Error {
-            message: msg.to_string(),
-        }
+        Error { message: msg.to_string() }
     }
 }
 
@@ -36,8 +31,6 @@ impl From<bt::Error> for Error {
 
 impl From<fidl::Error> for Error {
     fn from(err: fidl::Error) -> Error {
-        Error {
-            message: format!("FIDL error: {}", err),
-        }
+        Error { message: format!("FIDL error: {}", err) }
     }
 }

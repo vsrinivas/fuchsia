@@ -28,16 +28,15 @@
 //!   ```
 
 use {
-    failure::{Error, format_err},
+    failure::{format_err, Error},
     fuchsia_async::TimeoutExt,
     fuchsia_zircon as zx,
     futures::{future::FutureObj, task, Future, FutureExt, Poll},
-    parking_lot::{RwLock, RwLockReadGuard, MappedRwLockReadGuard, RwLockWriteGuard, MappedRwLockWriteGuard},
-    slab::Slab,
-    std::{
-        pin::Pin,
-        sync::Arc,
+    parking_lot::{
+        MappedRwLockReadGuard, MappedRwLockWriteGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
     },
+    slab::Slab,
+    std::{pin::Pin, sync::Arc},
 };
 
 use crate::expectation::Predicate;
@@ -142,7 +141,9 @@ where
         FutureObj::new(Box::pin(
             ExpectationFuture::new(self.clone(), expectation)
                 .map(|s| Ok(s))
-                .on_timeout(timeout.after_now(), move || Err(format_err!("Timed out waiting for expectation: {}", msg))),
+                .on_timeout(timeout.after_now(), move || {
+                    Err(format_err!("Timed out waiting for expectation: {}", msg))
+                }),
         ))
     }
 }
@@ -153,11 +154,11 @@ where
 /// This type is the easiest way to get an implementation of 'ExpectableState'
 /// to await upon. The Aux type `A` is commonly used to hold a FIDL Proxy to
 /// drive the behavior under test.
-pub struct ExpectationHarness<S, A>( Arc<RwLock<HarnessInner<S, A>>> );
+pub struct ExpectationHarness<S, A>(Arc<RwLock<HarnessInner<S, A>>>);
 
 impl<S, A> Clone for ExpectationHarness<S, A> {
     fn clone(&self) -> ExpectationHarness<S, A> {
-        ExpectationHarness( self.0.clone() )
+        ExpectationHarness(self.0.clone())
     }
 }
 
@@ -207,7 +208,9 @@ impl<S: Clone + 'static, A> ExpectableState for ExpectationHarness<S, A> {
 impl<S: Default, A> ExpectationHarness<S, A> {
     pub fn new(aux: A) -> ExpectationHarness<S, A> {
         ExpectationHarness(Arc::new(RwLock::new(HarnessInner {
-            aux, tasks: Slab::new(), state: S::default(),
+            aux,
+            tasks: Slab::new(),
+            state: S::default(),
         })))
     }
 
@@ -219,4 +222,3 @@ impl<S: Default, A> ExpectationHarness<S, A> {
         RwLockWriteGuard::map(self.0.write(), |harness| &mut harness.state)
     }
 }
-

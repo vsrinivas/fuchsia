@@ -6,9 +6,11 @@
 
 use {
     failure::{format_err, Error},
-    fidl_fuchsia_hardware_bluetooth::HciSynchronousProxy,
     fidl_fuchsia_device::ControllerSynchronousProxy,
-    fidl_fuchsia_device_test::{CONTROL_DEVICE, DeviceSynchronousProxy, RootDeviceSynchronousProxy},
+    fidl_fuchsia_device_test::{
+        DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE,
+    },
+    fidl_fuchsia_hardware_bluetooth::HciSynchronousProxy,
     fuchsia_zircon as zx,
     rand::{self, Rng},
     std::{

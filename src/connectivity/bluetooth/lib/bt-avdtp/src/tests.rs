@@ -51,16 +51,16 @@ pub(crate) fn expect_remote_recv(expected: &[u8], remote: &zx::Socket) {
     assert!(r.is_ok());
     let response = r.unwrap();
     if expected.len() != response.len() {
-        panic!(
-            "received wrong length\nexpected: {:?}\nreceived: {:?}",
-            expected, response
-        );
+        panic!("received wrong length\nexpected: {:?}\nreceived: {:?}", expected, response);
     }
     assert_eq!(expected, &response[0..expected.len()]);
 }
 
 fn stream_request_response(
-    exec: &mut fasync::Executor, stream: &mut RequestStream, remote: &zx::Socket, cmd: &[u8],
+    exec: &mut fasync::Executor,
+    stream: &mut RequestStream,
+    remote: &zx::Socket,
+    cmd: &[u8],
     expect: &[u8],
 ) {
     assert!(remote.write(cmd).is_ok());
@@ -241,9 +241,7 @@ fn exhaust_request_ids() {
     }
 
     for idx in 0..4 {
-        assert!(exec
-            .run_until_stalled(&mut response_futures[idx])
-            .is_ready());
+        assert!(exec.run_until_stalled(&mut response_futures[idx]).is_ready());
     }
 
     // We should be able to make new requests now.
@@ -268,10 +266,7 @@ fn command_timeout() {
     assert!(complete.is_pending());
 
     exec.wake_next_timer();
-    assert_eq!(
-        Poll::Ready(Err(Error::Timeout)),
-        exec.run_until_stalled(&mut response_fut)
-    );
+    assert_eq!(Poll::Ready(Err(Error::Timeout)), exec.run_until_stalled(&mut response_fut));
 
     // We should be able to make a new request now.
     let mut another_fut = Box::pin(peer.discover());
@@ -404,12 +399,8 @@ fn discover_command_works() {
     };
 
     assert_eq!(3, endpoints.len());
-    let e1 = StreamInformation::new(
-        StreamEndpointId(0x3E),
-        false,
-        MediaType::Audio,
-        EndpointType::Sink,
-    );
+    let e1 =
+        StreamInformation::new(StreamEndpointId(0x3E), false, MediaType::Audio, EndpointType::Sink);
     assert_eq!(e1, endpoints[0]);
     let e2 = StreamInformation::new(
         StreamEndpointId(0x01),
@@ -477,10 +468,7 @@ fn get_capabilities_event_responder_send_works() {
     assert!(remote.write(&CMD_GET_CAPABILITIES).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
-        Request::GetCapabilities {
-            responder,
-            stream_id,
-        } => {
+        Request::GetCapabilities { responder, stream_id } => {
             assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
             let capabilities = &[
                 ServiceCapability::MediaTransport,
@@ -537,10 +525,7 @@ fn get_capabilities_responder_reject_works() {
     assert!(remote.write(&CMD_GET_CAPABILITIES).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
-        Request::GetCapabilities {
-            responder,
-            stream_id,
-        } => {
+        Request::GetCapabilities { responder, stream_id } => {
             assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
             responder.reject(ErrorCode::BadAcpSeid)
         }
@@ -669,10 +654,7 @@ fn get_all_capabilities_event_responder_send_works() {
     assert!(remote.write(&CMD_GET_ALL_CAPABILITIES).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
-        Request::GetAllCapabilities {
-            responder,
-            stream_id,
-        } => {
+        Request::GetAllCapabilities { responder, stream_id } => {
             assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
             let capabilities = &[
                 ServiceCapability::MediaTransport,
@@ -729,10 +711,7 @@ fn get_all_capabilities_responder_reject_works() {
     assert!(remote.write(&CMD_GET_ALL_CAPABILITIES).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
-        Request::GetAllCapabilities {
-            responder,
-            stream_id,
-        } => {
+        Request::GetAllCapabilities { responder, stream_id } => {
             assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
             responder.reject(ErrorCode::BadAcpSeid)
         }
@@ -861,10 +840,7 @@ fn get_configuration_event_responder_send_works() {
     assert!(remote.write(&CMD_GET_CONFIGURATION).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
-        Request::GetConfiguration {
-            responder,
-            stream_id,
-        } => {
+        Request::GetConfiguration { responder, stream_id } => {
             assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
             let capabilities = &[
                 ServiceCapability::MediaTransport,
@@ -921,10 +897,7 @@ fn get_configuration_responder_reject_works() {
     assert!(remote.write(&CMD_GET_CONFIGURATION).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
-        Request::GetConfiguration {
-            responder,
-            stream_id,
-        } => {
+        Request::GetConfiguration { responder, stream_id } => {
             assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
             responder.reject(ErrorCode::BadAcpSeid)
         }
@@ -1192,10 +1165,7 @@ macro_rules! seid_event_responder_send_test {
             assert!(remote.write(&$command_var).is_ok());
 
             let respond_res = match next_request(&mut stream, &mut exec) {
-                Request::$variant {
-                    responder,
-                    stream_id,
-                } => {
+                Request::$variant { responder, stream_id } => {
                     assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
                     responder.send()
                 }
@@ -1223,10 +1193,7 @@ macro_rules! seids_event_responder_send_test {
             assert!(remote.write(&$command_var).is_ok());
 
             let respond_res = match next_request(&mut stream, &mut exec) {
-                Request::$variant {
-                    responder,
-                    stream_ids,
-                } => {
+                Request::$variant { responder, stream_ids } => {
                     assert_eq!(
                         &StreamEndpointId::try_from(12).unwrap(),
                         stream_ids.get(0).unwrap()
@@ -1257,10 +1224,7 @@ macro_rules! seid_event_responder_reject_test {
             assert!(remote.write(&$command_var).is_ok());
 
             let respond_res = match next_request(&mut stream, &mut exec) {
-                Request::$variant {
-                    responder,
-                    stream_id,
-                } => {
+                Request::$variant { responder, stream_id } => {
                     assert_eq!(StreamEndpointId::try_from(12).unwrap(), stream_id);
                     responder.reject(ErrorCode::BadAcpSeid)
                 }
@@ -1288,10 +1252,7 @@ macro_rules! stream_event_responder_reject_test {
             assert!(remote.write(&$command_var).is_ok());
 
             let respond_res = match next_request(&mut stream, &mut exec) {
-                Request::$variant {
-                    responder,
-                    stream_ids,
-                } => {
+                Request::$variant { responder, stream_ids } => {
                     let stream_id = stream_ids.get(0).unwrap();
                     assert_eq!(&StreamEndpointId::try_from(12).unwrap(), stream_id);
                     responder.reject(stream_id, ErrorCode::BadAcpSeid)
@@ -1375,12 +1336,7 @@ const CMD_SUSPEND_VALUE: &'static u8 = &0x09;
 incoming_cmd_length_fail_test!(suspend_length, *CMD_SUSPEND_VALUE, 0);
 seids_command_test!(suspend_command_works, *CMD_SUSPEND_VALUE, suspend);
 seids_command_reject_test!(suspend_command_reject_works, *CMD_SUSPEND_VALUE, suspend);
-seids_event_responder_send_test!(
-    suspend_responder_send,
-    Suspend,
-    *CMD_SUSPEND_VALUE,
-    CMD_SUSPEND
-);
+seids_event_responder_send_test!(suspend_responder_send, Suspend, *CMD_SUSPEND_VALUE, CMD_SUSPEND);
 stream_event_responder_reject_test!(
     suspend_responder_reject,
     Suspend,
@@ -1425,16 +1381,15 @@ fn abort_sent_no_response() {
     assert!(complete.is_pending());
 
     exec.wake_next_timer();
-    assert_eq!(
-        Poll::Ready(Err(Error::Timeout)),
-        exec.run_until_stalled(&mut response_fut)
-    );
+    assert_eq!(Poll::Ready(Err(Error::Timeout)), exec.run_until_stalled(&mut response_fut));
 }
 
 // Set Configuration
 
 fn expect_config_recv_cap_okay(
-    cmd: &[u8], local_seid: StreamEndpointId, remote_seid: StreamEndpointId,
+    cmd: &[u8],
+    local_seid: StreamEndpointId,
+    remote_seid: StreamEndpointId,
     capability: ServiceCapability,
 ) {
     let (mut stream, _, remote, mut exec) = setup_stream_test();
@@ -1647,10 +1602,7 @@ fn set_config_error_response() {
     assert!(remote.write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
-    assert_eq!(
-        Poll::Ready(Err(Error::RemoteConfigRejected(0x07, 0x29))),
-        complete
-    );
+    assert_eq!(Poll::Ready(Err(Error::RemoteConfigRejected(0x07, 0x29))), complete);
 }
 
 // Set Config: Reporting
@@ -1882,11 +1834,7 @@ fn reconfig_event_responder_send_works() {
     assert!(remote.write(reconfigure_cmd).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
-        Request::Reconfigure {
-            responder,
-            local_stream_id,
-            capabilities,
-        } => {
+        Request::Reconfigure { responder, local_stream_id, capabilities } => {
             assert_eq!(StreamEndpointId(1), local_stream_id);
             assert_eq!(
                 ServiceCapability::MediaCodec {
@@ -1921,11 +1869,7 @@ fn reconfig_event_responder_reject_works() {
     assert!(remote.write(reconfigure_cmd).is_ok());
 
     let respond_res = match next_request(&mut stream, &mut exec) {
-        Request::Reconfigure {
-            responder,
-            local_stream_id,
-            capabilities,
-        } => {
+        Request::Reconfigure { responder, local_stream_id, capabilities } => {
             assert_eq!(StreamEndpointId(1), local_stream_id);
             assert_eq!(
                 ServiceCapability::MediaCodec {
@@ -2012,10 +1956,7 @@ fn reconfigure_error_response() {
     ];
     let mut response_fut = Box::pin(peer.reconfigure(&StreamEndpointId(1), &caps));
     // This isn't valid, you can't reconfigure Media Transport
-    assert_eq!(
-        Poll::Ready(Err(Error::Encoding)),
-        exec.run_until_stalled(&mut response_fut)
-    );
+    assert_eq!(Poll::Ready(Err(Error::Encoding)), exec.run_until_stalled(&mut response_fut));
 
     let caps = vec![ServiceCapability::MediaCodec {
         media_type: MediaType::Audio,
@@ -2053,8 +1994,5 @@ fn reconfigure_error_response() {
     assert!(remote.write(response).is_ok());
 
     let complete = exec.run_until_stalled(&mut response_fut);
-    assert_eq!(
-        Poll::Ready(Err(Error::RemoteConfigRejected(0x00, 0x13))),
-        complete
-    );
+    assert_eq!(Poll::Ready(Err(Error::RemoteConfigRejected(0x00, 0x13))), complete);
 }

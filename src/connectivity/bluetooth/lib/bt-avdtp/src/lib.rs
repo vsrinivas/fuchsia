@@ -76,9 +76,7 @@ impl Peer {
             }
         }
 
-        RequestStream {
-            inner: self.inner.clone(),
-        }
+        RequestStream { inner: self.inner.clone() }
     }
 
     /// Send a Stream End Point Discovery (Sec 8.6) command to the remote peer.
@@ -102,7 +100,8 @@ impl Peer {
     /// Error will be RemoteRejected with the error code reported by the remote
     /// if the remote peer rejects the command.
     pub async fn get_capabilities<'a>(
-        &'a self, stream_id: &'a StreamEndpointId,
+        &'a self,
+        stream_id: &'a StreamEndpointId,
     ) -> Result<Vec<ServiceCapability>> {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<GetCapabilitiesResponse> =
@@ -120,7 +119,8 @@ impl Peer {
     /// Error will be RemoteRejected with the error code reported by the remote
     /// if the remote peer rejects the command.
     pub async fn get_all_capabilities<'a>(
-        &'a self, stream_id: &'a StreamEndpointId,
+        &'a self,
+        stream_id: &'a StreamEndpointId,
     ) -> Result<Vec<ServiceCapability>> {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<GetCapabilitiesResponse> =
@@ -138,7 +138,9 @@ impl Peer {
     /// Returns Ok(()) if the command was accepted, and RemoteConfigRejected
     /// if the remote refused.
     pub async fn set_configuration<'a>(
-        &'a self, stream_id: &'a StreamEndpointId, local_stream_id: &'a StreamEndpointId,
+        &'a self,
+        stream_id: &'a StreamEndpointId,
+        local_stream_id: &'a StreamEndpointId,
         capabilities: &'a [ServiceCapability],
     ) -> Result<()> {
         assert!(!capabilities.is_empty(), "must set at least one capability");
@@ -163,7 +165,8 @@ impl Peer {
     /// Error will be RemoteRejected with the error code reported by the remote
     /// if the remote peer rejects this command.
     pub async fn get_configuration<'a>(
-        &'a self, stream_id: &'a StreamEndpointId,
+        &'a self,
+        stream_id: &'a StreamEndpointId,
     ) -> Result<Vec<ServiceCapability>> {
         let stream_params = &[stream_id.to_msg()];
         let response: Result<GetCapabilitiesResponse> =
@@ -183,7 +186,9 @@ impl Peer {
     /// Returns Ok(()) if the command was accepted, and RemoteConfigRejected
     /// if the remote refused.
     pub async fn reconfigure<'a>(
-        &'a self, stream_id: &'a StreamEndpointId, capabilities: &'a [ServiceCapability],
+        &'a self,
+        stream_id: &'a StreamEndpointId,
+        capabilities: &'a [ServiceCapability],
     ) -> Result<()> {
         assert!(!capabilities.is_empty(), "must set at least one capability");
         let mut params: Vec<u8> = Vec::new();
@@ -274,7 +279,9 @@ impl Peer {
     /// Sends a signal on the socket and receive a future that will complete
     /// when we get the expected reponse.
     async fn send_command<'a, D: Decodable>(
-        &'a self, signal: SignalIdentifier, payload: &'a [u8],
+        &'a self,
+        signal: SignalIdentifier,
+        payload: &'a [u8],
     ) -> Result<D> {
         let id = self.inner.add_response_waiter()?;
         let header = SignalingHeader::new(id, signal, SignalingMessageType::Command);
@@ -288,10 +295,7 @@ impl Peer {
             self.inner.send_signal(buf.as_slice())?;
         }
 
-        let mut response = CommandResponse {
-            id: header.label(),
-            inner: Some(self.inner.clone()),
-        };
+        let mut response = CommandResponse { id: header.label(), inner: Some(self.inner.clone()) };
 
         let mut timeout = fasync::Timer::new(Time::after(Peer::command_timeout())).fuse();
 
@@ -367,11 +371,7 @@ macro_rules! parse_one_seid {
         } else {
             Ok(Request::$request_variant {
                 stream_id: StreamEndpointId::from_msg(&$body[0]),
-                responder: $responder_type {
-                    signal: $signal,
-                    peer: $peer,
-                    id: $id,
-                },
+                responder: $responder_type { signal: $signal, peer: $peer, id: $id },
             })
         }
     };
@@ -406,7 +406,10 @@ impl Request {
     }
 
     fn parse(
-        peer: Arc<PeerInner>, id: TxLabel, signal: SignalIdentifier, body: &[u8],
+        peer: Arc<PeerInner>,
+        id: TxLabel,
+        signal: SignalIdentifier,
+        body: &[u8],
     ) -> Result<Request> {
         match signal {
             SignalIdentifier::Discover => {
@@ -414,18 +417,11 @@ impl Request {
                 if body.len() > 0 {
                     return Err(Error::RequestInvalid(ErrorCode::BadLength));
                 }
-                Ok(Request::Discover {
-                    responder: DiscoverResponder { peer: peer, id: id },
-                })
+                Ok(Request::Discover { responder: DiscoverResponder { peer: peer, id: id } })
             }
-            SignalIdentifier::GetCapabilities => parse_one_seid!(
-                body,
-                signal,
-                peer,
-                id,
-                GetCapabilities,
-                GetCapabilitiesResponder
-            ),
+            SignalIdentifier::GetCapabilities => {
+                parse_one_seid!(body, signal, peer, id, GetCapabilities, GetCapabilitiesResponder)
+            }
             SignalIdentifier::GetAllCapabilities => parse_one_seid!(
                 body,
                 signal,
@@ -446,14 +442,9 @@ impl Request {
                     responder: ConfigureResponder { signal, peer, id },
                 })
             }
-            SignalIdentifier::GetConfiguration => parse_one_seid!(
-                body,
-                signal,
-                peer,
-                id,
-                GetConfiguration,
-                GetCapabilitiesResponder
-            ),
+            SignalIdentifier::GetConfiguration => {
+                parse_one_seid!(body, signal, peer, id, GetConfiguration, GetCapabilitiesResponder)
+            }
             SignalIdentifier::Reconfigure => {
                 if body.len() < 3 {
                     return Err(Error::RequestInvalid(ErrorCode::BadLength));
@@ -522,13 +513,11 @@ impl Stream for RequestStream {
                         return Poll::Pending;
                     }
                     Err(Error::RequestInvalidExtra(code, extra)) => {
-                        self.inner
-                            .send_reject_params(label, signal, &[extra, u8::from(&code)])?;
+                        self.inner.send_reject_params(label, signal, &[extra, u8::from(&code)])?;
                         return Poll::Pending;
                     }
                     Err(Error::UnimplementedMessage) => {
-                        self.inner
-                            .send_reject(label, signal, ErrorCode::NotSupportedCommand)?;
+                        self.inner.send_reject(label, signal, ErrorCode::NotSupportedCommand)?;
                         return Poll::Pending;
                     }
                     x => Some(x),
@@ -574,9 +563,7 @@ impl Decodable for DiscoverResponse {
             idx += endpoint.encoded_len();
             endpoints.push(endpoint);
         }
-        Ok(DiscoverResponse {
-            endpoints: endpoints,
-        })
+        Ok(DiscoverResponse { endpoints: endpoints })
     }
 }
 
@@ -601,13 +588,11 @@ impl DiscoverResponder {
             endpoint.encode(&mut params[idx..idx + endpoint.encoded_len()])?;
             idx += endpoint.encoded_len();
         }
-        self.peer
-            .send_response(self.id, SignalIdentifier::Discover, &params)
+        self.peer.send_response(self.id, SignalIdentifier::Discover, &params)
     }
 
     pub fn reject(self, error_code: ErrorCode) -> Result<()> {
-        self.peer
-            .send_reject(self.id, SignalIdentifier::Discover, error_code)
+        self.peer.send_reject(self.id, SignalIdentifier::Discover, error_code)
     }
 }
 
@@ -651,9 +636,7 @@ impl Decodable for GetCapabilitiesResponse {
             idx = idx + capability.encoded_len();
             capabilities.push(capability);
         }
-        Ok(GetCapabilitiesResponse {
-            capabilities: capabilities,
-        })
+        Ok(GetCapabilitiesResponse { capabilities: capabilities })
     }
 }
 
@@ -708,14 +691,15 @@ impl ConfigureResponder {
     }
 
     pub fn reject(
-        self, capability: Option<&ServiceCapability>, error_code: ErrorCode,
+        self,
+        capability: Option<&ServiceCapability>,
+        error_code: ErrorCode,
     ) -> Result<()> {
         let service_byte: u8 = match capability {
             None => 0x0, // If no service category applies, see notes in Sec 8.11.3 or 8.9.3
             Some(cap) => cap.to_category_byte(),
         };
-        self.peer
-            .send_reject_params(self.id, self.signal, &[service_byte, u8::from(&error_code)])
+        self.peer.send_reject_params(self.id, self.signal, &[service_byte, u8::from(&error_code)])
     }
 }
 
@@ -785,7 +769,8 @@ impl ResponseWaiter {
 }
 
 fn decode_signaling_response<D: Decodable>(
-    expected_signal: SignalIdentifier, buf: Vec<u8>,
+    expected_signal: SignalIdentifier,
+    buf: Vec<u8>,
 ) -> Result<D> {
     let header = SignalingHeader::decode(buf.as_slice())?;
     if header.signal() != expected_signal {
@@ -795,16 +780,10 @@ fn decode_signaling_response<D: Decodable>(
         let params_idx = header.encoded_len();
         match header.signal() {
             SignalIdentifier::Start | SignalIdentifier::Suspend => {
-                return Err(Error::RemoteStreamRejected(
-                    buf[params_idx] >> 2,
-                    buf[params_idx + 1],
-                ));
+                return Err(Error::RemoteStreamRejected(buf[params_idx] >> 2, buf[params_idx + 1]));
             }
             SignalIdentifier::SetConfiguration | SignalIdentifier::Reconfigure => {
-                return Err(Error::RemoteConfigRejected(
-                    buf[params_idx],
-                    buf[params_idx + 1],
-                ));
+                return Err(Error::RemoteConfigRejected(buf[params_idx], buf[params_idx + 1]));
             }
             _ => return Err(Error::RemoteRejected(buf[params_idx])),
         };
@@ -833,10 +812,7 @@ impl futures::Future for CommandResponse {
         }
 
         if let Poll::Ready(Ok(_)) = res {
-            let inner = this
-                .inner
-                .take()
-                .expect("CommandResponse polled after completion");
+            let inner = this.inner.take().expect("CommandResponse polled after completion");
             inner.wake_any();
         }
 
@@ -881,10 +857,7 @@ impl PeerInner {
     /// Add a response waiter, and return a id that can be used to send the
     /// transaction.  Responses then can be received using poll_recv_response
     fn add_response_waiter(&self) -> Result<TxLabel> {
-        let key = self
-            .response_waiters
-            .lock()
-            .insert(ResponseWaiter::WillPoll);
+        let key = self.response_waiters.lock().insert(ResponseWaiter::WillPoll);
         let id = TxLabel::try_from(key as u8);
         if id.is_err() {
             fx_log_warn!(tag: "avdtp", "Transaction IDs are exhausted");
@@ -937,11 +910,7 @@ impl PeerInner {
         let idx = usize::from(label);
         // We expect() below because the label above came from an internally-created object,
         // so the waiters should always exist in the map.
-        if waiters
-            .get(idx)
-            .expect("Polled unregistered waiter")
-            .is_received()
-        {
+        if waiters.get(idx).expect("Polled unregistered waiter").is_received() {
             // We got our response.
             let buf = waiters.remove(idx).unwrap_received();
             Poll::Ready(Ok(buf))
@@ -1066,13 +1035,19 @@ impl PeerInner {
     }
 
     fn send_reject(
-        &self, label: TxLabel, signal: SignalIdentifier, error_code: ErrorCode,
+        &self,
+        label: TxLabel,
+        signal: SignalIdentifier,
+        error_code: ErrorCode,
     ) -> Result<()> {
         self.send_reject_params(label, signal, &[u8::from(&error_code)])
     }
 
     fn send_reject_params(
-        &self, label: TxLabel, signal: SignalIdentifier, params: &[u8],
+        &self,
+        label: TxLabel,
+        signal: SignalIdentifier,
+        params: &[u8],
     ) -> Result<()> {
         let header = SignalingHeader::new(label, signal, SignalingMessageType::ResponseReject);
         let mut packet = vec![0 as u8; header.encoded_len() + params.len()];
@@ -1082,10 +1057,7 @@ impl PeerInner {
     }
 
     fn send_signal(&self, data: &[u8]) -> Result<()> {
-        self.signaling
-            .as_ref()
-            .write(data)
-            .map_err(|x| Error::PeerWrite(x))?;
+        self.signaling.as_ref().write(data).map_err(|x| Error::PeerWrite(x))?;
         Ok(())
     }
 }

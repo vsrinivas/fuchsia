@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_hardware_bluetooth::HostSynchronousProxy,
     fuchsia_zircon as zx,
     std::{
-        fs::{File, read_dir},
+        fs::{read_dir, File},
         path::PathBuf,
     },
 };
@@ -15,9 +15,7 @@ use {
 /// Returns the filesystem paths to the all bt-host devices.
 pub fn list_host_devices() -> Vec<PathBuf> {
     let paths = read_dir("/dev/class/bt-host/").unwrap();
-    paths
-        .filter_map(|entry| entry.ok().and_then(|e| Some(e.path())))
-        .collect::<Vec<PathBuf>>()
+    paths.filter_map(|entry| entry.ok().and_then(|e| Some(e.path()))).collect::<Vec<PathBuf>>()
 }
 
 /// Opens a Host Fidl interface on a bt-host device using a Fidl message

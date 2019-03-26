@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    fidl_fuchsia_bluetooth,
-    std::fmt,
-};
+use {fidl_fuchsia_bluetooth, std::fmt};
 
 macro_rules! bt_fidl_wrap {
     ($x:ident) => {

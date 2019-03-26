@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use self::constants::{
-    CHARACTERISTIC_NUMBERS,
-    CUSTOM_SERVICE_UUIDS,
-    DESCRIPTOR_NUMBERS,
-    SERVICE_UUIDS,
+    CHARACTERISTIC_NUMBERS, CUSTOM_SERVICE_UUIDS, DESCRIPTOR_NUMBERS, SERVICE_UUIDS,
 };
 
 mod constants;
@@ -30,9 +27,9 @@ impl AssignedNumber {
     /// leading 0s.
     pub fn matches(&self, identifier: &str) -> bool {
         let identifier = &identifier.to_uppercase();
-        self.matches_abbreviation(identifier) ||
-            self.matches_name(identifier) ||
-            self.matches_number(identifier)
+        self.matches_abbreviation(identifier)
+            || self.matches_name(identifier)
+            || self.matches_number(identifier)
     }
 
     fn matches_abbreviation(&self, identifier: &str) -> bool {
@@ -44,10 +41,7 @@ impl AssignedNumber {
     }
 
     fn short_id(&self) -> &str {
-        self.number
-            .split("-")
-            .next()
-            .expect("split iter always has at least 1 item")
+        self.number.split("-").next().expect("split iter always has at least 1 item")
     }
 
     /// Matches full uuid or short form of Bluetooth SIG assigned numbers.
@@ -90,33 +84,27 @@ pub fn find_descriptor_number(identifier: &str) -> Option<AssignedNumber> {
 
 #[macro_export]
 macro_rules! assigned_number {
-    ($num:expr, $abbr:expr, $name:expr) => (
+    ($num:expr, $abbr:expr, $name:expr) => {
         AssignedNumber {
             number: concat!("0000", $num, "-0000-1000-8000-00805F9B34FB"),
             abbreviation: Some($abbr),
-            name: $name
+            name: $name,
         }
-    );
-    ($num:expr, $name:expr) => (
+    };
+    ($num:expr, $name:expr) => {
         AssignedNumber {
             number: concat!("0000", $num, "-0000-1000-8000-00805F9B34FB"),
             abbreviation: None,
-            name: $name
+            name: $name,
         }
-    );
+    };
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::{
-        find_characteristic_number,
-        find_descriptor_number,
-        find_service_uuid,
-        CHARACTERISTIC_NUMBERS,
-        CUSTOM_SERVICE_UUIDS,
-        DESCRIPTOR_NUMBERS,
-        SERVICE_UUIDS,
+        find_characteristic_number, find_descriptor_number, find_service_uuid,
+        CHARACTERISTIC_NUMBERS, CUSTOM_SERVICE_UUIDS, DESCRIPTOR_NUMBERS, SERVICE_UUIDS,
     };
 
     #[test]
@@ -152,7 +140,10 @@ mod tests {
         assert_eq!(find_service_uuid("183A"), Some(SERVICE_UUIDS[39]));
         assert_eq!(find_service_uuid("0x183a"), Some(SERVICE_UUIDS[39]));
         assert_eq!(find_service_uuid("0000183a"), Some(SERVICE_UUIDS[39]));
-        assert_eq!(find_service_uuid("0000183A-0000-1000-8000-00805F9B34FB"), Some(SERVICE_UUIDS[39]));
+        assert_eq!(
+            find_service_uuid("0000183A-0000-1000-8000-00805F9B34FB"),
+            Some(SERVICE_UUIDS[39])
+        );
         assert_eq!(find_service_uuid("0000183A-0000-1000-8000-000000000000"), None);
         assert_eq!(find_service_uuid("ZZZZZZZZ"), None);
         assert_eq!(find_service_uuid("ZZZZZZZZ-0000-1000-8000-00805F9B34FB"), None);

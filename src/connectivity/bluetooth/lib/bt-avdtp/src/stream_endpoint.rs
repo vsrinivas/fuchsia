@@ -35,11 +35,11 @@ enum StreamState {
 impl StreamState {
     fn configured(&self) -> bool {
         match self {
-            StreamState::Configured |
-                StreamState::Opening |
-                StreamState::Open |
-                StreamState::Streaming => true,
-            _ => false
+            StreamState::Configured
+            | StreamState::Opening
+            | StreamState::Open
+            | StreamState::Streaming => true,
+            _ => false,
         }
     }
 }
@@ -76,7 +76,9 @@ impl StreamEndpoint {
     /// |id| must be in the valid range for a StreamEndpointId (0x01 - 0x3E).
     /// StreamEndpooints start in the Idle state.
     pub fn new(
-        id: u8, media_type: MediaType, endpoint_type: EndpointType,
+        id: u8,
+        media_type: MediaType,
+        endpoint_type: EndpointType,
         capabilities: Vec<ServiceCapability>,
     ) -> Result<StreamEndpoint> {
         let seid = StreamEndpointId::try_from(id)?;
@@ -97,7 +99,9 @@ impl StreamEndpoint {
     /// If the stream is not in an Idle state, fails with Err(InvalidState).
     /// Used for the Stream Configuration procedure, see Section 6.9
     pub fn configure(
-        &mut self, remote_id: &StreamEndpointId, capabilities: Vec<ServiceCapability>,
+        &mut self,
+        remote_id: &StreamEndpointId,
+        capabilities: Vec<ServiceCapability>,
     ) -> Result<()> {
         if self.state != StreamState::Idle {
             return Err(Error::InvalidState);
@@ -130,10 +134,8 @@ impl StreamEndpoint {
             return Err(Error::OutOfRange);
         }
         // Should only replace the capabilities that have been reconfigured. See Section 8.11.2
-        let to_replace: std::vec::Vec<_> = capabilities
-            .iter()
-            .map(|x| std::mem::discriminant(x))
-            .collect();
+        let to_replace: std::vec::Vec<_> =
+            capabilities.iter().map(|x| std::mem::discriminant(x)).collect();
         self.capabilities.retain(|x| {
             let disc = std::mem::discriminant(x);
             !to_replace.contains(&disc)
@@ -185,7 +187,9 @@ impl StreamEndpoint {
     /// If the channels are not closed in 3 seconds, it initates an abort prodecure with the
     /// remote |peer| and returns the result of that.
     pub async fn release<'a>(
-        &'a mut self, responder: SimpleResponder, peer: &'a Peer,
+        &'a mut self,
+        responder: SimpleResponder,
+        peer: &'a Peer,
     ) -> Result<()> {
         if self.state != StreamState::Open && self.state != StreamState::Streaming {
             return responder.reject(ErrorCode::BadState);
@@ -271,10 +275,7 @@ impl StreamEndpoint {
     /// Panics if the media stream is alraedy taken, or if the stream is not open.
     pub fn take_transport(&mut self) -> MediaStream {
         let mut lock = self.stream_held.lock();
-        assert!(
-            !*lock && self.transport.is_some(),
-            "Media stream has already been taken."
-        );
+        assert!(!*lock && self.transport.is_some(), "Media stream has already been taken.");
 
         *lock = true;
 
@@ -360,10 +361,7 @@ mod tests {
     fn establish_stream(s: &mut StreamEndpoint) -> zx::Socket {
         assert_eq!(Ok(()), s.establish());
         let (remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        assert_eq!(
-            Ok(false),
-            s.receive_channel(fasync::Socket::from_socket(transport).unwrap())
-        );
+        assert_eq!(Ok(false), s.receive_channel(fasync::Socket::from_socket(transport).unwrap()));
         remote
     }
 
@@ -428,10 +426,7 @@ mod tests {
         );
 
         // Can't reconfigure non-application types
-        assert_eq!(
-            Err(Error::OutOfRange),
-            s.reconfigure(vec![ServiceCapability::MediaTransport])
-        );
+        assert_eq!(Err(Error::OutOfRange), s.reconfigure(vec![ServiceCapability::MediaTransport]));
 
         // Can't configure or reconfigure while streaming
         assert_eq!(Ok(()), s.start());
@@ -495,19 +490,13 @@ mod tests {
 
         assert_eq!(Err(zx::Status::PEER_CLOSED), remote.read(buf));
 
-        assert_eq!(
-            Ok(()),
-            s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport])
-        );
+        assert_eq!(Ok(()), s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]));
 
         assert_eq!(Ok(()), s.establish());
 
         // And we should be able to give a channel now.
         let (_remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        assert_eq!(
-            Ok(false),
-            s.receive_channel(fasync::Socket::from_socket(transport).unwrap())
-        );
+        assert_eq!(Ok(false), s.receive_channel(fasync::Socket::from_socket(transport).unwrap()));
     }
 
     fn setup_peer_for_release(exec: &mut fasync::Executor) -> (Peer, zx::Socket, SimpleResponder) {
@@ -535,10 +524,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(
-            Ok(()),
-            s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport])
-        );
+        assert_eq!(Ok(()), s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]));
 
         let remote_transport = establish_stream(&mut s);
         let (peer, signaling, responder) = setup_peer_for_release(&mut exec);
@@ -557,10 +543,7 @@ mod tests {
 
         // TODO(jamuraa): We need to wait until the timer expires for now.
         exec.wake_next_timer();
-        assert_eq!(
-            Poll::Ready(Ok(())),
-            exec.run_until_stalled(&mut release_fut)
-        );
+        assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut release_fut));
     }
 
     #[test]
@@ -574,10 +557,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(
-            Ok(()),
-            s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport])
-        );
+        assert_eq!(Ok(()), s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]));
         let _remote_transport = establish_stream(&mut s);
         let (peer, signaling, responder) = setup_peer_for_release(&mut exec);
 
@@ -602,10 +582,7 @@ mod tests {
         // Send a response
         assert!(signaling.write(&[txlabel | 0x02, 0x0A]).is_ok());
 
-        assert_eq!(
-            Poll::Ready(Ok(())),
-            exec.run_until_stalled(&mut release_fut)
-        );
+        assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut release_fut));
     }
 
     #[test]
@@ -623,10 +600,7 @@ mod tests {
         assert_eq!(Err(Error::InvalidState), s.start());
         assert_eq!(Err(Error::InvalidState), s.suspend());
 
-        assert_eq!(
-            Ok(()),
-            s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport])
-        );
+        assert_eq!(Ok(()), s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]));
 
         assert_eq!(Err(Error::InvalidState), s.start());
         assert_eq!(Err(Error::InvalidState), s.suspend());
@@ -637,10 +611,7 @@ mod tests {
         assert_eq!(Err(Error::InvalidState), s.suspend());
 
         let (remote, transport) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
-        assert_eq!(
-            Ok(false),
-            s.receive_channel(fasync::Socket::from_socket(transport).unwrap())
-        );
+        assert_eq!(Ok(false), s.receive_channel(fasync::Socket::from_socket(transport).unwrap()));
 
         // Should be able to start but not suspend now.
         assert_eq!(Err(Error::InvalidState), s.suspend());
@@ -672,10 +643,7 @@ mod tests {
 
             // TODO(jamuraa): We need to wait until the timer expires for now.
             exec.wake_next_timer();
-            assert_eq!(
-                Poll::Ready(Ok(())),
-                exec.run_until_stalled(&mut release_fut)
-            );
+            assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut release_fut));
         }
 
         // Shouldn't be able to start or suspend again.
@@ -690,28 +658,30 @@ mod tests {
             REMOTE_ID_VAL,
             MediaType::Audio,
             EndpointType::Sink,
-            vec![ServiceCapability::MediaTransport,
-                 ServiceCapability::MediaCodec {
+            vec![
+                ServiceCapability::MediaTransport,
+                ServiceCapability::MediaCodec {
                     media_type: MediaType::Audio,
                     codec_type: MediaCodecType::new(0),
                     codec_extra: vec![0x60, 0x0D, 0xF0, 0x0D],
-                }]
+                },
+            ],
         )
         .unwrap();
 
         // Can't get configuration if we aren't configured.
         assert_eq!(Err(Error::InvalidState), s.get_configuration());
 
-        let config = vec![ServiceCapability::MediaTransport,
-                    ServiceCapability::MediaCodec {
-                    media_type: MediaType::Audio,
-                    codec_type: MediaCodecType::new(0),
-                    codec_extra: vec![0x60, 0x0D, 0xF0, 0x0D],
-                }];
+        let config = vec![
+            ServiceCapability::MediaTransport,
+            ServiceCapability::MediaCodec {
+                media_type: MediaType::Audio,
+                codec_type: MediaCodecType::new(0),
+                codec_extra: vec![0x60, 0x0D, 0xF0, 0x0D],
+            },
+        ];
 
-        assert_eq!(Ok(()),
-        s.configure(&REMOTE_ID, config.clone())
-        );
+        assert_eq!(Ok(()), s.configure(&REMOTE_ID, config.clone()));
 
         assert_eq!(Ok(config), s.get_configuration());
 
