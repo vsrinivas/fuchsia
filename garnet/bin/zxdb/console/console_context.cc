@@ -333,7 +333,11 @@ void ConsoleContext::HandleNotification(NotificationType type,
       out.Append(Syntax::kError, std::move(preamble));
     case NotificationType::kWarning:
       out.Append(Syntax::kWarning, std::move(preamble));
+    case NotificationType::kProcessStdout:
+    case NotificationType::kProcessStderr:
+      break;
   }
+
   out.Append(msg);
   Console::get()->Output(std::move(out));
 }

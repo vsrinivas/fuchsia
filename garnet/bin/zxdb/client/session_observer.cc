@@ -12,6 +12,10 @@ const char* SessionObserver::NotificationTypeToString(NotificationType type) {
   switch (type) {
     case NotificationType::kError:
       return "Error";
+    case NotificationType::kProcessStderr:
+      return "kProcessStderr";
+    case NotificationType::kProcessStdout:
+      return "kProcessStdout";
     case NotificationType::kWarning:
       return "Warning";
   }

@@ -79,6 +79,8 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "NotifyException";
     case MsgHeader::Type::kNotifyModules:
       return "NotifyModules";
+    case MsgHeader::Type::kNotifyIO:
+      return "NotifyIO";
     case MsgHeader::Type::kNumMessages:
       return "NumMessages";
   }
@@ -132,6 +134,17 @@ const char* TaskTypeToString(TaskType type) {
       return "Component Root";
     case TaskType::kLast:
       return "Last";
+  }
+
+  FXL_NOTREACHED();
+  return nullptr;
+}
+
+const char* NotifyIO::TypeToString(Type type) {
+  switch (type) {
+    case Type::kStderr: return "Stderr";
+    case Type::kStdout: return "Stdout";
+    case Type::kLast: return "Last";
   }
 
   FXL_NOTREACHED();

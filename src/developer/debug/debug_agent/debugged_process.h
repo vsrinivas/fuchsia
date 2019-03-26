@@ -128,6 +128,9 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   void OnStdout(bool close);
   void OnStderr(bool close);
 
+  // Sends a IO notification over to the client.
+  void SendIO(debug_ipc::NotifyIO::Type, const std::vector<char>& data);
+
   // This function will gracefully detach from the underlying zircon process.
   // Detaching correctly requires several steps:
   //

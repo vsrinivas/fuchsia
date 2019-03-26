@@ -141,6 +141,7 @@ void WriteNotifyProcessStarting(const NotifyProcessStarting&, MessageWriter*);
 void WriteNotifyThread(MsgHeader::Type, const NotifyThread&, MessageWriter*);
 void WriteNotifyException(const NotifyException& notify, MessageWriter*);
 void WriteNotifyModules(const NotifyModules& notify, MessageWriter*);
+void WriteNotifyIO(const NotifyIO& notify, MessageWriter*);
 
 }  // namespace debug_ipc
 

@@ -45,8 +45,6 @@ std::vector<char> ReadSocketInput(debug_ipc::BufferedZxSocket* socket) {
       break;
   }
 
-  // Add a trailing zero just in case.
-  data.push_back(0);
   return data;
 }
 
@@ -472,9 +470,7 @@ void DebuggedProcess::OnStdout(bool close) {
 
   auto data = ReadSocketInput(&stdout_);
   FXL_DCHECK(!data.empty());
-  // TODO(donosoc): For now log. This should be a message to the client.
-  DEBUG_LOG() << "Process " << name_ << " [STDOUT (" << data.size()
-              << "bytes)]: " << data.data();
+  SendIO(debug_ipc::NotifyIO::Type::kStdout, std::move(data));
 }
 
 void DebuggedProcess::OnStderr(bool close) {
@@ -487,9 +483,36 @@ void DebuggedProcess::OnStderr(bool close) {
 
   auto data = ReadSocketInput(&stderr_);
   FXL_DCHECK(!data.empty());
-  // TODO(donosoc): For now log. This should be a message to the client.
-  DEBUG_LOG() << "Process " << name_ << " [STDERR (" << data.size()
-              << "bytes)]: " << data.data();
+  SendIO(debug_ipc::NotifyIO::Type::kStderr, std::move(data));
+}
+
+void DebuggedProcess::SendIO(debug_ipc::NotifyIO::Type type,
+                             const std::vector<char>& data) {
+  // We send the IO message in chunks.
+  auto it = data.begin();
+  size_t size = data.size();
+  while (size > 0) {
+    size_t chunk_size = size;
+    if (chunk_size >= debug_ipc::NotifyIO::kMaxDataSize)
+      chunk_size = debug_ipc::NotifyIO::kMaxDataSize;
+
+    auto end = it + chunk_size;
+    std::string msg(it, end);
+
+    it = end;
+    size -= chunk_size;
+
+    debug_ipc::NotifyIO notify;
+    notify.process_koid = koid_;
+    notify.type = type;
+    // We tell whether this is a piece of a bigger message.
+    notify.more_data_available = size > 0;
+    notify.data = std::move(msg);
+
+    debug_ipc::MessageWriter writer;
+    debug_ipc::WriteNotifyIO(notify, &writer);
+    debug_agent_->stream()->Write(writer.MessageComplete());
+  }
 }
 
 }  // namespace debug_agent

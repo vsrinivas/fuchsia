@@ -54,6 +54,7 @@ struct MsgHeader {
     kNotifyThreadExiting,
     kNotifyException,
     kNotifyModules,
+    kNotifyIO,
 
     kNumMessages
   };
@@ -391,6 +392,28 @@ struct NotifyModules {
   // the module load. The client will want to resume these threads once it has
   // processed the load.
   std::vector<uint64_t> stopped_thread_koids;
+};
+
+struct NotifyIO {
+  static constexpr size_t kMaxDataSize = 64 * 1024;  // 64k.
+
+  enum class Type : uint32_t {
+    kStderr,
+    kStdout,
+    kLast,    // Not a real type.
+  };
+  static const char* TypeToString(Type);
+
+  uint64_t process_koid = 0;
+  Type type = Type::kLast;
+
+  // Data will be up most kMaxDataSize bytes.
+  std::string data;
+
+  // Whether this is a piece of bigger message.
+  // This information can be used by the consumer to change how it will handle
+  // this data.
+  bool more_data_available = false;
 };
 
 #pragma pack(pop)

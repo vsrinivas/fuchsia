@@ -20,6 +20,8 @@ class SessionObserver {
   // terminal state.
   enum class NotificationType {
     kError,
+    kProcessStderr,
+    kProcessStdout,
     kWarning,
   };
   static const char* NotificationTypeToString(NotificationType);

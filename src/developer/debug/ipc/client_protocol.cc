@@ -598,4 +598,27 @@ bool ReadNotifyModules(MessageReader* reader, NotifyModules* notify) {
   return Deserialize(reader, &notify->stopped_thread_koids);
 }
 
+bool ReadNotifyIO(MessageReader* reader, NotifyIO* notify) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+
+  if (!reader->ReadUint64(&notify->process_koid))
+    return false;
+
+  uint32_t type;
+  if (!reader->ReadUint32(&type) ||
+      type >= static_cast<uint32_t>(NotifyIO::Type::kLast)) {
+    return false;
+  }
+  notify->type = static_cast<NotifyIO::Type>(type);
+
+  if (!reader->ReadString(&notify->data) ||
+      !reader->ReadBool(&notify->more_data_available)) {
+    return false;
+  }
+
+  return true;
+}
+
 }  // namespace debug_ipc

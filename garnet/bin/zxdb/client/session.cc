@@ -31,6 +31,7 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/debug/block_timer.h"
+#include "src/developer/debug/ipc/debug/debug.h"
 #include "src/developer/debug/ipc/debug/logging.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
@@ -599,6 +600,29 @@ void Session::DispatchProcessStarting(
   found_target->process()->Continue();
 }
 
+void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
+  // TODO(donosoc): Ungate this.
+  if (!debug_ipc::IsDebugModeActive())
+    return;
+
+  ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
+  if (!process) {
+    SendSessionNotification(
+        SessionObserver::NotificationType::kWarning,
+        "Received io notification for an unexpected process %" PRIu64 ".",
+        notify.process_koid);
+    return;
+  }
+
+  FXL_DCHECK(notify.type != debug_ipc::NotifyIO::Type::kLast);
+  auto notification_type =
+      notify.type == debug_ipc::NotifyIO::Type::kStdout
+          ? SessionObserver::NotificationType::kProcessStdout
+          : SessionObserver::NotificationType::kProcessStderr;
+
+  SendSessionNotification(notification_type, notify.data);
+}
+
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
                                    std::vector<char> data) {
   debug_ipc::MessageReader reader(std::move(data));
@@ -619,8 +643,23 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
     }
     case debug_ipc::MsgHeader::Type::kNotifyProcessStarting: {
       debug_ipc::NotifyProcessStarting notify;
-      if (debug_ipc::ReadNotifyProcessStarting(&reader, &notify))
-        DispatchProcessStarting(notify);
+      if (!debug_ipc::ReadNotifyProcessStarting(&reader, &notify))
+        return;
+
+      // Search the targets to see if there is a non-attached empty one.
+      // Normally this would be the initial one. Assume that targets that have
+      // a name have been set up by the user which we don't want to overwrite.
+      TargetImpl* found_target = nullptr;
+      for (TargetImpl* target : system_.GetTargetImpls()) {
+        if (target->GetState() == Target::State::kNone &&
+            target->GetArgs().empty()) {
+          found_target = target;
+          break;
+        }
+      }
+      if (!found_target)  // No empty target, make a new one.
+        found_target = system_.CreateNewTargetImpl(nullptr);
+      found_target->ProcessCreatedInJob(notify.koid, notify.name);
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
@@ -640,6 +679,12 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
       debug_ipc::NotifyModules notify;
       if (debug_ipc::ReadNotifyModules(&reader, &notify))
         DispatchNotifyModules(notify);
+      break;
+    }
+    case debug_ipc::MsgHeader::Type::kNotifyIO: {
+      debug_ipc::NotifyIO notify;
+      if (debug_ipc::ReadNotifyIO(&reader, &notify))
+        DispatchNotifyIO(notify);
       break;
     }
     default:

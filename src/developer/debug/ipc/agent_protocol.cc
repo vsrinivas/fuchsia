@@ -535,4 +535,12 @@ void WriteNotifyModules(const NotifyModules& notify, MessageWriter* writer) {
   Serialize(notify.stopped_thread_koids, writer);
 }
 
+void WriteNotifyIO(const NotifyIO& notify, MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kNotifyIO, 0);
+  writer->WriteUint64(notify.process_koid);
+  writer->WriteUint32(static_cast<uint32_t>(notify.type));
+  writer->WriteString(notify.data);
+  writer->WriteBool(notify.more_data_available);
+}
+
 }  // namespace debug_ipc

@@ -128,6 +128,7 @@ class Session {
                                bool set_metadata = true);
   void DispatchNotifyModules(const debug_ipc::NotifyModules& notify);
   void DispatchProcessStarting(const debug_ipc::NotifyProcessStarting&);
+  void DispatchNotifyIO(const debug_ipc::NotifyIO& notify);
 
  protected:
   fxl::ObserverList<SessionObserver> observers_;

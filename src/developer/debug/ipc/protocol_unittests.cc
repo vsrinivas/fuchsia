@@ -776,4 +776,20 @@ TEST(Protocol, NotifyProcessExiting) {
   EXPECT_EQ(initial.return_code, second.return_code);
 }
 
+TEST(Protocol, NotifyIO) {
+  NotifyIO initial;
+  initial.process_koid = 1234;
+  initial.type = NotifyIO::Type::kStderr;
+  initial.data = "Some data";
+  initial.more_data_available = true;
+
+  NotifyIO second;
+  ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyIO,
+                                               &ReadNotifyIO));
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+  EXPECT_EQ(initial.type, second.type);
+  EXPECT_EQ(initial.data, second.data);
+  EXPECT_EQ(initial.more_data_available, second.more_data_available);
+}
+
 }  // namespace debug_ipc
