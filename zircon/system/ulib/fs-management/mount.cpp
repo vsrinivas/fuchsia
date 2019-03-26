@@ -14,6 +14,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <fs/client.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
@@ -200,23 +201,23 @@ zx_status_t Mounter::MountNativeFs(const char* binary, unique_fd device,
     // 3. (optional) verbose
     // 4. (optional) metrics
     // 5. command
-    const char* argv[6] = {binary};
-    int argc = 1;
+    fbl::Vector<const char*> argv;
+    argv.push_back(binary);
     if (options.readonly) {
-        argv[argc++] = "--readonly";
+        argv.push_back("--readonly");
     }
     if (options.verbose_mount) {
-        argv[argc++] = "--verbose";
+        argv.push_back("--verbose");
     }
     if (options.collect_metrics) {
-        argv[argc++] = "--metrics";
+        argv.push_back("--metrics");
     }
     if (options.enable_journal) {
-        argv[argc++] = "--journal";
+        argv.push_back("--journal");
     }
-    argv[argc++] = "mount";
-    argv[argc] = nullptr;
-    return LaunchAndMount(cb, options, argv, argc);
+    argv.push_back("mount");
+    argv.push_back(nullptr);
+    return LaunchAndMount(cb, options, argv.get(), static_cast<int>(argv.size() - 1));
 }
 
 zx_status_t Mounter::MountFat(unique_fd device, const mount_options_t& options, LaunchCallback cb) {

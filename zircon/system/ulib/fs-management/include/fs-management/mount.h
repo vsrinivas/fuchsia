@@ -96,8 +96,6 @@ typedef struct mkfs_options {
 
 extern const mkfs_options_t default_mkfs_options;
 
-#define NUM_MKFS_OPTIONS 2
-
 typedef struct fsck_options {
     bool verbose;
     // At MOST one of the following '*_modify' flags may be true.
@@ -105,8 +103,6 @@ typedef struct fsck_options {
     bool always_modify; // Fsck never asks to resolve problems; it assumes it should fix them.
     bool force;         // Force fsck to check the filesystem integrity, even if it is marked as "clean".
 } fsck_options_t;
-
-#define NUM_FSCK_OPTIONS 3
 
 extern const fsck_options_t default_fsck_options;
 
