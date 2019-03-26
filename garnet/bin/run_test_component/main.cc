@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include <fuchsia/logger/cpp/fidl.h>
+#include <fuchsia/process/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
@@ -13,6 +14,7 @@
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <zircon/syscalls.h>
+#include <zircon/status.h>
 
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
@@ -127,6 +129,32 @@ int main(int argc, const char** argv) {
             parse_result.matching_urls[0].c_str());
   }
   std::string program_name = parse_result.launch_info.url;
+
+
+  // We make a request to the resolver API to ensure that the on-disk package
+  // data is up to date before continuing to try and parse the CMX file.
+  // TODO(anmittal): Ideally we could use the VMO returned by the resolver to
+  // parse the data, but there are many layers of indirection between us and the
+  // JSON parser that do not know how to talk anything but file paths, so that
+  // was not yet done.
+  {
+    // TODO(raggi): replace this with fuchsia.pkg.Resolver, once it is stable.
+    fuchsia::process::ResolverSyncPtr resolver;
+    auto svc_dir = sys::ServiceDirectory::CreateFromNamespace();
+    zx_status_t status = svc_dir->Connect<fuchsia::process::Resolver>(resolver.NewRequest());
+    if (status != ZX_OK) {
+      fprintf(stderr, "connect to %s failed: %s. Can not continue.\n", fuchsia::process::Resolver::Name_, zx_status_get_string(status));
+      return 1;
+    }
+    zx::vmo cmx_unused;
+    fidl::InterfaceHandle<::fuchsia::ldsvc::Loader> ldsvc_unused;
+    resolver->Resolve(program_name, &status, &cmx_unused, &ldsvc_unused);
+    if (status != ZX_OK) {
+      fprintf(stderr, "Failed to resolve %s: %s\n", program_name.c_str(), zx_status_get_string(status));
+      return 1;
+    }
+  }
+
   run::TestMetadata test_metadata;
   if (!test_metadata.ParseFromFile(parse_result.cmx_file_path)) {
     fprintf(stderr, "Error parsing cmx %s: %s\n",
