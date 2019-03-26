@@ -87,11 +87,20 @@ static zx_status_t zxio_debuglog_write(zxio_t* io, const void* buffer, size_t ca
     return ZX_OK;
 }
 
+static zx_status_t zxio_debuglog_isatty(zxio_t* io, bool* tty) {
+    // debuglog needs to be a tty in order to tell stdio
+    // to use line-buffering semantics - bunching up log messages
+    // for an arbitrary amount of time makes for confusing results!
+    *tty = true;
+    return ZX_OK;
+}
+
 static constexpr zxio_ops_t zxio_debuglog_ops = ([]() {
     zxio_ops_t ops = zxio_default_ops;
     ops.close = zxio_debuglog_close;
     ops.clone = zxio_debuglog_clone;
     ops.write = zxio_debuglog_write;
+    ops.isatty = zxio_debuglog_isatty;
     return ops;
 })();
 

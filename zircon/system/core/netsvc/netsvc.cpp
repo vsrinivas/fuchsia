@@ -120,9 +120,6 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    // this program gets called without TTY standard streams - force line buffering
-    setvbuf(stdout, NULL, _IOLBF, 0);
-
     const char* interface = NULL;
     bool nodename_provided = false;
     bool should_advertise = false;

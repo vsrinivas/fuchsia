@@ -22,7 +22,6 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include <fuchsia/io/c/fidl.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
@@ -32,7 +31,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 
-#include <fuchsia/io/c/fidl.h>
 #include <lib/zircon-internal/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
@@ -2004,25 +2002,14 @@ int isatty(int fd) {
         return 0;
     }
 
-    int ret = 0;
+    bool tty;
+    zx_status_t status = zxio_isatty(fdio_get_zxio(io), &tty);
 
-    zx_handle_t handle = fdio_unsafe_borrow_channel(io);
-    if (handle != ZX_HANDLE_INVALID) {
-        fuchsia_io_NodeInfo info;
-        zx_status_t io_status = fuchsia_io_NodeDescribe(handle, &info);
-        if ((io_status == ZX_OK) && (info.tag == fuchsia_io_NodeInfoTag_tty)) {
-            ret = 1;
-        }
-    }
-
-    // TODO(ZX-972)
-    // For now, stdout etc. needs to be a tty for line buffering to
-    // work. So let's pretend those are ttys.
-    if (fd == 0 || fd == 1 || fd == 2) {
+    int ret;
+    if ((status == ZX_OK) && tty) {
         ret = 1;
-    }
-
-    if (ret == 0) {
+    } else {
+        ret = 0;
         errno = ENOTTY;
     }
 

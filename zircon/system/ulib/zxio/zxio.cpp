@@ -201,3 +201,8 @@ zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator,
                                       zxio_dirent_t** out_entry) {
     return ZX_ERR_NOT_SUPPORTED;
 }
+
+zx_status_t zxio_isatty(zxio_t* io, bool* tty) {
+    zxio_internal_t* zio = (zxio_internal_t*)io;
+    return zio->ops->isatty(io, tty);
+}

@@ -293,6 +293,10 @@ zx_status_t zxio_dirent_iterator_init(zxio_dirent_iterator_t* iterator,
 zx_status_t zxio_dirent_iterator_next(zxio_dirent_iterator_t* iterator,
                                       zxio_dirent_t** out_entry);
 
+// Return in |tty| whether or not |io| represents a TTY object (should
+// line buffer for stdio, etc).
+zx_status_t zxio_isatty(zxio_t* io, bool* tty);
+
 __END_CDECLS
 
 #endif // LIB_ZXIO_ZXIO_H_

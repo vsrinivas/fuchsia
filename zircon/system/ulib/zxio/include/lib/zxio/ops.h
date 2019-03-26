@@ -83,6 +83,7 @@ struct zxio_ops {
     zx_status_t (*readdir)(zxio_t* io, void* buffer, size_t capacity,
                            size_t* out_actual);
     zx_status_t (*rewind)(zxio_t* io);
+    zx_status_t (*isatty)(zxio_t* io, bool* tty);
 };
 
 __END_CDECLS

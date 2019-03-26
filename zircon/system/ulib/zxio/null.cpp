@@ -137,6 +137,11 @@ zx_status_t zxio_null_write(zxio_t* io, const void* buffer, size_t capacity,
     return ZX_OK;
 }
 
+zx_status_t zxio_default_isatty(zxio_t* io, bool* tty) {
+    *tty = false;
+    return ZX_OK;
+}
+
 static constexpr zxio_ops_t zxio_null_ops = []() {
     zxio_ops_t ops = zxio_default_ops;
     ops.read = zxio_null_read;

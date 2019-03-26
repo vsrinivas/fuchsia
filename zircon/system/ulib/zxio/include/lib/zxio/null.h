@@ -62,6 +62,7 @@ zx_status_t zxio_default_link(zxio_t* io, const char* src_path,
 zx_status_t zxio_default_readdir(zxio_t* io, void* buffer, size_t capacity,
                                  size_t* out_actual);
 zx_status_t zxio_default_rewind(zxio_t* io);
+zx_status_t zxio_default_isatty(zxio_t* io, bool* tty);
 
 // An ops table filled with the default implementations.
 //
@@ -94,6 +95,7 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .link = zxio_default_link,
     .readdir = zxio_default_readdir,
     .rewind = zxio_default_rewind,
+    .isatty = zxio_default_isatty
 };
 
 // Null ------------------------------------------------------------------------

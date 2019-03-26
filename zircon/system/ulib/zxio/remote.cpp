@@ -362,6 +362,53 @@ static zx_status_t zxio_remote_rewind(zxio_t* io) {
     return io_status != ZX_OK ? io_status : status;
 }
 
+// Closes the |zx_handle_t| in |info|, if one exists.
+static void zxio_object_close_handle_if_present(const fuchsia_io_NodeInfo* info) {
+    switch (info->tag) {
+    case fuchsia_io_NodeInfoTag_file:
+        if (info->file.event != ZX_HANDLE_INVALID) {
+            zx_handle_close(info->file.event);
+        }
+        break;
+    case fuchsia_io_NodeInfoTag_pipe:
+        if (info->pipe.socket != ZX_HANDLE_INVALID) {
+            zx_handle_close(info->pipe.socket);
+        }
+        break;
+    case fuchsia_io_NodeInfoTag_vmofile:
+        if (info->vmofile.vmo != ZX_HANDLE_INVALID) {
+            zx_handle_close(info->vmofile.vmo);
+        }
+        break;
+    case fuchsia_io_NodeInfoTag_device:
+        if (info->device.event != ZX_HANDLE_INVALID) {
+            zx_handle_close(info->device.event);
+        }
+        break;
+    case fuchsia_io_NodeInfoTag_tty:
+        if (info->tty.event != ZX_HANDLE_INVALID) {
+            zx_handle_close(info->tty.event);
+        }
+        break;
+    }
+}
+
+static zx_status_t zxio_remote_isatty(zxio_t* io, bool* tty) {
+    zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
+    fuchsia_io_NodeInfo info;
+    zx_status_t io_status = fuchsia_io_NodeDescribe(rio->control, &info);
+    if (io_status == ZX_OK) {
+        if (info.tag == fuchsia_io_NodeInfoTag_tty) {
+            *tty = true;
+        } else {
+            *tty = false;
+        }
+        zxio_object_close_handle_if_present(&info);
+    }
+
+    return io_status;
+}
+
 static constexpr zxio_ops_t zxio_remote_ops = []() {
     zxio_ops_t ops = zxio_default_ops;
     ops.close = zxio_remote_close;
@@ -386,6 +433,7 @@ static constexpr zxio_ops_t zxio_remote_ops = []() {
     ops.link = zxio_remote_link;
     ops.readdir = zxio_remote_readdir;
     ops.rewind = zxio_remote_rewind;
+    ops.isatty = zxio_remote_isatty;
     return ops;
 }();
 
