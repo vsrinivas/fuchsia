@@ -41,7 +41,6 @@ constexpr char kAnalyzerPublicKeyPemPath[] =
 constexpr char kShufflerPublicKeyPemPath[] =
     "/pkg/data/certs/cobaltv0.1/shuffler_public.pem";
 constexpr char kAnalyzerTinkPublicKeyPath[] = "/pkg/data/keys/analyzer_public";
-constexpr char kShufflerTinkPublicKeyPath[] = "/pkg/data/keys/shuffler_public";
 constexpr char kMetricsRegistryPath[] = "/pkg/data/global_metrics_registry.pb";
 
 constexpr char kLegacyObservationStorePath[] = "/data/legacy_observation_store";
@@ -88,9 +87,8 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       encrypt_to_analyzer_(util::EncryptedMessageMaker::MakeHybridTink(
                                ReadPublicKeyPem(kAnalyzerTinkPublicKeyPath))
                                .ValueOrDie()),
-      encrypt_to_shuffler_(util::EncryptedMessageMaker::MakeHybridTink(
-                               ReadPublicKeyPem(kShufflerTinkPublicKeyPath))
-                               .ValueOrDie()),
+      // TODO(azani): Support encryption to the shuffler.
+      encrypt_to_shuffler_(util::EncryptedMessageMaker::MakeUnencrypted()),
 
       legacy_shipping_manager_(
           UploadScheduler(target_interval, min_interval, initial_interval),
