@@ -118,6 +118,13 @@ package("vulkan-tests") {
       },
     ]
 
+    resources += [
+      {
+        path = "vkloop/comp.spv"
+        dest = "vkloop.spv"
+      },
+    ]
+
     meta = [
       {
         path = rebase_path("meta/vkext.cmx")

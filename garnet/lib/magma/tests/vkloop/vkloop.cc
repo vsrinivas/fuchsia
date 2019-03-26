@@ -35,6 +35,7 @@ public:
 
 private:
     bool InitVulkan();
+    bool InitBuffer();
     bool InitCommandBuffer();
 
     bool hang_on_event_;
@@ -45,6 +46,9 @@ private:
 
     VkCommandPool vk_command_pool_;
     VkCommandBuffer vk_command_buffer_;
+
+    VkBuffer vk_buffer_;
+    VkDeviceMemory device_memory_;
 };
 
 bool VkLoopTest::Initialize()
@@ -54,6 +58,9 @@ bool VkLoopTest::Initialize()
 
     if (!InitVulkan())
         return DRETF(false, "failed to initialize Vulkan");
+
+    if (!InitBuffer())
+        return DRETF(false, "failed to init buffer");
 
     if (!InitCommandBuffer())
         return DRETF(false, "InitImage failed");
@@ -168,6 +175,83 @@ bool VkLoopTest::InitVulkan()
     return true;
 }
 
+bool VkLoopTest::InitBuffer()
+{
+    VkResult result;
+
+    VkBufferCreateInfo buffer_create_info = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .size = 4096,
+        .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 0,    // ignored
+        .pQueueFamilyIndices = nullptr // ignored
+    };
+
+    if ((result = vkCreateBuffer(vk_device_, &buffer_create_info, nullptr, &vk_buffer_)) !=
+        VK_SUCCESS) {
+        return DRETF(false, "vkCreateBuffer failed: %d", result);
+    }
+
+    VkMemoryRequirements buffer_memory_reqs = {};
+    vkGetBufferMemoryRequirements(vk_device_, vk_buffer_, &buffer_memory_reqs);
+
+    VkPhysicalDeviceMemoryProperties memory_props;
+    vkGetPhysicalDeviceMemoryProperties(vk_physical_device_, &memory_props);
+
+    device_memory_ = VK_NULL_HANDLE;
+
+    for (uint32_t i = 0; i < memory_props.memoryTypeCount; i++) {
+        if (memory_props.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+            VkMemoryAllocateInfo allocate_info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+                                                  .pNext = nullptr,
+                                                  .allocationSize = buffer_memory_reqs.size,
+                                                  .memoryTypeIndex = i};
+
+            if ((result = vkAllocateMemory(vk_device_, &allocate_info, nullptr, &device_memory_)) !=
+                VK_SUCCESS) {
+                return DRETF(false, "vkAllocateMemory failed: %d", result);
+            }
+            break;
+        }
+    }
+
+    if (device_memory_ == VK_NULL_HANDLE)
+        return DRETF(false, "Couldn't find host visible memory");
+
+    {
+        void* data;
+        if ((result = vkMapMemory(vk_device_, device_memory_,
+                                  0, // offset
+                                  VK_WHOLE_SIZE,
+                                  0, // flags
+                                  &data)) != VK_SUCCESS) {
+            return DRETF(false, "vkMapMemory failed: %d", result);
+        }
+        // Set to 1 so the shader will ping pong about zero
+        *reinterpret_cast<uint32_t*>(data) = 1;
+
+        VkMappedMemoryRange memory_range = {.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+                                            .pNext = nullptr,
+                                            .memory = device_memory_,
+                                            .offset = 0,
+                                            .size = VK_WHOLE_SIZE};
+        if ((result = vkFlushMappedMemoryRanges(vk_device_, 1, &memory_range)) != VK_SUCCESS) {
+            return DRETF(false, "vkFlushMappedMemoryRanges failed: %d", result);
+        }
+    }
+
+    if ((result = vkBindBufferMemory(vk_device_, vk_buffer_, device_memory_,
+                                     0 // memoryOffset
+                                     )) != VK_SUCCESS) {
+        return DRETF(false, "vkBindBufferMemory failed: %d", result);
+    }
+
+    return true;
+}
+
 bool VkLoopTest::InitCommandBuffer()
 {
     VkCommandPoolCreateInfo command_pool_create_info = {
@@ -209,27 +293,113 @@ bool VkLoopTest::InitCommandBuffer()
     VkShaderModuleCreateInfo sh_info = {};
     sh_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 
-#include "loop.comp.h"
-    sh_info.codeSize = sizeof(loop_main);
-    sh_info.pCode = loop_main;
+    std::vector<uint8_t> shader;
+    {
+        int fd = open("/pkg/data/vkloop.spv", O_RDONLY);
+        if (fd < 0)
+            return DRETF(false, "couldn't open shader binary: %d", fd);
+
+        struct stat buf;
+        fstat(fd, &buf);
+        shader.resize(buf.st_size);
+        read(fd, shader.data(), shader.size());
+        close(fd);
+
+        sh_info.codeSize = shader.size();
+        sh_info.pCode = reinterpret_cast<uint32_t*>(shader.data());
+    }
+
     if ((result = vkCreateShaderModule(vk_device_, &sh_info, NULL, &compute_shader_module_)) !=
         VK_SUCCESS) {
         return DRETF(false, "vkCreateShaderModule failed: %d", result);
     }
 
-    VkPipelineLayout layout;
+    VkDescriptorSetLayoutBinding descriptor_set_layout_bindings = {
+        .binding = 0,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        .descriptorCount = 1,
+        .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+        .pImmutableSamplers = nullptr};
+
+    VkDescriptorSetLayoutCreateInfo descriptor_set_layout_create_info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = nullptr,
+        .bindingCount = 1,
+        .pBindings = &descriptor_set_layout_bindings,
+    };
+
+    VkDescriptorSetLayout descriptor_set_layout;
+
+    if ((result = vkCreateDescriptorSetLayout(vk_device_, &descriptor_set_layout_create_info,
+                                              nullptr, &descriptor_set_layout)) != VK_SUCCESS) {
+        return DRETF(false, "vkCreateDescriptorSetLayout failed: %d", result);
+    }
+
+    VkDescriptorPoolSize pool_size = {.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                                      .descriptorCount = 1};
+
+    VkDescriptorPoolCreateInfo descriptor_pool_create_info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .maxSets = 1,
+        .poolSizeCount = 1,
+        .pPoolSizes = &pool_size};
+
+    VkDescriptorPool descriptor_pool;
+    if ((result = vkCreateDescriptorPool(vk_device_, &descriptor_pool_create_info, nullptr,
+                                         &descriptor_pool)) != VK_SUCCESS) {
+        return DRETF(false, "vkCreateDescriptorPool failed: %d", result);
+    }
+
+    VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .pNext = nullptr,
+        .descriptorPool = descriptor_pool,
+        .descriptorSetCount = 1,
+        .pSetLayouts = &descriptor_set_layout,
+    };
+
+    VkDescriptorSet descriptor_set;
+
+    if ((result = vkAllocateDescriptorSets(vk_device_, &descriptor_set_allocate_info,
+                                           &descriptor_set)) != VK_SUCCESS) {
+        return DRETF(false, "vkAllocateDescriptorSets failed: %d", result);
+    }
+
+    VkDescriptorBufferInfo descriptor_buffer_info = {
+        .buffer = vk_buffer_, .offset = 0, .range = VK_WHOLE_SIZE};
+
+    VkWriteDescriptorSet write_descriptor_set = {.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                                                 .pNext = nullptr,
+                                                 .dstSet = descriptor_set,
+                                                 .dstBinding = 0,
+                                                 .dstArrayElement = 0,
+                                                 .descriptorCount = 1,
+                                                 .descriptorType =
+                                                     VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                                                 .pImageInfo = nullptr,
+                                                 .pBufferInfo = &descriptor_buffer_info,
+                                                 .pTexelBufferView = nullptr};
+    vkUpdateDescriptorSets(vk_device_,
+                           1, // descriptorWriteCount
+                           &write_descriptor_set,
+                           0,        // descriptorCopyCount
+                           nullptr); // pDescriptorCopies
+
+    VkPipelineLayout pipeline_layout;
 
     VkPipelineLayoutCreateInfo pipeline_create_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
         .pNext = nullptr,
         .flags = 0,
-        .setLayoutCount = 0,
-        .pSetLayouts = nullptr,
+        .setLayoutCount = 1,
+        .pSetLayouts = &descriptor_set_layout,
         .pushConstantRangeCount = 0,
         .pPushConstantRanges = nullptr};
 
-    if ((result = vkCreatePipelineLayout(vk_device_, &pipeline_create_info, nullptr, &layout)) !=
-        VK_SUCCESS) {
+    if ((result = vkCreatePipelineLayout(vk_device_, &pipeline_create_info, nullptr,
+                                         &pipeline_layout)) != VK_SUCCESS) {
         return DRETF(false, "vkCreatePipelineLayout failed: %d", result);
     }
 
@@ -246,7 +416,7 @@ bool VkLoopTest::InitCommandBuffer()
                   .module = compute_shader_module_,
                   .pName = "main",
                   .pSpecializationInfo = nullptr},
-        .layout = layout,
+        .layout = pipeline_layout,
         .basePipelineHandle = VK_NULL_HANDLE,
         .basePipelineIndex = 0};
 
@@ -266,6 +436,14 @@ bool VkLoopTest::InitCommandBuffer()
                         VK_PIPELINE_STAGE_TRANSFER_BIT, 0, nullptr, 0, nullptr, 0, nullptr);
     } else {
         vkCmdBindPipeline(vk_command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE, compute_pipeline);
+
+        vkCmdBindDescriptorSets(vk_command_buffer_, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_layout,
+                                0, // firstSet
+                                1, // descriptorSetCount,
+                                &descriptor_set,
+                                0,        // dynamicOffsetCount
+                                nullptr); // pDynamicOffsets
+
         vkCmdDispatch(vk_command_buffer_, 1, 1, 1);
     }
 
@@ -298,6 +476,7 @@ bool VkLoopTest::Exec(bool kill_driver)
 
     if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS)
         return DRETF(false, "vkQueueSubmit failed");
+
     if (kill_driver) {
         uint32_t fd = open("/dev/class/gpu/000", O_RDONLY);
         if (fd < 0) {
