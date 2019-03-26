@@ -95,6 +95,30 @@ public:
 
     virtual bool is_soft_atom() const { return false; }
 
+    // Use different names for different slots so they'll line up cleanly in the
+    // trace viewer.
+    static const char* AtomRunningString(uint32_t slot)
+    {
+        switch (slot) {
+            case 0:
+                return "Atom Slot 0";
+            case 1:
+                return "Atom Slot 1";
+            case 2:
+                return "Atom Slot 2";
+            default:
+                DASSERT(false);
+                return "Unknown Atom Slot";
+        }
+    }
+
+    // TODO: Remove this when trace generated JSON can support 64bit ints
+    // without this hack. (PT-110)
+    uint64_t slot_id()
+    {
+        return slot_ * 2000;
+    }
+
 private:
     // The following data is immmutable after construction.
     const uint64_t trace_nonce_;

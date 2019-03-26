@@ -19,23 +19,6 @@ void JobScheduler::EnqueueAtom(std::shared_ptr<MsdArmAtom> atom)
     atoms_.push_back(std::move(atom));
 }
 
-// Use different names for different slots so they'll line up cleanly in the
-// trace viewer.
-[[maybe_unused]] static const char* AtomRunningString(uint32_t slot)
-{
-    switch (slot) {
-        case 0:
-            return "Atom running slot 0";
-        case 1:
-            return "Atom running slot 1";
-        case 2:
-            return "Atom running slot 2";
-        default:
-            DASSERT(false);
-            return "Atom running unknown slot";
-    }
-}
-
 void JobScheduler::MoveAtomsToRunnable()
 {
     // Movement to next iterator happens inside loop.
@@ -202,20 +185,6 @@ void JobScheduler::ScheduleRunnableAtoms()
         executing_atoms_[slot] = atom;
         runnable.erase(runnable.begin());
 
-        // TODO: Remove this when the trace generated JSON can support 64bit
-        // ints without this hack. (PT-110)
-        [[maybe_unused]] uint64_t slot_id = slot * 2000;
-
-        [[maybe_unused]] const char* vthread_name = AtomRunningString(slot);
-        uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
-        TRACE_FLOW_STEP("magma", "atom", atom->trace_nonce());
-        TRACE_VTHREAD_DURATION_BEGIN("magma", vthread_name, vthread_name,
-                                    slot_id, current_ticks);
-
-        current_ticks = magma::PlatformTrace::GetCurrentTicks();
-        TRACE_VTHREAD_FLOW_STEP("magma", "atom", vthread_name,
-                                 slot_id, atom->trace_nonce(), current_ticks);
-
         owner_->RunAtom(executing_atoms_[slot].get());
     }
 }
@@ -251,16 +220,10 @@ void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code, ui
     std::shared_ptr<MsdArmAtom>& atom = executing_atoms_[slot];
     DASSERT(atom);
 
-    // TODO: Remove this when the trace generated JSON can support 64bit
-    // ints without this hack. (PT-110)
-    [[maybe_unused]] uint64_t slot_id = slot * 2000;
-
     [[maybe_unused]] uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
-    TRACE_VTHREAD_FLOW_STEP("magma", "atom", AtomRunningString(slot),
-                             slot_id, atom->trace_nonce(), current_ticks);
-    TRACE_FLOW_END("magma", "atom", atom->trace_nonce());
-    TRACE_VTHREAD_DURATION_END("magma", AtomRunningString(slot), AtomRunningString(slot),
-                                slot_id, current_ticks);
+    TRACE_VTHREAD_FLOW_STEP("magma", "atom", MsdArmAtom::AtomRunningString(slot), atom->slot_id(), atom->trace_nonce(), current_ticks);
+    TRACE_VTHREAD_DURATION_END("magma", MsdArmAtom::AtomRunningString(slot), MsdArmAtom::AtomRunningString(slot), atom->slot_id(), current_ticks);
+    TRACE_FLOW_STEP("magma", "atom", atom->trace_nonce());
 
     if (result_code == kArmMaliResultSoftStopped) {
         atom->set_soft_stopped(false);

@@ -7,6 +7,7 @@
 #include "magma_system_device.h"
 #include "magma_util/command_buffer.h"
 #include "magma_util/macros.h"
+#include "platform_trace.h"
 
 #include <memory>
 #include <unordered_set>
@@ -166,6 +167,7 @@ magma::Status MagmaSystemContext::ExecuteImmediateCommands(uint64_t commands_siz
                                                            uint64_t semaphore_count,
                                                            uint64_t* semaphore_ids)
 {
+    TRACE_DURATION("magma", "MagmaSystemContext::ExecuteImmediateCommands");
     std::vector<msd_semaphore_t*> msd_semaphores(semaphore_count);
     for (uint32_t i = 0; i < semaphore_count; i++) {
         auto semaphore = owner_->LookupSemaphoreForContext(semaphore_ids[i]);

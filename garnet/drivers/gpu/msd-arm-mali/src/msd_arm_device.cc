@@ -794,14 +794,12 @@ magma::Status MsdArmDevice::ProcessDumpStatusToLog()
 
 magma::Status MsdArmDevice::ProcessScheduleAtoms()
 {
-    TRACE_DURATION("magma", "MsdArmDevice::ProcessScheduleAtoms");
     std::vector<std::shared_ptr<MsdArmAtom>> atoms_to_schedule;
     {
         std::lock_guard<std::mutex> lock(schedule_mutex_);
         atoms_to_schedule.swap(atoms_to_schedule_);
     }
     for (auto& atom : atoms_to_schedule) {
-        TRACE_FLOW_STEP("magma", "atom", atom->trace_nonce());
         scheduler_->EnqueueAtom(std::move(atom));
     }
     scheduler_->TryToSchedule();
@@ -820,6 +818,8 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
 {
     TRACE_DURATION("magma", "ExecuteAtomOnDevice", "address", atom->gpu_address(), "slot",
                    atom->slot());
+    TRACE_FLOW_STEP("magma", "atom", atom->trace_nonce());
+
     DASSERT(atom->slot() < 2u);
     bool dependencies_finished;
     atom->UpdateDependencies(&dependencies_finished);
@@ -875,6 +875,12 @@ void MsdArmDevice::ExecuteAtomOnDevice(MsdArmAtom* atom, magma::RegisterIo* regi
     // Execute on every powered-on core.
     slot.AffinityNext().FromValue(UINT64_MAX).WriteTo(register_io);
     slot.CommandNext().FromValue(registers::JobSlotCommand::kCommandStart).WriteTo(register_io);
+
+    // Begin the virtual duration trace event to measure GPU work.
+    uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
+    TRACE_VTHREAD_DURATION_BEGIN("magma", MsdArmAtom::AtomRunningString(atom->slot()), MsdArmAtom::AtomRunningString(atom->slot()), atom->slot_id(), current_ticks);
+    TRACE_VTHREAD_FLOW_STEP("magma", "atom", MsdArmAtom::AtomRunningString(atom->slot()),
+                             atom->slot_id(), atom->trace_nonce(), current_ticks);
 }
 
 void MsdArmDevice::RunAtom(MsdArmAtom* atom) { ExecuteAtomOnDevice(atom, register_io_.get()); }
@@ -882,6 +888,8 @@ void MsdArmDevice::RunAtom(MsdArmAtom* atom) { ExecuteAtomOnDevice(atom, registe
 void MsdArmDevice::AtomCompleted(MsdArmAtom* atom, ArmMaliResultCode result)
 {
     TRACE_DURATION("magma", "AtomCompleted", "address", atom->gpu_address());
+    TRACE_FLOW_END("magma", "atom", atom->trace_nonce());
+
     DLOG("Completed job atom: 0x%lx\n", atom->gpu_address());
     address_manager_->AtomFinished(atom);
     if (atom->using_cycle_counter()) {

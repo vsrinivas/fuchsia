@@ -160,7 +160,6 @@ magma_status_t msd_context_execute_immediate_commands(msd_context_t* ctx, uint64
                                                       void* commands, uint64_t semaphore_count,
                                                       msd_semaphore_t** msd_semaphores)
 {
-    TRACE_DURATION("magma", "Connection::ExecuteImmediateCommands");
     auto context = static_cast<MsdArmContext*>(ctx);
     auto connection = context->connection().lock();
     if (!connection)

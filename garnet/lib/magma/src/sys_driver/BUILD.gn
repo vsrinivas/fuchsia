@@ -33,6 +33,7 @@ source_set("sys_driver") {
     "$magma_build_root/src/magma_util/platform:device",
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/magma_util/platform:thread",
+    "$magma_build_root/src/magma_util/platform:trace",
   ]
 }
 
@@ -42,8 +43,8 @@ source_set("entry") {
   ]
 
   deps = [
-    "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
@@ -82,8 +83,8 @@ source_set("test_entry_pci") {
   ]
 
   deps = [
-    "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
     "//garnet/lib/magma/tests/helper:platform_device_helper",
@@ -113,8 +114,8 @@ source_set("test_entry_pdev") {
   ]
 
   deps = [
-    "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:command_buffer",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
     "//garnet/lib/magma/tests/helper:platform_device_helper",
