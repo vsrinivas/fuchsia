@@ -12,8 +12,10 @@ rustc_binary("banjo_bin") {
   deps = [
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:heck",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:pest",
     "//third_party/rust_crates:pest_derive",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
@@ -27,8 +29,10 @@ rustc_library("banjo_lib") {
   deps = [
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:heck",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:pest",
     "//third_party/rust_crates:pest_derive",
+    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
@@ -48,6 +52,8 @@ if (host_toolchain == current_toolchain) {
       ":banjo_lib($host_toolchain)",
       "//third_party/rust_crates:pest",
       "//third_party/rust_crates:pretty_assertions",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
     ]
     source_root = "test/tests.rs"
   }

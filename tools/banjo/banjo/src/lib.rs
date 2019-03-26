@@ -8,4 +8,5 @@ use crate::parser::Rule;
 
 pub mod ast;
 pub mod backends;
+pub mod fidl;
 pub mod parser;

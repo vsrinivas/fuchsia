@@ -6,6 +6,7 @@
 
 mod ast_tests;
 mod codegen_tests;
+mod fidl_tests;
 
 /// Asserts the left and right hand side are the same ignoring new line characters
 #[macro_export]
@@ -61,7 +62,7 @@ macro_rules! codegen_test {
                     )*
                 };
 
-                let ast = banjo_lib::ast::BanjoAst::parse(pair_vec).unwrap();
+                let ast = banjo_lib::ast::BanjoAst::parse(pair_vec, Vec::new()).unwrap();
                 {
                     let mut backend: Box<dyn backends::Backend<_>> =
                         Box::new(backends::$backend::new(&mut output));

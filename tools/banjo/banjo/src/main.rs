@@ -18,6 +18,7 @@ use {
 
 mod ast;
 mod backends;
+mod fidl;
 mod parser;
 
 #[derive(Debug)]
@@ -72,9 +73,15 @@ struct Opt {
     #[structopt(short = "b", long = "backend")]
     backend: BackendName,
 
-    /// Files to process
+    /// Banjo IDL files to process. These are expected to be in the format described by
+    /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/docs/ddk/banjo-tutorial.md#reference
     #[structopt(short = "f", long = "files", parse(from_os_str))]
     input: Vec<PathBuf>,
+
+    /// FIDL IR JSON files to process. These files are expected to be in the format described by
+    /// https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/host/fidl/schema.json
+    #[structopt(short = "i", long = "fidl-ir", parse(from_os_str))]
+    fidl_ir: Vec<PathBuf>,
 
     /// Don't include default zx types
     #[structopt(long = "omit-zx")]
@@ -109,8 +116,20 @@ fn main() -> Result<(), Error> {
 
     let opt = Opt::from_iter(args);
     let mut pair_vec = Vec::new();
+    let mut fidl_vec = Vec::new();
     let files: Vec<String> = opt
         .input
+        .iter()
+        .map(|filename| {
+            let mut f = File::open(filename).expect(&format!("{} not found", filename.display()));
+            let mut contents = String::new();
+            f.read_to_string(&mut contents).expect("something went wrong reading the file");
+            contents
+        })
+        .collect();
+
+    let fidl_files: Vec<String> = opt
+        .fidl_ir
         .iter()
         .map(|filename| {
             let mut f = File::open(filename).expect(&format!("{} not found", filename.display()));
@@ -127,8 +146,11 @@ fn main() -> Result<(), Error> {
     for file in files.iter() {
         pair_vec.push(BanjoParser::parse(Rule::file, file.as_str())?);
     }
+    for file in fidl_files.iter() {
+        fidl_vec.push(serde_json::from_str(file.as_str())?);
+    }
 
-    let ast = BanjoAst::parse(pair_vec)?;
+    let ast = BanjoAst::parse(pair_vec, fidl_vec)?;
     let mut output: Box<dyn io::Write> = if let Some(output) = opt.output {
         Box::new(File::create(output)?)
     } else {
