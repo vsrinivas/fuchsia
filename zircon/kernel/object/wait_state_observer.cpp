@@ -41,7 +41,8 @@ zx_signals_t WaitStateObserver::End() {
     canary_.Assert();
     DEBUG_ASSERT(dispatcher_);
 
-    dispatcher_->RemoveObserver(this);
+    const bool removed = dispatcher_->RemoveObserver(this);
+    DEBUG_ASSERT(removed);
     dispatcher_.reset();
 
     // Return the set of reasons that we may have been woken.  Basically, this

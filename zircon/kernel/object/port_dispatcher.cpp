@@ -91,13 +91,17 @@ PortPacket::PortPacket(const void* handle, PortAllocator* allocator)
 }
 
 PortObserver::PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
-                           uint64_t key, zx_signals_t signals)
+                           Lock<fbl::Mutex>* port_lock, uint64_t key, zx_signals_t signals)
     : type_(type),
       trigger_(signals),
       packet_(handle, nullptr),
-      port_(ktl::move(port)) {
+      port_(ktl::move(port)),
+      port_lock_(port_lock),
+      dispatcher_(handle->dispatcher()) {
 
+    DEBUG_ASSERT(port_lock_ != nullptr);
     DEBUG_ASSERT(handle != nullptr);
+    DEBUG_ASSERT(dispatcher_ != nullptr);
 
     auto& packet = packet_.packet;
     packet.status = ZX_OK;
@@ -140,10 +144,8 @@ StateObserver::Flags PortObserver::OnCancelByKey(const Handle* handle, const voi
 }
 
 void PortObserver::OnRemoved() {
-    // If observer ends up being non-null, it is ourself, and thus our
-    // responsibility to delete ourself.
-    ktl::unique_ptr<PortObserver> observer =
-        port_->MaybeReap(ktl::unique_ptr<PortObserver>(this), &packet_);
+    port_->MaybeReap(this, &packet_);
+    // The |MaybeReap| call may have deleted |this|, so it is not safe to access any members now.
 }
 
 StateObserver::Flags PortObserver::MaybeQueue(zx_signals_t new_state, uint64_t count) {
@@ -202,6 +204,7 @@ void PortDispatcher::on_zero_handles() {
     canary_.Assert();
 
     Guard<fbl::Mutex> guard{get_lock()};
+    DEBUG_ASSERT(!zero_handles_);
     zero_handles_ = true;
 
     // Unlink and unbind exception ports.
@@ -230,6 +233,28 @@ void PortDispatcher::on_zero_handles() {
             // need to worry about destroying ourselves.
             packet->observer.reset();
         }
+    }
+
+    // For each of our outstanding observers, remove them from their dispatchers and destroy them.
+    //
+    // We could be racing with the dispatcher calling OnRemoved/MaybeReap. Only destroy the observer
+    // after RemoveObserver completes to ensure we don't destroy it out from under the dispatcher.
+    while (!observers_.is_empty()) {
+        PortObserver* observer = observers_.pop_front();
+        fbl::RefPtr<Dispatcher> dispatcher = observer->UnlinkDispatcherLocked();
+        DEBUG_ASSERT(dispatcher != nullptr);
+
+        // Don't hold the lock while calling RemoveObserver because we don't want to create a
+        // PortDispatcher-to-Dispatcher lock dependency.
+        guard.CallUnlocked([&dispatcher, &observer]() {
+            // We cannot assert that RemoveObserver returns true because it's possible that the
+            // Dispatcher removed it before we got here.
+            dispatcher->RemoveObserver(observer);
+            dispatcher.reset();
+
+            // At this point we know the dispatcher no longer has a reference to the observer.
+            ktl::unique_ptr<PortObserver> destroyer(observer);
+        });
     }
 }
 
@@ -352,18 +377,35 @@ zx_status_t PortDispatcher::Dequeue(const Deadline& deadline,
     }
 }
 
-ktl::unique_ptr<PortObserver> PortDispatcher::MaybeReap(ktl::unique_ptr<PortObserver> observer,
-                                                        PortPacket* port_packet) {
+void PortDispatcher::MaybeReap(PortObserver* observer, PortPacket* port_packet) {
     canary_.Assert();
-    DEBUG_ASSERT(!port_packet->is_ephemeral());
 
-    Guard<fbl::Mutex> guard{get_lock()};
-    if (port_packet->InContainer()) {
-        // The destruction will happen when the packet is dequeued or in CancelQueued()
-        DEBUG_ASSERT(port_packet->observer == nullptr);
-        port_packet->observer = ktl::move(observer);
+    // These pointers are declared before the guard because we want the destructors to execute
+    // outside the critical section below (if they end up being the last/only references).
+    ktl::unique_ptr<PortObserver> destroyer;
+    fbl::RefPtr<Dispatcher> dispatcher;
+
+    {
+        Guard<fbl::Mutex> guard{get_lock()};
+
+        // We may be racing with on_zero_handles. Whichever one of us unlinks the dispatcher will be
+        // responsible for ensuring the observer is cleaned up.
+        dispatcher = observer->UnlinkDispatcherLocked();
+        if (dispatcher != nullptr) {
+            observers_.erase(*observer);
+
+            // If the packet is queued, then the observer will be destroyed by Dequeue() or
+            // CancelQueued().
+            DEBUG_ASSERT(!port_packet->is_ephemeral());
+            if (port_packet->InContainer()) {
+                DEBUG_ASSERT(port_packet->observer == nullptr);
+                port_packet->observer.reset(observer);
+            } else {
+                // Otherwise, it'll be destroyed when this method returns.
+                destroyer.reset(observer);
+            }
+        } // else on_zero_handles must have beat us and is responsible for destroying this observer.
     }
-    return observer;
 }
 
 zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint64_t key,
@@ -389,13 +431,19 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
     }
 
     fbl::AllocChecker ac;
-    auto observer = new (&ac) PortObserver(type, handle, fbl::RefPtr<PortDispatcher>(this), key,
-                                           signals);
-    if (!ac.check())
+    auto observer = new (&ac)
+        PortObserver(type, handle, fbl::RefPtr<PortDispatcher>(this), get_lock(), key, signals);
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
+    }
 
-    dispatcher->add_observer(observer);
-    return ZX_OK;
+    {
+        Guard<fbl::Mutex> guard{get_lock()};
+        DEBUG_ASSERT(!zero_handles_);
+        observers_.push_front(observer);
+    }
+
+    return dispatcher->add_observer(observer);
 }
 
 bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {

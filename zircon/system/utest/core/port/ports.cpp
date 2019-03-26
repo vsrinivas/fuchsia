@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <stdio.h>
 #include <threads.h>
 
@@ -638,6 +639,131 @@ static bool cancel_stress() {
     END_TEST;
 }
 
+// A stress test that repeatedly signals and closes events registered with a port.
+static bool signal_close_stress() {
+    BEGIN_TEST;
+
+    constexpr zx_duration_t kTestDuration = ZX_SEC(1);
+    srand(4);
+
+    // Continually reads packets from a port until it gets a ZX_PKT_TYPE_USER.
+    auto drainer_thread = [](void* arg) -> int {
+        auto port = *reinterpret_cast<zx_handle_t*>(arg);
+        while (true) {
+            zx_port_packet_t packet{};
+            zx_status_t status = zx_port_wait(port, ZX_TIME_INFINITE, &packet);
+            if (status != ZX_OK) {
+                return status;
+            }
+            if (packet.type == ZX_PKT_TYPE_USER) {
+                break;
+            }
+        }
+        return ZX_OK;
+    };
+
+    std::atomic<bool> keep_running(true);
+
+    struct signaler_args {
+        zx_handle_t port;
+        std::atomic<bool>* keep_running;
+    };
+
+    // Creates an event registered with the port then performs the following actions randomly:
+    //   a. sleep
+    //   b. signal the event
+    //   c. signal the event, then close it
+    auto signaler_thread = [](void* arg) -> int {
+        auto args = reinterpret_cast<signaler_args*>(arg);
+        auto port = args->port;
+        auto keep_running = args->keep_running;
+
+        zx_handle_t ev = ZX_HANDLE_INVALID;
+        zx_status_t status = ZX_OK;
+        while (keep_running->load()) {
+            if (ev == ZX_HANDLE_INVALID) {
+                status = zx_event_create(0u, &ev);
+                if (status != ZX_OK) {
+                    return status;
+                }
+                status = zx_object_wait_async(ev, port, 0, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE);
+                if (status != ZX_OK) {
+                    return status;
+                }
+            }
+
+            unsigned action = rand() % 3;
+            switch (action) {
+            case 0: // sleep
+                zx_nanosleep(ZX_MSEC(1));
+                break;
+            case 1: // signal
+                status = zx_object_signal(ev, 0u, ZX_EVENT_SIGNALED);
+                if (status != ZX_OK) {
+                    return status;
+                }
+                break;
+            default: // signal and close
+                status = zx_object_signal(ev, 0u, ZX_EVENT_SIGNALED);
+                if (status != ZX_OK) {
+                    return status;
+                }
+                status = zx_handle_close(ev);
+                ev = ZX_HANDLE_INVALID;
+            }
+        }
+
+        return zx_handle_close(ev);
+    };
+
+    zx_handle_t port;
+    zx_status_t status = zx_port_create(0, &port);
+    ASSERT_EQ(status, ZX_OK);
+
+    constexpr unsigned kNumSignalers = 4;
+    thrd_t signalers[kNumSignalers];
+    signaler_args args{port, &keep_running};
+    for (auto& t : signalers) {
+        ASSERT_EQ(thrd_create(&t, signaler_thread, &args), thrd_success);
+    }
+
+    constexpr unsigned kNumDrainers = 4;
+    thrd_t drainers[kNumDrainers];
+    for (auto& t : drainers) {
+        ASSERT_EQ(thrd_create(&t, drainer_thread, &port), thrd_success);
+    }
+
+    zx_nanosleep(zx_deadline_after(kTestDuration));
+    keep_running.store(false);
+
+    for (unsigned i = 0; i < kNumDrainers; ++i) {
+        zx_port_packet_t pkt{};
+        pkt.type = ZX_PKT_TYPE_USER;
+        zx_status_t status;
+        do {
+            status = zx_port_queue(port, &pkt);
+        } while (status == ZX_ERR_SHOULD_WAIT);
+        ASSERT_EQ(status, ZX_OK);
+    }
+
+    for (auto& t : drainers) {
+        int res;
+        ASSERT_EQ(thrd_join(t, &res), thrd_success);
+        ASSERT_EQ(res, ZX_OK);
+    }
+
+    for (auto& t : signalers) {
+        int res;
+        ASSERT_EQ(thrd_join(t, &res), thrd_success);
+        ASSERT_EQ(res, ZX_OK);
+    }
+
+    status = zx_handle_close(port);
+    ASSERT_EQ(status, ZX_OK);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(port_tests)
 RUN_TEST(basic_test)
 RUN_TEST(queue_and_close_test)
@@ -657,4 +783,5 @@ RUN_TEST(cancel_event_key)
 RUN_TEST(cancel_event_key_after)
 RUN_TEST(threads_event)
 RUN_TEST_LARGE(cancel_stress)
+RUN_TEST_LARGE(signal_close_stress)
 END_TEST_CASE(port_tests)

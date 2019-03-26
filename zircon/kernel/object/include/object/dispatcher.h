@@ -121,24 +121,38 @@ public:
         return handle_count_;
     }
 
-    // The following are only to be called when |is_waitable| reports true.
-
-    using ObserverList = fbl::DoublyLinkedList<StateObserver*, StateObserverListTraits>;
+    using ObserverList = fbl::DoublyLinkedList<StateObserver*, StateObserver::ObserverListTraits>;
 
     // Add an observer.
+    //
+    // May only be called when |is_waitable| reports true.
     void AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo);
     void AddObserverLocked(StateObserver* observer,
                            const StateObserver::CountInfo* cinfo) TA_REQ(get_lock());
 
-    // Remove an observer (which must have been added).
-    void RemoveObserver(StateObserver* observer);
+    // Remove an observer.
+    //
+    // Returns true if the method removed |observer|, otherwise returns false.
+    //
+    // This method may return false if the observer was never added or has already been removed in
+    // preparation for its destruction.
+    //
+    // It is an error to call this method with an observer that's observing some other Dispatcher.
+    //
+    // May only be called when |is_waitable| reports true.
+    bool RemoveObserver(StateObserver* observer);
 
-    // Called when observers of the handle's state (e.g., waits on the handle) should be
-    // "cancelled", i.e., when a handle (for the object that owns this StateTracker) is being
-    // destroyed or transferred. Returns true if at least one observer was found.
+    // Cancel observers of this object's state (e.g., waits on the object).
+    // Should be called when a handle to this dispatcher is being destroyed.
+    //
+    // May only be called when |is_waitable| reports true.
     void Cancel(const Handle* handle);
 
     // Like Cancel() but issued via via zx_port_cancel().
+    //
+    // Returns true if an observer was canceled.
+    //
+    // May only be called when |is_waitable| reports true.
     bool CancelByKey(const Handle* handle, const void* port, uint64_t key);
 
     // Dispatchers that support get/set cookie must provide
@@ -193,6 +207,8 @@ protected:
 
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
+    //
+    // May only be called when |is_waitable| reports true.
     void UpdateState(zx_signals_t clear_mask, zx_signals_t set_mask);
     void UpdateStateLocked(zx_signals_t clear_mask, zx_signals_t set_mask) TA_REQ(get_lock());
 
@@ -219,9 +235,6 @@ private:
                            const StateObserver::CountInfo* cinfo,
                            Lock<LockType>* lock);
 
-    void UpdateInternalLocked(ObserverList* obs_to_remove,
-                              zx_signals_t signals) TA_REQ(get_lock());
-
     fbl::Canary<fbl::magic("DISP")> canary_;
 
     const zx_koid_t koid_;
@@ -245,8 +258,7 @@ class SoloDispatcher : public Dispatcher {
 public:
     static constexpr zx_rights_t default_rights() { return def_rights; }
 
-    // At construction, the object's state tracker is asserting
-    // |signals|.
+    // At construction, the object is asserting |signals|.
     explicit SoloDispatcher(zx_signals_t signals = 0u)
         : Dispatcher(signals) {}
 
@@ -320,8 +332,7 @@ class PeeredDispatcher : public Dispatcher {
 public:
     static constexpr zx_rights_t default_rights() { return def_rights; }
 
-    // At construction, the object's state tracker is asserting
-    // |signals|.
+    // At construction, the object is asserting |signals|.
     explicit PeeredDispatcher(fbl::RefPtr<PeerHolder<Self>> holder,
                               zx_signals_t signals = 0u)
         : Dispatcher(signals),

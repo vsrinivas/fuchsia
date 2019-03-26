@@ -13,7 +13,7 @@
 
 class Handle;
 
-// Observer base class for state maintained by StateTracker.
+// Observer base class for state maintained by Dispatcher.
 class StateObserver {
 public:
     // Optional initial counts. Each object might have a different idea of them
@@ -28,7 +28,7 @@ public:
         } entry[2];
     };
 
-    StateObserver() { }
+    StateObserver() = default;
 
     typedef unsigned Flags;
 
@@ -36,24 +36,24 @@ public:
     static constexpr Flags kNeedRemoval = 1;
     static constexpr Flags kHandled = 2;
 
-    // Called when this object is added to a StateTracker, to give it the initial state.
+    // Called when this object is added to a Dispatcher, to give it the initial state.
     // Note that |cinfo| might be null.
     // May return flags: kNeedRemoval
-    // WARNING: This is called under StateTracker's mutex.
+    // WARNING: This is called under Dispatcher's mutex.
     virtual Flags OnInitialize(zx_signals_t initial_state, const CountInfo* cinfo) = 0;
 
     // Called whenever the state changes, to give it the new state.
     // May return flags: kNeedRemoval
-    // WARNING: This is called under StateTracker's mutex
+    // WARNING: This is called under Dispatcher's mutex
     virtual Flags OnStateChange(zx_signals_t new_state) = 0;
 
-    // Called when |handle| (which refers to a handle to the object that owns the StateTracker) is
-    // being destroyed/"closed"/transferred. (The object itself, and thus the StateTracker too, may
-    // also be destroyed shortly afterwards.)
-    // Returns flag kHandled if |this| observer handled the call which normally
-    // means it was bound to |handle|.
+    // Called when |handle| (which refers to a handle to the Dispatcher object) is being
+    // destroyed/"closed"/transferred. (The object itself, may also be destroyed shortly
+    // afterwards.)
+    // Returns flag kHandled if |this| observer handled the call which normally means it
+    // was bound to |handle|.
     // May also return flags: kNeedRemoval
-    // WARNING: This is called under StateTracker's mutex.
+    // WARNING: This is called under Dispatcher's mutex.
     virtual Flags OnCancel(const Handle* handle) = 0;
 
     // Called when the client wants to cancel an outstanding object_wait_aysnc(..key..). In this
@@ -61,29 +61,26 @@ public:
     // Returns flag kHandled if |this| observer handled the call which normally
     // means it was bound to |handle| and |key|.
     // May also return flags: kNeedRemoval
-    // WARNING: This is called under StateTracker's mutex.
+    // WARNING: This is called under Dispatcher's mutex.
     virtual Flags OnCancelByKey(const Handle* handle, const void* port, uint64_t key) { return 0; }
 
-    // Called after this observer has been removed from the state tracker list. In this callback
+    // Called after this observer has been removed from the Dispatcher. In this callback
     // is safe to delete the observer.
+    // WARNING: This is called under Dispatcher's mutex.
     virtual void OnRemoved() {}
 
+    struct ObserverListTraits {
+        static fbl::DoublyLinkedListNodeState<StateObserver*>& node_state(StateObserver& obj) {
+            return obj.observer_list_node_state_;
+        }
+    };
+
 protected:
-    ~StateObserver() {}
+    ~StateObserver() = default;
 
 private:
     fbl::Canary<fbl::magic("SOBS")> canary_;
 
-    friend struct StateObserverListTraits;
-    fbl::DoublyLinkedListNodeState<StateObserver*> state_observer_list_node_state_;
-};
-
-// For use by StateTracker to maintain a list of StateObservers. (We don't use the default traits so
-// that implementations of StateObserver can themselves use the default traits if they need to be on
-// a different list.)
-struct StateObserverListTraits {
-    inline static fbl::DoublyLinkedListNodeState<StateObserver*>& node_state(
-            StateObserver& obj) {
-        return obj.state_observer_list_node_state_;
-    }
+    // Guarded by Dispatcher's lock.
+    fbl::DoublyLinkedListNodeState<StateObserver*> observer_list_node_state_;
 };

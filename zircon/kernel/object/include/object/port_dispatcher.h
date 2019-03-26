@@ -29,52 +29,56 @@
 // states of the system. The pure header view is really the
 // union of all these pointer which can be confusing.
 //
+// PortDispatcher is responsible for destroying PortObservers (MaybeReap
+// or on_zero_handles), however, their destruction may be initiated by
+// either Dispatcher or PortDispatcher.
+//
 // rc = ref counted
-// w  = weak pointer
+// p  = raw pointer
 // o =  owning pointer
 //
-// 1) Situation after handle_wait_async(port, handle) is issued:
+// 1) Situation after object_wait_async(port, handle) is issued:
 //
 //
-//  +----------+                            +--------+
-//  | object   |                            |  Port  |
-//  |          |                            |        |
-//  +----------+        +-----------+       +-+------+
-//  | state    |  w     | Port      |         ^
-//  | tracker  +------> | Observer  |         |
-//  +----------+        |           |    rc   |
-//                      |           +---------+
+//                                   list   +--------+
+//          +------p------+      +----p-----+  Port  |
+//          |             v      v          |        |
+//  +-------+--+        +-----------+       +-+------+
+//  | object   |        | Port      |         ^
+//  |          | <--rc--+ Observer  |         |
+//  +----------+        |           +---rc----+
+//                      |           |
 //                      +-----------+
 //                      |  Port     |
 //                      |  Packet   |
 //                      +-----------+
 //
 //   State changes of the object are propagated from the object
-//   to the port via |w| --> observer --> |rc| calls.
+//   to the port via |p| --> observer --> |rc| calls.
 //
 // 2) Situation after the packet is queued in the one-shot case on
 //    signal match or the wait is canceled.
 //
-//  +----------+                            +--------+
-//  | object   |                            |  Port  |
-//  |          |                            |        |
+//                                          +--------+
+//                                          |  Port  |
+//                                          |        |
 //  +----------+        +-----------+       +-+---+--+
-//  | state    |        | Port      |         ^   |
-//  | tracker  |        | Observer  |         |   |
-//  +----------+        |           |    rc   |   |
-//                +---> |           +---------+   |
+//  | object   |        | Port      |         ^   |
+//  |          |        | Observer  |         |   |
+//  +----------+        |           +---rc----+   |
+//                +---> |           |             |
 //                |     +-----------+             | list
-//             o1 |     |  Port     |      o2     |
-//                +-----|  Packet   | <-----------+
+//                |     |  Port     |             |
+//                +-rc--|  Packet   | <-----o-----+
 //                      +-----------+
 //
-//   Note that the object no longer has a |w| to the observer
+//   Note that the object no longer has a |p| to the observer
 //   but the observer still owns the port via |rc|.
 //
-//   For repeating ports |w| is always valid until the wait is
+//   For repeating ports |p| is always valid until the wait is
 //   canceled.
 //
-//   The |o1| pointer is used to destroy the port observer only
+//   The |o| pointer is used to destroy the port observer only
 //   when cancellation happens and the port still owns the packet.
 //
 
@@ -109,14 +113,31 @@ struct PortInterruptPacket final : public fbl::DoublyLinkedListable<PortInterrup
     uint64_t key;
 };
 
-// Observers are weakly contained in state trackers until |remove_| member
-// is false at the end of one of OnInitialize(), OnStateChange() or OnCancel()
-// callbacks.
+// Observers are weakly contained in Dispatchers until their OnInitialize(), OnStateChange() or
+// OnCancel() callbacks return StateObserver::kNeedRemoval.
 class PortObserver final : public StateObserver {
 public:
+    using ListNodeState = fbl::DoublyLinkedListNodeState<PortObserver*>;
+
+    // ListTraits allows PortObservers to be placed on a PortObserver::List.
+    struct ListTraits {
+        static ListNodeState& node_state(PortObserver& obj) {
+            return obj.observer_list_node_state_;
+        }
+    };
+
+    using List = fbl::DoublyLinkedList<PortObserver*, PortObserver::ListTraits>;
+
     PortObserver(uint32_t type, const Handle* handle, fbl::RefPtr<PortDispatcher> port,
-                 uint64_t key, zx_signals_t signals);
+                 Lock<fbl::Mutex>* port_lock, uint64_t key, zx_signals_t signals);
+
     ~PortObserver() = default;
+
+    // May only be called while holding PortDispatcher lock.
+    fbl::RefPtr<Dispatcher> UnlinkDispatcherLocked() {
+        DEBUG_ASSERT(port_lock_->lock().IsHeld());
+        return ktl::move(dispatcher_);
+    }
 
 private:
     PortObserver(const PortObserver&) = delete;
@@ -138,6 +159,13 @@ private:
     PortPacket packet_;
 
     fbl::RefPtr<PortDispatcher> const port_;
+    Lock<fbl::Mutex>* const port_lock_;
+
+    // Guarded by port_lock_;
+    ListNodeState observer_list_node_state_;
+
+    // Guarded by port_lock_;
+    fbl::RefPtr<Dispatcher> dispatcher_;
 };
 
 // The PortDispatcher implements the port kernel object which is the cornerstone
@@ -180,11 +208,16 @@ public:
     zx_status_t Dequeue(const Deadline& deadline, zx_port_packet_t* packet);
     bool RemoveInterruptPacket(PortInterruptPacket* port_packet);
 
-    // Decides who is going to destroy the observer. If it returns the
-    // observer back if it is the duty of the caller. It returns
-    // nullptr if it is the duty of the port.
-    ktl::unique_ptr<PortObserver> MaybeReap(ktl::unique_ptr<PortObserver> observer,
-                                            PortPacket* port_packet);
+    // This method determines the observer's fate. Upon return, one of the following will have
+    // occurred:
+    //
+    // 1. The observer is destroyed.
+    //
+    // 2. The observer is linked to an alreadyed queued packet and will be destroyed when the packet
+    // is destroyed (Queued or CancelQueued).
+    //
+    // 3. The observer is left for on_zero_handles to destroyed.
+    void MaybeReap(PortObserver* observer, PortPacket* port_packet);
 
     // Called under the handle table lock.
     zx_status_t MakeObserver(uint32_t options, Handle* handle, uint64_t key, zx_signals_t signals);
@@ -223,4 +256,8 @@ private:
     // Next two members handle the interrupt notifications.
     DECLARE_SPINLOCK(PortDispatcher) spinlock_;
     fbl::DoublyLinkedList<PortInterruptPacket*> interrupt_packets_ TA_GUARDED(spinlock_);
+
+    // Keeps track of outstanding observers so they can be removed from dispatchers once handle
+    // count drops to zero.
+    PortObserver::List observers_ TA_GUARDED(get_lock());
 };

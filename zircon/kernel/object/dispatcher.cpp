@@ -110,8 +110,6 @@ StateObserver::Flags CancelWithFunc(Dispatcher::ObserverList* observers,
                                     Lock<LockType>* observer_lock, Func f) {
     StateObserver::Flags flags = 0;
 
-    Dispatcher::ObserverList obs_to_remove;
-
     {
         Guard<LockType> guard{observer_lock};
         for (auto it = observers->begin(); it != observers->end();) {
@@ -120,15 +118,12 @@ StateObserver::Flags CancelWithFunc(Dispatcher::ObserverList* observers,
             if (it_flags & StateObserver::kNeedRemoval) {
                 auto to_remove = it;
                 ++it;
-                obs_to_remove.push_back(observers->erase(to_remove));
+                observers->erase(to_remove);
+                to_remove->OnRemoved();
             } else {
                 ++it;
             }
         }
-    }
-
-    while (!obs_to_remove.is_empty()) {
-        obs_to_remove.pop_front()->OnRemoved();
     }
 
     // We've processed the removal flag, so strip it
@@ -154,11 +149,12 @@ void Dispatcher::AddObserverHelper(StateObserver* observer,
         Guard<LockType> guard{lock};
 
         flags = observer->OnInitialize(signals_, cinfo);
-        if (!(flags & StateObserver::kNeedRemoval))
+        if (flags & StateObserver::kNeedRemoval) {
+            observer->OnRemoved();
+        } else {
             observers_.push_front(observer);
+        }
     }
-    if (flags & StateObserver::kNeedRemoval)
-        observer->OnRemoved();
 
     kcounter_add(dispatcher_observe_count, 1);
 }
@@ -179,13 +175,19 @@ void Dispatcher::AddObserverLocked(StateObserver* observer, const StateObserver:
     AddObserverHelper(observer, cinfo, &lock);
 }
 
-void Dispatcher::RemoveObserver(StateObserver* observer) {
+bool Dispatcher::RemoveObserver(StateObserver* observer) {
     canary_.Assert();
     ZX_DEBUG_ASSERT(is_waitable());
+    DEBUG_ASSERT(observer != nullptr);
 
     Guard<fbl::Mutex> guard{get_lock()};
-    DEBUG_ASSERT(observer != nullptr);
-    observers_.erase(*observer);
+
+    if (StateObserver::ObserverListTraits::node_state(*observer).InContainer()) {
+        observers_.erase(*observer);
+        return true;
+    }
+
+    return false;
 }
 
 void Dispatcher::Cancel(const Handle* handle) {
@@ -222,8 +224,8 @@ void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask,
                                    zx_signals_t set_mask,
                                    Lock<LockType>* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
+    ZX_DEBUG_ASSERT(is_waitable());
 
-    Dispatcher::ObserverList obs_to_remove;
     {
         Guard<LockType> guard{lock};
 
@@ -234,12 +236,19 @@ void Dispatcher::UpdateStateHelper(zx_signals_t clear_mask,
         if (previous_signals == signals_)
             return;
 
-        UpdateInternalLocked(&obs_to_remove, signals_);
+        for (auto it = observers_.begin(); it != observers_.end();) {
+            StateObserver::Flags it_flags = it->OnStateChange(signals_);
+            if (it_flags & StateObserver::kNeedRemoval) {
+                auto to_remove = it;
+                ++it;
+                observers_.erase(to_remove);
+                to_remove->OnRemoved();
+            } else {
+                ++it;
+            }
+        }
     }
 
-    while (!obs_to_remove.is_empty()) {
-        obs_to_remove.pop_front()->OnRemoved();
-    }
 }
 
 void Dispatcher::UpdateState(zx_signals_t clear_mask,
@@ -257,22 +266,6 @@ void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask,
     struct DispatcherUpdateStateLocked {};
     DECLARE_LOCK(DispatcherUpdateStateLocked, fbl::NullLock) lock;
     UpdateStateHelper(clear_mask, set_mask, &lock);
-}
-
-void Dispatcher::UpdateInternalLocked(ObserverList* obs_to_remove, zx_signals_t signals) {
-    canary_.Assert();
-    ZX_DEBUG_ASSERT(is_waitable());
-
-    for (auto it = observers_.begin(); it != observers_.end();) {
-        StateObserver::Flags it_flags = it->OnStateChange(signals);
-        if (it_flags & StateObserver::kNeedRemoval) {
-            auto to_remove = it;
-            ++it;
-            obs_to_remove->push_back(observers_.erase(to_remove));
-        } else {
-            ++it;
-        }
-    }
 }
 
 zx_status_t Dispatcher::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie) {
