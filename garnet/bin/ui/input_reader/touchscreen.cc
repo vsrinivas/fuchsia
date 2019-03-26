@@ -53,13 +53,6 @@ bool TouchScreen::ParseReport(const uint8_t* data, size_t len,
   FXL_CHECK(report);
   FXL_CHECK(report->touchscreen);
 
-  if (report_id_ != 0 && data[0] != report_id_) {
-    FXL_VLOG(0) << "Touch report " << static_cast<uint32_t>(data[0])
-                << " does not match report id "
-                << static_cast<uint32_t>(report_id_);
-    return false;
-  }
-
   Touch::Report touchscreen;
   if (!touch_.ParseReport(data, len, &touchscreen)) {
     return false;

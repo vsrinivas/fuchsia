@@ -22,11 +22,10 @@ class TouchScreen : public Device {
   bool ParseReport(const uint8_t* data, size_t len,
                    fuchsia::ui::input::InputReport* report) override;
   // |Device|
-  uint8_t ReportId() const override { return report_id_; }
+  uint8_t ReportId() const override { return touch_.ReportId(); }
 
  private:
   Touch touch_ = {};
-  uint8_t report_id_ = 0;
 };
 }  // namespace mozart
 
