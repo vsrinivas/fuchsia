@@ -71,18 +71,6 @@ protocol RepositoryManager {
     /// Arguments:
     /// |iterator| is a request for an iterator.
     List(request<RepositoryIterator> iterator);
-
-    /// Log into the mirror specified by the mirror url.
-    ///
-    /// Arguments:
-    /// * |repo_url| is the repository that contains the mirror to log into.
-    /// * |mirror_url| is the mirror URL to log into.
-    ///
-    /// Return Values:
-    /// * |ZX_OK| and a |code| if the if mirror is configured for authentication, or null if not.
-    /// * |ZX_ERR_INVALID_ARGS| if the |repo_url| or the |mirror_url| is malformed.
-    /// * |ZX_ERR_NOT_FOUND| if the repository or mirror does not exist.
-    Login(string repo_url, string mirror_url) -> (zx.status status, OAuth2DeviceCode? code);
 };
 
 /// Describes the configuration necessary to connect to a repository and it's mirrors.
@@ -113,45 +101,6 @@ struct MirrorConfig {
 
     /// Whether or not to automatically monitor the mirror for updates.
     bool subscribe;
-
-    /// Optionally configure if the repository requires OAuth2 authentication for access.
-    OAuth2Config? oauth2;
-};
-
-/// Describes the configuration for communicating with an OAuth 2.0 protected server.
-struct OAuth2Config {
-    /// The OAuth2 application's ID.
-    string client_id;
-
-    /// The OAuth2 application's secret.
-    string client_secret;
-
-    /// The OAuth2 provider's authorization endpoint.
-    string auth_url;
-
-    /// The OAuth2 provider's token endpoint.
-    string token_url;
-
-    /// The optional requested permissions.
-    vector<string> scopes;
-
-    /// The OAuth2 provider's device code endpoint.
-    string device_code_url;
-};
-
-/// Describes the state needed to complete the Oauth2 device flow.
-///
-/// TODO(PKG-199): This will eventually be replaced once the packaging system integrates with the
-/// new account manager.
-struct OAuth2DeviceCode {
-    /// The OAuth2 provider's device code verification endpoint.
-    string verification_url;
-
-    /// The code the user must pass to the verification endpoint.
-    string user_code;
-
-    /// The time in nanoseconds before the verification code expires.
-    zx.duration expires_in;
 };
 
 /// The iterator over all the repositories defined in a |PackageResolver|.
