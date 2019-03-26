@@ -34,7 +34,7 @@
 namespace {
 
 int Mount(fbl::unique_fd fd, blobfs::MountOptions* options) {
-    if (!options->readonly) {
+    if (options->writability == blobfs::Writability::Writable) {
         fzl::UnownedFdioCaller caller(fd.get());
 
         fuchsia_hardware_block_BlockInfo block_info;
@@ -51,7 +51,7 @@ int Mount(fbl::unique_fd fd, blobfs::MountOptions* options) {
         }
         if (block_info.flags & BLOCK_FLAG_READONLY) {
             FS_TRACE_WARN("blobfs: Mounting as read-only. WARNING: Journal will not be applied\n");
-            options->readonly = true;
+            options->writability = blobfs::Writability::ReadOnlyDisk;
         }
     }
 
@@ -91,7 +91,7 @@ int Fsck(fbl::unique_fd fd, blobfs::MountOptions* options) {
         return -1;
     }
 
-    return blobfs::Fsck(std::move(blobfs));
+    return blobfs::Fsck(std::move(blobfs), options->journal);
 }
 
 typedef int (*CommandFunction)(fbl::unique_fd fd, blobfs::MountOptions* options);
@@ -114,6 +114,8 @@ int usage() {
             "\n"
             "options: -r|--readonly  Mount filesystem read-only\n"
             "         -m|--metrics   Collect filesystem metrics\n"
+            "         -j|--journal   Utilize the blobfs journal\n"
+            "                        For fsck, the journal is replayed before verification\n"
             "         -h|--help      Display this message\n"
             "\n"
             "On Fuchsia, blobfs takes the block device argument by handle.\n"
@@ -145,7 +147,7 @@ int ProcessArgs(int argc, char** argv, CommandFunction* func, blobfs::MountOptio
         }
         switch (c) {
         case 'r':
-            options->readonly = true;
+            options->writability = blobfs::Writability::ReadOnlyFilesystem;
             break;
         case 'm':
             options->metrics = true;

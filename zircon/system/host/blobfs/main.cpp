@@ -224,7 +224,8 @@ zx_status_t BlobfsCreator::Fsck() {
         return status;
     }
 
-    return blobfs::Fsck(std::move(vn));
+    bool apply_journal = false;
+    return blobfs::Fsck(std::move(vn), apply_journal);
 }
 
 zx_status_t BlobfsCreator::Add() {

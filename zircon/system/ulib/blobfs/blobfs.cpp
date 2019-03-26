@@ -16,6 +16,7 @@
 #include <blobfs/blobfs.h>
 #include <blobfs/compression/compressor.h>
 #include <blobfs/extent-reserver.h>
+#include <blobfs/fsck.h>
 #include <blobfs/node-reserver.h>
 #include <blobfs/writeback.h>
 #include <cobalt-client/cpp/collector.h>
@@ -61,93 +62,6 @@ cobalt_client::CollectorOptions MakeCollectorOptions() {
     options.response_deadline = zx::nsec(0);
 #endif // __Fuchsia__
     return options;
-}
-
-zx_status_t CheckFvmConsistency(const Superblock* info, const zx::unowned_channel channel) {
-    if ((info->flags & kBlobFlagFVM) == 0) {
-        return ZX_OK;
-    }
-
-    fuchsia_hardware_block_volume_VolumeInfo fvm_info;
-    zx_status_t status;
-    zx_status_t io_status = fuchsia_hardware_block_volume_VolumeQuery(channel->get(), &status,
-                                                                      &fvm_info);
-    if (io_status != ZX_OK) {
-        status = io_status;
-    }
-    if (status != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Unable to query FVM, status: %s\n", zx_status_get_string(status));
-        return status;
-    }
-
-    if (info->slice_size != fvm_info.slice_size) {
-        FS_TRACE_ERROR("blobfs: Slice size did not match expected\n");
-        return ZX_ERR_BAD_STATE;
-    }
-    const size_t kBlocksPerSlice = info->slice_size / kBlobfsBlockSize;
-
-    size_t expected_count[4];
-    expected_count[0] = info->abm_slices;
-    expected_count[1] = info->ino_slices;
-    expected_count[2] = info->journal_slices;
-    expected_count[3] = info->dat_slices;
-
-    uint64_t start_slices[4];
-    start_slices[0] = kFVMBlockMapStart / kBlocksPerSlice;
-    start_slices[1] = kFVMNodeMapStart / kBlocksPerSlice;
-    start_slices[2] = kFVMJournalStart / kBlocksPerSlice;
-    start_slices[3] = kFVMDataStart / kBlocksPerSlice;
-
-    fuchsia_hardware_block_volume_VsliceRange
-            ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
-    size_t actual_ranges_count;
-    io_status = fuchsia_hardware_block_volume_VolumeQuerySlices(
-        channel->get(), start_slices, fbl::count_of(start_slices), &status, ranges,
-        &actual_ranges_count);
-    if (io_status != ZX_OK) {
-        status = io_status;
-    }
-    if (status != ZX_OK) {
-        FS_TRACE_ERROR("blobfs: Cannot query slices, status: %s\n", zx_status_get_string(status));
-        return status;
-    }
-
-    if (actual_ranges_count != fbl::count_of(start_slices)) {
-        FS_TRACE_ERROR("blobfs: Missing slice\n");
-        return ZX_ERR_BAD_STATE;
-    }
-
-    for (size_t i = 0; i < fbl::count_of(start_slices); i++) {
-        size_t blobfs_count = expected_count[i];
-        size_t fvm_count = ranges[i].count;
-
-        if (!ranges[i].allocated || fvm_count < blobfs_count) {
-            // Currently, since Blobfs can only grow new slices, it should not be possible for
-            // the FVM to report a slice size smaller than what is reported by Blobfs. In this
-            // case, automatically fail without trying to resolve the situation, as it is
-            // possible that Blobfs structures are allocated in the slices that have been lost.
-            FS_TRACE_ERROR("blobfs: Mismatched slice count\n");
-            return ZX_ERR_IO_DATA_INTEGRITY;
-        }
-
-        if (fvm_count > blobfs_count) {
-            // If FVM reports more slices than we expect, try to free remainder.
-            uint64_t offset = start_slices[i] + blobfs_count;
-            uint64_t length = fvm_count - blobfs_count;
-            io_status = fuchsia_hardware_block_volume_VolumeShrink(channel->get(), offset, length,
-                                                                   &status);
-            if (io_status != ZX_OK) {
-                status = io_status;
-            }
-            if (status != ZX_OK) {
-                FS_TRACE_ERROR("blobfs: Unable to shrink to expected size: %s\n",
-                               zx_status_get_string(status));
-                return status;
-            }
-        }
-    }
-
-    return ZX_OK;
 }
 
 } // namespace
@@ -225,10 +139,10 @@ void Blobfs::PersistNode(WritebackWork* wb, uint32_t node_index) {
     WriteInfo(wb);
 }
 
-zx_status_t Blobfs::InitializeWriteback(const MountOptions& options) {
-    if (options.readonly) {
-        // If blobfs should be readonly, do not start up any writeback threads.
-        return ZX_OK;
+zx_status_t Blobfs::InitializeWriteback(Writability writability, bool journal_enabled) {
+    if (writability == Writability::ReadOnlyDisk && journal_enabled) {
+        FS_TRACE_ERROR("blobfs: Cannot replay journal on a read-only device");
+        return ZX_ERR_ACCESS_DENIED;
     }
 
     // Initialize the WritebackQueue.
@@ -239,25 +153,33 @@ zx_status_t Blobfs::InitializeWriteback(const MountOptions& options) {
         return status;
     }
 
-    // Replay any lingering journal entries.
-    if ((status = journal_->Replay()) != ZX_OK) {
-        return status;
+    if (journal_enabled) {
+        // Replay any lingering journal entries.
+        if ((status = journal_->Replay()) != ZX_OK) {
+            return status;
+        }
+        // TODO(ZX-2728): Don't load metadata until after journal replay.
+        // Re-load blobfs metadata from disk, since things may have changed.
+        if ((status = Reload()) != ZX_OK) {
+            return status;
+        }
+        if (writability == Writability::Writable) {
+            // Initialize the journal's writeback thread.
+            // Wait until after replay has completed in order to avoid concurrency issues.
+            return journal_->InitWriteback();
+        }
     }
 
-    // TODO(ZX-2728): Don't load metadata until after journal replay.
-    // Re-load blobfs metadata from disk, since things may have changed.
-    if ((status = Reload()) != ZX_OK) {
-        return status;
-    }
-
-    if (options.journal) {
-        // Initialize the journal's writeback thread (if journaling is enabled).
-        // Wait until after replay has completed in order to avoid concurrency issues.
-        return journal_->InitWriteback();
-    }
-
-    // If journaling is disabled, delete the journal.
+    // If journaling is disabled or the filesystem is mounted read-only, tear down
+    // the journal.
     journal_.reset();
+
+    if (writability != Writability::Writable) {
+        // If writeback is disabled, tear down the writeback buffer.
+        writeback_->Teardown();
+        writeback_.reset();
+    }
+
     return ZX_OK;
 }
 
@@ -597,12 +519,12 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
                            fbl::unique_ptr<Blobfs>* out) {
     TRACE_DURATION("blobfs", "Blobfs::Create");
     zx_status_t status = CheckSuperblock(info, TotalBlocks(*info));
-    if (status < 0) {
+    if (status != ZX_OK) {
         FS_TRACE_ERROR("blobfs: Check info failure\n");
         return status;
     }
     auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(std::move(fd), info));
-    fs->SetReadonly(options.readonly);
+    fs->SetReadonly(options.writability != blobfs::Writability::Writable);
     fs->Cache().SetCachePolicy(options.cache_policy);
     if (options.metrics) {
         fs->LocalMetrics().Collect();
@@ -838,7 +760,7 @@ zx_status_t Mount(async_dispatcher_t* dispatcher, fbl::unique_fd blockfd,
     // Attempt to initialize writeback and journal.
     // The journal must be replayed before the FVM check, in case changes to slice counts have
     // been written to the journal but not persisted to the super block.
-    if ((status = fs->InitializeWriteback(options)) != ZX_OK) {
+    if ((status = fs->InitializeWriteback(options.writability, options.journal)) != ZX_OK) {
         return status;
     }
 

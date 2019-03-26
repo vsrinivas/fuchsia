@@ -333,7 +333,9 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
     zx_status_t status;
     if ((status = blobfs_create_sparse(&blob, std::move(fd), start, end, extent_lengths)) != ZX_OK) {
         return status;
-    } else if ((status = Fsck(std::move(blob))) != ZX_OK) {
+    }
+    bool apply_journal = false;
+    if ((status = Fsck(std::move(blob), apply_journal)) != ZX_OK) {
         return status;
     }
     return ZX_OK;

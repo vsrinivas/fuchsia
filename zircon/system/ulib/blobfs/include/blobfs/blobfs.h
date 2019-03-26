@@ -64,9 +64,19 @@ namespace blobfs {
 
 using digest::Digest;
 
+enum class Writability {
+    // Do not write to persistent storage under any circumstances whatsoever.
+    ReadOnlyDisk,
+    // Do not allow users of the filesystem to mutate filesystem state. This
+    // state allows the journal to replay while initializing writeback.
+    ReadOnlyFilesystem,
+    // Permit all operations.
+    Writable,
+};
+
 // Toggles that may be set on blobfs during initialization.
 struct MountOptions {
-    bool readonly = false;
+    Writability writability = Writability::Writable;
     bool metrics = false;
     bool journal = false;
     CachePolicy cache_policy = CachePolicy::EvictImmediately;
@@ -170,9 +180,13 @@ public:
 
     void SetUnmountCallback(fbl::Closure closure) { on_unmount_ = std::move(closure); }
 
-    // Initializes the WritebackQueue and Journal (if enabled in |options|),
-    // replaying any existing journal entries.
-    zx_status_t InitializeWriteback(const MountOptions& options);
+    // Initializes the WritebackQueue and Journal, replaying any existing journal entries
+    // if requested.
+    //
+    // If the underlying block device is read-only, the journal may not be
+    // replayed, and this function returns ZX_ERR_ACCESS_DENIED.
+    // If the filesystem is to be mounted read-only or read + write, the journal may be replayed.
+    zx_status_t InitializeWriteback(Writability writability, bool journal_enabled);
 
     virtual ~Blobfs();
 
