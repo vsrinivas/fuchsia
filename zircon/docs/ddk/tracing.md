@@ -4,7 +4,7 @@ This document describes how to add tracing to device drivers.
 
 ## Overview
 
-Please read [Fuchsia Tracing System Design](../tracing/design.md)
+Please read [Fuchsia Tracing System Design](../../../docs/development/tracing/design.md)
 for an overview of tracing.
 
 ## Trace Provider
@@ -126,5 +126,5 @@ viewing with the Chrome trace viewer.
 host$ fx traceutil record --categories=example:example1
 ```
 
-See the [Tracing Usage Guide](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/tracing_usage_guide.md)
+See the [Tracing Usage Guide](../../../docs/development/tracing/tracing-usage-guide.md)
 for further info.

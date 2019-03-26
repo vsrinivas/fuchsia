@@ -11,9 +11,9 @@ It also includes other counters that may be provided.
 For example on Intel the memory controller provides statistics on
 memory bytes read and written.
 
-Data collection is driving by the "cpuperf" program described herein.
+Data collection is driven by the "cpuperf" program described herein.
 Data can also be collected with Fuchsia's general tracing support
-using [the cpuperf provider](../cpuperf_provider/README.md).
+using [the cpuperf provider](../../../docs/development/tracing/cpuperf-provider.md).
 
 ## Quick Start
 

@@ -650,10 +650,10 @@ end-to-end from the client, through the server, and back to the client.
 
 # References
 
-* [Adding Tracing to Device Drivers](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/ddk/tracing.md)
+* [Adding Tracing to Device Drivers](../../../zircon/docs/ddk/tracing.md)
   gives details on source code additions (e.g., what `#include` files to add) and Makefile
   additions required by the trace provider in order to add tracing, or disable it completely.
-* [Fuchsia Tracing System Design](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/tracing/design.md)
+* [Fuchsia Tracing System Design](design.md)
   goes through the design goals of the tracing system.
-* [Fuchsia Trace Format](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/tracing/trace_format.md)
+* [Fuchsia Trace Format](trace-format.md)
   is a reference for the in-memory data format used by the tracing system.
