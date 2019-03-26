@@ -64,7 +64,14 @@ int MdnsInterfaceTransceiverV4::SetOptionUnicastTtl() {
   int result =
       setsockopt(socket_fd().get(), IPPROTO_IP, IP_TTL, &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IP_TTL, " << strerror(errno);
+    if (errno == ENOPROTOOPT) {
+      FXL_LOG(WARNING) << "NET-2177 IP_TTL not supported (ENOPROTOOPT), "
+                          "continuing anyway. May cause spurious IP traffic";
+      result = 0;
+    } else {
+      FXL_LOG(ERROR) << "Failed to set socket option IP_TTL, "
+                     << strerror(errno);
+    }
   }
 
   return result;
@@ -93,10 +100,6 @@ int MdnsInterfaceTransceiverV4::Bind() {
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to bind socket to V4 address, "
                    << strerror(errno);
-    // TODO(dalesat): Remove the following once NET-1809 is fixed.
-    if (errno == EADDRINUSE) {
-      FXL_LOG(ERROR) << "(EADDRINUSE) This is probably due to NET-1809.";
-    }
   }
 
   return result;

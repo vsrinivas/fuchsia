@@ -25,9 +25,9 @@ int MdnsInterfaceTransceiverV6::SetOptionDisableMulticastLoop() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_MULTICAST_LOOP,
                           &param, sizeof(param));
   if (result < 0) {
-    if (errno == EOPNOTSUPP) {
-      FXL_LOG(WARNING)
-          << "IPV6_MULTICAST_LOOP is not supported. Proceeding anyway.";
+    if (errno == ENOPROTOOPT) {
+      FXL_LOG(WARNING) << "NET-291 IPV6_MULTICAST_LOOP not supported "
+                          "(ENOPROTOOPT), continuing anyway";
       result = 0;
     } else {
       FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_LOOP, "
@@ -46,8 +46,13 @@ int MdnsInterfaceTransceiverV6::SetOptionJoinMulticastGroup() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IPV6, IPV6_JOIN_GROUP,
                           &param, sizeof(param));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IPV6_JOIN_GROUP, "
-                   << strerror(errno);
+    if (errno == ENODEV) {
+      FXL_LOG(WARNING) << "NET-2180 IPV6_JOIN_GROUP returned ENODEV, mDNS will "
+                          "not communicate via IPV6";
+    } else {
+      FXL_LOG(ERROR) << "Failed to set socket option IPV6_JOIN_GROUP, "
+                     << strerror(errno);
+    }
   }
 
   return result;
@@ -59,8 +64,8 @@ int MdnsInterfaceTransceiverV6::SetOptionOutboundInterface() {
                           &index, sizeof(index));
   if (result < 0) {
     if (errno == EOPNOTSUPP) {
-      FXL_LOG(WARNING)
-          << "IPV6_MULTICAST_IF is not supported. Proceeding anyway.";
+      FXL_LOG(WARNING) << "NET-1901 IPV6_MULTICAST_IF not supported "
+                          "(EOPNOTSUPP), continuing anyway";
       result = 0;
     } else {
       FXL_LOG(ERROR) << "Failed to set socket option IPV6_MULTICAST_IF, "
@@ -125,10 +130,6 @@ int MdnsInterfaceTransceiverV6::Bind() {
   if (result < 0) {
     FXL_LOG(ERROR) << "Failed to bind socket to V6 address, "
                    << strerror(errno);
-    // TODO(dalesat): Remove the following once NET-1809 is fixed.
-    if (errno == EADDRINUSE) {
-      FXL_LOG(ERROR) << "(EADDRINUSE) This is probably due to NET-1809.";
-    }
   }
 
   return result;
