@@ -9,8 +9,8 @@
 #include <fbl/algorithm.h>
 #include <fs/connection.h>
 #include <safemath/checked_math.h>
-#include <zircon/boot/image.h>
 #include <zircon/assert.h>
+#include <zircon/boot/image.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -37,7 +37,8 @@ void DiscardItem(zx::vmo* vmo, uint32_t begin_in, uint32_t end_in) {
     if (begin < end) {
         zx_status_t status = vmo->op_range(ZX_VMO_OP_DECOMMIT, begin, end - begin, nullptr, 0);
         ZX_ASSERT_MSG(status == ZX_OK, "Discarding boot item failed: %s\n",
-                    zx_status_get_string(status));
+                      zx_status_get_string(status));
+        printf("bootsvc: Decommitted BOOTDATA VMO from %#lx to %#lx\n", begin, end);
     }
 }
 

@@ -847,8 +847,6 @@ zx::channel devfs_root_clone() {
 }
 
 void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatcher) {
-    printf("devcoordinator: init\n");
-
     root_devnode = fbl::make_unique<Devnode>("");
     if (!root_devnode) {
         printf("devcoordinator: failed to allocate devfs root node\n");

@@ -163,7 +163,7 @@ int LaunchNextProcess(void* raw_ctx) {
         printf("bootsvc: launchpad %s failed: %s: %s\n", next_program, errmsg,
                zx_status_get_string(status));
     } else {
-        printf("bootsvc: launched %s\n", next_program);
+        printf("bootsvc: Launched %s\n", next_program);
     }
     return 0;
 }
@@ -222,7 +222,7 @@ int main(int argc, char** argv) {
                   zx_status_get_string(status));
 
     // Set up the svcfs service
-    printf("bootsvc:: Creating svcfs service...\n");
+    printf("bootsvc: Creating svcfs service...\n");
     fbl::RefPtr<bootsvc::SvcfsService> svcfs_svc = bootsvc::SvcfsService::Create(loop.dispatcher());
     svcfs_svc->AddService(fuchsia_boot_Arguments_Name,
                           bootsvc::CreateArgumentsService(loop.dispatcher(), std::move(args_vmo),
