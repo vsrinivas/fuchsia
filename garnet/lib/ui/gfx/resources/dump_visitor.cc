@@ -251,6 +251,7 @@ void DumpVisitor::Visit(Material* r) {
   WriteProperty("red") << r->red();
   WriteProperty("green") << r->green();
   WriteProperty("blue") << r->blue();
+  WriteProperty("alpha") << r->alpha();
   if (r->escher_material()->texture()) {
     auto texture = r->escher_material()->texture();
     WriteProperty("texture.width") << texture->width();

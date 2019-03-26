@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "transparency_benchmark"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/sys/cpp:cpp",
+    "//sdk/lib/ui/scenic/cpp:cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
+
+package("transparency_benchmark") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "transparency_benchmark"
+
+  meta = [
+    {
+      path = rebase_path("meta/transparency_benchmark.cmx")
+      dest = "transparency_benchmark.cmx"
+    },
+  ]
+}
