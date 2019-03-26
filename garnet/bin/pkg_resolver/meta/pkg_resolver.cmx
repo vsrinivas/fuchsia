@@ -3,6 +3,9 @@
         "binary": "bin/pkg_resolver"
     },
     "sandbox": {
+        "features": [
+            "config-data"
+        ],
         "services": [
             "fuchsia.amber.Control",
             "fuchsia.logger.LogSink",

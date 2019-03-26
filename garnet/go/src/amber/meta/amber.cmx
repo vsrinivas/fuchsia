@@ -4,8 +4,9 @@
     },
     "sandbox": {
         "features": [
-            "shell",
+            "config-data",
             "deprecated-global-persistent-storage",
+            "shell",
             "system-temp"
         ],
         "services": [
