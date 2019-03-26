@@ -298,7 +298,7 @@ impl ViewController {
         let f = timer
             .map(move |_| {
                 App::with(|app| {
-                    app.queue_message(key, make_message(&ViewMessages::Update));
+                    app.queue_message(key, make_message(ViewMessages::Update));
                 });
             })
             .collect::<()>();
