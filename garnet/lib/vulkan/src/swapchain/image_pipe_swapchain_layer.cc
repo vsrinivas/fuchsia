@@ -132,7 +132,8 @@ VkResult ImagePipeSwapchain::Initialize(
     VkExportSemaphoreCreateInfoKHR export_create_info = {
         .sType = VK_STRUCTURE_TYPE_EXPORT_SEMAPHORE_CREATE_INFO_KHR,
         .pNext = nullptr,
-        .handleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_FUCHSIA_FENCE_BIT_KHR};
+        .handleTypes =
+            VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA};
     VkSemaphoreCreateInfo create_semaphore_info{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         .pNext = &export_create_info,
