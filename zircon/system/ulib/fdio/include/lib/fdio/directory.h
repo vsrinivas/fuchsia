@@ -69,7 +69,7 @@ zx_status_t fdio_service_connect_at(zx_handle_t directory, const char* path,
 // Opens the remote object at the given |path| with the given |flags|
 // asynchronously.
 //
-// |flags| is a bitfield of |fuchsia.io.OPEN_*|.
+// |flags| is a bit field of |fuchsia.io.OPEN_*|.
 //
 // Always consumes |request|.
 //
@@ -79,7 +79,7 @@ zx_status_t fdio_open(const char* path, uint32_t flags, zx_handle_t request);
 // Opens the remote object at the given |path| relative to the given |directory|
 // with the given |flags| asynchronously.
 //
-// |flags| is a bitfield of |fuchsia.io.OPEN_*|.
+// |flags| is a bit field of |fuchsia.io.OPEN_*|.
 //
 // Always consumes |request|.
 //
@@ -94,7 +94,7 @@ zx_status_t fdio_open_at(zx_handle_t directory, const char* path,
 // Upon success, returns a handle to a newly created channel whose remote
 // endpoint has been sent to |node| as a request for a clone.
 //
-// The |node| is cloned as readable and writeable.
+// The |node| is cloned as readable and writable.
 //
 // Upon failure, returns |ZX_HANDLE_INVALID|.
 zx_handle_t fdio_service_clone(zx_handle_t node);
@@ -108,7 +108,7 @@ zx_handle_t fdio_service_clone(zx_handle_t node);
 //
 // Upon success, |request| has been sent to |node| as a request for a clone.
 //
-// The |node| is cloned as readable and writeable.
+// The |node| is cloned as readable and writable.
 //
 // # Errors
 //
