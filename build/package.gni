@@ -468,6 +468,13 @@ template("package") {
       }
     }
 
+    assert(pkg.package_name != "tests" && pkg.package_name != "app" &&
+               pkg.package_name != "bin" && pkg.package_name != "pkg" &&
+               pkg.package_name != "lib" && pkg.package_name != "package" &&
+               pkg.package_name != "binary" && pkg.package_name != "service" &&
+               pkg.package_name != "svc" && pkg.package_name != "component",
+           "${pkg.package_name} is too generic a name for a package")
+
     pkg_label = get_label_info(":$pkg_target_name", "label_no_toolchain")
     pkg_desc = "Package ${pkg_label} (${pkg.package_name}):"
     if (pkg.deprecated_system_image) {
@@ -480,7 +487,7 @@ template("package") {
 
       # Only appmgr can contribute binaries to /system/bin.
       assert(pkg.binaries == [] || pkg.package_name == "appmgr",
-              "no new packages are allowed to add binaries to /system/bin")
+             "no new packages are allowed to add binaries to /system/bin")
 
       assert(pkg.tests == [], "tests are not allowed in /system")
     } else {
