@@ -16,7 +16,20 @@ use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_uri::pkg_uri::FuchsiaPkgUri;
 use fuchsia_zircon::{Channel, MessageBuf, Signals, Status};
 use futures::prelude::*;
+use lazy_static::lazy_static;
 use log::{info, warn};
+use regex::Regex;
+
+lazy_static! {
+    // The error amber returns if it could not find the merkle for this package.
+    static ref PACKAGE_NOT_FOUND_RE: Regex =
+        Regex::new("^merkle not found for package ").unwrap();
+
+    // The error amber returns if it could resolve a merkle for this package, but it couldn't
+    // download the package.
+    static ref UNAVAILABLE_RE: Regex =
+        Regex::new("^not found in \\d+ active sources").unwrap();
+}
 
 pub async fn run_resolver_service(
     mut amber: AmberProxy,
@@ -98,9 +111,9 @@ async fn resolve<'a>(
             Status::INTERNAL
         })?;
 
-    let merkle = await!(wait_for_update_to_complete(chan)).map_err(|err| {
+    let merkle = await!(wait_for_update_to_complete(chan, &uri)).map_err(|err| {
         fx_log_err!("error when waiting for amber to complete: {:?}", err);
-        Status::INTERNAL
+        err
     })?;
 
     fx_log_info!("resolved {:?} with the selectors {:?} to {}", pkg_uri, selectors, merkle);
@@ -114,7 +127,7 @@ async fn resolve<'a>(
     Ok(())
 }
 
-async fn wait_for_update_to_complete(chan: Channel) -> Result<BlobId, Status> {
+async fn wait_for_update_to_complete(chan: Channel, uri: &FuchsiaPkgUri) -> Result<BlobId, Status> {
     let mut buf = MessageBuf::new();
 
     let sigs = await!(fasync::OnSignals::new(
@@ -128,7 +141,19 @@ async fn wait_for_update_to_complete(chan: Channel) -> Result<BlobId, Status> {
 
         if sigs.contains(Signals::USER_0) {
             let msg = String::from_utf8_lossy(&buf);
-            fx_log_err!("error installing package: {}", msg);
+
+            if PACKAGE_NOT_FOUND_RE.is_match(&msg) {
+                fx_log_info!("package {} was not found: {}", uri, msg);
+                return Err(Status::NOT_FOUND);
+            }
+
+            if UNAVAILABLE_RE.is_match(&msg) {
+                fx_log_info!("package {} is currently unavailable: {}", uri, msg);
+                return Err(Status::UNAVAILABLE);
+            }
+
+            fx_log_err!("error installing package {}: {}", uri, msg);
+
             return Err(Status::INTERNAL);
         }
 
@@ -170,7 +195,7 @@ mod tests {
     };
     use files_async;
     use fuchsia_async as fasync;
-    use fuchsia_zircon::{Channel, Handle, Peered, Signals, Status};
+    use fuchsia_zircon::{Channel, Peered, Signals, Status};
     use std::collections::HashMap;
     use std::fs::{self, File};
     use std::io;
@@ -179,39 +204,42 @@ mod tests {
     use std::str;
     use tempfile::TempDir;
 
-    #[derive(PartialEq, Eq, Hash)]
-    struct PackageId {
+    struct Package {
         name: String,
-        variant: Option<String>,
-        merkle: Option<String>,
+        variant: String,
+        merkle: String,
+        kind: PackageKind,
     }
 
-    impl PackageId {
-        fn new_with_name(name: &str) -> PackageId {
-            PackageId { name: name.to_string(), variant: None, merkle: None }
-        }
-        fn new_with_variant(name: &str, variant: &str) -> PackageId {
-            PackageId { name: name.to_string(), variant: Some(variant.to_string()), merkle: None }
-        }
-        fn new_with_merkle(name: &str, variant: &str, merkle: &str) -> PackageId {
-            PackageId {
+    enum PackageKind {
+        Ok,
+        Error(String),
+    }
+
+    impl Package {
+        fn new(name: &str, variant: &str, merkle: &str, kind: PackageKind) -> Self {
+            Self {
                 name: name.to_string(),
-                variant: Some(variant.to_string()),
-                merkle: Some(merkle.to_string()),
+                variant: variant.to_string(),
+                merkle: merkle.to_string(),
+                kind: kind,
             }
         }
     }
 
-    type PackageMap = HashMap<PackageId, String>;
     struct MockAmber {
-        pkg_merkles: PackageMap,
+        packages: HashMap<(String, String), Package>,
         pkgfs: Rc<TempDir>,
         channels: Vec<Channel>,
     }
 
     impl MockAmber {
-        fn new(pkg_merkles: PackageMap, pkgfs: Rc<TempDir>) -> MockAmber {
-            MockAmber { pkg_merkles, pkgfs, channels: vec![] }
+        fn new(packages: Vec<Package>, pkgfs: Rc<TempDir>) -> MockAmber {
+            let mut package_map = HashMap::new();
+            for package in packages {
+                package_map.insert((package.name.clone(), package.variant.clone()), package);
+            }
+            MockAmber { packages: package_map, pkgfs, channels: vec![] }
         }
 
         async fn run(&mut self, chan: fasync::Channel) -> Result<(), Error> {
@@ -233,34 +261,43 @@ mod tests {
             &mut self,
             name: String,
             variant: Option<String>,
-            merkle: Option<String>,
+            _merkle: Option<String>,
             responder: fidl_fuchsia_amber::ControlGetUpdateCompleteResponder,
         ) -> Result<(), Error> {
             let (s, c) = Channel::create()?;
-            let mut handles: Vec<Handle> = vec![];
-            let key = PackageId { name, variant, merkle };
-            if self.pkg_merkles.contains_key(&key) {
-                // Create blob dir with a single file.
-                let merkle = &self.pkg_merkles[&key];
-                s.write(merkle.as_bytes(), &mut handles)?;
-                let blob_path = self.pkgfs.path().join(merkle);
-                match fs::create_dir(&blob_path) {
-                    Ok(()) => Ok(()),
-                    Err(e) => {
-                        if e.kind() == io::ErrorKind::AlreadyExists {
-                            Ok(())
-                        } else {
-                            Err(e)
+            let mut handles = vec![];
+
+            let variant = variant.unwrap_or_else(|| "0".to_string());
+
+            if let Some(package) = self.packages.get(&(name, variant)) {
+                match package.kind {
+                    PackageKind::Ok => {
+                        // Create blob dir with a single file.
+                        let blob_path = self.pkgfs.path().join(&package.merkle);
+
+                        if let Err(e) = fs::create_dir(&blob_path) {
+                            if e.kind() != io::ErrorKind::AlreadyExists {
+                                return Err(e.into());
+                            }
                         }
+
+                        let blob_file = blob_path.join(format!("{}_file", package.merkle));
+                        fs::write(&blob_file, "hello")?;
+
+                        s.write(package.merkle.as_bytes(), &mut handles)?;
                     }
-                }?;
-                let blob_file = blob_path.join(format!("{}_file", merkle));
-                fs::write(&blob_file, "hello")?;
+                    PackageKind::Error(ref msg) => {
+                        // Package not found, signal error.
+                        s.signal_peer(Signals::NONE, Signals::USER_0)?;
+                        s.write(msg.as_bytes(), &mut handles)?;
+                    }
+                }
             } else {
                 // Package not found, signal error.
                 s.signal_peer(Signals::NONE, Signals::USER_0)?;
-                s.write("update failed".as_bytes(), &mut handles)?;
-            }
+                s.write("merkle not found for package ".as_bytes(), &mut handles)?;
+            };
+
             self.channels.push(s);
             responder.send(c)?;
             Ok(())
@@ -340,7 +377,7 @@ mod tests {
             ResolveTest { amber_proxy, cache_proxy, pkgfs }
         }
 
-        fn start_services(&self, amber_s: Channel, cache_s: Channel, packages: PackageMap) {
+        fn start_services(&self, amber_s: Channel, cache_s: Channel, packages: Vec<Package>) {
             {
                 let pkgfs = self.pkgfs.clone();
                 fasync::spawn_local(
@@ -401,7 +438,16 @@ mod tests {
             let chan = await!(self.amber_proxy.get_update_complete(name, variant, merkle))
                 .expect("error communicating with amber");
             let expected_res = expected_res.map(|r| r.parse().expect("could not parse blob"));
-            let res = await!(wait_for_update_to_complete(chan));
+
+            let uri = FuchsiaPkgUri::new_package(
+                "fuchsia.com".to_string(),
+                name.to_string(),
+                variant.map(|s| s.to_string()),
+                merkle.map(|s| s.to_string()),
+            )
+            .unwrap();
+
+            let res = await!(wait_for_update_to_complete(chan, &uri));
             assert_eq!(res, expected_res);
         }
 
@@ -439,102 +485,96 @@ mod tests {
         format!("{}_file", gen_merkle(c))
     }
 
-    #[test]
-    fn test_mock_amber() {
-        let mut executor = fasync::Executor::new().unwrap();
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_mock_amber() {
         let (amber_c, amber_s) = Channel::create().unwrap();
         let (cache_c, cache_s) = Channel::create().unwrap();
         let test = ResolveTest::new(amber_c, cache_c);
-        let mut packages: PackageMap = HashMap::new();
-        packages.insert(PackageId::new_with_name("foo"), gen_merkle('a'));
-        packages.insert(PackageId::new_with_variant("bar", "stable"), gen_merkle('b'));
-        packages
-            .insert(PackageId::new_with_merkle("bar", "stable", &gen_merkle('c')), gen_merkle('c'));
-        packages.insert(PackageId::new_with_name("buz"), gen_merkle('d'));
+        let packages = vec![
+            Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
+            Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
+            Package::new("baz", "stable", &gen_merkle('c'), PackageKind::Ok),
+            Package::new("buz", "0", &gen_merkle('c'), PackageKind::Ok),
+        ];
         test.start_services(amber_s, cache_s, packages);
-        executor.run_singlethreaded(
-            async move {
-                // Name
-                await!(test.check_amber_update("foo", None, None, Ok(gen_merkle('a'))));
-                // Name and variant
-                await!(test.check_amber_update("bar", Some("stable"), None, Ok(gen_merkle('b'))));
-                // Name, variant, and merkle
-                let merkle = gen_merkle('c');
-                await!(test.check_amber_update(
-                    "bar",
-                    Some("stable"),
-                    Some(&merkle),
-                    Ok(gen_merkle('c'))
-                ));
-                // Nonexistent package
-                await!(test.check_amber_update("nonexistent", None, None, Err(Status::INTERNAL)));
-                // no merkle('d') since we didn't ask to update "buz".
-                test.check_dir(
-                    test.pkgfs.path(),
-                    &vec![gen_merkle('a'), gen_merkle('b'), gen_merkle('c')],
-                );
-            },
-        );
+
+        // Name
+        await!(test.check_amber_update("foo", None, None, Ok(gen_merkle('a'))));
+
+        // Name and variant
+        await!(test.check_amber_update("bar", Some("stable"), None, Ok(gen_merkle('b'))));
+
+        // Name, variant, and merkle
+        let merkle = gen_merkle('c');
+        await!(test.check_amber_update("baz", Some("stable"), Some(&merkle), Ok(gen_merkle('c'))));
+
+        // Nonexistent package
+        await!(test.check_amber_update("nonexistent", None, None, Err(Status::NOT_FOUND)));
+
+        // no merkle('d') since we didn't ask to update "buz".
+        test.check_dir(test.pkgfs.path(), &vec![gen_merkle('a'), gen_merkle('b'), gen_merkle('c')]);
     }
 
-    #[test]
-    fn test_resolve_package() {
-        let mut executor = fasync::Executor::new().unwrap();
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_resolve_package() {
         let (amber_c, amber_s) = Channel::create().unwrap();
         let (cache_c, cache_s) = Channel::create().unwrap();
         let test = ResolveTest::new(amber_c, cache_c);
-        let mut packages: PackageMap = HashMap::new();
-        packages.insert(PackageId::new_with_name("foo"), gen_merkle('a'));
-        packages.insert(PackageId::new_with_variant("bar", "stable"), gen_merkle('b'));
-        packages
-            .insert(PackageId::new_with_merkle("bar", "stable", &gen_merkle('c')), gen_merkle('c'));
+
+        let packages = vec![
+            Package::new("foo", "0", &gen_merkle('a'), PackageKind::Ok),
+            Package::new("bar", "stable", &gen_merkle('b'), PackageKind::Ok),
+        ];
+
         test.start_services(amber_s, cache_s, packages);
-        executor.run_singlethreaded(
-            async move {
-                // Package name
-                await!(test
-                    .run_resolve("fuchsia-pkg://fuchsia.com/foo", Ok(vec![gen_merkle_file('a')]),));
-                // Package name and variant
-                await!(test.run_resolve(
-                    "fuchsia-pkg://fuchsia.com/bar/stable",
-                    Ok(vec![gen_merkle_file('b')]),
-                ));
-                // Package name, variant, and merkle
-                let url = format!("fuchsia-pkg://fuchsia.com/bar/stable?hash={}", gen_merkle('c'));
-                await!(test.run_resolve(&url, Ok(vec![gen_merkle_file('c')],)));
-                // Package resource
-                await!(test.run_resolve(
-                    "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx",
-                    Ok(vec![gen_merkle_file('a')]),
-                ));
-            },
-        );
+
+        // Package name
+        await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo", Ok(vec![gen_merkle_file('a')]),));
+
+        // Package name and variant
+        await!(test
+            .run_resolve("fuchsia-pkg://fuchsia.com/bar/stable", Ok(vec![gen_merkle_file('b')]),));
+
+        // Package name, variant, and merkle
+        let url = format!("fuchsia-pkg://fuchsia.com/bar/stable?hash={}", gen_merkle('b'));
+        await!(test.run_resolve(&url, Ok(vec![gen_merkle_file('b')],)));
+
+        // Package resource
+        await!(test.run_resolve(
+            "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx",
+            Ok(vec![gen_merkle_file('a')])
+        ));
     }
 
-    #[test]
-    fn test_resolve_package_error() {
-        let mut executor = fasync::Executor::new().unwrap();
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_resolve_package_error() {
         let (amber_c, amber_s) = Channel::create().unwrap();
         let (cache_c, cache_s) = Channel::create().unwrap();
         let test = ResolveTest::new(amber_c, cache_c);
-        let mut packages: PackageMap = HashMap::new();
-        packages.insert(PackageId::new_with_variant("foo", "stable"), gen_merkle('a'));
+        let packages = vec![
+            Package::new("foo", "stable", &gen_merkle('a'), PackageKind::Ok),
+            Package::new(
+                "unavailable",
+                "0",
+                &gen_merkle('a'),
+                PackageKind::Error("not found in 1 active sources. last error: ".to_string()),
+            ),
+        ];
+
         test.start_services(amber_s, cache_s, packages);
-        executor.run_singlethreaded(
-            async move {
-                // Missing package
-                await!(
-                    test.run_resolve("fuchsia-pkg://fuchsia.com/foo/beta", Err(Status::INTERNAL),)
-                );
 
-                // Bad package URI
-                await!(
-                    test.run_resolve("fuchsia-pkg://fuchsia.com/foo!", Err(Status::INVALID_ARGS),)
-                );
+        // Missing package
+        await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo/beta", Err(Status::NOT_FOUND)));
 
-                // No package name
-                await!(test.run_resolve("fuchsia-pkg://fuchsia.com", Err(Status::INVALID_ARGS),));
-            },
+        // Unavailable package
+        await!(
+            test.run_resolve("fuchsia-pkg://fuchsia.com/unavailable/0", Err(Status::UNAVAILABLE))
         );
+
+        // Bad package URI
+        await!(test.run_resolve("fuchsia-pkg://fuchsia.com/foo!", Err(Status::INVALID_ARGS)));
+
+        // No package name
+        await!(test.run_resolve("fuchsia-pkg://fuchsia.com", Err(Status::INVALID_ARGS)));
     }
 }

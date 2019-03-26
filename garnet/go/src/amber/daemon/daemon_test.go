@@ -31,6 +31,7 @@ import (
 )
 
 func TestSources(t *testing.T) {
+	fmt.Printf("hi\n")
 	store, err := ioutil.TempDir("", "amber-test")
 	if err != nil {
 		panic(err)
@@ -47,7 +48,7 @@ func TestSources(t *testing.T) {
 			Id:      "addtest",
 			RepoUrl: "http://localhost/addtest",
 			RootKeys: []amber.KeyConfig{
-				amber.KeyConfig{
+				{
 					Type:  "ed25519",
 					Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
 				},
@@ -67,7 +68,7 @@ func TestSources(t *testing.T) {
 			Id:      "removetest",
 			RepoUrl: "http://localhost/removetest",
 			RootKeys: []amber.KeyConfig{
-				amber.KeyConfig{
+				{
 					Type:  "ed25519",
 					Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
 				},
@@ -90,7 +91,7 @@ func TestSources(t *testing.T) {
 			Id:      "disabletest",
 			RepoUrl: "http://localhost/disabletest",
 			RootKeys: []amber.KeyConfig{
-				amber.KeyConfig{
+				{
 					Type:  "ed25519",
 					Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
 				},
@@ -116,7 +117,7 @@ func TestSources(t *testing.T) {
 			Id:      "enabletest",
 			RepoUrl: "http://localhost/enabletest",
 			RootKeys: []amber.KeyConfig{
-				amber.KeyConfig{
+				{
 					Type:  "ed25519",
 					Value: "be0b983f7396da675c40c6b93e47fced7c1e9ea8a32a1fe952ba8f519760b307",
 				},
@@ -240,7 +241,7 @@ func TestDaemon(t *testing.T) {
 		BlobRepoUrl: server.URL + "/blobs",
 		// TODO(raggi): fix keyconfig
 		RootKeys: []amber.KeyConfig{
-			amber.KeyConfig{
+			{
 				Type:  rootKey.Type,
 				Value: rootKey.Value.Public.String(),
 			},
@@ -483,7 +484,7 @@ func TestOutOfSpace(t *testing.T) {
 		BlobRepoUrl: server.URL + "/blobs",
 		// TODO(raggi): fix keyconfig
 		RootKeys: []amber.KeyConfig{
-			amber.KeyConfig{
+			{
 				Type:  rootKey.Type,
 				Value: rootKey.Value.Public.String(),
 			},

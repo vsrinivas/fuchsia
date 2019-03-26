@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall/zx"
 
@@ -363,18 +364,32 @@ func (d *Daemon) MerkleFor(name, version, merkle string) (string, int64, error) 
 		return merkle, -1, nil
 	}
 
+	errs := []error{}
+
 	for _, src := range d.GetActiveSources() {
 		m, l, err := src.MerkleFor(name, version)
-		if err == source.ErrUnknownPkg {
-			continue
-		}
 		if err != nil {
-			log.Printf("daemon: error checking source for updates %s", err)
+			if err != source.ErrUnknownPkg {
+				log.Printf("daemon: error checking source for updates %s", err)
+				errs = append(errs, err)
+			}
+
 			continue
 		}
 		return m, l, nil
 	}
-	return "", 0, fmt.Errorf("daemon: no update found for %s/%s/%s", name, version, merkle)
+
+	if len(errs) == 0 {
+		return "", 0, fmt.Errorf("merkle not found for package %s/%s", name, version)
+	}
+
+	errStrings := []string{}
+	for _, err := range errs {
+		errStrings = append(errStrings, err.Error())
+	}
+	errMsg := strings.Join(errStrings, ", ")
+
+	return "", 0, fmt.Errorf("error finding merkle for package %s/%s: %s", name, version, errMsg)
 }
 
 func (d *Daemon) GetPkg(merkle string, length int64) error {
