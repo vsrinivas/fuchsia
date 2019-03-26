@@ -166,6 +166,7 @@ group("mediaplayer") {
 group("media") {
   testonly = true
   public_deps = [
+    "//garnet/examples/camera/camera_client:camera_client",
     "//garnet/examples/media:fx",
     "//garnet/examples/media:simple_sine",
     "//garnet/examples/media:simple_sine_sync",

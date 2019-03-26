@@ -20,13 +20,13 @@ class Client {
 
   fuchsia::camera::ManagerSyncPtr& manager();
 
-  zx_status_t Open(int dev_id);
+  zx_status_t Open(const char *device);
 
   // use camera manager - open connections, request device info
-  zx_status_t StartManager();
+  zx_status_t StartManager(int device);
 
   // use camera driver - open connections, request device info
-  zx_status_t StartDriver();
+  zx_status_t StartDriver(const char *device);
 
   zx_status_t LoadVideoFormats(
       std::function<zx_status_t(

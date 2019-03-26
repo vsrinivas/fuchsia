@@ -6,12 +6,12 @@
 #include <lib/fxl/log_level.h>
 #include <lib/fxl/logging.h>
 
-#include "fake-control-impl.h"
+#include "virtual_camera_control.h"
 
-namespace simple_camera {
+namespace virtual_camera {
 
-const char* kFakeVendorName = "Fake Vendor Inc.";
-const char* kFakeProductName = "Fake Product";
+const char* kVirtualCameraVendorName = "Google Inc.";
+const char* kVirtualCameraProductName = "Fuchsia Virtual Camera";
 
 void ColorSource::FillARGB(void* start, size_t buffer_size) {
   if (!start) {
@@ -49,28 +49,28 @@ void ColorSource::hsv_color(uint32_t index, uint8_t* r, uint8_t* g,
   *b = phases[(phase + 3) % arraysize(phases)];
 }
 
-void FakeControlImpl::OnFrameAvailable(
+void VirtualCameraControlImpl::OnFrameAvailable(
     const fuchsia::camera::FrameAvailableEvent& frame) {
   stream_->OnFrameAvailable(frame);
 }
 
-FakeControlImpl::FakeControlImpl(fidl::InterfaceRequest<Control> control,
-                                 async_dispatcher_t* dispatcher,
-                                 fit::closure on_connection_closed)
+VirtualCameraControlImpl::VirtualCameraControlImpl(
+    fidl::InterfaceRequest<Control> control, async_dispatcher_t* dispatcher,
+    fit::closure on_connection_closed)
     : binding_(this, std::move(control), dispatcher) {
   binding_.set_error_handler(
       [occ = std::move(on_connection_closed)](zx_status_t status) { occ(); });
 }
 
-void FakeControlImpl::PostNextCaptureTask() {
+void VirtualCameraControlImpl::PostNextCaptureTask() {
   // Set the next frame time to be start + frame_count / frames per second.
   int64_t next_frame_time = frame_to_timestamp_.Apply(frame_count_++);
   FXL_DCHECK(next_frame_time > 0) << "TimelineFunction gave negative result!";
   FXL_DCHECK(next_frame_time != media::TimelineRate::kOverflow)
       << "TimelineFunction gave negative result!";
   task_.PostForTime(async_get_default_dispatcher(), zx::time(next_frame_time));
-  FXL_VLOG(4) << "FakeCameraSource: setting next frame to: " << next_frame_time
-              << "   "
+  FXL_VLOG(4) << "VirtualCameraSource: setting next frame to: "
+              << next_frame_time << "   "
               << next_frame_time - (int64_t)zx_clock_get(ZX_CLOCK_MONOTONIC)
               << " nsec from now";
 }
@@ -78,7 +78,7 @@ void FakeControlImpl::PostNextCaptureTask() {
 // Checks which buffer can be written to,
 // writes it, then signals it ready.
 // Then sleeps until next cycle.
-void FakeControlImpl::ProduceFrame() {
+void VirtualCameraControlImpl::ProduceFrame() {
   fuchsia::camera::FrameAvailableEvent event = {};
   // For realism, give the frame a timestamp that is kFramesOfDelay frames
   // in the past:
@@ -115,7 +115,8 @@ void FakeControlImpl::ProduceFrame() {
   PostNextCaptureTask();
 }
 
-void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
+void VirtualCameraControlImpl::GetFormats(uint32_t index,
+                                          GetFormatsCallback callback) {
   fidl::VectorPtr<fuchsia::camera::VideoFormat> formats;
 
   fuchsia::camera::VideoFormat format = {
@@ -135,17 +136,17 @@ void FakeControlImpl::GetFormats(uint32_t index, GetFormatsCallback callback) {
   callback(std::move(formats), 1, ZX_OK);
 }
 
-void FakeControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
+void VirtualCameraControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
   fuchsia::camera::DeviceInfo camera_device_info;
-  camera_device_info.vendor_name = kFakeVendorName;
-  camera_device_info.product_name = kFakeProductName;
+  camera_device_info.vendor_name = kVirtualCameraVendorName;
+  camera_device_info.product_name = kVirtualCameraProductName;
   camera_device_info.output_capabilities =
       fuchsia::camera::CAMERA_OUTPUT_STREAM;
   camera_device_info.max_stream_count = 1;
   callback(std::move(camera_device_info));
 }
 
-void FakeControlImpl::CreateStream(
+void VirtualCameraControlImpl::CreateStream(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
     fuchsia::camera::FrameRate frame_rate,
     fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
@@ -154,7 +155,7 @@ void FakeControlImpl::CreateStream(
 
   buffers_.Init(buffer_collection.vmos.data(), buffer_collection.buffer_count);
 
-  stream_ = fbl::make_unique<FakeStreamImpl>(*this, std::move(stream));
+  stream_ = std::make_unique<VirtualCameraStreamImpl>(*this, std::move(stream));
   stream_token_ = std::move(stream_token);
   // If not triggered by the token being closed, this waiter will be cancelled
   // by the destruction of this class, so the "this" pointer will be valid as
@@ -174,12 +175,12 @@ void FakeControlImpl::CreateStream(
   FXL_CHECK(status == ZX_OK);
 }
 
-void FakeControlImpl::FakeStreamImpl::OnFrameAvailable(
+void VirtualCameraControlImpl::VirtualCameraStreamImpl::OnFrameAvailable(
     const fuchsia::camera::FrameAvailableEvent& frame) {
   binding_.events().OnFrameAvailable(frame);
 }
 
-void FakeControlImpl::FakeStreamImpl::Start() {
+void VirtualCameraControlImpl::VirtualCameraStreamImpl::Start() {
   // Set a timeline function to convert from framecount to monotonic time.
   // The start time is now, the start frame number is 0, and the
   // conversion function from frame to time is:
@@ -195,14 +196,17 @@ void FakeControlImpl::FakeStreamImpl::Start() {
   owner_.PostNextCaptureTask();
 }
 
-void FakeControlImpl::FakeStreamImpl::Stop() { owner_.task_.Cancel(); }
+void VirtualCameraControlImpl::VirtualCameraStreamImpl::Stop() {
+  owner_.task_.Cancel();
+}
 
-void FakeControlImpl::FakeStreamImpl::ReleaseFrame(uint32_t buffer_index) {
+void VirtualCameraControlImpl::VirtualCameraStreamImpl::ReleaseFrame(
+    uint32_t buffer_index) {
   owner_.buffers_.BufferRelease(buffer_index);
 }
 
-FakeControlImpl::FakeStreamImpl::FakeStreamImpl(
-    FakeControlImpl& owner,
+VirtualCameraControlImpl::VirtualCameraStreamImpl::VirtualCameraStreamImpl(
+    VirtualCameraControlImpl& owner,
     fidl::InterfaceRequest<fuchsia::camera::Stream> stream)
     : owner_(owner), binding_(this, std::move(stream)) {
   binding_.set_error_handler([this](zx_status_t status) {
@@ -210,4 +214,4 @@ FakeControlImpl::FakeStreamImpl::FakeStreamImpl(
   });
 }
 
-}  // namespace simple_camera
+}  // namespace virtual_camera

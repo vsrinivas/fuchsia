@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/camera_manager/video_device_client.h"
-#include "garnet/bin/media/camera_manager/fake-control-impl.h"
 
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
 #include <lib/fzl/fdio.h>
 
@@ -59,37 +59,6 @@ std::unique_ptr<VideoDeviceClient> VideoDeviceClient::Create(
   device->camera_control_.Bind(std::move(local));
   device->device_info_.camera_id = camera_id_counter_++;
   return device;
-}
-
-std::unique_ptr<VideoDeviceClient> VideoDeviceClient::CreateFakeCamera(
-    async::Loop* loop) {
-  // CameraStream FIDL interface
-  static fbl::unique_ptr<simple_camera::FakeControlImpl>
-      fake_camera_control_server_ = nullptr;
-
-  if (fake_camera_control_server_ != nullptr) {
-    FXL_LOG(ERROR) << "Camera Control already running";
-    // TODO(CAM-XXX): support multiple concurrent clients.
-    return nullptr;
-  }
-
-  fidl::InterfaceHandle<fuchsia::camera::Control> control_handle;
-  fidl::InterfaceRequest<fuchsia::camera::Control> control_interface =
-      control_handle.NewRequest();
-
-  if (control_interface.is_valid()) {
-    fake_camera_control_server_ =
-        fbl::make_unique<simple_camera::FakeControlImpl>(
-            std::move(control_interface), loop->dispatcher(),
-            [] { fake_camera_control_server_.reset(); });
-
-    std::unique_ptr<VideoDeviceClient> device(new VideoDeviceClient);
-    device->camera_control_.Bind(control_handle.TakeChannel());
-    device->device_info_.camera_id = camera_id_counter_++;
-    return device;
-  } else {
-    return nullptr;
-  }
 }
 
 void VideoDeviceClient::OnGetFormatsResp(

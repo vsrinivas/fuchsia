@@ -8,8 +8,6 @@ source_set("lib") {
   sources = [
     "camera_manager_impl.cc",
     "camera_manager_impl.h",
-    "fake-control-impl.cc",
-    "fake-control-impl.h",
     "video_device_client.cc",
     "video_device_client.h",
   ]

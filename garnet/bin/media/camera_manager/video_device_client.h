@@ -7,7 +7,6 @@
 
 #include <list>
 
-#include <fbl/unique_ptr.h>
 #include <fuchsia/camera/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
@@ -32,8 +31,6 @@ class VideoDeviceClient : public fbl::RefCounted<VideoDeviceClient> {
   // by the CameraManagerImpl when it detects a new or existing device.
   static std::unique_ptr<VideoDeviceClient> Create(int dir_fd,
                                                    const std::string &name);
-
-  static std::unique_ptr<VideoDeviceClient> CreateFakeCamera(async::Loop *loop);
 
   // Load all information to identify the device, as well as available formats.
   // Will call |callback| when everything is loaded.

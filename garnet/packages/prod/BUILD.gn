@@ -179,6 +179,7 @@ group("drivers") {
     "//garnet/packages/prod:magma-vsl-gc",
     "//garnet/packages/prod:usb_video",
     "//garnet/packages/prod:virtual_audio_driver",
+    "//garnet/packages/prod:virtual_camera",
     "//garnet/packages/prod:vulkan",
     "//garnet/packages/prod:wlan_drivers",
     "//src/connectivity/telephony:drivers",
@@ -304,6 +305,7 @@ group("all") {
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/prod:vim",
     "//garnet/packages/prod:virtual_audio_driver",
+    "//garnet/packages/prod:virtual_camera",
     "//garnet/packages/prod:vulkan",
     "//garnet/packages/prod:wlan",
     "//garnet/packages/prod:wlan-ap-smoke-test",
@@ -466,6 +468,13 @@ group("usb_video") {
   testonly = true
   public_deps = [
     "//garnet/drivers/usb_video",
+  ]
+}
+
+group("virtual_camera") {
+  testonly = true
+  public_deps = [
+    "//garnet/drivers/virtual_camera",
   ]
 }
 

@@ -1,0 +1,53 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("virtual_camera_driver") {
+  output_name = "virtual_camera_driver"
+
+  sources = [
+    "virtual_camera.cpp",
+    "virtual_camera_control.cpp",
+    "virtual_camera_control.h",
+    "virtual_camera_device.cpp",
+    "virtual_camera_device.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/media/timeline:timeline",
+    "//sdk/fidl/fuchsia.camera",
+    "//sdk/lib/fidl/cpp",
+    "//zircon/public/banjo/ddk-protocol-usb",
+    "//zircon/public/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+package("virtual_camera") {
+  deprecated_system_image = true
+
+  deps = [
+    ":virtual_camera_driver",
+  ]
+
+  drivers = [
+    {
+      name = "virtual_camera_driver.so"
+    },
+  ]
+}

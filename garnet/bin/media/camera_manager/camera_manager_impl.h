@@ -9,7 +9,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <fbl/unique_ptr.h>
 #include <fuchsia/camera/cpp/fidl.h>
 #include <garnet/bin/media/camera_manager/video_device_client.h>
 #include <lib/fidl/cpp/binding.h>

@@ -38,7 +38,12 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
   return ZX_OK;
 }
 
-zx_status_t run_camera(bool use_camera_manager) {
+/*
+ Note: source can either be the device index if use_camera_manager,
+       or the full path to the camera driver if use_camera_manager
+       is false
+ */
+zx_status_t run_camera(bool use_camera_manager, const char *source) {
   printf("Connecting to camera using %s\n",
          use_camera_manager ? "camera manager" : "camera driver");
 
@@ -47,9 +52,9 @@ zx_status_t run_camera(bool use_camera_manager) {
   camera::Client client;
 
   if (use_camera_manager) {
-    client.StartManager();
+    client.StartManager(atoi(source));
   } else {
-    client.StartDriver();
+    client.StartDriver(source);
   }
 
   int frame_counter = 0;
@@ -124,15 +129,22 @@ int main(int argc, const char** argv) {
   printf("hello camera client\n");
 
   bool use_camera_manager = true;
+  const char *source = "0";
   for (int i = 1; i < argc; ++i) {
     if (!strcmp("--driver", argv[i])) {
       use_camera_manager = false;
+      source = "/dev/class/camera/000";
     } else if (!strcmp("--manager", argv[i])) {
       use_camera_manager = true;
+      source = "0";
+    } else {
+      source = argv[i];
+      break;
     }
   }
+  printf("using source %s\n", source);
 
-  zx_status_t result = run_camera(use_camera_manager);
+  zx_status_t result = run_camera(use_camera_manager, source);
 
   return result == ZX_OK ? 0 : -1;
 }

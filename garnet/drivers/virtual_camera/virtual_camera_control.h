@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_CAMERA_MANAGER_FAKE_CONTROL_IMPL_H_
-#define GARNET_BIN_MEDIA_CAMERA_MANAGER_FAKE_CONTROL_IMPL_H_
+#ifndef GARNET_DRIVERS_VIRTUAL_CAMERA_VIRTUAL_CAMERA_CONTROL_H_
+#define GARNET_DRIVERS_VIRTUAL_CAMERA_VIRTUAL_CAMERA_CONTROL_H_
 
-#include <fbl/unique_ptr.h>
 #include <fuchsia/camera/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -16,7 +15,7 @@
 #include <lib/media/timeline/timeline_function.h>
 #include <lib/zx/eventpair.h>
 
-namespace simple_camera {
+namespace virtual_camera {
 
 // ColorSource steps through hue at a constant rate in HSV colorspace,
 // with saturation and value remaining constant. An RGB color is written to
@@ -34,11 +33,11 @@ class ColorSource {
   static constexpr uint32_t kMaxFrameColor = 0x600;
 };
 
-class FakeControlImpl : public fuchsia::camera::Control {
+class VirtualCameraControlImpl : public fuchsia::camera::Control {
  public:
-  FakeControlImpl(fidl::InterfaceRequest<Control> control,
-                  async_dispatcher_t* dispatcher,
-                  fit::closure on_connection_closed);
+  VirtualCameraControlImpl(fidl::InterfaceRequest<Control> control,
+                           async_dispatcher_t* dispatcher,
+                           fit::closure on_connection_closed);
 
   // Sent by the driver to the client when a frame is available for processing,
   // or an error occurred.
@@ -60,10 +59,11 @@ class FakeControlImpl : public fuchsia::camera::Control {
   // Get the vendor and product information about the device.
   void GetDeviceInfo(GetDeviceInfoCallback callback) override;
 
-  class FakeStreamImpl : public fuchsia::camera::Stream {
+  class VirtualCameraStreamImpl : public fuchsia::camera::Stream {
    public:
-    FakeStreamImpl(FakeControlImpl& owner,
-                   fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
+    VirtualCameraStreamImpl(
+        VirtualCameraControlImpl& owner,
+        fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
 
     // Starts the streaming of frames.
     void Start() override;
@@ -79,16 +79,16 @@ class FakeControlImpl : public fuchsia::camera::Control {
     void OnFrameAvailable(const fuchsia::camera::FrameAvailableEvent& frame);
 
    private:
-    FakeControlImpl& owner_;
+    VirtualCameraControlImpl& owner_;
     fidl::Binding<Stream> binding_;
   };
 
-  fbl::unique_ptr<FakeStreamImpl> stream_;
+  std::unique_ptr<VirtualCameraStreamImpl> stream_;
   zx::eventpair stream_token_;
   std::unique_ptr<async::Wait> stream_token_waiter_;
 
-  FakeControlImpl(const FakeControlImpl&) = delete;
-  FakeControlImpl& operator=(const FakeControlImpl&) = delete;
+  VirtualCameraControlImpl(const VirtualCameraControlImpl&) = delete;
+  VirtualCameraControlImpl& operator=(const VirtualCameraControlImpl&) = delete;
 
   // Checks which buffer can be written to,
   // writes it then signals it ready
@@ -105,10 +105,11 @@ class FakeControlImpl : public fuchsia::camera::Control {
 
   fzl::VmoPool buffers_;
   media::TimelineFunction frame_to_timestamp_;
-  async::TaskClosureMethod<FakeControlImpl, &FakeControlImpl::ProduceFrame>
+  async::TaskClosureMethod<VirtualCameraControlImpl,
+                           &VirtualCameraControlImpl::ProduceFrame>
       task_{this};
 };
 
-}  // namespace simple_camera
+}  // namespace virtual_camera
 
-#endif  // GARNET_BIN_MEDIA_CAMERA_MANAGER_FAKE_CONTROL_IMPL_H_
+#endif  // GARNET_DRIVERS_VIRTUAL_CAMERA_VIRTUAL_CAMERA_CONTROL_H_

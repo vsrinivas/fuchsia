@@ -4,7 +4,8 @@
     },
     "sandbox": {
         "dev": [
-            "class/camera"
+            "class/camera",
+            "test/virtual_camera"
         ],
         "services": [
             "fuchsia.sys.Launcher",

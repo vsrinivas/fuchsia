@@ -71,7 +71,7 @@ static void dump_device_info(const DeviceInfo &device_info) {
             << "\n";
 }
 
-zx_status_t Client::StartManager() {
+zx_status_t Client::StartManager(int device_id) {
   // Connect to Camera Manager:
   context_->svc()->Connect(manager().NewRequest());
 
@@ -88,16 +88,16 @@ zx_status_t Client::StartManager() {
   }
 
   return LoadVideoFormats(
-      [&devices, this](uint32_t format_index,
+      [device_id, &devices, this](uint32_t format_index,
                        std::vector<fuchsia::camera::VideoFormat> *formats,
                        uint32_t *total_format_count) {
-        return manager()->GetFormats(devices[0].camera_id, format_index,
+        return manager()->GetFormats(devices[device_id].camera_id, format_index,
                                      formats, total_format_count);
       });
 }
 
-zx_status_t Client::StartDriver() {
-  zx_status_t status = Open(0);
+zx_status_t Client::StartDriver(const char *device) {
+  zx_status_t status = Open(device);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Couldn't open camera client (status " << status << ")";
     return status;
@@ -124,8 +124,8 @@ zx_status_t Client::StartDriver() {
       });
 }
 
-zx_status_t Client::Open(int dev_id) {
-  std::string dev_path = fxl::StringPrintf("/dev/class/camera/%03u", dev_id);
+zx_status_t Client::Open(const char *device) {
+  std::string dev_path = device;
   fbl::unique_fd dev_node{::open(dev_path.c_str(), O_RDONLY)};
   if (!dev_node.is_valid()) {
     FXL_LOG(ERROR) << "Client::Open failed to open device node at \""
