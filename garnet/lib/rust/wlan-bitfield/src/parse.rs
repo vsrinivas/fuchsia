@@ -5,9 +5,10 @@
 use {
     proc_macro2::TokenStream,
     syn::{
+        parenthesized,
         parse::{Parse, ParseStream},
         punctuated::Punctuated,
-        Ident, LitInt, Result, Token,
+        token, Ident, LitInt, Path, Result, Token, Type,
     },
     synstructure::ToTokens,
 };
@@ -55,9 +56,29 @@ impl Parse for IdentOrUnderscore {
     }
 }
 
+pub struct UserType {
+    pub as_keyword: Token![as],
+    pub type_name: Path,
+    pub paren: token::Paren,
+    pub inner_int_type: Type,
+}
+
+impl Parse for UserType {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let inside_parens;
+        Ok(UserType {
+            as_keyword: input.parse()?,
+            type_name: input.parse()?,
+            paren: parenthesized!(inside_parens in input),
+            inner_int_type: inside_parens.parse()?,
+        })
+    }
+}
+
 pub struct FieldDef {
     pub bits: BitRange,
     pub name: IdentOrUnderscore,
+    pub user_type: Option<UserType>,
 }
 
 pub struct FieldList {
@@ -82,7 +103,11 @@ impl Parse for BitRange {
 
 impl Parse for FieldDef {
     fn parse(input: ParseStream) -> Result<Self> {
-        Ok(FieldDef { bits: input.parse()?, name: input.parse()? })
+        let bits = input.parse()?;
+        let name = input.parse()?;
+        let lookahead = input.lookahead1();
+        let user_type = if lookahead.peek(Token![as]) { Some(input.parse()?) } else { None };
+        Ok(FieldDef { bits, name, user_type })
     }
 }
 

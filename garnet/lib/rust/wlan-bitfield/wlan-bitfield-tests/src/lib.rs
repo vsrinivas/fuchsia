@@ -99,4 +99,40 @@ mod tests {
         assert_eq!(0xffff_ffff_ffff, big.tail());
         assert_eq!(0xffff_ffff_ffff_ffff_ffff, big.head());
     }
+
+    struct CustomType(pub u8);
+
+    #[bitfield(
+        0..=5   a as CustomType(u8),
+        6..=15  b,
+    )]
+    struct WithCustomType(pub u16);
+
+    #[test]
+    pub fn custom_type() {
+        let mut x = WithCustomType(0).with_a(CustomType(0xf));
+        let a: CustomType = x.a();
+        assert_eq!(0xf, a.0);
+        assert_eq!(0x000f, x.0);
+        x.set_a(CustomType(12));
+        assert_eq!(12, x.a().0);
+    }
+
+    struct CustomBoolType(pub bool);
+
+    #[bitfield(
+        0       a as CustomBoolType(bool),
+        1..=15  b,
+    )]
+    struct WithCustomBoolType(pub u16);
+
+    #[test]
+    pub fn custom_bool_type() {
+        let mut x = WithCustomBoolType(0).with_a(CustomBoolType(true));
+        let a: CustomBoolType = x.a();
+        assert!(a.0);
+        assert_eq!(0x0001, x.0);
+        x.set_a(CustomBoolType(false));
+        assert!(!x.a().0);
+    }
 }

@@ -72,6 +72,52 @@ use {
 /// pub struct MoreFields(pub u8);
 /// ```
 ///
+/// Custom "Newtypes" for Fields
+/// ----------------------------
+/// By default, generated functions take and return values of the same integer type as
+/// the underlying type of the struct. Sometimes it is desirable to use a "newtype" instead,
+/// i.e. a strongly typed wrapper around an unsigned integer. For example, to represent
+/// an 802.11 frame type, one can define the following "newtype":
+///
+/// ```
+/// pub struct FrameType(pub u8);
+///
+/// impl FrameType {
+///     pub const MGMT: Self = FrameType(0);
+///     pub const CTRL: Self = FrameType(1);
+///     pub const DATA: Self = FrameType(2);
+///     pub const EXT: Self = FrameType(3);
+/// }
+/// ```
+///
+/// Then, the `FrameControl` bitfield can use the `FrameType` struct as a type for the "type" field:
+///
+/// ```
+/// #[bitfield(
+///     ...
+///     2..=3   frame_type as FrameType(u8),
+///     ...
+/// )]
+/// pub struct FrameControl(pub u16);
+/// ```
+///
+/// This will generate the following methods:
+/// ```
+/// impl FrameControl {
+///     pub fn frame_type(&self) -> FrameType { ... }
+///     pub fn set_frame_type(&mut self, value: FrameType) { ... }
+///     pub fn with_frame_type(self, value: FrameType) -> Self { ... }
+/// }
+/// ```
+///
+/// In addition, regular methods will also be generated, but with a "_raw" suffix:
+/// ```
+/// impl FrameControl {
+///     pub fn frame_type_raw(&self) -> u16 { ... }
+///     pub fn set_frame_type_raw(&mut self, value: u16) { ... }
+///     pub fn with_frame_type_raw(self, value: u16) -> Self { ... }
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn bitfield(
     attr: proc_macro::TokenStream,
@@ -107,6 +153,7 @@ fn generate(
     };
 
     check_overlaps_and_gaps(fields, len_bits, &mut errors);
+    check_user_types(fields, &mut errors);
 
     let mut methods = vec![];
     for f in &fields.fields {
@@ -186,6 +233,45 @@ fn check_overlaps_and_gaps(fields: &FieldList, len_bits: usize, errors: &mut Vec
     }
 }
 
+fn check_user_types(fields: &FieldList, errors: &mut Vec<Error>) {
+    for field in &fields.fields {
+        if let Some(user_type) = &field.user_type {
+            match &field.bits {
+                BitRange::Closed { start_inclusive, end_inclusive, .. } => {
+                    let field_len = if start_inclusive.value() <= end_inclusive.value() {
+                        (end_inclusive.value() - start_inclusive.value() + 1) as usize
+                    } else {
+                        continue;
+                    };
+                    let inner = &user_type.inner_int_type;
+                    let user_type_len = match get_bit_len_from_unsigned_type(inner) {
+                        Some(len) => len,
+                        None => {
+                            errors.push(Error::new(
+                                inner.span(),
+                                "expected bool, u8, u16, u32, u64 or u128",
+                            ));
+                            continue;
+                        }
+                    };
+                    if user_type_len < field_len {
+                        errors.push(Error::new(
+                            inner.span(),
+                            format!("type is too small to hold {} bits", field_len),
+                        ));
+                    }
+                }
+                BitRange::SingleBit { .. } => {
+                    match &user_type.inner_int_type {
+                        Type::Path(path) if path.path.is_ident("bool") => (),
+                        other => errors.push(Error::new(other.span(), "expected `bool`")),
+                    };
+                }
+            };
+        }
+    }
+}
+
 fn gap_to_string((start, end): &(usize, usize)) -> String {
     if start == end {
         format!("{}", start)
@@ -203,15 +289,10 @@ fn get_underlying_bit_len(struct_def: &DeriveInput) -> Result<usize, Error> {
                     "expected a tuple struct with a single field",
                 ));
             }
-            match &fields.unnamed.first().unwrap().value().ty {
-                Type::Path(path) if path.path.is_ident("u8") => 8,
-                Type::Path(path) if path.path.is_ident("u16") => 16,
-                Type::Path(path) if path.path.is_ident("u32") => 32,
-                Type::Path(path) if path.path.is_ident("u64") => 64,
-                Type::Path(path) if path.path.is_ident("u128") => 128,
-                other => {
-                    return Err(Error::new(other.span(), "expected u8, u16, u32, u64 or u128"))
-                }
+            let ty = &fields.unnamed.first().unwrap().value().ty;
+            match get_bit_len_from_unsigned_type(ty) {
+                Some(len) => len,
+                None => return Err(Error::new(ty.span(), "expected u8, u16, u32, u64 or u128")),
             }
         }
         _ => {
@@ -223,12 +304,38 @@ fn get_underlying_bit_len(struct_def: &DeriveInput) -> Result<usize, Error> {
     })
 }
 
+fn get_bit_len_from_unsigned_type(ty: &Type) -> Option<usize> {
+    Some(match ty {
+        Type::Path(path) if path.path.is_ident("u8") => 8,
+        Type::Path(path) if path.path.is_ident("u16") => 16,
+        Type::Path(path) if path.path.is_ident("u32") => 32,
+        Type::Path(path) if path.path.is_ident("u64") => 64,
+        Type::Path(path) if path.path.is_ident("u128") => 128,
+        _ => return None,
+    })
+}
+
+fn add_suffix(ident: &Ident, suffix: &str) -> Ident {
+    syn::Ident::new(&format!("{}{}", ident, suffix), Span::call_site())
+}
+
 fn generate_methods_for_field(field: &FieldDef, name: &Ident, len_bits: usize) -> TokenStream {
     let int_type = syn::Ident::new(&format!("u{}", len_bits), Span::call_site());
     let getter_fn_name = name;
     let setter_fn_name = syn::Ident::new(&format!("set_{}", name), name.span());
     let builder_fn_name = syn::Ident::new(&format!("with_{}", name), name.span());
-    match &field.bits {
+    let (raw_getter_fn_name, raw_setter_fn_name, raw_builder_fn_name) = match field.user_type {
+        None => (getter_fn_name.clone(), setter_fn_name.clone(), builder_fn_name.clone()),
+        Some(_) => {
+            // If a custom newtype is provided, generate regular method with a "_raw" suffix
+            (
+                add_suffix(getter_fn_name, "_raw"),
+                add_suffix(&setter_fn_name, "_raw"),
+                add_suffix(&builder_fn_name, "_raw"),
+            )
+        }
+    };
+    let (raw, raw_type) = match &field.bits {
         BitRange::Closed { start_inclusive, end_inclusive, .. } => {
             let len = if end_inclusive.value() >= start_inclusive.value() {
                 end_inclusive.value() - start_inclusive.value() + 1
@@ -239,31 +346,53 @@ fn generate_methods_for_field(field: &FieldDef, name: &Ident, len_bits: usize) -
                 0
             };
             let mask = TokenTree::Literal(Literal::u128_unsuffixed(!(!0u128 << len)));
-            quote! {
-                pub fn #getter_fn_name(&self) -> #int_type {
+            let code = quote! {
+                pub fn #raw_getter_fn_name(&self) -> #int_type {
                     (self.0 >> #start_inclusive) & #mask
                 }
-                pub fn #setter_fn_name(&mut self, value: #int_type) {
+                pub fn #raw_setter_fn_name(&mut self, value: #int_type) {
                     self.0 = (self.0 & !(#mask << #start_inclusive))
                            | ((value & #mask) << #start_inclusive);
                 }
-                pub fn #builder_fn_name(mut self, value: #int_type) -> Self {
-                    self.#setter_fn_name(value);
+                pub fn #raw_builder_fn_name(mut self, value: #int_type) -> Self {
+                    self.#raw_setter_fn_name(value);
                     self
                 }
-            }
+            };
+            (code, quote! { #int_type })
         }
         BitRange::SingleBit { index } => {
-            quote! {
-                pub fn #getter_fn_name(&self) -> bool {
+            let code = quote! {
+                pub fn #raw_getter_fn_name(&self) -> bool {
                     self.0 & (1 << #index) != 0
                 }
-                pub fn #setter_fn_name(&mut self, value: bool) {
+                pub fn #raw_setter_fn_name(&mut self, value: bool) {
                     self.0 = (self.0 & !(1 << #index)) | ((value as #int_type) << #index);
                 }
-                pub fn #builder_fn_name(mut self, value: bool) -> Self {
-                    self.#setter_fn_name(value);
+                pub fn #raw_builder_fn_name(mut self, value: bool) -> Self {
+                    self.#raw_setter_fn_name(value);
                     self
+                }
+            };
+            (code, quote! { bool })
+        }
+    };
+    match &field.user_type {
+        None => raw,
+        Some(user_type) => {
+            let user_int_type = &user_type.inner_int_type;
+            let user_type_name = &user_type.type_name;
+            quote! {
+                #raw
+
+                pub fn #getter_fn_name(&self) -> #user_type_name {
+                    #user_type_name(self.#raw_getter_fn_name() as #user_int_type)
+                }
+                pub fn #setter_fn_name(&mut self, value: #user_type_name) {
+                    self.#raw_setter_fn_name(value.0 as #raw_type);
+                }
+                pub fn #builder_fn_name(mut self, value: #user_type_name) -> Self {
+                    self.#raw_builder_fn_name(value.0 as #raw_type)
                 }
             }
         }
