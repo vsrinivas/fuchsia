@@ -24,6 +24,63 @@ static bool initial_state() {
     END_TEST;
 }
 
+// Verify that AddBasicPolicy prevents "widening" of a deny all policy.
+static bool add_basic_policy_no_widening() {
+    BEGIN_TEST;
+
+    JobPolicy p;
+
+    // Start with deny all.
+    zx_policy_basic_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY};
+    ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT), "");
+
+    // Attempt to allow event creation.
+    policy = {ZX_POL_NEW_EVENT, ZX_POL_ACTION_ALLOW};
+    // Fails because mode is ZX_JOB_POL_ABSOLUTE.
+    ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1), "");
+    // Does not fail because mode is ZX_JOB_POL_RELATIVE.
+    ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_RELATIVE, &policy, 1), "");
+
+    // However, action is still deny.
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_VMO), "");
+
+    END_TEST;
+}
+
+// Verify that AddBasicPolicy prevents "widening" of policy using NEW_ANY.
+static bool add_basic_policy_no_widening_with_any() {
+    BEGIN_TEST;
+
+    JobPolicy p;
+
+    // Start with deny event creation.
+    zx_policy_basic_t policy{ZX_POL_NEW_EVENT, ZX_POL_ACTION_DENY};
+    ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT), "");
+
+    // Attempt to allow event creation.
+    policy = {ZX_POL_NEW_EVENT, ZX_POL_ACTION_ALLOW};
+    // Fails because mode is ZX_JOB_POL_ABSOLUTE.
+    ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1), "");
+    // Does not fail because mode is ZX_JOB_POL_RELATIVE.
+    ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_RELATIVE, &policy, 1), "");
+
+    // However, action is still deny.
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT), "");
+
+    // Attempt to allow any.
+    policy = {ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW};
+    ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1), "");
+    ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_RELATIVE, &policy, 1), "");
+
+    // Still deny.
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT), "");
+
+    END_TEST;
+}
+
 static bool add_basic_policy_absolute() {
     BEGIN_TEST;
 
@@ -120,6 +177,8 @@ static bool set_get_timer_slack() {
 
 UNITTEST_START_TESTCASE(job_policy_tests)
 UNITTEST("initial_state", initial_state)
+UNITTEST("add_basic_policy_no_widening", add_basic_policy_no_widening)
+UNITTEST("add_basic_policy_no_widening_with_any", add_basic_policy_no_widening_with_any)
 UNITTEST("add_basic_policy_absolute", add_basic_policy_absolute)
 UNITTEST("add_basic_policy_relative", add_basic_policy_relative)
 UNITTEST("add_basic_policy_unmodified_on_error", add_basic_policy_unmodified_on_error)
