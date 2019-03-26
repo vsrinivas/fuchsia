@@ -2,167 +2,252 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <threads.h>
-#include <unistd.h>
+#include <lib/zx/fifo.h>
+#include <zxtest/zxtest.h>
 
-#include <zircon/syscalls.h>
-#include <unittest/unittest.h>
+namespace {
 
-static zx_signals_t get_signals(zx_handle_t h) {
+using ElementType = uint64_t;
+constexpr size_t kElementSize = sizeof(ElementType);
+
+zx_signals_t GetSignals(const zx::fifo& fifo) {
     zx_signals_t pending;
-    zx_status_t status = zx_object_wait_one(h, 0xFFFFFFFF, 0u, &pending);
+    zx_status_t status = fifo.wait_one(0xFFFFFFFF, zx::time(), &pending);
     if ((status != ZX_OK) && (status != ZX_ERR_TIMED_OUT)) {
         return 0xFFFFFFFF;
     }
     return pending;
 }
 
-#define EXPECT_SIGNALS(h, s) EXPECT_EQ(get_signals(h), s, "")
+#define EXPECT_SIGNALS(h, s) EXPECT_EQ(GetSignals(h), s)
 
-static bool basic_test(void) {
-    BEGIN_TEST;
-    zx_handle_t a, b;
-    uint64_t n[8] = { 1, 2, 3, 4, 5, 6, 7, 8};
-    enum { ELEM_SZ = sizeof(n[0]) };
+TEST(FifoTest, InvalidParametersReturnOutOfRange) {
+    zx::fifo fifo_a, fifo_b;
 
     // ensure parameter validation works
-    EXPECT_EQ(zx_fifo_create(0, 0, 0, &a, &b), ZX_ERR_OUT_OF_RANGE, ""); // too small
-    EXPECT_EQ(zx_fifo_create(35, 32, 0, &a, &b), ZX_ERR_OUT_OF_RANGE, ""); // not power of two
-    EXPECT_EQ(zx_fifo_create(128, 33, 0, &a, &b), ZX_ERR_OUT_OF_RANGE, ""); // too large
-    EXPECT_EQ(zx_fifo_create(0, 0, 1, &a, &b), ZX_ERR_OUT_OF_RANGE, ""); // invalid options
+    EXPECT_EQ(zx::fifo::create(0, 0, 0, &fifo_a, &fifo_b),
+              ZX_ERR_OUT_OF_RANGE); // too small
+    EXPECT_EQ(zx::fifo::create(35, 32, 0, &fifo_a, &fifo_b),
+              ZX_ERR_OUT_OF_RANGE); // not power of two
+    EXPECT_EQ(zx::fifo::create(128, 33, 0, &fifo_a, &fifo_b),
+              ZX_ERR_OUT_OF_RANGE); // too large
+    EXPECT_EQ(zx::fifo::create(0, 0, 1, &fifo_a, &fifo_b),
+              ZX_ERR_OUT_OF_RANGE); // invalid options
+    EXPECT_EQ(zx::fifo::create(23, 8, 8, &fifo_a, &fifo_b),
+              ZX_ERR_OUT_OF_RANGE); // bad option
+}
+
+TEST(FifoTest, EndpointsAreRelated) {
+    zx::fifo fifo_a, fifo_b;
 
     // simple 8 x 8 fifo
-    EXPECT_EQ(zx_fifo_create(8, ELEM_SZ, 0, &a, &b), ZX_OK, "");
-    EXPECT_SIGNALS(a, ZX_FIFO_WRITABLE);
-    EXPECT_SIGNALS(b, ZX_FIFO_WRITABLE);
+    ASSERT_OK(zx::fifo::create(8, kElementSize, 0, &fifo_a, &fifo_b));
+    EXPECT_SIGNALS(fifo_a, ZX_FIFO_WRITABLE);
+    EXPECT_SIGNALS(fifo_b, ZX_FIFO_WRITABLE);
 
     // Check that koids line up.
-    zx_info_handle_basic_t info[2] = {};
-    zx_status_t status = zx_object_get_info(a, ZX_INFO_HANDLE_BASIC, &info[0], sizeof(info[0]), NULL, NULL);
-    ASSERT_EQ(status, ZX_OK, "");
-    status = zx_object_get_info(b, ZX_INFO_HANDLE_BASIC, &info[1], sizeof(info[1]), NULL, NULL);
-    ASSERT_EQ(status, ZX_OK, "");
-    ASSERT_NE(info[0].koid, 0u, "zero koid!");
-    ASSERT_NE(info[0].related_koid, 0u, "zero peer koid!");
-    ASSERT_NE(info[1].koid, 0u, "zero koid!");
-    ASSERT_NE(info[1].related_koid, 0u, "zero peer koid!");
-    ASSERT_EQ(info[0].koid, info[1].related_koid, "mismatched koids!");
-    ASSERT_EQ(info[1].koid, info[0].related_koid, "mismatched koids!");
+    zx_info_handle_basic_t info_a = {}, info_b = {};
+    ASSERT_OK(fifo_a.get_info(ZX_INFO_HANDLE_BASIC, &info_a,
+                              sizeof(info_a), nullptr, nullptr));
+
+    ASSERT_OK(fifo_b.get_info(ZX_INFO_HANDLE_BASIC, &info_b,
+                             sizeof(info_b), nullptr, nullptr));
+    ASSERT_NE(info_a.koid, 0u, "zero koid!");
+    ASSERT_NE(info_a.related_koid, 0u, "zero peer koid!");
+    ASSERT_NE(info_b.koid, 0u, "zero koid!");
+    ASSERT_NE(info_b.related_koid, 0u, "zero peer koid!");
+    ASSERT_EQ(info_a.koid, info_b.related_koid, "mismatched koids!");
+    ASSERT_EQ(info_b.koid, info_a.related_koid, "mismatched koids!");
+}
+
+TEST(FifoTest, EmptyQueueReturnsErrShouldWait) {
+    zx::fifo fifo_a, fifo_b;
+    ElementType actual_elements[8] = {};
+
+    // simple 8 x 8 fifo
+    ASSERT_OK(zx::fifo::create(8, kElementSize, 0, &fifo_a, &fifo_b));
 
     // should not be able to read any entries from an empty fifo
-    size_t actual;
-    EXPECT_EQ(zx_fifo_read(a, ELEM_SZ, n, 8, &actual), ZX_ERR_SHOULD_WAIT, "");
+    size_t actual_count;
+    EXPECT_EQ(fifo_a.read(kElementSize, actual_elements, 8,
+              &actual_count), ZX_ERR_SHOULD_WAIT);
+}
+
+TEST(FifoTest, ReadAndWriteValidatesSizeAndElementCount) {
+    zx::fifo fifo_a, fifo_b;
+    ElementType expected_elements[] = { 1, 2, 3, 4, 5, 6, 7, 8};
+    ElementType actual_elements[8] = {};
+    size_t actual_count;
+
+    // simple 8 x 8 fifo
+    ASSERT_OK(zx::fifo::create(8, kElementSize, 0, &fifo_a, &fifo_b));
 
     // not allowed to read or write zero elements
-    EXPECT_EQ(zx_fifo_read(a, ELEM_SZ, n, 0, &actual), ZX_ERR_OUT_OF_RANGE, "");
-    EXPECT_EQ(zx_fifo_write(a, ELEM_SZ, n, 0, &actual), ZX_ERR_OUT_OF_RANGE, "");
+    EXPECT_EQ(fifo_a.read(kElementSize, actual_elements, 0,
+              &actual_count), ZX_ERR_OUT_OF_RANGE);
+    EXPECT_EQ(fifo_a.write(kElementSize, expected_elements,
+              0, &actual_count), ZX_ERR_OUT_OF_RANGE);
 
     // element size must match
-    EXPECT_EQ(zx_fifo_read(a, ELEM_SZ + 1, n, 8, &actual), ZX_ERR_OUT_OF_RANGE, "");
-    EXPECT_EQ(zx_fifo_write(a, ELEM_SZ + 1, n, 8, &actual), ZX_ERR_OUT_OF_RANGE, "");
+    EXPECT_EQ(fifo_a.read(kElementSize + 1, actual_elements,
+              8, &actual_count), ZX_ERR_OUT_OF_RANGE);
+    EXPECT_EQ(fifo_a.write(kElementSize + 1, expected_elements,
+              8, &actual_count), ZX_ERR_OUT_OF_RANGE);
+}
 
+TEST(FifoTest, DequeueSignalsWriteable) {
+    zx::fifo fifo_a, fifo_b;
+    ElementType expected_elements[] = { 1, 2, 3, 4, 5, 6, 7, 8};
+    ElementType actual_elements[8] = {};
+    // simple 8 x 8 fifo
+    ASSERT_OK(zx::fifo::create(8, kElementSize, 0, &fifo_a, &fifo_b));
+
+    EXPECT_SIGNALS(fifo_a, ZX_FIFO_WRITABLE);
+    EXPECT_SIGNALS(fifo_b, ZX_FIFO_WRITABLE);
+
+    size_t actual_count;
     // should be able to write all entries into empty fifo
-    ASSERT_EQ(zx_fifo_write(a, ELEM_SZ, n, 8, &actual), ZX_OK, "");
-    ASSERT_EQ(actual, 8u, "");
-    EXPECT_SIGNALS(b, ZX_FIFO_READABLE | ZX_FIFO_WRITABLE);
+    ASSERT_OK(fifo_a.write(kElementSize, expected_elements, 8,
+              &actual_count));
+    ASSERT_EQ(actual_count, 8u);
+    EXPECT_SIGNALS(fifo_b, ZX_FIFO_READABLE | ZX_FIFO_WRITABLE);
 
     // should be able to write no entries into a full fifo
-    ASSERT_EQ(zx_fifo_write(a, ELEM_SZ, n, 8, &actual), ZX_ERR_SHOULD_WAIT, "");
-    EXPECT_SIGNALS(a, 0u);
+    ASSERT_EQ(fifo_a.write(kElementSize, expected_elements, 8,
+              &actual_count), ZX_ERR_SHOULD_WAIT);
+    EXPECT_SIGNALS(fifo_a, 0u);
 
     // read half the entries, make sure they're what we expect
-    memset(n, 0, sizeof(n));
-    EXPECT_EQ(zx_fifo_read(b, ELEM_SZ, n, 4, &actual), ZX_OK, "");
-    ASSERT_EQ(actual, 4u, "");
-    ASSERT_EQ(n[0], 1u, "");
-    ASSERT_EQ(n[1], 2u, "");
-    ASSERT_EQ(n[2], 3u, "");
-    ASSERT_EQ(n[3], 4u, "");
+    ASSERT_OK(fifo_b.read(kElementSize, actual_elements, 4, &actual_count));
+    ASSERT_EQ(actual_count, 4u);
+    ASSERT_EQ(actual_elements[0], 1u);
+    ASSERT_EQ(actual_elements[1], 2u);
+    ASSERT_EQ(actual_elements[2], 3u);
+    ASSERT_EQ(actual_elements[3], 4u);
+    ASSERT_EQ(actual_elements[4], 0u);
 
     // should be writable again now
-    EXPECT_SIGNALS(a, ZX_FIFO_WRITABLE);
+    EXPECT_SIGNALS(fifo_a, ZX_FIFO_WRITABLE);
 
-    // write some more, wrapping to the front again
-    n[0] = 9u;
-    n[1] = 10u;
-    ASSERT_EQ(zx_fifo_write(a, ELEM_SZ, n, 2, &actual), ZX_OK, "");
-    ASSERT_EQ(actual, 2u, "");
-
-    // read across the wrap, test partial read
-    ASSERT_EQ(zx_fifo_read(b, ELEM_SZ, n, 8, &actual), ZX_OK, "");
-    ASSERT_EQ(actual, 6u, "");
-    ASSERT_EQ(n[0], 5u, "");
-    ASSERT_EQ(n[1], 6u, "");
-    ASSERT_EQ(n[2], 7u, "");
-    ASSERT_EQ(n[3], 8u, "");
-    ASSERT_EQ(n[4], 9u, "");
-    ASSERT_EQ(n[5], 10u, "");
+    ASSERT_OK(fifo_b.read(kElementSize, actual_elements, 4, &actual_count));
+    ASSERT_EQ(actual_elements[0], 5u);
+    ASSERT_EQ(actual_elements[1], 6u);
+    ASSERT_EQ(actual_elements[2], 7u);
+    ASSERT_EQ(actual_elements[3], 8u);
+    ASSERT_EQ(actual_elements[4], 0u);
 
     // should no longer be readable
-    EXPECT_SIGNALS(b, ZX_FIFO_WRITABLE);
+    EXPECT_SIGNALS(fifo_b, ZX_FIFO_WRITABLE);
+}
+
+TEST(FifoTest, FifoOrderIsPreserved) {
+    zx::fifo fifo_a, fifo_b;
+    ElementType expected_elements[] = { 1, 2, 3, 4, 5, 6, 7, 8};
+    ElementType actual_elements[8] = {};
+
+    // simple 8 x 8 fifo
+    ASSERT_OK(zx::fifo::create(8, kElementSize, 0, &fifo_a, &fifo_b));
+
+    size_t actual_count;
+    // should be able to write all entries into empty fifo
+    ASSERT_OK(fifo_a.write(kElementSize, expected_elements, 8, &actual_count));
+
+    // read half the entries, make sure they're what we expect
+    ASSERT_OK(fifo_b.read(kElementSize, actual_elements, 4, &actual_count));
+
+    // write some more, wrapping to the front again
+    expected_elements[0] = 9u;
+    expected_elements[1] = 10u;
+    ASSERT_OK(fifo_a.write(kElementSize, expected_elements, 2, &actual_count));
+    ASSERT_EQ(actual_count, 2u);
+
+    // read across the wrap, test partial read
+    ASSERT_OK(fifo_b.read(kElementSize, actual_elements, 8, &actual_count));
+    ASSERT_EQ(actual_count, 6u);
+    ASSERT_EQ(actual_elements[0], 5u);
+    ASSERT_EQ(actual_elements[1], 6u);
+    ASSERT_EQ(actual_elements[2], 7u);
+    ASSERT_EQ(actual_elements[3], 8u);
+    ASSERT_EQ(actual_elements[4], 9u);
+    ASSERT_EQ(actual_elements[5], 10u);
 
     // write across the wrap
-    n[0] = 11u; n[1] = 12u; n[2] = 13u; n[3] = 14u; n[4] = 15u;
-    ASSERT_EQ(zx_fifo_write(a, ELEM_SZ, n, 5, &actual), ZX_OK, "");
-    ASSERT_EQ(actual, 5u, "");
+    expected_elements[0] = 11u;
+    expected_elements[1] = 12u;
+    expected_elements[2] = 13u;
+    expected_elements[3] = 14u;
+    expected_elements[4] = 15u;
+    ASSERT_OK(fifo_a.write(kElementSize, expected_elements, 5,
+              &actual_count));
+    ASSERT_EQ(actual_count, 5u);
+}
+
+TEST(FifoTest, PartialWriteQueuesElementsThatFit) {
+    zx::fifo fifo_a, fifo_b;
+    ElementType expected_elements[] = { 1, 2, 3, 4, 5, 6, 7, 8};
+
+    // simple 8 x 8 fifo
+    ASSERT_OK(zx::fifo::create(8, kElementSize, 0, &fifo_a, &fifo_b));
+
+    size_t actual_count;
+    // Fill it up for 5 elements.
+    ASSERT_OK(fifo_a.write(kElementSize, expected_elements, 5,
+              &actual_count));
 
     // partial write test
-    n[0] = 16u; n[1] = 17u; n[2] = 18u;
-    ASSERT_EQ(zx_fifo_write(a, ELEM_SZ, n, 5, &actual), ZX_OK, "");
-    ASSERT_EQ(actual, 3u, "");
+    expected_elements[0] = 16u;
+    expected_elements[1] = 17u;
+    expected_elements[2] = 18u;
+    ASSERT_OK(fifo_a.write(kElementSize, expected_elements, 5,
+              &actual_count));
+    ASSERT_EQ(actual_count, 3u);
+}
 
+TEST(FifoTest, IndividualReadsPreserveOrder) {
+    zx::fifo fifo_a, fifo_b;
+    ElementType expected_elements[] = { 1, 2, 3, 4, 5, 6, 7, 8};
+
+    // simple 8 x 8 fifo
+    ASSERT_OK(zx::fifo::create(8, kElementSize, 0, &fifo_a, &fifo_b));
+
+    size_t actual_count;
+    // Fill it up
+    ASSERT_OK(fifo_a.write(kElementSize, expected_elements, 8, &actual_count));
+
+    ElementType actual_element;
     // small reads
     for (unsigned i = 0; i < 8; i++) {
-        ASSERT_EQ(zx_fifo_read(b, ELEM_SZ, n, 1, &actual), ZX_OK, "");
-        ASSERT_EQ(actual, 1u, "");
-        ASSERT_EQ(n[0], 11u + i, "");
+        ASSERT_OK(fifo_b.read(kElementSize, &actual_element, 1, &actual_count));
+        ASSERT_EQ(actual_count, 1u);
+        ASSERT_EQ(actual_element, expected_elements[i]);
+    }
+}
+
+TEST(FifoTest, EndpointCloseSignalsPeerClosed) {
+    zx::fifo fifo_b;
+    ElementType expected_element = 19u;
+    ElementType actual_elements[8] = {};
+
+    size_t actual_count;
+
+    {
+        zx::fifo fifo_a;
+        ASSERT_OK(zx::fifo::create(8, kElementSize, 0, &fifo_a, &fifo_b));
+
+        // write and then close, verify we can read written entries before
+        // receiving ZX_ERR_PEER_CLOSED.
+        ASSERT_OK(fifo_a.write(kElementSize, &expected_element, 1, &actual_count));
+        ASSERT_EQ(actual_count, 1u);
+        // end of scope for fifo_b so it's closed.
     }
 
-    // write and then close, verify we can read written entries before
-    // receiving ZX_ERR_PEER_CLOSED.
-    n[0] = 19u;
-    ASSERT_EQ(zx_fifo_write(b, ELEM_SZ, n, 1, &actual), ZX_OK, "");
-    ASSERT_EQ(actual, 1u, "");
-    zx_handle_close(b);
-    EXPECT_SIGNALS(a, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED);
-    ASSERT_EQ(zx_fifo_read(a, ELEM_SZ, n, 8, &actual), ZX_OK, "");
-    ASSERT_EQ(actual, 1u, "");
-    EXPECT_SIGNALS(a, ZX_FIFO_PEER_CLOSED);
-    ASSERT_EQ(zx_fifo_read(a, ELEM_SZ, n, 8, &actual), ZX_ERR_PEER_CLOSED, "");
-
-    zx_handle_close(a);
-
-    END_TEST;
+    EXPECT_SIGNALS(fifo_b, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED);
+    ASSERT_OK(fifo_b.read(kElementSize, actual_elements, 8, &actual_count));
+    ASSERT_EQ(actual_count, 1u);
+    EXPECT_SIGNALS(fifo_b, ZX_FIFO_PEER_CLOSED);
+    ASSERT_EQ(fifo_b.read(kElementSize, actual_elements, 8,
+              &actual_count), ZX_ERR_PEER_CLOSED);
+    ASSERT_EQ(fifo_b.signal_peer(0u, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED);
 }
 
-static bool peer_closed_test(void) {
-    BEGIN_TEST;
-
-    zx_handle_t fifo[2];
-    ASSERT_EQ(zx_fifo_create(16, 16, 0, &fifo[0], &fifo[1]), ZX_OK, "");
-    ASSERT_EQ(zx_handle_close(fifo[1]), ZX_OK, "");
-    ASSERT_EQ(zx_object_signal_peer(fifo[0], 0u, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED, "");
-    ASSERT_EQ(zx_handle_close(fifo[0]), ZX_OK, "");
-
-    END_TEST;
-}
-
-static bool options_test(void) {
-    BEGIN_TEST;
-
-    zx_handle_t fifos[2];
-    ASSERT_EQ(zx_fifo_create(23, 8, 8, &fifos[0], &fifos[1]),
-              ZX_ERR_OUT_OF_RANGE, "");
-
-    END_TEST;
-}
-
-BEGIN_TEST_CASE(fifo_tests)
-RUN_TEST(basic_test)
-RUN_TEST(peer_closed_test)
-RUN_TEST(options_test)
-END_TEST_CASE(fifo_tests)
+} // namespace
