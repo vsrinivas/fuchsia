@@ -5,6 +5,7 @@
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <fbl/algorithm.h>
+#include <fbl/vector.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/coding.h>
@@ -352,125 +353,188 @@ void BindCompositeDefineComposite(const fbl::RefPtr<devmgr::Device>& platform_bu
               ZX_OK);
 }
 
-void BindCompositeImpl(bool define_composite_before_devices) {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    devmgr::Coordinator coordinator(DefaultConfig(loop.dispatcher()));
+struct DeviceState {
+    // The representation in the coordinator of the device
+    fbl::RefPtr<devmgr::Device> device;
+    // The remote end of the channel that the coordinator is talking to
+    zx::channel remote;
+};
 
-    ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator));
-    ASSERT_NOT_NULL(coordinator.component_driver());
+class CompositeTestCase : public zxtest::Test {
+public:
+    ~CompositeTestCase() override = default;
 
-    // Create a mock devhost and connect the test device to it, so that all of
-    // its children show up there
-    devmgr::Devhost host;
-    zx::channel devhost_remote;
-    zx::channel platform_bus_devhost_remote;
-    host.AddRef(); // refcount starts at zero, so bump it up to keep us from being cleaned up
-    {
-        zx::channel local;
-        zx_status_t status = zx::channel::create(0, &local, &devhost_remote);
-        ASSERT_EQ(ZX_OK, status);
-        host.set_hrpc(local.release());
+    async::Loop* loop() { return &loop_; }
+    devmgr::Coordinator* coordinator() { return &coordinator_; }
+
+    devmgr::Devhost* devhost() { return &devhost_; }
+    const zx::channel& devhost_remote() { return devhost_remote_; }
+
+    const fbl::RefPtr<devmgr::Device>& platform_bus() const { return platform_bus_.device; }
+    DeviceState* device(size_t index) const { return &devices_[index]; }
+
+    void AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,
+                   uint32_t protocol_id, fbl::String driver, size_t* device_index);
+
+protected:
+    void SetUp() override {
+        ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator_));
+        ASSERT_NOT_NULL(coordinator_.component_driver());
+
+        // refcount starts at zero, so bump it up to keep us from being cleaned up
+        devhost_.AddRef();
+        {
+            zx::channel local;
+            zx_status_t status = zx::channel::create(0, &local, &devhost_remote_);
+            ASSERT_EQ(ZX_OK, status);
+            devhost_.set_hrpc(local.release());
+        }
+
+        // Set up the sys device proxy, inside of the devhost
+        ASSERT_EQ(coordinator_.PrepareProxy(coordinator_.sys_device(), &devhost_), ZX_OK);
+        loop_.RunUntilIdle();
+        ASSERT_NO_FATAL_FAILURES(CheckCreateDeviceReceived(devhost_remote_, kSystemDriverPath,
+                                                           &sys_proxy_remote_));
+        loop_.RunUntilIdle();
+
+        // Create a child of the sys_device, since only directly children of it can
+        // issue AddComposite
+        {
+            zx::channel local;
+            zx_status_t status = zx::channel::create(0, &local, &platform_bus_.remote);
+            ASSERT_EQ(ZX_OK, status);
+            status = coordinator_.AddDevice(coordinator_.sys_device()->proxy, std::move(local),
+                                           nullptr /* props_data */, 0 /* props_count */,
+                                           "platform-bus", 0, nullptr /* driver_path */,
+                                           nullptr /* args */, false /* invisible */,
+                                           zx::channel() /* client_remote */,
+                                           &platform_bus_.device);
+            ASSERT_EQ(ZX_OK, status);
+            loop_.RunUntilIdle();
+        }
     }
 
-    // Set up the sys device proxy
-    ASSERT_EQ(coordinator.PrepareProxy(coordinator.sys_device(), &host), ZX_OK);
-    loop.RunUntilIdle();
-    ASSERT_NO_FATAL_FAILURES(CheckCreateDeviceReceived(devhost_remote, kSystemDriverPath,
-                                                       &platform_bus_devhost_remote));
-    loop.RunUntilIdle();
+    void TearDown() override {
+        loop_.RunUntilIdle();
+        // Remove the devices in the opposite order that we added them
+        while (!devices_.is_empty()) {
+            devices_.pop_back();
+            loop_.RunUntilIdle();
+        }
+        platform_bus_.device.reset();
+        loop_.RunUntilIdle();
 
-    // Create a child of the sys_device, since only directly children of it can
-    // issue AddComposite
-    fbl::RefPtr<devmgr::Device> platform_bus;
-    zx::channel platform_bus_remote;
-    {
-        zx::channel local;
-        zx_status_t status = zx::channel::create(0, &local, &platform_bus_remote);
-        ASSERT_EQ(ZX_OK, status);
-        status = coordinator.AddDevice(coordinator.sys_device()->proxy, std::move(local),
-                                       nullptr /* props_data */, 0 /* props_count */,
-                                       "platform-bus", 0, nullptr /* driver_path */,
-                                       nullptr /* args */, false /* invisible */,
-                                       zx::channel() /* client_remote */, &platform_bus);
-        ASSERT_EQ(ZX_OK, status);
-        ASSERT_EQ(1, coordinator.devices().size_slow());
-        loop.RunUntilIdle();
+        devhost_.devices().clear();
     }
+private:
+    async::Loop loop_{&kAsyncLoopConfigNoAttachToThread};
+    devmgr::Coordinator coordinator_{DefaultConfig(loop_.dispatcher())};
 
-    fbl::RefPtr<devmgr::Device> devices[2];
-    zx::channel device_rpcs[fbl::count_of(devices)];
+    // The fake devhost that the platform bus is put into
+    devmgr::Devhost devhost_;
+    // The remote end of the channel that the coordinator uses to talk to the
+    // devhost
+    zx::channel devhost_remote_;
+
+    // The remote end of the channel that the coordinator uses to talk to the
+    // sys device proxy
+    zx::channel sys_proxy_remote_;
+
+    // The device object representing the platform bus driver (child of the
+    // sys proxy)
+    DeviceState platform_bus_;
+
+    // A list of all devices that were added during this test, and their
+    // channels.  These exist to keep them alive until the test is over.
+    fbl::Vector<DeviceState> devices_;
+};
+
+void CompositeTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,
+                                     uint32_t protocol_id, fbl::String driver, size_t* index) {
+    DeviceState state;
+
+    zx::channel local;
+    zx_status_t status = zx::channel::create(0, &local, &state.remote);
+    ASSERT_EQ(ZX_OK, status);
+    status = coordinator_.AddDevice(parent, std::move(local),
+                                    nullptr /* props_data */, 0 /* props_count */, name,
+                                    protocol_id, driver.data() /* driver_path */,
+                                    nullptr /* args */, false /* invisible */,
+                                    zx::channel() /* client_remote */, &state.device);
+    ASSERT_EQ(ZX_OK, status);
+    loop_.RunUntilIdle();
+
+    devices_.push_back(std::move(state));
+    *index = devices_.size() - 1;
+}
+
+class CompositeAddOrderTestCase : public CompositeTestCase {
+public:
+    enum class AddLocation {
+        // Add the composite before any components
+        BEFORE,
+        // Add the composite after all components
+        AFTER,
+    };
+    void ExecuteTest(AddLocation add);
+};
+
+void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
+    size_t device_indexes[2];
     uint32_t protocol_id[] = {
         ZX_PROTOCOL_GPIO,
         ZX_PROTOCOL_I2C,
     };
-    static_assert(fbl::count_of(protocol_id) == fbl::count_of(devices));
+    static_assert(fbl::count_of(protocol_id) == fbl::count_of(device_indexes));
 
     const char* kCompositeDevName = "composite-dev";
-    if (define_composite_before_devices) {
+    auto do_add = [&]() {
         ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
-                platform_bus, protocol_id, fbl::count_of(protocol_id), nullptr /* props */,
+                platform_bus(), protocol_id, fbl::count_of(protocol_id), nullptr /* props */,
                 0, kCompositeDevName));
+    };
+
+    if (add == AddLocation::BEFORE) {
+        ASSERT_NO_FATAL_FAILURES(do_add());
     }
 
     // Add the devices to construct the composite out of.
-    for (size_t i = 0; i < fbl::count_of(devices); ++i) {
-        zx::channel local;
-        zx_status_t status = zx::channel::create(0, &local, &device_rpcs[i]);
-        ASSERT_EQ(ZX_OK, status);
+    for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
         char name[32];
         snprintf(name, sizeof(name), "device-%zu", i);
-        status = coordinator.AddDevice(platform_bus, std::move(local),
-                                       nullptr /* props_data */, 0 /* props_count */, name,
-                                       protocol_id[i], nullptr /* driver_path */,
-                                       nullptr /* args */, false /* invisible */,
-                                       zx::channel() /* client_remote */, &devices[i]);
-        ASSERT_EQ(ZX_OK, status);
-        ASSERT_EQ(i + 2, coordinator.devices().size_slow());
-        loop.RunUntilIdle();
+        ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), name, protocol_id[i], "",
+                                           &device_indexes[i]));
     }
 
-    if (!define_composite_before_devices) {
-        ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
-                platform_bus, protocol_id, fbl::count_of(protocol_id), nullptr /* props */,
-                0, kCompositeDevName));
+    if (add == AddLocation::AFTER) {
+        ASSERT_NO_FATAL_FAILURES(do_add());
     }
 
-    fbl::RefPtr<devmgr::Device> component_devices[fbl::count_of(devices)];
-    zx::channel component_device_rpcs[fbl::count_of(devices)];
-    for (size_t i = 0; i < fbl::count_of(devices); ++i) {
+    size_t component_device_indexes[fbl::count_of(device_indexes)];
+    for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
+        auto device_state = device(device_indexes[i]);
         // Wait for the components to get bound
-        fbl::String driver = coordinator.component_driver()->libname;
-        ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_rpcs[i], driver.data()));
-        loop.RunUntilIdle();
+        fbl::String driver = coordinator()->component_driver()->libname;
+        ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
+        loop()->RunUntilIdle();
 
         // Synthesize the AddDevice request the component driver would send
-        zx::channel local, remote;
-        zx_status_t status = zx::channel::create(0, &local, &component_device_rpcs[i]);
-        ASSERT_EQ(ZX_OK, status);
         char name[32];
-        snprintf(name, sizeof(name), "composite-device-%zu", i);
-        status = coordinator.AddDevice(devices[i], std::move(local),
-                                       nullptr /* props_data */, 0 /* props_count */, name,
-                                       ZX_PROTOCOL_COMPOSITE, driver.data(),
-                                       nullptr /* args */, false /* invisible */,
-                                       zx::channel() /* client_remote */, &component_devices[i]);
-        ASSERT_EQ(ZX_OK, status);
-        loop.RunUntilIdle();
+        snprintf(name, sizeof(name), "component-device-%zu", i);
+        ASSERT_NO_FATAL_FAILURES(AddDevice(device_state->device, name, 0,
+                                           driver, &component_device_indexes[i]));
     }
 
-    ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(devhost_remote, kCompositeDevName,
-                                                                fbl::count_of(devices)));
-
-    loop.RunUntilIdle();
-    host.devices().clear();
+    ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(devhost_remote(), kCompositeDevName,
+                                                                fbl::count_of(device_indexes)));
 }
 
-TEST(CoordinatorTestCase, BindCompositeDefineAfterDevices) {
-    ASSERT_NO_FATAL_FAILURES(BindCompositeImpl(false));
+TEST_F(CompositeAddOrderTestCase, DefineBeforeDevices) {
+    ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::BEFORE));
 }
 
-TEST(CoordinatorTestCase, BindCompositeDefineBeforeDevices) {
-    ASSERT_NO_FATAL_FAILURES(BindCompositeImpl(true));
+TEST_F(CompositeAddOrderTestCase, DefineAfterDevices) {
+    ASSERT_NO_FATAL_FAILURES(ExecuteTest(AddLocation::AFTER));
 }
 
 } // namespace
