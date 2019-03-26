@@ -16,8 +16,8 @@
 KCOUNTER(dispatcher_eventpair_create_count, "dispatcher.eventpair.create");
 KCOUNTER(dispatcher_eventpair_destroy_count, "dispatcher.eventpair.destroy");
 
-zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
-                                        fbl::RefPtr<Dispatcher>* dispatcher1,
+zx_status_t EventPairDispatcher::Create(KernelHandle<EventPairDispatcher>* handle0,
+                                        KernelHandle<EventPairDispatcher>* handle1,
                                         zx_rights_t* rights) {
     fbl::AllocChecker ac;
     auto holder0 = fbl::AdoptRef(new (&ac) PeerHolder<EventPairDispatcher>());
@@ -25,20 +25,20 @@ zx_status_t EventPairDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher0,
         return ZX_ERR_NO_MEMORY;
     auto holder1 = holder0;
 
-    auto disp0 = fbl::AdoptRef(new (&ac) EventPairDispatcher(ktl::move(holder0)));
+    KernelHandle ep0(fbl::AdoptRef(new (&ac) EventPairDispatcher(ktl::move(holder0))));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    auto disp1 = fbl::AdoptRef(new (&ac) EventPairDispatcher(ktl::move(holder1)));
+    KernelHandle ep1(fbl::AdoptRef(new (&ac) EventPairDispatcher(ktl::move(holder1))));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    disp0->Init(disp1);
-    disp1->Init(disp0);
+    ep0.dispatcher()->Init(ep1.dispatcher());
+    ep1.dispatcher()->Init(ep0.dispatcher());
 
     *rights = default_rights();
-    *dispatcher0 = ktl::move(disp0);
-    *dispatcher1 = ktl::move(disp1);
+    *handle0 = ktl::move(ep0);
+    *handle1 = ktl::move(ep1);
 
     return ZX_OK;
 }

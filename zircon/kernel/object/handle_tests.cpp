@@ -210,21 +210,21 @@ bool KernelHandleUpgrade() {
     // HandleOwner requires a real Dispatcher so we can't use FakeDispatcher
     // here. Use eventpair instead since we can signal the peer to check
     // whether its on_zero_handles() has been called.
-    fbl::RefPtr<Dispatcher> eventpair[2];
+    KernelHandle<EventPairDispatcher> eventpair[2];
     zx_rights_t rights;
     ASSERT_EQ(EventPairDispatcher::Create(&eventpair[0], &eventpair[1], &rights), ZX_OK, "");
     {
         HandleOwner handle_owner;
         {
-            KernelHandle handle(ktl::move(eventpair[0]));
-            handle_owner = handle.UpgradeToHandleOwner(rights);
-            EXPECT_NULL(handle.dispatcher(), "");
+            handle_owner = eventpair[0].UpgradeToHandleOwner(rights);
+            EXPECT_NULL(eventpair[0].dispatcher(), "");
             EXPECT_TRUE(handle_owner, "");
             EXPECT_EQ(handle_owner->rights(), rights, "");
         }
-        EXPECT_EQ(eventpair[1]->user_signal_peer(0, ZX_USER_SIGNAL_0), ZX_OK, "");
+        EXPECT_EQ(eventpair[1].dispatcher()->user_signal_peer(0, ZX_USER_SIGNAL_0), ZX_OK, "");
     }
-    EXPECT_EQ(eventpair[1]->user_signal_peer(0, ZX_USER_SIGNAL_0), ZX_ERR_PEER_CLOSED, "");
+    EXPECT_EQ(eventpair[1].dispatcher()->user_signal_peer(0, ZX_USER_SIGNAL_0),
+              ZX_ERR_PEER_CLOSED, "");
 
     END_TEST;
 }

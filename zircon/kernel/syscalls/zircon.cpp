@@ -157,14 +157,14 @@ zx_status_t sys_eventpair_create(uint32_t options,
     if (res != ZX_OK)
         return res;
 
-    fbl::RefPtr<Dispatcher> epd0, epd1;
+    KernelHandle<EventPairDispatcher> handle0, handle1;
     zx_rights_t rights;
-    zx_status_t result = EventPairDispatcher::Create(&epd0, &epd1, &rights);
+    zx_status_t result = EventPairDispatcher::Create(&handle0, &handle1, &rights);
 
     if (result == ZX_OK)
-        result = out0->make(ktl::move(epd0), rights);
+        result = out0->make(ktl::move(handle0), rights);
     if (result == ZX_OK)
-        result = out1->make(ktl::move(epd1), rights);
+        result = out1->make(ktl::move(handle1), rights);
 
     return result;
 }
