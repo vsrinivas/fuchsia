@@ -67,6 +67,8 @@ class DwarfDieDecoder {
   //
   // The output pointers must remain valid until the last call to Decode()
   // has returned.
+  void AddBool(llvm::dwarf::Attribute attribute,
+               llvm::Optional<bool>* output);
   void AddUnsignedConstant(llvm::dwarf::Attribute attribute,
                            llvm::Optional<uint64_t>* output);
   void AddSignedConstant(llvm::dwarf::Attribute attribute,

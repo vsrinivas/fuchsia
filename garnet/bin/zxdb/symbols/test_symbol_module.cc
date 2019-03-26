@@ -12,10 +12,13 @@
 
 namespace zxdb {
 
+const char TestSymbolModule::kMyNamespaceName[] = "my_ns";
 const char TestSymbolModule::kMyFunctionName[] = "MyFunction";
 const int TestSymbolModule::kMyFunctionLine = 96;
 const char TestSymbolModule::kNamespaceFunctionName[] =
     "my_ns::NamespaceFunction";
+const char TestSymbolModule::kMyClassName[] = "my_ns::MyClass";
+const char TestSymbolModule::kMyInnerClassName[] = "my_ns::MyClass::Inner";
 const char TestSymbolModule::kMyMemberOneName[] = "my_ns::MyClass::MyMemberOne";
 const char TestSymbolModule::kFunctionInTest2Name[] =
     "ClassInTest2::FunctionInTest2";

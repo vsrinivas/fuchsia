@@ -13,7 +13,7 @@
 
 namespace zxdb {
 
-TEST(ModuleSymbolIndex, FindExact) {
+TEST(ModuleSymbolIndex, FindExactFunction) {
   TestSymbolModule module;
   std::string err;
   ASSERT_TRUE(module.Load(&err)) << err;
@@ -94,6 +94,31 @@ TEST(ModuleSymbolIndex, FindFileMatches) {
   // More-than-full path match.
   result = index.FindFileMatches("/a" + full_path);
   EXPECT_EQ(0u, result.size());
+}
+
+TEST(ModuleSymbolIndex, FindTypeAndNamespace) {
+  TestSymbolModule module;
+  std::string err;
+  ASSERT_TRUE(module.Load(&err)) << err;
+
+  ModuleSymbolIndex index;
+  index.CreateIndex(module.object_file());
+
+  // Should have one namespace.
+  auto result = index.FindExact(TestSymbolModule::kMyNamespaceName);
+  EXPECT_EQ(1u, result.size()) << "Namespace not found.";
+
+  // Outer class name.
+  result = index.FindExact(TestSymbolModule::kMyClassName);
+  EXPECT_EQ(1u, result.size()) << "Class not found.";
+
+  // Inner class name.
+  result = index.FindExact(TestSymbolModule::kMyInnerClassName);
+  EXPECT_EQ(1u, result.size()) << "Class not found.";
+
+  // Should also have deifned an "int" type.
+  result = index.FindExact("int");
+  EXPECT_EQ(1u, result.size()) << "int not found.";
 }
 
 // Enable and substitute a path on your system for kFilename to run the

@@ -16,16 +16,49 @@ class DWARFDie;
 
 namespace zxdb {
 
-// One node in the ModuleSymbolIndex tree. One node represents the set of things
-// with the same name inside a given namespace of a module. The index contains
-// things that might need to be named globally: functions, globals, and class
-// statics. It does not contain function-level statics. Variables in functions
-// are searched when in the context of that function, and can't be referenced
-// outside of it.
+// One node in the ModuleSymbolIndex tree. One node represents the set of
+// things with the same name inside a given named scope (namespace, class,
+// type, etc.) of a module. The index contains things that might need to be
+// named globally: types, functions, globals, and class statics. It does not
+// contain function-level statics. Variables in functions are searched when in
+// the context of that function, and can't be referenced outside of it.
 //
 // There could be multiple types of things with the same name in different
 // compilation unit, and a single function can have multiple locations. So one
 // one can represent many namespaces and functions.
+//
+// DUPLICATE TYPE HANDLING
+// -----------------------
+// We assume there is only one definition for a given type name. Usually there
+// will be one definition of a type in each compilation unit it appears in, so
+// there is epic duplication of common type definitions in each module
+// (covering many compilation units).
+//
+// The duplications aren't necessarily the same since the programmer could have
+// multiple different types with the same names in different contexts.
+// Depending on how things are linked, the user may not even notice
+// (technically violating the "one definition rule" leads to undefined
+// behavior, not failure).
+//
+// The main time this will come up is types defined in anonymous namespaces
+// which can easily be legally duplicated. For this, we need specific
+// disambiguation for anonymous namespaces associated with a given file. Once
+// we can express the difference between different anonymous namespaces, these
+// will no longer collide without having to do special handling in this
+// function.
+//
+// We do want to upgrade forward-declarations to full definitions when we
+// find them. Some compilation units won't even have full definitions for
+// a type they use (say when a pointer is passed through a file without being
+// dereferenced). Therefore, "types" will overwrite "type declarations."
+//
+// NAMESPACE HANDLING
+// ------------------
+// Namespaces are de-duplicated, with only one DIE saved per namespace name.
+// This means that one won't be able to enumerate the contents of a namespace
+// with the symbol returned from the index. This is because currently we only
+// need to know that a namespace exists with that name, not exactly where all
+// of its declarations are.
 class ModuleSymbolIndexNode {
  private:
   using Map = std::map<std::string, ModuleSymbolIndexNode>;
@@ -33,6 +66,15 @@ class ModuleSymbolIndexNode {
  public:
   using Iterator = Map::iterator;
   using ConstIterator = Map::const_iterator;
+
+  // Type for a DieRef.
+  enum class RefType {
+    kNamespace,  // Namespaces.
+    kFunction,   // Any kind of code.
+    kVariable,   // Any kind of data.
+    kTypeDecl,   // Forward declaration of a type.
+    kType,       // Full type definition.
+  };
 
   // A reference to a DIE that doesn't need the unit or the underlying
   // llvm::DwarfDebugInfoEntry to be kept. This allows the discarding of the
@@ -48,22 +90,23 @@ class ModuleSymbolIndexNode {
   class DieRef {
    public:
     explicit DieRef() : offset_(0) {}
-    explicit DieRef(uint32_t offset) : offset_(offset) {}
-    explicit DieRef(const llvm::DWARFDie& die);
+    DieRef(RefType type, uint32_t offset) : type_(type), offset_(offset) {}
 
+    RefType type() const { return type_; }
     uint32_t offset() const { return offset_; }
 
     // For use by ModuleSymbols. Other callers read the DieRef comments above.
     llvm::DWARFDie ToDie(llvm::DWARFContext* context) const;
 
    private:
+    RefType type_;
     uint32_t offset_;
   };
 
   ModuleSymbolIndexNode();
 
   // Makes a node pointing to one DIE.
-  ModuleSymbolIndexNode(const DieRef& ref);
+  explicit ModuleSymbolIndexNode(const DieRef& ref);
 
   ~ModuleSymbolIndexNode();
 

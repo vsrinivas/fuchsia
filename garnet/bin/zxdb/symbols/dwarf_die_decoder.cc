@@ -65,6 +65,13 @@ void DwarfDieDecoder::AddPresenceCheck(llvm::dwarf::Attribute attribute,
       attribute, [present](const llvm::DWARFFormValue&) { *present = true; });
 }
 
+void DwarfDieDecoder::AddBool(llvm::dwarf::Attribute attribute,
+                              llvm::Optional<bool>* output) {
+  attrs_.emplace_back(attribute, [output](const llvm::DWARFFormValue& form) {
+    *output = !!form.getAsUnsignedConstant();
+  });
+}
+
 void DwarfDieDecoder::AddUnsignedConstant(llvm::dwarf::Attribute attribute,
                                           llvm::Optional<uint64_t>* output) {
   attrs_.emplace_back(attribute, [output](const llvm::DWARFFormValue& form) {

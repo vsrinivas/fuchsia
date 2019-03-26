@@ -12,9 +12,6 @@
 
 namespace zxdb {
 
-ModuleSymbolIndexNode::DieRef::DieRef(const llvm::DWARFDie& die)
-    : offset_(die.getOffset()) {}
-
 llvm::DWARFDie ModuleSymbolIndexNode::DieRef::ToDie(
     llvm::DWARFContext* context) const {
   return context->getDIEForOffset(offset_);
@@ -23,7 +20,7 @@ llvm::DWARFDie ModuleSymbolIndexNode::DieRef::ToDie(
 ModuleSymbolIndexNode::ModuleSymbolIndexNode() = default;
 
 ModuleSymbolIndexNode::ModuleSymbolIndexNode(const DieRef& ref) {
-  dies_.emplace_back(ref);
+  dies_.push_back(ref);
 }
 
 ModuleSymbolIndexNode::~ModuleSymbolIndexNode() = default;
@@ -51,7 +48,34 @@ std::string ModuleSymbolIndexNode::AsString(int indent_level) const {
 }
 
 void ModuleSymbolIndexNode::AddDie(const DieRef& ref) {
-  dies_.emplace_back(ref);
+  if (ref.type() == RefType::kNamespace) {
+    // Just save a namespace once.
+    for (auto& existing : dies_) {
+      if (existing.type() == RefType::kNamespace)
+        return;  // Already have an entry for this namespace.
+    }
+  } else if (ref.type() == RefType::kType ||
+             ref.type() == RefType::kTypeDecl) {
+    // This is a type. Types only appear in the index once (see the class comment
+    // in the header). This loop does the de-duplication and also upgrades
+    // declarations to full definitions.
+    for (auto& existing : dies_) {
+      if (existing.type() == RefType::kTypeDecl) {
+        if (ref.type() == RefType::kType) {
+          // Upgrade existing declaration to full type.
+          existing = ref;
+        }
+        // "Else" means they're both declarations, don't need to duplicate.
+        return;
+      } else if (existing.type() == RefType::kType) {
+        // Already have a full type definition for this name, don't same.
+        return;
+      }
+    }
+  }
+
+  // Add the new entry.
+  dies_.push_back(ref);
 }
 
 ModuleSymbolIndexNode* ModuleSymbolIndexNode::AddChild(std::string&& name) {
@@ -80,13 +104,13 @@ void ModuleSymbolIndexNode::Merge(ModuleSymbolIndexNode&& other) {
     }
   }
 
-  // There should not be duplicates since this will be the result of iterating
-  // one module's DIEs.
   if (!other.dies_.empty()) {
     if (dies_.empty()) {
       dies_ = std::move(other.dies_);
     } else {
-      dies_.insert(dies_.end(), other.dies_.begin(), other.dies_.end());
+      // AddDie will apply de-duplication logic.
+      for (const auto& cur : other.dies_)
+        AddDie(cur);
     }
   }
 }

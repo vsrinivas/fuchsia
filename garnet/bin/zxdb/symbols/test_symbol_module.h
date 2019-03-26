@@ -31,9 +31,12 @@ namespace zxdb {
 class TestSymbolModule {
  public:
   // These constants identify locations in the symbol test files.
+  static const char kMyNamespaceName[];
   static const char kMyFunctionName[];
   static const int kMyFunctionLine;
   static const char kNamespaceFunctionName[];
+  static const char kMyClassName[];
+  static const char kMyInnerClassName[];
   static const char kMyMemberOneName[];
   static const char kFunctionInTest2Name[];
   static const char kMyMemberTwoName[];

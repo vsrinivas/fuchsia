@@ -34,7 +34,7 @@ struct TestGlobalVariable {
   TestGlobalVariable(MockModuleSymbols* mod_sym,
                      ModuleSymbolIndexNode* index_parent,
                      const std::string& var_name)
-      : die_ref(next_die_ref++),
+      : die_ref(ModuleSymbolIndexNode::RefType::kVariable, next_die_ref++),
         index_node(index_parent->AddChild(std::string(var_name))) {
     index_node->AddDie(die_ref);
     var = MakeVariableForTest(var_name, MakeInt32Type(), 0x100, 0x200,

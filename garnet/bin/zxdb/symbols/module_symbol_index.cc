@@ -9,6 +9,7 @@
 #include "garnet/bin/zxdb/common/file_util.h"
 #include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/symbols/dwarf_die_decoder.h"
+#include "garnet/bin/zxdb/symbols/dwarf_tag.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_index_node.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -73,11 +74,13 @@ namespace {
 // the definition and implementation is the same, the offset will just point to
 // the entry.
 struct SymbolStorage {
-  SymbolStorage(const llvm::DWARFDebugInfoEntry* e, uint64_t offs)
-      : entry(e), definition_unit_offset(offs) {}
+  SymbolStorage(const llvm::DWARFDebugInfoEntry* e, uint64_t offs,
+                ModuleSymbolIndexNode::RefType rt)
+      : entry(e), definition_unit_offset(offs), ref_type(rt) {}
 
   const llvm::DWARFDebugInfoEntry* entry;
   uint64_t definition_unit_offset;
+  ModuleSymbolIndexNode::RefType ref_type;
 };
 
 // Index used to indicate there is no parent.
@@ -131,6 +134,9 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
   decoder.AddReference(llvm::dwarf::DW_AT_specification, &decl_unit_offset,
                        &decl_global_offset);
 
+  llvm::Optional<bool> is_declaration;
+  decoder.AddBool(llvm::dwarf::DW_AT_declaration, &is_declaration);
+
   // Stores the index of the parent DIE for each one we encounter. The root
   // DIE with no parent will be set to kNoParent.
   unsigned die_count = unit->getNumDIEs();
@@ -174,34 +180,50 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
     // right type (there are a limited number of types of these) doesn't help.
     // Checking the abbreviation array is ~6-12 comparisons, which is roughly
     // equivalent to [unordered_]map lookup.
-    bool is_function = false;
     bool should_index = false;
-    if (abbrev->getTag() == llvm::dwarf::DW_TAG_subprogram &&
-        AbbrevHasCode(abbrev)) {
+    ModuleSymbolIndexNode::RefType ref_type;
+    DwarfTag tag = static_cast<DwarfTag>(abbrev->getTag());
+    if (tag == DwarfTag::kSubprogram && AbbrevHasCode(abbrev)) {
       // Found a function implementation.
-      is_function = true;
+      ref_type = ModuleSymbolIndexNode::RefType::kFunction;
+      should_index = true;
+    } else if (tag == DwarfTag::kNamespace) {
+      ref_type = ModuleSymbolIndexNode::RefType::kNamespace;
+      should_index = true;
+    } else if (DwarfTagIsType(tag)) {
+      // Found a type definition or declaration (these two will be
+      // disambiguated once the DIE is decoded below).
+      ref_type = ModuleSymbolIndexNode::RefType::kType;
       should_index = true;
     } else if (!tree_stack.back().inside_function &&
-               abbrev->getTag() == llvm::dwarf::DW_TAG_variable &&
+               tag == DwarfTag::kVariable &&
                AbbrevHasLocation(abbrev)) {
       // Found variable storage outside of a function (variables inside
       // functions are local so don't get added to the global index).
+      ref_type = ModuleSymbolIndexNode::RefType::kVariable;
       should_index = true;
     }
 
     // Add this node to the index.
     if (should_index) {
       decoder.Decode(*die);
+
+      // Apply the declaration flag for types now that we've decoded.
+      if (ref_type == ModuleSymbolIndexNode::RefType::kType &&
+          is_declaration && *is_declaration)
+        ref_type = ModuleSymbolIndexNode::RefType::kTypeDecl;
+
       if (decl_unit_offset) {
         // Save the declaration for indexing.
         symbol_storage->emplace_back(die,
-                                     unit->getOffset() + *decl_unit_offset);
+                                     unit->getOffset() + *decl_unit_offset,
+                                     ref_type);
       } else if (decl_global_offset) {
         FXL_NOTREACHED() << "Implement DW_FORM_ref_addr for references.";
       } else {
-        // This function has no separate definition so use it as its own
+        // This symbol has no separate definition so use it as its own
         // declaration (the name and such will be on itself).
-        symbol_storage->emplace_back(die, die->getOffset());
+        symbol_storage->emplace_back(die, die->getOffset(), ref_type);
       }
     }
 
@@ -220,7 +242,9 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
         tree_stack.pop_back();
 
       tree_stack.push_back(StackEntry(
-          current_depth, i, is_function || tree_stack.back().inside_function));
+          current_depth, i,
+          ref_type == ModuleSymbolIndexNode::RefType::kFunction ||
+              tree_stack.back().inside_function));
     }
 
     // Save parent info. The parent of this node is the one right before the
@@ -246,12 +270,13 @@ class SymbolStorageIndexer {
   }
 
   void AddDIE(const SymbolStorage& impl) {
-    // Components of the function name in reverse order (so "foo::Bar::Fn")
-    // would be { "Fn", "Bar", "foo"}
+    // Components of the name in reverse order (so "foo::Bar::Fn") would be {
+    // "Fn", "Bar", "foo"}
     std::vector<std::string> components;
 
-    // Find the declaration DIE for the function. Perf note: getDIEForOffset()
-    // is a binary search.
+
+    // Find the declaration DIE function. Perf note: getDIEForOffset() is a
+    // binary search.
     llvm::DWARFDie die = unit_->getDIEForOffset(impl.definition_unit_offset);
     if (!die.isValid())
       return;  // Invalid
@@ -273,7 +298,7 @@ class SymbolStorageIndexer {
 
       die = unit_->getDIEAtIndex(index);
       if (!die.isValid())
-        return;  // Something is corrupted, don't add this function.
+        return;  // Something is corrupted.
 
       if (die.getTag() == llvm::dwarf::DW_TAG_compile_unit)
         break;  // Reached the root.
@@ -291,11 +316,12 @@ class SymbolStorageIndexer {
       components.emplace_back(*name_);
     }
 
-    // Add the function to the index.
+    // Add the symbol to the index.
     ModuleSymbolIndexNode* cur = root_;
     for (int i = static_cast<int>(components.size()) - 1; i >= 0; i--)
       cur = cur->AddChild(std::move(components[i]));
-    cur->AddDie(ModuleSymbolIndexNode::DieRef(impl.entry->getOffset()));
+    cur->AddDie(ModuleSymbolIndexNode::DieRef(
+        impl.ref_type, impl.entry->getOffset()));
   }
 
  private:
