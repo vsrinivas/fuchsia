@@ -2005,6 +2005,7 @@ int isatty(int fd) {
     }
 
     int ret = 0;
+
     zx_handle_t handle = fdio_unsafe_borrow_channel(io);
     if (handle != ZX_HANDLE_INVALID) {
         fuchsia_io_NodeInfo info;
@@ -2012,6 +2013,13 @@ int isatty(int fd) {
         if ((io_status == ZX_OK) && (info.tag == fuchsia_io_NodeInfoTag_tty)) {
             ret = 1;
         }
+    }
+
+    // TODO(ZX-972)
+    // For now, stdout etc. needs to be a tty for line buffering to
+    // work. So let's pretend those are ttys.
+    if (fd == 0 || fd == 1 || fd == 2) {
+        ret = 1;
     }
 
     if (ret == 0) {
