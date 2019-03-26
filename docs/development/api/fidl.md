@@ -625,7 +625,7 @@ If a negative value has no meaning, use an unsigned type.  As a rule of thumb if
 you're unsure, use 32-bit values for small quantities and 64-bit values for
 large ones.
 
-### Errors
+### How should I represent errors?
 
 Select the appropriate error type for your use case and be consistent about how
 you report errors.
@@ -639,15 +639,73 @@ Use a domain-specific enum error type for other domains.  For example, use an
 enum when you expect clients to receive the error and then stop rather than
 propagate the error to another system.
 
-If a method can return either an error or a result, use the following pattern:
+There are two patterns for methods that can return a result or an error:
+
+ * Prefer using the `error` syntax to clearly document and convey a
+   possible erroneous return, and take advantage of tailored target language
+   bindings;
+
+ * Use the
+   [optional value with error enum](#using-optional-value-with-error-enum)
+   for cases when you need maximal performance.
+
+The performance difference between the [error syntax](#using-the-error-syntax)
+vs [optional value with error enum](#using-optional-value-with-error-enum) are
+small:
+
+  * Slightly bigger payload (8 extra bytes for values, 16 extra bytes for
+    errors);
+  * Since the value and error will be in an envelope, there is additional work
+    to record/verify the number of bytes and number of handles;
+  * Both will represent the value out-of-line, and therefore require a pointer
+    indirection.
+
+### Using the error syntax
+
+Methods can take an optional `error <type>` specifier to indicate that they
+return a value, or error out and produce `<type>`. Here is an example:
 
 ```fidl
-enum MyStatus { OK; FOO; BAR; ... };
+// Only erroneous status are listed
+enum MyErrorCode {
+    ERR_MISSING_FOO = 1;  // avoid using 0
+    ERR_NO_BAR = 2;
+    ...
+};
 
 protocol Frobinator {
-    1: Frobinate(...) -> (MyStatus status, FrobinateResult? result);
+    1: Frobinate(...) -> (FrobinateResult value) error MyErrorCode;
 };
 ```
+
+When using this pattern, you can either use an `int32`, `uint32`, or an enum
+thereof to represent the kind of error returned. In most cases, returning an
+enum is the preferred approach. As noted in the [enum](#enum) section, it is best
+to avoid using the value `0`.
+
+#### Using optional value with error enum
+
+When maximal performance is required, defining a method with two returns, an
+optional value and an error code, is common practice. See for instance:
+
+```fidl
+enum MyErrorCode {
+    OK = 0;               // The success value should be 0,
+    ERR_MISSING_FOO = 1;  // with erroneous status next.
+    ERR_NO_BAR = 2;
+    ...
+};
+
+protocol Frobinator {
+    1: Frobinate(...) -> (FrobinateResult? value, MyErrorCode err);
+};
+```
+
+When using this pattern, returning an enum is the preferred approach. Here,
+defining the `0` value as the "success" is best. For further details, refer
+to the [enum](#enum) section.
+
+#### Avoid messages and descriptions in errors
 
 In some unusual situations, protocols may include a string description of the
 error in addition to a `status` or enum value if the range of possible error
@@ -831,6 +889,21 @@ some size) to represent USB HID identifiers because the set of USB HID
 identifiers is controlled by an industry consortium.  Similarly, use a `string`
 to represent a MIME type because MIME types are controlled (at least in theory)
 by an IANA registry.
+
+We recommend that, where possible, developers avoid use of `0` as an enum value.
+Because many target languages use `0` as the default value for integers, it can
+be difficult for to distinguish whether a `0` value was set intentionally, or
+instead was set because it is the default. For instance, the
+`fuchsia.module.StoryState` defines three values:  `RUNNING` with value `1`,
+`STOPPING` with value `2`, and `STOPPED` with value `3`.
+
+There are two cases where using the value `0` is appropriate:
+
+  * The enum has a natural default, initial, or unknown state;
+
+  * The enum defines an error code used in the
+    [optional value with error enum](#using-optional-value-with-error-enum)
+    pattern.
 
 #### bits
 
