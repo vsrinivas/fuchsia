@@ -7,6 +7,8 @@
 
 ## usage: fx use DIR
 ##
+## DIR must be relative to FUCHSIA_DIR, e.g. out/default
+##
 ## Switches further `fx` commands to using a different build directory.
 ## This only works if `fx set ... --build-dir DIR` succeeded previously
 ## (and DIR has not been removed since).  The next `fx build` or other
@@ -42,20 +44,7 @@ function main {
     ;;
   esac
 
-  if [[ "$build_dir" == /* ]]; then
-    local -r full_build_dir="${build_dir}"
-  else
-    local -r full_build_dir="${FUCHSIA_DIR}/${build_dir}"
-  fi
-
-  if [[ -e "${full_build_dir}/args.gn" ]]; then
-    fx-config-write "${build_dir}"
-  else
-    echo "\"${build_dir}\" is not a valid build dir."
-    echo ""
-    fx-command-help
-    return 1
-  fi
+  fx-config-link "${build_dir}"
 }
 
 main "$@"
