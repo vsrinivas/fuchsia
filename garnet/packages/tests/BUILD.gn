@@ -1077,6 +1077,7 @@ group("rust_crates") {
     "//garnet/lib/rust/fidl_fuchsia_pkg_ext:fidl_fuchsia_pkg_ext_tests",
     "//garnet/lib/rust/fuchsia_uri:fuchsia_uri_tests",
     "//garnet/public/rust:rust-crates-tests",
+    "//garnet/public/rust/fuchsia-hyper:fuchsia-hyper-tests",
   ]
 }
 

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fuchsia_hyper_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "root-ssl-certificates"
+        ]
+    }
+}

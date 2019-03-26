@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
 
 rustc_library("fuchsia-hyper") {
   name = "fuchsia_hyper"
@@ -10,8 +12,25 @@ rustc_library("fuchsia-hyper") {
   version = "0.1.0"
   with_unit_tests = true
   deps = [
+    "//garnet/lib/rust/webpki-roots-fuchsia",
     "//garnet/public/rust/fuchsia-async",
+    "//third_party/rust_crates:ct-logs",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:hyper-rustls",
+    "//third_party/rust_crates:rustls",
+  ]
+}
+
+test_package("fuchsia-hyper-tests") {
+  deps = [
+    ":fuchsia-hyper",
+  ]
+
+  tests = [
+    {
+      name = "fuchsia_hyper_lib_test"
+      environments = basic_envs
+    },
   ]
 }

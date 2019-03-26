@@ -16,7 +16,7 @@ package("rust-crates-tests") {
     "fuchsia-component",
     "fuchsia-cprng",
     "fuchsia-framebuffer",
-    "fuchsia-hyper",
+    "fuchsia-hyper:fuchsia-hyper-tests",
     "fuchsia-inspect",
     "fuchsia-merkle",
     "fuchsia-syslog",
@@ -50,10 +50,6 @@ package("rust-crates-tests") {
     },
     {
       name = "fuchsia_cprng_lib_test"
-      environments = basic_envs
-    },
-    {
-      name = "fuchsia_hyper_lib_test"
       environments = basic_envs
     },
     {

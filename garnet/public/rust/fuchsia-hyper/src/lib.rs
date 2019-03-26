@@ -4,28 +4,27 @@
 
 #![feature(futures_api)]
 
+use hyper_rustls;
+use rustls;
+
 use {
     fuchsia_async::{
+        net::{TcpConnector, TcpStream},
         EHandle,
-        net::{TcpConnector, TcpStream}
     },
     futures::{
         compat::Compat,
         future::{Future, FutureExt, TryFutureExt},
         io::{self, AsyncReadExt},
         ready,
-        task::{Waker, Poll, SpawnExt},
+        task::{Poll, SpawnExt, Waker},
     },
     hyper::{
-        Body,
         client::{
+            connect::{Connect, Connected, Destination},
             Client,
-            connect::{
-                Connect,
-                Connected,
-                Destination,
-            },
         },
+        Body,
     },
     std::net::ToSocketAddrs,
     std::pin::Pin,
@@ -40,10 +39,7 @@ impl Future for HyperTcpConnector {
     fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
         let connector = self.0.as_mut().map_err(|x| x.take().unwrap())?;
         let stream = ready!(connector.poll_unpin(lw)?);
-        Poll::Ready(Ok((
-            stream.compat(),
-            Connected::new(),
-        )))
+        Poll::Ready(Ok((stream.compat(), Connected::new())))
     }
 }
 
@@ -58,14 +54,22 @@ impl Connect for HyperConnector {
     fn connect(&self, dst: Destination) -> Self::Future {
         let res = (|| {
             let host = dst.host();
-            // TODO(cramertj): smarter DNS-- nonblocking, don't just pick first addr
-            let addr_opt = match dst.port() {
-                Some(port) => (host, port).to_socket_addrs()?.next(),
-                None => host.to_socket_addrs()?.next(),
+            let port = match dst.port() {
+                Some(port) => port,
+                None => {
+                    if dst.scheme() == "https" {
+                        443
+                    } else {
+                        80
+                    }
+                }
             };
-            let addr = addr_opt.ok_or_else(||
+
+            // TODO(cramertj): smarter DNS-- nonblocking, don't just pick first addr
+            let addr_opt = (host, port).to_socket_addrs()?.next();
+            let addr = addr_opt.ok_or_else(|| {
                 io::Error::new(io::ErrorKind::Other, "destination resolved to no address")
-            )?;
+            })?;
             TcpStream::connect(addr)
         })();
         HyperTcpConnector(res.map_err(Some)).compat()
@@ -74,9 +78,16 @@ impl Connect for HyperConnector {
 
 /// Returns a new Fuchsia-compatible hyper client for making HTTP requests.
 pub fn new_client() -> Client<HyperConnector, Body> {
-    Client::builder()
-        .executor(EHandle::local().compat())
-        .build(HyperConnector)
+    Client::builder().executor(EHandle::local().compat()).build(HyperConnector)
+}
+
+pub fn new_https_client() -> Client<hyper_rustls::HttpsConnector<HyperConnector>, Body> {
+    let mut tls = rustls::ClientConfig::new();
+    tls.root_store.add_server_trust_anchors(&webpki_roots_fuchsia::TLS_SERVER_ROOTS);
+    tls.ct_logs = Some(&ct_logs::LOGS);
+
+    let https = hyper_rustls::HttpsConnector::from((HyperConnector, tls));
+    Client::builder().executor(EHandle::local().compat()).build(https)
 }
 
 #[cfg(test)]
@@ -88,5 +99,11 @@ mod test {
     fn can_create_client() {
         let _exec = Executor::new().unwrap();
         let _client = new_client();
+    }
+
+    #[test]
+    fn can_create_https_client() {
+        let _exec = Executor::new().unwrap();
+        let _client = new_https_client();
     }
 }
