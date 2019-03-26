@@ -81,6 +81,28 @@ pub async fn handle_control_events(harness: ControlHarness) -> Result<(), Error>
     Ok(())
 }
 
+pub async fn new_control_harness() -> Result<ControlHarness, Error> {
+    let proxy = fuchsia_app::client::connect_to_service::<ControlMarker>()
+        .context("Failed to connect to Control service")?;
+
+    let control_harness = ControlHarness::new(proxy.clone());
+
+    // Store existing hosts in our state, as we won't get notified about them
+    let hosts = await!(control_harness.aux().get_adapters())?;
+    if let Some(hosts) = hosts {
+        for host in hosts {
+            control_harness.write_state().hosts.insert(host.identifier.clone(), host);
+        }
+    }
+
+    fasync::spawn(
+        handle_control_events(control_harness.clone())
+            .unwrap_or_else(|e| eprintln!("Error handling control events: {:?}", e)),
+    );
+
+    Ok(control_harness)
+}
+
 /// Sets up the test environment and the given test case.
 /// Each integration test case is asynchronous and must return a Future that completes with the
 /// result of the test run.
@@ -89,15 +111,7 @@ where
     F: FnOnce(ControlHarness) -> Fut,
     Fut: Future<Output = Result<(), Error>>,
 {
-    let proxy = fuchsia_app::client::connect_to_service::<ControlMarker>()
-        .context("Failed to connect to Control service")?;
-
-    let control_harness = ControlHarness::new(proxy.clone());
-
-    fasync::spawn(
-        handle_control_events(control_harness.clone())
-            .unwrap_or_else(|e| eprintln!("Error handling control events: {:?}", e)),
-    );
+    let control_harness = await!(new_control_harness())?;
 
     await!(test(control_harness))
 }
@@ -118,10 +132,19 @@ pub mod control_expectation {
     use fuchsia_bluetooth::expectation::Predicate;
 
     pub fn active_host_is(id: String) -> Predicate<ControlState> {
+        let msg = format!("active bt-host is {}", id);
         let expected_host = Some(id);
         Predicate::new(
             move |state: &ControlState| -> bool { state.active_host == expected_host },
-            None,
+            Some(&msg),
+        )
+    }
+
+    pub fn host_not_present(id: String) -> Predicate<ControlState> {
+        let msg = format!("bt-host {} is no longer present", id);
+        Predicate::new(
+            move |state: &ControlState| !state.hosts.contains_key(&id),
+            Some(&msg),
         )
     }
 }

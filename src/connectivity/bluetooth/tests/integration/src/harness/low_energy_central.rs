@@ -4,7 +4,6 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl_fuchsia_bluetooth_control::ControlMarker,
     fidl_fuchsia_bluetooth_le::{CentralEvent, CentralMarker, CentralProxy},
     fuchsia_app, fuchsia_async as fasync,
     fuchsia_bluetooth::{
@@ -18,7 +17,7 @@ use {
 
 use crate::harness::{
     control::{
-        control_expectation, control_timeout, handle_control_events, ControlHarness, ControlState,
+        new_control_harness, control_expectation, control_timeout, ControlHarness, ControlState,
     },
     TestHarness,
 };
@@ -31,8 +30,10 @@ where
     F: FnOnce(CentralHarness) -> Fut,
     Fut: Future<Output = Result<(), Error>>,
 {
+    let control = await!(new_control_harness())?;
+
     // Don't drop the FakeHciDevice until the end of this function
-    let _fake_hci = await!(activate_fake_host())?;
+    let (fake_hci, fake_host) = await!(activate_fake_host(&control))?;
 
     let proxy = fuchsia_app::client::connect_to_service::<CentralMarker>()
         .context("Failed to connect to BLE Central service")?;
@@ -43,42 +44,50 @@ where
             .unwrap_or_else(|e| eprintln!("Error handling central events: {:?}", e)),
     );
 
-    await!(test(state))
+    let result = await!(test(state));
+
+    // Drop the fake hci handle, so the device will be unbound
+    drop(fake_hci);
+
+    // Wait for BT-GAP to unregister the associated fake host
+    await!(control.when_satisfied(control_expectation::host_not_present(fake_host),
+                                  control_timeout()))?;
+    result
 }
 
 // All Fake HCI Devices have this address
-const FAKE_HCI_ADDRESS: &'static str = "00:00:00:00:00:00";
+pub const FAKE_HCI_ADDRESS: &'static str = "00:00:00:00:00:00";
 
 /// Create a FakeHciDevice, wait for it to be bound as a host, and tell bt-gap
 /// to use it as the active Host
-async fn activate_fake_host() -> Result<FakeHciDevice, Error> {
+async fn activate_fake_host(control: &ControlHarness) -> Result<(FakeHciDevice, String), Error> {
+    let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
+    let initial_hosts_ = initial_hosts.clone();
+
     let hci = FakeHciDevice::new()?;
-    let proxy = fuchsia_app::client::connect_to_service::<ControlMarker>()
-        .context("Failed to connect to Bluetooth Control service")?;
-    let control: ControlHarness = ExpectationHarness::new(proxy);
-    fasync::spawn(
-        handle_control_events(control.clone())
-            .unwrap_or_else(|e| eprintln!("Error handling control events: {:?}", e)),
-    );
 
     let control_state = await!(control.when_satisfied(
         Predicate::<ControlState>::new(
-            |control| control.hosts.iter().any(|(_, host)| host.address == FAKE_HCI_ADDRESS),
-            None,
+            move |control| {
+                control.hosts.iter().any(|(id, host)| {
+                    host.address == FAKE_HCI_ADDRESS && !initial_hosts_.contains(id)
+                })
+            },
+            Some("At least one fake bt-host device added"),
         ),
         control_timeout()
     ))?;
-    let host = control_state
+    let fake_host = control_state
         .hosts
         .iter()
-        .find(|(_, host)| host.address == FAKE_HCI_ADDRESS)
+        .find(|(id, host)| host.address == FAKE_HCI_ADDRESS && !initial_hosts.contains(id))
         .unwrap()
         .1
         .identifier
         .to_string(); // We can safely unwrap here as this is guarded by the previous expectation
-    await!(control.aux().set_active_adapter(&host))?;
-    await!(control.when_satisfied(control_expectation::active_host_is(host), control_timeout()))?;
-    Ok(hci)
+    await!(control.aux().set_active_adapter(&fake_host))?;
+    await!(control.when_satisfied(control_expectation::active_host_is(fake_host.clone()), control_timeout()))?;
+    Ok((hci, fake_host))
 }
 
 impl TestHarness for CentralHarness {
