@@ -72,6 +72,7 @@ private:
     constexpr static size_t kDescriptors = 32;
     constexpr static uint32_t kChunkSize = 512;
 
+    static zx_status_t virtio_console_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
     static zx_status_t virtio_console_read(void* ctx, void* buf, size_t len, zx_off_t off, size_t* actual);
     static zx_status_t virtio_console_write(void* ctx, const void* buf, size_t len, zx_off_t off, size_t* actual);
 

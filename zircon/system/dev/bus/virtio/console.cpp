@@ -7,6 +7,7 @@
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+#include <fuchsia/hardware/pty/c/fidl.h>
 #include <string.h>
 #include <virtio/virtio.h>
 #include <lib/zx/vmar.h>
@@ -181,6 +182,7 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
         port0_transmit_descriptors_.Add(desc);
     }
 
+    device_ops_.message = virtio_console_message;
     device_ops_.read = virtio_console_read;
     device_ops_.write = virtio_console_write;
 
@@ -331,6 +333,51 @@ zx_status_t ConsoleDevice::Write(const void* buf, size_t count, zx_off_t off, si
 
     LTRACE_EXIT;
     return ZX_OK;
+}
+
+static zx_status_t virtio_console_OpenClient(void* ctx, uint32_t id, zx_handle_t handle,
+                                           fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceOpenClient_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t virtio_console_ClrSetFeature(void* ctx, uint32_t clr, uint32_t set,
+                                              fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceClrSetFeature_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+static zx_status_t virtio_console_GetWindowSize(void* ctx, fidl_txn_t* txn) {
+    fuchsia_hardware_pty_WindowSize wsz = {
+        .width = 0,
+        .height = 0
+    };
+    return fuchsia_hardware_pty_DeviceGetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED, &wsz);
+}
+
+static zx_status_t virtio_console_MakeActive(void* ctx, uint32_t client_pty_id, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceMakeActive_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static zx_status_t virtio_console_ReadEvents(void* ctx, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceReadEvents_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+}
+
+static zx_status_t virtio_console_SetWindowSize(void* ctx,
+                                              const fuchsia_hardware_pty_WindowSize* size,
+                                              fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_DeviceSetWindowSize_reply(txn, ZX_ERR_NOT_SUPPORTED);
+}
+
+static fuchsia_hardware_pty_Device_ops_t fidl_ops = {
+    .OpenClient = virtio_console_OpenClient,
+    .ClrSetFeature = virtio_console_ClrSetFeature,
+    .GetWindowSize = virtio_console_GetWindowSize,
+    .MakeActive = virtio_console_MakeActive,
+    .ReadEvents = virtio_console_ReadEvents,
+    .SetWindowSize = virtio_console_SetWindowSize
+};
+
+zx_status_t ConsoleDevice::virtio_console_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_pty_Device_dispatch(ctx, txn, msg, &fidl_ops);
 }
 
 } // namespace virtio
