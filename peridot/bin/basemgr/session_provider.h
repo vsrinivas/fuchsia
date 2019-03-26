@@ -42,9 +42,10 @@ class SessionProvider {
                   bool use_session_shell_for_story_shell_factory,
                   fit::function<void()> on_zero_sessions);
 
-  // Starts a new sessionmgr process if there isn't one already. If there is an
-  // existing sessionmgr process, it is a no-op.
-  void StartSession(
+  // Starts a new sessionmgr process if there isn't one already. Returns false
+  // if there is an existing sessionmgr process, and does not start a new
+  // session. Returns true if a new session was started successfully.
+  bool StartSession(
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
       fuchsia::modular::auth::AccountPtr account,
       fuchsia::auth::TokenManagerPtr ledger_token_manager,

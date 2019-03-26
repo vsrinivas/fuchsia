@@ -264,9 +264,14 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
                           fuchsia::auth::TokenManagerPtr agent_token_manager) {
   fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner;
 
-  session_provider_->StartSession(view_owner.NewRequest(), std::move(account),
-                                  std::move(ledger_token_manager),
-                                  std::move(agent_token_manager));
+  auto did_start_session = session_provider_->StartSession(
+      view_owner.NewRequest(), std::move(account),
+      std::move(ledger_token_manager), std::move(agent_token_manager));
+  if (!did_start_session) {
+    FXL_LOG(WARNING) << "Session was already started and the logged in user "
+                        "could not join the session.";
+    return;
+  }
 
   // TODO(MI4-1117): Integration tests currently expect base shell to always be
   // running. So, if we're running under a test, do not shut down the base shell

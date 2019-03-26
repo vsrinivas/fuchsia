@@ -25,7 +25,7 @@ SessionProvider::SessionProvider(
           use_session_shell_for_story_shell_factory),
       on_zero_sessions_(std::move(on_zero_sessions)) {}
 
-void SessionProvider::StartSession(
+bool SessionProvider::StartSession(
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
     fuchsia::modular::auth::AccountPtr account,
     fuchsia::auth::TokenManagerPtr ledger_token_manager,
@@ -33,7 +33,7 @@ void SessionProvider::StartSession(
   if (session_context_) {
     FXL_LOG(WARNING) << "StartSession() called when session context already "
                         "exists. Try calling SessionProvider::Teardown()";
-    return;
+    return false;
   }
 
   auto done = [this](bool logout_users) {
@@ -77,6 +77,8 @@ void SessionProvider::StartSession(
         delegate_->GetPresentation(std::move(request));
       },
       done);
+
+  return true;
 }
 
 void SessionProvider::Teardown(fit::function<void()> callback) {
