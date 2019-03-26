@@ -168,27 +168,6 @@ void DumpJobList() {
     });
 }
 
-void DumpProcessHandles(zx_koid_t id) {
-    auto pd = ProcessDispatcher::LookupProcessById(id);
-    if (!pd) {
-        printf("process %" PRIu64 " not found!\n", id);
-        return;
-    }
-
-    printf("process [%" PRIu64 "] handles :\n", id);
-    printf("handle       koid : type\n");
-
-    uint32_t total = 0;
-    pd->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights,
-                          const Dispatcher* disp) {
-        printf("%9x %7" PRIu64 " : %s\n",
-            handle, disp->get_koid(), ObjectTypeToString(disp->get_type()));
-        ++total;
-        return ZX_OK;
-    });
-    printf("total: %u handles\n", total);
-}
-
 static const char kRightsHeader[] = "dup tr r w x map gpr spr enm des spo gpo sig sigp wt ins mj mp mt ap";
 static void DumpHandleRightsKeyMap() {
     printf("dup : ZX_RIGHT_DUPLICATE\n");
@@ -241,6 +220,35 @@ static void FormatHandleRightsMask(zx_rights_t rights, char *buf, size_t buf_len
              HasRights(rights, ZX_RIGHT_MANAGE_THREAD),
              HasRights(rights, ZX_RIGHT_APPLY_PROFILE)
              );
+}
+
+void DumpProcessHandles(zx_koid_t id) {
+    auto pd = ProcessDispatcher::LookupProcessById(id);
+    if (!pd) {
+        printf("process %" PRIu64 " not found!\n", id);
+        return;
+    }
+
+    char pname[ZX_MAX_NAME_LEN];
+    pd->get_name(pname);
+    printf("process %" PRIu64 " ('%s') handles:\n", id, pname);
+    printf("%7s %10s %10s: {%s} [type]\n", "koid", "handle", "rights", kRightsHeader);
+
+    uint32_t total = 0;
+    pd->ForEachHandle([&](zx_handle_t handle, zx_rights_t rights,
+                          const Dispatcher* disp) {
+        char rights_mask[sizeof(kRightsHeader)];
+        FormatHandleRightsMask(rights, rights_mask, sizeof(rights_mask));
+        printf("%7" PRIu64 " %#10x %#10x: {%s} [%s]\n",
+               disp->get_koid(),
+               handle,
+               rights,
+               rights_mask,
+               ObjectTypeToString(disp->get_type()));
+        ++total;
+        return ZX_OK;
+    });
+    printf("total: %u handles\n", total);
 }
 
 void DumpHandlesForKoid(zx_koid_t id) {
