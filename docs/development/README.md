@@ -11,6 +11,7 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Getting started](/docs/getting_started.md) - **start here**. This document
    covers getting the source, building and running Fuchsia.
  - [Source code](source_code/README.md)
+ - [fx workflows](workflows/fx.md)
  - [Multiple device setup](workflows/multi_device.md)
  - [Pushing a package](workflows/package_update.md)
  - [Changes that span layers](workflows/multilayer_changes.md)
@@ -32,9 +33,11 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Python](languages/python/README.md)
  - [Flutter modules](languages/dart/mods.md) - how to write a graphical module
    using Flutter
+ - [New language](languages/new/README.md) - how to bring a new language to Fuchsia
 
 ## API
 
+ - [README](api/README.md) - Developing APIs for Fuchsia
  - [Council](api/council.md) - Definition of the API council
  - [System](api/system.md) - Rubric for designing the Zircon System Interface
  - [FIDL](api/fidl.md) - Rubric for designing FIDL protocols
@@ -60,7 +63,8 @@ This section covers Fuchsia development hardware targets.
 
 ## Testing
 
- - [Testing components](tests/test_component.md)
+ - [Test components](tests/test_component.md)
+ - [Test environments](tests/environments.md)
 
 ## Conventions
 
@@ -69,10 +73,14 @@ This section covers Fuchsia-wide conventions and best practices.
  - [Documentation standards](/docs/best-practices/documentation_standards.md)
  - [Endian Issues](source_code/endian.md) and recommendations
 
+## Tracing
+
+ - [Tracing tutorial](tracing/tracing-tutorial.md)
+ - [Tracing booting Fuchsia](tracing/tracing-boot.md)
+
 ## Miscellaneous
 
  - [CTU analysis in Zircon](workflows/ctu_analysis.md)
- - [Tracing tutorial](tracing/tracing-tutorial.md)
 
 
 [acer_12]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/targets/acer12.md "Acer 12"

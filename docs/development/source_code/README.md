@@ -5,6 +5,8 @@ Fuchsia uses the `jiri` tool to manage git repositories
 [https://fuchsia.googlesource.com/jiri](https://fuchsia.googlesource.com/jiri).
 This tool manages a set of repositories specified by a manifest.
 
+See [Source code layout](layout.md) for an overview of how the code is organized.
+
 For how to build, see Fuchsia's [Getting Started](/docs/getting_started.md) doc.
 
 ## Creating a new checkout

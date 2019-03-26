@@ -70,5 +70,4 @@ For more information on Zircon command line options see
 [kernel\_cmdline][kernel_cmdline].
 
 
-[kernel_cmdline]: https://fuchsia.googlesource.com/fuchsia/+/master/
-zircon/docs/kernel_cmdline.md
+[kernel_cmdline]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/kernel_cmdline.md

@@ -1,6 +1,7 @@
 # The Bluetooth System
 
-The Fuchsia Bluetooth system aims to provide a dual-mode implementation of the
+The Fuchsia Bluetooth system ([source layout](bluetooth_source_layout.md))
+aims to provide a dual-mode implementation of the
 Bluetooth Host Subsystem versions 4.2 and 5.0+. This includes
 
 - A framework for developing Bluetooth Low Energy applications in central,

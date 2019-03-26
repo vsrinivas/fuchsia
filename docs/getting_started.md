@@ -270,13 +270,15 @@ You may wish to peruse the [testing FAQ](development/workflows/testing_faq.md).
 
 ## Contribute changes
 
-* See [CONTRIBUTING.md](/CONTRIBUTING.md).
+* See [CONTRIBUTING.md](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/CONTRIBUTING.md).
 
 ## Additional helpful documents
 
 * [Fuchsia documentation](README.md) hub
 * Working with Zircon - [copying files, network booting, log viewing, and
 more](/zircon/docs/getting_started.md#Copying-files-to-and-from-Zircon)
+* [Documentation Standards](best-practices/documentation_standards.md) - best practices
+  for documentation
 * [Information on the system bootstrap component](/garnet/bin/sysmgr/).
 * [Workflow tips and FAQ](development/workflows/workflow_tips_and_faq.md) that help increase
   productivity.

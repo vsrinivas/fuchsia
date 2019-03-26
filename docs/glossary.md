@@ -180,6 +180,8 @@ user interface framework.
 
 A Fuchsia Package is a unit of software distribution. It is a collection of files, such as:
 manifests, metadata, zero or more executables (e.g. [Components](#component)), and assets.
+Individual Fuchsia Packages can be identified using
+[fuchsia-pkg URIs](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/the-book/package_uri.md).
 
 #### **fuchsia-pkg URL**
 
