@@ -163,6 +163,8 @@ typedef uint32_t zx_signals_t;
 typedef uint64_t zx_koid_t;
 #define ZX_KOID_INVALID ((uint64_t) 0)
 #define ZX_KOID_KERNEL  ((uint64_t) 1)
+// The first non-reserved koid. The first 1024 are reserved.
+#define ZX_KOID_FIRST   ((uint64_t) 1024)
 
 // Transaction ID and argument types for zx_channel_call.
 typedef uint32_t zx_txid_t;

@@ -31,8 +31,7 @@ KCOUNTER(dispatcher_cookie_set_count, "dispatcher.cookie.set");
 KCOUNTER(dispatcher_cookie_reset_count, "dispatcher.cookie.reset");
 
 namespace {
-// The first 1K koids are reserved.
-ktl::atomic<zx_koid_t> global_koid(1024ULL);
+ktl::atomic<zx_koid_t> global_koid(ZX_KOID_FIRST);
 
 zx_koid_t GenerateKernelObjectId() {
     return global_koid.fetch_add(1ULL, ktl::memory_order_relaxed);
