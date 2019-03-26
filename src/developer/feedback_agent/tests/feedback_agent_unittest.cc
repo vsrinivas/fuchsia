@@ -21,7 +21,7 @@
 #include <lib/fsl/vmo/vector.h>
 #include <lib/fxl/logging.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/sys/cpp/testing/component_context_for_test.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
@@ -215,10 +215,9 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
  public:
   void SetUp() override {
     stub_scenic_.reset(new StubScenic());
-    context_ = ::sys::testing::ComponentContextForTest::Create();
-    ASSERT_EQ(ZX_OK, context_->service_directory_for_test()->AddService(
+    ASSERT_EQ(ZX_OK, context_provider_.service_directory_provider()->AddService(
                          stub_scenic_->GetHandler()));
-    agent_.reset(new FeedbackAgent(context_.get()));
+    agent_.reset(new FeedbackAgent(context_provider_.context()));
   }
 
  protected:
@@ -233,7 +232,7 @@ class FeedbackAgentTest : public gtest::RealLoopFixture {
 
  private:
   std::unique_ptr<StubScenic> stub_scenic_;
-  std::unique_ptr<::sys::testing::ComponentContextForTest> context_;
+  ::sys::testing::ComponentContextProvider context_provider_;
 };
 
 TEST_F(FeedbackAgentTest, GetScreenshot_SucceedOnScenicReturningSuccess) {

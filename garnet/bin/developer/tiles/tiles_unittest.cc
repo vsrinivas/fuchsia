@@ -12,8 +12,7 @@
 #include <gtest/gtest.h>
 #include <lib/fxl/logging.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/component_context_for_test.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 namespace {
@@ -36,14 +35,15 @@ class FakeViewManager
 
 class TilesTest : public gtest::TestLoopFixture {
  public:
-  TilesTest() : context_(sys::testing::ComponentContextForTest::Create()) {}
+  TilesTest() {}
 
   void SetUp() final {
     auto tokens = scenic::NewViewTokenPair();
     view_holder_token_ = std::move(tokens.second);
 
     tiles_impl_ = std::make_unique<tiles::Tiles>(
-        context_.get(), std::move(tokens.first), std::vector<std::string>(), 10);
+        context_provider_.context(), std::move(tokens.first),
+        std::vector<std::string>(), 10);
     tiles_ = tiles_impl_.get();
   }
 
@@ -57,7 +57,7 @@ class TilesTest : public gtest::TestLoopFixture {
  private:
   FakeViewManager view_manager_;
   fuchsia::ui::views::ViewHolderToken view_holder_token_;
-  std::unique_ptr<sys::testing::ComponentContextForTest> context_;
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<tiles::Tiles> tiles_impl_;
   fuchsia::developer::tiles::Controller* tiles_;
 };
