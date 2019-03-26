@@ -69,6 +69,9 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: array of gpio_pin_t
 #define DEVICE_METADATA_GPIO_PINS                 0x4F495047 // GPIO
 
+// type: clock_id_maps_t
+#define DEVICE_METADATA_CLOCK_MAPS                0x4D4B4C43 // CLKM
+
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
 // This allows creating metadata types to be defined local to a particular

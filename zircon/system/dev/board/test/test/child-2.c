@@ -66,8 +66,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
         .version = DEVICE_ADD_ARGS_VERSION,
         .name = "child-2",
         .ctx = test,
-        .proto_id = ZX_PROTOCOL_GPIO,
-        .proto_ops = (void*)1, // Ops not actually implement this,
         .ops = &test_device_protocol,
     };
 

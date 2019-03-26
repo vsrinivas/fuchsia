@@ -5,6 +5,7 @@
 group("clk") {
   deps = [
     "amlogic-clk",
+    "clock",
     "hisi3660",
     "mtk-clk",
   ]

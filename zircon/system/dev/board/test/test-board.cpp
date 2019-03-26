@@ -37,6 +37,11 @@ int TestBoard::Thread() {
         zxlogf(ERROR, "%s: GpioInit failed: %d\n", __func__, status);
     }
 
+    status = ClockInit();
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: ClockInit failed: %d\n", __func__, status);
+    }
+
     status = TestInit();
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: TestInit failed: %d\n", __func__, status);
@@ -87,18 +92,19 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
         BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
         BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_GPIO),
     };
-    const zx_bind_inst_t child3_match[]  = {
+    const zx_bind_inst_t clock_impl_match[]  = {
         BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
         BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
         BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-        BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CHILD_3),
+        BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CLOCK),
     };
     const zx_bind_inst_t gpio_match[] = {
         BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
         BI_MATCH_IF(EQ, BIND_GPIO_PIN, 3),
     };
-    const zx_bind_inst_t i2c_match[] = {
-        BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    const zx_bind_inst_t clock_match[] = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+        BI_MATCH_IF(EQ, BIND_CHILD_INDEX, 1),
     };
     device_component_part_t composite1_1[] = {
         { fbl::count_of(root_match), root_match },
@@ -107,8 +113,8 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
     };
     device_component_part_t composite1_2[] = {
         { fbl::count_of(root_match), root_match },
-        { fbl::count_of(child3_match), child3_match },
-        { fbl::count_of(i2c_match), i2c_match },
+        { fbl::count_of(clock_impl_match), clock_impl_match },
+        { fbl::count_of(clock_match), clock_match },
     };
     device_component_t composite1[] = {
         { fbl::count_of(composite1_1), composite1_1 },

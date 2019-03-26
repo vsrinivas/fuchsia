@@ -99,7 +99,7 @@ bool enumeration_test() {
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
-                                   "sys/platform/11:01:1/child-1/child-3-top/child-3/component",
+                                   "sys/platform/11:01:7/test-clock/clock-1/component",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
@@ -116,10 +116,8 @@ bool enumeration_test() {
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3-top", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-2-top/child-2", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3-top/child-3", &st, 0), 0);
-    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:5/test-gpio/gpio-3/component", &st, 0),
-              0);
-   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3-top/child-3/component", &st, 0),
-              0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:5/test-gpio/gpio-3/component", &st, 0), 0);
+    EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:7/test-clock/clock-1/component", &st, 0), 0);
     EXPECT_EQ(fstatat(dirfd, "composite-dev/composite", &st, 0), 0);
 
     END_TEST;

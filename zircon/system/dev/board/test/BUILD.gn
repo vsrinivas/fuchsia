@@ -15,6 +15,7 @@ simple_drivers = [
 group("test") {
   deps = [
     ":test-board",
+    ":test-clock",
     ":test-gpio",
   ]
   foreach(driver, simple_drivers) {
@@ -25,6 +26,7 @@ group("test") {
 driver("test-board") {
   sources = [
     "test-board.cpp",
+    "test-clock.cpp",
     "test-gpio.cpp",
     "test.cpp",
   ]
@@ -46,6 +48,24 @@ driver("test-gpio") {
   deps = [
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-gpioimpl",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
+
+driver("test-clock") {
+  sources = [
+    "test/clock.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-clock",
+    "$zx/system/banjo/ddk-protocol-clockimpl",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/ulib/ddk",
