@@ -7,6 +7,7 @@
 #include <cstring>
 
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -259,8 +260,6 @@ void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
   }
 }
 
-}  // namespace
-
 class MinidumpReadDelegate : public crashpad::MemorySnapshot::Delegate {
  public:
   // Construct a delegate object for reading minidump memory regions.
@@ -290,6 +289,8 @@ class MinidumpReadDelegate : public crashpad::MemorySnapshot::Delegate {
   uint8_t* ptr_;
 };
 
+}  // namespace
+
 MinidumpRemoteAPI::MemoryRegion::MemoryRegion(
     const crashpad::MemorySnapshot* snapshot)
     : start(snapshot->Address()), size(snapshot->Size()), snapshot_(snapshot) {}
@@ -306,6 +307,35 @@ std::optional<std::vector<uint8_t>> MinidumpRemoteAPI::MemoryRegion::Read(
   }
 
   return std::move(data);
+}
+
+// An ELF GUID is a series of bytes, but a Minidump UUID is a series of
+// integers, and there are Opinions™ about byte order to deal with. Also they
+// like to hyphenate output.
+std::string MinidumpGetUUID(const crashpad::ModuleSnapshot& mod) {
+  crashpad::UUID uuid;
+  uint32_t unused_;
+
+  mod.UUIDAndAge(&uuid, &unused_);
+
+  // Endian swapping.
+  uuid.data_1 = uuid.data_1 >> 24 | uuid.data_1 << 24 |
+                ((uuid.data_1 >> 8) & 0xff00) | ((uuid.data_1 << 8) & 0xff0000);
+  uuid.data_2 = uuid.data_2 >> 8 | uuid.data_2 << 8;
+  uuid.data_3 = uuid.data_3 >> 8 | uuid.data_3 << 8;
+
+  std::string ret = uuid.ToString();
+
+  ret.erase(std::remove(ret.begin(), ret.end(), '-'), ret.end());
+
+  // ELF GUIDs can sometimes be shorter than the standard UUID. The UUID will
+  // be padded while the ELF GUIDs we expect won't be, so snip off the zero
+  // padding if we find it.
+  if (StringEndsWith(ret, "0000000000000000")) {
+    ret.resize(ret.size() - 16);
+  }
+
+  return ret;
 }
 
 MinidumpRemoteAPI::MinidumpRemoteAPI(Session* session) : session_(session) {}
@@ -484,10 +514,7 @@ void MinidumpRemoteAPI::Modules(
     mod.name = minidump_mod->Name();
     mod.base = minidump_mod->Address();
 
-    crashpad::UUID uuid;
-    uint32_t unused_;
-    minidump_mod->UUIDAndAge(&uuid, &unused_);
-    mod.build_id = uuid.ToString();
+    mod.build_id = MinidumpGetUUID(*minidump_mod);
   }
 
   Succeed(cb, reply);
