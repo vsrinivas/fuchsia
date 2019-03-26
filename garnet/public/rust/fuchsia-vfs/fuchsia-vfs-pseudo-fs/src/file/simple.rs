@@ -36,15 +36,15 @@ use {
     crate::common::send_on_open_with_error,
     crate::directory::entry::{DirectoryEntry, EntryInfo},
     crate::file::{
-        connection::FileConnection, PseudoFile, DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
-        DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES, DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
+        common::new_connection_validate_flags, connection::FileConnection, PseudoFile,
+        DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES, DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
+        DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
     },
     failure::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         FileObject, FileRequest, NodeAttributes, NodeInfo, NodeMarker, SeekOrigin,
         DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
-        OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
         OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::{
@@ -293,51 +293,6 @@ where
         }
     }
 
-    fn validate_flags(&mut self, parent_flags: u32, mut flags: u32) -> Result<u32, Status> {
-        if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
-            flags &= !OPEN_FLAG_NODE_REFERENCE;
-            flags &= OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;
-        }
-
-        if flags & OPEN_FLAG_DIRECTORY != 0 {
-            return Err(Status::NOT_DIR);
-        }
-
-        let allowed_flags = OPEN_FLAG_DESCRIBE
-            | if self.on_read.is_some() { OPEN_RIGHT_READABLE } else { 0 }
-            | if self.on_write.is_some() { OPEN_RIGHT_WRITABLE | OPEN_FLAG_TRUNCATE } else { 0 };
-
-        let prohibited_flags = (0 | if self.on_read.is_some() {
-                OPEN_FLAG_TRUNCATE
-            } else {
-                0
-            } | if self.on_write.is_some() {
-                OPEN_FLAG_APPEND
-            } else {
-                0
-            })
-            // allowed_flags takes precedence over prohibited_flags.
-            & !allowed_flags;
-
-        if flags & OPEN_RIGHT_READABLE != 0 && parent_flags & OPEN_RIGHT_READABLE == 0 {
-            return Err(Status::ACCESS_DENIED);
-        }
-
-        if flags & OPEN_RIGHT_WRITABLE != 0 && parent_flags & OPEN_RIGHT_WRITABLE == 0 {
-            return Err(Status::ACCESS_DENIED);
-        }
-
-        if flags & prohibited_flags != 0 {
-            return Err(Status::INVALID_ARGS);
-        }
-
-        if flags & !allowed_flags != 0 {
-            return Err(Status::NOT_SUPPORTED);
-        }
-
-        Ok(flags)
-    }
-
     fn add_connection(
         &mut self,
         parent_flags: u32,
@@ -356,7 +311,14 @@ where
             return send_on_open_with_error(flags, server_end, status);
         }
 
-        let flags = match self.validate_flags(parent_flags, flags) {
+        // TODO(sdemos): this should be moved into FileConnection::connect, but until we change how
+        // we deal with error types, the return type would get too weird.
+        let flags = match new_connection_validate_flags(
+            parent_flags,
+            flags,
+            self.on_read.is_some(),
+            self.on_write.is_some(),
+        ) {
             Ok(updated) => updated,
             Err(status) => return send_on_open_with_error(flags, server_end, status),
         };
@@ -770,7 +732,11 @@ mod tests {
 
     use {
         fidl::endpoints::{create_proxy, ServerEnd},
-        fidl_fuchsia_io::{FileEvent, FileMarker, FileProxy, INO_UNKNOWN, MODE_TYPE_FILE},
+        fidl_fuchsia_io::{
+            FileEvent, FileMarker, FileObject, FileProxy, NodeAttributes, NodeInfo, SeekOrigin,
+            INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
+            OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        },
         fuchsia_async as fasync,
         futures::channel::{mpsc, oneshot},
         futures::{future::LocalFutureObj, select, Future, FutureExt, SinkExt},
