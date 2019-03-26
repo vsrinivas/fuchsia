@@ -35,7 +35,6 @@
 
 namespace devmgr {
 
-#define MAX_ENVP 16
 #define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS)
 
 // clang-format off
@@ -87,17 +86,15 @@ zx_status_t devmgr_launch_with_loader(const zx::job& job, const char* name, zx::
     uint32_t spawn_flags = FDIO_SPAWN_CLONE_JOB;
 
     // Set up the environ for the new process
-    const char* envp[MAX_ENVP + 1];
-    unsigned envn = 0;
-
+    fbl::Vector<const char*> env;
     if (getenv(LDSO_TRACE_CMDLINE)) {
-        envp[envn++] = LDSO_TRACE_ENV;
+        env.push_back(LDSO_TRACE_ENV);
     }
-    envp[envn++] = ZX_SHELL_ENV_PATH;
-    while ((initial_envp && initial_envp[0]) && (envn < MAX_ENVP)) {
-        envp[envn++] = *initial_envp++;
+    env.push_back(ZX_SHELL_ENV_PATH);
+    while (initial_envp && initial_envp[0]) {
+        env.push_back(*initial_envp++);
     }
-    envp[envn++] = nullptr;
+    env.push_back(nullptr);
 
     fbl::Vector<fdio_spawn_action_t> actions;
     actions.reserve(3 + fbl::count_of(FSTAB) + hcount);
@@ -154,11 +151,11 @@ zx_status_t devmgr_launch_with_loader(const zx::job& job, const char* name, zx::
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
     if (executable.is_valid()) {
         status = fdio_spawn_vmo(job_copy.get(), spawn_flags, executable.release(), argv,
-                                envp, actions.size(), actions.get(),
+                                env.get(), actions.size(), actions.get(),
                                 proc.reset_and_get_address(), err_msg);
     } else {
         status = fdio_spawn_etc(job_copy.get(), spawn_flags, argv[0], argv,
-                                envp, actions.size(), actions.get(),
+                                env.get(), actions.size(), actions.get(),
                                 proc.reset_and_get_address(), err_msg);
     }
     if (status != ZX_OK) {
