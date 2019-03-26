@@ -45,8 +45,6 @@ static void hikey960_mmio_release(hikey960_t* hikey) {
 }
 
 static zx_status_t hikey960_init(hikey960_t* hikey, zx_handle_t resource) {
-    list_initialize(&hikey->gpios);
-
     zx_status_t status;
     if ((status = mmio_buffer_init_physical(&hikey->usb3otg_bc, MMIO_USB3OTG_BC_BASE,
                                             MMIO_USB3OTG_BC_LENGTH, resource,
@@ -68,11 +66,6 @@ static zx_status_t hikey960_init(hikey960_t* hikey, zx_handle_t resource) {
          (status = mmio_buffer_init_physical(&hikey->ufs_sctrl, MMIO_UFS_SYS_CTRL_BASE,
                                              MMIO_UFS_SYS_CTRL_LENGTH, resource,
                                              ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK) {
-        goto fail;
-    }
-
-    status = hikey960_gpio_init(hikey);
-    if (status != ZX_OK) {
         goto fail;
     }
 
@@ -100,7 +93,6 @@ static zx_status_t hikey960_init(hikey960_t* hikey, zx_handle_t resource) {
 
 fail:
     zxlogf(ERROR, "hikey960_init failed %d\n", status);
-    hikey960_gpio_release(hikey);
     hikey960_mmio_release(hikey);
     return status;
 }
@@ -108,7 +100,6 @@ fail:
 static void hikey960_release(void* ctx) {
     hikey960_t* hikey = ctx;
 
-    hikey960_gpio_release(hikey);
     hikey960_mmio_release(hikey);
     zx_handle_close(hikey->bti_handle);
     free(hikey);
@@ -122,14 +113,14 @@ static zx_protocol_device_t hikey960_device_protocol = {
 
 static int hikey960_start_thread(void* arg) {
     hikey960_t* hikey = arg;
+    zx_status_t status;
 
-    zx_status_t status = pbus_register_protocol(&hikey->pbus, ZX_PROTOCOL_GPIO_IMPL, &hikey->gpio,
-                                    sizeof(hikey->gpio));
+    status = hikey960_sysmem_init(hikey);
     if (status != ZX_OK) {
         goto fail;
     }
 
-    status = hikey960_sysmem_init(hikey);
+    status = hikey960_gpio_init(hikey);
     if (status != ZX_OK) {
         goto fail;
     }

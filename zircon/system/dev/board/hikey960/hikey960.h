@@ -26,8 +26,6 @@ typedef struct {
     zx_device_t* parent;
     zx_handle_t bti_handle;
 
-    list_node_t gpios;
-    gpio_impl_protocol_t gpio;
     mmio_buffer_t usb3otg_bc;
     mmio_buffer_t peri_crg;
     mmio_buffer_t iomcu;
@@ -44,6 +42,9 @@ zx_status_t hikey960_add_devices(hikey960_t* bus);
 // hikey960-sysmem.c
 zx_status_t hikey960_sysmem_init(hikey960_t* hikey);
 
+// hikey960-gpio.c
+zx_status_t hikey960_gpio_init(hikey960_t* bus);
+
 // hikey960-i2c.c
 zx_status_t hikey960_i2c1_init(hikey960_t* hikey);
 zx_status_t hikey960_i2c_pinmux(hikey960_t* hikey);
@@ -52,10 +53,6 @@ zx_status_t hikey960_i2c_init(hikey960_t* bus);
 
 // hikey960-usb.c
 zx_status_t hikey960_usb_init(hikey960_t* hikey);
-
-// hikey960-gpios.c
-zx_status_t hikey960_gpio_init(hikey960_t* hikey);
-void hikey960_gpio_release(hikey960_t* hikey);
 
 // hikey960-dsi.c
 zx_status_t hikey960_dsi_init(hikey960_t* hikey);

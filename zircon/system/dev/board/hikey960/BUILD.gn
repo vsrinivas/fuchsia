@@ -6,7 +6,7 @@ driver("hikey960") {
   sources = [
     "hikey960-devices.c",
     "hikey960-dsi.c",
-    "hikey960-gpios.c",
+    "hikey960-gpio.c",
     "hikey960-i2c.c",
     "hikey960-sysmem.c",
     "hikey960-usb.c",
@@ -21,7 +21,6 @@ driver("hikey960") {
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/banjo/ddk-protocol-usb-modeswitch",
-    "$zx/system/dev/gpio/pl061",
     "$zx/system/dev/lib/hi3660",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/sync",

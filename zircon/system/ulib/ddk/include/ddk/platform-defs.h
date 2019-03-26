@@ -56,6 +56,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_HIKEY960_USB       3
 #define PDEV_DID_HI_DISPLAY         4
 #define PDEV_DID_HISILICON_UFS      5
+#define PDEV_DID_HI3660_GPIO        6
 
 // Google
 #define PDEV_VID_GOOGLE             3
