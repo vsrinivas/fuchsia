@@ -26,6 +26,8 @@ import (
 	"amber/urlscope"
 	"app/context"
 	"fidl/fuchsia/amber"
+	fuchsiaio "fidl/fuchsia/io"
+	"fidl/fuchsia/pkg"
 )
 
 const usage = `usage: %s <command> [opts]
@@ -37,8 +39,6 @@ Commands
                  package instance could match
         -m:      merkle root of the package to retrieve, if none is supplied
                  any package instance could match
-        -nowait: exit once package installation has started, but don't wait for
-                 package activation
 
     get_blob      - get the specified content blob
         -i: content ID of the blob
@@ -75,7 +75,6 @@ var (
 	name         = fs.String("n", "", "Name of a source or package")
 	version      = fs.String("v", "", "Version of a package")
 	blobID       = fs.String("i", "", "Content ID of the blob")
-	noWait       = fs.Bool("nowait", false, "Return once installation has started, package will not yet be available.")
 	merkle       = fs.String("m", "", "Merkle root of the desired update.")
 	nonExclusive = fs.Bool("x", false, "When adding or enabling a source, do not disable other sources.")
 )
@@ -102,8 +101,17 @@ func doTest(pxy *amber.ControlInterface) error {
 	return nil
 }
 
-func connect(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterfaceRequest) {
+func connectToAmber(ctx *context.Context) (*amber.ControlInterface, amber.ControlInterfaceRequest) {
 	req, pxy, err := amber.NewControlInterfaceRequest()
+	if err != nil {
+		panic(err)
+	}
+	ctx.ConnectToEnvService(req)
+	return pxy, req
+}
+
+func connectToPackageResolver(ctx *context.Context) (*pkg.PackageResolverInterface, pkg.PackageResolverInterfaceRequest) {
+	req, pxy, err := pkg.NewPackageResolverInterfaceRequest()
 	if err != nil {
 		panic(err)
 	}
@@ -237,24 +245,14 @@ func rmSource(a *amber.ControlInterface) error {
 	}
 }
 
-func getUp(a *amber.ControlInterface) error {
+func getUp(r *pkg.PackageResolverInterface) error {
 	if *name == "" {
 		return fmt.Errorf("no source id provided")
-	}
-	if *noWait {
-		c, err := a.GetUpdateComplete(*name, version, merkle)
-		if err != nil {
-			return fmt.Errorf("Error getting update %s\n", err)
-		}
-		c.Close()
-
-		fmt.Printf("Update requested %s\n", *name)
-		return nil
 	}
 
 	var err error
 	for i := 0; i < 3; i++ {
-		err = getUpdateComplete(a, *name, version, merkle)
+		err = getUpdateComplete(r, *name, version, merkle)
 		if err == nil {
 			break
 		}
@@ -363,10 +361,10 @@ func printState(proxy *amber.ControlInterface) error {
 	return nil
 }
 
-func do(proxy *amber.ControlInterface) int {
+func do(amberProxy *amber.ControlInterface, resolverProxy *pkg.PackageResolverInterface) int {
 	switch os.Args[1] {
 	case "get_up":
-		if err := getUp(proxy); err != nil {
+		if err := getUp(resolverProxy); err != nil {
 			log.Printf("error getting an update: %s", err)
 			return 1
 		}
@@ -375,12 +373,12 @@ func do(proxy *amber.ControlInterface) int {
 			log.Printf("no blob id provided")
 			return 1
 		}
-		if err := proxy.GetBlob(*blobID); err != nil {
+		if err := amberProxy.GetBlob(*blobID); err != nil {
 			log.Printf("error requesting blob fetch: %s", err)
 			return 1
 		}
 	case "add_src":
-		if err := addSource(proxy); err != nil {
+		if err := addSource(amberProxy); err != nil {
 			log.Printf("error adding source: %s", err)
 			if _, ok := err.(ErrGetFile); ok {
 				return 2
@@ -389,12 +387,12 @@ func do(proxy *amber.ControlInterface) int {
 			}
 		}
 	case "rm_src":
-		if err := rmSource(proxy); err != nil {
+		if err := rmSource(amberProxy); err != nil {
 			log.Printf("error removing source: %s", err)
 			return 1
 		}
 	case "list_srcs":
-		if err := listSources(proxy); err != nil {
+		if err := listSources(amberProxy); err != nil {
 			log.Printf("error listing sources: %s", err)
 			return 1
 		}
@@ -402,12 +400,12 @@ func do(proxy *amber.ControlInterface) int {
 		log.Printf("%q not yet supported\n", os.Args[1])
 		return 1
 	case "test":
-		if err := doTest(proxy); err != nil {
+		if err := doTest(amberProxy); err != nil {
 			log.Printf("error testing connection to amber: %s", err)
 			return 1
 		}
 	case "system_update":
-		configured, err := proxy.CheckForSystemUpdate()
+		configured, err := amberProxy.CheckForSystemUpdate()
 		if err != nil {
 			log.Printf("error checking for system update: %s", err)
 			return 1
@@ -419,7 +417,7 @@ func do(proxy *amber.ControlInterface) int {
 			fmt.Printf("system update is not configured\n")
 		}
 	case "login":
-		device, err := proxy.Login(*name)
+		device, err := amberProxy.Login(*name)
 		if err != nil {
 			log.Printf("failed to login: %s", err)
 			return 1
@@ -430,14 +428,14 @@ func do(proxy *amber.ControlInterface) int {
 			log.Printf("Error enabling source: no source id provided")
 			return 1
 		}
-		err := setSourceEnablement(proxy, *name, true)
+		err := setSourceEnablement(amberProxy, *name, true)
 		if err != nil {
 			log.Printf("Error enabling source: %s", err)
 			return 1
 		}
 		fmt.Printf("Source %q enabled\n", *name)
 		if !*nonExclusive {
-			if err := disableAllSources(proxy, *name); err != nil {
+			if err := disableAllSources(amberProxy, *name); err != nil {
 				log.Printf("Error disabling sources: %s", err)
 				return 1
 			}
@@ -447,21 +445,21 @@ func do(proxy *amber.ControlInterface) int {
 			log.Printf("Error disabling source: no source id provided")
 			return 1
 		}
-		err := setSourceEnablement(proxy, *name, false)
+		err := setSourceEnablement(amberProxy, *name, false)
 		if err != nil {
 			log.Printf("Error disabling source: %s", err)
 			return 1
 		}
 		fmt.Printf("Source %q disabled\n", *name)
 	case "gc":
-		err := proxy.Gc()
+		err := amberProxy.Gc()
 		if err != nil {
 			log.Printf("Error collecting garbage: %s", err)
 			return 1
 		}
 		log.Printf("Started garbage collection. See logs for details")
 	case "print_state":
-		err := printState(proxy)
+		err := printState(amberProxy)
 		if err != nil {
 			log.Printf("Error printing process state: %s", err)
 			return 1
@@ -485,10 +483,15 @@ func Main() {
 
 	fs.Parse(os.Args[2:])
 
-	proxy, _ := connect(context.CreateFromStartupInfo())
-	defer proxy.Close()
+	ctx := context.CreateFromStartupInfo()
 
-	os.Exit(do(proxy))
+	amberProxy, _ := connectToAmber(ctx)
+	defer amberProxy.Close()
+
+	resolverProxy, _ := connectToPackageResolver(ctx)
+	defer resolverProxy.Close()
+
+	os.Exit(do(amberProxy, resolverProxy))
 }
 
 type ErrDaemon string
@@ -501,52 +504,50 @@ func (e ErrDaemon) Error() string {
 	return string(e)
 }
 
-func getUpdateComplete(proxy *amber.ControlInterface, name string, version *string, merkle *string) error {
-	c, err := proxy.GetUpdateComplete(name, version, merkle)
-	if err != nil {
-		return NewErrDaemon(fmt.Sprintf("error making FIDL request: %s", err))
+type resolveResult struct {
+	status zx.Status
+	err    error
+}
+
+func getUpdateComplete(r *pkg.PackageResolverInterface, name string, version *string, merkle *string) error {
+	pkgUri := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s", name)
+	if *version != "" {
+		pkgUri = fmt.Sprintf("%s/%s", pkgUri, *version)
+	}
+	if *merkle != "" {
+		pkgUri = fmt.Sprintf("%s?hash=%s", pkgUri, *merkle)
 	}
 
-	defer c.Close()
-	b := make([]byte, 64*1024)
+	selectors := []string{}
+	updatePolicy := pkg.UpdatePolicy{}
+
+	dirReq, dirPxy, err := fuchsiaio.NewDirectoryInterfaceRequest()
+	if err != nil {
+		return err
+	}
+	defer dirPxy.Close()
+
+	ch := make(chan resolveResult)
+	go func() {
+		status, err := r.Resolve(pkgUri, selectors, updatePolicy, dirReq)
+		ch <- resolveResult{
+			status: zx.Status(status),
+			err:    err,
+		}
+	}()
+
 	for {
-		sigs, err := zxwait.Wait(*c.Handle(),
-			zx.SignalChannelPeerClosed|zx.SignalChannelReadable,
-			zx.Sys_deadline_after(zx.Duration((3 * time.Second).Nanoseconds())))
-
-		if err != nil {
-			if zerr, ok := err.(zx.Error); ok && zerr.Status == zx.ErrTimedOut {
-				log.Println("Awaiting response...")
-				continue
+		select {
+		case result := <-ch:
+			if result.err != nil {
+				return fmt.Errorf("error getting update: %s", result.err)
 			}
-			return NewErrDaemon(
-				fmt.Sprintf("unknown error while waiting for response from channel: %s", err))
-		}
-
-		if sigs&zx.SignalChannelReadable != 0 {
-			bs, _, err := c.Read(b, []zx.Handle{}, 0)
-			if err != nil {
-				return NewErrDaemon(
-					fmt.Sprintf("error reading response from channel: %s", err))
+			if result.status != zx.ErrOk {
+				return fmt.Errorf("fetch: Resolve status: %s", result.status)
 			}
-
-			if sigs&zx.SignalUser0 != 0 {
-				return NewErrDaemon(string(b[:bs]))
-			}
-
-			pkgname := name
-			if version != nil {
-				pkgname = filepath.Join(pkgname, *version)
-			}
-			if merkle != nil {
-				pkgname = filepath.Join(pkgname, *merkle)
-			}
-			log.Printf("Success %s: %s", pkgname, string(b[:bs]))
 			return nil
-		}
-
-		if sigs&zx.SignalChannelPeerClosed != 0 {
-			return NewErrDaemon("response channel closed unexpectedly.")
+		case <-time.After(3 * time.Second):
+			log.Println("Awaiting response...")
 		}
 	}
 }
