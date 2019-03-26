@@ -116,6 +116,11 @@ public:
     }
     uint32_t components_count() const { return components_count_; }
 
+    // Returns a reference to the constructed composite device, if it exists.
+    fbl::RefPtr<Device> device() const {
+        return device_;
+    }
+
     // Attempt to match any of the unbound components against |dev|.  Returns true
     // if a component was match.  |*component_out| will be set to the index of
     // the matching component.
@@ -124,12 +129,21 @@ public:
     // Bind the component with the given index to the specified device
     zx_status_t BindComponent(size_t index, const fbl::RefPtr<Device>& dev);
 
+    // Mark the given component as unbound.  Note that since we don't expose
+    // this device's components in the API, this method can only be invoked by
+    // CompositeDeviceComponent
+    void UnbindComponent(CompositeDeviceComponent* component);
+
     // Creates the actual device and orchestrates the creation of the composite
     // device in a devhost.
     // Returns ZX_ERR_SHOULD_WAIT if some component is not fully ready (i.e. has
     // either not been matched or the component driver that bound to it has not
     // yet published its device).
     zx_status_t TryAssemble();
+
+    // Forget about the composite device that was constructed.  If TryAssemble()
+    // is invoked after this, it will reassemble the device.
+    void Remove();
 
     // Node for list of composite devices the coordinator knows about
     struct Node {
@@ -147,8 +161,11 @@ private:
 
     ComponentList unbound_;
     ComponentList bound_;
-
     fbl::DoublyLinkedListNodeState<std::unique_ptr<CompositeDevice>> node_;
+
+    // Once the composite has been assembled, this refers to the constructed
+    // device.
+    fbl::RefPtr<Device> device_;
 };
 
 } // namespace devmgr

@@ -11,6 +11,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
+#include <variant>
 
 #include "metadata.h"
 #include "../shared/async-loop-ref-counted-rpc-handler.h"
@@ -150,10 +151,30 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
         return !(flags & (DEV_CTX_BOUND | DEV_CTX_DEAD | DEV_CTX_INVISIBLE));
     }
 
-    CompositeDeviceComponent* component() const { return component_; }
+    // If the device was bound as a component of a composite, this returns the
+    // component's description.
+    CompositeDeviceComponent* component() const {
+        auto val = std::get_if<CompositeDeviceComponent*>(&composite_);
+        return val ? *val : nullptr;
+
+    }
     void set_component(CompositeDeviceComponent* component) {
-        ZX_ASSERT(component == nullptr || component_ == nullptr);
-        component_ = component;
+        ZX_ASSERT(std::holds_alternative<UnassociatedWithComposite>(composite_));
+        composite_ = component;
+    }
+
+    // If the device was created as a composite, this returns its description.
+    CompositeDevice* composite() const {
+        auto val = std::get_if<CompositeDevice*>(&composite_);
+        return val ? *val : nullptr;
+
+    }
+    void set_composite(CompositeDevice* composite) {
+        ZX_ASSERT(std::holds_alternative<UnassociatedWithComposite>(composite_));
+        composite_ = composite;
+    }
+    void disassociate_from_composite() {
+        composite_ = UnassociatedWithComposite{};
     }
 
     void set_host(Devhost* host);
@@ -170,9 +191,16 @@ private:
 
     async::TaskClosure publish_task_;
 
-    // If the device is part of a composite device, this points to the component
-    // that matched it.
-    CompositeDeviceComponent* component_ = nullptr;
+    // - If this device is part of a composite device, this is inhabited by
+    //   CompositeDeviceComponent* and it points to the component that matched it.
+    //   Note that this is only set on the device that matched the component, not
+    //   the "component device" added by the component driver.
+    // - If this device is a composite device, this is inhabited by
+    //   CompositeDevice* and it points to the composite that describes it.
+    // - Otherwise, it is inhabited by UnassociatedWithComposite
+    struct UnassociatedWithComposite {};
+    std::variant<UnassociatedWithComposite, CompositeDeviceComponent*, CompositeDevice*>
+            composite_;
 
     Devhost* host_ = nullptr;
     // The id of this device from the perspective of the devhost.  This can be

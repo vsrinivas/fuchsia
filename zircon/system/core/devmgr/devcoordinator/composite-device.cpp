@@ -102,6 +102,7 @@ zx_status_t CompositeDevice::BindComponent(size_t index, const fbl::RefPtr<Devic
 }
 
 zx_status_t CompositeDevice::TryAssemble() {
+    ZX_ASSERT(device_ == nullptr);
     if (!unbound_.is_empty()) {
         return ZX_ERR_SHOULD_WAIT;
     }
@@ -181,12 +182,26 @@ zx_status_t CompositeDevice::TryAssemble() {
         return status;
     }
 
-    status = new_device->SignalReadyForBind();
+    device_ = std::move(new_device);
+    device_->set_composite(this);
+
+    status = device_->SignalReadyForBind();
     if (status != ZX_OK) {
         return status;
     }
 
     return ZX_OK;
+}
+
+void CompositeDevice::UnbindComponent(CompositeDeviceComponent* component) {
+    ZX_ASSERT(device_ == nullptr);
+    ZX_ASSERT(component->composite() == this);
+    unbound_.push_back(bound_.erase(*component));
+}
+
+void CompositeDevice::Remove() {
+    device_->disassociate_from_composite();
+    device_ = nullptr;
 }
 
 // CompositeDeviceComponent methods
@@ -226,9 +241,10 @@ zx_status_t CompositeDeviceComponent::Bind(const fbl::RefPtr<Device>& dev) {
 
 void CompositeDeviceComponent::Unbind() {
     ZX_ASSERT(bound_device_ != nullptr);
+    composite_->UnbindComponent(this);
     // Drop our reference to the device added by the component driver
     component_device_ = nullptr;
-    bound_device_->set_component(nullptr);
+    bound_device_->disassociate_from_composite();
     bound_device_ = nullptr;
 }
 

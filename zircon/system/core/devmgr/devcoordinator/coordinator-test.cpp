@@ -261,7 +261,8 @@ void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_d
 // Reads a CreateCompositeDevice from remote, checks expectations, and sends
 // a ZX_OK response.
 void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* expected_name,
-                                        size_t expected_components_count) {
+                                        size_t expected_components_count,
+                                        zx::channel* composite_remote) {
     // Read the CreateCompositeDevice request.
     FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -272,9 +273,7 @@ void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* e
     ASSERT_OK(status);
     ASSERT_LT(0, actual_bytes);
     ASSERT_EQ(1, actual_handles);
-    // Close the RPC channel to the device, since we don't actually need it
-    status = zx_handle_close(handles[0]);
-    ASSERT_OK(status);
+    composite_remote->reset(handles[0]);
 
     // Validate the CreateCompositeDevice request.
     auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
@@ -357,7 +356,7 @@ public:
 
     void AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name,
                    uint32_t protocol_id, fbl::String driver, size_t* device_index);
-
+    void RemoveDevice(size_t device_index);
 protected:
     void SetUp() override {
         ASSERT_NO_FATAL_FAILURES(InitializeCoordinator(&coordinator_));
@@ -450,6 +449,14 @@ void CompositeTestCase::AddDevice(const fbl::RefPtr<devmgr::Device>& parent, con
     *index = devices_.size() - 1;
 }
 
+void CompositeTestCase::RemoveDevice(size_t device_index) {
+    auto& state = devices_[device_index];
+    ASSERT_OK(coordinator_.RemoveDevice(state.device, false));
+    state.device.reset();
+    state.remote.reset();
+    loop_.RunUntilIdle();
+}
+
 class CompositeAddOrderTestCase : public CompositeTestCase {
 public:
     enum class AddLocation {
@@ -513,8 +520,10 @@ void CompositeAddOrderTestCase::ExecuteTest(AddLocation add) {
                                            driver, &component_device_indexes[i]));
     }
 
+    zx::channel composite_remote;
     ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(devhost_remote(), kCompositeDevName,
-                                                                fbl::count_of(device_indexes)));
+                                                                fbl::count_of(device_indexes),
+                                                                &composite_remote));
 }
 
 TEST_F(CompositeAddOrderTestCase, DefineBeforeDevices) {
@@ -538,6 +547,77 @@ TEST_F(CompositeTestCase, CantAddFromNonPlatformBus) {
     ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
             device_state->device, protocol_id, fbl::count_of(protocol_id), nullptr /* props */,
             0, "composite-dev", ZX_ERR_ACCESS_DENIED));
+}
+
+TEST_F(CompositeTestCase, ComponentUnbinds) {
+    size_t device_indexes[2];
+    uint32_t protocol_id[] = {
+        ZX_PROTOCOL_GPIO,
+        ZX_PROTOCOL_I2C,
+    };
+    static_assert(fbl::count_of(protocol_id) == fbl::count_of(device_indexes));
+
+    const char* kCompositeDevName = "composite-dev";
+    ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(
+            platform_bus(), protocol_id, fbl::count_of(protocol_id), nullptr /* props */,
+            0, kCompositeDevName));
+
+    // Add the devices to construct the composite out of.
+    for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
+        char name[32];
+        snprintf(name, sizeof(name), "device-%zu", i);
+        ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), name, protocol_id[i], "",
+                                           &device_indexes[i]));
+    }
+    // Make sure the component devices come up
+    size_t component_device_indexes[fbl::count_of(device_indexes)];
+    for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
+        auto device_state = device(device_indexes[i]);
+        // Wait for the components to get bound
+        fbl::String driver = coordinator()->component_driver()->libname;
+        ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
+        loop()->RunUntilIdle();
+
+        // Synthesize the AddDevice request the component driver would send
+        char name[32];
+        snprintf(name, sizeof(name), "component-device-%zu", i);
+        ASSERT_NO_FATAL_FAILURES(AddDevice(device_state->device, name, 0,
+                                           driver, &component_device_indexes[i]));
+    }
+    // Make sure the composite comes up
+    zx::channel composite_remote;
+    ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(devhost_remote(), kCompositeDevName,
+                                                                fbl::count_of(device_indexes),
+                                                                &composite_remote));
+    loop()->RunUntilIdle();
+
+    {
+        // Remove device the composite, device 0's component device, and device 0
+        auto device1 = device(device_indexes[1])->device;
+        auto composite = device1->component()->composite()->device();
+        ASSERT_OK(coordinator()->RemoveDevice(composite, false));
+
+        ASSERT_NO_FATAL_FAILURES(RemoveDevice(component_device_indexes[0]));
+        ASSERT_NO_FATAL_FAILURES(RemoveDevice(device_indexes[0]));
+    }
+
+    // Add the device back and verify the composite gets created again
+    ASSERT_NO_FATAL_FAILURES(AddDevice(platform_bus(), "device-0", protocol_id[0], "",
+                                       &device_indexes[0]));
+    {
+        auto device_state = device(device_indexes[0]);
+        // Wait for the components to get bound
+        fbl::String driver = coordinator()->component_driver()->libname;
+        ASSERT_NO_FATAL_FAILURES(CheckBindDriverReceived(device_state->remote, driver.data()));
+        loop()->RunUntilIdle();
+
+        // Synthesize the AddDevice request the component driver would send
+        ASSERT_NO_FATAL_FAILURES(AddDevice(device_state->device, "component-device-0", 0,
+                                           driver, &component_device_indexes[0]));
+    }
+    ASSERT_NO_FATAL_FAILURES(CheckCreateCompositeDeviceReceived(devhost_remote(), kCompositeDevName,
+                                                                fbl::count_of(device_indexes),
+                                                                &composite_remote));
 }
 
 } // namespace

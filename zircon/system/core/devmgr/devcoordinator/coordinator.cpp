@@ -788,6 +788,11 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
         }
     }
 
+    // Check if this device is a composite device, and if so disconnects from it
+    if (dev->composite()) {
+        dev->composite()->Remove();
+    }
+
     // Check if this device is a composite component device
     if (component_driver_ != nullptr && dev->libname == component_driver_->libname) {
         // If it is, then its parent will know about which one (since the parent
@@ -926,17 +931,6 @@ zx_status_t Coordinator::AddCompositeDevice(
 
     composite_devices_.push_back(std::move(new_device));
     return ZX_OK;
-
-    // TODO:
-    // - Logic for sending an unbind() when some component goes away
-    //
-    // Tests to write:
-    // - Introducing a composite device when all components are already ready
-    // - Introducing a composite device when some component is already ready
-    // - Introducing a composite device when no components are ready
-    // - A component going away after instantiation
-    // - The composite device is in the same process as the coresident_device_index requests
-    // - Issuing device_add_composite from not the PBD
 }
 
 zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char* path,
