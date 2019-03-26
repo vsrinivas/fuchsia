@@ -23,6 +23,9 @@ import("//build/images/manifest.gni")
 #   binary (required)
 #     [path] The path to the primary binary for the component.
 #
+#   binary_dest (optional)
+#     [path] Defines the destination of the primary binary within the assembled package.
+#
 #   loadable_modules (optional)
 #     [list of scopes] Defines the loadable modules in the package.  These
 #     are produced by `loadable_module()` GN targets, and are typically
@@ -73,6 +76,7 @@ template("fuchsia_component") {
       forward_variables_from(invoker,
                              [
                                "binary",
+                               "binary_dest",
                                "data_deps",
                                "deprecated_global_persistent_storage",
                                "deps",
@@ -193,13 +197,16 @@ template("fuchsia_component") {
       ]
     }
 
-    bin_dir = "bin/"
-    if (component.test) {
-      bin_dir = "test/"
+    if (!defined(component.binary_dest)) {
+      bin_dir = "bin/"
+      if (component.test) {
+        bin_dir = "test/"
+      }
+      component.binary_dest = bin_dir + get_path_info(component.binary, "file")
     }
     component_manifest += [
       {
-        dest = bin_dir + get_path_info(component.binary, "file")
+        dest = component.binary_dest
         source = rebase_path(component.binary, "", root_out_dir)
       },
     ]

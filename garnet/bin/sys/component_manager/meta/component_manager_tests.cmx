@@ -13,7 +13,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fidl.examples.echo.Echo": "fuchsia-pkg://fuchsia.com/echo_server_rust#meta/echo_server_rust.cmx"
+                "fidl.examples.echo.Echo": "fuchsia-pkg://fuchsia.com/component_manager_tests#meta/echo_server_rust.cmx"
             }
         }
     }
