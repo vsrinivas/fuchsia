@@ -46,7 +46,6 @@ install_host_tools("host_insntrace_print") {
 }
 
 package("insntrace") {
-  deprecated_global_persistent_storage = "//build"
   deps = [
     ":bin",
   ]

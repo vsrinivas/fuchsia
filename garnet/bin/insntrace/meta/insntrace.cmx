@@ -4,6 +4,9 @@
     },
     "sandbox": {
         "dev": [ "sys/cpu-trace" ],
-        "features": [ "deprecated-global-persistent-storage", "system-temp" ]
+        "features": [
+          "isolated-persistent-storage",
+          "system-temp"
+        ]
     }
 }

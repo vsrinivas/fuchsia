@@ -46,7 +46,6 @@ package("log_listener_shell") {
 }
 
 fuchsia_component("log_listener_component") {
-  deprecated_global_persistent_storage = "//build"
   manifest = rebase_path("meta/log_listener.cmx")
   deps = [
     ":bin",

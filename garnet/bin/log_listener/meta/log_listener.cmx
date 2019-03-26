@@ -3,7 +3,7 @@
         "binary": "bin/log_listener"
     },
     "sandbox": {
-        "features": [ "deprecated-global-persistent-storage" ],
+        "features": [ "isolated-persistent-storage" ],
         "services": [ "fuchsia.logger.Log" ]
     }
 }

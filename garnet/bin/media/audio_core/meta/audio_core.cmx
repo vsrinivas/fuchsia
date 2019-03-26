@@ -9,7 +9,7 @@
         ],
         "features": [
             "system-temp",
-            "deprecated-global-persistent-storage"
+            "isolated-persistent-storage"
         ],
         "services": [
             "fuchsia.scheduler.ProfileProvider"

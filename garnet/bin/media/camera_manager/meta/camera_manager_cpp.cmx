@@ -7,7 +7,7 @@
             "class/camera"
         ],
         "features": [
-            "deprecated-global-persistent-storage"
+            "isolated-persistent-storage"
         ],
         "services": []
     }

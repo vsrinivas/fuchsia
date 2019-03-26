@@ -25,12 +25,7 @@ group("deprecated_global_persistent_storage_allowlist") {
     "//garnet/bin/auth:account_manager",
     "//garnet/bin/auth:token_manager_factory",
     "//garnet/bin/device_settings:device_settings_manager",
-    "//garnet/bin/insntrace:insntrace",
-    "//garnet/bin/log_listener:log_listener_component",
-    "//garnet/bin/media:audio_core",
-    "//garnet/bin/media/camera_manager:camera_manager_cpp",
     "//garnet/bin/timezone:timezone",
-    "//garnet/bin/trace:trace",
     "//garnet/go/src/amber:amber",
     "//peridot/bin/basemgr:basemgr",
   ]
