@@ -23,9 +23,9 @@ const char kConnectHelp[] = R"(  --connect=<host>:<port>
   -c <host>:<port>
       Attempts to connect to a debug_agent running on the given host/port.)";
 
-const char kDebugInfoHelp[] = R"(  --debug-info
+const char kDebugModeHelp[] = R"(  --debug-mode
   -d
-      Output debug information about zxdb (eg. MessageLoop commands).
+      Output debug information about zxdb.
       Should only be useful for people developing zxdb.)";
 
 const char kHelpHelp[] = R"(  --help
@@ -69,8 +69,8 @@ Err ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
   CommandLineParser<CommandLineOptions> parser;
 
   parser.AddSwitch("connect", 'c', kConnectHelp, &CommandLineOptions::connect);
-  parser.AddSwitch("debug-info", 'd', kDebugInfoHelp,
-                   &CommandLineOptions::debug_info);
+  parser.AddSwitch("debug-mode", 'd', kDebugModeHelp,
+                   &CommandLineOptions::debug_mode);
   parser.AddSwitch("quit-agent-on-exit", 0, kQuitAgentOnExit,
                    &CommandLineOptions::quit_agent_on_quit);
   parser.AddSwitch("run", 'r', kRunHelp, &CommandLineOptions::run);

@@ -14,7 +14,7 @@ namespace zxdb {
 
 struct CommandLineOptions {
   std::optional<std::string> connect;
-  bool debug_info = false;
+  bool debug_mode = false;
   bool quit_agent_on_quit = false;
   std::optional<std::string> run;
   std::optional<std::string> script_file;

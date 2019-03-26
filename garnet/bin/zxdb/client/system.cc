@@ -10,8 +10,13 @@ namespace zxdb {
 
 // Schema definition -----------------------------------------------------------
 
+const char* ClientSettings::System::kDebugMode = "debug-mode";
+static const char* kDebugModeDescription =
+    R"(  Output debug information about zxdb.
+  In general should only be useful for people developing zxdb.)";
+
 const char* ClientSettings::System::kSymbolPaths = "symbol-paths";
-const char* kSymbolPathsDescription =
+static const char* kSymbolPathsDescription =
     R"(  List of mapping databases, ELF files or directories for symbol lookup.
   When a directory path is passed, the directory will be enumerated
   non-recursively to index all ELF files within. When a .txt file is passed,
@@ -19,7 +24,7 @@ const char* kSymbolPathsDescription =
   Otherwise, the path will be loaded as an ELF file.)";
 
 const char* ClientSettings::System::kSymbolRepoPaths = "symbol-repo-paths";
-const char* kSymbolRepoPathsDescription =
+static const char* kSymbolRepoPathsDescription =
     R"(  List of GNU-style repositories for symbol lookup. When a directory path
   is passed, a folder called .debug-id will be expected beneath it. From there,
   a file called ab/cdefg will be assumed to contain the stripped binary with
@@ -30,18 +35,26 @@ const char* ClientSettings::System::kPauseNewProcesses = "pause-new-processes";
 static const char* kPauseNewProcessDescription =
     R"(  Whether a process should pause the initial thread on startup.)";
 
+const char* ClientSettings::System::kQuitAgentOnExit = "quit-agent-on-exit";
+static const char* kQuitAgentOnExitDescription =
+    R"(  Whether the client will shutdown the connected agent upon exiting.")";
+
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema =
       fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kSystem);
 
+  schema->AddBool(ClientSettings::System::kDebugMode, kDebugModeDescription,
+                  false);
   schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription,
                   {});
   schema->AddList(ClientSettings::System::kSymbolRepoPaths,
                   kSymbolRepoPathsDescription, {});
   schema->AddBool(ClientSettings::System::kPauseNewProcesses,
                   kPauseNewProcessDescription, true);
+  schema->AddBool(ClientSettings::System::kQuitAgentOnExit,
+                  kQuitAgentOnExitDescription, false);
 
   return schema;
 }

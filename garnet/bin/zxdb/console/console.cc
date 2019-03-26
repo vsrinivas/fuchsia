@@ -191,32 +191,8 @@ Console::Result Console::DispatchInputLine(const std::string& line,
 Console::Result Console::ProcessInputLine(const std::string& line,
                                           CommandCallback callback) {
   Result result = DispatchInputLine(line, callback);
-  if (result == Result::kQuit) {
-    // If we're not connected, quit immediately.
-    if (!quit_agent_on_quit() || !context().session()->IsConnected()) {
-      debug_ipc::MessageLoop::Current()->QuitNow();
-      return result;
-    }
-
-    // At this point we know that we're connected and we want to quit the agent
-    // at exit. We post an exit command and wait for the result.
-    Output("Stopping debug agent. Will exit on success.");
-    context().session()->QuitAgent([console = GetWeakPtr()](const Err& err) {
-      FXL_DCHECK(console);
-      if (!console)
-        return;
-
-      // If there was an error quitting the debug agent, let the user
-      // know and react to it.
-      if (err.has_error()) {
-        console->Output(err);
-        return;
-      }
-
-      // Here we have successfully exited.
-      debug_ipc::MessageLoop::Current()->QuitNow();
-    });
-  }
+  if (result == Result::kQuit)
+    debug_ipc::MessageLoop::Current()->QuitNow();
   return result;
 }
 

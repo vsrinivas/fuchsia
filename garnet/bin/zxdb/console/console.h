@@ -27,9 +27,6 @@ class Console : public debug_ipc::FDWatcher {
 
   ConsoleContext& context() { return context_; }
 
-  bool quit_agent_on_quit() const { return quit_agent_on_quit_; }
-  void set_quit_agent_on_quit(bool enabled) { quit_agent_on_quit_ = enabled; }
-
   fxl::WeakPtr<Console> GetWeakPtr();
 
   // Prints the first prompt to the screen. This only needs to be called once.
@@ -63,8 +60,8 @@ class Console : public debug_ipc::FDWatcher {
   void OnFDReadable(int fd) override;
 
   // Searches for history at $HOME/.zxdb_history and loads it if found.
-  void LoadHistoryFile();
   bool SaveHistoryFile();
+  void LoadHistoryFile();
 
   static Console* singleton_;
 
@@ -78,8 +75,6 @@ class Console : public debug_ipc::FDWatcher {
   // presses "Enter" with no parameters. This must be re-parsed each time
   // because the context can be different.
   std::string previous_line_;
-
-  bool quit_agent_on_quit_ = false;
 
   fxl::WeakPtrFactory<Console> weak_factory_;
 

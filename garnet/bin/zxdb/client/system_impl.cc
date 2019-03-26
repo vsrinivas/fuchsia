@@ -14,6 +14,7 @@
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/common/string_util.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/ipc/debug/debug.h"
 
 namespace zxdb {
 
@@ -36,8 +37,10 @@ SystemImpl::SystemImpl(Session* session)
   // System will be listening to its own options.
   // We don't use SystemSymbols because they live in the symbols library
   // and we don't want it to have a client dependency.
+  settings_.AddObserver(ClientSettings::System::kDebugMode, this);
   settings_.AddObserver(ClientSettings::System::kSymbolPaths, this);
   settings_.AddObserver(ClientSettings::System::kSymbolRepoPaths, this);
+  settings_.AddObserver(ClientSettings::System::kQuitAgentOnExit, this);
 }
 
 SystemImpl::~SystemImpl() {
@@ -53,6 +56,10 @@ SystemImpl::~SystemImpl() {
       observer.WillDestroyTarget(target.get());
   }
   targets_.clear();
+
+  // Attempt to quit the agent.
+  if (!quit_agent_on_exit_)
+    session()->QuitAgent(nullptr);
 }
 
 ProcessImpl* SystemImpl::ProcessImplFromKoid(uint64_t koid) const {
@@ -271,6 +278,10 @@ void SystemImpl::OnSettingChanged(const SettingStore& store,
     for (const std::string& path : paths) {
       build_id_index.AddRepoSymbolSource(path);
     }
+  } else if (setting_name == ClientSettings::System::kDebugMode) {
+    debug_ipc::SetDebugMode(store.GetBool(setting_name));
+  } else if (setting_name == ClientSettings::System::kQuitAgentOnExit) {
+    quit_agent_on_exit_ = store.GetBool(setting_name);
   } else {
     FXL_LOG(WARNING) << "Unhandled setting change: " << setting_name;
   }

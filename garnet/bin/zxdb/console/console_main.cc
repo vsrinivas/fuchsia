@@ -92,9 +92,6 @@ int ConsoleMain(int argc, const char* argv[]) {
   }
 
   debug_ipc::MessageLoopPoll loop;
-  if (options.debug_info)
-    debug_ipc::SetDebugMode(true);
-
   loop.Init();
 
   // This scope forces all the objects to be destroyed before the Cleanup()
@@ -107,8 +104,16 @@ int ConsoleMain(int argc, const char* argv[]) {
     buffer.set_data_available_callback(
         [&session]() { session.OnStreamReadable(); });
 
+    if (options.debug_mode) {
+      session.system().settings().SetBool(ClientSettings::System::kDebugMode,
+                                          true);
+    }
+
     Console console(&session);
-    console.set_quit_agent_on_quit(options.quit_agent_on_quit);
+    if (options.quit_agent_on_quit) {
+      session.system().settings().SetBool(
+          ClientSettings::System::kQuitAgentOnExit, true);
+    }
 
     // Save command-line switches ----------------------------------------------
 

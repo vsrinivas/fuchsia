@@ -19,9 +19,11 @@ class SettingSchema;
 // context: (System for system, Target for target, etc.).
 struct ClientSettings {
   struct System {
+    static const char* kDebugMode;
     static const char* kSymbolPaths;
     static const char* kSymbolRepoPaths;
     static const char* kPauseNewProcesses;
+    static const char* kQuitAgentOnExit;
   };
 
   struct Job {
