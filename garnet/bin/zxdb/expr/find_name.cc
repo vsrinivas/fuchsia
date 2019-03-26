@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/expr/find_variable.h"
+#include "garnet/bin/zxdb/expr/find_name.h"
 
-#include "garnet/bin/zxdb/expr/found_variable.h"
+#include "garnet/bin/zxdb/expr/found_name.h"
 #include "garnet/bin/zxdb/expr/identifier.h"
 #include "garnet/bin/zxdb/expr/index_walker.h"
 #include "garnet/bin/zxdb/symbols/code_block.h"
@@ -39,7 +39,7 @@ const Variable* SearchVariableVector(const std::vector<LazySymbol>& vect,
 
 // Searches the list for a reference to a variable and returns the first one
 // it finds.
-std::optional<FoundVariable> GetVariableFromDieList(
+std::optional<FoundName> GetVariableFromDieList(
     const ModuleSymbols* module_symbols,
     const std::vector<ModuleSymbolIndexNode::DieRef>& dies) {
   for (const ModuleSymbolIndexNode::DieRef& cur : dies) {
@@ -48,16 +48,17 @@ std::optional<FoundVariable> GetVariableFromDieList(
       continue;
     const Symbol* symbol = lazy_symbol.Get();
     if (const Variable* var = symbol->AsVariable())
-      return FoundVariable(var);
+      return FoundName(var);
   }
   return std::nullopt;
 }
 
 }  // namespace
 
-std::optional<FoundVariable> FindVariable(
-    const ProcessSymbols* process_symbols, const CodeBlock* block,
-    const SymbolContext* block_symbol_context, const Identifier& identifier) {
+std::optional<FoundName> FindName(const ProcessSymbols* process_symbols,
+                                  const CodeBlock* block,
+                                  const SymbolContext* block_symbol_context,
+                                  const Identifier& identifier) {
   if (block && !identifier.InGlobalNamespace()) {
     // Search for local variables and function parameters.
     if (auto found = FindLocalVariable(block, identifier))
@@ -81,14 +82,14 @@ std::optional<FoundVariable> FindVariable(
         current_scope = func_name.GetScope();
     }
 
-    return FindGlobalVariable(process_symbols, current_scope,
-                              block_symbol_context, identifier);
+    return FindGlobalName(process_symbols, current_scope, block_symbol_context,
+                          identifier);
   }
   return std::nullopt;
 }
 
-std::optional<FoundVariable> FindLocalVariable(const CodeBlock* block,
-                                               const Identifier& identifier) {
+std::optional<FoundName> FindLocalVariable(const CodeBlock* block,
+                                           const Identifier& identifier) {
   // Local variables can only be simple names.
   const std::string* name = identifier.GetSingleComponentName();
   if (!name)
@@ -100,12 +101,12 @@ std::optional<FoundVariable> FindLocalVariable(const CodeBlock* block,
   while (cur_block) {
     // Check for variables in this block.
     if (auto* var = SearchVariableVector(cur_block->variables(), *name))
-      return FoundVariable(var);
+      return FoundName(var);
 
     if (const Function* function = cur_block->AsFunction()) {
       // Found a function, check for a match in its parameters.
       if (auto* var = SearchVariableVector(function->parameters(), *name))
-        return FoundVariable(var);
+        return FoundName(var);
       break;  // Don't recurse into higher levels of nesting than a function.
     }
     if (!cur_block->parent())
@@ -143,8 +144,8 @@ std::optional<FoundMember> FindMember(const Collection* object,
   return result;
 }
 
-std::optional<FoundVariable> FindMemberOnThis(const CodeBlock* block,
-                                              const Identifier& identifier) {
+std::optional<FoundName> FindMemberOnThis(const CodeBlock* block,
+                                          const Identifier& identifier) {
   const Function* function = block->GetContainingFunction();
   if (!function)
     return std::nullopt;
@@ -159,13 +160,14 @@ std::optional<FoundVariable> FindMemberOnThis(const CodeBlock* block,
     return std::nullopt;  // Symbols likely corrupt.
 
   if (auto member = FindMember(collection, identifier))
-    return FoundVariable(this_var, std::move(*member));
+    return FoundName(this_var, std::move(*member));
   return std::nullopt;
 }
 
-std::optional<FoundVariable> FindGlobalVariable(
-    const ProcessSymbols* process_symbols, const Identifier& current_scope,
-    const SymbolContext* symbol_context, const Identifier& identifier) {
+std::optional<FoundName> FindGlobalName(const ProcessSymbols* process_symbols,
+                                        const Identifier& current_scope,
+                                        const SymbolContext* symbol_context,
+                                        const Identifier& identifier) {
   std::vector<const LoadedModuleSymbols*> modules =
       process_symbols->GetLoadedModuleSymbols();
   if (modules.empty())
@@ -187,8 +189,8 @@ std::optional<FoundVariable> FindGlobalVariable(
 
     if (current_module) {
       // Search the current module.
-      if (auto found = FindGlobalVariableInModule(
-              current_module->module_symbols(), current_scope, identifier))
+      if (auto found = FindGlobalNameInModule(current_module->module_symbols(),
+                                              current_scope, identifier))
         return found;
     }
   }
@@ -196,15 +198,15 @@ std::optional<FoundVariable> FindGlobalVariable(
   // Search all non-current modules.
   for (const LoadedModuleSymbols* loaded_mod : modules) {
     if (loaded_mod != current_module) {
-      if (auto found = FindGlobalVariableInModule(loaded_mod->module_symbols(),
-                                                  current_scope, identifier))
+      if (auto found = FindGlobalNameInModule(loaded_mod->module_symbols(),
+                                              current_scope, identifier))
         return found;
     }
   }
   return std::nullopt;
 }
 
-std::optional<FoundVariable> FindGlobalVariableInModule(
+std::optional<FoundName> FindGlobalNameInModule(
     const ModuleSymbols* module_symbols, const Identifier& current_scope,
     const Identifier& identifier) {
   IndexWalker walker(&module_symbols->GetIndex());

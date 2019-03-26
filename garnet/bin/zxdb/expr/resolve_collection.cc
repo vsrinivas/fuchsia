@@ -6,7 +6,7 @@
 
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
-#include "garnet/bin/zxdb/expr/find_variable.h"
+#include "garnet/bin/zxdb/expr/find_name.h"
 #include "garnet/bin/zxdb/expr/identifier.h"
 #include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
 #include "garnet/bin/zxdb/symbols/arch.h"

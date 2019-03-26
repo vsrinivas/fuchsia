@@ -10,7 +10,7 @@
 
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/found_member.h"
-#include "garnet/bin/zxdb/expr/found_variable.h"
+#include "garnet/bin/zxdb/expr/found_name.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {

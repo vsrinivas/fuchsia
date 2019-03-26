@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/expr/find_variable.h"
-#include "garnet/bin/zxdb/expr/found_variable.h"
+#include "garnet/bin/zxdb/expr/find_name.h"
+#include "garnet/bin/zxdb/expr/found_name.h"
 #include "garnet/bin/zxdb/expr/identifier.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/function.h"
@@ -74,7 +74,7 @@ int TestGlobalVariable::next_die_ref = 1;
 // }
 //
 // }  // namespace ns
-TEST(FindVariable, FindLocalVariable) {
+TEST(FindName, FindLocalVariable) {
   ProcessSymbolsTestSetup setup;
 
   auto int32_type = MakeInt32Type();
@@ -145,12 +145,12 @@ TEST(FindVariable, FindLocalVariable) {
   // Find "value" in the nested block should give the block's one.
   Identifier value_ident(
       ExprToken(ExprTokenType::kName, var_value->GetAssignedName(), 0));
-  auto found = FindVariable(nullptr, block.get(), &symbol_context, value_ident);
+  auto found = FindName(nullptr, block.get(), &symbol_context, value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_value.get(), found->variable());
 
   // Find "value" in the function block should give the function's one.
-  found = FindVariable(nullptr, function.get(), &symbol_context, value_ident);
+  found = FindName(nullptr, function.get(), &symbol_context, value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(var_value.get(), found->variable());
 
@@ -158,27 +158,24 @@ TEST(FindVariable, FindLocalVariable) {
   Identifier value_global_ident(Identifier::Component(
       ExprToken(ExprTokenType::kColonColon, "::", 0),
       ExprToken(ExprTokenType::kName, var_value->GetAssignedName(), 0)));
-  found = FindVariable(nullptr, function.get(), &symbol_context,
-                       value_global_ident);
+  found =
+      FindName(nullptr, function.get(), &symbol_context, value_global_ident);
   EXPECT_FALSE(found);
 
   // Find "block_local" in the block should be found, but in the function it
   // should not be.
   Identifier block_local_ident(
       ExprToken(ExprTokenType::kName, block_other->GetAssignedName(), 0));
-  found =
-      FindVariable(nullptr, block.get(), &symbol_context, block_local_ident);
+  found = FindName(nullptr, block.get(), &symbol_context, block_local_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_other.get(), found->variable());
-  found =
-      FindVariable(nullptr, function.get(), &symbol_context, block_local_ident);
+  found = FindName(nullptr, function.get(), &symbol_context, block_local_ident);
   EXPECT_FALSE(found);
 
   // Finding the other function parameter in the block should work.
   Identifier other_param_ident(
       ExprToken(ExprTokenType::kName, param_other->GetAssignedName(), 0));
-  found =
-      FindVariable(nullptr, block.get(), &symbol_context, other_param_ident);
+  found = FindName(nullptr, block.get(), &symbol_context, other_param_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(param_other.get(), found->variable());
 
@@ -186,14 +183,14 @@ TEST(FindVariable, FindLocalVariable) {
   // namespace) from within the context of the "ns::function()" function.
   // The namespace of the function should be implicitly picked up.
   Identifier ns_value_ident(ExprToken(ExprTokenType::kName, kNsVarName, 0));
-  found = FindVariable(&setup.process(), block.get(), &symbol_context,
-                       ns_value_ident);
+  found =
+      FindName(&setup.process(), block.get(), &symbol_context, ns_value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(ns_value.var.get(), found->variable());
 
   // Loop up the global "ns_value" var with no global symbol context. This
   // should fail and not crash.
-  found = FindVariable(nullptr, block.get(), &symbol_context, ns_value_ident);
+  found = FindName(nullptr, block.get(), &symbol_context, ns_value_ident);
   EXPECT_FALSE(found);
 
   // Break reference cycle for test teardown.
@@ -202,8 +199,8 @@ TEST(FindVariable, FindLocalVariable) {
 }
 
 // This only tests the ModuleSymbols and function naming integration, the
-// details of the index searching are tested by FindGlobalVariableInModule()
-TEST(FindVariable, FindGlobalVariable) {
+// details of the index searching are tested by FindGlobalNameInModule()
+TEST(FindName, FindGlobalName) {
   ProcessSymbolsTestSetup setup;
 
   const char kGlobalName[] = "global";  // Different variable in each.
@@ -236,33 +233,32 @@ TEST(FindVariable, FindGlobalVariable) {
 
   // Searching for "global" in module1's context should give the global in that
   // module.
-  auto found = FindGlobalVariable(&setup.process(), Identifier(),
-                                  &symbol_context1, global_ident);
+  auto found = FindGlobalName(&setup.process(), Identifier(), &symbol_context1,
+                              global_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global1.var.get(), found->variable());
 
   // Searching for "global" in module2's context should give the global in that
   // module.
-  found = FindGlobalVariable(&setup.process(), Identifier(), &symbol_context2,
-                             global_ident);
+  found = FindGlobalName(&setup.process(), Identifier(), &symbol_context2,
+                         global_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global2.var.get(), found->variable());
 
   // Searching for "var1" in module2's context should still find it even though
   // its in the other module.
-  found = FindGlobalVariable(&setup.process(), Identifier(), &symbol_context2,
-                             var1_ident);
+  found = FindGlobalName(&setup.process(), Identifier(), &symbol_context2,
+                         var1_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(var1.var.get(), found->variable());
 
   // Searching for "var2" with no context should still find it.
-  found =
-      FindGlobalVariable(&setup.process(), Identifier(), nullptr, var2_ident);
+  found = FindGlobalName(&setup.process(), Identifier(), nullptr, var2_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(var2.var.get(), found->variable());
 }
 
-TEST(FindVariable, FindGlobalVariableInModule) {
+TEST(FindName, FindGlobalNameInModule) {
   MockModuleSymbols mod_sym("test.so");
 
   auto& root = mod_sym.index().root();  // Root of the index.
@@ -274,14 +270,14 @@ TEST(FindVariable, FindGlobalVariableInModule) {
   TestGlobalVariable global(&mod_sym, &root, kVarName);
 
   Identifier var_ident(ExprToken(ExprTokenType::kName, kVarName, 0));
-  auto found = FindGlobalVariableInModule(&mod_sym, Identifier(), var_ident);
+  auto found = FindGlobalNameInModule(&mod_sym, Identifier(), var_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global.var.get(), found->variable());
 
   // Say we're in some nested namespace and search for the same name. It should
   // find the variable in the upper namespace.
   Identifier nested_ns(ExprToken(ExprTokenType::kName, kNsName, 0));
-  found = FindGlobalVariableInModule(&mod_sym, nested_ns, var_ident);
+  found = FindGlobalNameInModule(&mod_sym, nested_ns, var_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global.var.get(), found->variable());
 
@@ -291,7 +287,7 @@ TEST(FindVariable, FindGlobalVariableInModule) {
 
   // Re-search for the same name in the nested namespace, it should get the
   // nested one first.
-  found = FindGlobalVariableInModule(&mod_sym, nested_ns, var_ident);
+  found = FindGlobalNameInModule(&mod_sym, nested_ns, var_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(ns.var.get(), found->variable());
 
@@ -300,7 +296,7 @@ TEST(FindVariable, FindGlobalVariableInModule) {
   Identifier var_global_ident(
       Identifier::Component(ExprToken(ExprTokenType::kColonColon, "::", 0),
                             ExprToken(ExprTokenType::kName, kVarName, 0)));
-  found = FindGlobalVariableInModule(&mod_sym, nested_ns, var_global_ident);
+  found = FindGlobalNameInModule(&mod_sym, nested_ns, var_global_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global.var.get(), found->variable());
 }

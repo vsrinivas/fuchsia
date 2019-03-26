@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
-#include "garnet/bin/zxdb/expr/found_variable.h"
+#include "garnet/bin/zxdb/expr/found_name.h"
 #include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "garnet/bin/zxdb/symbols/symbol.h"
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
@@ -80,7 +80,7 @@ class SymbolEvalContext : public ExprEvalContext {
 
   // Computes the value of the given variable and issues the callback (possibly
   // asynchronously, possibly not).
-  void DoResolve(FoundVariable found, ValueCallback cb) const;
+  void DoResolve(FoundName found, ValueCallback cb) const;
 
   // Implements type name lookup on the target's symbol index.
   NameLookupResult DoTargetSymbolsNameLookup(const Identifier& ident);

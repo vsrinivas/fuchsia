@@ -7,7 +7,7 @@
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/builtin_types.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
-#include "garnet/bin/zxdb/expr/find_variable.h"
+#include "garnet/bin/zxdb/expr/find_name.h"
 #include "garnet/bin/zxdb/expr/identifier.h"
 #include "garnet/bin/zxdb/expr/resolve_collection.h"
 #include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
@@ -74,8 +74,8 @@ SymbolEvalContext::~SymbolEvalContext() = default;
 
 void SymbolEvalContext::GetNamedValue(const Identifier& identifier,
                                       ValueCallback cb) {
-  if (auto found = FindVariable(process_symbols_.get(), block_.get(),
-                                &symbol_context_, identifier)) {
+  if (auto found = FindName(process_symbols_.get(), block_.get(),
+                            &symbol_context_, identifier)) {
     DoResolve(std::move(*found), std::move(cb));
     return;
   }
@@ -120,7 +120,7 @@ NameLookupCallback SymbolEvalContext::GetSymbolNameLookupCallback() {
   };
 }
 
-void SymbolEvalContext::DoResolve(FoundVariable found, ValueCallback cb) const {
+void SymbolEvalContext::DoResolve(FoundName found, ValueCallback cb) const {
   if (!found.is_object_member()) {
     // Simple variable resolution.
     resolver_.ResolveVariable(symbol_context_, found.variable(),

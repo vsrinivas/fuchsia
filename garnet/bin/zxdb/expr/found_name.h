@@ -13,17 +13,17 @@ namespace zxdb {
 // be a local or global variable (simple Variable* object), or it could be a
 // member of the current implicit object ("this" in C++). This class represents
 // either state.
-class FoundVariable {
+class FoundName {
  public:
   // Constructor for regular variables. Takes a reference to the object.
-  explicit FoundVariable(const Variable* variable);
+  explicit FoundName(const Variable* variable);
 
   // Constructor for data members.
-  FoundVariable(const Variable* object_ptr, FoundMember member);
-  FoundVariable(const Variable* object_ptr, const DataMember* data_member,
-                uint32_t data_member_offset);
+  FoundName(const Variable* object_ptr, FoundMember member);
+  FoundName(const Variable* object_ptr, const DataMember* data_member,
+            uint32_t data_member_offset);
 
-  ~FoundVariable();
+  ~FoundName();
 
   bool is_object_member() const { return !!object_ptr_; }
 

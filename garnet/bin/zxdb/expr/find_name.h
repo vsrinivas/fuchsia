@@ -13,7 +13,7 @@ class CodeBlock;
 class Collection;
 class Identifier;
 class FoundMember;
-class FoundVariable;
+class FoundName;
 class Location;
 class ModuleSymbols;
 class ProcessSymbols;
@@ -31,9 +31,10 @@ class SymbolContext;
 //
 // The process_symbols is used to search for global variables, it can be null
 // in which case only local variables will be searched.
-std::optional<FoundVariable> FindVariable(
-    const ProcessSymbols* process_symbols, const CodeBlock* block,
-    const SymbolContext* block_symbol_context, const Identifier& identifier);
+std::optional<FoundName> FindName(const ProcessSymbols* process_symbols,
+                                  const CodeBlock* block,
+                                  const SymbolContext* block_symbol_context,
+                                  const Identifier& identifier);
 
 // Type-specific finding -------------------------------------------------------
 
@@ -41,8 +42,8 @@ std::optional<FoundVariable> FindVariable(
 // code blocks and function parameters, but does not go into the "this" class
 // or any non-function scopes like the current or global namespace (that's
 // what the later functions do).
-std::optional<FoundVariable> FindLocalVariable(const CodeBlock* block,
-                                               const Identifier& identifier);
+std::optional<FoundName> FindLocalVariable(const CodeBlock* block,
+                                           const Identifier& identifier);
 
 // Searches for the given variable name on the given collection. This is the
 // lower-level function and assumes a valid object.
@@ -52,21 +53,22 @@ std::optional<FoundMember> FindMember(const Collection* object,
 // Attempts the resolve the given named member variable on the "this" pointer
 // associated with the given code block. Fails if the function has no "this"
 // pointer or the member isn't found.
-std::optional<FoundVariable> FindMemberOnThis(const CodeBlock* block,
-                                              const Identifier& identifier);
+std::optional<FoundName> FindMemberOnThis(const CodeBlock* block,
+                                          const Identifier& identifier);
 
 // Attempts to resolve the named variable in the global namespace and any
 // other namespaces that the given block is in. The symbol_context is used
 // to prioritize the current module. It can be null to search in a
 // non-guaranteed order.
-std::optional<FoundVariable> FindGlobalVariable(
-    const ProcessSymbols* process_symbols, const Identifier& current_scope,
-    const SymbolContext* symbol_context, const Identifier& identifier);
+std::optional<FoundName> FindGlobalName(const ProcessSymbols* process_symbols,
+                                        const Identifier& current_scope,
+                                        const SymbolContext* symbol_context,
+                                        const Identifier& identifier);
 
 // Searches a specific index and current namespace for a global variable of
 // the given name. The current_scope would be the current namespace + class
 // from where to start the search.
-std::optional<FoundVariable> FindGlobalVariableInModule(
+std::optional<FoundName> FindGlobalNameInModule(
     const ModuleSymbols* module_symbols, const Identifier& current_scope,
     const Identifier& identifier);
 
