@@ -27,7 +27,7 @@ use {
     std::collections::HashMap,
     std::fs::File,
     std::marker::Unpin,
-    std::path::PathBuf,
+    std::path::Path,
     std::sync::{Arc, Weak},
 };
 
@@ -372,7 +372,7 @@ impl HostDispatcher {
         Ok(wstate.get_active_host())
     }
 
-    pub async fn get_adapters(&mut self) -> fidl::Result<Vec<AdapterInfo>> {
+    pub async fn get_adapters(&self) -> fidl::Result<Vec<AdapterInfo>> {
         let _ = await!(self.on_adapters_found());
         let mut result = vec![];
         for host in self.state.read().host_devices.values() {
@@ -469,7 +469,7 @@ impl HostDispatcher {
 
     /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
     /// watcher
-    pub async fn add_adapter(self, host_path: PathBuf) -> Result<(), Error> {
+    pub async fn add_adapter(self, host_path: &Path) -> Result<(), Error> {
         fx_log_info!("Adding Adapter: {:?}", host_path);
         let host_device = await!(init_host(host_path))?;
 
@@ -495,7 +495,7 @@ impl HostDispatcher {
         Ok(())
     }
 
-    pub fn rm_adapter(self, host_path: PathBuf) -> Result<(), Error> {
+    pub fn rm_adapter(self, host_path: &Path) {
         fx_log_info!("Host removed: {:?}", host_path);
 
         let mut hd = self.state.write();
@@ -526,8 +526,6 @@ impl HostDispatcher {
         if hd.active_id.is_none() {
             let _ = hd.get_active_id();
         }
-
-        Ok(())
     }
 
     pub async fn connect(
@@ -601,10 +599,9 @@ impl Future for OnAdaptersFound {
 }
 
 /// Initialize a HostDevice
-async fn init_host(host_path: PathBuf) -> Result<Arc<RwLock<HostDevice>>, Error> {
+async fn init_host(path: &Path) -> Result<Arc<RwLock<HostDevice>>, Error> {
     // Connect to the host device.
-    let host =
-        File::open(host_path.clone()).map_err(|_| BTError::new("failed to open bt-host device"))?;
+    let host = File::open(path).map_err(|_| BTError::new("failed to open bt-host device"))?;
     let handle = bt::host::open_host_channel(&host)?;
     let handle = fasync::Channel::from_channel(handle.into())?;
     let host = HostProxy::new(handle);
@@ -612,7 +609,7 @@ async fn init_host(host_path: PathBuf) -> Result<Arc<RwLock<HostDevice>>, Error>
     // Obtain basic information and create and entry in the disptacher's map.
     let adapter_info = await!(host.get_info())
         .map_err(|_| BTError::new("failed to obtain bt-host information"))?;
-    Ok(Arc::new(RwLock::new(HostDevice::new(host_path, host, adapter_info))))
+    Ok(Arc::new(RwLock::new(HostDevice::new(path.to_path_buf(), host, adapter_info))))
 }
 
 async fn try_restore_bonds(

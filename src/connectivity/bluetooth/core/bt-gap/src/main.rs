@@ -63,18 +63,19 @@ fn run() -> Result<(), Error> {
     let host_watcher = watch_hosts().try_for_each(move |msg| {
         let hd = watch_hd.clone();
         async {
-            let result = match msg {
+            match msg {
                 AdapterAdded(device_path) => {
-                    await!(hd.add_adapter(device_path)).context("Error adding host")
+                    let result = await!(hd.add_adapter(&device_path));
+                    if let Err(e) = &result {
+                        fx_log_warn!("Error adding bt-host device '{:?}': {:?}", device_path, e);
+                    }
+                    result
                 }
                 AdapterRemoved(device_path) => {
-                    hd.rm_adapter(device_path).context("Error removing host")
+                    hd.rm_adapter(&device_path);
+                    Ok(())
                 }
-            };
-            if let Err(err) = result {
-                fx_log_warn!("{:?}", err);
             }
-            Ok(())
         }
     });
 
