@@ -73,7 +73,7 @@ zx_status_t wait_queue_block_etc(wait_queue_t*,
 // returns the highest priority of all the blocked threads on this wait queue.
 // returns -1 if no threads are blocked.
 
-int wait_queue_blocked_priority(wait_queue_t*) TA_REQ(thread_lock);
+int wait_queue_blocked_priority(const wait_queue_t*) TA_REQ(thread_lock);
 
 // returns the current highest priority blocked thread on this wait queue, or
 // null if no threads are blocked.

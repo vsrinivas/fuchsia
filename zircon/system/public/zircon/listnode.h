@@ -117,7 +117,7 @@ static inline list_node_t* list_remove_tail(list_node_t* list) {
         __t;                                         \
     })
 
-static inline list_node_t* list_peek_head(list_node_t* list) {
+static inline list_node_t* list_peek_head(const list_node_t* list) {
     if (list->next != list) {
         return list->next;
     } else {
@@ -136,7 +136,7 @@ static inline list_node_t* list_peek_head(list_node_t* list) {
         __t;                                         \
     })
 
-static inline list_node_t* list_peek_tail(list_node_t* list) {
+static inline list_node_t* list_peek_tail(const list_node_t* list) {
     if (list->prev != list) {
         return list->prev;
     } else {

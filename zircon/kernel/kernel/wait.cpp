@@ -167,7 +167,7 @@ static void wait_queue_remove_thread(thread_t* t) {
 }
 
 // return the numeric priority of the highest priority thread queued
-int wait_queue_blocked_priority(wait_queue_t* wait) {
+int wait_queue_blocked_priority(const wait_queue_t* wait) {
     thread_t* t = list_peek_head_type(&wait->heads, thread_t, wait_queue_heads_node);
     if (!t) {
         return -1;
