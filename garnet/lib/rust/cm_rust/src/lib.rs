@@ -102,6 +102,41 @@ fidl_into_struct!(ComponentDecl, ComponentDecl, fsys::ComponentDecl,
                       facets: Option<fdata::Dictionary>,
                   });
 
+impl ComponentDecl {
+    /// Returns the ExposeDecl that exposes a capability under `target_path` with `type`, if it
+    /// exists.
+    pub fn find_expose_source<'a>(
+        &'a self,
+        target_path: &CapabilityPath,
+        type_: &fsys::CapabilityType,
+    ) -> Option<&'a ExposeDecl> {
+        self.exposes.iter().find(|&e| e.target_path == *target_path && e.type_ == *type_)
+    }
+
+    /// Returns the OfferDecl that offers a capability under `target_path` to `child_name` with
+    /// the given `type_`, if it exists.
+    pub fn find_offer_source<'a>(
+        &'a self,
+        target_path: &CapabilityPath,
+        type_: &fsys::CapabilityType,
+        child_name: &str,
+    ) -> Option<&'a OfferDecl> {
+        for offer in self.offers.iter() {
+            if offer.type_ != *type_ {
+                continue;
+            }
+            if let Some(_) = offer
+                .targets
+                .iter()
+                .find(|&e| e.target_path == *target_path && e.child_name == *child_name)
+            {
+                return Some(offer);
+            }
+        }
+        None
+    }
+}
+
 fidl_into_vec!(UseDecl, UseDecl, fsys::UseDecl,
                {
                    type_: fsys::CapabilityType,
@@ -272,12 +307,12 @@ impl TryFrom<fsys::ComponentDecl> for ComponentDecl {
 /// Errors produced by cm_rust.
 #[derive(Debug, Fail)]
 pub enum Error {
-    #[fail(display = "fidl validation failed: {}", err)]
+    #[fail(display = "Fidl validation failed: {}", err)]
     Validate {
         #[fail(cause)]
         err: cm_fidl_validator::ErrorList,
     },
-    #[fail(display = "invalid capability path: {}", raw)]
+    #[fail(display = "Invalid capability path: {}", raw)]
     InvalidCapabilityPath { raw: String },
 }
 

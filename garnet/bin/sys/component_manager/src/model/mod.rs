@@ -10,7 +10,7 @@ pub use self::{moniker::*, resolver::*, runner::*};
 use {
     crate::ns_util::PKG_PATH,
     crate::{data, directory_broker, io_util},
-    cm_rust::{self, CapabilityPath, ComponentDecl, ExposeDecl, OfferDecl, RelativeId, UseDecl},
+    cm_rust::{self, CapabilityPath, ComponentDecl, RelativeId, UseDecl},
     failure::{format_err, Error, Fail},
     fidl::endpoints::{create_endpoints, ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_io::{
@@ -642,8 +642,7 @@ impl Model {
             // This unwrap is safe because look_up_realm populates this field
             let decl = current_realm.instance.decl.as_ref().unwrap();
 
-            if let Some(offer) = find_offer_source(&decl.offers, &type_, &s.path, &s.name.unwrap())
-            {
+            if let Some(offer) = decl.find_offer_source(&s.path, &type_, &s.name.unwrap().name()) {
                 match &offer.source {
                     RelativeId::Realm => {
                         // The offered capability comes from the realm, so follow the
@@ -687,7 +686,7 @@ impl Model {
             // This unwrap is safe because look_up_realm populates this field
             let decl = current_realm.instance.decl.as_ref().unwrap();
 
-            if let Some(expose) = find_expose_source(&decl.exposes, &type_, &s.path) {
+            if let Some(expose) = decl.find_expose_source(&s.path, &type_) {
                 match &expose.source {
                     RelativeId::Myself => {
                         // The offered capability comes from the current component, return our
@@ -725,41 +724,6 @@ enum CapabilitySource {
     Component(CapabilityPath, Arc<Mutex<Realm>>),
     /// This capability source comes from component manager's namespace, at this path
     ComponentMgrNamespace(CapabilityPath),
-}
-
-/// find_offer_source will return the OfferDecl from the given Vec that provided the capability
-/// `type_` on `path` to the child `name`.
-fn find_offer_source<'a>(
-    offers: &'a Vec<OfferDecl>,
-    type_: &fsys::CapabilityType,
-    path: &CapabilityPath,
-    name: &ChildMoniker,
-) -> Option<&'a OfferDecl> {
-    for offer in offers {
-        if offer.type_ == *type_ {
-            for target in &offer.targets {
-                if target.target_path == *path && target.child_name == name.name() {
-                    return Some(offer);
-                }
-            }
-        }
-    }
-    None
-}
-
-/// find_expose_source will return the ExposeDecl from the given Vec that provided the capability
-/// `type_` on `path`.
-fn find_expose_source<'a>(
-    exposes: &'a Vec<ExposeDecl>,
-    type_: &fsys::CapabilityType,
-    path: &CapabilityPath,
-) -> Option<&'a ExposeDecl> {
-    for expose in exposes {
-        if expose.type_ == *type_ && expose.target_path == *path {
-            return Some(expose);
-        }
-    }
-    None
 }
 
 /// Errors produced by `Model`.
