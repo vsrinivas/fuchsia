@@ -20,7 +20,7 @@
 
 use crate::device::ethernet::EthernetNdpDevice;
 use crate::ip::types::IpProto;
-use crate::ip::{IpLayerTimerId, Ipv6, Ipv6Addr};
+use crate::ip::{IpAddress, IpLayerTimerId, Ipv6, Ipv6Addr};
 use crate::wire::icmp::ndp::{self, options::NdpOption, NeighborSolicitation};
 use crate::wire::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
 use crate::wire::ipv6::Ipv6PacketBuilder;
@@ -176,6 +176,11 @@ pub(crate) fn lookup<D: EventDispatcher, ND: NdpDevice>(
     device_id: u64,
     lookup_addr: Ipv6Addr,
 ) -> Option<ND::LinkAddress> {
+    // An IPv6 multicast address should always be sent on a broadcast
+    // link address.
+    if lookup_addr.is_multicast() {
+        return Some(ND::BROADCAST);
+    }
     // TODO(brunodalbo): Figure out what to do if a frame can't be sent
     let ndpstate = ND::get_ndp_state(ctx, device_id);
     let result = ndpstate.neighbors.get_neighbor_state(&lookup_addr);
@@ -275,6 +280,7 @@ fn send_neighbor_solicitation<D: EventDispatcher, ND: NdpDevice>(
     //  solicitation, so that when we hit the neighbor they'll have us in their
     //  cache, reducing overall burden on the network.
     if let Some(device_addr) = ND::get_ipv6_addr(ctx, device_id) {
+        debug_assert!(device_addr.is_valid_unicast());
         let src_ll = ND::get_link_layer_addr(ctx, device_id);
         let dst_ip = lookup_addr.to_solicited_node_address();
         send_ndp_packet::<_, ND, &u8, _>(
