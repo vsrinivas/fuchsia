@@ -167,29 +167,59 @@ void LoggerImpl::EndTimer(
   AddTimerObservationIfReady(std::move(timer_val_ptr), std::move(callback));
 }
 
+using fuchsia::cobalt::EventPayload;
 void LoggerImpl::LogCobaltEvent(
     fuchsia::cobalt::CobaltEvent event,
     fuchsia::cobalt::Logger::LogCobaltEventCallback callback) {
-  if (event.payload.is_event_count()) {
-    callback(ToCobaltStatus(logger_.LogEventCount(
-        event.metric_id, event.event_codes, event.component,
-        event.payload.event_count().period_duration_micros,
-        event.payload.event_count().count)));
-  } else if (event.payload.is_int_histogram()) {
-    auto histogram = std::move(event.payload.int_histogram());
-    logger::HistogramPtr histogram_ptr(
-        new google::protobuf::RepeatedPtrField<HistogramBucket>());
-    for (auto it = histogram.begin(); histogram.end() != it; it++) {
-      auto bucket = histogram_ptr->Add();
-      bucket->set_index((*it).index);
-      bucket->set_count((*it).count);
-    }
-    callback(ToCobaltStatus(
-        logger_.LogIntHistogram(event.metric_id, event.event_codes,
-                                event.component, std::move(histogram_ptr))));
+  switch (event.payload.Which()) {
+    case EventPayload::Tag::kEventCount:
+      callback(ToCobaltStatus(logger_.LogEventCount(
+          event.metric_id, event.event_codes, event.component,
+          event.payload.event_count().period_duration_micros,
+          event.payload.event_count().count)));
+      return;
 
-  } else {
-    callback(Status::INVALID_ARGUMENTS);
+    case EventPayload::Tag::kElapsedMicros:
+      callback(ToCobaltStatus(logger_.LogElapsedTime(
+          event.metric_id, event.event_codes, event.component,
+          event.payload.elapsed_micros())));
+      return;
+
+    case EventPayload::Tag::kFps:
+      callback(ToCobaltStatus(
+          logger_.LogFrameRate(event.metric_id, event.event_codes,
+                               event.component, event.payload.fps())));
+      return;
+
+    case EventPayload::Tag::kMemoryBytesUsed:
+      callback(ToCobaltStatus(logger_.LogMemoryUsage(
+          event.metric_id, event.event_codes, event.component,
+          event.payload.memory_bytes_used())));
+      return;
+
+    case EventPayload::Tag::kStringEvent:
+      callback(ToCobaltStatus(
+          logger_.LogString(event.metric_id, event.payload.string_event())));
+      return;
+
+    case EventPayload::Tag::kIntHistogram: {
+      auto histogram = std::move(event.payload.int_histogram());
+      logger::HistogramPtr histogram_ptr(
+          new google::protobuf::RepeatedPtrField<HistogramBucket>());
+      for (auto it = histogram.begin(); histogram.end() != it; it++) {
+        auto bucket = histogram_ptr->Add();
+        bucket->set_index((*it).index);
+        bucket->set_count((*it).count);
+      }
+      callback(ToCobaltStatus(
+          logger_.LogIntHistogram(event.metric_id, event.event_codes,
+                                  event.component, std::move(histogram_ptr))));
+      return;
+    }
+
+    default:
+      callback(Status::INVALID_ARGUMENTS);
+      return;
   }
 }
 

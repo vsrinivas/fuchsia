@@ -506,6 +506,18 @@ union EventPayload {
     // A Count event.
     CountEvent event_count;
 
+    // An ElapsedTime event.
+    int64 elapsed_micros;
+
+    // A FrameRate event.
+    float32 fps;
+
+    // A MemoryUsage event.
+    int64 memory_bytes_used;
+
+    // A logged string event.
+    string:256 string_event;
+
     // An IntHistogram event.
     vector<HistogramBucket> int_histogram;
 };
