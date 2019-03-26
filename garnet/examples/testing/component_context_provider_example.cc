@@ -5,12 +5,12 @@
 #include "garnet/examples/fidl/echo_client_cpp/echo_client_app.h"
 
 #include <lib/async/dispatcher.h>
-#include <lib/component/cpp/testing/fake_component.h>
-#include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/sys/cpp/testing/fake_component.h>
+#include <lib/sys/cpp/testing/fake_launcher.h>
 #include <memory>
 
 // This test file demonstrates how to use |ComponentContextProvider|.
@@ -40,12 +40,12 @@ class FakeEcho : public Echo {
   void SetAnswer(fidl::StringPtr answer) { answer_ = answer; }
 
   // Register to be launched with a fake URL
-  void Register(component::testing::FakeLauncher& fake_launcher) {
+  void Register(sys::testing::FakeLauncher& fake_launcher) {
     component_.Register(kURL, fake_launcher);
   }
 
  private:
-  component::testing::FakeComponent component_;
+  sys::testing::FakeComponent component_;
   fidl::BindingSet<Echo> bindings_;
   fidl::StringPtr answer_;
 };
@@ -87,7 +87,7 @@ class TestWithContextExampleTest : public gtest::TestLoopFixture {
  private:
   std::unique_ptr<EchoClientAppForTest> echoClientApp_;
   std::unique_ptr<FakeEcho> fake_echo_;
-  component::testing::FakeLauncher fake_launcher_;
+  sys::testing::FakeLauncher fake_launcher_;
   sys::testing::ComponentContextProvider provider_;
 };
 
