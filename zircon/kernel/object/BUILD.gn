@@ -17,7 +17,6 @@ library("object") {
     "excp_port.cpp",
     "fifo_dispatcher.cpp",
     "futex_context.cpp",
-    "futex_node.cpp",
     "glue.cpp",
     "guest_dispatcher.cpp",
     "handle.cpp",

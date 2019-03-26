@@ -208,7 +208,7 @@ public:
     Lock<BrwLock>* handle_table_lock() TA_RET_CAP(handle_table_lock_) {
         return &handle_table_lock_;
     }
-    FutexContext* futex_context() { return &futex_context_; }
+    FutexContext& futex_context() { return futex_context_; }
     State state() const;
     fbl::RefPtr<VmAspace> aspace() { return aspace_; }
     fbl::RefPtr<JobDispatcher> job();

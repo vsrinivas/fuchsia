@@ -85,13 +85,19 @@ struct thread* wait_queue_peek(wait_queue_t*) TA_REQ(thread_lock);
 
 int wait_queue_wake_one(wait_queue_t*, bool reschedule,
                         zx_status_t wait_queue_error) TA_REQ(thread_lock);
+
 int wait_queue_wake_all(wait_queue_t*, bool reschedule,
                         zx_status_t wait_queue_error) TA_REQ(thread_lock);
 struct thread* wait_queue_dequeue_one(wait_queue_t* wait,
                                       zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
+// Move a single thread from the source wait queue to the destination wait
+// queue, and return a pointer the the thread which was moved.  If there were
+// no threads in the source wait queue, do nothing and return NULL.
+struct thread* wait_queue_requeue_one(wait_queue_t* src, wait_queue_t* dst) TA_REQ(thread_lock);
+
 // is the wait queue currently empty
-bool wait_queue_is_empty(wait_queue_t*) TA_REQ(thread_lock);
+bool wait_queue_is_empty(const wait_queue_t*) TA_REQ(thread_lock);
 
 // remove a specific thread out of a wait queue it's blocked on
 zx_status_t wait_queue_unblock_thread(struct thread* t,
@@ -118,6 +124,10 @@ public:
     WaitQueue& operator=(WaitQueue&) = delete;
     WaitQueue& operator=(WaitQueue&&) = delete;
 
+    static struct thread* RequeueOne(WaitQueue* src, WaitQueue* dst) TA_REQ(thread_lock) {
+        return wait_queue_requeue_one(&src->wq_, &dst->wq_);
+    }
+
     zx_status_t Block(const Deadline& deadline) TA_REQ(thread_lock) {
         return wait_queue_block_etc(&wq_, deadline, 0, ResourceOwnership::Normal);
     }
@@ -139,6 +149,10 @@ public:
     static zx_status_t UnblockThread(struct thread* t, zx_status_t wait_queue_error)
         TA_REQ(thread_lock) {
         return wait_queue_unblock_thread(t, wait_queue_error);
+    }
+
+    struct thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock) {
+        return wait_queue_dequeue_one(&wq_, wait_queue_error);
     }
 
 private:

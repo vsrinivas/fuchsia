@@ -369,6 +369,32 @@ thread_t* wait_queue_dequeue_one(wait_queue_t* wait, zx_status_t wait_queue_erro
     return t;
 }
 
+struct thread* wait_queue_requeue_one(wait_queue_t* src, wait_queue_t* dst) {
+    thread_t* t;
+
+    if (WAIT_QUEUE_VALIDATION) {
+        wait_queue_validate_queue(src);
+        wait_queue_validate_queue(dst);
+    }
+
+    DEBUG_ASSERT(src->magic == WAIT_QUEUE_MAGIC);
+    DEBUG_ASSERT(dst->magic == WAIT_QUEUE_MAGIC);
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    t = wait_queue_pop_head(src);
+    if (t) {
+        DEBUG_ASSERT(t->state == THREAD_BLOCKED);
+        DEBUG_ASSERT(t->blocking_wait_queue == src);
+        src->count--;
+        dst->count++;
+        t->blocking_wait_queue = dst;
+        wait_queue_insert(dst, t);
+    }
+
+    return t;
+}
+
 /**
  * @brief  Wake all threads sleeping on a wait queue
  *
@@ -430,7 +456,7 @@ int wait_queue_wake_all(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
     return ret;
 }
 
-bool wait_queue_is_empty(wait_queue_t* wait) {
+bool wait_queue_is_empty(const wait_queue_t* wait) {
     DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));

@@ -49,12 +49,24 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
                                      fbl::StringPiece name,
                                      fbl::RefPtr<Dispatcher>* out_dispatcher,
                                      zx_rights_t* out_rights) {
-    fbl::AllocChecker ac;
-    auto disp = fbl::AdoptRef(new (&ac) ThreadDispatcher(ktl::move(process), flags));
-    if (!ac.check())
-        return ZX_ERR_NO_MEMORY;
+    // Make sure we contribute a FutexState object to our process's futex state
+    // pool before allocating the thread.  If we cannot grow the pool, then we
+    // cannot make a thread.
+    zx_status_t result = process->futex_context().GrowFutexStatePool();
+    if (result != ZX_OK)
+        return result;
 
-    auto result = disp->Initialize(name.data(), name.length());
+    fbl::AllocChecker ac;
+    auto disp = fbl::AdoptRef(new (&ac) ThreadDispatcher(process, flags));
+    if (!ac.check()) {
+        // We grew the state pool, but failed to allocate the thread.  Go ahead
+        // and shrink the pool back down to size.  Otherwise, the thread class
+        // we created will shrink the pool when the time comes
+        process->futex_context().ShrinkFutexStatePool();
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    result = disp->Initialize(name.data(), name.length());
     if (result != ZX_OK)
         return result;
 
@@ -102,6 +114,8 @@ ThreadDispatcher::~ThreadDispatcher() {
     }
 
     event_destroy(&exception_event_);
+
+    process_->futex_context().ShrinkFutexStatePool();
 }
 
 // complete initialization of the thread object outside of the constructor

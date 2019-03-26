@@ -163,7 +163,7 @@ public:
     // For ChannelDispatcher use.
     ChannelDispatcher::MessageWaiter* GetMessageWaiter() { return &channel_waiter_; }
 
-    // For FutexContext/FutexNode use.
+    // For FutexContext use.
     uintptr_t& blocking_futex_id() { return blocking_futex_id_; }
 
     // Blocking syscalls, once they commit to a path that will likely block the
