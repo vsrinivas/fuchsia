@@ -67,10 +67,6 @@ struct DeviceComponent {
     array<DeviceComponentPart>:DEVICE_COMPONENT_PARTS_MAX parts;
 };
 
-// All functions in these interfaces have the most-significant-byte set to 0x01 to allow
-// multiplexing these interfaces and parts of the fuchsia.io interfaces.
-// TODO(ZX-2922): I believe this shouldn't be necessary anymore.
-
 /// Interface for controlling a device in a devhost process from the devcoordinator.
 [Layout = "Simple"]
 protocol Controller {
@@ -108,7 +104,7 @@ protocol Controller {
     /// Give this device a channel to its shadow in another process.
     ConnectProxy(handle<channel> shadow);
 
-    /// Ask this device to enter the suspend state indicated by |flags|.
+    /// Ask devhost to suspend all of its devices, using the target state indicated by |flags|.
     Suspend(uint32 flags) -> (zx.status status);
 
     /// Ask the devhost to remove this device.  On success, the remote end of
