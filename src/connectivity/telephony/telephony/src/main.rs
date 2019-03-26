@@ -125,8 +125,8 @@ impl Manager {
 }
 
 fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["modem-mgr"]).expect("Can't init logger");
-    fx_log_info!("Starting modem-mgr...");
+    syslog::init_with_tags(&["telephony"]).expect("Can't init logger");
+    fx_log_info!("Starting telephony management service...");
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     let manager = Arc::new(Manager::new());

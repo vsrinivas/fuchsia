@@ -5,11 +5,12 @@
 //! ril-ctl is used for interacting with devices that expose the standard
 //! Fuchsia RIL (FRIL)
 //!
-//! Ex: run ril-ctl -d /dev/class/ril-transport/000
+//! Ex: ril-ctl
 //!
-//! Future support for connecting through modem-mgr instead of owning the
-//! modem service is planned. A REPL is also planned as the FIDL interfaces
-//! evolve.
+//! or
+//!
+//! Ex: ril-ctl -d /dev/class/qmi-usb-transport/000
+//!
 
 #![feature(async_await, await_macro, futures_api)]
 
@@ -26,7 +27,10 @@ use {
     fidl_fuchsia_telephony_ril::{
         RadioInterfaceLayerMarker, RadioInterfaceLayerProxy, RadioPowerState, *,
     },
-    fuchsia_app::client::{connect_to_service, Launcher},
+    fuchsia_app::{
+        client::{connect_to_service, Launcher},
+        fuchsia_single_component_package_url,
+    },
     fuchsia_async::{self as fasync, futures::select},
     futures::{FutureExt, TryFutureExt},
     parking_lot::Mutex,
@@ -40,6 +44,7 @@ mod commands;
 mod repl;
 
 static PROMPT: &str = "\x1b[35mril>\x1b[0m ";
+const RIL_URI: &str = fuchsia_single_component_package_url!("ril-qmi");
 
 // TODO count actual bit number
 fn u32_to_cidr(ip: u32) -> Result<u8, Error> {
@@ -213,7 +218,7 @@ pub fn main() -> Result<(), Error> {
 
     let fut = async move {
         let app; // need outside the match so it won't drop
-        let modem_mgr;
+        let telephony_svc;
         let (ril, server) = endpoints::create_proxy()?;
         let ril_modem = match args.device {
             Some(device) => {
@@ -221,21 +226,21 @@ pub fn main() -> Result<(), Error> {
                 let file = File::open(device)?;
                 let chan = qmi::connect_transport_device(&file)?;
                 app = launcher
-                    .launch(String::from("ril-qmi"), None)
+                    .launch(RIL_URI.to_string(), None)
                     .context("Failed to launch ril-qmi service")?;
                 let ril_modem = app.connect_to_service(RadioInterfaceLayerMarker)?;
                 let resp = await!(ril_modem.connect_transport(chan))?;
                 if !resp {
                     return Err(format_err!(
-                        "Failed to connect the driver to the RIL (check modem-mgr is not running?)"
+                        "Failed to connect the driver to the RIL (check telephony svc is not running?)"
                     ));
                 }
                 Ok::<_, Error>(ril_modem)
             }
             None => {
-                eprintln!("Connecting through modem-mgr...");
-                modem_mgr = connect_to_service::<ManagerMarker>()?;
-                let resp = await!(modem_mgr.get_ril_handle(server))?;
+                eprintln!("Connecting through telephony service...");
+                telephony_svc = connect_to_service::<ManagerMarker>()?;
+                let resp = await!(telephony_svc.get_ril_handle(server))?;
                 if !resp {
                     return Err(format_err!("Failed to get an active RIL"));
                 }

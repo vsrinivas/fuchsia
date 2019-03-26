@@ -6,7 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  name = "modem_mgr"
+  name = "telephony"
   edition = "2018"
 
   deps = [
@@ -27,17 +27,17 @@ rustc_binary("bin") {
   ]
 }
 
-package("modem-mgr") {
+package("telephony") {
   deps = [
     ":bin",
   ]
 
-  binary = "rust_crates/modem_mgr"
+  binary = "rust_crates/telephony"
 
   meta = [
     {
-      path = rebase_path("meta/modem-mgr.cmx")
-      dest = "modem_mgr.cmx"
+      path = rebase_path("meta/telephony.cmx")
+      dest = "telephony.cmx"
     },
   ]
 }

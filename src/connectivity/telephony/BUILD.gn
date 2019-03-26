@@ -6,8 +6,8 @@ group("telephony") {
   testonly = true
   public_deps = [
     "//src/connectivity/telephony/config",
-    "//src/connectivity/telephony/modem-mgr",
     "//src/connectivity/telephony/ril-qmi",
+    "//src/connectivity/telephony/telephony",
     "//src/connectivity/telephony/tools/ril-ctl",
   ]
 }

@@ -46,7 +46,7 @@ The `ril-ctl` package is used for interacting with devices that expose the FRIL 
 Interactive CLIs are currently incompatible with the standard `run` command, so these are launched
 through /bin
 
-connection owned by modem-mgr:
+connection owned by telephony service:
 ```
 $ ril-ctl
 ```

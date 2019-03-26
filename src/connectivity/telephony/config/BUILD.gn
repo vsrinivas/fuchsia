@@ -6,9 +6,9 @@ import("//build/config.gni")
 
 config_data("config") {
   outputs = [
-    "sysmgr/modemmgr.config",
+    "sysmgr/telephony.config",
   ]
   sources = [
-    "modemmgr.config",
+    "telephony.config",
   ]
 }

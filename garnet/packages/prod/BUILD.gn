@@ -726,9 +726,9 @@ group("telephony") {
   public_deps = [
     "//src/connectivity/telephony/drivers/qmi-fake-transport",
     "//src/connectivity/telephony/drivers/qmi-usb-transport",
-    "//src/connectivity/telephony/modem-mgr",
     "//src/connectivity/telephony/ril-qmi",
     "//src/connectivity/telephony/ril-qmi:ril-qmi-tests",
+    "//src/connectivity/telephony/telephony",
     "//src/connectivity/telephony/tools/ril-ctl",
   ]
 }
