@@ -31,16 +31,16 @@ zx_status_t sys_fifo_create(size_t count, size_t elemsize, uint32_t options,
     if (res != ZX_OK)
         return res;
 
-    fbl::RefPtr<Dispatcher> dispatcher0;
-    fbl::RefPtr<Dispatcher> dispatcher1;
+    KernelHandle<FifoDispatcher> handle0;
+    KernelHandle<FifoDispatcher> handle1;
     zx_rights_t rights;
     zx_status_t result = FifoDispatcher::Create(count, elemsize, options,
-                                                &dispatcher0, &dispatcher1, &rights);
+                                                &handle0, &handle1, &rights);
 
     if (result == ZX_OK)
-        result = out0->make(ktl::move(dispatcher0), rights);
+        result = out0->make(ktl::move(handle0), rights);
     if (result == ZX_OK)
-        result = out1->make(ktl::move(dispatcher1), rights);
+        result = out1->make(ktl::move(handle1), rights);
     return result;
 }
 

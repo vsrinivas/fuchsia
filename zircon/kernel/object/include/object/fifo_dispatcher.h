@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include <object/dispatcher.h>
+#include <object/handle.h>
 
 #include <zircon/rights.h>
 #include <zircon/types.h>
@@ -21,8 +22,8 @@
 class FifoDispatcher final : public PeeredDispatcher<FifoDispatcher, ZX_DEFAULT_FIFO_RIGHTS> {
 public:
     static zx_status_t Create(size_t elem_count, size_t elem_size, uint32_t options,
-                              fbl::RefPtr<Dispatcher>* dispatcher0,
-                              fbl::RefPtr<Dispatcher>* dispatcher1,
+                              KernelHandle<FifoDispatcher>* handle0,
+                              KernelHandle<FifoDispatcher>* handle1,
                               zx_rights_t* rights);
 
     ~FifoDispatcher() final;
