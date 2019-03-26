@@ -25,8 +25,14 @@
 #include <zircon/listnode.h>
 
 #include "ovl.h"
+#include "color.h"
+#include "ccorr.h"
+#include "aal.h"
+#include "gamma.h"
+#include "dither.h"
 #include "disp-rdma.h"
-#include "mt-mipi-phy.h"
+#include "mt-dsi-host.h"
+#include "mt-sysconfig.h"
 
 namespace mt8167s_display {
 
@@ -64,7 +70,6 @@ public:
                                                                 uint32_t* out_stride) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-
     int VSyncThread();
 
     // Required functions for DeviceType
@@ -79,6 +84,14 @@ private:
     // This function initializes the various components within the display subsytem such as
     // Overlay Engine, RDMA Engine, DSI, HDMI, etc
     zx_status_t DisplaySubsystemInit();
+    zx_status_t CreateAndInitDisplaySubsystems();
+
+    // This function safely and properly shutsdown the display substem. Proper shutdown of the
+    // display subsystem before bringing it back up is needed to ensure sanity of all the various
+    // display subsystems
+    zx_status_t ShutdownDisplaySubsytem();
+
+    zx_status_t StartupDisplaySubsytem();
 
     // Zircon handles
     zx::bti bti_;
@@ -103,6 +116,8 @@ private:
 
     const display_setting_t* init_disp_table_ = nullptr;
 
+    bool full_init_done_ = false;
+
     // Display structure used by various layers of display controller
     display_setting_t disp_setting_;
 
@@ -112,10 +127,19 @@ private:
     // Display controller related data
     ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);
 
+    // SMI
+    fbl::unique_ptr<ddk::MmioBuffer> smi_mmio_;
+
     // Objects
+    fbl::unique_ptr<mt8167s_display::MtSysConfig> syscfg_;
     fbl::unique_ptr<mt8167s_display::Ovl> ovl_;
+    fbl::unique_ptr<mt8167s_display::Color> color_;
+    fbl::unique_ptr<mt8167s_display::Ccorr> ccorr_;
+    fbl::unique_ptr<mt8167s_display::Aal> aal_;
+    fbl::unique_ptr<mt8167s_display::Gamma> gamma_;
+    fbl::unique_ptr<mt8167s_display::Dither> dither_;
     fbl::unique_ptr<mt8167s_display::DispRdma> disp_rdma_;
-    fbl::unique_ptr<mt8167s_display::MtMipiPhy> mipi_phy_;
+    fbl::unique_ptr<mt8167s_display::MtDsiHost> dsi_host_;
 };
 
 } // namespace mt8167s_display

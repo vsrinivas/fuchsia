@@ -16,6 +16,7 @@
 #include <fbl/unique_ptr.h>
 #include <optional>
 #include "common.h"
+#include "mt-sysconfig.h"
 #include "registers-mipiphy.h"
 #include "lcd.h"
 
@@ -28,35 +29,30 @@ namespace mt8167s_display {
 // class is responsible for setting up the MIPI-PHY and use the dsi-mt driver to perform
 // DSI specific operations.
 
-class MtMipiPhy {
+class MtDsiHost {
 public:
-    MtMipiPhy(uint32_t height, uint32_t width): height_(height), width_(width) {
+    MtDsiHost(uint32_t height, uint32_t width): height_(height), width_(width) {
         ZX_ASSERT(height_ < kMaxHeight);
         ZX_ASSERT(width_ < kMaxWidth);
     }
-
-    // Init
     zx_status_t Init(zx_device_t* parent);
-
-    // Configure DSI engine based on display properties
     zx_status_t Config(const display_setting_t& disp_setting);
-
-    // Dump all the relevant DSI registers
-    void Dump();
+    zx_status_t Start();
+    zx_status_t Shutdown(fbl::unique_ptr<MtSysConfig>& syscfg);
+    void PrintRegisters();
 
 private:
     void ConfigMipiPll(uint32_t pll_clock, uint32_t lane_num);
+    void PowerOffMipiTx();
 
-    uint32_t                                        height_;
-    uint32_t                                        width_;
-
-    fbl::unique_ptr<ddk::MmioBuffer>                mipi_tx_mmio_;
-    pdev_protocol_t                                 pdev_ = {nullptr, nullptr};
-    zx::bti                                         bti_;
-    ddk::DsiImplProtocolClient                      dsiimpl_;
-    fbl::unique_ptr<Lcd>                            lcd_;
-
-    bool                                            initialized_ = false;
+    uint32_t height_; // display height
+    uint32_t width_; // display width
+    fbl::unique_ptr<ddk::MmioBuffer> mipi_tx_mmio_;
+    pdev_protocol_t pdev_ = {nullptr, nullptr};
+    zx::bti bti_;
+    ddk::DsiImplProtocolClient dsiimpl_;
+    fbl::unique_ptr<Lcd> lcd_;
+    bool initialized_ = false;
 };
 
 } // namespace mt8167s_display

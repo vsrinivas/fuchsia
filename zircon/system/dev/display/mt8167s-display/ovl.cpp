@@ -11,7 +11,7 @@ namespace mt8167s_display {
 
 namespace {
 constexpr uint32_t kDefaultBackgroundColor = 0xFF000000; // alpha/red/green/blue
-constexpr int kIdleTimeout = 20000;
+constexpr int kIdleTimeout = 200000; // uSec
 } // namespace
 
 zx_status_t Ovl::Init(zx_device_t* parent) {
@@ -53,6 +53,8 @@ zx_status_t Ovl::Init(zx_device_t* parent) {
 
 void Ovl::Reset() {
     ZX_DEBUG_ASSERT(initialized_);
+    ovl_mmio_->Write32(1, OVL_RST);
+    ovl_mmio_->Write32(0, OVL_RST);
     Stop();
     active_layers_ = 0;
     layer_handle_[0] = 0;
@@ -133,7 +135,11 @@ void Ovl::Stop() {
     while (!IsIdle() && timeout--) {
         zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
     }
-    ZX_ASSERT(timeout > 0);
+    if (timeout <= 0) {
+        DISP_ERROR("Ovl could not stop\n");
+        PrintStatusRegisters();
+        ZX_ASSERT(false);
+    }
 
     // Now that we are idle, we can disable other parts of the engine
     ovl_mmio_->Write32(0, OVL_DATAPATH_CON);
@@ -167,7 +173,7 @@ zx_status_t Ovl::Config(uint8_t layer, OvlConfig &cfg) {
         ovl_mmio_->ModifyBits32(1, 0, 1, OVL_RDMAx_CTRL(layer));
     } else {
         // We are not Idle! Let's dump all registers and crash
-        Dump();
+        PrintStatusRegisters();
         ZX_ASSERT(false);
     }
 
@@ -257,7 +263,7 @@ zx_status_t Ovl::Config(uint8_t layer, OvlConfig &cfg) {
     return ZX_OK;
 }
 
-void Ovl::Dump() {
+void Ovl::PrintRegisters() {
     zxlogf(INFO, "Dumping OVL Registers:\n");
     zxlogf(INFO, "######################\n\n");
     zxlogf(INFO, "OVL_STA = 0x%x\n", ovl_mmio_->Read32(OVL_STA));

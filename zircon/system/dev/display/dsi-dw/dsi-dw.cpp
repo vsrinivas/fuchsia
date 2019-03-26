@@ -43,6 +43,18 @@ constexpr uint32_t kBitCmdEmpty = 0;
 
 } // namespace
 
+zx_status_t DsiDw::DsiImplWriteReg(uint32_t reg, uint32_t val) {
+    // TODO(payamm): Verify register offset is valid
+    dsi_mmio_->Write32(val, reg);
+    return ZX_OK;
+}
+
+zx_status_t DsiDw::DsiImplReadReg(uint32_t reg, uint32_t* val) {
+    // TODO(payamm): Verify register offset is valid
+    *val = dsi_mmio_->Read32(reg);
+    return ZX_OK;
+}
+
 zx_status_t DsiDw::GetColorCode(color_code_t c, bool& packed, uint8_t& code) {
     zx_status_t status = ZX_OK;
     switch (c) {

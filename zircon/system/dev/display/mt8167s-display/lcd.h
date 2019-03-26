@@ -21,6 +21,7 @@ public:
     zx_status_t Init(zx_device_t* parent);
     zx_status_t Enable();
     zx_status_t Disable();
+
 private:
     zx_status_t LoadInitTable(const uint8_t* buffer, size_t size);
     zx_status_t GetDisplayId();
@@ -28,7 +29,6 @@ private:
     uint8_t                                     panel_type_;
     gpio_protocol_t                             gpio_ = {};
     ddk::DsiImplProtocolClient                  dsiimpl_;
-
     bool                                        initialized_ = false;
     bool                                        enabled_ =false;
 };

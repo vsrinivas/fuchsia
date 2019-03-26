@@ -108,6 +108,17 @@ interface DsiImpl {
     /// are set, PHY has completed initialization
     PhyWaitForReady() -> (zx.status s);
 
+    /// This function allows writing to any register within the DSI block. This could be used
+    /// for debug purposes during development stages without needing to modify the DSI IMPL
+    /// protocol or to write to registers that don't really belong in the DSI IP block.
+    WriteReg(uint32 reg, uint32 val) -> (zx.status s);
+
+    /// This function returns the value of any register within the DSI IP block
+    ReadReg(uint32 reg) -> (zx.status s, uint32 val);
+
+    /// This function enable BIST pattern generation. This is useful during development stages
+    EnableBist(uint32 pattern) -> (zx.status s);
+
     /// This function prints the value of all DSI registers
     PrintDsiRegisters() -> ();
 };

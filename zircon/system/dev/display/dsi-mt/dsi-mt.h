@@ -54,6 +54,9 @@ public:
     void DsiImplPhySendCode(uint32_t code, uint32_t parameter) {}
     zx_status_t DsiImplPhyWaitForReady() { return 0;}
     void DsiImplPrintDsiRegisters();
+    zx_status_t DsiImplWriteReg(uint32_t reg, uint32_t val);
+    zx_status_t DsiImplReadReg(uint32_t reg, uint32_t* val);
+    zx_status_t DsiImplEnableBist(uint32_t pattern);
 
     void DdkUnbind() {}
     void DdkRelease() {}

@@ -83,18 +83,26 @@
 #define MT8167_DISP_OVL_SIZE                                0x1000
 #define MT8167_DISP_RDMA_BASE                               0x14009000
 #define MT8167_DISP_RDMA_SIZE                               0x1000
-#define MT8167_DISP_COLOR_BASE                              0x1400C400
-#define MT8167_DISP_COLOR_SIZE                              0x900
+#define MT8167_DISP_COLOR_BASE                              0x1400C000
+#define MT8167_DISP_COLOR_SIZE                              0x1000
+#define MT8167_DISP_CCORR_BASE                              0x1400D000
+#define MT8167_DISP_CCORR_SIZE                              0x1000
+#define MT8167_DISP_AAL_BASE                                0x1400E000
+#define MT8167_DISP_AAL_SIZE                                0x1000
+#define MT8167_DISP_GAMMA_BASE                              0x1400F000
+#define MT8167_DISP_GAMMA_SIZE                              0x1000
 #define MT8167_DITHER_BASE                                  0x14010000
-#define MT8167_DITHER_SIZE                                  0x200
+#define MT8167_DITHER_SIZE                                  0x1000
 #define MT8167_DISP_DSI_BASE                                0x14012000
-#define MT8167_DISP_DSI_SIZE                                0x200
+#define MT8167_DISP_DSI_SIZE                                0x1000
 #define MT8167_DISP_MUTEX_BASE                              0x14015000
-#define MT8167_DISP_MUTEX_SIZE                              0x210
+#define MT8167_DISP_MUTEX_SIZE                              0x1000
+#define MT8167_DISP_SMI_LARB0_BASE                          0x14016000
+#define MT8167_DISP_SMI_LARB0_SIZE                          0x1000
 #define MT8167_MIPI_TX_BASE                                 0x14018000
-#define MT8167_MIPI_TX_SIZE                                 0x100
-#define MT8167_LVDS_BASE                                    0x1401A200
-#define MT8167_LVDS_SIZE                                    0x100
+#define MT8167_MIPI_TX_SIZE                                 0x1000
+#define MT8167_LVDS_BASE                                    0x1401A000
+#define MT8167_LVDS_SIZE                                    0x1000
 
 // SOC Interrupt polarity registers start
 #define MT8167_SOC_INT_POL                                  0x620

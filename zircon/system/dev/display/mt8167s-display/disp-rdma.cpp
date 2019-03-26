@@ -78,7 +78,6 @@ void DispRdma::Reset() {
 
 void DispRdma::Start() {
     ZX_DEBUG_ASSERT(initialized_);
-    // TODO(payamm): don't think we need to enable any interrupts here, but you never know
     disp_rdma_mmio_->Write32(disp_rdma_mmio_->Read32(DISP_RDMA_GLOBAL_CON) | GLOBAL_CON_ENGINE_EN,
                              DISP_RDMA_GLOBAL_CON);
 }
@@ -91,6 +90,7 @@ void DispRdma::Stop() {
 }
 
 zx_status_t DispRdma::Config() {
+    ZX_DEBUG_ASSERT(initialized_);
     // This also disables matrix conversion since we are operating in direct link mode
     disp_rdma_mmio_->Write32(SIZE_CON0_WIDTH(width_), DISP_RDMA_SIZE_CON0);
     disp_rdma_mmio_->Write32(SIZE_CON1_HEIGHT(height_), DISP_RDMA_SIZE_CON1);

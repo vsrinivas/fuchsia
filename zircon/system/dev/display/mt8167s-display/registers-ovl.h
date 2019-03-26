@@ -47,10 +47,11 @@
 #define OVL_Lx_CLR(x)                   (0x025C + (0x04 * x))
 
 // OVL_INTEN Bit Definitions
-#define INT_FRAME_COMPLETE              (1 << 1)
+#define INT_FRAME_COMPLETE              (0xe)
 
 // OVL_FLOW_CTRL_DBG Bit Definitions
 #define OVL_IDLE                        (0x1)
+#define OVL_IDLE2                       (0x2)
 
 // OVL_SRC_CON Bit Definitions
 #define SRC_CON_ENABLE_LAYER(x)         (1 << x)

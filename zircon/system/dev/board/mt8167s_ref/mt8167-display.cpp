@@ -8,8 +8,9 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <ddk/protocol/platform/bus.h>
-
+#include <soc/mt8167/mt8167-gpio.h>
 #include <soc/mt8167/mt8167-hw.h>
+#include <hwreg/bitfields.h>
 #include "mt8167.h"
 
 namespace board_mt8167 {
@@ -38,6 +39,46 @@ constexpr pbus_mmio_t display_mmios[] = {
     {
         .base = MT8167_MIPI_TX_BASE,
         .length = MT8167_MIPI_TX_SIZE,
+    },
+    // Display Mutex
+    {
+        .base = MT8167_DISP_MUTEX_BASE,
+        .length = MT8167_DISP_MUTEX_SIZE,
+    },
+    // MT8167_MSYS_CFG_BASE
+    {
+        .base = MT8167_MSYS_CFG_BASE,
+        .length = MT8167_MSYS_CFG_SIZE,
+    },
+    // Color
+    {
+        .base = MT8167_DISP_COLOR_BASE,
+        .length = MT8167_DISP_COLOR_SIZE,
+    },
+    // AAL
+    {
+        .base = MT8167_DISP_AAL_BASE,
+        .length = MT8167_DISP_AAL_SIZE,
+    },
+    // Dither
+    {
+        .base = MT8167_DITHER_BASE,
+        .length = MT8167_DITHER_SIZE,
+    },
+    // Gamma
+    {
+        .base = MT8167_DISP_GAMMA_BASE,
+        .length = MT8167_DISP_GAMMA_SIZE,
+    },
+    // CCORR
+    {
+        .base = MT8167_DISP_CCORR_BASE,
+        .length = MT8167_DISP_CCORR_SIZE,
+    },
+    // SMI LARB0
+    {
+        .base = MT8167_DISP_SMI_LARB0_BASE,
+        .length = MT8167_DISP_SMI_LARB0_SIZE,
     },
 };
 
@@ -107,8 +148,60 @@ static pbus_dev_t dsi_dev = []() {
 }();
 } // namespace
 
+// TODO(payamm): Remove PMIC access once PMIC driver is ready
+class WACS2_CMD : public hwreg::RegisterBase<WACS2_CMD, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<WACS2_CMD>(0x00A0); }
+
+    DEF_BIT(31, WACS2_WRITE);
+    DEF_FIELD(30, 16, WACS2_ADR);
+    DEF_FIELD(15, 0, WACS2_WDATA);
+};
+
+class WACS2_RDATA : public hwreg::RegisterBase<WACS2_RDATA, uint32_t> {
+public:
+    static constexpr uint32_t kStateIdle = 0;
+
+    static auto Get() { return hwreg::RegisterAddr<WACS2_RDATA>(0x00A4); }
+
+    DEF_FIELD(18, 16, status);
+};
+
 zx_status_t Mt8167::DisplayInit() {
-    zx_status_t status = pbus_.DeviceAdd(&dsi_dev);
+
+    // Enable Backlight on reference board only. Cleo has blacklight through I2C
+    gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO55_DISP_PWM, MT8167_GPIO_GPIO_FN);
+    gpio_impl_config_out(&gpio_impl_, MT8167_GPIO55_DISP_PWM, 1);
+
+    // Enable LCD voltage rails
+    zx::unowned_resource root_resource(get_root_resource());
+    std::optional<ddk::MmioBuffer> pmic_mmio;
+    auto status = ddk::MmioBuffer::Create(MT8167_PMIC_WRAP_BASE, MT8167_PMIC_WRAP_SIZE,
+                                          *root_resource, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                          &pmic_mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: PMIC MmioBuffer::Create failed %d\n", __FUNCTION__, status);
+        return status;
+    }
+
+    // Wait for the PMIC to be IDLE.
+    while (WACS2_RDATA::Get().ReadFrom(&(*pmic_mmio)).status() != WACS2_RDATA::kStateIdle) {
+    }
+
+    constexpr uint32_t kDigLdoCon29 = 0x0532;
+    constexpr uint32_t kVpg2VoSel = 0x60; // 3 << 5
+    constexpr uint32_t kDigLdoCon8 = 0x050C;
+    constexpr uint32_t kVpg2En = 0x8000; // 1 << 15;
+
+    auto pmic = WACS2_CMD::Get().ReadFrom(&(*pmic_mmio));
+    // From the documentation "Wrapper access: Address[15:1]" hence the >> 1.
+    pmic.set_WACS2_WRITE(1).set_WACS2_ADR(kDigLdoCon29 >> 1).set_WACS2_WDATA(kVpg2VoSel);
+    pmic.WriteTo(&(*pmic_mmio));
+
+    pmic.set_WACS2_WRITE(1).set_WACS2_ADR(kDigLdoCon8 >> 1).set_WACS2_WDATA(kVpg2En);
+    pmic.WriteTo(&(*pmic_mmio));
+
+    status = pbus_.DeviceAdd(&dsi_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __FUNCTION__, status);
         return status;

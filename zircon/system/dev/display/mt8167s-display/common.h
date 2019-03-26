@@ -17,6 +17,14 @@ enum {
     MMIO_DISP_OVL,
     MMIO_DISP_RDMA,
     MMIO_DISP_MIPITX,
+    MMIO_DISP_MUTEX,
+    MMIO_DISP_SYSCFG,
+    MMIO_DISP_COLOR,
+    MMIO_DISP_AAL,
+    MMIO_DISP_DITHER,
+    MMIO_DISP_GAMMA,
+    MMIO_DISP_CCORR,
+    MMIO_DISP_SMI_LARB0,
 };
 
 constexpr uint8_t PANEL_DISPLAY_ID = 1;
@@ -30,12 +38,38 @@ constexpr uint16_t kMaxWidth = 4095;
 constexpr uint16_t kMaxHeight = 4095;
 
 struct OvlConfig {
-    zx_pixel_format_t   format;
-    zx_paddr_t          paddr;
-    alpha_t             alpha_mode;
-    float               alpha_val;
-    frame_t             src_frame;
-    frame_t             dest_frame;
-    uint32_t            pitch;
-    frame_transform_t   transform;
+    zx_pixel_format_t format;
+    zx_paddr_t paddr;
+    alpha_t alpha_mode;
+    float alpha_val;
+    frame_t src_frame;
+    frame_t dest_frame;
+    uint32_t pitch;
+    frame_transform_t transform;
 };
+
+enum SysConfigModule {
+    MODULE_OVL0,
+    MODULE_RDMA0,
+    MODULE_COLOR0,
+    MODULE_CCORR,
+    MODULE_AAL,
+    MODULE_GAMMA,
+    MODULE_DITHER,
+    MODULE_PWM0,
+    MODULE_DSI0,
+    MODULE_SMI,
+    MODULE_CONFIG,
+    MODULE_CMDQ,
+    MODULE_MUTEX,
+    MODULE_SMI_COMMON,
+    MODULE_NUM,
+};
+
+enum MutexMode {
+    MUTEX_SINGLE,
+    MUTEX_DSI0,
+    MUTEX_DPI0,
+    MUTEX_DPI1,
+};
+

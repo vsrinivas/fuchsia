@@ -20,22 +20,23 @@ zx_pixel_format_t kSupportedPixelFormats[3] = {
 };
 
 constexpr uint64_t kDisplayId = PANEL_DISPLAY_ID;
+constexpr uint32_t kLarbMmuEnOffset = 0x0FC0;
 
 constexpr display_setting_t kDisplaySettingIli9881c = {
-    .lane_num           = 4,
-    .bit_rate_max       = 0, // unused
-    .clock_factor       = 0, // unused
-    .lcd_clock          = 270,
-    .h_active           = 720,
-    .v_active           = 1280,
-    .h_period           = 900,  //Vendor provides front porch of 80. calculate period manually
-    .v_period           = 1340, //Vendor provides front porch of 40. calculate period manually
-    .hsync_width        = 20,
-    .hsync_bp           = 80,
-    .hsync_pol          = 0, // unused
-    .vsync_width        = 4,
-    .vsync_bp           = 16,
-    .vsync_pol          = 0, // unused
+    .lane_num = 4,
+    .bit_rate_max = 0, // unused
+    .clock_factor = 0, // unused
+    .lcd_clock = 270,
+    .h_active = 720,
+    .v_active = 1280,
+    .h_period = 900,  //Vendor provides front porch of 80. calculate period manually
+    .v_period = 1340, //Vendor provides front porch of 40. calculate period manually
+    .hsync_width = 20,
+    .hsync_bp = 80,
+    .hsync_pol = 0, // unused
+    .vsync_width = 4,
+    .vsync_bp = 16,
+    .vsync_pol = 0, // unused
 };
 
 struct ImageInfo {
@@ -228,6 +229,17 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
         ovl_->Restart();
         disp_rdma_->Restart();
     }
+
+    // If bootloader does not enable any of the display hardware, no vsync will be generated.
+    // This fakes a vsync to let clients know we are ready until we actually initialize hardware
+    if (!full_init_done_) {
+        if (dc_intf_.is_valid()) {
+            if (display_count == 0 || display_configs[0]->layer_count == 0) {
+                dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get(ZX_CLOCK_MONOTONIC), nullptr, 0);
+            }
+        }
+        full_init_done_ = true;
+    }
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
@@ -317,6 +329,7 @@ int Mt8167sDisplay::VSyncThread() {
                 ovl_->ClearLayer(i);
             }
         }
+
         if (dc_intf_.is_valid()) {
             dc_intf_.OnDisplayVsync(kDisplayId, timestamp.get(), handles, handle_count);
         }
@@ -324,20 +337,74 @@ int Mt8167sDisplay::VSyncThread() {
     return ZX_OK;
 }
 
-zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
+zx_status_t Mt8167sDisplay::ShutdownDisplaySubsytem() {
+    // Clear mutex
+    syscfg_->MutexClear();
 
-    // Select the appropriate display table. For now, we only support the lcd
-    // on the mt8167s reference board.
-    init_disp_table_ = &kDisplaySettingIli9881c;
-    CopyDisplaySettings();
+    // Clear Display Subsytem Path
+    syscfg_->ClearDefaultPath();
 
-    // Create and initialize DSI object
+    // Starting disabling from top to bottom
+    // (OVL -> Color -> Ccorr -> Aal -> Gamma -> Dither -> RDMA -> DSI)
+    syscfg_->PowerDown(MODULE_OVL0);
+    syscfg_->PowerDown(MODULE_COLOR0);
+    syscfg_->PowerDown(MODULE_CCORR);
+    syscfg_->PowerDown(MODULE_AAL);
+    syscfg_->PowerDown(MODULE_GAMMA);
+    // TODO(payamm): Bootloader does not touch any dither-related regs. I'm feeling adventerous
+    syscfg_->PowerDown(MODULE_DITHER);
+    syscfg_->PowerDown(MODULE_RDMA0);
+
+    // Finally shutdown DSI host
+    dsi_host_->Shutdown(syscfg_);
+
+    return ZX_OK;
+}
+
+zx_status_t Mt8167sDisplay::StartupDisplaySubsytem() {
+
+    // Turn top clocks on
+    syscfg_->PowerOn(MODULE_SMI);
+
+    // Add default modules to the Mutex system
+    syscfg_->MutexSetDefault();
+
+    // Create default path within the display subsystem
+    syscfg_->CreateDefaultPath();
+
+    // Enable clock
+    syscfg_->PowerOn(MODULE_OVL0);
+    syscfg_->PowerOn(MODULE_COLOR0);
+    syscfg_->PowerOn(MODULE_CCORR);
+    syscfg_->PowerOn(MODULE_AAL);
+    syscfg_->PowerOn(MODULE_GAMMA);
+    syscfg_->PowerOn(MODULE_DITHER);
+    syscfg_->PowerOn(MODULE_RDMA0);
+    syscfg_->PowerOn(MODULE_DSI0);
+
+    return ZX_OK;
+}
+
+zx_status_t Mt8167sDisplay::CreateAndInitDisplaySubsystems() {
+    zx_status_t status;
     fbl::AllocChecker ac;
-    mipi_phy_ = fbl::make_unique_checked<mt8167s_display::MtMipiPhy>(&ac, height_, width_);
+    // Create and initialize system config object
+    syscfg_ = fbl::make_unique_checked<mt8167s_display::MtSysConfig>(&ac);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    zx_status_t status = mipi_phy_->Init(parent_);
+    status = syscfg_->Init(parent_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not initialize SYS Config object\n");
+        return status;
+    }
+
+    // Create and initialize DSI Host object
+    dsi_host_ = fbl::make_unique_checked<mt8167s_display::MtDsiHost>(&ac, height_, width_);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    status = dsi_host_->Init(parent_);
     if (status != ZX_OK) {
         DISP_ERROR("Could not initialize DSI object\n");
         return status;
@@ -355,6 +422,66 @@ zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
         return status;
     }
 
+    // Create and initialize color object
+    color_ = fbl::make_unique_checked<mt8167s_display::Color>(&ac, height_, width_);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    // Initialize color object
+    status = color_->Init(parent_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not initialize Color object\n");
+        return status;
+    }
+
+    // Create and initialize ccorr object
+    ccorr_ = fbl::make_unique_checked<mt8167s_display::Ccorr>(&ac, height_, width_);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    // Initialize ccorr object
+    status = ccorr_->Init(parent_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not initialize Ccorr object\n");
+        return status;
+    }
+
+    // Create and initialize aal object
+    aal_ = fbl::make_unique_checked<mt8167s_display::Aal>(&ac, height_, width_);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    // Initialize aal object
+    status = aal_->Init(parent_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not initialize Aal object\n");
+        return status;
+    }
+
+    // Create and initialize gamma object
+    gamma_ = fbl::make_unique_checked<mt8167s_display::Gamma>(&ac, height_, width_);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    // Initialize gamma object
+    status = gamma_->Init(parent_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not initialize Gamma object\n");
+        return status;
+    }
+
+    // Create and initialize dither object
+    dither_ = fbl::make_unique_checked<mt8167s_display::Dither>(&ac, height_, width_);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    // Initialize dither object
+    status = dither_->Init(parent_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not initialize Dither object\n");
+        return status;
+    }
+
     // Create and initialize Display RDMA object
     disp_rdma_ = fbl::make_unique_checked<mt8167s_display::DispRdma>(&ac, height_, width_);
     if (!ac.check()) {
@@ -366,13 +493,43 @@ zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
         DISP_ERROR("Could not initialize DISP RDMA object\n");
         return status;
     }
+    return ZX_OK;
+}
 
-    // Reset and start the various subsytems. Order matters
-    ovl_->Reset();
-    disp_rdma_->Reset();
+zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
+    zx_status_t status;
+
+    // Select the appropriate display table. For now, we only support the lcd
+    // on the mt8167s reference board.
+    init_disp_table_ = &kDisplaySettingIli9881c;
+    CopyDisplaySettings();
+
+    // Create and Initialize the various display subsystems
+    status = CreateAndInitDisplaySubsystems();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // First, we need to properly shutdown the display subsystem in order to bring it back up
+    // safely.
+    ShutdownDisplaySubsytem();
+
+    // Disable MMU Agent --> Treat Agent Transactions as PA (default is VA)
+    smi_mmio_->Write32(0, kLarbMmuEnOffset);
+
+    // Let's bring systems back up now
+    StartupDisplaySubsytem();
+
+    // TODO(payamm): For now, we set all modules between OVL and RDMA in bypass mode
+    // The config function of each of these modules will set it to bypass mode
+    color_->Config();
+    ccorr_->Config();
+    aal_->Config();
+    gamma_->Config();
+    dither_->Config();
 
     // Configure the DSI0 interface
-    mipi_phy_->Config(disp_setting_);
+    dsi_host_->Config(disp_setting_);
 
     // TODO(payamm): configuring the display RDMA engine does take into account height and width
     // of the display destination frame. However, it is not clear right now how to program
@@ -380,8 +537,14 @@ zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
     // the display rdma to the display's height and width. However, this may need fine-tuning later
     // on.
     disp_rdma_->Config();
-    ovl_->Start();
     disp_rdma_->Start();
+
+    // Enable Mutex system
+    syscfg_->MutexEnable();
+
+    // This will trigger a start of the display subsystem.
+    dsi_host_->Start();
+
     return ZX_OK;
 }
 
@@ -416,6 +579,20 @@ zx_status_t Mt8167sDisplay::Bind() {
     if (status != ZX_OK) {
         DISP_ERROR("Could not get BTI handle\n");
         return status;
+    }
+
+    mmio_buffer_t mmio;
+    status = pdev_map_mmio_buffer(&pdev_, MMIO_DISP_SMI_LARB0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                   &mmio);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not map SMI LARB0 mmio\n");
+        return status;
+    }
+    fbl::AllocChecker ac;
+    smi_mmio_ = fbl::make_unique_checked<ddk::MmioBuffer>(&ac, mmio);
+    if (!ac.check()) {
+        DISP_ERROR("Could not map SMI LARB0 MMIO\n");
+        return ZX_ERR_NO_MEMORY;
     }
 
     // Map VSync Interrupt

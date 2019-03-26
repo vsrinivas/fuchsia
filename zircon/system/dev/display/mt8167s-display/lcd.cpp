@@ -9,9 +9,9 @@
 #include <lib/mipi-dsi/mipi-dsi.h>
 #include "common.h"
 
-#define DELAY_CMD           (0xFF)
-#define DCS_CMD             (0xFE)
-#define GEN_CMD             (0xFD)
+#define DELAY_CMD (0xFF)
+#define DCS_CMD (0xFE)
+#define GEN_CMD (0xFD)
 
 namespace mt8167s_display {
 
@@ -223,7 +223,6 @@ constexpr uint8_t lcd_init_sequence[] = {
 };
 } // namespace
 
-// This function write DSI commands based on the input buffer.
 zx_status_t Lcd::LoadInitTable(const uint8_t* buffer, size_t size) {
     zx_status_t status = ZX_OK;
     size_t i;
@@ -277,14 +276,15 @@ zx_status_t Lcd::Enable() {
     if (enabled_) {
         return ZX_OK;
     }
+
     // reset LCD panel via GPIO according to vendor doc
     gpio_config_out(&gpio_, 1);
     gpio_write(&gpio_, 1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
     gpio_write(&gpio_, 0);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
     gpio_write(&gpio_, 1);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(30)));
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
 
     // load table
     zx_status_t status = LoadInitTable(lcd_init_sequence, sizeof(lcd_init_sequence));
@@ -317,7 +317,6 @@ zx_status_t Lcd::Init(zx_device_t* parent) {
     }
 
     initialized_ = true;
-
     return ZX_OK;
 }
 

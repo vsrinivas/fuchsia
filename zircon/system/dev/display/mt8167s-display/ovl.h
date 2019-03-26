@@ -96,11 +96,14 @@ public:
 
     // Return true is Overlay Engine is Idle
     bool IsIdle() {
-        return (ovl_mmio_->Read32(OVL_FLOW_CTRL_DBG) & (OVL_IDLE)) == (OVL_IDLE);
+        if ((ovl_mmio_->Read32(OVL_FLOW_CTRL_DBG) & (0x3ff)) != (OVL_IDLE) &&
+            (ovl_mmio_->Read32(OVL_FLOW_CTRL_DBG) & (0x3ff)) != (OVL_IDLE2)) {
+            return false;
+        } else {
+            return true;
+        }
     }
-
-    // Dumps all relevant Overlay Registers
-    void Dump();
+    void PrintRegisters();
 
 private:
 
@@ -117,17 +120,16 @@ private:
     // TODO(payam): ZX_PIXEL_FORMAT_BYTES returns 4 for x888. We need three
     uint32_t GetBytesPerPixel(zx_pixel_format_t format);
 
-    fbl::unique_ptr<ddk::MmioBuffer>    ovl_mmio_;
-    pdev_protocol_t                     pdev_ = {nullptr, nullptr};
-    zx::bti                             bti_;
+    fbl::unique_ptr<ddk::MmioBuffer> ovl_mmio_;
+    pdev_protocol_t pdev_ = {nullptr, nullptr};
+    zx::bti bti_;
 
-    const uint32_t                      height_; // Display height
-    const uint32_t                      width_; // Display width
+    const uint32_t height_; // Display height
+    const uint32_t width_; // Display width
 
-    bool                                initialized_ = false;
-
-    uint8_t                             active_layers_ = 0;
-    zx_paddr_t                          layer_handle_[kMaxLayer] = {};
+    uint8_t active_layers_ = 0;
+    zx_paddr_t layer_handle_[kMaxLayer] = {};
+    bool initialized_ = false;
 };
 
 } // namespace mt8167s_display

@@ -54,6 +54,10 @@ public:
     void DsiImplPhySendCode(uint32_t code, uint32_t parameter);
     zx_status_t DsiImplPhyWaitForReady();
     void DsiImplPrintDsiRegisters();
+    zx_status_t DsiImplWriteReg(uint32_t reg, uint32_t val);
+    zx_status_t DsiImplReadReg(uint32_t reg, uint32_t* val);
+    //TODO(payamm): Implement BIST and test on Hikey
+    zx_status_t DsiImplEnableBist(uint32_t pattern) { return ZX_OK; }
 
     void DdkUnbind();
     void DdkRelease();

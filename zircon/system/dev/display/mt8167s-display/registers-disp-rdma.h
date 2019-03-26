@@ -62,5 +62,3 @@
 #define FIFO_CON_CLEAR_MASK                     (0x800003FF)
 #define FIFO_CON_UNDERFLOW_EN                   (1 << 31)
 #define FIFO_CON_FIFO_THRESHOLD_DEFAULT         (16 << 0)
-
-

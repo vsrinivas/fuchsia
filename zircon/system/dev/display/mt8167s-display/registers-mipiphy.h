@@ -26,6 +26,9 @@
 #define MIPI_TX_PLL_TOP                 (0x0064)
 #define MIPI_TX_PLL_PWR                 (0x0068)
 #define MIPI_TX_RGS                     (0x0070)
+#define MIPI_TX_SW_CTRL                 (0x0080)
+#define MIPI_TX_SW_CTRL_CON0            (0x0084)
+#define MIPI_TX_SW_CTRL_CON1            (0x0084)
 
 namespace mt8167s_display {
 
@@ -190,4 +193,62 @@ public:
     DEF_BIT(0, sdm_pwr_on);
     static auto Get() { return hwreg::RegisterAddr<MipiTxPllPwrReg>(MIPI_TX_PLL_PWR); }
 };
+
+class MipiTxSwCtrlReg : public hwreg::RegisterBase<MipiTxSwCtrlReg, uint32_t> {
+public:
+    DEF_BIT(0, enable);
+    static auto Get() { return hwreg::RegisterAddr<MipiTxSwCtrlReg>(MIPI_TX_SW_CTRL); }
+};
+
+class MipiTxSwCtrlCon0Reg : public hwreg::RegisterBase<MipiTxSwCtrlCon0Reg, uint32_t> {
+public:
+    DEF_FIELD(15, 8, sw_lnt0_hstx_data);
+    DEF_BIT(7, sw_lnt0_lprx_en);
+    DEF_BIT(6, sw_lntc_hstx_rdy);
+    DEF_BIT(5, sw_lntc_hstx_oe);
+    DEF_BIT(4, sw_lntc_hstx_pre_oe);
+    DEF_BIT(3, sw_lntc_lptx_n);
+    DEF_BIT(2, sw_lntc_lptx_p);
+    DEF_BIT(1, sw_lntc_lptx_oe);
+    DEF_BIT(0, sw_lntc_lptx_pre_oe);
+    static auto Get() { return hwreg::RegisterAddr<MipiTxSwCtrlCon0Reg>(MIPI_TX_SW_CTRL_CON0); }
+};
+
+class MipiTxSwCtrlCon1Reg : public hwreg::RegisterBase<MipiTxSwCtrlCon1Reg, uint32_t> {
+public:
+    DEF_BIT(31, sw_lnt3_lprx_en);
+    DEF_BIT(30, sw_lnt3_hstx_rdy);
+    DEF_BIT(29, sw_lnt3_hstx_oe);
+    DEF_BIT(28, sw_lnt3_hstx_pre_oe);
+    DEF_BIT(27, sw_lnt3_lptx_n);
+    DEF_BIT(26, sw_lnt3_lptx_p);
+    DEF_BIT(25, sw_lnt3_lptx_oe);
+    DEF_BIT(24, sw_lnt3_lptx_pre_oe);
+    DEF_BIT(23, sw_lnt2_lprx_en);
+    DEF_BIT(22, sw_lnt2_hstx_rdy);
+    DEF_BIT(21, sw_lnt2_hstx_oe);
+    DEF_BIT(20, sw_lnt2_hstx_pre_oe);
+    DEF_BIT(19, sw_lnt2_lptx_n);
+    DEF_BIT(18, sw_lnt2_lptx_p);
+    DEF_BIT(17, sw_lnt2_lptx_oe);
+    DEF_BIT(16, sw_lnt2_lptx_pre_oe);
+    DEF_BIT(15, sw_lnt1_lprx_en);
+    DEF_BIT(14, sw_lnt1_hstx_rdy);
+    DEF_BIT(13, sw_lnt1_hstx_oe);
+    DEF_BIT(12, sw_lnt1_hstx_pre_oe);
+    DEF_BIT(11, sw_lnt1_lptx_n);
+    DEF_BIT(10, sw_lnt1_lptx_p);
+    DEF_BIT(9, sw_lnt1_lptx_oe);
+    DEF_BIT(8, sw_lnt1_lptx_pre_oe);
+    DEF_BIT(7, sw_lnt0_lprx_en);
+    DEF_BIT(6, sw_lnt0_hstx_rdy);
+    DEF_BIT(5, sw_lnt0_hstx_oe);
+    DEF_BIT(4, sw_lnt0_hstx_pre_oe);
+    DEF_BIT(3, sw_lnt0_lptx_n);
+    DEF_BIT(2, sw_lnt0_lptx_p);
+    DEF_BIT(1, sw_lnt0_lptx_oe);
+    DEF_BIT(0, sw_lnt0_lptx_pre_oe);
+    static auto Get() { return hwreg::RegisterAddr<MipiTxSwCtrlCon1Reg>(MIPI_TX_SW_CTRL_CON1); }
+};
+
 } // namespace mt8167s_display
