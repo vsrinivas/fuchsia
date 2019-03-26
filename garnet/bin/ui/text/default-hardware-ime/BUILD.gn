@@ -1,0 +1,47 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "default-hardware-ime"
+  edition = "2018"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_json",
+  ]
+}
+
+package("default-hardware-ime") {
+  meta = [
+    {
+      path = rebase_path("meta/default-hardware-ime.cmx")
+      dest = "default-hardware-ime.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("assets/us.json")
+      dest = "us.json"
+    },
+  ]
+
+  deps = [
+    ":bin",
+  ]
+
+  binary = "default_hardware_ime"
+}
