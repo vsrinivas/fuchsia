@@ -197,18 +197,19 @@ class Pipe : public VirtioWl::Vfd {
   async::Wait tx_wait_;
 };
 
-#define VIRTIO_WL_F_MAGMA (1u << 2)
-
 VirtioWl::VirtioWl(component::StartupContext* context) : DeviceBase(context) {}
 
 void VirtioWl::Start(
     fuchsia::guest::device::StartInfo start_info, zx::vmar vmar,
     fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatcher,
+    std::string device_path, std::string driver_path,
     StartCallback callback) {
   auto deferred = fit::defer(std::move(callback));
   PrepStart(std::move(start_info));
   vmar_ = std::move(vmar);
   dispatcher_ = dispatcher.Bind();
+  device_path_ = std::move(device_path);
+  driver_path_ = std::move(driver_path);
 
   // Configure device queues.
   for (auto& queue : queues_) {
@@ -218,11 +219,19 @@ void VirtioWl::Start(
   }
 }
 
+// TODO(MAC-228): move feature flag to common location
+#define VIRTIO_WL_F_MAGMA_FLAGS (1u << 2)
+
 void VirtioWl::Ready(uint32_t negotiated_features, ReadyCallback callback) {
   auto deferred = fit::defer(std::move(callback));
-  if (negotiated_features & VIRTIO_WL_F_MAGMA) {
+  if (negotiated_features & VIRTIO_WL_F_MAGMA_FLAGS) {
     magma_ = std::make_unique<VirtioMagma>(&vmar_, magma_in_queue(),
                                            magma_out_queue());
+    zx_status_t status =
+        magma_->Init(std::move(device_path_), std::move(driver_path_));
+    if (status != ZX_OK) {
+      FXL_LOG(WARNING) << "failed to initialize magma sub-device - " << status;
+    }
   }
 }
 

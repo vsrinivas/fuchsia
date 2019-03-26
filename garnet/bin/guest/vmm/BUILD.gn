@@ -88,7 +88,10 @@ source_set("lib") {
     include_dirs = [ "//zircon/third_party/lib/acpica/source/include" ]
   }
 
-  defines = [ "_ALL_SOURCE=1" ]
+  defines = [
+    "_ALL_SOURCE=1",
+    "MAGMA_DEBUG_INTERNAL_USE_ONLY=1",
+  ]
 
   deps = [
     "//garnet/bin/guest/third_party/fdt",

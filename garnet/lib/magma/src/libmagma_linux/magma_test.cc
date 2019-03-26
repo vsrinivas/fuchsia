@@ -6,13 +6,14 @@
 
 #include "magma.h"
 
+#include <dlfcn.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/fcntl.h>
-#include <sys/ioctl.h>
-#include <sys/unistd.h>
+#include <unistd.h>
+#include <vulkan.h>
 
 #define CHECK(x)                                                                                   \
     do {                                                                                           \
@@ -21,6 +22,30 @@
             exit(EXIT_FAILURE);                                                                    \
         }                                                                                          \
     } while (0)
+
+// TODO(MA-520): this should be part of vm initialization, not a magma API
+extern bool magma_write_driver_to_filesystem(int32_t file_descriptor);
+
+PFN_vkVoidFunction get_vkCreateInstance(void* driver)
+{
+    // This method emulates a small part of the initialization logic in the Vulkan loader.
+
+    static const char* vulkan_main_entrypoint = "vk_icdGetInstanceProcAddr";
+    printf("dlsym for Address of Symbol %s\n", vulkan_main_entrypoint);
+    PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr =
+        (PFN_vkGetInstanceProcAddr)dlsym(driver, vulkan_main_entrypoint);
+    CHECK(vkGetInstanceProcAddr != nullptr);
+    printf("Address Acquired\n");
+
+    static const char* vulkan_instance_entrypoint = "vkCreateInstance";
+    printf("vkGetInstanceProcAddr for Address of Entrypoint %s\n", vulkan_instance_entrypoint);
+    PFN_vkVoidFunction addr_vkCreateInstance =
+        vkGetInstanceProcAddr(nullptr, vulkan_instance_entrypoint);
+    CHECK(addr_vkCreateInstance != nullptr);
+    printf("Address Acquired\n");
+
+    return addr_vkCreateInstance;
+}
 
 int main(int argc, char* argv[])
 {
@@ -44,6 +69,35 @@ int main(int argc, char* argv[])
     printf("Release Connection\n");
     magma_release_connection(connection);
     printf("Connection Released\n");
+
+    printf("Write Driver to FS\n");
+    bool ok = magma_write_driver_to_filesystem(fd);
+    CHECK(ok);
+    printf("Driver Written to FS\n");
+
+    static const char* driver_path = "/libvulkan_magma.so";
+    printf("Load Driver %s\n", driver_path);
+    void* driver = dlopen(driver_path, RTLD_NOW);
+    CHECK(driver != nullptr);
+    printf("Driver Loaded\n");
+
+    PFN_vkCreateInstance vkCreateInstance = (PFN_vkCreateInstance)get_vkCreateInstance(driver);
+
+    printf("Creating Vulkan Instance\n");
+    VkApplicationInfo application_info{};
+    application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    application_info.pApplicationName = "magma_test";
+    application_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    application_info.pEngineName = "no-engine";
+    application_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    application_info.apiVersion = VK_API_VERSION_1_0;
+    VkInstanceCreateInfo instance_create_info{};
+    instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    instance_create_info.pApplicationInfo = &application_info;
+    VkInstance instance{};
+    VkResult result = vkCreateInstance(&instance_create_info, nullptr, &instance);
+    CHECK(result == VK_SUCCESS);
+    printf("Vulkan Instance Created\n");
 
     return 0;
 }

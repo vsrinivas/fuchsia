@@ -2,6 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("libmagma_linux") {
-  # Placeholder
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+static_library("libmagma_linux") {
+  public_deps = [
+    "$magma_build_root/include:magma_abi",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
+    "magma.cc",
+    "virtio_magma_connection.cc",
+    "virtio_magma_connection.h",
+    "virtmagma.h",
+  ]
+
 }

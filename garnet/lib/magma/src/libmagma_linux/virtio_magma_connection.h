@@ -10,15 +10,16 @@
 
 namespace magma {
 
-struct VirtioMagmaConnection : public magma_connection_t {
+struct VirtioMagmaConnection : public magma_connection {
 public:
     VirtioMagmaConnection(int32_t virtio_fd, int32_t connection_fd)
-        : magma_connection_t{kMagic}, virtio_fd_(virtio_fd), connection_fd_(connection_fd)
+        : magma_connection{kMagic}, virtio_fd_(virtio_fd), connection_fd_(connection_fd)
     {
     }
 
+    static bool WriteDriverToFilesystem(int32_t virtio_fd);
     static magma_status_t Query(int32_t virtio_fd, uint64_t id, uint64_t* value_out);
-    static std::unique_ptr<magma_connection_t> Create(int32_t virtio_fd);
+    static std::unique_ptr<VirtioMagmaConnection> Create(int32_t virtio_fd);
     void Release();
     magma_status_t GetError();
     void CreateContext(uint32_t* context_id_out);

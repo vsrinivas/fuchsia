@@ -105,6 +105,7 @@ class VirtioWl : public DeviceBase<VirtioWl>,
   void Start(
       fuchsia::guest::device::StartInfo start_info, zx::vmar vmar,
       fidl::InterfaceHandle<fuchsia::guest::WaylandDispatcher> dispatcher,
+      std::string device_path, std::string driver_path,
       StartCallback callback) override;
 
  private:
@@ -164,6 +165,8 @@ class VirtioWl : public DeviceBase<VirtioWl>,
     VirtioChain payload;
   };
   std::deque<PendingVfd> pending_vfds_;
+  std::string device_path_;
+  std::string driver_path_;
 };
 
 #endif  // GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_WL_H_

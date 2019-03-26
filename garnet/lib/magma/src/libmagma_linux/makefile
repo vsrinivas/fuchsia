@@ -6,10 +6,12 @@ FUCHSIA_DIR ?= ../../../../..
 INTDIR := /tmp/virtio_magma/$(TARGETNAME)
 OUTDIR := $(FUCHSIA_DIR)/garnet/bin/guest/pkg/biscotti_guest/images/x64/sysroot/usr/bin
 TARGET := $(OUTDIR)/$(TARGETNAME)
+LIBS := dl
 INCLUDE_DIRS := \
 	$(FUCHSIA_DIR)/garnet/lib/magma/include/magma_abi \
 	$(FUCHSIA_DIR)/garnet/lib/magma/include/virtio \
 	$(FUCHSIA_DIR)/garnet/lib/magma/src \
+	$(FUCHSIA_DIR)/third_party/mesa/include/vulkan \
 	$(LINUX_HEADERS_DIR)
 
 SRC_EXT := cc

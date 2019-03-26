@@ -5,13 +5,28 @@
 #include "virtio_magma_connection.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
+#include "virtmagma.h"
 #include <cstring> // memcpy
-#include <linux/virtmagma.h>
+#include <errno.h>
 #include <sys/fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/unistd.h>
 
 namespace magma {
+
+bool VirtioMagmaConnection::WriteDriverToFilesystem(int32_t virtio_fd)
+{
+    if (!Handshake(virtio_fd)) {
+        DRETF(false, "virtio_fd does not implement VirtioMagma");
+    }
+
+    virtmagma_ioctl_args_get_driver args{};
+    if (ioctl(virtio_fd, VIRTMAGMA_IOCTL_GET_DRIVER, &args)) {
+        DRETF(false, "ioctl(GET_DRIVER) failed: %d", errno);
+    }
+
+    return true;
+}
 
 magma_status_t VirtioMagmaConnection::Query(int32_t virtio_fd, uint64_t id, uint64_t* value_out)
 {
@@ -31,7 +46,7 @@ magma_status_t VirtioMagmaConnection::Query(int32_t virtio_fd, uint64_t id, uint
     return args.status_return;
 }
 
-std::unique_ptr<magma_connection_t> VirtioMagmaConnection::Create(int32_t virtio_fd)
+std::unique_ptr<VirtioMagmaConnection> VirtioMagmaConnection::Create(int32_t virtio_fd)
 {
     uint32_t version_out = Handshake(virtio_fd);
     if (!version_out) {

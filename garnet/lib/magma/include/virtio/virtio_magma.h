@@ -12,7 +12,8 @@ __BEGIN_CDECLS
 
 enum virtio_magma_ctrl_type {
     /* magma commands */
-    VIRTIO_MAGMA_CMD_QUERY = 0x0400,
+    VIRTIO_MAGMA_CMD_GET_DRIVER = 0x0400,
+    VIRTIO_MAGMA_CMD_QUERY,
     VIRTIO_MAGMA_CMD_CREATE_CONNECTION,
     VIRTIO_MAGMA_CMD_RELEASE_CONNECTION,
     VIRTIO_MAGMA_CMD_GET_ERROR,
@@ -47,7 +48,8 @@ enum virtio_magma_ctrl_type {
     VIRTIO_MAGMA_CMD_IMPORT_SEMAPHORE,
     VIRTIO_MAGMA_CMD_READ_NOTIFICATION_CHANNEL,
     /* magma success responses */
-    VIRTIO_MAGMA_RESP_QUERY = 0x1180,
+    VIRTIO_MAGMA_RESP_GET_DRIVER = 0x1180,
+    VIRTIO_MAGMA_RESP_QUERY,
     VIRTIO_MAGMA_RESP_CREATE_CONNECTION,
     VIRTIO_MAGMA_RESP_RELEASE_CONNECTION,
     VIRTIO_MAGMA_RESP_GET_ERROR,
@@ -85,6 +87,7 @@ enum virtio_magma_ctrl_type {
     VIRTIO_MAGMA_RESP_ERR_UNIMPLEMENTED = 0x1280,
     VIRTIO_MAGMA_RESP_ERR_INTERNAL,
     VIRTIO_MAGMA_RESP_ERR_HOST_DISCONNECTED,
+    VIRTIO_MAGMA_RESP_ERR_OUT_OF_MEMORY,
     VIRTIO_MAGMA_RESP_ERR_INVALID_COMMAND,
     VIRTIO_MAGMA_RESP_ERR_INVALID_ARGUMENT,
 } __PACKED;
@@ -93,6 +96,17 @@ typedef struct virtio_magma_ctrl_hdr {
     uint32_t type;
     uint32_t flags;
 } __PACKED virtio_magma_ctrl_hdr_t;
+
+typedef struct virtio_magma_get_driver {
+    virtio_magma_ctrl_hdr_t hdr;
+    uint32_t page_size;
+} __PACKED virtio_magma_get_driver_t;
+
+typedef struct virtio_magma_get_driver_resp {
+    virtio_magma_ctrl_hdr_t hdr;
+    uint64_t pfn;
+    uint64_t size;
+} __PACKED virtio_magma_get_driver_resp_t;
 
 typedef struct virtio_magma_query {
     virtio_magma_ctrl_hdr_t hdr;

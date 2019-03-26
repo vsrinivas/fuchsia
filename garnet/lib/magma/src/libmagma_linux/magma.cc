@@ -3,18 +3,30 @@
 // found in the LICENSE file.
 
 #include "magma.h"
+#include "magma_sysmem.h"
+
 #include "virtio_magma_connection.h"
+
+bool magma_write_driver_to_filesystem(int32_t file_descriptor)
+{
+    return magma::VirtioMagmaConnection::WriteDriverToFilesystem(file_descriptor);
+}
 
 magma_status_t magma_query(int32_t file_descriptor, uint64_t id, uint64_t* value_out)
 {
     return magma::VirtioMagmaConnection::Query(file_descriptor, id, value_out);
 }
 
-magma_connection_t magma_create_connection(int32_t file_descriptor,
-                                           uint32_t /* capabilities (deprecated) */)
+magma_status_t magma_create_connection(int32_t file_descriptor, magma_connection_t* connection_out)
 {
-    // Here we release ownership of the connection to the client.
-    return magma::VirtioMagmaConnection::Create(file_descriptor).release();
+    *connection_out = magma::VirtioMagmaConnection::Create(file_descriptor).release();
+    return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_create_connection2(int32_t file_descriptor, magma_connection_t* connection_out)
+{
+    *connection_out = magma::VirtioMagmaConnection::Create(file_descriptor).release();
+    return MAGMA_STATUS_OK;
 }
 
 void magma_release_connection(magma_connection_t connection)
@@ -107,7 +119,7 @@ magma_status_t magma_unmap(magma_connection_t connection, magma_buffer_t buffer)
     return conn->Unmap(buffer);
 }
 
-void magma_map_buffer_gpu(struct magma_connection_t connection, magma_buffer_t buffer,
+void magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer,
                           uint64_t page_offset, uint64_t page_count, uint64_t gpu_va,
                           uint64_t map_flags)
 {
@@ -115,14 +127,13 @@ void magma_map_buffer_gpu(struct magma_connection_t connection, magma_buffer_t b
     return conn->MapBufferGpu(buffer, page_offset, page_count, gpu_va, map_flags);
 }
 
-void magma_unmap_buffer_gpu(struct magma_connection_t connection, magma_buffer_t buffer,
-                            uint64_t gpu_va)
+void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va)
 {
     auto conn = magma::VirtioMagmaConnection::cast(connection);
     conn->UnmapBufferGpu(buffer, gpu_va);
 }
 
-void magma_commit_buffer(struct magma_connection_t connection, magma_buffer_t buffer,
+void magma_commit_buffer(magma_connection_t connection, magma_buffer_t buffer,
                          uint64_t page_offset, uint64_t page_count)
 {
     auto conn = magma::VirtioMagmaConnection::cast(connection);
@@ -150,8 +161,7 @@ magma_status_t magma_create_command_buffer(magma_connection_t connection, uint64
     return conn->CreateCommandBuffer(size, buffer_out);
 }
 
-void magma_release_command_buffer(struct magma_connection_t connection,
-                                  magma_buffer_t command_buffer)
+void magma_release_command_buffer(magma_connection_t connection, magma_buffer_t command_buffer)
 {
     auto conn = magma::VirtioMagmaConnection::cast(connection);
     conn->ReleaseCommandBuffer(command_buffer);
@@ -219,6 +229,23 @@ magma_status_t magma_import_semaphore(magma_connection_t connection, uint32_t se
 {
     auto conn = magma::VirtioMagmaConnection::cast(connection);
     return conn->ImportSemaphore(semaphore_handle, semaphore_out);
+}
+
+magma_status_t magma_sysmem_connection_create(magma_sysmem_connection_t* connection_out)
+{
+    // TODO(msandy): implement
+    return MAGMA_STATUS_OK;
+}
+
+void magma_sysmem_connection_release(magma_sysmem_connection_t connection)
+{
+    // TODO(msandy): implement
+}
+
+magma_status_t magma_wait_notification_channel(magma_connection_t connection, int64_t timeout_ns)
+{
+    // TODO(msandy): implement
+    return MAGMA_STATUS_OK;
 }
 
 magma_status_t magma_read_notification_channel(magma_connection_t connection, void* buffer,

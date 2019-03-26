@@ -263,6 +263,7 @@ executable("virtio_wl_bin") {
   deps = [
     ":virtio",
     "//garnet/lib/magma/src/libmagma",
+    "//garnet/lib/magma/src/magma_util",
   ]
 }
 
@@ -270,6 +271,15 @@ package("virtio_wl") {
   binary = "virtio_wl"
   deps = [
     ":virtio_wl_bin",
+    "//third_party/mesa/src/intel/vulkan:vulkan_intel_linux(//build/toolchain:linux_x64-shared)",
+  ]
+
+  # TODO(MA-520): don't hard-code the driver
+  resources = [
+    {
+      path = rebase_path("${root_build_dir}/linux_x64-shared/libvulkan_intel_linux.so")
+      dest = "drivers/libvulkan_intel_linux.so"
+    },
   ]
   meta = [
     {
