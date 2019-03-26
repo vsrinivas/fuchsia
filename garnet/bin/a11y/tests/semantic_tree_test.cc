@@ -4,13 +4,14 @@
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/test_with_context.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/logger.h>
 
 #include "garnet/bin/a11y/a11y_manager/semantic_tree.h"
 #include "garnet/bin/a11y/tests/mocks/mock_semantics_provider.h"
 #include "gtest/gtest.h"
-#include "lib/syslog/cpp/logger.h"
 
 namespace a11y_manager_test {
 const std::string kSemanticTree1 = "    Node_id: 0, Label:Node-0\n";
@@ -32,15 +33,16 @@ const std::string kSemanticTree8 =
     "            Node_id: 5, Label:Node-5\n"
     "            Node_id: 6, Label:Node-6\n";
 // Unit tests for garnet/bin/a11y/a11y_manager/semantic_tree.h
-class SemanticTreeTest : public sys::testing::TestWithContext {
+class SemanticTreeTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
-    TestWithContext::SetUp();
+    TestLoopFixture::SetUp();
     syslog::InitLogger();
-    controller().AddService<fuchsia::accessibility::SemanticsRoot>(
-        [this](fidl::InterfaceRequest<fuchsia::accessibility::SemanticsRoot>
-                   request) { tree_.AddBinding(std::move(request)); });
-    context_ = TakeContext();
+    context_provider_.service_directory_provider()
+        ->AddService<fuchsia::accessibility::SemanticsRoot>(
+            [this](fidl::InterfaceRequest<fuchsia::accessibility::SemanticsRoot>
+                       request) { tree_.AddBinding(std::move(request)); });
+    context_ = context_provider_.TakeContext();
     RunLoopUntilIdle();
   }
   void CreateSemanticTree(
@@ -50,6 +52,7 @@ class SemanticTreeTest : public sys::testing::TestWithContext {
       int number_of_nodes_per_view,
       accessibility_test::MockSemanticsProvider *provider);
   a11y_manager::SemanticTree tree_;
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<sys::ComponentContext> context_;
 };
 
