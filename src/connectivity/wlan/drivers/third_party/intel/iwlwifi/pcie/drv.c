@@ -36,19 +36,19 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-#include <linux/module.h>
-#include <linux/pm_runtime.h>
-#include <linux/pci.h>
-#include <linux/acpi.h>
+#include <ddk/driver.h>
 
-#include "fw/acpi.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 
-#include "../fw/acpi.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 
-#include "../iwl-drv.h"
-#include "../iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#if 0  // NEEDS_PORTING
 #include "internal.h"
+#endif  // NEEDS_PORTING
 
+#if 0  // NEEDS_PORTING
 #define IWL_PCI_DEVICE(dev, subdev, cfg)                                     \
     .vendor = PCI_VENDOR_ID_INTEL, .device = (dev), .subvendor = PCI_ANY_ID, \
     .subdevice = (subdev), .driver_data = (kernel_ulong_t) & (cfg)
@@ -1309,3 +1309,4 @@ int __must_check iwl_pci_register_driver(void) {
 void iwl_pci_unregister_driver(void) {
     pci_unregister_driver(&iwl_pci_driver);
 }
+#endif  // NEEDS_PORTING

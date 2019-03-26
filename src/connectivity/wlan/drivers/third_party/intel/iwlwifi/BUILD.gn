@@ -19,7 +19,9 @@ import("//build/package.gni")
 driver_module("iwlwifi_driver") {
   output_name = "iwlwifi"
 
-  sources = []
+  sources = [
+    "pcie/drv.c",
+  ]
 
   deps = [
     "//zircon/public/lib/ddk",
