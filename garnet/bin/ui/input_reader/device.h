@@ -44,6 +44,7 @@ class Device {
     fuchsia::ui::input::SensorDescriptorPtr sensor_descriptor;
   };
 
+  virtual ~Device() = default;
   // This needs to be called to initialize the device.
   // Returns false if the report descriptor does not match the given device.
   virtual bool ParseReportDescriptor(

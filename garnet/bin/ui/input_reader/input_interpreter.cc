@@ -89,15 +89,6 @@ bool InputInterpreter::Initialize() {
 
     keyboard_report_ = fuchsia::ui::input::InputReport::New();
     keyboard_report_->keyboard = fuchsia::ui::input::KeyboardReport::New();
-  } else if (protocol == Protocol::Buttons) {
-    FXL_VLOG(2) << "Device " << name() << " has buttons";
-    has_buttons_ = true;
-    buttons_report_ = fuchsia::ui::input::InputReport::New();
-    buttons_report_->buttons = fuchsia::ui::input::ButtonsReport::New();
-  } else if (protocol == Protocol::Mouse) {
-    FXL_VLOG(2) << "Device " << name() << " has mouse";
-    mouse_report_ = fuchsia::ui::input::InputReport::New();
-    mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
   } else if (protocol == Protocol::BootMouse || protocol == Protocol::Gamepad) {
     FXL_VLOG(2) << "Device " << name() << " has mouse";
     has_mouse_ = true;
@@ -117,17 +108,6 @@ bool InputInterpreter::Initialize() {
     mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonPrimary;
     mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonSecondary;
     mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonTertiary;
-
-    mouse_report_ = fuchsia::ui::input::InputReport::New();
-    mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
-  } else if (protocol == Protocol::Touch) {
-    FXL_VLOG(2) << "Device " << name() << " has hid touch";
-
-    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
-    touchscreen_report_->touchscreen =
-        fuchsia::ui::input::TouchscreenReport::New();
-  } else if (protocol == Protocol::Touchpad) {
-    FXL_VLOG(2) << "Device " << name() << " has hid touchpad";
 
     mouse_report_ = fuchsia::ui::input::InputReport::New();
     mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
@@ -392,11 +372,6 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::EYOYO;
-  } else if (protocol == Protocol::Sensor) {
-    FXL_VLOG(2) << "Device " << name() << " has sensor";
-    sensor_device_type_ = SensorDeviceType::HID;
-    sensor_report_ = fuchsia::ui::input::InputReport::New();
-    sensor_report_->sensor = fuchsia::ui::input::SensorReport::New();
   } else if (protocol == Protocol::LightSensor) {
     FXL_VLOG(2) << "Device " << name() << " has an ambient light sensor";
     sensor_device_type_ = SensorDeviceType::AMBIENT_LIGHT;
@@ -451,9 +426,6 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::FT3X27;
-  } else {
-    FXL_VLOG(2) << "Device " << name() << " has unsupported HID device";
-    return false;
   }
 
   event_ = hid_decoder_->GetEvent();
@@ -483,20 +455,48 @@ void InputInterpreter::NotifyRegistry() {
     return;
   }
 
-  fuchsia::ui::input::DeviceDescriptor descriptor;
-  if (has_keyboard_) {
-    fidl::Clone(keyboard_descriptor_, &descriptor.keyboard);
+  // Register the hardcoded device's descriptors.
+  {
+    fuchsia::ui::input::DeviceDescriptor descriptor;
+    if (has_keyboard_) {
+      fidl::Clone(keyboard_descriptor_, &descriptor.keyboard);
+    }
+    if (has_mouse_) {
+      fidl::Clone(mouse_descriptor_, &descriptor.mouse);
+    }
+    if (has_stylus_) {
+      fidl::Clone(stylus_descriptor_, &descriptor.stylus);
+    }
+    if (has_touchscreen_) {
+      fidl::Clone(touchscreen_descriptor_, &descriptor.touchscreen);
+    }
+    registry_->RegisterDevice(std::move(descriptor),
+                              input_device_.NewRequest());
   }
-  if (has_mouse_) {
-    fidl::Clone(mouse_descriptor_, &descriptor.mouse);
+
+  // Register the generic device's descriptors.
+  for (size_t i = 0; i < devices_.size(); i++) {
+    fuchsia::ui::input::DeviceDescriptor descriptor;
+    InputDevice& device = devices_[i];
+    if (device.descriptor.has_keyboard) {
+      fidl::Clone(device.descriptor.keyboard_descriptor, &descriptor.keyboard);
+    }
+    if (device.descriptor.has_mouse) {
+      fidl::Clone(device.descriptor.mouse_descriptor, &descriptor.mouse);
+    }
+    if (device.descriptor.has_stylus) {
+      fidl::Clone(device.descriptor.stylus_descriptor, &descriptor.stylus);
+    }
+    if (device.descriptor.has_touchscreen) {
+      fidl::Clone(device.descriptor.touchscreen_descriptor,
+                  &descriptor.touchscreen);
+    }
+    if (device.descriptor.has_sensor) {
+      fidl::Clone(device.descriptor.sensor_descriptor, &descriptor.sensor);
+    }
+    registry_->RegisterDevice(std::move(descriptor),
+                              device.input_device.NewRequest());
   }
-  if (has_stylus_) {
-    fidl::Clone(stylus_descriptor_, &descriptor.stylus);
-  }
-  if (has_touchscreen_) {
-    fidl::Clone(touchscreen_descriptor_, &descriptor.touchscreen);
-  }
-  registry_->RegisterDevice(std::move(descriptor), input_device_.NewRequest());
 }
 
 bool InputInterpreter::Read(bool discard) {
@@ -522,18 +522,6 @@ bool InputInterpreter::Read(bool discard) {
     }
   }
 
-  if (has_buttons_) {
-    if (buttons_.ParseReport(report.data(), rc, buttons_report_.get())) {
-      if (!discard) {
-        buttons_report_->event_time = InputEventTimestampNow();
-        buttons_report_->trace_id = TRACE_NONCE();
-        TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                         buttons_report_->trace_id);
-        input_device_->DispatchReport(CloneReport(*buttons_report_));
-      }
-    }
-  }
-
   switch (mouse_device_type_) {
     case MouseDeviceType::BOOT:
       hardcoded_.ParseMouseReport(report.data(), rc, mouse_report_.get());
@@ -541,28 +529,6 @@ bool InputInterpreter::Read(bool discard) {
         TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
                          mouse_report_->trace_id);
         input_device_->DispatchReport(CloneReport(*mouse_report_));
-      }
-      break;
-    case MouseDeviceType::TOUCH:
-      if (touchpad_.ParseReport(report.data(), rc, mouse_report_.get())) {
-        if (!discard) {
-          mouse_report_->event_time = InputEventTimestampNow();
-          mouse_report_->trace_id = TRACE_NONCE();
-          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                           mouse_report_->trace_id);
-          input_device_->DispatchReport(CloneReport(*mouse_report_));
-        }
-      }
-      break;
-    case MouseDeviceType::HID:
-      if (mouse_.ParseReport(report.data(), rc, mouse_report_.get())) {
-        if (!discard) {
-          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                           mouse_report_->trace_id);
-          mouse_report_->event_time = InputEventTimestampNow();
-          mouse_report_->trace_id = TRACE_NONCE();
-          input_device_->DispatchReport(CloneReport(*mouse_report_));
-        }
       }
       break;
     case MouseDeviceType::PARADISEv1:
@@ -598,21 +564,11 @@ bool InputInterpreter::Read(bool discard) {
       break;
     case MouseDeviceType::NONE:
       break;
+    default:
+      break;
   }
 
   switch (touch_device_type_) {
-    case TouchDeviceType::HID:
-      if (touchscreen_.ParseReport(report.data(), rc,
-                                   touchscreen_report_.get())) {
-        if (!discard) {
-          touchscreen_report_->event_time = InputEventTimestampNow();
-          touchscreen_report_->trace_id = TRACE_NONCE();
-          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                           touchscreen_report_->trace_id);
-          input_device_->DispatchReport(CloneReport(*touchscreen_report_));
-        }
-      }
-      break;
     case TouchDeviceType::ACER12:
       if (report[0] == ACER12_RPT_ID_STYLUS) {
         if (hardcoded_.ParseAcer12StylusReport(report.data(), rc,
@@ -745,19 +701,6 @@ bool InputInterpreter::Read(bool discard) {
   }
 
   switch (sensor_device_type_) {
-    case SensorDeviceType::HID: {
-      if (sensor_.ParseReport(report.data(), rc, sensor_report_.get())) {
-        if (!discard) {
-          sensor_report_->event_time = InputEventTimestampNow();
-          sensor_report_->trace_id = TRACE_NONCE();
-          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
-                           sensor_report_->trace_id);
-          sensor_devices_[sensor_idx_]->DispatchReport(
-              CloneReport(*sensor_report_));
-        }
-      }
-      break;
-    }
     case SensorDeviceType::PARADISE:
       if (hardcoded_.ParseParadiseSensorReport(report.data(), rc, &sensor_idx_,
                                                sensor_report_.get())) {
@@ -786,6 +729,18 @@ bool InputInterpreter::Read(bool discard) {
       break;
     default:
       break;
+  }
+  for (size_t i = 0; i < devices_.size(); i++) {
+    InputDevice& device = devices_[i];
+    if (device.device->ParseReport(report.data(), rc, device.report.get())) {
+      if (!discard) {
+        device.report->event_time = InputEventTimestampNow();
+        device.report->trace_id = TRACE_NONCE();
+        TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                         device.report->trace_id);
+        device.input_device->DispatchReport(CloneReport(*device.report));
+      }
+    }
   }
 
   return true;
@@ -826,59 +781,6 @@ Protocol ExtractProtocol(hid::Usage input) {
     }
   }
   return Protocol::Other;
-}
-
-bool InputInterpreter::ConsumeDescriptor(Device::Descriptor* descriptor) {
-  protocol_ = descriptor->protocol;
-  if (descriptor->has_keyboard) {
-    if (has_keyboard_) {
-      FXL_LOG(ERROR) << name() << " HID device defines multiple keyboards";
-      return false;
-    }
-    has_keyboard_ = true;
-    keyboard_descriptor_ = std::move(descriptor->keyboard_descriptor);
-  }
-  if (descriptor->has_buttons) {
-    if (has_buttons_) {
-      FXL_LOG(ERROR) << name() << " HID device defines multiple buttons";
-      return false;
-    }
-    has_buttons_ = true;
-    buttons_descriptor_ = std::move(descriptor->buttons_descriptor);
-  }
-  if (descriptor->has_mouse) {
-    if (has_mouse_) {
-      FXL_LOG(ERROR) << name() << " HID device defines multiple mice";
-      return false;
-    }
-    has_mouse_ = true;
-    mouse_device_type_ = descriptor->mouse_type;
-    mouse_descriptor_ = std::move(descriptor->mouse_descriptor);
-  }
-  if (descriptor->has_stylus) {
-    if (has_stylus_) {
-      FXL_LOG(ERROR) << name() << " HID device defines multiple styluses";
-      return false;
-    }
-    has_stylus_ = true;
-    stylus_descriptor_ = std::move(descriptor->stylus_descriptor);
-  }
-  if (descriptor->has_touchscreen) {
-    if (has_touchscreen_) {
-      FXL_LOG(ERROR) << name() << " HID device defines multiple touchscreens";
-      return false;
-    }
-    has_touchscreen_ = true;
-    touch_device_type_ = descriptor->touch_type;
-    touchscreen_descriptor_ = std::move(descriptor->touchscreen_descriptor);
-  }
-  if (descriptor->has_sensor) {
-    has_sensors_ = true;
-    sensor_idx_ = 0;
-    sensor_device_type_ = SensorDeviceType::HID;
-    sensor_descriptors_[sensor_idx_] = std::move(descriptor->sensor_descriptor);
-  }
-  return true;
 }
 
 bool InputInterpreter::ParseProtocol() {
@@ -999,7 +901,7 @@ bool InputInterpreter::ParseProtocol() {
   }
 
   if (collection == nullptr) {
-    FXL_LOG(ERROR) << "invalid hid collection for " << name();
+    FXL_LOG(ERROR) << "invalid HID collection for " << name();
     return false;
   }
 
@@ -1007,73 +909,57 @@ bool InputInterpreter::ParseProtocol() {
                 << collection->usage.page << " and usage "
                 << collection->usage.usage;
 
+  InputDevice input_device = {};
+  input_device.report = fuchsia::ui::input::InputReport::New();
+
   // Most modern gamepads report themselves as Joysticks. Madness.
   if (collection->usage.page == hid::usage::Page::kGenericDesktop &&
       collection->usage.usage == hid::usage::GenericDesktop::kJoystick &&
       hardcoded_.ParseGamepadDescriptor(input_desc->input_fields,
                                         input_desc->input_count)) {
     protocol_ = Protocol::Gamepad;
+    return true;
   } else {
     protocol_ = ExtractProtocol(collection->usage);
     switch (protocol_) {
       case Protocol::LightSensor:
         hardcoded_.ParseAmbientLightDescriptor(input_desc->input_fields,
                                                input_desc->input_count);
-        break;
+        return true;
       case Protocol::Buttons: {
-        Device::Descriptor device_descriptor = {};
-        if (!buttons_.ParseReportDescriptor(*input_desc, &device_descriptor)) {
-          FXL_LOG(ERROR) << "invalid sensor descriptor for " << name();
-          return false;
-        }
-        if (!ConsumeDescriptor(&device_descriptor)) {
-          return false;
-        }
+        FXL_VLOG(2) << "Device " << name() << " has HID buttons";
+
+        input_device.device = std::make_unique<Buttons>();
+        input_device.report->buttons = fuchsia::ui::input::ButtonsReport::New();
         break;
       }
       case Protocol::Sensor: {
-        Device::Descriptor device_descriptor = {};
-        if (!sensor_.ParseReportDescriptor(*input_desc, &device_descriptor)) {
-          FXL_LOG(ERROR) << "invalid sensor descriptor for " << name();
-          return false;
-        }
-        if (!ConsumeDescriptor(&device_descriptor)) {
-          return false;
-        }
+        FXL_VLOG(2) << "Device " << name() << " has HID sensor";
+
+        input_device.device = std::make_unique<Sensor>();
+        input_device.report->sensor = fuchsia::ui::input::SensorReport::New();
         break;
       }
       case Protocol::Touchpad: {
-        Device::Descriptor device_descriptor = {};
-        if (!touchpad_.ParseReportDescriptor(*input_desc, &device_descriptor)) {
-          FXL_LOG(ERROR) << "invalid touchscreen descriptor for " << name();
-          return false;
-        }
-        if (!ConsumeDescriptor(&device_descriptor)) {
-          return false;
-        }
+        FXL_VLOG(2) << "Device " << name() << " has HID touchpad";
+
+        input_device.device = std::make_unique<Touchpad>();
+        input_device.report->mouse = fuchsia::ui::input::MouseReport::New();
         break;
       }
       case Protocol::Touch: {
-        Device::Descriptor device_descriptor = {};
-        if (!touchscreen_.ParseReportDescriptor(*input_desc,
-                                                &device_descriptor)) {
-          FXL_LOG(ERROR) << "invalid touchscreen descriptor for " << name();
-          return false;
-        }
-        if (!ConsumeDescriptor(&device_descriptor)) {
-          return false;
-        }
+        FXL_VLOG(2) << "Device " << name() << " has HID touch";
+
+        input_device.device = std::make_unique<TouchScreen>();
+        input_device.report->touchscreen =
+            fuchsia::ui::input::TouchscreenReport::New();
         break;
       }
       case Protocol::Mouse: {
-        Device::Descriptor device_descriptor = {};
-        if (!mouse_.ParseReportDescriptor(*input_desc, &device_descriptor)) {
-          FXL_LOG(ERROR) << "invalid mouse descriptor for " << name();
-          return false;
-        }
-        if (!ConsumeDescriptor(&device_descriptor)) {
-          return false;
-        }
+        FXL_VLOG(2) << "Device " << name() << " has HID mouse";
+
+        input_device.device = std::make_unique<Mouse>();
+        input_device.report->mouse = fuchsia::ui::input::MouseReport::New();
         break;
       }
       // Add more protocols here
@@ -1081,6 +967,13 @@ bool InputInterpreter::ParseProtocol() {
         return false;
     }
   }
+
+  if (!input_device.device->ParseReportDescriptor(*input_desc,
+                                                  &input_device.descriptor)) {
+    FXL_LOG(ERROR) << "invalid report descriptor for " << name();
+    return false;
+  }
+  devices_.push_back(std::move(input_device));
 
   return true;
 }

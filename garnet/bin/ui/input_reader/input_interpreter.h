@@ -56,14 +56,19 @@ class InputInterpreter {
   zx_handle_t handle() { return event_.get(); }
 
  private:
-  static const uint8_t kMaxSensorCount = 16;
-  static const uint8_t kNoSuchSensor = 0xFF;
-
-  // Helper function called at the end of ParseProtocol. It will set
-  // InputInterpreter's |procotol_| and various device descriptors based
-  // on |descriptor|. It will move the DescriptorPtrs out of |descriptor|, so
-  // |descriptor| should not be used after calling this function.
-  bool ConsumeDescriptor(Device::Descriptor* descriptor);
+  // Each InputDevice represents a logical device exposed by a HID device.
+  // Some HID devices have multiple InputDevices (e.g: A keyboard/mouse
+  // combo with a single USB cable).
+  struct InputDevice {
+    // The Device struct that parses the reports.
+    std::unique_ptr<Device> device;
+    // The structured report that is parsed by |device|.
+    fuchsia::ui::input::InputReportPtr report;
+    // Holds descriptions of what this device contains.
+    Device::Descriptor descriptor;
+    // The pointer where reports are sent to by this device.
+    fuchsia::ui::input::InputDevicePtr input_device;
+  };
 
   // Helper function called during Init() that determines which protocol
   // is going to be used. If it returns true then |protocol_| has been
@@ -75,6 +80,18 @@ class InputInterpreter {
   fuchsia::ui::input::InputDeviceRegistry* registry_;
 
   zx::event event_;
+
+  // The array of Devices that are managed by this InputInterpreter.
+  std::vector<InputDevice> devices_;
+
+  std::unique_ptr<HidDecoder> hid_decoder_;
+
+  // TODO(SCN-1251) All of the below variables are only used with devices that
+  // have not been updated to the new code path. They will hopefully be removed
+  // before long.
+
+  static const uint8_t kMaxSensorCount = 16;
+  static const uint8_t kNoSuchSensor = 0xFF;
 
   bool has_keyboard_ = false;
   fuchsia::ui::input::KeyboardDescriptorPtr keyboard_descriptor_;
@@ -111,15 +128,8 @@ class InputInterpreter {
 
   fuchsia::ui::input::InputDevicePtr input_device_;
 
-  std::unique_ptr<HidDecoder> hid_decoder_;
-
   Protocol protocol_;
-  TouchScreen touchscreen_ = {};
-  Touchpad touchpad_ = {};
-  Mouse mouse_ = {};
-  Sensor sensor_ = {};
   Hardcoded hardcoded_ = {};
-  Buttons buttons_ = {};
 };
 
 }  // namespace mozart
