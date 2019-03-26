@@ -582,12 +582,6 @@ var handleTypes = map[types.HandleSubtype]string{
 	types.Vmar:    "_zx.VMAR",
 }
 
-func exportIdentifier(name types.EncodedCompoundIdentifier) types.CompoundIdentifier {
-	ci := types.ParseCompoundIdentifier(name)
-	ci.Name = types.Identifier(common.ToUpperCamelCase(string(ci.Name)))
-	return ci
-}
-
 func isReservedWord(str string) bool {
 	_, ok := reservedWords[str]
 	return ok
@@ -624,8 +618,13 @@ func (_ *compiler) compileIdentifier(id types.Identifier, export bool, ext strin
 	return changeIfReserved(types.Identifier(str), ext)
 }
 
-func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, ext string) string {
-	ci := exportIdentifier(eci)
+func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier, export bool, ext string) string {
+	ci := types.ParseCompoundIdentifier(eci)
+	if export {
+		ci.Name = types.Identifier(common.ToUpperCamelCase(string(ci.Name)))
+	} else {
+		ci.Name = types.Identifier(common.ToLowerCamelCase(string(ci.Name)))
+	}
 	pkg := compileLibraryIdentifier(ci.Library)
 	strs := []string{}
 	if c.inExternalLibrary(ci) {
@@ -707,7 +706,7 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 		t2.reverseOfBounds = append(t2.reverseOfBounds, nullability)
 		r = Type(e)
 	case types.RequestType:
-		e := c.compileCompoundIdentifier(val.RequestSubtype, RequestSuffix)
+		e := c.compileCompoundIdentifier(val.RequestSubtype, true, RequestSuffix)
 		var nullability int
 		if val.Nullable {
 			t.Nullable = true
@@ -733,7 +732,7 @@ func (c *compiler) compileType(val types.Type) (r Type, t Tag, t2 tagNew) {
 	case types.PrimitiveType:
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
 	case types.IdentifierType:
-		e := c.compileCompoundIdentifier(val.Identifier, "")
+		e := c.compileCompoundIdentifier(val.Identifier, true, "")
 		declType, ok := c.decls[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier: ", val.Identifier)
@@ -781,7 +780,7 @@ func (c *compiler) compileBits(val types.Bits) Bits {
 	t, _, _ := c.compileType(val.Type)
 	r := Bits{
 		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
 		Type:       t,
 	}
 	for _, v := range val.Members {
@@ -796,7 +795,7 @@ func (c *compiler) compileConst(val types.Const) Const {
 	t, _, _ := c.compileType(val.Type)
 	return Const{
 		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
 		Type:       t,
 		Value:      c.compileConstant(val.Value),
 	}
@@ -813,7 +812,7 @@ func (c *compiler) compileEnumMember(val types.EnumMember) EnumMember {
 func (c *compiler) compileEnum(val types.Enum) Enum {
 	r := Enum{
 		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
 		Type:       c.compilePrimitiveSubtype(val.Type),
 	}
 	for _, v := range val.Members {
@@ -836,7 +835,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 func (c *compiler) compileStruct(val types.Struct) Struct {
 	r := Struct{
 		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
 		Size:       val.Size,
 		Alignment:  val.Alignment,
 	}
@@ -862,8 +861,8 @@ func (c *compiler) compileUnionMember(unionName string, val types.UnionMember) U
 func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
 		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, ""),
-		TagName:    c.compileCompoundIdentifier(val.Name, TagSuffix),
+		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
+		TagName:    c.compileCompoundIdentifier(val.Name, true, TagSuffix),
 		Size:       val.Size,
 		Alignment:  val.Alignment,
 	}
@@ -890,8 +889,8 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	}
 	return XUnion{
 		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, ""),
-		TagName:    c.compileCompoundIdentifier(val.Name, TagSuffix),
+		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
+		TagName:    c.compileCompoundIdentifier(val.Name, true, TagSuffix),
 		Size:       val.Size,
 		Alignment:  val.Alignment,
 		Members:    members,
@@ -926,7 +925,7 @@ func (c *compiler) compileTable(val types.Table) Table {
 	}
 	return Table{
 		Attributes: val.Attributes,
-		Name:       c.compileCompoundIdentifier(val.Name, ""),
+		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
 		Size:       val.Size,
 		Alignment:  val.Alignment,
 		Members:    members,
@@ -949,16 +948,16 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 		Attributes:      val.Attributes,
 		Name:            methodName,
 		Ordinal:         val.Ordinal,
-		OrdinalName:     c.compileCompoundIdentifier(ifaceName, methodName+"Ordinal"),
+		OrdinalName:     c.compileCompoundIdentifier(ifaceName, true, methodName+"Ordinal"),
 		GenOrdinal:      val.GenOrdinal,
-		GenOrdinalName:  c.compileCompoundIdentifier(ifaceName, methodName+"GenOrdinal"),
+		GenOrdinalName:  c.compileCompoundIdentifier(ifaceName, true, methodName+"GenOrdinal"),
 		EventExpectName: "Expect" + methodName,
 		IsEvent:         !val.HasRequest && val.HasResponse,
 		IsTransitional:  val.IsTransitional(),
 	}
 	if val.HasRequest {
 		req := Struct{
-			Name: c.compileCompoundIdentifier(ifaceName, methodName+"Request"),
+			Name: c.compileCompoundIdentifier(ifaceName, false, methodName+"Request"),
 			// We want just the size of the parameter array as a struct, not
 			// including the message header size.
 			Size: val.RequestSize - MessageHeaderSize,
@@ -970,7 +969,7 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 	}
 	if val.HasResponse {
 		resp := Struct{
-			Name: c.compileCompoundIdentifier(ifaceName, methodName+"Response"),
+			Name: c.compileCompoundIdentifier(ifaceName, false, methodName+"Response"),
 			// We want just the size of the parameter array as a struct, not
 			// including the message header size.
 			Size: val.ResponseSize - MessageHeaderSize,
@@ -990,15 +989,15 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	}
 	r := Interface{
 		Attributes:           val.Attributes,
-		Name:                 c.compileCompoundIdentifier(val.Name, ""),
-		TransitionalBaseName: c.compileCompoundIdentifier(val.Name, TransitionalBaseSuffix),
-		ProxyName:            c.compileCompoundIdentifier(val.Name, ProxySuffix),
+		Name:                 c.compileCompoundIdentifier(val.Name, true, ""),
+		TransitionalBaseName: c.compileCompoundIdentifier(val.Name, true, TransitionalBaseSuffix),
+		ProxyName:            c.compileCompoundIdentifier(val.Name, true, ProxySuffix),
 		ProxyType:            proxyType,
-		StubName:             c.compileCompoundIdentifier(val.Name, StubSuffix),
-		RequestName:          c.compileCompoundIdentifier(val.Name, RequestSuffix),
-		EventProxyName:       c.compileCompoundIdentifier(val.Name, EventProxySuffix),
-		ServerName:           c.compileCompoundIdentifier(val.Name, ServiceSuffix),
-		ServiceNameConstant:  c.compileCompoundIdentifier(val.Name, ServiceNameSuffix),
+		StubName:             c.compileCompoundIdentifier(val.Name, true, StubSuffix),
+		RequestName:          c.compileCompoundIdentifier(val.Name, true, RequestSuffix),
+		EventProxyName:       c.compileCompoundIdentifier(val.Name, true, EventProxySuffix),
+		ServerName:           c.compileCompoundIdentifier(val.Name, true, ServiceSuffix),
+		ServiceNameConstant:  c.compileCompoundIdentifier(val.Name, true, ServiceNameSuffix),
 		ServiceNameString:    val.GetServiceName(),
 	}
 	for _, v := range val.Methods {

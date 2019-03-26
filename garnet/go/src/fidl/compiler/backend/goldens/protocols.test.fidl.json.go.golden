@@ -11,6 +11,135 @@ import (
 
 
 
+
+type ErrorEnun uint32
+const (
+	ErrorEnunErrFoo ErrorEnun = 1
+	ErrorEnunErrBar ErrorEnun = 2
+)
+func (x ErrorEnun) String() string {
+	switch x {
+	case 1:
+		return "ErrFoo"
+	case 2:
+		return "ErrBar"
+	}
+	return "Unknown"
+}
+
+type WithErrorSyntaxErrorAsPrimitiveResponse struct {
+	_ struct{} `fidl2:"s,1,1"`
+}
+
+var _mWithErrorSyntaxErrorAsPrimitiveResponse = _bindings.CreateLazyMarshaler(WithErrorSyntaxErrorAsPrimitiveResponse{})
+
+func (msg *WithErrorSyntaxErrorAsPrimitiveResponse) Marshaler() _bindings.Marshaler {
+	return _mWithErrorSyntaxErrorAsPrimitiveResponse
+}
+
+// Implements Payload.
+func (_ *WithErrorSyntaxErrorAsPrimitiveResponse) InlineAlignment() int {
+	return 1
+}
+
+// Implements Payload.
+func (_ *WithErrorSyntaxErrorAsPrimitiveResponse) InlineSize() int {
+	return 1
+}
+
+type WithErrorSyntaxErrorAsEnumResponse struct {
+	_ struct{} `fidl2:"s,1,1"`
+}
+
+var _mWithErrorSyntaxErrorAsEnumResponse = _bindings.CreateLazyMarshaler(WithErrorSyntaxErrorAsEnumResponse{})
+
+func (msg *WithErrorSyntaxErrorAsEnumResponse) Marshaler() _bindings.Marshaler {
+	return _mWithErrorSyntaxErrorAsEnumResponse
+}
+
+// Implements Payload.
+func (_ *WithErrorSyntaxErrorAsEnumResponse) InlineAlignment() int {
+	return 1
+}
+
+// Implements Payload.
+func (_ *WithErrorSyntaxErrorAsEnumResponse) InlineSize() int {
+	return 1
+}
+type WithErrorSyntaxErrorAsPrimitiveResultTag uint32
+const (
+	_ WithErrorSyntaxErrorAsPrimitiveResultTag = iota
+	WithErrorSyntaxErrorAsPrimitiveResultResponse
+	WithErrorSyntaxErrorAsPrimitiveResultErr
+)
+
+
+type WithErrorSyntaxErrorAsPrimitiveResult struct {
+	WithErrorSyntaxErrorAsPrimitiveResultTag `fidl:"tag" fidl2:"u,8,4"`
+	Response WithErrorSyntaxErrorAsPrimitiveResponse 
+	Err uint32 
+}
+
+// Implements Payload.
+func (_ *WithErrorSyntaxErrorAsPrimitiveResult) InlineAlignment() int {
+	return 4
+}
+
+// Implements Payload.
+func (_ *WithErrorSyntaxErrorAsPrimitiveResult) InlineSize() int {
+	return 8
+}
+
+func (u *WithErrorSyntaxErrorAsPrimitiveResult) Which() WithErrorSyntaxErrorAsPrimitiveResultTag {
+	return u.WithErrorSyntaxErrorAsPrimitiveResultTag
+}
+
+func (u *WithErrorSyntaxErrorAsPrimitiveResult) SetResponse(response WithErrorSyntaxErrorAsPrimitiveResponse) {
+	u.WithErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultResponse
+	u.Response = response
+}
+
+func (u *WithErrorSyntaxErrorAsPrimitiveResult) SetErr(err uint32) {
+	u.WithErrorSyntaxErrorAsPrimitiveResultTag = WithErrorSyntaxErrorAsPrimitiveResultErr
+	u.Err = err
+}
+type WithErrorSyntaxErrorAsEnumResultTag uint32
+const (
+	_ WithErrorSyntaxErrorAsEnumResultTag = iota
+	WithErrorSyntaxErrorAsEnumResultResponse
+	WithErrorSyntaxErrorAsEnumResultErr
+)
+
+
+type WithErrorSyntaxErrorAsEnumResult struct {
+	WithErrorSyntaxErrorAsEnumResultTag `fidl:"tag" fidl2:"u,8,4"`
+	Response WithErrorSyntaxErrorAsEnumResponse 
+	Err ErrorEnun 
+}
+
+// Implements Payload.
+func (_ *WithErrorSyntaxErrorAsEnumResult) InlineAlignment() int {
+	return 4
+}
+
+// Implements Payload.
+func (_ *WithErrorSyntaxErrorAsEnumResult) InlineSize() int {
+	return 8
+}
+
+func (u *WithErrorSyntaxErrorAsEnumResult) Which() WithErrorSyntaxErrorAsEnumResultTag {
+	return u.WithErrorSyntaxErrorAsEnumResultTag
+}
+
+func (u *WithErrorSyntaxErrorAsEnumResult) SetResponse(response WithErrorSyntaxErrorAsEnumResponse) {
+	u.WithErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultResponse
+	u.Response = response
+}
+
+func (u *WithErrorSyntaxErrorAsEnumResult) SetErr(err ErrorEnun) {
+	u.WithErrorSyntaxErrorAsEnumResultTag = WithErrorSyntaxErrorAsEnumResultErr
+	u.Err = err
+}
 const (
 	WithAndWithoutRequestResponseNoRequestNoResponseOrdinal uint32 = 503576693
 	WithAndWithoutRequestResponseNoRequestNoResponseGenOrdinal uint32 = 503576693
@@ -30,129 +159,129 @@ const (
 	WithAndWithoutRequestResponseOnWithResponseGenOrdinal uint32 = 2051478023
 )
 
-type WithAndWithoutRequestResponseNoRequestWithResponseResponse struct {
+type withAndWithoutRequestResponseNoRequestWithResponseResponse struct {
 	_ struct{} `fidl2:"s,16,0"`
 	Ret string
 }
 
-var _mWithAndWithoutRequestResponseNoRequestWithResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseNoRequestWithResponseResponse{})
+var _mwithAndWithoutRequestResponseNoRequestWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseNoRequestWithResponseResponse{})
 
-func (msg *WithAndWithoutRequestResponseNoRequestWithResponseResponse) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseNoRequestWithResponseResponse
+func (msg *withAndWithoutRequestResponseNoRequestWithResponseResponse) Marshaler() _bindings.Marshaler {
+	return _mwithAndWithoutRequestResponseNoRequestWithResponseResponse
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseNoRequestWithResponseResponse) InlineAlignment() int {
+func (_ *withAndWithoutRequestResponseNoRequestWithResponseResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseNoRequestWithResponseResponse) InlineSize() int {
+func (_ *withAndWithoutRequestResponseNoRequestWithResponseResponse) InlineSize() int {
 	return 16
 }
 
-type WithAndWithoutRequestResponseWithRequestNoResponseRequest struct {
+type withAndWithoutRequestResponseWithRequestNoResponseRequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	Arg string
 }
 
-var _mWithAndWithoutRequestResponseWithRequestNoResponseRequest = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseWithRequestNoResponseRequest{})
+var _mwithAndWithoutRequestResponseWithRequestNoResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestNoResponseRequest{})
 
-func (msg *WithAndWithoutRequestResponseWithRequestNoResponseRequest) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseWithRequestNoResponseRequest
+func (msg *withAndWithoutRequestResponseWithRequestNoResponseRequest) Marshaler() _bindings.Marshaler {
+	return _mwithAndWithoutRequestResponseWithRequestNoResponseRequest
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestNoResponseRequest) InlineAlignment() int {
+func (_ *withAndWithoutRequestResponseWithRequestNoResponseRequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestNoResponseRequest) InlineSize() int {
+func (_ *withAndWithoutRequestResponseWithRequestNoResponseRequest) InlineSize() int {
 	return 16
 }
 
-type WithAndWithoutRequestResponseWithRequestEmptyResponseRequest struct {
+type withAndWithoutRequestResponseWithRequestEmptyResponseRequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	Arg string
 }
 
-var _mWithAndWithoutRequestResponseWithRequestEmptyResponseRequest = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseWithRequestEmptyResponseRequest{})
+var _mwithAndWithoutRequestResponseWithRequestEmptyResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestEmptyResponseRequest{})
 
-func (msg *WithAndWithoutRequestResponseWithRequestEmptyResponseRequest) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseWithRequestEmptyResponseRequest
+func (msg *withAndWithoutRequestResponseWithRequestEmptyResponseRequest) Marshaler() _bindings.Marshaler {
+	return _mwithAndWithoutRequestResponseWithRequestEmptyResponseRequest
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestEmptyResponseRequest) InlineAlignment() int {
+func (_ *withAndWithoutRequestResponseWithRequestEmptyResponseRequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestEmptyResponseRequest) InlineSize() int {
+func (_ *withAndWithoutRequestResponseWithRequestEmptyResponseRequest) InlineSize() int {
 	return 16
 }
 
-type WithAndWithoutRequestResponseWithRequestWithResponseRequest struct {
+type withAndWithoutRequestResponseWithRequestWithResponseRequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	Arg string
 }
 
-var _mWithAndWithoutRequestResponseWithRequestWithResponseRequest = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseWithRequestWithResponseRequest{})
+var _mwithAndWithoutRequestResponseWithRequestWithResponseRequest = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestWithResponseRequest{})
 
-func (msg *WithAndWithoutRequestResponseWithRequestWithResponseRequest) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseWithRequestWithResponseRequest
+func (msg *withAndWithoutRequestResponseWithRequestWithResponseRequest) Marshaler() _bindings.Marshaler {
+	return _mwithAndWithoutRequestResponseWithRequestWithResponseRequest
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestWithResponseRequest) InlineAlignment() int {
+func (_ *withAndWithoutRequestResponseWithRequestWithResponseRequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestWithResponseRequest) InlineSize() int {
+func (_ *withAndWithoutRequestResponseWithRequestWithResponseRequest) InlineSize() int {
 	return 16
 }
 
-type WithAndWithoutRequestResponseWithRequestWithResponseResponse struct {
+type withAndWithoutRequestResponseWithRequestWithResponseResponse struct {
 	_ struct{} `fidl2:"s,16,0"`
 	Ret string
 }
 
-var _mWithAndWithoutRequestResponseWithRequestWithResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseWithRequestWithResponseResponse{})
+var _mwithAndWithoutRequestResponseWithRequestWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseWithRequestWithResponseResponse{})
 
-func (msg *WithAndWithoutRequestResponseWithRequestWithResponseResponse) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseWithRequestWithResponseResponse
+func (msg *withAndWithoutRequestResponseWithRequestWithResponseResponse) Marshaler() _bindings.Marshaler {
+	return _mwithAndWithoutRequestResponseWithRequestWithResponseResponse
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestWithResponseResponse) InlineAlignment() int {
+func (_ *withAndWithoutRequestResponseWithRequestWithResponseResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseWithRequestWithResponseResponse) InlineSize() int {
+func (_ *withAndWithoutRequestResponseWithRequestWithResponseResponse) InlineSize() int {
 	return 16
 }
 
-type WithAndWithoutRequestResponseOnWithResponseResponse struct {
+type withAndWithoutRequestResponseOnWithResponseResponse struct {
 	_ struct{} `fidl2:"s,16,0"`
 	Ret string
 }
 
-var _mWithAndWithoutRequestResponseOnWithResponseResponse = _bindings.CreateLazyMarshaler(WithAndWithoutRequestResponseOnWithResponseResponse{})
+var _mwithAndWithoutRequestResponseOnWithResponseResponse = _bindings.CreateLazyMarshaler(withAndWithoutRequestResponseOnWithResponseResponse{})
 
-func (msg *WithAndWithoutRequestResponseOnWithResponseResponse) Marshaler() _bindings.Marshaler {
-	return _mWithAndWithoutRequestResponseOnWithResponseResponse
+func (msg *withAndWithoutRequestResponseOnWithResponseResponse) Marshaler() _bindings.Marshaler {
+	return _mwithAndWithoutRequestResponseOnWithResponseResponse
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseOnWithResponseResponse) InlineAlignment() int {
+func (_ *withAndWithoutRequestResponseOnWithResponseResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *WithAndWithoutRequestResponseOnWithResponseResponse) InlineSize() int {
+func (_ *withAndWithoutRequestResponseOnWithResponseResponse) InlineSize() int {
 	return 16
 }
 
@@ -174,13 +303,13 @@ func (p *WithAndWithoutRequestResponseInterface) NoRequestEmptyResponse() error 
 
 func (p *WithAndWithoutRequestResponseInterface) NoRequestWithResponse() (string, error) {
 	var req_ _bindings.Payload
-	resp_ := &WithAndWithoutRequestResponseNoRequestWithResponseResponse{}
+	resp_ := &withAndWithoutRequestResponseNoRequestWithResponseResponse{}
 	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseNoRequestWithResponseOrdinal, req_, resp_)
 	return resp_.Ret, err
 }
 
 func (p *WithAndWithoutRequestResponseInterface) WithRequestNoResponse(arg string) error {
-	req_ := &WithAndWithoutRequestResponseWithRequestNoResponseRequest{
+	req_ := &withAndWithoutRequestResponseWithRequestNoResponseRequest{
 		Arg: arg,
 	}
 	err := ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseWithRequestNoResponseOrdinal, req_)
@@ -188,7 +317,7 @@ func (p *WithAndWithoutRequestResponseInterface) WithRequestNoResponse(arg strin
 }
 
 func (p *WithAndWithoutRequestResponseInterface) WithRequestEmptyResponse(arg string) error {
-	req_ := &WithAndWithoutRequestResponseWithRequestEmptyResponseRequest{
+	req_ := &withAndWithoutRequestResponseWithRequestEmptyResponseRequest{
 		Arg: arg,
 	}
 	var resp_ _bindings.Payload
@@ -197,10 +326,10 @@ func (p *WithAndWithoutRequestResponseInterface) WithRequestEmptyResponse(arg st
 }
 
 func (p *WithAndWithoutRequestResponseInterface) WithRequestWithResponse(arg string) (string, error) {
-	req_ := &WithAndWithoutRequestResponseWithRequestWithResponseRequest{
+	req_ := &withAndWithoutRequestResponseWithRequestWithResponseRequest{
 		Arg: arg,
 	}
-	resp_ := &WithAndWithoutRequestResponseWithRequestWithResponseResponse{}
+	resp_ := &withAndWithoutRequestResponseWithRequestWithResponseResponse{}
 	err := ((*_bindings.ChannelProxy)(p)).Call(WithAndWithoutRequestResponseWithRequestWithResponseOrdinal, req_, resp_)
 	return resp_.Ret, err
 }
@@ -212,7 +341,7 @@ func (p *WithAndWithoutRequestResponseInterface) ExpectOnEmptyResponse() error {
 }
 
 func (p *WithAndWithoutRequestResponseInterface) ExpectOnWithResponse() (string, error) {
-	resp_ := &WithAndWithoutRequestResponseOnWithResponseResponse{}
+	resp_ := &withAndWithoutRequestResponseOnWithResponseResponse{}
 	err := ((*_bindings.ChannelProxy)(p)).Recv(WithAndWithoutRequestResponseOnWithResponseOrdinal, resp_)
 	return resp_.Ret, err
 }
@@ -255,30 +384,30 @@ func (s *WithAndWithoutRequestResponseStub) DispatchNew(ord uint32, b_ []byte, h
 		return nil, err_
 	case WithAndWithoutRequestResponseNoRequestWithResponseOrdinal:
 		ret, err_ := s.Impl.NoRequestWithResponse()
-		out_ := WithAndWithoutRequestResponseNoRequestWithResponseResponse{}
+		out_ := withAndWithoutRequestResponseNoRequestWithResponseResponse{}
 		out_.Ret = ret
 		return &out_, err_
 	case WithAndWithoutRequestResponseWithRequestNoResponseOrdinal:
-		in_ := WithAndWithoutRequestResponseWithRequestNoResponseRequest{}
+		in_ := withAndWithoutRequestResponseWithRequestNoResponseRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		err_ := s.Impl.WithRequestNoResponse(in_.Arg)
 		return nil, err_
 	case WithAndWithoutRequestResponseWithRequestEmptyResponseOrdinal:
-		in_ := WithAndWithoutRequestResponseWithRequestEmptyResponseRequest{}
+		in_ := withAndWithoutRequestResponseWithRequestEmptyResponseRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		err_ := s.Impl.WithRequestEmptyResponse(in_.Arg)
 		return nil, err_
 	case WithAndWithoutRequestResponseWithRequestWithResponseOrdinal:
-		in_ := WithAndWithoutRequestResponseWithRequestWithResponseRequest{}
+		in_ := withAndWithoutRequestResponseWithRequestWithResponseRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		ret, err_ := s.Impl.WithRequestWithResponse(in_.Arg)
-		out_ := WithAndWithoutRequestResponseWithRequestWithResponseResponse{}
+		out_ := withAndWithoutRequestResponseWithRequestWithResponseResponse{}
 		out_.Ret = ret
 		return &out_, err_
 	}
@@ -304,11 +433,133 @@ func (p *WithAndWithoutRequestResponseEventProxy) OnEmptyResponse() error {
 	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnEmptyResponseOrdinal, event_)
 }
 func (p *WithAndWithoutRequestResponseEventProxy) OnWithResponse(ret string) error {
-	event_ := &WithAndWithoutRequestResponseOnWithResponseResponse{
+	event_ := &withAndWithoutRequestResponseOnWithResponseResponse{
 		Ret: ret,
 	}
 	return ((*_bindings.ChannelProxy)(p)).Send(WithAndWithoutRequestResponseOnWithResponseOrdinal, event_)
 }
+
+
+const (
+	WithErrorSyntaxErrorAsPrimitiveOrdinal uint32 = 2069369145
+	WithErrorSyntaxErrorAsPrimitiveGenOrdinal uint32 = 2069369145
+	WithErrorSyntaxErrorAsEnumOrdinal uint32 = 1284890143
+	WithErrorSyntaxErrorAsEnumGenOrdinal uint32 = 1284890143
+)
+
+type withErrorSyntaxErrorAsPrimitiveResponse struct {
+	_ struct{} `fidl2:"s,8,0"`
+	Result WithErrorSyntaxErrorAsPrimitiveResult
+}
+
+var _mwithErrorSyntaxErrorAsPrimitiveResponse = _bindings.CreateLazyMarshaler(withErrorSyntaxErrorAsPrimitiveResponse{})
+
+func (msg *withErrorSyntaxErrorAsPrimitiveResponse) Marshaler() _bindings.Marshaler {
+	return _mwithErrorSyntaxErrorAsPrimitiveResponse
+}
+
+// Implements Payload.
+func (_ *withErrorSyntaxErrorAsPrimitiveResponse) InlineAlignment() int {
+	return 0
+}
+
+// Implements Payload.
+func (_ *withErrorSyntaxErrorAsPrimitiveResponse) InlineSize() int {
+	return 8
+}
+
+type withErrorSyntaxErrorAsEnumResponse struct {
+	_ struct{} `fidl2:"s,8,0"`
+	Result WithErrorSyntaxErrorAsEnumResult
+}
+
+var _mwithErrorSyntaxErrorAsEnumResponse = _bindings.CreateLazyMarshaler(withErrorSyntaxErrorAsEnumResponse{})
+
+func (msg *withErrorSyntaxErrorAsEnumResponse) Marshaler() _bindings.Marshaler {
+	return _mwithErrorSyntaxErrorAsEnumResponse
+}
+
+// Implements Payload.
+func (_ *withErrorSyntaxErrorAsEnumResponse) InlineAlignment() int {
+	return 0
+}
+
+// Implements Payload.
+func (_ *withErrorSyntaxErrorAsEnumResponse) InlineSize() int {
+	return 8
+}
+
+type WithErrorSyntaxInterface _bindings.ChannelProxy
+
+
+func (p *WithErrorSyntaxInterface) ErrorAsPrimitive() (WithErrorSyntaxErrorAsPrimitiveResult, error) {
+	var req_ _bindings.Payload
+	resp_ := &withErrorSyntaxErrorAsPrimitiveResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxErrorAsPrimitiveOrdinal, req_, resp_)
+	return resp_.Result, err
+}
+
+func (p *WithErrorSyntaxInterface) ErrorAsEnum() (WithErrorSyntaxErrorAsEnumResult, error) {
+	var req_ _bindings.Payload
+	resp_ := &withErrorSyntaxErrorAsEnumResponse{}
+	err := ((*_bindings.ChannelProxy)(p)).Call(WithErrorSyntaxErrorAsEnumOrdinal, req_, resp_)
+	return resp_.Result, err
+}
+
+
+type WithErrorSyntax interface {
+	ErrorAsPrimitive() (WithErrorSyntaxErrorAsPrimitiveResult, error)
+	ErrorAsEnum() (WithErrorSyntaxErrorAsEnumResult, error)
+}
+
+type WithErrorSyntaxTransitionalBase struct {}
+
+
+type WithErrorSyntaxInterfaceRequest _bindings.InterfaceRequest
+
+func NewWithErrorSyntaxInterfaceRequest() (WithErrorSyntaxInterfaceRequest, *WithErrorSyntaxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return WithErrorSyntaxInterfaceRequest(req), (*WithErrorSyntaxInterface)(cli), err
+}
+
+type WithErrorSyntaxStub struct {
+	Impl WithErrorSyntax
+}
+
+func (s *WithErrorSyntaxStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
+	return s.DispatchNew(ord, b_, h_)
+}
+
+func (s *WithErrorSyntaxStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
+	switch ord {
+	case WithErrorSyntaxErrorAsPrimitiveOrdinal:
+		result, err_ := s.Impl.ErrorAsPrimitive()
+		out_ := withErrorSyntaxErrorAsPrimitiveResponse{}
+		out_.Result = result
+		return &out_, err_
+	case WithErrorSyntaxErrorAsEnumOrdinal:
+		result, err_ := s.Impl.ErrorAsEnum()
+		out_ := withErrorSyntaxErrorAsEnumResponse{}
+		out_.Result = result
+		return &out_, err_
+	}
+	return nil, _bindings.ErrUnknownOrdinal
+}
+type WithErrorSyntaxService struct {
+	_bindings.BindingSet
+}
+
+func (s *WithErrorSyntaxService) Add(impl WithErrorSyntax, c _zx.Channel, onError func(error)) (_bindings.BindingKey, error) {
+	return s.BindingSet.Add(&WithErrorSyntaxStub{Impl: impl}, c, onError)
+}
+
+func (s *WithErrorSyntaxService) EventProxyFor(key _bindings.BindingKey) (*WithErrorSyntaxEventProxy, bool) {
+	pxy, err := s.BindingSet.ProxyFor(key)
+	return (*WithErrorSyntaxEventProxy)(pxy), err
+}
+
+type WithErrorSyntaxEventProxy _bindings.ChannelProxy
+
 
 
 const (
@@ -320,90 +571,90 @@ const (
 	OvernetInternalProtocolMethodBGenOrdinal uint32 = 952134976
 )
 
-type OvernetInternalProtocolMethodARequest struct {
+type overnetInternalProtocolMethodARequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mOvernetInternalProtocolMethodARequest = _bindings.CreateLazyMarshaler(OvernetInternalProtocolMethodARequest{})
+var _movernetInternalProtocolMethodARequest = _bindings.CreateLazyMarshaler(overnetInternalProtocolMethodARequest{})
 
-func (msg *OvernetInternalProtocolMethodARequest) Marshaler() _bindings.Marshaler {
-	return _mOvernetInternalProtocolMethodARequest
+func (msg *overnetInternalProtocolMethodARequest) Marshaler() _bindings.Marshaler {
+	return _movernetInternalProtocolMethodARequest
 }
 
 // Implements Payload.
-func (_ *OvernetInternalProtocolMethodARequest) InlineAlignment() int {
+func (_ *overnetInternalProtocolMethodARequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *OvernetInternalProtocolMethodARequest) InlineSize() int {
+func (_ *overnetInternalProtocolMethodARequest) InlineSize() int {
 	return 16
 }
 
-type OvernetInternalProtocolEventAResponse struct {
+type overnetInternalProtocolEventAResponse struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mOvernetInternalProtocolEventAResponse = _bindings.CreateLazyMarshaler(OvernetInternalProtocolEventAResponse{})
+var _movernetInternalProtocolEventAResponse = _bindings.CreateLazyMarshaler(overnetInternalProtocolEventAResponse{})
 
-func (msg *OvernetInternalProtocolEventAResponse) Marshaler() _bindings.Marshaler {
-	return _mOvernetInternalProtocolEventAResponse
+func (msg *overnetInternalProtocolEventAResponse) Marshaler() _bindings.Marshaler {
+	return _movernetInternalProtocolEventAResponse
 }
 
 // Implements Payload.
-func (_ *OvernetInternalProtocolEventAResponse) InlineAlignment() int {
+func (_ *overnetInternalProtocolEventAResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *OvernetInternalProtocolEventAResponse) InlineSize() int {
+func (_ *overnetInternalProtocolEventAResponse) InlineSize() int {
 	return 16
 }
 
-type OvernetInternalProtocolMethodBRequest struct {
+type overnetInternalProtocolMethodBRequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mOvernetInternalProtocolMethodBRequest = _bindings.CreateLazyMarshaler(OvernetInternalProtocolMethodBRequest{})
+var _movernetInternalProtocolMethodBRequest = _bindings.CreateLazyMarshaler(overnetInternalProtocolMethodBRequest{})
 
-func (msg *OvernetInternalProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
-	return _mOvernetInternalProtocolMethodBRequest
+func (msg *overnetInternalProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
+	return _movernetInternalProtocolMethodBRequest
 }
 
 // Implements Payload.
-func (_ *OvernetInternalProtocolMethodBRequest) InlineAlignment() int {
+func (_ *overnetInternalProtocolMethodBRequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *OvernetInternalProtocolMethodBRequest) InlineSize() int {
+func (_ *overnetInternalProtocolMethodBRequest) InlineSize() int {
 	return 16
 }
 
-type OvernetInternalProtocolMethodBResponse struct {
+type overnetInternalProtocolMethodBResponse struct {
 	_ struct{} `fidl2:"s,8,0"`
 	Result int64
 }
 
-var _mOvernetInternalProtocolMethodBResponse = _bindings.CreateLazyMarshaler(OvernetInternalProtocolMethodBResponse{})
+var _movernetInternalProtocolMethodBResponse = _bindings.CreateLazyMarshaler(overnetInternalProtocolMethodBResponse{})
 
-func (msg *OvernetInternalProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
-	return _mOvernetInternalProtocolMethodBResponse
+func (msg *overnetInternalProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
+	return _movernetInternalProtocolMethodBResponse
 }
 
 // Implements Payload.
-func (_ *OvernetInternalProtocolMethodBResponse) InlineAlignment() int {
+func (_ *overnetInternalProtocolMethodBResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *OvernetInternalProtocolMethodBResponse) InlineSize() int {
+func (_ *overnetInternalProtocolMethodBResponse) InlineSize() int {
 	return 8
 }
 
@@ -411,7 +662,7 @@ type OvernetInternalProtocolInterface _bindings.ChannelProxy
 
 
 func (p *OvernetInternalProtocolInterface) MethodA(a int64,b int64) error {
-	req_ := &OvernetInternalProtocolMethodARequest{
+	req_ := &overnetInternalProtocolMethodARequest{
 		A: a,
 		B: b,
 	}
@@ -420,17 +671,17 @@ func (p *OvernetInternalProtocolInterface) MethodA(a int64,b int64) error {
 }
 
 func (p *OvernetInternalProtocolInterface) ExpectEventA() (int64, int64, error) {
-	resp_ := &OvernetInternalProtocolEventAResponse{}
+	resp_ := &overnetInternalProtocolEventAResponse{}
 	err := ((*_bindings.ChannelProxy)(p)).Recv(OvernetInternalProtocolEventAOrdinal, resp_)
 	return resp_.A, resp_.B, err
 }
 
 func (p *OvernetInternalProtocolInterface) MethodB(a int64,b int64) (int64, error) {
-	req_ := &OvernetInternalProtocolMethodBRequest{
+	req_ := &overnetInternalProtocolMethodBRequest{
 		A: a,
 		B: b,
 	}
-	resp_ := &OvernetInternalProtocolMethodBResponse{}
+	resp_ := &overnetInternalProtocolMethodBResponse{}
 	err := ((*_bindings.ChannelProxy)(p)).Call(OvernetInternalProtocolMethodBOrdinal, req_, resp_)
 	return resp_.Result, err
 }
@@ -462,19 +713,19 @@ func (s *OvernetInternalProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.H
 func (s *OvernetInternalProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case OvernetInternalProtocolMethodAOrdinal:
-		in_ := OvernetInternalProtocolMethodARequest{}
+		in_ := overnetInternalProtocolMethodARequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		err_ := s.Impl.MethodA(in_.A,in_.B)
 		return nil, err_
 	case OvernetInternalProtocolMethodBOrdinal:
-		in_ := OvernetInternalProtocolMethodBRequest{}
+		in_ := overnetInternalProtocolMethodBRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		result, err_ := s.Impl.MethodB(in_.A,in_.B)
-		out_ := OvernetInternalProtocolMethodBResponse{}
+		out_ := overnetInternalProtocolMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
 	}
@@ -496,7 +747,7 @@ func (s *OvernetInternalProtocolService) EventProxyFor(key _bindings.BindingKey)
 type OvernetInternalProtocolEventProxy _bindings.ChannelProxy
 
 func (p *OvernetInternalProtocolEventProxy) EventA(a int64,b int64) error {
-	event_ := &OvernetInternalProtocolEventAResponse{
+	event_ := &overnetInternalProtocolEventAResponse{
 		A: a,
 		B: b,
 	}
@@ -513,90 +764,90 @@ const (
 	SocketControlProtocolMethodBGenOrdinal uint32 = 677342235
 )
 
-type SocketControlProtocolMethodARequest struct {
+type socketControlProtocolMethodARequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mSocketControlProtocolMethodARequest = _bindings.CreateLazyMarshaler(SocketControlProtocolMethodARequest{})
+var _msocketControlProtocolMethodARequest = _bindings.CreateLazyMarshaler(socketControlProtocolMethodARequest{})
 
-func (msg *SocketControlProtocolMethodARequest) Marshaler() _bindings.Marshaler {
-	return _mSocketControlProtocolMethodARequest
+func (msg *socketControlProtocolMethodARequest) Marshaler() _bindings.Marshaler {
+	return _msocketControlProtocolMethodARequest
 }
 
 // Implements Payload.
-func (_ *SocketControlProtocolMethodARequest) InlineAlignment() int {
+func (_ *socketControlProtocolMethodARequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *SocketControlProtocolMethodARequest) InlineSize() int {
+func (_ *socketControlProtocolMethodARequest) InlineSize() int {
 	return 16
 }
 
-type SocketControlProtocolEventAResponse struct {
+type socketControlProtocolEventAResponse struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mSocketControlProtocolEventAResponse = _bindings.CreateLazyMarshaler(SocketControlProtocolEventAResponse{})
+var _msocketControlProtocolEventAResponse = _bindings.CreateLazyMarshaler(socketControlProtocolEventAResponse{})
 
-func (msg *SocketControlProtocolEventAResponse) Marshaler() _bindings.Marshaler {
-	return _mSocketControlProtocolEventAResponse
+func (msg *socketControlProtocolEventAResponse) Marshaler() _bindings.Marshaler {
+	return _msocketControlProtocolEventAResponse
 }
 
 // Implements Payload.
-func (_ *SocketControlProtocolEventAResponse) InlineAlignment() int {
+func (_ *socketControlProtocolEventAResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *SocketControlProtocolEventAResponse) InlineSize() int {
+func (_ *socketControlProtocolEventAResponse) InlineSize() int {
 	return 16
 }
 
-type SocketControlProtocolMethodBRequest struct {
+type socketControlProtocolMethodBRequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mSocketControlProtocolMethodBRequest = _bindings.CreateLazyMarshaler(SocketControlProtocolMethodBRequest{})
+var _msocketControlProtocolMethodBRequest = _bindings.CreateLazyMarshaler(socketControlProtocolMethodBRequest{})
 
-func (msg *SocketControlProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
-	return _mSocketControlProtocolMethodBRequest
+func (msg *socketControlProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
+	return _msocketControlProtocolMethodBRequest
 }
 
 // Implements Payload.
-func (_ *SocketControlProtocolMethodBRequest) InlineAlignment() int {
+func (_ *socketControlProtocolMethodBRequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *SocketControlProtocolMethodBRequest) InlineSize() int {
+func (_ *socketControlProtocolMethodBRequest) InlineSize() int {
 	return 16
 }
 
-type SocketControlProtocolMethodBResponse struct {
+type socketControlProtocolMethodBResponse struct {
 	_ struct{} `fidl2:"s,8,0"`
 	Result int64
 }
 
-var _mSocketControlProtocolMethodBResponse = _bindings.CreateLazyMarshaler(SocketControlProtocolMethodBResponse{})
+var _msocketControlProtocolMethodBResponse = _bindings.CreateLazyMarshaler(socketControlProtocolMethodBResponse{})
 
-func (msg *SocketControlProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
-	return _mSocketControlProtocolMethodBResponse
+func (msg *socketControlProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
+	return _msocketControlProtocolMethodBResponse
 }
 
 // Implements Payload.
-func (_ *SocketControlProtocolMethodBResponse) InlineAlignment() int {
+func (_ *socketControlProtocolMethodBResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *SocketControlProtocolMethodBResponse) InlineSize() int {
+func (_ *socketControlProtocolMethodBResponse) InlineSize() int {
 	return 8
 }
 
@@ -604,7 +855,7 @@ type SocketControlProtocolInterface _bindings.SocketControlProxy
 
 
 func (p *SocketControlProtocolInterface) MethodA(a int64,b int64) error {
-	req_ := &SocketControlProtocolMethodARequest{
+	req_ := &socketControlProtocolMethodARequest{
 		A: a,
 		B: b,
 	}
@@ -613,17 +864,17 @@ func (p *SocketControlProtocolInterface) MethodA(a int64,b int64) error {
 }
 
 func (p *SocketControlProtocolInterface) ExpectEventA() (int64, int64, error) {
-	resp_ := &SocketControlProtocolEventAResponse{}
+	resp_ := &socketControlProtocolEventAResponse{}
 	err := ((*_bindings.SocketControlProxy)(p)).Recv(SocketControlProtocolEventAOrdinal, resp_)
 	return resp_.A, resp_.B, err
 }
 
 func (p *SocketControlProtocolInterface) MethodB(a int64,b int64) (int64, error) {
-	req_ := &SocketControlProtocolMethodBRequest{
+	req_ := &socketControlProtocolMethodBRequest{
 		A: a,
 		B: b,
 	}
-	resp_ := &SocketControlProtocolMethodBResponse{}
+	resp_ := &socketControlProtocolMethodBResponse{}
 	err := ((*_bindings.SocketControlProxy)(p)).Call(SocketControlProtocolMethodBOrdinal, req_, resp_)
 	return resp_.Result, err
 }
@@ -649,19 +900,19 @@ func (s *SocketControlProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Han
 func (s *SocketControlProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case SocketControlProtocolMethodAOrdinal:
-		in_ := SocketControlProtocolMethodARequest{}
+		in_ := socketControlProtocolMethodARequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		err_ := s.Impl.MethodA(in_.A,in_.B)
 		return nil, err_
 	case SocketControlProtocolMethodBOrdinal:
-		in_ := SocketControlProtocolMethodBRequest{}
+		in_ := socketControlProtocolMethodBRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		result, err_ := s.Impl.MethodB(in_.A,in_.B)
-		out_ := SocketControlProtocolMethodBResponse{}
+		out_ := socketControlProtocolMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
 	}
@@ -671,7 +922,7 @@ func (s *SocketControlProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.
 type SocketControlProtocolEventProxy _bindings.SocketControlProxy
 
 func (p *SocketControlProtocolEventProxy) EventA(a int64,b int64) error {
-	event_ := &SocketControlProtocolEventAResponse{
+	event_ := &socketControlProtocolEventAResponse{
 		A: a,
 		B: b,
 	}
@@ -688,90 +939,90 @@ const (
 	ChannelProtocolMethodBGenOrdinal uint32 = 180770075
 )
 
-type ChannelProtocolMethodARequest struct {
+type channelProtocolMethodARequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mChannelProtocolMethodARequest = _bindings.CreateLazyMarshaler(ChannelProtocolMethodARequest{})
+var _mchannelProtocolMethodARequest = _bindings.CreateLazyMarshaler(channelProtocolMethodARequest{})
 
-func (msg *ChannelProtocolMethodARequest) Marshaler() _bindings.Marshaler {
-	return _mChannelProtocolMethodARequest
+func (msg *channelProtocolMethodARequest) Marshaler() _bindings.Marshaler {
+	return _mchannelProtocolMethodARequest
 }
 
 // Implements Payload.
-func (_ *ChannelProtocolMethodARequest) InlineAlignment() int {
+func (_ *channelProtocolMethodARequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *ChannelProtocolMethodARequest) InlineSize() int {
+func (_ *channelProtocolMethodARequest) InlineSize() int {
 	return 16
 }
 
-type ChannelProtocolEventAResponse struct {
+type channelProtocolEventAResponse struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mChannelProtocolEventAResponse = _bindings.CreateLazyMarshaler(ChannelProtocolEventAResponse{})
+var _mchannelProtocolEventAResponse = _bindings.CreateLazyMarshaler(channelProtocolEventAResponse{})
 
-func (msg *ChannelProtocolEventAResponse) Marshaler() _bindings.Marshaler {
-	return _mChannelProtocolEventAResponse
+func (msg *channelProtocolEventAResponse) Marshaler() _bindings.Marshaler {
+	return _mchannelProtocolEventAResponse
 }
 
 // Implements Payload.
-func (_ *ChannelProtocolEventAResponse) InlineAlignment() int {
+func (_ *channelProtocolEventAResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *ChannelProtocolEventAResponse) InlineSize() int {
+func (_ *channelProtocolEventAResponse) InlineSize() int {
 	return 16
 }
 
-type ChannelProtocolMethodBRequest struct {
+type channelProtocolMethodBRequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mChannelProtocolMethodBRequest = _bindings.CreateLazyMarshaler(ChannelProtocolMethodBRequest{})
+var _mchannelProtocolMethodBRequest = _bindings.CreateLazyMarshaler(channelProtocolMethodBRequest{})
 
-func (msg *ChannelProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
-	return _mChannelProtocolMethodBRequest
+func (msg *channelProtocolMethodBRequest) Marshaler() _bindings.Marshaler {
+	return _mchannelProtocolMethodBRequest
 }
 
 // Implements Payload.
-func (_ *ChannelProtocolMethodBRequest) InlineAlignment() int {
+func (_ *channelProtocolMethodBRequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *ChannelProtocolMethodBRequest) InlineSize() int {
+func (_ *channelProtocolMethodBRequest) InlineSize() int {
 	return 16
 }
 
-type ChannelProtocolMethodBResponse struct {
+type channelProtocolMethodBResponse struct {
 	_ struct{} `fidl2:"s,8,0"`
 	Result int64
 }
 
-var _mChannelProtocolMethodBResponse = _bindings.CreateLazyMarshaler(ChannelProtocolMethodBResponse{})
+var _mchannelProtocolMethodBResponse = _bindings.CreateLazyMarshaler(channelProtocolMethodBResponse{})
 
-func (msg *ChannelProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
-	return _mChannelProtocolMethodBResponse
+func (msg *channelProtocolMethodBResponse) Marshaler() _bindings.Marshaler {
+	return _mchannelProtocolMethodBResponse
 }
 
 // Implements Payload.
-func (_ *ChannelProtocolMethodBResponse) InlineAlignment() int {
+func (_ *channelProtocolMethodBResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *ChannelProtocolMethodBResponse) InlineSize() int {
+func (_ *channelProtocolMethodBResponse) InlineSize() int {
 	return 8
 }
 
@@ -779,7 +1030,7 @@ type ChannelProtocolInterface _bindings.ChannelProxy
 
 
 func (p *ChannelProtocolInterface) MethodA(a int64,b int64) error {
-	req_ := &ChannelProtocolMethodARequest{
+	req_ := &channelProtocolMethodARequest{
 		A: a,
 		B: b,
 	}
@@ -788,17 +1039,17 @@ func (p *ChannelProtocolInterface) MethodA(a int64,b int64) error {
 }
 
 func (p *ChannelProtocolInterface) ExpectEventA() (int64, int64, error) {
-	resp_ := &ChannelProtocolEventAResponse{}
+	resp_ := &channelProtocolEventAResponse{}
 	err := ((*_bindings.ChannelProxy)(p)).Recv(ChannelProtocolEventAOrdinal, resp_)
 	return resp_.A, resp_.B, err
 }
 
 func (p *ChannelProtocolInterface) MethodB(a int64,b int64) (int64, error) {
-	req_ := &ChannelProtocolMethodBRequest{
+	req_ := &channelProtocolMethodBRequest{
 		A: a,
 		B: b,
 	}
-	resp_ := &ChannelProtocolMethodBResponse{}
+	resp_ := &channelProtocolMethodBResponse{}
 	err := ((*_bindings.ChannelProxy)(p)).Call(ChannelProtocolMethodBOrdinal, req_, resp_)
 	return resp_.Result, err
 }
@@ -830,19 +1081,19 @@ func (s *ChannelProtocolStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (
 func (s *ChannelProtocolStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case ChannelProtocolMethodAOrdinal:
-		in_ := ChannelProtocolMethodARequest{}
+		in_ := channelProtocolMethodARequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		err_ := s.Impl.MethodA(in_.A,in_.B)
 		return nil, err_
 	case ChannelProtocolMethodBOrdinal:
-		in_ := ChannelProtocolMethodBRequest{}
+		in_ := channelProtocolMethodBRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		result, err_ := s.Impl.MethodB(in_.A,in_.B)
-		out_ := ChannelProtocolMethodBResponse{}
+		out_ := channelProtocolMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
 	}
@@ -864,7 +1115,7 @@ func (s *ChannelProtocolService) EventProxyFor(key _bindings.BindingKey) (*Chann
 type ChannelProtocolEventProxy _bindings.ChannelProxy
 
 func (p *ChannelProtocolEventProxy) EventA(a int64,b int64) error {
-	event_ := &ChannelProtocolEventAResponse{
+	event_ := &channelProtocolEventAResponse{
 		A: a,
 		B: b,
 	}
@@ -881,90 +1132,90 @@ const (
 	KitchenSinkMethodBGenOrdinal uint32 = 1999489700
 )
 
-type KitchenSinkMethodARequest struct {
+type kitchenSinkMethodARequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mKitchenSinkMethodARequest = _bindings.CreateLazyMarshaler(KitchenSinkMethodARequest{})
+var _mkitchenSinkMethodARequest = _bindings.CreateLazyMarshaler(kitchenSinkMethodARequest{})
 
-func (msg *KitchenSinkMethodARequest) Marshaler() _bindings.Marshaler {
-	return _mKitchenSinkMethodARequest
+func (msg *kitchenSinkMethodARequest) Marshaler() _bindings.Marshaler {
+	return _mkitchenSinkMethodARequest
 }
 
 // Implements Payload.
-func (_ *KitchenSinkMethodARequest) InlineAlignment() int {
+func (_ *kitchenSinkMethodARequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *KitchenSinkMethodARequest) InlineSize() int {
+func (_ *kitchenSinkMethodARequest) InlineSize() int {
 	return 16
 }
 
-type KitchenSinkEventAResponse struct {
+type kitchenSinkEventAResponse struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mKitchenSinkEventAResponse = _bindings.CreateLazyMarshaler(KitchenSinkEventAResponse{})
+var _mkitchenSinkEventAResponse = _bindings.CreateLazyMarshaler(kitchenSinkEventAResponse{})
 
-func (msg *KitchenSinkEventAResponse) Marshaler() _bindings.Marshaler {
-	return _mKitchenSinkEventAResponse
+func (msg *kitchenSinkEventAResponse) Marshaler() _bindings.Marshaler {
+	return _mkitchenSinkEventAResponse
 }
 
 // Implements Payload.
-func (_ *KitchenSinkEventAResponse) InlineAlignment() int {
+func (_ *kitchenSinkEventAResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *KitchenSinkEventAResponse) InlineSize() int {
+func (_ *kitchenSinkEventAResponse) InlineSize() int {
 	return 16
 }
 
-type KitchenSinkMethodBRequest struct {
+type kitchenSinkMethodBRequest struct {
 	_ struct{} `fidl2:"s,16,0"`
 	A int64
 	B int64
 }
 
-var _mKitchenSinkMethodBRequest = _bindings.CreateLazyMarshaler(KitchenSinkMethodBRequest{})
+var _mkitchenSinkMethodBRequest = _bindings.CreateLazyMarshaler(kitchenSinkMethodBRequest{})
 
-func (msg *KitchenSinkMethodBRequest) Marshaler() _bindings.Marshaler {
-	return _mKitchenSinkMethodBRequest
+func (msg *kitchenSinkMethodBRequest) Marshaler() _bindings.Marshaler {
+	return _mkitchenSinkMethodBRequest
 }
 
 // Implements Payload.
-func (_ *KitchenSinkMethodBRequest) InlineAlignment() int {
+func (_ *kitchenSinkMethodBRequest) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *KitchenSinkMethodBRequest) InlineSize() int {
+func (_ *kitchenSinkMethodBRequest) InlineSize() int {
 	return 16
 }
 
-type KitchenSinkMethodBResponse struct {
+type kitchenSinkMethodBResponse struct {
 	_ struct{} `fidl2:"s,8,0"`
 	Result int64
 }
 
-var _mKitchenSinkMethodBResponse = _bindings.CreateLazyMarshaler(KitchenSinkMethodBResponse{})
+var _mkitchenSinkMethodBResponse = _bindings.CreateLazyMarshaler(kitchenSinkMethodBResponse{})
 
-func (msg *KitchenSinkMethodBResponse) Marshaler() _bindings.Marshaler {
-	return _mKitchenSinkMethodBResponse
+func (msg *kitchenSinkMethodBResponse) Marshaler() _bindings.Marshaler {
+	return _mkitchenSinkMethodBResponse
 }
 
 // Implements Payload.
-func (_ *KitchenSinkMethodBResponse) InlineAlignment() int {
+func (_ *kitchenSinkMethodBResponse) InlineAlignment() int {
 	return 0
 }
 
 // Implements Payload.
-func (_ *KitchenSinkMethodBResponse) InlineSize() int {
+func (_ *kitchenSinkMethodBResponse) InlineSize() int {
 	return 8
 }
 
@@ -972,7 +1223,7 @@ type KitchenSinkInterface _bindings.ChannelProxy
 
 
 func (p *KitchenSinkInterface) MethodA(a int64,b int64) error {
-	req_ := &KitchenSinkMethodARequest{
+	req_ := &kitchenSinkMethodARequest{
 		A: a,
 		B: b,
 	}
@@ -981,17 +1232,17 @@ func (p *KitchenSinkInterface) MethodA(a int64,b int64) error {
 }
 
 func (p *KitchenSinkInterface) ExpectEventA() (int64, int64, error) {
-	resp_ := &KitchenSinkEventAResponse{}
+	resp_ := &kitchenSinkEventAResponse{}
 	err := ((*_bindings.ChannelProxy)(p)).Recv(KitchenSinkEventAOrdinal, resp_)
 	return resp_.A, resp_.B, err
 }
 
 func (p *KitchenSinkInterface) MethodB(a int64,b int64) (int64, error) {
-	req_ := &KitchenSinkMethodBRequest{
+	req_ := &kitchenSinkMethodBRequest{
 		A: a,
 		B: b,
 	}
-	resp_ := &KitchenSinkMethodBResponse{}
+	resp_ := &kitchenSinkMethodBResponse{}
 	err := ((*_bindings.ChannelProxy)(p)).Call(KitchenSinkMethodBOrdinal, req_, resp_)
 	return resp_.Result, err
 }
@@ -1023,19 +1274,19 @@ func (s *KitchenSinkStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bin
 func (s *KitchenSinkStub) DispatchNew(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Message, error) {
 	switch ord {
 	case KitchenSinkMethodAOrdinal:
-		in_ := KitchenSinkMethodARequest{}
+		in_ := kitchenSinkMethodARequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		err_ := s.Impl.MethodA(in_.A,in_.B)
 		return nil, err_
 	case KitchenSinkMethodBOrdinal:
-		in_ := KitchenSinkMethodBRequest{}
+		in_ := kitchenSinkMethodBRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
 			return nil, err_
 		}
 		result, err_ := s.Impl.MethodB(in_.A,in_.B)
-		out_ := KitchenSinkMethodBResponse{}
+		out_ := kitchenSinkMethodBResponse{}
 		out_.Result = result
 		return &out_, err_
 	}
@@ -1057,7 +1308,7 @@ func (s *KitchenSinkService) EventProxyFor(key _bindings.BindingKey) (*KitchenSi
 type KitchenSinkEventProxy _bindings.ChannelProxy
 
 func (p *KitchenSinkEventProxy) EventA(a int64,b int64) error {
-	event_ := &KitchenSinkEventAResponse{
+	event_ := &kitchenSinkEventAResponse{
 		A: a,
 		B: b,
 	}

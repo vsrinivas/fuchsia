@@ -22,6 +22,30 @@ use fidl::{
 };
 
 
+fidl_enum! {
+  ErrorEnun(u32) {
+    ErrFoo = 1,
+    ErrBar = 2,
+  }
+}
+
+
+type WithErrorSyntaxErrorAsPrimitiveResult = std::result::Result< WithErrorSyntaxErrorAsPrimitiveResponse , u32 >;
+
+
+type WithErrorSyntaxErrorAsEnumResult = std::result::Result< WithErrorSyntaxErrorAsEnumResponse , ErrorEnun >;
+
+
+
+fidl_empty_struct!(
+	WithErrorSyntaxErrorAsPrimitiveResponse
+);
+
+
+fidl_empty_struct!(
+	WithErrorSyntaxErrorAsEnumResponse
+);
+
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct WithAndWithoutRequestResponseMarker;
@@ -1415,6 +1439,748 @@ impl WithAndWithoutRequestResponseWithRequestWithResponseResponder {
 		};
 
 		let mut response = (ret);
+
+		let mut msg = fidl::encoding::TransactionMessage {
+			header,
+			body: &mut response,
+		};
+
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+				.map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+}
+
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct WithErrorSyntaxMarker;
+
+impl fidl::endpoints::ServiceMarker for WithErrorSyntaxMarker {
+	type Proxy = WithErrorSyntaxProxy;
+	type RequestStream = WithErrorSyntaxRequestStream;
+	const NAME: &'static str = "";
+}
+
+pub trait WithErrorSyntaxProxyInterface: Send + Sync {
+	type ErrorAsPrimitiveResponseFut: futures::Future<Output = Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error>> + Send;
+	fn error_as_primitive(&self,
+	)-> Self::ErrorAsPrimitiveResponseFut;
+	type ErrorAsEnumResponseFut: futures::Future<Output = Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error>> + Send;
+	fn error_as_enum(&self,
+	)-> Self::ErrorAsEnumResponseFut;
+}
+
+#[derive(Debug)]
+pub struct WithErrorSyntaxSynchronousProxy {
+	client: fidl::client::sync::Client,
+}
+
+impl WithErrorSyntaxSynchronousProxy {
+	pub fn new(channel: zx::Channel) -> Self {
+		Self { client: fidl::client::sync::Client::new(channel) }
+	}
+
+	pub fn into_channel(self) -> zx::Channel {
+		self.client.into_channel()
+	}
+	pub fn error_as_primitive(&mut self,___deadline: zx::Time,) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {self.client.send_query(&mut (),
+				2069369145,
+				___deadline,
+			)}
+	pub fn error_as_enum(&mut self,___deadline: zx::Time,) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {self.client.send_query(&mut (),
+				1284890143,
+				___deadline,
+			)}
+}
+
+#[derive(Debug, Clone)]
+pub struct WithErrorSyntaxProxy {
+	client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for WithErrorSyntaxProxy {
+	type Service = WithErrorSyntaxMarker;
+	fn from_channel(inner: ::fuchsia_async::Channel) -> Self {
+		Self::new(inner)
+	}
+}
+
+impl ::std::ops::Deref for WithErrorSyntaxProxy {
+	type Target = fidl::client::Client;
+
+	fn deref(&self) -> &Self::Target {
+		&self.client
+	}
+}
+
+/// Proxy object for communicating with interface WithErrorSyntax
+impl WithErrorSyntaxProxy {
+	/// Create a new Proxy for WithErrorSyntax
+	pub fn new(channel: ::fuchsia_async::Channel) -> Self {
+		Self { client: fidl::client::Client::new(channel) }
+	}
+
+	/// Attempt to convert the Proxy back into a channel.
+	///
+	/// This will only succeed if there are no active clones of this Proxy
+	/// and no currently-alive EventStream or response futures that came from
+	/// this Proxy.
+	pub fn into_channel(self) -> Result<::fuchsia_async::Channel, Self> {
+		self.client.into_channel().map_err(|client| Self { client })
+	}
+
+	/// Get a Stream of events from the remote end of the WithErrorSyntax interface
+	pub fn take_event_stream(&self) -> WithErrorSyntaxEventStream {
+		WithErrorSyntaxEventStream {
+			event_receiver: self.client.take_event_receiver(),
+		}
+	}
+	pub fn error_as_primitive(&self,
+	)-> fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsPrimitiveResult)> {
+		WithErrorSyntaxProxyInterface::error_as_primitive(self,
+		)
+	}
+	pub fn error_as_enum(&self,
+	)-> fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsEnumResult)> {
+		WithErrorSyntaxProxyInterface::error_as_enum(self,
+		)
+	}
+}
+
+impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
+	type ErrorAsPrimitiveResponseFut = fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsPrimitiveResult)>;
+	fn error_as_primitive(&self,
+	)-> Self::ErrorAsPrimitiveResponseFut {
+		self.client.send_query(&mut (), 2069369145)
+	}
+	type ErrorAsEnumResponseFut = fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsEnumResult)>;
+	fn error_as_enum(&self,
+	)-> Self::ErrorAsEnumResponseFut {
+		self.client.send_query(&mut (), 1284890143)
+	}}
+
+pub struct WithErrorSyntaxEventStream {
+	event_receiver: fidl::client::EventReceiver,
+}
+
+impl ::std::marker::Unpin for WithErrorSyntaxEventStream {}
+
+impl futures::stream::FusedStream for WithErrorSyntaxEventStream {
+	fn is_terminated(&self) -> bool {
+		self.event_receiver.is_terminated()
+	}
+}
+
+impl futures::Stream for WithErrorSyntaxEventStream {
+	type Item = Result<WithErrorSyntaxEvent, fidl::Error>;
+
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
+		-> futures::Poll<Option<Self::Item>>
+	{
+		let mut buf = match futures::ready!(
+			futures::stream::StreamExt::poll_next_unpin(&mut self.event_receiver, lw)?
+		) {
+			Some(buf) => buf,
+			None => return futures::Poll::Ready(None),
+		};
+		let (bytes, _handles) = buf.split_mut();
+		let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+		#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+		futures::Poll::Ready(Some(match tx_header.ordinal {
+			_ => Err(fidl::Error::UnknownOrdinal {
+				ordinal: tx_header.ordinal,
+				service_name: <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::NAME,
+			})
+		}))
+	}
+}
+
+#[derive(Debug)]
+pub enum WithErrorSyntaxEvent {
+	
+	
+	}
+
+pub struct WithErrorSyntaxEventSender<'a> {
+	// Some protocols don't define events which would render this channel unused.
+	#[allow(unused)]
+	channel: zx::Unowned<'a, zx::Channel>,
+}
+impl <'a> WithErrorSyntaxEventSender<'a> {
+	pub fn new(channel: zx::Unowned<'a, zx::Channel>) -> Self {
+		Self { channel }
+	}
+}
+
+#[deprecated(note = "use WithErrorSyntaxRequestStream instead")]
+pub trait WithErrorSyntax {
+	type OnOpenFut: futures::Future<Output = ()> + Send;
+	fn on_open(&mut self, control_handle: WithErrorSyntaxControlHandle) -> Self::OnOpenFut;
+	type ErrorAsPrimitiveFut: futures::Future<Output = ()> + Send;
+	fn error_as_primitive (&mut self,
+		response_chan: WithErrorSyntaxErrorAsPrimitiveResponder,
+	) -> Self::ErrorAsPrimitiveFut;
+	
+	type ErrorAsEnumFut: futures::Future<Output = ()> + Send;
+	fn error_as_enum (&mut self,
+		response_chan: WithErrorSyntaxErrorAsEnumResponder,
+	) -> Self::ErrorAsEnumFut;
+	
+
+	fn serve(mut self, channel: ::fuchsia_async::Channel)
+		-> WithErrorSyntaxServer<Self>
+	where Self: Sized
+	{
+		let inner = ::std::sync::Arc::new(fidl::ServeInner::new(channel));
+		let on_open_fut = self.on_open(
+			WithErrorSyntaxControlHandle {
+				inner: inner.clone(),
+			}
+		);
+		WithErrorSyntaxServer {
+			server: self,
+			inner: inner.clone(),
+			on_open_fut: Some(on_open_fut),error_as_primitive_futures: futures::stream::FuturesUnordered::new(),error_as_enum_futures: futures::stream::FuturesUnordered::new(),
+		}
+	}
+}
+
+pub struct WithErrorSyntaxServer<T: WithErrorSyntax> {
+	#[allow(dead_code)] // not used if no methods are present
+	server: T,
+	inner: ::std::sync::Arc<fidl::ServeInner>,
+	on_open_fut: Option<T::OnOpenFut>,error_as_primitive_futures: futures::stream::FuturesUnordered<T::ErrorAsPrimitiveFut>,error_as_enum_futures: futures::stream::FuturesUnordered<T::ErrorAsEnumFut>,
+}
+
+// Safety: only the OnOpen fut is held directly, so it's the only one that
+// is projected to, so it's the only one that needs to be Unpin for the Impl
+// struct to be Unpin.
+impl<T: WithErrorSyntax> ::std::marker::Unpin for WithErrorSyntaxServer<T>
+where T::OnOpenFut: ::std::marker::Unpin,
+{}
+
+impl<T: WithErrorSyntax> WithErrorSyntaxServer<T> {
+	pub fn control_handle(&self) -> WithErrorSyntaxControlHandle {
+		WithErrorSyntaxControlHandle {
+			inner: self.inner.clone(),
+		}
+	}
+}
+
+impl<T: WithErrorSyntax> futures::Future for WithErrorSyntaxServer<T> {
+	type Output = Result<(), fidl::Error>;
+
+	fn poll(
+		mut self: ::std::pin::Pin<&mut Self>,
+		lw: &futures::task::Waker,
+	) -> futures::Poll<Self::Output> {
+		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
+		// isn't moved below
+		let this = unsafe { ::std::pin::Pin::get_unchecked_mut(self) };
+		loop {
+		let mut made_progress_this_loop_iter = false;
+
+		if this.inner.poll_shutdown(lw) {
+			return futures::Poll::Ready(Ok(()));
+		}
+
+		unsafe {
+			// Safety: ensure that on_open isn't moved
+			let completed_on_open = if let Some(on_open_fut) = &mut this.on_open_fut {
+				match futures::Future::poll(::std::pin::Pin::new_unchecked(on_open_fut), lw) {
+					futures::Poll::Ready(()) => true,
+					futures::Poll::Pending => false,
+				}
+			} else {
+				false
+			};
+
+			if completed_on_open {
+				made_progress_this_loop_iter = true;
+				this.on_open_fut = None;
+			}
+		}match futures::stream::StreamExt::poll_next_unpin(
+			&mut this.error_as_primitive_futures, lw
+		) {
+			futures::Poll::Ready(Some(())) => made_progress_this_loop_iter = true,
+			_ => {},
+		}match futures::stream::StreamExt::poll_next_unpin(
+			&mut this.error_as_enum_futures, lw
+		) {
+			futures::Poll::Ready(Some(())) => made_progress_this_loop_iter = true,
+			_ => {},
+		}
+
+		let poll_done = ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match ::futures::ready!(this.inner.channel().read(bytes, handles, lw)) {
+				Ok(()) => {},
+				Err(zx::Status::PEER_CLOSED) => return futures::Poll::Ready(Ok(true)),
+				Err(e) => return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
+			}
+
+			{
+				// A message has been received from the channel
+				let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+				#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+				match header.ordinal {
+						2069369145 | 2069369145 => {
+							let mut req: () = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = WithErrorSyntaxControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.error_as_primitive_futures.push(
+								this.server.error_as_primitive(WithErrorSyntaxErrorAsPrimitiveResponder {
+											control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+											tx_id: header.tx_id,
+											ordinal: header.ordinal,
+										})
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+						1284890143 | 1284890143 => {
+							let mut req: () = fidl::encoding::Decodable::new_empty();
+							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+							let control_handle = WithErrorSyntaxControlHandle {
+								inner: this.inner.clone(),
+							};
+							this.error_as_enum_futures.push(
+								this.server.error_as_enum(WithErrorSyntaxErrorAsEnumResponder {
+											control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+											tx_id: header.tx_id,
+											ordinal: header.ordinal,
+										})
+							);
+							::futures::Poll::Ready(Ok(false))
+						}
+					// TODO(cramertj) handle control/fileio messages
+					_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
+						ordinal: header.ordinal,
+						service_name: "unknown fidl", // TODO(cramertj)
+					})),
+				}
+			}
+		})?;
+
+		match poll_done {
+			::futures::Poll::Ready(true) => return ::futures::Poll::Ready(Ok(())),
+			::futures::Poll::Ready(false) => {},
+			::futures::Poll::Pending if made_progress_this_loop_iter => {}, // continue
+			::futures::Poll::Pending => return ::futures::Poll::Pending,
+		}
+	}}
+}
+
+/// A Stream of incoming requests for WithErrorSyntax
+pub struct WithErrorSyntaxRequestStream {
+	inner: ::std::sync::Arc<fidl::ServeInner>,
+	is_terminated: bool,
+}
+
+impl ::std::marker::Unpin for WithErrorSyntaxRequestStream {}
+
+impl futures::stream::FusedStream for WithErrorSyntaxRequestStream {
+	fn is_terminated(&self) -> bool {
+		self.is_terminated
+	}
+}
+
+impl fidl::endpoints::RequestStream for WithErrorSyntaxRequestStream {
+	type Service = WithErrorSyntaxMarker;
+
+	/// Consume a channel to make a WithErrorSyntaxRequestStream
+	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
+		Self {
+			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
+			is_terminated: false,
+		}
+	}
+
+	/// ControlHandle for the remote connection
+	type ControlHandle = WithErrorSyntaxControlHandle;
+
+	/// ControlHandle for the remote connection
+	fn control_handle(&self) -> Self::ControlHandle {
+		WithErrorSyntaxControlHandle { inner: self.inner.clone() }
+	}
+
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+		(self.inner, self.is_terminated)
+	}
+
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, is_terminated: bool)
+		-> Self
+	{
+		Self { inner, is_terminated }
+	}
+}
+
+impl futures::Stream for WithErrorSyntaxRequestStream {
+	type Item = Result<WithErrorSyntaxRequest, fidl::Error>;
+
+	fn poll_next(mut self: ::std::pin::Pin<&mut Self>, lw: &futures::task::Waker)
+		-> futures::Poll<Option<Self::Item>>
+	{
+		let this = &mut *self;
+		if this.inner.poll_shutdown(lw) {
+			this.is_terminated = true;
+			return futures::Poll::Ready(None);
+		}
+		if this.is_terminated {
+			panic!("polled WithErrorSyntaxRequestStream after completion");
+		}
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			match this.inner.channel().read(bytes, handles, lw) {
+				futures::Poll::Ready(Ok(())) => {},
+				futures::Poll::Pending => return futures::Poll::Pending,
+				futures::Poll::Ready(Err(zx::Status::PEER_CLOSED)) => {
+					this.is_terminated = true;
+					return futures::Poll::Ready(None)
+				},
+				futures::Poll::Ready(Err(e)) =>
+				return futures::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e)))),
+			}
+
+			// A message has been received from the channel
+			let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+			#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
+			futures::Poll::Ready(Some(match header.ordinal {
+				2069369145 | 2069369145 => {
+					let mut req: () = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = WithErrorSyntaxControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(WithErrorSyntaxRequest::ErrorAsPrimitive {responder:WithErrorSyntaxErrorAsPrimitiveResponder {
+								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								tx_id: header.tx_id,
+								ordinal: header.ordinal,
+							},})
+				}
+				1284890143 | 1284890143 => {
+					let mut req: () = fidl::encoding::Decodable::new_empty();
+					fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
+					let control_handle = WithErrorSyntaxControlHandle {
+						inner: this.inner.clone(),
+					};
+
+					Ok(WithErrorSyntaxRequest::ErrorAsEnum {responder:WithErrorSyntaxErrorAsEnumResponder {
+								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
+								tx_id: header.tx_id,
+								ordinal: header.ordinal,
+							},})
+				}
+				_ => Err(fidl::Error::UnknownOrdinal {
+					ordinal: header.ordinal,
+					service_name: <WithErrorSyntaxMarker as fidl::endpoints::ServiceMarker>::NAME,
+				}),
+			}))
+		})
+	}
+}
+pub enum WithErrorSyntaxRequest {
+	ErrorAsPrimitive {
+		responder: WithErrorSyntaxErrorAsPrimitiveResponder,},
+	ErrorAsEnum {
+		responder: WithErrorSyntaxErrorAsEnumResponder,},
+}
+
+pub struct WithErrorSyntaxEncoder;
+impl WithErrorSyntaxEncoder {
+	pub fn encode_error_as_primitive_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 2069369145,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_error_as_primitive_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_result: &mut WithErrorSyntaxErrorAsPrimitiveResult,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 2069369145,
+		};
+		let mut body = (in_result,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_error_as_enum_request<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 1284890143,
+		};
+		let mut body = ();
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}
+	pub fn encode_error_as_enum_response<'a>(
+		out_bytes: &'a mut Vec<u8>,
+		out_handles: &'a mut Vec<zx::Handle>,
+		tx_id: u32,mut in_result: &mut WithErrorSyntaxErrorAsEnumResult,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id,flags: 0,
+			ordinal: 1284890143,
+		};
+		let mut body = (in_result,);
+		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
+		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
+		Ok(())
+	}}
+
+#[deprecated(note = "use WithErrorSyntaxRequestStream instead")]
+pub struct WithErrorSyntaxImpl<
+	State,
+OnOpen: FnMut(&mut State, WithErrorSyntaxControlHandle) -> OnOpenFut,
+OnOpenFut: futures::Future<Output = ()> + Send,
+	ErrorAsPrimitive: FnMut(&mut State,WithErrorSyntaxErrorAsPrimitiveResponder) -> ErrorAsPrimitiveFut,
+	ErrorAsPrimitiveFut: futures::Future<Output = ()> + Send,
+	ErrorAsEnum: FnMut(&mut State,WithErrorSyntaxErrorAsEnumResponder) -> ErrorAsEnumFut,
+	ErrorAsEnumFut: futures::Future<Output = ()> + Send,
+> {
+	pub state: State,
+	pub on_open: OnOpen,
+	pub error_as_primitive: ErrorAsPrimitive,
+	pub error_as_enum: ErrorAsEnum,
+}
+
+// Unpin is never projected for the Impl struct
+impl<
+	State,
+OnOpen: FnMut(&mut State, WithErrorSyntaxControlHandle) -> OnOpenFut,
+OnOpenFut: futures::Future<Output = ()> + Send,
+	ErrorAsPrimitive: FnMut(&mut State,WithErrorSyntaxErrorAsPrimitiveResponder) -> ErrorAsPrimitiveFut,
+	ErrorAsPrimitiveFut: futures::Future<Output = ()> + Send,
+	ErrorAsEnum: FnMut(&mut State,WithErrorSyntaxErrorAsEnumResponder) -> ErrorAsEnumFut,
+	ErrorAsEnumFut: futures::Future<Output = ()> + Send,
+> ::std::marker::Unpin for WithErrorSyntaxImpl<State, OnOpen, OnOpenFut,
+	ErrorAsPrimitive,
+	ErrorAsPrimitiveFut,
+	ErrorAsEnum,
+	ErrorAsEnumFut,
+>
+{}
+
+impl<
+	State,
+OnOpen: FnMut(&mut State, WithErrorSyntaxControlHandle) -> OnOpenFut,
+OnOpenFut: futures::Future<Output = ()> + Send,
+	ErrorAsPrimitive: FnMut(&mut State,WithErrorSyntaxErrorAsPrimitiveResponder) -> ErrorAsPrimitiveFut,
+	ErrorAsPrimitiveFut: futures::Future<Output = ()> + Send,
+	ErrorAsEnum: FnMut(&mut State,WithErrorSyntaxErrorAsEnumResponder) -> ErrorAsEnumFut,
+	ErrorAsEnumFut: futures::Future<Output = ()> + Send,
+> WithErrorSyntax for WithErrorSyntaxImpl<State, OnOpen, OnOpenFut,
+	ErrorAsPrimitive,
+	ErrorAsPrimitiveFut,
+	ErrorAsEnum,
+	ErrorAsEnumFut,
+>
+{
+	type OnOpenFut = OnOpenFut;
+	fn on_open(&mut self, response_chan: WithErrorSyntaxControlHandle) -> Self::OnOpenFut {
+		(self.on_open)(&mut self.state, response_chan)
+	}
+	type ErrorAsPrimitiveFut = ErrorAsPrimitiveFut;
+	fn error_as_primitive (&mut self,
+		response_chan: WithErrorSyntaxErrorAsPrimitiveResponder
+	) -> Self::ErrorAsPrimitiveFut
+	{
+		(self.error_as_primitive)(
+			&mut self.state,
+			response_chan
+		)
+	}
+	
+	type ErrorAsEnumFut = ErrorAsEnumFut;
+	fn error_as_enum (&mut self,
+		response_chan: WithErrorSyntaxErrorAsEnumResponder
+	) -> Self::ErrorAsEnumFut
+	{
+		(self.error_as_enum)(
+			&mut self.state,
+			response_chan
+		)
+	}
+	
+}
+
+#[derive(Clone)]
+pub struct WithErrorSyntaxControlHandle {
+	inner: ::std::sync::Arc<fidl::ServeInner>,
+}
+
+impl ::std::ops::Deref for WithErrorSyntaxControlHandle {
+	type Target = ::std::sync::Arc<fidl::ServeInner>;
+
+	fn deref(&self) -> &Self::Target {
+		&self.inner
+	}
+}
+
+
+impl WithErrorSyntaxControlHandle {
+	pub fn shutdown(&self) {
+		self.inner.shutdown()
+	}}
+
+/* beginning of response types */
+#[must_use = "FIDL methods require a response to be sent"]
+pub struct WithErrorSyntaxErrorAsPrimitiveResponder {
+	control_handle: ::std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
+	tx_id: u32,
+	ordinal: u32,
+}
+
+impl ::std::ops::Drop for WithErrorSyntaxErrorAsPrimitiveResponder {
+	fn drop(&mut self) {
+		// Shutdown the channel if the responder is dropped without sending a response
+		// so that the client doesn't hang. To prevent this behavior, some methods
+		// call "drop_without_shutdown"
+		self.control_handle.shutdown();
+		// Safety: drops once, never accessed again
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+	}
+}
+
+impl WithErrorSyntaxErrorAsPrimitiveResponder {
+	pub fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
+		&self.control_handle
+	}
+
+	/// Drop the Responder without setting the channel to shutdown.
+	///
+	/// This method shouldn't normally be used-- instead, send a response
+	/// to prevent the channel from shutting down.
+	pub fn drop_without_shutdown(mut self) {
+		// Safety: drops once, never accessed again due to mem::forget
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+		// Prevent Drop from running (which would shut down the channel)
+		::std::mem::forget(self);
+	}
+
+	/// Sends a response to the FIDL transaction.
+	///
+	/// Sets the channel to shutdown if an error occurs.
+	pub fn send(self,mut result: &mut WithErrorSyntaxErrorAsPrimitiveResult,) -> Result<(), fidl::Error> {
+		let r = self.send_raw(result,);
+		if r.is_err() {
+			self.control_handle.shutdown();
+		}
+		self.drop_without_shutdown();
+		r
+	}
+
+	/// Similar to "send" but does not shutdown the channel if
+	/// an error occurs.
+	pub fn send_no_shutdown_on_err(self,mut result: &mut WithErrorSyntaxErrorAsPrimitiveResult,) -> Result<(), fidl::Error> {
+		let r = self.send_raw(result,);
+		self.drop_without_shutdown();
+		r
+	}
+
+	fn send_raw(&self,mut result: &mut WithErrorSyntaxErrorAsPrimitiveResult,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id: self.tx_id,
+			flags: 0,
+			ordinal: self.ordinal,
+		};
+
+		let mut response = (result);
+
+		let mut msg = fidl::encoding::TransactionMessage {
+			header,
+			body: &mut response,
+		};
+
+		::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
+			::fidl::encoding::Encoder::encode(bytes, handles, &mut msg)?;
+			self.control_handle.inner.channel().write(&*bytes, &mut *handles)
+				.map_err(fidl::Error::ServerResponseWrite)?;
+			Ok(())
+		})
+	}
+}
+#[must_use = "FIDL methods require a response to be sent"]
+pub struct WithErrorSyntaxErrorAsEnumResponder {
+	control_handle: ::std::mem::ManuallyDrop<WithErrorSyntaxControlHandle>,
+	tx_id: u32,
+	ordinal: u32,
+}
+
+impl ::std::ops::Drop for WithErrorSyntaxErrorAsEnumResponder {
+	fn drop(&mut self) {
+		// Shutdown the channel if the responder is dropped without sending a response
+		// so that the client doesn't hang. To prevent this behavior, some methods
+		// call "drop_without_shutdown"
+		self.control_handle.shutdown();
+		// Safety: drops once, never accessed again
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+	}
+}
+
+impl WithErrorSyntaxErrorAsEnumResponder {
+	pub fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
+		&self.control_handle
+	}
+
+	/// Drop the Responder without setting the channel to shutdown.
+	///
+	/// This method shouldn't normally be used-- instead, send a response
+	/// to prevent the channel from shutting down.
+	pub fn drop_without_shutdown(mut self) {
+		// Safety: drops once, never accessed again due to mem::forget
+		unsafe { ::std::mem::ManuallyDrop::drop(&mut self.control_handle) };
+		// Prevent Drop from running (which would shut down the channel)
+		::std::mem::forget(self);
+	}
+
+	/// Sends a response to the FIDL transaction.
+	///
+	/// Sets the channel to shutdown if an error occurs.
+	pub fn send(self,mut result: &mut WithErrorSyntaxErrorAsEnumResult,) -> Result<(), fidl::Error> {
+		let r = self.send_raw(result,);
+		if r.is_err() {
+			self.control_handle.shutdown();
+		}
+		self.drop_without_shutdown();
+		r
+	}
+
+	/// Similar to "send" but does not shutdown the channel if
+	/// an error occurs.
+	pub fn send_no_shutdown_on_err(self,mut result: &mut WithErrorSyntaxErrorAsEnumResult,) -> Result<(), fidl::Error> {
+		let r = self.send_raw(result,);
+		self.drop_without_shutdown();
+		r
+	}
+
+	fn send_raw(&self,mut result: &mut WithErrorSyntaxErrorAsEnumResult,) -> Result<(), fidl::Error> {
+		let header = fidl::encoding::TransactionHeader {
+			tx_id: self.tx_id,
+			flags: 0,
+			ordinal: self.ordinal,
+		};
+
+		let mut response = (result);
 
 		let mut msg = fidl::encoding::TransactionMessage {
 			header,

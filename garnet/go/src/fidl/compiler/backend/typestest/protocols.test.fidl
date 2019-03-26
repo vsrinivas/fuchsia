@@ -11,6 +11,16 @@ protocol WithAndWithoutRequestResponse {
     -> OnWithResponse(string ret);
 };
 
+enum ErrorEnun {
+    ERR_FOO = 1;
+    ERR_BAR = 2;
+};
+
+protocol WithErrorSyntax {
+    ErrorAsPrimitive() -> () error uint32;
+    ErrorAsEnum() -> () error ErrorEnun;
+};
+
 [Transport="OvernetInternal"]
 protocol OvernetInternalProtocol {
     MethodA(int64 a, int64 b);

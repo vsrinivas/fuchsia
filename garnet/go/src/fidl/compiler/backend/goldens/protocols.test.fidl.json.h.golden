@@ -8,6 +8,9 @@
 namespace test {
 namespace name {
 
+class WithErrorSyntax_ErrorAsPrimitive_Response;
+class WithErrorSyntax_ErrorAsPrimitive_Result;
+class WithErrorSyntax_ErrorAsEnum_Response;
 #ifdef __Fuchsia__
 class KitchenSink;
 using KitchenSinkPtr = ::fidl::InterfacePtr<KitchenSink>;
@@ -58,6 +61,152 @@ class WithAndWithoutRequestResponse_Sync;
 using WithAndWithoutRequestResponseSyncPtr = ::fidl::SynchronousInterfacePtr<WithAndWithoutRequestResponse>;
 class WithAndWithoutRequestResponse_SyncProxy;
 #endif // __Fuchsia__
+enum class ErrorEnun : uint32_t {
+  ERR_FOO = 1,
+  ERR_BAR = 2,
+};
+
+inline zx_status_t Clone(::test::name::ErrorEnun value,
+                         ::test::name::ErrorEnun* result) {
+  *result = value;
+  return ZX_OK;
+}
+
+class WithErrorSyntax_ErrorAsEnum_Result;
+#ifdef __Fuchsia__
+class WithErrorSyntax;
+using WithErrorSyntaxPtr = ::fidl::InterfacePtr<WithErrorSyntax>;
+class WithErrorSyntax_Proxy;
+class WithErrorSyntax_Stub;
+class WithErrorSyntax_EventSender;
+class WithErrorSyntax_Sync;
+using WithErrorSyntaxSyncPtr = ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
+class WithErrorSyntax_SyncProxy;
+#endif // __Fuchsia__
+
+class WithErrorSyntax_ErrorAsPrimitive_Response  {
+ public:
+  static const fidl_type_t* FidlType;
+  
+  uint8_t __reserved = 0;
+
+  static inline ::std::unique_ptr<WithErrorSyntax_ErrorAsPrimitive_Response> New() { return ::std::make_unique<WithErrorSyntax_ErrorAsPrimitive_Response>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Response* value, size_t _offset);
+  zx_status_t Clone(WithErrorSyntax_ErrorAsPrimitive_Response* result) const;
+};
+
+bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Response& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Response& _rhs);
+inline bool operator!=(const WithErrorSyntax_ErrorAsPrimitive_Response& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Response& _rhs) {
+  return !(_lhs == _rhs);
+}
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _value,
+                         ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* _result) {
+  return _value.Clone(_result);
+}
+
+using WithErrorSyntax_ErrorAsPrimitive_ResponsePtr = ::std::unique_ptr<WithErrorSyntax_ErrorAsPrimitive_Response>;
+
+class WithErrorSyntax_ErrorAsPrimitive_Result {
+ public:
+  WithErrorSyntax_ErrorAsPrimitive_Result();
+  ~WithErrorSyntax_ErrorAsPrimitive_Result();
+
+  WithErrorSyntax_ErrorAsPrimitive_Result(WithErrorSyntax_ErrorAsPrimitive_Result&&);
+  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(WithErrorSyntax_ErrorAsPrimitive_Result&&);
+
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<WithErrorSyntax_ErrorAsPrimitive_Result> New() { return ::std::make_unique<WithErrorSyntax_ErrorAsPrimitive_Result>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Result* _value, size_t _offset);
+  zx_status_t Clone(WithErrorSyntax_ErrorAsPrimitive_Result* result) const;
+
+  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
+
+  bool is_response() const { return Which() == Tag(0); }
+  
+  WithErrorSyntax_ErrorAsPrimitive_Response& response() {
+    if (!is_response()) {
+      value_.emplace<0 + 1>();
+    }
+    return value_.template get<0 + 1>();
+  }
+  
+  const WithErrorSyntax_ErrorAsPrimitive_Response& response() const { return value_.template get<0 + 1>(); }
+  void set_response(WithErrorSyntax_ErrorAsPrimitive_Response value);
+
+  bool is_err() const { return Which() == Tag(1); }
+  
+  uint32_t& err() {
+    if (!is_err()) {
+      value_.emplace<1 + 1>();
+    }
+    return value_.template get<1 + 1>();
+  }
+  
+  const uint32_t& err() const { return value_.template get<1 + 1>(); }
+  void set_err(uint32_t value);
+
+  Tag Which() const {
+    size_t index = value_.index();
+    if (index == 0) {
+      return Tag::Invalid;
+    } else {
+      return Tag(index - 1);
+    }
+  }
+
+ private:
+  friend bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Result& _rhs);
+
+  using Variant = fit::internal::variant<fit::internal::monostate, WithErrorSyntax_ErrorAsPrimitive_Response, uint32_t>;
+  Variant value_;
+};
+
+bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Result& _rhs);
+inline bool operator!=(const WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Result& _rhs) {
+  return !(_lhs == _rhs);
+}
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& value,
+                         ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
+  return value.Clone(result);
+}
+
+using WithErrorSyntax_ErrorAsPrimitive_ResultPtr = ::std::unique_ptr<WithErrorSyntax_ErrorAsPrimitive_Result>;
+
+class WithErrorSyntax_ErrorAsEnum_Response  {
+ public:
+  static const fidl_type_t* FidlType;
+  
+  uint8_t __reserved = 0;
+
+  static inline ::std::unique_ptr<WithErrorSyntax_ErrorAsEnum_Response> New() { return ::std::make_unique<WithErrorSyntax_ErrorAsEnum_Response>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Response* value, size_t _offset);
+  zx_status_t Clone(WithErrorSyntax_ErrorAsEnum_Response* result) const;
+};
+
+bool operator==(const WithErrorSyntax_ErrorAsEnum_Response& _lhs, const WithErrorSyntax_ErrorAsEnum_Response& _rhs);
+inline bool operator!=(const WithErrorSyntax_ErrorAsEnum_Response& _lhs, const WithErrorSyntax_ErrorAsEnum_Response& _rhs) {
+  return !(_lhs == _rhs);
+}
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _value,
+                         ::test::name::WithErrorSyntax_ErrorAsEnum_Response* _result) {
+  return _value.Clone(_result);
+}
+
+using WithErrorSyntax_ErrorAsEnum_ResponsePtr = ::std::unique_ptr<WithErrorSyntax_ErrorAsEnum_Response>;
 #ifdef __Fuchsia__
 
 class KitchenSink {
@@ -469,7 +618,204 @@ class WithAndWithoutRequestResponse_SyncProxy : public WithAndWithoutRequestResp
   friend class ::fidl::SynchronousInterfacePtr<WithAndWithoutRequestResponse>;
 };
 #endif // __Fuchsia__
+
+class WithErrorSyntax_ErrorAsEnum_Result {
+ public:
+  WithErrorSyntax_ErrorAsEnum_Result();
+  ~WithErrorSyntax_ErrorAsEnum_Result();
+
+  WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&&);
+  WithErrorSyntax_ErrorAsEnum_Result& operator=(WithErrorSyntax_ErrorAsEnum_Result&&);
+
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<WithErrorSyntax_ErrorAsEnum_Result> New() { return ::std::make_unique<WithErrorSyntax_ErrorAsEnum_Result>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Result* _value, size_t _offset);
+  zx_status_t Clone(WithErrorSyntax_ErrorAsEnum_Result* result) const;
+
+  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
+
+  bool is_response() const { return Which() == Tag(0); }
+  
+  WithErrorSyntax_ErrorAsEnum_Response& response() {
+    if (!is_response()) {
+      value_.emplace<0 + 1>();
+    }
+    return value_.template get<0 + 1>();
+  }
+  
+  const WithErrorSyntax_ErrorAsEnum_Response& response() const { return value_.template get<0 + 1>(); }
+  void set_response(WithErrorSyntax_ErrorAsEnum_Response value);
+
+  bool is_err() const { return Which() == Tag(1); }
+  
+  ErrorEnun& err() {
+    if (!is_err()) {
+      value_.emplace<1 + 1>();
+    }
+    return value_.template get<1 + 1>();
+  }
+  
+  const ErrorEnun& err() const { return value_.template get<1 + 1>(); }
+  void set_err(ErrorEnun value);
+
+  Tag Which() const {
+    size_t index = value_.index();
+    if (index == 0) {
+      return Tag::Invalid;
+    } else {
+      return Tag(index - 1);
+    }
+  }
+
+ private:
+  friend bool operator==(const WithErrorSyntax_ErrorAsEnum_Result& _lhs, const WithErrorSyntax_ErrorAsEnum_Result& _rhs);
+
+  using Variant = fit::internal::variant<fit::internal::monostate, WithErrorSyntax_ErrorAsEnum_Response, ErrorEnun>;
+  Variant value_;
+};
+
+bool operator==(const WithErrorSyntax_ErrorAsEnum_Result& _lhs, const WithErrorSyntax_ErrorAsEnum_Result& _rhs);
+inline bool operator!=(const WithErrorSyntax_ErrorAsEnum_Result& _lhs, const WithErrorSyntax_ErrorAsEnum_Result& _rhs) {
+  return !(_lhs == _rhs);
+}
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& value,
+                         ::test::name::WithErrorSyntax_ErrorAsEnum_Result* result) {
+  return value.Clone(result);
+}
+
+using WithErrorSyntax_ErrorAsEnum_ResultPtr = ::std::unique_ptr<WithErrorSyntax_ErrorAsEnum_Result>;
+#ifdef __Fuchsia__
+
+class WithErrorSyntax {
+ public:
+  using Proxy_ = WithErrorSyntax_Proxy;
+  using Stub_ = WithErrorSyntax_Stub;
+  using EventSender_ = WithErrorSyntax_EventSender;
+  using Sync_ = WithErrorSyntax_Sync;
+  virtual ~WithErrorSyntax();
+  using ErrorAsPrimitiveCallback =
+      fit::function<void(WithErrorSyntax_ErrorAsPrimitive_Result)>;
+      
+  virtual void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) = 0;
+  using ErrorAsEnumCallback =
+      fit::function<void(WithErrorSyntax_ErrorAsEnum_Result)>;
+      
+  virtual void ErrorAsEnum(ErrorAsEnumCallback callback) = 0;
+};
+
+class WithErrorSyntax_EventSender {
+ public:
+  virtual ~WithErrorSyntax_EventSender();
+};
+
+class WithErrorSyntax_Sync {
+ public:
+  using Proxy_ = WithErrorSyntax_SyncProxy;
+  virtual ~WithErrorSyntax_Sync();
+  virtual zx_status_t ErrorAsPrimitive(WithErrorSyntax_ErrorAsPrimitive_Result* out_result) = 0;
+  virtual zx_status_t ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Result* out_result) = 0;
+};
+
+class WithErrorSyntax_Proxy : public ::fidl::internal::Proxy, public WithErrorSyntax {
+ public:
+  explicit WithErrorSyntax_Proxy(::fidl::internal::ProxyController* controller);
+  ~WithErrorSyntax_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::Message message) override;
+  void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) override;
+  void ErrorAsEnum(ErrorAsEnumCallback callback) override;
+
+ private:
+  WithErrorSyntax_Proxy(const WithErrorSyntax_Proxy&) = delete;
+  WithErrorSyntax_Proxy& operator=(const WithErrorSyntax_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class WithErrorSyntax_Stub : public ::fidl::internal::Stub, public WithErrorSyntax_EventSender {
+ public:
+  typedef class ::test::name::WithErrorSyntax WithErrorSyntax_clazz;
+  explicit WithErrorSyntax_Stub(WithErrorSyntax_clazz* impl);
+  ~WithErrorSyntax_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::Message message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  WithErrorSyntax_clazz* impl_;
+};
+
+class WithErrorSyntax_SyncProxy : public WithErrorSyntax_Sync {
+ public:
+  explicit WithErrorSyntax_SyncProxy(::zx::channel channel);
+  ~WithErrorSyntax_SyncProxy() override;
+  zx_status_t ErrorAsPrimitive(WithErrorSyntax_ErrorAsPrimitive_Result* out_result) override;
+  zx_status_t ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Result* out_result) override;
+
+  private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
+};
+#endif // __Fuchsia__
 }  // namespace name
 }  // namespace test
 namespace fidl {
-}  // namespace fidl
+
+template <>
+struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
+    : public EncodableCodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response, 1> {};
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& value,
+                         ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* result) {
+  return ::test::name::Clone(value, result);
+}
+template <>
+struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>
+    : public EncodableCodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, 8> {};
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& value,
+                         ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
+  return ::test::name::Clone(value, result);
+}
+template <>
+struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Response>
+    : public EncodableCodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Response, 1> {};
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& value,
+                         ::test::name::WithErrorSyntax_ErrorAsEnum_Response* result) {
+  return ::test::name::Clone(value, result);
+}
+template <>
+struct CodingTraits<::test::name::ErrorEnun> {
+  static constexpr size_t encoded_size = sizeof(::test::name::ErrorEnun);
+  static void Encode(Encoder* encoder, ::test::name::ErrorEnun* value, size_t offset) {
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::test::name::ErrorEnun* value, size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::test::name::ErrorEnun>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::test::name::ErrorEnun value,
+                         ::test::name::ErrorEnun* result) {
+  return ::test::name::Clone(value, result);
+}
+template <>
+struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Result>
+    : public EncodableCodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Result, 8> {};
+
+inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& value,
+                         ::test::name::WithErrorSyntax_ErrorAsEnum_Result* result) {
+  return ::test::name::Clone(value, result);
+}}  // namespace fidl

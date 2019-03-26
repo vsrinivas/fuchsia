@@ -6,6 +6,30 @@
 namespace test {
 namespace name {
 
+::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::WithErrorSyntax_ErrorAsPrimitive_Result() {
+  memset(this, 0, sizeof(WithErrorSyntax_ErrorAsPrimitive_Result));
+  tag_ = Tag::Invalid;
+}
+
+::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::~WithErrorSyntax_ErrorAsPrimitive_Result() {
+  Destroy();
+}
+
+void ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~WithErrorSyntax_ErrorAsPrimitive_Response();
+  default:
+    break;
+  }
+}
+
+void ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, response_) == 4);
+  static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, err_) == 4);
+  static_assert(sizeof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Result) == ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::PrimarySize);
+}
+
 namespace {
 
 [[maybe_unused]]
@@ -1516,6 +1540,303 @@ zx_status_t WithAndWithoutRequestResponse::SendOnWithResponseEvent(::zx::unowned
   params.message()->_hdr = {};
   params.message()->_hdr.ordinal = kWithAndWithoutRequestResponse_OnWithResponse_Ordinal;
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
+}
+
+
+::test::name::WithErrorSyntax_ErrorAsEnum_Result::WithErrorSyntax_ErrorAsEnum_Result() {
+  memset(this, 0, sizeof(WithErrorSyntax_ErrorAsEnum_Result));
+  tag_ = Tag::Invalid;
+}
+
+::test::name::WithErrorSyntax_ErrorAsEnum_Result::~WithErrorSyntax_ErrorAsEnum_Result() {
+  Destroy();
+}
+
+void ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~WithErrorSyntax_ErrorAsEnum_Response();
+  case Tag::kErr:
+    err_.~ErrorEnun();
+  default:
+    break;
+  }
+}
+
+void ::test::name::WithErrorSyntax_ErrorAsEnum_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsEnum_Result, response_) == 4);
+  static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsEnum_Result, err_) == 4);
+  static_assert(sizeof(::test::name::WithErrorSyntax_ErrorAsEnum_Result) == ::test::name::WithErrorSyntax_ErrorAsEnum_Result::PrimarySize);
+}
+
+namespace {
+
+[[maybe_unused]]
+constexpr uint32_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 2069369145u;
+[[maybe_unused]]
+constexpr uint32_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 1284890143u;
+
+}  // namespace
+
+zx_status_t WithErrorSyntax::SyncClient::ErrorAsPrimitive(WithErrorSyntax_ErrorAsPrimitive_Result* out_result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveRequest>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _request = *reinterpret_cast<ErrorAsPrimitiveRequest*>(_write_bytes);
+  _request._hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ErrorAsPrimitiveRequest));
+  ::fidl::DecodedMessage<ErrorAsPrimitiveRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveResponse>();
+  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
+  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
+  auto _call_result = ::fidl::Call<ErrorAsPrimitiveRequest, ErrorAsPrimitiveResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_result = std::move(_response.result);
+  return ZX_OK;
+}
+
+zx_status_t WithErrorSyntax::SyncClient::ErrorAsPrimitive(::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsPrimitive_Result* out_result) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsPrimitiveRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  auto& _request = *reinterpret_cast<ErrorAsPrimitiveRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
+  _request_buffer.set_actual(sizeof(ErrorAsPrimitiveRequest));
+  ::fidl::DecodedMessage<ErrorAsPrimitiveRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  auto _call_result = ::fidl::Call<ErrorAsPrimitiveRequest, ErrorAsPrimitiveResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_result = std::move(_response.result);
+  return ZX_OK;
+}
+
+::fidl::DecodeResult<WithErrorSyntax::ErrorAsPrimitiveResponse> WithErrorSyntax::SyncClient::ErrorAsPrimitive(::fidl::BytePart response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsPrimitiveRequest)] = {};
+  constexpr uint32_t _write_num_bytes = sizeof(ErrorAsPrimitiveRequest);
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::DecodedMessage<ErrorAsPrimitiveRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<WithErrorSyntax::ErrorAsPrimitiveResponse>(
+      _encode_request_result.status,
+      _encode_request_result.error,
+      ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>());
+  }
+  auto _call_result = ::fidl::Call<ErrorAsPrimitiveRequest, ErrorAsPrimitiveResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<WithErrorSyntax::ErrorAsPrimitiveResponse>(
+      _call_result.status,
+      _call_result.error,
+      ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsPrimitiveResponse>());
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+zx_status_t WithErrorSyntax::SyncClient::ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Result* out_result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumRequest>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _request = *reinterpret_cast<ErrorAsEnumRequest*>(_write_bytes);
+  _request._hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ErrorAsEnumRequest));
+  ::fidl::DecodedMessage<ErrorAsEnumRequest> _decoded_request(std::move(_request_bytes));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+
+  constexpr uint32_t _kReadAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumResponse>();
+  FIDL_ALIGNDECL uint8_t _read_bytes[_kReadAllocSize];
+  ::fidl::BytePart _response_bytes(_read_bytes, _kReadAllocSize);
+  auto _call_result = ::fidl::Call<ErrorAsEnumRequest, ErrorAsEnumResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_bytes));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_result = std::move(_response.result);
+  return ZX_OK;
+}
+
+zx_status_t WithErrorSyntax::SyncClient::ErrorAsEnum(::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsEnum_Result* out_result) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsEnumRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  auto& _request = *reinterpret_cast<ErrorAsEnumRequest*>(_request_buffer.data());
+  _request._hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
+  _request_buffer.set_actual(sizeof(ErrorAsEnumRequest));
+  ::fidl::DecodedMessage<ErrorAsEnumRequest> _decoded_request(std::move(_request_buffer));
+  auto _encode_request_result = ::fidl::Encode(std::move(_decoded_request));
+  if (_encode_request_result.status != ZX_OK) {
+    return _encode_request_result.status;
+  }
+  auto _call_result = ::fidl::Call<ErrorAsEnumRequest, ErrorAsEnumResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(_response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return _call_result.status;
+  }
+  auto _decode_result = ::fidl::Decode(std::move(_call_result.message));
+  if (_decode_result.status != ZX_OK) {
+    return _decode_result.status;
+  }
+  auto& _response = *_decode_result.message.message();
+  *out_result = std::move(_response.result);
+  return ZX_OK;
+}
+
+::fidl::DecodeResult<WithErrorSyntax::ErrorAsEnumResponse> WithErrorSyntax::SyncClient::ErrorAsEnum(::fidl::BytePart response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(ErrorAsEnumRequest)] = {};
+  constexpr uint32_t _write_num_bytes = sizeof(ErrorAsEnumRequest);
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes), _write_num_bytes);
+  ::fidl::DecodedMessage<ErrorAsEnumRequest> params(std::move(_request_buffer));
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<WithErrorSyntax::ErrorAsEnumResponse>(
+      _encode_request_result.status,
+      _encode_request_result.error,
+      ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>());
+  }
+  auto _call_result = ::fidl::Call<ErrorAsEnumRequest, ErrorAsEnumResponse>(
+    this->channel_, std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<WithErrorSyntax::ErrorAsEnumResponse>(
+      _call_result.status,
+      _call_result.error,
+      ::fidl::DecodedMessage<WithErrorSyntax::ErrorAsEnumResponse>());
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool WithErrorSyntax::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kWithErrorSyntax_ErrorAsPrimitive_Ordinal: {
+      auto result = ::fidl::DecodeAs<ErrorAsPrimitiveRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->ErrorAsPrimitive(
+        Interface::ErrorAsPrimitiveCompleter::Sync(txn));
+      return true;
+    }
+    case kWithErrorSyntax_ErrorAsEnum_Ordinal: {
+      auto result = ::fidl::DecodeAs<ErrorAsEnumRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->ErrorAsEnum(
+        Interface::ErrorAsEnumCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool WithErrorSyntax::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(WithErrorSyntax_ErrorAsPrimitive_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsPrimitiveResponse>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<ErrorAsPrimitiveResponse*>(_write_bytes);
+  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ErrorAsPrimitiveResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse>(std::move(_response_bytes)));
+}
+
+void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::fidl::BytePart _buffer, WithErrorSyntax_ErrorAsPrimitive_Result result) {
+  if (_buffer.capacity() < ErrorAsPrimitiveResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<ErrorAsPrimitiveResponse*>(_buffer.data());
+  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(ErrorAsPrimitiveResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse>(std::move(_buffer)));
+}
+
+void WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::Reply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsPrimitive_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(WithErrorSyntax_ErrorAsEnum_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ErrorAsEnumResponse>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<ErrorAsEnumResponse*>(_write_bytes);
+  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ErrorAsEnumResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsEnumResponse>(std::move(_response_bytes)));
+}
+
+void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::BytePart _buffer, WithErrorSyntax_ErrorAsEnum_Result result) {
+  if (_buffer.capacity() < ErrorAsEnumResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<ErrorAsEnumResponse*>(_buffer.data());
+  _response._hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(ErrorAsEnumResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ErrorAsEnumResponse>(std::move(_buffer)));
+}
+
+void WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::Reply(::fidl::DecodedMessage<ErrorAsEnumResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kWithErrorSyntax_ErrorAsEnum_Ordinal;
+  CompleterBase::SendReply(std::move(params));
 }
 
 

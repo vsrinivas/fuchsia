@@ -5,6 +5,9 @@
   namespace test {
   namespace name {
   
+  
+  
+  
       
         
 class KitchenSink;
@@ -24,6 +27,13 @@ class OvernetInternalProtocol_Stub;
       
   
       
+  
+  
+  
+      
+  
+  
+  
   
   
       
@@ -117,6 +127,13 @@ class OvernetInternalProtocol_Stub : public ::overnet::FidlStream, public Overne
       
   
   
+  
+      
+  
+  
+  
+  
+  
       
         
       
@@ -128,6 +145,10 @@ class OvernetInternalProtocol_Stub : public ::overnet::FidlStream, public Overne
       
         
       
+  
+      
+  
+  
   
       
   

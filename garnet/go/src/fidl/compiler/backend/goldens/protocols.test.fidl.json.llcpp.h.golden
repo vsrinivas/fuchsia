@@ -15,11 +15,110 @@
 namespace test {
 namespace name {
 
+struct WithErrorSyntax_ErrorAsPrimitive_Response;
+struct WithErrorSyntax_ErrorAsPrimitive_Result;
+struct WithErrorSyntax_ErrorAsEnum_Response;
 class KitchenSink;
 class ChannelProtocol;
 class SocketControlProtocol;
 class OvernetInternalProtocol;
 class WithAndWithoutRequestResponse;
+enum class ErrorEnun : uint32_t {
+  ERR_FOO = 1,
+  ERR_BAR = 2,
+};
+
+
+struct WithErrorSyntax_ErrorAsEnum_Result;
+class WithErrorSyntax;
+
+
+
+struct WithErrorSyntax_ErrorAsPrimitive_Response {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  uint8_t __reserved = 0;
+};
+
+extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+
+struct WithErrorSyntax_ErrorAsPrimitive_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  WithErrorSyntax_ErrorAsPrimitive_Result();
+  ~WithErrorSyntax_ErrorAsPrimitive_Result();
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  WithErrorSyntax_ErrorAsPrimitive_Response& mutable_response() {
+    if (which() != Tag::kResponse) {
+      Destroy();
+    }
+    tag_ = Tag::kResponse;
+    return response_;
+  }
+
+  void set_response(WithErrorSyntax_ErrorAsPrimitive_Response const & v) {
+    mutable_response() = v;
+  }
+
+  WithErrorSyntax_ErrorAsPrimitive_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  uint32_t& mutable_err() {
+    if (which() != Tag::kErr) {
+      Destroy();
+    }
+    tag_ = Tag::kErr;
+    return err_;
+  }
+
+  void set_err(uint32_t const & v) {
+    mutable_err() = v;
+  }
+
+  uint32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    WithErrorSyntax_ErrorAsPrimitive_Response response_;
+    uint32_t err_;
+  };
+};
+
+
+
+struct WithErrorSyntax_ErrorAsEnum_Response {
+  static constexpr const fidl_type_t* Type = nullptr;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+  uint8_t __reserved = 0;
+};
 
 
 class KitchenSink final {
@@ -781,10 +880,203 @@ class WithAndWithoutRequestResponse final {
 
 };
 
+extern "C" const fidl_type_t test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+
+struct WithErrorSyntax_ErrorAsEnum_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  WithErrorSyntax_ErrorAsEnum_Result();
+  ~WithErrorSyntax_ErrorAsEnum_Result();
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  WithErrorSyntax_ErrorAsEnum_Response& mutable_response() {
+    if (which() != Tag::kResponse) {
+      Destroy();
+    }
+    tag_ = Tag::kResponse;
+    return response_;
+  }
+
+  void set_response(WithErrorSyntax_ErrorAsEnum_Response const & v) {
+    mutable_response() = v;
+  }
+
+  WithErrorSyntax_ErrorAsEnum_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  ErrorEnun& mutable_err() {
+    if (which() != Tag::kErr) {
+      Destroy();
+    }
+    tag_ = Tag::kErr;
+    return err_;
+  }
+
+  void set_err(ErrorEnun const & v) {
+    mutable_err() = v;
+  }
+
+  ErrorEnun const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+
+ private:
+  void Destroy();
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    WithErrorSyntax_ErrorAsEnum_Response response_;
+    ErrorEnun err_;
+  };
+};
+
+
+class WithErrorSyntax final {
+ public:
+
+  struct ErrorAsPrimitiveResponse {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    WithErrorSyntax_ErrorAsPrimitive_Result result;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+  using ErrorAsPrimitiveRequest = ::fidl::AnyZeroArgMessage;
+
+  struct ErrorAsEnumResponse {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    WithErrorSyntax_ErrorAsEnum_Result result;
+
+    static constexpr const fidl_type_t* Type = nullptr;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+  };
+  using ErrorAsEnumRequest = ::fidl::AnyZeroArgMessage;
+
+
+  class SyncClient final {
+   public:
+    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+
+    ~SyncClient() {}
+
+    zx_status_t ErrorAsPrimitive(WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t ErrorAsPrimitive(::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsPrimitive_Result* out_result);
+
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<ErrorAsPrimitiveResponse> ErrorAsPrimitive(::fidl::BytePart response_buffer);
+
+    zx_status_t ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_Result* out_result);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t ErrorAsEnum(::fidl::BytePart _response_buffer, WithErrorSyntax_ErrorAsEnum_Result* out_result);
+
+    // Messages are encoded and decoded in-place.
+    ::fidl::DecodeResult<ErrorAsEnumResponse> ErrorAsEnum(::fidl::BytePart response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = WithErrorSyntax;
+    using _Base = ::fidl::CompleterBase;
+
+    class ErrorAsPrimitiveCompleterBase : public _Base {
+     public:
+      void Reply(WithErrorSyntax_ErrorAsPrimitive_Result result);
+      void Reply(::fidl::BytePart _buffer, WithErrorSyntax_ErrorAsPrimitive_Result result);
+      void Reply(::fidl::DecodedMessage<ErrorAsPrimitiveResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ErrorAsPrimitiveCompleter = ::fidl::Completer<ErrorAsPrimitiveCompleterBase>;
+
+    virtual void ErrorAsPrimitive(ErrorAsPrimitiveCompleter::Sync _completer) = 0;
+
+    class ErrorAsEnumCompleterBase : public _Base {
+     public:
+      void Reply(WithErrorSyntax_ErrorAsEnum_Result result);
+      void Reply(::fidl::BytePart _buffer, WithErrorSyntax_ErrorAsEnum_Result result);
+      void Reply(::fidl::DecodedMessage<ErrorAsEnumResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ErrorAsEnumCompleter = ::fidl::Completer<ErrorAsEnumCompleterBase>;
+
+    virtual void ErrorAsEnum(ErrorAsEnumCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+};
+
 }  // namespace name
 }  // namespace test
 
 namespace fidl {
+
+template <>
+struct IsFidlType<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>);
+static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Response, __reserved) == 0);
+static_assert(sizeof(::test::name::WithErrorSyntax_ErrorAsPrimitive_Response) == ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>);
+
+template <>
+struct IsFidlType<::test::name::WithErrorSyntax_ErrorAsEnum_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test::name::WithErrorSyntax_ErrorAsEnum_Response>);
+static_assert(offsetof(::test::name::WithErrorSyntax_ErrorAsEnum_Response, __reserved) == 0);
+static_assert(sizeof(::test::name::WithErrorSyntax_ErrorAsEnum_Response) == ::test::name::WithErrorSyntax_ErrorAsEnum_Response::PrimarySize);
 
 template <>
 struct IsFidlType<::test::name::KitchenSink::MethodARequest> : public std::true_type {};
@@ -973,5 +1265,25 @@ struct IsFidlMessage<::test::name::WithAndWithoutRequestResponse::OnWithResponse
 static_assert(sizeof(::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse)
     == ::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse::PrimarySize);
 static_assert(offsetof(::test::name::WithAndWithoutRequestResponse::OnWithResponseResponse, ret) == 16);
+
+template <>
+struct IsFidlType<::test::name::WithErrorSyntax_ErrorAsEnum_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::test::name::WithErrorSyntax_ErrorAsEnum_Result>);
+
+template <>
+struct IsFidlType<::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse> : public std::true_type {};
+static_assert(sizeof(::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse)
+    == ::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse::PrimarySize);
+static_assert(offsetof(::test::name::WithErrorSyntax::ErrorAsPrimitiveResponse, result) == 16);
+
+template <>
+struct IsFidlType<::test::name::WithErrorSyntax::ErrorAsEnumResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::test::name::WithErrorSyntax::ErrorAsEnumResponse> : public std::true_type {};
+static_assert(sizeof(::test::name::WithErrorSyntax::ErrorAsEnumResponse)
+    == ::test::name::WithErrorSyntax::ErrorAsEnumResponse::PrimarySize);
+static_assert(offsetof(::test::name::WithErrorSyntax::ErrorAsEnumResponse, result) == 16);
 
 }  // namespace fidl

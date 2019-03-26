@@ -4,6 +4,9 @@
   namespace test {
   namespace name {
   
+  
+  
+  
       
         
 namespace {
@@ -261,6 +264,10 @@ void OvernetInternalProtocol_Stub::EventA(int64_t a, int64_t b) {
 
 
       
+  
+      
+  
+  
   
       
   

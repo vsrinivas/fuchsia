@@ -634,7 +634,7 @@ func TestCompileInterface(t *testing.T) {
 				GenOrdinalName: "TestFirstGenOrdinal",
 				Name:           "First",
 				Request: &Struct{
-					Name: "TestFirstRequest",
+					Name: "testFirstRequest",
 					Members: []StructMember{
 						{
 							Name:        "Value",
@@ -654,7 +654,7 @@ func TestCompileInterface(t *testing.T) {
 				GenOrdinalName: "TestSecondGenOrdinal",
 				Name:           "Second",
 				Request: &Struct{
-					Name: "TestSecondRequest",
+					Name: "testSecondRequest",
 					Members: []StructMember{
 						{
 							Name:        "Value",
@@ -665,7 +665,7 @@ func TestCompileInterface(t *testing.T) {
 					Size: 16,
 				},
 				Response: &Struct{
-					Name: "TestSecondResponse",
+					Name: "testSecondResponse",
 					Members: []StructMember{
 						{
 							Name:        "Value",
@@ -727,7 +727,7 @@ func TestCompileInterface(t *testing.T) {
 				GenOrdinalName: "TestFirstGenOrdinal",
 				Name:           "First",
 				Response: &Struct{
-					Name: "TestFirstResponse",
+					Name: "testFirstResponse",
 					Members: []StructMember{
 						{
 							Name:        "Value",

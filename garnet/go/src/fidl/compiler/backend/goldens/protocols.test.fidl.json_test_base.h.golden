@@ -83,6 +83,19 @@ class WithAndWithoutRequestResponse_TestBase : public WithAndWithoutRequestRespo
   }
 
 };
+
+class WithErrorSyntax_TestBase : public WithErrorSyntax {
+  public:
+  virtual ~WithErrorSyntax_TestBase() { }
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void ErrorAsPrimitive(ErrorAsPrimitiveCallback callback) override {
+    NotImplemented_("ErrorAsPrimitive");
+  }
+  void ErrorAsEnum(ErrorAsEnumCallback callback) override {
+    NotImplemented_("ErrorAsEnum");
+  }
+
+};
 }  // namespace testing
 }  // namespace name
 }  // namespace test
