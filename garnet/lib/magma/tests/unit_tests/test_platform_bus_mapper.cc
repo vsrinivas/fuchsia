@@ -78,6 +78,20 @@ public:
             mappings.clear();
         }
     }
+
+    static void Contiguous(magma::PlatformBusMapper* mapper)
+    {
+        constexpr uint32_t kPageCount = 5;
+        std::unique_ptr<magma::PlatformBuffer> buffer =
+            mapper->CreateContiguousBuffer(kPageCount * PAGE_SIZE, 12u, "test");
+        EXPECT_NE(nullptr, buffer.get());
+
+        auto bus_mapping = mapper->MapPageRangeBus(buffer.get(), 0, kPageCount);
+        ASSERT_NE(nullptr, bus_mapping.get());
+        for (uint32_t i = 1; i < kPageCount; ++i) {
+            EXPECT_EQ(bus_mapping->Get()[i - 1] + PAGE_SIZE, bus_mapping->Get()[i]);
+        }
+    }
 };
 
 TEST(PlatformPciDevice, BusMapperBasic)
@@ -102,6 +116,16 @@ TEST(PlatformPciDevice, BusMapperOverlapped)
     TestPlatformBusMapper::Overlapped(mapper.get(), 12);
 }
 
+TEST(PlatformPciDevice, BusMapperContiguous)
+{
+    magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
+    ASSERT_TRUE(platform_device);
+    auto mapper = magma::PlatformBusMapper::Create(platform_device->GetBusTransactionInitiator());
+    ASSERT_TRUE(mapper);
+
+    TestPlatformBusMapper::Contiguous(mapper.get());
+}
+
 TEST(PlatformDevice, BusMapperBasic)
 {
     magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
@@ -122,4 +146,14 @@ TEST(PlatformDevice, BusMapperOverlapped)
     ASSERT_TRUE(mapper);
 
     TestPlatformBusMapper::Overlapped(mapper.get(), 12);
+}
+
+TEST(PlatformDevice, BusMapperContiguous)
+{
+    magma::PlatformDevice* platform_device = TestPlatformDevice::GetInstance();
+    ASSERT_TRUE(platform_device);
+    auto mapper = magma::PlatformBusMapper::Create(platform_device->GetBusTransactionInitiator());
+    ASSERT_TRUE(mapper);
+
+    TestPlatformBusMapper::Contiguous(mapper.get());
 }

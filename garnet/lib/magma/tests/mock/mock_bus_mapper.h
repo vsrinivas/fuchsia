@@ -49,6 +49,13 @@ public:
         return mapping;
     }
 
+    std::unique_ptr<magma::PlatformBuffer>
+    CreateContiguousBuffer(size_t size, uint32_t alignment_log2, const char* name) override
+    {
+        // This mapper maps every buffer contiguously.
+        return magma::PlatformBuffer::Create(size, name);
+    }
+
 private:
     uint64_t start_addr_;
 };
@@ -71,6 +78,13 @@ public:
             mapping->page_addr_[i] = (buffer->id() << 24) + ((start_page_index + i) * PAGE_SIZE);
         }
         return mapping;
+    }
+
+    std::unique_ptr<magma::PlatformBuffer>
+    CreateContiguousBuffer(size_t size, uint32_t alignment_log2, const char* name) override
+    {
+        // This mapper maps every buffer contiguously.
+        return magma::PlatformBuffer::Create(size, name);
     }
 };
 

@@ -26,6 +26,10 @@ public:
     virtual std::unique_ptr<BusMapping>
     MapPageRangeBus(PlatformBuffer* buffer, uint32_t start_page_index, uint32_t page_count) = 0;
 
+    // Create a VMO that this bus mapper can map into a contiguous range of pages.
+    virtual std::unique_ptr<PlatformBuffer>
+    CreateContiguousBuffer(size_t size, uint32_t alignment_log2, const char* name) = 0;
+
     static std::unique_ptr<PlatformBusMapper>
     Create(std::shared_ptr<PlatformHandle> bus_transaction_initiator);
 };

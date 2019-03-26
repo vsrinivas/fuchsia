@@ -7,8 +7,8 @@
 
 #include "platform_bus_mapper.h"
 #include "zircon_platform_buffer.h"
-#include <vector>
 #include <lib/zx/pmt.h>
+#include <vector>
 
 namespace magma {
 
@@ -21,6 +21,8 @@ public:
 
     std::unique_ptr<BusMapping> MapPageRangeBus(PlatformBuffer* buffer, uint32_t start_page_index,
                                                 uint32_t page_count) override;
+    std::unique_ptr<PlatformBuffer> CreateContiguousBuffer(size_t size, uint32_t alignment_log2,
+                                                           const char* name) override;
 
     class BusMapping : public PlatformBusMapper::BusMapping {
     public:
