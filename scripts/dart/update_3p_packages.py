@@ -14,12 +14,9 @@ import sys
 # error out and the conflicts will have to be resolved before the packages can
 # be updated.
 ROOT_PUBSPECS = [
-    'third_party/dart/pkg/analyzer',
     'third_party/dart/pkg/analysis_tool',
     'third_party/dart/pkg/build_integration',
     'third_party/dart/pkg/expect',
-    'third_party/dart/pkg/front_end',
-    'third_party/dart/pkg/kernel',
     'third_party/dart/pkg/testing',
     'third_party/dart-pkg/git/flutter/examples/flutter_gallery',
     'third_party/dart-pkg/git/flutter/packages/flutter',
