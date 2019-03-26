@@ -337,8 +337,6 @@ void MsdIntelDevice::DestroyContext(std::shared_ptr<ClientContext> client_contex
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
     EnqueueDeviceRequest(std::make_unique<DestroyContextRequest>(std::move(client_context)));
-    // TODO(MA-547): wait for the request to be processed so that the gpu is not executing
-    // the context before we return.
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -558,8 +556,6 @@ magma::Status MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContex
 
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     // Just let it go out of scope
-
-    // TODO(MA-547): if this context is executing, stop it now.
 
     return MAGMA_STATUS_OK;
 }
