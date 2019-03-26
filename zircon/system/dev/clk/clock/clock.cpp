@@ -19,11 +19,17 @@
 namespace clock {
 
 zx_status_t ClockDevice::ClockEnable(uint32_t index) {
-    return clock_.Enable(index);
+    if (index >= map_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return clock_.Enable(map_[index]);
 }
 
 zx_status_t ClockDevice::ClockDisable(uint32_t index) {
-    return clock_.Disable(index);
+    if (index >= map_.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    return clock_.Disable(map_[index]);
 }
 
 void ClockDevice::DdkUnbind() {
