@@ -41,12 +41,11 @@ DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream,
 
 DebugAgent::~DebugAgent() = default;
 
-void DebugAgent::OnProcessStart(const std::string& filter, zx::process process,
-                                zx::thread initial_thread) {
+void DebugAgent::OnProcessStart(const std::string& filter,
+                                zx::process process) {
   TIME_BLOCK();
   auto process_koid = KoidForObject(process);
   auto process_name = NameForObject(process);
-  auto thread_koid = KoidForObject(initial_thread);
 
   debug_ipc::NotifyProcessStarting notify;
   notify.koid = process_koid;
@@ -73,13 +72,6 @@ void DebugAgent::OnProcessStart(const std::string& filter, zx::process process,
   create_info.handle = std::move(process);
   create_info.resume_initial_thread = false;
   AddDebuggedProcess(std::move(create_info));
-
-  // Attached to the process. At that point it will get a new thread
-  // notification for the initial thread which it can stop or continue as it
-  // desires. Therefore, we can always resume the thread in the "new process"
-  // exception.
-  debug_ipc::MessageLoopTarget::Current()->ResumeFromException(
-      thread_koid, initial_thread, 0);
 }
 
 void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
@@ -531,6 +523,8 @@ zx_status_t DebugAgent::AddDebuggedProcess(
 
 void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
                                debug_ipc::LaunchReply* reply) {
+  FXL_DCHECK(!request.argv.empty());
+  DEBUG_LOG() << "Launching binary " << request.argv.front();
   Launcher launcher(services_);
   reply->inferior_type = debug_ipc::InferiorType::kBinary;
 

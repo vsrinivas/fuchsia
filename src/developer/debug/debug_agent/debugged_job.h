@@ -28,8 +28,8 @@ class ProcessStartHandler {
   //
   // The DebuggedJob matching filter passed in case the handler is tracking from
   // which this event comes from.
-  virtual void OnProcessStart(const std::string& filter, zx::process process,
-                              zx::thread thread) = 0;
+  virtual void OnProcessStart(const std::string& filter,
+                              zx::process process) = 0;
 };
 
 class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {

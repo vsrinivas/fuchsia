@@ -172,8 +172,9 @@ const std::map<std::string, std::string>& GetOptions() {
   static std::map<std::string, std::string> options = {
       {"auwind", R"(
       [Experimental] Use the unwinder from AOSP.)"},
-      {"async-message-loop", R"(
-      [Experimental] Use async-loop backend message loop.)"},
+      {"legacy-message-loop", R"(
+      [DEPRECATED] Use the originalbackend message loop.
+                   Will be removed eventually.)"},
       {"debug-mode", R"(
       Run the agent on debug mode. This will enable conditional logging messages
       and timing profiling. Mainly useful for people developing zxdb.)"},
@@ -239,11 +240,11 @@ int main(int argc, char* argv[]) {
     debug_agent::SetUnwinderType(debug_agent::UnwinderType::kAndroid);
   }
 
-  // By default use the original agent message loop.
-  auto message_loop_type = MessageLoopTarget::Type::kZircon;
-  if (cmdline.HasOption("async-message-loop")) {
+  // By default use the async agent message loop.
+  auto message_loop_type = MessageLoopTarget::Type::kAsync;
+  if (cmdline.HasOption("legacy-message-loop")) {
     // Use new async loop.
-    message_loop_type = MessageLoopTarget::Type::kAsync;
+    message_loop_type = MessageLoopTarget::Type::kZircon;
   }
 
   if (cmdline.HasOption("debug-mode")) {

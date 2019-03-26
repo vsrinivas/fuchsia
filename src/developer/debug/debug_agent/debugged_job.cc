@@ -40,7 +40,7 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
 
   zx::process process = GetProcessFromKoid(process_koid);
   auto proc_name = NameForObject(process);
-  zx::thread thread = ThreadForKoid(process.get(), thread_koid);
+  zx::thread initial_thread = ThreadForKoid(process.get(), thread_koid);
 
   // Tools like fx serve will connect every second or so to the target, spamming
   // logging for this with a lot of "/boot/bin/sh" starting.
@@ -71,9 +71,16 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   if (matching_filter) {
     DEBUG_LOG() << "Filter " << matching_filter->filter << " matches process "
                 << proc_name << ". Attaching.";
-    handler_->OnProcessStart(matching_filter->filter, std::move(process),
-                             std::move(thread));
+    handler_->OnProcessStart(matching_filter->filter, std::move(process));
   }
+
+  // Attached to the process. At that point it will get a new thread
+  // notification for the initial thread which it can stop or continue as it
+  // desires. Therefore, we can always resume the thread in the "new process"
+  // exception.
+  debug_ipc::MessageLoopTarget::Current()->ResumeFromException(
+      thread_koid, initial_thread, 0);
+
 }
 
 void DebuggedJob::SetFilters(std::vector<std::string> filters) {

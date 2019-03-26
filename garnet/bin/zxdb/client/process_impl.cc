@@ -255,7 +255,6 @@ void ProcessImpl::WillUnloadModuleSymbols(LoadedModuleSymbols* module) {
 }
 
 void ProcessImpl::OnSymbolLoadFailure(const Err& err) {
-  TIME_BLOCK();
   for (auto& observer : observers())
     observer.OnSymbolLoadFailure(this, err);
 }

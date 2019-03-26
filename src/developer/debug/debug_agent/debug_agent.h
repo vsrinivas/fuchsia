@@ -44,8 +44,7 @@ class DebugAgent : public RemoteAPI,
 
   void RemoveBreakpoint(uint32_t breakpoint_id);
 
-  void OnProcessStart(const std::string& filter, zx::process,
-                      zx::thread initial_thread) override;
+  void OnProcessStart(const std::string& filter, zx::process) override;
 
   bool should_quit() const { return should_quit_; }
 

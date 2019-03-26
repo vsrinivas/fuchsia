@@ -603,6 +603,9 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
                                    std::vector<char> data) {
   debug_ipc::MessageReader reader(std::move(data));
 
+  DEBUG_LOG() << "Got " << debug_ipc::MsgHeader::TypeToString(header.type)
+              << " notification.";
+
   switch (header.type) {
     case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {
       debug_ipc::NotifyProcessExiting notify;
