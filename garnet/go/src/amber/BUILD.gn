@@ -127,6 +127,7 @@ package("amber_tools") {
   binaries = [
     # TODO(raggi): remove the underscore version of the command name once all
     # docs and scripts have been updated.
+    # See https://fuchsia-review.googlesource.com/c/fuchsia/+/255274.
     {
       name = "amber_ctl"
       source = "grand_unified_binary"

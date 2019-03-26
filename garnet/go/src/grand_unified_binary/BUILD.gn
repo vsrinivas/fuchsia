@@ -5,8 +5,6 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 
-# lib contains all of the softare delivery binaries dependencies used to make
-# the grand unified binary.
 go_library("lib") {
   name = "fuchsia.googlesource.com/grand_unified_binary"
 
@@ -18,13 +16,9 @@ go_library("lib") {
   ]
 }
 
-# The grand unified software delivery binary that contains:
-# pkgsvr
-# amber
-# amber_ctl
-# system_updater
 go_binary("grand_unified_binary") {
   gopackage = "fuchsia.googlesource.com/grand_unified_binary"
+
   deps = [
     ":lib",
   ]

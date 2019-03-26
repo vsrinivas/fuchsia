@@ -86,7 +86,7 @@ function main {
     exit 1
   fi
 
-  fx-command-run shell amber_ctl add_src \
+  fx-command-run shell amberctl add_src \
     -n "${source_name}" \
     -f "${config_url}"
   err=$?
@@ -103,7 +103,7 @@ function main {
 
   if [[ -n "${disable_source}" ]]; then
     # Best effort, don't show status or fail on error
-    fx-command-run shell amber_ctl disable_src -n "${disable_source}" >/dev/null 2>/dev/null || true
+    fx-command-run shell amberctl disable_src -n "${disable_source}" >/dev/null 2>/dev/null || true
   fi
 }
 

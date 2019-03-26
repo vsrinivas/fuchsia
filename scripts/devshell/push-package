@@ -57,7 +57,7 @@ function main {
   local cmd="
     code=0;
     for c in ${pkgs[@]}; do
-      amber_ctl get_up -n \"\${c}\" -v 0 || code=\$((\$code + \$?));
+      amberctl get_up -n \"\${c}\" -v 0 || code=\$((\$code + \$?));
       manifest_path=\"/pkgfs/packages/\${c}/0/meta/module.json\";
       if [ -s \"\$manifest_path\" ]; then
         run fuchsia-pkg://fuchsia.com/module_package_indexer#meta/module_package_indexer.cmx \"\${c}\" 0;

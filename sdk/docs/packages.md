@@ -94,7 +94,7 @@ _All commands in this section are executed on the target device._
 
 First, add the new repository as an update source:
 ```
-amber_ctl add_src -x -f http://$HOST_ADDRESS:8083/config.json
+amberctl add_src -x -f http://$HOST_ADDRESS:8083/config.json
 ```
 
 Then, run the component exposed by the package:

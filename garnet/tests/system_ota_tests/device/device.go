@@ -126,8 +126,7 @@ func (c *Client) GetBuildSnapshot(t *testing.T) []byte {
 func (c *Client) TriggerSystemOTA(t *testing.T) {
 	log.Printf("triggering OTA")
 
-	err := c.Run("amber_ctl system_update", os.Stdout, os.Stderr)
-	if err != nil {
+	if err := c.Run("amberctl system_update", os.Stdout, os.Stderr); err != nil {
 		t.Fatalf("failed to trigger OTA: %s", err)
 	}
 
@@ -179,12 +178,8 @@ func (c *Client) RegisterAmberSource(repoDir string, localHostname string, port 
 		return err
 	}
 
-	cmd := fmt.Sprintf("amber_ctl add_src -f %s -h %s", configURL, configHash)
-	err = c.Run(cmd, os.Stdout, os.Stderr)
-	if err != nil {
-		return err
-	}
-	return nil
+	cmd := fmt.Sprintf("amberctl add_src -f %s -h %s", configURL, configHash)
+	return c.Run(cmd, os.Stdout, os.Stderr)
 }
 
 // Wait for the path to exist on the device.

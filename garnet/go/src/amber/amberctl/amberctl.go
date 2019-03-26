@@ -28,7 +28,7 @@ import (
 	"fidl/fuchsia/amber"
 )
 
-const usage = `usage: amber_ctl <command> [opts]
+const usage = `usage: %s <command> [opts]
 Commands
     get_up        - get an update for a package
       Options
@@ -468,8 +468,8 @@ func do(proxy *amber.ControlInterface) int {
 		}
 	default:
 
-		log.Printf("Error, %q is not a recognized command\n%s",
-			os.Args[1], usage)
+		fmt.Printf("Error, %q is not a recognized command\n", os.Args[1])
+		fmt.Printf(usage, filepath.Base(os.Args[0]))
 		return -1
 	}
 
@@ -478,7 +478,8 @@ func do(proxy *amber.ControlInterface) int {
 
 func Main() {
 	if len(os.Args) < 2 {
-		fmt.Printf("Error: no command provided\n%s\n", usage)
+		fmt.Println("Error: no command provided")
+		fmt.Printf(usage, filepath.Base(os.Args[0]))
 		os.Exit(-1)
 	}
 
@@ -493,7 +494,7 @@ func Main() {
 type ErrDaemon string
 
 func NewErrDaemon(str string) ErrDaemon {
-	return ErrDaemon(fmt.Sprintf("amber_ctl: daemon error: %s", str))
+	return ErrDaemon(fmt.Sprintf("amberctl: daemon error: %s", str))
 }
 
 func (e ErrDaemon) Error() string {

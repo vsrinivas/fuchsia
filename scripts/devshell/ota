@@ -25,7 +25,7 @@ function main {
 
   check-for-amber-server || return -1
 
-  fx-command-run shell "$@" amber_ctl system_update
+  fx-command-run shell "$@" amberctl system_update
   local r=$?
   echo "Check the target's log for update progress"
   return $r
