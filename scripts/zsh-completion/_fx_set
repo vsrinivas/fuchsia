@@ -1,35 +1,49 @@
-# _fx_set__board completes a board name
-_fx_set__board() {
-  compadd ${(u)$(echo ${fuchsia_dir}/boards/*.gni(N:t:r) ${fuchsia_dir}/vendor/*/boards/*.gni(N:t:r))}
+_fx_set__product_board() {
+  compset -P "*."
+  if [[ "$IPREFIX" = *. ]]; then
+    # complete board
+    compadd ${(u)$(echo ${fuchsia_dir}/boards/*.gni(N:t:r) ${fuchsia_dir}/vendor/*/boards/*.gni(N:t:r))}
+  else
+    # complete product followed by a dot
+    compadd -S . ${(u)$(echo ${fuchsia_dir}/products/*.gni(N:t:r) ${fuchsia_dir}/vendor/*/products/*.gni(N:t:r))}
+  fi
 }
 
-# _fx_set__product completes a product name
-_fx_set__product() {
-  compadd ${(u)$(echo ${fuchsia_dir}/products/*.gni(N:t:r) ${fuchsia_dir}/vendor/*/products/*.gni(N:t:r))}
+_fx_set__package_caching_policy() {
+  test "${ninja_file}" -nt "$1"
 }
 
-# _fx_set__package completes a package name
-_fx_set__package() {
-  compadd $(cd ${fuchsia_dir} >/dev/null 2>&1 && echo */packages/**/^*.*(.N) vendor/*/packages/**/^*.*(.N))
-}
+# complete comma separated bundles labels
+_fx_set__with() {
+  local -a package_patterns=( "//bundles/*" "//garnet/packages/*" "//peridot/packages/*" "//topaz/packages/*" )
+  for vendor in ${fuchsia_dir}/vendor/*(N/); do
+    package_patterns+=( "//vendor/${vendor}/bundles" "//vendor/${vendor}/packages" )
+  done
 
-# _packages completes a comma separated list of packages
-_packages() {
-  # packages are files without extensions in */packages/ and vendor/*/packages/
-  _values -s , $(cd ${fuchsia_dir} >/dev/null 2>&1 && echo */packages/**/^*.*(.N) vendor/*/packages/**/^*.*(.N))
-}
+  # apply a default caching policy if one isn't configured
+  local cache_policy
+  zstyle -s ":completion:${curcontext}:" cache-policy cache_policy
+  zstyle ":completion:${curcontext}:" cache-policy \
+      ${cache_policy:-_fx_set__package_caching_policy}
 
-# _products completes a comma separated list of products
-_products() {
-  # products are .gni files in */products/ and vendor/*/products/
-  _values -s , $(cd ${fuchsia_dir} >/dev/null 2>&1 && echo */products/**/*.gni(.N) vendor/*/products/**/*.gni(.N))
+  # if this file is newer than the cache file then the cache is stale
+  local ninja_file=${fuchsia_dir}/${fuchsia_build_dir}/build.ninja
+
+  local -a fx_packages
+  if ! _retrieve_cache fx_packages ; then
+    fx_packages=( $(${fuchsia_dir}/buildtools/gn ls ${fuchsia_dir}/${fuchsia_build_dir} ${package_patterns[@]} ) )
+    _store_cache fx_packages fx_packages
+  fi
+
+  compset -P "*,"
+  compadd -q -S "," ${fx_packages}
 }
 
 _gn_args_caching_policy() {
   test ${ninja_file} -nt $1
 }
 
-_gn_args() {
+_fx_set__gn_args() {
   if [ -z ${fuchsia_build_dir} ]; then
     return
   fi
@@ -49,30 +63,30 @@ _gn_args() {
     _store_cache gn_args gn_args
   fi
 
-  # complete the list of gn args with an = suffix
-  compadd -S = ${gn_args}
+  echo $gn_args
 }
 
-# list of supported fuchsia architectures
-local -a archs
-archs=(
-  'x64:64 bit Intel'
-  'arm64:64 bit ARM'
-)
+_fx_set__gn_arg_equals() {
+  # complete the list of gn args with an = suffix
+  compadd -S = (${fx_set_gn_args})
+}
 
-# TODO: --help-args --zircon-arg
+_fx_set__gn_arg_name() {
+  # complete the list of gn args
+  compadd (${fx_set_gn_args})
+}
+
+# TODO:
+#  - complete --variant
+#  - complete --fuzz-with
 
 # arguments to fx set
-_arguments '1:arch:{_describe "arch" archs}' \
-  '2::build_dir:{__fx_build_dir}' \
-  '(:)--board[Use the listed board configuration]:board:_fx_set__board' \
-  '(:)--product[Include the listed product in the build]:product:_fx_set__product' \
-  '(:)*--available[Package to be available for pushing]:package:_fx_set__package' \
-  '(:)*--preinstall[Package to be included in the system image]:package:_fx_set__package' \
-  '(:)*--monolith[Package to be included in the monolithic system image]:package:_fx_set__package' \
+_arguments '1:arch:{_fx_set__product_board}' \
+  '(:)--with[Packages to include in the universe]:packages:_fx_set__with' \
   '(:)*--variant[Pass a select_variant GN arg]: ' \
   '(:)*--fuzz-with[A sanitizer name to fuzz with]: ' \
-  '(:)--args[Arguments for GN gen]:args:{_gn_args}' \
+  '(:)*--args[Arguments for GN gen]:args:{_fx_set___gn_arg_equals}' \
+  '(:)--help-args[Display GN argument documentation]:arg:{_fx_set__gn_arg_name}' \
   '(:)--goma[Use GOMA]' \
   "(:)--no-goma[Don't use GOMA]" \
   "(:)--no-ensure-goma[Don't make sure GOMA is running]" \
@@ -81,3 +95,4 @@ _arguments '1:arch:{_describe "arch" archs}' \
   "(:)--no-ccache[Don't use ccache]" \
   '(:)--ide[Generate files for an IDE]:ide:(eclipse vs vs2013 vs2015 vs2017 xcode qcreator json)' \
   '(:)--release[Release build]'
+
