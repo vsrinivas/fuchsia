@@ -216,7 +216,7 @@ group("sysmgr") {
 group("zxdb") {
   testonly = true
   public_deps = [
-    "//garnet/bin/zxdb:zxdb_tests($host_toolchain)",
+    "//src/developer/debug/zxdb:zxdb_tests($host_toolchain)",
   ]
 }
 

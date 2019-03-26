@@ -38,7 +38,7 @@ group("dockyard_host") {
 group("zxdb") {
   testonly = true
   public_deps = [
-    "//garnet/bin/zxdb:zxdb_host",
+    "//src/developer/debug/zxdb:zxdb_host",
   ]
 }
 
