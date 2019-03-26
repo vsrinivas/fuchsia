@@ -16,7 +16,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/sys/cpp/testing/service_directory_for_test.h>
+#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
 #include <lib/zx/channel.h>
@@ -78,8 +78,6 @@ class NamespaceHostDirectoryTest : public NamespaceTest {
 
 class NamespaceProviderTest : public NamespaceTest {
  protected:
-  NamespaceProviderTest()
-      : provider_(sys::testing::ServiceDirectoryForTest::Create()) {}
   fxl::RefPtr<Namespace> MakeNamespace(ServiceListPtr additional_services) {
     return fxl::MakeRefCounted<Namespace>(
         nullptr, nullptr, std::move(additional_services), nullptr);
@@ -90,11 +88,11 @@ class NamespaceProviderTest : public NamespaceTest {
         [this, name](fidl::InterfaceRequest<fuchsia::io::Node> request) {
           ++connection_ctr_[name];
         };
-    provider_->AddService(std::move(cb), name);
+    provider_.AddService(std::move(cb), name);
     return ZX_OK;
   }
 
-  std::shared_ptr<sys::testing::ServiceDirectoryForTest> provider_;
+  sys::testing::ServiceDirectoryProvider provider_;
   std::map<std::string, int> connection_ctr_;
 };
 
@@ -169,7 +167,8 @@ TEST_F(NamespaceProviderTest, AdditionalServices) {
   EXPECT_EQ(ZX_OK, AddService(kService1));
   EXPECT_EQ(ZX_OK, AddService(kService2));
 
-  service_list->host_directory = provider_->CloneChannel().TakeChannel();
+  service_list->host_directory =
+      provider_.service_directory()->CloneChannel().TakeChannel();
   auto ns = MakeNamespace(std::move(service_list));
 
   zx::channel svc_dir = ns->OpenServicesAsDirectory();
