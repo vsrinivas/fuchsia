@@ -94,6 +94,8 @@ const char* ObjectTypeToString(zx_obj_type_t type) {
         return "suspend-token";
     case ZX_OBJ_TYPE_PAGER:
         return "pager";
+    case ZX_OBJ_TYPE_EXCEPTION:
+        return "exception";
     default:
         return "???";
     }

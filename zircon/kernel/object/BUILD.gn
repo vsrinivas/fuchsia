@@ -13,6 +13,7 @@ library("object") {
     "event_dispatcher.cpp",
     "event_pair_dispatcher.cpp",
     "exception.cpp",
+    "exception_dispatcher.cpp",
     "exceptionate.cpp",
     "excp_port.cpp",
     "fifo_dispatcher.cpp",

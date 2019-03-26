@@ -110,6 +110,13 @@ typedef struct zx_exception_report {
     zx_exception_context_t context;
 } zx_exception_report_t;
 
+// Basic info sent along with the handle over an exception channel.
+typedef struct zx_exception_info {
+    zx_koid_t pid;
+    zx_koid_t tid;
+    zx_excp_type_t type;
+} zx_exception_info_t;
+
 // Options for zx_task_resume_from_exception()
 #define ZX_RESUME_TRY_NEXT ((uint32_t)2)
 // Indicates that instead of resuming from the faulting instruction we instead

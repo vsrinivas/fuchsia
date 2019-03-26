@@ -340,6 +340,7 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_PMT             ((zx_obj_type_t)26u)
 #define ZX_OBJ_TYPE_SUSPEND_TOKEN   ((zx_obj_type_t)27u)
 #define ZX_OBJ_TYPE_PAGER           ((zx_obj_type_t)28u)
+#define ZX_OBJ_TYPE_EXCEPTION       ((zx_obj_type_t)29u)
 
 // System ABI commits to having no more than 64 object types.
 //

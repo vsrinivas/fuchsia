@@ -6,7 +6,10 @@
 
 #include <object/exceptionate.h>
 
+#include <object/process_dispatcher.h>
+#include <object/thread_dispatcher.h>
 #include <zircon/errors.h>
+#include <zircon/syscalls/exception.h>
 
 zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel) {
     if (!channel) {
@@ -25,4 +28,46 @@ zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel) {
     channel_ = ktl::move(channel);
 
     return ZX_OK;
+}
+
+zx_status_t Exceptionate::SendException(fbl::RefPtr<ExceptionDispatcher> exception) {
+    DEBUG_ASSERT(exception);
+
+    Guard<fbl::Mutex> guard{&lock_};
+
+    if (!channel_) {
+        return ZX_ERR_NEXT;
+    }
+
+    zx_exception_info_t info;
+    info.tid = exception->thread()->get_koid();
+    info.pid = exception->thread()->process()->get_koid();
+    info.type = exception->exception_type();
+
+    MessagePacketPtr message;
+    zx_status_t status = MessagePacket::Create(&info, sizeof(info), 1, &message);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    HandleOwner exception_handle(Handle::Make(ktl::move(exception),
+                                              ExceptionDispatcher::default_rights()));
+    if (!exception_handle) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    message->mutable_handles()[0] = exception_handle.release();
+    message->set_owns_handles(true);
+
+    status = channel_->Write(ZX_KOID_INVALID, ktl::move(message));
+
+    // ZX_ERR_PEER_CLOSED just indicates that there's no longer an endpoint
+    // to receive exceptions, simplify things for callers by collapsing this
+    // into the ZX_ERR_NEXT case since it means the same thing.
+    if (status == ZX_ERR_PEER_CLOSED) {
+        // No need to call on_zero_handles() here, the peer is already gone.
+        channel_.reset();
+        return ZX_ERR_NEXT;
+    }
+
+    return status;
 }

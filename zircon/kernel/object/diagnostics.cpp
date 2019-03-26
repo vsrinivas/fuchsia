@@ -87,6 +87,7 @@ static const char* ObjectTypeToString(zx_obj_type_t type) {
         case ZX_OBJ_TYPE_PMT: return "pmt";
         case ZX_OBJ_TYPE_SUSPEND_TOKEN: return "suspend-token";
         case ZX_OBJ_TYPE_PAGER: return "pager";
+        case ZX_OBJ_TYPE_EXCEPTION: return "exception";
         default: return "???";
     }
 }
@@ -136,7 +137,8 @@ static void FormatHandleTypeCount(const ProcessDispatcher& pd,
              types[ZX_OBJ_TYPE_GUEST] + types[ZX_OBJ_TYPE_VCPU] +
              types[ZX_OBJ_TYPE_IOMMU] + types[ZX_OBJ_TYPE_BTI] +
              types[ZX_OBJ_TYPE_PROFILE] + types[ZX_OBJ_TYPE_PMT] +
-             types[ZX_OBJ_TYPE_SUSPEND_TOKEN] + types[ZX_OBJ_TYPE_PAGER]
+             types[ZX_OBJ_TYPE_SUSPEND_TOKEN] + types[ZX_OBJ_TYPE_PAGER] +
+             types[ZX_OBJ_TYPE_EXCEPTION]
              );
 }
 
