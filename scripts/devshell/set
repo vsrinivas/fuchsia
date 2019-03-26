@@ -365,7 +365,7 @@ universe_package_labels+=["
   "${FUCHSIA_DIR}/buildtools/gn" ${gn_cmd} "${build_dir}" \
                                   "${gn_switches[@]}" --args="${gn_args}" "$@"
 
-  fx-config-link "${config_build_dir}"
+  fx-config-write "${config_build_dir}"
 
   if [[ "${use_goma}" -eq 1 ]] && [[ "${ensure_goma}" -eq 1 ]]; then
     if ! [[ $("${goma_dir}/gomacc" port) =~ ^[0-9]+$ ]]; then
