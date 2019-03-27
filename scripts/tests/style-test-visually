@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Visual tests for //scripts/devshell/lib/style.sh
+# Visual tests for //tools/devshell/lib/style.sh
 
 # This is not an automated unit test.
 # It prints stylized text describing the style to be shown, so a tester

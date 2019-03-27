@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 # Run this command in Fuchsia development environment, or at minimum,
-# source ${FUCHSIA_DIR}/scripts/devshell/lib/vars.sh || exit $?
+# source ${FUCHSIA_DIR}/tools/devshell/lib/vars.sh || exit $?
 
 ### register Zircon tools at MacOS Application Firewall
 

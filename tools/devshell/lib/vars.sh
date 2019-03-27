@@ -196,7 +196,7 @@ function get-device-addr {
 
 function fx-command-run {
   local -r command_name="$1"
-  local -r command_path="${FUCHSIA_DIR}/scripts/devshell/${command_name}"
+  local -r command_path="${FUCHSIA_DIR}/tools/devshell/${command_name}"
 
   if [[ ! -f "${command_path}" ]]; then
     fx-error "Unknown command ${command_name}"
@@ -229,7 +229,7 @@ function fx-buildtool-run {
 
 function fx-command-exec {
   local -r command_name="$1"
-  local -r command_path="${FUCHSIA_DIR}/scripts/devshell/${command_name}"
+  local -r command_path="${FUCHSIA_DIR}/tools/devshell/${command_name}"
 
   if [[ ! -f "${command_path}" ]]; then
     fx-error "Unknown command ${command_name}"

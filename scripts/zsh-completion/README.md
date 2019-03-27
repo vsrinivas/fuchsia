@@ -12,7 +12,7 @@ fpath+=( ~/fuchsia/scripts/zsh-completion )
 
 ## Improve
 
-Subcommands are completed by looking in `//scripts/devshell/` but there isn't
+Subcommands are completed by looking in `//tools/devshell/` but there isn't
 completion for most subcommand arguments. To add completion for `fx foo` write a
 new autoload function in `//scripts/zsh-completion/_fx_foo`. It will be called
 by the `_fx` completion function when needed. The `${fuchsia_dir}` and

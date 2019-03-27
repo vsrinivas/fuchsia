@@ -19,8 +19,8 @@
 ## # First import style.sh
 ##
 ## source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
-## source "${FUCHSIA_DIR}/scripts/devshell/lib/style.sh" || exit $?
-## source "${FUCHSIA_DIR}/scripts/devshell/lib/common_term_styles.sh" || exit $?
+## source "${FUCHSIA_DIR}/tools/devshell/lib/style.sh" || exit $?
+## source "${FUCHSIA_DIR}/tools/devshell/lib/common_term_styles.sh" || exit $?
 ##
 ##  warn 'The warning message.'
 ##

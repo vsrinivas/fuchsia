@@ -44,7 +44,7 @@ enum Command : uint32_t {
     kMerge,
 };
 
-// Usage information for specific tool subcommands.  Keep in sync with //scripts/devshell/fuzz!
+// Usage information for specific tool subcommands.  Keep in sync with //tools/devshell/fuzz!
 const struct {
     Command cmd;
     const char* name;

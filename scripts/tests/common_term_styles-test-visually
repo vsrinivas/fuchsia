@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Visual tests for //scripts/devshell/lib/common_term_styles.sh
+# Visual tests for //tools/devshell/lib/common_term_styles.sh
 
 # This is not an automated unit test.
 # It prints stylized to demonstrate the styles on a terminal.

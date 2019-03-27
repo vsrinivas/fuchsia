@@ -6,7 +6,7 @@
 ### check the health of a user's interactive bash environment (from "fx doctor")
 
 ## usage:
-##   "${SHELL}" [-flags] "${FUCHSIA_DIR}/scripts/devshell/lib/bashrc_checkup.sh" || status=$?
+##   "${SHELL}" [-flags] "${FUCHSIA_DIR}/tools/devshell/lib/bashrc_checkup.sh" || status=$?
 ##   (Valid only for bash ${SHELL} since this script is bash.)
 
 # Detect potential problems for Fuchsia development from settings specific
@@ -18,8 +18,8 @@
 #
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/vars.sh || exit $?
-source "${FUCHSIA_DIR}/scripts/devshell/lib/style.sh" || exit $?
-source "${FUCHSIA_DIR}/scripts/devshell/lib/common_term_styles.sh" || exit $?
+source "${FUCHSIA_DIR}/tools/devshell/lib/style.sh" || exit $?
+source "${FUCHSIA_DIR}/tools/devshell/lib/common_term_styles.sh" || exit $?
 
 fx-config-read || exit $?
 

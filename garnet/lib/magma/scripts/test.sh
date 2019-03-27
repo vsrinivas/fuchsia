@@ -5,7 +5,7 @@
 # found in the LICENSE file.
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-source "$(cd "${script_dir}/../../../../scripts/devshell" && pwd)"/lib/vars.sh || exit $?
+source "$(cd "${script_dir}/../../../../tools/devshell" && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
 test_out=/tmp/magma_test_out

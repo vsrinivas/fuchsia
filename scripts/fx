@@ -11,7 +11,7 @@ function commands {
   local -r newline=$'\n'
 
   local cmds=""
-  for dir in "${fuchsia_dir}/scripts/devshell"{,/contrib}
+  for dir in "${fuchsia_dir}/tools/devshell"{,/contrib}
   do
     cmds="${cmds}${newline}$(ls "$dir" | grep -v -e '^lib$' -e '^tests$')"
   done
@@ -31,13 +31,13 @@ function commands {
 function find_command {
   local -r cmd=$1
 
-  local command_path="${fuchsia_dir}/scripts/devshell/${cmd}"
+  local command_path="${fuchsia_dir}/tools/devshell/${cmd}"
   if [[ -x "${command_path}" ]]; then
     echo "${command_path}"
     return 0
   fi
 
-  local command_path="${fuchsia_dir}/scripts/devshell/contrib/${cmd}"
+  local command_path="${fuchsia_dir}/tools/devshell/contrib/${cmd}"
   if [[ -x "${command_path}" ]]; then
     echo "${command_path}"
     return 0
@@ -145,7 +145,7 @@ if [[ -z "${fuchsia_dir}" ]]; then
   done
 fi
 
-declare -r vars_sh="${fuchsia_dir}/scripts/devshell/lib/vars.sh"
+declare -r vars_sh="${fuchsia_dir}/tools/devshell/lib/vars.sh"
 source "${vars_sh}" || exit $?
 
 while [[ $# -ne 0 ]]; do

@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Automated tests for //scripts/devshell/lib/common_term_styles.sh
+# Automated tests for //tools/devshell/lib/common_term_styles.sh
 #
 # Usage: common_term_styles-tests
 #

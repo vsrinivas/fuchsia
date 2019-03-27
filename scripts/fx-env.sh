@@ -145,8 +145,8 @@ if [[ -z "${ZSH_VERSION}" ]]; then
   function __fx {
     COMPREPLY=()
     if [[ ${COMP_CWORD} -eq 1 ]]; then
-      COMPREPLY=($(/bin/ls -dp1 ${FUCHSIA_DIR}/scripts/devshell/${COMP_WORDS[1]}* 2>/dev/null | \
-        sed -n "s|^${FUCHSIA_DIR}/scripts/devshell/\([^/]*\)\$|\1|p" | xargs echo))
+      COMPREPLY=($(/bin/ls -dp1 ${FUCHSIA_DIR}/tools/devshell/${COMP_WORDS[1]}* 2>/dev/null | \
+        sed -n "s|^${FUCHSIA_DIR}/tools/devshell/\([^/]*\)\$|\1|p" | xargs echo))
     else
       __fx_complete_cmd
     fi
