@@ -6,6 +6,31 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/packages.gni")
 import("//build/testing/platforms.gni")
 
+declare_args() {
+  # If you add package labels to this variable, the packages will be included in
+  # the 'base' package set, which represents the set of packages that are part
+  # of an OTA. These pacakages are updated as an atomic unit during an OTA
+  # process and are immutable and are a superset of the TCB (Trusted Computing
+  # Base) for a product. These packages are never evicted by the system.
+  base_package_labels = []
+
+  # If you add package labels to this variable, the packages will be included
+  # in the 'cache' package set, which represents an additional set of software
+  # that is made available on disk immediately after paving and in factory
+  # flows. These packages are not updated with an OTA, but instead are updated
+  # ephemerally. This cache of software can be evicted by the system if storage
+  # pressure arises or other policies indicate.
+  cache_package_labels = []
+
+  # If you add package labels to this variable, the packages will be included
+  # in the 'universe' package set, which represents all software that is
+  # produced that is to be published to a package repository or to the SDK by
+  # the build. The build system ensures that the universe package set includes
+  # the base and cache package sets, which means you do not need to redundantly
+  # include those labels in this variable.
+  universe_package_labels = []
+}
+
 # Collect the source files that are dependencies of the create_gn_rules.py
 # script, below.  Unfortunately, exec_script cannot use a depfile produced
 # by the script and only supports a separately computed list of dependencies.
@@ -161,3 +186,23 @@ foreach(platform, test_platforms) {
   }
 }
 write_file("$root_build_dir/platforms.json", target_platforms, "json")
+
+# These groups exist at the root of the build so relative labels specified
+# through GN args are interpreted as if they were absolute.
+group("additional_base_packages") {
+  testonly = true
+  visibility = [ "//build/images:monolith_packages" ]
+  public_deps = base_package_labels
+}
+
+group("additional_cache_packages") {
+  testonly = true
+  visibility = [ "//build/images:preinstall_packages" ]
+  public_deps = cache_package_labels
+}
+
+group("additional_universe_packages") {
+  testonly = true
+  visibility = [ "//build/images:available_packages" ]
+  public_deps = universe_package_labels
+}

@@ -35,29 +35,6 @@ declare_args() {
   # A list of labels for meta packages to be included in the monolith.
   meta_package_labels = []
 
-  # If you add package labels to this variable, the packages will be included in
-  # the 'base' package set, which represents the set of packages that are part
-  # of an OTA. These pacakages are updated as an atomic unit during an OTA
-  # process and are immutable and are a superset of the TCB (Trusted Computing
-  # Base) for a product. These packages are never evicted by the system.
-  base_package_labels = []
-
-  # If you add package labels to this variable, the packages will be included
-  # in the 'cache' package set, which represents an additional set of software
-  # that is made available on disk immediately after paving and in factory
-  # flows. These packages are not updated with an OTA, but instead are updated
-  # ephemerally. This cache of software can be evicted by the system if storage
-  # pressure arises or other policies indicate.
-  cache_package_labels = []
-
-  # If you add package labels to this variable, the packages will be included
-  # in the 'universe' package set, which represents all software that is
-  # produced that is to be published to a package repository or to the SDK by
-  # the build. The build system ensures that the universe package set includes
-  # the base and cache package sets, which means you do not need to redundantly
-  # include those labels in this variable.
-  universe_package_labels = []
-
   # arguments to fx flash script
   zircon_a_partition = ""
   zircon_b_partition = ""
@@ -120,21 +97,22 @@ group("meta_packages") {
 group("monolith_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = monolith_package_labels + base_package_labels
+  public_deps = monolith_package_labels + [ "//:additional_base_packages" ]
 }
 
 group("preinstall_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = preinstall_package_labels + cache_package_labels
+  public_deps = preinstall_package_labels + [ "//:additional_cache_packages" ]
 }
 
 group("available_packages") {
   testonly = true
   visibility = [ ":*" ]
-  public_deps = available_package_labels + universe_package_labels + [
+  public_deps = available_package_labels + [
                   ":monolith_packages",
                   ":preinstall_packages",
+                  "//:additional_universe_packages",
                 ]
 }
 
