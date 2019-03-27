@@ -689,7 +689,7 @@ static int cmd_gfx(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND("gfx", "gfx commands", &cmd_gfx)
-STATIC_COMMAND_END(gfx);
+STATIC_COMMAND_END(gfx)
 
 static int gfx_draw_rgb_bars(gfx_surface* surface) {
     uint x, y;

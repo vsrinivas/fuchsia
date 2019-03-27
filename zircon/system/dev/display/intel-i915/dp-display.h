@@ -24,7 +24,7 @@ public:
     void set_mmio_space(ddk::MmioBuffer* mmio_space) {
         fbl::AutoLock lock(&lock_);
         mmio_space_ = mmio_space;
-    };
+    }
 private:
     const registers::Ddi ddi_;
     // The lock protects the registers this class writes to, not the whole register io space.

@@ -141,4 +141,4 @@ RUN_NAMED_TEST("nullptr Scoped Destruction",       ufptr_test_null_scoped_destru
 RUN_NAMED_TEST("Different Scope Swapping",         ufptr_test_diff_scope_swap)
 RUN_NAMED_TEST("operator bool",                    ufptr_test_bool_op)
 RUN_NAMED_TEST("comparison operators",             ufptr_test_comparison)
-END_TEST_CASE(unique_free_ptr);
+END_TEST_CASE(unique_free_ptr)

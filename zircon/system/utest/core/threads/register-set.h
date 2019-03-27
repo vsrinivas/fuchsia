@@ -39,7 +39,7 @@ bool debug_regs_expect_eq(const char* file, int line,
                           const zx_thread_state_debug_regs_t& regs2);
 
 // The functions below are assembly.
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // This function sets the registers to the state specified by |regs| and
 // then spins, executing a single-instruction infinite loop whose address
@@ -56,4 +56,4 @@ void save_general_regs_and_exit_thread();
 void save_fp_regs_and_exit_thread();
 void save_vector_regs_and_exit_thread();
 
-__END_CDECLS;
+__END_CDECLS

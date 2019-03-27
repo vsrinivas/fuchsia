@@ -38,7 +38,7 @@ public:
     // Stops clocking data and quiets output signals.
     void Shutdown();
 
-    uint32_t fifo_depth() const { return fifo_depth_; };
+    uint32_t fifo_depth() const { return fifo_depth_; }
 
 private:
     const uint32_t fifo_depth_; // in bytes.
@@ -47,7 +47,7 @@ private:
     // TODO(andresoportus): Add more configuration options.
     MtAudioOutDevice(ddk::MmioBuffer mmio, uint32_t fifo_depth)
         : fifo_depth_(fifo_depth),
-          mmio_(std::move(mmio)){};
+          mmio_(std::move(mmio)){}
 
     void InitRegs();
 };

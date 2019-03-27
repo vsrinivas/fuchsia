@@ -31,7 +31,7 @@ class InterruptDispatcher
 public:
     InterruptDispatcher& operator=(const InterruptDispatcher&) = delete;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_INTERRUPT; }
-    uint32_t get_flags() const { return flags_; };
+    uint32_t get_flags() const { return flags_; }
 
     zx_status_t WaitForInterrupt(zx_time_t* out_timestamp);
     zx_status_t Trigger(zx_time_t timestamp);

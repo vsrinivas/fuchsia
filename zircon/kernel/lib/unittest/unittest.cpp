@@ -296,4 +296,4 @@ static int run_unittests(int argc, const cmd_args* argv, uint32_t flags) {
 
 STATIC_COMMAND_START
 STATIC_COMMAND("ut", "Run unittests", run_unittests)
-STATIC_COMMAND_END(unittests);
+STATIC_COMMAND_END(unittests)

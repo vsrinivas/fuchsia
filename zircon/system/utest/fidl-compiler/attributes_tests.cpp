@@ -460,23 +460,23 @@ union MyUnion {
 
 } // namespace
 
-BEGIN_TEST_CASE(attributes_tests);
-RUN_TEST(no_two_same_attribute_test);
-RUN_TEST(no_two_same_doc_attribute_test);
-RUN_TEST(no_two_same_attribute_on_library_test);
-RUN_TEST(warn_on_close_attribute_test);
-RUN_TEST(warnings_as_errors_test);
-RUN_TEST(empty_transport);
-RUN_TEST(bogus_transport);
-RUN_TEST(channel_transport);
-RUN_TEST(socket_control_transport);
-RUN_TEST(multiple_transports);
-RUN_TEST(multiple_transports_with_bogus);
-RUN_TEST(incorrect_placement_layout);
-RUN_TEST(constraint_only_three_members_on_struct);
-RUN_TEST(constraint_only_three_members_on_method);
-RUN_TEST(constraint_only_three_members_on_interface);
-RUN_TEST(max_bytes);
-RUN_TEST(max_handles);
-RUN_TEST(selector_incorrect_placement);
-END_TEST_CASE(attributes_tests);
+BEGIN_TEST_CASE(attributes_tests)
+RUN_TEST(no_two_same_attribute_test)
+RUN_TEST(no_two_same_doc_attribute_test)
+RUN_TEST(no_two_same_attribute_on_library_test)
+RUN_TEST(warn_on_close_attribute_test)
+RUN_TEST(warnings_as_errors_test)
+RUN_TEST(empty_transport)
+RUN_TEST(bogus_transport)
+RUN_TEST(channel_transport)
+RUN_TEST(socket_control_transport)
+RUN_TEST(multiple_transports)
+RUN_TEST(multiple_transports_with_bogus)
+RUN_TEST(incorrect_placement_layout)
+RUN_TEST(constraint_only_three_members_on_struct)
+RUN_TEST(constraint_only_three_members_on_method)
+RUN_TEST(constraint_only_three_members_on_interface)
+RUN_TEST(max_bytes)
+RUN_TEST(max_handles)
+RUN_TEST(selector_incorrect_placement)
+END_TEST_CASE(attributes_tests)

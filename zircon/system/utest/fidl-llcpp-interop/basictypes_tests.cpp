@@ -569,4 +569,4 @@ RUN_NAMED_TEST_SMALL("client: generated binding (passing union, caller allocatin
                      SyncCallerAllocateCallUnionTest)
 RUN_NAMED_TEST_SMALL("server: passing union", ServerUnionTest)
 RUN_NAMED_TEST_SMALL("server: passing struct", ServerStructTest)
-END_TEST_CASE(llcpp_basictypes_tests);
+END_TEST_CASE(llcpp_basictypes_tests)

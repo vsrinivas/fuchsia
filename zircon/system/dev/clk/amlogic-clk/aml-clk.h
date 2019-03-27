@@ -33,7 +33,7 @@ class AmlClock : public DeviceType,
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlClock);
     explicit AmlClock(zx_device_t* device)
-        : DeviceType(device){};
+        : DeviceType(device){}
     // Performs the object initialization.
     static zx_status_t Create(zx_device_t* device);
 

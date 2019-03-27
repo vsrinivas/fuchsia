@@ -58,7 +58,7 @@ public:
     */
     void Shutdown();
 
-    uint32_t fifo_depth() const { return fifo_depth_; };
+    uint32_t fifo_depth() const { return fifo_depth_; }
 
     void ConfigPdmIn(uint8_t mask);
 
@@ -75,7 +75,7 @@ private:
           dclk_div_(dclk_div),
           toddr_base_(GetToddrBase(toddr)),
           pdm_mmio_(std::move(pdm_mmio)),
-          audio_mmio_(std::move(audio_mmio)){};
+          audio_mmio_(std::move(audio_mmio)){}
 
     ~AmlPdmDevice() = default;
 

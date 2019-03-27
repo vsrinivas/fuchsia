@@ -57,7 +57,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 /* The entropy pool */
 struct rand_data
@@ -187,6 +187,6 @@ void jent_entropy_collector_init(
 
 /* -- END of Zircon interface -- */
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif /* _JITTERENTROPY_H */

@@ -51,7 +51,7 @@ private:
 
     static constexpr uint8_t kFifoDepth = 0x20;
 
-    zx_status_t AddFormats() __TA_REQUIRES(domain_->token());;
+    zx_status_t AddFormats() __TA_REQUIRES(domain_->token());
     zx_status_t InitBuffer(size_t size);
     zx_status_t InitPDev();
     zx_status_t ProcessRingNotification();

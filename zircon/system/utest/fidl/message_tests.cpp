@@ -131,4 +131,4 @@ RUN_NAMED_TEST("Message test", message_test)
 RUN_NAMED_TEST("MessageBuilder test", message_builder_test)
 RUN_NAMED_TEST("MessagePart friendly with STL test", message_part_is_stl_container_test)
 RUN_NAMED_TEST("MessagePart size test", message_part_size_test)
-END_TEST_CASE(message_tests);
+END_TEST_CASE(message_tests)

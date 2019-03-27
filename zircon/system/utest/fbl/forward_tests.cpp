@@ -91,4 +91,4 @@ static bool forward_test()
 
 BEGIN_TEST_CASE(forward_tests)
 RUN_NAMED_TEST("Forward test", forward_test)
-END_TEST_CASE(forward_tests);
+END_TEST_CASE(forward_tests)

@@ -20,7 +20,7 @@ class SpaceShip {
 public:
     using SpaceShipBinder = fidl::Binder<SpaceShip>;
 
-    virtual ~SpaceShip() {};
+    virtual ~SpaceShip() {}
 
     virtual zx_status_t AdjustHeading(const uint32_t* stars_data,
                                       size_t stars_count, fidl_txn_t* txn) {
@@ -235,7 +235,7 @@ class AsyncSpaceShip : public SpaceShip {
 public:
     using SpaceShipBinder = fidl::Binder<AsyncSpaceShip>;
 
-    virtual ~AsyncSpaceShip() {};
+    virtual ~AsyncSpaceShip() {}
 
     // Creates a |fidl_async_txn| using the C++ wrapper, and pushes the
     // computation to a background thread.
@@ -426,4 +426,4 @@ public:
 BEGIN_TEST_CASE(spaceship_tests_cpp)
 RUN_NAMED_TEST("fidl.test.spaceship.SpaceShip test", spaceship_test)
 RUN_NAMED_TEST("fidl.test.spaceship.SpaceShip async test", spaceship_async_test)
-END_TEST_CASE(spaceship_tests_cpp);
+END_TEST_CASE(spaceship_tests_cpp)

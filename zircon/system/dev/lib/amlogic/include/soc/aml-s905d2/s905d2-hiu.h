@@ -160,7 +160,7 @@ static inline uint32_t hiu_get_pll_offs(aml_pll_dev_t* pll_dev) {
     return 0;
 }
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 /*
     Maps the hiu register block (containing all the pll controls).
@@ -207,4 +207,4 @@ const hhi_pll_rate_t* s905d2_pll_get_rate_table(hhi_plls_t pll_num);
 */
 size_t s905d2_get_rate_table_count(hhi_plls_t pll_num);
 
-__END_CDECLS;
+__END_CDECLS

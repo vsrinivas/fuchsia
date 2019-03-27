@@ -55,4 +55,4 @@ bool type_info_test() {
 
 BEGIN_TEST_CASE(type_info_tests)
 RUN_NAMED_TEST("type info test", type_info_test)
-END_TEST_CASE(type_info_tests);
+END_TEST_CASE(type_info_tests)

@@ -73,4 +73,4 @@ STATIC_COMMAND("rng32",
 STATIC_COMMAND("rng",
                "Generate and print N random bytes using the HW RNG",
                &cmd_rng)
-STATIC_COMMAND_END(hw_rng);
+STATIC_COMMAND_END(hw_rng)

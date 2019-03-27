@@ -298,4 +298,4 @@ STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("vm_object", "vm object debug commands", &cmd_vm_object)
 #endif
-STATIC_COMMAND_END(vm_object);
+STATIC_COMMAND_END(vm_object)

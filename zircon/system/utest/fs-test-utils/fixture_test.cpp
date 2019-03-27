@@ -167,7 +167,7 @@ RUN_TEST(IsValidRamdiskBlockCountIsZeroFalse);
 RUN_TEST(IsValidRamdiskBlockSizeIsZeroFalse);
 RUN_TEST(IsValidFvmSlizeSizeIsZeroFalse);
 RUN_TEST(IsValidFvmSlizeSizeIsNotMultipleOfFvmBlockSizeFalse);
-END_TEST_CASE(FixtureOptionsTests);
+END_TEST_CASE(FixtureOptionsTests)
 
 bool RamdiskSetupAndCleanup() {
     BEGIN_TEST;
@@ -562,7 +562,7 @@ RUN_TEST(FsckFails);
 RUN_TEST(FsckMounted);
 RUN_TEST(FsckUnformatted);
 RUN_TEST(FsckNoBlockDevice);
-END_TEST_CASE(FixtureTest);
+END_TEST_CASE(FixtureTest)
 
 } // namespace
 } // namespace fs_test_utils

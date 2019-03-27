@@ -46,7 +46,7 @@ constexpr uint8_t kMaxReservedMmioEntries = 64;
 typedef struct reserved_mmio_space {
     uint64_t base;
     size_t len;
-    ResourceDispatcher::RefPtr dispatcher;;
+    ResourceDispatcher::RefPtr dispatcher;
 } reserved_mmio_space_t;
 reserved_mmio_space_t reserved_mmio_entries[kMaxReservedMmioEntries];
 static uint8_t reserved_mmio_count = 0;
@@ -463,4 +463,4 @@ static void x86_resource_init_hook(unsigned int rl) {
     }
 }
 
-LK_INIT_HOOK(x86_resource_init, x86_resource_init_hook, LK_INIT_LEVEL_HEAP);
+LK_INIT_HOOK(x86_resource_init, x86_resource_init_hook, LK_INIT_LEVEL_HEAP)

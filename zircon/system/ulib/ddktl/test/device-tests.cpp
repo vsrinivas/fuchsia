@@ -371,6 +371,6 @@ RUN_NAMED_TEST("FailStaticOverride", do_test<TestStaticOverride>);
 RUN_NAMED_TEST("FailNotAMixin", do_test<TestNotAMixin>);
 RUN_NAMED_TEST("FailNotAllMixins", do_test<TestNotAllMixins>);
 #endif
-END_TEST_CASE(ddktl_device);
+END_TEST_CASE(ddktl_device)
 
 test_case_element* test_case_ddktl_device = TEST_CASE_ELEMENT(ddktl_device);

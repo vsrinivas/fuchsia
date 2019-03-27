@@ -4,8 +4,8 @@
 
 #pragma once
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 zx_status_t aml_usb_phy_v2_init(zx_handle_t bti);
 
-__END_CDECLS;
+__END_CDECLS

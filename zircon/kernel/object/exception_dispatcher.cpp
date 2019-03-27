@@ -13,8 +13,8 @@
 #include <ktl/move.h>
 #include <lib/counters.h>
 
-KCOUNTER(dispatcher_exception_create_count, "dispatcher.exception.create");
-KCOUNTER(dispatcher_exception_destroy_count, "dispatcher.exception.destroy");
+KCOUNTER(dispatcher_exception_create_count, "dispatcher.exception.create")
+KCOUNTER(dispatcher_exception_destroy_count, "dispatcher.exception.destroy")
 
 fbl::RefPtr<ExceptionDispatcher> ExceptionDispatcher::Create(
     fbl::RefPtr<ThreadDispatcher> thread, zx_excp_type_t exception_type,

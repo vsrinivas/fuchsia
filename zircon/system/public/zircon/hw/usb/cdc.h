@@ -70,7 +70,7 @@
 #define USB_CDC_SEND_ENCAPSULATED_COMMAND   0x00
 #define USB_CDC_GET_ENCAPSULATED_RESPONSE   0x01
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct {
     uint8_t bLength;
@@ -136,6 +136,6 @@ typedef struct {
     uint32_t uplink_br;
  } __attribute__ ((packed)) usb_cdc_speed_change_notification_t;
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif  // SYSROOT_ZIRCON_HW_USB_CDC_H_

@@ -28,7 +28,7 @@ private:
 class PciReg16 {
 public:
     constexpr explicit PciReg16(uint16_t offset)
-        : offset_(offset) {};
+        : offset_(offset) {}
     constexpr PciReg16()
         : offset_(0u) {}
     constexpr uint16_t offset() const { return offset_; }
@@ -40,7 +40,7 @@ private:
 class PciReg32 {
 public:
     constexpr explicit PciReg32(uint16_t offset)
-        : offset_(offset) {};
+        : offset_(offset) {}
     constexpr PciReg32()
         : offset_(0u) {}
     constexpr uint16_t offset() const { return offset_; }
@@ -130,7 +130,7 @@ public:
     virtual void Write(const PciReg8 addr, uint8_t val) const = 0;
     virtual void Write(const PciReg16 addr, uint16_t val) const = 0;
     virtual void Write(const PciReg32 addr, uint32_t val) const = 0;
-    virtual ~PciConfig(){};
+    virtual ~PciConfig() {}
 
 protected:
     PciConfig(uintptr_t base, PciAddrSpace addr_space)

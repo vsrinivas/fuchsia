@@ -141,7 +141,7 @@
 private: \
     fbl::RefCounted<void> ref_count_impl_; \
 public: \
-    __PCIE_IMPLEMENT_ADOPT; \
+    __PCIE_IMPLEMENT_ADOPT \
     void AddRef() final { ref_count_impl_.AddRef(); } \
     bool Release() final __WARN_UNUSED_RESULT { return ref_count_impl_.Release(); } \
     using __force_semicolon = int

@@ -77,10 +77,10 @@ bool root_types_with_some_library_in_lookup() {
     END_TEST;
 }
 
-BEGIN_TEST_CASE(types_tests);
-RUN_TEST(root_types_with_no_library_in_lookup);
-RUN_TEST(root_types_with_some_library_in_lookup);
-END_TEST_CASE(types_tests);
+BEGIN_TEST_CASE(types_tests)
+RUN_TEST(root_types_with_no_library_in_lookup)
+RUN_TEST(root_types_with_some_library_in_lookup)
+END_TEST_CASE(types_tests)
 
 } // namespace flat
 } // namespace fidl

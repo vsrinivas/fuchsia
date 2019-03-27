@@ -94,7 +94,7 @@ public:
 
 private:
     IdAllocator()
-        : id_count_(0), level_count_(0){};
+        : id_count_(0), level_count_(0){}
 
     // Returns number of bits required in a "level" for id_count ids
     size_t LevelBitCount(int8_t level) const;

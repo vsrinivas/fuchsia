@@ -191,13 +191,13 @@ library shibboleth.b.c;
 
 } // namespace
 
-BEGIN_TEST_CASE(lint_test);
-RUN_TEST(const_names_bad);
-RUN_TEST(const_names_good);
-RUN_TEST(protocol_names_bad);
-RUN_TEST(protocol_names_good);
-RUN_TEST(library_names_bad_name);
-RUN_TEST(library_names_banned_name);
-RUN_TEST(using_names_bad);
-RUN_TEST(using_names_good);
-END_TEST_CASE(lint_test);
+BEGIN_TEST_CASE(lint_test)
+RUN_TEST(const_names_bad)
+RUN_TEST(const_names_good)
+RUN_TEST(protocol_names_bad)
+RUN_TEST(protocol_names_good)
+RUN_TEST(library_names_bad_name)
+RUN_TEST(library_names_banned_name)
+RUN_TEST(using_names_bad)
+RUN_TEST(using_names_good)
+END_TEST_CASE(lint_test)

@@ -87,6 +87,6 @@ inline bool Fail() {
     END_TEST;
 }
 
-}; // namespace fs_test_utils_internal
+} // namespace fs_test_utils_internal
 
 } // namespace fs_test_utils

@@ -23,8 +23,8 @@
 
 #include <platform.h>
 
-KCOUNTER(dispatcher_job_create_count, "dispatcher.job.create");
-KCOUNTER(dispatcher_job_destroy_count, "dispatcher.job.destroy");
+KCOUNTER(dispatcher_job_create_count, "dispatcher.job.create")
+KCOUNTER(dispatcher_job_destroy_count, "dispatcher.job.destroy")
 
 // The starting max_height value of the root job.
 static constexpr uint32_t kRootJobMaxHeight = 32;
@@ -615,7 +615,7 @@ fbl::RefPtr<ExceptionPort> JobDispatcher::debugger_exception_port() {
 void JobDispatcher::set_kill_on_oom(bool value) {
     Guard<fbl::Mutex> guard{get_lock()};
     kill_on_oom_ = value;
-};
+}
 
 bool JobDispatcher::get_kill_on_oom() const {
     Guard<fbl::Mutex> guard{get_lock()};

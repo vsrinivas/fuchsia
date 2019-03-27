@@ -125,4 +125,4 @@ RUN_TEST(blobfs::EmptyTest)
 RUN_TEST(blobfs::FullTest)
 RUN_TEST(blobfs::FragmentedTest)
 RUN_TEST(blobfs::LengthTest)
-END_TEST_CASE(blobfsGetAllocatedRegionsTests);
+END_TEST_CASE(blobfsGetAllocatedRegionsTests)

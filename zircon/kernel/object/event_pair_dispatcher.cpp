@@ -13,8 +13,8 @@
 #include <lib/counters.h>
 #include <zircon/rights.h>
 
-KCOUNTER(dispatcher_eventpair_create_count, "dispatcher.eventpair.create");
-KCOUNTER(dispatcher_eventpair_destroy_count, "dispatcher.eventpair.destroy");
+KCOUNTER(dispatcher_eventpair_create_count, "dispatcher.eventpair.create")
+KCOUNTER(dispatcher_eventpair_destroy_count, "dispatcher.eventpair.destroy")
 
 zx_status_t EventPairDispatcher::Create(KernelHandle<EventPairDispatcher>* handle0,
                                         KernelHandle<EventPairDispatcher>* handle1,

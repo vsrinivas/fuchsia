@@ -57,13 +57,13 @@ static inline uint8_t bt_hci_snoop_flags(bt_hci_snoop_type_t type, bool is_recei
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_BT_HCI, 2)
 
 // ssize_t ioctl_bt_hci_get_command_channel(int fd, zx_handle_t* out);
-IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_command_channel, IOCTL_BT_HCI_GET_COMMAND_CHANNEL, zx_handle_t);
+IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_command_channel, IOCTL_BT_HCI_GET_COMMAND_CHANNEL, zx_handle_t)
 
 // ssize_t ioctl_bt_hci_get_acl_data_channel(int fd, zx_handle_t* out);
-IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_acl_data_channel, IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL, zx_handle_t);
+IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_acl_data_channel, IOCTL_BT_HCI_GET_ACL_DATA_CHANNEL, zx_handle_t)
 
 // ssize_t ioctl_bt_hci_get_snoop_channel(int fd, zx_handle_t* out);
-IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_snoop_channel, IOCTL_BT_HCI_GET_SNOOP_CHANNEL, zx_handle_t);
+IOCTL_WRAPPER_OUT(ioctl_bt_hci_get_snoop_channel, IOCTL_BT_HCI_GET_SNOOP_CHANNEL, zx_handle_t)
 
 // TODO(jamuraa): Add ioctl for SCO
 

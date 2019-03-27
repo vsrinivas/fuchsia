@@ -15,7 +15,7 @@
 
 // Filesystem test utilities
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 #define ASSERT_STREAM_ALL(op, fd, buf, len) \
     ASSERT_EQ(op(fd, (buf), (len)), (ssize_t)(len), "");
@@ -35,4 +35,4 @@ bool check_file_contents(int fd, const uint8_t* buf, size_t length);
 // Unmount and remount our filesystem, simulating a reboot
 bool check_remount(void);
 
-__END_CDECLS;
+__END_CDECLS

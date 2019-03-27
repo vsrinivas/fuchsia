@@ -212,8 +212,8 @@ public:
 
     bool Init(zx_handle_t channel) override;
 
-    void SendLayout(zx_handle_t channel) override {};
-    void StepLayout(int32_t frame_num) override {};
+    void SendLayout(zx_handle_t channel) override {}
+    void StepLayout(int32_t frame_num) override {}
     bool WaitForReady() override { return true; }
     void Render(int32_t frame_num) override {}
     uint64_t image_id(uint64_t display_id) const override { return INVALID_ID; }

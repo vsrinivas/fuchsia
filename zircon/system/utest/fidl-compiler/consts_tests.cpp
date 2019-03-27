@@ -475,43 +475,43 @@ const handle<thread> c = -1;
 
 } // namespace
 
-BEGIN_TEST_CASE(consts_tests);
+BEGIN_TEST_CASE(consts_tests)
 
-RUN_TEST(LiteralsTest);
+RUN_TEST(LiteralsTest)
 
-RUN_TEST(GoodConstTestBool);
-RUN_TEST(BadConstTestBoolWithString);
-RUN_TEST(BadConstTestBoolWithNumeric);
+RUN_TEST(GoodConstTestBool)
+RUN_TEST(BadConstTestBoolWithString)
+RUN_TEST(BadConstTestBoolWithNumeric)
 
-RUN_TEST(GoodConstTestInt32);
-RUN_TEST(GoodConstTestInt32FromOtherConst);
-RUN_TEST(BadConstTestInt32WithString);
-RUN_TEST(BadConstTestInt32WithBool);
+RUN_TEST(GoodConstTestInt32)
+RUN_TEST(GoodConstTestInt32FromOtherConst)
+RUN_TEST(BadConstTestInt32WithString)
+RUN_TEST(BadConstTestInt32WithBool)
 
-RUN_TEST(GoodConstTesUint64);
-RUN_TEST(GoodConstTestUint64FromOtherUint32);
-RUN_TEST(BadConstTestUint64Negative);
-RUN_TEST(BadConstTestUint64Overflow);
+RUN_TEST(GoodConstTesUint64)
+RUN_TEST(GoodConstTestUint64FromOtherUint32)
+RUN_TEST(BadConstTestUint64Negative)
+RUN_TEST(BadConstTestUint64Overflow)
 
 RUN_TEST(GoodConstTestFloat32);
-RUN_TEST(GoodConstTestFloat32HighLimit);
-RUN_TEST(GoodConstTestFloat32LowLimit);
-RUN_TEST(BadConstTestFloat32HighLimit);
-RUN_TEST(BadConstTestFloat32LowLimit);
+RUN_TEST(GoodConstTestFloat32HighLimit)
+RUN_TEST(GoodConstTestFloat32LowLimit)
+RUN_TEST(BadConstTestFloat32HighLimit)
+RUN_TEST(BadConstTestFloat32LowLimit)
 
-RUN_TEST(GoodConstTestString);
-RUN_TEST(GoodConstTestStringFromOtherConst);
-RUN_TEST(BadConstTestStringWithNumeric);
-RUN_TEST(BadConstTestStringWithBool);
-RUN_TEST(BadConstTestStringWithStringTooLong);
+RUN_TEST(GoodConstTestString)
+RUN_TEST(GoodConstTestStringFromOtherConst)
+RUN_TEST(BadConstTestStringWithNumeric)
+RUN_TEST(BadConstTestStringWithBool)
+RUN_TEST(BadConstTestStringWithStringTooLong)
 
-RUN_TEST(GoodConstTestUsing);
-RUN_TEST(BadConstTestUsingWithInconvertibleValue);
+RUN_TEST(GoodConstTestUsing)
+RUN_TEST(BadConstTestUsingWithInconvertibleValue)
 
-RUN_TEST(BadConstTestNullableString);
-RUN_TEST(BadConstTestEnum);
-RUN_TEST(BadConstTestArray);
-RUN_TEST(BadConstTestVector);
-RUN_TEST(BadConstTestHandleOfThread);
+RUN_TEST(BadConstTestNullableString)
+RUN_TEST(BadConstTestEnum)
+RUN_TEST(BadConstTestArray)
+RUN_TEST(BadConstTestVector)
+RUN_TEST(BadConstTestHandleOfThread)
 
-END_TEST_CASE(consts_tests);
+END_TEST_CASE(consts_tests)

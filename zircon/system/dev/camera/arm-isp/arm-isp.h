@@ -61,7 +61,7 @@ public:
     void DdkUnbind();
 
     // ZX_PROTOCOL_ISP ops.
-    void IspDummyCall(){};
+    void IspDummyCall() {}
 
     // ISP Init Sequences (init_sequences.cpp)
     void IspLoadSeq_linear();

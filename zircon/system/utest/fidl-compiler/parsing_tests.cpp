@@ -291,14 +291,14 @@ struct Empty {
 
 } // namespace
 
-BEGIN_TEST_CASE(parsing_tests);
-RUN_TEST(bad_compound_identifier_test);
-RUN_TEST(parsing_reserved_words_in_struct_test);
-RUN_TEST(parsing_reserved_words_in_union_test);
-RUN_TEST(parsing_reserved_words_in_interface_test);
-RUN_TEST(bad_char_at_sign_test);
-RUN_TEST(bad_char_slash_test);
-RUN_TEST(bad_identifier_test);
-RUN_TEST(invalid_character_test);
-RUN_TEST(empty_struct_test);
-END_TEST_CASE(parsing_tests);
+BEGIN_TEST_CASE(parsing_tests)
+RUN_TEST(bad_compound_identifier_test)
+RUN_TEST(parsing_reserved_words_in_struct_test)
+RUN_TEST(parsing_reserved_words_in_union_test)
+RUN_TEST(parsing_reserved_words_in_interface_test)
+RUN_TEST(bad_char_at_sign_test)
+RUN_TEST(bad_char_slash_test)
+RUN_TEST(bad_identifier_test)
+RUN_TEST(invalid_character_test)
+RUN_TEST(empty_struct_test)
+END_TEST_CASE(parsing_tests)

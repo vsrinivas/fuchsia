@@ -48,14 +48,14 @@ static void dump_iframe(const arm64_iframe_t* iframe) {
     printf("spsr %#18" PRIx64 "\n", iframe->spsr);
 }
 
-KCOUNTER(exceptions_brkpt, "exceptions.breakpoint");
-KCOUNTER(exceptions_hw_brkpt, "exceptions.hw_breakpoint");
-KCOUNTER(exceptions_fpu, "exceptions.fpu");
-KCOUNTER(exceptions_page, "exceptions.page_fault");
-KCOUNTER(exceptions_irq, "exceptions.irq");
-KCOUNTER(exceptions_unhandled, "exceptions.unhandled");
-KCOUNTER(exceptions_user, "exceptions.user");
-KCOUNTER(exceptions_unknown, "exceptions.unknown");
+KCOUNTER(exceptions_brkpt, "exceptions.breakpoint")
+KCOUNTER(exceptions_hw_brkpt, "exceptions.hw_breakpoint")
+KCOUNTER(exceptions_fpu, "exceptions.fpu")
+KCOUNTER(exceptions_page, "exceptions.page_fault")
+KCOUNTER(exceptions_irq, "exceptions.irq")
+KCOUNTER(exceptions_unhandled, "exceptions.unhandled")
+KCOUNTER(exceptions_user, "exceptions.user")
+KCOUNTER(exceptions_unknown, "exceptions.unknown")
 
 static zx_status_t try_dispatch_user_data_fault_exception(
     zx_excp_type_t type, arm64_iframe_t* iframe,

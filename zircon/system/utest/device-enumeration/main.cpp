@@ -340,7 +340,7 @@ bool msm8x53_som_enumeration_test() {
 #define MAKE_TEST_CASE(name) \
     BEGIN_TEST_CASE(name) \
     RUN_TEST(name ## _enumeration_test) \
-    END_TEST_CASE(name); \
+    END_TEST_CASE(name) \
     test_case_element* test_case_ ## name = TEST_CASE_ELEMENT(name)
 
 MAKE_TEST_CASE(qemu);

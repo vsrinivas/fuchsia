@@ -245,7 +245,7 @@ RUN_NAMED_TEST("ReplaceMove (std::uptr)",           SUPDDTE::ReplaceMoveTest)
 RUN_NAMED_TEST("ReplaceMove (std::uptr<Del>)",      SUPCDTE::ReplaceMoveTest)
 RUN_NAMED_TEST("ReplaceMove (RefPtr)",              RPTE::ReplaceMoveTest)
 
-END_TEST_CASE(double_linked_list_tests);
+END_TEST_CASE(double_linked_list_tests)
 
 }  // namespace intrusive_containers
 }  // namespace tests

@@ -61,7 +61,7 @@ TestLoopDispatcher::TestLoopDispatcher(TimeKeeper* time_keeper)
 TestLoopDispatcher::~TestLoopDispatcher() {
     Shutdown();
     time_keeper_->CancelTimers(this);
-};
+}
 
 zx::time TestLoopDispatcher::Now() { return time_keeper_->Now(); }
 

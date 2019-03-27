@@ -13,8 +13,8 @@
 
 #define LOCAL_TRACE 0
 
-KCOUNTER(dispatcher_pager_create_count, "dispatcher.pager.create");
-KCOUNTER(dispatcher_pager_destroy_count, "dispatcher.pager.destroy");
+KCOUNTER(dispatcher_pager_create_count, "dispatcher.pager.create")
+KCOUNTER(dispatcher_pager_destroy_count, "dispatcher.pager.destroy")
 
 zx_status_t PagerDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {
     fbl::AllocChecker ac;

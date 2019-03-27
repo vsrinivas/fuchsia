@@ -65,20 +65,20 @@ static void dump_fault_frame(x86_iframe_t* frame) {
     }
 }
 
-KCOUNTER(exceptions_debug, "exceptions.debug");
-KCOUNTER(exceptions_nmi, "exceptions.nmi");
-KCOUNTER(exceptions_brkpt, "exceptions.breakpoint");
-KCOUNTER(exceptions_invop, "exceptions.inv_opcode");
-KCOUNTER(exceptions_dev_na, "exceptions.dev_na");
-KCOUNTER(exceptions_dfault, "exceptions.double_fault");
-KCOUNTER(exceptions_fpu, "exceptions.fpu");
-KCOUNTER(exceptions_simd, "exceptions.simd");
-KCOUNTER(exceptions_gpf, "exceptions.gpf");
-KCOUNTER(exceptions_page, "exceptions.page_fault");
-KCOUNTER(exceptions_apic_err, "exceptions.apic_error");
-KCOUNTER(exceptions_irq, "exceptions.irq");
-KCOUNTER(exceptions_unhandled, "exceptions.unhandled");
-KCOUNTER(exceptions_user, "exceptions.user");
+KCOUNTER(exceptions_debug, "exceptions.debug")
+KCOUNTER(exceptions_nmi, "exceptions.nmi")
+KCOUNTER(exceptions_brkpt, "exceptions.breakpoint")
+KCOUNTER(exceptions_invop, "exceptions.inv_opcode")
+KCOUNTER(exceptions_dev_na, "exceptions.dev_na")
+KCOUNTER(exceptions_dfault, "exceptions.double_fault")
+KCOUNTER(exceptions_fpu, "exceptions.fpu")
+KCOUNTER(exceptions_simd, "exceptions.simd")
+KCOUNTER(exceptions_gpf, "exceptions.gpf")
+KCOUNTER(exceptions_page, "exceptions.page_fault")
+KCOUNTER(exceptions_apic_err, "exceptions.apic_error")
+KCOUNTER(exceptions_irq, "exceptions.irq")
+KCOUNTER(exceptions_unhandled, "exceptions.unhandled")
+KCOUNTER(exceptions_user, "exceptions.user")
 
 __NO_RETURN static void exception_die(x86_iframe_t* frame, const char* msg) {
     platform_panic_start();

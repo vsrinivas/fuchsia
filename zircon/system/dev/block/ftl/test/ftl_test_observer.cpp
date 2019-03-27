@@ -20,7 +20,7 @@ fuchsia_hardware_nand_RamNandInfo GetConfig() {
     config.nand_info.oob_size = 8;
     config.nand_info.nand_class = fuchsia_hardware_nand_Class_FTL;
     return config;
-};
+}
 
 }  // namespace
 

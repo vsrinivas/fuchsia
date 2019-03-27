@@ -97,4 +97,4 @@ zx_status_t PioCfgWrite(uint8_t bus, uint8_t dev, uint8_t func, uint8_t offset,
 }
 
 #endif // ARCH_X86
-}; // namespace PCI
+} // namespace PCI

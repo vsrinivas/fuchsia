@@ -373,4 +373,4 @@ RUN_TEST(blobfs::MultiNodeTest)
 RUN_TEST(blobfs::BadInodeNextNodeTest);
 RUN_TEST(blobfs::BlockIteratorFragmentedTest);
 RUN_TEST(blobfs::BlockIteratorUnfragmentedTest);
-END_TEST_CASE(blobfsAllocatedExtentIteratorTests);
+END_TEST_CASE(blobfsAllocatedExtentIteratorTests)

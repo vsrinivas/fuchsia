@@ -34,7 +34,7 @@ public:
 
     void Flush();
 
-    const char* tag() const override { return "virtio-gpu"; };
+    const char* tag() const override { return "virtio-gpu"; }
 
 private:
     // DDK driver hooks

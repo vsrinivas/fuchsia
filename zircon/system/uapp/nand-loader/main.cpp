@@ -104,7 +104,7 @@ fuchsia_hardware_nand_Info GetNandInfo(const Config& config) {
     info.oob_size = 8;
     info.nand_class = fuchsia_hardware_nand_Class_FTL;
     return info;
-};
+}
 
 // Sets the vmo and nand size from the contents of the input file.
 bool FinishDeviceConfig(const char* path, fuchsia_hardware_nand_RamNandInfo* device_config) {

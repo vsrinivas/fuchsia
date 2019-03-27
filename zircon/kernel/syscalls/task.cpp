@@ -62,7 +62,7 @@ void thread_set_priority_experiment_init_hook(uint) {
 }
 LK_INIT_HOOK(thread_set_priority_experiment,
              thread_set_priority_experiment_init_hook,
-             LK_INIT_LEVEL_THREADING - 1);
+             LK_INIT_LEVEL_THREADING - 1)
 #endif
 
 // TODO(ZX-1025): copy_user_string may truncate the incoming string,

@@ -92,7 +92,7 @@ bool WipeFilterCallback(const gpt_partition_t& part) {
 constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
     constexpr size_t kReservedEntryBlocks = (16 * 1024);
     return (kReservedEntryBlocks + 2 * blk_size) / blk_size;
-};
+}
 
 // Helper function to auto-deduce type.
 template <typename T>

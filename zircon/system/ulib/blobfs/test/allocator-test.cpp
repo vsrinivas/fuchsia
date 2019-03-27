@@ -464,4 +464,4 @@ RUN_TEST(blobfs::FragmentationTest</* EvensReserved = */ true>)
 RUN_TEST(blobfs::FragmentationTest</* EvensReserved = */ false>)
 RUN_TEST(blobfs::MaxExtentTest)
 RUN_TEST(blobfs::ResetSizeTest)
-END_TEST_CASE(blobfsAllocatorTests);
+END_TEST_CASE(blobfsAllocatorTests)

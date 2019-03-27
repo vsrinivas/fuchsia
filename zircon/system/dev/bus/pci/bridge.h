@@ -85,4 +85,4 @@ private:
     bool supports_32bit_pio_;
 };
 
-}; // namespace pci
+} // namespace pci

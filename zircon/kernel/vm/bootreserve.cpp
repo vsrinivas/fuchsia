@@ -140,4 +140,4 @@ bool boot_reserve_foreach(const fbl::Function<bool(const reserve_range_t)>& cb) 
     }
 
     return true;
-};
+}

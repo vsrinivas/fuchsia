@@ -170,4 +170,4 @@ RUN_NAMED_TEST("integer arithmetic", (integer_arithmetic<uint8_t, 8>))
 
 RUN_NAMED_TEST("ceiling test", ceiling_test)
 RUN_NAMED_TEST("floor test", floor_test)
-END_TEST_CASE(ffl_tests);
+END_TEST_CASE(ffl_tests)

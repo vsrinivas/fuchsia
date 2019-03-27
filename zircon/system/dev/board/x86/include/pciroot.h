@@ -6,11 +6,11 @@
 #include <region-alloc/region-alloc.h>
 #include <string.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 pciroot_protocol_ops_t* get_pciroot_ops(void);
 
-__END_CDECLS;
+__END_CDECLS
 
 // Userspace ACPI/PCI support is entirely in C++, but the legacy kernel pci support
 // still has kpci.c. In lieu of needlessly porting that, it's simpler to ifdef the

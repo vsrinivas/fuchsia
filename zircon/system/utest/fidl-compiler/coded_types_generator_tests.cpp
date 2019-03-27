@@ -202,11 +202,11 @@ protocol UseOfRequestOfInterface {
 
 } // namespace
 
-BEGIN_TEST_CASE(coded_types_generator_tests);
+BEGIN_TEST_CASE(coded_types_generator_tests)
 
 RUN_TEST(CodedTypesOfArrays);
 RUN_TEST(CodedTypesOfVectors);
 RUN_TEST(CodedTypesOfInterface);
 RUN_TEST(CodedTypesOfRequestOfInterface);
 
-END_TEST_CASE(coded_types_generator_tests);
+END_TEST_CASE(coded_types_generator_tests)

@@ -136,6 +136,6 @@ void RegisterTests() {
     perftest::RegisterTest("HandleCreate_Thread", ThreadCreateTest);
     perftest::RegisterTest("HandleCreate_Vmo", VmoCreateTest);
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

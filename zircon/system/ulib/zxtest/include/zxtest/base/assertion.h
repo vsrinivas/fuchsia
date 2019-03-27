@@ -41,7 +41,7 @@ public:
 
     // Returns the expected value of an equality. For example in ASSERT_EQ(actual, expected) returns
     // the text representation of expected as it is evaluated at runtime..
-    const fbl::String& expected_eval() const { return expected_eval_; };
+    const fbl::String& expected_eval() const { return expected_eval_; }
 
     // Returns the expected value of an equality. For example in ASSERT_EQ(actual, expected) returns
     // the text representation of actual, as it was captured on runtime.

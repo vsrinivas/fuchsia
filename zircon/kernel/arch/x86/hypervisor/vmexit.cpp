@@ -90,7 +90,7 @@ ExitInterruptionInformation::ExitInterruptionInformation(const AutoVmcs& vmcs) {
     vector = static_cast<uint8_t>(BITS(int_info, 7, 0));
     interruption_type = static_cast<InterruptionType>(BITS_SHIFT(int_info, 10, 8));
     valid = BIT(int_info, 31);
-};
+}
 
 CrAccessInfo::CrAccessInfo(uint64_t qualification) {
     // From Volume 3, Table 27-3.

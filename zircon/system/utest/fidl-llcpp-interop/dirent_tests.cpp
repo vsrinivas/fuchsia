@@ -959,4 +959,4 @@ RUN_NAMED_TEST_SMALL("server: Send OnDirents event, caller-allocating",
                      CallerAllocateSendOnDirents)
 RUN_NAMED_TEST_SMALL("server: Send OnDirents event, in-place",
                      InPlaceSendOnDirents)
-END_TEST_CASE(llcpp_interface_dirent_tests);
+END_TEST_CASE(llcpp_interface_dirent_tests)

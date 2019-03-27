@@ -120,7 +120,7 @@ static zx_status_t ConvertOpteeToZxResult(uint32_t optee_return_code, uint32_t o
     return ZX_OK;
 }
 
-}; // namespace
+} // namespace
 
 namespace optee {
 

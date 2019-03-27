@@ -497,7 +497,7 @@ void platform_init_pre_thread(uint) {
 }
 
 LK_INIT_HOOK(platform_init_pre_thread, platform_init_pre_thread,
-             LK_INIT_LEVEL_THREADING - 1);
+             LK_INIT_LEVEL_THREADING - 1)
 
 void platform_init(void) {
     if (use_topology) {
@@ -512,7 +512,7 @@ static void platform_init_postvm(uint level) {
     reserve_periph_ranges();
 }
 
-LK_INIT_HOOK(platform_postvm, platform_init_postvm, LK_INIT_LEVEL_VM);
+LK_INIT_HOOK(platform_postvm, platform_init_postvm, LK_INIT_LEVEL_VM)
 
 void platform_dputs_thread(const char* str, size_t len) {
     if (uart_disabled) {
@@ -768,4 +768,4 @@ static void arm_resource_dispatcher_init_hook(unsigned int rl) {
     }
 }
 
-LK_INIT_HOOK(arm_resource_init, arm_resource_dispatcher_init_hook, LK_INIT_LEVEL_HEAP);
+LK_INIT_HOOK(arm_resource_init, arm_resource_dispatcher_init_hook, LK_INIT_LEVEL_HEAP)

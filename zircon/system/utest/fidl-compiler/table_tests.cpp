@@ -239,6 +239,6 @@ xunion OptionalTableContainer {
 
 } // namespace
 
-BEGIN_TEST_CASE(table_tests);
-RUN_TEST(compiling);
-END_TEST_CASE(table_tests);
+BEGIN_TEST_CASE(table_tests)
+RUN_TEST(compiling)
+END_TEST_CASE(table_tests)

@@ -1059,7 +1059,7 @@ public:
     bool Lookup(StringView filename, const std::vector<StringView>& name,
                 Library** out_library);
 
-    const std::set<Library*>& dependencies() const { return dependencies_aggregate_; };
+    const std::set<Library*>& dependencies() const { return dependencies_aggregate_; }
 
 private:
     bool InsertByName(StringView filename, const std::vector<StringView>& name,

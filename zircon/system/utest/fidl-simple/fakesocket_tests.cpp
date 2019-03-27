@@ -156,4 +156,4 @@ static bool basic_test(void) {
 
 BEGIN_TEST_CASE(fakesocket_tests)
 RUN_NAMED_TEST("basic test", basic_test)
-END_TEST_CASE(fakesocket_tests);
+END_TEST_CASE(fakesocket_tests)

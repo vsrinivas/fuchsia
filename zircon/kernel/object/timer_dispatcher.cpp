@@ -19,8 +19,8 @@
 #include <zircon/rights.h>
 #include <zircon/types.h>
 
-KCOUNTER(dispatcher_timer_create_count, "dispatcher.timer.create");
-KCOUNTER(dispatcher_timer_destroy_count, "dispatcher.timer.destroy");
+KCOUNTER(dispatcher_timer_create_count, "dispatcher.timer.create")
+KCOUNTER(dispatcher_timer_destroy_count, "dispatcher.timer.destroy")
 
 static void timer_irq_callback(timer* timer, zx_time_t now, void* arg) {
     // We are in IRQ context and cannot touch the timer state_tracker, so we

@@ -20,7 +20,7 @@ using DeviceType = ddk::Device<Bma253>;
 
 class Bma253 : public DeviceType, public ddk::HidbusProtocol<Bma253, ddk::base_protocol> {
 public:
-    virtual ~Bma253() {};
+    virtual ~Bma253() {}
 
     static zx_status_t Create(void* ctx, zx_device_t* parent);
 

@@ -50,7 +50,7 @@ LogExporter::~LogExporter() {
     if (output_file_ != nullptr) {
         fclose(output_file_);
     }
-};
+}
 
 zx_status_t LogExporter::StartThread() {
     return loop_.StartThread();

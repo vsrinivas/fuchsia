@@ -243,4 +243,4 @@ RUN_TEST(blobfs::BlockIteratorTest)
 RUN_TEST(blobfs::StreamBlocksFragmentedTest)
 RUN_TEST(blobfs::StreamBlocksContiguousTest)
 RUN_TEST(blobfs::StreamBlocksInvalidLengthTest)
-END_TEST_CASE(blobfsVectorExtentIteratorTests);
+END_TEST_CASE(blobfsVectorExtentIteratorTests)

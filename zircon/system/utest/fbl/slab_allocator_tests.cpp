@@ -688,4 +688,4 @@ RUN_NAMED_TEST("Counted Static UniquePtr (unlock)", (static_slab_test
     <StaticUniquePtrTestTraits<NullLock, true>>))
 RUN_NAMED_TEST("Counted Static RefPtr    (unlock)", (static_slab_test
     <StaticRefPtrTestTraits<NullLock, true>>))
-END_TEST_CASE(slab_allocator_tests);
+END_TEST_CASE(slab_allocator_tests)

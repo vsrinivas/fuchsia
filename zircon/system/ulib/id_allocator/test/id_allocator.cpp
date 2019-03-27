@@ -523,7 +523,7 @@ RUN_TEST_SMALL((TestResetShrink<101, 64, 16>))
 RUN_TEST_SMALL((TestResetShrink<128, 64, 32>))           // Two levels
 RUN_TEST_MEDIUM((TestResetShrink<1 << 20, 64 * 64, 35>)) // Million ids. 4 levels.
 
-END_TEST_CASE(IdAllocatorTests);
+END_TEST_CASE(IdAllocatorTests)
 
 } // namespace
 } // namespace id_allocator

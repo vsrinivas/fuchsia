@@ -256,4 +256,4 @@ RUN_NAMED_TEST("Extra release should assert", extra_release_asserts)
 RUN_NAMED_TEST("Wrapping zero-count pointer should assert", wrap_after_last_release_asserts)
 RUN_NAMED_TEST("AddRef on unadopted object should assert", unadopted_add_ref_asserts)
 RUN_NAMED_TEST("Release on unadopted object should assert", unadopted_release_asserts)
-END_TEST_CASE(ref_counted_tests);
+END_TEST_CASE(ref_counted_tests)

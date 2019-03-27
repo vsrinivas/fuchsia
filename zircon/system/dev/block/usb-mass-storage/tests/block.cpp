@@ -188,4 +188,4 @@ RUN_NAMED_TEST("BlockImplQueue read OPCODE initiates a read transaction", UmsBlo
 RUN_NAMED_TEST("write OPCODE initiates a write transaction", UmsBlockDeviceWriteTest)
 RUN_NAMED_TEST("flush OPCODE initiates a flush transaction", UmsBlockDeviceFlushTest)
 
-END_TEST_CASE(usb_mass_storage_tests);
+END_TEST_CASE(usb_mass_storage_tests)

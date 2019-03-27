@@ -123,4 +123,4 @@ bool InterfaceListTest() {
 
 BEGIN_TEST_CASE(usb_wrapper_tests)
 RUN_NAMED_TEST("InterfaceList test", InterfaceListTest)
-END_TEST_CASE(usb_wrapper_tests);
+END_TEST_CASE(usb_wrapper_tests)

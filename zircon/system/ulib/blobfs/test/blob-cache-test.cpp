@@ -397,4 +397,4 @@ RUN_TEST(blobfs::DestructorTest)
 RUN_TEST(blobfs::ForAllOpenNodesTest)
 RUN_TEST(blobfs::CachePolicyEvictImmediatelyTest)
 RUN_TEST(blobfs::CachePolicyNeverEvictTest)
-END_TEST_CASE(blobfsBlobCacheTests);
+END_TEST_CASE(blobfsBlobCacheTests)

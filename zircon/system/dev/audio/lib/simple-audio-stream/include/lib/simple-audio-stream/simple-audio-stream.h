@@ -274,7 +274,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
 
     // Callable any time after SetFormat while the RingBuffer channel is active,
     // but only valid after GetBuffer is called. Can be called from any context.
-    uint32_t LoadNotificationsPerRing() const { return expected_notifications_per_ring_.load(); };
+    uint32_t LoadNotificationsPerRing() const { return expected_notifications_per_ring_.load(); }
 
     // The execution domain
     fbl::RefPtr<dispatcher::ExecutionDomain> domain_;

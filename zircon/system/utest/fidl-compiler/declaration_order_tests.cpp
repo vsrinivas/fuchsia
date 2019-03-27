@@ -344,12 +344,12 @@ xunion #Xunion# {
 
 } // namespace
 
-BEGIN_TEST_CASE(declaration_order_test);
-RUN_TEST(nonnullable_ref);
-RUN_TEST(nullable_ref_breaks_dependency);
-RUN_TEST(request_type_breaks_dependency_graph);
-RUN_TEST(nonnullable_xunion);
-RUN_TEST(nullable_xunion);
-RUN_TEST(nonnullable_xunion_in_struct);
-RUN_TEST(nullable_xunion_in_struct);
-END_TEST_CASE(declaration_order_test);
+BEGIN_TEST_CASE(declaration_order_test)
+RUN_TEST(nonnullable_ref)
+RUN_TEST(nullable_ref_breaks_dependency)
+RUN_TEST(request_type_breaks_dependency_graph)
+RUN_TEST(nonnullable_xunion)
+RUN_TEST(nullable_xunion)
+RUN_TEST(nonnullable_xunion_in_struct)
+RUN_TEST(nullable_xunion_in_struct)
+END_TEST_CASE(declaration_order_test)

@@ -20,15 +20,15 @@
 
 #define LOCAL_TRACE 0
 
-KCOUNTER(root_resource_created, "resource.root.created");
-KCOUNTER(hypervisor_resource_created, "resource.hypervisor.created");
-KCOUNTER(vmex_resource_created, "resource.vmex.created");
-KCOUNTER(mmio_resource_created, "resource.mmio.created");
-KCOUNTER(irq_resource_created, "resource.irq.created");
-KCOUNTER(ioport_resource_created, "resource.ioport.created");
-KCOUNTER(smc_resource_created, "resource.smc.created");
-KCOUNTER(dispatcher_resource_create_count, "dispatcher.resource.create");
-KCOUNTER(dispatcher_resource_destroy_count, "dispatcher.resource.destroy");
+KCOUNTER(root_resource_created, "resource.root.created")
+KCOUNTER(hypervisor_resource_created, "resource.hypervisor.created")
+KCOUNTER(vmex_resource_created, "resource.vmex.created")
+KCOUNTER(mmio_resource_created, "resource.mmio.created")
+KCOUNTER(irq_resource_created, "resource.irq.created")
+KCOUNTER(ioport_resource_created, "resource.ioport.created")
+KCOUNTER(smc_resource_created, "resource.smc.created")
+KCOUNTER(dispatcher_resource_create_count, "dispatcher.resource.create")
+KCOUNTER(dispatcher_resource_destroy_count, "dispatcher.resource.destroy")
 
 // Storage for static members of ResourceDispatcher
 RegionAllocator ResourceDispatcher::static_rallocs_[ZX_RSRC_KIND_COUNT];
@@ -330,4 +330,4 @@ static int cmd_resources(int argc, const cmd_args* argv, uint32_t flags) {
 
 STATIC_COMMAND_START
 STATIC_COMMAND("resource", "Inspect physical address space resource allocations", &cmd_resources)
-STATIC_COMMAND_END(resources);
+STATIC_COMMAND_END(resources)

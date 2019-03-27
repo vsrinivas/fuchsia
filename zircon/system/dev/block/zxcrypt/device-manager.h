@@ -26,7 +26,7 @@ using DeviceManagerType = ddk::Device<DeviceManager, ddk::Unbindable, ddk::Messa
 class DeviceManager final : public DeviceManagerType {
 public:
     explicit DeviceManager(zx_device_t* parent)
-        : DeviceManagerType(parent), state_(kBinding){};
+        : DeviceManagerType(parent), state_(kBinding){}
     ~DeviceManager() = default;
     DISALLOW_COPY_ASSIGN_AND_MOVE(DeviceManager);
 

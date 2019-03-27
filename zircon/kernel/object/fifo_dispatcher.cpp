@@ -14,8 +14,8 @@
 #include <object/handle.h>
 #include <zircon/rights.h>
 
-KCOUNTER(dispatcher_fifo_create_count, "dispatcher.fifo.create");
-KCOUNTER(dispatcher_fifo_destroy_count, "dispatcher.fifo.destroy");
+KCOUNTER(dispatcher_fifo_create_count, "dispatcher.fifo.create")
+KCOUNTER(dispatcher_fifo_destroy_count, "dispatcher.fifo.destroy")
 
 // static
 zx_status_t FifoDispatcher::Create(size_t count, size_t elemsize, uint32_t options,

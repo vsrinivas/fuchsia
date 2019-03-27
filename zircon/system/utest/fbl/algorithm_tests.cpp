@@ -456,4 +456,4 @@ RUN_NAMED_TEST("lcm_test<uint64_t>", lcm_test<uint64_t>)
 RUN_NAMED_TEST("lcm_test<size_t>",   lcm_test<size_t>)
 RUN_NAMED_TEST("accumulate test", accumulate_test)
 RUN_NAMED_TEST("accumulate_op test", accumulate_op_test)
-END_TEST_CASE(algorithm_tests);
+END_TEST_CASE(algorithm_tests)

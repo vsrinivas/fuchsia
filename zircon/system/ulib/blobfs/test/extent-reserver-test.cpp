@@ -161,4 +161,4 @@ RUN_TEST(blobfs::ConstructorTest)
 RUN_TEST(blobfs::MoveConstructorTest)
 RUN_TEST(blobfs::MoveAssignmentTest)
 RUN_TEST(blobfs::SplitTest)
-END_TEST_CASE(blobfsExtentReserverTests);
+END_TEST_CASE(blobfsExtentReserverTests)

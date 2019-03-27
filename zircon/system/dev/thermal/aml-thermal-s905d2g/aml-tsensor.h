@@ -22,7 +22,7 @@ class AmlTSensor {
 
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlTSensor);
-    AmlTSensor(){};
+    AmlTSensor(){}
     uint32_t ReadTemperature();
     zx_status_t InitSensor(zx_device_t* parent,
                            fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config);

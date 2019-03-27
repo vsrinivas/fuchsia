@@ -16,8 +16,8 @@
 
 #include <zircon/rights.h>
 
-KCOUNTER(dispatcher_profile_create_count, "dispatcher.profile.create");
-KCOUNTER(dispatcher_profile_destroy_count, "dispatcher.profile.destroy");
+KCOUNTER(dispatcher_profile_create_count, "dispatcher.profile.create")
+KCOUNTER(dispatcher_profile_destroy_count, "dispatcher.profile.destroy")
 
 zx_status_t validate_profile(const zx_profile_info_t& info) {
     if (info.type != ZX_PROFILE_INFO_SCHEDULER)

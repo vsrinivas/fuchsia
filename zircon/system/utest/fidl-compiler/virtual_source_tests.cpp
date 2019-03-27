@@ -44,10 +44,9 @@ bool LineContaining() {
 
 } // namespace
 
-BEGIN_TEST_CASE(virtual_source_tests);
+BEGIN_TEST_CASE(virtual_source_tests)
 
-RUN_TEST(AddLine);
-RUN_TEST(LineContaining);
+RUN_TEST(AddLine)
+RUN_TEST(LineContaining)
 
-END_TEST_CASE(virtual_source_tests);
-
+END_TEST_CASE(virtual_source_tests)

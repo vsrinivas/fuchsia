@@ -296,4 +296,4 @@ RUN_TEST_SMALL(EraseTest)
 RUN_TEST_SMALL(MultipleLayerTest)
 RUN_TEST_SMALL(MultipleLayerWithStorageTest)
 RUN_TEST_SMALL(MultipleLayerWithCallbackTest)
-END_TEST_CASE(OperationQueueTests);
+END_TEST_CASE(OperationQueueTests)

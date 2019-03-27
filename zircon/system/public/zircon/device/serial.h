@@ -10,7 +10,7 @@
 #include <zircon/device/ioctl.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // flags for serial_config()
 #define SERIAL_DATA_BITS_5 (0 << 0)
@@ -53,6 +53,6 @@ typedef struct {
 IOCTL_WRAPPER_IN(ioctl_serial_config, IOCTL_SERIAL_CONFIG, serial_config_t)
 IOCTL_WRAPPER_OUT(ioctl_serial_get_class, IOCTL_SERIAL_GET_CLASS, uint32_t)
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif  // SYSROOT_ZIRCON_DEVICE_SERIAL_H_

@@ -773,4 +773,4 @@ STATIC_COMMAND("pcirescan",
 STATIC_COMMAND("pciregions",
                "Dump information on present PCI address region allocations",
                &PcieDebugConsole::CmdPciRegionDump)
-STATIC_COMMAND_END(pcie);
+STATIC_COMMAND_END(pcie)

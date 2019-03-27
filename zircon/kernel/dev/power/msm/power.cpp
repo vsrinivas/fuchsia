@@ -51,4 +51,4 @@ static void msm_power_init(const void* driver_data, uint32_t length) {
     pdev_register_power(&msm_power_ops);
 }
 
-LK_PDEV_INIT(msm_power_init, KDRV_MSM_POWER, msm_power_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(msm_power_init, KDRV_MSM_POWER, msm_power_init, LK_INIT_LEVEL_PLATFORM)

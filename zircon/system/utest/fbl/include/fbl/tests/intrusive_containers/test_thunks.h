@@ -22,52 +22,52 @@ static bool _test_name ## Test() { \
 template <typename TestEnvironmentClass>
 struct TestThunks {
     // Generic tests
-    MAKE_TEST_THUNK(Clear);
-    MAKE_TEST_THUNK(ClearUnsafe);
-    MAKE_TEST_THUNK(IsEmpty);
-    MAKE_TEST_THUNK(Iterate);
-    MAKE_TEST_THUNK(IterErase);
-    MAKE_TEST_THUNK(DirectErase);
-    MAKE_TEST_THUNK(MakeIterator);
-    MAKE_TEST_THUNK(ReverseIterate);
-    MAKE_TEST_THUNK(ReverseIterErase);
-    MAKE_TEST_THUNK(Swap);
-    MAKE_TEST_THUNK(RvalueOps);
-    MAKE_TEST_THUNK(Scope);
-    MAKE_TEST_THUNK(TwoContainer);
-    MAKE_TEST_THUNK(IterCopyPointer);
-    MAKE_TEST_THUNK(EraseIf);
-    MAKE_TEST_THUNK(FindIf);
+    MAKE_TEST_THUNK(Clear)
+    MAKE_TEST_THUNK(ClearUnsafe)
+    MAKE_TEST_THUNK(IsEmpty)
+    MAKE_TEST_THUNK(Iterate)
+    MAKE_TEST_THUNK(IterErase)
+    MAKE_TEST_THUNK(DirectErase)
+    MAKE_TEST_THUNK(MakeIterator)
+    MAKE_TEST_THUNK(ReverseIterate)
+    MAKE_TEST_THUNK(ReverseIterErase)
+    MAKE_TEST_THUNK(Swap)
+    MAKE_TEST_THUNK(RvalueOps)
+    MAKE_TEST_THUNK(Scope)
+    MAKE_TEST_THUNK(TwoContainer)
+    MAKE_TEST_THUNK(IterCopyPointer)
+    MAKE_TEST_THUNK(EraseIf)
+    MAKE_TEST_THUNK(FindIf)
 
     // Sequence specific tests
-    MAKE_TEST_THUNK(PushFront);
-    MAKE_TEST_THUNK(PopFront);
-    MAKE_TEST_THUNK(PushBack);
-    MAKE_TEST_THUNK(PopBack);
-    MAKE_TEST_THUNK(SeqIterate);
-    MAKE_TEST_THUNK(SeqReverseIterate);
-    MAKE_TEST_THUNK(EraseNext);
-    MAKE_TEST_THUNK(InsertAfter);
-    MAKE_TEST_THUNK(Insert);
-    MAKE_TEST_THUNK(DirectInsert);
-    MAKE_TEST_THUNK(Splice);
-    MAKE_TEST_THUNK(ReplaceIfCopy);
-    MAKE_TEST_THUNK(ReplaceIfMove);
-    MAKE_TEST_THUNK(ReplaceCopy);
-    MAKE_TEST_THUNK(ReplaceMove);
+    MAKE_TEST_THUNK(PushFront)
+    MAKE_TEST_THUNK(PopFront)
+    MAKE_TEST_THUNK(PushBack)
+    MAKE_TEST_THUNK(PopBack)
+    MAKE_TEST_THUNK(SeqIterate)
+    MAKE_TEST_THUNK(SeqReverseIterate)
+    MAKE_TEST_THUNK(EraseNext)
+    MAKE_TEST_THUNK(InsertAfter)
+    MAKE_TEST_THUNK(Insert)
+    MAKE_TEST_THUNK(DirectInsert)
+    MAKE_TEST_THUNK(Splice)
+    MAKE_TEST_THUNK(ReplaceIfCopy)
+    MAKE_TEST_THUNK(ReplaceIfMove)
+    MAKE_TEST_THUNK(ReplaceCopy)
+    MAKE_TEST_THUNK(ReplaceMove)
 
     // Associative container specific tests
-    MAKE_TEST_THUNK(InsertByKey);
-    MAKE_TEST_THUNK(FindByKey);
-    MAKE_TEST_THUNK(EraseByKey);
-    MAKE_TEST_THUNK(InsertOrFind);
-    MAKE_TEST_THUNK(InsertOrReplace);
+    MAKE_TEST_THUNK(InsertByKey)
+    MAKE_TEST_THUNK(FindByKey)
+    MAKE_TEST_THUNK(EraseByKey)
+    MAKE_TEST_THUNK(InsertOrFind)
+    MAKE_TEST_THUNK(InsertOrReplace)
 
     // Ordered Associative container specific tests
     MAKE_TEST_THUNK(OrderedIter)
     MAKE_TEST_THUNK(OrderedReverseIter)
-    MAKE_TEST_THUNK(UpperBound);
-    MAKE_TEST_THUNK(LowerBound);
+    MAKE_TEST_THUNK(UpperBound)
+    MAKE_TEST_THUNK(LowerBound)
 };
 #undef MAKE_TEST_THUNK
 

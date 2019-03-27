@@ -171,4 +171,4 @@ RUN_TEST(nand::SanitizeMultiplePartitionMapOverlappingTest)
 RUN_TEST(nand::SanitizePartitionMapBadRangeTest)
 RUN_TEST(nand::SanitizePartitionMapUnalignedTest)
 RUN_TEST(nand::SanitizePartitionMapOutofBoundsTest)
-END_TEST_CASE(NandpartUtilsTests);
+END_TEST_CASE(NandpartUtilsTests)

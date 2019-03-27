@@ -21,7 +21,7 @@ extern "C" {
 
 __LOCAL decltype(zx_ticks_get) CODE_soft_ticks_get;
 
-};
+}
 
 // Code should define '_zx_foo' and then do 'VDSO_INTERFACE_FUNCTION(zx_foo);'
 // to define the public name 'zx_foo' and the vDSO-private name 'VDSO_zx_foo'.

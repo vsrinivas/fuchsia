@@ -33,7 +33,7 @@ private:
 class PciReg16 {
 public:
     constexpr explicit PciReg16(uint16_t offset)
-        : offset_(offset){};
+        : offset_(offset) {}
     constexpr PciReg16()
         : offset_(0u) {}
     constexpr uint16_t offset() const { return offset_; }
@@ -45,7 +45,7 @@ private:
 class PciReg32 {
 public:
     constexpr explicit PciReg32(uint16_t offset)
-        : offset_(offset){};
+        : offset_(offset) {}
     constexpr PciReg32()
         : offset_(0u) {}
     constexpr uint16_t offset() const { return offset_; }
@@ -125,7 +125,7 @@ public:
     // @return a pointer to a new Config instance on success, nullptr on failure.
     //
     inline const pci_bdf_t& bdf() const { return bdf_; }
-    inline const char* addr(void) const { return addr_; };
+    inline const char* addr(void) const { return addr_; }
     virtual const char* type(void) const = 0;
 
     // Virtuals
@@ -136,7 +136,7 @@ public:
     virtual void Write(const PciReg8 addr, uint8_t val) const = 0;
     virtual void Write(const PciReg16 addr, uint16_t val) const = 0;
     virtual void Write(const PciReg32 addr, uint32_t val) const = 0;
-    virtual ~Config(){};
+    virtual ~Config() {}
 
 protected:
     Config(pci_bdf_t bdf)

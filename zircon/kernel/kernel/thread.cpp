@@ -59,13 +59,13 @@
 // The counters below never decrease.
 //
 // counts the number of thread_t successfully created.
-KCOUNTER(thread_create_count, "thread.create");
+KCOUNTER(thread_create_count, "thread.create")
 // counts the number of thread_t joined. Never decreases.
-KCOUNTER(thread_join_count, "thread.join");
+KCOUNTER(thread_join_count, "thread.join")
 // counts the number of calls to suspend() that succeeded.
-KCOUNTER(thread_suspend_count, "thread.suspend");
+KCOUNTER(thread_suspend_count, "thread.suspend")
 // counts the number of calls to resume() that succeeded.
-KCOUNTER(thread_resume_count, "thread.resume");
+KCOUNTER(thread_resume_count, "thread.resume")
 
 // global thread list
 static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);

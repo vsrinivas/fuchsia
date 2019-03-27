@@ -161,7 +161,7 @@ bool UpdateNoData() {
 BEGIN_TEST_CASE(blobfsCompressorTests)
 ALL_COMPRESSION_TESTS(CompressionAlgorithm::LZ4)
 ALL_COMPRESSION_TESTS(CompressionAlgorithm::ZSTD)
-END_TEST_CASE(blobfsCompressorTests);
+END_TEST_CASE(blobfsCompressorTests)
 
 } // namespace
 } // namespace blobfs

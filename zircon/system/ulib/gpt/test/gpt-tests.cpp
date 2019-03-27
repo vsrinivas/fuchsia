@@ -1082,4 +1082,4 @@ RUN_TEST_MEDIUM(KnownGuidUniqueNameTest)
 RUN_TEST_MEDIUM(KnownGuidUniqueGuidTest)
 RUN_TEST_MEDIUM(KnownGuidUniqueStrTest)
 RUN_TEST_MEDIUM(KnownGuidToStrTest)
-END_TEST_CASE(libgpt_tests);
+END_TEST_CASE(libgpt_tests)

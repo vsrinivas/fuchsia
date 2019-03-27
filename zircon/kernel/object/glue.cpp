@@ -68,4 +68,4 @@ static void object_glue_init(uint level) TA_NO_THREAD_SAFETY_ANALYSIS {
              oom_lowmem);
 }
 
-LK_INIT_HOOK(libobject, object_glue_init, LK_INIT_LEVEL_THREADING);
+LK_INIT_HOOK(libobject, object_glue_init, LK_INIT_LEVEL_THREADING)

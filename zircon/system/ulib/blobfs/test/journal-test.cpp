@@ -195,4 +195,4 @@ static bool JournalProcessorResetWorkTest() {
 BEGIN_TEST_CASE(blobfsJournalTests)
 RUN_TEST(blobfs::JournalEntryLifetimeTest)
 RUN_TEST(blobfs::JournalProcessorResetWorkTest)
-END_TEST_CASE(blobfsJournalTests);
+END_TEST_CASE(blobfsJournalTests)

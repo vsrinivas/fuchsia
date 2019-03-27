@@ -85,7 +85,7 @@ public:
         void Cancel(zx_status_t status);
         fbl::RefPtr<ChannelDispatcher> get_channel() { return channel_; }
         zx_txid_t get_txid() const { return txid_; }
-        void set_txid(zx_txid_t txid) { txid_ = txid; };
+        void set_txid(zx_txid_t txid) { txid_ = txid; }
         zx_status_t Wait(const Deadline& deadline);
         // Returns any delivered message via out and the status.
         zx_status_t EndWait(MessagePacketPtr* out);

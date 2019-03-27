@@ -120,4 +120,4 @@ static void s912_hdcp_init(const void* driver_data, uint32_t length) {
     arm_smccc_smc(0x82000012, 0, 0, 0, 0, 0, 0, 0);
 }
 
-LK_PDEV_INIT(s912_hdcp_init, KDRV_AMLOGIC_HDCP, s912_hdcp_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(s912_hdcp_init, KDRV_AMLOGIC_HDCP, s912_hdcp_init, LK_INIT_LEVEL_PLATFORM)

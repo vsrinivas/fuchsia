@@ -28,9 +28,9 @@
 
 #define DEFINE_EACH_DEVICE(Test)                                                                   \
     bool Test##Raw(Volume::Version version) { return Test(version, false /* not FVM */); }         \
-    DEFINE_EACH(Test##Raw);                                                                        \
+    DEFINE_EACH(Test##Raw)                                                                        \
     bool Test##Fvm(Volume::Version version) { return Test(version, true /* FVM */); }              \
-    DEFINE_EACH(Test##Fvm);
+    DEFINE_EACH(Test##Fvm)
 
 #define RUN_EACH_DEVICE(Test)                                                                      \
     RUN_EACH(Test##Raw)                                                                            \

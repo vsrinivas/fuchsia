@@ -226,7 +226,7 @@ DEFINE_SMC_RESULT_STRUCT(CallWithArgResult, 4,
                          uint32_t, status,
                          uint32_t, arg1,
                          uint32_t, arg2,
-                         uint32_t, arg3);
+                         uint32_t, arg3)
 
 //
 // Get Shared Memory Config (0x0007)

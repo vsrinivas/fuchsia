@@ -195,16 +195,16 @@ protocol Example {
 }
 } // namespace
 
-BEGIN_TEST_CASE(errors_tests);
+BEGIN_TEST_CASE(errors_tests)
 
-RUN_TEST(GoodError);
-RUN_TEST(GoodErrorUnsigned);
-RUN_TEST(GoodErrorEnum);
-RUN_TEST(GoodErrorEnumAfter);
-RUN_TEST(BadErrorUnknownIdentifier);
-RUN_TEST(BadErrorWrongPrimitive);
-RUN_TEST(BadErrorMissingType);
-RUN_TEST(BadErrorNotAType);
-RUN_TEST(BadErrorNoResponse);
+RUN_TEST(GoodError)
+RUN_TEST(GoodErrorUnsigned)
+RUN_TEST(GoodErrorEnum)
+RUN_TEST(GoodErrorEnumAfter)
+RUN_TEST(BadErrorUnknownIdentifier)
+RUN_TEST(BadErrorWrongPrimitive)
+RUN_TEST(BadErrorMissingType)
+RUN_TEST(BadErrorNotAType)
+RUN_TEST(BadErrorNoResponse)
 
-END_TEST_CASE(errors_tests);
+END_TEST_CASE(errors_tests)

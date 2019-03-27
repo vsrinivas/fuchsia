@@ -120,8 +120,8 @@ private:
 
     // TODO(stevensd): This can race if this is changed right after
     // vsync but before the interrupt is handled.
-    uint8_t current_image_ TA_GUARDED(display_lock_);;
-    bool current_image_valid_ TA_GUARDED(display_lock_);;
+    uint8_t current_image_ TA_GUARDED(display_lock_);
+    bool current_image_valid_ TA_GUARDED(display_lock_);
 
     // display dimensions and format
     uint32_t width_;
@@ -148,7 +148,7 @@ private:
     ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);
 
     // Simple hashtable
-    ImportedImageBitmap imported_images_ TA_GUARDED(image_lock_);;
+    ImportedImageBitmap imported_images_ TA_GUARDED(image_lock_);
 
     // DSIIMPL Protocol
     ddk::DsiImplProtocolClient dsiimpl_;

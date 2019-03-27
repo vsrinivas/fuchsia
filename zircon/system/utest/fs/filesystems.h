@@ -16,7 +16,7 @@
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef struct fs_info {
     const char* name;
@@ -145,4 +145,4 @@ inline bool can_execute_test(const fs_info_t* info, const test_disk_t* requested
 #define RUN_FOR_ALL_FILESYSTEMS(case_name, CASE_TESTS)                     \
     RUN_FOR_ALL_FILESYSTEMS_SIZE(case_name, default_test_disk, CASE_TESTS)
 
-__END_CDECLS;
+__END_CDECLS

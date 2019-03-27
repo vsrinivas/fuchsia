@@ -29,14 +29,14 @@
 
 #define LOCAL_TRACE 0
 
-KCOUNTER(channel_packet_depth_1, "channel.depth.1");
-KCOUNTER(channel_packet_depth_4, "channel.depth.4");
-KCOUNTER(channel_packet_depth_16, "channel.depth.16");
-KCOUNTER(channel_packet_depth_64, "channel.depth.64");
-KCOUNTER(channel_packet_depth_256, "channel.depth.256");
-KCOUNTER(channel_packet_depth_unbounded, "channel.depth.unbounded");
-KCOUNTER(dispatcher_channel_create_count, "dispatcher.channel.create");
-KCOUNTER(dispatcher_channel_destroy_count, "dispatcher.channel.destroy");
+KCOUNTER(channel_packet_depth_1, "channel.depth.1")
+KCOUNTER(channel_packet_depth_4, "channel.depth.4")
+KCOUNTER(channel_packet_depth_16, "channel.depth.16")
+KCOUNTER(channel_packet_depth_64, "channel.depth.64")
+KCOUNTER(channel_packet_depth_256, "channel.depth.256")
+KCOUNTER(channel_packet_depth_unbounded, "channel.depth.unbounded")
+KCOUNTER(dispatcher_channel_create_count, "dispatcher.channel.create")
+KCOUNTER(dispatcher_channel_destroy_count, "dispatcher.channel.destroy")
 
 // static
 zx_status_t ChannelDispatcher::Create(fbl::RefPtr<ChannelDispatcher>* dispatcher0,

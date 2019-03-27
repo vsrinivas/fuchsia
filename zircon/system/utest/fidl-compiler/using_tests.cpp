@@ -132,9 +132,9 @@ using fidl.test.uzing.dependent; // duplicated
 
 } // namespace
 
-BEGIN_TEST_CASE(using_tests);
-RUN_TEST(valid_using_without_alias_test);
-RUN_TEST(valid_using_with_alias_test);
-RUN_TEST(invalid_did_not_declare_dependency_with_using);
-RUN_TEST(invalid_duplicate_using);
-END_TEST_CASE(using_tests);
+BEGIN_TEST_CASE(using_tests)
+RUN_TEST(valid_using_without_alias_test)
+RUN_TEST(valid_using_with_alias_test)
+RUN_TEST(invalid_did_not_declare_dependency_with_using)
+RUN_TEST(invalid_duplicate_using)
+END_TEST_CASE(using_tests)

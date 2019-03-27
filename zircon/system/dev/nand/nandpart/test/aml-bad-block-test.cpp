@@ -491,4 +491,4 @@ RUN_TEST(nand::FindBadBlockLastPageInvalidTest)
 RUN_TEST(nand::FindBadBlockNoValidTest)
 RUN_TEST(nand::FindBadBlockBigHoleTest)
 RUN_TEST(nand::MarkBlockBadFullBlockTest)
-END_TEST_CASE(AmlBadBlockTests);
+END_TEST_CASE(AmlBadBlockTests)

@@ -32,6 +32,6 @@ bool MallocFreeTest(perftest::RepeatState* state) {
 void RegisterTests() {
     perftest::RegisterTest("MallocFree/100bytes", MallocFreeTest);
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

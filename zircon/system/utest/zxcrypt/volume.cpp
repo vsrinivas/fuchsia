@@ -83,7 +83,7 @@ bool TestInit(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestInit);
+DEFINE_EACH_DEVICE(TestInit)
 
 bool TestCreate(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -105,7 +105,7 @@ bool TestCreate(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestCreate);
+DEFINE_EACH_DEVICE(TestCreate)
 
 bool TestUnlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -172,7 +172,7 @@ bool TestUnlock(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestUnlock);
+DEFINE_EACH_DEVICE(TestUnlock)
 
 bool TestEnroll(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -199,7 +199,7 @@ bool TestEnroll(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestEnroll);
+DEFINE_EACH_DEVICE(TestEnroll)
 
 bool TestRevoke(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -223,7 +223,7 @@ bool TestRevoke(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestRevoke);
+DEFINE_EACH_DEVICE(TestRevoke)
 
 bool TestShred(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -245,7 +245,7 @@ bool TestShred(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestShred);
+DEFINE_EACH_DEVICE(TestShred)
 
 BEGIN_TEST_CASE(VolumeTest)
 RUN_EACH_DEVICE(TestInit)

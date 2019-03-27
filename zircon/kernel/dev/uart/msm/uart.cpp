@@ -340,8 +340,8 @@ static void msm_uart_init_early(const void* driver_data, uint32_t length) {
     pdev_register_uart(&uart_ops);
 }
 
-LK_PDEV_INIT(msm_uart_init_early, KDRV_MSM_UART, msm_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY);
-LK_PDEV_INIT(msm_uart_init, KDRV_MSM_UART, msm_uart_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(msm_uart_init_early, KDRV_MSM_UART, msm_uart_init_early, LK_INIT_LEVEL_PLATFORM_EARLY)
+LK_PDEV_INIT(msm_uart_init, KDRV_MSM_UART, msm_uart_init, LK_INIT_LEVEL_PLATFORM)
 
 // boot time hacked version to directly print
 #if 0

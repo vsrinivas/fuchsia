@@ -22,8 +22,8 @@
 
 #define LOCAL_TRACE 0
 
-KCOUNTER(dispatcher_vmar_create_count, "dispatcher.vmar.create");
-KCOUNTER(dispatcher_vmar_destroy_count, "dispatcher.vmar.destroy");
+KCOUNTER(dispatcher_vmar_create_count, "dispatcher.vmar.create")
+KCOUNTER(dispatcher_vmar_destroy_count, "dispatcher.vmar.destroy")
 
 namespace {
 

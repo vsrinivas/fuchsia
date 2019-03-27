@@ -466,7 +466,7 @@ public:
     // ++ ZX_ERR_NOT_FOUND : No suitable region could be found in the set of
     // currently available regions which can satisfy the request.
     zx_status_t GetRegion(const ralloc_region_t& requested_region, Region::UPtr& out_region)
-        __TA_EXCLUDES(alloc_lock_);;
+        __TA_EXCLUDES(alloc_lock_);
 
     // Helper which defaults the alignment of a size/alignment based allocation
     // to pointer-aligned.

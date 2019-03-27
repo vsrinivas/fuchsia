@@ -569,4 +569,4 @@ static void arm_gic_v3_init(const void* driver_data, uint32_t length) {
     LTRACE_EXIT;
 }
 
-LK_PDEV_INIT(arm_gic_v3_init, KDRV_ARM_GIC_V3, arm_gic_v3_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(arm_gic_v3_init, KDRV_ARM_GIC_V3, arm_gic_v3_init, LK_INIT_LEVEL_PLATFORM_EARLY)

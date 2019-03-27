@@ -38,6 +38,6 @@ void RegisterTests() {
         perftest::RegisterTest(name.c_str(), MemcpyTest, size);
     }
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

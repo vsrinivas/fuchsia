@@ -187,7 +187,7 @@ class PciStdCapability : public fbl::SinglyLinkedListable<ktl::unique_ptr<PciStd
 public:
     PciStdCapability(const PcieDevice& dev, uint16_t base, uint8_t id)
         : dev_(dev), base_(base), id_(id) {}
-    virtual ~PciStdCapability() {};
+    virtual ~PciStdCapability() {}
     uint8_t id() const { return id_; }
     uint16_t base() const { return base_; }
     bool is_valid() const { return is_valid_; }

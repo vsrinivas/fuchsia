@@ -147,7 +147,7 @@ public:
         void* addr = arena_.Alloc();
         mutex_.Release();
         return addr ? new (addr) T(fbl::forward<Args>(args)...) : nullptr;
-    };
+    }
 
     void Delete(T* obj) {
         obj->~T();

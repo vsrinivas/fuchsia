@@ -181,10 +181,10 @@ protocol b {
 
 } // namespace
 
-BEGIN_TEST_CASE(ordinals_test);
-RUN_TEST(ordinal_cannot_be_zero);
-RUN_TEST(test_clashing_ordinal_values);
-RUN_TEST(test_clashing_ordinal_values_with_attribute);
-RUN_TEST(attribute_resolves_clashes);
-RUN_TEST(test_ordinal_value_is_sha256);
-END_TEST_CASE(ordinals_test);
+BEGIN_TEST_CASE(ordinals_test)
+RUN_TEST(ordinal_cannot_be_zero)
+RUN_TEST(test_clashing_ordinal_values)
+RUN_TEST(test_clashing_ordinal_values_with_attribute)
+RUN_TEST(attribute_resolves_clashes)
+RUN_TEST(test_ordinal_value_is_sha256)
+END_TEST_CASE(ordinals_test)

@@ -319,4 +319,4 @@ STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("memtype", "memory type commands", &cmd_memtype)
 #endif
-STATIC_COMMAND_END(memtype);
+STATIC_COMMAND_END(memtype)

@@ -59,7 +59,7 @@ static int cmd_sysreg(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND("sysreg", "read armv8 system register", &cmd_sysreg)
-STATIC_COMMAND_END(kernel);
+STATIC_COMMAND_END(kernel)
 
 static int cmd_sysreg(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {

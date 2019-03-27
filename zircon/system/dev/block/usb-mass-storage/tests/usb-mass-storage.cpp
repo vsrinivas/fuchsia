@@ -575,4 +575,4 @@ BEGIN_TEST_CASE(usb_mass_storage_tests)
 RUN_NAMED_TEST("USB mass storage device test (read)", UmsTestRead)
 RUN_NAMED_TEST("USB mass storage device test (write)", UmsTestWrite)
 RUN_NAMED_TEST("USB mass storage device test (flush)", UmsTestFlush)
-END_TEST_CASE(usb_mass_storage_tests);
+END_TEST_CASE(usb_mass_storage_tests)

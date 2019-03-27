@@ -216,19 +216,19 @@ typedef struct {
 // TODO(dje): Later return a trace descriptor.
 #define IOCTL_INSNTRACE_ALLOC_TRACE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 0)
-IOCTL_WRAPPER_IN(ioctl_insntrace_alloc_trace, IOCTL_INSNTRACE_ALLOC_TRACE, ioctl_insntrace_trace_config_t);
+IOCTL_WRAPPER_IN(ioctl_insntrace_alloc_trace, IOCTL_INSNTRACE_ALLOC_TRACE, ioctl_insntrace_trace_config_t)
 
 // release resources allocated with IOCTL_INSNTRACE_ALLOC_TRACE
 // TODO(dje): Later allow allocating multiple traces.
 #define IOCTL_INSNTRACE_FREE_TRACE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 1)
-IOCTL_WRAPPER(ioctl_insntrace_free_trace, IOCTL_INSNTRACE_FREE_TRACE);
+IOCTL_WRAPPER(ioctl_insntrace_free_trace, IOCTL_INSNTRACE_FREE_TRACE)
 
 // fetch the config of a trace
 // Output: ioctl_insntrace_trace_config_t
 #define IOCTL_INSNTRACE_GET_TRACE_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 2)
-IOCTL_WRAPPER_OUT(ioctl_insntrace_get_trace_config, IOCTL_INSNTRACE_GET_TRACE_CONFIG, ioctl_insntrace_trace_config_t);
+IOCTL_WRAPPER_OUT(ioctl_insntrace_get_trace_config, IOCTL_INSNTRACE_GET_TRACE_CONFIG, ioctl_insntrace_trace_config_t)
 
 typedef struct {
     // A "buffer" is made up of |num_chunks| chunks with each chunk having size
@@ -251,7 +251,7 @@ typedef struct {
 // buffer descriptor is the number of the cpu using the buffer.
 #define IOCTL_INSNTRACE_ALLOC_BUFFER \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 3)
-IOCTL_WRAPPER_INOUT(ioctl_insntrace_alloc_buffer, IOCTL_INSNTRACE_ALLOC_BUFFER, ioctl_insntrace_buffer_config_t, zx_itrace_buffer_descriptor_t);
+IOCTL_WRAPPER_INOUT(ioctl_insntrace_alloc_buffer, IOCTL_INSNTRACE_ALLOC_BUFFER, ioctl_insntrace_buffer_config_t, zx_itrace_buffer_descriptor_t)
 
 typedef struct {
     // for IOCTL_KIND_SET_HANDLE first element must be the handle
@@ -264,14 +264,14 @@ typedef struct {
 #define IOCTL_INSNTRACE_ASSIGN_THREAD_BUFFER \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_INSNTRACE, 4)
 IOCTL_WRAPPER_IN(ioctl_insntrace_assign_thread_buffer, IOCTL_INSNTRACE_ASSIGN_THREAD_BUFFER,
-                 ioctl_insntrace_assign_thread_buffer_t);
+                 ioctl_insntrace_assign_thread_buffer_t)
 
 // release a buffer from a thread
 // Input: ioctl_insntrace_assign_thread_buffer_t
 #define IOCTL_INSNTRACE_RELEASE_THREAD_BUFFER \
     IOCTL(IOCTL_KIND_SET_HANDLE, IOCTL_FAMILY_INSNTRACE, 5)
 IOCTL_WRAPPER_IN(ioctl_insntrace_release_thread_buffer, IOCTL_INSNTRACE_RELEASE_THREAD_BUFFER,
-                 ioctl_insntrace_assign_thread_buffer_t);
+                 ioctl_insntrace_assign_thread_buffer_t)
 
 // return config data for a trace buffer
 // Input: zx_itrace_buffer_descriptor_t
@@ -279,7 +279,7 @@ IOCTL_WRAPPER_IN(ioctl_insntrace_release_thread_buffer, IOCTL_INSNTRACE_RELEASE_
 #define IOCTL_INSNTRACE_GET_BUFFER_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 6)
 IOCTL_WRAPPER_INOUT(ioctl_insntrace_get_buffer_config, IOCTL_INSNTRACE_GET_BUFFER_CONFIG,
-                    zx_itrace_buffer_descriptor_t, ioctl_insntrace_buffer_config_t);
+                    zx_itrace_buffer_descriptor_t, ioctl_insntrace_buffer_config_t)
 
 // This contains the run-time produced data about the buffer.
 // Not the trace data itself, just info about the data.
@@ -297,7 +297,7 @@ typedef struct {
 #define IOCTL_INSNTRACE_GET_BUFFER_INFO \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 7)
 IOCTL_WRAPPER_INOUT(ioctl_insntrace_get_buffer_info, IOCTL_INSNTRACE_GET_BUFFER_INFO,
-                    zx_itrace_buffer_descriptor_t, ioctl_insntrace_buffer_info_t);
+                    zx_itrace_buffer_descriptor_t, ioctl_insntrace_buffer_info_t)
 
 typedef struct {
     zx_itrace_buffer_descriptor_t descriptor;
@@ -311,24 +311,24 @@ typedef struct {
 #define IOCTL_INSNTRACE_GET_CHUNK_HANDLE \
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_INSNTRACE, 8)
 IOCTL_WRAPPER_INOUT(ioctl_insntrace_get_chunk_handle, IOCTL_INSNTRACE_GET_CHUNK_HANDLE,
-                    ioctl_insntrace_chunk_handle_req_t, zx_handle_t);
+                    ioctl_insntrace_chunk_handle_req_t, zx_handle_t)
 
 // free a trace buffer
 // Input: zx_itrace_buffer_descriptor_t
 #define IOCTL_INSNTRACE_FREE_BUFFER \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 9)
 IOCTL_WRAPPER_IN(ioctl_insntrace_free_buffer, IOCTL_INSNTRACE_FREE_BUFFER,
-                 zx_itrace_buffer_descriptor_t);
+                 zx_itrace_buffer_descriptor_t)
 
 // turn on processor tracing
 #define IOCTL_INSNTRACE_START \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 10)
-IOCTL_WRAPPER(ioctl_insntrace_start, IOCTL_INSNTRACE_START);
+IOCTL_WRAPPER(ioctl_insntrace_start, IOCTL_INSNTRACE_START)
 
 // turn off processor tracing
 #define IOCTL_INSNTRACE_STOP \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_INSNTRACE, 11)
-IOCTL_WRAPPER(ioctl_insntrace_stop, IOCTL_INSNTRACE_STOP);
+IOCTL_WRAPPER(ioctl_insntrace_stop, IOCTL_INSNTRACE_STOP)
 
 #endif // __Fuchsia__
 

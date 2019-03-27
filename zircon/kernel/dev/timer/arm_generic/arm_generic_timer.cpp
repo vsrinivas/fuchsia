@@ -341,7 +341,7 @@ static void arm_generic_timer_init_secondary_cpu(uint level) {
 /* secondary cpu initialize the timer just before the kernel starts with interrupts enabled */
 LK_INIT_HOOK_FLAGS(arm_generic_timer_init_secondary_cpu,
                    arm_generic_timer_init_secondary_cpu,
-                   LK_INIT_LEVEL_THREADING - 1, LK_INIT_FLAG_SECONDARY_CPUS);
+                   LK_INIT_LEVEL_THREADING - 1, LK_INIT_FLAG_SECONDARY_CPUS)
 
 static void arm_generic_timer_resume_cpu(uint level) {
     /* Always trigger a timer interrupt on each cpu for now */
@@ -350,7 +350,7 @@ static void arm_generic_timer_resume_cpu(uint level) {
 }
 
 LK_INIT_HOOK_FLAGS(arm_generic_timer_resume_cpu, arm_generic_timer_resume_cpu,
-                   LK_INIT_LEVEL_PLATFORM, LK_INIT_FLAG_CPU_RESUME);
+                   LK_INIT_LEVEL_PLATFORM, LK_INIT_FLAG_CPU_RESUME)
 
 static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length) {
     ASSERT(length >= sizeof(dcfg_arm_generic_timer_driver_t));
@@ -380,4 +380,4 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
     arm_generic_timer_init(driver->freq_override);
 }
 
-LK_PDEV_INIT(arm_generic_timer_pdev_init, KDRV_ARM_GENERIC_TIMER, arm_generic_timer_pdev_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(arm_generic_timer_pdev_init, KDRV_ARM_GENERIC_TIMER, arm_generic_timer_pdev_init, LK_INIT_LEVEL_PLATFORM_EARLY)

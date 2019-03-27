@@ -101,4 +101,4 @@ static int cmd_hwp(int argc, const cmd_args* argv, uint32_t flags) {
 
 STATIC_COMMAND_START
 STATIC_COMMAND("hwp", "hardware controlled performance states\n", &cmd_hwp)
-STATIC_COMMAND_END(hwp);
+STATIC_COMMAND_END(hwp)

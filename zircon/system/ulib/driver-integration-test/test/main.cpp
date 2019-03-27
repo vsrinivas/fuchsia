@@ -62,4 +62,4 @@ bool enumeration_test() {
 
 BEGIN_TEST_CASE(driver_integration_tests)
 RUN_TEST(enumeration_test)
-END_TEST_CASE(driver_integration_tests);
+END_TEST_CASE(driver_integration_tests)

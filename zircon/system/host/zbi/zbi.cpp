@@ -1498,7 +1498,6 @@ private:
         ZBI_ALL_TYPES(kITemTypes_Element)
 #undef kitemtypes_element
     };
-    ;
 
     static constexpr ItemTypeInfo ItemTypeInfo(uint32_t zbi_type) {
         for (const auto& t : kItemTypes_) {

@@ -27,4 +27,4 @@ STATIC_COMMAND("spinner", "create a spinning thread", &spinner)
 STATIC_COMMAND("timer_diag", "prints timer diagnostics", &timer_diag)
 STATIC_COMMAND("timer_stress", "runs a timer stress test", &timer_stress)
 STATIC_COMMAND("uart_tests", "tests uart Tx", &uart_tests)
-STATIC_COMMAND_END(tests);
+STATIC_COMMAND_END(tests)

@@ -1469,16 +1469,16 @@ struct DocCommentWithQuotes {};
 
 } // namespace
 
-BEGIN_TEST_CASE(json_generator_tests);
-RUN_TEST(json_generator_test_empty_struct);
-RUN_TEST(json_generator_test_struct);
-RUN_TEST(json_generator_test_table);
-RUN_TEST(json_generator_test_union);
-RUN_TEST(json_generator_test_xunion);
-RUN_TEST(json_generator_test_inheritance);
-RUN_TEST(json_generator_test_inheritance_with_recursive_decl);
-RUN_TEST(json_generator_test_error);
-RUN_TEST(json_generator_test_byte_and_bytes);
-RUN_TEST(json_generator_test_bits);
-RUN_TEST(json_generator_check_escaping);
-END_TEST_CASE(json_generator_tests);
+BEGIN_TEST_CASE(json_generator_tests)
+RUN_TEST(json_generator_test_empty_struct)
+RUN_TEST(json_generator_test_struct)
+RUN_TEST(json_generator_test_table)
+RUN_TEST(json_generator_test_union)
+RUN_TEST(json_generator_test_xunion)
+RUN_TEST(json_generator_test_inheritance)
+RUN_TEST(json_generator_test_inheritance_with_recursive_decl)
+RUN_TEST(json_generator_test_error)
+RUN_TEST(json_generator_test_byte_and_bytes)
+RUN_TEST(json_generator_test_bits)
+RUN_TEST(json_generator_check_escaping)
+END_TEST_CASE(json_generator_tests)

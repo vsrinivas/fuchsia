@@ -37,7 +37,7 @@ bool TestBind(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestBind);
+DEFINE_EACH_DEVICE(TestBind)
 
 // TODO(aarongreen): When ZX-1130 is resolved, add tests that check zxcrypt_rekey and zxcrypt_shred.
 
@@ -60,7 +60,7 @@ bool TestDdkGetSize(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestDdkGetSize);
+DEFINE_EACH_DEVICE(TestDdkGetSize)
 
 // FIDL tests
 bool TestBlockGetInfo(Volume::Version version, bool fvm) {
@@ -84,7 +84,7 @@ bool TestBlockGetInfo(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestBlockGetInfo);
+DEFINE_EACH_DEVICE(TestBlockGetInfo)
 
 bool TestBlockFvmQuery(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -115,7 +115,7 @@ bool TestBlockFvmQuery(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestBlockFvmQuery);
+DEFINE_EACH_DEVICE(TestBlockFvmQuery)
 
 bool QueryLeadingFvmSlice(const TestDevice& device, bool fvm) {
     BEGIN_HELPER;
@@ -174,7 +174,7 @@ bool TestBlockFvmVSliceQuery(Volume::Version version, bool fvm) {
     EXPECT_TRUE(QueryLeadingFvmSlice(device, fvm));
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestBlockFvmVSliceQuery);
+DEFINE_EACH_DEVICE(TestBlockFvmVSliceQuery)
 
 bool TestBlockFvmShrinkAndExtend(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -210,7 +210,7 @@ bool TestBlockFvmShrinkAndExtend(Volume::Version version, bool fvm) {
     }
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestBlockFvmShrinkAndExtend);
+DEFINE_EACH_DEVICE(TestBlockFvmShrinkAndExtend)
 
 // Device::DdkIotxnQueue tests
 bool TestFdZeroLength(Volume::Version version, bool fvm) {
@@ -224,7 +224,7 @@ bool TestFdZeroLength(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestFdZeroLength);
+DEFINE_EACH_DEVICE(TestFdZeroLength)
 
 bool TestFdFirstBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -238,7 +238,7 @@ bool TestFdFirstBlock(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestFdFirstBlock);
+DEFINE_EACH_DEVICE(TestFdFirstBlock)
 
 bool TestFdLastBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -253,7 +253,7 @@ bool TestFdLastBlock(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestFdLastBlock);
+DEFINE_EACH_DEVICE(TestFdLastBlock)
 
 bool TestFdAllBlocks(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -267,7 +267,7 @@ bool TestFdAllBlocks(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestFdAllBlocks);
+DEFINE_EACH_DEVICE(TestFdAllBlocks)
 
 bool TestFdUnaligned(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -298,7 +298,7 @@ bool TestFdUnaligned(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestFdUnaligned);
+DEFINE_EACH_DEVICE(TestFdUnaligned)
 
 bool TestFdOutOfBounds(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -344,7 +344,7 @@ bool TestFdOutOfBounds(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestFdOutOfBounds);
+DEFINE_EACH_DEVICE(TestFdOutOfBounds)
 
 bool TestFdOneToMany(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -363,7 +363,7 @@ bool TestFdOneToMany(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestFdOneToMany);
+DEFINE_EACH_DEVICE(TestFdOneToMany)
 
 bool TestFdManyToOne(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -382,7 +382,7 @@ bool TestFdManyToOne(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestFdManyToOne);
+DEFINE_EACH_DEVICE(TestFdManyToOne)
 
 // Device::BlockWrite and Device::BlockRead tests
 bool TestVmoZeroLength(Volume::Version version, bool fvm) {
@@ -397,7 +397,7 @@ bool TestVmoZeroLength(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestVmoZeroLength);
+DEFINE_EACH_DEVICE(TestVmoZeroLength)
 
 bool TestVmoFirstBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -410,7 +410,7 @@ bool TestVmoFirstBlock(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestVmoFirstBlock);
+DEFINE_EACH_DEVICE(TestVmoFirstBlock)
 
 bool TestVmoLastBlock(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -424,7 +424,7 @@ bool TestVmoLastBlock(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestVmoLastBlock);
+DEFINE_EACH_DEVICE(TestVmoLastBlock)
 
 bool TestVmoAllBlocks(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -438,7 +438,7 @@ bool TestVmoAllBlocks(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestVmoAllBlocks);
+DEFINE_EACH_DEVICE(TestVmoAllBlocks)
 
 bool TestVmoOutOfBounds(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -463,7 +463,7 @@ bool TestVmoOutOfBounds(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestVmoOutOfBounds);
+DEFINE_EACH_DEVICE(TestVmoOutOfBounds)
 
 bool TestVmoOneToMany(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -480,7 +480,7 @@ bool TestVmoOneToMany(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestVmoOneToMany);
+DEFINE_EACH_DEVICE(TestVmoOneToMany)
 
 bool TestVmoManyToOne(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -498,7 +498,7 @@ bool TestVmoManyToOne(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestVmoManyToOne);
+DEFINE_EACH_DEVICE(TestVmoManyToOne)
 
 bool TestVmoStall(Volume::Version version, bool fvm) {
     BEGIN_TEST;
@@ -531,7 +531,7 @@ bool TestVmoStall(Volume::Version version, bool fvm) {
 
     END_TEST;
 }
-DEFINE_EACH_DEVICE(TestVmoStall);
+DEFINE_EACH_DEVICE(TestVmoStall)
 
 bool TestWriteAfterFvmExtend(Volume::Version version) {
     BEGIN_TEST;
@@ -565,7 +565,7 @@ bool TestWriteAfterFvmExtend(Volume::Version version) {
 
     END_TEST;
 }
-DEFINE_EACH(TestWriteAfterFvmExtend);
+DEFINE_EACH(TestWriteAfterFvmExtend)
 
 // TODO(aarongreen): Currently, we're using XTS, which provides no data integrity.  When possible,
 // we should switch to an AEAD, which would allow us to detect data corruption when doing I/O.

@@ -9,7 +9,7 @@
 
 #include <stdint.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef uint8_t input_report_id_t;
 typedef uint16_t input_report_size_t;
@@ -31,6 +31,6 @@ typedef struct hid_reports {
 zx_status_t hid_lib_parse_reports(const uint8_t* buf, const size_t buf_len,
                                   hid_reports_t* reports);
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif // ZIRCON_SYSTEM_DEV_INPUT_HID_HID_PARSER_H_

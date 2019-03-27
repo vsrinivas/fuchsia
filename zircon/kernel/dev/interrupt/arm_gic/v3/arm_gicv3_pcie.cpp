@@ -35,6 +35,6 @@ static void arm_gicv3_pcie_init(const void* driver_data, uint32_t length) {
     }
 }
 
-LK_PDEV_INIT(arm_gicv3_pcie_init, KDRV_ARM_GIC_V3, arm_gicv3_pcie_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(arm_gicv3_pcie_init, KDRV_ARM_GIC_V3, arm_gicv3_pcie_init, LK_INIT_LEVEL_PLATFORM)
 
 #endif // if WITH_KERNEL_PCIE

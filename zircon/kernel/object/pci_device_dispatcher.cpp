@@ -21,8 +21,8 @@
 #include <err.h>
 #include <trace.h>
 
-KCOUNTER(dispatcher_pci_device_create_count, "dispatcher.pci_device.create");
-KCOUNTER(dispatcher_pci_device_destroy_count, "dispatcher.pci_device.destroy");
+KCOUNTER(dispatcher_pci_device_create_count, "dispatcher.pci_device.create")
+KCOUNTER(dispatcher_pci_device_destroy_count, "dispatcher.pci_device.destroy")
 
 zx_status_t PciDeviceDispatcher::Create(uint32_t                  index,
                                         zx_pcie_device_info_t*    out_info,

@@ -259,4 +259,4 @@ RUN_NAMED_TEST("EncodedMessage test", EncodedMessageTest)
 RUN_NAMED_TEST("DecodedMessage test", DecodedMessageTest)
 RUN_NAMED_TEST("Round trip test", RoundTripTest)
 RUN_NAMED_TEST("Array layout test", ArrayLayoutTest)
-END_TEST_CASE(llcpp_types_tests);
+END_TEST_CASE(llcpp_types_tests)

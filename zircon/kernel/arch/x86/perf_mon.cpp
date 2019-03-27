@@ -573,7 +573,7 @@ static void x86_perfmon_init_once(uint level)
     printf("PMU: version %u\n", perfmon_version);
 }
 
-LK_INIT_HOOK(x86_perfmon, x86_perfmon_init_once, LK_INIT_LEVEL_ARCH);
+LK_INIT_HOOK(x86_perfmon, x86_perfmon_init_once, LK_INIT_LEVEL_ARCH)
 
 static void x86_perfmon_clear_overflow_indicators() {
     uint64_t value = (IA32_PERF_GLOBAL_OVF_CTRL_CLR_COND_CHGD_MASK |

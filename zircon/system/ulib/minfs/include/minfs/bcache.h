@@ -75,7 +75,7 @@ public:
 
     // Returns the maximum number of available blocks,
     // assuming the filesystem is non-resizable.
-    uint32_t Maxblk() const { return blockmax_; };
+    uint32_t Maxblk() const { return blockmax_; }
 
 #ifdef __Fuchsia__
     zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len);

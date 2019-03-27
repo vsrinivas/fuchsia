@@ -20,8 +20,8 @@
 
 #include "priv.h"
 
-KCOUNTER(profile_create, "profile.create");
-KCOUNTER(profile_set,    "profile.set");
+KCOUNTER(profile_create, "profile.create")
+KCOUNTER(profile_set,    "profile.set")
 
 
 // zx_status_t zx_profile_create

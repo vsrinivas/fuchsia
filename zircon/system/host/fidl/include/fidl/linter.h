@@ -158,7 +158,7 @@ private:
 class IdentifierTokenizer {
 public:
     IdentifierTokenizer(fidl::ErrorReporter* error_reporter)
-        : upper_camel_case_(*this, error_reporter){};
+        : upper_camel_case_(*this, error_reporter) {}
 
     std::vector<std::string> Tokenize(std::string& identifier) const;
 

@@ -153,7 +153,7 @@ protocol Child {
     ASSERT_STR_STR(errors[0].c_str(), "Cannot attach attributes to compose stanza");
 
     END_TEST;
-};
+}
 
 bool invalid_cannot_compose_yourself() {
     BEGIN_TEST;
@@ -173,7 +173,7 @@ protocol Narcisse {
     ASSERT_STR_STR(errors[0].c_str(), "There is an includes-cycle in declaration");
 
     END_TEST;
-};
+}
 
 bool invalid_cannot_compose_twice_the_same_protocol() {
     BEGIN_TEST;
@@ -360,18 +360,18 @@ protocol Child {
 
 } // namespace
 
-BEGIN_TEST_CASE(protocol_tests);
-RUN_TEST(valid_empty_protocol);
-RUN_TEST(valid_compose_method);
-RUN_TEST(valid_protocol_composition);
-RUN_TEST(invalid_colon_syntax_is_not_supported);
-RUN_TEST(invalid_cannot_attach_attributes_to_compose);
-RUN_TEST(invalid_cannot_compose_yourself);
-RUN_TEST(invalid_cannot_compose_twice_the_same_protocol);
-RUN_TEST(invalid_cannot_use_ordinals_in_protocol_declaration);
-RUN_TEST(invalid_no_other_pragma_than_compose);
-RUN_TEST(invalid_composed_protocols_have_clashing_names);
-RUN_TEST(invalid_composed_protocols_have_clashing_ordinals);
-RUN_TEST(invalid_simple_constraint_applies_to_composed_methods_too);
-RUN_TEST(invalid_missing_fragile_base_on_composed_protocol);
-END_TEST_CASE(protocol_tests);
+BEGIN_TEST_CASE(protocol_tests)
+RUN_TEST(valid_empty_protocol)
+RUN_TEST(valid_compose_method)
+RUN_TEST(valid_protocol_composition)
+RUN_TEST(invalid_colon_syntax_is_not_supported)
+RUN_TEST(invalid_cannot_attach_attributes_to_compose)
+RUN_TEST(invalid_cannot_compose_yourself)
+RUN_TEST(invalid_cannot_compose_twice_the_same_protocol)
+RUN_TEST(invalid_cannot_use_ordinals_in_protocol_declaration)
+RUN_TEST(invalid_no_other_pragma_than_compose)
+RUN_TEST(invalid_composed_protocols_have_clashing_names)
+RUN_TEST(invalid_composed_protocols_have_clashing_ordinals)
+RUN_TEST(invalid_simple_constraint_applies_to_composed_methods_too)
+RUN_TEST(invalid_missing_fragile_base_on_composed_protocol)
+END_TEST_CASE(protocol_tests)

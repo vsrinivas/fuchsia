@@ -728,7 +728,7 @@ bool Controller::FN_NAME(uint64_t display_id, fbl::Array<TYPE>* data_out) { \
 }
 
 GET_DISPLAY_INFO(GetCursorInfo,  cursor_infos_, cursor_info_t)
-GET_DISPLAY_INFO(GetSupportedPixelFormats, pixel_formats_, zx_pixel_format_t);
+GET_DISPLAY_INFO(GetSupportedPixelFormats, pixel_formats_, zx_pixel_format_t)
 
 bool Controller::GetDisplayIdentifiers(uint64_t display_id, const char** manufacturer_name,
                                        const char** monitor_name, const char** monitor_serial) {

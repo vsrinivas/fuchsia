@@ -100,4 +100,4 @@ static bool auto_call_test()
 
 BEGIN_TEST_CASE(auto_call_tests)
 RUN_NAMED_TEST("Auto call test", auto_call_test)
-END_TEST_CASE(auto_call_tests);
+END_TEST_CASE(auto_call_tests)

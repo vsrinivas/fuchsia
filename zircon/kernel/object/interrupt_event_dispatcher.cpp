@@ -15,8 +15,8 @@
 #include <platform.h>
 #include <zircon/rights.h>
 
-KCOUNTER(dispatcher_interrupt_event_create_count, "dispatcher.interrupt_event.create");
-KCOUNTER(dispatcher_interrupt_event_destroy_count, "dispatcher.interrupt_event.destroy");
+KCOUNTER(dispatcher_interrupt_event_create_count, "dispatcher.interrupt_event.create")
+KCOUNTER(dispatcher_interrupt_event_destroy_count, "dispatcher.interrupt_event.destroy")
 
 zx_status_t InterruptEventDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher,
                                              zx_rights_t* rights,

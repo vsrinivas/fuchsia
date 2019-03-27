@@ -66,7 +66,7 @@ protected:
 // register block), but is not implemented yet.
 class PcieRoot : public PciRoot {
     PcieRoot(uint32_t managed_bus_id, ddk::PcirootProtocolClient proto)
-        : PciRoot(managed_bus_id, proto){};
+        : PciRoot(managed_bus_id, proto) {}
     virtual ~PcieRoot() {}
 };
 

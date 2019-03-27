@@ -50,4 +50,4 @@ bool WaitTest() {
 BEGIN_TEST_CASE(ConditionVariableTests)
 RUN_TEST(fbl::EmptySignalTest)
 RUN_TEST(fbl::WaitTest)
-END_TEST_CASE(ConditionVariableTests);
+END_TEST_CASE(ConditionVariableTests)

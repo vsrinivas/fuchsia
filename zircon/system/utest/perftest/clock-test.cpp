@@ -37,6 +37,6 @@ void RegisterTests() {
     perftest::RegisterSimpleTest<ClockGetThreadTest>("ClockGetThread");
     perftest::RegisterSimpleTest<TicksGetTest>("TicksGet");
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

@@ -237,10 +237,10 @@ static bool unions(void) {
 
 } // namespace
 
-BEGIN_TEST_CASE(max_handles_tests);
-RUN_TEST(simple_structs);
-RUN_TEST(simple_tables);
-RUN_TEST(arrays);
-RUN_TEST(vectors);
-RUN_TEST(unions);
-END_TEST_CASE(max_handles_tests);
+BEGIN_TEST_CASE(max_handles_tests)
+RUN_TEST(simple_structs)
+RUN_TEST(simple_tables)
+RUN_TEST(arrays)
+RUN_TEST(vectors)
+RUN_TEST(unions)
+END_TEST_CASE(max_handles_tests)

@@ -54,4 +54,4 @@ static void hisi_power_init(const void* driver_data, uint32_t length) {
     pdev_register_power(&hisi_power_ops);
 }
 
-LK_PDEV_INIT(hisi_power_init, KDRV_HISILICON_POWER, hisi_power_init, LK_INIT_LEVEL_PLATFORM);
+LK_PDEV_INIT(hisi_power_init, KDRV_HISILICON_POWER, hisi_power_init, LK_INIT_LEVEL_PLATFORM)

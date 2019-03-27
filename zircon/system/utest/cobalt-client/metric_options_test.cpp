@@ -295,7 +295,7 @@ RUN_TEST(TestLocal)
 RUN_TEST(TestRemote)
 RUN_TEST(TestLocalAndRemote)
 RUN_TEST(TestLazy)
-END_TEST_CASE(MetricOptionsTest);
+END_TEST_CASE(MetricOptionsTest)
 
 BEGIN_TEST_CASE(HistogramOptionsTest)
 RUN_TEST(TestMakeExponentialOptions)

@@ -331,7 +331,7 @@ static int cmd_heap(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("heap", "heap debug commands", &cmd_heap, CMD_AVAIL_ALWAYS)
-STATIC_COMMAND_END(heap);
+STATIC_COMMAND_END(heap)
 
 static int cmd_heap(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 2) {

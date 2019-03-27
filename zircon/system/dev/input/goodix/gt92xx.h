@@ -46,7 +46,7 @@ public:
                  ddk::GpioProtocolClient intr, ddk::GpioProtocolClient reset)
         : ddk::Device<Gt92xxDevice, ddk::Unbindable>(device),
           i2c_(std::move(i2c)), int_gpio_(std::move(intr)),
-          reset_gpio_(std::move(reset)){};
+          reset_gpio_(std::move(reset)){}
 
     static zx_status_t Create(zx_device_t* device);
 

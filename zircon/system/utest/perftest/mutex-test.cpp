@@ -27,6 +27,6 @@ bool MutexLockUnlockTest(perftest::RepeatState* state) {
 void RegisterTests() {
     perftest::RegisterTest("MutexLockUnlock", MutexLockUnlockTest);
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

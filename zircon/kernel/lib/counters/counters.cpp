@@ -24,7 +24,7 @@ static_assert(sizeof(vmo_header) ==
               offsetof(counters::DescriptorVmo, descriptor_table_size));
 
 // This counter gets a constant value just as a sanity check.
-KCOUNTER(magic, "counters.magic");
+KCOUNTER(magic, "counters.magic")
 
 static void counters_init(unsigned level) {
     // Wire the memory defined in the .bss section to the counters.
@@ -34,5 +34,4 @@ static void counters_init(unsigned level) {
     magic.Add(counters::DescriptorVmo::kMagic);
 }
 
-LK_INIT_HOOK(kcounters, counters_init, LK_INIT_LEVEL_PLATFORM_EARLY);
-
+LK_INIT_HOOK(kcounters, counters_init, LK_INIT_LEVEL_PLATFORM_EARLY)

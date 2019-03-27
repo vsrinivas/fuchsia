@@ -356,6 +356,7 @@ config("default_warnings") {
   cflags_cc = [
     "-Wconversion",
     "-Wno-sign-conversion",
+    "-Wextra-semi",
   ]
   if (is_gcc) {
     cflags += [

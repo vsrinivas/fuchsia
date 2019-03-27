@@ -234,10 +234,10 @@ static bool external_definitions(void) {
 
 } // namespace
 
-BEGIN_TEST_CASE(max_bytes_multipass_tests);
-RUN_TEST(simple_struct_array);
-RUN_TEST(optional_struct_array);
-RUN_TEST(handle_struct_array);
-RUN_TEST(optional_handle_union_array);
-RUN_TEST(external_definitions);
-END_TEST_CASE(max_bytes_multipass_tests);
+BEGIN_TEST_CASE(max_bytes_multipass_tests)
+RUN_TEST(simple_struct_array)
+RUN_TEST(optional_struct_array)
+RUN_TEST(handle_struct_array)
+RUN_TEST(optional_handle_union_array)
+RUN_TEST(external_definitions)
+END_TEST_CASE(max_bytes_multipass_tests)

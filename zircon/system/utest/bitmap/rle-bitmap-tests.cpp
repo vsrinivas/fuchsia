@@ -524,7 +524,7 @@ RUN_TEST(ClearAll)
 RUN_TEST(SetOutOfOrder)
 RUN_TEST(SetOverlap)
 RUN_TEST(FindRange)
-END_TEST_CASE(rle_bitmap_tests);
+END_TEST_CASE(rle_bitmap_tests)
 
 } // namespace tests
 } // namespace bitmap

@@ -12,7 +12,7 @@ typedef struct {
 } aml_fclk_rate_table_t;
 
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Return the Fixed clk rate table.
 const aml_fclk_rate_table_t* s905d2_fclk_get_rate_table(void);
@@ -20,4 +20,4 @@ const aml_fclk_rate_table_t* s905d2_fclk_get_rate_table(void);
 // Return the rate table count.
 size_t s905d2_fclk_get_rate_table_count(void);
 
-__END_CDECLS;
+__END_CDECLS

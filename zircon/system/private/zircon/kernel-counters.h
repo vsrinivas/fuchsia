@@ -61,11 +61,11 @@ struct DescriptorVmo {
 
     constexpr const Descriptor* begin() const {
         return descriptor_table;
-    };
+    }
 
     constexpr const Descriptor* end() const {
         return &descriptor_table[num_counters()];
-    };
+    }
 };
 static_assert(offsetof(DescriptorVmo, descriptor_table_size) == 16 &&
               offsetof(DescriptorVmo, descriptor_table) == 24,

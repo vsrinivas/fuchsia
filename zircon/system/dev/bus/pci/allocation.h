@@ -78,7 +78,7 @@ public:
 
 protected:
     PciAllocation(zx::resource&& resource)
-        : resource_(std::move(resource)){};
+        : resource_(std::move(resource)) {}
     const zx::resource resource_;
 
 private:
@@ -91,7 +91,7 @@ private:
     // This is only needed for PciRegionAllocators because PciRootAllocators do not
     // hold a backing PciAllocation object.
     friend class PciRegionAllocator;
-    const zx::resource& resource() const { return resource_; };
+    const zx::resource& resource() const { return resource_; }
 };
 
 class PciRootAllocation final : public PciAllocation {
@@ -120,7 +120,7 @@ private:
 class PciRegionAllocation final : public PciAllocation {
 public:
     PciRegionAllocation(zx::resource&& resource, RegionAllocator::Region::UPtr&& region)
-        : PciAllocation(std::move(resource)), region_(std::move(region)){};
+        : PciAllocation(std::move(resource)), region_(std::move(region)) {}
     zx_paddr_t base() const final { return region_->base; }
     size_t size() const final { return region_->size; }
 

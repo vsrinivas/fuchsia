@@ -101,4 +101,4 @@ RUN_TEST(blobfs::ReserveResetTest)
 RUN_TEST(blobfs::ConstructorTest)
 RUN_TEST(blobfs::MoveConstructorTest)
 RUN_TEST(blobfs::MoveAssignmentTest)
-END_TEST_CASE(blobfsNodeReserverTests);
+END_TEST_CASE(blobfsNodeReserverTests)

@@ -251,7 +251,7 @@ int unittest_set_verbosity_level(int new_level);
         .name = #case_name,                                             \
         .test_case = case_name,                                         \
     };                                                                  \
-    DEFINE_REGISTER_TEST_CASE(case_name);
+    DEFINE_REGISTER_TEST_CASE(case_name)
 
 #define RUN_NAMED_TEST_TYPE(name, test, test_type, enable_crash_handler)       \
     if (!test_name_matching || strcmp(test_name_matching, name) == 0) {        \

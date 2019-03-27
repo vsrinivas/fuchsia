@@ -200,6 +200,6 @@ bool StartTest(perftest::RepeatState* state) {
 void RegisterTests() {
     perftest::RegisterTest("Process/Start", StartTest);
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 } // namespace

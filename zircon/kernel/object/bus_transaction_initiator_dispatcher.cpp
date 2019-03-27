@@ -14,8 +14,8 @@
 #include <vm/vm_object.h>
 #include <zircon/rights.h>
 
-KCOUNTER(dispatcher_bti_create_count, "dispatcher.bti.create");
-KCOUNTER(dispatcher_bti_destroy_count, "dispatcher.bti.destroy");
+KCOUNTER(dispatcher_bti_create_count, "dispatcher.bti.create")
+KCOUNTER(dispatcher_bti_destroy_count, "dispatcher.bti.destroy")
 
 zx_status_t BusTransactionInitiatorDispatcher::Create(fbl::RefPtr<Iommu> iommu, uint64_t bti_id,
                                                       fbl::RefPtr<Dispatcher>* dispatcher,

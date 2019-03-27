@@ -16,8 +16,8 @@
 #include <object/thread_dispatcher.h>
 #include <zircon/rights.h>
 
-KCOUNTER(dispatcher_suspend_token_create_count, "dispatcher.suspend_token.create");
-KCOUNTER(dispatcher_suspend_token_destroy_count, "dispatcher.suspend_token.destroy");
+KCOUNTER(dispatcher_suspend_token_create_count, "dispatcher.suspend_token.create")
+KCOUNTER(dispatcher_suspend_token_destroy_count, "dispatcher.suspend_token.destroy")
 
 namespace {
 

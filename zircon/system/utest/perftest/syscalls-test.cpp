@@ -22,6 +22,6 @@ void RegisterTests() {
     perftest::RegisterSimpleTest<SyscallNullTest>("Syscall/Null");
     perftest::RegisterSimpleTest<SyscallManyArgsTest>("Syscall/ManyArgs");
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

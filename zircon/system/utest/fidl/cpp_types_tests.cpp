@@ -60,4 +60,4 @@ bool vector_view_test() {
 BEGIN_TEST_CASE(cpp_types_tests)
 RUN_NAMED_TEST("StringView test", string_view_test)
 RUN_NAMED_TEST("VectorView test", vector_view_test)
-END_TEST_CASE(cpp_types_tests);
+END_TEST_CASE(cpp_types_tests)

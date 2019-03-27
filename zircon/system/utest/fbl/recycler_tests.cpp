@@ -157,4 +157,4 @@ RUN_NAMED_TEST("FailBadArg",   do_test<fbl::unique_ptr<FailBadArg>>);
 #if TEST_WILL_NOT_COMPILE || 0
 RUN_NAMED_TEST("FailNotVis",   do_test<fbl::unique_ptr<FailBadArg>>);
 #endif
-END_TEST_CASE(fbl_recycle);
+END_TEST_CASE(fbl_recycle)

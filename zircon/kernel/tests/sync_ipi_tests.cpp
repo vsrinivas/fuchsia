@@ -76,7 +76,7 @@ cleanup:
         }
     }
     event_destroy(&gate);
-};
+}
 
 static bool sync_ipi_tests() {
     BEGIN_TEST;

@@ -105,12 +105,12 @@ public:
     // wrapper around GptDevice's SetPartitionType
     zx_status_t SetPartitionType(uint32_t partition_index, const uint8_t* type) {
         return gpt_->SetPartitionType(partition_index, type);
-    };
+    }
 
     // wrapper around GptDevice's SetPartitionGuid
     zx_status_t SetPartitionGuid(uint32_t partition_index, const uint8_t* guid) {
         return gpt_->SetPartitionGuid(partition_index, guid);
-    };
+    }
 
     // wrapper around GptDevice's SetPartitionRange
     zx_status_t SetPartitionRange(uint32_t partition_index, uint64_t start, uint64_t end) {

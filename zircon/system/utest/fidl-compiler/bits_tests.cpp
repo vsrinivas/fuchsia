@@ -215,17 +215,17 @@ bits BitsImplicit {
 
 } // namespace
 
-BEGIN_TEST_CASE(bits_tests);
+BEGIN_TEST_CASE(bits_tests)
 
-RUN_TEST(GoodBitsTestSimple);
-RUN_TEST(BadBitsTestSigned);
-RUN_TEST(BadBitsTestWithNonUniqueValues);
-RUN_TEST(BadBitsTestWithNonUniqueValuesOutOfLine);
-RUN_TEST(BadBitsTestUnsignedWithNegativeMember);
-RUN_TEST(BadBitsTestMemberOverflow);
-RUN_TEST(BadBitsTestDuplicateMember);
-RUN_TEST(GoodBitsTestKeywordNames);
-RUN_TEST(GoodBitsTestShape);
-RUN_TEST(BadBitsTestNonPowerOfTwo);
+RUN_TEST(GoodBitsTestSimple)
+RUN_TEST(BadBitsTestSigned)
+RUN_TEST(BadBitsTestWithNonUniqueValues)
+RUN_TEST(BadBitsTestWithNonUniqueValuesOutOfLine)
+RUN_TEST(BadBitsTestUnsignedWithNegativeMember)
+RUN_TEST(BadBitsTestMemberOverflow)
+RUN_TEST(BadBitsTestDuplicateMember)
+RUN_TEST(GoodBitsTestKeywordNames)
+RUN_TEST(GoodBitsTestShape)
+RUN_TEST(BadBitsTestNonPowerOfTwo)
 
-END_TEST_CASE(bits_tests);
+END_TEST_CASE(bits_tests)

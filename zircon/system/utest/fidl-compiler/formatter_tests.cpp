@@ -129,9 +129,9 @@ bool golden_file_test() {
 
 } // namespace
 
-BEGIN_TEST_CASE(formatter_tests);
+BEGIN_TEST_CASE(formatter_tests)
 InitializeContents();
-RUN_TEST(idempotence_test);
-RUN_TEST(basic_formatting_rules_test);
-RUN_TEST(golden_file_test);
-END_TEST_CASE(formatter_tests);
+RUN_TEST(idempotence_test)
+RUN_TEST(basic_formatting_rules_test)
+RUN_TEST(golden_file_test)
+END_TEST_CASE(formatter_tests)

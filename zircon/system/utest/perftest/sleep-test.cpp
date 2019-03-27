@@ -43,6 +43,6 @@ void RegisterTests() {
         perftest::RegisterTest(name.c_str(), SleepTest, time_ns);
     }
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

@@ -12,8 +12,8 @@
 #include <object/vm_address_region_dispatcher.h>
 #include <zircon/rights.h>
 
-KCOUNTER(dispatcher_guest_create_count, "dispatcher.guest.create");
-KCOUNTER(dispatcher_guest_destroy_count, "dispatcher.guest.destroy");
+KCOUNTER(dispatcher_guest_create_count, "dispatcher.guest.create")
+KCOUNTER(dispatcher_guest_destroy_count, "dispatcher.guest.destroy")
 
 // static
 zx_status_t GuestDispatcher::Create(fbl::RefPtr<Dispatcher>* guest_dispatcher,

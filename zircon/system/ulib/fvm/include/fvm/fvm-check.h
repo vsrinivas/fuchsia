@@ -46,8 +46,8 @@ public:
 private:
     class Logger {
     public:
-        Logger() : silent_(false) {};
-        explicit Logger(bool silent) : silent_(silent) {};
+        Logger() : silent_(false) {}
+        explicit Logger(bool silent) : silent_(silent) {}
 
         // Toggles the output of future calls to |Log|.
         void SetSilent(bool silent) {

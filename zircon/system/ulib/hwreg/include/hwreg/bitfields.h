@@ -269,7 +269,8 @@ private:
     SelfType& set_ ## NAME(ValueType val) {                                                       \
         hwreg::BitfieldRef<ValueType>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW)).set(val);           \
         return *this;                                                                             \
-    }
+    } \
+    static_assert(true) // eat a ;
 
 #define DEF_UNSHIFTED_FIELD(BIT_HIGH, BIT_LOW, NAME)                                              \
     static_assert((BIT_HIGH) >= (BIT_LOW), "Upper bit goes before lower bit");                    \
@@ -283,7 +284,8 @@ private:
     SelfType& set_ ## NAME(ValueType val) {                                                       \
         hwreg::BitfieldRef<ValueType>(reg_value_ptr(), (BIT_HIGH), (BIT_LOW), true).set(val);     \
         return *this;                                                                             \
-    }
+    } \
+    static_assert(true) // eat a ;
 
 // Declares single-bit fields in a derived class of RegisterBase<D, T>.  This
 // produces functions "T NAME() const" and "void set_NAME(T)".
@@ -298,7 +300,7 @@ private:
     hwreg::internal::Field<SelfType> Field ## BIT_HIGH ## _ ## BIT_LOW =                          \
         hwreg::internal::Field<SelfType>(this, "RsvdZ", (BIT_HIGH), (BIT_LOW));                   \
     hwreg::internal::RsvdZField<SelfType> RsvdZ ## BIT_HIGH ## _ ## BIT_LOW =                     \
-        hwreg::internal::RsvdZField<SelfType>(this, (BIT_HIGH), (BIT_LOW));
+        hwreg::internal::RsvdZField<SelfType>(this, (BIT_HIGH), (BIT_LOW))
 
 // Declares single-bit reserved-zero fields in a derived class of RegisterBase<D, T>.
 // This will ensure that on RegisterBase<T>::WriteTo(), reserved-zero bits are
@@ -321,7 +323,8 @@ private:
         hwreg::BitfieldRef<typename fbl::remove_reference<decltype(FIELD)>::type>(                \
                 &FIELD, (BIT_HIGH), (BIT_LOW)).set(val);                                          \
         return *this;                                                                             \
-    }
+    }                                                                   \
+    static_assert(true) // eat a ;
 
 // Declares "decltype(FIELD) NAME() const" and "void set_NAME(decltype(FIELD))" that
 // reads/modifies the declared bit.

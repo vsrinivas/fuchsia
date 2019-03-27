@@ -57,7 +57,7 @@ struct Bad {
 
 } // namespace
 
-BEGIN_TEST_CASE(optionals_test);
-RUN_TEST(test_no_optional_on_primitive);
-RUN_TEST(test_no_optional_on_aliased_primitive);
-END_TEST_CASE(optionals_test);
+BEGIN_TEST_CASE(optionals_test)
+RUN_TEST(test_no_optional_on_primitive)
+RUN_TEST(test_no_optional_on_aliased_primitive)
+END_TEST_CASE(optionals_test)

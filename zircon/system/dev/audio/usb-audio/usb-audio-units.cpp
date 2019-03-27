@@ -464,7 +464,7 @@ zx_status_t FeatureUnit::Probe(const usb_protocol_t& proto) {
 
     // All done!  Declare success and get out.
     return ZX_OK;
-};
+}
 
 float FeatureUnit::SetVol(const usb_protocol_t& proto, float db) {
     // If we have no volume control, then our gain is fixed at 0.0 dB no matter

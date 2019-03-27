@@ -103,6 +103,6 @@ bool read_and_write_direct_test() {
 
 } // namespace
 
-BEGIN_TEST_CASE(visitor_tests);
-RUN_TEST(read_and_write_direct_test);
-END_TEST_CASE(visitor_tests);
+BEGIN_TEST_CASE(visitor_tests)
+RUN_TEST(read_and_write_direct_test)
+END_TEST_CASE(visitor_tests)

@@ -605,7 +605,7 @@ zx_status_t MinfsChecker::CheckJournal() const {
 }
 
 MinfsChecker::MinfsChecker()
-    : conforming_(true), fs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), links_() {};
+    : conforming_(true), fs_(nullptr), alloc_inodes_(0), alloc_blocks_(0), links_() {}
 
 zx_status_t MinfsChecker::Init(fbl::unique_ptr<Bcache> bc, const Superblock* info) {
     links_.reset(new int32_t[info->inode_count]{0}, info->inode_count);

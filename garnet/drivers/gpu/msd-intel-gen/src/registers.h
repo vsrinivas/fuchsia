@@ -539,20 +539,20 @@ public:
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part2.pdf
 class PowerWellControl2 : public magma::RegisterBase {
 public:
-    DEF_BIT(31, power_well_2_request)
-    DEF_BIT(30, power_well_2_state)
-    DEF_BIT(29, power_well_1_request)
-    DEF_BIT(28, power_well_1_state)
-    DEF_BIT(9, ddi_d_io_power_request)
-    DEF_BIT(8, ddi_d_io_power_state)
-    DEF_BIT(7, ddi_c_io_power_request)
-    DEF_BIT(6, ddi_c_io_power_state)
-    DEF_BIT(5, ddi_b_io_power_request)
-    DEF_BIT(4, ddi_b_io_power_state)
-    DEF_BIT(3, ddi_a_and_e_io_power_request)
-    DEF_BIT(2, ddi_a_and_e_io_power_state)
-    DEF_BIT(1, misc_io_power_request)
-    DEF_BIT(0, misc_io_power_state)
+    DEF_BIT(31, power_well_2_request);
+    DEF_BIT(30, power_well_2_state);
+    DEF_BIT(29, power_well_1_request);
+    DEF_BIT(28, power_well_1_state);
+    DEF_BIT(9, ddi_d_io_power_request);
+    DEF_BIT(8, ddi_d_io_power_state);
+    DEF_BIT(7, ddi_c_io_power_request);
+    DEF_BIT(6, ddi_c_io_power_state);
+    DEF_BIT(5, ddi_b_io_power_request);
+    DEF_BIT(4, ddi_b_io_power_state);
+    DEF_BIT(3, ddi_a_and_e_io_power_request);
+    DEF_BIT(2, ddi_a_and_e_io_power_state);
+    DEF_BIT(1, misc_io_power_request);
+    DEF_BIT(0, misc_io_power_state);
 
     static auto Get() { return magma::RegisterAddr<PowerWellControl2>(0x45404); }
 };
@@ -572,7 +572,7 @@ public:
 
 class RenderEngineTlbControl : public magma::RegisterBase {
 public:
-    DEF_BIT(0, invalidate)
+    DEF_BIT(0, invalidate);
     static auto Get() { return magma::RegisterAddr<RenderEngineTlbControl>(0x4260); }
 };
 

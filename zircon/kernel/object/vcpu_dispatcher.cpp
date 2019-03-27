@@ -15,8 +15,8 @@
 #include <zircon/rights.h>
 #include <zircon/types.h>
 
-KCOUNTER(dispatcher_vcpu_create_count, "dispatcher.vcpu.create");
-KCOUNTER(dispatcher_vcpu_destroy_count, "dispatcher.vcpu.destroy");
+KCOUNTER(dispatcher_vcpu_create_count, "dispatcher.vcpu.create")
+KCOUNTER(dispatcher_vcpu_destroy_count, "dispatcher.vcpu.destroy")
 
 zx_status_t VcpuDispatcher::Create(fbl::RefPtr<GuestDispatcher> guest_dispatcher, zx_vaddr_t entry,
                                    fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {

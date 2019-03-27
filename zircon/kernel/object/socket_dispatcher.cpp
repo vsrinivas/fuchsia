@@ -27,8 +27,8 @@
 
 #define LOCAL_TRACE 0
 
-KCOUNTER(dispatcher_socket_create_count, "dispatcher.socket.create");
-KCOUNTER(dispatcher_socket_destroy_count, "dispatcher.socket.destroy");
+KCOUNTER(dispatcher_socket_create_count, "dispatcher.socket.create")
+KCOUNTER(dispatcher_socket_destroy_count, "dispatcher.socket.destroy")
 
 // static
 zx_status_t SocketDispatcher::Create(uint32_t flags,

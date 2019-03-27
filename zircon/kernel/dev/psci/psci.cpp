@@ -110,7 +110,7 @@ static void arm_psci_init(const void* driver_data, uint32_t length) {
     }
 }
 
-LK_PDEV_INIT(arm_psci_init, KDRV_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(arm_psci_init, KDRV_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM_EARLY)
 
 #include <lib/console.h>
 
@@ -133,4 +133,4 @@ static int cmd_psci(int argc, const cmd_args *argv, uint32_t flags) {
 
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("psci", "execute PSCI command", &cmd_psci, CMD_AVAIL_ALWAYS)
-STATIC_COMMAND_END(psci);
+STATIC_COMMAND_END(psci)

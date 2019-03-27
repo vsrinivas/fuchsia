@@ -38,9 +38,9 @@ public:
     void ReportError(StringView message);
     void ReportWarning(const SourceLocation& location, StringView message);
     void PrintReports();
-    Counts Checkpoint() const { return Counts(this); };
-    const std::vector<std::string>& errors() const { return errors_; };
-    const std::vector<std::string>& warnings() const { return warnings_; };
+    Counts Checkpoint() const { return Counts(this); }
+    const std::vector<std::string>& errors() const { return errors_; }
+    const std::vector<std::string>& warnings() const { return warnings_; }
     void set_warnings_as_errors(bool value) { warnings_as_errors_ = value; }
 
 private:

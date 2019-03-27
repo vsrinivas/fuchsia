@@ -572,7 +572,7 @@ RUN_TEST(MoveAssignmentTest<RawBitmapGeneric<VmoStorage>>)
 RUN_TEST(GrowAcrossPage<RawBitmapGeneric<VmoStorage>>)
 RUN_TEST(GrowShrink<RawBitmapGeneric<VmoStorage>>)
 RUN_TEST(GrowFailure<RawBitmapGeneric<DefaultStorage>>)
-END_TEST_CASE(raw_bitmap_tests);
+END_TEST_CASE(raw_bitmap_tests)
 
 } // namespace tests
 } // namespace bitmap

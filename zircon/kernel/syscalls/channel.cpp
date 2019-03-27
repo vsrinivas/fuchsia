@@ -26,14 +26,14 @@
 
 #define LOCAL_TRACE 0
 
-KCOUNTER(channel_msg_0_bytes,   "channel.bytes.0");
-KCOUNTER(channel_msg_64_bytes,  "channel.bytes.64");
-KCOUNTER(channel_msg_256_bytes, "channel.bytes.256");
-KCOUNTER(channel_msg_1k_bytes,  "channel.bytes.1k");
-KCOUNTER(channel_msg_4k_bytes,  "channel.bytes.4k");
-KCOUNTER(channel_msg_16k_bytes, "channel.bytes.16k");
-KCOUNTER(channel_msg_64k_bytes, "channel.bytes.64k");
-KCOUNTER(channel_msg_received,  "channel.messages");
+KCOUNTER(channel_msg_0_bytes,   "channel.bytes.0")
+KCOUNTER(channel_msg_64_bytes,  "channel.bytes.64")
+KCOUNTER(channel_msg_256_bytes, "channel.bytes.256")
+KCOUNTER(channel_msg_1k_bytes,  "channel.bytes.1k")
+KCOUNTER(channel_msg_4k_bytes,  "channel.bytes.4k")
+KCOUNTER(channel_msg_16k_bytes, "channel.bytes.16k")
+KCOUNTER(channel_msg_64k_bytes, "channel.bytes.64k")
+KCOUNTER(channel_msg_received,  "channel.messages")
 
 static void record_recv_msg_sz(uint32_t size) {
     kcounter_add(channel_msg_received, 1);

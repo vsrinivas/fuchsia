@@ -40,7 +40,7 @@ typedef struct layer_node : public fbl::SinglyLinkedListable<layer_node*> {
 // Almost-POD used by Client to manage layer state. Public state is used by Controller.
 class Layer : public IdMappable<fbl::unique_ptr<Layer>> {
 public:
-    fbl::RefPtr<Image> current_image() const { return displayed_image_; };
+    fbl::RefPtr<Image> current_image() const { return displayed_image_; }
     uint32_t z_order() const { return current_layer_.z_index; }
     bool is_skipped() const { return is_skipped_; }
 

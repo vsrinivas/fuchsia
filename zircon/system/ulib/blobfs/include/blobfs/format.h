@@ -214,7 +214,7 @@ constexpr uint64_t kBlockCountMask = kBlockCountMax << kBlockOffsetBits;
 
 class Extent {
 public:
-    Extent() : data_(0) {};
+    Extent() : data_(0) {}
     Extent(BlockOffsetType start, BlockCountType length) : data_(0) {
         SetStart(start);
         SetLength(length);

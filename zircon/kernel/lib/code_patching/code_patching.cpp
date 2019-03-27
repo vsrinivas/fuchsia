@@ -20,4 +20,4 @@ static void apply_startup_code_patches(uint level) {
 }
 
 LK_INIT_HOOK(code_patching, apply_startup_code_patches,
-             LK_INIT_LEVEL_ARCH_EARLY);
+             LK_INIT_LEVEL_ARCH_EARLY)

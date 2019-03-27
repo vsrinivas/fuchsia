@@ -35,6 +35,6 @@ void RegisterTests() {
     perftest::RegisterSimpleTest<NullTest>("Null");
     perftest::RegisterTest("Null5Step", Null5StepTest);
 }
-PERFTEST_CTOR(RegisterTests);
+PERFTEST_CTOR(RegisterTests)
 
 }  // namespace

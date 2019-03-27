@@ -155,7 +155,7 @@ public:
 
     // Debug/ASSERT routine, used by devices and bridges to assert that the
     // rescan lock is currently being held.
-    bool RescanLockIsHeld() const { return bus_rescan_lock_.IsHeld(); };
+    bool RescanLockIsHeld() const { return bus_rescan_lock_.IsHeld(); }
 
 private:
     friend class PcieDebugConsole;

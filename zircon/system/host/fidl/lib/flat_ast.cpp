@@ -442,7 +442,7 @@ public:
     PrimitiveTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter,
                           const std::string& name, types::PrimitiveSubtype subtype)
         : TypeTemplate(Name(nullptr, name), typespace, error_reporter),
-          subtype_(subtype){};
+          subtype_(subtype) {}
 
     bool Create(const SourceLocation& location,
                 const Type* maybe_arg_type,
@@ -494,7 +494,7 @@ private:
 class ArrayTypeTemplate : public TypeTemplate {
 public:
     ArrayTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-        : TypeTemplate(Name(nullptr, "array"), typespace, error_reporter){};
+        : TypeTemplate(Name(nullptr, "array"), typespace, error_reporter) {}
 
     bool Create(const SourceLocation& location,
                 const Type* arg_type,
@@ -517,7 +517,7 @@ public:
 class VectorTypeTemplate : public TypeTemplate {
 public:
     VectorTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-        : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter){};
+        : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter) {}
 
     bool Create(const SourceLocation& location,
                 const Type* arg_type,
@@ -541,7 +541,7 @@ private:
 class StringTypeTemplate : public TypeTemplate {
 public:
     StringTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-        : TypeTemplate(Name(nullptr, "string"), typespace, error_reporter){};
+        : TypeTemplate(Name(nullptr, "string"), typespace, error_reporter) {}
 
     bool Create(const SourceLocation& location,
                 const Type* arg_type,
@@ -565,7 +565,7 @@ private:
 class HandleTypeTemplate : public TypeTemplate {
 public:
     HandleTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-        : TypeTemplate(Name(nullptr, "handle"), typespace, error_reporter){};
+        : TypeTemplate(Name(nullptr, "handle"), typespace, error_reporter) {}
 
     bool Create(const SourceLocation& location,
                 const Type* maybe_arg_type,
@@ -590,7 +590,7 @@ public:
 class RequestTypeTemplate : public TypeTemplate {
 public:
     RequestTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
-        : TypeTemplate(Name(nullptr, "request"), typespace, error_reporter){};
+        : TypeTemplate(Name(nullptr, "request"), typespace, error_reporter) {}
 
     bool Create(const SourceLocation& location,
                 const Type* arg_type,

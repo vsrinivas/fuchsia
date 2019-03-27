@@ -138,6 +138,6 @@ static void x86_pcie_init_hook(uint level) {
     }
 }
 
-LK_INIT_HOOK(x86_pcie_init, x86_pcie_init_hook, LK_INIT_LEVEL_PLATFORM);
+LK_INIT_HOOK(x86_pcie_init, x86_pcie_init_hook, LK_INIT_LEVEL_PLATFORM)
 
 #endif // WITH_KERNEL_PCIE

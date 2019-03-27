@@ -44,7 +44,7 @@ STATIC_COMMAND_MASKED("thread", "manipulate kernel threads", &cmd_thread, CMD_AV
 STATIC_COMMAND("threadstats", "thread level statistics", &cmd_threadstats)
 STATIC_COMMAND("threadload", "toggle thread load display", &cmd_threadload)
 STATIC_COMMAND("threadq", "toggle thread queue display", &cmd_threadq)
-STATIC_COMMAND_END(kernel);
+STATIC_COMMAND_END(kernel)
 
 #if LK_DEBUGLEVEL > 1
 static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {

@@ -255,4 +255,4 @@ STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("cpu", "cpu test commands", &cmd_cpu)
 #endif
-STATIC_COMMAND_END(cpu);
+STATIC_COMMAND_END(cpu)

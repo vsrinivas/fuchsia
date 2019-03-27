@@ -152,15 +152,15 @@ private:
     zx_status_t FinalizeSetupLocked() __TA_REQUIRES(obj_lock());
     void DumpStreamPublishedLocked() __TA_REQUIRES(obj_lock());
     void DumpAmpCaps(const CommonCaps& caps, const char* tag);
-    DECLARE_THUNK(ProcessPinWidgetCaps);
-    DECLARE_THUNK(ProcessPinAmpCaps);
-    DECLARE_THUNK(ProcessPinCfgDefaults);
-    DECLARE_THUNK(ProcessPinCaps);
-    DECLARE_THUNK(ProcessPinState);
-    DECLARE_THUNK(ProcessConverterWidgetCaps);
-    DECLARE_THUNK(ProcessConverterAmpCaps);
-    DECLARE_THUNK(ProcessConverterSampleSizeRate);
-    DECLARE_THUNK(ProcessConverterSampleFormats);
+    DECLARE_THUNK(ProcessPinWidgetCaps)
+    DECLARE_THUNK(ProcessPinAmpCaps)
+    DECLARE_THUNK(ProcessPinCfgDefaults)
+    DECLARE_THUNK(ProcessPinCaps)
+    DECLARE_THUNK(ProcessPinState)
+    DECLARE_THUNK(ProcessConverterWidgetCaps)
+    DECLARE_THUNK(ProcessConverterAmpCaps)
+    DECLARE_THUNK(ProcessConverterSampleSizeRate)
+    DECLARE_THUNK(ProcessConverterSampleFormats)
 
     bool can_mute() const __TA_REQUIRES(obj_lock()) {
         return (conv_.has_amp && conv_.amp_caps.can_mute()) ||

@@ -15,9 +15,7 @@
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS;
-extern zx_handle_t get_root_resource(void);
-__END_CDECLS;
+extern "C" zx_handle_t get_root_resource(void);
 
 static const size_t mmio_test_size = (PAGE_SIZE * 4);
 static uint64_t mmio_test_base;

@@ -300,7 +300,7 @@ bool UseBlockInterfaceTest() {
 
 BEGIN_TEST_CASE(EfiDevicePartitionerTests)
 RUN_TEST(efi::UseBlockInterfaceTest)
-END_TEST_CASE(EfiDevicePartitionerTests);
+END_TEST_CASE(EfiDevicePartitionerTests)
 
 namespace cros {
 namespace {
@@ -320,7 +320,7 @@ bool UseBlockInterfaceTest() {
 
 BEGIN_TEST_CASE(CrosDevicePartitionerTests)
 RUN_TEST(cros::UseBlockInterfaceTest)
-END_TEST_CASE(CrosDevicePartitionerTests);
+END_TEST_CASE(CrosDevicePartitionerTests)
 
 namespace fixed {
 namespace {
@@ -464,7 +464,7 @@ RUN_TEST(fixed::WipePartitionsTest)
 RUN_TEST(fixed::FinalizePartitionTest)
 RUN_TEST(fixed::FindPartitionTest)
 RUN_TEST(fixed::GetBlockSizeTest)
-END_TEST_CASE(FixedDevicePartitionerTests);
+END_TEST_CASE(FixedDevicePartitionerTests)
 
 namespace skipblock {
 namespace {
@@ -628,4 +628,4 @@ RUN_TEST(skipblock::WipePartitionsTest)
 RUN_TEST(skipblock::FinalizePartitionTest)
 RUN_TEST(skipblock::FindPartitionTest)
 RUN_TEST(skipblock::GetBlockSizeTest)
-END_TEST_CASE(SkipBlockDevicePartitionerTests);
+END_TEST_CASE(SkipBlockDevicePartitionerTests)

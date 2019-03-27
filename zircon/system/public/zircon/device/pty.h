@@ -89,12 +89,12 @@ typedef struct {
 #define IOCTL_PTY_SET_WINDOW_SIZE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PTY, 0x20)
 
-IOCTL_WRAPPER_IN(ioctl_pty_clr_set_feature, IOCTL_PTY_CLR_SET_FEATURE, pty_clr_set_t);
-IOCTL_WRAPPER_OUT(ioctl_pty_get_window_size, IOCTL_PTY_GET_WINDOW_SIZE, pty_window_size_t);
+IOCTL_WRAPPER_IN(ioctl_pty_clr_set_feature, IOCTL_PTY_CLR_SET_FEATURE, pty_clr_set_t)
+IOCTL_WRAPPER_OUT(ioctl_pty_get_window_size, IOCTL_PTY_GET_WINDOW_SIZE, pty_window_size_t)
 
-IOCTL_WRAPPER_IN(ioctl_pty_make_active, IOCTL_PTY_MAKE_ACTIVE, uint32_t);
-IOCTL_WRAPPER_OUT(ioctl_pty_read_events, IOCTL_PTY_READ_EVENTS, uint32_t);
+IOCTL_WRAPPER_IN(ioctl_pty_make_active, IOCTL_PTY_MAKE_ACTIVE, uint32_t)
+IOCTL_WRAPPER_OUT(ioctl_pty_read_events, IOCTL_PTY_READ_EVENTS, uint32_t)
 
-IOCTL_WRAPPER_IN(ioctl_pty_set_window_size, IOCTL_PTY_SET_WINDOW_SIZE, pty_window_size_t);
+IOCTL_WRAPPER_IN(ioctl_pty_set_window_size, IOCTL_PTY_SET_WINDOW_SIZE, pty_window_size_t)
 
 #endif  // SYSROOT_ZIRCON_DEVICE_PTY_H_

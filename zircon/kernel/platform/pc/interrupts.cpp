@@ -122,7 +122,7 @@ static void platform_init_apic(uint level) {
                             X86_INT_PLATFORM_MAX - X86_INT_PLATFORM_BASE + 1);
     ASSERT(status == ZX_OK);
 }
-LK_INIT_HOOK(apic, &platform_init_apic, LK_INIT_LEVEL_VM + 2);
+LK_INIT_HOOK(apic, &platform_init_apic, LK_INIT_LEVEL_VM + 2)
 
 zx_status_t mask_interrupt(unsigned int vector) {
     AutoSpinLock guard(&lock);

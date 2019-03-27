@@ -232,7 +232,7 @@ static void arm64_perfmon_init_once(uint level) {
            perfmon_num_fixed_counters, perfmon_num_programmable_counters);
 }
 
-LK_INIT_HOOK(arm64_perfmon, arm64_perfmon_init_once, LK_INIT_LEVEL_ARCH);
+LK_INIT_HOOK(arm64_perfmon, arm64_perfmon_init_once, LK_INIT_LEVEL_ARCH)
 
 static void arm64_perfmon_clear_overflow_indicators() {
     __arm_wsr64("pmovsclr_el0", perfmon_counter_status_bits);

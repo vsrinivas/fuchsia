@@ -38,7 +38,7 @@ constexpr bool IsParameterOutput(fuchsia_tee_Direction direction) {
            (direction == fuchsia_tee_Direction_INOUT);
 }
 
-}; // namespace
+} // namespace
 
 bool Message::TryInitializeParameters(size_t starting_param_index,
                                       const fuchsia_tee_ParameterSet& parameter_set,

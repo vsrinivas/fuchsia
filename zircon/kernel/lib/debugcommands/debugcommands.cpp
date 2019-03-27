@@ -56,7 +56,7 @@ STATIC_COMMAND("mtest", "simple memory test", &cmd_memtest)
 STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)
-STATIC_COMMAND_END(mem);
+STATIC_COMMAND_END(mem)
 
 static int cmd_display_mem(int argc, const cmd_args *argv, uint32_t flags)
 {

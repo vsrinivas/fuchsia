@@ -224,4 +224,4 @@ STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("vmm", "virtual memory manager", &cmd_vmm)
 #endif
-STATIC_COMMAND_END(vmm);
+STATIC_COMMAND_END(vmm)

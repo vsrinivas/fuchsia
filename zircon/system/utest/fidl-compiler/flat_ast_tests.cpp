@@ -42,7 +42,7 @@ static bool compare_handles() {
 
 } // namespace
 
-BEGIN_TEST_CASE(flat_ast_tests);
-RUN_TEST(implicit_assumptions);
-RUN_TEST(compare_handles);
-END_TEST_CASE(flat_ast_tests);
+BEGIN_TEST_CASE(flat_ast_tests)
+RUN_TEST(implicit_assumptions)
+RUN_TEST(compare_handles)
+END_TEST_CASE(flat_ast_tests)

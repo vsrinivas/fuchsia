@@ -165,15 +165,15 @@ enum Fruit : uint64 {
 
 } // namespace
 
-BEGIN_TEST_CASE(enums_tests);
+BEGIN_TEST_CASE(enums_tests)
 
-RUN_TEST(GoodEnumTestSimple);
-RUN_TEST(BadEnumTestWithNonUniqueValues);
-RUN_TEST(BadEnumTestWithNonUniqueValuesOutOfLine);
-RUN_TEST(BadEnumTestUnsignedWithNegativeMember);
-RUN_TEST(BadEnumTestInferredUnsignedWithNegativeMember);
-RUN_TEST(BadEnumTestMemberOverflow);
-RUN_TEST(BadEnumTestDuplicateMember);
-RUN_TEST(GoodEnumTestKeywordNames);
+RUN_TEST(GoodEnumTestSimple)
+RUN_TEST(BadEnumTestWithNonUniqueValues)
+RUN_TEST(BadEnumTestWithNonUniqueValuesOutOfLine)
+RUN_TEST(BadEnumTestUnsignedWithNegativeMember)
+RUN_TEST(BadEnumTestInferredUnsignedWithNegativeMember)
+RUN_TEST(BadEnumTestMemberOverflow)
+RUN_TEST(BadEnumTestDuplicateMember)
+RUN_TEST(GoodEnumTestKeywordNames)
 
-END_TEST_CASE(enums_tests);
+END_TEST_CASE(enums_tests)

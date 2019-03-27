@@ -210,4 +210,4 @@ RUN_TEST(blobfs::EnqueuePaginatedSmallTest)
 RUN_TEST(blobfs::EnqueuePaginatedLargeTest)
 RUN_TEST(blobfs::EnqueuePaginatedManyTest)
 RUN_TEST(blobfs::WritebackWorkOrderTest)
-END_TEST_CASE(blobfsWritebackTests);
+END_TEST_CASE(blobfsWritebackTests)

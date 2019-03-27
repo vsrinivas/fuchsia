@@ -140,7 +140,7 @@
 #define BOOTDATA_IGNORE (0x50494b53) // SKIP
 
 #ifndef __ASSEMBLER__
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // BootData header, describing the type and size of data
 // used to initialize the system. All fields are little-endian.
@@ -253,7 +253,7 @@ typedef struct {
     uint32_t reserved;
 } bootdata_mem_range_t;
 
-__END_CDECLS;
+__END_CDECLS
 
 // BOOTFS is a trivial "filesystem" format
 //

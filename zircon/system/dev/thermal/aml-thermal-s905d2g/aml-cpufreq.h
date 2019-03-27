@@ -21,7 +21,7 @@ class AmlCpuFrequency {
 
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpuFrequency);
-    AmlCpuFrequency(){};
+    AmlCpuFrequency(){}
     ~AmlCpuFrequency() = default;
     zx_status_t SetFrequency(uint32_t rate);
     zx_status_t Init(zx_device_t* parent);

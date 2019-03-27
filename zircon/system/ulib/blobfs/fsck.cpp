@@ -116,7 +116,7 @@ zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
 
 BlobfsChecker::BlobfsChecker(fbl::unique_ptr<Blobfs> blobfs)
     : blobfs_(std::move(blobfs)), alloc_inodes_(0), alloc_blocks_(0),
-      error_blobs_(0), inode_blocks_(0) {};
+      error_blobs_(0), inode_blocks_(0) {}
 
 zx_status_t BlobfsChecker::Initialize(bool apply_journal) {
 #ifdef __Fuchsia__

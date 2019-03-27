@@ -127,4 +127,4 @@ bool enumeration_test() {
 
 BEGIN_TEST_CASE(pbus_tests)
 RUN_TEST(enumeration_test)
-END_TEST_CASE(pbus_tests);
+END_TEST_CASE(pbus_tests)

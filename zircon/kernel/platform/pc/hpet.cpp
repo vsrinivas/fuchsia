@@ -114,7 +114,7 @@ fail:
     num_timers = 0;
 }
 /* Begin running after ACPI tables are up */
-LK_INIT_HOOK(hpet, hpet_init, LK_INIT_LEVEL_VM + 2);
+LK_INIT_HOOK(hpet, hpet_init, LK_INIT_LEVEL_VM + 2)
 
 zx_status_t hpet_timer_disable(uint n) {
     if (unlikely(n >= num_timers)) {

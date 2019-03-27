@@ -216,4 +216,4 @@ static int cmd_oom(int argc, const cmd_args* argv, uint32_t flags) {
 
 STATIC_COMMAND_START
 STATIC_COMMAND("oom", "out-of-memory watcher/killer", &cmd_oom)
-STATIC_COMMAND_END(oom);
+STATIC_COMMAND_END(oom)

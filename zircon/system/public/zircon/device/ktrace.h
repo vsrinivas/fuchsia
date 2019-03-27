@@ -23,7 +23,7 @@
 #define IOCTL_KTRACE_ADD_PROBE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_KTRACE, 2)
 
-IOCTL_WRAPPER_OUT(ioctl_ktrace_get_handle, IOCTL_KTRACE_GET_HANDLE, zx_handle_t);
+IOCTL_WRAPPER_OUT(ioctl_ktrace_get_handle, IOCTL_KTRACE_GET_HANDLE, zx_handle_t)
 // Start tracing.
 // input: The group_mask
 #define IOCTL_KTRACE_START \
@@ -42,8 +42,8 @@ static inline ssize_t ioctl_ktrace_add_probe(int fd, const char* name, uint32_t*
                       name, strlen(name), probe_id, sizeof(uint32_t));
 }
 
-IOCTL_WRAPPER_IN(ioctl_ktrace_start, IOCTL_KTRACE_START, uint32_t);
-IOCTL_WRAPPER(ioctl_ktrace_stop, IOCTL_KTRACE_STOP);
-IOCTL_WRAPPER(ioctl_ktrace_rewind, IOCTL_KTRACE_REWIND);
+IOCTL_WRAPPER_IN(ioctl_ktrace_start, IOCTL_KTRACE_START, uint32_t)
+IOCTL_WRAPPER(ioctl_ktrace_stop, IOCTL_KTRACE_STOP)
+IOCTL_WRAPPER(ioctl_ktrace_rewind, IOCTL_KTRACE_REWIND)
 
 #endif  // SYSROOT_ZIRCON_DEVICE_KTRACE_H_

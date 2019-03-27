@@ -110,7 +110,7 @@ static void init_build_id(uint level) {
 }
 
 // This must happen before print_version, below.
-LK_INIT_HOOK(elf_build_id, &init_build_id, LK_INIT_LEVEL_HEAP - 2);
+LK_INIT_HOOK(elf_build_id, &init_build_id, LK_INIT_LEVEL_HEAP - 2)
 
 #include <debug.h>
 #include <lib/console.h>
@@ -122,7 +122,7 @@ static int cmd_version(int argc, const cmd_args* argv, uint32_t flags) {
 
 STATIC_COMMAND_START
 STATIC_COMMAND("version", "print version", &cmd_version)
-STATIC_COMMAND_END(version);
+STATIC_COMMAND_END(version)
 
 #if LK_DEBUGLEVEL > 0
 static void print_version_init(uint) {
@@ -130,5 +130,5 @@ static void print_version_init(uint) {
 }
 
 // print the version string if any level of debug is set
-LK_INIT_HOOK(version, print_version_init, LK_INIT_LEVEL_HEAP - 1);
+LK_INIT_HOOK(version, print_version_init, LK_INIT_LEVEL_HEAP - 1)
 #endif

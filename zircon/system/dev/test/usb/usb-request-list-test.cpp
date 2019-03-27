@@ -398,4 +398,4 @@ RUN_TEST_SMALL(ReleaseTest)
 RUN_TEST_SMALL(MultipleLayerTest)
 RUN_TEST_SMALL(MultipleLayerWithStorageTest)
 RUN_TEST_SMALL(MultipleLayerWithCallbackTest)
-END_TEST_CASE(UsbRequestListTests);
+END_TEST_CASE(UsbRequestListTests)

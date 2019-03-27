@@ -432,4 +432,4 @@ static void arm_gic_v2_init(const void* driver_data, uint32_t length) {
     gicv2_hw_interface_register();
 }
 
-LK_PDEV_INIT(arm_gic_v2_init, KDRV_ARM_GIC_V2, arm_gic_v2_init, LK_INIT_LEVEL_PLATFORM_EARLY);
+LK_PDEV_INIT(arm_gic_v2_init, KDRV_ARM_GIC_V2, arm_gic_v2_init, LK_INIT_LEVEL_PLATFORM_EARLY)

@@ -45,7 +45,7 @@ public:
 
     // Removes any value associated with the given |key| and removes it from the map.
     void erase(const char* key);
-    void erase(const fbl::String& key) { erase(key.c_str()); };
+    void erase(const fbl::String& key) { erase(key.c_str()); }
 
     // Erases all keys.
     void clear();

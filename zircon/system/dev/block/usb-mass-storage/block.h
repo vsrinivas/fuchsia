@@ -58,7 +58,7 @@ public:
     void BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_cb,
                         void* cookie);
 
-    void DdkUnbind(){};
+    void DdkUnbind(){}
 
     const BlockDeviceParameters& GetBlockDeviceParameters() {
         return parameters_;

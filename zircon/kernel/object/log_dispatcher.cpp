@@ -15,8 +15,8 @@
 #include <fbl/auto_lock.h>
 #include <lib/counters.h>
 
-KCOUNTER(dispatcher_log_create_count, "dispatcher.log.create");
-KCOUNTER(dispatcher_log_destroy_count, "dispatcher.log.destroy");
+KCOUNTER(dispatcher_log_create_count, "dispatcher.log.create")
+KCOUNTER(dispatcher_log_destroy_count, "dispatcher.log.destroy")
 
 zx_status_t LogDispatcher::Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher,
                                   zx_rights_t* rights) {

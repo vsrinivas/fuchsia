@@ -19,7 +19,7 @@ namespace test {
 // Stub used for testing;
 class TestDriverStub : public internal::TestDriver {
 public:
-    ~TestDriverStub() final{};
+    ~TestDriverStub() final {}
 
     void Skip() final {}
 

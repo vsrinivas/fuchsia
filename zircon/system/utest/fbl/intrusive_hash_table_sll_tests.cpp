@@ -244,7 +244,7 @@ RUN_NAMED_TEST("InsertOrReplace (unique)",         UPTE::InsertOrReplaceTest)
 RUN_NAMED_TEST("InsertOrReplace (std::uptr)",      SUPDDTE::InsertOrReplaceTest)
 RUN_NAMED_TEST("InsertOrReplace (std::uptr<Del>)", SUPCDTE::InsertOrReplaceTest)
 RUN_NAMED_TEST("InsertOrReplace (RefPtr)",         RPTE::InsertOrReplaceTest)
-END_TEST_CASE(hashtable_sll_tests);
+END_TEST_CASE(hashtable_sll_tests)
 
 }  // namespace intrusive_containers
 }  // namespace tests

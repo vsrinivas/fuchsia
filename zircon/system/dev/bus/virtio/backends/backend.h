@@ -26,7 +26,7 @@ public:
         irq_handle_.reset();
     }
     virtual zx_status_t Bind() = 0;
-    virtual void Unbind(){};
+    virtual void Unbind(){}
 
     // Returns true if the specified feature bit is set
     virtual bool ReadFeature(uint32_t bit) = 0;

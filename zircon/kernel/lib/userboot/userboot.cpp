@@ -472,4 +472,4 @@ void userboot_init(uint level) {
     attempt_userboot();
 }
 
-LK_INIT_HOOK(userboot, userboot_init, LK_INIT_LEVEL_USER);
+LK_INIT_HOOK(userboot, userboot_init, LK_INIT_LEVEL_USER)

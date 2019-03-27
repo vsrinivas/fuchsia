@@ -135,4 +135,4 @@ RUN_TEST(nand::LastBadTest)
 RUN_TEST(nand::AllBadTest)
 RUN_TEST(nand::MultipleCopiesTest)
 RUN_TEST(nand::MultipleCopiesSomeBadTest)
-END_TEST_CASE(LtopTests);
+END_TEST_CASE(LtopTests)

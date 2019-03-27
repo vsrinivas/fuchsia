@@ -3537,7 +3537,7 @@ END_TEST_CASE(fvm_tests)
 BEGIN_TEST_CASE(fvm_check_tests)
 RUN_TEST_SMALL(TestCheckBadArguments);
 RUN_TEST_SMALL(TestCheckNewFVM);
-END_TEST_CASE(fvm_check_tests);
+END_TEST_CASE(fvm_check_tests)
 
 int main(int argc, char** argv) {
     int i = 1;

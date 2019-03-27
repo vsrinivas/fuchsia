@@ -75,7 +75,7 @@ public:
     */
     void Shutdown();
 
-    uint32_t fifo_depth() const { return fifo_depth_;};
+    uint32_t fifo_depth() const { return fifo_depth_;}
 
 private:
     const uint32_t fifo_depth_;    // in bytes.
@@ -98,7 +98,7 @@ private:
         clk_src_(clk_src),
         frddr_base_(GetFrddrBase(frddr)),
         tdm_base_(GetTdmBase(tdm)),
-        mmio_(std::move(mmio)) {};
+        mmio_(std::move(mmio)) {}
 
     ~AmlTdmDevice() = default;
 

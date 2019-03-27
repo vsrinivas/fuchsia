@@ -14,7 +14,7 @@
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_DISPLAY_CONTROLLER, 1)
 
 IOCTL_WRAPPER_OUT(ioctl_display_controller_get_handle,
-                  IOCTL_DISPLAY_CONTROLLER_GET_HANDLE, zx_handle_t);
+                  IOCTL_DISPLAY_CONTROLLER_GET_HANDLE, zx_handle_t)
 
 #define IMAGE_TYPE_SIMPLE UINT32_C(0)
 #define INVALID_ID 0

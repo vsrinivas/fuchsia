@@ -110,44 +110,44 @@ static_assert(sizeof(size_t) == sizeof(void*), "");
 
 #define CHECK_MAX(type, TYPE) static_assert(std::is_signed<type>::value ? CHECK_MAX_SIGNED(type, TYPE) : CHECK_MAX_UNSIGNED(type, TYPE), "");
 
-CHECK_MAX(int8_t, INT8);
-CHECK_MAX(int16_t, INT16);
-CHECK_MAX(int32_t, INT32);
-CHECK_MAX(int64_t, INT64);
-CHECK_MAX(uint8_t, UINT8);
-CHECK_MAX(uint16_t, UINT16);
-CHECK_MAX(uint32_t, UINT32);
-CHECK_MAX(uint64_t, UINT64);
+CHECK_MAX(int8_t, INT8)
+CHECK_MAX(int16_t, INT16)
+CHECK_MAX(int32_t, INT32)
+CHECK_MAX(int64_t, INT64)
+CHECK_MAX(uint8_t, UINT8)
+CHECK_MAX(uint16_t, UINT16)
+CHECK_MAX(uint32_t, UINT32)
+CHECK_MAX(uint64_t, UINT64)
 
-CHECK_MAX(int_least8_t, INT_LEAST8);
-CHECK_MAX(int_least16_t, INT_LEAST16);
-CHECK_MAX(int_least32_t, INT_LEAST32);
-CHECK_MAX(int_least64_t, INT_LEAST64);
-CHECK_MAX(uint_least8_t, UINT_LEAST8);
-CHECK_MAX(uint_least16_t, UINT_LEAST16);
-CHECK_MAX(uint_least32_t, UINT_LEAST32);
-CHECK_MAX(uint_least64_t, UINT_LEAST64);
+CHECK_MAX(int_least8_t, INT_LEAST8)
+CHECK_MAX(int_least16_t, INT_LEAST16)
+CHECK_MAX(int_least32_t, INT_LEAST32)
+CHECK_MAX(int_least64_t, INT_LEAST64)
+CHECK_MAX(uint_least8_t, UINT_LEAST8)
+CHECK_MAX(uint_least16_t, UINT_LEAST16)
+CHECK_MAX(uint_least32_t, UINT_LEAST32)
+CHECK_MAX(uint_least64_t, UINT_LEAST64)
 
-CHECK_MAX(int_fast8_t, INT_FAST8);
-CHECK_MAX(int_fast16_t, INT_FAST16);
-CHECK_MAX(int_fast32_t, INT_FAST32);
-CHECK_MAX(int_fast64_t, INT_FAST64);
-CHECK_MAX(uint_fast8_t, UINT_FAST8);
-CHECK_MAX(uint_fast16_t, UINT_FAST16);
-CHECK_MAX(uint_fast32_t, UINT_FAST32);
-CHECK_MAX(uint_fast64_t, UINT_FAST64);
+CHECK_MAX(int_fast8_t, INT_FAST8)
+CHECK_MAX(int_fast16_t, INT_FAST16)
+CHECK_MAX(int_fast32_t, INT_FAST32)
+CHECK_MAX(int_fast64_t, INT_FAST64)
+CHECK_MAX(uint_fast8_t, UINT_FAST8)
+CHECK_MAX(uint_fast16_t, UINT_FAST16)
+CHECK_MAX(uint_fast32_t, UINT_FAST32)
+CHECK_MAX(uint_fast64_t, UINT_FAST64)
 
-CHECK_MAX(intptr_t, INTPTR);
-CHECK_MAX(uintptr_t, UINTPTR);
+CHECK_MAX(intptr_t, INTPTR)
+CHECK_MAX(uintptr_t, UINTPTR)
 
-CHECK_MAX(intmax_t, INTMAX);
-CHECK_MAX(uintmax_t, UINTMAX);
+CHECK_MAX(intmax_t, INTMAX)
+CHECK_MAX(uintmax_t, UINTMAX)
 
-CHECK_MAX(ptrdiff_t, PTRDIFF);
-CHECK_MAX(size_t, SIZE);
-CHECK_MAX(wchar_t, WCHAR);
+CHECK_MAX(ptrdiff_t, PTRDIFF)
+CHECK_MAX(size_t, SIZE)
+CHECK_MAX(wchar_t, WCHAR)
 
-CHECK_MAX(sig_atomic_t, SIG_ATOMIC);
+CHECK_MAX(sig_atomic_t, SIG_ATOMIC)
 
 // Check minimums.
 #define CHECK_MIN_TYPE(type, TYPE)                                   \

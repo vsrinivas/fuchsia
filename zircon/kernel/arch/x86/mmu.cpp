@@ -28,14 +28,14 @@
 #define LOCAL_TRACE 0
 
 // Count of the number of batches of TLB invalidations initiated on each CPU
-KCOUNTER(tlb_invalidations_sent, "mmu.tlb_invalidation_batches_sent");
+KCOUNTER(tlb_invalidations_sent, "mmu.tlb_invalidation_batches_sent")
 // Count of the number of batches of TLB invalidation requests received on each CPU
 // Includes tlb_invalidations_full_global_received and tlb_invalidations_full_nonglobal_received
-KCOUNTER(tlb_invalidations_received, "mmu.tlb_invalidation_batches_received");
+KCOUNTER(tlb_invalidations_received, "mmu.tlb_invalidation_batches_received")
 // Count of the number of TLB invalidation requests for all entries on each CPU
-KCOUNTER(tlb_invalidations_full_global_received, "mmu.tlb_invalidation_full_global_received");
+KCOUNTER(tlb_invalidations_full_global_received, "mmu.tlb_invalidation_full_global_received")
 // Count of the number of TLB invalidation requests for all non-global entries on each CPU
-KCOUNTER(tlb_invalidations_full_nonglobal_received, "mmu.tlb_invalidation_full_nonglobal_received");
+KCOUNTER(tlb_invalidations_full_nonglobal_received, "mmu.tlb_invalidation_full_nonglobal_received")
 
 /* Default address width including virtual/physical address.
  * newer versions fetched below */

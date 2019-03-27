@@ -15,11 +15,11 @@ namespace {
 class BaseClass {
 public:
     zx_status_t SimpleFnWithReply(uint64_t, fidl_txn_t*) { return ZX_OK; }
-    zx_status_t SimpleFnWithoutReply(uint64_t) { return ZX_OK; };
+    zx_status_t SimpleFnWithoutReply(uint64_t) { return ZX_OK; }
     zx_status_t ConstFnWithReply(uint64_t, fidl_txn_t*) const { return ZX_OK; }
-    zx_status_t ConstFnWithoutReply(uint64_t) const { return ZX_OK; };
+    zx_status_t ConstFnWithoutReply(uint64_t) const { return ZX_OK; }
     zx_status_t VolatileFnWithReply(uint64_t, fidl_txn_t*) volatile { return ZX_OK; }
-    zx_status_t VolatileFnWithoutReply(uint64_t) volatile { return ZX_OK; };
+    zx_status_t VolatileFnWithoutReply(uint64_t) volatile { return ZX_OK; }
 
     zx_status_t OverloadedFnWithReply(uint64_t, fidl_txn_t*) { return ZX_OK; }
 
@@ -190,4 +190,4 @@ RUN_TEST(ConstBindMemberTest)
 RUN_TEST(VolatileBindMemberTest)
 RUN_TEST(OverloadedBindMemberTest)
 RUN_TEST(VirtualBindMemberTest)
-END_TEST_CASE(binding_tests);
+END_TEST_CASE(binding_tests)

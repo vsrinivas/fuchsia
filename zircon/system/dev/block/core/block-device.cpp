@@ -60,7 +60,7 @@ public:
           parent_volume_protocol_(parent) {
         block_protocol_t self { &block_protocol_ops_, this };
         self_protocol_ = ddk::BlockProtocolClient(&self);
-    };
+    }
 
     static zx_status_t Bind(void* ctx, zx_device_t* dev);
 

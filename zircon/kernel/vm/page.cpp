@@ -89,4 +89,4 @@ STATIC_COMMAND_START
 #if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("vm_page", "vm_page debug commands", &cmd_vm_page)
 #endif
-STATIC_COMMAND_END(vm_page);
+STATIC_COMMAND_END(vm_page)

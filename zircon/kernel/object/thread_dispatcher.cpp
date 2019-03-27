@@ -41,8 +41,8 @@
 
 #define LOCAL_TRACE 0
 
-KCOUNTER(dispatcher_thread_create_count, "dispatcher.thread.create");
-KCOUNTER(dispatcher_thread_destroy_count, "dispatcher.thread.destroy");
+KCOUNTER(dispatcher_thread_create_count, "dispatcher.thread.create")
+KCOUNTER(dispatcher_thread_destroy_count, "dispatcher.thread.destroy")
 
 // static
 zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags,

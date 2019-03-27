@@ -42,7 +42,7 @@ public:
     // Stops clocking data and quiets output signals.
     void Shutdown();
 
-    uint32_t fifo_depth() const { return fifo_depth_; };
+    uint32_t fifo_depth() const { return fifo_depth_; }
     zx_status_t SetRate(uint32_t frames_per_second);
 
 private:
@@ -60,7 +60,7 @@ private:
         : fifo_depth_(fifo_depth),
           mmio_audio_(std::move(mmio_audio)),
           mmio_clk_(std::move(mmio_clk)),
-          mmio_pll_(std::move(mmio_pll)){};
+          mmio_pll_(std::move(mmio_pll)){}
 
     void InitRegs();
 };

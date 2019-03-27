@@ -194,7 +194,7 @@ bool Dnode::IsDirectory() const { return vnode_->IsDirectory(); }
 
 Dnode::Dnode(fbl::RefPtr<VnodeMemfs> vn, fbl::unique_ptr<char[]> name, uint32_t flags) :
     vnode_(std::move(vn)), parent_(nullptr), ordering_token_(0), flags_(flags), name_(std::move(name)) {
-};
+}
 
 size_t Dnode::NameLen() const {
     return flags_ & kDnodeNameMax;

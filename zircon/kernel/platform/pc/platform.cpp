@@ -52,7 +52,7 @@
 extern "C" {
 #include <efi/runtime-services.h>
 #include <efi/system-table.h>
-};
+}
 
 #define LOCAL_TRACE 0
 
@@ -294,10 +294,10 @@ static void platform_ensure_display_memtype(uint level) {
     info.framebuffer = addr;
     gfxconsole_bind_display(&info, NULL);
 }
-LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM + 1);
+LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM + 1)
 
 static efi_guid zircon_guid = ZIRCON_VENDOR_GUID;
-static char16_t crashlog_name[] = ZIRCON_CRASHLOG_EFIVAR;
+static char16_t crashlog_name[] = ZIRCON_CRASHLOG_EFIVAR
 
 static fbl::RefPtr<VmAspace> efi_aspace;
 

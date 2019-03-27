@@ -161,4 +161,4 @@ RUN_TEST_SMALL(PrivateStorageTest)
 RUN_TEST_SMALL(MultipleSectionTest)
 RUN_TEST_SMALL(CallbackTest)
 RUN_TEST_SMALL(AutoCallbackTest)
-END_TEST_CASE(OperationTests);
+END_TEST_CASE(OperationTests)

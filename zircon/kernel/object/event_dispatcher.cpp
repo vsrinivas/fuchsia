@@ -12,8 +12,8 @@
 #include <lib/counters.h>
 #include <zircon/rights.h>
 
-KCOUNTER(dispatcher_event_create_count, "dispatcher.event.create");
-KCOUNTER(dispatcher_event_destroy_count, "dispatcher.event.destroy");
+KCOUNTER(dispatcher_event_create_count, "dispatcher.event.create")
+KCOUNTER(dispatcher_event_destroy_count, "dispatcher.event.destroy")
 
 zx_status_t EventDispatcher::Create(uint32_t options, KernelHandle<EventDispatcher>* handle,
                                     zx_rights_t* rights) {

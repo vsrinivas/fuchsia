@@ -1835,19 +1835,19 @@ bool fn_name ##_vmo() { return fn_name(false); } \
 RUN_TEST(fn_name ##_vmar); \
 RUN_TEST(fn_name ##_vmo);
 
-DEFINE_VMO_VMAR_TEST(single_page_test);
-DEFINE_VMO_VMAR_TEST(presupply_test);
-DEFINE_VMO_VMAR_TEST(early_supply_test);
-DEFINE_VMO_VMAR_TEST(sequential_multipage_test);
-DEFINE_VMO_VMAR_TEST(concurrent_multipage_access_test);
-DEFINE_VMO_VMAR_TEST(concurrent_overlapping_access_test);
-DEFINE_VMO_VMAR_TEST(bulk_single_supply_test);
-DEFINE_VMO_VMAR_TEST(bulk_odd_length_supply_test);
-DEFINE_VMO_VMAR_TEST(bulk_odd_offset_supply_test);
-DEFINE_VMO_VMAR_TEST(overlap_supply_test);
-DEFINE_VMO_VMAR_TEST(many_request_test);
-DEFINE_VMO_VMAR_TEST(read_resize_test);
-DEFINE_VMO_VMAR_TEST(suspend_read_test);
+DEFINE_VMO_VMAR_TEST(single_page_test)
+DEFINE_VMO_VMAR_TEST(presupply_test)
+DEFINE_VMO_VMAR_TEST(early_supply_test)
+DEFINE_VMO_VMAR_TEST(sequential_multipage_test)
+DEFINE_VMO_VMAR_TEST(concurrent_multipage_access_test)
+DEFINE_VMO_VMAR_TEST(concurrent_overlapping_access_test)
+DEFINE_VMO_VMAR_TEST(bulk_single_supply_test)
+DEFINE_VMO_VMAR_TEST(bulk_odd_length_supply_test)
+DEFINE_VMO_VMAR_TEST(bulk_odd_offset_supply_test)
+DEFINE_VMO_VMAR_TEST(overlap_supply_test)
+DEFINE_VMO_VMAR_TEST(many_request_test)
+DEFINE_VMO_VMAR_TEST(read_resize_test)
+DEFINE_VMO_VMAR_TEST(suspend_read_test)
 
 BEGIN_TEST_CASE(pager_read_tests)
 RUN_VMO_VMAR_TEST(single_page_test);
@@ -1872,12 +1872,12 @@ END_TEST_CASE(pager_read_tests)
 
 // Tests focused on lifecycle of pager and paged vmos.
 
-DEFINE_VMO_VMAR_TEST(read_detach_interrupt_late_test);
-DEFINE_VMO_VMAR_TEST(read_close_interrupt_late_test);
-DEFINE_VMO_VMAR_TEST(read_detach_interrupt_early_test);
-DEFINE_VMO_VMAR_TEST(read_close_interrupt_early_test);
-DEFINE_VMO_VMAR_TEST(thread_kill_test);
-DEFINE_VMO_VMAR_TEST(thread_kill_overlap_test);
+DEFINE_VMO_VMAR_TEST(read_detach_interrupt_late_test)
+DEFINE_VMO_VMAR_TEST(read_close_interrupt_late_test)
+DEFINE_VMO_VMAR_TEST(read_detach_interrupt_early_test)
+DEFINE_VMO_VMAR_TEST(read_close_interrupt_early_test)
+DEFINE_VMO_VMAR_TEST(thread_kill_test)
+DEFINE_VMO_VMAR_TEST(thread_kill_overlap_test)
 
 BEGIN_TEST_CASE(lifecycle_tests)
 RUN_TEST(vmo_info_pager_test);
@@ -1896,10 +1896,10 @@ END_TEST_CASE(lifecycle_tests)
 
 // Tests focused on clones.
 
-DEFINE_VMO_VMAR_TEST(clone_read_from_clone_test);
-DEFINE_VMO_VMAR_TEST(clone_read_from_parent_test);
-DEFINE_VMO_VMAR_TEST(clone_simultaneous_read_test);
-DEFINE_VMO_VMAR_TEST(clone_simultaneous_child_read_test);
+DEFINE_VMO_VMAR_TEST(clone_read_from_clone_test)
+DEFINE_VMO_VMAR_TEST(clone_read_from_parent_test)
+DEFINE_VMO_VMAR_TEST(clone_simultaneous_read_test)
+DEFINE_VMO_VMAR_TEST(clone_simultaneous_child_read_test)
 
 BEGIN_TEST_CASE(clone_tests);
 RUN_VMO_VMAR_TEST(clone_read_from_clone_test);
@@ -1911,7 +1911,7 @@ RUN_TEST(clone_detach_test);
 RUN_TEST(clone_commit_test);
 RUN_TEST(clone_split_commit_test);
 RUN_TEST(clone_decommit_test);
-END_TEST_CASE(clone_tests);
+END_TEST_CASE(clone_tests)
 
 // Tests focused on commit/decommit.
 

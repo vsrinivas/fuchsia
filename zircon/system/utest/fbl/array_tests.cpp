@@ -95,4 +95,4 @@ BEGIN_TEST_CASE(array_tests)
 RUN_NAMED_TEST("destructor test", destructor_test)
 RUN_TEST(move_to_const_ctor_test)
 RUN_TEST(move_to_const_assignment_test)
-END_TEST_CASE(array_tests);
+END_TEST_CASE(array_tests)

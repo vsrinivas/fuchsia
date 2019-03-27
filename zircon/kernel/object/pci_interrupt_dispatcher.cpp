@@ -15,8 +15,8 @@
 #include <platform.h>
 #include <zircon/rights.h>
 
-KCOUNTER(dispatcher_pci_interrupt_create_count, "dispatcher.pci_interrupt.create");
-KCOUNTER(dispatcher_pci_interrupt_destroy_count, "dispatcher.pci_interrupt.destroy");
+KCOUNTER(dispatcher_pci_interrupt_create_count, "dispatcher.pci_interrupt.create")
+KCOUNTER(dispatcher_pci_interrupt_destroy_count, "dispatcher.pci_interrupt.destroy")
 
 PciInterruptDispatcher::~PciInterruptDispatcher() {
     kcounter_add(dispatcher_pci_interrupt_destroy_count, 1);

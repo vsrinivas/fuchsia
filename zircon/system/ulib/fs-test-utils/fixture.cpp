@@ -215,7 +215,7 @@ Fixture::~Fixture() {
     // Sanity check, teardown any resources if these two were not called yet.
     TearDown();
     TearDownTestCase();
-};
+}
 
 zx_status_t Fixture::Mount() {
     fbl::unique_fd fd(open(GetFsBlockDevice().c_str(), O_RDWR));

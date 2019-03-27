@@ -88,6 +88,6 @@ xunion Foo {
 
 } // namespace
 
-BEGIN_TEST_CASE(xunion_tests);
-RUN_TEST(compiling);
-END_TEST_CASE(xunion_tests);
+BEGIN_TEST_CASE(xunion_tests)
+RUN_TEST(compiling)
+END_TEST_CASE(xunion_tests)

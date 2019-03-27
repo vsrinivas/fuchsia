@@ -29,7 +29,7 @@ public:
         static_assert(std::is_unsigned_v<T>,
                      "LFSR initializer type must be an unsigned integer!");
         core_ = static_cast<CoreType>(val);
-    };
+    }
 
     CoreType PeekCore() const {
         return core_;

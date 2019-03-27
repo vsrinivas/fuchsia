@@ -48,7 +48,7 @@ private:
     IntelHDADSP(IntelHDAController& controller,
                 hda_pp_registers_t* pp_regs,
                 const fbl::RefPtr<RefCountedBti>& pci_bti);
-    ~IntelHDADSP() { };
+    ~IntelHDADSP() { }
 
     hda_pp_registers_t* pp_regs() const {
         return pp_regs_;

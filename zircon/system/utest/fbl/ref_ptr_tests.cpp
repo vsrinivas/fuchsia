@@ -654,4 +654,4 @@ RUN_NAMED_TEST("Ref Pointer Upcast", upcasting::ref_ptr_upcast_test)
 RUN_NAMED_TEST("Ref Pointer Adopt null", ref_ptr_adopt_null_test)
 RUN_NAMED_TEST("Ref Pointer To Const", ref_ptr_to_const_test)
 RUN_NAMED_TEST("Ref Pointer Move Assignment", ref_ptr_move_assign)
-END_TEST_CASE(ref_ptr_tests);
+END_TEST_CASE(ref_ptr_tests)

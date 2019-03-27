@@ -10,10 +10,9 @@ namespace gpt {
 // GUID_*_VALUE are brace-enclosed values {1, 2,..}. Function arguments
 // cannot be brace-enclosed initializer. So here we convert VALUE to a
 // constexpr
-#define GUID_MAKE_ARRAY(name)                                                                      \
-    constexpr uint8_t GUID_##name##_ARRAY[GPT_GUID_LEN] = GUID_##name##_VALUE;
+#define GUID_MAKE_ARRAY(name) \
+    constexpr uint8_t GUID_##name##_ARRAY[GPT_GUID_LEN] = GUID_##name##_VALUE
 
-// clang-format off
 GUID_MAKE_ARRAY(EMPTY);
 GUID_MAKE_ARRAY(EFI);
 GUID_MAKE_ARRAY(SYSTEM);
@@ -36,7 +35,6 @@ GUID_MAKE_ARRAY(CROS_RESERVED);
 GUID_MAKE_ARRAY(CROS_FIRMWARE);
 GUID_MAKE_ARRAY(CROS_DATA);
 GUID_MAKE_ARRAY(BIOS);
-// clang-format on
 
 #define GUID_NAMETAB(name)                                                                         \
     GuidProperties(GUID_##name##_NAME, GUID_##name##_STRING, GUID_##name##_ARRAY)

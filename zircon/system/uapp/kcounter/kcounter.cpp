@@ -46,7 +46,7 @@ If PREFIX arguments are given, only matching names are shown.\n\
 Results are always sorted by name.\n\
 ",
            myname, default_period);
-};
+}
 
 constexpr char kVmoFileDir[] = "/boot/kernel";
 

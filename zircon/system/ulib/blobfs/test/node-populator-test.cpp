@@ -501,4 +501,4 @@ RUN_TEST(blobfs::WalkManyNodesTest)
 RUN_TEST(blobfs::WalkManyContainersTest)
 RUN_TEST(blobfs::WalkExtraNodesTest)
 RUN_TEST(blobfs::WalkExtraExtentsTest)
-END_TEST_CASE(blobfsNodePopulatorTests);
+END_TEST_CASE(blobfsNodePopulatorTests)

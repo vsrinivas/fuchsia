@@ -333,7 +333,7 @@ typedef struct {
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PERFMON, 0)
 IOCTL_WRAPPER_OUT(ioctl_perfmon_get_properties,
                   IOCTL_PERFMON_GET_PROPERTIES,
-                  perfmon_properties_t);
+                  perfmon_properties_t)
 
 // The allocation configuration for a data collection run.
 // This is generally the first call to allocate resources for a trace,
@@ -354,20 +354,20 @@ typedef struct {
 #define IOCTL_PERFMON_ALLOC_TRACE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PERFMON, 1)
 IOCTL_WRAPPER_IN(ioctl_perfmon_alloc_trace, IOCTL_PERFMON_ALLOC_TRACE,
-                 ioctl_perfmon_alloc_t);
+                 ioctl_perfmon_alloc_t)
 
 // Free all trace buffers and any other resources allocated for the trace.
 // This is also done when the fd is closed (as well as stopping the trace).
 #define IOCTL_PERFMON_FREE_TRACE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PERFMON, 2)
-IOCTL_WRAPPER(ioctl_perfmon_free_trace, IOCTL_PERFMON_FREE_TRACE);
+IOCTL_WRAPPER(ioctl_perfmon_free_trace, IOCTL_PERFMON_FREE_TRACE)
 
 // Return trace allocation config.
 // Output: ioctl_perfmon_alloc_t
 #define IOCTL_PERFMON_GET_ALLOC \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PERFMON, 3)
 IOCTL_WRAPPER_OUT(ioctl_perfmon_get_alloc, IOCTL_PERFMON_GET_ALLOC,
-                  ioctl_perfmon_alloc_t);
+                  ioctl_perfmon_alloc_t)
 
 // Stage performance monitor specification for a cpu.
 // Must be called with data collection off and after ALLOC.
@@ -377,7 +377,7 @@ IOCTL_WRAPPER_OUT(ioctl_perfmon_get_alloc, IOCTL_PERFMON_GET_ALLOC,
 #define IOCTL_PERFMON_STAGE_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PERFMON, 4)
 IOCTL_WRAPPER_IN(ioctl_perfmon_stage_config, IOCTL_PERFMON_STAGE_CONFIG,
-                 perfmon_config_t);
+                 perfmon_config_t)
 
 // Fetch performance monitor specification for a cpu.
 // Must be called with data collection off and after STAGE_CONFIG.
@@ -385,7 +385,7 @@ IOCTL_WRAPPER_IN(ioctl_perfmon_stage_config, IOCTL_PERFMON_STAGE_CONFIG,
 #define IOCTL_PERFMON_GET_CONFIG \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PERFMON, 5)
 IOCTL_WRAPPER_OUT(ioctl_perfmon_get_config, IOCTL_PERFMON_GET_CONFIG,
-                  perfmon_config_t);
+                  perfmon_config_t)
 
 typedef struct {
     uint32_t descriptor;
@@ -398,20 +398,20 @@ typedef struct {
     IOCTL(IOCTL_KIND_GET_HANDLE, IOCTL_FAMILY_PERFMON, 6)
 IOCTL_WRAPPER_INOUT(ioctl_perfmon_get_buffer_handle,
                     IOCTL_PERFMON_GET_BUFFER_HANDLE,
-                    ioctl_perfmon_buffer_handle_req_t, zx_handle_t);
+                    ioctl_perfmon_buffer_handle_req_t, zx_handle_t)
 
 // Turn on data collection.
 // Must be called after ALLOC+STAGE_CONFIG and with data collection off.
 #define IOCTL_PERFMON_START \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PERFMON, 7)
-IOCTL_WRAPPER(ioctl_perfmon_start, IOCTL_PERFMON_START);
+IOCTL_WRAPPER(ioctl_perfmon_start, IOCTL_PERFMON_START)
 
 // Turn off data collection.
 // May be called any time after ALLOC has been called and before FREE.
 // May be called multiple times.
 #define IOCTL_PERFMON_STOP \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_PERFMON, 8)
-IOCTL_WRAPPER(ioctl_perfmon_stop, IOCTL_PERFMON_STOP);
+IOCTL_WRAPPER(ioctl_perfmon_stop, IOCTL_PERFMON_STOP)
 
 #endif // __Fuchsia__
 

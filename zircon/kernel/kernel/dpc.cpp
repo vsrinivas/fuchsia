@@ -193,4 +193,4 @@ static void dpc_init(unsigned int level) {
     dpc_init_for_cpu();
 }
 
-LK_INIT_HOOK(dpc, dpc_init, LK_INIT_LEVEL_THREADING);
+LK_INIT_HOOK(dpc, dpc_init, LK_INIT_LEVEL_THREADING)

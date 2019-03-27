@@ -60,4 +60,4 @@ static void platform_dev_init(uint level) {
     pdev_run_hooks(level);
 }
 
-LK_INIT_HOOK(platform_dev_init, platform_dev_init, LK_INIT_LEVEL_PLATFORM);
+LK_INIT_HOOK(platform_dev_init, platform_dev_init, LK_INIT_LEVEL_PLATFORM)

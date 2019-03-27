@@ -130,20 +130,20 @@ DEFINE_REGISTER(VldMemVififoEndPtr, DosRegisterIo, 0x0c42)
 DEFINE_REGISTER(VldMemVififoBytesAvail, DosRegisterIo, 0x0c43)
 
 REGISTER_NAME(VldMemVififoControl, DosRegisterIo, 0x0c44)
-  DEF_FIELD(23, 16, upper)
-  DEF_BIT(10, fill_on_level)
-  DEF_FIELD(6, 3, endianness)
-  DEF_BIT(2, empty_en)
-  DEF_BIT(1, fill_en)
-  DEF_BIT(0, init)
+  DEF_FIELD(23, 16, upper);
+  DEF_BIT(10, fill_on_level);
+  DEF_FIELD(6, 3, endianness);
+  DEF_BIT(2, empty_en);
+  DEF_BIT(1, fill_en);
+  DEF_BIT(0, init);
 };
 
 DEFINE_REGISTER(VldMemVififoWP, DosRegisterIo, 0x0c45)
 DEFINE_REGISTER(VldMemVififoRP, DosRegisterIo, 0x0c46)
 DEFINE_REGISTER(VldMemVififoLevel, DosRegisterIo, 0x0c47)
 REGISTER_NAME(VldMemVififoBufCntl, DosRegisterIo, 0x0c48)
-    DEF_BIT(1, manual)
-    DEF_BIT(0, init)
+    DEF_BIT(1, manual);
+    DEF_BIT(0, init);
 };
 DEFINE_REGISTER(VldMemVififoWrapCount, DosRegisterIo, 0x0c51)
 DEFINE_REGISTER(VldMemVififoMemCtl, DosRegisterIo, 0x0c52)
@@ -164,8 +164,8 @@ DEFINE_REGISTER(McCtrl1, DosRegisterIo, 0x090b)
 DEFINE_REGISTER(DblkCtrl, DosRegisterIo, 0x0951)
 DEFINE_REGISTER(DblkStatus, DosRegisterIo, 0x0953)
 REGISTER_NAME(MdecPicDcCtrl, DosRegisterIo, 0x098e)
-    DEF_BIT(17, nv12_output) // as opposed to 3-plane YUV
-    DEF_BIT(31, bit31)
+    DEF_BIT(17, nv12_output); // as opposed to 3-plane YUV
+    DEF_BIT(31, bit31);
 };
 DEFINE_REGISTER(MdecPicDcStatus, DosRegisterIo, 0x098f)
 
@@ -338,8 +338,8 @@ DEFINE_REGISTER(HevcImemDmaAdr, DosRegisterIo, 0x3341);
 DEFINE_REGISTER(HevcImemDmaCount, DosRegisterIo, 0x3342);
 
 REGISTER_NAME(HevcdIppTopCntl, DosRegisterIo, 0x3400)
-  DEF_BIT(1, enable_ipp)
-  DEF_BIT(0, reset_ipp_and_mpp)
+  DEF_BIT(1, enable_ipp);
+  DEF_BIT(0, reset_ipp_and_mpp);
 };
 DEFINE_REGISTER(HevcdIppLinebuffBase, DosRegisterIo, 0x3409);
 REGISTER_NAME(HevcdIppAxiifConfig, DosRegisterIo, 0x340b)
@@ -476,22 +476,22 @@ REGISTER_NAME(DmcReqCtrl, DmcRegisterIo, 0x0)
 
 DEFINE_REGISTER(Reset0Register, ResetRegisterIo, 0x1101 - 0x1100);
 REGISTER_NAME(Reset1Register, ResetRegisterIo, 0x1102 - 0x1100)
-  DEF_BIT(8, parser)
+  DEF_BIT(8, parser);
 };
 DEFINE_REGISTER(FecInputControl, DemuxRegisterIo, 0x1602)
 
 REGISTER_NAME(TsHiuCtl, DemuxRegisterIo, 0x1625)
-  DEF_BIT(7, use_hi_bsf_interface)
+  DEF_BIT(7, use_hi_bsf_interface);
 };
 REGISTER_NAME(TsHiuCtl2, DemuxRegisterIo, 0x1675)
-  DEF_BIT(7, use_hi_bsf_interface)
+  DEF_BIT(7, use_hi_bsf_interface);
 };
 REGISTER_NAME(TsHiuCtl3, DemuxRegisterIo, 0x16c5)
-  DEF_BIT(7, use_hi_bsf_interface)
+  DEF_BIT(7, use_hi_bsf_interface);
 };
 
 REGISTER_NAME(TsFileConfig, DemuxRegisterIo, 0x16f2)
-  DEF_BIT(5, ts_hiu_enable)
+  DEF_BIT(5, ts_hiu_enable);
 };
 
 REGISTER_NAME(ParserConfig, ParserRegisterIo, 0x2965)
@@ -501,11 +501,11 @@ REGISTER_NAME(ParserConfig, ParserRegisterIo, 0x2965)
     kWidth24 = 2,
     kWidth32 = 3,
   };
-  DEF_FIELD(23, 16, pfifo_empty_cnt)
-  DEF_FIELD(15, 12, max_es_write_cycle)
-  DEF_FIELD(11, 10, startcode_width)
-  DEF_FIELD(9, 8, pfifo_access_width)
-  DEF_FIELD(7, 0, max_fetch_cycle)
+  DEF_FIELD(23, 16, pfifo_empty_cnt);
+  DEF_FIELD(15, 12, max_es_write_cycle);
+  DEF_FIELD(11, 10, startcode_width);
+  DEF_FIELD(9, 8, pfifo_access_width);
+  DEF_FIELD(7, 0, max_fetch_cycle);
 };
 DEFINE_REGISTER(PfifoWrPtr, ParserRegisterIo, 0x2966)
 DEFINE_REGISTER(PfifoRdPtr, ParserRegisterIo, 0x2967)
@@ -518,10 +518,10 @@ REGISTER_NAME(ParserControl, ParserRegisterIo, 0x2960)
     kStart = (1 << 0),
     kAutoSearch = kSearch | kStart,
   };
-  DEF_FIELD(31, 8, es_pack_size)
-  DEF_FIELD(7, 6, type)
-  DEF_BIT(5, write)
-  DEF_FIELD(4, 0, command)
+  DEF_FIELD(31, 8, es_pack_size);
+  DEF_FIELD(7, 6, type);
+  DEF_BIT(5, write);
+  DEF_FIELD(4, 0, command);
 };
 
 DEFINE_REGISTER(ParserVideoStartPtr, ParserRegisterIo, 0x2980)
@@ -529,22 +529,22 @@ DEFINE_REGISTER(ParserVideoEndPtr, ParserRegisterIo, 0x2981)
 DEFINE_REGISTER(ParserVideoWp, ParserRegisterIo, 0x2982)
 
 REGISTER_NAME(ParserEsControl, ParserRegisterIo, 0x2977)
-  DEF_BIT(0, video_manual_read_ptr_update)
+  DEF_BIT(0, video_manual_read_ptr_update);
 };
 
 REGISTER_NAME(ParserIntStatus, ParserRegisterIo, 0x296c)
-  DEF_BIT(7, fetch_complete)
-  DEF_BIT(0, start_code_found)
+  DEF_BIT(7, fetch_complete);
+  DEF_BIT(0, start_code_found);
 };
 REGISTER_NAME(ParserIntEnable, ParserRegisterIo, 0x296b)
-  DEF_BIT(8, host_en_start_code_found)
-  DEF_BIT(15, host_en_fetch_complete)
+  DEF_BIT(8, host_en_start_code_found);
+  DEF_BIT(15, host_en_fetch_complete);
 };
 
 DEFINE_REGISTER(ParserFetchAddr, ParserRegisterIo, 0x2961)
 REGISTER_NAME(ParserFetchCmd, ParserRegisterIo, 0x2962)
-  DEF_FIELD(29, 27, fetch_endian)
-  DEF_FIELD(26, 0, len)
+  DEF_FIELD(29, 27, fetch_endian);
+  DEF_FIELD(26, 0, len);
 };
 
 // clang-format on

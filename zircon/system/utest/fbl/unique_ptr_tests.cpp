@@ -625,4 +625,4 @@ RUN_NAMED_TEST("Array comparison operators",       uptr_test_array_comparison)
 RUN_NAMED_TEST("Upcast tests",                     upcasting::uptr_upcasting)
 RUN_NAMED_TEST("Make unique",                      uptr_test_make_unique)
 RUN_NAMED_TEST("Make unique array",                uptr_test_make_unique_array)
-END_TEST_CASE(unique_ptr);
+END_TEST_CASE(unique_ptr)

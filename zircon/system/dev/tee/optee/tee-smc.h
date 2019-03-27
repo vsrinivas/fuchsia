@@ -133,7 +133,7 @@ constexpr uint32_t kTrustedOsCallCountFuncId = CreateFunctionId(kFastCall,
                                                                 kTrustedOsServiceEnd,
                                                                 0xFF00);
 
-DEFINE_SMC_RESULT_STRUCT(TrustedOsCallCountResult, 1, uint32_t, call_count);
+DEFINE_SMC_RESULT_STRUCT(TrustedOsCallCountResult, 1, uint32_t, call_count)
 
 //
 // Call UID Query (0xFF01)
@@ -157,7 +157,7 @@ DEFINE_SMC_RESULT_STRUCT(TrustedOsCallUidResult, 4,
                          uint32_t, uid_0_3,
                          uint32_t, uid_4_7,
                          uint32_t, uid_8_11,
-                         uint32_t, uid_12_15);
+                         uint32_t, uid_12_15)
 
 //
 // Call Revision Query (0xFF03)
@@ -184,6 +184,6 @@ constexpr uint32_t kTrustedOsCallRevisionFuncId = CreateFunctionId(kFastCall,
 
 DEFINE_SMC_RESULT_STRUCT(TrustedOsCallRevisionResult, 2,
                          uint32_t, major,
-                         uint32_t, minor);
+                         uint32_t, minor)
 
 } // namespace tee_smc

@@ -84,7 +84,7 @@ STATIC_COMMAND_MASKED("test", "test the command processor", &cmd_test, CMD_AVAIL
 STATIC_COMMAND_MASKED("history", "command history", &cmd_history, CMD_AVAIL_ALWAYS)
 #endif
 #endif
-STATIC_COMMAND_END(help);
+STATIC_COMMAND_END(help)
 
 static void console_init(uint level) {
 #if CONSOLE_ENABLE_HISTORY
@@ -92,7 +92,7 @@ static void console_init(uint level) {
 #endif
 }
 
-LK_INIT_HOOK(console, console_init, LK_INIT_LEVEL_HEAP);
+LK_INIT_HOOK(console, console_init, LK_INIT_LEVEL_HEAP)
 
 #if CONSOLE_ENABLE_HISTORY
 static int cmd_history(int argc, const cmd_args* argv, uint32_t flags) {
@@ -837,4 +837,4 @@ static void kernel_shell_init(uint level) {
     }
 }
 
-LK_INIT_HOOK(kernel_shell, kernel_shell_init, LK_INIT_LEVEL_USER);
+LK_INIT_HOOK(kernel_shell, kernel_shell_init, LK_INIT_LEVEL_USER)

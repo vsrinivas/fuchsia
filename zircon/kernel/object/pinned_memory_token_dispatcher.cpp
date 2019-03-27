@@ -22,8 +22,8 @@
 
 #define LOCAL_TRACE 0
 
-KCOUNTER(dispatcher_pinned_memory_token_create_count, "dispatcher.pinned_memory_token.create");
-KCOUNTER(dispatcher_pinned_memory_token_destroy_count, "dispatcher.pinned_memory_token.destroy");
+KCOUNTER(dispatcher_pinned_memory_token_create_count, "dispatcher.pinned_memory_token.create")
+KCOUNTER(dispatcher_pinned_memory_token_destroy_count, "dispatcher.pinned_memory_token.destroy")
 
 zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitiatorDispatcher> bti,
                                                 PinnedVmObject pinned_vmo, uint32_t perms,

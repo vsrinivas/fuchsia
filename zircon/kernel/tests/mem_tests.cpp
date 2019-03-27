@@ -208,4 +208,4 @@ static int mem_test(int argc, const cmd_args* argv, uint32_t flags) {
 
 STATIC_COMMAND_START
 STATIC_COMMAND("mem_test", "test memory", &mem_test)
-STATIC_COMMAND_END(mem_tests);
+STATIC_COMMAND_END(mem_tests)

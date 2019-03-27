@@ -239,4 +239,4 @@ void msi_register_handler(const msi_block_t* block, uint msi_id, int_handler han
     intr_ops->msi_register_handler(block, msi_id, handler, ctx);
 }
 
-LK_INIT_HOOK_FLAGS(interrupt_init_percpu_early, interrupt_init_percpu_early, LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_FLAG_SECONDARY_CPUS);
+LK_INIT_HOOK_FLAGS(interrupt_init_percpu_early, interrupt_init_percpu_early, LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_FLAG_SECONDARY_CPUS)

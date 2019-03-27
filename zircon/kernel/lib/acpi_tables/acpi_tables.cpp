@@ -41,7 +41,7 @@ void AcpiTables::Initialize(uint32_t) {
 }
 
 /* initialize ACPI tables as soon as we have a working VM */
-LK_INIT_HOOK(acpi_tables, &AcpiTables::Initialize, LK_INIT_LEVEL_VM + 1);
+LK_INIT_HOOK(acpi_tables, &AcpiTables::Initialize, LK_INIT_LEVEL_VM + 1)
 
 zx_status_t AcpiTables::cpu_count(uint32_t* cpu_count) const {
     uint32_t count = 0;

@@ -19,8 +19,8 @@
 
 #define LOCAL_TRACE 0
 
-CODE_TEMPLATE(kStacInstruction, "stac");
-CODE_TEMPLATE(kClacInstruction, "clac");
+CODE_TEMPLATE(kStacInstruction, "stac")
+CODE_TEMPLATE(kClacInstruction, "clac")
 static const uint8_t kNopInstruction = 0x90;
 
 extern "C" {

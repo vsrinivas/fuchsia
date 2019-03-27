@@ -266,7 +266,7 @@ public:
     const ProviderInfo& GetProviderInfo() const {
         ZX_DEBUG_ASSERT(type_ == MetadataType::kProviderInfo);
         return provider_info_;
-    };
+    }
 
     const ProviderSection& GetProviderSection() const {
         ZX_DEBUG_ASSERT(type_ == MetadataType::kProviderSection);
@@ -430,7 +430,7 @@ public:
     const AsyncBegin& GetAsyncBegin() const {
         ZX_DEBUG_ASSERT(type_ == EventType::kAsyncBegin);
         return async_begin_;
-    };
+    }
 
     const AsyncInstant& GetAsyncInstant() const {
         ZX_DEBUG_ASSERT(type_ == EventType::kAsyncInstant);
@@ -626,7 +626,7 @@ public:
     const Thread& GetThread() const {
         ZX_DEBUG_ASSERT(type_ == RecordType::kThread);
         return thread_;
-    };
+    }
 
     const Event& GetEvent() const {
         ZX_DEBUG_ASSERT(type_ == RecordType::kEvent);

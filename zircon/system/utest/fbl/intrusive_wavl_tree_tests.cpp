@@ -252,7 +252,7 @@ public:
     }
 
     BalanceTestKeyType GetKey() const { return key_; }
-    BalanceTestObj* EraseDeckPtr() const { return erase_deck_ptr_; };
+    BalanceTestObj* EraseDeckPtr() const { return erase_deck_ptr_; }
 
     void SwapEraseDeckPtr(BalanceTestObj& other) {
         BalanceTestObj* tmp   = erase_deck_ptr_;
@@ -597,7 +597,7 @@ RUN_NAMED_TEST("LowerBound (RefPtr)",                      RPTE::LowerBoundTest)
 // ZX-2230: This can take more than 20 seconds in CI, so mark it medium.
 RUN_NAMED_TEST_MEDIUM("BalanceTest", WAVLBalanceTest)
 
-END_TEST_CASE(wavl_tree_tests);
+END_TEST_CASE(wavl_tree_tests)
 
 }  // namespace intrusive_containers
 }  // namespace tests

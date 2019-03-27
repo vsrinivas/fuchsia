@@ -85,7 +85,7 @@ private:
         Ramdisk* dev = reinterpret_cast<Ramdisk*>(arg);
         dev->ProcessRequests();
         return 0;
-    };
+    }
 
     uint64_t block_size_;
     uint64_t block_count_;

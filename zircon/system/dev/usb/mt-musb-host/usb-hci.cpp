@@ -326,7 +326,7 @@ zx_status_t UsbHci::InitRootHub() {
     device_[kRootHubId] = std::unique_ptr<UsbDevice>(new UsbRootHub(kRootHubId,
                                                                     usb_mmio()->View(0)));
     return ZX_OK;
-};
+}
 
 zx_status_t UsbHci::InitFifo() {
     // Each FIFO is initialized to the largest it could possibly be (singly-buffered).  As endpoints

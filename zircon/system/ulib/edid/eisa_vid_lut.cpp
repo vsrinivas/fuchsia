@@ -2470,6 +2470,6 @@ const char* lookup_eisa_vid(uint32_t eisa_vid) {
     }
 
     return found->vendor_name;
-};
+}
 
 __END_CDECLS

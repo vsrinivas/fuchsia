@@ -120,7 +120,7 @@ public:
     uint64_t TotalBlockCount() const { return blocks_; }
 
 private:
-    GptDevice() { valid_ = false; };
+    GptDevice() { valid_ = false; }
 
     zx_status_t FinalizeAndSync(bool persist);
 

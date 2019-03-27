@@ -540,7 +540,7 @@ static void pc_init_timer(uint level) {
            constant_tsc, invariant_tsc, use_tsc_deadline);
     printf("Using %s as wallclock\n", clock_name[wall_clock]);
 }
-LK_INIT_HOOK(timer, &pc_init_timer, LK_INIT_LEVEL_VM + 3);
+LK_INIT_HOOK(timer, &pc_init_timer, LK_INIT_LEVEL_VM + 3)
 
 zx_status_t platform_set_oneshot_timer(zx_time_t deadline) {
     DEBUG_ASSERT(arch_ints_disabled());

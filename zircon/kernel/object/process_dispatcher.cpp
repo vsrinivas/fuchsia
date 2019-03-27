@@ -39,8 +39,8 @@
 
 #define LOCAL_TRACE 0
 
-KCOUNTER(dispatcher_process_create_count, "dispatcher.process.create");
-KCOUNTER(dispatcher_process_destroy_count, "dispatcher.process.destroy");
+KCOUNTER(dispatcher_process_create_count, "dispatcher.process.create")
+KCOUNTER(dispatcher_process_destroy_count, "dispatcher.process.destroy")
 
 static zx_handle_t map_handle_to_value(const Handle* handle, uint32_t mixer) {
     // Ensure that the last bit of the result is not zero, and make sure

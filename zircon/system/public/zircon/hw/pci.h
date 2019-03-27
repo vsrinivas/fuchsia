@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // Structure for passing around PCI address information
 typedef struct pci_bdf {
@@ -45,6 +45,6 @@ typedef struct pci_bdf {
 
 #endif // WITH_KERNEL_PCIE
 
-__END_CDECLS;
+__END_CDECLS
 
 #endif // SYSROOT_ZIRCON_HW_PCI_H_

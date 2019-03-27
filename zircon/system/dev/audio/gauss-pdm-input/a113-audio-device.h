@@ -7,7 +7,7 @@
 
 #pragma once
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
@@ -37,4 +37,4 @@ uint32_t a113_pdm_read(a113_audio_device_t* audio_device, uint32_t reg);
 void a113_pdm_write(a113_audio_device_t* audio_device, uint32_t reg, uint32_t val);
 void a113_pdm_update_bits(a113_audio_device_t* audio_device, uint32_t reg,
                           uint32_t mask, uint32_t val);
-__END_CDECLS;
+__END_CDECLS

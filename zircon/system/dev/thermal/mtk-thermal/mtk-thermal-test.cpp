@@ -38,7 +38,7 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(uint32_t tem
     trip.down_temp = CToKTenths(temp - 2);
     trip.big_cluster_dvfs_opp = opp;
     return trip;
-};
+}
 
 }  // namespace
 

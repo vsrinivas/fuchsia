@@ -173,7 +173,7 @@ static void BecomeThreadSafe(uint level) {
 
 
 LK_INIT_HOOK(global_prng_seed, crypto::GlobalPRNG::EarlyBootSeed,
-             LK_INIT_LEVEL_TARGET_EARLY);
+             LK_INIT_LEVEL_TARGET_EARLY)
 
 LK_INIT_HOOK(global_prng_thread_safe, crypto::GlobalPRNG::BecomeThreadSafe,
              LK_INIT_LEVEL_THREADING - 1)

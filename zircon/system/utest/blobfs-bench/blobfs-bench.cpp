@@ -305,7 +305,7 @@ private:
             }
             break;
         }
-    };
+    }
 
     BlobfsInfo info_;
 };

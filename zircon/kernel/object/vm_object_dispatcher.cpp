@@ -21,8 +21,8 @@
 
 #define LOCAL_TRACE 0
 
-KCOUNTER(dispatcher_vmo_create_count, "dispatcher.vmo.create");
-KCOUNTER(dispatcher_vmo_destroy_count, "dispatcher.vmo.destroy");
+KCOUNTER(dispatcher_vmo_create_count, "dispatcher.vmo.create")
+KCOUNTER(dispatcher_vmo_destroy_count, "dispatcher.vmo.destroy")
 
 zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo,
                                        zx_koid_t pager_koid,

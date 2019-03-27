@@ -63,7 +63,7 @@ int emu_closedir(DIR* dirp);
 class FileWrapper {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(FileWrapper);
-    constexpr FileWrapper() : hostfile_(false), fd_(0) {};
+    constexpr FileWrapper() : hostfile_(false), fd_(0) {}
 
     ~FileWrapper() {
         Close();
@@ -109,7 +109,7 @@ private:
 class DirWrapper {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(DirWrapper);
-    constexpr DirWrapper() : hostdir_(false), dir_(NULL) {};
+    constexpr DirWrapper() : hostdir_(false), dir_(NULL) {}
 
     ~DirWrapper() {
         Close();

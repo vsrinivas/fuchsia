@@ -950,4 +950,4 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
 
 STATIC_COMMAND_START
 STATIC_COMMAND("zx", "kernel object diagnostics", &cmd_diagnostics)
-STATIC_COMMAND_END(zx);
+STATIC_COMMAND_END(zx)

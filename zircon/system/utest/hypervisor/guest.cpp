@@ -42,28 +42,28 @@ static constexpr uint32_t kExceptionVector = 16u;
     extern const char name##_start[];                                                              \
     extern const char name##_end[];
 
-DECLARE_TEST_FUNCTION(vcpu_resume);
-DECLARE_TEST_FUNCTION(vcpu_read_write_state);
-DECLARE_TEST_FUNCTION(vcpu_interrupt);
-DECLARE_TEST_FUNCTION(guest_set_trap);
+DECLARE_TEST_FUNCTION(vcpu_resume)
+DECLARE_TEST_FUNCTION(vcpu_read_write_state)
+DECLARE_TEST_FUNCTION(vcpu_interrupt)
+DECLARE_TEST_FUNCTION(guest_set_trap)
 #ifdef __aarch64__
-DECLARE_TEST_FUNCTION(vcpu_wfi);
-DECLARE_TEST_FUNCTION(vcpu_wfi_pending_interrupt_gicv2);
-DECLARE_TEST_FUNCTION(vcpu_wfi_pending_interrupt_gicv3);
-DECLARE_TEST_FUNCTION(vcpu_aarch32_wfi);
-DECLARE_TEST_FUNCTION(vcpu_fp);
-DECLARE_TEST_FUNCTION(vcpu_aarch32_fp);
+DECLARE_TEST_FUNCTION(vcpu_wfi)
+DECLARE_TEST_FUNCTION(vcpu_wfi_pending_interrupt_gicv2)
+DECLARE_TEST_FUNCTION(vcpu_wfi_pending_interrupt_gicv3)
+DECLARE_TEST_FUNCTION(vcpu_aarch32_wfi)
+DECLARE_TEST_FUNCTION(vcpu_fp)
+DECLARE_TEST_FUNCTION(vcpu_aarch32_fp)
 #elif __x86_64__
-DECLARE_TEST_FUNCTION(vcpu_hlt);
-DECLARE_TEST_FUNCTION(vcpu_pause);
-DECLARE_TEST_FUNCTION(vcpu_write_cr0);
-DECLARE_TEST_FUNCTION(vcpu_compat_mode);
-DECLARE_TEST_FUNCTION(vcpu_syscall);
-DECLARE_TEST_FUNCTION(vcpu_sysenter);
-DECLARE_TEST_FUNCTION(vcpu_sysenter_compat);
-DECLARE_TEST_FUNCTION(vcpu_vmcall);
-DECLARE_TEST_FUNCTION(vcpu_extended_registers);
-DECLARE_TEST_FUNCTION(guest_set_trap_with_io);
+DECLARE_TEST_FUNCTION(vcpu_hlt)
+DECLARE_TEST_FUNCTION(vcpu_pause)
+DECLARE_TEST_FUNCTION(vcpu_write_cr0)
+DECLARE_TEST_FUNCTION(vcpu_compat_mode)
+DECLARE_TEST_FUNCTION(vcpu_syscall)
+DECLARE_TEST_FUNCTION(vcpu_sysenter)
+DECLARE_TEST_FUNCTION(vcpu_sysenter_compat)
+DECLARE_TEST_FUNCTION(vcpu_vmcall)
+DECLARE_TEST_FUNCTION(vcpu_extended_registers)
+DECLARE_TEST_FUNCTION(guest_set_trap_with_io)
 #endif
 #undef DECLARE_TEST_FUNCTION
 
