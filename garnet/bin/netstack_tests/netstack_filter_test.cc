@@ -65,7 +65,7 @@ TEST_F(NetstackFilterTest, TestRuleset) {
           test_static_ip.ToString().c_str());
 
   fuchsia::net::Subnet subnet;
-  fuchsia::net::IPv4Address ipv4;
+  fuchsia::net::Ipv4Address ipv4;
   memcpy(ipv4.addr.data(), test_static_ip.as_bytes(), 4);
   subnet.addr.set_ipv4(ipv4);
   subnet.prefix_len = 24;

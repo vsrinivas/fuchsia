@@ -117,7 +117,7 @@ mod tests {
             enablement_status: EnablementStatus::Enabled,
             physical_status: PhysicalStatus::Up,
             addresses: vec![InterfaceAddress {
-                ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::IPv4Address {
+                ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
                     addr: [1, 1, 1, 1],
                 }),
                 prefix_len: 4,

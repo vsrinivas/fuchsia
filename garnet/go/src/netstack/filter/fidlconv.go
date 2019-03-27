@@ -100,13 +100,13 @@ func fromAddress(o tcpip.Address) (net.IpAddress, error) {
 	switch len(o) {
 	case 4:
 		addr := net.IpAddress{}
-		ipv4 := net.IPv4Address{}
+		ipv4 := net.Ipv4Address{}
 		copy(ipv4.Addr[:], o)
 		addr.SetIpv4(ipv4)
 		return addr, nil
 	case 16:
 		addr := net.IpAddress{}
-		ipv6 := net.IPv6Address{}
+		ipv6 := net.Ipv6Address{}
 		copy(ipv6.Addr[:], o)
 		addr.SetIpv6(ipv6)
 		return addr, nil

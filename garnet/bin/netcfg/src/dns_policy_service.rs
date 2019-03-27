@@ -62,7 +62,7 @@ fn get_dns_config() -> DnsConfig {
     // TODO(NET-1430): Add FIDL getters for current netcfg DNS server IP addresses.
     fx_log_err!("netdns: unimplemented get_dns_config called!");
     DnsConfig {
-        dns_servers: vec![fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::IPv4Address {
+        dns_servers: vec![fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
             addr: [0, 0, 0, 0],
         })],
     }
@@ -77,7 +77,7 @@ mod tests {
     };
 
     fn build_address() -> fidl_fuchsia_net::IpAddress {
-        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::IPv4Address { addr: [1, 1, 1, 1] })
+        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr: [1, 1, 1, 1] })
     }
 
     #[test]

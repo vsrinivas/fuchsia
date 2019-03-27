@@ -179,10 +179,10 @@ func TestFromAddress(t *testing.T) {
 	a1 := util.Parse("1.2.3.4")
 	var b1 net.IpAddress
 
-	b1.SetIpv4(net.IPv4Address{Addr: [4]uint8{1, 2, 3, 4}})
+	b1.SetIpv4(net.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
 
 	a2 := util.Parse("a:b:c::2:3:4")
-	var b2v6 net.IPv6Address
+	var b2v6 net.Ipv6Address
 	copy(b2v6.Addr[:], "\x00\x0a\x00\x0b\x00\x0c\x00\x00\x00\x00\x00\x02\x00\x03\x00\x04")
 	var b2 net.IpAddress
 
@@ -227,11 +227,11 @@ func TestFromAddress(t *testing.T) {
 
 func TestToAddress(t *testing.T) {
 	var a1 net.IpAddress
-	a1.SetIpv4(net.IPv4Address{Addr: [4]uint8{1, 2, 3, 4}})
+	a1.SetIpv4(net.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
 
 	b1 := util.Parse("1.2.3.4")
 
-	var a2v6 net.IPv6Address
+	var a2v6 net.Ipv6Address
 	copy(a2v6.Addr[:], "\x00\x0a\x00\x0b\x00\x0c\x00\x00\x00\x00\x00\x02\x00\x03\x00\x04")
 	var a2 net.IpAddress
 	a2.SetIpv6(a2v6)
@@ -270,7 +270,7 @@ func TestFromSubnet(t *testing.T) {
 	}
 
 	var a1 net.IpAddress
-	a1.SetIpv4(net.IPv4Address{Addr: [4]uint8{1, 2, 3, 4}})
+	a1.SetIpv4(net.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
 	t1 := net.Subnet{Addr: a1, PrefixLen: 32}
 
 	// test2
@@ -280,7 +280,7 @@ func TestFromSubnet(t *testing.T) {
 	}
 
 	var a2 net.IpAddress
-	a2.SetIpv4(net.IPv4Address{Addr: [4]uint8{10, 0, 0, 0}})
+	a2.SetIpv4(net.Ipv4Address{Addr: [4]uint8{10, 0, 0, 0}})
 	t2 := net.Subnet{Addr: a2, PrefixLen: 8}
 
 	// test3
@@ -289,7 +289,7 @@ func TestFromSubnet(t *testing.T) {
 		t.Errorf("ParseCIDR error: %v", err)
 	}
 
-	var a3v6 net.IPv6Address
+	var a3v6 net.Ipv6Address
 	copy(a3v6.Addr[:], "\x00\x0a\x00\x0b\x00\x0c\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
 	var a3 net.IpAddress
 	a3.SetIpv6(a3v6)
@@ -338,7 +338,7 @@ func TestFromSubnet(t *testing.T) {
 func TestToSubnet(t *testing.T) {
 	// test1
 	var a1 net.IpAddress
-	a1.SetIpv4(net.IPv4Address{Addr: [4]uint8{1, 2, 3, 4}})
+	a1.SetIpv4(net.Ipv4Address{Addr: [4]uint8{1, 2, 3, 4}})
 	s1 := net.Subnet{Addr: a1, PrefixLen: 32}
 
 	_, t1, err := util.ParseCIDR("1.2.3.4/32")
@@ -348,7 +348,7 @@ func TestToSubnet(t *testing.T) {
 
 	// test2
 	var a2 net.IpAddress
-	a2.SetIpv4(net.IPv4Address{Addr: [4]uint8{10, 0, 0, 0}})
+	a2.SetIpv4(net.Ipv4Address{Addr: [4]uint8{10, 0, 0, 0}})
 	s2 := net.Subnet{Addr: a2, PrefixLen: 8}
 
 	_, t2, err := util.ParseCIDR("10.0.0.0/8")
@@ -357,7 +357,7 @@ func TestToSubnet(t *testing.T) {
 	}
 
 	// test3
-	var a3v6 net.IPv6Address
+	var a3v6 net.Ipv6Address
 	copy(a3v6.Addr[:], "\x00\x0a\x00\x0b\x00\x0c\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
 	var a3 net.IpAddress
 	a3.SetIpv6(a3v6)

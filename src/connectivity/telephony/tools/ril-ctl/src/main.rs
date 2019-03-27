@@ -18,7 +18,7 @@ use {
     crate::commands::{Cmd, ReplControl},
     failure::{format_err, Error, ResultExt},
     fidl::endpoints,
-    fidl_fuchsia_net::{IPv4Address, IpAddress, Subnet},
+    fidl_fuchsia_net::{Ipv4Address, IpAddress, Subnet},
     fidl_fuchsia_net_stack::{
         ForwardingDestination, ForwardingEntry, InterfaceAddress, StackMarker,
     },
@@ -76,7 +76,7 @@ fn u32_to_ip_str(ip: u32) -> String {
 fn u32_to_netaddr(ip: u32, mask: u32) -> Result<InterfaceAddress, Error> {
     let cidr = u32_to_cidr(mask)?;
     Ok(InterfaceAddress {
-        ip_address: IpAddress::Ipv4(IPv4Address {
+        ip_address: IpAddress::Ipv4(Ipv4Address {
             addr: [
                 ((ip >> 24) & 0xFF) as u8,
                 ((ip >> 16) & 0xFF) as u8,
@@ -161,14 +161,14 @@ async fn handle_cmd<'a>(
                         await!(netstack.add_interface_address(3, &mut u32_to_netaddr(settings.ip_v4_addr, settings.ip_v4_subnet)?))?;
                         let ip = settings.ip_v4_addr;
                         await!(netstack.add_forwarding_entry(&mut ForwardingEntry {
-                            destination: ForwardingDestination::NextHop(IpAddress::Ipv4(IPv4Address{
+                            destination: ForwardingDestination::NextHop(IpAddress::Ipv4(Ipv4Address{
                                 addr: [
                                     ((settings.ip_v4_gateway >> 24) & 0xFF) as u8,
                                     ((settings.ip_v4_gateway >> 16) & 0xFF) as u8,
                                     ((settings.ip_v4_gateway >> 8)  & 0xFF) as u8,
                                     (settings.ip_v4_gateway & 0xFF) as u8]})),
                             subnet: Subnet {
-                                addr: IpAddress::Ipv4(IPv4Address{
+                                addr: IpAddress::Ipv4(Ipv4Address{
                                     addr: [
                                         ((ip >> 24) & 0xFF) as u8,
                                         ((ip >> 16) & 0xFF) as u8,

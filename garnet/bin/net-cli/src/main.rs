@@ -178,10 +178,10 @@ async fn do_fwd(cmd: opts::FwdCmd, stack: StackProxy) -> Result<(), Error> {
 fn parse_ip_addr(addr: &str) -> Result<net::IpAddress, Error> {
     match addr.parse()? {
         ::std::net::IpAddr::V4(ipv4) => {
-            Ok(net::IpAddress::Ipv4(net::IPv4Address { addr: ipv4.octets() }))
+            Ok(net::IpAddress::Ipv4(net::Ipv4Address { addr: ipv4.octets() }))
         }
         ::std::net::IpAddr::V6(ipv6) => {
-            Ok(net::IpAddress::Ipv6(net::IPv6Address { addr: ipv6.octets() }))
+            Ok(net::IpAddress::Ipv6(net::Ipv6Address { addr: ipv6.octets() }))
         }
     }
 }

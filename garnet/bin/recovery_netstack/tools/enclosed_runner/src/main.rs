@@ -43,10 +43,10 @@ fn parse_ip_addr_and_prefix(addr: &str) -> Result<(net::IpAddress, u8), Error> {
     let prefix: u8 = prefix.parse()?;
     let addr = match addr.parse()? {
         ::std::net::IpAddr::V4(ipv4) => {
-            net::IpAddress::Ipv4(net::IPv4Address { addr: ipv4.octets() })
+            net::IpAddress::Ipv4(net::Ipv4Address { addr: ipv4.octets() })
         }
         ::std::net::IpAddr::V6(ipv6) => {
-            net::IpAddress::Ipv6(net::IPv6Address { addr: ipv6.octets() })
+            net::IpAddress::Ipv6(net::Ipv6Address { addr: ipv6.octets() })
         }
     };
 
@@ -75,10 +75,10 @@ fn mask_with_prefix(mut ip: net::IpAddress, prefix: u8) -> net::IpAddress {
 fn copy_ip(ip: &net::IpAddress) -> net::IpAddress {
     match ip {
         net::IpAddress::Ipv4(addr) => {
-            net::IpAddress::Ipv4(net::IPv4Address { addr: addr.addr.clone() })
+            net::IpAddress::Ipv4(net::Ipv4Address { addr: addr.addr.clone() })
         }
         net::IpAddress::Ipv6(addr) => {
-            net::IpAddress::Ipv6(net::IPv6Address { addr: addr.addr.clone() })
+            net::IpAddress::Ipv6(net::Ipv6Address { addr: addr.addr.clone() })
         }
     }
 }

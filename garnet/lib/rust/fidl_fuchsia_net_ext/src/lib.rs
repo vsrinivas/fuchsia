@@ -17,8 +17,8 @@ impl std::fmt::Display for IpAddress {
 impl From<fidl::IpAddress> for IpAddress {
     fn from(addr: fidl::IpAddress) -> IpAddress {
         IpAddress(match addr {
-            fidl::IpAddress::Ipv4(fidl::IPv4Address { addr }) => addr.into(),
-            fidl::IpAddress::Ipv6(fidl::IPv6Address { addr }) => addr.into(),
+            fidl::IpAddress::Ipv4(fidl::Ipv4Address { addr }) => addr.into(),
+            fidl::IpAddress::Ipv6(fidl::Ipv6Address { addr }) => addr.into(),
         })
     }
 }
@@ -27,10 +27,10 @@ impl Into<fidl::IpAddress> for IpAddress {
     fn into(self) -> fidl::IpAddress {
         let IpAddress(ip_address) = self;
         match ip_address {
-            std::net::IpAddr::V4(v4addr) => fidl::IpAddress::Ipv4(fidl::IPv4Address {
+            std::net::IpAddr::V4(v4addr) => fidl::IpAddress::Ipv4(fidl::Ipv4Address {
                 addr: v4addr.octets(),
             }),
-            std::net::IpAddr::V6(v6addr) => fidl::IpAddress::Ipv6(fidl::IPv6Address {
+            std::net::IpAddr::V6(v6addr) => fidl::IpAddress::Ipv6(fidl::Ipv6Address {
                 addr: v6addr.octets(),
             }),
         }

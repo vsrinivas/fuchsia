@@ -188,10 +188,10 @@ fn parse_ipaddr(pair: Pair<Rule>) -> Result<net::IpAddress, Error> {
     let addr = pair.as_str().parse().map_err(Error::Addr)?;
     match addr {
         std::net::IpAddr::V4(ip4) => {
-            Ok(net::IpAddress::Ipv4(net::IPv4Address { addr: ip4.octets() }))
+            Ok(net::IpAddress::Ipv4(net::Ipv4Address { addr: ip4.octets() }))
         }
         std::net::IpAddr::V6(ip6) => {
-            Ok(net::IpAddress::Ipv6(net::IPv6Address { addr: ip6.octets() }))
+            Ok(net::IpAddress::Ipv6(net::Ipv6Address { addr: ip6.octets() }))
         }
     }
 }
@@ -459,7 +459,7 @@ mod test {
                 quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: Some(Box::new(net::Subnet {
-                    addr: net::IpAddress::Ipv4(net::IPv4Address { addr: [1, 2, 3, 4] }),
+                    addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
                     prefix_len: 24,
                 })),
                 src_subnet_invert_match: false,
@@ -498,7 +498,7 @@ mod test {
                 quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: Some(Box::new(net::Subnet {
-                    addr: net::IpAddress::Ipv4(net::IPv4Address { addr: [1, 2, 3, 4] }),
+                    addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
                     prefix_len: 24,
                 })),
                 src_subnet_invert_match: false,
@@ -519,7 +519,7 @@ mod test {
                 quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: Some(Box::new(net::Subnet {
-                    addr: net::IpAddress::Ipv4(net::IPv4Address { addr: [1, 2, 3, 4] }),
+                    addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
                     prefix_len: 24,
                 })),
                 src_subnet_invert_match: true,
@@ -540,7 +540,7 @@ mod test {
                 quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: Some(Box::new(net::Subnet {
-                    addr: net::IpAddress::Ipv6(net::IPv6Address {
+                    addr: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: [0x12, 0x34, 0x56, 0x78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                     }),
                     prefix_len: 32,
@@ -566,7 +566,7 @@ mod test {
                 src_subnet_invert_match: false,
                 src_port: 0,
                 dst_subnet: Some(Box::new(net::Subnet {
-                    addr: net::IpAddress::Ipv6(net::IPv6Address {
+                    addr: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: [0x12, 0x34, 0x56, 0x78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                     }),
                     prefix_len: 32,
@@ -586,7 +586,7 @@ mod test {
                 quick: false,
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: Some(Box::new(net::Subnet {
-                    addr: net::IpAddress::Ipv6(net::IPv6Address {
+                    addr: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: [0x12, 0x34, 0x56, 0x78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                     }),
                     prefix_len: 32,
@@ -594,7 +594,7 @@ mod test {
                 src_subnet_invert_match: false,
                 src_port: 10000,
                 dst_subnet: Some(Box::new(net::Subnet {
-                    addr: net::IpAddress::Ipv4(net::IPv4Address { addr: [1, 2, 3, 4] }),
+                    addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
                     prefix_len: 8,
                 })),
                 dst_subnet_invert_match: false,
@@ -645,10 +645,10 @@ mod test {
             &[filter::Nat {
                 proto: filter::SocketProtocol::Tcp,
                 src_subnet: net::Subnet {
-                    addr: net::IpAddress::Ipv4(net::IPv4Address { addr: [1, 2, 3, 0] }),
+                    addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 0] }),
                     prefix_len: 24,
                 },
-                new_src_addr: net::IpAddress::Ipv4(net::IPv4Address { addr: [192, 168, 1, 1] }),
+                new_src_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
                 nic: 0,
             }],
         );
@@ -656,9 +656,9 @@ mod test {
             "rdr proto tcp to 1.2.3.4 port 10000 -> to 192.168.1.1 port 20000;",
             &[filter::Rdr {
                 proto: filter::SocketProtocol::Tcp,
-                dst_addr: net::IpAddress::Ipv4(net::IPv4Address { addr: [1, 2, 3, 4] }),
+                dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
                 dst_port: 10000,
-                new_dst_addr: net::IpAddress::Ipv4(net::IPv4Address { addr: [192, 168, 1, 1] }),
+                new_dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
                 new_dst_port: 20000,
                 nic: 0,
             }],
@@ -667,9 +667,9 @@ mod test {
             "rdr proto tcp to 1.2.3.4 port 1 -> to 192.168.1.1 port 20000;",
             &[filter::Rdr {
                 proto: filter::SocketProtocol::Tcp,
-                dst_addr: net::IpAddress::Ipv4(net::IPv4Address { addr: [1, 2, 3, 4] }),
+                dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
                 dst_port: 1,
-                new_dst_addr: net::IpAddress::Ipv4(net::IPv4Address { addr: [192, 168, 1, 1] }),
+                new_dst_addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [192, 168, 1, 1] }),
                 new_dst_port: 20000,
                 nic: 0,
             }],

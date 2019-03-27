@@ -70,7 +70,7 @@ TEST_F(NetstackNoNetworkTest, DisableEthernetInterface) {
 
   inet::IpAddress ip = inet::IpAddress(192, 168, 0, 2);
   fuchsia::net::IpAddress addr;
-  fuchsia::net::IPv4Address ipv4;
+  fuchsia::net::Ipv4Address ipv4;
   memcpy(ipv4.addr.data(), ip.as_bytes(), 4);
   addr.set_ipv4(ipv4);
 

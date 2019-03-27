@@ -16,7 +16,7 @@ fn add_interface_address_not_found() {
             let interfaces = await!(stack.list_interfaces()).expect("failed to list interfaces");
             let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
             let mut interface_address = fidl_fuchsia_net_stack::InterfaceAddress {
-                ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::IPv4Address {
+                ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
                     addr: [0, 0, 0, 0],
                 }),
                 prefix_len: 0,

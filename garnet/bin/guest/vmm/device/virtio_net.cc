@@ -174,7 +174,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     PrepStart(std::move(start_info));
 
     fuchsia::net::Subnet subnet;
-    fuchsia::net::IPv4Address ipv4;
+    fuchsia::net::Ipv4Address ipv4;
     memcpy(ipv4.addr.data(), kIpv4Address, 4);
     subnet.addr.set_ipv4(ipv4);
     subnet.prefix_len = 24;

@@ -20,7 +20,7 @@ import (
 
 func TestNetIPtoTCPIPAddressIPv4(t *testing.T) {
 	from := net.IpAddress{}
-	from.SetIpv4(net.IPv4Address{Addr: [4]uint8{127, 0, 0, 1}})
+	from.SetIpv4(net.Ipv4Address{Addr: [4]uint8{127, 0, 0, 1}})
 	to := ToTCPIPAddress(from)
 	expected := util.Parse("127.0.0.1")
 	if to != expected {
@@ -30,7 +30,7 @@ func TestNetIPtoTCPIPAddressIPv4(t *testing.T) {
 
 func TestNetIPtoTCPIPAddressIPv6(t *testing.T) {
 	from := net.IpAddress{}
-	from.SetIpv6(net.IPv6Address{Addr: [16]uint8{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}})
+	from.SetIpv6(net.Ipv6Address{Addr: [16]uint8{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}})
 	to := ToTCPIPAddress(from)
 	expected := util.Parse("fe80::1")
 	if to != expected {
@@ -42,7 +42,7 @@ func TestToFIDLIPAddressIPv4(t *testing.T) {
 	from := util.Parse("127.0.0.1")
 	to := ToNetIpAddress(from)
 	expected := net.IpAddress{}
-	expected.SetIpv4(net.IPv4Address{Addr: [4]uint8{127, 0, 0, 1}})
+	expected.SetIpv4(net.Ipv4Address{Addr: [4]uint8{127, 0, 0, 1}})
 	if to != expected {
 		t.Fatalf("Expected:\n %v\nActual:\n %v", expected, to)
 	}
@@ -52,7 +52,7 @@ func TestToFIDLIPAddressIPv6(t *testing.T) {
 	from := util.Parse("fe80::1")
 	to := ToNetIpAddress(from)
 	expected := net.IpAddress{}
-	expected.SetIpv6(net.IPv6Address{Addr: [16]uint8{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}})
+	expected.SetIpv6(net.Ipv6Address{Addr: [16]uint8{0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}})
 	if to != expected {
 		t.Fatalf("Expected:\n %v\nActual:\n %v", expected, to)
 	}
@@ -223,7 +223,7 @@ func TestForwardingEntryAndTcpipRouteConversions(t *testing.T) {
 
 func newNetSubnet(addr [4]uint8, prefix uint8) net.Subnet {
 	subnet := net.Subnet{}
-	subnet.Addr.SetIpv4(net.IPv4Address{Addr: addr})
+	subnet.Addr.SetIpv4(net.Ipv4Address{Addr: addr})
 	subnet.PrefixLen = prefix
 	return subnet
 }

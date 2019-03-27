@@ -482,7 +482,7 @@ impl EventLoop {
             .map(|entry| match entry {
                 EntryEither::V4(v4_entry) => fidl_net_stack::ForwardingEntry {
                     subnet: fidl_net::Subnet {
-                        addr: fidl_net::IpAddress::Ipv4(fidl_net::IPv4Address {
+                        addr: fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address {
                             addr: v4_entry.subnet.network().ipv4_bytes(),
                         }),
                         prefix_len: v4_entry.subnet.prefix(),
@@ -493,7 +493,7 @@ impl EventLoop {
                         }
                         EntryDest::Remote { next_hop } => {
                             fidl_net_stack::ForwardingDestination::NextHop(
-                                fidl_net::IpAddress::Ipv4(fidl_net::IPv4Address {
+                                fidl_net::IpAddress::Ipv4(fidl_net::Ipv4Address {
                                     addr: next_hop.ipv4_bytes(),
                                 }),
                             )
@@ -502,7 +502,7 @@ impl EventLoop {
                 },
                 EntryEither::V6(v6_entry) => fidl_net_stack::ForwardingEntry {
                     subnet: fidl_net::Subnet {
-                        addr: fidl_net::IpAddress::Ipv6(fidl_net::IPv6Address {
+                        addr: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
                             addr: v6_entry.subnet.network().ipv6_bytes(),
                         }),
                         prefix_len: v6_entry.subnet.prefix(),
@@ -513,7 +513,7 @@ impl EventLoop {
                         }
                         EntryDest::Remote { next_hop } => {
                             fidl_net_stack::ForwardingDestination::NextHop(
-                                fidl_net::IpAddress::Ipv6(fidl_net::IPv6Address {
+                                fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
                                     addr: next_hop.ipv6_bytes(),
                                 }),
                             )

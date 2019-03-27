@@ -38,13 +38,13 @@ fn test_display_interfaceinfo() {
             physical_status: fidl_fuchsia_net_stack::PhysicalStatus::Up,
             addresses: vec![
                 fidl_fuchsia_net_stack::InterfaceAddress {
-                    ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::IPv4Address {
+                    ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
                         addr: [255, 255, 255, 0],
                     }),
                     prefix_len: 4,
                 },
                 fidl_fuchsia_net_stack::InterfaceAddress {
-                    ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::IPv4Address {
+                    ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
                         addr: [255, 255, 255, 1],
                     }),
                     prefix_len: 4,

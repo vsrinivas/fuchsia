@@ -4,32 +4,32 @@
 
 library fuchsia.net;
 
-// IPv4Address is expressed in network byte order, so the most significant byte
+// Ipv4Address is expressed in network byte order, so the most significant byte
 // ("127" in the address "127.0.0.1") will be at index 0.
-struct IPv4Address {
+struct Ipv4Address {
     array<uint8>:4 addr;
 };
 
-// IPv6Address is expressed in network byte order, so the most significant byte
+// Ipv6Address is expressed in network byte order, so the most significant byte
 // ("ff" in the address "ff02::1") will be at index 0.
-struct IPv6Address {
+struct Ipv6Address {
     array<uint8>:16 addr;
 };
 
 union IpAddress {
-    IPv4Address ipv4;
-    IPv6Address ipv6;
+    Ipv4Address ipv4;
+    Ipv6Address ipv6;
 };
 
 struct Subnet {
-    // The IPv4 or IPv6 address. Only the |prefix_len| most significant bits may be set in |addr|;
+    // The Ipv4 or Ipv6 address. Only the |prefix_len| most significant bits may be set in |addr|;
     // all bits in the host portion of the address must be zero.
     IpAddress addr;
 
     // The prefix length of the netmask. E.g. for 192.168.1.0/24, the prefix
     // length is 24, corresponding to a netmask of 255.255.255.0.
-    // For IPv4, prefix_len must be in the range [0, 32].
-    // For IPv6, prefix_len must be in the range [0, 128].
+    // For Ipv4, prefix_len must be in the range [0, 32].
+    // For Ipv6, prefix_len must be in the range [0, 128].
     uint8 prefix_len;
 };
 
