@@ -159,7 +159,8 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
     {
       TRACE_DURATION("gfx", "escher::IndexedTriangleMeshClip[clip_verts]");
       for (size_t i = 0; i < num_input_vertices; ++i) {
-        if (PlaneClipsPoint(plane, input_mesh.positions[i])) {
+        // Don't bother clipping if the point is very close to the plane.
+        if (PlaneDistanceToPoint(plane, input_mesh.positions[i]) < -kEpsilon) {
           clipped_vertices.Set(i);
           plane_clipped_vertices = true;
         }
@@ -242,17 +243,12 @@ auto IndexedTriangleMeshClip(MeshT input_mesh, const PlaneT* planes,
       if (t == FLT_MAX) {
         // Since |get_index_for_split_edge_vertex| is only called when one of
         // the edge vertices is clipped and the other is not, there should
-        // always be an intersection.  If there isn't, it is likely due to a
-        // numerical precision issue in our clipping algorithms.  Since we don't
+        // always be an intersection.  However, IntersectLinePlane() takes a
+        // conservative approach to avoid computing a wildly erroneous
+        // intersection position due to numerical instability.  Since we don't
         // know where the intersection actually is, assume it is at the midpoint
         // of the two edge vertices.
         t = 0.5f;
-
-        const char* error_msg = "plane doesn't intersect triangle edge: ";
-        FXL_DCHECK(false) << error_msg << plane << "  origin: " << edge_origin
-                          << "  vector: " << edge_vector;
-        FXL_LOG(ERROR) << error_msg << plane << "  origin: " << edge_origin
-                       << "  vector: " << edge_vector;
       }
       const Index new_index = output_mesh.vertex_count();
       IndexedTriangleMeshPushLerpedAttributes(&output_mesh, &input_mesh,
