@@ -85,9 +85,10 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
           util::EncryptedMessageMaker::MakeHybridEcdh(
               ReadPublicKeyPem(kShufflerPublicKeyPemPath))
               .ValueOrDie()),
-      encrypt_to_analyzer_(util::EncryptedMessageMaker::MakeHybridTink(
-                               ReadPublicKeyPem(kAnalyzerTinkPublicKeyPath))
-                               .ValueOrDie()),
+      encrypt_to_analyzer_(
+          util::EncryptedMessageMaker::MakeHybridTinkForObservations(
+              ReadPublicKeyPem(kAnalyzerTinkPublicKeyPath))
+              .ValueOrDie()),
       // TODO(azani): Support encryption to the shuffler.
       encrypt_to_shuffler_(util::EncryptedMessageMaker::MakeUnencrypted()),
 
