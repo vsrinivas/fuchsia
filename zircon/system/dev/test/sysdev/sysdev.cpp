@@ -8,7 +8,7 @@
 #include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <fbl/unique_ptr.h>
-#include <lib/zx/vmo.h>
+#include <lib/zx/channel.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
@@ -21,7 +21,7 @@ class Sysdev : public SysdevType {
 public:
     explicit Sysdev(zx_device_t* device) : SysdevType(device) { }
 
-    static zx_status_t Create(zx_device_t* parent, const char* name, zx::vmo zbi);
+    static zx_status_t Create(zx_device_t* parent, const char* name, zx::channel items_svc);
 
     // Device protocol implementation.
     void DdkRelease() {
@@ -30,7 +30,7 @@ public:
     }
 };
 
-zx_status_t Sysdev::Create(zx_device_t* parent, const char* name, zx::vmo zbi) {
+zx_status_t Sysdev::Create(zx_device_t* parent, const char* name, zx::channel items_svc) {
     auto sysdev = fbl::make_unique<Sysdev>(parent);
 
     zx_status_t status = sysdev->DdkAdd("sys", DEVICE_ADD_NON_BINDABLE,
@@ -48,7 +48,7 @@ zx_status_t Sysdev::Create(zx_device_t* parent, const char* name, zx::vmo zbi) {
 } // namespace
 
 zx_status_t test_sysdev_create(void* ctx, zx_device_t* parent, const char* name,
-                               const char* args, zx_handle_t zbi_vmo_handle) {
-    zx::vmo zbi(zbi_vmo_handle);
-    return Sysdev::Create(parent, name, std::move(zbi));
+                               const char* args, zx_handle_t items_svc_handle) {
+    zx::channel items_svc(items_svc_handle);
+    return Sysdev::Create(parent, name, std::move(items_svc));
 }
