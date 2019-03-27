@@ -31,7 +31,7 @@ public:
 
     ~ChannelDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_CHANNEL; }
-    zx_status_t add_observer(StateObserver* observer) final;
+    zx_status_t AddObserver(StateObserver* observer) final;
 
     // Read from this endpoint's message queue.
     // |msg_size| and |msg_handle_count| are in-out parameters. As input, they specify the maximum

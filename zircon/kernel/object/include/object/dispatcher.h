@@ -125,10 +125,10 @@ public:
 
     // Add an observer.
     //
-    // May only be called when |is_waitable| reports true.
-    void AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo);
-    void AddObserverLocked(StateObserver* observer,
-                           const StateObserver::CountInfo* cinfo) TA_REQ(get_lock());
+    // Fails when |is_waitable| reports false.
+    //
+    // Be sure to |RemoveObserver| before the Dispatcher is destroyed.
+    virtual zx_status_t AddObserver(StateObserver* observer);
 
     // Remove an observer.
     //
@@ -169,8 +169,6 @@ public:
 
     virtual zx_obj_type_t get_type() const = 0;
 
-    virtual zx_status_t add_observer(StateObserver* observer);
-
     virtual zx_status_t user_signal_self(uint32_t clear_mask, uint32_t set_mask) = 0;
     virtual zx_status_t user_signal_peer(uint32_t clear_mask, uint32_t set_mask) = 0;
 
@@ -205,6 +203,12 @@ protected:
     // At construction, the object's state tracker is asserting |signals|.
     explicit Dispatcher(zx_signals_t signals);
 
+    // Add an observer.
+    //
+    // It is an error to call this when |is_waitable| reports false.
+    void AddObserverLocked(StateObserver* observer,
+                           const StateObserver::CountInfo* cinfo) TA_REQ(get_lock());
+
     // Notify others of a change in state (possibly waking them). (Clearing satisfied signals or
     // setting satisfiable signals should not wake anyone.)
     //
@@ -230,6 +234,8 @@ private:
                            Lock<LockType>* lock);
 
     // The common implementation of AddObserver and AddObserverLocked.
+    //
+    // It is an error to call this when |is_waitable| reports false.
     template <typename LockType>
     void AddObserverHelper(StateObserver* observer,
                            const StateObserver::CountInfo* cinfo,

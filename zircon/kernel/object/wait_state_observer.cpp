@@ -29,7 +29,7 @@ zx_status_t WaitStateObserver::Begin(Event* event,
     dispatcher_ = handle->dispatcher();
     wakeup_reasons_ = 0u;
 
-    auto status = dispatcher_->add_observer(this);
+    auto status = dispatcher_->AddObserver(this);
     if (status != ZX_OK) {
         dispatcher_.reset();
         return status;

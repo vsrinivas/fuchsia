@@ -111,7 +111,7 @@ ChannelDispatcher::~ChannelDispatcher() {
     }
 }
 
-zx_status_t ChannelDispatcher::add_observer(StateObserver* observer) {
+zx_status_t ChannelDispatcher::AddObserver(StateObserver* observer) {
     canary_.Assert();
 
     Guard<fbl::Mutex> guard{get_lock()};

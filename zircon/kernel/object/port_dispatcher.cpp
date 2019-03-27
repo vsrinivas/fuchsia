@@ -443,7 +443,7 @@ zx_status_t PortDispatcher::MakeObserver(uint32_t options, Handle* handle, uint6
         observers_.push_front(observer);
     }
 
-    return dispatcher->add_observer(observer);
+    return dispatcher->AddObserver(observer);
 }
 
 bool PortDispatcher::CancelQueued(const void* handle, uint64_t key) {

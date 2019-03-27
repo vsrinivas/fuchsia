@@ -94,15 +94,6 @@ void Dispatcher::fbl_recycle() {
     SafeDeleter::Delete(this);
 }
 
-zx_status_t Dispatcher::add_observer(StateObserver* observer) {
-    canary_.Assert();
-
-    if (!is_waitable())
-        return ZX_ERR_NOT_SUPPORTED;
-    AddObserver(observer, nullptr);
-    return ZX_OK;
-}
-
 namespace {
 
 template <typename Func, typename LockType>
@@ -159,12 +150,6 @@ void Dispatcher::AddObserverHelper(StateObserver* observer,
     kcounter_add(dispatcher_observe_count, 1);
 }
 
-void Dispatcher::AddObserver(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
-    canary_.Assert();
-
-    AddObserverHelper(observer, cinfo, get_lock());
-}
-
 void Dispatcher::AddObserverLocked(StateObserver* observer, const StateObserver::CountInfo* cinfo) {
     canary_.Assert();
 
@@ -173,6 +158,15 @@ void Dispatcher::AddObserverLocked(StateObserver* observer, const StateObserver:
     DECLARE_LOCK(DispatcherAddObserverLocked, fbl::NullLock) lock;
 
     AddObserverHelper(observer, cinfo, &lock);
+}
+
+zx_status_t Dispatcher::AddObserver(StateObserver* observer) {
+    canary_.Assert();
+
+    if (!is_waitable())
+        return ZX_ERR_NOT_SUPPORTED;
+    AddObserverHelper(observer, nullptr, get_lock());
+    return ZX_OK;
 }
 
 bool Dispatcher::RemoveObserver(StateObserver* observer) {
