@@ -4,8 +4,10 @@
     },
     "sandbox": {
         "dev": [
-            "class/sysmem",
-            "class/tee"
+            "class/sysmem"
+        ],
+        "services": [
+            "fuchsia.tee.Device"
         ]
     }
 }

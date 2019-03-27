@@ -11,6 +11,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <fuchsia/hardware/tee/c/fidl.h>
 #include <fuchsia/tee/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -18,7 +19,8 @@
 
 #include <tee-client-api/tee_client_api.h>
 
-#define DEFAULT_TEE "/dev/class/tee/000"
+#define TEE_DEV_CLASS "/dev/class/tee/"
+#define TEE_SERVICE_PATH "/svc/fuchsia.tee.Device"
 
 #define GET_PARAM_TYPE_FOR_INDEX(param_types, index) \
     ((param_types >> (4 * index)) & 0xF)
@@ -522,25 +524,99 @@ static TEEC_Result postprocess_operation(const fuchsia_tee_ParameterSet* paramet
     return rc;
 }
 
+static zx_status_t connect_service(zx_handle_t* tee_channel) {
+    ZX_DEBUG_ASSERT(tee_channel);
+
+    zx_handle_t client_channel;
+    zx_handle_t server_channel;
+    zx_status_t status = zx_channel_create(0, &client_channel, &server_channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = fdio_service_connect(TEE_SERVICE_PATH, server_channel);
+    if (status != ZX_OK) {
+        zx_handle_close(client_channel);
+        return status;
+    }
+
+    *tee_channel = client_channel;
+    return ZX_OK;
+}
+
+// Connects the client directly to the TEE Driver.
+//
+// This is a temporary measure to allow clients that come up before component services to still
+// access the TEE. This requires that the client has access to the TEE device class. Additionally,
+// the client's entire context will not have any filesystem support, so if the client sends a
+// command to a trusted application that then needs persistent storage to complete, the persistent
+// storage request will be rejected by the driver.
+static zx_status_t connect_driver(const char* tee_device, zx_handle_t* tee_channel) {
+    ZX_DEBUG_ASSERT(tee_device);
+    ZX_DEBUG_ASSERT(tee_channel);
+
+    int fd = open(tee_device, O_RDWR);
+    if (fd < 0) {
+        return ZX_ERR_NOT_FOUND;
+    }
+
+    zx_handle_t connector_channel;
+    zx_status_t status = fdio_get_service_handle(fd, &connector_channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_handle_t client_channel;
+    zx_handle_t server_channel;
+    status = zx_channel_create(0, &client_channel, &server_channel);
+    if (status != ZX_OK) {
+        zx_handle_close(connector_channel);
+        return status;
+    }
+
+    // Connect to the device interface with no supporting service provider
+    status = fuchsia_hardware_tee_DeviceConnectorConnectTee(connector_channel,
+                                                            ZX_HANDLE_INVALID,
+                                                            server_channel);
+
+    // Close the connector channel regardless of FIDL call success. It has served its purpose.
+    zx_handle_close(connector_channel);
+
+    if (status != ZX_OK) {
+        zx_handle_close(client_channel);
+        return status;
+    }
+
+    *tee_channel = client_channel;
+    return ZX_OK;
+}
+
 TEEC_Result TEEC_InitializeContext(const char* name, TEEC_Context* context) {
 
     if (!context) {
         return TEEC_ERROR_BAD_PARAMETERS;
     }
 
-    const char* tee_device = (name != NULL) ? name : DEFAULT_TEE;
-
-    int fd = open(tee_device, O_RDWR);
-    if (fd < 0) {
-        return TEEC_ERROR_ITEM_NOT_FOUND;
-    }
-
+    zx_status_t status;
     zx_handle_t tee_channel;
-    zx_status_t status = fdio_get_service_handle(fd, &tee_channel);
-    // Irregardless of the success or failure of fdio_get_service_handle, the original file
-    // descriptor is effectively closed.
-    if (status != ZX_OK) {
-        return TEEC_ERROR_COMMUNICATION;
+    if (!name || strcmp(TEE_SERVICE_PATH, name) == 0) {
+        status = connect_service(&tee_channel);
+        if (status != ZX_OK) {
+            return TEEC_ERROR_COMMUNICATION;
+        }
+    } else if (strncmp(TEE_DEV_CLASS, name, strlen(TEE_DEV_CLASS)) == 0) {
+        // The client has specified a direct connection to some TEE device
+        // See comments on `connect_driver()` for details.
+        status = connect_driver(name, &tee_channel);
+        if (status != ZX_OK) {
+            if (status == ZX_ERR_NOT_FOUND) {
+                return TEEC_ERROR_ITEM_NOT_FOUND;
+            } else {
+                return TEEC_ERROR_COMMUNICATION;
+            }
+        }
+    } else {
+        return TEEC_ERROR_BAD_PARAMETERS;
     }
 
     if (!is_global_platform_compliant(tee_channel)) {

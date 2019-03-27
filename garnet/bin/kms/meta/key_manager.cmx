@@ -3,11 +3,11 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [
-            "class/tee"
-        ],
         "features": [
             "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.tee.Device"
         ]
     }
 }
