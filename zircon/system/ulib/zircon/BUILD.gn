@@ -72,6 +72,9 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
     # Note, "./" makes GN realize this is a file rather than a -l switch.
     libs = [ "./alternates.ld" ]
 
+    # Set e_entry so _zx_process_exit is easy to find without reading .dynsym.
+    ldflags = [ "-Wl,-e,_zx_process_exit" ]
+
     # This doesn't get normal default deps on libc.
     no_implicit_deps = true
   }

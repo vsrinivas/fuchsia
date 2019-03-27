@@ -38,6 +38,22 @@ appropriate handle value will be placed in arg1 for the newly started
 thread. If `zx_process_start()` returns an error, *arg1* is closed rather
 than transferred to the process being started.
 
+Alternatively, *arg1* can be **ZX_HANDLE_INVALID** instead of a handle.
+In this case the process starts with **ZX_HANDLE_INVALID** (i.e. zero)
+in its first argument register instead of a handle.  This means there
+are *no* handles in the process and *can never* be any handles to any
+objects shared outside the process.  `zx_process_start()` is the only
+way to transfer a handle into a process that doesn't involve the process
+making some system call using a handle it already has (*arg1* is usually
+the "bootstrap" handle).  A process with no handles can make the few
+system calls that don't require a handle, such as [`zx_process_exit()`],
+if it's been provided with a vDSO mapping.  It can create new kernel
+objects with system calls that don't require a handle, such as
+[`zx_vmo_create()`], but there is no way to make use of those objects
+without more handles and no way to transfer them outside the process.
+Its only means of communication is via the memory mapped into its
+address space by others.
+
 ## RIGHTS
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->

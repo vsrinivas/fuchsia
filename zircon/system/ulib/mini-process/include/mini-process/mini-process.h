@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include <zircon/types.h>
@@ -60,6 +61,18 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
                                    zx_handle_t vmar,
                                    zx_handle_t transferred_handle,
                                    zx_handle_t* cntrl_channel);
+
+// Loads the vDSO into a process.  |base| and |entry| can be NULL.  This is not
+// thread-safe.  It steals the startup handle, so it's not compatible with also
+// using launchpad (which also needs to steal the startup handle).
+zx_status_t mini_process_load_vdso(zx_handle_t process, zx_handle_t vmar,
+                                   uintptr_t* base, uintptr_t* entry);
+
+// Set up a stack VMO mapped into a process.  If |with_code| is true, this
+// will include the mini-process code stub.  Otherwise, the stack will not
+// be executable.
+zx_status_t mini_process_load_stack(zx_handle_t vmar, bool with_code,
+                                    uintptr_t* stack_base, uintptr_t *sp);
 
 // Starts a no-VDSO infinite-loop thread.
 zx_status_t start_mini_process_thread(zx_handle_t thread, zx_handle_t vmar);

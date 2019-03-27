@@ -46,6 +46,50 @@ bool mini_process_sanity() {
     END_TEST;
 }
 
+bool process_start_no_handle() {
+    BEGIN_TEST;
+
+    zx_handle_t proc;
+    zx_handle_t thread;
+    zx_handle_t vmar;
+
+    constexpr const char kTestName[] = "test-no-handles";
+    ASSERT_EQ(zx_process_create(zx_job_default(),
+                                kTestName, sizeof(kTestName) - 1, 0,
+                                &proc, &vmar), ZX_OK);
+    ASSERT_EQ(zx_thread_create(proc, kTestName, sizeof(kTestName) - 1, 0u,
+                               &thread), ZX_OK);
+
+    // The process will get no handles, but it can still make syscalls.
+    // The vDSO's e_entry points to zx_process_exit.  So the process will
+    // enter at `zx_process_exit(ZX_HANDLE_INVALID);`.
+    uintptr_t entry;
+    EXPECT_EQ(mini_process_load_vdso(proc, vmar, nullptr, &entry), ZX_OK);
+
+    // The vDSO ABI needs a stack, though zx_process_exit actually might not.
+    uintptr_t stack_base, sp;
+    EXPECT_EQ(mini_process_load_stack(vmar, false, &stack_base, &sp), ZX_OK);
+    zx_handle_close(vmar);
+
+    EXPECT_EQ(zx_process_start(proc, thread, entry, sp, ZX_HANDLE_INVALID, 0),
+              ZX_OK);
+    zx_handle_close(thread);
+
+    zx_signals_t signals;
+    EXPECT_EQ(zx_object_wait_one(proc, ZX_TASK_TERMINATED,
+                                 zx_deadline_after(ZX_SEC(1)), &signals),
+              ZX_OK);
+    EXPECT_EQ(signals, ZX_TASK_TERMINATED);
+
+    zx_info_process_t info{};
+    EXPECT_EQ(zx_object_get_info(proc, ZX_INFO_PROCESS,
+                                 &info, sizeof(info), nullptr, nullptr), ZX_OK);
+    EXPECT_EQ(info.return_code, int64_t{ZX_HANDLE_INVALID});
+
+    zx_handle_close(proc);
+    END_TEST;
+}
+
 bool process_start_fail() {
     BEGIN_TEST;
 
@@ -664,6 +708,7 @@ bool suspend_with_dying_thread() {
 BEGIN_TEST_CASE(process_tests)
 RUN_TEST(mini_process_sanity);
 RUN_TEST(process_start_fail);
+RUN_TEST(process_start_no_handle);
 RUN_TEST(process_not_killed_via_thread_close);
 RUN_TEST(process_not_killed_via_process_close);
 RUN_TEST(kill_process_via_thread_kill);

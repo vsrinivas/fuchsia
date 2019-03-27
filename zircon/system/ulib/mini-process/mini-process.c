@@ -48,7 +48,8 @@ static zx_status_t write_ctx_message(
 }
 
 // Sets up a VMO on the given VMAR which contains the mini process code and space for a stack.
-static zx_status_t prepare_stack_vmo(zx_handle_t vmar, zx_vaddr_t* stack_base, zx_vaddr_t* sp) {
+zx_status_t mini_process_load_stack(zx_handle_t vmar, bool with_code,
+                                    zx_vaddr_t* stack_base, zx_vaddr_t* sp) {
     // Allocate a single VMO for the child. It doubles as the stack on the top and
     // as the executable code (minipr_thread_loop()) at the bottom. In theory, actual
     // stack usage is minimal, like 160 bytes or less.
@@ -62,19 +63,23 @@ static zx_status_t prepare_stack_vmo(zx_handle_t vmar, zx_vaddr_t* stack_base, z
     static const char vmo_name[] = "mini-process:stack";
     zx_object_set_property(stack_vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
 
-    // We assume that the code to execute is less than kSizeLimit bytes.
-    const uint32_t kSizeLimit = 2000;
-    status = zx_vmo_write(stack_vmo, &minipr_thread_loop, 0u, kSizeLimit);
-    if (status != ZX_OK)
-        goto exit;
+    zx_vm_option_t perms = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
+    if (with_code) {
+        // We assume that the code to execute is less than kSizeLimit bytes.
+        const uint32_t kSizeLimit = 2000;
+        status = zx_vmo_write(stack_vmo, &minipr_thread_loop, 0u, kSizeLimit);
+        if (status != ZX_OK)
+            goto exit;
 
-    // TODO(mdempsky): Separate minipr_thread_loop and stack into
-    // separate VMOs to enforce W^X.
-    status = zx_vmo_replace_as_executable(stack_vmo, ZX_HANDLE_INVALID, &stack_vmo);
-    if (status != ZX_OK)
-        goto exit;
+        // TODO(mdempsky): Separate minipr_thread_loop and stack into
+        // separate VMOs to enforce W^X.
+        status = zx_vmo_replace_as_executable(stack_vmo, ZX_HANDLE_INVALID, &stack_vmo);
+        if (status != ZX_OK)
+            goto exit;
 
-    zx_vm_option_t perms = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE;
+        perms |= ZX_VM_PERM_EXECUTE;
+    }
+
     status = zx_vmar_map(vmar, perms, 0, stack_vmo, 0, stack_size, stack_base);
     if (status != ZX_OK)
         goto exit;
@@ -89,13 +94,43 @@ exit:
     return status;
 }
 
+zx_status_t mini_process_load_vdso(zx_handle_t process, zx_handle_t vmar,
+                                   uintptr_t* base, uintptr_t* entry) {
+    // This is not thread-safe.  It steals the startup handle, so it's not
+    // compatible with also using launchpad (which also needs to steal the
+    // startup handle).
+    static zx_handle_t vdso_vmo = ZX_HANDLE_INVALID;
+    if (vdso_vmo == ZX_HANDLE_INVALID) {
+        vdso_vmo = zx_take_startup_handle(PA_HND(PA_VMO_VDSO, 0));
+        if (vdso_vmo == ZX_HANDLE_INVALID) {
+            return ZX_ERR_INTERNAL;
+        }
+    }
+
+    elf_load_header_t header;
+    uintptr_t phoff;
+    zx_status_t status = elf_load_prepare(vdso_vmo, NULL, 0,
+                                          &header, &phoff);
+    if (status == ZX_OK) {
+        elf_phdr_t phdrs[header.e_phnum];
+        status = elf_load_read_phdrs(vdso_vmo, phdrs, phoff,
+                                     header.e_phnum);
+        if (status == ZX_OK) {
+            status = elf_load_map_segments(vmar, &header, phdrs, vdso_vmo,
+                                           NULL, base, entry);
+        }
+    }
+
+    return status;
+}
+
 zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
                                    zx_handle_t vmar,
                                    zx_handle_t transferred_handle,
                                    zx_handle_t* control_channel) {
     zx_vaddr_t stack_base = 0;
     zx_vaddr_t sp = 0;
-    zx_status_t status = prepare_stack_vmo(vmar, &stack_base, &sp);
+    zx_status_t status = mini_process_load_stack(vmar, true, &stack_base, &sp);
     if (status != ZX_OK)
         return status;
 
@@ -122,31 +157,8 @@ zx_status_t start_mini_process_etc(zx_handle_t process, zx_handle_t thread,
         if (status != ZX_OK)
             goto exit;
 
-        // This is not thread-safe.  It steals the startup handle, so it's not
-        // compatible with also using launchpad (which also needs to steal the
-        // startup handle).
-        static zx_handle_t vdso_vmo = ZX_HANDLE_INVALID;
-        if (vdso_vmo == ZX_HANDLE_INVALID) {
-            vdso_vmo = zx_take_startup_handle(PA_HND(PA_VMO_VDSO, 0));
-            if (vdso_vmo == ZX_HANDLE_INVALID) {
-                status = ZX_ERR_INTERNAL;
-                goto exit;
-            }
-        }
-
         uintptr_t vdso_base = 0;
-        elf_load_header_t header;
-        uintptr_t phoff;
-        zx_status_t status = elf_load_prepare(vdso_vmo, NULL, 0,
-                                              &header, &phoff);
-        if (status == ZX_OK) {
-            elf_phdr_t phdrs[header.e_phnum];
-            status = elf_load_read_phdrs(vdso_vmo, phdrs, phoff,
-                                         header.e_phnum);
-            if (status == ZX_OK)
-                status = elf_load_map_segments(vmar, &header, phdrs, vdso_vmo,
-                                               NULL, &vdso_base, NULL);
-        }
+        status = mini_process_load_vdso(process, vmar, &vdso_base, NULL);
         if (status != ZX_OK)
             goto exit;
 
@@ -265,7 +277,7 @@ exit:
 zx_status_t start_mini_process_thread(zx_handle_t thread, zx_handle_t vmar) {
     zx_vaddr_t stack_base = 0;
     zx_vaddr_t sp = 0;
-    zx_status_t status = prepare_stack_vmo(vmar, &stack_base, &sp);
+    zx_status_t status = mini_process_load_stack(vmar, true, &stack_base, &sp);
     if (status != ZX_OK)
         return status;
 

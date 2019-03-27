@@ -424,13 +424,14 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
     // test that the thread belongs to the starting process
     if (thread->process() != process.get())
         return ZX_ERR_ACCESS_DENIED;
-    if (!arg_handle)
-        return ZX_ERR_BAD_HANDLE;
-    if (!arg_handle->HasRights(ZX_RIGHT_TRANSFER))
-        return ZX_ERR_ACCESS_DENIED;
 
-    auto arg_nhv = process->MapHandleToValue(arg_handle);
-    process->AddHandle(ktl::move(arg_handle));
+    zx_handle_t arg_nhv = ZX_HANDLE_INVALID;
+    if (arg_handle) {
+        if (!arg_handle->HasRights(ZX_RIGHT_TRANSFER))
+            return ZX_ERR_ACCESS_DENIED;
+        arg_nhv = process->MapHandleToValue(arg_handle);
+        process->AddHandle(ktl::move(arg_handle));
+    }
 
     status = thread->Start(pc, sp, static_cast<uintptr_t>(arg_nhv),
                            arg2, /* initial_thread */ true);
