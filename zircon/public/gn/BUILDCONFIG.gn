@@ -731,7 +731,8 @@ template("library") {
                 lib_deps +=
                     [ get_path_info(get_label_info(label, "dir"), "name") ]
               } else if (get_path_info(get_label_info(label, "name"), "name") !=
-                         "common" && get_label_info(label, "name") != "static") {
+                         "common" &&
+                         get_label_info(label, "name") != "static") {
                 lib_deps += [ get_label_info(label, "name") ]
               }
             }
@@ -1410,20 +1411,32 @@ template("host_tool") {
       if (output_extension != "") {
         tool_extension = ".$output_extension"
       }
+
+      # The stripped file is what goes into `tool_executables` to drive
+      # the installation copies.
+      install_file = rebase_path(
+              get_path_info(tool_executable, "dir") + "/" +
+                  get_path_info(tool_executable, "name") + tool_extension,
+              root_build_dir)
+
+      # The unstripped file is what we actually run, so that compiled-in
+      # sanitizer code can symbolize itself.
+      run_file = install_file + toolchain.link_output_suffix
+
       metadata = {
         # List of tool binaries that could be presented to users' command line.
-        tool_executables = [ rebase_path(
-                get_path_info(tool_executable, "dir") + "/" +
-                    get_path_info(tool_executable, "name") + tool_extension,
-                root_build_dir) ]
+        tool_executables = [ install_file ]
 
         # See host_tool_action().
         host_tool_barrier = []
-        host_tool_rspfile = tool_executables + [ "--" ]
+        host_tool_rspfile = [
+          run_file,
+          "--",
+        ]
         if (defined(toolchain.host_run_env)) {  # TODO: sanitizer case
           host_tool_rspfile += toolchain.host_run_env
         }
-        host_tool_rspfile += tool_executables
+        host_tool_rspfile += [ run_file ]
       }
       variant_suffix_outputs = [ tool_executable + tool_extension ]
       variant_suffix_metadata = {
