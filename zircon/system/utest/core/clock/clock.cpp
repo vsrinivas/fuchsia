@@ -2,36 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdbool.h>
+#include <utility>
 
-#include <unittest/unittest.h>
-#include <zircon/syscalls.h>
-#include <zircon/time.h>
-#include <zircon/types.h>
+#include <lib/zx/time.h>
 
-static bool clock_monotonic_test(void) {
-    BEGIN_TEST;
+#include <zxtest/zxtest.h>
 
-    const zx_time_t zero = 0;
+namespace {
 
-    zx_time_t previous = zx_clock_get_monotonic();
+constexpr zx::duration k1MsDelay = zx::msec(1);
+
+TEST(ClockTest, ClockMonotonic) {
+    const zx::time zero;
+    zx::time previous = zx::clock::get_monotonic();
 
     for (int idx = 0; idx < 100; ++idx) {
-        zx_time_t current = zx_clock_get_monotonic();
+        zx::time current = zx::clock::get_monotonic();
         ASSERT_GT(current, zero, "monotonic time should be a positive number of nanoseconds");
         ASSERT_GE(current, previous, "monotonic time should only advance");
-
         // This calls zx_nanosleep directly rather than using
         // zx_deadline_after, which internally gets the monotonic
         // clock.
-        zx_nanosleep(zx_time_add_duration(current, 1000u));
+        zx::nanosleep(current + k1MsDelay);
 
         previous = current;
     }
-
-    END_TEST;
 }
 
-BEGIN_TEST_CASE(clock_tests)
-RUN_TEST(clock_monotonic_test)
-END_TEST_CASE(clock_tests)
+} // namespace

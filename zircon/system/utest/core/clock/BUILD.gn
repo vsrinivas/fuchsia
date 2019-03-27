@@ -8,8 +8,9 @@ source_set("clock") {
     "clock.cpp",
   ]
   deps = [
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
