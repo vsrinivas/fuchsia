@@ -489,6 +489,10 @@ fn receive_ndp_packet_inner<D: EventDispatcher, ND: NdpDevice, B>(
                 Some(NeighborState { link_address }) if link_address.is_waiting() => {
                     if let Some(address) = get_target_link_layer_option::<ND, _>(p.body()) {
                         *link_address = LinkAddressResolutionValue::Known { address };
+                        // Cancel the resolution timeout.
+                        ctx.dispatcher.cancel_timeout(
+                            NdpTimerId::new_neighbor_solicitation_timer_id(device_id, src_ip),
+                        );
                         ND::address_resolved(ctx, device_id, &src_ip, address);
                     }
                 }
@@ -614,6 +618,8 @@ mod tests {
         );
         // this should've triggered a neighbor solicitation to come out of local
         assert_eq!(local.dispatcher.frames_sent().len(), 1);
+        // and a timer should've been started.
+        assert_eq!(local.dispatcher.timer_events().count(), 1);
         local.dispatcher.forward_frames(&mut remote, mapper);
         assert_eq!(
             *remote.state().test_counters.get("ndp::rx_neighbor_solicitation"),
@@ -647,6 +653,8 @@ mod tests {
                 .link_address,
             LinkAddressResolutionValue::<Mac>::Known { address: TEST_LOCAL_MAC }
         );
+        // and the local timer should've been unscheduled:
+        assert_eq!(local.dispatcher.timer_events().count(), 0);
 
         // TODO(brunodalbo) once we are able to dequeue the packets, we can
         //  assert that "remote" receives the original IcmpEchoRequest.
