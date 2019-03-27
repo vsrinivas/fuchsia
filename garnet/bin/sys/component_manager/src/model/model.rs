@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
-    std::convert::TryInto,
     std::sync::Arc,
 };
 
@@ -48,7 +47,7 @@ impl Model {
                 abs_moniker: AbsoluteMoniker::root(),
                 instance: Instance {
                     component_uri: params.root_component_uri,
-                    execution: Mutex::new(None),
+                    execution: None,
                     child_realms: None,
                     decl: None,
                     // Started by main().
@@ -81,38 +80,18 @@ impl Model {
         let mut cur_realm = self.root_realm.clone();
         for moniker in look_up_abs_moniker.path().iter() {
             cur_realm = {
-                let Realm {
-                    ref resolver_registry,
-                    ref default_runner,
-                    ref abs_moniker,
-                    ref mut instance,
-                } = *await!(cur_realm.lock());
-                let mut component = None;
-                if instance.child_realms.is_none() {
-                    component = Some(await!(resolver_registry.resolve(&instance.component_uri))?);
-                    instance.child_realms = Some(Instance::make_child_realms(
-                        component.as_ref().unwrap(),
-                        abs_moniker,
-                        resolver_registry.clone(),
-                        default_runner.clone(),
-                    )?);
-                }
-                if instance.decl.is_none() {
-                    if component.is_none() {
-                        component =
-                            Some(await!(resolver_registry.resolve(&instance.component_uri))?);
-                    }
-                    instance.decl =
-                        Some(component.unwrap().decl.unwrap().try_into().map_err(|e| {
-                            ModelError::manifest_invalid(look_up_abs_moniker.to_string(), e)
-                        })?)
-                }
-                let child_realms = instance.child_realms.as_ref().unwrap();
+                let mut realm = await!(cur_realm.lock());
+                await!(realm.resolve_decl())?;
+                let child_realms = realm.instance.child_realms.as_ref().unwrap();
                 if !child_realms.contains_key(&moniker) {
                     return Err(ModelError::instance_not_found(look_up_abs_moniker.clone()));
                 }
                 child_realms[moniker].clone()
             }
+        }
+        {
+            let mut realm = await!(cur_realm.lock());
+            await!(realm.resolve_decl())?;
         }
         Ok(cur_realm)
     }
@@ -125,43 +104,19 @@ impl Model {
         realm_cell: Arc<Mutex<Realm>>,
     ) -> Result<Vec<Arc<Mutex<Realm>>>, ModelError> {
         // There can only be one task manipulating an instance's execution at a time.
-        let Realm { ref resolver_registry, ref default_runner, ref abs_moniker, ref mut instance } =
-            *await!(realm_cell.lock());
-        let Instance {
-            ref component_uri,
-            ref execution,
-            ref mut child_realms,
-            ref mut decl,
-            startup: _,
-        } = instance;
-        let mut execution_lock = await!(execution.lock());
+        let mut realm = await!(realm_cell.lock());
         let mut started = false;
-        match &*execution_lock {
+        match &realm.instance.execution {
             Some(_) => {}
             None => {
-                let component = await!(resolver_registry.resolve(component_uri))?;
-                // TODO: the following logic that populates some fields in Instance is duplicated
-                // in look_up_in_realm. Find a way to prevent that duplication.
-                if child_realms.is_none() {
-                    *child_realms = Some(Instance::make_child_realms(
-                        &component,
-                        abs_moniker,
-                        resolver_registry.clone(),
-                        default_runner.clone(),
-                    )?);
-                }
-                if decl.is_none() {
-                    *decl =
-                        Some(component.decl.unwrap().try_into().map_err(|e| {
-                            ModelError::manifest_invalid(component_uri.to_string(), e)
-                        })?)
-                }
-                let decl = instance.decl.as_ref().unwrap();
-                // TODO(CF-647): Serve in the Instance's PseudoDir instead.
+                let component =
+                    await!(realm.resolver_registry.resolve(&realm.instance.component_uri))?;
+                realm.populate_decl(component.decl)?;
+                let decl = realm.instance.decl.as_ref().unwrap();
                 let (outgoing_dir_client, outgoing_dir_server) =
                     zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
                 let mut namespace = IncomingNamespace::new(component.package)?;
-                let ns = await!(namespace.populate(self.clone(), abs_moniker, decl))?;
+                let ns = await!(namespace.populate(self.clone(), &realm.abs_moniker, decl))?;
                 let execution = Execution::start_from(
                     component.resolved_uri,
                     namespace,
@@ -176,15 +131,15 @@ impl Model {
                     ns: Some(ns),
                     outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
                 };
-                await!(default_runner.start(start_info))?;
+                await!(realm.default_runner.start(start_info))?;
                 started = true;
-                *execution_lock = Some(execution);
+                realm.instance.execution = Some(execution);
             }
         }
         // Return children that need eager starting.
         let mut eager_children = vec![];
         if started {
-            for child_realm in instance.child_realms.as_ref().unwrap().values() {
+            for child_realm in realm.instance.child_realms.as_ref().unwrap().values() {
                 let startup = await!(child_realm.lock()).instance.startup;
                 match startup {
                     fsys::StartupMode::Eager => {

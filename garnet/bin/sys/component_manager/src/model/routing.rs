@@ -85,8 +85,9 @@ async fn route_capability(
         CapabilitySource::Component(path, realm) => {
             let server_end = ServerEnd::new(server_chan);
             let realm = await!(realm.lock());
-            let execution = await!(realm.instance.execution.lock());
-            let out_dir = &execution
+            let out_dir = &realm
+                .instance
+                .execution
                 .as_ref()
                 .ok_or(ModelError::capability_discovery_error(format_err!(
                     "component hosting capability isn't running: {}",

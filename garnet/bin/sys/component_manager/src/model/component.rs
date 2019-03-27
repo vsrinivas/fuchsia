@@ -8,6 +8,7 @@ use {
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
+    std::convert::TryInto,
     std::{collections::HashMap, sync::Arc},
 };
 
@@ -29,54 +30,68 @@ pub struct Realm {
     pub abs_moniker: AbsoluteMoniker,
 }
 
+impl Realm {
+    /// Resolves and populates the component declaration of this realm's Instance, if not already
+    /// populated.
+    pub async fn resolve_decl(&mut self) -> Result<(), ModelError> {
+        if self.instance.decl.is_none() {
+            let component = await!(self.resolver_registry.resolve(&self.instance.component_uri))?;
+            self.populate_decl(component.decl)?;
+        }
+        Ok(())
+    }
+
+    /// Populates the component declaration of this realm's Instance with `decl`, if not already
+    /// populated.
+    pub fn populate_decl(&mut self, decl: Option<fsys::ComponentDecl>) -> Result<(), ModelError> {
+        if self.instance.decl.is_none() {
+            if decl.is_none() {
+                return Err(ModelError::ComponentInvalid);
+            }
+            let decl = decl.unwrap().try_into().map_err(|e| {
+                ModelError::manifest_invalid(self.instance.component_uri.clone(), e)
+            })?;
+            self.instance.child_realms = Some(self.make_child_realms(&decl));
+            self.instance.decl = Some(decl);
+        }
+        Ok(())
+    }
+
+    fn make_child_realms(&self, decl: &ComponentDecl) -> ChildRealmMap {
+        let mut child_realms = HashMap::new();
+        for child in decl.children.iter() {
+            let moniker = ChildMoniker::new(child.name.clone());
+            let abs_moniker = self.abs_moniker.child(moniker.clone());
+            let realm = Arc::new(Mutex::new(Realm {
+                resolver_registry: self.resolver_registry.clone(),
+                default_runner: self.default_runner.clone(),
+                abs_moniker: abs_moniker,
+                instance: Instance {
+                    component_uri: child.uri.clone(),
+                    execution: None,
+                    child_realms: None,
+                    decl: None,
+                    startup: child.startup,
+                },
+            }));
+            child_realms.insert(moniker, realm);
+        }
+        child_realms
+    }
+}
+
 /// An instance of a component.
 pub struct Instance {
     /// The component's URI.
     pub component_uri: String,
     /// Execution state for the component instance or `None` if not running.
-    pub execution: Mutex<Option<Execution>>,
+    pub execution: Option<Execution>,
     /// Realms of child instances, indexed by child moniker (name). Evaluated on demand.
     pub child_realms: Option<ChildRealmMap>,
     /// The component's validated declaration. Evaluated on demand.
     pub decl: Option<ComponentDecl>,
     /// The mode of startup (lazy or eager).
     pub startup: fsys::StartupMode,
-}
-
-impl Instance {
-    pub fn make_child_realms(
-        component: &fsys::Component,
-        abs_moniker: &AbsoluteMoniker,
-        resolver_registry: Arc<ResolverRegistry>,
-        default_runner: Arc<Box<dyn Runner + Send + Sync + 'static>>,
-    ) -> Result<ChildRealmMap, ModelError> {
-        let mut child_realms = HashMap::new();
-        if component.decl.is_none() {
-            return Err(ModelError::ComponentInvalid);
-        }
-        if let Some(ref children_decl) = component.decl.as_ref().unwrap().children {
-            for child_decl in children_decl {
-                let child_name = child_decl.name.as_ref().unwrap().clone();
-                let child_uri = child_decl.uri.as_ref().unwrap().clone();
-                let moniker = ChildMoniker::new(child_name);
-                let abs_moniker = abs_moniker.child(moniker.clone());
-                let realm = Arc::new(Mutex::new(Realm {
-                    resolver_registry: resolver_registry.clone(),
-                    default_runner: default_runner.clone(),
-                    abs_moniker: abs_moniker,
-                    instance: Instance {
-                        component_uri: child_uri,
-                        execution: Mutex::new(None),
-                        child_realms: None,
-                        decl: None,
-                        startup: child_decl.startup.unwrap(),
-                    },
-                }));
-                child_realms.insert(moniker, realm);
-            }
-        }
-        Ok(child_realms)
-    }
 }
 
 /// The execution state for a component instance that has started running.
