@@ -79,6 +79,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   EXPECT_THAT(out_result.response().data.attachments(),
               testing::UnorderedElementsAreArray({
                   MatchesKey("build.snapshot"),
+                  MatchesKey("log.kernel"),
               }));
 }
 
