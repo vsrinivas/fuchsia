@@ -138,4 +138,37 @@ const std::vector<uint8_t>& FdioHidDecoder::Read(int* bytes_read) {
   return report_;
 }
 
+zx_status_t FdioHidDecoder::Send(ReportType type, uint8_t report_id,
+                                 const std::vector<uint8_t>& report) {
+  FXL_CHECK(type != ReportType::INPUT);
+
+  fuchsia_hardware_input_ReportType fidl_report_type;
+  switch (type) {
+    case ReportType::INPUT:
+      fidl_report_type = fuchsia_hardware_input_ReportType_INPUT;
+      break;
+    case ReportType::OUTPUT:
+      fidl_report_type = fuchsia_hardware_input_ReportType_OUTPUT;
+      break;
+    case ReportType::FEATURE:
+      fidl_report_type = fuchsia_hardware_input_ReportType_FEATURE;
+      break;
+  }
+
+  zx_handle_t svc = caller_.borrow_channel();
+
+  zx_status_t call_status;
+  zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
+      svc, fidl_report_type, report_id, report.data(), report.size(),
+      &call_status);
+
+  if (status != ZX_OK) {
+    return status;
+  } else if (call_status != ZX_OK) {
+    return call_status;
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace mozart

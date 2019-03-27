@@ -52,7 +52,7 @@ const std::vector<uint8_t>& MockHidDecoder::Read(int* bytes_read) {
   return report_.data;
 }
 
-void MockHidDecoder::Send(std::vector<uint8_t> bytes, int length) {
+void MockHidDecoder::SetHidDecoderRead(std::vector<uint8_t> bytes, int length) {
   FXL_CHECK(report_.length == 0);
   report_.data = std::move(bytes);
   report_.length = length;

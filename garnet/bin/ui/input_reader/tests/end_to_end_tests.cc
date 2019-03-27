@@ -93,7 +93,7 @@ TEST_F(ReaderInterpreterInputTest, BootMouse) {
                               mouse_report_bytes + sizeof(mouse_report));
 
   // Send the boot mouse report.
-  device->Send(report, sizeof(mouse_report));
+  device->SetHidDecoderRead(report, sizeof(mouse_report));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(last_report_.mouse);
@@ -109,7 +109,7 @@ TEST_F(ReaderInterpreterInputTest, BootKeyboard) {
 
   // A keyboard report is 8 bytes long, with bytes 3-8 containing HID usage
   // codes.
-  device->Send({0, 0, HID_USAGE_KEY_A, 0, 0, 0, 0, 0}, 8);
+  device->SetHidDecoderRead({0, 0, HID_USAGE_KEY_A, 0, 0, 0, 0, 0}, 8);
 
   RunLoopUntilIdle();
   EXPECT_EQ(1, report_count_);
@@ -117,14 +117,15 @@ TEST_F(ReaderInterpreterInputTest, BootKeyboard) {
   EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_A},
             last_report_.keyboard->pressed_keys);
 
-  device->Send({0, 0, HID_USAGE_KEY_A, HID_USAGE_KEY_Z, 0, 0, 0, 0}, 8);
+  device->SetHidDecoderRead(
+      {0, 0, HID_USAGE_KEY_A, HID_USAGE_KEY_Z, 0, 0, 0, 0}, 8);
   RunLoopUntilIdle();
   EXPECT_EQ(2, report_count_);
   EXPECT_EQ(std::multiset<uint32_t>({HID_USAGE_KEY_A, HID_USAGE_KEY_Z}),
             std::multiset<uint32_t>(last_report_.keyboard->pressed_keys.begin(),
                                     last_report_.keyboard->pressed_keys.end()));
 
-  device->Send({0, 0, HID_USAGE_KEY_Z, 0, 0, 0, 0, 0}, 8);
+  device->SetHidDecoderRead({0, 0, HID_USAGE_KEY_Z, 0, 0, 0, 0, 0}, 8);
   RunLoopUntilIdle();
   EXPECT_EQ(std::vector<uint32_t>{HID_USAGE_KEY_Z},
             last_report_.keyboard->pressed_keys);
@@ -154,7 +155,7 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchscreen) {
                               touch_report_bytes + sizeof(touch_report));
 
   // Send the touch report.
-  device->Send(report, sizeof(touch_report));
+  device->SetHidDecoderRead(report, sizeof(touch_report));
   RunLoopUntilIdle();
 
   // Check that we saw one report, and that the data was sent out correctly.
@@ -190,7 +191,7 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchpad) {
                               touch_report_bytes + sizeof(touch_report));
 
   // Send the touch report.
-  device->Send(report, sizeof(touch_report));
+  device->SetHidDecoderRead(report, sizeof(touch_report));
   RunLoopUntilIdle();
 
   // Check that we saw one report. Mice are relative so we shouldn't see
@@ -207,7 +208,7 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchpad) {
                                 touch_report_bytes + sizeof(touch_report));
 
   // Send the touch report.
-  device->Send(report, sizeof(touch_report));
+  device->SetHidDecoderRead(report, sizeof(touch_report));
   RunLoopUntilIdle();
 
   ASSERT_EQ(2, report_count_);
@@ -236,7 +237,7 @@ TEST_F(ReaderInterpreterInputTest, SensorTest) {
   std::vector<uint8_t> report(report_data, report_data + sizeof(report_data));
 
   // Send the touch report.
-  device->Send(report, sizeof(report_data));
+  device->SetHidDecoderRead(report, sizeof(report_data));
   RunLoopUntilIdle();
 
   // Check that the report matches.
@@ -266,7 +267,7 @@ TEST_F(ReaderInterpreterInputTest, ButtonsTest) {
   std::vector<uint8_t> report(report_data, report_data + sizeof(report_data));
 
   // Send the touch report.
-  device->Send(report, sizeof(report_data));
+  device->SetHidDecoderRead(report, sizeof(report_data));
   RunLoopUntilIdle();
 
   // Check that the report matches.

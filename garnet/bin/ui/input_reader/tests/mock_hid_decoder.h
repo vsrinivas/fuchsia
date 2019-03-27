@@ -44,10 +44,15 @@ class MockHidDecoder : public HidDecoder {
   const std::vector<uint8_t>& ReadReportDescriptor(int* bytes_read) override;
   // |HidDecoder|
   const std::vector<uint8_t>& Read(int* bytes_read) override;
+  // |HidDecoder|
+  zx_status_t Send(ReportType type, uint8_t report_id,
+                   const std::vector<uint8_t>& report) override {
+    return ZX_OK;
+  }
 
-  // Emulates sending a report, which will be read by |Read|.
+  // Emulates the Device sending a report, which will be read by |Read|.
   // There must not be a pending report that has not been |Read|.
-  void Send(std::vector<uint8_t> bytes, int length);
+  void SetHidDecoderRead(std::vector<uint8_t> bytes, int length);
   // Sets the report descripter, which will be read by
   // |ReadReportDescriptor|. This should only be called once at the beginning
   // of setting up |MockHidDecoder|.

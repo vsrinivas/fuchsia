@@ -20,6 +20,20 @@ namespace mozart {
 // step towards fully wrapping the HID protocol.
 class HidDecoder {
  public:
+  enum class ReportType { INPUT, OUTPUT, FEATURE };
+  // TODO(SCN-867) - The two below enums should be removed when we finally
+  // remove all of the Hardcoded devices.
+  enum class BootMode {
+    NONE,
+    MOUSE,
+    KEYBOARD,
+  };
+  enum class Device {
+    EYOYO,
+    FT3X27,
+    SAMSUNG,
+  };
+
   HidDecoder();
   virtual ~HidDecoder();
 
@@ -36,22 +50,12 @@ class HidDecoder {
   // has, then the hid descriptor and report must follow a specific format.
   // TODO (SCN-1266) - This should be removed when we can just run these
   // through generic HID parsers.
-  enum class BootMode {
-    NONE,
-    MOUSE,
-    KEYBOARD,
-  };
   virtual BootMode ReadBootMode() const = 0;
 
   // Some devices require that data is sent back to the device. At the moment
   // we don't have a general framework for this so we have hardcoded support
   // for 3 devices. This should be removed when the generic parsers are
   // complete.
-  enum class Device {
-    EYOYO,
-    FT3X27,
-    SAMSUNG,
-  };
   virtual void SetupDevice(Device device) = 0;
 
   // Reads the Report descriptor from the device.
@@ -60,6 +64,11 @@ class HidDecoder {
   // Reads a single Report from the device. This will block unless the
   // device has signaled that it is ready to be read.
   virtual const std::vector<uint8_t>& Read(int* bytes_read) = 0;
+
+  // Sends a single Report to the device. |type| must be either
+  // OUTPUT or FEATURE.
+  virtual zx_status_t Send(ReportType type, uint8_t report_id,
+                           const std::vector<uint8_t>& report) = 0;
 };
 
 }  // namespace mozart
