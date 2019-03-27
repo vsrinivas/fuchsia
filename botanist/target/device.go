@@ -189,7 +189,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images build.Images, args []st
 func (t *DeviceTarget) Restart(ctx context.Context) error {
 	if t.config.Power != nil {
 		if err := t.config.Power.RebootDevice(t.signers, t.Nodename()); err != nil {
-			return fmt.Errorf("failed to reboot the device: %v\n", err)
+			return fmt.Errorf("failed to reboot the device: %v", err)
 		}
 	}
 	return nil

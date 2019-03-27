@@ -6,6 +6,7 @@ package power
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist/power/amt"
@@ -27,6 +28,8 @@ const (
 	botInterface = "eno2"
 
 	sshUser = "fuchsia"
+
+	sshRebootTimeout = 10 * time.Second
 )
 
 // Client represents a power management configuration for a particular device.
@@ -51,7 +54,16 @@ type Client struct {
 // additionally uses the given configuration to reboot the device if specified.
 func (c Client) RebootDevice(signers []ssh.Signer, nodename string) error {
 	// Always attempt to soft reboot the device to recovery.
-	err := rebootRecovery(nodename, signers)
+	ch := make(chan error)
+	go func() {
+		ch <- rebootRecovery(nodename, signers)
+	}()
+	// Just move on if rebootRecovery returns or timeout reached.
+	select {
+	case <-ch:
+	// Strict timeout if SSH hangs
+	case <-time.After(sshRebootTimeout):
+	}
 
 	// Hard reboot the device if specified in the config.
 	switch c.Type {
@@ -59,9 +71,9 @@ func (c Client) RebootDevice(signers []ssh.Signer, nodename string) error {
 		return amt.Reboot(c.Host, c.Username, c.Password)
 	case "wol":
 		return wol.Reboot(botBroadcastAddr, botInterface, c.HostMACAddr)
+	default:
+		return fmt.Errorf("unsupported power type: %s", c.Type)
 	}
-
-	return err
 }
 
 func rebootRecovery(nodeName string, signers []ssh.Signer) error {
