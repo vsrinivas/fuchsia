@@ -11,6 +11,7 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/lib/elflib/elflib.h"
 #include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
 #include "third_party/crashpad/snapshot/memory_snapshot.h"
 #include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
@@ -289,13 +290,24 @@ class MinidumpReadDelegate : public crashpad::MemorySnapshot::Delegate {
   uint8_t* ptr_;
 };
 
-}  // namespace
+class SnapshotMemoryRegion : public MinidumpRemoteAPI::MemoryRegion {
+ public:
+  // Construct a memory region from a crashpad MemorySnapshot. The pointer
+  // should always be derived from the minidump_ object, and will thus always
+  // share its lifetime.
+  explicit SnapshotMemoryRegion(const crashpad::MemorySnapshot* snapshot)
+      : MinidumpRemoteAPI::MemoryRegion(snapshot->Address(), snapshot->Size()),
+        snapshot_(snapshot) {}
+  virtual ~SnapshotMemoryRegion() = default;
 
-MinidumpRemoteAPI::MemoryRegion::MemoryRegion(
-    const crashpad::MemorySnapshot* snapshot)
-    : start(snapshot->Address()), size(snapshot->Size()), snapshot_(snapshot) {}
+  std::optional<std::vector<uint8_t>> Read(uint64_t offset,
+                                           size_t size) const override;
 
-std::optional<std::vector<uint8_t>> MinidumpRemoteAPI::MemoryRegion::Read(
+ private:
+  const crashpad::MemorySnapshot* snapshot_;
+};
+
+std::optional<std::vector<uint8_t>> SnapshotMemoryRegion::Read(
     uint64_t offset, size_t size) const {
   std::vector<uint8_t> data;
   data.resize(size);
@@ -306,6 +318,48 @@ std::optional<std::vector<uint8_t>> MinidumpRemoteAPI::MemoryRegion::Read(
     return std::nullopt;
   }
 
+  return std::move(data);
+}
+
+class ElfMemoryRegion : public MinidumpRemoteAPI::MemoryRegion {
+ public:
+  // Construct a memory region from a crashpad MemorySnapshot. The pointer
+  // should always be derived from the minidump_ object, and will thus always
+  // share its lifetime.
+  explicit ElfMemoryRegion(std::shared_ptr<elflib::ElfLib>& elf,
+                           uint64_t start_in, size_t size_in, size_t idx)
+      : MinidumpRemoteAPI::MemoryRegion(start_in, size_in),
+        idx_(idx),
+        elf_(elf) {}
+  virtual ~ElfMemoryRegion() = default;
+
+  std::optional<std::vector<uint8_t>> Read(uint64_t offset,
+                                           size_t size) const override;
+
+ private:
+  size_t idx_;
+  std::shared_ptr<elflib::ElfLib> elf_;
+};
+
+std::optional<std::vector<uint8_t>> ElfMemoryRegion::Read(uint64_t offset,
+                                                          size_t size) const {
+  if (offset + size > this->size) {
+    return std::nullopt;
+  }
+
+  auto got = elf_->GetSegmentData(idx_);
+  if (!got.ptr) {
+    return std::nullopt;
+  }
+
+  size_t read_end = std::min(got.size, static_cast<size_t>(offset + size));
+
+  std::vector<uint8_t> data;
+  std::copy(got.ptr + offset, got.ptr + read_end, std::back_inserter(data));
+
+  // If the mapped size is larger than the file data, we pad with zeros per
+  // spec.
+  data.resize(size, 0);
   return std::move(data);
 }
 
@@ -338,6 +392,8 @@ std::string MinidumpGetUUID(const crashpad::ModuleSnapshot& mod) {
   return ret;
 }
 
+}  // namespace
+
 MinidumpRemoteAPI::MinidumpRemoteAPI(Session* session) : session_(session) {}
 
 MinidumpRemoteAPI::~MinidumpRemoteAPI() = default;
@@ -364,7 +420,38 @@ void MinidumpRemoteAPI::CollectMemory() {
       continue;
     }
 
-    memory_.push_back(std::make_unique<MinidumpRemoteAPI::MemoryRegion>(stack));
+    memory_.push_back(std::make_unique<SnapshotMemoryRegion>(stack));
+  }
+
+  auto& build_id_index = session_->system().GetSymbols()->build_id_index();
+
+  for (const auto& minidump_mod : minidump_->Modules()) {
+    uint64_t base = minidump_mod->Address();
+    auto path = build_id_index.FileForBuildID(MinidumpGetUUID(*minidump_mod));
+    std::shared_ptr<elflib::ElfLib> elf = elflib::ElfLib::Create(path);
+
+    if (!elf) {
+      continue;
+    }
+
+    const auto& segments = elf->GetSegmentHeaders();
+    for (size_t i = 0; i < segments.size(); i++) {
+      const auto& segment = segments[i];
+
+      // Only PT_LOAD segments are actually mapped. The rest are informational.
+      if (segment.p_type != elflib::PT_LOAD) {
+        continue;
+      }
+
+      if (segment.p_flags & elflib::PF_W) {
+        // Writable segment. Data in the ELF file might not match what was
+        // present at the time of the crash.
+        continue;
+      }
+
+      memory_.push_back(std::make_unique<ElfMemoryRegion>(
+          elf, segment.p_vaddr + base, segment.p_memsz, i));
+    }
   }
 
   std::sort(memory_.begin(), memory_.end(),

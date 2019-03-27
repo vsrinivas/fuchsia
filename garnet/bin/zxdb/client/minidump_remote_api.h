@@ -93,24 +93,20 @@ class MinidumpRemoteAPI : public RemoteAPI {
       const debug_ipc::WriteMemoryRequest& request,
       std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) override;
 
- private:
   class MemoryRegion {
    public:
-    // Construct a memory region from a crashpad MemorySnapshot. The pointer
-    // should always be derived from the minidump_ object, and will thus always
-    // share its lifetime.
-    explicit MemoryRegion(const crashpad::MemorySnapshot* snapshot);
-    ~MemoryRegion() = default;
+    MemoryRegion(uint64_t start_in, size_t size_in)
+        : start(start_in), size(size_in) {}
+    virtual ~MemoryRegion() = default;
 
-    std::optional<std::vector<uint8_t>> Read(uint64_t offset,
-                                             size_t size) const;
+    virtual std::optional<std::vector<uint8_t>> Read(uint64_t offset,
+                                                     size_t size) const = 0;
 
     const uint64_t start;
     const size_t size;
-
-   private:
-    const crashpad::MemorySnapshot* snapshot_;
   };
+
+ private:
 
   // Initialization routine. Iterates minidump structures and finds all the
   // readable memory.

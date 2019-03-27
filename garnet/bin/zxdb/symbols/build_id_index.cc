@@ -73,7 +73,7 @@ std::string BuildIDIndex::FileForBuildID(const std::string& build_id) {
 
   auto found = build_id_to_file_.find(*to_find);
   if (found == build_id_to_file_.end())
-    return SearchRepoSources(build_id);
+    return SearchRepoSources(*to_find);
   return found->second;
 }
 

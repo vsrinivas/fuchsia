@@ -113,6 +113,7 @@ static_library("symbols") {
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
     "//src/developer/debug/zxdb/common",
+    "//src/lib/elflib",
   ]
 
   deps = [
