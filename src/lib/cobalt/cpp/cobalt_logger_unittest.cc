@@ -11,7 +11,7 @@
 #include <lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/svc/cpp/service_provider_bridge.h>
-#include <lib/sys/cpp/testing/service_directory_for_test.h>
+#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <zx/time.h>
 
 namespace cobalt {
@@ -346,7 +346,7 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
 
  private:
   std::unique_ptr<sys::ComponentContext> InitStartupContext() {
-    service_directory = sys::testing::ServiceDirectoryForTest::Create();
+    service_directory = std::make_shared<sys::testing::ServiceDirectoryProvider>();
     factory_impl_.reset(new FakeLoggerFactoryImpl());
     service_directory->AddService<fuchsia::cobalt::LoggerFactory>(
         [this](fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
@@ -360,7 +360,7 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
         [this](fidl::InterfaceRequest<fuchsia::sys::Launcher> request) {
           launcher_request_ = std::move(request);
         });
-    return std::make_unique<sys::ComponentContext>(service_directory,
+    return std::make_unique<sys::ComponentContext>(service_directory->service_directory(),
                                                    zx::channel());
   }
 
@@ -374,7 +374,7 @@ class CobaltLoggerTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  std::shared_ptr<sys::testing::ServiceDirectoryForTest> service_directory;
+  std::shared_ptr<sys::testing::ServiceDirectoryProvider> service_directory;
   std::unique_ptr<FakeLoggerFactoryImpl> factory_impl_;
   std::unique_ptr<FakeLoggerImpl> logger_;
   std::unique_ptr<sys::ComponentContext> context_;
