@@ -487,7 +487,7 @@ impl<'entries> DirectoryEntry for Simple<'entries> {
         //     https://play.rust-lang.org/?version=nightly&gist=5471f93c52f3adb7c8d6741ea96f9bce
         //
         // Given a path with 2048 components, which is the maximum possible path, considering the
-        // MAX_PATH restirction of 4096, the function used 290KBs of stack.  Rust, by default, uses
+        // MAX_PATH restriction of 4096, the function used 290KBs of stack.  Rust, by default, uses
         // 2MB stacks.
         //
         // Considering that the open method will only use recursion for the pseudo directories
@@ -499,11 +499,10 @@ impl<'entries> DirectoryEntry for Simple<'entries> {
         //
         //     open_next_entry_or_consume(flags, mode, entry_name, path, server_end) -> Option<&mut DirectoryEntry>
         //
-        // method that would either return the next DirectoryEntry or will consume
-        // the path futher down (recursively) returning None.  This would allow traversal to happen
-        // in a fixed stack space, still allowing nodes like mount points to intercept the
-        // traversal process. It seems like it will complicate the API for the DirectoryEntry
-        // implementations though.
+        // method that would either return the next DirectoryEntry or will consume the path further
+        // down (recursively) returning None.  This would allow traversal to happen in a fixed
+        // stack space, still allowing nodes like mount points to intercept the traversal process.
+        // It seems like it will complicate the API for the DirectoryEntry implementations though.
 
         entry.open(flags, mode, path, server_end)
     }
@@ -656,7 +655,7 @@ mod tests {
 
     // Create level import of this macro does not affect nested modules.  And as attributes can
     // only be applied to the whole "use" directive, this need to be present here and need to be
-    // separate form the above.  "use crate::pseudo_directory" generates a warning refering to
+    // separate form the above.  "use crate::pseudo_directory" generates a warning referring to
     // "issue #52234 <https://github.com/rust-lang/rust/issues/52234>".
     #[proc_macro_hack(support_nested)]
     use fuchsia_vfs_pseudo_fs_macros::pseudo_directory;
