@@ -24,7 +24,9 @@ usage() {
   echo "  -j N: Passed along to ninja (number of parallel jobs)"
   echo "  -l N: Passed along to ninja (maximum load average)"
   echo "  -t <target>: Architecture (GN style) to build, instead of all"
-  echo "  -o <outdir>: Directory in which to put the build-zircon directory."
+  echo "  -o <outdir>: TODO(BLD-383): SEMANTICS CHANGING SOON."
+  echo "     Directory in which to put the build-zircon directory."
+  echo "  -z <zircon-outdir>: Zircon build directory."
   echo ""
   echo 'Additional arguments containing `=` will be used as GN build arguments.'
   echo "Other additional arguments will be passed as extra Ninja arguments."
@@ -33,7 +35,7 @@ usage() {
   echo 'Note that -A and -H translate into a `variants=...` build argument.'
   echo "You can't use those switches and also use such a build argument."
   echo "Note that if GN no build arguments (nor -c) are specified and the file"
-  echo "<outdir>/build-zircon/args.gn already exists, it will be reused."
+  echo "<zircon-outdir>/args.gn already exists, it will be reused."
   echo "For nontrivial configuration changes, edit the args.gn file by hand"
   echo "either from scratch or after a run of this script with switches;"
   echo "then run this script with neither build arguments nor -A or -H."
@@ -47,7 +49,7 @@ declare CLEAN="false"
 declare DRY_RUN="false"
 declare HOST_ASAN="false"
 declare TOOLS_ONLY="false"
-declare OUTDIR="${ROOT_DIR}/out"
+declare ZIRCON_BUILDROOT="${ROOT_DIR}/out/build-zircon"
 declare VERBOSE="0"
 declare -a ARCHLIST=(arm64 x64)
 declare JOBS=0
@@ -55,7 +57,7 @@ declare LOADAVG=0
 declare RUN_GN="true"
 declare RUN_NINJA="true"
 
-while getopts "AcgGHhl:nj:t:Tp:o:vV" opt; do
+while getopts "AcgGHhl:nj:t:Tp:o:vVz:" opt; do
   case "${opt}" in
     A) ASAN="true" ;;
     c) CLEAN="true" ;;
@@ -66,18 +68,22 @@ while getopts "AcgGHhl:nj:t:Tp:o:vV" opt; do
     n) DRY_RUN="true" ;;
     j) JOBS="${OPTARG}" ;;
     l) LOADAVG="${OPTARG}" ;;
-    o) OUTDIR="${OPTARG}" ;;
+    o) echo >&2 "TODO(BLD-383): Semantics of -o will change real soon."
+       echo >&2 "-o will be used for specifying the zircon build output directory,"
+       echo >&2 "not just its parent directory. This is for supporting multiple"
+       echo >&2 "compilers for zircon build."
+       ZIRCON_BUILDROOT="${OPTARG}/build-zircon" ;;
     t) ARCHLIST=("${OPTARG}") ;;
     T) TOOLS_ONLY="true" ;;
     v) VERBOSE="1" ;;
     V) VERBOSE="2" ;;
+    z) ZIRCON_BUILDROOT="${OPTARG}" ;;
     *) usage 1>&2 ; exit 1 ;;
   esac
 done
 shift $(($OPTIND - 1))
 
-readonly ASAN CLEAN DRY_RUN HOST_ASAN PROJECTS OUTDIR VERBOSE
-readonly ZIRCON_BUILDROOT="${OUTDIR}/build-zircon"
+readonly ASAN CLEAN DRY_RUN HOST_ASAN PROJECTS VERBOSE ZIRCON_BUILDROOT
 readonly -a ARCHLIST
 
 if [[ "${CLEAN}" = "true" ]]; then
