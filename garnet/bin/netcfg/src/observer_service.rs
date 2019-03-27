@@ -17,7 +17,8 @@ use {
 const EMPTY: &str = "";
 
 pub async fn serve_fidl_requests(
-    stack: StackProxy, stream: ObserverRequestStream,
+    stack: StackProxy,
+    stream: ObserverRequestStream,
     interface_ids: Arc<Mutex<HashMap<String, u64>>>,
 ) -> Result<(), fidl::Error> {
     await!(stream.try_for_each(|req| async {
@@ -28,10 +29,7 @@ pub async fn serve_fidl_requests(
                     let infos = infos
                         .into_iter()
                         .filter_map(|info| {
-                            match interface_ids_lock
-                                .iter()
-                                .find(|(_name, id)| &&info.id == id)
-                            {
+                            match interface_ids_lock.iter().find(|(_name, id)| &&info.id == id) {
                                 Some((name, _)) => Some(InterfaceInfo {
                                     name: name.to_owned(),
                                     properties: info.properties,
@@ -65,10 +63,7 @@ pub async fn serve_fidl_requests(
                 let (mut info, status) = if let Some(&id) = interface_ids_lock.get(&name) {
                     if let Ok((info, None)) = await!(stack.get_interface_info(id)) {
                         (
-                            Some(InterfaceInfo {
-                                name,
-                                properties: info.unwrap().properties,
-                            }),
+                            Some(InterfaceInfo { name, properties: info.unwrap().properties }),
                             zx::sys::ZX_OK,
                         )
                     } else {
@@ -90,7 +85,7 @@ mod tests {
         fidl::endpoints::create_proxy,
         fidl_fuchsia_net_policy::{ObserverMarker, ObserverProxy},
         fidl_fuchsia_net_stack::{
-            EnablementStatus, InterfaceAddress, PhysicalStatus, StackMarker, StackRequest,
+            AdministrativeStatus, InterfaceAddress, PhysicalStatus, StackMarker, StackRequest,
             StackRequestStream,
         },
         fuchsia_async as fasync,
@@ -114,7 +109,7 @@ mod tests {
             })),
             mtu: 1500,
             features: 2,
-            enablement_status: EnablementStatus::Enabled,
+            administrative_status: AdministrativeStatus::Enabled,
             physical_status: PhysicalStatus::Up,
             addresses: vec![InterfaceAddress {
                 ip_address: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
@@ -126,17 +121,11 @@ mod tests {
     }
 
     fn build_interface_info() -> fidl_fuchsia_net_stack::InterfaceInfo {
-        fidl_fuchsia_net_stack::InterfaceInfo {
-            id: ID2,
-            properties: build_interface_properties(),
-        }
+        fidl_fuchsia_net_stack::InterfaceInfo { id: ID2, properties: build_interface_properties() }
     }
 
     fn build_no_match_interface_info() -> fidl_fuchsia_net_stack::InterfaceInfo {
-        fidl_fuchsia_net_stack::InterfaceInfo {
-            id: ID3,
-            properties: build_interface_properties(),
-        }
+        fidl_fuchsia_net_stack::InterfaceInfo { id: ID3, properties: build_interface_properties() }
     }
 
     fn expect_interface_info() -> fidl_fuchsia_net_policy::InterfaceInfo {
@@ -153,27 +142,21 @@ mod tests {
         }
     }
 
-    fn setup_interface_tests() -> (
-        fasync::Executor,
-        impl Future,
-        ObserverProxy,
-        StackRequestStream,
-    ) {
+    fn setup_interface_tests() -> (fasync::Executor, impl Future, ObserverProxy, StackRequestStream)
+    {
         let exec = fasync::Executor::new().expect("failed to create an executor");
 
         // Set up mock stack fidl server.
         let (stack_proxy, stack_server) =
             create_proxy::<StackMarker>().expect("failed to create stack fidl");
-        let stack_stream = stack_server
-            .into_stream()
-            .expect("failed to create a stack request stream.");
+        let stack_stream =
+            stack_server.into_stream().expect("failed to create a stack request stream.");
 
         // Set up real Observer fidl server and client.
         let (observer_proxy, observer_server) =
             create_proxy::<ObserverMarker>().expect("failed to create observer fidl");
-        let observer_stream = observer_server
-            .into_stream()
-            .expect("failed to create an observer request stream.");
+        let observer_stream =
+            observer_server.into_stream().expect("failed to create an observer request stream.");
 
         // Create and initialize interface_ids
         let mut interface_ids = HashMap::new();
@@ -201,9 +184,7 @@ mod tests {
 
         // Let observer server run to stall.
         pin_mut!(observer_service_task);
-        assert!(exec
-            .run_until_stalled(&mut observer_service_task)
-            .is_pending());
+        assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
 
         // Let stack server run to stall and check that we got an appropriate FIDL call.
         let event = match exec.run_until_stalled(&mut stack_stream.next()) {
@@ -220,17 +201,12 @@ mod tests {
             _ => panic!("Unexpected stack call!"),
         };
 
-        assert!(exec
-            .run_until_stalled(&mut observer_service_task)
-            .is_pending());
+        assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
 
         // Let observer client run until ready, and check that we got an expected response.
         let (infos, status) = match exec.run_until_stalled(&mut client_fut) {
             Poll::Ready(Ok(req)) => req,
-            other => panic!(
-                "Expected a response from observer fidl call, but got {:?}!",
-                other
-            ),
+            other => panic!("Expected a response from observer fidl call, but got {:?}!", other),
         };
         assert_eq!(zx::sys::ZX_OK, status);
         assert_eq!(vec![expect_interface_info()], infos.unwrap());
@@ -250,9 +226,7 @@ mod tests {
 
         // Let observer server run to stall.
         pin_mut!(observer_service_task);
-        assert!(exec
-            .run_until_stalled(&mut observer_service_task)
-            .is_pending());
+        assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
 
         // Let stack server run to stall and check that we got an appropriate FIDL call.
         let event = match exec.run_until_stalled(&mut stack_stream.next()) {
@@ -272,23 +246,15 @@ mod tests {
             _ => panic!("Unexpected stack call!"),
         };
 
-        assert!(exec
-            .run_until_stalled(&mut observer_service_task)
-            .is_pending());
+        assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
 
         // Let observer client run until ready, and check that we got an expected response.
         let (infos, status) = match exec.run_until_stalled(&mut client_fut) {
             Poll::Ready(Ok(req)) => req,
-            other => panic!(
-                "Expected a response from observer fidl call, but got {:?}!",
-                other
-            ),
+            other => panic!("Expected a response from observer fidl call, but got {:?}!", other),
         };
         assert_eq!(zx::sys::ZX_OK, status);
-        assert_eq!(
-            vec![expect_interface_info(), expect_interface_info_no_match()],
-            infos.unwrap()
-        );
+        assert_eq!(vec![expect_interface_info(), expect_interface_info_no_match()], infos.unwrap());
     }
 
     #[test]
@@ -305,9 +271,7 @@ mod tests {
 
         // Let observer server run to stall.
         pin_mut!(observer_service_task);
-        assert!(exec
-            .run_until_stalled(&mut observer_service_task)
-            .is_pending());
+        assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
 
         // Let stack server run to stall and check that we got an appropriate FIDL call.
         let event = match exec.run_until_stalled(&mut stack_stream.next()) {
@@ -324,17 +288,12 @@ mod tests {
             _ => panic!("Unexpected stack call!"),
         };
 
-        assert!(exec
-            .run_until_stalled(&mut observer_service_task)
-            .is_pending());
+        assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
 
         // Let observer client run until ready, and check that we got an expected response.
         let response = match exec.run_until_stalled(&mut client_fut) {
             Poll::Ready(Ok(req)) => req,
-            other => panic!(
-                "Expected a response from observer fidl call, but got {:?}",
-                other
-            ),
+            other => panic!("Expected a response from observer fidl call, but got {:?}", other),
         };
         assert_eq!(expect_interface_info(), *response.0.unwrap());
     }
@@ -353,17 +312,12 @@ mod tests {
 
         // Let observer server run to stall.
         pin_mut!(observer_service_task);
-        assert!(exec
-            .run_until_stalled(&mut observer_service_task)
-            .is_pending());
+        assert!(exec.run_until_stalled(&mut observer_service_task).is_pending());
 
         // Let observer client run to stall and check that we got an expected response.
         let response = match exec.run_until_stalled(&mut client_fut) {
             Poll::Ready(Ok(req)) => req,
-            other => panic!(
-                "Expected a response from observer fidl call, but got {:?}",
-                other
-            ),
+            other => panic!("Expected a response from observer fidl call, but got {:?}", other),
         };
 
         assert_eq!(zx::Status::NOT_FOUND.into_raw(), response.1);

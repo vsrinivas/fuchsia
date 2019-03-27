@@ -34,7 +34,7 @@ fn test_display_interfaceinfo() {
             })),
             mtu: 1500,
             features: 2,
-            enablement_status: fidl_fuchsia_net_stack::EnablementStatus::Enabled,
+            administrative_status: fidl_fuchsia_net_stack::AdministrativeStatus::Enabled,
             physical_status: fidl_fuchsia_net_stack::PhysicalStatus::Up,
             addresses: vec![
                 fidl_fuchsia_net_stack::InterfaceAddress {

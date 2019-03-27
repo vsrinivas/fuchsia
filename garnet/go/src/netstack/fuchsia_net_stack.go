@@ -41,10 +41,10 @@ func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
 	}
 
 	// TODO(tkilbourn): distinguish between enabled and link up
-	enablementStatus := stack.EnablementStatusDisabled
+	administrativeStatus := stack.AdministrativeStatusDisabled
 	physicalStatus := stack.PhysicalStatusDown
 	if ifs.mu.state == link.StateStarted {
-		enablementStatus = stack.EnablementStatusEnabled
+		administrativeStatus = stack.AdministrativeStatusEnabled
 		physicalStatus = stack.PhysicalStatusUp
 	}
 
@@ -68,13 +68,13 @@ func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
 	return &stack.InterfaceInfo{
 		Id: uint64(ifs.mu.nic.ID),
 		Properties: stack.InterfaceProperties{
-			Path:             path,
-			Mac:              mac,
-			Mtu:              uint32(ifs.endpoint.MTU()),
-			EnablementStatus: enablementStatus,
-			PhysicalStatus:   physicalStatus,
-			Features:         ifs.mu.nic.Features,
-			Addresses:        addrs,
+			Path:                 path,
+			Mac:                  mac,
+			Mtu:                  uint32(ifs.endpoint.MTU()),
+			AdministrativeStatus: administrativeStatus,
+			PhysicalStatus:       physicalStatus,
+			Features:             ifs.mu.nic.Features,
+			Addresses:            addrs,
 		},
 	}
 }

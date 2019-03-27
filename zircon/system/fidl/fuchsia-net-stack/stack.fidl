@@ -21,7 +21,7 @@ enum PhysicalStatus {
     UP = 2;
 };
 
-enum EnablementStatus {
+enum AdministrativeStatus {
     /// The interface is administratively disabled.
     DISABLED = 1;
     /// The interface is administratively enabled.
@@ -31,7 +31,7 @@ enum EnablementStatus {
 union InterfaceStatus {
     PresenceStatus presence;
     PhysicalStatus physical;
-    EnablementStatus enablement;
+    AdministrativeStatus administrative;
 };
 
 struct InterfaceAddress {
@@ -67,10 +67,10 @@ struct InterfaceProperties {
     /// fuchsia.hardware.ethernet.INFO_FEATURE_*.
     uint32 features;
 
-    /// The enablement status of the interface.
-    EnablementStatus enablementStatus;
+    /// The administrative status of the interface.
+    AdministrativeStatus administrativeStatus;
 
-    /// The physcial link status of the interface.
+    /// The physical link status of the interface.
     PhysicalStatus physicalStatus;
 
     /// The list of addresses currently assigned to the interface.

@@ -88,7 +88,7 @@ use fidl_fuchsia_net::{SocketControlRequest, SocketProviderRequest};
 use fidl_fuchsia_net_ext as fidl_net_ext;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack::{
-    EnablementStatus, ForwardingEntry, InterfaceAddress, InterfaceInfo, InterfaceProperties,
+    AdministrativeStatus, ForwardingEntry, InterfaceAddress, InterfaceInfo, InterfaceProperties,
     PhysicalStatus, StackAddEthernetInterfaceResponder, StackAddForwardingEntryResponder,
     StackAddInterfaceAddressResponder, StackDelEthernetInterfaceResponder,
     StackDelForwardingEntryResponder, StackDelInterfaceAddressResponder,
@@ -411,7 +411,7 @@ impl EventLoop {
                     mac: if let Ok(info) = &info { Some(Box::new(info.mac.into())) } else { None },
                     mtu: if let Ok(info) = &info { info.mtu } else { 0 },
                     features: if let Ok(info) = &info { info.features.bits() } else { 0 },
-                    enablement_status: EnablementStatus::Enabled, // TODO(wesleyac) this
+                    administrative_status: AdministrativeStatus::Enabled, // TODO(wesleyac) this
                     physical_status: match status {
                         Ok(status) => {
                             if status.contains(EthernetStatus::ONLINE) {

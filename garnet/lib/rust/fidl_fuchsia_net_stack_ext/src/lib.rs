@@ -11,24 +11,15 @@ pub struct InterfaceAddress {
 
 impl From<fidl::InterfaceAddress> for InterfaceAddress {
     fn from(interface_address: fidl::InterfaceAddress) -> Self {
-        let fidl::InterfaceAddress {
-            ip_address,
-            prefix_len,
-        } = interface_address;
+        let fidl::InterfaceAddress { ip_address, prefix_len } = interface_address;
         let ip_address = ip_address.into();
-        Self {
-            ip_address,
-            prefix_len,
-        }
+        Self { ip_address, prefix_len }
     }
 }
 
 impl std::fmt::Display for InterfaceAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        let Self {
-            ip_address,
-            prefix_len,
-        } = self;
+        let Self { ip_address, prefix_len } = self;
         write!(f, "{}/{}", ip_address, prefix_len)
     }
 }
@@ -65,50 +56,41 @@ pub struct ForwardingEntry {
 
 impl From<fidl::ForwardingEntry> for ForwardingEntry {
     fn from(forwarding_entry: fidl::ForwardingEntry) -> Self {
-        let fidl::ForwardingEntry {
-            subnet,
-            destination,
-        } = forwarding_entry;
+        let fidl::ForwardingEntry { subnet, destination } = forwarding_entry;
         let subnet = subnet.into();
         let destination = destination.into();
-        Self {
-            subnet,
-            destination,
-        }
+        Self { subnet, destination }
     }
 }
 
 impl std::fmt::Display for ForwardingEntry {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        let Self {
-            subnet,
-            destination,
-        } = self;
+        let Self { subnet, destination } = self;
         write!(f, "{}", subnet)?;
         write!(f, "{}", destination)?;
         Ok(())
     }
 }
 
-pub enum EnablementStatus {
+pub enum AdministrativeStatus {
     DISABLED,
     ENABLED,
 }
 
-impl From<fidl::EnablementStatus> for EnablementStatus {
-    fn from(enablement_status: fidl::EnablementStatus) -> Self {
-        match enablement_status {
-            fidl::EnablementStatus::Disabled => EnablementStatus::DISABLED,
-            fidl::EnablementStatus::Enabled => EnablementStatus::ENABLED,
+impl From<fidl::AdministrativeStatus> for AdministrativeStatus {
+    fn from(administrative_status: fidl::AdministrativeStatus) -> Self {
+        match administrative_status {
+            fidl::AdministrativeStatus::Disabled => AdministrativeStatus::DISABLED,
+            fidl::AdministrativeStatus::Enabled => AdministrativeStatus::ENABLED,
         }
     }
 }
 
-impl std::fmt::Display for EnablementStatus {
+impl std::fmt::Display for AdministrativeStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         match self {
-            EnablementStatus::DISABLED => write!(f, "DISABLED"),
-            EnablementStatus::ENABLED => write!(f, "ENABLED"),
+            AdministrativeStatus::DISABLED => write!(f, "DISABLED"),
+            AdministrativeStatus::ENABLED => write!(f, "ENABLED"),
         }
     }
 }
@@ -141,7 +123,7 @@ pub struct InterfaceProperties {
     mac: Option<fidl_fuchsia_hardware_ethernet_ext::MacAddress>,
     mtu: u32,
     features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures,
-    enablement_status: EnablementStatus,
+    administrative_status: AdministrativeStatus,
     physical_status: PhysicalStatus,
     addresses: Vec<InterfaceAddress>,
 }
@@ -153,7 +135,7 @@ impl From<fidl::InterfaceProperties> for InterfaceProperties {
             mac,
             mtu,
             features,
-            enablement_status,
+            administrative_status,
             physical_status,
             addresses,
         }: fidl::InterfaceProperties,
@@ -161,18 +143,10 @@ impl From<fidl::InterfaceProperties> for InterfaceProperties {
         let mac = mac.map(|mac| (*mac).into());
         let features =
             fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::from_bits_truncate(features);
-        let enablement_status = EnablementStatus::from(enablement_status);
+        let administrative_status = AdministrativeStatus::from(administrative_status);
         let physical_status = PhysicalStatus::from(physical_status);
         let addresses = addresses.into_iter().map(Into::into).collect();
-        Self {
-            path,
-            mac,
-            mtu,
-            features,
-            enablement_status,
-            physical_status,
-            addresses,
-        }
+        Self { path, mac, mtu, features, administrative_status, physical_status, addresses }
     }
 }
 
@@ -183,7 +157,7 @@ impl std::fmt::Display for InterfaceProperties {
             mac,
             mtu,
             features,
-            enablement_status,
+            administrative_status,
             physical_status,
             addresses,
         } = self;
@@ -193,7 +167,7 @@ impl std::fmt::Display for InterfaceProperties {
         }
         write!(f, "  mtu: {}\n", mtu)?;
         write!(f, "  features: {:?}\n", features)?;
-        write!(f, "  status: {} | {}\n", enablement_status, physical_status)?;
+        write!(f, "  status: {} | {}\n", administrative_status, physical_status)?;
         write!(f, "  Addresses:")?;
         for address in addresses {
             write!(f, "\n    {}", address)?;
@@ -237,7 +211,7 @@ fn test_display_interfaceinfo() {
                     }),
                     mtu: 1500,
                     features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::all(),
-                    enablement_status: EnablementStatus::ENABLED,
+                    administrative_status: AdministrativeStatus::ENABLED,
                     physical_status: PhysicalStatus::UP,
                     addresses: vec![
                         InterfaceAddress {

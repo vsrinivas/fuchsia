@@ -44,15 +44,15 @@ protocol BaseInterfaceController {
     /// Retrieve info about an interface.
     GetInterfaceInfo() -> (InterfaceInfo info);
 
-    /// Set the administrative enablement for an interfance.
+    /// Set the administrative status for an interfance.
     /// If enabled, the interface starts processing packets.
     /// If disabled, the interface stops processing packets.
-    SetInterfaceStatus(fuchsia.net.stack.EnablementStatus status) -> (zx.status status);
+    SetInterfaceStatus(fuchsia.net.stack.AdministrativeStatus status) -> (zx.status status);
 
-    /// Set DHCP client enablement for a specific interface.
+    /// Set DHCP client status for a specific interface.
     /// If enabled, the interface acquires a dynamic IP address through DHCP server.
     /// If disabled, the interface uses the assigned static IP address.
-    SetDHCPClientStatus(fuchsia.net.stack.EnablementStatus status) -> (zx.status status);
+    SetDHCPClientStatus(fuchsia.net.stack.AdministrativeStatus status) -> (zx.status status);
 
     /// Add/Remove IP address for an interface.
     /// Remove only if IP address is an exact match.
@@ -108,5 +108,5 @@ protocol BasePolicy {
 // https://docs.google.com/document/d/1pOPFRfdh6AnWt2d37F1k7YH0AhJ1AnrGEdUU3zyzCkQ/edit#
 // That said, the component infrastrastructure will block unqualified client from accessing the PrivilegedPolicy interface.
 protocol PrivilegedPolicy {
-    GetInterfaceController(string interface, EthernetControllerRequest controller)-> (zx.status status);
+    GetInterfaceController(string interface, EthernetControllerRequest controller) -> (zx.status status);
 };
