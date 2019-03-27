@@ -152,7 +152,7 @@ int main(int argc, char** argv) {
             options.metrics = true;
             break;
         case 'j':
-            //TODO(planders): Enable journaling here once minfs supports it.
+            // TODO(planders): Enable journaling here once minfs supports it.
             fprintf(stderr, "minfs: Journaling option not supported\n");
             return usage();
         case 'v':

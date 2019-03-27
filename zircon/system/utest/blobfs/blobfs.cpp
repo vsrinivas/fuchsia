@@ -218,6 +218,7 @@ const fsck_options_t test_fsck_options = {
     .never_modify = true,
     .always_modify = false,
     .force = true,
+    .apply_journal = false,
 };
 
 BlobfsTest::~BlobfsTest() {

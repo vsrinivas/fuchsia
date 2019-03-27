@@ -60,7 +60,8 @@ public:
 
     // Optionally checks the filesystem stored on the device at |device_path|,
     // if "zircon.system.filesystem-check" is set.
-    zx_status_t CheckFilesystem(const char* device_path, disk_format_t df) const;
+    zx_status_t CheckFilesystem(const char* device_path, disk_format_t df,
+                                const fsck_options_t* options) const;
 
     // Attempts to mount a block device backed by |fd| to "/data".
     // Fails if already mounted.
@@ -390,13 +391,13 @@ zx_status_t BlockWatcher::MountBlob(fbl::unique_fd fd, mount_options_t* options)
     return status;
 }
 
-zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t df) const {
+zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t df,
+                                          const fsck_options_t* options) const {
     if (!getenv_bool("zircon.system.filesystem-check", false)) {
         return ZX_OK;
     }
 
     printf("fshost: fsck of %s started\n", disk_format_string_[df]);
-    const fsck_options_t* options = &default_fsck_options;
 
     auto launch_fsck = [](int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                           size_t len) {
@@ -624,7 +625,9 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
         if (memcmp(guid.value, expected_guid, GPT_GUID_LEN)) {
             return ZX_OK;
         }
-        if (watcher->CheckFilesystem(device_path, DISK_FORMAT_BLOBFS) != ZX_OK) {
+        fsck_options_t fsck_options = default_fsck_options;
+        fsck_options.apply_journal = true;
+        if (watcher->CheckFilesystem(device_path, DISK_FORMAT_BLOBFS, &fsck_options) != ZX_OK) {
             return ZX_OK;
         }
 
@@ -642,7 +645,8 @@ zx_status_t block_device_added(int dirfd, int event, const char* name, void* coo
     }
     case DISK_FORMAT_MINFS: {
         printf("fshost: mounting minfs\n");
-        if (watcher->CheckFilesystem(device_path, DISK_FORMAT_MINFS) != ZX_OK) {
+        fsck_options_t fsck_options = default_fsck_options;
+        if (watcher->CheckFilesystem(device_path, DISK_FORMAT_MINFS, &fsck_options) != ZX_OK) {
             return ZX_OK;
         }
         mount_options_t options = default_mount_options;

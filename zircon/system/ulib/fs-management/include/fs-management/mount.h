@@ -101,7 +101,8 @@ typedef struct fsck_options {
     // At MOST one of the following '*_modify' flags may be true.
     bool never_modify;  // Fsck still looks for problems, but it does not try to resolve them.
     bool always_modify; // Fsck never asks to resolve problems; it assumes it should fix them.
-    bool force;         // Force fsck to check the filesystem integrity, even if it is marked as "clean".
+    bool force;         // Force fsck to check the filesystem integrity, even if it is "clean".
+    bool apply_journal; // Apply journal prior to running the consistency checker.
 } fsck_options_t;
 
 extern const fsck_options_t default_fsck_options;

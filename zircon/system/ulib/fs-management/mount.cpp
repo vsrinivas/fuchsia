@@ -268,6 +268,7 @@ const fsck_options_t default_fsck_options = {
     .never_modify = false,
     .always_modify = false,
     .force = false,
+    .apply_journal = false,
 };
 
 disk_format_t detect_disk_format(int fd) {
