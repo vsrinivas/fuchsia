@@ -62,11 +62,10 @@ bool ParamsToJSON(const std::optional<std::vector<InterfaceMethodParameter>>& p,
   for (const InterfaceMethodParameter* param : params) {
     current_offset = param->get_offset();
 
-    Type type = param->GetType();
+    std::unique_ptr<Type> type = param->GetType();
     ValueGeneratingCallback value_callback;
-
-    type.MakeValue(bytes.data() + current_offset, param->get_size(), &tracker,
-                   value_callback, result.GetAllocator());
+    type->GetValueCallback(bytes.data() + current_offset, param->get_size(),
+                           &tracker, value_callback);
 
     tracker.ObjectEnqueue(param->name(), std::move(value_callback), result,
                           result.GetAllocator());

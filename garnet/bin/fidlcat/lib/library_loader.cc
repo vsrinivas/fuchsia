@@ -6,8 +6,6 @@
 
 #include <lib/fxl/logging.h>
 
-#include <endian.h>
-
 #include "rapidjson/error/en.h"
 
 // See library_loader.h for details.
@@ -66,19 +64,7 @@ void ObjectTracker::ArrayEnqueue(
   });
 }
 
-namespace {
-
-// This namespace contains implementations of EqualityFunctions and
-// PrintFunctions for built in FIDL types.  These can be provided to
-// fidlcat::Type's constructor to generate a Type object for the given type.
-
-// These are convenience functions for reading little endian (i.e., FIDL wire
-// format encoded) bits.
-template <typename T>
-class LeToHost {
- public:
-  static T le_to_host(const T* ts);
-};
+namespace internal {
 
 template <>
 uint8_t LeToHost<uint8_t>::le_to_host(const uint8_t* bytes) {
@@ -100,30 +86,13 @@ uint64_t LeToHost<uint64_t>::le_to_host(const uint64_t* bytes) {
   return le64toh(*bytes);
 }
 
-template <typename T>
-struct GetUnsigned {
-  using type = typename std::conditional<std::is_same<float, T>::value,
-                                         uint32_t, uint64_t>::type;
-};
-
-template <typename T>
-T MemoryFrom(const uint8_t* bytes) {
-  using U = typename std::conditional<std::is_integral<T>::value,
-                                      std::make_unsigned<T>,
-                                      GetUnsigned<T>>::type::type;
-  union {
-    U uval;
-    T tval;
-  } u;
-  u.uval = LeToHost<U>::le_to_host(reinterpret_cast<const U*>(bytes));
-  return u.tval;
-}
+}  // namespace internal
 
 // Prints out raw bytes as a C string of hex pairs ("af b0 1e...").  Useful for
 // debugging / unknown data.
-size_t UnknownPrint(const uint8_t* bytes, size_t length, ObjectTracker* tracker,
-                    ValueGeneratingCallback& callback,
-                    rapidjson::Document::AllocatorType& allocator) {
+size_t UnknownType::GetValueCallback(const uint8_t* bytes, size_t length,
+                                     ObjectTracker* tracker,
+                                     ValueGeneratingCallback& callback) const {
   callback = [length, bytes](const uint8_t* ignored, rapidjson::Value& value,
                              rapidjson::Document::AllocatorType& allocator) {
     size_t size = length * 3 + 1;
@@ -138,13 +107,24 @@ size_t UnknownPrint(const uint8_t* bytes, size_t length, ObjectTracker* tracker,
   return length;
 }
 
-size_t StringPrint(const uint8_t* bytes, size_t length, ObjectTracker* tracker,
-                   ValueGeneratingCallback& callback,
-                   rapidjson::Document::AllocatorType& allocator) {
+bool Type::ValueEquals(const uint8_t* bytes, size_t length,
+                       const rapidjson::Value& value) const {
+  FXL_LOG(FATAL) << "Equality operator for type not implemented";
+  return false;
+}
+
+size_t Type::InlineSize() const {
+  FXL_LOG(FATAL) << "Size for type not implemented";
+  return 0;
+}
+
+size_t StringType::GetValueCallback(const uint8_t* bytes, size_t length,
+                                    ObjectTracker* tracker,
+                                    ValueGeneratingCallback& callback) const {
   // Strings: First 8 bytes is length
-  uint64_t string_length = MemoryFrom<uint64_t>(bytes);
+  uint64_t string_length = internal::MemoryFrom<uint64_t>(bytes);
   // next 8 bytes are 0 if the string is null, and 0xffffffff otherwise.
-  bool is_null = bytes[8] == 0x0;
+  bool is_null = bytes[sizeof(uint64_t)] == 0x0;
   callback = [is_null, string_length](
                  const uint8_t* bytes, rapidjson::Value& value,
                  rapidjson::Document::AllocatorType& allocator) {
@@ -160,15 +140,9 @@ size_t StringPrint(const uint8_t* bytes, size_t length, ObjectTracker* tracker,
   return length;
 }
 
-bool DummyEq(const uint8_t* bytes, size_t length,
-             const rapidjson::Value& value) {
-  FXL_LOG(FATAL) << "Equality operator for type not implemented";
-  return false;
-}
-
-size_t BoolPrint(const uint8_t* bytes, size_t length, ObjectTracker* tracker,
-                 ValueGeneratingCallback& callback,
-                 rapidjson::Document::AllocatorType& allocator) {
+size_t BoolType::GetValueCallback(const uint8_t* bytes, size_t length,
+                                  ObjectTracker* tracker,
+                                  ValueGeneratingCallback& callback) const {
   callback = [val = *bytes](const uint8_t* bytes, rapidjson::Value& value,
                             rapidjson::Document::AllocatorType& allocator) {
     // assert that length == 1
@@ -180,34 +154,6 @@ size_t BoolPrint(const uint8_t* bytes, size_t length, ObjectTracker* tracker,
     return 0;
   };
   return sizeof(bool);
-}
-
-// A generic PrintFunction that can be used for any scalar type.
-template <typename T>
-size_t PrimitivePrint(const uint8_t* bytes, size_t length,
-                      ObjectTracker* tracker, ValueGeneratingCallback& callback,
-                      rapidjson::Document::AllocatorType& allocator) {
-  T val = MemoryFrom<T>(bytes);
-  callback = [val](const uint8_t* bytes, rapidjson::Value& value,
-                   rapidjson::Document::AllocatorType& allocator) {
-    value.SetString(std::to_string(val).c_str(), allocator);
-    return 0;
-  };
-  return sizeof(T);
-}
-
-// A generic EqualityFunction that can be used for any scalar type.
-template <typename T>
-size_t PrimitiveEq(const uint8_t* bytes, size_t length,
-                   const rapidjson::Value& value) {
-  T lhs = MemoryFrom<T>(bytes);
-  std::istringstream input(value["value"].GetString());
-  // Because int8_t is really char, and we don't want to read that.
-  using R =
-      typename std::conditional<std::is_same<T, int8_t>::value, int, T>::type;
-  R rhs;
-  input >> rhs;
-  return lhs == rhs;
 }
 
 // This provides a Tracker for objects that may or may not be out-of-line.  If
@@ -245,10 +191,14 @@ class TrackerMark {
   ObjectTracker inner_tracker_;
 };
 
-size_t StructPrint(const Struct& str, bool is_nullable, const uint8_t* bytes,
-                   size_t length, ObjectTracker* tracker,
-                   ValueGeneratingCallback& callback,
-                   rapidjson::Document::AllocatorType& allocator) {
+StructType::StructType(const Struct& str, bool is_nullable)
+    : struct_(str), is_nullable_(is_nullable) {}
+
+size_t StructType::GetValueCallback(const uint8_t* bytes, size_t length,
+                                    ObjectTracker* tracker,
+                                    ValueGeneratingCallback& callback) const {
+  bool is_nullable = is_nullable_;
+  const Struct& str = struct_;
   callback = [inline_bytes = bytes, str, is_nullable, tracker](
                  const uint8_t* outline_bytes, rapidjson::Value& value,
                  rapidjson::Document::AllocatorType& allocator) -> size_t {
@@ -266,10 +216,10 @@ size_t StructPrint(const Struct& str, bool is_nullable, const uint8_t* bytes,
     value.SetObject();
     ObjectTracker* tracker = mark.GetTracker();
     for (auto& member : str.members()) {
-      Type member_type = member.GetType();
+      std::unique_ptr<Type> member_type = member.GetType();
       ValueGeneratingCallback value_callback;
-      member_type.MakeValue(&bytes[member.offset()], member.size(), tracker,
-                            value_callback, allocator);
+      member_type->GetValueCallback(&bytes[member.offset()], member.size(),
+                                    tracker, value_callback);
       tracker->ObjectEnqueue(member.name(), std::move(value_callback), value,
                              allocator);
     }
@@ -278,40 +228,66 @@ size_t StructPrint(const Struct& str, bool is_nullable, const uint8_t* bytes,
   return length;
 }
 
-size_t ArrayPrint(Type type, uint32_t count, const uint8_t* bytes,
-                  size_t length, ObjectTracker* tracker,
-                  ValueGeneratingCallback& callback,
-                  rapidjson::Document::AllocatorType& allocator) {
-  callback = [tracker, type, count, bytes, length](
-                 const uint8_t* ignored, rapidjson::Value& value,
-                 rapidjson::Document::AllocatorType& allocator) {
+ElementSequenceType::ElementSequenceType(std::unique_ptr<Type>&& component_type)
+    : component_type_(std::move(component_type)) {
+  FXL_DCHECK(component_type_.get() != nullptr);
+}
+
+ElementSequenceType::ElementSequenceType(std::shared_ptr<Type> component_type)
+    : component_type_(component_type) {
+  FXL_DCHECK(component_type_.get() != nullptr);
+}
+
+ValueGeneratingCallback ElementSequenceType::GetIteratingCallback(
+    ObjectTracker* tracker, size_t count, const uint8_t* bytes,
+    size_t length) const {
+  std::shared_ptr<Type> component_type = component_type_;
+  return [tracker, component_type, count, bytes, length](
+             const uint8_t* ignored, rapidjson::Value& value,
+             rapidjson::Document::AllocatorType& allocator) {
     value.SetArray();
     size_t offset = 0;
     for (uint32_t i = 0; i < count; i++) {
       ValueGeneratingCallback value_callback;
-      offset += type.MakeValue(bytes + offset, length / count, tracker,
-                               value_callback, allocator);
+      offset += component_type->GetValueCallback(bytes + offset, length / count,
+                                                 tracker, value_callback);
       tracker->ArrayEnqueue(std::move(value_callback), value, allocator);
     }
     return 0;
   };
+}
+
+ArrayType::ArrayType(std::unique_ptr<Type>&& component_type, uint32_t count)
+    : ElementSequenceType(std::move(component_type)), count_(count) {}
+
+size_t ArrayType::GetValueCallback(const uint8_t* bytes, size_t length,
+                                   ObjectTracker* tracker,
+                                   ValueGeneratingCallback& callback) const {
+  callback = GetIteratingCallback(tracker, count_, bytes, length);
   return length;
 }
 
-size_t VectorPrint(Type type, size_t element_size, const uint8_t* bytes,
-                   size_t length, ObjectTracker* tracker,
-                   ValueGeneratingCallback& callback,
-                   rapidjson::Document::AllocatorType& allocator) {
-  uint64_t count = MemoryFrom<uint64_t>(bytes);
-  uint64_t data = MemoryFrom<uint64_t>(bytes + sizeof(uint64_t));
+VectorType::VectorType(std::unique_ptr<Type>&& component_type)
+    : ElementSequenceType(std::move(component_type)) {}
+
+VectorType::VectorType(std::shared_ptr<Type> component_type,
+                       size_t element_size)
+    : ElementSequenceType(component_type) {}
+
+size_t VectorType::GetValueCallback(const uint8_t* bytes, size_t length,
+                                    ObjectTracker* tracker,
+                                    ValueGeneratingCallback& callback) const {
+  uint64_t count = internal::MemoryFrom<uint64_t>(bytes);
+  uint64_t data = internal::MemoryFrom<uint64_t>(bytes + sizeof(uint64_t));
+  size_t element_size = component_type_->InlineSize();
   if (data == UINTPTR_MAX) {
-    callback = [tracker, type, count, element_size](
+    VectorType vt(component_type_, element_size);
+    callback = [vt, tracker, element_size, count](
                    const uint8_t* bytes, rapidjson::Value& value,
                    rapidjson::Document::AllocatorType& allocator) {
-      ValueGeneratingCallback callback;
-      ArrayPrint(type, count, bytes, element_size * count, tracker, callback,
-                 allocator);
-      callback(bytes, value, allocator);
+      ValueGeneratingCallback value_cb =
+          vt.GetIteratingCallback(tracker, count, bytes, element_size * count);
+      value_cb(bytes, value, allocator);
       return element_size * count;
     };
   } else if (data == 0) {
@@ -324,10 +300,12 @@ size_t VectorPrint(Type type, size_t element_size, const uint8_t* bytes,
   return length;
 }
 
-size_t EnumPrint(const Enum& e, const uint8_t* bytes, size_t length,
-                 ObjectTracker* tracker, ValueGeneratingCallback& callback,
-                 rapidjson::Document::AllocatorType& allocator) {
-  std::string name = e.GetNameFromBytes(bytes, length);
+EnumType::EnumType(const Enum& e) : enum_(e) {}
+
+size_t EnumType::GetValueCallback(const uint8_t* bytes, size_t length,
+                                  ObjectTracker* tracker,
+                                  ValueGeneratingCallback& callback) const {
+  std::string name = enum_.GetNameFromBytes(bytes, length);
   callback = [name](const uint8_t* bytes, rapidjson::Value& value,
                     rapidjson::Document::AllocatorType& allocator) {
     value.SetString(name, allocator);
@@ -336,77 +314,61 @@ size_t EnumPrint(const Enum& e, const uint8_t* bytes, size_t length,
   return length;
 }
 
-}  // anonymous namespace
-
-uint32_t Enum::size() const {
-  return Type::InlineSizeFromType(enclosing_library_.enclosing_loader(),
-                                  value_);
+std::unique_ptr<Type> Type::get_illegal() {
+  return std::unique_ptr<Type>(new UnknownType());
 }
 
-const Type& Type::get_illegal() {
-  static Type illegal;
-  return illegal;
-}
-
-Type Type::ScalarTypeFromName(const std::string& type_name) {
-  static std::map<std::string, Type> scalar_type_map_{
-      {"bool", Type(BoolPrint, DummyEq)},
-      {"float32", Type(PrimitivePrint<float>, DummyEq)},
-      {"float64", Type(PrimitivePrint<double>, DummyEq)},
-      {"int8", Type(PrimitivePrint<int8_t>, PrimitiveEq<int8_t>)},
-      {"int16", Type(PrimitivePrint<int16_t>, PrimitiveEq<int16_t>)},
-      {"int32", Type(PrimitivePrint<int32_t>, PrimitiveEq<int32_t>)},
-      {"int64", Type(PrimitivePrint<int64_t>, PrimitiveEq<int64_t>)},
-      {"uint8", Type(PrimitivePrint<uint8_t>, PrimitiveEq<uint8_t>)},
-      {"uint16", Type(PrimitivePrint<uint16_t>, PrimitiveEq<uint16_t>)},
-      {"uint32", Type(PrimitivePrint<uint32_t>, PrimitiveEq<uint32_t>)},
-      {"uint64", Type(PrimitivePrint<uint64_t>, PrimitiveEq<uint64_t>)},
-  };
+std::unique_ptr<Type> Type::ScalarTypeFromName(const std::string& type_name) {
+  static std::map<std::string, std::function<std::unique_ptr<Type>()>>
+      scalar_type_map_{
+          {"bool", []() { return std::make_unique<BoolType>(); }},
+          {"float32", []() { return std::make_unique<Float32Type>(); }},
+          {"float64", []() { return std::make_unique<Float64Type>(); }},
+          {"int8", []() { return std::make_unique<Int8Type>(); }},
+          {"int16", []() { return std::make_unique<Int16Type>(); }},
+          {"int32", []() { return std::make_unique<Int32Type>(); }},
+          {"int64", []() { return std::make_unique<Int64Type>(); }},
+          {"uint8", []() { return std::make_unique<Uint8Type>(); }},
+          {"uint16", []() { return std::make_unique<Uint16Type>(); }},
+          {"uint32", []() { return std::make_unique<Uint32Type>(); }},
+          {"uint64", []() { return std::make_unique<Uint64Type>(); }},
+      };
   auto it = scalar_type_map_.find(type_name);
   if (it != scalar_type_map_.end()) {
-    return it->second;
+    return it->second();
   }
   return Type::get_illegal();
 }
 
-Type Type::TypeFromPrimitive(const rapidjson::Value& type) {
+std::unique_ptr<Type> Type::TypeFromPrimitive(const rapidjson::Value& type) {
   if (!type.HasMember("subtype")) {
     FXL_LOG(ERROR) << "Invalid type";
-    return Type(UnknownPrint, DummyEq);
+    return Type::get_illegal();
   }
 
   std::string subtype = type["subtype"].GetString();
   return ScalarTypeFromName(subtype);
 }
 
-Type Library::TypeFromIdentifier(bool is_nullable,
-                                 std::string& identifier) const {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-  using std::placeholders::_5;
-
+std::unique_ptr<Type> Library::TypeFromIdentifier(
+    bool is_nullable, std::string& identifier) const {
   auto str = structs_.find(identifier);
   if (str != structs_.end()) {
-    return Type(std::bind(StructPrint, std::ref(str->second), is_nullable, _1,
-                          _2, _3, _4, _5),
-                DummyEq);
+    return std::make_unique<StructType>(std::ref(str->second), is_nullable);
   }
   auto enu = enums_.find(identifier);
   if (enu != enums_.end()) {
-    return Type(std::bind(EnumPrint, std::ref(enu->second), _1, _2, _3, _4, _5),
-                DummyEq);
+    return std::make_unique<EnumType>(std::ref(enu->second));
   }
   // And probably for unions and tables.
   return Type::get_illegal();
 }
 
-Type Type::TypeFromIdentifier(const LibraryLoader& loader,
-                              const rapidjson::Value& type) {
+std::unique_ptr<Type> Type::TypeFromIdentifier(const LibraryLoader& loader,
+                                               const rapidjson::Value& type) {
   if (!type.HasMember("identifier")) {
     FXL_LOG(ERROR) << "Invalid type";
-    return Type(UnknownPrint, DummyEq);
+    return std::unique_ptr<Type>();
   }
   std::string id = type["identifier"].GetString();
   size_t split_index = id.find('/');
@@ -415,7 +377,7 @@ Type Type::TypeFromIdentifier(const LibraryLoader& loader,
   if (!loader.GetLibraryFromName(library_name, &library)) {
     FXL_LOG(ERROR) << "Unknown type for identifier: " << library_name;
     // TODO: Something else here
-    return Type::get_illegal();
+    return std::unique_ptr<Type>();
   }
 
   bool is_nullable = false;
@@ -425,11 +387,9 @@ Type Type::TypeFromIdentifier(const LibraryLoader& loader,
   return library->TypeFromIdentifier(is_nullable, id);
 }
 
-Type InterfaceMethodParameter::GetType() const {
+std::unique_ptr<Type> InterfaceMethodParameter::GetType() const {
   if (!value_.HasMember("type")) {
     FXL_LOG(ERROR) << "Type missing";
-    // TODO: something else here.
-    // Probably print out raw bytes instead.
     return Type::get_illegal();
   }
   const rapidjson::Value& type = value_["type"];
@@ -439,7 +399,7 @@ Type InterfaceMethodParameter::GetType() const {
                        type);
 }
 
-Type StructMember::GetType() const {
+std::unique_ptr<Type> StructMember::GetType() const {
   if (!value_.HasMember("type")) {
     FXL_LOG(ERROR) << "Type missing";
     // TODO: something else here.
@@ -451,118 +411,39 @@ Type StructMember::GetType() const {
       enclosing_struct().enclosing_library().enclosing_loader(), type);
 }
 
-size_t Library::InlineSizeFromIdentifier(std::string& identifier) const {
-  auto str = structs_.find(identifier);
-  if (str != structs_.end()) {
-    return str->second.size();
-  }
-  auto enu = enums_.find(identifier);
-  if (enu != enums_.end()) {
-    return enu->second.size();
-  }
-  // And probably for unions and tables.
-  return 0;
-}
-
-size_t Type::InlineSizeFromIdentifier(const LibraryLoader& loader,
-                                      const rapidjson::Value& type) {
-  if (!type.HasMember("identifier")) {
-    FXL_LOG(ERROR) << "Invalid type";
-    return 0;
-  }
-  std::string id = type["identifier"].GetString();
-  size_t split_index = id.find('/');
-  std::string library_name = id.substr(0, split_index);
-  const Library* library;
-  if (!loader.GetLibraryFromName(library_name, &library)) {
-    FXL_LOG(ERROR) << "Unknown type for identifier: " << library_name;
-    // TODO: Something else here
-    return 0;
-  }
-
-  return library->InlineSizeFromIdentifier(id);
-}
-
-size_t Type::InlineSizeFromType(const LibraryLoader& loader,
-                                const rapidjson::Value& type) {
-  std::string kind = type["kind"].GetString();
-  if (kind == "array") {
-    const rapidjson::Value& element_type = type["element_type"];
-    uint32_t element_count =
-        std::strtol(type["element_count"].GetString(), nullptr, 10);
-    return InlineSizeFromType(loader, element_type) * element_count;
-  } else if (kind == "vector") {
-    // size + data
-    return sizeof(uint64_t) + sizeof(uint64_t);
-  } else if (kind == "string") {
-    return sizeof(uint64_t) + sizeof(uint64_t);
-  } else if (kind == "handle") {
-    return sizeof(uint32_t);
-  } else if (kind == "request") {
-    return sizeof(uint32_t);
-  } else if (kind == "primitive") {
-    std::string subtype = type["subtype"].GetString();
-    static std::map<std::string, size_t> scalar_size_map_{
-        {"bool", sizeof(uint8_t)},     {"float32", sizeof(uint32_t)},
-        {"float64", sizeof(uint64_t)}, {"int8", sizeof(int8_t)},
-        {"int16", sizeof(int16_t)},    {"int32", sizeof(int32_t)},
-        {"int64", sizeof(int64_t)},    {"uint8", sizeof(uint8_t)},
-        {"uint16", sizeof(uint16_t)},  {"uint32", sizeof(uint32_t)},
-        {"uint64", sizeof(uint64_t)},
-    };
-    auto it = scalar_size_map_.find(subtype);
-    if (it != scalar_size_map_.end()) {
-      return it->second;
-    }
-  } else if (kind == "identifier") {
-    return InlineSizeFromIdentifier(loader, type);
-  }
-  FXL_LOG(ERROR) << "Invalid type " << kind;
-  return 0;
-}
-
-Type Type::GetType(const LibraryLoader& loader, const rapidjson::Value& type) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
-  using std::placeholders::_4;
-  using std::placeholders::_5;
-
+std::unique_ptr<Type> Type::GetType(const LibraryLoader& loader,
+                                    const rapidjson::Value& type) {
+  // TODO: This is creating a new type every time we need one.  That's pretty
+  // inefficient.  Find a way of caching them if it becomes a problem.
   if (!type.HasMember("kind")) {
     FXL_LOG(ERROR) << "Invalid type";
-    return Type(UnknownPrint, DummyEq);
+    return Type::get_illegal();
   }
   std::string kind = type["kind"].GetString();
   if (kind == "array") {
     const rapidjson::Value& element_type = type["element_type"];
     uint32_t element_count =
         std::strtol(type["element_count"].GetString(), nullptr, 10);
-    return Type(std::bind(ArrayPrint, GetType(loader, element_type),
-                          element_count, _1, _2, _3, _4, _5),
-                DummyEq);
-
+    return std::make_unique<ArrayType>(GetType(loader, element_type),
+                                       element_count);
   } else if (kind == "vector") {
     const rapidjson::Value& element_type = type["element_type"];
-    const size_t element_size = InlineSizeFromType(loader, element_type);
-    using namespace std::placeholders;
-    return Type(std::bind(VectorPrint, GetType(loader, element_type),
-                          element_size, _1, _2, _3, _4, _5),
-                DummyEq);
+    return std::make_unique<VectorType>(GetType(loader, element_type));
   } else if (kind == "string") {
-    return Type(StringPrint, DummyEq);
+    return std::make_unique<StringType>();
   } else if (kind == "handle") {
     // TODO: implement something useful.
-    return Type(PrimitivePrint<uint32_t>, DummyEq);
+    return std::make_unique<NumericType<uint32_t>>();
   } else if (kind == "request") {
     // TODO: implement something useful.
-    return Type(PrimitivePrint<uint32_t>, DummyEq);
+    return std::make_unique<NumericType<uint32_t>>();
   } else if (kind == "primitive") {
     return Type::TypeFromPrimitive(type);
   } else if (kind == "identifier") {
     return Type::TypeFromIdentifier(loader, type);
   }
   FXL_LOG(ERROR) << "Invalid type " << kind;
-  return Type(UnknownPrint, DummyEq);
+  return get_illegal();
 }
 
 LibraryLoader::LibraryLoader(

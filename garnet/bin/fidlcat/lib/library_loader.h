@@ -8,9 +8,12 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/fit/function.h>
 
+#include <endian.h>
+
 #include <iostream>
 #include <map>
 #include <optional>
+#include <sstream>
 #include <vector>
 
 #include "rapidjson/document.h"
@@ -109,22 +112,6 @@ class ObjectTracker {
   const uint8_t* bytes_;
 };
 
-// Takes a series of bytes pointed to by |bytes| and of length |length|, and
-// sets |value| to their representation for a particular type.  Uses |allocator|
-// to allocate in |value|.  Returns the in-line length of data read.
-typedef std::function<size_t(const uint8_t* bytes, size_t length,
-                             ObjectTracker* tracker,
-                             ValueGeneratingCallback& callback,
-                             rapidjson::Document::AllocatorType& allocator)>
-    PrintFunction;
-
-// Takes a series of bytes pointed to by |bytes| and of length |length|, and
-// returns whether that is equal to the Value represented by |value| according
-// to some type.
-typedef std::function<bool(const uint8_t* bytes, size_t length,
-                           const rapidjson::Value& value)>
-    EqualityFunction;
-
 // A FIDL type.  Provides methods for generating instances of this type.
 //
 // TODO: This may be misnamed.  Right now, it's mostly only useful for
@@ -136,71 +123,251 @@ class Type {
   friend class Library;
 
  public:
-  // To avoid inheritance, a type takes two functions
-  Type(PrintFunction printer, EqualityFunction equals)
-      : printer_(printer), equals_(equals) {}
+  Type() {}
+  virtual ~Type() {}
 
   // Takes a series of bytes pointed to by |bytes| and of length |length|, and
-  // tells |tracker| to invoke |callback| on to their representation given this
-  // type
-  size_t MakeValue(const uint8_t* bytes, size_t length, ObjectTracker* tracker,
-                   ValueGeneratingCallback& callback,
-                   rapidjson::Document::AllocatorType& allocator) const {
-    return printer_(bytes, length, tracker, callback, allocator);
-  }
+  // tells |tracker| to invoke |callback| on their representation given this
+  // type.
+  //
+  // A callback may outlive the Type that provided it.  They should therefore
+  // not refer to anything in the containing type, as that might get deleted.
+  virtual size_t GetValueCallback(const uint8_t* bytes, size_t length,
+                                  ObjectTracker* tracker,
+                                  ValueGeneratingCallback& callback) const = 0;
 
   // Takes a series of bytes pointed to by |bytes| and of length |length|, and
   // returns whether that is equal to the Value represented by |value| according
   // to this type.
-  bool ValueEquals(const uint8_t* bytes, size_t length,
-                   const rapidjson::Value& value) const {
-    return equals_(bytes, length, value);
-  }
+  virtual bool ValueEquals(const uint8_t* bytes, size_t length,
+                           const rapidjson::Value& value) const;
+
+  // Returns the size of this type when embedded in another object.
+  virtual size_t InlineSize() const;
 
   // Gets a Type object representing the |type|.  |type| is a JSON object a
   // field "kind" that states the type (e.g., "array", "vector", "foo.bar/Baz").
   // |loader| is the set of libraries to use to find types that need to be given
   // by identifier (e.g., "foo.bar/Baz").
-  static Type GetType(const LibraryLoader& loader,
-                      const rapidjson::Value& type);
+  static std::unique_ptr<Type> GetType(const LibraryLoader& loader,
+                                       const rapidjson::Value& type);
 
   // Gets a Type object representing the |type|.  |type| is a JSON object with a
   // "subtype" field that represents a scalar type (e.g., "float64", "uint32")
-  static Type TypeFromPrimitive(const rapidjson::Value& type);
+  static std::unique_ptr<Type> TypeFromPrimitive(const rapidjson::Value& type);
 
   // Gets a Type object representing the |type_name|.  |type| is a string that
   // represents a scalar type (e.g., "float64", "uint32").
-  static Type ScalarTypeFromName(const std::string& type_name);
+  static std::unique_ptr<Type> ScalarTypeFromName(const std::string& type_name);
 
   // Gets a Type object representing the |type|.  |type| is a JSON object a
   // field "kind" that states the type.  "kind" is an identifier
   // (e.g.,"foo.bar/Baz").  |loader| is the set of libraries to use to lookup
   // that identifier.
-  static Type TypeFromIdentifier(const LibraryLoader& loader,
-                                 const rapidjson::Value& type);
+  static std::unique_ptr<Type> TypeFromIdentifier(const LibraryLoader& loader,
+                                                  const rapidjson::Value& type);
 
-  // Returns a reference to a singleton illegal type value.
-  static const Type& get_illegal();
-
-  // The size of the given type when it is embedded in another object (struct,
-  // array, etc).
-  static size_t InlineSizeFromType(const LibraryLoader& loader,
-                                   const rapidjson::Value& type);
-
-  // The size of the given type when it is embedded in another object (struct,
-  // array, etc).
-  static size_t InlineSizeFromIdentifier(const LibraryLoader& loader,
-                                         const rapidjson::Value& type);
+  static std::unique_ptr<Type> get_illegal();
 
   Type& operator=(const Type& other) = default;
   Type(const Type& other) = default;
+};
+
+// An instance of this class is created when the system can't determine the real
+// class (e.g., in cases of corrupted metadata).  The ValueGeneratingCallback
+// spits back hex pairs.
+class UnknownType : public Type {
+ public:
+  virtual size_t GetValueCallback(
+      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
+};
+
+class StringType : public Type {
+ public:
+  virtual size_t GetValueCallback(
+      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
+
+  virtual size_t InlineSize() const override {
+    return sizeof(uint64_t) + sizeof(uint64_t);
+  }
+};
+
+namespace internal {
+
+// These are convenience functions for reading little endian (i.e., FIDL wire
+// format encoded) bits.
+template <typename T>
+class LeToHost {
+ public:
+  static T le_to_host(const T* ts);
+};
+
+template <>
+uint8_t LeToHost<uint8_t>::le_to_host(const uint8_t* bytes);
+
+template <>
+uint16_t LeToHost<uint16_t>::le_to_host(const uint16_t* bytes);
+
+template <>
+uint32_t LeToHost<uint32_t>::le_to_host(const uint32_t* bytes);
+
+template <>
+uint64_t LeToHost<uint64_t>::le_to_host(const uint64_t* bytes);
+
+template <typename T>
+struct GetUnsigned {
+  using type = typename std::conditional<std::is_same<float, T>::value,
+                                         uint32_t, uint64_t>::type;
+};
+
+template <typename T>
+T MemoryFrom(const uint8_t* bytes) {
+  using U = typename std::conditional<std::is_integral<T>::value,
+                                      std::make_unsigned<T>,
+                                      GetUnsigned<T>>::type::type;
+  union {
+    U uval;
+    T tval;
+  } u;
+  u.uval = LeToHost<U>::le_to_host(reinterpret_cast<const U*>(bytes));
+  return u.tval;
+}
+
+}  // namespace internal
+
+// A generic type that can be used for any numeric value that corresponds to a
+// C++ arithmetic value.
+template <typename T>
+class NumericType : public Type {
+  static_assert(std::is_arithmetic<T>::value && !std::is_same<T, bool>::value,
+                "NumericType can only be used for numerics");
+
+ public:
+  virtual size_t GetValueCallback(
+      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override {
+    T val = internal::MemoryFrom<T>(bytes);
+    callback = [val](const uint8_t* bytes, rapidjson::Value& value,
+                     rapidjson::Document::AllocatorType& allocator) {
+      value.SetString(std::to_string(val).c_str(), allocator);
+      return 0;
+    };
+    return sizeof(T);
+  }
+
+  virtual bool ValueEquals(const uint8_t* bytes, size_t length,
+                           const rapidjson::Value& value) const override {
+    T lhs = internal::MemoryFrom<T>(bytes);
+    std::istringstream input(value["value"].GetString());
+    // Because int8_t is really char, and we don't want to read that.
+    using R =
+        typename std::conditional<std::is_same<T, int8_t>::value, int, T>::type;
+    R rhs;
+    input >> rhs;
+    return lhs == rhs;
+  }
+
+  virtual size_t InlineSize() const override { return sizeof(T); }
+};
+
+class BoolType : public Type {
+ public:
+  virtual size_t GetValueCallback(
+      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
+};
+
+class StructType : public Type {
+ public:
+  StructType(const Struct& str, bool is_nullable);
+
+  virtual size_t GetValueCallback(
+      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
 
  private:
-  Type() {}
-
-  PrintFunction printer_;
-  EqualityFunction equals_;
+  const Struct& struct_;
+  const bool is_nullable_;
 };
+
+class ElementSequenceType : public Type {
+ public:
+  explicit ElementSequenceType(std::unique_ptr<Type>&& component_type);
+
+ protected:
+  explicit ElementSequenceType(std::shared_ptr<Type> component_type);
+
+  // |tracker| is the ObjectTracker to use for the callback.
+  // |count| is the number of elements in this sequence
+  // |bytes| is a pointer to the byte sequence we're decoding.
+  // |length| is the length of the byte sequence.
+  ValueGeneratingCallback GetIteratingCallback(ObjectTracker* tracker,
+                                               size_t count,
+                                               const uint8_t* bytes,
+                                               size_t length) const;
+
+  // The unique_ptr is converted to a shared_ptr so that it can be used by the
+  // callback returned by GetValueCallback, which may outlive the
+  // ElementSequenceType instance.
+  std::shared_ptr<Type> component_type_;
+};
+
+class ArrayType : public ElementSequenceType {
+ public:
+  ArrayType(std::unique_ptr<Type>&& component_type, uint32_t count);
+
+  virtual size_t GetValueCallback(
+      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
+
+  virtual size_t InlineSize() const override {
+    return component_type_->InlineSize() * count_;
+  }
+
+ private:
+  uint32_t count_;
+};
+
+class VectorType : public ElementSequenceType {
+ public:
+  VectorType(std::unique_ptr<Type>&& component_type);
+
+  virtual size_t GetValueCallback(
+      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
+
+  virtual size_t InlineSize() const override {
+    return sizeof(uint64_t) + sizeof(uint64_t);
+  }
+
+ private:
+  VectorType(std::shared_ptr<Type> component_type, size_t element_size);
+};
+
+class EnumType : public Type {
+ public:
+  EnumType(const Enum& e);
+
+  virtual size_t GetValueCallback(
+      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
+
+ private:
+  const Enum& enum_;
+};
+
+using Float32Type = NumericType<float>;
+using Float64Type = NumericType<double>;
+using Int8Type = NumericType<int8_t>;
+using Int16Type = NumericType<int16_t>;
+using Int32Type = NumericType<int32_t>;
+using Int64Type = NumericType<int64_t>;
+using Uint8Type = NumericType<uint8_t>;
+using Uint16Type = NumericType<uint16_t>;
+using Uint32Type = NumericType<uint32_t>;
+using Uint64Type = NumericType<uint64_t>;
 
 class InterfaceMethodParameter {
   friend class InterfaceMethod;
@@ -223,7 +390,7 @@ class InterfaceMethodParameter {
 
   std::string name() const { return value_["name"].GetString(); }
 
-  Type GetType() const;
+  std::unique_ptr<Type> GetType() const;
 
  private:
   const InterfaceMethod& enclosing_method_;
@@ -341,14 +508,15 @@ class Interface {
 class Enum {
  public:
   Enum(const Library& enclosing_library, const rapidjson::Value& value)
-      : enclosing_library_(enclosing_library),
-        value_(value),
-        type_(Type::ScalarTypeFromName(value_["type"].GetString())) {
+      : enclosing_library_(enclosing_library), value_(value) {
     (void)value_;
     (void)enclosing_library_;
   }
 
-  const Type GetType() const { return type_; }
+  const std::unique_ptr<Type> GetType() const {
+    // TODO Consider caching this.
+    return Type::ScalarTypeFromName(value_["type"].GetString());
+  }
 
   // Gets the name of the enum member corresponding to the value pointed to by
   // |bytes| of length |length|.  For example, if we had the following
@@ -360,20 +528,20 @@ class Enum {
   // function will return "x".  Returns "(Unknown enum member)" if it can't find
   // the member.
   std::string GetNameFromBytes(const uint8_t* bytes, size_t length) const {
+    std::unique_ptr<Type> type = GetType();
     for (auto& member : value_["members"].GetArray()) {
-      if (type_.ValueEquals(bytes, length, member["value"]["literal"])) {
+      if (type->ValueEquals(bytes, length, member["value"]["literal"])) {
         return member["name"].GetString();
       }
     }
     return "(Unknown enum member)";
   }
 
-  uint32_t size() const;
+  uint32_t size() const { return GetType()->InlineSize(); }
 
  private:
   const Library& enclosing_library_;
   const rapidjson::Value& value_;
-  const Type type_;
 };
 
 class StructMember {
@@ -384,7 +552,7 @@ class StructMember {
     (void)value_;
   }
 
-  Type GetType() const;
+  std::unique_ptr<Type> GetType() const;
 
   uint64_t size() const {
     return std::strtoll(value_["size"].GetString(), nullptr, 10);
@@ -464,7 +632,8 @@ class Library {
 
   const LibraryLoader& enclosing_loader() const { return enclosing_loader_; }
 
-  Type TypeFromIdentifier(bool is_nullable, std::string& identifier) const;
+  std::unique_ptr<Type> TypeFromIdentifier(bool is_nullable,
+                                           std::string& identifier) const;
 
   // The size of the type with name |identifier| when it is inline (e.g.,
   // embedded in an array)
