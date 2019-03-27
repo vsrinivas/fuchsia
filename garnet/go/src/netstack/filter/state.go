@@ -174,7 +174,7 @@ func (s *State) updateStateUDP(dir Direction, dataLen uint16) error {
 		s.expireTime = time.Now().Add(UDPExpireDefault)
 	}
 
-	logger.VLogf(logger.TraceVerbosity, "packet filter: updated state: %v", s)
+	logger.VLogTf(logger.TraceVerbosity, tag, "updated state: %v", s)
 	return nil
 }
 
@@ -297,6 +297,10 @@ func (s *State) updateStateTCP(dir Direction, dataLen uint16, win uint16, seq, a
 		s.expireTime = time.Now().Add(TCPExpireAfterEstablished)
 	} else {
 		s.expireTime = time.Now().Add(TCPExpireDefault)
+	}
+
+	if chatty {
+		logger.VLogTf(logger.TraceVerbosity, tag, "updated state: %v", s)
 	}
 	return nil
 }
@@ -586,7 +590,7 @@ func (ss *States) createState(dir Direction, transProto tcpip.TransportProtocolN
 	ss.lanToExt[kLanToExt] = s
 	ss.extToGwy[kExtToGwy] = s
 
-	logger.VLogf(logger.TraceVerbosity, "packet filter: new state: %v", s)
+	logger.VLogTf(logger.TraceVerbosity, tag, "new state: %v", s)
 
 	return s
 }
