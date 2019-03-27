@@ -284,10 +284,10 @@ bool DisplaySwapchain::InitializeFramebuffers(
         device_.getImageMemoryRequirements(image_result.value);
     uint32_t memory_type_index =
         escher::CountTrailingZeros(memory_requirements.memoryTypeBits);
-    vk::ImportMemoryFuchsiaHandleInfoKHR import_info;
+    vk::ImportMemoryZirconHandleInfoFUCHSIA import_info;
     import_info.setHandle(memory.release());
     import_info.setHandleType(
-        vk::ExternalMemoryHandleTypeFlagBits::eFuchsiaVmoKHR);
+        vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
     vk::MemoryAllocateInfo alloc_info;
     alloc_info.setPNext(&import_info);
     alloc_info.allocationSize = memory_requirements.size;

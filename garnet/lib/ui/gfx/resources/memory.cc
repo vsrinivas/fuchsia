@@ -75,8 +75,8 @@ escher::GpuMemPtr Memory::ImportGpuMemory() {
 
   // Import a VkDeviceMemory from the VMO. VkAllocateMemory takes ownership of
   // the VMO handle it is passed.
-  vk::ImportMemoryFuchsiaHandleInfoKHR memory_import_info(
-      vk::ExternalMemoryHandleTypeFlagBits::eFuchsiaVmoKHR,
+  vk::ImportMemoryZirconHandleInfoFUCHSIA memory_import_info(
+      vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA,
       DuplicateVmo().release());
 
   vk::MemoryAllocateInfo memory_allocate_info(
