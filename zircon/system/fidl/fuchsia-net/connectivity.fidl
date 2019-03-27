@@ -6,5 +6,8 @@ library fuchsia.net;
 
 [Discoverable]
 protocol Connectivity {
+    /// This is triggered on a state change in network reachability. Clients
+    /// should expect that network requests will succeed when |reachable| is
+    /// true.
     -> OnNetworkReachable(bool reachable);
 };

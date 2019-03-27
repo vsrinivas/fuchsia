@@ -4,35 +4,39 @@
 
 library fuchsia.net;
 
-// Ipv4Address is expressed in network byte order, so the most significant byte
-// ("127" in the address "127.0.0.1") will be at index 0.
+/// Ipv4Address is expressed in network byte order, so the most significant byte
+/// ("127" in the address "127.0.0.1") will be at index 0.
 struct Ipv4Address {
     array<uint8>:4 addr;
 };
 
-// Ipv6Address is expressed in network byte order, so the most significant byte
-// ("ff" in the address "ff02::1") will be at index 0.
+/// Ipv6Address is expressed in network byte order, so the most significant byte
+/// ("ff" in the address "ff02::1") will be at index 0.
 struct Ipv6Address {
     array<uint8>:16 addr;
 };
 
+/// Represents an IP address that may be either v4 or v6.
 union IpAddress {
     Ipv4Address ipv4;
     Ipv6Address ipv6;
 };
 
+/// Subnet describes an IP subnetwork, where all host IP addresses share the same most significant
+/// bits.
 struct Subnet {
-    // The Ipv4 or Ipv6 address. Only the |prefix_len| most significant bits may be set in |addr|;
-    // all bits in the host portion of the address must be zero.
+    /// The Ipv4 or Ipv6 address. Only the |prefix_len| most significant bits may be set in |addr|;
+    /// all bits in the host portion of the address must be zero.
     IpAddress addr;
 
-    // The prefix length of the netmask. E.g. for 192.168.1.0/24, the prefix
-    // length is 24, corresponding to a netmask of 255.255.255.0.
-    // For Ipv4, prefix_len must be in the range [0, 32].
-    // For Ipv6, prefix_len must be in the range [0, 128].
+    /// The prefix length of the netmask. E.g. for 192.168.1.0/24, the prefix
+    /// length is 24, corresponding to a netmask of 255.255.255.0.
+    /// For Ipv4, prefix_len must be in the range [0, 32].
+    /// For Ipv6, prefix_len must be in the range [0, 128].
     uint8 prefix_len;
 };
 
+/// A MAC address used to identify a network interface on the data link layer within the network.
 struct MacAddress {
     array<uint8>:6 octets;
 };

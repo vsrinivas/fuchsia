@@ -50,27 +50,45 @@ const uint64 MAX_ADDR = 128;
 // want to send as payload.
 const uint64 MAX_BUFFER = 900;
 
-/// POSIX, as much as possible. |code| values are defined in errno.h.
+/// SocketProvider implements the POSIX sockets API.
 [Discoverable, Layout = "Simple"]
 protocol SocketProvider {
+    /// Requests a socket with the specified parameters. Values for |code| are defined in
+    /// errno.h.
     Socket(int16 domain, int16 type, int16 protocol) -> (int16 code, handle<socket>? s);
+    /// Retrieves information about the address of a node and/or service. The number of valid
+    /// results in |res| is given by the |count| return value.
     // TODO(FIDL-323): use vector<AddInfo>:4.
     GetAddrInfo(string:256? node, string:256? service, AddrInfoHints? hints)
         -> (AddrInfoStatus status, uint32 nres, array<AddrInfo>:4 res);
 };
 
-// This interface is essentially POSIX. Its implementation must support
-// Linux-specific arguments to {Get,Set}SockOpt.
+/// The control plane for a network socket. Once a socket has been retrieved from a
+/// |SocketProvider|, this interface is then used to further configure and use the socket.
+/// This interface is essentially POSIX. Its implementation must support Linux-specific arguments
+/// to {Get,Set}SockOpt.
 [Transport = "SocketControl", Layout = "Simple"]
 protocol SocketControl {
-    Close() -> (int16 code);
-    Ioctl(int16 req, vector<uint8>:MAX_BUFFER in) -> (int16 code, vector<uint8>:MAX_BUFFER out);
-    Connect(vector<uint8>:MAX_ADDR addr) -> (int16 code);
-    Accept(int16 flags) -> (int16 code);
+    /// Sets the local address used for the socket.
     Bind(vector<uint8>:MAX_ADDR addr) -> (int16 code);
+    /// Initiates a connection to a network endpoint.
+    Connect(vector<uint8>:MAX_ADDR addr) -> (int16 code);
+    /// Begin listening for new connections from network endpoints. At most |backlog| connections
+    /// will be buffered.
     Listen(int16 backlog) -> (int16 code);
+    /// Accepts an incoming connection from a network endpoint.
+    Accept(int16 flags) -> (int16 code);
+    /// Closes the socket.
+    Close() -> (int16 code);
+    /// Retrieves the local socket address.
     GetSockName() -> (int16 code, vector<uint8>:MAX_ADDR addr);
+    /// Retrieves the remote socket address.
     GetPeerName() -> (int16 code, vector<uint8>:MAX_ADDR addr);
+    /// Sets a socket option. TODO(NET-1699): link to description of supported socket options.
     SetSockOpt(int16 level, int16 optname, vector<uint8>:MAX_BUFFER optval) -> (int16 code);
+    /// Retrieves the current value of a socket option. TODO(NET-1699): link to description of
+    /// supported socket options.
     GetSockOpt(int16 level, int16 optname) -> (int16 code, vector<uint8>:MAX_BUFFER optval);
+    /// Runs operations (e.g., get the receive timestamp of the last packet) on the socket.
+    Ioctl(int16 req, vector<uint8>:MAX_BUFFER in) -> (int16 code, vector<uint8>:MAX_BUFFER out);
 };
