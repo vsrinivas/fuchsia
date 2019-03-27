@@ -136,7 +136,16 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
   // Starts the service.
   void Start();
 
+  // Handles a bind request.
+  void OnBindRequest(fidl::InterfaceRequest<fuchsia::mdns::Controller> request);
+
+  // Handles the ready callback from |mdns_|.
+  void OnReady();
+
   component::StartupContext* startup_context_;
+  bool ready_ = false;
+  std::vector<fidl::InterfaceRequest<fuchsia::mdns::Controller>>
+      pending_binding_requests_;
   fidl::BindingSet<fuchsia::mdns::Controller> bindings_;
   mdns::Mdns mdns_;
   size_t next_subscriber_id_ = 0;

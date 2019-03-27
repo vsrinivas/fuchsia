@@ -42,7 +42,8 @@ std::string GetHostName() {
 
 MdnsServiceImpl::MdnsServiceImpl(component::StartupContext* startup_context)
     : startup_context_(startup_context) {
-  startup_context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+  startup_context_->outgoing().AddPublicService<fuchsia::mdns::Controller>(
+      fit::bind_member(this, &MdnsServiceImpl::OnBindRequest));
   Start();
 }
 
@@ -61,18 +62,37 @@ void MdnsServiceImpl::Start() {
 
   mdns_.Start(startup_context_
                   ->ConnectToEnvironmentService<fuchsia::netstack::Netstack>(),
-              host_name);
+              host_name, fit::bind_member(this, &MdnsServiceImpl::OnReady));
+}
+
+void MdnsServiceImpl::OnBindRequest(
+    fidl::InterfaceRequest<fuchsia::mdns::Controller> request) {
+  if (ready_) {
+    bindings_.AddBinding(this, std::move(request));
+  } else {
+    pending_binding_requests_.push_back(std::move(request));
+  }
+}
+
+void MdnsServiceImpl::OnReady() {
+  ready_ = true;
 
   // Publish this device as "_fuchsia._udp.".
   // TODO(dalesat): Make this a config item or delegate to another party.
   PublishServiceInstance(
-      kPublishAs, host_name, kPublishPort, fidl::VectorPtr<std::string>(),
-      [this](fuchsia::mdns::Result result) {
+      kPublishAs, mdns_.host_name(), kPublishPort,
+      fidl::VectorPtr<std::string>(), [this](fuchsia::mdns::Result result) {
         if (result != fuchsia::mdns::Result::OK) {
           FXL_LOG(ERROR) << "Failed to publish as " << kPublishAs << ", result "
                          << static_cast<uint32_t>(result);
         }
       });
+
+  for (auto& request : pending_binding_requests_) {
+    bindings_.AddBinding(this, std::move(request));
+  }
+
+  pending_binding_requests_.clear();
 }
 
 void MdnsServiceImpl::ResolveHostName(std::string host_name,

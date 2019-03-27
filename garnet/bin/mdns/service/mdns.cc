@@ -35,10 +35,12 @@ void Mdns::SetVerbose(bool verbose) {
 }
 
 void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
-                 const std::string& host_name) {
+                 const std::string& host_name, fit::closure ready_callback) {
   FXL_DCHECK(!host_name.empty());
+  FXL_DCHECK(ready_callback);
   FXL_DCHECK(state_ == State::kNotStarted);
 
+  ready_callback_ = std::move(ready_callback);
   state_ = State::kWaitingForInterfaces;
 
   original_host_name_ = host_name;
@@ -120,6 +122,7 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
 
 void Mdns::Stop() {
   transceiver_.Stop();
+  ready_callback_ = nullptr;
   state_ = State::kNotStarted;
 }
 
@@ -127,6 +130,7 @@ void Mdns::ResolveHostName(const std::string& host_name, fxl::TimePoint timeout,
                            ResolveHostNameCallback callback) {
   FXL_DCHECK(MdnsNames::IsValidHostName(host_name));
   FXL_DCHECK(callback);
+  FXL_DCHECK(state_ == State::kActive);
 
   AddAgent(std::make_shared<HostNameResolver>(this, host_name, timeout,
                                               std::move(callback)));
@@ -136,6 +140,7 @@ void Mdns::SubscribeToService(const std::string& service_name,
                               Subscriber* subscriber) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(subscriber);
+  FXL_DCHECK(state_ == State::kActive);
 
   std::shared_ptr<InstanceRequestor> agent;
 
@@ -155,6 +160,11 @@ void Mdns::SubscribeToService(const std::string& service_name,
 bool Mdns::PublishServiceInstance(const std::string& service_name,
                                   const std::string& instance_name,
                                   Publisher* publisher) {
+  FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
+  FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
+  FXL_DCHECK(publisher);
+  FXL_DCHECK(state_ == State::kActive);
+
   auto agent = std::make_shared<InstanceResponder>(this, service_name,
                                                    instance_name, publisher);
 
@@ -207,6 +217,11 @@ void Mdns::StartAddressProbe(const std::string& host_name) {
         }
 
         agents_awaiting_start_.clear();
+
+        // Let the client know we're ready.
+        FXL_DCHECK(ready_callback_);
+        ready_callback_();
+        ready_callback_ = nullptr;
       });
 
   // We don't use |AddAgent| here, because agents added that way don't

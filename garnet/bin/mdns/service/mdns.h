@@ -139,8 +139,11 @@ class Mdns : public MdnsAgent::Host {
   // Determines whether message traffic will be logged.
   void SetVerbose(bool verbose);
 
-  // Starts the transceiver.
-  void Start(fuchsia::netstack::NetstackPtr, const std::string& host_name);
+  // Starts the transceiver. |ready_callback| is called once we're is ready for
+  // calls to |ResolveHostName|, |SubscribeToService| and
+  // |PublishServiceInstance|.
+  void Start(fuchsia::netstack::NetstackPtr, const std::string& host_name,
+             fit::closure ready_callback);
 
   // Stops the transceiver.
   void Stop();
@@ -149,19 +152,22 @@ class Mdns : public MdnsAgent::Host {
   // passed in to |Start| if address probing detected conflicts.
   std::string host_name() { return host_name_; }
 
-  // Resolves |host_name| to one or two |IpAddress|es.
+  // Resolves |host_name| to one or two |IpAddress|es. Must not be called before
+  // |Start|'s ready callback is called.
   void ResolveHostName(const std::string& host_name, fxl::TimePoint timeout,
                        ResolveHostNameCallback callback);
 
   // Subscribes to the specified service. The subscription is cancelled when
   // the subscriber is deleted or its |Unsubscribe| method is called.
-  // Multiple subscriptions may be created for a given service name.
+  // Multiple subscriptions may be created for a given service name. Must not be
+  // called before |Start|'s ready callback is called.
   void SubscribeToService(const std::string& service_name,
                           Subscriber* subscriber);
 
   // Publishes a service instance. Returns false if and only if the instance was
   // already published locally. The instance is unpublished when the publisher
-  // is deleted or its |Unpublish| method is called.
+  // is deleted or its |Unpublish| method is called. Must not be called before
+  // |Start|'s ready callback is called.
   bool PublishServiceInstance(const std::string& service_name,
                               const std::string& instance_name,
                               Publisher* publisher);
@@ -257,6 +263,7 @@ class Mdns : public MdnsAgent::Host {
   async_dispatcher_t* dispatcher_;
   MdnsTransceiver transceiver_;
   std::string original_host_name_;
+  fit::closure ready_callback_;
   uint32_t next_host_name_deduplicator_ = 2;
   std::string host_name_;
   std::string host_full_name_;
