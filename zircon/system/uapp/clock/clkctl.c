@@ -53,8 +53,8 @@ const char* getValue(int argc, char** argv, const char* field) {
 }
 
 char* guess_dev(void) {
-    char path[21]; // strlen("/dev/class/clock/###") + 1
-    DIR* d = opendir("/dev/class/clock");
+    char path[26]; // strlen("/dev/class/clock-impl/###") + 1
+    DIR* d = opendir("/dev/class/clock-impl");
     if (!d) {
         return NULL;
     }
@@ -68,7 +68,7 @@ char* guess_dev(void) {
         if (isdigit(de->d_name[0]) &&
             isdigit(de->d_name[1]) &&
             isdigit(de->d_name[2])) {
-            sprintf(path, "/dev/class/clock/%.3s", de->d_name);
+            sprintf(path, "/dev/class/clock-impl/%.3s", de->d_name);
             closedir(d);
             return strdup(path);
         }
