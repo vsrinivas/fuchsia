@@ -60,7 +60,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                        EntityProviderLauncher {
  public:
   SessionmgrImpl(component::StartupContext* startup_context,
-                 fuchsia::modular::internal::SessionmgrConfigPtr configs);
+                 fuchsia::modular::internal::SessionmgrConfig config);
   ~SessionmgrImpl() override;
 
   // |AppDriver| calls this.
@@ -196,7 +196,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::string session_id_;
 
   component::StartupContext* const startup_context_;
-  fuchsia::modular::internal::SessionmgrConfigPtr config_;
+  fuchsia::modular::internal::SessionmgrConfig config_;
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> memfs_for_ledger_;
 
   fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;

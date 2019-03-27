@@ -30,22 +30,22 @@ fit::deferred_action<fit::closure> SetupCobalt(
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
-  auto config = fuchsia::modular::internal::SessionmgrConfig::New();
-  config->set_enable_cobalt(command_line.GetOptionValueWithDefault(
-                                "enable_statistics", "true") == "true");
-  config->set_enable_story_shell_preload(
+  fuchsia::modular::internal::SessionmgrConfig config;
+  config.set_enable_cobalt(command_line.GetOptionValueWithDefault(
+                               "enable_statistics", "true") == "true");
+  config.set_enable_story_shell_preload(
       command_line.GetOptionValueWithDefault("enable_story_shell_preload",
                                              "true") == "true");
-  config->set_use_memfs_for_ledger(
+  config.set_use_memfs_for_ledger(
       command_line.HasOption("use_memfs_for_ledger"));
 
   if (command_line.HasOption("no_cloud_provider_for_ledger")) {
-    config->set_cloud_provider(fuchsia::modular::internal::CloudProvider::NONE);
+    config.set_cloud_provider(fuchsia::modular::internal::CloudProvider::NONE);
   } else if (command_line.HasOption("use_cloud_provider_from_environment")) {
-    config->set_cloud_provider(
+    config.set_cloud_provider(
         fuchsia::modular::internal::CloudProvider::FROM_ENVIRONMENT);
   } else {
-    config->set_cloud_provider(
+    config.set_cloud_provider(
         fuchsia::modular::internal::CloudProvider::LET_LEDGER_DECIDE);
   }
 
@@ -55,17 +55,17 @@ int main(int argc, const char** argv) {
       component::StartupContext::CreateFromStartupInfo();
 
   auto cobalt_cleanup = SetupCobalt(
-      (config->enable_cobalt()), std::move(loop.dispatcher()), context.get());
+      (config.enable_cobalt()), std::move(loop.dispatcher()), context.get());
 
   auto startup_agents = fxl::SplitStringCopy(
       command_line.GetOptionValueWithDefault("startup_agents", ""), ",",
       fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
-  config->set_startup_agents(std::move(startup_agents));
+  config.set_startup_agents(std::move(startup_agents));
 
   auto session_agents = fxl::SplitStringCopy(
       command_line.GetOptionValueWithDefault("session_agents", ""), ",",
       fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
-  config->set_session_agents(std::move(session_agents));
+  config.set_session_agents(std::move(session_agents));
 
   modular::AppDriver<modular::SessionmgrImpl> driver(
       context->outgoing().deprecated_services(),
