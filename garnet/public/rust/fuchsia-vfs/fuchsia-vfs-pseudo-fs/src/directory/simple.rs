@@ -11,7 +11,7 @@ use {
         controllable::Controllable,
         entry::{DirectoryEntry, EntryInfo},
         traversal_position::AlphabeticalTraversal,
-        watcher_connection::WatcherConnection,
+        watchers::{Watchers, WatchersAddError, WatchersSendError},
         DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES,
     },
     byteorder::{LittleEndian, WriteBytesExt},
@@ -57,7 +57,7 @@ pub fn empty_attr<'entries>(protection_attributes: u32) -> Simple<'entries> {
         protection_attributes,
         entries: BTreeMap::new(),
         connections: FuturesUnordered::new(),
-        watchers: Vec::new(),
+        watchers: Watchers::new(),
     }
 }
 
@@ -78,7 +78,7 @@ pub struct Simple<'entries> {
 
     connections: FuturesUnordered<StreamFuture<SimpleDirectoryConnection>>,
 
-    watchers: Vec<WatcherConnection>,
+    watchers: Watchers,
 }
 
 /// We assume that usize/isize and u64/i64 are of the same size in a few locations in code.  This
@@ -122,17 +122,6 @@ impl<'entries> Simple<'entries> {
         self.add_boxed_entry(name, Box::new(entry))
     }
 
-    fn send_watcher_event(&mut self, mask: u32, event: u8, name: &str) {
-        self.watchers.retain(|watcher| match watcher.send_event_check_mask(mask, event, name) {
-            Ok(()) => true,
-            Err(_) => false,
-        });
-    }
-
-    fn remove_dead_watchers(&mut self, lw: &Waker) {
-        self.watchers.retain(|watcher| !watcher.is_dead(lw));
-    }
-
     fn validate_flags(&self, parent_flags: u32, mut flags: u32) -> Result<u32, Status> {
         if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
             flags &= !OPEN_FLAG_NODE_REFERENCE;
@@ -162,17 +151,6 @@ impl<'entries> Simple<'entries> {
         }
 
         Ok(flags)
-    }
-
-    fn add_watcher(&mut self, mask: u32, channel: Channel) -> Result<(), fidl::Error> {
-        let conn = WatcherConnection::new(mask, channel);
-
-        let mut keys = &mut self.entries.keys().map(|k| k.as_str());
-        conn.send_events_existing(&mut keys)?;
-        conn.send_event_idle()?;
-
-        self.watchers.push(conn);
-        Ok(())
     }
 
     fn add_connection(
@@ -307,10 +285,18 @@ impl<'entries> Simple<'entries> {
                 } else {
                     let channel = Channel::from_channel(watcher)?;
 
+                    let mut names = self.entries.keys().map(|k| k.as_str());
                     let status = self
-                        .add_watcher(mask, channel)
+                        .watchers
+                        .add(&mut names, mask, channel)
                         .map(|()| Status::OK)
-                        .unwrap_or_else(|_error| Status::IO_REFUSED);
+                        .unwrap_or_else(|err| match err {
+                            WatchersAddError::NameTooLong => panic!(
+                                "All the names in 'entries' are checked to be within limits.  There \
+                                is a bug somewhere."
+                            ),
+                            WatchersAddError::FIDL(_) => Status::IO_REFUSED,
+                        });
                     responder.send(status.into_raw())?;
                 }
             }
@@ -527,7 +513,13 @@ impl<'entries> Controllable<'entries> for Simple<'entries> {
             return Err((Status::ALREADY_EXISTS, entry));
         }
 
-        self.send_watcher_event(WATCH_MASK_ADDED, WATCH_EVENT_ADDED, name);
+        self.watchers.send_event(WATCH_MASK_ADDED, WATCH_EVENT_ADDED, name).unwrap_or_else(|err| {
+            match err {
+                WatchersSendError::NameTooLong => {
+                    panic!("We just checked the length of the `name`.  There should be a bug.")
+                }
+            }
+        });
         let _ = self.entries.insert(name.to_string(), entry);
         Ok(())
     }
@@ -547,7 +539,13 @@ impl<'entries> Controllable<'entries> for Simple<'entries> {
             return Err(Status::INVALID_ARGS);
         }
 
-        self.send_watcher_event(WATCH_MASK_REMOVED, WATCH_EVENT_REMOVED, name);
+        self.watchers.send_event(WATCH_MASK_REMOVED, WATCH_EVENT_REMOVED, name).unwrap_or_else(
+            |err| match err {
+                WatchersSendError::NameTooLong => {
+                    panic!("We just checked the length of the `name`.  There should be a bug.")
+                }
+            },
+        );
         Ok(self.entries.remove(name))
     }
 }
@@ -599,7 +597,7 @@ impl<'entries> Future for Simple<'entries> {
                 }
             }
 
-            self.remove_dead_watchers(lw);
+            self.watchers.remove_dead(lw);
 
             if !did_work {
                 break;
@@ -626,7 +624,7 @@ impl<'entries> FusedFuture for Simple<'entries> {
         // for an empty set of connections for the first time, while `Simple::poll()` will return
         // `Pending` in the same situation.  If we do not return `true` here for the empty
         // connections case for the first time instead, we will hang.
-        self.watchers.len() == 0 && self.connections.len() == 0
+        !self.watchers.has_connections() && self.connections.len() == 0
     }
 }
 

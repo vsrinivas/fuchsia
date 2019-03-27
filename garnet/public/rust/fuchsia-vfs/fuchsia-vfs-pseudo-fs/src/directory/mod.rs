@@ -20,4 +20,4 @@ pub const DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR;
 
 mod connection;
 mod traversal_position;
-mod watcher_connection;
+mod watchers;
