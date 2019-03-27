@@ -27,7 +27,7 @@ namespace {
 class VulkanTest {
 public:
     bool Initialize();
-    bool Exec(VkFormat format, uint32_t width, bool linear);
+    bool Exec(VkFormat format, uint32_t width, bool direct, bool linear);
 
 private:
     bool InitVulkan();
@@ -44,6 +44,7 @@ private:
     PFN_vkCreateBufferCollectionFUCHSIA vkCreateBufferCollectionFUCHSIA_;
     PFN_vkSetBufferCollectionConstraintsFUCHSIA vkSetBufferCollectionConstraintsFUCHSIA_;
     PFN_vkDestroyBufferCollectionFUCHSIA vkDestroyBufferCollectionFUCHSIA_;
+    PFN_vkGetBufferCollectionPropertiesFUCHSIA vkGetBufferCollectionPropertiesFUCHSIA_;
 };
 
 bool VulkanTest::Initialize()
@@ -179,10 +180,17 @@ bool VulkanTest::InitVulkan()
         return DRETF(false, "No vkSetBufferCollectionConstraintsFUCHSIA");
     }
 
+    vkGetBufferCollectionPropertiesFUCHSIA_ =
+        reinterpret_cast<PFN_vkGetBufferCollectionPropertiesFUCHSIA>(
+            vkGetDeviceProcAddr(vk_device_, "vkGetBufferCollectionPropertiesFUCHSIA"));
+    if (!vkGetBufferCollectionPropertiesFUCHSIA_) {
+        return DRETF(false, "No vkGetBufferCollectionPropertiesFUCHSIA_");
+    }
+
     return true;
 }
 
-bool VulkanTest::Exec(VkFormat format, uint32_t width, bool linear)
+bool VulkanTest::Exec(VkFormat format, uint32_t width, bool direct, bool linear)
 {
     VkResult result;
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
@@ -249,13 +257,18 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool linear)
     }
 
     fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection;
-    status = sysmem_allocator->BindSharedCollection(std::move(local_token), sysmem_collection.NewRequest());
+    status = sysmem_allocator->BindSharedCollection(std::move(local_token),
+                                                    sysmem_collection.NewRequest());
     if (status != ZX_OK) {
         return DRETF(false, "BindSharedCollection failed: %d", status);
     }
     fuchsia::sysmem::BufferCollectionConstraints constraints{};
-    constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
-    status = sysmem_collection->SetConstraints(true, constraints);
+    if (direct) {
+        status = sysmem_collection->SetConstraints(false, constraints);
+    } else {
+        constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
+        status = sysmem_collection->SetConstraints(true, constraints);
+    }
     if (status != ZX_OK) {
         return DRETF(false, "SetConstraints failed: %d", status);
     }
@@ -271,31 +284,41 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool linear)
     if (status != ZX_OK) {
         return DRETF(false, "Close failed: %d", status);
     }
-
     fuchsia::sysmem::PixelFormat pixel_format =
         buffer_collection_info.settings.image_format_constraints.pixel_format;
     DLOG("Allocated format %d has_modifier %d modifier %lx\n", pixel_format.type,
          pixel_format.has_format_modifier, pixel_format.format_modifier.value);
 
-    fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
-    encoder.Alloc(fidl::CodingTraits<fuchsia::sysmem::SingleBufferSettings>::encoded_size);
-    buffer_collection_info.settings.Encode(&encoder, 0);
-    std::vector<uint8_t> encoded_data = encoder.TakeBytes();
+    if (!direct) {
+        fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
+        encoder.Alloc(fidl::CodingTraits<fuchsia::sysmem::SingleBufferSettings>::encoded_size);
+        buffer_collection_info.settings.Encode(&encoder, 0);
+        std::vector<uint8_t> encoded_data = encoder.TakeBytes();
 
-    vkDestroyBufferCollectionFUCHSIA_(vk_device_, collection, nullptr);
+        VkFuchsiaImageFormatFUCHSIA image_format_fuchsia = {
+            .sType = VK_STRUCTURE_TYPE_FUCHSIA_IMAGE_FORMAT_FUCHSIA,
+            .pNext = nullptr,
+            .imageFormat = encoded_data.data(),
+            .imageFormatSize = static_cast<uint32_t>(encoded_data.size())};
+        image_create_info.pNext = &image_format_fuchsia;
 
-    VkFuchsiaImageFormatFUCHSIA image_format_fuchsia = {
-        .sType = VK_STRUCTURE_TYPE_FUCHSIA_IMAGE_FORMAT_FUCHSIA,
-        .pNext = nullptr,
-        .imageFormat = encoded_data.data(),
-        .imageFormatSize = static_cast<uint32_t>(encoded_data.size())};
-    image_create_info.pNext = &image_format_fuchsia;
+        result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkCreateImage failed: %d", result);
+        DLOG("image created");
+    } else {
+        VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
+            .pNext = nullptr,
+            .collection = collection,
+            .index = 0};
+        image_create_info.pNext = &image_format_fuchsia;
 
-    result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_);
-    if (result != VK_SUCCESS)
-        return DRETF(false, "vkCreateImage failed: %d", result);
-
-    DLOG("image created");
+        result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkCreateImage failed: %d", result);
+        DLOG("image created");
+    }
 
     if (linear) {
         VkImageSubresource subresource = {.aspectMask =
@@ -312,37 +335,73 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool linear)
         EXPECT_LE(min_bytes_per_pixel * width * 64, layout.size);
     }
 
-    VkMemoryRequirements memory_reqs;
-    vkGetImageMemoryRequirements(vk_device_, vk_image_, &memory_reqs);
-    // Use first supported type
-    uint32_t memory_type = __builtin_ctz(memory_reqs.memoryTypeBits);
+    if (!direct) {
+        VkMemoryRequirements memory_reqs;
+        vkGetImageMemoryRequirements(vk_device_, vk_image_, &memory_reqs);
+        // Use first supported type
+        uint32_t memory_type = __builtin_ctz(memory_reqs.memoryTypeBits);
 
-    VkImportMemoryZirconHandleInfoFUCHSIA handle_info = {
-        .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
-        .pNext = nullptr,
-        VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
-        buffer_collection_info.buffers[0].vmo.release()};
+        VkImportMemoryZirconHandleInfoFUCHSIA handle_info = {
+            .sType = VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
+            .pNext = nullptr,
+            VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
+            buffer_collection_info.buffers[0].vmo.release()};
 
-    VkMemoryAllocateInfo alloc_info = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .pNext = &handle_info,
-        .allocationSize = memory_reqs.size,
-        .memoryTypeIndex = memory_type,
-    };
+        VkMemoryAllocateInfo alloc_info = {
+            .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+            .pNext = &handle_info,
+            .allocationSize = memory_reqs.size,
+            .memoryTypeIndex = memory_type,
+        };
 
-    VkDeviceMemory memory;
-    if ((result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &memory)) != VK_SUCCESS) {
-        return DRETF(false, "vkAllocateMemory failed");
-    }
+        if ((result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_)) !=
+            VK_SUCCESS) {
+            return DRETF(false, "vkAllocateMemory failed");
+        }
 
-    result = vkBindImageMemory(vk_device_, vk_image_, memory, 0);
-    if (result != VK_SUCCESS) {
-        return DRETF(false, "vkBindImageMemory failed");
+        result = vkBindImageMemory(vk_device_, vk_image_, vk_device_memory_, 0);
+        if (result != VK_SUCCESS) {
+            return DRETF(false, "vkBindImageMemory failed");
+        }
+    } else {
+        VkMemoryRequirements requirements;
+        vkGetImageMemoryRequirements(vk_device_, vk_image_, &requirements);
+        VkBufferCollectionPropertiesFUCHSIA properties = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA};
+        result = vkGetBufferCollectionPropertiesFUCHSIA_(vk_device_, collection, &properties);
+        if (result != VK_SUCCESS) {
+            return DRETF(false, "vkBindImageMemory failed");
+        }
+
+        EXPECT_EQ(1u, properties.count);
+        uint32_t viable_memory_types = properties.memoryTypeBits & requirements.memoryTypeBits;
+        EXPECT_NE(0u, viable_memory_types);
+        uint32_t memory_type = __builtin_ctz(viable_memory_types);
+
+        VkImportMemoryBufferCollectionFUCHSIA import_info = {
+            .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA};
+
+        import_info.collection = collection;
+        import_info.index = 0;
+        VkMemoryAllocateInfo alloc_info = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+        alloc_info.pNext = &import_info;
+        alloc_info.allocationSize = requirements.size;
+        alloc_info.memoryTypeIndex = memory_type;
+
+        result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkCreateImage failed: %d", result);
+
+        result = vkBindImageMemory(vk_device_, vk_image_, vk_device_memory_, 0u);
+        if (result != VK_SUCCESS)
+            return DRETF(false, "vkCreateImage failed: %d", result);
     }
 
     vkDestroyImage(vk_device_, vk_image_, nullptr);
 
-    vkFreeMemory(vk_device_, memory, nullptr);
+    vkFreeMemory(vk_device_, vk_device_memory_, nullptr);
+
+    vkDestroyBufferCollectionFUCHSIA_(vk_device_, collection, nullptr);
 
     DLOG("image destroyed");
 
@@ -357,28 +416,35 @@ TEST_P(VulkanExtensionTest, BufferCollectionNV12)
 {
     VulkanTest test;
     ASSERT_TRUE(test.Initialize());
-    ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, GetParam()));
+    ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, false, GetParam()));
 }
 
 TEST_P(VulkanExtensionTest, BufferCollectionNV12_1025)
 {
     VulkanTest test;
     ASSERT_TRUE(test.Initialize());
-    ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1025, GetParam()));
+    ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 1025, false, GetParam()));
 }
 
 TEST_P(VulkanExtensionTest, BufferCollectionRGBA)
 {
     VulkanTest test;
     ASSERT_TRUE(test.Initialize());
-    ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, GetParam()));
+    ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 64, false, GetParam()));
 }
 
 TEST_P(VulkanExtensionTest, BufferCollectionRGBA_1025)
 {
     VulkanTest test;
     ASSERT_TRUE(test.Initialize());
-    ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 1025, GetParam()));
+    ASSERT_TRUE(test.Exec(VK_FORMAT_R8G8B8A8_UNORM, 1025, false, GetParam()));
+}
+
+TEST_P(VulkanExtensionTest, BufferCollectionDirectNV12)
+{
+    VulkanTest test;
+    ASSERT_TRUE(test.Initialize());
+    ASSERT_TRUE(test.Exec(VK_FORMAT_G8_B8R8_2PLANE_420_UNORM, 64, true, GetParam()));
 }
 
 INSTANTIATE_TEST_SUITE_P(, VulkanExtensionTest, ::testing::Bool());
