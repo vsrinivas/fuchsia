@@ -1313,48 +1313,42 @@ Extracted items use the file names shown below:\n\
     static ItemPtr CreateBootFS(FileOpener* opener,
                                 const InputFileGeneratorList& input,
                                 const Filter& include_file,
-                                bool sort,
                                 const std::filesystem::path& prefix,
                                 bool compress) {
         auto item = MakeItem(NewHeader(ZBI_TYPE_STORAGE_BOOTFS, 0), compress);
 
-        // Collect the names and exact sizes here and the contents in payload_.
+        // Collect the names and contents pointers here.
         struct Entry {
             std::string name;
-            uint32_t data_len = 0;
+            const FileContents* contents;
+
+            bool operator<(const Entry& other) const {
+                return name < other.name;
+            };
         };
         std::deque<Entry> entries;
         size_t dirsize = 0, bodysize = 0;
         for (const auto& generator : input) {
             InputFileGenerator::value_type next;
             while (generator->Next(opener, prefix, &next)) {
-                Entry entry{next.target.generic_string()};
+                Entry entry{next.target.generic_string(), next.file};
                 if (!include_file(entry.name.c_str())) {
                     continue;
                 }
                 // Accumulate the space needed for each zbi_bootfs_dirent_t.
                 dirsize += ZBI_BOOTFS_DIRENT_SIZE(entry.name.size() + 1);
-                entry.data_len =
-                    static_cast<uint32_t>(next.file->exact_size());
-                if (entry.data_len != next.file->exact_size()) {
+                if (next.file->exact_size() > std::numeric_limits<uint32_t>::max()) {
                     fprintf(stderr,
                             "input file size exceeds format maximum\n");
                     exit(1);
                 }
-                uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(entry.data_len);
+                uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(next.file->exact_size());
                 bodysize += size;
-                item->payload_.emplace_back(
-                    next.file->PageRoundedView(0, size));
                 entries.push_back(std::move(entry));
             }
         }
 
-        if (sort) {
-            std::sort(entries.begin(), entries.end(),
-                      [](const Entry& a, const Entry& b) {
-                          return a.name < b.name;
-                      });
-        }
+        std::sort(entries.begin(), entries.end());
 
         // Now we can calculate the final sizes.
         const zbi_bootfs_header_t header = {
@@ -1371,23 +1365,25 @@ Extracted items use the file names shown below:\n\
         }
 
         // Now fill a buffer with the BOOTFS header and directory entries.
+        // At the same time collect the file contents in item->payload_.
         AppendBuffer buffer(header_size);
         buffer.Append(&header);
         uint32_t data_off = static_cast<uint32_t>(header_size);
-        for (const auto& file : item->payload_) {
-            const auto& entry = entries.front();
+        for (const auto& entry : entries) {
             const zbi_bootfs_dirent_t entry_hdr = {
                 static_cast<uint32_t>(entry.name.size() + 1), // name_len
-                entry.data_len,                               // data_len
+                static_cast<uint32_t>(entry.contents->exact_size()), // data_len
                 data_off,                                     // data_off
             };
-            data_off += static_cast<uint32_t>(file.iov_len);
+            uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(entry.contents->exact_size());
+            data_off += size;
+            item->payload_.emplace_back(
+                entry.contents->PageRoundedView(0, size));
             buffer.Append(&entry_hdr);
             buffer.Append(entry.name.c_str(), entry_hdr.name_len);
             buffer.Pad(
                 ZBI_BOOTFS_DIRENT_SIZE(entry_hdr.name_len) -
                 offsetof(zbi_bootfs_dirent_t, name[entry_hdr.name_len]));
-            entries.pop_front();
         }
         assert(data_off == item->header_.length);
         // Zero fill to the end of the page.
@@ -1810,7 +1806,7 @@ const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
     return nullptr;
 }
 
-constexpr const char kOptString[] = "-B:cd:e:FxXRhto:p:sT:uv";
+constexpr const char kOptString[] = "-B:cd:e:FxXRhto:p:T:uv";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", no_argument, nullptr, 'c'},
@@ -1824,7 +1820,6 @@ constexpr const option kLongOpts[] = {
     {"list", no_argument, nullptr, 't'},
     {"output", required_argument, nullptr, 'o'},
     {"prefix", required_argument, nullptr, 'p'},
-    {"sort", no_argument, nullptr, 's'},
     {"type", required_argument, nullptr, 'T'},
     {"uncompressed", no_argument, nullptr, 'u'},
     {"verbose", no_argument, nullptr, 'v'},
@@ -1876,12 +1871,11 @@ Format control switches (last switch affects all output):\n\
     --complete=ARCH, -B ARCH       verify result is a complete boot image\n\
     --compressed, -c               compress BOOTFS images (default)\n\
     --uncompressed, -u             do not compress BOOTFS images\n\
-    --sort, -s                     sort BOOTFS entries by name\n\
 \n\
 In all cases there is only a single BOOTFS item (if any) written out.\n\
 The BOOTFS image contains all files from BOOTFS items in ZBI input files,\n\
-manifest files, directories, and `--entry` switches (in input order unless\n\
-`--sort` was specified).\n\
+manifest files, directories, and `--entry` switches.  The BOOTFS directory\n\
+table is always sorted.\n\
 \n\
 Each argument after -- is shell filename PATTERN (* matches even /)\n\
 to filter the files that will be packed into BOOTFS, extracted, or listed.\n\
@@ -1920,7 +1914,6 @@ int main(int argc, char** argv) {
     bool extract_items = false;
     bool extract_raw = false;
     bool list_contents = false;
-    bool sort = false;
     bool verbose = false;
     ItemList items;
     InputFileGeneratorList bootfs_input;
@@ -2008,10 +2001,6 @@ int main(int argc, char** argv) {
 
         case 'u':
             compressed = false;
-            continue;
-
-        case 's':
-            sort = true;
             continue;
 
         case 'x':
@@ -2172,11 +2161,11 @@ int main(int argc, char** argv) {
 
     if (!bootfs_input.empty()) {
         // Pack up the BOOTFS.
-        items.push_back(
-            Item::CreateBootFS(&opener, bootfs_input, [&](const char* name) {
-                return extract_items || name_matcher.Matches(name);
-            },
-                               sort, prefix, compressed));
+        auto filter = [&](const char* name) {
+                          return extract_items || name_matcher.Matches(name);
+                      };
+        items.push_back(Item::CreateBootFS(&opener, bootfs_input,
+                                           filter, prefix, compressed));
     }
 
     if (items.empty()) {
