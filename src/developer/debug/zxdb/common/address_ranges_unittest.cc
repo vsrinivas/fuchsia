@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/common/address_ranges.h"
+#include "src/developer/debug/zxdb/common/address_ranges.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {
@@ -25,9 +25,9 @@ TEST(AddressRanges, NonCanonical) {
   EXPECT_TRUE(b.empty());
 
   // Enclosed inputs.
-  AddressRanges c(
-      AddressRanges::kNonCanonical,
-      {AddressRange(0x100, 0x200), AddressRange(0x110, 0x120), AddressRange(0x140, 0x150)});
+  AddressRanges c(AddressRanges::kNonCanonical,
+                  {AddressRange(0x100, 0x200), AddressRange(0x110, 0x120),
+                   AddressRange(0x140, 0x150)});
   ASSERT_EQ(1u, c.size());
   EXPECT_EQ(AddressRange(0x100, 0x200), c[0]);
   EXPECT_EQ("{[0x100, 0x200)}", c.ToString());

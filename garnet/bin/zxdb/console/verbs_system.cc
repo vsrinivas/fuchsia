@@ -9,10 +9,10 @@
 
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

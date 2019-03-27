@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "garnet/bin/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

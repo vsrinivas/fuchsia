@@ -4,7 +4,6 @@
 
 #include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
@@ -12,6 +11,7 @@
 #include "garnet/bin/zxdb/symbols/type.h"
 #include "garnet/bin/zxdb/symbols/type_utils.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 
@@ -38,20 +38,21 @@ void ResolvePointer(fxl::RefPtr<SymbolDataProvider> data_provider,
   }
 
   uint32_t type_size = type->byte_size();
-  data_provider->GetMemoryAsync(address, type_size, [
-    type = std::move(type), address, cb = std::move(cb)
-  ](const Err& err, std::vector<uint8_t> data) {
-    if (err.has_error()) {
-      cb(err, ExprValue());
-    } else if (data.size() != type->byte_size()) {
-      // Short read, memory is invalid.
-      cb(Err(fxl::StringPrintf("Invalid pointer 0x%" PRIx64, address)),
-         ExprValue());
-    } else {
-      cb(Err(),
-         ExprValue(std::move(type), std::move(data), ExprValueSource(address)));
-    }
-  });
+  data_provider->GetMemoryAsync(
+      address, type_size,
+      [type = std::move(type), address, cb = std::move(cb)](
+          const Err& err, std::vector<uint8_t> data) {
+        if (err.has_error()) {
+          cb(err, ExprValue());
+        } else if (data.size() != type->byte_size()) {
+          // Short read, memory is invalid.
+          cb(Err(fxl::StringPrintf("Invalid pointer 0x%" PRIx64, address)),
+             ExprValue());
+        } else {
+          cb(Err(), ExprValue(std::move(type), std::move(data),
+                              ExprValueSource(address)));
+        }
+      });
 }
 
 void ResolvePointer(fxl::RefPtr<SymbolDataProvider> data_provider,

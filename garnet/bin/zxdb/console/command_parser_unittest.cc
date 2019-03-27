@@ -4,10 +4,10 @@
 
 #include "garnet/bin/zxdb/console/command_parser.h"
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/nouns.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

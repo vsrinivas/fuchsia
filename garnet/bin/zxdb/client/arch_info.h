@@ -6,9 +6,9 @@
 
 #include <memory>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/public/lib/fxl/macros.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace llvm {
 class MCInstrInfo;

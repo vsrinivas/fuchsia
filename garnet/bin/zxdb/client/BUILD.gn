@@ -111,7 +111,6 @@ static_library("client") {
   ]
 
   public_deps = [
-    "//garnet/bin/zxdb/common",
     "//garnet/bin/zxdb/expr",
     "//garnet/bin/zxdb/symbols",
     "//garnet/public/lib/fxl",
@@ -121,6 +120,7 @@ static_library("client") {
     "//garnet/third_party/llvm:LLVMX86Disassembler",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
+    "//src/developer/debug/zxdb/common",
   ]
 
   deps = [
@@ -222,9 +222,9 @@ source_set("tests") {
   deps = [
     ":client",
     ":test_support",
-    "//garnet/bin/zxdb/common:test_support",
     "//garnet/bin/zxdb/symbols:test_support",
     "//garnet/bin/zxdb/symbols:tests",
+    "//src/developer/debug/zxdb/common:test_support",
     "//third_party/googletest:gtest",
   ]
 }

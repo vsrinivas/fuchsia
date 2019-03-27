@@ -15,7 +15,6 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -29,6 +28,7 @@
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 
@@ -453,8 +453,7 @@ bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
 
 // Global ----------------------------------------------------------------------
 
-const char kGlobalShortHelp[] =
-    "global / gl: Global override for commands.";
+const char kGlobalShortHelp[] = "global / gl: Global override for commands.";
 const char kGlobalHelp[] =
     R"("global <command> ...
 
@@ -468,8 +467,9 @@ bool HandleGlobalNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kGlobal))
     return false;
 
-  Console::get()->Output("\"global\" only makes sense when applied to a verb, "
-                         "for example \"global get\".");
+  Console::get()->Output(
+      "\"global\" only makes sense when applied to a verb, "
+      "for example \"global get\".");
   return true;
 }
 
@@ -666,7 +666,7 @@ void AppendNouns(std::map<Noun, NounRecord>* nouns) {
   (*nouns)[Noun::kProcess] = NounRecord({"process", "pr"}, kProcessShortHelp,
                                         kProcessHelp, CommandGroup::kProcess);
   (*nouns)[Noun::kGlobal] = NounRecord({"global", "gl"}, kGlobalShortHelp,
-                                        kGlobalHelp, CommandGroup::kNone);
+                                       kGlobalHelp, CommandGroup::kNone);
   (*nouns)[Noun::kJob] =
       NounRecord({"job", "j"}, kJobShortHelp, kJobHelp, CommandGroup::kJob);
 }

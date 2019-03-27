@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/expr/symbol_eval_context.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_node.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
@@ -19,6 +18,7 @@
 #include "gtest/gtest.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

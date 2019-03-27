@@ -8,7 +8,6 @@
 
 #include <algorithm>
 
-#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/symbols/dwarf_expr_eval.h"
 #include "garnet/bin/zxdb/symbols/dwarf_symbol_factory.h"
 #include "garnet/bin/zxdb/symbols/find_line.h"
@@ -28,6 +27,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/lib/elflib/elflib.h"
 
 namespace zxdb {

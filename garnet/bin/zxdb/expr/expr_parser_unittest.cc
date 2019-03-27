@@ -4,11 +4,11 @@
 
 #include <sstream>
 
-#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/expr/expr_parser.h"
 #include "garnet/bin/zxdb/expr/expr_tokenizer.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 
 namespace zxdb {
 
@@ -603,12 +603,12 @@ TEST_F(ExprParserTest, ReinterpretCast) {
       " BINARY_OP(&&)\n"
       "  IDENTIFIER(\"x\")\n"
       "  IDENTIFIER(\"y\")\n",
-      GetParseString("reinterpret_cast<  const Type&& >( x && y)", &TestLookupName));
+      GetParseString("reinterpret_cast<  const Type&& >( x && y)",
+                     &TestLookupName));
 
   auto result = Parse("reinterpret_cast<", &TestLookupName);
   EXPECT_FALSE(result);
-  EXPECT_EQ("Expected type name before end of input.",
-            parser().err().msg());
+  EXPECT_EQ("Expected type name before end of input.", parser().err().msg());
 }
 
 }  // namespace zxdb

@@ -5,9 +5,9 @@
 #include "garnet/bin/zxdb/client/mock_process.h"
 
 #include "garnet/bin/zxdb/client/memory_dump.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

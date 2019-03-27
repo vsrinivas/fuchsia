@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/common/command_line_parser.h"
+#include "src/developer/debug/zxdb/common/command_line_parser.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {

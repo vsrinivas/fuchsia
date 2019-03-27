@@ -15,16 +15,16 @@
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "src/lib/files/file.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/split_string.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/trim.h"
+#include "src/developer/debug/zxdb/common/err.h"
+#include "src/lib/files/file.h"
 
 namespace zxdb {
 

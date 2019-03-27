@@ -13,7 +13,6 @@
 #include "garnet/bin/zxdb/client/step_thread_controller.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/client/until_thread_controller.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -33,6 +32,7 @@
 #include "garnet/bin/zxdb/symbols/variable.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

@@ -4,8 +4,8 @@
 
 #include "garnet/bin/zxdb/client/socket_connect.h"
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "src/developer/debug/ipc/debug/logging.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 #if defined(__APPLE__)
 

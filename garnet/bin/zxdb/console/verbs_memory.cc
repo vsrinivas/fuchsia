@@ -15,7 +15,6 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/analyze_memory.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
@@ -28,6 +27,7 @@
 #include "garnet/bin/zxdb/symbols/code_block.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

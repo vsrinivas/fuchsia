@@ -9,7 +9,6 @@
 
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_register_arm64.h"
@@ -20,6 +19,7 @@
 #include "garnet/public/lib/fxl/logging.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/shared/regex.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

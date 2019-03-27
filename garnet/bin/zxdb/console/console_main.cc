@@ -8,7 +8,6 @@
 
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/setting_schema_definition.h"
-#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/console/actions.h"
 #include "garnet/bin/zxdb/console/command_line_options.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -18,6 +17,7 @@
 #include "src/developer/debug/ipc/debug/debug.h"
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 
 namespace zxdb {
 

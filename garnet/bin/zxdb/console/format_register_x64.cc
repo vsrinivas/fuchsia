@@ -7,7 +7,6 @@
 #include <set>
 
 #include "garnet/bin/zxdb/client/register.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_register_x64.h"
 #include "garnet/bin/zxdb/console/format_table.h"
@@ -17,6 +16,7 @@
 #include "lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/arch_x86.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 using debug_ipc::RegisterCategory;
 using debug_ipc::RegisterID;

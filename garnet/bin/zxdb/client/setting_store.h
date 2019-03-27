@@ -7,12 +7,12 @@
 #include <map>
 #include <memory>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/client/setting_schema.h"
 #include "garnet/bin/zxdb/client/setting_store_observer.h"
 #include "garnet/bin/zxdb/client/setting_value.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/observer_list.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 
@@ -22,8 +22,7 @@ struct StoredSetting;
 // settings are indexed by a unique key.
 class SettingStore {
  public:
-  SettingStore(fxl::RefPtr<SettingSchema> schema,
-               SettingStore* fallback);
+  SettingStore(fxl::RefPtr<SettingSchema> schema, SettingStore* fallback);
 
   SettingStore* fallback() const { return fallback_; }
   void set_fallback(SettingStore* fallback) { fallback_ = fallback; }

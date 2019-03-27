@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 
 namespace zxdb {
 
@@ -10,8 +10,7 @@ bool StringBeginsWith(std::string_view str, std::string_view begins_with) {
   if (begins_with.size() > str.size())
     return false;
 
-  std::string_view source =
-      str.substr(0, begins_with.size());
+  std::string_view source = str.substr(0, begins_with.size());
   return source == begins_with;
 }
 

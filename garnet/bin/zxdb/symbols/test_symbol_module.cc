@@ -4,11 +4,11 @@
 
 #include "garnet/bin/zxdb/symbols/test_symbol_module.h"
 
-#include "garnet/bin/zxdb/common/host_util.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "src/developer/debug/zxdb/common/host_util.h"
 
 namespace zxdb {
 

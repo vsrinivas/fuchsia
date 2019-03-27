@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/zxdb/common/address_range.h"
+#include "src/developer/debug/zxdb/common/address_range.h"
 
 namespace zxdb {
 

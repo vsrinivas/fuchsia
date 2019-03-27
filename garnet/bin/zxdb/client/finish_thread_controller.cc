@@ -8,10 +8,10 @@
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/step_over_thread_controller.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 
@@ -42,7 +42,8 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   if (finish_physical_controller_) {
     Log("Dispatching to physical frame finisher.");
-    if (auto op = finish_physical_controller_->OnThreadStop(stop_type, hit_breakpoints);
+    if (auto op = finish_physical_controller_->OnThreadStop(stop_type,
+                                                            hit_breakpoints);
         op != kStopDone)
       return op;  // Still stepping out of the physical frame.
 
@@ -67,7 +68,8 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
   if (step_over_controller_) {
     // Have an existing step controller for an inline frame.
     Log("Dispatching to inline frame step over.");
-    if (auto op = step_over_controller_->OnThreadStop(stop_type, hit_breakpoints);
+    if (auto op =
+            step_over_controller_->OnThreadStop(stop_type, hit_breakpoints);
         op != kStopDone)
       return op;
 

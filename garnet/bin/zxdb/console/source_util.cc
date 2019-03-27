@@ -6,9 +6,9 @@
 
 #include <limits>
 
-#include "garnet/bin/zxdb/common/file_util.h"
-#include "src/lib/files/file.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/zxdb/common/file_util.h"
+#include "src/lib/files/file.h"
 
 namespace zxdb {
 
@@ -31,9 +31,8 @@ Err GetFileContents(const std::string& file_name, const std::string& build_dir,
   return Err();
 }
 
-std::vector<std::string> ExtractSourceLines(
-    const std::string& contents,
-    int first_line, int last_line) {
+std::vector<std::string> ExtractSourceLines(const std::string& contents,
+                                            int first_line, int last_line) {
   FXL_DCHECK(first_line > 0);
 
   std::vector<std::string> result;
@@ -79,8 +78,7 @@ std::vector<std::string> ExtractSourceLines(
   return result;
 }
 
-std::vector<std::string> ExtractSourceLines(
-    const std::string& contents) {
+std::vector<std::string> ExtractSourceLines(const std::string& contents) {
   return ExtractSourceLines(contents, 1, std::numeric_limits<int>::max());
 }
 

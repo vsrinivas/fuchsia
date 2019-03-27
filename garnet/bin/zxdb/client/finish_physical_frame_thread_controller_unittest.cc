@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/client/finish_physical_frame_thread_controller.h"
+#include "garnet/bin/zxdb/client/inline_thread_controller_test.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/client/inline_thread_controller_test.h"
 #include "garnet/bin/zxdb/client/thread_impl_test_support.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 
@@ -20,7 +20,8 @@ constexpr uint64_t kInitialBase = 0x1000;
 constexpr uint64_t kReturnAddress = 0x34567890;
 constexpr uint64_t kReturnBase = 0x1010;
 
-class FinishPhysicalFrameThreadControllerTest : public InlineThreadControllerTest {
+class FinishPhysicalFrameThreadControllerTest
+    : public InlineThreadControllerTest {
  public:
   // Creates a break notification with two stack frames using the constants
   // above.
@@ -196,13 +197,14 @@ TEST_F(FinishPhysicalFrameThreadControllerTest, FinishToInline) {
       mock_frames.begin(),
       std::make_unique<MockFrame>(
           nullptr, nullptr,
-          debug_ipc::StackFrame(second_inline_range.begin(), kMiddleSP, kMiddleSP),
+          debug_ipc::StackFrame(second_inline_range.begin(), kMiddleSP,
+                                kMiddleSP),
           second_inline_loc, mock_frames[0]->GetPhysicalFrame(), true));
 
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
                            debug_ipc::NotifyException::Type::kSingleStep,
-                           MockFrameVectorToFrameVector(std::move(mock_frames)), true,
-                           hit_breakpoints);
+                           MockFrameVectorToFrameVector(std::move(mock_frames)),
+                           true, hit_breakpoints);
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
 
   EXPECT_EQ(1u, thread()->GetStack().hide_ambiguous_inline_frame_count());

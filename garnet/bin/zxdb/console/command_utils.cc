@@ -15,7 +15,6 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -31,6 +30,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/trim.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 
@@ -364,8 +364,8 @@ std::string DescribeTarget(const ConsoleContext* context,
         fxl::StringPrintf("koid=%" PRIu64 " ", target->GetProcess()->GetKoid());
   }
 
-  std::string result = fxl::StringPrintf("Process %d [%s] %s", id, state.c_str(),
-                                         koid_str.c_str());
+  std::string result = fxl::StringPrintf("Process %d [%s] %s", id,
+                                         state.c_str(), koid_str.c_str());
   result += DescribeTargetName(target);
   return result;
 }

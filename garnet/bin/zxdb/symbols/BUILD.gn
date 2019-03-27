@@ -109,10 +109,10 @@ static_library("symbols") {
   # This library can not use any part of the debugger other than the "common"
   # base helpers.
   public_deps = [
-    "//garnet/bin/zxdb/common",
     "//garnet/public/lib/fxl",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
+    "//src/developer/debug/zxdb/common",
   ]
 
   deps = [
@@ -227,9 +227,9 @@ source_set("tests") {
   deps = [
     ":symbols",
     ":test_support",
-    "//garnet/bin/zxdb/common:test_support",
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
     "//src/developer/debug/shared:copy_test_file($host_toolchain)",
+    "//src/developer/debug/zxdb/common:test_support",
     "//third_party/googletest:gtest",
   ]
 

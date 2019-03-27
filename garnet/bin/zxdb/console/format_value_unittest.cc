@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/console/format_value.h"
-#include "garnet/bin/zxdb/common/test_with_loop.h"
 #include "garnet/bin/zxdb/console/mock_format_value_process_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
@@ -21,6 +20,7 @@
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/common/test_with_loop.h"
 
 namespace zxdb {
 

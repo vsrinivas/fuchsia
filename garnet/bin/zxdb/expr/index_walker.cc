@@ -9,8 +9,8 @@
 
 #include <string_view>
 
-#include "garnet/bin/zxdb/common/err.h"
-//#include "garnet/bin/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/common/err.h"
+//#include "src/developer/debug/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_index.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_index_node.h"
 #include "lib/fxl/logging.h"
@@ -125,7 +125,7 @@ bool IndexWalker::ComponentMatchesNameOnly(const std::string& index_string,
 // static
 bool IndexWalker::ComponentMatchesTemplateOnly(
     const std::string& index_string, const Identifier::Component& comp) {
-  auto[err, index_ident] = Identifier::FromString(index_string);
+  auto [err, index_ident] = Identifier::FromString(index_string);
   if (err.has_error())
     return false;
 

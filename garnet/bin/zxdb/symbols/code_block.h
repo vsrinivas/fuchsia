@@ -6,8 +6,8 @@
 
 #include <vector>
 
-#include "garnet/bin/zxdb/common/address_ranges.h"
 #include "garnet/bin/zxdb/symbols/symbol.h"
+#include "src/developer/debug/zxdb/common/address_ranges.h"
 
 namespace zxdb {
 

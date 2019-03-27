@@ -8,8 +8,8 @@
 #include <map>
 #include <string>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

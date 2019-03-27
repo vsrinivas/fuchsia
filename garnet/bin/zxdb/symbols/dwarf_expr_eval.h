@@ -11,12 +11,12 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace llvm {
 class DataExtractor;

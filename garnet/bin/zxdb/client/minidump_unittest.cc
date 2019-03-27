@@ -7,9 +7,9 @@
 
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/common/host_util.h"
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/zxdb/common/host_util.h"
 
 namespace zxdb {
 

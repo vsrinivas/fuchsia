@@ -5,7 +5,6 @@
 #include <inttypes.h>
 
 #include "garnet/bin/zxdb/client/register.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_register_arm64.h"
 #include "garnet/bin/zxdb/console/format_table.h"
@@ -13,6 +12,7 @@
 #include "garnet/bin/zxdb/console/string_formatters.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/shared/arch_arm64.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 using debug_ipc::RegisterCategory;
 using debug_ipc::RegisterID;

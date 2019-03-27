@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "lib/fxl/macros.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

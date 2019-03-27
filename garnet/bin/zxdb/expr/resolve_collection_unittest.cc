@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/expr/resolve_collection.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/identifier.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
@@ -13,6 +12,7 @@
 #include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

@@ -10,13 +10,13 @@
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

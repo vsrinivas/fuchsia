@@ -9,11 +9,11 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/step_thread_controller.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/common/address_ranges.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "lib/fxl/logging.h"
+#include "src/developer/debug/zxdb/common/address_ranges.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

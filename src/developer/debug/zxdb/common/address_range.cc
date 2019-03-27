@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/common/address_range.h"
+#include "src/developer/debug/zxdb/common/address_range.h"
 
 #include <inttypes.h>
 

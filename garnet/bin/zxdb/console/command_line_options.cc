@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/console/command_line_options.h"
 
-#include "garnet/bin/zxdb/common/command_line_parser.h"
+#include "src/developer/debug/zxdb/common/command_line_parser.h"
 
 namespace zxdb {
 

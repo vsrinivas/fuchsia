@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/common/host_util.h"
+#include "src/developer/debug/zxdb/common/host_util.h"
 
 #include <limits.h>
 #include <unistd.h>

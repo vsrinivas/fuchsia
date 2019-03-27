@@ -12,10 +12,10 @@
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

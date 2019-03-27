@@ -7,8 +7,8 @@
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/client/step_mode.h"
 #include "garnet/bin/zxdb/client/thread_controller.h"
-#include "garnet/bin/zxdb/common/address_ranges.h"
 #include "garnet/bin/zxdb/symbols/file_line.h"
+#include "src/developer/debug/zxdb/common/address_ranges.h"
 
 namespace zxdb {
 

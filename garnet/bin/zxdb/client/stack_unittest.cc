@@ -7,12 +7,12 @@
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/client/mock_frame.h"
 #include "garnet/bin/zxdb/client/stack.h"
-#include "garnet/bin/zxdb/common/err.h"
-#include "garnet/bin/zxdb/common/test_with_loop.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/test_with_loop.h"
 
 namespace zxdb {
 

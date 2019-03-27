@@ -6,10 +6,10 @@
 #include "garnet/bin/zxdb/client/inline_thread_controller_test.h"
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

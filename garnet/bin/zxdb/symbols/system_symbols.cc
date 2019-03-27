@@ -4,10 +4,10 @@
 
 #include "garnet/bin/zxdb/symbols/system_symbols.h"
 
-#include "garnet/bin/zxdb/common/file_util.h"
-#include "garnet/bin/zxdb/common/host_util.h"
 #include "garnet/bin/zxdb/symbols/module_symbols_impl.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/common/file_util.h"
+#include "src/developer/debug/zxdb/common/host_util.h"
 
 namespace zxdb {
 

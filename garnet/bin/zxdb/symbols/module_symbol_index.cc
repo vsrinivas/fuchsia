@@ -6,8 +6,6 @@
 
 #include <limits>
 
-#include "garnet/bin/zxdb/common/file_util.h"
-#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/symbols/dwarf_die_decoder.h"
 #include "garnet/bin/zxdb/symbols/dwarf_tag.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_index_node.h"
@@ -15,6 +13,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "src/developer/debug/zxdb/common/file_util.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 
 namespace zxdb {
 
@@ -196,8 +196,7 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
       ref_type = ModuleSymbolIndexNode::RefType::kType;
       should_index = true;
     } else if (!tree_stack.back().inside_function &&
-               tag == DwarfTag::kVariable &&
-               AbbrevHasLocation(abbrev)) {
+               tag == DwarfTag::kVariable && AbbrevHasLocation(abbrev)) {
       // Found variable storage outside of a function (variables inside
       // functions are local so don't get added to the global index).
       ref_type = ModuleSymbolIndexNode::RefType::kVariable;
@@ -209,14 +208,13 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
       decoder.Decode(*die);
 
       // Apply the declaration flag for types now that we've decoded.
-      if (ref_type == ModuleSymbolIndexNode::RefType::kType &&
-          is_declaration && *is_declaration)
+      if (ref_type == ModuleSymbolIndexNode::RefType::kType && is_declaration &&
+          *is_declaration)
         ref_type = ModuleSymbolIndexNode::RefType::kTypeDecl;
 
       if (decl_unit_offset) {
         // Save the declaration for indexing.
-        symbol_storage->emplace_back(die,
-                                     unit->getOffset() + *decl_unit_offset,
+        symbol_storage->emplace_back(die, unit->getOffset() + *decl_unit_offset,
                                      ref_type);
       } else if (decl_global_offset) {
         FXL_NOTREACHED() << "Implement DW_FORM_ref_addr for references.";
@@ -241,10 +239,10 @@ void ExtractUnitIndexableEntries(llvm::DWARFContext* context,
       while (tree_stack.back().depth >= current_depth)
         tree_stack.pop_back();
 
-      tree_stack.push_back(StackEntry(
-          current_depth, i,
-          ref_type == ModuleSymbolIndexNode::RefType::kFunction ||
-              tree_stack.back().inside_function));
+      tree_stack.push_back(
+          StackEntry(current_depth, i,
+                     ref_type == ModuleSymbolIndexNode::RefType::kFunction ||
+                         tree_stack.back().inside_function));
     }
 
     // Save parent info. The parent of this node is the one right before the
@@ -273,7 +271,6 @@ class SymbolStorageIndexer {
     // Components of the name in reverse order (so "foo::Bar::Fn") would be {
     // "Fn", "Bar", "foo"}
     std::vector<std::string> components;
-
 
     // Find the declaration DIE function. Perf note: getDIEForOffset() is a
     // binary search.
@@ -320,8 +317,8 @@ class SymbolStorageIndexer {
     ModuleSymbolIndexNode* cur = root_;
     for (int i = static_cast<int>(components.size()) - 1; i >= 0; i--)
       cur = cur->AddChild(std::move(components[i]));
-    cur->AddDie(ModuleSymbolIndexNode::DieRef(
-        impl.ref_type, impl.entry->getOffset()));
+    cur->AddDie(
+        ModuleSymbolIndexNode::DieRef(impl.ref_type, impl.entry->getOffset()));
   }
 
  private:
@@ -352,10 +349,9 @@ void ModuleSymbolIndex::CreateIndex(llvm::object::ObjectFile* object_file) {
       *object_file, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
   llvm::DWARFUnitVector compile_units;
-  context->getDWARFObj().forEachInfoSections(
-      [&](const llvm::DWARFSection& s) {
-        compile_units.addUnitsForSection(*context, s, llvm::DW_SECT_INFO);
-      });
+  context->getDWARFObj().forEachInfoSections([&](const llvm::DWARFSection& s) {
+    compile_units.addUnitsForSection(*context, s, llvm::DW_SECT_INFO);
+  });
 
   for (unsigned i = 0; i < compile_units.size(); i++) {
     IndexCompileUnit(context.get(), compile_units[i].get(), i);
@@ -441,10 +437,10 @@ const std::vector<unsigned>* ModuleSymbolIndex::FindFileUnitIndices(
 }
 
 void ModuleSymbolIndex::DumpFileIndex(std::ostream& out) const {
-  for (const auto& [filename, file_index_entry]: file_name_index_) {
+  for (const auto& [filename, file_index_entry] : file_name_index_) {
     const auto& [filepath, compilation_units] = *file_index_entry;
-    out << filename << " -> " << filepath << " -> "
-        << compilation_units.size() << " units\n";
+    out << filename << " -> " << filepath << " -> " << compilation_units.size()
+        << " units\n";
   }
 }
 

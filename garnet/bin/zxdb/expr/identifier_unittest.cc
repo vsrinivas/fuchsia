@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/expr/identifier.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

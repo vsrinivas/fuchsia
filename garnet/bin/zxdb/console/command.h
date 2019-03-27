@@ -10,9 +10,9 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/nouns.h"
 #include "garnet/bin/zxdb/console/verbs.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 
@@ -99,8 +99,8 @@ class Command {
   // will inherit the default.
   Target* target_ = nullptr;  // Guaranteed non-null for valid commands.
   JobContext* job_context_ = nullptr;  // May be null.
-  Thread* thread_ = nullptr;  // Will be null if not running.
-  Frame* frame_ = nullptr;    // Will be null if no valid thread stopped.
+  Thread* thread_ = nullptr;           // Will be null if not running.
+  Frame* frame_ = nullptr;  // Will be null if no valid thread stopped.
   Breakpoint* breakpoint_ = nullptr;  // May be null.
 
   Verb verb_ = Verb::kNone;

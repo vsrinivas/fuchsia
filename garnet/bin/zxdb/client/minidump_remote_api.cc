@@ -6,11 +6,11 @@
 
 #include <cstring>
 
-#include "garnet/bin/zxdb/common/err.h"
-#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
 #include "third_party/crashpad/snapshot/memory_snapshot.h"
 #include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"

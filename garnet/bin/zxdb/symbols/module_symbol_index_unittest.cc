@@ -6,10 +6,10 @@
 #include <time.h>
 #include <ostream>
 
-#include "garnet/bin/zxdb/common/string_util.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_index.h"
 #include "garnet/bin/zxdb/symbols/test_symbol_module.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 
 namespace zxdb {
 

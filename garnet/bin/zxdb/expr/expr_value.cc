@@ -4,9 +4,9 @@
 
 #include "garnet/bin/zxdb/expr/expr_value.h"
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 
@@ -106,8 +106,8 @@ int16_t ExprValue::GetAs<int16_t>() const {
 
 template <>
 uint16_t ExprValue::GetAs<uint16_t>() const {
-  FXL_DCHECK(data_.size() == sizeof(uint16_t)) << "Got size of "
-                                               << data_.size();
+  FXL_DCHECK(data_.size() == sizeof(uint16_t))
+      << "Got size of " << data_.size();
   uint16_t result;
   memcpy(&result, &data_[0], sizeof(uint16_t));
   return result;
@@ -123,8 +123,8 @@ int32_t ExprValue::GetAs<int32_t>() const {
 
 template <>
 uint32_t ExprValue::GetAs<uint32_t>() const {
-  FXL_DCHECK(data_.size() == sizeof(uint32_t)) << "Got size of "
-                                               << data_.size();
+  FXL_DCHECK(data_.size() == sizeof(uint32_t))
+      << "Got size of " << data_.size();
   uint32_t result;
   memcpy(&result, &data_[0], sizeof(uint32_t));
   return result;
@@ -140,8 +140,8 @@ int64_t ExprValue::GetAs<int64_t>() const {
 
 template <>
 uint64_t ExprValue::GetAs<uint64_t>() const {
-  FXL_DCHECK(data_.size() == sizeof(uint64_t)) << "Got size of "
-                                               << data_.size();
+  FXL_DCHECK(data_.size() == sizeof(uint64_t))
+      << "Got size of " << data_.size();
   uint64_t result;
   memcpy(&result, &data_[0], sizeof(uint64_t));
   return result;

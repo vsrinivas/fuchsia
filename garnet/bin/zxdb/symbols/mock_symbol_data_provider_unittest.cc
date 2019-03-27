@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
-#include "garnet/bin/zxdb/common/test_with_loop.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/common/test_with_loop.h"
 
 namespace zxdb {
 
@@ -54,12 +54,12 @@ TEST_F(MockSymbolDataProviderTest, MemReadRanges) {
 
   // Read across the end, this is a short read.
   read = SyncRead(provider, kBegin + kSize - 2, 4);
-  std::vector<uint8_t> across_end = { 8, 9 };
+  std::vector<uint8_t> across_end = {8, 9};
   EXPECT_EQ(across_end, read);
 
   // Read in the middle.
   read = SyncRead(provider, kBegin + 2, 4);
-  std::vector<uint8_t> middle = { 2, 3, 4, 5 };
+  std::vector<uint8_t> middle = {2, 3, 4, 5};
   EXPECT_EQ(middle, read);
 }
 

@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/file_line.h"
 
-#include "garnet/bin/zxdb/common/file_util.h"
+#include "src/developer/debug/zxdb/common/file_util.h"
 
 namespace zxdb {
 

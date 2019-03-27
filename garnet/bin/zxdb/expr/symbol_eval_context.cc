@@ -4,7 +4,6 @@
 
 #include "garnet/bin/zxdb/expr/symbol_eval_context.h"
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/builtin_types.h"
 #include "garnet/bin/zxdb/expr/expr_value.h"
 #include "garnet/bin/zxdb/expr/find_name.h"
@@ -22,6 +21,7 @@
 #include "garnet/bin/zxdb/symbols/variable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 namespace {

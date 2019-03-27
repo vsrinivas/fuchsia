@@ -5,7 +5,7 @@
 #include "garnet/bin/zxdb/client/thread_impl_test_support.h"
 
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

@@ -7,10 +7,10 @@
 #include <cstdint>
 #include <map>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/public/lib/fxl/logging.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 // Idiomatic classes that wrap over the debug_ipc definitions of this info.
 

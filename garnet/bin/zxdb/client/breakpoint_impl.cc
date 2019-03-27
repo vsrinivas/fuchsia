@@ -15,13 +15,13 @@
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
 #include "garnet/bin/zxdb/symbols/module_symbols.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

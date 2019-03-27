@@ -6,9 +6,9 @@
 
 #include <vector>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

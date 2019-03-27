@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command_group.h"
 #include "garnet/bin/zxdb/console/switch_record.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

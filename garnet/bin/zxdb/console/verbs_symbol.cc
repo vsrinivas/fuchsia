@@ -14,7 +14,6 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -44,6 +43,7 @@
 #include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/shared/regex.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

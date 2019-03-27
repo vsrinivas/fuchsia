@@ -21,9 +21,7 @@ class AddressRange {
   uint64_t size() const { return end_ - begin_; }
   bool empty() const { return end_ == begin_; }
 
-  bool InRange(uint64_t addr) const {
-    return addr >= begin_ && addr < end_;
-  }
+  bool InRange(uint64_t addr) const { return addr >= begin_ && addr < end_; }
 
   bool Contains(const AddressRange& other) const {
     return other.begin_ >= begin_ && other.end_ <= end_;

@@ -8,7 +8,6 @@
 
 #include <limits>
 
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
@@ -19,6 +18,7 @@
 #include "garnet/bin/zxdb/symbols/variable_test_support.h"
 #include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

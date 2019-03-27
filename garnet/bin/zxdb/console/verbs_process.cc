@@ -12,7 +12,6 @@
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target.h"
-#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -21,6 +20,7 @@
 #include "garnet/public/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/debug/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

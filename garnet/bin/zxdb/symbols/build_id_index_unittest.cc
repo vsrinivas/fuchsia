@@ -4,9 +4,9 @@
 
 #include <filesystem>
 
-#include "garnet/bin/zxdb/common/host_util.h"
 #include "garnet/bin/zxdb/symbols/build_id_index.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/common/host_util.h"
 
 namespace zxdb {
 
