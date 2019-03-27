@@ -16,23 +16,17 @@ dpkg --configure --force-depends base-passwd
 dpkg --configure -a
 
 # Create default account.
-username="bench"
+username="root"
 default_password="password"
-useradd ${username} -G sudo
+home=/root
 echo "${username}:${default_password}" | chpasswd
 echo "Default login/password is ${username}:${default_password}" > /etc/issue
 
-# Configure user account.
-user_home=/home/${username}
-mkdir -p ${user_home}
-chown -R ${username}:${username} ${user_home}
-chsh -s /bin/bash ${username}
-
 # Squelch MOTD.
-touch ${user_home}/.hushlogin
+touch ${home}/.hushlogin
 
 # Make the prompt as simple as possible (useful for testing).
-echo "PS1='$ '" > ${user_home}/.profile
+echo "PS1='$ '" >> ${home}/.profile
 
 # Setup hostname.
 echo "machina-guest" > /etc/hostname
