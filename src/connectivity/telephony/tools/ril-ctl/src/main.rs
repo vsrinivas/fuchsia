@@ -154,7 +154,7 @@ async fn handle_cmd<'a>(
                     Some(ref file_ref) => {
                         // Set up the netstack.
                         // TODO not hardcode to iface 3
-                        qmi::set_network_status(file_ref, true)?;
+                        await!(qmi::set_network_status(file_ref, true))?;
                         let netstack = connect_to_service::<StackMarker>()?;
                         let old_netstack = connect_to_service::<NetstackMarker>()?;
                         await!(old_netstack.set_dhcp_client_status(3, false))?;
@@ -224,7 +224,7 @@ pub fn main() -> Result<(), Error> {
             Some(device) => {
                 eprintln!("Connecting with exclusive access to {}..", device.display());
                 let file = File::open(device)?;
-                let chan = qmi::connect_transport_device(&file)?;
+                let chan = await!(qmi::connect_transport_device(&file))?;
                 app = launcher
                     .launch(RIL_URI.to_string(), None)
                     .context("Failed to launch ril-qmi service")?;

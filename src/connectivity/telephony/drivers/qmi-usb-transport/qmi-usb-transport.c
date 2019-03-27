@@ -10,6 +10,9 @@
 #include <ddk/protocol/usb.h>
 #include <lib/sync/completion.h>
 #include <usb/usb.h>
+
+#include <fuchsia/hardware/telephony/transport/c/fidl.h>
+
 #include <zircon/device/qmi-transport.h>
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/status.h>
@@ -92,28 +95,21 @@ typedef struct qmi_ctx {
 
 static void usb_write_complete(void* ctx, usb_request_t* request);
 
-static zx_status_t get_channel(void* ctx, zx_handle_t* out_channel) {
+static zx_status_t set_channel(void* ctx, zx_handle_t channel) {
   ZX_DEBUG_ASSERT(ctx);
   zxlogf(INFO, "qmi-usb-transport: getting channel from transport\n");
   qmi_ctx_t* qmi_ctx = ctx;
   zx_status_t result = ZX_OK;
 
-  zx_handle_t* in_channel = &qmi_ctx->channel;
-
-  if (*in_channel != ZX_HANDLE_INVALID) {
+  if (qmi_ctx->channel != ZX_HANDLE_INVALID) {
     zxlogf(ERROR, "qmi-usb-transport: already bound, failing\n");
     result = ZX_ERR_ALREADY_BOUND;
-    goto done;
+  } else if (channel == ZX_HANDLE_INVALID) {
+    zxlogf(ERROR, "qmi-usb-transport: invalid channel handle\n");
+    result = ZX_ERR_BAD_HANDLE;
+  } else {
+    qmi_ctx->channel = channel;
   }
-
-  result = zx_channel_create(0, in_channel, out_channel);
-  if (result < 0) {
-    zxlogf(ERROR, "qmi-usb-transport: Failed to create channel: %s\n",
-           zx_status_get_string(result));
-    goto done;
-  }
-
-done:
   return result;
 }
 
@@ -246,41 +242,46 @@ static inline zx_status_t set_async_wait(qmi_ctx_t* ctx) {
   return status;
 }
 
-static zx_status_t qmi_ioctl(void* ctx, uint32_t op, const void* in_buf,
-                             size_t in_len, void* out_buf, size_t out_len,
-                             size_t* out_actual) {
-  qmi_ctx_t* qmi_ctx = ctx;
+#define REPLY(x) fuchsia_hardware_telephony_transport_Qmi##x##_reply
+
+static zx_status_t fidl_SetChannel(void* ctx, zx_handle_t transport, fidl_txn_t* txn) {
   zx_status_t status = ZX_OK;
-  if ((op != IOCTL_QMI_GET_CHANNEL) && (op != IOCTL_QMI_SET_NETWORK)) {
-    status = ZX_ERR_NOT_SUPPORTED;
-    goto done;
+  qmi_ctx_t* qmi_ctx = ctx;
+  fuchsia_hardware_telephony_transport_Qmi_SetChannel_Result res;
+  zx_status_t set_channel_res = set_channel(ctx, transport);
+  if (ZX_OK == set_channel_res) {
+    res.tag = 0;
+    res.response._reserved = 0;
+  } else {
+    res.tag = 1;
+    res.err = set_channel_res;
   }
-
-  if (op == IOCTL_QMI_SET_NETWORK) {
-    bool state = (bool)in_buf;
-    qmi_update_online_status(qmi_ctx, state);
-    return status;
-  }
-
-  if (out_buf == NULL || out_len != sizeof(zx_handle_t)) {
-    status = ZX_ERR_INVALID_ARGS;
-    goto done;
-  }
-
-  zx_handle_t* out_channel = (zx_handle_t*)out_buf;
-  status = get_channel(ctx, out_channel);
+  status = REPLY(SetChannel)(txn, &res);
   if (status != ZX_OK) {
     goto done;
   }
-  *out_actual = sizeof(zx_handle_t);
-
   status = set_async_wait(qmi_ctx);
   if (status != ZX_OK) {
-    zx_handle_close(*out_channel);
     zx_handle_close(qmi_ctx->channel);
   }
-
 done:
+  return status;
+}
+
+static zx_status_t fidl_SetNetworkStatus(void* ctx, bool connected, fidl_txn_t* txn){
+  qmi_ctx_t* qmi_ctx = ctx;
+  qmi_update_online_status(qmi_ctx, connected);
+  return REPLY(SetNetwork)(txn);
+}
+#undef REPLY
+
+static fuchsia_hardware_telephony_transport_Qmi_ops_t fidl_ops = {
+  .SetChannel = fidl_SetChannel,
+  .SetNetwork = fidl_SetNetworkStatus,
+};
+
+static zx_status_t qmi_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+  zx_status_t status = fuchsia_hardware_telephony_transport_Qmi_dispatch(ctx, txn, msg, &fidl_ops);
   return status;
 }
 
@@ -390,9 +391,9 @@ static ethmac_protocol_ops_t ethmac_ops = {
 
 static zx_protocol_device_t qmi_ops = {
     .version = DEVICE_OPS_VERSION,
-    .ioctl = qmi_ioctl,
     .release = qmi_release,
     .unbind = qmi_unbind,
+    .message = qmi_message,
 };
 
 static zx_protocol_device_t eth_qmi_ops = {

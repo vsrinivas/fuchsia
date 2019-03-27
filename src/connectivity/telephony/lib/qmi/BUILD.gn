@@ -8,8 +8,13 @@ import("//build/rust/rustc_library.gni")
 rustc_library("qmi") {
   edition = "2018"
   deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust_crates:failure",
+    "//zircon/system/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport-rustc",
   ]
 }

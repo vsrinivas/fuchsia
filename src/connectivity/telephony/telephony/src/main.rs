@@ -32,9 +32,9 @@ use {
 const QMI_TRANSPORT: &str = "/dev/class/qmi-transport";
 const RIL_URI: &str = fuchsia_single_component_package_url!("ril-qmi");
 
-pub fn connect_qmi_transport(path: PathBuf) -> Result<fasync::Channel, zx::Status> {
+pub async fn connect_qmi_transport(path: PathBuf) -> Result<fasync::Channel, Error> {
     let file = File::open(&path)?;
-    let chan = connect_transport_device(&file)?;
+    let chan = await!(connect_transport_device(&file))?;
     Ok(fasync::Channel::from_channel(chan)?)
 }
 
@@ -113,7 +113,7 @@ impl Manager {
                     let qmi_path = path.join(msg.filename);
                     fx_log_info!("Connecting to {}", qmi_path.display());
                     let file = File::open(&qmi_path)?;
-                    let channel = qmi::connect_transport_device(&file)?;
+                    let channel = await!(qmi::connect_transport_device(&file))?;
                     let svc = await!(start_qmi_modem(channel))?;
                     self.radios.write().push(svc);
                 }
