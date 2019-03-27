@@ -34,6 +34,7 @@ func New(pm *ports.PortManager) *Filter {
 		portManager: pm,
 		states:      NewStates(),
 	}
+	f.states.enablePurge()
 	f.enabled.Store(true)
 	return f
 }

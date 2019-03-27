@@ -417,8 +417,8 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 
 		now := time.Now()
 		for k, s := range ss.extToGwy {
-			if s.expireTime.After(now) {
-				logger.VLogf(logger.TraceVerbosity, "packet filter: delete state: %v (ExtToGwy)", s)
+			if now.After(s.expireTime) {
+				logger.VLogTf(logger.TraceVerbosity, tag, "delete state: %v (ExtToGwy) expire: %v now: %v", s, s.expireTime, now)
 				delete(ss.lockKeyToMut, StatesLockKey{Addr: k.srcAddr, Port: k.srcPort})
 				delete(ss.extToGwy, k)
 			}
@@ -429,8 +429,8 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 			}
 		}
 		for k, s := range ss.lanToExt {
-			if s.expireTime.After(now) {
-				logger.VLogf(logger.TraceVerbosity, "packet filter: delete state: %v (LanToExt)", s)
+			if now.After(s.expireTime) {
+				logger.VLogTf(logger.TraceVerbosity, tag, "delete state: %v (LanToExt) expire: %v now: %v", s, s.expireTime, now)
 				delete(ss.lanToExt, k)
 			}
 		}
