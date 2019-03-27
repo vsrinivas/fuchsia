@@ -226,11 +226,11 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	errs := make(chan error)
 
 	for _, device := range devices {
-		go func() {
+		go func(device *target.DeviceTarget) {
 			if err := device.Start(ctx, imgs, cmdlineArgs); err != nil {
 				errs <- err
 			}
-		}()
+		}(device)
 	}
 	go func() {
 		addr, err := devices[0].IPv6Addr()
