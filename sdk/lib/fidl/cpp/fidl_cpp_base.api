@@ -7,7 +7,7 @@
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/encoder.h": "4508ee1117ba48cccf2382b5edf42c61",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/logging.h": "43720fc1e024ee167d4eded662f08bdb",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "cd4cbb458a137a65e5e0674080a37125",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "1fb99238e992816ce57ed660c1f8aa8f",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "3a22e835bc039b726b4f140922195169",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "35d6f33f6365d393ec32ff44314fa94f",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "5e20a40d8ac289ba0165f75ff001fe5a"
 }

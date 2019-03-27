@@ -29,7 +29,7 @@ class StringPtr {
  public:
   StringPtr();
   StringPtr(const StringPtr& other);
-  StringPtr(StringPtr&& other);
+  StringPtr(StringPtr&& other) noexcept;
   StringPtr(std::string str);
   StringPtr(const char* str);
   StringPtr(const char* str, size_t length);

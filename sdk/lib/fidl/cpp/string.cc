@@ -26,7 +26,7 @@ StringPtr::StringPtr(const char* str, size_t length)
 
 StringPtr::~StringPtr() = default;
 
-StringPtr::StringPtr(StringPtr&& other)
+StringPtr::StringPtr(StringPtr&& other) noexcept
     : str_(std::move(other.str_)), is_null_if_empty_(other.is_null_if_empty_) {}
 
 StringPtr& StringPtr::operator=(const StringPtr& other) = default;
