@@ -38,6 +38,7 @@
 #include <fbl/unique_fd.h>
 #include <lib/cksum.h>
 #include <lz4/lz4frame.h>
+#include <zircon/boot/bootfs.h>
 #include <zircon/boot/image.h>
 
 namespace {

@@ -4,7 +4,7 @@
 
 #include "bootfs-loader-service.h"
 
-#include <zircon/boot/bootdata.h>
+#include <zircon/boot/bootfs.h>
 
 namespace bootsvc {
 
@@ -16,7 +16,7 @@ const loader_service_ops_t BootfsLoaderService::kOps_ = {
 };
 
 zx_status_t BootfsLoaderService::LoadObject(const char* name, zx::vmo* vmo_out) {
-    char tmp[BOOTFS_MAX_NAME_LEN];
+    char tmp[ZBI_BOOTFS_MAX_NAME_LEN];
     if (snprintf(tmp, sizeof(tmp), "lib/%s", name) >= static_cast<int>(sizeof(tmp))) {
         return ZX_ERR_BAD_PATH;
     }

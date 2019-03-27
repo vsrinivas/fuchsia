@@ -34,7 +34,6 @@
 #include <lib/zx/socket.h>
 #include <libzbi/zbi-cpp.h>
 #include <zircon/assert.h>
-#include <zircon/boot/bootdata.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
