@@ -296,3 +296,31 @@ magma_status_t magma_get_buffer_format_modifier(magma_buffer_format_description_
 {
     return MAGMA_STATUS_UNIMPLEMENTED;
 }
+
+magma_status_t magma_sysmem_get_description_from_collection(
+    magma_sysmem_connection_t connection, magma_buffer_collection_t collection,
+    magma_buffer_format_description_t* buffer_format_description_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_sysmem_get_buffer_handle_from_collection(magma_sysmem_connection_t connection,
+                                                              magma_buffer_collection_t collection,
+                                                              uint32_t index,
+                                                              uint32_t* buffer_handle_out,
+                                                              uint32_t* vmo_offset_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_get_buffer_count(magma_buffer_format_description_t description,
+                                      uint32_t* count_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_get_buffer_is_secure(magma_buffer_format_description_t description,
+                                          magma_bool_t* is_secure_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
