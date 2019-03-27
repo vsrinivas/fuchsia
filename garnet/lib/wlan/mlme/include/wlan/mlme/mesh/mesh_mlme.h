@@ -13,6 +13,7 @@
 #include <wlan/mlme/mesh/hwmp.h>
 #include <wlan/mlme/mesh/path_table.h>
 #include <wlan/mlme/mlme.h>
+#include <wlan/mlme/rust_utils.h>
 
 namespace wlan {
 
@@ -75,7 +76,7 @@ class MeshMlme : public Mlme {
     };
 
     DeviceInterface* const device_;
-    Sequence seq_;
+    SequenceManager seq_mgr_;
     uint32_t mesh_seq_ = 0;
     std::optional<MeshState> state_;
 };

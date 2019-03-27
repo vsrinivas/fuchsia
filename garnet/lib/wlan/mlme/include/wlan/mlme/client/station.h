@@ -13,7 +13,7 @@
 #include <wlan/mlme/eapol.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/sequence.h>
+#include <wlan/mlme/rust_utils.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer_manager.h>
 
@@ -67,9 +67,6 @@ class Station : public ClientInterface {
     void ResetStats() override;
 
    private:
-    using SequenceManager =
-        std::unique_ptr<mlme_sequence_manager_t, void (*)(mlme_sequence_manager_t*)>;
-
     static constexpr size_t kAssocBcnCountTimeout = 20;
     static constexpr size_t kSignalReportBcnCountTimeout = 10;
     static constexpr size_t kAutoDeauthBcnCountTimeout = 100;

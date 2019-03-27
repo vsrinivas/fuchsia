@@ -13,7 +13,6 @@
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/frame_validation.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/sequence.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -265,14 +264,6 @@ using aid_t = size_t;
 static constexpr aid_t kGroupAdressedAid = 0;
 static constexpr aid_t kMaxBssClients = 2008;
 static constexpr aid_t kUnknownAid = kMaxBssClients + 1;
-
-seq_t NextSeqNo(const MgmtFrameHeader& hdr, Sequence* seq);
-seq_t NextSeqNo(const MgmtFrameHeader& hdr, uint8_t aci, Sequence* seq);
-seq_t NextSeqNo(const DataFrameHeader& hdr, Sequence* seq);
-
-void SetSeqNo(MgmtFrameHeader* hdr, Sequence* seq);
-void SetSeqNo(MgmtFrameHeader* hdr, uint8_t aci, Sequence* seq);
-void SetSeqNo(DataFrameHeader* hdr, Sequence* seq);
 
 void FillEtherLlcHeader(LlcHeader* llc, uint16_t protocol_id);
 

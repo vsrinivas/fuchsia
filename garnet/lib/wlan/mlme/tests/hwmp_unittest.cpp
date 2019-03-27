@@ -33,7 +33,7 @@ TEST(Hwmp, HwmpSeqnoLessThan) {
 struct HwmpTest : public ::testing::Test {
     HwmpTest() : state(fbl::make_unique<TestTimer>(123, &clock)) { clock.Set(zx::time(1000)); }
 
-    MacHeaderWriter CreateMacHeaderWriter() { return MacHeaderWriter(self_addr(), &seq); }
+    MacHeaderWriter CreateMacHeaderWriter() { return MacHeaderWriter(self_addr(), seq_mgr.get()); }
 
     static common::MacAddr self_addr() { return common::MacAddr("aa:aa:aa:aa:aa:aa"); }
 
@@ -47,7 +47,7 @@ struct HwmpTest : public ::testing::Test {
     timekeeper::TestClock clock;
     HwmpState state;
     PathTable table;
-    Sequence seq;
+    SequenceManager seq_mgr = NewSequenceManager();
 };
 
 TEST_F(HwmpTest, HandlePreqAddressedToUs) {

@@ -33,9 +33,7 @@ class BssInterface {
     virtual const common::MacAddr& bssid() const = 0;
     virtual uint64_t timestamp() = 0;
 
-    virtual seq_t NextSeq(const MgmtFrameHeader& hdr) = 0;
-    virtual seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) = 0;
-    virtual seq_t NextSeq(const DataFrameHeader& hdr) = 0;
+    virtual uint32_t NextSns1(const common::MacAddr& addr) = 0;
 
     virtual std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame,
                                                                bool needs_protection) = 0;

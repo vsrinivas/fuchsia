@@ -426,7 +426,7 @@ void AssociatedState::HandlePsPollFrame(CtrlFrame<PsPollFrame>&& frame) {
     data_hdr->addr1 = client_->addr();
     data_hdr->addr2 = client_->bss()->bssid();
     data_hdr->addr3 = client_->bss()->bssid();
-    data_hdr->sc.set_seq(client_->bss()->NextSeq(*data_hdr));
+    data_hdr->sc.set_seq(client_->bss()->NextSns1(data_hdr->addr1));
 
     packet->set_len(w.WrittenBytes());
 
@@ -585,7 +585,7 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRe
     data_hdr->addr1.Set(req.body()->dst_addr.data());
     data_hdr->addr2 = client_->bss()->bssid();
     data_hdr->addr3.Set(req.body()->src_addr.data());
-    data_hdr->sc.set_seq(client_->bss()->NextSeq(*data_hdr));
+    data_hdr->sc.set_seq(client_->bss()->NextSns1(data_hdr->addr1));
 
     auto llc_hdr = w.Write<LlcHeader>();
     llc_hdr->dsap = kLlcSnapExtension;
@@ -777,7 +777,7 @@ zx_status_t RemoteClient::SendAuthentication(wlan_status_code result) {
     mgmt_hdr->addr1 = addr_;
     mgmt_hdr->addr2 = bss_->bssid();
     mgmt_hdr->addr3 = bss_->bssid();
-    mgmt_hdr->sc.set_seq(bss_->NextSeq(*mgmt_hdr));
+    mgmt_hdr->sc.set_seq(bss_->NextSns1(mgmt_hdr->addr1));
 
     auto auth = w.Write<Authentication>();
     auth->status_code = result;
@@ -813,7 +813,7 @@ zx_status_t RemoteClient::SendAssociationResponse(aid_t aid, wlan_status_code re
     mgmt_hdr->addr1 = addr_;
     mgmt_hdr->addr2 = bss_->bssid();
     mgmt_hdr->addr3 = bss_->bssid();
-    mgmt_hdr->sc.set_seq(bss_->NextSeq(*mgmt_hdr));
+    mgmt_hdr->sc.set_seq(bss_->NextSns1(mgmt_hdr->addr1));
 
     auto assoc = w.Write<AssociationResponse>();
     assoc->status_code = result;
@@ -858,7 +858,7 @@ zx_status_t RemoteClient::SendDeauthentication(wlan_mlme::ReasonCode reason_code
     mgmt_hdr->addr1 = addr_;
     mgmt_hdr->addr2 = bss_->bssid();
     mgmt_hdr->addr3 = bss_->bssid();
-    mgmt_hdr->sc.set_seq(bss_->NextSeq(*mgmt_hdr));
+    mgmt_hdr->sc.set_seq(bss_->NextSns1(mgmt_hdr->addr1));
 
     w.Write<Deauthentication>()->reason_code = static_cast<uint16_t>(reason_code);
 
@@ -911,7 +911,7 @@ zx_status_t RemoteClient::SendAddBaRequest() {
     mgmt_hdr->addr1 = addr_;
     mgmt_hdr->addr2 = bss_->bssid();
     mgmt_hdr->addr3 = bss_->bssid();
-    mgmt_hdr->sc.set_seq(bss_->NextSeq(*mgmt_hdr));
+    mgmt_hdr->sc.set_seq(bss_->NextSns1(mgmt_hdr->addr1));
 
     w.Write<ActionFrame>()->category = action::Category::kBlockAck;
     w.Write<ActionFrameBlockAck>()->action = action::BaAction::kAddBaRequest;
@@ -955,7 +955,7 @@ zx_status_t RemoteClient::SendAddBaResponse(const AddBaRequestFrame& req) {
     mgmt_hdr->addr1 = addr_;
     mgmt_hdr->addr2 = bss_->bssid();
     mgmt_hdr->addr3 = bss_->bssid();
-    mgmt_hdr->sc.set_seq(bss_->NextSeq(*mgmt_hdr));
+    mgmt_hdr->sc.set_seq(bss_->NextSns1(mgmt_hdr->addr1));
 
     w.Write<ActionFrame>()->category = action::Category::kBlockAck;
     w.Write<ActionFrameBlockAck>()->action = action::BaAction::kAddBaResponse;

@@ -23,7 +23,11 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 InfraBss::InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
                    const common::MacAddr& bssid, fbl::unique_ptr<Timer> timer)
-    : bssid_(bssid), device_(device), bcn_sender_(std::move(bcn_sender)), started_at_(0),
+    : bssid_(bssid),
+      device_(device),
+      bcn_sender_(std::move(bcn_sender)),
+      started_at_(0),
+      seq_mgr_(NewSequenceManager()),
       timer_mgr_(std::move(timer)) {
     ZX_DEBUG_ASSERT(bcn_sender_ != nullptr);
 }
@@ -204,10 +208,8 @@ void InfraBss::CancelTimeout(TimeoutId id) {
 }
 
 zx_status_t InfraBss::HandleTimeout() {
-    zx_status_t status = timer_mgr_.HandleTimeout([&] (auto _now, auto addr, auto timeout_id) {
-        if (auto client = GetClient(addr)) {
-            client->HandleTimeout(timeout_id);
-        }
+    zx_status_t status = timer_mgr_.HandleTimeout([&](auto _now, auto addr, auto timeout_id) {
+        if (auto client = GetClient(addr)) { client->HandleTimeout(timeout_id); }
     });
     if (status != ZX_OK) {
         errorf("[infra-bss] failed to rearm the timer: %s\n", zx_status_get_string(status));
@@ -424,7 +426,7 @@ std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth
     data_hdr->addr1 = eth_frame.hdr()->dest;
     data_hdr->addr2 = bssid_;
     data_hdr->addr3 = eth_frame.hdr()->src;
-    data_hdr->sc.set_seq(NextSeq(*data_hdr));
+    data_hdr->sc.set_seq(NextSns1(data_hdr->addr1));
 
     auto llc_hdr = w.Write<LlcHeader>();
     llc_hdr->dsap = kLlcSnapExtension;
@@ -480,16 +482,8 @@ uint64_t InfraBss::timestamp() {
     return uptime_ns / 1000;  // as microseconds
 }
 
-seq_t InfraBss::NextSeq(const MgmtFrameHeader& hdr) {
-    return NextSeqNo(hdr, &seq_);
-}
-
-seq_t InfraBss::NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) {
-    return NextSeqNo(hdr, aci, &seq_);
-}
-
-seq_t InfraBss::NextSeq(const DataFrameHeader& hdr) {
-    return NextSeqNo(hdr, &seq_);
+uint32_t InfraBss::NextSns1(const common::MacAddr& addr) {
+    return mlme_sequence_manager_next_sns1(seq_mgr_.get(), &addr.byte);
 }
 
 bool InfraBss::IsRsn() const {

@@ -21,7 +21,6 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/rates_elements.h>
-#include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
 
 #include <fuchsia/wlan/mlme/c/fidl.h>
@@ -46,7 +45,7 @@ Station::Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelSch
       timer_mgr_(std::move(timer_mgr)),
       chan_sched_(chan_sched),
       join_ctx_(join_ctx),
-      seq_mgr_(mlme_sequence_manager_new(), mlme_sequence_manager_delete) {
+      seq_mgr_(NewSequenceManager())  {
     rust_device_ = {
         .device = static_cast<void*>(device),
         .deliver_ethernet = [](void* device, const uint8_t* data, size_t len) -> zx_status_t {

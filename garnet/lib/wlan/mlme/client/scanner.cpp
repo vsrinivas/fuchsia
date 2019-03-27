@@ -13,7 +13,6 @@
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/rates_elements.h>
-#include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/wlan.h>
@@ -63,7 +62,8 @@ Scanner::Scanner(DeviceInterface* device, ChannelScheduler* chan_sched,
     : off_channel_handler_(this),
       device_(device),
       chan_sched_(chan_sched),
-      timer_(std::move(timer)) {}
+      timer_(std::move(timer)),
+      seq_mgr_(NewSequenceManager()) {}
 
 zx_status_t Scanner::HandleMlmeScanReq(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
     return Start(req);
@@ -297,7 +297,8 @@ void Scanner::SendProbeRequest(wlan_channel_t channel) {
     auto mgmt_hdr = w.Write<MgmtFrameHeader>();
     mgmt_hdr->fc.set_type(FrameType::kManagement);
     mgmt_hdr->fc.set_subtype(ManagementSubtype::kProbeRequest);
-    SetSeqNo(mgmt_hdr, &seq_);
+    uint32_t seq = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mgmt_hdr->addr1.byte);
+    mgmt_hdr->sc.set_seq(seq);
 
     const common::MacAddr& mymac = device_->GetState()->address();
     const common::MacAddr& bssid = common::MacAddr(req_->bssid.data());

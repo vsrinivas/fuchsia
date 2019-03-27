@@ -12,7 +12,7 @@
 #include <wlan/mlme/ap/tim.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
-#include <wlan/mlme/sequence.h>
+#include <wlan/mlme/rust_utils.h>
 #include <wlan/mlme/service.h>
 
 #include <wlan/common/macaddr.h>
@@ -58,9 +58,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     zx_status_t SendDataFrame(DataFrame<>&& data_frame, uint32_t flags = 0) override;
     zx_status_t DeliverEthernet(Span<const uint8_t> frame) override;
 
-    seq_t NextSeq(const MgmtFrameHeader& hdr) override;
-    seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) override;
-    seq_t NextSeq(const DataFrameHeader& hdr) override;
+    uint32_t NextSns1(const common::MacAddr& addr) override;
 
     std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame,
                                                        bool needs_protection) override;
@@ -112,7 +110,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     fbl::unique_ptr<BeaconSender> bcn_sender_;
     zx_time_t started_at_;
     ClientMap clients_;
-    Sequence seq_;
+    SequenceManager seq_mgr_;
     // Queue which holds buffered non-GCR-SP frames when at least one client is
     // dozing.
     std::queue<fbl::unique_ptr<Packet>> bu_queue_;

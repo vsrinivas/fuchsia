@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 type MacAddr = [u8; 6];
 
-const SEQ_START_NUM: SequenceNum = 0;
+const SEQ_START_NUM: SequenceNum = 1;
 pub type SequenceNum = u32;
 
 /// IEEE Std 802.11-2016, 10.3.2.11.2, 10.3.2.11.3
@@ -98,14 +98,14 @@ mod tests {
 
         for i in 0..4095 {
             let seq_num = seq_mgr.next_sns1(&[1; 6]);
-            assert_eq!(i, seq_num);
+            assert_eq!(i + 1, seq_num);
         }
 
         let seq_num = seq_mgr.next_sns1(&[1; 6]);
-        assert_eq!(4095, seq_num);
+        assert_eq!(0, seq_num); // wrapped
 
         let seq_num = seq_mgr.next_sns1(&[1; 6]);
-        assert_eq!(0, seq_num);
+        assert_eq!(0 + 1, seq_num);
     }
 
     #[test]
@@ -117,14 +117,14 @@ mod tests {
         seq_mgr.next_sns1(&FIRST_PEER);
         seq_mgr.next_sns1(&FIRST_PEER);
         let seq_num = seq_mgr.next_sns1(&FIRST_PEER);
-        assert_eq!(2, seq_num);
+        assert_eq!(3, seq_num);
 
         seq_mgr.next_sns1(&SECOND_PEER);
         let seq_num = seq_mgr.next_sns1(&SECOND_PEER);
-        assert_eq!(1, seq_num);
+        assert_eq!(2, seq_num);
 
         let seq_num = seq_mgr.next_sns1(&FIRST_PEER);
-        assert_eq!(3, seq_num);
+        assert_eq!(4, seq_num);
     }
 
     #[test]
@@ -134,14 +134,14 @@ mod tests {
         seq_mgr.next_sns2(&[1; 6], 0);
         seq_mgr.next_sns2(&[1; 6], 0);
         let seq_num = seq_mgr.next_sns2(&[1; 6], 0);
-        assert_eq!(2, seq_num);
+        assert_eq!(3, seq_num);
 
         seq_mgr.next_sns2(&[1; 6], 1);
         let seq_num = seq_mgr.next_sns2(&[1; 6], 1);
-        assert_eq!(1, seq_num);
+        assert_eq!(2, seq_num);
 
         let seq_num = seq_mgr.next_sns2(&[1; 6], 0);
-        assert_eq!(3, seq_num);
+        assert_eq!(4, seq_num);
     }
 
     #[test]
@@ -151,14 +151,14 @@ mod tests {
         seq_mgr.next_sns4(&[1; 6], 0);
         seq_mgr.next_sns4(&[1; 6], 0);
         let seq_num = seq_mgr.next_sns4(&[1; 6], 0);
-        assert_eq!(2, seq_num);
+        assert_eq!(3, seq_num);
 
         seq_mgr.next_sns4(&[1; 6], 1);
         let seq_num = seq_mgr.next_sns4(&[1; 6], 1);
-        assert_eq!(1, seq_num);
+        assert_eq!(2, seq_num);
 
         let seq_num = seq_mgr.next_sns4(&[1; 6], 0);
-        assert_eq!(3, seq_num);
+        assert_eq!(4, seq_num);
     }
 
     #[test]
@@ -168,13 +168,13 @@ mod tests {
         seq_mgr.next_sns1(&[1; 6]);
         seq_mgr.next_sns1(&[1; 6]);
         let seq_num = seq_mgr.next_sns1(&[1; 6]);
-        assert_eq!(2, seq_num);
+        assert_eq!(3, seq_num);
 
         seq_mgr.next_sns2(&[1; 6], 0);
         let seq_num = seq_mgr.next_sns2(&[1; 6], 0);
-        assert_eq!(1, seq_num);
+        assert_eq!(2, seq_num);
 
         let seq_num = seq_mgr.next_sns4(&[1; 6], 3);
-        assert_eq!(0, seq_num);
+        assert_eq!(1, seq_num);
     }
 }

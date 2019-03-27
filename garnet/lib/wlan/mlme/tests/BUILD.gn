@@ -116,7 +116,6 @@ executable("mac_tests") {
     "parse_mac_header_unittest.cpp",
     "perr_destination_parser_unittest.cpp",
     "rate_limiter_unittest.cpp",
-    "sequence_unittest.cpp",
     "tim_element_unittest.cpp",
     "tim_unittest.cpp",
     "tx_vector_unittest.cpp",

@@ -78,7 +78,7 @@ static zx_status_t BuildMeshBeacon(wlan_channel_t channel, DeviceInterface* devi
 MeshMlme::MeshState::MeshState(fbl::unique_ptr<Timer> timer)
     : hwmp(std::move(timer)), deduplicator(kMaxReceivedFrameCacheSize) {}
 
-MeshMlme::MeshMlme(DeviceInterface* device) : device_(device) {}
+MeshMlme::MeshMlme(DeviceInterface* device) : device_(device), seq_mgr_(NewSequenceManager()) {}
 
 zx_status_t MeshMlme::Init() {
     return ZX_OK;
@@ -569,7 +569,15 @@ void MeshMlme::ForwardData(const common::ParsedMeshDataHeader& header,
     auto mac_header = const_cast<DataFrameHeader*>(header.mac_header.fixed);
     mac_header->addr1 = next_hop;
     mac_header->addr2 = self_addr();
-    SetSeqNo(mac_header, &seq_);
+
+    if (header.mac_header.qos_ctrl) {
+        uint32_t seq = mlme_sequence_manager_next_sns2(seq_mgr_.get(), &mac_header->addr1.byte,
+                                                       header.mac_header.qos_ctrl->tid());
+        mac_header->sc.set_seq(seq);
+    } else {
+        uint32_t seq = mlme_sequence_manager_next_sns1(seq_mgr_.get(), &mac_header->addr1.byte);
+        mac_header->sc.set_seq(seq);
+    }
 
     auto mesh_ctrl = const_cast<MeshControl*>(header.mesh_ctrl);
     mesh_ctrl->ttl -= 1;
@@ -601,7 +609,7 @@ zx_status_t MeshMlme::HandleTimeout(const ObjectId id) {
 }
 
 MacHeaderWriter MeshMlme::CreateMacHeaderWriter() {
-    return MacHeaderWriter{self_addr(), &seq_};
+    return MacHeaderWriter{self_addr(), seq_mgr_.get()};
 }
 
 }  // namespace wlan

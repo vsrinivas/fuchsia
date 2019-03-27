@@ -7,7 +7,7 @@
 
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/channel_scheduler.h>
-#include <wlan/mlme/sequence.h>
+#include <wlan/mlme/rust_utils.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
@@ -74,7 +74,7 @@ class Scanner {
     std::unordered_map<uint64_t, Bss> current_bss_;
     ChannelScheduler* chan_sched_;
     fbl::unique_ptr<Timer> timer_;
-    Sequence seq_;
+    SequenceManager seq_mgr_;
 };
 
 }  // namespace wlan

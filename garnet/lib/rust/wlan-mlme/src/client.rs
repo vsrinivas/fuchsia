@@ -172,7 +172,7 @@ mod tests {
                 1, 1, 1, 1, 1, 1, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 1, 1, 1, 1, 1, 1, // addr3
-                0, 0, // Sequence Control
+                0x10, 0, // Sequence Control
                 // Auth body
                 0, 0, // Auth Algorithm Number
                 1, 0, // Auth Txn Seq Number
@@ -196,7 +196,7 @@ mod tests {
                 1, 1, 1, 1, 1, 1, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 1, 1, 1, 1, 1, 1, // addr3
-                0, 0, // Sequence Control
+                0x10, 0, // Sequence Control
                 // Deauth body
                 0x27, 0 // Reason code
             ],
@@ -217,7 +217,7 @@ mod tests {
                 1, 1, 1, 1, 1, 1, // addr1
                 2, 2, 2, 2, 2, 2, // addr2
                 1, 1, 1, 1, 1, 1, // addr3
-                0, 0, // Sequence Control
+                0x10, 0, // Sequence Control
             ],
             &buf[..]
         );
@@ -276,7 +276,7 @@ mod tests {
             1, 1, 1, 1, 1, 1, // addr1
             2, 2, 2, 2, 2, 2, // addr2
             1, 1, 1, 1, 1, 1, // addr3
-            0, 0, // Sequence Control
+            0x10, 0, // Sequence Control
             // LLC header
             0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
             0, 0, 0, // OUI
@@ -300,7 +300,7 @@ mod tests {
             1, 1, 1, 1, 1, 1, // addr1
             2, 2, 2, 2, 2, 2, // addr2
             1, 1, 1, 1, 1, 1, // addr3
-            0, 0, // Sequence Control
+            0x10, 0, // Sequence Control
             // LLC header
             0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
             0, 0, 0, // OUI

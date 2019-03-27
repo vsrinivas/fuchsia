@@ -27,19 +27,16 @@ namespace {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 struct MockBss : public BssInterface {
-    zx_status_t ScheduleTimeout(wlan_tu_t tus, const common::MacAddr& client_addr,
-                                TimeoutId* id) {
+    zx_status_t ScheduleTimeout(wlan_tu_t tus, const common::MacAddr& client_addr, TimeoutId* id) {
         return ZX_OK;
     }
 
-    void CancelTimeout(TimeoutId id) { }
+    void CancelTimeout(TimeoutId id) {}
 
     const common::MacAddr& bssid() const { return bssid_; }
     uint64_t timestamp() { return 0; }
 
-    seq_t NextSeq(const MgmtFrameHeader& hdr) { return 0; }
-    seq_t NextSeq(const MgmtFrameHeader& hdr, uint8_t aci) { return 0; }
-    seq_t NextSeq(const DataFrameHeader& hdr) { return 0; }
+    uint32_t NextSns1(const common::MacAddr& addr) { return 0; }
 
     std::optional<DataFrame<LlcHeader>> EthToDataFrame(const EthFrame& eth_frame,
                                                        bool needs_protection) {
