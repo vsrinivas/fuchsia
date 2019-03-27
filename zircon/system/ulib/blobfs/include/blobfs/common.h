@@ -41,6 +41,18 @@ zx_status_t readblk(int fd, uint64_t bno, void* data);
 zx_status_t writeblk(int fd, uint64_t bno, const void* data);
 zx_status_t CheckSuperblock(const Superblock* info, uint64_t max);
 zx_status_t GetBlockCount(int fd, uint64_t* out);
+
+// Returns number of blocks required for inode_count inodes
+uint32_t BlocksRequiredForInode(uint64_t inode_count);
+
+// Returns number of blocks required for bit_count bits
+uint32_t BlocksRequiredForBits(uint64_t bit_count);
+
+// Suggests a journal size, in blocks.
+// |current|: The current size of the journal, in blocks.
+// |available|: An additional number of blocks available which may be used by the journal.
+uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available);
+
 int Mkfs(int fd, uint64_t block_count);
 
 uint32_t MerkleTreeBlocks(const Inode& blobNode);

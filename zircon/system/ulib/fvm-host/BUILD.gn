@@ -9,6 +9,7 @@ library("fvm-host") {
     "container/fvm.cpp",
     "container/sparse.cpp",
     "file-wrapper.cpp",
+    "format.cpp",
     "format/blobfs.cpp",
     "format/format.cpp",
     "format/minfs.cpp",

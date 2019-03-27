@@ -42,6 +42,7 @@ library("blobfs") {
     "$zx/system/ulib/zircon-internal",
     "$zx/third_party/ulib/cksum",
     "$zx/third_party/ulib/lz4",
+    "$zx/third_party/ulib/safemath",
     "$zx/third_party/ulib/uboringssl",
     "$zx/third_party/ulib/zstd",
   ]

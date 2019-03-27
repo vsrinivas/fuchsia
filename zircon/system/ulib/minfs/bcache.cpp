@@ -52,8 +52,9 @@ zx_status_t Bcache::Writeblk(blk_t bno, const void* data) {
         FS_TRACE_ERROR("minfs: cannot seek to block %u. %d\n", bno, errno);
         return ZX_ERR_IO;
     }
-    if (write(fd_.get(), data, kMinfsBlockSize) != kMinfsBlockSize) {
-        FS_TRACE_ERROR("minfs: cannot write block %u\n", bno);
+    ssize_t ret = write(fd_.get(), data, kMinfsBlockSize);
+    if (ret != kMinfsBlockSize) {
+        FS_TRACE_ERROR("minfs: cannot write block %u (%zd)\n", bno, ret);
         return ZX_ERR_IO;
     }
     return ZX_OK;

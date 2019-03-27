@@ -35,6 +35,7 @@ library("minfs") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fs",
     "$zx/system/ulib/zircon-internal",
+    "$zx/third_party/ulib/safemath",
   ]
   if (is_fuchsia) {
     public_deps += [

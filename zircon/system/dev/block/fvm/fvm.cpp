@@ -195,20 +195,21 @@ zx_status_t VPartitionManager::Load() {
     });
 
     zx::vmo vmo;
-    if (zx::vmo::create(FVM_BLOCK_SIZE, 0, &vmo) != ZX_OK) {
-        return ZX_ERR_INTERNAL;
+    zx_status_t status;
+    if ((status = zx::vmo::create(FVM_BLOCK_SIZE, 0, &vmo)) != ZX_OK) {
+        return status;
     }
 
     // Read the superblock first, to determine the slice sice
-    if (DoIoLocked(vmo.get(), 0, FVM_BLOCK_SIZE, BLOCK_OP_READ)) {
+    if ((status = DoIoLocked(vmo.get(), 0, FVM_BLOCK_SIZE, BLOCK_OP_READ)) != ZX_OK) {
         fprintf(stderr, "fvm: Failed to read first block from underlying device\n");
-        return ZX_ERR_INTERNAL;
+        return status;
     }
 
     fvm_t sb;
-    zx_status_t status = vmo.read(&sb, 0, sizeof(sb));
+    status = vmo.read(&sb, 0, sizeof(sb));
     if (status != ZX_OK) {
-        return ZX_ERR_INTERNAL;
+        return status;
     }
 
     format_info_ = FormatInfo::FromSuperBlock(sb);

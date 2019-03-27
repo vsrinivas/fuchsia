@@ -54,7 +54,8 @@ public:
     virtual size_t SliceSize() const = 0;
 
     // Given a path to a valid file system partition, adds that partition to the container
-    virtual zx_status_t AddPartition(const char* path, const char* type_name) = 0;
+    virtual zx_status_t AddPartition(const char* path, const char* type_name,
+                                     FvmReservation* reserve) = 0;
 
     // Calculates the minimum disk size required to hold the unpacked contents of the container.
     virtual uint64_t CalculateDiskSize() const = 0;
@@ -95,7 +96,8 @@ public:
     // Extends the FVM container to the specified length
     zx_status_t Extend(size_t length);
     size_t SliceSize() const final;
-    zx_status_t AddPartition(const char* path, const char* type_name) final;
+    zx_status_t AddPartition(const char* path, const char* type_name,
+                             FvmReservation* reserve) final;
 
     uint64_t CalculateDiskSize() const final;
 
@@ -170,7 +172,8 @@ public:
 
     size_t SliceSize() const final;
     size_t SliceCount() const;
-    zx_status_t AddPartition(const char* path, const char* type_name) final;
+    zx_status_t AddPartition(const char* path, const char* type_name,
+                             FvmReservation* reserve) final;
 
     // Decompresses the contents of the sparse file (if they are compressed), and writes the output
     // to |path|.
@@ -191,7 +194,7 @@ private:
     CompressionContext compression_;
     fbl::unique_ptr<fvm::SparseReader> reader_;
 
-    zx_status_t AllocatePartition(fbl::unique_ptr<Format> format);
+    zx_status_t AllocatePartition(fbl::unique_ptr<Format> format, FvmReservation* reserve);
     zx_status_t AllocateExtent(uint32_t part_index, uint64_t slice_start, uint64_t slice_count,
                                uint64_t extent_length);
 

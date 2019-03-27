@@ -6,11 +6,15 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
-#include <fvm/sparse-reader.h>
 #include <fvm-host/container.h>
 #include <fvm-host/file-wrapper.h>
+#include <fvm/sparse-reader.h>
+#include <safemath/checked_math.h>
 
 #define DEFAULT_SLICE_SIZE (8lu * (1 << 20))
+constexpr char kMinimumInodes[] = "--minimum-inodes";
+constexpr char kMinimumData[] = "--minimum-data-bytes";
+constexpr char kMaximumBytes[] = "--maximum-bytes";
 
 int usage(void) {
     fprintf(stderr, "usage: fvm [ output_path ] [ command ] [ <flags>* ] [ <input_paths>* ]\n");
@@ -38,46 +42,34 @@ int usage(void) {
     fprintf(stderr, " --compress - specify that file should be compressed (sparse only)\n");
     fprintf(stderr, " --disk [bytes] - Size of target disk (valid for size command only)\n");
     fprintf(stderr, "Input options:\n");
-    fprintf(stderr, " --blob [path] - Add path as blob type (must be blobfs)\n");
-    fprintf(stderr, " --data [path] - Add path as encrypted data type (must be minfs)\n");
+    fprintf(stderr, " --blob [path] [reserve options] - Add path as blob type (must be blobfs)\n");
+    fprintf(stderr, " --data [path] [reserve options] - Add path as encrypted data type (must"
+                    " be minfs)\n");
     fprintf(stderr, " --data-unsafe [path] - Add path as unencrypted data type (must be minfs)\n");
     fprintf(stderr, " --system [path] - Add path as system type (must be minfs)\n");
     fprintf(stderr, " --default [path] - Add generic path\n");
     fprintf(stderr, " --sparse [path] - Path to compressed sparse file\n");
+    fprintf(stderr, "reserve options:\n");
+    fprintf(stderr, " These options, on success, reserve additional fvm slices for data/inodes.\n"
+                    " The number of bytes reserved may exceed the actual bytes needed due to\n"
+                    " rounding up to slice boundary.\n");
+    fprintf(stderr,
+            " --minimum-inodes inode_count - number of inodes to reserve\n"
+            "                                Blobfs inode size is %u\n"
+            "                                Minfs inode size is %u\n",
+            blobfs::kBlobfsInodeSize, minfs::kMinfsInodeSize);
+
+    fprintf(stderr,
+            " --minimum-data-bytes data_bytes - number of bytes to reserve for data\n"
+            "                                   in the fs\n"
+            "                                   Blobfs block size is %u\n"
+            "                                   Minfs block size is %u\n",
+            blobfs::kBlobfsBlockSize, minfs::kMinfsBlockSize);
+    fprintf(stderr, " --maximum-bytes bytes - Places an upper bound of <bytes> on the total\n"
+                    "                         number of bytes which may be used by the partition.\n"
+                    "                         Returns an error if more space is necessary to\n"
+                    "                         create the requested filesystem.\n");
     exit(-1);
-}
-
-int add_partitions(Container* container, int argc, char** argv) {
-    for (int i = 0; i < argc; i += 2) {
-        if (argc - i < 2 || argv[i][0] != '-' || argv[i][1] != '-') {
-            usage();
-        }
-
-        char* partition_type = argv[i] + 2;
-        char* partition_path = argv[i + 1];
-        if ((container->AddPartition(partition_path, partition_type)) != ZX_OK) {
-            fprintf(stderr, "Failed to add partition\n");
-            return -1;
-        }
-    }
-
-    return 0;
-}
-
-size_t get_disk_size(const char* path, size_t offset) {
-    fbl::unique_fd fd(open(path, O_RDONLY, 0644));
-
-    if (fd) {
-        struct stat s;
-        if (fstat(fd.get(), &s) < 0) {
-            fprintf(stderr, "Failed to stat %s\n", path);
-            exit(-1);
-        }
-
-        return s.st_size - offset;
-    }
-
-    return 0;
 }
 
 int parse_size(const char* size_str, size_t* out) {
@@ -108,6 +100,73 @@ int parse_size(const char* size_str, size_t* out) {
     }
 
     *out = size;
+    return 0;
+}
+
+int add_partitions(Container* container, int argc, char** argv) {
+    for (int i = 0; i < argc;) {
+        if (argc - i < 2 || argv[i][0] != '-' || argv[i][1] != '-') {
+            usage();
+        }
+
+        const char* partition_type = argv[i] + 2;
+        const char* partition_path = argv[i + 1];
+        std::optional<uint64_t> inodes = {}, data = {}, total_bytes = {};
+        i += 2;
+
+        while (true) {
+            size_t size;
+            if ((i + 2) <= argc && strcmp(argv[i], kMinimumInodes) == 0) {
+                if (parse_size(argv[i + 1], &size) < 0) {
+                    usage();
+                    return -1;
+                }
+                inodes = safemath::checked_cast<uint64_t>(size);
+                i += 2;
+            } else if ((i + 2) <= argc && strcmp(argv[i], kMinimumData) == 0) {
+                if (parse_size(argv[i + 1], &size) < 0) {
+                    usage();
+                    return -1;
+                }
+                data = safemath::checked_cast<uint64_t>(size);
+                i += 2;
+            } else if ((i + 2) <= argc && strcmp(argv[i], kMaximumBytes) == 0) {
+                if (parse_size(argv[i + 1], &size) < 0) {
+                    usage();
+                    return -1;
+                }
+                total_bytes = safemath::checked_cast<uint64_t>(size);
+                i += 2;
+            } else {
+                break;
+            }
+        }
+
+        FvmReservation reserve(inodes, data, total_bytes);
+        zx_status_t status = container->AddPartition(partition_path, partition_type, &reserve);
+        if (status == ZX_ERR_BUFFER_TOO_SMALL) {
+            fprintf(stderr, "Failed to add partition\n");
+            reserve.Dump(stderr);
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+size_t get_disk_size(const char* path, size_t offset) {
+    fbl::unique_fd fd(open(path, O_RDONLY, 0644));
+
+    if (fd) {
+        struct stat s;
+        if (fstat(fd.get(), &s) < 0) {
+            fprintf(stderr, "Failed to stat %s\n", path);
+            exit(-1);
+        }
+
+        return s.st_size - offset;
+    }
+
     return 0;
 }
 

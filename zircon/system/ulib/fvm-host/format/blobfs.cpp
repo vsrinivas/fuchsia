@@ -5,6 +5,7 @@
 #include <inttypes.h>
 
 #include <limits>
+#include <safemath/checked_math.h>
 #include <utility>
 
 #include "fvm-host/format.h"
@@ -13,11 +14,11 @@ namespace {
 
 template <class T> uint32_t ToU32(T in) {
     if (in > std::numeric_limits<uint32_t>::max()) {
-        fprintf(stderr, "out of range %" PRIuMAX "\n",
-                static_cast<uintmax_t>(in));
+        fprintf(stderr, "%s:%d out of range %" PRIuMAX "\n", __FILE__, __LINE__,
+                safemath::checked_cast<uintmax_t>(in));
         exit(-1);
     }
-    return static_cast<uint32_t>(in);
+    return safemath::checked_cast<uint32_t>(in);
 }
 
 } // namespace
@@ -49,7 +50,45 @@ BlobfsFormat::BlobfsFormat(fbl::unique_fd fd, const char* type)
 
 BlobfsFormat::~BlobfsFormat() = default;
 
-zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
+zx_status_t BlobfsFormat::ComputeSlices(uint64_t inode_count, uint64_t data_blocks,
+                                        uint64_t journal_block_count) {
+    auto abm_blocks = blobfs::BlocksRequiredForBits(data_blocks);
+    auto ino_blocks = blobfs::BlocksRequiredForInode(inode_count);
+
+    fvm_info_.abm_slices = BlocksToSlices(abm_blocks);
+    fvm_info_.ino_slices = BlocksToSlices(ino_blocks);
+    fvm_info_.journal_slices = BlocksToSlices(ToU32(journal_block_count));
+    fvm_info_.dat_slices = BlocksToSlices(safemath::checked_cast<uint32_t>(data_blocks));
+    fvm_info_.vslice_count = 1 + fvm_info_.abm_slices + fvm_info_.ino_slices +
+                             fvm_info_.dat_slices + fvm_info_.journal_slices;
+
+    fvm_info_.inode_count = safemath::checked_cast<uint32_t>(
+        fvm_info_.ino_slices * fvm_info_.slice_size / blobfs::kBlobfsInodeSize);
+    fvm_info_.journal_block_count = SlicesToBlocks(fvm_info_.journal_slices);
+    fvm_info_.data_block_count = SlicesToBlocks(fvm_info_.dat_slices);
+    fvm_info_.flags |= blobfs::kBlobFlagFVM;
+
+    xprintf("Blobfs: slice_size is %" PRIu64 "\n", fvm_info_.slice_size);
+    xprintf("Blobfs: abm_blocks: %" PRIu64 ", abm_slices: %u\n", BlockMapBlocks(fvm_info_),
+            fvm_info_.abm_slices);
+    xprintf("Blobfs: ino_blocks: %" PRIu64 ", ino_slices: %u\n", NodeMapBlocks(fvm_info_),
+            fvm_info_.ino_slices);
+    xprintf("Blobfs: jnl_blocks: %" PRIu64 ", jnl_slices: %u\n", JournalBlocks(fvm_info_),
+            fvm_info_.journal_slices);
+    xprintf("Blobfs: dat_blocks: %" PRIu64 ", dat_slices: %u\n", DataBlocks(fvm_info_),
+            fvm_info_.dat_slices);
+
+    zx_status_t status;
+    if ((status = CheckSuperblock(&fvm_info_, blocks_)) != ZX_OK) {
+        fprintf(stderr, "Check info failed\n");
+        return status;
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
+                                       FvmReservation* reserve) {
     memcpy(&fvm_blk_, &blk_, BlockSize());
     xprintf("fvm_info has data block count %" PRIu64 "\n", fvm_info_.data_block_count);
     fvm_info_.slice_size = slice_size;
@@ -59,33 +98,44 @@ zx_status_t BlobfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) 
         return ZX_ERR_INVALID_ARGS;
     }
 
-    fvm_info_.abm_slices = BlocksToSlices(ToU32(BlockMapBlocks(info_)));
-    fvm_info_.ino_slices = BlocksToSlices(ToU32(NodeMapBlocks(info_)));
-    fvm_info_.journal_slices = BlocksToSlices(ToU32(JournalBlocks(info_)));
-    fvm_info_.dat_slices = BlocksToSlices(ToU32(DataBlocks(info_)));
-    fvm_info_.vslice_count = 1 + fvm_info_.abm_slices + fvm_info_.ino_slices +
-                             fvm_info_.dat_slices + fvm_info_.journal_slices;
+    uint64_t minimum_data_blocks =
+        fbl::round_up(reserve->data().request.value_or(0), BlockSize()) / BlockSize();
+    if (minimum_data_blocks < fvm_info_.data_block_count) {
+        minimum_data_blocks = fvm_info_.data_block_count;
+    }
 
-    xprintf("Blobfs: slice_size is %" PRIu64 "\n", fvm_info_.slice_size);
-    xprintf("Blobfs: abm_blocks: %" PRIu64 ", abm_slices: %u\n", BlockMapBlocks(info_),
-            fvm_info_.abm_slices);
-    xprintf("Blobfs: ino_blocks: %" PRIu64 ", ino_slices: %u\n", NodeMapBlocks(info_),
-            fvm_info_.ino_slices);
-    xprintf("Blobfs: jnl_blocks: %" PRIu64 ", jnl_slices: %u\n", JournalBlocks(info_),
-            fvm_info_.journal_slices);
-    xprintf("Blobfs: dat_blocks: %" PRIu64 ", dat_slices: %u\n", DataBlocks(info_),
-            fvm_info_.dat_slices);
-
-    fvm_info_.inode_count = static_cast<uint32_t>(fvm_info_.ino_slices * fvm_info_.slice_size /
-                                                  blobfs::kBlobfsInodeSize);
-    fvm_info_.journal_block_count = SlicesToBlocks(fvm_info_.journal_slices);
-    fvm_info_.data_block_count = SlicesToBlocks(fvm_info_.dat_slices);
-    fvm_info_.flags |= blobfs::kBlobFlagFVM;
+    uint64_t minimum_inode_count = reserve->inodes().request.value_or(0);
+    if (minimum_inode_count < fvm_info_.inode_count) {
+        minimum_inode_count = fvm_info_.inode_count;
+    }
 
     zx_status_t status;
-    if ((status = CheckSuperblock(&fvm_info_, blocks_)) != ZX_OK) {
-        fprintf(stderr, "Check info failed\n");
+    if ((status = ComputeSlices(minimum_inode_count, minimum_data_blocks, JournalBlocks(info_))) !=
+        ZX_OK) {
         return status;
+    }
+
+    // Lets see if we can increase journal size now
+    uint64_t slice_limit = reserve->total_bytes().request.value_or(0) / slice_size;
+    if (slice_limit > fvm_info_.vslice_count) {
+        // TODO(auradkar): This should use TransactionLimits
+        uint64_t journal_block_count = blobfs::SuggestJournalBlocks(
+            ToU32(JournalBlocks(fvm_info_)),
+            ToU32((slice_limit - fvm_info_.vslice_count) * slice_size / BlockSize()));
+        // Above, we might have changed number of blocks allocated to the journal. This
+        // might affect the number of allocated/reserved slices. Call ComputeSlices
+        // again to adjust the count.
+        if ((status = ComputeSlices(minimum_inode_count, minimum_data_blocks,
+                                    journal_block_count)) != ZX_OK) {
+            return status;
+        }
+    }
+
+    reserve->set_data_reserved(fvm_info_.data_block_count * BlockSize());
+    reserve->set_inodes_reserved(fvm_info_.inode_count);
+    reserve->set_total_bytes_reserved(SlicesToBlocks(ToU32(fvm_info_.vslice_count)) * BlockSize());
+    if (!reserve->Approved()) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
     fvm_ready_ = true;

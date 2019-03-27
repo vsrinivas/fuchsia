@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <safemath/checked_math.h>
 #include <utility>
 
 #include "fvm-host/container.h"
@@ -404,7 +405,8 @@ size_t SparseContainer::SliceCount() const {
     return slices;
 }
 
-zx_status_t SparseContainer::AddPartition(const char* path, const char* type_name) {
+zx_status_t SparseContainer::AddPartition(const char* path, const char* type_name,
+                                          FvmReservation* reserve) {
     fbl::unique_ptr<Format> format;
     zx_status_t status;
 
@@ -413,8 +415,7 @@ zx_status_t SparseContainer::AddPartition(const char* path, const char* type_nam
         return status;
     }
 
-    if ((status = AllocatePartition(std::move(format))) != ZX_OK) {
-        fprintf(stderr, "Sparse partition allocation failed\n");
+    if ((status = AllocatePartition(std::move(format), reserve)) != ZX_OK) {
         return status;
     }
 
@@ -438,16 +439,17 @@ zx_status_t SparseContainer::Decompress(const char* path) {
     return reader_->WriteDecompressed(std::move(fd));
 }
 
-zx_status_t SparseContainer::AllocatePartition(fbl::unique_ptr<Format> format) {
+zx_status_t SparseContainer::AllocatePartition(fbl::unique_ptr<Format> format,
+                                               FvmReservation* reserve) {
     SparsePartitionInfo partition;
     format->GetPartitionInfo(&partition.descriptor);
     partition.descriptor.magic = fvm::kPartitionDescriptorMagic;
     partition.descriptor.extent_count = 0;
     image_.header_length += sizeof(fvm::partition_descriptor_t);
-    uint32_t part_index = static_cast<uint32_t>(image_.partition_count);
+    uint32_t part_index = safemath::checked_cast<uint32_t>(image_.partition_count);
 
     zx_status_t status;
-    if ((status = format->MakeFvmReady(SliceSize(), part_index)) != ZX_OK) {
+    if ((status = format->MakeFvmReady(SliceSize(), part_index, reserve)) != ZX_OK) {
         return status;
     }
 

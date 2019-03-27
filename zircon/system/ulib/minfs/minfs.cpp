@@ -19,6 +19,7 @@
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
 #include <fs/trace.h>
+#include <safemath/checked_math.h>
 
 #ifdef __Fuchsia__
 #include <fbl/auto_lock.h>
@@ -953,6 +954,15 @@ void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
 }
 #endif
 
+uint32_t BlocksRequiredForInode(uint64_t inode_count) {
+    return safemath::checked_cast<uint32_t>((inode_count + kMinfsInodesPerBlock - 1) /
+                                            kMinfsInodesPerBlock);
+}
+
+uint32_t BlocksRequiredForBits(uint64_t bit_count) {
+    return safemath::checked_cast<uint32_t>((bit_count + kMinfsBlockBits - 1) / kMinfsBlockBits);
+}
+
 zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     Superblock info;
     memset(&info, 0x00, sizeof(info));
@@ -1150,20 +1160,26 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     for (uint32_t n = 0; n < abmblks; n++) {
         void* bmdata = fs::GetBlock(kMinfsBlockSize, abm.StorageUnsafe()->GetData(), n);
         memcpy(blk, bmdata, kMinfsBlockSize);
-        bc->Writeblk(info.abm_block + n, blk);
+        if ((status = bc->Writeblk(info.abm_block + n, blk)) != ZX_OK) {
+            return status;
+        }
     }
 
     // write inode bitmap
     for (uint32_t n = 0; n < ibmblks; n++) {
         void* bmdata = fs::GetBlock(kMinfsBlockSize, ibm.StorageUnsafe()->GetData(), n);
         memcpy(blk, bmdata, kMinfsBlockSize);
-        bc->Writeblk(info.ibm_block + n, blk);
+        if ((status = bc->Writeblk(info.ibm_block + n, blk)) != ZX_OK) {
+            return status;
+        }
     }
 
     // write inodes
     memset(blk, 0, sizeof(blk));
     for (uint32_t n = 0; n < inoblks; n++) {
-        bc->Writeblk(info.ino_block + n, blk);
+        if ((status = bc->Writeblk(info.ino_block + n, blk)) != ZX_OK) {
+            return status;
+        }
     }
 
     // setup root inode

@@ -10,5 +10,6 @@ host_tool("fvm") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fvm",
     "$zx/system/ulib/fvm-host",
+    "$zx/third_party/ulib/safemath",
   ]
 }

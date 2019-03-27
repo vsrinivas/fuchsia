@@ -26,6 +26,12 @@ zx_status_t CheckSuperblock(const Superblock* info, Bcache* bc);
 // Invokes CheckSuperblock, but also verifies inode and block usage.
 zx_status_t Fsck(fbl::unique_ptr<Bcache> bc);
 
+// Returns number of blocks required to store inode_count inodes
+uint32_t BlocksRequiredForInode(uint64_t inode_count);
+
+// Returns number of blocks required to store bit_count bits
+uint32_t BlocksRequiredForBits(uint64_t bit_count);
+
 #ifndef __Fuchsia__
 // Run fsck on a sparse minfs partition
 // |start| indicates where the minfs partition starts within the file (in bytes)

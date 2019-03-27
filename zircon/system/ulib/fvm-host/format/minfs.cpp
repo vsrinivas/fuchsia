@@ -58,7 +58,8 @@ MinfsFormat::MinfsFormat(fbl::unique_fd fd, const char* type)
     }
 }
 
-zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
+zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index,
+                                      FvmReservation* reserve) {
     memcpy(&fvm_blk_, &blk_, minfs::kMinfsBlockSize);
     fvm_info_.slice_size = slice_size;
     fvm_info_.flags |= minfs::kMinfsFlagFVM;
@@ -69,11 +70,29 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
     }
 
     size_t kBlocksPerSlice = fvm_info_.slice_size / minfs::kMinfsBlockSize;
-    uint32_t ibm_blocks = info_.abm_block - info_.ibm_block;
-    uint32_t abm_blocks = info_.ino_block - info_.abm_block;
-    uint32_t ino_blocks = info_.journal_start_block - info_.ino_block;
-    uint32_t journal_blocks = info_.dat_block - info_.journal_start_block;
-    uint32_t dat_blocks = info_.block_count;
+
+    uint64_t minimum_inodes = reserve->inodes().request.value_or(0);
+    uint32_t ibm_blocks = fvm_info_.abm_block - fvm_info_.ibm_block;
+    uint32_t ino_blocks = fvm_info_.journal_start_block - fvm_info_.ino_block;
+
+    if (minimum_inodes > fvm_info_.inode_count) {
+        // If requested, reserve more inodes than originally allocated.
+        ino_blocks = minfs::BlocksRequiredForInode(minimum_inodes);
+        ibm_blocks = minfs::BlocksRequiredForBits(minimum_inodes);
+    }
+
+    uint32_t minimum_data_blocks = safemath::checked_cast<uint32_t>(
+        fbl::round_up(reserve->data().request.value_or(0), minfs::kMinfsBlockSize) /
+        minfs::kMinfsBlockSize);
+    uint32_t abm_blocks = fvm_info_.ino_block - fvm_info_.abm_block;
+    uint32_t dat_blocks = fvm_info_.block_count;
+
+    if (minimum_data_blocks > fvm_info_.block_count) {
+        abm_blocks = minfs::BlocksRequiredForBits(minimum_data_blocks);
+        dat_blocks = minimum_data_blocks;
+    }
+
+    uint32_t journal_blocks = fvm_info_.dat_block - fvm_info_.journal_start_block;
 
     //TODO(planders): Once blobfs journaling patch is landed, use fvm::BlocksToSlices() here.
     fvm_info_.ibm_slices =
@@ -104,16 +123,24 @@ zx_status_t MinfsFormat::MakeFvmReady(size_t slice_size, uint32_t vpart_index) {
             fvm_info_.journal_slices);
     xprintf("Minfs: dat_blocks: %u, dat_slices: %u\n", dat_blocks, fvm_info_.dat_slices);
 
-    fvm_info_.inode_count = static_cast<uint32_t>(fvm_info_.ino_slices * fvm_info_.slice_size /
-                                                  minfs::kMinfsInodeSize);
-    fvm_info_.block_count = static_cast<uint32_t>(fvm_info_.dat_slices * fvm_info_.slice_size /
-                                                  minfs::kMinfsBlockSize);
+    fvm_info_.inode_count = safemath::checked_cast<uint32_t>(
+        fvm_info_.ino_slices * fvm_info_.slice_size / minfs::kMinfsInodeSize);
+    fvm_info_.block_count = safemath::checked_cast<uint32_t>(
+        fvm_info_.dat_slices * fvm_info_.slice_size / minfs::kMinfsBlockSize);
 
     fvm_info_.ibm_block = minfs::kFVMBlockInodeBmStart;
     fvm_info_.abm_block = minfs::kFVMBlockDataBmStart;
     fvm_info_.ino_block = minfs::kFVMBlockInodeStart;
     fvm_info_.journal_start_block = minfs::kFVMBlockJournalStart;
     fvm_info_.dat_block = minfs::kFVMBlockDataStart;
+
+    reserve->set_data_reserved(fvm_info_.dat_slices * fvm_info_.slice_size);
+    reserve->set_inodes_reserved(fvm_info_.inode_count);
+    reserve->set_total_bytes_reserved(fvm_info_.vslice_count * kBlocksPerSlice *
+                                      minfs::kMinfsBlockSize);
+    if (!reserve->Approved()) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
 
     zx_status_t status;
     // Check if bitmaps are the wrong size, slice extents run on too long, etc.

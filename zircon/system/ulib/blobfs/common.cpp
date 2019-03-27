@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <limits>
+#include <safemath/checked_math.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -154,6 +155,20 @@ zx_status_t writeblk(int fd, uint64_t bno, const void* data) {
         return ZX_ERR_IO;
     }
     return ZX_OK;
+}
+
+uint32_t BlocksRequiredForInode(uint64_t inode_count) {
+    return safemath::checked_cast<uint32_t>(fbl::round_up(inode_count, kBlobfsInodesPerBlock) /
+                                            kBlobfsInodesPerBlock);
+}
+
+uint32_t BlocksRequiredForBits(uint64_t bit_count) {
+    return safemath::checked_cast<uint32_t>(fbl::round_up(bit_count, kBlobfsBlockBits) /
+                                            kBlobfsBlockBits);
+}
+
+uint32_t SuggestJournalBlocks(uint32_t current, uint32_t available) {
+    return current + available;
 }
 
 int Mkfs(int fd, uint64_t block_count) {

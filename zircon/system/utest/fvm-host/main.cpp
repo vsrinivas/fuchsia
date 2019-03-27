@@ -15,7 +15,7 @@
 #include <utility>
 
 #define DEFAULT_SLICE_SIZE (8lu * (1 << 20)) // 8 mb
-#define PARTITION_SIZE     (1lu * (1 << 27)) // 128 mb
+#define PARTITION_SIZE     (1lu * (1 << 28)) // 128 mb
 #define CONTAINER_SIZE     (2lu * (1 << 30)) // 2 gb
 
 #define MAX_PARTITIONS 6
@@ -58,6 +58,8 @@ typedef struct {
     guid_type_t guid_type;
     char path[PATH_MAX];
     bool created = false;
+    FvmReservation reserve;
+    zx_status_t status;
 
     const char* FsTypeName() {
         switch (fs_type) {
@@ -130,10 +132,9 @@ bool CreateBlobfs(const char* path) {
 // Adds all create partitions to |container|. If enable_data is false, the DATA partition is
 // skipped. This is to avoid discrepancies in disk size calculation due to zxcrypt not being
 // implemented on host.
+// Stores success or failure of each AddPartition in part->status.
 // TODO(planders): Once we are able to create zxcrypt'd FVM images on host, remove enable_data flag.
-bool AddPartitions(Container* container, bool enable_data) {
-    BEGIN_HELPER;
-
+void AddPartitionsReserve(Container* container, bool enable_data) {
     // Randomize order in which partitions are added to container.
     uint32_t order[partition_count];
 
@@ -164,26 +165,54 @@ bool AddPartitions(Container* container, bool enable_data) {
 
         if (part->created) {
             unittest_printf("Adding partition to container: %s\n", part->path);
-            ASSERT_EQ(container->AddPartition(part->path, part->GuidTypeName()), ZX_OK,
-                      "Failed to add partition");
+            part->status =
+                container->AddPartition(part->path, part->GuidTypeName(), &part->reserve);
+        }
+    }
+}
+
+// Adds all created partitions to |container|. Asserts on failures.
+bool AddPartitions(Container* container, bool enable_data, bool should_pass) {
+    BEGIN_HELPER;
+    AddPartitionsReserve(container, enable_data);
+    for (unsigned i = 0; i < partition_count; i++) {
+        partition_t* part = &partitions[i];
+        if (part->created) {
+            bool added = part->status == ZX_OK;
+            bool reserved = part->reserve.Approved();
+            if ((added && reserved) != should_pass) {
+                fprintf(stderr, "Failed to add partition %d\n", added);
+                part->reserve.Dump(stderr);
+            }
+            ASSERT_EQ(added && reserved, should_pass);
         }
     }
 
     END_HELPER;
 }
 
-bool CreateSparse(uint32_t flags, size_t slice_size, bool enable_data = true) {
+// Creates a sparse container and adds partitions to it. When should_pass is false,
+// the function surfaces the error in adding partition to caller without asserting.
+bool CreateSparse(uint32_t flags, size_t slice_size, bool should_pass, bool enable_data = true) {
     BEGIN_HELPER;
+
     const char* path = ((flags & fvm::kSparseFlagLz4) != 0) ? sparse_lz4_path : sparse_path;
     unittest_printf("Creating sparse container: %s\n", path);
     fbl::unique_ptr<SparseContainer> sparseContainer;
     ASSERT_EQ(SparseContainer::Create(path, slice_size, flags, &sparseContainer), ZX_OK,
               "Failed to initialize sparse container");
-    ASSERT_TRUE(AddPartitions(sparseContainer.get(), enable_data));
-    ASSERT_EQ(sparseContainer->Commit(), ZX_OK, "Failed to write to sparse file");
+    ASSERT_TRUE(AddPartitions(sparseContainer.get(), enable_data, should_pass));
+    if (should_pass) {
+        ASSERT_EQ(sparseContainer->Commit(), ZX_OK, "Failed to write to sparse file");
+    }
     END_HELPER;
 }
 
+bool CreateSparseEnsure(uint32_t flags, size_t slice_size, bool enable_data = true) {
+    BEGIN_HELPER;
+    ASSERT_TRUE(CreateSparse(flags, slice_size, true, enable_data));
+    END_HELPER;
+}
 bool StatFile(const char* path, off_t* length) {
     BEGIN_HELPER;
     fbl::unique_fd fd(open(path, O_RDWR, 0755));
@@ -223,7 +252,10 @@ bool ReportSparse(uint32_t flags) {
     END_HELPER;
 }
 
-bool CreateFvm(bool create_before, off_t offset, size_t slice_size, bool enable_data = true) {
+// Creates a fvm container and adds partitions to it. When should succeed is false,
+// the function surfaces the error in adding partition to caller without asserting.
+bool CreateFvm(bool create_before, off_t offset, size_t slice_size, bool should_pass,
+               bool enable_data = true) {
     BEGIN_HELPER;
     unittest_printf("Creating fvm container: %s\n", fvm_path);
 
@@ -236,8 +268,16 @@ bool CreateFvm(bool create_before, off_t offset, size_t slice_size, bool enable_
     fbl::unique_ptr<FvmContainer> fvmContainer;
     ASSERT_EQ(FvmContainer::Create(fvm_path, slice_size, offset, length - offset, &fvmContainer),
               ZX_OK, "Failed to initialize fvm container");
-    ASSERT_TRUE(AddPartitions(fvmContainer.get(), enable_data));
-    ASSERT_EQ(fvmContainer->Commit(), ZX_OK, "Failed to write to fvm file");
+    ASSERT_TRUE(AddPartitions(fvmContainer.get(), enable_data, should_pass));
+    if (should_pass) {
+        ASSERT_EQ(fvmContainer->Commit(), ZX_OK, "Failed to write to fvm file");
+    }
+    END_HELPER;
+}
+
+bool CreateFvmEnsure(bool create_before, off_t offset, size_t slice_size, bool enable_data = true) {
+    BEGIN_HELPER;
+    ASSERT_TRUE(CreateFvm(create_before, offset, slice_size, true, enable_data));
     END_HELPER;
 }
 
@@ -421,6 +461,8 @@ bool DestroyPartitions() {
             unittest_printf("Destroying partition: %s\n", part->path);
             ASSERT_EQ(unlink(part->path), 0, "Failed to unlink path");
             part->created = false;
+            // Reset reservations for next iteration of the test.
+            part->reserve = FvmReservation({}, {}, {});
         }
     }
 
@@ -478,8 +520,15 @@ bool GetSparseInfo(container_t type, uint32_t* out_flags, char** out_path) {
     END_HELPER;
 }
 
-bool CreateReportDestroy(container_t type, size_t slice_size) {
+bool CreateReportDestroy(container_t type, size_t slice_size, bool test_success = true,
+                         std::optional<uint64_t> data_size = {},
+                         std::optional<uint64_t> inodes_count = {},
+                         std::optional<uint64_t> limit = {}) {
     BEGIN_HELPER;
+    for (unsigned i = 0; i < partition_count; i++) {
+        partition_t* part = &partitions[i];
+        part->reserve = FvmReservation(inodes_count, data_size, limit);
+    }
     switch (type) {
     case SPARSE:
         __FALLTHROUGH;
@@ -489,30 +538,38 @@ bool CreateReportDestroy(container_t type, size_t slice_size) {
         uint32_t flags;
         char* path;
         ASSERT_TRUE(GetSparseInfo(type, &flags, &path));
-        ASSERT_TRUE(CreateSparse(flags, slice_size));
-        ASSERT_TRUE(ReportSparse(flags));
+        ASSERT_TRUE(CreateSparse(flags, slice_size, test_success));
+        if (test_success) {
+            ASSERT_TRUE(ReportSparse(flags));
+        }
         ASSERT_TRUE(DestroySparse(flags));
         break;
     }
     case FVM: {
-        ASSERT_TRUE(CreateFvm(true, 0, slice_size));
-        ASSERT_TRUE(ReportFvm());
-        ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
-        ASSERT_TRUE(ReportFvm());
+        ASSERT_TRUE(CreateFvm(true, 0, slice_size, test_success));
+        if (test_success) {
+            ASSERT_TRUE(ReportFvm());
+            ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
+            ASSERT_TRUE(ReportFvm());
+        }
         ASSERT_TRUE(DestroyFvm());
         break;
     }
     case FVM_NEW: {
-        ASSERT_TRUE(CreateFvm(false, 0, slice_size));
-        ASSERT_TRUE(ReportFvm());
-        ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
-        ASSERT_TRUE(ReportFvm());
+        ASSERT_TRUE(CreateFvm(false, 0, slice_size, test_success));
+        if (test_success) {
+            ASSERT_TRUE(ReportFvm());
+            ASSERT_TRUE(ExtendFvm(CONTAINER_SIZE * 2));
+            ASSERT_TRUE(ReportFvm());
+        }
         ASSERT_TRUE(DestroyFvm());
         break;
     }
     case FVM_OFFSET: {
-        ASSERT_TRUE(CreateFvm(true, DEFAULT_SLICE_SIZE, slice_size));
-        ASSERT_TRUE(ReportFvm(DEFAULT_SLICE_SIZE));
+        ASSERT_TRUE(CreateFvm(true, DEFAULT_SLICE_SIZE, slice_size, test_success));
+        if (test_success) {
+            ASSERT_TRUE(ReportFvm(DEFAULT_SLICE_SIZE));
+        }
         ASSERT_TRUE(DestroyFvm());
         break;
     }
@@ -527,6 +584,19 @@ template <container_t ContainerType, size_t SliceSize>
 bool TestPartitions() {
     BEGIN_TEST;
     ASSERT_TRUE(CreateReportDestroy(ContainerType, SliceSize));
+    END_TEST;
+}
+
+template <container_t ContainerType, size_t SliceSize, bool test_success, uint64_t data,
+          uint64_t inodes, uint64_t size_limit>
+bool TestPartitionsFailures() {
+    BEGIN_TEST;
+    std::optional<uint64_t> odata = data == 0 ? std::optional<uint64_t>{} : data;
+    std::optional<uint64_t> osize_limit = size_limit == 0 ? std::optional<uint64_t>{} : size_limit;
+    std::optional<uint64_t> oinodes = inodes == 0 ? std::optional<uint64_t>{} : inodes;
+
+    ASSERT_TRUE(
+        CreateReportDestroy(ContainerType, SliceSize, test_success, odata, oinodes, osize_limit));
     END_TEST;
 }
 
@@ -547,7 +617,7 @@ bool TestDiskSizeCalculation() {
     uint32_t flags;
     char* path;
     ASSERT_TRUE(GetSparseInfo(ContainerType, &flags, &path));
-    ASSERT_TRUE(CreateSparse(flags, SliceSize, false /* enable_data */));
+    ASSERT_TRUE(CreateSparseEnsure(flags, SliceSize, false /* enable_data */));
     ASSERT_TRUE(ReportSparse(flags));
     SparseContainer sparseContainer(path, 0, 0);
 
@@ -556,7 +626,7 @@ bool TestDiskSizeCalculation() {
     ASSERT_NE(sparseContainer.CheckDiskSize(expected_size - 1), ZX_OK);
 
     // Create an FVM using the same partitions and verify its size matches expected.
-    ASSERT_TRUE(CreateFvm(false, 0, SliceSize, false /* enable_data */));
+    ASSERT_TRUE(CreateFvmEnsure(false, 0, SliceSize, false /* enable_data */));
     ASSERT_TRUE(VerifyFvmSize(expected_size));
     ASSERT_TRUE(DestroyFvm());
 
@@ -654,7 +724,7 @@ bool TestPave() {
     uint32_t sparse_flags;
     char* src_path;
     ASSERT_TRUE(GetSparseInfo(ContainerType, &sparse_flags, &src_path));
-    ASSERT_TRUE(CreateSparse(sparse_flags, SliceSize, false /* enable_data */));
+    ASSERT_TRUE(CreateSparseEnsure(sparse_flags, SliceSize, false /* enable_data */));
 
     size_t pave_offset = 0;
     size_t pave_size = 0;
@@ -684,13 +754,14 @@ bool TestPave() {
 // TODO(planders): Once we are able to create zxcrypt'd FVM images on host, remove this test.
 bool TestPaveZxcryptFail() {
     BEGIN_TEST;
-    ASSERT_TRUE(CreateSparse(0, DEFAULT_SLICE_SIZE));
+    ASSERT_TRUE(CreateSparseEnsure(0, DEFAULT_SLICE_SIZE));
     SparseContainer sparseContainer(sparse_path, 0, 0);
 
     fbl::unique_ptr<fvm::host::UniqueFdWrapper> wrapper;
     ASSERT_EQ(fvm::host::UniqueFdWrapper::Open(fvm_path, O_RDWR | O_CREAT, 0644, &wrapper), ZX_OK);
     ASSERT_NE(sparseContainer.Pave(std::move(wrapper), 0, 0), ZX_OK);
     ASSERT_TRUE(DestroySparse(0));
+    ASSERT_EQ(unlink(fvm_path), 0);
     END_TEST;
 }
 
@@ -770,14 +841,25 @@ bool Cleanup() {
     END_HELPER;
 }
 
-#define RUN_FOR_ALL_TYPES(slice_size) \
-    RUN_TEST_MEDIUM((TestPartitions<SPARSE, slice_size>)) \
-    RUN_TEST_MEDIUM((TestPartitions<SPARSE_LZ4, slice_size>)) \
-    RUN_TEST_MEDIUM((TestPartitions<FVM, slice_size>)) \
-    RUN_TEST_MEDIUM((TestPartitions<FVM_NEW, slice_size>)) \
-    RUN_TEST_MEDIUM((TestPartitions<FVM_OFFSET, slice_size>)) \
-    RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE, slice_size>)) \
-    RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE_LZ4, slice_size>)) \
+#define RUN_FOR_ALL_TYPES(slice_size)                                                              \
+    RUN_TEST_MEDIUM((TestPartitions<SPARSE, slice_size>))                                          \
+    RUN_TEST_MEDIUM((TestPartitions<SPARSE_LZ4, slice_size>))                                      \
+    RUN_TEST_MEDIUM((TestPartitions<FVM, slice_size>))                                             \
+    RUN_TEST_MEDIUM((TestPartitions<FVM_NEW, slice_size>))                                         \
+    RUN_TEST_MEDIUM((TestPartitions<FVM_OFFSET, slice_size>))                                      \
+    RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE, slice_size>))                                 \
+    RUN_TEST_MEDIUM((TestDiskSizeCalculation<SPARSE_LZ4, slice_size>))
+
+#define RUN_RESERVATION_TEST_FOR_ALL_TYPES(slice_size, should_pass, data, inodes, limit)           \
+    RUN_TEST_MEDIUM(                                                                               \
+        (TestPartitionsFailures<SPARSE, slice_size, should_pass, data, inodes, limit>))            \
+    RUN_TEST_MEDIUM(                                                                               \
+        (TestPartitionsFailures<SPARSE_LZ4, slice_size, should_pass, data, inodes, limit>))        \
+    RUN_TEST_MEDIUM((TestPartitionsFailures<FVM, slice_size, should_pass, data, inodes, limit>))   \
+    RUN_TEST_MEDIUM(                                                                               \
+        (TestPartitionsFailures<FVM_NEW, slice_size, should_pass, data, inodes, limit>))           \
+    RUN_TEST_MEDIUM(                                                                               \
+        (TestPartitionsFailures<FVM_OFFSET, slice_size, should_pass, data, inodes, limit>))
 
 #define RUN_ALL_SPARSE(create_type, size_type, slice_size) \
     RUN_TEST_MEDIUM((TestPave<create_type, size_type, SPARSE, slice_size>)) \
@@ -799,6 +881,25 @@ RUN_TEST_MEDIUM(TestCompressorBufferTooSmall)
 RUN_ALL_PAVE(8192)
 RUN_ALL_PAVE(DEFAULT_SLICE_SIZE)
 RUN_TEST_MEDIUM(TestPaveZxcryptFail)
+// Too small total limit for inodes. Expect failure
+RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, false, 1, 0, 10)
+
+// Too small total limit for 100 bytes of data
+RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, false, 0, 1000, 999)
+
+// Too small limit for data + inodes
+RUN_RESERVATION_TEST_FOR_ALL_TYPES(DEFAULT_SLICE_SIZE, false, 200, 10, 1000)
+
+// Limitless capacity for 10 inodes and 100 bytes
+RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, true, 10, 100, 0)
+
+// Creating large total_bytes partition leads to increased test run time.
+// Keep the total_bytes within certain limit.
+RUN_RESERVATION_TEST_FOR_ALL_TYPES(8192, true, 100, 10, 300 * 1024 * 1024)
+
+// Limitless capacity for 10k inodes and 10k bytes of data
+RUN_RESERVATION_TEST_FOR_ALL_TYPES(DEFAULT_SLICE_SIZE, true, 10000, 1024 * 10, 0)
+
 END_TEST_CASE(fvm_host_tests)
 
 int main(int argc, char** argv) {

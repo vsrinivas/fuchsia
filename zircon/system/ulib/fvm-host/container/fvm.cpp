@@ -351,7 +351,8 @@ size_t FvmContainer::SliceSize() const {
     return slice_size_;
 }
 
-zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) {
+zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name,
+                                       FvmReservation* reserve) {
     info_.CheckValid();
 
     fbl::unique_ptr<Format> format;
@@ -370,7 +371,7 @@ zx_status_t FvmContainer::AddPartition(const char* path, const char* type_name) 
         return status;
     }
 
-    if ((status = format->MakeFvmReady(slice_size_, vpart_index)) != ZX_OK) {
+    if ((status = format->MakeFvmReady(slice_size_, vpart_index, reserve)) != ZX_OK) {
         return status;
     }
 
