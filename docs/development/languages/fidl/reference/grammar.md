@@ -58,7 +58,7 @@ library-header = ( attribute-list ) , "library" , compound-identifier , ";" ;
 
 using-list = ( using | using-declaration )* ;
 
-using-declaration = "using" , IDENTIFIER ,  "=" , type-constructor , ";" ; [NOTE 1]
+using-declaration = "using" , IDENTIFIER ,  "=" , type-constructor , ";" ;
 
 declaration-list = ( declaration , ";" )* ;
 
@@ -72,14 +72,14 @@ declaration = bits-declaration | const-declaration | enum-declaration | protocol
 const-declaration = ( attribute-list ) , "const" , type-constructor , IDENTIFIER , "=" , constant ;
 
 enum-declaration = ( attribute-list ) , "enum" , IDENTIFIER , ( ":" , type-constructor ) ,
-                   "{" , ( bits-or-enum-member , ";" )+ , "}" ; [NOTE 2]
+                   "{" , ( bits-or-enum-member , ";" )+ , "}" ; [NOTE 1]
 
 bits-declaration = ( attribute-list ) , "bits" , IDENTIFIER , ( ":" , type-constructor ) ,
-                   "{" , ( bits-or-enum-member , ";" )+ , "}" ; [NOTE 3]
+                   "{" , ( bits-or-enum-member , ";" )+ , "}" ; [NOTE 2]
 
 bits-or-enum-member = ( attribute-list ) , IDENTIFIER , "=" , bits-or-enum-member-value ;
 
-bits-or-enum-member-value = IDENTIFIER | literal ; [NOTE 4]
+bits-or-enum-member-value = IDENTIFIER | literal ; [NOTE 3]
 
 protocol-declaration = ( attribute-list ) , "protocol" , IDENTIFIER ,
                        "{" , ( protocol-member , ";" )*  , "}" ;
@@ -87,7 +87,7 @@ protocol-declaration = ( attribute-list ) , "protocol" , IDENTIFIER ,
 protocol-member = protocol-method | protocol-event | protocol-compose ;
 
 protocol-method = ( attribute-list ) , IDENTIFIER , parameter-list,
-                  ( "->" , parameter-list , ( "error" type-constructor ) ) ; [NOTE 5]
+                  ( "->" , parameter-list , ( "error" type-constructor ) ) ; [NOTE 4]
 
 protocol-event = ( attribute-list ) , "->" , IDENTIFIER , parameter-list ;
 
@@ -142,25 +142,20 @@ literal = STRING-LITERAL | NUMERIC-LITERAL | "true" | "false" ;
 ----------
 
 ### NOTE 1
-The `using-declaration` allows the more liberal `type-constructor`
-in the grammar, but the compiler limits this to
-[primitives].
-
-### NOTE 2
 The `enum-declaration` allows the more liberal `type-constructor` in the
 grammar, but the compiler limits this to signed or unsigned integer types,
 see [primitives].
 
-### NOTE 3
+### NOTE 2
 The `bits-declaration` allows the more liberal `type-constructor` in the grammar, but the compiler
 limits this to unsigned integer types, see [primitives].
 
-### NOTE 4
+### NOTE 3
 The `bits-or-enum-member-value` allows the more liberal `literal` in the grammar, but the compiler limits this to:
 * A `NUMERIC-LITERAL` in the context of an `enum`;
 * A `NUMERIC-LITERAL` which must be a power of two, in the context of a `bits`.
 
-### NOTE 5
+### NOTE 4
 The `protocol-method` error stanza allows the more liberal `type-constructor`
 in the grammar, but the compiler limits this to an `int32`, `uint32`, or
 an enum thereof.

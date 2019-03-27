@@ -50,7 +50,7 @@ struct Bad {
     const auto& errors = library.errors();
     ASSERT_EQ(1, errors.size());
     ASSERT_STR_STR(errors[0].c_str(),
-        "type aliases cannot be nullable");
+        "int64 cannot be nullable");
 
     END_TEST;
 }

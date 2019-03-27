@@ -77,27 +77,9 @@ bool root_types_with_some_library_in_lookup() {
     END_TEST;
 }
 
-bool alias_not_of_primitive() {
-    BEGIN_TEST;
-
-    TestLibrary library(R"FIDL(
-library example;
-
-using some_alias = string;
-
-)FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "may only alias primitive types, found string");
-
-    END_TEST;
-}
-
 BEGIN_TEST_CASE(types_tests);
 RUN_TEST(root_types_with_no_library_in_lookup);
 RUN_TEST(root_types_with_some_library_in_lookup);
-RUN_TEST(alias_not_of_primitive);
 END_TEST_CASE(types_tests);
 
 } // namespace flat

@@ -382,6 +382,20 @@ bool Typespace::Create(const flat::Name& name,
                        const Size* size,
                        types::Nullability nullability,
                        const Type** out_type) {
+    std::unique_ptr<Type> type;
+    if (!CreateNotOwned(name, arg_type, handle_subtype, size, nullability, &type))
+        return false;
+    types_.push_back(std::move(type));
+    *out_type = types_.back().get();
+    return true;
+}
+
+bool Typespace::CreateNotOwned(const flat::Name& name,
+                       const Type* arg_type,
+                       const types::HandleSubtype* handle_subtype,
+                       const Size* size,
+                       types::Nullability nullability,
+                       std::unique_ptr<Type>* out_type) {
     // TODO(pascallouis): lookup whether we've already created the type, and
     // return it rather than create a new one. Lookup must be by name,
     // arg_type, size, and nullability.
@@ -394,13 +408,8 @@ bool Typespace::Create(const flat::Name& name,
         error_reporter_->ReportError(location, message);
         return false;
     }
-    std::unique_ptr<Type> type;
-    if (!type_template->Create(location, arg_type, handle_subtype, size, nullability, &type))
-        return false;
+    return type_template->Create(location, arg_type, handle_subtype, size, nullability, out_type);
 
-    types_.push_back(std::move(type));
-    *out_type = types_.back().get();
-    return true;
 }
 
 void Typespace::AddTemplate(std::unique_ptr<TypeTemplate> type_template) {
@@ -665,6 +674,70 @@ public:
 private:
     Library* library_;
     TypeDecl* type_decl_;
+};
+
+class TypeAliasTypeTemplate : public TypeTemplate {
+public:
+    TypeAliasTypeTemplate(Name name, Typespace* typespace, ErrorReporter* error_reporter,
+                          Library* library,
+                          std::unique_ptr<TypeConstructor> partial_type_ctor)
+        : TypeTemplate(std::move(name), typespace, error_reporter),
+          library_(library), partial_type_ctor_(std::move(partial_type_ctor)) {}
+
+    bool Create(const SourceLocation& location,
+                const Type* maybe_arg_type,
+                const types::HandleSubtype* no_handle_subtype,
+                const Size* maybe_size,
+                types::Nullability maybe_nullability,
+                std::unique_ptr<Type>* out_type) const {
+        assert(!no_handle_subtype);
+
+        const Type* arg_type = nullptr;
+        if (partial_type_ctor_->maybe_arg_type_ctor) {
+            if (maybe_arg_type) {
+                return Fail(location, "cannot parametrize twice");
+            }
+            if (!partial_type_ctor_->maybe_arg_type_ctor->type) {
+                if (!library_->CompileTypeConstructor(
+                    partial_type_ctor_->maybe_arg_type_ctor.get(),
+                    nullptr /* out_typeshape */))
+                    return false;
+            }
+            arg_type = partial_type_ctor_->maybe_arg_type_ctor->type;
+        } else {
+            arg_type = maybe_arg_type;
+        }
+
+        const Size* size = nullptr;
+        if (partial_type_ctor_->maybe_size) {
+            if (maybe_size) {
+                return Fail(location, "cannot bound twice");
+            }
+            if (!library_->ResolveConstant(partial_type_ctor_->maybe_size.get(), &library_->kSizeType))
+                return Fail(location, "unable to parse size bound");
+            size = static_cast<const Size*>(&partial_type_ctor_->maybe_size->Value());
+        } else {
+            size = maybe_size;
+        }
+
+        types::Nullability nullability;
+        if (partial_type_ctor_->nullability == types::Nullability::kNullable) {
+            if (maybe_nullability == types::Nullability::kNullable) {
+                return Fail(location, "cannot indicate nullability twice");
+            }
+            nullability = types::Nullability::kNullable;
+        } else {
+            nullability = maybe_nullability;
+        }
+
+        return typespace_->CreateNotOwned(partial_type_ctor_->name, arg_type,
+                                          nullptr /* handle_subtype */,
+                                          size, nullability, out_type);
+    }
+
+private:
+    Library* library_;
+    std::unique_ptr<TypeConstructor> partial_type_ctor_;
 };
 
 Typespace Typespace::RootTypes(ErrorReporter* error_reporter) {
@@ -1386,8 +1459,6 @@ bool Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive) {
     // Import declarations, and type aliases of dependent library.
     const auto& declarations = dep_library->declarations_;
     declarations_.insert(declarations.begin(), declarations.end());
-    const auto& type_aliases = dep_library->type_aliases_;
-    type_aliases_.insert(type_aliases.begin(), type_aliases.end());
     return true;
 }
 
@@ -1396,24 +1467,12 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::Using> using_directive) {
 
     auto location = using_directive->using_path->components[0]->location();
     auto alias_name = Name(this, location);
-    Name type_name;
-    if (!CompileCompoundIdentifier(using_directive->maybe_type_ctor->identifier.get(),
-                                   using_directive->maybe_type_ctor->location(),
-                                   &type_name)) {
+    std::unique_ptr<TypeConstructor> partial_type_ctor_;
+    if (!ConsumeTypeConstructor(std::move(using_directive->maybe_type_ctor), location,
+                                &partial_type_ctor_))
         return false;
-    }
-    const Type* type;
-    if (!typespace_->Create(type_name, nullptr, nullptr, nullptr, types::Nullability::kNonnullable, &type))
-        return false;
-    if (type->kind != Type::Kind::kPrimitive) {
-        std::string message("may only alias primitive types, found ");
-        message += type_name.name_part();
-        return Fail(location, message);
-    }
-    auto primitive_type = static_cast<const PrimitiveType*>(type);
-    auto using_dir = std::make_unique<Using>(std::move(alias_name), primitive_type);
-    type_aliases_.emplace(&using_dir->name, using_dir.get());
-    using_.push_back(std::move(using_dir));
+    typespace_->AddTemplate(std::make_unique<TypeAliasTypeTemplate>(
+        std::move(alias_name), typespace_, error_reporter_, this, std::move(partial_type_ctor_)));
     return true;
 }
 
@@ -2194,13 +2253,6 @@ Decl* Library::LookupConstant(const TypeConstructor* type_ctor, const Name& name
 
 // Library resolution is concerned with resolving identifiers to their
 // declarations, and with computing type sizes and alignments.
-
-const PrimitiveType* Library::LookupTypeAlias(const Name& name) const {
-    const auto it = type_aliases_.find(&name);
-    if (it == type_aliases_.end())
-        return nullptr;
-    return it->second->type;
-}
 
 Decl* Library::LookupDeclByName(const Name& name) const {
     auto iter = declarations_.find(&name);
@@ -3077,20 +3129,10 @@ bool Library::CompileTypeConstructor(TypeConstructor* type_ctor, TypeShape* out_
             return Fail(location, "unable to parse size bound");
         size = static_cast<const Size*>(&type_ctor->maybe_size->Value());
     }
-
-    // Special case: type aliases.
-    const auto alias_type = LookupTypeAlias(type_ctor->name);
-    if (alias_type != nullptr) {
-        if (type_ctor->nullability != types::Nullability::kNonnullable)
-            return Fail(location, "type aliases cannot be nullable");
-        type_ctor->type = alias_type;
-    } else {
-        if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->maybe_handle_subtype.get(),
-                                size, type_ctor->nullability,
-                                &type_ctor->type))
-            return false;
-    }
-
+    if (!typespace_->Create(type_ctor->name, maybe_arg_type, type_ctor->maybe_handle_subtype.get(),
+                            size, type_ctor->nullability,
+                            &type_ctor->type))
+        return false;
     if (out_typeshape)
         *out_typeshape = type_ctor->type->shape;
     return true;

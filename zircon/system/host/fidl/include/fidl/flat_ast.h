@@ -936,6 +936,14 @@ public:
     static Typespace RootTypes(ErrorReporter* error_reporter);
 
 private:
+    friend class TypeAliasTypeTemplate;
+
+    bool CreateNotOwned(const flat::Name& name,
+                        const Type* arg_type,
+                        const types::HandleSubtype* handle_subtype,
+                        const Size* size,
+                        types::Nullability nullability,
+                        std::unique_ptr<Type>* out_type);
     const TypeTemplate* LookupTemplate(const flat::Name& name) const;
 
     struct cmpName {
@@ -1076,6 +1084,8 @@ public:
     const std::vector<std::string>& errors() const { return error_reporter_->errors(); }
 
 private:
+    friend class TypeAliasTypeTemplate;
+
     bool Fail(StringView message);
     bool Fail(const SourceLocation& location, StringView message);
     bool Fail(const Name& name, StringView message) {
@@ -1131,10 +1141,6 @@ private:
     // return the declaration corresponding to name.
     Decl* LookupConstant(const TypeConstructor* type_ctor, const Name& name);
 
-    // Given a name, checks whether that name corresponds to a type alias. If
-    // so, returns the type. Otherwise, returns nullptr.
-    const PrimitiveType* LookupTypeAlias(const Name& name) const;
-
     bool DeclDependencies(Decl* decl, std::set<Decl*>* out_edges);
 
     bool SortDeclarations();
@@ -1189,7 +1195,6 @@ public:
 
     std::vector<StringView> library_name_;
 
-    std::vector<std::unique_ptr<Using>> using_;
     std::vector<std::unique_ptr<Bits>> bits_declarations_;
     std::vector<std::unique_ptr<Const>> const_declarations_;
     std::vector<std::unique_ptr<Enum>> enum_declarations_;
@@ -1213,7 +1218,6 @@ private:
 
     // All Name, Constant, Using, and Decl pointers here are non-null and are
     // owned by the various foo_declarations_.
-    std::map<const Name*, Using*, PtrCompare<Name>> type_aliases_;
     std::map<const Name*, Decl*, PtrCompare<Name>> declarations_;
     std::map<const Name*, Const*, PtrCompare<Name>> constants_;
 
