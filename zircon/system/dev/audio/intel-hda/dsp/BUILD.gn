@@ -38,6 +38,6 @@ driver("dsp") {
 
 firmware("firmware") {
   sources = [
-    "$firmware_dir/intel-adsp-sst/dsp_fw_kbl_v3266.bin",
+    "$firmware_dir/intel-adsp-sst/dsp_fw_kbl_v3420.bin",
   ]
 }

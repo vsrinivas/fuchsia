@@ -7,7 +7,7 @@ $ParanoidMode CheckPresence
 
 # ADSP SST Firmware
 @Subdir firmware/intel-adsp-sst
-fuchsia_internal/firmware/intel-adsp-sst git_revision:8fc2d4e55685bf73b6f7752383da9067404a74bb
+fuchsia_internal/firmware/intel-adsp-sst NC0gy5Ej51GElpWUQXzO6Q1d5hPLV4Z4c1mbhDLuhfcC
 
 # Broadcom BCM4345C4 Firmware
 @Subdir firmware/bluetooth/bcm4345c4
