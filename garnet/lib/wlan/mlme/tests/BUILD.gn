@@ -270,8 +270,8 @@ package("wlan_tests") {
   testonly = true
 
   deps = [
-    "//garnet/drivers/wlan/testing",
     ":tests",
+    "//src/connectivity/wlan/drivers/testing",
   ]
 
   data_deps = [

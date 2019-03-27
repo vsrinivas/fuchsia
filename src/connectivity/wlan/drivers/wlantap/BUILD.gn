@@ -5,18 +5,28 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-driver_module("wlanif-test-driver") {
-  output_name = "wlanif-test"
+driver_module("wlantap_driver") {
+  output_name = "wlantap"
 
   sources = [
-    "binding.c",
+    "utils.cpp",
+    "utils.h",
+    "wlantap-ctl.cpp",
+    "wlantap-mac.cpp",
+    "wlantap-mac.h",
+    "wlantap-phy.cpp",
+    "wlantap-phy.h",
   ]
 
   deps = [
-    "//garnet/drivers/wlan/lib",
     "//garnet/lib/wlan/common",
+    "//garnet/lib/wlan/fidl:wlantap",
     "//garnet/lib/wlan/protocol",
+    "//src/connectivity/wlan/drivers/lib",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/driver",
+    "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
 
@@ -27,16 +37,16 @@ driver_module("wlanif-test-driver") {
   ]
 }
 
-package("wlanif-test") {
+package("wlantap") {
   deprecated_system_image = true
 
   deps = [
-    ":wlanif-test-driver",
+    ":wlantap_driver",
   ]
 
   drivers = [
     {
-      name = "wlanif-test.so"
+      name = "wlantap.so"
     },
   ]
 }

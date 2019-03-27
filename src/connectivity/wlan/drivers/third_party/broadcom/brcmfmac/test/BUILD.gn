@@ -26,7 +26,7 @@ executable("workqueue_test") {
   ]
 
   deps = [
-    "//garnet/drivers/wlan/third_party/broadcom/brcmfmac:brcmfmac_srcs",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_srcs",
     "//third_party/googletest:gtest_main",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-loop",
@@ -49,8 +49,8 @@ executable("netbuf_test") {
   ]
 
   deps = [
-    "//garnet/drivers/wlan/third_party/broadcom/brcmfmac:brcmfmac_srcs",
     "//garnet/lib/wlan/protocol",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:brcmfmac_srcs",
     "//third_party/googletest:gtest_main",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-loop",

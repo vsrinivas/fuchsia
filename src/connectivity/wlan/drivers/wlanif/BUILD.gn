@@ -5,9 +5,11 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-driver_module("wlanphy_driver") {
-  output_name = "wlanphy"
+driver_module("wlanif_driver") {
+  output_name = "wlanif"
   sources = [
+    "convert.cpp",
+    "convert.h",
     "device.cpp",
     "device.h",
     "driver.cpp",
@@ -15,11 +17,10 @@ driver_module("wlanphy_driver") {
   ]
 
   deps = [
-    "//garnet/drivers/wlan/lib",
     "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/fidl",
     "//garnet/lib/wlan/protocol",
-    "//garnet/public/lib/fxl",
+    "//src/connectivity/wlan/drivers/lib",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ddk",
@@ -33,16 +34,16 @@ driver_module("wlanphy_driver") {
   ]
 }
 
-package("wlanphy") {
+package("wlanif") {
   deprecated_system_image = true
 
   deps = [
-    ":wlanphy_driver",
+    ":wlanif_driver",
   ]
 
   drivers = [
     {
-      name = "wlanphy.so"
+      name = "wlanif.so"
     },
   ]
 }

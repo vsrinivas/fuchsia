@@ -7,7 +7,7 @@ import("//build/config/fuchsia/rules.gni")
 group("testing") {
   public_deps = [
     ":wlanphy-testdev",
-    "//garnet/drivers/wlan/testing/util",
+    "//src/connectivity/wlan/drivers/testing/util",
   ]
 }
 
@@ -21,10 +21,10 @@ driver_module("wlanphy-testdev") {
   ]
 
   deps = [
-    "//garnet/drivers/wlan/lib",
     "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/fidl",
     "//garnet/lib/wlan/protocol",
+    "//src/connectivity/wlan/drivers/lib",
     "//zircon/public/banjo/ddk-protocol-sdio",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",

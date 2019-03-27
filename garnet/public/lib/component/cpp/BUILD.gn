@@ -193,7 +193,7 @@ source_set("environment_services") {
   # DO NOT ADD MORE ENTRIES TO THIS LIST.
   visibility = [
     "//garnet/bin/appmgr:*",
-    "//garnet/drivers/wlan/wlan:*",
+    "//src/connectivity/wlan/drivers/wlan:*",
 
     # TODO(CF-664): move playback to lib/sys.
     "//src/media/playback/*",

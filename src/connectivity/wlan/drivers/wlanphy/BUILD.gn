@@ -5,29 +5,25 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
-driver_module("wlantap_driver") {
-  output_name = "wlantap"
-
+driver_module("wlanphy_driver") {
+  output_name = "wlanphy"
   sources = [
-    "utils.cpp",
-    "utils.h",
-    "wlantap-ctl.cpp",
-    "wlantap-mac.cpp",
-    "wlantap-mac.h",
-    "wlantap-phy.cpp",
-    "wlantap-phy.h",
+    "device.cpp",
+    "device.h",
+    "driver.cpp",
+    "driver.h",
   ]
 
   deps = [
-    "//garnet/drivers/wlan/lib",
     "//garnet/lib/wlan/common",
-    "//garnet/lib/wlan/fidl:wlantap",
+    "//garnet/lib/wlan/fidl",
     "//garnet/lib/wlan/protocol",
+    "//garnet/public/lib/fxl",
+    "//src/connectivity/wlan/drivers/lib",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -37,16 +33,16 @@ driver_module("wlantap_driver") {
   ]
 }
 
-package("wlantap") {
+package("wlanphy") {
   deprecated_system_image = true
 
   deps = [
-    ":wlantap_driver",
+    ":wlanphy_driver",
   ]
 
   drivers = [
     {
-      name = "wlantap.so"
+      name = "wlanphy.so"
     },
   ]
 }

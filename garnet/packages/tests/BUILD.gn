@@ -25,7 +25,7 @@ group("netfilter") {
 group("broadcom") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/wlan/third_party/broadcom/brcmfmac/test:brcmfmac_test",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:brcmfmac_test",
   ]
 }
 
@@ -726,7 +726,7 @@ group("system_monitor") {
 group("ath10k") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/wlan/third_party/atheros/ath10k:ath10k_test",
+    "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k_test",
   ]
 }
 
@@ -835,7 +835,6 @@ group("wlan") {
     "//garnet/bin/wlan/wlancfg:wlancfg-tests",
     "//garnet/bin/wlan/wlanstack:wlanstack2-tests",
     "//garnet/bin/wlan/wlantool:wlantool2-tests",
-    "//garnet/drivers/wlan/wlan:wlan_drivers_tests",
     "//garnet/lib/rust/wlan-bitfield/wlan-bitfield-tests",
     "//garnet/lib/rust/wlan-common:wlan-common-tests",
     "//garnet/lib/rust/wlan-inspect:wlan-inspect-tests",
@@ -843,6 +842,7 @@ group("wlan") {
     "//garnet/lib/rust/wlan-rsn:wlan-rsn-tests",
     "//garnet/lib/rust/wlan-sme:wlan-sme-tests",
     "//garnet/lib/wlan/mlme/tests:wlan_tests",
+    "//src/connectivity/wlan/drivers/wlan:wlan_drivers_tests",
   ]
 }
 

@@ -22,9 +22,9 @@ group("tz-util") {
 group("broadcom") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/wlan/third_party/broadcom/brcmfmac",
-    "//garnet/drivers/wlan/wlanif",
-    "//garnet/drivers/wlan/wlanphy",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac",
+    "//src/connectivity/wlan/drivers/wlanif",
+    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
 
@@ -332,18 +332,18 @@ group("sysmem-assistant") {
 group("atheros") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/wlan/third_party/atheros/ath10k:ath10k",
-    "//garnet/drivers/wlan/wlan",
-    "//garnet/drivers/wlan/wlanphy",
+    "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
 
 group("realtek") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/wlan/realtek/rtl88xx",
-    "//garnet/drivers/wlan/wlan",
-    "//garnet/drivers/wlan/wlanphy",
+    "//src/connectivity/wlan/drivers/realtek/rtl88xx",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
 
@@ -958,8 +958,8 @@ group("terminal") {
 group("wlanif") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/wlan/wlan",
-    "//garnet/drivers/wlan/wlanif",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanif",
   ]
 }
 
@@ -1006,8 +1006,8 @@ group("wlancfg") {
 group("wlanphy") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/wlan/wlan",
-    "//garnet/drivers/wlan/wlanphy",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
 
@@ -1043,9 +1043,9 @@ group("mdns-util") {
 group("ralink") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/wlan/mediatek/ralink",
-    "//garnet/drivers/wlan/wlan",
-    "//garnet/drivers/wlan/wlanphy",
+    "//src/connectivity/wlan/drivers/mediatek/ralink",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
 
@@ -1111,8 +1111,8 @@ group("fortune") {
 group("wlantap") {
   testonly = true
   public_deps = [
-    "//garnet/drivers/wlan/wlan",
-    "//garnet/drivers/wlan/wlantap",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlantap",
   ]
 }
 
