@@ -44,8 +44,22 @@ use {
     void::Void,
 };
 
-/// When in a "simple" directory is traversed, entries are returned in an alphanumeric order.
-type SimpleDirectoryConnection = DirectoryConnection<AlphabeticalTraversal>;
+/// Creates an empty directory.
+///
+/// POSIX access attributes are set to [`DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES`].
+pub fn empty<'entries>() -> Simple<'entries> {
+    empty_attr(DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES)
+}
+
+/// Creates an empty directory with the specified POSIX access attributes.
+pub fn empty_attr<'entries>(protection_attributes: u32) -> Simple<'entries> {
+    Simple {
+        protection_attributes,
+        entries: BTreeMap::new(),
+        connections: FuturesUnordered::new(),
+        watchers: Vec::new(),
+    }
+}
 
 /// An implementation of a pseudo directory.  Most clients will probably just use the
 /// DirectoryEntry trait to deal with the pseudo directories uniformly.
@@ -85,22 +99,8 @@ enum ConnectionState {
     Closed,
 }
 
-/// Creates an empty directory.
-///
-/// POSIX access attributes are set to [`DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES`].
-pub fn empty<'entries>() -> Simple<'entries> {
-    empty_attr(DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES)
-}
-
-/// Creates an empty directory with the specified POSIX access attributes.
-pub fn empty_attr<'entries>(protection_attributes: u32) -> Simple<'entries> {
-    Simple {
-        protection_attributes,
-        entries: BTreeMap::new(),
-        connections: FuturesUnordered::new(),
-        watchers: Vec::new(),
-    }
-}
+/// When in a "simple" directory is traversed, entries are returned in an alphanumeric order.
+type SimpleDirectoryConnection = DirectoryConnection<AlphabeticalTraversal>;
 
 impl<'entries> Simple<'entries> {
     /// Adds a child entry to this directory.  The directory will own the child entry item and will
