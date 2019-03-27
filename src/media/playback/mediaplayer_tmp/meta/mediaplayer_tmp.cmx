@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/mediaplayer_tmp"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.media.Audio",
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.sys.Environment",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.viewsv1.ViewManager"
+        ]
+    }
+}

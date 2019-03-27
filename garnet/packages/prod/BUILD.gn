@@ -614,6 +614,7 @@ group("mediaplayer") {
   testonly = true
   public_deps = [
     "//src/media/playback/mediaplayer",
+    "//src/media/playback/mediaplayer_tmp",
   ]
 }
 

@@ -33,6 +33,7 @@ if (ffmpeg_prebuilts + [ toolchain_variant.name ] -
 group("ffmpeg") {
   visibility = [
     "//src/media/playback/mediaplayer/ffmpeg",
+    "//src/media/playback/mediaplayer_tmp/ffmpeg",
     "//garnet/bin/media/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg",
   ]
 
