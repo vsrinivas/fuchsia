@@ -185,4 +185,15 @@ void GatherThreadSamples(
   task_harvester.UploadTaskInfo(harvester);
 }
 
+void GatherComponentIntrospection(
+    zx_handle_t root_resource,
+    const std::unique_ptr<harvester::Harvester>& harvester) {
+  std::string fake_json_data = "{ \"test\": 5 }";
+  HarvesterStatus status = harvester->SendInspectJson(
+      "inspect:/hub/fake/234/faux.Inspect", fake_json_data);
+  if (status != HarvesterStatus::OK) {
+    FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
+  }
+}
+
 }  // namespace harvester

@@ -30,6 +30,10 @@ class Harvester {
   // Initialize the Harvester.
   virtual HarvesterStatus Init() = 0;
 
+  // Send inspection data to the Dockyard.
+  virtual HarvesterStatus SendInspectJson(const std::string& stream_name,
+                                          const std::string& json) = 0;
+
   // Send a single sample to the Dockyard.
   virtual HarvesterStatus SendSample(const std::string& stream_name,
                                      uint64_t value) = 0;
@@ -46,6 +50,10 @@ void GatherMemorySamples(
     zx_handle_t root_resource,
     const std::unique_ptr<harvester::Harvester>& harvester);
 void GatherThreadSamples(
+    zx_handle_t root_resource,
+    const std::unique_ptr<harvester::Harvester>& harvester);
+
+void GatherComponentIntrospection(
     zx_handle_t root_resource,
     const std::unique_ptr<harvester::Harvester>& harvester);
 

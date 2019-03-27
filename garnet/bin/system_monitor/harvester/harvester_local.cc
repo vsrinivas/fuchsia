@@ -12,6 +12,12 @@ HarvesterStatus HarvesterLocal::Init() {
   return HarvesterStatus::OK;
 }
 
+HarvesterStatus HarvesterLocal::SendInspectJson(const std::string& stream_name,
+                                                const std::string& json) {
+  FXL_LOG(INFO) << "HarvesterLocal::SendInspectJson";
+  return HarvesterStatus::OK;
+}
+
 HarvesterStatus HarvesterLocal::SendSample(const std::string& stream_name,
                                            uint64_t value) {
   FXL_LOG(INFO) << "HarvesterLocal::SendSample";

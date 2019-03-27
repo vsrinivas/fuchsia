@@ -45,6 +45,20 @@ HarvesterStatus HarvesterGrpc::Init() {
   return HarvesterStatus::ERROR;
 }
 
+HarvesterStatus HarvesterGrpc::SendInspectJson(const std::string& stream_name,
+                                               const std::string& json) {
+  auto now = std::chrono::system_clock::now();
+  uint64_t nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                             now.time_since_epoch())
+                             .count();
+  dockyard::SampleStreamId stream_id;
+  grpc::Status status = GetStreamIdForName(&stream_id, stream_name);
+  if (status.ok()) {
+    return ToHarvesterStatus(SendInspectJsonById(nanoseconds, stream_id, json));
+  }
+  return ToHarvesterStatus(status);
+}
+
 HarvesterStatus HarvesterGrpc::SendSample(const std::string& stream_name,
                                           uint64_t value) {
   // TODO(dschuyler): system_clock might be at usec resolution. Consider using
@@ -81,6 +95,25 @@ HarvesterStatus HarvesterGrpc::SendSampleList(const SampleList list) {
     id_iter->second = name_iter->second;
   }
   return ToHarvesterStatus(SendSampleListById(nanoseconds, by_id));
+}
+
+grpc::Status HarvesterGrpc::SendInspectJsonById(
+    uint64_t time, dockyard::SampleStreamId stream_id,
+    const std::string& json) {
+  // Data we are sending to the server.
+  dockyard_proto::InspectJson inspect;
+  inspect.set_time(time);
+  inspect.set_id(stream_id);
+  inspect.set_json(json);
+
+  grpc::ClientContext context;
+  std::shared_ptr<grpc::ClientReaderWriter<dockyard_proto::InspectJson,
+                                           dockyard_proto::EmptyMessage>>
+      stream(stub_->SendInspectJson(&context));
+
+  stream->Write(inspect);
+  stream->WritesDone();
+  return stream->Finish();
 }
 
 grpc::Status HarvesterGrpc::SendSampleById(uint64_t time,

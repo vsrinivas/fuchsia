@@ -19,6 +19,9 @@ service Dockyard {
   // Ask the Dockyard what the ID is for the given StreamName.
   rpc GetStreamIdForName (StreamNameMessage) returns (StreamIdMessage) {}
 
+  // Sends a single JSON inspection message.
+  rpc SendInspectJson (stream InspectJson) returns (stream EmptyMessage) {}
+
   // Sends a single sample.
   rpc SendSample (stream RawSample) returns (stream EmptyMessage) {}
 
@@ -66,6 +69,7 @@ message Sample {
 
 // Sample data going from the Harvester to the Dockyard. A single sample with a
 // time stamp.
+// |time| is in nanoseconds.
 message RawSample {
   uint64 time = 1;
   Sample sample = 2;
@@ -74,7 +78,18 @@ message RawSample {
 // Sample data going from the Harvester to the Dockyard. A list of samples with
 // a common timestamp. This is an optimization over sending a burst of separate
 // samples with `RawSample`.
+// |time| is in nanoseconds.
 message RawSamples {
   uint64 time = 1;
   repeated Sample sample = 2;
+}
+
+// Component inspection data in JSON format.
+// |time| is in nanoseconds.
+// |id| is a stream ID, as returned by GetStreamIdForName()
+// |json| is a JSON format utf-8 string.
+message InspectJson {
+  uint64 time = 1;
+  uint64 id = 2;
+  string json = 3;
 }

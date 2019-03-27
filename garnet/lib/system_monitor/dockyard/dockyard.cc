@@ -62,6 +62,19 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
     return grpc::Status::OK;
   }
 
+  grpc::Status SendInspectJson(
+      grpc::ServerContext* context,
+      grpc::ServerReaderWriter<dockyard_proto::EmptyMessage,
+                               dockyard_proto::InspectJson>* stream) override {
+    dockyard_proto::InspectJson inspect;
+    while (stream->Read(&inspect)) {
+      FXL_LOG(INFO) << "Received inspect at " << inspect.time() << ", key "
+                    << inspect.id() << ": " << inspect.json();
+      // TODO(dschuyler): interpret the data.
+    }
+    return grpc::Status::OK;
+  }
+
   // This is the handler for the client sending a `SendSample` message. A better
   // name would be `ReceiveSample` but then it wouldn't match the message
   // name.

@@ -22,6 +22,10 @@ class HarvesterGrpc : public Harvester {
   virtual HarvesterStatus Init() override;
 
   // |Harvester|.
+  virtual HarvesterStatus SendInspectJson(const std::string& stream_name,
+                                          const std::string& json) override;
+
+  // |Harvester|.
   virtual HarvesterStatus SendSample(const std::string& stream_name,
                                      uint64_t value) override;
 
@@ -34,12 +38,21 @@ class HarvesterGrpc : public Harvester {
   // For looking up the ID of a stream name.
   std::map<std::string, dockyard::SampleStreamId> stream_ids_;
 
+  // Actually send data to the Dockyard.
+  // |time| is in nanoseconds.
+  // See also: SendInspectJson().
+  grpc::Status SendInspectJsonById(uint64_t time,
+                                   dockyard::SampleStreamId stream_id,
+                                   const std::string& json);
+
   // Actually send a single sample to the Dockyard.
+  // |time| is in nanoseconds.
   // See also: SendSample().
   grpc::Status SendSampleById(uint64_t time, dockyard::SampleStreamId stream_id,
                               uint64_t value);
 
   // Actually send a list of samples with the same timestamp to the Dockyard.
+  // |time| is in nanoseconds.
   // See also: SendSampleList().
   grpc::Status SendSampleListById(uint64_t time, const SampleListById list);
 

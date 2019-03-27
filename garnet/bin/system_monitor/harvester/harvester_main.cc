@@ -138,6 +138,7 @@ int main(int argc, char** argv) {
     harvester::GatherCpuSamples(root_resource, harvester);
     harvester::GatherMemorySamples(root_resource, harvester);
     harvester::GatherThreadSamples(root_resource, harvester);
+    harvester::GatherComponentIntrospection(root_resource, harvester);
     // TODO(dschuyler): make this actually run at rate (i.e. remove drift from
     // execution time).
     std::this_thread::sleep_for(std::chrono::milliseconds(cycle_msec_rate));

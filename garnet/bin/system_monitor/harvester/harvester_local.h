@@ -21,6 +21,10 @@ class HarvesterLocal : public Harvester {
   virtual HarvesterStatus Init() override;
 
   // |Harvester|.
+  virtual HarvesterStatus SendInspectJson(const std::string& stream_name,
+                                          const std::string& json) override;
+
+  // |Harvester|.
   virtual HarvesterStatus SendSample(const std::string& stream_name,
                                      uint64_t value) override;
 
