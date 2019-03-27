@@ -85,7 +85,7 @@ pub fn write_snap_llc_hdr<B: Appendable>(w: &mut B, protocol_id: u16) -> Result<
     llc_hdr.ssap = mac::LLC_SNAP_EXTENSION;
     llc_hdr.control = mac::LLC_SNAP_UNNUMBERED_INFO;
     llc_hdr.oui = mac::LLC_SNAP_OUI;
-    llc_hdr.set_protocol_id(protocol_id);
+    llc_hdr.protocol_id.set_from_native(protocol_id);
     Ok(())
 }
 

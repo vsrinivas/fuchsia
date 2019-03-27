@@ -98,7 +98,7 @@ pub fn deliver_msdus<B: ByteSlice>(device: &device::Device, msdus: mac::MsduIter
             &mut writer,
             dst_addr,
             src_addr,
-            llc_frame.hdr.protocol_id(),
+            llc_frame.hdr.protocol_id.to_native(),
             &llc_frame.body,
         );
         match write_result {
@@ -124,7 +124,7 @@ pub fn write_eth_frame<B: Appendable>(
     let mut eth_hdr = buf.append_value_zeroed::<mac::EthernetIIHdr>()?;
     eth_hdr.da = dst_addr;
     eth_hdr.sa = src_addr;
-    eth_hdr.set_ether_type(protocol_id);
+    eth_hdr.ether_type.set_from_native(protocol_id);
 
     buf.append_bytes(body)?;
     Ok(())

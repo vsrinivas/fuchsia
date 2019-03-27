@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::mac::MacAddr,
-    byteorder::{BigEndian, ByteOrder},
+    crate::{big_endian::BigEndianU16, mac::MacAddr},
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
 
@@ -20,16 +19,7 @@ pub const MAX_ETH_FRAME_LEN: usize = 2048;
 pub struct EthernetIIHdr {
     pub da: MacAddr,
     pub sa: MacAddr,
-    pub ether_type_be: [u8; 2], // In network byte order (big endian).
-}
-
-impl EthernetIIHdr {
-    pub fn ether_type(&self) -> u16 {
-        BigEndian::read_u16(&self.ether_type_be)
-    }
-    pub fn set_ether_type(&mut self, val: u16) {
-        BigEndian::write_u16(&mut self.ether_type_be, val)
-    }
+    pub ether_type: BigEndianU16,
 }
 
 #[cfg(test)]
@@ -49,12 +39,12 @@ mod tests {
                 .expect("cannot create ethernet header.");
         assert_eq!(hdr.da, [1u8, 2, 3, 4, 5, 6]);
         assert_eq!(hdr.sa, [7u8, 8, 9, 10, 11, 12]);
-        assert_eq!(hdr.ether_type(), 13 << 8 | 14);
-        assert_eq!(hdr.ether_type_be, [13u8, 14]);
+        assert_eq!(hdr.ether_type.to_native(), 13 << 8 | 14);
+        assert_eq!(hdr.ether_type.0, [13u8, 14]);
         assert_eq!(body, [99, 99]);
 
-        hdr.set_ether_type(0x888e);
-        assert_eq!(hdr.ether_type_be, [0x88, 0x8e]);
+        hdr.ether_type.set_from_native(0x888e);
+        assert_eq!(hdr.ether_type.0, [0x88, 0x8e]);
         #[rustfmt::skip]
         assert_eq!(
             &[1u8, 2, 3, 4, 5, 6,

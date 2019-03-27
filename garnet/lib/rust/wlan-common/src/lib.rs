@@ -6,6 +6,7 @@
 //! to be used for WLAN SME, MLME, and binaries written in Rust.
 
 pub mod appendable;
+pub mod big_endian;
 pub mod buffer_reader;
 pub mod buffer_writer;
 pub mod channel;

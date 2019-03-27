@@ -4,10 +4,10 @@
 
 use {
     crate::{
+        big_endian::BigEndianU16,
         buffer_reader::BufferReader,
         mac::{round_up, MacAddr},
     },
-    byteorder::{BigEndian, ByteOrder},
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
@@ -18,13 +18,7 @@ pub struct AmsduSubframeHdr {
     // Note this is the same as the IEEE 802.3 frame format.
     pub da: MacAddr,
     pub sa: MacAddr,
-    pub msdu_len_be: [u8; 2], // In network byte order (big endian).
-}
-
-impl AmsduSubframeHdr {
-    pub fn msdu_len(&self) -> u16 {
-        BigEndian::read_u16(&self.msdu_len_be)
-    }
+    pub msdu_len: BigEndianU16,
 }
 
 pub struct AmsduSubframe<B> {
@@ -39,7 +33,7 @@ pub struct AmsduSubframe<B> {
 impl<B: ByteSlice> AmsduSubframe<B> {
     pub fn parse(buffer_reader: &mut BufferReader<B>) -> Option<Self> {
         let hdr = buffer_reader.read::<AmsduSubframeHdr>()?;
-        let msdu_len = hdr.msdu_len() as usize;
+        let msdu_len = hdr.msdu_len.to_native() as usize;
         if buffer_reader.bytes_remaining() < msdu_len {
             None
         } else {
@@ -79,14 +73,14 @@ mod tests {
                 (false, false) => {
                     assert_eq!(dst_addr, [0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03]);
                     assert_eq!(src_addr, [0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab]);
-                    assert_eq!(llc_frame.hdr.protocol_id(), 0x0800);
+                    assert_eq!(llc_frame.hdr.protocol_id.to_native(), 0x0800);
                     assert_eq!(llc_frame.body, MSDU_1_PAYLOAD);
                     found_msdus = (true, false);
                 }
                 (true, false) => {
                     assert_eq!(dst_addr, [0x78, 0x8a, 0x20, 0x0d, 0x67, 0x04]);
                     assert_eq!(src_addr, [0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xac]);
-                    assert_eq!(llc_frame.hdr.protocol_id(), 0x0801);
+                    assert_eq!(llc_frame.hdr.protocol_id.to_native(), 0x0801);
                     assert_eq!(llc_frame.body, MSDU_2_PAYLOAD);
                     found_msdus = (true, true);
                 }
@@ -107,7 +101,7 @@ mod tests {
             assert!(!found_one_msdu);
             assert_eq!(dst_addr, [0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03]);
             assert_eq!(src_addr, [0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab]);
-            assert_eq!(llc_frame.hdr.protocol_id(), 0x0800);
+            assert_eq!(llc_frame.hdr.protocol_id.to_native(), 0x0800);
             assert_eq!(llc_frame.body, MSDU_1_PAYLOAD);
             found_one_msdu = true;
         }

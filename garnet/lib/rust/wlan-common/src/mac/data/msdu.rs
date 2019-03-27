@@ -4,10 +4,10 @@
 
 use {
     crate::{
+        big_endian::BigEndianU16,
         buffer_reader::BufferReader,
         mac::{data::*, MacAddr, MacFrame},
     },
-    byteorder::{BigEndian, ByteOrder},
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
@@ -26,17 +26,7 @@ pub struct LlcHdr {
     pub ssap: u8,
     pub control: u8,
     pub oui: [u8; 3],
-    pub protocol_id_be: [u8; 2], // In network byte order (big endian).
-}
-
-impl LlcHdr {
-    pub fn protocol_id(&self) -> u16 {
-        BigEndian::read_u16(&self.protocol_id_be)
-    }
-
-    pub fn set_protocol_id(&mut self, val: u16) {
-        BigEndian::write_u16(&mut self.protocol_id_be, val);
-    }
+    pub protocol_id: BigEndianU16,
 }
 
 pub struct LlcFrame<B> {
@@ -127,7 +117,7 @@ mod tests {
             }
             assert_eq!(dst_addr, [3; 6]);
             assert_eq!(src_addr, [4; 6]);
-            assert_eq!(llc_frame.hdr.protocol_id(), 9 << 8 | 10);
+            assert_eq!(llc_frame.hdr.protocol_id.to_native(), 9 << 8 | 10);
             assert_eq!(llc_frame.body, [11; 3]);
             found_msdu = true;
         }
@@ -146,7 +136,7 @@ mod tests {
             }
             assert_eq!(dst_addr, [3; 6]);
             assert_eq!(src_addr, [4; 6]);
-            assert_eq!(llc_frame.hdr.protocol_id(), 9 << 8 | 10);
+            assert_eq!(llc_frame.hdr.protocol_id.to_native(), 9 << 8 | 10);
             assert_eq!(llc_frame.body, [11; 5]);
             found_msdu = true;
         }
@@ -166,8 +156,8 @@ mod tests {
                         assert_eq!(7, llc.hdr.ssap);
                         assert_eq!(7, llc.hdr.control);
                         assert_eq!([8, 8, 8], llc.hdr.oui);
-                        assert_eq!([9, 10], llc.hdr.protocol_id_be);
-                        assert_eq!(0x090A, llc.hdr.protocol_id());
+                        assert_eq!([9, 10], llc.hdr.protocol_id.0);
+                        assert_eq!(0x090A, llc.hdr.protocol_id.to_native());
                         assert_eq!(&[11, 11, 11], llc.body);
                     }
                     _ => panic!("failed parsing LLC"),
@@ -175,13 +165,5 @@ mod tests {
             }
             _ => panic!("failed parsing data frame"),
         };
-    }
-
-    #[test]
-    fn test_llc_set_protocol_id() {
-        let mut hdr: LlcHdr = Default::default();
-        hdr.set_protocol_id(0xAABB);
-        assert_eq!([0xAA, 0xBB], hdr.protocol_id_be);
-        assert_eq!(0xAABB, hdr.protocol_id());
     }
 }
