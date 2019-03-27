@@ -19,9 +19,9 @@
 #include "peridot/bin/basemgr/session_shell_settings/session_shell_settings.h"
 
 fit::deferred_action<fit::closure> SetupCobalt(
-    modular::BasemgrSettings& settings, async_dispatcher_t* dispatcher,
+    bool enable_cobalt, async_dispatcher_t* dispatcher,
     component::StartupContext* context) {
-  if (settings.disable_statistics) {
+  if (!enable_cobalt) {
     return fit::defer<fit::closure>([] {});
   }
   return modular::InitializeCobalt(dispatcher, context);
@@ -41,11 +41,29 @@ int main(int argc, const char** argv) {
   auto context = std::shared_ptr<component::StartupContext>(
       component::StartupContext::CreateFromStartupInfo());
   modular::BasemgrSettings settings(command_line);
+  auto config = settings.CreateBasemgrConfig();
   auto session_shell_settings =
       modular::SessionShellSettings::GetSystemSettings();
 
-  fit::deferred_action<fit::closure> cobalt_cleanup =
-      SetupCobalt(settings, std::move(loop.dispatcher()), context.get());
+  std::vector<fuchsia::modular::internal::SessionShellMapEntry>
+      session_shell_configs;
+  for (auto setting : session_shell_settings) {
+    fuchsia::modular::internal::SessionShellConfig session_shell_config;
+
+    session_shell_config.set_display_usage(setting.display_usage);
+    session_shell_config.set_screen_height(setting.screen_height);
+    session_shell_config.set_screen_width(setting.screen_width);
+    session_shell_config.mutable_app_config()->set_url(setting.name);
+
+    fuchsia::modular::internal::SessionShellMapEntry entry;
+    entry.set_name(setting.name);
+    entry.set_config(std::move(session_shell_config));
+
+    session_shell_configs.push_back(std::move(entry));
+  }
+
+  fit::deferred_action<fit::closure> cobalt_cleanup = SetupCobalt(
+      config.enable_cobalt(), std::move(loop.dispatcher()), context.get());
 
   fuchsia::ui::policy::PresenterPtr presenter;
   context->ConnectToEnvironmentService(presenter.NewRequest());
@@ -57,7 +75,7 @@ int main(int argc, const char** argv) {
   context->ConnectToEnvironmentService(account_manager.NewRequest());
 
   modular::BasemgrImpl basemgr(
-      settings, session_shell_settings, context->launcher().get(),
+      std::move(config), session_shell_configs, context->launcher().get(),
       std::move(presenter), std::move(device_settings_manager), std::move(wlan),
       std::move(account_manager), [&loop, &cobalt_cleanup, &context] {
         cobalt_cleanup.call();

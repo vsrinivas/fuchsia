@@ -8,6 +8,7 @@
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/macros.h>
@@ -19,12 +20,17 @@ class BasemgrSettings {
  public:
   explicit BasemgrSettings(const fxl::CommandLine& command_line);
 
+  // Gets the usage statement for running Basemgr with command line arguments.
   static std::string GetUsage();
 
-  fuchsia::modular::AppConfig base_shell;
-  fuchsia::modular::AppConfig story_shell;
-  fuchsia::modular::AppConfig sessionmgr;
-  fuchsia::modular::AppConfig session_shell;
+  // Creates a fidl table of basemgr configurations from the parsed command line
+  // arguments.
+  fuchsia::modular::internal::BasemgrConfig CreateBasemgrConfig();
+
+  fuchsia::modular::internal::AppConfig base_shell;
+  fuchsia::modular::internal::AppConfig story_shell;
+  fuchsia::modular::internal::AppConfig sessionmgr;
+  fuchsia::modular::internal::AppConfig session_shell;
 
   std::string test_name;
   bool use_session_shell_for_story_shell_factory;
@@ -36,14 +42,13 @@ class BasemgrSettings {
   bool enable_presenter;
 
  private:
-  void ParseShellArgs(const std::string& value,
-                      fidl::VectorPtr<std::string>* args);
+  void ParseShellArgs(const std::string& value, std::vector<std::string>* args);
 
   // Extract the test name using knowledge of how Modular structures its
   // command lines for testing.
   static std::string FindTestName(
-      const fidl::StringPtr& session_shell,
-      const fidl::VectorPtr<std::string>& session_shell_args);
+      const std::string& session_shell,
+      const std::vector<std::string>* session_shell_args);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BasemgrSettings);
 };

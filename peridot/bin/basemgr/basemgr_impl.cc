@@ -7,7 +7,9 @@
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/fidl/cpp/type_converter.h>
 #include <lib/fit/function.h>
+#include <lib/fsl/types/type_converters.h>
 #include <lib/fxl/logging.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
@@ -21,6 +23,26 @@
 #include "peridot/lib/common/teardown.h"
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/clone.h"
+
+namespace fidl {
+template <>
+// fidl::TypeConverter specialization for fuchsia::modular::internal::AppConfig
+// TODO(MF-277) Convert all usages of fuchsia::modular::AppConfig to
+// fuchsia::modular::internal::AppConfig and remove this converter.
+struct TypeConverter<fuchsia::modular::AppConfig,
+                     fuchsia::modular::internal::AppConfig> {
+  // Converts fuchsia::modular::internal::AppConfig to
+  // fuchsia::modular::AppConfig
+  static fuchsia::modular::AppConfig Convert(
+      const fuchsia::modular::internal::AppConfig& config) {
+    fuchsia::modular::AppConfig app_config;
+    app_config.url = config.url().c_str();
+    app_config.args = fidl::To<fidl::VectorPtr<std::string>>(config.args());
+
+    return app_config;
+  }
+};
+}  // namespace fidl
 
 namespace modular {
 
@@ -44,16 +66,17 @@ constexpr char kTokenManagerFactoryUrl[] =
 }  // namespace
 
 BasemgrImpl::BasemgrImpl(
-    const modular::BasemgrSettings& settings,
-    const std::vector<SessionShellSettings>& session_shell_settings,
+    fuchsia::modular::internal::BasemgrConfig config,
+    const std::vector<fuchsia::modular::internal::SessionShellMapEntry>&
+        session_shell_configs,
     fuchsia::sys::Launcher* const launcher,
     fuchsia::ui::policy::PresenterPtr presenter,
     fuchsia::devicesettings::DeviceSettingsManagerPtr device_settings_manager,
     fuchsia::wlan::service::WlanPtr wlan,
     fuchsia::auth::account::AccountManagerPtr account_manager,
     fit::function<void()> on_shutdown)
-    : settings_(settings),
-      session_shell_settings_(session_shell_settings),
+    : config_(std::move(config)),
+      session_shell_configs_(session_shell_configs),
       launcher_(launcher),
       presenter_(std::move(presenter)),
       device_settings_manager_(std::move(device_settings_manager)),
@@ -82,8 +105,10 @@ void BasemgrImpl::StartBaseShell() {
     return;
   }
 
+  auto base_shell_config =
+      fidl::To<fuchsia::modular::AppConfig>(config_.base_shell().app_config());
   base_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher_, CloneStruct(settings_.base_shell));
+      launcher_, std::move(base_shell_config));
 
   auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
 
@@ -95,7 +120,7 @@ void BasemgrImpl::StartBaseShell() {
 
   presentation_container_ = std::make_unique<PresentationContainer>(
       presenter_.get(), std::move(view_holder_token),
-      /* shell_settings= */ GetActiveSessionShellSettings(),
+      /* shell_config= */ GetActiveSessionShellConfig(),
       /* on_swap_session_shell= */ [this] { SwapSessionShell(); });
 
   // TODO(alexmin): Remove BaseShellParams.
@@ -147,19 +172,19 @@ FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
 }
 
 void BasemgrImpl::Start() {
-  if (settings_.test) {
+  if (config_.test()) {
     // 0. Print test banner.
     FXL_LOG(INFO)
         << std::endl
         << std::endl
-        << "======================== Starting Test [" << settings_.test_name
+        << "======================== Starting Test [" << config_.test_name()
         << "]" << std::endl
         << "============================================================"
         << std::endl;
   }
 
   // Wait for persistent data to come up.
-  if (!settings_.no_minfs) {
+  if (config_.use_minfs()) {
     WaitForMinfs();
   }
 
@@ -184,14 +209,18 @@ void BasemgrImpl::Start() {
                 std::move(agent_token_manager));
       });
 
+  auto sessionmgr_config =
+      fidl::To<fuchsia::modular::AppConfig>(config_.sessionmgr());
+  auto story_shell_config =
+      fidl::To<fuchsia::modular::AppConfig>(config_.story_shell().app_config());
   // 2. Initialize session provider.
   session_provider_.reset(new SessionProvider(
-      /* delegate= */ this, launcher_, settings_.sessionmgr,
-      session_shell_config_, settings_.story_shell,
-      settings_.use_session_shell_for_story_shell_factory,
+      /* delegate= */ this, launcher_, std::move(sessionmgr_config),
+      CloneStruct(session_shell_config_), std::move(story_shell_config),
+      config_.use_session_shell_for_story_shell_factory(),
       /* on_zero_sessions= */
       [this] {
-        if (settings_.keep_base_shell_alive_after_login) {
+        if (config_.base_shell().keep_alive_after_login()) {
           // TODO(MI4-1117): Integration tests currently
           // expect base shell to always be running. So, if
           // we're running under a test, DidLogin() will not
@@ -226,12 +255,12 @@ void BasemgrImpl::Shutdown() {
 
   FXL_DLOG(INFO) << "fuchsia::modular::BaseShellContext::Shutdown()";
 
-  if (settings_.test) {
+  if (config_.test()) {
     FXL_LOG(INFO)
         << std::endl
         << "============================================================"
         << std::endl
-        << "======================== [" << settings_.test_name << "] Done";
+        << "======================== [" << config_.test_name() << "] Done";
   }
 
   // |session_provider_| teardown is asynchronous because it holds the
@@ -276,19 +305,19 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
   // TODO(MI4-1117): Integration tests currently expect base shell to always be
   // running. So, if we're running under a test, do not shut down the base shell
   // after login.
-  if (!settings_.keep_base_shell_alive_after_login) {
+  if (!config_.base_shell().keep_alive_after_login()) {
     FXL_DLOG(INFO) << "Stopping base shell due to login";
     StopBaseShell();
   }
 
   // Ownership of the Presenter should be moved to the session shell for tests
   // that enable presenter, and production code.
-  if (!settings_.test || settings_.enable_presenter) {
+  if (!config_.test() || config_.enable_presenter()) {
     presentation_container_ = std::make_unique<PresentationContainer>(
         presenter_.get(),
         scenic::ToViewHolderToken(
             zx::eventpair(view_owner.TakeChannel().release())),
-        /* shell_settings= */ GetActiveSessionShellSettings(),
+        /* shell_config= */ GetActiveSessionShellConfig(),
         /* on_swap_session_shell= */ [this] { SwapSessionShell(); });
   }
 }
@@ -299,18 +328,18 @@ void BasemgrImpl::SwapSessionShell() {
     return;
   }
 
-  if (session_shell_settings_.empty()) {
+  if (session_shell_configs_.empty()) {
     FXL_DLOG(INFO) << "No session shells has been defined";
     return;
   }
-  auto shell_count = session_shell_settings_.size();
+  auto shell_count = session_shell_configs_.size();
   if (shell_count <= 1) {
     FXL_DLOG(INFO)
         << "Only one session shell has been defined so switch is disabled";
     return;
   }
-  active_session_shell_settings_index_ =
-      (active_session_shell_settings_index_ + 1) % shell_count;
+  active_session_shell_configs_index_ =
+      (active_session_shell_configs_index_ + 1) % shell_count;
 
   UpdateSessionShellConfig();
 
@@ -318,16 +347,25 @@ void BasemgrImpl::SwapSessionShell() {
       ->Then([] { FXL_DLOG(INFO) << "Swapped session shell"; });
 }
 
-const SessionShellSettings& BasemgrImpl::GetActiveSessionShellSettings() {
-  if (active_session_shell_settings_index_ >= session_shell_settings_.size()) {
+fuchsia::modular::internal::SessionShellConfig
+BasemgrImpl::GetActiveSessionShellConfig() {
+  if (active_session_shell_configs_index_ >= session_shell_configs_.size()) {
     FXL_LOG(ERROR) << "Active session shell index is "
-                   << active_session_shell_settings_index_ << ", but only "
-                   << session_shell_settings_.size()
-                   << " session shell settings exist.";
-    return default_session_shell_settings_;
+                   << active_session_shell_configs_index_ << ", but only "
+                   << session_shell_configs_.size()
+                   << " session shell configs exist.";
+    fuchsia::modular::internal::SessionShellConfig default_config;
+    default_config.set_display_usage(
+        fuchsia::ui::policy::DisplayUsage::kUnknown);
+    default_config.set_screen_height(
+        std::numeric_limits<float>::signaling_NaN());
+    default_config.set_screen_width(
+        std::numeric_limits<float>::signaling_NaN());
+    return CloneStruct(default_config);
   }
 
-  return session_shell_settings_[active_session_shell_settings_index_];
+  return CloneStruct(
+      session_shell_configs_[active_session_shell_configs_index_].config());
 }
 
 void BasemgrImpl::UpdateSessionShellConfig() {
@@ -335,12 +373,13 @@ void BasemgrImpl::UpdateSessionShellConfig() {
   // command line, except in integration tests. TODO(MF-113): Consolidate
   // the session shell settings.
   fuchsia::modular::AppConfig session_shell_config;
-  if (settings_.test || session_shell_settings_.empty()) {
-    session_shell_config = CloneStruct(settings_.session_shell);
+  if (config_.test() || session_shell_configs_.empty()) {
+    session_shell_config = CloneStruct(fidl::To<fuchsia::modular::AppConfig>(
+        config_.session_shell_map().at(0).config().app_config()));
   } else {
     const auto& settings =
-        session_shell_settings_[active_session_shell_settings_index_];
-    session_shell_config.url = settings.name;
+        session_shell_configs_[active_session_shell_configs_index_];
+    session_shell_config.url = settings.name();
   }
 
   session_shell_config_ = std::move(session_shell_config);
@@ -355,8 +394,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
 
     // If there are no session shell settings specified, default to showing
     // setup.
-    if (active_session_shell_settings_index_ >=
-        session_shell_settings_.size()) {
+    if (active_session_shell_configs_index_ >= session_shell_configs_.size()) {
       StartBaseShell();
       return;
     }

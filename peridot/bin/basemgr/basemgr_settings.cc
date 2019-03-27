@@ -14,18 +14,19 @@
 namespace modular {
 
 BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
-  base_shell.url = command_line.GetOptionValueWithDefault(
+  base_shell.set_url(command_line.GetOptionValueWithDefault(
       "base_shell",
       "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/"
-      "dev_base_shell.cmx");
-  story_shell.url = command_line.GetOptionValueWithDefault(
-      "story_shell", "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx");
-  sessionmgr.url = command_line.GetOptionValueWithDefault(
-      "sessionmgr", "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx");
-  session_shell.url = command_line.GetOptionValueWithDefault(
+      "dev_base_shell.cmx"));
+  story_shell.set_url(command_line.GetOptionValueWithDefault(
+      "story_shell", "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx"));
+  sessionmgr.set_url(command_line.GetOptionValueWithDefault(
+      "sessionmgr",
+      "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx"));
+  session_shell.set_url(command_line.GetOptionValueWithDefault(
       "session_shell",
       "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
-      "ermine_session_shell.cmx");
+      "ermine_session_shell.cmx"));
 
   use_session_shell_for_story_shell_factory =
       command_line.HasOption("use_session_shell_for_story_shell_factory");
@@ -48,28 +49,57 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   enable_presenter = command_line.HasOption("enable_presenter");
 
   ParseShellArgs(command_line.GetOptionValueWithDefault("base_shell_args", ""),
-                 &base_shell.args);
+                 base_shell.mutable_args());
 
   ParseShellArgs(command_line.GetOptionValueWithDefault("story_shell_args", ""),
-                 &story_shell.args);
+                 story_shell.mutable_args());
 
   ParseShellArgs(command_line.GetOptionValueWithDefault("sessionmgr_args", ""),
-                 &sessionmgr.args);
+                 sessionmgr.mutable_args());
 
   ParseShellArgs(
       command_line.GetOptionValueWithDefault("session_shell_args", ""),
-      &session_shell.args);
+      session_shell.mutable_args());
 
   if (test) {
     if (run_base_shell_with_test_runner) {
-      base_shell.args.push_back("--use_test_runner");
+      base_shell.mutable_args()->push_back("--use_test_runner");
     }
-    sessionmgr.args.push_back("--enable_story_shell_preload=false");
-    sessionmgr.args.push_back("--enable_statistics=false");
-    test_name = FindTestName(session_shell.url, session_shell.args);
+    sessionmgr.mutable_args()->push_back("--enable_story_shell_preload=false");
+    sessionmgr.mutable_args()->push_back("--enable_statistics=false");
+    test_name = FindTestName(session_shell.url(), &session_shell.args());
     disable_statistics = true;
     no_minfs = true;
   }
+}
+
+// Temporary way to transform commandline args into FIDL table
+fuchsia::modular::internal::BasemgrConfig
+BasemgrSettings::CreateBasemgrConfig() {
+  fuchsia::modular::internal::BasemgrConfig config;
+
+  config.set_enable_cobalt(!disable_statistics);
+  config.set_enable_presenter(enable_presenter);
+  config.set_use_minfs(!no_minfs);
+  config.set_use_session_shell_for_story_shell_factory(
+      use_session_shell_for_story_shell_factory);
+  config.set_test(test);
+  config.set_test_name(test_name);
+
+  config.mutable_base_shell()->set_app_config(std::move(base_shell));
+  config.mutable_base_shell()->set_keep_alive_after_login(
+      keep_base_shell_alive_after_login);
+
+  fuchsia::modular::internal::SessionShellMapEntry session_shell_entry;
+  session_shell_entry.set_name(session_shell.url());
+  session_shell_entry.mutable_config()->set_app_config(
+      std::move(session_shell));
+  config.mutable_session_shell_map()->push_back(std::move(session_shell_entry));
+
+  config.mutable_story_shell()->set_app_config(std::move(story_shell));
+  config.set_sessionmgr(std::move(sessionmgr));
+
+  return config;
 }
 
 std::string BasemgrSettings::GetUsage() {
@@ -106,7 +136,7 @@ std::string BasemgrSettings::GetUsage() {
 }
 
 void BasemgrSettings::ParseShellArgs(const std::string& value,
-                                     fidl::VectorPtr<std::string>* args) {
+                                     std::vector<std::string>* args) {
   bool escape = false;
   std::string arg;
   for (char i : value) {
@@ -136,8 +166,8 @@ void BasemgrSettings::ParseShellArgs(const std::string& value,
 }
 
 std::string BasemgrSettings::FindTestName(
-    const fidl::StringPtr& session_shell,
-    const fidl::VectorPtr<std::string>& session_shell_args) {
+    const std::string& session_shell,
+    const std::vector<std::string>* session_shell_args) {
   const std::string kRootModule = "--root_module";
   std::string result = session_shell;
 

@@ -9,18 +9,18 @@
 
 namespace modular {
 
-SessionProvider::SessionProvider(
-    Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
-    const fuchsia::modular::AppConfig& sessionmgr,
-    const fuchsia::modular::AppConfig& session_shell,
-    const fuchsia::modular::AppConfig& story_shell,
-    bool use_session_shell_for_story_shell_factory,
-    fit::function<void()> on_zero_sessions)
+SessionProvider::SessionProvider(Delegate* const delegate,
+                                 fuchsia::sys::Launcher* const launcher,
+                                 fuchsia::modular::AppConfig sessionmgr,
+                                 fuchsia::modular::AppConfig session_shell,
+                                 fuchsia::modular::AppConfig story_shell,
+                                 bool use_session_shell_for_story_shell_factory,
+                                 fit::function<void()> on_zero_sessions)
     : delegate_(delegate),
       launcher_(launcher),
-      sessionmgr_(sessionmgr),
-      session_shell_(session_shell),
-      story_shell_(story_shell),
+      sessionmgr_(std::move(sessionmgr)),
+      session_shell_(std::move(session_shell)),
+      story_shell_(std::move(story_shell)),
       use_session_shell_for_story_shell_factory_(
           use_session_shell_for_story_shell_factory),
       on_zero_sessions_(std::move(on_zero_sessions)) {}

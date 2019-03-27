@@ -5,6 +5,7 @@
 library fuchsia.modular.internal;
 
 using fuchsia.io;
+using fuchsia.ui.policy;
 
 /// Descriptions and defaults for these configurations are echoed in
 /// peridot/docs/modular/guide/config.md.
@@ -21,26 +22,36 @@ table BasemgrConfig {
     /// Default: true
     3: bool use_minfs;
 
-    /// Tells basemgr whether it is running as a part of an integration test.
-    /// Default: false
-    4: bool test;
-
     /// Create story shells through StoryShellFactory exposed by the session
     /// shell instead of creating separate story shell components. When set,
     /// `story_shell_url` and any story shell args are ignored.
     /// Default: false
-    5: bool use_session_shell_for_story_shell_factory;
+    4: bool use_session_shell_for_story_shell_factory;
+
+    /// Tells basemgr whether it is running as a part of an integration test.
+    /// Default: false
+    5: bool test;
+
+    /// The name of the test
+    6: string:fuchsia.io.MAX_PATH test_name;
 
     /// Launch configurations specific to base shell.
-    6: BaseShellConfig base_shell;
+    7: BaseShellConfig base_shell;
 
-    /// Launch configurations specific to session shell.
-    7: SessionShellConfig session_shell;
+    /// A map of launch configurations specific to session shells.
+    8: vector<SessionShellMapEntry> session_shell_map;
+
+    /// Launch configurations specific to story shell.
+    9: StoryShellConfig story_shell;
+
+    /// Temporary placeholder to pass configurations to sessionmgr. Will be
+    /// removed with the completion of MF-10.
+    10: AppConfig sessionmgr;
 };
 
 table BaseShellConfig {
-    /// The fuchsia package url for which base shell to use.
-    1: string:fuchsia.io.MAX_PATH url;
+    /// Contains the fuchsia package url and arguments to pass to the shell.
+    1: AppConfig app_config;
 
     /// When set to true, the base shell is kept alive after a log in. This is
     /// used for testing because current integration tests expect base shell
@@ -49,18 +60,31 @@ table BaseShellConfig {
     2: bool keep_alive_after_login;
 };
 
+table SessionShellMapEntry {
+    /// The name of the session shell represented by its url.
+    1: string:fuchsia.io.MAX_PATH name;
+
+    /// The launch configurations for the session shell.
+    2: SessionShellConfig config;
+};
+
 table SessionShellConfig {
-    /// The fuchsia package url for which session shell to use.
-    1: string:fuchsia.io.MAX_PATH url;
+    /// Contains the fuchsia package url and arguments to pass to the shell.
+    1: AppConfig app_config;
 
     /// The display usage policy for this session shell.
-    2: string:200 display_usage;
+    2: fuchsia.ui.policy.DisplayUsage display_usage;
 
     /// The screen height in millimeters for the session shell's display.
     3: float32 screen_height;
 
     /// The screen width in millimeters for the session shell's display.
     4: float32 screen_width;
+};
+
+table StoryShellConfig {
+    /// Contains the fuchsia package url and arguments to pass to the shell.
+    1: AppConfig app_config;
 };
 
 table SessionmgrConfig {
@@ -92,6 +116,16 @@ table SessionmgrConfig {
 
     /// The fuchsia package url for which story shell to use.
     7: string:fuchsia.io.MAX_PATH story_shell_url;
+};
+
+/// Used to pass around configuration references to apps such as base shell,
+/// session shell, and story shell.
+table AppConfig {
+    /// The fuchsia package url for app.
+    1: string:fuchsia.io.MAX_PATH url;
+
+    /// The arguments for the app.
+    2: vector<string> args;
 };
 
 enum CloudProvider {

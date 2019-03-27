@@ -5,6 +5,7 @@
 #ifndef PERIDOT_BIN_BASEMGR_PRESENTATION_CONTAINER_H_
 #define PERIDOT_BIN_BASEMGR_PRESENTATION_CONTAINER_H_
 
+#include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -19,13 +20,13 @@ namespace modular {
 class PresentationContainer : fuchsia::ui::policy::KeyboardCaptureListenerHACK {
  public:
   // Initializes the presentation with the given |view_owner| and
-  // |shell_settings| and connects it to the presenter service. Attaches the
-  // given |on_swap_session_shell| to a reserved keyboard binding
+  // |shell_config| and connects it to the presenter service. Attaches
+  // the given |on_swap_session_shell| to a reserved keyboard binding
   // (this is a hack to keep SwapSessionShell working).
   explicit PresentationContainer(
       fuchsia::ui::policy::Presenter* const presenter,
       fuchsia::ui::views::ViewHolderToken view_holder_token,
-      const SessionShellSettings& shell_settings,
+      fuchsia::modular::internal::SessionShellConfig shell_config,
       fit::function<void()> on_swap_session_shell);
 
   ~PresentationContainer() override;

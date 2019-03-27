@@ -21,7 +21,7 @@ constexpr char kSwapSessionShellKeyboardBinding = ' ';
 PresentationContainer::PresentationContainer(
     fuchsia::ui::policy::Presenter* const presenter,
     fuchsia::ui::views::ViewHolderToken view_holder_token,
-    const SessionShellSettings& shell_settings,
+    fuchsia::modular::internal::SessionShellConfig shell_config,
     fit::function<void()> on_swap_session_shell)
     : presenter_(presenter),
       on_swap_session_shell_(std::move(on_swap_session_shell)) {
@@ -33,20 +33,20 @@ PresentationContainer::PresentationContainer(
 
   // Set the presentation of the given view to the settings of the active
   // session shell.
-  if (shell_settings.display_usage !=
+  if (shell_config.display_usage() !=
       fuchsia::ui::policy::DisplayUsage::kUnknown) {
     FXL_DLOG(INFO) << "Setting display usage: "
-                   << fidl::ToUnderlying(shell_settings.display_usage);
+                   << fidl::ToUnderlying(shell_config.display_usage());
     presentation_state_.presentation->SetDisplayUsage(
-        shell_settings.display_usage);
+        shell_config.display_usage());
   }
 
-  if (!std::isnan(shell_settings.screen_width) &&
-      !std::isnan(shell_settings.screen_height)) {
-    FXL_DLOG(INFO) << "Setting display size: " << shell_settings.screen_width
-                   << " x " << shell_settings.screen_height;
+  if (!std::isnan(shell_config.screen_width()) &&
+      !std::isnan(shell_config.screen_height())) {
+    FXL_DLOG(INFO) << "Setting display size: " << shell_config.screen_width()
+                   << " x " << shell_config.screen_height();
     presentation_state_.presentation->SetDisplaySizeInMm(
-        shell_settings.screen_width, shell_settings.screen_height);
+        shell_config.screen_width(), shell_config.screen_height());
   }
 }
 

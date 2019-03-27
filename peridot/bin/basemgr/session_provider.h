@@ -36,9 +36,9 @@ class SessionProvider {
   // start a new session.
   SessionProvider(Delegate* const delegate,
                   fuchsia::sys::Launcher* const launcher,
-                  const fuchsia::modular::AppConfig& sessionmgr,
-                  const fuchsia::modular::AppConfig& session_shell,
-                  const fuchsia::modular::AppConfig& story_shell,
+                  fuchsia::modular::AppConfig sessionmgr,
+                  fuchsia::modular::AppConfig session_shell,
+                  fuchsia::modular::AppConfig story_shell,
                   bool use_session_shell_for_story_shell_factory,
                   fit::function<void()> on_zero_sessions);
 
@@ -66,12 +66,11 @@ class SessionProvider {
   void RestartSession(fit::function<void()> on_restart_complete);
 
  private:
-  Delegate* const delegate_;                       // Neither owned nor copied.
-  fuchsia::sys::Launcher* const launcher_;         // Not owned.
-  const fuchsia::modular::AppConfig& sessionmgr_;  // Neither owned nor copied.
-  const fuchsia::modular::AppConfig&
-      session_shell_;                               // Neither owned nor copied.
-  const fuchsia::modular::AppConfig& story_shell_;  // Neither owned nor copied.
+  Delegate* const delegate_;                // Neither owned nor copied.
+  fuchsia::sys::Launcher* const launcher_;  // Not owned.
+  const fuchsia::modular::AppConfig sessionmgr_;
+  const fuchsia::modular::AppConfig session_shell_;
+  const fuchsia::modular::AppConfig story_shell_;
   bool use_session_shell_for_story_shell_factory_;
 
   fit::function<void()> on_zero_sessions_;
