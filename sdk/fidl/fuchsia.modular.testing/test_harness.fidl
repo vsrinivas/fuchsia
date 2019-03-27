@@ -1,0 +1,194 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular.testing;
+
+using fuchsia.io;
+using fuchsia.mem;
+using fuchsia.modular;
+using fuchsia.modular.internal;
+using fuchsia.sys;
+
+/// The |TestHarness| service is used to run the modular runtime under a
+/// hermetic environment and drive integration tests under it. Tests may use
+/// this service to intercept components and assume their role. Additionally,
+/// tests may use |GetService()| to get capabilities to control stories (i.e.,
+/// using a PuppetMaster) and connect to Agents.
+///
+/// Closing the |TestHarness| connection will kill the |TestHarness| environment
+/// including the modular runtime running under it.
+///
+/// This connection is closed with the following epitaphs possible epitaphs:
+/// * ZX_ERR_INVALID_ARGS: Run() failed to execute succesfully.
+/// * ZX_ERR_BAD_STATE: Other methods are called before Run() is called.
+/// * ZX_ERR_ALREADY_BOUND: Run() was already called.
+[Discoverable]
+protocol TestHarness {
+    /// Initializes an instance of the modular runtime in an enclosed
+    /// environment, configured with parameters provided in |spec|. Closing the
+    /// |TestHarness| connection will kill the enclosed environment.
+    ///
+    /// This protocol connection is closed if Run() fails, with the following
+    /// epitaphs:
+    ///  * ZX_ERR_INVALID_ARGS: |spec| is mal-formed.
+    ///  * ZX_ERR_ALREADY_BOUND: Run() was already called.
+    Run(TestHarnessSpec spec);
+
+    /// This event is sent when a base shell component creation is intercepted,
+    /// which happens if |TestHarnessSpec.base_shell.should_intercept| is set.
+    -> OnNewBaseShell(fuchsia.sys.StartupInfo startup_info,
+                      InterceptedComponent intercepted_component);
+
+    /// This event is sent when a session shell component creation is
+    /// intercepted, which happens if
+    /// |TestHarnessSpec.session_shell.should_intercept| is set.
+    -> OnNewSessionShell(fuchsia.sys.StartupInfo startup_info,
+                         InterceptedComponent intercepted_component);
+
+    /// This event is sent when a story shell component creation is intercepted,
+    /// which happens if |TestHarnessSpec.story_shell.should_intercept| is set.
+    -> OnNewStoryShell(fuchsia.sys.StartupInfo startup_info,
+                       InterceptedComponent intercepted_component);
+
+    /// This event is sent when a component specified in
+    /// |TestHarnessSpec.components_to_intercept| is created.
+    /// |startup_info.launch_info.url| contains the component URL.
+    -> OnNewComponent(fuchsia.sys.StartupInfo startup_info,
+                      InterceptedComponent intercepted_component);
+
+    /// Tests may use this method to connect to services provided by the modular
+    /// runtime. These services share the component namespace for any
+    /// resources they create (e.g., entities, message queues, and module
+    /// names).
+    ///
+    /// This protocol connection is closed with the following epitaphs:
+    ///  * ZX_ERR_BAD_STATE: if |GetService()| is called before |Run()|.
+    ///  * ZX_ERR_INVALID_ARGS: if |service| is not set to a value.
+    GetService(TestHarnessService service);
+};
+
+/// Describes a service to get from the modular runtime under the test harness.
+/// All services here share a component namespace.
+xunion TestHarnessService {
+    request<fuchsia.modular.PuppetMaster> puppet_master;
+    request<fuchsia.modular.ComponentContext> component_context;
+    request<fuchsia.modular.AgentContext> agent_context;
+};
+
+/// InterceptedComponent represents an intercepted component's lifecycle.
+/// Closing this connection causes the component to be killed, and is
+/// equivalent in behaviour to the |ComponentController| being closed.
+protocol InterceptedComponent {
+    /// Signals that component has exit'd with the specified exit code. The
+    /// values here are bubbled up to the |ComponentController.OnTerminated|
+    /// event. The |OnKill| event is sent, and this InterceptedComponent
+    /// protocol is closed.
+    ///
+    /// This connection is closed once |Exit| is processed.
+    Exit(int64 exit_code, fuchsia.sys.TerminationReason reason);
+
+    /// The event is sent when the component is killed by the associated
+    /// |fuchsia.sys.ComponentController|, or when |Exit()| is called.
+    -> OnKill();
+};
+
+/// Defines the setup of an environment running an instance of the modular
+/// framework used for testing purposes. This table is supplied to
+/// |TestHarness.Run()|. A malformed |TestHarnessSpec| will cause |TestHarness|
+/// connection to close with an epitaph of ZX_ERR_INVALID_ARGS.
+table TestHarnessSpec {
+    /// There are three ways to configure the session shell:
+    ///  * Do not set |session_shell|:
+    ///      This uses a minimally functioning shell which automatically starts
+    ///      all new stories.
+    ///  * Set |session_shell.intercept_spec|:
+    ///      This will configure the modular runtime to use
+    ///      |session_shell.intercept_spec|, and set it up for interception. The
+    ///      |TestHarness.OnNewSessionShell| event is sent when the session
+    ///      shell component is launched.
+    ///  * Set |session_shell.component_url|:
+    ///      The specified component URL is used as the session shell. In this
+    ///      case, an interception event is NOT sent.
+    1: ShellSpec session_shell;
+
+    /// There are three ways to configure the session shell:
+    ///  * Do not set |base_shell|:
+    ///      This uses a minimally functioning base shell which auto-logins a
+    ///      guest user.
+    ///  * Set |base_shell.intercept_spec|:
+    ///      This will configure the modular runtime to use
+    ///      |base_shell.intercept_spec|, and set it up for interception. The
+    ///      |TestHarness.OnNewStoryShell| event is sent when the story shell
+    ///      component is launched.
+    ///  * Set |base_shell.component_url|:
+    ///      The specified component URL is used as the story shell. In this
+    ///      case, an interception event is NOT sent.
+    2: ShellSpec base_shell;
+
+    /// There are three ways to configure the session shell:
+    ///  * Do not set |story_shell|:
+    ///      This uses a minimally functioning story shell.
+    ///  * Set |story_shell.intercept_spec|:
+    ///      This will configure the modular runtime to use
+    ///      |story_shell.intercept_spec|, and set it up for interception. The
+    ///      |TestHarness.OnNewStoryShell| event is sent when the story shell
+    ///      component is launched.
+    ///  * Set |story_shell.component_url|:
+    ///      The specified component URL is used as the story shell. In this
+    ///      case, an interception event is NOT sent.
+    3: ShellSpec story_shell;
+
+    /// Configuration for basemgr. Only the following fields are processed:
+    ///  * test (default = true)
+    ///
+    /// All other fields are ignored, and must not be set.
+    4: fuchsia.modular.internal.BasemgrConfig basemgr_config;
+
+    /// The test harness starts basemgr in a hermetic environment, which
+    /// does not allow accessing services outside of the environment, unless the
+    /// service names are specified in this list.
+    ///
+    /// For example, adding "fuchsia.ui.policy.Presenter" to this list will
+    /// allow basemgr use the Presenter to display views; other
+    5: vector<string> basemgr_services_to_inherit;
+
+    /// Configuration for sessionmgr. Only the following fields are processed:
+    ///  * test (default = true)
+    ///  * use_memfs_for_ledger (default = true)
+    ///  * cloud_provider (default = CloudProvider::NONE)
+    ///  * session_agents (default = empty)
+    ///
+    ///  All other fields are ignored, and must not be set.
+    6: fuchsia.modular.internal.SessionmgrConfig sessionmgr_config;
+
+    /// List of component URLs (and additional .cmx contents) to intercept.
+    7: vector<InterceptSpec> components_to_intercept;
+};
+
+/// Describes the shell component to use for base, session or story shell.
+xunion ShellSpec {
+    /// If set, the specified component URL is used to start the shell, and is
+    /// also intercepted. The shell's component creation is delivered as one of
+    /// the |TestHarness.OnNew*Shell| events.
+    InterceptSpec intercept_spec;
+
+    /// If set, this supplied |url| is used to launch the shell.
+    string:fuchsia.io.MAX_PATH component_url;
+};
+
+/// Describes a component to intercept. Malformed parameters result in closing
+/// |TestHarness| with a |ZX_ERR_INVALID_ARGS| epitaph.
+table InterceptSpec {
+    /// Required. Must be a valid component URL (e.g., fuchsia-pkg://..), or is
+    /// considered malformed.
+    1: string:fuchsia.io.MAX_PATH component_url;
+
+    /// The .cmx contents of this component's manifest. A minimal manifest is
+    /// constructed by default. If set, the contents of |extra_cmx_contents|
+    /// override the default constructed manifest, which only has the required
+    /// "program.binary" field defined.
+    ///
+    /// |extra_cmx_contents| is considered malformed if it is not valid JSON.
+    2: fuchsia.mem.Buffer extra_cmx_contents;
+};
