@@ -28,6 +28,7 @@ enum class Board {
     kCleo,
     kSherlock,
     kMt8167sRef,
+    kMsm8x53Som,
     kUnknown,
 };
 
@@ -65,6 +66,8 @@ Board GetBoardType() {
         return Board::kSherlock;
     } else if (!strcmp(board_name, "mt8167s_ref")) {
         return Board::kMt8167sRef;
+    } else if (!strcmp(board_name, "msm8x53-som")) {
+        return Board::kMsm8x53Som;
     }
 
     return Board::kUnknown;
@@ -319,6 +322,20 @@ bool mt8167s_ref_enumeration_test() {
     END_TEST;
 }
 
+bool msm8x53_som_enumeration_test() {
+    BEGIN_TEST;
+    static const char* kDevicePaths[] = {
+        "sys/platform/msm8x53",
+        "sys/platform/13:01:1",
+        "sys/platform/13:00:3/msm8x53-sdhci",
+        "sys/platform/13:00:2/qcom-pil",
+    };
+
+    ASSERT_TRUE(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
+
+    END_TEST;
+}
+
 #define MAKE_TEST_CASE(name) \
     BEGIN_TEST_CASE(name) \
     RUN_TEST(name ## _enumeration_test) \
@@ -331,6 +348,7 @@ MAKE_TEST_CASE(astro);
 MAKE_TEST_CASE(cleo);
 MAKE_TEST_CASE(sherlock);
 MAKE_TEST_CASE(mt8167s_ref);
+MAKE_TEST_CASE(msm8x53_som);
 
 #undef MAKE_TEST_CASE
 
@@ -350,6 +368,8 @@ int main(int argc, char** argv) {
             return unittest_run_one_test(test_case_sherlock, TEST_ALL) ? 0 : -1;
         case Board::kMt8167sRef:
             return unittest_run_one_test(test_case_mt8167s_ref, TEST_ALL) ? 0 : -1;
+        case Board::kMsm8x53Som:
+            return unittest_run_one_test(test_case_msm8x53_som, TEST_ALL) ? 0 : -1;
         case Board::kUnknown:
             return 0;
     }
