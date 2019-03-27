@@ -7,6 +7,8 @@ package source
 import (
 	"amber/atonce"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
@@ -170,6 +172,9 @@ type Source struct {
 
 type custom struct {
 	Merkle string `json:"merkle"`
+	// Size sometimes not set, as it is in the process of being introduced. We use
+	// the pointer to determine set state.
+	Size *int64 `json:"size"`
 }
 
 type RemoteStoreError struct {
@@ -719,6 +724,7 @@ func (f *Source) Update() error {
 	})
 }
 
+// MerkleFor looks up a package target from the available TUF targets, returning the merkleroot and plaintext object length, or an error.
 func (f *Source) MerkleFor(name, version string) (string, int64, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -753,7 +759,14 @@ func (f *Source) MerkleFor(name, version string) (string, int64, error) {
 		return "", 0, ErrUnknownPkg
 	}
 
-	return custom.Merkle, meta.Length, nil
+	// If a blob is encrypted then the TUF recorded length includes the iv block,
+	// but we want to return the plain text content size.
+	length := meta.Length
+	if custom.Size != nil {
+		length = *custom.Size
+	}
+
+	return custom.Merkle, length, nil
 }
 
 func (f *Source) Save() error {
@@ -887,16 +900,35 @@ func (f *Source) FetchInto(blob string, length int64, outputDir string) error {
 		return fmt.Errorf("unknown content length, can not write")
 	}
 
-	if resp.ContentLength > -1 && length > -1 && resp.ContentLength != length {
-		return fmt.Errorf("bad content length: %d, expected %d", resp.ContentLength, length)
+	var src io.Reader = resp.Body
+	gotLength := resp.ContentLength
+	if f.cfg.Config.BlobKey != nil {
+		gotLength -= aes.BlockSize
+		block, err := aes.NewCipher(f.cfg.Config.BlobKey.Data[:])
+		if err != nil {
+			return err
+		}
+		iv := make([]byte, aes.BlockSize)
+		if _, err := io.ReadFull(src, iv); err != nil {
+			return err
+		}
+		stream := cipher.NewCTR(block, iv)
+		src = cipher.StreamReader{
+			stream,
+			src,
+		}
 	}
 
-	var src io.Reader = resp.Body
+	if gotLength > -1 && length > -1 && gotLength != length {
+		return fmt.Errorf("bad content length: %d, expected %d", gotLength, length)
+	}
+
 	if length > -1 {
-		src = io.LimitReader(resp.Body, length)
+		src = io.LimitReader(src, length)
 		err = dst.Truncate(length)
 	} else {
-		err = dst.Truncate(resp.ContentLength)
+		src = io.LimitReader(src, gotLength)
+		err = dst.Truncate(gotLength)
 	}
 
 	if err != nil {
@@ -908,8 +940,12 @@ func (f *Source) FetchInto(blob string, length int64, outputDir string) error {
 		return err
 	}
 
-	if resp.ContentLength != -1 && written != resp.ContentLength {
-		return fmt.Errorf("blob incomplete, only wrote %d out of %d bytes", written, resp.ContentLength)
+	if gotLength > -1 && written != gotLength {
+		return fmt.Errorf("blob incomplete, only wrote %d out of %d bytes", written, gotLength)
+	}
+
+	if length > -1 && written != length {
+		return fmt.Errorf("blob incomplete, only wrote %d out of %d bytes", written, length)
 	}
 
 	return nil

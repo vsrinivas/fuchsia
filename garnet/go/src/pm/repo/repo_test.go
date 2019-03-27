@@ -180,9 +180,12 @@ func TestAddBlob(t *testing.T) {
 		t.Fatalf("Repo init returned error %v", err)
 	}
 
-	res, err := repo.AddBlob("", io.LimitReader(rand.Reader, 8193))
+	res, n, err := repo.AddBlob("", io.LimitReader(rand.Reader, 8193))
 	if err != nil {
 		t.Fatal(err)
+	}
+	if want := int64(8193); n != want {
+		t.Fatalf("got %d, want %d", n, want)
 	}
 	blobs, err := os.Open(filepath.Join(repoDir, "repository", "blobs"))
 	if err != nil {
@@ -219,8 +222,13 @@ func TestAddBlob(t *testing.T) {
 	}
 
 	// Test adding a blob with a pre-computed name
-	if _, err := repo.AddBlob(mr, bytes.NewReader(b)); err != nil {
+	_, n, err = repo.AddBlob(mr, bytes.NewReader(b))
+	if err != nil {
 		t.Fatal(err)
+	}
+
+	if want := int64(len(b)); n != want {
+		t.Fatalf("got %d, want %d", n, want)
 	}
 
 	if _, err := os.Stat(blobPath); err != nil {

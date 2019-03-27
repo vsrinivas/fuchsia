@@ -144,6 +144,10 @@ package("amber_tools") {
 
 test_targets = [
   {
+    name = "amber_daemon_test"
+    gopkg = "amber/daemon"
+  },
+  {
     name = "amber_source_test"
     gopkg = "amber/source"
   },
@@ -162,6 +166,7 @@ foreach(test, test_targets) {
 
     deps = [
       ":lib",
+      "//garnet/go/src/pm:pm_lib",
       "//garnet/go/src/pmd",
       "//garnet/public/go/third_party:github.com/google/go-cmp",
     ]

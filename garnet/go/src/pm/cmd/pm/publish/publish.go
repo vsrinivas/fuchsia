@@ -22,9 +22,8 @@ import (
 )
 
 const (
-	usage = `Usage: %s publish (-a|-ps) -C -f file [-r <repo_path>]
-
-Pass any one of the mode flags (-a|-ps), and at least one file to pubish.
+	usage = `Usage: %s publish (-a|-bs|-ps) -C -f file [-r <repo_path>]
+		Pass any one of the mode flags (-a|-bs|-ps), and at least one file to pubish.
 `
 	serverBase = "amber-files"
 	metaFar    = "meta.far"
@@ -51,7 +50,8 @@ func Run(cfg *build.Config, args []string) error {
 
 	archiveMode := fs.Bool("a", false, "(mode) Publish an archived package.")
 	packageSetMode := fs.Bool("ps", false, "(mode) Publish a set of packages from a manifest.")
-	modeFlags := []*bool{archiveMode, packageSetMode}
+	blobSetMode := fs.Bool("bs", false, "(mode) Publish a set of blobs from a manifest.")
+	modeFlags := []*bool{archiveMode, packageSetMode, blobSetMode}
 
 	// TODO(raggi): cleanup args...
 	config := &repo.Config{}
@@ -64,6 +64,10 @@ func Run(cfg *build.Config, args []string) error {
 	fs.Var(&filePaths, "f", "Path(s) of the file(s) to publish")
 
 	clean := fs.Bool("C", false, "\"clean\" the repository. only new publications remain.")
+
+	// NOTE(raggi): encryption as implemented is not intended to be a generally used
+	// feature, as such this flag is deliberately not included in the usage line
+	encryptionKey := fs.String("e", "", "Path to AES private key for blob encryption")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, usage, filepath.Base(os.Args[0]))
@@ -116,9 +120,11 @@ func Run(cfg *build.Config, args []string) error {
 	if err != nil {
 		return fmt.Errorf("error initializing repo: %s", err)
 	}
+
 	if *verbose {
 		fmt.Printf("initialized repo %s\n", config.RepoDir)
 	}
+
 	if *clean {
 		// Remove any staged items from the repository that are yet to be published.
 		if err := repo.Clean(); err != nil {
@@ -126,6 +132,13 @@ func Run(cfg *build.Config, args []string) error {
 		}
 		// Removes all existing published targets from the repository.
 		if err := repo.RemoveTargets([]string{}); err != nil {
+			return err
+		}
+	}
+
+	if *encryptionKey != "" {
+		println("will encrypt")
+		if err := repo.EncryptWith(*encryptionKey); err != nil {
 			return err
 		}
 	}
@@ -182,7 +195,7 @@ func Run(cfg *build.Config, args []string) error {
 			if err != nil {
 				return err
 			}
-			if _, err := repo.AddBlob(n, bytes.NewReader(b)); err != nil {
+			if _, _, err := repo.AddBlob(n, bytes.NewReader(b)); err != nil {
 				return err
 			}
 		}
@@ -194,37 +207,69 @@ func Run(cfg *build.Config, args []string) error {
 		if len(filePaths) != 1 {
 			return fmt.Errorf("too many file paths supplied")
 		}
-		f, err := os.Open(filePaths[0])
-		if err != nil {
-			return fmt.Errorf("error reading package set manifest: %s", err)
-		}
-		defer f.Close()
-		s := bufio.NewScanner(f)
-		for s.Scan() {
-			if err := s.Err(); err != nil {
-				return fmt.Errorf("error reading package set manifest: %s", err)
-			}
 
-			line := s.Text()
-			parts := strings.SplitN(line, "=", 2)
-			name := parts[0]
-			f, err := os.Open(parts[1])
+		if err := eachEntry(filePaths[0], func(name, src string) error {
+			f, err := os.Open(src)
 			if err != nil {
 				return err
 			}
+			defer f.Close()
 			if err := repo.AddPackage(name, f); err != nil {
-				f.Close()
-				return fmt.Errorf("failed to add package %q from %q: %s", parts[0], parts[1], err)
+				return fmt.Errorf("failed to add package %q from %q: %s", name, src, err)
 			}
-			f.Close()
+			return nil
+		}); err != nil {
+			return err
 		}
+
 		if err := repo.CommitUpdates(*verTime); err != nil {
 			log.Fatalf("error committing repository updates: %s", err)
+		}
+
+	case *blobSetMode:
+
+		if len(filePaths) != 1 {
+			return fmt.Errorf("too many file paths supplied")
+		}
+
+		if err := eachEntry(filePaths[0], func(merkle, src string) error {
+			f, err := os.Open(src)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			if _, _, err := repo.AddBlob(merkle, f); err != nil {
+				return fmt.Errorf("failed to add blob %q from %q: %s", merkle, src, err)
+			}
+			return nil
+		}); err != nil {
+			return err
 		}
 
 	default:
 		panic("unhandled mode")
 	}
 
+	return nil
+}
+
+func eachEntry(path string, cb func(dest, src string) error) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("error reading manifest: %s", err)
+	}
+	defer f.Close()
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		if err := s.Err(); err != nil {
+			return fmt.Errorf("error reading manifest: %s", err)
+		}
+
+		line := s.Text()
+		parts := strings.SplitN(line, "=", 2)
+		if err := cb(parts[0], parts[1]); err != nil {
+			return err
+		}
+	}
 	return nil
 }

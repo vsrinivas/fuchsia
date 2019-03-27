@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -160,6 +161,7 @@ func Run(cfg *build.Config, args []string) error {
 	auto := fs.Bool("a", true, "Host auto endpoint for realtime client updates")
 	autoRate := fs.Duration("auto-rate", time.Second, "rate at which to poll filesystem if realtime watch is not available")
 	quiet := fs.Bool("q", false, "Don't print out information about requests")
+	encryptionKey := fs.String("e", "", "Path to a symmetric blob encryption key *UNSAFE*")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "usage: %s serve", filepath.Base(os.Args[0]))
@@ -298,7 +300,10 @@ func Run(cfg *build.Config, args []string) error {
 			StatusConfig struct {
 				Enabled bool
 			}
-			Auto bool
+			Auto    bool
+			BlobKey *struct {
+				Data [32]uint8
+			}
 		}{
 			ID:          repoUrl,
 			RepoURL:     repoUrl,
@@ -311,6 +316,19 @@ func Run(cfg *build.Config, args []string) error {
 			},
 			Auto: true,
 		}
+
+		if *encryptionKey != "" {
+			keyBytes, err := ioutil.ReadFile(*encryptionKey)
+			if err != nil {
+				log.Fatal(err)
+			}
+			if len(keyBytes) != 32 {
+				log.Fatalf("encryption key %s of improper size", *encryptionKey)
+			}
+			cfg.BlobKey = &struct{ Data [32]uint8 }{}
+			copy(cfg.BlobKey.Data[:], keyBytes)
+		}
+
 		for _, id := range signedKeys.Signed.Roles.Root.Keyids {
 			k := signedKeys.Signed.Keys[id]
 			cfg.RootKeys = append(cfg.RootKeys, struct{ Type, Value string }{

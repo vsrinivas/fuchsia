@@ -122,6 +122,12 @@ struct SourceConfig {
 
     // If true, the source supports the /auto SSE endpoint for live updates
     bool auto = false;
+
+    BlobEncryptionKey? blobKey;
+};
+
+struct BlobEncryptionKey {
+    array<uint8>:32 data;
 };
 
 enum Status {

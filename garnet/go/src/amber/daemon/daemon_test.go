@@ -5,33 +5,24 @@
 package daemon
 
 import (
-	"encoding/json"
+	"crypto/rand"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
-	"syscall"
-	"syscall/zx"
-	"syscall/zx/fidl"
-	zxio "syscall/zx/io"
 	"testing"
-	"thinfs/fs"
-	"thinfs/zircon/rpc"
 
 	"fidl/fuchsia/amber"
 
 	"fuchsia.googlesource.com/merkle"
-	"fuchsia.googlesource.com/pmd/amberer"
-	"fuchsia.googlesource.com/pmd/pkgfs"
-	tuf "github.com/flynn/go-tuf"
+	"fuchsia.googlesource.com/pm/repo"
 )
 
 func TestSources(t *testing.T) {
-	fmt.Printf("hi\n")
 	store, err := ioutil.TempDir("", "amber-test")
 	if err != nil {
 		panic(err)
@@ -159,38 +150,6 @@ func makeBlob(dir, content string) (string, error) {
 	return merkleroot, ioutil.WriteFile(path, []byte(content), 0644)
 }
 
-func initRepo(repoDir string, store string, blobs []string) *tuf.Repo {
-	// create and copy the package into the repo staging dir
-	sTargetsDir := repoDir + "/staged/targets"
-	panicerr(os.MkdirAll(sTargetsDir+"/foo", 0755))
-	stagedPkg := sTargetsDir + "/foo/0"
-	pkgBlob := blobs[0]
-	panicerr(os.Link(store+"/"+pkgBlob, stagedPkg))
-
-	panicerr(os.MkdirAll(repoDir+"/repository/blobs", 0755))
-	for _, blob := range blobs {
-		panicerr(os.Link(store+"/"+blob, repoDir+"/repository/blobs/"+blob))
-	}
-
-	// create the repo
-	repo, err := tuf.NewRepo(tuf.FileSystemStore(repoDir, nil), "sha512")
-	panicerr(err)
-	panicerr(repo.Init(true))
-	_, err = repo.GenKey("root")
-	panicerr(err)
-	_, err = repo.GenKey("targets")
-	panicerr(err)
-	_, err = repo.GenKey("snapshot")
-	panicerr(err)
-	_, err = repo.GenKey("timestamp")
-	panicerr(err)
-	panicerr(repo.AddTarget("/foo/0", json.RawMessage(fmt.Sprintf(`{"merkle": %q}`, pkgBlob))))
-	panicerr(repo.Snapshot(tuf.CompressionTypeNone))
-	panicerr(repo.Timestamp())
-	panicerr(repo.Commit())
-	return repo
-}
-
 func TestDaemon(t *testing.T) {
 	store, err := ioutil.TempDir("", "amber-test-store")
 	panicerr(err)
@@ -209,7 +168,26 @@ func TestDaemon(t *testing.T) {
 	defer os.RemoveAll(repoDir)
 
 	// initialize the repo, adding the staged target
-	repo := initRepo(repoDir, store, []string{pkgBlob, root1})
+	repo, err := repo.New(repoDir)
+	panicerr(err)
+	panicerr(repo.Init())
+	panicerr(repo.GenKeys())
+
+	mf, err := os.Open(store + "/" + pkgBlob)
+	panicerr(err)
+	defer mf.Close()
+	panicerr(repo.AddPackage("foo/0", mf))
+
+	for _, blob := range []string{pkgBlob, root1} {
+		b, err := os.Open(store + "/" + blob)
+		panicerr(err)
+		_, _, err = repo.AddBlob(blob, b)
+		b.Close()
+		panicerr(err)
+	}
+
+	panicerr(repo.CommitUpdates(false))
+
 	keys, err := repo.RootKeys()
 	panicerr(err)
 	rootKey := keys[0]
@@ -294,6 +272,146 @@ func TestDaemon(t *testing.T) {
 		t.Errorf("getblob: got %q, want %q", got, want)
 	}
 }
+
+func TestDaemonWithEncryption(t *testing.T) {
+	store, err := ioutil.TempDir("", "amber-test-store")
+	panicerr(err)
+	defer os.RemoveAll(store)
+
+	// TODO(raggi): make this a real package instead, but that's a lot more setup
+	pkgContent := "very fake package"
+	pkgBlobLength := int64(len(pkgContent))
+	pkgBlob, err := makeBlob(store, pkgContent)
+	panicerr(err)
+	root1, err := makeBlob(store, "first blob")
+	panicerr(err)
+
+	repoDir, err := ioutil.TempDir("", "amber-test-repo")
+	panicerr(err)
+	defer os.RemoveAll(repoDir)
+
+	// initialize the repo, adding the staged target
+	repo, err := repo.New(repoDir)
+	panicerr(err)
+	panicerr(repo.Init())
+	panicerr(repo.GenKeys())
+
+	// Create a blob encryption key
+	var key [32]byte
+	_, err = io.ReadFull(rand.Reader, key[:])
+	panicerr(err)
+	keyPath := store + "/crypt.key"
+	err = ioutil.WriteFile(keyPath, key[:], 0600)
+	panicerr(err)
+	panicerr(repo.EncryptWith(keyPath))
+
+	mf, err := os.Open(store + "/" + pkgBlob)
+	panicerr(err)
+	defer mf.Close()
+	panicerr(repo.AddPackage("foo/0", mf))
+
+	for _, blob := range []string{pkgBlob, root1} {
+		b, err := os.Open(store + "/" + blob)
+		panicerr(err)
+		_, _, err = repo.AddBlob(blob, b)
+		b.Close()
+		panicerr(err)
+	}
+
+	panicerr(repo.CommitUpdates(false))
+
+	keys, err := repo.RootKeys()
+	panicerr(err)
+	rootKey := keys[0]
+
+	server := httptest.NewServer(http.FileServer(http.Dir(repoDir + "/repository")))
+
+	// XXX(raggi): cleanup disabled because networking bug!
+	// defer server.Close()
+	// // so that the httptest server can close:
+	// defer http.DefaultTransport.(*http.Transport).CloseIdleConnections()
+
+	store, err = ioutil.TempDir("", "amber-test")
+	panicerr(err)
+	defer os.RemoveAll(store)
+
+	pkgsDir, err := ioutil.TempDir("", "amber-test-pkgs")
+	panicerr(err)
+	defer os.RemoveAll(pkgsDir)
+	blobsDir, err := ioutil.TempDir("", "amber-test-blobs")
+	panicerr(err)
+	defer os.RemoveAll(blobsDir)
+
+	d, err := NewDaemon(store, pkgsDir, blobsDir, nil)
+	panicerr(err)
+
+	err = d.AddSource(&amber.SourceConfig{
+		Id:          "testing",
+		RepoUrl:     server.URL,
+		BlobRepoUrl: server.URL + "/blobs",
+		// TODO(raggi): fix keyconfig
+		RootKeys: []amber.KeyConfig{
+			{
+				Type:  rootKey.Type,
+				Value: rootKey.Value.Public.String(),
+			},
+		},
+		BlobKey: &amber.BlobEncryptionKey{
+			Data: key,
+		},
+		StatusConfig: &amber.StatusConfig{Enabled: true},
+	})
+	panicerr(err)
+
+	// TODO(raggi): add test for the update semantics
+	d.Update()
+
+	merkle, length, err := d.MerkleFor("foo", "0", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if merkle != pkgBlob {
+		t.Errorf("merkleFor: got %q, want %q", merkle, pkgBlob)
+	}
+	if length != int64(pkgBlobLength) {
+		t.Errorf("merkleFor length: got %d, want %d", length, pkgBlobLength)
+	}
+
+	// TODO(raggi): add coverage for error propagatation cases
+	var rootSeen string
+	var errSeen error
+	d.AddWatch(pkgBlob, func(root string, err error) {
+		rootSeen = root
+		errSeen = err
+	})
+	panicerr(d.GetPkg(pkgBlob, pkgBlobLength))
+
+	d.Activated(pkgBlob)
+
+	if rootSeen != pkgBlob {
+		t.Errorf("activation: got %q, want %q", rootSeen, pkgBlob)
+	}
+	panicerr(errSeen)
+
+	c, err := ioutil.ReadFile(pkgsDir + "/" + pkgBlob)
+	panicerr(err)
+	if got := string(c); got != pkgContent {
+		t.Errorf("getpkg: got %q, want %q", got, pkgContent)
+	}
+
+	panicerr(d.GetBlob(root1))
+
+	c, err = ioutil.ReadFile(blobsDir + "/" + root1)
+	panicerr(err)
+	if got, want := string(c), "first blob"; got != want {
+		t.Errorf("getblob: got %q, want %q", got, want)
+	}
+}
+
+/***
+In the time between PKG-414 and when the tests in this file were re-enabled,
+the following case rotted because it is no longer possible to Mount
+filesystems in this way.
 
 // Mock blobfs that always returns "no space".
 
@@ -507,3 +625,4 @@ func TestOutOfSpace(t *testing.T) {
 	err = evtIfc.ExpectOnOutOfSpace()
 	panicerr(err)
 }
+*/
