@@ -549,34 +549,61 @@ TEST_F(CapturerTwoGainControlsTest, SetGainNaN) { TestSetGainNaN(); }
 // TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 bool IndependentGainControlsTest::ReceiveGainCallback(float gain_db,
                                                       bool mute) {
-  received_gain_callback_ = received_gain_callback_2_ = false;
+  error_occurred_ = error_occurred_2_ = received_gain_callback_ =
+      received_gain_callback_2_ = false;
   received_gain_db_ = kTooLowGainDb;
 
   bool timed_out = !RunLoopWithTimeoutOrUntil(
       [this]() {
-        return (error_occurred_ || error_occurred_2_ ||
-                received_gain_callback_2_);
+        // If any of these four things happen, break out of the loop...but only
+        // the first one is success; the other three are error conditions.
+        return received_gain_callback_ || received_gain_callback_2_ ||
+               error_occurred_ || error_occurred_2_;
       },
-      kDurationTimeoutExpected);
-
-  EXPECT_FALSE(error_occurred_);
-  EXPECT_FALSE(error_occurred_2_);
-  EXPECT_FALSE(ApiIsNull());
-  EXPECT_TRUE(gain_control_.is_bound());
-  EXPECT_TRUE(gain_control_2_.is_bound());
-
-  EXPECT_TRUE(timed_out);
-
-  EXPECT_TRUE(received_gain_callback_);
-  EXPECT_FALSE(received_gain_callback_2_);
-  EXPECT_EQ(received_gain_db_, gain_db);
-  EXPECT_EQ(received_mute_, mute);
+      kDurationResponseExpected, kDurationGranularity);
 
   // Not only must we not have disconnected or received unexpected gain2
   // callback, also gain1 must have received the expected callback.
-  return (!error_occurred_ && !error_occurred_2_ &&
-          !received_gain_callback_2_ && received_gain_db_ == gain_db &&
-          received_mute_ == mute);
+  EXPECT_FALSE(timed_out);
+  EXPECT_FALSE(received_gain_callback_2_);
+  EXPECT_FALSE(error_occurred_);
+  EXPECT_FALSE(error_occurred_2_);
+  bool no_error = !timed_out && !received_gain_callback_2_ &&
+                  !error_occurred_ && !error_occurred_2_;
+
+  EXPECT_EQ(received_gain_db_, gain_db);
+  EXPECT_EQ(received_mute_, mute);
+  bool gain_correct =
+      (received_gain_db_ == gain_db) && (received_mute_ == mute);
+
+  // Even if we did get the gain callback we wanted, now we wait for other
+  // gain callbacks -- or a disconnect. If any of these occur, then we fail.
+  if (gain_correct && no_error) {
+    received_gain_callback_ = false;
+
+    timed_out = !RunLoopWithTimeoutOrUntil(
+        [this]() {
+          return (error_occurred_ || error_occurred_2_ ||
+                  received_gain_callback_ || received_gain_callback_2_);
+        },
+        kDurationTimeoutExpected);
+    EXPECT_TRUE(timed_out);
+    EXPECT_FALSE(error_occurred_);
+    EXPECT_FALSE(error_occurred_2_);
+    EXPECT_FALSE(received_gain_callback_);
+    EXPECT_FALSE(received_gain_callback_2_);
+    no_error = no_error && timed_out && !error_occurred_ &&
+               !error_occurred_2_ && !received_gain_callback_ &&
+               !received_gain_callback_2_;
+  }
+
+  EXPECT_FALSE(ApiIsNull());
+  EXPECT_TRUE(gain_control_.is_bound());
+  EXPECT_TRUE(gain_control_2_.is_bound());
+  bool no_disconnects =
+      !ApiIsNull() && gain_control_.is_bound() && gain_control_2_.is_bound();
+
+  return (gain_correct && no_error && no_disconnects);
 }
 
 // Tests expect to receive neither gain callback nor error, on both gains.
@@ -615,30 +642,56 @@ bool IndependentGainControlsTest::ReceiveNoGainCallback() {
 //
 // TODO(mpuryear): Refactor tests to eliminate "wait for nothing bad to happen".
 bool IndependentGainControlsTest::ReceiveDisconnectCallback() {
-  received_gain_callback_ = received_gain_callback_2_ = false;
+  error_occurred_ = error_occurred_2_ = received_gain_callback_ =
+      received_gain_callback_2_ = false;
 
+  //  We expect Renderer/Capturer AND GainControl to disconnect. Wait for both.
   bool timed_out = !RunLoopWithTimeoutOrUntil(
       [this]() {
-        return error_occurred_2_ || received_gain_callback_ ||
+        // If any of these four conditions happen, break out of the loop.
+        // Only the first is success; the other three are failures.
+        // By "first", we mean that Renderer/Capturer and Gain1 both disconnect.
+        return ((ApiIsNull() && !gain_control_.is_bound())) ||
+               error_occurred_2_ || received_gain_callback_ ||
                received_gain_callback_2_;
       },
-      kDurationTimeoutExpected);
+      kDurationResponseExpected, kDurationGranularity);
 
-  EXPECT_TRUE(error_occurred_);
-  EXPECT_FALSE(error_occurred_2_);
-  EXPECT_TRUE(ApiIsNull());
-  EXPECT_FALSE(gain_control_.is_bound());
-  EXPECT_TRUE(gain_control_2_.is_bound());
+  EXPECT_FALSE(timed_out) << "Timed out waiting for disconnect";
 
-  EXPECT_TRUE(timed_out);
+  // After these disconnects, both Gain and API should be gone, but not Gain2.
+  EXPECT_FALSE(error_occurred_2_) << "Unexpected disconnect: independent gain";
+  EXPECT_TRUE(ApiIsNull()) << "Expected disconnect: parent API binding";
+  EXPECT_FALSE(gain_control_.is_bound()) << "Expected disconnect: gain binding";
+  bool correct_disconnect = error_occurred_ && !error_occurred_2_ &&
+                            ApiIsNull() && !gain_control_.is_bound();
 
   EXPECT_FALSE(received_gain_callback_);
   EXPECT_FALSE(received_gain_callback_2_);
+  bool unexpected_callback =
+      received_gain_callback_ || received_gain_callback_2_;
 
-  // While waiting for (but not receiving) gain2 disconnect or either gain
-  // callback, we should also have received the gain1 disconnect.
-  return (error_occurred_ && !error_occurred_2_ && !received_gain_callback_ &&
-          !received_gain_callback_2_);
+  // Even if we did get the disconnect callbacks we wanted, now wait for other
+  // unexpected callbacks. If none occur, then we pass.
+  if (!timed_out && correct_disconnect && !unexpected_callback) {
+    timed_out = !RunLoopWithTimeoutOrUntil(
+        [this]() {
+          return (error_occurred_2_ || received_gain_callback_ ||
+                  received_gain_callback_2_);
+        },
+        kDurationTimeoutExpected);
+    EXPECT_TRUE(timed_out) << "Should have timed out after disconnects";
+
+    EXPECT_FALSE(error_occurred_2_);
+    EXPECT_TRUE(gain_control_2_.is_bound());
+    correct_disconnect = !error_occurred_2_ && gain_control_2_.is_bound();
+
+    EXPECT_FALSE(received_gain_callback_);
+    EXPECT_FALSE(received_gain_callback_2_);
+    unexpected_callback = received_gain_callback_ || received_gain_callback_2_;
+  }
+
+  return (correct_disconnect && !unexpected_callback);
 }
 
 // TwoRenderersGainControlsTest
