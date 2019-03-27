@@ -99,8 +99,18 @@ impl Mac {
 }
 
 impl ndp::LinkLayerAddress for Mac {
+    const BYTES_LENGTH: usize = 6;
+
     fn bytes(&self) -> &[u8] {
         &self.0
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Self {
+        // assert that contract is being held:
+        debug_assert!(bytes.len() == Self::BYTES_LENGTH);
+        let mut b = [0; Self::BYTES_LENGTH];
+        b.copy_from_slice(bytes);
+        Self::new(b)
     }
 }
 
@@ -486,6 +496,16 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         }
     }
 
+    fn has_ipv6_addr<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+        address: &Ipv6Addr,
+    ) -> bool {
+        let state = get_device_state(ctx, device_id);
+        state.ipv6_addr_sub.map_or(false, |addr_sub| addr_sub.into_addr() == *address)
+            || state.mac.to_ipv6_link_local(None) == *address
+    }
+
     fn send_ipv6_frame<D: EventDispatcher, S: Serializer>(
         ctx: &mut Context<D>,
         device_id: u64,
@@ -499,6 +519,19 @@ impl ndp::NdpDevice for EthernetNdpDevice {
             .map_err(|(err, _)| err)?;
         ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
         Ok(())
+    }
+
+    fn get_device_id(id: u64) -> DeviceId {
+        DeviceId::new_ethernet(id)
+    }
+
+    fn address_resolved<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+        address: &Ipv6Addr,
+        link_address: Self::LinkAddress,
+    ) {
+        log_unimplemented!((), "Ethernet packet queueing not implemented");
     }
 }
 

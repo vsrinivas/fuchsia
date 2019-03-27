@@ -12,7 +12,7 @@ use specialize_ip_macro::specialize_ip_address;
 
 use crate::device::{DeviceId, FrameDestination};
 use crate::ip::{
-    send_icmp_response, send_ip_packet, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
+    ndp, send_icmp_response, send_ip_packet, IpAddress, IpProto, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
     IPV6_MIN_MTU,
 };
 use crate::wire::icmp::{
@@ -27,6 +27,7 @@ use crate::{Context, EventDispatcher};
 #[specialize_ip_address]
 pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
+    device: Option<DeviceId>,
     src_ip: A,
     dst_ip: A,
     mut buffer: B,
@@ -102,6 +103,13 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
             Icmpv6Packet::EchoReply(echo_reply) => {
                 increment_counter!(ctx, "receive_icmp_packet::echo_reply");
                 trace!("receive_icmp_packet: Received an EchoReply message");
+            }
+            Icmpv6Packet::RouterSolicitation(_)
+            | Icmpv6Packet::RouterAdvertisment(_)
+            | Icmpv6Packet::NeighborSolicitation(_)
+            | Icmpv6Packet::NeighborAdvertisment(_)
+            | Icmpv6Packet::Redirect(_) => {
+                ndp::receive_ndp_packet(ctx, device, src_ip, dst_ip, packet);
             }
             _ => log_unimplemented!(
                 (),

@@ -93,7 +93,7 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddress, B: BufferMut>(
     increment_counter!(ctx, "dispatch_receive_ip_packet");
     let res = match proto {
         IpProto::Icmp | IpProto::Icmpv6 => {
-            icmp::receive_icmp_packet(ctx, src_ip, dst_ip, buffer);
+            icmp::receive_icmp_packet(ctx, device, src_ip, dst_ip, buffer);
             Ok(())
         }
         IpProto::Igmp => {

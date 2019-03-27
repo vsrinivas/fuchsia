@@ -400,6 +400,11 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
         &self.message
     }
 
+    /// Get the ICMP body.
+    pub(crate) fn body(&self) -> &M::Body {
+        &self.message_body
+    }
+
     /// Get the ICMP message code.
     ///
     /// The code provides extra details about the message. Each message type has

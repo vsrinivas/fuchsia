@@ -80,6 +80,11 @@ impl NeighborSolicitation {
     pub(crate) fn new(target_address: Ipv6Addr) -> Self {
         Self { _reserved: [0; 4], target_address }
     }
+
+    /// Get the target address in neighbor solicitation message.
+    pub(crate) fn target_address(&self) -> &Ipv6Addr {
+        &self.target_address
+    }
 }
 
 /// An NDP Neighbor Advertisment.
@@ -92,6 +97,40 @@ pub(crate) struct NeighborAdvertisment {
 }
 
 impl_icmp_message!(Ipv6, NeighborAdvertisment, NeighborAdvertisment, IcmpUnusedCode, Options<B>);
+
+impl NeighborAdvertisment {
+    /// Router flag.
+    ///
+    /// When set, the R-bit indicates that the sender is a router. The R-bit is
+    /// used by Neighbor Unreachability Detection to detect a router that
+    /// changes to a host.
+    pub(crate) const FLAG_ROUTER: u8 = 0x80;
+    /// Solicited flag.
+    ///
+    /// When set, the S-bit indicates that the advertisement was sent in
+    /// response to a Neighbor Solicitation from the Destination address. The
+    /// S-bit is used as a reachability confirmation for Neighbor Unreachability
+    /// Detection.  It MUST NOT be set in multicast advertisements or in
+    /// unsolicited unicast advertisements.
+    pub(crate) const FLAG_SOLICITED: u8 = 0x40;
+    /// Override flag.
+    ///
+    /// When set, the O-bit indicates that the advertisement should override an
+    /// existing cache entry and update the cached link-layer address. When it
+    /// is not set the advertisement will not update a cached link-layer address
+    /// though it will update an existing Neighbor Cache entry for which no
+    /// link-layer address is known.  It SHOULD NOT be set in solicited
+    /// advertisements for anycast addresses and in solicited proxy
+    /// advertisements. It SHOULD be set in other solicited advertisements and
+    /// in unsolicited advertisements.
+    pub(crate) const FLAG_OVERRIDE: u8 = 0x20;
+
+    /// Creates a new neighbor advertisement message with the provided
+    /// `flags_rso` and `target_address`.
+    pub(crate) fn new(flags_rso: u8, target_address: Ipv6Addr) -> Self {
+        Self { flags_rso, _reserved: [0; 3], target_address }
+    }
+}
 
 /// An ICMPv6 Redirect Message.
 #[derive(Copy, Clone, Debug, FromBytes, AsBytes, Unaligned)]
