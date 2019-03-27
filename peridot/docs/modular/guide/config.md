@@ -12,21 +12,23 @@ modular_config() target in the product's monolith packages.
 ```
 {
   "basemgr": {
-    "disable_statistics": "true",
-    "base_shell_launch_configs": {
-        url: "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
+    "enable_cobalt": false,
+    "use_session_shell_for_story_shell_factory": true,
+    "base_shell": {
+      "url": "fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
     },
-    "session_shell_launch_configs": {
-      "url": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
-      "display_usage": "near",
-      "screen_height": 50,
-      "screen_width": 100
-    }
+    "session_shells": [
+      {
+        "url": "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/ermine_session_shell.cmx",
+        "display_usage": "near",
+        "screen_height": 50,
+        "screen_width": 100
+      }
+    ]
   },
   "sessionmgr": {
     "use_memfs_for_ledger": true,
-    "cloud_provider": false,
-    "story_shell_factory": NONE,
+    "cloud_provider": "NONE",
     "startup_agents": [
       "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
     ],
@@ -39,24 +41,26 @@ modular_config() target in the product's monolith packages.
 
 ## Basemgr fields
 
-* `base_shell_launch_configs` **boolean** *(required)*
+* `base_shell` **boolean** *(required)*
     - `url`: **string** *(required)*
-        * The fuchsia package url for which base shell to use.
+        * The fuchsia component url for which base shell to use.
     - `keep_alive_after_login` **boolean** *(optional)*
         * When set to true, the base shell is kept alive after a log in. This is
           used for testing because current integration tests expect base shell
           to always be running.
         * **default**: `false`
-* `session_shell_launch_configs` *(required)*
-    - `url`: **string** *(required)*
-        * The fuchsia package url for which session shell to use.
-    - `display_usage`: **string** *(optional)*
-        * The display usage policy for this session shell.
-        * **Examples**: handheld, close, near, midrange, far
-    - `screen_height`: **float** *(optional)*
-        * The screen height in millimeters for the session shell's display.
-    - `screen_width`: **float** *(optional)*
-        * The screen width in millimeters for the session shell's display.
+* `session_shells` **array** *(required)*
+    - Lists all the session shells with each shell containing the following
+      fields:
+        - `url`: **string** *(required)*
+            * The fuchsia component url for which session shell to use.
+        - `display_usage`: **string** *(optional)*
+            * The display usage policy for this session shell.
+            * **Examples**: handheld, close, near, midrange, far
+        - `screen_height`: **float** *(optional)*
+            * The screen height in millimeters for the session shell's display.
+        - `screen_width`: **float** *(optional)*
+            * The screen width in millimeters for the session shell's display.
 * `enable_cobalt`: **boolean** *(optional)*
     - When set to false, Cobalt statistics are disabled.
     - **default**: `true`
@@ -98,11 +102,11 @@ modular_config() target in the product's monolith packages.
       the ledger for the user's repository, or to use /data/LEDGER.
     - **default**: `false`
 * `startup_agents`: **string[]** *(optional)*
-    - A list of fuchsia package urls that specify which agents to launch at
+    - A list of fuchsia component urls that specify which agents to launch at
       startup.
 * `session_agents`: **string[]** *(optional)*
-    - A list of fuchsia package urls that specify which agents to launch at
+    - A list of fuchsia component urls that specify which agents to launch at
       startup with PuppetMaster and FocusProvider services.
 * `story_shell_url`: **string** *(optional)*
-    - The fuchsia package url for which story shell to use.
+    - The fuchsia component url for which story shell to use.
     - **default**: `fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx`
