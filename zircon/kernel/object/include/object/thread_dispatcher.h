@@ -12,11 +12,13 @@
 #include <kernel/dpc.h>
 #include <kernel/event.h>
 #include <kernel/thread.h>
-#include <vm/vm_address_region.h>
 #include <object/channel_dispatcher.h>
 #include <object/dispatcher.h>
+#include <object/exception_dispatcher.h>
+#include <object/exceptionate.h>
 #include <object/excp_port.h>
 #include <object/thread_state.h>
+#include <vm/vm_address_region.h>
 
 #include <zircon/compiler.h>
 #include <zircon/syscalls/debug.h>
@@ -147,6 +149,26 @@ public:
     // Returns ZX_ERR_BAD_STATE if not in an exception.
     zx_status_t GetExceptionReport(zx_exception_report_t* report);
 
+    // TODO(ZX-3072): remove the port-based exception code once everyone is
+    // switched over to channels.
+    zx_status_t SetExceptionChannel(fbl::RefPtr<ChannelDispatcher> channel);
+
+    // Sends an exception over the exception channel and blocks for a response.
+    //
+    // |sent| will indicate whether the exception was successfully sent over
+    // this thread's exceptionate channel. This can be used in the ZX_ERR_NEXT
+    // case to determine whether the exception channel didn't exist or it did
+    // exist but the receiver opted not to handle the exception.
+    //
+    // Returns:
+    //   ZX_OK if the exception was processed and the thread should resume.
+    //   ZX_ERR_NEXT if there is no channel or the receiver opted to skip.
+    //   ZX_ERR_NO_MEMORY on allocation failure.
+    //   ZX_ERR_INTERNAL_INTR_KILLED if the thread was killed before
+    //       receiving a response.
+    zx_status_t HandleException(fbl::RefPtr<ExceptionDispatcher> exception,
+                                bool* sent);
+
     // Fetch the state of the thread for userspace tools.
     zx_status_t GetInfoForUserspace(zx_info_thread_t* info);
 
@@ -213,6 +235,8 @@ private:
     // change states of the object, do what is appropriate for the state transition
     void SetStateLocked(ThreadState::Lifecycle lifecycle) TA_REQ(get_lock());
 
+    bool IsDyingOrDeadLocked() const TA_REQ(get_lock());
+
     // The containing process holds a list of all its threads.
     fbl::DoublyLinkedListNodeState<ThreadDispatcher*> dll_thread_;
     // a ref pointer back to the parent process
@@ -235,7 +259,9 @@ private:
     // get put on a wait queue, the thread was never really blocked.
     volatile Blocked blocked_reason_ = Blocked::NONE;
 
-    // A thread-level exception port for this thread.
+    // Thread-level exception handler.
+    // Exceptionates have internal locking so we don't need to guard it here.
+    Exceptionate exceptionate_;
     fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
 
     // Support for sending an exception to an exception handler and then waiting for a response.
@@ -245,6 +271,12 @@ private:
     const zx_exception_report_t* exception_report_ TA_GUARDED(get_lock());
     event_t exception_event_ =
         EVENT_INITIAL_VALUE(exception_event_, false, EVENT_FLAG_AUTOUNSIGNAL);
+
+    // Some glue to temporarily bridge state between channel-based and
+    // port-based exception handling until we remove ports.
+    ExceptionPort::Type channel_exception_wait_type_ TA_GUARDED(get_lock()) =
+        ExceptionPort::Type::NONE;
+    bool in_channel_exception_ TA_GUARDED(get_lock()) = false;
 
     // cleanup dpc structure
     dpc_t cleanup_dpc_ = {LIST_INITIAL_CLEARED_VALUE, nullptr, nullptr};

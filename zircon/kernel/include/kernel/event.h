@@ -108,6 +108,11 @@ public:
         return event_wait_interruptable(&event_, deadline);
     }
 
+    // Same as Wait() but waits forever and gives a mask of signals to ignore.
+    zx_status_t WaitWithMask(uint signal_mask) {
+        return event_wait_with_mask(&event_, signal_mask);
+    }
+
     void Signal(zx_status_t status = ZX_OK) {
         event_signal_etc(&event_, true, status);
     }

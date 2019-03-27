@@ -6,6 +6,9 @@
 
 #include <object/exceptionate.h>
 
+#include <object/exception_dispatcher.h>
+#include <object/handle.h>
+#include <object/message_packet.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <zircon/errors.h>
@@ -28,6 +31,14 @@ zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel) {
     channel_ = ktl::move(channel);
 
     return ZX_OK;
+}
+
+void Exceptionate::ClearChannel() {
+    Guard<fbl::Mutex> guard{&lock_};
+    if (channel_) {
+        channel_->on_zero_handles();
+        channel_.reset();
+    }
 }
 
 zx_status_t Exceptionate::SendException(fbl::RefPtr<ExceptionDispatcher> exception) {

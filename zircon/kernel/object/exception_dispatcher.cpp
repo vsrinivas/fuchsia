@@ -5,6 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <object/exception_dispatcher.h>
+
+#include <assert.h>
 #include <object/process_dispatcher.h>
 
 #include <fbl/alloc_checker.h>
@@ -36,7 +38,7 @@ ExceptionDispatcher::ExceptionDispatcher(fbl::RefPtr<ThreadDispatcher> thread,
                                          const zx_exception_report_t* report,
                                          const arch_exception_context_t* arch_context)
     : thread_(ktl::move(thread)), exception_type_(exception_type), report_(report),
-      arch_context_(arch_context) {
+      arch_context_(arch_context), response_event_(EVENT_FLAG_AUTOUNSIGNAL) {
     kcounter_add(dispatcher_exception_create_count, 1);
 }
 
@@ -45,5 +47,51 @@ ExceptionDispatcher::~ExceptionDispatcher() {
 }
 
 void ExceptionDispatcher::on_zero_handles() {
-    // TODO(ZX-3072): trigger |thread_| to continue exception handling.
+    canary_.Assert();
+
+    response_event_.Signal();
+}
+
+void ExceptionDispatcher::SetResumeThreadOnClose(bool resume_on_close) {
+    canary_.Assert();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+    resume_on_close_ = resume_on_close;
+}
+
+zx_status_t ExceptionDispatcher::WaitForResponse() {
+    canary_.Assert();
+
+    zx_status_t status;
+    do {
+        // Continue to wait for the exception response if we get suspended.
+        // Both the suspension and the exception need to be closed out before
+        // the thread can resume.
+        status = response_event_.WaitWithMask(THREAD_SIGNAL_SUSPEND);
+    } while (status == ZX_ERR_INTERNAL_INTR_RETRY);
+
+    if (status == ZX_ERR_INTERNAL_INTR_KILLED) {
+        // If the thread was killed it doesn't matter whether the handler
+        // wanted to resume or not.
+        return ZX_ERR_INTERNAL_INTR_KILLED;
+    } else if (status != ZX_OK) {
+        // Our event wait should only ever return one of the internal errors
+        // handled above or the ZX_OK we send in on_zero_handles().
+        ASSERT_MSG(false, "unexpected exception event result: %d\n", status);
+        __UNREACHABLE;
+    }
+
+    // Return the close action and reset it for next time.
+    Guard<fbl::Mutex> guard{get_lock()};
+    status = resume_on_close_ ? ZX_OK : ZX_ERR_NEXT;
+    resume_on_close_ = false;
+    return status;
+}
+
+void ExceptionDispatcher::Clear() {
+    canary_.Assert();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+    report_ = nullptr;
+    arch_context_ = nullptr;
 }

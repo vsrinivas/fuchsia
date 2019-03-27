@@ -354,6 +354,10 @@ void ThreadDispatcher::Resume() {
 
 bool ThreadDispatcher::IsDyingOrDead() const {
     Guard<fbl::Mutex> guard{get_lock()};
+    return IsDyingOrDeadLocked();
+}
+
+bool ThreadDispatcher::IsDyingOrDeadLocked() const {
     return state_.lifecycle() == ThreadState::Lifecycle::DYING ||
            state_.lifecycle() == ThreadState::Lifecycle::DEAD;
 }
@@ -395,6 +399,10 @@ void ThreadDispatcher::Exiting() {
 
         // put ourselves into the dead state
         SetStateLocked(ThreadState::Lifecycle::DEAD);
+
+        // Drop our exception channel endpoint so any userspace listener
+        // gets the PEER_CLOSED signal.
+        exceptionate_.ClearChannel();
     }
 
     // remove ourselves from our parent process's view
@@ -812,21 +820,25 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
         Guard<fbl::Mutex> guard{get_lock()};
         state = state_;
         blocked_reason = blocked_reason_;
-        if (InExceptionLocked() &&
-            // A port type of !NONE here indicates to the caller that the
-            // thread is waiting for an exception response. So don't return
-            // !NONE if the thread just woke up but hasn't reacquired
-            // |state_lock_|.
-            state_.exception() == ThreadState::Exception::UNPROCESSED) {
-            DEBUG_ASSERT(exception_wait_port_ != nullptr);
-            excp_port_type = exception_wait_port_->type();
+        if (in_channel_exception_) {
+            excp_port_type = channel_exception_wait_type_;
         } else {
-            // Either we're not in an exception, or we're in the window where
-            // event_wait_deadline has woken up but |state_lock_| has
-            // not been reacquired.
-            DEBUG_ASSERT(exception_wait_port_ == nullptr ||
-                         state_.exception() != ThreadState::Exception::UNPROCESSED);
-            excp_port_type = ExceptionPort::Type::NONE;
+            if (InExceptionLocked() &&
+                // A port type of !NONE here indicates to the caller that the
+                // thread is waiting for an exception response. So don't return
+                // !NONE if the thread just woke up but hasn't reacquired
+                // |state_lock_|.
+                state_.exception() == ThreadState::Exception::UNPROCESSED) {
+                DEBUG_ASSERT(exception_wait_port_ != nullptr);
+                excp_port_type = exception_wait_port_->type();
+            } else {
+                // Either we're not in an exception, or we're in the window where
+                // event_wait_deadline has woken up but |state_lock_| has
+                // not been reacquired.
+                DEBUG_ASSERT(exception_wait_port_ == nullptr ||
+                             state_.exception() != ThreadState::Exception::UNPROCESSED);
+                excp_port_type = ExceptionPort::Type::NONE;
+            }
         }
     }
 
@@ -939,6 +951,55 @@ zx_status_t ThreadDispatcher::GetExceptionReport(zx_exception_report_t* report) 
     DEBUG_ASSERT(exception_report_ != nullptr);
     *report = *exception_report_;
     return ZX_OK;
+}
+
+zx_status_t ThreadDispatcher::SetExceptionChannel(fbl::RefPtr<ChannelDispatcher> channel) {
+    canary_.Assert();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+
+    if (IsDyingOrDeadLocked()) {
+        return ZX_ERR_BAD_STATE;
+    }
+    return exceptionate_.SetChannel(ktl::move(channel));
+}
+
+zx_status_t ThreadDispatcher::HandleException(fbl::RefPtr<ExceptionDispatcher> exception,
+                                              bool* sent) {
+    canary_.Assert();
+
+    *sent = false;
+
+    // Mark as blocked before sending the exception, otherwise a handler could
+    // potentially query our state before we've marked ourself blocked.
+    ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::EXCEPTION);
+
+    {
+        Guard<fbl::Mutex> guard{get_lock()};
+
+        // We send the exception while locked so that if it succeeds we can
+        // atomically update our state.
+        zx_status_t status = exceptionate_.SendException(exception);
+        if (status != ZX_OK) {
+            return status;
+        }
+        *sent = true;
+
+        // This state is needed by GetInfoForUserspace().
+        // TODO(ZX-3072): add support for job/process/debug exception handling.
+        in_channel_exception_ = true;
+        channel_exception_wait_type_ = ExceptionPort::Type::THREAD;
+        state_.set(ThreadState::Exception::UNPROCESSED);
+    }
+
+    zx_status_t status = exception->WaitForResponse();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+    in_channel_exception_ = false;
+    channel_exception_wait_type_ = ExceptionPort::Type::NONE;
+    state_.set(ThreadState::Exception::IDLE);
+
+    return status;
 }
 
 // Note: buffer must be sufficiently aligned

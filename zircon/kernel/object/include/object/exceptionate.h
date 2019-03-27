@@ -8,11 +8,12 @@
 
 #include <kernel/mutex.h>
 #include <object/channel_dispatcher.h>
-#include <object/exception_dispatcher.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
 #include <fbl/ref_ptr.h>
+
+class ExceptionDispatcher;
 
 // Kernel-owned exception channel endpoint.
 //
@@ -31,6 +32,10 @@ public:
     //   ZX_ERR_INVALID_ARGS if |channel| is null.
     //   ZX_ERR_ALREADY_BOUND is there is already a valid channel.
     zx_status_t SetChannel(fbl::RefPtr<ChannelDispatcher> channel);
+
+    // Removes any exception channel, which will signal PEER_CLOSED for the
+    // userspace endpoint.
+    void ClearChannel();
 
     // Sends an exception to userspace.
     //
