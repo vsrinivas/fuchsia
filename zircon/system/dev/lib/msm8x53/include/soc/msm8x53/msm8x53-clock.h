@@ -11,24 +11,28 @@ namespace msm8x53 {
 
 // Branch clock control register.
 class CBCR : public hwreg::RegisterBase<CBCR, uint32_t> {
+public:
     DEF_BIT(0, enable);
     static auto Get(uint32_t offset) { return hwreg::RegisterAddr<CBCR>(offset); }
 };
 
 // Branch clock reset register.
 class BCR : public hwreg::RegisterBase<BCR, uint32_t> {
+public:
     DEF_BIT(0, reset);
     static auto Get(uint32_t offset) { return hwreg::RegisterAddr<BCR>(offset); }
 };
 
 // Root clock gating command register.
 class RCG_CMD : public hwreg::RegisterBase<RCG_CMD, uint32_t> {
+public:
     DEF_BIT(0, update);
     static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_CMD>(offset); }
 };
 
 // Root clock gating config register.
 class RCG_CFG: public hwreg::RegisterBase<RCG_CFG, uint32_t> {
+public:
     DEF_FIELD(12, 11, mode);
     DEF_FIELD(8, 6, src_sel);
     DEF_FIELD(4, 0, src_div);
@@ -37,18 +41,21 @@ class RCG_CFG: public hwreg::RegisterBase<RCG_CFG, uint32_t> {
 
 // Root clock gating M-prescalar.
 class RCG_M : public hwreg::RegisterBase<RCG_M, uint32_t> {
+public:
     DEF_FIELD(31, 0, m);
     static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_M>(offset); }
 };
 
 // Root clock gating N-prescalar.
 class RCG_N : public hwreg::RegisterBase<RCG_N, uint32_t> {
+public:
     DEF_FIELD(31, 0, n);
     static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_N>(offset); }
 };
 
 // Root clock gating D-prescalar.
 class RCG_D : public hwreg::RegisterBase<RCG_D, uint32_t> {
+public:
     DEF_FIELD(31, 0, d);
     static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_D>(offset); }
 };
