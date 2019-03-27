@@ -9,8 +9,11 @@
 #include <fbl/mutex.h>
 #include <fuchsia/hardware/clock/c/fidl.h>
 #include <lib/mmio/mmio.h>
+#include <zircon/thread_annotations.h>
 
 namespace clk {
+
+struct msm_clk_branch;
 
 class Msm8x53Clk;
 using DeviceType = ddk::Device<Msm8x53Clk, ddk::Unbindable>;
@@ -37,11 +40,24 @@ private:
 
     zx_status_t RegisterClockProtocol();
 
-    std::optional<ddk::MmioBuffer> mmio_ __TA_GUARDED(local_clock_mutex_);
+    // Gate Clocks
+    zx_status_t GateClockEnable(uint32_t index);
+    zx_status_t GateClockDisable(uint32_t index);
+    fbl::Mutex gate_clock_mutex_ TA_ACQ_BEFORE(branch_clock_mutex_);
 
-    // Protects access to all clock gates
-    // NOTE(gkalsi): We want finer grain locking once we add more lock classes.
-    fbl::Mutex local_clock_mutex_;
+    // Branch Clocks
+    zx_status_t BranchClockEnable(uint32_t index);
+    zx_status_t BranchClockDisable(uint32_t index);
+    fbl::Mutex branch_clock_mutex_;
+    enum class AwaitBranchClockStatus {
+        Enabled,
+        Disabled
+    };
+    // Wait for a change to a particular branch clock to take effect.
+    zx_status_t AwaitBranchClock(AwaitBranchClockStatus s,
+                                 const struct msm_clk_branch& clk);
+
+    std::optional<ddk::MmioBuffer> mmio_;
 };
 
 } // namespace clk
