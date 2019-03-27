@@ -447,14 +447,22 @@ zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t
 
     zx_status_t status = fsck(device_path, df, options, launch_fsck);
     if (status != ZX_OK) {
-        fprintf(stderr, "---------------------------------------------------------\n");
-        fprintf(stderr, "|                                                        \n");
-        fprintf(stderr, "|   WARNING: fshost fsck failure!                        \n");
-        fprintf(stderr, "|   Corrupt device: %s \n", device_path);
-        fprintf(stderr, "|   Please report this device to the local storage team, \n");
-        fprintf(stderr, "|   Preferably BEFORE reformatting your device.          \n");
-        fprintf(stderr, "|                                                        \n");
-        fprintf(stderr, "---------------------------------------------------------\n");
+        fprintf(stderr, "--------------------------------------------------------------\n");
+        fprintf(stderr, "|                                                             \n");
+        fprintf(stderr, "|   WARNING: fshost fsck failure!                             \n");
+        fprintf(stderr, "|   Corrupt %s @ %s \n", disk_format_string_[df], device_path);
+        fprintf(stderr, "|                                                             \n");
+        fprintf(stderr, "|   If your system encountered power-loss due to an unclean   \n");
+        fprintf(stderr, "|   shutdown, this error was expected. Journaling in minfs    \n");
+        fprintf(stderr, "|   is being tracked by ZX-2093. Re-paving will reset your    \n");
+        fprintf(stderr, "|   device.                                                   \n");
+        fprintf(stderr, "|                                                             \n");
+        fprintf(stderr, "|   If your system was shutdown cleanly (via 'dm poweroff'    \n");
+        fprintf(stderr, "|   or an OTA), report this device to the local-storage       \n");
+        fprintf(stderr, "|   team. Please file bugs with logs before and after reboot. \n");
+        fprintf(stderr, "|   Please use the 'filesystem' and 'minfs' component tag.    \n");
+        fprintf(stderr, "|                                                             \n");
+        fprintf(stderr, "--------------------------------------------------------------\n");
     } else {
         printf("fshost: fsck of %s completed OK\n", disk_format_string_[df]);
     }
