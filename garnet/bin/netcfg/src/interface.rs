@@ -26,7 +26,9 @@ impl Config {
     }
 
     fn generate_identifier(
-        &self, topological_path: String, mac_address: MacAddress,
+        &self,
+        topological_path: String,
+        mac_address: MacAddress,
     ) -> PersistentIdentifier {
         if topological_path.contains("/pci/") {
             if topological_path.contains("/usb/") {
@@ -82,7 +84,9 @@ impl Config {
     // Though it is not a sdio device, it has the vid:pid:did info following "/platform/",
     // it's handled the same way as a sdio device.
     fn generate_name_from_mac(
-        &self, octets: &[u8; 6], wlan: bool,
+        &self,
+        octets: &[u8; 6],
+        wlan: bool,
     ) -> Result<String, failure::Error> {
         let prefix = match wlan {
             true => "wlanx",
@@ -108,7 +112,9 @@ impl Config {
     }
 
     fn generate_name_from_topological_path(
-        &self, topological_path: &str, wlan: bool,
+        &self,
+        topological_path: &str,
+        wlan: bool,
     ) -> Result<String, failure::Error> {
         let (prefix, pat) = if topological_path.contains("/pci/") {
             (if wlan { "wlanp" } else { "ethp" }, "/pci/")
@@ -139,7 +145,9 @@ impl Config {
     }
 
     fn generate_name(
-        &self, persistent_id: &PersistentIdentifier, wlan: bool,
+        &self,
+        persistent_id: &PersistentIdentifier,
+        wlan: bool,
     ) -> Result<String, failure::Error> {
         match persistent_id {
             PersistentIdentifier::MacAddress(mac_addr) => {
@@ -179,10 +187,7 @@ impl<'a> FileBackedConfig<'a> {
     pub fn store(&self) -> Result<(), failure::Error> {
         let Self { path, config } = self;
         let temp_file_path = match path.file_name() {
-            None => Err(failure::format_err!(
-                "unexpected non-file path {}",
-                path.display()
-            )),
+            None => Err(failure::format_err!("unexpected non-file path {}", path.display())),
             Some(file_name) => {
                 let mut file_name = file_name.to_os_string();
                 file_name.push(".tmp");
@@ -191,10 +196,7 @@ impl<'a> FileBackedConfig<'a> {
         }?;
         {
             let temp_file = fs::File::create(&temp_file_path).with_context(|_| {
-                format!(
-                    "could not create temporary file {}",
-                    temp_file_path.display()
-                )
+                format!("could not create temporary file {}", temp_file_path.display())
             })?;
             serde_json::to_writer_pretty(temp_file, &config).with_context(|_| {
                 format!(
@@ -215,11 +217,12 @@ impl<'a> FileBackedConfig<'a> {
     }
 
     pub fn get_stable_name(
-        &mut self, topological_path: String, mac_address: MacAddress, wlan: bool,
+        &mut self,
+        topological_path: String,
+        mac_address: MacAddress,
+        wlan: bool,
     ) -> Result<&str, failure::Error> {
-        let persistent_id = self
-            .config
-            .generate_identifier(topological_path, mac_address);
+        let persistent_id = self.config.generate_identifier(topological_path, mac_address);
 
         let index = if let Some(index) = self.config.lookup_by_identifier(&persistent_id) {
             index
@@ -406,11 +409,7 @@ mod tests {
         assert_eq!(0, interface_config.config.names.len());
         for test in test_cases.into_iter() {
             let name = interface_config
-                .get_stable_name(
-                    test.topological_path,
-                    MacAddress { octets: test.mac },
-                    test.wlan,
-                )
+                .get_stable_name(test.topological_path, MacAddress { octets: test.mac }, test.wlan)
                 .expect("failed to get the interface config");
             assert_eq!(test.want_name, name);
             assert_eq!(test.want_len, interface_config.config.names.len());
@@ -451,8 +450,7 @@ mod tests {
         {
             let mut file = fs::File::create(&path).expect("failed to open file for writing");
             // Write invalid JSON and close the file
-            file.write(b"{")
-                .expect("failed to write broken json into file");
+            file.write(b"{").expect("failed to write broken json into file");
         }
         assert_eq!(
             FileBackedConfig::load(&path)

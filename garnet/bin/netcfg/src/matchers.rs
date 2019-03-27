@@ -6,38 +6,35 @@ use serde::de::Error;
 use serde::Deserialize;
 
 pub fn config_for_device(
-    device_info: &fidl_fuchsia_hardware_ethernet_ext::EthernetInfo, name: String,
-    topological_path: &str, rules: &Vec<InterfaceSpec>,
+    device_info: &fidl_fuchsia_hardware_ethernet_ext::EthernetInfo,
+    name: String,
+    topological_path: &str,
+    rules: &Vec<InterfaceSpec>,
 ) -> fidl_fuchsia_netstack::InterfaceConfig {
-    rules
-        .iter()
-        .filter_map(|spec| matches_info(&spec, &topological_path, device_info))
-        .fold(
-            fidl_fuchsia_netstack::InterfaceConfig {
-                ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
-                name: name,
+    rules.iter().filter_map(|spec| matches_info(&spec, &topological_path, device_info)).fold(
+        fidl_fuchsia_netstack::InterfaceConfig {
+            ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
+            name: name,
+        },
+        |seed, opt| match opt {
+            ConfigOption::IpConfig(value) => fidl_fuchsia_netstack::InterfaceConfig {
+                ip_address_config: (*value).into(),
+                ..seed
             },
-            |seed, opt| match opt {
-                ConfigOption::IpConfig(value) => fidl_fuchsia_netstack::InterfaceConfig {
-                    ip_address_config: (*value).into(),
-                    ..seed
-                },
-            },
-        )
+        },
+    )
 }
 
 fn matches_info<'a>(
-    spec: &'a InterfaceSpec, topological_path: &str,
+    spec: &'a InterfaceSpec,
+    topological_path: &str,
     info: &fidl_fuchsia_hardware_ethernet_ext::EthernetInfo,
 ) -> Option<&'a ConfigOption> {
     let matches = match &spec.matcher {
         InterfaceMatcher::All => true,
         InterfaceMatcher::TopoPath(path) => path == topological_path,
         InterfaceMatcher::MacAddress(address) => {
-            address
-                == &fidl_fuchsia_hardware_ethernet_ext::MacAddress {
-                    octets: info.mac.octets,
-                }
+            address == &fidl_fuchsia_hardware_ethernet_ext::MacAddress { octets: info.mac.octets }
         }
         InterfaceMatcher::Feature(matcher_features) => info.features.contains(*matcher_features),
     };
@@ -67,10 +64,9 @@ impl InterfaceMatcher {
             ("feature", feature) => Ok(InterfaceMatcher::Feature(
                 feature.parse::<fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures>()?,
             )),
-            (unknown, _) => Err(failure::format_err!(
-                "invalid matcher option for interface: {}",
-                unknown
-            )),
+            (unknown, _) => {
+                Err(failure::format_err!("invalid matcher option for interface: {}", unknown))
+            }
         }
     }
 }
@@ -83,20 +79,19 @@ pub enum ConfigOption {
 impl ConfigOption {
     fn parse_as_tuple(config: (&str, &str)) -> Result<Self, failure::Error> {
         match config {
-            ("ip_address", "dhcp") => Ok(ConfigOption::IpConfig(
-                fidl_fuchsia_netstack_ext::IpAddressConfig::Dhcp,
-            )),
-            ("ip_address", static_ip) => Ok(ConfigOption::IpConfig(
-                fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
+            ("ip_address", "dhcp") => {
+                Ok(ConfigOption::IpConfig(fidl_fuchsia_netstack_ext::IpAddressConfig::Dhcp))
+            }
+            ("ip_address", static_ip) => {
+                Ok(ConfigOption::IpConfig(fidl_fuchsia_netstack_ext::IpAddressConfig::StaticIp(
                     static_ip
                         .parse::<fidl_fuchsia_net_ext::Subnet>()
                         .expect("subnet parse should succeed"),
-                ),
-            )),
-            (unknown, _) => Err(failure::format_err!(
-                "invalid config option for interface: {}",
-                unknown
-            )),
+                )))
+            }
+            (unknown, _) => {
+                Err(failure::format_err!("invalid config option for interface: {}", unknown))
+            }
         }
     }
 }
