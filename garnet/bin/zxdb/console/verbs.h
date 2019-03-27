@@ -90,6 +90,14 @@ struct VerbRecord {
   using CommandExecutorWithCallback = std::function<Err(
       ConsoleContext*, const Command&, std::function<void(Err)>)>;
 
+  // Type for the callback to complete the command's arguments. The command
+  // will be filled out as far as is possible for the current parse, and the
+  // completions should be filled with suggestions for the next token, each of
+  // which should begin with the given prefix.
+  using CommandCompleter =
+      std::function<void(const Command& command, const std::string& prefix,
+                         std::vector<std::string>* completions)>;
+
   VerbRecord();
 
   // The help will be referenced by pointer. It is expected to be a static
@@ -116,6 +124,8 @@ struct VerbRecord {
 
   CommandGroup command_group = CommandGroup::kGeneral;
   SourceAffinity source_affinity = SourceAffinity::kNone;
+
+  CommandCompleter complete = nullptr;
 };
 
 // Returns all known verbs. The contents of this map will never change once

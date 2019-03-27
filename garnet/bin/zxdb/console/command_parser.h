@@ -19,9 +19,6 @@ Err TokenizeCommand(const std::string& input, std::vector<std::string>* result);
 
 Err ParseCommand(const std::string& input, Command* output);
 
-// Takes a pretokenized input.
-Err ParseCommand(const std::vector<std::string>& tokens, Command* output);
-
 // Returns a set of possible completions for the given input. The result will
 // be empty if there are none.
 std::vector<std::string> GetCommandCompletions(const std::string& input);

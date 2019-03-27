@@ -222,12 +222,10 @@ TEST(CommandParser, Completions) {
 
   // Noun completion.
   comp = GetCommandCompletions("t");
-  EXPECT_TRUE(CompletionContains(comp, "t"));
   EXPECT_TRUE(CompletionContains(comp, "thread"));
 
   // Verb completion.
   comp = GetCommandCompletions("h");
-  EXPECT_TRUE(CompletionContains(comp, "h"));
   EXPECT_TRUE(CompletionContains(comp, "help"));
 
   // Noun + Verb completion.

@@ -17,37 +17,6 @@ namespace zxdb {
 
 namespace {
 
-// Returns a sorted list of all possible noun and verb strings that can be
-// input.
-const std::set<std::string>& GetAllNounVerbStrings() {
-  static std::set<std::string> strings;
-  if (strings.empty()) {
-    for (const auto& noun_pair : GetNouns()) {
-      for (const auto& alias : noun_pair.second.aliases)
-        strings.insert(alias);
-    }
-    for (const auto& verb_pair : GetVerbs()) {
-      for (const auto& alias : verb_pair.second.aliases)
-        strings.insert(alias);
-    }
-  }
-  return strings;
-}
-
-// Returns only the canonical version of each noun and verb. Used for
-// completions when there is no input and we don't want to cycle through both
-// "s" and "step".
-const std::set<std::string>& GetCanonicalNounVerbStrings() {
-  static std::set<std::string> strings;
-  if (strings.empty()) {
-    for (const auto& noun_pair : GetNouns())
-      strings.insert(noun_pair.second.aliases[0]);
-    for (const auto& verb_pair : GetVerbs())
-      strings.insert(verb_pair.second.aliases[0]);
-  }
-  return strings;
-}
-
 bool IsTokenSeparator(char c) { return c == ' '; }
 
 // Finds the record for the switch associated with long switch string (which
@@ -115,12 +84,7 @@ class Parser {
   Parser(Command* command) : command_(command) {}
 
   const Err& Parse(const std::string& input) {
-    FXL_DCHECK(!err_.has_error() && pos_ == 0 && tokens_.size() == 0);
-
-    ends_with_space_ = !input.empty() && input.back() == ' ';
-    err_ = TokenizeCommand(input, &tokens_);
-
-    if (err_.has_error()) {
+    if (!Tokenize(input)) {
       return err_;
     }
 
@@ -130,14 +94,40 @@ class Parser {
     return err_;
   }
 
-  const Err& Parse(const std::vector<std::string>& tokens) {
-    FXL_DCHECK(!err_.has_error() && pos_ == 0 && tokens_.size() == 0);
+  const Err& Complete(const std::string& input,
+                      std::vector<std::string>* results) {
+    FXL_DCHECK(results->empty());
 
-    tokens_ = tokens;
+    if (!Tokenize(input)) {
+      return err_;
+    }
+
+    std::string to_complete;
+
+    if (!tokens_.empty() && input.back() != ' ') {
+      to_complete = tokens_.back();
+      tokens_.pop_back();
+    }
 
     while (Advance())
       ;
 
+    if (!at_end()) {
+      return err_;
+    }
+
+    for (const auto& state : states_at_pos_) {
+      (this->*(state->complete))(to_complete, results);
+    }
+
+    auto prefix = std::string(input);
+    prefix.resize(prefix.size() - to_complete.size());
+
+    for (auto& result : *results) {
+      result = prefix + result;
+    }
+
+    err_ = Err();
     return err_;
   }
 
@@ -149,15 +139,35 @@ class Parser {
   struct State {
     bool (Parser::*advance)();
 
-    State(bool (Parser::*advance)()) : advance(advance) {}
+    // Completer callback. The first argument is a prefix we expect all
+    // completions to share. The second is a vector to which we should append
+    // full single tokens which would be valid completions.
+    void (Parser::*complete)(const std::string&, std::vector<std::string>*);
+
+    State(bool (Parser::*advance)(),
+          void (Parser::*complete)(const std::string&,
+                                   std::vector<std::string>*))
+        : advance(advance), complete(complete) {}
   };
 
   const std::string& token() { return tokens_[pos_]; }
 
-  bool Advance() { return (this->*(state_->advance))(); }
+  bool Advance() {
+    const State* start = state_;
+    size_t start_pos = pos_;
+    bool result = (this->*(state_->advance))();
+
+    if (start_pos != pos_) {
+      states_at_pos_.clear();
+    } else {
+      states_at_pos_.push_back(start);
+    }
+
+    return result;
+  }
 
   bool Consume(const State& state) {
-    GoTo(state);
+    state_ = &state;
     return Consume();
   }
 
@@ -178,6 +188,17 @@ class Parser {
 
   bool Accept() { return false; }
 
+  std::string ParsePrefix() {
+    std::string ret;
+
+    for (size_t i = 0; i < pos_; i++) {
+      ret += tokens_[i];
+      ret += " ";
+    }
+
+    return ret;
+  }
+
   bool DoNounState();
   bool DoNounIndexState();
   bool DoVerbState();
@@ -186,6 +207,17 @@ class Parser {
   bool DoLongSwitchState();
   bool DoSwitchArgState();
   bool DoArgState();
+
+  void NoComplete(const std::string&, std::vector<std::string>*) {}
+
+  void DoCompleteNoun(const std::string& to_complete,
+                      std::vector<std::string>* result);
+  void DoCompleteSwitches(const std::string& to_complete,
+                          std::vector<std::string>* result);
+  void DoCompleteVerb(const std::string& to_complete,
+                      std::vector<std::string>* result);
+  void DoCompleteArgs(const std::string& to_complete,
+                      std::vector<std::string>* result);
 
   static const State kNounState;
   static const State kNounIndexState;
@@ -196,7 +228,12 @@ class Parser {
   static const State kSwitchArgState;
   static const State kArgState;
 
-  bool ends_with_space_ = false;
+  bool Tokenize(const std::string& input) {
+    FXL_DCHECK(!err_.has_error() && pos_ == 0 && tokens_.size() == 0);
+    err_ = TokenizeCommand(input, &tokens_);
+    return !err_.has_error();
+  }
+
   Command* command_ = nullptr;
   const State* state_ = &kNounState;
   Err err_;
@@ -225,20 +262,53 @@ class Parser {
   std::optional<std::string> sw_value_ = std::nullopt;
 
   std::vector<std::string> tokens_;
+
+  // States we've been through without advancing. This is important for
+  // completion.
+  //
+  // In essence this is a list of every state we've been through since the last
+  // time pos_ changed. If we are completing, and thus at the end of the
+  // stream, these are potentially all states that would like to have consumed
+  // another token but could not, and so passed control to another state or
+  // halted. Completion means going back to each of them and asking what we
+  // would like to have seen.
+  //
+  // An example. Suppose we had just the noun token "thread". We will parse
+  // that from the noun state, then enter the NounIndex state, which will
+  // move us back to the Noun state without parsing anything, and so will be
+  // added to this list. The Noun state will find no further tokens and thus
+  // pass control to the Verb state, and thus also get added to this list. The
+  // verb state will then accept without parsing, and it too will be added to
+  // this list, so at halt we will have the Noun, NounIndex, and Verb states,
+  // and on completion we will try to complete with either a Noun, an index,
+  // or a Verb.
+  //
+  // It's important to note that any time the parser advances, this list is
+  // cleared, so we end with only states that tried to match at the end but
+  // found no token.
+  std::vector<const State*> states_at_pos_;
 };
 
-const Parser::State Parser::kNounState(&Parser::DoNounState);
-const Parser::State Parser::kNounIndexState(&Parser::DoNounIndexState);
-const Parser::State Parser::kVerbState(&Parser::DoVerbState);
-const Parser::State Parser::kSwitchesState(&Parser::DoSwitchesState);
-const Parser::State Parser::kSwitchState(&Parser::DoSwitchState);
-const Parser::State Parser::kLongSwitchState(&Parser::DoLongSwitchState);
-const Parser::State Parser::kSwitchArgState(&Parser::DoSwitchArgState);
-const Parser::State Parser::kArgState(&Parser::DoArgState);
+const Parser::State Parser::kNounState(&Parser::DoNounState,
+                                       &Parser::DoCompleteNoun);
+const Parser::State Parser::kNounIndexState(&Parser::DoNounIndexState,
+                                            &Parser::NoComplete);
+const Parser::State Parser::kVerbState(&Parser::DoVerbState,
+                                       &Parser::DoCompleteVerb);
+const Parser::State Parser::kSwitchesState(&Parser::DoSwitchesState,
+                                           &Parser::DoCompleteSwitches);
+const Parser::State Parser::kSwitchState(&Parser::DoSwitchState,
+                                         &Parser::NoComplete);
+const Parser::State Parser::kLongSwitchState(&Parser::DoLongSwitchState,
+                                             &Parser::NoComplete);
+const Parser::State Parser::kSwitchArgState(&Parser::DoSwitchArgState,
+                                            &Parser::NoComplete);
+const Parser::State Parser::kArgState(&Parser::DoArgState,
+                                      &Parser::DoCompleteArgs);
 
 bool Parser::DoNounState() {
   if (at_end()) {
-    return Accept();
+    return GoTo(Parser::kVerbState);
   }
 
   const auto& nouns = GetStringNounMap();
@@ -279,7 +349,7 @@ bool Parser::DoNounIndexState() {
 
 bool Parser::DoSwitchesState() {
   if (at_end()) {
-    return Accept();
+    return GoTo(Parser::kArgState);
   }
 
   if (token()[0] != '-') {
@@ -390,10 +460,73 @@ bool Parser::DoVerbState() {
 }
 
 bool Parser::DoArgState() {
+  if (pos_ == tokens_.size()) {
+    return Accept();
+  }
+
   std::vector<std::string> args(tokens_.begin() + pos_, tokens_.end());
   command_->set_args(std::move(args));
   pos_ = tokens_.size();
+
   return Accept();
+}
+
+void Parser::DoCompleteNoun(const std::string& to_complete,
+                            std::vector<std::string>* result) {
+  for (const auto& noun_pair : GetNouns()) {
+    if (command_->HasNoun(noun_pair.first)) {
+      continue;
+    }
+
+    for (size_t i = 0; i < noun_pair.second.aliases.size(); i++) {
+      std::string noun_name = noun_pair.second.aliases[i];
+
+      if (StartsWith(noun_name, to_complete)) {
+        result->push_back(noun_name);
+        break;
+      }
+    }
+  }
+}
+
+void Parser::DoCompleteSwitches(const std::string& to_complete,
+                                std::vector<std::string>* result) {
+  const std::vector<SwitchRecord>& switches =
+      verb_record_ ? verb_record_->switches : GetNounSwitches();
+
+  for (const auto& sw : switches) {
+    std::string long_name = "--";
+    long_name += sw.name;
+
+    if (StartsWith(long_name, to_complete)) {
+      result->push_back(long_name);
+    }
+  }
+}
+
+void Parser::DoCompleteVerb(const std::string& to_complete,
+                            std::vector<std::string>* result) {
+  if (verb_record_) {
+    return;
+  }
+
+  for (const auto& verb_pair : GetVerbs()) {
+    for (size_t i = 0; i < verb_pair.second.aliases.size(); i++) {
+      std::string verb_name = verb_pair.second.aliases[i];
+
+      if (StartsWith(verb_name, to_complete)) {
+        result->push_back(verb_name);
+        break;
+      }
+    }
+  }
+}
+
+void Parser::DoCompleteArgs(const std::string& to_complete,
+                            std::vector<std::string>* result) {
+  if (verb_record_ && verb_record_->complete) {
+    verb_record_->complete(*command_, to_complete, result);
+  }
 }
 
 }  // namespace
@@ -440,49 +573,14 @@ Err ParseCommand(const std::string& input, Command* output) {
   return parser.err();
 }
 
-Err ParseCommand(const std::vector<std::string>& tokens, Command* output) {
-  *output = Command();
-
-  Parser parser(output);
-
-  return parser.Parse(tokens);
-}
-
 // It would be nice to do more context-aware completions. For now, just
 // complete based on all known nouns and verbs.
 std::vector<std::string> GetCommandCompletions(const std::string& input) {
+  Command temp;
+  Parser parser(&temp);
+
   std::vector<std::string> result;
-
-  std::vector<std::string> tokens;
-  Err err = TokenizeCommand(input, &tokens);
-  if (err.has_error())
-    return result;
-
-  // The no input or following a space, cycle through all possibilities.
-  if (input.empty() || tokens.empty() || input.back() == ' ') {
-    for (const auto& str : GetCanonicalNounVerbStrings())
-      result.push_back(input + str);
-    return result;
-  }
-
-  // Compute the string of stuff that stays constant for each completion.
-  std::string prefix;
-  if (!tokens.empty()) {
-    // All tokens but the last one.
-    for (size_t i = 0; i < tokens.size() - 1; i++) {
-      prefix += tokens[i];
-      prefix.push_back(' ');
-    }
-  }
-
-  // Cycle through matching prefixes.
-  const std::string token = tokens.back();
-  const std::set<std::string>& possibilities = GetAllNounVerbStrings();
-  auto found = possibilities.lower_bound(token);
-  while (found != possibilities.end() && StartsWith(*found, token)) {
-    result.push_back(prefix + *found);
-    ++found;
-  }
+  parser.Complete(input, &result);
 
   return result;
 }
