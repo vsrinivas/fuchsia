@@ -102,6 +102,7 @@ executable("input_reader_unittests") {
   sources = [
     "mouse_test.cc",
     "sensor_test.cc",
+    "stylus_test.cc",
     "touchpad_test.cc",
     "touchscreen_test.cc",
   ]

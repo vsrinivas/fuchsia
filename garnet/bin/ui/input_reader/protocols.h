@@ -16,6 +16,7 @@ enum class Protocol : uint32_t {
   Touchpad,
   Gamepad,
   Sensor,
+  Stylus,
   LightSensor,
   Buttons,
   // The ones below are hacks that need to be removed.

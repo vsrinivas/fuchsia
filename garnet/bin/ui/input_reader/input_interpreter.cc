@@ -769,6 +769,12 @@ Protocol InputInterpreter::ExtractProtocol(hid::Usage input) {
       {{static_cast<uint16_t>(Page::kDigitizer),
         static_cast<uint32_t>(Digitizer::kTouchPad)},
        Protocol::Touchpad},
+      {{static_cast<uint16_t>(Page::kDigitizer),
+        static_cast<uint32_t>(Digitizer::kStylus)},
+       Protocol::Stylus},
+      {{static_cast<uint16_t>(Page::kDigitizer),
+        static_cast<uint32_t>(Digitizer::kPen)},
+       Protocol::Stylus},
       {{static_cast<uint16_t>(Page::kGenericDesktop),
         static_cast<uint32_t>(GenericDesktop::kMouse)},
        Protocol::Mouse},
@@ -857,6 +863,13 @@ bool InputInterpreter::ParseHidInputReportDescriptor(
 
         input_device.device = std::make_unique<Mouse>();
         input_device.report->mouse = fuchsia::ui::input::MouseReport::New();
+        break;
+      }
+      case Protocol::Stylus: {
+        FXL_VLOG(2) << "Device " << name() << " has HID stylus";
+
+        input_device.device = std::make_unique<Stylus>();
+        input_device.report->stylus = fuchsia::ui::input::StylusReport::New();
         break;
       }
       // Add more protocols here

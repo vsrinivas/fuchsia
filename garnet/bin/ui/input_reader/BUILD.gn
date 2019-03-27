@@ -73,6 +73,8 @@ source_set("device") {
     "mouse.h",
     "sensor.cc",
     "sensor.h",
+    "stylus.cc",
+    "stylus.h",
     "touch.cc",
     "touch.h",
     "touchpad.cc",
