@@ -27,13 +27,14 @@ use fidl_fuchsia_auth_account::{AccountManagerMarker, AccountManagerRequestStrea
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use log::{error, info};
+use std::path::PathBuf;
 use std::sync::Arc;
 
-// Default accounts directory
+// Default accounts parent directory, where individual accounts are stored.
 const ACCOUNT_DIR_PARENT: &str = "/data/account";
 
-// Default account list directory
-const ACCOUNT_LIST_DIR: &str = "/data/accounts";
+// Default data directory for the AccountManager.
+const DATA_DIR: &str = "/data";
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
@@ -41,9 +42,8 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
-    // TODO(dnorsdtrom): Add CLI arg for making the path configurable, to support test isolation
-    let account_manager =
-        AccountManager::new(ACCOUNT_DIR_PARENT, ACCOUNT_LIST_DIR).map_err(|e| {
+    let account_manager = AccountManager::new(ACCOUNT_DIR_PARENT, PathBuf::from(DATA_DIR))
+        .map_err(|e| {
             error!("Error initializing AccountManager {:?}", e);
             e
         })?;

@@ -21,7 +21,6 @@ use futures::prelude::*;
 use lazy_static::lazy_static;
 use log::{info, warn};
 use std::collections::BTreeMap;
-use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -67,35 +66,28 @@ pub struct AccountManager {
     /// Contains the client ends of all AccountListeners which are subscribed to account events.
     event_emitter: AccountEventEmitter,
 
-    /// Directory containing list of accounts.
-    account_list_dir: PathBuf,
+    /// Root directory containing persistent resources for an AccountManager instance.
+    data_dir: PathBuf,
 }
 
 impl AccountManager {
-    /// Constructs a new AccountManager, loading existing set of accounts from disk.
-    pub fn new(account_dir_parent: &str, account_list_dir: &str) -> Result<AccountManager, Error> {
+    /// Constructs a new AccountManager, loading existing set of accounts from `data_dir`. This
+    /// directory must exist. `account_dir_parent` doesn't have to exist though.
+    /// TODO(dnordstrom): Remove `account_dir_parent` once AccountHandler has
+    /// isolated-persistent-storage.
+    pub fn new(account_dir_parent: &str, data_dir: PathBuf) -> Result<AccountManager, Error> {
         let context =
             Arc::new(AccountHandlerContext::new(&DEFAULT_AUTH_PROVIDER_CONFIG, account_dir_parent));
-        let account_list_dir = PathBuf::from(account_list_dir);
         let mut ids_to_handlers = AccountMap::new();
-        if !account_list_dir.exists() {
-            fs::create_dir(&account_list_dir)?;
-            info!("Created account list dir: {:?}", account_list_dir);
-        }
-        let account_list = StoredAccountList::load(&account_list_dir)?;
+        let account_list = StoredAccountList::load(&data_dir)?;
         for account in account_list.accounts().into_iter() {
             ids_to_handlers.insert(account.account_id().clone(), None);
-        }
-        let account_dir_parent = PathBuf::from(account_dir_parent);
-        if !account_dir_parent.exists() {
-            fs::create_dir(&account_dir_parent)?;
-            info!("Created account dir parent: {:?}", account_list_dir);
         }
         Ok(Self {
             ids_to_handlers: Mutex::new(ids_to_handlers),
             context,
             event_emitter: AccountEventEmitter::new(),
-            account_list_dir,
+            data_dir,
         })
     }
 
@@ -255,7 +247,7 @@ impl AccountManager {
             .filter(|&x| x != &id)
             .map(|id| StoredAccountMetadata::new(id.clone()))
             .collect();
-        if let Err(err) = StoredAccountList::new(account_ids).save(&self.account_list_dir) {
+        if let Err(err) = StoredAccountList::new(account_ids).save(&self.data_dir) {
             return err.status;
         }
         let event = AccountEvent::AccountRemoved(id.clone());
@@ -292,7 +284,7 @@ impl AccountManager {
         let mut account_ids: Vec<StoredAccountMetadata> =
             ids_to_handlers_lock.keys().map(|id| StoredAccountMetadata::new(id.clone())).collect();
         account_ids.push(StoredAccountMetadata::new(account_id.clone()));
-        if let Err(err) = StoredAccountList::new(account_ids).save(&self.account_list_dir) {
+        if let Err(err) = StoredAccountList::new(account_ids).save(&self.data_dir) {
             // TODO(dnordstrom): When AccountHandler uses persistent storage, clean up its state.
             return (err.status, None);
         }
@@ -315,6 +307,7 @@ impl AccountManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
     use fidl::endpoints::{create_request_stream, RequestStream};
     use fidl_fuchsia_auth::AuthChangeGranularity;
     use fidl_fuchsia_auth_account::{
@@ -349,13 +342,13 @@ mod tests {
         executor.run_singlethreaded(test_fn(proxy)).expect("Executor run failed.")
     }
 
-    fn create_test_object(existing_ids: Vec<u64>, account_list_dir: &Path) -> AccountManager {
+    fn create_test_object(existing_ids: Vec<u64>, data_dir: &Path) -> AccountManager {
         let stored_account_list = existing_ids
             .iter()
             .map(|&id| StoredAccountMetadata::new(LocalAccountId::new(id)))
             .collect();
         StoredAccountList::new(stored_account_list)
-            .save(account_list_dir)
+            .save(data_dir)
             .expect("Couldn't write account list");
         AccountManager {
             ids_to_handlers: Mutex::new(
@@ -363,7 +356,7 @@ mod tests {
             ),
             context: Arc::new(AccountHandlerContext::new(&vec![], TEST_ACCOUNT_DIR)),
             event_emitter: AccountEventEmitter::new(),
-            account_list_dir: account_list_dir.to_path_buf(),
+            data_dir: data_dir.to_path_buf(),
         }
     }
 
@@ -378,10 +371,9 @@ mod tests {
 
     #[test]
     fn test_initially_empty() {
-        let account_list_dir = TempDir::new().unwrap();
+        let data_dir = TempDir::new().unwrap();
         request_stream_test(
-            AccountManager::new(TEST_ACCOUNT_DIR, &account_list_dir.path().to_string_lossy())
-                .unwrap(),
+            AccountManager::new(TEST_ACCOUNT_DIR, data_dir.path().into()).unwrap(),
             async move |proxy| {
                 assert_eq!(await!(proxy.get_account_ids())?, vec![]);
                 assert_eq!(await!(proxy.get_account_auth_states())?, (Status::Ok, vec![]));
@@ -393,8 +385,8 @@ mod tests {
     #[test]
     fn test_remove_missing_account() {
         // Manually create an account manager with one account.
-        let account_list_dir = TempDir::new().unwrap();
-        let test_object = create_test_object(vec![1], account_list_dir.path());
+        let data_dir = TempDir::new().unwrap();
+        let test_object = create_test_object(vec![1], data_dir.path());
         request_stream_test(test_object, async move |proxy| {
             // Try to delete a very different account from the one we added.
             assert_eq!(
@@ -407,16 +399,15 @@ mod tests {
 
     #[test]
     fn test_remove_present_account() {
-        let tmp_dir = TempDir::new().unwrap();
-        let account_list_dir = tmp_dir.path().to_path_buf();
+        let data_dir = TempDir::new().unwrap();
         let stored_account_list = StoredAccountList::new(vec![
             StoredAccountMetadata::new(LocalAccountId::new(1)),
             StoredAccountMetadata::new(LocalAccountId::new(2)),
         ]);
-        stored_account_list.save(&account_list_dir).unwrap();
+        stored_account_list.save(data_dir.path()).unwrap();
         // Manually create an account manager from an account_list_dir with two pre-populated dirs.
         let account_manager =
-            AccountManager::new(TEST_ACCOUNT_DIR, &account_list_dir.to_string_lossy()).unwrap();
+            AccountManager::new(TEST_ACCOUNT_DIR, data_dir.path().to_owned()).unwrap();
 
         request_stream_test(account_manager, async move |proxy| {
             // Try to remove the first account.
@@ -429,12 +420,15 @@ mod tests {
         // Now create another account manager using the same directory, which should pick up the new
         // state from the operations of the first account manager.
         let account_manager =
-            AccountManager::new(TEST_ACCOUNT_DIR, &account_list_dir.to_string_lossy()).unwrap();
-        request_stream_test(account_manager, async move |proxy| {
+            AccountManager::new(TEST_ACCOUNT_DIR, data_dir.path().to_owned()).unwrap();
+        request_stream_test(
+            account_manager,
+            async move |proxy| {
             // Verify the only the second account is present.
-            assert_eq!(await!(proxy.get_account_ids())?, fidl_local_id_vec(vec![2]));
-            Ok(())
-        });
+                assert_eq!(await!(proxy.get_account_ids())?, fidl_local_id_vec(vec![2]));
+                Ok(())
+            },
+        );
     }
 
     /// Sets up an AccountListener which receives two events, init and remove.
@@ -447,8 +441,8 @@ mod tests {
             granularity: AuthChangeGranularity { summary_changes: false },
         };
 
-        let account_list_dir = TempDir::new().unwrap();
-        let test_object = create_test_object(vec![1, 2], account_list_dir.path());
+        let data_dir = TempDir::new().unwrap();
+        let test_object = create_test_object(vec![1, 2], data_dir.path());
         // TODO(dnordstrom): Use run_until_stalled macro instead.
         request_stream_test(test_object, async move |proxy| {
             let (client_end, mut stream) =

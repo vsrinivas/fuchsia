@@ -23,7 +23,7 @@ use fidl_fuchsia_auth_account::{
 use fidl_fuchsia_auth_account_internal::AccountHandlerContextProxy;
 use fuchsia_async as fasync;
 use futures::prelude::*;
-use log::{error, warn};
+use log::{error, info, warn};
 use serde_derive::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
@@ -97,10 +97,14 @@ impl Account {
         account_dir: &Path,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
-        fs::create_dir(account_dir).map_err(|err| {
+        fs::create_dir_all(account_dir).map_err(|err| {
             warn!("Failed to create account dir: {:?}", err);
             AccountManagerError::new(Status::IoError).with_cause(err)
         })?;
+        if StoredAccount::path(account_dir).exists() {
+            info!("Attempting to create account twice with local id: {:?}", account_id);
+            return Err(AccountManagerError::new(Status::InvalidRequest));
+        }
 
         let local_persona_id = LocalPersonaId::new(rand::random::<u64>());
         let stored_account = StoredAccount::new(local_persona_id.clone());

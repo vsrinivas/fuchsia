@@ -39,7 +39,7 @@ async fn test_account_functionality() -> Result<(), Error> {
     );
 
     // Provision a second new account and verify it has a different ID.
-    let mut account_2 = await!(provision_new_account(&account_manager))?;
+    let account_2 = await!(provision_new_account(&account_manager))?;
     assert_ne!(account_1.id, account_2.id);
 
     // Connect a channel to one of these accounts and verify it's usable.
@@ -66,9 +66,13 @@ async fn test_account_functionality() -> Result<(), Error> {
     };
     assert_eq!(persona_auth_state.summary, AuthStateSummary::Unknown);
 
-    // Delete both accounts and verify they are removed.
+    // Delete an account and verify it is removed.
     assert_eq!(await!(account_manager.remove_account(&mut account_1))?, Status::Ok);
-    assert_eq!(await!(account_manager.remove_account(&mut account_2))?, Status::Ok);
-    assert_eq!(await!(account_manager.get_account_ids())?, vec![]);
+    assert_eq!(
+        await!(account_manager.get_account_ids())?,
+        vec![LocalAccountId { id: account_2.id }]
+    );
+    // Deliberately leave an account as dirty state which will cause assert errors upon storage
+    // isolation violations across invocations of this test. No state should be preserved.
     Ok(())
 }
