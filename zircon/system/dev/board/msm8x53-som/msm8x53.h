@@ -37,6 +37,7 @@ private:
     zx_status_t GpioInit();
     zx_status_t PilInit();
     zx_status_t Sdc1Init();
+    zx_status_t ClockInit();
     int Thread();
 
     ddk::PBusProtocolClient pbus_;

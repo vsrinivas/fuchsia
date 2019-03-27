@@ -28,7 +28,7 @@ class RCG_CMD : public hwreg::RegisterBase<RCG_CMD, uint32_t> {
 };
 
 // Root clock gating config register.
-class RCG_CFG: public hwreg::RegisterBae<RCG_CFG, uint32_t> {
+class RCG_CFG: public hwreg::RegisterBase<RCG_CFG, uint32_t> {
     DEF_FIELD(12, 11, mode);
     DEF_FIELD(8, 6, src_sel);
     DEF_FIELD(4, 0, src_div);
@@ -51,6 +51,16 @@ class RCG_N : public hwreg::RegisterBase<RCG_N, uint32_t> {
 class RCG_D : public hwreg::RegisterBase<RCG_D, uint32_t> {
     DEF_FIELD(31, 0, d);
     static auto Get(uint32_t offset) { return hwreg::RegisterAddr<RCG_D>(offset); }
+};
+
+// Clock control registers.
+static constexpr uint32_t kCcBase = 0x1800000;
+static constexpr uint32_t kCcSize = 0x80000;
+
+enum Msm8x53Clock {
+    kQUsbRefClk,
+    kUsbSSRefClk,
+    kUsb3PipeClk,
 };
 
 } // namespace msm8x53
