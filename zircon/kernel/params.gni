@@ -35,7 +35,12 @@ declare_args() {
   enable_lock_dep = false
 
   # Enable fair scheduler.
-  enable_fair_scheduler = false
+  # ZX-3798: Temporarily enabled by default on x64 for broader testing.
+  if (current_cpu == "arm64") {
+    enable_fair_scheduler = false
+  } else if (current_cpu == "x64") {
+    enable_fair_scheduler = true
+  }
 
   # Enable detailed scheduler traces.
   detailed_scheduler_tracing = false
