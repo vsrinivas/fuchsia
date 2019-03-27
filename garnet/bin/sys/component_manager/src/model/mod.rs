@@ -13,4 +13,6 @@ mod runner;
 #[cfg(test)]
 mod tests;
 
-pub use self::{error::*, instance::*, model::*, moniker::*, namespace::*, resolver::*, routing::*, runner::*};
+pub use self::{
+    error::*, instance::*, model::*, moniker::*, namespace::*, resolver::*, routing::*, runner::*,
+};

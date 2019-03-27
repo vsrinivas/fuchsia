@@ -48,24 +48,34 @@ pub struct FileConnection {
 impl FileConnection {
     /// Initialized a file connection, checking flags and sending an `OnOpen` event if necessary.
     /// Returns a [`FileConnection`] object as a [`StreamFuture`], or in the case of an error, sends
-    /// an appropriate `OnOpen` event (if requested) and returns `Err`.
+    /// an appropriate `OnOpen` event (if requested) and returns `()`.
     pub fn connect(
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
         buffer: Vec<u8>,
         was_written: bool,
-    ) -> Result<StreamFuture<FileConnection>, fidl::Error> {
-        let (requests, control_handle) = ServerEnd::<FileMarker>::new(server_end.into_channel())
-            .into_stream_and_control_handle()?;
+    ) -> Option<StreamFuture<FileConnection>> {
+        // As we report all errors on `server_end`, if we failed to send an error in there, there
+        // is nowhere to send it to.
+        let (requests, control_handle) =
+            match ServerEnd::<FileMarker>::new(server_end.into_channel())
+                .into_stream_and_control_handle()
+            {
+                Ok((requests, control_handle)) => (requests, control_handle),
+                Err(_) => return None,
+            };
 
         let conn = (FileConnection { requests, flags, seek: 0, buffer, was_written }).into_future();
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::File(FileObject { event: None });
-            control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info)))?;
+            match control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info))) {
+                Ok(()) => (),
+                Err(_) => return None,
+            }
         }
 
-        Ok(conn)
+        Some(conn)
     }
 }
 

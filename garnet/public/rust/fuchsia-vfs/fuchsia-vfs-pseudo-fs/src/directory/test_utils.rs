@@ -53,14 +53,12 @@ pub fn run_server_client_with_mode<GetClientRes>(
     let (client_proxy, server_end) =
         create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
-    server
-        .open(
-            flags,
-            mode,
-            &mut iter::empty(),
-            ServerEnd::<NodeMarker>::new(server_end.into_channel()),
-        )
-        .expect("open() failed");
+    server.open(
+        flags,
+        mode,
+        &mut iter::empty(),
+        ServerEnd::<NodeMarker>::new(server_end.into_channel()),
+    );
 
     let client = get_client(client_proxy);
 
@@ -108,8 +106,7 @@ pub fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
                     if let Some((flags, mode, mut path, server_end)) = open_req {
                         server
                             .open(flags, mode, &mut path,
-                                  ServerEnd::new(server_end.into_channel()))
-                            .expect("open() failed");
+                                  ServerEnd::new(server_end.into_channel()));
                     }
                 },
                 complete => return,

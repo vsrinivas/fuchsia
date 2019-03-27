@@ -36,17 +36,6 @@ pub enum OpenError {
     Terminated,
 }
 
-/// Type of errors returned by the [`Controller::open_res`] future.
-#[derive(Debug, Fail)]
-pub enum OpenResError {
-    /// Controlled directory has been destroyed.
-    #[fail(display = "Controlled directory has been destroyed.")]
-    Terminated,
-    /// [`Controlled::open`] has returned an error.
-    #[fail(display = "`Controlled::open` has returned an error")]
-    OpenFailed(fidl::Error),
-}
-
 /// Type of errors returned by the [`Controller::add_entry`] future.
 #[derive(Debug, Fail)]
 pub enum AddEntryError {
@@ -99,7 +88,6 @@ pub enum RemoveEntryResError {
     RemoveFailed(Status),
 }
 
-type OpenResponse = Result<(), fidl::Error>;
 type AddEntryResponse<'entries> = Result<(), (Status, Box<DirectoryEntry + 'entries>)>;
 type RemoveEntryResponse<'entries> = Result<Option<Box<DirectoryEntry + 'entries>>, Status>;
 
@@ -109,13 +97,6 @@ enum Command<'entries> {
         mode: u32,
         path: Vec<String>,
         server_end: ServerEnd<NodeMarker>,
-    },
-    OpenAndRespond {
-        flags: u32,
-        mode: u32,
-        path: Vec<String>,
-        server_end: ServerEnd<NodeMarker>,
-        res_sender: oneshot::Sender<OpenResponse>,
     },
     AddEntry {
         name: String,
@@ -163,8 +144,8 @@ impl<'entries> Controller<'entries> {
     /// Adds a connection to the directory controlled by this controller when `path` is empty, or
     /// to a child entry specified by the `path`.
     ///
-    /// In case of any error the `server_end` is dropped and the underlying channel is closed.  See
-    /// [`open_res`] in case you want to process errors.
+    /// In case of any error the `server_end` is dropped and the underlying channel is closed.  As
+    /// [`DirectoryEntry::open`] has no retrun value, there is no matching [`open_res`].
     // I wish we could do
     //
     //   pub fn open<Path, PathElem>(
@@ -199,43 +180,6 @@ impl<'entries> Controller<'entries> {
                     OpenError::Terminated
                 },
             )
-        }
-    }
-
-    /// Adds a connection to the directory controlled by this controller when `path` is empty, or
-    /// to a child entry specified by the `path`.
-    ///
-    /// In case of any error the `server_end` is dropped but the error is returned.  See
-    /// [`DirectoryEntry::open`] for details.
-    // TODO See open() above for discussion of the path argument.
-    pub fn open_res(
-        &self,
-        flags: u32,
-        mode: u32,
-        path: Vec<String>,
-        server_end: ServerEnd<NodeMarker>,
-    ) -> impl Future<Output = Result<(), OpenResError>> + 'entries {
-        // Cloning the sender allows us to generate a future that does not have any lifetime
-        // dependencies on self.
-        let mut controlled = self.controlled.clone();
-        let (res_sender, res_receiver) = oneshot::channel();
-        async move {
-            await!(controlled.send(Command::OpenAndRespond {
-                flags,
-                mode,
-                path,
-                server_end,
-                res_sender
-            }))
-            .map_err(|send_err| {
-                check_send_err_is_disconnection("Controller::open", send_err);
-                OpenResError::Terminated
-            })?;
-
-            match await!(res_receiver) {
-                Ok(res) => res.map_err(OpenResError::OpenFailed),
-                Err(oneshot::Canceled) => Err(OpenResError::Terminated),
-            }
         }
     }
 
@@ -470,17 +414,6 @@ impl<'entries> Controlled<'entries> {
                     server_end,
                 );
             }
-            Command::OpenAndRespond { flags, mode, path, server_end, res_sender } => {
-                let res = self.controllable.open(
-                    flags,
-                    mode,
-                    &mut path.iter().map(|s| s.as_str()),
-                    server_end,
-                );
-                // Failure to send a response should indicate that the controller has been
-                // destroyed.
-                let _ = res_sender.send(res);
-            }
             Command::AddEntry { name, entry } => {
                 // As the controller did not ask for the result, we can only ignore any potential
                 // errors here.
@@ -514,8 +447,8 @@ impl<'entries> DirectoryEntry for Controlled<'entries> {
         mode: u32,
         path: &mut Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
-    ) -> Result<(), fidl::Error> {
-        self.controllable.open(flags, mode, path, server_end)
+    ) {
+        self.controllable.open(flags, mode, path, server_end);
     }
 
     fn entry_info(&self) -> EntryInfo {
@@ -640,28 +573,6 @@ mod tests {
                     0,
                     vec![],
                     ServerEnd::new(server_end.into_channel())
-                ))
-                .unwrap();
-                assert_describe!(proxy, NodeInfo::Directory(DirectoryObject));
-                assert_close!(proxy);
-            },
-        );
-    }
-
-    #[test]
-    fn simple_open_res() {
-        run_server_client(
-            OPEN_RIGHT_READABLE,
-            controlled(simple::empty()),
-            async move |controller, _root| {
-                let (proxy, server_end) = create_proxy::<DirectoryMarker>()
-                    .expect("Failed to create connection endpoints");
-
-                await!(controller.open_res(
-                    OPEN_RIGHT_READABLE,
-                    0,
-                    vec![],
-                    ServerEnd::<NodeMarker>::new(server_end.into_channel())
                 ))
                 .unwrap();
                 assert_describe!(proxy, NodeInfo::Directory(DirectoryObject));

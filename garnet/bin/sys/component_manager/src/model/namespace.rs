@@ -231,9 +231,12 @@ impl IncomingNamespace {
         for (target_dir_path, mut pseudo_dir) in svc_dirs {
             let (client_end, server_end) =
                 create_endpoints::<NodeMarker>().expect("could not create node proxy endpoints");
-            pseudo_dir
-                .open(OPEN_RIGHT_READABLE, MODE_TYPE_DIRECTORY, &mut iter::empty(), server_end)
-                .expect("failed to open services dir");
+            pseudo_dir.open(
+                OPEN_RIGHT_READABLE,
+                MODE_TYPE_DIRECTORY,
+                &mut iter::empty(),
+                server_end,
+            );
             let (abort_handle, abort_registration) = AbortHandle::new_pair();
             self.dir_abort_handles.push(abort_handle);
             let future = Abortable::new(pseudo_dir, abort_registration);

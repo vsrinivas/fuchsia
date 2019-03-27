@@ -734,14 +734,12 @@ fn host_svc_foo_hippo(server_end: ServerEnd<DirectoryMarker>) {
                         directory_broker::DirectoryBroker::new_service_broker(echo_service_fn),
                 },
             };
-            pseudo_dir
-                .open(
-                    OPEN_RIGHT_READABLE,
-                    MODE_TYPE_DIRECTORY,
-                    &mut iter::empty(),
-                    ServerEnd::new(server_end.into_channel()),
-                )
-                .expect("failed to open services dir");
+            pseudo_dir.open(
+                OPEN_RIGHT_READABLE,
+                MODE_TYPE_DIRECTORY,
+                &mut iter::empty(),
+                ServerEnd::new(server_end.into_channel()),
+            );
 
             let _ = await!(pseudo_dir);
             panic!("the pseudo dir exited!");
@@ -1177,14 +1175,12 @@ fn host_data_foo_hippo(server_end: ServerEnd<DirectoryMarker>) {
                     },
                 },
             };
-            pseudo_dir
-                .open(
-                    OPEN_RIGHT_READABLE,
-                    MODE_TYPE_DIRECTORY,
-                    &mut iter::empty(),
-                    ServerEnd::new(server_end.into_channel()),
-                )
-                .expect("failed to open out dir");
+            pseudo_dir.open(
+                OPEN_RIGHT_READABLE,
+                MODE_TYPE_DIRECTORY,
+                &mut iter::empty(),
+                ServerEnd::new(server_end.into_channel()),
+            );
 
             let _ = await!(pseudo_dir);
 

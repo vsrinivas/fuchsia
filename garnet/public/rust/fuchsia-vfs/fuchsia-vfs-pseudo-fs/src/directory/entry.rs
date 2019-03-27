@@ -106,13 +106,20 @@ pub trait DirectoryEntry: Future<Output = Void> + FusedFuture + Unpin + Send {
     /// contained by `server_end` in case `OPEN_FLAG_STATUS` was present in `flags`, and to
     /// populate the `info` part of the event if `OPEN_FLAG_DESCRIBE` was set.  This also applies
     /// to the error cases.
+    ///
+    /// This is deliberate that this method does not return any errors.  Any errors that occur
+    /// during this process apply to the `server_end` connection and should be sent in the `OnOpen`
+    /// event over this connection, if requested.  This method is triggered by either `Open` or
+    /// `Clone` io.fidl methods, and they have no return value.  So the only way to report an error
+    /// duing the `open` operation is to close the connection that have received the `Open` or
+    /// `Clone` calls.  This is too much, as the conneciton might still be in a good shape.
     fn open(
         &mut self,
         flags: u32,
         mode: u32,
         path: &mut Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
-    ) -> Result<(), fidl::Error>;
+    );
 
     /// This method is used to populate ReadDirents() output.
     fn entry_info(&self) -> EntryInfo;

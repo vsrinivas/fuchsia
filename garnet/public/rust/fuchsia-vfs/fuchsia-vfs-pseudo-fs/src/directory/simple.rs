@@ -106,13 +106,15 @@ impl<'entries> Simple<'entries> {
         self.add_boxed_entry(name, Box::new(entry))
     }
 
+    /// Attaches a new connection, client end `server_end`, to this object.  Any error are reported
+    /// as `OnOpen` events on the `server_end` itself.
     fn add_connection(
         &mut self,
         parent_flags: u32,
         flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
-    ) -> Result<(), fidl::Error> {
+    ) {
         // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_DIRECTORY when
         // the target is a directory.
         if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_DIRECTORY != 0 {
@@ -121,26 +123,35 @@ impl<'entries> Simple<'entries> {
             } else {
                 Status::INVALID_ARGS
             };
-            return send_on_open_with_error(flags, server_end, status);
+            send_on_open_with_error(flags, server_end, status);
+            return;
         }
 
         let flags = match new_connection_validate_flags(parent_flags, flags) {
             Ok(updated) => updated,
-            Err(status) => return send_on_open_with_error(flags, server_end, status),
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
         };
 
+        // As we report all errors on `server_end`, if we failed to send an error in there, there
+        // is nowhere to send it to.
         let (request_stream, control_handle) =
-            ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
-                .into_stream_and_control_handle()?;
+            match ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
+                .into_stream_and_control_handle()
+            {
+                Ok((request_stream, control_handle)) => (request_stream, control_handle),
+                Err(_) => return,
+            };
         let conn = SimpleDirectoryConnection::into_stream_future(request_stream, flags);
         self.connections.push(conn);
 
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::Directory(DirectoryObject);
-            control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info)))?;
+            // Ignore send errors, as there is nowhere to report them to.
+            let _ = control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info)));
         }
-
-        Ok(())
     }
 
     fn validate_and_split_path(path: &str) -> Result<(impl Iterator<Item = &str>, bool), Status> {
@@ -174,7 +185,7 @@ impl<'entries> Simple<'entries> {
     ) -> Result<ConnectionState, failure::Error> {
         match req {
             DirectoryRequest::Clone { flags, object, control_handle: _ } => {
-                self.add_connection(connection.flags, flags, 0, object)?;
+                self.add_connection(connection.flags, flags, 0, object);
             }
             DirectoryRequest::Close { responder } => {
                 responder.send(ZX_OK)?;
@@ -209,7 +220,7 @@ impl<'entries> Simple<'entries> {
                 responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
             }
             DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
-                self.handle_open(flags, mode, &path, object)?;
+                self.handle_open(flags, mode, &path, object);
             }
             DirectoryRequest::Unlink { path: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
@@ -263,18 +274,23 @@ impl<'entries> Simple<'entries> {
         mut mode: u32,
         path: &str,
         server_end: ServerEnd<NodeMarker>,
-    ) -> Result<(), fidl::Error> {
+    ) {
         if path == "/" {
-            return send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
+            send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
+            return;
         }
 
         if path == "." {
-            return self.open(flags, mode, &mut iter::empty(), server_end);
+            self.open(flags, mode, &mut iter::empty(), server_end);
+            return;
         }
 
         let (mut names, is_dir) = match Self::validate_and_split_path(path) {
             Ok(v) => v,
-            Err(status) => return send_on_open_with_error(flags, server_end, status),
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
         };
 
         if is_dir {
@@ -282,8 +298,7 @@ impl<'entries> Simple<'entries> {
         }
 
         // It is up to the open method to handle OPEN_FLAG_DESCRIBE from this point on.
-        self.open(flags, mode, &mut names, server_end)?;
-        Ok(())
+        self.open(flags, mode, &mut names, server_end);
     }
 
     fn handle_read_dirents<R>(
@@ -365,18 +380,20 @@ impl<'entries> DirectoryEntry for Simple<'entries> {
         mode: u32,
         path: &mut Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
-    ) -> Result<(), fidl::Error> {
+    ) {
         let name = match path.next() {
             Some(name) => name,
             None => {
-                return self.add_connection(!0, flags, mode, server_end);
+                self.add_connection(!0, flags, mode, server_end);
+                return;
             }
         };
 
         let entry = match self.entries.get_mut(name) {
             Some(entry) => entry,
             None => {
-                return send_on_open_with_error(flags, server_end, Status::NOT_FOUND);
+                send_on_open_with_error(flags, server_end, Status::NOT_FOUND);
+                return;
             }
         };
 
@@ -407,7 +424,7 @@ impl<'entries> DirectoryEntry for Simple<'entries> {
         // stack space, still allowing nodes like mount points to intercept the traversal process.
         // It seems like it will complicate the API for the DirectoryEntry implementations though.
 
-        entry.open(flags, mode, path, server_end)
+        entry.open(flags, mode, path, server_end);
     }
 
     fn entry_info(&self) -> EntryInfo {

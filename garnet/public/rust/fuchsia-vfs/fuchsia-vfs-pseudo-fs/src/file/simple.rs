@@ -281,13 +281,15 @@ where
         }
     }
 
+    /// Attaches a new connection, client end `server_end`, to this object.  Any error are reported
+    /// as `OnOpen` events on the `server_end` itself.
     fn add_connection(
         &mut self,
         parent_flags: u32,
         flags: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
-    ) -> Result<(), fidl::Error> {
+    ) {
         // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_FILE when the
         // target is a pseudo file.
         if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_FILE != 0 {
@@ -296,7 +298,8 @@ where
             } else {
                 Status::INVALID_ARGS
             };
-            return send_on_open_with_error(flags, server_end, status);
+            send_on_open_with_error(flags, server_end, status);
+            return;
         }
 
         // TODO(sdemos): this should be moved into FileConnection::connect, but until we change how
@@ -308,17 +311,28 @@ where
             self.on_write.is_some(),
         ) {
             Ok(updated) => updated,
-            Err(status) => return send_on_open_with_error(flags, server_end, status),
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
         };
 
         match self.init_buffer(flags) {
             Ok((buffer, was_written)) => {
-                let conn = FileConnection::connect(flags, server_end, buffer, was_written)?;
-                self.connections.push(conn);
-
-                Ok(())
+                match FileConnection::connect(flags, server_end, buffer, was_written) {
+                    Some(conn) => self.connections.push(conn),
+                    None => {
+                        // FileConnection::connect will do all the error processing.
+                        // match here just to make sure that we are not ignoring
+                        // FileConnection::connect error should it change.
+                        return;
+                    }
+                }
             }
-            Err(status) => send_on_open_with_error(flags, server_end, status),
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
         }
     }
 
@@ -329,7 +343,7 @@ where
     ) -> Result<ConnectionState, Error> {
         match req {
             FileRequest::Clone { flags, object, control_handle: _ } => {
-                self.add_connection(connection.flags, flags, 0, object)?;
+                self.add_connection(connection.flags, flags, 0, object);
             }
             FileRequest::Close { responder } => {
                 self.handle_close(connection, |status| responder.send(status.into_raw()))?;
@@ -639,12 +653,13 @@ where
         mode: u32,
         path: &mut Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
-    ) -> Result<(), fidl::Error> {
+    ) {
         if let Some(_) = path.next() {
-            return send_on_open_with_error(flags, server_end, Status::NOT_DIR);
+            send_on_open_with_error(flags, server_end, Status::NOT_DIR);
+            return;
         }
 
-        self.add_connection(!0, flags, mode, server_end)
+        self.add_connection(!0, flags, mode, server_end);
     }
 
     fn entry_info(&self) -> EntryInfo {
@@ -756,9 +771,7 @@ mod tests {
         let (client_proxy, server_end) =
             create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
-        server
-            .open(flags, mode, &mut iter::empty(), ServerEnd::new(server_end.into_channel()))
-            .expect("open() failed");
+        server.open(flags, mode, &mut iter::empty(), ServerEnd::new(server_end.into_channel()));
 
         let client = get_client(client_proxy);
 
@@ -797,8 +810,7 @@ mod tests {
                         if let Some((flags, mode, server_end)) = open_req {
                             server
                                 .open(flags, mode, &mut iter::empty(),
-                                      ServerEnd::new(server_end.into_channel()))
-                                .expect("open() failed");
+                                      ServerEnd::new(server_end.into_channel()));
                         }
                     },
                     complete => return,

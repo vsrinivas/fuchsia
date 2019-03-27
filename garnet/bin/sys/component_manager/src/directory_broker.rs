@@ -42,15 +42,14 @@ impl DirectoryEntry for DirectoryBroker {
         _mode: u32,
         path: &mut Iterator<Item = &str>,
         server_end: ServerEnd<NodeMarker>,
-    ) -> Result<(), fidl::Error> {
+    ) {
         if let Some(_) = path.next() {
             // Services do not support nested paths, so we just are going to close server_end.
             // It will be closed by the destructor as it will go out of scope.
             // TODO: we probably want to support nested paths
-            return Ok(());
+            return;
         }
         (self.route_service)(server_end);
-        Ok(())
     }
     fn entry_info(&self) -> fvfs::directory::entry::EntryInfo {
         return fvfs::directory::entry::EntryInfo::new(
