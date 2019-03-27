@@ -11,268 +11,270 @@ declare_args() {
   amlogic_decoder_tests = false
 }
 
-driver_module("amlogic_decoder") {
-  output_name = "amlogic_video_decoder"
-
-  deps = [
-    ":sources",
-    ":test_support",
-  ]
-
-  sources = [
-    "tests/test_support_disabled.cc",
-  ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-}
-
-# This version of the driver runs tests on startup.
-driver_module("amlogic_decoder_test") {
-  output_name = "amlogic_video_decoder_test"
-
-  testonly = true
-
-  deps = [
-    ":sources",
-    ":tests",
-  ]
-
-  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-}
-
-config("sources_include_config") {
-  include_dirs = [ "." ]
-  if (amlogic_decoder_tests) {
-    include_dirs += [ "./tests/integration/test_data_headers" ]
-  }
-}
-
-source_set("test_support") {
-  deps = [
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/driver",
-  ]
-  sources = [
-    "tests/test_support.h",
-  ]
-}
-
-source_set("sources") {
-  sources = [
-    # Driver structure:
-    "device_ctx.cc",
-    "device_ctx.h",
-    "driver_ctx.cc",
-    "driver_ctx.h",
-
-    # HW driving:
-    "amlogic-video.cc",
-    "amlogic-video.h",
-    "binding.c",
-    "decoder_core.h",
-    "firmware_blob.cc",
-    "firmware_blob.h",
-    "h264_decoder.cc",
-    "h264_decoder.h",
-    "hevcdec.cc",
-    "hevcdec.h",
-    "macros.h",
-    "mpeg12_decoder.cc",
-    "mpeg12_decoder.h",
-    "pts_manager.cc",
-    "pts_manager.h",
-    "registers.h",
-    "vdec1.cc",
-    "vdec1.h",
-    "video_decoder.h",
-    "video_frame.cc",
-    "video_frame.h",
-    "vp9_decoder.cc",
-    "vp9_decoder.h",
-    "vp9_utils.cc",
-    "vp9_utils.h",
-
-    # CodecFactory+Codec interface handling:
-    "codec_adapter_h264.cc",
-    "codec_adapter_h264.h",
-    "codec_adapter_mpeg2.cc",
-    "codec_adapter_mpeg2.h",
-    "codec_adapter_vp9.cc",
-    "codec_adapter_vp9.h",
-    "device_fidl.cc",
-    "device_fidl.h",
-    "local_codec_factory.cc",
-    "local_codec_factory.h",
-  ]
-  public_deps = [
-    "//zircon/public/banjo/ddk-protocol-amlogiccanvas",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/driver",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/hwreg",
-    "//zircon/public/lib/mmio",
-    "//zircon/public/lib/zx",
-  ]
-  deps = [
-    ":test_support",
-    "third_party/libvpx",
-    "//garnet/lib/media/codec_impl",
-    "//sdk/fidl/fuchsia.mediacodec",
-    "//sdk/lib/fidl/cpp",
-  ]
-  public_configs = [ ":sources_include_config" ]
-  cflags = []
-}
-
-source_set("tests") {
-  testonly = true
-  deps = [
-    ":sources",
-    ":test_support",
-    "//garnet/lib/media/codec_impl:codec_impl",
-    "//sdk/fidl/fuchsia.mediacodec",
-    "//third_party/googletest:gtest",
-  ]
-  sources = [
-    "tests/integration/test_h264.cc",
-    "tests/integration/test_mpeg2.cc",
-    "tests/integration/test_vp9.cc",
-    "tests/test_support.cc",
-    "tests/unit_tests/test_binding.cc",
-    "tests/unit_tests/test_vp9.cc",
-  ]
-}
-
-copy("video-ucode") {
-  sources = [
-    "firmware/video_ucode.bin",
-  ]
-  outputs = [
-    "$root_out_dir/firmware/amlogic_video_ucode.bin",
-  ]
-}
-
-copy("test_files") {
-  sources = [
-    "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
-    "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.h264",
-    "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9",
-    "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9_2",
-    "//garnet/test_data/media/third_party/chromium_media_test_data_downstream/bear.mpeg2",
-  ]
-  outputs = [
-    "$root_out_dir/firmware/video_test_data/{{source_file_part}}",
-  ]
-}
-
-package("amlogic_video_decoder") {
-  deprecated_system_image = true
-
-  # internal access is needed to get the firmware
-  if (target_cpu == "arm64" && internal_access) {
-    if (amlogic_decoder_tests) {
-      testonly = true
-    }
+# These targets only compile for arm64.
+if (target_cpu == "arm64") {
+  driver_module("amlogic_decoder") {
+    output_name = "amlogic_video_decoder"
 
     deps = [
-      ":video-ucode($shlib_toolchain)",
+      ":sources",
+      ":test_support",
     ]
 
-    libraries = [
-      {
-        name = "firmware/amlogic_video_ucode.bin"
-      },
+    sources = [
+      "tests/test_support_disabled.cc",
     ]
 
+    configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  }
+
+  # This version of the driver runs tests on startup.
+  driver_module("amlogic_decoder_test") {
+    output_name = "amlogic_video_decoder_test"
+
+    testonly = true
+
+    deps = [
+      ":sources",
+      ":tests",
+    ]
+
+    configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+    configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  }
+
+  config("sources_include_config") {
+    include_dirs = [ "." ]
     if (amlogic_decoder_tests) {
-      deps += [
-        ":amlogic_decoder_test",
-        ":test_files($shlib_toolchain)",
+      include_dirs += [ "./tests/integration/test_data_headers" ]
+    }
+  }
+
+  source_set("test_support") {
+    deps = [
+      "//zircon/public/lib/ddk",
+      "//zircon/public/lib/driver",
+    ]
+    sources = [
+      "tests/test_support.h",
+    ]
+  }
+
+  source_set("sources") {
+    sources = [
+      # Driver structure:
+      "device_ctx.cc",
+      "device_ctx.h",
+      "driver_ctx.cc",
+      "driver_ctx.h",
+
+      # HW driving:
+      "amlogic-video.cc",
+      "amlogic-video.h",
+      "binding.c",
+      "decoder_core.h",
+      "firmware_blob.cc",
+      "firmware_blob.h",
+      "h264_decoder.cc",
+      "h264_decoder.h",
+      "hevcdec.cc",
+      "hevcdec.h",
+      "macros.h",
+      "mpeg12_decoder.cc",
+      "mpeg12_decoder.h",
+      "pts_manager.cc",
+      "pts_manager.h",
+      "registers.h",
+      "vdec1.cc",
+      "vdec1.h",
+      "video_decoder.h",
+      "video_frame.cc",
+      "video_frame.h",
+      "vp9_decoder.cc",
+      "vp9_decoder.h",
+      "vp9_utils.cc",
+      "vp9_utils.h",
+
+      # CodecFactory+Codec interface handling:
+      "codec_adapter_h264.cc",
+      "codec_adapter_h264.h",
+      "codec_adapter_mpeg2.cc",
+      "codec_adapter_mpeg2.h",
+      "codec_adapter_vp9.cc",
+      "codec_adapter_vp9.h",
+      "device_fidl.cc",
+      "device_fidl.h",
+      "local_codec_factory.cc",
+      "local_codec_factory.h",
+    ]
+    public_deps = [
+      "//zircon/public/banjo/ddk-protocol-amlogiccanvas",
+      "//zircon/public/lib/async-cpp",
+      "//zircon/public/lib/async-loop-cpp",
+      "//zircon/public/lib/ddk",
+      "//zircon/public/lib/ddktl",
+      "//zircon/public/lib/driver",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/hwreg",
+      "//zircon/public/lib/mmio",
+      "//zircon/public/lib/zx",
+    ]
+    deps = [
+      ":test_support",
+      "third_party/libvpx",
+      "//garnet/lib/media/codec_impl",
+      "//sdk/fidl/fuchsia.mediacodec",
+      "//sdk/lib/fidl/cpp",
+    ]
+    public_configs = [ ":sources_include_config" ]
+    cflags = []
+  }
+
+  source_set("tests") {
+    testonly = true
+    deps = [
+      ":sources",
+      ":test_support",
+      "//garnet/lib/media/codec_impl:codec_impl",
+      "//sdk/fidl/fuchsia.mediacodec",
+      "//third_party/googletest:gtest",
+    ]
+    sources = [
+      "tests/integration/test_h264.cc",
+      "tests/integration/test_mpeg2.cc",
+      "tests/integration/test_vp9.cc",
+      "tests/test_support.cc",
+      "tests/unit_tests/test_binding.cc",
+      "tests/unit_tests/test_vp9.cc",
+    ]
+  }
+
+  copy("video-ucode") {
+    sources = [
+      "firmware/video_ucode.bin",
+    ]
+    outputs = [
+      "$root_out_dir/firmware/amlogic_video_ucode.bin",
+    ]
+  }
+
+  copy("test_files") {
+    sources = [
+      "//garnet/test_data/media/third_party/chromium_media_test_data/bear.h264",
+      "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.h264",
+      "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9",
+      "//garnet/test_data/media/third_party/chromium_media_test_data/test-25fps.vp9_2",
+      "//garnet/test_data/media/third_party/chromium_media_test_data_downstream/bear.mpeg2",
+    ]
+    outputs = [
+      "$root_out_dir/firmware/video_test_data/{{source_file_part}}",
+    ]
+  }
+
+  package("amlogic_video_decoder") {
+    deprecated_system_image = true
+
+    # internal access is needed to get the firmware
+    if (target_cpu == "arm64" && internal_access) {
+      if (amlogic_decoder_tests) {
+        testonly = true
+      }
+
+      deps = [
+        ":video-ucode($shlib_toolchain)",
       ]
-      drivers = [
+
+      libraries = [
         {
-          name = "amlogic_video_decoder_test.so"
+          name = "firmware/amlogic_video_ucode.bin"
         },
       ]
 
-      # The test data is stored as a firmware file, because that's the only way
-      # that a file can be read from a driver.
-      libraries += [
-        {
-          name = "firmware/video_test_data/bear.mpeg2"
-        },
-        {
-          name = "firmware/video_test_data/bear.h264"
-        },
-        {
-          name = "firmware/video_test_data/test-25fps.h264"
-        },
-        {
-          name = "firmware/video_test_data/test-25fps.vp9"
-        },
-        {
-          name = "firmware/video_test_data/test-25fps.vp9_2"
-        },
-      ]
+      if (amlogic_decoder_tests) {
+        deps += [
+          ":amlogic_decoder_test",
+          ":test_files($shlib_toolchain)",
+        ]
+        drivers = [
+          {
+            name = "amlogic_video_decoder_test.so"
+          },
+        ]
+
+        # The test data is stored as a firmware file, because that's the only way
+        # that a file can be read from a driver.
+        libraries += [
+          {
+            name = "firmware/video_test_data/bear.mpeg2"
+          },
+          {
+            name = "firmware/video_test_data/bear.h264"
+          },
+          {
+            name = "firmware/video_test_data/test-25fps.h264"
+          },
+          {
+            name = "firmware/video_test_data/test-25fps.vp9"
+          },
+          {
+            name = "firmware/video_test_data/test-25fps.vp9_2"
+          },
+        ]
+      } else {
+        deps += [ ":amlogic_decoder" ]
+        drivers = [
+          {
+            name = "amlogic_video_decoder.so"
+          },
+        ]
+      }
     } else {
-      deps += [ ":amlogic_decoder" ]
-      drivers = [
+      assert(!amlogic_decoder_tests, "amlogic decoder not built")
+    }
+  }
+
+  # This causes both versions of the driver to be built, so compile
+  # errors in tests are hit on the CQ.
+  group("amlogic_video_decoder_test_build") {
+    testonly = true
+
+    if (target_cpu == "arm64") {
+      deps = [
+        ":amlogic_decoder",
+        ":amlogic_decoder_test",
+      ]
+    }
+  }
+
+  #
+  # Manual tests
+  #
+
+  executable("test_amlogic_codec_factory") {
+    testonly = true
+    sources = [
+      "tests/manual/test_amlogic_codec_factory.cc",
+    ]
+    deps = [
+      "//garnet/public/lib/component/cpp",
+      "//sdk/fidl/fuchsia.mediacodec",
+      "//zircon/public/lib/async-loop-cpp",
+    ]
+  }
+
+  package("test_amlogic_codec_factory_package") {
+    testonly = true
+    if (target_cpu == "arm64") {
+      deps = [
+        ":test_amlogic_codec_factory",
+      ]
+      tests = [
         {
-          name = "amlogic_video_decoder.so"
+          name = "test_amlogic_codec_factory"
+          environments = basic_envs
         },
       ]
     }
-  } else {
-    assert(!amlogic_decoder_tests, "amlogic decoder not built")
   }
-}
-
-# This package causes both versions of the driver to be built, so compile
-# errors in tests are hit on the CQ. It doesn't actually package any files.
-package("amlogic_video_decoder_test_build") {
-  deprecated_system_image = true
-  testonly = true
-
-  if (target_cpu == "arm64") {
-    deps = [
-      ":amlogic_decoder",
-      ":amlogic_decoder_test",
-    ]
-  }
-}
-
-#
-# Manual tests
-#
-
-executable("test_amlogic_codec_factory") {
-  testonly = true
-  sources = [
-    "tests/manual/test_amlogic_codec_factory.cc",
-  ]
-  deps = [
-    "//garnet/public/lib/component/cpp",
-    "//sdk/fidl/fuchsia.mediacodec",
-    "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-package("test_amlogic_codec_factory_package") {
-  # TODO(dustingreen): Do we need deprecated_system_image to be able to run a
-  # test manually from fx shell?
-  testonly = true
-  deps = [
-    ":test_amlogic_codec_factory",
-  ]
-  tests = [
-    {
-      name = "test_amlogic_codec_factory"
-      environments = basic_envs
-    },
-  ]
 }

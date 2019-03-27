@@ -174,7 +174,6 @@ group("sysmgr") {
 group("drivers") {
   testonly = true
   public_deps = [
-    "//garnet/packages/prod:amlogic_video_decoder",
     "//garnet/packages/prod:bluetooth_drivers",
     "//garnet/packages/prod:magma-vsl-gc",
     "//garnet/packages/prod:usb_video",
@@ -184,6 +183,9 @@ group("drivers") {
     "//garnet/packages/prod:wlan_drivers",
     "//src/connectivity/telephony:drivers",
   ]
+  if (target_cpu == "arm64") {
+    public_deps += [ "//garnet/packages/prod:amlogic_video_decoder" ]
+  }
 }
 
 group("debugserver") {
@@ -203,8 +205,8 @@ group("xi_core") {
 group("all") {
   testonly = true
   public_deps = [
+    ":drivers",
     "//garnet/packages/prod:amber",
-    "//garnet/packages/prod:amlogic_video_decoder",
     "//garnet/packages/prod:appmgr",
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:auth",
@@ -214,7 +216,6 @@ group("all") {
     "//garnet/packages/prod:bluetooth_all",
     "//garnet/packages/prod:bluetooth_atheros",
     "//garnet/packages/prod:bluetooth_core",
-    "//garnet/packages/prod:bluetooth_drivers",
     "//garnet/packages/prod:bluetooth_hci",
     "//garnet/packages/prod:bluetooth_hid",
     "//garnet/packages/prod:bluetooth_intel",
@@ -248,7 +249,6 @@ group("all") {
     "//garnet/packages/prod:logger",
     "//garnet/packages/prod:magma",
     "//garnet/packages/prod:magma-img-rgx-mtk",
-    "//garnet/packages/prod:magma-vsl-gc",
     "//garnet/packages/prod:mdns",
     "//garnet/packages/prod:mdns-util",
     "//garnet/packages/prod:media",
@@ -302,18 +302,13 @@ group("all") {
     "//garnet/packages/prod:tracing",
     "//garnet/packages/prod:tts",
     "//garnet/packages/prod:tz-util",
-    "//garnet/packages/prod:usb_video",
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/prod:vim",
-    "//garnet/packages/prod:virtual_audio_driver",
-    "//garnet/packages/prod:virtual_camera",
-    "//garnet/packages/prod:vulkan",
     "//garnet/packages/prod:wlan",
     "//garnet/packages/prod:wlan-ap-smoke-test",
     "//garnet/packages/prod:wlan-hw-sim",
     "//garnet/packages/prod:wlan-smoke-test",
     "//garnet/packages/prod:wlan-stress-test",
-    "//garnet/packages/prod:wlan_drivers",
     "//garnet/packages/prod:wlan_tools",
     "//garnet/packages/prod:wlancfg",
     "//garnet/packages/prod:wlanif",
@@ -976,12 +971,14 @@ group("tts") {
   ]
 }
 
-group("amlogic_video_decoder") {
-  testonly = true
-  public_deps = [
-    "//garnet/drivers/video/amlogic-decoder:amlogic_video_decoder",
-    "//garnet/drivers/video/amlogic-decoder:amlogic_video_decoder_test_build",
-  ]
+if (target_cpu == "arm64") {
+  group("amlogic_video_decoder") {
+    testonly = true
+    public_deps = [
+      "//garnet/drivers/video/amlogic-decoder:amlogic_video_decoder",
+      "//garnet/drivers/video/amlogic-decoder:amlogic_video_decoder_test_build",
+    ]
+  }
 }
 
 group("stash") {
