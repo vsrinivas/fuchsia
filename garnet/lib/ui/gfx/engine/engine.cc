@@ -24,6 +24,7 @@
 #include "garnet/lib/ui/gfx/util/vulkan_utils.h"
 #include "garnet/lib/ui/scenic/session.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
+#include "lib/escher/util/fuchsia_utils.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -233,7 +234,7 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
 
     success &= hla.swapchain->DrawAndPresentFrame(
         timings, hla,
-        [is_last_hla, &frame, engine_renderer{engine_renderer_.get()}](
+        [is_last_hla, &frame, escher{escher_}, engine_renderer{engine_renderer_.get()}](
             zx_time_t target_presentation_time,
             const escher::ImagePtr& output_image,
             const HardwareLayerAssignment::Item hla_item,
@@ -242,6 +243,15 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
           output_image->SetWaitSemaphore(acquire_semaphore);
           engine_renderer->RenderLayers(frame, target_presentation_time,
                                         output_image, hla_item.layers);
+
+          // Create a flow event that ends in the magma system driver.
+          zx::event semaphore_event = GetEventForSemaphore(escher->device(), frame_done_semaphore);
+          zx_info_handle_basic_t info;
+          zx_status_t status = semaphore_event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                                                        nullptr, nullptr);
+          ZX_DEBUG_ASSERT(status == ZX_OK);
+          TRACE_FLOW_BEGIN("gfx", "semaphore", info.koid);
+
           if (!is_last_hla) {
             frame->SubmitPartialFrame(frame_done_semaphore);
           } else {

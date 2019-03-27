@@ -175,6 +175,7 @@ magma::Status MagmaSystemContext::ExecuteImmediateCommands(uint64_t commands_siz
             return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "semaphore id not found 0x%" PRIx64,
                             semaphore_ids[i]);
         msd_semaphores[i] = semaphore->msd_semaphore();
+        TRACE_FLOW_END("gfx", "semaphore", semaphore_ids[i]);
     }
     magma_status_t result = msd_context_execute_immediate_commands(
         msd_ctx(), commands_size, commands, semaphore_count, msd_semaphores.data());
