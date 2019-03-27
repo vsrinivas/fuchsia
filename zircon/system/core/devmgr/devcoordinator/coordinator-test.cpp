@@ -160,11 +160,11 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
 
     // Validate the BindDriver request.
     auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-    ASSERT_EQ(fuchsia_device_manager_ControllerBindDriverOrdinal, hdr->ordinal);
-    status = fidl_decode(&fuchsia_device_manager_ControllerBindDriverRequestTable, bytes,
+    ASSERT_EQ(fuchsia_device_manager_DeviceControllerBindDriverOrdinal, hdr->ordinal);
+    status = fidl_decode(&fuchsia_device_manager_DeviceControllerBindDriverRequestTable, bytes,
                          actual_bytes, handles, actual_handles, nullptr);
     ASSERT_OK(status);
-    auto req = reinterpret_cast<fuchsia_device_manager_ControllerBindDriverRequest*>(bytes);
+    auto req = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverRequest*>(bytes);
     ASSERT_EQ(req->driver_path.size, strlen(expected_driver));
     ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected_driver),
                     reinterpret_cast<const uint8_t*>(req->driver_path.data),
@@ -172,10 +172,10 @@ void CheckBindDriverReceived(const zx::channel& remote, const char* expected_dri
 
     // Write the BindDriver response.
     memset(bytes, 0, sizeof(bytes));
-    auto resp = reinterpret_cast<fuchsia_device_manager_ControllerBindDriverResponse*>(bytes);
-    resp->hdr.ordinal = fuchsia_device_manager_ControllerBindDriverOrdinal;
+    auto resp = reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(bytes);
+    resp->hdr.ordinal = fuchsia_device_manager_DeviceControllerBindDriverOrdinal;
     resp->status = ZX_OK;
-    status = fidl_encode(&fuchsia_device_manager_ControllerBindDriverResponseTable, bytes,
+    status = fidl_encode(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable, bytes,
                          sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
     ASSERT_OK(status);
     ASSERT_EQ(0, actual_handles);
@@ -246,11 +246,11 @@ void CheckCreateDeviceReceived(const zx::channel& remote, const char* expected_d
 
     // Validate the CreateDevice request.
     auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-    ASSERT_EQ(fuchsia_device_manager_ControllerCreateDeviceOrdinal, hdr->ordinal);
-    status = fidl_decode(&fuchsia_device_manager_ControllerCreateDeviceRequestTable, bytes,
+    ASSERT_EQ(fuchsia_device_manager_DevhostControllerCreateDeviceOrdinal, hdr->ordinal);
+    status = fidl_decode(&fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable, bytes,
                          actual_bytes, handles, actual_handles, nullptr);
     ASSERT_OK(status);
-    auto req = reinterpret_cast<fuchsia_device_manager_ControllerCreateDeviceRequest*>(
+    auto req = reinterpret_cast<fuchsia_device_manager_DevhostControllerCreateDeviceRequest*>(
             bytes);
     ASSERT_EQ(req->driver_path.size, strlen(expected_driver));
     ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected_driver),
@@ -277,11 +277,12 @@ void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* e
 
     // Validate the CreateCompositeDevice request.
     auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
-    ASSERT_EQ(fuchsia_device_manager_ControllerCreateCompositeDeviceOrdinal, hdr->ordinal);
-    status = fidl_decode(&fuchsia_device_manager_ControllerCreateCompositeDeviceRequestTable, bytes,
+    ASSERT_EQ(fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal, hdr->ordinal);
+    status = fidl_decode(&fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable,
+                         bytes,
                          actual_bytes, handles, actual_handles, nullptr);
     ASSERT_OK(status);
-    auto req = reinterpret_cast<fuchsia_device_manager_ControllerCreateCompositeDeviceRequest*>(
+    auto req = reinterpret_cast<fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequest*>(
             bytes);
     ASSERT_EQ(req->name.size, strlen(expected_name));
     ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected_name),
@@ -290,13 +291,14 @@ void CheckCreateCompositeDeviceReceived(const zx::channel& remote, const char* e
 
     // Write the CreateCompositeDevice response.
     memset(bytes, 0, sizeof(bytes));
-    auto resp = reinterpret_cast<fuchsia_device_manager_ControllerCreateCompositeDeviceResponse*>(
+    auto resp = reinterpret_cast<fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponse*>(
             bytes);
-    resp->hdr.ordinal = fuchsia_device_manager_ControllerCreateCompositeDeviceOrdinal;
+    resp->hdr.ordinal = fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal;
     resp->status = ZX_OK;
-    status = fidl_encode(&fuchsia_device_manager_ControllerCreateCompositeDeviceResponseTable,
-                         bytes, sizeof(*resp), handles, fbl::count_of(handles), &actual_handles,
-                         nullptr);
+    status = fidl_encode(
+            &fuchsia_device_manager_DevhostControllerCreateCompositeDeviceResponseTable,
+            bytes, sizeof(*resp), handles, fbl::count_of(handles), &actual_handles,
+            nullptr);
     ASSERT_OK(status);
     ASSERT_EQ(0, actual_handles);
     status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);

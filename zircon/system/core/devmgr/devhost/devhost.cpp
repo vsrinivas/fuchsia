@@ -493,7 +493,8 @@ static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc
 
     auto newconn = fbl::make_unique<DevcoordinatorConnection>();
     if (!newconn) {
-        return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(txn, ZX_ERR_NO_MEMORY);
+        return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn,
+                                                                                   ZX_ERR_NO_MEMORY);
     }
 
     // Convert the component IDs into zx_device references
@@ -508,7 +509,7 @@ static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc
             uint64_t local_id = component_local_ids_data[i];
             fbl::RefPtr<zx_device_t> dev = zx_device::GetDeviceFromLocalId(local_id);
             if (dev == nullptr || (dev->flags & DEV_FLAG_DEAD)) {
-                return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(
+                return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(
                         txn, ZX_ERR_NOT_FOUND);
             }
             components_list[i] = std::move(dev);
@@ -518,7 +519,7 @@ static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc
     fbl::RefPtr<zx_device_t> dev;
     zx_status_t status = zx_device::Create(&dev);
     if (status != ZX_OK) {
-        return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(txn, status);
+        return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn, status);
     }
     static_assert(fuchsia_device_manager_DEVICE_NAME_MAX + 1 >= sizeof(dev->name));
     memcpy(dev->name, name_data, name_size);
@@ -528,7 +529,7 @@ static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc
 
     status = InitializeCompositeDevice(dev, std::move(components_list));
     if (status != ZX_OK) {
-        return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(txn, status);
+        return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn, status);
     }
 
     newconn->dev = dev;
@@ -537,9 +538,9 @@ static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc
     log(RPC_IN, "devhost[%s] creating new composite conn=%p\n", ctx->path, newconn.get());
     if ((status = DevcoordinatorConnection::BeginWait(std::move(newconn),
                                                  DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
-        return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(txn, status);
+        return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn, status);
     }
-    return fuchsia_device_manager_ControllerCreateCompositeDevice_reply(txn, ZX_OK);
+    return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn, ZX_OK);
 }
 
 static zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
@@ -555,13 +556,13 @@ static zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
     fbl::RefPtr<zx_driver_t> drv;
     if (ctx->conn->dev->flags & DEV_FLAG_DEAD) {
         log(ERROR, "devhost[%s] bind to removed device disallowed\n", ctx->path);
-        return fuchsia_device_manager_ControllerBindDriver_reply(txn, ZX_ERR_IO_NOT_PRESENT);
+        return fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, ZX_ERR_IO_NOT_PRESENT);
     }
 
     zx_status_t r;
     if ((r = dh_find_driver(driver_path, std::move(driver_vmo), &drv)) < 0) {
         log(ERROR, "devhost[%s] driver load failed: %d\n", ctx->path, r);
-        return fuchsia_device_manager_ControllerBindDriver_reply(txn, r);
+        return fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, r);
     }
 
     if (drv->has_bind_op()) {
@@ -579,14 +580,14 @@ static zx_status_t fidl_BindDriver(void* raw_ctx, const char* driver_path_data,
             log(ERROR, "devhost[%s] bind driver '%.*s' failed: %d\n", ctx->path,
                 static_cast<int>(driver_path_size), driver_path_data, r);
         }
-        return fuchsia_device_manager_ControllerBindDriver_reply(txn, r);
+        return fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, r);
     }
 
     if (!drv->has_create_op()) {
         log(ERROR, "devhost[%s] neither create nor bind are implemented: '%.*s'\n", ctx->path,
             static_cast<int>(driver_path_size), driver_path_data);
     }
-    return fuchsia_device_manager_ControllerBindDriver_reply(txn, ZX_ERR_NOT_SUPPORTED);
+    return fuchsia_device_manager_DeviceControllerBindDriver_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
 static zx_status_t fidl_ConnectProxy(void* raw_ctx, zx_handle_t raw_shadow) {
@@ -614,7 +615,7 @@ static zx_status_t fidl_Suspend(void* raw_ctx, uint32_t flags, fidl_txn_t* txn) 
         r = devhost_device_suspend(device, flags);
     }
     // TODO(teisenbe): We should probably check this return...
-    fuchsia_device_manager_ControllerSuspend_reply(txn, r);
+    fuchsia_device_manager_DeviceControllerSuspend_reply(txn, r);
     return ZX_OK;
 }
 
@@ -624,14 +625,17 @@ static zx_status_t fidl_RemoveDevice(void* raw_ctx) {
     return ZX_OK;
 }
 
-static fuchsia_device_manager_Controller_ops_t fidl_ops = {
+static fuchsia_device_manager_DevhostController_ops_t devhost_fidl_ops = {
     .CreateDeviceStub = fidl_CreateDeviceStub,
     .CreateDevice = fidl_CreateDevice,
+    .CreateCompositeDevice = fidl_CreateCompositeDevice,
+};
+
+static fuchsia_device_manager_DeviceController_ops_t device_fidl_ops = {
     .BindDriver = fidl_BindDriver,
     .ConnectProxy = fidl_ConnectProxy,
-    .Suspend = fidl_Suspend,
     .RemoveDevice = fidl_RemoveDevice,
-    .CreateCompositeDevice = fidl_CreateCompositeDevice,
+    .Suspend = fidl_Suspend,
 };
 
 static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* conn) {
@@ -663,13 +667,18 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* c
     // Double-check that Open (the only message we forward) cannot be mistaken for an
     // internal dev coordinator RPC message.
     static_assert(
-        fuchsia_device_manager_ControllerCreateDeviceStubOrdinal !=
+        fuchsia_device_manager_DevhostControllerCreateDeviceStubOrdinal !=
             fuchsia_io_DirectoryOpenOrdinal &&
-        fuchsia_device_manager_ControllerCreateDeviceOrdinal != fuchsia_io_DirectoryOpenOrdinal &&
-        fuchsia_device_manager_ControllerBindDriverOrdinal != fuchsia_io_DirectoryOpenOrdinal &&
-        fuchsia_device_manager_ControllerConnectProxyOrdinal != fuchsia_io_DirectoryOpenOrdinal &&
-        fuchsia_device_manager_ControllerSuspendOrdinal != fuchsia_io_DirectoryOpenOrdinal &&
-        fuchsia_device_manager_ControllerRemoveDeviceOrdinal != fuchsia_io_DirectoryOpenOrdinal);
+        fuchsia_device_manager_DevhostControllerCreateDeviceOrdinal !=
+            fuchsia_io_DirectoryOpenOrdinal &&
+        fuchsia_device_manager_DeviceControllerBindDriverOrdinal !=
+            fuchsia_io_DirectoryOpenOrdinal &&
+        fuchsia_device_manager_DeviceControllerConnectProxyOrdinal !=
+            fuchsia_io_DirectoryOpenOrdinal &&
+        fuchsia_device_manager_DeviceControllerSuspendOrdinal !=
+            fuchsia_io_DirectoryOpenOrdinal &&
+        fuchsia_device_manager_DeviceControllerRemoveDeviceOrdinal !=
+            fuchsia_io_DirectoryOpenOrdinal);
 
     auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
     if (hdr->ordinal == fuchsia_io_DirectoryOpenOrdinal) {
@@ -686,8 +695,15 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* c
 
     FidlTxn txn(zx::unowned_channel(h), hdr->txid);
     DevhostRpcReadContext read_ctx = {path, conn};
-    return fuchsia_device_manager_Controller_dispatch(&read_ctx, txn.fidl_txn(), &fidl_msg,
-                                                      &fidl_ops);
+    // TODO(teisenbe): Instead of trying both, have a different handler function
+    // for devhosts and devices
+    r = fuchsia_device_manager_DevhostController_try_dispatch(&read_ctx, txn.fidl_txn(), &fidl_msg,
+                                                              &devhost_fidl_ops);
+    if (r != ZX_ERR_NOT_SUPPORTED) {
+        return r;
+    }
+    return fuchsia_device_manager_DeviceController_dispatch(&read_ctx, txn.fidl_txn(), &fidl_msg,
+                                                            &device_fidl_ops);
 }
 
 // handles devcoordinator rpc

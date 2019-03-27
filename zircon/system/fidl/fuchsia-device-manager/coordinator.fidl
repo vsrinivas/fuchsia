@@ -67,11 +67,31 @@ struct DeviceComponent {
     array<DeviceComponentPart>:DEVICE_COMPONENT_PARTS_MAX parts;
 };
 
-/// Interface for controlling a device in a devhost process from the devcoordinator.
+/// Protocol for controlling devices in a devhost process from the devcoordinator
 [Layout = "Simple"]
-protocol Controller {
-    // TODO(ZX-2921): These should probably return a status?
+protocol DeviceController {
+    /// Bind the requested driver to this device.  |driver_path| is informational,
+    /// but all calls to BindDriver/CreateDevice should use the same |driver_path|
+    /// each time they use a |driver| VMO with the same contents.
+    BindDriver(string:DEVICE_PATH_MAX driver_path, handle<vmo> driver)
+        -> (zx.status status);
 
+    /// Give this device a channel to its shadow in another process.
+    ConnectProxy(handle<channel> shadow);
+
+    /// Ask the devhost to remove this device.  On success, the remote end of
+    /// this interface channel will close instead of returning a result.
+    RemoveDevice();
+
+    /// Ask devhost to suspend all of its devices, using the target state indicated by |flags|.
+    /// This should logically be in DevhostController, but currently this is instead sent to the
+    /// first device in the devhost
+    Suspend(uint32 flags) -> (zx.status status);
+};
+
+/// Protocol for controlling a devhost process from the devcoordinator
+[Layout = "Simple"]
+protocol DevhostController {
     /// Create a device in the devhost that only implements the device protocol
     /// and claims to support the given |protocol_id|.  This device will communicate
     /// with the devcoordinator via |rpc|.
@@ -94,22 +114,6 @@ protocol Controller {
     CreateDevice(handle<channel> rpc, string:DEVICE_PATH_MAX driver_path,
                  handle<vmo> driver, handle? parent_proxy,
                  string:DEVICE_ARGS_MAX? proxy_args, LocalDeviceId local_device_id);
-
-    /// Bind the requested driver to this device.  |driver_path| is informational,
-    /// but all calls to BindDriver/CreateDevice should use the same |driver_path|
-    /// each time they use a |driver| VMO with the same contents.
-    BindDriver(string:DEVICE_PATH_MAX driver_path, handle<vmo> driver)
-        -> (zx.status status);
-
-    /// Give this device a channel to its shadow in another process.
-    ConnectProxy(handle<channel> shadow);
-
-    /// Ask devhost to suspend all of its devices, using the target state indicated by |flags|.
-    Suspend(uint32 flags) -> (zx.status status);
-
-    /// Ask the devhost to remove this device.  On success, the remote end of
-    /// this interface channel will close instead of returning a result.
-    RemoveDevice();
 
     /// Introduce a composite device that has the given name and properties.
     /// |components| will be a list of all of the composite's components,

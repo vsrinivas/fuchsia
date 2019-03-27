@@ -13,12 +13,13 @@
 namespace devmgr {
 
 zx_status_t dh_send_remove_device(const Device* dev) {
-    FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_ControllerRemoveDeviceRequest)];
+    FIDL_ALIGNDECL char wr_bytes[
+            sizeof(fuchsia_device_manager_DeviceControllerRemoveDeviceRequest)];
     fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
 
-    auto req = builder.New<fuchsia_device_manager_ControllerRemoveDeviceRequest>();
+    auto req = builder.New<fuchsia_device_manager_DeviceControllerRemoveDeviceRequest>();
     ZX_ASSERT(req != nullptr);
-    req->hdr.ordinal = fuchsia_device_manager_ControllerRemoveDeviceOrdinal;
+    req->hdr.ordinal = fuchsia_device_manager_DeviceControllerRemoveDeviceOrdinal;
     // TODO(teisenbe): Allocate and track txids
     req->hdr.txid = 1;
 
@@ -31,16 +32,16 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx:
     size_t driver_path_size = dev->libname.size();
     size_t args_size = strlen(args);
     uint32_t wr_num_bytes =
-        static_cast<uint32_t>(sizeof(fuchsia_device_manager_ControllerCreateDeviceRequest) +
+        static_cast<uint32_t>(sizeof(fuchsia_device_manager_DevhostControllerCreateDeviceRequest) +
                               FIDL_ALIGN(driver_path_size) + FIDL_ALIGN(args_size));
     FIDL_ALIGNDECL char wr_bytes[wr_num_bytes];
     fidl::Builder builder(wr_bytes, wr_num_bytes);
 
-    auto req = builder.New<fuchsia_device_manager_ControllerCreateDeviceRequest>();
+    auto req = builder.New<fuchsia_device_manager_DevhostControllerCreateDeviceRequest>();
     char* driver_path_data = builder.NewArray<char>(static_cast<uint32_t>(driver_path_size));
     char* args_data = builder.NewArray<char>(static_cast<uint32_t>(args_size));
     ZX_ASSERT(req != nullptr && driver_path_data != nullptr && args_data != nullptr);
-    req->hdr.ordinal = fuchsia_device_manager_ControllerCreateDeviceOrdinal;
+    req->hdr.ordinal = fuchsia_device_manager_DevhostControllerCreateDeviceOrdinal;
     // TODO(teisenbe): Allocate and track txids
     req->hdr.txid = 1;
 
@@ -72,12 +73,13 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx:
 
 zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel rpc,
                                        uint32_t protocol_id) {
-    FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_ControllerCreateDeviceStubRequest)];
+    FIDL_ALIGNDECL char wr_bytes[
+            sizeof(fuchsia_device_manager_DevhostControllerCreateDeviceStubRequest)];
     fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
 
-    auto req = builder.New<fuchsia_device_manager_ControllerCreateDeviceStubRequest>();
+    auto req = builder.New<fuchsia_device_manager_DevhostControllerCreateDeviceStubRequest>();
     ZX_ASSERT(req != nullptr);
-    req->hdr.ordinal = fuchsia_device_manager_ControllerCreateDeviceStubOrdinal;
+    req->hdr.ordinal = fuchsia_device_manager_DevhostControllerCreateDeviceStubOrdinal;
     // TODO(teisenbe): Allocate and track txids
     req->hdr.txid = 1;
 
@@ -94,14 +96,15 @@ zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel rpc
 zx_status_t dh_send_bind_driver(const Device* dev, const char* libname, zx::vmo driver) {
     size_t libname_size = strlen(libname);
     uint32_t wr_num_bytes = static_cast<uint32_t>(
-        sizeof(fuchsia_device_manager_ControllerBindDriverRequest) + FIDL_ALIGN(libname_size));
+        sizeof(fuchsia_device_manager_DeviceControllerBindDriverRequest) +
+        FIDL_ALIGN(libname_size));
     FIDL_ALIGNDECL char wr_bytes[wr_num_bytes];
     fidl::Builder builder(wr_bytes, wr_num_bytes);
 
-    auto req = builder.New<fuchsia_device_manager_ControllerBindDriverRequest>();
+    auto req = builder.New<fuchsia_device_manager_DeviceControllerBindDriverRequest>();
     char* libname_data = builder.NewArray<char>(static_cast<uint32_t>(libname_size));
     ZX_ASSERT(req != nullptr && libname_data != nullptr);
-    req->hdr.ordinal = fuchsia_device_manager_ControllerBindDriverOrdinal;
+    req->hdr.ordinal = fuchsia_device_manager_DeviceControllerBindDriverOrdinal;
     // TODO(teisenbe): Allocate and track txids
     req->hdr.txid = 1;
 
@@ -118,12 +121,13 @@ zx_status_t dh_send_bind_driver(const Device* dev, const char* libname, zx::vmo 
 }
 
 zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy) {
-    FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_ControllerConnectProxyRequest)];
+    FIDL_ALIGNDECL char wr_bytes[
+            sizeof(fuchsia_device_manager_DeviceControllerConnectProxyRequest)];
     fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
 
-    auto req = builder.New<fuchsia_device_manager_ControllerConnectProxyRequest>();
+    auto req = builder.New<fuchsia_device_manager_DeviceControllerConnectProxyRequest>();
     ZX_ASSERT(req != nullptr);
-    req->hdr.ordinal = fuchsia_device_manager_ControllerConnectProxyOrdinal;
+    req->hdr.ordinal = fuchsia_device_manager_DeviceControllerConnectProxyOrdinal;
     // TODO(teisenbe): Allocate and track txids
     req->hdr.txid = 1;
 
@@ -136,12 +140,12 @@ zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy) {
 }
 
 zx_status_t dh_send_suspend(const Device* dev, uint32_t flags) {
-    FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_ControllerSuspendRequest)];
+    FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_device_manager_DeviceControllerSuspendRequest)];
     fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
 
-    auto req = builder.New<fuchsia_device_manager_ControllerSuspendRequest>();
+    auto req = builder.New<fuchsia_device_manager_DeviceControllerSuspendRequest>();
     ZX_ASSERT(req != nullptr);
-    req->hdr.ordinal = fuchsia_device_manager_ControllerSuspendOrdinal;
+    req->hdr.ordinal = fuchsia_device_manager_DeviceControllerSuspendOrdinal;
     // TODO(teisenbe): Allocate and track txids
     req->hdr.txid = 1;
     req->flags = flags;
@@ -156,17 +160,17 @@ zx_status_t dh_send_create_composite_device(Devhost* dh, const Device* composite
     size_t components_size = composite.components_count() * sizeof(uint64_t);
     size_t name_size = composite.name().size();
     uint32_t wr_num_bytes = static_cast<uint32_t>(
-            sizeof(fuchsia_device_manager_ControllerCreateCompositeDeviceRequest) +
+            sizeof(fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequest) +
             FIDL_ALIGN(components_size) + FIDL_ALIGN(name_size));
     FIDL_ALIGNDECL char wr_bytes[wr_num_bytes];
     fidl::Builder builder(wr_bytes, wr_num_bytes);
 
-    auto req = builder.New<fuchsia_device_manager_ControllerCreateCompositeDeviceRequest>();
+    auto req = builder.New<fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequest>();
     uint64_t* components_data = builder.NewArray<uint64_t>(
             static_cast<uint32_t>(composite.components_count()));
     char* name_data = builder.NewArray<char>(static_cast<uint32_t>(name_size));
     ZX_ASSERT(req != nullptr && components_data != nullptr && name_data != nullptr);
-    req->hdr.ordinal = fuchsia_device_manager_ControllerCreateCompositeDeviceOrdinal;
+    req->hdr.ordinal = fuchsia_device_manager_DevhostControllerCreateCompositeDeviceOrdinal;
     // TODO(teisenbe): Allocate and track txids
     req->hdr.txid = 1;
 

@@ -1447,37 +1447,40 @@ zx_status_t Coordinator::HandleDeviceRead(const fbl::RefPtr<Device>& dev) {
     // This is an if statement because, depending on the state of the ordinal
     // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-372
     uint32_t ordinal = hdr->ordinal;
-    if (ordinal == fuchsia_device_manager_ControllerBindDriverOrdinal ||
-        ordinal == fuchsia_device_manager_ControllerBindDriverGenOrdinal) {
+    if (ordinal == fuchsia_device_manager_DeviceControllerBindDriverOrdinal ||
+        ordinal == fuchsia_device_manager_DeviceControllerBindDriverGenOrdinal) {
         const char* err_msg = nullptr;
-        r = fidl_decode_msg(&fuchsia_device_manager_ControllerBindDriverResponseTable, &fidl_msg,
-                            &err_msg);
+        r = fidl_decode_msg(&fuchsia_device_manager_DeviceControllerBindDriverResponseTable,
+                            &fidl_msg, &err_msg);
         if (r != ZX_OK) {
             log(ERROR, "devcoordinator: rpc: bind-driver '%s' received malformed reply: %s\n",
                 dev->name.data(), err_msg);
             return ZX_ERR_IO;
         }
         auto resp =
-            reinterpret_cast<fuchsia_device_manager_ControllerBindDriverResponse*>(fidl_msg.bytes);
+            reinterpret_cast<fuchsia_device_manager_DeviceControllerBindDriverResponse*>(
+                    fidl_msg.bytes);
         if (resp->status != ZX_OK) {
             log(ERROR, "devcoordinator: rpc: bind-driver '%s' status %d\n", dev->name.data(),
                 resp->status);
         }
         // TODO: try next driver, clear BOUND flag
-    } else if (ordinal == fuchsia_device_manager_ControllerSuspendOrdinal ||
-               ordinal == fuchsia_device_manager_ControllerSuspendGenOrdinal) {
+    } else if (ordinal == fuchsia_device_manager_DeviceControllerSuspendOrdinal ||
+               ordinal == fuchsia_device_manager_DeviceControllerSuspendGenOrdinal) {
         const char* err_msg = nullptr;
-        r = fidl_decode_msg(&fuchsia_device_manager_ControllerSuspendResponseTable, &fidl_msg,
-                            &err_msg);
+        r = fidl_decode_msg(&fuchsia_device_manager_DeviceControllerSuspendResponseTable,
+                            &fidl_msg, &err_msg);
         if (r != ZX_OK) {
             log(ERROR, "devcoordinator: rpc: suspend '%s' received malformed reply: %s\n",
                 dev->name.data(), err_msg);
             return ZX_ERR_IO;
         }
         auto resp =
-            reinterpret_cast<fuchsia_device_manager_ControllerSuspendResponse*>(fidl_msg.bytes);
+            reinterpret_cast<fuchsia_device_manager_DeviceControllerSuspendResponse*>(
+                    fidl_msg.bytes);
         if (resp->status != ZX_OK) {
-            log(ERROR, "devcoordinator: rpc: suspend '%s' status %d\n", dev->name.data(), resp->status);
+            log(ERROR, "devcoordinator: rpc: suspend '%s' status %d\n", dev->name.data(),
+                resp->status);
         }
         suspend_context().set_status(resp->status);
         ContinueSuspend(&suspend_context(), root_resource());
