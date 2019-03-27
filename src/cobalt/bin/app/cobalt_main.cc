@@ -27,6 +27,9 @@
 #include "lib/fxl/logging.h"
 #include "src/cobalt/bin/app/cobalt_app.h"
 #include "src/cobalt/bin/app/product_hack.h"
+#include "third_party/cobalt/encoder/file_observation_store.h"
+#include "third_party/cobalt/encoder/memory_observation_store.h"
+#include "third_party/cobalt/util/posix_file_system.h"
 
 // Command-line flags
 
@@ -43,6 +46,12 @@ constexpr fxl::StringView kMinIntervalSecondsFlagName = "min_interval_seconds";
 // Used to override kStartEventAggregatorWorkerDefault
 constexpr fxl::StringView kStartEventAggregatorWorkerFlagName =
     "start_event_aggregator_worker";
+
+constexpr fxl::StringView kUseMemoryObservationStore =
+    "use_memory_observation_store";
+
+constexpr fxl::StringView kMaxBytesTotalFlagName =
+    "max_bytes_per_observation_store";
 
 // We want to only upload every hour. This is the interval that will be
 // approached by the uploader.
@@ -162,15 +171,31 @@ int main(int argc, const char** argv) {
     }
   }
 
-  FXL_LOG(INFO) << "Cobalt client schedule params: schedule_interval="
-                << schedule_interval.count()
+  bool use_memory_observation_store =
+      command_line.HasOption(kUseMemoryObservationStore);
+
+  // Parse the max_bytes_per_observation_store
+  size_t max_bytes_per_observation_store = 1024 * 1024;  // 1 MiB
+  flag_value.clear();
+  if (command_line.GetOptionValue(kMaxBytesTotalFlagName, &flag_value)) {
+    int num_bytes = std::stoi(flag_value);
+    if (num_bytes > 0) {
+      max_bytes_per_observation_store = num_bytes;
+    }
+  }
+
+  FXL_LOG(INFO) << "Cobalt is starting with the following parameters: "
+                << "schedule_interval=" << schedule_interval.count()
                 << " seconds, min_interval=" << min_interval.count()
                 << " seconds, initial_interval=" << initial_interval.count()
-                << " seconds.";
+                << " seconds, max_bytes_per_observation_store="
+                << max_bytes_per_observation_store << ".";
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   cobalt::CobaltApp app(loop.dispatcher(), schedule_interval, min_interval,
                         initial_interval, start_event_aggregator_worker,
+                        use_memory_observation_store,
+                        max_bytes_per_observation_store,
                         cobalt::hack::GetLayer(), ReadBoardName());
   loop.Run();
   return 0;

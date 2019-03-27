@@ -8,6 +8,7 @@
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "third_party/cobalt/encoder/file_observation_store.h"
+#include "third_party/cobalt/encoder/memory_observation_store.h"
 #include "third_party/cobalt/encoder/upload_scheduler.h"
 #include "third_party/cobalt/util/posix_file_system.h"
 
@@ -20,6 +21,8 @@ using encoder::ClearcutV1ShippingManager;
 using encoder::ClientSecret;
 using encoder::FileObservationStore;
 using encoder::LegacyShippingManager;
+using encoder::MemoryObservationStore;
+using encoder::ObservationStore;
 using encoder::ShippingManager;
 using encoder::UploadScheduler;
 using util::PosixFileSystem;
@@ -31,7 +34,6 @@ const std::chrono::seconds kInitialRpcDeadline(10);
 const std::chrono::seconds kDeadlinePerSendAttempt(60);
 
 const size_t kMaxBytesPerEnvelope = 512 * 1024;  // 0.5 MiB.
-const size_t kMaxBytesTotal = 1024 * 1024;       // 1 MiB
 
 constexpr char kCloudShufflerUri[] = "shuffler.cobalt-api.fuchsia.com:443";
 constexpr char kClearcutEndpoint[] = "https://jmt17.google.com/log";
@@ -49,13 +51,34 @@ constexpr char kObservationStorePath[] = "/data/observation_store";
 constexpr char kLocalAggregateProtoStorePath[] = "/data/local_aggregate_store";
 constexpr char kObsHistoryProtoStorePath[] = "/data/obs_history_store";
 
-CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
-                     std::chrono::seconds target_interval,
-                     std::chrono::seconds min_interval,
-                     std::chrono::seconds initial_interval,
-                     bool start_event_aggregator_worker,
-                     const std::string& product_name,
-                     const std::string& board_name)
+namespace {
+
+std::unique_ptr<ObservationStore> NewObservationStore(
+    size_t max_bytes_per_event, size_t max_bytes_per_envelope,
+    size_t max_bytes_total, std::string root_directory, std::string name_prefix,
+    bool use_memory_observation_store) {
+  std::unique_ptr<ObservationStore> store;
+  if (use_memory_observation_store) {
+    store.reset(new MemoryObservationStore(
+        max_bytes_per_event, max_bytes_per_envelope, max_bytes_total));
+  } else {
+    store.reset(new FileObservationStore(
+        max_bytes_per_event, max_bytes_per_envelope, max_bytes_total,
+        std::make_unique<PosixFileSystem>(), std::move(root_directory),
+        name_prefix + " FileObservationStore"));
+  }
+
+  return store;
+}
+
+}  // namespace
+
+CobaltApp::CobaltApp(
+    async_dispatcher_t* dispatcher, std::chrono::seconds target_interval,
+    std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
+    bool start_event_aggregator_worker, bool use_memory_observation_store,
+    size_t max_bytes_per_observation_store, const std::string& product_name,
+    const std::string& board_name)
     : system_data_(product_name, board_name),
       context_(sys::ComponentContext::Create()),
       shuffler_client_(kCloudShufflerUri, true),
@@ -70,14 +93,14 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       // TODO(pesk): Observations for UniqueActives reports are of comparable
       // to the events logged for them, so no change is needed now. Update this
       // comment as we add more non-immediate report types.
-      legacy_observation_store_(
+      legacy_observation_store_(NewObservationStore(
           fuchsia::cobalt::MAX_BYTES_PER_EVENT, kMaxBytesPerEnvelope,
-          kMaxBytesTotal, std::make_unique<PosixFileSystem>(),
-          kLegacyObservationStorePath, "Legacy FileObservationStore"),
-      observation_store_(fuchsia::cobalt::MAX_BYTES_PER_EVENT,
-                         kMaxBytesPerEnvelope, kMaxBytesTotal,
-                         std::make_unique<PosixFileSystem>(),
-                         kObservationStorePath, "V1 FileObservationStore"),
+          max_bytes_per_observation_store, kLegacyObservationStorePath,
+          "Legacy", use_memory_observation_store)),
+      observation_store_(NewObservationStore(
+          fuchsia::cobalt::MAX_BYTES_PER_EVENT, kMaxBytesPerEnvelope,
+          max_bytes_per_observation_store, kObservationStorePath, "V1",
+          use_memory_observation_store)),
       legacy_encrypt_to_analyzer_(
           util::EncryptedMessageMaker::MakeHybridEcdh(
               ReadPublicKeyPem(kAnalyzerPublicKeyPemPath))
@@ -97,14 +120,14 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
 
       legacy_shipping_manager_(
           UploadScheduler(target_interval, min_interval, initial_interval),
-          &legacy_observation_store_, legacy_encrypt_to_shuffler_.get(),
+          legacy_observation_store_.get(), legacy_encrypt_to_shuffler_.get(),
           LegacyShippingManager::SendRetryerParams(kInitialRpcDeadline,
                                                    kDeadlinePerSendAttempt),
           &send_retryer_),
 
       clearcut_shipping_manager_(
           UploadScheduler(target_interval, min_interval, initial_interval),
-          &observation_store_, encrypt_to_shuffler_.get(),
+          observation_store_.get(), encrypt_to_shuffler_.get(),
           std::make_unique<clearcut::ClearcutUploader>(
               kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(
                                      &network_wrapper_, dispatcher))),
@@ -114,7 +137,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       obs_history_proto_store_(kObsHistoryProtoStorePath,
                                std::make_unique<PosixFileSystem>()),
       logger_encoder_(getClientSecret(), &system_data_),
-      observation_writer_(&observation_store_, &clearcut_shipping_manager_,
+      observation_writer_(observation_store_.get(), &clearcut_shipping_manager_,
                           encrypt_to_analyzer_.get()),
       // Construct an EventAggregator using default values for the snapshot
       // intervals and the number of backfill days.
@@ -148,7 +171,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
 
   logger_factory_impl_.reset(new LoggerFactoryImpl(
       global_metrics_registry_bytes, getClientSecret(),
-      &legacy_observation_store_, legacy_encrypt_to_analyzer_.get(),
+      legacy_observation_store_.get(), legacy_encrypt_to_analyzer_.get(),
       &legacy_shipping_manager_, &system_data_, &timer_manager_,
       &logger_encoder_, &observation_writer_, &event_aggregator_));
 

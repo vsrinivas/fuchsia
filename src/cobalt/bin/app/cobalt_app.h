@@ -56,6 +56,13 @@ class CobaltApp {
   //                                 worker thread after constructing the
   //                                 EventAggregator.
   //
+  // |use_memory_observation_store| If this is true, the observation stores will
+  //                                be in-memory only, otherwise they will be
+  //                                file-system backed.
+  //
+  // |max_bytes_per_observation_store| The maximum number of bytes to store for
+  //                                   each of the observation_stores.
+  //
   // |product_name| A product name used in the ObservationMetadata sent with
   //                every upload to the Cobalt server.
   //
@@ -69,8 +76,10 @@ class CobaltApp {
             std::chrono::seconds target_interval,
             std::chrono::seconds min_interval,
             std::chrono::seconds initial_interval,
-            bool start_event_aggregator_worker, const std::string& product_name,
-            const std::string& board_name);
+            bool start_event_aggregator_worker,
+            bool use_memory_observation_store,
+            size_t max_bytes_per_observation_store,
+            const std::string& product_name, const std::string& board_name);
 
  private:
   static encoder::ClientSecret getClientSecret();
@@ -82,8 +91,8 @@ class CobaltApp {
   encoder::ShufflerClient shuffler_client_;
   encoder::send_retryer::SendRetryer send_retryer_;
   network_wrapper::NetworkWrapperImpl network_wrapper_;
-  encoder::FileObservationStore legacy_observation_store_;
-  encoder::FileObservationStore observation_store_;
+  std::unique_ptr<encoder::ObservationStore> legacy_observation_store_;
+  std::unique_ptr<encoder::ObservationStore> observation_store_;
   std::unique_ptr<util::EncryptedMessageMaker> legacy_encrypt_to_analyzer_;
   std::unique_ptr<util::EncryptedMessageMaker> legacy_encrypt_to_shuffler_;
   std::unique_ptr<util::EncryptedMessageMaker> encrypt_to_analyzer_;
