@@ -2,7 +2,6 @@
     "facets": {
         "fuchsia.module": {
             "@version": 2,
-            "binary": "bin/common_null_module",
             "composition_pattern": "ticker",
             "intent_filters": [
                 {
