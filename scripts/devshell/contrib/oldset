@@ -126,7 +126,7 @@
 ##      product: products/ermine.gni
 ##      available: topaz/packages/kitchen_sink (all other packages)
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
 function guess_config_location {
   local config_type="$1"

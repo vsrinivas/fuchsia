@@ -8,10 +8,15 @@ function get_build_dir {
 }
 
 function commands {
-  local cmds="$(ls "${fuchsia_dir}/scripts/devshell" | grep -v -e '^lib$' -e '^tests$')"
+  local -r newline=$'\n'
 
-  local newline=$'\n'
-  local build_dir=$(get_build_dir)
+  local cmds=""
+  for dir in "${fuchsia_dir}/scripts/devshell"{,/contrib}
+  do
+    cmds="${cmds}${newline}$(ls "$dir" | grep -v -e '^lib$' -e '^tests$')"
+  done
+
+  local -r build_dir=$(get_build_dir)
   if [[ -n "${build_dir}" ]]; then
     cmds="${cmds}${newline}$(ls "${build_dir}/tools" 2>/dev/null)"
   fi
@@ -24,7 +29,7 @@ function commands {
 }
 
 function find_command {
-  local cmd=$1
+  local -r cmd=$1
 
   local command_path="${fuchsia_dir}/scripts/devshell/${cmd}"
   if [[ -x "${command_path}" ]]; then
@@ -32,7 +37,13 @@ function find_command {
     return 0
   fi
 
-  local build_dir=$(get_build_dir)
+  local command_path="${fuchsia_dir}/scripts/devshell/contrib/${cmd}"
+  if [[ -x "${command_path}" ]]; then
+    echo "${command_path}"
+    return 0
+  fi
+
+  local -r build_dir=$(get_build_dir)
   if [[ -n "${build_dir}" ]]; then
     local command_path="${build_dir}/tools/${cmd}"
     if [[ -x "${command_path}" ]]; then
