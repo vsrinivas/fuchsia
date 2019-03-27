@@ -5,18 +5,18 @@
 library fuchsia.castauth;
 
 /// Input hash to be signed by Cast key.
-/// It must be ASN1-encoded SHA1 or SHA256 hash, with sizes 39 or 51 bytes.
-union Hash {
-  array<uint8>:39 sha1;
-  array<uint8>:51 sha256;
+/// It must be ASN1-encoded SHA1 or SHA256 hash, with sizes 35 or 51 bytes.
+union Asn1EncodedHash {
+    array<byte>:35 sha1;
+    array<byte>:51 sha256;
 };
 
-/// Response codes for CastKeySigner operations.
-enum Status {
-    /// Operation successful.
-    OK = 0;
-    /// Operation failed due to unrecoverable errors.
-    FAILED = 1;
+/// Error codes for CastKeySigner operations.
+enum ErrorCode {
+    /// Key/cert not found in storage.
+    FILE_NOT_FOUND = 1;
+    /// Error occurred during signing operation.
+    CRYPTO_ERROR = 2;
 };
 
 /// This FIDL interface is used to sign with hardware Cast key.
@@ -24,17 +24,17 @@ enum Status {
 /// devices. It will eventually be replaced by an attestation service.
 [Discoverable]
 protocol CastKeySigner {
-  /// Use Cast key to sign a hash value.
-  ///
-  /// The input is hash value.
-  /// The return value is the return code or the signature if the operation
-  /// succeeds. The signature algorithm is RSA-2048-PKCS1.
-  SignHash(Hash hash) -> (array<uint8>:256 signature) error Status;
+    /// Use Cast key to sign a hash value.
+    ///
+    /// The input is hash value.
+    /// The return value is the error code or the signature if the operation
+    /// succeeds. The signature algorithm is RSA-2048-PKCS1.
+    SignHash(Asn1EncodedHash hash) -> (array<byte>:256 signature) error ErrorCode;
 
-  /// Get the Cast certificate chain.
-  ///
-  /// The return value is the return code or the certificate chain if
-  /// the operation succeeds. The chain contains Cast key cert,
-  /// one or more intermediate CA certs and root CA cert.
-  GetCertificateChain() -> (vector<bytes:2048> cert_chain) error Status;
+    /// Get the Cast certificate chain.
+    ///
+    /// The return value is the error code or the certificate chain if
+    /// the operation succeeds. The chain contains Cast key cert,
+    /// one or more intermediate CA certs and root CA cert.
+    GetCertificateChain() -> (vector<bytes:2048>:16 cert_chain) error ErrorCode;
 };
