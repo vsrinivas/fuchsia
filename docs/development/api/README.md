@@ -8,7 +8,7 @@ APIs for Fuchsia.
 Although the documentation in this directory applies to all Fuchsia APIs, it
 will be enforced for the _public facing surface area_ of Fuchsia: the Fuchsia
 APIs that are surfaced to developers via SDK releases.  All public facing API
-changes will be reviewed by the [API Council][council.md] for consistency with
+changes will be reviewed by the [API Council](council.md) for consistency with
 these guidelines.
 
 ## Rubrics
