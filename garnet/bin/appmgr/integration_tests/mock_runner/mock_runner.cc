@@ -57,7 +57,7 @@ void FakeSubComponent::PublishService(::std::string service_name,
   // publish to root as appmgr assumes that all the components started by
   // runners publish services using legacy style
   std::string sname = service_name;
-  component_context_->outgoing().AddPublicService(
+  component_context_->outgoing2()->AddPublicService(
       std::make_unique<vfs::Service>(
           [sname, this](zx::channel channel, async_dispatcher_t* dispatcher) {
             fdio_service_connect_at(service_dir_.get(), sname.c_str(),
@@ -72,7 +72,7 @@ MockRunner::MockRunner()
       context_(sys::ComponentContext::Create()),
       mock_binding_(this),
       component_id_counter_(0) {
-  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+  context_->outgoing2()->AddPublicService(bindings_.GetHandler(this));
   mockrunner::MockRunnerPtr mock_runner;
   mock_binding_.Bind(mock_runner.NewRequest());
   mockrunner::MockRunnerRegistryPtr runner_registry_ptr;

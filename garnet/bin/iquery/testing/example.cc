@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
   // Legacy work required to expose an object tree over FIDL.
   auto root = component::ObjectDir::Make("root");
   fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
-  component_context->outgoing().GetOrCreateDirectory("objects")->AddEntry(
+  component_context->outgoing2()->GetOrCreateDirectory("objects")->AddEntry(
       fuchsia::inspect::Inspect::Name_,
       std::make_unique<vfs::Service>(
           inspect_bindings_.GetHandler(root.object().get())));

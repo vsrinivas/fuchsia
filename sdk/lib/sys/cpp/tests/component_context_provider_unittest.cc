@@ -15,7 +15,7 @@ namespace {
 class ComponentContextProviderTests : public gtest::RealLoopFixture {
  protected:
   void PublishOutgoingService() {
-    ASSERT_EQ(ZX_OK, provider_.context()->outgoing().AddPublicService(
+    ASSERT_EQ(ZX_OK, provider_.context()->outgoing2()->AddPublicService(
                          echo_impl_.GetHandler(dispatcher())));
   }
 

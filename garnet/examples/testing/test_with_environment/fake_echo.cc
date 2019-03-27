@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
   echo::testing::FakeEcho echo;
   echo.SetAnswer(argv[1]);
   auto context = sys::ComponentContext::Create();
-  context->outgoing().AddPublicService(echo.GetHandler());
+  context->outgoing2()->AddPublicService(echo.GetHandler());
   loop.Run();
   return 0;
 }

@@ -24,7 +24,7 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto startup_context = sys::ComponentContext::Create();
   fidl::BindingSet<fuchsia::crash::Analyzer> bindings;
-  startup_context->outgoing().AddPublicService(
+  startup_context->outgoing2()->AddPublicService(
       bindings.GetHandler(agent.get()));
 
   loop.Run();

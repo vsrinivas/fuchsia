@@ -64,7 +64,7 @@ AudioCoreImpl::~AudioCoreImpl() {
 }
 
 void AudioCoreImpl::PublishServices() {
-  ctx_->outgoing().AddPublicService<fuchsia::media::AudioCore>(
+  ctx_->outgoing2()->AddPublicService<fuchsia::media::AudioCore>(
       [this](fidl::InterfaceRequest<fuchsia::media::AudioCore> request) {
         bindings_.AddBinding(this, std::move(request));
         bindings_.bindings().back()->events().SystemGainMuteChanged(
@@ -72,7 +72,7 @@ void AudioCoreImpl::PublishServices() {
       });
   // TODO(dalesat): Load the gain/mute values.
 
-  ctx_->outgoing().AddPublicService<fuchsia::media::AudioDeviceEnumerator>(
+  ctx_->outgoing2()->AddPublicService<fuchsia::media::AudioDeviceEnumerator>(
       [this](fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator>
                  request) {
         device_manager_.AddDeviceEnumeratorClient(std::move(request));

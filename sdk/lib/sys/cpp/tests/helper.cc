@@ -78,7 +78,7 @@ int main(int argc, const char** argv) {
 
   if (cmdline.HasOption(kCmdEcho)) {
     echo_server = std::make_unique<EchoServer>();
-    startup->outgoing().AddPublicService(echo_server->GetHandler());
+    startup->outgoing2()->AddPublicService(echo_server->GetHandler());
   }
 
   if (echo_server && cmdline.HasOption(kCmdKill)) {

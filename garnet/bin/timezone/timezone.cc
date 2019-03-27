@@ -27,7 +27,7 @@ TimezoneImpl::TimezoneImpl(std::unique_ptr<sys::ComponentContext> context,
       icu_data_path_(icu_data_path),
       tz_id_path_(tz_id_path),
       valid_(Init()) {
-  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+  context_->outgoing2()->AddPublicService(bindings_.GetHandler(this));
 }
 
 TimezoneImpl::~TimezoneImpl() = default;
