@@ -45,9 +45,11 @@ struct MockResolver {
     // Map of component instance to vec of ExposeDecls of the component instance.
     exposes: Arc<Mutex<HashMap<String, Option<Vec<fsys::ExposeDecl>>>>>,
 }
+
 lazy_static! {
     static ref NAME_RE: Regex = Regex::new(r"test:///([0-9a-z\-\._]+)$").unwrap();
 }
+
 impl MockResolver {
     async fn resolve_async(&self, component_uri: String) -> Result<fsys::Component, ResolverError> {
         let caps = NAME_RE.captures(&component_uri).unwrap();
@@ -128,31 +130,42 @@ impl MockResolver {
         })
     }
 }
+
 impl Resolver for MockResolver {
     fn resolve(&self, component_uri: &str) -> FutureObj<Result<fsys::Component, ResolverError>> {
         FutureObj::new(Box::new(self.resolve_async(component_uri.to_string())))
     }
 }
+
 struct MockRunner {
     uris_run: Arc<Mutex<Vec<String>>>,
     namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
-    outgoing_dirs: Arc<Mutex<HashMap<String, ServerEnd<DirectoryMarker>>>>,
+    host_fns: Arc<Mutex<HashMap<String, Box<Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>>>,
 }
+
 impl MockRunner {
     async fn start_async(&self, start_info: fsys::ComponentStartInfo) -> Result<(), RunnerError> {
         let resolved_uri = start_info.resolved_uri.unwrap();
         await!(self.uris_run.lock()).push(resolved_uri.clone());
         await!(self.namespaces.lock()).insert(resolved_uri.clone(), start_info.ns.unwrap());
-        await!(self.outgoing_dirs.lock())
-            .insert(resolved_uri.clone(), start_info.outgoing_dir.unwrap());
+        // If no host_fn was provided, then start_info.outgoing_dir will be
+        // automatically closed once it goes out of scope at the end of this
+        // function.
+        let host_fns_guard = await!(self.host_fns.lock());
+        let host_fn = host_fns_guard.get(&resolved_uri);
+        if let Some(host_fn) = host_fn {
+            host_fn(start_info.outgoing_dir.unwrap());
+        }
         Ok(())
     }
 }
+
 impl Runner for MockRunner {
     fn start(&self, start_info: fsys::ComponentStartInfo) -> FutureObj<Result<(), RunnerError>> {
         FutureObj::new(Box::new(self.start_async(start_info)))
     }
 }
+
 fn new_component_decl() -> fsys::ComponentDecl {
     fsys::ComponentDecl {
         program: None,
@@ -163,16 +176,17 @@ fn new_component_decl() -> fsys::ComponentDecl {
         children: None,
     }
 }
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_root() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
     let children = Arc::new(Mutex::new(HashMap::new()));
     let uses = Arc::new(Mutex::new(HashMap::new()));
@@ -202,16 +216,17 @@ async fn bind_instance_root() {
     let actual_children = get_children(&root_realm);
     assert!(actual_children.is_empty());
 }
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_root_non_existent() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
     let children = Arc::new(Mutex::new(HashMap::new()));
     let uses = Arc::new(Mutex::new(HashMap::new()));
@@ -242,16 +257,17 @@ async fn bind_instance_root_non_existent() {
     let expected_uris: Vec<String> = vec![];
     assert_eq!(*actual_uris, expected_uris);
 }
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_child() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
@@ -322,16 +338,17 @@ async fn bind_instance_child() {
         assert!(actual_children.is_empty());
     }
 }
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_child_non_existent() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
@@ -379,17 +396,18 @@ async fn bind_instance_child_non_existent() {
         assert_eq!(*actual_uris, expected_uris);
     }
 }
+
 #[fuchsia_async::run_singlethreaded(test)]
 async fn bind_instance_eager_child() {
     // Create a hierarchy of children. The two components in the middle enable eager binding.
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
@@ -448,11 +466,11 @@ async fn bind_instance_recursive_child() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
@@ -573,11 +591,11 @@ async fn check_namespace_from_using() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
@@ -705,9 +723,11 @@ async fn check_namespace_from_using() {
         }
     }
 }
+
 fn get_children(realm: &Realm) -> HashSet<ChildMoniker> {
     realm.instance.child_realms.as_ref().unwrap().keys().map(|m| m.clone()).collect()
 }
+
 fn get_child_realm(realm: &Realm, child: &str) -> Arc<Mutex<Realm>> {
     realm.instance.child_realms.as_ref().unwrap()[&ChildMoniker::new(child.to_string())].clone()
 }
@@ -777,12 +797,16 @@ async fn use_service_from_parent() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
+
+    // Host /svc/foo from a's outgoing directory
+    await!(host_fns.lock()).insert("test:///a_resolved".to_string(), Box::new(host_svc_foo_hippo));
+
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
         "a".to_string(),
@@ -837,9 +861,6 @@ async fn use_service_from_parent() {
     )
     .is_ok());
 
-    // Host /svc/foo from a's outgoing directory
-    host_svc_foo_hippo(await!(outgoing_dirs.lock()).remove("test:///a_resolved").unwrap());
-
     // use /svc/baz from b's incoming namespace
     let mut namespaces = await!(namespaces.lock());
     await!(call_svc_hippo(namespaces.get_mut("test:///b_resolved").unwrap()));
@@ -859,12 +880,16 @@ async fn use_service_from_grandparent() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
+
+    // Host /svc/foo from a's outgoing directory
+    await!(host_fns.lock()).insert("test:///a_resolved".to_string(), Box::new(host_svc_foo_hippo));
+
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
         "a".to_string(),
@@ -943,9 +968,6 @@ async fn use_service_from_grandparent() {
     ])))
     .is_ok());
 
-    // Host /svc/foo from a's outgoing directory
-    host_svc_foo_hippo(await!(outgoing_dirs.lock()).remove("test:///a_resolved").unwrap());
-
     // use /svc/hippo from c's incoming namespace
     let mut namespaces = await!(namespaces.lock());
     await!(call_svc_hippo(namespaces.get_mut("test:///c_resolved").unwrap()));
@@ -963,12 +985,16 @@ async fn use_service_from_sibling() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
+
+    // Host /svc/foo from b's outgoing directory
+    await!(host_fns.lock()).insert("test:///b_resolved".to_string(), Box::new(host_svc_foo_hippo));
+
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
         "a".to_string(),
@@ -1038,9 +1064,6 @@ async fn use_service_from_sibling() {
     await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("c".to_string()),])))
         .expect("failed to bind to c");
 
-    // Host /svc/foo from b's outgoing directory
-    host_svc_foo_hippo(await!(outgoing_dirs.lock()).remove("test:///b_resolved").unwrap());
-
     // use /svc/hippo from c's incoming namespace
     let mut namespaces = await!(namespaces.lock());
     await!(call_svc_hippo(namespaces.get_mut("test:///c_resolved").unwrap()));
@@ -1061,12 +1084,16 @@ async fn use_service_from_niece() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
+
+    // Host /svc/foo from d's outgoing directory
+    await!(host_fns.lock()).insert("test:///d_resolved".to_string(), Box::new(host_svc_foo_hippo));
+
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
         "a".to_string(),
@@ -1157,9 +1184,6 @@ async fn use_service_from_niece() {
     ])))
     .expect("failed to bind to b/d");
 
-    // Host /svc/foo from d's outgoing directory
-    host_svc_foo_hippo(await!(outgoing_dirs.lock()).remove("test:///d_resolved").unwrap());
-
     // use /svc/hippo from c's incoming namespace
     let mut namespaces = await!(namespaces.lock());
     await!(call_svc_hippo(namespaces.get_mut("test:///c_resolved").unwrap()));
@@ -1216,12 +1240,16 @@ async fn use_directory_from_parent() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
+
+    // Host /data/foo from a's outgoing directory
+    await!(host_fns.lock()).insert("test:///a_resolved".to_string(), Box::new(host_data_foo_hippo));
+
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
         "a".to_string(),
@@ -1276,9 +1304,6 @@ async fn use_directory_from_parent() {
     )
     .is_ok());
 
-    // Host /data/foo from a's outgoing directory
-    host_data_foo_hippo(await!(outgoing_dirs.lock()).remove("test:///a_resolved").unwrap());
-
     // use /data/hippo from b's incoming namespace
     let mut namespaces = await!(namespaces.lock());
     await!(read_data_hippo_hippo(namespaces.get_mut("test:///b_resolved").unwrap()));
@@ -1298,12 +1323,16 @@ async fn use_directory_from_grandparent() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
+
+    // Host /data/foo from a's outgoing directory
+    await!(host_fns.lock()).insert("test:///a_resolved".to_string(), Box::new(host_data_foo_hippo));
+
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
         "a".to_string(),
@@ -1382,9 +1411,6 @@ async fn use_directory_from_grandparent() {
     ])))
     .is_ok());
 
-    // Host /data/foo from a's outgoing directory
-    host_data_foo_hippo(await!(outgoing_dirs.lock()).remove("test:///a_resolved").unwrap());
-
     // use /data/hippo from c's incoming namespace
     let mut namespaces = await!(namespaces.lock());
     await!(read_data_hippo_hippo(namespaces.get_mut("test:///c_resolved").unwrap()));
@@ -1402,12 +1428,16 @@ async fn use_directory_from_sibling() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
+
+    // Host /data/foo from b's outgoing directory
+    await!(host_fns.lock()).insert("test:///b_resolved".to_string(), Box::new(host_data_foo_hippo));
+
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
         "a".to_string(),
@@ -1477,9 +1507,6 @@ async fn use_directory_from_sibling() {
     await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("c".to_string()),])))
         .expect("failed to bind to c");
 
-    // Host /data/foo from b's outgoing directory
-    host_data_foo_hippo(await!(outgoing_dirs.lock()).remove("test:///b_resolved").unwrap());
-
     // use /data/hippo from c's incoming namespace
     let mut namespaces = await!(namespaces.lock());
     await!(read_data_hippo_hippo(namespaces.get_mut("test:///c_resolved").unwrap()));
@@ -1500,12 +1527,16 @@ async fn use_directory_from_niece() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
-    let outgoing_dirs = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
     let runner = MockRunner {
         uris_run: uris_run.clone(),
         namespaces: namespaces.clone(),
-        outgoing_dirs: outgoing_dirs.clone(),
+        host_fns: host_fns.clone(),
     };
+
+    // Host /data/foo from d's outgoing directory
+    await!(host_fns.lock()).insert("test:///d_resolved".to_string(), Box::new(host_data_foo_hippo));
+
     let children = Arc::new(Mutex::new(HashMap::new()));
     await!(children.lock()).insert(
         "a".to_string(),
@@ -1595,9 +1626,6 @@ async fn use_directory_from_niece() {
         ChildMoniker::new("d".to_string()),
     ])))
     .expect("failed to bind to b/d");
-
-    // Host /data/foo from d's outgoing directory
-    host_data_foo_hippo(await!(outgoing_dirs.lock()).remove("test:///d_resolved").unwrap());
 
     // use /svc/hippo from c's incoming namespace
     let mut namespaces = await!(namespaces.lock());
