@@ -61,14 +61,10 @@ class PageDbMutator {
       CommitIdView parent2_id, CommitIdView merge_commit_id) = 0;
 
   // Commits.
-  // Adds the given |commit| in the database.
+  // Adds the given |commit|, referencing |root_node|, in the database.
   FXL_WARN_UNUSED_RESULT virtual Status AddCommitStorageBytes(
       coroutine::CoroutineHandler* handler, const CommitId& commit_id,
-      fxl::StringView storage_bytes) = 0;
-
-  // Removes the commit with the given |commit_id| from the commits.
-  FXL_WARN_UNUSED_RESULT virtual Status RemoveCommit(
-      coroutine::CoroutineHandler* handler, const CommitId& commit_id) = 0;
+      const ObjectIdentifier& root_node, fxl::StringView storage_bytes) = 0;
 
   // Object data.
   // Writes the content of the given object, and reference information from this
@@ -185,11 +181,20 @@ class PageDb : public PageDbMutator {
       const ObjectIdentifier& object_identifier,
       PageDbObjectStatus* object_status) = 0;
 
-  // Returns inbound references towards the object with the given id.
+  // Returns inbound object references towards the object with the given id.
+  // WARNING: this function is reversing the usual semantics of
+  // |ObjectReferencesAndPriority|. |references| contains |source| identifiers
+  // such that there are references from |source| to |object_identifier|.
   FXL_WARN_UNUSED_RESULT virtual Status GetInboundObjectReferences(
       coroutine::CoroutineHandler* handler,
       const ObjectIdentifier& object_identifier,
       ObjectReferencesAndPriority* references) = 0;
+
+  // Returns inbound commit references towards the object with the given id.
+  FXL_WARN_UNUSED_RESULT virtual Status GetInboundCommitReferences(
+      coroutine::CoroutineHandler* handler,
+      const ObjectIdentifier& object_identifier,
+      std::vector<CommitId>* references) = 0;
 
   // Commit sync metadata.
   // Finds the set of unsynced commits and replaces the contents of |commit_ids|

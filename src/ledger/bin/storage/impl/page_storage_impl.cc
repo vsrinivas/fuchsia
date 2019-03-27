@@ -1472,6 +1472,7 @@ Status PageStorageImpl::SynchronousAddCommits(
     }
 
     s = batch->AddCommitStorageBytes(handler, commit->GetId(),
+                                     commit->GetRootIdentifier(),
                                      commit->GetStorageBytes());
     if (s != Status::OK) {
       return s;

@@ -48,6 +48,9 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
       coroutine::CoroutineHandler* handler,
       const ObjectIdentifier& object_identifier,
       ObjectReferencesAndPriority* references) override;
+  Status GetInboundCommitReferences(coroutine::CoroutineHandler* handler,
+                                    const ObjectIdentifier& object_identifier,
+                                    std::vector<CommitId>* references) override;
   Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
                          fxl::StringView key, std::string* value) override;
 
@@ -63,9 +66,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
                   CommitIdView merge_commit_id) override;
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                const CommitId& commit_id,
+                               const ObjectIdentifier& root_node,
                                fxl::StringView storage_bytes) override;
-  Status RemoveCommit(coroutine::CoroutineHandler* handler,
-                      const CommitId& commit_id) override;
   Status WriteObject(coroutine::CoroutineHandler* handler,
                      const ObjectIdentifier& object_identifier,
                      std::unique_ptr<DataSource::DataChunk> content,

@@ -29,9 +29,8 @@ class PageDbBatchImpl : public PageDb::Batch {
   // Commits.
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                const CommitId& commit_id,
+                               const ObjectIdentifier& root_node,
                                fxl::StringView storage_bytes) override;
-  Status RemoveCommit(coroutine::CoroutineHandler* handler,
-                      const CommitId& commit_id) override;
 
   // Object data.
   Status WriteObject(coroutine::CoroutineHandler* handler,

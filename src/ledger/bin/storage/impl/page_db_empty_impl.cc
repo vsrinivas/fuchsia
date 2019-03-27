@@ -51,6 +51,12 @@ Status PageDbEmptyImpl::GetInboundObjectReferences(
     ObjectReferencesAndPriority* /*references*/) {
   return Status::NOT_IMPLEMENTED;
 }
+Status PageDbEmptyImpl::GetInboundCommitReferences(
+    coroutine::CoroutineHandler* /*handler*/,
+    const ObjectIdentifier& /*object_identifier*/,
+    std::vector<CommitId>* /*references*/) {
+  return Status::NOT_IMPLEMENTED;
+}
 Status PageDbEmptyImpl::GetUnsyncedCommitIds(
     CoroutineHandler* /*handler*/, std::vector<CommitId>* /*commit_ids*/) {
   return Status::NOT_IMPLEMENTED;
@@ -91,11 +97,7 @@ Status PageDbEmptyImpl::AddMerge(coroutine::CoroutineHandler* /*handler*/,
 }
 Status PageDbEmptyImpl::AddCommitStorageBytes(
     CoroutineHandler* /*handler*/, const CommitId& /*commit_id*/,
-    fxl::StringView /*storage_bytes*/) {
-  return Status::NOT_IMPLEMENTED;
-}
-Status PageDbEmptyImpl::RemoveCommit(CoroutineHandler* /*handler*/,
-                                     const CommitId& /*commit_id*/) {
+    const ObjectIdentifier& /*root_node*/, fxl::StringView /*storage_bytes*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::WriteObject(

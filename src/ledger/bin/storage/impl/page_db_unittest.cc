@@ -182,15 +182,17 @@ TEST_F(PageDbTest, Commits) {
 
     EXPECT_EQ(Status::OK,
               page_db_.AddCommitStorageBytes(handler, commit->GetId(),
+                                             commit->GetRootIdentifier(),
                                              commit->GetStorageBytes()));
     EXPECT_EQ(Status::OK, page_db_.GetCommitStorageBytes(
                               handler, commit->GetId(), &storage_bytes));
     EXPECT_EQ(storage_bytes, commit->GetStorageBytes());
 
-    EXPECT_EQ(Status::OK, page_db_.RemoveCommit(handler, commit->GetId()));
-    EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
-              page_db_.GetCommitStorageBytes(handler, commit->GetId(),
-                                             &storage_bytes));
+    std::vector<CommitId> references;
+    EXPECT_EQ(Status::OK,
+              page_db_.GetInboundCommitReferences(
+                  handler, commit->GetRootIdentifier(), &references));
+    EXPECT_THAT(references, ElementsAre(commit->GetId()));
   });
 }
 

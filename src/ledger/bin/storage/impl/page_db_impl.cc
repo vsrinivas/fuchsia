@@ -162,6 +162,18 @@ Status PageDbImpl::GetInboundObjectReferences(
   return Status::OK;
 }
 
+Status PageDbImpl::GetInboundCommitReferences(
+    coroutine::CoroutineHandler* handler,
+    const ObjectIdentifier& object_identifier,
+    std::vector<CommitId>* references) {
+  FXL_DCHECK(references);
+  references->clear();
+  return db_->GetByPrefix(
+      handler,
+      ReferenceRow::GetCommitKeyPrefixFor(object_identifier.object_digest()),
+      references);
+}
+
 Status PageDbImpl::GetUnsyncedCommitIds(CoroutineHandler* handler,
                                         std::vector<CommitId>* commit_ids) {
   std::vector<std::pair<std::string, std::string>> entries;
@@ -253,19 +265,12 @@ Status PageDbImpl::AddMerge(coroutine::CoroutineHandler* handler,
 
 Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler,
                                          const CommitId& commit_id,
+                                         const ObjectIdentifier& root_node,
                                          fxl::StringView storage_bytes) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(
-      batch->AddCommitStorageBytes(handler, commit_id, storage_bytes));
-  return batch->Execute(handler);
-}
-
-Status PageDbImpl::RemoveCommit(CoroutineHandler* handler,
-                                const CommitId& commit_id) {
-  std::unique_ptr<Batch> batch;
-  RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->RemoveCommit(handler, commit_id));
+  RETURN_ON_ERROR(batch->AddCommitStorageBytes(handler, commit_id, root_node,
+                                               storage_bytes));
   return batch->Execute(handler);
 }
 

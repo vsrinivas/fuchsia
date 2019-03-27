@@ -73,8 +73,8 @@ namespace {
 
 using ::coroutine::CoroutineHandler;
 using ::testing::ElementsAre;
-using ::testing::ElementsAreArray;
 using ::testing::IsEmpty;
+using ::testing::UnorderedElementsAreArray;
 
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(
     const Commit& commit) {
@@ -531,7 +531,7 @@ class PageStorageTest : public ledger::TestWithEnvironment {
   }
 
   // Checks that |object_identifier| is referenced by |expected_references|.
-  void CheckInboundReferences(CoroutineHandler* handler,
+  void CheckInboundObjectReferences(CoroutineHandler* handler,
                               ObjectIdentifier object_identifier,
                               ObjectReferencesAndPriority expected_references) {
     ObjectReferencesAndPriority stored_references;
@@ -539,7 +539,21 @@ class PageStorageTest : public ledger::TestWithEnvironment {
               PageStorageImplAccessorForTest::GetDb(storage_)
                   .GetInboundObjectReferences(handler, object_identifier,
                                               &stored_references));
-    EXPECT_THAT(stored_references, ElementsAreArray(expected_references));
+    EXPECT_THAT(stored_references,
+                UnorderedElementsAreArray(expected_references));
+  }
+
+  // Checks that |object_identifier| is referenced by |expected_references|.
+  void CheckInboundCommitReferences(
+      CoroutineHandler* handler, ObjectIdentifier object_identifier,
+      const std::vector<CommitId>& expected_references) {
+    std::vector<CommitId> stored_references;
+    ASSERT_EQ(Status::OK,
+              PageStorageImplAccessorForTest::GetDb(storage_)
+                  .GetInboundCommitReferences(handler, object_identifier,
+                                              &stored_references));
+    EXPECT_THAT(stored_references,
+                UnorderedElementsAreArray(expected_references));
   }
 
   ::testing::AssertionResult ObjectIsUntracked(
@@ -695,9 +709,10 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
       environment_.clock(), storage_.get(),
       RandomObjectIdentifier(environment_.random()), std::move(parent));
   CommitId id = commit->GetId();
+  ObjectIdentifier root_node = commit->GetRootIdentifier();
   std::string storage_bytes = commit->GetStorageBytes().ToString();
 
-  // Search for a commit that exist and check the content.
+  // Search for a commit that exists and check the content.
   storage_->AddCommitFromLocal(
       std::move(commit), {},
       callback::Capture(callback::SetWhenCalled(&called), &status));
@@ -707,6 +722,44 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
 
   std::unique_ptr<const Commit> found = GetCommit(id);
   EXPECT_EQ(storage_bytes, found->GetStorageBytes());
+}
+
+TEST_F(PageStorageTest, AddLocalCommitsReferences) {
+  // Create two commits pointing to the same object identifier and check that
+  // both are stored as inbound references of said object.
+  ObjectIdentifier root_node = RandomObjectIdentifier(environment_.random());
+
+  std::vector<std::unique_ptr<const Commit>> parent;
+  parent.emplace_back(GetFirstHead());
+  std::unique_ptr<const Commit> commit1 = CommitImpl::FromContentAndParents(
+      environment_.clock(), storage_.get(),
+      root_node, std::move(parent));
+  CommitId id1 = commit1->GetId();
+  bool called;
+  Status status;
+  storage_->AddCommitFromLocal(
+      std::move(commit1), {},
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  parent.clear();
+  parent.emplace_back(GetFirstHead());
+  std::unique_ptr<const Commit> commit2 = CommitImpl::FromContentAndParents(
+      environment_.clock(), storage_.get(),
+      root_node, std::move(parent));
+  CommitId id2 = commit2->GetId();
+  storage_->AddCommitFromLocal(
+      std::move(commit2), {},
+      callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::OK, status);
+
+  RunInCoroutine([this, root_node, id1, id2] (CoroutineHandler* handler) {
+    CheckInboundCommitReferences(handler, root_node, {id1, id2});
+  });
 }
 
 TEST_F(PageStorageTest, AddCommitFromLocalDoNotMarkUnsynedAlreadySyncedCommit) {
@@ -1241,7 +1294,7 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, true));
     EXPECT_TRUE(IsPieceSynced(data.object_identifier, false));
 
-    CheckInboundReferences(
+    CheckInboundObjectReferences(
         handler, reference,
         {{data.object_identifier.object_digest(), KeyPriority::LAZY}});
   });
@@ -1272,7 +1325,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     EXPECT_TRUE(ObjectIsUntracked(data.object_identifier, false));
     EXPECT_TRUE(IsPieceSynced(data.object_identifier, true));
 
-    CheckInboundReferences(
+    CheckInboundObjectReferences(
         handler, reference,
         {{data.object_identifier.object_digest(), KeyPriority::EAGER}});
   });
@@ -1601,13 +1654,13 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
                   tree_reference,
                   object_identifier](CoroutineHandler* handler) {
     // Check tree reference.
-    CheckInboundReferences(
+    CheckInboundObjectReferences(
         handler, tree_reference,
         {{object_identifier.object_digest(), KeyPriority::LAZY}});
     // Check piece references.
     ForEachPiece(piece_content, [this, handler, object_identifier](
                                     ObjectIdentifier piece_identifier) {
-      CheckInboundReferences(
+      CheckInboundObjectReferences(
           handler, piece_identifier,
           {{object_identifier.object_digest(), KeyPriority::EAGER}});
       return Status::OK;
