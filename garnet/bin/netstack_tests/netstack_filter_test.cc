@@ -76,7 +76,7 @@ TEST_F(NetstackFilterTest, TestRuleset) {
 
   uint32_t eth_id = 0;
   netstack->AddEthernetDevice(std::move(kTopoPath), std::move(config),
-                              eth->device(),
+                              std::move(eth->device()),
                               [&eth_id](uint32_t id) { eth_id = id; });
   ASSERT_TRUE(RunLoopUntil([&eth_id] { return eth_id != 0; }));
 

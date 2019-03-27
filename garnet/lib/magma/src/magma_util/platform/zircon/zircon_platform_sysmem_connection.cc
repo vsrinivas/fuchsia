@@ -154,9 +154,8 @@ public:
 
     Status Bind(const fuchsia::sysmem::AllocatorSyncPtr& allocator, uint32_t handle)
     {
-        fuchsia::sysmem::BufferCollectionTokenSyncPtr token;
-        token.Bind(zx::channel(handle));
-        zx_status_t status = allocator->BindSharedCollection(token, collection_.NewRequest());
+        fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token((zx::channel(handle)));
+        zx_status_t status = allocator->BindSharedCollection(std::move(token), collection_.NewRequest());
         if (status != ZX_OK)
             return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Internal error: %d", status);
         return MAGMA_STATUS_OK;

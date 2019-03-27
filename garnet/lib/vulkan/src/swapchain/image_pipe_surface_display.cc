@@ -213,7 +213,7 @@ bool ImagePipeSurfaceDisplay::CreateImage(
 
   fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection;
   status = sysmem_allocator_->BindSharedCollection(
-      local_token, sysmem_collection.NewRequest());
+      std::move(local_token), sysmem_collection.NewRequest());
   if (status != ZX_OK) {
     fprintf(stderr, "Swapchain: BindSharedCollection failed: %d\n", status);
     return false;

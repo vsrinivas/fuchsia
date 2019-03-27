@@ -72,7 +72,7 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
   uint64_t eth_id = 0;
   fidl::StringPtr topo_path = "/fake/device";
   stack->AddEthernetInterface(
-      std::move(topo_path), eth->device(),
+      std::move(topo_path), std::move(eth->device()),
       [&](std::unique_ptr<::fuchsia::net::stack::Error> err, uint64_t id) {
         if (err != nullptr) {
           fprintf(stderr, "error adding ethernet interface: %u\n",
@@ -147,7 +147,7 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
 
   uint32_t eth_id = 0;
   netstack->AddEthernetDevice(std::move(topo_path), std::move(config),
-                              eth->device(), [&](uint32_t id) { eth_id = id; });
+                              std::move(eth->device()), [&](uint32_t id) { eth_id = id; });
   ASSERT_TRUE(
       RunLoopWithTimeoutOrUntil([&] { return eth_id > 0; }, zx::sec(5)));
 
@@ -252,7 +252,7 @@ TEST_F(NetstackLaunchTest, DHCPRequestSent) {
   // TODO(NET-1864): migrate to fuchsia.net.stack.AddEthernetInterface when we
   // migrate netcfg to use AddEthernetInterface.
   netstack->AddEthernetDevice(std::move(topo_path), std::move(config),
-                              eth->device(),
+                              std::move(eth->device()),
                               [&nicid](uint32_t id) { nicid = id; });
 
   ASSERT_TRUE(

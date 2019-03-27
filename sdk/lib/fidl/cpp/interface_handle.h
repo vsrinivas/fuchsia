@@ -64,11 +64,41 @@ class InterfaceHandle {
   // Implicit conversion from |InterfacePtr| unbinds the channel from the
   // |InterfacePtr|.
   //
+  // This requires the caller to provide an rvalue reference, as the caller's
+  // InterfacePtr is effectively moved out of.
+  //
   // Making this constructor templated ensures that it is not type-instantiated
   // unless it is used, making the InterfacePtr<->InterfaceHandle codependency
   // less fragile.
-  template <typename InterfacePtr = InterfacePtr<Interface>>
-  InterfaceHandle(InterfacePtr&& ptr) {
+  //
+  // The std::enable_if_t avoids creation of unintended implicit type
+  // conversions (especially from anything else that has an "Unbind()"),
+  // presumably due to InterfacePtrType being inferred to be something other
+  // than InterfacePtr<Interface>.  However, if a caller is trying to use a type
+  // that's only incorrect due to not being an rvalue reference, we do permit
+  // this constructor to be selected, but then static_assert() with a message
+  // suggesting std::move().
+  template <typename InterfacePtrType = InterfacePtr<Interface>,
+            typename std::enable_if_t<
+                std::is_same<InterfacePtr<Interface>,
+                             typename std::remove_reference<
+                                 InterfacePtrType>::type>::value ||
+                    std::is_same<SynchronousInterfacePtr<Interface>,
+                                 typename std::remove_reference<
+                                     InterfacePtrType>::type>::value,
+                int>
+                zero_not_used = 0>
+  InterfaceHandle(InterfacePtrType&& ptr) {
+    static_assert(
+        std::is_same<InterfacePtr<Interface>&&, decltype(ptr)>::value ||
+            std::is_same<SynchronousInterfacePtr<Interface>&&,
+                         decltype(ptr)>::value,
+        "Implicit conversion from InterfacePtr<> (or "
+        "SynchronousInterfacePtr<>) to InterfaceHandle<> requires an rvalue "
+        "reference. Maybe there's a missing std::move(), or consider "
+        "using/providing an InterfaceHandle<> directly instead (particularly "
+        "if the usage prior to this conversion doesn't need to send or receive "
+        "messages).");
     *this = ptr.Unbind();
   }
 

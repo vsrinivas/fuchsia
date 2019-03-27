@@ -249,7 +249,7 @@ bool VulkanTest::Exec(VkFormat format, uint32_t width, bool linear)
     }
 
     fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection;
-    status = sysmem_allocator->BindSharedCollection(local_token, sysmem_collection.NewRequest());
+    status = sysmem_allocator->BindSharedCollection(std::move(local_token), sysmem_collection.NewRequest());
     if (status != ZX_OK) {
         return DRETF(false, "BindSharedCollection failed: %d", status);
     }

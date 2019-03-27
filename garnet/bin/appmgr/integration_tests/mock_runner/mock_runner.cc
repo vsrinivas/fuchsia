@@ -73,7 +73,7 @@ MockRunner::MockRunner()
       mock_binding_(this),
       component_id_counter_(0) {
   context_->outgoing2()->AddPublicService(bindings_.GetHandler(this));
-  mockrunner::MockRunnerPtr mock_runner;
+  fidl::InterfaceHandle<mockrunner::MockRunner> mock_runner;
   mock_binding_.Bind(mock_runner.NewRequest());
   mockrunner::MockRunnerRegistryPtr runner_registry_ptr;
   context_->svc()->Connect(runner_registry_ptr.NewRequest());
