@@ -45,14 +45,7 @@ if [[ $# -gt 1 ]]; then
   exit 1
 fi
 
-# If the OS X firewall is enabled, add timeout so users can click the network connection warning
-# dialog.
-if [[ "$(uname -s)" = "Darwin" ]] &&
-   [[ "$("/usr/libexec/ApplicationFirewall/socketfilterfw" "--getglobalstate" | grep -i -c "enabled" || echo -n 0)" = "1" ]]; then
-  timeout_flag="--timeout=3000"
-else
-  timeout_flag="--nowait"
-fi
+timeout_flag="--nowait"
 
 device=$(get-device-name)
 if [[ -z ${device} ]] &&
