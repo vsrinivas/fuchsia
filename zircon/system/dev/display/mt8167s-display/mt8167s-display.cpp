@@ -221,7 +221,8 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
     auto* config = display_configs[0];
     if (display_count == 1 && config->layer_count) {
         // First stop the overlay engine, followed by the DISP RDMA Engine
-        ovl_->Stop();
+        syscfg_->MutexReset();
+        ovl_->Reset();
         disp_rdma_->Stop();
         for (size_t j = 0; j < config->layer_count; j++) {
             const primary_layer_t& layer = config->layer_list[j]->cfg.primary;
@@ -242,9 +243,12 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
         // All configurations are done. Re-start the engine
         disp_rdma_->Start();
         ovl_->Start();
+        syscfg_->MutexEnable();
     } else {
+        syscfg_->MutexReset();
         ovl_->Restart();
         disp_rdma_->Restart();
+        syscfg_->MutexEnable();
     }
 
     // If bootloader does not enable any of the display hardware, no vsync will be generated.

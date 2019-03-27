@@ -201,6 +201,7 @@ zx_status_t MtSysConfig::MutexClear() {
     ZX_DEBUG_ASSERT(initialized_);
     Mutex0ModReg::Get().FromValue(0).WriteTo(&(*mutex_mmio_));
     Mutex0SofReg::Get().FromValue(0).WriteTo(&(*mutex_mmio_));
+    MutexReset();
     return ZX_OK;
 }
 
@@ -213,6 +214,12 @@ zx_status_t MtSysConfig::MutexEnable() {
 zx_status_t MtSysConfig::MutexDisable() {
     ZX_DEBUG_ASSERT(initialized_);
     Mutex0EnReg::Get().ReadFrom(&(*mutex_mmio_)).set_enable(0).WriteTo(&(*mutex_mmio_));
+    return ZX_OK;
+}
+
+zx_status_t MtSysConfig::MutexReset() {
+    Mutex0RstReg::Get().ReadFrom(&(*mutex_mmio_)).set_reset(1).WriteTo(&(*mutex_mmio_));
+    Mutex0RstReg::Get().ReadFrom(&(*mutex_mmio_)).set_reset(0).WriteTo(&(*mutex_mmio_));
     return ZX_OK;
 }
 

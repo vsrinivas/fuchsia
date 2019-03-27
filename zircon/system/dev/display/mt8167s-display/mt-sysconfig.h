@@ -37,6 +37,7 @@ public:
     // Set 0 to the MOUT path of default path
     zx_status_t ClearDefaultPath();
     zx_status_t MutexClear();
+    zx_status_t MutexReset();
     zx_status_t MutexEnable();
     zx_status_t MutexDisable();
     zx_status_t MutexSetDefault();
