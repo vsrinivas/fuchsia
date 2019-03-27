@@ -76,6 +76,8 @@ This section covers Fuchsia-wide conventions and best practices.
 ## Tracing
 
  - [Tracing tutorial](tracing/tracing-tutorial.md)
+ - [Tracing usage guide](tracing/tracing-usage-guide.md)
+ - [Trace based benchmarking](benchmarking/trace_based_benchmarking.md)
  - [Tracing booting Fuchsia](tracing/tracing-boot.md)
 
 ## Miscellaneous
@@ -86,5 +88,3 @@ This section covers Fuchsia-wide conventions and best practices.
 [acer_12]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/targets/acer12.md "Acer 12"
 [intel_nuc]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/targets/nuc.md "Intel NUC"
 [pixelbook]: hardware/pixelbook.md "Pixelbook"
-[tracing]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/tracing_usage_guide.md
-[trace_based_benchmarking]: benchmarking/trace_based_benchmarking.md

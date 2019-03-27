@@ -125,7 +125,7 @@ developer's desktop.
 # Hello World
 
 Assuming that the background async loop is started and running (see
-[Fuchsia Tracing System Design](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/tracing/design.md) for details),
+[Fuchsia Tracing System Design](design.md) for details),
 this is the minimum code you need in order to write a simple string to
 the trace buffer:
 

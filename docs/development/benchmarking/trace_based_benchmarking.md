@@ -195,5 +195,4 @@ the [dashboard user guide] and the instructions for [automating benchmarks].
 [examples/benchmark]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/benchmark/
 [results schema]: results_schema.md
 [best practices]: #best-practices
-[tracing]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/tracing_usage_guide.md
-
+[tracing]: ../tracing/tracing-usage-guide.md
