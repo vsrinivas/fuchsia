@@ -43,7 +43,7 @@ function fx-symbolize {
     source "${FUCHSIA_DIR}/buildtools/vars.sh"
   fi
   local idstxt="${FUCHSIA_BUILD_DIR}/ids.txt"
-  if [[ $# > 0 ]]; then
+  if [[ $# -gt 0 ]]; then
     idstxt="$1"
   fi
   local prebuilt_dir="${FUCHSIA_DIR}/zircon/prebuilt/downloads"
@@ -298,7 +298,7 @@ function fx-choose-build-concurrency {
   if grep -q "use_goma = true" "${FUCHSIA_BUILD_DIR}/args.gn"; then
     # The recommendation from the Goma team is to use 10*cpu-count.
     local cpus="$(fx-cpu-count)"
-    echo $(($cpus * 10))
+    echo $((cpus * 10))
   else
     fx-cpu-count
   fi
@@ -375,7 +375,7 @@ function fx-run-ninja {
       # reasonable value to prevent catastrophic load (i.e. user can not kill
       # the build, can not lock the screen, etc).
       local cpus="$(fx-cpu-count)"
-      args=("-l" $(($cpus * 20)) "${args[@]}")
+      args=("-l" $((cpus * 20)) "${args[@]}")
     fi
   fi
 
@@ -386,7 +386,7 @@ function fx-run-ninja {
     # the number of allowed file descriptors per process if it appears to be
     # low in order to avoid failures due to the limit. See `getrlimit(2)` for
     # more information.
-    local min_limit=$((${concurrency} * 2))
+    local min_limit=$((concurrency * 2))
     if [[ $(ulimit -n) -lt "${min_limit}" ]]; then
       ulimit -n "${min_limit}"
     fi
