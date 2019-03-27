@@ -18,7 +18,7 @@ namespace {
 bool TestSetOption() {
     BEGIN_TEST;
     TestFuzzer test;
-    ASSERT_TRUE(test.InitZircon());
+    ASSERT_TRUE(test.Init());
 
     EXPECT_NE(ZX_OK, test.SetOption("", "value1"));
     EXPECT_NE(ZX_OK, test.SetOption("key1", ""));
@@ -91,7 +91,7 @@ bool TestSetOption() {
 bool TestRebasePath() {
     BEGIN_TEST;
     TestFuzzer test;
-    ASSERT_TRUE(test.InitZircon());
+    ASSERT_TRUE(test.Init());
     const FuzzerFixture& fixture = test.fixture();
 
     Path path;
@@ -101,7 +101,7 @@ bool TestRebasePath() {
     EXPECT_EQ(ZX_OK, test.RebasePath("boot/test/fuzz", &path));
     EXPECT_CSTR_EQ(path, fixture.path("boot/test/fuzz/"));
 
-    EXPECT_NE(ZX_OK, test.RebasePath("pkgfs", &path));
+    EXPECT_NE(ZX_OK, test.RebasePath("no-such-path", &path));
     EXPECT_CSTR_EQ(path, fixture.path());
 
     END_TEST;
@@ -110,7 +110,7 @@ bool TestRebasePath() {
 bool TestGetPackagePath() {
     BEGIN_TEST;
     TestFuzzer test;
-    ASSERT_TRUE(test.InitFuchsia());
+    ASSERT_TRUE(test.Init());
     const FuzzerFixture& fixture = test.fixture();
 
     Path path;
@@ -142,181 +142,106 @@ bool TestGetPackagePath() {
     END_TEST;
 }
 
-bool TestFindZirconFuzzers() {
-    BEGIN_TEST;
-    TestFuzzer test;
-    ASSERT_TRUE(test.InitZircon());
-
-    StringMap fuzzers;
-    test.FindZirconFuzzers("no/such/dir", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 0);
-
-    test.FindZirconFuzzers("boot/test/fuzz", "no-such", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 0);
-
-    // Empty matches all
-    test.FindZirconFuzzers("boot/test/fuzz", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 2);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
-
-    // Idempotent
-    test.FindZirconFuzzers("boot/test/fuzz", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 2);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
-
-    // Substrings match
-    fuzzers.clear();
-    test.FindZirconFuzzers("boot/test/fuzz", "target", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 2);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
-
-    fuzzers.clear();
-    test.FindZirconFuzzers("boot/test/fuzz", "1", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 1);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
-    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target2"));
-
-    END_TEST;
-}
-
-bool TestFindFuchsiaFuzzers() {
-    BEGIN_TEST;
-    TestFuzzer test;
-    ASSERT_TRUE(test.InitFuchsia());
-
-    StringMap fuzzers;
-    test.FindFuchsiaFuzzers("not-a-package", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 0);
-
-    test.FindFuchsiaFuzzers("", "not-a-target", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 0);
-
-    // Empty matches all
-    test.FindFuchsiaFuzzers("", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 4);
-    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target2"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia2_fuzzers/target4"));
-
-    // Idempotent
-    test.FindFuchsiaFuzzers("", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 4);
-    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target2"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia2_fuzzers/target4"));
-
-    // Substrings match
-    fuzzers.clear();
-    test.FindFuchsiaFuzzers("fuchsia", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 4);
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia2_fuzzers/target4"));
-
-    fuzzers.clear();
-    test.FindFuchsiaFuzzers("", "target", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 4);
-    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target2"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia2_fuzzers/target4"));
-
-    fuzzers.clear();
-    test.FindFuchsiaFuzzers("fuchsia", "target", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 4);
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia2_fuzzers/target4"));
-
-    fuzzers.clear();
-    test.FindFuchsiaFuzzers("", "1", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 1);
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
-
-    fuzzers.clear();
-    test.FindFuchsiaFuzzers("1", "", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 3);
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
-    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
-
-    fuzzers.clear();
-    test.FindFuchsiaFuzzers("1", "4", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 0);
-
-    fuzzers.clear();
-    test.FindFuchsiaFuzzers("2", "1", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 0);
-
-    END_TEST;
-}
-
 bool TestFindFuzzers() {
     BEGIN_TEST;
-
-    // Zircon tests
     TestFuzzer test;
-    ASSERT_TRUE(test.InitZircon());
+    ASSERT_TRUE(test.Init());
+
+    // FindFuzzers with package/target
+    StringMap fuzzers;
+    test.FindFuzzers("not-a-package", "", &fuzzers);
+    EXPECT_EQ(fuzzers.size(), 0);
+
+    test.FindFuzzers("", "not-a-target", &fuzzers);
+    EXPECT_EQ(fuzzers.size(), 0);
+
+    // In the tests below, "zircon_fuzzers/target1" does not correspond to a package (just a
+    // binary).  All others do correspond to packages. See fuzzer-fixture.cpp for more details.
 
     // Empty matches all
-    StringMap fuzzers;
-    test.FindFuzzers("", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 2);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
+    test.FindFuzzers("", "", &fuzzers);
+    EXPECT_EQ(fuzzers.size(), 5);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia2_fuzzers/target4"));
 
     // Idempotent
-    test.FindFuzzers("", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 2);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
+    test.FindFuzzers("", "", &fuzzers);
+    EXPECT_EQ(fuzzers.size(), 5);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia2_fuzzers/target4"));
 
     // Substrings match
     fuzzers.clear();
-    test.FindFuzzers("invalid", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 0);
-
-    test.FindFuzzers("fuchsia", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 0);
+    test.FindFuzzers("fuchsia", "", &fuzzers);
+    EXPECT_EQ(fuzzers.size(), 4);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia2_fuzzers/target4"));
 
     fuzzers.clear();
-    test.FindFuzzers("zircon", &fuzzers);
+    test.FindFuzzers("", "target", &fuzzers);
+    EXPECT_EQ(fuzzers.size(), 5);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
+    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia2_fuzzers/target4"));
+
+    fuzzers.clear();
+    test.FindFuzzers("fuchsia", "target", &fuzzers);
+    EXPECT_EQ(fuzzers.size(), 4);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia2_fuzzers/target4"));
+
+    fuzzers.clear();
+    test.FindFuzzers("", "2", &fuzzers);
     EXPECT_EQ(fuzzers.size(), 2);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
     EXPECT_NULL(fuzzers.get("fuchsia1_fuzzers/target1"));
-    EXPECT_NULL(fuzzers.get("fuchsia1_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
     EXPECT_NULL(fuzzers.get("fuchsia1_fuzzers/target3"));
     EXPECT_NULL(fuzzers.get("fuchsia2_fuzzers/target4"));
 
     fuzzers.clear();
-    test.FindFuzzers("target", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 2);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
+    test.FindFuzzers("1", "", &fuzzers);
+    EXPECT_EQ(fuzzers.size(), 3);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
+    EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
+    EXPECT_NULL(fuzzers.get("fuchsia2_fuzzers/target4"));
 
     fuzzers.clear();
-    test.FindFuzzers("1", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 1);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
+    test.FindFuzzers("1", "4", &fuzzers);
+    EXPECT_EQ(fuzzers.size(), 0);
 
-    // Fuchsia tests
-    ASSERT_TRUE(test.InitFuchsia());
+    fuzzers.clear();
+    test.FindFuzzers("2", "1", &fuzzers);
+    EXPECT_EQ(fuzzers.size(), 0);
 
+    // FindFuzzers using 'name'
     // Empty matches all
     test.FindFuzzers("", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 6);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
+    EXPECT_EQ(fuzzers.size(), 5);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
@@ -325,8 +250,8 @@ bool TestFindFuzzers() {
 
     // Idempotent
     test.FindFuzzers("", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 6);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
+    EXPECT_EQ(fuzzers.size(), 5);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
@@ -342,8 +267,8 @@ bool TestFindFuzzers() {
     EXPECT_EQ(fuzzers.size(), 0);
 
     test.FindFuzzers("zircon", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 2);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
+    EXPECT_EQ(fuzzers.size(), 1);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
 
     fuzzers.clear();
@@ -369,8 +294,8 @@ bool TestFindFuzzers() {
 
     fuzzers.clear();
     test.FindFuzzers("_fuzzers/target", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 6);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
+    EXPECT_EQ(fuzzers.size(), 5);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
@@ -379,8 +304,8 @@ bool TestFindFuzzers() {
 
     fuzzers.clear();
     test.FindFuzzers("1", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 4);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
+    EXPECT_EQ(fuzzers.size(), 3);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target2"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target3"));
@@ -394,8 +319,8 @@ bool TestFindFuzzers() {
 
     fuzzers.clear();
     test.FindFuzzers("/1", &fuzzers);
-    EXPECT_EQ(fuzzers.size(), 2);
-    EXPECT_NONNULL(fuzzers.get("zircon_fuzzers/target1"));
+    EXPECT_EQ(fuzzers.size(), 1);
+    EXPECT_NULL(fuzzers.get("zircon_fuzzers/target1"));
     EXPECT_NONNULL(fuzzers.get("fuchsia1_fuzzers/target1"));
 
     END_TEST;
@@ -404,7 +329,7 @@ bool TestFindFuzzers() {
 bool TestCheckProcess() {
     BEGIN_TEST;
     TestFuzzer test;
-    ASSERT_TRUE(test.InitZircon());
+    ASSERT_TRUE(test.Init());
 
     EXPECT_FALSE(test.CheckProcess(ZX_HANDLE_INVALID));
     EXPECT_FALSE(test.CheckProcess(zx_process_self()));
@@ -420,7 +345,7 @@ bool TestCheckProcess() {
 bool TestInvalid() {
     BEGIN_TEST;
     TestFuzzer test;
-    ASSERT_TRUE(test.InitZircon());
+    ASSERT_TRUE(test.Init());
 
     ASSERT_TRUE(test.Eval(""));
     EXPECT_NE(ZX_OK, test.Run());
@@ -433,7 +358,7 @@ bool TestInvalid() {
 bool TestHelp() {
     BEGIN_TEST;
     TestFuzzer test;
-    ASSERT_TRUE(test.InitZircon());
+    ASSERT_TRUE(test.Init());
 
     ASSERT_TRUE(test.Eval("help"));
     EXPECT_EQ(ZX_OK, test.Run());
@@ -452,47 +377,14 @@ bool TestHelp() {
 bool TestList() {
     BEGIN_TEST;
     TestFuzzer test;
+    ASSERT_TRUE(test.Init());
 
-    // Zircon tests
-    ASSERT_TRUE(test.InitZircon());
-
-    ASSERT_TRUE(test.Eval("list"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target1"));
-    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target2"));
-    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target1"));
-    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target2"));
-    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target3"));
-    EXPECT_FALSE(test.InStdOut("fuchsia2_fuzzers/target4"));
-
-    ASSERT_TRUE(test.Eval("list fuchsia"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdOut("no match"));
-
-    ASSERT_TRUE(test.Eval("list target"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target1"));
-    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target2"));
-    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target1"));
-    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target2"));
-    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target3"));
-    EXPECT_FALSE(test.InStdOut("fuchsia2_fuzzers/target4"));
-
-    ASSERT_TRUE(test.Eval("list zircon_fuzzers/target1"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target1"));
-    EXPECT_FALSE(test.InStdOut("zircon_fuzzers/target2"));
-    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target1"));
-    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target2"));
-    EXPECT_FALSE(test.InStdOut("fuchsia1_fuzzers/target3"));
-    EXPECT_FALSE(test.InStdOut("fuchsia2_fuzzers/target4"));
-
-    // Fuchsia tests
-    ASSERT_TRUE(test.InitFuchsia());
+    // In the tests below, "zircon_fuzzers/target1" does not correspond to a package (just a
+    // binary).  All others do correspond to packages. See fuzzer-fixture.cpp for more details.
 
     ASSERT_TRUE(test.Eval("list"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target1"));
+    EXPECT_FALSE(test.InStdOut("zircon_fuzzers/target1"));
     EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target2"));
     EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target1"));
     EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target2"));
@@ -510,7 +402,7 @@ bool TestList() {
 
     ASSERT_TRUE(test.Eval("list target"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target1"));
+    EXPECT_FALSE(test.InStdOut("zircon_fuzzers/target1"));
     EXPECT_TRUE(test.InStdOut("zircon_fuzzers/target2"));
     EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target1"));
     EXPECT_TRUE(test.InStdOut("fuchsia1_fuzzers/target2"));
@@ -532,28 +424,7 @@ bool TestList() {
 bool TestSeeds() {
     BEGIN_TEST;
     TestFuzzer test;
-
-    // Zircon tests
-    ASSERT_TRUE(test.InitZircon());
-
-    ASSERT_TRUE(test.Eval("seeds"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("missing"));
-
-    ASSERT_TRUE(test.Eval("seeds foobar"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("no match"));
-
-    ASSERT_TRUE(test.Eval("seeds target"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("multiple"));
-
-    ASSERT_TRUE(test.Eval("seeds zircon/target2"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdOut("no seed"));
-
-    // Fuchsia tests
-    ASSERT_TRUE(test.InitFuchsia());
+    ASSERT_TRUE(test.Init());
 
     ASSERT_TRUE(test.Eval("seeds zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
@@ -573,42 +444,13 @@ bool TestSeeds() {
 bool TestStart() {
     BEGIN_TEST;
     TestFuzzer test;
-
-    // Zircon tests
-    ASSERT_TRUE(test.InitZircon());
-
-    ASSERT_TRUE(test.Eval("start"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("missing"));
-
-    ASSERT_TRUE(test.Eval("start foobar"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("no match"));
-
-    ASSERT_TRUE(test.Eval("start target"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("multiple"));
-
-    // Zircon fuzzer
-    ASSERT_TRUE(test.Eval("start zircon/target2"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_GT(0, test.FindArg(test.manifest()));
-    EXPECT_LT(0, test.FindArg("-jobs=1"));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
-    EXPECT_GT(0, test.FindArg("-baz=qux"));
-    EXPECT_GT(0, test.FindArg("-dict=%s", test.dictionary()));
-    EXPECT_GT(0, test.FindArg("-foo=bar"));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
-
-    // Fuchsia tests
-    ASSERT_TRUE(test.InitFuchsia());
+    ASSERT_TRUE(test.Init());
 
     // Zircon fuzzer within Fuchsia
     ASSERT_TRUE(test.Eval("start zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_GT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-jobs=1"));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
@@ -654,40 +496,7 @@ bool TestStart() {
 bool TestCheck() {
     BEGIN_TEST;
     TestFuzzer test;
-
-    // Zircon tests
-    ASSERT_TRUE(test.InitZircon());
-
-    ASSERT_TRUE(test.Eval("check"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("missing"));
-
-    ASSERT_TRUE(test.Eval("check foobar"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("no match"));
-
-    ASSERT_TRUE(test.Eval("check target"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("multiple"));
-
-    ASSERT_TRUE(test.Eval("check zircon/target1"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdOut("stopped"));
-    EXPECT_TRUE(test.InStdOut(test.executable()));
-    EXPECT_TRUE(test.InStdOut(test.data_path()));
-    EXPECT_TRUE(test.InStdOut("0 inputs"));
-    EXPECT_TRUE(test.InStdOut("none"));
-
-    ASSERT_TRUE(test.Eval("check zircon/target2"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdOut("stopped"));
-    EXPECT_TRUE(test.InStdOut(test.executable()));
-    EXPECT_TRUE(test.InStdOut(test.data_path()));
-    EXPECT_TRUE(test.InStdOut("0 inputs"));
-    EXPECT_TRUE(test.InStdOut("crash"));
-
-    // Fuchsia tests
-    ASSERT_TRUE(test.InitFuchsia());
+    ASSERT_TRUE(test.Init());
 
     ASSERT_TRUE(test.Eval("check zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
@@ -720,7 +529,7 @@ bool TestStop() {
     BEGIN_TEST;
     TestFuzzer test;
 
-    ASSERT_TRUE(test.InitZircon());
+    ASSERT_TRUE(test.Init());
 
     ASSERT_TRUE(test.Eval("stop"));
     EXPECT_NE(ZX_OK, test.Run());
@@ -734,7 +543,7 @@ bool TestStop() {
     EXPECT_NE(ZX_OK, test.Run());
     EXPECT_TRUE(test.InStdErr("multiple"));
 
-    ASSERT_TRUE(test.Eval("stop zircon/target1"));
+    ASSERT_TRUE(test.Eval("stop zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_TRUE(test.InStdOut("stopped"));
 
@@ -744,52 +553,13 @@ bool TestStop() {
 bool TestRepro() {
     BEGIN_TEST;
     TestFuzzer test;
-
-    // Zircon tests
-    FuzzerFixture fixture;
-    ASSERT_TRUE(test.InitZircon());
-
-    ASSERT_TRUE(test.Eval("repro"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("missing"));
-
-    ASSERT_TRUE(test.Eval("repro foobar"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("no match"));
-
-    ASSERT_TRUE(test.Eval("repro target"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("multiple"));
-
-    ASSERT_TRUE(test.Eval("repro zircon/target1"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("no match"));
-
-    // Automatically add artifacts
-    ASSERT_TRUE(test.Eval("repro zircon/target2"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
-    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef")));
-    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11")));
-    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface")));
-
-    // Filter artifacts based on substring
-    ASSERT_TRUE(test.Eval("repro zircon/target2 dead"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef")));
-    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11")));
-    EXPECT_GT(0, test.FindArg(test.data_path("oom-feedface")));
-
-    // Fuchsia tests
-    ASSERT_TRUE(test.InitFuchsia());
+    ASSERT_TRUE(test.Init());
 
     // Zircon fuzzer within Fuchsia
     ASSERT_TRUE(test.Eval("repro zircon/target2 fa"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_GT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
     EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
@@ -823,36 +593,7 @@ bool TestRepro() {
 bool TestMerge() {
     BEGIN_TEST;
     TestFuzzer test;
-
-    // Zircon tests
-    FuzzerFixture fixture;
-    ASSERT_TRUE(test.InitZircon());
-
-    ASSERT_TRUE(test.Eval("merge"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("missing"));
-
-    ASSERT_TRUE(test.Eval("merge foobar"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("no match"));
-
-    ASSERT_TRUE(test.Eval("merge target"));
-    EXPECT_NE(ZX_OK, test.Run());
-    EXPECT_TRUE(test.InStdErr("multiple"));
-
-    // Zircon minimizing merge
-    ASSERT_TRUE(test.Eval("merge zircon/target2"));
-    EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_GT(0, test.FindArg(test.manifest()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
-    EXPECT_LT(0, test.FindArg("-merge=1"));
-    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev")));
-
-    // Fuchsia tests
-    ASSERT_TRUE(test.InitFuchsia());
+    ASSERT_TRUE(test.Init());
 
     Path path;
     size_t len;
@@ -861,7 +602,7 @@ bool TestMerge() {
     ASSERT_TRUE(test.Eval("merge zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_GT(0, test.FindArg(test.manifest()));
+    EXPECT_LT(0, test.FindArg(test.manifest()));
     EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
     EXPECT_LT(0, test.FindArg("-merge=1"));
     EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
@@ -928,8 +669,6 @@ BEGIN_TEST_CASE(FuzzerTest)
 RUN_TEST(TestSetOption)
 RUN_TEST(TestRebasePath)
 RUN_TEST(TestGetPackagePath)
-RUN_TEST(TestFindZirconFuzzers)
-RUN_TEST(TestFindFuchsiaFuzzers)
 RUN_TEST(TestFindFuzzers)
 RUN_TEST(TestCheckProcess)
 RUN_TEST(TestInvalid)

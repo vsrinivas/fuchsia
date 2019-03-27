@@ -71,7 +71,12 @@ const struct {
 // |kArtifactPrefixes| should matches the prefixes in libFuzzer passed to |Fuzzer::DumpCurrentUnit|
 // or |Fuzzer::WriteUnitToFileWithPrefix|.
 constexpr const char* kArtifactPrefixes[] = {
-    "crash", "leak", "mismatch", "oom", "slow-unit", "timeout",
+    "crash",
+    "leak",
+    "mismatch",
+    "oom",
+    "slow-unit",
+    "timeout",
 };
 constexpr size_t kArtifactPrefixesLen = sizeof(kArtifactPrefixes) / sizeof(kArtifactPrefixes[0]);
 
@@ -89,7 +94,8 @@ zx_status_t Fuzzer::Main(int argc, char** argv) {
 
 // Protected methods
 
-Fuzzer::Fuzzer() : cmd_(kNone), out_(stdout), err_(stderr) {}
+Fuzzer::Fuzzer()
+    : cmd_(kNone), out_(stdout), err_(stderr) {}
 
 void Fuzzer::Reset() {
     cmd_ = kNone;
@@ -245,25 +251,7 @@ zx_status_t Fuzzer::GetPackagePath(const fbl::String& package, Path* out) {
     return ZX_OK;
 }
 
-void Fuzzer::FindZirconFuzzers(const fbl::String& zircon_path, const fbl::String& target,
-                               StringMap* out) {
-    Path path;
-    if (RebasePath(zircon_path, &path) != ZX_OK) {
-        return;
-    }
-
-    auto targets = path.List();
-    for (const char* t = targets->first(); t; t = targets->next()) {
-    }
-
-    targets->keep_if(target);
-    for (const char* t = targets->first(); t; t = targets->next()) {
-        out->set(fbl::StringPrintf("zircon_fuzzers/%s", t), path.Join(t));
-    }
-}
-
-void Fuzzer::FindFuchsiaFuzzers(const fbl::String& package, const fbl::String& target,
-                                StringMap* out) {
+void Fuzzer::FindFuzzers(const fbl::String& package, const fbl::String& target, StringMap* out) {
     Path path;
     if (RebasePath("pkgfs/packages", &path) != ZX_OK) {
         return;
@@ -289,14 +277,6 @@ void Fuzzer::FindFuchsiaFuzzers(const fbl::String& package, const fbl::String& t
             }
         }
     }
-}
-
-void Fuzzer::FindFuzzers(const fbl::String& package, const fbl::String& target, StringMap* out) {
-    if (strstr("zircon_fuzzers", package.c_str()) != nullptr) {
-        FindZirconFuzzers("boot/test/fuzz", target, out);
-        FindZirconFuzzers("system/test/fuzz", target, out);
-    }
-    FindFuchsiaFuzzers(package, target, out);
 }
 
 static zx_status_t ParseName(const fbl::String& name, fbl::String* out_package,
@@ -412,7 +392,8 @@ zx_status_t Fuzzer::Execute() {
 // or end it.
 class Walker final : public TaskEnumerator {
 public:
-    explicit Walker(const Fuzzer* fuzzer, bool kill) : fuzzer_(fuzzer), kill_(kill), killed_(0) {}
+    explicit Walker(const Fuzzer* fuzzer, bool kill)
+        : fuzzer_(fuzzer), kill_(kill), killed_(0) {}
     ~Walker() {}
 
     size_t killed() const { return killed_; }

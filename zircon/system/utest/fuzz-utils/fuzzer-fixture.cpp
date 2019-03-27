@@ -16,21 +16,7 @@ namespace testing {
 
 // Public methods
 
-bool FuzzerFixture::CreateZircon() {
-    BEGIN_HELPER;
-    ASSERT_TRUE(Fixture::Create());
-
-    // Zircon binaries
-    ASSERT_TRUE(CreateFile("boot/test/fuzz/target1"));
-    ASSERT_TRUE(CreateFile("boot/test/fuzz/target2"));
-
-    // Data from "previous" runs
-    ASSERT_TRUE(CreateData("zircon_fuzzers", "target2"));
-
-    END_HELPER;
-}
-
-bool FuzzerFixture::CreateFuchsia() {
+bool FuzzerFixture::Create() {
     BEGIN_HELPER;
     ASSERT_TRUE(Fixture::Create());
 
@@ -81,8 +67,8 @@ bool FuzzerFixture::CreatePackage(const char* package, long int version, const c
         ASSERT_TRUE(CreateFile(path("boot/test/fuzz/%s", target)));
     } else {
         ASSERT_TRUE(CreateFile(path("%s/bin/%s", base.c_str(), target)));
-        ASSERT_TRUE(CreateFile(path("%s/meta/%s.cmx", base.c_str(), target)));
     }
+    ASSERT_TRUE(CreateFile(path("%s/meta/%s.cmx", base.c_str(), target)));
 
     ASSERT_TRUE(CreateFile(path("%s/data/%s/corpora", base.c_str(), target),
                            "//path/to/seed/corpus\n "

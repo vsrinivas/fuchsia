@@ -26,11 +26,8 @@ public:
     // Resets the out and err buffers to be unallocated.
     void Reset() override;
 
-    // Sets up the test fuzzer to buffer output with a Zircon-standalone test fixture
-    bool InitZircon();
-
     // Sets up the test fuzzer to buffer output with a test fixture of Fuchsia packages
-    bool InitFuchsia();
+    bool Init();
 
     // Resets |test| and reconstructs it from the |cmdline| in the context of the current fixture.
     zx_status_t Eval(const char* cmdline);
@@ -68,12 +65,8 @@ public:
     zx_status_t GetPackagePath(const fbl::String& package, Path* out) {
         return Fuzzer::GetPackagePath(package, out);
     }
-    void FindZirconFuzzers(const fbl::String& zircon_path, const fbl::String& target,
-                           StringMap* out) {
-        Fuzzer::FindZirconFuzzers(zircon_path, target, out);
-    }
-    void FindFuchsiaFuzzers(const fbl::String& package, const fbl::String& target, StringMap* out) {
-        Fuzzer::FindFuchsiaFuzzers(package, target, out);
+    void FindFuzzers(const fbl::String& package, const fbl::String& target, StringMap* out) {
+        Fuzzer::FindFuzzers(package, target, out);
     }
     void FindFuzzers(const fbl::String& name, StringMap* out) { Fuzzer::FindFuzzers(name, out); }
 
@@ -85,9 +78,6 @@ protected:
     zx_status_t Execute() override;
 
 private:
-    // Sets up the test fuzzer to buffer output without changing the test fixture
-    bool Init();
-
     // The current test fixture
     FuzzerFixture fixture_;
 

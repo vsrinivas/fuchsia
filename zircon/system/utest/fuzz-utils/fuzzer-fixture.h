@@ -17,14 +17,9 @@ namespace testing {
 class FuzzerFixture final : public Fixture {
 public:
     // Creates a number of temporary, fake directories and files to mimic a deployment of
-    // fuzz-targets on Zircon.  The files and directories are automatically deleted when the fixture
-    // is destroyed.
-    bool CreateZircon();
-
-    // Creates a number of temporary, fake directories and files to mimic a deployment of
     // fuzz-packages on Fuchsia. The files and directories are automatically deleted when the
     // fixture is destroyed.
-    bool CreateFuchsia();
+    bool Create() override;
 
     // Returns the maximum version of the given |Package| in the fixture as a C-style string, or
     // "0" if the package wasn't created by the fixture.

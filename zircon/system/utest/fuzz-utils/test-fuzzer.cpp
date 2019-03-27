@@ -62,17 +62,22 @@ void TestFuzzer::Reset() {
     }
 }
 
-bool TestFuzzer::InitZircon() {
+bool TestFuzzer::Init() {
     BEGIN_HELPER;
-    ASSERT_TRUE(fixture_.CreateZircon());
-    ASSERT_TRUE(Init());
-    END_HELPER;
-}
+    ASSERT_TRUE(fixture_.Create());
+    Reset();
 
-bool TestFuzzer::InitFuchsia() {
-    BEGIN_HELPER;
-    ASSERT_TRUE(fixture_.CreateFuchsia());
-    ASSERT_TRUE(Init());
+    out_ = open_memstream(&outbuf_, &outbuflen_);
+    ASSERT_NONNULL(out_);
+
+    err_ = open_memstream(&errbuf_, &errbuflen_);
+    ASSERT_NONNULL(err_);
+
+    // Configure base object
+    set_root(fixture_.path());
+    set_out(out_);
+    set_err(err_);
+
     END_HELPER;
 }
 
@@ -161,26 +166,6 @@ zx_status_t TestFuzzer::Execute() {
     }
 
     return ZX_OK;
-}
-
-// Private methods
-
-bool TestFuzzer::Init() {
-    BEGIN_HELPER;
-    Reset();
-
-    out_ = open_memstream(&outbuf_, &outbuflen_);
-    ASSERT_NONNULL(out_);
-
-    err_ = open_memstream(&errbuf_, &errbuflen_);
-    ASSERT_NONNULL(err_);
-
-    // Configure base object
-    set_root(fixture_.path());
-    set_out(out_);
-    set_err(err_);
-
-    END_HELPER;
 }
 
 } // namespace testing
