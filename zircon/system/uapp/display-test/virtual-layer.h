@@ -37,6 +37,8 @@ public:
     explicit VirtualLayer(Display* display);
     explicit VirtualLayer(const fbl::Vector<Display>& displays);
 
+    virtual ~VirtualLayer() {}
+
     // Finish initializing the layer. All Set* methods should be called before this.
     virtual bool Init(zx_handle_t channel) = 0;
 
