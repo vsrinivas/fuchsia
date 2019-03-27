@@ -3,17 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    failure::Error, fidl::endpoints::RequestStream, fidl_fuchsia_setui::*, fuchsia_async as fasync,
-    futures::prelude::*,
+    failure::Error, failure::ResultExt, fidl::endpoints::RequestStream, fidl_fuchsia_setui::*,
+    fuchsia_async as fasync, futures::prelude::*,
 };
 
 pub async fn start_setui_service(channel: fasync::Channel) -> Result<(), Error> {
     let mut stream = SetUiServiceRequestStream::from_channel(channel);
 
-    while let Some(event) = await!(stream.next()) {
-        await!(handler(event?))?;
+    while let Some(event) = await!(stream.try_next()).context("error reading value from stream")? {
+        await!(handler(event))?;
     }
-
     // event_listener will now be dropped, closing the listener
     Ok(())
 }
@@ -23,8 +22,8 @@ async fn handler(event: SetUiServiceRequest) -> fidl::Result<()> {
         SetUiServiceRequest::Listen { .. }
         | SetUiServiceRequest::Update { .. }
         | SetUiServiceRequest::InteractiveMutate { .. } => {}
-        SetUiServiceRequest::Mutate { setting_type, mutation, responder: _ } => {
-            mutate(setting_type, mutation);
+        SetUiServiceRequest::Mutate { setting_type, mutation, responder } => {
+            responder.send(&mut mutate(setting_type, mutation))?;
         }
     }
 

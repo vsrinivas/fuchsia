@@ -349,6 +349,7 @@ group("all") {
     "//garnet/packages/tests:scenic",
     "//garnet/packages/tests:scenic_cpp",
     "//garnet/packages/tests:scpi",
+    "//garnet/packages/tests:setui_client",
     "//garnet/packages/tests:setui_service",
     "//garnet/packages/tests:sse",
     "//garnet/packages/tests:stash",
@@ -1162,5 +1163,13 @@ group("webpki_roots_fuchsia") {
   testonly = true
   public_deps = [
     "//garnet/lib/rust/webpki-roots-fuchsia:webpki-roots-fuchsia_tests",
+  ]
+}
+
+group("setui_client") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/setui_client:setui_client_tests",
+    "//garnet/packages/prod:setui_client",
   ]
 }

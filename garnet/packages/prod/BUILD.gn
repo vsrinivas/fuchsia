@@ -286,6 +286,7 @@ group("all") {
     "//garnet/packages/prod:scenic",
     "//garnet/packages/prod:scenic_tools",
     "//garnet/packages/prod:scpi",
+    "//garnet/packages/prod:setui_client",
     "//garnet/packages/prod:setui_service",
     "//garnet/packages/prod:ssh",
     "//garnet/packages/prod:stash",
@@ -1139,5 +1140,12 @@ group("omaha_client") {
   testonly = true
   public_deps = [
     "//garnet/bin/omaha_client",
+  ]
+}
+
+group("setui_client") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/setui_client",
   ]
 }
