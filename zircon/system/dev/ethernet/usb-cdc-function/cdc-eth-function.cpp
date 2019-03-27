@@ -176,6 +176,9 @@ static zx_status_t cdc_generate_mac_address(usb_cdc_t* cdc) {
              cdc->mac_addr[0], cdc->mac_addr[1], cdc->mac_addr[2],
              cdc->mac_addr[3], cdc->mac_addr[4], cdc->mac_addr[5]);
 
+    // Make the host and device addresses different so packets are routed correctly.
+    cdc->mac_addr[5] ^= 1;
+
     return usb_function_alloc_string_desc(&cdc->function, buffer, &descriptors.cdc_eth.iMACAddress);
 }
 
