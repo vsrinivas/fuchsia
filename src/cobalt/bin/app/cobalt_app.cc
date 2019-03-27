@@ -52,6 +52,7 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                      std::chrono::seconds target_interval,
                      std::chrono::seconds min_interval,
                      std::chrono::seconds initial_interval,
+                     bool start_event_aggregator_worker,
                      const std::string& product_name,
                      const std::string& board_name)
     : system_data_(product_name, board_name),
@@ -123,7 +124,9 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
           {&legacy_shipping_manager_, &clearcut_shipping_manager_})) {
   legacy_shipping_manager_.Start();
   clearcut_shipping_manager_.Start();
-  event_aggregator_.Start();
+  if (start_event_aggregator_worker) {
+    event_aggregator_.Start();
+  }
 
   // Load the global metrics registry.
   std::ifstream registry_file_stream;

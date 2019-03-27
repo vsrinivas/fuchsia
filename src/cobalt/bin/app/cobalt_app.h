@@ -52,6 +52,10 @@ class CobaltApp {
   //                    back off until it reaches a periodic rhythm of
   //                    |target_interval|.
   //
+  // |start_event_aggregator_worker| If true, starts the EventAggregator's
+  //                                 worker thread after constructing the
+  //                                 EventAggregator.
+  //
   // |product_name| A product name used in the ObservationMetadata sent with
   //                every upload to the Cobalt server.
   //
@@ -65,7 +69,8 @@ class CobaltApp {
             std::chrono::seconds target_interval,
             std::chrono::seconds min_interval,
             std::chrono::seconds initial_interval,
-            const std::string& product_name, const std::string& board_name);
+            bool start_event_aggregator_worker, const std::string& product_name,
+            const std::string& board_name);
 
  private:
   static encoder::ClientSecret getClientSecret();

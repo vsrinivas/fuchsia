@@ -40,6 +40,10 @@ constexpr fxl::StringView kInitialIntervalSecondsFlagName =
 // Used to override kMinIntervalDefault;
 constexpr fxl::StringView kMinIntervalSecondsFlagName = "min_interval_seconds";
 
+// Used to override kStartEventAggregatorWorkerDefault
+constexpr fxl::StringView kStartEventAggregatorWorkerFlagName =
+    "start_event_aggregator_worker";
+
 // We want to only upload every hour. This is the interval that will be
 // approached by the uploader.
 const std::chrono::hours kScheduleIntervalDefault(1);
@@ -54,6 +58,10 @@ const std::chrono::minutes kInitialIntervalDefault(1);
 // is a safety parameter. We do not make two attempts within a period of this
 // specified length.
 const std::chrono::seconds kMinIntervalDefault(10);
+
+// We normally start the EventAggregator's worker thread after constructing the
+// EventAggregator.
+constexpr bool kStartEventAggregatorWorkerDefault(true);
 
 // ReadBoardName returns the board name of the currently running device.
 //
@@ -142,6 +150,18 @@ int main(int argc, const char** argv) {
     }
   }
 
+  // Parse the start_event_aggregator_worker flag.
+  bool start_event_aggregator_worker = kStartEventAggregatorWorkerDefault;
+  flag_value.clear();
+  if (command_line.GetOptionValue(kStartEventAggregatorWorkerFlagName,
+                                  &flag_value)) {
+    if (flag_value == "true") {
+      start_event_aggregator_worker = true;
+    } else if (flag_value == "false") {
+      start_event_aggregator_worker = false;
+    }
+  }
+
   FXL_LOG(INFO) << "Cobalt client schedule params: schedule_interval="
                 << schedule_interval.count()
                 << " seconds, min_interval=" << min_interval.count()
@@ -150,8 +170,8 @@ int main(int argc, const char** argv) {
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   cobalt::CobaltApp app(loop.dispatcher(), schedule_interval, min_interval,
-                        initial_interval, cobalt::hack::GetLayer(),
-                        ReadBoardName());
+                        initial_interval, start_event_aggregator_worker,
+                        cobalt::hack::GetLayer(), ReadBoardName());
   loop.Run();
   return 0;
 }

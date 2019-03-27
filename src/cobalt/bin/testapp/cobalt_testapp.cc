@@ -81,6 +81,7 @@ bool CobaltTestApp::RunTests() {
 void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
                             uint32_t min_interval_seconds,
                             CobaltConfigType type,
+                            bool start_event_aggregator_worker,
                             uint32_t initial_interval_seconds) {
   controller_.Unbind();
   fidl::InterfaceHandle<fuchsia::io::Directory> directory;
@@ -102,6 +103,13 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   {
     std::ostringstream stream;
     stream << "--min_interval_seconds=" << min_interval_seconds;
+    launch_info.arguments.push_back(stream.str());
+  }
+
+  {
+    std::ostringstream stream;
+    stream << "--start_event_aggregator_worker="
+           << start_event_aggregator_worker;
     launch_info.arguments.push_back(stream.str());
   }
 

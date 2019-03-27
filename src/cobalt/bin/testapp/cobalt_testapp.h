@@ -47,6 +47,7 @@ class CobaltTestApp {
   // scheduling parameters.
   void Connect(uint32_t schedule_interval_seconds,
                uint32_t min_interval_seconds, CobaltConfigType type,
+               bool start_event_aggregator_worker = false,
                uint32_t initial_interval_seconds = 0);
 
   // Loads the CobaltConfig proto for this project and writes it to a VMO.
