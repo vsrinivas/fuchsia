@@ -541,6 +541,16 @@ zx_status_t IntelAudioDsp::CreateAndStartStreams() {
             },
             .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
         },
+        // DMIC
+        {
+            .stream_id = 2,
+            .is_input = true,
+            .pipeline = {
+                .pl_source = PIPELINE3_ID,
+                .pl_sink = PIPELINE2_ID,
+            },
+            .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
+        },
     };
 
     for (const auto& stream_def : STREAMS) {
