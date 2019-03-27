@@ -50,16 +50,16 @@ fuchsia/tools/banjo_bin/mac-amd64
 	Oh5IShkc11dgnCQ192l4671rV2EO_p7mqBsi3GqSsv8C
 
 fuchsia/tools/symbolize/linux-amd64
-	git_revision:0ce34c429c451d8fc23cb69b5ffbf609e91b4a63
-	zaVKhK0aYtRA6Bee6Aa_rodEByq1wWne-amspjLVBZcC
+	git_revision:b22d440c081f0c8a75936621df9ca7e6bc018a43
+	fYA5w2Ej35Zt-rc3TaM2sl3SXnpijaY1pJXahr2nh1kC
 
 fuchsia/tools/symbolize/linux-arm64
-	git_revision:0ce34c429c451d8fc23cb69b5ffbf609e91b4a63
-	0YB8nQnWoFxYryEXaVhcmYnblCu-FeEOS7ZrqFenyJsC
+	git_revision:b22d440c081f0c8a75936621df9ca7e6bc018a43
+	t0mV0wRtrIuw9CHCWfAsmz_PmXWgdLMLSQCPqZNgR-kC
 
 fuchsia/tools/symbolize/mac-amd64
-	git_revision:0ce34c429c451d8fc23cb69b5ffbf609e91b4a63
-	4hv7m0-izCWnFtJv8i4BWYoukFwIhIgS8iTpbWGK1dEC
+	git_revision:b22d440c081f0c8a75936621df9ca7e6bc018a43
+	b_L2gILtgk-stGVhMG2DoHJKykdkpNM4oAjXUwqGFcwC
 
 fuchsia_internal/firmware/bluetooth/bcm4345c4
 	git_revision:1e41b7d6f96f09558a36a636de2819068cd71ea0
