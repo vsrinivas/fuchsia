@@ -293,6 +293,7 @@ group("all") {
     "//garnet/packages/prod:sysmem-assistant",
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:sysmgr",
+    "//garnet/packages/prod:tee_manager",
     "//garnet/packages/prod:telephony",
     "//garnet/packages/prod:terminal",
     "//garnet/packages/prod:test_runner",
@@ -1144,5 +1145,13 @@ group("setui_client") {
   testonly = true
   public_deps = [
     "//garnet/bin/setui_client",
+  ]
+}
+
+group("tee_manager") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/tee_manager",
+    "//garnet/bin/tee_manager:config",
   ]
 }

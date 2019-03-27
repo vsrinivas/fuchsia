@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/tee_manager"
+    },
+    "sandbox": {
+        "dev": [
+            "class/tee"
+        ],
+        "features": [
+            "isolated-persistent-storage"
+        ]
+    }
+}
