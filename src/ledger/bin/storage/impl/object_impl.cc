@@ -73,11 +73,6 @@ Status VmoObject::GetData(fxl::StringView* data) const {
 }
 
 Status VmoObject::GetVmo(fsl::SizedVmo* vmo) const {
-  Status status = Initialize();
-  if (status != Status::OK) {
-    return status;
-  }
-
   zx_status_t zx_status =
       vmo_.Duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, vmo);
   if (zx_status != ZX_OK) {
