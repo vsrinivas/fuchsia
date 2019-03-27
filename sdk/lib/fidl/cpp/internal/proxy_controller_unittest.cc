@@ -30,7 +30,6 @@ class DestructorMessageHandler : public MessageHandler {
   fit::function<void()> destructor;
 
   ~DestructorMessageHandler() {
-    printf("\ngoing to call destructor callback\n");
     destructor();
   }
 
