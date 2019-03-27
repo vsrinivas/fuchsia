@@ -298,11 +298,23 @@ pub(crate) fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>
     result
 }
 
+// Since BSD resends ARP requests every 20 seconds and sets the default
+// time limit to establish a TCP connection as 75 seconds, 4 is used as
+// the max number of tries, which is the initial remaining_tries.
+const DEFAULT_ARP_REQUEST_MAX_TRIES: usize = 4;
+// Currently at 20 seconds because that's what FreeBSD does.
+const DEFAULT_ARP_REQUEST_PERIOD: u64 = 20;
+
 fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
     ctx: &mut Context<D>,
     device_id: u64,
     lookup_addr: P,
 ) {
+    let tries_remaining = AD::get_arp_state(ctx, device_id)
+        .table
+        .get_remaining_tries(lookup_addr)
+        .unwrap_or(DEFAULT_ARP_REQUEST_MAX_TRIES);
+
     if let Some(sender_protocol_addr) = AD::get_protocol_addr(ctx, device_id) {
         let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
         // TODO(joshlf): Do something if send_arp_frame returns an error?
@@ -322,15 +334,15 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
             ),
         );
 
-        // TODO(wesleyac): Configurable timeout.
-        // Currently at 20 seconds because that's what FreeBSD does.
-        // TODO(wesleyac): maxretries
-        ctx.dispatcher.schedule_timeout(
-            Duration::from_secs(20),
-            ArpTimerId::new_ipv4_timer_id(device_id, lookup_addr.addr()),
-        );
-
-        AD::get_arp_state(ctx, device_id).table.set_waiting(lookup_addr);
+        let id = ArpTimerId::new_ipv4_timer_id(device_id, lookup_addr.addr());
+        if tries_remaining > 1 {
+            // TODO(wesleyac): Configurable timeout.
+            ctx.dispatcher.schedule_timeout(Duration::from_secs(DEFAULT_ARP_REQUEST_PERIOD), id);
+            AD::get_arp_state(ctx, device_id).table.set_waiting(lookup_addr, tries_remaining - 1);
+        } else {
+            ctx.dispatcher.cancel_timeout(id);
+            AD::get_arp_state(ctx, device_id).table.remove(lookup_addr);
+        }
     } else {
         // RFC 826 does not specify what to do if we don't have a local address, but there is no
         // reasonable way to send an ARP request without one (as the receiver will cache our local
@@ -369,22 +381,36 @@ struct ArpTable<H, P: Hash + Eq> {
 
 #[derive(Debug, Eq, PartialEq)] // for testing
 enum ArpValue<H> {
-    Known(H),
-    Waiting,
+    Known { hardware_addr: H },
+    Waiting { remaining_tries: usize },
 }
 
 impl<H, P: Hash + Eq> ArpTable<H, P> {
     fn insert(&mut self, net: P, hw: H) {
-        self.table.insert(net, ArpValue::Known(hw));
+        self.table.insert(net, ArpValue::Known { hardware_addr: hw });
     }
 
-    fn set_waiting(&mut self, net: P) {
-        self.table.insert(net, ArpValue::Waiting);
+    fn remove(&mut self, net: P) {
+        self.table.remove(&net);
+    }
+
+    fn get_remaining_tries(&mut self, net: P) -> Option<usize> {
+        let remaining_tries =
+            if let Some(ArpValue::Waiting { remaining_tries }) = self.table.get(&net) {
+                Some(*remaining_tries)
+            } else {
+                None
+            };
+        remaining_tries
+    }
+
+    fn set_waiting(&mut self, net: P, remaining_tries: usize) {
+        self.table.insert(net, ArpValue::Waiting { remaining_tries });
     }
 
     fn lookup(&self, addr: P) -> Option<&H> {
         match self.table.get(&addr) {
-            Some(ArpValue::Known(x)) => Some(x),
+            Some(ArpValue::Known { hardware_addr }) => Some(hardware_addr),
             _ => None,
         }
     }
@@ -469,13 +495,14 @@ mod tests {
 
     #[test]
     fn test_send_arp_request_on_cache_miss() {
-        const NUM_ARP_REQUESTS: usize = 4;
+        const NUM_ARP_REQUESTS: usize = DEFAULT_ARP_REQUEST_MAX_TRIES;
         let mut state = StackState::default();
         let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        set_ip_addr_subnet(&mut ctx, dev_id.id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
         let device_id = dev_id.id();
+
+        set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
 
         lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
             &mut ctx,
@@ -490,7 +517,7 @@ mod tests {
         // we don't receive a response.
         let mut cur_frame_num: usize = 0;
         let mut arp_request_num = 0;
-        for _ in 1..NUM_ARP_REQUESTS {
+        for _ in 0..NUM_ARP_REQUESTS {
             for frame_num in cur_frame_num..ctx.dispatcher.frames_sent().len() {
                 let mut buf = &ctx.dispatcher.frames_sent()[frame_num].1[..];
                 if validate_ipv4_arp_packet(
@@ -508,7 +535,7 @@ mod tests {
                 }
             }
         }
-        assert_eq!(arp_request_num, NUM_ARP_REQUESTS - 1);
+        assert_eq!(arp_request_num, NUM_ARP_REQUESTS);
 
         receive_arp_response(
             &mut ctx,
@@ -521,6 +548,76 @@ mod tests {
 
         // Once an arp response is received, the arp timer event will be cancelled.
         assert!(!ctx.dispatcher.timer_events().any(|(t, id)| id == &arp_timer_id))
+    }
+
+    #[test]
+    fn test_exhaust_retries_arp_request() {
+        //To fully test max retries of APR request, NUM_APR_REQUEST should be
+        // set >= DEFAULT_ARP_REQUEST_MAX_TRIES.
+        const NUM_ARP_REQUESTS: usize = DEFAULT_ARP_REQUEST_MAX_TRIES + 1;
+        let mut state = StackState::default();
+        let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC, IPV6_MIN_MTU);
+        let dispatcher = DummyEventDispatcher::default();
+        let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
+        let device_id = dev_id.id();
+
+        set_ip_addr_subnet(&mut ctx, device_id, AddrSubnet::new(TEST_LOCAL_IPV4, 24).unwrap());
+
+        lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
+            &mut ctx,
+            device_id,
+            TEST_LOCAL_MAC,
+            TEST_REMOTE_IPV4,
+        );
+
+        let arp_timer_id = ArpTimerId::new_ipv4_timer_id(device_id, TEST_REMOTE_IPV4);
+
+        // The above loopup sent one arp request already.
+        let mut num_requests_sent: usize = 1;
+
+        let mut cur_frame_num: usize = 0;
+        let mut arp_request_num = 0;
+
+        for _ in 0..NUM_ARP_REQUESTS {
+            // Check that ARP request timer event is cancelled after the number
+            // of DEFAULT_ARP_REQUEST_MAX_TRIES ARP requests are sent.
+            if num_requests_sent < DEFAULT_ARP_REQUEST_MAX_TRIES {
+                assert_eq!(
+                    EthernetArpDevice::get_arp_state(&mut ctx, device_id)
+                        .table
+                        .get_remaining_tries(TEST_REMOTE_IPV4),
+                    Some(DEFAULT_ARP_REQUEST_MAX_TRIES - num_requests_sent)
+                );
+                assert!(ctx.dispatcher.timer_events().any(|(t, id)| id == &arp_timer_id));
+            } else {
+                assert_eq!(
+                    EthernetArpDevice::get_arp_state(&mut ctx, device_id)
+                        .table
+                        .get_remaining_tries(TEST_REMOTE_IPV4),
+                    None
+                );
+                assert!(!ctx.dispatcher.timer_events().any(|(t, id)| id == &arp_timer_id));
+            }
+
+            for frame_num in cur_frame_num..ctx.dispatcher.frames_sent().len() {
+                let mut buf = &ctx.dispatcher.frames_sent()[frame_num].1[..];
+                if validate_ipv4_arp_packet(
+                    buf,
+                    ArpOp::Request,
+                    TEST_LOCAL_IPV4,
+                    TEST_REMOTE_IPV4,
+                    TEST_LOCAL_MAC,
+                    EthernetArpDevice::BROADCAST,
+                ) {
+                    cur_frame_num = frame_num + 1;
+                    arp_request_num = arp_request_num + 1;
+
+                    testutil::trigger_timers_until(&mut ctx, |id| id == &arp_timer_id);
+                    num_requests_sent += 1;
+                    break;
+                }
+            }
+        }
     }
 
     #[test]
