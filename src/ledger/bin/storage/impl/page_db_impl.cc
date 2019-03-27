@@ -149,14 +149,14 @@ Status PageDbImpl::GetInboundObjectReferences(
       handler,
       ReferenceRow::GetEagerKeyPrefixFor(object_identifier.object_digest()),
       &keys));
-  for (const auto& key : keys) {
+  for (auto& key : keys) {
     references->emplace(ObjectDigest(std::move(key)), KeyPriority::EAGER);
   }
   RETURN_ON_ERROR(db_->GetByPrefix(
       handler,
       ReferenceRow::GetLazyKeyPrefixFor(object_identifier.object_digest()),
       &keys));
-  for (const auto& key : keys) {
+  for (auto& key : keys) {
     references->emplace(ObjectDigest(std::move(key)), KeyPriority::LAZY);
   }
   return Status::OK;
