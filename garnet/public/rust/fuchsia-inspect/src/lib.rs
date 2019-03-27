@@ -53,25 +53,8 @@ impl InspectService {
 
     /// Spawns a new async to respond to requests querying inspect_service over chan
     fn spawn(service: InspectService, chan: fasync::Channel) {
-        let fut = async move {
-            let mut stream = InspectRequestStream::from_channel(chan);
-            while let Some(req) =
-                await!(stream.try_next()).context("error running inspect service")?
-            {
-                match req {
-                    InspectRequest::ReadData { responder } => {
-                        responder.send(&mut service.current_node.lock().evaluate())?;
-                    }
-                    InspectRequest::ListChildren { responder } => responder.send(Some(
-                        &mut service.current_node.lock().get_children_names().iter().map(|x| &**x),
-                    ))?,
-                    InspectRequest::OpenChild { child_name, child_channel, responder } => {
-                        responder.send(service.open_child(&child_name, child_channel)?)?
-                    }
-                }
-            }
-            Ok(())
-        };
+        let stream = InspectRequestStream::from_channel(chan);
+        let fut = serve_request_stream(service.current_node.clone(), stream);
         fasync::spawn(fut.unwrap_or_else(|e: failure::Error| {
             fx_log_err!("error running inspect interface: {:?}", e)
         }))
@@ -93,6 +76,27 @@ impl InspectService {
             }
         }
     }
+}
+
+pub async fn serve_request_stream(
+    node: Arc<Mutex<ObjectTreeNode>>,
+    mut stream: InspectRequestStream,
+) -> Result<(), Error> {
+    while let Some(req) = await!(stream.try_next()).context("error running inspect service")? {
+        match req {
+            InspectRequest::ReadData { responder } => {
+                responder.send(&mut node.lock().evaluate())?;
+            }
+            InspectRequest::ListChildren { responder } => {
+                responder.send(Some(&mut node.lock().get_children_names().iter().map(|x| &**x)))?
+            }
+            InspectRequest::OpenChild { child_name, child_channel, responder } => {
+                let service = InspectService { current_node: node.clone() };
+                responder.send(service.open_child(&child_name, child_channel)?)?
+            }
+        }
+    }
+    Ok(())
 }
 
 pub type ChildrenGenerator = Box<FnMut() -> Vec<Arc<Mutex<ObjectTreeNode>>> + Send + 'static>;
