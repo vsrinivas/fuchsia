@@ -69,6 +69,11 @@ int Msm8x53::Thread() {
         return -1;
     }
 
+    if (ClockInit() != ZX_OK) {
+        zxlogf(ERROR, "ClockInit failed\n");
+        return -1;
+    }
+
     return 0;
 }
 

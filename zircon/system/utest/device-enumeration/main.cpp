@@ -329,6 +329,7 @@ bool msm8x53_som_enumeration_test() {
         "sys/platform/13:01:1",
         "sys/platform/13:00:3/msm8x53-sdhci",
         "sys/platform/13:00:2/qcom-pil",
+        "sys/platform/13:01:4/msm-clk",
     };
 
     ASSERT_TRUE(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
