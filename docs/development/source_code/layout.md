@@ -81,6 +81,11 @@ pattern:
     * Subareas should follow the generic area template
     * Do not create deeply nested area structures (e.g., three should be enough)
 
+Areas may use additional directories for internal organization in addition to
+enumerated directories. A directory that contains an `OWNERS` file is considered
+a subarea and must adhere to the contract for areas and subareas.  A directory
+lacking an `OWNERS` file is considered part of the same area.
+
 ### Dependency Structure
 
 In addition to depending on itself, an area can depend only on the top-level
@@ -91,7 +96,7 @@ In addition to depending on itself, an area can depend only on the top-level
  * `//buildtools`
  * `//sdk`
  * `//third_party`
- * `(../)+lib`
+ * `(../)+lib/`
 
 ### Canonical targets
 

@@ -1,0 +1,15 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### checks dependency graph in areas
+
+## usage: fx check-deps
+
+set -o pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+fx-config-read
+"${FUCHSIA_DIR}"/scripts/check_deps/check_deps.py --out "${FUCHSIA_BUILD_DIR}" "$@"
