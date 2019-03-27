@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <fuchsia/io/cpp/fidl.h>
+#include <lib/fdio/vfs.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
@@ -83,6 +84,21 @@ TEST_F(RemoteDirConnection, ConstructorWithInterfaceHandle) {
 TEST_F(RemoteDirConnection, ConstructorWithDirPtr) {
   dir_ = std::make_unique<vfs::RemoteDir>(GetPseudoDirConnection());
   CompareReadDirs();
+}
+
+TEST_F(RemoteDirConnection, RemoteDirContainedInPseudoDir) {
+  vfs::PseudoDir containing_dir;
+  containing_dir.AddEntry(
+      "remote", std::make_unique<vfs::RemoteDir>(GetPseudoDirConnection()));
+
+  fuchsia::io::DirectorySyncPtr ptr;
+  containing_dir.Serve(fuchsia::io::OPEN_RIGHT_READABLE,
+                       ptr.NewRequest().TakeChannel(), loop_.dispatcher());
+
+  std::vector<vfs_tests::Dirent> expected = {
+      vfs_tests::Dirent::DirentForDot(),
+      vfs_tests::Dirent::DirentForDirectory("remote")};
+  AssertReadDirents(ptr, 1024, expected);
 }
 
 }  // namespace
