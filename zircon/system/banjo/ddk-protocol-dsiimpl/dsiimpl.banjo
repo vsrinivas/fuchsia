@@ -53,6 +53,7 @@ struct DesignwareConfig {
     uint32 phy_timer_clklp_to_hs;
     uint32 phy_timer_hs_to_lp;
     uint32 phy_timer_lp_to_hs;
+    uint8 auto_clklane;
 };
 
 /// This structure contains information that the DSI block needs from the MIPI D-PHY

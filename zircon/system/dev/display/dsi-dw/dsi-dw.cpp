@@ -115,6 +115,17 @@ bool DsiDw::DsiImplIsPoweredUp() {
     return (DsiDwPwrUpReg::Get().ReadFrom(&(*dsi_mmio_)).shutdown() == kPowerOn);
 }
 
+zx_status_t DsiDw::DsiImplEnableBist(uint32_t pattern) {
+    // enable video mode
+    DsiImplSetMode(DSI_MODE_VIDEO);
+
+    DsiDwVidModeCfgReg::Get().ReadFrom(&(*dsi_mmio_))
+                             .set_vpg_mode(1)
+                             .set_vpg_en(1)
+                             .WriteTo(&(*dsi_mmio_));
+    return ZX_OK;
+
+}
 void DsiDw::DsiImplPhySendCode(uint32_t code, uint32_t parameter) {
     // Write code
     DsiDwPhyTstCtrl1Reg::Get().FromValue(0)
@@ -262,7 +273,7 @@ zx_status_t DsiDw::DsiImplConfig(const dsi_config_t* dsi_config) {
     // The following values are relevent for video mode
     // 3.1 Configure low power transitions and video mode type
     DsiDwVidModeCfgReg::Get().ReadFrom(&(*dsi_mmio_))
-                             .set_vpg_en(1)
+                             .set_vpg_en(0)
                              .set_lp_cmd_en(1)
                              .set_frame_bta_ack_en(1)
                              .set_lp_hfp_en(1)
@@ -343,7 +354,7 @@ zx_status_t DsiDw::DsiImplConfig(const dsi_config_t* dsi_config) {
                             .WriteTo(&(*dsi_mmio_));
 
     DsiDwLpclkCtrlReg::Get().ReadFrom(&(*dsi_mmio_))
-                            .set_auto_clklane_ctrl(1)
+                            .set_auto_clklane_ctrl(dw_cfg.auto_clklane)
                             .set_phy_txrequestclkhs(1)
                             .WriteTo(&(*dsi_mmio_));
 
