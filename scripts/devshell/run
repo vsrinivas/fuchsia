@@ -4,11 +4,24 @@
 # found in the LICENSE file.
 
 ### start fuchsia in qemu with a FVM disk
+## start fuchsia in qemu with a FVM disk
+##
+## This command delegates to //zircon/scripts/run-zircon. Flags are documented
+## in that script, and can be discovered by passing -h or --help.
+##
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
 source "${FUCHSIA_DIR}/buildtools/vars.sh"
+
+for arg in "$@"; do
+  if [[ "$arg" = "-h" || "$arg" = "--help" ]]; then
+    fx-command-help
+    "${FUCHSIA_DIR}/zircon/scripts/run-zircon" -h
+    exit 1
+  fi
+done
 
 qemu_dir="${BUILDTOOLS_QEMU_DIR}/bin"
 
