@@ -71,14 +71,14 @@ class Thread {
 
     const zx::thread& handle() const { return handle_; }
     zx_koid_t koid() const { return koid_; }
-    State state() const { return state_.load(std::memory_order_relaxed); }
+    State state() const { return state_.load(); }
 
   private:
     static constexpr zx_duration_t THREAD_TIMEOUT = ZX_MSEC(1000);
     static constexpr zx_duration_t THREAD_POLL_INTERVAL = ZX_MSEC(1);
 
     void SetState(State state) {
-        state_.store(state, std::memory_order_relaxed);
+        state_.store(state);
     }
 
     void Reset();
