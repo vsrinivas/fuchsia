@@ -116,10 +116,20 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// Get the protocol address of this interface.
     fn get_protocol_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Option<P>;
 
+    /// Get the hardware address of this interface.
     fn get_hardware_addr<D: EventDispatcher>(
         ctx: &mut Context<D>,
         device_id: u64,
     ) -> Self::HardwareAddr;
+
+    /// Notifies the device layer that the hardware address `hw_addr`
+    /// was resolved for a the given protocol address `proto_addr`.
+    fn address_resolved<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+        proto_addr: P,
+        hw_addr: Self::HardwareAddr,
+    );
 }
 
 /// Handle a ARP timer event
@@ -228,6 +238,13 @@ pub(crate) fn receive_arp_packet<
             device_id,
             packet.sender_protocol_address().addr(),
         ));
+        // Notify device layer:
+        AD::address_resolved(
+            ctx,
+            device_id,
+            packet.sender_protocol_address(),
+            packet.sender_hardware_address(),
+        );
     }
     if addressed_to_me && packet.operation() == ArpOp::Request {
         let self_hw_addr = AD::get_hardware_addr(ctx, device_id);

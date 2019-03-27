@@ -443,6 +443,15 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     fn get_hardware_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Mac {
         get_device_state(ctx, device_id).mac
     }
+
+    fn address_resolved<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+        proto_addr: Ipv4Addr,
+        hw_addr: Mac,
+    ) {
+        log_unimplemented!((), "Ethernet frame queueing not implemented");
+    }
 }
 
 /// Dummy type used to implement NdpDevice
