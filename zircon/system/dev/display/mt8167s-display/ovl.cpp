@@ -259,7 +259,7 @@ zx_status_t Ovl::Config(uint8_t layer, OvlConfig &cfg) {
     // Setup magical register with undocumented magic value
     ovl_mmio_->Write32(0x6070, OVL_RDMAx_MEM_GMC_SETTING(layer));
     active_layers_ |= static_cast<uint8_t>((1 << layer));
-    layer_handle_[layer] = cfg.paddr;
+    layer_handle_[layer] = cfg.handle;
     return ZX_OK;
 }
 

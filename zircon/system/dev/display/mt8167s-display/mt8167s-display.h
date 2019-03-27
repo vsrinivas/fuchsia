@@ -12,6 +12,7 @@
 
 #include <ddk/debug.h>
 #include <ddktl/device.h>
+#include <fbl/intrusive_double_list.h>
 #include <lib/mmio/mmio.h>
 #include <ddktl/protocol/display/controller.h>
 #include <ddktl/protocol/dsiimpl.h>
@@ -34,6 +35,16 @@
 #include "mt-sysconfig.h"
 
 namespace mt8167s_display {
+
+struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> {
+    ~ImageInfo() {
+        if (pmt)
+            pmt.unpin();
+    }
+
+    zx::pmt pmt;
+    zx_paddr_t paddr;
+};
 
 class Mt8167sDisplay;
 
@@ -129,7 +140,7 @@ private:
     display_setting_t disp_setting_;
 
     // Imported Images
-    list_node_t imported_images_ TA_GUARDED(image_lock_);
+    fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_images_ TA_GUARDED(image_lock_);
 
     // Display controller related data
     ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);

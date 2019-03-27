@@ -56,12 +56,6 @@ constexpr display_setting_t kDisplaySettingSt7701s = {
     .vsync_pol = 0, // unused
 };
 
-struct ImageInfo {
-    zx::pmt pmt;
-    zx_paddr_t paddr;
-    list_node_t node;
-};
-
 } // namespace
 
 void Mt8167sDisplay::CopyDisplaySettings() {
@@ -99,16 +93,10 @@ void Mt8167sDisplay::DisplayControllerImplSetDisplayControllerInterface(
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 zx_status_t Mt8167sDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
                                                                 size_t offset) {
-    ImageInfo* import_info = new(ImageInfo);
+    auto import_info = std::make_unique<ImageInfo>();
     if (import_info == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
-    auto cleanup = fbl::MakeAutoCall([&]() {
-        if (import_info->pmt) {
-            import_info->pmt.unpin();
-        }
-        delete(import_info);
-     });
 
     fbl::AutoLock lock(&image_lock_);
     if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats[0]) {
@@ -130,27 +118,16 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportVmoImage(image_t* image, 
     // Make sure paddr is allocated in the lower 4GB. (ZX-1073)
     ZX_ASSERT((paddr + size) <= UINT32_MAX);
     import_info->paddr = paddr;
-    list_add_head(&imported_images_, &import_info->node);
-    image->handle = paddr;
-    cleanup.cancel();
+    image->handle = reinterpret_cast<uint64_t>(import_info.get());
+    imported_images_.push_back(std::move(import_info));
     return status;
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 void Mt8167sDisplay::DisplayControllerImplReleaseImage(image_t* image) {
     fbl::AutoLock lock(&image_lock_);
-    zx_paddr_t image_paddr = reinterpret_cast<zx_paddr_t>(image->handle);
-    ImageInfo* info;
-    list_for_every_entry(&imported_images_, info, ImageInfo, node) {
-        if (info->paddr == image_paddr) {
-            list_delete(&info->node);
-            break;
-        }
-    }
-    if (info) {
-        info->pmt.unpin();
-        delete(info);
-    }
+    auto info = reinterpret_cast<ImageInfo*>(image->handle);
+    imported_images_.erase(*info);
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
@@ -226,10 +203,11 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
         disp_rdma_->Stop();
         for (size_t j = 0; j < config->layer_count; j++) {
             const primary_layer_t& layer = config->layer_list[j]->cfg.primary;
-            zx_paddr_t addr = reinterpret_cast<zx_paddr_t>(layer.image.handle);
+            auto info = reinterpret_cast<ImageInfo*>(layer.image.handle);
             // Build the overlay configuration. For now we only provide format and address.
             OvlConfig cfg;
-            cfg.paddr = addr;
+            cfg.handle = layer.image.handle;
+            cfg.paddr = info->paddr;
             cfg.format = layer.image.pixel_format;
             cfg.alpha_mode = layer.alpha_mode;
             cfg.alpha_val = layer.alpha_layer_val;
@@ -677,8 +655,6 @@ zx_status_t Mt8167sDisplay::Bind() {
         DISP_ERROR("Could not create vsync_thread\n");
         return status;
     }
-
-    list_initialize(&imported_images_);
 
     status = DdkAdd("mt8167s-display");
     if (status != ZX_OK) {

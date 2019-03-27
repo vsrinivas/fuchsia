@@ -48,6 +48,7 @@ constexpr uint8_t  PANEL_ST7701S = 0x01;
 struct OvlConfig {
     zx_pixel_format_t format;
     zx_paddr_t paddr;
+    uint64_t handle;
     alpha_t alpha_mode;
     float alpha_val;
     frame_t src_frame;
