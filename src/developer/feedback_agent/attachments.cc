@@ -10,6 +10,7 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/sized_vmo.h>
+#include <lib/syslog/cpp/logger.h>
 
 namespace fuchsia {
 namespace feedback {
@@ -36,6 +37,8 @@ void PushBackIfValuePresent(const std::string& key,
                             std::vector<Attachment>* attachments) {
   if (value.has_value()) {
     attachments->push_back(BuildAttachment(key, std::move(value.value())));
+  } else {
+    FX_LOGS(WARNING) << "missing attachment " << key;
   }
 }
 

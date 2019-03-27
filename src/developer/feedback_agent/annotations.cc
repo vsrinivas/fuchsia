@@ -86,6 +86,8 @@ void PushBackIfValuePresent(const std::string& key,
                             std::vector<Annotation>* annotations) {
   if (value.has_value()) {
     annotations->push_back(BuildAnnotation(key, value.value()));
+  } else {
+    FX_LOGS(WARNING) << "missing annotation " << key;
   }
 }
 
