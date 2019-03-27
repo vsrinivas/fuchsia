@@ -5,6 +5,7 @@
 #include <lib/sys/cpp/component_context.h>
 
 #include <lib/fdio/directory.h>
+#include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/zx/channel.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -19,8 +20,8 @@ constexpr char kServiceRootPath[] = "/svc";
 ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
                                    zx::channel directory_request,
                                    async_dispatcher_t* dispatcher)
-    : svc_(std::move(svc)) {
-  outgoing_.Serve(std::move(directory_request), dispatcher);
+    : svc_(std::move(svc)), outgoing_(std::make_shared<OutgoingDirectory>()) {
+  outgoing_->Serve(std::move(directory_request), dispatcher);
 }
 
 ComponentContext::~ComponentContext() = default;

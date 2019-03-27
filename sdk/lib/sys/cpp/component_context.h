@@ -110,9 +110,6 @@ class ComponentContext final {
   // ```
   const std::shared_ptr<ServiceDirectory>& svc() const { return svc_; }
 
-  // IMP: use |outgoing2| till we change this function to return
-  // std::shared_ptr<OutgoingDirectory>.
-  //
   // The outgoing namespace.
   //
   // Use this object to publish services and data to the component manager and
@@ -125,7 +122,7 @@ class ComponentContext final {
   //  public:
   //   App(std::unique_ptr<ComponentContext> context)
   //     : context_(std::move(context) {
-  //     context_.outgoing2()->AddPublicService(bindings_.GetHandler(this));
+  //     context_.outgoing()->AddPublicService(bindings_.GetHandler(this));
   //   }
   //
   //   // fuchsia::foo::Controller implementation:
@@ -135,15 +132,18 @@ class ComponentContext final {
   //   fidl::BindingSet<fuchsia::foo::Controller> bindings_;
   // }
   // ```
-  const OutgoingDirectory& outgoing() const { return outgoing_; }
-  OutgoingDirectory& outgoing() { return outgoing_; }
+  const std::shared_ptr<OutgoingDirectory>& outgoing() const {
+    return outgoing_;
+  }
+  std::shared_ptr<OutgoingDirectory>& outgoing() { return outgoing_; }
 
-  const OutgoingDirectory* outgoing2() const { return &outgoing_; }
-  OutgoingDirectory* outgoing2() { return &outgoing_; }
+  // Deprecated. Use |outgoing|.
+  const OutgoingDirectory* outgoing2() const { return outgoing_.get(); }
+  OutgoingDirectory* outgoing2() { return outgoing_.get(); }
 
  private:
   std::shared_ptr<ServiceDirectory> svc_;
-  OutgoingDirectory outgoing_;
+  std::shared_ptr<OutgoingDirectory> outgoing_;
 };
 
 }  // namespace sys
