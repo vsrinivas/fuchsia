@@ -14,12 +14,12 @@ pub async fn audio_method_to_fidl(
     facade: Arc<AudioFacade>,
 ) -> Result<Value, Error> {
     match method_name.parse()? {
-        AudioMethod::PutInputAudio => facade.put_input_audio(args),
-        AudioMethod::StartInputInjection => facade.start_input_injection(args),
-        AudioMethod::StopInputInjection => facade.stop_input_injection(),
+        AudioMethod::PutInputAudio => await!(facade.put_input_audio(args)),
+        AudioMethod::StartInputInjection => await!(facade.start_input_injection(args)),
+        AudioMethod::StopInputInjection => await!(facade.stop_input_injection()),
 
-        AudioMethod::StartOutputSave => facade.start_output_save(),
+        AudioMethod::StartOutputSave => await!(facade.start_output_save()),
         AudioMethod::StopOutputSave => await!(facade.stop_output_save()),
-        AudioMethod::GetOutputAudio => facade.get_output_audio(),
+        AudioMethod::GetOutputAudio => await!(facade.get_output_audio()),
     }
 }

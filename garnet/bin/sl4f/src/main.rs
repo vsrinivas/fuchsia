@@ -4,7 +4,7 @@
 
 #![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
-
+#![recursion_limit = "1024"]
 #[macro_use]
 extern crate failure;
 

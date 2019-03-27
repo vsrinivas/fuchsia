@@ -37,6 +37,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//third_party/rust_crates:base64",
     "//third_party/rust_crates:byteorder",

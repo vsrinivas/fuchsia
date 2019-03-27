@@ -3,6 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "features": [
+            "shell"
+        ],
         "services": [
             "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.bluetooth.control.Control",
@@ -18,8 +21,9 @@
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
+            "fuchsia.virtualaudio.Control",
+            "fuchsia.virtualaudio.Input",
             "fuchsia.wlan.device.service.DeviceService"
-        ],
-        "features": [ "shell" ]
+        ]
     }
 }
