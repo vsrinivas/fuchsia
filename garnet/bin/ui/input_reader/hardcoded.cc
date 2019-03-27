@@ -18,10 +18,10 @@
 #include <hid/paradise.h>
 #include <hid/samsung.h>
 #include <hid/usages.h>
+#include <lib/ui/input/cpp/formatting.h>
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/time/time_point.h>
-#include <lib/ui/input/cpp/formatting.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <trace/event.h>
@@ -30,8 +30,20 @@
 
 namespace {
 
+// Variable to quickly re-enable the hardcoded touchpad reports.
+// TODO(ZX-3219): Remove this once touchpads are stable
+bool USE_TOUCHPAD_HARDCODED_REPORTS = false;
+bool USE_TOUCHSCREEN_HARDCODED_REPORTS = false;
+
 int64_t InputEventTimestampNow() {
   return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
+}
+
+fuchsia::ui::input::InputReport CloneReport(
+    const fuchsia::ui::input::InputReport& report) {
+  fuchsia::ui::input::InputReport result;
+  fidl::Clone(report, &result);
+  return result;
 }
 
 // Casting from unsigned to signed can change the bit pattern so
@@ -764,6 +776,668 @@ bool Hardcoded::ParseAmbientLightSensorReport(
               << " parsed (sensor=" << static_cast<uint16_t>(*sensor_idx)
               << "): " << *sensor_report;
   return true;
+}
+
+Protocol Hardcoded::MatchProtocol(const std::vector<uint8_t> desc,
+                                  HidDecoder* hid_decoder) {
+  if (USE_TOUCHSCREEN_HARDCODED_REPORTS) {
+    FXL_VLOG(2) << name() << " Using Hardcoded Touchscreen descriptors";
+    if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
+      return Protocol::Acer12Touch;
+    }
+    if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
+      hid_decoder->SetupDevice(HidDecoder::Device::SAMSUNG);
+      return Protocol::SamsungTouch;
+    }
+    if (is_paradise_touch_report_desc(desc.data(), desc.size())) {
+      return Protocol::ParadiseV1Touch;
+    }
+    if (is_paradise_touch_v2_report_desc(desc.data(), desc.size())) {
+      return Protocol::ParadiseV2Touch;
+    }
+    if (is_paradise_touch_v3_report_desc(desc.data(), desc.size())) {
+      return Protocol::ParadiseV3Touch;
+    }
+    if (is_egalax_touchscreen_report_desc(desc.data(), desc.size())) {
+      return Protocol::EgalaxTouch;
+    }
+    if (is_eyoyo_touch_report_desc(desc.data(), desc.size())) {
+      hid_decoder->SetupDevice(HidDecoder::Device::EYOYO);
+      return Protocol::EyoyoTouch;
+    }
+    if (is_ft3x27_touch_report_desc(desc.data(), desc.size())) {
+      hid_decoder->SetupDevice(HidDecoder::Device::FT3X27);
+      return Protocol::Ft3x27Touch;
+    }
+  }
+  if (USE_TOUCHPAD_HARDCODED_REPORTS) {
+    FXL_VLOG(2) << name() << " Using Hardcoded Touchpad descriptors";
+    if (is_paradise_touchpad_v1_report_desc(desc.data(), desc.size())) {
+      return Protocol::ParadiseV1TouchPad;
+    }
+    if (is_paradise_touchpad_v2_report_desc(desc.data(), desc.size())) {
+      return Protocol::ParadiseV2TouchPad;
+    }
+  }
+  if (is_paradise_sensor_report_desc(desc.data(), desc.size())) {
+    return Protocol::ParadiseSensor;
+  }
+  return Protocol::Other;
+}
+
+void Hardcoded::Initialize(Protocol protocol) {
+  protocol_ = protocol;
+  if (protocol == Protocol::Keyboard) {
+    FXL_VLOG(2) << "Device " << name() << " has keyboard";
+    has_keyboard_ = true;
+    keyboard_descriptor_ = fuchsia::ui::input::KeyboardDescriptor::New();
+    keyboard_descriptor_->keys.resize(HID_USAGE_KEY_RIGHT_GUI -
+                                      HID_USAGE_KEY_A + 1);
+    for (size_t index = HID_USAGE_KEY_A; index <= HID_USAGE_KEY_RIGHT_GUI;
+         ++index) {
+      keyboard_descriptor_->keys.at(index - HID_USAGE_KEY_A) = index;
+    }
+
+    keyboard_report_ = fuchsia::ui::input::InputReport::New();
+    keyboard_report_->keyboard = fuchsia::ui::input::KeyboardReport::New();
+  } else if (protocol == Protocol::BootMouse || protocol == Protocol::Gamepad) {
+    FXL_VLOG(2) << "Device " << name() << " has mouse";
+    has_mouse_ = true;
+    mouse_device_type_ = (protocol == Protocol::BootMouse)
+                             ? MouseDeviceType::BOOT
+                             : MouseDeviceType::GAMEPAD;
+
+    mouse_descriptor_ = fuchsia::ui::input::MouseDescriptor::New();
+    mouse_descriptor_->rel_x.range.min = INT32_MIN;
+    mouse_descriptor_->rel_x.range.max = INT32_MAX;
+    mouse_descriptor_->rel_x.resolution = 1;
+
+    mouse_descriptor_->rel_y.range.min = INT32_MIN;
+    mouse_descriptor_->rel_y.range.max = INT32_MAX;
+    mouse_descriptor_->rel_y.resolution = 1;
+
+    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonPrimary;
+    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonSecondary;
+    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonTertiary;
+
+    mouse_report_ = fuchsia::ui::input::InputReport::New();
+    mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
+  } else if (protocol == Protocol::Acer12Touch) {
+    FXL_VLOG(2) << "Device " << name() << " has stylus";
+    has_stylus_ = true;
+    stylus_descriptor_ = fuchsia::ui::input::StylusDescriptor::New();
+
+    stylus_descriptor_->x.range.min = 0;
+    stylus_descriptor_->x.range.max = ACER12_STYLUS_X_MAX;
+    stylus_descriptor_->x.resolution = 1;
+
+    stylus_descriptor_->y.range.min = 0;
+    stylus_descriptor_->y.range.max = ACER12_STYLUS_Y_MAX;
+    stylus_descriptor_->y.resolution = 1;
+
+    stylus_descriptor_->is_invertible = false;
+
+    stylus_descriptor_->buttons |= fuchsia::ui::input::kStylusBarrel;
+
+    stylus_report_ = fuchsia::ui::input::InputReport::New();
+    stylus_report_->stylus = fuchsia::ui::input::StylusReport::New();
+
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = ACER12_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = ACER12_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(jpoichet) do not hardcode this
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::ACER12;
+  } else if (protocol == Protocol::SamsungTouch) {
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = SAMSUNG_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = SAMSUNG_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(jpoichet) do not hardcode this
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::SAMSUNG;
+  } else if (protocol == Protocol::ParadiseV1Touch) {
+    // TODO(cpu): Add support for stylus.
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = PARADISE_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = PARADISE_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(cpu) do not hardcode |max_finger_id|.
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::PARADISEv1;
+  } else if (protocol == Protocol::ParadiseV2Touch) {
+    FXL_VLOG(2) << "Device " << name() << " has stylus";
+    has_stylus_ = true;
+    stylus_descriptor_ = fuchsia::ui::input::StylusDescriptor::New();
+
+    stylus_descriptor_->x.range.min = 0;
+    stylus_descriptor_->x.range.max = PARADISE_STYLUS_X_MAX;
+    stylus_descriptor_->x.resolution = 1;
+
+    stylus_descriptor_->y.range.min = 0;
+    stylus_descriptor_->y.range.max = PARADISE_STYLUS_Y_MAX;
+    stylus_descriptor_->y.resolution = 1;
+
+    stylus_descriptor_->is_invertible = false;
+
+    stylus_descriptor_->buttons |= fuchsia::ui::input::kStylusBarrel;
+
+    stylus_report_ = fuchsia::ui::input::InputReport::New();
+    stylus_report_->stylus = fuchsia::ui::input::StylusReport::New();
+
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = PARADISE_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = PARADISE_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(cpu) do not hardcode |max_finger_id|.
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::PARADISEv2;
+  } else if (protocol == Protocol::ParadiseV3Touch) {
+    FXL_VLOG(2) << "Device " << name() << " has stylus";
+    has_stylus_ = true;
+    stylus_descriptor_ = fuchsia::ui::input::StylusDescriptor::New();
+
+    stylus_descriptor_->x.range.min = 0;
+    stylus_descriptor_->x.range.max = PARADISE_STYLUS_X_MAX;
+    stylus_descriptor_->x.resolution = 1;
+
+    stylus_descriptor_->y.range.min = 0;
+    stylus_descriptor_->y.range.max = PARADISE_STYLUS_Y_MAX;
+    stylus_descriptor_->y.resolution = 1;
+
+    stylus_descriptor_->is_invertible = false;
+
+    stylus_descriptor_->buttons |= fuchsia::ui::input::kStylusBarrel;
+
+    stylus_report_ = fuchsia::ui::input::InputReport::New();
+    stylus_report_->stylus = fuchsia::ui::input::StylusReport::New();
+
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = PARADISE_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = PARADISE_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(cpu) do not hardcode |max_finger_id|.
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::PARADISEv3;
+  } else if (protocol == Protocol::ParadiseV1TouchPad) {
+    FXL_VLOG(2) << "Device " << name() << " has touchpad";
+    has_mouse_ = true;
+    mouse_device_type_ = MouseDeviceType::PARADISEv1;
+
+    mouse_descriptor_ = fuchsia::ui::input::MouseDescriptor::New();
+
+    mouse_descriptor_->rel_x.range.min = INT32_MIN;
+    mouse_descriptor_->rel_x.range.max = INT32_MAX;
+    mouse_descriptor_->rel_x.resolution = 1;
+
+    mouse_descriptor_->rel_y.range.min = INT32_MIN;
+    mouse_descriptor_->rel_y.range.max = INT32_MAX;
+    mouse_descriptor_->rel_y.resolution = 1;
+
+    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonPrimary;
+
+    mouse_report_ = fuchsia::ui::input::InputReport::New();
+    mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
+  } else if (protocol == Protocol::ParadiseV2TouchPad) {
+    FXL_VLOG(2) << "Device " << name() << " has touchpad";
+    has_mouse_ = true;
+    mouse_device_type_ = MouseDeviceType::PARADISEv2;
+
+    mouse_descriptor_ = fuchsia::ui::input::MouseDescriptor::New();
+
+    mouse_descriptor_->rel_x.range.min = INT32_MIN;
+    mouse_descriptor_->rel_x.range.max = INT32_MAX;
+    mouse_descriptor_->rel_x.resolution = 1;
+
+    mouse_descriptor_->rel_y.range.min = INT32_MIN;
+    mouse_descriptor_->rel_y.range.max = INT32_MAX;
+    mouse_descriptor_->rel_y.resolution = 1;
+
+    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonPrimary;
+
+    mouse_report_ = fuchsia::ui::input::InputReport::New();
+    mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
+  } else if (protocol == Protocol::EgalaxTouch) {
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = EGALAX_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = EGALAX_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    touchscreen_descriptor_->max_finger_id = 1;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::EGALAX;
+  } else if (protocol == Protocol::ParadiseSensor) {
+    FXL_VLOG(2) << "Device " << name() << " has motion sensors";
+    sensor_device_type_ = SensorDeviceType::PARADISE;
+    has_sensors_ = true;
+
+    fuchsia::ui::input::SensorDescriptorPtr acc_base =
+        fuchsia::ui::input::SensorDescriptor::New();
+    acc_base->type = fuchsia::ui::input::SensorType::ACCELEROMETER;
+    acc_base->loc = fuchsia::ui::input::SensorLocation::BASE;
+    sensor_descriptors_[kParadiseAccBase] = std::move(acc_base);
+
+    fuchsia::ui::input::SensorDescriptorPtr acc_lid =
+        fuchsia::ui::input::SensorDescriptor::New();
+    acc_lid->type = fuchsia::ui::input::SensorType::ACCELEROMETER;
+    acc_lid->loc = fuchsia::ui::input::SensorLocation::LID;
+    sensor_descriptors_[kParadiseAccLid] = std::move(acc_lid);
+
+    sensor_report_ = fuchsia::ui::input::InputReport::New();
+    sensor_report_->sensor = fuchsia::ui::input::SensorReport::New();
+  } else if (protocol == Protocol::EyoyoTouch) {
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = EYOYO_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = EYOYO_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(jpoichet) do not hardcode this
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::EYOYO;
+  } else if (protocol == Protocol::LightSensor) {
+    FXL_VLOG(2) << "Device " << name() << " has an ambient light sensor";
+    sensor_device_type_ = SensorDeviceType::AMBIENT_LIGHT;
+    has_sensors_ = true;
+
+    fuchsia::ui::input::SensorDescriptorPtr desc =
+        fuchsia::ui::input::SensorDescriptor::New();
+    desc->type = fuchsia::ui::input::SensorType::LIGHTMETER;
+    desc->loc = fuchsia::ui::input::SensorLocation::UNKNOWN;
+    sensor_descriptors_[kAmbientLight] = std::move(desc);
+
+    sensor_report_ = fuchsia::ui::input::InputReport::New();
+    sensor_report_->sensor = fuchsia::ui::input::SensorReport::New();
+  } else if (protocol == Protocol::EyoyoTouch) {
+    FXL_VLOG(2) << "Device " << name() << " has touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = EYOYO_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = EYOYO_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(jpoichet) do not hardcode this
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::EYOYO;
+  } else if (protocol == Protocol::Ft3x27Touch) {
+    FXL_VLOG(2) << "Device " << name() << " has a touchscreen";
+    has_touchscreen_ = true;
+    touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
+    touchscreen_descriptor_->x.range.min = 0;
+    touchscreen_descriptor_->x.range.max = FT3X27_X_MAX;
+    touchscreen_descriptor_->x.resolution = 1;
+    touchscreen_descriptor_->y.range.min = 0;
+    touchscreen_descriptor_->y.range.max = FT3X27_Y_MAX;
+    touchscreen_descriptor_->y.resolution = 1;
+
+    // TODO(SCN-867) Use HID parsing for all touch devices
+    // will remove the need for this hardcoding
+    touchscreen_descriptor_->max_finger_id = 255;
+
+    touchscreen_report_ = fuchsia::ui::input::InputReport::New();
+    touchscreen_report_->touchscreen =
+        fuchsia::ui::input::TouchscreenReport::New();
+
+    touch_device_type_ = TouchDeviceType::FT3X27;
+  }
+}
+
+void Hardcoded::NotifyRegistry(
+    fuchsia::ui::input::InputDeviceRegistry* registry) {
+  if (has_sensors_) {
+    FXL_DCHECK(kMaxSensorCount == sensor_descriptors_.size());
+    FXL_DCHECK(kMaxSensorCount == sensor_devices_.size());
+    for (size_t i = 0; i < kMaxSensorCount; ++i) {
+      if (sensor_descriptors_[i]) {
+        fuchsia::ui::input::DeviceDescriptor descriptor;
+        zx_status_t status =
+            fidl::Clone(sensor_descriptors_[i], &descriptor.sensor);
+        FXL_DCHECK(status == ZX_OK)
+            << "Sensor descriptor: clone failed (status=" << status << ")";
+        registry->RegisterDevice(std::move(descriptor),
+                                 sensor_devices_[i].NewRequest());
+      }
+    }
+    // Sensor devices can't be anything else, so don't bother with other types.
+    return;
+  }
+
+  // Register the hardcoded device's descriptors.
+  {
+    fuchsia::ui::input::DeviceDescriptor descriptor;
+    if (has_keyboard_) {
+      fidl::Clone(keyboard_descriptor_, &descriptor.keyboard);
+    }
+    if (has_mouse_) {
+      fidl::Clone(mouse_descriptor_, &descriptor.mouse);
+    }
+    if (has_stylus_) {
+      fidl::Clone(stylus_descriptor_, &descriptor.stylus);
+    }
+    if (has_touchscreen_) {
+      fidl::Clone(touchscreen_descriptor_, &descriptor.touchscreen);
+    }
+    registry->RegisterDevice(std::move(descriptor), input_device_.NewRequest());
+  }
+}
+
+void Hardcoded::Read(std::vector<uint8_t> report, int report_len,
+                     bool discard) {
+  if (has_keyboard_) {
+    ParseKeyboardReport(report.data(), report_len, keyboard_report_.get());
+    if (!discard) {
+      TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                       keyboard_report_->trace_id);
+      input_device_->DispatchReport(CloneReport(*keyboard_report_));
+    }
+  }
+
+  switch (mouse_device_type_) {
+    case MouseDeviceType::BOOT:
+      ParseMouseReport(report.data(), report_len, mouse_report_.get());
+      if (!discard) {
+        TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                         mouse_report_->trace_id);
+        input_device_->DispatchReport(CloneReport(*mouse_report_));
+      }
+      break;
+    case MouseDeviceType::PARADISEv1:
+      if (ParseParadiseTouchpadReportV1(report.data(), report_len,
+                                        mouse_report_.get())) {
+        if (!discard) {
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           mouse_report_->trace_id);
+          input_device_->DispatchReport(CloneReport(*mouse_report_));
+        }
+      }
+      break;
+    case MouseDeviceType::PARADISEv2:
+      if (ParseParadiseTouchpadReportV2(report.data(), report_len,
+                                        mouse_report_.get())) {
+        if (!discard) {
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           mouse_report_->trace_id);
+          input_device_->DispatchReport(CloneReport(*mouse_report_));
+        }
+      }
+      break;
+    case MouseDeviceType::GAMEPAD:
+      // TODO(cpu): remove this once we have a good way to test gamepad.
+      if (ParseGamepadMouseReport(report.data(), report_len,
+                                  mouse_report_.get())) {
+        if (!discard) {
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           mouse_report_->trace_id);
+          input_device_->DispatchReport(CloneReport(*mouse_report_));
+        }
+      }
+      break;
+    case MouseDeviceType::NONE:
+      break;
+    default:
+      break;
+  }
+
+  switch (touch_device_type_) {
+    case TouchDeviceType::ACER12:
+      if (report[0] == ACER12_RPT_ID_STYLUS) {
+        if (ParseAcer12StylusReport(report.data(), report_len,
+                                    stylus_report_.get())) {
+          if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             stylus_report_->trace_id);
+            input_device_->DispatchReport(CloneReport(*stylus_report_));
+          }
+        }
+      } else if (report[0] == ACER12_RPT_ID_TOUCH) {
+        if (ParseAcer12TouchscreenReport(report.data(), report_len,
+                                         touchscreen_report_.get())) {
+          if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
+          }
+        }
+      }
+      break;
+    case TouchDeviceType::SAMSUNG:
+      if (report[0] == SAMSUNG_RPT_ID_TOUCH) {
+        if (ParseSamsungTouchscreenReport(report.data(), report_len,
+                                          touchscreen_report_.get())) {
+          if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
+          }
+        }
+      }
+      break;
+
+    case TouchDeviceType::PARADISEv1:
+      if (report[0] == PARADISE_RPT_ID_TOUCH) {
+        if (ParseParadiseTouchscreenReportV1(report.data(), report_len,
+                                             touchscreen_report_.get())) {
+          if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
+          }
+        }
+      }
+      break;
+    case TouchDeviceType::PARADISEv2:
+      if (report[0] == PARADISE_RPT_ID_TOUCH) {
+        if (ParseParadiseTouchscreenReportV2(report.data(), report_len,
+                                             touchscreen_report_.get())) {
+          if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
+          }
+        }
+      } else if (report[0] == PARADISE_RPT_ID_STYLUS) {
+        if (ParseParadiseStylusReport(report.data(), report_len,
+                                      stylus_report_.get())) {
+          if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             stylus_report_->trace_id);
+            input_device_->DispatchReport(CloneReport(*stylus_report_));
+          }
+        }
+      }
+      break;
+    case TouchDeviceType::PARADISEv3:
+      if (report[0] == PARADISE_RPT_ID_TOUCH) {
+        // Paradise V3 uses the same touchscreen report as v1.
+        if (ParseParadiseTouchscreenReportV1(report.data(), report_len,
+                                             touchscreen_report_.get())) {
+          if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
+          }
+        }
+      } else if (report[0] == PARADISE_RPT_ID_STYLUS) {
+        if (ParseParadiseStylusReport(report.data(), report_len,
+                                      stylus_report_.get())) {
+          if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             stylus_report_->trace_id);
+            input_device_->DispatchReport(CloneReport(*stylus_report_));
+          }
+        }
+      }
+      break;
+    case TouchDeviceType::EGALAX:
+      if (report[0] == EGALAX_RPT_ID_TOUCH) {
+        if (ParseEGalaxTouchscreenReport(report.data(), report_len,
+                                         touchscreen_report_.get())) {
+          if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
+          }
+        }
+      }
+      break;
+
+    case TouchDeviceType::EYOYO:
+      if (report[0] == EYOYO_RPT_ID_TOUCH) {
+        if (ParseEyoyoTouchscreenReport(report.data(), report_len,
+                                        touchscreen_report_.get())) {
+          if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
+          }
+        }
+      }
+      break;
+    case TouchDeviceType::FT3X27:
+      if (report[0] == FT3X27_RPT_ID_TOUCH) {
+        if (ParseFt3x27TouchscreenReport(report.data(), report_len,
+                                         touchscreen_report_.get())) {
+          if (!discard) {
+            TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                             touchscreen_report_->trace_id);
+            input_device_->DispatchReport(CloneReport(*touchscreen_report_));
+          }
+        }
+      }
+      break;
+
+    default:
+      break;
+  }
+
+  switch (sensor_device_type_) {
+    case SensorDeviceType::PARADISE:
+      if (ParseParadiseSensorReport(report.data(), report_len, &sensor_idx_,
+                                    sensor_report_.get())) {
+        if (!discard) {
+          FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
+          FXL_DCHECK(sensor_devices_[sensor_idx_]);
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           sensor_report_->trace_id);
+          sensor_devices_[sensor_idx_]->DispatchReport(
+              CloneReport(*sensor_report_));
+        }
+      }
+      break;
+    case SensorDeviceType::AMBIENT_LIGHT:
+      if (ParseAmbientLightSensorReport(report.data(), report_len, &sensor_idx_,
+                                        sensor_report_.get())) {
+        if (!discard) {
+          FXL_DCHECK(sensor_idx_ < kMaxSensorCount);
+          FXL_DCHECK(sensor_devices_[sensor_idx_]);
+          TRACE_FLOW_BEGIN("input", "hid_read_to_listener",
+                           sensor_report_->trace_id);
+          sensor_devices_[sensor_idx_]->DispatchReport(
+              CloneReport(*sensor_report_));
+        }
+      }
+      break;
+    default:
+      break;
+  }
 }
 
 }  // namespace mozart

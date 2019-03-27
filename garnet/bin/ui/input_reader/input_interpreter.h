@@ -105,49 +105,6 @@ class InputInterpreter {
   std::vector<InputDevice> devices_;
 
   std::unique_ptr<HidDecoder> hid_decoder_;
-
-  // TODO(SCN-1251) All of the below variables are only used with devices that
-  // have not been updated to the new code path. They will hopefully be removed
-  // before long.
-
-  static const uint8_t kMaxSensorCount = 16;
-  static const uint8_t kNoSuchSensor = 0xFF;
-
-  bool has_keyboard_ = false;
-  fuchsia::ui::input::KeyboardDescriptorPtr keyboard_descriptor_;
-  bool has_media_buttons_ = false;
-  fuchsia::ui::input::MediaButtonsDescriptorPtr media_buttons_descriptor_;
-  bool has_mouse_ = false;
-  fuchsia::ui::input::MouseDescriptorPtr mouse_descriptor_;
-  bool has_stylus_ = false;
-  fuchsia::ui::input::StylusDescriptorPtr stylus_descriptor_;
-  bool has_touchscreen_ = false;
-  fuchsia::ui::input::TouchscreenDescriptorPtr touchscreen_descriptor_;
-  bool has_sensors_ = false;
-  // Arrays are indexed by the sensor number that was assigned by Zircon.
-  // Keeps track of the physical sensors multiplexed over the file descriptor.
-  std::array<fuchsia::ui::input::SensorDescriptorPtr, kMaxSensorCount>
-      sensor_descriptors_;
-  std::array<fuchsia::ui::input::InputDevicePtr, kMaxSensorCount>
-      sensor_devices_;
-
-  TouchDeviceType touch_device_type_ = TouchDeviceType::NONE;
-  MouseDeviceType mouse_device_type_ = MouseDeviceType::NONE;
-  SensorDeviceType sensor_device_type_ = SensorDeviceType::NONE;
-
-  // Keep track of which sensor gave us a report. Index into
-  // |sensor_descriptors_| and |sensor_devices_|.
-  uint8_t sensor_idx_ = kNoSuchSensor;
-
-  fuchsia::ui::input::InputReportPtr keyboard_report_;
-  fuchsia::ui::input::InputReportPtr mouse_report_;
-  fuchsia::ui::input::InputReportPtr touchscreen_report_;
-  fuchsia::ui::input::InputReportPtr stylus_report_;
-  fuchsia::ui::input::InputReportPtr sensor_report_;
-  fuchsia::ui::input::InputReportPtr media_buttons_report_;
-
-  fuchsia::ui::input::InputDevicePtr input_device_;
-
   Protocol protocol_;
   Hardcoded hardcoded_ = {};
 };
