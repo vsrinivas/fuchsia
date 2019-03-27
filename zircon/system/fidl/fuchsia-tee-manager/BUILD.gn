@@ -4,12 +4,11 @@
 
 import("$zx/public/gn/fidl.gni")
 
-fidl_library("fuchsia-hardware-tee") {
+fidl_library("fuchsia-tee-manager") {
   sources = [
-    "device_connector.fidl",
+    "provider.fidl",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-tee",
-    "$zx/system/fidl/fuchsia-tee-manager",
+    "$zx/system/fidl/fuchsia-io",
   ]
 }

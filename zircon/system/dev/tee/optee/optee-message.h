@@ -216,15 +216,15 @@ protected:
     using MessageBase::MessageBase; // inherit constructors
 
     bool TryInitializeParameters(size_t starting_param_index,
-                                 const fuchsia_hardware_tee_ParameterSet& parameter_set,
+                                 const fuchsia_tee_ParameterSet& parameter_set,
                                  SharedMemoryManager::ClientMemoryPool* temp_memory_pool);
-    bool TryInitializeValue(const fuchsia_hardware_tee_Value& value, MessageParam* out_param);
-    bool TryInitializeBuffer(const fuchsia_hardware_tee_Buffer& buffer,
+    bool TryInitializeValue(const fuchsia_tee_Value& value, MessageParam* out_param);
+    bool TryInitializeBuffer(const fuchsia_tee_Buffer& buffer,
                              SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                              MessageParam* out_param);
 
     zx_status_t CreateOutputParameterSet(size_t starting_param_index,
-                                         fuchsia_hardware_tee_ParameterSet* out_parameter_set);
+                                         fuchsia_tee_ParameterSet* out_parameter_set);
 
 private:
     // This nested class is just a container for pairing a vmo with a chunk of shared memory. It
@@ -252,9 +252,9 @@ private:
         fbl::unique_ptr<SharedMemory> shared_memory_;
     };
 
-    fuchsia_hardware_tee_Value CreateOutputValueParameter(const MessageParam& optee_param);
+    fuchsia_tee_Value CreateOutputValueParameter(const MessageParam& optee_param);
     zx_status_t CreateOutputBufferParameter(const MessageParam& optee_param,
-                                            fuchsia_hardware_tee_Buffer* out_buffer);
+                                            fuchsia_tee_Buffer* out_buffer);
 
     fbl::Vector<TemporarySharedMemory> allocated_temp_memory_;
 };
@@ -267,14 +267,14 @@ public:
     explicit OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
                                 SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                 const Uuid& trusted_app,
-                                const fuchsia_hardware_tee_ParameterSet& parameter_set);
+                                const fuchsia_tee_ParameterSet& parameter_set);
 
     // Outputs
     uint32_t session_id() const { return header()->session_id; }
     uint32_t return_code() const { return header()->return_code; }
     uint32_t return_origin() const { return header()->return_origin; }
 
-    zx_status_t CreateOutputParameterSet(fuchsia_hardware_tee_ParameterSet* out_parameter_set) {
+    zx_status_t CreateOutputParameterSet(fuchsia_tee_ParameterSet* out_parameter_set) {
         return Message::CreateOutputParameterSet(kNumFixedOpenSessionParams, out_parameter_set);
     }
 
@@ -312,13 +312,13 @@ public:
     explicit InvokeCommandMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
                                   SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                   uint32_t session_id, uint32_t command_id,
-                                  const fuchsia_hardware_tee_ParameterSet& parameter_set);
+                                  const fuchsia_tee_ParameterSet& parameter_set);
 
     // Outputs
     uint32_t return_code() const { return header()->return_code; }
     uint32_t return_origin() const { return header()->return_origin; }
 
-    zx_status_t CreateOutputParameterSet(fuchsia_hardware_tee_ParameterSet* out_parameter_set) {
+    zx_status_t CreateOutputParameterSet(fuchsia_tee_ParameterSet* out_parameter_set) {
         return Message::CreateOutputParameterSet(0, out_parameter_set);
     }
 };

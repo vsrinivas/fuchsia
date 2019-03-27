@@ -28,20 +28,20 @@ void ConvertMessageParamToUuid(const MessageParam::Value& src, TEEC_UUID* dst) {
            sizeof(src.uuid_big_endian.clockSeqAndNode));
 }
 
-constexpr bool IsParameterInput(fuchsia_hardware_tee_Direction direction) {
-    return (direction == fuchsia_hardware_tee_Direction_INPUT) ||
-           (direction == fuchsia_hardware_tee_Direction_INOUT);
+constexpr bool IsParameterInput(fuchsia_tee_Direction direction) {
+    return (direction == fuchsia_tee_Direction_INPUT) ||
+           (direction == fuchsia_tee_Direction_INOUT);
 }
 
-constexpr bool IsParameterOutput(fuchsia_hardware_tee_Direction direction) {
-    return (direction == fuchsia_hardware_tee_Direction_OUTPUT) ||
-           (direction == fuchsia_hardware_tee_Direction_INOUT);
+constexpr bool IsParameterOutput(fuchsia_tee_Direction direction) {
+    return (direction == fuchsia_tee_Direction_OUTPUT) ||
+           (direction == fuchsia_tee_Direction_INOUT);
 }
 
 }; // namespace
 
 bool Message::TryInitializeParameters(size_t starting_param_index,
-                                      const fuchsia_hardware_tee_ParameterSet& parameter_set,
+                                      const fuchsia_tee_ParameterSet& parameter_set,
                                       SharedMemoryManager::ClientMemoryPool* temp_memory_pool) {
     // If we don't have any parameters to parse, then we can just skip this
     if (parameter_set.count == 0) {
@@ -51,16 +51,16 @@ bool Message::TryInitializeParameters(size_t starting_param_index,
     bool is_valid = true;
     for (size_t i = 0; i < parameter_set.count; i++) {
         MessageParam& optee_param = params()[starting_param_index + i];
-        const fuchsia_hardware_tee_Parameter& zx_param = parameter_set.parameters[i];
+        const fuchsia_tee_Parameter& zx_param = parameter_set.parameters[i];
 
         switch (zx_param.tag) {
-        case fuchsia_hardware_tee_ParameterTag_empty:
+        case fuchsia_tee_ParameterTag_empty:
             optee_param.attribute = MessageParam::kAttributeTypeNone;
             break;
-        case fuchsia_hardware_tee_ParameterTag_value:
+        case fuchsia_tee_ParameterTag_value:
             is_valid = TryInitializeValue(zx_param.value, &optee_param);
             break;
-        case fuchsia_hardware_tee_ParameterTag_buffer:
+        case fuchsia_tee_ParameterTag_buffer:
             is_valid = TryInitializeBuffer(zx_param.buffer, temp_memory_pool, &optee_param);
             break;
         default:
@@ -76,17 +76,17 @@ bool Message::TryInitializeParameters(size_t starting_param_index,
     return true;
 }
 
-bool Message::TryInitializeValue(const fuchsia_hardware_tee_Value& value, MessageParam* out_param) {
+bool Message::TryInitializeValue(const fuchsia_tee_Value& value, MessageParam* out_param) {
     ZX_DEBUG_ASSERT(out_param != nullptr);
 
     switch (value.direction) {
-    case fuchsia_hardware_tee_Direction_INPUT:
+    case fuchsia_tee_Direction_INPUT:
         out_param->attribute = MessageParam::kAttributeTypeValueInput;
         break;
-    case fuchsia_hardware_tee_Direction_OUTPUT:
+    case fuchsia_tee_Direction_OUTPUT:
         out_param->attribute = MessageParam::kAttributeTypeValueOutput;
         break;
-    case fuchsia_hardware_tee_Direction_INOUT:
+    case fuchsia_tee_Direction_INOUT:
         out_param->attribute = MessageParam::kAttributeTypeValueInOut;
         break;
     default:
@@ -99,7 +99,7 @@ bool Message::TryInitializeValue(const fuchsia_hardware_tee_Value& value, Messag
     return true;
 }
 
-bool Message::TryInitializeBuffer(const fuchsia_hardware_tee_Buffer& buffer,
+bool Message::TryInitializeBuffer(const fuchsia_tee_Buffer& buffer,
                                   SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                   MessageParam* out_param) {
     ZX_DEBUG_ASSERT(temp_memory_pool != nullptr);
@@ -111,13 +111,13 @@ bool Message::TryInitializeBuffer(const fuchsia_hardware_tee_Buffer& buffer,
 
     MessageParam::AttributeType attribute;
     switch (buffer.direction) {
-    case fuchsia_hardware_tee_Direction_INPUT:
+    case fuchsia_tee_Direction_INPUT:
         attribute = MessageParam::kAttributeTypeTempMemInput;
         break;
-    case fuchsia_hardware_tee_Direction_OUTPUT:
+    case fuchsia_tee_Direction_OUTPUT:
         attribute = MessageParam::kAttributeTypeTempMemOutput;
         break;
-    case fuchsia_hardware_tee_Direction_INOUT:
+    case fuchsia_tee_Direction_INOUT:
         attribute = MessageParam::kAttributeTypeTempMemInOut;
         break;
     default:
@@ -176,11 +176,11 @@ bool Message::TryInitializeBuffer(const fuchsia_hardware_tee_Buffer& buffer,
 
 zx_status_t
 Message::CreateOutputParameterSet(size_t starting_param_index,
-                                  fuchsia_hardware_tee_ParameterSet* out_parameter_set) {
+                                  fuchsia_tee_ParameterSet* out_parameter_set) {
     ZX_DEBUG_ASSERT(out_parameter_set != nullptr);
 
     // Use a temporary parameter set to avoid populating the output until we're sure it's valid.
-    fuchsia_hardware_tee_ParameterSet parameter_set = {};
+    fuchsia_tee_ParameterSet parameter_set = {};
 
     // Below code assumes that we can fit all of the parameters from optee into the FIDL parameter
     // set. This static assert ensures that the FIDL parameter set can always fit the number of
@@ -206,23 +206,23 @@ Message::CreateOutputParameterSet(size_t starting_param_index,
     parameter_set.count = static_cast<uint16_t>(count);
     for (size_t i = starting_param_index; i < header()->num_params; i++) {
         const MessageParam& optee_param = params()[i];
-        fuchsia_hardware_tee_Parameter& zx_param = parameter_set.parameters[i];
+        fuchsia_tee_Parameter& zx_param = parameter_set.parameters[i];
 
         switch (optee_param.attribute) {
         case MessageParam::kAttributeTypeNone:
-            zx_param.tag = fuchsia_hardware_tee_ParameterTag_empty;
+            zx_param.tag = fuchsia_tee_ParameterTag_empty;
             zx_param.empty = {};
             break;
         case MessageParam::kAttributeTypeValueInput:
         case MessageParam::kAttributeTypeValueOutput:
         case MessageParam::kAttributeTypeValueInOut:
-            zx_param.tag = fuchsia_hardware_tee_ParameterTag_value;
+            zx_param.tag = fuchsia_tee_ParameterTag_value;
             zx_param.value = CreateOutputValueParameter(optee_param);
             break;
         case MessageParam::kAttributeTypeTempMemInput:
         case MessageParam::kAttributeTypeTempMemOutput:
         case MessageParam::kAttributeTypeTempMemInOut:
-            zx_param.tag = fuchsia_hardware_tee_ParameterTag_buffer;
+            zx_param.tag = fuchsia_tee_ParameterTag_buffer;
             if (zx_status_t status = CreateOutputBufferParameter(optee_param, &zx_param.buffer);
                 status != ZX_OK) {
                 return status;
@@ -240,18 +240,18 @@ Message::CreateOutputParameterSet(size_t starting_param_index,
     return ZX_OK;
 }
 
-fuchsia_hardware_tee_Value Message::CreateOutputValueParameter(const MessageParam& optee_param) {
-    fuchsia_hardware_tee_Value zx_value = {};
+fuchsia_tee_Value Message::CreateOutputValueParameter(const MessageParam& optee_param) {
+    fuchsia_tee_Value zx_value = {};
 
     switch (optee_param.attribute) {
     case MessageParam::kAttributeTypeValueInput:
-        zx_value.direction = fuchsia_hardware_tee_Direction_INPUT;
+        zx_value.direction = fuchsia_tee_Direction_INPUT;
         break;
     case MessageParam::kAttributeTypeValueOutput:
-        zx_value.direction = fuchsia_hardware_tee_Direction_OUTPUT;
+        zx_value.direction = fuchsia_tee_Direction_OUTPUT;
         break;
     case MessageParam::kAttributeTypeValueInOut:
-        zx_value.direction = fuchsia_hardware_tee_Direction_INOUT;
+        zx_value.direction = fuchsia_tee_Direction_INOUT;
         break;
     default:
         ZX_PANIC("Invalid OP-TEE attribute specified\n");
@@ -268,21 +268,21 @@ fuchsia_hardware_tee_Value Message::CreateOutputValueParameter(const MessagePara
 }
 
 zx_status_t Message::CreateOutputBufferParameter(const MessageParam& optee_param,
-                                                 fuchsia_hardware_tee_Buffer* out_buffer) {
+                                                 fuchsia_tee_Buffer* out_buffer) {
     ZX_DEBUG_ASSERT(out_buffer != nullptr);
 
     // Use a temporary buffer to avoid populating the output until we're sure it's valid.
-    fuchsia_hardware_tee_Buffer zx_buffer = {};
+    fuchsia_tee_Buffer zx_buffer = {};
 
     switch (optee_param.attribute) {
     case MessageParam::kAttributeTypeTempMemInput:
-        zx_buffer.direction = fuchsia_hardware_tee_Direction_INPUT;
+        zx_buffer.direction = fuchsia_tee_Direction_INPUT;
         break;
     case MessageParam::kAttributeTypeTempMemOutput:
-        zx_buffer.direction = fuchsia_hardware_tee_Direction_OUTPUT;
+        zx_buffer.direction = fuchsia_tee_Direction_OUTPUT;
         break;
     case MessageParam::kAttributeTypeTempMemInOut:
-        zx_buffer.direction = fuchsia_hardware_tee_Direction_INOUT;
+        zx_buffer.direction = fuchsia_tee_Direction_INOUT;
         break;
     default:
         ZX_PANIC("Invalid OP-TEE attribute specified\n");
@@ -356,7 +356,7 @@ zx_handle_t Message::TemporarySharedMemory::ReleaseVmo() {
 OpenSessionMessage::OpenSessionMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
                                        SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                        const Uuid& trusted_app,
-                                       const fuchsia_hardware_tee_ParameterSet& parameter_set) {
+                                       const fuchsia_tee_ParameterSet& parameter_set) {
     ZX_DEBUG_ASSERT(message_pool != nullptr);
 
     const size_t num_params = parameter_set.count + kNumFixedOpenSessionParams;
@@ -413,7 +413,7 @@ CloseSessionMessage::CloseSessionMessage(SharedMemoryManager::DriverMemoryPool* 
 InvokeCommandMessage::InvokeCommandMessage(SharedMemoryManager::DriverMemoryPool* message_pool,
                                            SharedMemoryManager::ClientMemoryPool* temp_memory_pool,
                                            uint32_t session_id, uint32_t command_id,
-                                           const fuchsia_hardware_tee_ParameterSet& parameter_set) {
+                                           const fuchsia_tee_ParameterSet& parameter_set) {
     ZX_DEBUG_ASSERT(message_pool != nullptr);
 
     zx_status_t status = message_pool->Allocate(CalculateSize(parameter_set.count), &memory_);

@@ -20,7 +20,7 @@ namespace optee {
 // network byte order. This class stores the data as a sequence of bytes.
 struct Uuid final {
 public:
-    explicit Uuid(const fuchsia_hardware_tee_Uuid& zx_uuid);
+    explicit Uuid(const fuchsia_tee_Uuid& zx_uuid);
 
     void ToUint64Pair(uint64_t* out_hi, uint64_t* out_low) const;
 

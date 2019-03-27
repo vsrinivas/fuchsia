@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.hardware.tee;
+library fuchsia.tee;
 
 using zx;
 
@@ -92,7 +92,7 @@ struct OpResult {
     ParameterSet parameter_set;
 };
 
-[Layout = "Simple"]
+[Discoverable, Layout = "Simple"]
 protocol Device {
     // Obtain information about the TEE OS
     GetOsInfo() -> (OsInfo info);

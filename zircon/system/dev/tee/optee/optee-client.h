@@ -8,7 +8,8 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>
-#include <fuchsia/hardware/tee/c/fidl.h>
+#include <fuchsia/tee/c/fidl.h>
+#include <lib/zx/channel.h>
 
 #include "optee-controller.h"
 
@@ -28,8 +29,9 @@ class OpteeClient : public OpteeClientBase,
                     public OpteeClientProtocol,
                     public fbl::DoublyLinkedListable<OpteeClient*> {
 public:
-    explicit OpteeClient(OpteeController* controller)
-        : OpteeClientBase(controller->zxdev()), controller_(controller) {}
+    explicit OpteeClient(OpteeController* controller, zx::channel service_provider_channel)
+        : OpteeClientBase(controller->zxdev()), controller_(controller),
+          service_provider_channel_(std::move(service_provider_channel)) {}
 
     OpteeClient(const OpteeClient&) = delete;
     OpteeClient& operator=(const OpteeClient&) = delete;
@@ -45,11 +47,11 @@ public:
 
     // FIDL Handlers
     zx_status_t GetOsInfo(fidl_txn_t* txn) const;
-    zx_status_t OpenSession(const fuchsia_hardware_tee_Uuid* trusted_app,
-                            const fuchsia_hardware_tee_ParameterSet* parameter_set,
+    zx_status_t OpenSession(const fuchsia_tee_Uuid* trusted_app,
+                            const fuchsia_tee_ParameterSet* parameter_set,
                             fidl_txn_t* txn);
     zx_status_t InvokeCommand(uint32_t session_id, uint32_t command_id,
-                              const fuchsia_hardware_tee_ParameterSet* parameter_set,
+                              const fuchsia_tee_ParameterSet* parameter_set,
                               fidl_txn_t* txn);
     zx_status_t CloseSession(uint32_t session_id, fidl_txn_t* txn);
 
@@ -157,12 +159,16 @@ private:
     zx_status_t HandleRpcCommandFreeMemory(FreeMemoryRpcMessage* message);
     zx_status_t HandleRpcCommandFileSystem(FileSystemRpcMessage* message);
 
-    static fuchsia_hardware_tee_Device_ops_t kFidlOps;
+    static fuchsia_tee_Device_ops_t kFidlOps;
 
     OpteeController* controller_;
     bool needs_to_close_ = false;
     SharedMemoryList allocated_shared_memory_;
     OpenSessionsTable open_sessions_;
+
+    // The client end of a channel to the `fuchsia.tee.manager.ServiceProvider` protocol.
+    // This may be an invalid channel, which indicates the client has no service provider support.
+    zx::channel service_provider_channel_;
 };
 
 } // namespace optee

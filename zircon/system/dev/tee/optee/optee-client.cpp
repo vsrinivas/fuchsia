@@ -6,6 +6,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <fbl/vector.h>
+#include <lib/fidl-utils/bind.h>
 #include <lib/zx/vmo.h>
 #include <tee-client-api/tee-client-types.h>
 
@@ -91,7 +92,7 @@ static fbl::StringBuffer<kTaPathLength> BuildTaPath(const TEEC_UUID& ta_uuid) {
 }
 
 static zx_status_t ConvertOpteeToZxResult(uint32_t optee_return_code, uint32_t optee_return_origin,
-                                          fuchsia_hardware_tee_OpResult* zx_result) {
+                                          fuchsia_tee_OpResult* zx_result) {
     ZX_DEBUG_ASSERT(zx_result != nullptr);
 
     // Do a quick check of the return origin to make sure we can map it to one
@@ -99,21 +100,21 @@ static zx_status_t ConvertOpteeToZxResult(uint32_t optee_return_code, uint32_t o
     switch (optee_return_origin) {
     case TEEC_ORIGIN_COMMS:
         zx_result->return_code = optee_return_code;
-        zx_result->return_origin = fuchsia_hardware_tee_ReturnOrigin_COMMUNICATION;
+        zx_result->return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
         break;
     case TEEC_ORIGIN_TEE:
         zx_result->return_code = optee_return_code;
-        zx_result->return_origin = fuchsia_hardware_tee_ReturnOrigin_TRUSTED_OS;
+        zx_result->return_origin = fuchsia_tee_ReturnOrigin_TRUSTED_OS;
         break;
     case TEEC_ORIGIN_TRUSTED_APP:
         zx_result->return_code = optee_return_code;
-        zx_result->return_origin = fuchsia_hardware_tee_ReturnOrigin_TRUSTED_APPLICATION;
+        zx_result->return_origin = fuchsia_tee_ReturnOrigin_TRUSTED_APPLICATION;
         break;
     default:
         zxlogf(ERROR, "optee: optee returned an invalid return origin (%" PRIu32 ")\n",
                optee_return_origin);
         zx_result->return_code = TEEC_ERROR_COMMUNICATION;
-        zx_result->return_origin = fuchsia_hardware_tee_ReturnOrigin_COMMUNICATION;
+        zx_result->return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
         return ZX_ERR_INTERNAL;
     }
     return ZX_OK;
@@ -123,27 +124,14 @@ static zx_status_t ConvertOpteeToZxResult(uint32_t optee_return_code, uint32_t o
 
 namespace optee {
 
-fuchsia_hardware_tee_Device_ops_t OpteeClient::kFidlOps = {
-    .GetOsInfo =
-        [](void* ctx, fidl_txn_t* txn) {
-            return reinterpret_cast<OpteeClient*>(ctx)->GetOsInfo(txn);
-        },
-    .OpenSession =
-        [](void* ctx, const fuchsia_hardware_tee_Uuid* trusted_app,
-           const fuchsia_hardware_tee_ParameterSet* parameter_set, fidl_txn_t* txn) {
-            return reinterpret_cast<OpteeClient*>(ctx)->OpenSession(trusted_app, parameter_set,
-                                                                    txn);
-        },
-    .InvokeCommand =
-        [](void* ctx, uint32_t session_id, uint32_t command_id,
-           const fuchsia_hardware_tee_ParameterSet* parameter_set, fidl_txn_t* txn) {
-            return reinterpret_cast<OpteeClient*>(ctx)->InvokeCommand(session_id, command_id,
-                                                                      parameter_set, txn);
-        },
-    .CloseSession =
-        [](void* ctx, uint32_t session_id, fidl_txn_t* txn) {
-            return reinterpret_cast<OpteeClient*>(ctx)->CloseSession(session_id, txn);
-        },
+fuchsia_tee_Device_ops_t OpteeClient::kFidlOps = {
+    .GetOsInfo = fidl::Binder<OpteeClient>::BindMember<&OpteeClient::GetOsInfo>,
+    .OpenSession = fidl::Binder<OpteeClient>::BindMember<&OpteeClient::OpenSession>,
+    .InvokeCommand = fidl::Binder<OpteeClient>::BindMember<&OpteeClient::InvokeCommand>,
+
+    // Use the BindMember version disambiguates the overloaded CloseSession() by function signature
+    .CloseSession = fidl::Binder<OpteeClient>::BindMember<zx_status_t(uint32_t, fidl_txn_t*),
+                                                          &OpteeClient::CloseSession>,
 };
 
 zx_status_t OpteeClient::DdkClose(uint32_t flags) {
@@ -180,22 +168,22 @@ zx_status_t OpteeClient::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
         // closed by devhost once the unbind is complete.
         return ZX_ERR_PEER_CLOSED;
     }
-    return fuchsia_hardware_tee_Device_dispatch(this, txn, msg, &kFidlOps);
+    return fuchsia_tee_Device_dispatch(this, txn, msg, &kFidlOps);
 }
 
 zx_status_t OpteeClient::GetOsInfo(fidl_txn_t* txn) const {
     return controller_->GetOsInfo(txn);
 }
 
-zx_status_t OpteeClient::OpenSession(const fuchsia_hardware_tee_Uuid* trusted_app,
-                                     const fuchsia_hardware_tee_ParameterSet* parameter_set,
+zx_status_t OpteeClient::OpenSession(const fuchsia_tee_Uuid* trusted_app,
+                                     const fuchsia_tee_ParameterSet* parameter_set,
                                      fidl_txn_t* txn) {
     constexpr uint32_t kInvalidSession = 0;
 
     ZX_DEBUG_ASSERT(trusted_app != nullptr);
     ZX_DEBUG_ASSERT(parameter_set != nullptr);
 
-    fuchsia_hardware_tee_OpResult result = {};
+    fuchsia_tee_OpResult result = {};
 
     Uuid ta_uuid{*trusted_app};
 
@@ -204,23 +192,23 @@ zx_status_t OpteeClient::OpenSession(const fuchsia_hardware_tee_Uuid* trusted_ap
 
     if (!message.is_valid()) {
         result.return_code = TEEC_ERROR_COMMUNICATION;
-        result.return_origin = fuchsia_hardware_tee_ReturnOrigin_COMMUNICATION;
-        return fuchsia_hardware_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
+        result.return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
+        return fuchsia_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
     }
 
     uint32_t call_code = controller_->CallWithMessage(
         message, fbl::BindMember(this, &OpteeClient::HandleRpc));
     if (call_code != kReturnOk) {
         result.return_code = TEEC_ERROR_COMMUNICATION;
-        result.return_origin = fuchsia_hardware_tee_ReturnOrigin_COMMUNICATION;
-        return fuchsia_hardware_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
+        result.return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
+        return fuchsia_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
     }
 
     zxlogf(SPEW, "optee: OpenSession returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n",
            call_code, message.return_code(), message.return_origin());
 
     if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
-        return fuchsia_hardware_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
+        return fuchsia_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
     }
 
     if (message.CreateOutputParameterSet(&result.parameter_set) != ZX_OK) {
@@ -228,26 +216,26 @@ zx_status_t OpteeClient::OpenSession(const fuchsia_hardware_tee_Uuid* trusted_ap
         // It is okay that the session id is not in the session list.
         CloseSession(message.session_id());
         result.return_code = TEEC_ERROR_COMMUNICATION;
-        result.return_origin = fuchsia_hardware_tee_ReturnOrigin_COMMUNICATION;
-        return fuchsia_hardware_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
+        result.return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
+        return fuchsia_tee_DeviceOpenSession_reply(txn, kInvalidSession, &result);
     }
 
     open_sessions_.insert(fbl::make_unique<OpteeSession>(message.session_id()));
 
-    return fuchsia_hardware_tee_DeviceOpenSession_reply(txn, message.session_id(), &result);
+    return fuchsia_tee_DeviceOpenSession_reply(txn, message.session_id(), &result);
 }
 
 zx_status_t OpteeClient::InvokeCommand(uint32_t session_id, uint32_t command_id,
-                                       const fuchsia_hardware_tee_ParameterSet* parameter_set,
+                                       const fuchsia_tee_ParameterSet* parameter_set,
                                        fidl_txn_t* txn) {
     ZX_DEBUG_ASSERT(parameter_set != nullptr);
 
-    fuchsia_hardware_tee_OpResult result = {};
+    fuchsia_tee_OpResult result = {};
 
     if (!open_sessions_.find(session_id).IsValid()) {
         result.return_code = TEEC_ERROR_BAD_STATE;
-        result.return_origin = fuchsia_hardware_tee_ReturnOrigin_COMMUNICATION;
-        return fuchsia_hardware_tee_DeviceInvokeCommand_reply(txn, &result);
+        result.return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
+        return fuchsia_tee_DeviceInvokeCommand_reply(txn, &result);
     }
 
     InvokeCommandMessage message{controller_->driver_pool(), controller_->client_pool(),
@@ -255,32 +243,32 @@ zx_status_t OpteeClient::InvokeCommand(uint32_t session_id, uint32_t command_id,
 
     if (!message.is_valid()) {
         result.return_code = TEEC_ERROR_COMMUNICATION;
-        result.return_origin = fuchsia_hardware_tee_ReturnOrigin_COMMUNICATION;
-        return fuchsia_hardware_tee_DeviceInvokeCommand_reply(txn, &result);
+        result.return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
+        return fuchsia_tee_DeviceInvokeCommand_reply(txn, &result);
     }
 
     uint32_t call_code = controller_->CallWithMessage(
         message, fbl::BindMember(this, &OpteeClient::HandleRpc));
     if (call_code != kReturnOk) {
         result.return_code = TEEC_ERROR_COMMUNICATION;
-        result.return_origin = fuchsia_hardware_tee_ReturnOrigin_COMMUNICATION;
-        return fuchsia_hardware_tee_DeviceInvokeCommand_reply(txn, &result);
+        result.return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
+        return fuchsia_tee_DeviceInvokeCommand_reply(txn, &result);
     }
 
     zxlogf(SPEW, "optee: InvokeCommand returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n",
            call_code, message.return_code(), message.return_origin());
 
     if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
-        return fuchsia_hardware_tee_DeviceInvokeCommand_reply(txn, &result);
+        return fuchsia_tee_DeviceInvokeCommand_reply(txn, &result);
     }
 
     if (message.CreateOutputParameterSet(&result.parameter_set) != ZX_OK) {
         result.return_code = TEEC_ERROR_COMMUNICATION;
-        result.return_origin = fuchsia_hardware_tee_ReturnOrigin_COMMUNICATION;
-        return fuchsia_hardware_tee_DeviceInvokeCommand_reply(txn, &result);
+        result.return_origin = fuchsia_tee_ReturnOrigin_COMMUNICATION;
+        return fuchsia_tee_DeviceInvokeCommand_reply(txn, &result);
     }
 
-    return fuchsia_hardware_tee_DeviceInvokeCommand_reply(txn, &result);
+    return fuchsia_tee_DeviceInvokeCommand_reply(txn, &result);
 }
 
 zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
@@ -309,7 +297,7 @@ zx_status_t OpteeClient::CloseSession(uint32_t session_id,
         return status;
     }
 
-    return fuchsia_hardware_tee_DeviceCloseSession_reply(txn);
+    return fuchsia_tee_DeviceCloseSession_reply(txn);
 }
 
 template <typename SharedMemoryPoolTraits>

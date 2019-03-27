@@ -18,6 +18,7 @@ library("tee-client-api") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-tee:c",
+    "$zx/system/fidl/fuchsia-tee:c",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/zircon",

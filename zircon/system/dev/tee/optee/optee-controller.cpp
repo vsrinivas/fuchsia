@@ -11,9 +11,9 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <lib/fidl-utils/bind.h>
 #include <tee-client-api/tee-client-types.h>
 
 #include "optee-client.h"
@@ -38,6 +38,10 @@ static bool IsOpteeApiRevisionSupported(const tee_smc::TrustedOsCallRevisionResu
     return returned_rev.major == kOpteeApiRevisionMajor &&
            static_cast<int32_t>(returned_rev.minor) >= static_cast<int32_t>(kOpteeApiRevisionMinor);
 }
+
+fuchsia_hardware_tee_DeviceConnector_ops_t OpteeController::kFidlOps = {
+    fidl::Binder<OpteeController>::BindMember<&OpteeController::ConnectDevice>,
+};
 
 zx_status_t OpteeController::ValidateApiUid() const {
     static const zx_smc_parameters_t kGetApiFuncCall = tee_smc::CreateSmcFunctionCall(
@@ -243,26 +247,12 @@ zx_status_t OpteeController::Bind() {
     return status;
 }
 
+zx_status_t OpteeController::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_tee_DeviceConnector_dispatch(this, txn, msg, &kFidlOps);
+}
+
 zx_status_t OpteeController::DdkOpen(zx_device_t** out_dev, uint32_t flags) {
-    // Create a new OpteeClient device and hand off client communication to it.
-    fbl::AllocChecker ac;
-    auto client = fbl::make_unique_checked<OpteeClient>(&ac, this);
-
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    zx_status_t status = client->DdkAdd("optee-client", DEVICE_ADD_INSTANCE);
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    // devmgr is now in charge of the memory for the tee client
-    OpteeClient* client_ptr = client.release();
-    *out_dev = client_ptr->zxdev();
-
-    AddClient(client_ptr);
-
+    // Do not set out_dev because this Controller will handle the FIDL messages
     return ZX_OK;
 }
 
@@ -289,8 +279,40 @@ void OpteeController::DdkRelease() {
     delete this;
 }
 
+zx_status_t OpteeController::ConnectDevice(zx_handle_t service_provider,
+                                           zx_handle_t device_request) {
+    // Create managed versions of the channels
+    zx::channel service_provider_channel(service_provider);
+    zx::channel device_request_channel(device_request);
+    ZX_DEBUG_ASSERT(device_request_channel.is_valid());
+
+    // Create a new OpteeClient device and hand off client communication to it.
+    auto client = fbl::make_unique<OpteeClient>(this, std::move(service_provider_channel));
+
+    // Add child client device and have it immediately start serving device_request
+    //
+    // What we really want here is named parameter passing to pass client_remote
+    zx_status_t status = client->DdkAdd("optee-client",                  // name
+                                        DEVICE_ADD_INSTANCE,             // flags
+                                        nullptr,                         // props
+                                        0,                               // prop_count
+                                        0,                               // proto_id
+                                        nullptr,                         // proxy_args
+                                        device_request_channel.release() // client_remote
+    );
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // devmgr is now in charge of the memory for the tee client
+    OpteeClient* client_ptr = client.release();
+    AddClient(client_ptr);
+
+    return ZX_OK;
+}
+
 zx_status_t OpteeController::GetOsInfo(fidl_txn_t* txn) const {
-    fuchsia_hardware_tee_OsInfo os_info;
+    fuchsia_tee_OsInfo os_info;
     ::memset(&os_info, 0, sizeof(os_info));
 
     os_info.uuid.time_low = kOpteeOsUuid.timeLow;
@@ -302,7 +324,7 @@ zx_status_t OpteeController::GetOsInfo(fidl_txn_t* txn) const {
 
     os_info.revision = os_revision_;
     os_info.is_global_platform_compliant = true;
-    return fuchsia_hardware_tee_DeviceGetOsInfo_reply(txn, &os_info);
+    return fuchsia_tee_DeviceGetOsInfo_reply(txn, &os_info);
 }
 
 void OpteeController::RemoveClient(OpteeClient* client) {
@@ -313,7 +335,7 @@ void OpteeController::RemoveClient(OpteeClient* client) {
     }
 }
 
-uint32_t OpteeController::CallWithMessage(const Message& message,
+uint32_t OpteeController::CallWithMessage(const optee::Message& message,
                                           RpcHandler rpc_handler) {
     uint32_t return_value = tee_smc::kSmc32ReturnUnknownFunction;
     union {

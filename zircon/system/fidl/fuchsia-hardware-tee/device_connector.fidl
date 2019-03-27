@@ -1,0 +1,18 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.tee;
+
+using fuchsia.tee as tee;
+using fuchsia.tee.manager as manager;
+
+/// Protocol used by the TEE Manager to proxy requests for TEE access to the driver.
+[Layout = "Simple"]
+protocol DeviceConnector {
+    /// Requests service from the TEE driver while the caller provides a client end to a
+    /// ServiceProvider server that supports the driver on any RPCs.
+    ///
+    /// The sole caller of this should be the TEE Manager.
+    ConnectTee(manager.ServiceProvider? service_provider, request<tee.Device> tee_request);
+};
