@@ -44,7 +44,7 @@ func (t *triggerTester) HandleDump(dump *DumpfileElement) {
 
 func TestDumpfile(t *testing.T) {
 	msg := "[123.456] 01234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
-		"[123.456] 1234.05678> {{{mmap:0x12345000:849596:load:1:rx:0x0}}}\n" +
+		"[123.456] 1234:05678> {{{mmap:0x12345000:849596:load:1:rx:0x0}}}\n" +
 		"[123.456] 01234.05678> {{{dumpfile:llvm-cov:test}}}\n"
 
 	symbo := newMockSymbolizer([]mockModule{})
@@ -122,8 +122,8 @@ func TestSyslog(t *testing.T) {
 func TestColor(t *testing.T) {
 	// TODO(jakehehrlich): Change presenter so that redundent resets are not used when user input already contains them.
 	msg := "[0.0] 01234.5678> \033[1mThis is bold \033[31mThis is red and bold \033[37mThis is bold white\n" +
-		"[0.0] 1234.05678> This is just normal and has no trailing ANSI code\n" +
-		"[0.0] 1234.5678> \033[1m\033[31m this line tests adjacent state changes\n" +
+		"[0.0] 1234:05678> This is just normal and has no trailing ANSI code\n" +
+		"[0.0] 1234:5678> \033[1m\033[31m this line tests adjacent state changes\n" +
 		"[0.0] 01234.5678> \033[1m\033[31m this line will eventully test non-redundent reset \033[1m\n"
 	symbo := newMockSymbolizer([]mockModule{})
 	demuxer := NewDemuxer(testBinaries, symbo)

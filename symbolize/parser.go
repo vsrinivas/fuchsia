@@ -128,7 +128,7 @@ func StartParsing(ctx context.Context, reader io.Reader) <-chan InputLine {
 	float := floatRegexp
 	dec := decRegexp
 	tags := `[^\[\]]*`
-	b.addRule(fmt.Sprintf(`\[(%s)\]%s(%s)\.(%s)>(.*)$`, float, space, dec, dec), func(args ...string) {
+	b.addRule(fmt.Sprintf(`\[(%s)\]%s(%s)[.:](%s)>(.*)$`, float, space, dec, dec), func(args ...string) {
 		var hdr logHeader
 		var line InputLine
 		hdr.time = str2float(args[1])
