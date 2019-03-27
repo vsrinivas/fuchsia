@@ -23,6 +23,7 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
+#include <lib/fzl/time.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
@@ -396,6 +397,22 @@ zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t
     if (!getenv_bool("zircon.system.filesystem-check", false)) {
         return ZX_OK;
     }
+
+    // TODO(ZX-3793): Blobfs' consistency checker is too slow to execute on boot.
+    // With journaling, it is also unnecessary, but would be a nice mechanism for sanity
+    // checking.
+    if (df == DISK_FORMAT_BLOBFS) {
+        fprintf(stderr, "fshost: Skipping blobfs consistency checker\n");
+        return ZX_OK;
+    }
+
+    zx::ticks before = zx::ticks::now();
+    auto timer = fbl::MakeAutoCall([before]() {
+        auto after = zx::ticks::now();
+        auto duration = fzl::TicksToNs(after - before);
+        printf("fshost: fsck took %" PRId64".%" PRId64 " seconds\n", duration.to_secs(),
+               duration.to_msecs() % 1000);
+    });
 
     printf("fshost: fsck of %s started\n", disk_format_string_[df]);
 
