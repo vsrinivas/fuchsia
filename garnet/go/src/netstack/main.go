@@ -59,7 +59,7 @@ func Main() {
 	ctx := context.CreateFromStartupInfo()
 
 	options := logger.LogInitOptions{
-		Loglevel:  logger.TraceLevel,
+		Loglevel:  logger.InfoLevel,
 		Connector: ctx.Connector(),
 		Tags:      []string{"netstack"},
 		MinSeverityForFileAndLineInfo: logger.InfoLevel,
