@@ -57,6 +57,8 @@ The
 is the code responsible for actually monitoring `/dev/class/input` for new
 peripherals, and reacting to new reports from existing peripherals. It forwards
 new events for processing to other parts of RootPresenter.
+More information on `InputReader` can be found
+[here](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/ui/input_reader/README.md).
 
 For each new peripheral (an input device), `InputReader` assigns a new
 `InputInterpreter` object that reads the HID descriptor report for a single
