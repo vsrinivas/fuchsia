@@ -17,8 +17,11 @@
 
 #include "test_library.h"
 
+#define DECL_NAME(D) \
+    static_cast<const std::string>(D->name.name_part()).c_str()
+
 #define ASSERT_DECL_NAME(D, N) \
-    ASSERT_STR_EQ(N, static_cast<const std::string>(D->name.name_part()).c_str());
+    ASSERT_STR_EQ(N, DECL_NAME(D));
 
 namespace {
 
@@ -134,10 +137,28 @@ protocol #Protocol# {
         ASSERT_TRUE(library.Compile());
         auto decl_order = library.declaration_order();
         ASSERT_EQ(4, decl_order.size());
-        ASSERT_DECL_NAME(decl_order[0], namer.of("Request"));
-        ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix0");
-        ASSERT_DECL_NAME(decl_order[2], namer.of("Protocol"));
-        ASSERT_DECL_NAME(decl_order[3], namer.of("Element"));
+
+        // Since the Element struct contains a Protocol handle, it does not
+        // have any dependencies, and we therefore have two independent
+        // declaration sub-graphs:
+        //   a. Element
+        //   b. Request <- SomeLongAnonymousPrefix0 <- Protocol
+        // Because of random prefixes, either (a) or (b) will be selected to
+        // be first in the declaration order.
+        bool element_is_first = strcmp(
+          DECL_NAME(decl_order[0]), namer.of("Element")) == 0;
+
+        if (element_is_first) {
+          ASSERT_DECL_NAME(decl_order[0], namer.of("Element"));
+          ASSERT_DECL_NAME(decl_order[1], namer.of("Request"));
+          ASSERT_DECL_NAME(decl_order[2], "SomeLongAnonymousPrefix0");
+          ASSERT_DECL_NAME(decl_order[3], namer.of("Protocol"));
+        } else {
+          ASSERT_DECL_NAME(decl_order[0], namer.of("Request"));
+          ASSERT_DECL_NAME(decl_order[1], "SomeLongAnonymousPrefix0");
+          ASSERT_DECL_NAME(decl_order[2], namer.of("Protocol"));
+          ASSERT_DECL_NAME(decl_order[3], namer.of("Element"));
+        }
     }
 
     END_TEST;

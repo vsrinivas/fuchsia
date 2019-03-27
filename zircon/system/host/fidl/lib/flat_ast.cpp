@@ -2243,13 +2243,7 @@ bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
 // their layout.
 bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     std::set<Decl*> edges;
-    auto maybe_add_name = [this, &edges](const Name& name) {
-        auto type_decl = LookupDeclByName(name);
-        if (type_decl != nullptr) {
-            edges.insert(type_decl);
-        }
-    };
-    auto maybe_add_decl = [this, &edges, &maybe_add_name](const TypeConstructor* type_ctor) {
+    auto maybe_add_decl = [this, &edges](const TypeConstructor* type_ctor) {
         for (;;) {
             const auto& name = type_ctor->name;
             if (name.name_part() == "request") {
@@ -2262,7 +2256,9 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
                 }
                 return;
             } else {
-                maybe_add_name(name);
+                if (auto decl = LookupDeclByName(name); decl && decl->kind != Decl::Kind::kInterface) {
+                    edges.insert(decl);
+                }
                 return;
             }
         }
@@ -2313,7 +2309,9 @@ bool Library::DeclDependencies(Decl* decl, std::set<Decl*>* out_edges) {
     case Decl::Kind::kInterface: {
         auto interface_decl = static_cast<const Interface*>(decl);
         for (const auto& superinterface : interface_decl->superinterfaces) {
-            maybe_add_name(superinterface);
+            auto type_decl = LookupDeclByName(superinterface);
+            assert(type_decl);
+            edges.insert(type_decl);
         }
         for (const auto& method : interface_decl->methods) {
             if (method.maybe_request != nullptr) {

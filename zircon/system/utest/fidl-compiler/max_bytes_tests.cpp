@@ -546,6 +546,45 @@ bool protocols_and_request_of_protocols() {
     END_TEST;
 }
 
+bool recursive_request() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct WebMessage {
+  request<MessagePort> message_port_req;
+};
+
+protocol MessagePort {
+  PostMessage(WebMessage message) -> (bool success);
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto web_message = library.LookupStruct("WebMessage");
+  EXPECT_NONNULL(web_message);
+  EXPECT_EQ(web_message->typeshape.Size(), 4);
+  EXPECT_EQ(web_message->typeshape.Alignment(), 4);
+  EXPECT_EQ(web_message->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(web_message->typeshape.MaxHandles(), 1);
+  EXPECT_EQ(web_message->typeshape.Depth(), 0);
+
+  auto message_port = library.LookupInterface("MessagePort");
+  EXPECT_NONNULL(message_port);
+  EXPECT_EQ(message_port->methods.size(), 1);
+  auto& post_message = message_port->methods[0];
+  auto post_message_request = post_message.maybe_request;
+  EXPECT_NONNULL(post_message_request);
+  EXPECT_EQ(post_message_request->typeshape.Size(), 24);
+  EXPECT_EQ(post_message_request->typeshape.Alignment(), 8);
+  EXPECT_EQ(post_message_request->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(post_message_request->typeshape.MaxHandles(), 1);
+  EXPECT_EQ(post_message_request->typeshape.Depth(), 0);
+
+  END_TEST;
+}
+
 bool recursive_opt_request() {
   BEGIN_TEST;
 
@@ -554,6 +593,45 @@ library example;
 
 struct WebMessage {
   request<MessagePort>? opt_message_port_req;
+};
+
+protocol MessagePort {
+  PostMessage(WebMessage message) -> (bool success);
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto web_message = library.LookupStruct("WebMessage");
+  EXPECT_NONNULL(web_message);
+  EXPECT_EQ(web_message->typeshape.Size(), 4);
+  EXPECT_EQ(web_message->typeshape.Alignment(), 4);
+  EXPECT_EQ(web_message->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(web_message->typeshape.MaxHandles(), 1);
+  EXPECT_EQ(web_message->typeshape.Depth(), 0);
+
+  auto message_port = library.LookupInterface("MessagePort");
+  EXPECT_NONNULL(message_port);
+  EXPECT_EQ(message_port->methods.size(), 1);
+  auto& post_message = message_port->methods[0];
+  auto post_message_request = post_message.maybe_request;
+  EXPECT_NONNULL(post_message_request);
+  EXPECT_EQ(post_message_request->typeshape.Size(), 24);
+  EXPECT_EQ(post_message_request->typeshape.Alignment(), 8);
+  EXPECT_EQ(post_message_request->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(post_message_request->typeshape.MaxHandles(), 1);
+  EXPECT_EQ(post_message_request->typeshape.Depth(), 0);
+
+  END_TEST;
+}
+
+bool recursive_protocol() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct WebMessage {
+  MessagePort message_port;
 };
 
 protocol MessagePort {
@@ -904,7 +982,9 @@ RUN_TEST(strings);
 RUN_TEST(arrays);
 RUN_TEST(xunions);
 RUN_TEST(protocols_and_request_of_protocols);
+RUN_TEST(recursive_request);
 RUN_TEST(recursive_opt_request);
+RUN_TEST(recursive_protocol);
 RUN_TEST(recursive_opt_protocol);
 RUN_TEST(recursive_struct);
 RUN_TEST(recursive_struct_with_handles);
