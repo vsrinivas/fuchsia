@@ -6,12 +6,24 @@ package llcpp
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"fidl/compiler/backend/cpp/ir"
 	"fidl/compiler/backend/typestest"
 )
+
+// basePath holds the base path to the directory containing goldens.
+var basePath = func() string {
+	testPath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		panic(err)
+	}
+	testDataDir := filepath.Join(filepath.Dir(testPath), "test_data", "fidlgen")
+	return fmt.Sprintf("%s%c", testDataDir, filepath.Separator)
+}()
 
 type example string
 
@@ -24,12 +36,12 @@ func (s example) source() string {
 }
 
 func TestCodegenHeader(t *testing.T) {
-	for _, filename := range typestest.AllExamples() {
+	for _, filename := range typestest.AllExamples(basePath) {
 		t.Run(filename, func(t *testing.T) {
-			fidl := typestest.GetExample(filename)
+			fidl := typestest.GetExample(basePath, filename)
 			tree := ir.Compile(fidl)
 			tree.PrimaryHeader = strings.TrimRight(example(filename).header(), ".golden")
-			header := typestest.GetGolden(example(filename).header())
+			header := typestest.GetGolden(basePath, example(filename).header())
 
 			buf := new(bytes.Buffer)
 			if err := NewFidlGenerator().GenerateHeader(buf, tree); err != nil {
@@ -41,12 +53,12 @@ func TestCodegenHeader(t *testing.T) {
 	}
 }
 func TestCodegenSource(t *testing.T) {
-	for _, filename := range typestest.AllExamples() {
+	for _, filename := range typestest.AllExamples(basePath) {
 		t.Run(filename, func(t *testing.T) {
-			fidl := typestest.GetExample(filename)
+			fidl := typestest.GetExample(basePath, filename)
 			tree := ir.Compile(fidl)
 			tree.PrimaryHeader = strings.TrimRight(example(filename).header(), ".golden")
-			source := typestest.GetGolden(example(filename).source())
+			source := typestest.GetGolden(basePath, example(filename).source())
 
 			buf := new(bytes.Buffer)
 			if err := NewFidlGenerator().GenerateSource(buf, tree); err != nil {

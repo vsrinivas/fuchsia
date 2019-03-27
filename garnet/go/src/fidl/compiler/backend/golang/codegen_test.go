@@ -5,18 +5,30 @@ package golang
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"fidl/compiler/backend/golang/ir"
 	"fidl/compiler/backend/typestest"
 )
 
+// basePath holds the base path to the directory containing goldens.
+var basePath = func() string {
+	testPath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		panic(err)
+	}
+	testDataDir := filepath.Join(filepath.Dir(testPath), "test_data", "fidlgen")
+	return fmt.Sprintf("%s%c", testDataDir, filepath.Separator)
+}()
+
 func TestCodegenImplDotGo(t *testing.T) {
-	for _, filename := range typestest.AllExamples() {
+	for _, filename := range typestest.AllExamples(basePath) {
 		t.Run(filename, func(t *testing.T) {
-			fidl := typestest.GetExample(filename)
+			fidl := typestest.GetExample(basePath, filename)
 			tree := ir.Compile(fidl)
-			implDotGo := typestest.GetGolden(fmt.Sprintf("%s.go.golden", filename))
+			implDotGo := typestest.GetGolden(basePath, fmt.Sprintf("%s.go.golden", filename))
 
 			actualImplDotGo, err := NewFidlGenerator().GenerateImplDotGo(tree)
 			if err != nil {

@@ -6,18 +6,30 @@ package rust
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"fidl/compiler/backend/rust/ir"
 	"fidl/compiler/backend/typestest"
 )
 
+// basePath holds the base path to the directory containing goldens.
+var basePath = func() string {
+	testPath, err := filepath.Abs(os.Args[0])
+	if err != nil {
+		panic(err)
+	}
+	testDataDir := filepath.Join(filepath.Dir(testPath), "test_data", "fidlgen")
+	return fmt.Sprintf("%s%c", testDataDir, filepath.Separator)
+}()
+
 func TestCodegen(t *testing.T) {
-	for _, filename := range typestest.AllExamples() {
+	for _, filename := range typestest.AllExamples(basePath) {
 		t.Run(filename, func(t *testing.T) {
-			fidl := typestest.GetExample(filename)
+			fidl := typestest.GetExample(basePath, filename)
 			tree := ir.Compile(fidl)
-			implDotRs := typestest.GetGolden(fmt.Sprintf("%s.rs.golden", filename))
+			implDotRs := typestest.GetGolden(basePath, fmt.Sprintf("%s.rs.golden", filename))
 
 			actualImplDotRs := new(bytes.Buffer)
 			if err := NewFidlGenerator().GenerateImpl(actualImplDotRs, tree); err != nil {

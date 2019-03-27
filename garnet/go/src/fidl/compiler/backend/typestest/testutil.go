@@ -6,9 +6,7 @@ package typestest
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -19,19 +17,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// basePath holds the base path to the directory containing goldens.
-var basePath = func() string {
-	testPath, err := filepath.Abs(os.Args[0])
-	if err != nil {
-		panic(err)
-	}
-	testDataDir := filepath.Join(filepath.Dir(testPath), "test_data", "fidlgen")
-	return fmt.Sprintf("%s%c", testDataDir, filepath.Separator)
-}()
-
 // AllExamples returns all examples by filename.
 // See also #GetExample.
-func AllExamples() []string {
+func AllExamples(basePath string) []string {
 	paths, err := filepath.Glob(filepath.Join(basePath, "*.json"))
 	if err != nil {
 		panic(err)
@@ -47,9 +35,9 @@ func AllExamples() []string {
 }
 
 // GetExample retrieves an example by filename, and parses it.
-func GetExample(filename string) types.Root {
+func GetExample(basePath, filename string) types.Root {
 	var (
-		data = GetGolden(filename)
+		data = GetGolden(basePath, filename)
 		fidl types.Root
 	)
 	if err := json.Unmarshal(data, &fidl); err != nil {
@@ -60,7 +48,7 @@ func GetExample(filename string) types.Root {
 
 // GetGolden retrieves a golden example by filename, and returns the raw
 // content.
-func GetGolden(filename string) []byte {
+func GetGolden(basePath, filename string) []byte {
 	data, err := ioutil.ReadFile(filepath.Join(basePath, filename))
 	if err != nil {
 		panic(err)
@@ -75,7 +63,7 @@ func AssertCodegenCmp(t *testing.T, expected, actual []byte) {
 		splitActual   = strings.Split(strings.TrimSpace(string(actual)), "\n")
 	)
 	if diff := cmp.Diff(splitActual, splitExpected); diff != "" {
-		t.Errorf("unexpected impl.go: %s\ngot: %s", diff, string(actual))
+		t.Errorf("unexpected difference: %s\ngot: %s", diff, string(actual))
 	}
 }
 
