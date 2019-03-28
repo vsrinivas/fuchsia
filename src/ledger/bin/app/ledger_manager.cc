@@ -19,6 +19,7 @@
 
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/page_connection_notifier.h"
+#include "src/ledger/bin/app/page_manager_container.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -26,169 +27,6 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 
 namespace ledger {
-
-// Container for a PageManager that keeps tracks of in-flight page requests and
-// callbacks and fires them when the PageManager is available.
-class LedgerManager::PageManagerContainer {
- public:
-  PageManagerContainer(std::string ledger_name, storage::PageId page_id,
-                       PageUsageListener* page_usage_listener);
-  ~PageManagerContainer();
-
-  void set_on_empty(fit::closure on_empty_callback);
-
-  // Keeps track of |page| and |callback|. Binds |page| and fires |callback|
-  // when a PageManager is available or an error occurs.
-  void BindPage(fidl::InterfaceRequest<Page> page_request,
-                fit::function<void(storage::Status)> callback);
-
-  // Registers a new internal request for PageStorage.
-  void NewInternalRequest(
-      fit::function<void(storage::Status, ExpiringToken, PageManager*)>
-          callback);
-
-  // Sets the PageManager or the error status for the container. This notifies
-  // all awaiting callbacks and binds all pages in case of success.
-  void SetPageManager(storage::Status status,
-                      std::unique_ptr<PageManager> page_manager);
-
-  // Returns true if there is at least one active external page connection.
-  bool PageConnectionIsOpen();
-
- private:
-  // Checks whether this container is empty, and calls the |on_empty_callback_|
-  // if it is.
-  void CheckEmpty();
-
-  const storage::PageId page_id_;
-
-  std::unique_ptr<PageManager> page_manager_;
-  // |status_| holds the status given to |SetPageManager|. If
-  // |page_manager_is_set_| is true, |status_| is |storage::Status::OK| if and
-  // only if |page_manager_| is not null.
-  storage::Status status_ = storage::Status::OK;
-  // |page_manager_is_set_| if |SetPageManager| has been called. |page_manager_|
-  // may still be null.
-  bool page_manager_is_set_ = false;
-
-  PageConnectionNotifier connection_notifier_;
-  // page_impls_ is only populated before page_manager_ is set. Once the
-  // PageManager is created and assigned to page_manager_, the PageImpls stored
-  // in page_impls_ are handed off to that PageManager and page_impls_ is not
-  // used again.
-  std::vector<std::pair<std::unique_ptr<PageImpl>,
-                        fit::function<void(storage::Status)>>>
-      page_impls_;
-  std::vector<fit::function<void(storage::Status, ExpiringToken, PageManager*)>>
-      internal_request_callbacks_;
-  fit::closure on_empty_callback_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
-};
-
-LedgerManager::PageManagerContainer::PageManagerContainer(
-    std::string ledger_name, storage::PageId page_id,
-    PageUsageListener* page_usage_listener)
-    : page_id_(page_id),
-      connection_notifier_(std::move(ledger_name), std::move(page_id),
-                           page_usage_listener) {}
-
-LedgerManager::PageManagerContainer::~PageManagerContainer() {}
-
-void LedgerManager::PageManagerContainer::set_on_empty(
-    fit::closure on_empty_callback) {
-  on_empty_callback_ = std::move(on_empty_callback);
-  connection_notifier_.set_on_empty([this] { CheckEmpty(); });
-  if (page_manager_) {
-    page_manager_->set_on_empty(
-        [this] { connection_notifier_.UnregisterExternalRequests(); });
-  }
-}
-
-void LedgerManager::PageManagerContainer::BindPage(
-    fidl::InterfaceRequest<Page> page_request,
-    fit::function<void(storage::Status)> callback) {
-  connection_notifier_.RegisterExternalRequest();
-
-  if (status_ != storage::Status::OK) {
-    callback(status_);
-    return;
-  }
-  auto page_impl =
-      std::make_unique<PageImpl>(page_id_, std::move(page_request));
-  if (page_manager_) {
-    page_manager_->AddPageImpl(std::move(page_impl), std::move(callback));
-    return;
-  }
-  page_impls_.emplace_back(std::move(page_impl), std::move(callback));
-}
-
-void LedgerManager::PageManagerContainer::NewInternalRequest(
-    fit::function<void(storage::Status, ExpiringToken, PageManager*)>
-        callback) {
-  if (status_ != storage::Status::OK) {
-    callback(status_, fit::defer<fit::closure>([] {}), nullptr);
-    return;
-  }
-
-  if (page_manager_) {
-    callback(status_, connection_notifier_.NewInternalRequestToken(),
-             page_manager_.get());
-    return;
-  }
-
-  internal_request_callbacks_.push_back(std::move(callback));
-}
-
-void LedgerManager::PageManagerContainer::SetPageManager(
-    storage::Status status, std::unique_ptr<PageManager> page_manager) {
-  auto token = connection_notifier_.NewInternalRequestToken();
-  TRACE_DURATION("ledger", "ledger_manager_set_page_manager");
-
-  FXL_DCHECK(!page_manager_is_set_);
-  FXL_DCHECK((status != storage::Status::OK) == !page_manager);
-  status_ = status;
-  page_manager_ = std::move(page_manager);
-  page_manager_is_set_ = true;
-
-  for (auto& [page_impl, callback] : page_impls_) {
-    if (page_manager_) {
-      page_manager_->AddPageImpl(std::move(page_impl), std::move(callback));
-    } else {
-      callback(status_);
-    }
-  }
-  page_impls_.clear();
-
-  for (auto& callback : internal_request_callbacks_) {
-    if (!page_manager_) {
-      callback(status_, fit::defer<fit::closure>([] {}), nullptr);
-      continue;
-    }
-    callback(status_, connection_notifier_.NewInternalRequestToken(),
-             page_manager_.get());
-  }
-  internal_request_callbacks_.clear();
-
-  if (page_manager_) {
-    page_manager_->set_on_empty(
-        [this] { connection_notifier_.UnregisterExternalRequests(); });
-  }
-  // |CheckEmpty| called when |token| goes out of scope.
-}
-
-bool LedgerManager::PageManagerContainer::PageConnectionIsOpen() {
-  return (page_manager_ && !page_manager_->IsEmpty()) || !page_impls_.empty();
-}
-
-void LedgerManager::PageManagerContainer::CheckEmpty() {
-  // The PageManagerContainer is not considered empty until |SetPageManager| has
-  // been called.
-  if (on_empty_callback_ && connection_notifier_.IsEmpty() &&
-      page_manager_is_set_ && (!page_manager_ || page_manager_->IsEmpty())) {
-    on_empty_callback_();
-  }
-}
 
 LedgerManager::LedgerManager(
     Environment* environment, std::string ledger_name,
@@ -346,7 +184,7 @@ void LedgerManager::CreatePageStorage(storage::PageId page_id,
       });
 }
 
-LedgerManager::PageManagerContainer* LedgerManager::AddPageManagerContainer(
+PageManagerContainer* LedgerManager::AddPageManagerContainer(
     storage::PageIdView page_id) {
   auto ret = page_managers_.emplace(
       std::piecewise_construct, std::forward_as_tuple(page_id.ToString()),

@@ -23,6 +23,7 @@
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
 #include "src/ledger/bin/app/page_availability_manager.h"
 #include "src/ledger/bin/app/page_manager.h"
+#include "src/ledger/bin/app/page_manager_container.h"
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
@@ -86,7 +87,6 @@ class LedgerManager : public LedgerImpl::Delegate {
   }
 
  private:
-  class PageManagerContainer;
   using PageTracker = fit::function<bool()>;
 
   // Requests a PageStorage object for the given |container|. If the page is not
