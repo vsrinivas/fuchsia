@@ -9,7 +9,6 @@
 #include <poll.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/pty.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>

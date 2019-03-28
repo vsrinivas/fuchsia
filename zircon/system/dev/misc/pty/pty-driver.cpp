@@ -17,8 +17,6 @@
 #include "pty-core.h"
 #include "pty-fifo.h"
 
-#include <zircon/device/pty.h>
-
 typedef struct pty_server_dev {
     pty_server_t srv;
 
@@ -97,25 +95,6 @@ static zx_status_t psd_write(void* ctx, const void* buf, size_t count, zx_off_t 
     }
 }
 
-static zx_status_t psd_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
-                             void* out_buf, size_t out_len, size_t* out_actual) {
-    auto psd = static_cast<pty_server_dev_t*>(ctx);
-
-    switch (op) {
-    case IOCTL_PTY_SET_WINDOW_SIZE: {
-        auto wsz = static_cast<const pty_window_size_t*>(in_buf);
-        zxlogf(TRACE, "PTY Server Device %p ioctl: set window size\n", psd);
-        if (in_len != sizeof(pty_window_size_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        pty_server_set_window_size(&psd->srv, wsz->width, wsz->height);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 zx_status_t psd_ClrSetFeature(void* ctx, uint32_t clr, uint32_t set, fidl_txn_t* txn) {
     return fuchsia_hardware_pty_DeviceClrSetFeature_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
 }
@@ -169,7 +148,6 @@ static zx_protocol_device_t psd_ops = []() {
     ops.release = pty_server_release;
     ops.read = psd_read;
     ops.write = psd_write;
-    ops.ioctl = psd_ioctl;
     ops.message = psd_message;
     return ops;
 }();
