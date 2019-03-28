@@ -4,19 +4,13 @@
 
 #include "lib/async_promise/executor.h"
 
-#include <thread>
+#include <future>
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
-#include <lib/fit/function.h>
 #include <unittest/unittest.h>
 
 namespace {
-
-void LaunchAsync(fit::function<void()> func) {
-    std::thread thread(std::move(func));
-    thread.detach();
-}
 
 bool running_tasks() {
     BEGIN_TEST;
@@ -88,7 +82,7 @@ bool suspending_and_resuming_tasks() {
                                                  -> fit::result<> {
         if (++run_count[2] == 100)
             return fit::ok();
-        LaunchAsync([&, s = context.suspend_task()]() mutable {
+        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
             resume_count[2]++;
             s.resume_task();
         });
@@ -110,11 +104,11 @@ bool suspending_and_resuming_tasks() {
                                                  -> fit::result<> {
         if (++run_count[4] == 100)
             return fit::ok();
-        LaunchAsync([&, s = context.suspend_task()]() mutable {
+        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
             resume_count[4]++;
             s.resume_task();
         });
-        LaunchAsync([&, s = context.suspend_task()]() mutable {
+        std::async(std::launch::async, [&, s = context.suspend_task()]() mutable {
             resume_count4b++; // use a different variable to avoid data races
             s.resume_task();
         });
@@ -164,15 +158,13 @@ bool abandoning_tasks() {
             return fit::pending();
         }));
 
-    std::thread thread;
     // Schedule a task that suspends itself and drops the |suspended_task|
     // object from a different thread so it is abandoned concurrently.
     executor.schedule_task(fit::make_promise(
         [&, d = fit::defer([&] { destruction[2]++; })](fit::context& context)
             -> fit::result<> {
             run_count[2]++;
-            std::thread new_thread([s = context.suspend_task()]() { });
-            thread = std::move(new_thread);
+            std::async(std::launch::async, [s = context.suspend_task()] {});
             return fit::pending();
         }));
 
@@ -190,9 +182,6 @@ bool abandoning_tasks() {
 
     // We expect the tasks to have been executed but to have been abandoned.
     loop.RunUntilIdle();
-    thread.join();
-    loop.RunUntilIdle();
-
     EXPECT_EQ(1, run_count[0]);
     EXPECT_EQ(1, destruction[0]);
     EXPECT_EQ(1, run_count[1]);
