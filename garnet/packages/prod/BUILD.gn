@@ -340,6 +340,15 @@ group("atheros") {
   ]
 }
 
+group("wifi_intel") {
+  testonly = true
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi",
+    "//src/connectivity/wlan/drivers/wlan",
+    "//src/connectivity/wlan/drivers/wlanphy",
+  ]
+}
+
 group("realtek") {
   testonly = true
   public_deps = [
@@ -1081,6 +1090,7 @@ group("wlan_drivers") {
     "//garnet/packages/prod:broadcom",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
+    "//garnet/packages/prod:wifi_intel",
     "//garnet/packages/prod:wlanif",
     "//garnet/packages/prod:wlanphy",
     "//garnet/packages/prod:wlantap",
