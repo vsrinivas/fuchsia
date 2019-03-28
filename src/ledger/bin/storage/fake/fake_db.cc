@@ -63,15 +63,6 @@ class FakeBatch : public Db::Batch {
     return MakeEmptySyncCallAndCheck(dispatcher_, handler);
   }
 
-  Status DeleteByPrefix(coroutine::CoroutineHandler* handler,
-                        convert::ExtendedStringView prefix) override {
-    for (auto it = key_value_store_->lower_bound(prefix.ToString());
-         it != key_value_store_->end() && HasPrefix(it->first, prefix); ++it) {
-      Delete(handler, it->first);
-    }
-    return MakeEmptySyncCallAndCheck(dispatcher_, handler);
-  }
-
   Status Execute(coroutine::CoroutineHandler* handler) override {
     for (const auto& entry : entries_to_put_) {
       (*key_value_store_)[entry.first] = entry.second;

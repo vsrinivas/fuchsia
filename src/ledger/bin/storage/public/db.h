@@ -30,11 +30,6 @@ class Db {
         coroutine::CoroutineHandler* handler,
         convert::ExtendedStringView key) = 0;
 
-    // Deletes all entries whose keys match the given |prefix|.
-    FXL_WARN_UNUSED_RESULT virtual Status DeleteByPrefix(
-        coroutine::CoroutineHandler* handler,
-        convert::ExtendedStringView prefix) = 0;
-
     // Executes this batch. No further operations in this batch are supported
     // after a successful execution.
     FXL_WARN_UNUSED_RESULT virtual Status Execute(

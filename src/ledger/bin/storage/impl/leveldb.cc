@@ -53,11 +53,10 @@ class BatchImpl : public Db::Batch {
   // batch, |callback| will be called with a |nullptr|.
   BatchImpl(
       async_dispatcher_t* dispatcher,
-      std::unique_ptr<leveldb::WriteBatch> batch, leveldb::DB* db,
+      std::unique_ptr<leveldb::WriteBatch> batch,
       fit::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback)
       : dispatcher_(dispatcher),
         batch_(std::move(batch)),
-        db_(db),
         callback_(std::move(callback)) {}
 
   ~BatchImpl() override {
@@ -83,21 +82,6 @@ class BatchImpl : public Db::Batch {
     return MakeEmptySyncCallAndCheck(dispatcher_, handler);
   }
 
-  Status DeleteByPrefix(CoroutineHandler* handler,
-                        convert::ExtendedStringView prefix) override {
-    FXL_DCHECK(batch_);
-    std::unique_ptr<leveldb::Iterator> it(db_->NewIterator(read_options_));
-    for (it->Seek(prefix); it->Valid() && it->key().starts_with(prefix);
-         it->Next()) {
-      batch_->Delete(it->key());
-    }
-    if (MakeEmptySyncCallAndCheck(dispatcher_, handler) ==
-        Status::INTERRUPTED) {
-      return Status::INTERRUPTED;
-    }
-    return ConvertStatus(it->status());
-  }
-
   Status Execute(CoroutineHandler* handler) override {
     FXL_DCHECK(batch_);
     if (MakeEmptySyncCallAndCheck(dispatcher_, handler) ==
@@ -112,7 +96,6 @@ class BatchImpl : public Db::Batch {
   std::unique_ptr<leveldb::WriteBatch> batch_;
 
   const leveldb::ReadOptions read_options_;
-  leveldb::DB* db_;
 
   fit::function<Status(std::unique_ptr<leveldb::WriteBatch>)> callback_;
 };
@@ -239,7 +222,7 @@ Status LevelDb::StartBatch(CoroutineHandler* handler,
   auto db_batch = std::make_unique<leveldb::WriteBatch>();
   active_batches_count_++;
   *batch = std::make_unique<BatchImpl>(
-      dispatcher_, std::move(db_batch), db_.get(),
+      dispatcher_, std::move(db_batch),
       [this](std::unique_ptr<leveldb::WriteBatch> db_batch) {
         active_batches_count_--;
         if (db_batch) {

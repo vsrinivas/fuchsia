@@ -201,11 +201,6 @@ class ControlledLevelDb : public Db {
       return batch_->Delete(handler, key);
     }
 
-    Status DeleteByPrefix(coroutine::CoroutineHandler* handler,
-                          convert::ExtendedStringView prefix) override {
-      return batch_->DeleteByPrefix(handler, prefix);
-    }
-
     Status Execute(coroutine::CoroutineHandler* handler) override {
       if (controller_->fail_batch_execute_after_ == 0) {
         return Status::IO_ERROR;
