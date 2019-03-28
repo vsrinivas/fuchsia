@@ -4,11 +4,12 @@
 
 use bytes::Bytes;
 use failure::bail;
-use wlan_rsn::{
+use wlan_common::ie::rsn::{
     akm, cipher,
     rsne::{RsnCapabilities, Rsne},
-    NegotiatedRsne, OUI,
+    OUI,
 };
+use wlan_rsn::NegotiatedRsne;
 
 fn make_cipher(suite_type: u8) -> cipher::Cipher {
     cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type }

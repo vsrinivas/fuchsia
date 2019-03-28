@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use crate::crypto_utils::nonce::Nonce;
-use crate::integrity;
+use crate::integrity::{self, integrity_algorithm};
 use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFrame};
 use crate::key::exchange::Key;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data::{self, kde};
+use crate::keywrap::keywrap_algorithm;
 use crate::rsna::{
     derive_key_descriptor_version, KeyFrameState, NegotiatedRsne, SecAssocUpdate, UpdateSink,
 };
@@ -254,7 +255,7 @@ fn create_message_3(
     // Add optional padding and encrypt the key data.
     key_data::add_padding(&mut key_data);
     let encrypted_key_data =
-        rsne.akm.keywrap_algorithm().ok_or(Error::UnsupportedAkmSuite)?.wrap(kek, &key_data[..])?;
+        keywrap_algorithm(&rsne.akm).ok_or(Error::UnsupportedAkmSuite)?.wrap(kek, &key_data[..])?;
 
     // Construct message.
     let version = derive_key_descriptor_version(eapol::KeyDescriptor::Ieee802dot11, rsne);
@@ -289,7 +290,7 @@ fn create_message_3(
     msg3.update_packet_body_len();
 
     // Compute and update the frame's MIC.
-    let integrity_alg = rsne.akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
+    let integrity_alg = integrity_algorithm(&rsne.akm).ok_or(Error::UnsupportedAkmSuite)?;
     update_mic(kck, rsne.mic_size as usize, integrity_alg, &mut msg3)?;
 
     Ok(msg3)

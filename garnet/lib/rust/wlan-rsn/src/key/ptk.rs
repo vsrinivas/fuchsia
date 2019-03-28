@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::akm::Akm;
-use crate::cipher::Cipher;
 use crate::crypto_utils::prf;
 use crate::Error;
 use failure::{self, ensure};
 use std::cmp::{max, min};
+use wlan_common::ie::rsn::{akm::Akm, cipher::Cipher};
 
 /// A PTK is derived from a PMK and provides access to the PTK's key-hierarchy which yields a KEK,
 /// KCK, and TK, used for EAPOL frame protection, integrity check and unicast frame protection
@@ -91,11 +90,13 @@ impl Ptk {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::akm::{Akm, PSK};
-    use crate::cipher::{Cipher, CCMP_128, TKIP};
-    use crate::suite_selector::{Factory, OUI};
     use bytes::Bytes;
     use hex::FromHex;
+    use wlan_common::ie::rsn::{
+        akm::{Akm, PSK},
+        cipher::{Cipher, CCMP_128, TKIP},
+        suite_selector::{Factory, OUI},
+    };
 
     struct TestData {
         pmk: Vec<u8>,

@@ -12,19 +12,14 @@ use failure::{self, Fail};
 
 // TODO(hahnr): Limit exports and rearrange modules.
 
-pub mod akm;
 pub mod auth;
-pub mod cipher;
 mod crypto_utils;
 mod integrity;
 pub mod key;
 mod key_data;
 mod keywrap;
-mod pmkid;
 pub mod rsna;
-pub mod rsne;
 mod state_machine;
-pub mod suite_selector;
 
 use crate::key::exchange::{
     self,
@@ -40,7 +35,7 @@ pub use crate::crypto_utils::nonce;
 pub use crate::key::gtk;
 pub use crate::key::gtk::GtkProvider;
 pub use crate::rsna::NegotiatedRsne;
-pub use crate::suite_selector::OUI;
+use wlan_common::ie::rsn::rsne;
 
 #[derive(Debug, PartialEq)]
 pub struct Supplicant {

@@ -607,8 +607,8 @@ mod tests {
     use futures::channel::{mpsc, oneshot};
     use std::error::Error;
     use std::sync::Arc;
-    use wlan_common::RadioConfig;
-    use wlan_rsn::{rsna::UpdateSink, rsne::RsnCapabilities, NegotiatedRsne};
+    use wlan_common::{ie::rsn::rsne::RsnCapabilities, RadioConfig};
+    use wlan_rsn::{rsna::UpdateSink, NegotiatedRsne};
 
     use crate::client::test_utils::{
         expect_info_event, fake_protected_bss_description, fake_unprotected_bss_description,

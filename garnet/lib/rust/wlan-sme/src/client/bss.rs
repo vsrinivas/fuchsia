@@ -7,7 +7,7 @@ use std::cmp::Ordering;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::hash::Hash;
-use wlan_rsn::rsne;
+use wlan_common::ie::rsn::rsne;
 
 use super::rsn::is_rsn_compatible;
 use crate::client::Standard;

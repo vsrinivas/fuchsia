@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::integrity;
+use crate::integrity::{self, integrity_algorithm};
 use crate::key::exchange::{
     handshake::group_key::{self, Config, GroupKeyHandshakeFrame},
     Key,
@@ -95,7 +95,7 @@ impl Supplicant {
 
         // Update the frame's MIC.
         let akm = &self.cfg.akm;
-        let integrity_alg = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
+        let integrity_alg = integrity_algorithm(&akm).ok_or(Error::UnsupportedAkmSuite)?;
         let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
         update_mic(&self.kck[..], mic_len, integrity_alg, &mut msg2)?;
 

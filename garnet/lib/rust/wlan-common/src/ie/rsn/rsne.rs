@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::akm;
-use crate::cipher;
-use crate::pmkid;
-use crate::suite_selector;
-use bitfield::bitfield;
-use bytes::{BufMut, Bytes};
+use super::{akm, cipher, pmkid, suite_selector};
 
-use nom::{call, cond, count, do_parse, eof, error_position, expr_res, named, named_attr, take, try_parse};
+use bytes::{BufMut, Bytes};
+use nom::{
+    call, cond, count, do_parse, eof, error_position, expr_res, named, named_attr, take, try_parse,
+};
 use nom::{le_u16, le_u8, IResult};
+use wlan_bitfield::bitfield;
 
 macro_rules! if_remaining (
   ($i:expr, $f:expr) => ( cond!($i, $i.len() !=0, call!($f)); );
@@ -32,26 +31,23 @@ pub struct Rsne {
     pub group_mgmt_cipher_suite: Option<cipher::Cipher>,
 }
 
-bitfield! {
-    #[derive(PartialOrd, PartialEq, Clone)]
-    pub struct RsnCapabilities(u16);
-    impl Debug;
-    pub preauth, set_preauth: 0;
-    pub no_pairwise, set_no_pairwise: 1;
-    pub ptksa_replay_counter, set_ptksa_replay_counter: 3, 2;
-    pub gtksa_replay_counter, set_gtksa_replay_counter: 5, 4;
-    pub mgmt_frame_protection_req, set_mgmt_frame_protection_req: 6;
-    pub mgmt_frame_protection_cap, set_mgmt_frame_protection_cap: 7;
-    pub joint_multiband, set_joint_multiband: 8;
-    pub peerkey_enabled, set_peerkey_enabled: 9;
-    pub ssp_amsdu_cap, set_ssp_amsdu_cap: 10;
-    pub ssp_amsdu_req, set_ssp_amsdu_req: 11;
-    pub pbac, set_pbac: 12;
-    pub extended_key_id, set_extended_key_id: 13;
-    // bit 14-15 reserved
-
-    value, _: 15, 0;
-}
+#[bitfield(
+    0         preauth,
+    1         no_pairwise,
+    2..=3     ptksa_replay_counter,
+    4..=5     gtksa_replay_counter,
+    6         mgmt_frame_protection_req,
+    7         mgmt_frame_protection_cap,
+    8         joint_multiband,
+    9         peerkey_enabled,
+    10        ssp_amsdu_cap,
+    11        ssp_amsdu_req,
+    12        pbac,
+    13        extended_key_id,
+    14..=15   _, // reserved
+)]
+#[derive(PartialOrd, PartialEq, Clone)]
+pub struct RsnCapabilities(pub u16);
 
 impl Rsne {
     pub fn new() -> Self {
@@ -129,7 +125,7 @@ impl Rsne {
 
         match self.rsn_capabilities.as_ref() {
             None => return,
-            Some(caps) => buf.put_u16_le(caps.value()),
+            Some(caps) => buf.put_u16_le(caps.0),
         };
 
         if self.pmkids.is_empty() {
@@ -304,7 +300,7 @@ mod tests {
         assert!(!rsn_capabilities.pbac());
         assert!(!rsn_capabilities.extended_key_id());
 
-        assert_eq!(rsn_capabilities.value(), 0xa8 + (0x04 << 8));
+        assert_eq!(rsn_capabilities.0, 0xa8 + (0x04 << 8));
 
         let pmkids: &[u8] = &[
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
@@ -327,6 +323,6 @@ mod tests {
         rsn_caps.set_mgmt_frame_protection_cap(true);
         rsn_caps.set_ssp_amsdu_cap(true);
 
-        assert_eq!(rsn_caps.value(), 0xa8 + (0x04 << 8));
+        assert_eq!(rsn_caps.0, 0xa8 + (0x04 << 8));
     }
 }

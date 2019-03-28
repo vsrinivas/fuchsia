@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::crypto_utils::nonce::Nonce;
-use crate::integrity;
+use crate::integrity::{self, integrity_algorithm};
 use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFrame};
 use crate::key::exchange::Key;
 use crate::key::gtk::Gtk;
@@ -12,12 +12,12 @@ use crate::key_data;
 use crate::rsna::{
     KeyFrameKeyDataState, KeyFrameState, NegotiatedRsne, SecAssocUpdate, UpdateSink,
 };
-use crate::rsne::Rsne;
 use crate::Error;
 use bytes::Bytes;
 use eapol;
 use failure::{self, bail, ensure};
 use log::{error, info};
+use wlan_common::ie::rsn::rsne::Rsne;
 
 // IEEE Std 802.11-2016, 12.7.6.2
 fn handle_message_1(
@@ -74,7 +74,7 @@ fn create_message_2(
     };
     msg2.update_packet_body_len();
 
-    let integrity_alg = rsne.akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
+    let integrity_alg = integrity_algorithm(&rsne.akm).ok_or(Error::UnsupportedAkmSuite)?;
     update_mic(kck, rsne.mic_size, integrity_alg, &mut msg2)?;
 
     Ok(msg2)
@@ -157,7 +157,7 @@ fn create_message_4(
     };
     msg4.update_packet_body_len();
 
-    let integrity_alg = rsne.akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
+    let integrity_alg = integrity_algorithm(&rsne.akm).ok_or(Error::UnsupportedAkmSuite)?;
     update_mic(kck, rsne.mic_size, integrity_alg, &mut msg4)?;
 
     Ok(msg4)

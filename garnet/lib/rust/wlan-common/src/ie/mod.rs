@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod id;
+pub mod rsn;
 
 mod constants;
 mod fields;

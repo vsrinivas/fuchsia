@@ -27,11 +27,12 @@ use futures::channel::{mpsc, oneshot};
 use log::{debug, error, info, warn};
 use std::boxed::Box;
 use std::sync::{Arc, Mutex};
+use wlan_common::ie::rsn::rsne::{self, Rsne};
 use wlan_common::{
     channel::{Channel, Phy},
     RadioConfig,
 };
-use wlan_rsn::{self, gtk::GtkProvider, nonce::NonceReader, psk, rsne::Rsne, NegotiatedRsne};
+use wlan_rsn::{self, gtk::GtkProvider, nonce::NonceReader, psk, NegotiatedRsne};
 
 const DEFAULT_BEACON_PERIOD: u16 = 100;
 const DEFAULT_DTIM_PERIOD: u8 = 1;
@@ -397,7 +398,7 @@ impl InfraBss {
         a_rsn: RsnCfg,
         client_addr: &MacAddr,
     ) -> Result<AssociationId, fidl_mlme::AssociateResultCodes> {
-        let s_rsne = wlan_rsn::rsne::from_bytes(s_rsne_bytes).to_full_result().map_err(|e| {
+        let s_rsne = rsne::from_bytes(s_rsne_bytes).to_full_result().map_err(|e| {
             warn!("failed to deserialize RSNE: {:?}", e);
             fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch
         })?;

@@ -4,11 +4,11 @@
 
 // Remove once GtkProvider is used.
 #[allow(unused)]
-use crate::cipher::Cipher;
 use crate::crypto_utils::prf;
 use crate::Error;
 use failure::{self, ensure};
 use mundane::rand_bytes;
+use wlan_common::ie::rsn::cipher::Cipher;
 
 /// This GTK provider does not support key rotations yet.
 #[derive(Debug)]
@@ -83,10 +83,9 @@ impl Gtk {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cipher;
-    use crate::suite_selector::OUI;
     use bytes::Bytes;
     use std::collections::HashSet;
+    use wlan_common::ie::rsn::{cipher, suite_selector::OUI};
 
     #[test]
     fn test_gtk_generation() {

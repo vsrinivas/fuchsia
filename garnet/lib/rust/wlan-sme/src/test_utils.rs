@@ -6,17 +6,17 @@ use crate::{DeviceInfo, MacAddr};
 use bytes::Bytes;
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
+use wlan_common::ie::rsn::{
+    akm::{self, Akm},
+    cipher::{self, Cipher},
+    rsne::{RsnCapabilities, Rsne},
+    OUI,
+};
 use wlan_common::{
     channel::{Cbw, Phy},
     RadioConfig,
 };
-use wlan_rsn::{
-    akm::{self, Akm},
-    cipher::{self, Cipher},
-    key::{gtk::Gtk, ptk::Ptk},
-    rsne::{RsnCapabilities, Rsne},
-    suite_selector::OUI,
-};
+use wlan_rsn::key::{gtk::Gtk, ptk::Ptk};
 
 pub fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {
     let a_rsne = Rsne {

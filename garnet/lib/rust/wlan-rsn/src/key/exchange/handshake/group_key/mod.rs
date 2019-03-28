@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::akm::Akm;
-use crate::cipher::Cipher;
 use crate::key::exchange::{self, handshake::group_key::supplicant::Supplicant};
 use crate::rsna::{KeyFrameKeyDataState, KeyFrameState, Role, UpdateSink, VerifiedKeyFrame};
 use bytes::Bytes;
 use eapol;
 use failure::{self, bail, ensure};
+use wlan_common::ie::rsn::{akm::Akm, cipher::Cipher};
 
 mod supplicant;
 

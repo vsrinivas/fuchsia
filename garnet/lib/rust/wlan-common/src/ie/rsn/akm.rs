@@ -2,11 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::crypto_utils;
-use crate::integrity::{self, hmac_sha1::HmacSha1};
-use crate::keywrap;
-use crate::suite_selector;
-use crate::Error;
+use super::suite_selector;
+use super::Error;
 use bytes::Bytes;
 use failure::{self, ensure};
 use std::fmt;
@@ -138,44 +135,6 @@ impl Akm {
         match self.suite_type {
             1...11 | 13 => Some(256),
             12 => Some(384),
-            _ => None,
-        }
-    }
-
-    pub fn integrity_algorithm(&self) -> Option<Box<integrity::Algorithm>> {
-        return_none_if_unknown_algo!(self);
-
-        // IEEE 802.11-2016, 12.7.3, Table 12-8
-        match self.suite_type {
-            1 | 2 => Some(Box::new(HmacSha1::new())),
-            // TODO(hahnr): Add remaining integrity algorithms.
-            3...13 => None,
-            _ => None,
-        }
-    }
-
-    pub fn keywrap_algorithm(&self) -> Option<Box<keywrap::Algorithm>> {
-        return_none_if_unknown_algo!(self);
-
-        // IEEE 802.11-2016, 12.7.3, Table 12-8
-        match self.suite_type {
-            1...13 => Some(Box::new(keywrap::aes::NistAes)),
-            _ => None,
-        }
-    }
-
-    pub fn prf(
-        &self,
-        k: &[u8],
-        a: &str,
-        b: &[u8],
-        bits: usize,
-    ) -> Option<Result<Vec<u8>, failure::Error>> {
-        return_none_if_unknown_algo!(self);
-
-        // IEEE 802.11-2016, 12.7.1.2
-        match self.suite_type {
-            1...4 | 8 | 9 => Some(crypto_utils::prf(k, a, b, bits)),
             _ => None,
         }
     }

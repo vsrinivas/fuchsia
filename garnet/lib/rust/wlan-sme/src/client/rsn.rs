@@ -3,14 +3,12 @@ use eapol;
 use failure::{bail, ensure, format_err};
 use fidl_fuchsia_wlan_mlme::BssDescription;
 use std::boxed::Box;
-use wlan_rsn::{
-    self, akm, cipher,
-    nonce::NonceReader,
-    psk,
-    rsna::UpdateSink,
+use wlan_common::ie::rsn::{
+    akm, cipher,
     rsne::{self, Rsne},
-    NegotiatedRsne, OUI,
+    OUI,
 };
+use wlan_rsn::{self, nonce::NonceReader, psk, rsna::UpdateSink, NegotiatedRsne};
 
 use crate::DeviceInfo;
 
@@ -141,7 +139,7 @@ mod tests {
         client::test_utils::{fake_protected_bss_description, fake_unprotected_bss_description},
         test_utils::{fake_device_info, make_rsne, rsne_as_bytes, wpa2_psk_ccmp_rsne_with_caps},
     };
-    use wlan_rsn::rsne::RsnCapabilities;
+    use wlan_common::ie::rsn::rsne::RsnCapabilities;
 
     const CLIENT_ADDR: [u8; 6] = [0x7A, 0xE7, 0x76, 0xD9, 0xF2, 0x67];
 

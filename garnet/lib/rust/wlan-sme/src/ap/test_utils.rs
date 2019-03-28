@@ -4,7 +4,8 @@
 
 use eapol;
 use std::sync::{Arc, Mutex};
-use wlan_rsn::{rsna::UpdateSink, rsne::RsnCapabilities, NegotiatedRsne};
+use wlan_common::ie::rsn::rsne::RsnCapabilities;
+use wlan_rsn::{rsna::UpdateSink, NegotiatedRsne};
 
 use crate::{ap::authenticator::Authenticator, test_utils};
 

@@ -11,12 +11,12 @@ use crate::rsna::{
     KeyFrameKeyDataState, KeyFrameState, NegotiatedRsne, Role, SecAssocUpdate, UpdateSink,
     VerifiedKeyFrame,
 };
-use crate::rsne::Rsne;
 use crate::state_machine::StateMachine;
 use crate::Error;
 use eapol;
 use failure::{self, bail, ensure};
 use std::sync::{Arc, Mutex};
+use wlan_common::ie::rsn::rsne::Rsne;
 
 #[derive(Debug, PartialEq)]
 pub enum MessageNumber {

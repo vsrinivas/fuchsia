@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use super::*;
-use crate::akm::{self, Akm};
-use crate::cipher::{self, Cipher};
 use crate::crypto_utils::nonce::NonceReader;
+use crate::integrity::integrity_algorithm;
 use crate::key::exchange::handshake::fourway::{self, Fourway};
 use crate::key::{
     gtk::{Gtk, GtkProvider},
@@ -13,14 +12,19 @@ use crate::key::{
 };
 use crate::key_data;
 use crate::key_data::kde;
+use crate::keywrap::keywrap_algorithm;
 use crate::psk;
 use crate::rsna::{NegotiatedRsne, SecAssocUpdate, VerifiedKeyFrame};
-use crate::rsne::Rsne;
-use crate::suite_selector::OUI;
 use crate::{Authenticator, Supplicant};
 use bytes::Bytes;
 use hex::FromHex;
 use std::sync::{Arc, Mutex};
+use wlan_common::ie::rsn::{
+    akm::{self, Akm},
+    cipher::{self, Cipher},
+    rsne::Rsne,
+    suite_selector::OUI,
+};
 
 pub const S_ADDR: [u8; 6] = [0x81, 0x76, 0x61, 0x14, 0xDF, 0xC9];
 pub const A_ADDR: [u8; 6] = [0x1D, 0xE3, 0xFD, 0xDF, 0xCB, 0xD3];
@@ -107,7 +111,7 @@ pub fn get_pmk() -> Vec<u8> {
 pub fn compute_mic(kck: &[u8], frame: &eapol::KeyFrame) -> Vec<u8> {
     let akm = get_akm();
     let integrity_alg =
-        akm.integrity_algorithm().expect("error AKM has no known integrity Algorithm");
+        integrity_algorithm(&akm).expect("error AKM has no known integrity Algorithm");
     let mut buf = Vec::with_capacity(frame.len());
     frame.as_bytes(true, &mut buf);
     let written = buf.len();
@@ -120,7 +124,7 @@ pub fn compute_mic(kck: &[u8], frame: &eapol::KeyFrame) -> Vec<u8> {
 
 pub fn encrypt_key_data(kek: &[u8], key_data: &[u8]) -> Vec<u8> {
     let keywrap_alg =
-        get_akm().keywrap_algorithm().expect("error AKM has no known keywrap Algorithm");
+        keywrap_algorithm(&get_akm()).expect("error AKM has no known keywrap Algorithm");
     keywrap_alg.wrap(kek, key_data).expect("could not encrypt key data")
 }
 

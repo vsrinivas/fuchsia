@@ -4,13 +4,13 @@
 
 pub mod kde;
 
-use crate::rsne;
 use crate::Error;
 use bytes::BufMut;
 use failure::{self, ensure};
 use nom::IResult::{Done, Incomplete};
 use nom::{call, error_position, many0, named, take, try_parse};
 use nom::{IResult, Needed};
+use wlan_common::ie::rsn::rsne;
 
 #[derive(Debug)]
 pub enum Element {

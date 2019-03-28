@@ -9,7 +9,8 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
-use wlan_rsn::{rsna::UpdateSink, rsne::RsnCapabilities};
+use wlan_common::ie::rsn::rsne::RsnCapabilities;
+use wlan_rsn::rsna::UpdateSink;
 
 use crate::{
     client::rsn::Supplicant,

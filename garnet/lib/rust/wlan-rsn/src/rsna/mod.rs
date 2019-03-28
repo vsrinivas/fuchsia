@@ -2,13 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::akm::Akm;
-use crate::cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
+use crate::integrity::integrity_algorithm;
 use crate::key::exchange::Key;
-use crate::rsne::{RsnCapabilities, Rsne};
+use crate::keywrap::keywrap_algorithm;
 use crate::Error;
 use eapol;
 use failure::{self, bail, ensure};
+use wlan_common::ie::rsn::{
+    akm::Akm,
+    cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP},
+    rsne::{RsnCapabilities, Rsne},
+};
 
 pub mod esssa;
 #[cfg(test)]
@@ -65,7 +69,7 @@ pub struct EncryptedKeyData<'a> {
 
 impl<'a> EncryptedKeyData<'a> {
     pub fn decrypt(&self, kek: &[u8], akm: &Akm) -> Result<Vec<u8>, failure::Error> {
-        Ok(akm.keywrap_algorithm().ok_or(Error::UnsupportedAkmSuite)?.unwrap(kek, self.key_data)?)
+        Ok(keywrap_algorithm(akm).ok_or(Error::UnsupportedAkmSuite)?.unwrap(kek, self.key_data)?)
     }
 }
 
@@ -83,7 +87,7 @@ impl<'a> UnverifiedMic<'a> {
         // If a MIC is set but the PTK was not yet derived, the MIC cannot be verified.
         let mut buf = Vec::with_capacity(self.frame.len());
         self.frame.as_bytes(true, &mut buf);
-        let valid_mic = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?.verify(
+        let valid_mic = integrity_algorithm(akm).ok_or(Error::UnsupportedAkmSuite)?.verify(
             kck,
             &buf[..],
             &self.frame.key_mic[..],
@@ -361,12 +365,9 @@ pub type UpdateSink = Vec<SecAssocUpdate>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::akm;
-    use crate::cipher;
     use crate::rsna::{test_util, NegotiatedRsne, Role};
-    use crate::rsne::Rsne;
-    use crate::suite_selector::OUI;
     use bytes::Bytes;
+    use wlan_common::ie::rsn::{akm, cipher, rsne::Rsne, suite_selector::OUI};
 
     #[test]
     fn test_negotiated_rsne_from_rsne() {
