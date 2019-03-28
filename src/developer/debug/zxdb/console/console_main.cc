@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/console/command_line_options.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -26,6 +27,18 @@ namespace {
 // Loads any actions specified on the command line into the vector.
 Err SetupActions(const CommandLineOptions& options,
                  std::vector<Action>* actions) {
+  if (options.core) {
+    if (options.connect || options.run) {
+      return Err("--core can't be used with commands to connect or run.");
+    }
+
+    std::string cmd = VerbToString(Verb::kOpenDump) + " " + *options.core;
+    actions->push_back(Action("Open Dump", [cmd](const Action&, const Session&,
+                                               Console* console) {
+      console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
+    }));
+  }
+
   if (options.connect) {
     std::string cmd = "connect " + *options.connect;
     actions->push_back(Action("Connect", [cmd](const Action&, const Session&,
@@ -80,14 +93,14 @@ int ConsoleMain(int argc, const char* argv[]) {
   std::vector<std::string> params;
   Err err = ParseCommandLine(argc, argv, &options, &params);
   if (err.has_error()) {
-    fprintf(stderr, "%s", err.msg().c_str());
+    fprintf(stderr, "%s\n", err.msg().c_str());
     return 1;
   }
 
   std::vector<zxdb::Action> actions;
   err = SetupActions(options, &actions);
   if (err.has_error()) {
-    fprintf(stderr, "%s", err.msg().c_str());
+    fprintf(stderr, "%s\n", err.msg().c_str());
     return 1;
   }
 

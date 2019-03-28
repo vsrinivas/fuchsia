@@ -23,6 +23,9 @@ const char kConnectHelp[] = R"(  --connect=<host>:<port>
   -c <host>:<port>
       Attempts to connect to a debug_agent running on the given host/port.)";
 
+const char kCoreHelp[] = R"(  --core=<filename>
+      Attempts to open a core file for analysis.)";
+
 const char kDebugModeHelp[] = R"(  --debug-mode
   -d
       Output debug information about zxdb.
@@ -66,6 +69,7 @@ Err ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
   CommandLineParser<CommandLineOptions> parser;
 
   parser.AddSwitch("connect", 'c', kConnectHelp, &CommandLineOptions::connect);
+  parser.AddSwitch("core", 0, kCoreHelp, &CommandLineOptions::core);
   parser.AddSwitch("debug-mode", 'd', kDebugModeHelp,
                    &CommandLineOptions::debug_mode);
   parser.AddSwitch("quit-agent-on-exit", 0, kQuitAgentOnExit,
