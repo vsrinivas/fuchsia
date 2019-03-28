@@ -117,13 +117,10 @@ config("fdio_config") {
   # TODO(pylaligand): find a better way to let executables link in fdio.
   # Ideally their dependencies should be set up in such a way that it would get
   # inherited from them.
-  foreach(image, zircon_images) {
-    if (image.name == "fdio" && image.cpu == current_cpu) {
-      assert(image.type == "so")
-      libs = [ "$zircon_root_build_dir/${image.path}" ]
-    }
-  }
-  assert(defined(libs), "fdio.so missing from Zircon images.json")
+  api_file = "$zircon_root_build_dir/legacy-fdio-$current_cpu.json"
+  libs = rebase_path(read_file(api_file, "json"), ".", zircon_root_build_dir)
+  assert(libs != [], "$api_file empty?")
+  assert(libs == [ libs[0] ], "$api_file has multiple entries?")
 }
 
 config("executable_config") {

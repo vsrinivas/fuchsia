@@ -1132,6 +1132,7 @@ template("_variant_target") {
                                "*",
                                [
                                  "metadata",
+                                 "no_implicit_deps",
                                  "output_name",
                                  "target",
                                  "testonly",

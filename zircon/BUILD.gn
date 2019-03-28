@@ -148,6 +148,7 @@ if (current_toolchain == default_toolchain) {
       testonly = true
       deps = [
         ":ids-$cpu",
+        ":legacy-fdio-$cpu",
         ":legacy-image-$cpu",
         ":legacy-tests-$cpu",
         ":tools",
@@ -194,6 +195,43 @@ if (current_toolchain == default_toolchain) {
         ":$cpu",
       ]
     }
+
+    # This lists just the one file to link against to get fdio.
+    build_api_module("legacy-fdio-$cpu") {
+      data_keys = [ "link_output" ]
+      walk_keys = [ "link_barrier" ]
+      deps = [
+        ":legacy-fdio-redirect-$cpu",
+      ]
+    }
+
+    # Collect from the target below in the appropriate toolchain.
+    environment_redirect("legacy-fdio-redirect-$cpu") {
+      visibility = [ ":legacy-fdio-$cpu" ]
+      cpu = cpu
+      environment_label = "$zx/public/gn/toolchain:user"
+      deps = [
+        ":legacy-fdio-variant-redirect",
+      ]
+    }
+  }
+} else {
+  # This does variant selection as if it were an executable called "fdio",
+  # so it should get to the configured default variant.  But the target is
+  # nothing but a redirect to reach shared_library("fdio") and its
+  # `link_output` metadata.
+  _variant_target("legacy-fdio-variant-redirect") {
+    visibility = [ ":*" ]
+    target = {
+      type = "group"
+      match = "executable"
+      output_name = "fdio"
+      shlib = true
+    }
+    deps = [
+      "$zx/system/ulib/fdio",
+    ]
+    no_implicit_deps = true
   }
 }
 
