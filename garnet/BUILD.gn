@@ -11,6 +11,7 @@ group("garnet") {
     ":build-info",
     "bin",
     "examples",
+
     # TODO: Add more.
   ]
 }
@@ -33,6 +34,7 @@ build_info_files = {
   version = "$target_gen_dir/version.txt"
   jiri_snapshot = "//.jiri_root/update_history/latest"
   last_update = "$target_gen_dir/last-update.txt"
+  latest_commit_date = "$target_gen_dir/latest-commit-date.txt"
 }
 
 write_file(build_info_files.product, build_info_product)
@@ -41,12 +43,13 @@ write_file(build_info_files.board, build_info_board)
 if (build_info_version != "") {
   write_file(build_info_files.version, build_info_version)
 } else {
-  build_info_files.version = build_info_files.last_update
+  build_info_files.version = build_info_files.latest_commit_date
 }
 
 package("build-info") {
   deps = [
     ":last-update.txt",
+    ":latest-commit-date.txt",
   ]
   resources = [
     {
@@ -69,6 +72,10 @@ package("build-info") {
       dest = "snapshot"
       path = build_info_files.jiri_snapshot
     },
+    {
+      dest = "latest-commit-date"
+      path = build_info_files.latest_commit_date
+    },
   ]
 }
 
@@ -82,4 +89,26 @@ action("last-update.txt") {
   ]
   script = "tools/gen-last-update"
   args = rebase_path(sources + outputs, root_build_dir)
+}
+
+action("latest-commit-date.txt") {
+  visibility = [ ":*" ]
+
+  # The script at tools/gen-latest-commit-date.sh script runs the following
+  # command to compute the latest commit date:
+  #
+  #   GIT_CONFIG_NOSYSTEM=1 TZ=UTC git --git-dir="$INTEGRATION"/.git log --date=iso-strict-local --format=%cd -n 1 > "$OUTPUT"
+  #
+  # That command uses the following files, which means we need to depend on them
+  # in order to ensure that this GN target will be considered dirty if the
+  # output of that command would change.
+  sources = [
+    "//integration/.git/HEAD",
+    "//integration/.git/index",
+  ]
+  outputs = [
+    build_info_files.latest_commit_date,
+  ]
+  script = "tools/gen-latest-commit-date.sh"
+  args = rebase_path([ "//integration/" ] + outputs, root_build_dir)
 }

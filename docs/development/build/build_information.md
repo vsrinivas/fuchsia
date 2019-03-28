@@ -26,14 +26,14 @@ Example: “boards/x64.gni”
 `/config/build-info/version`
 
 ## Description
-String describing the version of the build.  Defaults to the same string used currently in ‘last-update’.  Can be overridden by build infrastructure to provide a more semantically meaningful version, e.g. to include the release train the build was produced on.
+String describing the version of the build.  Defaults to the same string used currently in ‘latest-commit-date’.  Can be overridden by build infrastructure to provide a more semantically meaningful version, e.g. to include the release train the build was produced on.
 
-# Last-update
+# Latest-commit-date
 ## Location
-`/config/build-info/last-update`
+`/config/build-info/latest-commit-date`
 
 ## Description
-String containing a timestamp of the most recent time ‘jiri update’ was executed.  Example: “2018-11-06T14:47:59-08:00”.
+String containing a timestamp of the most recent commit to the integration repository (specifically, the "CommitDate" field) formatted in strict ISO 8601 format in the UTC timezone.  Example: “2019-03-28T15:42:20+00:00”.
 
 # Snapshot
 ## Location:

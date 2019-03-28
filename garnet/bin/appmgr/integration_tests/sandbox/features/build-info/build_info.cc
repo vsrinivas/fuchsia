@@ -8,6 +8,6 @@ TEST_F(NamespaceTest, BuildInfo) {
   ExpectExists("/config/build-info/product");
   ExpectExists("/config/build-info/board");
   ExpectExists("/config/build-info/version");
-  ExpectExists("/config/build-info/last-update");
+  ExpectExists("/config/build-info/latest-commit-date");
   ExpectExists("/config/build-info/snapshot");
 }
