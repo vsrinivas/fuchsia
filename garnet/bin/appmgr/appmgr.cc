@@ -32,9 +32,11 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   root_realm_ = std::make_unique<Realm>(std::move(realm_args));
 
   // 2. Publish outgoing directories.
+  // Publish the root realm's hub directory as 'hub/' and the first nested
+  // realm's (to be created by sysmgr) service directory as 'svc/'.
   if (args.pa_directory_request != ZX_HANDLE_INVALID) {
     auto svc = fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-      return root_realm_->BindSvc(std::move(channel));
+      return root_realm_->BindFirstNestedRealmSvc(std::move(channel));
     }));
     publish_dir_->AddEntry("hub", root_realm_->hub_dir());
     publish_dir_->AddEntry("svc", svc);

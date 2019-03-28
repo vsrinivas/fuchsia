@@ -247,11 +247,12 @@ Realm::Realm(RealmArgs args)
     parent_job = zx::unowned<zx::job>(zx::job::default_job());
   }
 
-  // init svc service channel for root application environment
+  // Only need to create this channel for the root realm.
   if (parent_ == nullptr) {
-    FXL_CHECK(zx::channel::create(0, &svc_channel_server_,
-                                  &svc_channel_client_) == ZX_OK);
+    FXL_CHECK(zx::channel::create(0, &first_nested_realm_svc_server_,
+                                  &first_nested_realm_svc_client_) == ZX_OK);
   }
+
   FXL_CHECK(zx::job::create(*parent_job, 0u, &job_) == ZX_OK);
 
   koid_ = std::to_string(fsl::GetKoid(job_.get()));
@@ -402,12 +403,13 @@ void Realm::CreateNestedEnvironment(
   // update hub
   hub_.AddRealm(child->HubInfo());
 
-  Realm* root_realm = this;
-  while (root_realm->parent() != nullptr) {
-    root_realm = root_realm->parent();
+  // If this is the first nested realm created in the root realm, serve the
+  // child realm's service directory on this channel so that
+  // BindFirstNestedRealmSvc can be used to connect to it.
+  if (parent_ == nullptr && children_.size() == 0) {
+    child->default_namespace_->ServeServiceDirectory(
+        std::move(first_nested_realm_svc_server_));
   }
-  child->default_namespace_->ServeServiceDirectory(
-      std::move(root_realm->svc_channel_server_));
 
   controller->OnCreated();
   children_.emplace(child, std::move(controller));
@@ -972,12 +974,11 @@ RunnerHolder* Realm::GetRunnerRecursive(const std::string& runner) const {
   return nullptr;
 }
 
-zx_status_t Realm::BindSvc(zx::channel channel) {
-  Realm* root_realm = this;
-  while (root_realm->parent() != nullptr) {
-    root_realm = root_realm->parent();
+zx_status_t Realm::BindFirstNestedRealmSvc(zx::channel channel) {
+  if (parent_ != nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
-  return fdio_service_clone_to(root_realm->svc_channel_client_.get(),
+  return fdio_service_clone_to(first_nested_realm_svc_client_.get(),
                                channel.release());
 }
 

@@ -108,7 +108,11 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   void AddBinding(
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment);
 
-  zx_status_t BindSvc(zx::channel channel);
+  // Binds the given channel to the services directory (/svc) for the very first
+  // nested realm created. This function is only supported for the root realm,
+  // otherwise it will do nothing and return ZX_ERR_NOT_SUPPORTED.
+  zx_status_t BindFirstNestedRealmSvc(zx::channel channel);
+
   void CreateShell(const std::string& path, zx::channel svc);
 
   void Resolve(fidl::StringPtr name,
@@ -170,8 +174,11 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
 
   std::unordered_map<std::string, std::unique_ptr<RunnerHolder>> runners_;
 
-  zx::channel svc_channel_client_;
-  zx::channel svc_channel_server_;
+  // This channel pair is only created for the root realm, and is used to
+  // implement BindFirstNestedRealmSvc. The server end is used to serve the
+  // services directory (/svc) for the first nested realm created.
+  zx::channel first_nested_realm_svc_client_;
+  zx::channel first_nested_realm_svc_server_;
 
   SchemeMap scheme_map_;
 
