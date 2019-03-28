@@ -25,6 +25,32 @@ TEST(LibraryLoader, LoadSimple) {
   LibraryReadError err;
   LibraryLoader loader = LibraryLoader(library_files, &err);
   ASSERT_EQ(LibraryReadError::kOk, err.value);
+
+  const Library* library_ptr;
+  loader.GetLibraryFromName("fidl.test.frobinator", &library_ptr);
+  const std::vector<Interface>& interfaces = library_ptr->interfaces();
+
+  std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
+  const Interface* found_interface = nullptr;
+  for (const auto& interface : interfaces) {
+    if (interface.name() == kDesiredInterfaceName) {
+      found_interface = &interface;
+      break;
+    }
+  }
+  ASSERT_NE(found_interface, nullptr)
+      << "Could not find interface " << kDesiredInterfaceName;
+
+  const InterfaceMethod* found_method = nullptr;
+  std::string kDesiredFullMethodName = "fidl.test.frobinator/Frobinator.Frob";
+  for (const auto& method : found_interface->methods()) {
+    if (method.fully_qualified_name() == kDesiredFullMethodName) {
+      found_method = &method;
+      break;
+    }
+  }
+  ASSERT_NE(found_method, nullptr)
+      << "Could not find method " << kDesiredFullMethodName;
 }
 
 }  // namespace fidlcat

@@ -451,6 +451,8 @@ class InterfaceMethod {
 
   std::string name() const { return value_["name"].GetString(); }
 
+  std::string fully_qualified_name() const;
+
   const std::optional<std::vector<InterfaceMethodParameter>>& request_params()
       const {
     return request_params_;
@@ -484,11 +486,13 @@ class InterfaceMethod {
 class Interface {
  public:
   Interface(const Library& library, const rapidjson::Value& value)
-      : enclosing_library_(library) {
+      : value_(value), enclosing_library_(library) {
     for (auto& method : value["methods"].GetArray()) {
       interface_methods_.emplace_back(*this, method);
     }
   }
+
+  std::string name() const { return value_["name"].GetString(); }
 
   void AddMethodsToIndex(std::map<Ordinal, const InterfaceMethod*>& index) {
     for (size_t i = 0; i < interface_methods_.size(); i++) {
@@ -500,7 +504,12 @@ class Interface {
 
   const Library& enclosing_library() const { return enclosing_library_; }
 
+  const std::vector<InterfaceMethod>& methods() const {
+    return interface_methods_;
+  }
+
  private:
+  const rapidjson::Value& value_;
   const Library& enclosing_library_;
   std::vector<InterfaceMethod> interface_methods_;
 };
@@ -639,6 +648,8 @@ class Library {
   // embedded in an array)
   size_t InlineSizeFromIdentifier(std::string& identifier) const;
 
+  const std::vector<Interface>& interfaces() const { return interfaces_; }
+
   Library& operator=(const Library&) = delete;
   Library(const Library&) = delete;
 
@@ -674,7 +685,8 @@ class LibraryLoader {
   // If the library with name |name| is present in this loader, sets *|library|
   // to a pointer to that library and returns true.  Otherwise, returns false.
   // |name| is of the format "a.b.c"
-  bool GetLibraryFromName(std::string& name, const Library** library) const {
+  bool GetLibraryFromName(const std::string& name,
+                          const Library** library) const {
     auto l = representations_.find(name);
     if (l != representations_.end()) {
       const Library* lib = &(l->second);

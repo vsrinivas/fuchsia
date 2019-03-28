@@ -466,4 +466,8 @@ LibraryLoader::LibraryLoader(
   }
 }
 
+std::string InterfaceMethod::fully_qualified_name() const {
+  return enclosing_interface_.name() + "." + name();
+}
+
 }  // namespace fidlcat
