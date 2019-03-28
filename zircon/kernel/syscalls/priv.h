@@ -33,10 +33,9 @@ public:
     }
 
     // Note that if this call fails to allocate the Handle, the underlying
-    // Dispatcher's on_zero_handles() will be called when the KernelHandle
-    // goes out of scope on return.
+    // Dispatcher's on_zero_handles() will be called.
     zx_status_t make(KernelHandle<Dispatcher> handle, zx_rights_t rights) {
-        h_ = handle.UpgradeToHandleOwner(rights);
+        h_ = Handle::Make(ktl::move(handle), rights);
         return h_ ? ZX_OK : ZX_ERR_NO_MEMORY;
     }
 

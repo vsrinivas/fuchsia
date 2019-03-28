@@ -123,6 +123,18 @@ HandleOwner Handle::Make(fbl::RefPtr<Dispatcher> dispatcher,
                                          rights, base_value));
 }
 
+HandleOwner Handle::Make(KernelHandle<Dispatcher> kernel_handle,
+                         zx_rights_t rights) {
+    uint32_t base_value;
+    void* addr = Alloc(kernel_handle.dispatcher(), "new", &base_value);
+    if (unlikely(!addr))
+        return nullptr;
+    kcounter_add(handle_count_made, 1);
+    kcounter_add(handle_count_live, 1);
+    return HandleOwner(new (addr) Handle(kernel_handle.release(),
+                                         rights, base_value));
+}
+
 // Called only by Make.
 Handle::Handle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights,
                uint32_t base_value)

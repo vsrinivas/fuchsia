@@ -132,6 +132,20 @@ bool KernelHandleResetToNull() {
     END_TEST;
 }
 
+bool KernelHandleRelease() {
+    BEGIN_TEST;
+
+    fbl::RefPtr<FakeDispatcher> dispatcher = FakeDispatcher::Create();
+    KernelHandle handle(dispatcher);
+
+    fbl::RefPtr<FakeDispatcher> dispatcher_copy = handle.release();
+    EXPECT_NULL(handle.dispatcher(), "");
+    EXPECT_EQ(dispatcher->on_zero_handles_calls(), 0, "");
+    EXPECT_EQ(dispatcher.get(), dispatcher_copy.get(), "");
+
+    END_TEST;
+}
+
 bool KernelHandleMoveConstructor() {
     BEGIN_TEST;
 
@@ -216,7 +230,7 @@ bool KernelHandleUpgrade() {
     {
         HandleOwner handle_owner;
         {
-            handle_owner = eventpair[0].UpgradeToHandleOwner(rights);
+            handle_owner = Handle::Make(ktl::move(eventpair[0]), rights);
             EXPECT_NULL(eventpair[0].dispatcher(), "");
             EXPECT_TRUE(handle_owner, "");
             EXPECT_EQ(handle_owner->rights(), rights, "");
@@ -237,6 +251,7 @@ UNITTEST("KernelHandleCreateUpcast", KernelHandleCreateUpcast)
 UNITTEST("KernelHandleReset", KernelHandleReset)
 UNITTEST("KernelHandleResetUpcast", KernelHandleResetUpcast)
 UNITTEST("KernelHandleResetToNull", KernelHandleResetToNull)
+UNITTEST("KernelHandleRelease", KernelHandleRelease)
 UNITTEST("KernelHandleMoveConstructor", KernelHandleMoveConstructor)
 UNITTEST("KernelHandleMoveConstructorUpcast", KernelHandleMoveConstructorUpcast)
 UNITTEST("KernelHandleMoveAssignment", KernelHandleMoveAssignment)

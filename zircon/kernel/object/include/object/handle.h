@@ -21,6 +21,9 @@
 class Dispatcher;
 class Handle;
 
+template <typename T>
+class KernelHandle;
+
 // HandleOwner wraps a Handle in a unique_ptr-like object that has single
 // ownership of the Handle and deletes it whenever it falls out of scope.
 class HandleOwner {
@@ -136,6 +139,8 @@ public:
     // Handle should never be created by anything other than Make or Dup.
     static HandleOwner Make(
         fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights);
+    static HandleOwner Make(
+        KernelHandle<Dispatcher> kernel_handle, zx_rights_t rights);
     static HandleOwner Dup(Handle* source, zx_rights_t rights);
 
 private:
@@ -246,17 +251,8 @@ public:
 
     const fbl::RefPtr<T>& dispatcher() const { return dispatcher_; }
 
-    // Moves the dispatcher into a full process-owned Handle.
-    //
-    // On success, the underlying dispatcher will be cleared.
-    // If the Handle creation fails, this is a no-op and an empty HandleOwner
-    // will be returned.
-    HandleOwner UpgradeToHandleOwner(zx_rights_t rights) {
-        HandleOwner owner = Handle::Make(dispatcher_, rights);
-        if (owner) {
-            dispatcher_.reset();
-        }
-        return owner;
+    fbl::RefPtr<T> release() {
+        return ktl::move(dispatcher_);
     }
 
 private:
