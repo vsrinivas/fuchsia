@@ -51,6 +51,11 @@ zx_status_t PlatformProxy::Rpc(uint32_t device_id, const platform_proxy_req_t* r
     };
     auto status = rpc_channel_.call(0, zx::time::infinite(), &args, &resp_size, &handle_count);
     if (status != ZX_OK) {
+        // This is a fairly serious error; subsequent requests are very likely
+        // to also fail.
+        //
+        // TODO(ZX-3833): Make this less likely and/or handle differently.
+        zxlogf(ERROR, "PlatformProxy::Rpc rpc_channel_.call failed - status: %d\n", status);
         return status;
     }
 
