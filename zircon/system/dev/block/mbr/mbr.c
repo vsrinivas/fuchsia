@@ -66,7 +66,7 @@ typedef struct mbrpart_device {
     block_info_t info;
     size_t block_op_size;
 
-    atomic_int writercount;
+    sync_completion_t bind_completed;
 } mbrpart_device_t;
 
 static zx_off_t to_parent_offset(mbrpart_device_t* dev, zx_off_t offset) {
@@ -114,6 +114,7 @@ static void mbr_queue(void* ctx, block_op_t* bop, block_impl_queue_callback comp
 
 static void mbr_unbind(void* ctx) {
     mbrpart_device_t* device = ctx;
+    sync_completion_wait(&device->bind_completed, ZX_TIME_INFINITE);
     device_remove(device->zxdev);
 }
 
@@ -295,6 +296,7 @@ static int mbr_bind_thread(void* arg) {
                 goto unbind;
             }
             pdev->parent = dev;
+            pdev->bind_completed = SYNC_COMPLETION_INIT;
             memcpy(&pdev->bp, &bp, sizeof(bp));
         }
 
@@ -309,7 +311,7 @@ static int mbr_bind_thread(void* arg) {
             first_dev = NULL;
         } else {
             char name[16];
-            snprintf(name, sizeof(name), "part-%03u",partition_count);
+            snprintf(name, sizeof(name), "part-%03u", partition_count);
 
             device_add_args_t args = {
                 .version = DEVICE_ADD_ARGS_VERSION,
@@ -325,6 +327,7 @@ static int mbr_bind_thread(void* arg) {
                 continue;
             }
         }
+        sync_completion_signal(&pdev->bind_completed);
     }
 
     free(bop);
@@ -335,6 +338,7 @@ unbind:
     zx_handle_close(vmo);
     if (first_dev) {
         // handle case where no partitions were found
+        sync_completion_signal(&first_dev->bind_completed);
         device_remove(first_dev->zxdev);
     }
     return -1;
@@ -352,6 +356,7 @@ static zx_status_t mbr_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_MEMORY;
     }
     device->parent = parent;
+    device->bind_completed = SYNC_COMPLETION_INIT;
 
     if (device_get_protocol(parent, ZX_PROTOCOL_BLOCK, &device->bp) != ZX_OK) {
         zxlogf(ERROR, "mbr: ERROR: block device '%s': does not support block protocol\n",
@@ -379,7 +384,7 @@ static zx_status_t mbr_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    // Read the partition table asyncrhonously.
+    // Read the partition table asynchronously.
     thrd_t t;
     int thrd_rc = thrd_create_with_name(&t, mbr_bind_thread, device, "mbr-init");
     if (thrd_rc != thrd_success) {
