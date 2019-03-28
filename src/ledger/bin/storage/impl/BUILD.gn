@@ -99,6 +99,7 @@ source_set("lib") {
     ":commit_storage",
     ":file_index",
     ":object_identifier_lib",
+    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/callback",
     "//peridot/lib/base64url",
     "//sdk/lib/fidl/cpp",

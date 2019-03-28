@@ -4,12 +4,12 @@
 
 #include "src/ledger/bin/storage/impl/leveldb_factory.h"
 
-#include <memory>
-
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
+
+#include <memory>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
@@ -223,6 +223,51 @@ TEST_F(LevelDbFactoryTest, InitWithCachedDbAvailable) {
   db_factory = std::make_unique<LevelDbFactory>(&environment_, cache_path);
   db_factory->Init();
   RunLoopUntilIdle();
+}
+
+// Make sure we can destroy the factory while a request is in progress.
+TEST_F(LevelDbFactoryTest, QuitWhenBusy) {
+  std::unique_ptr<LevelDbFactory> db_factory_ptr =
+      std::make_unique<LevelDbFactory>(&environment_, cache_path_);
+  db_factory_ptr->Init();
+  RunLoopUntilIdle();
+
+  Status status_0, status_1;
+  std::unique_ptr<Db> db_0, db_1;
+  bool called_0, called_1;
+
+  db_factory_ptr->GetOrCreateDb(
+      db_path_.SubPath(fxl::NumberToString(0)), DbFactory::OnDbNotFound::CREATE,
+      callback::Capture(
+          [this, callback = callback::SetWhenCalled(&called_0)]() {
+            callback();
+            QuitLoop();
+          },
+          &status_0, &db_0));
+
+  db_factory_ptr->GetOrCreateDb(
+      db_path_.SubPath(fxl::NumberToString(1)), DbFactory::OnDbNotFound::CREATE,
+      callback::Capture(callback::SetWhenCalled(&called_1), &status_1, &db_1));
+
+  RunLoopUntilIdle();
+
+  // The first database should be created, but not the second one.
+  {
+    EXPECT_TRUE(called_0);
+    EXPECT_EQ(Status::OK, status_0);
+    ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(0));
+    EXPECT_TRUE(files::IsDirectoryAt(path.root_fd(), path.path()));
+
+    EXPECT_FALSE(called_1);
+  }
+
+  db_factory_ptr.reset();
+
+  RunLoopUntilIdle();
+
+  // The callback for the second database should not be executed even after
+  // re-running the runloop.
+  EXPECT_FALSE(called_1);
 }
 
 }  // namespace
