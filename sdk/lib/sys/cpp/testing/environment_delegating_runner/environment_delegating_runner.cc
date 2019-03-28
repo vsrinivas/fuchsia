@@ -18,7 +18,7 @@ int main() {
   });
 
   fidl::BindingSet<fuchsia::sys::Runner> runner_bindings;
-  startup_ctx->outgoing2()->AddPublicService(
+  startup_ctx->outgoing()->AddPublicService(
       runner_bindings.GetHandler(env_runner.get()));
 
   loop.Run();

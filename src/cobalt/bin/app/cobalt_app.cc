@@ -175,15 +175,15 @@ CobaltApp::CobaltApp(
       &legacy_shipping_manager_, &system_data_, &timer_manager_,
       &logger_encoder_, &observation_writer_, &event_aggregator_));
 
-  context_->outgoing2()->AddPublicService(
+  context_->outgoing()->AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));
 
   system_data_updater_impl_.reset(new SystemDataUpdaterImpl(&system_data_));
-  context_->outgoing2()->AddPublicService(
+  context_->outgoing()->AddPublicService(
       system_data_updater_bindings_.GetHandler(
           system_data_updater_impl_.get()));
 
-  context_->outgoing2()->AddPublicService(
+  context_->outgoing()->AddPublicService(
       controller_bindings_.GetHandler(controller_impl_.get()));
 }
 

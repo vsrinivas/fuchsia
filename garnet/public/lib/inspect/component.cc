@@ -28,7 +28,7 @@ std::shared_ptr<ComponentInspector> ComponentInspector::Initialize(
   std::unique_ptr<vfs::Node> vmo_file(
       new vfs::VmoFile(std::move(read_only_vmo), 0, 4096));
   ZX_ASSERT(
-      startup_context->outgoing2()->GetOrCreateDirectory("objects")->AddEntry(
+      startup_context->outgoing()->GetOrCreateDirectory("objects")->AddEntry(
           "root.inspect", std::move(vmo_file)) == ZX_OK);
 
   singleton_ = inspector;

@@ -23,7 +23,7 @@ class CobaltAppForTest {
       : system_data_("test", "test"), context_(std::move(context)) {
     system_data_updater_impl_.reset(new SystemDataUpdaterImpl(&system_data_));
 
-    context_->outgoing2()->AddPublicService(
+    context_->outgoing()->AddPublicService(
         system_data_updater_bindings_.GetHandler(
             system_data_updater_impl_.get()));
   }

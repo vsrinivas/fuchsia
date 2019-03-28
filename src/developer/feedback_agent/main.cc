@@ -19,7 +19,7 @@ int main(int argc, const char** argv) {
   auto startup_context = sys::ComponentContext::Create();
   fuchsia::feedback::FeedbackAgent feedback_agent(startup_context.get());
   fidl::BindingSet<fuchsia::feedback::DataProvider> bindings;
-  startup_context->outgoing2()->AddPublicService(
+  startup_context->outgoing()->AddPublicService(
       bindings.GetHandler(&feedback_agent));
 
   loop.Run();

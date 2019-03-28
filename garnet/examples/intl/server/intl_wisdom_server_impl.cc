@@ -57,7 +57,7 @@ IntlWisdomServerImpl::IntlWisdomServerImpl(
     std::unique_ptr<sys::ComponentContext> startup_context)
     : startup_context_(std::move(startup_context)) {
   ZX_ASSERT(icu_data::Initialize());
-  startup_context_->outgoing2()->AddPublicService(bindings_.GetHandler(this));
+  startup_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 void IntlWisdomServerImpl::AskForWisdom(Profile intl_profile,

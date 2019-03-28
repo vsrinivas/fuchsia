@@ -17,7 +17,8 @@ namespace {
 class IsolatedStorageTestUtil
     : public test::appmgr::integration::DataFileReaderWriter {
  public:
-  explicit IsolatedStorageTestUtil(const sys::OutgoingDirectory* outgoing) {
+  explicit IsolatedStorageTestUtil(
+      const std::shared_ptr<sys::OutgoingDirectory>& outgoing) {
     outgoing->AddPublicService(bindings_.GetHandler(this));
   }
 
@@ -49,7 +50,7 @@ class IsolatedStorageTestUtil
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   auto context = sys::ComponentContext::Create();
-  IsolatedStorageTestUtil server(context->outgoing2());
+  IsolatedStorageTestUtil server(context->outgoing());
   loop.Run();
   return 0;
 }

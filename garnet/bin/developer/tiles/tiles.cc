@@ -61,7 +61,7 @@ Tiles::Tiles(sys::ComponentContext* startup_context,
   }
 
   // Make ourselves available as a |fuchsia.developer.TilesController|.
-  startup_context_->outgoing2()->AddPublicService(
+  startup_context_->outgoing()->AddPublicService(
       tiles_binding_.GetHandler(this));
 }
 

@@ -11,7 +11,7 @@ namespace oldhttp = ::fuchsia::net::oldhttp;
 HttpServiceDelegate::HttpServiceDelegate(async_dispatcher_t* dispatcher)
     : context_(sys::ComponentContext::Create()), http_provider_(dispatcher) {
   FXL_DCHECK(dispatcher),
-      context_->outgoing2()->AddPublicService<oldhttp::HttpService>(
+      context_->outgoing()->AddPublicService<oldhttp::HttpService>(
           [this](fidl::InterfaceRequest<oldhttp::HttpService> request) {
             http_provider_.AddBinding(std::move(request));
           });

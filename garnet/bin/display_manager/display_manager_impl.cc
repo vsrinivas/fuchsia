@@ -15,7 +15,7 @@ DisplayManagerImpl::DisplayManagerImpl(
     : context_(std::move(context)) {
   display_ = std::unique_ptr<Display>(Display::GetDisplay());
 
-  context_->outgoing2()->AddPublicService<Manager>(
+  context_->outgoing()->AddPublicService<Manager>(
       [this](fidl::InterfaceRequest<Manager> request) {
         bindings_.AddBinding(this, std::move(request));
       });
