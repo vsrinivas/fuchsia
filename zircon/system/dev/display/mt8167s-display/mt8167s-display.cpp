@@ -7,7 +7,9 @@
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
+#include <fbl/vector.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/image-format/image_format.h>
 #include <lib/zx/pmt.h>
 #include <zircon/pixelformat.h>
 
@@ -118,6 +120,73 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportVmoImage(image_t* image, 
     // Make sure paddr is allocated in the lower 4GB. (ZX-1073)
     ZX_ASSERT((paddr + size) <= UINT32_MAX);
     import_info->paddr = paddr;
+    import_info->pitch = stride * pixel_size;
+    image->handle = reinterpret_cast<uint64_t>(import_info.get());
+    imported_images_.push_back(std::move(import_info));
+    return status;
+}
+
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
+zx_status_t Mt8167sDisplay::DisplayControllerImplImportImage(image_t* image,
+                                                           zx_unowned_handle_t handle,
+                                                           uint32_t index) {
+    auto import_info = std::make_unique<ImageInfo>();
+    if (import_info == nullptr) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    fbl::AutoLock lock(&image_lock_);
+    if (image->type != IMAGE_TYPE_SIMPLE || image->pixel_format != kSupportedPixelFormats[0]) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status2;
+    fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
+    zx_status_t status =
+        fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(handle, &status2, &collection_info);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (status2 != ZX_OK) {
+        return status2;
+    }
+
+    fbl::Vector<zx::vmo> vmos;
+    for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
+        vmos.push_back(zx::vmo(collection_info.buffers[i].vmo));
+    }
+
+    if (!collection_info.settings.has_image_format_constraints || index >= vmos.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
+                    fuchsia_sysmem_PixelFormatType_BGRA32);
+    ZX_DEBUG_ASSERT(
+        !collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
+
+    uint32_t minimum_row_bytes;
+    if (!ImageFormatMinimumRowBytes(&collection_info.settings.image_format_constraints,
+                                    image->width, &minimum_row_bytes)) {
+        DISP_ERROR("Invalid image width %d for collection\n", image->width);
+        return ZX_ERR_INVALID_ARGS;
+    }
+    uint64_t offset = collection_info.buffers[index].vmo_usable_start;
+
+    size_t size = ROUNDUP((minimum_row_bytes * image->height) +
+                          (offset & (PAGE_SIZE - 1)), PAGE_SIZE);
+    zx_paddr_t paddr;
+    status = bti_.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS,
+                                  vmos[index], offset & ~(PAGE_SIZE - 1), size, &paddr, 1,
+                                  &import_info->pmt);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not pin bit\n");
+        return status;
+    }
+    // Make sure paddr is allocated in the lower 4GB. (ZX-1073)
+    ZX_ASSERT((paddr + size) <= UINT32_MAX);
+    import_info->paddr = paddr;
+    import_info->pitch = minimum_row_bytes;
     image->handle = reinterpret_cast<uint64_t>(import_info.get());
     imported_images_.push_back(std::move(import_info));
     return status;
@@ -213,8 +282,7 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
             cfg.alpha_val = layer.alpha_layer_val;
             cfg.src_frame = layer.src_frame;
             cfg.dest_frame = layer.dest_frame;
-            cfg.pitch = DisplayControllerImplComputeLinearStride(layer.image.width, cfg.format) *
-                        ZX_PIXEL_FORMAT_BYTES(cfg.format);
+            cfg.pitch = info->pitch;
             cfg.transform = layer.transform_mode;
             ovl_->Config(static_cast<uint8_t>(j), cfg);
         }

@@ -27,6 +27,7 @@ driver("mt8167s-display") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/image-format",
     "$zx/system/ulib/mipi-dsi",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
