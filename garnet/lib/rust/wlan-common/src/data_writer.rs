@@ -5,9 +5,10 @@
 use {
     crate::{
         appendable::Appendable,
+        error::FrameWriteError,
         mac::{self, FixedDataHdrFields, FrameControl, OptionalDataHdrFields, SequenceControl},
     },
-    failure::{ensure, Error},
+    failure::Error,
 };
 
 type MacAddr = [u8; 6];
@@ -30,42 +31,43 @@ pub fn data_hdr_client_to_ap(
     }
 }
 
-fn make_new_frame_ctrl(
-    mut fc: FrameControl,
-    optional: &OptionalDataHdrFields,
-) -> Result<FrameControl, Error> {
-    fc.set_frame_type(mac::FRAME_TYPE_DATA);
-    if optional.addr4.is_some() {
-        fc.set_from_ds(true);
-        fc.set_to_ds(true);
-    } else {
-        ensure!(
-            !(fc.from_ds() && fc.to_ds()),
-            "addr4 is absent but to- and from-ds bit are present"
-        );
+fn validate_frame_ctrl(fc: FrameControl, optional: &OptionalDataHdrFields) -> Result<(), String> {
+    if fc.frame_type() != mac::FRAME_TYPE_DATA {
+        return Err(format!("invalid frame type {}", fc.frame_type()));
     }
-    if optional.qos_ctrl.is_some() {
-        fc.set_frame_subtype(fc.frame_subtype() | mac::BITMASK_QOS);
-    } else {
-        ensure!(
-            fc.frame_subtype() & mac::BITMASK_QOS == 0,
-            "QoS bit set while QoS-Control is absent"
-        );
+
+    if optional.addr4.is_some() && !(fc.to_ds() && fc.from_ds()) {
+        return Err(format!("addr4 is present but to_ds={}, from_ds={}", fc.to_ds(), fc.from_ds()));
+    } else if optional.addr4.is_none() && fc.to_ds() && fc.from_ds() {
+        return Err("to_ds and from_ds are both set but addr4 is missing".to_string());
     }
-    if optional.ht_ctrl.is_some() {
-        fc.set_htc_order(true);
-    } else {
-        ensure!(!fc.htc_order(), "htc_order bit set while HT-Control is absent");
+
+    if optional.qos_ctrl.is_some() && (fc.frame_subtype() & mac::BITMASK_QOS == 0) {
+        return Err("qos_ctrl is present but QoS bit is not set".to_string());
+    } else if optional.qos_ctrl.is_none() && (fc.frame_subtype() & mac::BITMASK_QOS != 0) {
+        return Err("QoS bit is set but qos_ctrl is missing".to_string());
     }
-    Ok(fc)
+
+    if optional.ht_ctrl.is_some() && !fc.htc_order() {
+        return Err("ht_ctrl is present but +HTC bit is not set".to_string());
+    } else if optional.ht_ctrl.is_none() && fc.htc_order() {
+        return Err("+HTC bit is set but ht_ctrl is missing".to_string());
+    }
+
+    Ok(())
 }
 
 pub fn write_data_hdr<B: Appendable>(
     w: &mut B,
-    mut fixed: FixedDataHdrFields,
+    fixed: FixedDataHdrFields,
     optional: OptionalDataHdrFields,
-) -> Result<(), Error> {
-    fixed.frame_ctrl = make_new_frame_ctrl(fixed.frame_ctrl, &optional)?;
+) -> Result<(), FrameWriteError> {
+    if let Err(message) = validate_frame_ctrl(fixed.frame_ctrl, &optional) {
+        return Err(FrameWriteError::InvalidData {
+            debug_message: format!("attempted to write an invalid data frame header: {}", message),
+        });
+    }
+
     w.append_value(&fixed)?;
     if let Some(addr4) = optional.addr4.as_ref() {
         w.append_value(addr4)?;
@@ -121,7 +123,7 @@ mod tests {
         let result = write_data_hdr(
             &mut BufferWriter::new(&mut bytes[..]),
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0b00110001_00110000),
+                frame_ctrl: FrameControl(0).with_frame_type(2),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -130,15 +132,15 @@ mod tests {
             },
             OptionalDataHdrFields::none(),
         );
-        assert!(result.is_err(), "expected failure when writing into too small buffer");
+        assert_eq!(result, Err(FrameWriteError::BufferTooSmall));
     }
 
     #[test]
-    fn invalid_ht_configuration() {
+    fn wrong_frame_type() {
         let result = write_data_hdr(
             &mut vec![],
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0b10110001_00110000),
+                frame_ctrl: FrameControl(0).with_frame_type(0),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -147,15 +149,15 @@ mod tests {
             },
             OptionalDataHdrFields::none(),
         );
-        assert!(result.is_err(), "expected failure due to invalid ht configuration");
+        assert_invalid_data(result, "invalid frame type 0");
     }
 
     #[test]
-    fn invalid_addr4_configuration() {
+    fn htc_set_but_ht_ctrl_missing() {
         let result = write_data_hdr(
             &mut vec![],
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0b00110011_00110000),
+                frame_ctrl: FrameControl(0).with_frame_type(2).with_htc_order(true),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -164,15 +166,32 @@ mod tests {
             },
             OptionalDataHdrFields::none(),
         );
-        assert!(result.is_err(), "expected failure due to invalid addr4 configuration");
+        assert_invalid_data(result, "+HTC bit is set but ht_ctrl is missing");
     }
 
     #[test]
-    fn invalid_qos_configuration() {
+    fn ht_ctrl_present_but_no_htc() {
         let result = write_data_hdr(
             &mut vec![],
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0b00110000_10110000),
+                frame_ctrl: FrameControl(0).with_frame_type(2),
+                duration: 0,
+                addr1: [1; 6],
+                addr2: [2; 6],
+                addr3: [3; 6],
+                seq_ctrl: SequenceControl(0b11000000_10010000),
+            },
+            OptionalDataHdrFields { addr4: None, qos_ctrl: None, ht_ctrl: Some(HtControl(0)) },
+        );
+        assert_invalid_data(result, "ht_ctrl is present but +HTC bit is not set");
+    }
+
+    #[test]
+    fn to_from_ds_both_set_but_addr4_missing() {
+        let result = write_data_hdr(
+            &mut vec![],
+            FixedDataHdrFields {
+                frame_ctrl: FrameControl(0).with_frame_type(2).with_to_ds(true).with_from_ds(true),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -181,7 +200,62 @@ mod tests {
             },
             OptionalDataHdrFields::none(),
         );
-        assert!(result.is_err(), "expected failure due to invalid qos configuration");
+        assert_invalid_data(result, "to_ds and from_ds are both set but addr4 is missing");
+    }
+
+    #[test]
+    fn addr4_is_present_but_to_from_are_invalid() {
+        let result = write_data_hdr(
+            &mut vec![],
+            FixedDataHdrFields {
+                frame_ctrl: FrameControl(0).with_frame_type(2).with_to_ds(true),
+                duration: 0,
+                addr1: [1; 6],
+                addr2: [2; 6],
+                addr3: [3; 6],
+                seq_ctrl: SequenceControl(0b11000000_10010000),
+            },
+            OptionalDataHdrFields { addr4: Some([4u8; 6]), qos_ctrl: None, ht_ctrl: None },
+        );
+        assert_invalid_data(result, "addr4 is present but to_ds=true, from_ds=false");
+    }
+
+    #[test]
+    fn qos_set_but_qos_ctrl_missing() {
+        let result = write_data_hdr(
+            &mut vec![],
+            FixedDataHdrFields {
+                frame_ctrl: FrameControl(0).with_frame_type(2).with_frame_subtype(0x8),
+                duration: 0,
+                addr1: [1; 6],
+                addr2: [2; 6],
+                addr3: [3; 6],
+                seq_ctrl: SequenceControl(0b11000000_10010000),
+            },
+            OptionalDataHdrFields::none(),
+        );
+        assert_invalid_data(result, "QoS bit is set but qos_ctrl is missing");
+    }
+
+    #[test]
+    fn qos_ctrl_present_but_no_qos_bit() {
+        let result = write_data_hdr(
+            &mut vec![],
+            FixedDataHdrFields {
+                frame_ctrl: FrameControl(0).with_frame_type(2),
+                duration: 0,
+                addr1: [1; 6],
+                addr2: [2; 6],
+                addr3: [3; 6],
+                seq_ctrl: SequenceControl(0b11000000_10010000),
+            },
+            OptionalDataHdrFields {
+                addr4: None,
+                qos_ctrl: Some(QosControl(0b11110000_10101010)),
+                ht_ctrl: None,
+            },
+        );
+        assert_invalid_data(result, "qos_ctrl is present but QoS bit is not set");
     }
 
     #[test]
@@ -190,7 +264,7 @@ mod tests {
         write_data_hdr(
             &mut bytes,
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0b00110001_0011_00_00),
+                frame_ctrl: FrameControl(0b00110001_0011_10_00),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -222,7 +296,7 @@ mod tests {
         write_data_hdr(
             &mut bytes,
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0b00110001_00111000),
+                frame_ctrl: FrameControl(0b10110011_00111000),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -262,7 +336,7 @@ mod tests {
         write_data_hdr(
             &mut bytes,
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0b00110001_00111000),
+                frame_ctrl: FrameControl(0b00110001_10111000),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -308,5 +382,19 @@ mod tests {
                 0x88, 0x8E, // Protocol ID
             ]
         );
+    }
+
+    fn assert_invalid_data(r: Result<(), FrameWriteError>, msg_part: &str) {
+        match r {
+            Err(FrameWriteError::InvalidData { debug_message }) => {
+                if !debug_message.contains(msg_part) {
+                    panic!(
+                        "expected the error message `{}` to contain `{}` as a substring",
+                        debug_message, msg_part
+                    );
+                }
+            }
+            other => panic!("expected Err(FrameWriteError::InvalidData), got {:?}", other),
+        }
     }
 }

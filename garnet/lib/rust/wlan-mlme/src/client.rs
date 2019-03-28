@@ -69,10 +69,11 @@ pub fn write_keep_alive_resp_frame<B: Appendable>(
     client_addr: MacAddr,
     seq_mgr: &mut SequenceManager,
 ) -> Result<(), Error> {
-    let mut frame_ctrl = mac::FrameControl(0);
-    frame_ctrl.set_frame_subtype(mac::DATA_SUBTYPE_NULL_DATA);
-    let mut seq_ctrl = mac::SequenceControl(0);
-    seq_ctrl.set_seq_num(seq_mgr.next_sns1(&bssid) as u16);
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FRAME_TYPE_DATA)
+        .with_frame_subtype(mac::DATA_SUBTYPE_NULL_DATA);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid) as u16);
+
     data_writer::write_data_hdr(
         buf,
         data_writer::data_hdr_client_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
@@ -137,11 +138,11 @@ pub fn write_eapol_data_frame<B: Appendable>(
     protected: bool,
     eapol_frame: &[u8],
 ) -> Result<(), Error> {
-    let mut frame_ctrl = mac::FrameControl(0);
-    frame_ctrl.set_frame_subtype(mac::DATA_SUBTYPE_DATA);
-    frame_ctrl.set_protected(protected);
-    let mut seq_ctrl = mac::SequenceControl(0);
-    seq_ctrl.set_seq_num(seq_mgr.next_sns1(&dest) as u16);
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FRAME_TYPE_DATA)
+        .with_frame_subtype(mac::DATA_SUBTYPE_DATA)
+        .with_protected(protected);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&dest) as u16);
     data_writer::write_data_hdr(
         buf,
         data_writer::data_hdr_client_to_ap(frame_ctrl, dest, src, seq_ctrl),
