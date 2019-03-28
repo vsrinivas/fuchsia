@@ -19,7 +19,10 @@ import (
 	"os"
 	"sync"
 
+	"cloud.google.com/go/storage"
 	"fuchsia.googlesource.com/tools/elflib"
+	"go.chromium.org/luci/auth/client/authcli"
+	"go.chromium.org/luci/hardcoded/chromeinfra"
 )
 
 const (
@@ -42,6 +45,8 @@ var (
 
 	// The maximum number of files to upload at once.
 	concurrentUploadCount int
+
+	authFlags authcli.Flags
 )
 
 func init() {
@@ -50,7 +55,9 @@ func init() {
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
-
+	authDefaults := chromeinfra.DefaultAuthOptions()
+	authDefaults.Scopes = append(authDefaults.Scopes, storage.ScopeReadWrite)
+	authFlags.Register(flag.CommandLine, authDefaults)
 	flag.StringVar(&gcsBucket, "bucket", "", "GCS Bucket to upload to")
 	flag.IntVar(&concurrentUploadCount, "j", defaultConccurrentUploadCount, "Number of concurrent threads to use to upload files")
 }
@@ -77,9 +84,13 @@ func execute(ctx context.Context, paths []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to queue jobs: %v", err)
 	}
-	bkt, err := prepareGCSBucket(ctx, gcsBucket)
+	opts, err := authFlags.Options()
 	if err != nil {
 		return fmt.Errorf("failed to fetch GCS bucket information: %v", err)
+	}
+	bkt, err := prepareGCSBucket(ctx, gcsBucket, opts)
+	if err != nil {
+		return err
 	}
 	if !upload(ctx, bkt, jobs) {
 		return errors.New("completed with errors")

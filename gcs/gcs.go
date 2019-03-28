@@ -14,8 +14,10 @@ import (
 	"google.golang.org/api/option"
 )
 
-// NewClient returns a storage.Client that uses LUCI auth with silent login by
-// default.
+// NewClient returns a storage.Client that uses LUCI auth with silent login by default.
+// The caller should set the required GCE scopes on the given auth.Options, otherwise
+// RPCs to GCS will fail with 403 errors even if the given user has permissions to access
+// GCS.
 func NewClient(ctx context.Context, opts auth.Options) (*storage.Client, error) {
 	return NewClientWithLoginMode(ctx, auth.SilentLogin, opts)
 }
@@ -27,7 +29,6 @@ func NewClientWithLoginMode(ctx context.Context, mode auth.LoginMode, opts auth.
 	if err != nil {
 		return nil, fmt.Errorf("failed to create token source: %v", err)
 	}
-
 	client, err := storage.NewClient(ctx, option.WithTokenSource(source))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Cloud Storage client: %v", err)

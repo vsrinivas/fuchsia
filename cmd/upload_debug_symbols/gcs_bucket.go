@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"fuchsia.googlesource.com/tools/gcs"
+	"go.chromium.org/luci/auth"
 	"google.golang.org/api/iterator"
 )
 
@@ -48,8 +50,8 @@ func (bkt *GCSBucket) upload(ctx context.Context, object string, r io.Reader) er
 }
 
 // prepareGCSBucket captures the current state of the GCS bucket with the given name.
-func prepareGCSBucket(ctx context.Context, name string) (*GCSBucket, error) {
-	client, err := storage.NewClient(ctx)
+func prepareGCSBucket(ctx context.Context, name string, opts auth.Options) (*GCSBucket, error) {
+	client, err := gcs.NewClient(ctx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %v", err)
 	}
