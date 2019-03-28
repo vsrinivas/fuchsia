@@ -175,7 +175,7 @@ group("drivers") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:bluetooth_drivers",
-    "//garnet/packages/prod:magma-vsl-gc",
+    "//garnet/packages/prod:magma-intel-gen",
     "//garnet/packages/prod:usb_video",
     "//garnet/packages/prod:virtual_audio_driver",
     "//garnet/packages/prod:virtual_camera",
@@ -247,7 +247,8 @@ group("all") {
     "//garnet/packages/prod:kernel_crash_checker",
     "//garnet/packages/prod:log_listener",
     "//garnet/packages/prod:logger",
-    "//garnet/packages/prod:magma",
+    "//garnet/packages/prod:magma-arm-mali",
+    "//garnet/packages/prod:magma-intel-gen",
     "//garnet/packages/prod:magma-img-rgx-mtk",
     "//garnet/packages/prod:mdns",
     "//garnet/packages/prod:mdns-util",
@@ -550,13 +551,6 @@ group("wlan_tools") {
   ]
 }
 
-group("magma-img-rgx-mtk") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-img-rgx-mtk",
-  ]
-}
-
 group("vboot_reference") {
   testonly = true
   public_deps = [
@@ -766,7 +760,6 @@ group("vulkan") {
   testonly = true
   public_deps = [
     "//garnet/bin/vulkan_loader",
-    "//garnet/packages/prod:magma",
   ]
 }
 
@@ -774,15 +767,6 @@ group("run") {
   testonly = true
   public_deps = [
     "//garnet/bin/run",
-  ]
-}
-
-group("magma") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-arm-mali",
-    "//garnet/lib/magma/gnbuild/magma-intel-gen",
-    "//garnet/packages/prod:sysmem_connector",
   ]
 }
 
@@ -1125,6 +1109,37 @@ group("bluetooth_all") {
     "//garnet/packages/prod:bluetooth_core",
     "//garnet/packages/prod:bluetooth_intel",
     "//garnet/packages/prod:bluetooth_profiles",
+  ]
+}
+
+group("magma") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/magma/gnbuild/magma-arm-mali",
+    "//garnet/lib/magma/gnbuild/magma-intel-gen",
+  ]
+}
+
+group("magma-arm-mali") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/magma/gnbuild/magma-arm-mali",
+    "//garnet/packages/prod:sysmem_connector",
+  ]
+}
+
+group("magma-intel-gen") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/magma/gnbuild/magma-intel-gen",
+    "//garnet/packages/prod:sysmem_connector",
+  ]
+}
+
+group("magma-img-rgx-mtk") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-img-rgx-mtk",
   ]
 }
 
