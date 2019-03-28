@@ -322,58 +322,65 @@ int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test
 }
 
 bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_paths,
-              const fbl::Vector<fbl::String>& test_args,
+              const fbl::Vector<fbl::String>& test_args, int repeat,
               const char* output_dir,
               const fbl::StringPiece output_file_basename, signed char verbosity, int* failed_count,
               fbl::Vector<std::unique_ptr<Result>>* results) {
-    for (const fbl::String& test_path : test_paths) {
-        fbl::String output_dir_for_test_str;
-        fbl::String output_filename_str;
-        // Ensure the output directory for this test binary's output exists.
-        if (output_dir != nullptr) {
-            // If output_dir was specified, ask |RunTest| to redirect stdout/stderr
-            // to a file whose name is based on the test name.
-            output_dir_for_test_str = runtests::JoinPath(output_dir, test_path);
-            const int error = runtests::MkDirAll(output_dir_for_test_str);
-            if (error) {
-                fprintf(stderr, "Error: Could not create output directory %s: %s\n",
-                        output_dir_for_test_str.c_str(), strerror(error));
-                return false;
+    for (int i = 1; i <= repeat; ++i) {
+        for (const fbl::String& test_path : test_paths) {
+            fbl::String output_dir_for_test_str;
+            fbl::String output_filename_str;
+            // Ensure the output directory for this test binary's output exists.
+            if (output_dir != nullptr) {
+                // If output_dir was specified, ask |RunTest| to redirect stdout/stderr
+                // to a file whose name is based on the test name.
+                output_dir_for_test_str = runtests::JoinPath(output_dir, test_path);
+                const int error = runtests::MkDirAll(output_dir_for_test_str);
+                if (error) {
+                    fprintf(stderr, "Error: Could not create output directory %s: %s\n",
+                            output_dir_for_test_str.c_str(), strerror(error));
+                    return false;
+                }
+                output_filename_str = JoinPath(output_dir_for_test_str, output_file_basename);
             }
-            output_filename_str = JoinPath(output_dir_for_test_str, output_file_basename);
+
+            // Assemble test binary args.
+            fbl::Vector<const char*> argv;
+            argv.push_back(test_path.c_str());
+            fbl::String verbosity_arg;
+            if (verbosity >= 0) {
+                // verbosity defaults to -1: "unspecified". Only pass it along
+                // if it was specified: i.e., non-negative.
+                verbosity_arg = fbl::StringPrintf("v=%d", verbosity);
+                argv.push_back(verbosity_arg.c_str());
+            }
+            // Add in args to the test binary
+            argv.reserve(test_args.size());
+            for (auto test_arg = test_args.begin(); test_arg != test_args.end(); ++test_arg) {
+                argv.push_back(test_arg->c_str());
+            }
+            argv.push_back(nullptr); // Important, since there's no argc.
+            const char* output_dir_for_test =
+                output_dir_for_test_str.empty() ? nullptr : output_dir_for_test_str.c_str();
+            const char* output_filename =
+                output_filename_str.empty() ? nullptr : output_filename_str.c_str();
+
+            // Execute the test binary.
+            printf("\n------------------------------------------------\n"
+                   "RUNNING TEST: %s\n\n",
+                   test_path.c_str());
+            fflush(stdout);
+            std::unique_ptr<Result> result = RunTest(argv.get(), output_dir_for_test,
+                                                     output_filename);
+            if (result->launch_status != SUCCESS) {
+                *failed_count += 1;
+            }
+            results->push_back(std::move(result));
         }
 
-        // Assemble test binary args.
-        fbl::Vector<const char*> argv;
-        argv.push_back(test_path.c_str());
-        fbl::String verbosity_arg;
-        if (verbosity >= 0) {
-            // verbosity defaults to -1: "unspecified". Only pass it along
-            // if it was specified: i.e., non-negative.
-            verbosity_arg = fbl::StringPrintf("v=%d", verbosity);
-            argv.push_back(verbosity_arg.c_str());
+        if (i < repeat) {
+            printf("\nPROGRESS: Ran %lu tests: %d failed\n", results->size(), *failed_count);
         }
-        // Add in args to the test binary
-        argv.reserve(test_args.size());
-        for (auto test_arg = test_args.begin(); test_arg != test_args.end(); ++test_arg) {
-            argv.push_back(test_arg->c_str());
-        }
-        argv.push_back(nullptr); // Important, since there's no argc.
-        const char* output_dir_for_test =
-            output_dir_for_test_str.empty() ? nullptr : output_dir_for_test_str.c_str();
-        const char* output_filename =
-            output_filename_str.empty() ? nullptr : output_filename_str.c_str();
-
-        // Execute the test binary.
-        printf("\n------------------------------------------------\n"
-               "RUNNING TEST: %s\n\n",
-               test_path.c_str());
-        std::unique_ptr<Result> result = RunTest(argv.get(), output_dir_for_test,
-                                                 output_filename);
-        if (result->launch_status != SUCCESS) {
-            *failed_count += 1;
-        }
-        results->push_back(std::move(result));
     }
     return true;
 }

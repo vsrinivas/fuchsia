@@ -484,7 +484,7 @@ bool RunTestsWithVerbosity() {
     const fbl::String output_dir = JoinPath(test_dir.path(), "output");
     const char output_file_base_name[] = "output.txt";
     ASSERT_EQ(0, MkDirAll(output_dir));
-    EXPECT_TRUE(RunTests(PlatformRunTest, {succeed_file_name}, {},
+    EXPECT_TRUE(RunTests(PlatformRunTest, {succeed_file_name}, {}, 1,
                          output_dir.c_str(), output_file_base_name, verbosity,
                          &num_failed, &results));
     EXPECT_EQ(0, num_failed);
@@ -504,36 +504,36 @@ bool RunTestsWithVerbosity() {
 }
 
 bool RunTestsWithArguments() {
-  BEGIN_TEST;
+    BEGIN_TEST;
 
-  ScopedTestDir test_dir;
-  const fbl::String succeed_file_name =
-    JoinPath(test_dir.path(), "succeed.sh");
-  ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
-  int num_failed = 0;
-  const signed char verbosity = -1;
-  fbl::Vector<std::unique_ptr<Result>> results;
-  fbl::Vector<fbl::String> args{"first", "second", "third", "-4", "--", "-", "seventh"};
-  const fbl::String output_dir = JoinPath(test_dir.path(), "output");
-  const char output_file_base_name[] = "output.txt";
-  ASSERT_EQ(0, MkDirAll(output_dir));
-  EXPECT_TRUE(RunTests(PlatformRunTest, {succeed_file_name}, args,
-                       output_dir.c_str(), output_file_base_name, verbosity,
-                       &num_failed, &results));
-  EXPECT_EQ(0, num_failed);
-  EXPECT_EQ(1, results.size());
+    ScopedTestDir test_dir;
+    const fbl::String succeed_file_name =
+        JoinPath(test_dir.path(), "succeed.sh");
+    ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
+    int num_failed = 0;
+    const signed char verbosity = -1;
+    fbl::Vector<std::unique_ptr<Result>> results;
+    fbl::Vector<fbl::String> args{"first", "second", "third", "-4", "--", "-", "seventh"};
+    const fbl::String output_dir = JoinPath(test_dir.path(), "output");
+    const char output_file_base_name[] = "output.txt";
+    ASSERT_EQ(0, MkDirAll(output_dir));
+    EXPECT_TRUE(RunTests(PlatformRunTest, {succeed_file_name}, args, 1,
+                         output_dir.c_str(), output_file_base_name, verbosity,
+                         &num_failed, &results));
+    EXPECT_EQ(0, num_failed);
+    EXPECT_EQ(1, results.size());
 
-  fbl::String output_path = JoinPath(
-      JoinPath(output_dir, succeed_file.path()), output_file_base_name);
-  FILE* output_file = fopen(output_path.c_str(), "r");
-  ASSERT_TRUE(output_file);
-  char buf[1024];
-  memset(buf, 0, sizeof(buf));
-  EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
-  fclose(output_file);
-  EXPECT_STR_EQ("Success! first second third -4 -- - seventh\n", buf);
+    fbl::String output_path = JoinPath(
+        JoinPath(output_dir, succeed_file.path()), output_file_base_name);
+    FILE* output_file = fopen(output_path.c_str(), "r");
+    ASSERT_TRUE(output_file);
+    char buf[1024];
+    memset(buf, 0, sizeof(buf));
+    EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
+    fclose(output_file);
+    EXPECT_STR_EQ("Success! first second third -4 -- - seventh\n", buf);
 
-  END_TEST;
+    END_TEST;
 }
 
 bool DiscoverAndRunTestsBasicPass() {

@@ -4,8 +4,8 @@
 
 // Helper functions for running test binaries and recording their results.
 
-#ifndef ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_
-#define ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_
+#ifndef RUNTESTS_UTILS_RUNTESTS_UTILS_H_
+#define RUNTESTS_UTILS_RUNTESTS_UTILS_H_
 
 #include <inttypes.h>
 
@@ -137,6 +137,10 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
 // |run_test| is the function used to invoke the test binaries.
 // |test_paths| are the paths of the binaries to execute.
 // |test_args| are arguments passed into the binaries under test.
+// |repeat| runs the entire test suite this many times. The entire suite is repeated rather than
+//   each test individually so that:
+//   a) any flakes due to the sequencing of tests can be reproduced
+//   b) we can get an idea of global flake rates without waiting for all runs to complete
 // |output_dir| is the output directory for all the tests' output. May be nullptr, in which case
 //   output will not be captured.
 // |output_file_basename| is the basename of the tests' output files. May be nullptr only if
@@ -152,7 +156,7 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
 //
 // Returns false if any test binary failed, true otherwise.
 bool RunTests(const RunTestFn& RunTest, const fbl::Vector<fbl::String>& test_paths,
-              const fbl::Vector<fbl::String>& test_args,
+              const fbl::Vector<fbl::String>& test_args, int repeat,
               const char* output_dir, const fbl::StringPiece output_file_basename,
               signed char verbosity, int* failed_count,
               fbl::Vector<std::unique_ptr<Result>>* results);
@@ -194,4 +198,4 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
 
 } // namespace runtests
 
-#endif // ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_RUNTESTS_UTILS_H_
+#endif // RUNTESTS_UTILS_RUNTESTS_UTILS_H_

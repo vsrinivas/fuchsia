@@ -74,6 +74,7 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
             "   -t: Filter tests by name                           \n"
             "       (accepts a comma-separated list)               \n"
             "   -f: Run tests specified in this file [3]           \n"
+            "   -r: Repeat the test suite this many times          \n"
             "   -o: Write test output to a directory [4]           \n"
             "   -w: Watchdog timeout [5]                           \n"
             "       (accepts the timeout value in seconds)         \n"
@@ -104,8 +105,7 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
             "\n"
             "[5] The watchdog timeout option -w only works for     \n"
             "    tests that support the RUNTESTS_WATCHDOG_TIMEOUT  \n"
-            "    environment variable.                             \n"
-            );
+            "    environment variable.                             \n");
     return EXIT_FAILURE;
 }
 } // namespace
@@ -121,6 +121,7 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
     signed char verbosity = -1;
     int watchdog_timeout_seconds = -1;
     const char* test_list_path = nullptr;
+    int repeat = 1;
     bool dry_run = false;
 
     int optind = 1;
@@ -205,6 +206,21 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
             }
             test_list_path = argv[optind++];
             break;
+        case 'r': {
+            if (optind > argc) {
+                fprintf(stderr, "Missing argument for -r\n");
+                return EXIT_FAILURE;
+            }
+            const char* repeat_str = argv[optind++];
+            char* end;
+            long repeatl = strtol(repeat_str, &end, 0);
+            if (*repeat_str == '\0' || *end != '\0' || repeatl < 0 || repeatl > INT_MAX) {
+                fprintf(stderr, "Error: bad repeat\n");
+                return EXIT_FAILURE;
+            }
+            repeat = static_cast<int>(repeatl);
+            break;
+        }
         case 'w': {
             if (optind > argc) {
                 fprintf(stderr, "Missing argument for -w\n");
@@ -297,18 +313,18 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
     }
 
     if (dry_run) {
-      printf("Would run the following tests:\n");
-      for (const auto& test_path : test_paths) {
-        printf("\t%s\n", test_path.c_str());
-      }
-      return EXIT_SUCCESS;
+        printf("Would run the following tests:\n");
+        for (const auto& test_path : test_paths) {
+            printf("\t%s\n", test_path.c_str());
+        }
+        return EXIT_SUCCESS;
     }
 
     // TODO(mknyszek): Sort test_paths for deterministic behavior. Should be easy after ZX-1751.
     stopwatch->Start();
     int failed_count = 0;
     fbl::Vector<std::unique_ptr<Result>> results;
-    if (!RunTests(RunTest, test_paths, test_args, output_dir, kOutputFileName, verbosity,
+    if (!RunTests(RunTest, test_paths, test_args, repeat, output_dir, kOutputFileName, verbosity,
                   &failed_count, &results)) {
         return EXIT_FAILURE;
     }
