@@ -23,19 +23,19 @@ PageUpload::PageUpload(callback::ScopedTaskRunner* task_runner,
       log_prefix_("Page " + convert::ToHex(storage->GetId()) +
                   " upload sync: "),
       backoff_(std::move(backoff)),
-      weak_ptr_factory_(this) {}
+      weak_ptr_factory_(this) {
+  // Start to watch right away.
+  // |this| ignores the notifications if it is not in the right state.
+  storage_->AddCommitWatcher(this);
+}
 
-PageUpload::~PageUpload() {}
+PageUpload::~PageUpload() { storage_->RemoveCommitWatcher(this); }
 
 void PageUpload::StartOrRestartUpload() {
   if (external_state_ == UPLOAD_NOT_STARTED) {
     // When called for the first time, this method is responsible for handling
     // the initial setup.
     SetState(UPLOAD_SETUP);
-    // Starting to watch right away is not an issue, because new commit
-    // notifications are used as a tickle only, and we use a separate call to
-    // get unsynced commits.
-    storage_->AddCommitWatcher(this);
   }
   // Whether called for the first time or to restart upload, prime the upload
   // process.
@@ -51,10 +51,22 @@ void PageUpload::OnNewCommits(
     return;
   }
 
-  if (external_state_ == UPLOAD_TEMPORARY_ERROR) {
-    // Upload is already scheduled to retry uploading. No need to do anything
-    // here.
-    return;
+  switch (external_state_) {
+    case UPLOAD_SETUP:
+    case UPLOAD_IDLE:
+    case UPLOAD_PENDING:
+    case UPLOAD_WAIT_TOO_MANY_LOCAL_HEADS:
+    case UPLOAD_WAIT_REMOTE_DOWNLOAD:
+    case UPLOAD_IN_PROGRESS:
+      break;
+    case UPLOAD_NOT_STARTED:
+      // Upload is not started. Ignore the new commits.
+    case UPLOAD_TEMPORARY_ERROR:
+      // Upload is already scheduled to retry uploading. No need to do anything
+      // here.
+    case UPLOAD_PERMANENT_ERROR:
+      // Can't upload anything anymore. Ignore new commits.
+      return;
   }
   NextState();
 }
@@ -162,9 +174,6 @@ void PageUpload::HandleUnsyncedCommits(
 
 void PageUpload::HandleError(const char error_description[]) {
   FXL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
-  if (external_state_ > UPLOAD_SETUP) {
-    storage_->RemoveCommitWatcher(this);
-  }
   SetState(UPLOAD_PERMANENT_ERROR);
 }
 

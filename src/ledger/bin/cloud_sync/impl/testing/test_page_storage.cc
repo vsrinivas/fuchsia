@@ -112,12 +112,13 @@ void TestPageStorage::GetUnsyncedPieces(
 }
 
 void TestPageStorage::AddCommitWatcher(storage::CommitWatcher* watcher) {
+  FXL_DCHECK(watcher_ == nullptr);
   watcher_ = watcher;
-  watcher_set = true;
 }
 
-void TestPageStorage::RemoveCommitWatcher(storage::CommitWatcher* /*watcher*/) {
-  watcher_removed = true;
+void TestPageStorage::RemoveCommitWatcher(storage::CommitWatcher* watcher) {
+  FXL_DCHECK(watcher_ == watcher);
+  watcher_ = nullptr;
 }
 
 void TestPageStorage::GetUnsyncedCommits(

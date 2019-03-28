@@ -60,7 +60,7 @@ class PageUpload : public storage::CommitWatcher {
 
   // Starts or restarts the upload process.
   //
-  // The first time this method is called this sets up the storage watcher. It
+  // The first time this method is called it enables the storage watcher. It
   // might be called again in the future to restart the upload after it's
   // stopped due to a remote download in progress.
   void StartOrRestartUpload();
@@ -80,7 +80,7 @@ class PageUpload : public storage::CommitWatcher {
   void HandleUnsyncedCommits(
       std::vector<std::unique_ptr<const storage::Commit>> commits);
 
-  // Sets the internal state.
+  // Sets the external state.
   void SetState(UploadSyncState new_state);
 
   void HandleError(const char error_description[]);

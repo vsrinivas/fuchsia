@@ -93,7 +93,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
 
   storage::PageSyncDelegate* page_sync_delegate_;
   std::set<storage::CommitId> commits_marked_as_synced;
-  storage::CommitWatcher* watcher_;
+  storage::CommitWatcher* watcher_ = nullptr;
   bool watcher_set = false;
   bool watcher_removed = false;
   std::map<storage::CommitId, std::string> received_commits;

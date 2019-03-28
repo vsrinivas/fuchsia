@@ -60,6 +60,7 @@ executable("ledger_unittests") {
     "//src/ledger/bin/storage/impl/btree:unittests",
     "//src/ledger/bin/storage/public:unittests",
     "//src/ledger/bin/storage/testing:unittests",
+    "//src/ledger/bin/sync_coordinator/impl:unittests",
     "//src/ledger/bin/sync_helper:unittests",
     "//src/ledger/bin/testing:unittests",
     "//src/ledger/bin/testing/netconnector:unittests",

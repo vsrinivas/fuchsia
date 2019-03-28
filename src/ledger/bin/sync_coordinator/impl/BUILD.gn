@@ -23,3 +23,25 @@ source_set("impl") {
 
   configs += [ "//src/ledger:ledger_config" ]
 }
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "page_sync_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":impl",
+    "//garnet/public/lib/fxl",
+    "//src/ledger/bin/cloud_sync/impl",
+    "//src/ledger/bin/cloud_sync/impl/testing:testing",
+    "//src/ledger/bin/encryption/fake",
+    "//src/ledger/bin/storage/testing",
+    "//src/ledger/bin/sync_coordinator/public",
+    "//src/ledger/bin/testing:lib",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}

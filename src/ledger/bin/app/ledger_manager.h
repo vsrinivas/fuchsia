@@ -170,6 +170,8 @@ class LedgerManager : public LedgerImpl::Delegate {
   Environment* const environment_;
   std::string ledger_name_;
   std::unique_ptr<encryption::EncryptionService> encryption_service_;
+  // |storage_| must outlive objects containing CommitWatchers, which includes
+  // |ledger_sync_| and |page_managers_|.
   std::unique_ptr<storage::LedgerStorage> storage_;
   std::unique_ptr<sync_coordinator::LedgerSync> ledger_sync_;
   LedgerImpl ledger_impl_;
