@@ -1122,14 +1122,6 @@ group("bluetooth_all") {
   ]
 }
 
-group("magma") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-arm-mali",
-    "//garnet/lib/magma/gnbuild/magma-intel-gen",
-  ]
-}
-
 group("magma-arm-mali") {
   testonly = true
   public_deps = [
