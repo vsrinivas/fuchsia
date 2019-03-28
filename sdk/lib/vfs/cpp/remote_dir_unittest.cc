@@ -54,7 +54,7 @@ class RemoteDirConnection : public vfs_tests::DirConnection {
   }
 
   vfs::PseudoDir pseudo_dir_;
-  std::unique_ptr<vfs::RemoteDir> dir_;
+  std::shared_ptr<vfs::RemoteDir> dir_;
   async::Loop loop_;
 
  private:
@@ -71,34 +71,42 @@ class RemoteDirConnection : public vfs_tests::DirConnection {
 
 TEST_F(RemoteDirConnection, ConstructorWithChannel) {
   auto connection = GetPseudoDirConnection();
-  dir_ = std::make_unique<vfs::RemoteDir>(connection.Unbind().TakeChannel());
+  dir_ = std::make_shared<vfs::RemoteDir>(connection.Unbind().TakeChannel());
   CompareReadDirs();
 }
 
 TEST_F(RemoteDirConnection, ConstructorWithInterfaceHandle) {
   auto connection = GetPseudoDirConnection();
-  dir_ = std::make_unique<vfs::RemoteDir>(connection.Unbind());
+  dir_ = std::make_shared<vfs::RemoteDir>(connection.Unbind());
   CompareReadDirs();
 }
 
 TEST_F(RemoteDirConnection, ConstructorWithDirPtr) {
-  dir_ = std::make_unique<vfs::RemoteDir>(GetPseudoDirConnection());
+  dir_ = std::make_shared<vfs::RemoteDir>(GetPseudoDirConnection());
   CompareReadDirs();
 }
 
-TEST_F(RemoteDirConnection, RemoteDirContainedInPseudoDir) {
-  vfs::PseudoDir containing_dir;
-  containing_dir.AddEntry(
-      "remote", std::make_unique<vfs::RemoteDir>(GetPseudoDirConnection()));
+class RemoteDirContained : public RemoteDirConnection {
+ protected:
+  RemoteDirContained() {
+    dir_ = std::make_shared<vfs::RemoteDir>(GetPseudoDirConnection());
+    parent_pseudo_dir_.AddSharedEntry("remote_dir", dir_);
+    parent_pseudo_dir_.Serve(
+        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+        ptr_.NewRequest().TakeChannel(), loop_.dispatcher());
+  }
 
-  fuchsia::io::DirectorySyncPtr ptr;
-  containing_dir.Serve(fuchsia::io::OPEN_RIGHT_READABLE,
-                       ptr.NewRequest().TakeChannel(), loop_.dispatcher());
+  ~RemoteDirContained() { loop_.Shutdown(); }
 
+  vfs::PseudoDir parent_pseudo_dir_;
+  fuchsia::io::DirectorySyncPtr ptr_;
+};
+
+TEST_F(RemoteDirContained, RemoteDirContainedInPseudoDir) {
   std::vector<vfs_tests::Dirent> expected = {
       vfs_tests::Dirent::DirentForDot(),
-      vfs_tests::Dirent::DirentForDirectory("remote")};
-  AssertReadDirents(ptr, 1024, expected);
+      vfs_tests::Dirent::DirentForDirectory("remote_dir")};
+  AssertReadDirents(ptr_, 1024, expected);
 }
 
 }  // namespace
