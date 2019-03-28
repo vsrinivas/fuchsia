@@ -28,7 +28,8 @@ by *handle*. The pointer to *bytes* may be NULL if *buffer_size* is zero.
 If **ZX_SOCKET_CONTROL** is passed to *options*, then `zx_socket_write()`
 attempts to write into the socket control plane. A write to the control plane is
 never short. If the socket control plane has insufficient space for *buffer*, it
-writes nothing and returns **ZX_ERR_OUT_OF_RANGE**.
+writes nothing and returns **ZX_ERR_OUT_OF_RANGE**. Only a single control plane
+message can be active in a socket direction.
 
 If a NULL *actual* is passed in, it will be ignored.
 
@@ -70,7 +71,8 @@ socket was not created with **ZX_SOCKET_HAS_CONTROL**.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_WRITE**.
 
-**ZX_ERR_SHOULD_WAIT**  The buffer underlying the socket is full.
+**ZX_ERR_SHOULD_WAIT**  The buffer underlying the socket is full. For the
+control plane, a previous control message is still in the socket.
 
 **ZX_ERR_OUT_OF_RANGE**  The socket was created with **ZX_SOCKET_DATAGRAM** and
 *buffer* is larger than the remaining space in the socket.
