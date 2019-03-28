@@ -5,6 +5,7 @@
 
 #include <lib/vfs/cpp/directory.h>
 
+#include <fuchsia/io/cpp/fidl.h>
 #include <lib/vfs/cpp/internal/directory_connection.h>
 #include <zircon/errors.h>
 
@@ -108,7 +109,8 @@ zx_status_t Directory::WalkPath(const char* path, size_t path_len,
 }
 
 zx_status_t Directory::LookupPath(const char* path, size_t path_len,
-                                  bool* out_is_dir, Node** out_node) {
+                                  bool* out_is_dir, Node** out_node,
+                                  const char** out_path, size_t* out_len) {
   Node* current_node = this;
   size_t new_path_len = path_len;
   const char* new_path = path;
@@ -132,9 +134,14 @@ zx_status_t Directory::LookupPath(const char* path, size_t path_len,
       return status;
     }
     current_node = n;
+    if (current_node->IsRemote()) {
+      break;
+    }
   } while (new_path_len > 0);
 
   *out_node = current_node;
+  *out_len = new_path_len;
+  *out_path = new_path;
   return ZX_OK;
 }
 
@@ -143,9 +150,26 @@ void Directory::Open(uint32_t flags, uint32_t mode, const char* path,
                      async_dispatcher_t* dispatcher) {
   Node* n = nullptr;
   bool is_dir = false;
-  zx_status_t status = LookupPath(path, path_len, &is_dir, &n);
+  size_t new_path_len = path_len;
+  const char* new_path = path;
+  zx_status_t status =
+      LookupPath(path, path_len, &is_dir, &n, &new_path, &new_path_len);
   if (status != ZX_OK) {
     return SendOnOpenEventOnError(flags, std::move(request), status);
+  }
+  if (n->IsRemote() && new_path_len > 0) {
+    fuchsia::io::DirectoryPtr temp_dir;
+    zx_status_t status = n->Serve(fuchsia::io::OPEN_RIGHT_READABLE |
+                                      fuchsia::io::OPEN_RIGHT_WRITABLE |
+                                      fuchsia::io::OPEN_FLAG_DIRECTORY,
+                                  temp_dir.NewRequest().TakeChannel());
+    if (status != ZX_OK) {
+      return SendOnOpenEventOnError(flags, std::move(request), status);
+    }
+    temp_dir->Open(
+        flags, mode, std::string(new_path, new_path_len),
+        fidl::InterfaceRequest<fuchsia::io::Node>(std::move(request)));
+    return;
   }
 
   if (is_dir) {

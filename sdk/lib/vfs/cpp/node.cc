@@ -46,6 +46,8 @@ std::unique_ptr<Connection> Node::Close(Connection* connection) {
 
 zx_status_t Node::Sync() { return ZX_ERR_NOT_SUPPORTED; }
 
+bool Node::IsRemote() const { return false; }
+
 zx_status_t Node::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
   return ZX_ERR_NOT_SUPPORTED;
 }

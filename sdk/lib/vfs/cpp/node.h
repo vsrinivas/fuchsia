@@ -114,6 +114,11 @@ class Node {
   // All directory types should implement this method.
   virtual zx_status_t Lookup(const std::string& name, Node** out_node) const;
 
+  // Return true if |Node| is a remote node.
+  // This function is used in |Directory::Open| to correctly open those kind of
+  // nodes.
+  virtual bool IsRemote() const;
+
  protected:
   // Called by |Serve| after validating flags and modes.
   // This should be implemented by sub classes which doesn't create a

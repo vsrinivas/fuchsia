@@ -53,4 +53,6 @@ zx_status_t RemoteDir::Readdir(uint64_t offset, void* data, uint64_t len,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+bool RemoteDir::IsRemote() const { return true; }
+
 }  // namespace vfs

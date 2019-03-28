@@ -86,11 +86,17 @@ class Directory : public Node {
   // if found.
   // Sets |out_is_dir| to true if path has '/' or '/.' at the end.
   //
-  // Calls |WalkPath| in loop and returns status on error.
-  // Returns |ZX_ERR_NOT_DIR| if path tries to search for node within a
-  // non-directory node type.
+  // This function will return intermidiate node if |IsRemote| on that node is
+  // true and will sets |out_path| and |out_len| as rest of the remaining path.
+  // For example: if path is /a/b/c/d/f/g and c is a remote node, it will return
+  // c in |out_node|, "d/f/g" in |out_path| and |out_len|.
+  //
+  // Calls |WalkPath| in loop and returns status on error. Returns
+  // |ZX_ERR_NOT_DIR| if path tries to search for node within a non-directory
+  // node type.
   zx_status_t LookupPath(const char* path, size_t path_len, bool* out_is_dir,
-                         Node** out_node);
+                         Node** out_node, const char** out_path,
+                         size_t* out_len);
 
   bool IsDirectory() const override;
 

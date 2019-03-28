@@ -109,4 +109,31 @@ TEST_F(RemoteDirContained, RemoteDirContainedInPseudoDir) {
   AssertReadDirents(ptr_, 1024, expected);
 }
 
+TEST_F(RemoteDirContained, OpenAndReadFile) {
+  fuchsia::io::FileSyncPtr file_ptr;
+  std::string paths[] = {"remote_dir/file1", "remote_dir//file1",
+                         "remote_dir/./file1"};
+  for (auto& path : paths) {
+    SCOPED_TRACE(path);
+    AssertOpenPath(ptr_, path, file_ptr, fuchsia::io::OPEN_RIGHT_READABLE);
+    AssertRead(file_ptr, 1024, "file1");
+  }
+}
+
+TEST_F(RemoteDirContained, OpenRemoteDirAndRead) {
+  std::string paths[] = {"remote_dir",    "remote_dir/",  "remote_dir/.",
+                         "remote_dir/./", "remote_dir//", "remote_dir//."};
+  for (auto& path : paths) {
+    SCOPED_TRACE(path);
+    fuchsia::io::DirectorySyncPtr remote_ptr;
+    AssertOpenPath(
+        ptr_, path, remote_ptr,
+        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE);
+    fuchsia::io::FileSyncPtr file_ptr;
+    AssertOpenPath(remote_ptr, "file1", file_ptr,
+                   fuchsia::io::OPEN_RIGHT_READABLE);
+    AssertRead(file_ptr, 1024, "file1");
+  }
+}
+
 }  // namespace
