@@ -40,6 +40,14 @@ pub struct RepositoryConfig {
     update_package_uri: Option<String>,
 }
 
+/// Wraper for serializing repository configs to the on-disk JSON format.
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(tag = "version", content = "content", deny_unknown_fields)]
+pub enum RepositoryConfigs {
+    #[serde(rename = "1")]
+    Version1(Vec<RepositoryConfig>),
+}
+
 impl TryFrom<fidl::RepositoryKeyConfig> for RepositoryKey {
     type Error = RepositoryParseError;
     fn try_from(id: fidl::RepositoryKeyConfig) -> Result<Self, RepositoryParseError> {
@@ -349,6 +357,20 @@ mod tests {
         };
         let as_fidl: fidl::RepositoryConfig = config.clone().into();
         assert_eq!(RepositoryConfig::try_from(as_fidl).unwrap(), config);
+    }
+
+    #[test]
+    fn test_repository_configs_serialize() {
+        let configs = RepositoryConfigs::Version1(vec![RepositoryConfig {
+            repo_url: "fuchsia-pkg://fuchsia.com".into(),
+            root_keys: vec![],
+            mirrors: vec![],
+            update_package_uri: None,
+        }]);
+        assert_eq!(
+            serde_json::to_string(&configs).unwrap(),
+            r#"{"version":"1","content":[{"repo_url":"fuchsia-pkg://fuchsia.com","root_keys":[],"mirrors":[],"update_package_uri":null}]}"#
+        )
     }
 }
 
