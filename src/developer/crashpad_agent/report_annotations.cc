@@ -76,8 +76,8 @@ std::map<std::string, std::string> MakeDefaultAnnotations(
       {"build.product", ReadStringFromFile("/config/build-info/product")},
       {"build.board", ReadStringFromFile("/config/build-info/board")},
       {"build.version", version},
-      {"build.last-update",
-       ReadStringFromFile("/config/build-info/last-update")},
+      {"build.latest-commit-date",
+       ReadStringFromFile("/config/build-info/latest-commit-date")},
   };
 }
 

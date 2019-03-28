@@ -103,8 +103,8 @@ std::vector<Annotation> GetAnnotations() {
   PushBackIfValuePresent("build.product",
                          ReadStringFromFile("/config/build-info/product"),
                          &annotations);
-  PushBackIfValuePresent("build.last-update",
-                         ReadStringFromFile("/config/build-info/last-update"),
+  PushBackIfValuePresent("build.latest-commit-date",
+                         ReadStringFromFile("/config/build-info/latest-commit-date"),
                          &annotations);
   PushBackIfValuePresent("build.version",
                          ReadStringFromFile("/config/build-info/version"),

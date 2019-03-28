@@ -70,7 +70,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   EXPECT_THAT(out_result.response().data.annotations(),
               testing::UnorderedElementsAreArray({
                   MatchesKey("device.board-name"),
-                  MatchesKey("build.last-update"),
+                  MatchesKey("build.latest-commit-date"),
                   MatchesKey("build.version"),
                   MatchesKey("build.board"),
                   MatchesKey("build.product"),
