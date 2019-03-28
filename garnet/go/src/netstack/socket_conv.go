@@ -340,7 +340,7 @@ func SetSockOpt(ep tcpip.Endpoint, level, name int16, optVal []uint8) *tcpip.Err
 		logger.Infof("unimplemented setsockopt: level=%d name=%d optVal=%x", level, name, optVal)
 
 	}
-	return ep.SetSockOpt(struct{}{})
+	return tcpip.ErrUnknownProtocolOption
 }
 
 func setSockOptSocket(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
@@ -411,7 +411,7 @@ func setSockOptSocket(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error
 		logger.Infof("unimplemented setsockopt: SOL_SOCKET name=%d optVal=%x", name, optVal)
 
 	}
-	return ep.SetSockOpt(struct{}{})
+	return tcpip.ErrUnknownProtocolOption
 }
 
 // setSockOptTCP implements SetSockOpt when level is SOL_TCP.
@@ -467,7 +467,7 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		logger.Infof("unimplemented setsockopt: SOL_TCP name=%d optVal=%x", name, optVal)
 
 	}
-	return ep.SetSockOpt(struct{}{})
+	return tcpip.ErrUnknownProtocolOption
 }
 
 // setSockOptIPv6 implements SetSockOpt when level is SOL_IPV6.
@@ -518,7 +518,7 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		logger.Infof("unimplemented setsockopt: SOL_IPV6 name=%d optVal=%x", name, optVal)
 
 	}
-	return ep.SetSockOpt(struct{}{})
+	return tcpip.ErrUnknownProtocolOption
 }
 
 // setSockOptIP implements SetSockOpt when level is SOL_IP.
@@ -665,7 +665,7 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		logger.Infof("unimplemented setsockopt: SOL_IP name=%d optVal=%x", name, optVal)
 
 	}
-	return ep.SetSockOpt(struct{}{})
+	return tcpip.ErrUnknownProtocolOption
 }
 
 // isLinkLocal determines if the given IPv6 address is link-local. This is the
