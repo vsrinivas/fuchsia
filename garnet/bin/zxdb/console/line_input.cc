@@ -8,8 +8,8 @@
 #include <unistd.h>
 
 #ifdef __Fuchsia__
+#include <fuchsia/hardware/pty/c/fidl.h>
 #include <lib/fdio/io.h>
-#include <zircon/device/pty.h>
 #else
 #include <sys/ioctl.h>
 #include <termios.h>
@@ -28,10 +28,19 @@ namespace {
 
 size_t GetTerminalMaxCols(int fileno) {
 #ifdef __Fuchsia__
-  pty_window_size_t wsz;
-  ssize_t r = ioctl_pty_get_window_size(fileno, &wsz);
-  if (r == sizeof(wsz))
+  if (isatty(STDIN_FILENO)) {
+    fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
+    fuchsia_hardware_pty_WindowSize wsz;
+    zx_status_t status;
+    zx_status_t call_status = fuchsia_hardware_pty_DeviceGetWindowSize(
+      fdio_unsafe_borrow_channel(io), &status, &wsz);
+    fdio_unsafe_release(io);
+    if (call_status != ZX_OK || status != ZX_OK) {
+      return 0;
+    }
+
     return wsz.width;
+  }
 #else
   struct winsize ws;
   if (ioctl(fileno, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0)
