@@ -22,7 +22,10 @@ LedgerSyncImpl::LedgerSyncImpl(
       encryption_service_(encryption_service),
       app_id_(app_id.ToString()),
       user_watcher_(std::move(watcher)) {
-  FXL_DCHECK(user_config_->cloud_provider);
+  if (!user_config_->cloud_provider) {
+    FXL_LOG(ERROR)
+        << "Instantiated a LedgerSyncImpl with an invalid cloud provider.";
+  }
   aggregator_.SetBaseWatcher(user_watcher_.get());
 }
 
@@ -39,7 +42,7 @@ std::unique_ptr<PageSync> LedgerSyncImpl::CreatePageSync(
     storage::PageSyncClient* page_sync_client) {
   FXL_DCHECK(page_storage);
   if (!user_config_->cloud_provider) {
-    // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
+    // TODO(LE-567): handle recovery from cloud provider disconnection.
     FXL_LOG(WARNING) << "Skipped initializing the cloud sync. "
                      << "Cloud provider is disconnected.";
     return nullptr;
