@@ -31,12 +31,11 @@
  *
  *****************************************************************************/
 
-#include <linux/device.h>
-#include <linux/interrupt.h>
-#include <linux/export.h>
 #include "iwl-drv.h"
 #include "iwl-debug.h"
+#if 0  // NEEDS_PORTING
 #include "iwl-devtrace.h"
+#endif  // NEEDS_PORTING
 
 #define __iwl_fn(fn)						\
 void __iwl_ ##fn(struct device *dev, const char *fmt, ...)	\
@@ -56,16 +55,10 @@ void __iwl_ ##fn(struct device *dev, const char *fmt, ...)	\
 	va_end(args1);						\
 }
 
-__iwl_fn(warn)
-IWL_EXPORT_SYMBOL(__iwl_warn);
-__iwl_fn(info)
-IWL_EXPORT_SYMBOL(__iwl_info);
-__iwl_fn(crit)
-IWL_EXPORT_SYMBOL(__iwl_crit);
-
 void __iwl_err(struct device *dev, bool rfkill_prefix, bool trace_only,
 		const char *fmt, ...)
 {
+#if 0  // NEEDS_PORTING
 	struct va_format vaf = {
 		.fmt = fmt,
 	};
@@ -86,8 +79,8 @@ void __iwl_err(struct device *dev, bool rfkill_prefix, bool trace_only,
 	vaf.va = &args;
 	trace_iwlwifi_err(&vaf);
 	va_end(args);
+#endif  // NEEDS_PORTING
 }
-IWL_EXPORT_SYMBOL(__iwl_err);
 
 #if defined(CPTCFG_IWLWIFI_DEBUG) || defined(CPTCFG_IWLWIFI_DEVICE_TRACING)
 void __iwl_dbg(struct device *dev,
@@ -116,5 +109,10 @@ void __iwl_dbg(struct device *dev,
 	trace_iwlwifi_dbg(level, in_interrupt(), function, &vaf);
 	va_end(args);
 }
-IWL_EXPORT_SYMBOL(__iwl_dbg);
 #endif
+
+void __iwl_warn(struct device *dev, const char *fmt, ...) {}
+
+void __iwl_info(struct device *dev, const char *fmt, ...) {}
+
+void __iwl_crit(struct device *dev, const char *fmt, ...) {}

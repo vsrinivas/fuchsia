@@ -34,6 +34,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_MODPARAMS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_MODPARAMS_H_
 
+#include <stdbool.h>
+
+#include "fuchsia_porting.h"
+
 extern struct iwl_mod_params iwlwifi_mod_params;
 
 enum iwl_power_level {

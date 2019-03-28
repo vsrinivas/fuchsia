@@ -33,10 +33,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <stdlib.h>
-#include <string.h>
+#include <stdio.h>
+#include <threads.h>
 
 #include <ddk/driver.h>
+#include <lib/sync/completion.h>
+#include <zircon/listnode.h>
 
 #include "iwl-drv.h"
 #include "iwl-csr.h"
@@ -61,10 +63,7 @@
  *
  ******************************************************************************/
 
-#define DRV_DESCRIPTION	"Intel(R) Wireless WiFi driver for Linux"
-MODULE_DESCRIPTION(DRV_DESCRIPTION);
-MODULE_AUTHOR(DRV_COPYRIGHT " " DRV_AUTHOR);
-MODULE_LICENSE("GPL");
+#define DRV_DESCRIPTION	"Intel(R) Wireless WiFi driver for Fuchsia"
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 static struct dentry *iwl_dbgfs_root;
@@ -82,7 +81,7 @@ static struct dentry *iwl_dbgfs_root;
  * @request_firmware_complete: the firmware has been obtained from user space
  */
 struct iwl_drv {
-	struct list_head list;
+	list_node_t list;
 	struct iwl_fw fw;
 
 	struct iwl_op_mode *op_mode;
@@ -95,7 +94,7 @@ struct iwl_drv {
 	int fw_index;                   /* firmware we're trying to load */
 	char firmware_name[64];         /* name of firmware file to load */
 
-	struct completion request_firmware_complete;
+	sync_completion_t request_firmware_complete;
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	struct dentry *dbgfs_drv;
@@ -119,11 +118,11 @@ enum {
 };
 
 /* Protects the table contents, i.e. the ops pointer & drv list */
-static struct mutex iwlwifi_opmode_table_mtx;
+static mtx_t iwlwifi_opmode_table_mtx;
 static struct iwlwifi_opmode_table {
 	const char *name;			/* name: iwldvm, iwlmvm, etc */
 	const struct iwl_op_mode_ops *ops;	/* pointer to op_mode ops */
-	struct list_head drv;		/* list of devices using this op_mode */
+	list_node_t drv;		/* list of devices using this op_mode */
 } iwlwifi_opmode_table[] = {		/* ops set when driver is initialized */
 	[DVM_OP_MODE] = { .name = "iwldvm", .ops = NULL },
 	[MVM_OP_MODE] = { .name = "iwlmvm", .ops = NULL },
@@ -171,7 +170,7 @@ IWL_EXPORT_SYMBOL(iwl_drv_get_dev_container);
  * iwl_drv_get_op_mode - Returns the index of the device's
  * active operation mode
  */
-static int iwl_drv_get_op_mode_idx(struct iwl_drv *drv)
+static zx_status_t iwl_drv_get_op_mode_idx(struct iwl_drv *drv)
 {
 	struct iwl_drv *drv_itr;
 	int i;
@@ -186,7 +185,7 @@ static int iwl_drv_get_op_mode_idx(struct iwl_drv *drv)
 				return i;
 	}
 
-	return -EINVAL;
+	return ZX_ERR_INVALID_ARGS;
 }
 
 static bool iwl_drv_xvt_mode_supported(enum iwl_fw_type fw_type, int mode_idx)
@@ -221,7 +220,7 @@ static bool iwl_drv_xvt_mode_supported(enum iwl_fw_type fw_type, int mode_idx)
  * is supported by the device. Stops the current op mode
  * and starts the desired mode.
  */
-int iwl_drv_switch_op_mode(struct iwl_drv *drv, const char *new_op_name)
+zx_status_t iwl_drv_switch_op_mode(struct iwl_drv *drv, const char *new_op_name)
 {
 	struct iwlwifi_opmode_table *new_op = NULL;
 	int idx;
@@ -237,7 +236,7 @@ int iwl_drv_switch_op_mode(struct iwl_drv *drv, const char *new_op_name)
 	/* Checking if the desired op mode is valid */
 	if (!new_op) {
 		IWL_ERR(drv, "No such op mode \"%s\"\n", new_op_name);
-		return -EINVAL;
+		return ZX_ERR_INVALID_ARGS;
 	}
 
 	/*
@@ -261,16 +260,16 @@ int iwl_drv_switch_op_mode(struct iwl_drv *drv, const char *new_op_name)
 	_iwl_op_mode_stop(drv);
 
 	/* Changing operation mode */
-	mutex_lock(&iwlwifi_opmode_table_mtx);
+	mtx_lock(&iwlwifi_opmode_table_mtx);
 	list_move_tail(&drv->list, &new_op->drv);
-	mutex_unlock(&iwlwifi_opmode_table_mtx);
+	mtx_unlock(&iwlwifi_opmode_table_mtx);
 
 	/* Starting the new op mode */
 	if (new_op->ops) {
 		drv->op_mode = _iwl_op_mode_start(drv, new_op);
 		if (!drv->op_mode) {
 			IWL_ERR(drv, "Error switching op modes\n");
-			return -EINVAL;
+			return ZX_ERR_INVALID_ARGS;
 		}
 	} else {
 		return request_module("%s", new_op->name);
@@ -368,7 +367,7 @@ static void iwl_free_fw_img(struct iwl_drv *drv, struct fw_img *img)
 
 static void iwl_dealloc_ucode(struct iwl_drv *drv)
 {
-	int i;
+	size_t i;
 
 	kfree(drv->fw.dbg.dest_tlv);
 	for (i = 0; i < ARRAY_SIZE(drv->fw.dbg.conf_tlv); i++)
@@ -382,7 +381,7 @@ static void iwl_dealloc_ucode(struct iwl_drv *drv)
 		iwl_free_fw_img(drv, drv->fw.img + i);
 }
 
-static int iwl_alloc_fw_desc(struct iwl_drv *drv, struct fw_desc *desc,
+static zx_status_t iwl_alloc_fw_desc(struct iwl_drv *drv, struct fw_desc *desc,
 			     struct fw_sec *sec)
 {
 	void *data;
@@ -390,11 +389,11 @@ static int iwl_alloc_fw_desc(struct iwl_drv *drv, struct fw_desc *desc,
 	desc->data = NULL;
 
 	if (!sec || !sec->size)
-		return -EINVAL;
+		return ZX_ERR_INVALID_ARGS;
 
 	data = vmalloc(sec->size);
 	if (!data)
-		return -ENOMEM;
+		return ZX_ERR_NO_MEMORY;
 
 	desc->len = sec->size;
 	desc->offset = sec->offset;
@@ -404,10 +403,14 @@ static int iwl_alloc_fw_desc(struct iwl_drv *drv, struct fw_desc *desc,
 	return 0;
 }
 
+static inline void release_firmware(const struct firmware *fw) {
+    // NEEDS_PORTING: implement me
+}
+
 static void iwl_req_fw_callback(const struct firmware *ucode_raw,
 				void *context);
 
-static int iwl_request_firmware(struct iwl_drv *drv, bool first)
+static zx_status_t iwl_request_firmware(struct iwl_drv *drv, bool first)
 {
 	const struct iwl_cfg *cfg = drv->trans->cfg;
 	char tag[8];
@@ -421,7 +424,7 @@ static int iwl_request_firmware(struct iwl_drv *drv, bool first)
 		IWL_ERR(drv,
 			"Only HW steps B and C are currently supported (0x%0x)\n",
 			drv->trans->hw_rev);
-		return -EINVAL;
+		return ZX_ERR_INVALID_ARGS;
 	}
 
 	if (first) {
@@ -460,7 +463,7 @@ static int iwl_request_firmware(struct iwl_drv *drv, bool first)
 
 		IWL_ERR(drv,
 			"check git://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git\n");
-		return -ENOENT;
+		return ZX_ERR_NOT_FOUND;
 	}
 
 	snprintf(drv->firmware_name, sizeof(drv->firmware_name), "%s%s.ucode",
@@ -478,9 +481,28 @@ static int iwl_request_firmware(struct iwl_drv *drv, bool first)
 	IWL_DEBUG_INFO(drv, "attempting to load firmware '%s'\n",
 		       drv->firmware_name);
 
-	return request_firmware_nowait(THIS_MODULE, 1, drv->firmware_name,
-				       drv->trans->dev,
-				       GFP_KERNEL, drv, iwl_req_fw_callback);
+#if 0  // NEEDS_PORTING
+    zx_status_t ret;
+    ret = load_firmware(drv->zxdrv, drv->firmware_name, &firmware->vmo, &firmware->size);
+    if (ret != ZX_OK) {
+        return ret;
+    }
+
+    uintptr_t vaddr;
+    ret = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, firmware->vmo, 0,
+                      firmware->size, &vaddr);
+    if (ret != ZX_OK) {
+        zx_handle_close(firmware->vmo);
+        return ret;
+    }
+
+    firmware->data = (uint8_t*)vaddr;
+#endif  // NEEDS_PORTING
+
+    // To make compilation passing, NEEDS_PORTING
+    iwl_req_fw_callback(NULL, NULL);
+
+    return ZX_OK;
 }
 
 struct fw_img_parsing {
@@ -551,7 +573,7 @@ static void alloc_sec_data(struct iwl_firmware_pieces *pieces,
 	if (img->sec && img->sec_counter >= size)
 		return;
 
-	sec_memory = krealloc(img->sec, alloc_size, GFP_KERNEL);
+	sec_memory = realloc(img->sec, alloc_size);
 	if (!sec_memory)
 		return;
 
@@ -596,7 +618,7 @@ static void set_sec_offset(struct iwl_firmware_pieces *pieces,
 	pieces->img[type].sec[sec].offset = offset;
 }
 
-static int iwl_store_cscheme(struct iwl_fw *fw, const u8 *data, const u32 len)
+static zx_status_t iwl_store_cscheme(struct iwl_fw *fw, const u8 *data, const u32 len)
 {
 	int i, j;
 	struct iwl_fw_cscheme_list *l = (struct iwl_fw_cscheme_list *)data;
@@ -604,7 +626,7 @@ static int iwl_store_cscheme(struct iwl_fw *fw, const u8 *data, const u32 len)
 
 	if (len < sizeof(*l) ||
 	    len < sizeof(l->size) + l->size * sizeof(l->cs[0]))
-		return -EINVAL;
+		return ZX_ERR_INVALID_ARGS;
 
 	for (i = 0, j = 0; i < IWL_UCODE_MAX_CS && i < l->size; i++) {
 		fwcs = &l->cs[j];
@@ -639,9 +661,9 @@ static int iwl_store_ucode_sec(struct iwl_firmware_pieces *pieces,
 	img = &pieces->img[type];
 
 	alloc_size = sizeof(*img->sec) * (img->sec_counter + 1);
-	sec = krealloc(img->sec, alloc_size, GFP_KERNEL);
+	sec = realloc(img->sec, alloc_size);
 	if (!sec)
-		return -ENOMEM;
+		return ZX_ERR_NO_MEMORY;
 	img->sec = sec;
 
 	sec = &img->sec[img->sec_counter];
@@ -655,7 +677,7 @@ static int iwl_store_ucode_sec(struct iwl_firmware_pieces *pieces,
 	return 0;
 }
 
-static int iwl_set_default_calib(struct iwl_drv *drv, const u8 *data)
+static zx_status_t iwl_set_default_calib(struct iwl_drv *drv, const u8 *data)
 {
 	struct iwl_tlv_calib_data *def_calib =
 					(struct iwl_tlv_calib_data *)data;
@@ -663,7 +685,7 @@ static int iwl_set_default_calib(struct iwl_drv *drv, const u8 *data)
 	if (ucode_type >= IWL_UCODE_TYPE_MAX) {
 		IWL_ERR(drv, "Wrong ucode_type %u for default calibration.\n",
 			ucode_type);
-		return -EINVAL;
+		return ZX_ERR_INVALID_ARGS;
 	}
 	drv->fw.default_calib[ucode_type].flow_trigger =
 		def_calib->calib.flow_trigger;
@@ -715,9 +737,9 @@ static void iwl_set_ucode_capabilities(struct iwl_drv *drv, const u8 *data,
 	}
 }
 
-static int iwl_parse_v1_v2_firmware(struct iwl_drv *drv,
-				    const struct firmware *ucode_raw,
-				    struct iwl_firmware_pieces *pieces)
+static zx_status_t iwl_parse_v1_v2_firmware(struct iwl_drv *drv,
+                                            const struct firmware *ucode_raw,
+                                            struct iwl_firmware_pieces *pieces)
 {
 	struct iwl_ucode_header *ucode = (void *)ucode_raw->data;
 	u32 api_ver, hdr_size, build;
@@ -732,7 +754,7 @@ static int iwl_parse_v1_v2_firmware(struct iwl_drv *drv,
 		hdr_size = 28;
 		if (ucode_raw->size < hdr_size) {
 			IWL_ERR(drv, "File size too small!\n");
-			return -EINVAL;
+			return ZX_ERR_INVALID_ARGS;
 		}
 		build = le32_to_cpu(ucode->u.v2.build);
 		set_sec_size(pieces, IWL_UCODE_REGULAR, IWL_UCODE_SECTION_INST,
@@ -751,7 +773,7 @@ static int iwl_parse_v1_v2_firmware(struct iwl_drv *drv,
 		hdr_size = 24;
 		if (ucode_raw->size < hdr_size) {
 			IWL_ERR(drv, "File size too small!\n");
-			return -EINVAL;
+			return ZX_ERR_INVALID_ARGS;
 		}
 		build = 0;
 		set_sec_size(pieces, IWL_UCODE_REGULAR, IWL_UCODE_SECTION_INST,
@@ -767,13 +789,13 @@ static int iwl_parse_v1_v2_firmware(struct iwl_drv *drv,
 	}
 
 	if (build)
-		sprintf(buildstr, " build %u", build);
+		sprintf(buildstr, " build %lu", build);
 	else
 		buildstr[0] = '\0';
 
 	snprintf(drv->fw.fw_version,
 		 sizeof(drv->fw.fw_version),
-		 "%u.%u.%u.%u%s",
+		 "%lu.%lu.%lu.%lu%s",
 		 IWL_UCODE_MAJOR(drv->fw.ucode_ver),
 		 IWL_UCODE_MINOR(drv->fw.ucode_ver),
 		 IWL_UCODE_API(drv->fw.ucode_ver),
@@ -791,7 +813,7 @@ static int iwl_parse_v1_v2_firmware(struct iwl_drv *drv,
 		IWL_ERR(drv,
 			"uCode file size %d does not match expected size\n",
 			(int)ucode_raw->size);
-		return -EINVAL;
+		return ZX_ERR_INVALID_ARGS;
 	}
 
 
@@ -814,11 +836,11 @@ static int iwl_parse_v1_v2_firmware(struct iwl_drv *drv,
 	return 0;
 }
 
-static int iwl_parse_tlv_firmware(struct iwl_drv *drv,
-				const struct firmware *ucode_raw,
-				struct iwl_firmware_pieces *pieces,
-				struct iwl_ucode_capabilities *capa,
-				bool *usniffer_images)
+static zx_status_t iwl_parse_tlv_firmware(struct iwl_drv *drv,
+                                          const struct firmware *ucode_raw,
+                                          struct iwl_firmware_pieces *pieces,
+                                          struct iwl_ucode_capabilities *capa,
+                                          bool *usniffer_images)
 {
 	struct iwl_tlv_ucode_header *ucode = (void *)ucode_raw->data;
 	struct iwl_ucode_tlv *tlv;
@@ -846,13 +868,13 @@ static int iwl_parse_tlv_firmware(struct iwl_drv *drv,
 
 	if (len < sizeof(*ucode)) {
 		IWL_ERR(drv, "uCode has invalid length: %zd\n", len);
-		return -EINVAL;
+		return ZX_ERR_INVALID_ARGS;
 	}
 
-	if (ucode->magic != cpu_to_le32(IWL_TLV_UCODE_MAGIC)) {
+	if (ucode->magic != (__le32)cpu_to_le32(IWL_TLV_UCODE_MAGIC)) {
 		IWL_ERR(drv, "invalid uCode magic: 0X%x\n",
 			le32_to_cpu(ucode->magic));
-		return -EINVAL;
+		return ZX_ERR_INVALID_ARGS;
 	}
 
 	drv->fw.ucode_ver = le32_to_cpu(ucode->ver);
@@ -861,13 +883,13 @@ static int iwl_parse_tlv_firmware(struct iwl_drv *drv,
 	build = le32_to_cpu(ucode->build);
 
 	if (build)
-		sprintf(buildstr, " build %u", build);
+		sprintf(buildstr, " build %lu", build);
 	else
 		buildstr[0] = '\0';
 
 	snprintf(drv->fw.fw_version,
 		 sizeof(drv->fw.fw_version),
-		 "%u.%u.%u.%u%s",
+		 "%lu.%lu.%lu.%lu%s",
 		 IWL_UCODE_MAJOR(drv->fw.ucode_ver),
 		 IWL_UCODE_MINOR(drv->fw.ucode_ver),
 		 IWL_UCODE_API(drv->fw.ucode_ver),
@@ -882,8 +904,10 @@ static int iwl_parse_tlv_firmware(struct iwl_drv *drv,
 fw_dbg_conf:
 #endif
 
+#if 0  // NEEDS_PORTING
 	if (iwlwifi_mod_params.enable_ini)
 		iwl_alloc_dbg_tlv(drv->trans, len, data, false);
+#endif  // NEEDS_PORTING
 
 	while (len >= sizeof(*tlv)) {
 		len -= sizeof(*tlv);
@@ -896,7 +920,7 @@ fw_dbg_conf:
 		if (len < tlv_len) {
 			IWL_ERR(drv, "invalid TLV len: %zd/%u\n",
 				len, tlv_len);
-			return -EINVAL;
+			return ZX_ERR_INVALID_ARGS;
 		}
 		len -= ALIGN(tlv_len, 4);
 		data += sizeof(*tlv) + ALIGN(tlv_len, 4);
@@ -1126,7 +1150,7 @@ fw_dbg_conf:
 					true;
 			} else if ((num_of_cpus > 2) || (num_of_cpus < 1)) {
 				IWL_ERR(drv, "Driver support upto 2 CPUs\n");
-				return -EINVAL;
+				return ZX_ERR_INVALID_ARGS;
 			}
 			break;
 		case IWL_UCODE_TLV_CSCHEME:
@@ -1151,14 +1175,14 @@ fw_dbg_conf:
 			minor = le32_to_cpup(ptr++);
 			local_comp = le32_to_cpup(ptr);
 
-			if (strncmp(drv->fw.human_readable, "stream:", 7))
+			if (strncmp((const char *)drv->fw.human_readable, "stream:", 7))
 				snprintf(drv->fw.fw_version,
 					 sizeof(drv->fw.fw_version),
-					"%u.%08x.%u", major, minor, local_comp);
+					"%lu.%08lx.%hhu", major, minor, local_comp);
 			else
 				snprintf(drv->fw.fw_version,
 					 sizeof(drv->fw.fw_version),
-					"%u.%u.%u", major, minor, local_comp);
+					"%lu.%lu.%hhu", major, minor, local_comp);
 			break;
 			}
 		case IWL_UCODE_TLV_FW_DBG_DEST: {
@@ -1309,14 +1333,14 @@ fw_dbg_conf:
 				IWL_ERR(drv,
 					"Paging: driver supports up to %lu bytes for paging image\n",
 					MAX_PAGING_IMAGE_SIZE);
-				return -EINVAL;
+				return ZX_ERR_INVALID_ARGS;
 			}
 
 			if (paging_mem_size & (FW_PAGING_SIZE - 1)) {
 				IWL_ERR(drv,
 					"Paging: image isn't multiple %lu\n",
 					FW_PAGING_SIZE);
-				return -EINVAL;
+				return ZX_ERR_INVALID_ARGS;
 			}
 
 			drv->fw.img[IWL_UCODE_REGULAR].paging_mem_size =
@@ -1342,9 +1366,9 @@ fw_dbg_conf:
 
 			size = sizeof(*pieces->dbg_mem_tlv) *
 			       (pieces->n_mem_tlv + 1);
-			n = krealloc(pieces->dbg_mem_tlv, size, GFP_KERNEL);
+			n = realloc(pieces->dbg_mem_tlv, size);
 			if (!n)
-				return -ENOMEM;
+				return ZX_ERR_NO_MEMORY;
 			pieces->dbg_mem_tlv = n;
 			pieces->dbg_mem_tlv[pieces->n_mem_tlv] = *dbg_mem;
 			pieces->n_mem_tlv++;
@@ -1352,9 +1376,9 @@ fw_dbg_conf:
 			}
 		case IWL_UCODE_TLV_IML: {
 			drv->fw.iml_len = tlv_len;
-			drv->fw.iml = kmemdup(tlv_data, tlv_len, GFP_KERNEL);
+			drv->fw.iml = kmemdup(tlv_data, tlv_len);
 			if (!drv->fw.iml)
-				return -ENOMEM;
+				return ZX_ERR_NO_MEMORY;
 			break;
 			}
 #if IS_ENABLED(CPTCFG_IWLFMAC)
@@ -1384,8 +1408,10 @@ fw_dbg_conf:
 		case IWL_UCODE_TLV_TYPE_REGIONS:
 		case IWL_UCODE_TLV_TYPE_TRIGGERS:
 		case IWL_UCODE_TLV_TYPE_DEBUG_FLOW:
+#if 0  // NEEDS_PORTING
 			if (iwlwifi_mod_params.enable_ini)
 				iwl_fw_dbg_copy_tlv(drv->trans, tlv, false);
+#endif  // NEEDS_PORTING
 		default:
 			IWL_DEBUG_INFO(drv, "unknown TLV: %d\n", tlv_type);
 			break;
@@ -1396,13 +1422,13 @@ fw_dbg_conf:
 	    usniffer_req && !*usniffer_images) {
 		IWL_ERR(drv,
 			"user selected to work with usniffer but usniffer image isn't available in ucode package\n");
-		return -EINVAL;
+		return ZX_ERR_INVALID_ARGS;
 	}
 
 	if (len) {
 		IWL_ERR(drv, "invalid TLV after parsing: %zd\n", len);
 		iwl_print_hex_dump(drv, IWL_DL_FW, (u8 *)data, len);
-		return -EINVAL;
+		return ZX_ERR_INVALID_ARGS;
 	}
 
 #if IS_ENABLED(CPTCFG_IWLFMAC)
@@ -1417,7 +1443,7 @@ fw_dbg_conf:
  tlv_error:
 	iwl_print_hex_dump(drv, IWL_DL_FW, tlv_data, tlv_len);
 
-	return -EINVAL;
+	return ZX_ERR_INVALID_ARGS;
 }
 
 static int iwl_alloc_ucode(struct iwl_drv *drv,
@@ -1427,15 +1453,15 @@ static int iwl_alloc_ucode(struct iwl_drv *drv,
 	int i;
 	struct fw_desc *sec;
 
-	sec = kcalloc(pieces->img[type].sec_counter, sizeof(*sec), GFP_KERNEL);
+	sec = calloc(pieces->img[type].sec_counter, sizeof(*sec));
 	if (!sec)
-		return -ENOMEM;
+		return ZX_ERR_NO_MEMORY;
 	drv->fw.img[type].sec = sec;
 	drv->fw.img[type].num_sec = pieces->img[type].sec_counter;
 
 	for (i = 0; i < pieces->img[type].sec_counter; i++)
 		if (iwl_alloc_fw_desc(drv, &sec[i], get_sec(pieces, type, i)))
-			return -ENOMEM;
+			return ZX_ERR_NO_MEMORY;
 
 	return 0;
 }
@@ -1553,13 +1579,13 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	const unsigned int api_min = drv->trans->cfg->ucode_api_min;
 	size_t trigger_tlv_sz[FW_DBG_TRIGGER_MAX];
 	u32 api_ver;
-	int i;
+	size_t i;
 	bool load_module = false;
 	bool usniffer_images = false;
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	const struct firmware *fw_dbg_config;
-	int load_fw_dbg_err = -ENOENT;
+	int load_fw_dbg_err = ZX_ERR_NOT_FOUND;
 #endif
 
 	fw->ucode_capa.max_probe_length = IWL_DEFAULT_MAX_PROBE_LENGTH;
@@ -1569,7 +1595,7 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	/* dump all fw memory areas by default except d3 debug data */
 	fw->dbg.dump_mask = 0xfffdffff;
 
-	pieces = kzalloc(sizeof(*pieces), GFP_KERNEL);
+	pieces = calloc(1, sizeof(*pieces));
 	if (!pieces)
 		goto out_free_fw;
 
@@ -1655,7 +1681,7 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 			sizeof(drv->fw.dbg.dest_tlv->reg_ops[0]) *
 			drv->fw.dbg.n_dest_reg;
 
-		drv->fw.dbg.dest_tlv = kmalloc(dbg_dest_size, GFP_KERNEL);
+		drv->fw.dbg.dest_tlv = malloc(dbg_dest_size);
 
 		if (!drv->fw.dbg.dest_tlv)
 			goto out_free_fw;
@@ -1701,8 +1727,7 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 		if (pieces->dbg_conf_tlv[i]) {
 			drv->fw.dbg.conf_tlv[i] =
 				kmemdup(pieces->dbg_conf_tlv[i],
-					pieces->dbg_conf_tlv_len[i],
-					GFP_KERNEL);
+					pieces->dbg_conf_tlv_len[i]);
 			if (!pieces->dbg_conf_tlv_len[i])
 				goto out_free_fw;
 		}
@@ -1751,8 +1776,7 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 				pieces->dbg_trigger_tlv_len[i];
 			drv->fw.dbg.trigger_tlv[i] =
 				kmemdup(pieces->dbg_trigger_tlv[i],
-					drv->fw.dbg.trigger_tlv_len[i],
-					GFP_KERNEL);
+					drv->fw.dbg.trigger_tlv_len[i]);
 			if (!drv->fw.dbg.trigger_tlv[i])
 				goto out_free_fw;
 		}
@@ -1801,7 +1825,7 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 		release_firmware(fw_dbg_config);
 #endif
 
-	mutex_lock(&iwlwifi_opmode_table_mtx);
+	mtx_lock(&iwlwifi_opmode_table_mtx);
 	switch (fw->type) {
 	case IWL_FW_DVM:
 		op = &iwlwifi_opmode_table[DVM_OP_MODE];
@@ -1840,21 +1864,22 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 		drv->op_mode = _iwl_op_mode_start(drv, op);
 
 		if (!drv->op_mode) {
-			mutex_unlock(&iwlwifi_opmode_table_mtx);
+			mtx_unlock(&iwlwifi_opmode_table_mtx);
 			goto out_unbind;
 		}
 	} else {
 		load_module = true;
 	}
-	mutex_unlock(&iwlwifi_opmode_table_mtx);
+	mtx_unlock(&iwlwifi_opmode_table_mtx);
 
 	/*
 	 * Complete the firmware request last so that
 	 * a driver unbind (stop) doesn't run while we
 	 * are doing the start() above.
 	 */
-	complete(&drv->request_firmware_complete);
+	sync_completion_signal(&drv->request_firmware_complete);
 
+#if 0  // NEEDS_PORTING
 	/*
 	 * Load the module last so we don't block anything
 	 * else from proceeding if the module fails to load
@@ -1862,6 +1887,7 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	 */
 	if (load_module)
 		request_module("%s", op->name);
+#endif  // NEEDS_PORTING
 	goto free;
 
  try_again:
@@ -1875,8 +1901,10 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 	iwl_dealloc_ucode(drv);
 	release_firmware(ucode_raw);
  out_unbind:
-	complete(&drv->request_firmware_complete);
+	sync_completion_signal(&drv->request_firmware_complete);
+#if 0  // NEEDS_PORTING
 	device_release_driver(drv->trans->dev);
+#endif  // NEEDS_PORTING
  free:
 	if (pieces) {
 		for (i = 0; i < ARRAY_SIZE(pieces->img); i++)
@@ -1889,19 +1917,19 @@ static void iwl_req_fw_callback(const struct firmware *ucode_raw, void *context)
 struct iwl_drv *iwl_drv_start(struct iwl_trans *trans)
 {
 	struct iwl_drv *drv;
-	int ret;
+	zx_status_t ret;
 
-	drv = kzalloc(sizeof(*drv), GFP_KERNEL);
+	drv = calloc(1, sizeof(*drv));
 	if (!drv) {
-		ret = -ENOMEM;
+		ret = ZX_ERR_NO_MEMORY;
 		goto err;
 	}
 
 	drv->trans = trans;
 	drv->dev = trans->dev;
 
-	init_completion(&drv->request_firmware_complete);
-	INIT_LIST_HEAD(&drv->list);
+    drv->request_firmware_complete = SYNC_COMPLETION_INIT;
+    list_initialize(&drv->list);
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	trans->dbg_cfg = current_dbg_config;
@@ -1917,7 +1945,7 @@ struct iwl_drv *iwl_drv_start(struct iwl_trans *trans)
 
 	if (!drv->dbgfs_drv) {
 		IWL_ERR(drv, "failed to create debugfs directory\n");
-		ret = -ENOMEM;
+		ret = ZX_ERR_NO_MEMORY;
 		goto err_free_tlv;
 	}
 
@@ -1926,7 +1954,7 @@ struct iwl_drv *iwl_drv_start(struct iwl_trans *trans)
 
 	if (!drv->trans->dbgfs_dir) {
 		IWL_ERR(drv, "failed to create transport debugfs directory\n");
-		ret = -ENOMEM;
+		ret = ZX_ERR_NO_MEMORY;
 		goto err_free_dbgfs;
 	}
 #endif
@@ -1963,26 +1991,27 @@ err_free_tlv:
 #endif
 	kfree(drv);
 err:
-	return ERR_PTR(ret);
+	// NEEDS_PORTING: return ERR_PTR(ret);
+    return NULL;
 }
 
 void iwl_drv_stop(struct iwl_drv *drv)
 {
-	wait_for_completion(&drv->request_firmware_complete);
+	sync_completion_wait(&drv->request_firmware_complete, ZX_SEC(5));
 
 	_iwl_op_mode_stop(drv);
 
 	iwl_dealloc_ucode(drv);
 
-	mutex_lock(&iwlwifi_opmode_table_mtx);
+	mtx_lock(&iwlwifi_opmode_table_mtx);
 	/*
 	 * List is empty (this item wasn't added)
 	 * when firmware loading failed -- in that
 	 * case we can't remove it from any list.
 	 */
-	if (!list_empty(&drv->list))
-		list_del(&drv->list);
-	mutex_unlock(&iwlwifi_opmode_table_mtx);
+	if (!list_is_empty(&drv->list))
+		list_remove_tail(&drv->list);
+	mtx_unlock(&iwlwifi_opmode_table_mtx);
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 	drv->trans->ops->debugfs_cleanup(drv->trans);
@@ -1993,7 +2022,9 @@ void iwl_drv_stop(struct iwl_drv *drv)
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
 	iwl_dbg_cfg_free(&drv->trans->dbg_cfg);
 #endif
+#if 0  // NEEDS_PORTING
 	iwl_fw_dbg_free(drv->trans);
+#endif  // NEEDS_PORTING
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
 	iwl_remove_sysfs_file(drv);
@@ -2007,7 +2038,6 @@ void iwl_drv_stop(struct iwl_drv *drv)
 }
 
 
-#if 0  // NEEDS_PORTING
 /* shared module parameters */
 struct iwl_mod_params iwlwifi_mod_params = {
 	.fw_restart = true,
@@ -2018,8 +2048,8 @@ struct iwl_mod_params iwlwifi_mod_params = {
 	.uapsd_disable = IWL_DISABLE_UAPSD_BSS | IWL_DISABLE_UAPSD_P2P_CLIENT,
 	/* the rest are 0 by default */
 };
-IWL_EXPORT_SYMBOL(iwlwifi_mod_params);
 
+#if 0  // NEEDS_PORTING
 int iwl_opmode_register(const char *name, const struct iwl_op_mode_ops *ops)
 {
 	int i;

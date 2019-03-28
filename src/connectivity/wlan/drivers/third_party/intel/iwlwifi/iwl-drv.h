@@ -34,6 +34,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DRV_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DRV_H_
 
+#include "fuchsia_porting.h"
+
 /* for all modules */
 #define DRV_NAME "iwlwifi"
 #define DRV_COPYRIGHT "Copyright(c) 2003- 2015 Intel Corporation"

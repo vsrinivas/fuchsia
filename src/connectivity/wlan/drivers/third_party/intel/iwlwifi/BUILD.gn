@@ -20,6 +20,8 @@ driver_module("iwlwifi_driver") {
   output_name = "iwlwifi"
 
   sources = [
+    "iwl-debug.c",
+    "iwl-drv.c",
     "pcie/drv.c",
   ]
 

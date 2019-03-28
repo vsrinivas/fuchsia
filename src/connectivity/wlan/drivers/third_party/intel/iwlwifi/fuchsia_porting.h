@@ -78,7 +78,8 @@ enum nl80211_iftype {
 
 #define ETHTOOL_FWVERS_LEN 32
 
-#define IS_ENABLED(x) (defined(x))
+#define IS_ENABLED(x) (false)
+
 #define __printf(x, y)
 #define __packed __PACKED
 #define __bitwise

@@ -35,6 +35,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DEBUG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DEBUG_H_
 
+#include <stdbool.h>
+
 #include "iwl-modparams.h"
 
 static inline bool iwl_have_debug_level(u32 level) {
