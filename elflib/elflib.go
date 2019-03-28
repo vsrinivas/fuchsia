@@ -147,6 +147,28 @@ func GetBuildIDs(filename string, file io.ReaderAt) ([][]byte, error) {
 	return out, nil
 }
 
+type DynamicTable struct {
+	SoName string
+}
+
+func GetSoName(filename string, file io.ReaderAt) (string, error) {
+	elfFile, err := elf.NewFile(file)
+	if err != nil {
+		return "", fmt.Errorf("could not parse ELF file %s: %v", filename, err)
+	}
+	strings, err := elfFile.DynString(elf.DT_SONAME)
+	if err != nil {
+		return "", fmt.Errorf("when parsing .dynamic from %s: %v", filename, err)
+	}
+	if len(strings) > 1 {
+		return "", fmt.Errorf("expected at most one DT_SONAME entry in %s", filename)
+	}
+	if len(strings) == 0 {
+		return "", nil
+	}
+	return strings[0], nil
+}
+
 func ReadIDsFile(file io.Reader) ([]BinaryFileRef, error) {
 	scanner := bufio.NewScanner(file)
 	out := []BinaryFileRef{}
