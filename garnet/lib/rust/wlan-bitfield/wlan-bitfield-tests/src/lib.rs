@@ -100,6 +100,7 @@ mod tests {
         assert_eq!(0xffff_ffff_ffff_ffff_ffff, big.head());
     }
 
+    #[derive(Debug)]
     struct CustomType(pub u8);
 
     #[bitfield(
@@ -118,6 +119,7 @@ mod tests {
         assert_eq!(12, x.a().0);
     }
 
+    #[derive(Debug)]
     struct CustomBoolType(pub bool);
 
     #[bitfield(
@@ -134,5 +136,39 @@ mod tests {
         assert_eq!(0x0001, x.0);
         x.set_a(CustomBoolType(false));
         assert!(!x.a().0);
+    }
+
+    #[bitfield(
+        0..=3   alpha,
+        4..=11  beta as CustomType(u8),
+        12..=13 _,
+        14      gamma as CustomBoolType(bool),
+        15      delta,
+    )]
+    struct ForDebug(pub u16);
+
+    #[test]
+    pub fn debug() {
+        let string = format!("{:?}", ForDebug(0x0fff));
+        assert_eq!(
+            "ForDebug { 0: 0x0fff, alpha: 0xf, beta: CustomType(255), \
+             gamma: CustomBoolType(false), delta: false }",
+            string
+        );
+    }
+
+    #[test]
+    pub fn debug_pretty() {
+        let string = format!("{:#?}", ForDebug(0x0fff));
+        assert_eq!(
+            "ForDebug {\
+             \n    0: 0x0fff,\
+             \n    alpha: 0xf,\
+             \n    beta: CustomType(255),\
+             \n    gamma: CustomBoolType(false),\
+             \n    delta: false\
+             \n}",
+            string
+        );
     }
 }

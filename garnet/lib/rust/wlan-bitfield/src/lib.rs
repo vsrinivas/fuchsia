@@ -72,6 +72,11 @@ use {
 /// pub struct MoreFields(pub u8);
 /// ```
 ///
+/// The macro also generates a `Debug` trait implementation that prints values for all
+/// individual members, as well as the raw value of the entire bit field. Therefore, including
+/// an additional #[derive(Debug)] will produce a compilation error because of conflicting
+/// implementations.
+///
 /// Custom "Newtypes" for Fields
 /// ----------------------------
 /// By default, generated functions take and return values of the same integer type as
@@ -80,6 +85,7 @@ use {
 /// an 802.11 frame type, one can define the following "newtype":
 ///
 /// ```
+/// #[derive(Cope, Clone, Debug, PartialEq, Eq)]
 /// pub struct FrameType(pub u8);
 ///
 /// impl FrameType {
@@ -118,6 +124,9 @@ use {
 ///     pub fn with_frame_type_raw(self, value: u16) -> Self { ... }
 /// }
 /// ```
+///
+/// Note that the custom type is required to implement the `Debug` trait.
+///
 #[proc_macro_attribute]
 pub fn bitfield(
     attr: proc_macro::TokenStream,
@@ -162,10 +171,13 @@ fn generate(
         }
     }
 
+    let debug_impl = generate_debug_impl(struct_name, fields, len_bits);
+
     let impl_code = quote! {
         impl #struct_name {
             #( #methods )*
         }
+        #debug_impl
     };
 
     (impl_code, errors)
@@ -396,5 +408,40 @@ fn generate_methods_for_field(field: &FieldDef, name: &Ident, len_bits: usize) -
                 }
             }
         }
+    }
+}
+
+fn generate_debug_impl(struct_name: &Ident, fields: &FieldList, len_bits: usize) -> TokenStream {
+    let mut per_field = vec![];
+    for f in fields.fields.iter() {
+        if let IdentOrUnderscore::Ident(name) = &f.name {
+            per_field.push(generate_debug_for_field(f, name));
+        }
+    }
+    let struct_name_str = struct_name.to_string();
+    let format_string = format!("0x{{:0{}x}}", len_bits / 4);
+    quote! {
+        impl ::std::fmt::Debug for #struct_name {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                f.debug_struct(#struct_name_str)
+                    .field("0", &format_args!(#format_string, self.0))
+                    #( #per_field )*
+                    .finish()
+            }
+        }
+    }
+}
+
+fn generate_debug_for_field(field: &FieldDef, name: &Ident) -> TokenStream {
+    let name_string = name.to_string();
+    let format_string = match &field.user_type {
+        None => match &field.bits {
+            BitRange::Closed { .. } => "{:#x}",
+            BitRange::SingleBit { .. } => "{}",
+        },
+        Some(_user_type) => "{:?}",
+    };
+    quote! {
+        .field(#name_string, &format_args!(#format_string, self.#name()))
     }
 }

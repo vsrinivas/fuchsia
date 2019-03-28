@@ -22,7 +22,7 @@ use {
     14      protected,
     15      htc_order
 )]
-#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy)]
 #[repr(C)]
 pub struct FrameControl(pub u16);
 
@@ -31,7 +31,7 @@ pub struct FrameControl(pub u16);
     0..=3   frag_num,
     4..=15  seq_num,
 )]
-#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy, Debug)]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy)]
 #[repr(C)]
 pub struct SequenceControl(pub u16);
 
@@ -43,7 +43,7 @@ pub struct SequenceControl(pub u16);
     31      rdg_more_ppdu,
 )]
 #[repr(C)]
-#[derive(AsBytes, FromBytes, Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(AsBytes, FromBytes, Copy, Clone, PartialEq, Eq)]
 pub struct HtControl(pub u32);
 
 #[derive(PartialEq, Eq)]

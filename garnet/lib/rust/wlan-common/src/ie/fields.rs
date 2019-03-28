@@ -13,7 +13,7 @@ use {
     7       basic,
 )]
 #[repr(C)]
-#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
 pub struct SupportedRate(pub u8);
 
 // IEEE Std 802.11-2016, 9.4.2.4
@@ -29,7 +29,7 @@ pub struct DsssParamSet {
     1..=7   offset,
 )]
 #[repr(C)]
-#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
 pub struct BitmapControl(pub u8);
 
 // IEEE Std 802.11-2016, 9.4.2.6

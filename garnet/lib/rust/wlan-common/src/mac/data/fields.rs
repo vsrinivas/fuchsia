@@ -17,7 +17,7 @@ use {
     8..=15  high_byte, // interpretation varies
 )]
 #[repr(C)]
-#[derive(AsBytes, FromBytes, Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(AsBytes, FromBytes, Copy, Clone, PartialEq, Eq)]
 pub struct QosControl(pub u16);
 
 pub type Addr4 = MacAddr;
