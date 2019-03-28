@@ -26,7 +26,7 @@ namespace fidl {
 //
 //  * |InterfacePtrSet|, which is the client analog of |BindingSet|.
 template <typename Interface, typename ImplPtr = Interface*>
-class BindingSet {
+class BindingSet final {
  public:
   using Binding = ::fidl::Binding<Interface, ImplPtr>;
   using StorageType = std::vector<std::unique_ptr<Binding>>;

@@ -25,7 +25,7 @@ namespace fidl {
 //
 //  * |BindingSet|, which is the server analog of an |InterfacePtrSet|.
 template <typename Interface>
-class InterfacePtrSet {
+class InterfacePtrSet final {
  public:
   using StorageType = std::vector<std::unique_ptr<InterfacePtr<Interface>>>;
   using Ptr = InterfacePtr<Interface>;

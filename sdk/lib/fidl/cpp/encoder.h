@@ -17,7 +17,7 @@
 
 namespace fidl {
 
-class Encoder {
+class Encoder final {
  public:
   enum NoHeader { NO_HEADER };
 

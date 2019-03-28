@@ -23,7 +23,7 @@ class WeakStubController;
 // unbound from the underlying channel (e.g., due to an error), the stub can
 // still safely call |Send|, but the response will not actually be sent to the
 // client.
-class PendingResponse {
+class PendingResponse final {
  public:
   // Creates a |PendingResponse| that does not need a response.
   //

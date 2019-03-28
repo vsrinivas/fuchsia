@@ -17,7 +17,7 @@ class StubController;
 // |StubController| is destroyed (or unbound from the underling channel), the
 // weak reference is invalidated, preventing outstanding |PendingResponse|
 // objects from referencing the |StubController|.
-class WeakStubController {
+class WeakStubController final {
  public:
   // Creates a weak reference to a |StubController|.
   //

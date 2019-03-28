@@ -20,7 +20,7 @@
 namespace fidl {
 namespace internal {
 
-class MessageReader {
+class MessageReader final {
  public:
   explicit MessageReader(MessageHandler* message_handler = nullptr);
   ~MessageReader();

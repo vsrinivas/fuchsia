@@ -13,7 +13,7 @@
 namespace fidl {
 
 template <typename T, size_t N>
-class Array {
+class Array final {
  public:
   Array() { memset(data_, 0, sizeof(data_)); }
 

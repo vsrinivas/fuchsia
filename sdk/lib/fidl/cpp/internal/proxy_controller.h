@@ -27,7 +27,7 @@ namespace internal {
 class ProxyController : public MessageHandler {
  public:
   ProxyController();
-  ~ProxyController();
+  ~ProxyController() override;
 
   ProxyController(const ProxyController&) = delete;
   ProxyController& operator=(const ProxyController&) = delete;

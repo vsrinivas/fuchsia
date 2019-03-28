@@ -19,7 +19,7 @@ namespace internal {
 // and (optionally) blocks until it receives a reply.
 //
 // Instances of this class are thread-safe.
-class SynchronousProxy {
+class SynchronousProxy final {
  public:
   // Creates a |SynchronousProxy| that wraps the given channel.
   explicit SynchronousProxy(zx::channel channel);

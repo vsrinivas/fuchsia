@@ -32,7 +32,7 @@ namespace fidl {
 //    functionality.
 //  * |InterfacePtrSet|, which is the client analog of |BindingSet|.
 template <typename Interface, typename ImplPtr = Interface*>
-class ThreadSafeBindingSet {
+class ThreadSafeBindingSet final {
  public:
   using Binding = ::fidl::Binding<Interface, ImplPtr>;
   using StorageType = std::vector<std::unique_ptr<Binding>>;

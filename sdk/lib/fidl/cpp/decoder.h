@@ -14,7 +14,7 @@
 
 namespace fidl {
 
-class Decoder {
+class Decoder final {
  public:
   explicit Decoder(Message message);
   ~Decoder();

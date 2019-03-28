@@ -42,7 +42,7 @@ namespace fidl {
 //  * |InterfacePtr|, which is an asynchronous interface to a remote
 //    implementation.
 template <typename Interface>
-class SynchronousInterfacePtr {
+class SynchronousInterfacePtr final {
  public:
   using InterfaceSync = typename Interface::Sync_;
 

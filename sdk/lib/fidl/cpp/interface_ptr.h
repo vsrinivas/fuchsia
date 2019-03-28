@@ -55,7 +55,7 @@ namespace fidl {
 //  * |SynchronousInterfacePtr|, which is a synchronous client interface to a
 //    remote implementation.
 template <typename Interface>
-class InterfacePtr {
+class InterfacePtr final {
  public:
   using Proxy = typename Interface::Proxy_;
 

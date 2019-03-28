@@ -27,7 +27,7 @@ class WeakStubController;
 class StubController : public MessageHandler {
  public:
   StubController();
-  ~StubController();
+  ~StubController() override;
 
   StubController(const StubController&) = delete;
   StubController& operator=(const StubController&) = delete;

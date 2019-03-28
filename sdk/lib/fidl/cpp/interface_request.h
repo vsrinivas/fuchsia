@@ -60,7 +60,7 @@ class Builder;
 //
 //  * |InterfaceHandle|, which is the client analog of an |InterfaceRequest|.
 template <typename Interface>
-class InterfaceRequest {
+class InterfaceRequest final {
  public:
   // Creates an |InterfaceHandle| whose underlying channel is invalid.
   //

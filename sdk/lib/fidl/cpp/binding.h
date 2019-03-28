@@ -59,7 +59,7 @@ namespace fidl {
 //
 //  * |InterfacePtr|, which is the client analog of a |Binding|.
 template <typename Interface, typename ImplPtr = Interface*>
-class Binding {
+class Binding final {
  public:
   // Constructs an incomplete binding that will use the implementation |impl|.
   //

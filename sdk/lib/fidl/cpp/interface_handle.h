@@ -37,7 +37,7 @@ class SynchronousInterfacePtr;
 //
 //  * |InterfaceRequest|, which is the server analog of an |InterfaceHandle|.
 template <typename Interface>
-class InterfaceHandle {
+class InterfaceHandle final {
  public:
   // Creates an |InterfaceHandle| whose underlying channel is invalid.
   InterfaceHandle() = default;
