@@ -137,10 +137,6 @@ class ComponentContext final {
   }
   std::shared_ptr<OutgoingDirectory>& outgoing() { return outgoing_; }
 
-  // Deprecated. Use |outgoing|.
-  const OutgoingDirectory* outgoing2() const { return outgoing_.get(); }
-  OutgoingDirectory* outgoing2() { return outgoing_.get(); }
-
  private:
   std::shared_ptr<ServiceDirectory> svc_;
   std::shared_ptr<OutgoingDirectory> outgoing_;
