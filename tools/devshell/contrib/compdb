@@ -20,9 +20,6 @@ main () {
         exit
     fi
 
-    source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
-    fx-config-read
-
     cd ${FUCHSIA_DIR}/zircon
     "${FUCHSIA_DIR}/buildtools/gn" gen "${ZIRCON_BUILDROOT}" --export-compile-commands
     cd ..
