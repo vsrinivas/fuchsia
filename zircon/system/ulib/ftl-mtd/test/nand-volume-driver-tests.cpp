@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <set>
 
 #include <lib/ftl-mtd/nand-volume-driver.h>
 #include <zxtest/zxtest.h>
@@ -158,7 +159,7 @@ TEST_F(NandVolumeDriverTest, BadWriteReportsError) {
                                                                   write_oob_buffer_.get()));
 
     // Bad read from interface should result in an error.
-    interface_->set_write_fails(true);
+    interface_->set_fail_write(true);
     ASSERT_EQ(ftl::kNdmError, nand_volume_driver_->NandWrite(0, 1, write_page_buffer_.get(),
                                                              write_oob_buffer_.get()));
 }
@@ -230,7 +231,7 @@ TEST_F(NandVolumeDriverTest, BadReadReportsFatalError) {
                                             read_oob_buffer_.get()));
 
     // Bad read from interface should result in an error.
-    interface_->set_read_fails(true);
+    interface_->set_fail_read(true);
     ASSERT_EQ(ftl::kNdmFatalError,
               nand_volume_driver_->NandRead(0, 1, read_page_buffer_.get(), nullptr));
     ASSERT_EQ(ftl::kNdmFatalError,
@@ -244,6 +245,120 @@ TEST_F(NandVolumeDriverTest, ShortReadReportsError) {
     interface_->set_read_actual(0);
     ASSERT_EQ(ftl::kNdmFatalError,
               nand_volume_driver_->NandRead(0, 1, read_page_buffer_.get(), read_oob_buffer_.get()));
+}
+
+TEST_F(NandVolumeDriverTest, EraseAllSucceeds) {
+    // Start on block 9 (0-indexed).
+    // Try to read all pages, 2 at a time.
+    uint32_t block_offset = 9;
+
+    SetUpDriver(block_offset, 1, kOobSizeDefault);
+    SetWritePageBufferData(0x2A);
+    SetWriteOobBufferData(0xBD);
+
+    uint32_t byte_offset = block_offset * kBlockSize;
+    for (uint32_t offset = byte_offset; offset < kSize; offset += kPageSize) {
+        ASSERT_OK(interface_->WritePage(offset, write_page_buffer_.get(), write_oob_buffer_.get()));
+    }
+
+    uint32_t num_pages = (kSize - byte_offset) / (page_multiplier_ * kPageSize);
+    for (uint32_t page = 0; page < num_pages; page++) {
+        ASSERT_EQ(ftl::kNdmOk, nand_volume_driver_->NandErase(page));
+    }
+
+    // After erasure, expect 0xFF to be returned after a read.
+    SetWritePageBufferData(0xFF);
+    SetWriteOobBufferData(0xFF);
+
+    for (uint32_t offset = byte_offset; offset < kSize; offset += kPageSize) {
+        SetReadPageBufferData(0);
+        SetReadOobBufferData(0);
+
+        uint32_t actual;
+        ASSERT_OK(interface_->ReadPage(offset, read_page_buffer_.get(), &actual));
+        ASSERT_OK(interface_->ReadOob(offset, read_oob_buffer_.get()));
+
+        ASSERT_BYTES_EQ(write_page_buffer_.get(), read_page_buffer_.get(), kPageSize);
+        ASSERT_BYTES_EQ(write_oob_buffer_.get(), read_oob_buffer_.get(), oob_size_);
+    }
+}
+
+TEST_F(NandVolumeDriverTest, EraseAllWithPageMultiplierSucceeds) {
+    // Start on block 9 (0-indexed).
+    // Try to read all pages, 2 at a time.
+    uint32_t block_offset = 9;
+
+    SetUpDriver(block_offset, 1, kOobSizeNeedsMultiplier2);
+    SetWritePageBufferData(0x2A);
+    SetWriteOobBufferData(0xBD);
+
+    uint32_t byte_offset = block_offset * kBlockSize;
+    for (uint32_t offset = byte_offset; offset < kSize; offset += kPageSize) {
+        ASSERT_OK(interface_->WritePage(offset, write_page_buffer_.get(), write_oob_buffer_.get()));
+    }
+
+    uint32_t num_pages = (kSize - byte_offset) / (page_multiplier_ * kPageSize);
+    for (uint32_t page = 0; page < num_pages; page++) {
+        ASSERT_EQ(ftl::kNdmOk, nand_volume_driver_->NandErase(page));
+    }
+
+    // After erasure, expect 0xFF to be returned after a read.
+    SetWritePageBufferData(0xFF);
+    SetWriteOobBufferData(0xFF);
+
+    for (uint32_t offset = byte_offset; offset < kSize; offset += kPageSize) {
+        SetReadPageBufferData(0);
+        SetReadOobBufferData(0);
+
+        uint32_t actual;
+        ASSERT_OK(interface_->ReadPage(offset, read_page_buffer_.get(), &actual));
+        ASSERT_OK(interface_->ReadOob(offset, read_oob_buffer_.get()));
+
+        ASSERT_BYTES_EQ(write_page_buffer_.get(), read_page_buffer_.get(), kPageSize);
+        ASSERT_BYTES_EQ(write_oob_buffer_.get(), read_oob_buffer_.get(), oob_size_);
+    }
+}
+
+TEST_F(NandVolumeDriverTest, BadEraseReportsError) {
+    SetUpDriver(0, 1, kOobSizeNeedsMultiplier2);
+
+    // Erase of non-existent page returns an error.
+    ASSERT_EQ(ftl::kNdmError, nand_volume_driver_->NandErase(kSize));
+
+    // Failure to erase returns an error.
+    interface_->set_fail_erase(true);
+    ASSERT_EQ(ftl::kNdmError, nand_volume_driver_->NandErase(0));
+}
+
+TEST_F(NandVolumeDriverTest, IsBadBlockSucceeds) {
+    uint32_t block_offset = 1;
+    SetUpDriver(block_offset, 1, kOobSizeDefault);
+
+    std::set<uint32_t> bad_blocks{2, 4, 9};
+    for (uint32_t block : bad_blocks) {
+        interface_->SetBadBlock(block, true);
+    }
+
+    uint32_t pages_per_block = kBlockSize / kPageSize;
+    uint32_t byte_offset = block_offset * kBlockSize;
+    uint32_t num_pages = (kSize - byte_offset) / (page_multiplier_ * kPageSize);
+
+    for (uint32_t page = 0; page < num_pages; page++) {
+        uint32_t block = block_offset + page / pages_per_block;
+        int expected_value = bad_blocks.find(block) != bad_blocks.end() ? ftl::kTrue : ftl::kFalse;
+        ASSERT_EQ(expected_value, nand_volume_driver_->IsBadBlock(page));
+    }
+}
+
+TEST_F(NandVolumeDriverTest, BadIsBadBlockReportsError) {
+    SetUpDriver(0, 1, kOobSizeNeedsMultiplier2);
+
+    // Check for non-existent page returns an error.
+    ASSERT_EQ(ftl::kNdmError, nand_volume_driver_->IsBadBlock(kSize));
+
+    // Failure to check bad block returns an error.
+    interface_->set_fail_is_bad_block(true);
+    ASSERT_EQ(ftl::kNdmError, nand_volume_driver_->IsBadBlock(0));
 }
 
 } // namespace

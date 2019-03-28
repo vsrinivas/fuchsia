@@ -26,22 +26,31 @@ public:
     zx_status_t EraseBlock(uint32_t byte_offset) final;
     zx_status_t IsBadBlock(uint32_t byte_offset, bool* is_bad_block) final;
 
+    void SetBadBlock(uint32_t page_num, bool is_bad);
+
     void set_read_actual(uint32_t read_actual) { read_actual_ = read_actual; }
-    void set_read_fails(bool read_fails) { read_fails_ = read_fails; }
-    void set_write_fails(bool write_fails) { write_fails_ = write_fails; }
+    void set_fail_read(bool fail_read) { fail_read_ = fail_read; }
+    void set_fail_write(bool fail_write) { fail_write_ = fail_write; }
+    void set_fail_erase(bool fail_erase) { fail_erase_ = fail_erase; }
+    void set_fail_is_bad_block(bool fail_is_bad_block) {
+        fail_is_bad_block_ = fail_is_bad_block;
+    }
 
 private:
     zx_status_t GetPagePointers(uint32_t byte_offset, void** data, void** oob);
 
     uint32_t read_actual_;
-    bool read_fails_;
-    bool write_fails_;
+    bool fail_read_;
+    bool fail_write_;
+    bool fail_erase_;
+    bool fail_is_bad_block_;
 
     uint32_t page_size_;
     uint32_t oob_size_;
     uint32_t block_size_;
     uint32_t size_;
     std::unique_ptr<uint8_t[]> data_;
+    std::unique_ptr<bool[]> bad_blocks_;
 };
 
 } // namespace ftl_mtd

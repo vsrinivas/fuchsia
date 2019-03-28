@@ -16,6 +16,8 @@
 #include <string>
 #include <utility>
 
+#include <zircon/assert.h>
+
 #include <lib/ftl-mtd/nand-volume-driver.h>
 
 namespace ftl_mtd {
@@ -78,9 +80,9 @@ int NandVolumeDriver::NandWrite(uint32_t start_page, uint32_t page_count, const 
         zx_status_t status = interface_->WritePage(
             GetByteOffsetForPage(page), page_buffer_ptr, oob_buffer_ptr);
 
-        if (status == ZX_ERR_INVALID_ARGS) {
-            return ftl::kNdmFatalError;
-        }
+        // We checked the inputs before, so the interface should never return ZX_ERR_INVALID_ARGS.
+        ZX_ASSERT(status != ZX_ERR_INVALID_ARGS);
+
         if (status != ZX_OK) {
             return ftl::kNdmError;
         }
@@ -124,13 +126,32 @@ int NandVolumeDriver::NandRead(uint32_t start_page, uint32_t page_count, void* p
 }
 
 int NandVolumeDriver::NandErase(uint32_t page_num) {
-    // TODO(mbrunson): Implement NandErase.
-    return ftl::kNdmOk;
+    uint32_t real_start_page;
+    uint32_t real_end_page;
+    if (GetPageIndices(page_num, 1, &real_start_page, &real_end_page) != ZX_OK) {
+        return ftl::kNdmError;
+    }
+
+    zx_status_t status = interface_->EraseBlock(GetBlockOffsetForPage(real_start_page));
+    return status == ZX_OK ? ftl::kNdmOk : ftl::kNdmError;
 }
 
 int NandVolumeDriver::IsBadBlock(uint32_t page_num) {
-    // TODO(mbrunson): Implement IsBadBlock.
-    return ftl::kFalse;
+    bool is_bad_block = false;
+
+    uint32_t real_start_page;
+    uint32_t real_end_page;
+    if (GetPageIndices(page_num, 1, &real_start_page, &real_end_page) != ZX_OK) {
+        return ftl::kNdmError;
+    }
+
+    zx_status_t status = interface_->IsBadBlock(GetBlockOffsetForPage(real_start_page),
+                                                &is_bad_block);
+    if (status != ZX_OK) {
+        return ftl::kNdmError;
+    }
+
+    return is_bad_block ? ftl::kTrue : ftl::kFalse;
 }
 
 bool NandVolumeDriver::IsEmptyPage(uint32_t page_num, const uint8_t* page_buffer,
@@ -176,6 +197,10 @@ zx_status_t NandVolumeDriver::GetPageIndices(uint32_t mapped_page, uint32_t mapp
     *start_page = start;
     *end_page = end;
     return ZX_OK;
+}
+
+uint32_t NandVolumeDriver::GetBlockOffsetForPage(uint32_t real_page) {
+    return GetByteOffsetForPage(real_page) / interface_->BlockSize() * interface_->BlockSize();
 }
 
 uint32_t NandVolumeDriver::GetByteOffsetForPage(uint32_t real_page) {

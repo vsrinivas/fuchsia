@@ -50,6 +50,7 @@ private:
 
     zx_status_t GetPageIndices(uint32_t mapped_page, uint32_t mapped_page_count,
                                uint32_t* start_page, uint32_t* end_page);
+    uint32_t GetBlockOffsetForPage(uint32_t real_page);
     uint32_t GetByteOffsetForPage(uint32_t real_page);
 
     uint32_t ByteOffset();
