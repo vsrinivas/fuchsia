@@ -23,6 +23,7 @@ group("tests") {
 group("buildbot") {
   testonly = true
   public_deps = [
+    "//src:tests",
     "//bundles:tools",
     "//garnet/packages:all",
     "//peridot/packages:all",
@@ -32,6 +33,7 @@ group("buildbot") {
 group("kitchen_sink") {
   testonly = true
   public_deps = [
+    "//bundles:tests",
     "//src/connectivity/telephony",
     "//topaz/packages:kitchen_sink",
   ]
