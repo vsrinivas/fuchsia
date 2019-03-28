@@ -370,7 +370,7 @@ func TestDelRoute(t *testing.T) {
 			tb := routes.RouteTable{}
 			tb.Set(testRouteTable)
 			validRoutes := make([]bool, len(testRouteTable))
-			for i, _ := range validRoutes {
+			for i := range validRoutes {
 				validRoutes[i] = true
 			}
 			for _, d := range tc.order {

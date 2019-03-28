@@ -8,6 +8,6 @@ go_test("netstack_util_test") {
   gopackage = "netstack/util"
 
   deps = [
-    "//garnet/go/src/netstack:netstack_lib",
+    "//src/connectivity/network/netstack:netstack_lib",
   ]
 }

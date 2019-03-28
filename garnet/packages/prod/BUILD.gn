@@ -385,8 +385,8 @@ group("memory_monitor") {
 group("netstack") {
   testonly = true
   public_deps = [
-    "//garnet/go/src/netstack",
     "//garnet/packages/prod:netcfg",
+    "//src/connectivity/network/netstack",
   ]
 }
 

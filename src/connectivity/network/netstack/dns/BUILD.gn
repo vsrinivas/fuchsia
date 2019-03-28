@@ -10,7 +10,7 @@ go_test("netstack_dns_test") {
   gopackage = "netstack/dns"
 
   deps = [
-    "//garnet/go/src/netstack:netstack_lib",
+    "//src/connectivity/network/netstack:netstack_lib",
   ]
 }
 

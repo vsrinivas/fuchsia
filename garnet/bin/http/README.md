@@ -6,20 +6,20 @@ This repository contains the FIDL HTTP Service protocol and implementation.
      | FIDL app  |           | POSIX app |
      +------+----+           +-----+-----+
             |                      |
-    +-------v----------------+     |
-    |  FIDL http service     |     |
-    | (//garnet/bin/http)    |     |
-    +-------+----------------+     |
+     +-------v----------------+    |
+     |  FIDL http service     |    |
+     | (//garnet/bin/http)    |    |
+     +-------+----------------+    |
             |                      |
-      +-----v----------------------v---+
-      |         BSD socket API         |
-      |  (//zircon/system/ulib/fdio)   |
-      +---------------+----------------+
+     +------v----------------------v--+
+     |         BSD socket API         |
+     |  (//zircon/system/ulib/fdio)   |
+     +----------------+---------------+
                       |
-        +-------------v--------------+
-        |         netstack           |
-        | (//garnet/go/src/netstack) |
-        +-------------+--------------+
+     +----------------v----------------------+
+     |            netstack                   |
+     | (//src/connectivity/network/netstack) |
+     +----------------+----------------------+
                       |
      +----------------v-----------------+
      |         Ethernet driver          |

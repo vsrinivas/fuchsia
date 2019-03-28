@@ -11,8 +11,8 @@ go_library("lib") {
   deps = [
     "//garnet/go/src/amber:lib",
     "//garnet/go/src/amber/system_updater:lib",
-    "//garnet/go/src/netstack:netstack_lib",
     "//garnet/go/src/pmd",
+    "//src/connectivity/network/netstack:netstack_lib",
   ]
 }
 

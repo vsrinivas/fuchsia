@@ -32,10 +32,9 @@ import (
 // #cgo CFLAGS: -D_GNU_SOURCE
 // #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/system/ulib/zxs/include
 // #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include
-// #cgo CFLAGS: -I${SRCDIR}/../../../public
+// #cgo CFLAGS: -I${SRCDIR}/../../../../garnet/public
 // #include <errno.h>
 // #include <fcntl.h>
-// #include <lib/netstack/c/netconfig.h>
 // #include <lib/zxs/protocol.h>
 // #include <netinet/tcp.h>
 // #include <lib/netstack/c/netconfig.h>

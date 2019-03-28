@@ -9,18 +9,18 @@ package("netstack_manual_tests") {
   testonly = true
 
   deps = [
-    "//garnet/go/src/netstack/tests/manual:closetest",
-    "//garnet/go/src/netstack/tests/manual:getaddrinfo_test",
-    "//garnet/go/src/netstack/tests/manual:gethostbyname_test",
-    "//garnet/go/src/netstack/tests/manual:keepalivetest",
-    "//garnet/go/src/netstack/tests/manual:mctest",
-    "//garnet/go/src/netstack/tests/manual:nbiotest",
-    "//garnet/go/src/netstack/tests/manual:passfdtest",
-    "//garnet/go/src/netstack/tests/manual:polltest",
-    "//garnet/go/src/netstack/tests/manual:selecttest",
-    "//garnet/go/src/netstack/tests/manual:sockettest",
-    "//garnet/go/src/netstack/tests/manual:sockopttest",
-    "//garnet/go/src/netstack/tests/manual:udptest",
+    "//src/connectivity/network/netstack/tests/manual:closetest",
+    "//src/connectivity/network/netstack/tests/manual:getaddrinfo_test",
+    "//src/connectivity/network/netstack/tests/manual:gethostbyname_test",
+    "//src/connectivity/network/netstack/tests/manual:keepalivetest",
+    "//src/connectivity/network/netstack/tests/manual:mctest",
+    "//src/connectivity/network/netstack/tests/manual:nbiotest",
+    "//src/connectivity/network/netstack/tests/manual:passfdtest",
+    "//src/connectivity/network/netstack/tests/manual:polltest",
+    "//src/connectivity/network/netstack/tests/manual:selecttest",
+    "//src/connectivity/network/netstack/tests/manual:sockettest",
+    "//src/connectivity/network/netstack/tests/manual:sockopttest",
+    "//src/connectivity/network/netstack/tests/manual:udptest",
   ]
 
   binaries = [

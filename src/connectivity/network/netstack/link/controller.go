@@ -5,7 +5,7 @@
 package link
 
 import (
-  "fmt"
+	"fmt"
 )
 
 type State int

@@ -78,7 +78,7 @@ group("make-efi") {
 group("netstack") {
   testonly = true
   public_deps = [
-    "//garnet/go/src/netstack:netstack_tools",
+    "//src/connectivity/network/netstack:netstack_tools",
   ]
 }
 
