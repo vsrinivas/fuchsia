@@ -12,7 +12,7 @@
 ##   --name|-n NAME   Set the NAME of the package snapshot (Default: "system")
 ##   OUTPUT_PATH      Write the snapshot at the specified OUTPUT_PATH (Default: $FUCHSIA_BUILD_DIR/snapshots/$NAME.snapshot)
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
 function usage {

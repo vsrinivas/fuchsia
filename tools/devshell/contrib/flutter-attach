@@ -13,8 +13,7 @@
 ##   -v|--verbose Enable verbose logging.
 ##   -h|--help    Print out this message.
 
-DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-source "${DEVSHELL_DIR}"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
 ARGS=()
@@ -42,10 +41,10 @@ done
 
 case "$(uname -s)" in
     Linux)
-        PREBUILT_DART="${DEVSHELL_DIR}/../../topaz/tools/prebuilt-dart-sdk/linux-x64/bin/dart"
+        PREBUILT_DART="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/linux-x64/bin/dart"
         ;;
     Darwin)
-        PREBUILT_DART="${DEVSHELL_DIR}/../../topaz/tools/prebuilt-dart-sdk/mac-x64/bin/dart"
+        PREBUILT_DART="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/mac-x64/bin/dart"
         ;;
 esac
 

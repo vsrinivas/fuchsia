@@ -25,7 +25,7 @@
 ##            out components. Only matching components will be included in the
 ##            report.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
 # Defaults.
 system_objects=false

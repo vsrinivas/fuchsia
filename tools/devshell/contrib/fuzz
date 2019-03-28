@@ -80,7 +80,7 @@
 ##   8. Save the new, minimized corpus in CIPD:
 ##         fx fuzz store foo/bar
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
 # Constants

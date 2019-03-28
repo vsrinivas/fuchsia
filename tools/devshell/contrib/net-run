@@ -23,7 +23,7 @@
 ##    SSH_COMMAND   Any argument will be passed directly to "fx ssh".
 ##                  If not specified, it will open an interactive SSH session.
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
 # make sure to terminate qemu and any other children when this script exits!
 trap 'kill 0 &>/dev/null' INT EXIT TERM

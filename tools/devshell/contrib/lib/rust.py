@@ -6,7 +6,7 @@ import os
 import sys
 import subprocess
 
-ROOT_PATH = os.path.abspath(__file__ + "/../../../..")
+ROOT_PATH = os.path.abspath(__file__ + "/../../../../..")
 FX_PATH = os.path.join(ROOT_PATH, "scripts", "fx")
 CONFIG_PATH = os.path.join(ROOT_PATH, ".config")
 

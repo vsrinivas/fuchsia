@@ -5,21 +5,20 @@
 
 ### compute some blobfs statistics from the build
 
-DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-source "${DEVSHELL_DIR}/lib/vars.sh" || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
 case "$(uname -s)" in
     Linux)
-        PREBUILT_DART="${DEVSHELL_DIR}/../../topaz/tools/prebuilt-dart-sdk/linux-x64/bin/dart"
+        PREBUILT_DART="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/linux-x64/bin/dart"
         ;;
     Darwin)
-        PREBUILT_DART="${DEVSHELL_DIR}/../../topaz/tools/prebuilt-dart-sdk/mac-x64/bin/dart"
+        PREBUILT_DART="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/mac-x64/bin/dart"
         ;;
 esac
 
 cd "${FUCHSIA_BUILD_DIR}"
 
 exec "${PREBUILT_DART}" \
-  --packages="${DEVSHELL_DIR}/../blobstats/blobstats.packages" \
-  "${DEVSHELL_DIR}/../blobstats/blobstats.dart" "$@"
+  --packages="${FUCHSIA_DIR}/scripts/blobstats/blobstats.packages" \
+  "${FUCHSIA_DIR}/scripts/blobstats/blobstats.dart" "$@"
