@@ -36,9 +36,6 @@
 #ifndef __iwl_op_mode_h__
 #define __iwl_op_mode_h__
 
-#include <linux/netdevice.h>
-#include <linux/debugfs.h>
-
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "fw/testmode.h"
 #endif

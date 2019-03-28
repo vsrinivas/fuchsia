@@ -36,11 +36,6 @@
 #ifndef __iwl_trans_h__
 #define __iwl_trans_h__
 
-#include <linux/ieee80211.h>
-#include <linux/mm.h> /* for page_address */
-#include <linux/lockdep.h>
-#include <linux/kernel.h>
-
 #include "iwl-debug.h"
 #include "iwl-config.h"
 #include "fw/img.h"
@@ -235,6 +230,7 @@ struct iwl_host_cmd {
 	u8 dataflags[IWL_MAX_CMD_TBS_PER_TFD];
 };
 
+#if 0  // NEEDS_PORTING
 static inline void iwl_free_resp(struct iwl_host_cmd *cmd)
 {
 	free_pages(cmd->_rx_page_addr, cmd->_rx_page_order);
@@ -270,6 +266,7 @@ static inline void iwl_free_rxb(struct iwl_rx_cmd_buffer *r)
 {
 	__free_pages(r->_page, r->_rx_page_order);
 }
+#endif  // NEEDS_PORTING
 
 #define MAX_NO_RECLAIM_CMDS	6
 
@@ -326,6 +323,7 @@ enum iwl_trans_status {
 	STATUS_TRANS_DEAD,
 };
 
+#if 0  // NEEDS_PORTING
 static inline int
 iwl_trans_get_rb_size_order(enum iwl_amsdu_size rb_size)
 {
@@ -343,6 +341,7 @@ iwl_trans_get_rb_size_order(enum iwl_amsdu_size rb_size)
 		return -1;
 	}
 }
+#endif  // NEEDS_PORTING
 
 struct iwl_hcmd_names {
 	u8 cmd_id;
@@ -934,6 +933,7 @@ iwl_trans_dump_data(struct iwl_trans *trans, u32 dump_mask)
 	return trans->ops->dump_data(trans, dump_mask);
 }
 
+#if 0  // NEEDS_PORTING
 static inline struct iwl_device_cmd *
 iwl_trans_alloc_tx_cmd(struct iwl_trans *trans)
 {
@@ -1232,6 +1232,7 @@ static inline void iwl_trans_fw_error(struct iwl_trans *trans)
 	if (!test_and_set_bit(STATUS_FW_ERROR, &trans->status))
 		iwl_op_mode_nic_error(trans->op_mode);
 }
+#endif  // NEEDS_PORTING
 
 static inline bool iwl_trans_fw_running(struct iwl_trans *trans)
 {

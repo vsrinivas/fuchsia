@@ -33,8 +33,6 @@
 #ifndef __iwl_fw_dbg_tlv_h__
 #define __iwl_fw_dbg_tlv_h__
 
-#include <linux/bitops.h>
-
 /*
  * struct iwl_fw_ini_header: Common Header for all debug group TLV's structures
  * @tlv_version: version info
@@ -44,7 +42,7 @@
 struct iwl_fw_ini_header {
 	__le32 tlv_version;
 	__le32 apply_point;
-	u8 data[];
+	u8 data[0];
 } __packed; /* FW_INI_HEADER_TLV_S */
 
 /**

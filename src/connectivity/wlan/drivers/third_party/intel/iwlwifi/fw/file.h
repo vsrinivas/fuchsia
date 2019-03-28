@@ -36,9 +36,6 @@
 #ifndef __iwl_fw_file_h__
 #define __iwl_fw_file_h__
 
-#include <linux/netdevice.h>
-#include <linux/nl80211.h>
-
 /* v1/v2 uCode file layout */
 struct iwl_ucode_header {
 	__le32 ver;	/* major/minor/API/serial */

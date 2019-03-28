@@ -33,11 +33,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#include <linux/completion.h>
-#include <linux/dma-mapping.h>
-#include <linux/firmware.h>
-#include <linux/module.h>
-#include <linux/vmalloc.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <ddk/driver.h>
 
 #include "iwl-drv.h"
 #include "iwl-csr.h"
@@ -2008,6 +2007,7 @@ void iwl_drv_stop(struct iwl_drv *drv)
 }
 
 
+#if 0  // NEEDS_PORTING
 /* shared module parameters */
 struct iwl_mod_params iwlwifi_mod_params = {
 	.fw_restart = true,
@@ -2226,3 +2226,4 @@ module_param_named(remove_when_gone,
 		   iwlwifi_mod_params.remove_when_gone, bool, 0444);
 MODULE_PARM_DESC(remove_when_gone,
 		 "Remove dev from PCIe bus if it is deemed inaccessible (default: false)");
+#endif  // NEEDS_PORTING

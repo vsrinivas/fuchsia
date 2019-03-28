@@ -33,9 +33,6 @@
 #ifndef __iwl_dbg_tlv_h__
 #define __iwl_dbg_tlv_h__
 
-#include <linux/device.h>
-#include <linux/types.h>
-
 /**
  * struct iwl_apply_point_data
  * @data: start address of this apply point data
