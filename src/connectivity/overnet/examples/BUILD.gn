@@ -4,6 +4,16 @@
 
 import("//build/test/test_package.gni")
 
+group("examples") {
+  testonly = true
+  deps = [
+    ":netemul_empty_binaries",
+    ":overnet_examples_tests",
+    "echo",
+    "interface_passing",
+  ]
+}
+
 group("netemul_empty_binaries") {
   write_file("$root_out_dir/overnet_echo_test", "")
   write_file("$root_out_dir/overnet_interface_passing_test", "")

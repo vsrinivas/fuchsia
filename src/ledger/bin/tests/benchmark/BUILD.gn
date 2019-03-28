@@ -5,6 +5,23 @@
 import("//build/package.gni")
 import("//src/ledger/bin/testing/sync_params.gni")
 
+group("benchmark") {
+  testonly = true
+  deps = [
+    ":ledger_benchmarks",
+    "backlog",
+    "convergence",
+    "delete_entry",
+    "disk_space",
+    "fetch",
+    "get_entry",
+    "get_page",
+    "put",
+    "sync",
+    "update_entry",
+  ]
+}
+
 visibility = [ "//src/ledger/*" ]
 
 package("ledger_benchmarks") {

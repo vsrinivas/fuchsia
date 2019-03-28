@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("testing") {
+  testonly = true
+  deps = [
+    ":get_ledger",
+    ":ledger_instance_factory",
+    ":lib",
+    ":unittests",
+    "ledger_test_instance_provider",
+    "netconnector",
+  ]
+}
+
 visibility = [ "//src/ledger/*" ]
 
 source_set("lib") {

@@ -8,6 +8,21 @@ import("//build/package.gni")
 
 # Test .so ---------------------------------------------------------------------
 
+group("test_data") {
+  testonly = true
+  deps = [
+    ":breakpoint_test_exe",
+    ":debug_agent_test_loadable_module",
+    ":debug_agent_test_so",
+    ":debug_agent_test_so_lib",
+    ":debug_test_false",
+    ":debug_test_true",
+    ":printer",
+    ":process_loop",
+    ":process_spawner",
+  ]
+}
+
 source_set("debug_agent_test_so_lib") {
   testonly = true
 

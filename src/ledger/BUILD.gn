@@ -7,6 +7,19 @@ import("//build/testing/environments.gni")
 import("//src/ledger/bin/testing/sync_params.gni")
 
 # Public targets
+group("ledger") {
+  testonly = true
+  deps = [
+    ":ledger_tests",
+    ":tests",
+    "bin",
+    "cloud_provider_firestore",
+    "cloud_provider_in_memory",
+    "lib",
+    "third_party",
+  ]
+}
+
 group("tests") {
   testonly = true
 

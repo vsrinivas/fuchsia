@@ -2,6 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("lib") {
+  testonly = true
+  deps = [
+    ":ledger_lib_unittests",
+    "coroutine",
+    "firebase_auth",
+  ]
+}
+
 executable("ledger_lib_unittests") {
   testonly = true
 

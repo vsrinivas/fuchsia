@@ -2,6 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("developer") {
+  testonly = true
+  deps = [
+    ":tests",
+    "crashpad_agent",
+    "debug",
+    "feedback_agent",
+    "kernel_crash_checker",
+  ]
+}
+
 group("tests") {
   testonly = true
 

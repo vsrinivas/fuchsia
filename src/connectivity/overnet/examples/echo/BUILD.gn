@@ -5,6 +5,14 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("echo") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":overnet-echo",
+  ]
+}
+
 rustc_binary("bin") {
   name = "overnet_echo"
   edition = "2018"

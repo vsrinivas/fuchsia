@@ -4,6 +4,14 @@
 
 import("//build/package.gni")
 
+group("tts") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":tts_service",
+  ]
+}
+
 executable("bin") {
   output_name = "tts_service"
 

@@ -4,6 +4,13 @@
 
 import("//build/fidl/fidl.gni")
 
+group("service") {
+  testonly = true
+  deps = [
+    ":interface_passing",
+  ]
+}
+
 fidl("interface_passing") {
   name = "fuchsia.overnet.examples.interfacepassing"
 

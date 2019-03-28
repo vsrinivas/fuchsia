@@ -6,6 +6,15 @@ import("//build/package.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 import("//third_party/protobuf/proto_library.gni")
 
+group("testapp") {
+  testonly = true
+  deps = [
+    ":cobalt_testapp",
+    ":generate_legacy_testapp_metrics",
+    ":generate_testapp_metrics",
+  ]
+}
+
 metrics_registry("generate_legacy_testapp_metrics") {
   project_id = 2
   output_name = "legacy_cobalt_metrics"

@@ -6,6 +6,19 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//third_party/protobuf/proto_library.gni")
 
+group("bin") {
+  testonly = true
+  deps = [
+    ":cobalt_encoder_unittests",
+    ":cobalt_tests",
+    "app",
+    "system-metrics",
+    "testapp",
+    "testing",
+    "utils",
+  ]
+}
+
 executable("cobalt_encoder_unittests") {
   testonly = true
 

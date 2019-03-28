@@ -4,6 +4,16 @@
 
 import("//build/package.gni")
 
+group("cobalt") {
+  testonly = true
+  deps = [
+    ":cobalt_lib_tests",
+    ":tests",
+    ":unittests",
+    "cpp",
+  ]
+}
+
 executable("unittests") {
   testonly = true
   output_name = "cobalt_lib_unittests"

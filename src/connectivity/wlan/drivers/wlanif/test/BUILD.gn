@@ -5,6 +5,14 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
+group("test") {
+  testonly = true
+  deps = [
+    ":wlanif-test",
+    ":wlanif-test-driver",
+  ]
+}
+
 driver_module("wlanif-test-driver") {
   output_name = "wlanif-test"
 

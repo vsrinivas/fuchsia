@@ -4,6 +4,14 @@
 
 import("//build/package.gni")
 
+group("testing") {
+  testonly = true
+  deps = [
+    ":fake_clock_lib",
+    ":fake_logger_lib",
+  ]
+}
+
 source_set("fake_logger_lib") {
   testonly = true
   sources = [

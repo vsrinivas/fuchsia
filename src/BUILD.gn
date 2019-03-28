@@ -2,6 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("src") {
+  testonly = true
+  deps = [
+    ":tests",
+    "cobalt",
+    "connectivity",
+    "developer",
+    "ledger",
+    "lib",
+    "media",
+    "modular",
+    "speech",
+    "testing",
+  ]
+}
+
 group("tests") {
   testonly = true
 

@@ -4,6 +4,17 @@
 
 # This library is shared between the client and agent code. You should depend
 # on it via one of those targets.
+group("ipc") {
+  testonly = true
+  deps = [
+    ":agent",
+    ":client",
+    ":shared",
+    ":tests",
+    "debug",
+  ]
+}
+
 static_library("shared") {
   visibility = [ ":*" ]
   sources = [

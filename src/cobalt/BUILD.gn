@@ -2,6 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("cobalt") {
+  testonly = true
+  deps = [
+    ":tests",
+    "bin",
+  ]
+}
+
 group("tests") {
   testonly = true
 

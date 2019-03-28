@@ -2,16 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("testing") {
+group("playback") {
   testonly = true
   deps = [
-    ":tests",
-    "sl4f",
+    "mediaplayer",
+    "mediaplayer_tmp",
   ]
-}
-
-group("tests") {
-  testonly = true
-
-  data_deps = []
 }

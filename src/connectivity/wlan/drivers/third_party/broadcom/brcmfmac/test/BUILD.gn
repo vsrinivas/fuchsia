@@ -15,6 +15,15 @@
 import("//build/package.gni")
 import("//build/testing/environments.gni")
 
+group("test") {
+  testonly = true
+  deps = [
+    ":brcmfmac_test",
+    ":netbuf_test",
+    ":workqueue_test",
+  ]
+}
+
 executable("workqueue_test") {
   output_name = "workqueue_test"
   testonly = true
