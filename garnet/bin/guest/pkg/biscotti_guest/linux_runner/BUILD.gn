@@ -25,17 +25,6 @@ config("linux_runner_net_config") {
   ]
 }
 
-package("config") {
-  deprecated_system_image = true
-  package_name = "linux_runner_config"
-  resources = [
-    {
-      dest = "appmgr/scheme_map/linux_scheme.config"
-      path = rebase_path("config/linux_scheme.config")
-    },
-  ]
-}
-
 source_set("lib") {
   sources = [
     "guest.cc",
