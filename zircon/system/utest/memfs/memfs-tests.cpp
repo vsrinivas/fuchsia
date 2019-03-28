@@ -275,6 +275,42 @@ bool TestMemfsCloseDuringAccess() {
     END_TEST;
 }
 
+bool TestMemfsOverflow() {
+    BEGIN_TEST;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+    // Create a memfs filesystem, acquire a file descriptor
+    memfs_filesystem_t* vfs;
+    zx_handle_t root;
+    ASSERT_EQ(memfs_create_filesystem(loop.dispatcher(), &vfs, &root), ZX_OK);
+    int root_fd;
+    ASSERT_EQ(fdio_fd_create(root, &root_fd), ZX_OK);
+
+    // Access files within the filesystem.
+    DIR* d = fdopendir(root_fd);
+    ASSERT_NONNULL(d);
+
+    // Issue writes to the file in an order that previously would have triggered
+    // an overflow in the memfs write path.
+    //
+    // Values provided mimic the bug reported by syzkaller (ZX-3791).
+    uint8_t buf[4096];
+    memset(buf, 'a', sizeof(buf));
+    fbl::unique_fd fd(openat(dirfd(d), "file", O_CREAT | O_RDWR));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(pwrite(fd.get(), buf, 199, 0), 199);
+    ASSERT_EQ(pwrite(fd.get(), buf, 226, 0xfffffffffffff801), -1);
+    ASSERT_EQ(errno, EFBIG);
+
+    ASSERT_EQ(closedir(d), 0);
+    sync_completion_t unmounted;
+    memfs_free_filesystem(vfs, &unmounted);
+    ASSERT_EQ(sync_completion_wait(&unmounted, ZX_SEC(3)), ZX_OK);
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(memfs_tests)
@@ -283,4 +319,5 @@ RUN_TEST(TestMemfsBasic)
 RUN_TEST(TestMemfsLimitPages)
 RUN_TEST(TestMemfsInstall)
 RUN_TEST(TestMemfsCloseDuringAccess)
+RUN_TEST(TestMemfsOverflow)
 END_TEST_CASE(memfs_tests)

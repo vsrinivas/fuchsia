@@ -57,7 +57,13 @@ zx_status_t VnodeFile::Read(void* data, size_t len, size_t off, size_t* out_actu
 zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset,
                              size_t* out_actual) {
     zx_status_t status;
-    size_t newlen = offset + len;
+    if (offset > kMemfsMaxFileSize) {
+        return ZX_ERR_FILE_BIG;
+    }
+    size_t newlen;
+    if (add_overflow(offset, len, &newlen)) {
+        return ZX_ERR_FILE_BIG;
+    }
     newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
     if ((status = vfs()->GrowVMO(vmo_, vmo_size_, newlen, &vmo_size_)) != ZX_OK) {
         return status;
