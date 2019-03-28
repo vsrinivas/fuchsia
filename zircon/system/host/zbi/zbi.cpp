@@ -1324,7 +1324,7 @@ Extracted items use the file names shown below:\n\
 
             bool operator<(const Entry& other) const {
                 return name < other.name;
-            };
+            }
         };
         std::deque<Entry> entries;
         size_t dirsize = 0, bodysize = 0;
