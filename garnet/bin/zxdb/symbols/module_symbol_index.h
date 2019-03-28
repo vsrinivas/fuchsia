@@ -6,6 +6,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string_view>
 #include <vector>
 
@@ -52,6 +53,32 @@ class ModuleSymbolIndex {
   // parameters and returns the list of symbols which match exactly.
   const std::vector<ModuleSymbolIndexNode::DieRef>& FindExact(
       const std::string& input) const;
+
+  // Takes a fully-qualified name with namespaces and classes and returns a
+  // pair of iterators.
+  //
+  // The first iterator points to the first node that has the input as a
+  // prefix.
+  //
+  // The second returned iterator points to the last node IN THE CONTAINER.
+  // This does not indicate the last node with the prefix. Many callers won't
+  // need all of the matches and doing it this way avoids a second lookup.
+  //
+  // Non-last input nodes must match exactly with "std::string::operator==".
+  // For example, the input:
+  //   { "std", "vector<" }
+  // Would look in the "std" node and would return an iterator to the
+  // "vector<Aardvark>" node inside it and the end of the "std" mode. Nodes are
+  // sorted by "std::string::operator<".
+  //
+  // IF there are no matches both iterators will be the same (found == end).
+  //
+  // If the caller wants to find all matching prefixes, it can advance the
+  // iterator as long as the last input component is a prefix if the current
+  // iterator key and less than the end.
+  std::pair<ModuleSymbolIndexNode::ConstIterator,
+            ModuleSymbolIndexNode::ConstIterator>
+  FindPrefix(const std::vector<std::string>& input) const;
 
   // Looks up the name in the file index and returns the set of matches. The
   // name is matched from the right side with a left boundary of either a slash

@@ -405,6 +405,31 @@ const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
   return cur->dies();
 }
 
+std::pair<ModuleSymbolIndexNode::ConstIterator,
+          ModuleSymbolIndexNode::ConstIterator>
+ModuleSymbolIndex::FindPrefix(const std::vector<std::string>& input) const {
+  if (input.empty())
+    return std::make_pair(root_.sub().end(), root_.sub().end());
+
+  const ModuleSymbolIndexNode* cur = &root_;
+
+  // Go through all inputs that must match exactly (all but the last).
+  for (size_t i = 0; i < input.size() - 1; i++) {
+    auto found = cur->sub().find(input[i]);
+    if (found == cur->sub().end())
+      return std::make_pair(root_.sub().end(), root_.sub().end());
+    cur = &found->second;
+  }
+
+  // Do a prefix match on the last input component.
+  const std::string& last = input.back();
+  auto found = cur->sub().lower_bound(last);
+  if (found == cur->sub().end() || !StringBeginsWith(found->first, last))
+    return std::make_pair(root_.sub().end(), root_.sub().end());
+
+  return std::make_pair(found, cur->sub().end());
+}
+
 std::vector<std::string> ModuleSymbolIndex::FindFileMatches(
     const std::string& name) const {
   std::string_view name_last_comp = ExtractLastFileComponent(name);
