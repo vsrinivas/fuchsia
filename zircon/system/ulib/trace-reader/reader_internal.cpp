@@ -43,7 +43,7 @@ fbl::String BufferHeaderReader::Validate(const trace_buffer_header& header,
     }
 
     if (buffer_size & 7u) {
-        return fbl::StringPrintf("buffer size not multiple of 64-bit words: 0x%" PRIx64,
+        return fbl::StringPrintf("buffer size not multiple of 64-bit words: 0x%zx",
                                  buffer_size);
     }
 

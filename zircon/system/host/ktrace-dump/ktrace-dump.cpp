@@ -4,7 +4,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -115,14 +115,14 @@ static void PrintTag(uint32_t tag) {
 }
 
 static void Dump16B(const TagInfo* info, ktrace_header_t* r) {
-    printf("%lu: ", r->ts);
+    printf("%" PRIu64 ": ", r->ts);
     PrintTag(r->tag);
     // TODO(dje): Further decode args.
     printf(", arg 0x%x\n", r->tid);
 }
 
 static void Dump32B(const TagInfo* info, ktrace_rec_32b_t* r) {
-    printf("%lu: ", r->ts);
+    printf("%" PRIu64 ": ", r->ts);
     PrintTag(r->tag);
     // TODO(dje): Further decode args.
     printf(", tid 0x%x, a 0x%x, b 0x%x, c 0x%x, d 0x%x\n",
