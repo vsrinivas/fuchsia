@@ -65,9 +65,9 @@ mod tests {
         ];
         match MgmtSubtype::parse(MGMT_SUBTYPE_BEACON, &bytes[..]) {
             Some(MgmtSubtype::Beacon { bcn_hdr, elements }) => {
-                assert_eq!(0x0101010101010101, bcn_hdr.timestamp());
-                assert_eq!(0x0202, bcn_hdr.beacon_interval());
-                assert_eq!(0x0303, bcn_hdr.capabilities());
+                assert_eq!(0x0101010101010101, { bcn_hdr.timestamp });
+                assert_eq!(0x0202, { bcn_hdr.beacon_interval });
+                assert_eq!(0x0303, { bcn_hdr.capabilities.0 });
                 assert_eq!(&[0, 5, 1, 2, 3, 4, 5], &elements[..]);
             }
             _ => panic!("failed parsing beacon frame"),

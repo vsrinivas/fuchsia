@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::mac::{FrameControl, HtControl, MacAddr, OptionalField, Presence, SequenceControl},
-    byteorder::{ByteOrder, LittleEndian},
+    crate::mac::{
+        FrameControl, HtControl, MacAddr, OptionalField, Presence, ReasonCode, SequenceControl,
+        StatusCode,
+    },
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };
-
-pub type RawCapabilityInfo = [u8; 2];
 
 // IEEE Std 802.11-2016, 9.4.1.4
 #[bitfield(
@@ -29,6 +29,8 @@ pub type RawCapabilityInfo = [u8; 2];
     14      delayed_block_ack,
     15      immediate_block_ack,
 )]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy)]
+#[repr(C)]
 pub struct CapabilityInfo(pub u16);
 
 // IEEE Std 802.11-2016, 9.3.3.2
@@ -57,91 +59,43 @@ impl MgmtHdr {
 }
 
 // IEEE Std 802.11-2016, 9.4.1.1
-#[repr(u16)]
-#[derive(Copy, Clone)]
-pub enum AuthAlgorithm {
-    Open = 0,
-    _SharedKey = 1,
-    _FastBssTransition = 2,
-    Sae = 3,
+#[repr(C)]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Copy, Clone, Debug, Default)]
+pub struct AuthAlgorithmNumber(pub u16);
+
+impl AuthAlgorithmNumber {
+    pub const OPEN: Self = Self(0);
+    pub const SHARED_KEY: Self = Self(1);
+    pub const FAST_BSS_TRANSITION: Self = Self(2);
+    pub const SAE: Self = Self(3);
     // 4-65534 Reserved
-    _VendorSpecific = 65535,
+    pub const VENDOR_SPECIFIC: Self = Self(65535);
 }
 
 // IEEE Std 802.11-2016, 9.3.3.3
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct BeaconHdr {
-    pub timestamp: [u8; 8],
-    pub beacon_interval: [u8; 2],
+    pub timestamp: u64,
+    pub beacon_interval: u16,
     // IEEE Std 802.11-2016, 9.4.1.4
-    pub capabilities: RawCapabilityInfo,
-}
-
-impl BeaconHdr {
-    pub fn timestamp(&self) -> u64 {
-        LittleEndian::read_u64(&self.timestamp)
-    }
-
-    pub fn beacon_interval(&self) -> u16 {
-        LittleEndian::read_u16(&self.beacon_interval)
-    }
-
-    pub fn capabilities(&self) -> u16 {
-        LittleEndian::read_u16(&self.capabilities)
-    }
+    pub capabilities: CapabilityInfo,
 }
 
 // IEEE Std 802.11-2016, 9.3.3.12
 #[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct AuthHdr {
-    pub auth_alg_num: [u8; 2],
-    pub auth_txn_seq_num: [u8; 2],
-    pub status_code: [u8; 2],
-}
-
-impl AuthHdr {
-    pub fn auth_alg_num(&self) -> u16 {
-        LittleEndian::read_u16(&self.auth_alg_num)
-    }
-
-    pub fn set_auth_alg_num(&mut self, val: u16) {
-        LittleEndian::write_u16(&mut self.auth_alg_num, val)
-    }
-
-    pub fn auth_txn_seq_num(&self) -> u16 {
-        LittleEndian::read_u16(&self.auth_txn_seq_num)
-    }
-
-    pub fn set_auth_txn_seq_num(&mut self, val: u16) {
-        LittleEndian::write_u16(&mut self.auth_txn_seq_num, val)
-    }
-
-    pub fn status_code(&self) -> u16 {
-        LittleEndian::read_u16(&self.status_code)
-    }
-
-    pub fn set_status_code(&mut self, val: u16) {
-        LittleEndian::write_u16(&mut self.status_code, val)
-    }
+    pub auth_alg_num: AuthAlgorithmNumber,
+    pub auth_txn_seq_num: u16,
+    pub status_code: StatusCode,
 }
 
 // IEEE Std 802.11-2016, 9.3.3.13
 #[derive(Default, FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
 pub struct DeauthHdr {
-    pub reason_code: [u8; 2],
-}
-
-impl DeauthHdr {
-    pub fn reason_code(&self) -> u16 {
-        LittleEndian::read_u16(&self.reason_code)
-    }
-
-    pub fn set_reason_code(&mut self, val: u16) {
-        LittleEndian::write_u16(&mut self.reason_code, val)
-    }
+    pub reason_code: ReasonCode,
 }
 
 // IEEE Std 802.11-2016, 9.3.3.6
@@ -149,21 +103,7 @@ impl DeauthHdr {
 #[repr(C, packed)]
 pub struct AssocRespHdr {
     // IEEE Std 802.11-2016, 9.4.1.4
-    pub capabilities: [u8; 2],
-    pub status_code: [u8; 2],
-    pub aid: [u8; 2],
-}
-
-impl AssocRespHdr {
-    pub fn capabilities(&self) -> u16 {
-        LittleEndian::read_u16(&self.capabilities)
-    }
-
-    pub fn status_code(&self) -> u16 {
-        LittleEndian::read_u16(&self.status_code)
-    }
-
-    pub fn aid(&self) -> u16 {
-        LittleEndian::read_u16(&self.aid)
-    }
+    pub capabilities: CapabilityInfo,
+    pub status_code: StatusCode,
+    pub aid: u16,
 }

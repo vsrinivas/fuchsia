@@ -58,8 +58,7 @@ pub fn write_deauth_frame<B: Appendable>(
         None,
     )?;
 
-    let mut deauth_hdr = buf.append_value_zeroed::<mac::DeauthHdr>()?;
-    deauth_hdr.set_reason_code(reason_code as u16);
+    buf.append_value(&mac::DeauthHdr { reason_code })?;
     Ok(())
 }
 
@@ -186,7 +185,7 @@ mod tests {
     fn deauth_frame() {
         let mut buf = vec![];
         let mut seq_mgr = SequenceManager::new();
-        write_deauth_frame(&mut buf, [1; 6], [2; 6], mac::ReasonCode::Timeout, &mut seq_mgr)
+        write_deauth_frame(&mut buf, [1; 6], [2; 6], mac::ReasonCode::TIMEOUT, &mut seq_mgr)
             .expect("failed writing frame");
         assert_eq!(
             &[

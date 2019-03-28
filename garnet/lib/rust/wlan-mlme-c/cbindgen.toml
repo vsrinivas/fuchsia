@@ -19,7 +19,7 @@ include = ["wlan_mlme", "wlan_common"]
 [export]
 # Explicitly declare types to export as cbindgen seems to have trouble
 # detecting their usage.
-include = ["BufferProvider", "Device", "InBuf", "OutBuf", "ReasonCode", "StatusCode"]
+include = ["BufferProvider", "Device", "InBuf", "OutBuf"]
 
 [export.rename]
 # Unfortunately cbindgen's rename machinery is rather simple

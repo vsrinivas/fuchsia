@@ -12,7 +12,9 @@
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element.h>
 #include <wlan/common/macaddr.h>
+#include <wlan/common/reason_code.h>
 #include <wlan/common/span.h>
+#include <wlan/common/status_code.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

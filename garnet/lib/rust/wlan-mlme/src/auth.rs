@@ -8,24 +8,24 @@ use {
 };
 
 pub fn write_client_req(auth_hdr: &mut mac::AuthHdr) {
-    auth_hdr.set_auth_alg_num(mac::AuthAlgorithm::Open as u16);
-    auth_hdr.set_auth_txn_seq_num(1);
-    auth_hdr.set_status_code(0);
+    auth_hdr.auth_alg_num = mac::AuthAlgorithmNumber::OPEN;
+    auth_hdr.auth_txn_seq_num = 1;
+    auth_hdr.status_code = mac::StatusCode::SUCCESS;
 }
 
 /// Validates whether a given authentication header is a valid response to an open authentication
 /// request.
 pub fn is_valid_open_ap_resp(auth: &mac::AuthHdr) -> Result<(), Error> {
     ensure!(
-        auth.auth_alg_num() == mac::AuthAlgorithm::Open as u16,
+        { auth.auth_alg_num } == mac::AuthAlgorithmNumber::OPEN,
         "invalid auth_alg_num: {}",
-        auth.auth_alg_num()
+        { auth.auth_alg_num }.0
     );
-    ensure!(auth.auth_txn_seq_num() == 2, "invalid auth_txn_seq_num: {}", auth.auth_txn_seq_num());
+    ensure!(auth.auth_txn_seq_num == 2, "invalid auth_txn_seq_num: {}", { auth.auth_txn_seq_num });
     ensure!(
-        auth.status_code() == mac::StatusCode::Success as u16,
+        { auth.status_code } == mac::StatusCode::SUCCESS,
         "invalid status_code: {}",
-        auth.status_code()
+        { auth.status_code }.0
     );
     Ok(())
 }
@@ -35,11 +35,11 @@ mod tests {
     use super::*;
 
     fn make_valid_auth_resp() -> mac::AuthHdr {
-        let mut auth_hdr = mac::AuthHdr::default();
-        auth_hdr.set_auth_alg_num(0);
-        auth_hdr.set_auth_txn_seq_num(2);
-        auth_hdr.set_status_code(0);
-        auth_hdr
+        mac::AuthHdr {
+            auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
+            auth_txn_seq_num: 2,
+            status_code: mac::StatusCode::SUCCESS,
+        }
     }
 
     #[test]
@@ -50,15 +50,15 @@ mod tests {
     #[test]
     fn invalid_open_auth_resp() {
         let mut auth_hdr = make_valid_auth_resp();
-        auth_hdr.set_auth_alg_num(2);
+        auth_hdr.auth_alg_num = mac::AuthAlgorithmNumber::FAST_BSS_TRANSITION;
         assert!(is_valid_open_ap_resp(&auth_hdr).is_err());
 
         let mut auth_hdr = make_valid_auth_resp();
-        auth_hdr.set_auth_txn_seq_num(1);
+        auth_hdr.auth_txn_seq_num = 1;
         assert!(is_valid_open_ap_resp(&auth_hdr).is_err());
 
         let mut auth_hdr = make_valid_auth_resp();
-        auth_hdr.set_status_code(1);
+        auth_hdr.status_code = mac::StatusCode::REFUSED;
         assert!(is_valid_open_ap_resp(&auth_hdr).is_err());
     }
 }
