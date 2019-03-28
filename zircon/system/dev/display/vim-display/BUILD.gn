@@ -34,6 +34,7 @@ driver("vim-display") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/image-format",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

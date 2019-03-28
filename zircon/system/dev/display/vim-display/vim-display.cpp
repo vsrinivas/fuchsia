@@ -22,6 +22,7 @@
 #include <fuchsia/sysmem/c/fidl.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
+#include <lib/image-format/image_format.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -177,7 +178,145 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
 
 zx_status_t vim_import_image(void* ctx, image_t* image, zx_unowned_handle_t handle,
                              uint32_t index) {
-    return ZX_ERR_NOT_SUPPORTED;
+    zx_status_t status = ZX_OK;
+
+    if (image->type != IMAGE_TYPE_SIMPLE) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_status_t status2;
+    fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
+    status =
+        fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(handle, &status2, &collection_info);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (status2 != ZX_OK) {
+        return status2;
+    }
+
+    fbl::Vector<zx::vmo> vmos;
+    for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
+        vmos.push_back(zx::vmo(collection_info.buffers[i].vmo));
+    }
+
+    if (!collection_info.settings.has_image_format_constraints || index >= vmos.size()) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    uint64_t offset = collection_info.buffers[index].vmo_usable_start;
+
+    zx::vmo dup_vmo;
+    status = vmos[index].duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+    if (status != ZX_OK) {
+        DISP_ERROR("Failed to duplicate vmo: %d\n", status);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<image_info_t> import_info = fbl::make_unique_checked<image_info_t>(&ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
+    fbl::AutoLock lock(&display->image_lock);
+
+    if (image->type != IMAGE_TYPE_SIMPLE)
+        return ZX_ERR_INVALID_ARGS;
+
+    import_info->format = image->pixel_format;
+
+    if (image->pixel_format == ZX_PIXEL_FORMAT_RGB_x888) {
+        if (collection_info.settings.image_format_constraints.pixel_format.type !=
+            fuchsia_sysmem_PixelFormatType_BGRA32) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        ZX_DEBUG_ASSERT(
+            !collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
+
+        uint32_t minimum_row_bytes;
+        if (!ImageFormatMinimumRowBytes(&collection_info.settings.image_format_constraints,
+                                        image->width, &minimum_row_bytes)) {
+            DISP_ERROR("Invalid image width %d for collection\n", image->width);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        zx_status_t status = ZX_OK;
+        canvas_info_t info;
+        info.height = image->height;
+        info.stride_bytes = minimum_row_bytes;
+        info.wrap = 0;
+        info.blkmode = 0;
+        info.endianness = 0;
+        info.flags = CANVAS_FLAGS_READ;
+
+        status = amlogic_canvas_config(&display->canvas, dup_vmo.release(),
+                                       offset,
+                                       &info, &import_info->canvas_idx[0]);
+        if (status != ZX_OK) {
+            return ZX_ERR_NO_RESOURCES;
+        }
+        image->handle = import_info->canvas_idx[0];
+    } else if (image->pixel_format == ZX_PIXEL_FORMAT_NV12) {
+        if (image->height % 2 != 0) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (collection_info.settings.image_format_constraints.pixel_format.type !=
+            fuchsia_sysmem_PixelFormatType_NV12) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        ZX_DEBUG_ASSERT(
+            !collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
+
+        uint32_t minimum_row_bytes;
+        if (!ImageFormatMinimumRowBytes(&collection_info.settings.image_format_constraints,
+                                        image->width, &minimum_row_bytes)) {
+            DISP_ERROR("Invalid image width %d for collection\n", image->width);
+            return ZX_ERR_INVALID_ARGS;
+        }
+        zx_status_t status = ZX_OK;
+        canvas_info_t info;
+        info.height = image->height;
+        info.stride_bytes = minimum_row_bytes;
+        info.wrap = 0;
+        info.blkmode = 0;
+        // Do 64-bit endianness conversion.
+        info.endianness = 7;
+        info.flags = CANVAS_FLAGS_READ;
+
+        zx::vmo dup_vmo2;
+        status = dup_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo2);
+        if (status != ZX_OK) {
+            return status;
+        }
+
+        status = amlogic_canvas_config(&display->canvas, dup_vmo.release(),
+                                       offset,
+                                       &info, &import_info->canvas_idx[0]);
+        if (status != ZX_OK) {
+            return ZX_ERR_NO_RESOURCES;
+        }
+
+        info.height /= 2;
+        uint32_t plane_offset = minimum_row_bytes * image->height;
+
+        status = amlogic_canvas_config(&display->canvas, dup_vmo2.release(),
+                                       offset + plane_offset,
+                                       &info, &import_info->canvas_idx[1]);
+        if (status != ZX_OK) {
+            amlogic_canvas_free(&display->canvas, import_info->canvas_idx[0]);
+            return ZX_ERR_NO_RESOURCES;
+        }
+        // The handle used by hardware is VVUUYY, so the UV plane is included twice.
+        image->handle = (((uint64_t)import_info->canvas_idx[1] << 16) |
+                         (import_info->canvas_idx[1] << 8) | import_info->canvas_idx[0]);
+    } else {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    list_add_head(&display->imported_images, &import_info.release()->node);
+
+    return ZX_OK;
 }
 
 static void vim_release_image(void* ctx, image_t* image) {
