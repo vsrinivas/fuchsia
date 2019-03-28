@@ -7,18 +7,21 @@ package context
 import (
 	"bytes"
 	"encoding/binary"
+	"io"
+	"runtime"
 	"strings"
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
-	"syscall/zx/io"
+	zxio "syscall/zx/io"
+	"syscall/zx/mem"
 	"unsafe"
 )
 
-func respond(flags uint32, req io.NodeInterfaceRequest, err error, node io.Node) error {
-	if flags&io.OpenFlagDescribe != 0 {
-		proxy := io.NodeEventProxy{Channel: req.Channel}
+func respond(flags uint32, req zxio.NodeInterfaceRequest, err error, node zxio.Node) error {
+	if flags&zxio.OpenFlagDescribe != 0 {
+		proxy := zxio.NodeEventProxy{Channel: req.Channel}
 		switch err := err.(type) {
 		case nil:
 			info, err := node.Describe()
@@ -36,25 +39,25 @@ func respond(flags uint32, req io.NodeInterfaceRequest, err error, node io.Node)
 }
 
 type Node interface {
-	GetIO() io.Node
-	AddConnection(flags, mode uint32, req io.NodeInterfaceRequest) error
+	GetIO() zxio.Node
+	AddConnection(flags, mode uint32, req zxio.NodeInterfaceRequest) error
 }
 
 type ServiceFn func(zx.Channel) error
 
-var _ Node = (ServiceFn)(nil)
-var _ io.Node = (ServiceFn)(nil)
+var _ Node = (*ServiceFn)(nil)
+var _ zxio.Node = (*ServiceFn)(nil)
 
-func (s ServiceFn) GetIO() io.Node {
+func (s ServiceFn) GetIO() zxio.Node {
 	return s
 }
 
-func (s ServiceFn) AddConnection(flags, mode uint32, req io.NodeInterfaceRequest) error {
+func (s ServiceFn) AddConnection(flags, mode uint32, req zxio.NodeInterfaceRequest) error {
 	// TODO(ZX-3805): this does not implement the node protocol correctly,
 	// but matches the behaviour of SDK FVS.
-	if flags&io.OpenFlagNodeReference != 0 {
+	if flags&zxio.OpenFlagNodeReference != 0 {
 		b := fidl.Binding{
-			Stub:    &io.NodeStub{Impl: s},
+			Stub:    &zxio.NodeStub{Impl: s},
 			Channel: req.Channel,
 		}
 		return respond(flags, req, b.Init(func(error) {
@@ -67,7 +70,7 @@ func (s ServiceFn) AddConnection(flags, mode uint32, req io.NodeInterfaceRequest
 	return respond(flags, req, s(req.Channel), s)
 }
 
-func (s ServiceFn) Clone(flags uint32, req io.NodeInterfaceRequest) error {
+func (s ServiceFn) Clone(flags uint32, req zxio.NodeInterfaceRequest) error {
 	return s.AddConnection(flags, 0, req)
 }
 
@@ -75,22 +78,22 @@ func (s ServiceFn) Close() (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (s ServiceFn) Describe() (io.NodeInfo, error) {
-	return io.NodeInfo{NodeInfoTag: io.NodeInfoService}, nil
+func (s ServiceFn) Describe() (zxio.NodeInfo, error) {
+	return zxio.NodeInfo{NodeInfoTag: zxio.NodeInfoService}, nil
 }
 
 func (s ServiceFn) Sync() (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (s ServiceFn) GetAttr() (int32, io.NodeAttributes, error) {
-	return int32(zx.ErrOk), io.NodeAttributes{
-		Mode:      io.ModeTypeService,
+func (s ServiceFn) GetAttr() (int32, zxio.NodeAttributes, error) {
+	return int32(zx.ErrOk), zxio.NodeAttributes{
+		Mode:      zxio.ModeTypeService,
 		LinkCount: 1,
 	}, nil
 }
 
-func (s ServiceFn) SetAttr(flags uint32, attributes io.NodeAttributes) (int32, error) {
+func (s ServiceFn) SetAttr(flags uint32, attributes zxio.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -100,7 +103,7 @@ func (s ServiceFn) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in [
 
 type Directory interface {
 	Get(string) (Node, bool)
-	ForEach(func(string, io.Node))
+	ForEach(func(string, zxio.Node))
 }
 
 var _ Directory = mapDirectory(nil)
@@ -112,7 +115,7 @@ func (md mapDirectory) Get(name string) (Node, bool) {
 	return node, ok
 }
 
-func (md mapDirectory) ForEach(fn func(string, io.Node)) {
+func (md mapDirectory) ForEach(fn func(string, zxio.Node)) {
 	for name, node := range md {
 		fn(name, node.GetIO())
 	}
@@ -124,18 +127,18 @@ type DirectoryWrapper struct {
 
 var _ Node = (*DirectoryWrapper)(nil)
 
-func (dir *DirectoryWrapper) getIO() io.Directory {
+func (dir *DirectoryWrapper) getIO() zxio.Directory {
 	return &directoryState{DirectoryWrapper: dir}
 }
 
-func (dir *DirectoryWrapper) GetIO() io.Node {
+func (dir *DirectoryWrapper) GetIO() zxio.Node {
 	return dir.getIO()
 }
 
-func (dir *DirectoryWrapper) addConnection(flags, mode uint32, req io.NodeInterfaceRequest, copy bool) error {
+func (dir *DirectoryWrapper) addConnection(flags, mode uint32, req zxio.NodeInterfaceRequest, copy bool) error {
 	ioDir := dir.getIO()
 	b := fidl.Binding{
-		Stub:    &io.DirectoryStub{Impl: ioDir},
+		Stub:    &zxio.DirectoryStub{Impl: ioDir},
 		Channel: req.Channel,
 	}
 	return respond(flags, req, b.Init(func(error) {
@@ -145,11 +148,11 @@ func (dir *DirectoryWrapper) addConnection(flags, mode uint32, req io.NodeInterf
 	}), ioDir)
 }
 
-func (dir *DirectoryWrapper) AddConnection(flags, mode uint32, req io.NodeInterfaceRequest) error {
+func (dir *DirectoryWrapper) AddConnection(flags, mode uint32, req zxio.NodeInterfaceRequest) error {
 	return dir.addConnection(flags, mode, req, true)
 }
 
-var _ io.Directory = (*directoryState)(nil)
+var _ zxio.Directory = (*directoryState)(nil)
 
 type directoryState struct {
 	*DirectoryWrapper
@@ -158,7 +161,7 @@ type directoryState struct {
 	dirents bytes.Buffer
 }
 
-func (dirState *directoryState) Clone(flags uint32, req io.NodeInterfaceRequest) error {
+func (dirState *directoryState) Clone(flags uint32, req zxio.NodeInterfaceRequest) error {
 	return dirState.AddConnection(flags, 0, req)
 }
 
@@ -166,22 +169,22 @@ func (dirState *directoryState) Close() (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (dirState *directoryState) Describe() (io.NodeInfo, error) {
-	return io.NodeInfo{NodeInfoTag: io.NodeInfoDirectory}, nil
+func (dirState *directoryState) Describe() (zxio.NodeInfo, error) {
+	return zxio.NodeInfo{NodeInfoTag: zxio.NodeInfoDirectory}, nil
 }
 
 func (dirState *directoryState) Sync() (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (dirState *directoryState) GetAttr() (int32, io.NodeAttributes, error) {
-	return int32(zx.ErrOk), io.NodeAttributes{
-		Mode:      io.ModeTypeDirectory | uint32(fdio.VtypeIRUSR),
+func (dirState *directoryState) GetAttr() (int32, zxio.NodeAttributes, error) {
+	return int32(zx.ErrOk), zxio.NodeAttributes{
+		Mode:      zxio.ModeTypeDirectory | uint32(fdio.VtypeIRUSR),
 		LinkCount: 1,
 	}, nil
 }
 
-func (dirState *directoryState) SetAttr(flags uint32, attributes io.NodeAttributes) (int32, error) {
+func (dirState *directoryState) SetAttr(flags uint32, attributes zxio.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -191,20 +194,20 @@ func (dirState *directoryState) Ioctl(opcode uint32, maxOut uint64, handles []zx
 
 const dot = "."
 
-func (dirState *directoryState) Open(flags, mode uint32, path string, req io.NodeInterfaceRequest) error {
+func (dirState *directoryState) Open(flags, mode uint32, path string, req zxio.NodeInterfaceRequest) error {
 	if path == dot {
 		return dirState.AddConnection(flags, mode, req)
 	}
 	const slash = "/"
 	if strings.HasSuffix(path, slash) {
-		mode |= io.ModeTypeDirectory
+		mode |= zxio.ModeTypeDirectory
 		path = path[:len(path)-len(slash)]
 	}
 
 	if i := strings.Index(path, slash); i != -1 {
 		if node, ok := dirState.Get(path[:i]); ok {
 			node := node.GetIO()
-			if dir, ok := node.(io.Directory); ok {
+			if dir, ok := node.(zxio.Directory); ok {
 				return dir.Open(flags, mode, path[i+len(slash):], req)
 			}
 			return respond(flags, req, zx.Error{Status: zx.ErrNotDir}, node)
@@ -222,7 +225,7 @@ func (dirState *directoryState) Unlink(path string) (int32, error) {
 
 func (dirState *directoryState) ReadDirents(maxOut uint64) (int32, []uint8, error) {
 	if !dirState.reading {
-		writeFn := func(name string, node io.Node) {
+		writeFn := func(name string, node zxio.Node) {
 			status, attr, err := node.GetAttr()
 			if err != nil {
 				panic(err)
@@ -233,7 +236,7 @@ func (dirState *directoryState) ReadDirents(maxOut uint64) (int32, []uint8, erro
 			dirent := syscall.Dirent{
 				Ino:  attr.Id,
 				Size: uint8(len(name)),
-				Type: uint8(attr.Mode & io.ModeTypeMask),
+				Type: uint8(attr.Mode & zxio.ModeTypeMask),
 			}
 			if err := binary.Write(&dirState.dirents, binary.LittleEndian, dirent); err != nil {
 				panic(err)
@@ -281,4 +284,133 @@ func (dirState *directoryState) Watch(mask uint32, options uint32, watcher zx.Ch
 		_ = err
 	}
 	return int32(zx.ErrNotSupported), nil
+}
+
+var _ Node = (*goroutineFile)(nil)
+
+type goroutineFile struct{}
+
+func (gf *goroutineFile) getIO() zxio.File {
+	buf := make([]byte, 1024)
+	for {
+		if n := runtime.Stack(buf, true); n < len(buf) {
+			buf = buf[:n]
+			break
+		}
+		buf = make([]byte, 2*len(buf))
+	}
+	fState := fileState{goroutineFile: gf}
+	fState.Reset(buf)
+	return &fState
+}
+
+func (gf *goroutineFile) GetIO() zxio.Node {
+	return gf.getIO()
+}
+
+func (gf *goroutineFile) AddConnection(flags, mode uint32, req zxio.NodeInterfaceRequest) error {
+	ioFile := gf.getIO()
+	b := fidl.Binding{
+		Stub:    &zxio.FileStub{Impl: ioFile},
+		Channel: req.Channel,
+	}
+	return respond(flags, req, b.Init(func(error) {
+		if err := b.Close(); err != nil {
+			panic(err)
+		}
+	}), ioFile)
+}
+
+var _ zxio.File = (*fileState)(nil)
+
+type fileState struct {
+	*goroutineFile
+	bytes.Reader
+}
+
+func (fState *fileState) Clone(flags uint32, req zxio.NodeInterfaceRequest) error {
+	return fState.AddConnection(flags, 0, req)
+}
+
+func (fState *fileState) Close() (int32, error) {
+	return int32(zx.ErrOk), nil
+}
+
+func (fState *fileState) Describe() (zxio.NodeInfo, error) {
+	return zxio.NodeInfo{NodeInfoTag: zxio.NodeInfoFile}, nil
+}
+
+func (fState *fileState) Sync() (int32, error) {
+	return int32(zx.ErrNotSupported), nil
+}
+
+func (fState *fileState) GetAttr() (int32, zxio.NodeAttributes, error) {
+	return int32(zx.ErrOk), zxio.NodeAttributes{
+		Mode:        zxio.ModeTypeFile | uint32(fdio.VtypeIRUSR),
+		ContentSize: uint64(fState.Size()),
+		LinkCount:   1,
+	}, nil
+}
+
+func (fState *fileState) SetAttr(flags uint32, attributes zxio.NodeAttributes) (int32, error) {
+	return int32(zx.ErrNotSupported), nil
+}
+
+func (fState *fileState) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in []uint8) (int32, []zx.Handle, []uint8, error) {
+	return int32(zx.ErrNotSupported), nil, nil, nil
+}
+
+func (fState *fileState) Read(count uint64) (int32, []uint8, error) {
+	if l := uint64(fState.Len()); l < count {
+		count = l
+	}
+	b := make([]byte, count)
+	n, err := fState.Reader.Read(b)
+	if err != nil && err != io.EOF {
+		return 0, nil, err
+	}
+	b = b[:n]
+	return int32(zx.ErrOk), b, nil
+}
+
+func (fState *fileState) ReadAt(count uint64, offset uint64) (int32, []uint8, error) {
+	if l := uint64(fState.Size()) - offset; l < count {
+		count = l
+	}
+	b := make([]byte, count)
+	n, err := fState.Reader.ReadAt(b, int64(offset))
+	if err != nil && err != io.EOF {
+		return 0, nil, err
+	}
+	b = b[:n]
+	return int32(zx.ErrOk), b, nil
+}
+
+func (fState *fileState) Write(data []uint8) (int32, uint64, error) {
+	return int32(zx.ErrNotSupported), 0, nil
+}
+
+func (fState *fileState) WriteAt(data []uint8, offset uint64) (int32, uint64, error) {
+	return int32(zx.ErrNotSupported), 0, nil
+}
+
+func (fState *fileState) Seek(offset int64, start zxio.SeekOrigin) (int32, uint64, error) {
+	n, err := fState.Reader.Seek(offset, int(start))
+	return int32(zx.ErrOk), uint64(n), err
+}
+
+func (fState *fileState) Truncate(length uint64) (int32, error) {
+	return int32(zx.ErrNotSupported), nil
+}
+
+func (fState *fileState) GetFlags() (int32, uint32, error) {
+	return int32(zx.ErrNotSupported), 0, nil
+}
+
+func (fState *fileState) SetFlags(flags uint32) (int32, error) {
+	return int32(zx.ErrNotSupported), nil
+}
+
+func (fState *fileState) GetBuffer(flags uint32) (int32, *mem.Buffer, error) {
+	return int32(zx.ErrNotSupported), nil, nil
 }

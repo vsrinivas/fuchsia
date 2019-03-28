@@ -63,6 +63,10 @@ func (od OutDirectory) getMapDirectory(name string) mapDirectory {
 	return dir
 }
 
+func (od OutDirectory) AddDebug(name string, n Node) {
+	od.getMapDirectory("debug")[name] = n
+}
+
 func (od OutDirectory) AddObjects(name string, n Node) {
 	od.getMapDirectory("objects")[name] = n
 }
@@ -100,6 +104,8 @@ func CreateFromStartupInfo() *Context {
 		},
 		OutgoingService: make(OutDirectory),
 	}
+
+	c.OutgoingService.AddDebug("goroutines", &goroutineFile{})
 
 	if directoryRequest := GetStartupHandle(HandleInfo{
 		Type: HandleDirectoryRequest,
