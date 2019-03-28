@@ -4,7 +4,7 @@
 
 use std::collections::{HashSet, VecDeque};
 
-use crate::nodes::{NodeExt, SharedNodePtr};
+use crate::{NodeExt, SharedNodePtr};
 
 type IfaceId = u16;
 

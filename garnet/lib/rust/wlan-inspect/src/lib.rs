@@ -4,3 +4,5 @@
 
 pub mod iface_mgr;
 pub mod nodes;
+
+pub use nodes::{NodeExt, SharedNodePtr};

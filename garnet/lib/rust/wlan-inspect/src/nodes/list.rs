@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon as zx;
-
-use crate::nodes::{NodeExt, SharedNodePtr};
+use crate::{NodeExt, SharedNodePtr};
 
 /// This struct is intended to represent a list node in Inspect, which doesn't support list
 /// natively. Furthermore, it makes sure that the number of items does not exceed |capacity|
@@ -35,13 +33,6 @@ impl BoundedListNode {
         entry
     }
 
-    pub fn request_timed_entry(&mut self) -> SharedNodePtr {
-        let now = zx::Time::get(zx::ClockId::Monotonic);
-        let node = self.request_entry();
-        node.lock().insert_time_metadata(now);
-        node
-    }
-
     #[cfg(test)]
     pub fn inner(&self) -> SharedNodePtr {
         self.node.clone()
@@ -52,7 +43,7 @@ impl BoundedListNode {
 mod tests {
     use super::*;
 
-    use fuchsia_inspect::{self as finspect, object::ObjectUtil};
+    use fuchsia_inspect as finspect;
 
     #[test]
     fn test_bounded_list_node() {
@@ -67,13 +58,6 @@ mod tests {
 
         let _ = list_node.request_entry();
         verify_children(&list_node, vec!["2", "3", "4"]);
-    }
-
-    #[test]
-    fn test_bounded_list_node_timed_entry() {
-        let mut list_node = BoundedListNode::new(finspect::ObjectTreeNode::new_root(), 3);
-        let object = list_node.request_timed_entry().lock().evaluate();
-        object.get_property("time").expect("expect time property");
     }
 
     fn verify_children(list_node: &BoundedListNode, expected_names: Vec<&str>) {

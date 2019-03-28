@@ -20,13 +20,10 @@ pub trait NodeExt {
     /// For this function, previously existing child node is discarded.
     fn create_child(&mut self, child_name: &str) -> SharedNodePtr;
 
-    fn insert_time_metadata(&mut self, timestamp: zx::Time);
-    fn insert_str<S>(&mut self, key: &str, value: S)
-    where
-        S: Into<String>;
-    fn insert_debug<D>(&mut self, key: &str, value: D)
-    where
-        D: std::fmt::Debug;
+    fn set_time(&mut self) -> &mut Self;
+    fn set_time_at(&mut self, timestamp: zx::Time) -> &mut Self;
+    fn insert_str<S: Into<String>>(&mut self, key: &str, value: S) -> &mut Self;
+    fn insert_debug<D: std::fmt::Debug>(&mut self, key: &str, value: D) -> &mut Self;
 }
 
 impl NodeExt for finspect::ObjectTreeNode {
@@ -37,7 +34,12 @@ impl NodeExt for finspect::ObjectTreeNode {
         child
     }
 
-    fn insert_time_metadata(&mut self, timestamp: zx::Time) {
+    fn set_time(&mut self) -> &mut Self {
+        let now = zx::Time::get(zx::ClockId::Monotonic);
+        self.set_time_at(now)
+    }
+
+    fn set_time_at(&mut self, timestamp: zx::Time) -> &mut Self {
         // TODO(WLAN-1010) - if we have something to post-process Inspect JSON dump, it would be
         //                   better to log the timestamp as MetricValue::UintValue.
         let seconds = timestamp.nanos() / 1000_000_000;
@@ -46,23 +48,19 @@ impl NodeExt for finspect::ObjectTreeNode {
             key: "time".to_string(),
             value: fidl_inspect::PropertyValue::Str(format!("{}.{}", seconds, millis)),
         });
+        self
     }
 
-    fn insert_str<S>(&mut self, key: &str, value: S)
-    where
-        S: Into<String>,
-    {
+    fn insert_str<S: Into<String>>(&mut self, key: &str, value: S) -> &mut Self {
         self.add_property(fidl_inspect::Property {
             key: key.to_string(),
             value: fidl_inspect::PropertyValue::Str(value.into()),
         });
+        self
     }
 
-    fn insert_debug<D>(&mut self, key: &str, value: D)
-    where
-        D: std::fmt::Debug,
-    {
-        self.insert_str(key, format!("{:?}", value));
+    fn insert_debug<D: std::fmt::Debug>(&mut self, key: &str, value: D) -> &mut Self {
+        self.insert_str(key, format!("{:?}", value))
     }
 }
 
@@ -76,7 +74,7 @@ mod tests {
     fn test_time_metadata_format() {
         let node = finspect::ObjectTreeNode::new_root();
         let timestamp = zx::Time::from_nanos(123_456700000);
-        node.lock().insert_time_metadata(timestamp);
+        node.lock().set_time_at(timestamp);
         let object = node.lock().evaluate();
         let time_property = object.get_property("time").expect("expect time property");
         assert_eq!(
