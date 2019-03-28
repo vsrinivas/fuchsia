@@ -49,12 +49,12 @@ as well for developers, but changes to the build and your local build
 configuration can affect this.
 
 If you're working in a vendor layer or aren't getting the debugger when
-building, you need to add `garnet/packages/products/devtools` to the list of
+building, you need to add `//bundles:tools` to the list of
 packages to build. This example shows how to add this onto the default peridot
 packages (replace with your build's default or whatever you're using):
 
 ```sh
-fx set x64 --monolith="peridot/packages/default,garnet/packages/products/devtools"
+fx set  core.x64 --with //bundles:tools
 fx build
 ```
 
