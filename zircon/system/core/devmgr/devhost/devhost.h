@@ -169,15 +169,24 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev,
                                          size_t components_count,
                                          uint32_t coresident_device_index) REQ_DM_LOCK;
 
-// shared between devhost.c and rpc-device.c
-struct DevcoordinatorConnection : AsyncLoopOwnedRpcHandler<DevcoordinatorConnection> {
-    DevcoordinatorConnection() = default;
+struct DeviceControllerConnection : AsyncLoopOwnedRpcHandler<DeviceControllerConnection> {
+    DeviceControllerConnection() = default;
 
-    static void HandleRpc(fbl::unique_ptr<DevcoordinatorConnection> conn,
+    static void HandleRpc(fbl::unique_ptr<DeviceControllerConnection> conn,
                           async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal);
+    zx_status_t HandleRead();
 
     fbl::RefPtr<zx_device_t> dev;
+};
+
+struct DevhostControllerConnection : AsyncLoopOwnedRpcHandler<DevhostControllerConnection> {
+    DevhostControllerConnection() = default;
+
+    static void HandleRpc(fbl::unique_ptr<DevhostControllerConnection> conn,
+                          async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                          const zx_packet_signal_t* signal);
+    zx_status_t HandleRead();
 };
 
 struct DevfsConnection : AsyncLoopOwnedRpcHandler<DevfsConnection> {

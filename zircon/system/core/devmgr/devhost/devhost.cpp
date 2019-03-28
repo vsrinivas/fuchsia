@@ -22,6 +22,7 @@
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
@@ -87,13 +88,14 @@ async::Loop* DevhostAsyncLoop() {
 }
 
 static zx_status_t SetupRootDevcoordinatorConnection(zx::channel ch) {
-    auto conn = fbl::make_unique<DevcoordinatorConnection>();
+    auto conn = fbl::make_unique<DevhostControllerConnection>();
     if (conn == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
     conn->set_channel(std::move(ch));
-    return DevcoordinatorConnection::BeginWait(std::move(conn), DevhostAsyncLoop()->dispatcher());
+    return DevhostControllerConnection::BeginWait(std::move(conn),
+                                                      DevhostAsyncLoop()->dispatcher());
 }
 
 // Handles destroying Connection objects in the single-threaded DevhostAsyncLoop().
@@ -106,7 +108,7 @@ public:
         return &destroyer;
     }
 
-    zx_status_t QueueDevcoordinatorConnection(DevcoordinatorConnection* conn);
+    zx_status_t QueueDeviceControllerConnection(DeviceControllerConnection* conn);
     zx_status_t QueueProxyConnection(ProxyIostate* conn);
 
 private:
@@ -122,7 +124,7 @@ private:
                         zx_status_t status, const zx_packet_user_t* data);
 
     enum class Type {
-        Devcoordinator,
+        DeviceController,
         Proxy,
     };
 
@@ -136,9 +138,10 @@ zx_status_t ConnectionDestroyer::QueueProxyConnection(ProxyIostate* conn) {
     return receiver_.QueuePacket(DevhostAsyncLoop()->dispatcher(), &pkt);
 }
 
-zx_status_t ConnectionDestroyer::QueueDevcoordinatorConnection(DevcoordinatorConnection* conn) {
+zx_status_t ConnectionDestroyer::QueueDeviceControllerConnection(
+        DeviceControllerConnection* conn) {
     zx_packet_user_t pkt = {};
-    pkt.u64[0] = static_cast<uint64_t>(Type::Devcoordinator);
+    pkt.u64[0] = static_cast<uint64_t>(Type::DeviceController);
     pkt.u64[1] = reinterpret_cast<uintptr_t>(conn);
     return receiver_.QueuePacket(DevhostAsyncLoop()->dispatcher(), &pkt);
 }
@@ -149,8 +152,8 @@ void ConnectionDestroyer::Handler(async_dispatcher_t* dispatcher, async::Receive
     uintptr_t ptr = data->u64[1];
 
     switch (type) {
-    case Type::Devcoordinator: {
-        auto conn = reinterpret_cast<DevcoordinatorConnection*>(ptr);
+    case Type::DeviceController: {
+        auto conn = reinterpret_cast<DeviceControllerConnection*>(ptr);
         log(TRACE, "devhost: destroying devcoord conn '%p'\n", conn);
         delete conn;
         break;
@@ -341,14 +344,14 @@ static fidl_txn_t dh_null_txn = {
 
 struct DevhostRpcReadContext {
     const char* path;
-    DevcoordinatorConnection* conn;
+    DeviceControllerConnection* conn;
 };
 
 // Handler for when open() is called on a device
 static zx_status_t fidl_devcoord_connection_directory_open(void* ctx, uint32_t flags, uint32_t mode,
                                                            const char* path_data, size_t path_size,
                                                            zx_handle_t object) {
-    auto conn = static_cast<DevcoordinatorConnection*>(ctx);
+    auto conn = static_cast<DeviceControllerConnection*>(ctx);
     zx::channel c(object);
     return devhost_device_connect(conn->dev, flags, path_data, path_size, std::move(c));
 }
@@ -361,11 +364,10 @@ static const fuchsia_io_Directory_ops_t kDevcoordinatorConnectionDirectoryOps = 
 
 static zx_status_t fidl_CreateDeviceStub(void* raw_ctx, zx_handle_t raw_rpc, uint32_t protocol_id,
                                          uint64_t device_local_id) {
-    auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
     zx::channel rpc(raw_rpc);
-    log(RPC_IN, "devhost[%s] create device stub\n", ctx->path);
+    log(RPC_IN, "devhost: create device stub\n");
 
-    auto newconn = fbl::make_unique<DevcoordinatorConnection>();
+    auto newconn = fbl::make_unique<DeviceControllerConnection>();
     if (!newconn) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -385,9 +387,9 @@ static zx_status_t fidl_CreateDeviceStub(void* raw_ctx, zx_handle_t raw_rpc, uin
     newconn->dev = dev;
 
     newconn->set_channel(std::move(rpc));
-    log(RPC_IN, "devhost[%s] creating new stub conn=%p\n", ctx->path, newconn.get());
-    if ((r = DevcoordinatorConnection::BeginWait(std::move(newconn),
-                                                 DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
+    log(RPC_IN, "devhost: creating new stub conn=%p\n", newconn.get());
+    if ((r = DeviceControllerConnection::BeginWait(
+            std::move(newconn), DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
         return r;
     }
     return ZX_OK;
@@ -398,7 +400,6 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
                                      zx_handle_t raw_driver_vmo, zx_handle_t raw_parent_proxy,
                                      const char* proxy_args_data, size_t proxy_args_size,
                                      uint64_t device_local_id) {
-    auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
     zx::channel rpc(raw_rpc);
     zx::vmo driver_vmo(raw_driver_vmo);
     zx::handle parent_proxy(raw_parent_proxy);
@@ -408,11 +409,11 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
     // since the newly created device is not visible to
     // any API surface until a driver is bound to it.
     // (which can only happen via another message on this thread)
-    log(RPC_IN, "devhost[%s] create device drv='%.*s' args='%.*s'\n", ctx->path,
+    log(RPC_IN, "devhost: create device drv='%.*s' args='%.*s'\n",
         static_cast<int>(driver_path_size), driver_path_data, static_cast<int>(proxy_args_size),
         proxy_args_data);
 
-    auto newconn = fbl::make_unique<DevcoordinatorConnection>();
+    auto newconn = fbl::make_unique<DeviceControllerConnection>();
     if (!newconn) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -421,7 +422,7 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
     fbl::RefPtr<zx_driver_t> drv;
     zx_status_t r = dh_find_driver(driver_path, std::move(driver_vmo), &drv);
     if (r != ZX_OK) {
-        log(ERROR, "devhost[%s] driver load failed: %d\n", ctx->path, r);
+        log(ERROR, "devhost: driver load failed: %d\n", r);
         return r;
     }
     if (drv->has_create_op()) {
@@ -454,26 +455,26 @@ static zx_status_t fidl_CreateDevice(void* raw_ctx, zx_handle_t raw_rpc,
         creation_context.parent->flags |= DEV_FLAG_VERY_DEAD;
 
         if (r != ZX_OK) {
-            log(ERROR, "devhost[%s] driver create() failed: %d\n", ctx->path, r);
+            log(ERROR, "devhost: driver create() failed: %d\n", r);
             return r;
         }
         newconn->dev = std::move(creation_context.child);
         if (newconn->dev == nullptr) {
-            log(ERROR, "devhost[%s] driver create() failed to create a device!", ctx->path);
+            log(ERROR, "devhost: driver create() failed to create a device!");
             return ZX_ERR_BAD_STATE;
         }
         newconn->dev->set_local_id(device_local_id);
     } else {
-        log(ERROR, "devhost[%s] driver create() not supported\n", ctx->path);
+        log(ERROR, "devhost: driver create() not supported\n");
         return ZX_ERR_NOT_SUPPORTED;
     }
     // TODO: inform devcoord
 
     newconn->set_channel(std::move(rpc));
-    log(RPC_IN, "devhost[%s] creating '%.*s' conn=%p\n", ctx->path,
-        static_cast<int>(driver_path_size), driver_path_data, newconn.get());
-    if ((r = DevcoordinatorConnection::BeginWait(std::move(newconn),
-                                                 DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
+    log(RPC_IN, "devhost: creating '%.*s' conn=%p\n", static_cast<int>(driver_path_size),
+        driver_path_data, newconn.get());
+    if ((r = DeviceControllerConnection::BeginWait(
+            std::move(newconn), DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
         return r;
     }
     return ZX_OK;
@@ -484,14 +485,12 @@ static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc
                                               size_t component_local_ids_count,
                                               const char* name_data, size_t name_size,
                                               uint64_t device_local_id, fidl_txn_t* txn) {
-    auto ctx = static_cast<DevhostRpcReadContext*>(raw_ctx);
     zx::channel rpc(raw_rpc);
     fbl::StringPiece name(name_data, name_size);
 
-    log(RPC_IN, "devhost[%s] create composite device %.*s'\n", ctx->path,
-        static_cast<int>(name_size), name_data);
+    log(RPC_IN, "devhost: create composite device %.*s'\n", static_cast<int>(name_size), name_data);
 
-    auto newconn = fbl::make_unique<DevcoordinatorConnection>();
+    auto newconn = fbl::make_unique<DeviceControllerConnection>();
     if (!newconn) {
         return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn,
                                                                                    ZX_ERR_NO_MEMORY);
@@ -535,9 +534,9 @@ static zx_status_t fidl_CreateCompositeDevice(void* raw_ctx, zx_handle_t raw_rpc
     newconn->dev = dev;
 
     newconn->set_channel(std::move(rpc));
-    log(RPC_IN, "devhost[%s] creating new composite conn=%p\n", ctx->path, newconn.get());
-    if ((status = DevcoordinatorConnection::BeginWait(std::move(newconn),
-                                                 DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
+    log(RPC_IN, "devhost: creating new composite conn=%p\n", newconn.get());
+    if ((status = DeviceControllerConnection::BeginWait(
+            std::move(newconn), DevhostAsyncLoop()->dispatcher())) != ZX_OK) {
         return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn, status);
     }
     return fuchsia_device_manager_DevhostControllerCreateCompositeDevice_reply(txn, ZX_OK);
@@ -638,15 +637,15 @@ static fuchsia_device_manager_DeviceController_ops_t device_fidl_ops = {
     .Suspend = fidl_Suspend,
 };
 
-static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* conn) {
+zx_status_t DeviceControllerConnection::HandleRead() {
+    zx::unowned_channel conn = channel();
     uint8_t msg[8192];
     zx_handle_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t msize = sizeof(msg);
     uint32_t hcount = fbl::count_of(hin);
-
-    zx_status_t r;
-    if ((r = zx_channel_read(h, 0, &msg, hin, msize, hcount, &msize, &hcount)) != ZX_OK) {
-        return r;
+    zx_status_t status = conn->read(0, msg, msize, &msize, hin, hcount, &hcount);
+    if (status != ZX_OK) {
+        return status;
     }
 
     fidl_msg_t fidl_msg = {
@@ -662,7 +661,7 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* c
     }
 
     char buffer[512];
-    const char* path = mkdevpath(conn->dev, buffer, sizeof(buffer));
+    const char* path = mkdevpath(this->dev, buffer, sizeof(buffer));
 
     // Double-check that Open (the only message we forward) cannot be mistaken for an
     // internal dev coordinator RPC message.
@@ -684,38 +683,60 @@ static zx_status_t dh_handle_rpc_read(zx_handle_t h, DevcoordinatorConnection* c
     if (hdr->ordinal == fuchsia_io_DirectoryOpenOrdinal) {
         log(RPC_RIO, "devhost[%s] FIDL OPEN\n", path);
 
-        r = fuchsia_io_Directory_dispatch(conn, &dh_null_txn, &fidl_msg,
-                                          &kDevcoordinatorConnectionDirectoryOps);
-        if (r != ZX_OK) {
-            log(ERROR, "devhost: OPEN failed: %d\n", r);
-            return r;
+        status = fuchsia_io_Directory_dispatch(this, &dh_null_txn, &fidl_msg,
+                                                &kDevcoordinatorConnectionDirectoryOps);
+        if (status != ZX_OK) {
+            log(ERROR, "devhost: OPEN failed: %s\n", zx_status_get_string(status));
+            return status;
         }
         return ZX_OK;
     }
 
-    FidlTxn txn(zx::unowned_channel(h), hdr->txid);
-    DevhostRpcReadContext read_ctx = {path, conn};
-    // TODO(teisenbe): Instead of trying both, have a different handler function
-    // for devhosts and devices
-    r = fuchsia_device_manager_DevhostController_try_dispatch(&read_ctx, txn.fidl_txn(), &fidl_msg,
-                                                              &devhost_fidl_ops);
-    if (r != ZX_ERR_NOT_SUPPORTED) {
-        return r;
-    }
+    FidlTxn txn(std::move(conn), hdr->txid);
+    DevhostRpcReadContext read_ctx = {path, this};
     return fuchsia_device_manager_DeviceController_dispatch(&read_ctx, txn.fidl_txn(), &fidl_msg,
                                                             &device_fidl_ops);
 }
 
+zx_status_t DevhostControllerConnection::HandleRead() {
+    zx::unowned_channel conn = channel();
+    uint8_t msg[ZX_CHANNEL_MAX_MSG_BYTES];
+    zx_handle_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
+    uint32_t msize = sizeof(msg);
+    uint32_t hcount = fbl::count_of(hin);
+    zx_status_t status = conn->read(0, msg, msize, &msize, hin, hcount, &hcount);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    fidl_msg_t fidl_msg = {
+        .bytes = msg,
+        .handles = hin,
+        .num_bytes = msize,
+        .num_handles = hcount,
+    };
+
+    if (fidl_msg.num_bytes < sizeof(fidl_message_header_t)) {
+        zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);
+        return ZX_ERR_IO;
+    }
+
+    auto hdr = static_cast<fidl_message_header_t*>(fidl_msg.bytes);
+    FidlTxn txn(std::move(conn), hdr->txid);
+    return fuchsia_device_manager_DevhostController_dispatch(nullptr, txn.fidl_txn(), &fidl_msg,
+                                                             &devhost_fidl_ops);
+}
+
 // handles devcoordinator rpc
-void DevcoordinatorConnection::HandleRpc(fbl::unique_ptr<DevcoordinatorConnection> conn,
-                                         async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                         zx_status_t status, const zx_packet_signal_t* signal) {
+void DeviceControllerConnection::HandleRpc(
+        fbl::unique_ptr<DeviceControllerConnection> conn, async_dispatcher_t* dispatcher,
+        async::WaitBase* wait, zx_status_t status, const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
         log(ERROR, "devhost: devcoord conn wait error: %d\n", status);
         return;
     }
     if (signal->observed & ZX_CHANNEL_READABLE) {
-        zx_status_t r = dh_handle_rpc_read(wait->object(), conn.get());
+        zx_status_t r = conn->HandleRead();
         if (r != ZX_OK) {
             log(ERROR, "devhost: devmgr rpc unhandleable ios=%p r=%d. fatal.\n", conn.get(), r);
             abort();
@@ -735,6 +756,31 @@ void DevcoordinatorConnection::HandleRpc(fbl::unique_ptr<DevcoordinatorConnectio
             return;
         }
 
+        log(ERROR, "devhost: devmgr disconnected! fatal. (conn=%p)\n", conn.get());
+        abort();
+    }
+    log(ERROR, "devhost: no work? %08x\n", signal->observed);
+    BeginWait(std::move(conn), dispatcher);
+}
+
+void DevhostControllerConnection::HandleRpc(
+        fbl::unique_ptr<DevhostControllerConnection> conn, async_dispatcher_t* dispatcher,
+        async::WaitBase* wait, zx_status_t status, const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+        log(ERROR, "devhost: devcoord conn wait error: %d\n", status);
+        return;
+    }
+    if (signal->observed & ZX_CHANNEL_READABLE) {
+        status = conn->HandleRead();
+        if (status != ZX_OK) {
+            log(ERROR, "devhost: devmgr rpc unhandleable ios=%p r=%s. fatal.\n", conn.get(),
+                zx_status_get_string(status));
+            abort();
+        }
+        BeginWait(std::move(conn), dispatcher);
+        return;
+    }
+    if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
         log(ERROR, "devhost: devmgr disconnected! fatal. (conn=%p)\n", conn.get());
         abort();
     }
@@ -978,7 +1024,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
 
     bool add_invisible = child->flags & DEV_FLAG_INVISIBLE;
 
-    auto conn = fbl::make_unique<DevcoordinatorConnection>();
+    auto conn = fbl::make_unique<DeviceControllerConnection>();
     if (!conn) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1024,7 +1070,8 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
 
     conn->dev = child;
     conn->set_channel(std::move(hrpc));
-    status = DevcoordinatorConnection::BeginWait(std::move(conn), DevhostAsyncLoop()->dispatcher());
+    status = DeviceControllerConnection::BeginWait(std::move(conn),
+                                                       DevhostAsyncLoop()->dispatcher());
     if (status != ZX_OK) {
         child->conn.store(nullptr);
         child->rpc = zx::unowned_channel();
@@ -1063,7 +1110,7 @@ void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev) {
 // Send message to devcoordinator informing it that this device
 // is being removed.  Called under devhost api lock.
 zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
-    DevcoordinatorConnection* conn = dev->conn.load();
+    DeviceControllerConnection* conn = dev->conn.load();
     if (conn == nullptr) {
         log(ERROR, "removing device %p, conn is nullptr\n", dev.get());
         return ZX_ERR_INTERNAL;
@@ -1094,7 +1141,7 @@ zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) {
     dev->rpc = zx::unowned_channel();
 
     // queue an event to destroy the connection
-    ConnectionDestroyer::Get()->QueueDevcoordinatorConnection(conn);
+    ConnectionDestroyer::Get()->QueueDeviceControllerConnection(conn);
 
     // shut down our proxy rpc channel if it exists
     proxy_ios_destroy(dev);

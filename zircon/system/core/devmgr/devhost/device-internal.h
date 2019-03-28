@@ -19,7 +19,7 @@
 
 namespace devmgr {
 
-struct DevcoordinatorConnection;
+struct DeviceControllerConnection;
 struct ProxyIostate;
 
 } // namespace devmgr
@@ -138,7 +138,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     // This is an atomic so that the connection's async loop can inspect this
     // value to determine if an expected shutdown is happening.  See comments in
     // devhost_remove().
-    std::atomic<devmgr::DevcoordinatorConnection*> conn = nullptr;
+    std::atomic<devmgr::DeviceControllerConnection*> conn = nullptr;
 
     fbl::Mutex proxy_ios_lock;
     devmgr::ProxyIostate* proxy_ios TA_GUARDED(proxy_ios_lock) = nullptr;
