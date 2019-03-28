@@ -5,6 +5,8 @@
 #ifndef GARNET_BIN_FIDLCAT_LIB_WIRE_PARSER_H_
 #define GARNET_BIN_FIDLCAT_LIB_WIRE_PARSER_H_
 
+#include <lib/fidl/cpp/message.h>
+
 #include "library_loader.h"
 
 namespace fidlcat {

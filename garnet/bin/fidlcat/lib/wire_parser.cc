@@ -4,6 +4,8 @@
 
 #include "wire_parser.h"
 
+#include "garnet/bin/fidlcat/lib/wire_types.h"
+
 namespace fidlcat {
 
 #if 0

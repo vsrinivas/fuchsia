@@ -10,11 +10,13 @@ static_library("lib") {
   public = [
     "library_loader.h",
     "wire_parser.h",
+    "wire_types.h",
   ]
 
   sources = [
     "library_loader.cc",
     "wire_parser.cc",
+    "wire_types.cc",
   ]
 
   deps = [
