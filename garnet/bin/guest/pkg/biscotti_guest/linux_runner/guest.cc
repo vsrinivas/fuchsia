@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/pkg/biscotti_guest/bin/guest.h"
+#include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/guest.h"
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -13,9 +13,9 @@
 #include <grpc++/grpc++.h>
 #include <grpc++/server_posix.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/vector.h>
 #include <lib/fxl/logging.h>
 #include <lib/fzl/fdio.h>
@@ -23,7 +23,7 @@
 
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
 
-namespace biscotti {
+namespace linux_runner {
 
 // If this is true, a container shell is spawned on /dev/hvc0 logged into the
 // default 'machina' user. If this is false then the shell on /dev/hvc0 will
@@ -238,7 +238,7 @@ void Guest::ConfigureNetwork() {
 
   uint32_t ip_addr = 0;
   if (!cl_.GetOptionValue("ip", &arg)) {
-    arg = BISCOTTI_IP_DEFAULT;
+    arg = LINUX_RUNNER_IP_DEFAULT;
   }
   FXL_LOG(INFO) << "Using ip: " << arg;
   FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
@@ -247,7 +247,7 @@ void Guest::ConfigureNetwork() {
 
   uint32_t netmask = 0;
   if (!cl_.GetOptionValue("netmask", &arg)) {
-    arg = BISCOTTI_NETMASK_DEFAULT;
+    arg = LINUX_RUNNER_NETMASK_DEFAULT;
   }
   FXL_LOG(INFO) << "Using netmask: " << arg;
   FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
@@ -256,7 +256,7 @@ void Guest::ConfigureNetwork() {
 
   uint32_t gateway = 0;
   if (!cl_.GetOptionValue("gateway", &arg)) {
-    arg = BISCOTTI_GATEWAY_DEFAULT;
+    arg = LINUX_RUNNER_GATEWAY_DEFAULT;
   }
   FXL_LOG(INFO) << "Using gateway: " << arg;
   FXL_CHECK(inet_aton(arg.c_str(), &addr) != 0)
@@ -787,4 +787,4 @@ void Guest::OnComponentTerminated(const LinuxComponent* component) {
   components_.erase(component);
 }
 
-}  // namespace biscotti
+}  // namespace linux_runner

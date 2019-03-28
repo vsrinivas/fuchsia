@@ -30,9 +30,9 @@ group("all") {
   public_deps = [
     "//garnet/packages/experimental:a11y",
     "//garnet/packages/experimental:auth",
-    "//garnet/packages/experimental:biscotti",
     "//garnet/packages/experimental:kms",
     "//garnet/packages/experimental:linux_guest",
+    "//garnet/packages/experimental:linux_runner",
     "//garnet/packages/experimental:network_settings_server",
     "//garnet/packages/experimental:sys",
     "//garnet/packages/experimental:tennis",
@@ -73,10 +73,10 @@ group("sys") {
   ]
 }
 
-group("biscotti") {
+group("linux_runner") {
   testonly = true
   public_deps = [
-    "//garnet/bin/guest/pkg/biscotti_guest/bin:biscotti",
+    "//garnet/bin/guest/pkg/biscotti_guest/linux_runner",
     "//garnet/packages/experimental:wayland_bridge",
     "//garnet/packages/prod:guest_runner",
   ]

@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_BIN_LOG_COLLECTOR_H_
-#define GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_BIN_LOG_COLLECTOR_H_
+#ifndef GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_LINUX_RUNNER_LOG_COLLECTOR_H_
+#define GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_LINUX_RUNNER_LOG_COLLECTOR_H_
 
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/vm_host.grpc.pb.h"
 
-namespace biscotti {
+namespace linux_runner {
 
 class LogCollector : public vm_tools::LogCollector::Service {
  private:
@@ -22,6 +22,6 @@ class LogCollector : public vm_tools::LogCollector::Service {
   grpc::Status CollectLogs(const vm_tools::LogRequest* request);
 };
 
-}  // namespace biscotti
+}  // namespace linux_runner
 
-#endif  // GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_BIN_LOG_COLLECTOR_H_
+#endif  // GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_LINUX_RUNNER_LOG_COLLECTOR_H_

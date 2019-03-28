@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/pkg/biscotti_guest/bin/linux_component.h"
+#include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/linux_component.h"
 
 #include <lib/async/default.h>
 #include <zircon/status.h>
 
-namespace biscotti {
+namespace linux_runner {
 
 // static
 std::unique_ptr<LinuxComponent> LinuxComponent::Create(
@@ -69,4 +69,4 @@ void LinuxComponent::CreateView(
                                     std::move(outgoing_services));
 }
 
-}  // namespace biscotti
+}  // namespace linux_runner

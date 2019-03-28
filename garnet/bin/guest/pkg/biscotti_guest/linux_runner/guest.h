@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_BIN_GUEST_H_
-#define GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_BIN_GUEST_H_
+#ifndef GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_LINUX_RUNNER_GUEST_H_
+#define GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_LINUX_RUNNER_GUEST_H_
 
 #include <zircon/types.h>
 #include <deque>
@@ -16,14 +16,14 @@
 #include <lib/fxl/command_line.h>
 #include <lib/guest/scenic_wayland_dispatcher.h>
 
-#include "garnet/bin/guest/pkg/biscotti_guest/bin/linux_component.h"
-#include "garnet/bin/guest/pkg/biscotti_guest/bin/log_collector.h"
+#include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/linux_component.h"
+#include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/log_collector.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/container_guest.grpc.pb.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/container_host.grpc.pb.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/tremplin.grpc.pb.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
 
-namespace biscotti {
+namespace linux_runner {
 
 struct AppLaunchRequest {
  public:
@@ -156,6 +156,6 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   std::unordered_map<const LinuxComponent*, std::unique_ptr<LinuxComponent>>
       components_;
 };
-}  // namespace biscotti
+}  // namespace linux_runner
 
-#endif  // GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_BIN_GUEST_H_
+#endif  // GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_LINUX_RUNNER_GUEST_H_

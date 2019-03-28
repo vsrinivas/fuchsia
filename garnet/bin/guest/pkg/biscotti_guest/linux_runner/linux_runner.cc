@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/guest/pkg/biscotti_guest/bin/linux_runner.h"
+#include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/linux_runner.h"
 
 #include <memory>
 
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 
-namespace biscotti {
+namespace linux_runner {
 
 LinuxRunner::LinuxRunner()
     : context_(component::StartupContext::CreateFromStartupInfo()) {
@@ -31,4 +31,4 @@ void LinuxRunner::StartComponent(
   guest_->Launch(std::move(request));
 }
 
-}  // namespace biscotti
+}  // namespace linux_runner

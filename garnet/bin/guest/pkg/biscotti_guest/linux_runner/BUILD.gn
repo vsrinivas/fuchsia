@@ -12,16 +12,16 @@ declare_args() {
   # device.
   #
   # See //garnet/bin/guest/vmm/device/virtio_net.cc for more details.
-  biscotti_ip = "10.0.0.2"
-  biscotti_gateway = "10.0.0.1"
-  biscotti_netmask = "255.255.255.0"
+  linux_runner_ip = "10.0.0.2"
+  linux_runner_gateway = "10.0.0.1"
+  linux_runner_netmask = "255.255.255.0"
 }
 
-config("biscotti_net_config") {
+config("linux_runner_net_config") {
   defines = [
-    "BISCOTTI_IP_DEFAULT=\"" + biscotti_ip + "\"",
-    "BISCOTTI_GATEWAY_DEFAULT=\"" + biscotti_gateway + "\"",
-    "BISCOTTI_NETMASK_DEFAULT=\"" + biscotti_netmask + "\"",
+    "LINUX_RUNNER_IP_DEFAULT=\"" + linux_runner_ip + "\"",
+    "LINUX_RUNNER_GATEWAY_DEFAULT=\"" + linux_runner_gateway + "\"",
+    "LINUX_RUNNER_NETMASK_DEFAULT=\"" + linux_runner_netmask + "\"",
   ]
 }
 
@@ -47,17 +47,17 @@ source_set("lib") {
     "log_collector.cc",
     "log_collector.h",
   ]
-  public_configs = [ ":biscotti_net_config" ]
+  public_configs = [ ":linux_runner_net_config" ]
   public_deps = [
     ":protos",
-    "//sdk/fidl/fuchsia.guest",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.wayland",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/guest",
+    "//sdk/fidl/fuchsia.guest",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.wayland",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
     "//zircon/public/lib/async-loop-cpp",
@@ -91,7 +91,7 @@ proto_library("protos") {
 }
 
 executable("bin") {
-  output_name = "biscotti"
+  output_name = "linux_runner"
 
   sources = [
     "main.cc",
@@ -102,17 +102,17 @@ executable("bin") {
   ]
 }
 
-package("biscotti") {
+package("linux_runner") {
   deps = [
     ":bin",
   ]
 
-  binary = "biscotti"
+  binary = "linux_runner"
 
   meta = [
     {
-      path = rebase_path("biscotti.cmx")
-      dest = "biscotti.cmx"
+      path = rebase_path("linux_runner.cmx")
+      dest = "linux_runner.cmx"
     },
   ]
 }
