@@ -14,7 +14,7 @@ TEST(ProjectProfile, FromBase64String) {
 
 TEST(ProjectProfile, FromFile) {
   ProjectProfileFromFile(
-      "/pkgfs/packages/garnet_lib_tests/0/data/test_metrics_registry.pb");
+      "/pkgfs/packages/cobalt_lib_tests/0/data/test_metrics_registry.pb");
 }
 
 }  // namespace cobalt
