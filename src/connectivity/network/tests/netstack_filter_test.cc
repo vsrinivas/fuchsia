@@ -103,8 +103,8 @@ TEST_F(NetstackFilterTest, TestRuleset) {
         term_reason = reason;
       };
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&wait] { return wait; }, kTimeout));
-  ASSERT_TRUE(exit_code == 0) << "Exit code was non-zero, got: " << exit_code;
-  ASSERT_TRUE(term_reason == fuchsia::sys::TerminationReason::EXITED)
+  EXPECT_EQ(exit_code, 0) << "Exit code was non-zero, got: " << exit_code;
+  EXPECT_EQ(term_reason, fuchsia::sys::TerminationReason::EXITED)
       << "TerminationReason was not 'EXITED' as expected, got: "
       << sys::TerminationReasonToString(term_reason);
 }

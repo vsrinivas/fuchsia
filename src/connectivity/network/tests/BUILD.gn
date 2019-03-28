@@ -18,7 +18,6 @@ executable("netstack_integration_test") {
   ]
 
   deps = [
-    "//garnet/bin/netstack_tests/test_ioctl_client",
     "//garnet/lib/inet",
     "//garnet/public/lib/netemul/network:ethertap",
     "//garnet/public/lib/netstack/c",

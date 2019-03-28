@@ -104,8 +104,8 @@ TEST_F(NetstackNoNetworkTest, DisableEthernetInterface) {
         term_reason = reason;
       };
   EXPECT_TRUE(RunLoopUntil([&wait] { return wait; }));
-  ASSERT_EQ(exit_code, 0) << "Exit code was non-zero, got: " << exit_code;
-  ASSERT_EQ(term_reason, fuchsia::sys::TerminationReason::EXITED)
+  EXPECT_EQ(exit_code, 0) << "Exit code was non-zero, got: " << exit_code;
+  EXPECT_EQ(term_reason, fuchsia::sys::TerminationReason::EXITED)
       << "TerminationReason was not 'EXITED' as expected, got: "
       << sys::TerminationReasonToString(term_reason);
 }

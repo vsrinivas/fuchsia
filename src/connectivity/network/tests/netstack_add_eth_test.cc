@@ -147,7 +147,8 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
 
   uint32_t eth_id = 0;
   netstack->AddEthernetDevice(std::move(topo_path), std::move(config),
-                              std::move(eth->device()), [&](uint32_t id) { eth_id = id; });
+                              std::move(eth->device()),
+                              [&](uint32_t id) { eth_id = id; });
   ASSERT_TRUE(
       RunLoopWithTimeoutOrUntil([&] { return eth_id > 0; }, zx::sec(5)));
 
