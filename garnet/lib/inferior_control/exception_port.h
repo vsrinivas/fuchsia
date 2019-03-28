@@ -13,9 +13,9 @@
 #include <lib/fxl/macros.h>
 #include <lib/fxl/memory/ref_ptr.h>
 #include <lib/zx/port.h>
+#include <lib/zx/process.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
-#include <zx/process.h>
 
 namespace inferior_control {
 

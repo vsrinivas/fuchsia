@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/sys/cpp/service_directory.h>
-#include <zx/channel.h>
+#include <lib/zx/channel.h>
 
 #include "garnet/bin/guest/vmm/device/config.h"
 #include "garnet/bin/guest/vmm/device/test_with_device.h"

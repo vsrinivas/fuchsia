@@ -5,9 +5,9 @@
 #include <gtest/gtest.h>
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/time.h>
 #include <zircon/processargs.h>
-#include <zx/channel.h>
-#include <zx/time.h>
 
 #include "jobs.h"
 #include "processes.h"

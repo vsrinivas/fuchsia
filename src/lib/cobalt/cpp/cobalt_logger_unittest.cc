@@ -12,7 +12,7 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/svc/cpp/service_provider_bridge.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
-#include <zx/time.h>
+#include <lib/zx/time.h>
 
 namespace cobalt {
 namespace {

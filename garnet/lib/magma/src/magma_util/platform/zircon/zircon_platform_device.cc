@@ -5,8 +5,8 @@
 #include <ddk/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
+#include <lib/zx/vmo.h>
 #include <zircon/process.h>
-#include <zx/vmo.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"

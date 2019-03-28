@@ -16,11 +16,11 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/pseudo_file.h>
+#include <lib/zx/channel.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 #include <zircon/assert.h>
-#include <zx/channel.h>
 #include <memory>
 
 namespace sys {

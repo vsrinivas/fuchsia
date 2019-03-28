@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <hid/usages.h>
-#include <zx/eventpair.h>
+#include <lib/zx/eventpair.h>
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
