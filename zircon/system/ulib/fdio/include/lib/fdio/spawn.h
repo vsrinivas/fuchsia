@@ -62,6 +62,14 @@ __BEGIN_CDECLS
 // |zx_job_default()|. Does not take ownership of |job|.
 //
 // Upon success, |process_out| will be a handle to the process.
+//
+// # Errors
+//
+// ZX_ERR_NOT_FOUND: |path| cannot be opened.
+//
+// ZX_ERR_BAD_HANDLE: |path| cannot be opened as an executable VMO.
+//
+// Returns the result of |fdio_spawn_vmo| in all other cases.
 zx_status_t fdio_spawn(zx_handle_t job,
                        uint32_t flags,
                        const char* path,
@@ -203,6 +211,14 @@ struct fdio_spawn_action {
 // Upon success, |process_out| will be a handle to the process. Upon failure, if
 // |err_msg_out| is not null, an error message will be we written to
 // |err_msg_out|, including a null terminator.
+//
+// # Errors
+//
+// ZX_ERR_NOT_FOUND: |path| cannot be opened.
+//
+// ZX_ERR_BAD_HANDLE: |path| cannot be opened as an executable VMO.
+//
+// Returns the result of |fdio_spawn_vmo| in all other cases.
 zx_status_t fdio_spawn_etc(zx_handle_t job,
                            uint32_t flags,
                            const char* path,
@@ -220,6 +236,24 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
 // vmo.
 //
 // Always consumes |executable_vmo|.
+//
+// # Errors
+//
+// ZX_ERR_INVALID_ARGS: any supplied action is invalid, or the process name is unset.
+//
+// ZX_ERR_IO_INVALID: the recursion limit is hit resolving the executable name.
+//
+// ZX_ERR_BAD_HANDLE: |executable_vmo| is not a valid handle.
+//
+// ZX_ERR_WRONG_TYPE: |executable_vmo| is not a VMO handle.
+//
+// ZX_ERR_ACCESS_DENIED: |executable_vmo| is not readable.
+//
+// ZX_ERR_OUT_OF_RANGE: |executable_vmo| is smaller than the resolver prefix.
+//
+// ZX_ERR_NOT_FOUND: Cannot connect to process launcher.
+//
+// May return other errors.
 zx_status_t fdio_spawn_vmo(zx_handle_t job,
                            uint32_t flags,
                            zx_handle_t executable_vmo,
