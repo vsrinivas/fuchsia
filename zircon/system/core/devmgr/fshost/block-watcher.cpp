@@ -141,52 +141,6 @@ void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_roo
     watcher->FuchsiaStart();
 }
 
-// TODO(mcgrathr): Remove this fallback path when the old args
-// are no longer used.
-void old_launch_blob_init(BlockWatcher* watcher) {
-    const char* blob_init = getenv("zircon.system.blob-init");
-    if (blob_init == nullptr) {
-        return;
-    }
-    if (watcher->IsSystemMounted()) {
-        printf("fshost: zircon.system.blob-init ignored since system already mounted\n");
-        return;
-    }
-
-    zx::process proc;
-
-    uint32_t type = PA_HND(PA_USER0, 0);
-    zx::channel handle, pkgfs_root;
-    if (zx::channel::create(0, &handle, &pkgfs_root) != ZX_OK) {
-        return;
-    }
-
-    // TODO: make blob-init a /fs/blob relative path
-    const char* argv[3];
-    char binary[strlen(blob_init) + 4];
-    sprintf(binary, "/fs%s", blob_init);
-    argv[0] = binary;
-    const char* blob_init_arg = getenv("zircon.system.blob-init-arg");
-    int argc = 1;
-    if (blob_init_arg != nullptr) {
-        argc++;
-        argv[1] = blob_init_arg;
-    }
-    argv[argc] = nullptr;
-
-    const zx_handle_t raw_handle = handle.release();
-    zx_status_t status =
-        devmgr_launch(*watcher->Job(), "pkgfs", argv,
-                      nullptr, -1, &raw_handle, &type, 1, &proc, FS_DATA | FS_BLOB | FS_SVC);
-
-    if (status != ZX_OK) {
-        printf("fshost: '%s' failed to launch: %d\n", blob_init, status);
-        return;
-    }
-
-    pkgfs_finish(watcher, std::move(proc), std::move(pkgfs_root));
-}
-
 // Launching pkgfs uses its own loader service and command lookup to run out of
 // the blobfs without any real filesystem.  Files are found by
 // getenv("zircon.system.pkgfs.file.PATH") returning a blob content ID.
@@ -325,10 +279,7 @@ bool pkgfs_launch(BlockWatcher* watcher) {
 }
 
 void launch_blob_init(BlockWatcher* watcher) {
-    if (!pkgfs_launch(watcher)) {
-        // TODO(mcgrathr): Remove when the old args are no longer used.
-        old_launch_blob_init(watcher);
-    }
+    pkgfs_launch(watcher);
 }
 
 zx_status_t launch_blobfs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,

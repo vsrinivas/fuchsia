@@ -317,24 +317,6 @@ will never be launched.
 Any `+` characters in *command* are treated as argument separators, allowing
 you to pass arguments to an executable.
 
-## zircon.system.blob-init=\<command>
-
-**DEPRECATED** See [`zircon.system.pkgfs.cmd`](#zircon.system.pkgfs.cmd).
-
-This option requests that *command* be run once the blob partition is
-mounted. The given command is expected to mount /system, and then signal its
-process handle with `ZX_USER_SIGNAL_0`.
-
-*command* may not assume that any other filesystem has been mounted. If
-`zircon.system.blob-init-arg` is set, it will be provided as the first
-argument.
-
-A ramdisk containing `/system` takes precedence over
-`zircon.system.blob-init` and *command* will not be run if a system
-ramdisk is present. blob init will take precedence over a minfs
-partition with the system GUID, and the minfs partition will not be mounted
-if `zircon.system.blob-init` is set.
-
 ## zircon.system.disable-automount=\<bool>
 
 This option prevents the fshost from auto-mounting any disk filesystems
