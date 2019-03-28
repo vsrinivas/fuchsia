@@ -74,33 +74,52 @@ protocol RepositoryManager {
 };
 
 /// Describes the configuration necessary to connect to a repository and it's mirrors.
-struct RepositoryConfig {
-    /// The url that hosts the repository.
-    string repo_url;
+table RepositoryConfig {
+    /// A fuchsia-pkg URI identifying the repository. Required.
+    ///
+    /// Example: fuchsia-pkg://example.com/
+    1: string repo_url;
 
-    /// A vector of public keys. These keys must match one of the trusted keys known to the system.
-    vector<RepositoryKeyConfig> root_keys;
+    /// A vector of public keys. Required.
+    ///
+    /// These keys must match one of the trusted keys known to the system.
+    2: vector<RepositoryKeyConfig> root_keys;
 
-    /// The repository mirrors that serve the package contents.
-    vector<MirrorConfig> mirrors;
+    /// The repository mirrors that serve the package contents. Required.
+    3: vector<MirrorConfig> mirrors;
+
+    /// The package URI of the system update package. Optional.
+    ///
+    /// Only used for the fuchsia-pkg://fuchsia.com/ repo.
+    4: string update_package_uri;
 };
 
 /// Describes the keys used by the repository to authenticate it's packages.
-struct RepositoryKeyConfig {
-    /// The type of the key value. The only supported algorithm at the moment is ed25519.
-    string type;
+///
+/// The only supported algorithm at the moment is ed25519.
+xunion RepositoryKeyConfig {
+    /// The raw ed25519 public key as binary data.
+    bytes ed25519_key;
+};
 
-    /// The value of the key.
-    bytes value;
+/// Describes a key used to decrypt blobs.
+///
+/// The only supported algorithm at the moment is aes.
+xunion RepositoryBlobKey {
+    /// A raw aes key as binary data.
+    bytes aes_key;
 };
 
 /// Descibes the configuration necessary to connect to a mirror.
-struct MirrorConfig {
-    /// The url that hosts the mirror.
-    string mirror_url;
+table MirrorConfig {
+    /// The base URL of the TUF metadata on this mirror. Required.
+    1: string mirror_url;
 
-    /// Whether or not to automatically monitor the mirror for updates.
-    bool subscribe;
+    /// Whether or not to automatically monitor the mirror for updates. Required.
+    2: bool subscribe;
+
+    /// The private (or symmetric) key used to decrypt blobs fetched from this mirror. Optional.
+    3: RepositoryBlobKey blob_key;
 };
 
 /// The iterator over all the repositories defined in a |PackageResolver|.
