@@ -45,7 +45,7 @@ MANDATORY_SDK_HEADERS = [
 # the library's 'include/' and 'include/lib' directories are added to the
 # include path so both old and new style include work.
 # TODO(ZX-1871): Once everything in Zircon is migrated, remove this mechanism.
-LIBRARIES_BEING_MOVED = ['zx']
+LIBRARIES_BEING_MOVED = []
 
 # Prebuilt libraries for which headers shouldn't be included in an SDK.
 # While this kind of mechanism exists in the GN build, there's no equivalent in
