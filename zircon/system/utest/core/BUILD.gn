@@ -83,8 +83,6 @@ foreach(test_name, core_tests) {
   test(test_name) {
     test_group = "core"
     deps = [
-      "$zx/system/ulib/unittest",
-      "$zx/system/ulib/zxtest",
       test_name,
     ]
   }

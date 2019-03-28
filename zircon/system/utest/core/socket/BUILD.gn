@@ -9,7 +9,9 @@ source_set("socket") {
   ]
   deps = [
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/zxtest",
   ]
 }
