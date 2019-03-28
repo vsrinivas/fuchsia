@@ -44,17 +44,16 @@ def main():
 
     outfile.write('''
     Future<int> main(List<String> args) async {
-      await runFuchsiaTests(<MainFunction>[
+      final int exitCode = await runFuchsiaTests(<MainFunction>[
     ''')
 
     for i in range(len(test_files)):
         outfile.write('test_%d.main,\n' % i)
 
-    outfile.write(''']);
+    outfile.write(''']) ? 0 : 1;
 
-      // Quit.
-      exitFuchsiaTest(0);
-      return 0;
+      exitFuchsiaTest(exitCode);
+      return exitCode;
     }
     ''')
 
