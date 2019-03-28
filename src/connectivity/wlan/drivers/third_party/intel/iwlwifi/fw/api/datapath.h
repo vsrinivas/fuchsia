@@ -41,88 +41,88 @@
  * enum iwl_data_path_subcmd_ids - data path group commands
  */
 enum iwl_data_path_subcmd_ids {
-	/**
-	 * @DQA_ENABLE_CMD: &struct iwl_dqa_enable_cmd
-	 */
-	DQA_ENABLE_CMD = 0x0,
+    /**
+     * @DQA_ENABLE_CMD: &struct iwl_dqa_enable_cmd
+     */
+    DQA_ENABLE_CMD = 0x0,
 
-	/**
-	 * @UPDATE_MU_GROUPS_CMD: &struct iwl_mu_group_mgmt_cmd
-	 */
-	UPDATE_MU_GROUPS_CMD = 0x1,
+    /**
+     * @UPDATE_MU_GROUPS_CMD: &struct iwl_mu_group_mgmt_cmd
+     */
+    UPDATE_MU_GROUPS_CMD = 0x1,
 
-	/**
-	 * @TRIGGER_RX_QUEUES_NOTIF_CMD: &struct iwl_rxq_sync_cmd
-	 */
-	TRIGGER_RX_QUEUES_NOTIF_CMD = 0x2,
+    /**
+     * @TRIGGER_RX_QUEUES_NOTIF_CMD: &struct iwl_rxq_sync_cmd
+     */
+    TRIGGER_RX_QUEUES_NOTIF_CMD = 0x2,
 
-	/**
-	 * @STA_HE_CTXT_CMD: &struct iwl_he_sta_context_cmd
-	 */
-	STA_HE_CTXT_CMD = 0x7,
+    /**
+     * @STA_HE_CTXT_CMD: &struct iwl_he_sta_context_cmd
+     */
+    STA_HE_CTXT_CMD = 0x7,
 
 #ifdef CPTCFG_IWLMVM_AX_SOFTAP_TESTMODE
-	/**
-	 * @AX_SOFTAP_TESTMODE_DL_BASIC: &struct ax_softap_testmode_dl_basic_cmd
-	 */
-	AX_SOFTAP_TESTMODE_DL_BASIC = 0x9,
+    /**
+     * @AX_SOFTAP_TESTMODE_DL_BASIC: &struct ax_softap_testmode_dl_basic_cmd
+     */
+    AX_SOFTAP_TESTMODE_DL_BASIC = 0x9,
 
-	/**
-	 * @AX_SOFTAP_TESTMODE_DL_MU_BAR:
-	 *  &struct ax_softap_testmode_dl_mu_bar_cmd
-	 */
-	AX_SOFTAP_TESTMODE_DL_MU_BAR = 0xA,
+    /**
+     * @AX_SOFTAP_TESTMODE_DL_MU_BAR:
+     *  &struct ax_softap_testmode_dl_mu_bar_cmd
+     */
+    AX_SOFTAP_TESTMODE_DL_MU_BAR = 0xA,
 
-	/**
-	 * @AX_SOFTAP_TESTMODE_UL: &struct ax_softap_testmode_ul_cmd
-	 */
-	AX_SOFTAP_TESTMODE_UL = 0xB,
+    /**
+     * @AX_SOFTAP_TESTMODE_UL: &struct ax_softap_testmode_ul_cmd
+     */
+    AX_SOFTAP_TESTMODE_UL = 0xB,
 #endif
 
-	/**
-	 * @AX_SOFTAP_CLIENT_TESTMODE: &struct ax_softap_client_testmode_cmd
-	 */
-	AX_SOFTAP_CLIENT_TESTMODE = 0xC,
+    /**
+     * @AX_SOFTAP_CLIENT_TESTMODE: &struct ax_softap_client_testmode_cmd
+     */
+    AX_SOFTAP_CLIENT_TESTMODE = 0xC,
 
-	/**
-	 * @RFH_QUEUE_CONFIG_CMD: &struct iwl_rfh_queue_config
-	 */
-	RFH_QUEUE_CONFIG_CMD = 0xD,
+    /**
+     * @RFH_QUEUE_CONFIG_CMD: &struct iwl_rfh_queue_config
+     */
+    RFH_QUEUE_CONFIG_CMD = 0xD,
 
-	/**
-	 * @TLC_MNG_CONFIG_CMD: &struct iwl_tlc_config_cmd
-	 */
-	TLC_MNG_CONFIG_CMD = 0xF,
+    /**
+     * @TLC_MNG_CONFIG_CMD: &struct iwl_tlc_config_cmd
+     */
+    TLC_MNG_CONFIG_CMD = 0xF,
 
-	/**
-	 * @HE_AIR_SNIFFER_CONFIG_CMD: &struct iwl_he_monitor_cmd
-	 */
-	HE_AIR_SNIFFER_CONFIG_CMD = 0x13,
+    /**
+     * @HE_AIR_SNIFFER_CONFIG_CMD: &struct iwl_he_monitor_cmd
+     */
+    HE_AIR_SNIFFER_CONFIG_CMD = 0x13,
 
-	/**
-	 * @RX_NO_DATA_NOTIF: &struct iwl_rx_no_data
-	 */
-	RX_NO_DATA_NOTIF = 0xF5,
+    /**
+     * @RX_NO_DATA_NOTIF: &struct iwl_rx_no_data
+     */
+    RX_NO_DATA_NOTIF = 0xF5,
 
-	/**
-	 * @TLC_MNG_UPDATE_NOTIF: &struct iwl_tlc_update_notif
-	 */
-	TLC_MNG_UPDATE_NOTIF = 0xF7,
+    /**
+     * @TLC_MNG_UPDATE_NOTIF: &struct iwl_tlc_update_notif
+     */
+    TLC_MNG_UPDATE_NOTIF = 0xF7,
 
-	/**
-	 * @STA_PM_NOTIF: &struct iwl_mvm_pm_state_notification
-	 */
-	STA_PM_NOTIF = 0xFD,
+    /**
+     * @STA_PM_NOTIF: &struct iwl_mvm_pm_state_notification
+     */
+    STA_PM_NOTIF = 0xFD,
 
-	/**
-	 * @MU_GROUP_MGMT_NOTIF: &struct iwl_mu_group_mgmt_notif
-	 */
-	MU_GROUP_MGMT_NOTIF = 0xFE,
+    /**
+     * @MU_GROUP_MGMT_NOTIF: &struct iwl_mu_group_mgmt_notif
+     */
+    MU_GROUP_MGMT_NOTIF = 0xFE,
 
-	/**
-	 * @RX_QUEUES_NOTIFICATION: &struct iwl_rxq_sync_notification
-	 */
-	RX_QUEUES_NOTIFICATION = 0xFF,
+    /**
+     * @RX_QUEUES_NOTIFICATION: &struct iwl_rxq_sync_notification
+     */
+    RX_QUEUES_NOTIFICATION = 0xFF,
 };
 
 /**
@@ -131,12 +131,12 @@ enum iwl_data_path_subcmd_ids {
  * @reserved: reserved
  * @membership_status: a bitmap of MU groups
  * @user_position:the position of station in a group. If the station is in the
- *	group then bits (group * 2) is the position -1
+ *  group then bits (group * 2) is the position -1
  */
 struct iwl_mu_group_mgmt_cmd {
-	__le32 reserved;
-	__le32 membership_status[2];
-	__le32 user_position[4];
+    __le32 reserved;
+    __le32 membership_status[2];
+    __le32 user_position[4];
 } __packed; /* MU_GROUP_ID_MNG_TABLE_API_S_VER_1 */
 
 /**
@@ -144,11 +144,11 @@ struct iwl_mu_group_mgmt_cmd {
  *
  * @membership_status: a bitmap of MU groups
  * @user_position: the position of station in a group. If the station is in the
- *	group then bits (group * 2) is the position -1
+ *  group then bits (group * 2) is the position -1
  */
 struct iwl_mu_group_mgmt_notif {
-	__le32 membership_status[2];
-	__le32 user_position[4];
+    __le32 membership_status[2];
+    __le32 user_position[4];
 } __packed; /* MU_GROUP_MNG_NTFY_API_S_VER_1 */
 
 #endif /* __iwl_fw_api_datapath_h__ */

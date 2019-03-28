@@ -77,7 +77,7 @@ enum iwl_uapsd_disable {
  *
  * @swcrypto: using hardware encryption, default = 0
  * @disable_11n: disable 11n capabilities, default = 0,
- *	use IWL_[DIS,EN]ABLE_HT_* constants
+ *  use IWL_[DIS,EN]ABLE_HT_* constants
  * @amsdu_size: See &enum iwl_amsdu_size.
  * @fw_restart: restart firmware, default = 1
  * @bt_coex_active: enable bt coex, default = true
@@ -88,11 +88,11 @@ enum iwl_uapsd_disable {
  * @antenna_coupling: antenna coupling in dB, default = 0
  * @nvm_file: specifies a external NVM file
  * @uapsd_disable: disable U-APSD, see &enum iwl_uapsd_disable, default =
- *	IWL_DISABLE_UAPSD_BSS | IWL_DISABLE_UAPSD_P2P_CLIENT
+ *  IWL_DISABLE_UAPSD_BSS | IWL_DISABLE_UAPSD_P2P_CLIENT
  * @xvt_default_mode: xVT is the default operation mode, default = false
  * @d0i3_disable: disable d0i3, default = 1,
  * @d0i3_timeout: time to wait after no refs are taken before
- *	entering D0i3 (in msecs)
+ *  entering D0i3 (in msecs)
  * @lar_disable: disable LAR (regulatory), default = 0
  * @fw_monitor: allow to use firmware monitor
  * @disable_11ac: disable VHT capabilities, default = false.

@@ -34,45 +34,45 @@
 #ifndef __iwl_eeprom_parse_h__
 #define __iwl_eeprom_parse_h__
 
-#include <linux/types.h>
 #include <linux/if_ether.h>
+#include <linux/types.h>
 #include <net/cfg80211.h>
 #include "iwl-trans.h"
 
 struct iwl_nvm_data {
-	int n_hw_addrs;
-	u8 hw_addr[ETH_ALEN];
+    int n_hw_addrs;
+    u8 hw_addr[ETH_ALEN];
 
-	u8 calib_version;
-	__le16 calib_voltage;
+    u8 calib_version;
+    __le16 calib_voltage;
 
-	__le16 raw_temperature;
-	__le16 kelvin_temperature;
-	__le16 kelvin_voltage;
-	__le16 xtal_calib[2];
+    __le16 raw_temperature;
+    __le16 kelvin_temperature;
+    __le16 kelvin_voltage;
+    __le16 xtal_calib[2];
 
-	bool sku_cap_band_24ghz_enable;
-	bool sku_cap_band_52ghz_enable;
-	bool sku_cap_11n_enable;
-	bool sku_cap_11ac_enable;
-	bool sku_cap_11ax_enable;
-	bool sku_cap_amt_enable;
-	bool sku_cap_ipan_enable;
-	bool sku_cap_mimo_disabled;
+    bool sku_cap_band_24ghz_enable;
+    bool sku_cap_band_52ghz_enable;
+    bool sku_cap_11n_enable;
+    bool sku_cap_11ac_enable;
+    bool sku_cap_11ax_enable;
+    bool sku_cap_amt_enable;
+    bool sku_cap_ipan_enable;
+    bool sku_cap_mimo_disabled;
 
-	u16 radio_cfg_type;
-	u8 radio_cfg_step;
-	u8 radio_cfg_dash;
-	u8 radio_cfg_pnum;
-	u8 valid_tx_ant, valid_rx_ant;
+    u16 radio_cfg_type;
+    u8 radio_cfg_step;
+    u8 radio_cfg_dash;
+    u8 radio_cfg_pnum;
+    u8 valid_tx_ant, valid_rx_ant;
 
-	u32 nvm_version;
-	s8 max_tx_pwr_half_dbm;
+    u32 nvm_version;
+    s8 max_tx_pwr_half_dbm;
 
-	bool lar_enabled;
-	bool vht160_supported;
-	struct ieee80211_supported_band bands[NUM_NL80211_BANDS];
-	struct ieee80211_channel channels[];
+    bool lar_enabled;
+    bool vht160_supported;
+    struct ieee80211_supported_band bands[NUM_NL80211_BANDS];
+    struct ieee80211_channel channels[];
 };
 
 /**
@@ -88,18 +88,14 @@ struct iwl_nvm_data {
  * relevant values for driver use. The struct must be freed
  * later with iwl_free_nvm_data().
  */
-struct iwl_nvm_data *
-iwl_parse_eeprom_data(struct device *dev, const struct iwl_cfg *cfg,
-		      const u8 *eeprom, size_t eeprom_size);
+struct iwl_nvm_data* iwl_parse_eeprom_data(struct device* dev, const struct iwl_cfg* cfg,
+                                           const u8* eeprom, size_t eeprom_size);
 
-int iwl_init_sband_channels(struct iwl_nvm_data *data,
-			    struct ieee80211_supported_band *sband,
-			    int n_channels, enum nl80211_band band);
+int iwl_init_sband_channels(struct iwl_nvm_data* data, struct ieee80211_supported_band* sband,
+                            int n_channels, enum nl80211_band band);
 
-void iwl_init_ht_hw_capab(const struct iwl_cfg *cfg,
-			  struct iwl_nvm_data *data,
-			  struct ieee80211_sta_ht_cap *ht_info,
-			  enum nl80211_band band,
-			  u8 tx_chains, u8 rx_chains);
+void iwl_init_ht_hw_capab(const struct iwl_cfg* cfg, struct iwl_nvm_data* data,
+                          struct ieee80211_sta_ht_cap* ht_info, enum nl80211_band band,
+                          u8 tx_chains, u8 rx_chains);
 
 #endif /* __iwl_eeprom_parse_h__ */

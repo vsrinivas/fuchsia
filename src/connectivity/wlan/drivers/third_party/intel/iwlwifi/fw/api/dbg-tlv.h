@@ -53,11 +53,11 @@ struct iwl_fw_ini_header {
  *
  * @iwl_fw_ini_header: header
  * @allocation_id: &enum iwl_fw_ini_allocation_id - to bind allocation and hcmd
- *	if needed (DBGC1/DBGC2/SDFX/...)
+ *  if needed (DBGC1/DBGC2/SDFX/...)
  * @buffer_location: type of iwl_fw_ini_buffer_location
  * @size: size in bytes
  * @max_fragments: the maximum allowed fragmentation in the desired memory
- *	allocation above
+ *  allocation above
  * @min_frag_size: the minimum allowed fragmentation size in bytes
  */
 struct iwl_fw_ini_allocation_tlv {
@@ -200,7 +200,7 @@ struct iwl_fw_ini_trigger_tlv {
  * @IWL_FW_TRIGGER_ID_HOST_PEER_CLIENT_INACTIVITY: peer inactivity
  * @FW_DEBUG_TLV_TRIGGER_ID_HOST_DID_INITIATED_EVENT: undefined
  * @IWL_FW_TRIGGER_ID_HOST_TX_LATENCY_THRESHOLD_CROSSED: TX latency
- *	threshold was crossed
+ *  threshold was crossed
  * @IWL_FW_TRIGGER_ID_HOST_TX_RESPONSE_STATUS_FAILED: TX failed
  * @IWL_FW_TRIGGER_ID_HOST_OS_REQ_DEAUTH_PEER: Deauth initiated by host
  * @IWL_FW_TRIGGER_ID_HOST_STOP_GO_REQUEST: stop GO request
@@ -224,7 +224,7 @@ struct iwl_fw_ini_trigger_tlv {
  * @IWL_FW_TRIGGER_ID_HOST_PEER_CLIENT_TX_FAILURES:  undefined
  * @IWL_FW_TRIGGER_ID_HOST_TX_WFD_ACTION_FRAME_FAILED: undefined
  * @IWL_FW_TRIGGER_ID_HOST_AUTH_ASSOC_FAILED: authentication / association
- *	failed
+ *  failed
  * @IWL_FW_TRIGGER_ID_HOST_SCAN_COMPLETE: scan complete event
  * @IWL_FW_TRIGGER_ID_HOST_SCAN_ABORT: scan abort complete
  * @IWL_FW_TRIGGER_ID_HOST_NIC_ALIVE: nic alive message was received

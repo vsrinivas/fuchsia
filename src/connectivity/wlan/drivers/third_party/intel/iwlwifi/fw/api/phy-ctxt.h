@@ -37,14 +37,14 @@
 #define __iwl_fw_api_phy_ctxt_h__
 
 /* Supported bands */
-#define PHY_BAND_5  (0)
+#define PHY_BAND_5 (0)
 #define PHY_BAND_24 (1)
 
 /* Supported channel width, vary if there is VHT support */
-#define PHY_VHT_CHANNEL_MODE20	(0x0)
-#define PHY_VHT_CHANNEL_MODE40	(0x1)
-#define PHY_VHT_CHANNEL_MODE80	(0x2)
-#define PHY_VHT_CHANNEL_MODE160	(0x3)
+#define PHY_VHT_CHANNEL_MODE20 (0x0)
+#define PHY_VHT_CHANNEL_MODE40 (0x1)
+#define PHY_VHT_CHANNEL_MODE80 (0x2)
+#define PHY_VHT_CHANNEL_MODE160 (0x3)
 
 /*
  * Control channel position:
@@ -58,14 +58,14 @@
  * 160Mhz |_______|_______|_______|_______|_______|_______|_______|_______|
  * code      011     010     001     000  |  100     101     110    111
  */
-#define PHY_VHT_CTRL_POS_1_BELOW  (0x0)
-#define PHY_VHT_CTRL_POS_2_BELOW  (0x1)
-#define PHY_VHT_CTRL_POS_3_BELOW  (0x2)
-#define PHY_VHT_CTRL_POS_4_BELOW  (0x3)
-#define PHY_VHT_CTRL_POS_1_ABOVE  (0x4)
-#define PHY_VHT_CTRL_POS_2_ABOVE  (0x5)
-#define PHY_VHT_CTRL_POS_3_ABOVE  (0x6)
-#define PHY_VHT_CTRL_POS_4_ABOVE  (0x7)
+#define PHY_VHT_CTRL_POS_1_BELOW (0x0)
+#define PHY_VHT_CTRL_POS_2_BELOW (0x1)
+#define PHY_VHT_CTRL_POS_3_BELOW (0x2)
+#define PHY_VHT_CTRL_POS_4_BELOW (0x3)
+#define PHY_VHT_CTRL_POS_1_ABOVE (0x4)
+#define PHY_VHT_CTRL_POS_2_ABOVE (0x5)
+#define PHY_VHT_CTRL_POS_3_ABOVE (0x6)
+#define PHY_VHT_CTRL_POS_4_ABOVE (0x7)
 
 /*
  * @band: PHY_BAND_*
@@ -74,36 +74,29 @@
  * @ctrl channel: PHY_[VHT|LEGACY]_CTRL_*
  */
 struct iwl_fw_channel_info {
-	u8 band;
-	u8 channel;
-	u8 width;
-	u8 ctrl_pos;
+    u8 band;
+    u8 channel;
+    u8 width;
+    u8 ctrl_pos;
 } __packed;
 
-#define PHY_RX_CHAIN_DRIVER_FORCE_POS	(0)
-#define PHY_RX_CHAIN_DRIVER_FORCE_MSK \
-	(0x1 << PHY_RX_CHAIN_DRIVER_FORCE_POS)
-#define PHY_RX_CHAIN_VALID_POS		(1)
-#define PHY_RX_CHAIN_VALID_MSK \
-	(0x7 << PHY_RX_CHAIN_VALID_POS)
-#define PHY_RX_CHAIN_FORCE_SEL_POS	(4)
-#define PHY_RX_CHAIN_FORCE_SEL_MSK \
-	(0x7 << PHY_RX_CHAIN_FORCE_SEL_POS)
-#define PHY_RX_CHAIN_FORCE_MIMO_SEL_POS	(7)
-#define PHY_RX_CHAIN_FORCE_MIMO_SEL_MSK \
-	(0x7 << PHY_RX_CHAIN_FORCE_MIMO_SEL_POS)
-#define PHY_RX_CHAIN_CNT_POS		(10)
-#define PHY_RX_CHAIN_CNT_MSK \
-	(0x3 << PHY_RX_CHAIN_CNT_POS)
-#define PHY_RX_CHAIN_MIMO_CNT_POS	(12)
-#define PHY_RX_CHAIN_MIMO_CNT_MSK \
-	(0x3 << PHY_RX_CHAIN_MIMO_CNT_POS)
-#define PHY_RX_CHAIN_MIMO_FORCE_POS	(14)
-#define PHY_RX_CHAIN_MIMO_FORCE_MSK \
-	(0x1 << PHY_RX_CHAIN_MIMO_FORCE_POS)
+#define PHY_RX_CHAIN_DRIVER_FORCE_POS (0)
+#define PHY_RX_CHAIN_DRIVER_FORCE_MSK (0x1 << PHY_RX_CHAIN_DRIVER_FORCE_POS)
+#define PHY_RX_CHAIN_VALID_POS (1)
+#define PHY_RX_CHAIN_VALID_MSK (0x7 << PHY_RX_CHAIN_VALID_POS)
+#define PHY_RX_CHAIN_FORCE_SEL_POS (4)
+#define PHY_RX_CHAIN_FORCE_SEL_MSK (0x7 << PHY_RX_CHAIN_FORCE_SEL_POS)
+#define PHY_RX_CHAIN_FORCE_MIMO_SEL_POS (7)
+#define PHY_RX_CHAIN_FORCE_MIMO_SEL_MSK (0x7 << PHY_RX_CHAIN_FORCE_MIMO_SEL_POS)
+#define PHY_RX_CHAIN_CNT_POS (10)
+#define PHY_RX_CHAIN_CNT_MSK (0x3 << PHY_RX_CHAIN_CNT_POS)
+#define PHY_RX_CHAIN_MIMO_CNT_POS (12)
+#define PHY_RX_CHAIN_MIMO_CNT_MSK (0x3 << PHY_RX_CHAIN_MIMO_CNT_POS)
+#define PHY_RX_CHAIN_MIMO_FORCE_POS (14)
+#define PHY_RX_CHAIN_MIMO_FORCE_MSK (0x1 << PHY_RX_CHAIN_MIMO_FORCE_POS)
 
 /* TODO: fix the value, make it depend on firmware at runtime? */
-#define NUM_PHY_CTX	3
+#define NUM_PHY_CTX 3
 
 /* TODO: complete missing documentation */
 /**
@@ -112,7 +105,7 @@ struct iwl_fw_channel_info {
  * @id_and_color: ID and color of the relevant Binding
  * @action: action to perform, one of FW_CTXT_ACTION_*
  * @apply_time: 0 means immediate apply and context switch.
- *	other value means apply new params after X usecs
+ *  other value means apply new params after X usecs
  * @tx_param_color: ???
  * @ci: channel info
  * @txchain_info: ???
@@ -121,17 +114,17 @@ struct iwl_fw_channel_info {
  * @dsp_cfg_flags: set to 0
  */
 struct iwl_phy_context_cmd {
-	/* COMMON_INDEX_HDR_API_S_VER_1 */
-	__le32 id_and_color;
-	__le32 action;
-	/* PHY_CONTEXT_DATA_API_S_VER_1 */
-	__le32 apply_time;
-	__le32 tx_param_color;
-	struct iwl_fw_channel_info ci;
-	__le32 txchain_info;
-	__le32 rxchain_info;
-	__le32 acquisition_data;
-	__le32 dsp_cfg_flags;
+    /* COMMON_INDEX_HDR_API_S_VER_1 */
+    __le32 id_and_color;
+    __le32 action;
+    /* PHY_CONTEXT_DATA_API_S_VER_1 */
+    __le32 apply_time;
+    __le32 tx_param_color;
+    struct iwl_fw_channel_info ci;
+    __le32 txchain_info;
+    __le32 rxchain_info;
+    __le32 acquisition_data;
+    __le32 dsp_cfg_flags;
 } __packed; /* PHY_CONTEXT_CMD_API_VER_1 */
 
 #endif /* __iwl_fw_api_phy_ctxt_h__ */

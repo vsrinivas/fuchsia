@@ -38,8 +38,8 @@
 
 /* type of devices for defining SOC latency */
 enum iwl_soc_device_types {
-	SOC_CONFIG_CMD_INTEGRATED   = 0x0,
-	SOC_CONFIG_CMD_DISCRETE     = 0x1,
+    SOC_CONFIG_CMD_INTEGRATED = 0x0,
+    SOC_CONFIG_CMD_DISCRETE = 0x1,
 };
 
 /**
@@ -49,8 +49,8 @@ enum iwl_soc_device_types {
  * @soc_latency: time for SOC to ensure stable power & XTAL
  */
 struct iwl_soc_configuration_cmd {
-	__le32 device_type;
-	__le32 soc_latency;
+    __le32 device_type;
+    __le32 soc_latency;
 } __packed; /* SOC_CONFIGURATION_CMD_S_VER_1 */
 
 #endif /* __iwl_fw_api_soc_h__ */

@@ -40,10 +40,10 @@
  * enum iwl_prot_offload_subcmd_ids - protocol offload commands
  */
 enum iwl_prot_offload_subcmd_ids {
-	/**
-	 * @STORED_BEACON_NTF: &struct iwl_stored_beacon_notif
-	 */
-	STORED_BEACON_NTF = 0xFF,
+    /**
+     * @STORED_BEACON_NTF: &struct iwl_stored_beacon_notif
+     */
+    STORED_BEACON_NTF = 0xFF,
 };
 
 #define MAX_STORED_BEACON_SIZE 600
@@ -61,14 +61,14 @@ enum iwl_prot_offload_subcmd_ids {
  * @data: beacon data, length in @byte_count
  */
 struct iwl_stored_beacon_notif {
-	__le32 system_time;
-	__le64 tsf;
-	__le32 beacon_timestamp;
-	__le16 band;
-	__le16 channel;
-	__le32 rates;
-	__le32 byte_count;
-	u8 data[MAX_STORED_BEACON_SIZE];
+    __le32 system_time;
+    __le64 tsf;
+    __le32 beacon_timestamp;
+    __le16 band;
+    __le16 channel;
+    __le32 rates;
+    __le32 byte_count;
+    u8 data[MAX_STORED_BEACON_SIZE];
 } __packed; /* WOWLAN_STROED_BEACON_INFO_S_VER_2 */
 
 #endif /* __iwl_fw_api_offload_h__ */

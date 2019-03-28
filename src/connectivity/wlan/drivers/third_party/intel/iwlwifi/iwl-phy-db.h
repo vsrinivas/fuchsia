@@ -39,19 +39,17 @@
 #include "iwl-op-mode.h"
 #include "iwl-trans.h"
 
-struct iwl_phy_db *iwl_phy_db_init(struct iwl_trans *trans);
+struct iwl_phy_db* iwl_phy_db_init(struct iwl_trans* trans);
 
-void iwl_phy_db_free(struct iwl_phy_db *phy_db);
+void iwl_phy_db_free(struct iwl_phy_db* phy_db);
 
-int iwl_phy_db_set_section(struct iwl_phy_db *phy_db,
-			   struct iwl_rx_packet *pkt);
-
+int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt);
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
-int iwl_phy_db_get_section_data(struct iwl_phy_db *phy_db,
-				u32 type, u8 **data, u16 *size, u16 ch_id);
+int iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, u32 type, u8** data, u16* size,
+                                u16 ch_id);
 #endif
 
-int iwl_send_phy_db_data(struct iwl_phy_db *phy_db);
+int iwl_send_phy_db_data(struct iwl_phy_db* phy_db);
 
 #endif /* __IWL_PHYDB_H__ */

@@ -31,172 +31,158 @@
  *
  *****************************************************************************/
 
+#include "iwl-dbg-tlv.h"
 #include <linux/firmware.h>
 #include "iwl-trans.h"
-#include "iwl-dbg-tlv.h"
 
-void iwl_fw_dbg_copy_tlv(struct iwl_trans *trans, struct iwl_ucode_tlv *tlv,
-			 bool ext)
-{
-	struct iwl_apply_point_data *data;
-	struct iwl_fw_ini_header *header = (void *)&tlv->data[0];
-	u32 apply_point = le32_to_cpu(header->apply_point);
+void iwl_fw_dbg_copy_tlv(struct iwl_trans* trans, struct iwl_ucode_tlv* tlv, bool ext) {
+    struct iwl_apply_point_data* data;
+    struct iwl_fw_ini_header* header = (void*)&tlv->data[0];
+    u32 apply_point = le32_to_cpu(header->apply_point);
 
-	int copy_size = le32_to_cpu(tlv->length) + sizeof(*tlv);
+    int copy_size = le32_to_cpu(tlv->length) + sizeof(*tlv);
 
-	if (WARN_ONCE(apply_point >= IWL_FW_INI_APPLY_NUM,
-		      "Invalid apply point id %d\n", apply_point))
-		return;
+    if (WARN_ONCE(apply_point >= IWL_FW_INI_APPLY_NUM, "Invalid apply point id %d\n",
+                  apply_point)) {
+        return;
+    }
 
-	if (ext)
-		data = &trans->apply_points_ext[apply_point];
-	else
-		data = &trans->apply_points[apply_point];
+    if (ext) {
+        data = &trans->apply_points_ext[apply_point];
+    } else {
+        data = &trans->apply_points[apply_point];
+    }
 
-	/*
-	 * Make sure we still have room to copy this TLV. Offset points to the
-	 * location the last copy ended.
-	 */
-	if (WARN_ONCE(data->offset + copy_size > data->size,
-		      "Not enough memory for apply point %d\n",
-		      apply_point))
-		return;
+    /*
+     * Make sure we still have room to copy this TLV. Offset points to the
+     * location the last copy ended.
+     */
+    if (WARN_ONCE(data->offset + copy_size > data->size, "Not enough memory for apply point %d\n",
+                  apply_point)) {
+        return;
+    }
 
-	memcpy(data->data + data->offset, (void *)tlv, copy_size);
-	data->offset += copy_size;
+    memcpy(data->data + data->offset, (void*)tlv, copy_size);
+    data->offset += copy_size;
 }
 
-void iwl_alloc_dbg_tlv(struct iwl_trans *trans, size_t len, const u8 *data,
-		       bool ext)
-{
-	struct iwl_ucode_tlv *tlv;
-	u32 size[IWL_FW_INI_APPLY_NUM] = {0};
-	int i;
+void iwl_alloc_dbg_tlv(struct iwl_trans* trans, size_t len, const u8* data, bool ext) {
+    struct iwl_ucode_tlv* tlv;
+    u32 size[IWL_FW_INI_APPLY_NUM] = {0};
+    int i;
 
-	while (len >= sizeof(*tlv)) {
-		u32 tlv_len, tlv_type, apply;
-		struct iwl_fw_ini_header *hdr;
+    while (len >= sizeof(*tlv)) {
+        u32 tlv_len, tlv_type, apply;
+        struct iwl_fw_ini_header* hdr;
 
-		len -= sizeof(*tlv);
-		tlv = (void *)data;
+        len -= sizeof(*tlv);
+        tlv = (void*)data;
 
-		tlv_len = le32_to_cpu(tlv->length);
-		tlv_type = le32_to_cpu(tlv->type);
+        tlv_len = le32_to_cpu(tlv->length);
+        tlv_type = le32_to_cpu(tlv->type);
 
-		if (len < tlv_len)
-			return;
+        if (len < tlv_len) { return; }
 
-		len -= ALIGN(tlv_len, 4);
-		data += sizeof(*tlv) + ALIGN(tlv_len, 4);
+        len -= ALIGN(tlv_len, 4);
+        data += sizeof(*tlv) + ALIGN(tlv_len, 4);
 
-		if (!(tlv_type & IWL_UCODE_INI_TLV_GROUP))
-			continue;
+        if (!(tlv_type & IWL_UCODE_INI_TLV_GROUP)) { continue; }
 
-		hdr = (void *)&tlv->data[0];
-		apply = le32_to_cpu(hdr->apply_point);
+        hdr = (void*)&tlv->data[0];
+        apply = le32_to_cpu(hdr->apply_point);
 
-		IWL_DEBUG_FW(trans, "Read TLV %x, apply point %d\n",
-			     le32_to_cpu(tlv->type), apply);
+        IWL_DEBUG_FW(trans, "Read TLV %x, apply point %d\n", le32_to_cpu(tlv->type), apply);
 
-		if (WARN_ON(apply >= IWL_FW_INI_APPLY_NUM))
-			continue;
+        if (WARN_ON(apply >= IWL_FW_INI_APPLY_NUM)) { continue; }
 
-		size[apply] += sizeof(*tlv) + tlv_len;
-	}
+        size[apply] += sizeof(*tlv) + tlv_len;
+    }
 
-	for (i = 0; i < ARRAY_SIZE(size); i++) {
-		void *mem;
+    for (i = 0; i < ARRAY_SIZE(size); i++) {
+        void* mem;
 
-		if (!size[i])
-			continue;
+        if (!size[i]) { continue; }
 
-		mem = kzalloc(size[i], GFP_KERNEL);
+        mem = kzalloc(size[i], GFP_KERNEL);
 
-		if (!mem) {
-			IWL_ERR(trans, "No memory for apply point %d\n", i);
-			return;
-		}
+        if (!mem) {
+            IWL_ERR(trans, "No memory for apply point %d\n", i);
+            return;
+        }
 
-		if (ext) {
-			trans->apply_points_ext[i].data = mem;
-			trans->apply_points_ext[i].size = size[i];
-		} else {
-			trans->apply_points[i].data = mem;
-			trans->apply_points[i].size = size[i];
-		}
+        if (ext) {
+            trans->apply_points_ext[i].data = mem;
+            trans->apply_points_ext[i].size = size[i];
+        } else {
+            trans->apply_points[i].data = mem;
+            trans->apply_points[i].size = size[i];
+        }
 
-		trans->ini_valid = true;
-	}
+        trans->ini_valid = true;
+    }
 }
 
-void iwl_fw_dbg_free(struct iwl_trans *trans)
-{
-	int i;
+void iwl_fw_dbg_free(struct iwl_trans* trans) {
+    int i;
 
-	for (i = 0; i < ARRAY_SIZE(trans->apply_points); i++) {
-		kfree(trans->apply_points[i].data);
-		trans->apply_points[i].size = 0;
-		trans->apply_points[i].offset = 0;
+    for (i = 0; i < ARRAY_SIZE(trans->apply_points); i++) {
+        kfree(trans->apply_points[i].data);
+        trans->apply_points[i].size = 0;
+        trans->apply_points[i].offset = 0;
 
-		kfree(trans->apply_points_ext[i].data);
-		trans->apply_points_ext[i].size = 0;
-		trans->apply_points_ext[i].offset = 0;
-	}
+        kfree(trans->apply_points_ext[i].data);
+        trans->apply_points_ext[i].size = 0;
+        trans->apply_points_ext[i].offset = 0;
+    }
 }
 
-static int iwl_parse_fw_dbg_tlv(struct iwl_trans *trans, const u8 *data,
-				size_t len)
-{
-	struct iwl_ucode_tlv *tlv;
-	enum iwl_ucode_tlv_type tlv_type;
-	u32 tlv_len;
+static int iwl_parse_fw_dbg_tlv(struct iwl_trans* trans, const u8* data, size_t len) {
+    struct iwl_ucode_tlv* tlv;
+    enum iwl_ucode_tlv_type tlv_type;
+    u32 tlv_len;
 
-	while (len >= sizeof(*tlv)) {
-		len -= sizeof(*tlv);
-		tlv = (void *)data;
+    while (len >= sizeof(*tlv)) {
+        len -= sizeof(*tlv);
+        tlv = (void*)data;
 
-		tlv_len = le32_to_cpu(tlv->length);
-		tlv_type = le32_to_cpu(tlv->type);
+        tlv_len = le32_to_cpu(tlv->length);
+        tlv_type = le32_to_cpu(tlv->type);
 
-		if (len < tlv_len) {
-			IWL_ERR(trans, "invalid TLV len: %zd/%u\n",
-				len, tlv_len);
-			return -EINVAL;
-		}
-		len -= ALIGN(tlv_len, 4);
-		data += sizeof(*tlv) + ALIGN(tlv_len, 4);
+        if (len < tlv_len) {
+            IWL_ERR(trans, "invalid TLV len: %zd/%u\n", len, tlv_len);
+            return -EINVAL;
+        }
+        len -= ALIGN(tlv_len, 4);
+        data += sizeof(*tlv) + ALIGN(tlv_len, 4);
 
-		switch (tlv_type) {
-		case IWL_UCODE_TLV_TYPE_BUFFER_ALLOCATION:
-		case IWL_UCODE_TLV_TYPE_HCMD:
-		case IWL_UCODE_TLV_TYPE_REGIONS:
-		case IWL_UCODE_TLV_TYPE_TRIGGERS:
-		case IWL_UCODE_TLV_TYPE_DEBUG_FLOW:
-			iwl_fw_dbg_copy_tlv(trans, tlv, true);
-		default:
-			WARN_ONCE(1, "Invalid TLV %x\n", tlv_type);
-			break;
-		}
-	}
+        switch (tlv_type) {
+        case IWL_UCODE_TLV_TYPE_BUFFER_ALLOCATION:
+        case IWL_UCODE_TLV_TYPE_HCMD:
+        case IWL_UCODE_TLV_TYPE_REGIONS:
+        case IWL_UCODE_TLV_TYPE_TRIGGERS:
+        case IWL_UCODE_TLV_TYPE_DEBUG_FLOW:
+            iwl_fw_dbg_copy_tlv(trans, tlv, true);
+        default:
+            WARN_ONCE(1, "Invalid TLV %x\n", tlv_type);
+            break;
+        }
+    }
 
-	return 0;
+    return 0;
 }
 
-void iwl_load_fw_dbg_tlv(struct device *dev, struct iwl_trans *trans)
-{
-	const struct firmware *fw;
-	int res;
+void iwl_load_fw_dbg_tlv(struct device* dev, struct iwl_trans* trans) {
+    const struct firmware* fw;
+    int res;
 
-	if (trans->external_ini_loaded || !iwlwifi_mod_params.enable_ini)
-		return;
+    if (trans->external_ini_loaded || !iwlwifi_mod_params.enable_ini) { return; }
 
-	res = request_firmware(&fw, "iwl-dbg-tlv.ini", dev);
-	if (res)
-		return;
+    res = request_firmware(&fw, "iwl-dbg-tlv.ini", dev);
+    if (res) { return; }
 
-	iwl_alloc_dbg_tlv(trans, fw->size, fw->data, true);
-	iwl_parse_fw_dbg_tlv(trans, fw->data, fw->size);
+    iwl_alloc_dbg_tlv(trans, fw->size, fw->data, true);
+    iwl_parse_fw_dbg_tlv(trans, fw->data, fw->size);
 
-	trans->external_ini_loaded = true;
-	release_firmware(fw);
+    trans->external_ini_loaded = true;
+    release_firmware(fw);
 }

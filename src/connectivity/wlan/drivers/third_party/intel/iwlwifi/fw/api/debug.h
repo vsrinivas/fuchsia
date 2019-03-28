@@ -40,47 +40,47 @@
  * enum iwl_debug_cmds - debug commands
  */
 enum iwl_debug_cmds {
-	/**
-	 * @LMAC_RD_WR:
-	 * LMAC memory read/write, using &struct iwl_dbg_mem_access_cmd and
-	 * &struct iwl_dbg_mem_access_rsp
-	 */
-	LMAC_RD_WR = 0x0,
-	/**
-	 * @UMAC_RD_WR:
-	 * UMAC memory read/write, using &struct iwl_dbg_mem_access_cmd and
-	 * &struct iwl_dbg_mem_access_rsp
-	 */
-	UMAC_RD_WR = 0x1,
+    /**
+     * @LMAC_RD_WR:
+     * LMAC memory read/write, using &struct iwl_dbg_mem_access_cmd and
+     * &struct iwl_dbg_mem_access_rsp
+     */
+    LMAC_RD_WR = 0x0,
+    /**
+     * @UMAC_RD_WR:
+     * UMAC memory read/write, using &struct iwl_dbg_mem_access_cmd and
+     * &struct iwl_dbg_mem_access_rsp
+     */
+    UMAC_RD_WR = 0x1,
 #ifdef CPTCFG_IWLWIFI_DEBUG_HOST_CMD_ENABLED
-	/**
-	 * @DEBUG_HOST_NTF:
-	 * &struct iwl_adwell_fine_tune_metrics_report or
-	 * &struct iwl_channel_dwell_report or
-	 * &struct iwl_profiling_notification
-	 */
-	DEBUG_HOST_NTF = 0xFC,
+    /**
+     * @DEBUG_HOST_NTF:
+     * &struct iwl_adwell_fine_tune_metrics_report or
+     * &struct iwl_channel_dwell_report or
+     * &struct iwl_profiling_notification
+     */
+    DEBUG_HOST_NTF = 0xFC,
 #endif
-	/**
-	 * @MFU_ASSERT_DUMP_NTF:
-	 * &struct iwl_mfu_assert_dump_notif
-	 */
-	MFU_ASSERT_DUMP_NTF = 0xFE,
+    /**
+     * @MFU_ASSERT_DUMP_NTF:
+     * &struct iwl_mfu_assert_dump_notif
+     */
+    MFU_ASSERT_DUMP_NTF = 0xFE,
 };
 
 /* Error response/notification */
 enum {
-	FW_ERR_UNKNOWN_CMD = 0x0,
-	FW_ERR_INVALID_CMD_PARAM = 0x1,
-	FW_ERR_SERVICE = 0x2,
-	FW_ERR_ARC_MEMORY = 0x3,
-	FW_ERR_ARC_CODE = 0x4,
-	FW_ERR_WATCH_DOG = 0x5,
-	FW_ERR_WEP_GRP_KEY_INDX = 0x10,
-	FW_ERR_WEP_KEY_SIZE = 0x11,
-	FW_ERR_OBSOLETE_FUNC = 0x12,
-	FW_ERR_UNEXPECTED = 0xFE,
-	FW_ERR_FATAL = 0xFF
+    FW_ERR_UNKNOWN_CMD = 0x0,
+    FW_ERR_INVALID_CMD_PARAM = 0x1,
+    FW_ERR_SERVICE = 0x2,
+    FW_ERR_ARC_MEMORY = 0x3,
+    FW_ERR_ARC_CODE = 0x4,
+    FW_ERR_WATCH_DOG = 0x5,
+    FW_ERR_WEP_GRP_KEY_INDX = 0x10,
+    FW_ERR_WEP_KEY_SIZE = 0x11,
+    FW_ERR_OBSOLETE_FUNC = 0x12,
+    FW_ERR_UNEXPECTED = 0xFE,
+    FW_ERR_FATAL = 0xFF
 };
 
 /**
@@ -95,55 +95,55 @@ enum {
  * @timestamp: TSF in usecs.
  */
 struct iwl_error_resp {
-	__le32 error_type;
-	u8 cmd_id;
-	u8 reserved1;
-	__le16 bad_cmd_seq_num;
-	__le32 error_service;
-	__le64 timestamp;
+    __le32 error_type;
+    u8 cmd_id;
+    u8 reserved1;
+    __le16 bad_cmd_seq_num;
+    __le32 error_service;
+    __le64 timestamp;
 } __packed;
 
-#define TX_FIFO_MAX_NUM_9000		8
-#define TX_FIFO_MAX_NUM			15
-#define RX_FIFO_MAX_NUM			2
-#define TX_FIFO_INTERNAL_MAX_NUM	6
+#define TX_FIFO_MAX_NUM_9000 8
+#define TX_FIFO_MAX_NUM 15
+#define RX_FIFO_MAX_NUM 2
+#define TX_FIFO_INTERNAL_MAX_NUM 6
 
 /**
  * struct iwl_shared_mem_cfg_v2 - Shared memory configuration information
  *
  * @shared_mem_addr: shared memory addr (pre 8000 HW set to 0x0 as MARBH is not
- *	accessible)
+ *  accessible)
  * @shared_mem_size: shared memory size
  * @sample_buff_addr: internal sample (mon/adc) buff addr (pre 8000 HW set to
- *	0x0 as accessible only via DBGM RDAT)
+ *  0x0 as accessible only via DBGM RDAT)
  * @sample_buff_size: internal sample buff size
  * @txfifo_addr: start addr of TXF0 (excluding the context table 0.5KB), (pre
- *	8000 HW set to 0x0 as not accessible)
+ *  8000 HW set to 0x0 as not accessible)
  * @txfifo_size: size of TXF0 ... TXF7
  * @rxfifo_size: RXF1, RXF2 sizes. If there is no RXF2, it'll have a value of 0
  * @page_buff_addr: used by UMAC and performance debug (page miss analysis),
- *	when paging is not supported this should be 0
+ *  when paging is not supported this should be 0
  * @page_buff_size: size of %page_buff_addr
  * @rxfifo_addr: Start address of rxFifo
  * @internal_txfifo_addr: start address of internalFifo
  * @internal_txfifo_size: internal fifos' size
  *
  * NOTE: on firmware that don't have IWL_UCODE_TLV_CAPA_EXTEND_SHARED_MEM_CFG
- *	 set, the last 3 members don't exist.
+ *   set, the last 3 members don't exist.
  */
 struct iwl_shared_mem_cfg_v2 {
-	__le32 shared_mem_addr;
-	__le32 shared_mem_size;
-	__le32 sample_buff_addr;
-	__le32 sample_buff_size;
-	__le32 txfifo_addr;
-	__le32 txfifo_size[TX_FIFO_MAX_NUM_9000];
-	__le32 rxfifo_size[RX_FIFO_MAX_NUM];
-	__le32 page_buff_addr;
-	__le32 page_buff_size;
-	__le32 rxfifo_addr;
-	__le32 internal_txfifo_addr;
-	__le32 internal_txfifo_size[TX_FIFO_INTERNAL_MAX_NUM];
+    __le32 shared_mem_addr;
+    __le32 shared_mem_size;
+    __le32 sample_buff_addr;
+    __le32 sample_buff_size;
+    __le32 txfifo_addr;
+    __le32 txfifo_size[TX_FIFO_MAX_NUM_9000];
+    __le32 rxfifo_size[RX_FIFO_MAX_NUM];
+    __le32 page_buff_addr;
+    __le32 page_buff_size;
+    __le32 rxfifo_addr;
+    __le32 internal_txfifo_addr;
+    __le32 internal_txfifo_size[TX_FIFO_INTERNAL_MAX_NUM];
 } __packed; /* SHARED_MEM_ALLOC_API_S_VER_2 */
 
 /**
@@ -155,10 +155,10 @@ struct iwl_shared_mem_cfg_v2 {
  * @rxfifo1_size: RXF1 size
  */
 struct iwl_shared_mem_lmac_cfg {
-	__le32 txfifo_addr;
-	__le32 txfifo_size[TX_FIFO_MAX_NUM];
-	__le32 rxfifo1_addr;
-	__le32 rxfifo1_size;
+    __le32 txfifo_addr;
+    __le32 txfifo_size[TX_FIFO_MAX_NUM];
+    __le32 rxfifo1_addr;
+    __le32 rxfifo1_size;
 
 } __packed; /* SHARED_MEM_ALLOC_LMAC_API_S_VER_1 */
 
@@ -172,22 +172,22 @@ struct iwl_shared_mem_lmac_cfg {
  * @rxfifo2_addr: start addr of RXF2
  * @rxfifo2_size: size of RXF2
  * @page_buff_addr: used by UMAC and performance debug (page miss analysis),
- *	when paging is not supported this should be 0
+ *  when paging is not supported this should be 0
  * @page_buff_size: size of %page_buff_addr
  * @lmac_num: number of LMACs (1 or 2)
  * @lmac_smem: per - LMAC smem data
  */
 struct iwl_shared_mem_cfg {
-	__le32 shared_mem_addr;
-	__le32 shared_mem_size;
-	__le32 sample_buff_addr;
-	__le32 sample_buff_size;
-	__le32 rxfifo2_addr;
-	__le32 rxfifo2_size;
-	__le32 page_buff_addr;
-	__le32 page_buff_size;
-	__le32 lmac_num;
-	struct iwl_shared_mem_lmac_cfg lmac_smem[2];
+    __le32 shared_mem_addr;
+    __le32 shared_mem_size;
+    __le32 sample_buff_addr;
+    __le32 sample_buff_size;
+    __le32 rxfifo2_addr;
+    __le32 rxfifo2_size;
+    __le32 page_buff_addr;
+    __le32 page_buff_size;
+    __le32 lmac_num;
+    struct iwl_shared_mem_lmac_cfg lmac_smem[2];
 } __packed; /* SHARED_MEM_ALLOC_API_S_VER_3 */
 
 /**
@@ -198,14 +198,14 @@ struct iwl_shared_mem_cfg {
  * @status: MFUART loading status
  * @duration: MFUART loading time
  * @image_size: MFUART image size in bytes
-*/
+ */
 struct iwl_mfuart_load_notif {
-	__le32 installed_ver;
-	__le32 external_ver;
-	__le32 status;
-	__le32 duration;
-	/* image size valid only in v2 of the command */
-	__le32 image_size;
+    __le32 installed_ver;
+    __le32 external_ver;
+    __le32 status;
+    __le32 duration;
+    /* image size valid only in v2 of the command */
+    __le32 image_size;
 } __packed; /* MFU_LOADER_NTFY_API_S_VER_2 */
 
 /**
@@ -219,12 +219,12 @@ struct iwl_mfuart_load_notif {
  * @data: data buffer
  */
 struct iwl_mfu_assert_dump_notif {
-	__le32   assert_id;
-	__le32   curr_reset_num;
-	__le16   index_num;
-	__le16   parts_num;
-	__le32   data_size;
-	__le32   data[0];
+    __le32 assert_id;
+    __le32 curr_reset_num;
+    __le16 index_num;
+    __le16 parts_num;
+    __le32 data_size;
+    __le32 data[0];
 } __packed; /* MFU_DUMP_ASSERT_API_S_VER_1 */
 
 /**
@@ -236,8 +236,8 @@ struct iwl_mfu_assert_dump_notif {
  * @MARKER_ID_SYNC_CLOCK: sync FW time and systime
  */
 enum iwl_mvm_marker_id {
-	MARKER_ID_TX_FRAME_LATENCY = 1,
-	MARKER_ID_SYNC_CLOCK = 2,
+    MARKER_ID_TX_FRAME_LATENCY = 1,
+    MARKER_ID_SYNC_CLOCK = 2,
 }; /* MARKER_ID_API_E_VER_2 */
 
 /**
@@ -256,11 +256,11 @@ enum iwl_mvm_marker_id {
  * @metadata: additional meta data that will be written to the unsiffer log
  */
 struct iwl_mvm_marker {
-	u8 dw_len;
-	u8 marker_id;
-	__le16 reserved;
-	__le64 timestamp;
-	__le32 metadata[0];
+    u8 dw_len;
+    u8 marker_id;
+    __le16 reserved;
+    __le64 timestamp;
+    __le32 metadata[0];
 } __packed; /* MARKER_API_S_VER_1 */
 
 /**
@@ -269,14 +269,14 @@ struct iwl_mvm_marker {
  * @gp2: The gp2 clock value in the FW
  */
 struct iwl_mvm_marker_rsp {
-	__le32 gp2;
+    __le32 gp2;
 } __packed;
 
 /* Operation types for the debug mem access */
 enum {
-	DEBUG_MEM_OP_READ = 0,
-	DEBUG_MEM_OP_WRITE = 1,
-	DEBUG_MEM_OP_WRITE_BYTES = 2,
+    DEBUG_MEM_OP_READ = 0,
+    DEBUG_MEM_OP_WRITE = 1,
+    DEBUG_MEM_OP_WRITE_BYTES = 2,
 };
 
 #define DEBUG_MEM_MAX_SIZE_DWORDS 32
@@ -289,19 +289,19 @@ enum {
  * @data: for write opeations, contains the source buffer
  */
 struct iwl_dbg_mem_access_cmd {
-	__le32 op;
-	__le32 addr;
-	__le32 len;
-	__le32 data[];
+    __le32 op;
+    __le32 addr;
+    __le32 len;
+    __le32 data[];
 } __packed; /* DEBUG_(U|L)MAC_RD_WR_CMD_API_S_VER_1 */
 
 /* Status responses for the debug mem access */
 enum {
-	DEBUG_MEM_STATUS_SUCCESS = 0x0,
-	DEBUG_MEM_STATUS_FAILED = 0x1,
-	DEBUG_MEM_STATUS_LOCKED = 0x2,
-	DEBUG_MEM_STATUS_HIDDEN = 0x3,
-	DEBUG_MEM_STATUS_LENGTH = 0x4,
+    DEBUG_MEM_STATUS_SUCCESS = 0x0,
+    DEBUG_MEM_STATUS_FAILED = 0x1,
+    DEBUG_MEM_STATUS_LOCKED = 0x2,
+    DEBUG_MEM_STATUS_HIDDEN = 0x3,
+    DEBUG_MEM_STATUS_LENGTH = 0x4,
 };
 
 /**
@@ -311,36 +311,35 @@ enum {
  * @data: contains the read DWs
  */
 struct iwl_dbg_mem_access_rsp {
-	__le32 status;
-	__le32 len;
-	__le32 data[];
+    __le32 status;
+    __le32 len;
+    __le32 data[];
 } __packed; /* DEBUG_(U|L)MAC_RD_WR_RSP_API_S_VER_1 */
 
-#define CONT_REC_COMMAND_SIZE	80
-#define ENABLE_CONT_RECORDING	0x15
-#define DISABLE_CONT_RECORDING	0x16
-#define BUFFER_ALLOCATION	0x27
-#define START_DEBUG_RECORDING	0x29
-#define STOP_DEBUG_RECORDING	0x2A
+#define CONT_REC_COMMAND_SIZE 80
+#define ENABLE_CONT_RECORDING 0x15
+#define DISABLE_CONT_RECORDING 0x16
+#define BUFFER_ALLOCATION 0x27
+#define START_DEBUG_RECORDING 0x29
+#define STOP_DEBUG_RECORDING 0x2A
 
 /*
  * struct iwl_continuous_record_mode - recording mode
  */
 struct iwl_continuous_record_mode {
-	__le16 enable_recording;
+    __le16 enable_recording;
 } __packed;
 
 /*
  * struct iwl_continuous_record_cmd - enable/disable continuous recording
  */
 struct iwl_continuous_record_cmd {
-	struct iwl_continuous_record_mode record_mode;
-	u8 pad[CONT_REC_COMMAND_SIZE -
-		sizeof(struct iwl_continuous_record_mode)];
+    struct iwl_continuous_record_mode record_mode;
+    u8 pad[CONT_REC_COMMAND_SIZE - sizeof(struct iwl_continuous_record_mode)];
 } __packed;
 
 /* maximum fragments to be allocated per target of allocationId */
-#define IWL_BUFFER_LOCATION_MAX_FRAGS	2
+#define IWL_BUFFER_LOCATION_MAX_FRAGS 2
 
 /**
  * struct iwl_fragment_data single fragment structure
@@ -348,8 +347,8 @@ struct iwl_continuous_record_cmd {
  * @size: size in bytes
  */
 struct iwl_fragment_data {
-	__le64 address;
-	__le32 size;
+    __le64 address;
+    __le32 size;
 } __packed; /* FRAGMENT_STRUCTURE_API_S_VER_1 */
 
 /**
@@ -360,10 +359,10 @@ struct iwl_fragment_data {
  * @fragments: memory fragments
  */
 struct iwl_buffer_allocation_cmd {
-	__le32 allocation_id;
-	__le32 buffer_location;
-	__le32 num_frags;
-	struct iwl_fragment_data fragments[IWL_BUFFER_LOCATION_MAX_FRAGS];
+    __le32 allocation_id;
+    __le32 buffer_location;
+    __le32 num_frags;
+    struct iwl_fragment_data fragments[IWL_BUFFER_LOCATION_MAX_FRAGS];
 } __packed; /* BUFFER_ALLOCATION_CMD_API_S_VER_1 */
 
 #endif /* __iwl_fw_api_debug_h__ */

@@ -67,26 +67,26 @@ struct iwl_tm_data;
  *
  * The operational mode has a very simple life cycle.
  *
- *	1) The driver layer (iwl-drv.c) chooses the op_mode based on the
- *	   capabilities advertised by the fw file (in TLV format).
- *	2) The driver layer starts the op_mode (ops->start)
- *	3) The op_mode registers mac80211
- *	4) The op_mode is governed by mac80211
- *	5) The driver layer stops the op_mode
+ *  1) The driver layer (iwl-drv.c) chooses the op_mode based on the
+ *     capabilities advertised by the fw file (in TLV format).
+ *  2) The driver layer starts the op_mode (ops->start)
+ *  3) The op_mode registers mac80211
+ *  4) The op_mode is governed by mac80211
+ *  5) The driver layer stops the op_mode
  */
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 /**
  * struct iwl_test_ops: callback to the op mode
  * @send_hcmd: Handler that sends host cmd in the specific op_mode. If this
- *	handler is not registered then sending host cmd will not be supported.
+ *  handler is not registered then sending host cmd will not be supported.
  * @cmd_exec_start: Handler that is used for user preparations before
- *	executing a command. It is optional.
+ *  executing a command. It is optional.
  * @cmd_exec: Handler that is used to execute user's test-mode commands.
- *	It is optional. If this handler is not given, the default handler will
- *	execute.
+ *  It is optional. If this handler is not given, the default handler will
+ *  execute.
  * @cmd_exec_end: Handler that is used for user to cleanup after a command
- *	was executed. It is optional.
+ *  was executed. It is optional.
  *
  * The structure defines the callbacks that the op_mode should handle,
  * inorder to handle logic that is out of the scope of iwl_test.
@@ -111,37 +111,37 @@ struct iwl_test_ops {
  * out *iff* the opmode will never run on hardware with multi-queue capability.
  *
  * @start: start the op_mode. The transport layer is already allocated.
- *	May sleep
+ *  May sleep
  * @stop: stop the op_mode. Must free all the memory allocated.
- *	May sleep
+ *  May sleep
  * @rx: Rx notification to the op_mode. rxb is the Rx buffer itself. Cmd is the
- *	HCMD this Rx responds to. Can't sleep.
+ *  HCMD this Rx responds to. Can't sleep.
  * @rx_rss: data queue RX notification to the op_mode, for (data) notifications
- *	received on the RSS queue(s). The queue parameter indicates which of the
- *	RSS queues received this frame; it will always be non-zero.
- *	This method must not sleep.
+ *  received on the RSS queue(s). The queue parameter indicates which of the
+ *  RSS queues received this frame; it will always be non-zero.
+ *  This method must not sleep.
  * @async_cb: called when an ASYNC command with CMD_WANT_ASYNC_CALLBACK set
- *	completes. Must be atomic.
+ *  completes. Must be atomic.
  * @queue_full: notifies that a HW queue is full.
- *	Must be atomic and called with BH disabled.
+ *  Must be atomic and called with BH disabled.
  * @queue_not_full: notifies that a HW queue is not full any more.
- *	Must be atomic and called with BH disabled.
+ *  Must be atomic and called with BH disabled.
  * @hw_rf_kill:notifies of a change in the HW rf kill switch. True means that
- *	the radio is killed. Return %true if the device should be stopped by
- *	the transport immediately after the call. May sleep.
+ *  the radio is killed. Return %true if the device should be stopped by
+ *  the transport immediately after the call. May sleep.
  * @free_skb: allows the transport layer to free skbs that haven't been
- *	reclaimed by the op_mode. This can happen when the driver is freed and
- *	there are Tx packets pending in the transport layer.
- *	Must be atomic
+ *  reclaimed by the op_mode. This can happen when the driver is freed and
+ *  there are Tx packets pending in the transport layer.
+ *  Must be atomic
  * @nic_error: error notification. Must be atomic and must be called with BH
- *	disabled.
+ *  disabled.
  * @cmd_queue_full: Called when the command queue gets full. Must be atomic and
- *	called with BH disabled.
+ *  called with BH disabled.
  * @nic_config: configure NIC, called before firmware is started.
- *	May sleep
+ *  May sleep
  * @wimax_active: invoked when WiMax becomes active. May sleep
  * @enter_d0i3: configure the fw to enter d0i3. return 1 to indicate d0i3
- *	entrance is aborted (e.g. due to held reference). May sleep.
+ *  entrance is aborted (e.g. due to held reference). May sleep.
  * @exit_d0i3: configure the fw to exit d0i3. May sleep.
  */
 struct iwl_op_mode_ops {
@@ -200,7 +200,7 @@ static inline void iwl_op_mode_rx_rss(struct iwl_op_mode* op_mode, struct napi_s
 
 static inline void iwl_op_mode_async_cb(struct iwl_op_mode* op_mode,
                                         const struct iwl_device_cmd* cmd) {
-    if (op_mode->ops->async_cb) op_mode->ops->async_cb(op_mode, cmd);
+    if (op_mode->ops->async_cb) { op_mode->ops->async_cb(op_mode, cmd); }
 }
 
 static inline void iwl_op_mode_queue_full(struct iwl_op_mode* op_mode, int queue) {
@@ -241,14 +241,14 @@ static inline void iwl_op_mode_wimax_active(struct iwl_op_mode* op_mode) {
 static inline int iwl_op_mode_enter_d0i3(struct iwl_op_mode* op_mode) {
     might_sleep();
 
-    if (!op_mode->ops->enter_d0i3) return 0;
+    if (!op_mode->ops->enter_d0i3) { return 0; }
     return op_mode->ops->enter_d0i3(op_mode);
 }
 
 static inline int iwl_op_mode_exit_d0i3(struct iwl_op_mode* op_mode) {
     might_sleep();
 
-    if (!op_mode->ops->exit_d0i3) return 0;
+    if (!op_mode->ops->exit_d0i3) { return 0; }
     return op_mode->ops->exit_d0i3(op_mode);
 }
 

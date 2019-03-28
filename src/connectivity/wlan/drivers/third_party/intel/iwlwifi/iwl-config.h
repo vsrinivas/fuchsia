@@ -64,10 +64,10 @@ enum iwl_device_family {
  * LED mode
  *    IWL_LED_DEFAULT:  use device default
  *    IWL_LED_RF_STATE: turn LED on/off based on RF state
- *			LED ON  = RF ON
- *			LED OFF = RF OFF
+ *          LED ON  = RF ON
+ *          LED OFF = RF OFF
  *    IWL_LED_BLINK:    adjust led blink rate based on blink table
- *    IWL_LED_DISABLE:	led disabled
+ *    IWL_LED_DISABLE:  led disabled
  */
 enum iwl_led_mode {
     IWL_LED_DEFAULT,
@@ -128,13 +128,13 @@ static inline u8 num_of_ant(u8 mask) {
  * @max_ll_items: max number of OTP blocks
  * @shadow_ram_support: shadow support for OTP memory
  * @led_compensation: compensate on the led on/off time per HW according
- *	to the deviation to achieve the desired led frequency.
- *	The detail algorithm is described in iwl-led.c
+ *  to the deviation to achieve the desired led frequency.
+ *  The detail algorithm is described in iwl-led.c
  * @wd_timeout: TX queues watchdog timeout
  * @max_event_log_size: size of event log buffer size for ucode event logging
  * @shadow_reg_enable: HW shadow register support
  * @apmg_wake_up_wa: should the MAC access REQ be asserted when a command
- *	is in flight. This is due to a HW bug in 7260, 3160 and 7265.
+ *  is in flight. This is due to a HW bug in 7260, 3160 and 7265.
  * @scd_chain_ext_wa: should the chain extension feature in SCD be disabled.
  * @max_tfd_queue_size: max number of entries in tfd queue.
  */
@@ -183,7 +183,7 @@ struct iwl_tt_tx_backoff {
  * @ct_kill_entry: CT Kill entry threshold
  * @ct_kill_exit: CT Kill exit threshold
  * @ct_kill_duration: The time  intervals (in uSec) in which the driver needs
- *	to checks whether to exit CT Kill.
+ *  to checks whether to exit CT Kill.
  * @dynamic_smps_entry: Dynamic SMPS entry threshold
  * @dynamic_smps_exit: Dynamic SMPS exit threshold
  * @tx_protection_entry: TX protection entry threshold
@@ -244,23 +244,23 @@ struct iwl_pwr_tx_backoff {
  *
  * @flag_sw_reset: reset the device
  * @flag_mac_clock_ready:
- *	Indicates MAC (ucode processor, etc.) is powered up and can run.
- *	Internal resources are accessible.
- *	NOTE:  This does not indicate that the processor is actually running.
- *	NOTE:  This does not indicate that device has completed
- *	       init or post-power-down restore of internal SRAM memory.
- *	       Use CSR_UCODE_DRV_GP1_BIT_MAC_SLEEP as indication that
- *	       SRAM is restored and uCode is in normal operation mode.
- *	       This note is relevant only for pre 5xxx devices.
- *	NOTE:  After device reset, this bit remains "0" until host sets
- *	       INIT_DONE
+ *  Indicates MAC (ucode processor, etc.) is powered up and can run.
+ *  Internal resources are accessible.
+ *  NOTE:  This does not indicate that the processor is actually running.
+ *  NOTE:  This does not indicate that device has completed
+ *         init or post-power-down restore of internal SRAM memory.
+ *         Use CSR_UCODE_DRV_GP1_BIT_MAC_SLEEP as indication that
+ *         SRAM is restored and uCode is in normal operation mode.
+ *         This note is relevant only for pre 5xxx devices.
+ *  NOTE:  After device reset, this bit remains "0" until host sets
+ *         INIT_DONE
  * @flag_init_done: Host sets this to put device into fully operational
- *	D0 power mode. Host resets this after SW_RESET to put device into
- *	low power mode.
+ *  D0 power mode. Host resets this after SW_RESET to put device into
+ *  low power mode.
  * @flag_mac_access_req: Host sets this to request and maintain MAC wakeup,
- *	to allow host access to device-internal resources. Host must wait for
- *	mac_clock_ready (and !GOING_TO_SLEEP) before accessing non-CSR device
- *	registers.
+ *  to allow host access to device-internal resources. Host must wait for
+ *  mac_clock_ready (and !GOING_TO_SLEEP) before accessing non-CSR device
+ *  registers.
  * @flag_val_mac_access_en: mac access is enabled
  * @flag_master_dis: disable master
  * @flag_stop_master: stop master
@@ -289,8 +289,8 @@ struct iwl_csr_params {
  * struct iwl_cfg
  * @name: Official name of the device
  * @fw_name_pre: Firmware filename prefix. The api version and extension
- *	(.ucode) will be added to filename before loading from disk. The
- *	filename is constructed as fw_name_pre<api>.ucode.
+ *  (.ucode) will be added to filename before loading from disk. The
+ *  filename is constructed as fw_name_pre<api>.ucode.
  * @ucode_api_max: Highest version of uCode API supported by driver.
  * @ucode_api_min: Lowest version of uCode API supported by driver.
  * @max_inst_size: The maximal length of the fw inst section (only DVM)
@@ -308,7 +308,7 @@ struct iwl_csr_params {
  * @internal_wimax_coex: internal wifi/wimax combo device
  * @high_temp: Is this NIC is designated to be in high temperature.
  * @host_interrupt_operation_mode: device needs host interrupt operation
- *	mode set
+ *  mode set
  * @nvm_hw_section_num: the ID of the HW NVM section
  * @mac_addr_from_csr: read HW address from CSR registers
  * @features: hw features, any combination of feature_whitelist
@@ -317,9 +317,9 @@ struct iwl_csr_params {
  * @max_rx_agg_size: max RX aggregation size of the ADDBA request/response
  * @max_tx_agg_size: max TX aggregation size of the ADDBA request/response
  * @max_ht_ampdu_factor: the exponent of the max length of A-MPDU that the
- *	station can receive in HT
+ *  station can receive in HT
  * @max_vht_ampdu_exponent: the exponent of the max length of A-MPDU that the
- *	station can receive in VHT
+ *  station can receive in VHT
  * @dccm_offset: offset from which DCCM begins
  * @dccm_len: length of DCCM (including runtime stack CCM)
  * @dccm2_offset: offset from which the second DCCM begins

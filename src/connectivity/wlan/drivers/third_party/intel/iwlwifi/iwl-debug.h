@@ -133,10 +133,10 @@ __printf(5, 6) static inline void __iwl_dbg(struct device* dev, u32 level, bool 
  *
  * The active debug levels can be accessed via files
  *
- *	/sys/module/iwlwifi/parameters/debug
+ *  /sys/module/iwlwifi/parameters/debug
  * when CPTCFG_IWLWIFI_DEBUG=y.
  *
- *	/sys/kernel/debug/phy0/iwlwifi/debug/debug_level
+ *  /sys/kernel/debug/phy0/iwlwifi/debug/debug_level
  * when CPTCFG_IWLWIFI_DEBUGFS=y.
  *
  */

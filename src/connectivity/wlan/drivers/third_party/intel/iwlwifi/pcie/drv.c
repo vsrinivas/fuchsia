@@ -42,8 +42,8 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #if 0  // NEEDS_PORTING
 #include "internal.h"
 #endif  // NEEDS_PORTING
