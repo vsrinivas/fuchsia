@@ -18,9 +18,9 @@
 ## Arguments:
 ##   -h|--help    Print out this message.
 
-DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+DEVSHELL_CONTRIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 VERBOSE=false
-source "${DEVSHELL_DIR}"/lib/vars.sh || exit $?
+source "${DEVSHELL_CONTRIB_DIR}"/lib/vars.sh || exit $?
 fx-config-read
 
 case $1 in
@@ -36,10 +36,10 @@ esac
 
 case "$(uname -s)" in
     Linux)
-        PREBUILT_DART="${DEVSHELL_DIR}/../../topaz/tools/prebuilt-dart-sdk/linux-x64/bin/dart"
+        PREBUILT_DART="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/linux-x64/bin/dart"
         ;;
     Darwin)
-        PREBUILT_DART="${DEVSHELL_DIR}/../../topaz/tools/prebuilt-dart-sdk/mac-x64/bin/dart"
+        PREBUILT_DART="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/mac-x64/bin/dart"
         ;;
 esac
 IP_ADDR_LINK_LOCAL="$(get-fuchsia-device-addr)"
@@ -53,7 +53,7 @@ IP_IFACE="${IP_ADDR_LINK_LOCAL##*%}"
 SSH_CONFIG="${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config"
 # Just compress the rest of the args to an array here.
 ARGS="$(echo "$@")"
-DART_TUNNEL_LIB_DIR="${DEVSHELL_DIR}/dart-tunnel-lib"
+DART_TUNNEL_LIB_DIR="${DEVSHELL_CONTRIB_DIR}/dart-tunnel-lib"
 DART_TUNNEL_PACKAGES="${DART_TUNNEL_LIB_DIR}/dart-tunnel.packages"
 DART_BIN="${DART_TUNNEL_LIB_DIR}/dart-tunnel.dart"
 
