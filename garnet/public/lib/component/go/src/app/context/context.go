@@ -10,8 +10,7 @@ import (
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
-
-	"svc/svcns"
+	"syscall/zx/io"
 
 	"fidl/fuchsia/sys"
 )
@@ -45,107 +44,113 @@ type Connector struct {
 	serviceRoot zx.Handle
 }
 
-type Context struct {
-	connector       *Connector
-	environment     *sys.EnvironmentInterface
-	launcher        *sys.LauncherInterface
-	servicesMu      sync.Mutex
-	OutgoingService *svcns.Namespace
-	appServices     zx.Handle
-	serviceProvider sys.ServiceProviderService
+type OutDirectory mapDirectory
+
+func (od OutDirectory) getMapDirectory(name string) mapDirectory {
+	if dir, ok := od[name]; ok {
+		if dir, ok := dir.(*DirectoryWrapper); ok {
+			if dir, ok := dir.Directory.(mapDirectory); ok {
+				return dir
+			}
+			panic(fmt.Sprintf("unexpected %s type %T", name, dir))
+		}
+		panic(fmt.Sprintf("unexpected %s type %T", name, dir))
+	}
+	dir := make(mapDirectory)
+	od[name] = &DirectoryWrapper{
+		Directory: dir,
+	}
+	return dir
 }
 
-func getServiceRoot() zx.Handle {
+func (od OutDirectory) AddObjects(name string, n Node) {
+	od.getMapDirectory("objects")[name] = n
+}
+
+func (od OutDirectory) AddService(name string, service ServiceFn) {
+	od.getMapDirectory("public")[name] = service
+}
+
+type Context struct {
+	connector   Connector
+	environment struct {
+		sync.Once
+		*sys.EnvironmentInterface
+	}
+	launcher struct {
+		sync.Once
+		*sys.LauncherInterface
+	}
+	OutgoingService OutDirectory
+}
+
+func CreateFromStartupInfo() *Context {
 	c0, c1, err := zx.NewChannel(0)
 	if err != nil {
-		return zx.HandleInvalid
+		panic(err)
 	}
 
-	// TODO: Use "/svc" once that actually works.
-	err = fdio.ServiceConnect("/svc/.", zx.Handle(c0))
-	if err != nil {
-		return zx.HandleInvalid
+	// TODO(tamird): use "/svc" once it no longer causes crashes.
+	if err := fdio.ServiceConnect("/svc/.", zx.Handle(c0)); err != nil {
+		panic(err)
 	}
-	return zx.Handle(c1)
-}
-
-func New(serviceRoot, directoryRequest, appServices zx.Handle) *Context {
 	c := &Context{
-		connector: &Connector{
-			serviceRoot: serviceRoot,
+		connector: Connector{
+			serviceRoot: zx.Handle(c1),
 		},
-		appServices: appServices,
+		OutgoingService: make(OutDirectory),
 	}
 
-	c.OutgoingService = svcns.New()
-
-	if directoryRequest.IsValid() {
-		c.OutgoingService.ServeDirectory(zx.Channel(directoryRequest))
+	if directoryRequest := GetStartupHandle(HandleInfo{
+		Type: HandleDirectoryRequest,
+		Arg:  0,
+	}); directoryRequest.IsValid() {
+		if err := (&DirectoryWrapper{
+			Directory: mapDirectory(c.OutgoingService),
+		}).addConnection(0, 0, io.NodeInterfaceRequest{
+			Channel: zx.Channel(directoryRequest),
+		}, false); err != nil {
+			panic(err)
+		}
 	}
 
 	return c
 }
 
 func (c *Context) Connector() *Connector {
-	return c.connector
+	return &c.connector
 }
 
 func (c *Context) Environment() *sys.EnvironmentInterface {
-	c.servicesMu.Lock()
-	defer c.servicesMu.Unlock()
-	if c.environment != nil {
-		return c.environment
-	}
-	r, p, err := sys.NewEnvironmentInterfaceRequest()
-	if err != nil {
-		panic(err.Error())
-	}
-	c.environment = p
-	c.ConnectToEnvService(r)
-	return c.environment
+	c.environment.Do(func() {
+		r, p, err := sys.NewEnvironmentInterfaceRequest()
+		if err != nil {
+			panic(err)
+		}
+		c.environment.EnvironmentInterface = p
+		c.Connector().ConnectToEnvService(r)
+	})
+	return c.environment.EnvironmentInterface
 }
 
 func (c *Context) Launcher() *sys.LauncherInterface {
-	c.servicesMu.Lock()
-	defer c.servicesMu.Unlock()
-	if c.launcher != nil {
-		return c.launcher
-	}
-	r, p, err := sys.NewLauncherInterfaceRequest()
-	if err != nil {
-		panic(err.Error())
-	}
-	c.launcher = p
-	c.ConnectToEnvService(r)
-	return c.launcher
-}
-
-func (c *Context) Serve() {
-	if c.appServices.IsValid() {
-		c.serviceProvider.Add(c.OutgoingService, zx.Channel(c.appServices), nil)
-	}
-	go fidl.Serve()
+	c.launcher.Do(func() {
+		r, p, err := sys.NewLauncherInterfaceRequest()
+		if err != nil {
+			panic(err)
+		}
+		c.launcher.LauncherInterface = p
+		c.Connector().ConnectToEnvService(r)
+	})
+	return c.launcher.LauncherInterface
 }
 
 func (c *Context) ConnectToEnvService(r fidl.ServiceRequest) {
-	c.connector.ConnectToEnvService(r)
+	c.Connector().ConnectToEnvService(r)
 }
 
 func (c *Connector) ConnectToEnvService(r fidl.ServiceRequest) {
-	c.ConnectToEnvServiceAt(r.Name(), r.ToChannel())
-}
-
-func (c *Connector) ConnectToEnvServiceAt(name string, h zx.Channel) {
-	err := fdio.ServiceConnectAt(c.serviceRoot, name, zx.Handle(h))
-	if err != nil {
-		panic(fmt.Sprintf("ConnectToEnvService: %v: %v", name, err))
+	if err := fdio.ServiceConnectAt(c.serviceRoot, r.Name(), zx.Handle(r.ToChannel())); err != nil {
+		panic(err)
 	}
-}
-
-func CreateFromStartupInfo() *Context {
-	directoryRequest := GetStartupHandle(
-		HandleInfo{Type: HandleDirectoryRequest, Arg: 0})
-	appServices := GetStartupHandle(
-		HandleInfo{Type: HandleAppServices, Arg: 0})
-	return New(getServiceRoot(), directoryRequest, appServices)
 }

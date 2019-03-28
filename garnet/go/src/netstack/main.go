@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"runtime"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -22,7 +23,6 @@ import (
 	"netstack/link/eth"
 
 	"fidl/fuchsia/devicesettings"
-	"fidl/fuchsia/inspect"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
@@ -125,14 +125,13 @@ func Main() {
 		}
 	}
 
-	var inspectService inspect.InspectService
-	ctx.OutgoingService.AddService(inspect.InspectName, func(c zx.Channel) error {
-		_, err := inspectService.Add(&statCounterInspectImpl{
-			svc:   &inspectService,
-			name:  "netstack",
-			Value: reflect.ValueOf(stk.Stats()),
-		}, c, nil)
-		return err
+	ctx.OutgoingService.AddObjects("counters", &context.DirectoryWrapper{
+		Directory: context.DirectoryWrapper{
+			Directory: &statCounterInspectImpl{
+				name:  "Networking Stat Counters",
+				Value: reflect.ValueOf(stk.Stats()),
+			},
+		},
 	})
 
 	ctx.OutgoingService.AddService(netstack.NetstackName, func(c zx.Channel) error {
@@ -184,16 +183,10 @@ func Main() {
 	}
 	ns.filter = f
 
-	ctx.Serve()
-
-	// Serve FIDL bindings on two threads. Since the Go FIDL bindings are blocking,
-	// this allows two outstanding requests at a time.
-	// TODO(tkilbourn): revisit this and tune the number of serving threads.
-	for i := 0; i < 2; i++ {
-		go fidl.Serve()
-	}
-
 	go pprofListen()
 
-	<-(chan struct{})(nil)
+	for i := 1; i < runtime.NumCPU(); i++ {
+		go fidl.Serve()
+	}
+	fidl.Serve()
 }

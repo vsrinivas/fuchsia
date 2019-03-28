@@ -52,26 +52,17 @@ the future.
 
 # API
 
-## [FIDL](/zircon/system/fidl/fuchsia-inspect/inspect.fidl)
-
-The FIDL protocol, `fuchsia.inspect.Inspect`, exposes the following
-operations on an object:
-
-### `ReadData`
-Read the object's properties and metrics.
-
-### `ListChildren`
-Obtain a list of names for the object's children.
-
 ## Filesystem Interface
-
-Objects are exposed as a tree in the filesystem. Each directory is
-named with the object's name, and they must expose a file `.channel`
-that allows binding to the `fuchsia.inspect.Inspect` interface.
 
 Components by default obtain a reference to their `out/` directory in
 their hub. It is customary to expose a root-level object called `objects`
 at `out/objects/`.
+
+*Top-level* objects are exposed as a tree in the filesystem. Each directory is
+named with the object's name, and must contain a node named
+`fuchsia.inspect.Inspect` that allows binding to an implementation of
+[`fuchsia.inspect.Inspect`](/zircon/system/fidl/fuchsia-inspect/inspect.fidl).
+Nested objects are discovered via this implementation.
 
 The manager for a component's environment may expose its own information
 about the component to the hub. For instance, appmgr exposes

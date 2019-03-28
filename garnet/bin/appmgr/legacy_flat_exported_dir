@@ -1,8 +1,0 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
-
-The presence of this file at a package's meta/legacy_flat_exported_dir indicates
-that the package cannot serve nested directories from its exported directory at
-runtime. This is a temporary step to help with migration.
-The contents of this file do not matter.

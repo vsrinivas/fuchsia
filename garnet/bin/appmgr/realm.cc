@@ -51,7 +51,6 @@ constexpr char kAppPath[] = "bin/app";
 constexpr char kDataPathPrefix[] = "data/";
 constexpr char kDataKey[] = "data";
 constexpr char kAppArgv0Prefix[] = "/pkg/";
-constexpr char kLegacyFlatExportedDirPath[] = "meta/legacy_flat_exported_dir";
 constexpr zx_status_t kComponentCreationFailed = -1;
 
 using fuchsia::sys::TerminationReason;
@@ -789,14 +788,6 @@ void Realm::CreateComponentFromPackage(
     program_metadata->at(0) = pg;
   }
 
-  TRACE_DURATION_BEGIN("appmgr", "Realm::CreateComponentFromPackage:IsFileAt",
-                       "file_path", kLegacyFlatExportedDirPath);
-  ExportedDirType exported_dir_layout =
-      files::IsFileAt(fd.get(), kLegacyFlatExportedDirPath)
-          ? ExportedDirType::kLegacyFlatLayout
-          : ExportedDirType::kPublicDebugCtrlLayout;
-  TRACE_DURATION_END("appmgr", "Realm::CreateComponentFromPackage:IsFileAt");
-
   // TODO(abarth): We shouldn't need to clone the channel here. Instead, we
   // should be able to tear down the file descriptor in a way that gives us
   // the channel back.
@@ -855,9 +846,9 @@ void Realm::CreateComponentFromPackage(
   if (runtime.IsNull()) {
     // Use the default runner: ELF binaries.
     CreateElfBinaryComponentFromPackage(
-        std::move(launch_info), app_data, app_argv0, exported_dir_layout,
-        std::move(loader_service), builder.Build(),
-        std::move(component_request), std::move(ns), std::move(callback));
+        std::move(launch_info), app_data, app_argv0, std::move(loader_service),
+        builder.Build(), std::move(component_request), std::move(ns),
+        std::move(callback));
   } else {
     // Use other component runners.
     CreateRunnerComponentFromPackage(
@@ -869,10 +860,9 @@ void Realm::CreateComponentFromPackage(
 
 void Realm::CreateElfBinaryComponentFromPackage(
     fuchsia::sys::LaunchInfo launch_info, fsl::SizedVmo& app_data,
-    const std::string& app_argv0, ExportedDirType exported_dir_layout,
-    zx::channel loader_service, fdio_flat_namespace_t* flat,
-    ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
-    ComponentObjectCreatedCallback callback) {
+    const std::string& app_argv0, zx::channel loader_service,
+    fdio_flat_namespace_t* flat, ComponentRequestWrapper component_request,
+    fxl::RefPtr<Namespace> ns, ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateElfBinaryComponentFromPackage",
                  "launch_info.url", launch_info.url);
 
@@ -895,8 +885,8 @@ void Realm::CreateElfBinaryComponentFromPackage(
     auto application = std::make_unique<ComponentControllerImpl>(
         std::move(controller), this, std::move(child_job), std::move(process),
         url, std::move(args), Util::GetLabelFromURL(url), std::move(ns),
-        exported_dir_layout, std::move(channels.exported_dir),
-        std::move(channels.client_request), std::move(termination_callback));
+        std::move(channels.exported_dir), std::move(channels.client_request),
+        std::move(termination_callback));
     // update hub
     hub_.AddComponent(application->HubInfo());
     ComponentControllerImpl* key = application.get();

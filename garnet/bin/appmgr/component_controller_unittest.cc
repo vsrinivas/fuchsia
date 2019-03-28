@@ -192,7 +192,6 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
  protected:
   std::unique_ptr<ComponentControllerImpl> CreateComponent(
       fuchsia::sys::ComponentControllerPtr& controller,
-      ExportedDirType export_dir_type = ExportedDirType::kLegacyFlatLayout,
       zx::channel export_dir = zx::channel(),
       fxl::RefPtr<Namespace> ns = CreateFakeNamespace({})) {
     // job_ is used later in a test to check the job-id, so we need to make a
@@ -204,7 +203,7 @@ class ComponentControllerTest : public gtest::RealLoopFixture {
     return std::make_unique<ComponentControllerImpl>(
         controller.NewRequest(), &realm_, std::move(job_clone),
         std::move(process_), "test-url", "test-arg", "test-label", ns,
-        export_dir_type, std::move(export_dir), zx::channel(),
+        std::move(export_dir), zx::channel(),
         MakeForwardingTerminationCallback());
   }
 
@@ -240,7 +239,6 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
  protected:
   std::unique_ptr<ComponentBridge> CreateComponentBridge(
       fuchsia::sys::ComponentControllerPtr& controller,
-      ExportedDirType export_dir_type = ExportedDirType::kLegacyFlatLayout,
       zx::channel export_dir = zx::channel(),
       fxl::RefPtr<Namespace> ns = CreateFakeNamespace({})) {
     // only allow creation of one component.
@@ -249,9 +247,8 @@ class ComponentBridgeTest : public gtest::RealLoopFixture,
     }
     auto component = std::make_unique<ComponentBridge>(
         controller.NewRequest(), std::move(remote_controller_), &runner_,
-        "test-url", "test-arg", "test-label", "1", ns, export_dir_type,
-        std::move(export_dir), zx::channel(),
-        MakeForwardingTerminationCallback());
+        "test-url", "test-arg", "test-label", "1", ns, std::move(export_dir),
+        zx::channel(), MakeForwardingTerminationCallback());
     component->SetParentJobId(runner_.koid());
     return component;
   }
@@ -398,9 +395,7 @@ TEST_F(ComponentControllerTest, Hub) {
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
-  auto component =
-      CreateComponent(component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
-                      std::move(export_dir_req));
+  auto component = CreateComponent(component_ptr, std::move(export_dir_req));
 
   bool ready = false;
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
@@ -434,8 +429,7 @@ TEST_F(ComponentControllerTest, HubWithIncomingServices) {
   fxl::RefPtr<Namespace> ns = CreateFakeNamespace({"service_a", "service_b"});
 
   auto component =
-      CreateComponent(component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
-                      std::move(export_dir_req), ns);
+      CreateComponent(component_ptr, std::move(export_dir_req), ns);
 
   bool ready = false;
   component_ptr.events().OnDirectoryReady = [&ready] { ready = true; };
@@ -601,9 +595,8 @@ TEST_F(ComponentBridgeTest, Hub) {
 
   fuchsia::sys::ComponentControllerPtr component_ptr;
 
-  auto component = CreateComponentBridge(
-      component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
-      std::move(export_dir_req));
+  auto component =
+      CreateComponentBridge(component_ptr, std::move(export_dir_req));
 
   RunLoopUntil(
       [this, &component] { return PathExists(component->hub_dir(), "out"); });
@@ -631,9 +624,8 @@ TEST_F(ComponentBridgeTest, HubWithIncomingServices) {
 
   fxl::RefPtr<Namespace> ns = CreateFakeNamespace({"service_a", "service_b"});
 
-  auto component = CreateComponentBridge(
-      component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
-      std::move(export_dir_req), ns);
+  auto component =
+      CreateComponentBridge(component_ptr, std::move(export_dir_req), ns);
 
   RunLoopUntil(
       [this, &component] { return PathExists(component->hub_dir(), "out"); });
@@ -648,9 +640,8 @@ TEST_F(ComponentBridgeTest, BindingErrorHandler) {
   fuchsia::sys::ComponentControllerPtr component_ptr;
   {
     // let it go out of scope, that should trigger binding error handler.
-    auto component = CreateComponentBridge(
-        component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
-        std::move(export_dir_req));
+    auto component =
+        CreateComponentBridge(component_ptr, std::move(export_dir_req));
   }
   EXPECT_TRUE(RunLoopUntil([this] { return !binding_.is_bound(); }));
   EXPECT_TRUE(binding_error_handler_called_);
@@ -663,9 +654,8 @@ TEST_F(ComponentBridgeTest, BindingErrorHandlerWhenDetached) {
   fuchsia::sys::ComponentControllerPtr component_ptr;
   {
     // let it go out of scope, that should trigger binding error handler.
-    auto component = CreateComponentBridge(
-        component_ptr, ExportedDirType::kPublicDebugCtrlLayout,
-        std::move(export_dir_req));
+    auto component =
+        CreateComponentBridge(component_ptr, std::move(export_dir_req));
     component_ptr->Detach();
     RunLoopUntilIdle();
   }

@@ -35,8 +35,5 @@ func main() {
 		_, err := echoService.Add(&echoImpl{quiet}, c, nil)
 		return err
 	})
-	c.Serve()
-	go fidl.Serve()
-
-	select {}
+	fidl.Serve()
 }

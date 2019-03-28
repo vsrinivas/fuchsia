@@ -10,6 +10,5 @@ go_library("app") {
 
   deps = [
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//garnet/public/lib/svc/go/src/svc",
   ]
 }

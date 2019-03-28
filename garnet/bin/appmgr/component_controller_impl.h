@@ -23,20 +23,6 @@
 
 namespace component {
 
-enum class ExportedDirType {
-  // Legacy exported directory layout where each file / service is exposed at
-  // the top level. Appmgr forwards a client's
-  // |fuchsia::sys::LaunchInfo.directory_request| to the top level directory.
-  kLegacyFlatLayout,
-
-  // A nested directory structure where appmgr expects 3 sub-directories-
-  // (1) public - A client's |fuchsia::sys::LaunchInfo.directory_request| is
-  // forwarded to this directory.
-  // (2) debug - This directory is used to expose debug files.
-  // (3) ctrl - This deirectory is used to expose files to the system.
-  kPublicDebugCtrlLayout,
-};
-
 typedef fit::function<void(int64_t, fuchsia::sys::TerminationReason,
                            fuchsia::sys::ComponentController_EventSender*)>
     TerminationCallback;
@@ -114,8 +100,7 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
       std::string url, std::string args, std::string label,
       std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
-      ExportedDirType export_dir_type, zx::channel exported_dir,
-      zx::channel client_request);
+      zx::channel exported_dir, zx::channel client_request);
   virtual ~ComponentControllerBase() override;
 
  public:
@@ -158,9 +143,8 @@ class ComponentControllerImpl : public ComponentControllerBase {
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
       ComponentContainer<ComponentControllerImpl>* container, zx::job job,
       zx::process process, std::string url, std::string args, std::string label,
-      fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
-      zx::channel exported_dir, zx::channel client_request,
-      TerminationCallback termination_callback);
+      fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
+      zx::channel client_request, TerminationCallback termination_callback);
   ~ComponentControllerImpl() override;
 
   const std::string& koid() const { return koid_; }
@@ -205,9 +189,8 @@ class ComponentBridge : public ComponentControllerBase {
       fuchsia::sys::ComponentControllerPtr remote_controller,
       ComponentContainer<ComponentBridge>* container, std::string url,
       std::string args, std::string label, std::string hub_instance_id,
-      fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
-      zx::channel exported_dir, zx::channel client_request,
-      TerminationCallback termination_callback);
+      fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
+      zx::channel client_request, TerminationCallback termination_callback);
 
   ~ComponentBridge() override;
 

@@ -91,8 +91,8 @@ void RunnerHolder::StartComponent(
       std::move(controller), std::move(remote_controller), this, url,
       std::move(args), Util::GetLabelFromURL(url),
       std::to_string(++component_id_counter_), std::move(ns),
-      ExportedDirType::kPublicDebugCtrlLayout, std::move(channels.exported_dir),
-      std::move(channels.client_request), std::move(termination_callback));
+      std::move(channels.exported_dir), std::move(channels.client_request),
+      std::move(termination_callback));
 
   // update hub
   if (impl_object_) {

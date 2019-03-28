@@ -9,9 +9,9 @@
 #include <fs/remote-dir.h>
 #include <fs/service.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fit/function.h>
 #include <trace/event.h>
 #include <cinttypes>
@@ -107,8 +107,7 @@ ComponentControllerBase::ComponentControllerBase(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
     std::string url, std::string args, std::string label,
     std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
-    ExportedDirType export_dir_type, zx::channel exported_dir,
-    zx::channel client_request)
+    zx::channel exported_dir, zx::channel client_request)
     : binding_(this),
       label_(std::move(label)),
       hub_instance_id_(std::move(hub_instance_id)),
@@ -125,67 +124,35 @@ ComponentControllerBase::ComponentControllerBase(
   exported_dir_.Bind(std::move(exported_dir), async_get_default_dispatcher());
 
   if (client_request) {
-    if (export_dir_type == ExportedDirType::kPublicDebugCtrlLayout) {
-      fdio_service_connect_at(exported_dir_.channel().get(), "public",
-                              client_request.release());
-    } else if (export_dir_type == ExportedDirType::kLegacyFlatLayout) {
-      fdio_service_clone_to(exported_dir_.channel().get(),
+    fdio_service_connect_at(exported_dir_.channel().get(), "public",
                             client_request.release());
-
-      // Components using the legacy flat format can expose information using
-      // inspect by implementing "fuchsia.inspect.Inspect". This code attempts
-      // to connect to that endpoint, and if the connection works it will mount
-      // a new "out/objects" on the hub for the component.
-      fdio_service_connect_at(
-          exported_dir_.channel().get(), fuchsia::inspect::Inspect::Name_,
-          inspect_checker_.NewRequest().TakeChannel().release());
-
-      inspect_checker_->ReadData([this](fuchsia::inspect::Object unused) {
-        inspect_checker_.Unbind();
-        auto out = fbl::AdoptRef(new fs::PseudoDir());
-        auto objects = fbl::AdoptRef(new fs::PseudoDir());
-        hub_.PublishOut(out);
-        out->AddEntry("objects", objects);
-        objects->AddEntry(
-            fuchsia::inspect::Inspect::Name_,
-            fbl::AdoptRef(new fs::Service([this](zx::channel chan) {
-              return fdio_service_connect_at(exported_dir_.channel().get(),
-                                             fuchsia::inspect::Inspect::Name_,
-                                             chan.release());
-            })));
-      });
-    }
   }
 
   hub_.SetName(label_);
   hub_.AddEntry("url", std::move(url));
   hub_.AddEntry("args", std::move(args));
-  if (export_dir_type == ExportedDirType::kPublicDebugCtrlLayout) {
-    exported_dir_->Clone(fuchsia::io::OPEN_FLAG_DESCRIBE |
-                             fuchsia::io::OPEN_RIGHT_READABLE |
-                             fuchsia::io::OPEN_RIGHT_WRITABLE,
-                         cloned_exported_dir_.NewRequest());
+  exported_dir_->Clone(fuchsia::io::OPEN_FLAG_DESCRIBE |
+                           fuchsia::io::OPEN_RIGHT_READABLE |
+                           fuchsia::io::OPEN_RIGHT_WRITABLE,
+                       cloned_exported_dir_.NewRequest());
 
-    cloned_exported_dir_.events().OnOpen =
-        [this](zx_status_t status,
-               std::unique_ptr<fuchsia::io::NodeInfo> info) {
-          if (status != ZX_OK) {
-            FXL_LOG(WARNING) << "could not bind out directory for component"
-                             << label_ << "): " << status;
-            return;
-          }
-          auto output_dir = fbl::AdoptRef(
-              new fs::RemoteDir(cloned_exported_dir_.Unbind().TakeChannel()));
-          hub_.PublishOut(std::move(output_dir));
-          TRACE_DURATION_BEGIN("appmgr",
-                               "ComponentController::OnDirectoryReady");
-          binding_.events().OnDirectoryReady();
-          TRACE_DURATION_END("appmgr", "ComponentController::OnDirectoryReady");
-        };
+  cloned_exported_dir_.events().OnOpen =
+      [this](zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> info) {
+        if (status != ZX_OK) {
+          FXL_LOG(WARNING) << "could not bind out directory for component"
+                           << label_ << "): " << status;
+          return;
+        }
+        auto output_dir = fbl::AdoptRef(
+            new fs::RemoteDir(cloned_exported_dir_.Unbind().TakeChannel()));
+        hub_.PublishOut(std::move(output_dir));
+        TRACE_DURATION_BEGIN("appmgr", "ComponentController::OnDirectoryReady");
+        binding_.events().OnDirectoryReady();
+        TRACE_DURATION_END("appmgr", "ComponentController::OnDirectoryReady");
+      };
 
-    cloned_exported_dir_.set_error_handler(
-        [this](zx_status_t status) { cloned_exported_dir_.Unbind(); });
-  }
+  cloned_exported_dir_.set_error_handler(
+      [this](zx_status_t status) { cloned_exported_dir_.Unbind(); });
 }
 
 ComponentControllerBase::~ComponentControllerBase() {}
@@ -200,14 +167,12 @@ ComponentControllerImpl::ComponentControllerImpl(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
     ComponentContainer<ComponentControllerImpl>* container, zx::job job,
     zx::process process, std::string url, std::string args, std::string label,
-    fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
-    zx::channel exported_dir, zx::channel client_request,
-    TerminationCallback termination_callback)
+    fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
+    zx::channel client_request, TerminationCallback termination_callback)
     : ComponentControllerBase(
           std::move(request), std::move(url), std::move(args), std::move(label),
           std::to_string(fsl::GetKoid(process.get())), std::move(ns),
-          std::move(export_dir_type), std::move(exported_dir),
-          std::move(client_request)),
+          std::move(exported_dir), std::move(client_request)),
       container_(container),
       job_(std::move(job)),
       process_(std::move(process)),
@@ -313,13 +278,12 @@ ComponentBridge::ComponentBridge(
     fuchsia::sys::ComponentControllerPtr remote_controller,
     ComponentContainer<ComponentBridge>* container, std::string url,
     std::string args, std::string label, std::string hub_instance_id,
-    fxl::RefPtr<Namespace> ns, ExportedDirType export_dir_type,
-    zx::channel exported_dir, zx::channel client_request,
-    TerminationCallback termination_callback)
+    fxl::RefPtr<Namespace> ns, zx::channel exported_dir,
+    zx::channel client_request, TerminationCallback termination_callback)
     : ComponentControllerBase(
           std::move(request), std::move(url), std::move(args), std::move(label),
-          hub_instance_id, std::move(ns), std::move(export_dir_type),
-          std::move(exported_dir), std::move(client_request)),
+          hub_instance_id, std::move(ns), std::move(exported_dir),
+          std::move(client_request)),
       remote_controller_(std::move(remote_controller)),
       container_(std::move(container)),
       termination_callback_(std::move(termination_callback)),

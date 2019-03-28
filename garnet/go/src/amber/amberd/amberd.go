@@ -102,8 +102,6 @@ func Main() {
 		_, err := evtSvc.Add(control_server.EventsImpl{}, c, nil)
 		return err
 	})
-	// note: not blocking
-	ctx.Serve()
 
 	go func() {
 		log.Printf("monitoring for updates")
