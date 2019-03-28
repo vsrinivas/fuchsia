@@ -113,27 +113,29 @@ impl Model {
                     await!(realm.resolver_registry.resolve(&realm.instance.component_uri))?;
                 realm.populate_decl(component.decl)?;
                 let decl = realm.instance.decl.as_ref().unwrap();
-                let (outgoing_dir_client, outgoing_dir_server) =
-                    zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
-                let mut namespace = IncomingNamespace::new(component.package)?;
-                let ns = await!(namespace.populate(self.clone(), &realm.abs_moniker, decl))?;
-                let execution = Execution::start_from(
-                    component.resolved_uri,
-                    namespace,
-                    DirectoryProxy::from_channel(
-                        fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
-                    ),
-                )?;
+                if decl.program.is_some() {
+                    let (outgoing_dir_client, outgoing_dir_server) = zx::Channel::create()
+                        .map_err(|e| ModelError::namespace_creation_failed(e))?;
+                    let mut namespace = IncomingNamespace::new(component.package)?;
+                    let ns = await!(namespace.populate(self.clone(), &realm.abs_moniker, decl))?;
+                    let execution = Execution::start_from(
+                        component.resolved_uri,
+                        namespace,
+                        DirectoryProxy::from_channel(
+                            fasync::Channel::from_channel(outgoing_dir_client).unwrap(),
+                        ),
+                    )?;
 
-                let start_info = fsys::ComponentStartInfo {
-                    resolved_uri: Some(execution.resolved_uri.clone()),
-                    program: data::clone_option_dictionary(&decl.program),
-                    ns: Some(ns),
-                    outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
-                };
-                await!(realm.default_runner.start(start_info))?;
+                    let start_info = fsys::ComponentStartInfo {
+                        resolved_uri: Some(execution.resolved_uri.clone()),
+                        program: data::clone_option_dictionary(&decl.program),
+                        ns: Some(ns),
+                        outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
+                    };
+                    await!(realm.default_runner.start(start_info))?;
+                    realm.instance.execution = Some(execution);
+                }
                 started = true;
-                realm.instance.execution = Some(execution);
             }
         }
         // Return children that need eager starting.

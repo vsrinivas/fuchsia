@@ -8,6 +8,7 @@ use {
     fdio,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
+    fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker},
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
@@ -44,6 +45,8 @@ struct MockResolver {
     offers: Arc<Mutex<HashMap<String, Option<Vec<fsys::OfferDecl>>>>>,
     // Map of component instance to vec of ExposeDecls of the component instance.
     exposes: Arc<Mutex<HashMap<String, Option<Vec<fsys::ExposeDecl>>>>>,
+    // All the component instances that contain no `program` (non-executable realms).
+    no_execute: Arc<Mutex<HashSet<String>>>,
 }
 
 lazy_static! {
@@ -51,6 +54,16 @@ lazy_static! {
 }
 
 impl MockResolver {
+    fn new() -> MockResolver {
+        MockResolver {
+            children: Arc::new(Mutex::new(HashMap::new())),
+            uses: Arc::new(Mutex::new(HashMap::new())),
+            offers: Arc::new(Mutex::new(HashMap::new())),
+            exposes: Arc::new(Mutex::new(HashMap::new())),
+            no_execute: Arc::new(Mutex::new(HashSet::new())),
+        }
+    }
+
     async fn resolve_async(&self, component_uri: String) -> Result<fsys::Component, ResolverError> {
         let caps = NAME_RE.captures(&component_uri).unwrap();
         let name = &caps[1];
@@ -123,6 +136,12 @@ impl MockResolver {
             }
             decl.exposes = Some(decl_exposes);
         }
+        let no_execute = await!(self.no_execute.lock());
+        decl.program = if no_execute.contains(name) {
+            None
+        } else {
+            Some(fdata::Dictionary { entries: vec![] })
+        };
         Ok(fsys::Component {
             resolved_uri: Some(format!("test:///{}_resolved", name)),
             decl: Some(decl),
@@ -188,19 +207,7 @@ async fn bind_instance_root() {
         namespaces: namespaces.clone(),
         host_fns: host_fns.clone(),
     };
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(MockResolver::new()));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///root".to_string(),
         root_resolver_registry: resolver,
@@ -210,7 +217,7 @@ async fn bind_instance_root() {
     let expected_res: Result<(), ModelError> = Ok(());
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     let actual_uris = await!(uris_run.lock());
-    let expected_uris: Vec<String> = vec!["test:///root_resolved".to_string()];
+    let expected_uris = vec!["test:///root_resolved".to_string()];
     assert_eq!(*actual_uris, expected_uris);
     let root_realm = await!(model.root_realm.lock());
     let actual_children = get_children(&root_realm);
@@ -228,19 +235,7 @@ async fn bind_instance_root_non_existent() {
         namespaces: namespaces.clone(),
         host_fns: host_fns.clone(),
     };
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(MockResolver::new()));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///root".to_string(),
         root_resolver_registry: resolver,
@@ -269,26 +264,15 @@ async fn bind_instance_child() {
         namespaces: namespaces.clone(),
         host_fns: host_fns.clone(),
     };
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "root".to_string(),
         vec![
             ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy },
             ChildInfo { name: "echo".to_string(), startup: fsys::StartupMode::Lazy },
         ],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///root".to_string(),
         root_resolver_registry: resolver,
@@ -301,7 +285,7 @@ async fn bind_instance_child() {
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
-        let expected_uris: Vec<String> = vec!["test:///system_resolved".to_string()];
+        let expected_uris = vec!["test:///system_resolved".to_string()];
         assert_eq!(*actual_uris, expected_uris);
     }
     // Validate children. system is resolved, but not echo.
@@ -327,7 +311,7 @@ async fn bind_instance_child() {
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
-        let expected_uris: Vec<String> =
+        let expected_uris =
             vec!["test:///system_resolved".to_string(), "test:///echo_resolved".to_string()];
         assert_eq!(*actual_uris, expected_uris);
     }
@@ -350,23 +334,12 @@ async fn bind_instance_child_non_existent() {
         namespaces: namespaces.clone(),
         host_fns: host_fns.clone(),
     };
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "root".to_string(),
         vec![ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///root".to_string(),
         root_resolver_registry: resolver,
@@ -379,7 +352,7 @@ async fn bind_instance_child_non_existent() {
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
-        let expected_uris: Vec<String> = vec!["test:///system_resolved".to_string()];
+        let expected_uris = vec!["test:///system_resolved".to_string()];
         assert_eq!(*actual_uris, expected_uris);
     }
     // can't bind to logger: it does not exist
@@ -392,7 +365,7 @@ async fn bind_instance_child_non_existent() {
         let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(moniker));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
-        let expected_uris: Vec<String> = vec!["test:///system_resolved".to_string()];
+        let expected_uris = vec!["test:///system_resolved".to_string()];
         assert_eq!(*actual_uris, expected_uris);
     }
 }
@@ -409,35 +382,24 @@ async fn bind_instance_eager_child() {
         namespaces: namespaces.clone(),
         host_fns: host_fns.clone(),
     };
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "root".to_string(),
         vec![ChildInfo { name: "a".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    await!(children.lock()).insert(
+    await!(mock_resolver.children.lock()).insert(
         "a".to_string(),
         vec![ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Eager }],
     );
-    await!(children.lock()).insert(
+    await!(mock_resolver.children.lock()).insert(
         "b".to_string(),
         vec![ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Eager }],
     );
-    await!(children.lock()).insert(
+    await!(mock_resolver.children.lock()).insert(
         "c".to_string(),
         vec![ChildInfo { name: "d".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///root".to_string(),
         root_resolver_registry: resolver,
@@ -452,11 +414,54 @@ async fn bind_instance_eager_child() {
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
-        let expected_uris: Vec<String> = vec![
+        let expected_uris = vec![
             "test:///a_resolved".to_string(),
             "test:///b_resolved".to_string(),
             "test:///c_resolved".to_string(),
         ];
+        assert_eq!(*actual_uris, expected_uris);
+    }
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn bind_instance_no_execute() {
+    // Create a non-executable component with an eagerly-started child.
+    let mut resolver = ResolverRegistry::new();
+    let uris_run = Arc::new(Mutex::new(vec![]));
+    let namespaces = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
+    let runner = MockRunner {
+        uris_run: uris_run.clone(),
+        namespaces: namespaces.clone(),
+        host_fns: host_fns.clone(),
+    };
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
+        "root".to_string(),
+        vec![ChildInfo { name: "a".to_string(), startup: fsys::StartupMode::Lazy }],
+    );
+    await!(mock_resolver.children.lock()).insert(
+        "a".to_string(),
+        vec![ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Eager }],
+    );
+    await!(mock_resolver.no_execute.lock()).insert("a".to_string());
+    resolver.register("test".to_string(), Box::new(mock_resolver));
+    let model = Model::new(ModelParams {
+        root_component_uri: "test:///root".to_string(),
+        root_resolver_registry: resolver,
+        root_default_runner: Box::new(runner),
+    });
+
+    // Bind to the parent component. The child should be started. However, the parent component
+    // is non-executable so it is not run.
+    {
+        let res =
+            await!(model
+                .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("a".to_string()),])));
+        let expected_res: Result<(), ModelError> = Ok(());
+        assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
+        let actual_uris = await!(uris_run.lock());
+        let expected_uris = vec!["test:///b_resolved".to_string()];
         assert_eq!(*actual_uris, expected_uris);
     }
 }
@@ -472,30 +477,19 @@ async fn bind_instance_recursive_child() {
         namespaces: namespaces.clone(),
         host_fns: host_fns.clone(),
     };
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "root".to_string(),
         vec![ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    await!(children.lock()).insert(
+    await!(mock_resolver.children.lock()).insert(
         "system".to_string(),
         vec![
             ChildInfo { name: "logger".to_string(), startup: fsys::StartupMode::Lazy },
             ChildInfo { name: "netstack".to_string(), startup: fsys::StartupMode::Lazy },
         ],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///root".to_string(),
         root_resolver_registry: resolver,
@@ -510,7 +504,7 @@ async fn bind_instance_recursive_child() {
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
-        let expected_uris: Vec<String> = vec!["test:///logger_resolved".to_string()];
+        let expected_uris = vec!["test:///logger_resolved".to_string()];
         assert_eq!(*actual_uris, expected_uris);
     }
     // bind to netstack
@@ -522,7 +516,7 @@ async fn bind_instance_recursive_child() {
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
-        let expected_uris: Vec<String> =
+        let expected_uris =
             vec!["test:///logger_resolved".to_string(), "test:///netstack_resolved".to_string()];
         assert_eq!(*actual_uris, expected_uris);
     }
@@ -533,7 +527,7 @@ async fn bind_instance_recursive_child() {
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
-        let expected_uris: Vec<String> = vec![
+        let expected_uris = vec![
             "test:///logger_resolved".to_string(),
             "test:///netstack_resolved".to_string(),
             "test:///system_resolved".to_string(),
@@ -597,16 +591,15 @@ async fn check_namespace_from_using() {
         namespaces: namespaces.clone(),
         host_fns: host_fns.clone(),
     };
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
-        "root".to_string(),
-        vec![ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy }],
-    );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
 
     // The system component will request namespaces of "/foo" to its "/bar" and
     // "/baz/bar", and it will also request the "/svc/fidl.examples.echo.Echo" service
-    await!(uses.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
+        "root".to_string(),
+        vec![ChildInfo { name: "system".to_string(), startup: fsys::StartupMode::Lazy }],
+    );
+    await!(mock_resolver.uses.lock()).insert(
         "system".to_string(),
         Some(vec![
             fsys::UseDecl {
@@ -629,8 +622,7 @@ async fn check_namespace_from_using() {
 
     // The root component will offer the "/hippo" directory from its realm as "/foo" and the
     // "/svc/fidl.examples.echo.Echo" service from its realm
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    await!(offers.lock()).insert(
+    await!(mock_resolver.offers.lock()).insert(
         "root".to_string(),
         Some(vec![
             fsys::OfferDecl {
@@ -659,16 +651,7 @@ async fn check_namespace_from_using() {
             },
         ]),
     );
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///root".to_string(),
         root_resolver_registry: resolver,
@@ -807,14 +790,12 @@ async fn use_service_from_parent() {
     // Host /svc/foo from a's outgoing directory
     await!(host_fns.lock()).insert("test:///a_resolved".to_string(), Box::new(host_svc_foo_hippo));
 
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "a".to_string(),
         vec![ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-
-    await!(uses.lock()).insert(
+    await!(mock_resolver.uses.lock()).insert(
         "b".to_string(),
         Some(vec![fsys::UseDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -822,9 +803,7 @@ async fn use_service_from_parent() {
             target_path: Some("/svc/hippo".to_string()),
         }]),
     );
-
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    await!(offers.lock()).insert(
+    await!(mock_resolver.offers.lock()).insert(
         "a".to_string(),
         Some(vec![fsys::OfferDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -839,16 +818,7 @@ async fn use_service_from_parent() {
             }]),
         }]),
     );
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///a".to_string(),
         root_resolver_registry: resolver,
@@ -890,18 +860,16 @@ async fn use_service_from_grandparent() {
     // Host /svc/foo from a's outgoing directory
     await!(host_fns.lock()).insert("test:///a_resolved".to_string(), Box::new(host_svc_foo_hippo));
 
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "a".to_string(),
         vec![ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    await!(children.lock()).insert(
+    await!(mock_resolver.children.lock()).insert(
         "b".to_string(),
         vec![ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-
-    await!(uses.lock()).insert(
+    await!(mock_resolver.uses.lock()).insert(
         "c".to_string(),
         Some(vec![fsys::UseDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -909,9 +877,7 @@ async fn use_service_from_grandparent() {
             target_path: Some("/svc/hippo".to_string()),
         }]),
     );
-
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    await!(offers.lock()).insert(
+    await!(mock_resolver.offers.lock()).insert(
         "a".to_string(),
         Some(vec![fsys::OfferDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -926,7 +892,7 @@ async fn use_service_from_grandparent() {
             }]),
         }]),
     );
-    await!(offers.lock()).insert(
+    await!(mock_resolver.offers.lock()).insert(
         "b".to_string(),
         Some(vec![fsys::OfferDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -941,16 +907,7 @@ async fn use_service_from_grandparent() {
             }]),
         }]),
     );
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///a".to_string(),
         root_resolver_registry: resolver,
@@ -995,17 +952,15 @@ async fn use_service_from_sibling() {
     // Host /svc/foo from b's outgoing directory
     await!(host_fns.lock()).insert("test:///b_resolved".to_string(), Box::new(host_svc_foo_hippo));
 
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "a".to_string(),
         vec![
             ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Lazy },
             ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Lazy },
         ],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-
-    await!(uses.lock()).insert(
+    await!(mock_resolver.uses.lock()).insert(
         "c".to_string(),
         Some(vec![fsys::UseDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -1013,9 +968,7 @@ async fn use_service_from_sibling() {
             target_path: Some("/svc/hippo".to_string()),
         }]),
     );
-
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    await!(offers.lock()).insert(
+    await!(mock_resolver.offers.lock()).insert(
         "a".to_string(),
         Some(vec![fsys::OfferDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -1030,8 +983,7 @@ async fn use_service_from_sibling() {
             }]),
         }]),
     );
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    await!(exposes.lock()).insert(
+    await!(mock_resolver.exposes.lock()).insert(
         "b".to_string(),
         Some(vec![fsys::ExposeDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -1043,15 +995,7 @@ async fn use_service_from_sibling() {
             target_path: Some("/svc/bar".to_string()),
         }]),
     );
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///a".to_string(),
         root_resolver_registry: resolver,
@@ -1094,21 +1038,19 @@ async fn use_service_from_niece() {
     // Host /svc/foo from d's outgoing directory
     await!(host_fns.lock()).insert("test:///d_resolved".to_string(), Box::new(host_svc_foo_hippo));
 
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "a".to_string(),
         vec![
             ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Lazy },
             ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Lazy },
         ],
     );
-    await!(children.lock()).insert(
+    await!(mock_resolver.children.lock()).insert(
         "b".to_string(),
         vec![ChildInfo { name: "d".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-
-    await!(uses.lock()).insert(
+    await!(mock_resolver.uses.lock()).insert(
         "c".to_string(),
         Some(vec![fsys::UseDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -1116,9 +1058,7 @@ async fn use_service_from_niece() {
             target_path: Some("/svc/hippo".to_string()),
         }]),
     );
-
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    await!(offers.lock()).insert(
+    await!(mock_resolver.offers.lock()).insert(
         "a".to_string(),
         Some(vec![fsys::OfferDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -1133,8 +1073,7 @@ async fn use_service_from_niece() {
             }]),
         }]),
     );
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    await!(exposes.lock()).insert(
+    await!(mock_resolver.exposes.lock()).insert(
         "b".to_string(),
         Some(vec![fsys::ExposeDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -1146,7 +1085,7 @@ async fn use_service_from_niece() {
             target_path: Some("/svc/baz".to_string()),
         }]),
     );
-    await!(exposes.lock()).insert(
+    await!(mock_resolver.exposes.lock()).insert(
         "d".to_string(),
         Some(vec![fsys::ExposeDecl {
             type_: Some(fsys::CapabilityType::Service),
@@ -1158,15 +1097,7 @@ async fn use_service_from_niece() {
             target_path: Some("/svc/bar".to_string()),
         }]),
     );
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///a".to_string(),
         root_resolver_registry: resolver,
@@ -1250,14 +1181,12 @@ async fn use_directory_from_parent() {
     // Host /data/foo from a's outgoing directory
     await!(host_fns.lock()).insert("test:///a_resolved".to_string(), Box::new(host_data_foo_hippo));
 
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "a".to_string(),
         vec![ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-
-    await!(uses.lock()).insert(
+    await!(mock_resolver.uses.lock()).insert(
         "b".to_string(),
         Some(vec![fsys::UseDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1265,9 +1194,7 @@ async fn use_directory_from_parent() {
             target_path: Some("/data/hippo".to_string()),
         }]),
     );
-
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    await!(offers.lock()).insert(
+    await!(mock_resolver.offers.lock()).insert(
         "a".to_string(),
         Some(vec![fsys::OfferDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1282,16 +1209,7 @@ async fn use_directory_from_parent() {
             }]),
         }]),
     );
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///a".to_string(),
         root_resolver_registry: resolver,
@@ -1333,18 +1251,16 @@ async fn use_directory_from_grandparent() {
     // Host /data/foo from a's outgoing directory
     await!(host_fns.lock()).insert("test:///a_resolved".to_string(), Box::new(host_data_foo_hippo));
 
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "a".to_string(),
         vec![ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    await!(children.lock()).insert(
+    await!(mock_resolver.children.lock()).insert(
         "b".to_string(),
         vec![ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-
-    await!(uses.lock()).insert(
+    await!(mock_resolver.uses.lock()).insert(
         "c".to_string(),
         Some(vec![fsys::UseDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1352,9 +1268,7 @@ async fn use_directory_from_grandparent() {
             target_path: Some("/data/hippo".to_string()),
         }]),
     );
-
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    await!(offers.lock()).insert(
+    await!(mock_resolver.offers.lock()).insert(
         "a".to_string(),
         Some(vec![fsys::OfferDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1369,7 +1283,7 @@ async fn use_directory_from_grandparent() {
             }]),
         }]),
     );
-    await!(offers.lock()).insert(
+    await!(mock_resolver.offers.lock()).insert(
         "b".to_string(),
         Some(vec![fsys::OfferDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1384,16 +1298,7 @@ async fn use_directory_from_grandparent() {
             }]),
         }]),
     );
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///a".to_string(),
         root_resolver_registry: resolver,
@@ -1438,17 +1343,15 @@ async fn use_directory_from_sibling() {
     // Host /data/foo from b's outgoing directory
     await!(host_fns.lock()).insert("test:///b_resolved".to_string(), Box::new(host_data_foo_hippo));
 
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "a".to_string(),
         vec![
             ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Lazy },
             ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Lazy },
         ],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-
-    await!(uses.lock()).insert(
+    await!(mock_resolver.uses.lock()).insert(
         "c".to_string(),
         Some(vec![fsys::UseDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1456,9 +1359,7 @@ async fn use_directory_from_sibling() {
             target_path: Some("/data/hippo".to_string()),
         }]),
     );
-
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    await!(offers.lock()).insert(
+    await!(mock_resolver.offers.lock()).insert(
         "a".to_string(),
         Some(vec![fsys::OfferDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1473,8 +1374,7 @@ async fn use_directory_from_sibling() {
             }]),
         }]),
     );
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    await!(exposes.lock()).insert(
+    await!(mock_resolver.exposes.lock()).insert(
         "b".to_string(),
         Some(vec![fsys::ExposeDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1486,15 +1386,7 @@ async fn use_directory_from_sibling() {
             target_path: Some("/data/bar".to_string()),
         }]),
     );
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///a".to_string(),
         root_resolver_registry: resolver,
@@ -1537,21 +1429,19 @@ async fn use_directory_from_niece() {
     // Host /data/foo from d's outgoing directory
     await!(host_fns.lock()).insert("test:///d_resolved".to_string(), Box::new(host_data_foo_hippo));
 
-    let children = Arc::new(Mutex::new(HashMap::new()));
-    await!(children.lock()).insert(
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
         "a".to_string(),
         vec![
             ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Lazy },
             ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Lazy },
         ],
     );
-    await!(children.lock()).insert(
+    await!(mock_resolver.children.lock()).insert(
         "b".to_string(),
         vec![ChildInfo { name: "d".to_string(), startup: fsys::StartupMode::Lazy }],
     );
-    let uses = Arc::new(Mutex::new(HashMap::new()));
-
-    await!(uses.lock()).insert(
+    await!(mock_resolver.uses.lock()).insert(
         "c".to_string(),
         Some(vec![fsys::UseDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1559,9 +1449,7 @@ async fn use_directory_from_niece() {
             target_path: Some("/data/hippo".to_string()),
         }]),
     );
-
-    let offers = Arc::new(Mutex::new(HashMap::new()));
-    await!(offers.lock()).insert(
+    await!(mock_resolver.offers.lock()).insert(
         "a".to_string(),
         Some(vec![fsys::OfferDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1576,8 +1464,7 @@ async fn use_directory_from_niece() {
             }]),
         }]),
     );
-    let exposes = Arc::new(Mutex::new(HashMap::new()));
-    await!(exposes.lock()).insert(
+    await!(mock_resolver.exposes.lock()).insert(
         "b".to_string(),
         Some(vec![fsys::ExposeDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1589,7 +1476,7 @@ async fn use_directory_from_niece() {
             target_path: Some("/data/baz".to_string()),
         }]),
     );
-    await!(exposes.lock()).insert(
+    await!(mock_resolver.exposes.lock()).insert(
         "d".to_string(),
         Some(vec![fsys::ExposeDecl {
             type_: Some(fsys::CapabilityType::Directory),
@@ -1601,15 +1488,7 @@ async fn use_directory_from_niece() {
             target_path: Some("/data/bar".to_string()),
         }]),
     );
-    resolver.register(
-        "test".to_string(),
-        Box::new(MockResolver {
-            children: children.clone(),
-            uses: uses.clone(),
-            offers: offers.clone(),
-            exposes: exposes.clone(),
-        }),
-    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
     let model = Model::new(ModelParams {
         root_component_uri: "test:///a".to_string(),
         root_resolver_registry: resolver,
