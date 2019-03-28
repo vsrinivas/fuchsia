@@ -8,7 +8,7 @@ package("netstack3_tools") {
   testonly = true
 
   deps = [
-    "//garnet/bin/netstack3/tools/enclosed_runner",
+    "//src/connectivity/network/netstack3/tools/enclosed_runner",
   ]
 
   binaries = [

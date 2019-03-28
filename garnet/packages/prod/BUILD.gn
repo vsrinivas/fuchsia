@@ -248,8 +248,8 @@ group("all") {
     "//garnet/packages/prod:log_listener",
     "//garnet/packages/prod:logger",
     "//garnet/packages/prod:magma-arm-mali",
-    "//garnet/packages/prod:magma-intel-gen",
     "//garnet/packages/prod:magma-img-rgx-mtk",
+    "//garnet/packages/prod:magma-intel-gen",
     "//garnet/packages/prod:mdns",
     "//garnet/packages/prod:mdns-util",
     "//garnet/packages/prod:media",
@@ -400,8 +400,8 @@ group("wlan-stress-test") {
 group("netstack3") {
   testonly = true
   public_deps = [
-    "//garnet/bin/netstack3",
-    "//garnet/bin/netstack3/tools:netstack3_tools",
+    "//src/connectivity/network/netstack3",
+    "//src/connectivity/network/netstack3/tools:netstack3_tools",
   ]
 }
 

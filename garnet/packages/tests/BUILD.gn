@@ -471,7 +471,7 @@ group("netstack") {
 group("netstack3") {
   testonly = true
   public_deps = [
-    "//garnet/bin/netstack3:netstack3_tests",
+    "//src/connectivity/network/netstack3:netstack3_tests",
   ]
 }
 

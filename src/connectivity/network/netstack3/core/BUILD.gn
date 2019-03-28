@@ -12,11 +12,11 @@ rustc_library("netstack3-core") {
   __unstable_recovery_netstack_only_specialization_bypass = [ "specialization" ]
 
   deps = [
-    "//garnet/bin/netstack3/core/specialize-ip-macro",
     "//garnet/lib/rust/never",
     "//garnet/public/rust/packet",
     "//garnet/public/rust/zerocopy",
     "//garnet/public/rust/zerocopy/zerocopy-derive",
+    "//src/connectivity/network/netstack3/core/specialize-ip-macro",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:log",
