@@ -209,7 +209,6 @@ func (cache *cacheInfo) prune() {
 var cache = newCache()
 
 func newCachedResolver(fallback Resolver) Resolver {
-	throttles := make(map[dnsmessage.Question]<-chan time.Time)
 	return func(c *Client, question dnsmessage.Question) (dnsmessage.Name, []dnsmessage.Resource, dnsmessage.Message, error) {
 		if !(question.Class == dnsmessage.ClassINET && (question.Type == dnsmessage.TypeA || question.Type == dnsmessage.TypeAAAA)) {
 			panic("unexpected question type")
@@ -226,16 +225,7 @@ func newCachedResolver(fallback Resolver) Resolver {
 		logger.VLogTf(logger.TraceVerbosity, tag, "DNS cache miss for the message %v(%v)", question.Name, question.Type)
 		cname, rrs, msg, err := fallback(c, question)
 		if err != nil {
-			throttle, ok := throttles[question]
-			if !ok {
-				throttle = time.Tick(10 * time.Second)
-				throttles[question] = throttle
-			}
-			select {
-			case <-throttle:
-				logger.WarnTf(tag, "%s", err)
-			default:
-			}
+			logger.WarnTf(tag, "%s", err)
 		}
 
 		cache.mu.Lock()
