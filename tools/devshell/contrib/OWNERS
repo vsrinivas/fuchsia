@@ -15,4 +15,5 @@ per-file rustdoc=cramertj@google.com
 per-file rustfmt=cramertj@google.com
 per-file save-package-stats=raggi@google.com
 per-file set-petal=abarth@google.com
+per-file set-relay=tamird@google.com
 per-file update-rustc-third-party=cramertj@google.com

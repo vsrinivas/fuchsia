@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+## Actuates the state of an external relay by writing a single byte to |tty|.
+
+import argparse
+import sys
+
+def main():
+    parser = argparse.ArgumentParser(
+            'Actuates the state of an external relay')
+    parser.add_argument('tty',
+                        type=argparse.FileType('wb'),
+                        help='TTY to which the external relay is connected')
+    state_parser = parser.add_mutually_exclusive_group(required=True)
+    state_parser.add_argument('--on',  dest='state', action='store_true')
+    state_parser.add_argument('--off', dest='state', action='store_false')
+    args = parser.parse_args()
+
+    if args.state:
+      args.tty.write(b'\x02')
+    else:
+      args.tty.write(b'\x01')
+
+if __name__ == '__main__':
+    sys.exit(main())
