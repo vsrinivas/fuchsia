@@ -13,7 +13,7 @@
 #include <lib/zx/socket.h>
 #include <lib/zx/vmo.h>
 
-#include "../devhost/device-internal.h"
+#include "../devhost/zx-device.h"
 
 namespace {
 

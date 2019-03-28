@@ -9,7 +9,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include "devhost.h"
-#include "device-internal.h"
+#include "zx-device.h"
 
 namespace devmgr {
 

@@ -7,7 +7,7 @@
 #include <ddk/driver.h>
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
-#include "device-internal.h"
+#include "zx-device.h"
 
 namespace devmgr {
 

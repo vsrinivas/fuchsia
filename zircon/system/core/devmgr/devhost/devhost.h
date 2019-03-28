@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../shared/async-loop-owned-rpc-handler.h"
-#include "device-internal.h"
+#include "zx-device.h"
 #include "lock.h"
 
 #include <ddk/binding.h>

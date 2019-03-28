@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "device-internal.h"
+#include "zx-device.h"
 
 #include "devhost.h"
 #include <fbl/auto_call.h>

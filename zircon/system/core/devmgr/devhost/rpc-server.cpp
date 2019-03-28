@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "devhost.h"
-#include "device-internal.h"
+#include "zx-device.h"
 
 #include <assert.h>
 #include <fcntl.h>
