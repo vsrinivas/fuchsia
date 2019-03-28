@@ -126,7 +126,7 @@ static bool spawn_invalid_args_test(void) {
 
     status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
                         "/bogus/not/a/file", argv, process.reset_and_get_address());
-    ASSERT_EQ(ZX_ERR_IO, status);
+    ASSERT_EQ(ZX_ERR_NOT_FOUND, status);
 
     status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
                         kSpawnChild, NULL, process.reset_and_get_address());
@@ -501,7 +501,7 @@ static bool spawn_errors_test(void) {
                              empty_argv, process.reset_and_get_address()));
     }
 
-    ASSERT_EQ(ZX_ERR_IO,
+    ASSERT_EQ(ZX_ERR_NOT_FOUND,
               fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/bogus/path",
                              argv, nullptr, 0, nullptr, process.reset_and_get_address(), err_msg));
     EXPECT_TRUE(strstr(err_msg, "/bogus/path") != nullptr);

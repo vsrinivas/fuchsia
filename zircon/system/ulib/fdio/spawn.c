@@ -71,7 +71,7 @@ static_assert(offsetof(fdio_spawn_action_t, name.data) == 8,
 static zx_status_t load_path(const char* path, zx_handle_t* vmo) {
     int fd = open(path, O_RDONLY);
     if (fd < 0)
-        return ZX_ERR_IO;
+        return ZX_ERR_NOT_FOUND;
 
     zx_status_t status = fdio_get_vmo_clone(fd, vmo);
     close(fd);
