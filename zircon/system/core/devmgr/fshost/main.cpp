@@ -161,10 +161,6 @@ zx::channel fs_clone(const char* path) {
 } // namespace devmgr
 
 int main(int argc, char** argv) {
-    using namespace devmgr;
-
-    printf("fshost: started.\n");
-
     bool netboot = false;
     bool disable_block_watcher = false;
 
@@ -208,13 +204,13 @@ int main(int argc, char** argv) {
     zx::event fshost_event(zx_take_startup_handle(PA_HND(PA_USER1, 0)));
 
     // First, initialize the local filesystem in isolation.
-    fbl::unique_ptr<FsManager> root = fbl::make_unique<FsManager>();
+    auto root = fbl::make_unique<devmgr::FsManager>();
 
     // Initialize connections to external service managers, and begin
     // monitoring the |fshost_event| for a termination event.
     root->InitializeConnections(std::move(fs_root), std::move(devfs_root), std::move(svc_root),
                                 std::move(fshost_event));
-    g_fshost = root.get();
+    devmgr::g_fshost = root.get();
 
     // If we have a "/system" ramdisk, start higher level services.
     if (root->IsSystemMounted()) {
@@ -222,17 +218,17 @@ int main(int argc, char** argv) {
     }
 
     // Setup the devmgr loader service.
-    setup_loader_service(std::move(devmgr_loader));
+    devmgr::setup_loader_service(std::move(devmgr_loader));
 
     // If there is a ramdisk, setup the ramctl watcher.
     zx::vmo ramdisk_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTDATA, 0)));
     if (ramdisk_vmo.is_valid()) {
-        thrd_t th;
-        int err = thrd_create_with_name(&th, &RamctlWatcher, &ramdisk_vmo, "ramctl-watcher");
+        thrd_t t;
+        int err = thrd_create_with_name(&t, &devmgr::RamctlWatcher, &ramdisk_vmo, "ramctl-watcher");
         if (err != thrd_success) {
             printf("fshost: failed to start ramctl-watcher: %d\n", err);
         }
-        thrd_detach(th);
+        thrd_detach(t);
     }
 
     if (!disable_block_watcher) {
