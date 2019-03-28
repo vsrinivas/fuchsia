@@ -274,15 +274,15 @@ struct Message {
 
 } // namespace
 
-BEGIN_TEST_CASE(type_alias_tests);
-RUN_TEST(primitive);
-RUN_TEST(vector_parametrized_on_decl);
-RUN_TEST(vector_parametrized_on_use);
-RUN_TEST(vector_bounded_on_decl);
-RUN_TEST(vector_bounded_on_use);
-RUN_TEST(vector_nullable_on_decl);
-RUN_TEST(vector_nullable_on_use);
-RUN_TEST(invalid_cannot_parametrize_twice);
-RUN_TEST(invalid_cannot_bound_twice);
-RUN_TEST(invalid_cannot_null_twice);
-END_TEST_CASE(type_alias_tests);
+BEGIN_TEST_CASE(type_alias_tests)
+RUN_TEST(primitive)
+RUN_TEST(vector_parametrized_on_decl)
+RUN_TEST(vector_parametrized_on_use)
+RUN_TEST(vector_bounded_on_decl)
+RUN_TEST(vector_bounded_on_use)
+RUN_TEST(vector_nullable_on_decl)
+RUN_TEST(vector_nullable_on_use)
+RUN_TEST(invalid_cannot_parametrize_twice)
+RUN_TEST(invalid_cannot_bound_twice)
+RUN_TEST(invalid_cannot_null_twice)
+END_TEST_CASE(type_alias_tests)
