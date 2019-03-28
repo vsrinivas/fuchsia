@@ -10,8 +10,7 @@ use {
     fidl_fuchsia_netemul_network::{EndpointManagerMarker, NetworkContextMarker},
     fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
     fuchsia_app::client,
-    fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_zircon::DurationNum,
+    fuchsia_async as fasync,
     futures::TryStreamExt,
     structopt::StructOpt,
 };
@@ -32,7 +31,6 @@ struct Opt {
     skip_up_check: bool,
 }
 
-const TIMEOUT_SECS: i64 = 15;
 const IGNORED_IP_ADDRESS_CONFIG: IpAddressConfig = IpAddressConfig::Dhcp(true);
 
 async fn config_netstack(opt: Opt) -> Result<(), Error> {
@@ -110,9 +108,5 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
 fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    executor.run_singlethreaded(
-        config_netstack(opt).on_timeout(TIMEOUT_SECS.seconds().after_now(), || {
-            Err(format_err!("Netstack setup timed out"))
-        }),
-    )
+    executor.run_singlethreaded(config_netstack(opt))
 }

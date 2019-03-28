@@ -11,8 +11,7 @@ use {
     },
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
     fuchsia_app::client,
-    fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_zircon::DurationNum,
+    fuchsia_async as fasync,
     futures::TryStreamExt,
     std::fs,
     std::path::Path,
@@ -32,7 +31,6 @@ const NETWORK_NAME: &str = "test-net";
 const EP0_NAME: &str = "ep0";
 const EP1_NAME: &str = "ep1";
 const EVENT_CODE: i32 = 1;
-const TIMEOUT_SECS: i64 = 2;
 const SETUP_FILE: &str = "/vdata/test-setup";
 const SETUP_FILE_DATA: &str = "Hello World";
 
@@ -50,11 +48,7 @@ impl BusConnection {
     }
 
     pub fn publish_code(&self, code: i32) -> Result<(), Error> {
-        self.bus.publish(Event {
-            code: Some(code),
-            message: None,
-            arguments: None,
-        })?;
+        self.bus.publish(Event { code: Some(code), message: None, arguments: None })?;
         Ok(())
     }
 
@@ -64,22 +58,19 @@ impl BusConnection {
     }
 
     pub async fn wait_for_event(&mut self, code: i32) -> Result<(), Error> {
-        let mut stream = self
-            .bus
-            .take_event_stream()
-            .try_filter_map(|event| match event {
-                fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data } => match data.code {
-                    Some(rcv_code) => {
-                        if rcv_code == code {
-                            futures::future::ok(Some(()))
-                        } else {
-                            futures::future::ok(None)
-                        }
+        let mut stream = self.bus.take_event_stream().try_filter_map(|event| match event {
+            fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data } => match data.code {
+                Some(rcv_code) => {
+                    if rcv_code == code {
+                        futures::future::ok(Some(()))
+                    } else {
+                        futures::future::ok(None)
                     }
-                    None => futures::future::ok(None),
-                },
-                _ => futures::future::ok(None),
-            });
+                }
+                None => futures::future::ok(None),
+            },
+            _ => futures::future::ok(None),
+        });
         await!(stream.try_next())?;
         Ok(())
     }
@@ -97,19 +88,13 @@ fn check_path_present(path: &str) -> Result<(), Error> {
     if Path::new(path).exists() {
         Ok(())
     } else {
-        Err(format_err!(
-            "Path {} not present, expected it to be there",
-            path
-        ))
+        Err(format_err!("Path {} not present, expected it to be there", path))
     }
 }
 
 fn check_path_absent(path: &str) -> Result<(), Error> {
     if Path::new(path).exists() {
-        Err(format_err!(
-            "Path {} present, expected it to be absent.",
-            path
-        ))
+        Err(format_err!("Path {} present, expected it to be absent.", path))
     } else {
         Ok(())
     }
@@ -117,9 +102,7 @@ fn check_path_absent(path: &str) -> Result<(), Error> {
 
 fn check_netemul_environment() -> Result<(), Error> {
     let () = check_path_present(&service_path("fuchsia.netemul.sync.SyncManager"))?;
-    let () = check_path_present(&service_path(
-        "fuchsia.netemul.environment.ManagedEnvironment",
-    ))?;
+    let () = check_path_present(&service_path("fuchsia.netemul.environment.ManagedEnvironment"))?;
     let () = check_path_present(&service_path("fuchsia.netemul.network.NetworkContext"))?;
     Ok(())
 }
@@ -152,11 +135,7 @@ async fn check_network() -> Result<(), Error> {
 async fn root_wait_for_children(mut bus: BusConnection) -> Result<(), Error> {
     // wait for three hits on the bus, representing each child test
     for i in 0..3 {
-        let () = await!(bus
-            .wait_for_event(EVENT_CODE)
-            .on_timeout(TIMEOUT_SECS.seconds().after_now(), || Err(format_err!(
-                "timed out waiting for children procs"
-            ))))?;
+        let () = await!(bus.wait_for_event(EVENT_CODE))?;
         println!("Got ping from child {}", i);
     }
 
@@ -165,11 +144,7 @@ async fn root_wait_for_children(mut bus: BusConnection) -> Result<(), Error> {
 
 async fn child_publish_on_bus(mut bus: BusConnection) -> Result<(), Error> {
     // wait for root to show up on the bus...
-    let () = await!(bus
-        .wait_for_client("root")
-        .on_timeout(TIMEOUT_SECS.seconds().after_now(), || Err(format_err!(
-            "Timed out waiting for root test"
-        ))))?;
+    let () = await!(bus.wait_for_client("root"))?;
     // ... then publish an event so root knows we were spawned
     let () = bus.publish_code(EVENT_CODE)?;
     Ok(())
@@ -191,10 +166,7 @@ fn run_root(opt: &Opt) -> Result<(), Error> {
     // check that the setup process ran:
     let setup_data = fs::read_to_string(SETUP_FILE).context("Can't open setup file.")?;
     if setup_data != SETUP_FILE_DATA {
-        return Err(format_err!(
-            "Setup file contents mismatch, got {}",
-            setup_data
-        ));
+        return Err(format_err!("Setup file contents mismatch, got {}", setup_data));
     }
 
     // wait for children on bus

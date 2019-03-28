@@ -8,8 +8,7 @@ use {
     failure::{format_err, Error, ResultExt},
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker},
     fuchsia_app::client,
-    fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_zircon::DurationNum,
+    fuchsia_async as fasync,
     std::io::{Read, Write},
     std::net::{SocketAddr, TcpListener, TcpStream},
     structopt::StructOpt,
@@ -22,7 +21,6 @@ const HELLO_MSG_REQ: &str = "Hello World from Client!";
 const HELLO_MSG_RSP: &str = "Hello World from Server!";
 const SERVER_IP: &str = "192.168.0.1";
 const PORT: i32 = 8080;
-const TIMEOUT_SECS: i64 = 5;
 
 pub struct BusConnection {
     bus: BusProxy,
@@ -60,9 +58,7 @@ async fn run_server() -> Result<(), Error> {
         return Err(format_err!("Got unexpected request from client: {}", req));
     }
     println!("Got request {}", req);
-    stream
-        .write(HELLO_MSG_RSP.as_bytes())
-        .context("write failed")?;
+    stream.write(HELLO_MSG_RSP.as_bytes()).context("write failed")?;
     stream.flush().context("flush failed")?;
     Ok(())
 }
@@ -100,17 +96,9 @@ fn main() -> Result<(), Error> {
     executor.run_singlethreaded(
         async {
             if opt.is_child {
-                await!(
-                    run_client().on_timeout(TIMEOUT_SECS.seconds().after_now(), || Err(
-                        format_err!("client timed out")
-                    ))
-                )
+                await!(run_client())
             } else {
-                await!(
-                    run_server().on_timeout(TIMEOUT_SECS.seconds().after_now(), || Err(
-                        format_err!("server timed out")
-                    ))
-                )
+                await!(run_server())
             }
         },
     )

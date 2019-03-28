@@ -81,7 +81,8 @@
                     ],
                     "name": "test-net"
                 }
-            ]
+            ],
+            "timeout": 120
         }
     },
     "program": {

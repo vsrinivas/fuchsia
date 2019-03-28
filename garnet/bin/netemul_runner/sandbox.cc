@@ -7,6 +7,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/promise.h>
+#include <lib/fit/sequencer.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/concatenate.h>
@@ -21,8 +23,6 @@ using namespace fuchsia::netemul;
 namespace netemul {
 
 static const char* kEndpointMountPath = "class/ethernet/";
-// give setup processes a maximum of 30s before bailing
-constexpr int kSetupTimeoutSecs = 30;
 constexpr int64_t kFailureTerminationCode = -1;
 constexpr int64_t kTimeoutTerminationCode = 1;
 
@@ -75,6 +75,8 @@ void Sandbox::Start(async_dispatcher_t* dispatcher) {
     Terminate(TerminationReason::INTERNAL_ERROR);
     return;
   }
+  helper_executor_ =
+      std::make_unique<async::Executor>(helper_loop_->dispatcher());
 
   sandbox_env_ = std::make_shared<SandboxEnv>();
   sandbox_env_->set_default_name(env_config_.default_url());
@@ -160,9 +162,7 @@ void Sandbox::StartEnvironments() {
 
                         // configure root environment:
                         async::PostTask(helper_loop_->dispatcher(), [this]() {
-                          if (!ConfigureRootEnvironment()) {
-                            PostTerminate(TerminationReason::INTERNAL_ERROR);
-                          }
+                          ConfigureRootEnvironment();
                         });
                       });
                     });
@@ -307,84 +307,143 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
   return true;
 }
 
-bool Sandbox::ConfigureRootEnvironment() {
+void Sandbox::ConfigureRootEnvironment() {
   ASSERT_HELPER_DISPATCHER;
   // connect to environment:
-  environment::ManagedEnvironmentSyncPtr svc;
-  auto req = svc.NewRequest();
+  auto svc = std::make_shared<environment::ManagedEnvironmentSyncPtr>();
+  auto req = svc->NewRequest();
 
   async::PostTask(main_dispatcher_, [this, req = std::move(req)]() mutable {
     root_->Bind(std::move(req));
   });
 
-  // configure with service pointer:
-  return ConfigureEnvironment(std::move(svc), env_config_.environment(), true);
+  fit::schedule_for_consumer(
+      helper_executor_.get(),
+      ConfigureEnvironment(std::move(svc), &env_config_.environment(), true)
+          .or_else(
+              [this]() { PostTerminate(TerminationReason::INTERNAL_ERROR); }));
 }
 
-// Configure environment runs in an auxiliary thread, so we can use synchronous
-// calls to fidl services
-bool Sandbox::ConfigureEnvironment(
-    fidl::SynchronousInterfacePtr<ManagedEnvironment::FManagedEnvironment> env,
-    const config::Environment& config, bool root) {
+fit::promise<> Sandbox::StartChildEnvironment(
+    ConfiguringEnvironmentPtr parent, const config::Environment* config) {
   ASSERT_HELPER_DISPATCHER;
+
+  return fit::make_promise(
+             [this, parent,
+              config]() -> fit::result<ConfiguringEnvironmentPtr> {
+               ManagedEnvironment::Options options;
+               if (!CreateEnvironmentOptions(*config, &options)) {
+                 return fit::error();
+               }
+               auto child_env =
+                   std::make_shared<environment::ManagedEnvironmentSyncPtr>();
+               if ((*parent)->CreateChildEnvironment(
+                       child_env->NewRequest(), std::move(options)) != ZX_OK) {
+                 return fit::error();
+               }
+
+               return fit::ok(std::move(child_env));
+             })
+      .and_then([this, config](ConfiguringEnvironmentPtr child_env) {
+        return ConfigureEnvironment(std::move(child_env), config);
+      });
+}
+
+fit::promise<> Sandbox::StartEnvironmentSetup(
+    const config::Environment* config,
+    ConfiguringEnvironmentLauncher launcher) {
+  return fit::make_promise([this, config, launcher = std::move(launcher)] {
+    auto prom = fit::make_promise([] { return fit::ok(); }).box();
+    for (const auto& setup : config->setup()) {
+      prom = prom.and_then([this, setup = &setup, launcher]() {
+                   return LaunchSetup(
+                       launcher.get(),
+                       setup->GetUrlOrDefault(sandbox_env_->default_name()),
+                       setup->arguments());
+                 })
+                 .box();
+    }
+    return prom;
+  });
+}
+
+fit::promise<> Sandbox::StartEnvironmentAppsAndTests(
+    const netemul::config::Environment* config,
+    netemul::Sandbox::ConfiguringEnvironmentLauncher launcher) {
+  return fit::make_promise([this, config,
+                            launcher = std::move(launcher)]() -> fit::result<> {
+    for (const auto& app : config->apps()) {
+      if (!LaunchProcess<kMsgApp>(
+              launcher.get(), app.GetUrlOrDefault(sandbox_env_->default_name()),
+              app.arguments(), false)) {
+        return fit::error();
+      }
+    }
+
+    for (const auto& test : config->test()) {
+      if (!LaunchProcess<kMsgTest>(
+              launcher.get(),
+              test.GetUrlOrDefault(sandbox_env_->default_name()),
+              test.arguments(), true)) {
+        return fit::error();
+      }
+      // save that at least one test was spawned.
+      test_spawned_ = true;
+    }
+
+    return fit::ok();
+  });
+}
+
+fit::promise<> Sandbox::StartEnvironmentInner(
+    ConfiguringEnvironmentPtr env, const config::Environment* config) {
+  ASSERT_HELPER_DISPATCHER;
+  auto launcher = std::make_shared<fuchsia::sys::LauncherSyncPtr>();
+  return fit::make_promise([this, launcher, env]() -> fit::result<> {
+           // get launcher
+           if ((*env)->GetLauncher(launcher->NewRequest()) != ZX_OK) {
+             FXL_LOG(ERROR) << "Can't get environment launcher";
+             return fit::error();
+           }
+           return fit::ok();
+         })
+      .and_then(StartEnvironmentSetup(config, launcher))
+      .and_then(StartEnvironmentAppsAndTests(config, launcher));
+}
+
+fit::promise<> Sandbox::ConfigureEnvironment(ConfiguringEnvironmentPtr env,
+                                             const config::Environment* config,
+                                             bool root) {
+  ASSERT_HELPER_DISPATCHER;
+
+  std::vector<fit::promise<>> promises;
+
   // iterate on children
-  for (const auto& child : config.children()) {
-    ManagedEnvironment::Options options;
-    if (!CreateEnvironmentOptions(child, &options)) {
-      return false;
-    }
-    environment::ManagedEnvironmentSyncPtr child_env;
-    if (env->CreateChildEnvironment(child_env.NewRequest(),
-                                    std::move(options)) != ZX_OK) {
-      FXL_LOG(ERROR) << "Creating environment \"" << child.name()
-                     << "\" failed";
-      return false;
-    }
-
-    // child environment was successfully created, configure child:
-    if (!ConfigureEnvironment(std::move(child_env), child)) {
-      return false;
-    }
+  for (const auto& child : config->children()) {
+    // start each one of the child environments
+    promises.emplace_back(StartChildEnvironment(env, &child));
   }
 
-  // get launcher
-  fuchsia::sys::LauncherSyncPtr launcher;
-  if (env->GetLauncher(launcher.NewRequest()) != ZX_OK) {
-    FXL_LOG(ERROR) << "Can't get environment launcher";
-    return false;
-  }
-
-  for (const auto& setup : config.setup()) {
-    if (!LaunchSetup(&launcher,
-                     setup.GetUrlOrDefault(sandbox_env_->default_name()),
-                     setup.arguments())) {
-      return false;
-    }
-  }
-
-  for (const auto& app : config.apps()) {
-    if (!LaunchProcess<kMsgApp>(
-            &launcher, app.GetUrlOrDefault(sandbox_env_->default_name()),
-            app.arguments(), false)) {
-      return false;
-    }
-  }
-
-  for (const auto& test : config.test()) {
-    if (!LaunchProcess<kMsgTest>(
-            &launcher, test.GetUrlOrDefault(sandbox_env_->default_name()),
-            test.arguments(), true)) {
-      return false;
-    }
-    // save that at least one test was spawned.
-    test_spawned_ = true;
-  }
-
+  // start this processes inside this environment
+  auto self_start = StartEnvironmentInner(env, config);
   if (root) {
-    EnableTestObservation();
+    // if root, after everything is set up, enable observing
+    // test returns.
+    promises.emplace_back(
+        self_start.and_then([this]() { EnableTestObservation(); }));
+  } else {
+    promises.emplace_back(std::move(self_start));
   }
 
-  return true;
+  return fit::join_promise_vector(std::move(promises))
+      .and_then([](std::vector<fit::result<>> results) -> fit::result<> {
+        for (const auto& r : results) {
+          if (r.is_error()) {
+            return fit::error();
+          }
+        }
+        return fit::ok();
+      });
 }
 
 template <typename T>
@@ -432,47 +491,41 @@ bool Sandbox::LaunchProcess(fuchsia::sys::LauncherSyncPtr* launcher,
   return true;
 }
 
-bool Sandbox::LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
-                          const std::string& url,
-                          const std::vector<std::string>& arguments) {
+fit::promise<> Sandbox::LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
+                                    const std::string& url,
+                                    const std::vector<std::string>& arguments) {
   ASSERT_HELPER_DISPATCHER;
+
+  fit::bridge<> bridge;
 
   fuchsia::sys::LaunchInfo linfo;
   linfo.url = url;
   linfo.arguments->insert(linfo.arguments->end(), arguments.begin(),
                           arguments.end());
 
-  fuchsia::sys::ComponentControllerPtr proc;
-  bool done = false;
-  bool success = false;
-
-  // we observe test processes return code
-  proc.events().OnTerminated = [url, this, &done, &success](
-                                   int64_t code, TerminationReason reason) {
-    FXL_LOG(INFO) << "Setup " << url << " terminated with (" << code
-                  << ") reason: "
-                  << sys::HumanReadableTerminationReason(reason);
-    done = true;
-    success = code == 0 && reason == TerminationReason::EXITED;
-  };
+  auto& proc = procs_.emplace_back();
 
   if ((*launcher)->CreateComponent(std::move(linfo), proc.NewRequest()) !=
       ZX_OK) {
     FXL_LOG(ERROR) << "couldn't launch setup: " << url;
-    return false;
+    bridge.completer.complete_error();
+  } else {
+    // we observe test processes return code
+    proc.events().OnTerminated =
+        [url, this, completer = std::move(bridge.completer)](
+            int64_t code, TerminationReason reason) mutable {
+          FXL_LOG(INFO) << "Setup " << url << " terminated with (" << code
+                        << ") reason: "
+                        << sys::HumanReadableTerminationReason(reason);
+          if (code == 0 && reason == TerminationReason::EXITED) {
+            completer.complete_ok();
+          } else {
+            completer.complete_error();
+          }
+        };
   }
 
-  while (!done) {
-    auto status =
-        helper_loop_->Run(zx::deadline_after(zx::sec(kSetupTimeoutSecs)), true);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Setup " << url << " run loop exited with: "
-                     << zx_status_get_string(status);
-      return false;
-    }
-  }
-
-  return success;
+  return bridge.consumer.promise();
 }
 
 void Sandbox::EnableTestObservation() {

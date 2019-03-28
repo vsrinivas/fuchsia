@@ -7,6 +7,8 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async_promise/executor.h>
+#include <lib/fit/promise.h>
 #include <lib/netemul/network/netdump.h>
 #include <unordered_set>
 #include "managed_environment.h"
@@ -53,6 +55,11 @@ class Sandbox {
   const SandboxEnv::Ptr& sandbox_environment() { return sandbox_env_; }
 
  private:
+  using ConfiguringEnvironmentPtr = std::shared_ptr<
+      fidl::SynchronousInterfacePtr<ManagedEnvironment::FManagedEnvironment>>;
+  using ConfiguringEnvironmentLauncher =
+      std::shared_ptr<fidl::SynchronousInterfacePtr<fuchsia::sys::Launcher>>;
+
   void StartEnvironments();
   void Terminate(TerminationReason reason);
   void Terminate(int64_t exit_code, TerminationReason reason);
@@ -68,21 +75,31 @@ class Sandbox {
                      const std::string& url,
                      const std::vector<std::string>& arguments, bool is_test);
 
-  bool LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
-                   const std::string& url,
-                   const std::vector<std::string>& arguments);
+  fit::promise<> LaunchSetup(fuchsia::sys::LauncherSyncPtr* launcher,
+                             const std::string& url,
+                             const std::vector<std::string>& arguments);
+
+  fit::promise<> StartChildEnvironment(ConfiguringEnvironmentPtr parent,
+                                       const config::Environment* config);
+  fit::promise<> StartEnvironmentInner(ConfiguringEnvironmentPtr environment,
+                                       const config::Environment* config);
+  fit::promise<> StartEnvironmentSetup(const config::Environment* config,
+                                       ConfiguringEnvironmentLauncher launcher);
+  fit::promise<> StartEnvironmentAppsAndTests(
+      const config::Environment* config,
+      ConfiguringEnvironmentLauncher launcher);
 
   bool CreateEnvironmentOptions(const config::Environment& config,
                                 ManagedEnvironment::Options* options);
-  bool ConfigureRootEnvironment();
-  bool ConfigureEnvironment(
-      fidl::SynchronousInterfacePtr<ManagedEnvironment::FManagedEnvironment>
-          env,
-      const config::Environment& config, bool root = false);
+  void ConfigureRootEnvironment();
+  fit::promise<> ConfigureEnvironment(ConfiguringEnvironmentPtr env,
+                                      const config::Environment* config,
+                                      bool root = false);
   bool ConfigureNetworks();
 
   async_dispatcher_t* main_dispatcher_;
   std::unique_ptr<async::Loop> helper_loop_;
+  std::unique_ptr<async::Executor> helper_executor_;
   config::Config env_config_;
   bool setup_done_;
   bool test_spawned_;

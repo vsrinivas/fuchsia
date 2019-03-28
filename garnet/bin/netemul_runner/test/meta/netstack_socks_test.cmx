@@ -5,7 +5,8 @@
                 "test": [
                     "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/netstack_socks.cmx"
                 ]
-            }
+            },
+            "timeout": 120
         }
     },
     "program": {

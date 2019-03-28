@@ -40,7 +40,8 @@
                         "arguments": []
                     }
                 ]
-            }
+            },
+            "timeout": 120
         }
     },
     "program": {

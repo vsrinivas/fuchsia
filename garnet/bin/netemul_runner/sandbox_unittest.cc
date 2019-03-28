@@ -3,12 +3,16 @@
 // found in the LICENSE file.
 
 #include "sandbox.h"
+#include <lib/fit/sequencer.h>
+#include <lib/fit/single_threaded_executor.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <iostream>
 #include <unordered_set>
 #include "lib/gtest/real_loop_fixture.h"
 
-static const uint32_t kTimeoutSecs = 5;
+// A fairly large timeout is used to prevent flakiness in CQ, but we don't want
+// to have a test that just blocks forever.
+static const uint32_t kTimeoutSecs = 90;
 static const char* kBusName = "test-bus";
 static const char* kBusClientName = "sandbox_unittest";
 
@@ -230,9 +234,11 @@ TEST_F(SandboxTest, FastChildren) {
   {
     "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
     "environment" : {
+      "name" : "root",
       "test" : [ { "arguments": ["-p", "1", "-w", "30"] } ],
       "children" : [
         {
+          "name" : "child",
           "test" : [{
             "arguments" : ["-p", "2", "-n", "child"]
           }]
@@ -252,9 +258,11 @@ TEST_F(SandboxTest, FastRoot) {
   {
     "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
     "environment" : {
+      "name" : "root",
       "test" : [ { "arguments": ["-p", "1"] } ],
       "children" : [
         {
+          "name" : "child",
           "test" : [{
             "arguments" : ["-p", "2", "-n", "child", "-w", "30"]
           }]
@@ -690,9 +698,25 @@ TEST_F(SandboxTest, ProcessSucceedsBeforeTimeoutFires) {
    }
 }
 )");
-  // if a test succeds, even though we have a timeout, we should succeed
+  // if a test succeeds, even though we have a timeout, we should succeed
   // normally:
   RunSandboxSuccess();
+}
+
+TEST_F(SandboxTest, Sequencer) {
+  fit::sequencer seq;
+  fit::single_threaded_executor exec;
+  std::stringstream ss;
+
+  std::vector<fit::promise<>> proms;
+  proms.emplace_back(seq.wrap(fit::make_promise([&]() { ss << "a"; })));
+
+  proms.emplace_back(seq.wrap(fit::make_promise([&]() { ss << "b"; })));
+
+  exec.schedule_task(fit::join_promise_vector(std::move(proms)));
+  exec.run();
+
+  EXPECT_EQ(ss.str(), "ab");
 }
 
 }  // namespace testing

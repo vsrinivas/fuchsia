@@ -198,8 +198,7 @@ mod test {
         Status,
     };
     use fuchsia_app::client;
-    use fuchsia_async::{self as fasync, TimeoutExt};
-    use fuchsia_zircon::DurationNum;
+    use fuchsia_async as fasync;
     use futures::{future, TryStreamExt};
 
     #[fasync::run_singlethreaded]
@@ -256,10 +255,6 @@ mod test {
                 }
             });
 
-        const TIMEOUT_SECS: i64 = 2;
-        await!(wait_watch
-            .try_next()
-            .on_timeout(TIMEOUT_SECS.seconds().after_now(), || panic!("Test timed out")))
-        .unwrap();
+        await!(wait_watch.try_next()).unwrap();
     }
 }

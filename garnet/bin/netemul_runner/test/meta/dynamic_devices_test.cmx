@@ -24,7 +24,8 @@
                     ],
                     "name": "net"
                 }
-            ]
+            ],
+            "timeout": 120
         }
     },
     "program": {

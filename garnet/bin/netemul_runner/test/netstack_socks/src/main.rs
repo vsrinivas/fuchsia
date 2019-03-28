@@ -4,27 +4,25 @@
 
 #![feature(async_await, await_macro, futures_api)]
 
-use {
-    failure::{format_err, Error, ResultExt},
-    fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_netemul_environment::{
-        EnvironmentOptions, LaunchService, ManagedEnvironmentMarker, VirtualDevice,
-    },
-    fidl_fuchsia_netemul_network::{
-        DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker, EndpointProxy,
-        NetworkConfig, NetworkContextMarker, NetworkManagerMarker, NetworkProxy,
-    },
-    fidl_fuchsia_netstack::NetstackMarker,
-    fidl_fuchsia_sys::{
-        ComponentControllerEvent, ComponentControllerMarker, ComponentControllerProxy, LaunchInfo,
-        LauncherMarker, TerminationReason,
-    },
-    fuchsia_app::client,
-    fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_zircon::{self as zx, DurationNum},
-    futures::TryStreamExt,
-    structopt::StructOpt,
+use failure::{format_err, Error, ResultExt};
+use fidl::endpoints::ServiceMarker;
+use fidl_fuchsia_netemul_environment::{
+    EnvironmentOptions, LaunchService, ManagedEnvironmentMarker, VirtualDevice,
 };
+use fidl_fuchsia_netemul_network::{
+    DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker, EndpointProxy,
+    NetworkConfig, NetworkContextMarker, NetworkManagerMarker, NetworkProxy,
+};
+use fidl_fuchsia_netstack::NetstackMarker;
+use fidl_fuchsia_sys::{
+    ComponentControllerEvent, ComponentControllerMarker, ComponentControllerProxy, LaunchInfo,
+    LauncherMarker, TerminationReason,
+};
+use fuchsia_app::client;
+use fuchsia_async as fasync;
+use fuchsia_zircon as zx;
+use futures::TryStreamExt;
+use structopt::StructOpt;
 
 mod child;
 mod common;
@@ -32,7 +30,6 @@ mod common;
 const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/netstack_socks.cmx";
 const NETSTACK_URL: &str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
 const NETWORK_NAME: &str = "test-network";
-const TIMEOUT: i64 = 5;
 
 struct Env {
     controller: ComponentControllerProxy,
@@ -191,28 +188,18 @@ async fn prepare_env() -> Result<(), Error> {
     println!("Starting server...");
     let server = await!(spawn_env(
         &net,
-        SpawnOptions { env_name: "server", ip: server_ip_cfg, remote: None }
+        SpawnOptions { env_name: "server", ip: server_ip_cfg, remote: None },
     ))?;
 
-    let () = await!(bus
-        .wait_for_event(common::SERVER_READY)
-        .on_timeout(TIMEOUT.seconds().after_now(), || Err(format_err!(
-            "timed out waiting for server"
-        ))))?;
+    let () = await!(bus.wait_for_event(common::SERVER_READY))?;
     println!("Server ready, starting client...");
 
     let client = await!(spawn_env(
         &net,
-        SpawnOptions { env_name: "client", ip: client_ip_cfg, remote: Some(server_ip) }
+        SpawnOptions { env_name: "client", ip: client_ip_cfg, remote: Some(server_ip) },
     ))?;
-    let () = await!(wait_for_component(&client.controller)
-        .on_timeout(TIMEOUT.seconds().after_now(), || Err(format_err!(
-            "Timed out waiting for client"
-        ))))?;
-    let () = await!(wait_for_component(&server.controller)
-        .on_timeout(TIMEOUT.seconds().after_now(), || Err(format_err!(
-            "Timed out waiting for server"
-        ))))?;
+    let () = await!(wait_for_component(&client.controller))?;
+    let () = await!(wait_for_component(&server.controller))?;
     Ok(())
 }
 

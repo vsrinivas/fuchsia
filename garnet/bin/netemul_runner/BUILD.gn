@@ -28,6 +28,7 @@ source_set("src") {
     "//garnet/bin/netemul_runner/model",
     "//garnet/lib/cmx:cmx",
     "//garnet/lib/process",
+    "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/json",
