@@ -9,6 +9,8 @@
 #include <poll.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/device/pty.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
@@ -126,7 +128,7 @@ int process_launch(const char* const* argv, const char* path, int index,
     } else {
         status = ZX_ERR_NOT_FOUND;
         const char* filename = NULL;
-        while (status != ZX_OK && (filename = padvance(&path, argv[0])) != NULL) {
+        while (status == ZX_ERR_NOT_FOUND && (filename = padvance(&path, argv[0])) != NULL) {
             if (--index < 0 && pathopt == NULL)
                 status = launch(filename, argv, envp, process, job, err_msg);
             stunalloc(filename);

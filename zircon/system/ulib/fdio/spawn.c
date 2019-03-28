@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/dlfcn.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
@@ -139,6 +140,9 @@ static zx_status_t resolve_name(const char* name, size_t name_len,
         return ZX_ERR_INTERNAL;
     }
 
+    if (status != ZX_OK) {
+        report_error(err_msg, "failed to resolve %.*s", name_len, name);
+    }
     return status;
 }
 
@@ -731,6 +735,14 @@ cleanup:
 
     if (msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_JOB] != ZX_HANDLE_INVALID)
         zx_handle_close(msg_handles[FDIO_SPAWN_LAUNCH_HANDLE_JOB]);
+
+    // If we observe ZX_ERR_NOT_FOUND in the VMO spawn, it really means a
+    // dependency of launching could not be fulfilled, but clients of spawn_etc
+    // and friends could misinterpret this to mean the binary was not found.
+    // Instead we remap that specific case to ZX_ERR_INTERNAL.
+    if (status == ZX_ERR_NOT_FOUND) {
+        return ZX_ERR_INTERNAL;
+    }
 
     return status;
 }

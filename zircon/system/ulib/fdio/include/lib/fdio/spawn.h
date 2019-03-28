@@ -251,7 +251,7 @@ zx_status_t fdio_spawn_etc(zx_handle_t job,
 //
 // ZX_ERR_OUT_OF_RANGE: |executable_vmo| is smaller than the resolver prefix.
 //
-// ZX_ERR_NOT_FOUND: Cannot connect to process launcher.
+// ZX_ERR_INTERNAL: Cannot connect to process launcher.
 //
 // May return other errors.
 zx_status_t fdio_spawn_vmo(zx_handle_t job,
