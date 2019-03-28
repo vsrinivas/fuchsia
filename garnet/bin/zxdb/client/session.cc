@@ -643,23 +643,8 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
     }
     case debug_ipc::MsgHeader::Type::kNotifyProcessStarting: {
       debug_ipc::NotifyProcessStarting notify;
-      if (!debug_ipc::ReadNotifyProcessStarting(&reader, &notify))
-        return;
-
-      // Search the targets to see if there is a non-attached empty one.
-      // Normally this would be the initial one. Assume that targets that have
-      // a name have been set up by the user which we don't want to overwrite.
-      TargetImpl* found_target = nullptr;
-      for (TargetImpl* target : system_.GetTargetImpls()) {
-        if (target->GetState() == Target::State::kNone &&
-            target->GetArgs().empty()) {
-          found_target = target;
-          break;
-        }
-      }
-      if (!found_target)  // No empty target, make a new one.
-        found_target = system_.CreateNewTargetImpl(nullptr);
-      found_target->ProcessCreatedInJob(notify.koid, notify.name);
+      if (debug_ipc::ReadNotifyProcessStarting(&reader, &notify))
+        DispatchProcessStarting(notify);
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:

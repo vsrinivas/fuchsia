@@ -6,7 +6,6 @@
 
 #include <inttypes.h>
 
-#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <zircon/syscalls/debug.h>
@@ -16,8 +15,9 @@
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/debug_agent/arch.h"
+#include "src/developer/debug/debug_agent/binary_launcher.h"
+#include "src/developer/debug/debug_agent/component_launcher.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
-#include "src/developer/debug/debug_agent/launcher.h"
 #include "src/developer/debug/debug_agent/object_util.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
 #include "src/developer/debug/debug_agent/process_info.h"
@@ -27,7 +27,6 @@
 #include "src/developer/debug/ipc/debug/logging.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
-#include "src/developer/debug/shared/component_utils.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/shared/zx_status.h"
@@ -524,9 +523,10 @@ zx_status_t DebugAgent::AddDebuggedProcess(
 void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
                                debug_ipc::LaunchReply* reply) {
   FXL_DCHECK(!request.argv.empty());
-  DEBUG_LOG() << "Launching binary " << request.argv.front();
-  Launcher launcher(services_);
   reply->inferior_type = debug_ipc::InferiorType::kBinary;
+  DEBUG_LOG() << "Launching binary " << request.argv.front();
+
+  BinaryLauncher launcher(services_);
 
   reply->status = launcher.Setup(request.argv);
   if (reply->status != ZX_OK)
@@ -562,21 +562,7 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
 
 void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
                                  debug_ipc::LaunchReply* reply) {
-  const auto& pkg_url = request.argv.front();
-
-  debug_ipc::ComponentDescription desc;
-  if (!debug_ipc::ExtractComponentFromPackageUrl(pkg_url, &desc)) {
-    FXL_LOG(WARNING) << "Invalid package url: " << pkg_url;
-    reply->status = ZX_ERR_INVALID_ARGS;
-    return;
-  }
-
-  auto& filter = desc.component_name;
-  DEBUG_LOG() << "Running component. Url: " << pkg_url
-              << ", filter: " << filter;
-
   *reply = {};
-  reply->process_name = filter;
   reply->inferior_type = debug_ipc::InferiorType::kComponent;
 
   if (!debug_ipc::MessageLoopTarget::Current()->SupportsFidl()) {
@@ -584,51 +570,48 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
     return;
   }
 
-  if (component_root_job_koid_ == 0) {
+
+  ComponentLauncher component_launcher(services_);
+
+  LaunchComponentDescription desc;
+  zx_status_t status = component_launcher.Prepare(request.argv, &desc);
+  if (status != ZX_OK) {
+    reply->status = status;
+    return;
+  }
+
+  // Create the filter
+  DebuggedJob* job = GetDebuggedJob(component_root_job_koid_);
+  FXL_DCHECK(job);
+  job->AppendFilter(desc.filter);
+
+  // Store the filter associate to the unique id for that filter.
+  uint32_t component_id = next_component_id_++;
+  expected_components_[desc.filter] = component_id;
+  reply->component_id = component_id;
+
+  auto controller = component_launcher.Launch();
+  if (!controller) {
+    FXL_LOG(WARNING) << "Could not launch component " << desc.url;
     reply->status = ZX_ERR_BAD_STATE;
     return;
   }
 
-  fuchsia::sys::LaunchInfo launch_info = {};
-  launch_info.url = pkg_url;
-  for (size_t i = 1; i < request.argv.size(); i++) {
-    launch_info.arguments.push_back(request.argv[i]);
-  }
-
-  // Create the filter
-  // TODO(donosoc): Filters should be removed on attach or failure.
-  DebuggedJob* job = GetDebuggedJob(component_root_job_koid_);
-  FXL_DCHECK(job);
-  job->AppendFilter(filter);
-
-  fuchsia::sys::LauncherSyncPtr launcher;
-  services_->Connect(launcher.NewRequest());
-
-  // Controller is a way to manage the newly created component. We need it in
-  // order to receive the terminated events. Sadly, there is no component
-  // started event. This also makes us need an async::Loop so that the fidl
-  // plumbing can work.
-  fuchsia::sys::ComponentControllerPtr controller;
-  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
-
+  // TODO(donosoc): This should hook into the debug agent so it can correctly
+  //                shutdown the state associated with waiting for this
+  //                component.
   controller.events().OnTerminated =
-      [this, &pkg_url](int64_t return_code,
-                       fuchsia::sys::TerminationReason reason) {
+      [pkg_url = desc.url](int64_t return_code,
+                           fuchsia::sys::TerminationReason reason) {
         if (reason != fuchsia::sys::TerminationReason::EXITED) {
           FXL_LOG(WARNING) << "Component " << pkg_url << " exited with "
                            << sys::HumanReadableTerminationReason(reason);
         }
       };
 
-  // Detaching means that we're no longer controlling the component. This is
-  // needed because otherwise the component is removed once the controller is
-  // destroyed.
-  controller.get()->Detach();
-
-  // Store the filter associate to the unique id for that filter.
-  uint32_t component_id = next_component_id_++;
-  expected_components_[filter] = component_id;
-  reply->component_id = component_id;
+  // TODO(donosoc): We should hold on to the controller to better control the
+  //                component lifetime.
+  controller->Detach();
 
   // TODO(donosoc): This should be replaced with the actual TerminationReason
   //                provided by the fidl interface. But this requires to put

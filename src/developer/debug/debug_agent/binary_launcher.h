@@ -26,10 +26,10 @@ namespace debug_agent {
 // returning ownership of its internal process handle at the end of launching.
 // But our code needs to set up the exception handling before code starts
 // executing, and expects to own the handle its using.
-class Launcher {
+class BinaryLauncher {
  public:
-  explicit Launcher(std::shared_ptr<sys::ServiceDirectory> env_services);
-  ~Launcher() = default;
+  explicit BinaryLauncher(std::shared_ptr<sys::ServiceDirectory> env_services);
+  ~BinaryLauncher();
 
   // Setup will create the process object but not launch the process yet.
   zx_status_t Setup(const std::vector<std::string>& argv);
@@ -62,7 +62,7 @@ class Launcher {
   zx::socket out_;
   zx::socket err_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(Launcher);
+  FXL_DISALLOW_COPY_AND_ASSIGN(BinaryLauncher);
 };
 
 }  // namespace debug_agent
