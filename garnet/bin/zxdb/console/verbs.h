@@ -109,6 +109,14 @@ struct VerbRecord {
              std::initializer_list<std::string> aliases, const char* short_help,
              const char* help, CommandGroup group,
              SourceAffinity source_affinity = SourceAffinity::kNone);
+  VerbRecord(CommandExecutor exec, CommandCompleter complete,
+             std::initializer_list<std::string> aliases, const char* short_help,
+             const char* help, CommandGroup group,
+             SourceAffinity source_affinity = SourceAffinity::kNone);
+  VerbRecord(CommandExecutorWithCallback exec_cb, CommandCompleter complete,
+             std::initializer_list<std::string> aliases, const char* short_help,
+             const char* help, CommandGroup group,
+             SourceAffinity source_affinity = SourceAffinity::kNone);
   ~VerbRecord();
 
   CommandExecutor exec = nullptr;

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include <algorithm>
+#include <filesystem>
 
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/thread.h"
@@ -16,6 +17,7 @@
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 
 namespace zxdb {
 
@@ -293,6 +295,68 @@ Err DoOpenDump(ConsoleContext* context, const Command& cmd,
   return Err();
 }
 
+void DoCompleteOpenDump(const Command& cmd, const std::string& prefix,
+                        std::vector<std::string>* completions) {
+  if (!cmd.args().empty()) {
+    return;
+  }
+
+  std::error_code ec;
+
+  std::filesystem::path path;
+  std::string filename;
+
+  if (prefix.empty()) {
+    path = std::filesystem::current_path(ec);
+
+    if (ec) {
+      return;
+    }
+  } else if (std::filesystem::exists(prefix, ec)) {
+    if (!std::filesystem::is_directory(prefix, ec)) {
+      completions->push_back(prefix);
+      return;
+    }
+
+    path = std::filesystem::path(prefix) / "";
+  } else {
+    auto path_parts = std::filesystem::path(prefix);
+    filename = path_parts.filename();
+
+    if (filename.empty()) {
+      return;
+    }
+
+    path = path_parts.parent_path();
+
+    if (path.empty()) {
+      path = std::filesystem::current_path(ec);
+
+      if (ec) {
+        return;
+      }
+    } else if (!std::filesystem::is_directory(path)) {
+      return;
+    }
+  }
+
+  for (const auto& item : std::filesystem::directory_iterator(path, ec)) {
+    auto found = std::string(item.path().filename());
+
+    if (!StringBeginsWith(found, filename)) {
+      continue;
+    }
+
+    auto completion = prefix + found.substr(filename.size());
+
+    if (item.is_directory(ec)) {
+      completion += "/";
+    }
+
+    completions->push_back(completion);
+  }
+}
+
 // disconnect ------------------------------------------------------------------
 
 const char kDisconnectShortHelp[] =
@@ -364,9 +428,9 @@ void AppendControlVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kQuitAgent] =
       VerbRecord(&DoQuitAgent, {"quit-agent"}, kQuitAgentShortHelp,
                  kQuitAgentHelp, CommandGroup::kGeneral);
-  (*verbs)[Verb::kOpenDump] =
-      VerbRecord(&DoOpenDump, {"opendump"}, kOpenDumpShortHelp, kOpenDumpHelp,
-                 CommandGroup::kGeneral);
+  (*verbs)[Verb::kOpenDump] = VerbRecord(
+      &DoOpenDump, &DoCompleteOpenDump, {"opendump"}, kOpenDumpShortHelp,
+      kOpenDumpHelp, CommandGroup::kGeneral, SourceAffinity::kNone);
   (*verbs)[Verb::kCls] = VerbRecord(&DoCls, {"cls"}, kClsShortHelp, kClsHelp,
                                     CommandGroup::kGeneral);
 }
