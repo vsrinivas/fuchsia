@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/recovery_netstack#meta/recovery_netstack.cmx",
-                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/recovery_netstack#meta/recovery_netstack.cmx"
+                "fuchsia.net.SocketProvider": "fuchsia-pkg://fuchsia.com/netstack3#meta/netstack3.cmx",
+                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack3#meta/netstack3.cmx"
             }
         }
     },

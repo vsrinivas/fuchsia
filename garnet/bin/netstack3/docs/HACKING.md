@@ -1,8 +1,8 @@
 # Recovery Netstack Hacking HOWTO
 
-This document describes how to run the recovery netstack, as well as a few
-possible dev workflows. The instructions are for how to set up QEMU, but are
-also applicable to real hardware.
+This document describes how to run Netstack3, as well as a few possible dev
+workflows. The instructions are for how to set up QEMU, but are also applicable
+to real hardware.
 
 ## (Step 1) QEMU Setup
 
@@ -33,15 +33,15 @@ fx run -kN -- -netdev type=tap,ifname=qemu-extra,script=no,downscript=no,id=net1
 
 ## (Step 2) `sysmgr` Setup
 
-No matter how you want to run `recovery_netstack`, you'll probably want to
-disable the Go `netstack` first, so as to avoid conflicts and confusion between
-the two stacks.
+No matter how you want to run `netstack3`, you'll probably want to disable the
+Go `netstack` first, so as to avoid conflicts and confusion between the two
+stacks.
 
 In [`garnet/bin/sysmgr/config/services.config`](../sysmgr/config/services.config):
 
 * Replace `fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx` on the
   `fuchsia.net.stack.Stack` line with
-  `fuchsia-pkg://fuchsia.com/recovery_netstack#meta/recovery_netstack.cmx`
+  `fuchsia-pkg://fuchsia.com/netstack3#meta/netstack3.cmx`
 * Remove all of the lines from `services` referencing
   `fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx`.
 * Remove `fuchsia.netstack.Netstack` from `startup_services` and
@@ -49,9 +49,9 @@ In [`garnet/bin/sysmgr/config/services.config`](../sysmgr/config/services.config
 * Note that trailing commas are not allowed, and will cause `sysmgr` to fail -
   make sure to check your config for that.
 
-If you frequently work on the recovery netstack like this, consider telling git
-to ignore changes to `bin/sysmgr/config/services.config` - you can do this with
-the command `git update-index --skip-worktree bin/sysmgr/config/services.config`.
+If you frequently work on Netstack3 like this, consider telling git to ignore
+changes to `bin/sysmgr/config/services.config` - you can do this with the
+command `git update-index --skip-worktree bin/sysmgr/config/services.config`.
 This comes with the caveat that when you _do_ want to edit the file and check it
 in (or someone else has made a breaking change to the config format), you need
 to remember that you've done this, though. It can be undone by the same command
@@ -78,8 +78,8 @@ fx run -kN -- -netdev type=tap,ifname=qemu-extra,script=no,downscript=no,id=net1
 $FUCHSIA_OUT_DIR/build-zircon/tools/netruncmd : "net_cli if add /dev/class/ethernet/000 && net_cli if addr add 1 192.168.1.39 24 && net_cli fwd add-device 1 192.168.1.0 24"
 ```
 
-Once you've done this, you can check that the recovery netstack is reachable by
-pinging it from your host machine:
+Once you've done this, you can check that Netstack3 is reachable by pinging it
+from your host machine:
 
 ```
 ping -I qemu-extra 192.168.1.39 -c 1

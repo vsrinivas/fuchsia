@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/recovery_netstack"
+        "binary": "bin/netstack3"
     },
     "sandbox": {
         "services": [

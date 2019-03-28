@@ -263,6 +263,7 @@ group("all") {
     "//garnet/packages/prod:netcfg",
     "//garnet/packages/prod:netconnector",
     "//garnet/packages/prod:netstack",
+    "//garnet/packages/prod:netstack3",
     "//garnet/packages/prod:netstack_tools",
     "//garnet/packages/prod:network",
     "//garnet/packages/prod:network-speed-test",
@@ -277,7 +278,6 @@ group("all") {
     "//garnet/packages/prod:power_manager",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
-    "//garnet/packages/prod:recovery_netstack",
     "//garnet/packages/prod:recovery_ui",
     "//garnet/packages/prod:rolldice",
     "//garnet/packages/prod:root_ssl_certificates",
@@ -397,11 +397,11 @@ group("wlan-stress-test") {
   ]
 }
 
-group("recovery_netstack") {
+group("netstack3") {
   testonly = true
   public_deps = [
-    "//garnet/bin/recovery_netstack",
-    "//garnet/bin/recovery_netstack/tools:recovery_netstack_tools",
+    "//garnet/bin/netstack3",
+    "//garnet/bin/netstack3/tools:netstack3_tools",
   ]
 }
 

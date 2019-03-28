@@ -7,12 +7,12 @@ import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 
 rustc_binary("bin") {
-  name = "recovery_netstack"
+  name = "netstack3"
   edition = "2018"
   with_unit_tests = true
 
   deps = [
-    "core:netstack-core",
+    "core:netstack3-core",
     "//garnet/lib/rust/ethernet",
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
@@ -32,38 +32,38 @@ rustc_binary("bin") {
   ]
 }
 
-package("recovery_netstack") {
+package("netstack3") {
   deps = [
     ":bin",
   ]
 
   binaries = [
     {
-      name = "recovery_netstack"
+      name = "netstack3"
     },
   ]
 
   meta = [
     {
-      path = rebase_path("meta/recovery_netstack.cmx")
-      dest = "recovery_netstack.cmx"
+      path = rebase_path("meta/netstack3.cmx")
+      dest = "netstack3.cmx"
     },
   ]
 }
 
-package("recovery_netstack_tests") {
+package("netstack3_tests") {
   testonly = true
   deps = [
     ":bin",
-    "core:netstack-core",
+    "core:netstack3-core",
   ]
   tests = [
     {
-      name = "recovery_netstack_bin_test"
+      name = "netstack3_bin_test"
       environments = basic_envs
     },
     {
-      name = "netstack_core_lib_test"
+      name = "netstack3_core_lib_test"
       environments = basic_envs
     },
   ]

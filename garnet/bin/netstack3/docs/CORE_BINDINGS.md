@@ -6,14 +6,14 @@ This document describes and motivates the design of the netstack into separate
 ## Architecute
 
 The netstack codebase is split into two crates - the `core` crate, and the
-top-level `recovery_netstack` crate. We refer to these as the "core" and
-bindings" respectively.
+top-level `netstack3` crate. We refer to these as the "core" and bindings"
+respectively.
 
 The core is a library crate, and contains most of the logic of the netstack.
 However, it is also platform-agnostic. Any client of the core which produces a
 binary is known as "bindings" because they bind the core to a particular
-platform. Currently, the `recovery_netstack` crate, which provides bindings to
-Fuchsia, is the only bindings crate in existence.
+platform. Currently, `netstack3` crate, which provides bindings to Fuchsia, is
+the only bindings crate in existence.
 
 ## Benefits
 

@@ -4,11 +4,11 @@
 
 import("//build/package.gni")
 
-package("recovery_netstack_tools") {
+package("netstack3_tools") {
   testonly = true
 
   deps = [
-    "//garnet/bin/recovery_netstack/tools/enclosed_runner",
+    "//garnet/bin/netstack3/tools/enclosed_runner",
   ]
 
   binaries = [

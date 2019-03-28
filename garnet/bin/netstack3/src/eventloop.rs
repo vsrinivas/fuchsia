@@ -102,7 +102,7 @@ use futures::prelude::*;
 use futures::{select, TryFutureExt, TryStreamExt};
 use log::{error, info};
 
-use netstack_core::{
+use netstack3_core::{
     add_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout, receive_frame,
     set_ip_addr_subnet, AddrSubnet, AddrSubnetEither, Context, DeviceId,
     DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, Mac, NetstackError,

@@ -4,15 +4,15 @@
 
 import("//build/rust/rustc_library.gni")
 
-rustc_library("netstack-core") {
-  name = "netstack_core"
+rustc_library("netstack3-core") {
+  name = "netstack3_core"
   version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
   __unstable_recovery_netstack_only_specialization_bypass = [ "specialization" ]
 
   deps = [
-    "//garnet/bin/recovery_netstack/core/specialize-ip-macro",
+    "//garnet/bin/netstack3/core/specialize-ip-macro",
     "//garnet/lib/rust/never",
     "//garnet/public/rust/packet",
     "//garnet/public/rust/zerocopy",

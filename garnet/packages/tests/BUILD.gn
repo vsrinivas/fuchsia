@@ -327,6 +327,7 @@ group("all") {
     "//garnet/packages/tests:netemul",
     "//garnet/packages/tests:netfilter",
     "//garnet/packages/tests:netstack",
+    "//garnet/packages/tests:netstack3",
     "//garnet/packages/tests:network",
     "//garnet/packages/tests:network_time",
     "//garnet/packages/tests:omaha_client",
@@ -341,7 +342,6 @@ group("all") {
     "//garnet/packages/tests:process",
     "//garnet/packages/tests:profiler",
     "//garnet/packages/tests:rapidjson_utils",
-    "//garnet/packages/tests:recovery_netstack",
     "//garnet/packages/tests:run_test_component",
     "//garnet/packages/tests:run_tests",
     "//garnet/packages/tests:runtime",
@@ -468,10 +468,10 @@ group("netstack") {
   ]
 }
 
-group("recovery_netstack") {
+group("netstack3") {
   testonly = true
   public_deps = [
-    "//garnet/bin/recovery_netstack:recovery_netstack_tests",
+    "//garnet/bin/netstack3:netstack3_tests",
   ]
 }
 

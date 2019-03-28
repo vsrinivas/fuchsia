@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Macros used in `recovery_netstack`.
+//! Macros used in Netstack3.
 
 macro_rules! log_unimplemented {
     ($nocrash:expr, $fmt:expr $(,$arg:expr)*) => {{
