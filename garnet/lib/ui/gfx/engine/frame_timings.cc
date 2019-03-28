@@ -29,8 +29,17 @@ size_t FrameTimings::AddSwapchain(Swapchain* swapchain) {
 }
 
 void FrameTimings::OnFrameRendered(size_t swapchain_index, zx_time_t time) {
+  if (finalized()) {
+    // Frame was dropped, but we received a delayed OnFrameRendered event.
+    FXL_LOG(INFO)
+        << "Frame was dropped, but received a delayed OnFrameRendered event.";
+    return;
+  }
+
   FXL_DCHECK(swapchain_index < swapchain_records_.size());
-  FXL_DCHECK(frame_rendered_count_ < swapchain_records_.size());
+  FXL_DCHECK(frame_rendered_count_ < swapchain_records_.size())
+      << "Frame rendered count: " << frame_rendered_count_
+      << " Swapchain records size: " << swapchain_records_.size();
   FXL_DCHECK(time > 0);
 
   auto& record = swapchain_records_[swapchain_index];
@@ -49,9 +58,9 @@ void FrameTimings::OnFrameRendered(size_t swapchain_index, zx_time_t time) {
   ++frame_rendered_count_;
 
   // TODO(SCN-1324): We currently only return the time of the last received
-  // callback. This is not a problem right now, since we only have cases where
-  // with a single swapchain/display, but need to figure out how to handle the
-  // general case.
+  // callback. This is not a problem right now, since we only have cases with a
+  // single swapchain/display, but need to figure out how to handle the general
+  // case.
   rendering_finished_time_ = time;
   if (received_all_frame_rendered_callbacks() && frame_scheduler_) {
     frame_scheduler_->OnFrameRendered(*this);
@@ -89,10 +98,12 @@ void FrameTimings::OnFrameDropped(size_t swapchain_index) {
   Record& record = swapchain_records_[swapchain_index];
   if (record.frame_presented_time == 0) {
     record.frame_presented_time = ZX_TIME_INFINITE;
+    actual_presentation_time_ = ZX_TIME_INFINITE;
     ++frame_presented_count_;
   }
   if (record.frame_rendered_time == 0) {
     record.frame_rendered_time = ZX_TIME_INFINITE;
+    rendering_finished_time_ = ZX_TIME_INFINITE;
     ++frame_rendered_count_;
   }
 

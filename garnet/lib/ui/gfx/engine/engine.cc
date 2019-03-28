@@ -10,8 +10,8 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <trace/event.h>
 #include <lib/zx/time.h>
+#include <trace/event.h>
 
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
@@ -132,8 +132,8 @@ CommandContext Engine::CreateCommandContext(uint64_t frame_number_for_tracing) {
 // Applies scheduled updates to a session. If the update fails, the session is
 // killed. Returns true if a new render is needed, false otherwise.
 bool Engine::UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
-                            uint64_t frame_number, uint64_t presentation_time,
-                            uint64_t presentation_interval) {
+                            uint64_t frame_number, zx_time_t presentation_time,
+                            zx_duration_t presentation_interval) {
   auto command_context = CreateCommandContext(frame_number);
 
   bool needs_render = false;
@@ -173,8 +173,8 @@ bool Engine::UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
 }
 
 bool Engine::RenderFrame(const FrameTimingsPtr& timings,
-                         uint64_t presentation_time,
-                         uint64_t presentation_interval) {
+                         zx_time_t presentation_time,
+                         zx_duration_t presentation_interval) {
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
   // without also updating the "process_gfx_trace.go" script.
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),

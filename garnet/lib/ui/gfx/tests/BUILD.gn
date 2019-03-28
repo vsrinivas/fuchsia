@@ -19,6 +19,8 @@ source_set("testing_deps") {
   sources = [
     "error_reporting_test.cc",
     "error_reporting_test.h",
+    "frame_scheduler_mocks.cc",
+    "frame_scheduler_mocks.h",
     "frame_scheduler_test.cc",
     "frame_scheduler_test.h",
     "gfx_test.h",
@@ -72,6 +74,7 @@ executable("unittests") {
     "default_frame_scheduler_unittest.cc",
     "escher_vulkan_smoke_test.cc",
     "event_timestamper_unittest.cc",
+    "frame_timings_unittest.cc",
     "gfx_command_applier_unittest.cc",
     "hardware_layer_assignment_unittest.cc",
     "hittest_global_unittest.cc",

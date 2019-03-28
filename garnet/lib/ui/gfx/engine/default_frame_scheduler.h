@@ -7,6 +7,7 @@
 
 #include <queue>
 
+#include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/time.h>
 #include "garnet/lib/ui/gfx/engine/frame_scheduler.h"
@@ -23,7 +24,7 @@ class Display;
 
 class DefaultFrameScheduler : public FrameScheduler {
  public:
-  explicit DefaultFrameScheduler(Display* const display);
+  explicit DefaultFrameScheduler(const Display* display);
   ~DefaultFrameScheduler();
 
   // |FrameScheduler|
@@ -42,8 +43,11 @@ class DefaultFrameScheduler : public FrameScheduler {
   // Tell the FrameScheduler to schedule a frame. This is also used for
   // updates triggered by something other than a Session update i.e. an
   // ImagePipe with a new Image to present.
-  void ScheduleUpdateForSession(uint64_t presentation_time,
+  void ScheduleUpdateForSession(zx_time_t presentation_time,
                                 scenic_impl::SessionId session) override;
+
+  // Public for testing.
+  constexpr static size_t kMaxOutstandingFrames = 2;
 
  protected:
   // |FrameScheduler|
@@ -53,51 +57,23 @@ class DefaultFrameScheduler : public FrameScheduler {
   void OnFrameRendered(const FrameTimings& timings) override;
 
  private:
-  // Used to compare presentation times so that the priority_queue acts as a min
-  // heap, placing the earliest PresentationTime at the top
-  class UpdatableSessionsComparator {
-   public:
-    bool operator()(SessionUpdate updatable_session1,
-                    SessionUpdate updatable_session2) {
-      return updatable_session1.requested_presentation_time >
-             updatable_session2.requested_presentation_time;
-    }
-  };
-
-  // Request a frame to be scheduled at or after |presentation_time|, which
-  // may be in the past.
-  void RequestFrame(zx_time_t presentation_time);
+  // Requests a new frame to be drawn, which schedules the next wake up time for
+  // rendering. If we've already scheduled a wake up time, it checks if it needs
+  // rescheduling and deals with it appropriately.
+  void RequestFrame();
 
   // Update the global scene and then draw it... maybe.  There are multiple
   // reasons why this might not happen.  For example, the swapchain might apply
-  // back-pressure if we can't hit our target frame rate.  Or, after this frame
-  // was scheduled, another frame was scheduled to be rendered at an earlier
-  // time, and not enough time has elapsed to render this frame.  Etc.
-  void MaybeRenderFrame(zx_time_t presentation_time, zx_time_t wakeup_time,
-                        uint64_t flow_id);
+  // back-pressure if we can't hit our target frame rate. Or, the frame before
+  // this one has yet to finish rendering. Etc.
+  void MaybeRenderFrame(async_dispatcher_t*, async::TaskBase*, zx_status_t);
 
-  // Schedule a frame for the earliest of |requested_presentation_times_|.  The
-  // scheduled time will be the earliest achievable time, such that rendering
-  // can start early enough to hit the next Vsync.
-  void ScheduleFrame();
-
-  // Returns true to apply back-pressure when we cannot hit our target frame
-  // rate.  Otherwise, return false to indicate that it is OK to immediately
-  // render a frame.
-  // TODO(MZ-225): We need to track backpressure so that the frame scheduler
-  // doesn't get too far ahead. With that in mind, Renderer::DrawFrame should
-  // have a callback which is invoked when the frame is fully flushed through
-  // the graphics pipeline. Then Engine::RenderFrame itself should have a
-  // callback which is invoked when all renderers finish work for that frame.
-  // Then FrameScheduler should listen to the callback to count how many
-  bool TooMuchBackPressure();
-
-  // Helper method for ScheduleFrame().  Returns the target presentation time
-  // for the next frame, and a wake-up time that is early enough to start
-  // rendering in order to hit the target presentation time.
-  std::pair<zx_time_t, zx_time_t> ComputeNextPresentationAndWakeupTimes() const;
-  // Computes the target presentation time for the requested presentation time.
-  std::pair<zx_time_t, zx_time_t> ComputeTargetPresentationAndWakeupTimes(
+  // Computes the target presentation time for the requested presentation time,
+  // and a wake-up time that is early enough to start rendering in order to hit
+  // the target presentation time. These times are guaranteed to be in the
+  // future.
+  std::pair<zx_time_t, zx_time_t>
+  ComputePresentationAndWakeupTimesForTargetTime(
       zx_time_t requested_presentation_time) const;
 
   // Return the predicted amount of time required to render a frame.
@@ -105,30 +81,33 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   // Executes updates that are scheduled up to and including a given
   // presentation time. Returns true if rendering is needed.
-  bool ApplyScheduledSessionUpdates(uint64_t frame_number,
-                                    uint64_t presentation_time,
-                                    uint64_t presentation_interval);
+  bool ApplyScheduledSessionUpdates(zx_time_t presentation_time,
+                                    zx_duration_t presentation_interval);
 
+  // References.
   async_dispatcher_t* const dispatcher_;
   const Display* const display_;
-
-  std::priority_queue<zx_time_t, std::vector<zx_time_t>,
-                      std::greater<zx_time_t>>
-      requested_presentation_times_;
-
-  uint64_t frame_number_ = 0;
-  constexpr static size_t kMaxOutstandingFrames = 2;
-  std::vector<FrameTimingsPtr> outstanding_frames_;
-  bool back_pressure_applied_ = false;
-  bool render_continuously_ = false;
-
-  // Lists all Session that have updates to apply, sorted by the earliest
-  // requested presentation time of each update.
-  std::priority_queue<SessionUpdate, std::vector<SessionUpdate>,
-                      UpdatableSessionsComparator>
-      updatable_sessions_;
-
   FrameSchedulerDelegate delegate_;
+
+  // State.
+  uint64_t frame_number_ = 0;
+  std::vector<FrameTimingsPtr> outstanding_frames_;
+  bool render_continuously_ = false;
+  bool currently_rendering_ = false;
+  bool render_pending_ = false;
+  zx_time_t wakeup_time_;
+  zx_time_t next_presentation_time_;
+
+  // The async task that wakes up to start rendering.
+  async::TaskMethod<DefaultFrameScheduler,
+                    &DefaultFrameScheduler::MaybeRenderFrame>
+      frame_render_task_{this};
+
+  // Sessions that have updates to apply, sorted by requested presentation time
+  // from earliest to latest.
+  std::priority_queue<SessionUpdate, std::vector<SessionUpdate>,
+                      std::greater<SessionUpdate>>
+      updatable_sessions_;
 
   fxl::WeakPtrFactory<DefaultFrameScheduler> weak_factory_;  // must be last
 

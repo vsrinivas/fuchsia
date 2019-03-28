@@ -13,6 +13,29 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
+class MockFrameScheduler : public FrameScheduler {
+ private:
+  uint32_t frame_presented_call_count_ = 0;
+  uint32_t frame_rendered_call_count_ = 0;
+
+ public:
+  MockFrameScheduler() = default;
+  void SetDelegate(FrameSchedulerDelegate delegate) override{};
+  void SetRenderContinuously(bool render_continuously) override{};
+  void ScheduleUpdateForSession(zx_time_t presentation_time,
+                                scenic_impl::SessionId session) override{};
+
+  void OnFramePresented(const FrameTimings& timings) override {
+    ++frame_presented_call_count_;
+  };
+  void OnFrameRendered(const FrameTimings& timings) override {
+    ++frame_rendered_call_count_;
+  };
+
+  uint32_t frame_presented_call_count() { return frame_presented_call_count_; }
+  uint32_t frame_rendered_call_count() { return frame_rendered_call_count_; }
+};
+
 class FakeDisplay : public Display {
  public:
   FakeDisplay()
@@ -35,9 +58,10 @@ class MockSessionUpdater : public SessionUpdater {
   MockSessionUpdater() : weak_factory_(this) {}
 
   bool UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
-                      uint64_t frame_number, uint64_t presentation_time,
-                      uint64_t presentation_interval) override {
+                      uint64_t frame_number, zx_time_t presentation_time,
+                      zx_duration_t presentation_interval) override {
     ++update_sessions_call_count_;
+    last_requested_updates_ = std::move(sessions_to_update);
     return update_sessions_return_value_;
   };
 
@@ -46,6 +70,9 @@ class MockSessionUpdater : public SessionUpdater {
     update_sessions_return_value_ = new_value;
   }
   uint32_t update_sessions_call_count() { return update_sessions_call_count_; }
+  const std::vector<SessionUpdate>& last_requested_updates() {
+    return last_requested_updates_;
+  }
 
   fxl::WeakPtr<MockSessionUpdater> GetWeakPtr() {
     return weak_factory_.GetWeakPtr();
@@ -54,6 +81,7 @@ class MockSessionUpdater : public SessionUpdater {
  private:
   bool update_sessions_return_value_ = true;
   uint32_t update_sessions_call_count_ = 0;
+  std::vector<SessionUpdate> last_requested_updates_;
 
   fxl::WeakPtrFactory<MockSessionUpdater> weak_factory_;  // must be last
 };
@@ -62,31 +90,28 @@ class MockFrameRenderer : public FrameRenderer {
  public:
   MockFrameRenderer() : weak_factory_(this) {}
 
+  // |FrameRenderer|
   bool RenderFrame(const FrameTimingsPtr& frame_timings,
-                   uint64_t presentation_time,
-                   uint64_t presentation_interval) override {
-    ++render_frame_call_count_;
-    last_frame_timings_ = frame_timings.get();
-    return render_frame_return_value_;
-  };
+                   zx_time_t presentation_time,
+                   zx_duration_t presentation_interval);
 
   // Need to call this in order to trigger the OnFramePresented() callback in
   // FrameScheduler, but is not valid to do until after RenderFrame has returned
   // to FrameScheduler. Hence this separate method.
-  void EndFrame() {
-    if(last_frame_timings_) {
-      last_frame_timings_->AddSwapchain(nullptr);
-      last_frame_timings_->OnFrameRendered(/*swapchain index*/ 0, /*time*/ 1);
-      last_frame_timings_->OnFramePresented(/*swapchain index*/ 0, /*time*/ 1);
-      last_frame_timings_ = nullptr;
-    }
-  }
+  void EndFrame(size_t frame_index);
+
+  // Signal frame |frame_index| that it has been rendered.
+  void SignalFrameRendered(size_t frame_index);
+
+  // Signal frame |frame_index| that it has been presented.
+  void SignalFramePresented(size_t frame_index);
 
   // Manually set value returned from RenderFrame.
   void SetRenderFrameReturnValue(bool new_value) {
     render_frame_return_value_ = new_value;
   }
   uint32_t render_frame_call_count() { return render_frame_call_count_; }
+  size_t pending_frames() { return frames_.size(); }
 
   fxl::WeakPtr<MockFrameRenderer> GetWeakPtr() {
     return weak_factory_.GetWeakPtr();
@@ -95,7 +120,16 @@ class MockFrameRenderer : public FrameRenderer {
  private:
   bool render_frame_return_value_ = true;
   uint32_t render_frame_call_count_ = 0;
-  FrameTimings* last_frame_timings_ = nullptr;
+
+  struct Timings {
+    FrameTimings* frame_timings;
+    uint32_t frame_rendered = false;
+    uint32_t frame_presented = false;
+    Timings(FrameTimings* ft) { frame_timings = ft; }
+  };
+  std::vector<Timings> frames_;
+
+  uint64_t last_frame_number_ = -1;
 
   fxl::WeakPtrFactory<MockFrameRenderer> weak_factory_;  // must be last
 };

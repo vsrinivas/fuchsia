@@ -17,7 +17,7 @@ namespace gfx {
 
 class FrameTimings;
 using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
-using PresentationTime = uint64_t;
+using PresentationTime = zx_time_t;
 
 // Interface for performing session updates.
 class SessionUpdater {
@@ -25,6 +25,10 @@ class SessionUpdater {
   struct SessionUpdate {
     SessionId session_id;
     PresentationTime requested_presentation_time;
+
+    bool operator>(const SessionUpdate& rhs) const {
+      return requested_presentation_time > rhs.requested_presentation_time;
+    }
   };
 
   virtual ~SessionUpdater() = default;
@@ -33,8 +37,9 @@ class SessionUpdater {
   // session in |sessions|. Returns true if any updates were applied, false
   // otherwise.
   virtual bool UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
-                              uint64_t frame_number, uint64_t presentation_time,
-                              uint64_t presentation_interval) = 0;
+                              uint64_t frame_number,
+                              zx_time_t presentation_time,
+                              zx_duration_t presentation_interval) = 0;
 };
 
 // Interface for rendering frames.
@@ -53,8 +58,8 @@ class FrameRenderer {
   // TODO(SCN-1089): these return value semantics are not ideal.  See comments
   // in Engine::RenderFrame() regarding this same issue.
   virtual bool RenderFrame(const FrameTimingsPtr& frame_timings,
-                           uint64_t presentation_time,
-                           uint64_t presentation_interval) = 0;
+                           zx_time_t presentation_time,
+                           zx_duration_t presentation_interval) = 0;
 };
 
 struct FrameSchedulerDelegate {
@@ -84,7 +89,7 @@ class FrameScheduler {
   // Tell the FrameScheduler to schedule a frame. This is also used for
   // updates triggered by something other than a Session update i.e. an
   // ImagePipe with a new Image to present.
-  virtual void ScheduleUpdateForSession(uint64_t presentation_time,
+  virtual void ScheduleUpdateForSession(zx_time_t presentation_time,
                                         scenic_impl::SessionId session) = 0;
 
  protected:
