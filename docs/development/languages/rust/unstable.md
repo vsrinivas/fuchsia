@@ -103,7 +103,7 @@ This list includes all of the unstable features currently used in Fuchsia.
 [Rust 2018: an early preview]: https://internals.rust-lang.org/t/rust-2018-an-early-preview/7776
 [Rust 2018: the home stretch]: https://internals.rust-lang.org/t/rust-2018-the-home-stretch/7810
 
-[buildtools]: https://fuchsia.googlesource.com/buildtools/+/master/fuchsia.ensure#42
+[buildtools]: https://fuchsia.googlesource.com/integration/+/refs/heads/master/prebuilts#52
 [rust builder]: https://ci.chromium.org/p/fuchsia/g/rust/console
 [third_party/rust]: https://fuchsia.googlesource.com/third_party/rust/
 [tracking issues]: https://github.com/rust-lang/rust/issues?q=is%3Aopen+is%3Aissue+label%3AC-tracking-issue

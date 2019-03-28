@@ -16,8 +16,6 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [Pushing a package](workflows/package_update.md)
  - [Changes that span layers](workflows/multilayer_changes.md)
  - [Debugging](workflows/debugging.md)
- - [Tracing][tracing]
- - [Trace-based Benchmarking][trace_based_benchmarking]
  - [LibFuzzer-based fuzzing](workflows/libfuzzer.md)
  - [Build system](build/README.md)
  - [Workflow tips and FAQ](workflows/workflow_tips_and_faq.md)
@@ -79,6 +77,7 @@ This section covers Fuchsia-wide conventions and best practices.
  - [Tracing usage guide](tracing/tracing-usage-guide.md)
  - [Trace based benchmarking](benchmarking/trace_based_benchmarking.md)
  - [Tracing booting Fuchsia](tracing/tracing-boot.md)
+ - [CPU Performance Monitor](tracing/cpuperf-provider.md)
 
 ## Miscellaneous
 

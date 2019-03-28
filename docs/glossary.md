@@ -181,11 +181,11 @@ user interface framework.
 A Fuchsia Package is a unit of software distribution. It is a collection of files, such as:
 manifests, metadata, zero or more executables (e.g. [Components](#component)), and assets.
 Individual Fuchsia Packages can be identified using
-[fuchsia-pkg URIs](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/the-book/package_uri.md).
+[fuchsia-pkg URIs](#fuchsia-pkg-uri).
 
-#### **fuchsia-pkg URL**
+#### **fuchsia-pkg URI**
 
-The fuchsia-pkg URL scheme is a means for referring to a repository, a package,
+The [fuchsia-pkg URI](the-book/package_uri.md) scheme is a means for referring to a repository, a package,
 or a package resource. The syntax is
 `fuchsia-pkg://<repo-hostname>[/<pkg-name>][#<path>]]`. E.g., for the component
 `echo_client_dart.cmx` published under the package `echo_dart`'s `meta`
