@@ -9,9 +9,9 @@ go_binary("netstack_service_test") {
   gopackage = "netstack/netstack_service_test"
 
   deps = [
+    "../:netstack_lib",
     "//garnet/public/lib/component/go/src/app",
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
-    "//src/connectivity/network/netstack:netstack_lib",
   ]
 }

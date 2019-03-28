@@ -8,6 +8,6 @@ go_test("netstack_link_bridge_test") {
   gopackage = "netstack/link/bridge"
 
   deps = [
-    "//src/connectivity/network/netstack:netstack_lib",
+    "../../:netstack_lib",
   ]
 }

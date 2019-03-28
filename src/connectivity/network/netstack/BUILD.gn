@@ -55,7 +55,7 @@ test_package("netstack_gotests") {
     ":netstack_link_eth_test",
     ":netstack_test",
     "netstack_service_test",
-    "//src/connectivity/network/netstack/util:netstack_util_test",
+    "util:netstack_util_test",
   ]
 
   binaries = [
@@ -96,8 +96,8 @@ package("netstack_non_component_gotests") {
   testonly = true
 
   deps = [
-    "//src/connectivity/network/netstack/ifconfig:netstack_ifconfig_test",
-    "//src/connectivity/network/netstack/netstat:netstack_netstat_test",
+    "ifconfig:netstack_ifconfig_test",
+    "netstat:netstack_netstat_test",
   ]
 
   tests = [

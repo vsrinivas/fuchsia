@@ -9,18 +9,18 @@ package("netstack_manual_tests") {
   testonly = true
 
   deps = [
-    "//src/connectivity/network/netstack/tests/manual:closetest",
-    "//src/connectivity/network/netstack/tests/manual:getaddrinfo_test",
-    "//src/connectivity/network/netstack/tests/manual:gethostbyname_test",
-    "//src/connectivity/network/netstack/tests/manual:keepalivetest",
-    "//src/connectivity/network/netstack/tests/manual:mctest",
-    "//src/connectivity/network/netstack/tests/manual:nbiotest",
-    "//src/connectivity/network/netstack/tests/manual:passfdtest",
-    "//src/connectivity/network/netstack/tests/manual:polltest",
-    "//src/connectivity/network/netstack/tests/manual:selecttest",
-    "//src/connectivity/network/netstack/tests/manual:sockettest",
-    "//src/connectivity/network/netstack/tests/manual:sockopttest",
-    "//src/connectivity/network/netstack/tests/manual:udptest",
+    "manual:closetest",
+    "manual:getaddrinfo_test",
+    "manual:gethostbyname_test",
+    "manual:keepalivetest",
+    "manual:mctest",
+    "manual:nbiotest",
+    "manual:passfdtest",
+    "manual:polltest",
+    "manual:selecttest",
+    "manual:sockettest",
+    "manual:sockopttest",
+    "manual:udptest",
   ]
 
   binaries = [

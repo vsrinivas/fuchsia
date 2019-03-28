@@ -10,8 +10,8 @@ go_binary("netstat") {
   gopackage = "netstack/netstat"
 
   deps = [
+    "../:netstack_lib",
     "//garnet/public/lib/component/go/src/app",
-    "//src/connectivity/network/netstack:netstack_lib",
   ]
 }
 
@@ -19,7 +19,7 @@ go_test("netstack_netstat_test") {
   gopackage = "netstack/netstat"
 
   deps = [
+    "../:netstack_lib",
     "//garnet/public/lib/component/go/src/app",
-    "//src/connectivity/network/netstack:netstack_lib",
   ]
 }

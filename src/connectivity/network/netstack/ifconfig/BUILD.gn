@@ -19,11 +19,11 @@ go_library("ifconfig_lib") {
   name = "ifconfig_lib"
 
   deps = [
+    "../:netstack_lib",
     "//garnet/public/lib/component/go/src/app",
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//sdk/fidl/fuchsia.wlan.service($go_toolchain)",
-    "//src/connectivity/network/netstack:netstack_lib",
   ]
 }
 

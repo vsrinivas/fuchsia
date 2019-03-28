@@ -10,7 +10,7 @@ go_test("netstack_routes_test") {
   gopackage = "netstack/routes"
 
   deps = [
-    "//src/connectivity/network/netstack:netstack_lib",
+    "../:netstack_lib",
   ]
 }
 
