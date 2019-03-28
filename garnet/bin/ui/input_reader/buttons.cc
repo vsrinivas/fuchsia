@@ -54,10 +54,10 @@ bool Buttons::ParseReportDescriptor(
   capabilities_ = caps;
 
   // Set the device descriptor.
-  device_descriptor->protocol = Protocol::Buttons;
-  device_descriptor->has_buttons = true;
+  device_descriptor->protocol = Protocol::MediaButtons;
+  device_descriptor->has_media_buttons = true;
   device_descriptor->buttons_descriptor =
-      fuchsia::ui::input::ButtonsDescriptor::New();
+      fuchsia::ui::input::MediaButtonsDescriptor::New();
   if (caps & Capabilities::PHONE_MUTE) {
     device_descriptor->buttons_descriptor->buttons |=
         fuchsia::ui::input::kMicMute;
@@ -74,7 +74,7 @@ bool Buttons::ParseReportDescriptor(
 bool Buttons::ParseReport(const uint8_t* data, size_t len,
                           fuchsia::ui::input::InputReport* report) {
   FXL_CHECK(report);
-  FXL_CHECK(report->buttons);
+  FXL_CHECK(report->media_buttons);
   double volume = 0;
   double mic_mute = 0;
 
@@ -97,14 +97,14 @@ bool Buttons::ParseReport(const uint8_t* data, size_t len,
     }
   }
 
-  report->buttons->mic_mute = 0;
-  report->buttons->volume = 0;
+  report->media_buttons->mic_mute = 0;
+  report->media_buttons->volume = 0;
 
   if (capabilities_ & Capabilities::PHONE_MUTE) {
-    report->buttons->mic_mute = (mic_mute > 0);
+    report->media_buttons->mic_mute = (mic_mute > 0);
   }
   if (capabilities_ & Capabilities::VOLUME) {
-    report->buttons->volume = static_cast<int8_t>(volume);
+    report->media_buttons->volume = static_cast<int8_t>(volume);
   }
 
   return true;

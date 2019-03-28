@@ -107,6 +107,9 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   void SetPresentationModeListener(
       fidl::InterfaceHandle<fuchsia::ui::policy::PresentationModeListener>
           listener) override;
+  void RegisterMediaButtonsListener(
+      fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener)
+      override;
 
   // Sets |display_metrics_| and updates view_manager and Scenic.
   // Returns false if the updates were skipped (if display initialization hasn't
@@ -130,6 +133,7 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
 
   void OnEvent(fuchsia::ui::input::InputEvent event);
   void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
+  void OnMediaButtonsEvent(fuchsia::ui::input::InputReport event);
 
   // When no shadows, ambient light needs to be full brightness.  Otherwise,
   // ambient needs to be dimmed so that other lights don't "overbrighten".
@@ -240,6 +244,10 @@ class Presentation : protected fuchsia::ui::policy::Presentation {
   // Presentation mode, based on last N measurements
   fuchsia::ui::policy::PresentationMode presentation_mode_;
   std::unique_ptr<presentation_mode::Detector> presentation_mode_detector_;
+
+  // A registry of listeners for media button events.
+  std::vector<fuchsia::ui::policy::MediaButtonsListenerPtr>
+      media_buttons_listeners_;
 
   fxl::WeakPtrFactory<Presentation> weak_factory_;
 

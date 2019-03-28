@@ -89,6 +89,13 @@ bool InputInterpreter::Initialize() {
 
     keyboard_report_ = fuchsia::ui::input::InputReport::New();
     keyboard_report_->keyboard = fuchsia::ui::input::KeyboardReport::New();
+  } else if (protocol == Protocol::MediaButtons) {
+    FXL_VLOG(2) << "Device " << name() << " has media buttons";
+    has_media_buttons_ = true;
+    media_buttons_descriptor_ = fuchsia::ui::input::MediaButtonsDescriptor::New();
+    media_buttons_report_ = fuchsia::ui::input::InputReport::New();
+    media_buttons_report_->media_buttons =
+        fuchsia::ui::input::MediaButtonsReport::New();
   } else if (protocol == Protocol::BootMouse || protocol == Protocol::Gamepad) {
     FXL_VLOG(2) << "Device " << name() << " has mouse";
     has_mouse_ = true;
@@ -470,6 +477,9 @@ void InputInterpreter::NotifyRegistry() {
     if (has_touchscreen_) {
       fidl::Clone(touchscreen_descriptor_, &descriptor.touchscreen);
     }
+    if (has_media_buttons_) {
+      fidl::Clone(media_buttons_descriptor_, &descriptor.media_buttons);
+    }
     registry_->RegisterDevice(std::move(descriptor),
                               input_device_.NewRequest());
   }
@@ -493,6 +503,9 @@ void InputInterpreter::NotifyRegistry() {
     }
     if (device.descriptor.has_sensor) {
       fidl::Clone(device.descriptor.sensor_descriptor, &descriptor.sensor);
+    }
+    if (device.descriptor.has_media_buttons) {
+      fidl::Clone(media_buttons_descriptor_, &descriptor.media_buttons);
     }
     registry_->RegisterDevice(std::move(descriptor),
                               device.input_device.NewRequest());
@@ -730,6 +743,7 @@ bool InputInterpreter::Read(bool discard) {
     default:
       break;
   }
+
   for (size_t i = 0; i < devices_.size(); i++) {
     InputDevice& device = devices_[i];
     if (device.device->ReportId() != 0 &&
@@ -762,7 +776,7 @@ Protocol InputInterpreter::ExtractProtocol(hid::Usage input) {
   } usage_to_protocol[] = {
       {{static_cast<uint16_t>(Page::kConsumer),
         static_cast<uint32_t>(Consumer::kConsumerControl)},
-       Protocol::Buttons},
+       Protocol::MediaButtons},
       {{static_cast<uint16_t>(Page::kDigitizer),
         static_cast<uint32_t>(Digitizer::kTouchScreen)},
        Protocol::Touch},
@@ -829,11 +843,13 @@ bool InputInterpreter::ParseHidInputReportDescriptor(
         hardcoded_.ParseAmbientLightDescriptor(input_desc->input_fields,
                                                input_desc->input_count);
         return true;
-      case Protocol::Buttons: {
-        FXL_VLOG(2) << "Device " << name() << " has HID buttons";
+      case Protocol::MediaButtons: {
+        FXL_VLOG(2) << "Device " << name() << " has HID media buttons";
+
 
         input_device.device = std::make_unique<Buttons>();
-        input_device.report->buttons = fuchsia::ui::input::ButtonsReport::New();
+        input_device.report->media_buttons =
+            fuchsia::ui::input::MediaButtonsReport::New();
         break;
       }
       case Protocol::Sensor: {

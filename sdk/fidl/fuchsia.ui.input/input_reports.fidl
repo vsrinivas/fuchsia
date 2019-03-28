@@ -44,9 +44,10 @@ struct AxisF {
     AxisScale scale = LINEAR;
 };
 
-// |ButtonsDescriptor| describes the buttons.
-struct ButtonsDescriptor {
-    // The list of buttons available.
+// |MediaButtonsDescriptor| describes the media buttons.
+struct MediaButtonsDescriptor {
+    // A bitmask that represents the list of media buttons available.
+    // The mask bit values are located in usages.fidl.
     uint32 buttons;
 };
 
@@ -218,8 +219,8 @@ union SensorReport {
     uint16 scalar;
 };
 
-// |ButtonsReport| describes the buttons event delivered from the event stream.
-struct ButtonsReport {
+// |MediaButtonsReport| describes the media buttons event delivered from the event stream.
+struct MediaButtonsReport {
     // Volume changes +1/-1 for volume up/down, this is a relative value.
     int8 volume;
     bool mic_mute;
@@ -238,7 +239,7 @@ struct DeviceInfo {
 struct DeviceDescriptor {
     DeviceInfo? device_info;
     KeyboardDescriptor? keyboard;
-    ButtonsDescriptor? buttons;
+    MediaButtonsDescriptor? media_buttons;
     MouseDescriptor? mouse;
     StylusDescriptor? stylus;
     TouchscreenDescriptor? touchscreen;
@@ -251,11 +252,11 @@ struct InputReport {
     uint64 event_time;
 
     KeyboardReport? keyboard;
-    ButtonsReport? buttons;
+    MediaButtonsReport? media_buttons;
     MouseReport? mouse;
     StylusReport? stylus;
     TouchscreenReport? touchscreen;
     SensorReport? sensor;
 
-    uint64 trace_id = 0;  // Unique ID to connect trace async begin/end events.
+    uint64 trace_id = 0; // Unique ID to connect trace async begin/end events.
 };

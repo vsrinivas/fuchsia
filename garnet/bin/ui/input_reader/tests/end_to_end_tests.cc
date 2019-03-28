@@ -246,7 +246,7 @@ TEST_F(ReaderInterpreterInputTest, SensorTest) {
   EXPECT_EQ(0x2412, last_report_.sensor->scalar());
 }
 
-TEST_F(ReaderInterpreterInputTest, ButtonsTest) {
+TEST_F(ReaderInterpreterInputTest, MediaButtonsTest) {
   // Create the paradise report descriptor.
   size_t desc_len;
   const uint8_t* desc_data;
@@ -272,9 +272,9 @@ TEST_F(ReaderInterpreterInputTest, ButtonsTest) {
 
   // Check that the report matches.
   ASSERT_EQ(1, report_count_);
-  ASSERT_TRUE(last_report_.buttons);
-  EXPECT_EQ(true, last_report_.buttons->mic_mute);
-  EXPECT_EQ(0x1, last_report_.buttons->volume);
+  ASSERT_TRUE(last_report_.media_buttons);
+  EXPECT_EQ(true, last_report_.media_buttons->mic_mute);
+  EXPECT_EQ(0x1, last_report_.media_buttons->volume);
 }
 
 }  // namespace mozart

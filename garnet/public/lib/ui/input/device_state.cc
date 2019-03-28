@@ -430,8 +430,7 @@ void TouchscreenState::Update(fuchsia::ui::input::InputReport input_report,
       // TODO(SCN-1278): Use proper trace_id field for tracing flow.
       trace_async_id_t add_async_id = TRACE_NONCE();
       PointerTraceHACK(add_async_id, &add.radius_major, &add.radius_minor);
-      TRACE_FLOW_BEGIN("input", "dispatch_event_to_presentation",
-                        add_async_id);
+      TRACE_FLOW_BEGIN("input", "dispatch_event_to_presentation", add_async_id);
 
       fuchsia::ui::input::InputEvent ev;
       ev.set_pointer(std::move(add));
@@ -489,6 +488,12 @@ void SensorState::Update(fuchsia::ui::input::InputReport input_report) {
                                    std::move(input_report));
 }
 
+void MediaButtonState::Update(fuchsia::ui::input::InputReport report) {
+  FXL_DCHECK(report.media_buttons);
+  FXL_DCHECK(device_state_->media_buttons_descriptor());
+  device_state_->media_buttons_callback()(std::move(report));
+}
+
 DeviceState::DeviceState(uint32_t device_id,
                          fuchsia::ui::input::DeviceDescriptor* descriptor,
                          OnEventCallback callback)
@@ -500,7 +505,9 @@ DeviceState::DeviceState(uint32_t device_id,
       touchscreen_(this),
       callback_(std::move(callback)),
       sensor_(this),
-      sensor_callback_(nullptr) {}
+      sensor_callback_(nullptr),
+      media_buttons_callback_(nullptr),
+      media_buttons_(this) {}
 
 DeviceState::DeviceState(uint32_t device_id,
                          fuchsia::ui::input::DeviceDescriptor* descriptor,
@@ -513,7 +520,24 @@ DeviceState::DeviceState(uint32_t device_id,
       touchscreen_(this),
       callback_(nullptr),
       sensor_(this),
-      sensor_callback_(std::move(callback)) {}
+      sensor_callback_(std::move(callback)),
+      media_buttons_callback_(nullptr),
+      media_buttons_(this) {}
+
+DeviceState::DeviceState(uint32_t device_id,
+                         fuchsia::ui::input::DeviceDescriptor* descriptor,
+                         OnMediaButtonsEventCallback callback)
+    : device_id_(device_id),
+      descriptor_(descriptor),
+      keyboard_(this),
+      mouse_(this),
+      stylus_(this),
+      touchscreen_(this),
+      callback_(nullptr),
+      sensor_(this),
+      sensor_callback_(nullptr),
+      media_buttons_callback_(std::move(callback)),
+      media_buttons_(this) {}
 
 DeviceState::~DeviceState() {}
 
@@ -533,6 +557,9 @@ void DeviceState::OnRegistered() {
   if (descriptor_->sensor) {
     sensor_.OnRegistered();
   }
+  if (descriptor_->media_buttons) {
+    media_buttons_.OnRegistered();
+  }
 }
 
 void DeviceState::OnUnregistered() {
@@ -551,6 +578,9 @@ void DeviceState::OnUnregistered() {
   if (descriptor_->sensor) {
     sensor_.OnUnregistered();
   }
+  if (descriptor_->media_buttons) {
+    media_buttons_.OnUnregistered();
+  }
 }
 
 void DeviceState::Update(fuchsia::ui::input::InputReport input_report,
@@ -565,6 +595,8 @@ void DeviceState::Update(fuchsia::ui::input::InputReport input_report,
     touchscreen_.Update(std::move(input_report), display_size);
   } else if (input_report.sensor && descriptor_->sensor) {
     sensor_.Update(std::move(input_report));
+  } else if (input_report.media_buttons && descriptor_->media_buttons) {
+    media_buttons_.Update(std::move(input_report));
   }
 }
 

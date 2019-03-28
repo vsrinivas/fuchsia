@@ -7,8 +7,8 @@
 
 #include <hid/hid.h>
 #include <hid/usages.h>
-#include <stdint.h>
 #include <lib/zx/time.h>
+#include <stdint.h>
 
 #include <vector>
 
@@ -30,6 +30,9 @@ using OnEventCallback =
 // sensor the report came from.
 using OnSensorEventCallback = fit::function<void(
     uint32_t device_id, fuchsia::ui::input::InputReport event)>;
+
+using OnMediaButtonsEventCallback =
+    fit::function<void(fuchsia::ui::input::InputReport event)>;
 
 class DeviceState;
 
@@ -118,6 +121,15 @@ class SensorState : public State {
   // TODO(SCN-627): Remember sampling frequency and physical units.
 };
 
+class MediaButtonState : public State {
+ public:
+  MediaButtonState(DeviceState* device_state) : device_state_(device_state) {}
+  void Update(fuchsia::ui::input::InputReport report);
+
+ private:
+  DeviceState* device_state_;
+};
+
 class DeviceState {
  public:
   DeviceState(uint32_t device_id,
@@ -126,6 +138,9 @@ class DeviceState {
   DeviceState(uint32_t device_id,
               fuchsia::ui::input::DeviceDescriptor* descriptor,
               OnSensorEventCallback callback);
+  DeviceState(uint32_t device_id,
+              fuchsia::ui::input::DeviceDescriptor* descriptor,
+              OnMediaButtonsEventCallback callback);
   ~DeviceState();
 
   void OnRegistered();
@@ -137,6 +152,9 @@ class DeviceState {
   uint32_t device_id() { return device_id_; }
   const OnEventCallback& callback() { return callback_; }
   const OnSensorEventCallback& sensor_callback() { return sensor_callback_; }
+  const OnMediaButtonsEventCallback& media_buttons_callback() {
+    return media_buttons_callback_;
+  }
 
   fuchsia::ui::input::KeyboardDescriptor* keyboard_descriptor() {
     return descriptor_->keyboard.get();
@@ -153,6 +171,9 @@ class DeviceState {
   fuchsia::ui::input::SensorDescriptor* sensor_descriptor() {
     return descriptor_->sensor.get();
   }
+  fuchsia::ui::input::MediaButtonsDescriptor* media_buttons_descriptor() {
+    return descriptor_->media_buttons.get();
+  }
 
  private:
   uint32_t device_id_;
@@ -166,6 +187,9 @@ class DeviceState {
 
   SensorState sensor_;
   OnSensorEventCallback sensor_callback_;
+
+  OnMediaButtonsEventCallback media_buttons_callback_;
+  MediaButtonState media_buttons_;
 };
 
 }  // namespace mozart

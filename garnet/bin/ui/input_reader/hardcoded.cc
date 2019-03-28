@@ -673,8 +673,8 @@ bool Hardcoded::ParseButtonsReport(
     FXL_LOG(ERROR) << " failed reading from buttons";
     return false;
   }
-  buttons_report->buttons->volume = data.volume;
-  buttons_report->buttons->mic_mute = data.mic_mute;
+  buttons_report->media_buttons->volume = data.volume;
+  buttons_report->media_buttons->mic_mute = data.mic_mute;
   buttons_report->event_time = InputEventTimestampNow();
   buttons_report->trace_id = TRACE_NONCE();
 

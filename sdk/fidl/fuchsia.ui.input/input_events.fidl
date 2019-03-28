@@ -130,8 +130,8 @@ struct PointerEvent {
     // TODO(jpoichet) float32 vx;
     // TODO(jpoichet) float32 vy;
 
-    float32 radius_major = 0.0;  // DO NOT USE
-    float32 radius_minor = 0.0;  // DO NOT USE
+    float32 radius_major = 0.0; // DO NOT USE
+    float32 radius_minor = 0.0; // DO NOT USE
     // TODO(jpoichet) float32 orientation;
     // TODO(jpoichet) float32 tilt;
     // TODO(jpoichet) float32 altitude;
@@ -151,6 +151,12 @@ struct FocusEvent {
     bool focused;
 };
 
+table MediaButtonsEvent {
+    1: int8 volume;
+    2: bool mic_mute;
+};
+
+// This union does not include MediaButtonsEvent because it's processed differently.
 union InputEvent {
     PointerEvent pointer;
     KeyboardEvent keyboard;

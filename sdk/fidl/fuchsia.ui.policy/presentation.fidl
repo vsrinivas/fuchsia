@@ -19,6 +19,12 @@ protocol PointerCaptureListenerHACK {
     OnPointerEvent(fuchsia.ui.input.PointerEvent event);
 };
 
+// |Presentation.RegisterMediaButtonsListener| will consume this listener interface
+// and call |OnMediaButtonsEvent| when the registered media buttons event occurs.
+protocol MediaButtonsListener {
+    OnMediaButtonsEvent(fuchsia.ui.input.MediaButtonsEvent event);
+};
+
 // Allows clients of Presenter.Present() to control a presentation.
 // Experimental.
 [Discoverable]
@@ -63,6 +69,10 @@ protocol Presentation {
     // TODO(SCN-650): Determine better place for PresentationMode API.
     GetPresentationMode() -> (PresentationMode mode);
     SetPresentationModeListener(PresentationModeListener listener);
+
+    // Registers a listener for media buttons events.
+    [Transitional]
+    RegisterMediaButtonsListener(MediaButtonsListener listener);
 };
 
 // Screen modes that can be detected via sensor data.

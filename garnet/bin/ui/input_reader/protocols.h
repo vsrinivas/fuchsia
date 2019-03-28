@@ -18,7 +18,7 @@ enum class Protocol : uint32_t {
   Sensor,
   Stylus,
   LightSensor,
-  Buttons,
+  MediaButtons,
   // The ones below are hacks that need to be removed.
   BootMouse,
   Acer12Touch,

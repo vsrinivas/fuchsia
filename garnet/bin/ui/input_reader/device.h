@@ -24,8 +24,8 @@ class Device {
     bool has_keyboard = false;
     fuchsia::ui::input::KeyboardDescriptorPtr keyboard_descriptor;
 
-    bool has_buttons = false;
-    fuchsia::ui::input::ButtonsDescriptorPtr buttons_descriptor;
+    bool has_media_buttons = false;
+    fuchsia::ui::input::MediaButtonsDescriptorPtr buttons_descriptor;
 
     bool has_mouse = false;
     MouseDeviceType mouse_type;

@@ -14,6 +14,8 @@
 
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
 
+using fuchsia::ui::policy::MediaButtonsListenerPtr;
+
 namespace root_presenter {
 namespace {
 
@@ -424,6 +426,13 @@ void Presentation::OnDeviceAdded(mozart::InputDeviceImpl* input_device) {
         };
     state = std::make_unique<mozart::DeviceState>(
         input_device->id(), input_device->descriptor(), std::move(callback));
+  } else if (input_device->descriptor()->media_buttons) {
+    mozart::OnMediaButtonsEventCallback callback =
+        [this](fuchsia::ui::input::InputReport report) {
+          OnMediaButtonsEvent(std::move(report));
+        };
+    state = std::make_unique<mozart::DeviceState>(
+        input_device->id(), input_device->descriptor(), std::move(callback));
   } else {
     mozart::OnEventCallback callback =
         [this](fuchsia::ui::input::InputEvent event) {
@@ -542,6 +551,27 @@ void Presentation::SetPresentationModeListener(
 
   presentation_mode_listener_.Bind(std::move(listener));
   FXL_LOG(INFO) << "Presentation mode, now listening.";
+}
+
+void Presentation::RegisterMediaButtonsListener(
+    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener>
+        listener_handle) {
+  MediaButtonsListenerPtr listener;
+  listener.Bind(std::move(listener_handle));
+
+  // Auto-remove listeners if the interface closes.
+  listener.set_error_handler([this,
+                              listener = listener.get()](zx_status_t status) {
+    media_buttons_listeners_.erase(
+        std::remove_if(media_buttons_listeners_.begin(),
+                       media_buttons_listeners_.end(),
+                       [listener](const MediaButtonsListenerPtr& item) -> bool {
+                         return item.get() == listener;
+                       }),
+        media_buttons_listeners_.end());
+  });
+
+  media_buttons_listeners_.push_back(std::move(listener));
 }
 
 bool Presentation::GlobalHooksHandleEvent(
@@ -687,6 +717,17 @@ void Presentation::OnSensorEvent(uint32_t device_id,
       presentation_mode_ = update.second;
       presentation_mode_listener_->OnModeChanged();
     }
+  }
+}
+
+void Presentation::OnMediaButtonsEvent(fuchsia::ui::input::InputReport report) {
+  FXL_CHECK(report.media_buttons);
+  fuchsia::ui::input::MediaButtonsEvent event;
+  event.set_volume(report.media_buttons->volume);
+  event.set_mic_mute(report.media_buttons->mic_mute);
+
+  for (auto& listener : media_buttons_listeners_) {
+    listener->OnMediaButtonsEvent(std::move(event));
   }
 }
 
