@@ -188,6 +188,23 @@ bool TestMetrics() {
     ASSERT_EQ(metrics.create_calls, 2);
     ASSERT_EQ(metrics.create_calls_success, 1);
 
+    ASSERT_TRUE(GetMetrics(&metrics));
+    ASSERT_EQ(metrics.unlink_calls, 0);
+    ASSERT_EQ(metrics.unlink_calls_success, 0);
+    ASSERT_EQ(metrics.unlink_ticks, 0);
+
+    ASSERT_EQ(unlink(path), 0);
+    ASSERT_TRUE(GetMetrics(&metrics));
+    ASSERT_EQ(metrics.unlink_calls, 1);
+    ASSERT_EQ(metrics.unlink_calls_success, 1);
+    ASSERT_NE(metrics.unlink_ticks, 0);
+
+    ASSERT_NE(unlink(path), 0);
+    ASSERT_TRUE(GetMetrics(&metrics));
+    ASSERT_EQ(metrics.unlink_calls, 2);
+    ASSERT_EQ(metrics.unlink_calls_success, 1);
+    ASSERT_NE(metrics.unlink_ticks, 0);
+
     ASSERT_TRUE(ToggleMetrics(false));
     ASSERT_TRUE(GetMetricsUnavailable());
 

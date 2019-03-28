@@ -1963,10 +1963,11 @@ zx_status_t VnodeMinfs::Unlink(fbl::StringPiece name, bool must_be_dir) {
     args.type = must_be_dir ? kMinfsTypeDir : 0;
     args.transaction = transaction.get();
     status = ForEachDirent(&args, DirentCallbackUnlink);
-    if (status == ZX_OK) {
-        transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-        return fs_->CommitTransaction(std::move(transaction));
+    if (status != ZX_OK) {
+        return status;
     }
+    transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+    status = fs_->CommitTransaction(std::move(transaction));
     success = (status == ZX_OK);
     return status;
 }
