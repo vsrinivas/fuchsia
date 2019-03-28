@@ -10,7 +10,6 @@
 #include <memory>
 #include <utility>
 
-#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/memory/weak_ptr.h>
 
