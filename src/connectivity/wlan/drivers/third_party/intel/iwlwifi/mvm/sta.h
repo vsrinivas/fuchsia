@@ -34,15 +34,15 @@
  *
  *****************************************************************************/
 
-#ifndef __sta_h__
-#define __sta_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_STA_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_STA_H_
 
 #include <linux/spinlock.h>
-#include <net/mac80211.h>
 #include <linux/wait.h>
+#include <net/mac80211.h>
 
+#include "fw-api.h"    /* IWL_MVM_STATION_COUNT */
 #include "iwl-trans.h" /* for IWL_MAX_TID_COUNT */
-#include "fw-api.h" /* IWL_MVM_STATION_COUNT */
 #include "rs.h"
 
 struct iwl_mvm;
@@ -60,14 +60,14 @@ struct iwl_mvm_vif;
  *
  * Although the queues in DQA mode are dynamically allocated, there are still
  * some queues that are statically allocated:
- *	TXQ #0 - command queue
- *	TXQ #1 - aux frames
- *	TXQ #2 - P2P device frames
- *	TXQ #3 - P2P GO/SoftAP GCAST/BCAST frames
- *	TXQ #4 - BSS DATA frames queue
- *	TXQ #5-8 - Non-QoS and MGMT frames queue pool
- *	TXQ #9 - P2P GO/SoftAP probe responses
- *	TXQ #10-31 - DATA frames queue pool
+ *  TXQ #0 - command queue
+ *  TXQ #1 - aux frames
+ *  TXQ #2 - P2P device frames
+ *  TXQ #3 - P2P GO/SoftAP GCAST/BCAST frames
+ *  TXQ #4 - BSS DATA frames queue
+ *  TXQ #5-8 - Non-QoS and MGMT frames queue pool
+ *  TXQ #9 - P2P GO/SoftAP probe responses
+ *  TXQ #10-31 - DATA frames queue pool
  * The queues are dynamically taken from either the MGMT frames queue pool or
  * the DATA frames one. See the %iwl_mvm_dqa_txq for more information on every
  * queue.
@@ -254,70 +254,70 @@ struct iwl_mvm_vif;
  * @IWL_AGG_STARTING: aggregation are starting (between start and oper)
  * @IWL_AGG_ON: aggregation session is up
  * @IWL_EMPTYING_HW_QUEUE_ADDBA: establishing a BA session - waiting for the
- *	HW queue to be empty from packets for this RA /TID.
+ *  HW queue to be empty from packets for this RA /TID.
  * @IWL_EMPTYING_HW_QUEUE_DELBA: tearing down a BA session - waiting for the
- *	HW queue to be empty from packets for this RA /TID.
+ *  HW queue to be empty from packets for this RA /TID.
  */
 enum iwl_mvm_agg_state {
-	IWL_AGG_OFF = 0,
-	IWL_AGG_QUEUED,
-	IWL_AGG_STARTING,
-	IWL_AGG_ON,
-	IWL_EMPTYING_HW_QUEUE_ADDBA,
-	IWL_EMPTYING_HW_QUEUE_DELBA,
+    IWL_AGG_OFF = 0,
+    IWL_AGG_QUEUED,
+    IWL_AGG_STARTING,
+    IWL_AGG_ON,
+    IWL_EMPTYING_HW_QUEUE_ADDBA,
+    IWL_EMPTYING_HW_QUEUE_DELBA,
 };
 
 /**
  * struct iwl_mvm_tid_data - holds the states for each RA / TID
  * @seq_number: the next WiFi sequence number to use
  * @next_reclaimed: the WiFi sequence number of the next packet to be acked.
- *	This is basically (last acked packet++).
+ *  This is basically (last acked packet++).
  * @rate_n_flags: Rate at which Tx was attempted. Holds the data between the
- *	Tx response (TX_CMD), and the block ack notification (COMPRESSED_BA).
+ *  Tx response (TX_CMD), and the block ack notification (COMPRESSED_BA).
  * @lq_color: the color of the LQ command as it appears in tx response.
  * @amsdu_in_ampdu_allowed: true if A-MSDU in A-MPDU is allowed.
  * @state: state of the BA agreement establishment / tear down.
  * @txq_id: Tx queue used by the BA session / DQA
  * @ssn: the first packet to be sent in AGG HW queue in Tx AGG start flow, or
- *	the first packet to be sent in legacy HW queue in Tx AGG stop flow.
- *	Basically when next_reclaimed reaches ssn, we can tell mac80211 that
- *	we are ready to finish the Tx AGG stop / start flow.
+ *  the first packet to be sent in legacy HW queue in Tx AGG stop flow.
+ *  Basically when next_reclaimed reaches ssn, we can tell mac80211 that
+ *  we are ready to finish the Tx AGG stop / start flow.
  * @tx_time: medium time consumed by this A-MPDU
  * @tpt_meas_start: time of the throughput measurements start, is reset every HZ
  * @tx_count_last: number of frames transmitted during the last second
  * @tx_count: counts the number of frames transmitted since the last reset of
- *	 tpt_meas_start
+ *   tpt_meas_start
  */
 struct iwl_mvm_tid_data {
-	u16 seq_number;
-	u16 next_reclaimed;
-	/* The rest is Tx AGG related */
-	u32 rate_n_flags;
-	u8 lq_color;
-	bool amsdu_in_ampdu_allowed;
-	enum iwl_mvm_agg_state state;
-	u16 txq_id;
-	u16 ssn;
-	u16 tx_time;
-	unsigned long tpt_meas_start;
-	u32 tx_count_last;
-	u32 tx_count;
+    u16 seq_number;
+    u16 next_reclaimed;
+    /* The rest is Tx AGG related */
+    u32 rate_n_flags;
+    u8 lq_color;
+    bool amsdu_in_ampdu_allowed;
+    enum iwl_mvm_agg_state state;
+    u16 txq_id;
+    u16 ssn;
+    u16 tx_time;
+    unsigned long tpt_meas_start;
+    u32 tx_count_last;
+    u32 tx_count;
 };
 
 struct iwl_mvm_key_pn {
-	struct rcu_head rcu_head;
-	struct {
-		u8 pn[IWL_MAX_TID_COUNT][IEEE80211_CCMP_PN_LEN];
-	} ____cacheline_aligned_in_smp q[];
+    struct rcu_head rcu_head;
+    struct {
+        u8 pn[IWL_MAX_TID_COUNT][IEEE80211_CCMP_PN_LEN];
+    } ____cacheline_aligned_in_smp q[];
 };
 
 struct iwl_mvm_delba_data {
-	u32 baid;
+    u32 baid;
 } __packed;
 
 struct iwl_mvm_delba_notif {
-	struct iwl_mvm_internal_rxq_notif metadata;
-	struct iwl_mvm_delba_data delba;
+    struct iwl_mvm_internal_rxq_notif metadata;
+    struct iwl_mvm_delba_data delba;
 } __packed;
 
 /**
@@ -326,8 +326,8 @@ struct iwl_mvm_delba_notif {
  * @last_sub_frame: last subframe packet
  */
 struct iwl_mvm_rxq_dup_data {
-	__le16 last_seq[IWL_MAX_TID_COUNT + 1];
-	u8 last_sub_frame[IWL_MAX_TID_COUNT + 1];
+    __le16 last_seq[IWL_MAX_TID_COUNT + 1];
+    u8 last_sub_frame[IWL_MAX_TID_COUNT + 1];
 } ____cacheline_aligned_in_smp;
 
 /**
@@ -336,40 +336,40 @@ struct iwl_mvm_rxq_dup_data {
  * @tfd_queue_msk: the tfd queues used by the station
  * @mac_id_n_color: the MAC context this station is linked to
  * @tid_disable_agg: bitmap: if bit(tid) is set, the fw won't send ampdus for
- *	tid.
+ *  tid.
  * @max_agg_bufsize: the maximal size of the AGG buffer for this station
  * @sta_type: station type
  * @sta_state: station state according to enum %ieee80211_sta_state
  * @bt_reduced_txpower: is reduced tx power enabled for this station
  * @next_status_eosp: the next reclaimed packet is a PS-Poll response and
- *	we need to signal the EOSP
+ *  we need to signal the EOSP
  * @lock: lock to protect the whole struct. Since %tid_data is access from Tx
  * and from Tx response flow, it needs a spinlock.
  * @tid_data: per tid data + mgmt. Look at %iwl_mvm_tid_data.
  * @tid_to_baid: a simple map of TID to baid
  * @lq_sta: holds rate scaling data, either for the case when RS is done in
- *	the driver - %rs_drv or in the FW - %rs_fw.
+ *  the driver - %rs_drv or in the FW - %rs_fw.
  * @reserved_queue: the queue reserved for this STA for DQA purposes
- *	Every STA has is given one reserved queue to allow it to operate. If no
- *	such queue can be guaranteed, the STA addition will fail.
+ *  Every STA has is given one reserved queue to allow it to operate. If no
+ *  such queue can be guaranteed, the STA addition will fail.
  * @tx_protection: reference counter for controlling the Tx protection.
  * @tt_tx_protection: is thermal throttling enable Tx protection?
  * @disable_tx: is tx to this STA disabled?
  * @amsdu_enabled: bitmap of TX AMSDU allowed TIDs.
- *	In case TLC offload is not active it is either 0xFFFF or 0.
+ *  In case TLC offload is not active it is either 0xFFFF or 0.
  * @max_amsdu_len: max AMSDU length
  * @agg_tids: bitmap of tids whose status is operational aggregated (IWL_AGG_ON)
  * @sleep_tx_count: the number of frames that we told the firmware to let out
- *	even when that station is asleep. This is useful in case the queue
- *	gets empty before all the frames were sent, which can happen when
- *	we are sending frames from an AMPDU queue and there was a hole in
- *	the BA window. To be used for UAPSD only.
+ *  even when that station is asleep. This is useful in case the queue
+ *  gets empty before all the frames were sent, which can happen when
+ *  we are sending frames from an AMPDU queue and there was a hole in
+ *  the BA window. To be used for UAPSD only.
  * @ptk_pn: per-queue PTK PN data structures
  * @dup_data: per queue duplicate packet detection data
  * @deferred_traffic_tid_map: indication bitmap of deferred traffic per-TID
  * @tx_ant: the index of the antenna to use for data tx to this station. Only
- *	used during connection establishment (e.g. for the 4 way handshake
- *	exchange).
+ *  used during connection establishment (e.g. for the 4 way handshake
+ *  exchange).
  *
  * When mac80211 creates a station it reserves some space (hw->sta_data_size)
  * in the structure for use by driver. This structure is placed in that
@@ -377,48 +377,46 @@ struct iwl_mvm_rxq_dup_data {
  *
  */
 struct iwl_mvm_sta {
-	u32 sta_id;
-	u32 tfd_queue_msk;
-	u32 mac_id_n_color;
-	u16 tid_disable_agg;
-	u16 max_agg_bufsize;
-	enum iwl_sta_type sta_type;
-	enum ieee80211_sta_state sta_state;
-	bool bt_reduced_txpower;
-	bool next_status_eosp;
-	spinlock_t lock;
-	struct iwl_mvm_tid_data tid_data[IWL_MAX_TID_COUNT + 1];
-	u8 tid_to_baid[IWL_MAX_TID_COUNT];
-	union {
-		struct iwl_lq_sta_rs_fw rs_fw;
-		struct iwl_lq_sta rs_drv;
-	} lq_sta;
-	struct ieee80211_vif *vif;
-	struct iwl_mvm_key_pn __rcu *ptk_pn[4];
-	struct iwl_mvm_rxq_dup_data *dup_data;
+    u32 sta_id;
+    u32 tfd_queue_msk;
+    u32 mac_id_n_color;
+    u16 tid_disable_agg;
+    u16 max_agg_bufsize;
+    enum iwl_sta_type sta_type;
+    enum ieee80211_sta_state sta_state;
+    bool bt_reduced_txpower;
+    bool next_status_eosp;
+    spinlock_t lock;
+    struct iwl_mvm_tid_data tid_data[IWL_MAX_TID_COUNT + 1];
+    u8 tid_to_baid[IWL_MAX_TID_COUNT];
+    union {
+        struct iwl_lq_sta_rs_fw rs_fw;
+        struct iwl_lq_sta rs_drv;
+    } lq_sta;
+    struct ieee80211_vif* vif;
+    struct iwl_mvm_key_pn __rcu* ptk_pn[4];
+    struct iwl_mvm_rxq_dup_data* dup_data;
 
-	u8 reserved_queue;
+    u8 reserved_queue;
 
-	/* Temporary, until the new TLC will control the Tx protection */
-	s8 tx_protection;
-	bool tt_tx_protection;
+    /* Temporary, until the new TLC will control the Tx protection */
+    s8 tx_protection;
+    bool tt_tx_protection;
 
-	bool disable_tx;
-	u16 amsdu_enabled;
-	u16 max_amsdu_len;
-	bool sleeping;
-	u8 agg_tids;
-	u8 sleep_tx_count;
-	u8 avg_energy;
-	u8 tx_ant;
+    bool disable_tx;
+    u16 amsdu_enabled;
+    u16 max_amsdu_len;
+    bool sleeping;
+    u8 agg_tids;
+    u8 sleep_tx_count;
+    u8 avg_energy;
+    u8 tx_ant;
 };
 
-u16 iwl_mvm_tid_queued(struct iwl_mvm *mvm, struct iwl_mvm_tid_data *tid_data);
+u16 iwl_mvm_tid_queued(struct iwl_mvm* mvm, struct iwl_mvm_tid_data* tid_data);
 
-static inline struct iwl_mvm_sta *
-iwl_mvm_sta_from_mac80211(struct ieee80211_sta *sta)
-{
-	return (void *)sta->drv_priv;
+static inline struct iwl_mvm_sta* iwl_mvm_sta_from_mac80211(struct ieee80211_sta* sta) {
+    return (void*)sta->drv_priv;
 }
 
 /**
@@ -429,9 +427,9 @@ iwl_mvm_sta_from_mac80211(struct ieee80211_sta *sta)
  * @tfd_queue_msk: the tfd queues used by the station
  */
 struct iwl_mvm_int_sta {
-	u32 sta_id;
-	enum iwl_sta_type type;
-	u32 tfd_queue_msk;
+    u32 sta_id;
+    enum iwl_sta_type type;
+    u32 tfd_queue_msk;
 };
 
 /**
@@ -440,104 +438,76 @@ struct iwl_mvm_int_sta {
  * @mvm: the iwl_mvm* to use
  * @sta: the STA
  * @update: this is true if the FW is being updated about a STA it already knows
- *	about. Otherwise (if this is a new STA), this should be false.
+ *  about. Otherwise (if this is a new STA), this should be false.
  * @flags: if update==true, this marks what is being changed via ORs of values
- *	from enum iwl_sta_modify_flag. Otherwise, this is ignored.
+ *  from enum iwl_sta_modify_flag. Otherwise, this is ignored.
  */
-int iwl_mvm_sta_send_to_fw(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
-			   bool update, unsigned int flags);
-int iwl_mvm_add_sta(struct iwl_mvm *mvm,
-		    struct ieee80211_vif *vif,
-		    struct ieee80211_sta *sta);
+int iwl_mvm_sta_send_to_fw(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool update,
+                           unsigned int flags);
+int iwl_mvm_add_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta);
 
-static inline int iwl_mvm_update_sta(struct iwl_mvm *mvm,
-				     struct ieee80211_vif *vif,
-				     struct ieee80211_sta *sta)
-{
-	return iwl_mvm_sta_send_to_fw(mvm, sta, true, 0);
+static inline int iwl_mvm_update_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                                     struct ieee80211_sta* sta) {
+    return iwl_mvm_sta_send_to_fw(mvm, sta, true, 0);
 }
 
-int iwl_mvm_wait_sta_queues_empty(struct iwl_mvm *mvm,
-				  struct iwl_mvm_sta *mvm_sta);
-int iwl_mvm_rm_sta(struct iwl_mvm *mvm,
-		   struct ieee80211_vif *vif,
-		   struct ieee80211_sta *sta);
-int iwl_mvm_rm_sta_id(struct iwl_mvm *mvm,
-		      struct ieee80211_vif *vif,
-		      u8 sta_id);
-int iwl_mvm_set_sta_key(struct iwl_mvm *mvm,
-			struct ieee80211_vif *vif,
-			struct ieee80211_sta *sta,
-			struct ieee80211_key_conf *keyconf,
-			u8 key_offset);
-int iwl_mvm_remove_sta_key(struct iwl_mvm *mvm,
-			   struct ieee80211_vif *vif,
-			   struct ieee80211_sta *sta,
-			   struct ieee80211_key_conf *keyconf);
+int iwl_mvm_wait_sta_queues_empty(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm_sta);
+int iwl_mvm_rm_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta);
+int iwl_mvm_rm_sta_id(struct iwl_mvm* mvm, struct ieee80211_vif* vif, u8 sta_id);
+int iwl_mvm_set_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif, struct ieee80211_sta* sta,
+                        struct ieee80211_key_conf* keyconf, u8 key_offset);
+int iwl_mvm_remove_sta_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                           struct ieee80211_sta* sta, struct ieee80211_key_conf* keyconf);
 
-void iwl_mvm_update_tkip_key(struct iwl_mvm *mvm,
-			     struct ieee80211_vif *vif,
-			     struct ieee80211_key_conf *keyconf,
-			     struct ieee80211_sta *sta, u32 iv32,
-			     u16 *phase1key);
+void iwl_mvm_update_tkip_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                             struct ieee80211_key_conf* keyconf, struct ieee80211_sta* sta,
+                             u32 iv32, u16* phase1key);
 
-void iwl_mvm_rx_eosp_notif(struct iwl_mvm *mvm,
-			   struct iwl_rx_cmd_buffer *rxb);
+void iwl_mvm_rx_eosp_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 
 /* AMPDU */
-int iwl_mvm_sta_rx_agg(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
-		       int tid, u16 ssn, bool start, u16 buf_size, u16 timeout);
-int iwl_mvm_sta_tx_agg_start(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
-			struct ieee80211_sta *sta, u16 tid, u16 *ssn);
-int iwl_mvm_sta_tx_agg_oper(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
-			    struct ieee80211_sta *sta, u16 tid, u16 buf_size,
-			    bool amsdu);
-int iwl_mvm_sta_tx_agg_stop(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
-			    struct ieee80211_sta *sta, u16 tid);
-int iwl_mvm_sta_tx_agg_flush(struct iwl_mvm *mvm, struct ieee80211_vif *vif,
-			    struct ieee80211_sta *sta, u16 tid);
+int iwl_mvm_sta_rx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, u16 ssn, bool start,
+                       u16 buf_size, u16 timeout);
+int iwl_mvm_sta_tx_agg_start(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                             struct ieee80211_sta* sta, u16 tid, u16* ssn);
+int iwl_mvm_sta_tx_agg_oper(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                            struct ieee80211_sta* sta, u16 tid, u16 buf_size, bool amsdu);
+int iwl_mvm_sta_tx_agg_stop(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                            struct ieee80211_sta* sta, u16 tid);
+int iwl_mvm_sta_tx_agg_flush(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                             struct ieee80211_sta* sta, u16 tid);
 
-int iwl_mvm_sta_tx_agg(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
-		       int tid, u8 queue, bool start);
+int iwl_mvm_sta_tx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, u8 queue,
+                       bool start);
 
-int iwl_mvm_add_aux_sta(struct iwl_mvm *mvm);
-void iwl_mvm_del_aux_sta(struct iwl_mvm *mvm);
+int iwl_mvm_add_aux_sta(struct iwl_mvm* mvm);
+void iwl_mvm_del_aux_sta(struct iwl_mvm* mvm);
 
-int iwl_mvm_alloc_bcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
-int iwl_mvm_send_add_bcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
-int iwl_mvm_add_p2p_bcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
-int iwl_mvm_send_rm_bcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
-int iwl_mvm_rm_p2p_bcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
-int iwl_mvm_add_mcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
-int iwl_mvm_rm_mcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
-int iwl_mvm_allocate_int_sta(struct iwl_mvm *mvm,
-			     struct iwl_mvm_int_sta *sta,
-				    u32 qmask, enum nl80211_iftype iftype,
-				    enum iwl_sta_type type);
-void iwl_mvm_dealloc_bcast_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
-void iwl_mvm_dealloc_int_sta(struct iwl_mvm *mvm, struct iwl_mvm_int_sta *sta);
-int iwl_mvm_add_snif_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
-int iwl_mvm_rm_snif_sta(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
-void iwl_mvm_dealloc_snif_sta(struct iwl_mvm *mvm);
+int iwl_mvm_alloc_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+int iwl_mvm_send_add_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+int iwl_mvm_add_p2p_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+int iwl_mvm_send_rm_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+int iwl_mvm_rm_p2p_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+int iwl_mvm_add_mcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+int iwl_mvm_rm_mcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+int iwl_mvm_allocate_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta, u32 qmask,
+                             enum nl80211_iftype iftype, enum iwl_sta_type type);
+void iwl_mvm_dealloc_bcast_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+void iwl_mvm_dealloc_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta);
+int iwl_mvm_add_snif_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+int iwl_mvm_rm_snif_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+void iwl_mvm_dealloc_snif_sta(struct iwl_mvm* mvm);
 
-void iwl_mvm_sta_modify_ps_wake(struct iwl_mvm *mvm,
-				struct ieee80211_sta *sta);
-void iwl_mvm_sta_modify_sleep_tx_count(struct iwl_mvm *mvm,
-				       struct ieee80211_sta *sta,
-				       enum ieee80211_frame_release_type reason,
-				       u16 cnt, u16 tids, bool more_data,
-				       bool single_sta_queue);
-int iwl_mvm_drain_sta(struct iwl_mvm *mvm, struct iwl_mvm_sta *mvmsta,
-		      bool drain);
-void iwl_mvm_sta_modify_disable_tx(struct iwl_mvm *mvm,
-				   struct iwl_mvm_sta *mvmsta, bool disable);
-void iwl_mvm_sta_modify_disable_tx_ap(struct iwl_mvm *mvm,
-				      struct ieee80211_sta *sta,
-				      bool disable);
-void iwl_mvm_modify_all_sta_disable_tx(struct iwl_mvm *mvm,
-				       struct iwl_mvm_vif *mvmvif,
-				       bool disable);
-void iwl_mvm_csa_client_absent(struct iwl_mvm *mvm, struct ieee80211_vif *vif);
-void iwl_mvm_add_new_dqa_stream_wk(struct work_struct *wk);
+void iwl_mvm_sta_modify_ps_wake(struct iwl_mvm* mvm, struct ieee80211_sta* sta);
+void iwl_mvm_sta_modify_sleep_tx_count(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
+                                       enum ieee80211_frame_release_type reason, u16 cnt, u16 tids,
+                                       bool more_data, bool single_sta_queue);
+int iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool drain);
+void iwl_mvm_sta_modify_disable_tx(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool disable);
+void iwl_mvm_sta_modify_disable_tx_ap(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool disable);
+void iwl_mvm_modify_all_sta_disable_tx(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
+                                       bool disable);
+void iwl_mvm_csa_client_absent(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+void iwl_mvm_add_new_dqa_stream_wk(struct work_struct* wk);
 
-#endif /* __sta_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_STA_H_

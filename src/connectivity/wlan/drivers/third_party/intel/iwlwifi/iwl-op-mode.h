@@ -33,8 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_op_mode_h__
-#define __iwl_op_mode_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_OP_MODE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_OP_MODE_H_
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "fw/testmode.h"
@@ -92,12 +92,11 @@ struct iwl_tm_data;
  * inorder to handle logic that is out of the scope of iwl_test.
  */
 struct iwl_test_ops {
-	int (*send_hcmd)(void *op_mode, struct iwl_host_cmd *host_cmd);
-	int (*cmd_exec_start)(struct iwl_testmode *testmode);
-	int (*cmd_exec)(struct iwl_testmode *testmode, u32 cmd,
-			struct iwl_tm_data *data_in,
-			struct iwl_tm_data *data_out, bool *cmd_supported);
-	void (*cmd_exec_end)(struct iwl_testmode *testmode);
+    int (*send_hcmd)(void* op_mode, struct iwl_host_cmd* host_cmd);
+    int (*cmd_exec_start)(struct iwl_testmode* testmode);
+    int (*cmd_exec)(struct iwl_testmode* testmode, u32 cmd, struct iwl_tm_data* data_in,
+                    struct iwl_tm_data* data_out, bool* cmd_supported);
+    void (*cmd_exec_end)(struct iwl_testmode* testmode);
 };
 #endif
 
@@ -146,34 +145,31 @@ struct iwl_test_ops {
  * @exit_d0i3: configure the fw to exit d0i3. May sleep.
  */
 struct iwl_op_mode_ops {
-	struct iwl_op_mode *(*start)(struct iwl_trans *trans,
-				     const struct iwl_cfg *cfg,
-				     const struct iwl_fw *fw,
-				     struct dentry *dbgfs_dir);
-	void (*stop)(struct iwl_op_mode *op_mode);
-	void (*rx)(struct iwl_op_mode *op_mode, struct napi_struct *napi,
-		   struct iwl_rx_cmd_buffer *rxb);
-	void (*rx_rss)(struct iwl_op_mode *op_mode, struct napi_struct *napi,
-		       struct iwl_rx_cmd_buffer *rxb, unsigned int queue);
-	void (*async_cb)(struct iwl_op_mode *op_mode,
-			 const struct iwl_device_cmd *cmd);
-	void (*queue_full)(struct iwl_op_mode *op_mode, int queue);
-	void (*queue_not_full)(struct iwl_op_mode *op_mode, int queue);
-	bool (*hw_rf_kill)(struct iwl_op_mode *op_mode, bool state);
-	void (*free_skb)(struct iwl_op_mode *op_mode, struct sk_buff *skb);
-	void (*nic_error)(struct iwl_op_mode *op_mode);
-	void (*cmd_queue_full)(struct iwl_op_mode *op_mode);
-	void (*nic_config)(struct iwl_op_mode *op_mode);
-	void (*wimax_active)(struct iwl_op_mode *op_mode);
+    struct iwl_op_mode* (*start)(struct iwl_trans* trans, const struct iwl_cfg* cfg,
+                                 const struct iwl_fw* fw, struct dentry* dbgfs_dir);
+    void (*stop)(struct iwl_op_mode* op_mode);
+    void (*rx)(struct iwl_op_mode* op_mode, struct napi_struct* napi,
+               struct iwl_rx_cmd_buffer* rxb);
+    void (*rx_rss)(struct iwl_op_mode* op_mode, struct napi_struct* napi,
+                   struct iwl_rx_cmd_buffer* rxb, unsigned int queue);
+    void (*async_cb)(struct iwl_op_mode* op_mode, const struct iwl_device_cmd* cmd);
+    void (*queue_full)(struct iwl_op_mode* op_mode, int queue);
+    void (*queue_not_full)(struct iwl_op_mode* op_mode, int queue);
+    bool (*hw_rf_kill)(struct iwl_op_mode* op_mode, bool state);
+    void (*free_skb)(struct iwl_op_mode* op_mode, struct sk_buff* skb);
+    void (*nic_error)(struct iwl_op_mode* op_mode);
+    void (*cmd_queue_full)(struct iwl_op_mode* op_mode);
+    void (*nic_config)(struct iwl_op_mode* op_mode);
+    void (*wimax_active)(struct iwl_op_mode* op_mode);
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-	struct iwl_test_ops test_ops;
+    struct iwl_test_ops test_ops;
 #endif
-	int (*enter_d0i3)(struct iwl_op_mode *op_mode);
-	int (*exit_d0i3)(struct iwl_op_mode *op_mode);
+    int (*enter_d0i3)(struct iwl_op_mode* op_mode);
+    int (*exit_d0i3)(struct iwl_op_mode* op_mode);
 };
 
-int iwl_opmode_register(const char *name, const struct iwl_op_mode_ops *ops);
-void iwl_opmode_deregister(const char *name);
+int iwl_opmode_register(const char* name, const struct iwl_op_mode_ops* ops);
+void iwl_opmode_deregister(const char* name);
 
 /**
  * struct iwl_op_mode - operational mode
@@ -182,102 +178,78 @@ void iwl_opmode_deregister(const char *name);
  * This holds an implementation of the mac80211 / fw API.
  */
 struct iwl_op_mode {
-	const struct iwl_op_mode_ops *ops;
+    const struct iwl_op_mode_ops* ops;
 
-	char op_mode_specific[0] __aligned(sizeof(void *));
+    char op_mode_specific[0] __aligned(sizeof(void*));
 };
 
-static inline void iwl_op_mode_stop(struct iwl_op_mode *op_mode)
-{
-	might_sleep();
-	op_mode->ops->stop(op_mode);
+static inline void iwl_op_mode_stop(struct iwl_op_mode* op_mode) {
+    might_sleep();
+    op_mode->ops->stop(op_mode);
 }
 
-static inline void iwl_op_mode_rx(struct iwl_op_mode *op_mode,
-				  struct napi_struct *napi,
-				  struct iwl_rx_cmd_buffer *rxb)
-{
-	return op_mode->ops->rx(op_mode, napi, rxb);
+static inline void iwl_op_mode_rx(struct iwl_op_mode* op_mode, struct napi_struct* napi,
+                                  struct iwl_rx_cmd_buffer* rxb) {
+    return op_mode->ops->rx(op_mode, napi, rxb);
 }
 
-static inline void iwl_op_mode_rx_rss(struct iwl_op_mode *op_mode,
-				      struct napi_struct *napi,
-				      struct iwl_rx_cmd_buffer *rxb,
-				      unsigned int queue)
-{
-	op_mode->ops->rx_rss(op_mode, napi, rxb, queue);
+static inline void iwl_op_mode_rx_rss(struct iwl_op_mode* op_mode, struct napi_struct* napi,
+                                      struct iwl_rx_cmd_buffer* rxb, unsigned int queue) {
+    op_mode->ops->rx_rss(op_mode, napi, rxb, queue);
 }
 
-static inline void iwl_op_mode_async_cb(struct iwl_op_mode *op_mode,
-					const struct iwl_device_cmd *cmd)
-{
-	if (op_mode->ops->async_cb)
-		op_mode->ops->async_cb(op_mode, cmd);
+static inline void iwl_op_mode_async_cb(struct iwl_op_mode* op_mode,
+                                        const struct iwl_device_cmd* cmd) {
+    if (op_mode->ops->async_cb) op_mode->ops->async_cb(op_mode, cmd);
 }
 
-static inline void iwl_op_mode_queue_full(struct iwl_op_mode *op_mode,
-					  int queue)
-{
-	op_mode->ops->queue_full(op_mode, queue);
+static inline void iwl_op_mode_queue_full(struct iwl_op_mode* op_mode, int queue) {
+    op_mode->ops->queue_full(op_mode, queue);
 }
 
-static inline void iwl_op_mode_queue_not_full(struct iwl_op_mode *op_mode,
-					      int queue)
-{
-	op_mode->ops->queue_not_full(op_mode, queue);
+static inline void iwl_op_mode_queue_not_full(struct iwl_op_mode* op_mode, int queue) {
+    op_mode->ops->queue_not_full(op_mode, queue);
 }
 
-static inline bool __must_check
-iwl_op_mode_hw_rf_kill(struct iwl_op_mode *op_mode, bool state)
-{
-	might_sleep();
-	return op_mode->ops->hw_rf_kill(op_mode, state);
+static inline bool __must_check iwl_op_mode_hw_rf_kill(struct iwl_op_mode* op_mode, bool state) {
+    might_sleep();
+    return op_mode->ops->hw_rf_kill(op_mode, state);
 }
 
-static inline void iwl_op_mode_free_skb(struct iwl_op_mode *op_mode,
-					struct sk_buff *skb)
-{
-	op_mode->ops->free_skb(op_mode, skb);
+static inline void iwl_op_mode_free_skb(struct iwl_op_mode* op_mode, struct sk_buff* skb) {
+    op_mode->ops->free_skb(op_mode, skb);
 }
 
-static inline void iwl_op_mode_nic_error(struct iwl_op_mode *op_mode)
-{
-	op_mode->ops->nic_error(op_mode);
+static inline void iwl_op_mode_nic_error(struct iwl_op_mode* op_mode) {
+    op_mode->ops->nic_error(op_mode);
 }
 
-static inline void iwl_op_mode_cmd_queue_full(struct iwl_op_mode *op_mode)
-{
-	op_mode->ops->cmd_queue_full(op_mode);
+static inline void iwl_op_mode_cmd_queue_full(struct iwl_op_mode* op_mode) {
+    op_mode->ops->cmd_queue_full(op_mode);
 }
 
-static inline void iwl_op_mode_nic_config(struct iwl_op_mode *op_mode)
-{
-	might_sleep();
-	op_mode->ops->nic_config(op_mode);
+static inline void iwl_op_mode_nic_config(struct iwl_op_mode* op_mode) {
+    might_sleep();
+    op_mode->ops->nic_config(op_mode);
 }
 
-static inline void iwl_op_mode_wimax_active(struct iwl_op_mode *op_mode)
-{
-	might_sleep();
-	op_mode->ops->wimax_active(op_mode);
+static inline void iwl_op_mode_wimax_active(struct iwl_op_mode* op_mode) {
+    might_sleep();
+    op_mode->ops->wimax_active(op_mode);
 }
 
-static inline int iwl_op_mode_enter_d0i3(struct iwl_op_mode *op_mode)
-{
-	might_sleep();
+static inline int iwl_op_mode_enter_d0i3(struct iwl_op_mode* op_mode) {
+    might_sleep();
 
-	if (!op_mode->ops->enter_d0i3)
-		return 0;
-	return op_mode->ops->enter_d0i3(op_mode);
+    if (!op_mode->ops->enter_d0i3) return 0;
+    return op_mode->ops->enter_d0i3(op_mode);
 }
 
-static inline int iwl_op_mode_exit_d0i3(struct iwl_op_mode *op_mode)
-{
-	might_sleep();
+static inline int iwl_op_mode_exit_d0i3(struct iwl_op_mode* op_mode) {
+    might_sleep();
 
-	if (!op_mode->ops->exit_d0i3)
-		return 0;
-	return op_mode->ops->exit_d0i3(op_mode);
+    if (!op_mode->ops->exit_d0i3) return 0;
+    return op_mode->ops->exit_d0i3(op_mode);
 }
 
-#endif /* __iwl_op_mode_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_OP_MODE_H_

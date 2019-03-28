@@ -33,59 +33,59 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef __fw_error_dump_h__
-#define __fw_error_dump_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_ERROR_DUMP_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_ERROR_DUMP_H_
 
-#define IWL_FW_ERROR_DUMP_BARKER	0x14789632
+#define IWL_FW_ERROR_DUMP_BARKER 0x14789632
 
 /**
  * enum iwl_fw_error_dump_type - types of data in the dump file
  * @IWL_FW_ERROR_DUMP_CSR: Control Status Registers - from offset 0
  * @IWL_FW_ERROR_DUMP_RXF:
  * @IWL_FW_ERROR_DUMP_TXCMD: last TX command data, structured as
- *	&struct iwl_fw_error_dump_txcmd packets
+ *  &struct iwl_fw_error_dump_txcmd packets
  * @IWL_FW_ERROR_DUMP_DEV_FW_INFO:  struct %iwl_fw_error_dump_info
- *	info on the device / firmware.
+ *  info on the device / firmware.
  * @IWL_FW_ERROR_DUMP_FW_MONITOR: firmware monitor
  * @IWL_FW_ERROR_DUMP_PRPH: range of periphery registers - there can be several
- *	sections like this in a single file.
+ *  sections like this in a single file.
  * @IWL_FW_ERROR_DUMP_FH_REGS: range of FH registers
  * @IWL_FW_ERROR_DUMP_MEM: chunk of memory
  * @IWL_FW_ERROR_DUMP_ERROR_INFO: description of what triggered this dump.
- *	Structured as &struct iwl_fw_error_dump_trigger_desc.
+ *  Structured as &struct iwl_fw_error_dump_trigger_desc.
  * @IWL_FW_ERROR_DUMP_RB: the content of an RB structured as
- *	&struct iwl_fw_error_dump_rb
+ *  &struct iwl_fw_error_dump_rb
  * @IWL_FW_ERROR_PAGING: UMAC's image memory segments which were
- *	paged to the DRAM.
+ *  paged to the DRAM.
  * @IWL_FW_ERROR_DUMP_RADIO_REG: Dump the radio registers.
  * @IWL_FW_ERROR_DUMP_EXTERNAL: used only by external code utilities, and
- *	for that reason is not in use in any other place in the Linux Wi-Fi
- *	stack.
+ *  for that reason is not in use in any other place in the Linux Wi-Fi
+ *  stack.
  * @IWL_FW_ERROR_DUMP_MEM_CFG: the addresses and sizes of fifos in the smem,
- *	which we get from the fw after ALIVE. The content is structured as
- *	&struct iwl_fw_error_dump_smem_cfg.
+ *  which we get from the fw after ALIVE. The content is structured as
+ *  &struct iwl_fw_error_dump_smem_cfg.
  */
 enum iwl_fw_error_dump_type {
-	/* 0 is deprecated */
-	IWL_FW_ERROR_DUMP_CSR = 1,
-	IWL_FW_ERROR_DUMP_RXF = 2,
-	IWL_FW_ERROR_DUMP_TXCMD = 3,
-	IWL_FW_ERROR_DUMP_DEV_FW_INFO = 4,
-	IWL_FW_ERROR_DUMP_FW_MONITOR = 5,
-	IWL_FW_ERROR_DUMP_PRPH = 6,
-	IWL_FW_ERROR_DUMP_TXF = 7,
-	IWL_FW_ERROR_DUMP_FH_REGS = 8,
-	IWL_FW_ERROR_DUMP_MEM = 9,
-	IWL_FW_ERROR_DUMP_ERROR_INFO = 10,
-	IWL_FW_ERROR_DUMP_RB = 11,
-	IWL_FW_ERROR_DUMP_PAGING = 12,
-	IWL_FW_ERROR_DUMP_RADIO_REG = 13,
-	IWL_FW_ERROR_DUMP_INTERNAL_TXF = 14,
-	IWL_FW_ERROR_DUMP_EXTERNAL = 15, /* Do not move */
-	IWL_FW_ERROR_DUMP_MEM_CFG = 16,
-	IWL_FW_ERROR_DUMP_D3_DEBUG_DATA = 17,
+    /* 0 is deprecated */
+    IWL_FW_ERROR_DUMP_CSR = 1,
+    IWL_FW_ERROR_DUMP_RXF = 2,
+    IWL_FW_ERROR_DUMP_TXCMD = 3,
+    IWL_FW_ERROR_DUMP_DEV_FW_INFO = 4,
+    IWL_FW_ERROR_DUMP_FW_MONITOR = 5,
+    IWL_FW_ERROR_DUMP_PRPH = 6,
+    IWL_FW_ERROR_DUMP_TXF = 7,
+    IWL_FW_ERROR_DUMP_FH_REGS = 8,
+    IWL_FW_ERROR_DUMP_MEM = 9,
+    IWL_FW_ERROR_DUMP_ERROR_INFO = 10,
+    IWL_FW_ERROR_DUMP_RB = 11,
+    IWL_FW_ERROR_DUMP_PAGING = 12,
+    IWL_FW_ERROR_DUMP_RADIO_REG = 13,
+    IWL_FW_ERROR_DUMP_INTERNAL_TXF = 14,
+    IWL_FW_ERROR_DUMP_EXTERNAL = 15, /* Do not move */
+    IWL_FW_ERROR_DUMP_MEM_CFG = 16,
+    IWL_FW_ERROR_DUMP_D3_DEBUG_DATA = 17,
 
-	IWL_FW_ERROR_DUMP_MAX,
+    IWL_FW_ERROR_DUMP_MAX,
 };
 
 /**
@@ -95,9 +95,9 @@ enum iwl_fw_error_dump_type {
  * @data: the data itself
  */
 struct iwl_fw_error_dump_data {
-	__le32 type;
-	__le32 len;
-	__u8 data[];
+    __le32 type;
+    __le32 len;
+    __u8 data[];
 } __packed;
 
 /**
@@ -107,9 +107,9 @@ struct iwl_fw_error_dump_data {
  * @data: array of &struct iwl_fw_error_dump_data
  */
 struct iwl_fw_error_dump_file {
-	__le32 barker;
-	__le32 file_len;
-	u8 data[0];
+    __le32 barker;
+    __le32 file_len;
+    u8 data[0];
 } __packed;
 
 /**
@@ -119,9 +119,9 @@ struct iwl_fw_error_dump_file {
  * @data: captured command data, @caplen bytes
  */
 struct iwl_fw_error_dump_txcmd {
-	__le32 cmdlen;
-	__le32 caplen;
-	u8 data[];
+    __le32 cmdlen;
+    __le32 caplen;
+    u8 data[];
 } __packed;
 
 /**
@@ -132,22 +132,22 @@ struct iwl_fw_error_dump_txcmd {
  * @rd_ptr: position of read pointer
  * @fence_ptr: position of fence pointer
  * @fence_mode: the current mode of the fence (before locking) -
- *	0=follow RD pointer ; 1 = freeze
+ *  0=follow RD pointer ; 1 = freeze
  * @data: all of the FIFO's data
  */
 struct iwl_fw_error_dump_fifo {
-	__le32 fifo_num;
-	__le32 available_bytes;
-	__le32 wr_ptr;
-	__le32 rd_ptr;
-	__le32 fence_ptr;
-	__le32 fence_mode;
-	u8 data[];
+    __le32 fifo_num;
+    __le32 available_bytes;
+    __le32 wr_ptr;
+    __le32 rd_ptr;
+    __le32 fence_ptr;
+    __le32 fence_mode;
+    u8 data[];
 } __packed;
 
 enum iwl_fw_error_dump_family {
-	IWL_FW_ERROR_DUMP_FAMILY_7 = 7,
-	IWL_FW_ERROR_DUMP_FAMILY_8 = 8,
+    IWL_FW_ERROR_DUMP_FAMILY_7 = 7,
+    IWL_FW_ERROR_DUMP_FAMILY_8 = 8,
 };
 
 #define MAX_NUM_LMAC 2
@@ -161,19 +161,19 @@ enum iwl_fw_error_dump_family {
  * @bus_human_readable: name of the bus used
  * @num_of_lmacs: the number of lmacs
  * @lmac_err_id: the lmac 0/1 error_id/rt_status that triggered the latest dump
- *	if the dump collection was not initiated by an assert, the value is 0
+ *  if the dump collection was not initiated by an assert, the value is 0
  * @umac_err_id: the umac error_id/rt_status that triggered the latest dump
- *	if the dump collection was not initiated by an assert, the value is 0
+ *  if the dump collection was not initiated by an assert, the value is 0
  */
 struct iwl_fw_error_dump_info {
-	__le32 device_family;
-	__le32 hw_step;
-	u8 fw_human_readable[FW_VER_HUMAN_READABLE_SZ];
-	u8 dev_human_readable[64];
-	u8 bus_human_readable[8];
-	u8 num_of_lmacs;
-	__le32 umac_err_id;
-	__le32 lmac_err_id[MAX_NUM_LMAC];
+    __le32 device_family;
+    __le32 hw_step;
+    u8 fw_human_readable[FW_VER_HUMAN_READABLE_SZ];
+    u8 dev_human_readable[64];
+    u8 bus_human_readable[8];
+    u8 num_of_lmacs;
+    __le32 umac_err_id;
+    __le32 lmac_err_id[MAX_NUM_LMAC];
 } __packed;
 
 /**
@@ -185,19 +185,19 @@ struct iwl_fw_error_dump_info {
  * @data: captured data
  */
 struct iwl_fw_error_dump_fw_mon {
-	__le32 fw_mon_wr_ptr;
-	__le32 fw_mon_base_ptr;
-	__le32 fw_mon_cycle_cnt;
-	__le32 reserved[3];
-	u8 data[];
+    __le32 fw_mon_wr_ptr;
+    __le32 fw_mon_base_ptr;
+    __le32 fw_mon_cycle_cnt;
+    __le32 reserved[3];
+    u8 data[];
 } __packed;
 
 #define MAX_NUM_LMAC 2
-#define TX_FIFO_INTERNAL_MAX_NUM	6
-#define TX_FIFO_MAX_NUM			15
+#define TX_FIFO_INTERNAL_MAX_NUM 6
+#define TX_FIFO_MAX_NUM 15
 /**
  * struct iwl_fw_error_dump_smem_cfg - Dump SMEM configuration
- *	This must follow &struct iwl_fwrt_shared_mem_cfg.
+ *  This must follow &struct iwl_fwrt_shared_mem_cfg.
  * @num_lmacs: number of lmacs
  * @num_txfifo_entries: number of tx fifos
  * @lmac: sizes of lmacs txfifos and rxfifo1
@@ -206,15 +206,15 @@ struct iwl_fw_error_dump_fw_mon {
  * @internal_txfifo_size: size of internal tx fifo
  */
 struct iwl_fw_error_dump_smem_cfg {
-	__le32 num_lmacs;
-	__le32 num_txfifo_entries;
-	struct {
-		__le32 txfifo_size[TX_FIFO_MAX_NUM];
-		__le32 rxfifo1_size;
-	} lmac[MAX_NUM_LMAC];
-	__le32 rxfifo2_size;
-	__le32 internal_txfifo_addr;
-	__le32 internal_txfifo_size[TX_FIFO_INTERNAL_MAX_NUM];
+    __le32 num_lmacs;
+    __le32 num_txfifo_entries;
+    struct {
+        __le32 txfifo_size[TX_FIFO_MAX_NUM];
+        __le32 rxfifo1_size;
+    } lmac[MAX_NUM_LMAC];
+    __le32 rxfifo2_size;
+    __le32 internal_txfifo_addr;
+    __le32 internal_txfifo_size[TX_FIFO_INTERNAL_MAX_NUM];
 } __packed;
 /**
  * struct iwl_fw_error_dump_prph - periphery registers data
@@ -222,14 +222,14 @@ struct iwl_fw_error_dump_smem_cfg {
  * @data: the content of the registers
  */
 struct iwl_fw_error_dump_prph {
-	__le32 prph_start;
-	__le32 data[];
+    __le32 prph_start;
+    __le32 data[];
 };
 
 enum iwl_fw_error_dump_mem_type {
-	IWL_FW_ERROR_DUMP_MEM_SRAM,
-	IWL_FW_ERROR_DUMP_MEM_SMEM,
-	IWL_FW_ERROR_DUMP_MEM_NAMED_MEM = 10,
+    IWL_FW_ERROR_DUMP_MEM_SRAM,
+    IWL_FW_ERROR_DUMP_MEM_SMEM,
+    IWL_FW_ERROR_DUMP_MEM_NAMED_MEM = 10,
 };
 
 /**
@@ -239,9 +239,9 @@ enum iwl_fw_error_dump_mem_type {
  * @data: the content of the memory
  */
 struct iwl_fw_error_dump_mem {
-	__le32 type;
-	__le32 offset;
-	u8 data[];
+    __le32 type;
+    __le32 offset;
+    u8 data[];
 };
 
 /**
@@ -253,11 +253,11 @@ struct iwl_fw_error_dump_mem {
  * @data: the content of the memory
  */
 struct iwl_fw_error_dump_named_mem {
-	__le32 type;
-	__le32 offset;
-	u8 name_len;
-	u8 name[32];
-	u8 data[];
+    __le32 type;
+    __le32 offset;
+    u8 name_len;
+    u8 name[32];
+    u8 data[];
 };
 
 /**
@@ -268,23 +268,23 @@ struct iwl_fw_error_dump_named_mem {
  * @data: the content of the Receive Buffer
  */
 struct iwl_fw_error_dump_rb {
-	__le32 index;
-	__le32 rxq;
-	__le32 reserved;
-	u8 data[];
+    __le32 index;
+    __le32 rxq;
+    __le32 reserved;
+    u8 data[];
 };
 
 /**
  * struct iwl_fw_error_dump_paging - content of the UMAC's image page
- *	block on DRAM
+ *  block on DRAM
  * @index: the index of the page block
  * @reserved:
  * @data: the content of the page block
  */
 struct iwl_fw_error_dump_paging {
-	__le32 index;
-	__le32 reserved;
-	u8 data[];
+    __le32 index;
+    __le32 reserved;
+    u8 data[];
 };
 
 /**
@@ -292,36 +292,35 @@ struct iwl_fw_error_dump_paging {
  * @data: previous data block
  * Returns: next data block
  */
-static inline struct iwl_fw_error_dump_data *
-iwl_fw_error_next_data(struct iwl_fw_error_dump_data *data)
-{
-	return (void *)(data->data + le32_to_cpu(data->len));
+static inline struct iwl_fw_error_dump_data* iwl_fw_error_next_data(
+    struct iwl_fw_error_dump_data* data) {
+    return (void*)(data->data + le32_to_cpu(data->len));
 }
 
 /**
  * enum iwl_fw_dbg_trigger - triggers available
  *
  * @FW_DBG_TRIGGER_USER: trigger log collection by user
- *	This should not be defined as a trigger to the driver, but a value the
- *	driver should set to indicate that the trigger was initiated by the
- *	user.
+ *  This should not be defined as a trigger to the driver, but a value the
+ *  driver should set to indicate that the trigger was initiated by the
+ *  user.
  * @FW_DBG_TRIGGER_FW_ASSERT: trigger log collection when the firmware asserts
  * @FW_DBG_TRIGGER_MISSED_BEACONS: trigger log collection when beacons are
- *	missed.
+ *  missed.
  * @FW_DBG_TRIGGER_CHANNEL_SWITCH: trigger log collection upon channel switch.
  * @FW_DBG_TRIGGER_FW_NOTIF: trigger log collection when the firmware sends a
- *	command response or a notification.
+ *  command response or a notification.
  * @FW_DBG_TRIGGER_MLME: trigger log collection upon MLME event.
  * @FW_DBG_TRIGGER_STATS: trigger log collection upon statistics threshold.
  * @FW_DBG_TRIGGER_RSSI: trigger log collection when the rssi of the beacon
- *	goes below a threshold.
+ *  goes below a threshold.
  * @FW_DBG_TRIGGER_TXQ_TIMERS: configures the timers for the Tx queue hang
- *	detection.
+ *  detection.
  * @FW_DBG_TRIGGER_TIME_EVENT: trigger log collection upon time events related
- *	events.
+ *  events.
  * @FW_DBG_TRIGGER_BA: trigger log collection upon BlockAck related events.
  * @FW_DBG_TX_LATENCY: trigger log collection when the tx latency goes above a
- *	threshold.
+ *  threshold.
  * @FW_DBG_TDLS: trigger log collection upon TDLS related events.
  * @FW_DBG_TRIGGER_TX_STATUS: trigger log collection upon tx status when
  *  the firmware sends a tx reply.
@@ -330,26 +329,26 @@ iwl_fw_error_next_data(struct iwl_fw_error_dump_data *data)
  * @FW_DBG_TRIGGER_NO_ALIVE: trigger log collection if alive flow fails
  */
 enum iwl_fw_dbg_trigger {
-	FW_DBG_TRIGGER_INVALID = 0,
-	FW_DBG_TRIGGER_USER,
-	FW_DBG_TRIGGER_FW_ASSERT,
-	FW_DBG_TRIGGER_MISSED_BEACONS,
-	FW_DBG_TRIGGER_CHANNEL_SWITCH,
-	FW_DBG_TRIGGER_FW_NOTIF,
-	FW_DBG_TRIGGER_MLME,
-	FW_DBG_TRIGGER_STATS,
-	FW_DBG_TRIGGER_RSSI,
-	FW_DBG_TRIGGER_TXQ_TIMERS,
-	FW_DBG_TRIGGER_TIME_EVENT,
-	FW_DBG_TRIGGER_BA,
-	FW_DBG_TRIGGER_TX_LATENCY,
-	FW_DBG_TRIGGER_TDLS,
-	FW_DBG_TRIGGER_TX_STATUS,
-	FW_DBG_TRIGGER_USER_EXTENDED,
-	FW_DBG_TRIGGER_NO_ALIVE,
+    FW_DBG_TRIGGER_INVALID = 0,
+    FW_DBG_TRIGGER_USER,
+    FW_DBG_TRIGGER_FW_ASSERT,
+    FW_DBG_TRIGGER_MISSED_BEACONS,
+    FW_DBG_TRIGGER_CHANNEL_SWITCH,
+    FW_DBG_TRIGGER_FW_NOTIF,
+    FW_DBG_TRIGGER_MLME,
+    FW_DBG_TRIGGER_STATS,
+    FW_DBG_TRIGGER_RSSI,
+    FW_DBG_TRIGGER_TXQ_TIMERS,
+    FW_DBG_TRIGGER_TIME_EVENT,
+    FW_DBG_TRIGGER_BA,
+    FW_DBG_TRIGGER_TX_LATENCY,
+    FW_DBG_TRIGGER_TDLS,
+    FW_DBG_TRIGGER_TX_STATUS,
+    FW_DBG_TRIGGER_USER_EXTENDED,
+    FW_DBG_TRIGGER_NO_ALIVE,
 
-	/* must be last */
-	FW_DBG_TRIGGER_MAX,
+    /* must be last */
+    FW_DBG_TRIGGER_MAX,
 };
 
 /**
@@ -358,8 +357,8 @@ enum iwl_fw_dbg_trigger {
  * @data: raw data about what happened
  */
 struct iwl_fw_error_dump_trigger_desc {
-	__le32 type;
-	u8 data[];
+    __le32 type;
+    u8 data[];
 };
 
-#endif /* __fw_error_dump_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_ERROR_DUMP_H_

@@ -32,15 +32,15 @@
  *
  *****************************************************************************/
 
-#ifndef __coex_h__
-#define __coex_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_LTE_COEX_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_LTE_COEX_H_
 
 #include <linux/types.h>
 
 /* LTE-Coex protocol user space commands */
 
-#define LTE_OFF	      0
-#define LTE_IDLE      1
+#define LTE_OFF 0
+#define LTE_IDLE 1
 #define LTE_CONNECTED 2
 
 /* LTE-Coex error codes */
@@ -52,9 +52,8 @@
 #define LTE_INVALID_DATA 3
 #define LTE_OTHER_ERR 4
 
-
 struct lte_coex_state_cmd {
-	__u8 lte_state;
+    __u8 lte_state;
 } __packed;
 
 #define LTE_MWS_CONF_LENGTH 12
@@ -62,8 +61,8 @@ struct lte_coex_state_cmd {
 #define LTE_SAFE_PT_FIRST -128
 #define LTE_SAFE_PT_LAST 127
 struct lte_coex_config_info_cmd {
-	__u32 mws_conf_data[LTE_MWS_CONF_LENGTH];
-	__s8 safe_power_table[LTE_SAFE_PT_LENGTH];
+    __u32 mws_conf_data[LTE_MWS_CONF_LENGTH];
+    __s8 safe_power_table[LTE_SAFE_PT_LENGTH];
 } __packed;
 
 #define LTE_CONNECTED_BANDS_LENGTH 8
@@ -74,17 +73,17 @@ struct lte_coex_config_info_cmd {
 #define LTE_MAX_TX_MIN 0
 #define LTE_MAX_TX_MAX 31
 struct lte_coex_dynamic_info_cmd {
-	__u32 lte_connected_bands[LTE_CONNECTED_BANDS_LENGTH];
-	__u32 lte_frame_structure[LTE_FRAME_STRUCT_LENGTH];
-	__u16 wifi_tx_safe_freq_min;
-	__u16 wifi_tx_safe_freq_max;
-	__u16 wifi_rx_safe_freq_min;
-	__u16 wifi_rx_safe_freq_max;
-	__u8 wifi_max_tx_power[LTE_TX_POWER_LENGTH];
+    __u32 lte_connected_bands[LTE_CONNECTED_BANDS_LENGTH];
+    __u32 lte_frame_structure[LTE_FRAME_STRUCT_LENGTH];
+    __u16 wifi_tx_safe_freq_min;
+    __u16 wifi_tx_safe_freq_max;
+    __u16 wifi_rx_safe_freq_min;
+    __u16 wifi_rx_safe_freq_max;
+    __u8 wifi_max_tx_power[LTE_TX_POWER_LENGTH];
 } __packed;
 
 struct lte_coex_sps_info_cmd {
-	__u32 sps_info;
+    __u32 sps_info;
 } __packed;
 
 #define LTE_RC_CHAN_MIN 1
@@ -92,8 +91,8 @@ struct lte_coex_sps_info_cmd {
 #define LTE_RC_BW_MIN 0
 #define LTE_RC_BW_MAX 3
 struct lte_coex_wifi_reported_chan_cmd {
-	__u8 chan;
-	__u8 bandwidth;
+    __u8 chan;
+    __u8 bandwidth;
 } __packed;
 
-#endif /* __coex_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_LTE_COEX_H_

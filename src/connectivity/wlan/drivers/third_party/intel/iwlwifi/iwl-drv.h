@@ -31,26 +31,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef __iwl_drv_h__
-#define __iwl_drv_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DRV_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DRV_H_
 
 /* for all modules */
-#define DRV_NAME        "iwlwifi"
-#define DRV_COPYRIGHT	"Copyright(c) 2003- 2015 Intel Corporation"
-#define DRV_AUTHOR     "<linuxwifi@intel.com>"
+#define DRV_NAME "iwlwifi"
+#define DRV_COPYRIGHT "Copyright(c) 2003- 2015 Intel Corporation"
+#define DRV_AUTHOR "<linuxwifi@intel.com>"
 
 /* radio config bits (actual values from NVM definition) */
-#define NVM_RF_CFG_DASH_MSK(x)   (x & 0x3)         /* bits 0-1   */
-#define NVM_RF_CFG_STEP_MSK(x)   ((x >> 2)  & 0x3) /* bits 2-3   */
-#define NVM_RF_CFG_TYPE_MSK(x)   ((x >> 4)  & 0x3) /* bits 4-5   */
-#define NVM_RF_CFG_PNUM_MSK(x)   ((x >> 6)  & 0x3) /* bits 6-7   */
-#define NVM_RF_CFG_TX_ANT_MSK(x) ((x >> 8)  & 0xF) /* bits 8-11  */
+#define NVM_RF_CFG_DASH_MSK(x) (x & 0x3)           /* bits 0-1   */
+#define NVM_RF_CFG_STEP_MSK(x) ((x >> 2) & 0x3)    /* bits 2-3   */
+#define NVM_RF_CFG_TYPE_MSK(x) ((x >> 4) & 0x3)    /* bits 4-5   */
+#define NVM_RF_CFG_PNUM_MSK(x) ((x >> 6) & 0x3)    /* bits 6-7   */
+#define NVM_RF_CFG_TX_ANT_MSK(x) ((x >> 8) & 0xF)  /* bits 8-11  */
 #define NVM_RF_CFG_RX_ANT_MSK(x) ((x >> 12) & 0xF) /* bits 12-15 */
 
-#define EXT_NVM_RF_CFG_FLAVOR_MSK(x)   ((x) & 0xF)
-#define EXT_NVM_RF_CFG_DASH_MSK(x)   (((x) >> 4) & 0xF)
-#define EXT_NVM_RF_CFG_STEP_MSK(x)   (((x) >> 8) & 0xF)
-#define EXT_NVM_RF_CFG_TYPE_MSK(x)   (((x) >> 12) & 0xFFF)
+#define EXT_NVM_RF_CFG_FLAVOR_MSK(x) ((x)&0xF)
+#define EXT_NVM_RF_CFG_DASH_MSK(x) (((x) >> 4) & 0xF)
+#define EXT_NVM_RF_CFG_STEP_MSK(x) (((x) >> 8) & 0xF)
+#define EXT_NVM_RF_CFG_TYPE_MSK(x) (((x) >> 12) & 0xFFF)
 #define EXT_NVM_RF_CFG_TX_ANT_MSK(x) (((x) >> 24) & 0xF)
 #define EXT_NVM_RF_CFG_RX_ANT_MSK(x) (((x) >> 28) & 0xF)
 
@@ -92,7 +92,7 @@ struct iwl_cfg;
  * function should do bus related operations only, and then call to this
  * function. It returns the driver object or %NULL if an error occurred.
  */
-struct iwl_drv *iwl_drv_start(struct iwl_trans *trans);
+struct iwl_drv* iwl_drv_start(struct iwl_trans* trans);
 
 /**
  * iwl_drv_stop - stop the drv
@@ -103,13 +103,13 @@ struct iwl_drv *iwl_drv_start(struct iwl_trans *trans);
  * implementations. For example, the bus specific remove function should first
  * call this function and then do the bus related operations only.
  */
-void iwl_drv_stop(struct iwl_drv *drv);
+void iwl_drv_stop(struct iwl_drv* drv);
 
 /*
  * iwl_drv_get_dev_container - Given a device, returns the pointer
  * to it's corresponding driver's struct
  */
-struct iwl_drv *iwl_drv_get_dev_container(struct device *dev);
+struct iwl_drv* iwl_drv_get_dev_container(struct device* dev);
 
 /*
  * iwl_drv_switch_op_mode - Switch between operation modes
@@ -117,7 +117,7 @@ struct iwl_drv *iwl_drv_get_dev_container(struct device *dev);
  * is supported by the device. Stops the current op mode
  * and starts the desired mode.
  */
-int iwl_drv_switch_op_mode(struct iwl_drv *drv, const char *new_op_name);
+int iwl_drv_switch_op_mode(struct iwl_drv* drv, const char* new_op_name);
 
 /*
  * exported symbol management
@@ -127,9 +127,9 @@ int iwl_drv_switch_op_mode(struct iwl_drv *drv, const char *new_op_name);
  * everything is built-in, then we can avoid that.
  */
 #ifdef CPTCFG_IWLWIFI_OPMODE_MODULAR
-#define IWL_EXPORT_SYMBOL(sym)	EXPORT_SYMBOL_GPL(sym)
+#define IWL_EXPORT_SYMBOL(sym) EXPORT_SYMBOL_GPL(sym)
 #else
 #define IWL_EXPORT_SYMBOL(sym)
 #endif
 
-#endif /* __iwl_drv_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DRV_H_

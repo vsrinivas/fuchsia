@@ -31,39 +31,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_modparams_h__
-#define __iwl_modparams_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_MODPARAMS_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_MODPARAMS_H_
 
 extern struct iwl_mod_params iwlwifi_mod_params;
 
 enum iwl_power_level {
-	IWL_POWER_INDEX_1,
-	IWL_POWER_INDEX_2,
-	IWL_POWER_INDEX_3,
-	IWL_POWER_INDEX_4,
-	IWL_POWER_INDEX_5,
-	IWL_POWER_NUM
+    IWL_POWER_INDEX_1,
+    IWL_POWER_INDEX_2,
+    IWL_POWER_INDEX_3,
+    IWL_POWER_INDEX_4,
+    IWL_POWER_INDEX_5,
+    IWL_POWER_NUM
 };
 
 enum iwl_disable_11n {
-	IWL_DISABLE_HT_ALL	 = BIT(0),
-	IWL_DISABLE_HT_TXAGG	 = BIT(1),
-	IWL_DISABLE_HT_RXAGG	 = BIT(2),
-	IWL_ENABLE_HT_TXAGG	 = BIT(3),
+    IWL_DISABLE_HT_ALL = BIT(0),
+    IWL_DISABLE_HT_TXAGG = BIT(1),
+    IWL_DISABLE_HT_RXAGG = BIT(2),
+    IWL_ENABLE_HT_TXAGG = BIT(3),
 };
 
 enum iwl_amsdu_size {
-	IWL_AMSDU_DEF = 0,
-	IWL_AMSDU_4K = 1,
-	IWL_AMSDU_8K = 2,
-	IWL_AMSDU_12K = 3,
-	/* Add 2K at the end to avoid breaking current API */
-	IWL_AMSDU_2K = 4,
+    IWL_AMSDU_DEF = 0,
+    IWL_AMSDU_4K = 1,
+    IWL_AMSDU_8K = 2,
+    IWL_AMSDU_12K = 3,
+    /* Add 2K at the end to avoid breaking current API */
+    IWL_AMSDU_2K = 4,
 };
 
 enum iwl_uapsd_disable {
-	IWL_DISABLE_UAPSD_BSS		= BIT(0),
-	IWL_DISABLE_UAPSD_P2P_CLIENT	= BIT(1),
+    IWL_DISABLE_UAPSD_BSS = BIT(0),
+    IWL_DISABLE_UAPSD_P2P_CLIENT = BIT(1),
 };
 
 /**
@@ -97,38 +97,38 @@ enum iwl_uapsd_disable {
  * @enable_ini: enable new FW debug infratructure (INI TLVs)
  */
 struct iwl_mod_params {
-	int swcrypto;
-	unsigned int disable_11n;
-	int amsdu_size;
-	bool fw_restart;
-	bool bt_coex_active;
-	int led_mode;
-	bool power_save;
-	int power_level;
+    int swcrypto;
+    unsigned int disable_11n;
+    int amsdu_size;
+    bool fw_restart;
+    bool bt_coex_active;
+    int led_mode;
+    bool power_save;
+    int power_level;
 #ifdef CPTCFG_IWLWIFI_DEBUG
-	u32 debug_level;
+    u32 debug_level;
 #endif
-	int antenna_coupling;
+    int antenna_coupling;
 #if IS_ENABLED(CPTCFG_IWLXVT)
-	bool xvt_default_mode;
+    bool xvt_default_mode;
 #endif
 #if IS_ENABLED(CPTCFG_IWLTEST)
-	bool trans_test;
+    bool trans_test;
 #endif
-	char *nvm_file;
-	u32 uapsd_disable;
-	bool d0i3_disable;
-	unsigned int d0i3_timeout;
-	bool lar_disable;
-	bool fw_monitor;
-	bool disable_11ac;
-	/**
-	 * @disable_11ax: disable HE capabilities, default = false
-	 */
-	bool disable_11ax;
-	bool disable_msix;
-	bool remove_when_gone;
-	bool enable_ini;
+    char* nvm_file;
+    u32 uapsd_disable;
+    bool d0i3_disable;
+    unsigned int d0i3_timeout;
+    bool lar_disable;
+    bool fw_monitor;
+    bool disable_11ac;
+    /**
+     * @disable_11ax: disable HE capabilities, default = false
+     */
+    bool disable_11ax;
+    bool disable_msix;
+    bool remove_when_gone;
+    bool enable_ini;
 };
 
-#endif /* #__iwl_modparams_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_MODPARAMS_H_

@@ -32,32 +32,32 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __IWL_CONFIG_H__
-#define __IWL_CONFIG_H__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONFIG_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONFIG_H_
 
 #include "iwl-csr.h"
 
 enum iwl_device_family {
-	IWL_DEVICE_FAMILY_UNDEFINED,
-	IWL_DEVICE_FAMILY_1000,
-	IWL_DEVICE_FAMILY_100,
-	IWL_DEVICE_FAMILY_2000,
-	IWL_DEVICE_FAMILY_2030,
-	IWL_DEVICE_FAMILY_105,
-	IWL_DEVICE_FAMILY_135,
-	IWL_DEVICE_FAMILY_5000,
-	IWL_DEVICE_FAMILY_5150,
-	IWL_DEVICE_FAMILY_6000,
-	IWL_DEVICE_FAMILY_6000i,
-	IWL_DEVICE_FAMILY_6005,
-	IWL_DEVICE_FAMILY_6030,
-	IWL_DEVICE_FAMILY_6050,
-	IWL_DEVICE_FAMILY_6150,
-	IWL_DEVICE_FAMILY_7000,
-	IWL_DEVICE_FAMILY_8000,
-	IWL_DEVICE_FAMILY_9000,
-	IWL_DEVICE_FAMILY_22000,
-	IWL_DEVICE_FAMILY_22560,
+    IWL_DEVICE_FAMILY_UNDEFINED,
+    IWL_DEVICE_FAMILY_1000,
+    IWL_DEVICE_FAMILY_100,
+    IWL_DEVICE_FAMILY_2000,
+    IWL_DEVICE_FAMILY_2030,
+    IWL_DEVICE_FAMILY_105,
+    IWL_DEVICE_FAMILY_135,
+    IWL_DEVICE_FAMILY_5000,
+    IWL_DEVICE_FAMILY_5150,
+    IWL_DEVICE_FAMILY_6000,
+    IWL_DEVICE_FAMILY_6000i,
+    IWL_DEVICE_FAMILY_6005,
+    IWL_DEVICE_FAMILY_6030,
+    IWL_DEVICE_FAMILY_6050,
+    IWL_DEVICE_FAMILY_6150,
+    IWL_DEVICE_FAMILY_7000,
+    IWL_DEVICE_FAMILY_8000,
+    IWL_DEVICE_FAMILY_9000,
+    IWL_DEVICE_FAMILY_22000,
+    IWL_DEVICE_FAMILY_22560,
 };
 
 /*
@@ -70,10 +70,10 @@ enum iwl_device_family {
  *    IWL_LED_DISABLE:	led disabled
  */
 enum iwl_led_mode {
-	IWL_LED_DEFAULT,
-	IWL_LED_RF_STATE,
-	IWL_LED_BLINK,
-	IWL_LED_DISABLE,
+    IWL_LED_DEFAULT,
+    IWL_LED_RF_STATE,
+    IWL_LED_BLINK,
+    IWL_LED_DISABLE,
 };
 
 /**
@@ -83,50 +83,45 @@ enum iwl_led_mode {
  * @IWL_NVM_SDP: NVM format used by 3168 series
  */
 enum iwl_nvm_type {
-	IWL_NVM,
-	IWL_NVM_EXT,
-	IWL_NVM_SDP,
+    IWL_NVM,
+    IWL_NVM_EXT,
+    IWL_NVM_SDP,
 };
 
 /*
  * This is the threshold value of plcp error rate per 100mSecs.  It is
  * used to set and check for the validity of plcp_delta.
  */
-#define IWL_MAX_PLCP_ERR_THRESHOLD_MIN		1
-#define IWL_MAX_PLCP_ERR_THRESHOLD_DEF		50
-#define IWL_MAX_PLCP_ERR_LONG_THRESHOLD_DEF	100
-#define IWL_MAX_PLCP_ERR_EXT_LONG_THRESHOLD_DEF	200
-#define IWL_MAX_PLCP_ERR_THRESHOLD_MAX		255
-#define IWL_MAX_PLCP_ERR_THRESHOLD_DISABLE	0
+#define IWL_MAX_PLCP_ERR_THRESHOLD_MIN 1
+#define IWL_MAX_PLCP_ERR_THRESHOLD_DEF 50
+#define IWL_MAX_PLCP_ERR_LONG_THRESHOLD_DEF 100
+#define IWL_MAX_PLCP_ERR_EXT_LONG_THRESHOLD_DEF 200
+#define IWL_MAX_PLCP_ERR_THRESHOLD_MAX 255
+#define IWL_MAX_PLCP_ERR_THRESHOLD_DISABLE 0
 
 /* TX queue watchdog timeouts in mSecs */
-#define IWL_WATCHDOG_DISABLED	0
-#define IWL_DEF_WD_TIMEOUT	(2500 * CPTCFG_IWL_TIMEOUT_FACTOR)
-#define IWL_LONG_WD_TIMEOUT	(10000 * CPTCFG_IWL_TIMEOUT_FACTOR)
-#define IWL_MAX_WD_TIMEOUT	(120000 * CPTCFG_IWL_TIMEOUT_FACTOR)
+#define IWL_WATCHDOG_DISABLED 0
+#define IWL_DEF_WD_TIMEOUT (2500 * CPTCFG_IWL_TIMEOUT_FACTOR)
+#define IWL_LONG_WD_TIMEOUT (10000 * CPTCFG_IWL_TIMEOUT_FACTOR)
+#define IWL_MAX_WD_TIMEOUT (120000 * CPTCFG_IWL_TIMEOUT_FACTOR)
 
 #define IWL_DEFAULT_MAX_TX_POWER 22
-#define IWL_TX_CSUM_NETIF_FLAGS (NETIF_F_IPV6_CSUM | NETIF_F_IP_CSUM |\
-				 NETIF_F_TSO | NETIF_F_TSO6)
+#define IWL_TX_CSUM_NETIF_FLAGS (NETIF_F_IPV6_CSUM | NETIF_F_IP_CSUM | NETIF_F_TSO | NETIF_F_TSO6)
 
 /* Antenna presence definitions */
-#define	ANT_NONE	0x0
-#define	ANT_INVALID	0xff
-#define	ANT_A		BIT(0)
-#define	ANT_B		BIT(1)
-#define ANT_C		BIT(2)
-#define	ANT_AB		(ANT_A | ANT_B)
-#define	ANT_AC		(ANT_A | ANT_C)
-#define ANT_BC		(ANT_B | ANT_C)
-#define ANT_ABC		(ANT_A | ANT_B | ANT_C)
+#define ANT_NONE 0x0
+#define ANT_INVALID 0xff
+#define ANT_A BIT(0)
+#define ANT_B BIT(1)
+#define ANT_C BIT(2)
+#define ANT_AB (ANT_A | ANT_B)
+#define ANT_AC (ANT_A | ANT_C)
+#define ANT_BC (ANT_B | ANT_C)
+#define ANT_ABC (ANT_A | ANT_B | ANT_C)
 #define MAX_ANT_NUM 3
 
-
-static inline u8 num_of_ant(u8 mask)
-{
-	return  !!((mask) & ANT_A) +
-		!!((mask) & ANT_B) +
-		!!((mask) & ANT_C);
+static inline u8 num_of_ant(u8 mask) {
+    return !!((mask)&ANT_A) + !!((mask)&ANT_B) + !!((mask)&ANT_C);
 }
 
 /*
@@ -144,23 +139,20 @@ static inline u8 num_of_ant(u8 mask)
  * @max_tfd_queue_size: max number of entries in tfd queue.
  */
 struct iwl_base_params {
-	unsigned int wd_timeout;
+    unsigned int wd_timeout;
 
-	u16 eeprom_size;
-	u16 max_event_log_size;
+    u16 eeprom_size;
+    u16 max_event_log_size;
 
-	u8 pll_cfg:1, /* for iwl_pcie_apm_init() */
-	   shadow_ram_support:1,
-	   shadow_reg_enable:1,
-	   pcie_l1_allowed:1,
-	   apmg_wake_up_wa:1,
-	   scd_chain_ext_wa:1;
+    u8 pll_cfg : 1, /* for iwl_pcie_apm_init() */
+        shadow_ram_support : 1, shadow_reg_enable : 1, pcie_l1_allowed : 1, apmg_wake_up_wa : 1,
+        scd_chain_ext_wa : 1;
 
-	u16 num_of_queues;	/* def: HW dependent */
-	u32 max_tfd_queue_size;	/* def: HW dependent */
+    u16 num_of_queues;      /* def: HW dependent */
+    u32 max_tfd_queue_size; /* def: HW dependent */
 
-	u8 max_ll_items;
-	u8 led_compensation;
+    u8 max_ll_items;
+    u8 led_compensation;
 };
 
 /*
@@ -170,11 +162,8 @@ struct iwl_base_params {
  * @ht40_bands: bitmap of bands (using %NL80211_BAND_*) that support HT40
  */
 struct iwl_ht_params {
-	u8 ht_greenfield_support:1,
-	   stbc:1,
-	   ldpc:1,
-	   use_rts_for_aggregation:1;
-	u8 ht40_bands;
+    u8 ht_greenfield_support : 1, stbc : 1, ldpc : 1, use_rts_for_aggregation : 1;
+    u8 ht40_bands;
 };
 
 /*
@@ -183,8 +172,8 @@ struct iwl_ht_params {
  * @backoff: The tx-backoff in uSec
  */
 struct iwl_tt_tx_backoff {
-	s32 temperature;
-	u32 backoff;
+    s32 temperature;
+    u32 backoff;
 };
 
 #define TT_TX_BACKOFF_SIZE 6
@@ -206,41 +195,39 @@ struct iwl_tt_tx_backoff {
  * @support_tx_backoff: Support tx-backoff?
  */
 struct iwl_tt_params {
-	u32 ct_kill_entry;
-	u32 ct_kill_exit;
-	u32 ct_kill_duration;
-	u32 dynamic_smps_entry;
-	u32 dynamic_smps_exit;
-	u32 tx_protection_entry;
-	u32 tx_protection_exit;
-	struct iwl_tt_tx_backoff tx_backoff[TT_TX_BACKOFF_SIZE];
-	u8 support_ct_kill:1,
-	   support_dynamic_smps:1,
-	   support_tx_protection:1,
-	   support_tx_backoff:1;
+    u32 ct_kill_entry;
+    u32 ct_kill_exit;
+    u32 ct_kill_duration;
+    u32 dynamic_smps_entry;
+    u32 dynamic_smps_exit;
+    u32 tx_protection_entry;
+    u32 tx_protection_exit;
+    struct iwl_tt_tx_backoff tx_backoff[TT_TX_BACKOFF_SIZE];
+    u8 support_ct_kill : 1, support_dynamic_smps : 1, support_tx_protection : 1,
+        support_tx_backoff : 1;
 };
 
 /*
  * information on how to parse the EEPROM
  */
-#define EEPROM_REG_BAND_1_CHANNELS		0x08
-#define EEPROM_REG_BAND_2_CHANNELS		0x26
-#define EEPROM_REG_BAND_3_CHANNELS		0x42
-#define EEPROM_REG_BAND_4_CHANNELS		0x5C
-#define EEPROM_REG_BAND_5_CHANNELS		0x74
-#define EEPROM_REG_BAND_24_HT40_CHANNELS	0x82
-#define EEPROM_REG_BAND_52_HT40_CHANNELS	0x92
-#define EEPROM_6000_REG_BAND_24_HT40_CHANNELS	0x80
-#define EEPROM_REGULATORY_BAND_NO_HT40		0
+#define EEPROM_REG_BAND_1_CHANNELS 0x08
+#define EEPROM_REG_BAND_2_CHANNELS 0x26
+#define EEPROM_REG_BAND_3_CHANNELS 0x42
+#define EEPROM_REG_BAND_4_CHANNELS 0x5C
+#define EEPROM_REG_BAND_5_CHANNELS 0x74
+#define EEPROM_REG_BAND_24_HT40_CHANNELS 0x82
+#define EEPROM_REG_BAND_52_HT40_CHANNELS 0x92
+#define EEPROM_6000_REG_BAND_24_HT40_CHANNELS 0x80
+#define EEPROM_REGULATORY_BAND_NO_HT40 0
 
 /* lower blocks contain EEPROM image and calibration data */
-#define OTP_LOW_IMAGE_SIZE_2K		(2 * 512 * sizeof(u16))  /*  2 KB */
-#define OTP_LOW_IMAGE_SIZE_16K		(16 * 512 * sizeof(u16)) /* 16 KB */
-#define OTP_LOW_IMAGE_SIZE_32K		(32 * 512 * sizeof(u16)) /* 32 KB */
+#define OTP_LOW_IMAGE_SIZE_2K (2 * 512 * sizeof(u16))   /*  2 KB */
+#define OTP_LOW_IMAGE_SIZE_16K (16 * 512 * sizeof(u16)) /* 16 KB */
+#define OTP_LOW_IMAGE_SIZE_32K (32 * 512 * sizeof(u16)) /* 32 KB */
 
 struct iwl_eeprom_params {
-	const u8 regulatory_bands[7];
-	bool enhanced_txpower;
+    const u8 regulatory_bands[7];
+    bool enhanced_txpower;
 };
 
 /* Tx-backoff power threshold
@@ -248,8 +235,8 @@ struct iwl_eeprom_params {
  * @backoff: The tx-backoff in uSec
  */
 struct iwl_pwr_tx_backoff {
-	u32 pwr;
-	u32 backoff;
+    u32 pwr;
+    u32 backoff;
 };
 
 /**
@@ -284,18 +271,18 @@ struct iwl_pwr_tx_backoff {
  * @mac_addr1_strap: second part of MAC address from strap
  */
 struct iwl_csr_params {
-	u8 flag_sw_reset;
-	u8 flag_mac_clock_ready;
-	u8 flag_init_done;
-	u8 flag_mac_access_req;
-	u8 flag_val_mac_access_en;
-	u8 flag_master_dis;
-	u8 flag_stop_master;
-	u8 addr_sw_reset;
-	u32 mac_addr0_otp;
-	u32 mac_addr1_otp;
-	u32 mac_addr0_strap;
-	u32 mac_addr1_strap;
+    u8 flag_sw_reset;
+    u8 flag_mac_clock_ready;
+    u8 flag_init_done;
+    u8 flag_mac_access_req;
+    u8 flag_val_mac_access_en;
+    u8 flag_master_dis;
+    u8 flag_stop_master;
+    u8 addr_sw_reset;
+    u32 mac_addr0_otp;
+    u32 mac_addr1_otp;
+    u32 mac_addr0_strap;
+    u32 mac_addr1_strap;
 };
 
 /**
@@ -354,95 +341,79 @@ struct iwl_csr_params {
  * and/or the uCode API version instead.
  */
 struct iwl_cfg {
-	/* params specific to an individual device within a device family */
-	const char *name;
-	const char *fw_name_pre;
-	/* params not likely to change within a device family */
-	const struct iwl_base_params *base_params;
-	/* params likely to change within a device family */
-	const struct iwl_ht_params *ht_params;
-	const struct iwl_eeprom_params *eeprom_params;
-	const struct iwl_pwr_tx_backoff *pwr_tx_backoffs;
-	const char *default_nvm_file_C_step;
-	const struct iwl_tt_params *thermal_params;
-	const struct iwl_csr_params *csr;
-	enum iwl_device_family device_family;
-	enum iwl_led_mode led_mode;
-	enum iwl_nvm_type nvm_type;
-	u32 max_data_size;
-	u32 max_inst_size;
-	netdev_features_t features;
-	u32 dccm_offset;
-	u32 dccm_len;
-	u32 dccm2_offset;
-	u32 dccm2_len;
-	u32 smem_offset;
-	u32 smem_len;
-	u32 soc_latency;
-	u16 nvm_ver;
-	u16 nvm_calib_ver;
-	u32 rx_with_siso_diversity:1,
-	    bt_shared_single_ant:1,
-	    internal_wimax_coex:1,
-	    host_interrupt_operation_mode:1,
-	    high_temp:1,
-	    mac_addr_from_csr:1,
-	    lp_xtal_workaround:1,
-	    disable_dummy_notification:1,
-	    apmg_not_supported:1,
-	    mq_rx_supported:1,
-	    vht_mu_mimo_supported:1,
-	    rf_id:1,
-	    integrated:1,
-	    use_tfh:1,
-	    gen2:1,
-	    cdb:1,
-	    dbgc_supported:1;
-	u8 valid_tx_ant;
-	u8 valid_rx_ant;
-	u8 non_shared_ant;
-	u8 nvm_hw_section_num;
-	u8 max_rx_agg_size;
-	u8 max_tx_agg_size;
-	u8 max_ht_ampdu_exponent;
-	u8 max_vht_ampdu_exponent;
-	u8 ucode_api_max;
-	u8 ucode_api_min;
-	u32 min_umac_error_event_table;
-	u32 extra_phy_cfg_flags;
-	u32 d3_debug_data_base_addr;
-	u32 d3_debug_data_length;
+    /* params specific to an individual device within a device family */
+    const char* name;
+    const char* fw_name_pre;
+    /* params not likely to change within a device family */
+    const struct iwl_base_params* base_params;
+    /* params likely to change within a device family */
+    const struct iwl_ht_params* ht_params;
+    const struct iwl_eeprom_params* eeprom_params;
+    const struct iwl_pwr_tx_backoff* pwr_tx_backoffs;
+    const char* default_nvm_file_C_step;
+    const struct iwl_tt_params* thermal_params;
+    const struct iwl_csr_params* csr;
+    enum iwl_device_family device_family;
+    enum iwl_led_mode led_mode;
+    enum iwl_nvm_type nvm_type;
+    u32 max_data_size;
+    u32 max_inst_size;
+    netdev_features_t features;
+    u32 dccm_offset;
+    u32 dccm_len;
+    u32 dccm2_offset;
+    u32 dccm2_len;
+    u32 smem_offset;
+    u32 smem_len;
+    u32 soc_latency;
+    u16 nvm_ver;
+    u16 nvm_calib_ver;
+    u32 rx_with_siso_diversity : 1, bt_shared_single_ant : 1, internal_wimax_coex : 1,
+        host_interrupt_operation_mode : 1, high_temp : 1, mac_addr_from_csr : 1,
+        lp_xtal_workaround : 1, disable_dummy_notification : 1, apmg_not_supported : 1,
+        mq_rx_supported : 1, vht_mu_mimo_supported : 1, rf_id : 1, integrated : 1, use_tfh : 1,
+        gen2 : 1, cdb : 1, dbgc_supported : 1;
+    u8 valid_tx_ant;
+    u8 valid_rx_ant;
+    u8 non_shared_ant;
+    u8 nvm_hw_section_num;
+    u8 max_rx_agg_size;
+    u8 max_tx_agg_size;
+    u8 max_ht_ampdu_exponent;
+    u8 max_vht_ampdu_exponent;
+    u8 ucode_api_max;
+    u8 ucode_api_min;
+    u32 min_umac_error_event_table;
+    u32 extra_phy_cfg_flags;
+    u32 d3_debug_data_base_addr;
+    u32 d3_debug_data_length;
 };
 
-static const struct iwl_csr_params iwl_csr_v1 = {
-	.flag_mac_clock_ready = 0,
-	.flag_val_mac_access_en = 0,
-	.flag_init_done = 2,
-	.flag_mac_access_req = 3,
-	.flag_sw_reset = 7,
-	.flag_master_dis = 8,
-	.flag_stop_master = 9,
-	.addr_sw_reset = (CSR_BASE + 0x020),
-	.mac_addr0_otp = 0x380,
-	.mac_addr1_otp = 0x384,
-	.mac_addr0_strap = 0x388,
-	.mac_addr1_strap = 0x38C
-};
+static const struct iwl_csr_params iwl_csr_v1 = {.flag_mac_clock_ready = 0,
+                                                 .flag_val_mac_access_en = 0,
+                                                 .flag_init_done = 2,
+                                                 .flag_mac_access_req = 3,
+                                                 .flag_sw_reset = 7,
+                                                 .flag_master_dis = 8,
+                                                 .flag_stop_master = 9,
+                                                 .addr_sw_reset = (CSR_BASE + 0x020),
+                                                 .mac_addr0_otp = 0x380,
+                                                 .mac_addr1_otp = 0x384,
+                                                 .mac_addr0_strap = 0x388,
+                                                 .mac_addr1_strap = 0x38C};
 
-static const struct iwl_csr_params iwl_csr_v2 = {
-	.flag_init_done = 6,
-	.flag_mac_clock_ready = 20,
-	.flag_val_mac_access_en = 20,
-	.flag_mac_access_req = 21,
-	.flag_master_dis = 28,
-	.flag_stop_master = 29,
-	.flag_sw_reset = 31,
-	.addr_sw_reset = (CSR_BASE + 0x024),
-	.mac_addr0_otp = 0x30,
-	.mac_addr1_otp = 0x34,
-	.mac_addr0_strap = 0x38,
-	.mac_addr1_strap = 0x3C
-};
+static const struct iwl_csr_params iwl_csr_v2 = {.flag_init_done = 6,
+                                                 .flag_mac_clock_ready = 20,
+                                                 .flag_val_mac_access_en = 20,
+                                                 .flag_mac_access_req = 21,
+                                                 .flag_master_dis = 28,
+                                                 .flag_stop_master = 29,
+                                                 .flag_sw_reset = 31,
+                                                 .addr_sw_reset = (CSR_BASE + 0x024),
+                                                 .mac_addr0_otp = 0x30,
+                                                 .mac_addr1_otp = 0x34,
+                                                 .mac_addr0_strap = 0x38,
+                                                 .mac_addr1_strap = 0x3C};
 
 /*
  * This list declares the config structures for all devices.
@@ -556,4 +527,4 @@ extern const struct iwl_cfg iwl22000_2ax_cfg_qnj_hr_a0;
 extern const struct iwl_cfg iwl22560_2ax_cfg_su_cdb;
 #endif /* CPTCFG_IWLMVM || CPTCFG_IWLFMAC */
 
-#endif /* __IWL_CONFIG_H__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONFIG_H_

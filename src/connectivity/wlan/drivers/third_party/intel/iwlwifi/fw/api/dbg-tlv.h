@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_fw_dbg_tlv_h__
-#define __iwl_fw_dbg_tlv_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DBG_TLV_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DBG_TLV_H_
 
 /*
  * struct iwl_fw_ini_header: Common Header for all debug group TLV's structures
@@ -40,9 +40,9 @@
  * @data: TLV data followed
  **/
 struct iwl_fw_ini_header {
-	__le32 tlv_version;
-	__le32 apply_point;
-	u8 data[0];
+    __le32 tlv_version;
+    __le32 apply_point;
+    u8 data[0];
 } __packed; /* FW_INI_HEADER_TLV_S */
 
 /**
@@ -57,14 +57,14 @@ struct iwl_fw_ini_header {
  * @max_fragments: the maximum allowed fragmentation in the desired memory
  *	allocation above
  * @min_frag_size: the minimum allowed fragmentation size in bytes
-*/
+ */
 struct iwl_fw_ini_allocation_tlv {
-	struct iwl_fw_ini_header header;
-	__le32 allocation_id;
-	__le32 buffer_location;
-	__le32 size;
-	__le32 max_fragments;
-	__le32 min_frag_size;
+    struct iwl_fw_ini_header header;
+    __le32 allocation_id;
+    __le32 buffer_location;
+    __le32 size;
+    __le32 max_fragments;
+    __le32 min_frag_size;
 } __packed; /* FW_INI_BUFFER_ALLOCATION_TLV_S_VER_1 */
 
 /**
@@ -75,12 +75,12 @@ struct iwl_fw_ini_allocation_tlv {
  * @group: the desired cmd group
  * @padding: all zeros for dword alignment
  * @data: all of the relevant command (0xf6/0xf5) to be sent
-*/
+ */
 struct iwl_fw_ini_hcmd {
-	u8 id;
-	u8 group;
-	__le16 padding;
-	u8 data[0];
+    u8 id;
+    u8 group;
+    __le16 padding;
+    u8 data[0];
 } __packed; /* FW_INI_HCMD_S */
 
 /**
@@ -89,8 +89,8 @@ struct iwl_fw_ini_hcmd {
  * @hcmd: a variable length host-command to be sent to apply the configuration.
  */
 struct iwl_fw_ini_hcmd_tlv {
-	struct iwl_fw_ini_header header;
-	struct iwl_fw_ini_hcmd hcmd;
+    struct iwl_fw_ini_header header;
+    struct iwl_fw_ini_hcmd hcmd;
 } __packed; /* FW_INI_HCMD_TLV_S_VER_1 */
 
 /*
@@ -100,12 +100,12 @@ struct iwl_fw_ini_hcmd_tlv {
  * @debug_flow_cfg: &enum iwl_fw_ini_debug_flow
  */
 struct iwl_fw_ini_debug_flow_tlv {
-	struct iwl_fw_ini_header header;
-	__le32 debug_flow_cfg;
+    struct iwl_fw_ini_header header;
+    __le32 debug_flow_cfg;
 } __packed; /* FW_INI_DEBUG_FLOW_TLV_S_VER_1 */
 
-#define IWL_FW_INI_MAX_REGION_ID	20
-#define IWL_FW_INI_MAX_NAME		32
+#define IWL_FW_INI_MAX_REGION_ID 20
+#define IWL_FW_INI_MAX_NAME 32
 /**
  * struct iwl_fw_ini_region_cfg
  * @region_id: ID of this dump configuration
@@ -118,16 +118,16 @@ struct iwl_fw_ini_debug_flow_tlv {
  * @start_addr: array of addresses. (unused for IWL_FW_INI_REGION_DRAM_BUFFER)
  */
 struct iwl_fw_ini_region_cfg {
-	__le32 region_id;
-	__le32 region_type;
-	__le32 name_len;
-	u8 name[IWL_FW_INI_MAX_NAME];
-	union {
-		__le32 num_regions;
-		__le32 allocation_id;
-	};
-	__le32 size;
-	__le32 start_addr[];
+    __le32 region_id;
+    __le32 region_type;
+    __le32 name_len;
+    u8 name[IWL_FW_INI_MAX_NAME];
+    union {
+        __le32 num_regions;
+        __le32 allocation_id;
+    };
+    __le32 size;
+    __le32 start_addr[];
 } __packed; /* FW_INI_REGION_CONFIG_S */
 
 /**
@@ -138,9 +138,9 @@ struct iwl_fw_ini_region_cfg {
  * @iwl_fw_ini_dump dump_config: list of dump configurations
  */
 struct iwl_fw_ini_region_tlv {
-	struct iwl_fw_ini_header header;
-	__le32 num_regions;
-	struct iwl_fw_ini_region_cfg region_config[];
+    struct iwl_fw_ini_header header;
+    __le32 num_regions;
+    struct iwl_fw_ini_region_cfg region_config[];
 } __packed; /* FW_INI_REGION_CFG_S */
 
 /**
@@ -159,16 +159,16 @@ struct iwl_fw_ini_region_tlv {
  * @data: region IDs
  */
 struct iwl_fw_ini_trigger {
-	__le32 trigger_id;
-	__le32 ignore_default;
-	__le32 dump_delay;
-	__le32 occurrences;
-	__le32 ignore_consec;
-	__le32 force_restart;
-	__le32 multi_dut;
-	__le32 trigger_data;
-	__le32 num_regions;
-	__le32 data[];
+    __le32 trigger_id;
+    __le32 ignore_default;
+    __le32 dump_delay;
+    __le32 occurrences;
+    __le32 ignore_consec;
+    __le32 force_restart;
+    __le32 multi_dut;
+    __le32 trigger_data;
+    __le32 num_regions;
+    __le32 data[];
 } __packed; /* FW_INI_TRIGGER_CONFIG_S */
 
 /**
@@ -180,9 +180,9 @@ struct iwl_fw_ini_trigger {
  * @trigger_config: list of trigger configurations
  */
 struct iwl_fw_ini_trigger_tlv {
-	struct iwl_fw_ini_header header;
-	__le32 num_triggers;
-	struct iwl_fw_ini_trigger trigger_config[];
+    struct iwl_fw_ini_header header;
+    __le32 num_triggers;
+    struct iwl_fw_ini_trigger trigger_config[];
 } __packed; /* FW_INI_TRIGGER_CFG_S */
 
 /**
@@ -230,49 +230,49 @@ struct iwl_fw_ini_trigger_tlv {
  * @IWL_FW_TRIGGER_ID_NUM: number of trigger IDs
  */
 enum iwl_fw_ini_trigger_id {
-	/* Errors triggers */
-	IWL_FW_TRIGGER_ID_FW_ASSERT				= 1,
-	IWL_FW_TRIGGER_ID_FW_TFD_Q_HANG				= 2,
-	IWL_FW_TRIGGER_ID_FW_HW_ERROR				= 3,
-	/* Generic triggers */
-	IWL_FW_TRIGGER_ID_FW_TRIGGER_ERROR			= 4,
-	IWL_FW_TRIGGER_ID_FW_TRIGGER_WARNING			= 5,
-	IWL_FW_TRIGGER_ID_FW_TRIGGER_INFO			= 6,
-	IWL_FW_TRIGGER_ID_FW_TRIGGER_DEBUG			= 7,
-	/* User Trigger */
-	IWL_FW_TRIGGER_ID_USER_TRIGGER				= 8,
-	/* Host triggers */
-	IWL_FW_TRIGGER_ID_HOST_PEER_CLIENT_INACTIVITY		= 9,
-	IWL_FW_TRIGGER_ID_HOST_DID_INITIATED_EVENT		= 10,
-	IWL_FW_TRIGGER_ID_HOST_TX_LATENCY_THRESHOLD_CROSSED	= 11,
-	IWL_FW_TRIGGER_ID_HOST_TX_RESPONSE_STATUS_FAILED	= 12,
-	IWL_FW_TRIGGER_ID_HOST_OS_REQ_DEAUTH_PEER		= 13,
-	IWL_FW_TRIGGER_ID_HOST_STOP_GO_REQUEST			= 14,
-	IWL_FW_TRIGGER_ID_HOST_START_GO_REQUEST			= 15,
-	IWL_FW_TRIGGER_ID_HOST_JOIN_GROUP_REQUEST		= 16,
-	IWL_FW_TRIGGER_ID_HOST_SCAN_START			= 17,
-	IWL_FW_TRIGGER_ID_HOST_SCAN_SUBITTED			= 18,
-	IWL_FW_TRIGGER_ID_HOST_SCAN_PARAMS			= 19,
-	IWL_FW_TRIGGER_ID_HOST_CHECK_FOR_HANG			= 20,
-	IWL_FW_TRIGGER_ID_HOST_BAR_RECEIVED			= 21,
-	IWL_FW_TRIGGER_ID_HOST_AGG_TX_RESPONSE_STATUS_FAILED	= 22,
-	IWL_FW_TRIGGER_ID_HOST_EAPOL_TX_RESPONSE_FAILED		= 23,
-	IWL_FW_TRIGGER_ID_HOST_FAKE_TX_RESPONSE_SUSPECTED	= 24,
-	IWL_FW_TRIGGER_ID_HOST_AUTH_REQ_FROM_ASSOC_CLIENT	= 25,
-	IWL_FW_TRIGGER_ID_HOST_ROAM_COMPLETE			= 26,
-	IWL_FW_TRIGGER_ID_HOST_AUTH_ASSOC_FAST_FAILED		= 27,
-	IWL_FW_TRIGGER_ID_HOST_D3_START				= 28,
-	IWL_FW_TRIGGER_ID_HOST_D3_END				= 29,
-	IWL_FW_TRIGGER_ID_HOST_BSS_MISSED_BEACONS		= 30,
-	IWL_FW_TRIGGER_ID_HOST_P2P_CLIENT_MISSED_BEACONS	= 31,
-	IWL_FW_TRIGGER_ID_HOST_PEER_CLIENT_TX_FAILURES		= 32,
-	IWL_FW_TRIGGER_ID_HOST_TX_WFD_ACTION_FRAME_FAILED	= 33,
-	IWL_FW_TRIGGER_ID_HOST_AUTH_ASSOC_FAILED		= 34,
-	IWL_FW_TRIGGER_ID_HOST_SCAN_COMPLETE			= 35,
-	IWL_FW_TRIGGER_ID_HOST_SCAN_ABORT			= 36,
-	IWL_FW_TRIGGER_ID_HOST_NIC_ALIVE			= 37,
-	IWL_FW_TRIGGER_ID_HOST_CHANNEL_SWITCH_COMPLETE          = 38,
-	IWL_FW_TRIGGER_ID_NUM,
+    /* Errors triggers */
+    IWL_FW_TRIGGER_ID_FW_ASSERT = 1,
+    IWL_FW_TRIGGER_ID_FW_TFD_Q_HANG = 2,
+    IWL_FW_TRIGGER_ID_FW_HW_ERROR = 3,
+    /* Generic triggers */
+    IWL_FW_TRIGGER_ID_FW_TRIGGER_ERROR = 4,
+    IWL_FW_TRIGGER_ID_FW_TRIGGER_WARNING = 5,
+    IWL_FW_TRIGGER_ID_FW_TRIGGER_INFO = 6,
+    IWL_FW_TRIGGER_ID_FW_TRIGGER_DEBUG = 7,
+    /* User Trigger */
+    IWL_FW_TRIGGER_ID_USER_TRIGGER = 8,
+    /* Host triggers */
+    IWL_FW_TRIGGER_ID_HOST_PEER_CLIENT_INACTIVITY = 9,
+    IWL_FW_TRIGGER_ID_HOST_DID_INITIATED_EVENT = 10,
+    IWL_FW_TRIGGER_ID_HOST_TX_LATENCY_THRESHOLD_CROSSED = 11,
+    IWL_FW_TRIGGER_ID_HOST_TX_RESPONSE_STATUS_FAILED = 12,
+    IWL_FW_TRIGGER_ID_HOST_OS_REQ_DEAUTH_PEER = 13,
+    IWL_FW_TRIGGER_ID_HOST_STOP_GO_REQUEST = 14,
+    IWL_FW_TRIGGER_ID_HOST_START_GO_REQUEST = 15,
+    IWL_FW_TRIGGER_ID_HOST_JOIN_GROUP_REQUEST = 16,
+    IWL_FW_TRIGGER_ID_HOST_SCAN_START = 17,
+    IWL_FW_TRIGGER_ID_HOST_SCAN_SUBITTED = 18,
+    IWL_FW_TRIGGER_ID_HOST_SCAN_PARAMS = 19,
+    IWL_FW_TRIGGER_ID_HOST_CHECK_FOR_HANG = 20,
+    IWL_FW_TRIGGER_ID_HOST_BAR_RECEIVED = 21,
+    IWL_FW_TRIGGER_ID_HOST_AGG_TX_RESPONSE_STATUS_FAILED = 22,
+    IWL_FW_TRIGGER_ID_HOST_EAPOL_TX_RESPONSE_FAILED = 23,
+    IWL_FW_TRIGGER_ID_HOST_FAKE_TX_RESPONSE_SUSPECTED = 24,
+    IWL_FW_TRIGGER_ID_HOST_AUTH_REQ_FROM_ASSOC_CLIENT = 25,
+    IWL_FW_TRIGGER_ID_HOST_ROAM_COMPLETE = 26,
+    IWL_FW_TRIGGER_ID_HOST_AUTH_ASSOC_FAST_FAILED = 27,
+    IWL_FW_TRIGGER_ID_HOST_D3_START = 28,
+    IWL_FW_TRIGGER_ID_HOST_D3_END = 29,
+    IWL_FW_TRIGGER_ID_HOST_BSS_MISSED_BEACONS = 30,
+    IWL_FW_TRIGGER_ID_HOST_P2P_CLIENT_MISSED_BEACONS = 31,
+    IWL_FW_TRIGGER_ID_HOST_PEER_CLIENT_TX_FAILURES = 32,
+    IWL_FW_TRIGGER_ID_HOST_TX_WFD_ACTION_FRAME_FAILED = 33,
+    IWL_FW_TRIGGER_ID_HOST_AUTH_ASSOC_FAILED = 34,
+    IWL_FW_TRIGGER_ID_HOST_SCAN_COMPLETE = 35,
+    IWL_FW_TRIGGER_ID_HOST_SCAN_ABORT = 36,
+    IWL_FW_TRIGGER_ID_HOST_NIC_ALIVE = 37,
+    IWL_FW_TRIGGER_ID_HOST_CHANNEL_SWITCH_COMPLETE = 38,
+    IWL_FW_TRIGGER_ID_NUM,
 }; /* FW_INI_TRIGGER_ID_E_VER_1 */
 
 /**
@@ -284,15 +284,15 @@ enum iwl_fw_ini_trigger_id {
  * @IWL_FW_INI_APPLY_MISSED_BEACONS: missed beacons notification
  * @IWL_FW_INI_APPLY_SCAN_COMPLETE: scan completed
  * @IWL_FW_INI_APPLY_NUM: number of apply points
-*/
+ */
 enum iwl_fw_ini_apply_point {
-	IWL_FW_INI_APPLY_INVALID,
-	IWL_FW_INI_APPLY_EARLY,
-	IWL_FW_INI_APPLY_AFTER_ALIVE,
-	IWL_FW_INI_APPLY_POST_INIT,
-	IWL_FW_INI_APPLY_MISSED_BEACONS,
-	IWL_FW_INI_APPLY_SCAN_COMPLETE,
-	IWL_FW_INI_APPLY_NUM,
+    IWL_FW_INI_APPLY_INVALID,
+    IWL_FW_INI_APPLY_EARLY,
+    IWL_FW_INI_APPLY_AFTER_ALIVE,
+    IWL_FW_INI_APPLY_POST_INIT,
+    IWL_FW_INI_APPLY_MISSED_BEACONS,
+    IWL_FW_INI_APPLY_SCAN_COMPLETE,
+    IWL_FW_INI_APPLY_NUM,
 }; /* FW_INI_APPLY_POINT_E_VER_1 */
 
 /**
@@ -304,15 +304,15 @@ enum iwl_fw_ini_apply_point {
  * @IWL_FW_INI_ALLOCATION_ID_SDFX: for SDFX module
  * @IWL_FW_INI_ALLOCATION_ID_FW_DUMP: used for crash and runtime dumps
  * @IWL_FW_INI_ALLOCATION_ID_USER_DEFINED: for future user scenarios
-*/
+ */
 enum iwl_fw_ini_allocation_id {
-	IWL_FW_INI_ALLOCATION_INVALID,
-	IWL_FW_INI_ALLOCATION_ID_DBGC1,
-	IWL_FW_INI_ALLOCATION_ID_DBGC2,
-	IWL_FW_INI_ALLOCATION_ID_DBGC3,
-	IWL_FW_INI_ALLOCATION_ID_SDFX,
-	IWL_FW_INI_ALLOCATION_ID_FW_DUMP,
-	IWL_FW_INI_ALLOCATION_ID_USER_DEFINED,
+    IWL_FW_INI_ALLOCATION_INVALID,
+    IWL_FW_INI_ALLOCATION_ID_DBGC1,
+    IWL_FW_INI_ALLOCATION_ID_DBGC2,
+    IWL_FW_INI_ALLOCATION_ID_DBGC3,
+    IWL_FW_INI_ALLOCATION_ID_SDFX,
+    IWL_FW_INI_ALLOCATION_ID_FW_DUMP,
+    IWL_FW_INI_ALLOCATION_ID_USER_DEFINED,
 }; /* FW_INI_ALLOCATION_ID_E_VER_1 */
 
 /**
@@ -322,9 +322,9 @@ enum iwl_fw_ini_allocation_id {
  * @IWL_FW_INI_LOCATION_DRAM_PATH: DRAM location
  */
 enum iwl_fw_ini_buffer_location {
-	IWL_FW_INI_LOCATION_SRAM_INVALID,
-	IWL_FW_INI_LOCATION_SRAM_PATH,
-	IWL_FW_INI_LOCATION_DRAM_PATH,
+    IWL_FW_INI_LOCATION_SRAM_INVALID,
+    IWL_FW_INI_LOCATION_SRAM_PATH,
+    IWL_FW_INI_LOCATION_DRAM_PATH,
 }; /* FW_INI_BUFFER_LOCATION_E_VER_1 */
 
 /**
@@ -334,9 +334,9 @@ enum iwl_fw_ini_buffer_location {
  * @IWL_FW_INI_DEBUG_TB2DTF_FLOW: undefined
  */
 enum iwl_fw_ini_debug_flow {
-	IWL_FW_INI_DEBUG_INVALID,
-	IWL_FW_INI_DEBUG_DBTR_FLOW,
-	IWL_FW_INI_DEBUG_TB2DTF_FLOW,
+    IWL_FW_INI_DEBUG_INVALID,
+    IWL_FW_INI_DEBUG_DBTR_FLOW,
+    IWL_FW_INI_DEBUG_TB2DTF_FLOW,
 }; /* FW_INI_DEBUG_FLOW_E_VER_1 */
 
 /**
@@ -356,19 +356,19 @@ enum iwl_fw_ini_debug_flow {
  * @IWL_FW_INI_REGION_NUM: number of region types
  */
 enum iwl_fw_ini_region_type {
-	IWL_FW_INI_REGION_INVALID,
-	IWL_FW_INI_REGION_DEVICE_MEMORY,
-	IWL_FW_INI_REGION_PERIPHERY_MAC,
-	IWL_FW_INI_REGION_PERIPHERY_PHY,
-	IWL_FW_INI_REGION_PERIPHERY_AUX,
-	IWL_FW_INI_REGION_DRAM_BUFFER,
-	IWL_FW_INI_REGION_DRAM_IMR,
-	IWL_FW_INI_REGION_INTERNAL_BUFFER,
-	IWL_FW_INI_REGION_TXF,
-	IWL_FW_INI_REGION_RXF,
-	IWL_FW_INI_REGION_PAGING,
-	IWL_FW_INI_REGION_CSR,
-	IWL_FW_INI_REGION_NUM
+    IWL_FW_INI_REGION_INVALID,
+    IWL_FW_INI_REGION_DEVICE_MEMORY,
+    IWL_FW_INI_REGION_PERIPHERY_MAC,
+    IWL_FW_INI_REGION_PERIPHERY_PHY,
+    IWL_FW_INI_REGION_PERIPHERY_AUX,
+    IWL_FW_INI_REGION_DRAM_BUFFER,
+    IWL_FW_INI_REGION_DRAM_IMR,
+    IWL_FW_INI_REGION_INTERNAL_BUFFER,
+    IWL_FW_INI_REGION_TXF,
+    IWL_FW_INI_REGION_RXF,
+    IWL_FW_INI_REGION_PAGING,
+    IWL_FW_INI_REGION_CSR,
+    IWL_FW_INI_REGION_NUM
 }; /* FW_INI_REGION_TYPE_E_VER_1*/
 
-#endif
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DBG_TLV_H_

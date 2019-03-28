@@ -12,8 +12,8 @@
 // ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 // OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-#ifndef GARNET_DRIVERS_WLAN_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
-#define GARNET_DRIVERS_WLAN_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
 
 #include <stdlib.h>
 #include <string.h>
@@ -38,7 +38,7 @@ typedef uint32_t netdev_features_t;
 
 typedef uint64_t dma_addr_t;
 
-typedef char *acpi_string;
+typedef char* acpi_string;
 
 // TODO(yjlou@): move to ieee80211.h
 enum nl80211_iftype {
@@ -63,7 +63,7 @@ enum nl80211_iftype {
 
 #define BIT(x) (1 << x)
 
-#define DIV_ROUND_UP(num, div) (((num) + (div) - 1) / (div))
+#define DIV_ROUND_UP(num, div) (((num) + (div)-1) / (div))
 
 #define le32_to_cpu(x) (x)
 #define le32_to_cpup(x) (*x)
@@ -71,12 +71,12 @@ enum nl80211_iftype {
 
 #define BITS_PER_LONG 32
 
-#define BITS_TO_LONGS(nr)   (nr / BITS_PER_LONG)
-#define BITS_TO_U64(nr)     (nr / 64)
-#define BITS_TO_U32(nr)     (nr / 32)
-#define BITS_TO_BYTES(nr)   (nr / 8)
+#define BITS_TO_LONGS(nr) (nr / BITS_PER_LONG)
+#define BITS_TO_U64(nr) (nr / 64)
+#define BITS_TO_U32(nr) (nr / 32)
+#define BITS_TO_BYTES(nr) (nr / 8)
 
-#define ETHTOOL_FWVERS_LEN   32
+#define ETHTOOL_FWVERS_LEN 32
 
 #define IS_ENABLED(x) (defined(x))
 #define __printf(x, y)
@@ -90,7 +90,9 @@ enum nl80211_iftype {
 #define ARRAY_SIZE(x) (countof(x))
 
 // NEEDS_PORTING
-#define WARN(x, y, z) do {} while (0)
+#define WARN(x, y, z) \
+    do {              \
+    } while (0)
 #define WARN_ON(x) (false)
 #define WARN_ON_ONCE(x) (false)
 #define BUILD_BUG_ON(x) (false)
@@ -103,48 +105,44 @@ struct sk_buff_head {};
 struct mutex {};
 struct firmware {
     size_t size;
-    const u8 *data;
+    const u8* data;
     // NEEDS_PORTING struct page **pages;
 
     /* firmware loader private fields */
-    void *priv;
+    void* priv;
 };
 
-static inline int test_bit(int nbits, const volatile unsigned long *addr)
-{
+static inline int test_bit(int nbits, const volatile unsigned long* addr) {
     return 1UL & (addr[nbits / BITS_PER_LONG] >> (nbits % BITS_PER_LONG));
 }
 
-static inline void set_bit(int nbits, unsigned long* addr)
-{
+static inline void set_bit(int nbits, unsigned long* addr) {
     addr[nbits / BITS_PER_LONG] |= 1UL << (nbits % BITS_PER_LONG);
 }
 #define __set_bit set_bit
 
-static inline void clear_bit(int nbits, volatile unsigned long *addr) {
-    addr[nbits / BITS_PER_LONG ] &= ~(1UL << (nbits % BITS_PER_LONG));
+static inline void clear_bit(int nbits, volatile unsigned long* addr) {
+    addr[nbits / BITS_PER_LONG] &= ~(1UL << (nbits % BITS_PER_LONG));
 }
 
-static inline void might_sleep() {
-}
+static inline void might_sleep() {}
 
-
-static inline void *vmalloc(unsigned long size) {
+static inline void* vmalloc(unsigned long size) {
     return malloc(size);
 }
 
-static inline void *kmemdup(const void *src, size_t len) {
+static inline void* kmemdup(const void* src, size_t len) {
     void* dst = malloc(len);
     memcpy(dst, src, len);
     return dst;
 }
 
-static inline void vfree(const void *addr) {
+static inline void vfree(const void* addr) {
     free((void*)addr);
 }
 
-static inline void kfree(void *addr) {
+static inline void kfree(void* addr) {
     free(addr);
 }
 
-#endif  // GARNET_DRIVERS_WLAN_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_

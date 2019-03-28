@@ -30,35 +30,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __tof_h__
-#define __tof_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_TOF_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_TOF_H_
 
 #include "fw/api/tof.h"
 
 struct iwl_mvm_tof_data {
-	struct iwl_tof_config_cmd tof_cfg;
-	struct iwl_tof_range_req_cmd range_req;
-	struct iwl_tof_range_req_ext_cmd range_req_ext;
+    struct iwl_tof_config_cmd tof_cfg;
+    struct iwl_tof_range_req_cmd range_req;
+    struct iwl_tof_range_req_ext_cmd range_req_ext;
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-	struct iwl_tof_responder_config_cmd responder_cfg;
+    struct iwl_tof_responder_config_cmd responder_cfg;
 #endif
-	struct iwl_tof_range_rsp_ntfy range_resp;
-	u8 last_abort_id;
-	u16 active_range_request;
+    struct iwl_tof_range_rsp_ntfy range_resp;
+    u8 last_abort_id;
+    u16 active_range_request;
 };
 
-void iwl_mvm_tof_init(struct iwl_mvm *mvm);
-void iwl_mvm_tof_clean(struct iwl_mvm *mvm);
-int iwl_mvm_tof_config_cmd(struct iwl_mvm *mvm);
-int iwl_mvm_tof_range_abort_cmd(struct iwl_mvm *mvm, u8 id);
-int iwl_mvm_tof_range_request_cmd(struct iwl_mvm *mvm,
-				  struct ieee80211_vif *vif);
-void iwl_mvm_tof_resp_handler(struct iwl_mvm *mvm,
-			      struct iwl_rx_cmd_buffer *rxb);
-int iwl_mvm_tof_range_request_ext_cmd(struct iwl_mvm *mvm,
-				      struct ieee80211_vif *vif);
+void iwl_mvm_tof_init(struct iwl_mvm* mvm);
+void iwl_mvm_tof_clean(struct iwl_mvm* mvm);
+int iwl_mvm_tof_config_cmd(struct iwl_mvm* mvm);
+int iwl_mvm_tof_range_abort_cmd(struct iwl_mvm* mvm, u8 id);
+int iwl_mvm_tof_range_request_cmd(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
+void iwl_mvm_tof_resp_handler(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
+int iwl_mvm_tof_range_request_ext_cmd(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-int iwl_mvm_tof_responder_cmd(struct iwl_mvm *mvm,
-			      struct ieee80211_vif *vif);
+int iwl_mvm_tof_responder_cmd(struct iwl_mvm* mvm, struct ieee80211_vif* vif);
 #endif
-#endif /* __tof_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_TOF_H_

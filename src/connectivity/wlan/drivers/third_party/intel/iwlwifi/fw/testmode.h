@@ -33,13 +33,13 @@
  *
  *****************************************************************************/
 
-#ifndef __IWL_TESTMODE_H__
-#define __IWL_TESTMODE_H__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_TESTMODE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_TESTMODE_H_
 
 #ifdef CPTCFG_NL80211_TESTMODE
 /**
  * enum iwl_testmode_attrs - testmode attributes inside
- *	NL80211_ATTR_TESTDATA
+ *  NL80211_ATTR_TESTDATA
  * @IWL_TM_ATTR_UNSPEC: (invalid attribute)
  * @IWL_TM_ATTR_CMD: sub command, see &enum iwl_testmode_commands (u32)
  * @IWL_TM_ATTR_NOA_DURATION: requested NoA duration (u32)
@@ -48,14 +48,14 @@
  * @IWL_TM_ATTR_MAX: max amount of attributes
  */
 enum iwl_testmode_attrs {
-	IWL_TM_ATTR_UNSPEC,
-	IWL_TM_ATTR_CMD,
-	IWL_TM_ATTR_NOA_DURATION,
-	IWL_TM_ATTR_BEACON_FILTER_STATE,
+    IWL_TM_ATTR_UNSPEC,
+    IWL_TM_ATTR_CMD,
+    IWL_TM_ATTR_NOA_DURATION,
+    IWL_TM_ATTR_BEACON_FILTER_STATE,
 
-	/* keep last */
-	NUM_IWL_TM_ATTRS,
-	IWL_TM_ATTR_MAX = NUM_IWL_TM_ATTRS - 1,
+    /* keep last */
+    NUM_IWL_TM_ATTRS,
+    IWL_TM_ATTR_MAX = NUM_IWL_TM_ATTRS - 1,
 };
 
 /**
@@ -64,8 +64,8 @@ enum iwl_testmode_attrs {
  * @IWL_TM_CMD_SET_BEACON_FILTER: turn beacon filtering off/on
  */
 enum iwl_testmode_commands {
-	IWL_TM_CMD_SET_NOA,
-	IWL_TM_CMD_SET_BEACON_FILTER,
+    IWL_TM_CMD_SET_NOA,
+    IWL_TM_CMD_SET_BEACON_FILTER,
 };
 #endif
 
@@ -74,14 +74,14 @@ struct iwl_host_cmd;
 struct iwl_rx_cmd_buffer;
 
 struct iwl_testmode {
-	struct iwl_trans *trans;
-	const struct iwl_fw *fw;
-	/* the mutex of the op_mode */
-	struct mutex *mutex;
-	void *op_mode;
-	int (*send_hcmd)(void *op_mode, struct iwl_host_cmd *host_cmd);
-	u32 fw_major_ver;
-	u32 fw_minor_ver;
+    struct iwl_trans* trans;
+    const struct iwl_fw* fw;
+    /* the mutex of the op_mode */
+    struct mutex* mutex;
+    void* op_mode;
+    int (*send_hcmd)(void* op_mode, struct iwl_host_cmd* host_cmd);
+    u32 fw_major_ver;
+    u32 fw_minor_ver;
 };
 
 /**
@@ -94,23 +94,21 @@ struct iwl_testmode {
  * between internal testmode interfaces
  */
 struct iwl_tm_data {
-	void *data;
-	u32 len;
+    void* data;
+    u32 len;
 };
 
-void iwl_tm_init(struct iwl_trans *trans, const struct iwl_fw *fw,
-		 struct mutex *mutex, void *op_mode);
+void iwl_tm_init(struct iwl_trans* trans, const struct iwl_fw* fw, struct mutex* mutex,
+                 void* op_mode);
 
-void iwl_tm_set_fw_ver(struct iwl_trans *trans, u32 fw_major_ver,
-		       u32 fw_minor_var);
+void iwl_tm_set_fw_ver(struct iwl_trans* trans, u32 fw_major_ver, u32 fw_minor_var);
 
-int iwl_tm_execute_cmd(struct iwl_testmode *testmode, u32 cmd,
-		       struct iwl_tm_data *data_in,
-		       struct iwl_tm_data *data_out);
+int iwl_tm_execute_cmd(struct iwl_testmode* testmode, u32 cmd, struct iwl_tm_data* data_in,
+                       struct iwl_tm_data* data_out);
 
 #define ADDR_IN_AL_MSK (0x80000000)
 #define GET_AL_ADDR(ofs) (ofs & ~(ADDR_IN_AL_MSK))
 #define IS_AL_ADDR(ofs) (!!(ofs & (ADDR_IN_AL_MSK)))
 #endif
 
-#endif /* __IWL_TESTMODE_H__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_TESTMODE_H_

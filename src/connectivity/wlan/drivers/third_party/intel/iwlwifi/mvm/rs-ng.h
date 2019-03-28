@@ -33,8 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __rs_ng_h__
-#define __rs_ng_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_RS_NG_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_RS_NG_H_
 
 #include <net/mac80211.h>
 
@@ -45,13 +45,13 @@
 #define U16 u16
 #define U32 u32
 #define U64 u64
-#define MAX(x,y) ((x) > (y) ? (x) : (y))
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define INLINE inline
 
-#include "apiVersion.h"
 #include "API_rates.h"
-#include "apiGroupDatapath.h"
 #include "_rateScaleMng.h"
+#include "apiGroupDatapath.h"
+#include "apiVersion.h"
 
 #define RS_NAME "iwlwifi-rs"
 
@@ -59,54 +59,51 @@
 #define LINK_QUAL_AGG_FRAME_LIMIT_GEN2_DEF (64)
 
 #define RS_DRV_DATA_LQ_COLOR_POS (8)
-#define RS_DRV_DATA_PACK(lq_color, reduced_txp) ((void*) (((lq_color) << RS_DRV_DATA_LQ_COLOR_POS) | ((uintptr_t) reduced_txp)))
+#define RS_DRV_DATA_PACK(lq_color, reduced_txp) \
+    ((void*)(((lq_color) << RS_DRV_DATA_LQ_COLOR_POS) | ((uintptr_t)reduced_txp)))
 
 struct iwl_mvm;
 struct iwl_mvm_sta;
 
 struct iwl_lq_sta_rs_fw_pers {
-	struct iwl_mvm *drv;
-	u32 sta_id;
-	u8 chains;
-	s8 chain_signal[IEEE80211_MAX_CHAINS];
-	s8 last_rssi;
+    struct iwl_mvm* drv;
+    u32 sta_id;
+    u8 chains;
+    s8 chain_signal[IEEE80211_MAX_CHAINS];
+    s8 last_rssi;
 #ifdef CPTCFG_MAC80211_DEBUGFS
-	u32 dbg_fixed_rate;
-	u32 dbg_agg_frame_count_lim;
+    u32 dbg_fixed_rate;
+    u32 dbg_agg_frame_count_lim;
 #endif
 };
 
 struct iwl_lq_sta_rs_fw {
-	u32 last_rate_n_flags;
+    u32 last_rate_n_flags;
 
-	struct iwl_lq_sta_rs_fw_pers pers;
+    struct iwl_lq_sta_rs_fw_pers pers;
 };
 
 struct iwl_lq_sta {
-	struct iwl_lq_cmd lq;
+    struct iwl_lq_cmd lq;
 
-	RS_MNG_STA_INFO_S pers;
+    RS_MNG_STA_INFO_S pers;
 };
 
 int iwl_mvm_rate_control_register(void);
 void iwl_mvm_rate_control_unregister(void);
-int iwl_mvm_tx_protection(struct iwl_mvm *mvm, struct iwl_mvm_sta *mvmsta,
-			  bool enable);
-void iwl_mvm_rs_rate_init(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
-			  enum nl80211_band band, bool update);
-void iwl_mvm_rs_tx_status(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
-			  int tid, struct ieee80211_tx_info *info,
-			  bool is_ndp);
+int iwl_mvm_tx_protection(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool enable);
+void iwl_mvm_rs_rate_init(struct iwl_mvm* mvm, struct ieee80211_sta* sta, enum nl80211_band band,
+                          bool update);
+void iwl_mvm_rs_tx_status(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid,
+                          struct ieee80211_tx_info* info, bool is_ndp);
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-void iwl_mvm_reset_frame_stats(struct iwl_mvm *mvm);
+void iwl_mvm_reset_frame_stats(struct iwl_mvm* mvm);
 #endif
 
-void iwl_mvm_tlc_update_notif(struct iwl_mvm *mvm,
-			      struct iwl_rx_cmd_buffer *rxb);
-void rs_fw_rate_init(struct iwl_mvm *mvm, struct ieee80211_sta *sta,
-		     enum nl80211_band band, bool update);
-void iwl_mvm_rs_add_sta(struct iwl_mvm *mvm, struct iwl_mvm_sta *mvmsta);
-int rs_fw_tx_protection(struct iwl_mvm *mvm, struct iwl_mvm_sta *mvmsta,
-			bool enable);
+void iwl_mvm_tlc_update_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
+void rs_fw_rate_init(struct iwl_mvm* mvm, struct ieee80211_sta* sta, enum nl80211_band band,
+                     bool update);
+void iwl_mvm_rs_add_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta);
+int rs_fw_tx_protection(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool enable);
 
-#endif /* __rs_ng_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_RS_NG_H_

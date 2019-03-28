@@ -33,17 +33,19 @@
  *
  *****************************************************************************/
 
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_DEBUGFS_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_DEBUGFS_H_
+
 #include "runtime.h"
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-int iwl_fwrt_dbgfs_register(struct iwl_fw_runtime *fwrt,
-			    struct dentry *dbgfs_dir);
+int iwl_fwrt_dbgfs_register(struct iwl_fw_runtime* fwrt, struct dentry* dbgfs_dir);
 
 #else
-static inline int iwl_fwrt_dbgfs_register(struct iwl_fw_runtime *fwrt,
-					  struct dentry *dbgfs_dir)
-{
-	return 0;
+static inline int iwl_fwrt_dbgfs_register(struct iwl_fw_runtime* fwrt, struct dentry* dbgfs_dir) {
+    return 0;
 }
 
 #endif /* CPTCFG_IWLWIFI_DEBUGFS */
+
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_DEBUGFS_H_
