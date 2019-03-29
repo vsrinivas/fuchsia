@@ -1,0 +1,245 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// SEGMENT TTRK
+//
+// FIXME - The OpenCL and CUDA versions of this kernel are far more
+// sophisticated but let's see how this performs.  Optimize this later
+// using the CUDA & OpenCL techniques.
+//
+
+#extension GL_GOOGLE_include_directive        : require
+#extension GL_ARB_gpu_shader_int64            : require
+#extension GL_KHR_shader_subgroup_arithmetic  : require
+#extension GL_KHR_shader_subgroup_ballot      : require
+#extension GL_KHR_shader_subgroup_shuffle     : require
+
+//
+// NOTE THAT THE SEGMENT TTRK KERNEL IS ENTIRELY DEPENDENT ON THE
+// LAYOUT OF THE TTRK KEY.
+//
+// IF THE TTRK KEY IS ALTERED THEN THIS KERNEL WILL NEED TO BE UPDATED
+//
+// TTRK (64-bit COMPARE)
+//
+//  0                                         63
+//  | TTSB ID |   X  |   Y  | RASTER COHORT ID |
+//  +---------+------+------+------------------+
+//  |    27   |  12  |  12  |        13        |
+//
+//
+// TTRK (32-BIT COMPARE) ( DEFAULT )
+//
+//  0                                               63
+//  | TTSB ID | N/A |   X  |   Y  | RASTER COHORT ID |
+//  +---------+-----+------+------+------------------+
+//  |    27   |  5  |  12  |  12  |        8         |
+//
+
+//
+//
+//
+
+#include "config.h"
+#include "target_layouts.h"
+
+//
+//
+//
+
+#if   defined( SPN_DEVICE_NVIDIA_SM50 )
+
+#include "hotsort/vk/targets/nvidia/sm_35/u64/hs_config.h"
+#include "hotsort/vk/targets/nvidia/hs_glsl_macros.h"
+
+#elif defined( SPN_DEVICE_AMD_GCN3 )
+
+#include "hotsort/vk/targets/amd/gcn3/u64/hs_config.h"
+#include "hotsort/vk/targets/amd/hs_glsl_macros.h"
+
+#elif defined( SPN_DEVICE_INTEL_GEN8 )
+
+#include "hotsort/vk/targets/intel/gen8/u64/hs_config.h"
+#include "hotsort/vk/targets/intel/hs_glsl_macros.h"
+
+#else // FIXME --
+
+#include "hotsort/vk/targets/intel/gen8/u64/hs_config.h"
+#include "hotsort/vk/targets/intel/hs_glsl_macros.h"
+
+// #error "SPN_KERNEL_SEGMENT_TTRK_TARGET undefined!"
+
+#endif
+
+//
+// overridable specialization constants
+//
+
+layout(local_size_x = HS_SLAB_THREADS) in;
+
+//
+// main(buffer ulong vout[],
+//      buffer uvec4 metas[4][SPN_KERNEL_SEGMENT_TTRK_METAS_SIZE])
+//
+// THE ORDER OF THE META_IN COMPONENTS IS:
+//
+//   0: blocks
+//   1: offset
+//   2: pk
+//   3: rk
+//
+
+//
+// NOTE: THIS DESCRIPTOR IS COMPATIBLE WITH DS_RASTERIZE_POST
+//
+
+SPN_TARGET_GLSL_DECL_KERNEL_SEGMENT_TTRK();
+
+//
+//
+//
+
+#define HS_KEY_TYPE_MAX  HS_KEY_TYPE(-1)
+
+//
+//
+//
+
+#undef  HS_VOUT
+#define HS_VOUT ttrks_keys
+
+#undef  HS_VOUT_LOAD
+#define HS_VOUT_LOAD(idx)     packUint2x32(HS_VOUT[idx])
+
+#undef  HS_VOUT_STORE
+#define HS_VOUT_STORE(idx,kv) HS_VOUT[idx] = unpackUint2x32(kv)
+
+
+//
+//
+//
+
+void main()
+{
+  HS_SUBGROUP_PREAMBLE(); // because we don't know the size of Intel subgroups
+
+  const uint gmem_base  = (gl_GlobalInvocationID.x >> HS_SLAB_THREADS_LOG2) * HS_SLAB_KEYS;
+  const uint gmem_idx   = gmem_base + HS_SUBGROUP_LANE_ID();
+  const uint linear_idx = gmem_base + HS_SUBGROUP_LANE_ID() * HS_SLAB_HEIGHT;
+
+  //
+  // LOAD ALL THE ROWS
+  //
+#undef  HS_SLAB_ROW
+#define HS_SLAB_ROW(row,prev)                           \
+  HS_KEY_TYPE r##row = HS_VOUT_LOAD(gmem_idx + prev * HS_SLAB_WIDTH);
+
+  HS_SLAB_ROWS();
+
+  //
+  // LOAD LAST REGISTER FROM COLUMN TO LEFT
+  //
+  // shuffle up the last key from the column to the left
+  //
+  // note that column 0 is undefined
+  //
+  const uint  sgid = max(gl_SubgroupInvocationID,1) - 1; // clamp to 0
+  const HS_KEY_TYPE rN   = HS_REG_LAST(r);
+  HS_KEY_TYPE       r0   = HS_SUBGROUP_SHUFFLE(rN,sgid);
+
+  if ((gmem_base > 0) && (gl_SubgroupInvocationID == 0))
+    {
+      //
+      // If this is the first key in any slab but the first then it
+      // broadcast loads the last key in previous slab from gmem
+      //
+      // Note that we only need the high dword...
+      //
+      r0 = HS_VOUT_LOAD(gmem_base - 1); // FIXME - we only need HS_KEY_TYPE[1]
+    }
+  else if (gl_GlobalInvocationID.x == 0)
+    {
+      //
+      // If this is the first lane and first slab then record a diff
+      //
+      r0 = ~r1;
+    }
+
+  //
+  // FOR ALL VALID KEYS IN SLAB... GATHER META STATS
+  //
+#define HS_KEY_TO_COHORT_ID(row)  (unpackUint2x32(r##row)[1] >> SPN_TTRK_HI_OFFSET_COHORT)
+#define SPN_IS_BLOCK(row)         ((unpackUint2x32(r##row)[0] & SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_MASK) != 0)
+#define SPN_XY_XOR(row,prev)      uint(((r##row ^ r##prev) >> SPN_TTRK_LO_BITS_TTSB_ID))
+#define SPN_IS_PK(row,prev)       ((SPN_XY_XOR(row,prev) - 1) < SPN_GLSL_BITS_TO_MASK(SPN_TTRK_LO_HI_BITS_Y))
+
+  uint c      = SPN_GLSL_UINT_MAX;
+  uint c_prev = HS_KEY_TO_COHORT_ID(0);
+  uint blocks = 0;
+  uint pk     = 0;
+  uint rk     = 0;
+
+#undef  HS_SLAB_ROW
+#define HS_SLAB_ROW(row,prev)                           \
+  if (r##row != HS_KEY_TYPE_MAX)                        \
+    {                                                   \
+      c = HS_KEY_TO_COHORT_ID(row);                     \
+                                                        \
+      if (c != c_prev)                                  \
+        {                                               \
+          if (blocks > 0)                               \
+            atomicAdd(ttrks_meta.blocks[c],blocks);     \
+                                                        \
+          ttrks_meta.offset[c] = linear_idx + prev;     \
+                                                        \
+          if (pk > 0)                                   \
+            atomicAdd(ttrks_meta.pk_keys[c],pk);        \
+                                                        \
+          if (rk > 0)                                   \
+            atomicAdd(ttrks_meta.rk[c],rk);             \
+                                                        \
+          c_prev = c;                                   \
+          blocks = 0;                                   \
+          pk     = 0;                                   \
+          rk     = 0;                                   \
+        }                                               \
+                                                        \
+      if (SPN_IS_BLOCK(row))                            \
+        blocks += 1;                                    \
+                                                        \
+      if (SPN_IS_PK(row,prev))                          \
+        pk += 1;                                        \
+                                                        \
+      rk += 1;                                          \
+    }
+
+  HS_SLAB_ROWS();
+
+  //
+  // IF THERE ARE STRAGGLERS THEN ADD THEM
+  //
+  if (c != SPN_GLSL_UINT_MAX)
+    {
+      if (blocks > 0)
+        atomicAdd(ttrks_meta.blocks[c],blocks);
+
+      if (pk > 0)
+        atomicAdd(ttrks_meta.pk_keys[c],pk);
+
+      if (rk > 0)
+        atomicAdd(ttrks_meta.rk[c],rk);
+    }
+
+  //
+  // TRANSPOSE THE SLAB AND STORE IT -- FIXME -- pass in the buffer name
+  //
+  HS_TRANSPOSE_SLAB();
+}
+
+//
+//
+//

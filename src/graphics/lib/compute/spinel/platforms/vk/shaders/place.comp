@@ -1,0 +1,509 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// IMPORTANT:
+//
+// Note that the RASTER TTXK keys are already in *sorted* YX order.
+//
+// This enables some huge future optimizations:
+//
+//   1. The PLACE kernel can be exited early once TTXK.x >= clip.x1
+//
+//   2. If the TTXK keys can be stored together then composition
+//      high-performance sorting problem becomes a merging problem --
+//      this is especially useful for a CPU/SIMD implementation.
+//
+//   3. Finally, the PLACE kernel can "bin" TTCK keys and
+//      significantly shrink the TTCK YX coordinates freeing bits for
+//      either an increased address space or layer stack.
+//
+
+#extension GL_GOOGLE_include_directive             : require
+#extension GL_KHR_shader_subgroup_vote             : require
+#extension GL_KHR_shader_subgroup_basic            : require
+#extension GL_KHR_shader_subgroup_ballot           : require
+#extension GL_KHR_shader_subgroup_arithmetic       : require
+#extension GL_KHR_shader_subgroup_shuffle          : require
+
+//
+// PLACE KERNEL
+//
+
+#include "config.h"
+#include "target_layouts.h"
+
+//
+//
+//
+
+layout(local_size_x = SPN_KERNEL_PLACE_WORKGROUP_SIZE) in;
+
+//
+// main(buffer  uint    bp_blocks[],    // read raster nodes
+//      buffer  uint    map[]           // map path host id to device id
+//      atomic  uint    ttck_count,
+//      buffer  uint    ttck_extent[],
+//      buffer  uvec4   cmds[],
+//      const   uvec4   place_clip,
+//      const   uint    cmd_count);
+//
+
+SPN_TARGET_GLSL_DECL_KERNEL_PLACE();
+
+//
+//
+//
+
+#if   ( SPN_KERNEL_PLACE_BLOCK_EXPAND_SIZE == 1 )
+
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND()       SPN_EXPAND_1()
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST  0
+
+#elif ( SPN_KERNEL_PLACE_BLOCK_EXPAND_SIZE == 2 )
+
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND()       SPN_EXPAND_2()
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST  1
+
+#elif ( SPN_KERNEL_PLACE_BLOCK_EXPAND_SIZE == 4 )
+
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND()       SPN_EXPAND_4()
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST  3
+
+#elif ( SPN_KERNEL_PLACE_BLOCK_EXPAND_SIZE == 8 )
+
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND()       SPN_EXPAND_8()
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST  7
+
+#elif ( SPN_KERNEL_PLACE_BLOCK_EXPAND_SIZE == 16 )
+
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND()       SPN_EXPAND_16()
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST  15
+
+#elif ( SPN_KERNEL_PLACE_BLOCK_EXPAND_SIZE == 32 )
+
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND
+#undef  SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND()       SPN_EXPAND_32()
+#define SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST  31
+
+#else
+
+#error "Define larger expansion!"
+
+#endif
+
+//
+// After a successful clip, we move the TTXK key to an intermediate
+// representation that's closer to a TTCK key.
+//
+// TTIK
+//
+//  0                      |<--------- PEZ -------->|                 63
+//  | PAYLOAD/TTSB/TTPB ID | PREFIX | ESCAPE | ZERO | SPAN |  Y  |  X  |
+//  +----------------------+--------+--------+------+------+-----+-----+
+//  |          27          |    1   |    1   |  3   |  15  |  8  |  9  |
+//
+// TTIK.PEZ is 0 or 1 (for now)
+// TTIK.SPAN is signed and larger than it needs to be
+// TTIK.Y/X are unsigned
+//
+
+#define SPN_TTIK_LO_BITS_PEZ      (32 - SPN_TTXK_LO_BITS_TTXB_ID)
+#define SPN_TTIK_LO_OFFSET_PEZ    SPN_TTXK_LO_BITS_TTXB_ID
+
+#define SPN_TTIK_HI_BITS_SPAN     (32 - SPN_TTCK_HI_BITS_YX) // consume all the bits
+#define SPN_TTIK_HI_BITS_Y        SPN_TTCK_HI_BITS_Y
+#define SPN_TTIK_HI_BITS_X        SPN_TTCK_HI_BITS_X
+#define SPN_TTIK_HI_OFFSET_Y      SPN_TTIK_HI_BITS_SPAN
+#define SPN_TTIK_HI_OFFSET_X      (SPN_TTIK_HI_OFFSET_Y + SPN_TTIK_HI_BITS_Y)
+
+#define SPN_TTIK_SET_PEZ(t,pez)   bitfieldInsert(t[0],pez,SPN_TTIK_LO_OFFSET_PEZ,SPN_TTIK_LO_BITS_PEZ)
+#define SPN_TTIK_SET_X(t,x)       bitfieldInsert(t[1],x,SPN_TTIK_HI_OFFSET_X,SPN_TTIK_HI_BITS_X)
+#define SPN_TTIK_SET_Y(t,y)       bitfieldInsert(t[1],y,SPN_TTIK_HI_OFFSET_Y,SPN_TTIK_HI_BITS_Y)
+
+//
+// Translate and clip the TTSK key and output a TTIK key
+//
+
+void
+spn_ttsk_translate_and_clip(const spn_cmd_place cmd, inout uvec2 ttsk)
+{
+  //
+  // place_clip: { x0, y0, x1, y1 }
+  //
+  const int x = SPN_TTXK_GET_X(ttsk) + cmd.tx;
+
+  if (x >= place_clip[0] && x < place_clip[2])
+    {
+      const int y0   = max(place_clip[1],SPN_TTXK_GET_Y(ttsk) + cmd.ty);
+      const int span = SPN_TTXK_GET_SPAN(ttsk);
+      const int y1   = min(place_clip[3],y0 + abs(span));
+
+      if (y1 > y0)
+        {
+          const bool is_sk = span > 0;
+
+          SPN_TTIK_SET_PEZ(ttsk,is_sk ? 0 : 1);
+
+          ttsk[1]    = is_sk ? y1 - y0 : y0 - y1;
+
+          SPN_TTIK_SET_X(ttsk,x);
+          SPN_TTIK_SET_Y(ttsk,y0);
+
+          return;
+        }
+    }
+
+  ttsk[0] = SPN_TTXK_GET_TTXB_ID(ttsk);
+  ttsk[1] = 0;
+}
+
+//
+// There are TTSK keys but no TTPK keys.  There are potentially
+// invalid keys as well.
+//
+
+void
+spn_ttsk_to_ttck(const uvec2 ttik, const uint span, inout uint ttck_base)
+{
+  const bool  is_ttsk     = (span == 1);
+  const uvec4 ttsk_ballot = subgroupBallot(is_ttsk);
+  const uint  ttck_idx    = ttck_base + subgroupBallotExclusiveBitCount(ttsk_ballot);
+
+  ttck_base              += subgroupBallotBitCount(ttsk_ballot);
+
+  if (is_ttsk)
+    ttcks.keys[ttck_idx] = ttik;
+}
+
+//
+// There are TTPK keys and potentially TTSK and invalid keys.
+//
+
+// the expansion relies on bouncing values through smem
+shared uint smem[SPN_KERNEL_PLACE_SUBGROUP_SIZE];
+
+// encode { span_exc : src } into a uint
+#define SPN_PLACE_MAKE_EXC_SRC(exc)                                     \
+  ((exc) | (gl_SubgroupInvocationID << (32-SPN_KERNEL_PLACE_SUBGROUP_SIZE_LOG2)))
+
+// get exc_src.exc
+#define SPN_PLACE_EXC_SRC_GET_EXC(exc_src)      \
+  bitfieldExtract(exc_src,0,(32-SPN_KERNEL_PLACE_SUBGROUP_SIZE_LOG2))
+
+// get exc_src.src
+#define SPN_PLACE_EXC_SRC_GET_SRC(exc_src)      \
+  bitfieldExtract(exc_src,(32-SPN_KERNEL_PLACE_SUBGROUP_SIZE_LOG2),SPN_KERNEL_PLACE_SUBGROUP_SIZE_LOG2)
+
+void
+spn_ttxk_to_ttck(const uvec2 ttik, const uint span, inout uint ttck_base)
+{
+  uint       span_exc     = subgroupExclusiveAdd(span);
+  const uint span_inc     = span_exc + span;
+  const uint span_max     = subgroupBroadcast(span_inc,SPN_KERNEL_PLACE_SUBGROUP_SIZE-1);
+
+  // these lanes are invalid
+  if (span == 0)
+    span_exc = SPN_GLSL_UINT_MAX;
+
+  // iteratively write out keys to ttck.extent[]
+  uint ttck_idx           = ttck_base + gl_SubgroupInvocationID;
+
+  // increment ttck_base to its final value
+  ttck_base              += span_max;
+
+  // encode { span_exc : lane } into a uint
+  const uint lane_exc_src = SPN_PLACE_MAKE_EXC_SRC(span_exc);
+
+  while (true)
+    {
+      smem[gl_SubgroupInvocationID] = 0;
+
+      if (span_exc < SPN_KERNEL_PLACE_SUBGROUP_SIZE)
+        smem[span_exc] = lane_exc_src;
+
+      subgroupMemoryBarrierShared(); // READ-AFTER-WRITE SMEM BARRIER
+
+      const uint exc_src  = subgroupInclusiveMax(smem[gl_SubgroupInvocationID]);
+      const uint delta    = ttck_idx - SPN_PLACE_EXC_SRC_GET_EXC(exc_src);
+      const uint src      = SPN_PLACE_EXC_SRC_GET_SRC(exc_src);
+
+      uvec2      ttck_src = uvec2(subgroupShuffle(ttik[0],src),
+                                  subgroupShuffle(ttik[1],src));
+
+      SPN_TTCK_ADD_Y(ttck_src,delta);
+
+      if (ttck_idx < ttck_base)
+        ttcks.keys[ttck_idx] = ttck_src;
+
+      ttck_idx += SPN_KERNEL_PLACE_SUBGROUP_SIZE;
+
+      if (ttck_idx >= ttck_base)
+        return;
+
+      span_exc -= SPN_KERNEL_PLACE_SUBGROUP_SIZE;
+    }
+}
+
+//
+// RUN-TIME PREDICATES
+//
+
+#define SPN_PLACE_BROADCAST(E,O,I)                              \
+  subgroupBroadcast(E,O - I * SPN_KERNEL_PLACE_SUBGROUP_SIZE)
+
+//
+//
+//
+
+void main()
+{
+  //
+  // Each subgroup is responsible for a command.
+  //
+  // Test the raster's translated bounds against the composition's
+  // tile clip
+  //
+  // There are 3 cases:
+  //
+  //   - the raster is completely clipped -> return
+  //   - the raster is partially  clipped -> all keys must clipped
+  //   - the raster is not        clipped -> no keys are tested
+  //
+  // There are at least 4 implementations of place and we want to
+  // special-case them as much as possible so that, at the least, thebluet
+  // fastpath remains fast.
+  //
+  //  - implement CLIPPED + TILE     TRANSLATION
+  //  - implement CLIPPED + PIXEL    TRANSLATION
+  //  - implement CLIPPED + SUBPIXEL TRANSLATION
+  //
+  // FIXME/OPTIMIZATION: split scan accumulator into a triple-bin
+  // 12:12:8 integer where:
+  //
+  //  12: ttsk
+  //  12: ttpk
+  //   8: /dev/null -- clipped or invalid key
+  //
+  // Three kinds of nodes in a raster's list:
+  //
+  //  - the head node
+  //  - internal nodes
+  //  - the final node
+  //
+#if (SPN_KERNEL_PLACE_WORKGROUP_SIZE == SPN_KERNEL_PLACE_SUBGROUP_SIZE)
+  const uint cmd_idx = gl_WorkGroupID.x;
+#else
+  const uint cmd_idx = gl_WorkGroupID.x * gl_NumSubgroups + gl_SubgroupID;
+
+  if (cmd_idx >= cmd_count)
+    return;
+#endif
+
+  // load the cmd
+  SPN_SUBGROUP_UNIFORM const spn_cmd_place cmd = cmds[cmd_idx];
+
+  // get the device id
+  SPN_SUBGROUP_UNIFORM const uint raster_d = bp_host_map[cmd.raster_h];
+
+  // where is the raster node in the pool?
+  const uint h_idx = raster_d * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
+
+  //
+  // the layout of a raster node is:
+  //
+  //   union {
+  //     u32   words[block_size];
+  //     struct {
+  //       u32 lo[block_size/2];
+  //       u32 hi[block_size/2];
+  //     };
+  //   };
+  //
+
+  //
+  // load raster head node
+  //
+  // there are N rows of uvec2 keys with the lo and hi words residing
+  // in the top and bottom of the block
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                           \
+  uvec2 t##I = uvec2(bp_blocks[h_idx + SPN_KERNEL_PLACE_SUBGROUP_SIZE *  I], \
+                     bp_blocks[h_idx + SPN_KERNEL_PLACE_SUBGROUP_SIZE * (I + SPN_KERNEL_PLACE_BLOCK_EXPAND_SIZE)]);
+
+  SPN_KERNEL_PLACE_BLOCK_EXPAND();
+
+  //
+  // pick out count.nodes from the header
+  //
+  SPN_SUBGROUP_UNIFORM uint count_nodes = 0;
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                           \
+  if (SPN_RASTER_HEAD_ELEM_IN_RANGE(SPN_KERNEL_PLACE_SUBGROUP_SIZE,SPN_RASTER_HEAD_LO_OFFSET_NODES,I)) { \
+    count_nodes = SPN_PLACE_BROADCAST(t##I[0],SPN_RASTER_HEAD_LO_OFFSET_NODES,I); \
+  }
+
+  SPN_KERNEL_PLACE_BLOCK_EXPAND();
+
+  //
+  // invalidate the header with span=0 -- just use a uvec2(0,0)
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                           \
+  if (!SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) { \
+    if (SPN_RASTER_HEAD_PARTIALLY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) { \
+      if (SPN_RASTER_HEAD_IS_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) { \
+        t##I = uvec2(0,0);                                              \
+      }                                                                 \
+    }                                                                   \
+
+  //
+  // translate and clip the keys in the node
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                           \
+  if (!SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) { \
+    spn_ttsk_translate_and_clip(cmd,t##I);                              \
+  }
+
+  SPN_KERNEL_PLACE_BLOCK_EXPAND();
+
+  //
+  // count total clipped SK/PK keys in this slab
+  //
+  uint h_lane_keys = 0;
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                           \
+  if (!SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) { \
+    h_lane_keys += abs(SPN_TTXK_GET_SPAN(t##I));                        \
+  }
+
+  SPN_KERNEL_PLACE_BLOCK_EXPAND();
+
+  //
+  // atomically allocate space for keys in this node
+  //
+  const uint h_block_keys = subgroupAdd(h_lane_keys);
+  uint       h_ttck_base  = 0;
+
+  if (gl_SubgroupInvocationID == 0)
+    h_ttck_base = atomicAdd(ttcks.atomics[0],h_block_keys);
+
+  h_ttck_base = subgroupBroadcastFirst(h_ttck_base);
+
+  //
+  // expand each row of block
+  //
+  //   - if all 0 then do nothing
+  //   - if all 1 then these are all TTSK keys
+  //   - otherwise, it's a mix of TTSK and TTPK and invalid keys
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L) {                         \
+    int span = SPN_TTXK_GET_SPAN(t##I);                 \
+    if (subgroupAny(span != 0))                         \
+      {                                                 \
+        span = abs(span);                               \
+        SPN_TTCK_SET_LAYER(t##I,cmd.layer_id);          \
+        if (subgroupAll(span >= 0))                     \
+          spn_ttsk_to_ttck(t##I,span,h_ttck_base);      \
+        else                                            \
+          spn_ttxk_to_ttck(t##I,span,h_ttck_base);      \
+      }                                                 \
+  }
+
+  SPN_KERNEL_PLACE_BLOCK_EXPAND();
+
+  //
+  // if more nodes, load next raster node
+  //
+  while (count_nodes-- > 0)
+    {
+      SPN_SUBGROUP_UNIFORM const uint node_id = subgroupBroadcast(SPN_GLSL_CONCAT(t,SPN_KERNEL_PLACE_BLOCK_EXPAND_I_LAST)[0],
+                                                                  SPN_KERNEL_PLACE_SUBGROUP_SIZE-1);
+
+      uint n_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                           \
+      t##I = uvec2(bp_blocks[n_idx + SPN_KERNEL_PLACE_SUBGROUP_SIZE *  I], \
+                   bp_blocks[n_idx + SPN_KERNEL_PLACE_SUBGROUP_SIZE * (I + SPN_KERNEL_PLACE_BLOCK_EXPAND_SIZE)]);
+
+      SPN_KERNEL_PLACE_BLOCK_EXPAND();
+
+      //
+      // translate and clip the keys in the node
+      //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+      spn_ttsk_translate_and_clip(cmd,t##I);
+
+      SPN_KERNEL_PLACE_BLOCK_EXPAND();
+
+      //
+      // count total clipped SK/PK keys in this slab
+      //
+      uint n_lane_keys = 0;
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                           \
+      n_lane_keys += abs(SPN_TTXK_GET_SPAN(t##I));
+
+      SPN_KERNEL_PLACE_BLOCK_EXPAND();
+
+      //
+      // atomically allocate space for keys in this node
+      //
+      const uint n_block_keys = subgroupAdd(n_lane_keys);
+      uint       n_ttck_base  = 0;
+
+      if (gl_SubgroupInvocationID == 0)
+        n_ttck_base = atomicAdd(ttcks.atomics[0],n_block_keys);
+
+      n_ttck_base = subgroupBroadcastFirst(n_ttck_base);
+
+      //
+      // expand each row of block
+      //
+      //   - if all 0 then do nothing
+      //   - if all 1 then these are all TTSK keys
+      //   - otherwise, it's a mix of TTSK and TTPK and invalid keys
+      //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L) {                                 \
+        int span = SPN_TTXK_GET_SPAN(t##I);                     \
+        if (subgroupAny(span != 0))                             \
+          {                                                     \
+            span = abs(span);                                   \
+            SPN_TTCK_SET_LAYER(t##I,cmd.layer_id);              \
+            if (subgroupAll(span >= 0))                         \
+              spn_ttsk_to_ttck(t##I,span,n_ttck_base);          \
+            else                                                \
+              spn_ttxk_to_ttck(t##I,span,n_ttck_base);          \
+          }                                                     \
+      }
+
+      SPN_KERNEL_PLACE_BLOCK_EXPAND();
+    }
+}
+
+//
+//
+//

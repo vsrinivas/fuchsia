@@ -1,0 +1,2284 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+//
+//
+
+#extension GL_GOOGLE_include_directive             : require
+#extension GL_KHR_shader_subgroup_basic            : require
+
+//
+// RENDER KERNEL
+//
+
+#include "config.h"
+#include "target_layouts.h"
+
+//
+// COLOR/COVER CHANNELS ARE DETERMINED BY TARGET HARDWARE
+//
+
+//
+// SINGLE PRECISION FLOAT
+//
+#if defined( SPN_KERNEL_RENDER_TILE_CHANNEL_IS_FLOAT )
+
+#define SPN_KERNEL_RENDER_TILE_CHANNEL_SIZE_LOG2     0
+
+#define SPN_KERNEL_RENDER_TILE_CHANNEL               float
+#define SPN_KERNEL_RENDER_TILE_COVER                 SPN_KERNEL_RENDER_TILE_CHANNEL
+#define SPN_KERNEL_RENDER_TILE_COLOR                 vec4
+
+#define SPN_KERNEL_RENDER_PIXEL_COVER                float
+
+#define SPN_KERNEL_RENDER_TILE_CHANNEL_IS_ZERO(c)    ((c) == SPN_KERNEL_RENDER_TILE_CHANNEL(0))
+
+#define SPN_KERNEL_RENDER_COLOR_PAIR_UNPACK(v)       unpackHalf2x16(v)
+#define SPN_KERNEL_RENDER_COLOR_PAIR                 vec2
+
+#define SPN_KERNEL_RENDER_COLOR_ACC_RGBA             vec4
+
+//
+// HALF PRECISION FLOAT
+//
+#elif defined( SPN_KERNEL_RENDER_TILE_CHANNEL_IS_FP16 )
+
+#ifdef AMD_GCN3
+#extension GL_AMD_gpu_shader_half_float                    : require // temporary
+#else
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#endif
+
+#define SPN_KERNEL_RENDER_TILE_CHANNEL_SIZE_LOG2     0
+
+#define SPN_KERNEL_RENDER_TILE_CHANNEL               float16_t
+#define SPN_KERNEL_RENDER_TILE_COVER                 SPN_KERNEL_RENDER_TILE_CHANNEL
+#define SPN_KERNEL_RENDER_TILE_COLOR                 f16vec4
+
+#define SPN_KERNEL_RENDER_PIXEL_COVER                float16_t
+
+#define SPN_KERNEL_RENDER_TILE_CHANNEL_IS_ZERO(c)    ((c) == SPN_KERNEL_RENDER_TILE_CHANNEL(0))
+
+#define SPN_KERNEL_RENDER_COLOR_PAIR_UNPACK(v)       unpackFloat2x16(v)
+#define SPN_KERNEL_RENDER_COLOR_PAIR                 f16vec2
+
+#define SPN_KERNEL_RENDER_COLOR_ACC_RGBA             f16vec4
+
+//
+// TWO PACKED HALF PRECISION FLOATS
+//
+#elif defined( SPN_KERNEL_RENDER_TILE_CHANNEL_IS_FP16X2 )
+
+#ifdef AMD_GCN3
+#extension GL_AMD_gpu_shader_half_float                    : require // temporary
+#else
+#extension GL_EXT_shader_explicit_arithmetic_types_float16 : require
+#endif
+
+#define SPN_KERNEL_RENDER_TILE_CHANNEL_SIZE_LOG2  1
+
+#define SPN_KERNEL_RENDER_TILE_CHANNEL               f16vec2
+#define SPN_KERNEL_RENDER_TILE_COVER                 SPN_KERNEL_RENDER_TILE_CHANNEL
+#define SPN_KERNEL_RENDER_TILE_COLOR                 f16vec2[4]
+
+#define SPN_KERNEL_RENDER_PIXEL_COVER                float16_t
+
+#define SPN_KERNEL_RENDER_TILE_CHANNEL_IS_ZERO(c)    (packFloat2x16(c) == 0)
+
+#define SPN_KERNEL_RENDER_COLOR_PAIR_UNPACK(v)       unpackFloat2x16(v)
+#define SPN_KERNEL_RENDER_COLOR_PAIR                 f16vec2
+
+#define SPN_KERNEL_RENDER_COLOR_ACC_RGBA             f16vec4
+
+#endif
+
+//
+//
+//
+
+#define SPN_COLOR_WIP_R(I)  color_wip[I][0]
+#define SPN_COLOR_WIP_G(I)  color_wip[I][1]
+#define SPN_COLOR_WIP_B(I)  color_wip[I][2]
+#define SPN_COLOR_WIP_A(I)  color_wip[I][3]
+
+#define SPN_COLOR_ACC_R(I)  color_acc[I][0]
+#define SPN_COLOR_ACC_G(I)  color_acc[I][1]
+#define SPN_COLOR_ACC_B(I)  color_acc[I][2]
+#define SPN_COLOR_ACC_A(I)  color_acc[I][3]
+
+//
+// COMMON DEFINES
+//
+
+#define SPN_TILE_WIDTH                         (1<<SPN_TILE_WIDTH_LOG2)
+#define SPN_TILE_HEIGHT                        (1<<SPN_TILE_HEIGHT_LOG2)
+
+#define SPN_TILE_CHANNEL_SIZE                  (1<<SPN_KERNEL_RENDER_TILE_CHANNEL_SIZE_LOG2)
+#define SPN_TILE_CHANNEL_MASK                  SPN_GLSL_BITS_TO_MASK(SPN_KERNEL_RENDER_TILE_CHANNEL_SIZE_LOG2)
+
+#define SPN_KERNEL_RENDER_WORKGROUP_SIZE       (1<<SPN_KERNEL_RENDER_WORKGROUP_SIZE_LOG2)
+
+#define SPN_KERNEL_RENDER_SUBGROUP_SIZE        (1<<SPN_KERNEL_RENDER_SUBGROUP_SIZE_LOG2)
+#define SPN_KERNEL_RENDER_SUBGROUP_MASK        SPN_GLSL_BITS_TO_MASK(SPN_KERNEL_RENDER_SUBGROUP_SIZE_LOG2)
+
+#define SPN_KERNEL_RENDER_SUBGROUP_COUNT       (SPN_KERNEL_RENDER_WORKGROUP_SIZE / SPN_KERNEL_RENDER_SUBGROUP_SIZE)
+
+#define SPN_KERNEL_RENDER_SUBTILE_COUNT_LOG2   (SPN_KERNEL_RENDER_SUBGROUP_SIZE_LOG2 - SPN_TILE_WIDTH_LOG2)
+#define SPN_KERNEL_RENDER_SUBTILE_COUNT        (1<<SPN_KERNEL_RENDER_SUBTILE_COUNT_LOG2)
+
+#define SPN_KERNEL_RENDER_SUBTILE_HEIGHT       (1<<SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2)
+
+#define SPN_KERNEL_RENDER_TTS                  SPN_KERNEL_RENDER_TTX
+#define SPN_KERNEL_RENDER_TTP                  SPN_KERNEL_RENDER_TTX
+
+#define SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2  (SPN_TILE_HEIGHT_LOG2                 + \
+                                                SPN_TILE_WIDTH_LOG2                  - \
+                                                SPN_KERNEL_RENDER_SUBGROUP_SIZE_LOG2)
+
+#define SPN_KERNEL_RENDER_SUBTILE_MEMBERS_LOG2 (SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2 - \
+                                                SPN_KERNEL_RENDER_SUBTILE_CHANNEL_SIZE_LOG2)
+
+
+//
+// Make sure the config has all necessary steering switches
+//
+
+#if                                                     \
+  !defined( SPN_KERNEL_RENDER_LGF_USE_SHUFFLE ) &&      \
+  !defined( SPN_KERNEL_RENDER_LGF_USE_SHARED  )
+#error "SPN_KERNEL_RENDER_LGF_XXX undefined!"
+#endif
+
+#if                                                     \
+  !defined( SPN_KERNEL_RENDER_TTCKS_USE_SHUFFLE ) &&    \
+  !defined( SPN_KERNEL_RENDER_TTCKS_USE_SHARED  ) &&    \
+  !defined( SPN_KERNEL_RENDER_TTCKS_NO_SHARED   )
+#error "SPN_KERNEL_RENDER_TTCKS_XXX undefined!"
+#endif
+
+#if                                                             \
+  !defined( SPN_KERNEL_RENDER_STYLING_CMDS_USE_SHUFFLE ) &&     \
+  !defined( SPN_KERNEL_RENDER_STYLING_CMDS_USE_SHARED  ) &&     \
+  !defined( SPN_KERNEL_RENDER_STYLING_CMDS_NO_SHARED   )
+#error "SPN_KERNEL_RENDER_STYLING_CMDS_XXX undefined!"
+#endif
+
+#if                                                     \
+  (SPN_KERNEL_RENDER_SUBTILE_COUNT > 1             ) && \
+  !defined( SPN_KERNEL_RENDER_COVERAGE_USE_SHUFFLE ) && \
+  !defined( SPN_KERNEL_RENDER_COVERAGE_USE_SHARED  )
+#error "SPN_KERNEL_RENDER_COVERAGE_XXX undefined!"
+#endif
+
+//
+// Coarsely enable all advanced subgroup features if we are using any
+// shuffle.  Improve this switch if a new architecture requires it.
+//
+
+#if                                                             \
+  defined( SPN_KERNEL_RENDER_LGF_USE_SHUFFLE           ) ||     \
+  defined( SPN_KERNEL_RENDER_TTCKS_USE_SHUFFLE         ) ||     \
+  defined( SPN_KERNEL_RENDER_STYLING_CMDS_USE_SHUFFLE  ) ||     \
+  defined( SPN_KERNEL_RENDER_COVERAGE_USE_SHUFFLE      )
+
+#extension GL_KHR_shader_subgroup_shuffle          : require
+#extension GL_KHR_shader_subgroup_ballot           : require
+#extension GL_KHR_shader_subgroup_shuffle_relative : require
+
+#endif
+
+//
+// Do we have vote support?
+//
+
+#ifndef SPN_KERNEL_RENDER_NO_VOTE
+
+#extension GL_KHR_shader_subgroup_vote             : require
+
+#endif
+
+//
+// FIXME -- aliased styling structs mean we have to fix the indices
+// and pad upon construction
+//
+
+#define SPN_KERNEL_RENDER_WORKGROUP_SIZE  (1<<SPN_KERNEL_RENDER_WORKGROUP_SIZE_LOG2)
+
+//
+//
+//
+
+layout(local_size_x = SPN_KERNEL_RENDER_WORKGROUP_SIZE) in;
+
+//
+// main(buffer  TTX     bp_blocks[],
+//      buffer  uint    styling[],
+//      buffer  uint    ttck_keys[],
+//      buffer  uint    ttck_offsets[],
+//      uniform image2D surface);
+//
+
+SPN_TARGET_GLSL_DECL_KERNEL_RENDER();
+
+//
+// SUBTILE HEIGHT EXPANSION
+//
+
+#if   ( SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2 == 0 )
+#define SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND()      SPN_EXPAND_1()
+#elif ( SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2 == 1 )
+#define SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND()      SPN_EXPAND_2()
+#elif ( SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2 == 2 )
+#define SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND()      SPN_EXPAND_4()
+#elif ( SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2 == 3 )
+#define SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND()      SPN_EXPAND_8()
+#elif ( SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2 == 4 )
+#define SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND()      SPN_EXPAND_16()
+#elif ( SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2 == 5 )
+#define SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND()      SPN_EXPAND_32()
+#else
+#error "SPN_KERNEL_RENDER_SUBTILE_HEIGHT_LOG2 not supported!"
+#endif
+
+//
+// SUBTILE MEMBERS EXPANSION
+//
+
+#if   ( SPN_KERNEL_RENDER_SUBTILE_MEMBERS_LOG2 == 0 )
+#define SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND()     SPN_EXPAND_1()
+#elif ( SPN_KERNEL_RENDER_SUBTILE_MEMBERS_LOG2 == 1 )
+#define SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND()     SPN_EXPAND_2()
+#elif ( SPN_KERNEL_RENDER_SUBTILE_MEMBERS_LOG2 == 2 )
+#define SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND()     SPN_EXPAND_4()
+#elif ( SPN_KERNEL_RENDER_SUBTILE_MEMBERS_LOG2 == 3 )
+#define SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND()     SPN_EXPAND_8()
+#elif ( SPN_KERNEL_RENDER_SUBTILE_MEMBERS_LOG2 == 4 )
+#define SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND()     SPN_EXPAND_16()
+#elif ( SPN_KERNEL_RENDER_SUBTILE_MEMBERS_LOG2 == 5 )
+#define SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND()     SPN_EXPAND_32()
+#else
+#error "SPN_KERNEL_RENDER_SUBTILE_MEMBERS_LOG2 not supported!"
+#endif
+
+//
+// Globally declare tile cover and color registers
+//
+// Total color and cover "channels" is 11.
+//
+// This occupies '11 * SPN_KERNEL_RENDER_SUBTILE_HEIGHT' channels per
+// subgroup lane.
+//
+//                     Tile Size
+//  Subgroup +----------------------------
+//    Size   |   4x4   8x8   16x16  32x32
+//  ---------+----------------------------
+//      4    |    44   176    704   2816
+//      8    |    22    88    352   1408
+//     16    |    11    44    176    704
+//     32    |   ---    22     88    352
+//     64    |   ---    11     44    176
+//
+
+SPN_KERNEL_RENDER_TILE_COLOR color_wip[SPN_KERNEL_RENDER_SUBTILE_HEIGHT]; // 4
+SPN_KERNEL_RENDER_TILE_COLOR color_acc[SPN_KERNEL_RENDER_SUBTILE_HEIGHT]; // 4
+
+SPN_KERNEL_RENDER_TILE_COVER cover_wip[SPN_KERNEL_RENDER_SUBTILE_HEIGHT]; // 1
+SPN_KERNEL_RENDER_TILE_COVER cover_acc[SPN_KERNEL_RENDER_SUBTILE_HEIGHT]; // 1
+SPN_KERNEL_RENDER_TILE_COVER cover_msk[SPN_KERNEL_RENDER_SUBTILE_HEIGHT]; // 1
+
+//
+// GENERAL DATA TYPES THAT WE MAY WANT TO TWEAK LATER
+//
+
+#define SPN_KERNEL_RENDER_TTX                                     int
+#define SPN_KERNEL_RENDER_PIXEL_AREA                              int
+
+
+//
+// shared memory is primarily for accumulating areas but is also used
+// as a scratch buffer for gradients and other operations that might
+// require random-access lookups
+//
+
+#ifndef SPN_TTS_V2
+#define SPN_KERNEL_RENDER_TILE_SMEM_DWORDS ((SPN_TILE_WIDTH  + 1) * SPN_TILE_HEIGHT)
+#else
+#define SPN_KERNEL_RENDER_TILE_SMEM_DWORDS ((SPN_TILE_HEIGHT + 1) * SPN_TILE_WIDTH)
+#endif
+
+struct spn_subgroup_smem
+{
+  SPN_KERNEL_RENDER_PIXEL_AREA area[SPN_KERNEL_RENDER_TILE_SMEM_DWORDS];
+};
+
+//
+//
+//
+#if (SPN_KERNEL_RENDER_SUBGROUP_COUNT == 1)
+
+shared spn_subgroup_smem smem;
+
+#define SPN_RENDER_SMEM() smem
+
+#else
+
+shared spn_subgroup_smem smem[SPN_KERNEL_RENDER_SUBGROUP_COUNT];
+
+#define SPN_RENDER_SMEM() smem[gl_WorkGroupID.x]
+
+#endif
+
+//
+// render flags
+//
+//
+// FIXME: testing for opacity and skipping scattering is on its way to
+// becoming a much more programmable option because sometimes we may
+// be compositing/blending from back-to-front and/or be using group
+// blend rules that ignore opacity.
+//
+// The point is that all of these decisions should be encoded in
+// styling commands and, as much as possible, removed from the final
+// group/layer styling traversal render loop.
+//
+
+// FLUSH FLAGS
+#define SPN_RENDER_FLAGS_FLUSH_FINALIZE    0x1
+#define SPN_RENDER_FLAGS_FLUSH_UNWIND      0x2
+#define SPN_RENDER_FLAGS_FLUSH_COMPLETE    0x4
+// OPACITY FLAG
+#define SPN_RENDER_FLAGS_SCATTER_SKIP      0x8
+
+//
+// LGF -- layer / group / flags
+//                                                               optional
+//   | current layer |          current group           |       |       |       |
+//   +---------------+------------+-------+-------------+.......+.......+.......f....
+//   |     layer     |   parents  | range |    cmds     | layer | group | flags | ...
+//   |  cmds parent  | depth base | lo hi | enter leave |  id   |  id   |       |
+//   +------+--------+------+-----+---+---+------+------+.......+-......+.......+....
+//   0      1        2      3     4   5   6      7      8       9       10      11
+//
+
+#define SPN_LGF_LAYER_CMDS                0
+#define SPN_LGF_LAYER_PARENT              1
+
+#define SPN_LGF_GROUP_PARENTS_DEPTH       2
+#define SPN_LGF_GROUP_FIRST               SPN_LGF_GROUP_PARENTS_DEPTH
+#define SPN_LGF_GROUP_PARENTS_BASE        3
+#define SPN_LGF_GROUP_RANGE_LO            4
+#define SPN_LGF_GROUP_RANGE_HI            5
+#define SPN_LGF_GROUP_CMDS_ENTER          6
+#define SPN_LGF_GROUP_CMDS_LEAVE          7
+#define SPN_LGF_GROUP_LAST                SPN_LGF_GROUP_CMDS_LEAVE
+
+#define SPN_LGF_COUNT                     8
+
+//
+//
+//
+
+#if defined( SPN_KERNEL_RENDER_LGF_USE_SHUFFLE )
+//
+// SHUFFLE
+//
+
+#define SPN_LGF_BANKS                     ((SPN_LGF_COUNT + SPN_KERNEL_RENDER_SUBGROUP_SIZE - 1) / SPN_KERNEL_RENDER_SUBGROUP_SIZE)
+#define SPN_LGF_BANK(idx)                 ((idx) / SPN_KERNEL_RENDER_SUBGROUP_SIZE)
+
+#define SPN_LGF_LANE(idx)                 ((idx) - SPN_LGF_BANK(idx) * SPN_KERNEL_RENDER_SUBGROUP_SIZE)
+#define SPN_LGF_IS_LANE(idx)              (gl_SubgroupInvocationID == SPN_LGF_LANE(idx))
+
+#define SPN_LGF_LOAD(idx)                 subgroupShuffle(lgf[SPN_LGF_BANK(idx)],idx)
+
+uint lgf[SPN_LGF_BANKS];
+
+#elif defined( SPN_KERNEL_RENDER_LGF_USE_SHARED )
+//
+// SHARED
+//
+
+shared uint lgf[SPN_LGF_COUNT];
+
+#define SPN_LGF_LOAD(idx)                 lgf[idx]
+
+#endif
+
+//
+//
+//
+
+SPN_SUBGROUP_UNIFORM uvec2 lgf_yxl;
+SPN_SUBGROUP_UNIFORM uint  lgf_flags;
+SPN_SUBGROUP_UNIFORM uint  lgf_group_id;
+
+//
+//
+//
+
+void
+spn_lgf_init()
+{
+#if defined( SPN_KERNEL_RENDER_LGF_USE_SHUFFLE )
+  //
+  // SHUFFLE
+  //
+  lgf[0] = SPN_GLSL_UINT_MAX;
+
+  if (SPN_LGF_IS_LANE(SPN_LGF_GROUP_RANGE_LO))
+    lgf[SPN_LGF_BANK(SPN_LGF_GROUP_RANGE_LO)] = 0;
+
+#elif defined( SPN_KERNEL_RENDER_LGF_USE_SHARED )
+  //
+  // SHARED
+  //
+#if   ( SPN_KERNEL_RENDER_SUBGROUP_SIZE == 4 )
+
+  lgf[gl_SubgroupInvocationID + 0] = SPN_GLSL_UINT_MAX;
+  lgf[gl_SubgroupInvocationID + 4] = SPN_GLSL_UINT_MAX;
+
+#elif ( SPN_KERNEL_RENDER_SUBGROUP_SIZE == 8 ) // CAREFUL -- if gl_SubgroupInvocationID doesn't match!
+
+  lgf[gl_SubgroupInvocationID]     = SPN_GLSL_UINT_MAX;
+
+#else // >= 16
+
+  if (gl_SubgroupInvocationID < SPN_LGF_COUNT)
+    lgf[gl_SubgroupInvocationID]   = SPN_GLSL_UINT_MAX;
+
+#endif
+
+  lgf[SPN_LGF_GROUP_RANGE_LO]      = 0;
+
+#endif
+
+  lgf_flags    = 0;
+  lgf_group_id = SPN_GLSL_UINT_MAX;
+}
+
+void
+spn_lgf_flag_set_flush_finalize()
+{
+  lgf_flags |= SPN_RENDER_FLAGS_FLUSH_FINALIZE;
+}
+
+void
+spn_lgf_flag_set_flush_unwind()
+{
+  lgf_flags |= SPN_RENDER_FLAGS_FLUSH_UNWIND;
+}
+
+void
+spn_lgf_flag_set_flush_complete()
+{
+  lgf_flags |= SPN_RENDER_FLAGS_FLUSH_COMPLETE;
+}
+
+void
+spn_lgf_flag_clear_flush_complete()
+{
+  lgf_flags &= ~SPN_RENDER_FLAGS_FLUSH_COMPLETE;
+}
+
+void
+spn_lgf_flag_set_scatter_skip()
+{
+  lgf_flags |= SPN_RENDER_FLAGS_SCATTER_SKIP;
+}
+
+SPN_SUBGROUP_UNIFORM
+bool
+spn_lgf_flag_is_scatter_noskip()
+{
+  return (lgf_flags & SPN_RENDER_FLAGS_SCATTER_SKIP) == 0;
+}
+
+SPN_SUBGROUP_UNIFORM
+bool
+spn_lgf_flag_is_flush_unwind()
+{
+  return (lgf_flags & SPN_RENDER_FLAGS_FLUSH_UNWIND) != 0;
+}
+
+SPN_SUBGROUP_UNIFORM
+bool
+spn_lgf_flag_is_not_flush_finalize()
+{
+  return (lgf_flags & SPN_RENDER_FLAGS_FLUSH_FINALIZE) == 0;
+}
+
+SPN_SUBGROUP_UNIFORM
+bool
+spn_lgf_flag_is_not_flush_complete()
+{
+  return (lgf_flags & SPN_RENDER_FLAGS_FLUSH_COMPLETE) == 0;
+}
+
+SPN_SUBGROUP_UNIFORM
+uint
+spn_lgf_get_layer_cmds()
+{
+  return SPN_LGF_LOAD(SPN_LGF_LAYER_CMDS);
+}
+
+SPN_SUBGROUP_UNIFORM
+uint
+spn_lgf_get_group_cmds_enter()
+{
+  return SPN_LGF_LOAD(SPN_LGF_GROUP_CMDS_ENTER);
+}
+
+SPN_SUBGROUP_UNIFORM
+uint
+spn_lgf_get_group_cmds_leave()
+{
+  return SPN_LGF_LOAD(SPN_LGF_GROUP_CMDS_LEAVE);
+}
+
+SPN_SUBGROUP_UNIFORM
+bool
+spn_lgf_layer_in_group_range(SPN_SUBGROUP_UNIFORM const uint layer_id)
+{
+  //
+  // FIXME -- test against single comparison
+  //
+  SPN_SUBGROUP_UNIFORM const uint range_lo = SPN_LGF_LOAD(SPN_LGF_GROUP_RANGE_LO);
+  SPN_SUBGROUP_UNIFORM const uint range_hi = SPN_LGF_LOAD(SPN_LGF_GROUP_RANGE_HI);
+  SPN_SUBGROUP_UNIFORM const uint lo       = layer_id - range_lo;
+
+  return lo <= (range_hi - range_lo);
+}
+
+SPN_SUBGROUP_UNIFORM
+bool
+spn_lgf_layer_parent_equals_group()
+{
+  SPN_SUBGROUP_UNIFORM const uint layer_parent = SPN_LGF_LOAD(SPN_LGF_LAYER_PARENT);
+
+  return layer_parent == lgf_group_id;
+}
+
+void
+spn_lgf_layer_load(SPN_SUBGROUP_UNIFORM const uint layer_id)
+{
+#if defined( SPN_KERNEL_RENDER_LGF_USE_SHUFFLE )
+  //
+  // SHUFFLE
+  //
+  if (gl_SubgroupInvocationID <= SPN_LGF_LAYER_PARENT)
+    lgf[0] = styling[layer_id * 2 + gl_SubgroupInvocationID];
+
+#elif defined( SPN_KERNEL_RENDER_LGF_USE_SHARED )
+  //
+  // SHARED
+  //
+  if (gl_SubgroupInvocationID <= SPN_LGF_LAYER_PARENT)
+    lgf[gl_SubgroupInvocationID] = styling[layer_id * 2 + gl_SubgroupInvocationID];
+
+#endif
+}
+
+void
+spn_lgf_group_load()
+{
+#if defined( SPN_KERNEL_RENDER_LGF_USE_SHUFFLE )
+  //
+  // SHUFFLE
+  //
+  const uint iid = gl_SubgroupInvocationID - SPN_LGF_GROUP_FIRST;
+
+  // load layer
+  if (iid < SPN_LGF_GROUP_LAST - SPN_LGF_GROUP_FIRST + 1)
+    lgf[0] = styling[lgf_group_id + iid];
+
+#elif defined( SPN_KERNEL_RENDER_LGF_USE_SHARED )
+  //
+  // SHARED
+  //
+  const uint iid     = lgf_group_id        + gl_SubgroupInvocationID;
+  const uint lgf_idx = SPN_LGF_GROUP_FIRST + gl_SubgroupInvocationID;
+
+#if ( SPN_KERNEL_RENDER_SUBGROUP_SIZE == 4 )
+
+  lgf[lgf_idx] = styling[iid];
+
+  if (gl_SubgroupInvocationID < SPN_LGF_GROUP_LAST - SPN_LGF_GROUP_FIRST + 1 - 4)
+    lgf[lgf_idx+4] = styling[iid+4];
+
+#else // >= 8
+
+  if (gl_SubgroupInvocationID < SPN_LGF_GROUP_LAST - SPN_LGF_GROUP_FIRST + 1)
+    lgf[lgf_idx] = styling[iid];
+
+#endif
+#endif
+}
+
+void
+spn_lgf_load_child_group()
+{
+  lgf_group_id                                    = SPN_LGF_LOAD(SPN_LGF_LAYER_PARENT);
+  SPN_SUBGROUP_UNIFORM const uint group_depth_old = SPN_LGF_LOAD(SPN_LGF_GROUP_PARENTS_DEPTH) + 1;
+
+  spn_lgf_group_load();
+
+  SPN_SUBGROUP_UNIFORM const uint group_depth_new   = SPN_LGF_LOAD(SPN_LGF_GROUP_PARENTS_DEPTH);
+  SPN_SUBGROUP_UNIFORM const uint group_base_offset = group_depth_new - group_depth_old;
+
+  if (group_base_offset != 0)
+    {
+      SPN_SUBGROUP_UNIFORM const uint group_base   = SPN_LGF_LOAD(SPN_LGF_GROUP_PARENTS_BASE);
+      SPN_SUBGROUP_UNIFORM const uint group_id_idx = group_base + group_base_offset - 1;
+
+      lgf_group_id = styling[group_id_idx];
+
+      spn_lgf_group_load();
+    }
+}
+
+void
+spn_lgf_load_parent_group()
+{
+  SPN_SUBGROUP_UNIFORM const uint group_depth = SPN_LGF_LOAD(SPN_LGF_GROUP_PARENTS_DEPTH);
+
+  if (group_depth == 0)
+    {
+      spn_lgf_flag_set_flush_complete();
+    }
+  else
+    {
+      SPN_SUBGROUP_UNIFORM const uint group_base = SPN_LGF_LOAD(SPN_LGF_GROUP_PARENTS_BASE);
+
+      lgf_group_id = styling[group_base];
+
+      spn_lgf_group_load();
+    }
+}
+
+//
+//
+//
+
+bool
+spn_ttck_yxl_equal(const uvec2 a, SPN_SUBGROUP_UNIFORM const uvec2 yxl)
+{
+  // FIXME FIXME
+  uvec2 c = a ^ yxl;
+
+  c[0] = c[0] & SPN_TTCK_LO_MASK_LAYER;
+
+  return (c[0] | c[1]) == 0;
+}
+
+SPN_SUBGROUP_UNIFORM
+bool
+spn_ttck_yxl_neq_uni(SPN_SUBGROUP_UNIFORM const uvec2 a,
+                     SPN_SUBGROUP_UNIFORM const uvec2 yxl)
+{
+  // FIXME FIXME
+  uvec2 c = a ^ yxl;
+
+  c[0] = c[0] & SPN_TTCK_LO_MASK_LAYER;
+
+  return (c[0] | c[1]) != 0;
+}
+
+bool
+spn_ttck_hi_yx_equal(const uint a, SPN_SUBGROUP_UNIFORM const uint yxl_hi)
+{
+  // FIXME FIXME
+  return ((a ^ yxl_hi) & SPN_TTCK_HI_MASK_YX) == 0;
+}
+
+SPN_SUBGROUP_UNIFORM
+bool
+spn_ttck_hi_yx_equal_uni(SPN_SUBGROUP_UNIFORM const uint a,
+                         SPN_SUBGROUP_UNIFORM const uint yxl_hi)
+{
+  // FIXME FIXME
+  return ((a ^ yxl_hi) & SPN_TTCK_HI_MASK_YX) == 0;
+}
+
+SPN_SUBGROUP_UNIFORM
+uint
+spn_ttck_get_layer_uni(SPN_SUBGROUP_UNIFORM const uvec2 yxl)
+{
+  return SPN_TTCK_GET_LAYER(yxl);
+}
+
+//
+//
+//
+
+uint
+spn_tts_get_xy_idx(const SPN_KERNEL_RENDER_TTS tts)
+{
+#ifndef SPN_TTS_V2
+  return SPN_TTS_GET_TX_PIXEL(tts) * SPN_TILE_HEIGHT + SPN_TTS_GET_TY_PIXEL(tts);
+#else
+  return SPN_TTS_GET_TY_PIXEL(tts) * SPN_TILE_WIDTH  + SPN_TTS_GET_TX_PIXEL(tts);
+#endif
+}
+
+int
+spn_tts_get_dy(const SPN_KERNEL_RENDER_TTS tts)
+{
+  //
+  // The tts.dy bitfield is either [-32,-1] or [0,31].
+  //
+  // After extracting the bitfield, the range must be adjusted:
+  //
+  //   if (dy >= 0) then ++dy
+  //
+  // The branchless equivalent subtracts the twiddle shift (~tts>>31)
+  // which maps:
+  //
+  //   [  0,31] -> [  1,32]
+  //   [-32,-1] -> [-32,-1]
+  //
+  return (tts >> SPN_TTS_OFFSET_DY) - (~tts >> 31);
+}
+
+//
+//
+//
+
+void
+spn_tile_smem_zero()
+{
+  //
+  // Note that atomic_init() is likely implemented as a simple
+  // assignment so there is no identifiable performance difference on
+  // current targets.
+  //
+  // If such an architecture appears in the future then we'll probably
+  // still want to implement this zero'ing operation as below but
+  // follow with an appropriate fence that occurs before any scatter
+  // operations.
+  //
+  // FIXME: try to (re)implement 8-byte writes in GLSL for GEN9
+  //
+  // NOT IMPLEMENTED:
+  //
+  //   Intel GENx has a documented 64 byte per cycle SLM write limit.
+  //   So having each lane in an 8 lane subgroup zero-write 8 bytes is
+  //   probably a safe bet (Later: benchmarking backs this up!).
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                           \
+  SPN_RENDER_SMEM().area[gl_SubgroupInvocationID + I * SPN_KERNEL_RENDER_SUBGROUP_SIZE] = 0;
+
+  SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND();
+}
+
+//
+// Note this is going to be vectorizable on most architectures.
+//
+// The return of the key translation feature might complicate things.
+//
+void
+spn_tile_scatter_ttpb(const SPN_KERNEL_RENDER_TTP ttp, const uint iid)
+{
+  if (ttp != 0)
+    {
+      const int area = ttp * SPN_TTS_SUBPIXEL_Y_SIZE * 2;
+
+#if (SPN_KERNEL_RENDER_SUBTILE_COUNT == 1)
+      // it's a single tile
+      SPN_RENDER_SMEM().area[iid] += area;
+#else
+      // there are subtiles
+      atomicAdd(SPN_RENDER_SMEM().area[iid],area);
+#endif
+    }
+}
+
+//
+// Accumulate altitudes and areas -- see docs to understand what's
+// going on here with Surveyor's Algorithm.
+//
+// Note that other coverate calculation algorithms are possible
+// because the TTS values encode (flattened) subpixel line segments.
+//
+// Note that spn_scatter_ttsb is *not* vectorizable unless the
+// architecture supports a "scatter-add" capability.  All relevant
+// GPUs support atomic add on shared/local memory and thus support
+// scatter-add.
+//
+// On a SIMD device without scatter support, the vector components are
+// are stored sequentially.
+//
+
+#ifndef SPN_TTS_V2
+
+void
+spn_tile_scatter_ttsb(const SPN_KERNEL_RENDER_TTS tts)
+{
+#ifdef  SPN_KERNEL_RENDER_TEST_TTS_INVALID_EARLY
+  if (tts != SPN_TTS_INVALID)
+#endif
+    {
+      //
+      // FIXME - skipping per-key pixel and subpixel translation for now
+      //
+
+      //
+      // The tiles are stored in row-major order.
+      //
+      // The final row is a guard column that is OK to write to but will
+      // never be read.  It simplifies the TTSB scatter but could be
+      // predicated if SMEM is really at a premium.
+      //
+      const uint xy_idx  = spn_tts_get_xy_idx(tts);
+      const int  dy      = spn_tts_get_dy(tts);
+
+      // this "min(y0,y1) * 2 + abs(dy)" is equivalent to "y0 + y1"
+      // and is always positive and <= 1023
+      const uint widths  = SPN_TTS_GET_TX_SUBPIXEL(tts) * 2 + SPN_TTS_GET_DX(tts);
+
+      // calculate top and bottom coverage contribution trapezoids
+      const int  left    = dy * int(widths);
+      const int  right   = dy * SPN_TTS_SUBPIXEL_X_SIZE * 2 - left;
+      //
+      // GPU/SIMT -- IMPLIES SUPPORT FOR ATOMIC SCATTER-ADD
+      //
+#ifndef SPN_KERNEL_RENDER_TEST_TTS_INVALID_EARLY
+      if (tts != SPN_TTS_INVALID)
+#endif
+        {
+          atomicAdd(SPN_RENDER_SMEM().area[xy_idx                ],right);
+          atomicAdd(SPN_RENDER_SMEM().area[xy_idx+SPN_TILE_HEIGHT],left);
+        }
+    }
+}
+
+#else
+
+void
+spn_tile_scatter_ttsb(const SPN_KERNEL_RENDER_TTS tts)
+{
+#ifdef SPN_KERNEL_RENDER_TEST_TTS_INVALID_EARLY
+  if (tts != SPN_TTS_INVALID)
+#endif
+    {
+      //
+      // FIXME - skipping per-key pixel and subpixel translation for now
+      //
+
+      //
+      // The tiles are stored in row-major order.
+      //
+      // The final row is a guard column that is OK to write to but will
+      // never be read.  It simplifies the TTSB scatter but could be
+      // predicated if SMEM is really at a premium.
+      //
+      const uint xy_idx  = spn_tts_get_xy_idx(tts);
+      const int  dx      = SPN_TTS_GET_DX(tts);
+
+      // this "min(y0,y1) * 2 + abs(dy)" is equivalent to "y0 + y1"
+      // and is always positive and <= 1023
+      const int  heights = SPN_TTS_GET_TY_SUBPIXEL(tts) * 2 + abs(spn_tts_get_dy(tts)); // FIXME -- this is wrong
+
+      // calculate top and bottom coverage contribution trapezoids
+      const int  top     = dx * heights;
+      const int  bot     = dx * SPN_TTS_SUBPIXEL_Y_SIZE * 2 - top;
+      //
+      // GPU/SIMT -- IMPLIES SUPPORT FOR ATOMIC SCATTER-ADD
+      //
+#ifndef SPN_KERNEL_RENDER_TEST_TTS_INVALID_EARLY
+      if (tts != SPN_TTS_INVALID)
+#endif
+        {
+          atomicAdd(SPN_RENDER_SMEM().area[xy_idx               ],bot);
+          atomicAdd(SPN_RENDER_SMEM().area[xy_idx+SPN_TILE_WIDTH],top);
+        }
+    }
+}
+
+#endif
+
+//
+//
+//
+
+#define SPN_PIXEL_SMEM_AREA(I,lane)                                     \
+  SPN_RENDER_SMEM().area[lane + I * SPN_KERNEL_RENDER_SUBGROUP_SIZE]
+
+//
+// If there are multiple subtiles per subgroup then we need to
+// horizontally exclusive scan add the accumulated areas
+//
+
+#if (SPN_KERNEL_RENDER_SUBTILE_COUNT == 1)
+//
+// SUBTILE IS ENTIRE TILE
+//
+
+#define SPN_KERNEL_RENDER_PIXEL_AREA_PREAMBLE() // noop
+
+#define SPN_SUBTILE_AREA_SCAN_PRE(I,area)                       \
+  area += SPN_PIXEL_SMEM_AREA(I,gl_SubgroupInvocationID)
+
+#define SPN_SUBTILE_AREA_SCAN_POST(area)        // noop
+
+#else
+//
+// MULTIPLE SUBTILES
+//
+
+#define SPN_KERNEL_RENDER_SUBTILE_LAST       (SPN_KERNEL_RENDER_SUBTILE_COUNT - 1)
+#define SPN_KERNEL_RENDER_SUBTILE_LAST_BASE  (SPN_KERNEL_RENDER_SUBTILE_LAST * SPN_TILE_WIDTH)
+
+#if defined( SPN_KERNEL_RENDER_COVERAGE_USE_SHUFFLE )
+//
+// COVERAGE USES SHUFFLE
+//
+
+#if (SPN_KERNEL_RENDER_SUBTILE_COUNT_LOG2 == 1)
+//
+// SUBTILES COUNT = 2
+//
+
+#define SPN_KERNEL_RENDER_PIXEL_AREA_PREAMBLE()                         \
+  const bool is_p0 = (gl_SubgroupInvocationID >= SPN_TILE_WIDTH);       \
+  SPN_KERNEL_RENDER_PIXEL_AREA total
+
+#define SPN_SUBTILE_AREA_SCAN_PRE(I,area)                               \
+  {                                                                     \
+    total = area;                                                       \
+                                                                        \
+    SPN_KERNEL_RENDER_PIXEL_AREA pp = SPN_PIXEL_SMEM_AREA(I,gl_SubgroupInvocationID); \
+    SPN_KERNEL_RENDER_PIXEL_AREA x0 = subgroupShuffleXor(pp,SPN_TILE_WIDTH); \
+    SPN_KERNEL_RENDER_PIXEL_AREA rr = pp + x0;                          \
+                                                                        \
+    total += rr;                                                        \
+                                                                        \
+    if (is_p0)                                                          \
+      pp = rr;                                                          \
+                                                                        \
+    area += pp;                                                         \
+  }
+
+#define SPN_SUBTILE_AREA_SCAN_POST(area)        \
+  area = total;
+
+#elif (SPN_KERNEL_RENDER_SUBTILE_COUNT_LOG2 == 2)
+//
+// SUBTILES COUNT = 4
+//
+
+#define SPN_KERNEL_RENDER_PIXEL_AREA_PREAMBLE()                         \
+  const bool is_p0 = (gl_SubgroupInvocationID & SPN_TILE_WIDTH) != 0;   \
+  const bool is_p1 = (gl_SubgroupInvocationID > SPN_TILE_WIDTH * 2);    \
+  SPN_KERNEL_RENDER_PIXEL_AREA total
+
+#define SPN_SUBTILE_AREA_SCAN_PRE(I,area)                               \
+  {                                                                     \
+    total = area;                                                       \
+                                                                        \
+    SPN_KERNEL_RENDER_PIXEL_AREA pp = SPN_PIXEL_SMEM_AREA(I,gl_SubgroupInvocationID); \
+    SPN_KERNEL_RENDER_PIXEL_AREA x0 = subgroupShuffleXor(pp,SPN_TILE_WIDTH); \
+    SPN_KERNEL_RENDER_PIXEL_AREA rr = pp + x0;                          \
+                                                                        \
+    total += rr;                                                        \
+                                                                        \
+    if (is_p0)                                                          \
+      pp = rr;                                                          \
+                                                                        \
+    SPN_KERNEL_RENDER_PIXEL_AREA x1 = subgroupShuffleXor(rr,SPN_TILE_WIDTH * 2); \
+                                                                        \
+    total += x1;                                                        \
+                                                                        \
+    if (is_p1)                                                          \
+      pp += x1;                                                         \
+                                                                        \
+    area += pp;                                                         \
+  }
+
+#define SPN_SUBTILE_AREA_SCAN_POST(area)        \
+  area = total;
+
+#else
+//
+// SUBTILES COUNT >= 8
+//
+#error "SPN_KERNEL_RENDER_SUBTILE_COUNT_LOG2 > 2 not supported"
+#endif
+
+#elif defined( SPN_KERNEL_RENDER_COVERAGE_USE_SHARED )
+//
+// COVERAGE USES SHARED
+//
+
+//
+// SUBTILES COUNT = 2
+//
+#define SPN_KERNEL_RENDER_PIXEL_AREA_PREAMBLE()                         \
+  const bool is_p0   = (gl_SubgroupInvocationID >= SPN_TILE_WIDTH);     \
+  const uint iid_xor = gl_SubgroupInvocationID ^ SPN_TILE_WIDTH;        \
+  SPN_KERNEL_RENDER_PIXEL_AREA total
+
+#define SPN_SUBTILE_AREA_SCAN_PRE(I,area)                               \
+  {                                                                     \
+    total = area;                                                       \
+                                                                        \
+    SPN_KERNEL_RENDER_PIXEL_AREA pp = SPN_PIXEL_SMEM_AREA(I,gl_SubgroupInvocationID); \
+    SPN_KERNEL_RENDER_PIXEL_AREA x0 = SPN_PIXEL_SMEM_AREA(I,iid_xor);   \
+    SPN_KERNEL_RENDER_PIXEL_AREA rr = pp + x0;                          \
+                                                                        \
+    total += rr;                                                        \
+                                                                        \
+    if (is_p0)                                                          \
+      pp = rr;                                                          \
+                                                                        \
+    area += pp;                                                         \
+  }
+
+#define SPN_SUBTILE_AREA_SCAN_POST(area)        \
+  area = total;
+
+#if ( SPN_KERNEL_RENDER_SUBTILE_COUNT_LOG2 > 1)
+#error "SPN_KERNEL_RENDER_COVERAGE_USE_SHARED missing support for a subtile count > 2"
+#endif
+
+#endif
+#endif
+
+//
+//
+//
+
+#if ( SPN_KERNEL_RENDER_TILE_CHANNEL_SIZE_LOG2 == 0)
+#define SPN_PIXEL_COVER_WIP(I)  cover_wip[I]
+#else
+#define SPN_PIXEL_COVER_WIP(I)  cover_wip[I/SPN_TILE_CHANNEL_SIZE][I&SPN_TILE_CHANNEL_MASK]
+#endif
+
+//
+// Compute accumulated pixel coverage "fill rules" using Surveyor's
+// Algorithm.
+//
+// FIXME -- we may want SPN_KERNEL_RENDER_COVER_AREA to be an int2()
+// which means the initial SMEM load and subsequent shuffles would
+// need to hide the second load and shuffle.
+//
+
+void
+spn_tile_cover_nonzero()
+{
+  SPN_KERNEL_RENDER_PIXEL_AREA_PREAMBLE();
+
+  SPN_KERNEL_RENDER_PIXEL_AREA area = 0;
+
+  subgroupMemoryBarrierShared();
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L) {                                         \
+                                                                        \
+    SPN_SUBTILE_AREA_SCAN_PRE(I,area);                                  \
+                                                                        \
+    const SPN_KERNEL_RENDER_PIXEL_AREA  trapabs = abs(area);            \
+    const SPN_KERNEL_RENDER_PIXEL_AREA  trapmin = min(trapabs,SPN_TTS_FILL_MAX_AREA); \
+    const SPN_KERNEL_RENDER_PIXEL_COVER nonzero = SPN_KERNEL_RENDER_PIXEL_COVER(trapmin); \
+                                                                        \
+    SPN_PIXEL_COVER_WIP(I) = nonzero * SPN_KERNEL_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA_RCP_F32); \
+                                                                        \
+    if (!L) {                                                           \
+      SPN_SUBTILE_AREA_SCAN_POST(area);                                 \
+    }                                                                   \
+  }
+
+  SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND();
+}
+
+void
+spn_tile_cover_evenodd()
+{
+  SPN_KERNEL_RENDER_PIXEL_AREA_PREAMBLE();
+
+  SPN_KERNEL_RENDER_PIXEL_AREA area = 0;
+
+  subgroupMemoryBarrierShared();
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L) {                                         \
+                                                                        \
+    SPN_SUBTILE_AREA_SCAN_PRE(I,area);                                  \
+                                                                        \
+    const SPN_KERNEL_RENDER_PIXEL_AREA  trapabs = abs(area);            \
+    const SPN_KERNEL_RENDER_PIXEL_AREA  maskabs = trapabs & SPN_TTS_FILL_EVEN_ODD_MASK; \
+    const SPN_KERNEL_RENDER_PIXEL_AREA  reflect = abs(SPN_TTS_FILL_MAX_AREA - maskabs); \
+    const SPN_KERNEL_RENDER_PIXEL_COVER evenodd = SPN_KERNEL_RENDER_PIXEL_COVER(reflect); \
+                                                                        \
+    SPN_PIXEL_COVER_WIP(I) = evenodd * SPN_KERNEL_RENDER_PIXEL_COVER(SPN_TTS_FILL_MAX_AREA_RCP_F32); \
+                                                                        \
+    if (!L) {                                                           \
+      SPN_SUBTILE_AREA_SCAN_POST(area);                                 \
+    }                                                                   \
+  }
+
+  SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_color_fill_solid(SPN_SUBGROUP_UNIFORM const uint rg_uint,
+                          SPN_SUBGROUP_UNIFORM const uint ba_uint)
+{
+  //
+  // solid fill -- loads { fp16x2 rg, fp16x2 ba } from cmd stream
+  //
+  SPN_SUBGROUP_UNIFORM const SPN_KERNEL_RENDER_COLOR_PAIR rg =
+    SPN_KERNEL_RENDER_COLOR_PAIR_UNPACK(rg_uint);
+
+  SPN_SUBGROUP_UNIFORM const SPN_KERNEL_RENDER_COLOR_PAIR ba =
+    SPN_KERNEL_RENDER_COLOR_PAIR_UNPACK(ba_uint);
+
+  SPN_SUBGROUP_UNIFORM const SPN_KERNEL_RENDER_TILE_COLOR rgba =
+    {
+      SPN_KERNEL_RENDER_TILE_CHANNEL(rg[0]),
+      SPN_KERNEL_RENDER_TILE_CHANNEL(rg[1]),
+      SPN_KERNEL_RENDER_TILE_CHANNEL(ba[0]),
+      SPN_KERNEL_RENDER_TILE_CHANNEL(ba[1])
+    };
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L) color_wip[I] = rgba;
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND()
+}
+
+//
+//
+//
+
+void
+spn_tile_blend_over()
+{
+  //
+  // fralunco = cover.wip * acc.a
+  //
+  // acc.r    =  fralunco * wip.r + acc.r
+  // acc.g    =  fralunco * wip.g + acc.g
+  // acc.b    =  fralunco * wip.b + acc.b
+  // acc.a    = -fralunco * wip.a + acc.a
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L) {                                         \
+    const SPN_KERNEL_RENDER_TILE_COVER fralunco =                       \
+      cover_wip[I] * SPN_COLOR_ACC_A(I);                                \
+                                                                        \
+    SPN_COLOR_ACC_R(I) = fma(+fralunco,SPN_COLOR_WIP_R(I),SPN_COLOR_ACC_R(I)); \
+    SPN_COLOR_ACC_G(I) = fma(+fralunco,SPN_COLOR_WIP_G(I),SPN_COLOR_ACC_G(I)); \
+    SPN_COLOR_ACC_B(I) = fma(+fralunco,SPN_COLOR_WIP_B(I),SPN_COLOR_ACC_B(I)); \
+    SPN_COLOR_ACC_A(I) = fma(-fralunco,SPN_COLOR_WIP_A(I),SPN_COLOR_ACC_A(I)); \
+  }
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_blend_plus()
+{
+  //
+  // cover_min = min(cover.wip,a.acc)
+  //
+  // r.acc =  cover_min * r.wip + r.acc
+  // g.acc =  cover_min * g.wip + g.acc
+  // b.acc =  cover_min * b.wip + b.acc
+  // a.acc = -cover_min * a.wip + a.acc
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L) {                                         \
+    const SPN_KERNEL_RENDER_TILE_COVER cover_min =                      \
+      min(cover_wip[I],SPN_COLOR_ACC_A(I));                             \
+                                                                        \
+    SPN_COLOR_ACC_R(I) = fma(+cover_min,SPN_COLOR_WIP_R(I),SPN_COLOR_ACC_R(I)); \
+    SPN_COLOR_ACC_G(I) = fma(+cover_min,SPN_COLOR_WIP_G(I),SPN_COLOR_ACC_G(I)); \
+    SPN_COLOR_ACC_B(I) = fma(+cover_min,SPN_COLOR_WIP_B(I),SPN_COLOR_ACC_B(I)); \
+    SPN_COLOR_ACC_A(I) = fma(-cover_min,SPN_COLOR_WIP_A(I),SPN_COLOR_ACC_A(I)); \
+  }
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_blend_multiply()
+{
+  //
+  // r.acc = (cover.wip * r.wip) * r.acc
+  // g.acc = (cover.wip * g.wip) * g.acc
+  // b.acc = (cover.wip * b.wip) * b.acc
+  // a.acc = (cover.wip * a.wip) * (1.0 - a.acc) <-- a.acc is already (1.0 - alpha)
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L) {                                 \
+    SPN_COLOR_ACC_R(I) *= cover_wip[I] * SPN_COLOR_WIP_R(I);  \
+    SPN_COLOR_ACC_G(I) *= cover_wip[I] * SPN_COLOR_WIP_G(I);  \
+    SPN_COLOR_ACC_B(I) *= cover_wip[I] * SPN_COLOR_WIP_B(I);  \
+    SPN_COLOR_ACC_A(I) *= cover_wip[I] * SPN_COLOR_WIP_A(I);  \
+  }
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+// #define SPN_TILE_DEBUG
+#ifdef  SPN_TILE_DEBUG
+
+void
+spn_tile_debug()
+{
+  SPN_KERNEL_RENDER_TILE_COLOR r,g,b;
+
+  switch (gl_SubgroupSize)
+    {
+    case 64:  // RED
+      r = SPN_KERNEL_RENDER_TILE_COLOR(1.0);
+      g = SPN_KERNEL_RENDER_TILE_COLOR(0.0);
+      b = SPN_KERNEL_RENDER_TILE_COLOR(0.0);
+      break;
+    case 32:  // ORANGE
+      r = SPN_KERNEL_RENDER_TILE_COLOR(1.0);
+      g = SPN_KERNEL_RENDER_TILE_COLOR(165.0/255.0);
+      b = SPN_KERNEL_RENDER_TILE_COLOR(0.0);
+      break;
+    case 16: // YELLOW
+      r = SPN_KERNEL_RENDER_TILE_COLOR(1.0);
+      g = SPN_KERNEL_RENDER_TILE_COLOR(1.0);
+      b = SPN_KERNEL_RENDER_TILE_COLOR(0.0);
+      break;
+    case 8:  // GREEN
+      r = SPN_KERNEL_RENDER_TILE_COLOR(0.0);
+      g = SPN_KERNEL_RENDER_TILE_COLOR(1.0);
+      b = SPN_KERNEL_RENDER_TILE_COLOR(0.0);
+      break;
+    case 4:  // BLUE
+      r = SPN_KERNEL_RENDER_TILE_COLOR(0.0);
+      g = SPN_KERNEL_RENDER_TILE_COLOR(0.0);
+      b = SPN_KERNEL_RENDER_TILE_COLOR(1.0);
+      break;
+    }
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L) {                     \
+    SPN_COLOR_ACC_R(I) = r;                         \
+    SPN_COLOR_ACC_G(I) = g;                         \
+    SPN_COLOR_ACC_B(I) = b;                         \
+  }
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+#endif
+
+//
+//
+//
+
+void
+spn_tile_blend_knockout()
+{
+  //
+  // cover.wip.contrib = (1.0 - cover.acc) * cover.wip
+  // cover.acc         = cover.acc + cover.wip.contrib
+  //
+  // r.acc =  cover.wip.contrib * r.wip + r.acc
+  // g.acc =  cover.wip.contrib * g.wip + g.acc
+  // b.acc =  cover.wip.contrib * b.wip + b.acc
+  // a.acc = -cover.wip.contrib * a.wip * a.acc
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L) {                                         \
+    const SPN_KERNEL_RENDER_TILE_COVER contrib = cover_wip[I] *         \
+      (SPN_KERNEL_RENDER_TILE_COVER(1) - cover_acc[I]);                 \
+                                                                        \
+    cover_acc[I] += contrib;                                            \
+                                                                        \
+    SPN_COLOR_ACC_R(I)  = fma(+contrib,SPN_COLOR_WIP_R(I),SPN_COLOR_ACC_R(I)); \
+    SPN_COLOR_ACC_G(I)  = fma(+contrib,SPN_COLOR_WIP_G(I),SPN_COLOR_ACC_G(I)); \
+    SPN_COLOR_ACC_B(I)  = fma(+contrib,SPN_COLOR_WIP_B(I),SPN_COLOR_ACC_B(I)); \
+    SPN_COLOR_ACC_A(I)  = fma(-contrib,SPN_COLOR_WIP_A(I),SPN_COLOR_ACC_A(I)); \
+  }
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_cover_msk_copy_wip()
+{
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+  cover_msk[I] = cover_wip[I];
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_cover_msk_copy_acc()
+{
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+  cover_msk[I] = cover_acc[I];
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_cover_accumulate()
+{
+  //
+  // cover.wip.contrib = (1.0 - cover.acc) * cover.wip
+  // cover.acc         = cover.acc + cover.wip.contrib
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                           \
+  cover_acc[I] = fma(SPN_KERNEL_RENDER_TILE_COVER(1)-cover_acc[I],      \
+                     cover_wip[I],                                      \
+                     cover_acc[I]);
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_cover_wip_mask()
+{
+  //
+  // cover.wip *= cover.msk
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+  cover_wip[I] *= cover_msk[I];
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_cover_wip_zero()
+{
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+  cover_wip[I] = SPN_KERNEL_RENDER_TILE_COVER(0);
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+void
+spn_tile_cover_acc_zero()
+{
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+  cover_acc[I] = SPN_KERNEL_RENDER_TILE_COVER(0);
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+void
+spn_tile_cover_msk_zero()
+{
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+  cover_msk[I] = SPN_KERNEL_RENDER_TILE_COVER(0);
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_cover_msk_one()
+{
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+  cover_msk[I] = SPN_KERNEL_RENDER_TILE_COVER(1);
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_cover_msk_invert()
+{
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+  cover_msk[I] = SPN_KERNEL_RENDER_TILE_COVER(1) - cover_msk[I];
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_color_wip_zero()
+{
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+  color_wip[I] = SPN_KERNEL_RENDER_TILE_COLOR(  \
+    SPN_KERNEL_RENDER_TILE_CHANNEL(0),          \
+    SPN_KERNEL_RENDER_TILE_CHANNEL(0),          \
+    SPN_KERNEL_RENDER_TILE_CHANNEL(0),          \
+    SPN_KERNEL_RENDER_TILE_CHANNEL(1));
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+void
+spn_tile_color_acc_zero()
+{
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+  color_acc[I] = SPN_KERNEL_RENDER_TILE_COLOR(  \
+    SPN_KERNEL_RENDER_TILE_CHANNEL(0),          \
+    SPN_KERNEL_RENDER_TILE_CHANNEL(0),          \
+    SPN_KERNEL_RENDER_TILE_CHANNEL(0),          \
+    SPN_KERNEL_RENDER_TILE_CHANNEL(1));
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+}
+
+//
+//
+//
+
+void
+spn_tile_color_acc_test_opacity()
+{
+  //
+  // returns true if tile is opaque
+  //
+  // various hacks to test for complete tile opacity
+  //
+  // note that front-to-back currently has alpha at 0.0f -- this can
+  // be harmonized to use a traditional alpha if we want to support
+  // rendering in either direction
+  //
+  // hack -- ADD/MAX/OR all alphas together and test for non-zero
+  //
+#ifndef SPN_KERNEL_RENDER_NO_VOTE
+  //
+  // VOTE
+  //
+  SPN_KERNEL_RENDER_TILE_CHANNEL a = SPN_KERNEL_RENDER_TILE_CHANNEL(0);
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                   \
+  a = max(a,SPN_COLOR_ACC_A(I));
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND();
+
+  // are all components in the subtile zero?
+  if (subgroupAll(SPN_KERNEL_RENDER_TILE_CHANNEL_IS_ZERO(a)))
+    spn_lgf_flag_set_scatter_skip();
+
+#else
+  //
+  // NO VOTE
+  //
+
+  // FIXME -- for now, do nothing on basic-only devices
+
+#endif
+}
+
+//
+//
+//
+
+void
+spn_tile_color_acc_over_background(SPN_SUBGROUP_UNIFORM const uint rg_uint,
+                                   SPN_SUBGROUP_UNIFORM const uint ba_uint)
+{
+  //
+  // acc.r = acc.a * r + acc.r
+  // acc.g = acc.a * g + acc.g
+  // acc.b = acc.a * b + acc.b
+  //
+
+  SPN_SUBGROUP_UNIFORM const SPN_KERNEL_RENDER_COLOR_PAIR   rg =
+    SPN_KERNEL_RENDER_COLOR_PAIR_UNPACK(rg_uint);
+
+  SPN_SUBGROUP_UNIFORM const SPN_KERNEL_RENDER_TILE_CHANNEL r  =
+    SPN_KERNEL_RENDER_TILE_CHANNEL(rg[0]);
+
+  SPN_SUBGROUP_UNIFORM const SPN_KERNEL_RENDER_TILE_CHANNEL g  =
+    SPN_KERNEL_RENDER_TILE_CHANNEL(rg[1]);
+
+  SPN_SUBGROUP_UNIFORM const SPN_KERNEL_RENDER_COLOR_PAIR ba =
+    SPN_KERNEL_RENDER_COLOR_PAIR_UNPACK(ba_uint);
+
+  SPN_SUBGROUP_UNIFORM const SPN_KERNEL_RENDER_TILE_CHANNEL b  =
+    SPN_KERNEL_RENDER_TILE_CHANNEL(ba[0]);
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                            \
+  SPN_COLOR_ACC_R(I) = fma(SPN_COLOR_ACC_A(I),r,SPN_COLOR_ACC_R(I)); \
+  SPN_COLOR_ACC_G(I) = fma(SPN_COLOR_ACC_A(I),g,SPN_COLOR_ACC_G(I)); \
+  SPN_COLOR_ACC_B(I) = fma(SPN_COLOR_ACC_A(I),b,SPN_COLOR_ACC_B(I));
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND()
+}
+
+//
+// Map accumulator register rows to surface coordinates
+//
+
+#if   (SPN_KERNEL_RENDER_SUBTILE_COUNT == 1)
+
+#define SPN_KERNEL_RENDER_SUBTILE_LANE_TO_X(sgid)  (sgid)
+#define SPN_KERNEL_RENDER_SUBTILE_LANE_TO_Y(sgid)  0
+
+#else
+
+#define SPN_KERNEL_RENDER_SUBTILE_LANE_TO_X(sgid)  (sgid & SPN_TILE_WIDTH_MASK)
+#define SPN_KERNEL_RENDER_SUBTILE_LANE_TO_Y(sgid)  (sgid >> SPN_TILE_WIDTH_LOG2)
+
+#endif
+
+//
+// Unpack colors before storing to surface
+//
+
+#if   (SPN_KERNEL_RENDER_TILE_CHANNEL_SIZE_LOG2 == 0)
+
+#define SPN_PIXEL_COLOR_ACC(I)                              \
+  SPN_KERNEL_RENDER_COLOR_ACC_RGBA(SPN_COLOR_ACC_R(I),      \
+                                   SPN_COLOR_ACC_G(I),      \
+                                   SPN_COLOR_ACC_B(I),      \
+                                   SPN_COLOR_ACC_A(I))
+
+#elif (SPN_KERNEL_RENDER_TILE_CHANNEL_SIZE_LOG2 == 1)
+
+#define SPN_PIXEL_COLOR_ACC(I)                                          \
+  SPN_KERNEL_RENDER_COLOR_ACC_RGBA(                                     \
+    SPN_COLOR_ACC_R(I/SPN_TILE_CHANNEL_SIZE)[I&SPN_TILE_CHANNEL_MASK],  \
+    SPN_COLOR_ACC_G(I/SPN_TILE_CHANNEL_SIZE)[I&SPN_TILE_CHANNEL_MASK],  \
+    SPN_COLOR_ACC_B(I/SPN_TILE_CHANNEL_SIZE)[I&SPN_TILE_CHANNEL_MASK],  \
+    SPN_COLOR_ACC_A(I/SPN_TILE_CHANNEL_SIZE)[I&SPN_TILE_CHANNEL_MASK])
+
+#elif
+#error "Unsupported SPN_KERNEL_RENDER_TILE_CHANNEL_SIZE_LOG2"
+#endif
+
+//
+//
+//
+
+#ifdef SPN_KERNEL_RENDER_SURFACE_IS_IMAGE
+//
+// surface is image
+//
+
+void
+spn_tile_color_acc_store_to_surface()
+{
+  //
+  // Fixme -- use a specialization constant to steer codegen for
+  // different color depths or multi-plane images.
+  //
+  // Multi-plane might be optimal because the R/G/B arrays can be
+  // directly copied?
+  //
+  SPN_SUBGROUP_UNIFORM const uint y_uni = SPN_TTCK_GET_Y(lgf_yxl) * SPN_TILE_HEIGHT;
+  SPN_SUBGROUP_UNIFORM const uint x_uni = SPN_TTCK_GET_X(lgf_yxl) * SPN_TILE_WIDTH;
+
+  ivec2 xy = ivec2(x_uni + SPN_KERNEL_RENDER_SUBTILE_LANE_TO_X(gl_SubgroupInvocationID),
+                   y_uni + SPN_KERNEL_RENDER_SUBTILE_LANE_TO_Y(gl_SubgroupInvocationID));
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                           \
+  imageStore(surface,                                                   \
+             xy,                                                        \
+             SPN_KERNEL_RENDER_COLOR_ACC_PACK(SPN_PIXEL_COLOR_ACC(I))); \
+  xy.y++;
+
+  SPN_KERNEL_RENDER_SUBTILE_MEMBERS_EXPAND()
+}
+
+#else
+//
+// surface is buffer
+//
+
+void
+spn_tile_color_acc_store_to_surface()
+{
+  //
+  // FIXME -- use a specialization constant to steer codegen for
+  // different color depths or multi-plane images.
+  //
+  // Multi-plane might be optimal because the R/G/B arrays can be
+  // directly copied?
+  //
+#if 0 // #ifndef SPN_TTS_V2
+  SPN_SUBGROUP_UNIFORM const uint y_uni = SPN_TTCK_GET_Y(lgf_yxl) * SPN_TILE_HEIGHT;
+  SPN_SUBGROUP_UNIFORM const uint x_uni = SPN_TTCK_GET_X(lgf_yxl) * SPN_TILE_WIDTH;
+
+  const uint y  = y_uni + SPN_KERNEL_RENDER_SUBTILE_LANE_TO_Y(gl_SubgroupInvocationID);
+  const uint x  = x_uni + SPN_KERNEL_RENDER_SUBTILE_LANE_TO_X(gl_SubgroupInvocationID);
+  const uint yx = y * surface_pitch + x;
+#else
+  //
+  // we aren't rasterizing with TTS_V2 so if you want to see the image
+  // with its tiles correctly drawn (instead of transposed) then
+  // activate this terribly uncoalesced routine
+  //
+  SPN_SUBGROUP_UNIFORM const uint y_uni = SPN_TTCK_GET_Y(lgf_yxl) * SPN_TILE_HEIGHT;
+  SPN_SUBGROUP_UNIFORM const uint x_uni = SPN_TTCK_GET_X(lgf_yxl) * SPN_TILE_WIDTH;
+
+  const uint y  = y_uni + SPN_KERNEL_RENDER_SUBTILE_LANE_TO_X(gl_SubgroupInvocationID);
+  const uint x  = x_uni + SPN_KERNEL_RENDER_SUBTILE_LANE_TO_Y(gl_SubgroupInvocationID);
+  const uint yx = x * surface_pitch + y;
+#endif
+
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                           \
+  surface[yx + (I * SPN_KERNEL_RENDER_SUBTILE_COUNT) * surface_pitch] = \
+    SPN_KERNEL_RENDER_COLOR_ACC_PACK(SPN_PIXEL_COLOR_ACC(I));
+
+  SPN_KERNEL_RENDER_SUBTILE_HEIGHT_EXPAND()
+}
+
+#endif
+
+//
+// The default is to load up to subgroup size of TTCK keys in
+// registers and index them with a subgroup shuffle.
+//
+// The "TTCKS_USE_SHARED" switch enables loading a number of TTCK keys
+// and storing them to shared memory.
+//
+// The "TTCKS_NO_SHARED" switch results in one TTCK key being loaded
+// at a time.
+//
+
+#if defined( SPN_KERNEL_RENDER_TTCKS_USE_SHARED )
+
+shared uvec2 ttck_smem[SPN_KERNEL_RENDER_SUBGROUP_SIZE]; // this could be smaller
+
+#endif
+
+//
+// The "STYLING_CMDS_USE_SHUFFLE" is to load up to a subgroup size of
+// commands in registers and index them with a subgroup shuffle.
+//
+// The "STYLING_CMDS_USE_SHARED" switch enables loading a number of
+// styling commands and storing them to shared memory.
+//
+// The "STYLING_CMDS_NO_SHARED" switch is an even lower performance
+// implementation that reads commands one at a time from global
+// memory.
+//
+
+#if defined( SPN_KERNEL_RENDER_STYLING_CMDS_USE_SHARED )
+
+shared uint spn_cmds[SPN_STYLING_CMDS_COUNT_MAX];
+
+#endif
+
+//
+//
+//
+
+void main()
+{
+#if (SPN_KERNEL_RENDER_SUBGROUP_COUNT == 1)
+  //
+  // Each subgroup is responsible for a tile.  No extra subgroups are
+  // launched.
+  //
+  SPN_SUBGROUP_UNIFORM const uint ttck_offset_idx = gl_WorkGroupID.x;
+#else
+  //
+  // Multiple subgroups per workgroup are launched.  Subgroups with no
+  // work exit early.
+  //
+  SPN_SUBGROUP_UNIFORM const uint ttck_offset_idx = gl_WorkGroupID.x * gl_NumSubgroups + gl_SubgroupID;
+
+  if (ttck_offset_idx >= ttck_offset_count)
+    return;
+#endif
+
+  //
+  // load the starting ttck for this offset and get a bound on the max
+  // number of keys that might be loaded
+  //
+  // then load one or more TTCK keys
+  //
+#if defined( SPN_KERNEL_RENDER_TTCKS_USE_SHUFFLE )
+  //
+  // SHUFFLE
+  //
+  SPN_SUBGROUP_UNIFORM const uint ttck_base = segs.offsets[ttck_offset_idx];
+
+  uvec2 ttck_sg; // row of TTCK keys in registers
+  uint  ttck_idx_next = (ttck_base & ~SPN_KERNEL_RENDER_SUBGROUP_MASK) + gl_SubgroupInvocationID;
+
+  {
+    SPN_SUBGROUP_UNIFORM const uint ttck_lane = (ttck_base & SPN_KERNEL_RENDER_SUBGROUP_MASK);
+
+    const bool is_valid = (gl_SubgroupInvocationID >= ttck_lane) && (ttck_idx_next <= ttck_key_count_minus_1);
+
+    if (is_valid)
+      ttck_sg = ttcks.keys[ttck_idx_next];
+
+    ttck_idx_next += SPN_KERNEL_RENDER_SUBGROUP_SIZE;
+
+    lgf_yxl[0] = subgroupShuffle(ttck_sg[0],ttck_lane) & SPN_TTCK_LO_MASK_LAYER;
+    lgf_yxl[1] = subgroupShuffle(ttck_sg[1],ttck_lane);
+
+    if (!is_valid)
+      ttck_sg[1] = ~lgf_yxl[1]; // ~yx
+  }
+
+#elif defined( SPN_KERNEL_RENDER_TTCKS_USE_SHARED )
+  //
+  // SHARED
+  //
+  SPN_SUBGROUP_UNIFORM uint ttck_idx_next = segs.offsets[ttck_offset_idx];
+
+  {
+    const uint ttck_idx_aligned = (ttck_idx_next & ~SPN_KERNEL_RENDER_SUBGROUP_MASK) + gl_SubgroupInvocationID;
+
+    SPN_SUBGROUP_UNIFORM const uint ttck_lane = (ttck_idx_next & SPN_KERNEL_RENDER_SUBGROUP_MASK);
+
+    const bool is_valid = (gl_SubgroupInvocationID >= ttck_lane) && (ttck_idx_aligned <= ttck_key_count_minus_1);
+
+    uvec2 ttck_new = { 0, 0 };
+
+    if (is_valid)
+      ttck_new = ttcks.keys[ttck_idx_aligned];
+
+    ttck_smem[gl_SubgroupInvocationID] = ttck_new;
+
+    subgroupMemoryBarrierShared();
+
+    SPN_SUBGROUP_UNIFORM const uvec2 ttck_first = ttck_smem[ttck_lane];
+
+    if (!is_valid)
+      ttck_smem[gl_SubgroupInvocationID][1] = ~ttck_first[1]; // ~yx
+
+    lgf_yxl[0] = ttck_first[0] & SPN_TTCK_LO_MASK_LAYER;
+    lgf_yxl[1] = ttck_first[1];
+  }
+
+#elif defined( SPN_KERNEL_RENDER_TTCKS_NO_SHARED )
+  //
+  // NO SHARED
+  //
+  SPN_SUBGROUP_UNIFORM uint  ttck_idx_next = segs.offsets[ttck_offset_idx];
+  SPN_SUBGROUP_UNIFORM uvec2 ttck_sgu; // subgroup uniform TTCK key
+  {
+    ttck_sgu   = ttcks.keys[ttck_idx_next++];
+    lgf_yxl[0] = ttck_sgu[0] & SPN_TTCK_LO_MASK_LAYER;
+    lgf_yxl[1] = ttck_sgu[1];
+  }
+
+#endif
+
+  //
+  // evaluate the coarse clip as late as possible
+  //
+  SPN_SUBGROUP_UNIFORM const uint ttck_x = SPN_TTCK_GET_X(lgf_yxl);
+
+  if (ttck_x <  tile_clip[0])
+    return;
+
+  if (ttck_x >= tile_clip[2])
+    return;
+
+  SPN_SUBGROUP_UNIFORM const uint ttck_y = SPN_TTCK_GET_Y(lgf_yxl);
+
+  if (ttck_y < tile_clip[1])
+    return;
+
+  if (ttck_y >= tile_clip[3])
+    return;
+
+  //
+  // initialize rendering and styling state
+  //
+  // save the first key so we know what tile we're in
+  //
+  spn_lgf_init();
+
+  //
+  // load -> scatter -> flush
+  //
+  do {
+    // clear the accumulator for this layer
+    spn_tile_smem_zero();
+
+    // load the layer we're working on
+    SPN_SUBGROUP_UNIFORM const uint layer_id = spn_ttck_get_layer_uni(lgf_yxl);
+
+    spn_lgf_layer_load(layer_id);
+
+    // do we need to skip all keys on this layer because the tile
+    // was marked as opaque or for some other reason?
+    SPN_SUBGROUP_UNIFORM const bool is_scatter = spn_lgf_flag_is_scatter_noskip();
+
+    //
+    // load and scatter all TTXBs on this layer
+    //
+#ifdef SPN_KERNEL_RENDER_TTCKS_USE_SHUFFLE
+    //
+    // SHUFFLE IS SUPPORTED
+    //
+#if (SPN_KERNEL_RENDER_SUBTILE_COUNT > 1)
+    // hopefully these lane constants get hoisted as necessary
+    const uint subtile_idx = gl_SubgroupInvocationID / SPN_TILE_WIDTH;
+    const uint subtile_iid = gl_SubgroupInvocationID & SPN_TILE_WIDTH_MASK;
+#endif
+
+    while (true)
+      {
+        // how many matches?
+        const                uvec4 match = subgroupBallot(spn_ttck_yxl_equal(ttck_sg,lgf_yxl));
+        SPN_SUBGROUP_UNIFORM uint  next  = subgroupBallotFindLSB(match);
+        SPN_SUBGROUP_UNIFORM uint  last  = subgroupBallotBitCount(match) + next;
+
+        if (is_scatter)
+          {
+            for ( ; next<last; next+=SPN_KERNEL_RENDER_SUBTILE_COUNT)
+              {
+#if (SPN_KERNEL_RENDER_SUBTILE_COUNT == 1)
+                //
+                // SUBTILES == 1
+                //
+                SPN_SUBGROUP_UNIFORM const uint ttck_lo   = subgroupShuffle(ttck_sg[0],next);
+                SPN_SUBGROUP_UNIFORM const bool is_ttpb   = SPN_TTCK_LO_IS_PREFIX(ttck_lo);
+                SPN_SUBGROUP_UNIFORM const uint ttxb_base = SPN_TTCK_LO_GET_TTXB_ID(ttck_lo) * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+                const SPN_KERNEL_RENDER_TTX     ttx       = int(bp_blocks[ttxb_base + gl_SubgroupInvocationID]);
+
+                if (is_ttpb)
+                  spn_tile_scatter_ttpb(ttx,gl_SubgroupInvocationID);
+                else
+                  spn_tile_scatter_ttsb(ttx);
+#else
+                //
+                // SUBTILES >= 2
+                //
+                const uint next_subtile = next + subtile_idx;
+                const uint ttck_lo      = subgroupShuffle(ttck_sg[0],next_subtile); // possibly undefined
+
+                if (next_subtile < last)
+                  {
+                    const bool                  is_ttpb   = SPN_TTCK_LO_IS_PREFIX(ttck_lo);
+                    const uint                  ttxb_base = SPN_TTCK_LO_GET_TTXB_ID(ttck_lo) * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+                    const SPN_KERNEL_RENDER_TTX ttx       = int(bp_blocks[ttxb_base + subtile_iid]);
+
+                    // POTENTIAL OPTIMIZATION: It's not a requirement,
+                    // but sorting against all 64-bit keys of the TTCK
+                    // keys results in all PREFIX keys being placed at
+                    // the end of a YXL/XYL sequence.
+
+                    if (is_ttpb)
+                      spn_tile_scatter_ttpb(ttx,subtile_iid);
+                    else
+                      spn_tile_scatter_ttsb(ttx);
+                  }
+#endif
+              }
+          }
+
+        // are we out of keys?
+        if (last == SPN_KERNEL_RENDER_SUBGROUP_SIZE)
+          {
+            last       = 0;
+            ttck_sg[1] = ~lgf_yxl[1]; // mark all keys invalid
+
+            if (ttck_idx_next <= ttck_key_count_minus_1)
+              ttck_sg = ttcks.keys[ttck_idx_next];
+
+            ttck_idx_next += SPN_KERNEL_RENDER_SUBGROUP_SIZE;
+          }
+
+        SPN_SUBGROUP_UNIFORM const uvec2 ttck_first = { subgroupShuffle(ttck_sg[0],last),
+                                                        subgroupShuffle(ttck_sg[1],last) };
+
+        // is this a new YXL?
+        if (spn_ttck_yxl_neq_uni(ttck_first,lgf_yxl))
+          {
+            if (spn_ttck_hi_yx_equal_uni(ttck_first[1],lgf_yxl[1]))
+              {
+                // this is a new layer and the ttck is the new yxl
+                lgf_yxl[0] = ttck_first[0] & SPN_TTCK_LO_MASK_LAYER;
+                lgf_yxl[1] = ttck_first[1];
+              }
+            else
+              {
+                // no more tiles left to process!
+                spn_lgf_flag_set_flush_finalize();
+              }
+            break;
+          }
+      }
+
+#elif defined( SPN_KERNEL_RENDER_TTCKS_USE_SHARED )
+    //
+    // SHARED
+    //
+    while (true)
+      {
+        SPN_SUBGROUP_UNIFORM const uint  ttck_lane = (ttck_idx_next & SPN_KERNEL_RENDER_SUBGROUP_MASK);
+        SPN_SUBGROUP_UNIFORM const uvec2 ttck      = ttck_smem[ttck_lane];
+
+        // is this a new YXL?
+        if (spn_ttck_yxl_neq_uni(ttck,lgf_yxl))
+          {
+            if (spn_ttck_hi_yx_equal_uni(ttck[1],lgf_yxl[1]))
+              {
+                // this is a new layer and the ttck is the new yxl
+                lgf_yxl[0] = ttck[0] & SPN_TTCK_LO_MASK_LAYER;
+                lgf_yxl[1] = ttck[1];
+              }
+            else
+              {
+                // no more tiles left to process!
+                spn_lgf_flag_set_flush_finalize();
+              }
+            break;
+          }
+
+        // scatter the key?
+        if (is_scatter)
+          {
+            SPN_SUBGROUP_UNIFORM const bool is_ttpb   = SPN_TTCK_LO_IS_PREFIX(ttck[0]);
+            SPN_SUBGROUP_UNIFORM const uint ttxb_base = SPN_TTCK_LO_GET_TTXB_ID(ttck[0]) * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+            const SPN_KERNEL_RENDER_TTX     ttx       = int(bp_blocks[ttxb_base + gl_SubgroupInvocationID]);
+
+            if (is_ttpb)
+              spn_tile_scatter_ttpb(ttx,gl_SubgroupInvocationID);
+            else
+              spn_tile_scatter_ttsb(ttx);
+          }
+
+        // are we now out of keys?
+        if ((++ttck_idx_next & SPN_KERNEL_RENDER_SUBGROUP_MASK) == 0)
+          {
+            const uint ttck_idx_aligned = ttck_idx_next + gl_SubgroupInvocationID;
+            const bool is_valid         = (ttck_idx_aligned <= ttck_key_count_minus_1);
+
+            uvec2 ttck_new = { 0, ~lgf_yxl[1] };
+
+            if (is_valid)
+              ttck_new = ttcks.keys[ttck_idx_aligned];
+
+            ttck_smem[gl_SubgroupInvocationID] = ttck_new;
+
+            subgroupMemoryBarrierShared();
+          }
+      }
+
+#elif defined( SPN_KERNEL_RENDER_TTCKS_NO_SHARED )
+  //
+  // NO SHARED
+  //
+
+#endif
+
+    //
+    // given: new layer id from ttxk key
+    //
+    // load [layer id]{ group id, depth }
+    //
+    // if within current group's layer range
+    //
+    //   if at same depth
+    //
+    //     load and execute cover>[mask>]color>blend commands
+    //
+    //   else if not at same depth then move deeper
+    //
+    //     for all groups in group trail from cur depth to new depth
+    //       enter group, saving and initializing regs as necessary
+    //     increment depth and update layer range
+    //     load and execute cover>[mask>]color>blend commands
+    //
+    // else not within layer range
+    //
+    //   exit current group, restoring regs as necessary
+    //   decrement depth and update layer range
+
+    // clear flag that controls group/layer traversal
+    spn_lgf_flag_clear_flush_complete();
+
+    do {
+      SPN_SUBGROUP_UNIFORM const bool unwind = spn_lgf_flag_is_flush_unwind();
+
+      //
+      // is layer a child of the current parent group?
+      //
+      SPN_SUBGROUP_UNIFORM uint cmd_next;
+
+      if (!unwind && spn_lgf_layer_parent_equals_group())
+        {
+          // execute this layer's cmds
+          cmd_next = spn_lgf_get_layer_cmds();
+
+          // if there are no more TTCK keys then configure the loop
+          // so groups get unwound until done
+          if (spn_lgf_flag_is_not_flush_finalize())
+            spn_lgf_flag_set_flush_complete();
+          else
+            spn_lgf_flag_set_flush_unwind();
+        }
+      else if (!unwind && spn_lgf_layer_in_group_range(layer_id))
+        {
+          //
+          // is layer in a child group?
+          //
+          spn_lgf_load_child_group();
+
+          // enter new group
+          cmd_next = spn_lgf_get_group_cmds_enter();
+        }
+      else // otherwise, exit this group
+        {
+          // leave current group
+          cmd_next = spn_lgf_get_group_cmds_leave();
+
+          // load parent group
+          spn_lgf_load_parent_group();
+        }
+
+      //
+      // execute cmds
+      //
+      // currently limited to 8 commands -- a subgroup size of 4 will
+      // break this but is easily fixed or avoided by using shared
+      // memory or reading the commands one at a time.
+      //
+      // implicitly add 1 to the cmd_count
+      //
+      // FIXME -- all tiles will be picking their way through the
+      // smallish styling buffer so performing these subgroup uniform
+      // reads through the texture cache (or equivalent) would
+      // probably be a performance win.
+      //
+      SPN_SUBGROUP_UNIFORM uint cmd_count = SPN_STYLING_CMDS_GET_COUNT(cmd_next);
+      SPN_SUBGROUP_UNIFORM uint cmd_base  = SPN_STYLING_CMDS_GET_BASE(cmd_next);
+
+#if defined( SPN_KERNEL_RENDER_STYLING_CMDS_USE_SHUFFLE )
+      //
+      // DEFAULT
+      //
+#define SPN_STYLING_CMDS_LOAD(ii)  subgroupShuffle(cmds,ii)
+
+      uint cmds;
+
+      if (gl_SubgroupInvocationID <= cmd_count)
+        cmds = styling[cmd_base + gl_SubgroupInvocationID];
+
+#elif defined( SPN_KERNEL_RENDER_STYLING_CMDS_USE_SHARED )
+      //
+      // ONLY SUBGROUP BASIC SUPPORT
+      //
+      // load a number of commands into shared
+      //
+#if SPN_KERNEL_RENDER_SUBGROUP_SIZE >= SPN_STYLING_CMDS_COUNT_MAX
+      if (gl_SubgroupInvocationID <= cmd_count)
+        spn_cmds[gl_SubgroupInvocationID] = styling[cmd_base + gl_SubgroupInvocationID];
+#else
+      for (uint ii=gl_SubgroupInvocationID; ii<=cmd_count; ii+=SPN_KERNEL_RENDER_SUBGROUP_SIZE)
+        spn_cmds[ii] = styling[cmd_base + ii];
+#endif
+
+#define SPN_STYLING_CMDS_LOAD(ii)  spn_cmds[ii]
+
+#elif defined( SPN_KERNEL_RENDER_STYLING_CMDS_NO_SHARED )
+      //
+      // ONLY SUBGROUP BASIC SUPPORT
+      //
+      // load each command from styling buffer
+      //
+#define SPN_STYLING_CMDS_LOAD(ii)  styling[cmd_base+ii]
+
+#endif
+
+      for (uint ii=0; ii<=cmd_count; ii++)
+        {
+          SPN_SUBGROUP_UNIFORM uint cmd = SPN_STYLING_CMDS_LOAD(ii);
+
+          switch (cmd)
+            {
+            case SPN_STYLING_OPCODE_NOOP:
+              break;
+
+            case SPN_STYLING_OPCODE_COVER_NONZERO:
+              spn_tile_cover_nonzero();
+              break;
+
+            case SPN_STYLING_OPCODE_COVER_EVENODD:
+              spn_tile_cover_evenodd();
+              break;
+
+            case SPN_STYLING_OPCODE_COVER_ACCUMULATE:
+              spn_tile_cover_accumulate();
+              break;
+
+            case SPN_STYLING_OPCODE_COVER_MASK:
+              spn_tile_cover_wip_mask();
+              break;
+
+            case SPN_STYLING_OPCODE_COVER_WIP_ZERO:
+              spn_tile_cover_wip_zero();
+              break;
+
+            case SPN_STYLING_OPCODE_COVER_ACC_ZERO:
+              spn_tile_cover_acc_zero();
+              break;
+
+            case SPN_STYLING_OPCODE_COVER_MASK_ZERO:
+              spn_tile_cover_msk_zero();
+              break;
+
+            case SPN_STYLING_OPCODE_COVER_MASK_ONE:
+              spn_tile_cover_msk_one();
+              break;
+
+            case SPN_STYLING_OPCODE_COVER_MASK_INVERT:
+              spn_tile_cover_msk_invert();
+              break;
+
+            case SPN_STYLING_OPCODE_COLOR_FILL_SOLID:
+            {
+              SPN_SUBGROUP_UNIFORM const uint rg = SPN_STYLING_CMDS_LOAD(++ii);
+              SPN_SUBGROUP_UNIFORM const uint ba = SPN_STYLING_CMDS_LOAD(++ii);
+              spn_tile_color_fill_solid(rg,ba);
+            }
+            break;
+
+            case SPN_STYLING_OPCODE_COLOR_FILL_GRADIENT_LINEAR:
+              //
+              // FIXME -- gradients shouldn't be executing so much
+              // conditional driven code at runtime since we *know*
+              // the gradient style on the host can just create a
+              // new styling command to exploit this.
+              //
+              // FIXME -- it might be time to try using the GPU's
+              // sampler on a linear array of half4 vectors -- it
+              // might outperform the explicit load/lerp routines.
+              //
+              // FIXME -- optimizing for vertical gradients (uhhh,
+              // they're actually horizontal due to the -90 degree
+              // view transform) is nice but is it worthwhile to
+              // have this in the kernel?  Easy to add it back...
+              //
+              // spn_tile_color_fill_gradient_linear_nonvertical(smem,commands,&cmd_next,&color_wip,ttck0.hi);
+
+              // disable gradients for now
+              cmd_next += SPN_GRADIENT_CMD_DWORDS_V1(styling[cmd_next+6]);
+              break;
+
+            case SPN_STYLING_OPCODE_COLOR_WIP_ZERO:
+              spn_tile_color_wip_zero();
+              break;
+
+            case SPN_STYLING_OPCODE_COLOR_ACC_ZERO:
+              spn_tile_color_acc_zero();
+              break;
+
+            case SPN_STYLING_OPCODE_BLEND_OVER:
+              spn_tile_blend_over();
+              break;
+
+            case SPN_STYLING_OPCODE_BLEND_PLUS:
+              spn_tile_blend_plus();
+              break;
+
+            case SPN_STYLING_OPCODE_BLEND_MULTIPLY:
+              spn_tile_blend_multiply();
+              break;
+
+            case SPN_STYLING_OPCODE_BLEND_KNOCKOUT:
+              spn_tile_blend_knockout();
+              break;
+
+            case SPN_STYLING_OPCODE_COVER_WIP_MOVE_TO_MASK:
+              spn_tile_cover_msk_copy_wip();
+              break;
+
+            case SPN_STYLING_OPCODE_COVER_ACC_MOVE_TO_MASK:
+              spn_tile_cover_msk_copy_acc();
+              break;
+
+            case SPN_STYLING_OPCODE_COLOR_ACC_OVER_BACKGROUND:
+            {
+              SPN_SUBGROUP_UNIFORM const uint rg = SPN_STYLING_CMDS_LOAD(++ii);
+              SPN_SUBGROUP_UNIFORM const uint ba = SPN_STYLING_CMDS_LOAD(++ii);
+              spn_tile_color_acc_over_background(rg,ba);
+            }
+            break;
+
+            case SPN_STYLING_OPCODE_COLOR_ACC_STORE_TO_SURFACE:
+#ifdef SPN_TILE_DEBUG
+              spn_tile_debug();
+#endif
+              spn_tile_color_acc_store_to_surface();
+              break;
+
+            case SPN_STYLING_OPCODE_COLOR_ACC_TEST_OPACITY:
+              spn_tile_color_acc_test_opacity();
+              break;
+
+              //default:
+              //return; // this is an illegal opcode -- trap and die!
+            }
+        }
+
+      // continue as long as tile flush isn't complete
+    } while (spn_lgf_flag_is_not_flush_complete());
+
+    // continue
+  } while (spn_lgf_flag_is_not_flush_finalize());
+}
+
+//
+//
+//

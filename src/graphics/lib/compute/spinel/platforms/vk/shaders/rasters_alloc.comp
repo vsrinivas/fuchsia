@@ -1,0 +1,175 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// RASTERS ALLOC
+//
+
+#extension GL_GOOGLE_include_directive        : require
+#extension GL_KHR_shader_subgroup_arithmetic  : require
+#extension GL_KHR_shader_subgroup_ballot      : require
+
+//
+//
+//
+
+#include "config.h"
+#include "target_layouts.h"
+
+//
+//
+//
+
+layout(local_size_x = SPN_KERNEL_RASTERS_ALLOC_WORKGROUP_SIZE) in;
+
+//
+// main(buffer  uint  bp_atomics[], // atomically updated
+//      buffer  uint  bp_ids[],     // read-only
+//      buffer  uint  raster_ids[]  // read-only
+//      buffer  uvec4 metas[],      // read-write
+//      buffer  uint  reads[],      // write-only
+//      buffer  uint  map[],        // write-only
+//      uniform uint  bp_mask,      // push constant
+//      uniform uint  count)        // push constant
+//
+
+SPN_TARGET_GLSL_DECL_KERNEL_RASTERS_ALLOC();
+
+//
+// COHORT META DATA
+//
+// union spn_raster_cohort_meta_in
+// {
+//   spn_uint4  u32v4;
+//
+//   struct {
+//     spn_uint blocks; // # of rk blocks
+//     spn_uint offset; // start of rk span
+//     spn_uint pk;     // # of pk keys
+//     spn_uint rk;     // # of rk keys
+//   };
+// };
+//
+// union spn_raster_cohort_meta_out
+// {
+//   spn_uint4  u32v4;
+//
+//   struct {
+//     spn_uint blocks; // # of blocks in raster -- initially just rk blocks
+//     spn_uint offset; // start of rk span
+//     spn_uint nodes;  // # of nodes in raster  -- necessary for walking
+//     spn_uint keys;   // # of rk & pk keys     -- initially just rk
+//   };
+// };
+//
+// union spn_raster_cohort_meta_inout
+// {
+//   union spn_raster_cohort_meta_in  in;
+//   union spn_raster_cohort_meta_out out;
+// };
+//
+
+//
+// There is a fixed-size meta table per raster cohort that we use to
+// peform a mostly coalesced sizing and allocation of blocks.
+//
+// This code is simple and fast.
+//
+
+void main()
+{
+  // access to the meta extent is linear
+  const bool is_active = gl_GlobalInvocationID.x < cmd_count;
+
+  //
+  // init with defaults for all lanes
+  //
+  uint raster_h     = 0;
+  uint extra_blocks = 0;
+
+  uint blocks,offset,pk,rk,keys,nodes;
+
+  if (is_active)
+    {
+      // load meta_in
+      blocks                 = ttrks_meta.blocks  [gl_GlobalInvocationID.x];
+      offset                 = ttrks_meta.offset  [gl_GlobalInvocationID.x];
+      pk                     = ttrks_meta.pk_keys [gl_GlobalInvocationID.x];
+      rk                     = ttrks_meta.rk      [gl_GlobalInvocationID.x];
+
+      // load raster_id as early as possible
+      raster_h               = ttrks_meta.raster_h[gl_GlobalInvocationID.x];
+
+      // how many blocks will the ttpb vectors consume?
+      extra_blocks          += (pk * SPN_TILE_ASPECT +
+                                SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK -
+                                SPN_TILE_ASPECT) / SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK;
+      // total keys
+      keys                   = rk + pk;
+
+      // how many blocks do we need to store all the keys in the head
+      // and trailing nodes?
+      const uint hn          = ((SPN_PATH_HEAD_QWORDS + keys +
+                                 SPN_RASTER_NODE_QWORDS - 2) /
+                                (SPN_RASTER_NODE_QWORDS - 1));
+      // increment blocks
+      extra_blocks          += hn;
+
+      // how many nodes trail the head?
+      nodes                  = hn - 1;
+
+      // update blocks
+      blocks                += extra_blocks;
+    }
+
+  //
+  // allocate blocks from block pool
+  //
+  // first perform a prefix sum on the subgroup to reduce atomic
+  // operation traffic
+  //
+  // note this idiom can be implemented with vectors, subgroups or
+  // workgroups
+  //
+  const uint prefix = subgroupInclusiveAdd(extra_blocks);
+  uint       reads = 0;
+
+  // last lane performs the block pool allocation with an atomic increment
+  if (gl_SubgroupInvocationID == SPN_KERNEL_RASTERS_ALLOC_SUBGROUP_SIZE-1) {
+    reads = atomicAdd(bp_atomics[0],prefix); // ring_reads
+  }
+
+  // broadcast block pool base to all lanes
+  reads = subgroupBroadcast(reads,SPN_KERNEL_RASTERS_ALLOC_SUBGROUP_SIZE-1);
+
+  // update base for each lane
+  reads += prefix - extra_blocks;
+
+  //
+  // store meta header
+  //
+  if (is_active)
+    {
+      // store raster node header back to meta extent
+      // ttsk.metas_out.raster_h unchanged
+      ttrks_meta.blocks [gl_GlobalInvocationID.x] = blocks;
+      ttrks_meta.offset [gl_GlobalInvocationID.x] = offset;
+      ttrks_meta.nodes  [gl_GlobalInvocationID.x] = nodes;
+      ttrks_meta.pk_keys[gl_GlobalInvocationID.x] = keys;
+      // ttrks_meta.rk unchanged
+      ttrks_meta.reads  [gl_GlobalInvocationID.x] = reads;
+
+      // get block_id of each raster head
+      const uint block_id = bp_ids[reads & bp_mask];
+
+      // update map
+      bp_host_map[raster_h] = block_id;
+    }
+}
+
+//
+//
+//

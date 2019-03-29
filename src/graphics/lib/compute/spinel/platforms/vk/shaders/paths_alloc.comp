@@ -1,0 +1,56 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+//
+//
+
+#extension GL_GOOGLE_include_directive        : require
+
+//
+//
+//
+
+#include "config.h"
+#include "target_layouts.h"
+
+//
+// The work can be performed by a single lane but we need to make sure
+// all devices can handle a workgroup this small.
+//
+// Alternatively, can choose a device-specific workgroup size
+//
+//   layout(local_size_x_id = SPN_KERNEL_PATHS_ALLOC_WORKGROUP_SIZE) in;
+//
+
+layout(local_size_x = SPN_KERNEL_PATHS_ALLOC_WORKGROUP_SIZE) in;
+
+//
+// main(buffer  uint atomics[2],
+//      buffer  uint base[],
+//      uniform uint base_idx,
+//      uniform uint count)
+//
+
+SPN_TARGET_GLSL_DECL_KERNEL_PATHS_ALLOC();
+
+//
+//
+//
+
+void main()
+{
+  //
+  // allocate 'count' blocks in the block pool and store it in the
+  // ring buffer 'slot' for the copy kernel to read
+  //
+  if (gl_LocalInvocationID.x == 0)
+    pc_alloc[pc_alloc_idx] = atomicAdd(bp_atomics[0],pc_span);
+}
+
+//
+//
+//

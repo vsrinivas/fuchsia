@@ -1,0 +1,123 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+//
+//
+
+#extension GL_GOOGLE_include_directive        : require
+#extension GL_KHR_shader_subgroup_basic       : require
+#extension GL_KHR_shader_subgroup_arithmetic  : require
+
+//
+//
+//
+
+#include "config.h"
+#include "target_layouts.h"
+
+//
+//
+//
+
+#if (((SPN_BLOCK_ID_TAG_PATH_COUNT + SPN_BLOCK_ID_TAG_PATH_COUNT - 1) / SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE) == 2)
+#extension GL_KHR_shader_subgroup_ballot      : require
+#endif
+
+//
+// FILLS DISPATCH
+//
+// This fixes up the (5) path primitive counts so they can be used by
+// vkCmdDispatchIndirect().
+//
+// It also computes the exclusive prefix sum of the counts so each
+// rasterization workgroup type (lines, quads, etc.) knows where to
+// begin the cmd_rast[] buffer.
+//
+// The sum is stored in the 4 element of each quad.
+//
+
+layout(local_size_x = SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE) in;
+
+//
+// main(buffer uint prim_counts[sizeof(uvec4) * 5]);
+//
+
+SPN_TARGET_GLSL_DECL_KERNEL_FILLS_DISPATCH();
+
+//
+// FIXME -- aliasing hack!
+//
+
+layout(set = 1, binding = SPN_TARGET_BINDING_FILL_SCAN, std430) buffer _fill_scan_counts_uvec4 {
+  uvec4 fill_scan_counts_uvec4[5];
+};
+
+//
+//
+//
+
+void main()
+{
+#if (((SPN_BLOCK_ID_TAG_PATH_COUNT + SPN_BLOCK_ID_TAG_PATH_COUNT - 1) / SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE) == 2)
+  //
+  // SIMD4 -- ARM Bifrost and maybe some other small GPUs
+  //
+  uvec4 dispatch0 = uvec4(0,1,1,0);
+  uvec4 dispatch1 = uvec4(0,1,1,0);
+
+  //
+  // load
+  //
+  dispatch0[0] = fill_scan_counts[gl_SubgroupInvocationID];
+
+  if (SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT)
+    dispatch1[0] = fill_scan_counts[SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID];
+
+  //
+  // exclusive scan-add of fill_scan_counts
+  //
+  dispatch0[3] = subgroupExclusiveAdd(dispatch0[0]);
+
+  const uint dispatch0_total = subgroupBroadcast(dispatch0[3]+dispatch0[0],SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE-1);
+
+  dispatch1[3] = subgroupExclusiveAdd(dispatch1[0]) + dispatch0_total;
+
+  //
+  // store
+  //
+  fill_scan_counts_uvec4[gl_SubgroupInvocationID] = dispatch0;
+
+  if (SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT)
+    fill_scan_counts_uvec4[SPN_KERNEL_FILLS_DISPATCH_SUBGROUP_SIZE + gl_SubgroupInvocationID] = dispatch1;
+
+#else
+
+  //
+  // SIMD8+ -- every other GPU I'm aware of...
+  //
+  uvec4 dispatch = uvec4(0,1,1,0);
+
+  // valid lane?
+  const bool is_valid = gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_COUNT;
+
+  // load
+  if (is_valid)
+    dispatch[0] = fill_scan_counts[gl_SubgroupInvocationID];
+
+  // exclusive scan-add
+  dispatch[3] = subgroupExclusiveAdd(dispatch[0]);
+
+  // store
+  if (is_valid)
+    fill_scan_counts_uvec4[gl_SubgroupInvocationID] = dispatch;
+
+#endif
+}
+
+//
+//
+//

@@ -1,0 +1,77 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+//
+//
+//
+
+#version 460
+
+//
+//
+//
+
+#extension GL_GOOGLE_include_directive        : require
+#extension GL_EXT_control_flow_attributes     : require
+
+//
+//
+//
+
+#include "config.h"
+#include "target_layouts.h"
+
+//
+// BLOCK POOL INIT
+//
+
+layout(local_size_x = SPN_KERNEL_BLOCK_POOL_INIT_WORKGROUP_SIZE) in;
+
+//
+// main(buffer struct { uint atomics[2]; uint[] ids; } bp, uniform uint bp_size)
+//
+// push constants:
+//   0: uint bp_size -- size of the bp_ids pool
+//
+
+SPN_TARGET_GLSL_DECL_KERNEL_BLOCK_POOL_INIT();
+
+//
+//
+//
+
+#define SPN_KERNEL_BLOCK_POOL_INIT_BP_IDS_PER_WORKGROUP                                                 \
+  (SPN_KERNEL_BLOCK_POOL_INIT_WORKGROUP_SIZE * SPN_KERNEL_BLOCK_POOL_INIT_BP_IDS_PER_INVOCATION)
+
+//
+//
+//
+
+void main()
+{
+  uint bp_id = gl_WorkGroupID.x * SPN_KERNEL_BLOCK_POOL_INIT_BP_IDS_PER_WORKGROUP + gl_LocalInvocationID.x;
+
+  //
+  // initialize atomics to [ 0, bp_size ]
+  //
+  if (bp_id < 2) {
+    bp_atomics[bp_id] = bp_id * bp_size;
+  }
+
+  //
+  // initialize the pool
+  //
+  [[unroll]]
+  for (uint ii=0; ii<SPN_KERNEL_BLOCK_POOL_INIT_BP_IDS_PER_INVOCATION; ii++)
+    {
+      if (bp_id < bp_size)
+        bp_ids[bp_id] = bp_id * SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK;
+
+      bp_id += SPN_KERNEL_BLOCK_POOL_INIT_WORKGROUP_SIZE;
+    }
+}
+
+//
+//
+//

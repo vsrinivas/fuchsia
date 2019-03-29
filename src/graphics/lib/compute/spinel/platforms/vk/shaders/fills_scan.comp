@@ -1,0 +1,268 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// KERNEL: FILLS SCAN
+//
+
+#extension GL_GOOGLE_include_directive        : require
+#extension GL_KHR_shader_subgroup_basic       : require
+#extension GL_KHR_shader_subgroup_ballot      : require
+#extension GL_KHR_shader_subgroup_arithmetic  : require
+
+//
+//
+//
+
+#include "config.h"
+#include "target_layouts.h"
+
+//
+//
+//
+
+layout(local_size_x = SPN_KERNEL_FILLS_SCAN_WORKGROUP_SIZE) in;
+
+//
+// BUFFERS
+//
+// main(buffer uint  bp_blocks[],    // read path head
+//      buffer uint  map[],          // map path host id to device id
+//      buffer uvec4 fill_cmds[],      // read in fill command
+//      buffer uint  prim_counts[N], // atomically incremented primitive count
+//      buffer uint  prim_prefix[])  // the raster command "base" for each primitive type
+//
+
+SPN_TARGET_GLSL_DECL_KERNEL_FILLS_SCAN();
+
+//
+// COMPILE-TIME CONSTANTS
+//
+
+#define SPN_FILLS_SCAN_SLAB_ROWS  (SPN_KERNEL_FILLS_SCAN_EXPAND_I_LAST + 1)
+
+//
+// This kernel is basically equivalent to executing a prefix-sum on
+// each path primitive count.
+//
+// A slab of commands will be loaded and scanned in registers with an
+// offset determined by a global atomic add.  The prefix sums are then
+// stored to global memory.
+//
+
+void main()
+{
+  //
+  // Every subgroup loads a slab of path header primitive counts.
+  //
+  // The expansion factor can be tuned (bigger is usually better).
+  //
+  const uint cmd_base =
+    (gl_GlobalInvocationID.x & ~(SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE - 1)) *
+    SPN_FILLS_SCAN_SLAB_ROWS + gl_SubgroupInvocationID;
+
+  //
+  // first convert host path ids to device path ids
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                                   \
+  uint path_id##I = SPN_TAGGED_BLOCK_ID_INVALID;                                \
+  {                                                                             \
+    const uint cmd_idx =                                                        \
+      cmd_base + I * SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE;                       \
+                                                                                \
+    if (cmd_idx < cmd_count) {                                                  \
+      path_id##I = bp_host_map[SPN_CMD_FILL_GET_PATH_H(fill_cmds[cmd_idx])];      \
+    }                                                                           \
+  }
+
+  SPN_KERNEL_FILLS_SCAN_EXPAND();
+
+  //
+  // update path fill command's path_h with the device path id so we
+  // don't have to pay for the potentially sparse map[] lookup twice
+  // -- here and in the FILLS_EXPAND kernel
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                   \
+  {                                                             \
+    const uint cmd_idx =                                        \
+      cmd_base + I * SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE;       \
+                                                                \
+    if (path_id##I != SPN_TAGGED_BLOCK_ID_INVALID) {            \
+      SPN_CMD_FILL_GET_PATH_H(fill_cmds[cmd_idx]) = path_id##I; \
+    }                                                           \
+  }
+
+  SPN_KERNEL_FILLS_SCAN_EXPAND();
+
+  //
+  // load the path header's path primitive count with a uvec4
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                           \
+  uvec4 pp##I = { 0, 0, 0, 0 };                                         \
+  {                                                                     \
+    const uint prims_idx =                                              \
+      (path_id##I * SPN_BLOCK_POOL_SUBBLOCK_DWORDS                      \
+       + SPN_PATH_HEAD_OFFSET_PRIMS) / 4;                               \
+                                                                        \
+    if (path_id##I != SPN_TAGGED_BLOCK_ID_INVALID) {                    \
+      pp##I = bp_blocks_uvec4[prims_idx];                               \
+    }                                                                   \
+  }
+
+  SPN_KERNEL_FILLS_SCAN_EXPAND();
+
+  //
+  // Incrementally add all the counts -- assumes the slab's packed
+  // summations total less than 64m (or 32m for rationals) for each
+  // path primitive.
+  //
+  // This is a reasonable assumption because the block id address
+  // space is only 27 bits... but we need to consider enforcing this
+  // limit (cheaply!) earlier in the pipeline.
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L)                                   \
+  if (I > 0) {                                                  \
+    uint carry;                                                 \
+    pp##I[0] = uaddCarry(pp##I[0],pp##P[0],carry);              \
+    pp##I[1] = uaddCarry(pp##I[1],pp##P[1],carry) + carry;      \
+    pp##I[2] = uaddCarry(pp##I[2],pp##P[2],carry) + carry;      \
+    pp##I[3] = uaddCarry(pp##I[3],pp##P[3],carry) + carry;      \
+  }
+
+  SPN_KERNEL_FILLS_SCAN_EXPAND();
+
+  //
+  // Note that most GPU's can perform a subgroup width of atomic ops
+  // simultaneously so it's beneficial to have several adjacent lanes
+  // performing the same atomic operation.
+  //
+  // This observation influences the structure of the remaining code.
+  //
+  // Spread the various prim totals across the first 5 lanes
+  //
+  uint total = 0;
+
+#define SPN_FILLS_SCAN_PP_LAST SPN_GLSL_CONCAT(pp,SPN_KERNEL_FILLS_SCAN_EXPAND_I_LAST)
+
+  //
+  // LINES
+  //
+  const uint last_lines          = SPN_PATH_PRIMS_GET_LINES(SPN_FILLS_SCAN_PP_LAST);
+  const uint last_lines_inc      = subgroupInclusiveAdd(last_lines);
+  const uint total_lines         = subgroupBroadcast(last_lines_inc,SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE-1);
+  const uint last_lines_exc      = last_lines_inc - last_lines;
+
+  if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_LINE)
+    total = total_lines;
+
+  //
+  // QUADS
+  //
+  const uint last_quads          = SPN_PATH_PRIMS_GET_QUADS(SPN_FILLS_SCAN_PP_LAST);
+  const uint last_quads_inc      = subgroupInclusiveAdd(last_quads);
+  const uint total_quads         = subgroupBroadcast(last_quads_inc,SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE-1);
+  const uint last_quads_exc      = last_quads_inc - last_quads;
+
+  if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_QUAD)
+    total = total_quads;
+
+  //
+  // CUBICS
+  //
+  const uint last_cubics         = SPN_PATH_PRIMS_GET_CUBICS(SPN_FILLS_SCAN_PP_LAST);
+  const uint last_cubics_inc     = subgroupInclusiveAdd(last_cubics);
+  const uint total_cubics        = subgroupBroadcast(last_cubics_inc,SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE-1);
+  const uint last_cubics_exc     = last_cubics_inc - last_cubics;
+
+  if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_CUBIC)
+    total = total_cubics;
+
+  //
+  // RAT_QUADS
+  //
+  const uint last_rat_quads      = SPN_PATH_PRIMS_GET_RAT_QUADS(SPN_FILLS_SCAN_PP_LAST);
+  const uint last_rat_quads_inc  = subgroupInclusiveAdd(last_rat_quads);
+  const uint total_rat_quads     = subgroupBroadcast(last_rat_quads_inc,SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE-1);
+  const uint last_rat_quads_exc  = last_rat_quads_inc - last_rat_quads;
+
+  if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_RAT_QUAD)
+    total = total_rat_quads;
+
+  //
+  // RAT_CUBICS
+  //
+  const uint last_rat_cubics      = SPN_PATH_PRIMS_GET_RAT_CUBICS(SPN_FILLS_SCAN_PP_LAST);
+  const uint last_rat_cubics_inc  = subgroupInclusiveAdd(last_rat_cubics);
+  const uint total_rat_cubics     = subgroupBroadcast(last_rat_cubics_inc,SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE-1);
+  const uint last_rat_cubics_exc  = last_rat_cubics_inc - last_rat_cubics;
+
+  if (gl_SubgroupInvocationID == SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC)
+    total = total_rat_cubics;
+
+  //
+  // add to the prims.count
+  //
+  uint base = 0;
+
+  if (gl_SubgroupInvocationID < SPN_BLOCK_ID_TAG_PATH_CUBIC)
+    base = atomicAdd(fill_scan_counts[gl_SubgroupInvocationID],total);
+
+  //
+  // distribute the bases
+  //
+  const uint base_lines      = subgroupBroadcast(base,SPN_BLOCK_ID_TAG_PATH_LINE)      + last_lines_exc;
+  const uint base_quads      = subgroupBroadcast(base,SPN_BLOCK_ID_TAG_PATH_QUAD)      + last_quads_exc;
+  const uint base_cubics     = subgroupBroadcast(base,SPN_BLOCK_ID_TAG_PATH_CUBIC)     + last_cubics_exc;
+  const uint base_rat_quads  = subgroupBroadcast(base,SPN_BLOCK_ID_TAG_PATH_RAT_QUAD)  + last_rat_quads_exc;
+  const uint base_rat_cubics = subgroupBroadcast(base,SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC) + last_rat_cubics_exc;
+
+  //
+  // this is the base for each column in the slab
+  //
+  const uvec4 pp_base = SPN_PATH_PRIMS_INIT(base_lines,
+                                            base_quads,
+                                            base_cubics,
+                                            base_rat_quads,
+                                            base_rat_cubics);
+  //
+  // write out all the offsets for each commands
+  //
+#undef  SPN_EXPAND_X
+#define SPN_EXPAND_X(I,N,P,L) {                                         \
+    const uint cmd_idx =                                                \
+      cmd_base + I * SPN_KERNEL_FILLS_SCAN_SUBGROUP_SIZE;               \
+    if (I == 0)                                                         \
+      {                                                                 \
+        fill_scan_prefix[cmd_idx] = pp_base;                            \
+      }                                                                 \
+    else                                                                \
+      {                                                                 \
+        uvec4 ppi##I;                                                   \
+        uint  carry;                                                    \
+                                                                        \
+        ppi##I[0] = uaddCarry(pp_base[0],pp##P[0],carry);               \
+        ppi##I[1] = uaddCarry(pp_base[1],pp##P[1],carry) + carry;       \
+        ppi##I[2] = uaddCarry(pp_base[2],pp##P[2],carry) + carry;       \
+        ppi##I[3] = uaddCarry(pp_base[3],pp##P[3],carry) + carry;       \
+                                                                        \
+        fill_scan_prefix[cmd_idx] = ppi##I;                             \
+      }                                                                 \
+  }
+
+  SPN_KERNEL_FILLS_SCAN_EXPAND();
+
+  //
+  //
+  //
+}
+
+//
+//
+//
