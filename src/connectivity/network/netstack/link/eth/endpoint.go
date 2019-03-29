@@ -10,8 +10,6 @@ import (
 
 	"syslog/logger"
 
-	"netstack/trace"
-
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/header"
@@ -48,15 +46,13 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 		return nil
 	}
 
-	trace.DebugTrace("eth write")
-
 	var buf Buffer
 	for {
 		if buf = e.client.AllocForSend(); buf != nil {
 			break
 		}
 		if err := e.client.WaitSend(); err != nil {
-			trace.DebugDrop("link: alloc error: %v", err)
+			logger.VLogTf(logger.DebugVerbosity, "eth", "wait error: %s", err)
 			return tcpip.ErrWouldBlock
 		}
 	}
@@ -78,15 +74,16 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 		used += copy(buf[used:], v)
 	}
 	if err := e.client.Send(buf[:used]); err != nil {
-		trace.DebugDrop("link: send error: %v", err)
+		logger.VLogTf(logger.DebugVerbosity, "eth", "send error: %s", err)
 		return tcpip.ErrWouldBlock
 	}
+
+	logger.VLogTf(logger.TraceVerbosity, "eth", "write=%d", used)
+
 	return nil
 }
 
 func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
-	trace.DebugTraceDeep(5, "eth attach")
-
 	go func() {
 		if err := func() error {
 			for {
@@ -105,7 +102,7 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 				}
 			}
 		}(); err != nil {
-			logger.Warnf("dispatch error: %v", err)
+			logger.WarnTf("eth", "dispatch error: %s", err)
 		}
 	}()
 

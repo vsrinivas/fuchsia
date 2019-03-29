@@ -48,10 +48,9 @@ import (
 	"syscall/zx/zxwait"
 	"unsafe"
 
-	"syslog/logger"
-
 	"netstack/link"
-	"netstack/trace"
+
+	"syslog/logger"
 
 	"fidl/fuchsia/hardware/ethernet"
 )
@@ -427,9 +426,9 @@ func (c *Client) WaitRecv() {
 			// TODO(): The wired Ethernet should receive this signal upon being
 			// hooked up with a (an active) Ethernet cable.
 			if status, err := c.GetStatus(); err != nil {
-				logger.Warnf("eth status error: %v", err)
+				logger.WarnTf("eth", "status error: %s", err)
 			} else {
-				trace.DebugTraceDeep(5, "status %d", status)
+				logger.VLogTf(logger.TraceVerbosity, "eth", "status: %d", status)
 
 				c.mu.Lock()
 				switch status {
