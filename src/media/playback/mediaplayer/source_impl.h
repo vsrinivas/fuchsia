@@ -5,12 +5,12 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_SOURCE_IMPL_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_SOURCE_IMPL_H_
 
-#include <fuchsia/mediaplayer/cpp/fidl.h>
+#include <fuchsia/media/playback/cpp/fidl.h>
 #include <vector>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
-#include "src/media/playback/mediaplayer/core/stream_source_segment.h"
+#include "src/media/playback/mediaplayer/core/elementary_source_segment.h"
 #include "src/media/playback/mediaplayer/demux/demux.h"
 #include "src/media/playback/mediaplayer/graph/graph.h"
 
@@ -35,7 +35,7 @@ class SourceImpl {
   virtual void SendStatusUpdates();
 
   // Returns the current status of the source.
-  fuchsia::mediaplayer::SourceStatus& status() { return status_; }
+  fuchsia::media::playback::SourceStatus& status() { return status_; }
 
   // Clears |source_segment_|, |streams_| and |status_|.
   void Clear();
@@ -67,26 +67,28 @@ class SourceImpl {
   // abstract GetStreams()?
   std::vector<Stream> streams_;
 
-  fuchsia::mediaplayer::SourceStatus status_;
+  fuchsia::media::playback::SourceStatus status_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
 // DemuxSourceImpl declaration.
 
 // |SourceImpl| that hosts a |DemuxSourceSegment|.
-class DemuxSourceImpl : public SourceImpl, public fuchsia::mediaplayer::Source {
+class DemuxSourceImpl : public SourceImpl,
+                        public fuchsia::media::playback::Source {
  public:
   // Creates a |DemuxSourceImpl|. |request| is optional.
   // |connection_failure_callback|, which is also optional, allows the source
   // to signal that its connection has failed.
   static std::unique_ptr<DemuxSourceImpl> Create(
       std::shared_ptr<Demux> demux, Graph* graph,
-      fidl::InterfaceRequest<fuchsia::mediaplayer::Source> request,
+      fidl::InterfaceRequest<fuchsia::media::playback::Source> request,
       fit::closure connection_failure_callback);
 
-  DemuxSourceImpl(std::shared_ptr<Demux> demux, Graph* graph,
-                  fidl::InterfaceRequest<fuchsia::mediaplayer::Source> request,
-                  fit::closure connection_failure_callback);
+  DemuxSourceImpl(
+      std::shared_ptr<Demux> demux, Graph* graph,
+      fidl::InterfaceRequest<fuchsia::media::playback::Source> request,
+      fit::closure connection_failure_callback);
 
   ~DemuxSourceImpl() override;
 
@@ -99,59 +101,62 @@ class DemuxSourceImpl : public SourceImpl, public fuchsia::mediaplayer::Source {
 
  private:
   std::shared_ptr<Demux> demux_;
-  fidl::Binding<fuchsia::mediaplayer::Source> binding_;
+  fidl::Binding<fuchsia::media::playback::Source> binding_;
 
   std::unique_ptr<DemuxSourceSegment> demux_source_segment_;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
-// StreamSourceImpl declaration.
+// ElementarySourceImpl declaration.
 
-// |SourceImpl| that hosts a |StreamSourceSegment|.
-class StreamSourceImpl : public SourceImpl,
-                         public fuchsia::mediaplayer::StreamSource {
+// |SourceImpl| that hosts a |ElementarySourceSegment|.
+class ElementarySourceImpl : public SourceImpl,
+                             public fuchsia::media::playback::ElementarySource {
  public:
-  // Creates a |StreamSourceImpl|. |request| is required.
+  // Creates a |ElementarySourceImpl|. |request| is required.
   // |connection_failure_callback|, which is also optional, allows the source
   // to signal that its connection has failed.
-  static std::unique_ptr<StreamSourceImpl> Create(
+  static std::unique_ptr<ElementarySourceImpl> Create(
       int64_t duration_ns, bool can_pause, bool can_seek,
       std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
-      fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource> request,
+      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
+          request,
       fit::closure connection_failure_callback);
 
-  StreamSourceImpl(
+  ElementarySourceImpl(
       int64_t duration_ns, bool can_pause, bool can_seek,
       std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
-      fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource> request,
+      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
+          request,
       fit::closure connection_failure_callback);
 
-  ~StreamSourceImpl() override;
+  ~ElementarySourceImpl() override;
 
   // SourceImpl overrides.
   std::unique_ptr<SourceSegment> TakeSourceSegment() override;
 
   void SendStatusUpdates() override;
 
-  // StreamSource implementation.
+  // ElementarySource implementation.
   void AddStream(fuchsia::media::StreamType type,
                  uint32_t tick_per_second_numerator,
                  uint32_t tick_per_second_denominator,
                  ::fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink>
                      simple_stream_sink_request) override;
 
-  void AddBinding(fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
-                      stream_source_request) override;
+  void AddBinding(
+      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
+          elementary_source_request) override;
 
  private:
   void AddBindingInternal(
-      fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
-          stream_source_request);
+      fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
+          elementary_source_request);
 
-  fidl::BindingSet<fuchsia::mediaplayer::StreamSource> bindings_;
+  fidl::BindingSet<fuchsia::media::playback::ElementarySource> bindings_;
 
-  std::unique_ptr<StreamSourceSegment> stream_source_segment_;
-  StreamSourceSegment* stream_source_segment_raw_ptr_;
+  std::unique_ptr<ElementarySourceSegment> elementary_source_segment_;
+  ElementarySourceSegment* elementary_source_segment_raw_ptr_;
 };
 
 }  // namespace media_player

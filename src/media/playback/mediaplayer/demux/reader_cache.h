@@ -68,7 +68,7 @@ class ReaderCache : public Reader,
   // holes in the desired cache range. 3) Invokes |load_callback| on completion
   // of the load.
   void StartLoadForPosition(size_t position,
-                            fit::function<void(Result)> load_callback);
+                            fit::function<void(zx_status_t)> load_callback);
 
   // Estimates load range based on observations of the input (upstream source)
   // and output (demux requests) byte rates. Returns std::nullopt if there is
@@ -78,7 +78,7 @@ class ReaderCache : public Reader,
   // Makes async calls to the upstream Reader to fill the given holes in our
   // underlying buffer. Calls callback on completion.
   void FillHoles(std::vector<SlidingBuffer::Block> holes,
-                 fit::function<void(Result)> callback);
+                 fit::function<void(zx_status_t)> callback);
 
   // Calculates the desired cache range according to our cache options around
   // the requested read position.
@@ -86,7 +86,7 @@ class ReaderCache : public Reader,
 
   // |buffer_| is the underlying storage for the cache.
   std::optional<SlidingBuffer> buffer_;
-  Result last_result_;
+  zx_status_t last_status_;
 
   Incident describe_is_complete_;
 

@@ -8,7 +8,7 @@
 #include <atomic>
 #include <memory>
 
-#include <fuchsia/mediaplayer/cpp/fidl.h>
+#include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
@@ -24,7 +24,7 @@ class FidlReader : public Reader,
  public:
   // Creates an FidlReader. Must be called on a fidl thread.
   static std::shared_ptr<Reader> Create(
-      fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader>
+      fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader>
           seeking_reader) {
     return std::shared_ptr<Reader>(new FidlReader(std::move(seeking_reader)));
   }
@@ -38,7 +38,7 @@ class FidlReader : public Reader,
               ReadAtCallback callback) override;
 
  private:
-  FidlReader(fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader>
+  FidlReader(fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader>
                  seeking_reader);
 
   // Continues a ReadAt operation on the thread on which this reader was
@@ -49,13 +49,13 @@ class FidlReader : public Reader,
   void ReadFromSocket();
 
   // Completes a ReadAt operation by calling the read_at_callback_.
-  void CompleteReadAt(Result result, size_t bytes_read = 0);
+  void CompleteReadAt(zx_status_t result, size_t bytes_read = 0);
 
   // Shuts down the consumer handle and calls CompleteReadAt.
   void FailReadAt(zx_status_t status);
 
-  fuchsia::mediaplayer::SeekingReaderPtr seeking_reader_;
-  Result result_ = Result::kOk;
+  fuchsia::media::playback::SeekingReaderPtr seeking_reader_;
+  zx_status_t status_ = ZX_OK;
   size_t size_ = kUnknownSize;
   bool can_seek_ = false;
   async_dispatcher_t* dispatcher_;

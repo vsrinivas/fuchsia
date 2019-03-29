@@ -6,8 +6,8 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_TYPE_CONVERSIONS_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <fuchsia/media/playback/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <fuchsia/mediaplayer/cpp/fidl.h>
 
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fidl/cpp/type_converter.h"
@@ -19,13 +19,6 @@
 #include "src/media/playback/mediaplayer/graph/types/video_stream_type.h"
 
 namespace fidl {
-
-template <>
-struct TypeConverter<media_player::Result,
-                     fuchsia::mediaplayer::SeekingReaderResult> {
-  static media_player::Result Convert(
-      fuchsia::mediaplayer::SeekingReaderResult media_result);
-};
 
 template <>
 struct TypeConverter<media_player::AudioStreamType::SampleFormat,

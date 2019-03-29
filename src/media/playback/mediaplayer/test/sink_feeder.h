@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_SINK_FEEDER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_SINK_FEEDER_H_
 
-#include <fuchsia/mediaplayer/cpp/fidl.h>
+#include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 
 namespace media_player {

@@ -28,9 +28,9 @@ void AVIOContextDeleter::operator()(AVIOContext* context) const {
 }
 
 // static
-Result AvIoContext::Create(std::shared_ptr<Reader> reader,
-                           AvIoContextPtr* context_ptr_out,
-                           async_dispatcher_t* dispatcher) {
+zx_status_t AvIoContext::Create(std::shared_ptr<Reader> reader,
+                                AvIoContextPtr* context_ptr_out,
+                                async_dispatcher_t* dispatcher) {
   FXL_CHECK(context_ptr_out);
 
   // Internal buffer size used by AVIO for reading.
@@ -42,11 +42,11 @@ Result AvIoContext::Create(std::shared_ptr<Reader> reader,
   // pointers.
   AvIoContextOpaque* avIoContextOpaque =
       new AvIoContextOpaque(reader, dispatcher);
-  Result result = avIoContextOpaque->describe_result_;
-  if (result != Result::kOk) {
+  zx_status_t status = avIoContextOpaque->describe_status_;
+  if (status != ZX_OK) {
     *context_ptr_out = nullptr;
     delete avIoContextOpaque;
-    return result;
+    return status;
   }
 
   AVIOContext* avIoContext = avio_alloc_context(
@@ -64,7 +64,7 @@ Result AvIoContext::Create(std::shared_ptr<Reader> reader,
 
   *context_ptr_out = AvIoContextPtr(avIoContext);
 
-  return result;
+  return status;
 }
 
 // static
@@ -87,8 +87,8 @@ AvIoContextOpaque::AvIoContextOpaque(std::shared_ptr<Reader> reader,
                                      async_dispatcher_t* dispatcher)
     : reader_(reader), dispatcher_(dispatcher) {
   async::PostTask(dispatcher_, [this]() {
-    reader_->Describe([this](Result result, size_t size, bool can_seek) {
-      describe_result_ = result;
+    reader_->Describe([this](zx_status_t status, size_t size, bool can_seek) {
+      describe_status_ = status;
       size_ = size == Reader::kUnknownSize ? -1 : static_cast<int64_t>(size);
       can_seek_ = can_seek;
       CallbackComplete();
@@ -108,14 +108,14 @@ int AvIoContextOpaque::Read(uint8_t* buffer, size_t bytes_to_read) {
   FXL_DCHECK(static_cast<uint64_t>(position_) <
              std::numeric_limits<size_t>::max());
 
-  Result read_at_result;
+  zx_status_t read_at_status;
   size_t read_at_bytes_read;
-  async::PostTask(dispatcher_, [this, &read_at_result, &read_at_bytes_read,
+  async::PostTask(dispatcher_, [this, &read_at_status, &read_at_bytes_read,
                                 buffer, bytes_to_read]() {
     reader_->ReadAt(static_cast<size_t>(position_), buffer, bytes_to_read,
-                    [this, &read_at_result, &read_at_bytes_read](
-                        Result result, size_t bytes_read) {
-                      read_at_result = result;
+                    [this, &read_at_status, &read_at_bytes_read](
+                        zx_status_t status, size_t bytes_read) {
+                      read_at_status = status;
                       read_at_bytes_read = bytes_read;
                       CallbackComplete();
                     });
@@ -123,7 +123,7 @@ int AvIoContextOpaque::Read(uint8_t* buffer, size_t bytes_to_read) {
 
   WaitForCallback();
 
-  if (read_at_result != Result::kOk) {
+  if (read_at_status != ZX_OK) {
     FXL_LOG(ERROR) << "read failed";
     return AVERROR(EIO);
   }

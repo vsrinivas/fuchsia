@@ -73,23 +73,6 @@ bool KnownEncodingsMatch() {
 
 }  // namespace
 
-media_player::Result
-TypeConverter<media_player::Result, fuchsia::mediaplayer::SeekingReaderResult>::
-    Convert(fuchsia::mediaplayer::SeekingReaderResult media_result) {
-  switch (media_result) {
-    case fuchsia::mediaplayer::SeekingReaderResult::OK:
-      return media_player::Result::kOk;
-    case fuchsia::mediaplayer::SeekingReaderResult::INVALID_ARGUMENT:
-      return media_player::Result::kInvalidArgument;
-    case fuchsia::mediaplayer::SeekingReaderResult::NOT_FOUND:
-      return media_player::Result::kNotFound;
-    case fuchsia::mediaplayer::SeekingReaderResult::UNKNOWN_ERROR:
-      break;
-  }
-
-  return media_player::Result::kUnknownError;
-}
-
 media_player::AudioStreamType::SampleFormat
 TypeConverter<media_player::AudioStreamType::SampleFormat,
               fuchsia::media::AudioSampleFormat>::

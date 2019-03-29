@@ -6,7 +6,7 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_SEGMENT_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/mediaplayer/cpp/fidl.h>
+#include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
@@ -50,7 +50,7 @@ class Segment {
 
   // Returns the current problem preventing intended operation or nullptr if
   // there is no such problem.
-  const fuchsia::mediaplayer::Problem* problem() const {
+  const fuchsia::media::playback::Problem* problem() const {
     return problem_.get();
   }
 
@@ -86,7 +86,7 @@ class Segment {
   Graph* graph_ = nullptr;
   async_dispatcher_t* dispatcher_ = nullptr;
   fit::closure update_callback_;
-  fuchsia::mediaplayer::ProblemPtr problem_;
+  fuchsia::media::playback::ProblemPtr problem_;
 };
 
 }  // namespace media_player

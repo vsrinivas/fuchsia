@@ -52,7 +52,7 @@ class Demux : public Node {
 
   // Calls the callback when the initial streams and metadata have
   // established.
-  virtual void WhenInitialized(fit::function<void(Result)> callback) = 0;
+  virtual void WhenInitialized(fit::function<void(zx_status_t)> callback) = 0;
 
   // Gets the stream collection. This method should not be called until the
   // WhenInitialized callback has been called.

@@ -10,16 +10,15 @@
 
 #include <lib/fit/function.h>
 
-#include "src/media/playback/mediaplayer/graph/result.h"
-
 namespace media_player {
 
 // Abstract base class for objects that read raw data on behalf of demuxes.
 class Reader {
  public:
   using DescribeCallback =
-      fit::function<void(Result result, size_t size, bool can_seek)>;
-  using ReadAtCallback = fit::function<void(Result result, size_t bytes_read)>;
+      fit::function<void(zx_status_t status, size_t size, bool can_seek)>;
+  using ReadAtCallback =
+      fit::function<void(zx_status_t status, size_t bytes_read)>;
 
   static constexpr size_t kUnknownSize = std::numeric_limits<size_t>::max();
 

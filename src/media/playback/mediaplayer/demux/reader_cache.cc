@@ -33,10 +33,10 @@ ReaderCache::ReaderCache(std::shared_ptr<Reader> upstream_reader)
       demux_byte_rate_(kByteRateMaxSamples),
       upstream_reader_byte_rate_(kByteRateMaxSamples) {
   upstream_reader_->Describe(
-      [this, upstream_reader](Result result, size_t size, bool can_seek) {
+      [this, upstream_reader](zx_status_t status, size_t size, bool can_seek) {
         upstream_size_ = size;
         upstream_can_seek_ = can_seek;
-        last_result_ = result;
+        last_status_ = status;
         describe_is_complete_.Occur();
       });
 }
@@ -45,7 +45,7 @@ ReaderCache::~ReaderCache() {}
 
 void ReaderCache::Describe(DescribeCallback callback) {
   describe_is_complete_.When([this, callback = std::move(callback)]() mutable {
-    callback(last_result_, upstream_size_, upstream_can_seek_);
+    callback(last_status_, upstream_size_, upstream_can_seek_);
   });
 }
 
@@ -100,15 +100,16 @@ void ReaderCache::ServeReadAtRequest(ReaderCache::ReadAtRequest request) {
     demux_sampler_ =
         ByteRateEstimator::ByteRateSampler::StartSample(bytes_read);
     const size_t bytes_we_will_not_read = request.bytes_to_read - bytes_read;
-    request.callback(Result::kOk, request.total_bytes - bytes_we_will_not_read);
+    request.callback(ZX_OK, request.total_bytes - bytes_we_will_not_read);
     return;
   }
 
   StartLoadForPosition(
       request.position + bytes_read,
-      [this, bytes_read, request = std::move(request)](Result result) mutable {
-        if (result != Result::kOk) {
-          request.callback(result, request.position + bytes_read -
+      [this, bytes_read,
+       request = std::move(request)](zx_status_t status) mutable {
+        if (status != ZX_OK) {
+          request.callback(status, request.position + bytes_read -
                                        request.original_position);
           return;
         }
@@ -125,7 +126,7 @@ void ReaderCache::ServeReadAtRequest(ReaderCache::ReadAtRequest request) {
 }
 
 void ReaderCache::StartLoadForPosition(
-    size_t position, fit::function<void(Result)> load_callback) {
+    size_t position, fit::function<void(zx_status_t)> load_callback) {
   FXL_DCHECK(buffer_);
   FXL_DCHECK(!load_in_progress_);
   load_in_progress_ = true;
@@ -139,11 +140,11 @@ void ReaderCache::StartLoadForPosition(
                               std::min({load_size, upstream_size_ - load_start,
                                         buffer_->capacity() - max_backtrack_}));
 
-  FillHoles(holes, [this, load_callback =
-                              std::move(load_callback)](Result result) mutable {
+  FillHoles(holes, [this, load_callback = std::move(load_callback)](
+                       zx_status_t status) mutable {
     load_in_progress_ = false;
     if (load_callback) {
-      load_callback(result);
+      load_callback(status);
     }
   });
 }
@@ -187,15 +188,15 @@ std::optional<std::pair<size_t, size_t>> ReaderCache::CalculateLoadRange(
 }
 
 void ReaderCache::FillHoles(std::vector<SlidingBuffer::Block> holes,
-                            fit::function<void(Result)> callback) {
+                            fit::function<void(zx_status_t)> callback) {
   upstream_reader_sampler_ =
       ByteRateEstimator::ByteRateSampler::StartSample(holes.back().size);
   upstream_reader_->ReadAt(
       holes.back().start, holes.back().buffer, holes.back().size,
-      [this, holes, callback = std::move(callback)](Result result,
+      [this, holes, callback = std::move(callback)](zx_status_t status,
                                                     size_t bytes_read) mutable {
-        last_result_ = result;
-        if (result == Result::kOk && upstream_reader_sampler_) {
+        last_status_ = status;
+        if (status == ZX_OK && upstream_reader_sampler_) {
           upstream_reader_byte_rate_.AddSample(
               ByteRateEstimator::ByteRateSampler::FinishSample(
                   std::move(*upstream_reader_sampler_)));
@@ -204,7 +205,7 @@ void ReaderCache::FillHoles(std::vector<SlidingBuffer::Block> holes,
 
         holes.pop_back();
         if (holes.empty()) {
-          callback(result);
+          callback(status);
           return;
         }
 

@@ -36,7 +36,7 @@ source_set("ffmpeg") {
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.mediaplayer",
+    "//sdk/fidl/fuchsia.media.playback",
     "//src/media/lib/ffmpeg",
     "//src/media/playback/mediaplayer/decode",
     "//src/media/playback/mediaplayer/demux",

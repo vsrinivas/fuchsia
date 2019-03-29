@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_STREAM_SOURCE_SEGMENT_H_
-#define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_STREAM_SOURCE_SEGMENT_H_
+#ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_ELEMENTARY_SOURCE_SEGMENT_H_
+#define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_ELEMENTARY_SOURCE_SEGMENT_H_
 
 #include <memory>
 #include <vector>
@@ -15,16 +15,16 @@
 namespace media_player {
 
 // A source segment employing a demux.
-class StreamSourceSegment : public SourceSegment {
+class ElementarySourceSegment : public SourceSegment {
  public:
-  static std::unique_ptr<StreamSourceSegment> Create(
+  static std::unique_ptr<ElementarySourceSegment> Create(
       int64_t duration_ns, bool can_pause, bool can_seek,
       std::unique_ptr<media_player::Metadata> metadata);
 
-  StreamSourceSegment(int64_t duration_ns, bool can_pause, bool can_seek,
-                      std::unique_ptr<media_player::Metadata> metadata);
+  ElementarySourceSegment(int64_t duration_ns, bool can_pause, bool can_seek,
+                          std::unique_ptr<media_player::Metadata> metadata);
 
-  ~StreamSourceSegment() override;
+  ~ElementarySourceSegment() override;
 
   // Adds a stream to this source segment.
   void AddStream(std::shared_ptr<Node> node,
@@ -58,4 +58,4 @@ class StreamSourceSegment : public SourceSegment {
 
 }  // namespace media_player
 
-#endif  // SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_STREAM_SOURCE_SEGMENT_H_
+#endif  // SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_ELEMENTARY_SOURCE_SEGMENT_H_

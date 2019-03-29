@@ -54,26 +54,29 @@ class FakeReader : public Reader {
 TEST(ReaderCache, MTWN214Repro) {
   auto fake_reader = std::make_shared<FakeReader>();
   auto under_test = ReaderCache::Create(fake_reader);
-  fake_reader->GetDescribeCallback()(Result::kOk, 500000, true);
+  fake_reader->GetDescribeCallback()(ZX_OK, 500000, true);
 
   uint8_t dest[800] = {0};
 
   // Set up a load and leave it hanging.
-  under_test->ReadAt(0, dest, 100, [](Result result, size_t bytes_read) {});
+  under_test->ReadAt(0, dest, 100,
+                     [](zx_status_t status, size_t bytes_read) {});
   auto request = fake_reader->GetReadAtRequest();
   EXPECT_NE(request, std::nullopt);
 
   // Start a new load so that ReadAt queues a recursive call on the upstream
   // reader callback incident.
-  under_test->ReadAt(101, dest, 300, [](Result result, size_t bytes_read) {});
-  under_test->ReadAt(300, dest, 600, [](Result result, size_t bytes_read) {});
+  under_test->ReadAt(101, dest, 300,
+                     [](zx_status_t status, size_t bytes_read) {});
+  under_test->ReadAt(300, dest, 600,
+                     [](zx_status_t status, size_t bytes_read) {});
 
   // Finish the first load, so that the reader callback incident calls itself.
   // It will not escape before hitting the stack limit because we aren't
   // finishing any more loads in this test.
   //
   // To pass, this just needs to not crash.
-  request->callback(Result::kOk, request->bytes_to_read);
+  request->callback(ZX_OK, request->bytes_to_read);
 }
 
 TEST(ReaderCache, SunnyDayAPI) {
@@ -89,7 +92,7 @@ TEST(ReaderCache, SunnyDayAPI) {
   for (size_t i = 0; i < kSourceSize; ++i) {
     source[i] = i;
   }
-  fake_reader->GetDescribeCallback()(Result::kOk, kSourceSize, true);
+  fake_reader->GetDescribeCallback()(ZX_OK, kSourceSize, true);
 
   const size_t seeks = 200;
   srand(12929);
@@ -110,9 +113,9 @@ TEST(ReaderCache, SunnyDayAPI) {
     bool callback_executed = false;
     under_test->ReadAt(seek_start, &buffer[0], seek_size,
                        [&callback_executed, expected_bytes_read](
-                           Result result, size_t bytes_read) {
+                           zx_status_t status, size_t bytes_read) {
                          EXPECT_EQ(bytes_read, expected_bytes_read);
-                         EXPECT_EQ(result, Result::kOk);
+                         EXPECT_EQ(status, ZX_OK);
                          callback_executed = true;
                        });
 
@@ -122,7 +125,7 @@ TEST(ReaderCache, SunnyDayAPI) {
       EXPECT_NE(request->callback, nullptr);
       memcpy(request->buffer, &source[request->position],
              request->bytes_to_read);
-      request->callback(Result::kOk, request->bytes_to_read);
+      request->callback(ZX_OK, request->bytes_to_read);
     }
 
     EXPECT_TRUE(callback_executed);
@@ -140,19 +143,20 @@ TEST(ReaderCache, ReportFailure) {
   under_test->SetCacheOptions(kCapacity, kBacktrack);
 
   constexpr size_t kSourceSize = 1000;
-  fake_reader->GetDescribeCallback()(Result::kOk, kSourceSize, true);
+  fake_reader->GetDescribeCallback()(ZX_OK, kSourceSize, true);
 
   std::vector<uint8_t> buffer(10, 0);
   bool callback_executed = false;
-  under_test->ReadAt(0, &buffer[0], 10,
-                     [&callback_executed](Result result, size_t bytes_read) {
-                       EXPECT_EQ(result, Result::kUnknownError);
-                       callback_executed = true;
-                     });
+  under_test->ReadAt(
+      0, &buffer[0], 10,
+      [&callback_executed](zx_status_t status, size_t bytes_read) {
+        EXPECT_EQ(status, ZX_ERR_INTERNAL);
+        callback_executed = true;
+      });
 
   auto request = fake_reader->GetReadAtRequest();
   ASSERT_TRUE(request);
-  request->callback(Result::kUnknownError, 0);
+  request->callback(ZX_ERR_INTERNAL, 0);
 
   EXPECT_TRUE(callback_executed);
 }

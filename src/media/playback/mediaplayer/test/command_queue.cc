@@ -34,7 +34,7 @@ CommandQueue::CommandQueue() : dispatcher_(async_get_default_dispatcher()) {
 CommandQueue::~CommandQueue() {}
 
 void CommandQueue::NotifyStatusChanged(
-    const fuchsia::mediaplayer::PlayerStatus& status) {
+    const fuchsia::media::playback::PlayerStatus& status) {
   status_ = fidl::MakeOptional(fidl::Clone(status));
 
   MaybeFinishWaitingForStatusCondition();

@@ -6,7 +6,7 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_MEDIAPLAYER_TEST_UTIL_VIEW_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/mediaplayer/cpp/fidl.h>
+#include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 #include <memory>
@@ -71,7 +71,8 @@ class MediaPlayerTestUtilView : public scenic::BaseView {
   void Layout();
 
   // Handles a status changed event from the player.
-  void HandleStatusChanged(const fuchsia::mediaplayer::PlayerStatus& status);
+  void HandleStatusChanged(
+      const fuchsia::media::playback::PlayerStatus& status);
 
   // Toggles between play and pause.
   void TogglePlayPause();
@@ -92,7 +93,7 @@ class MediaPlayerTestUtilView : public scenic::BaseView {
   std::unique_ptr<scenic::EntityNode> video_host_node_;
   std::unique_ptr<scenic::ViewHolder> video_view_holder_;
 
-  fuchsia::mediaplayer::PlayerPtr player_;
+  fuchsia::media::playback::PlayerPtr player_;
   CommandQueue commands_;
   fuchsia::math::Size video_size_;
   fuchsia::math::Size pixel_aspect_ratio_;

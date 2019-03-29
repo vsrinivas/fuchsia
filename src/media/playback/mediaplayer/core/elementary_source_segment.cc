@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/playback/mediaplayer/core/stream_source_segment.h"
+#include "src/media/playback/mediaplayer/core/elementary_source_segment.h"
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
@@ -13,14 +13,14 @@
 namespace media_player {
 
 // static
-std::unique_ptr<StreamSourceSegment> StreamSourceSegment::Create(
+std::unique_ptr<ElementarySourceSegment> ElementarySourceSegment::Create(
     int64_t duration_ns, bool can_pause, bool can_seek,
     std::unique_ptr<media_player::Metadata> metadata) {
-  return std::make_unique<StreamSourceSegment>(duration_ns, can_pause, can_seek,
-                                               std::move(metadata));
+  return std::make_unique<ElementarySourceSegment>(
+      duration_ns, can_pause, can_seek, std::move(metadata));
 }
 
-StreamSourceSegment::StreamSourceSegment(
+ElementarySourceSegment::ElementarySourceSegment(
     int64_t duration_ns, bool can_pause, bool can_seek,
     std::unique_ptr<media_player::Metadata> metadata)
     : SourceSegment(false),
@@ -29,10 +29,10 @@ StreamSourceSegment::StreamSourceSegment(
       can_seek_(can_seek),
       metadata_(std::move(metadata)) {}
 
-StreamSourceSegment::~StreamSourceSegment() {}
+ElementarySourceSegment::~ElementarySourceSegment() {}
 
-void StreamSourceSegment::AddStream(std::shared_ptr<Node> node,
-                                    const StreamType& output_stream_type) {
+void ElementarySourceSegment::AddStream(std::shared_ptr<Node> node,
+                                        const StreamType& output_stream_type) {
   FXL_DCHECK(node);
 
   size_t index = nodes_.size();
@@ -43,7 +43,7 @@ void StreamSourceSegment::AddStream(std::shared_ptr<Node> node,
                   false);  // more
 }
 
-void StreamSourceSegment::DidProvision() {
+void ElementarySourceSegment::DidProvision() {
   async::PostTask(dispatcher(), [this, weak_this = GetWeakThis()]() {
     if (!weak_this) {
       return;
@@ -55,13 +55,13 @@ void StreamSourceSegment::DidProvision() {
   });
 }
 
-void StreamSourceSegment::WillDeprovision() {
+void ElementarySourceSegment::WillDeprovision() {
   for (auto node_ref : nodes_) {
     graph().RemoveNode(node_ref);
   }
 }
 
-void StreamSourceSegment::Flush(bool hold_frame, fit::closure callback) {
+void ElementarySourceSegment::Flush(bool hold_frame, fit::closure callback) {
   auto callback_joiner = CallbackJoiner::Create();
 
   for (auto node_ref : nodes_) {
@@ -72,7 +72,7 @@ void StreamSourceSegment::Flush(bool hold_frame, fit::closure callback) {
   callback_joiner->WhenJoined(std::move(callback));
 }
 
-void StreamSourceSegment::Seek(int64_t position, fit::closure callback) {
+void ElementarySourceSegment::Seek(int64_t position, fit::closure callback) {
   FXL_DCHECK(can_seek_);
   // TODO(dalesat): Implement.
   FXL_NOTIMPLEMENTED();

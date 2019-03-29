@@ -31,7 +31,7 @@ class FileReader : public Reader {
  private:
   async_dispatcher_t* dispatcher_;
   fxl::UniqueFD fd_;
-  Result result_ = Result::kOk;
+  zx_status_t status_ = ZX_OK;
   uint64_t size_ = kUnknownSize;
 };
 

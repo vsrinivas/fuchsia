@@ -253,7 +253,7 @@ const Metadata* PlayerCore::metadata() const {
   return nullptr;
 }
 
-const fuchsia::mediaplayer::Problem* PlayerCore::problem() const {
+const fuchsia::media::playback::Problem* PlayerCore::problem() const {
   // First, see if the source segment has a problem to report.
   if (source_segment_ && source_segment_->problem()) {
     return source_segment_->problem();

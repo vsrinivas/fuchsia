@@ -122,7 +122,7 @@ class PlayerCore {
 
   // Returns the current problem preventing intended operation or nullptr if
   // there is no such problem.
-  const fuchsia::mediaplayer::Problem* problem() const;
+  const fuchsia::media::playback::Problem* problem() const;
 
   // Returns a pointer to the graph.
   Graph* graph() { return &graph_; }

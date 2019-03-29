@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/source_impl.h"
 
-#include <fuchsia/mediaplayer/cpp/fidl.h>
+#include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
@@ -88,7 +88,7 @@ void SourceImpl::SendStatusUpdates() { UpdateStatus(); }
 void SourceImpl::Clear() {
   source_segment_ = nullptr;
   streams_.clear();
-  status_ = fuchsia::mediaplayer::SourceStatus();
+  status_ = fuchsia::media::playback::SourceStatus();
 }
 
 void SourceImpl::Remove() {
@@ -118,7 +118,7 @@ void SourceImpl::UpdateStatus() {
     }
   }
 
-  status_.duration_ns = source_segment_->duration_ns();
+  status_.duration = source_segment_->duration_ns();
   status_.can_pause = source_segment_->can_pause();
   status_.can_seek = source_segment_->can_seek();
 
@@ -137,7 +137,7 @@ void SourceImpl::UpdateStatus() {
 // static
 std::unique_ptr<DemuxSourceImpl> DemuxSourceImpl::Create(
     std::shared_ptr<Demux> demux, Graph* graph,
-    fidl::InterfaceRequest<fuchsia::mediaplayer::Source> request,
+    fidl::InterfaceRequest<fuchsia::media::playback::Source> request,
     fit::closure connection_failure_callback) {
   FXL_DCHECK(demux);
   FXL_DCHECK(graph);
@@ -147,7 +147,7 @@ std::unique_ptr<DemuxSourceImpl> DemuxSourceImpl::Create(
 
 DemuxSourceImpl::DemuxSourceImpl(
     std::shared_ptr<Demux> demux, Graph* graph,
-    fidl::InterfaceRequest<fuchsia::mediaplayer::Source> request,
+    fidl::InterfaceRequest<fuchsia::media::playback::Source> request,
     fit::closure connection_failure_callback)
     : SourceImpl(graph, std::move(connection_failure_callback)),
       demux_(demux),
@@ -180,54 +180,54 @@ void DemuxSourceImpl::SendStatusUpdates() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// StreamSourceImpl implementation.
+// ElementarySourceImpl implementation.
 
 // static
-std::unique_ptr<StreamSourceImpl> StreamSourceImpl::Create(
+std::unique_ptr<ElementarySourceImpl> ElementarySourceImpl::Create(
     int64_t duration_ns, bool can_pause, bool can_seek,
     std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
-    fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource> request,
+    fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> request,
     fit::closure connection_failure_callback) {
   FXL_DCHECK(graph);
   FXL_DCHECK(request);
-  return std::make_unique<StreamSourceImpl>(
+  return std::make_unique<ElementarySourceImpl>(
       duration_ns, can_pause, can_seek, std::move(metadata), graph,
       std::move(request), std::move(connection_failure_callback));
 }
 
-StreamSourceImpl::StreamSourceImpl(
+ElementarySourceImpl::ElementarySourceImpl(
     int64_t duration_ns, bool can_pause, bool can_seek,
     std::unique_ptr<fuchsia::media::Metadata> metadata, Graph* graph,
-    fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource> request,
+    fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource> request,
     fit::closure connection_failure_callback)
     : SourceImpl(graph, std::move(connection_failure_callback)),
-      stream_source_segment_(StreamSourceSegment::Create(
+      elementary_source_segment_(ElementarySourceSegment::Create(
           duration_ns, can_pause, can_seek,
           fidl::To<std::unique_ptr<media_player::Metadata>>(metadata))) {
-  SourceImpl::CompleteConstruction(stream_source_segment_.get());
+  SourceImpl::CompleteConstruction(elementary_source_segment_.get());
 
   // We keep a raw pointer around and use that, because we still want to be
   // able to add streams to the source segment after |TakeSourceSegment| is
-  // called. This is a bit weird but safe as long as this |StreamSourceImpl|
+  // called. This is a bit weird but safe as long as this |ElementarySourceImpl|
   // is destroyed before the source segment is destroyed. |PlayerImpl| is
   // careful about that.
-  stream_source_segment_raw_ptr_ = stream_source_segment_.get();
+  elementary_source_segment_raw_ptr_ = elementary_source_segment_.get();
 
   AddBindingInternal(std::move(request));
 
   bindings_.set_empty_set_handler([this]() { Remove(); });
 }
 
-StreamSourceImpl::~StreamSourceImpl() {}
+ElementarySourceImpl::~ElementarySourceImpl() {}
 
-std::unique_ptr<SourceSegment> StreamSourceImpl::TakeSourceSegment() {
-  FXL_DCHECK(stream_source_segment_);
-  // We don't call |Clear|, because we want this |StreamSourceImpl| to continue
-  // to function event without |stream_source_segment_| set.
-  return std::move(stream_source_segment_);
+std::unique_ptr<SourceSegment> ElementarySourceImpl::TakeSourceSegment() {
+  FXL_DCHECK(elementary_source_segment_);
+  // We don't call |Clear|, because we want this |ElementarySourceImpl| to
+  // continue to function event without |elementary_source_segment_| set.
+  return std::move(elementary_source_segment_);
 }
 
-void StreamSourceImpl::SendStatusUpdates() {
+void ElementarySourceImpl::SendStatusUpdates() {
   SourceImpl::SendStatusUpdates();
 
   for (auto& binding : bindings_.bindings()) {
@@ -235,19 +235,19 @@ void StreamSourceImpl::SendStatusUpdates() {
   }
 }
 
-void StreamSourceImpl::AddStream(
+void ElementarySourceImpl::AddStream(
     fuchsia::media::StreamType type, uint32_t tick_per_second_numerator,
     uint32_t tick_per_second_denominator,
     ::fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink>
         simple_stream_sink_request) {
   FXL_DCHECK(simple_stream_sink_request);
-  FXL_DCHECK(stream_source_segment_raw_ptr_);
+  FXL_DCHECK(elementary_source_segment_raw_ptr_);
 
   auto output_stream_type =
       fidl::To<std::unique_ptr<media_player::StreamType>>(type);
   FXL_DCHECK(output_stream_type);
 
-  stream_source_segment_raw_ptr_->AddStream(
+  elementary_source_segment_raw_ptr_->AddStream(
       SimpleStreamSinkImpl::Create(
           *output_stream_type,
           media::TimelineRate(tick_per_second_numerator,
@@ -256,19 +256,19 @@ void StreamSourceImpl::AddStream(
       *output_stream_type);
 }
 
-void StreamSourceImpl::AddBinding(
-    fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
-        stream_source_request) {
-  FXL_DCHECK(stream_source_request);
-  AddBindingInternal(std::move(stream_source_request));
+void ElementarySourceImpl::AddBinding(
+    fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
+        elementary_source_request) {
+  FXL_DCHECK(elementary_source_request);
+  AddBindingInternal(std::move(elementary_source_request));
 }
 
-void StreamSourceImpl::AddBindingInternal(
-    fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
-        stream_source_request) {
-  FXL_DCHECK(stream_source_request);
+void ElementarySourceImpl::AddBindingInternal(
+    fidl::InterfaceRequest<fuchsia::media::playback::ElementarySource>
+        elementary_source_request) {
+  FXL_DCHECK(elementary_source_request);
 
-  bindings_.AddBinding(this, std::move(stream_source_request));
+  bindings_.AddBinding(this, std::move(elementary_source_request));
 
   // Fire |OnStatusChanged| event for the new client.
   bindings_.bindings().back()->events().OnStatusChanged(fidl::Clone(status()));

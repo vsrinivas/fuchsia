@@ -49,7 +49,7 @@ void Segment::ReportProblem(const std::string& type,
     return;
   }
 
-  problem_ = fuchsia::mediaplayer::Problem::New();
+  problem_ = fuchsia::media::playback::Problem::New();
   problem_->type = type;
   problem_->details = details;
   NotifyUpdate();

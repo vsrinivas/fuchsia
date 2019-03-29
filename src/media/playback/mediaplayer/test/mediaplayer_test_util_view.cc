@@ -81,8 +81,9 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(
   pixel_aspect_ratio_.height = 1;
 
   // Create a player from all that stuff.
-  player_ = startup_context()
-                ->ConnectToEnvironmentService<fuchsia::mediaplayer::Player>();
+  player_ =
+      startup_context()
+          ->ConnectToEnvironmentService<fuchsia::media::playback::Player>();
 
   // Create the video view.
   auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
@@ -99,7 +100,7 @@ MediaPlayerTestUtilView::MediaPlayerTestUtilView(
   commands_.Init(player_.get());
 
   player_.events().OnStatusChanged =
-      [this](fuchsia::mediaplayer::PlayerStatus status) {
+      [this](fuchsia::media::playback::PlayerStatus status) {
         HandleStatusChanged(status);
       };
 
@@ -398,7 +399,7 @@ void MediaPlayerTestUtilView::OnChildUnavailable(uint32_t view_holder_id) {
 }
 
 void MediaPlayerTestUtilView::HandleStatusChanged(
-    const fuchsia::mediaplayer::PlayerStatus& status) {
+    const fuchsia::media::playback::PlayerStatus& status) {
   // Process status received from the player.
   if (status.timeline_function) {
     timeline_function_ =
@@ -431,7 +432,7 @@ void MediaPlayerTestUtilView::HandleStatusChanged(
     Layout();
   }
 
-  duration_ns_ = status.duration_ns;
+  duration_ns_ = status.duration;
   metadata_ = fidl::Clone(status.metadata);
 
   InvalidateScene();

@@ -17,7 +17,8 @@
 namespace media_player {
 
 FidlReader::FidlReader(
-    fidl::InterfaceHandle<fuchsia::mediaplayer::SeekingReader> seeking_reader)
+    fidl::InterfaceHandle<fuchsia::media::playback::SeekingReader>
+        seeking_reader)
     : seeking_reader_(seeking_reader.Bind()),
       dispatcher_(async_get_default_dispatcher()),
       ready_(dispatcher_) {
@@ -26,10 +27,9 @@ FidlReader::FidlReader(
   read_in_progress_ = false;
 
   seeking_reader_->Describe(
-      [this](fuchsia::mediaplayer::SeekingReaderResult result, uint64_t size,
-             bool can_seek) {
-        result_ = fidl::To<Result>(result);
-        if (result_ == Result::kOk) {
+      [this](zx_status_t status, uint64_t size, bool can_seek) {
+        status_ = status;
+        if (status_ == ZX_OK) {
           size_ = size;
           can_seek_ = can_seek;
         }
@@ -41,7 +41,7 @@ FidlReader::~FidlReader() {}
 
 void FidlReader::Describe(DescribeCallback callback) {
   ready_.When([this, callback = std::move(callback)]() {
-    callback(result_, size_, can_seek_);
+    callback(status_, size_, can_seek_);
   });
 }
 
@@ -71,8 +71,8 @@ void FidlReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
 
 void FidlReader::ContinueReadAt() {
   ready_.When([this]() {
-    if (result_ != Result::kOk) {
-      CompleteReadAt(result_);
+    if (status_ != ZX_OK) {
+      CompleteReadAt(status_);
       return;
     }
 
@@ -94,24 +94,21 @@ void FidlReader::ContinueReadAt() {
     socket_position_ = kUnknownSize;
 
     if (!can_seek_ && read_at_position_ != 0) {
-      CompleteReadAt(Result::kInvalidArgument);
+      CompleteReadAt(ZX_ERR_INVALID_ARGS);
       return;
     }
 
-    seeking_reader_->ReadAt(
-        read_at_position_,
-        [this](fuchsia::mediaplayer::SeekingReaderResult result,
-               zx::socket socket) {
-          result_ = fidl::To<Result>(result);
-          if (result_ != Result::kOk) {
-            CompleteReadAt(result_);
-            return;
-          }
+    seeking_reader_->ReadAt(read_at_position_,
+                            [this](zx_status_t status, zx::socket socket) {
+                              if (status_ != ZX_OK) {
+                                CompleteReadAt(status_);
+                                return;
+                              }
 
-          socket_ = std::move(socket);
-          socket_position_ = read_at_position_;
-          ReadFromSocket();
-        });
+                              socket_ = std::move(socket);
+                              socket_position_ = read_at_position_;
+                              ReadFromSocket();
+                            });
   });
 }
 
@@ -159,37 +156,24 @@ void FidlReader::ReadFromSocket() {
     socket_position_ += byte_count;
 
     if (read_at_bytes_remaining_ == 0) {
-      CompleteReadAt(Result::kOk, read_at_bytes_to_read_);
+      CompleteReadAt(ZX_OK, read_at_bytes_to_read_);
       break;
     }
   }
 }
 
-void FidlReader::CompleteReadAt(Result result, size_t bytes_read) {
+void FidlReader::CompleteReadAt(zx_status_t status, size_t bytes_read) {
   ReadAtCallback read_at_callback;
   read_at_callback_.swap(read_at_callback);
   read_in_progress_ = false;
-  read_at_callback(result, bytes_read);
+  read_at_callback(status, bytes_read);
 }
 
 void FidlReader::FailReadAt(zx_status_t status) {
-  switch (status) {
-    case ZX_ERR_PEER_CLOSED:
-      result_ = Result::kPeerClosed;
-      break;
-    case ZX_ERR_CANCELED:
-      result_ = Result::kCancelled;
-      break;
-    // TODO(dalesat): Expect more statuses here.
-    default:
-      FXL_LOG(ERROR) << "Unexpected status " << status;
-      result_ = Result::kUnknownError;
-      break;
-  }
-
+  status_ = status;
   socket_.reset();
   socket_position_ = kUnknownSize;
-  CompleteReadAt(result_);
+  CompleteReadAt(status_);
 }
 
 }  // namespace media_player

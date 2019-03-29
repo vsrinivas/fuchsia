@@ -10,6 +10,8 @@ source_set("core") {
     "conversion_pipeline_builder.h",
     "demux_source_segment.cc",
     "demux_source_segment.h",
+    "elementary_source_segment.cc",
+    "elementary_source_segment.h",
     "player_core.cc",
     "player_core.h",
     "renderer_sink_segment.cc",
@@ -20,15 +22,13 @@ source_set("core") {
     "sink_segment.h",
     "source_segment.cc",
     "source_segment.h",
-    "stream_source_segment.cc",
-    "stream_source_segment.h",
   ]
 
   deps = [
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.mediaplayer",
+    "//sdk/fidl/fuchsia.media.playback",
     "//sdk/lib/fidl/cpp",
     "//src/media/playback/mediaplayer/decode",
     "//src/media/playback/mediaplayer/demux",

@@ -42,8 +42,8 @@ class FakeDemux : public Demux {
 
   void SetCacheOptions(zx_duration_t lead, zx_duration_t backtrack) override {}
 
-  void WhenInitialized(fit::function<void(Result)> callback) override {
-    callback(Result::kOk);
+  void WhenInitialized(fit::function<void(zx_status_t)> callback) override {
+    callback(ZX_OK);
   }
 
   const std::vector<std::unique_ptr<DemuxStream>>& streams() const override {

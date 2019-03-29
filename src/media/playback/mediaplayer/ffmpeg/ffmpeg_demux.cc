@@ -8,7 +8,7 @@
 #include <thread>
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/mediaplayer/cpp/fidl.h>
+#include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
@@ -53,7 +53,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
 
   void SetCacheOptions(zx_duration_t lead, zx_duration_t backtrack) override;
 
-  void WhenInitialized(fit::function<void(Result)> callback) override;
+  void WhenInitialized(fit::function<void(zx_status_t)> callback) override;
 
   const std::vector<std::unique_ptr<DemuxStream>>& streams() const override;
 
@@ -139,7 +139,7 @@ class FfmpegDemuxImpl : public FfmpegDemux {
   std::shared_ptr<ReaderCache> reader_cache_;
   std::vector<std::unique_ptr<DemuxStream>> streams_;
   Incident init_complete_;
-  Result result_;
+  zx_status_t status_ = ZX_OK;
   async_dispatcher_t* dispatcher_;
 
   // After Init, only the ffmpeg thread accesses these.
@@ -183,8 +183,8 @@ void FfmpegDemuxImpl::SetCacheOptions(zx_duration_t lead,
                                       zx_duration_t backtrack) {
   FXL_DCHECK(lead > 0);
 
-  WhenInitialized([this, lead, backtrack](Result init_result) {
-    if (init_result != Result::kOk) {
+  WhenInitialized([this, lead, backtrack](zx_status_t init_status) {
+    if (init_status != ZX_OK) {
       return;
     }
 
@@ -210,9 +210,10 @@ void FfmpegDemuxImpl::SetCacheOptions(zx_duration_t lead,
   });
 }
 
-void FfmpegDemuxImpl::WhenInitialized(fit::function<void(Result)> callback) {
+void FfmpegDemuxImpl::WhenInitialized(
+    fit::function<void(zx_status_t)> callback) {
   init_complete_.When(
-      [this, callback = std::move(callback)]() { callback(result_); });
+      [this, callback = std::move(callback)]() { callback(status_); });
 }
 
 const std::vector<std::unique_ptr<Demux::DemuxStream>>&
@@ -266,13 +267,12 @@ void FfmpegDemuxImpl::RequestOutputPacket() {
 void FfmpegDemuxImpl::Worker() {
   static constexpr uint64_t kNanosecondsPerMicrosecond = 1000;
 
-  result_ = AvIoContext::Create(reader_cache_, &io_context_, dispatcher_);
-  if (result_ != Result::kOk) {
-    FXL_LOG(ERROR) << "AvIoContext::Create failed, result "
-                   << static_cast<int>(result_);
-    ReportProblem(result_ == Result::kNotFound
-                      ? fuchsia::mediaplayer::kProblemAssetNotFound
-                      : fuchsia::mediaplayer::kProblemInternal,
+  status_ = AvIoContext::Create(reader_cache_, &io_context_, dispatcher_);
+  if (status_ != ZX_OK) {
+    FXL_LOG(ERROR) << "AvIoContext::Create failed, status " << status_;
+    ReportProblem(status_ == ZX_ERR_NOT_FOUND
+                      ? fuchsia::media::playback::PROBLEM_ASSET_NOT_FOUND
+                      : fuchsia::media::playback::PROBLEM_INTERNAL,
                   "");
 
     NotifyInitComplete();
@@ -284,8 +284,9 @@ void FfmpegDemuxImpl::Worker() {
   format_context_ = AvFormatContext::OpenInput(io_context_);
   if (!format_context_) {
     FXL_LOG(ERROR) << "AvFormatContext::OpenInput failed";
-    result_ = Result::kUnsupportedOperation;
-    ReportProblem(fuchsia::mediaplayer::kProblemContainerNotSupported, "");
+    status_ = ZX_ERR_NOT_SUPPORTED;
+    ReportProblem(fuchsia::media::playback::PROBLEM_CONTAINER_NOT_SUPPORTED,
+                  "");
     NotifyInitComplete();
     return;
   }
@@ -293,8 +294,8 @@ void FfmpegDemuxImpl::Worker() {
   int r = avformat_find_stream_info(format_context_.get(), nullptr);
   if (r < 0) {
     FXL_LOG(ERROR) << "avformat_find_stream_info failed, result " << r;
-    result_ = Result::kInternalError;
-    ReportProblem(fuchsia::mediaplayer::kProblemInternal,
+    status_ = ZX_ERR_INTERNAL;
+    ReportProblem(fuchsia::media::playback::PROBLEM_INTERNAL,
                   "avformat_find_stream_info failed");
     NotifyInitComplete();
     return;
@@ -317,7 +318,7 @@ void FfmpegDemuxImpl::Worker() {
     metadata_ = std::move(metadata);
   }
 
-  result_ = Result::kOk;
+  status_ = ZX_OK;
   NotifyInitComplete();
 
   async::PostTask(dispatcher_, [this]() { SendStatus(); });
@@ -467,7 +468,7 @@ void FfmpegDemuxImpl::CopyMetadata(AVDictionary* source, Metadata& metadata) {
     std::string label = entry->key;
     auto iter = kMetadataLabelMap.find(label);
     if (iter != kMetadataLabelMap.end()) {
-      // Store the property under its fuchsia.mediaplayer label.
+      // Store the property under its fuchsia.media.playback label.
       label = iter->second;
     } else {
       // Store the property under "ffmpeg.<ffmpeg label>".

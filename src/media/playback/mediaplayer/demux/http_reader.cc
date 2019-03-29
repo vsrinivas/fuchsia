@@ -60,17 +60,17 @@ HttpReader::HttpReader(
                      << (response.error->description
                              ? response.error->description
                              : "<no description>");
-      result_ = response.error->code == ::http::HTTP_ERR_NAME_NOT_RESOLVED
-                    ? Result::kNotFound
-                    : Result::kUnknownError;
+      status_ = response.error->code == ::http::HTTP_ERR_NAME_NOT_RESOLVED
+                    ? ZX_ERR_NOT_FOUND
+                    : ZX_ERR_INTERNAL;
       ready_.Occur();
       return;
     }
 
     if (response.status_code != kStatusOk) {
       FXL_LOG(ERROR) << "HEAD response status code " << response.status_code;
-      result_ = response.status_code == kStatusNotFound ? Result::kNotFound
-                                                        : Result::kUnknownError;
+      status_ = response.status_code == kStatusNotFound ? ZX_ERR_NOT_FOUND
+                                                        : ZX_ERR_INTERNAL;
       ready_.Occur();
       return;
     }
@@ -92,7 +92,7 @@ HttpReader::~HttpReader() {}
 
 void HttpReader::Describe(DescribeCallback callback) {
   ready_.When([this, callback = std::move(callback)]() {
-    callback(result_, size_, can_seek_);
+    callback(status_, size_, can_seek_);
   });
 }
 
@@ -100,13 +100,13 @@ void HttpReader::ReadAt(size_t position, uint8_t* buffer, size_t bytes_to_read,
                         ReadAtCallback callback) {
   ready_.When([this, position, buffer, bytes_to_read,
                callback = std::move(callback)]() mutable {
-    if (result_ != Result::kOk) {
-      callback(result_, 0);
+    if (status_ != ZX_OK) {
+      callback(status_, 0);
       return;
     }
 
     if (!can_seek_ && position != 0) {
-      callback(Result::kInvalidArgument, 0);
+      callback(ZX_ERR_INVALID_ARGS, 0);
       return;
     }
 
@@ -176,46 +176,30 @@ void HttpReader::ReadFromSocket() {
     socket_position_ += byte_count;
 
     if (read_at_bytes_remaining_ == 0) {
-      CompleteReadAt(Result::kOk, read_at_bytes_to_read_);
+      CompleteReadAt(ZX_OK, read_at_bytes_to_read_);
       break;
     }
   }
 }
 
-void HttpReader::CompleteReadAt(Result result, size_t bytes_read) {
+void HttpReader::CompleteReadAt(zx_status_t status, size_t bytes_read) {
   ReadAtCallback read_at_callback;
   read_at_callback_.swap(read_at_callback);
-  read_at_callback(result, bytes_read);
+  read_at_callback(status, bytes_read);
 }
 
 void HttpReader::FailReadAt(zx_status_t status) {
-  switch (status) {
-    case ZX_ERR_PEER_CLOSED:
-      FailReadAt(Result::kPeerClosed);
-      break;
-    case ZX_ERR_CANCELED:
-      FailReadAt(Result::kCancelled);
-      break;
-    // TODO(dalesat): Expect more statuses here.
-    default:
-      FXL_LOG(ERROR) << "Unexpected status " << status;
-      FailReadAt(Result::kUnknownError);
-      break;
-  }
-}
-
-void HttpReader::FailReadAt(Result result) {
-  result_ = result;
+  status_ = status;
   socket_.reset();
   socket_position_ = kUnknownSize;
-  CompleteReadAt(result_, 0);
+  CompleteReadAt(status_, 0);
 }
 
 void HttpReader::LoadAndReadFromSocket() {
   FXL_DCHECK(!socket_);
 
   if (!can_seek_ && read_at_position_ != 0) {
-    FailReadAt(Result::kInvalidArgument);
+    FailReadAt(ZX_ERR_INVALID_ARGS);
     return;
   }
 
@@ -241,7 +225,7 @@ void HttpReader::LoadAndReadFromSocket() {
     if (response.status_code != kStatusOk &&
         response.status_code != kStatusPartialContent) {
       FXL_LOG(WARNING) << "GET response status code " << response.status_code;
-      FailReadAt(Result::kUnknownError);
+      FailReadAt(ZX_ERR_INTERNAL);
       return;
     }
 

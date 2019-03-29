@@ -39,13 +39,10 @@ class HttpReader : public Reader {
   void ReadFromSocket();
 
   // Completes a pending ReadAt.
-  void CompleteReadAt(Result result, size_t bytes_read);
+  void CompleteReadAt(zx_status_t status, size_t bytes_read);
 
   // Fails the pending ReadAt.
   void FailReadAt(zx_status_t status);
-
-  // Fails the pending ReadAt.
-  void FailReadAt(Result result);
 
   // Performs an HTTP load and reads from the resulting socket.
   void LoadAndReadFromSocket();
@@ -53,7 +50,7 @@ class HttpReader : public Reader {
   std::string url_;
   fidl::VectorPtr<fuchsia::net::oldhttp::HttpHeader> headers_;
   ::fuchsia::net::oldhttp::URLLoaderPtr url_loader_;
-  Result result_ = Result::kOk;
+  zx_status_t status_ = ZX_OK;
   uint64_t size_ = kUnknownSize;
   bool can_seek_ = false;
   zx::socket socket_;

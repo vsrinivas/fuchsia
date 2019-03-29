@@ -7,7 +7,7 @@
             "system-temp"
         ],
         "services": [
-            "fuchsia.mediaplayer.Player",
+            "fuchsia.media.playback.Player",
             "fuchsia.ui.viewsv1.ViewManager",
             "fuchsia.ui.scenic.Scenic"
         ]

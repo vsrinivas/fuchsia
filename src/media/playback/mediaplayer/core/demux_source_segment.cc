@@ -45,7 +45,7 @@ DemuxSourceSegment::DemuxSourceSegment(std::shared_ptr<Demux> demux)
   });
 
   demux_->WhenInitialized(
-      [this](Result result) { demux_initialized_.Occur(); });
+      [this](zx_status_t status) { demux_initialized_.Occur(); });
 }
 
 DemuxSourceSegment::~DemuxSourceSegment() {}
