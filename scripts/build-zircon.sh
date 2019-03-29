@@ -24,9 +24,8 @@ usage() {
   echo "  -j N: Passed along to ninja (number of parallel jobs)"
   echo "  -l N: Passed along to ninja (maximum load average)"
   echo "  -t <target>: Architecture (GN style) to build, instead of all"
-  echo "  -o <outdir>: TODO(BLD-383): SEMANTICS CHANGING SOON."
-  echo "     Directory in which to put the build-zircon directory."
-  echo "  -z <zircon-outdir>: Zircon build directory."
+  echo "  -o <zircon-outdir>: Zircon build directory."
+  echo "  -z <zircon-outdir>: TODO(BLD-383): DELETE. Deprecated alias for -o."
   echo ""
   echo 'Additional arguments containing `=` will be used as GN build arguments.'
   echo "Other additional arguments will be passed as extra Ninja arguments."
@@ -68,16 +67,14 @@ while getopts "AcgGHhl:nj:t:Tp:o:vVz:" opt; do
     n) DRY_RUN="true" ;;
     j) JOBS="${OPTARG}" ;;
     l) LOADAVG="${OPTARG}" ;;
-    o) echo >&2 "TODO(BLD-383): Semantics of -o will change real soon."
-       echo >&2 "-o will be used for specifying the zircon build output directory,"
-       echo >&2 "not just its parent directory. This is for supporting multiple"
-       echo >&2 "compilers for zircon build."
-       ZIRCON_BUILDROOT="${OPTARG}/build-zircon" ;;
+    o) ZIRCON_BUILDROOT="${OPTARG}" ;;
     t) ARCHLIST=("${OPTARG}") ;;
     T) TOOLS_ONLY="true" ;;
     v) VERBOSE="1" ;;
     V) VERBOSE="2" ;;
-    z) ZIRCON_BUILDROOT="${OPTARG}" ;;
+    z) echo >&2 "TODO(BLD-383): -z WILL BE DELETED REAL SOON."
+       echo >&2 "Use -o instead."
+       ZIRCON_BUILDROOT="${OPTARG}" ;;
     *) usage 1>&2 ; exit 1 ;;
   esac
 done
