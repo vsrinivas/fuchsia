@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,7 +35,6 @@ type Config struct {
 func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	outputDir, err := ioutil.TempDir("", "system_ota_tests")
 	if err != nil {
-		log.Printf("wee")
 		return nil, fmt.Errorf("failed to create a temporary directory: %s", err)
 	}
 	c := &Config{
@@ -50,7 +48,7 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.netaddrPath, "netaddr-path", filepath.Join(testDataPath, "netaddr"), "zircon netaddr tool path")
 	fs.StringVar(&c.localHostname, "local-hostname", "", "local hostname")
 	fs.StringVar(&c.DeviceName, "device", "", "device name")
-	fs.StringVar(&c.deviceHostname, "device-hostname", os.Getenv("FUCHSIA_NODENAME"), "device hostname")
+	fs.StringVar(&c.deviceHostname, "device-hostname", os.Getenv("FUCHSIA_IPV4_ADDR"), "device hostname or IPv4/IPv6 address")
 	fs.StringVar(&c.LkgbPath, "lkgb", filepath.Join(testDataPath, "lkgb"), "path to lkgb, default is $FUCHSIA_DIR/prebuilt/tools/lkgb/lkgb")
 	fs.StringVar(&c.ArtifactsPath, "artifacts", filepath.Join(testDataPath, "artifacts"), "path to the artifacts binary, default is $FUCHSIA_DIR/prebuilt/tools/artifacts/artifacts")
 	fs.StringVar(&c.BuilderName, "builder-name", "", "download the amber repository from the latest build of this builder")
