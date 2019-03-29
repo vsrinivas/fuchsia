@@ -192,6 +192,7 @@ void SessionmgrImpl::Initialize(
         session_context,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
+  FXL_LOG(INFO) << "SessionmgrImpl::Initialize() called.";
   // This is called in the service connection factory callbacks for session
   // shell (see how RunSessionShell() initializes session_shell_services_) to
   // lazily initialize the following services only once they are requested
@@ -204,6 +205,8 @@ void SessionmgrImpl::Initialize(
         if (called) {
           return;
         }
+        FXL_LOG(INFO)
+            << "SessionmgrImpl::Initialize() finishing initialization.";
         called = true;
 
         InitializeLedger(std::move(ledger_token_manager));

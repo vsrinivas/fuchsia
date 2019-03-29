@@ -68,7 +68,8 @@
         "--session_shell_args=--root_module=fuchsia-pkg://fuchsia.com/queue_persistence_test_module#meta/queue_persistence_test_module.cmx",
         "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
         "--sessionmgr_args=--use_memfs_for_ledger"
-      ]
+      ],
+      "disabled": true
     },
     {
       "name": "story_shell",
