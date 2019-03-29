@@ -141,11 +141,11 @@ struct PerfmonState {
     uint32_t pmintenset_el1 = 0;
 };
 
+DECLARE_SINGLETON_MUTEX(PerfmonLock);
+
 } // namespace
 
-static fbl::Mutex perfmon_lock;
-
-static ktl::unique_ptr<PerfmonState> perfmon_state TA_GUARDED(perfmon_lock);
+static ktl::unique_ptr<PerfmonState> perfmon_state TA_GUARDED(PerfmonLock::Get());
 
 // This is accessed atomically as it is also accessed by the PMI handler.
 static int perfmon_active = false;
@@ -304,7 +304,7 @@ static perfmon_record_header_t* arm64_perfmon_write_pc_record(
 }
 
 zx_status_t arch_perfmon_get_properties(zx_arm64_pmu_properties_t* props) {
-    fbl::AutoLock al(&perfmon_lock);
+    Guard<Mutex> guard(PerfmonLock::Get());
 
     if (!supports_perfmon) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -324,7 +324,7 @@ zx_status_t arch_perfmon_get_properties(zx_arm64_pmu_properties_t* props) {
 }
 
 zx_status_t arch_perfmon_init() {
-    fbl::AutoLock al(&perfmon_lock);
+    Guard<Mutex> guard(PerfmonLock::Get());
 
     if (!supports_perfmon) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -347,7 +347,7 @@ zx_status_t arch_perfmon_init() {
 }
 
 zx_status_t arch_perfmon_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo) {
-    fbl::AutoLock al(&perfmon_lock);
+    Guard<Mutex> guard(PerfmonLock::Get());
 
     if (!supports_perfmon) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -579,7 +579,7 @@ static void arm64_perfmon_stage_programmable_config(const zx_arm64_pmu_config_t*
 // One of the main goals of this function is to verify the provided config
 // is ok, e.g., it won't cause us to crash.
 zx_status_t arch_perfmon_stage_config(zx_arm64_pmu_config_t* config) {
-    fbl::AutoLock al(&perfmon_lock);
+    Guard<Mutex> guard(PerfmonLock::Get());
 
     if (!supports_perfmon) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -718,7 +718,7 @@ static void arm64_perfmon_start_task(void* raw_context) TA_NO_THREAD_SAFETY_ANAL
 // Begin collecting data.
 
 zx_status_t arch_perfmon_start() {
-    fbl::AutoLock al(&perfmon_lock);
+    Guard<Mutex> guard(PerfmonLock::Get());
 
     if (!supports_perfmon) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -870,7 +870,7 @@ static void arm64_perfmon_stop_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALY
 // It's ok to call this multiple times.
 // Returns an error if called before ALLOC or after FREE.
 zx_status_t arch_perfmon_stop() {
-    fbl::AutoLock al(&perfmon_lock);
+    Guard<Mutex> guard(PerfmonLock::Get());
 
     if (!supports_perfmon) {
         return ZX_ERR_NOT_SUPPORTED;
@@ -928,7 +928,7 @@ static void arm64_perfmon_reset_task(void* raw_context) TA_NO_THREAD_SAFETY_ANAL
 // Must be called while tracing is stopped.
 // It's ok to call this multiple times.
 zx_status_t arch_perfmon_fini() {
-    fbl::AutoLock al(&perfmon_lock);
+    Guard<Mutex> guard(PerfmonLock::Get());
 
     if (!supports_perfmon) {
         return ZX_ERR_NOT_SUPPORTED;
