@@ -38,7 +38,7 @@ func (e *endpoint) IsAttached() bool {
 	return e.dispatcher != nil
 }
 
-func (e *endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
 	if r.LocalAddress != "" && r.LocalAddress == r.RemoteAddress {
 		views := make([]buffer.View, 1, 1+len(payload.Views()))
 		views[0] = hdr.View()

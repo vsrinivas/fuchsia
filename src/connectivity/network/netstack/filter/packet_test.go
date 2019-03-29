@@ -67,15 +67,10 @@ func udpV4Packet(payload []byte, p *udpParams) (buffer.Prependable, buffer.Vecto
 	if p.noUDPChecksum {
 		u.SetChecksum(0)
 	} else {
-		// Calculate the UDP pseudo-header checksum.
-		xsum := header.Checksum([]byte(p.srcAddr), 0)
-		xsum = header.Checksum([]byte(p.dstAddr), xsum)
-		xsum = header.Checksum([]byte{0, uint8(udp.ProtocolNumber)}, xsum)
-
-		// Calculate the UDP checksum and set it.
 		length := uint16(header.UDPMinimumSize + len(payload))
+		xsum := header.PseudoHeaderChecksum(udp.ProtocolNumber, p.srcAddr, p.dstAddr, length)
 		xsum = header.Checksum(payload, xsum)
-		u.SetChecksum(^u.CalculateChecksum(xsum, length))
+		u.SetChecksum(^u.CalculateChecksum(xsum))
 	}
 
 	// Create the IPv4 header.
@@ -107,15 +102,10 @@ func udpV6Packet(payload []byte, p *udpParams) (buffer.Prependable, buffer.Vecto
 	if p.noUDPChecksum {
 		u.SetChecksum(0)
 	} else {
-		// Calculate the UDP pseudo-header checksum.
-		xsum := header.Checksum([]byte(p.srcAddr), 0)
-		xsum = header.Checksum([]byte(p.dstAddr), xsum)
-		xsum = header.Checksum([]byte{0, uint8(udp.ProtocolNumber)}, xsum)
-
-		// Calculate the UDP checksum and set it.
 		length := uint16(header.UDPMinimumSize + len(payload))
+		xsum := header.PseudoHeaderChecksum(udp.ProtocolNumber, p.srcAddr, p.dstAddr, length)
 		xsum = header.Checksum(payload, xsum)
-		u.SetChecksum(^u.CalculateChecksum(xsum, length))
+		u.SetChecksum(^u.CalculateChecksum(xsum))
 	}
 
 	// Create the IPv6 header.
@@ -160,16 +150,10 @@ func tcpV4Packet(payload []byte, p *tcpParams) (buffer.Prependable, buffer.Vecto
 		Flags:      uint8(p.flags),
 		WindowSize: uint16(p.rcvWnd),
 	})
-
-	// Calculate the TCP pseudo-header checksum.
-	xsum := header.Checksum([]byte(p.srcAddr), 0)
-	xsum = header.Checksum([]byte(p.dstAddr), xsum)
-	xsum = header.Checksum([]byte{0, uint8(tcp.ProtocolNumber)}, xsum)
-
-	// Calculate the TCP checksum and set it.
 	length := uint16(header.TCPMinimumSize + len(p.tcpOpts) + len(payload))
+	xsum := header.PseudoHeaderChecksum(tcp.ProtocolNumber, p.srcAddr, p.dstAddr, length)
 	xsum = header.Checksum(payload, xsum)
-	t.SetChecksum(^t.CalculateChecksum(xsum, length))
+	t.SetChecksum(^t.CalculateChecksum(xsum))
 
 	// Create the IPv4 header.
 	ip := header.IPv4(hdr.Prepend(header.IPv4MinimumSize))
@@ -200,16 +184,10 @@ func tcpV6Packet(payload []byte, p *tcpParams) (buffer.Prependable, buffer.Vecto
 		DataOffset: uint8(header.TCPMinimumSize + len(p.tcpOpts)),
 		Flags:      uint8(p.flags),
 	})
-
-	// Calculate the TCP pseudo-header checksum.
-	xsum := header.Checksum([]byte(p.srcAddr), 0)
-	xsum = header.Checksum([]byte(p.dstAddr), xsum)
-	xsum = header.Checksum([]byte{0, uint8(tcp.ProtocolNumber)}, xsum)
-
-	// Calculate the TCP checksum and set it.
 	length := uint16(header.TCPMinimumSize + len(p.tcpOpts) + len(payload))
+	xsum := header.PseudoHeaderChecksum(tcp.ProtocolNumber, p.srcAddr, p.dstAddr, length)
 	xsum = header.Checksum(payload, xsum)
-	t.SetChecksum(^t.CalculateChecksum(xsum, length))
+	t.SetChecksum(^t.CalculateChecksum(xsum))
 
 	// Create the IPv6 header.
 	ip := header.IPv6(hdr.Prepend(header.IPv6MinimumSize))

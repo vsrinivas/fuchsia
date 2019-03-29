@@ -80,12 +80,14 @@ func TestEndpoint_WritePacket(t *testing.T) {
 	payload := buffer.NewViewFromBytes([]byte("bar")).ToVectorisedView()
 	const fakeProtocolNumber = 45
 	const protocol = tcpip.NetworkProtocolNumber(fakeProtocolNumber)
-	e.WritePacket(&stack.Route{
+	if err := e.WritePacket(&stack.Route{
 		LocalAddress:      address,
 		RemoteAddress:     address,
 		LocalLinkAddress:  localLinkAddress,
 		RemoteLinkAddress: remoteLinkAddress,
-	}, hdr, payload, protocol)
+	}, nil, hdr, payload, protocol); err != nil {
+		t.Fatal(err)
+	}
 
 	if want := 1; packetsDelivered != want {
 		t.Errorf("got %d packets delivered, want = %d", packetsDelivered, want)

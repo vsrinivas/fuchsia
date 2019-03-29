@@ -83,9 +83,9 @@ func (e *StatsEndpoint) IsAttached() bool {
 // WritePacket handles outgoing packet from the higher layer.
 // It performs packet inspection, and extracts a rich set of statistics,
 // and stores them to a FIDL data structure.
-func (e *StatsEndpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+func (e *StatsEndpoint) WritePacket(r *stack.Route, gso *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
 	e.analyzeTrafficStats(&e.Stats.Tx, protocol, hdr.View(), hdr.UsedLength()+payload.Size())
-	return e.lower.WritePacket(r, hdr, payload, protocol)
+	return e.lower.WritePacket(r, gso, hdr, payload, protocol)
 }
 
 func (e *StatsEndpoint) analyzeTrafficStats(ts *nsfidl.NetTrafficStats, protocol tcpip.NetworkProtocolNumber, hdr []byte, packetSize int) {

@@ -188,9 +188,9 @@ func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 	return ep.linkAddress
 }
 
-func (ep *Endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+func (ep *Endpoint) WritePacket(r *stack.Route, gso *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
 	for _, l := range ep.links {
-		if err := l.WritePacket(r, hdr, payload, protocol); err != nil {
+		if err := l.WritePacket(r, gso, hdr, payload, protocol); err != nil {
 			return err
 		}
 	}
@@ -250,7 +250,7 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 		// Don't write back out interface from which the frame arrived
 		// because that causes interoperability issues with a router.
 		if linkaddr != rxaddr {
-			l.WritePacket(&r, hdr, payload, p)
+			l.WritePacket(&r, nil, hdr, payload, p)
 		}
 	}
 }

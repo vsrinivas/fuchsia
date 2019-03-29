@@ -47,9 +47,9 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 
 // WritePacket is called when a packet arrives is written to the lower
 // endpoint. It calls Run to what to do with the packet.
-func (e *endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+func (e *endpoint) WritePacket(r *stack.Route, gso *stack.GSO, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
 	if e.filter.Run(Outgoing, protocol, hdr, payload) != Pass {
 		return nil
 	}
-	return e.LinkEndpoint.WritePacket(r, hdr, payload, protocol)
+	return e.LinkEndpoint.WritePacket(r, gso, hdr, payload, protocol)
 }
