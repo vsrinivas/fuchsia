@@ -15,7 +15,7 @@ namespace sys {
 namespace testing {
 
 // This provides a fake |ServiceDirectory| for unit testing.
-// Does not allow accessing services outside of this object.
+// Provides access to services that have been added to this object.
 // The object of this class should be kept alive for fake |ServiceDirectory| to
 // work.
 class ServiceDirectoryProvider {

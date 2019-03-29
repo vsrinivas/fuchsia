@@ -14,7 +14,7 @@ namespace sys {
 namespace testing {
 
 // Provides fake |ComponentContext| for unit testing.
-// Does not allow publishing or accessing services outside of this object.
+// Provides access to services that have been added to this object.
 // The object of this class should be kept alive for fake |ComponentContext| to
 // work.
 class ComponentContextProvider {

@@ -157,7 +157,7 @@ class ServiceDirectory final {
   //
   // ZX_ERR_UNAVAILABLE: The directory backing this service bundle is invalid.
   //
-  // Other transport- and application-level errors associated with
+  // Other transport and application-level errors associated with
   // |fuchsia.io.Node/Clone|.
   //
   // # Example
@@ -172,7 +172,7 @@ class ServiceDirectory final {
  private:
   // The directory to which connection requests are routed.
   //
-  // Implements the |fuchsia.io.Directory| protocol.
+  // Implements |fuchsia.io.Directory| protocol.
   zx::channel directory_;
 };
 

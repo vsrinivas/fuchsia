@@ -54,10 +54,10 @@ class ComponentContext final {
   struct MakePrivate;
 
  public:
-  // Create a startup context.
+  // Create a component context.
   //
   // This constructor is rarely used directly. Instead, most clients create a
-  // startup context using the |Create()| static method.
+  // component context using the |Create()| static method.
   ComponentContext(MakePrivate make_private,
                    std::shared_ptr<ServiceDirectory> svc,
                    zx::channel directory_request,
@@ -69,12 +69,12 @@ class ComponentContext final {
   ComponentContext(const ComponentContext&) = delete;
   ComponentContext& operator=(const ComponentContext&) = delete;
 
-  // Creates a startup context from the process startup info.
+  // Creates a component context from the process startup info.
   //
   // Call this function once during process initialization to retrieve the
   // handles supplied to the component by the component manager. This function
   // consumes some of those handles, which means subsequent calls to this
-  // function will not return a functional startup context.
+  // function will not return a functional component context.
   //
   // Prefer creating the |ComponentContext| in the |main| function for a
   // component and passing the object to any |App| class. This pattern makes
@@ -96,7 +96,7 @@ class ComponentContext final {
   // ```
   static std::unique_ptr<ComponentContext> Create();
 
-  // Creates a startup context from |fuchsia::sys::StartupInfo|.
+  // Creates a component context from |fuchsia::sys::StartupInfo|.
   //
   // Typically used by implementations of |fuchsia::sys::Runner| to obtain the
   // |ComponentContext| for components being run by the runner.

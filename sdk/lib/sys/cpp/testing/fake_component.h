@@ -22,7 +22,7 @@ class FakeComponent {
   FakeComponent();
   ~FakeComponent();
 
-  // Adds the specified interface to the set of public interfaces.
+  // Adds specified interface to the set of public interfaces.
   //
   // Adds a supported service with the given |service_name|, using the given
   // |interface_request_handler|, which should remain valid for the lifetime of
@@ -40,7 +40,7 @@ class FakeComponent {
         std::make_unique<vfs::Service>(std::move(handler)));
   }
 
-  // Register this component with a FakeLauncher.
+  // Registers this component with a FakeLauncher.
   void Register(std::string url, FakeLauncher& fake_launcher,
                 async_dispatcher_t* dispatcher = nullptr);
 
