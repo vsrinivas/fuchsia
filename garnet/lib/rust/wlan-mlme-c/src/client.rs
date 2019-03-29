@@ -10,7 +10,11 @@ use {
     wlan_mlme::{
         buffer::{BufferProvider, InBuf, OutBuf},
         client,
-        common::{frame_len, mac, sequence::SequenceManager},
+        common::{
+            frame_len,
+            mac::{self, OptionalField},
+            sequence::SequenceManager,
+        },
         device,
     },
 };
@@ -88,22 +92,27 @@ pub extern "C" fn mlme_handle_data_frame(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn mlme_write_eapol_data_frame(
+pub unsafe extern "C" fn mlme_write_data_frame(
     provider: BufferProvider,
     seq_mgr: &mut SequenceManager,
     bssid: &[u8; 6],
     src: &[u8; 6],
     dest: &[u8; 6],
     is_protected: bool,
-    eapol_frame_ptr: *const u8,
-    eapol_frame_len: usize,
+    is_qos: bool,
+    ether_type: u16,
+    payload: *const u8,
+    payload_len: usize,
     out_buf: &mut OutBuf,
 ) -> i32 {
-    let frame_len = frame_len!(mac::FixedDataHdrFields, mac::LlcHdr) + eapol_frame_len;
+    let qos_presence = if is_qos { mac::QosControl::PRESENT } else { mac::QosControl::ABSENT };
+    let data_hdr_len =
+        mac::FixedDataHdrFields::len(mac::Addr4::ABSENT, qos_presence, mac::HtControl::ABSENT);
+    let frame_len = data_hdr_len + std::mem::size_of::<mac::LlcHdr>() + payload_len;
     let buf_result = provider.get_buffer(frame_len);
     let mut buf = unwrap_or_bail!(buf_result, zx::ZX_ERR_NO_RESOURCES);
     let mut writer = BufferWriter::new(&mut buf[..]);
-    let eapol_frame = utils::as_slice(eapol_frame_ptr, eapol_frame_len);
+    let payload = utils::as_slice(payload, payload_len);
     let write_result = client::write_data_frame(
         &mut writer,
         seq_mgr,
@@ -111,9 +120,9 @@ pub unsafe extern "C" fn mlme_write_eapol_data_frame(
         *src,
         *dest,
         is_protected,
-        false, // Transmit EAPOL frames without a QoS Control field
-        mac::ETHER_TYPE_EAPOL,
-        eapol_frame,
+        is_qos,
+        ether_type,
+        payload,
     );
     unwrap_or_bail!(write_result, zx::ZX_ERR_INTERNAL);
     let written_bytes = writer.bytes_written();

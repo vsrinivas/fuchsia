@@ -90,18 +90,19 @@ extern "C" uint32_t mlme_sequence_manager_next_sns1(
 extern "C" uint32_t mlme_sequence_manager_next_sns2(
     mlme_sequence_manager_t *mgr, const uint8_t (*sta_addr)[6], uint16_t tid);
 
+extern "C" int32_t mlme_write_data_frame(
+    mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,
+    const uint8_t (*bssid)[6], const uint8_t (*src)[6],
+    const uint8_t (*dest)[6], bool is_protected, bool is_qos,
+    uint16_t ether_type, const uint8_t *payload, uintptr_t payload_len,
+    mlme_out_buf_t *out_buf);
+
 extern "C" int32_t mlme_write_deauth_frame(mlme_buffer_provider_ops_t provider,
                                            mlme_sequence_manager_t *seq_mgr,
                                            const uint8_t (*bssid)[6],
                                            const uint8_t (*client_addr)[6],
                                            uint16_t reason_code,
                                            mlme_out_buf_t *out_buf);
-
-extern "C" int32_t mlme_write_eapol_data_frame(
-    mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,
-    const uint8_t (*bssid)[6], const uint8_t (*src)[6],
-    const uint8_t (*dest)[6], bool is_protected, const uint8_t *eapol_frame_ptr,
-    uintptr_t eapol_frame_len, mlme_out_buf_t *out_buf);
 
 extern "C" int32_t mlme_write_keep_alive_resp_frame(
     mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,
