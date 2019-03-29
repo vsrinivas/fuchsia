@@ -44,3 +44,39 @@ func (s State) String() string {
 		return fmt.Sprintf("link bad state (%d)", s)
 	}
 }
+
+func NewLoopbackController() Controller {
+	return &loopbackController{}
+}
+
+type loopbackController struct {
+	onStateChange func(State)
+}
+
+func (c *loopbackController) Up() error {
+	if f := c.onStateChange; f != nil {
+		f(StateStarted)
+	}
+	return nil
+}
+func (c *loopbackController) Down() error {
+	if f := c.onStateChange; f != nil {
+		f(StateDown)
+	}
+	return nil
+}
+func (c *loopbackController) Close() error {
+	if f := c.onStateChange; f != nil {
+		f(StateClosed)
+	}
+	return nil
+}
+func (c *loopbackController) SetOnStateChange(f func(State)) {
+	c.onStateChange = f
+}
+func (c *loopbackController) Path() string {
+	return "loopback"
+}
+func (c *loopbackController) SetPromiscuousMode(bool) error {
+	return nil
+}

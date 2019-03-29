@@ -553,13 +553,16 @@ func (ns *Netstack) addLoopback() error {
 	nic.Name = "lo"
 
 	ifs := &ifState{
-		ns: ns,
+		ns:  ns,
+		eth: link.NewLoopbackController(),
 	}
 
 	ifs.mu.state = link.StateStarted
 	ifs.mu.nic = nic
 	ifs.mu.dhcp.running = func() bool { return false }
 	ifs.mu.dhcp.cancel = func() {}
+
+	ifs.eth.SetOnStateChange(ifs.stateChange)
 
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
