@@ -4,7 +4,7 @@
 
 #include "garnet/lib/measure/argument_value.h"
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace measure {

@@ -18,8 +18,8 @@
 #include "garnet/bin/zxdb/console/format_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/symbols/location.h"
-#include "garnet/public/lib/fxl/logging.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 

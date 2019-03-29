@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/shared/buffered_zx_socket.h"
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zx_status.h"
 

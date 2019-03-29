@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/client/setting_schema.h"
-#include "garnet/public/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/join_strings.h"
 
 namespace zxdb {
 

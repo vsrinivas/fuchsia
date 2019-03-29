@@ -6,7 +6,7 @@
 
 #include <deque>
 
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 
 namespace debug_ipc {

@@ -9,7 +9,7 @@
 #include "garnet/bin/zxdb/symbols/dwarf_die_decoder.h"
 #include "garnet/bin/zxdb/symbols/dwarf_tag.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_index_node.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"

@@ -11,7 +11,7 @@
 
 #include "garnet/bin/ui/sketchy/stroke/cubic_bezier.h"
 #include "garnet/public/lib/escher/geometry/bounding_box.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace sketchy_service {
 

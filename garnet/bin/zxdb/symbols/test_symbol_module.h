@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Object/ObjectFile.h"

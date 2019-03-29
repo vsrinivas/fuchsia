@@ -8,7 +8,7 @@
 
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/console/string_formatters.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 

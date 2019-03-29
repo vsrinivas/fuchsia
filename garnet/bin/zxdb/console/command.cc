@@ -8,8 +8,8 @@
 
 #include "garnet/bin/zxdb/console/nouns.h"
 #include "garnet/bin/zxdb/console/verbs.h"
-#include "garnet/public/lib/fxl/logging.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

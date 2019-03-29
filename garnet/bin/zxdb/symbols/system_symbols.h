@@ -8,8 +8,8 @@
 #include <memory>
 
 #include "garnet/bin/zxdb/symbols/build_id_index.h"
-#include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

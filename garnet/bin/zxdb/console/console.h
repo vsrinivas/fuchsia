@@ -7,7 +7,7 @@
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/line_input.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/message_loop.h"
 

@@ -6,8 +6,8 @@
 #define GARNET_BIN_ZXDB_CLIENT_JOB_CONTEXT_IMPL_H_
 
 #include "garnet/bin/zxdb/client/job_context.h"
-#include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {

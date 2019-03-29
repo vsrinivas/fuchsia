@@ -11,7 +11,7 @@
 #include <lib/zx/process.h>
 #include <zircon/syscalls/exception.h>
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/shared/fd_watcher.h"
 #include "src/developer/debug/shared/socket_watcher.h"
 #include "src/developer/debug/shared/zircon_exception_watcher.h"

@@ -6,7 +6,7 @@
 
 #include <cstring>
 
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"

@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <map>
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/common/err.h"

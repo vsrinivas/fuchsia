@@ -11,9 +11,8 @@ source_set("ethertap") {
     "ethertap_types.h",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
-
   deps = [
+    "//garnet/public/lib/fxl",
     "//zircon/public/fidl/fuchsia-hardware-ethernet",
     "//zircon/public/fidl/fuchsia-hardware-ethertap",
     "//zircon/public/lib/async-default",
@@ -44,10 +43,9 @@ source_set("network_service") {
     "network_manager.h",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
-
   deps = [
     ":ethertap",
+    "//garnet/public/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fbl",
@@ -87,12 +85,11 @@ executable("network_test_bin") {
     "network_service_unittest.cc",
   ]
 
-  public_configs = [ "//garnet/public:config" ]
-
   deps = [
     ":ethertap",
     ":netdump",
     ":network_service",
+    "//garnet/public/lib/fxl",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
     "//zircon/public/lib/fzl",

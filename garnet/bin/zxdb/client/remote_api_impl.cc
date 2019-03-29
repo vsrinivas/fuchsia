@@ -5,8 +5,8 @@
 #include "garnet/bin/zxdb/client/remote_api_impl.h"
 
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/public/lib/fxl/logging.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"

@@ -10,7 +10,7 @@
 
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/nouns.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

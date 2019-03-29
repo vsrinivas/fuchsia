@@ -6,7 +6,7 @@
 
 #include <sstream>
 
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
 

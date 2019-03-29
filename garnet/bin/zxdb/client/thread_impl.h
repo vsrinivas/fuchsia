@@ -6,7 +6,7 @@
 
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 

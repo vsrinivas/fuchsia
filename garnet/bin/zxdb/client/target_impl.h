@@ -8,8 +8,8 @@
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/client/target_observer.h"
 #include "garnet/bin/zxdb/symbols/target_symbols.h"
-#include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 

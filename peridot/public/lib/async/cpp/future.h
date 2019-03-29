@@ -15,11 +15,11 @@
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 
-#include "garnet/public/lib/fxl/functional/apply.h"
-#include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/memory/ref_counted.h"
-#include "garnet/public/lib/fxl/memory/ref_ptr.h"
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/functional/apply.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace modular {
 

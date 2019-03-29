@@ -7,8 +7,8 @@
 
 #include "garnet/bin/zxdb/client/job.h"
 
-#include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 

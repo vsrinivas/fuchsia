@@ -4,7 +4,7 @@
 
 #include "garnet/lib/measure/results.h"
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include <sstream>
 

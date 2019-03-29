@@ -6,7 +6,7 @@
 
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

@@ -14,7 +14,7 @@
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/system_symbols.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 

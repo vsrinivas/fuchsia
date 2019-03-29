@@ -5,7 +5,7 @@
 #include "garnet/bin/zxdb/client/remote_api.h"
 
 #include "garnet/bin/zxdb/client/session.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

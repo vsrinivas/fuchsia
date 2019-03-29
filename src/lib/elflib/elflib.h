@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
 
 namespace elflib {

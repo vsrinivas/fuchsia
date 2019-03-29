@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/root_presenter/displays/display_configuration.h"
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/files/file.h"
 
 namespace root_presenter {

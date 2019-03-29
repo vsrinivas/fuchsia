@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/common/err.h"
 

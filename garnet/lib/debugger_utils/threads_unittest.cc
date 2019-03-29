@@ -18,7 +18,7 @@
 #include "garnet/lib/debugger_utils/jobs.h"
 #include "garnet/lib/debugger_utils/threads.h"
 #include "garnet/lib/debugger_utils/util.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "gtest/gtest.h"
 
 namespace debugger_utils {

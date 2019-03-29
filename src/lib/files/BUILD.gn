@@ -22,12 +22,12 @@ source_set("files") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl:strings",
+    "//src/lib/fxl:strings",
   ]
 
   deps = [
-    "//garnet/public/lib/fxl:fxl_logging",
-    "//garnet/public/lib/fxl:memory",
+    "//src/lib/fxl:fxl_logging",
+    "//src/lib/fxl:memory",
     "//zircon/public/lib/fit",
   ]
 }

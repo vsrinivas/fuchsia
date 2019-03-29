@@ -7,7 +7,7 @@
 #include <map>
 
 #include "garnet/bin/zxdb/client/setting_value.h"
-#include "garnet/public/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

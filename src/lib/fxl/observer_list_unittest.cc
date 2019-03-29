@@ -4,7 +4,7 @@
 
 // Derived from chromium/src/base/observer_list_unittest.cc
 
-#include "garnet/public/lib/fxl/observer_list.h"
+#include "src/lib/fxl/observer_list.h"
 
 #include <utility>
 #include <vector>

@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <limits>
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace presentation_mode {
 

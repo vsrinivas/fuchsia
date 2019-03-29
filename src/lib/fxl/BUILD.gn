@@ -1,0 +1,275 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("transition_config") {
+  include_dirs = [ "//src" ]
+}
+
+source_set("common") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "arraysize.h",
+    "build_config.h",
+    "compiler_specific.h",
+    "fxl_export.h",
+    "macros.h",
+  ]
+
+  public_configs = [
+    ":transition_config",
+    "//garnet/public:config",
+  ]
+}
+
+if (is_fuchsia) {
+  fxl_logging_type = "shared_library"
+} else {
+  fxl_logging_type = "source_set"
+}
+
+target(fxl_logging_type, "fxl_logging") {
+  # Some of these sources store static global state that may impose potential
+  # constraints on dynamic linking.
+  sources = [
+    "debug/debugger.cc",
+    "debug/debugger.h",
+    "log_level.h",
+    "log_settings.cc",
+    "log_settings.h",
+    "log_settings_state.cc",
+    "logging.cc",
+    "logging.h",
+  ]
+
+  public_deps = [
+    ":common",
+  ]
+}
+
+source_set("memory") {
+  visibility = [
+    ":*",
+    "//src/lib/files",
+  ]
+
+  sources = [
+    "memory/ref_counted.h",
+    "memory/ref_counted_internal.h",
+    "memory/ref_ptr.h",
+    "memory/ref_ptr_internal.h",
+    "memory/unique_object.h",
+    "memory/weak_ptr.h",
+    "memory/weak_ptr_internal.cc",
+    "memory/weak_ptr_internal.h",
+  ]
+
+  public_deps = [
+    ":common",
+    ":fxl_logging",
+  ]
+
+  public_configs = [
+    ":transition_config",
+    "//garnet/public:config",
+  ]
+}
+
+source_set("strings") {
+  visibility = [
+    ":*",
+    "//src/lib/files",
+  ]
+
+  sources = [
+    "strings/ascii.cc",
+    "strings/ascii.h",
+    "strings/concatenate.cc",
+    "strings/concatenate.h",
+    "strings/join_strings.h",
+    "strings/split_string.cc",
+    "strings/split_string.h",
+    "strings/string_number_conversions.cc",
+    "strings/string_number_conversions.h",
+    "strings/string_printf.cc",
+    "strings/string_printf.h",
+    "strings/string_view.cc",
+    "strings/string_view.h",
+    "strings/substitute.cc",
+    "strings/substitute.h",
+    "strings/trim.cc",
+    "strings/trim.h",
+    "strings/utf_codecs.cc",
+    "strings/utf_codecs.h",
+    "third_party/icu/icu_utf.cc",
+    "third_party/icu/icu_utf.h",
+  ]
+
+  public_deps = [
+    ":common",
+    ":fxl_logging",
+  ]
+
+  public_configs = [
+    ":transition_config",
+    "//garnet/public:config",
+  ]
+}
+
+source_set("time") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "time/stopwatch.cc",
+    "time/stopwatch.h",
+    "time/time_delta.h",
+    "time/time_point.cc",
+    "time/time_point.h",
+  ]
+
+  public_deps = [
+    ":common",
+    ":fxl_logging",
+  ]
+
+  public_configs = [
+    ":transition_config",
+    "//garnet/public:config",
+  ]
+}
+
+source_set("functional") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "functional/apply.h",
+    "functional/cancelable_callback.h",
+  ]
+
+  public_deps = [
+    ":common",
+    ":fxl_logging",
+    ":memory",
+  ]
+
+  public_configs = [
+    ":transition_config",
+    "//garnet/public:config",
+  ]
+}
+
+static_library("fxl") {
+  sources = [
+    "command_line.cc",
+    "command_line.h",
+    "log_settings_command_line.cc",
+    "log_settings_command_line.h",
+    "observer_list.h",
+    "synchronization/thread_annotations.h",
+    "synchronization/thread_checker.h",
+  ]
+
+  public_deps = [
+    ":common",
+    ":functional",
+    ":fxl_logging",
+    ":memory",
+    ":strings",
+    ":time",
+    "//src/lib/files",
+    "//zircon/public/lib/fit",
+  ]
+
+  if (is_fuchsia) {
+    libs = [ "zircon" ]
+  }
+}
+
+source_set("printers") {
+  testonly = true
+
+  sources = [
+    "time/time_printers.cc",
+  ]
+  deps = [
+    ":fxl",
+  ]
+  public_configs = [
+    ":transition_config",
+    "//garnet/public:config",
+  ]
+}
+
+group("fxl_printers") {
+  testonly = true
+
+  public_deps = [
+    ":printers",
+  ]
+}
+
+executable("fxl_unittests") {
+  testonly = true
+
+  sources = [
+    # TODO: Move the files-related tests to a separate target.
+    "//src/lib/files/directory_unittest.cc",
+    "//src/lib/files/file_descriptor_unittest.cc",
+    "//src/lib/files/file_unittest.cc",
+    "//src/lib/files/glob_unittest.cc",
+    "//src/lib/files/path_unittest.cc",
+    "//src/lib/files/scoped_temp_dir_unittest.cc",
+    "arraysize_unittest.cc",
+    "command_line_unittest.cc",
+    "functional/apply_unittest.cc",
+    "functional/cancelable_callback_unittest.cc",
+    "log_settings_unittest.cc",
+    "memory/ref_counted_unittest.cc",
+    "memory/weak_ptr_unittest.cc",
+    "observer_list_unittest.cc",
+    "strings/ascii_unittest.cc",
+    "strings/concatenate_unittest.cc",
+    "strings/join_strings_unittest.cc",
+    "strings/split_string_unittest.cc",
+    "strings/string_number_conversions_unittest.cc",
+    "strings/string_printf_unittest.cc",
+    "strings/string_view_unittest.cc",
+    "strings/substitute_unittest.cc",
+    "strings/trim_unittest.cc",
+    "synchronization/thread_annotations_unittest.cc",
+    "synchronization/thread_checker_unittest.cc",
+    "time/stopwatch_unittest.cc",
+    "time/time_delta_unittest.cc",
+    "time/time_point_unittest.cc",
+    "time/time_unittest.cc",
+  ]
+
+  deps = [
+    ":fxl",
+    ":fxl_logging",
+    ":printers",
+    "test:gtest_main",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+if (is_fuchsia) {
+  import("//build/package.gni")
+
+  package("fxl_tests") {
+    testonly = true
+
+    deps = [
+      ":fxl_unittests",
+    ]
+
+    tests = [
+      {
+        name = "fxl_unittests"
+      },
+    ]
+  }
+}

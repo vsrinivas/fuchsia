@@ -7,7 +7,7 @@
 #include <fbl/algorithm.h>
 #include <cmath>
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "garnet/public/lib/media/audio_dfx/audio_device_fx.h"
 
 namespace media::audio_dfx_test {

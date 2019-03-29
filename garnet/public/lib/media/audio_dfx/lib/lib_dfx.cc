@@ -7,7 +7,7 @@
 #include <fbl/algorithm.h>
 #include <cmath>
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_base.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_delay.h"
 #include "garnet/public/lib/media/audio_dfx/lib/dfx_rechannel.h"

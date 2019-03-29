@@ -11,7 +11,7 @@
 
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace zxdb {
 

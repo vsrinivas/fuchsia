@@ -8,7 +8,7 @@
 #include <poll.h>
 #include <unistd.h>
 
-#include "garnet/public/lib/fxl/build_config.h"
+#include "src/lib/fxl/build_config.h"
 #include "src/lib/files/eintr_wrapper.h"
 
 namespace debug_ipc {

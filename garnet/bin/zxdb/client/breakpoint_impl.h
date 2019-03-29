@@ -11,7 +11,7 @@
 #include "garnet/bin/zxdb/client/process_observer.h"
 #include "garnet/bin/zxdb/client/system_observer.h"
 #include "garnet/bin/zxdb/client/target_observer.h"
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace debug_ipc {
 struct BreakpointStats;

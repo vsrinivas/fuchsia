@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace llvm {

@@ -8,7 +8,7 @@
 #include <string>
 #include <utility>
 
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"

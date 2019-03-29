@@ -7,7 +7,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/exception.h>
 
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "lib/fxl/logging.h"
 #include "src/developer/debug/ipc/register_desc.h"
 

@@ -9,7 +9,7 @@
 #include <limits>
 
 #include "garnet/bin/zxdb/client/memory_dump.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 

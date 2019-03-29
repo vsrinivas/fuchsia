@@ -2,19 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Generic main entry point target for GTest executables.
-source_set("gtest_main") {
+group("gtest_main") {
   testonly = true
-
-  sources = [
-    "run_all_unittests.cc",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fxl",
-  ]
-
   public_deps = [
-    "//third_party/googletest:gtest",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }

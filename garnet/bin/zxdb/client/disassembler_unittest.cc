@@ -7,7 +7,7 @@
 #include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/disassembler.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
-#include "garnet/public/lib/fxl/arraysize.h"
+#include "src/lib/fxl/arraysize.h"
 #include "gtest/gtest.h"
 
 namespace zxdb {

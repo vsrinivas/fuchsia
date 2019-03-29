@@ -8,7 +8,7 @@
 #include "garnet/bin/ui/sketchy/stroke/stroke_path.h"
 
 #include <vector>
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "third_party/glm/glm/vec2.hpp"
 
 namespace sketchy_service {

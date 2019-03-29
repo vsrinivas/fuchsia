@@ -11,7 +11,7 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/symbols/module_symbol_index_node.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace llvm {
 

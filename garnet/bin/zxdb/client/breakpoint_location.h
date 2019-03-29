@@ -5,7 +5,7 @@
 #pragma once
 
 #include "garnet/bin/zxdb/symbols/location.h"
-#include "garnet/public/lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace zxdb {
 

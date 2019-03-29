@@ -12,8 +12,8 @@
 
 #include "garnet/bin/zxdb/client/session_observer.h"
 #include "garnet/bin/zxdb/client/system_impl.h"
-#include "garnet/public/lib/fxl/memory/ref_ptr.h"
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace debug_ipc {

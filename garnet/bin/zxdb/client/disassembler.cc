@@ -9,8 +9,8 @@
 
 #include "garnet/bin/zxdb/client/arch_info.h"
 #include "garnet/bin/zxdb/client/memory_dump.h"
-#include "garnet/public/lib/fxl/strings/string_printf.h"
-#include "garnet/public/lib/fxl/strings/trim.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/trim.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
