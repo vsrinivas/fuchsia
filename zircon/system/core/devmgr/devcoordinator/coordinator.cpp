@@ -49,6 +49,7 @@
 #include "composite-device.h"
 #include "devfs.h"
 #include "devhost-loader-service.h"
+#include "fidl.h"
 #include "fidl-proxy.h"
 #include "vmo-writer.h"
 

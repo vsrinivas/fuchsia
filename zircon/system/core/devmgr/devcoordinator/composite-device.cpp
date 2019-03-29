@@ -9,6 +9,7 @@
 #include "../shared/log.h"
 #include "binding-internal.h"
 #include "coordinator.h"
+#include "fidl.h"
 
 namespace devmgr {
 
