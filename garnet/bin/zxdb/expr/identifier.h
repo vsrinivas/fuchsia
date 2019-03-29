@@ -87,6 +87,15 @@ class Identifier {
     }
     const ExprToken& template_end() const { return template_end_; }
 
+    // Returns this component, either as a string as it would be represented in
+    // C++, or in our debug format for unit test format checking (the name and
+    // each template parameter will be separately quoted so we can check the
+    // parsing).
+    //
+    // include_separator controls whether the "::" is included in the result or
+    // not.
+    std::string GetName(bool include_debug, bool include_separator) const;
+
    private:
     ExprToken separator_;
     ExprToken name_;
@@ -123,6 +132,9 @@ class Identifier {
                        std::vector<std::string> template_contents,
                        ExprToken template_end);
 
+  // Appends the components from the other identifier to this one.
+  void Append(Identifier other);
+
   // Returns a new identifier that's the scope of this one. The scope is
   // everything but the last identifier.
   //
@@ -141,6 +153,14 @@ class Identifier {
 
   // Returns a form for debugging where the parsing is more visible.
   std::string GetDebugName() const;
+
+  // Returns the list of components, each with their template parameters
+  // converted to a string. For example:
+  //
+  //   { "std", "vector<std::string>" }
+  //
+  // This is the format used in the ModuleSymbolIndex for lookup.
+  std::vector<std::string> GetAsIndexComponents() const;
 
   // In many contexts (like function parameters and local variables) the name
   // can't have any :: or template parameters and can have only one component.

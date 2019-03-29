@@ -34,9 +34,11 @@ Err FindMemberWithErr(const Collection* base, const Identifier& identifier,
                identifier.GetFullName().c_str());
   }
 
-  if (auto found = FindMember(base, identifier)) {
-    *out = *found;
-    return Err();
+  if (auto found = FindMember(base, identifier, nullptr)) {
+    if (found->kind() == FoundName::kMemberVariable) {
+      *out = found->member();
+      return Err();
+    }
   }
 
   return Err("No member '%s' in %s '%s'.", identifier.GetFullName().c_str(),

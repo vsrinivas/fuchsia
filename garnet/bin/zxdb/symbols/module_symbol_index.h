@@ -51,8 +51,17 @@ class ModuleSymbolIndex {
 
   // Takes a fully-qualified name with namespaces and classes and template
   // parameters and returns the list of symbols which match exactly.
+  //
+  // TODO(brettw) remove the version that takes a bare string. It doesn't know
+  // how to split things properly with templates.
+  //
+  // The vector version takes a list of components that have been split on
+  // "::". Most callers should use Identifier::GetAsIndexComponents() to get
+  // this list in the correct format.
   const std::vector<ModuleSymbolIndexNode::DieRef>& FindExact(
       const std::string& input) const;
+  const std::vector<ModuleSymbolIndexNode::DieRef>& FindExact(
+      const std::vector<std::string>& input) const;
 
   // Takes a fully-qualified name with namespaces and classes and returns a
   // pair of iterators.

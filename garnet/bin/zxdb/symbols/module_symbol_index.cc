@@ -375,10 +375,11 @@ const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
   //
   // TODO(brettw) this doesn't handle a lot of things like templates. By
   // blindly splitting on "::" we'll never find functions like
-  // "std::vector<Foo::Bar>::insert".
+  // "std::vector<Foo::Bar>::insert". This version should be deleted and all
+  // callers should use the one that takes a pre-split string.
   std::string separator("::");
 
-  const ModuleSymbolIndexNode* cur = &root_;
+  std::vector<std::string> components;
 
   size_t input_index = 0;
   while (input_index < input.size()) {
@@ -393,12 +394,23 @@ const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
       input_index = next + separator.size();  // Skip over "::".
     }
 
-    auto found = cur->sub().find(cur_name);
-    if (found == cur->sub().end()) {
-      static std::vector<ModuleSymbolIndexNode::DieRef> empty_vector;
-      return empty_vector;
-    }
+    components.push_back(std::move(cur_name));
+  }
 
+  return FindExact(components);
+}
+
+const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
+    const std::vector<std::string>& input) const {
+  const ModuleSymbolIndexNode* cur = &root_;
+
+  for (size_t i = 0; i < input.size(); i++) {
+    auto found = cur->sub().find(input[i]);
+    if (found == cur->sub().end()) {
+      // We return a reference for performance, so need an empty one.
+      static std::vector<ModuleSymbolIndexNode::DieRef> empty_result;
+      return empty_result;
+    }
     cur = &found->second;
   }
 

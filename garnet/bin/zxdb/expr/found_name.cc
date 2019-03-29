@@ -7,20 +7,33 @@
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
+#include "lib/fxl/logging.h"
 
 namespace zxdb {
 
+FoundName::FoundName() = default;
+
+FoundName::FoundName(Kind kind) : kind_(kind) {
+  // These are the only kinds that don't require other information.
+  FXL_DCHECK(kind == kNone || kind == kNamespace || kind == kTemplate);
+}
+
 FoundName::FoundName(const Variable* variable)
-    : variable_(const_cast<Variable*>(variable)) {}
+    : kind_(kVariable), variable_(const_cast<Variable*>(variable)) {}
 
 FoundName::FoundName(const Variable* object_ptr, FoundMember member)
-    : object_ptr_(const_cast<Variable*>(object_ptr)),
+    : kind_(kMemberVariable),
+      object_ptr_(const_cast<Variable*>(object_ptr)),
       member_(std::move(member)) {}
 
 FoundName::FoundName(const Variable* object_ptr, const DataMember* data_member,
                      uint32_t data_member_offset)
-    : object_ptr_(const_cast<Variable*>(object_ptr)),
+    : kind_(kMemberVariable),
+      object_ptr_(const_cast<Variable*>(object_ptr)),
       member_(data_member, data_member_offset) {}
+
+FoundName::FoundName(fxl::RefPtr<Type> type)
+    : kind_(kType), type_(std::move(type)) {}
 
 FoundName::~FoundName() = default;
 

@@ -10,6 +10,42 @@
 
 namespace zxdb {
 
+std::string Identifier::Component::GetName(bool include_debug, bool include_separator) const {
+  std::string result;
+
+  if (include_separator && has_separator()) {
+    result += separator().value();
+    if (include_debug)
+      result.push_back(',');
+  }
+
+  if (include_debug)
+    result.push_back('"');
+  result += name().value();
+  if (include_debug)
+    result.push_back('"');
+
+  if (has_template()) {
+    if (include_debug)
+      result.push_back(',');
+    result += template_begin().value();
+
+    for (size_t i = 0; i < template_contents().size(); i++) {
+      if (i > 0)
+        result += ", ";
+
+      // Template parameter string.
+      if (include_debug)
+        result.push_back('"');
+      result += template_contents()[i];
+      if (include_debug)
+        result.push_back('"');
+    }
+    result += template_end().value();
+  }
+  return result;
+}
+
 Identifier::Identifier(ExprToken name) {
   components_.emplace_back(ExprToken(), std::move(name));
 }
@@ -57,6 +93,11 @@ void Identifier::AppendComponent(ExprToken separator, ExprToken name,
       std::move(template_contents), std::move(template_end));
 }
 
+void Identifier::Append(Identifier other) {
+  for (auto& cur : other.components())
+    components_.push_back(std::move(cur));
+}
+
 Identifier Identifier::GetScope() const {
   if (components_.empty())
     return Identifier();
@@ -78,6 +119,14 @@ std::string Identifier::GetFullName() const { return GetName(false); }
 
 std::string Identifier::GetDebugName() const { return GetName(true); }
 
+std::vector<std::string> Identifier::GetAsIndexComponents() const {
+  std::vector<std::string> result;
+  result.reserve(components_.size());
+  for (const auto& c : components_)
+    result.push_back(c.GetName(false, false));
+  return result;
+}
+
 const std::string* Identifier::GetSingleComponentName() const {
   if (components_.size() != 1)
     return nullptr;
@@ -94,37 +143,7 @@ std::string Identifier::GetName(bool include_debug) const {
       first = false;
     else if (include_debug)
       result += "; ";
-
-    if (c.has_separator()) {
-      result += c.separator().value();
-      if (include_debug)
-        result.push_back(',');
-    }
-
-    if (include_debug)
-      result.push_back('"');
-    result += c.name().value();
-    if (include_debug)
-      result.push_back('"');
-
-    if (c.has_template()) {
-      if (include_debug)
-        result.push_back(',');
-      result += c.template_begin().value();
-
-      for (size_t i = 0; i < c.template_contents().size(); i++) {
-        if (i > 0)
-          result += ", ";
-
-        // Template parameter string.
-        if (include_debug)
-          result.push_back('"');
-        result += c.template_contents()[i];
-        if (include_debug)
-          result.push_back('"');
-      }
-      result += c.template_end().value();
-    }
+    result += c.GetName(include_debug, true);
   }
   return result;
 }

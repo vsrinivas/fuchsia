@@ -43,10 +43,10 @@ fxl::RefPtr<SymbolDataProvider> MockExprEvalContext::GetDataProvider() {
 
 NameLookupCallback MockExprEvalContext::GetSymbolNameLookupCallback() {
   // This mock version just integrates with builtin types.
-  return [](const Identifier& ident) -> NameLookupResult {
+  return [](const Identifier& ident) {
     if (auto type = GetBuiltinType(ident.GetFullName()))
-       return NameLookupResult(NameLookupResult::kType, std::move(type));
-    return NameLookupResult();
+       return FoundName(std::move(type));
+    return FoundName();
   };
 }
 

@@ -17,12 +17,12 @@ namespace {
 // This name looker-upper declares anything beginning with "Namespace" is a
 // namespace, anything beginning with "Template" is a template, and anything
 // beginning with "Type" is a type.
-NameLookupResult TestLookupName(const Identifier& ident) {
+FoundName TestLookupName(const Identifier& ident) {
   const Identifier::Component& comp = ident.components().back();
   const std::string& name = comp.name().value();
 
   if (StringBeginsWith(name, "Namespace"))
-    return NameLookupResult(NameLookupResult::kNamespace);
+    return FoundName(FoundName::kNamespace);
   if (StringBeginsWith(name, "Type")) {
     // Make up a random class to go with the type.
     auto type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
@@ -31,18 +31,16 @@ NameLookupResult TestLookupName(const Identifier& ident) {
     // NOTE: This doesn't qualify the type with namespaces or classes present
     // in the identifier so qualified names ("Namespace::Type") won't convert
     // to strings properly. This could be added if necessary.
-    return NameLookupResult(NameLookupResult::kType, std::move(type));
+    return FoundName(std::move(type));
   }
   if (StringBeginsWith(name, "Template")) {
     if (comp.has_template()) {
       // Assume templates with arguments are types.
-      return NameLookupResult(
-          NameLookupResult::kType,
-          fxl::MakeRefCounted<Collection>(DwarfTag::kClassType));
+      return FoundName(fxl::MakeRefCounted<Collection>(DwarfTag::kClassType));
     }
-    return NameLookupResult(NameLookupResult::kTemplate);
+    return FoundName(FoundName::kTemplate);
   }
-  return NameLookupResult(NameLookupResult::kOther);
+  return FoundName();
 }
 
 }  // namespace

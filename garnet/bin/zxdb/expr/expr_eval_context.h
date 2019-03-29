@@ -49,7 +49,7 @@ class ExprEvalContext : public fxl::RefCountedThreadSafe<ExprEvalContext> {
 
   virtual fxl::RefPtr<SymbolDataProvider> GetDataProvider() = 0;
 
-  // Returns a callback the parser can use to lookup type names.
+  // Returns a callback the parser can use to lookup names.
   //
   // It is assumed this callback is used for parsing and discarded rather than
   // stored since it may have references back the eval context.

@@ -107,21 +107,21 @@ fxl::RefPtr<SymbolDataProvider> SymbolEvalContext::GetDataProvider() {
 NameLookupCallback SymbolEvalContext::GetSymbolNameLookupCallback() {
   // The contract for this function is that the callback must not be stored
   // so the callback can reference |this|.
-  return [this](const Identifier& ident) -> NameLookupResult {
+  return [this](const Identifier& ident) -> FoundName {
     // Look up the symbols in the symbol table if possible.
-    NameLookupResult result = DoTargetSymbolsNameLookup(ident);
+    FoundName result = DoTargetSymbolsNameLookup(ident);
 
     // Fall back on builtin types.
-    if (result.kind == NameLookupResult::kOther) {
+    if (result.kind() == FoundName::kNone) {
       if (auto type = GetBuiltinType(ident.GetFullName()))
-        return NameLookupResult(NameLookupResult::kType, std::move(type));
+        return FoundName(std::move(type));
     }
     return result;
   };
 }
 
 void SymbolEvalContext::DoResolve(FoundName found, ValueCallback cb) const {
-  if (!found.is_object_member()) {
+  if (found.kind() == FoundName::kVariable) {
     // Simple variable resolution.
     resolver_.ResolveVariable(symbol_context_, found.variable(),
                               [var = found.variable_ref(), cb = std::move(cb)](
@@ -161,10 +161,10 @@ void SymbolEvalContext::DoResolve(FoundName found, ValueCallback cb) const {
       });
 }
 
-NameLookupResult SymbolEvalContext::DoTargetSymbolsNameLookup(
+FoundName SymbolEvalContext::DoTargetSymbolsNameLookup(
     const Identifier& ident) {
   // TODO(brettw) hook up actual symbol lookup here.
-  return NameLookupResult();
+  return FoundName();
 }
 
 }  // namespace zxdb

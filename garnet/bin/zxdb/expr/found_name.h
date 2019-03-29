@@ -5,6 +5,7 @@
 #pragma once
 
 #include "garnet/bin/zxdb/expr/found_member.h"
+#include "garnet/bin/zxdb/symbols/type.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
 
 namespace zxdb {
@@ -15,29 +16,61 @@ namespace zxdb {
 // either state.
 class FoundName {
  public:
+  // Since identifiers with template parameters at the end are assumed to be
+  // a type, we don't need to check that "std::vector<int>" is a type. This
+  // will need to be revisited if we support templatized function names in
+  // expressions ("auto a = &MyClass::MyFunc<int>;");
+  enum Kind {
+    kNone,            // Nothing with this name found.
+    kVariable,        // Local and global variables.
+    kMemberVariable,  // Class and struct member vars that require an object.
+    kNamespace,       // Namespace name like "std".
+    kTemplate,        // Template name without parameters like "std::vector".
+    kType,            // Full type name like "std::string" or "int".
+  };
+
+  // Default constructor for a "not found" name.
+  FoundName();
+
+  // Constructor for templates and namespaces that have no extra data.
+  explicit FoundName(Kind kind);
+
   // Constructor for regular variables. Takes a reference to the object.
   explicit FoundName(const Variable* variable);
 
-  // Constructor for data members.
+  // Constructor for data member variables. The object_ptr may be null if this
+  // represents a query on a type with no corresponding variable).
   FoundName(const Variable* object_ptr, FoundMember member);
   FoundName(const Variable* object_ptr, const DataMember* data_member,
             uint32_t data_member_offset);
 
+  // Constructor for types.
+  explicit FoundName(fxl::RefPtr<Type> type);
+
   ~FoundName();
 
-  bool is_object_member() const { return !!object_ptr_; }
+  Kind kind() const { return kind_; }
 
-  // Use when is_object_member() is false.
+  bool is_found() const { return kind_ != kNone; }
+
+  // Use when kind == kVariable and kMemberVariable. The variable may be null
+  // for member pointers if the call is just looking up the 
   const Variable* variable() const { return variable_.get(); }
   fxl::RefPtr<Variable> variable_ref() { return variable_; }
 
-  // Use when is_object_member() is true. Always use the data_member_offset()
+  // Valid when kind == kMemberVariable. Always use the data_member_offset()
   // from this class rather than the offset in data_member() (see comment
   // below for more).
   const Variable* object_ptr() const { return object_ptr_.get(); }
   const FoundMember& member() const { return member_; }
 
+  // Valid when kind == kType.
+  fxl::RefPtr<Type>& type() { return type_; }
+  const fxl::RefPtr<Type>& type() const { return type_; }
+
  private:
+  Kind kind_ = kNone;
+
   // Represents the found variable when it's not a class member. When null,
   // the result will be in object_member/data_member.
   fxl::RefPtr<Variable> variable_;
@@ -54,6 +87,8 @@ class FoundName {
   // Valid when object_ptr_ is non-null. This indicates the location of the
   // data inside the object.
   FoundMember member_;
+
+  fxl::RefPtr<Type> type_;
 };
 
 }  // namespace zxdb

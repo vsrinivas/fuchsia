@@ -288,19 +288,21 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
 
         // The thing we just made is either a type or a name, look it up.
         if (name_lookup_callback_) {
-          NameLookupResult lookup = name_lookup_callback_(result.ident);
-          switch (lookup.kind) {
-            case NameLookupResult::kType:
+          FoundName lookup = name_lookup_callback_(result.ident);
+          switch (lookup.kind()) {
+            case FoundName::kType:
               mode = kType;
-              result.type = std::move(lookup.type);
+              result.type = std::move(lookup.type());
               break;
-            case NameLookupResult::kNamespace:
-            case NameLookupResult::kTemplate:
+            case FoundName::kNamespace:
+            case FoundName::kTemplate:
               // The lookup shouldn't tell us a template name or namespace for
               // something that has template parameters.
               FXL_NOTREACHED();
               // Fall through to "other" case for fallback.
-            case NameLookupResult::kOther:
+            case FoundName::kVariable:
+            case FoundName::kMemberVariable:
+            case FoundName::kNone:
               mode = kOtherName;
               break;
           }
@@ -332,19 +334,21 @@ ExprParser::ParseNameResult ExprParser::ParseName(bool expand_types) {
 
         // Decode what adding the name just generated.
         if (name_lookup_callback_) {
-          NameLookupResult lookup = name_lookup_callback_(result.ident);
-          switch (lookup.kind) {
-            case NameLookupResult::kNamespace:
+          FoundName lookup = name_lookup_callback_(result.ident);
+          switch (lookup.kind()) {
+            case FoundName::kNamespace:
               mode = kNamespace;
               break;
-            case NameLookupResult::kTemplate:
+            case FoundName::kTemplate:
               mode = kTemplate;
               break;
-            case NameLookupResult::kType:
+            case FoundName::kType:
               mode = kType;
-              result.type = std::move(lookup.type);
+              result.type = std::move(lookup.type());
               break;
-            case NameLookupResult::kOther:
+            case FoundName::kVariable:
+            case FoundName::kMemberVariable:
+            case FoundName::kNone:
               mode = kOtherName;
               break;
           }
