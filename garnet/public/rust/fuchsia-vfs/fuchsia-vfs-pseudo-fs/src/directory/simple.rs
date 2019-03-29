@@ -7,7 +7,7 @@
 use {
     crate::common::send_on_open_with_error,
     crate::directory::{
-        common::{encode_dirent, new_connection_validate_flags},
+        common::encode_dirent,
         connection::DirectoryConnection,
         controllable::Controllable,
         entry::{DirectoryEntry, EntryInfo},
@@ -15,12 +15,10 @@ use {
         watchers::{Watchers, WatchersAddError, WatchersSendError},
         DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES,
     },
-    fidl::encoding::OutOfLine,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryObject, DirectoryRequest, NodeAttributes, NodeInfo, NodeMarker,
-        DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MAX_FILENAME, MODE_PROTECTION_MASK,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, WATCH_EVENT_ADDED,
+        DirectoryObject, DirectoryRequest, NodeAttributes, NodeInfo, NodeMarker,
+        DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MAX_FILENAME, MODE_TYPE_DIRECTORY, WATCH_EVENT_ADDED,
         WATCH_EVENT_REMOVED, WATCH_MASK_ADDED, WATCH_MASK_REMOVED,
     },
     fuchsia_async::Channel,
@@ -115,42 +113,10 @@ impl<'entries> Simple<'entries> {
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_DIRECTORY when
-        // the target is a directory.
-        if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_DIRECTORY != 0 {
-            let status = if (mode & !MODE_PROTECTION_MASK) & MODE_TYPE_FILE != 0 {
-                Status::NOT_FILE
-            } else {
-                Status::INVALID_ARGS
-            };
-            send_on_open_with_error(flags, server_end, status);
-            return;
-        }
-
-        let flags = match new_connection_validate_flags(parent_flags, flags) {
-            Ok(updated) => updated,
-            Err(status) => {
-                send_on_open_with_error(flags, server_end, status);
-                return;
-            }
-        };
-
-        // As we report all errors on `server_end`, if we failed to send an error in there, there
-        // is nowhere to send it to.
-        let (request_stream, control_handle) =
-            match ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
-                .into_stream_and_control_handle()
-            {
-                Ok((request_stream, control_handle)) => (request_stream, control_handle),
-                Err(_) => return,
-            };
-        let conn = SimpleDirectoryConnection::into_stream_future(request_stream, flags);
-        self.connections.push(conn);
-
-        if flags & OPEN_FLAG_DESCRIBE != 0 {
-            let mut info = NodeInfo::Directory(DirectoryObject);
-            // Ignore send errors, as there is nowhere to report them to.
-            let _ = control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info)));
+        if let Some(conn) =
+            SimpleDirectoryConnection::connect(parent_flags, flags, mode, server_end)
+        {
+            self.connections.push(conn);
         }
     }
 
@@ -577,8 +543,8 @@ mod tests {
         fidl_fuchsia_io::{
             DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent,
             FileMarker, FileObject, SeekOrigin, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
-            INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
-            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
+            OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         futures::SinkExt,
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IXGRP, S_IXOTH, S_IXUSR},

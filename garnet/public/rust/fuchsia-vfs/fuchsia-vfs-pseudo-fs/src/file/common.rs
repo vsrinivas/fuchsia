@@ -6,8 +6,9 @@
 
 use {
     fidl_fuchsia_io::{
-        OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
+        OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
 };
@@ -24,9 +25,20 @@ use {
 pub fn new_connection_validate_flags(
     parent_flags: u32,
     mut flags: u32,
+    mode: u32,
     readable: bool,
     writable: bool,
 ) -> Result<u32, Status> {
+    // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_FILE when the
+    // target is a pseudo file.
+    if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_FILE != 0 {
+        if (mode & !MODE_PROTECTION_MASK) & MODE_TYPE_DIRECTORY != 0 {
+            return Err(Status::NOT_DIR);
+        } else {
+            return Err(Status::INVALID_ARGS);
+        };
+    }
+
     if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
         flags &= !OPEN_FLAG_NODE_REFERENCE;
         flags &= OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;

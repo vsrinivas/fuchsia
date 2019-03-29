@@ -8,9 +8,10 @@ use {
     crate::directory::entry::EntryInfo,
     byteorder::{LittleEndian, WriteBytesExt},
     fidl_fuchsia_io::{
-        MAX_FILENAME, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
-        OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        MAX_FILENAME, MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
+        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
     std::{io::Write, mem::size_of},
@@ -19,7 +20,21 @@ use {
 /// Compares flags provided for a new connection with the flags of a parent connection.  Returns
 /// adjusted flags for the new connection (cleaning up some ambiguities) or a fidl Status error, in
 /// case new new connection flags are not permitting the connection to be opened.
-pub fn new_connection_validate_flags(parent_flags: u32, mut flags: u32) -> Result<u32, Status> {
+pub fn new_connection_validate_flags(
+    parent_flags: u32,
+    mut flags: u32,
+    mode: u32,
+) -> Result<u32, Status> {
+    // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_DIRECTORY when
+    // the target is a directory.
+    if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_DIRECTORY != 0 {
+        if (mode & !MODE_PROTECTION_MASK) & MODE_TYPE_FILE != 0 {
+            return Err(Status::NOT_FILE);
+        } else {
+            return Err(Status::INVALID_ARGS);
+        };
+    }
+
     if flags & OPEN_FLAG_NODE_REFERENCE != 0 {
         flags &= !OPEN_FLAG_NODE_REFERENCE;
         flags &= OPEN_FLAG_DIRECTORY | OPEN_FLAG_DESCRIBE;

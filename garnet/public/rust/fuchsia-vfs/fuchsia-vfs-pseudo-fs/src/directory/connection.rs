@@ -3,7 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io::DirectoryRequestStream,
+    crate::common::send_on_open_with_error,
+    crate::directory::common::new_connection_validate_flags,
+    fidl::encoding::OutOfLine,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryObject, DirectoryRequestStream, NodeInfo, NodeMarker,
+        OPEN_FLAG_DESCRIBE,
+    },
+    fuchsia_zircon::Status,
     futures::{
         stream::{Stream, StreamExt, StreamFuture},
         task::Waker,
@@ -45,11 +53,43 @@ impl<TraversalPosition> DirectoryConnection<TraversalPosition>
 where
     TraversalPosition: Default,
 {
-    pub fn into_stream_future(
-        requests: DirectoryRequestStream,
+    /// Initializes a directory connection, checking the flags and sending `OnOpen` event if
+    /// necessary.  Returns a [`DirectoryConnection`] object as a [`StreamFuture`], or in case of
+    /// an error, sends an appropriate `OnOpen` event (if requested) and returns `None`.
+    pub fn connect(
+        parent_flags: u32,
         flags: u32,
-    ) -> StreamFuture<DirectoryConnection<TraversalPosition>> {
-        (DirectoryConnection { requests, flags, seek: Default::default() }).into_future()
+        mode: u32,
+        server_end: ServerEnd<NodeMarker>,
+    ) -> Option<StreamFuture<DirectoryConnection<TraversalPosition>>> {
+        let flags = match new_connection_validate_flags(parent_flags, flags, mode) {
+            Ok(updated) => updated,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return None;
+            }
+        };
+
+        // As we report all errors on `server_end`, if we failed to send an error in there, there
+        // is nowhere to send it to.
+        let (requests, control_handle) =
+            match ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
+                .into_stream_and_control_handle()
+            {
+                Ok((requests, control_handle)) => (requests, control_handle),
+                Err(_) => return None,
+            };
+
+        if flags & OPEN_FLAG_DESCRIBE != 0 {
+            let mut info = NodeInfo::Directory(DirectoryObject);
+            match control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info))) {
+                Ok(()) => (),
+                Err(_) => return None,
+            }
+        }
+
+        let conn = DirectoryConnection { requests, flags, seek: Default::default() };
+        Some(conn.into_future())
     }
 }
 

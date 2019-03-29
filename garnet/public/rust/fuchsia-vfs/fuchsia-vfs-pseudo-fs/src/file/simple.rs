@@ -36,16 +36,15 @@ use {
     crate::common::send_on_open_with_error,
     crate::directory::entry::{DirectoryEntry, EntryInfo},
     crate::file::{
-        common::new_connection_validate_flags, connection::FileConnection, PseudoFile,
-        DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES, DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
-        DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
+        connection::FileConnection, PseudoFile, DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
+        DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES, DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
     },
     failure::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         FileObject, FileRequest, NodeAttributes, NodeInfo, NodeMarker, SeekOrigin,
-        DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_PROTECTION_MASK, MODE_TYPE_FILE, OPEN_FLAG_TRUNCATE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::{
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -290,49 +289,16 @@ where
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        // There should be no MODE_TYPE_* flags set, except for, possibly, MODE_TYPE_FILE when the
-        // target is a pseudo file.
-        if (mode & !MODE_PROTECTION_MASK) & !MODE_TYPE_FILE != 0 {
-            let status = if (mode & !MODE_PROTECTION_MASK) & MODE_TYPE_DIRECTORY != 0 {
-                Status::NOT_DIR
-            } else {
-                Status::INVALID_ARGS
-            };
-            send_on_open_with_error(flags, server_end, status);
-            return;
-        }
-
-        // TODO(sdemos): this should be moved into FileConnection::connect, but until we change how
-        // we deal with error types, the return type would get too weird.
-        let flags = match new_connection_validate_flags(
+        if let Some(conn) = FileConnection::connect(
             parent_flags,
             flags,
+            mode,
+            server_end,
             self.on_read.is_some(),
             self.on_write.is_some(),
+            |flags| self.init_buffer(flags),
         ) {
-            Ok(updated) => updated,
-            Err(status) => {
-                send_on_open_with_error(flags, server_end, status);
-                return;
-            }
-        };
-
-        match self.init_buffer(flags) {
-            Ok((buffer, was_written)) => {
-                match FileConnection::connect(flags, server_end, buffer, was_written) {
-                    Some(conn) => self.connections.push(conn),
-                    None => {
-                        // FileConnection::connect will do all the error processing.
-                        // match here just to make sure that we are not ignoring
-                        // FileConnection::connect error should it change.
-                        return;
-                    }
-                }
-            }
-            Err(status) => {
-                send_on_open_with_error(flags, server_end, status);
-                return;
-            }
+            self.connections.push(conn);
         }
     }
 

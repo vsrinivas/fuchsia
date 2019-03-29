@@ -5,8 +5,9 @@
 //! Implementation of an individual connection to a file.
 
 use {
-    fidl::encoding::OutOfLine,
-    fidl::endpoints::ServerEnd,
+    crate::common::send_on_open_with_error,
+    crate::file::common::new_connection_validate_flags,
+    fidl::{encoding::OutOfLine, endpoints::ServerEnd},
     fidl_fuchsia_io::{
         FileMarker, FileObject, FileRequestStream, NodeInfo, NodeMarker, OPEN_FLAG_DESCRIBE,
     },
@@ -48,13 +49,40 @@ pub struct FileConnection {
 impl FileConnection {
     /// Initialized a file connection, checking flags and sending an `OnOpen` event if necessary.
     /// Returns a [`FileConnection`] object as a [`StreamFuture`], or in the case of an error, sends
-    /// an appropriate `OnOpen` event (if requested) and returns `()`.
-    pub fn connect(
+    /// an appropriate `OnOpen` event (if requested) and returns `None`.
+    ///
+    /// Per connection buffer is initialized using the `init_buffer` closure, which is passed
+    /// `flags` value that might be adjusted for normalization.  Closue should return new buffer
+    /// content and a "dirty" flag, or an error to send in `OnOpen`.
+    pub fn connect<InitBuffer>(
+        parent_flags: u32,
         flags: u32,
+        mode: u32,
         server_end: ServerEnd<NodeMarker>,
-        buffer: Vec<u8>,
-        was_written: bool,
-    ) -> Option<StreamFuture<FileConnection>> {
+        readable: bool,
+        writable: bool,
+        init_buffer: InitBuffer,
+    ) -> Option<StreamFuture<FileConnection>>
+    where
+        InitBuffer: FnOnce(u32) -> Result<(Vec<u8>, bool), Status>,
+    {
+        let flags =
+            match new_connection_validate_flags(parent_flags, flags, mode, readable, writable) {
+                Ok(updated) => updated,
+                Err(status) => {
+                    send_on_open_with_error(flags, server_end, status);
+                    return None;
+                }
+            };
+
+        let (buffer, was_written) = match init_buffer(flags) {
+            Ok((buffer, was_written)) => (buffer, was_written),
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return None;
+            }
+        };
+
         // As we report all errors on `server_end`, if we failed to send an error in there, there
         // is nowhere to send it to.
         let (requests, control_handle) =
@@ -65,8 +93,6 @@ impl FileConnection {
                 Err(_) => return None,
             };
 
-        let conn = (FileConnection { requests, flags, seek: 0, buffer, was_written }).into_future();
-
         if flags & OPEN_FLAG_DESCRIBE != 0 {
             let mut info = NodeInfo::File(FileObject { event: None });
             match control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLine(&mut info))) {
@@ -75,6 +101,7 @@ impl FileConnection {
             }
         }
 
+        let conn = (FileConnection { requests, flags, seek: 0, buffer, was_written }).into_future();
         Some(conn)
     }
 }
