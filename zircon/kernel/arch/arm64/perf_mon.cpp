@@ -54,7 +54,7 @@ static constexpr int kFixedCounterWidth = 64;
 static constexpr uint32_t kMaxProgrammableCounterValue = UINT32_MAX;
 static constexpr uint64_t kMaxFixedCounterValue = UINT64_MAX;
 
-static bool supports_perfmon = false;
+static bool perfmon_supported = false;
 static bool perfmon_hw_initialized = false;
 
 static uint32_t perfmon_imp = 0;
@@ -216,7 +216,7 @@ static void arm64_perfmon_init_once(uint level) {
     perfmon_num_fixed_counters = 1;
     DEBUG_ASSERT(perfmon_num_fixed_counters <= ARM64_PMU_MAX_FIXED_COUNTERS);
 
-    supports_perfmon = true;
+    perfmon_supported = true;
 
     perfmon_counter_status_bits = (ARM64_PMOVSCLR_EL0_C_MASK |
                                    ((1 << perfmon_num_programmable_counters) - 1));
@@ -306,7 +306,7 @@ static perfmon_record_header_t* arm64_perfmon_write_pc_record(
 zx_status_t arch_perfmon_get_properties(zx_arm64_pmu_properties_t* props) {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon) {
+    if (!perfmon_supported) {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
@@ -326,7 +326,7 @@ zx_status_t arch_perfmon_get_properties(zx_arm64_pmu_properties_t* props) {
 zx_status_t arch_perfmon_init() {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon) {
+    if (!perfmon_supported) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     if (atomic_load(&perfmon_active)) {
@@ -349,7 +349,7 @@ zx_status_t arch_perfmon_init() {
 zx_status_t arch_perfmon_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo) {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon) {
+    if (!perfmon_supported) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     if (atomic_load(&perfmon_active)) {
@@ -581,7 +581,7 @@ static void arm64_perfmon_stage_programmable_config(const zx_arm64_pmu_config_t*
 zx_status_t arch_perfmon_stage_config(zx_arm64_pmu_config_t* config) {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon) {
+    if (!perfmon_supported) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     if (atomic_load(&perfmon_active)) {
@@ -720,7 +720,7 @@ static void arm64_perfmon_start_task(void* raw_context) TA_NO_THREAD_SAFETY_ANAL
 zx_status_t arch_perfmon_start() {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon) {
+    if (!perfmon_supported) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     if (atomic_load(&perfmon_active)) {
@@ -872,7 +872,7 @@ static void arm64_perfmon_stop_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALY
 zx_status_t arch_perfmon_stop() {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon) {
+    if (!perfmon_supported) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     if (!perfmon_state) {
@@ -930,7 +930,7 @@ static void arm64_perfmon_reset_task(void* raw_context) TA_NO_THREAD_SAFETY_ANAL
 zx_status_t arch_perfmon_fini() {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon) {
+    if (!perfmon_supported) {
         return ZX_ERR_NOT_SUPPORTED;
     }
     if (atomic_load(&perfmon_active)) {

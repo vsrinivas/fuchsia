@@ -219,7 +219,7 @@ enum LbrFormat {
     LBR_FORMAT_INFO = 0b101,
 };
 
-static bool supports_perfmon = false;
+static bool perfmon_supported = false;
 static bool perfmon_hw_initialized = false;
 
 static uint16_t perfmon_version = 0;
@@ -534,7 +534,7 @@ static void x86_perfmon_init_once(uint level)
             (1ul << perfmon_fixed_counter_width) - 1;
     }
 
-    supports_perfmon = perfmon_version >= MINIMUM_INTEL_PERFMON_VERSION;
+    perfmon_supported = perfmon_version >= MINIMUM_INTEL_PERFMON_VERSION;
 
     if (x86_feature_test(X86_FEATURE_PDCM)) {
         perfmon_capabilities = static_cast<uint32_t>(read_msr(IA32_PERF_CAPABILITIES));
@@ -680,7 +680,7 @@ static perfmon_record_header_t* x86_perfmon_write_pc_record(
 zx_status_t arch_perfmon_get_properties(zx_x86_pmu_properties_t* props) {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon)
+    if (!perfmon_supported)
         return ZX_ERR_NOT_SUPPORTED;
     memset(props, 0, sizeof(*props));
     props->pm_version = perfmon_version;
@@ -697,7 +697,7 @@ zx_status_t arch_perfmon_get_properties(zx_x86_pmu_properties_t* props) {
 zx_status_t arch_perfmon_init() {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon)
+    if (!perfmon_supported)
         return ZX_ERR_NOT_SUPPORTED;
     if (atomic_load(&perfmon_active))
         return ZX_ERR_BAD_STATE;
@@ -716,7 +716,7 @@ zx_status_t arch_perfmon_init() {
 zx_status_t arch_perfmon_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo) {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon)
+    if (!perfmon_supported)
         return ZX_ERR_NOT_SUPPORTED;
     if (atomic_load(&perfmon_active))
         return ZX_ERR_BAD_STATE;
@@ -1092,7 +1092,7 @@ static void x86_perfmon_stage_misc_config(const zx_x86_pmu_config_t* config,
 zx_status_t arch_perfmon_stage_config(zx_x86_pmu_config_t* config) {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon)
+    if (!perfmon_supported)
         return ZX_ERR_NOT_SUPPORTED;
     if (atomic_load(&perfmon_active))
         return ZX_ERR_BAD_STATE;
@@ -1608,7 +1608,7 @@ static void x86_perfmon_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_AN
 zx_status_t arch_perfmon_start() {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon)
+    if (!perfmon_supported)
         return ZX_ERR_NOT_SUPPORTED;
     if (atomic_load(&perfmon_active))
         return ZX_ERR_BAD_STATE;
@@ -1778,7 +1778,7 @@ static void x86_perfmon_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANA
 zx_status_t arch_perfmon_stop() {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon)
+    if (!perfmon_supported)
         return ZX_ERR_NOT_SUPPORTED;
     if (!perfmon_state)
         return ZX_ERR_BAD_STATE;
@@ -1834,7 +1834,7 @@ static void x86_perfmon_reset_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
 zx_status_t arch_perfmon_fini() {
     Guard<Mutex> guard(PerfmonLock::Get());
 
-    if (!supports_perfmon)
+    if (!perfmon_supported)
         return ZX_ERR_NOT_SUPPORTED;
     if (atomic_load(&perfmon_active))
         return ZX_ERR_BAD_STATE;
