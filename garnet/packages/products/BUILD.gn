@@ -177,6 +177,7 @@ group("graphics-dev") {
     "//garnet/packages/prod:cmdutils",
     "//garnet/packages/prod:pm",
     "//garnet/packages/prod:run",
+    "//garnet/packages/prod:ssh",
     "//garnet/packages/prod:tiles",
     "//garnet/packages/prod:tracing",
     "//garnet/packages/prod:vboot_reference",
