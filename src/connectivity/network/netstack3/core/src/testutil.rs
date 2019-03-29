@@ -4,7 +4,7 @@
 
 //! Testing-related utilities.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BinaryHeap, HashMap};
 use std::sync::Once;
 use std::time::{Duration, Instant};
 
@@ -99,15 +99,8 @@ pub(crate) fn set_logger_for_test() {
 /// Returns true if a timer was triggered, false if there were no timers waiting
 /// to be triggered.
 pub(crate) fn trigger_next_timer(ctx: &mut Context<DummyEventDispatcher>) -> bool {
-    match ctx
-        .dispatcher
-        .timer_events
-        .keys()
-        .next()
-        .cloned()
-        .and_then(|t| ctx.dispatcher.timer_events.remove(&t).map(|id| (t, id)))
-    {
-        Some((t, id)) => {
+    match ctx.dispatcher.timer_events.pop() {
+        Some(InstantAndData(t, id)) => {
             ctx.dispatcher.current_time = t;
             handle_timeout(ctx, id);
             true
@@ -132,18 +125,15 @@ pub(crate) fn trigger_timers_until<F: Fn(&TimerId) -> bool>(
     f: F,
 ) {
     for _ in 0..1_000_000 {
-        let t = if let Some(t) = ctx.dispatcher.timer_events.keys().next().cloned() {
+        let InstantAndData(t, id) = if let Some(t) = ctx.dispatcher.timer_events.pop() {
             t
         } else {
             return;
         };
 
-        // Safe to unwrap(), because the key was found first.
-        let id = ctx.dispatcher.timer_events.remove(&t).unwrap();
-
         ctx.dispatcher.current_time = t;
         handle_timeout(ctx, id);
-        if (f(&id)) {
+        if f(&id) {
             break;
         }
     }
@@ -470,6 +460,40 @@ impl DummyEventDispatcherBuilder {
     }
 }
 
+/// Represents arbitrary data of type `D` attached to an `Instant`.
+///
+/// `InstantAndData` implements `Ord` and `Eq` to be used in a `BinaryHeap`
+/// and ordered by `Instant`.
+struct InstantAndData<D>(Instant, D);
+
+impl<D> InstantAndData<D> {
+    fn new(time: Instant, data: D) -> Self {
+        Self(time, data)
+    }
+}
+
+impl<D> Eq for InstantAndData<D> {}
+
+impl<D> PartialEq for InstantAndData<D> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<D> Ord for InstantAndData<D> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        other.0.cmp(&self.0)
+    }
+}
+
+impl<D> PartialOrd for InstantAndData<D> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+type PendingTimer = InstantAndData<TimerId>;
+
 /// A dummy `EventDispatcher` used for testing.
 ///
 /// A `DummyEventDispatcher` implements the `EventDispatcher` interface for
@@ -477,7 +501,7 @@ impl DummyEventDispatcherBuilder {
 /// events have been emitted to the system.
 pub(crate) struct DummyEventDispatcher {
     frames_sent: Vec<(DeviceId, Vec<u8>)>,
-    timer_events: BTreeMap<Instant, TimerId>,
+    timer_events: BinaryHeap<PendingTimer>,
     current_time: Instant,
 }
 
@@ -488,7 +512,7 @@ impl DummyEventDispatcher {
 
     /// Get an ordered list of all scheduled timer events
     pub(crate) fn timer_events(&self) -> impl Iterator<Item = (&'_ Instant, &'_ TimerId)> {
-        self.timer_events.iter()
+        self.timer_events.iter().map(|t| (&t.0, &t.1))
     }
 
     /// Get the current (fake) time
@@ -518,7 +542,7 @@ impl Default for DummyEventDispatcher {
     fn default() -> DummyEventDispatcher {
         DummyEventDispatcher {
             frames_sent: vec![],
-            timer_events: BTreeMap::new(),
+            timer_events: BinaryHeap::new(),
             current_time: Instant::now(),
         }
     }
@@ -544,50 +568,94 @@ impl EventDispatcher for DummyEventDispatcher {
 
     fn schedule_timeout_instant(&mut self, time: Instant, id: TimerId) -> Option<Instant> {
         let ret = self.cancel_timeout(id);
-        self.timer_events.insert(time, id);
+        self.timer_events.push(PendingTimer::new(time, id));
         ret
     }
 
     fn cancel_timeout(&mut self, id: TimerId) -> Option<Instant> {
-        // There is the invariant that there can only be one timer event per
-        // TimerId, so we only need to remove at most one element from
-        // timer_events.
-
-        match self.timer_events.iter().find_map(|(instant, event_timer_id)| {
-            if *event_timer_id == id {
-                Some(*instant)
-            } else {
-                None
-            }
-        }) {
-            Some(instant) => {
-                self.timer_events.remove(&instant);
-                Some(instant)
-            }
-            None => None,
-        }
+        let mut r: Option<Instant> = None;
+        // NOTE(brunodalbo): cancelling timeouts can be made a faster than this
+        //  if we kept two data structures and TimerId was Hashable.
+        self.timer_events = self
+            .timer_events
+            .drain()
+            .filter(|t| {
+                if t.1 == id {
+                    r = Some(t.0);
+                    false
+                } else {
+                    true
+                }
+            })
+            .collect::<Vec<_>>()
+            .into();
+        r
     }
 }
+
+#[derive(Debug)]
+struct PendingFrameData<N> {
+    data: Vec<u8>,
+    dst_context: N,
+    dst_device: DeviceId,
+}
+
+type PendingFrame<N> = InstantAndData<PendingFrameData<N>>;
 
 /// A dummy network, composed of many `Context`s backed by
 /// `DummyEventDispatcher`s.
 ///
 /// Provides a quick utility to have many contexts keyed by `N` that can
 /// exchange frames between their interfaces, which are mapped by `mapper`.
-pub(crate) struct DummyNetwork<N: Eq + Hash + Clone, F: Fn(&N, DeviceId) -> (N, DeviceId)> {
+/// `mapper` also provides the option to return a `Duration` parameter that is
+/// interpreted as a delivery latency for a given packet.
+pub(crate) struct DummyNetwork<
+    N: Eq + Hash + Clone,
+    F: Fn(&N, DeviceId) -> (N, DeviceId, Option<Duration>),
+> {
     contexts: HashMap<N, Context<DummyEventDispatcher>>,
     mapper: F,
+    current_time: Instant,
+    pending_frames: BinaryHeap<PendingFrame<N>>,
 }
 
 /// The result of a single step in a `DummyNetwork`
-#[derive(Debug, PartialEq)]
-pub(crate) enum StepResult {
-    /// No operation was performed in requested step.
-    Idle,
-    /// All the queued frames were exchanged in this step.
-    FramesSent,
-    /// A single timer was fired in this step.
-    TimerFired,
+#[derive(Debug)]
+pub(crate) struct StepResult {
+    time_delta: Duration,
+    timers_fired: usize,
+    frames_sent: usize,
+}
+
+impl StepResult {
+    fn new(time_delta: Duration, timers_fired: usize, frames_sent: usize) -> Self {
+        Self { time_delta, timers_fired, frames_sent }
+    }
+
+    fn new_idle() -> Self {
+        Self::new(Duration::from_millis(0), 0, 0)
+    }
+
+    /// Returns the time jump in the last step.
+    pub(crate) fn time_delta(&self) -> Duration {
+        self.time_delta
+    }
+
+    /// Returns `true` if the last step did not perform any operations.
+    pub(crate) fn is_idle(&self) -> bool {
+        return self.timers_fired == 0 && self.frames_sent == 0;
+    }
+
+    /// Returns the number of frames dispatched to their destinations in the
+    /// last step.
+    pub(crate) fn frames_sent(&self) -> usize {
+        self.frames_sent
+    }
+
+    /// Returns the number of timers fired in the last step.
+    pub(crate) fn timers_fired(&self) -> usize {
+        self.timers_fired
+    }
 }
 
 /// Error type that marks that one of the `run_until` family of functions
@@ -598,7 +666,7 @@ pub(crate) struct LoopLimitReachedError;
 impl<N, F> DummyNetwork<N, F>
 where
     N: Eq + Hash + Clone + std::fmt::Debug,
-    F: Fn(&N, DeviceId) -> (N, DeviceId),
+    F: Fn(&N, DeviceId) -> (N, DeviceId, Option<Duration>),
 {
     /// Creates a new `DummyNetwork`.
     ///
@@ -620,7 +688,12 @@ where
         contexts: I,
         mapper: F,
     ) -> Self {
-        let mut ret = Self { contexts: contexts.collect(), mapper };
+        let mut ret = Self {
+            contexts: contexts.collect(),
+            mapper,
+            current_time: Instant::now(),
+            pending_frames: BinaryHeap::new(),
+        };
 
         // We can't guarantee that all contexts are safely running their timers
         // together if we receive a context with any timers already set.
@@ -629,12 +702,10 @@ where
             "can't start network with contexts that already have timers set"
         );
 
-        let beginning_of_time = Instant::now();
-
-        // synchronize all dispatchers current time to the same value:
-        ret.contexts.iter_mut().for_each(|(n, ctx)| {
-            ctx.dispatcher.current_time = beginning_of_time;
-        });
+        // synchronize all dispatchers' current time to the same value:
+        for (_, ctx) in ret.contexts.iter_mut() {
+            ctx.dispatcher.current_time = ret.current_time;
+        }
 
         ret
     }
@@ -647,18 +718,28 @@ where
     /// Performs a single step in network simulation.
     ///
     /// `step` performs a single logical step in the collection of `Context`s
-    /// held by this `DummyNetwork`. A single step consists of only one of the
-    /// following operations:
+    /// held by this `DummyNetwork`. A single step consists of the following
+    /// operations:
     ///
     /// - All pending frames, kept in `frames_sent` of `DummyEventDispatcher`
-    /// are mapped to their destination `Context`/`DeviceId` pairs and injected
-    /// with `receive_frame`.
-    /// - A **single** timer event is fired (the next in line) and the internal
-    /// clock of all `Context`s is moved up to the resulting time.
+    /// are mapped to their destination `Context`/`DeviceId` pairs and moved to
+    /// an internal collection of pending frames.
+    /// - The collection of pending timers and scheduled frames is inspected and
+    /// a simulation time step is retrieved, which will cause a next event
+    /// to trigger. The simulation time is updated to the new time.
+    /// - All scheduled frames whose deadline is less than or equal to the new
+    /// simulation time are sent to their destinations.
+    /// - All timer events whose deadline is less than or equal to the new
+    /// simulation time are fired.
     ///
-    /// The return value of `step` indicates which of the operations was
-    /// performed, returning `StepResult::Idle` if no frames or timers are
-    /// queued.
+    /// If any new events are created during the operation of frames or timers,
+    /// they **will not** be taken into account in the current `step`. That is,
+    /// `step` collects all the pending events before dispatching them, ensuring
+    /// that an infinite loop can't be created as a side effect of calling
+    /// `step`.
+    ///
+    /// The return value of `step` indicates which of the operations were
+    /// performed.
     ///
     /// # Panics
     ///
@@ -666,49 +747,72 @@ where
     /// panic when trying to route frames to their `Context`/`DeviceId`
     /// destinations.
     pub(crate) fn step(&mut self) -> StepResult {
-        if self.dispatch_frames() {
-            return StepResult::FramesSent;
+        self.collect_frames();
+
+        let next_step = if let Some(t) = self.next_step() {
+            t
+        } else {
+            return StepResult::new_idle();
+        };
+
+        // this assertion holds the contract that `next_step` does not return
+        // a time in the past.
+        assert!(next_step >= self.current_time);
+        let mut ret = StepResult::new(next_step.duration_since(self.current_time), 0, 0);
+        // move time forward:
+        self.current_time = next_step;
+        for (_, ctx) in self.contexts.iter_mut() {
+            ctx.dispatcher.current_time = next_step;
         }
 
-        // check if we should fire any timers:
-        match self
-            .contexts
-            .iter()
-            .filter_map(|(n, ctx)| match ctx.dispatcher.timer_events.keys().next() {
-                Some(tmr) => Some((n.clone(), tmr.clone())),
-                None => None,
-            })
-            .min_by(|(n1, t1), (n2, t2)| t1.cmp(t2))
-        {
-            // If a timer is present
-            Some((n, t)) => {
-                let ctx = self.context(n);
-                trigger_next_timer(ctx);
-                // triggering the next timer should cause all the contexts
-                // to move forward in time:
-                let cur_time = ctx.dispatcher.current_time;
-                self.contexts.iter_mut().for_each(|(n, ctx)| {
-                    ctx.dispatcher.current_time = cur_time;
-                });
-                StepResult::TimerFired
+        // dispatch all pending frames:
+        while let Some(InstantAndData(t, _)) = self.pending_frames.peek() {
+            // TODO(brunodalbo): remove this break once let_chains is stable
+            if *t > self.current_time {
+                break;
             }
-            // otherwise there's nothing to do so we're idling
-            None => StepResult::Idle,
+            // we can unwrap because we just peeked.
+            let mut frame = self.pending_frames.pop().unwrap().1;
+            crate::receive_frame(
+                self.context(frame.dst_context),
+                frame.dst_device,
+                &mut frame.data,
+            );
+            ret.frames_sent += 1;
         }
+
+        // dispatch all pending timers.
+        for (n, ctx) in self.contexts.iter_mut() {
+            // We have to collect the timers before dispatching them, to avoid
+            // an infinite loop in case handle_timeout schedules another timer for
+            // the same or older Instant.
+            let mut timers = Vec::<TimerId>::new();
+            while let Some(InstantAndData(t, id)) = ctx.dispatcher.timer_events.peek() {
+                // TODO(brunodalbo): remove this break once let_chains is stable
+                if *t > self.current_time {
+                    break;
+                }
+                timers.push(*id);
+                ctx.dispatcher.timer_events.pop();
+            }
+
+            for t in timers {
+                crate::handle_timeout(ctx, t);
+                ret.timers_fired += 1;
+            }
+        }
+
+        ret
     }
 
-    /// Dispatches all queued frames.
+    /// Collects all queued frames.
     ///
-    /// Collects all pending frames and dispatches them to the destination
-    /// `Context`/`DeviceId` based on the result of `mapper`. Returns `false` if
-    /// no pending frames were available to be dispatched.
-    ///
-    /// # Panics
-    ///
-    /// If `DummyNetwork` was set up with a bad `mapper`, calls to
-    /// `dispatch_frames` may panic when trying to route frames to their
-    /// `Context`/`DeviceId` destinations.
-    pub(crate) fn dispatch_frames(&mut self) -> bool {
+    /// Collects all pending frames and schedules them for delivery to the
+    /// destination `Context`/`DeviceId` based on the result of `mapper`. The
+    /// collected frames are queued for dispatching in the `DummyNetwork`,
+    /// ordered by their scheduled delivery time given by the latency result
+    /// provided by `mapper`.
+    fn collect_frames(&mut self) {
         let all_frames: Vec<(N, Vec<(DeviceId, Vec<u8>)>)> = self
             .contexts
             .iter_mut()
@@ -721,59 +825,59 @@ where
             })
             .collect();
 
-        if !all_frames.is_empty() {
-            // if we got frames to send, we should prioritize sending them:
-            all_frames.into_iter().for_each(|(n, frames)| {
-                frames.into_iter().for_each(|(device_id, mut frame)| {
-                    let (dst_n, dst_device) = (self.mapper)(&n, device_id);
-                    crate::receive_frame(
-                        self.contexts.get_mut(&dst_n).unwrap(),
-                        dst_device,
-                        &mut frame,
-                    );
-                })
-            });
-            true
-        } else {
-            false
+        for (n, frames) in all_frames.into_iter() {
+            for (device_id, mut frame) in frames.into_iter() {
+                let (dst_context, dst_device, latency) = (self.mapper)(&n, device_id);
+                self.pending_frames.push(PendingFrame::new(
+                    self.current_time + latency.unwrap_or(Duration::from_millis(0)),
+                    PendingFrameData::<N> { data: frame, dst_context, dst_device },
+                ));
+            }
         }
     }
 
-    /// Runs the dummy network simulation until no frames are queued.
+    /// Calculates the next `Instant` when events are available.
     ///
-    /// Dispatches all pending frames in discrete steps until all `Context`s
-    /// are starved of outgoing frames, or a total of 1,000,000 steps is
-    /// reached. The imposed limit in steps is there to prevent the call from
-    /// blocking; reaching that limit should be considered a logic error.
-    ///
-    /// # Panics
-    ///
-    /// See [`dispatch_frames`] for possible panic conditions.
-    pub(crate) fn run_until_no_frames(&mut self) -> Result<(), LoopLimitReachedError> {
-        for _ in 0..1_000_000 {
-            if !self.dispatch_frames() {
-                return Ok(());
-            }
+    /// Returns the smallest `Instant` greater than or equal to `current_time`
+    /// for which an event is available. If no events are available, returns
+    /// `None`.
+    fn next_step(&self) -> Option<Instant> {
+        // get earliest timer in all contexts:
+        let next_timer = self
+            .contexts
+            .iter()
+            .filter_map(|(n, ctx)| match ctx.dispatcher.timer_events.peek() {
+                Some(tmr) => Some(tmr.0),
+                None => None,
+            })
+            .min();
+        /// get the instant for the next packet
+        let next_packet_due = self.pending_frames.peek().map(|t| t.0);
+
+        // Return the earliest of them both, and protect against returning a
+        // time in the past.
+        match next_timer {
+            Some(t) if next_packet_due.is_some() => Some(t).min(next_packet_due),
+            Some(t) => Some(t),
+            None => next_packet_due,
         }
-        debug!("DummyNetwork seems to have gotten stuck in a loop.");
-        Err(LoopLimitReachedError)
+        .map(|t| t.max(self.current_time))
     }
 
     /// Runs the dummy network simulation until it is starved of events.
     ///
-    /// Runs `step` until it returns `StepResult::Idle` or a total of 1,000,000
-    /// steps is performed. The imposed limit in steps is there to prevent the
-    /// call from blocking; reaching that limit should be considered a logic
-    /// error.
+    /// Runs `step` until it returns a `StepResult` where `is_idle` is `true` or
+    /// a total of 1,000,000 steps is performed. The imposed limit in steps is
+    /// there to prevent the call from blocking; reaching that limit should be
+    /// considered a logic error.
     ///
     /// # Panics
     ///
     /// See [`step`] for possible panic conditions.
     pub(crate) fn run_until_idle(&mut self) -> Result<(), LoopLimitReachedError> {
         for _ in 0..1_000_000 {
-            match self.step() {
-                StepResult::Idle => return Ok(()),
-                _ => {}
+            if self.step().is_idle() {
+                return Ok(());
             }
         }
         debug!("DummyNetwork seems to have gotten stuck in a loop.");
@@ -783,10 +887,11 @@ where
     /// Runs the dummy network simulation until it is starved of events or
     /// `stop` returns `true`.
     ///
-    /// Runs `step` until it returns `StepResult::Idle` or the provided function
-    /// `stop` returns `true`, or a total of 1,000,000 steps is performed. The
-    /// imposed limit in steps is there to prevent the call from blocking;
-    /// reaching that limit should be considered a logic error.
+    /// Runs `step` until it returns a `StepResult` where `is_idle` is `true` or
+    /// the provided function `stop` returns `true`, or a total of 1,000,000
+    /// steps is performed. The imposed limit in steps is there to prevent the
+    /// call from blocking; reaching that limit should be considered a logic
+    /// error.
     ///
     /// # Panics
     ///
@@ -796,13 +901,10 @@ where
         stop: S,
     ) -> Result<(), LoopLimitReachedError> {
         for _ in 0..1_000_000 {
-            match self.step() {
-                StepResult::Idle => return Ok(()),
-                _ => {
-                    if stop(self) {
-                        return Ok(());
-                    }
-                }
+            if self.step().is_idle() {
+                return Ok(());
+            } else if stop(self) {
+                return Ok(());
             }
         }
         debug!("DummyNetwork seems to have gotten stuck in a loop.");
@@ -818,11 +920,12 @@ where
 /// generated by `DummyEventDispatcherConfig::swap`. A default `mapper` function
 /// is provided that maps all frames from (`a`, ethernet device `1`) to
 /// (`b`, ethernet device `1`) and vice-versa.
-pub(crate) fn new_dummy_network_from_config<A: IpAddress, N>(
+pub(crate) fn new_dummy_network_from_config_with_latency<A: IpAddress, N>(
     a: N,
     b: N,
     cfg: DummyEventDispatcherConfig<A>,
-) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> (N, DeviceId)>
+    latency: Option<Duration>,
+) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> (N, DeviceId, Option<Duration>)>
 where
     N: Eq + Hash + Clone + std::fmt::Debug,
 {
@@ -831,11 +934,26 @@ where
     let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
     DummyNetwork::<N, _>::new(contexts, move |net, device_id| {
         if *net == a {
-            (b.clone(), DeviceId::new_ethernet(1))
+            (b.clone(), DeviceId::new_ethernet(1), latency)
         } else {
-            (a.clone(), DeviceId::new_ethernet(1))
+            (a.clone(), DeviceId::new_ethernet(1), latency)
         }
     })
+}
+
+/// Convenience function to create `DummyNetwork`s with no latency
+///
+/// Creates a `DummyNetwork` by calling
+/// [`new_dummy_network_from_config_with_latency`] with `latency` set to `None`.
+pub(crate) fn new_dummy_network_from_config<A: IpAddress, N>(
+    a: N,
+    b: N,
+    cfg: DummyEventDispatcherConfig<A>,
+) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> (N, DeviceId, Option<Duration>)>
+where
+    N: Eq + Hash + Clone + std::fmt::Debug,
+{
+    new_dummy_network_from_config_with_latency(a, b, cfg, None)
 }
 
 #[cfg(test)]
@@ -926,8 +1044,7 @@ mod tests {
     #[test]
     fn test_dummy_network_transmits_packets() {
         set_logger_for_test();
-        let mut net =
-            new_dummy_network_from_config("alice".to_string(), "bob".to_string(), DUMMY_CONFIG_V4);
+        let mut net = new_dummy_network_from_config("alice", "bob", DUMMY_CONFIG_V4);
 
         // alice sends bob a ping:
         ip::send_ip_packet(
@@ -949,11 +1066,11 @@ mod tests {
         );
 
         // send from alice to bob
-        assert_eq!(net.step(), StepResult::FramesSent);
+        assert_eq!(net.step().frames_sent(), 1);
         // respond from bob to alice
-        assert_eq!(net.step(), StepResult::FramesSent);
+        assert_eq!(net.step().frames_sent(), 1);
         // should've starved all events:
-        assert_eq!(net.step(), StepResult::Idle);
+        assert!(net.step().is_idle());
     }
 
     #[test]
@@ -974,27 +1091,38 @@ mod tests {
             .dispatcher
             .schedule_timeout(Duration::from_secs(4), TimerId(TimerIdInner::Nop(4)));
 
+        net.context(1)
+            .dispatcher
+            .schedule_timeout(Duration::from_secs(5), TimerId(TimerIdInner::Nop(5)));
+        net.context(2)
+            .dispatcher
+            .schedule_timeout(Duration::from_secs(5), TimerId(TimerIdInner::Nop(6)));
+
         // no timers fired before:
         assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 0);
         assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 0);
-        assert_eq!(net.step(), StepResult::TimerFired);
+        assert_eq!(net.step().timers_fired(), 1);
         // only timer in context 1 should have fired:
         assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 1);
         assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 0);
-        assert_eq!(net.step(), StepResult::TimerFired);
+        assert_eq!(net.step().timers_fired(), 1);
         // only timer in context 2 should have fired:
         assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 1);
         assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 1);
-        assert_eq!(net.step(), StepResult::TimerFired);
+        assert_eq!(net.step().timers_fired(), 1);
         // only timer in context 2 should have fired:
         assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 1);
         assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 2);
-        assert_eq!(net.step(), StepResult::TimerFired);
+        assert_eq!(net.step().timers_fired(), 1);
         // only timer in context 1 should have fired:
         assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 2);
         assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 2);
+        assert_eq!(net.step().timers_fired(), 2);
+        // both timers have fired at the same time:
+        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 3);
+        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 3);
 
-        assert_eq!(net.step(), StepResult::Idle);
+        assert!(net.step().is_idle());
         // check that current time on contexts tick together:
         let t1 = net.context(1).dispatcher.current_time;
         let t2 = net.context(2).dispatcher.current_time;
@@ -1022,6 +1150,119 @@ mod tests {
         .unwrap();
         // assert that we stopped before all times were fired, meaning we can
         // step again:
-        assert_eq!(net.step(), StepResult::TimerFired);
+        assert_eq!(net.step().timers_fired(), 1);
+    }
+
+    #[test]
+    fn test_instant_and_data() {
+        // verify implementation of InstantAndData to be used as a complex type
+        // in a BinaryHeap:
+        let mut heap = BinaryHeap::<InstantAndData<usize>>::new();
+        let now = Instant::now();
+
+        fn new_data(time: Instant, id: usize) -> InstantAndData<usize> {
+            InstantAndData::new(time, id)
+        }
+
+        heap.push(new_data(now + Duration::from_secs(1), 1));
+        heap.push(new_data(now + Duration::from_secs(2), 2));
+
+        // earlier timer is popped first
+        assert!(heap.pop().unwrap().1 == 1);
+        assert!(heap.pop().unwrap().1 == 2);
+        assert!(heap.pop().is_none());
+
+        heap.push(new_data(now + Duration::from_secs(1), 1));
+        heap.push(new_data(now + Duration::from_secs(1), 1));
+
+        // can pop twice with identical data:
+        assert!(heap.pop().unwrap().1 == 1);
+        assert!(heap.pop().unwrap().1 == 1);
+        assert!(heap.pop().is_none());
+    }
+
+    #[test]
+    fn test_delayed_packets() {
+        set_logger_for_test();
+        // create a network that takes 5ms to get any packet to go through:
+        let mut net = new_dummy_network_from_config_with_latency(
+            "alice",
+            "bob",
+            DUMMY_CONFIG_V4,
+            Some(Duration::from_millis(5)),
+        );
+
+        // alice sends bob a ping:
+        ip::send_ip_packet(
+            net.context("alice"),
+            DUMMY_CONFIG_V4.remote_ip,
+            ip::IpProto::Icmp,
+            |_| {
+                let req = IcmpEchoRequest::new(0, 0);
+                let req_body = &[1, 2, 3, 4];
+                BufferSerializer::new_vec(Buf::new(req_body.to_vec(), ..)).encapsulate(
+                    IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                        DUMMY_CONFIG_V4.local_ip,
+                        DUMMY_CONFIG_V4.remote_ip,
+                        IcmpUnusedCode,
+                        req,
+                    ),
+                )
+            },
+        );
+
+        net.context("alice")
+            .dispatcher
+            .schedule_timeout(Duration::from_millis(3), TimerId(TimerIdInner::Nop(1)));
+        net.context("bob")
+            .dispatcher
+            .schedule_timeout(Duration::from_millis(7), TimerId(TimerIdInner::Nop(2)));
+        net.context("bob")
+            .dispatcher
+            .schedule_timeout(Duration::from_millis(10), TimerId(TimerIdInner::Nop(1)));
+
+        // order of expected events is as follows:
+        // - Alice's timer expires at t = 3
+        // - Bob receives Alice's packet at t = 5
+        // - Bob's timer expires at t = 7
+        // - Alice receives Bob's response and Bob's last timer fires at t = 10
+
+        fn assert_full_state<F>(
+            net: &mut DummyNetwork<&'static str, F>,
+            alice_nop: usize,
+            bob_nop: usize,
+            bob_echo_request: usize,
+            alice_echo_response: usize,
+        ) where
+            F: Fn(&&'static str, DeviceId) -> (&'static str, DeviceId, Option<Duration>),
+        {
+            let alice = net.context("alice");
+            assert_eq!(*alice.state.test_counters.get("timer::nop"), alice_nop);
+            assert_eq!(
+                *alice.state.test_counters.get("receive_icmp_packet::echo_reply"),
+                alice_echo_response
+            );
+
+            let bob = net.context("bob");
+            assert_eq!(*bob.state.test_counters.get("timer::nop"), bob_nop);
+            assert_eq!(
+                *bob.state.test_counters.get("receive_icmp_packet::echo_request"),
+                bob_echo_request
+            );
+        }
+
+        assert_eq!(net.step().timers_fired(), 1);
+        assert_full_state(&mut net, 1, 0, 0, 0);
+        assert_eq!(net.step().frames_sent(), 1);
+        assert_full_state(&mut net, 1, 0, 1, 0);
+        assert_eq!(net.step().timers_fired(), 1);
+        assert_full_state(&mut net, 1, 1, 1, 0);
+        let step = net.step();
+        assert_eq!(step.frames_sent(), 1);
+        assert_eq!(step.timers_fired(), 1);
+        assert_full_state(&mut net, 1, 2, 1, 1);
+
+        // should've starved all events:
+        assert!(net.step().is_idle());
     }
 }
