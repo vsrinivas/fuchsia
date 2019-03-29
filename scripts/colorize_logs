@@ -68,8 +68,8 @@ class ColorAssigner(object):
     return c
 
 
-PROCESS_RE = r'^\[\d+\.\d+] (\d+)\.\d+> .*$'
-THREAD_RE = r'^\[\d+\.\d+] (\d+\.\d+)> .*$'
+PROCESS_RE = r'^\[\d+\.\d+] (\d+)[\.:]\d+> .*$'
+THREAD_RE = r'^\[\d+\.\d+] (\d+[\.:]\d+)> .*$'
 
 def main():
   parser = argparse.ArgumentParser(

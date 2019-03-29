@@ -375,7 +375,7 @@ static int debuglog_dumper(void* arg) {
                 rec.data[rec.hdr.datalen] = 0;
             }
             int n;
-            n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
+            n = snprintf(tmp, sizeof(tmp), "[%05d.%03d] %05" PRIu64 ":%05" PRIu64 "> %s\n",
                          (int)(rec.hdr.timestamp / ZX_SEC(1)),
                          (int)((rec.hdr.timestamp / ZX_MSEC(1)) % 1000ULL),
                          rec.hdr.pid, rec.hdr.tid, rec.data);
