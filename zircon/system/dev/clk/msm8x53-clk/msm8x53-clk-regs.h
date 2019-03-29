@@ -4,6 +4,9 @@
 
 #pragma once
 
+namespace msm8x53 {
+
+// Branch Clock Register Offsets.
 constexpr uint32_t kApc0VoltageDroopDetectorGpll0Cbcr = 0x78004;
 constexpr uint32_t kApc1VoltageDroopDetectorGpll0Cbcr = 0x79004;
 constexpr uint32_t kBimcGfxCbcr = 0x59034;
@@ -113,3 +116,29 @@ constexpr uint32_t kVenus0AhbCbcr = 0x4c020;
 constexpr uint32_t kVenus0AxiCbcr = 0x4c024;
 constexpr uint32_t kVenus0Core0Vcodec0Cbcr = 0x4c02c;
 constexpr uint32_t kVenus0Vcodec0Cbcr = 0x4c01c;
+
+// Voter Clock Register Offsets.
+// CBCR Regs.
+constexpr uint32_t kVfe1TbuCbcr = 0x12090;
+constexpr uint32_t kBootRomAhbCbcr = 0x1300c;
+constexpr uint32_t kBlsp2AhbCbcr = 0xb008;
+constexpr uint32_t kSmmuCfgCbcr = 0x12038;
+constexpr uint32_t kMdpTbuCbcr = 0x1201c;
+constexpr uint32_t kApssAhbCbcr = 0x4601c;
+constexpr uint32_t kCryptoAxiCbcr = 0x16020;
+constexpr uint32_t kBlsp1AhbCbcr = 0x1008;
+constexpr uint32_t kQdssDapCbcr = 0x29084;
+constexpr uint32_t kCppTbuCbcr = 0x12040;
+constexpr uint32_t kCryptoCbcr = 0x1601c;
+constexpr uint32_t kVfeTbuCbcr = 0x1203c;
+constexpr uint32_t kJpegTbuCbcr = 0x12034;
+constexpr uint32_t kVenusTbuCbcr = 0x12014;
+constexpr uint32_t kCryptoAhbCbcr = 0x16024;
+constexpr uint32_t kPrngAhbCbcr = 0x13004;
+constexpr uint32_t kApssAxiCbcr = 0x46020;
+constexpr uint32_t kApssTcuAsyncCbcr = 0x12018;
+// Vote Regs.
+constexpr uint32_t kApcsClockBranchEnaVote = 0x45004;
+constexpr uint32_t kApcsSmmuClockBranchEnaVote = 0x4500C;
+
+} // namespace msm8x53

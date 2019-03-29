@@ -67,6 +67,7 @@ static constexpr uint32_t kCcSize = 0x80000;
 enum class msm_clk_type : uint16_t {
     kGate,
     kBranch,
+    kVoter,
 };
 
 // Create a clock ID based on a type and an index
@@ -202,5 +203,25 @@ constexpr uint32_t kVenus0AhbClk = MsmClkId(105, msm_clk_type::kBranch);
 constexpr uint32_t kVenus0AxiClk = MsmClkId(106, msm_clk_type::kBranch);
 constexpr uint32_t kVenus0Core0Vcodec0Clk = MsmClkId(107, msm_clk_type::kBranch);
 constexpr uint32_t kVenus0Vcodec0Clk = MsmClkId(108, msm_clk_type::kBranch);
+
+// MSM Local Voter Clocks
+constexpr uint32_t kApssAhbClk = MsmClkId(0, msm_clk_type::kVoter);
+constexpr uint32_t kApssAxiClk = MsmClkId(1, msm_clk_type::kVoter);
+constexpr uint32_t kBlsp1AhbClk = MsmClkId(2, msm_clk_type::kVoter);
+constexpr uint32_t kBlsp2AhbClk = MsmClkId(3, msm_clk_type::kVoter);
+constexpr uint32_t kBootRomAhbClk = MsmClkId(4, msm_clk_type::kVoter);
+constexpr uint32_t kCryptoAhbClk = MsmClkId(5, msm_clk_type::kVoter);
+constexpr uint32_t kCryptoAxiClk = MsmClkId(6, msm_clk_type::kVoter);
+constexpr uint32_t kCryptoClk = MsmClkId(7, msm_clk_type::kVoter);
+constexpr uint32_t kQdssDapClk = MsmClkId(8, msm_clk_type::kVoter);
+constexpr uint32_t kPrngAhbClk = MsmClkId(9, msm_clk_type::kVoter);
+constexpr uint32_t kApssTcuAsyncClk = MsmClkId(10, msm_clk_type::kVoter);
+constexpr uint32_t kCppTbuClk = MsmClkId(11, msm_clk_type::kVoter);
+constexpr uint32_t kJpegTbuClk = MsmClkId(12, msm_clk_type::kVoter);
+constexpr uint32_t kMdpTbuClk = MsmClkId(13, msm_clk_type::kVoter);
+constexpr uint32_t kSmmuCfgClk = MsmClkId(14, msm_clk_type::kVoter);
+constexpr uint32_t kVenusTbuClk = MsmClkId(15, msm_clk_type::kVoter);
+constexpr uint32_t kVfe1TbuClk = MsmClkId(16, msm_clk_type::kVoter);
+constexpr uint32_t kVfeTbuClk = MsmClkId(17, msm_clk_type::kVoter);
 
 } // namespace msm8x53

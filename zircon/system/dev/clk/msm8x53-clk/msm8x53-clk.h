@@ -13,8 +13,6 @@
 
 namespace clk {
 
-struct msm_clk_branch;
-
 class Msm8x53Clk;
 using DeviceType = ddk::Device<Msm8x53Clk, ddk::Unbindable>;
 
@@ -43,20 +41,23 @@ private:
     // Gate Clocks
     zx_status_t GateClockEnable(uint32_t index);
     zx_status_t GateClockDisable(uint32_t index);
-    fbl::Mutex gate_clock_mutex_ TA_ACQ_BEFORE(branch_clock_mutex_);
 
     // Branch Clocks
     zx_status_t BranchClockEnable(uint32_t index);
     zx_status_t BranchClockDisable(uint32_t index);
-    fbl::Mutex branch_clock_mutex_;
     enum class AwaitBranchClockStatus {
         Enabled,
         Disabled
     };
     // Wait for a change to a particular branch clock to take effect.
     zx_status_t AwaitBranchClock(AwaitBranchClockStatus s,
-                                 const struct msm_clk_branch& clk);
+                                 const uint32_t cbcr_reg);
 
+    // Voter Clocks
+    zx_status_t VoterClockEnable(uint32_t index);
+    zx_status_t VoterClockDisable(uint32_t index);
+
+    fbl::Mutex lock_;       // Lock guards mmio_.
     std::optional<ddk::MmioBuffer> mmio_;
 };
 
