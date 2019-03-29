@@ -10,8 +10,8 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/bin/zxdb/expr/format_expr_value_options.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/expr/format_expr_value_options.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"

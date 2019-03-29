@@ -8,9 +8,6 @@
 #include <stdio.h>
 #include <limits>
 
-#include "garnet/bin/zxdb/expr/expr_value.h"
-#include "garnet/bin/zxdb/expr/identifier.h"
-#include "garnet/bin/zxdb/expr/number_parser.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
@@ -28,6 +25,9 @@
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
+#include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/identifier.h"
+#include "src/developer/debug/zxdb/expr/number_parser.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"

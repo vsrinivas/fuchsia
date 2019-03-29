@@ -6,7 +6,6 @@
 
 #include <map>
 
-#include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
@@ -15,6 +14,7 @@
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 
 namespace zxdb {
 

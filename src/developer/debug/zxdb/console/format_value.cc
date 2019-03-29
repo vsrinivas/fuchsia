@@ -7,11 +7,6 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "garnet/bin/zxdb/expr/expr_value.h"
-#include "garnet/bin/zxdb/expr/resolve_array.h"
-#include "garnet/bin/zxdb/expr/resolve_collection.h"
-#include "garnet/bin/zxdb/expr/resolve_ptr_ref.h"
-#include "garnet/bin/zxdb/expr/symbol_variable_resolver.h"
 #include "garnet/bin/zxdb/symbols/array_type.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
@@ -26,6 +21,11 @@
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
 #include "garnet/bin/zxdb/symbols/visit_scopes.h"
+#include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/resolve_array.h"
+#include "src/developer/debug/zxdb/expr/resolve_collection.h"
+#include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
+#include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

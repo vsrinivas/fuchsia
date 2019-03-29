@@ -4,7 +4,6 @@
 
 #include "src/developer/debug/zxdb/client/frame_impl.h"
 
-#include "garnet/bin/zxdb/expr/symbol_eval_context.h"
 #include "garnet/bin/zxdb/symbols/dwarf_expr_eval.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/input_location.h"
@@ -15,6 +14,7 @@
 #include "src/developer/debug/zxdb/client/frame_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/thread_impl.h"
+#include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
 
 namespace zxdb {
 

@@ -111,7 +111,6 @@ static_library("client") {
   ]
 
   public_deps = [
-    "//garnet/bin/zxdb/expr",
     "//garnet/bin/zxdb/symbols",
     "//garnet/public/lib/fxl",
     "//garnet/third_party/libunwindstack",
@@ -122,6 +121,7 @@ static_library("client") {
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
     "//src/developer/debug/zxdb/common",
+    "//src/developer/debug/zxdb/expr",
   ]
 
   deps = [

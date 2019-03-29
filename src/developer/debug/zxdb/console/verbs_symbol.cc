@@ -10,9 +10,6 @@
 #include <set>
 #include <vector>
 
-#include "garnet/bin/zxdb/expr/expr_eval_context.h"
-#include "garnet/bin/zxdb/expr/expr_value.h"
-#include "garnet/bin/zxdb/expr/identifier.h"
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
@@ -44,6 +41,9 @@
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
+#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/identifier.h"
 
 namespace zxdb {
 

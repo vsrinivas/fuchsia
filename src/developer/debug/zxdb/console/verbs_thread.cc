@@ -4,8 +4,6 @@
 
 #include <inttypes.h>
 
-#include "garnet/bin/zxdb/expr/expr.h"
-#include "garnet/bin/zxdb/expr/symbol_eval_context.h"
 #include "garnet/bin/zxdb/symbols/code_block.h"
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
@@ -33,6 +31,8 @@
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
+#include "src/developer/debug/zxdb/expr/expr.h"
+#include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
 
 namespace zxdb {
 

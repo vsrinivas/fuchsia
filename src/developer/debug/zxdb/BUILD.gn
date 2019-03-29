@@ -24,12 +24,12 @@ if (current_toolchain == host_toolchain) {
 
   test("zxdb_tests") {
     deps = [
-      "//garnet/bin/zxdb/expr:tests",
       "//src/developer/debug/ipc:tests",
       "//src/developer/debug/shared:tests",
       "//src/developer/debug/zxdb/client:tests",
       "//src/developer/debug/zxdb/common:tests",
       "//src/developer/debug/zxdb/console:tests",
+      "//src/developer/debug/zxdb/expr:tests",
       "//third_party/googletest:gtest",
       "//third_party/googletest:gtest_main",
     ]

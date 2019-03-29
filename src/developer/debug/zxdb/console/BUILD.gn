@@ -73,9 +73,9 @@ static_library("console") {
 
   deps = []
   public_deps = [
-    "//garnet/bin/zxdb/expr",
     "//garnet/public/lib/fxl",
     "//src/developer/debug/zxdb/client",
+    "//src/developer/debug/zxdb/expr",
     "//zircon/public/lib/fit",
   ]
 
