@@ -16,6 +16,9 @@ namespace {
 std::string GenerateData() {
     std::ostringstream out;
 
+    // Please be sure to update the documentation about this library at the
+    // location //docs/development/languages/fidl/reference/library-zx.md
+
     out <<
         R"FIDL(
 [Internal]

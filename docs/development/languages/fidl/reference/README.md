@@ -7,6 +7,7 @@ The reference section provides the following material:
 * [Editors](editors.md) &mdash; discusses support for FIDL in IDEs and stand-alone editors
 * [FIDL Tuning Proposals](ftp/README.md) &mdash; accepted and rejected changes for FIDL
 * [Grammar](grammar.md) &mdash; the FIDL grammar
+* [`library zx`](library-zx.md) &mdash; the Zircon system library
 * [JSON IR](json-ir.md) &mdash; a tour of the JSON Intermediate Representation (**JSON IR**) generator
 * [Language](language.md) &mdash; defines the syntax of the FIDL language
 * [Wire Format](wire-format/README.md) &mdash; details the byte-by-byte organization of data
