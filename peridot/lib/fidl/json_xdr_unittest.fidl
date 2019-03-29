@@ -115,3 +115,22 @@ union Union {
     int32 int32;
     string string;
 };
+
+// Used to test that FieldWithDefault() and ValueWithDefault() fill in default
+// values as expected for the types in this table.
+table FillWithDefaultValues {
+    1: string string;
+    2: bool bool;
+    3: int8 int8;
+    4: int16 int16;
+    5: int32 int32;
+    6: int64 int64;
+    7: uint8 uint8;
+    8: uint16 uint16;
+    9: uint32 uint32;
+    10: uint64 uint64;
+    11: float32 float32;
+    12: float64 float64;
+    13: Enum enum;
+    14: vector<string> vector_of_strings;
+};

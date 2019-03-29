@@ -863,5 +863,89 @@ TEST(Xdr, FidlArray) {
   EXPECT_EQ(13, t1.union_.at(0).int32());
 }
 
+template <typename FillWithDefaultValues>
+void XdrFillWithDefaultValues_v1(
+    XdrContext* const xdr,
+    json_xdr_unittest::FillWithDefaultValues* const data) {
+  bool has_string = data->has_string();
+  xdr->FieldWithDefault("string", data->mutable_string(), has_string,
+                        std::string("string"));
+  bool has_bool = data->has_bool();
+  xdr->FieldWithDefault("bool", data->mutable_bool_(), has_bool, true);
+  bool has_int8 = data->has_int8();
+  xdr->FieldWithDefault("int8", data->mutable_int8(), has_int8, (int8_t)1);
+  bool has_int16 = data->has_int16();
+  xdr->FieldWithDefault("int16", data->mutable_int16(), has_int16, (int16_t)2);
+  bool has_int32 = data->has_int32();
+  xdr->FieldWithDefault("int32", data->mutable_int32(), has_int32, (int32_t)3);
+  bool has_int64 = data->has_int64();
+  xdr->FieldWithDefault("int64", data->mutable_int64(), has_int64, (int64_t)4);
+  bool has_uint8 = data->has_uint8();
+  xdr->FieldWithDefault("uint8", data->mutable_uint8(), has_uint8, (uint8_t)5);
+  bool has_uint16 = data->has_uint16();
+  xdr->FieldWithDefault("uint16", data->mutable_uint16(), has_uint16,
+                        (uint16_t)6);
+  bool has_uint32 = data->has_uint32();
+  xdr->FieldWithDefault("uint32", data->mutable_uint32(), has_uint32,
+                        (uint32_t)7);
+  bool has_uint64 = data->has_uint64();
+  xdr->FieldWithDefault("uint64", data->mutable_uint64(), has_uint64,
+                        (uint64_t)8);
+  bool has_float32 = data->has_float32();
+  xdr->FieldWithDefault("float32", data->mutable_float32(), has_float32,
+                        (float)9);
+  bool has_float64 = data->has_float64();
+  xdr->FieldWithDefault("float64", data->mutable_float64(), has_float64,
+                        (double)10);
+  bool has_enum = data->has_enum();
+  xdr->FieldWithDefault("enum", data->mutable_enum_(), has_enum,
+                        json_xdr_unittest::Enum::ZERO);
+
+  std::vector<std::string> v = {"a", "vector"};
+  bool has_vector_of_strings = data->has_vector_of_strings();
+  xdr->FieldWithDefault("vector_of_strings", data->mutable_vector_of_strings(),
+                        has_vector_of_strings, v);
+}
+
+constexpr XdrFilterType<json_xdr_unittest::FillWithDefaultValues>
+    XdrFillWithDefaultType[] = {
+        XdrFillWithDefaultValues_v1<json_xdr_unittest::FillWithDefaultValues>,
+        nullptr,
+};
+
+TEST(Xdr, FillWithDefaults) {
+  // Write default values to JSON from uninitialized fidl table
+  std::string json0;
+  json_xdr_unittest::FillWithDefaultValues t0;
+  XdrWrite(&json0, &t0, XdrFillWithDefaultType);
+  EXPECT_EQ(
+      "{\"string\":\"string\",\"bool\":true,\"int8\":1,\"int16\":2,"
+      "\"int32\":3,\"int64\":4,\"uint8\":5,\"uint16\":6,\"uint32\":7,"
+      "\"uint64\":8,\"float32\":9.0,\"float64\":10.0,\"enum\":0,"
+      "\"vector_of_strings\":[\"a\",\"vector\"]}",
+      json0);
+
+  // Read empty JSON values and populate fidl table
+  std::string json1 = "\"\"";
+  json_xdr_unittest::FillWithDefaultValues t1;
+  EXPECT_TRUE(XdrRead(json1, &t1, XdrFillWithDefaultType));
+
+  EXPECT_EQ("string", t1.string());
+  EXPECT_TRUE(t1.bool_());
+  EXPECT_EQ(1, t1.int8());
+  EXPECT_EQ(2, t1.int16());
+  EXPECT_EQ(3, t1.int32());
+  EXPECT_EQ(4, t1.int64());
+  EXPECT_EQ(5u, t1.uint8());
+  EXPECT_EQ(6u, t1.uint16());
+  EXPECT_EQ(7u, t1.uint32());
+  EXPECT_EQ(8u, t1.uint64());
+  EXPECT_EQ(9.0f, t1.float32());
+  EXPECT_EQ(10.0, t1.float64());
+  EXPECT_EQ(json_xdr_unittest::Enum::ZERO, t1.enum_());
+  std::vector<std::string> v = {"a", "vector"};
+  EXPECT_EQ(v, t1.vector_of_strings());
+}
+
 }  // namespace
 }  // namespace modular

@@ -224,6 +224,27 @@ class XdrContext {
     Field(field).Value(data);
   }
 
+  // Same as Field(), but allows a default value to be specified. Only simple
+  // types and std::vector<simple type> are supported.
+  //
+  // |field| is the name of the JSON field to be read or written to
+  // |data| is a pointer to the fidl field to be read or written to
+  // |use_data| when set to true, set the JSON field to the value of data
+  // |default_value| the value data should be defaulted to if the field doesn't
+  //   exist in JSON
+  //
+  // IMPORTANT: calling mutable_field() on a fidl table forces a default value
+  // on the field resulting in has_field() to return true. The value of
+  // has_field() will need to be stored in a separate variable to avoid this.
+  // Example:
+  // bool has_field = data->has_field();
+  // xdr->FieldWithDefault("field", data->mutable_field(), has_field, "value");
+  template <typename V>
+  void FieldWithDefault(const char field[], V* const data, bool use_data,
+                        V default_value) {
+    FieldWithDefault(field).ValueWithDefault(data, use_data, default_value);
+  }
+
   // If we supply a custom filter for the value of a field, the data
   // type of the field very often does not match directly the data
   // type for which we write a filter, therefore this template has two
@@ -256,31 +277,60 @@ class XdrContext {
   // float, bool) directly.
   template <typename V>
   typename std::enable_if<!std::is_enum<V>::value>::type Value(V* data) {
+    V default_value = V();
+    ValueWithDefault(data, true, std::move(default_value));
+  }
+
+  // An enum is mapped to a JSON int.
+  template <typename V>
+  typename std::enable_if<std::is_enum<V>::value>::type Value(V* const data) {
+    V default_value = V();
+    ValueWithDefault(data, true, std::move(default_value));
+  }
+
+  // This function used when |data| is not an enum. It maps type V to its
+  // corresponding JSON type (int, float, bool). If |use_data| is true, read
+  // from |data|, otherwise, use |default_value|.
+  template <typename V>
+  typename std::enable_if<!std::is_enum<V>::value>::type ValueWithDefault(
+      V* data, bool use_data, V default_value) {
     switch (op_) {
       case XdrOp::TO_JSON:
-        value_->Set(*data, allocator());
+        use_data ? value_->Set(*data, allocator())
+                 : value_->Set(default_value, allocator());
         break;
 
       case XdrOp::FROM_JSON:
         if (!value_->Is<V>()) {
-          AddError("Unexpected type.");
+          if (use_data) {
+            AddError("Unexpected type.");
+            return;
+          }
+          *data = default_value;
           return;
         }
         *data = value_->Get<V>();
     }
   }
 
-  // An enum is mapped to a JSON int.
+  // This function is used when |data| is an enum. It maps enums to a JSON int.
+  // If |use_data| is true, read from |data|, otherwise, use |default_value|.
   template <typename V>
-  typename std::enable_if<std::is_enum<V>::value>::type Value(V* const data) {
+  typename std::enable_if<std::is_enum<V>::value>::type ValueWithDefault(
+      V* const data, bool use_data, V default_value) {
     switch (op_) {
       case XdrOp::TO_JSON:
-        value_->Set(static_cast<int>(*data), allocator());
+        use_data ? value_->Set(static_cast<int>(*data), allocator())
+                 : value_->Set(static_cast<int>(default_value), allocator());
         break;
 
       case XdrOp::FROM_JSON:
         if (!value_->Is<int>()) {
-          AddError("Unexpected type.");
+          if (use_data) {
+            AddError("Unexpected type.");
+            return;
+          }
+          *data = default_value;
           return;
         }
         *data = static_cast<V>(value_->Get<int>());
@@ -300,6 +350,19 @@ class XdrContext {
 
   // An STL string is mapped to a JSON string.
   void Value(std::string* data);
+
+  // Allows for default values to be specified for the following types.
+  // These follow the mapping properties listed in Value().
+  void ValueWithDefault(unsigned char* data, bool use_data,
+                        unsigned char default_value);
+  void ValueWithDefault(int8_t* data, bool use_data, int8_t default_value);
+  void ValueWithDefault(unsigned short* data, bool use_data,
+                        unsigned short default_value);
+  void ValueWithDefault(short* data, bool use_data, short default_value);
+  void ValueWithDefault(fidl::StringPtr* data, bool use_data,
+                        fidl::StringPtr default_value);
+  void ValueWithDefault(std::string* data, bool use_data,
+                        std::string default_value);
 
   // A value of a custom type is mapped using the custom filter. See
   // the corresponding Field() method for why there are two type
@@ -484,11 +547,64 @@ class XdrContext {
     }
   }
 
+  // Allows for a default value to be specified for STL vectors mapped to JSON
+  // arrays with a custom filter for the elements. This only supports vectors
+  // with simple types.
+  template <typename D, typename V>
+  void ValueWithDefault(std::vector<D>* const data,
+                        const XdrFilterType<V> filter, bool use_data,
+                        std::vector<D> default_value) {
+    switch (op_) {
+      case XdrOp::TO_JSON:
+        if (use_data) {
+          value_->SetArray();
+          value_->Reserve(data->size(), allocator());
+
+          for (size_t i = 0; i < data->size(); ++i) {
+            Element(i).Value(&data->at(i), filter);
+          }
+          break;
+        }
+        data->resize(default_value.size());
+        for (size_t i = 0; i < default_value.size(); ++i) {
+          ElementWithDefault(i).ValueWithDefault(&data->at(i), use_data,
+                                                 default_value.at(i));
+        }
+        break;
+
+      case XdrOp::FROM_JSON:
+        if (!value_->IsArray()) {
+          if (use_data) {
+            AddError("Array type expected.");
+            return;
+          }
+          data->resize(default_value.size());
+          for (size_t i = 0; i < default_value.size(); ++i) {
+            ElementWithDefault(i).ValueWithDefault(&data->at(i), use_data,
+                                                   default_value.at(i));
+          }
+          return;
+        }
+        data->resize(value_->Size());
+        for (size_t i = 0; i < value_->Size(); ++i) {
+          Element(i).Value(&data->at(i), filter);
+        }
+    }
+  }
+
   // An STL vector with a simple element type can infer its element value filter
   // from the type parameters of the array.
   template <typename V>
   void Value(std::vector<V>* const data) {
     Value(data, XdrFilter<V>);
+  }
+
+  // Allows for a default value to be specified for STL vector with a simple
+  // element type
+  template <typename V>
+  void ValueWithDefault(std::vector<V>* const data, bool use_data,
+                        std::vector<V> default_value) {
+    ValueWithDefault(data, XdrFilter<V>, use_data, default_value);
   }
 
   // An STL map is mapped to an array of pairs of key and value, because maps
@@ -553,7 +669,9 @@ class XdrContext {
              JsonValue* value);
   JsonDoc::AllocatorType& allocator() const { return doc_->GetAllocator(); }
   XdrContext Field(const char field[]);
+  XdrContext FieldWithDefault(const char field[]);
   XdrContext Element(size_t i);
+  XdrContext ElementWithDefault(size_t i);
 
   // Error reporting: Recursively requests the error string from the
   // parent, and on the way back appends a description of the current

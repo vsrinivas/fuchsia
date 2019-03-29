@@ -95,73 +95,127 @@ bool XdrContext::Version(uint32_t version) {
 }
 
 void XdrContext::Value(unsigned char* const data) {
-  switch (op_) {
-    case XdrOp::TO_JSON:
-      value_->Set(static_cast<int>(*data), allocator());
-      break;
-
-    case XdrOp::FROM_JSON:
-      if (!value_->Is<int>()) {
-        AddError("Value() of unsigned char: int expected");
-        return;
-      }
-      *data = static_cast<unsigned char>(value_->Get<int>());
-  }
+  ValueWithDefault(data, true, static_cast<unsigned char>(0));
 }
 
 void XdrContext::Value(int8_t* const data) {
-  switch (op_) {
-    case XdrOp::TO_JSON:
-      value_->Set(static_cast<int>(*data), allocator());
-      break;
-
-    case XdrOp::FROM_JSON:
-      if (!value_->Is<int>()) {
-        AddError("Value() of int8: int expected");
-        return;
-      }
-      *data = static_cast<int8_t>(value_->Get<int>());
-  }
+  ValueWithDefault(data, true, static_cast<int8_t>(0));
 }
 
 void XdrContext::Value(unsigned short* const data) {
-  switch (op_) {
-    case XdrOp::TO_JSON:
-      value_->Set(static_cast<int>(*data), allocator());
-      break;
-
-    case XdrOp::FROM_JSON:
-      if (!value_->Is<int>()) {
-        AddError("Value() of unsigned short: int expected");
-        return;
-      }
-      *data = static_cast<unsigned short>(value_->Get<int>());
-  }
+  ValueWithDefault(data, true, static_cast<unsigned short>(0));
 }
 
 void XdrContext::Value(short* const data) {
+  ValueWithDefault(data, true, static_cast<short>(0));
+}
+
+void XdrContext::Value(fidl::StringPtr* const data) {
+  ValueWithDefault(data, true, nullptr);
+}
+
+void XdrContext::Value(std::string* const data) {
+  ValueWithDefault(data, true, "");
+}
+
+void XdrContext::ValueWithDefault(unsigned char* const data, bool use_data,
+                                  unsigned char default_value) {
   switch (op_) {
     case XdrOp::TO_JSON:
-      value_->Set(static_cast<int>(*data), allocator());
+      use_data ? value_->Set(static_cast<int>(*data), allocator())
+               : value_->Set(static_cast<int>(default_value), allocator());
       break;
 
     case XdrOp::FROM_JSON:
       if (!value_->Is<int>()) {
-        AddError("Value() of short: int expected");
+        if (use_data) {
+          AddError("Value() of unsigned char: int expected");
+          return;
+        }
+        *data = default_value;
         return;
       }
-      *data = static_cast<short>(value_->Get<int>());
+      *data = static_cast<unsigned char>(value_->Get<int>());
+      return;
   }
 }
 
-void XdrContext::Value(fidl::StringPtr* const data) {
+void XdrContext::ValueWithDefault(int8_t* const data, bool use_data,
+                                  int8_t default_value) {
   switch (op_) {
     case XdrOp::TO_JSON:
-      if (data->is_null()) {
-        value_->SetNull();
-      } else {
-        value_->SetString(data->get(), allocator());
+      use_data ? value_->Set(static_cast<int>(*data), allocator())
+               : value_->Set(static_cast<int>(default_value), allocator());
+      break;
+
+    case XdrOp::FROM_JSON:
+      if (!value_->Is<int>()) {
+        if (use_data) {
+          AddError("Value() of int8: int expected");
+          return;
+        }
+        *data = default_value;
+        return;
       }
+      *data = static_cast<int8_t>(value_->Get<int>());
+      return;
+  }
+}
+
+void XdrContext::ValueWithDefault(unsigned short* const data, bool use_data,
+                                  unsigned short default_value) {
+  switch (op_) {
+    case XdrOp::TO_JSON:
+      use_data ? value_->Set(static_cast<int>(*data), allocator())
+               : value_->Set(static_cast<int>(default_value), allocator());
+      break;
+
+    case XdrOp::FROM_JSON:
+      if (!value_->Is<int>()) {
+        if (use_data) {
+          AddError("Value() of unsigned short: int expected");
+          return;
+        }
+        *data = default_value;
+        return;
+      }
+      *data = static_cast<unsigned short>(value_->Get<int>());
+      return;
+  }
+}
+
+void XdrContext::ValueWithDefault(short* const data, bool use_data,
+                                  short default_value) {
+  switch (op_) {
+    case XdrOp::TO_JSON:
+      use_data ? value_->Set(static_cast<int>(*data), allocator())
+               : value_->Set(static_cast<int>(default_value), allocator());
+      break;
+
+    case XdrOp::FROM_JSON:
+      if (!value_->Is<int>()) {
+        if (use_data) {
+          AddError("Value() of short: int expected");
+          return;
+        }
+        *data = default_value;
+        return;
+      }
+      *data = static_cast<short>(value_->Get<int>());
+      return;
+  }
+}
+
+void XdrContext::ValueWithDefault(fidl::StringPtr* const data, bool use_data,
+                                  fidl::StringPtr default_value) {
+  switch (op_) {
+    case XdrOp::TO_JSON:
+      if (!use_data) {
+        value_->SetString(default_value.get(), allocator());
+        break;
+      }
+      data->is_null() ? value_->SetNull()
+                      : value_->SetString(data->get(), allocator());
       break;
 
     case XdrOp::FROM_JSON:
@@ -170,23 +224,33 @@ void XdrContext::Value(fidl::StringPtr* const data) {
       } else if (value_->IsString()) {
         *data = value_->GetString();
       } else {
-        AddError("Value() of fidl::StringPtr: string expected");
+        if (use_data) {
+          AddError("Value() of fidl::StringPtr: string expected");
+          return;
+        }
+        *data = default_value;
       }
       break;
   }
 }
 
-void XdrContext::Value(std::string* const data) {
+void XdrContext::ValueWithDefault(std::string* const data, bool use_data,
+                                  std::string default_value) {
   switch (op_) {
     case XdrOp::TO_JSON:
-      value_->SetString(*data, allocator());
+      use_data ? value_->SetString(*data, allocator())
+               : value_->SetString(default_value, allocator());
       break;
 
     case XdrOp::FROM_JSON:
       if (value_->IsString()) {
         *data = value_->GetString();
       } else {
-        AddError("Value() of std::string: string expected");
+        if (use_data) {
+          AddError("Value() of std::string: string expected");
+          return;
+        }
+        *data = default_value;
       }
       break;
   }
@@ -226,6 +290,39 @@ XdrContext XdrContext::Field(const char field[]) {
   }
 }
 
+XdrContext XdrContext::FieldWithDefault(const char field[]) {
+  switch (op_) {
+    case XdrOp::TO_JSON:
+      if (!value_->IsObject()) {
+        value_->SetObject();
+      }
+      break;
+
+    case XdrOp::FROM_JSON:
+      if (!value_->IsObject()) {
+        return {this, field, op_, doc_, &null_};
+      }
+  }
+
+  auto i = value_->FindMember(field);
+  if (i != value_->MemberEnd()) {
+    return {this, field, op_, doc_, &i->value};
+  }
+
+  switch (op_) {
+    case XdrOp::TO_JSON: {
+      JsonValue name{field, allocator()};
+      value_->AddMember(name, JsonValue(), allocator());
+      auto i = value_->FindMember(field);
+      FXL_DCHECK(i != value_->MemberEnd());
+      return {this, field, op_, doc_, &i->value};
+    }
+
+    case XdrOp::FROM_JSON:
+      return {this, field, op_, doc_, &null_};
+  }
+}
+
 XdrContext XdrContext::Element(const size_t i) {
   switch (op_) {
     case XdrOp::TO_JSON:
@@ -237,6 +334,36 @@ XdrContext XdrContext::Element(const size_t i) {
     case XdrOp::FROM_JSON:
       if (!value_->IsArray()) {
         AddError("Array expected for element " + std::to_string(i));
+        return {this, nullptr, op_, doc_, &null_};
+      }
+  }
+
+  if (i < value_->Size()) {
+    return {this, nullptr, op_, doc_, &value_->operator[](i)};
+  }
+
+  switch (op_) {
+    case XdrOp::TO_JSON:
+      while (i >= value_->Size()) {
+        value_->PushBack(JsonValue(), allocator());
+      }
+      return {this, nullptr, op_, doc_, &value_->operator[](i)};
+
+    case XdrOp::FROM_JSON:
+      return {this, nullptr, op_, doc_, &null_};
+  }
+}
+
+XdrContext XdrContext::ElementWithDefault(const size_t i) {
+  switch (op_) {
+    case XdrOp::TO_JSON:
+      if (!value_->IsArray()) {
+        value_->SetArray();
+      }
+      break;
+
+    case XdrOp::FROM_JSON:
+      if (!value_->IsArray()) {
         return {this, nullptr, op_, doc_, &null_};
       }
   }
