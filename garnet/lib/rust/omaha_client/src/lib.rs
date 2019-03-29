@@ -5,11 +5,6 @@
 //! Crate omaha_client
 //! This is for Omaha client binaries written in Rust.
 
+pub mod common;
+pub mod configuration;
 pub mod protocol;
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    pub fn empty_test() {}
-}
