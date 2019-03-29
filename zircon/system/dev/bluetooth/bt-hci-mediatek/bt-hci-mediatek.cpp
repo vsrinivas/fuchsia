@@ -277,7 +277,7 @@ zx_status_t BtHciMediatek::OpenChannel(zx::channel* in_channel, zx_handle_t in, 
     }
 
     zx_status_t status = ZX_OK;
-    if ((status = in_channel->wait_async(port_, key, wait_signals, ZX_WAIT_ASYNC_REPEATING)) != ZX_OK) {
+    if ((status = in_channel->wait_async(port_, key, wait_signals, ZX_WAIT_ASYNC_ONCE)) != ZX_OK) {
         zxlogf(ERROR, "%s: Channel object_wait_async failed\n", __FILE__);
         return status;
     }
@@ -1010,7 +1010,8 @@ int BtHciMediatek::Thread() {
 
         CardSetOwn(true);
 
-        if (packet.type == ZX_PKT_TYPE_SIGNAL_REP && packet.key == kCommandChannelKey) {
+        if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE && packet.key == kCommandChannelKey) {
+            bool rearm = true;
             if (packet.signal.observed & ZX_CHANNEL_READABLE) {
                 status = HostToCardPacket(cmd_channel_, kPacketTypeCmd, BT_HCI_SNOOP_TYPE_CMD);
                 if (status != ZX_OK) {
@@ -1022,8 +1023,20 @@ int BtHciMediatek::Thread() {
             if (packet.signal.observed & (ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_HANDLE_CLOSED)) {
                 port_.cancel(cmd_channel_, packet.key);
                 cmd_channel_.reset();
+                rearm = false;
             }
-        } else if (packet.type == ZX_PKT_TYPE_SIGNAL_REP && packet.key == kAclChannelKey) {
+            if (rearm) {
+                zx_signals_t wait_signals = ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_HANDLE_CLOSED |
+                                            ZX_CHANNEL_READABLE;
+                status = cmd_channel_.wait_async(port_, packet.key, wait_signals,
+                                                 ZX_WAIT_ASYNC_ONCE);
+                if (status != ZX_OK) {
+                        zxlogf(ERROR, "%s: Channel object_wait_async failed: %d\n",
+                               __FILE__, status);
+                }
+            }
+        } else if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE && packet.key == kAclChannelKey) {
+            bool rearm = true;
             if (packet.signal.observed & ZX_CHANNEL_READABLE) {
                 status = HostToCardPacket(acl_channel_, kPacketTypeAcl, BT_HCI_SNOOP_TYPE_ACL);
                 if (status != ZX_OK) {
@@ -1035,11 +1048,30 @@ int BtHciMediatek::Thread() {
             if (packet.signal.observed & (ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_HANDLE_CLOSED)) {
                 port_.cancel(acl_channel_, packet.key);
                 acl_channel_.reset();
+                rearm = false;
             }
-        } else if (packet.type == ZX_PKT_TYPE_SIGNAL_REP && packet.key == kSnoopChannelKey) {
+            if (rearm) {
+                zx_signals_t wait_signals = ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_HANDLE_CLOSED |
+                                            ZX_CHANNEL_READABLE;
+                status = acl_channel_.wait_async(port_, packet.key, wait_signals,
+                                                 ZX_WAIT_ASYNC_ONCE);
+                if (status != ZX_OK) {
+                        zxlogf(ERROR, "%s: Channel object_wait_async failed: %d\n",
+                               __FILE__, status);
+                }
+            }
+        } else if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE && packet.key == kSnoopChannelKey) {
             if (packet.signal.observed & (ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_HANDLE_CLOSED)) {
                 port_.cancel(snoop_channel_, packet.key);
                 snoop_channel_.reset();
+            } else {
+                zx_signals_t wait_signals = ZX_CHANNEL_PEER_CLOSED | ZX_SIGNAL_HANDLE_CLOSED;
+                status = acl_channel_.wait_async(port_, packet.key, wait_signals,
+                                                 ZX_WAIT_ASYNC_ONCE);
+                if (status != ZX_OK) {
+                        zxlogf(ERROR, "%s: Channel object_wait_async failed: %d\n",
+                               __FILE__, status);
+                }
             }
         } else if (packet.type == ZX_PKT_TYPE_INTERRUPT && packet.key == kSdioInterruptKey) {
             CardWrite32(kChlpcrAddress, kChlpcrFwIntClear);
