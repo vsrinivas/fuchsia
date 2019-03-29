@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "environment.h"
+#include <lib/fxl/strings/string_printf.h>
 
 namespace netemul {
 namespace config {
@@ -25,121 +26,106 @@ bool Environment::ParseFromJSON(const rapidjson::Value& value,
     return false;
   }
 
-  auto name = value.FindMember(kName);
-  if (name == value.MemberEnd()) {
-    name_ = kDefaultName;
-  } else if (!name->value.IsString()) {
-    parser->ReportError("environment name must be string value");
-    return false;
-  } else {
-    name_ = name->value.GetString();
-  }
+  // load defaults:
+  name_ = kDefaultName;
+  inherit_services_ = kDefaultInheritServices;
+  devices_.clear();
+  services_.clear();
+  test_.clear();
+  children_.clear();
+  apps_.clear();
+  setup_.clear();
 
-  auto inherit = value.FindMember(kInheritServices);
-  if (inherit == value.MemberEnd()) {
-    inherit_services_ = kDefaultInheritServices;
-  } else if (!inherit->value.IsBool()) {
-    parser->ReportError("inherit_services must be boolean value");
-    return false;
-  } else {
-    inherit_services_ = inherit->value.GetBool();
-  }
-
-  auto devices = value.FindMember(kDevices);
-  if (devices == value.MemberEnd()) {
-    devices_.clear();
-  } else if (!devices->value.IsArray()) {
-    parser->ReportError("environment devices must be array of strings");
-    return false;
-  } else {
-    auto devs = devices->value.GetArray();
-    devices_.clear();
-    for (auto d = devs.Begin(); d != devs.End(); d++) {
-      if (!d->IsString()) {
+  // iterate over members:
+  for (auto i = value.MemberBegin(); i != value.MemberEnd(); i++) {
+    if (i->name == kName) {
+      if (!i->value.IsString()) {
+        parser->ReportError("environment name must be string value");
+        return false;
+      }
+      name_ = i->value.GetString();
+    } else if (i->name == kInheritServices) {
+      if (!i->value.IsBool()) {
+        parser->ReportError("inherit_services must be boolean value");
+        return false;
+      }
+      inherit_services_ = i->value.GetBool();
+    } else if (i->name == kDevices) {
+      if (!i->value.IsArray()) {
         parser->ReportError("environment devices must be array of strings");
         return false;
       }
-      devices_.emplace_back(d->GetString());
-    }
-  }
-
-  auto services = value.FindMember(kServices);
-  if (services == value.MemberEnd()) {
-    services_.clear();
-  } else if (!services->value.IsObject()) {
-    parser->ReportError("environment services must be object");
-    return false;
-  } else {
-    for (auto s = services->value.MemberBegin();
-         s != services->value.MemberEnd(); s++) {
-      auto& ns = services_.emplace_back(s->name.GetString());
-      if (!ns.ParseFromJSON(s->value, parser)) {
+      auto devs = i->value.GetArray();
+      for (auto d = devs.Begin(); d != devs.End(); d++) {
+        if (!d->IsString()) {
+          parser->ReportError("environment devices must be array of strings");
+          return false;
+        }
+        devices_.emplace_back(d->GetString());
+      }
+    } else if (i->name == kServices) {
+      if (!i->value.IsObject()) {
+        parser->ReportError("environment services must be object");
         return false;
       }
-    }
-  }
-
-  auto test = value.FindMember(kTest);
-  if (test == value.MemberEnd()) {
-    test_.clear();
-  } else if (!test->value.IsArray()) {
-    parser->ReportError("environment tests must be array of objects");
-    return false;
-  } else {
-    auto test_arr = test->value.GetArray();
-    for (auto t = test_arr.Begin(); t != test_arr.End(); t++) {
-      auto& nt = test_.emplace_back();
-      if (!nt.ParseFromJSON(*t, parser)) {
+      for (auto s = i->value.MemberBegin(); s != i->value.MemberEnd(); s++) {
+        auto& ns = services_.emplace_back(s->name.GetString());
+        if (!ns.ParseFromJSON(s->value, parser)) {
+          return false;
+        }
+      }
+    } else if (i->name == kTest) {
+      if (!i->value.IsArray()) {
+        parser->ReportError("environment tests must be array of objects");
         return false;
       }
-    }
-  }
-
-  auto children = value.FindMember(kChildren);
-  if (children == value.MemberEnd()) {
-    children_.clear();
-  } else if (!children->value.IsArray()) {
-    parser->ReportError("environment children must be array of objects");
-    return false;
-  } else {
-    auto ch_arr = children->value.GetArray();
-    for (auto c = ch_arr.Begin(); c != ch_arr.End(); c++) {
-      auto& nc = children_.emplace_back();
-      if (!nc.ParseFromJSON(*c, parser)) {
+      auto test_arr = i->value.GetArray();
+      for (auto t = test_arr.Begin(); t != test_arr.End(); t++) {
+        auto& nt = test_.emplace_back();
+        if (!nt.ParseFromJSON(*t, parser)) {
+          return false;
+        }
+      }
+    } else if (i->name == kChildren) {
+      if (!i->value.IsArray()) {
+        parser->ReportError("environment children must be array of objects");
         return false;
       }
-    }
-  }
-
-  auto apps = value.FindMember(kApps);
-  if (apps == value.MemberEnd()) {
-    apps_.clear();
-  } else if (!apps->value.IsArray()) {
-    parser->ReportError("environment apps must be array");
-    return false;
-  } else {
-    auto app_arr = apps->value.GetArray();
-    for (auto a = app_arr.Begin(); a != app_arr.End(); a++) {
-      auto& na = apps_.emplace_back();
-      if (!na.ParseFromJSON(*a, parser)) {
+      auto ch_arr = i->value.GetArray();
+      for (auto c = ch_arr.Begin(); c != ch_arr.End(); c++) {
+        auto& nc = children_.emplace_back();
+        if (!nc.ParseFromJSON(*c, parser)) {
+          return false;
+        }
+      }
+    } else if (i->name == kApps) {
+      if (!i->value.IsArray()) {
+        parser->ReportError("environment apps must be array");
         return false;
       }
-    }
-  }
-
-  auto setup = value.FindMember(kSetup);
-  if (setup == value.MemberEnd()) {
-    setup_.clear();
-  } else if (!setup->value.IsArray()) {
-    parser->ReportError("environment setup must be array");
-    return false;
-  } else {
-    auto setup_arr = setup->value.GetArray();
-    for (auto s = setup_arr.Begin(); s != setup_arr.End(); s++) {
-      auto& ns = setup_.emplace_back();
-      if (!ns.ParseFromJSON(*s, parser)) {
+      auto app_arr = i->value.GetArray();
+      for (auto a = app_arr.Begin(); a != app_arr.End(); a++) {
+        auto& na = apps_.emplace_back();
+        if (!na.ParseFromJSON(*a, parser)) {
+          return false;
+        }
+      }
+    } else if (i->name == kSetup) {
+      if (!i->value.IsArray()) {
+        parser->ReportError("environment setup must be array");
         return false;
       }
+      auto setup_arr = i->value.GetArray();
+      for (auto s = setup_arr.Begin(); s != setup_arr.End(); s++) {
+        auto& ns = setup_.emplace_back();
+        if (!ns.ParseFromJSON(*s, parser)) {
+          return false;
+        }
+      }
+    } else {
+      parser->ReportError(fxl::StringPrintf(
+          "Unrecognized environment member \"%s\"", i->name.GetString()));
+      return false;
     }
   }
 

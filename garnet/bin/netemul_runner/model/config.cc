@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "config.h"
+#include <lib/fxl/strings/string_printf.h>
 
 namespace netemul {
 namespace config {
@@ -31,89 +32,80 @@ bool Config::ParseFromJSON(const rapidjson::Value& value,
     return false;
   }
 
-  auto nets_value = value.FindMember(kNetworks);
-  if (nets_value != value.MemberEnd()) {
-    if (!nets_value->value.IsArray()) {
-      json_parser->ReportError("\"networks\" property must be an Array");
-      return false;
-    }
-    const auto& nets = nets_value->value.GetArray();
-    for (auto n = nets.Begin(); n != nets.End(); n++) {
-      auto& net = networks_.emplace_back();
-      if (!net.ParseFromJSON(*n, json_parser)) {
+  // load all defaults:
+  if (!environment_.ParseFromJSON(rapidjson::Value(rapidjson::kObjectType),
+                                  json_parser)) {
+    return false;
+  }
+  default_url_ = "";
+  disabled_ = false;
+  timeout_ = zx::duration::infinite();
+  networks_.clear();
+  capture_mode_ = CaptureMode::NONE;
+
+  // iterate over config members:
+  for (auto i = value.MemberBegin(); i != value.MemberEnd(); i++) {
+    if (i->name == kNetworks) {
+      if (!i->value.IsArray()) {
+        json_parser->ReportError("\"networks\" property must be an Array");
         return false;
       }
-    }
-  }
-
-  auto env_value = value.FindMember(kEnvironment);
-  if (env_value == value.MemberEnd()) {
-    // parse from empty object if not present
-    if (!environment_.ParseFromJSON(rapidjson::Value(rapidjson::kObjectType),
-                                    json_parser)) {
-      return false;
-    }
-  } else {
-    if (!environment_.ParseFromJSON(env_value->value, json_parser)) {
-      return false;
-    }
-  }
-
-  auto default_url = value.FindMember(kDefaultUrl);
-  if (default_url != value.MemberEnd()) {
-    if (!default_url->value.IsString()) {
-      json_parser->ReportError("\"default_url\" must be a String");
-      return false;
-    }
-    default_url_ = default_url->value.GetString();
-  }
-
-  auto disabled = value.FindMember(kDisabled);
-  if (disabled != value.MemberEnd()) {
-    if (!disabled->value.IsBool()) {
-      json_parser->ReportError("\"disabled\" must be a Boolean value");
-      return false;
-    }
-    disabled_ = disabled->value.GetBool();
-  } else {
-    disabled_ = false;
-  }
-
-  auto timeout = value.FindMember(kTimeout);
-  if (timeout != value.MemberEnd()) {
-    if (!timeout->value.IsUint64() || timeout->value.GetUint64() <= 0) {
-      json_parser->ReportError(
-          "\"timeout\" must be a positive integer Number value");
-      return false;
-    }
-    timeout_ = zx::sec(timeout->value.GetUint64());
-  } else {
-    timeout_ = zx::duration::infinite();
-  }
-
-  auto capture = value.FindMember(kCapture);
-  if (capture != value.MemberEnd()) {
-    if (capture->value.IsBool()) {
-      capture_mode_ =
-          capture->value.GetBool() ? CaptureMode::ON_ERROR : CaptureMode::NONE;
-    } else if (capture->value.IsString()) {
-      std::string val = capture->value.GetString();
-      if (val == kCaptureNo) {
-        capture_mode_ = CaptureMode::NONE;
-      } else if (val == kCaptureOnError) {
-        capture_mode_ = CaptureMode::ON_ERROR;
-      } else if (val == kCaptureAlways) {
-        capture_mode_ = CaptureMode::ALWAYS;
+      const auto& nets = i->value.GetArray();
+      for (auto n = nets.Begin(); n != nets.End(); n++) {
+        auto& net = networks_.emplace_back();
+        if (!net.ParseFromJSON(*n, json_parser)) {
+          return false;
+        }
+      }
+    } else if (i->name == kEnvironment) {
+      if (!environment_.ParseFromJSON(i->value, json_parser)) {
+        return false;
+      }
+    } else if (i->name == kDefaultUrl) {
+      if (!i->value.IsString()) {
+        json_parser->ReportError("\"default_url\" must be a String");
+        return false;
+      }
+      default_url_ = i->value.GetString();
+    } else if (i->name == kDisabled) {
+      if (!i->value.IsBool()) {
+        json_parser->ReportError("\"disabled\" must be a Boolean value");
+        return false;
+      }
+      disabled_ = i->value.GetBool();
+    } else if (i->name == kTimeout) {
+      if (!i->value.IsUint64() || i->value.GetUint64() <= 0) {
+        json_parser->ReportError(
+            "\"timeout\" must be a positive integer Number value");
+        return false;
+      }
+      timeout_ = zx::sec(i->value.GetUint64());
+    } else if (i->name == kCapture) {
+      if (i->value.IsBool()) {
+        capture_mode_ =
+            i->value.GetBool() ? CaptureMode::ON_ERROR : CaptureMode::NONE;
+      } else if (i->value.IsString()) {
+        std::string val = i->value.GetString();
+        if (val == kCaptureNo) {
+          capture_mode_ = CaptureMode::NONE;
+        } else if (val == kCaptureOnError) {
+          capture_mode_ = CaptureMode::ON_ERROR;
+        } else if (val == kCaptureAlways) {
+          capture_mode_ = CaptureMode::ALWAYS;
+        } else {
+          json_parser->ReportError("unrecognized \"capture\" option");
+          return false;
+        }
       } else {
-        json_parser->ReportError("unrecognized \"capture\" option");
+        json_parser->ReportError(
+            "\"capture\" must be a Boolean or String value");
         return false;
       }
     } else {
-      json_parser->ReportError("\"capture\" must be a Boolean or String value");
+      json_parser->ReportError(fxl::StringPrintf(
+          "Unrecognized config member \"%s\"", i->name.GetString()));
       return false;
     }
-  } else {
-    capture_mode_ = CaptureMode::NONE;
   }
 
   return true;

@@ -317,6 +317,19 @@ TEST_F(ModelTest, CaptureParsing) {
   ExpectFailedParse(R"({"capture" : "foo"})", "Can't parse bad capture value");
 }
 
+TEST_F(ModelTest, InvalidKeys) {
+  ExpectFailedParse(R"({ "foo" : "bar" })", "Bad config key accepted");
+  ExpectFailedParse(R"({ "environment" : {"foo" : "bar"} })",
+                    "Bad environment key accepted");
+  ExpectFailedParse(R"({ "networks" : [{"name" : "net", "foo" : "bar"}] })",
+                    "Bad network key accepted");
+  ExpectFailedParse(R"({ "environment" : { "setup": [{"foo" : "bar"}] } })",
+                    "Bad launch_app key accepted");
+  ExpectFailedParse(
+      R"({ "networks" : [ {"name" : "net", "endpoints" : [{"name" : "ep", "foo" : "bar"}] }] })",
+      "Bad endpoint key accepted");
+}
+
 }  // namespace testing
 }  // namespace config
 }  // namespace netemul

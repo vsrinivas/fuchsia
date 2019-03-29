@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "endpoint.h"
+#include <lib/fxl/strings/string_printf.h>
 #include <cstdio>
 #include <memory>
 
@@ -23,59 +24,64 @@ bool Endpoint::ParseFromJSON(const rapidjson::Value& value,
     return false;
   }
 
-  auto name = value.FindMember(kName);
-  if (name == value.MemberEnd()) {
-    parser->ReportError("endpoint must have name property");
-    return false;
-  } else if ((!name->value.IsString()) || name->value.GetStringLength() == 0) {
-    parser->ReportError("endpoint name must be a non-empty string");
-    return false;
-  } else {
-    name_ = name->value.GetString();
-  }
+  // set default values:
+  name_ = "";
+  mtu_ = kDefaultMtu;
+  mac_ = nullptr;
+  up_ = kDefaultUp;
 
-  auto mtu = value.FindMember(kMtu);
-  if (mtu == value.MemberEnd()) {
-    mtu_ = kDefaultMtu;
-  } else if (!mtu->value.IsNumber()) {
-    parser->ReportError("endpoint mtu must be number");
-    return false;
-  } else {
-    auto v = static_cast<uint16_t>(mtu->value.GetUint());
-    if (v == 0) {
-      parser->ReportError(
-          "endpoint with zero mtu is invalid, omit to use default");
+  // iterate over members:
+  for (auto i = value.MemberBegin(); i != value.MemberEnd(); i++) {
+    if (i->name == kName) {
+      if ((!i->value.IsString()) || i->value.GetStringLength() == 0) {
+        parser->ReportError("endpoint name must be a non-empty string");
+        return false;
+      }
+      name_ = i->value.GetString();
+    } else if (i->name == kMtu) {
+      if (!i->value.IsNumber()) {
+        parser->ReportError("endpoint mtu must be number");
+        return false;
+      }
+      auto v = static_cast<uint16_t>(i->value.GetUint());
+      if (v == 0) {
+        parser->ReportError(
+            "endpoint with zero mtu is invalid, omit to use default");
+        return false;
+      }
+      mtu_ = v;
+    } else if (i->name == kMac) {
+      if (!i->value.IsString()) {
+        parser->ReportError("endpoint mac must be string");
+        return false;
+      }
+      auto macval = std::make_unique<Mac>();
+      if (std::sscanf(i->value.GetString(),
+                      "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", macval->d,
+                      macval->d + 1, macval->d + 2, macval->d + 3,
+                      macval->d + 4, macval->d + 5) != 6) {
+        parser->ReportError("Can't parse supplied mac address");
+        return false;
+      }
+      mac_ = std::move(macval);
+    } else if (i->name == kUp) {
+      if (!i->value.IsBool()) {
+        parser->ReportError("endpoint up must be bool");
+        return false;
+      }
+      up_ = i->value.GetBool();
+    } else {
+      parser->ReportError(fxl::StringPrintf(
+          "Unrecognized endpoint member \"%s\"", i->name.GetString()));
       return false;
     }
-    mtu_ = v;
   }
 
-  auto mac = value.FindMember(kMac);
-  if (mac == value.MemberEnd()) {
-    mac_ = nullptr;
-  } else if (!mac->value.IsString()) {
-    parser->ReportError("endpoint mac must be string");
+  // check that a non-empty name is provided:
+  if (name_.empty()) {
+    parser->ReportError(
+        "endpoint name must be provided and can't be an empty string");
     return false;
-  } else {
-    auto macval = std::make_unique<Mac>();
-    if (std::sscanf(mac->value.GetString(),
-                    "%02hhx:%02hhx:%02hhx:%02hhx:%02hhx:%02hhx", macval->d,
-                    macval->d + 1, macval->d + 2, macval->d + 3, macval->d + 4,
-                    macval->d + 5) != 6) {
-      parser->ReportError("Can't parse supplied mac address");
-      return false;
-    }
-    mac_ = std::move(macval);
-  }
-
-  auto up = value.FindMember(kUp);
-  if (up == value.MemberEnd()) {
-    up_ = kDefaultUp;
-  } else if (!up->value.IsBool()) {
-    parser->ReportError("endpoint up must be bool");
-    return false;
-  } else {
-    up_ = up->value.GetBool();
   }
 
   return true;

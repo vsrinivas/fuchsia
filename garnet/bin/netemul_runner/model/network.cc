@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "network.h"
+#include <lib/fxl/strings/string_printf.h>
 
 namespace netemul {
 namespace config {
@@ -17,31 +18,42 @@ bool Network::ParseFromJSON(const rapidjson::Value& value,
     return false;
   }
 
-  auto name = value.FindMember(kName);
-  if (name == value.MemberEnd()) {
-    json_parser->ReportError("network must have name property set");
-    return false;
-  } else if ((!name->value.IsString()) || name->value.GetStringLength() == 0) {
-    json_parser->ReportError("network name must be a non-empty string");
-    return false;
-  } else {
-    name_ = name->value.GetString();
-  }
+  // set defaults:
+  name_ = "";
+  endpoints_.clear();
 
-  auto endpoints = value.FindMember(kEndpoints);
-  if (endpoints == value.MemberEnd()) {
-    endpoints_.clear();
-  } else if (!endpoints->value.IsArray()) {
-    json_parser->ReportError("network endpoints must be an array");
-    return false;
-  } else {
-    auto eps = endpoints->value.GetArray();
-    for (auto e = eps.Begin(); e != eps.End(); e++) {
-      auto& ne = endpoints_.emplace_back();
-      if (!ne.ParseFromJSON(*e, json_parser)) {
+  // iterate over members:
+  for (auto i = value.MemberBegin(); i != value.MemberEnd(); i++) {
+    if (i->name == kName) {
+      if ((!i->value.IsString()) || i->value.GetStringLength() == 0) {
+        json_parser->ReportError("network name must be a non-empty string");
         return false;
       }
+      name_ = i->value.GetString();
+    } else if (i->name == kEndpoints) {
+      if (!i->value.IsArray()) {
+        json_parser->ReportError("network endpoints must be an array");
+        return false;
+      }
+      auto eps = i->value.GetArray();
+      for (auto e = eps.Begin(); e != eps.End(); e++) {
+        auto& ne = endpoints_.emplace_back();
+        if (!ne.ParseFromJSON(*e, json_parser)) {
+          return false;
+        }
+      }
+    } else {
+      json_parser->ReportError(fxl::StringPrintf(
+          "Unrecognized network member \"%s\"", i->name.GetString()));
+      return false;
     }
+  }
+
+  // check that a non-empty name is provided:
+  if (name_.empty()) {
+    json_parser->ReportError(
+        "network name must be provided and can't be an empty string");
+    return false;
   }
 
   return true;

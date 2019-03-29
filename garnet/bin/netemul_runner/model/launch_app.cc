@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "launch_app.h"
+#include <lib/fxl/strings/string_printf.h>
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 namespace netemul {
@@ -29,40 +30,46 @@ bool LaunchApp::ParseFromJSON(const rapidjson::Value& value,
     arguments_.clear();
 
   } else if (value.IsObject()) {
-    auto url = value.FindMember(kUrl);
-    if (url == value.MemberEnd()) {
-      url_ = kEmptyUrl;
-    } else if (!url->value.IsString()) {
-      parser->ReportError("launch options url must be string");
-      return false;
-    } else {
-      auto v = url->value.GetString();
-      if (url->value.GetStringLength() != 0) {
-        component::FuchsiaPkgUrl pkgUrl;
-        if (!pkgUrl.Parse(v)) {
-          parser->ReportError(
-              "launch options url is not a valid fuchsia package url");
-          return false;
-        }
-      }
-      url_ = v;
-    }
+    // set defaults:
+    url_ = kEmptyUrl;
+    arguments_.clear();
 
-    auto arguments = value.FindMember(kArguments);
-    if (arguments == value.MemberEnd()) {
-      arguments_.clear();
-    } else if (!arguments->value.IsArray()) {
-      parser->ReportError("launch options arguments must be array of string");
-      return false;
-    } else {
-      auto arg_arr = arguments->value.GetArray();
-      for (auto a = arg_arr.Begin(); a != arg_arr.End(); a++) {
-        if (!a->IsString()) {
-          parser->ReportError(
-              "launch options arguments element must be string");
+    // iterate over members:
+    for (auto i = value.MemberBegin(); i != value.MemberEnd(); i++) {
+      if (i->name == kUrl) {
+        if (!i->value.IsString()) {
+          parser->ReportError("launch options url must be string");
           return false;
         }
-        arguments_.emplace_back(a->GetString());
+        auto v = i->value.GetString();
+        if (i->value.GetStringLength() != 0) {
+          component::FuchsiaPkgUrl pkgUrl;
+          if (!pkgUrl.Parse(v)) {
+            parser->ReportError(
+                "launch options url is not a valid fuchsia package url");
+            return false;
+          }
+        }
+        url_ = v;
+      } else if (i->name == kArguments) {
+        if (!i->value.IsArray()) {
+          parser->ReportError(
+              "launch options arguments must be array of string");
+          return false;
+        }
+        auto arg_arr = i->value.GetArray();
+        for (auto a = arg_arr.Begin(); a != arg_arr.End(); a++) {
+          if (!a->IsString()) {
+            parser->ReportError(
+                "launch options arguments element must be string");
+            return false;
+          }
+          arguments_.emplace_back(a->GetString());
+        }
+      } else {
+        parser->ReportError(fxl::StringPrintf(
+            "Unrecognized launch args member \"%s\"", i->name.GetString()));
+        return false;
       }
     }
   } else {
