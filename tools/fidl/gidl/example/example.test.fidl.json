@@ -41,13 +41,84 @@
       "max_handles": 0
     }
   ],
-  "table_declarations": [],
+  "table_declarations": [
+    {
+      "name": "example/TableOnlyPrimitives",
+      "location": {
+        "filename": "tools/fidl/gidl/example/example.test.fidl",
+        "line": 7,
+        "column": 6
+      },
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "i",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 8,
+            "column": 13
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "max_handles": 0
+        },
+        {
+          "ordinal": 2,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool"
+          },
+          "name": "b",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 9,
+            "column": 12
+          },
+          "size": 1,
+          "max_out_of_line": 0,
+          "alignment": 1,
+          "max_handles": 0
+        },
+        {
+          "ordinal": 3,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "u",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 10,
+            "column": 14
+          },
+          "size": 2,
+          "max_out_of_line": 0,
+          "alignment": 2,
+          "max_handles": 0
+        }
+      ],
+      "size": 16,
+      "max_out_of_line": 72,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
   "union_declarations": [],
   "xunion_declarations": [],
   "declaration_order": [
-    "example/OneStringOfMaxLengthFive"
+    "example/OneStringOfMaxLengthFive",
+    "example/TableOnlyPrimitives"
   ],
   "declarations": {
-    "example/OneStringOfMaxLengthFive": "struct"
+    "example/OneStringOfMaxLengthFive": "struct",
+    "example/TableOnlyPrimitives": "table"
   }
 }

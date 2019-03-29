@@ -97,8 +97,11 @@ func main() {
 
 	// Generate Go code.
 	buf := new(bytes.Buffer)
-	gidlgolang.Generate(buf, gidl, fidl)
-	_, err := os.Stdout.Write(buf.Bytes())
+	err := gidlgolang.Generate(buf, gidl, fidl)
+	if err != nil {
+		panic(err)
+	}
+	_, err = os.Stdout.Write(buf.Bytes())
 	if err != nil {
 		panic(err)
 	}

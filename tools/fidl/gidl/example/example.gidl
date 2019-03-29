@@ -20,6 +20,28 @@ success("OneStringOfMaxLengthFive-exactly-five-characters") {
 	}
 }
 
+success("TableOnlyPrimitives-no-field-is-set") {
+	value = TableOnlyPrimitives {
+	}
+	bytes = {
+		0, 0, 0, 0, 0, 0, 0, 0, // length
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+	}
+}
+
+success("TableOnlyPrimitives-all-fields-are-set") {
+	value = TableOnlyPrimitives {
+		i: -9,
+		b: true,
+		u: 314,
+	}
+	bytes = {
+		3, 0, 0, 0, 0, 0, 0, 0, // length
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		// not important
+	}
+}
+
 fails_to_encode("OneStringOfMaxLengthFive-too-long") {
 	value = OneStringOfMaxLengthFive {
 		the_string: "bonjour", // 6 characters

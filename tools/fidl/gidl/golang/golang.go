@@ -96,13 +96,32 @@ func (b *goValueBuilder) newVar() string {
 	return fmt.Sprintf("v%d", b.varidx)
 }
 
+func (b *goValueBuilder) OnBool(value bool) {
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf(
+		"%s := %t\n", newVar, value))
+	b.lastVar = newVar
+}
+
+func (b *goValueBuilder) OnInt64(value int64, typ fidlir.PrimitiveSubtype) {
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf(
+		"var %s %s = %d\n", newVar, typ, value))
+	b.lastVar = newVar
+}
+
+func (b *goValueBuilder) OnUint64(value uint64, typ fidlir.PrimitiveSubtype) {
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf(
+		"var %s %s = %d\n", newVar, typ, value))
+	b.lastVar = newVar
+}
+
 func (b *goValueBuilder) OnString(value string) {
-	stringVar := b.newVar()
-	b.Builder.WriteString(stringVar)
-	b.Builder.WriteString(":=")
-	b.Builder.WriteString(strconv.Quote(value))
-	b.Builder.WriteString("\n")
-	b.lastVar = stringVar
+	newVar := b.newVar()
+	b.Builder.WriteString(fmt.Sprintf(
+		"%s := %s\n", newVar, strconv.Quote(value)))
+	b.lastVar = newVar
 }
 
 func (b *goValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDecl) {
@@ -122,6 +141,27 @@ func (b *goValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.StructDec
 		b.Builder.WriteString("=")
 		b.Builder.WriteString(fieldVar)
 		b.Builder.WriteString("\n")
+	}
+	b.lastVar = structVar
+}
+
+func (b *goValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDecl) {
+	structVar := b.newVar()
+	b.Builder.WriteString(structVar)
+	b.Builder.WriteString(":=")
+	b.Builder.WriteString(value.Name)
+	b.Builder.WriteString("{}")
+	b.Builder.WriteString("\n")
+	for key, field := range value.Fields {
+		fieldDecl, _ := decl.ForKey(key)
+		gidlmixer.Visit(b, field, fieldDecl)
+		fieldVar := b.lastVar
+		b.Builder.WriteString(structVar)
+		b.Builder.WriteString(".set_")
+		b.Builder.WriteString(key)
+		b.Builder.WriteString("(")
+		b.Builder.WriteString(fieldVar)
+		b.Builder.WriteString(")\n")
 	}
 	b.lastVar = structVar
 }

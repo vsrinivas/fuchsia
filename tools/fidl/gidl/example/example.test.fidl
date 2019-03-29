@@ -3,3 +3,9 @@ library example;
 struct OneStringOfMaxLengthFive {
     string:5 the_string;
 };
+
+table TableOnlyPrimitives {
+    1: int32 i;
+    2: bool b;
+    3: uint16 u;
+};

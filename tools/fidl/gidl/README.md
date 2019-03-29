@@ -12,6 +12,12 @@ For now, GIDL only generates Go test files. Here is an example invocation:
         --gidl tools/fidl/gidl/example/example.gidl \
         --json tools/fidl/gidl/example/example.test.fidl.json | gofmt
 
+To update the JSON IR
+
+    fx full-build && ./out/x64/host_x64/fidlc \
+        --json tools/fidl/gidl/example/example.test.fidl.json \
+        --files tools/fidl/gidl/example/example.test.fidl
+
 ## Writing Conformance Tests
 
 There are three kinds of tests which can be expressed. We describe them below.
