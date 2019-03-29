@@ -624,7 +624,6 @@ group("mediaplayer") {
 group("log_listener") {
   testonly = true
   public_deps = [
-    "//garnet/bin/log_listener:all_logs",
     "//garnet/bin/log_listener:log_listener",
     "//garnet/bin/log_listener:log_listener_shell",
   ]

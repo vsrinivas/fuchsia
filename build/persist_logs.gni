@@ -2,8 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/config.gni")
 
+# Build files that use the persist_logs template should check the value of
+# persist_logs and only include their persist_logs targets if this arg's
+# value is true. This is to allow global coordination of whether logs are
+# persisted and, for example, control at the global level whether logs are
+# consuming disk space.
 declare_args() {
   persist_logs = is_debug
 }
@@ -54,9 +59,8 @@ template("persist_logs") {
                            "max_disk_usage",
                            "startup_sleep",
                          ])
-
-  pkg_resources = []
-  pkg_deps = []
+  assert(persist_logs,
+         "persist_logs is false, no log persistence targets should be defined")
 
   if (!defined(log_tags)) {
     log_tags = []
@@ -101,18 +105,15 @@ template("persist_logs") {
     }
   }
 
-  if (persist_logs) {
-    pkg_resources = [
-      {
-        dest = "sysmgr/${target_name}_log_listener.config"
-        path = output_file
-      },
+  config_data(target_name) {
+    sources = [
+      rebase_path(output_file),
     ]
-    pkg_deps = [ ":$logs_action_name" ]
-  }
-  package(target_name) {
-    deprecated_system_image = true
-    resources = pkg_resources
-    deps = pkg_deps
+    outputs = [
+      "sysmgr/${target_name}_log_listener.config",
+    ]
+    deps = [
+      ":$logs_action_name",
+    ]
   }
 }

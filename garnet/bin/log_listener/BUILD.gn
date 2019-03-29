@@ -56,6 +56,12 @@ fuchsia_component("log_listener_component") {
 
 package("log_listener") {
   components = [ ":log_listener_component" ]
+
+  if (persist_logs) {
+    data_deps = [
+      ":all_logs",
+    ]
+  }
 }
 
 package("log_listener_tests") {
@@ -73,7 +79,9 @@ package("log_listener_tests") {
   ]
 }
 
-persist_logs("all_logs") {
-  max_disk_usage = max_log_disk_usage
-  startup_sleep = log_startup_sleep
+if (persist_logs) {
+  persist_logs("all_logs") {
+    max_disk_usage = max_log_disk_usage
+    startup_sleep = log_startup_sleep
+  }
 }
