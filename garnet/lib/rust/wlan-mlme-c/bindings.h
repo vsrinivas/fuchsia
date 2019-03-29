@@ -99,9 +99,9 @@ extern "C" int32_t mlme_write_deauth_frame(mlme_buffer_provider_ops_t provider,
 
 extern "C" int32_t mlme_write_eapol_data_frame(
     mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,
-    const uint8_t (*dest)[6], const uint8_t (*src)[6], bool is_protected,
-    const uint8_t *eapol_frame_ptr, uintptr_t eapol_frame_len,
-    mlme_out_buf_t *out_buf);
+    const uint8_t (*bssid)[6], const uint8_t (*src)[6],
+    const uint8_t (*dest)[6], bool is_protected, const uint8_t *eapol_frame_ptr,
+    uintptr_t eapol_frame_len, mlme_out_buf_t *out_buf);
 
 extern "C" int32_t mlme_write_keep_alive_resp_frame(
     mlme_buffer_provider_ops_t provider, mlme_sequence_manager_t *seq_mgr,

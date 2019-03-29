@@ -866,9 +866,9 @@ zx_status_t Station::SendEapolFrame(Span<const uint8_t> eapol_frame, const commo
     bool needs_protection =
         !join_ctx_->bss()->rsn.is_null() && controlled_port_ == eapol::PortState::kOpen;
     mlme_out_buf_t out_buf;
-    auto status = mlme_write_eapol_data_frame(rust_buffer_provider, seq_mgr_.get(), &dst.byte,
-                                              &src.byte, needs_protection, eapol_frame.data(),
-                                              eapol_frame.size_bytes(), &out_buf);
+    auto status = mlme_write_eapol_data_frame(
+        rust_buffer_provider, seq_mgr_.get(), &join_ctx_->bssid().byte, &src.byte, &dst.byte,
+        needs_protection, eapol_frame.data(), eapol_frame.size_bytes(), &out_buf);
     if (status != ZX_OK) {
         errorf("could not write eapol frame: %d\n", status);
         return status;

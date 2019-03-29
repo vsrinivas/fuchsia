@@ -82,7 +82,8 @@ pub fn write_keep_alive_resp_frame<B: Appendable>(
     Ok(())
 }
 
-/// Extracts aggregated and non-aggregated MSDUs from the data frame, converts those into Ethernet frames and delivers those frames via the given device.
+/// Extracts aggregated and non-aggregated MSDUs from the data frame, 
+/// converts those into Ethernet frames and delivers those frames via the given device.
 pub fn handle_data_frame<B: ByteSlice>(device: &device::Device, bytes: B, has_padding: bool) {
     if let Some(msdus) = mac::MsduIterator::from_raw_data_frame(bytes, has_padding) {
         deliver_msdus(device, msdus);
@@ -130,27 +131,49 @@ pub fn write_eth_frame<B: Appendable>(
     Ok(())
 }
 
-pub fn write_eapol_data_frame<B: Appendable>(
+/// If |qos_ctrl| is true a default QoS Control field, all zero, is written to the frame as
+/// Fuchsia's WLAN client does not support full QoS yet. The QoS Control is written to support
+/// higher PHY rates such as HT and VHT which mandate QoS usage.
+pub fn write_data_frame<B: Appendable>(
     buf: &mut B,
-    dest: MacAddr,
-    src: MacAddr,
     seq_mgr: &mut SequenceManager,
+    bssid: MacAddr,
+    src: MacAddr,
+    dst: MacAddr,
     protected: bool,
-    eapol_frame: &[u8],
+    qos_ctrl: bool,
+    ether_type: u16,
+    payload: &[u8],
 ) -> Result<(), Error> {
     let frame_ctrl = mac::FrameControl(0)
         .with_frame_type(mac::FRAME_TYPE_DATA)
-        .with_frame_subtype(mac::DATA_SUBTYPE_DATA)
-        .with_protected(protected);
-    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&dest) as u16);
+        .with_frame_subtype(if qos_ctrl { mac::DATA_SUBTYPE_QOS_DATA } else { mac::DATA_SUBTYPE_DATA })
+        .with_protected(protected)
+        .with_to_ds(true);
+
+    // QoS is not fully supported. Write default, all zeroed QoS Control field.
+    let qos_ctrl = if qos_ctrl { Some(mac::QosControl(0)) } else { None };
+    let seq_ctrl = match qos_ctrl.as_ref() {
+        None => mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&dst) as u16),
+        Some(qos_ctrl) => {
+            mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns2(&dst, qos_ctrl.tid()) as u16)
+        },
+    };
     data_writer::write_data_hdr(
         buf,
-        data_writer::data_hdr_client_to_ap(frame_ctrl, dest, src, seq_ctrl),
-        mac::OptionalDataHdrFields::none(),
+        mac::FixedDataHdrFields {
+            frame_ctrl,
+            duration: 0,
+            addr1: bssid,
+            addr2: src,
+            addr3: dst,
+            seq_ctrl,
+        },
+        mac::OptionalDataHdrFields { qos_ctrl, addr4: None, ht_ctrl: None },
     )?;
 
-    data_writer::write_snap_llc_hdr(buf, mac::ETHER_TYPE_EAPOL)?;
-    buf.append_bytes(eapol_frame)?;
+    data_writer::write_snap_llc_hdr(buf, ether_type)?;
+    buf.append_bytes(payload)?;
     Ok(())
 }
 
@@ -264,23 +287,33 @@ mod tests {
     }
 
     #[test]
-    fn eapol_data_frame() {
+    fn data_frame() {
         let mut buf = vec![];
         let mut seq_mgr = SequenceManager::new();
-        write_eapol_data_frame(&mut buf, [1; 6], [2; 6], &mut seq_mgr, true, &[4, 5, 6])
-            .expect("failed writing frame");
+        write_data_frame(
+            &mut buf,
+            &mut seq_mgr,
+            [1; 6],
+            [2; 6],
+            [3; 6],
+            false, // protected
+            false, // qos_ctrl
+            0xABCD,
+            &[4, 5, 6],
+        )
+        .expect("failed writing data frame");
         let expected = [
             // Data header
-            0b00001000, 0b01000001, // Frame Control
+            0b00001000, 0b00000001, // Frame Control
             0, 0, // Duration
             1, 1, 1, 1, 1, 1, // addr1
             2, 2, 2, 2, 2, 2, // addr2
-            1, 1, 1, 1, 1, 1, // addr3
+            3, 3, 3, 3, 3, 3, // addr3
             0x10, 0, // Sequence Control
             // LLC header
             0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
             0, 0, 0, // OUI
-            0x88, 0x8E, // Protocol ID
+            0xAB, 0xCD, // Protocol ID
             // Payload
             4, 5, 6,
         ];
@@ -288,37 +321,85 @@ mod tests {
     }
 
     #[test]
-    fn eapol_data_frame_empty_payload() {
+    fn data_frame_protected_qos() {
         let mut buf = vec![];
         let mut seq_mgr = SequenceManager::new();
-        write_eapol_data_frame(&mut buf, [1; 6], [2; 6], &mut seq_mgr, true, &[])
-            .expect("failed writing frame");
+        write_data_frame(
+            &mut buf,
+            &mut seq_mgr,
+            [1; 6],
+            [2; 6],
+            [3; 6],
+            true, // protected
+            true, // qos_ctrl
+            0xABCD,
+            &[4, 5, 6],
+        )
+        .expect("failed writing data frame");
+        let expected = [
+            // Data header
+            0b10001000, 0b01000001, // Frame Control
+            0, 0, // Duration
+            1, 1, 1, 1, 1, 1, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            3, 3, 3, 3, 3, 3, // addr3
+            0x10, 0, // Sequence Control
+            0, 0, // QoS Control
+            // LLC header
+            0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
+            0, 0, 0, // OUI
+            0xAB, 0xCD, // Protocol ID
+            // Payload
+            4, 5, 6,
+        ];
+        assert_eq!(&expected[..], &buf[..]);
+    }
+
+    #[test]
+    fn data_frame_empty_payload() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        write_data_frame(
+            &mut buf,
+            &mut seq_mgr,
+            [1; 6],
+            [2; 6],
+            [3; 6],
+            true,  // protected
+            false, // qos_ctrl
+            0xABCD,
+            &[],
+        )
+        .expect("failed writing frame");
         let expected = [
             // Data header
             0b00001000, 0b01000001, // Frame Control
             0, 0, // Duration
             1, 1, 1, 1, 1, 1, // addr1
             2, 2, 2, 2, 2, 2, // addr2
-            1, 1, 1, 1, 1, 1, // addr3
+            3, 3, 3, 3, 3, 3, // addr3
             0x10, 0, // Sequence Control
             // LLC header
             0xAA, 0xAA, 0x03, // DSAP, SSAP, Control, OUI
             0, 0, 0, // OUI
-            0x88, 0x8E, // Protocol ID
+            0xAB, 0xCD, // Protocol ID
         ];
         assert_eq!(&expected[..], &buf[..]);
     }
 
     #[test]
-    fn eapol_data_frame_buffer_too_small() {
+    fn data_frame_buffer_too_small() {
         let mut buf = [99u8; 34];
         let mut seq_mgr = SequenceManager::new();
-        let result = write_eapol_data_frame(
+        let result = write_data_frame(
             &mut BufferWriter::new(&mut buf[..]),
+            &mut seq_mgr,
             [1; 6],
             [2; 6],
-            &mut seq_mgr,
-            true,
+            [3; 6],
+            false, // protected
+            false, // qos_ctrl
+            0xABCD,
             &[4, 5, 6],
         );
         assert!(result.is_err(), "expect writing eapol frame to fail");

@@ -91,8 +91,9 @@ pub extern "C" fn mlme_handle_data_frame(
 pub unsafe extern "C" fn mlme_write_eapol_data_frame(
     provider: BufferProvider,
     seq_mgr: &mut SequenceManager,
-    dest: &[u8; 6],
+    bssid: &[u8; 6],
     src: &[u8; 6],
+    dest: &[u8; 6],
     is_protected: bool,
     eapol_frame_ptr: *const u8,
     eapol_frame_len: usize,
@@ -103,12 +104,15 @@ pub unsafe extern "C" fn mlme_write_eapol_data_frame(
     let mut buf = unwrap_or_bail!(buf_result, zx::ZX_ERR_NO_RESOURCES);
     let mut writer = BufferWriter::new(&mut buf[..]);
     let eapol_frame = utils::as_slice(eapol_frame_ptr, eapol_frame_len);
-    let write_result = client::write_eapol_data_frame(
+    let write_result = client::write_data_frame(
         &mut writer,
-        *dest,
-        *src,
         seq_mgr,
+        *bssid,
+        *src,
+        *dest,
         is_protected,
+        false, // Transmit EAPOL frames without a QoS Control field
+        mac::ETHER_TYPE_EAPOL,
         eapol_frame,
     );
     unwrap_or_bail!(write_result, zx::ZX_ERR_INTERNAL);
