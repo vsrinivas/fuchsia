@@ -1,0 +1,6 @@
+{
+  "fidl/fuchsia.media.playback/player.fidl": "7117823570a8d48808c0ea8f0272e12d",
+  "fidl/fuchsia.media.playback/problem.fidl": "87a4097616967869a35d9b62dec59677",
+  "fidl/fuchsia.media.playback/seeking_reader.fidl": "4d6a1e04aa6f66ccafaeac1985fb7acc",
+  "fidl/fuchsia.media.playback/source_manager.fidl": "316c942a32f6559bb1f0482af6b6e022"
+}

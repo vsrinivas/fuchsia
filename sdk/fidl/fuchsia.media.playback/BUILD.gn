@@ -1,0 +1,24 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.media.playback") {
+  sdk_category = "partner"
+
+  sources = [
+    "player.fidl",
+    "problem.fidl",
+    "seeking_reader.fidl",
+    "source_manager.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.math",
+    "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.net.oldhttp",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1token",
+  ]
+}

@@ -1,0 +1,111 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.playback;
+
+using fuchsia.math;
+using fuchsia.media;
+using fuchsia.media.audio;
+using fuchsia.net.oldhttp;
+using fuchsia.ui.viewsv1;
+using fuchsia.ui.viewsv1token;
+using zx;
+
+/// Plays media.
+[Discoverable]
+protocol Player {
+    compose SourceManager;
+
+    /// Sets an HTTP URL to read from. The provided headers are added to each
+    /// HTTP request issued to the URL.
+    SetHttpSource(string http_url,
+                  vector<fuchsia.net.oldhttp.HttpHeader>? headers);
+
+    /// Sets a file channel to read from.
+    SetFileSource(handle<channel> file_channel);
+
+    /// Starts playback.
+    Play();
+
+    /// Pauses playback.
+    Pause();
+
+    /// Provides current status immediately after binding and whenever status
+    /// changes thereafter.
+    -> OnStatusChanged(PlayerStatus player_status);
+
+    /// Seeks to the specified position, specified in nanoseconds.
+    Seek(int64 position);
+
+    /// Creates a video view.
+    // DEPRECATED
+    CreateView(fuchsia.ui.viewsv1.ViewManager view_manager,
+               request<fuchsia.ui.viewsv1token.ViewOwner> view_owner_request);
+
+    /// Creates a video view.
+    // Temporary, in use for V2 transition.
+    CreateView2(handle<eventpair> view_owner_token);
+
+    /// Binds to the gain control for this player.
+    BindGainControl(
+        request<fuchsia.media.audio.GainControl> gain_control_request);
+
+    /// Adds a new binding to this player.
+    AddBinding(request<Player> player_request);
+};
+
+/// Player status information.
+struct PlayerStatus {
+    /// Duration of the content.
+    zx.duration duration;
+
+    /// Whether the player can pause.
+    bool can_pause;
+
+    /// Whether the player can seek.
+    bool can_seek;
+
+    /// Whether the source has an audio stream.
+    bool has_audio;
+
+    /// Whether the source has a video stream.
+    bool has_video;
+
+    /// Indicates whether the player is ready to play. After `SetHttpSource`,
+    /// `SetFileSource` or `SourceManager.SetSource` is called, this value is
+    /// false until the player is fully prepared to play the content from the
+    /// source.
+    bool ready;
+
+    // Describes the media.
+    fuchsia.media.Metadata? metadata;
+
+    /// Indicates a problem preventing intended operation.
+    Problem? problem;
+
+    /// Indicates whether an audio stream is currently connected for rendering.
+    /// This value will be false if `has_audio` is false or if the audio stream
+    /// type isn't supported.
+    bool audio_connected;
+
+    /// Indicates whether a video stream is currently connected for rendering.
+    /// This value will be false if `has_video` is false or if the video stream
+    /// type isn't supported.
+    bool video_connected;
+
+    /// Size of the video currently being produced. This value will be null if
+    /// the video size is currently unknown.
+    fuchsia.math.Size? video_size;
+
+    /// Relative dimensions of a video pixel. This value will be null if the
+    /// pixel aspect ratio is currently unknown.
+    fuchsia.math.Size? pixel_aspect_ratio;
+
+    /// Function translating local time to presentation time. This value will be
+    /// null if the timeline function is currently undefined.
+    fuchsia.media.TimelineFunction? timeline_function;
+
+    /// Indicates whether presentation for all streams has reached end-of-stream.
+    bool end_of_stream;
+};

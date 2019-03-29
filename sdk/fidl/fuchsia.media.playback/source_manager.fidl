@@ -1,0 +1,123 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.playback;
+
+using fuchsia.media;
+using fuchsia.net.oldhttp;
+using zx;
+
+/// Manages sources on behalf of a Player.
+[FragileBase]
+protocol SourceManager {
+    /// Creates a source that reads from a URL.
+    CreateHttpSource(string http_url,
+                     vector<fuchsia.net.oldhttp.HttpHeader>? headers,
+                     request<Source> source_request);
+
+    /// Creates a source that reads from a file.
+    CreateFileSource(handle<channel> file_channel,
+                     request<Source> source_request);
+
+    /// Creates a source that reads from a `SeekingReader`.
+    CreateReaderSource(SeekingReader seeking_reader,
+                       request<Source> source_request);
+
+    /// Creates a source that allows the client to provide independent elementary
+    /// streams to the player. duration_ns, can_pause, can_seek and metadata are
+    /// all included in the SourceStatus and, when the `ElementarySource` is used by
+    /// the player, in the `PlayerStatus` as well. `can_pause` and `can_seek`, when
+    /// false, constrain the capabilities of the player.
+    CreateElementarySource(zx.duration duration_ns, bool can_pause, bool can_seek,
+                           fuchsia.media.Metadata? metadata,
+                           request<ElementarySource> source_request);
+
+    /// Sets the source for this player to use. If source is null, the player
+    /// becomes idle.
+    SetSource(Source? source);
+
+    /// Transitions to the specified source when playback of the current source
+    /// reaches transition_pts. The new source starts playback at start_pts. If
+    /// a transition is already pending, it will be discarded in favor of the new
+    /// transition.
+    TransitionToSource(Source source, int64 transition_pts,
+                       int64 start_pts);
+
+    /// Cancels a pending transition, returning the source. If no transition is
+    /// pending, the request channel is closed.
+    CancelSourceTransition(request<Source> returned_source_request);
+};
+
+/// A source of content that may be used by a player.
+[FragileBase]
+protocol Source {
+    // Provides current status immediately after binding and whenever status
+    // changes thereafter.
+    -> OnStatusChanged(SourceStatus source_status);
+};
+
+/// `Source` variant for providing elementary streams directly to the player.
+protocol ElementarySource {
+    compose Source;
+
+    /// Adds an elementary stream. The elementary stream can be removed by
+    /// closing the `SimpleStreamSink`. `ticks_per_second_numerator` and
+    /// `ticks_per_second_denominator` indicate the units that will be used for
+    /// `Streampacket` timestamp values. For nanoseconds units, for example,
+    /// `ticks_per_second_numerator` should be 1000000000 and
+    /// `ticks_per_second_denominator` should be 1. To use units of frames for
+    /// 48k audio, `ticks_per_second_numerator` should be 48000 and
+    /// `ticks_per_second_denominator` should be 1.
+    //
+    // SimpleStreamSink methods not currently implemented:
+    //     DiscardAllPackets
+    //     DiscardAllPacketsNoReply
+    AddStream(
+        fuchsia.media.StreamType type,
+        uint32 ticks_per_second_numerator,
+        uint32 ticks_per_second_denominator,
+        request<fuchsia.media.SimpleStreamSink> sink_request);
+
+    /// Adds a new binding to this `ElementarySource`. By using this method,
+    /// the client can obtain an additional channel through which to communicate
+    /// to this `ElementarySource` even after a channel is consumed by a call to
+    /// `SourceManager.SetSource`.
+    // IMPLEMENTATION NOTE:
+    // This method is implemented, however a limitation in the current
+    // implementation requires that the StreamSource handle passed to
+    // SourceManager.SetSource be created from the connection established by the
+    // original CreateStreamSource call. That is, a connection established
+    // using AddBinding cannot be passed to SourceManager.SetSource.
+    // TODO(dalesat): Remove this limitation.
+    AddBinding(request<ElementarySource> source_request);
+};
+
+/// Source status information.
+struct SourceStatus {
+    /// Duration of the content.
+    zx.duration duration;
+
+    /// Whether the source can pause.
+    bool can_pause;
+
+    /// Whether the source can seek.
+    bool can_seek;
+
+    /// Whether the source has an audio stream.
+    bool has_audio;
+
+    /// Whether the source has a video stream.
+    bool has_video;
+
+    /// Indicates whether the source is ready. A true value signals that the
+    /// content has been probed and there are no known problems with it.
+    bool ready;
+
+    /// Describes the media.
+    fuchsia.media.Metadata? metadata;
+
+    /// Indicates a problem preventing intended operation. A null value
+    /// indicates that the source is functioning as intended.
+    Problem? problem;
+};

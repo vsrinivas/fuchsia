@@ -1,0 +1,26 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.playback;
+
+using zx;
+
+// Reader with seek semantics.
+// TODO(dalesat): Report problems using Problem rather than SeekingReaderResult.
+protocol SeekingReader {
+    // Describes the content. If there’s a problem accessing the content, this
+    // is expressed by using result. The size_in_bytes may be reported as
+    // UNKNOWN_SIZE if the size of the content is unknown.
+    Describe() -> (zx.status status, uint64 size, bool can_seek);
+
+    // Reads the content. If there’s a problem performing the read, this is
+    // expressed using result. If the read succeeded, the reply must contain a
+    // valid socket from which the content can be read.
+    ReadAt(uint64 position) -> (zx.status status, handle<socket>? socket);
+};
+
+/// Distinguished value for the `size` value returned by `SeekingReader.Describe`
+/// Indicating that the size isn't known.
+const uint64 UNKNOWN_SIZE = 0xffffffffffffffff;
+
