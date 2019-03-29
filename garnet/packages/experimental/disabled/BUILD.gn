@@ -79,11 +79,3 @@ group("screenshot_layer") {
     "//garnet/packages/prod:vulkan",
   ]
 }
-
-group("debian_guest") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/guest/pkg/debian_guest",
-    "//garnet/packages/prod:guest_runner",
-  ]
-}

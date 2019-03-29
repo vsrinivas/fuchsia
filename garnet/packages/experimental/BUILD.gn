@@ -49,6 +49,14 @@ group("linux_guest") {
   ]
 }
 
+group("debian_guest") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/guest/pkg/debian_guest",
+    "//garnet/packages/prod:guest_runner",
+  ]
+}
+
 group("wayland_bridge") {
   testonly = true
   public_deps = [
