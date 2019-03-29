@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/codec_runner_sw_ffmpeg_tests"
+        "binary": "test/mpsc_queue_tests"
     },
     "sandbox": {
         "services": []

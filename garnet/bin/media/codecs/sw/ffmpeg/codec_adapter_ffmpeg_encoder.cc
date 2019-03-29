@@ -8,11 +8,16 @@
 
 CodecAdapterFfmpegEncoder::CodecAdapterFfmpegEncoder(
     std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
-    : CodecAdapterFfmpeg(lock, codec_adapter_events) {
+    : CodecAdapterSW(lock, codec_adapter_events) {
   ZX_ASSERT_MSG(false, "Not implemented.");
 }
 
 CodecAdapterFfmpegEncoder::~CodecAdapterFfmpegEncoder() = default;
+
+void CodecAdapterFfmpegEncoder::CoreCodecAddBuffer(CodecPort port,
+                                                   const CodecBuffer* buffer) {
+  ZX_ASSERT_MSG(false, "Not implemented.");
+}
 
 void CodecAdapterFfmpegEncoder::ProcessInputLoop() {
   ZX_ASSERT_MSG(false, "Not implemented.");
@@ -23,6 +28,14 @@ void CodecAdapterFfmpegEncoder::UnreferenceOutputPacket(CodecPacket* packet) {
 }
 
 void CodecAdapterFfmpegEncoder::UnreferenceClientBuffers() {
+  ZX_ASSERT_MSG(false, "Not implemented.");
+}
+
+void CodecAdapterFfmpegEncoder::BeginStopInputProcessing() {
+  ZX_ASSERT_MSG(false, "Not implemented.");
+}
+
+void CodecAdapterFfmpegEncoder::CleanUpAfterStream() {
   ZX_ASSERT_MSG(false, "Not implemented.");
 }
 

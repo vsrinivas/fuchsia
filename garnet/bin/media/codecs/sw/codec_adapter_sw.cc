@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "codec_adapter_ffmpeg.h"
+#include "codec_adapter_sw.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/media/codec_impl/codec_buffer.h>
@@ -25,8 +25,8 @@ static constexpr uint32_t kPacketCount = kPacketCountForClientForced + 16;
 
 }  // namespace
 
-CodecAdapterFfmpeg::CodecAdapterFfmpeg(std::mutex& lock,
-                                       CodecAdapterEvents* codec_adapter_events)
+CodecAdapterSW::CodecAdapterSW(std::mutex& lock,
+                               CodecAdapterEvents* codec_adapter_events)
     : CodecAdapter(lock, codec_adapter_events),
       input_queue_(),
       free_output_packets_(),
@@ -34,13 +34,13 @@ CodecAdapterFfmpeg::CodecAdapterFfmpeg(std::mutex& lock,
   ZX_DEBUG_ASSERT(codec_adapter_events);
 }
 
-CodecAdapterFfmpeg::~CodecAdapterFfmpeg() = default;
+CodecAdapterSW::~CodecAdapterSW() = default;
 
-bool CodecAdapterFfmpeg::IsCoreCodecRequiringOutputConfigForFormatDetection() {
+bool CodecAdapterSW::IsCoreCodecRequiringOutputConfigForFormatDetection() {
   return false;
 }
 
-void CodecAdapterFfmpeg::CoreCodecInit(
+void CodecAdapterSW::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
   if (!initial_input_format_details.has_format_details_version_ordinal()) {
     events_->onCoreCodecFailCodec(
@@ -62,13 +62,11 @@ void CodecAdapterFfmpeg::CoreCodecInit(
   }
 }
 
-void CodecAdapterFfmpeg::CoreCodecStartStream() {
-  ZX_DEBUG_ASSERT(avcodec_context_ == nullptr);
+void CodecAdapterSW::CoreCodecStartStream() {
   // It's ok for RecycleInputPacket to make a packet free anywhere in this
   // sequence. Nothing else ought to be happening during CoreCodecStartStream
   // (in this or any other thread).
   input_queue_.Reset();
-  output_buffer_pool_.Reset(/*keep_data=*/true);
   free_output_packets_.Reset(/*keep_data=*/true);
 
   zx_status_t post_result = async::PostTask(input_processing_loop_.dispatcher(),
@@ -79,7 +77,7 @@ void CodecAdapterFfmpeg::CoreCodecStartStream() {
       post_result);
 }
 
-void CodecAdapterFfmpeg::CoreCodecQueueInputFormatDetails(
+void CodecAdapterSW::CoreCodecQueueInputFormatDetails(
     const fuchsia::media::FormatDetails& per_stream_override_format_details) {
   // TODO(turnage): Accept midstream and interstream input format changes.
   // For now these should always be 0, so assert to notice if anything changes.
@@ -91,21 +89,21 @@ void CodecAdapterFfmpeg::CoreCodecQueueInputFormatDetails(
       CodecInputItem::FormatDetails(per_stream_override_format_details));
 }
 
-void CodecAdapterFfmpeg::CoreCodecQueueInputPacket(CodecPacket* packet) {
+void CodecAdapterSW::CoreCodecQueueInputPacket(CodecPacket* packet) {
   input_queue_.Push(CodecInputItem::Packet(packet));
 }
 
-void CodecAdapterFfmpeg::CoreCodecQueueInputEndOfStream() {
+void CodecAdapterSW::CoreCodecQueueInputEndOfStream() {
   input_queue_.Push(CodecInputItem::EndOfStream());
 }
 
-void CodecAdapterFfmpeg::CoreCodecStopStream() {
+void CodecAdapterSW::CoreCodecStopStream() {
   input_queue_.StopAllWaits();
-  output_buffer_pool_.StopAllWaits();
   free_output_packets_.StopAllWaits();
 
+  BeginStopInputProcessing();
   WaitForInputProcessingLoopToEnd();
-  avcodec_context_ = nullptr;
+  CleanUpAfterStream();
 
   auto queued_input_items =
       BlockingMpscQueue<CodecInputItem>::Extract(std::move(input_queue_));
@@ -118,50 +116,37 @@ void CodecAdapterFfmpeg::CoreCodecStopStream() {
   }
 }
 
-void CodecAdapterFfmpeg::CoreCodecAddBuffer(CodecPort port,
-                                            const CodecBuffer* buffer) {
-  if (port != kOutputPort) {
-    return;
-  }
-  output_buffer_pool_.AddBuffer(buffer);
-}
-
-void CodecAdapterFfmpeg::CoreCodecConfigureBuffers(
+void CodecAdapterSW::CoreCodecConfigureBuffers(
     CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) {
   // Nothing to do here.
 }
 
-void CodecAdapterFfmpeg::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
+void CodecAdapterSW::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   UnreferenceOutputPacket(packet);
   free_output_packets_.Push(std::move(packet));
 }
 
-void CodecAdapterFfmpeg::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
+void CodecAdapterSW::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   if (port != kOutputPort) {
     // We don't do anything with input buffers.
     return;
   }
 
-  output_buffer_pool_.Reset();
   UnreferenceClientBuffers();
-
-  // Given that we currently fail the codec on mid-stream output format
-  // change (elsewhere), the decoder won't have frames referenced here.
-  ZX_DEBUG_ASSERT(!output_buffer_pool_.has_buffers_in_use());
 
   free_output_packets_.Reset();
 }
 
-void CodecAdapterFfmpeg::CoreCodecMidStreamOutputBufferReConfigPrepare() {
+void CodecAdapterSW::CoreCodecMidStreamOutputBufferReConfigPrepare() {
   // Nothing to do here for now.
 }
 
-void CodecAdapterFfmpeg::CoreCodecMidStreamOutputBufferReConfigFinish() {
+void CodecAdapterSW::CoreCodecMidStreamOutputBufferReConfigFinish() {
   // Nothing to do here for now.
 }
 
 std::unique_ptr<const fuchsia::media::StreamOutputConfig>
-CodecAdapterFfmpeg::CoreCodecBuildNewOutputConfig(
+CodecAdapterSW::CoreCodecBuildNewOutputConfig(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_buffer_constraints_version_ordinal,
     uint64_t new_output_format_details_version_ordinal,
@@ -220,7 +205,7 @@ CodecAdapterFfmpeg::CoreCodecBuildNewOutputConfig(
   return config;
 }
 
-void CodecAdapterFfmpeg::WaitForInputProcessingLoopToEnd() {
+void CodecAdapterSW::WaitForInputProcessingLoopToEnd() {
   ZX_DEBUG_ASSERT(thrd_current() != input_processing_thread_);
 
   std::condition_variable stream_stopped_condition;

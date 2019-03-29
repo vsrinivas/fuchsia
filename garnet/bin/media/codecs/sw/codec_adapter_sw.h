@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MEDIA_CODECS_SW_FFMPEG_CODEC_ADAPTER_FFMPEG_H_
-#define GARNET_BIN_MEDIA_CODECS_SW_FFMPEG_CODEC_ADAPTER_FFMPEG_H_
+#ifndef GARNET_BIN_MEDIA_CODECS_SW_CODEC_ADAPTER_SW_H_
+#define GARNET_BIN_MEDIA_CODECS_SW_CODEC_ADAPTER_SW_H_
 
 #include <threads.h>
 #include <optional>
@@ -14,15 +14,12 @@
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_input_item.h>
 
-#include "avcodec_context.h"
-#include "buffer_pool.h"
 #include "mpsc_queue.h"
 
-class CodecAdapterFfmpeg : public CodecAdapter {
+class CodecAdapterSW : public CodecAdapter {
  public:
-  CodecAdapterFfmpeg(std::mutex& lock,
-                     CodecAdapterEvents* codec_adapter_events);
-  ~CodecAdapterFfmpeg();
+  CodecAdapterSW(std::mutex& lock, CodecAdapterEvents* codec_adapter_events);
+  ~CodecAdapterSW();
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
   void CoreCodecInit(const fuchsia::media::FormatDetails&
@@ -34,7 +31,6 @@ class CodecAdapterFfmpeg : public CodecAdapter {
   void CoreCodecQueueInputPacket(CodecPacket* packet) override;
   void CoreCodecQueueInputEndOfStream() override;
   void CoreCodecStopStream() override;
-  void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) override;
   void CoreCodecConfigureBuffers(
       CodecPort port,
       const std::vector<std::unique_ptr<CodecPacket>>& packets) override;
@@ -54,11 +50,17 @@ class CodecAdapterFfmpeg : public CodecAdapter {
   // Loops for the lifetime of a stream.
   virtual void ProcessInputLoop() = 0;
 
-  // Unreference an output packet's data in ffmpeg's refcounter.
+  // Releases any references to an output packet..
   virtual void UnreferenceOutputPacket(CodecPacket* packet) = 0;
 
-  // Unreference all buffers in use by client.
+  // Unreferences all buffers in use by client.
   virtual void UnreferenceClientBuffers() = 0;
+
+  // Gracefully stops the input processing thread.
+  virtual void BeginStopInputProcessing() = 0;
+
+  // Releases any resources from the just-ended stream.
+  virtual void CleanUpAfterStream() = 0;
 
   // Returns the format details of the output and the bytes needed to store each
   // output packet.
@@ -69,13 +71,11 @@ class CodecAdapterFfmpeg : public CodecAdapter {
 
   BlockingMpscQueue<CodecInputItem> input_queue_;
   BlockingMpscQueue<CodecPacket*> free_output_packets_;
-  BufferPool output_buffer_pool_;
 
   uint64_t input_format_details_version_ordinal_;
 
   async::Loop input_processing_loop_;
   thrd_t input_processing_thread_;
-  std::unique_ptr<AvCodecContext> avcodec_context_;
 };
 
-#endif  // GARNET_BIN_MEDIA_CODECS_SW_FFMPEG_CODEC_ADAPTER_FFMPEG_H_
+#endif  // GARNET_BIN_MEDIA_CODECS_SW_CODEC_ADAPTER_SW_H_

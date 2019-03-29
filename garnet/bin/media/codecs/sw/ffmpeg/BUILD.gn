@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 executable("codec_runner_sw_ffmpeg") {
@@ -19,67 +18,20 @@ executable("codec_runner_sw_ffmpeg") {
     "avcodec_context.h",
     "buffer_pool.cc",
     "buffer_pool.h",
-    "codec_adapter_ffmpeg.cc",
-    "codec_adapter_ffmpeg.h",
     "codec_adapter_ffmpeg_decoder.cc",
     "codec_adapter_ffmpeg_decoder.h",
     "codec_adapter_ffmpeg_encoder.cc",
     "codec_adapter_ffmpeg_encoder.h",
-    "codec_runner_app.cc",
-    "codec_runner_app.h",
-    "local_single_codec_factory.cc",
-    "local_single_codec_factory.h",
     "main.cc",
-    "mpsc_queue.h",
   ]
 
   deps = [
+    "//garnet/bin/media/codecs/sw:codec_adapter_sw",
+    "//garnet/bin/media/codecs/sw:codec_runner_sw",
     "//garnet/lib/media/codec_impl",
     "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.mediacodec",
     "//src/media/lib/ffmpeg",
     "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-source_set("mpsc_queue") {
-  visibility = [ "//garnet/bin/media/codecs/sw/ffmpeg/*" ]
-
-  public = [
-    "mpsc_queue.h",
-  ]
-
-  public_deps = [
-    "//zircon/public/lib/fit",
-  ]
-}
-
-executable("codec_runner_sw_ffmpeg_test_bin") {
-  output_name = "codec_runner_sw_ffmpeg_tests"
-
-  testonly = true
-
-  sources = [
-    "test/codec_runner_sw_ffmpeg_tests.cc",
-  ]
-
-  deps = [
-    ":mpsc_queue",
-    "//garnet/public/lib/fsl",
-    "//third_party/googletest:gtest_main",
-    "//zircon/public/lib/async-loop-cpp",
-  ]
-}
-
-test_package("codec_runner_sw_ffmpeg_tests") {
-  deps = [
-    ":codec_runner_sw_ffmpeg_test_bin",
-  ]
-
-  tests = [
-    {
-      name = "codec_runner_sw_ffmpeg_tests"
-      environments = basic_envs
-    },
   ]
 }

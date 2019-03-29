@@ -10,9 +10,17 @@
 
 CodecAdapterFfmpegDecoder::CodecAdapterFfmpegDecoder(
     std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
-    : CodecAdapterFfmpeg(lock, codec_adapter_events) {}
+    : CodecAdapterSW(lock, codec_adapter_events) {}
 
 CodecAdapterFfmpegDecoder::~CodecAdapterFfmpegDecoder() = default;
+
+void CodecAdapterFfmpegDecoder::CoreCodecAddBuffer(CodecPort port,
+                                                   const CodecBuffer* buffer) {
+  if (port != kOutputPort) {
+    return;
+  }
+  output_buffer_pool_.AddBuffer(buffer);
+}
 
 void CodecAdapterFfmpegDecoder::ProcessInputLoop() {
   std::optional<CodecInputItem> maybe_input_item;
@@ -71,12 +79,27 @@ void CodecAdapterFfmpegDecoder::UnreferenceOutputPacket(CodecPacket* packet) {
 }
 
 void CodecAdapterFfmpegDecoder::UnreferenceClientBuffers() {
+  output_buffer_pool_.Reset();
+
   std::map<CodecPacket*, AvCodecContext::AVFramePtr> to_drop;
   {
     std::lock_guard<std::mutex> lock(lock_);
     std::swap(to_drop, in_use_by_client_);
   }
   // ~ to_drop
+
+  // Given that we currently fail the codec on mid-stream output format
+  // change (elsewhere), the decoder won't have frames referenced here.
+  ZX_DEBUG_ASSERT(!output_buffer_pool_.has_buffers_in_use());
+}
+
+void CodecAdapterFfmpegDecoder::BeginStopInputProcessing() {
+  output_buffer_pool_.StopAllWaits();
+}
+
+void CodecAdapterFfmpegDecoder::CleanUpAfterStream() {
+  output_buffer_pool_.Reset(/*keep_data=*/true);
+  avcodec_context_ = nullptr;
 }
 
 std::pair<fuchsia::media::FormatDetails, size_t>
