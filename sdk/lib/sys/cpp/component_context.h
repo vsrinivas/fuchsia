@@ -108,9 +108,7 @@ class ComponentContext final {
   // Use this object to connect to services offered by other components.
   //
   // The directory of services is thread-safe and is commonly used on multiple
-  // threads. Rather than creating a separate |ServiceDirectory| object for each
-  // thread, which costs a kernel handle, consider sharing the same
-  // |ServiceDirectory| using this |std::shared_ptr|.
+  // threads.
   //
   // # Example
   //

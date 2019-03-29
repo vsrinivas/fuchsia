@@ -51,6 +51,10 @@ class ServiceDirectory final {
   //
   // Uses the "/svc" entry in the namespace as the backing directory for the
   // returned directory of services.
+  //
+  // Rather than creating a new |ServiceDirectory| consider passing |svc()| from
+  // your |ComponentContext| around as that makes your code unit testable and
+  // consumes one less kernel handle.
   static std::shared_ptr<ServiceDirectory> CreateFromNamespace();
 
   // Create a directory of services and return a request for an implementation
