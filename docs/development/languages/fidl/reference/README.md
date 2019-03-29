@@ -15,9 +15,7 @@ The reference section provides the following material:
 
 ### Readability rubric
 
-Fuchsia has adopted a
-[readability rubric](../../../api/fidl.md)
-for FIDL libraries.
+Fuchsia has adopted a [readability rubric](../../../api/fidl.md) for FIDL libraries.
 
 ## Bindings
 
@@ -35,8 +33,8 @@ for FIDL libraries.
 ### Dart
 
 - [Documentation](../languages/dart.md)
-- [Echo server example](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_server_dart/)
-- [Echo client example](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_client_dart/)
+- [Echo server example](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_server_async_dart/)
+- [Echo client example](https://fuchsia.googlesource.com/topaz/+/master/examples/fidl/echo_client_async_dart/)
 
 ### Go
 
