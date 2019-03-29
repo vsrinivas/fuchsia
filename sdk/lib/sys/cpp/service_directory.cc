@@ -21,8 +21,6 @@ zx::channel OpenServiceRoot() {
 
 }  // namespace
 
-ServiceDirectory::ServiceDirectory() = default;
-
 ServiceDirectory::ServiceDirectory(zx::channel directory)
     : directory_(std::move(directory)) {}
 
@@ -39,10 +37,10 @@ std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateFromNamespace() {
 std::shared_ptr<ServiceDirectory> ServiceDirectory::CreateWithRequest(
     zx::channel* out_request) {
   zx::channel directory;
-  zx_status_t status = zx::channel::create(0, &directory, out_request);
-  if (status != ZX_OK) {
-    return std::make_shared<ServiceDirectory>(ServiceDirectory());
-  }
+  // no need to check status, even if this fails, service directory would be
+  // backed by invalid channel and Connect will return correct error.
+  zx::channel::create(0, &directory, out_request);
+
   return std::make_shared<ServiceDirectory>(
       ServiceDirectory(std::move(directory)));
 }

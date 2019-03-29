@@ -24,9 +24,6 @@ namespace sys {
 // Instances of this class are thread-safe.
 class ServiceDirectory final {
  public:
-  // Create an empty directory of services.
-  ServiceDirectory();
-
   // Create an directory of services backed by given |directory|.
   //
   // Requests for services are routed to entries in this directory.

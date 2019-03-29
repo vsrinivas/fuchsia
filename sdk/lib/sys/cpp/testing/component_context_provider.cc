@@ -19,7 +19,7 @@ ComponentContextProvider::ComponentContextProvider(
   zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
   component_context_ = std::make_unique<sys::ComponentContext>(
-      svc_provider_->service_directory(),
+      sys::ComponentContext::MakePrivate{}, svc_provider_->service_directory(),
       outgoing_directory_ptr_.NewRequest(dispatcher).TakeChannel(), dispatcher);
 
   fdio_service_connect_at(

@@ -13,6 +13,12 @@
 
 namespace sys {
 
+namespace testing {
+
+class ComponentContextProvider;
+
+}
+
 // Context information that this component received at startup.
 //
 // Upon creation, components are given a namespace, which is file system local
@@ -45,12 +51,15 @@ namespace sys {
 // }
 // ```
 class ComponentContext final {
+  struct MakePrivate;
+
  public:
   // Create a startup context.
   //
   // This constructor is rarely used directly. Instead, most clients create a
   // startup context using the |Create()| static method.
-  ComponentContext(std::shared_ptr<ServiceDirectory> svc,
+  ComponentContext(MakePrivate make_private,
+                   std::shared_ptr<ServiceDirectory> svc,
                    zx::channel directory_request,
                    async_dispatcher_t* dispatcher = nullptr);
 
@@ -140,6 +149,11 @@ class ComponentContext final {
  private:
   std::shared_ptr<ServiceDirectory> svc_;
   std::shared_ptr<OutgoingDirectory> outgoing_;
+
+  // makes constructor private and only accessible by
+  // |sys::testing::ComponentContextProvider|.
+  struct MakePrivate {};
+  friend class sys::testing::ComponentContextProvider;
 };
 
 }  // namespace sys
