@@ -440,7 +440,7 @@ impl FromArgs for Request {{
                     writeln!(self.w, "    /// {},", l.trim())?;
                 }
             }
-            writeln!(self.w, "    {},", entry.rust_name())?;
+            writeln!(self.w, "    {} = {},", entry.rust_name(), entry.value)?;
         }
         writeln!(self.w, "}}")?;
         writeln!(self.w, "")?;

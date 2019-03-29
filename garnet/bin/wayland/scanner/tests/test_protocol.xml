@@ -6,6 +6,7 @@
   -->
   <interface name="test_interface" version="1">
     <enum name="test_enum">
+      <entry name="doesnt_start_at_0" value="111" />
       <entry name="entry1" value="0" />
       <entry name="entry2" value="1" />
       <entry name="0_starts_with_number" value="0x2" />
