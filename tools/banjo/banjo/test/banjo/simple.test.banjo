@@ -19,7 +19,7 @@ enum Direction : uint32 {
 };
 
 [Layout = "ddk-protocol"]
-interface Drawing {
+protocol Drawing {
     Draw(Point p, Direction d) -> ();
     DrawLots(handle<vmo> commands) -> (zx.status result, Point p);
     DrawArray(array<Point>:4 points) -> (zx.status rv);

@@ -19,12 +19,12 @@ enum Direction : uint32 {
 };
 
 [Layout = "ddk-callback"]
-interface Draw {
+protocol Draw {
     Callback(Point p, Direction d) -> ();
 };
 
 [Layout = "ddk-protocol"]
-interface Drawing {
+protocol Drawing {
     RegisterCallback() -> ();
     DeregisterCallback() -> ();
     DrawLots(handle<vmo> commands) -> (int32 result, Point p);

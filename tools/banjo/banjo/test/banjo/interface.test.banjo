@@ -18,7 +18,7 @@ enum CookieKind {
 
 /// An interface for a device that's able to create and deliver cookies!
 [Layout = "ddk-interface"]
-interface CookieMaker {
+protocol CookieMaker {
     /// Asynchonously preps a cookie.
     [Async]
     Prep(CookieKind cookie) -> (uint64 token);
@@ -33,7 +33,7 @@ interface CookieMaker {
 
 /// Protocol for a baker who outsources all of it's baking duties to others.
 [Layout = "ddk-protocol"]
-interface Baker {
+protocol Baker {
     /// Registers a cookie maker device which the baker can use.
     Register(CookieMaker intf) -> ();
     /// De-registers a cookie maker device when it's no longer available.

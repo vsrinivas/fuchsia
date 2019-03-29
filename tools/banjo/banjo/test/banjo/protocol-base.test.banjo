@@ -5,7 +5,7 @@
 library banjo.examples.protocol.base;
 
 [Layout = "ddk-protocol"]
-interface SynchronousBase {
+protocol SynchronousBase {
     Status(zx.status status) -> (zx.status status, zx.status status_2);
     Time(zx.time time) -> (zx.time time, zx.time time_2);
     Duration(zx.duration duration) -> (zx.duration duration, zx.duration duration_2);
@@ -18,7 +18,7 @@ interface SynchronousBase {
 };
 
 [Layout = "ddk-protocol"]
-interface AsyncBase {
+protocol AsyncBase {
     [Async]
     Status(zx.status status) -> (zx.status status, zx.status status_2);
     [Async]

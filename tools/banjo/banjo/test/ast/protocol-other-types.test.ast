@@ -93,7 +93,7 @@ BanjoAst {
                     "32"
                 )
             },
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {
@@ -303,7 +303,7 @@ BanjoAst {
                     }
                 ]
             },
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {
@@ -543,7 +543,7 @@ BanjoAst {
                     }
                 ]
             },
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {
@@ -719,7 +719,7 @@ BanjoAst {
                     }
                 ]
             },
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {
@@ -920,7 +920,7 @@ BanjoAst {
                     }
                 ]
             },
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {

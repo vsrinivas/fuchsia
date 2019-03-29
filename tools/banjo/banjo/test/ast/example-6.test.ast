@@ -17,7 +17,7 @@ BanjoAst {
                     "23"
                 )
             },
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {

@@ -15,7 +15,7 @@ struct EchoMore {
 };
 
 [Layout = "ddk-protocol"]
-interface Echo {
+protocol Echo {
     Echo32(uint32 uint32) -> (uint32 response);
     Echo64(uint64 uint64) -> (uint64 response);
     EchoEnum(EchoMe req) -> (EchoMe response);

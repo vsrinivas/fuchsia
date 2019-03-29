@@ -213,7 +213,7 @@ pub enum Ty {
     Str { size: Option<Constant>, nullable: bool },
     Vector { ty: Box<Ty>, size: Option<Constant>, nullable: bool },
     Array { ty: Box<Ty>, size: Constant },
-    Interface,
+    Protocol,
     Struct,
     Union,
     Enum,
@@ -245,7 +245,7 @@ impl Ty {
             }
             Ty::Struct { .. } => false,
             Ty::Union { .. } => false,
-            Ty::Interface { .. } => false,
+            Ty::Protocol { .. } => false,
             Ty::Enum { .. } => true,
             Ty::Str { .. } | Ty::Vector { .. } | Ty::Array { .. } | Ty::Handle { .. } => false,
             _ => true,
@@ -486,7 +486,7 @@ impl Method {
                 Rule::attributes => {
                     attributes = Attrs::from_pair(inner_pair)?;
                 }
-                Rule::interface_parameters => {
+                Rule::protocol_parameters => {
                     let mut fields: Vec<Pair<'_, Rule>> = inner_pair.into_inner().collect();
                     name = String::from(fields[0].as_str());
                     // TODO cleaner way of getting in/out params
@@ -531,7 +531,7 @@ pub enum Decl {
     Union { attributes: Attrs, name: Ident, fields: Vec<UnionField> },
     Enum { attributes: Attrs, name: Ident, ty: Ty, variants: Vec<EnumVariant> },
     Constant { attributes: Attrs, name: Ident, ty: Ty, value: Constant },
-    Interface { attributes: Attrs, name: Ident, methods: Vec<Method> },
+    Protocol { attributes: Attrs, name: Ident, methods: Vec<Method> },
     Alias(Ident, Ident),
 }
 
@@ -546,7 +546,7 @@ impl BanjoAst {
         let (namespace, ident) = fq_ident.fq();
         for decl in self.namespaces[&namespace.unwrap_or(self.primary_namespace.clone())].iter() {
             match decl {
-                Decl::Interface { name, .. } => {
+                Decl::Protocol { name, .. } => {
                     if name.name() == ident {
                         return Ok(decl);
                     }
@@ -607,9 +607,9 @@ impl BanjoAst {
 
         for decl in self.namespaces[namespace].iter() {
             match decl {
-                Decl::Interface { name, .. } => {
+                Decl::Protocol { name, .. } => {
                     if name.name() == ident {
-                        return Ty::Interface;
+                        return Ty::Protocol;
                     }
                 }
                 Decl::Struct { name, .. } => {
@@ -657,7 +657,7 @@ impl BanjoAst {
 
         for decl in self.namespaces[namespace].iter() {
             match decl {
-                Decl::Interface { name, attributes, .. } => {
+                Decl::Protocol { name, attributes, .. } => {
                     if name.name() == ident {
                         return Some(attributes);
                     }
@@ -757,7 +757,7 @@ impl BanjoAst {
                 Ok(Decl::Union { attributes, name: Ident::new(ns, name.as_str()), fields })
             }
             // TODO extend to be more expressive for banjo
-            Rule::interface_declaration => {
+            Rule::protocol_declaration => {
                 let mut attributes = Attrs::default();
                 let mut name = String::default();
                 let mut methods = Vec::default();
@@ -769,11 +769,11 @@ impl BanjoAst {
                         Rule::ident => {
                             name = String::from(inner_pair.as_str());
                         }
-                        Rule::interface_method => methods.push(Method::from_pair(ns, inner_pair)?),
+                        Rule::protocol_method => methods.push(Method::from_pair(ns, inner_pair)?),
                         e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
-                Ok(Decl::Interface { attributes, name: Ident::new(ns, name.as_str()), methods })
+                Ok(Decl::Protocol { attributes, name: Ident::new(ns, name.as_str()), methods })
             }
             Rule::const_declaration => {
                 let mut attributes = Attrs::default();
@@ -821,7 +821,7 @@ impl BanjoAst {
                     match decl {
                         Decl::Union { name, .. }
                         | Decl::Constant { name, .. }
-                        | Decl::Interface { name, .. }
+                        | Decl::Protocol { name, .. }
                         | Decl::Enum { name, .. }
                         | Decl::Struct { name, .. } => {
                             if name.name() == ident {
@@ -857,7 +857,7 @@ impl BanjoAst {
         };
 
         match decl {
-            Decl::Interface { methods, .. } => {
+            Decl::Protocol { methods, .. } => {
                 for method in methods {
                     for (_, ty) in method.in_params.iter() {
                         maybe_add_decl(&ty, false);
@@ -949,7 +949,7 @@ impl BanjoAst {
             .into_iter()
             .filter(|decl| {
                 let ident = match decl {
-                    Decl::Interface { name, .. } => name,
+                    Decl::Protocol { name, .. } => name,
                     Decl::Struct { name, .. } => name,
                     Decl::Union { name, .. } => name,
                     Decl::Enum { name, .. } => name,
@@ -1089,7 +1089,7 @@ impl BanjoAst {
                         Rule::struct_declaration
                         | Rule::union_declaration
                         | Rule::enum_declaration
-                        | Rule::interface_declaration
+                        | Rule::protocol_declaration
                         | Rule::const_declaration => {
                             let decl =
                                 Self::parse_decl(inner_pair, &current_namespace, &namespaces)?;

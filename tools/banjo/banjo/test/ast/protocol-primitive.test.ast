@@ -2,7 +2,7 @@ BanjoAst {
     primary_namespace: "banjo.examples.protocol.primitive",
     namespaces: {
         "banjo.examples.protocol.primitive": [
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {
@@ -264,7 +264,7 @@ BanjoAst {
                     }
                 ]
             },
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {

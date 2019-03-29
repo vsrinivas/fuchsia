@@ -19,7 +19,7 @@ enum ThisIsAnEnum {
 const uint32 strings_size = 32;
 
 [Layout = "ddk-protocol"]
-interface OtherTypes {
+protocol OtherTypes {
     Struct(ThisIsAStruct s) -> (ThisIsAStruct s);
     Union(ThisIsAUnion u) -> (ThisIsAUnion u);
     Enum(ThisIsAnEnum e) -> (ThisIsAnEnum e);
@@ -29,7 +29,7 @@ interface OtherTypes {
 };
 
 [Layout = "ddk-protocol"]
-interface OtherTypesAsync {
+protocol OtherTypesAsync {
     [Async]
     Struct(ThisIsAStruct s) -> (ThisIsAStruct s);
     [Async]
@@ -45,7 +45,7 @@ interface OtherTypesAsync {
 };
 
 [Layout = "ddk-protocol"]
-interface OtherTypesReference {
+protocol OtherTypesReference {
     Struct(ThisIsAStruct? s) -> (ThisIsAStruct? s);
     Union(ThisIsAUnion? u) -> (ThisIsAUnion? u);
     String(string? s) -> (string? s);
@@ -54,7 +54,7 @@ interface OtherTypesReference {
 };
 
 [Layout = "ddk-protocol"]
-interface OtherTypesAsyncReference {
+protocol OtherTypesAsyncReference {
     [Async]
     Struct(ThisIsAStruct? s) -> (ThisIsAStruct? s);
     [Async]
@@ -68,7 +68,7 @@ interface OtherTypesAsyncReference {
 };
 
 [Layout = "ddk-protocol"]
-interface Interface {
+protocol Interface {
    Value(OtherTypes intf) -> (OtherTypes intf);
    Reference(OtherTypes? intf) -> (OtherTypes? intf);
    [Async]

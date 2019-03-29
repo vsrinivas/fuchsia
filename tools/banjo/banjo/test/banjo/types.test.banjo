@@ -12,7 +12,7 @@ union this_is_a_union {
     string s;
 };
 
-interface this_is_an_interface {
+protocol this_is_an_interface {
     Copy(string s, uint32 count) -> (string s);
 };
 

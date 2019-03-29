@@ -71,7 +71,7 @@ BanjoAst {
                     }
                 ]
             },
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {
@@ -216,7 +216,7 @@ BanjoAst {
                     }
                 ]
             },
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {

@@ -2,7 +2,7 @@ BanjoAst {
     primary_namespace: "banjo.examples.protocol.array",
     namespaces: {
         "banjo.examples.protocol.array": [
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {
@@ -379,7 +379,7 @@ BanjoAst {
                     "32"
                 )
             },
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {
@@ -741,7 +741,7 @@ BanjoAst {
                     }
                 ]
             },
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {

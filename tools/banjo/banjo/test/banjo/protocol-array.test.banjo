@@ -8,7 +8,7 @@ library banjo.examples.protocol.array;
 // TODO(surajmalhotra): Reference for arrays.
 
 [Layout = "ddk-protocol"]
-interface Array {
+protocol Array {
     Bool(array<bool>:1 b) -> (array<bool>:1 b);
     Int8(array<int8>:1 i8) -> (array<int8>:1 i8);
     Int16(array<int16>:1 i16) -> (array<int16>:1 i16);
@@ -26,7 +26,7 @@ interface Array {
 const uint32 array_size = 32;
 
 [Layout = "ddk-protocol"]
-interface Array2 {
+protocol Array2 {
     Bool(array<bool>:array_size b) -> (array<bool>:array_size b);
     Int8(array<int8>:array_size i8) -> (array<int8>:array_size i8);
     Int16(array<int16>:array_size i16) -> (array<int16>:array_size i16);
@@ -42,7 +42,7 @@ interface Array2 {
 };
 
 [Layout = "ddk-protocol"]
-interface ArrayofArrays {
+protocol ArrayofArrays {
     Bool(array<array<bool>:4>:array_size b) -> (array<array<bool>:4>:array_size b);
     Int8(array<array<int8>:4>:array_size i8) -> (array<array<int8>:4>:array_size i8);
     Int16(array<array<int16>:4>:array_size i16) -> (array<array<int16>:4>:array_size i16);

@@ -5,7 +5,7 @@
 library banjo.examples.protocol.primitive;
 
 [Layout = "ddk-protocol"]
-interface SynchronousPrimitive {
+protocol SynchronousPrimitive {
     Bool(bool b) -> (bool b, bool b_2);
     Int8(int8 i8) -> (int8 i8, int8 i8_2);
     Int16(int16 i16) -> (int16 i16, int16 i16_2);
@@ -20,7 +20,7 @@ interface SynchronousPrimitive {
 };
 
 [Layout = "ddk-protocol"]
-interface AsyncPrimitive {
+protocol AsyncPrimitive {
     [Async]
     Bool(bool b) -> (bool b, bool b_2);
     [Async]

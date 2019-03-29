@@ -7,6 +7,6 @@ library banjo.examples.example6;
 const int32 x = 23;
 
 [Layout = "ddk-protocol"]
-interface Hello {
+protocol Hello {
     Say(string req) -> (string response);
 };

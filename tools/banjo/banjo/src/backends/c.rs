@@ -80,7 +80,7 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
                 Ok(format!("zx_{}_t", id.name()))
             } else {
                 match ast.id_to_type(id) {
-                    ast::Ty::Struct | ast::Ty::Union | ast::Ty::Interface | ast::Ty::Enum => {
+                    ast::Ty::Struct | ast::Ty::Union | ast::Ty::Protocol | ast::Ty::Enum => {
                         return Ok(format!("{}_t", to_c_name(id.name())));
                     }
                     t => return ty_to_c_str(ast, &t),
@@ -103,13 +103,13 @@ pub fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
     None
 }
 
-fn interface_to_ops_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
+fn protocol_to_ops_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     if let ast::Ty::Identifier { id, .. } = ty {
-        if ast.id_to_type(id) == ast::Ty::Interface {
+        if ast.id_to_type(id) == ast::Ty::Protocol {
             return Ok(to_c_name(id.name()) + "_ops_t");
         }
     }
-    Err(format_err!("unknown ident type in interface_to_ops_c_str {:?}", ty))
+    Err(format_err!("unknown ident type in protocol_to_ops_c_str {:?}", ty))
 }
 
 pub fn not_callback(ast: &ast::BanjoAst, id: &Ident) -> bool {
@@ -185,10 +185,10 @@ fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec
                         return Ok(format!("{} {}", ty_name, to_c_name(name)));
                     }
                     match ast.id_to_type(id) {
-                        ast::Ty::Interface => {
+                        ast::Ty::Protocol => {
                             let ty_name = ty_to_c_str(ast, ty).unwrap();
                             if transform && not_callback(ast, id) {
-                                let ty_name = interface_to_ops_c_str(ast, ty).unwrap();
+                                let ty_name = protocol_to_ops_c_str(ast, ty).unwrap();
                                 Ok(format!(
                                     "void* {name}_ctx, {ty_name}* {name}_ops",
                                     ty_name = ty_name,
@@ -281,7 +281,7 @@ fn get_out_params(
         let nullable = if ty.is_reference() { "*" } else { "" };
         let ty_name = ty_to_c_str(ast, ty).unwrap();
         match ty {
-            ast::Ty::Interface => format!("const {}* {}", ty_name, to_c_name(name)),
+            ast::Ty::Protocol => format!("const {}* {}", ty_name, to_c_name(name)),
             ast::Ty::Array { .. } => {
                 let bounds = array_bounds(ast, ty).unwrap();
                 let ty = ty_to_c_str(ast, ty).unwrap();
@@ -351,7 +351,7 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
             .iter()
             .skip(skip_amt)
             .map(|(name, ty)| match ty {
-                ast::Ty::Interface { .. } => format!("{}", to_c_name(name)),
+                ast::Ty::Protocol { .. } => format!("{}", to_c_name(name)),
                 ast::Ty::Vector { .. } => {
                     let ty_name = ty_to_c_str(ast, ty).unwrap();
                     if ty.is_reference() {
@@ -380,26 +380,26 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
     ))
 }
 
-enum InterfaceType {
+enum ProtocolType {
     Callback,
     Interface,
     Protocol,
 }
 
-impl From<&Attrs> for InterfaceType {
+impl From<&Attrs> for ProtocolType {
     fn from(attributes: &Attrs) -> Self {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "ddk-callback" {
-                InterfaceType::Callback
+                ProtocolType::Callback
             } else if layout == "ddk-interface" {
-                InterfaceType::Interface
+                ProtocolType::Interface
             } else if layout == "ddk-protocol" {
-                InterfaceType::Protocol
+                ProtocolType::Protocol
             } else {
                 panic!("Unknown layout attribute: {}", layout);
             }
         } else {
-            InterfaceType::Protocol
+            ProtocolType::Protocol
         }
     }
 }
@@ -614,7 +614,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         Ok(accum)
     }
 
-    fn codegen_protocol_def(
+    fn codegen_protocol_def2(
         &self,
         name: &str,
         methods: &Vec<ast::Method>,
@@ -694,7 +694,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                     .iter()
                     .filter_map(|(name, ty)| {
                         if let ast::Ty::Identifier { id, .. } = ty {
-                            if ast.id_to_type(id) == ast::Ty::Interface && not_callback(ast, id) {
+                            if ast.id_to_type(id) == ast::Ty::Protocol && not_callback(ast, id) {
                                 return Some((to_c_name(name), ty_to_c_str(ast, ty).unwrap()));
                             }
                         }
@@ -736,27 +736,27 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .map(|x| x.join("\n"))
     }
 
-    fn codegen_interface_def(
+    fn codegen_protocol_def(
         &self,
         attributes: &Attrs,
         name: &Ident,
         methods: &Vec<Method>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
-        Ok(match InterfaceType::from(attributes) {
-            InterfaceType::Interface => format!(
+        Ok(match ProtocolType::from(attributes) {
+            ProtocolType::Interface => format!(
                 include_str!("templates/c/interface.h"),
                 protocol_name = to_c_name(name.name()),
-                protocol_def = self.codegen_protocol_def(name.name(), methods, false, ast)?,
+                protocol_def = self.codegen_protocol_def2(name.name(), methods, false, ast)?,
                 helper_def = self.codegen_helper_def(name.name(), methods, false, ast)?
             ),
-            InterfaceType::Protocol => format!(
+            ProtocolType::Protocol => format!(
                 include_str!("templates/c/protocol.h"),
                 protocol_name = to_c_name(name.name()),
-                protocol_def = self.codegen_protocol_def(name.name(), methods, true, ast)?,
+                protocol_def = self.codegen_protocol_def2(name.name(), methods, true, ast)?,
                 helper_def = self.codegen_helper_def(name.name(), methods, true, ast)?
             ),
-            InterfaceType::Callback => {
+            ProtocolType::Callback => {
                 let m = methods.get(0).ok_or(format_err!("callback has no methods"))?;
                 let (out_params, return_param) = get_out_params(&m, name.name(), ast)?;
                 let in_params = get_in_params(&m, false, ast)?;
@@ -813,25 +813,25 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .join(""))
     }
 
-    fn codegen_interface_decl(
+    fn codegen_protocol_decl(
         &self,
         attributes: &Attrs,
         name: &Ident,
         methods: &Vec<Method>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
-        Ok(match InterfaceType::from(attributes) {
-            InterfaceType::Interface => format!(
+        Ok(match ProtocolType::from(attributes) {
+            ProtocolType::Interface => format!(
                 "{async_decls}typedef struct {c_name} {c_name}_t;",
                 async_decls = self.codegen_async_decls(name, methods, ast)?,
                 c_name = to_c_name(name.name())
             ),
-            InterfaceType::Protocol => format!(
+            ProtocolType::Protocol => format!(
                 "{async_decls}typedef struct {c_name}_protocol {c_name}_protocol_t;",
                 async_decls = self.codegen_async_decls(name, methods, ast)?,
                 c_name = to_c_name(name.name())
             ),
-            InterfaceType::Callback => {
+            ProtocolType::Callback => {
                 format!("typedef struct {c_name} {c_name}_t;", c_name = to_c_name(name.name()))
             }
         })
@@ -874,8 +874,8 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                 Decl::Constant { attributes, name, ty, value } => {
                     Some(self.codegen_constant_decl(attributes, name, ty, value, &ast))
                 }
-                Decl::Interface { attributes, name, methods } => {
-                    Some(self.codegen_interface_decl(attributes, name, methods, &ast))
+                Decl::Protocol { attributes, name, methods } => {
+                    Some(self.codegen_protocol_decl(attributes, name, methods, &ast))
                 }
                 Decl::Alias(_to, _from) => None,
             })
@@ -893,8 +893,8 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
                 }
                 Decl::Enum { .. } => None,
                 Decl::Constant { .. } => None,
-                Decl::Interface { attributes, name, methods } => {
-                    Some(self.codegen_interface_def(attributes, name, methods, &ast))
+                Decl::Protocol { attributes, name, methods } => {
+                    Some(self.codegen_protocol_def(attributes, name, methods, &ast))
                 }
                 Decl::Alias(_to, _from) => None,
             })

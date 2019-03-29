@@ -67,7 +67,7 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
                 Ok(format!("zx_{}_t", id.name()))
             } else {
                 match ast.id_to_type(id) {
-                    ast::Ty::Struct | ast::Ty::Union | ast::Ty::Interface | ast::Ty::Enum => {
+                    ast::Ty::Struct | ast::Ty::Union | ast::Ty::Protocol | ast::Ty::Enum => {
                         return Ok(to_c_name(&id.name()) + "_t");
                     }
                     t => Err(format_err!("unknown ident type in ty_to_cpp_str {:?}", t)),
@@ -85,13 +85,13 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
     }
 }
 
-fn interface_to_ops_cpp_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
+fn protocol_to_ops_cpp_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     if let ast::Ty::Identifier { id, .. } = ty {
-        if ast.id_to_type(id) == ast::Ty::Interface {
+        if ast.id_to_type(id) == ast::Ty::Protocol {
             return Ok(to_c_name(&id.name()) + "_ops_t");
         }
     }
-    Err(format_err!("unknown ident type in interface_to_ops_cpp_str {:?}", ty))
+    Err(format_err!("unknown ident type in protocol_to_ops_cpp_str {:?}", ty))
 }
 
 fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String), Error> {
@@ -119,10 +119,10 @@ fn get_in_params(
                         return Ok(format!("{} {}", ty_name, to_c_name(name)));
                     }
                     match ast.id_to_type(id) {
-                        ast::Ty::Interface => {
+                        ast::Ty::Protocol => {
                             let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
                             if transform && not_callback(ast, id) {
-                                let ty_name = interface_to_ops_cpp_str(ast, ty).unwrap();
+                                let ty_name = protocol_to_ops_cpp_str(ast, ty).unwrap();
                                 Ok(format!(
                                     "void* {name}_ctx, {ty_name}* {name}_ops",
                                     ty_name = ty_name,
@@ -213,7 +213,7 @@ fn get_out_params(
         let nullable = if ty.is_reference() { "*" } else { "" };
         let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
         match ty {
-            ast::Ty::Interface => format!("const {}* {}", ty_name, to_c_name(name)),
+            ast::Ty::Protocol => format!("const {}* {}", ty_name, to_c_name(name)),
             ast::Ty::Str {..} => {
                 format!("{} out_{name}, size_t {name}_capacity", ty_name,
                         name=to_c_name(name))
@@ -296,7 +296,7 @@ fn get_out_args(
             .iter()
             .skip(skip_amt)
             .map(|(name, ty)| match ty {
-                ast::Ty::Interface { .. } => format!("{}", to_c_name(name)),
+                ast::Ty::Protocol { .. } => format!("{}", to_c_name(name)),
                 ast::Ty::Str { .. } => {
                     format!("out_{name}, {name}_capacity", name = to_c_name(name))
                 }
@@ -332,11 +332,11 @@ fn get_out_args(
     ))
 }
 
-/// Checks whether a decl is an interface, and if it is an interface, checks that it is a "ddk-interface".
+/// Checks whether a decl is an protocol, and if it is an protocol, checks that it is a "ddk-interface".
 fn filter_interface<'a>(
     decl: &'a ast::Decl,
 ) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
+    if let ast::Decl::Protocol { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "ddk-interface" {
                 return Some((name, methods, attributes));
@@ -346,11 +346,11 @@ fn filter_interface<'a>(
     None
 }
 
-/// Checks whether a decl is an interface, and if it is an interface, checks that it is a "ddk-protocol".
+/// Checks whether a decl is an protocol, and if it is an protocol, checks that it is a "ddk-protocol".
 fn filter_protocol<'a>(
     decl: &'a ast::Decl,
 ) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
+    if let ast::Decl::Protocol { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "ddk-protocol" {
                 return Some((name, methods, attributes));
@@ -657,7 +657,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                     .iter()
                     .filter_map(|(name, ty)| {
                         if let ast::Ty::Identifier { id, .. } = ty {
-                            if ast.id_to_type(id) == ast::Ty::Interface && not_callback(ast, id) {
+                            if ast.id_to_type(id) == ast::Ty::Protocol && not_callback(ast, id) {
                                 return Some((
                                     to_c_name(name),
                                     ty_to_cpp_str(ast, true, ty).unwrap(),
@@ -770,12 +770,12 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
         .chain(ast.namespaces.iter().filter(|n| n.0 != "zx").map(|n| n.0.replace('.', "/")))
         .map(|n| format!("#include <{}.h>", n))
         .chain(
-            // Include handle headers for zx_handle_t wrapper types used in interfaces.
+            // Include handle headers for zx_handle_t wrapper types used in protocols.
             ast.namespaces[&ast.primary_namespace]
                 .iter()
                 .filter_map(|decl| {
-                    // Find all interfaces and extract their methods.
-                    if let ast::Decl::Interface { ref methods, .. } = *decl {
+                    // Find all protocols and extract their methods.
+                    if let ast::Decl::Protocol { ref methods, .. } = *decl {
                         Some(methods)
                     } else {
                         None

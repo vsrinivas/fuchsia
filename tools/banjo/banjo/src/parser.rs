@@ -20,7 +20,7 @@ using = { "using" ~ compound_ident ~ ("as" ~ ident)? ~ ";" }
 
 declaration_list = _{ ( declaration ~ ";" )* }
 
-declaration = _{ const_declaration | enum_declaration | union_declaration | struct_declaration | interface_declaration }
+declaration = _{ const_declaration | enum_declaration | union_declaration | struct_declaration | protocol_declaration }
 
 const_declaration = { attributes ~ "const" ~ ( primitive_type | string_type | identifier_type ) ~ ident ~ "=" ~ constant }
 
@@ -39,17 +39,17 @@ union_field  = { attributes? ~ type_ ~ ident }
 enum_declaration = { attributes ~ "enum" ~ ident ~ (":" ~ integer_type)? ~ "{" ~ (enum_field ~ ";")* ~ "}" }
 enum_field  = { attributes? ~ ident ~ ("=" ~ constant)? }
 
-interface_method = { attributes ~ interface_parameters }
-interface_parameters = { ident ~ parameter_list ~ ( "->" ~ parameter_list )? }
+protocol_method = { attributes ~ protocol_parameters }
+protocol_parameters = { ident ~ parameter_list ~ ( "->" ~ parameter_list )? }
 
 parameter_list = { "(" ~ ( parameters )? ~ ")" }
 parameters = _{ parameter ~ "," ~ parameters | parameter}
 parameter = { type_ ~ ident }
 
-super_interface_list = { compound_ident | compound_ident ~ "," ~ super_interface_list }
+super_protocol_list = { compound_ident | compound_ident ~ "," ~ super_protocol_list }
 
-interface_declaration = { attributes ~ "interface" ~ ident ~ ( ":" ~ super_interface_list )?
-                          ~ "{" ~ ( interface_method ~ ";" )*  ~ "}" }
+protocol_declaration = { attributes ~ "protocol" ~ ident ~ ( ":" ~ super_protocol_list )?
+                          ~ "{" ~ ( protocol_method ~ ";" )*  ~ "}" }
 
 type_ = _{ string_type | primitive_type | vector_type | array_type | handle_type | identifier_type }
 

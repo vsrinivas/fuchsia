@@ -39,7 +39,7 @@ BanjoAst {
             }
         ],
         "banjo.examples.libraryb": [
-            Interface {
+            Protocol {
                 attributes: Attrs(
                     [
                         Attr {
