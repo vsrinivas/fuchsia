@@ -9,6 +9,7 @@
 
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/service.h>
+#include <memory>
 
 namespace sys {
 namespace testing {
@@ -44,9 +45,22 @@ class ServiceDirectoryProvider {
   template <typename Interface>
   zx_status_t AddService(fidl::InterfaceRequestHandler<Interface> handler,
                          const std::string& name = Interface::Name_) const {
-    return svc_dir_->AddEntry(
-        name, std::make_unique<vfs::Service>(std::move(handler)));
+    return AddService(std::make_unique<vfs::Service>(std::move(handler)), name);
   }
+
+  // Injects a service which can be accessed by calling Connect on
+  // |sys::ServiceDirectory| by code under test.
+  //
+  // Adds a supported service with the given |service_name|, using the given
+  // |service|. |service| closure should
+  // remain valid for the lifetime of this object.
+  //
+  // # Errors
+  //
+  // ZX_ERR_ALREADY_EXISTS: This already contains an entry for
+  // this service.
+  zx_status_t AddService(std::unique_ptr<vfs::Service> service,
+                         const std::string& name) const;
 
   std::shared_ptr<ServiceDirectory>& service_directory() {
     return service_directory_;

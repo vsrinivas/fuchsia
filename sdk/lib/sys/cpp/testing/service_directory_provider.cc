@@ -19,5 +19,10 @@ ServiceDirectoryProvider::ServiceDirectoryProvider(
 
 ServiceDirectoryProvider::~ServiceDirectoryProvider() = default;
 
+zx_status_t ServiceDirectoryProvider::AddService(
+    std::unique_ptr<vfs::Service> service, const std::string& name) const {
+  return svc_dir_->AddEntry(name, std::move(service));
+}
+
 }  // namespace testing
 }  // namespace sys
