@@ -130,7 +130,6 @@ public:
                          EnvelopePointer envelope,
                          const fidl_type_t* payload_type) {
         if (envelope->data != nullptr && payload_type == nullptr) {
-            // TODO(FIDL-421): Generate coding table for primitives such that they can be linearized
             SetError("Cannot linearize envelope without a coding table");
             return Status::kConstraintViolationError;
         }

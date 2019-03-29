@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cstddef>
 #include <limits.h>
 #include <memory>
-#include <stddef.h>
 
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/string_view.h>
@@ -644,6 +644,57 @@ bool linearize_xunion_empty_invariant_zero_ordinal() {
     END_TEST;
 }
 
+bool linearize_xunion_primitive_field() {
+    BEGIN_TEST;
+
+    int32_t raw_int = 42;
+    SampleXUnionStruct xunion = {};
+    xunion.xu.header = (fidl_xunion_t) {
+        .tag = kSampleXUnionRawIntOrdinal,
+        .padding = 0,
+        .envelope = (fidl_envelope_t) {
+            .num_bytes = 0,
+            .num_handles = 0,
+            .data = &raw_int
+        }
+    };
+    constexpr uint32_t buf_size = 512;
+    uint8_t buffer[buf_size];
+    const char* error = nullptr;
+    zx_status_t status;
+    uint32_t actual_num_bytes = 0;
+    status = fidl_linearize(&fidl_test_coding_SampleXUnionStructTable,
+                            &xunion,
+                            buffer,
+                            buf_size,
+                            &actual_num_bytes,
+                            &error);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+
+    uint8_t golden_linearized_prefix[] = {
+        0xe3, 0x60, 0x0e, 0x13, // The ordinal value is 0x130e60e3
+        0x00, 0x00, 0x00, 0x00, // xunion padding
+        0x08, 0x00, 0x00, 0x00, // num_bytes of envelope
+        0x00, 0x00, 0x00, 0x00, // num_handles of envelope
+        // The out-of-line address of the payload would follow.
+    };
+    constexpr uint32_t kEnvelopeDataPointerSize = sizeof(uintptr_t);
+    constexpr uint32_t kEnvelopePayloadSize = fidl::FidlAlign(sizeof(int32_t));
+    ASSERT_EQ(actual_num_bytes,
+              sizeof(golden_linearized_prefix) + kEnvelopeDataPointerSize + kEnvelopePayloadSize);
+    ASSERT_BYTES_EQ(buffer, golden_linearized_prefix, sizeof(golden_linearized_prefix),
+                    "linearized result is different from goldens");
+    SampleXUnionStruct* linearized = reinterpret_cast<SampleXUnionStruct*>(&buffer[0]);
+    int32_t* payload_addr = reinterpret_cast<int32_t*>(linearized->xu.header.envelope.data);
+    std::ptrdiff_t distance = reinterpret_cast<uint8_t*>(payload_addr) - &buffer[0];
+    ASSERT_EQ(distance,
+              sizeof(golden_linearized_prefix) + kEnvelopeDataPointerSize);
+    ASSERT_EQ(*payload_addr, raw_int);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(strings)
 RUN_TEST(linearize_present_nonnullable_string)
 RUN_TEST(linearize_present_nonnullable_longer_string)
@@ -672,6 +723,7 @@ END_TEST_CASE(tables)
 BEGIN_TEST_CASE(xunions)
 RUN_TEST(linearize_xunion_empty_invariant_empty)
 RUN_TEST(linearize_xunion_empty_invariant_zero_ordinal)
+RUN_TEST(linearize_xunion_primitive_field)
 END_TEST_CASE(xunions)
 
 

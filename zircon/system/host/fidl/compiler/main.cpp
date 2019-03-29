@@ -100,7 +100,7 @@ void PrintJsonSchema() {
     exit(1);
 }
 
-    [[noreturn]] void Fail(const char* message, ...) {
+[[noreturn]] void Fail(const char* message, ...) {
     va_list args;
     va_start(args, message);
     vfprintf(stderr, message, args);

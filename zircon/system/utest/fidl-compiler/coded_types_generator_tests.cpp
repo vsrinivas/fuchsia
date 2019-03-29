@@ -30,14 +30,14 @@ struct Arrays {
 
     auto type0 = gen.coded_types().at(0).get();
     ASSERT_STR_EQ("uint8", type0->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kNotNeeded, type0->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type0->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
     auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
     ASSERT_EQ(fidl::types::PrimitiveSubtype::kUint8, type0_primitive->subtype);
 
     auto type1 = gen.coded_types().at(1).get();
     ASSERT_STR_EQ("Arrayuint87", type1->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kNotNeeded, type1->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type1->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kArray, type1->kind);
     auto type1_array = static_cast<const fidl::coded::ArrayType*>(type1);
     ASSERT_EQ(1, type1_array->element_size);
@@ -45,7 +45,7 @@ struct Arrays {
 
     auto type2 = gen.coded_types().at(2).get();
     ASSERT_STR_EQ("ArrayArrayuint8777", type2->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kNotNeeded, type2->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type2->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kArray, type2->kind);
     auto type2_array = static_cast<const fidl::coded::ArrayType*>(type2);
     ASSERT_EQ(7 * 1, type2_array->element_size);
@@ -53,7 +53,7 @@ struct Arrays {
 
     auto type3 = gen.coded_types().at(3).get();
     ASSERT_STR_EQ("ArrayArrayArrayuint87771001", type3->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kNotNeeded, type3->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type3->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kArray, type3->kind);
     auto type3_array = static_cast<const fidl::coded::ArrayType*>(type3);
     ASSERT_EQ(11 * 7 * 1, type3_array->element_size);
@@ -83,7 +83,7 @@ struct Vectors {
     auto type_some_struct = gen.CodedTypeFor(&name_some_struct);
     ASSERT_NONNULL(type_some_struct);
     ASSERT_STR_EQ("example_SomeStruct", type_some_struct->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kNeeded, type_some_struct->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type_some_struct->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kStruct, type_some_struct->kind);
     auto type_some_struct_struct = static_cast<const fidl::coded::StructType*>(type_some_struct);
     ASSERT_EQ(0, type_some_struct_struct->fields.size());
@@ -95,7 +95,7 @@ struct Vectors {
 
     auto type0 = gen.coded_types().at(0).get();
     ASSERT_STR_EQ("Vectorexample_SomeStruct10nonnullable", type0->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kNeeded, type0->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kVector, type0->kind);
     auto type0_vector = static_cast<const fidl::coded::VectorType*>(type0);
     ASSERT_EQ(type_some_struct, type0_vector->element_type);
@@ -105,7 +105,7 @@ struct Vectors {
 
     auto type1 = gen.coded_types().at(1).get();
     ASSERT_STR_EQ("VectorVectorexample_SomeStruct10nonnullable20nonnullable", type1->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kNeeded, type1->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kVector, type1->kind);
     auto type1_vector = static_cast<const fidl::coded::VectorType*>(type1);
     ASSERT_EQ(type0, type1_vector->element_type);
@@ -136,7 +136,7 @@ protocol UseOfInterface {
 
     auto type0 = gen.coded_types().at(0).get();
     ASSERT_STR_EQ("example_SomeInterfaceInterfacenonnullable", type0->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kNeeded, type0->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kInterfaceHandle, type0->kind);
     ASSERT_EQ(4, type0->size);
     auto type0_ihandle = static_cast<const fidl::coded::InterfaceHandleType*>(type0);
@@ -144,7 +144,7 @@ protocol UseOfInterface {
 
     auto type1 = gen.coded_types().at(1).get();
     ASSERT_STR_EQ("example_UseOfInterfaceCallRequest", type1->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kNeeded, type1->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
     ASSERT_EQ(24, type1->size);
     auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
@@ -178,7 +178,7 @@ protocol UseOfRequestOfInterface {
 
     auto type0 = gen.coded_types().at(0).get();
     ASSERT_STR_EQ("example_SomeInterfaceRequestnonnullable", type0->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kNeeded, type0->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type0->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kRequestHandle, type0->kind);
     ASSERT_EQ(4, type0->size);
     auto type0_ihandle = static_cast<const fidl::coded::RequestHandleType*>(type0);
@@ -186,7 +186,7 @@ protocol UseOfRequestOfInterface {
 
     auto type1 = gen.coded_types().at(1).get();
     ASSERT_STR_EQ("example_UseOfRequestOfInterfaceCallRequest", type1->coded_name.c_str());
-    ASSERT_EQ(fidl::coded::CodingNeeded::kNeeded, type1->coding_needed);
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type1->coding_needed);
     ASSERT_EQ(fidl::coded::Type::Kind::kMessage, type1->kind);
     ASSERT_EQ(24, type1->size);
     auto type1_message = static_cast<const fidl::coded::MessageType*>(type1);
@@ -200,6 +200,112 @@ protocol UseOfRequestOfInterface {
     END_TEST;
 }
 
+bool CodedTypesOfXUnions() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+xunion MyXUnion {
+  bool foo;
+  int32 bar;
+};
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+    fidl::CodedTypesGenerator gen(library.library());
+    gen.CompileCodedTypes();
+
+    ASSERT_EQ(2, gen.coded_types().size());
+
+    auto type0 = gen.coded_types().at(0).get();
+    ASSERT_STR_EQ("int32", type0->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type0->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
+    auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type0_primitive->subtype);
+
+    auto type1 = gen.coded_types().at(1).get();
+    ASSERT_STR_EQ("bool", type1->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type1->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
+    auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type1_primitive->subtype);
+
+    auto name_xunion = fidl::flat::Name(library.library(), "MyXUnion");
+    auto type_xunion = gen.CodedTypeFor(&name_xunion);
+    ASSERT_NONNULL(type_xunion);
+    ASSERT_STR_EQ("example_MyXUnion", type_xunion->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type_xunion->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kXUnion, type_xunion->kind);
+    auto type_xunion_xunion = static_cast<const fidl::coded::XUnionType*>(type_xunion);
+    ASSERT_EQ(2, type_xunion_xunion->fields.size());
+    auto xunion_field0 = type_xunion_xunion->fields.at(0);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, xunion_field0.type->kind);
+    auto xunion_field0_primitive = static_cast<const fidl::coded::PrimitiveType*>(xunion_field0.type);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, xunion_field0_primitive->subtype);
+    auto xunion_field1 = type_xunion_xunion->fields.at(1);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, xunion_field1.type->kind);
+    auto xunion_field1_primitive = static_cast<const fidl::coded::PrimitiveType*>(xunion_field1.type);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, xunion_field1_primitive->subtype);
+    ASSERT_STR_EQ("example/MyXUnion", type_xunion_xunion->qname.c_str());
+    ASSERT_FALSE(type_xunion_xunion->referenced_by_pointer);
+
+    END_TEST;
+}
+
+bool CodedTypesOfTables() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+table MyTable {
+  1: bool foo;
+  2: int32 bar;
+};
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+    fidl::CodedTypesGenerator gen(library.library());
+    gen.CompileCodedTypes();
+
+    ASSERT_EQ(2, gen.coded_types().size());
+
+    auto type0 = gen.coded_types().at(0).get();
+    ASSERT_STR_EQ("bool", type0->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type0->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type0->kind);
+    auto type0_primitive = static_cast<const fidl::coded::PrimitiveType*>(type0);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, type0_primitive->subtype);
+
+    auto type1 = gen.coded_types().at(1).get();
+    ASSERT_STR_EQ("int32", type1->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kEnvelopeOnly, type1->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, type1->kind);
+    auto type1_primitive = static_cast<const fidl::coded::PrimitiveType*>(type1);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, type1_primitive->subtype);
+
+    auto name_table = fidl::flat::Name(library.library(), "MyTable");
+    auto type_table = gen.CodedTypeFor(&name_table);
+    ASSERT_NONNULL(type_table);
+    ASSERT_STR_EQ("example_MyTable", type_table->coded_name.c_str());
+    ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type_table->coding_needed);
+    ASSERT_EQ(fidl::coded::Type::Kind::kTable, type_table->kind);
+    auto type_table_table = static_cast<const fidl::coded::TableType*>(type_table);
+    ASSERT_EQ(2, type_table_table->fields.size());
+    auto table_field0 = type_table_table->fields.at(0);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, table_field0.type->kind);
+    auto table_field0_primitive = static_cast<const fidl::coded::PrimitiveType*>(table_field0.type);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kBool, table_field0_primitive->subtype);
+    auto table_field1 = type_table_table->fields.at(1);
+    ASSERT_EQ(fidl::coded::Type::Kind::kPrimitive, table_field1.type->kind);
+    auto table_field1_primitive = static_cast<const fidl::coded::PrimitiveType*>(table_field1.type);
+    ASSERT_EQ(fidl::types::PrimitiveSubtype::kInt32, table_field1_primitive->subtype);
+    ASSERT_STR_EQ("example/MyTable", type_table_table->qname.c_str());
+    ASSERT_FALSE(type_table_table->referenced_by_pointer);
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(coded_types_generator_tests)
@@ -208,5 +314,7 @@ RUN_TEST(CodedTypesOfArrays);
 RUN_TEST(CodedTypesOfVectors);
 RUN_TEST(CodedTypesOfInterface);
 RUN_TEST(CodedTypesOfRequestOfInterface);
+RUN_TEST(CodedTypesOfXUnions);
+RUN_TEST(CodedTypesOfTables);
 
 END_TEST_CASE(coded_types_generator_tests)

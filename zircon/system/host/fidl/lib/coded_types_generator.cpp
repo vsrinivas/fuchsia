@@ -71,7 +71,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
         auto iter = request_type_map_.find(request_type);
         if (iter != request_type_map_.end())
             return iter->second;
-        auto name = NameCodedRequestHandle(NameName(request_type->interface_type->name, "_", "_"), request_type->nullability);
+        auto name = NameCodedRequestHandle(NameName(request_type->interface_type->name, "_", "_"),
+                                           request_type->nullability);
         auto coded_request_type =
             std::make_unique<coded::RequestHandleType>(std::move(name), request_type->nullability);
         request_type_map_[request_type] = coded_request_type.get();
@@ -190,7 +191,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
                     std::string parameter_name =
                         coded_message->coded_name + "_" + std::string(parameter.name.data());
                     auto coded_parameter_type = CompileType(parameter.type_ctor->type);
-                    if (coded_parameter_type->coding_needed == coded::CodingNeeded::kNeeded)
+                    if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways)
                         request_fields.emplace_back(coded_parameter_type,
                                                     parameter.fieldshape.Offset());
                 }
@@ -219,7 +220,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
             std::string member_name =
                 coded_struct->coded_name + "_" + std::string(member.name.data());
             auto coded_member_type = CompileType(member.type_ctor->type);
-            if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded)
+            if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways)
                 struct_fields.emplace_back(coded_member_type, member.fieldshape.Offset());
         }
         break;
@@ -233,7 +234,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
             std::string member_name =
                 union_struct->coded_name + "_" + std::string(member.name.data());
             auto coded_member_type = CompileType(member.type_ctor->type);
-            if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded) {
+            if (coded_member_type->coding_needed == coded::CodingNeeded::kAlways) {
                 union_members.push_back(coded_member_type);
             } else {
                 // We need union_members.size() to match union_decl->members.size() because
@@ -258,9 +259,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         for (const auto& member_pair : members) {
             const auto& member = *member_pair.second;
             auto coded_member_type = CompileType(member.type_ctor->type);
-            if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded) {
-                coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
-            }
+            coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
         }
         break;
     }
@@ -282,8 +281,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
             std::string member_name =
                 coded_table->coded_name + "_" + std::string(member.maybe_used->name.data());
             auto coded_member_type = CompileType(member.maybe_used->type_ctor->type);
-            if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded)
-                table_fields.emplace_back(coded_member_type, member.ordinal->value);
+            table_fields.emplace_back(coded_member_type, member.ordinal->value);
         }
         break;
     }

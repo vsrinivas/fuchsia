@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fidl.gni")
+
+# This file will evaluated in $default_toolchain when processing the
+# fidl_library() invocations below.  But that toolchain doesn't support
+# compiling targets, so don't define the actual target there.
+if (current_toolchain != default_toolchain) {
+  test("fidl-coding-tables") {
+    sources = [
+      "coding_tables_tests.cpp",
+    ]
+    deps = [
+      ":fidl.test.example.codingtables.c",
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fidl",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxcpp",
+      "$zx/system/ulib/zxtest",
+    ]
+  }
+}
+
+fidl_library("fidl.test.example.codingtables") {
+  visibility = [ ":*" ]
+  sources = [
+    "coding_tables.test.fidl",
+  ]
+}

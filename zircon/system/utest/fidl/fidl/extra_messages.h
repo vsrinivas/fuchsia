@@ -88,9 +88,13 @@ struct SampleXUnion {
 
         FIDL_ALIGNDECL
         SimpleTable st;
+
+        FIDL_ALIGNDECL
+        int32_t raw_int;
     };
 };
 constexpr uint32_t kSampleXUnionIntStructOrdinal = 376675050;
+constexpr uint32_t kSampleXUnionRawIntOrdinal = 319709411;
 
 struct SampleXUnionStruct {
     FIDL_ALIGNDECL

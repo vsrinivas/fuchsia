@@ -90,6 +90,7 @@ if (current_cpu != "") {
       "fdio",
       "ffl",
       "fidl",
+      "fidl-coding-tables",
       "fidl-llcpp-interop",
       "fidl-simple",
       "fidl-utils",

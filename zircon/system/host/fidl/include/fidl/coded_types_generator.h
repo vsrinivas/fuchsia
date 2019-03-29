@@ -24,7 +24,7 @@ public:
     template <typename FlatType, typename CodedType>
     using TypeMap = std::map<const FlatType*, const CodedType*, flat::PtrCompare<FlatType>>;
 
-    const flat::Library* library() const {return library_; }
+    const flat::Library* library() const { return library_; }
     const std::vector<std::unique_ptr<coded::Type>>& coded_types() const { return coded_types_; }
 
     const coded::Type* CodedTypeFor(const flat::Name* name) {

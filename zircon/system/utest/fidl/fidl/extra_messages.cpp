@@ -83,10 +83,11 @@ static const ::fidl::FidlTableField fidl_test_coding_SimpleTableFields[] = {
 const fidl_type_t fidl_test_coding_SimpleTableTable = fidl_type_t(::fidl::FidlCodedTable(fidl_test_coding_SimpleTableFields, 2, "fidl.test.coding/SimpleTable"));
 
 static const ::fidl::FidlXUnionField fidl_test_coding_SampleXUnionFields[] = {
+    ::fidl::FidlXUnionField(&::fidl::internal::kInt32Table,319709411),
     ::fidl::FidlXUnionField(&fidl_test_coding_IntStructTable,376675050),
     ::fidl::FidlXUnionField(&fidl_test_coding_SimpleTableTable,586453270)
 };
-const fidl_type_t fidl_test_coding_SampleXUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(2, fidl_test_coding_SampleXUnionFields, "fidl.test.coding/SampleXUnion"));
+const fidl_type_t fidl_test_coding_SampleXUnionTable = fidl_type_t(::fidl::FidlCodedXUnion(3, fidl_test_coding_SampleXUnionFields, "fidl.test.coding/SampleXUnion"));
 
 static const ::fidl::FidlStructField fidl_test_coding_SampleXUnionStructFields[] = {
     ::fidl::FidlStructField(&fidl_test_coding_SampleXUnionTable, 0)

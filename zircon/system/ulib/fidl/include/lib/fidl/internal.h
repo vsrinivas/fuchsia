@@ -66,10 +66,6 @@ struct FidlStructField {
         : type(type), offset(offset) {}
 };
 
-// TODO(apang): Remove this backward-compatible typedef after all dependencies
-// have been updated from FidlField to FidlStructField.
-using FidlField = FidlStructField;
-
 struct FidlTableField {
     const fidl_type* type;
     uint32_t ordinal;
@@ -87,6 +83,7 @@ struct FidlXUnionField {
 };
 
 enum FidlTypeTag : uint32_t {
+    kFidlTypePrimitive,
     kFidlTypeStruct,
     kFidlTypeStructPointer,
     kFidlTypeUnion,
@@ -98,6 +95,20 @@ enum FidlTypeTag : uint32_t {
     kFidlTypeTable,
     kFidlTypeTablePointer,
     kFidlTypeXUnion,
+};
+
+enum struct FidlCodedPrimitive : uint32_t {
+    kBool,
+    kInt8,
+    kInt16,
+    kInt32,
+    kInt64,
+    kUint8,
+    kUint16,
+    kUint32,
+    kUint64,
+    kFloat32,
+    kFloat64,
 };
 
 // Though the |size| is implied by the fields, computing that information is not the purview of this
@@ -241,6 +252,7 @@ struct FidlCodedVector {
 struct fidl_type {
     const fidl::FidlTypeTag type_tag;
     const union {
+        const fidl::FidlCodedPrimitive coded_primitive;
         const fidl::FidlCodedStruct coded_struct;
         const fidl::FidlCodedStructPointer coded_struct_pointer;
         const fidl::FidlCodedTable coded_table;
@@ -254,38 +266,61 @@ struct fidl_type {
         const fidl::FidlCodedVector coded_vector;
     };
 
-    constexpr fidl_type(fidl::FidlCodedStruct coded_struct)
+    constexpr fidl_type(fidl::FidlCodedPrimitive coded_primitive) noexcept
+        : type_tag(fidl::kFidlTypePrimitive), coded_primitive(coded_primitive) {}
+
+    constexpr fidl_type(fidl::FidlCodedStruct coded_struct) noexcept
         : type_tag(fidl::kFidlTypeStruct), coded_struct(coded_struct) {}
 
-    constexpr fidl_type(fidl::FidlCodedStructPointer coded_struct_pointer)
+    constexpr fidl_type(fidl::FidlCodedStructPointer coded_struct_pointer) noexcept
         : type_tag(fidl::kFidlTypeStructPointer), coded_struct_pointer(coded_struct_pointer) {}
 
-    constexpr fidl_type(fidl::FidlCodedTable coded_table)
+    constexpr fidl_type(fidl::FidlCodedTable coded_table) noexcept
         : type_tag(fidl::kFidlTypeTable), coded_table(coded_table) {}
 
-    constexpr fidl_type(fidl::FidlCodedTablePointer coded_table_pointer)
+    constexpr fidl_type(fidl::FidlCodedTablePointer coded_table_pointer) noexcept
         : type_tag(fidl::kFidlTypeTablePointer), coded_table_pointer(coded_table_pointer) {}
 
-    constexpr fidl_type(fidl::FidlCodedUnion coded_union)
+    constexpr fidl_type(fidl::FidlCodedUnion coded_union) noexcept
         : type_tag(fidl::kFidlTypeUnion), coded_union(coded_union) {}
 
-    constexpr fidl_type(fidl::FidlCodedUnionPointer coded_union_pointer)
+    constexpr fidl_type(fidl::FidlCodedUnionPointer coded_union_pointer) noexcept
         : type_tag(fidl::kFidlTypeUnionPointer), coded_union_pointer(coded_union_pointer) {}
 
-    constexpr fidl_type(fidl::FidlCodedXUnion coded_xunion)
+    constexpr fidl_type(fidl::FidlCodedXUnion coded_xunion) noexcept
         : type_tag(fidl::kFidlTypeXUnion), coded_xunion(coded_xunion) {}
 
-    constexpr fidl_type(fidl::FidlCodedHandle coded_handle)
+    constexpr fidl_type(fidl::FidlCodedHandle coded_handle) noexcept
         : type_tag(fidl::kFidlTypeHandle), coded_handle(coded_handle) {}
 
-    constexpr fidl_type(fidl::FidlCodedString coded_string)
+    constexpr fidl_type(fidl::FidlCodedString coded_string) noexcept
         : type_tag(fidl::kFidlTypeString), coded_string(coded_string) {}
 
-    constexpr fidl_type(fidl::FidlCodedArray coded_array)
+    constexpr fidl_type(fidl::FidlCodedArray coded_array) noexcept
         : type_tag(fidl::kFidlTypeArray), coded_array(coded_array) {}
 
-    constexpr fidl_type(fidl::FidlCodedVector coded_vector)
+    constexpr fidl_type(fidl::FidlCodedVector coded_vector) noexcept
         : type_tag(fidl::kFidlTypeVector), coded_vector(coded_vector) {}
 };
+
+namespace fidl {
+
+namespace internal {
+
+extern const fidl_type kBoolTable;
+extern const fidl_type kInt8Table;
+extern const fidl_type kInt16Table;
+extern const fidl_type kInt32Table;
+extern const fidl_type kInt64Table;
+extern const fidl_type kUint8Table;
+extern const fidl_type kUint16Table;
+extern const fidl_type kUint32Table;
+extern const fidl_type kUint64Table;
+extern const fidl_type kFloat32Table;
+extern const fidl_type kFloat64Table;
+
+} // namespace internal
+
+} // namespace fidl
 
 #endif // LIB_FIDL_INTERNAL_H_

@@ -39,6 +39,25 @@ static_assert(ZX_HANDLE_INVALID == FIDL_HANDLE_ABSENT, "invalid handle equals ab
 
 constexpr uint32_t TypeSize(const fidl_type_t* type) {
     switch (type->type_tag) {
+    case fidl::kFidlTypePrimitive:
+        switch (type->coded_primitive) {
+        case FidlCodedPrimitive::kBool:
+        case FidlCodedPrimitive::kInt8:
+        case FidlCodedPrimitive::kUint8:
+            return 1;
+        case FidlCodedPrimitive::kInt16:
+        case FidlCodedPrimitive::kUint16:
+            return 2;
+        case FidlCodedPrimitive::kInt32:
+        case FidlCodedPrimitive::kUint32:
+        case FidlCodedPrimitive::kFloat32:
+            return 4;
+        case FidlCodedPrimitive::kInt64:
+        case FidlCodedPrimitive::kUint64:
+        case FidlCodedPrimitive::kFloat64:
+            return 8;
+        }
+        __builtin_unreachable();
     case fidl::kFidlTypeStructPointer:
     case fidl::kFidlTypeTablePointer:
     case fidl::kFidlTypeUnionPointer:
@@ -61,6 +80,15 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
         return sizeof(fidl_vector_t);
     }
     __builtin_unreachable();
+}
+
+constexpr bool IsPrimitive(const fidl_type_t* type) {
+    switch (type->type_tag) {
+    case fidl::kFidlTypePrimitive:
+        return true;
+    default:
+        return false;
+    }
 }
 
 // The Walker class traverses through a FIDL message by following its coding table and
@@ -165,6 +193,10 @@ private:
                 vector_state.element_size = fidl_type->coded_vector.element_size;
                 vector_state.nullable = fidl_type->coded_vector.nullable;
                 break;
+            case fidl::kFidlTypePrimitive:
+                // Walker will never recurse into a primitive. Note: this branch must be
+                // implemented should we decide to support table-driven ToString in the future.
+                __builtin_unreachable();
             }
         }
 
@@ -262,7 +294,7 @@ private:
         // example, struct sizes do not need to be present here.
         union {
             struct {
-                const fidl::FidlField* fields;
+                const fidl::FidlStructField* fields;
                 uint32_t field_count;
                 // Index of the currently processing field.
                 uint32_t field;
@@ -489,30 +521,21 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
             if (envelope_ptr->data == nullptr) {
                 continue;
             }
-            if (payload_type != nullptr) {
-                Position position;
-                auto status =
-                    visitor.VisitPointer(frame->position,
-                                         // casting since |envelope_ptr->data| is always void*
-                                         &const_cast<Ptr<void>&>(envelope_ptr->data),
-                                         TypeSize(payload_type),
-                                         &position);
-                // Do not pop the table frame, to guarantee calling |LeaveEnvelope|
-                FIDL_STATUS_GUARD_NO_POP(status);
+            uint32_t num_bytes =
+                payload_type != nullptr ? TypeSize(payload_type) : envelope_ptr->num_bytes;
+            Position position;
+            status = visitor.VisitPointer(frame->position,
+                                          // casting since |envelope_ptr->data| is always void*
+                                          &const_cast<Ptr<void>&>(envelope_ptr->data),
+                                          num_bytes,
+                                          &position);
+            // Do not pop the table frame, to guarantee calling |LeaveEnvelope|
+            FIDL_STATUS_GUARD_NO_POP(status);
+            if (payload_type != nullptr && !IsPrimitive(payload_type)) {
                 if (!Push(Frame(payload_type, position))) {
                     visitor.OnError("recursion depth exceeded processing table");
                     FIDL_STATUS_GUARD_NO_POP(Status::kConstraintViolationError);
                 }
-            } else {
-                // No coding table for this ordinal.
-                // Still patch pointers, but cannot recurse into the payload.
-                Position position;
-                auto status =
-                    visitor.VisitPointer(frame->position,
-                                         &const_cast<Ptr<void>&>(envelope_ptr->data),
-                                         envelope_ptr->num_bytes,
-                                         &position);
-                FIDL_STATUS_GUARD_NO_POP(status);
             }
             continue;
         }
@@ -607,28 +630,19 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 }
                 continue;
             }
-            if (payload_type != nullptr) {
-                Position position;
-                auto status =
-                    visitor.VisitPointer(frame->position,
-                                         &const_cast<Ptr<void>&>(envelope_ptr->data),
-                                         TypeSize(payload_type),
-                                         &position);
-                FIDL_STATUS_GUARD_NO_POP(status);
+            uint32_t num_bytes =
+                payload_type != nullptr ? TypeSize(payload_type) : envelope_ptr->num_bytes;
+            Position position;
+            status = visitor.VisitPointer(frame->position,
+                                          &const_cast<Ptr<void>&>(envelope_ptr->data),
+                                          num_bytes,
+                                          &position);
+            FIDL_STATUS_GUARD_NO_POP(status);
+            if (payload_type != nullptr && !IsPrimitive(payload_type)) {
                 if (!Push(Frame(payload_type, position))) {
                     visitor.OnError("recursion depth exceeded processing xunion");
                     FIDL_STATUS_GUARD_NO_POP(Status::kConstraintViolationError);
                 }
-            } else {
-                // No coding table for this ordinal.
-                // Still patch pointers, but cannot recurse into the payload.
-                Position position;
-                auto status =
-                    visitor.VisitPointer(frame->position,
-                                         &const_cast<Ptr<void>&>(envelope_ptr->data),
-                                         envelope_ptr->num_bytes,
-                                         &position);
-                FIDL_STATUS_GUARD_NO_POP(status);
             }
             continue;
         }

@@ -28,12 +28,12 @@ namespace coded {
 enum struct CodingNeeded {
     // There is interesting coding information about the location of
     // pointers, allocations, or handles for this type.
-    kNeeded,
+    kAlways,
 
-    // There is no coding information needed for this type. That is,
-    // it contains no pointers or handles, and is just primitive
-    // types, or fixed size aggregates thereof.
-    kNotNeeded,
+    // The type contains no pointers or handles. However, we should generate
+    // corresponding coding information when it is wrapped in an envelope,
+    // to support encoding/decoding of xunions and tables.
+    kEnvelopeOnly,
 };
 
 struct Type;
@@ -104,7 +104,7 @@ struct Type {
 
 struct PrimitiveType : public Type {
     PrimitiveType(std::string name, types::PrimitiveSubtype subtype, uint32_t size)
-        : Type(Kind::kPrimitive, std::move(name), size, CodingNeeded::kNotNeeded),
+        : Type(Kind::kPrimitive, std::move(name), size, CodingNeeded::kEnvelopeOnly),
           subtype(subtype) {}
 
     const types::PrimitiveSubtype subtype;
@@ -112,7 +112,7 @@ struct PrimitiveType : public Type {
 
 struct HandleType : public Type {
     HandleType(std::string name, types::HandleSubtype subtype, types::Nullability nullability)
-        : Type(Kind::kHandle, std::move(name), 4u, CodingNeeded::kNeeded), subtype(subtype),
+        : Type(Kind::kHandle, std::move(name), 4u, CodingNeeded::kAlways), subtype(subtype),
           nullability(nullability) {}
 
     const types::HandleSubtype subtype;
@@ -121,7 +121,7 @@ struct HandleType : public Type {
 
 struct InterfaceHandleType : public Type {
     InterfaceHandleType(std::string name, types::Nullability nullability)
-        : Type(Kind::kInterfaceHandle, std::move(name), 4u, CodingNeeded::kNeeded),
+        : Type(Kind::kInterfaceHandle, std::move(name), 4u, CodingNeeded::kAlways),
           nullability(nullability) {}
 
     const types::Nullability nullability;
@@ -129,7 +129,7 @@ struct InterfaceHandleType : public Type {
 
 struct RequestHandleType : public Type {
     RequestHandleType(std::string name, types::Nullability nullability)
-        : Type(Kind::kRequestHandle, std::move(name), 4u, CodingNeeded::kNeeded),
+        : Type(Kind::kRequestHandle, std::move(name), 4u, CodingNeeded::kAlways),
           nullability(nullability) {}
 
     const types::Nullability nullability;
@@ -138,7 +138,7 @@ struct RequestHandleType : public Type {
 struct StructType : public Type {
     StructType(std::string name, std::vector<StructField> fields, uint32_t size, std::string pointer_name,
                std::string qname)
-        : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kNeeded),
+        : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kAlways),
           fields(std::move(fields)), pointer_name(std::move(pointer_name)),
           qname(std::move(qname)) {}
 
@@ -150,7 +150,7 @@ struct StructType : public Type {
 
 struct StructPointerType : public Type {
     StructPointerType(std::string name, const StructType* struct_type)
-        : Type(Kind::kStructPointer, std::move(name), 8u, CodingNeeded::kNeeded),
+        : Type(Kind::kStructPointer, std::move(name), 8u, CodingNeeded::kAlways),
           struct_type(struct_type) {}
 
     const StructType* struct_type;
@@ -159,7 +159,7 @@ struct StructPointerType : public Type {
 struct TableType : public Type {
     TableType(std::string name, std::vector<TableField> fields, uint32_t size, std::string pointer_name,
               std::string qname)
-        : Type(Kind::kTable, std::move(name), size, CodingNeeded::kNeeded),
+        : Type(Kind::kTable, std::move(name), size, CodingNeeded::kAlways),
           fields(std::move(fields)), pointer_name(std::move(pointer_name)),
           qname(std::move(qname)) {}
 
@@ -171,7 +171,7 @@ struct TableType : public Type {
 
 struct TablePointerType : public Type {
     TablePointerType(std::string name, const TableType* table_type)
-        : Type(Kind::kTablePointer, std::move(name), 8u, CodingNeeded::kNeeded),
+        : Type(Kind::kTablePointer, std::move(name), 8u, CodingNeeded::kAlways),
           table_type(table_type) {}
 
     const TableType* table_type;
@@ -180,7 +180,7 @@ struct TablePointerType : public Type {
 struct UnionType : public Type {
     UnionType(std::string name, std::vector<const Type*> types, uint32_t data_offset, uint32_t size,
               std::string pointer_name, std::string qname)
-        : Type(Kind::kUnion, std::move(name), size, CodingNeeded::kNeeded), types(std::move(types)),
+        : Type(Kind::kUnion, std::move(name), size, CodingNeeded::kAlways), types(std::move(types)),
           data_offset(data_offset), pointer_name(std::move(pointer_name)), qname(std::move(qname)) {
     }
 
@@ -193,7 +193,7 @@ struct UnionType : public Type {
 
 struct UnionPointerType : public Type {
     UnionPointerType(std::string name, const UnionType* union_type)
-        : Type(Kind::kUnionPointer, std::move(name), 8u, CodingNeeded::kNeeded),
+        : Type(Kind::kUnionPointer, std::move(name), 8u, CodingNeeded::kAlways),
           union_type(union_type) {}
 
     const UnionType* union_type;
@@ -201,7 +201,7 @@ struct UnionPointerType : public Type {
 
 struct XUnionType : public Type {
     XUnionType(std::string name, std::vector<XUnionField> fields, std::string qname)
-        : Type(Kind::kXUnion, std::move(name), 24u, CodingNeeded::kNeeded),
+        : Type(Kind::kXUnion, std::move(name), 24u, CodingNeeded::kAlways),
           fields(std::move(fields)),
           qname(std::move(qname)) {
     }
@@ -213,7 +213,7 @@ struct XUnionType : public Type {
 
 struct MessageType : public Type {
     MessageType(std::string name, std::vector<StructField> fields, uint32_t size, std::string qname)
-        : Type(Kind::kMessage, std::move(name), size, CodingNeeded::kNeeded),
+        : Type(Kind::kMessage, std::move(name), size, CodingNeeded::kAlways),
           fields(std::move(fields)), qname(std::move(qname)) {}
 
     std::vector<StructField> fields;
@@ -221,8 +221,10 @@ struct MessageType : public Type {
 };
 
 struct InterfaceType : public Type {
-    InterfaceType(std::vector<std::unique_ptr<MessageType>> messages)
-        : Type(Kind::kInterface, "", 0, CodingNeeded::kNotNeeded), messages(std::move(messages)) {}
+    explicit InterfaceType(std::vector<std::unique_ptr<MessageType>> messages)
+        // N.B. InterfaceTypes are never used in the eventual coding table generation.
+        : Type(Kind::kInterface, "", 0, CodingNeeded::kEnvelopeOnly),
+          messages(std::move(messages)) {}
 
     std::vector<std::unique_ptr<MessageType>> messages;
 };
@@ -239,7 +241,7 @@ struct ArrayType : public Type {
 
 struct StringType : public Type {
     StringType(std::string name, uint32_t max_size, types::Nullability nullability)
-        : Type(Kind::kString, std::move(name), 16u, CodingNeeded::kNeeded), max_size(max_size),
+        : Type(Kind::kString, std::move(name), 16u, CodingNeeded::kAlways), max_size(max_size),
           nullability(nullability) {}
 
     const uint32_t max_size;
@@ -249,7 +251,7 @@ struct StringType : public Type {
 struct VectorType : public Type {
     VectorType(std::string name, const Type* element_type, uint32_t max_count,
                uint32_t element_size, types::Nullability nullability)
-        : Type(Kind::kVector, std::move(name), 16u, CodingNeeded::kNeeded),
+        : Type(Kind::kVector, std::move(name), 16u, CodingNeeded::kAlways),
           element_type(element_type), max_count(max_count), element_size(element_size),
           nullability(nullability) {}
 

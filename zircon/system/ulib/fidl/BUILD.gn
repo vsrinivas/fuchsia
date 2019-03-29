@@ -25,6 +25,7 @@ library("fidl_base") {
     "decoding.cpp",
     "encoding.cpp",
     "formatting.cpp",
+    "internal.cpp",
     "linearizing.cpp",
     "message.cpp",
     "message_buffer.cpp",
