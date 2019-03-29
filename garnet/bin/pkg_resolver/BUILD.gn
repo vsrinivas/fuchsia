@@ -31,7 +31,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:url",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

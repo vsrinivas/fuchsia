@@ -91,16 +91,16 @@ async fn resolve<'a>(
         fx_log_warn!("package uri's host is currently unsupported: {}", uri);
     }
 
-    // FIXME: need to implement selectors.
-    if !selectors.is_empty() {
-        fx_log_warn!("resolve does not support selectors yet");
-    }
-
     // While the fuchsia-pkg:// spec doesn't require a package name, we do.
     let name = uri.name().ok_or_else(|| {
         fx_log_err!("package uri is missing a package name: {}", uri);
         Err(Status::INVALID_ARGS)
     })?;
+
+    // FIXME: need to implement selectors.
+    if !selectors.is_empty() {
+        fx_log_warn!("resolve does not support selectors yet");
+    }
 
     // FIXME: use the package cache to fetch the package instead of amber.
 
@@ -439,10 +439,14 @@ mod tests {
                 .expect("error communicating with amber");
             let expected_res = expected_res.map(|r| r.parse().expect("could not parse blob"));
 
+            let path = match variant {
+                None => name.to_string(),
+                Some(variant) => format!("{}/{}", name, variant),
+            };
+
             let uri = FuchsiaPkgUri::new_package(
                 "fuchsia.com".to_string(),
-                name.to_string(),
-                variant.map(|s| s.to_string()),
+                path,
                 merkle.map(|s| s.to_string()),
             )
             .unwrap();

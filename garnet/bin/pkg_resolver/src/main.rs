@@ -16,6 +16,7 @@ use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use futures::TryFutureExt;
 
 mod resolver_service;
+mod rewrite;
 
 const SERVER_THREADS: usize = 2;
 
@@ -40,8 +41,6 @@ fn main() -> Result<(), Error> {
         .start()
         .context("error starting package resolver server")?;
 
-    executor
-        .run(server, SERVER_THREADS)
-        .context("failed to execute package resolver future")?;
+    executor.run(server, SERVER_THREADS).context("failed to execute package resolver future")?;
     Ok(())
 }
