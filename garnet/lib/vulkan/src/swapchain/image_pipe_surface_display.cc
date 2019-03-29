@@ -247,21 +247,14 @@ bool ImagePipeSurfaceDisplay::CreateImage(
     return false;
   }
 
-  fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
-  encoder.Alloc(
-      fidl::CodingTraits<fuchsia::sysmem::SingleBufferSettings>::encoded_size);
-  buffer_collection_info.settings.Encode(&encoder, 0);
-  std::vector<uint8_t> encoded_data = encoder.TakeBytes();
-
-  pDisp->DestroyBufferCollectionFUCHSIA(device, collection, pAllocator);
   display_controller_->ReleaseBufferCollection(kBufferCollectionId);
 
   for (uint32_t i = 0; i < image_count; ++i) {
-    VkFuchsiaImageFormatFUCHSIA image_format_fuchsia = {
-        .sType = VK_STRUCTURE_TYPE_FUCHSIA_IMAGE_FORMAT_FUCHSIA,
+    VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
         .pNext = nullptr,
-        .imageFormat = encoded_data.data(),
-        .imageFormatSize = static_cast<uint32_t>(encoded_data.size())};
+        .collection = collection,
+        .index = i};
     image_create_info.pNext = &image_format_fuchsia;
 
     VkImage image;
@@ -281,22 +274,31 @@ bool ImagePipeSurfaceDisplay::CreateImage(
 
     VkMemoryRequirements memory_requirements;
     pDisp->GetImageMemoryRequirements(device, image, &memory_requirements);
-    // Find lowest usable index.
-    uint32_t memory_type_index =
-        __builtin_ctz(memory_requirements.memoryTypeBits);
 
-    VkImportMemoryZirconHandleInfoFUCHSIA import_allocate_info = {
-        .sType =
-            VK_STRUCTURE_TYPE_TEMP_IMPORT_MEMORY_ZIRCON_HANDLE_INFO_FUCHSIA,
-        .pNext = nullptr,
-        .handleType =
-            VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
-        .handle = buffer_collection_info.buffers[i].vmo.release(),
+    VkBufferCollectionPropertiesFUCHSIA properties = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA};
+    result = pDisp->GetBufferCollectionPropertiesFUCHSIA(device, collection,
+                                                         &properties);
+    if (result != VK_SUCCESS) {
+      fprintf(stderr,
+              "Swapchain: GetBufferCollectionPropertiesFUCHSIA failed: %d\n",
+              status);
+      return false;
+    }
+
+    // Find lowest usable index.
+    uint32_t memory_type_index = __builtin_ctz(
+        memory_requirements.memoryTypeBits & properties.memoryTypeBits);
+
+    VkImportMemoryBufferCollectionFUCHSIA import_info = {
+        .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
+        .collection = collection,
+        .index = i,
     };
 
     VkMemoryAllocateInfo alloc_info{
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .pNext = &import_allocate_info,
+        .pNext = &import_info,
         .allocationSize = memory_requirements.size,
         .memoryTypeIndex = memory_type_index,
     };
@@ -337,6 +339,9 @@ bool ImagePipeSurfaceDisplay::CreateImage(
 
     image_id_map[info.image_id] = fb_image_id;
   }
+
+  pDisp->DestroyBufferCollectionFUCHSIA(device, collection, pAllocator);
+
   display_controller_->CreateLayer(
       [this, &status](zx_status_t layer_status, uint64_t layer_id) {
         status = layer_status;
