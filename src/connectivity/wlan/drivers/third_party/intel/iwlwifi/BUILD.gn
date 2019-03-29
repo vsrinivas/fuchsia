@@ -31,6 +31,19 @@ driver_module("iwlwifi_driver") {
   ]
 }
 
+all_fw_files = [ "iwlwifi-7265-17.ucode" ]
+
+foreach(fw_file, all_fw_files) {
+  copy("iwlwifi-firmware-copy-" + fw_file) {
+    sources = [
+      "//prebuilt/connectivity/wlan/firmware/intel/iwlwifi/" + fw_file,
+    ]
+    outputs = [
+      "$root_out_dir/firmware/iwlwifi/" + fw_file,
+    ]
+  }
+}
+
 package("iwlwifi") {
   deprecated_system_image = true
 
@@ -43,4 +56,21 @@ package("iwlwifi") {
       name = "iwlwifi.so"
     },
   ]
+
+  libraries = []
+
+  foreach(fw_file, all_fw_files) {
+    deps += [
+      # The copy step has to be in the shared-library toolchain to use the
+      # expected output directory, since we treat firmware blobs as if they
+      # were libraries which always use the shared-library toolchain to build.
+      ":iwlwifi-firmware-copy-" + fw_file + "($shlib_toolchain)",
+    ]
+
+    libraries += [
+      {
+        name = "firmware/iwlwifi/" + fw_file
+      },
+    ]
+  }
 }
