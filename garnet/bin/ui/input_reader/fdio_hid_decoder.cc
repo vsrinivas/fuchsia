@@ -14,8 +14,8 @@
 #include <hid/ft3x27.h>
 #include <hid/paradise.h>
 #include <hid/samsung.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 #include <zircon/status.h>
 

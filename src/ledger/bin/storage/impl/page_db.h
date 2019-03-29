@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_view.h>
 #include <lib/zx/time.h>
 
 #include "src/ledger/bin/storage/public/data_source.h"

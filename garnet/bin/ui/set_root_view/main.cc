@@ -6,9 +6,9 @@
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/log_settings_command_line.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>

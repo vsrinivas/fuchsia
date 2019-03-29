@@ -9,7 +9,7 @@
 
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/app/merging/merge_strategy.h"
 #include "src/ledger/bin/storage/public/commit.h"

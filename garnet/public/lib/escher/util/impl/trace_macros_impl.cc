@@ -4,7 +4,7 @@
 
 #include "lib/escher/util/impl/trace_macros_impl.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {

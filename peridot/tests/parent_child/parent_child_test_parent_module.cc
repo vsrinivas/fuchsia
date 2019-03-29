@@ -11,7 +11,7 @@
 #include <lib/async/default.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
 #include "peridot/public/lib/integration_testing/cpp/testing.h"

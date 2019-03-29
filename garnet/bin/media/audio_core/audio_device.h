@@ -21,8 +21,8 @@
 #include "garnet/bin/media/audio_core/audio_object.h"
 #include "garnet/bin/media/audio_core/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_core/fwd_decls.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/time/time_point.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media::audio {

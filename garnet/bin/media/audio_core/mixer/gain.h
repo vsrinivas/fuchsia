@@ -11,7 +11,7 @@
 #include <cmath>
 
 #include "garnet/bin/media/audio_core/mixer/constants.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media::audio {

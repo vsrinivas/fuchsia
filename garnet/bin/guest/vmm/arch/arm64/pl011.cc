@@ -11,7 +11,7 @@
 #include <zircon/boot/driver-config.h>
 
 #include "garnet/bin/guest/vmm/guest.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 __BEGIN_CDECLS;
 #include <libfdt.h>

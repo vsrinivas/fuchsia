@@ -11,7 +11,7 @@
 #include "lib/escher/vk/framebuffer.h"
 #include "lib/escher/vk/image.h"
 #include "lib/escher/vk/render_pass.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {

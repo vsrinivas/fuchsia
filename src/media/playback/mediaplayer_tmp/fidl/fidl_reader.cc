@@ -11,7 +11,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer_tmp/fidl/fidl_type_conversions.h"
 
 namespace media_player {

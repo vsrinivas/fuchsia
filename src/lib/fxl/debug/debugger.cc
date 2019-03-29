@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 
-#include "lib/fxl/debug/debugger.h"
+#include "src/lib/fxl/debug/debugger.h"
 
 namespace fxl {
 

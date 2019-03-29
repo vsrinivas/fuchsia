@@ -12,9 +12,9 @@
 #include <inttypes.h>
 #include <utility>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/memory/weak_ptr_internal.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr_internal.h"
 
 namespace fxl {
 

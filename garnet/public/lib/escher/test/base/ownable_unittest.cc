@@ -7,7 +7,7 @@
 #include "lib/escher/base/type_info.h"
 
 #include "gtest/gtest.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace {
 

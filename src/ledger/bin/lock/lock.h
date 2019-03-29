@@ -8,8 +8,8 @@
 #include <memory>
 
 #include <lib/callback/operation_serializer.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "src/ledger/lib/coroutine/coroutine.h"
 

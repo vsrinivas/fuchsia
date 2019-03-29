@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace fxl {
 

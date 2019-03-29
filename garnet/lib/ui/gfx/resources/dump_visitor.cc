@@ -30,7 +30,7 @@
 #include "garnet/lib/ui/gfx/resources/shapes/rounded_rectangle_shape.h"
 #include "garnet/lib/ui/gfx/resources/view.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {

@@ -15,7 +15,7 @@
 #include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "src/lib/url/gurl.h"
 

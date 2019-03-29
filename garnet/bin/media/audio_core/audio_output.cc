@@ -6,8 +6,8 @@
 
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
 #include "garnet/bin/media/audio_core/audio_link.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace media::audio {
 

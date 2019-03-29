@@ -9,7 +9,7 @@
 
 #include <fuchsia/auth/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 using fuchsia::auth::AppConfig;
 using fuchsia::auth::AuthenticationUIContext;

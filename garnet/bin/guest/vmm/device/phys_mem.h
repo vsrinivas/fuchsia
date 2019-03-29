@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_GUEST_VMM_DEVICE_PHYS_MEM_H_
 #define GARNET_BIN_GUEST_VMM_DEVICE_PHYS_MEM_H_
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/vmo.h>
 
 class PhysMem {

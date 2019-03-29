@@ -10,7 +10,7 @@
 #include "lib/escher/vk/shader_module_template.h"
 #include "lib/escher/vk/shader_program.h"
 #include "lib/escher/vk/shader_program_factory.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

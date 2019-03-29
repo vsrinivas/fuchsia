@@ -6,7 +6,7 @@
 #include <hid/usages.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/time/time_point.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
 #include "lib/ui/tests/mocks/mock_input_device_registry.h"

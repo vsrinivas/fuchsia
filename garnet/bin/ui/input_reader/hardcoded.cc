@@ -18,9 +18,9 @@
 #include <hid/paradise.h>
 #include <hid/samsung.h>
 #include <hid/usages.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/time/time_point.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/time/time_point.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <sys/types.h>
 #include <sys/uio.h>

@@ -9,7 +9,7 @@
 #include "garnet/bin/zxdb/client/mock_frame.h"
 #include "garnet/bin/zxdb/client/thread_controller_test.h"
 #include "garnet/bin/zxdb/symbols/location.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/developer/debug/zxdb/common/address_ranges.h"
 
 namespace zxdb {

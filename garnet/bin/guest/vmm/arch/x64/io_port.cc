@@ -6,7 +6,7 @@
 
 #include <time.h>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/guest/vmm/bits.h"
 #include "garnet/bin/guest/vmm/guest.h"

@@ -6,7 +6,7 @@
 
 #include "garnet/lib/ui/scenic/util/print_event.h"
 #include "lib/fostr/fidl/fuchsia/ui/scenic/formatting.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
 
 namespace scenic_impl {

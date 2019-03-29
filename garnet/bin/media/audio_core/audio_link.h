@@ -9,8 +9,8 @@
 
 #include "garnet/bin/media/audio_core/mixer/gain.h"
 #include "garnet/bin/media/audio_core/mixer/mixer.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/timeline_rate.h"
 

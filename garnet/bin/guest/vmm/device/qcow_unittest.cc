@@ -8,8 +8,8 @@
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/guest/vmm/device/qcow_test_data.h"
 

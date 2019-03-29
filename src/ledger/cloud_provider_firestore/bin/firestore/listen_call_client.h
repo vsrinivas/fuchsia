@@ -10,8 +10,8 @@
 
 #include <google/firestore/v1beta1/firestore.grpc.pb.h>
 #include <grpc++/grpc++.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 
 namespace cloud_provider_firestore {
 

@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
-#include <lib/fxl/log_settings_command_line.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>

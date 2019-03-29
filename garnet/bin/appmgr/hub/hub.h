@@ -7,7 +7,7 @@
 
 #include "garnet/bin/appmgr/hub/hub_info.h"
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 #include <fbl/ref_ptr.h>
 #include <fs/pseudo-dir.h>

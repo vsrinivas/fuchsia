@@ -6,7 +6,7 @@
 #include "garnet/bin/zxdb/symbols/arch.h"
 #include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 

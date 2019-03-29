@@ -11,7 +11,7 @@
 #include <utility>
 
 #include <fuchsia/crash/cpp/fidl.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>

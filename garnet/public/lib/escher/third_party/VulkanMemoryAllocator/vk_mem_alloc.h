@@ -1487,7 +1487,7 @@ available through VmaAllocatorCreateInfo::pRecordSettings.
     #endif
 #endif
 
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 /** \struct VmaAllocator
 \brief Represents main object of this library initialized.

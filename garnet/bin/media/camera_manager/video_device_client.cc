@@ -8,8 +8,8 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/camera/c/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/fzl/fdio.h>
 
 namespace camera {

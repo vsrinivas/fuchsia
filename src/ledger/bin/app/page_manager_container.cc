@@ -8,7 +8,7 @@
 
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/ledger/bin/app/page_manager.h"
 #include "src/ledger/bin/app/page_usage_listener.h"

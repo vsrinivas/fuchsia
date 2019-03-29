@@ -14,8 +14,8 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 #include <lib/lifecycle/cpp/lifecycle_impl.h>
 
 namespace modular {

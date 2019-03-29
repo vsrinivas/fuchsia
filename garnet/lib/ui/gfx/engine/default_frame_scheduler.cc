@@ -12,7 +12,7 @@
 
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/engine/frame_timings.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {

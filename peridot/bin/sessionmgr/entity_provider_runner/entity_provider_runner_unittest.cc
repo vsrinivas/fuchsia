@@ -16,7 +16,7 @@
 #include <lib/component/cpp/testing/fake_launcher.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include "src/lib/files/scoped_temp_dir.h"
 
 #include "gtest/gtest.h"

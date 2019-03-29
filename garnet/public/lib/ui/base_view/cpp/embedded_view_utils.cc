@@ -5,7 +5,7 @@
 #include "lib/ui/base_view/cpp/embedded_view_utils.h"
 
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scenic {
 

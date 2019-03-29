@@ -9,7 +9,7 @@
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 #include <trace/event.h>
 
 #include "src/ledger/bin/cloud_sync/impl/constants.h"

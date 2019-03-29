@@ -9,11 +9,11 @@
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 #include "src/lib/uuid/uuid.h"
-#include <lib/fxl/strings/string_printf.h>
-#include <lib/fxl/strings/trim.h>
+#include <src/lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/trim.h>
 
 namespace modular {
 

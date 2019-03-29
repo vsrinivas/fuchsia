@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <iterator>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/ledger/bin/p2p_provider/impl/envelope_generated.h"
 #include "src/lib/files/file.h"

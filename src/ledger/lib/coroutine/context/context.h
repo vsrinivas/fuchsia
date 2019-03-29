@@ -7,7 +7,7 @@
 
 #include <memory>
 
-#include <lib/fxl/build_config.h>
+#include <src/lib/fxl/build_config.h>
 
 #include "src/ledger/lib/coroutine/context/stack.h"
 

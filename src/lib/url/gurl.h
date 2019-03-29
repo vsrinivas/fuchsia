@@ -8,7 +8,7 @@
 #include <iosfwd>
 #include <string>
 
-#include "lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/url/third_party/mozilla/url_parse.h"
 #include "src/lib/url/url_canon.h"
 #include "src/lib/url/url_canon_stdstring.h"

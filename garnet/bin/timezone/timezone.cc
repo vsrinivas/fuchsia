@@ -6,8 +6,8 @@
 
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/sized_vmo.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/string_number_conversions.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <lib/sys/cpp/component_context.h>
 #include <zircon/syscalls.h>
 #include <fstream>

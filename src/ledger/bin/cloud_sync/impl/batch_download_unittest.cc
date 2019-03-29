@@ -9,7 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/callback/capture.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"

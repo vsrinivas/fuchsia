@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "garnet/lib/perfmon/events.h"
 

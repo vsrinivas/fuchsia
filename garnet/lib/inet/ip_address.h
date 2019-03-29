@@ -7,7 +7,7 @@
 
 #include <arpa/inet.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include <fuchsia/net/cpp/fidl.h>
 

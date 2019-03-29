@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/types/type_converters.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
 

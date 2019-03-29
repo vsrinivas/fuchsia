@@ -33,7 +33,7 @@
 #include "lib/escher/third_party/granite/vk/pipeline_layout.h"
 #include "lib/escher/util/hash.h"
 #include "lib/escher/vk/vulkan_limits.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 

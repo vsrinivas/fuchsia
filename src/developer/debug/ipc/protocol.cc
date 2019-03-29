@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/ipc/protocol.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #if defined(__Fuchsia__)
 

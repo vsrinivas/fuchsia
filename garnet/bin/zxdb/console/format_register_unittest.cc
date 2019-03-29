@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "garnet/bin/zxdb/console/format_register.cc"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/shared/arch_arm64.h"
 #include "src/developer/debug/shared/arch_x86.h"
 

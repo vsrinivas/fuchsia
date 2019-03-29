@@ -5,7 +5,7 @@
 #include "src/ledger/bin/storage/fake/fake_db.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/storage/fake/fake_object.h"
 

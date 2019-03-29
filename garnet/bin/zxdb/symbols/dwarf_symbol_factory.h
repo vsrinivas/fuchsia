@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/dwarf_tag.h"
 #include "garnet/bin/zxdb/symbols/symbol_factory.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace llvm {
 class DWARFDie;

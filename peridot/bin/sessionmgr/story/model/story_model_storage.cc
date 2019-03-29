@@ -4,7 +4,7 @@
 
 #include "peridot/bin/sessionmgr/story/model/story_model_storage.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 namespace modular {
 

@@ -43,9 +43,9 @@
 
 #include "lib/fidl/cpp/type_converter.h"
 #include "lib/fsl/types/type_converters.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/split_string.h"
-#include "lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_view.h"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"

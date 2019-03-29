@@ -14,8 +14,8 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/convert/convert.h"

@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_ENCRYPTION_PRIMITIVES_ENCRYPT_H_
 #define SRC_LEDGER_BIN_ENCRYPTION_PRIMITIVES_ENCRYPT_H_
 
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "peridot/lib/rng/random.h"
 

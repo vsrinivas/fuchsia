@@ -22,9 +22,9 @@
 #include <lib/zx/channel.h>
 #include <zircon/boot/image.h>
 
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 #include "src/cobalt/bin/app/cobalt_app.h"
 #include "src/cobalt/bin/app/product_hack.h"
 #include "third_party/cobalt/encoder/file_observation_store.h"

@@ -5,7 +5,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/app_driver/cpp/agent_driver.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/message_queue/cpp/message_queue_client.h>
 #include <test/peridot/tests/queuepersistence/cpp/fidl.h>
 

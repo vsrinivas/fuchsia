@@ -16,8 +16,8 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gmock/gmock.h"

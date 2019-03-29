@@ -9,7 +9,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 
 namespace media_player {

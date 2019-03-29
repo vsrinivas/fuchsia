@@ -8,7 +8,7 @@
 #include <string>
 
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"

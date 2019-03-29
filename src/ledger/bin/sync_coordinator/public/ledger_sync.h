@@ -9,7 +9,7 @@
 #include <memory>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/cloud_sync/public/ledger_sync.h"
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"

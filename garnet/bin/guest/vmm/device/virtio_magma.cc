@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/vmar.h>
 #include <trace/event.h>
 

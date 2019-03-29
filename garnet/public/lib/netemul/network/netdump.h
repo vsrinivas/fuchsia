@@ -6,7 +6,7 @@
 #define LIB_NETEMUL_NETWORK_NETDUMP_H_
 
 #include <fuchsia/netemul/network/cpp/fidl.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <iostream>
 #include <sstream>
 

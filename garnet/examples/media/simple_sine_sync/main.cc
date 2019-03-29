@@ -7,8 +7,8 @@
 
 #include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
 #include "lib/sys/cpp/component_context.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 namespace {
 

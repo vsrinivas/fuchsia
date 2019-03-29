@@ -11,7 +11,7 @@
 
 #include "lib/fidl/cpp/object_coding.h"  // for EncodeObject()/DecodeObject()
 #include "lib/fsl/vmo/vector.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "peridot/bin/sessionmgr/story/model/apply_mutations.h"
 #include "peridot/lib/ledger_client/promise.h"  // for fit::promise<> wrappers
 

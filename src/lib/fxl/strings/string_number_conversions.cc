@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 #include <stdint.h>
 
 #include <limits>
 #include <type_traits>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fxl {
 namespace {

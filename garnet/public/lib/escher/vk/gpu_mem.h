@@ -7,8 +7,8 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "display.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include <fcntl.h>
 #include <fuchsia/hardware/backlight/c/fidl.h>

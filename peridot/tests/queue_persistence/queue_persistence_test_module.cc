@@ -9,7 +9,7 @@
 #include <lib/async/default.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/component/cpp/connect.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 #include <lib/message_queue/cpp/message_sender_client.h>
 #include <test/peridot/tests/queuepersistence/cpp/fidl.h>
 

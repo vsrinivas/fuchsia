@@ -13,7 +13,7 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fostr/fidl/fuchsia/modular/formatting.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 

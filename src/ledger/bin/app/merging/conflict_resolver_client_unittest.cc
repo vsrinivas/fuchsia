@@ -10,7 +10,7 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/app/constants.h"

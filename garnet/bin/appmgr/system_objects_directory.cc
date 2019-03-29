@@ -5,7 +5,7 @@
 #include "system_objects_directory.h"
 
 #include <fs/pseudo-file.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <algorithm>
 #include "debug_info_retriever.h"
 

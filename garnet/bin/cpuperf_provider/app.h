@@ -9,8 +9,8 @@
 
 #include <memory>
 
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"

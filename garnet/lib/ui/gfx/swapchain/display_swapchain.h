@@ -17,7 +17,7 @@
 #include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/vk/vulkan_device_queues.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {
 namespace gfx {

@@ -10,8 +10,8 @@
 #include <cstdio>
 #include <string>
 
-#include "lib/fxl/strings/utf_codecs.h"
-#include "lib/fxl/third_party/icu/icu_utf.h"
+#include "src/lib/fxl/strings/utf_codecs.h"
+#include "src/lib/fxl/third_party/icu/icu_utf.h"
 
 namespace url {
 

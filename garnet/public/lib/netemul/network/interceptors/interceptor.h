@@ -6,7 +6,7 @@
 #define LIB_NETEMUL_NETWORK_INTERCEPTORS_INTERCEPTOR_H_
 
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <vector>
 #include "../consumer.h"
 

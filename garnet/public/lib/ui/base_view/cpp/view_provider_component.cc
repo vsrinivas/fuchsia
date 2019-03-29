@@ -4,7 +4,7 @@
 
 #include "garnet/public/lib/ui/base_view/cpp/view_provider_component.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 
 using fuchsia::ui::views::ViewToken;

@@ -9,10 +9,10 @@
 #include <fuchsia/timezone/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 static constexpr char kGetOffsetCmd[] = "get_offset_minutes";
 static constexpr char kSetTimezoneIdCmd[] = "set_timezone_id";

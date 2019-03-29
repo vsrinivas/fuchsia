@@ -5,7 +5,7 @@
 #ifndef LIB_ESCHER_BASE_MAKE_H_
 #define LIB_ESCHER_BASE_MAKE_H_
 
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 

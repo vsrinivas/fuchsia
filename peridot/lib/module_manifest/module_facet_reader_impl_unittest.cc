@@ -18,7 +18,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
-#include "lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 

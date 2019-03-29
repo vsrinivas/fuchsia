@@ -10,9 +10,9 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/testing/component_base.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"

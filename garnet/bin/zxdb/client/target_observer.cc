@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/client/target_observer.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

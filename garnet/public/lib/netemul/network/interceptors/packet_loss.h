@@ -5,7 +5,7 @@
 #ifndef LIB_NETEMUL_NETWORK_INTERCEPTORS_PACKET_LOSS_H_
 #define LIB_NETEMUL_NETWORK_INTERCEPTORS_PACKET_LOSS_H_
 
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <zircon/assert.h>
 #include <random>
 #include "interceptor.h"

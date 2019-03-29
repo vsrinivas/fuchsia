@@ -10,7 +10,7 @@
 #include "src/developer/debug/ipc/register_test_support.h"
 #include "src/developer/debug/shared/zx_status.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_agent {
 namespace arch {

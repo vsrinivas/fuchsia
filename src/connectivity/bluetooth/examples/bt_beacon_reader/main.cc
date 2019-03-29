@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 
 #include "app.h"
 

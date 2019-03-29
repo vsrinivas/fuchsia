@@ -8,7 +8,7 @@
 #include <fuchsia/virtualaudio/cpp/fidl.h>
 
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace virtual_audio {
 

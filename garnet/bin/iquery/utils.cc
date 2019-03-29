@@ -4,9 +4,9 @@
 
 #include <lib/fostr/hex_dump.h>
 #include "src/lib/files/path.h"
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/string_printf.h>
-#include <lib/fxl/strings/utf_codecs.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/utf_codecs.h>
 #include <third_party/cobalt/util/crypto_util/base64.h>
 
 #include "garnet/bin/iquery/options.h"

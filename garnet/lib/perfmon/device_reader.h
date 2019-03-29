@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_PERFMON_DEVICE_READER_H_
 #define GARNET_LIB_PERFMON_DEVICE_READER_H_
 
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>

@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"

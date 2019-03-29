@@ -10,7 +10,7 @@
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio {
 class AudioCoreClient : public fuchsia::media::Audio {

@@ -9,7 +9,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 namespace modular {
 

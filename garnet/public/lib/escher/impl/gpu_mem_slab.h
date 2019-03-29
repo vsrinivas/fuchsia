@@ -8,7 +8,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/vk/gpu_mem.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace escher {
 

@@ -9,7 +9,7 @@
 
 #include "lib/fsl/socket/strings.h"
 #include "lib/fsl/vmo/strings.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 
 namespace cobalt {

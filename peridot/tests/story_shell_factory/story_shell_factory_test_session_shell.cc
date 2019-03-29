@@ -13,10 +13,10 @@
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/time/time_delta.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/time/time_delta.h>
 
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/rapidjson/rapidjson.h"

@@ -7,8 +7,8 @@
 // The default behaviour, provided by the baseclass, is to run the inferior
 // and if it gets an exception then print a backtrace and kill it.
 
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "garnet/lib/debugger_utils/breakpoints.h"
 

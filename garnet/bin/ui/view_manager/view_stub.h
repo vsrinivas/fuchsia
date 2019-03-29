@@ -11,8 +11,8 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/scenic/cpp/resources.h"
 
 namespace view_manager {

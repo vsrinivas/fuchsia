@@ -10,12 +10,12 @@
 // So instead we have some cheesy macros that you can define to enable
 // individual compilation failures.
 
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 #include <mutex>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 // Uncomment these to enable particular compilation failure tests.
 // #define NC_GUARDED_BY

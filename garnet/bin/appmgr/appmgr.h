@@ -8,7 +8,7 @@
 #include <fs/pseudo-dir.h>
 #include <fs/service.h>
 #include <fs/synchronous-vfs.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include "garnet/bin/appmgr/realm.h"

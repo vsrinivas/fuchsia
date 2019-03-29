@@ -9,8 +9,8 @@
 #include <vector>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/functional/apply.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/functional/apply.h>
+#include <src/lib/fxl/logging.h>
 
 namespace ledger {
 

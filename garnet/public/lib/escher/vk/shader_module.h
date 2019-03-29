@@ -9,7 +9,7 @@
 
 #include "lib/escher/third_party/granite/vk/shader_module_resource_layout.h"
 #include "lib/escher/vk/shader_stage.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

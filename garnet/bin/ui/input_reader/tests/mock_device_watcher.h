@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_INPUT_READER_TESTS_MOCK_DEVICE_WATCHER_H_
 
 #include "garnet/bin/ui/input_reader/device_watcher.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace mozart {
 

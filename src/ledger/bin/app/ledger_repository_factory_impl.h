@@ -16,7 +16,7 @@
 #include <lib/callback/cancellable.h>
 #include <lib/callback/managed_container.h>
 #include <lib/component/cpp/expose.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/inspect/inspect.h>
 
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"

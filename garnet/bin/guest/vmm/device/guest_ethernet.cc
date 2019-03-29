@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async/default.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/fifo.h>
 
 #include "guest_ethernet.h"

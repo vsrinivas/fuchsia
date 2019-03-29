@@ -9,7 +9,7 @@
 #include <rapidjson/istreamwrapper.h>
 
 #include "garnet/bin/trace_manager/config.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace {

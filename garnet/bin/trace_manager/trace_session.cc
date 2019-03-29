@@ -8,7 +8,7 @@
 
 #include "garnet/bin/trace_manager/trace_session.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 

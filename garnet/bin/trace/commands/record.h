@@ -17,8 +17,8 @@
 #include "garnet/lib/measure/measurements.h"
 #include "garnet/lib/measure/time_between.h"
 #include "garnet/lib/trace_converters/chromium_exporter.h"
-#include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace tracing {
 

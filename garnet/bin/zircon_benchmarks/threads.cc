@@ -6,7 +6,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 

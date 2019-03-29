@@ -6,7 +6,7 @@
 #define LIB_UI_SKETCHY_CLIENT_RESOURCES_H_
 
 #include <fuchsia/ui/sketchy/cpp/fidl.h>
-#include <lib/fxl/memory/ref_counted.h>
+#include <src/lib/fxl/memory/ref_counted.h>
 
 #include "lib/ui/scenic/cpp/session.h"
 #include "lib/ui/sketchy/client/types.h"

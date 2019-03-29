@@ -10,7 +10,7 @@
 #include <zircon/syscalls.h>
 
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::tools {
 

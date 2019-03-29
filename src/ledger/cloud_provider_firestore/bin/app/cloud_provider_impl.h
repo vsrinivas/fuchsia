@@ -10,8 +10,8 @@
 #include <lib/callback/managed_container.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/device_set_impl.h"

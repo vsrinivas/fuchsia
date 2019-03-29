@@ -19,8 +19,8 @@
 #include "garnet/bin/mdns/service/mdns_addresses.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "garnet/bin/mdns/service/resource_renewer.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace mdns {
 

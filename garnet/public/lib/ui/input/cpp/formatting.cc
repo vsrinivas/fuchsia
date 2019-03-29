@@ -9,7 +9,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace fuchsia {
 namespace ui {

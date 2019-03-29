@@ -9,7 +9,7 @@
 #include <string>
 #include <vulkan/vulkan.hpp>
 
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

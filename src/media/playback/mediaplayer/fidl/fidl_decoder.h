@@ -6,7 +6,7 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_DECODER_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include "lib/fxl/synchronization/thread_checker.h"
+#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer/decode/decoder.h"
 #include "src/media/playback/mediaplayer/fidl/buffer_set.h"
 

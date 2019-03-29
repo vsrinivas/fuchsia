@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_APP_DISK_CLEANUP_MANAGER_H_
 #define SRC_LEDGER_BIN_APP_DISK_CLEANUP_MANAGER_H_
 
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/fidl/include/types.h"

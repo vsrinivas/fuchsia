@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 extern "C" {
 #include <acpica/acpi.h>

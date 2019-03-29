@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer_tmp/graph/types/bytes.h"
 
 namespace media_player {

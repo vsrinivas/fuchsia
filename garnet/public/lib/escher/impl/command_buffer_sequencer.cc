@@ -4,7 +4,7 @@
 
 #include "lib/escher/impl/command_buffer_sequencer.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {

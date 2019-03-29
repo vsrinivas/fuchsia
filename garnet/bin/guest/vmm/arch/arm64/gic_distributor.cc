@@ -20,7 +20,7 @@
 #include "garnet/bin/guest/vmm/guest.h"
 #include "garnet/bin/guest/vmm/sysinfo.h"
 #include "garnet/bin/guest/vmm/vcpu.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 __BEGIN_CDECLS;
 #include <libfdt.h>

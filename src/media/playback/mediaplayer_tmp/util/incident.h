@@ -11,7 +11,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 // The Incident class provides a facility for executing code as the consequence
 // of some occurrence. This can be useful for building state machines and

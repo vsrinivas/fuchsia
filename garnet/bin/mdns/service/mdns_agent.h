@@ -12,7 +12,7 @@
 #include "garnet/bin/mdns/service/dns_message.h"
 #include "garnet/bin/mdns/service/mdns_addresses.h"
 #include "garnet/lib/inet/socket_address.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/time/time_point.h"
 
 namespace mdns {
 

@@ -8,7 +8,7 @@
 #include <functional>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/cloud_sync/public/page_sync.h"
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"

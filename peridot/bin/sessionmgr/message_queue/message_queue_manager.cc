@@ -11,7 +11,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "peridot/bin/sessionmgr/message_queue/persistent_queue.h"
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"

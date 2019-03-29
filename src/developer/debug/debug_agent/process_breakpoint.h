@@ -7,7 +7,7 @@
 
 #include <map>
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"

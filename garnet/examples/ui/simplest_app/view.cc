@@ -4,7 +4,7 @@
 
 #include "garnet/examples/ui/simplest_app/view.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
 namespace simplest_app {

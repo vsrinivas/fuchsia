@@ -7,7 +7,7 @@
 #include <unordered_set>
 
 #include "garnet/lib/cmx/cmx.h"
-#include "lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 #include <fuchsia/net/cpp/fidl.h>
 #include <fuchsia/net/stack/cpp/fidl.h>

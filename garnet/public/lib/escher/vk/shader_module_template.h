@@ -14,7 +14,7 @@
 #include "lib/escher/util/hashable.h"
 #include "lib/escher/vk/shader_module.h"
 #include "lib/escher/vk/shader_variant_args.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace escher {
 

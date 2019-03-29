@@ -4,7 +4,7 @@
 
 #include "byte_rate_estimator.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media_player {
 

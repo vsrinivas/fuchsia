@@ -5,7 +5,7 @@
 #include "garnet/lib/ui/gfx/engine/engine_renderer_visitor.h"
 
 #include "lib/escher/paper/paper_renderer2.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include "garnet/lib/ui/gfx/resources/camera.h"
 #include "garnet/lib/ui/gfx/resources/import.h"

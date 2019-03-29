@@ -11,7 +11,7 @@
 #include <fuchsia/math/cpp/fidl.h>
 #include <garnet/lib/ui/gfx/util/unwrap.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 namespace a11y_manager {
 

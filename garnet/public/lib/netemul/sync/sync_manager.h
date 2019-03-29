@@ -8,7 +8,7 @@
 #include <fuchsia/netemul/sync/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <unordered_map>
 #include "bus.h"
 #include "counter_barrier.h"

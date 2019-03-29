@@ -14,7 +14,7 @@
 
 #include "garnet/examples/media/tones/tone_generator.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/sys/cpp/component_context.h"
 
 namespace examples {

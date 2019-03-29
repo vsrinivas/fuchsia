@@ -8,7 +8,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fxl/strings/substitute.h>
+#include <src/lib/fxl/strings/substitute.h>
 #include <lib/inspect/reader.h>
 #include <lib/inspect/testing/inspect.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>

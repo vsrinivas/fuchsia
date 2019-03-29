@@ -9,7 +9,7 @@
 #include <fbl/string_printf.h>
 #include <fs/lazy-dir.h>
 #include <fs/vfs.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <perftest/perftest.h>
 #include <zircon/syscalls.h>
 

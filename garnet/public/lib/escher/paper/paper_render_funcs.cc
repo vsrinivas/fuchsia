@@ -12,7 +12,7 @@
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/texture.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 

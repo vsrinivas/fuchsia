@@ -21,7 +21,7 @@
 #include "lib/fidl/cpp/vector.h"
 
 #include <fbl/unique_ptr.h>
-#include <lib/fxl/arraysize.h>
+#include <src/lib/fxl/arraysize.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>

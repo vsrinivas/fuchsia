@@ -11,8 +11,8 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"

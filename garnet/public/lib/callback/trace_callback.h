@@ -11,7 +11,7 @@
 
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
 namespace callback {

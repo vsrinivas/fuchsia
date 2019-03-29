@@ -26,8 +26,8 @@
 #include <zircon/types.h>
 
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/fxl/strings/concatenate.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace chrealm {
 

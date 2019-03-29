@@ -7,10 +7,10 @@
 #ifndef LIB_FXL_TIME_STOPWATCH_H_
 #define LIB_FXL_TIME_STOPWATCH_H_
 
-#include "lib/fxl/fxl_export.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/time/time_delta.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/fxl_export.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/time/time_point.h"
 
 namespace fxl {
 

@@ -6,7 +6,7 @@
 
 #include <zircon/syscalls/exception.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/arch_x64_helpers.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/ipc/register_desc.h"

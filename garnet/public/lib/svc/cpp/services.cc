@@ -8,7 +8,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace component {
 

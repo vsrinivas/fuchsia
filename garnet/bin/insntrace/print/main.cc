@@ -10,13 +10,13 @@
 
 #include "garnet/lib/intel_pt_decode/decoder.h"
 
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/fxl/time/stopwatch.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/time/stopwatch.h"
 
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 

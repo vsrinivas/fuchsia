@@ -11,8 +11,8 @@
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include "garnet/lib/inet/ip_address.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/macros.h"
 
 namespace netconnector {
 

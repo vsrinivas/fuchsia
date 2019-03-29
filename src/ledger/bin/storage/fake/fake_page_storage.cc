@@ -13,8 +13,8 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
 #include <lib/zx/time.h>
 
 #include "src/ledger/bin/encryption/primitives/hash.h"

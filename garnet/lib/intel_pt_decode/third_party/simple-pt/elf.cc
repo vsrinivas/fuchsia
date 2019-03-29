@@ -40,7 +40,7 @@
 #include "garnet/lib/debugger_utils/byte_block_file.h"
 #include "garnet/lib/debugger_utils/util.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include "third_party/processor-trace/libipt/include/intel-pt.h"
 

@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_NETEMUL_RUNNER_MODEL_ENDPOINT_H_
 #define GARNET_BIN_NETEMUL_RUNNER_MODEL_ENDPOINT_H_
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/json/json_parser.h"
 
 namespace netemul {

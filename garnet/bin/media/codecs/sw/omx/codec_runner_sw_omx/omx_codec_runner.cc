@@ -13,8 +13,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/time.h>
 #include <lib/fit/defer.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 

@@ -11,7 +11,7 @@
 #include <lib/fit/function.h>
 
 #include "garnet/bin/mdns/service/mdns_agent.h"
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace mdns {
 

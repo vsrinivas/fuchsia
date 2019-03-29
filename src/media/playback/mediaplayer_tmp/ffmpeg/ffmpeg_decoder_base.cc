@@ -6,7 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <trace/event.h>
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer_tmp/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer_tmp/graph/formatting.h"
 extern "C" {

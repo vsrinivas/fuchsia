@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/graph/refs.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/nodes/input.h"
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"
 #include "src/media/playback/mediaplayer/graph/nodes/output.h"

@@ -10,7 +10,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

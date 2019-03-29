@@ -12,7 +12,7 @@
 #include "lib/escher/flib/fence.h"
 #include "lib/escher/impl/command_buffer_sequencer.h"
 #include "lib/fidl/cpp/vector.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

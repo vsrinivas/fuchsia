@@ -8,7 +8,7 @@
 #include "lib/escher/scene/viewing_volume.h"
 #include "lib/escher/util/debug_print.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

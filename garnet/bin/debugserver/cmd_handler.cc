@@ -13,11 +13,11 @@
 #include "garnet/lib/inferior_control/registers.h"
 #include "garnet/lib/inferior_control/thread.h"
 
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/split_string.h"
-#include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 #include "registers.h"
 #include "server.h"

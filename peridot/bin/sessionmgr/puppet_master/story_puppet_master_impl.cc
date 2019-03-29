@@ -4,7 +4,7 @@
 
 #include "peridot/bin/sessionmgr/puppet_master/story_puppet_master_impl.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "peridot/bin/sessionmgr/puppet_master/story_command_executor.h"
 #include "peridot/bin/sessionmgr/storage/session_storage.h"

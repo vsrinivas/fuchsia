@@ -6,7 +6,7 @@
 
 #include <tuple>
 
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"

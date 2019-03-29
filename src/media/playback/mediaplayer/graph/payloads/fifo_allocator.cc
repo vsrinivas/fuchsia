@@ -6,7 +6,7 @@
 
 #include <zircon/compiler.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media_player {
 

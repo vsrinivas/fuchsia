@@ -6,8 +6,8 @@
 #include <trace-provider/provider.h>
 
 #include "garnet/bin/ktrace_provider/app.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 using namespace ktrace_provider;
 

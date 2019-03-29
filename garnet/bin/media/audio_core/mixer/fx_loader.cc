@@ -6,7 +6,7 @@
 
 #include <dlfcn.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio {
 

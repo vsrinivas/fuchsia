@@ -7,7 +7,7 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/zx/time.h>
 
-#include "lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/concatenate.h"
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/lock/lock.h"

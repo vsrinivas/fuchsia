@@ -6,7 +6,7 @@
 // The big part of the test is that this works at all in the presence of
 // a provider that provides two of them.
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/time.h>
 #include <trace-provider/provider.h>
 #include <zircon/status.h>

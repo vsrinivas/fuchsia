@@ -7,13 +7,13 @@
 #include <string>
 
 #include <gtest/gtest.h>
-#include <lib/fxl/command_line.h>
+#include <src/lib/fxl/command_line.h>
 #include "src/lib/files/file.h"
-#include <lib/fxl/log_settings.h>
-#include <lib/fxl/log_settings_command_line.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/log_settings.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "garnet/bin/cpuperf/session_result_spec.h"
 #include "garnet/bin/cpuperf/session_spec.h"

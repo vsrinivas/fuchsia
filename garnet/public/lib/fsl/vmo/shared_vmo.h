@@ -9,9 +9,9 @@
 
 #include <lib/zx/vmo.h>
 
-#include "lib/fxl/fxl_export.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/fxl_export.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace fsl {
 

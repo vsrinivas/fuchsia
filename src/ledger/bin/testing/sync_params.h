@@ -9,8 +9,8 @@
 #include <string>
 
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/lib/firebase_auth/testing/credentials.h"
 

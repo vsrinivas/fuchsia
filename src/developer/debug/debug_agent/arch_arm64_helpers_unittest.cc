@@ -8,7 +8,7 @@
 
 #include <optional>
 
-#include "lib/fxl/arraysize.h"
+#include "src/lib/fxl/arraysize.h"
 #include "src/developer/debug/ipc/debug/file_line_function.h"
 #include "src/developer/debug/shared/zx_status.h"
 

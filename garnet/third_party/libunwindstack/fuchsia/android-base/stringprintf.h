@@ -5,7 +5,7 @@
 #ifndef GARNET_THIRD_PARTY_LIBUNWINDSTACK_FUCHSIA_ANDROID_BASE_STRINGPRINTF_H_
 #define GARNET_THIRD_PARTY_LIBUNWINDSTACK_FUCHSIA_ANDROID_BASE_STRINGPRINTF_H_
 
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 // This just forwards android::base::StringPrintf to the FXL implementation.
 

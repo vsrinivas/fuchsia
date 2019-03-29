@@ -8,8 +8,8 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/ui/base_view/cpp/v1_base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 

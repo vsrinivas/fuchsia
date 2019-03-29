@@ -14,9 +14,9 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/log_settings_command_line.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/input/cpp/formatting.h>

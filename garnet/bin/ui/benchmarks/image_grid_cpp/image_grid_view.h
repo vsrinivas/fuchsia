@@ -6,8 +6,8 @@
 #define GARNET_BIN_UI_BENCHMARKS_IMAGE_GRID_CPP_IMAGE_GRID_VIEW_H_
 
 #include "garnet/lib/ui/scenic/util/rk4_spring_simulation.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/ui/base_view/cpp/base_view.h"
 
 class SkCanvas;

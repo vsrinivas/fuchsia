@@ -6,7 +6,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 
 namespace media_player {

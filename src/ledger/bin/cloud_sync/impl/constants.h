@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_CONSTANTS_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_CONSTANTS_H_
 
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 namespace cloud_sync {
 

@@ -4,7 +4,7 @@
 
 #include "peridot/bin/basemgr/presentation_container.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <cmath>
 

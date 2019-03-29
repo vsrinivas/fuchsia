@@ -12,7 +12,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/bin/suggestion_engine/debug.h"
 #include "peridot/bin/suggestion_engine/interruptions_processor.h"

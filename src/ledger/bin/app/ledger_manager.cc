@@ -13,8 +13,8 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 #include <trace/event.h>
 
 #include "src/ledger/bin/app/constants.h"

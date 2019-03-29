@@ -5,7 +5,7 @@
 #ifndef LIB_FXL_FXL_EXPORT_H_
 #define LIB_FXL_FXL_EXPORT_H_
 
-#include "lib/fxl/build_config.h"
+#include "src/lib/fxl/build_config.h"
 
 #ifdef OS_FUCHSIA
 #define FXL_EXPORT __attribute__((visibility("default")))

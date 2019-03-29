@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "lib/fxl/macros.h"
-#include "lib/fxl/time/stopwatch.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/time/stopwatch.h"
 #include "src/developer/debug/ipc/debug/file_line_function.h"
 
 namespace debug_ipc {

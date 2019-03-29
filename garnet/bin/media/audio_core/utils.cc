@@ -7,7 +7,7 @@
 #include <audio-proto-utils/format-utils.h>
 
 #include "garnet/bin/media/audio_core/driver_utils.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio {
 

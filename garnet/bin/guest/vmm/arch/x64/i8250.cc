@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <libzbi/zbi.h>
 #include <zircon/boot/image.h>
 

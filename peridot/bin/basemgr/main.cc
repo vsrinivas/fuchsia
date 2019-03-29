@@ -9,8 +9,8 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/macros.h>
 #include <trace-provider/provider.h>
 
 #include "peridot/bin/basemgr/basemgr_impl.h"

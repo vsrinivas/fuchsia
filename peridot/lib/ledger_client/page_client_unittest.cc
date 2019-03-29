@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/fidl/array_to_string.h"

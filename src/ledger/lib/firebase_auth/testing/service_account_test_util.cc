@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/strings/string_number_conversions.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/network_wrapper/fake_network_wrapper.h>
 #include <rapidjson/stringbuffer.h>

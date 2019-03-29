@@ -11,8 +11,8 @@
 #include <zircon/syscalls/port.h>
 
 #include "lib/escher/flib/fence.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace escher {
 

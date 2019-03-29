@@ -17,9 +17,9 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/file.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/strings/string_view.h>
 #include <lib/sys/cpp/service_directory.h>
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"

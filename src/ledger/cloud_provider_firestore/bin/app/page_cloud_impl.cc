@@ -10,7 +10,7 @@
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/concatenate.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/grpc_status.h"

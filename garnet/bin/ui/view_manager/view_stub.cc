@@ -9,7 +9,7 @@
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "garnet/bin/ui/view_manager/view_state.h"
 #include "garnet/bin/ui/view_manager/view_tree_state.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace view_manager {
 

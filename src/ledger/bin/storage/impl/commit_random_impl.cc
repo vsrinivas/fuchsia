@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/storage/impl/commit_random_impl.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"

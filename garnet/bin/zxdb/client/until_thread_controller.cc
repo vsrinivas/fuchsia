@@ -12,7 +12,7 @@
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/symbols/input_location.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

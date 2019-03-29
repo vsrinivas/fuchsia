@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/array_type.h"
 
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 

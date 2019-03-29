@@ -19,7 +19,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage.h"
 

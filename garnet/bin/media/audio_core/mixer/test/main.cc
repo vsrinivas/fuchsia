@@ -6,7 +6,7 @@
 #include "garnet/bin/media/audio_core/mixer/test/audio_result.h"
 #include "garnet/bin/media/audio_core/mixer/test/frequency_set.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 
 int main(int argc, char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

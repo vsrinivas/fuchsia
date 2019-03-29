@@ -17,7 +17,7 @@
 #include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "garnet/bin/zxdb/symbols/variable_test_support.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

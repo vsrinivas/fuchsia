@@ -9,7 +9,7 @@
 
 #include "garnet/lib/ui/gfx/id.h"
 
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 #include <lib/zx/time.h>
 
 namespace scenic_impl {

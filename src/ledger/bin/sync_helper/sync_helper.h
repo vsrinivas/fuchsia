@@ -11,7 +11,7 @@
 #include <lib/callback/scoped_callback.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "src/ledger/bin/sync_helper/mutable.h"
 

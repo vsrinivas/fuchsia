@@ -12,7 +12,7 @@
 #include <lib/zx/socket.h>
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media_player {
 

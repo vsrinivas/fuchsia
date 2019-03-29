@@ -8,7 +8,7 @@
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"
 

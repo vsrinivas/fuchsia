@@ -12,8 +12,8 @@
 #include <lib/escher/geometry/types.h>
 #include <lib/escher/util/type_utils.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/time/time_point.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/time/time_point.h>
 #include <lib/ui/geometry/cpp/formatting.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <trace/event.h>

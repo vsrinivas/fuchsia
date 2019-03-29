@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"
 

@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/zx/time.h>
 
 #include "src/ledger/bin/storage/public/types.h"

@@ -13,7 +13,7 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "garnet/lib/ui/gfx/resources/resource_context.h"
 #include "lib/escher/flib/fence_set_listener.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {
 namespace gfx {

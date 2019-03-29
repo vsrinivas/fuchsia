@@ -4,7 +4,7 @@
 
 #include "src/ledger/lib/firebase_auth/testing/service_account_token_manager.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 namespace service_account {
 namespace {

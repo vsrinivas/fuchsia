@@ -4,7 +4,7 @@
 
 #include "library_loader.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/fidlcat/lib/wire_types.h"
 #include "rapidjson/error/en.h"

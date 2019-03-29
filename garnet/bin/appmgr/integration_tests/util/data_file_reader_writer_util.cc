@@ -4,7 +4,7 @@
 
 #include "garnet/bin/appmgr/integration_tests/util/data_file_reader_writer_util.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 namespace component {
 namespace testing {

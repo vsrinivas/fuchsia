@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/console/verbs.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

@@ -7,7 +7,7 @@
 
 #include "garnet/bin/mdns/util/mdns_impl.h"
 #include "garnet/bin/mdns/util/mdns_params.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);

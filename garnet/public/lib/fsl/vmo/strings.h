@@ -12,8 +12,8 @@
 #include <lib/zx/vmo.h>
 
 #include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fxl/fxl_export.h"
-#include "lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/fxl_export.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace fsl {
 

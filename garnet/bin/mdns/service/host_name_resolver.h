@@ -11,7 +11,7 @@
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/mdns/service/mdns_agent.h"
 #include "garnet/lib/inet/ip_address.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/time/time_point.h"
 
 namespace mdns {
 

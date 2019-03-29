@@ -16,7 +16,7 @@
 
 #include "garnet/examples/media/tones/midi.h"
 #include "garnet/examples/media/tones/tones.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace examples {
 

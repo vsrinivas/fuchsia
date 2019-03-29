@@ -7,7 +7,7 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/util/bit_ops.h"
 #include "lib/escher/util/hasher.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

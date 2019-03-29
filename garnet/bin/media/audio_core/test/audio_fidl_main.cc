@@ -7,7 +7,7 @@
 #include "garnet/bin/media/audio_core/test/audio_tests_shared.h"
 #include "gtest/gtest.h"
 #include "lib/component/cpp/environment_services_helper.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio::test {
 

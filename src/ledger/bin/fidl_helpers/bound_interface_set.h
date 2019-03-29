@@ -7,7 +7,7 @@
 
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 namespace ledger {
 namespace fidl_helpers {

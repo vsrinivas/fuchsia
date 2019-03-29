@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_FILE_INDEX_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_FILE_INDEX_H_
 
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/storage/impl/file_index_generated.h"
 #include "src/ledger/bin/storage/public/data_source.h"

@@ -4,7 +4,7 @@
 
 #include <unwindstack/Log.h>
 
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 // This file contains an implementation of the Android Log.cpp file which
 // only logs to stdout. This keeps us from needing to fork that file.

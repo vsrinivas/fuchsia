@@ -11,7 +11,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/vector.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 namespace bt_le_heart_rate {
 

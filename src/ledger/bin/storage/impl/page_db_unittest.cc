@@ -12,7 +12,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/callback/set_when_called.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/zx/time.h>
 
 #include "gmock/gmock.h"

@@ -6,7 +6,7 @@
 #define LIB_ESCHER_TEST_FLIB_UTIL_H_
 
 #include <lib/zx/event.h>
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace escher {
 namespace test {

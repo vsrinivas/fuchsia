@@ -5,8 +5,8 @@
 #ifndef LIB_ESCHER_FORWARD_DECLARATIONS_H_
 #define LIB_ESCHER_FORWARD_DECLARATIONS_H_
 
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace escher {
 

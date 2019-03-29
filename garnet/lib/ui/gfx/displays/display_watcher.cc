@@ -9,7 +9,7 @@
 #include <lib/fidl/cpp/message.h>
 #include <zircon/device/display-controller.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/files/unique_fd.h"
 
 namespace scenic_impl {

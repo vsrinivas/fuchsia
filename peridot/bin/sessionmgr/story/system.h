@@ -5,7 +5,7 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_STORY_SYSTEM_H_
 #define PERIDOT_BIN_SESSIONMGR_STORY_SYSTEM_H_
 
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 namespace modular {
 

@@ -8,8 +8,8 @@
 #include <cstdint>
 
 #include "lib/escher/base/make.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 

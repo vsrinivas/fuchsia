@@ -10,8 +10,8 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <zircon/syscalls/exception.h>

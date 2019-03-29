@@ -7,7 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/handles/object_info.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "garnet/lib/debugger_utils/util.h"
 

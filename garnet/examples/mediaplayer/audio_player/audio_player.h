@@ -11,7 +11,7 @@
 
 #include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/sys/cpp/component_context.h"
 

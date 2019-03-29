@@ -11,8 +11,8 @@
 #include <lib/callback/auto_cleanable.h>
 #include <lib/callback/cancellable.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/cloud_provider_impl.h"

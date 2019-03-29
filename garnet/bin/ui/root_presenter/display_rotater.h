@@ -21,7 +21,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 
 #include "garnet/lib/ui/scenic/util/rk4_spring_simulation.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/ui/scenic/cpp/resources.h"
 
 namespace root_presenter {

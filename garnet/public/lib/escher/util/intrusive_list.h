@@ -6,7 +6,7 @@
 #define LIB_ESCHER_UTIL_INTRUSIVE_LIST_H_
 
 #ifndef NDEBUG
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #endif
 
 namespace escher {

@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debugger_utils {
 

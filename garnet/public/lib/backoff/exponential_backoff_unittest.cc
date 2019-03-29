@@ -6,8 +6,8 @@
 
 #include <stdlib.h>
 
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 
 #include "gtest/gtest.h"
 

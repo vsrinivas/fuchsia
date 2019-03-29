@@ -7,7 +7,7 @@
 #include "garnet/bin/media/audio_core/audio_object.h"
 #include "garnet/bin/media/audio_core/audio_renderer_format_info.h"
 #include "garnet/bin/media/audio_core/audio_renderer_impl.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio {
 

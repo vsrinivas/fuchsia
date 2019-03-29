@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "garnet/public/lib/callback/destruction_sentinel.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace netconnector {
 

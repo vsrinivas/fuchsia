@@ -18,7 +18,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>

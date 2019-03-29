@@ -5,7 +5,7 @@
 #include "garnet/bin/zxdb/client/setting_store.h"
 
 #include "garnet/bin/zxdb/client/setting_schema.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

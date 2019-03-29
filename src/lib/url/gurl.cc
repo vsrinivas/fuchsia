@@ -9,9 +9,9 @@
 
 #include "src/lib/url/gurl.h"
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/ascii.h"
-#include "lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/ascii.h"
+#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/url/url_canon_stdstring.h"
 #include "src/lib/url/url_util.h"
 #include "src/lib/url/url_util_internal.h"

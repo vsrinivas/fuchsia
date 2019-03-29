@@ -11,7 +11,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/enum.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/sync_helper/sync_helper.h"

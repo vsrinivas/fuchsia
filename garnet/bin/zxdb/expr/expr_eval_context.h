@@ -7,7 +7,7 @@
 #include <functional>
 
 #include "garnet/bin/zxdb/expr/name_lookup.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace zxdb {
 

@@ -10,7 +10,7 @@
 
 #include "garnet/lib/ui/gfx/engine/hardware_layer_assignment.h"
 
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace escher {
 class Image;

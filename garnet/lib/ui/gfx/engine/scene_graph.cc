@@ -5,7 +5,7 @@
 #include "garnet/lib/ui/gfx/engine/scene_graph.h"
 
 #include "garnet/lib/ui/gfx/engine/session.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {

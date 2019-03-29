@@ -5,7 +5,7 @@
 // This file contains Intel events.
 // When needed separate files will describe non-Intel x64 events.
 
-#include <lib/fxl/arraysize.h>
+#include <src/lib/fxl/arraysize.h>
 
 #include "garnet/lib/perfmon/event-registry.h"
 #include "garnet/lib/perfmon/events.h"

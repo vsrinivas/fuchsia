@@ -6,8 +6,8 @@
 
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
-#include "lib/fxl/strings/split_string.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 

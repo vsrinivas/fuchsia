@@ -100,8 +100,8 @@ int main(int argc, char** argv) {
 #### Initialization using command line
 
 ```C++
-#include "lib/fxl/command_line.h"
 #include "lib/fsl/syslogger/init.h"
+#include "src/lib/fxl/command_line.h"
 
 int main(int argc, char** argv) {
     auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

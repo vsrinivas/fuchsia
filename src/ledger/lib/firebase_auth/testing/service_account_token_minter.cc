@@ -9,10 +9,10 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/string_number_conversions.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
+#include <src/lib/fxl/strings/string_view.h>
 #include <openssl/bio.h>
 #include <openssl/digest.h>
 #include <openssl/hmac.h>

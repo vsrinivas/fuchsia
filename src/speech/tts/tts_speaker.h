@@ -16,8 +16,8 @@
 #include <zircon/types.h>
 
 #include "lib/fidl/cpp/string.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "lib/sys/cpp/component_context.h"
 #include "third_party/flite/include/flite_fuchsia.h"
 

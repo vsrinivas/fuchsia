@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/job.h>
 
 #include "processes.h"

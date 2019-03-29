@@ -8,7 +8,7 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/fidl/cpp/array.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/commit_pack/commit_pack.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"

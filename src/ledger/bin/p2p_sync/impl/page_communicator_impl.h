@@ -10,7 +10,7 @@
 #include <lib/callback/cancellable.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"

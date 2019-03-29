@@ -8,7 +8,7 @@
 
 #include <lib/backoff/backoff.h>
 #include <lib/backoff/testing/test_backoff.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"

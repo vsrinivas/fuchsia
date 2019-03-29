@@ -6,9 +6,9 @@
 
 #include <algorithm>
 
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/fxl/strings/string_view.h"
-#include "lib/fxl/strings/trim.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/strings/trim.h"
 #include "src/developer/debug/shared/elf.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include <lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/strings/join_strings.h>
 
 #include "peridot/lib/util/string_escape.h"
 

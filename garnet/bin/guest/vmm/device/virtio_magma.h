@@ -12,7 +12,7 @@
 #include <fbl/unique_fd.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/zx/vmar.h>
 #include <zircon/types.h>
 

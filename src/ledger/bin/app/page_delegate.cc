@@ -13,7 +13,7 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 #include <trace/event.h>
 
 #include "peridot/lib/convert/convert.h"

@@ -7,7 +7,7 @@
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/sysmem-connector/sysmem-connector.h>
 
 #include <memory>

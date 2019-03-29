@@ -16,10 +16,10 @@
 
 #include "fuchsia/developer/tiles/cpp/fidl.h"
 #include "lib/fsl/io/fd.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 #include "src/lib/files/unique_fd.h"
-#include "lib/fxl/memory/unique_object.h"
-#include "lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/memory/unique_object.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 #include "lib/sys/cpp/service_directory.h"
 
 using ControllerPtr = fuchsia::developer::tiles::ControllerSyncPtr;

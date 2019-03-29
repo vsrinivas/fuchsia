@@ -12,7 +12,7 @@
 
 #include <zircon/types.h>
 
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>

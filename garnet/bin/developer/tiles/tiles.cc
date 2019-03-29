@@ -6,7 +6,7 @@
 
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>

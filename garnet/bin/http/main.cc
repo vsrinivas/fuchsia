@@ -5,8 +5,8 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/http/http_service_delegate.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

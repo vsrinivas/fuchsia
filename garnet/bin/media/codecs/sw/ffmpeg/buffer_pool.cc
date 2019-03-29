@@ -8,7 +8,7 @@ extern "C" {
 #include "libavutil/imgutils.h"
 }
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/media/codec_impl/fourcc.h>
 
 namespace {

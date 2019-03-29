@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include <lib/async/default.h>
 #include <zircon/errors.h>

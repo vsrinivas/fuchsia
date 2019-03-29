@@ -14,7 +14,7 @@
 #include "lib/escher/renderer/semaphore.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/vk/vulkan_context.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace escher {
 typedef fit::function<void()> CommandBufferFinishedCallback;

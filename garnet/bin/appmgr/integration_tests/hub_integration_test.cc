@@ -4,9 +4,9 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/join_strings.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 

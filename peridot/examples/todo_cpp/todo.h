@@ -12,8 +12,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/examples/todo_cpp/generator.h"
 

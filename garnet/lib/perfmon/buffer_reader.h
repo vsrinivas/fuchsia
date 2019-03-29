@@ -9,7 +9,7 @@
 #include <memory>
 #include <string>
 
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <zircon/types.h>
 

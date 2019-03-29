@@ -8,7 +8,7 @@
 #include <functional>
 
 #include <fuchsia/auth/cpp/fidl.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/rng/random.h"
 

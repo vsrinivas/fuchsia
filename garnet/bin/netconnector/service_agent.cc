@@ -5,7 +5,7 @@
 #include "garnet/bin/netconnector/service_agent.h"
 
 #include "garnet/bin/netconnector/netconnector_impl.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace netconnector {
 

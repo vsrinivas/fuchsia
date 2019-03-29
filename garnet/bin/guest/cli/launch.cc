@@ -5,7 +5,7 @@
 #include "garnet/bin/guest/cli/launch.h"
 
 #include <fuchsia/guest/cpp/fidl.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "garnet/bin/guest/cli/serial.h"
 

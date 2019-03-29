@@ -14,7 +14,7 @@
 #include "garnet/bin/media/audio_core/audio_packet_ref.h"
 #include "garnet/bin/media/audio_core/fwd_decls.h"
 #include "garnet/bin/media/audio_core/pending_flush_token.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 namespace media::audio {
 

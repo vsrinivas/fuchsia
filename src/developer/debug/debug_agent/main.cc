@@ -12,8 +12,8 @@
 #include <unistd.h>
 #include <memory>
 
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/remote_api_adapter.h"

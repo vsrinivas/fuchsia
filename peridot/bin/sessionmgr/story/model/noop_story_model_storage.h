@@ -7,7 +7,7 @@
 
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
 #include <lib/fit/scope.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/bin/sessionmgr/story/model/story_model_storage.h"
 

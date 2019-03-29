@@ -10,7 +10,7 @@
 
 #include <gtest/gtest.h>
 #include <lib/async-testutils/test_loop.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 namespace callback {
 namespace {

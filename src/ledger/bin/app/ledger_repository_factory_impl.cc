@@ -17,8 +17,8 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/io/fd.h>
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/string_view.h>
 #include <lib/inspect/inspect.h>
 #include <trace/event.h>
 #include <zircon/processargs.h>

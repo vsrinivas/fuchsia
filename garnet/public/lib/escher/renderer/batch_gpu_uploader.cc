@@ -8,7 +8,7 @@
 
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/gpu_mem.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

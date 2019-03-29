@@ -9,7 +9,7 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 namespace modular {
 

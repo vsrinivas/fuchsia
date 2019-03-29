@@ -10,7 +10,7 @@
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/ui/base_view/cpp/v1_base_view.h>
 #include <lib/zx/eventpair.h>
 

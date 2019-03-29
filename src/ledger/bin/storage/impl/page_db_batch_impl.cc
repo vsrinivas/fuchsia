@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
 
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/db_serialization.h"

@@ -6,8 +6,8 @@
 
 #include <map>
 
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/ipc/protocol.h"
 
 namespace debug_ipc {

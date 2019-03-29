@@ -6,7 +6,7 @@
 #define SRC_LEDGER_BIN_STORAGE_IMPL_COMMIT_IMPL_H_
 
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 #include <lib/timekeeper/clock.h>
 
 #include "src/ledger/bin/storage/public/commit.h"

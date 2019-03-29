@@ -25,7 +25,7 @@
 #include "garnet/lib/inet/ip_port.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
 
 namespace netconnector {

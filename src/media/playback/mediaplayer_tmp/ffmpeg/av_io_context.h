@@ -9,8 +9,8 @@
 #include <mutex>
 
 #include "lib/async/cpp/task.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/playback/mediaplayer_tmp/demux/reader.h"
 extern "C" {
 #include "libavformat/avio.h"

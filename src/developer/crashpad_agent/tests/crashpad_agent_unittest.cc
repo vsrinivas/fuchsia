@@ -15,7 +15,7 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/concatenate.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>
 #include <lib/zx/port.h>

@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "lib/fsl/syslogger/init.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 #include "lib/syslog/cpp/logger.h"
 
 __BEGIN_CDECLS

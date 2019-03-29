@@ -20,7 +20,7 @@
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/environment.h"

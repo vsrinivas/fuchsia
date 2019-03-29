@@ -10,7 +10,7 @@
 #include <optional>
 #include <vector>
 
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {

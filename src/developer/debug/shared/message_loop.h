@@ -9,7 +9,7 @@
 #include <map>
 #include <mutex>
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "src/developer/debug/ipc/debug/file_line_function.h"
 
 #if defined(__Fuchsia__)

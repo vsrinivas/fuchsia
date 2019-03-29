@@ -8,7 +8,7 @@
 #include <iomanip>
 #include <vector>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio::test {
 

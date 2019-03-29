@@ -4,7 +4,7 @@
 
 #include "src/lib/pkg_url/url_resolver.h"
 
-#include "lib/fxl/strings/ascii.h"
+#include "src/lib/fxl/strings/ascii.h"
 
 namespace component {
 namespace {

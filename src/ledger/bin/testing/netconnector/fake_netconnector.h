@@ -8,7 +8,7 @@
 #include <fuchsia/netconnector/cpp/fidl.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 namespace ledger {
 

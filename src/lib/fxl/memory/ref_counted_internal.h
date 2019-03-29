@@ -9,8 +9,8 @@
 
 #include <atomic>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace fxl {
 namespace internal {

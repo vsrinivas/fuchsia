@@ -20,9 +20,9 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/zx/eventpair.h>
 
 #include "peridot/lib/fidl/single_service_app.h"

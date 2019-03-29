@@ -7,7 +7,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <string>
 #include "managed_logger.h"
 

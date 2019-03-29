@@ -5,7 +5,7 @@
 // This target runs all benchmarks for the Peridot layer.
 
 #include "garnet/testing/benchmarking/benchmarking.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 int main(int argc, const char** argv) {
   auto maybe_benchmarks_runner =

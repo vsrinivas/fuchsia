@@ -9,8 +9,8 @@
 
 #include "log/log.h"
 
-#include <lib/fxl/debug/debugger.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/debug/debugger.h>
+#include <src/lib/fxl/logging.h>
 
 extern "C" {
 

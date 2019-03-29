@@ -7,7 +7,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/fsl/vmo/file.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 using fuchsia::cobalt::ProjectProfile;
 

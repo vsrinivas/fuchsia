@@ -14,8 +14,8 @@
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
 
 #include "peridot/lib/base64url/base64url.h"
 #include "src/ledger/bin/filesystem/directory_reader.h"

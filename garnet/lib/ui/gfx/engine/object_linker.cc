@@ -8,7 +8,7 @@
 #include <functional>
 
 #include "lib/fsl/handles/object_info.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {

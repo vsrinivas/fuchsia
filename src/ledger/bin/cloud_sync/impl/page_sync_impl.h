@@ -13,8 +13,8 @@
 #include <lib/backoff/backoff.h>
 #include <lib/callback/scoped_task_runner.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/time/time_delta.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/time/time_delta.h>
 
 #include "src/ledger/bin/cloud_sync/impl/batch_download.h"
 #include "src/ledger/bin/cloud_sync/impl/batch_upload.h"

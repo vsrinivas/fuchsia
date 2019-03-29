@@ -9,7 +9,7 @@
 #include "lib/callback/cancellable_helper.h"
 #include "lib/callback/destruction_sentinel.h"
 #include "lib/callback/trace_callback.h"
-#include "lib/fxl/strings/ascii.h"
+#include "src/lib/fxl/strings/ascii.h"
 
 namespace network_wrapper {
 

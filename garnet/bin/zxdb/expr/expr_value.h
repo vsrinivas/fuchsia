@@ -10,7 +10,7 @@
 
 #include "garnet/bin/zxdb/expr/expr_value_source.h"
 #include "garnet/bin/zxdb/symbols/type.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 

@@ -5,7 +5,7 @@
 #include "garnet/bin/guest/vmm/guest_config.h"
 
 #include <gtest/gtest.h>
-#include <lib/fxl/arraysize.h>
+#include <src/lib/fxl/arraysize.h>
 #include <zircon/compiler.h>
 
 class GuestConfigParserTest : public ::testing::Test {

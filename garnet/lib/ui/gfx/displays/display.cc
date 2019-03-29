@@ -8,7 +8,7 @@
 #include <zircon/syscalls.h>
 
 #include "garnet/lib/ui/gfx/util/time.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
 namespace gfx {

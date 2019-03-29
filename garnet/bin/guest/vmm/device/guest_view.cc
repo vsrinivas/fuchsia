@@ -4,7 +4,7 @@
 
 #include "garnet/bin/guest/vmm/device/guest_view.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/images/cpp/images.h>
 
 GuestView::GuestView(

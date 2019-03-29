@@ -5,7 +5,7 @@
 #include "garnet/bin/zxdb/symbols/function_type.h"
 
 #include "garnet/bin/zxdb/symbols/variable.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

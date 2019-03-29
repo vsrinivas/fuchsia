@@ -7,7 +7,7 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/ipc/debug/logging.h"
 #include "src/developer/debug/shared/message_loop_async.h"
 #include "src/developer/debug/shared/zx_status.h"

@@ -10,7 +10,7 @@
 #include <lib/async/cpp/operation.h>
 #include <lib/entity/cpp/json.h>
 #include <lib/fsl/types/type_converters.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 namespace modular {
 

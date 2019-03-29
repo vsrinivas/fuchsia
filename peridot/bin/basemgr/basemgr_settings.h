@@ -10,8 +10,8 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/string.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/macros.h>
 #include "src/lib/files/file.h"
 
 namespace modular {

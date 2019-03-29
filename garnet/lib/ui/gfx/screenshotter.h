@@ -10,7 +10,7 @@
 
 #include "garnet/lib/ui/gfx/engine/engine.h"
 #include "lib/escher/vk/image.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace scenic_impl {
 namespace gfx {

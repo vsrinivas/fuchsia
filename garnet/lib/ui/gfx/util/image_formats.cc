@@ -4,7 +4,7 @@
 
 #include "lib/ui/gfx/util/image_formats.h"
 #include "garnet/lib/ui/yuv/yuv.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/images/cpp/images.h"
 
 namespace scenic_impl {

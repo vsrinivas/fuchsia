@@ -10,7 +10,7 @@
 #include <lib/async/default.h>
 
 #include "garnet/lib/debugger_utils/util.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debugserver {
 

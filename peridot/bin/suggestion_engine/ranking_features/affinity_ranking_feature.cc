@@ -5,8 +5,8 @@
 #include "peridot/bin/suggestion_engine/ranking_features/affinity_ranking_feature.h"
 
 #include <lib/fsl/types/type_converters.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/join_strings.h>
 
 namespace modular {
 

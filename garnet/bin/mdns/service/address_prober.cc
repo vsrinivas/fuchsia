@@ -4,7 +4,7 @@
 
 #include "garnet/bin/mdns/service/address_prober.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace mdns {
 

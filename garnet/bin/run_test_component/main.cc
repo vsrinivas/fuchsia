@@ -19,7 +19,7 @@
 #include "garnet/bin/run_test_component/env_config.h"
 #include "garnet/bin/run_test_component/run_test_component.h"
 #include "garnet/bin/run_test_component/test_metadata.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "lib/sys/cpp/testing/enclosing_environment.h"
 #include "src/lib/files/file.h"

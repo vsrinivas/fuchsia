@@ -8,8 +8,8 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fsl/syslogger/init.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/logging.h"
 
 namespace network_time_service {
 

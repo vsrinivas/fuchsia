@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/strings/ascii.h"
+#include "src/lib/fxl/strings/ascii.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace fxl {
 namespace {

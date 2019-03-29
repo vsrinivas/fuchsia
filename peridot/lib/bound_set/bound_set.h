@@ -9,7 +9,7 @@
 
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 namespace modular {
 

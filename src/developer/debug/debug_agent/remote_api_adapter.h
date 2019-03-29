@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_DEBUG_AGENT_REMOTE_API_ADAPTER_H_
 #define GARNET_BIN_DEBUG_AGENT_REMOTE_API_ADAPTER_H_
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace debug_ipc {
 class StreamBuffer;

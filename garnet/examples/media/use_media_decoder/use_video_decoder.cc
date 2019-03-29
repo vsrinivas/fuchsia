@@ -10,8 +10,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/media/test/codec_client.h>
 #include <lib/media/test/frame_sink.h>

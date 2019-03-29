@@ -5,8 +5,8 @@
 #ifndef LIB_FXL_MEMORY_WEAK_PTR_INTERNAL_H_
 #define LIB_FXL_MEMORY_WEAK_PTR_INTERNAL_H_
 
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace fxl {
 namespace internal {

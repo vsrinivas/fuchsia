@@ -11,7 +11,7 @@
 #include <lib/fit/function.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace gtest {
 

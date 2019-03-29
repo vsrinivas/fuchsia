@@ -6,7 +6,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
-#include <lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/strings/join_strings.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include "src/lib/files/directory.h"

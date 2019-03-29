@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 #include "lib/ui/base_view/cpp/view_provider_component.h"
 #include "src/media/playback/mediaplayer_tmp/test/mediaplayer_test_util_params.h"
 #include "src/media/playback/mediaplayer_tmp/test/mediaplayer_test_util_view.h"

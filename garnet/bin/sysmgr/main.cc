@@ -9,8 +9,8 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include "garnet/bin/sysmgr/app.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 constexpr char kConfigDir[] = "/system/data/sysmgr/";
 constexpr char kConfigDataDir[] = "/config/data/sysmgr/";

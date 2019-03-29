@@ -4,7 +4,7 @@
 
 #include "garnet/bin/guest/manager/environment_manager_impl.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 static uint32_t g_next_env_id = 0;
 

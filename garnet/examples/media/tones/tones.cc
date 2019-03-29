@@ -15,7 +15,7 @@
 #include <poll.h>
 
 #include "garnet/examples/media/tones/midi_keyboard.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace examples {
 namespace {

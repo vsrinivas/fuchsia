@@ -6,8 +6,8 @@
 #define LIB_MESSAGE_QUEUE_CPP_MESSAGE_SENDER_CLIENT_H_
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 namespace modular {
 

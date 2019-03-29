@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "garnet/bin/appmgr/appmgr.h"
 #include "lib/sys/cpp/termination_reason.h"

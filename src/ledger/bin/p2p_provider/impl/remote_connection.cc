@@ -6,7 +6,7 @@
 
 #include <flatbuffers/flatbuffers.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/impl/envelope_generated.h"

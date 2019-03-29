@@ -12,7 +12,7 @@
 #include <vector>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 namespace cache {
 // Implements a self-populating LRU cache.

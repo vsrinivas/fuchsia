@@ -10,8 +10,8 @@
 #include "garnet/lib/ui/gfx/resources/snapshot/snapshot_generated.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/ui/base_view/cpp/v1_base_view.h"
 
 namespace snapshot {

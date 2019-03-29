@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 
 #include <fbl/unique_fd.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/boot/e820.h>
 
 #include "garnet/bin/guest/vmm/bits.h"

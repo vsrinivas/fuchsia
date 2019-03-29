@@ -60,7 +60,7 @@
 #include <trace-provider/provider.h>
 #endif
 
-#include "lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 

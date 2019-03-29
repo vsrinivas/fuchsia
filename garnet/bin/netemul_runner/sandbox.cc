@@ -10,8 +10,8 @@
 #include <lib/fit/promise.h>
 #include <lib/fit/sequencer.h>
 #include <lib/fsl/io/fd.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>

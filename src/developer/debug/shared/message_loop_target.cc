@@ -7,7 +7,7 @@
 #include "src/developer/debug/shared/message_loop_async.h"
 #include "src/developer/debug/shared/message_loop_zircon.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 

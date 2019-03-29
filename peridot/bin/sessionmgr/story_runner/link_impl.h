@@ -17,7 +17,7 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/bin/sessionmgr/storage/story_storage.h"
 #include "peridot/lib/ledger_client/ledger_client.h"

@@ -10,9 +10,9 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/string_number_conversions.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
 #include <lib/zx/time.h>
 #include <trace/event.h>
 

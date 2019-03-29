@@ -25,7 +25,7 @@
 
 #include "lib/escher/third_party/granite/vk/descriptor_set_layout.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {

@@ -7,8 +7,8 @@
 #include <trace/event.h>
 
 #include "lib/component/cpp/connect.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/time/time_point.h"
 #include "lib/ui/geometry/cpp/geometry_util.h"
 
 namespace mozart {

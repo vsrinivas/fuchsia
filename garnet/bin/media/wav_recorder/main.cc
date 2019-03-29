@@ -8,7 +8,7 @@
 
 #include "garnet/bin/media/wav_recorder/wav_recorder.h"
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);

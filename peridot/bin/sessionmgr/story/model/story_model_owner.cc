@@ -6,7 +6,7 @@
 
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include "peridot/bin/sessionmgr/story/model/apply_mutations.h"
 #include "peridot/bin/sessionmgr/story/model/story_model_storage.h"
 #include "peridot/bin/sessionmgr/story/model/story_mutator.h"

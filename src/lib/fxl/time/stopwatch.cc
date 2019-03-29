@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/time/stopwatch.h"
+#include "src/lib/fxl/time/stopwatch.h"
 
-#include "lib/fxl/time/time_delta.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/time/time_point.h"
 
 namespace fxl {
 

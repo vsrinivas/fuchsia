@@ -18,7 +18,7 @@
 #include "lib/escher/fs/hack_filesystem.h"
 #include "lib/escher/paper/paper_renderer2.h"
 #include "lib/escher/util/stopwatch.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 class WaterfallDemo : public Demo {
  public:

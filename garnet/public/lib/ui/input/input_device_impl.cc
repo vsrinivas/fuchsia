@@ -1,6 +1,6 @@
 #include <lib/ui/input/input_device_impl.h>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
 namespace mozart {

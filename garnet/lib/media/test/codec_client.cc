@@ -5,7 +5,7 @@
 #include <lib/media/test/codec_client.h>
 
 #include <lib/async/cpp/task.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 namespace {
 

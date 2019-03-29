@@ -6,8 +6,8 @@
 #include <set>
 #include <string>
 
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/substitute.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/substitute.h>
 #include "src/lib/files/path.h"
 
 #include "garnet/bin/iquery/formatters/json.h"

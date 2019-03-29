@@ -13,7 +13,7 @@
 #include <stdio.h>
 #include <vector>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace mozart {
 bool Touch::ParseTouchDescriptor(const hid::ReportDescriptor &desc) {

@@ -14,7 +14,7 @@
 #include "garnet/lib/far/format.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
-#include "lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace archive {
 namespace {

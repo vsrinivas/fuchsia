@@ -9,7 +9,7 @@
 #include <lib/zx/debuglog.h>
 #include <trace-engine/types.h>
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ktrace_provider {
 

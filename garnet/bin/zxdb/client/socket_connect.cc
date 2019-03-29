@@ -119,7 +119,7 @@ Err ConnectToHost(const std::string& host, uint16_t port,
 #include <fcntl.h>
 #include <netdb.h>
 
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 

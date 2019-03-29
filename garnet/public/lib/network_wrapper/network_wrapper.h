@@ -9,8 +9,8 @@
 #include <lib/fit/function.h>
 
 #include "lib/callback/cancellable.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace network_wrapper {
 

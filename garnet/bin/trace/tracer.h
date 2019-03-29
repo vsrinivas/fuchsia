@@ -15,7 +15,7 @@
 #include <trace-engine/fields.h>
 #include <trace-reader/reader.h>
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace tracing {
 

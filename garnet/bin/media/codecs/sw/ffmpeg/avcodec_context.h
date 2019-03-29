@@ -13,7 +13,7 @@ extern "C" {
 }
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/media/codec_impl/codec_packet.h>
 
 #include "buffer_pool.h"

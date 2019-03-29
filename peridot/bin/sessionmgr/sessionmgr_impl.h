@@ -22,7 +22,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/zx/eventpair.h>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"

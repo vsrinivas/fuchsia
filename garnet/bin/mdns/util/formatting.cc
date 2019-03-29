@@ -6,7 +6,7 @@
 #include <iostream>
 
 #include "garnet/bin/mdns/util/formatting.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace mdns {
 

@@ -5,7 +5,7 @@
 #ifndef LIB_NETEMUL_NETWORK_CONSUMER_H_
 #define LIB_NETEMUL_NETWORK_CONSUMER_H_
 
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include <stdlib.h>
 #include <memory>

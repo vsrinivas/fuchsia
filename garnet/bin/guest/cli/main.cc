@@ -13,7 +13,7 @@
 #include "garnet/bin/guest/cli/serial.h"
 #include "garnet/bin/guest/cli/socat.h"
 #include "lib/sys/cpp/component_context.h"
-#include "lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 static void usage() {
   std::cerr << "Usage: guest <command> <package> <command-args>...\n"

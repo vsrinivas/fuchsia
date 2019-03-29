@@ -9,7 +9,7 @@
 #include "gtest/gtest.h"
 #include "lib/escher/impl/vk/pipeline_cache.h"
 #include "lib/escher/impl/vk/pipeline_factory.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {

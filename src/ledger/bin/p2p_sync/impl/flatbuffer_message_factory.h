@@ -6,7 +6,7 @@
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_FLATBUFFER_MESSAGE_FACTORY_H_
 
 #include <flatbuffers/flatbuffers.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 

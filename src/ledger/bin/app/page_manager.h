@@ -14,7 +14,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/time/time_delta.h>
+#include <src/lib/fxl/time/time_delta.h>
 
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 #include "src/ledger/bin/app/page_delegate.h"

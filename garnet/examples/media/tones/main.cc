@@ -6,7 +6,7 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/examples/media/tones/tones.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 
 int main(int argc, const char** argv) {
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);

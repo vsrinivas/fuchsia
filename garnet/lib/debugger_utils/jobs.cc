@@ -16,9 +16,9 @@
 
 #include "garnet/lib/debugger_utils/util.h"
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace debugger_utils {
 

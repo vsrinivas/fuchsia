@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_SKETCHY_RESOURCES_IMPORT_NODE_H_
 
 #include "garnet/bin/ui/sketchy/resources/resource.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 

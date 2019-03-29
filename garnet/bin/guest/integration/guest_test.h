@@ -8,7 +8,7 @@
 #include "garnet/bin/guest/integration/enclosed_guest.h"
 
 #include <fbl/type_info.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 // GuestTest creates a static EnclosedGuest to be shared across all tests in a
 // test fixture. Each translation unit that uses GuestTest must instantiate

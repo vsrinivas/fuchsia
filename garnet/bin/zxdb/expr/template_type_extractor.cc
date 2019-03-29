@@ -5,7 +5,7 @@
 #include "garnet/bin/zxdb/expr/template_type_extractor.h"
 
 #include "garnet/bin/zxdb/expr/expr_token.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

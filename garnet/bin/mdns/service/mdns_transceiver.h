@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <vector>
 #include "garnet/bin/mdns/service/mdns_interface_transceiver.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace mdns {
 

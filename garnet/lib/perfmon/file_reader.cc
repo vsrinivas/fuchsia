@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 #include "src/lib/files/file.h"
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "file_reader.h"
 

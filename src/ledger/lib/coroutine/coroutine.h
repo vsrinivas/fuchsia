@@ -10,8 +10,8 @@
 #include <lib/callback/capture.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/ref_counted.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/memory/ref_counted.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 // This Coroutine library allows to use coroutines. A coroutine is a function
 // that can interrupt itself by yielding, and the computation will resume at the

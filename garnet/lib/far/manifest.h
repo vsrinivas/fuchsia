@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_FAR_MANIFEST_H_
 #define GARNET_LIB_FAR_MANIFEST_H_
 
-#include "lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace archive {
 class ArchiveWriter;

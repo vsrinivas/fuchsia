@@ -12,7 +12,7 @@
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/displays/display_watcher.h"
 #include "lib/async/cpp/wait.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 #include <lib/fit/function.h>
 #include <zircon/pixelformat.h>

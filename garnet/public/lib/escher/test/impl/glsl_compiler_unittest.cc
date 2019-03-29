@@ -4,7 +4,7 @@
 
 #include "lib/escher/impl/glsl_compiler.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {

@@ -10,8 +10,8 @@
 
 #include <fbl/vector.h>
 #include <fuchsia/simplecamera/cpp/fidl.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/ui/base_view/cpp/v1_base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
 

@@ -7,7 +7,7 @@
 
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "src/ledger/bin/environment/environment.h"

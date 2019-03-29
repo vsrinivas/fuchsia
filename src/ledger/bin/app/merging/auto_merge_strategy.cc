@@ -10,8 +10,8 @@
 
 #include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "src/ledger/bin/app/merging/conflict_resolver_client.h"
 #include "src/ledger/bin/app/page_manager.h"

@@ -7,7 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/socket/strings.h>
-#include <lib/fxl/command_line.h>
+#include <src/lib/fxl/command_line.h>
 
 #include "peridot/lib/socket/socket_pair.h"
 #include "peridot/lib/socket/socket_writer.h"

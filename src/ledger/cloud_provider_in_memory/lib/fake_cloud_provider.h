@@ -8,7 +8,7 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/fidl_helpers/bound_interface_set.h"
 #include "src/ledger/cloud_provider_in_memory/lib/fake_device_set.h"

@@ -25,7 +25,7 @@
 #include "gtest/gtest.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/interface_ptr.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 

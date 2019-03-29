@@ -9,9 +9,9 @@
 #include "garnet/bin/zxdb/expr/name_lookup.h"
 #include "garnet/bin/zxdb/expr/template_type_extractor.h"
 #include "garnet/bin/zxdb/symbols/modified_type.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 // The parser is a Pratt parser. The basic idea there is to have the
 // precedences (and associativities) encoded relative to each other and only

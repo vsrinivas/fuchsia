@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/zx/process.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/time.h>

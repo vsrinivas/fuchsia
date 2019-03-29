@@ -13,7 +13,7 @@
 #include "garnet/bin/mdns/service/mdns.h"
 #include "garnet/bin/mdns/service/mdns_agent.h"
 #include "garnet/lib/inet/socket_address.h"
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace mdns {
 

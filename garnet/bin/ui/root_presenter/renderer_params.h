@@ -8,7 +8,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <optional>
 
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 
 namespace root_presenter {
 

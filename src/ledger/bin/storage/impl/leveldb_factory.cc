@@ -9,10 +9,10 @@
 #include <lib/async/cpp/task.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/callback/trace_callback.h>
-#include <lib/fxl/memory/ref_counted.h>
-#include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/strings/string_view.h>
-#include <lib/fxl/synchronization/thread_annotations.h>
+#include <src/lib/fxl/memory/ref_counted.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/synchronization/thread_annotations.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/lib/files/directory.h"

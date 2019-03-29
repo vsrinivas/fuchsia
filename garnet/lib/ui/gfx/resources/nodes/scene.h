@@ -6,7 +6,7 @@
 #define GARNET_LIB_UI_GFX_RESOURCES_NODES_SCENE_H_
 
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace scenic_impl {
 namespace gfx {

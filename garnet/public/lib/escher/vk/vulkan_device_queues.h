@@ -11,7 +11,7 @@
 
 #include "lib/escher/vk/vulkan_context.h"
 #include "lib/escher/vk/vulkan_instance.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

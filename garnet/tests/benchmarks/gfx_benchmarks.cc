@@ -6,8 +6,8 @@
 
 #include <unistd.h>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/join_strings.h"
 
 #include <lib/fdio/spawn.h>
 #include <lib/zx/handle.h>

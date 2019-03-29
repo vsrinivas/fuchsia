@@ -14,7 +14,7 @@
 #include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace mdns {
 

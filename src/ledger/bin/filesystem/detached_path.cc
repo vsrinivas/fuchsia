@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/filesystem/detached_path.h"
 
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/concatenate.h>
 
 #include <utility>
 

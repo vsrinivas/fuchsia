@@ -16,11 +16,11 @@
 #include <stdlib.h>
 #include <iostream>
 
-#include <lib/fxl/command_line.h>
+#include <src/lib/fxl/command_line.h>
 #include "src/lib/files/file.h"
-#include <lib/fxl/log_settings.h>
-#include <lib/fxl/log_settings_command_line.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/log_settings.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/trace/spec.h"
 #include "garnet/bin/trace/tests/integration_test_utils.h"

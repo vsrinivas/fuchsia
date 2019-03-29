@@ -11,7 +11,7 @@
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/app/merging/merge_resolver.h"
 #include "src/ledger/bin/fidl/include/types.h"

@@ -4,7 +4,7 @@
 
 #include "garnet/bin/media/audio_core/driver_ring_buffer.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio {
 

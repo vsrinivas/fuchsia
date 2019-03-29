@@ -16,9 +16,9 @@
 #include "garnet/bin/appmgr/job_provider_impl.h"
 #include "garnet/bin/appmgr/service_provider_dir_impl.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_counted.h"
-#include "lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace component {
 class Realm;

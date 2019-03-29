@@ -16,7 +16,7 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 #include "lib/media/audio/perceived_level.h"
 
 namespace media {

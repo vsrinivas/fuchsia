@@ -7,8 +7,8 @@
 #include <string.h>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/compiler_specific.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/compiler_specific.h>
+#include <src/lib/fxl/logging.h>
 
 #include "gtest/gtest.h"
 

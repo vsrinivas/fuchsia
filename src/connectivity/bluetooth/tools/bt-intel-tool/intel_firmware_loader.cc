@@ -25,7 +25,7 @@
 
 #include "bt_intel.h"
 
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 using ::bt::common::BufferView;
 using ::bt::common::PacketView;

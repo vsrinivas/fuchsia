@@ -6,7 +6,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/ui/scenic/cpp/commands.h>

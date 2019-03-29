@@ -11,7 +11,7 @@
 
 #include "garnet/examples/escher/common/demo.h"
 #include "lib/escher/util/trace_macros.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 static DemoHarness* g_harness = nullptr;
 static GLFWwindow* g_window;

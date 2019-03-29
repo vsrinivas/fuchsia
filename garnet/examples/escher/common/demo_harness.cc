@@ -9,8 +9,8 @@
 #include "lib/escher/vk/gpu_mem.h"
 #include "lib/escher/vk/image.h"
 #include "lib/escher/vk/vulkan_instance.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 #include <iostream>
 #include <set>

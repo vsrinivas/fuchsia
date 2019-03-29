@@ -8,7 +8,7 @@
 #include "garnet/bin/zxdb/expr/number_parser.h"
 #include "garnet/bin/zxdb/symbols/base_type.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/arraysize.h"
+#include "src/lib/fxl/arraysize.h"
 
 namespace zxdb {
 

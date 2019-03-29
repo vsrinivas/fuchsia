@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/url/url_canon_icu.h"
 #include "src/lib/url/url_canon_internal.h"  // for IntToString
 #include "third_party/icu/source/common/unicode/ucnv.h"

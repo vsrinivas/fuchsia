@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/cloud_sync/public/ledger_sync.h"
 #include "src/ledger/bin/cloud_sync/public/sync_state_watcher.h"

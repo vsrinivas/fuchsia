@@ -10,7 +10,7 @@
 #include <lib/async/default.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
 namespace modular {

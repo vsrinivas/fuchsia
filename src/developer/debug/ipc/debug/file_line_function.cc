@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/ipc/debug/file_line_function.h"
 
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/files/path.h"
 
 namespace debug_ipc {

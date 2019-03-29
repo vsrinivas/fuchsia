@@ -7,8 +7,8 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"

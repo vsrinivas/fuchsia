@@ -4,7 +4,7 @@
 
 #include "garnet/testing/views/embedder_view.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 
 namespace scenic {

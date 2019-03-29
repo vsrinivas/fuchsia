@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 
 #include "garnet/bin/mdns/service/mdns_addresses.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace mdns {
 

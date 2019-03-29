@@ -17,8 +17,8 @@
 #include "garnet/bin/mdns/service/mdns_agent.h"
 #include "garnet/bin/mdns/service/mdns_transceiver.h"
 #include "garnet/lib/inet/socket_address.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/time/time_point.h"
 
 namespace mdns {
 

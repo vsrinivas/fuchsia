@@ -9,7 +9,7 @@
 
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "src/ledger/bin/app/page_snapshot_impl.h"
 #include "src/ledger/bin/storage/public/commit_watcher.h"

@@ -6,7 +6,7 @@
 #define SRC_LEDGER_BIN_APP_SYNC_WATCHER_SET_H_
 
 #include <lib/callback/auto_cleanable.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/sync_coordinator/public/sync_state_watcher.h"

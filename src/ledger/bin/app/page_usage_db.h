@@ -11,7 +11,7 @@
 #include <lib/callback/operation_serializer.h>
 #include <lib/timekeeper/clock.h>
 
-#include "lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/concatenate.h"
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"

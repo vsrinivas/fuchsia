@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <zircon/processargs.h>

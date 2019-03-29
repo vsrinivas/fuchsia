@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TEST_CONSTANTS_H_
 #define SRC_LEDGER_LIB_FIREBASE_AUTH_TESTING_SERVICE_ACCOUNT_TEST_CONSTANTS_H_
 
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 // This file contains constant strings used to test code that needs a
 // Credentials.

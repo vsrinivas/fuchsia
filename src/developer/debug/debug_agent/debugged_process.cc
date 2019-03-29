@@ -8,7 +8,7 @@
 #include <zircon/syscalls/exception.h>
 #include <utility>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/object_util.h"

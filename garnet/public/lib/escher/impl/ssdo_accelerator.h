@@ -8,7 +8,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "lib/escher/forward_declarations.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {

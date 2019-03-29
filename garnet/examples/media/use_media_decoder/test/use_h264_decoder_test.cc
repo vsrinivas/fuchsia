@@ -17,7 +17,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/media/codec_impl/fourcc.h>
 
 #include <set>

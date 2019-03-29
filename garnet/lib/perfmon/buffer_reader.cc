@@ -6,7 +6,7 @@
 #include <zircon/syscalls.h>
 #endif
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "buffer_reader.h"
 #include "records.h"

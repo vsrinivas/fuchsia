@@ -13,7 +13,7 @@
 
 #include "garnet/bin/appmgr/realm.h"
 #include "garnet/lib/cmx/sandbox.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
 

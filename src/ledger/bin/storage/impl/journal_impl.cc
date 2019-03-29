@@ -11,7 +11,7 @@
 
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "src/ledger/bin/storage/impl/btree/builder.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"

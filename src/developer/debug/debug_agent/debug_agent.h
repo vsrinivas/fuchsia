@@ -10,7 +10,7 @@
 
 #include <zircon/types.h>
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/debugged_job.h"

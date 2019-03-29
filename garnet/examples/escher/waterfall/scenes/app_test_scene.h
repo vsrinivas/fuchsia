@@ -8,7 +8,7 @@
 #include "lib/escher/gl/mesh.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/viewing_volume.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 class AppTestScene {
  public:

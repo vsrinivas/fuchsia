@@ -9,7 +9,7 @@
 
 #include "garnet/bin/ui/input_reader/fdio_device_watcher.h"
 #include "garnet/bin/ui/input_reader/input_interpreter.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace mozart {
 

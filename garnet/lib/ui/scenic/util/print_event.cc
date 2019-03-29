@@ -4,7 +4,7 @@
 
 #include "garnet/lib/ui/scenic/util/print_event.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 using fuchsia::ui::gfx::Event;
 using fuchsia::ui::gfx::ImportUnboundEvent;

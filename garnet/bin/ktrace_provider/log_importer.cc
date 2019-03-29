@@ -9,7 +9,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace ktrace_provider {
 

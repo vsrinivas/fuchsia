@@ -8,7 +8,7 @@
 #include <string>
 
 #include <fuchsia/inspect/cpp/fidl.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "garnet/bin/iquery/options.h"
 

@@ -18,8 +18,8 @@
 #include <lib/component/cpp/connect.h>
 #include <lib/fsl/io/fd.h>
 #include <lib/fsl/types/type_converters.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"

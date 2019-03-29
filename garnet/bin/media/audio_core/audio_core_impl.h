@@ -18,8 +18,8 @@
 #include "garnet/bin/media/audio_core/pending_flush_token.h"
 #include "lib/component/cpp/outgoing.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 namespace component {
 class Services;

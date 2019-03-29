@@ -12,7 +12,7 @@
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
 #include "harvester.h"
 #include "harvester_grpc.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace harvester {
 

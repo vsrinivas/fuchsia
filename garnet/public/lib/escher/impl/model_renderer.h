@@ -12,7 +12,7 @@
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/shape/mesh.h"
 #include "lib/escher/vk/texture.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {

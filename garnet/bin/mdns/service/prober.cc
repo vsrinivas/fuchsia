@@ -4,9 +4,9 @@
 
 #include "garnet/bin/mdns/service/prober.h"
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_delta.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/time/time_point.h"
 #include <zircon/syscalls.h>
 
 namespace mdns {

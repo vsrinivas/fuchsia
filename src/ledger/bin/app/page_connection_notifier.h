@@ -6,7 +6,7 @@
 #define SRC_LEDGER_BIN_APP_PAGE_CONNECTION_NOTIFIER_H_
 
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 #include <trace/event.h>
 
 #include "src/ledger/bin/app/page_usage_listener.h"

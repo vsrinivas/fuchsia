@@ -8,7 +8,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include "peridot/bin/context_engine/scope_utils.h"
 #include "peridot/tests/maxwell_integration/context_engine_test_base.h"
 #include "peridot/tests/maxwell_integration/maxwell_service_provider_bridge.h"

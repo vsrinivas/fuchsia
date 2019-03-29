@@ -9,7 +9,7 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/fxl/time/time_point.h>
+#include <src/lib/fxl/time/time_point.h>
 
 #include "garnet/bin/ui/input_reader/stylus.h"
 

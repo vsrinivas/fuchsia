@@ -9,7 +9,7 @@
 
 #include <flatbuffers/flatbuffers.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 #include <lib/netconnector/cpp/message_relay.h>
 #include <lib/zx/channel.h>
 

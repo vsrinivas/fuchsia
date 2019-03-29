@@ -9,7 +9,7 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/vector.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <openssl/sha.h>
 
 namespace maxwell {

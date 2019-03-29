@@ -5,7 +5,7 @@
 #ifndef LIB_FXL_FILES_UNIQUE_FD_H_
 #define LIB_FXL_FILES_UNIQUE_FD_H_
 
-#include "lib/fxl/memory/unique_object.h"
+#include "src/lib/fxl/memory/unique_object.h"
 
 namespace fxl {
 namespace internal {

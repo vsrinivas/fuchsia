@@ -11,7 +11,7 @@
 #include "lib/escher/impl/model_pipeline_spec.h"
 #include "lib/escher/resources/resource.h"
 #include "lib/escher/util/hash_map.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {

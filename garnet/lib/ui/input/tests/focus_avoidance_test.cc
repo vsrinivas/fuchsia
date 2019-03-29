@@ -11,7 +11,7 @@
 #include "garnet/lib/ui/input/tests/util.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/resources.h"

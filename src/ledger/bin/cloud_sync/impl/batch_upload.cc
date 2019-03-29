@@ -13,8 +13,8 @@
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 #include <trace/event.h>
 
 #include "peridot/lib/commit_pack/commit_pack.h"

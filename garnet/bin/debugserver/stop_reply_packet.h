@@ -9,7 +9,7 @@
 
 #include <zircon/types.h>
 
-#include "lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/strings/string_view.h"
 
 namespace debugserver {
 

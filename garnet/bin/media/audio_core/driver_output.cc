@@ -13,7 +13,7 @@
 
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
 #include "garnet/lib/media/wav_writer/wav_writer.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
 

@@ -7,8 +7,8 @@
 #include <memory>
 #include <string>
 
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 #include <lib/zx/suspend_token.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>

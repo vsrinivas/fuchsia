@@ -8,8 +8,8 @@
 #include <vector>
 
 #include <lib/fsl/vmo/sized_vmo.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/storage/public/types.h"
 

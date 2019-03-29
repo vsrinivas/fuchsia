@@ -10,7 +10,7 @@
 #include <string>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/cloud_sync/public/page_sync.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"

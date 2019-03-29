@@ -9,7 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/concatenate.h>
 #include <lib/zx/time.h>
 
 #include "src/ledger/bin/app/constants.h"

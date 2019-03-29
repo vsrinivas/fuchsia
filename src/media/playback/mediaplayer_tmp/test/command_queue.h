@@ -10,7 +10,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <queue>
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_function.h"
 
 namespace media_player {

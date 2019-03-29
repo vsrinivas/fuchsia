@@ -5,8 +5,8 @@
 #ifndef SRC_LEDGER_BIN_APP_PAGE_EVICTION_POLICIES_H_
 #define SRC_LEDGER_BIN_APP_PAGE_EVICTION_POLICIES_H_
 
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"

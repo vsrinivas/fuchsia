@@ -5,7 +5,7 @@
 #ifndef LIB_FXL_DEBUG_DEBUGGER_H_
 #define LIB_FXL_DEBUG_DEBUGGER_H_
 
-#include "lib/fxl/fxl_export.h"
+#include "src/lib/fxl/fxl_export.h"
 
 namespace fxl {
 

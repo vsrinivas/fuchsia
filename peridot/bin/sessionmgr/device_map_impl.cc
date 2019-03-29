@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fxl/time/time_point.h>
+#include <src/lib/fxl/time/time_point.h>
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 #include "peridot/lib/fidl/json_xdr.h"

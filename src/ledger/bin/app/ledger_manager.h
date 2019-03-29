@@ -14,9 +14,9 @@
 #include <lib/callback/auto_cleanable.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/weak_ptr.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/ledger_impl.h"

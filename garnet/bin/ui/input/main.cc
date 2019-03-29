@@ -17,12 +17,12 @@
 #include "garnet/bin/ui/input/inverse_keymap.h"
 #include "lib/component/cpp/connect.h"
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/time/time_point.h"
 #include "lib/ui/input/cpp/formatting.h"
 
 namespace {

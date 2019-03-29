@@ -9,7 +9,7 @@
 #include "garnet/bin/ui/view_manager/view_impl.h"
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "garnet/bin/ui/view_manager/view_stub.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace view_manager {
 

@@ -4,7 +4,7 @@
 
 #include "garnet/bin/ui/sketchy/stroke/stroke_fitter.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 

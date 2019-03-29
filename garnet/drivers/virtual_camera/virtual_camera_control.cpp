@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/log_level.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/log_level.h>
+#include <src/lib/fxl/logging.h>
 
 #include "virtual_camera_control.h"
 

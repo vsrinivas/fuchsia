@@ -14,8 +14,8 @@
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/vk/buffer.h"
 #include "lib/escher/vk/gpu_allocator.h"
-#include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/time/time_point.h"
 
 namespace escher {
 

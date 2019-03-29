@@ -7,7 +7,7 @@
 #include <algorithm>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node_generated.h"

@@ -11,7 +11,7 @@
 #include <sstream>
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fidl/cpp/type_converter.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer_tmp/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer_tmp/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer_tmp/fidl/simple_stream_sink_impl.h"

@@ -12,7 +12,7 @@
 #include <stack>
 
 #include <lib/fit/defer.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/zx/event.h>
 #include <zircon/assert.h>
 

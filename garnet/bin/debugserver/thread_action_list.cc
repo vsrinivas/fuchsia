@@ -6,7 +6,7 @@
 
 #include "garnet/lib/debugger_utils/util.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include "util.h"
 

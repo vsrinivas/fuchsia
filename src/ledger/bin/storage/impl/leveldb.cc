@@ -8,7 +8,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 
 #include "src/ledger/bin/cobalt/cobalt.h"

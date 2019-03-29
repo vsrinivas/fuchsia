@@ -11,7 +11,7 @@
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/resources/resource_manager.h"
 #include "lib/escher/vk/buffer.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace escher {
 namespace impl {

@@ -8,7 +8,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/command_line.h>
+#include <src/lib/fxl/command_line.h>
 
 #include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/guest.h"
 

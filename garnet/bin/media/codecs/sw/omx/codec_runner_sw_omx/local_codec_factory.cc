@@ -7,8 +7,8 @@
 #include "codec_runner.h"
 #include "omx_codec_runner.h"
 
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
 
 #include <list>
 #include <map>

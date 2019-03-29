@@ -9,7 +9,7 @@
 #include <set>
 #include <string>
 
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "peridot/lib/convert/convert.h"
 

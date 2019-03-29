@@ -8,7 +8,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 #include "lib/test_runner/cpp/test_runner.h"
 
 class QuitObserver : public test_runner::TestRunObserver {

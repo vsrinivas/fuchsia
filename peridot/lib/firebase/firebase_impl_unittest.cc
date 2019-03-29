@@ -11,8 +11,8 @@
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <lib/fsl/socket/strings.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/network_wrapper/fake_network_wrapper.h>
 #include <lib/network_wrapper/network_wrapper_impl.h>

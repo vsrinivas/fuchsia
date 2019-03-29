@@ -6,7 +6,7 @@
 #define LIB_ESCHER_BASE_OWNER_H_
 
 #include "lib/escher/base/ownable.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

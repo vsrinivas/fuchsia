@@ -10,7 +10,7 @@
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/command_buffer_sequencer.h"
 #include "lib/escher/vk/vulkan_context.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {

@@ -11,7 +11,7 @@
 #include "garnet/lib/inet/socket_address.h"
 #include "lib/component/cpp/startup_context.h"
 #include "src/lib/files/unique_fd.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace netconnector {
 namespace {

@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include "lib/fxl/compiler_specific.h"
+#include "src/lib/fxl/compiler_specific.h"
 
 namespace zxdb {
 

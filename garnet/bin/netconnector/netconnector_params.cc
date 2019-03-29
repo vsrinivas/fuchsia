@@ -9,8 +9,8 @@
 
 #include "garnet/lib/inet/ip_address.h"
 #include "src/lib/files/file.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/split_string.h"
 
 namespace netconnector {
 namespace {

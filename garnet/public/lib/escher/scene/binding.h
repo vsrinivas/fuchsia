@@ -5,7 +5,7 @@
 #ifndef LIB_ESCHER_SCENE_BINDING_H_
 #define LIB_ESCHER_SCENE_BINDING_H_
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

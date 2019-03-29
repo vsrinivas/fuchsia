@@ -16,7 +16,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/time.h>
 
 using fuchsia::cobalt::Status;

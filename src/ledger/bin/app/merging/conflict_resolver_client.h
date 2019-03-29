@@ -11,8 +11,8 @@
 #include <lib/callback/operation_serializer.h>
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "src/ledger/bin/app/diff_utils.h"
 #include "src/ledger/bin/app/page_manager.h"

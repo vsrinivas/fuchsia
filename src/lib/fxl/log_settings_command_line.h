@@ -8,8 +8,8 @@
 #include <string>
 #include <vector>
 
-#include "lib/fxl/fxl_export.h"
-#include "lib/fxl/log_settings.h"
+#include "src/lib/fxl/fxl_export.h"
+#include "src/lib/fxl/log_settings.h"
 
 namespace fxl {
 

@@ -6,7 +6,7 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/threads.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include <unistd.h>
 

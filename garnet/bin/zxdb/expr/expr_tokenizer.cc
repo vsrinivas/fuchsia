@@ -8,8 +8,8 @@
 
 #include <type_traits>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 

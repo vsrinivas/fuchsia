@@ -7,7 +7,7 @@
 #include <functional>
 #include <iostream>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 namespace ble = fuchsia::bluetooth::le;
 

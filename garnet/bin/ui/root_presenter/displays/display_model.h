@@ -10,7 +10,7 @@
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"
 
 #include <fuchsia/ui/policy/cpp/fidl.h>
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace root_presenter {
 

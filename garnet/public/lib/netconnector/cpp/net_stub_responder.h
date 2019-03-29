@@ -11,8 +11,8 @@
 #include <fuchsia/netconnector/cpp/fidl.h>
 
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
 
 namespace netconnector {

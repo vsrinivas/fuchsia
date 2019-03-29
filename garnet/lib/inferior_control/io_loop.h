@@ -9,9 +9,9 @@
 
 #include <lib/async-loop/cpp/loop.h>
 
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 namespace inferior_control {
 

@@ -8,7 +8,7 @@
 #include <map>
 
 #include "lib/json/json_parser.h"
-#include "lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "rapidjson/document.h"
 
 namespace component {

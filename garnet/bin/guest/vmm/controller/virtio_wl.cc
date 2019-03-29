@@ -5,7 +5,7 @@
 #include "garnet/bin/guest/vmm/controller/virtio_wl.h"
 
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 
 static constexpr char kVirtioWlUrl[] =

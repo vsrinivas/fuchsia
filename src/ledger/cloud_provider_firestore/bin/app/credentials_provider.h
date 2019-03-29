@@ -10,7 +10,7 @@
 
 #include <grpc++/grpc++.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 namespace cloud_provider_firestore {
 

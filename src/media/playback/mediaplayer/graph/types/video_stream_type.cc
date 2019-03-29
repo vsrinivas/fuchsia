@@ -5,7 +5,7 @@
 #include "src/media/playback/mediaplayer/graph/types/video_stream_type.h"
 
 #include <unordered_map>
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"
 
 namespace media_player {

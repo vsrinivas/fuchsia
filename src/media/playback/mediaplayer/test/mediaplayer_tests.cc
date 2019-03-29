@@ -9,7 +9,7 @@
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <queue>
 #include "lib/fsl/io/fd.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/media/timeline/type_converters.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"

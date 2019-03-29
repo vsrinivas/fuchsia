@@ -7,7 +7,7 @@
 
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
 

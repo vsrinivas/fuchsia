@@ -10,7 +10,7 @@
 
 #include <zircon/types.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {

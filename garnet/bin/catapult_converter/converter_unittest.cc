@@ -5,8 +5,8 @@
 #include <zircon/compiler.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/strings/split_string.h"
 #include "rapidjson/error/en.h"
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/filewritestream.h"

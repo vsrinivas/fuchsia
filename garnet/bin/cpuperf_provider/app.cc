@@ -10,9 +10,9 @@
 
 #include <lib/async/default.h>
 
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/string_number_conversions.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
 
 #include "garnet/bin/cpuperf_provider/categories.h"
 #include "garnet/bin/cpuperf_provider/importer.h"

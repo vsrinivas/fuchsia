@@ -12,7 +12,7 @@
 #include "garnet/lib/far/archive_reader.h"
 #include "garnet/lib/far/archive_writer.h"
 #include "garnet/lib/far/manifest.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 #include "src/lib/files/unique_fd.h"
 
 namespace archive {

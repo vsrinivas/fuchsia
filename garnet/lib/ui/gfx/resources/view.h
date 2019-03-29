@@ -16,7 +16,7 @@
 #include "garnet/lib/ui/gfx/resources/resource_type_info.h"
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace scenic_impl {
 namespace gfx {

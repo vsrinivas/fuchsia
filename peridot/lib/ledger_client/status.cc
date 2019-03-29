@@ -7,7 +7,7 @@
 #include <string>
 
 #include <fuchsia/ledger/cpp/fidl.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 
 namespace modular {

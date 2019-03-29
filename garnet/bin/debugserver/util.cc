@@ -12,9 +12,9 @@
 #include "garnet/lib/debugger_utils/byte_block.h"
 #include "garnet/lib/debugger_utils/util.h"
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/string_number_conversions.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace debugserver {
 

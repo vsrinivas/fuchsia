@@ -5,7 +5,7 @@
 #include "src/ledger/bin/environment/environment.h"
 
 #include <lib/backoff/exponential_backoff.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/timekeeper/system_clock.h>
 
 #include "peridot/lib/ledger_client/constants.h"

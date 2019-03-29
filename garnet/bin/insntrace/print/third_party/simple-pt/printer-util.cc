@@ -29,7 +29,7 @@
 
 #include "printer-util.h"
 
-#include "lib/fxl/arraysize.h"
+#include "src/lib/fxl/arraysize.h"
 
 namespace simple_pt {
 

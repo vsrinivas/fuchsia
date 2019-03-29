@@ -13,8 +13,8 @@
 
 #include <fuchsia/bluetooth/control/cpp/fidl.h>
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/split_string.h"
 
 namespace ble = fuchsia::bluetooth::le;
 

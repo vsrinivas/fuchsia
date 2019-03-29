@@ -8,8 +8,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async_promise/executor.h>
 #include <lib/fit/promise.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/log_settings_command_line.h>
 
 #include "garnet/bin/iquery/formatter.h"
 #include "garnet/bin/iquery/modes.h"

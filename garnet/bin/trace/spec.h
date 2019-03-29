@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace tracing {
 

@@ -6,7 +6,7 @@
 
 #include "garnet/testing/benchmarking/benchmarking.h"
 #include "garnet/tests/benchmarks/gfx_benchmarks.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 int main(int argc, const char** argv) {
   auto maybe_benchmarks_runner =

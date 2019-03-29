@@ -7,7 +7,7 @@
 #include <lib/context/cpp/context_helper.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"

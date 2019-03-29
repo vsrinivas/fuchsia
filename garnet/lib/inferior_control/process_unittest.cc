@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async/cpp/task.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 

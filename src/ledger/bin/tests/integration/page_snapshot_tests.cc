@@ -10,8 +10,8 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "garnet/public/lib/callback/waiter.h"

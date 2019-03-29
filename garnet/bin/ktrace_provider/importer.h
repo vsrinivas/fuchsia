@@ -18,7 +18,7 @@
 #include <trace-engine/context.h>
 
 #include "garnet/bin/ktrace_provider/tags.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace ktrace_provider {
 

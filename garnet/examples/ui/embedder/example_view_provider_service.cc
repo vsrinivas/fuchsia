@@ -4,7 +4,7 @@
 
 #include "garnet/examples/ui/embedder/example_view_provider_service.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 namespace embedder {

@@ -5,7 +5,7 @@
 #include "garnet/examples/escher/waterfall/scenes/shadow_test_scene.h"
 
 #include "lib/escher/renderer.h"
-#include "lib/fxl/arraysize.h"
+#include "src/lib/fxl/arraysize.h"
 
 using namespace escher;
 

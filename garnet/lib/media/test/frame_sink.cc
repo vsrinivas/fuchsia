@@ -11,7 +11,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/media/codec_impl/fourcc.h>
 #include <lib/zx/vmo.h>
 

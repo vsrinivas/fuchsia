@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/dwarf_die_decoder.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 

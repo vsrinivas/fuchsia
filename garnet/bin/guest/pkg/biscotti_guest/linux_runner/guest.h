@@ -13,7 +13,7 @@
 #include <grpc++/grpc++.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/command_line.h>
+#include <src/lib/fxl/command_line.h>
 #include <lib/guest/scenic_wayland_dispatcher.h>
 
 #include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/linux_component.h"

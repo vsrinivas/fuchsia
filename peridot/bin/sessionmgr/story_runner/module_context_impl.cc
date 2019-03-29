@@ -7,7 +7,7 @@
 #include <string>
 
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/strings/join_strings.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"

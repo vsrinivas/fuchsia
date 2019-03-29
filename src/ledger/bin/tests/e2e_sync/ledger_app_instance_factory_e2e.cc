@@ -9,7 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/socket/strings.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 #include <lib/svc/cpp/services.h>
 
 #include "peridot/lib/convert/convert.h"

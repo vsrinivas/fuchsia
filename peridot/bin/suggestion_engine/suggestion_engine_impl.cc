@@ -10,8 +10,8 @@
 #include <lib/context/cpp/context_helper.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/time/time_delta.h>
-#include <lib/fxl/time/time_point.h>
+#include <src/lib/fxl/time/time_delta.h>
+#include <src/lib/fxl/time/time_point.h>
 #include "lib/fidl/cpp/clone.h"
 #include "src/lib/uuid/uuid.h"
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
-#include <lib/fxl/arraysize.h>
+#include <src/lib/fxl/arraysize.h>
 
 #include "garnet/lib/debugger_utils/argv.h"
 

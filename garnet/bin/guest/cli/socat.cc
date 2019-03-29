@@ -11,7 +11,7 @@
 #include "garnet/bin/guest/cli/serial.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fsl/handles/object_info.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 class GuestVsockAcceptor : public fuchsia::guest::HostVsockAcceptor {
  public:

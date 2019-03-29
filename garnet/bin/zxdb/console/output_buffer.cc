@@ -8,7 +8,7 @@
 #include <string_view>
 
 #include "garnet/bin/zxdb/console/string_util.h"
-#include "lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/split_string.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

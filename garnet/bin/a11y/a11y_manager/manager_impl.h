@@ -13,8 +13,8 @@
 
 #include "garnet/bin/a11y/a11y_manager/semantic_tree.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace a11y_manager {
 

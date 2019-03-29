@@ -4,8 +4,8 @@
 
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
-#include "lib/fxl/strings/concatenate.h"
-#include "lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 #include <regex>
 #include <string>

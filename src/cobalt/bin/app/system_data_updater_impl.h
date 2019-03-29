@@ -9,7 +9,7 @@
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "third_party/cobalt/encoder/system_data.h"
 
 namespace cobalt {

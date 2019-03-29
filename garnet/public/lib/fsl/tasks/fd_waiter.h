@@ -13,8 +13,8 @@
 #include <lib/fit/function.h>
 #include <zircon/types.h>
 
-#include "lib/fxl/fxl_export.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/fxl_export.h"
+#include "src/lib/fxl/macros.h"
 
 namespace fsl {
 

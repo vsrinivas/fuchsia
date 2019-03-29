@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/media/playback/mediaplayer/test/fakes/packet_info.h"
 
 namespace media_player {

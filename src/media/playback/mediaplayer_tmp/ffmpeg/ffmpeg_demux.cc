@@ -12,8 +12,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "lib/media/timeline/timeline_rate.h"
 #include "src/media/playback/mediaplayer_tmp/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer_tmp/ffmpeg/av_format_context.h"

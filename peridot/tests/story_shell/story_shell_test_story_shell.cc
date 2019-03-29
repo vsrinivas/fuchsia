@@ -12,9 +12,9 @@
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/component_base.h"

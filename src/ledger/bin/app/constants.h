@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_APP_CONSTANTS_H_
 #define SRC_LEDGER_BIN_APP_CONSTANTS_H_
 
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/storage/public/types.h"
 

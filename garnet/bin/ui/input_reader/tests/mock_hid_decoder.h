@@ -9,7 +9,7 @@
 #include <lib/zx/event.h>
 
 #include "garnet/bin/ui/input_reader/hid_decoder.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace mozart {
 

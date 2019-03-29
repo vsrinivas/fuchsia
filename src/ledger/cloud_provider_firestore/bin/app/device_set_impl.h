@@ -11,8 +11,8 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/vector.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "src/ledger/cloud_provider_firestore/bin/app/credentials_provider.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/firestore_service.h"

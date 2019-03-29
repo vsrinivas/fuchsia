@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/ipc/message_reader.h"
 

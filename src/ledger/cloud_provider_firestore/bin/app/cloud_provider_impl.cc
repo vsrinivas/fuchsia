@@ -8,9 +8,9 @@
 
 #include <lib/callback/scoped_callback.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/serialization_version.h"

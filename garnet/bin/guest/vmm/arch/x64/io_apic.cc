@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>

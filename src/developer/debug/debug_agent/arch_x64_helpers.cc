@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/debug_agent/arch.h"
 
 namespace debug_agent {

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "endpoint.h"
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <cstdio>
 #include <memory>
 

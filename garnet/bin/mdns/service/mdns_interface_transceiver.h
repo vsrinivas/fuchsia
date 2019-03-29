@@ -15,7 +15,7 @@
 #include "garnet/lib/inet/ip_address.h"
 #include "garnet/lib/inet/socket_address.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "src/lib/files/unique_fd.h"
 
 namespace mdns {

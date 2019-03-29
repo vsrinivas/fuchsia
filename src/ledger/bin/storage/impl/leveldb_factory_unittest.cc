@@ -8,8 +8,8 @@
 
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_number_conversions.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"

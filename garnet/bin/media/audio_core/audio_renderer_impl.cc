@@ -8,8 +8,8 @@
 
 #include "garnet/bin/media/audio_core/audio_core_impl.h"
 #include "garnet/bin/media/audio_core/audio_output.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio {
 

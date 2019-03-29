@@ -11,7 +11,7 @@
 #include <lib/async/cpp/wait.h>
 
 #include "garnet/bin/ui/input_reader/device_watcher.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace mozart {
 

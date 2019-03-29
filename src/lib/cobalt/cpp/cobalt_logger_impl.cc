@@ -14,8 +14,8 @@
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/callback/waiter.h>
 #include <lib/component/cpp/connect.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/zx/time.h>
 
 using fuchsia::cobalt::LoggerFactory;

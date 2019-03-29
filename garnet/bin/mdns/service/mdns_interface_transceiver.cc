@@ -19,8 +19,8 @@
 #include "garnet/bin/mdns/service/mdns_interface_transceiver_v4.h"
 #include "garnet/bin/mdns/service/mdns_interface_transceiver_v6.h"
 #include "lib/fostr/hex_dump.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/time/time_delta.h"
 #include "src/lib/files/unique_fd.h"
 
 namespace mdns {

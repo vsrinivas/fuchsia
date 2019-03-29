@@ -6,7 +6,7 @@
 
 #include <string.h>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 VirtioQueueFake::VirtioQueueFake(VirtioQueue* queue, uint16_t queue_size)
     : queue_(queue),

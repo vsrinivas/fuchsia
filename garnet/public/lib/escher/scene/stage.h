@@ -11,7 +11,7 @@
 #include "lib/escher/scene/ambient_light.h"
 #include "lib/escher/scene/directional_light.h"
 #include "lib/escher/scene/viewing_volume.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace escher {
 

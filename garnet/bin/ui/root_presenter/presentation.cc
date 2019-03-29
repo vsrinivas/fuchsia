@@ -8,7 +8,7 @@
 #include <utility>
 
 #include <lib/component/cpp/connect.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <trace/event.h>
 

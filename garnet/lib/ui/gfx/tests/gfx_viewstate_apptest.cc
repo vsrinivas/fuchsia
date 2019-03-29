@@ -12,7 +12,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/base_view/cpp/base_view.h>

@@ -10,8 +10,8 @@
 #include <lib/fdio/directory.h>
 #include <zircon/status.h>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 namespace component {
 

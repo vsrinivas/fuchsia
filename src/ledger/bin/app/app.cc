@@ -13,10 +13,10 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/log_settings_command_line.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/inspect/inspect.h>
 #include <trace-provider/provider.h>
 #include <zircon/device/vfs.h>

@@ -7,7 +7,7 @@
 
 #include "garnet/examples/mediaplayer/audio_player/audio_player.h"
 #include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);

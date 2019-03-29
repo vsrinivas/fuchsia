@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_init.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
 #include "src/media/playback/mediaplayer/graph/types/subpicture_stream_type.h"

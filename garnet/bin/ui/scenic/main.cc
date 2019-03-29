@@ -9,9 +9,9 @@
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/syslogger/init.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 
 #include "garnet/bin/ui/scenic/app.h"
 

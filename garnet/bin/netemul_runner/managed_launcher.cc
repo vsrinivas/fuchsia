@@ -6,8 +6,8 @@
 #include <lib/component/cpp/testing/test_util.h>
 #include <lib/fdio/io.h>
 #include <lib/fsl/io/fd.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
 #include <zircon/status.h>
 #include "garnet/lib/cmx/cmx.h"

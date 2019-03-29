@@ -9,8 +9,8 @@
 
 #include <lib/fit/function.h>
 
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/macros.h"
 
 namespace bluetooth_tools {
 

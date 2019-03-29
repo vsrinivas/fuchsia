@@ -19,7 +19,7 @@
 
 #include <stddef.h>
 
-#include "lib/fxl/third_party/icu/icu_utf.h"
+#include "src/lib/fxl/third_party/icu/icu_utf.h"
 
 namespace fxl_icu {
 

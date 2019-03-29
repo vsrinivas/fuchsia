@@ -13,7 +13,7 @@
 #include <lib/backoff/exponential_backoff.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/time.h>
 
 namespace cobalt {

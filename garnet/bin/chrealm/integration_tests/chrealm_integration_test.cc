@@ -14,11 +14,11 @@
 #include <fuchsia/testing/chrealm/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/split_string.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/split_string.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <zircon/compiler.h>

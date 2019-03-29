@@ -13,8 +13,8 @@
 #include <zircon/status.h>
 
 #include "garnet/bin/test_runner/run_integration_tests/test_runner_config.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "lib/test_runner/cpp/test_runner.h"
 
 namespace test_runner {

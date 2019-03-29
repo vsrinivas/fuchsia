@@ -7,8 +7,8 @@
 #include <gtest/gtest.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/testing/loop_controller_real_loop.h"
 #include "src/ledger/bin/testing/sync_params.h"

@@ -7,7 +7,7 @@
 #include <zircon/processargs.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace fsl {
 namespace {

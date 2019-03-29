@@ -10,7 +10,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fsl/socket/strings.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "peridot/lib/socket/socket_pair.h"

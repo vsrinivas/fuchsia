@@ -5,8 +5,8 @@
 #include "src/media/playback/mediaplayer_tmp/graph/payloads/vmo_payload_allocator.h"
 
 #include <lib/zx/vmar.h>
-#include "lib/fxl/logging.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/playback/mediaplayer_tmp/graph/formatting.h"
 
 namespace media_player {

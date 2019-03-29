@@ -9,7 +9,7 @@
 #include <string>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/random.h"

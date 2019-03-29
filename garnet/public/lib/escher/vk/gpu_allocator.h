@@ -10,7 +10,7 @@
 #include "lib/escher/vk/buffer.h"
 #include "lib/escher/vk/gpu_mem.h"
 #include "lib/escher/vk/image.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace escher {
 

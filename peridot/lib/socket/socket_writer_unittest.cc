@@ -7,7 +7,7 @@
 #include <utility>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "peridot/lib/socket/socket_drainer_client.h"

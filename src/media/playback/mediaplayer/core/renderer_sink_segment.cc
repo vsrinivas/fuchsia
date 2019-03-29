@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/core/renderer_sink_segment.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/core/conversion_pipeline_builder.h"
 #include "src/media/playback/mediaplayer/graph/types/stream_type.h"
 

@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <string>
 
-#include <lib/fxl/time/time_delta.h>
+#include <src/lib/fxl/time/time_delta.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zx/time.h>
 

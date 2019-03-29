@@ -10,7 +10,7 @@
 #include <queue>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fxl/synchronization/thread_annotations.h>
+#include <src/lib/fxl/synchronization/thread_annotations.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_input_item.h>
 

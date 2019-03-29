@@ -18,11 +18,11 @@
 #include <lib/callback/scoped_callback.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/weak_ptr.h>
-#include "lib/fxl/strings/string_number_conversions.h"
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
+#include "src/lib/fxl/strings/string_number_conversions.h"
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"

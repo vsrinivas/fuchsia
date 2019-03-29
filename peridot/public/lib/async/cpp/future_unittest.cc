@@ -3,7 +3,7 @@
 #include <string>
 
 #include <lib/async-testutils/test_loop.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "gtest/gtest-spi.h"
 #include "gtest/gtest.h"

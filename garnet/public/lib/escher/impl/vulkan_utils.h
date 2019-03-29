@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #if defined(ESCHER_VK_UTILS)
 #error "vulkan_utils.h should not be included from header files"

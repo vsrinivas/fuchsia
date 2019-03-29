@@ -12,7 +12,7 @@
 
 #include "garnet/lib/inet/ip_port.h"
 #include "src/lib/files/unique_fd.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace netconnector {
 

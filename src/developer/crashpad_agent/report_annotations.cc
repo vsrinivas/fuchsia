@@ -14,7 +14,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fxl/strings/trim.h>
+#include <src/lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/image.h>

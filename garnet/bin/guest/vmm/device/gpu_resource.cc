@@ -4,7 +4,7 @@
 
 #include "garnet/bin/guest/vmm/device/gpu_resource.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 GpuResource::GpuResource(const PhysMem& phys_mem, uint32_t format,
                          uint32_t width, uint32_t height)

@@ -7,7 +7,7 @@
 #include <lib/fit/defer.h>
 
 #include "garnet/bin/run_test_component/run_test_component.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"
 
 #include <regex>

@@ -9,7 +9,7 @@
 #include <optional>
 
 #include "lib/async/dispatcher.h"
-#include "lib/fxl/synchronization/thread_checker.h"
+#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer_tmp/demux/byte_rate_estimator.h"
 #include "src/media/playback/mediaplayer_tmp/demux/reader.h"
 #include "src/media/playback/mediaplayer_tmp/demux/sliding_buffer.h"

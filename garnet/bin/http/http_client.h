@@ -12,8 +12,8 @@
 #include "garnet/bin/http/http_errors.h"
 #include "garnet/bin/http/upload_element_reader.h"
 #include "lib/fsl/vmo/sized_vmo.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/ascii.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/ascii.h"
 
 #include <asio.hpp>
 #include <asio/ssl.hpp>

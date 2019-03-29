@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/developer/debug/ipc/protocol.h"
 
 namespace zxdb {

@@ -10,10 +10,10 @@
 
 #include <flatbuffers/flatbuffers.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/build_config.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/memory/ref_counted.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/build_config.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/memory/ref_counted.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"

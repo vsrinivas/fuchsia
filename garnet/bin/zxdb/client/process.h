@@ -11,9 +11,9 @@
 
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/client/process_observer.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/weak_ptr.h"
-#include "lib/fxl/observer_list.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/observer_list.h"
 
 namespace debug_ipc {
 struct MemoryBlock;

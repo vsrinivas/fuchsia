@@ -14,8 +14,8 @@
 #include <zircon/types.h>
 
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/macros.h"
 
 namespace memory {
 

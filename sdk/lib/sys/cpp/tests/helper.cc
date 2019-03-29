@@ -6,7 +6,7 @@
 #include "fidl/examples/echo/cpp/fidl.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 #include "lib/sys/cpp/component_context.h"
 
 static constexpr char kCmdHelp[] = "help";

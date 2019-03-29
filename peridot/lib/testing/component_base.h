@@ -6,7 +6,7 @@
 #define PERIDOT_LIB_TESTING_COMPONENT_BASE_H_
 
 #include <lib/component/cpp/connect.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/testing/component_main.h"

@@ -9,8 +9,8 @@
 
 #include <iosfwd>
 
-#include "lib/fxl/fxl_export.h"
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/fxl_export.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace fxl {
 

@@ -12,9 +12,9 @@
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/vmo/vector.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 
 // These are the only values we want to track
 const int kBlack = 0x000000;

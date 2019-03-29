@@ -4,7 +4,7 @@
 
 #include "garnet/examples/ui/simplest_embedder/view.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 namespace simplest_embedder {
 using ::fuchsia::ui::input::InputEvent;

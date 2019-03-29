@@ -10,7 +10,7 @@
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/io/fd.h"
-#include "lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/strings/string_view.h"
 #include "lib/svc/cpp/services.h"
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"

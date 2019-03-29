@@ -7,9 +7,9 @@
 #ifndef LIB_FXL_MEMORY_REF_COUNTED_H_
 #define LIB_FXL_MEMORY_REF_COUNTED_H_
 
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_counted_internal.h"
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted_internal.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace fxl {
 

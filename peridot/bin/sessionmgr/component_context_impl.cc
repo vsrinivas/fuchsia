@@ -6,7 +6,7 @@
 
 #include <utility>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "peridot/lib/fidl/array_to_string.h"

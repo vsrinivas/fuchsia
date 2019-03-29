@@ -10,7 +10,7 @@
 #include "lib/escher/impl/model_data.h"
 #include "lib/escher/scene/model.h"
 #include "lib/escher/scene/object.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace escher {
 namespace impl {

@@ -10,8 +10,8 @@
 #include "garnet/bin/zxdb/client/setting_schema.h"
 #include "garnet/bin/zxdb/client/setting_store_observer.h"
 #include "garnet/bin/zxdb/client/setting_value.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/observer_list.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/observer_list.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

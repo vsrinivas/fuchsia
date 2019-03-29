@@ -7,7 +7,7 @@
 
 #include <lib/zx/thread.h>
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "src/developer/debug/ipc/protocol.h"
 
 struct zx_thread_state_general_regs;

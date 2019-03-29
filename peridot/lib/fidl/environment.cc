@@ -5,7 +5,7 @@
 #include "peridot/lib/fidl/environment.h"
 
 #include <lib/async/default.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 namespace modular {
 

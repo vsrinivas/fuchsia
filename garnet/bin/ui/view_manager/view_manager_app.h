@@ -12,7 +12,7 @@
 #include "garnet/bin/ui/view_manager/view_registry.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace view_manager {
 

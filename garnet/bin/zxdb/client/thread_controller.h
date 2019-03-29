@@ -8,8 +8,8 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/common/address_range.h"
 

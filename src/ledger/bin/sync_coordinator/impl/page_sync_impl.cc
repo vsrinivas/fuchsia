@@ -6,7 +6,7 @@
 
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 namespace sync_coordinator {
 namespace {

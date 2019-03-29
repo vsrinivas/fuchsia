@@ -5,7 +5,7 @@
 #include <string>
 #include <cstdio>
 
-#include "lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/join_strings.h"
 
 int main(int argc, const char** argv) {
   std::vector<std::string> arguments(argv, argv + argc);

@@ -6,7 +6,7 @@
 
 #include "garnet/bin/ui/view_manager/view_manager_impl.h"
 #include "garnet/bin/ui/view_manager/view_snapshot_impl.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace view_manager {
 

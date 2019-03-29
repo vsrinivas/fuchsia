@@ -8,7 +8,7 @@
 #include <lib/zx/channel.h>
 
 #include "src/lib/files/unique_fd.h"
-#include "lib/fxl/fxl_export.h"
+#include "src/lib/fxl/fxl_export.h"
 
 namespace fsl {
 

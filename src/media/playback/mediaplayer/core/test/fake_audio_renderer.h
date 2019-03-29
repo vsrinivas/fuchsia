@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_TEST_FAKE_AUDIO_RENDERER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_TEST_FAKE_AUDIO_RENDERER_H_
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/render/renderer.h"
 
 namespace media_player {

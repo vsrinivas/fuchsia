@@ -12,9 +12,9 @@
 
 #include "garnet/bin/http/http_service_impl.h"
 #include "garnet/bin/http/http_url_loader_impl.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace http {
 

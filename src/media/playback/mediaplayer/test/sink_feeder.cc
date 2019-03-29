@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/test/sink_feeder.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media_player {
 namespace test {

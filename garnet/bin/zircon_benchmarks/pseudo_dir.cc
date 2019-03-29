@@ -9,7 +9,7 @@
 #include <fbl/string_printf.h>
 #include <fs/pseudo-dir.h>
 #include <fs/pseudo-file.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <perftest/perftest.h>
 #include <zircon/syscalls.h>
 

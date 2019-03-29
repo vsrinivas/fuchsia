@@ -8,8 +8,8 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 
-#include "lib/fxl/synchronization/thread_annotations.h"
-#include "lib/fxl/synchronization/thread_checker.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer/metrics/packet_timing_tracker.h"
 #include "src/media/playback/mediaplayer/render/audio_renderer.h"
 

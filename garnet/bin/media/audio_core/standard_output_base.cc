@@ -13,8 +13,8 @@
 #include "garnet/bin/media/audio_core/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_core/mixer/mixer.h"
 #include "garnet/bin/media/audio_core/mixer/no_op.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace media::audio {
 

@@ -6,7 +6,7 @@
 
 #include "src/ledger/bin/storage/impl/object_digest.h"
 
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/concatenate.h>
 
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/constants.h"

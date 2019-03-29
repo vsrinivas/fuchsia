@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/syslog/cpp/logger.h>
 
 #include "garnet/bin/a11y/a11y_manager/semantic_tree.h"

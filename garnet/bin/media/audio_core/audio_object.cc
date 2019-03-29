@@ -9,7 +9,7 @@
 #include "garnet/bin/media/audio_core/audio_link_packet_source.h"
 #include "garnet/bin/media/audio_core/audio_link_ring_buffer_source.h"
 #include "garnet/bin/media/audio_core/audio_renderer_impl.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio {
 

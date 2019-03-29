@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer/graph/packet.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
 
 namespace media_player {

@@ -4,7 +4,7 @@
 
 #include "garnet/examples/ui/video_display/simple_camera_view.h"
 
-#include <lib/fxl/log_level.h>
+#include <src/lib/fxl/log_level.h>
 #include <lib/ui/scenic/cpp/commands.h>
 
 #if defined(countof)

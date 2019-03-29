@@ -6,7 +6,7 @@
 
 #include <ostream>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include "garnet/bin/ui/view_manager/view_registry.h"
 

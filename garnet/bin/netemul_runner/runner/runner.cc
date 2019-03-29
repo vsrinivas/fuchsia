@@ -6,8 +6,8 @@
 
 #include <lib/async/default.h>
 #include <lib/fsl/io/fd.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
 #include "garnet/lib/cmx/cmx.h"
 

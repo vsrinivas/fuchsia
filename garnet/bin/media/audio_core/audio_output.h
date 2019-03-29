@@ -13,7 +13,7 @@
 #include "garnet/bin/media/audio_core/audio_device.h"
 #include "garnet/bin/media/audio_core/audio_driver.h"
 #include "garnet/bin/media/audio_core/fwd_decls.h"
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 namespace media::audio {
 

@@ -7,8 +7,8 @@
 #include <thread>
 
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/log_settings_command_line.h"
 
 int main(int argc, char** argv) {
   FXL_LOG(INFO) << "Starting dockyard host";

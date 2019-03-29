@@ -12,7 +12,7 @@
 
 #include <lib/fit/function.h>
 
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 #ifdef __Fuchsia__
 #include <fbl/ref_ptr.h>

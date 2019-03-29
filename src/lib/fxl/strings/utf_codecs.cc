@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/strings/utf_codecs.h"
+#include "src/lib/fxl/strings/utf_codecs.h"
 
-#include "lib/fxl/third_party/icu/icu_utf.h"
+#include "src/lib/fxl/third_party/icu/icu_utf.h"
 
 namespace fxl {
 

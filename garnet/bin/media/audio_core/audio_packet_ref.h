@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 #include "garnet/bin/media/audio_core/utils.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio {
 

@@ -11,8 +11,8 @@
 #include <vector>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"

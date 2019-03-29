@@ -5,7 +5,7 @@
 #ifndef GARNET_THIRD_PARTY_LIBUNWINDSTACK_FUCHSIA_FUCHSIA_BASENAME_H_
 #define GARNET_THIRD_PARTY_LIBUNWINDSTACK_FUCHSIA_FUCHSIA_BASENAME_H_
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 // Empty implementation of the POSIX libgen basename call. The Fuchsia
 // port does not read files from the filesystem so does not need this call,

@@ -16,7 +16,7 @@
 #include <lib/fzl/fdio.h>
 #include <zircon/device/vfs.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fsl {
 

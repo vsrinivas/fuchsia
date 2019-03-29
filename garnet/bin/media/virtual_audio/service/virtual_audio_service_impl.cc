@@ -9,7 +9,7 @@
 #include <lib/fdio/fdio.h>
 
 #include "garnet/drivers/audio/virtual_audio/virtual_audio.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace virtual_audio {
 

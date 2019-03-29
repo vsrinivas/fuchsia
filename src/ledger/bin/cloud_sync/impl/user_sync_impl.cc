@@ -7,8 +7,8 @@
 #include <utility>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
 #include <zircon/syscalls.h>
 
 #include "peridot/lib/convert/convert.h"

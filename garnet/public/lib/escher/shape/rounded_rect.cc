@@ -7,7 +7,7 @@
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/shape/mesh_spec.h"
 #include "lib/escher/util/trace_macros.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

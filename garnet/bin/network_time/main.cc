@@ -4,7 +4,7 @@
 
 #include "garnet/bin/network_time/timezone.h"
 #include "lib/fsl/syslogger/init.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 #include "lib/syslog/cpp/logger.h"
 #include "zircon/process.h"
 #include "zircon/processargs.h"

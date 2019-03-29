@@ -11,8 +11,8 @@
 
 #include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/resources/resource_type_info.h"
-#include "lib/fxl/memory/ref_counted.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {
 class ErrorReporter;

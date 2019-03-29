@@ -11,9 +11,9 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/concatenate.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/binary_launcher.h"
 #include "src/developer/debug/debug_agent/component_launcher.h"

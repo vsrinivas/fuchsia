@@ -6,7 +6,7 @@
 
 #include "garnet/bin/trace/commands/list_categories.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 

@@ -8,7 +8,7 @@
 #include <glm/gtc/epsilon.hpp>
 #include <glm/gtx/matrix_operation.hpp>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

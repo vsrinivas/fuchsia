@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/shared/regex.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 

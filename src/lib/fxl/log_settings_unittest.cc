@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/log_settings.h"
+#include "src/lib/fxl/log_settings.h"
 
 #include <unistd.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/log_settings_command_line.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fxl {
 namespace {

@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/encryption/primitives/hash.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <openssl/sha.h>
 
 namespace encryption {

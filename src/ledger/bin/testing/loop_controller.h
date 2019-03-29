@@ -9,8 +9,8 @@
 #include <memory>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/compiler_specific.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/compiler_specific.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
 

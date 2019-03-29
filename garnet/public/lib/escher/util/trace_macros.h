@@ -7,7 +7,7 @@
 
 // See <trace/event.h> for usage documentation.
 
-#include "lib/fxl/build_config.h"
+#include "src/lib/fxl/build_config.h"
 
 #ifdef OS_FUCHSIA
 #include <trace/event.h>

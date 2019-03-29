@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_PUBLIC_PAGE_SYNC_CLIENT_H_
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_PAGE_SYNC_CLIENT_H_
 
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 

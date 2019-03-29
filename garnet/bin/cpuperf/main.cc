@@ -8,12 +8,12 @@
 
 #include <algorithm>
 
-#include <lib/fxl/command_line.h>
+#include <src/lib/fxl/command_line.h>
 #include "src/lib/files/file.h"
-#include <lib/fxl/log_settings.h>
-#include <lib/fxl/log_settings_command_line.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/split_string.h>
+#include <src/lib/fxl/log_settings.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/split_string.h>
 
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <zircon/syscalls.h>

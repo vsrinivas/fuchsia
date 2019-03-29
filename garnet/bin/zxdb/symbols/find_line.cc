@@ -5,7 +5,7 @@
 #include "garnet/bin/zxdb/symbols/find_line.h"
 
 #include "garnet/bin/zxdb/symbols/line_table.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 
 namespace zxdb {

@@ -12,7 +12,7 @@
 #include "lib/escher/impl/frame_manager.h"
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/command_buffer.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace escher {
 

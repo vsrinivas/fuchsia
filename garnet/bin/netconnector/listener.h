@@ -13,7 +13,7 @@
 
 #include "garnet/lib/inet/ip_port.h"
 #include "src/lib/files/unique_fd.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace netconnector {
 

@@ -4,8 +4,8 @@
 
 #include <sstream>
 
-#include "lib/fxl/time/time_delta.h"
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/time/time_point.h"
 
 namespace fxl {
 

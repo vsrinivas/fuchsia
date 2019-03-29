@@ -15,7 +15,7 @@
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
-#include "lib/fxl/arraysize.h"
+#include "src/lib/fxl/arraysize.h"
 
 #include "driver.h"
 

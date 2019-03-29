@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 #include "lib/escher/test/fake_gpu_allocator.h"
 #include "lib/escher/util/image_utils.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {

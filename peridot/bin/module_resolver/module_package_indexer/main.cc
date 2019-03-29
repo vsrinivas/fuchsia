@@ -14,10 +14,10 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
-#include <lib/fxl/command_line.h>
+#include <src/lib/fxl/command_line.h>
 #include "src/lib/files/file.h"
-#include <lib/fxl/log_settings_command_line.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "peridot/lib/module_manifest_source/package_util.h"
 

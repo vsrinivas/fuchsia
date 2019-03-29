@@ -14,7 +14,7 @@
 #include <rapidjson/schema.h>
 #include <zircon/device/audio.h>
 
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 
 namespace media::audio {
 

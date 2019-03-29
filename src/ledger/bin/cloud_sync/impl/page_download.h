@@ -11,8 +11,8 @@
 #include <lib/callback/scoped_task_runner.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "peridot/lib/commit_pack/commit_pack.h"
 #include "src/ledger/bin/cloud_sync/impl/batch_download.h"

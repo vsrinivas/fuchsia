@@ -12,7 +12,7 @@
 #include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
 
-#include "lib/fxl/synchronization/thread_annotations.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/playback/mediaplayer_tmp/decode/decoder.h"
 #include "src/media/playback/mediaplayer_tmp/metrics/value_tracker.h"
 

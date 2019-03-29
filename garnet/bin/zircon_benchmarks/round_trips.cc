@@ -15,8 +15,8 @@
 #include <zircon/syscalls/port.h>
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/logging.h"
 
 #include "round_trips.h"
 #include "test_runner.h"

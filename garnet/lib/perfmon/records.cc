@@ -4,7 +4,7 @@
 
 #include "records.h"
 
-#include <lib/fxl/arraysize.h>
+#include <src/lib/fxl/arraysize.h>
 
 namespace perfmon {
 

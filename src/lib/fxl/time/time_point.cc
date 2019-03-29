@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/time/time_point.h"
+#include "src/lib/fxl/time/time_point.h"
 
-#include "lib/fxl/build_config.h"
+#include "src/lib/fxl/build_config.h"
 
 #if defined(OS_MACOSX) || defined(OS_IOS)
 #include <mach/kern_return.h>
@@ -15,7 +15,7 @@
 #include <time.h>
 #endif  // defined(OS_MACOSX) || defined(OS_IOS)
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fxl {
 

@@ -11,7 +11,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/time.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/scenic/cpp/resources.h"
 

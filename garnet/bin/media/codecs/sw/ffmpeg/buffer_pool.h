@@ -10,7 +10,7 @@ extern "C" {
 }
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/fxl/synchronization/thread_annotations.h>
+#include <src/lib/fxl/synchronization/thread_annotations.h>
 #include <lib/media/codec_impl/codec_buffer.h>
 
 #include "mpsc_queue.h"

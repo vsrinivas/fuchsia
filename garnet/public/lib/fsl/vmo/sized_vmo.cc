@@ -4,7 +4,7 @@
 
 #include "garnet/public/lib/fsl/vmo/sized_vmo.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace fsl {
 

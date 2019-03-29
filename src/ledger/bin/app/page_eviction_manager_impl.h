@@ -11,7 +11,7 @@
 #include <utility>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include "src/ledger/bin/app/page_usage_db.h"
 #include "src/ledger/bin/app/page_utils.h"

@@ -13,7 +13,7 @@
 #include <zircon/processargs.h>
 #include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace sysmgr {
 

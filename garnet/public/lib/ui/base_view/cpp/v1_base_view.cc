@@ -5,8 +5,8 @@
 #include "garnet/public/lib/ui/base_view/cpp/v1_base_view.h"
 
 #include <lib/component/cpp/connect.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/time/time_point.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/time/time_point.h>
 #include <lib/ui/geometry/cpp/geometry_util.h>
 #include <lib/zx/eventpair.h>
 #include <trace/event.h>

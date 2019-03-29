@@ -4,7 +4,7 @@
 
 #include "lib/media/audio_dfx/audio_device_fx.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 //
 // This minimal library has such limited functionality that we implement it

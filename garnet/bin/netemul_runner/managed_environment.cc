@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "managed_environment.h"
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <random>
 
 namespace netemul {

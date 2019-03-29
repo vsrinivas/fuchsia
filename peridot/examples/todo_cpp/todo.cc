@@ -15,9 +15,9 @@
 #include <lib/component/cpp/connect.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/string_printf.h>
-#include <lib/fxl/time/time_delta.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/time/time_delta.h>
 
 namespace todo {
 

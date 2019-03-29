@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace debugger_utils {
 

@@ -5,10 +5,10 @@
 #include <algorithm>
 #include <iostream>
 
-#include "lib/fxl/build_config.h"
-#include "lib/fxl/debug/debugger.h"
-#include "lib/fxl/log_settings.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/build_config.h"
+#include "src/lib/fxl/debug/debugger.h"
+#include "src/lib/fxl/log_settings.h"
+#include "src/lib/fxl/logging.h"
 
 #if defined(OS_ANDROID)
 #include <android/log.h>

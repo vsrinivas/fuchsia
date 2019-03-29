@@ -11,7 +11,7 @@
 
 #include "garnet/lib/intel_pt_decode/decoder.h"
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace intel_processor_trace {
 

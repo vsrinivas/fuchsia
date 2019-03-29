@@ -8,7 +8,7 @@
 #include <lib/async/default.h>
 #include "garnet/bin/http/http_errors.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media_player {
 

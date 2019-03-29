@@ -8,7 +8,7 @@
 #include <lib/fit/defer.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/media/audio/types.h"
 
 namespace media::tools {

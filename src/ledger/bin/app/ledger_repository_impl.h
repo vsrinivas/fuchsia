@@ -11,7 +11,7 @@
 #include <lib/component/cpp/expose.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/inspect/inspect.h>
 
 #include "peridot/lib/convert/convert.h"

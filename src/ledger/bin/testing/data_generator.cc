@@ -9,8 +9,8 @@
 #include <string>
 
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
 
 #include "peridot/lib/convert/convert.h"
 

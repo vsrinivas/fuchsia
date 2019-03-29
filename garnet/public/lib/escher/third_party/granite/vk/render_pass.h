@@ -34,7 +34,7 @@
 
 // TODO(ES-83): maybe move to .cc file, along with definitions of SubpassHas*().
 #include "lib/escher/util/image_utils.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 namespace impl {

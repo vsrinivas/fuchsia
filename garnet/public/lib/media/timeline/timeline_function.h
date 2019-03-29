@@ -5,7 +5,7 @@
 #ifndef LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_
 #define LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media {

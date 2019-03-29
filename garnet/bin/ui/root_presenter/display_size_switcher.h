@@ -6,7 +6,7 @@
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_SIZE_SWITCHER_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/ui/scenic/cpp/resources.h"
 
 #include "garnet/bin/ui/root_presenter/displays/display_metrics.h"

@@ -10,8 +10,8 @@
 
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/join_strings.h>
 
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_controller.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"

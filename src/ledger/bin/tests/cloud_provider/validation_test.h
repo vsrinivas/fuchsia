@@ -8,7 +8,7 @@
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <gtest/gtest.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "src/ledger/bin/tests/cloud_provider/types.h"

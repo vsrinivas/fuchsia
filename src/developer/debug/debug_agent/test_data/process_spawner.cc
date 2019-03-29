@@ -9,9 +9,9 @@
 #include <vector>
 
 #include <lib/fdio/spawn.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/zx/job.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>

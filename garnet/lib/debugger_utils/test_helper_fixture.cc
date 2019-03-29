@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/spawn.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/processargs.h>
 
 #include "test_helper.h"

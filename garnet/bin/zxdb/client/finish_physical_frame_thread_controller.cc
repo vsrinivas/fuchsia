@@ -8,7 +8,7 @@
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/client/until_thread_controller.h"
 #include "garnet/bin/zxdb/symbols/function.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

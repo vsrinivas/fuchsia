@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
-#include <lib/fxl/time/time_point.h>
+#include <src/lib/fxl/time/time_point.h>
 
 namespace input {
 

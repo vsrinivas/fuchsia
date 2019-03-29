@@ -5,7 +5,7 @@
 #include "thread_action_list.h"
 
 #include "gtest/gtest.h"
-#include "lib/fxl/arraysize.h"
+#include "src/lib/fxl/arraysize.h"
 
 namespace debugserver {
 namespace {

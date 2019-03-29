@@ -5,7 +5,7 @@
 #include "lib/escher/geometry/bounding_box.h"
 
 #include "lib/escher/geometry/types.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include "gtest/gtest.h"
 

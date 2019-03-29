@@ -6,8 +6,8 @@
 
 #include <fcntl.h>
 
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_number_conversions.h"
 #include "lib/syslog/cpp/logger.h"
 
 namespace fsl {

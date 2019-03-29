@@ -6,7 +6,7 @@
 #define LIB_ESCHER_BASE_TYPE_INFO_H_
 
 #include <utility>
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

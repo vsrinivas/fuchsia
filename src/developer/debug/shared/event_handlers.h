@@ -9,7 +9,7 @@
 #include <lib/async/cpp/exception.h>
 #include <lib/async/cpp/wait.h>
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace debug_ipc {
 

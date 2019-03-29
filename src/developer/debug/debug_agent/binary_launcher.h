@@ -12,7 +12,7 @@
 #include <lib/zx/socket.h>
 
 #include "garnet/lib/process/process_builder.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/sys/cpp/service_directory.h"
 
 namespace debug_agent {

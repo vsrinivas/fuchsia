@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 #include <array>
 #include <tuple>
 #include <utility>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace fxl {
 

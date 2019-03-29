@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/ethertap/cpp/fidl.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <lib/netemul/network/ethernet_client.h>
 #include <lib/netemul/network/ethertap_client.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>

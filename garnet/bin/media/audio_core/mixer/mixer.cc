@@ -7,7 +7,7 @@
 #include "garnet/bin/media/audio_core/mixer/linear_sampler.h"
 #include "garnet/bin/media/audio_core/mixer/no_op.h"
 #include "garnet/bin/media/audio_core/mixer/point_sampler.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media::audio {

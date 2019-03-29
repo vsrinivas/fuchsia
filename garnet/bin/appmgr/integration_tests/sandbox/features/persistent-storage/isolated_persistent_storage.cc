@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <gtest/gtest.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <test/appmgr/integration/cpp/fidl.h>

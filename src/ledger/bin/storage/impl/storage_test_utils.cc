@@ -9,7 +9,7 @@
 
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
 
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"

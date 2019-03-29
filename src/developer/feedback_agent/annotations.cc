@@ -13,7 +13,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
-#include <lib/fxl/strings/trim.h>
+#include <src/lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "netdump_parser.h"
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include "netdump_types.h"
 
 #define INSUFF_LEN(a, b)                                                 \

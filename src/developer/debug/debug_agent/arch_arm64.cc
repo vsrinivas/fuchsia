@@ -8,7 +8,7 @@
 #include <zircon/syscalls/exception.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/developer/debug/ipc/register_desc.h"
 
 namespace debug_agent {

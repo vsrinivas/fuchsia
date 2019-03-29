@@ -9,7 +9,7 @@
 
 #include "garnet/bin/netconnector/netconnector_impl.h"
 #include "garnet/lib/inet/ip_port.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace netconnector {
 

@@ -10,9 +10,9 @@
 
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/ascii.h>
-#include <lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/ascii.h>
+#include <src/lib/fxl/strings/join_strings.h>
 
 #include "peridot/lib/socket/socket_drainer_client.h"
 

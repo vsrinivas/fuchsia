@@ -5,7 +5,7 @@
 #include "src/ledger/bin/storage/impl/btree/synchronous_storage.h"
 
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 

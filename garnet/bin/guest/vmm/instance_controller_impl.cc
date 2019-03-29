@@ -4,7 +4,7 @@
 
 #include "garnet/bin/guest/vmm/instance_controller_impl.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 static zx::socket duplicate(const zx::socket& socket) {
   zx::socket dup;

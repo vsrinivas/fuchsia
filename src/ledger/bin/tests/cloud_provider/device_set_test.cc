@@ -4,7 +4,7 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/ledger/bin/tests/cloud_provider/convert.h"
 #include "src/ledger/bin/tests/cloud_provider/types.h"

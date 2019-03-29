@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <string>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/lib/elflib/elflib.h"
 

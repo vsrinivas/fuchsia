@@ -10,8 +10,8 @@
 #include <lib/fit/function.h>
 
 #include "garnet/lib/ui/scenic/command_dispatcher.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace component {
 class StartupContext;

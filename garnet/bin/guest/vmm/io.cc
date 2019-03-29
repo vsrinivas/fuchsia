@@ -4,7 +4,7 @@
 
 #include "garnet/bin/guest/vmm/io.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <lib/zx/port.h>
 

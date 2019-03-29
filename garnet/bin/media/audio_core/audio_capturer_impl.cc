@@ -7,7 +7,7 @@
 #include <lib/fit/defer.h>
 
 #include "garnet/bin/media/audio_core/audio_core_impl.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/media/audio/types.h"
 
 // Allow (at most) 256 slabs of pending capture buffers. At 16KB per slab, this

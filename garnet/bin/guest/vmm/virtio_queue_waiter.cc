@@ -4,7 +4,7 @@
 
 #include "garnet/bin/guest/vmm/virtio_queue_waiter.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 VirtioQueueWaiter::VirtioQueueWaiter(async_dispatcher_t* dispatcher,
                                      VirtioQueue* queue, Handler handler)

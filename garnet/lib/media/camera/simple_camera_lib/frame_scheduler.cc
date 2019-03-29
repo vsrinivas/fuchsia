@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <garnet/lib/media/camera/simple_camera_lib/frame_scheduler.h>
-#include <lib/fxl/command_line.h>
+#include <src/lib/fxl/command_line.h>
 #include <zircon/syscalls.h>
 
 namespace simple_camera {

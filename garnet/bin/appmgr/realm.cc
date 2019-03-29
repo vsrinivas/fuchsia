@@ -25,9 +25,9 @@
 #include <lib/fsl/io/fd.h>
 #include <lib/fsl/vmo/file.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/string_printf.h>
-#include <lib/fxl/strings/substitute.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/substitute.h>
 #include <lib/json/json_parser.h>
 #include <lib/sys/cpp/service_directory.h>
 #include "garnet/bin/appmgr/dynamic_library_loader.h"

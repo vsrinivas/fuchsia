@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <lib/fxl/strings/utf_codecs.h>
+#include <src/lib/fxl/strings/utf_codecs.h>
 #include <zircon/syscalls.h>
 
 #include "gtest/gtest.h"

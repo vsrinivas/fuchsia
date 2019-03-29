@@ -12,7 +12,7 @@
 #include <rapidjson/stringbuffer.h>
 
 #include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace tracing {
 namespace {

@@ -16,7 +16,7 @@
 #include "garnet/bin/sysmgr/config.h"
 #include "garnet/bin/sysmgr/package_updating_loader.h"
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/svc/cpp/service_namespace.h"
 #include "lib/svc/cpp/services.h"
 

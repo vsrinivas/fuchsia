@@ -10,7 +10,7 @@
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/commit_pack/commit_pack.h"
 #include "src/ledger/bin/fidl/include/types.h"

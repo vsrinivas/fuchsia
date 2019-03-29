@@ -14,8 +14,8 @@
 #include "lib/escher/vk/gpu_mem.h"
 #include "lib/escher/vk/image.h"
 #include "lib/escher/vk/image_factory.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 namespace impl {

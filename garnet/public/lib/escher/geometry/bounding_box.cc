@@ -6,7 +6,7 @@
 
 #include "lib/escher/geometry/intersection.h"
 #include "lib/escher/geometry/plane_ops.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

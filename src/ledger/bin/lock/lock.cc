@@ -6,7 +6,7 @@
 
 #include <lib/callback/capture.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 namespace lock {
 namespace {

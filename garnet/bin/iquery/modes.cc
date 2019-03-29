@@ -16,11 +16,11 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/join_strings.h>
-#include <lib/fxl/strings/split_string.h>
-#include <lib/fxl/strings/string_printf.h>
-#include <lib/fxl/strings/substitute.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/strings/split_string.h>
+#include <src/lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/substitute.h>
 #include <lib/inspect/reader.h>
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"

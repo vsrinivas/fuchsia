@@ -8,8 +8,8 @@
 #include <memory>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/page_manager.h"

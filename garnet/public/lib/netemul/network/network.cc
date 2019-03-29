@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "network.h"
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 #include "fake_endpoint.h"
 #include "interceptors/latency.h"
 #include "interceptors/packet_loss.h"

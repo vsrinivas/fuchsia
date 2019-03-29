@@ -9,8 +9,8 @@
 #include <lib/zx/vmo.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
 #include <lib/sys/cpp/service_directory.h>
 #include "garnet/bin/appmgr/component_container.h"
 #include "garnet/bin/appmgr/component_controller_impl.h"

@@ -4,7 +4,7 @@
 
 #include "peridot/lib/firebase/encoding.h"
 
-#include <lib/fxl/strings/utf_codecs.h>
+#include <src/lib/fxl/strings/utf_codecs.h>
 
 #include "peridot/lib/base64url/base64url.h"
 

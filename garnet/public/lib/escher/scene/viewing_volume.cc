@@ -7,7 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <utility>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

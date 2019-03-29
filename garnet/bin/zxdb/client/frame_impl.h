@@ -9,7 +9,7 @@
 
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/symbols/location.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 #include "src/developer/debug/ipc/records.h"
 
 namespace zxdb {

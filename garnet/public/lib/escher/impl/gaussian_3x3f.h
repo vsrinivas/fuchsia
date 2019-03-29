@@ -8,7 +8,7 @@
 #include <memory>
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/compute_shader.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "vulkan/vulkan.hpp"
 
 namespace escher {

@@ -4,8 +4,8 @@
 
 #include <cstring>
 
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 

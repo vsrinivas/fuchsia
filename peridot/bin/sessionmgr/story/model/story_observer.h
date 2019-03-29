@@ -6,7 +6,7 @@
 #define PERIDOT_BIN_SESSIONMGR_STORY_MODEL_STORY_OBSERVER_H_
 
 #include <fuchsia/modular/storymodel/cpp/fidl.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 namespace modular {
 

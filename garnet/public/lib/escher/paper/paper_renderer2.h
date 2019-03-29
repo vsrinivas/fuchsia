@@ -16,7 +16,7 @@
 #include "lib/escher/paper/paper_transform_stack.h"
 #include "lib/escher/renderer/renderer.h"
 #include "lib/escher/renderer/uniform_binding.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

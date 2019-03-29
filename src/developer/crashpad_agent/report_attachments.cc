@@ -8,8 +8,8 @@
 #include <string>
 
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/trim.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/debuglog.h>
 #include <zircon/errors.h>

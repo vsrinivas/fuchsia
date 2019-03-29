@@ -5,7 +5,7 @@
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
 

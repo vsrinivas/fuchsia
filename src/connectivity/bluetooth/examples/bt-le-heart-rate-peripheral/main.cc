@@ -6,8 +6,8 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/strings/string_number_conversions.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
 
 #include "app.h"
 #include "system_load_heart_model.h"

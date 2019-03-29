@@ -4,7 +4,7 @@
 
 #include "garnet/bin/guest/vmm/device/virtio_queue.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <virtio/virtio_ring.h>
 
 VirtioQueue::VirtioQueue() {

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "display_manager_impl.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace display {
 

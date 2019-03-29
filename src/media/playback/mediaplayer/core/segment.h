@@ -10,7 +10,7 @@
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/graph.h"
 #include "src/media/playback/mediaplayer/graph/metadata.h"
 

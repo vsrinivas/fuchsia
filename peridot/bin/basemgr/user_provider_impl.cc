@@ -7,7 +7,7 @@
 #include <utility>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/status.h>
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"

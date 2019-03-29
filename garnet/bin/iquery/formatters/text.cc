@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <sstream>
 
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "garnet/bin/iquery/formatters/text.h"
 #include "garnet/bin/iquery/options.h"

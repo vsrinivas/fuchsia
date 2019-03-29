@@ -26,9 +26,9 @@
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/types/type_converters.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/join_strings.h>
-#include <lib/fxl/strings/split_string.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/join_strings.h>
+#include <src/lib/fxl/strings/split_string.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
 

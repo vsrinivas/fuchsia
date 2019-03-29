@@ -13,7 +13,7 @@
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"

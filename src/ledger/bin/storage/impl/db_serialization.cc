@@ -6,8 +6,8 @@
 
 #include "src/ledger/bin/storage/impl/db_serialization.h"
 
-#include <lib/fxl/strings/concatenate.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/strings/string_view.h>
 #include <zircon/syscalls.h>
 
 #include "src/ledger/bin/storage/impl/data_serialization.h"

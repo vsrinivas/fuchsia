@@ -29,9 +29,9 @@
 #include <zircon/processargs.h>
 #include "garnet/lib/chrealm/chrealm.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 constexpr zx_rights_t kChildJobRights =
     ZX_RIGHTS_BASIC | ZX_RIGHTS_IO | ZX_RIGHT_DESTROY | ZX_RIGHT_MANAGE_JOB;

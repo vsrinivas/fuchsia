@@ -11,8 +11,8 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "garnet/public/lib/callback/capture.h"
 #include "gmock/gmock.h"

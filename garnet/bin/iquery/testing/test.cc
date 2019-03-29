@@ -14,9 +14,9 @@
 
 #include "gmock/gmock.h"
 
-#include "lib/fxl/strings/split_string.h"
-#include "lib/fxl/strings/string_printf.h"
-#include "lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/files/path.h"

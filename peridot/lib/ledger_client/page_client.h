@@ -11,7 +11,7 @@
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/ledger_client/types.h"
 

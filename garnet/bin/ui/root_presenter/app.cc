@@ -7,7 +7,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/ui/input/cpp/formatting.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <trace/event.h>

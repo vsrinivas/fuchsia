@@ -6,10 +6,10 @@
 // TODO(vtl): Possibly we could separate these tests out better, since a lot of
 // it is actually testing |RefPtr|.
 
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 #include "gtest/gtest.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 #if defined(__clang__)
 #define ALLOW_PESSIMIZING_MOVE(code_line)                                   \

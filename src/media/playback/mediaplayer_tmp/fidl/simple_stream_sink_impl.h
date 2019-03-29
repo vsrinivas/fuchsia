@@ -8,7 +8,7 @@
 #include <fuchsia/mediaplayer/cpp/fidl.h>
 #include <unordered_map>
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/synchronization/thread_checker.h"
+#include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer_tmp/graph/nodes/node.h"
 
 namespace media_player {

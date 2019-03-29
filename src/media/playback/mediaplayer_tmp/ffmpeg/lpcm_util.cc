@@ -4,7 +4,7 @@
 
 #include "src/media/playback/mediaplayer_tmp/ffmpeg/lpcm_util.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer_tmp/graph/formatting.h"
 
 namespace media_player {

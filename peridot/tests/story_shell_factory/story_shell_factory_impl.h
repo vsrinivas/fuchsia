@@ -8,8 +8,8 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/time/time_delta.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/time/time_delta.h>
 
 #include <string>
 

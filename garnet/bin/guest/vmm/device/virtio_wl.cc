@@ -8,7 +8,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/defer.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/socket.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>

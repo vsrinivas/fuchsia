@@ -8,8 +8,8 @@
 #include <iterator>
 #include <string>
 
-#include <lib/fxl/logging.h>
-#include <lib/fxl/strings/concatenate.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"

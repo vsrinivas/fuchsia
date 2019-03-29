@@ -9,8 +9,8 @@
 #include <string>
 #include <type_traits>
 
-#include "lib/fxl/fxl_export.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/fxl_export.h"
+#include "src/lib/fxl/logging.h"
 
 // MSVC 2015 doesn't support "extended constexpr" from C++14.
 #if __cplusplus >= 201402L

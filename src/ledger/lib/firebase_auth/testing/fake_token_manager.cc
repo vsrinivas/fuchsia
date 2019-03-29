@@ -4,7 +4,7 @@
 
 #include "src/ledger/lib/firebase_auth/testing/fake_token_manager.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "peridot/lib/convert/convert.h"
 

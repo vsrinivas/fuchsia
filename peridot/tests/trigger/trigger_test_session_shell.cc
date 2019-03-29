@@ -9,8 +9,8 @@
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/testing/component_main.h"
 #include "peridot/lib/testing/session_shell_base.h"

@@ -5,7 +5,7 @@
 #include "garnet/bin/guest/vmm/device/block_dispatcher.h"
 
 #include <bitmap/rle-bitmap.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/vmo.h>
 #include <trace/event.h>
 

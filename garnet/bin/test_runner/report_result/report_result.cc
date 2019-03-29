@@ -15,8 +15,8 @@
 #include <zircon/syscalls/object.h>
 
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/arraysize.h"
-#include "lib/fxl/time/stopwatch.h"
+#include "src/lib/fxl/arraysize.h"
+#include "src/lib/fxl/time/stopwatch.h"
 
 using fuchsia::testing::runner::TestResult;
 using fuchsia::testing::runner::TestRunner;

@@ -12,7 +12,7 @@
 #include "garnet/bin/mdns/util/mdns_params.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/mdns/cpp/service_subscriber.h"
 
 namespace mdns {

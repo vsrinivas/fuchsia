@@ -7,7 +7,7 @@
 
 #include "garnet/bin/ui/sketchy/resources/types.h"
 #include "lib/escher/base/typed_reffable.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace sketchy_service {
 

@@ -9,7 +9,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 #include "garnet/lib/chrealm/chrealm.h"
-#include "lib/fxl/command_line.h"
+#include "src/lib/fxl/command_line.h"
 
 static void PrintUsage() {
   fprintf(stderr,

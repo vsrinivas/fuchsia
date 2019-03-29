@@ -6,7 +6,7 @@
 
 #include <fbl/function.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <stdarg.h>
 #include <zircon/process.h>
 #include <zircon/status.h>

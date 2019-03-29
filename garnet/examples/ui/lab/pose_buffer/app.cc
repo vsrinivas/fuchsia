@@ -26,7 +26,7 @@
 #include "lib/component/cpp/connect.h"
 #include "lib/escher/util/image_utils.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include "lib/escher/hmd/pose_buffer.h"
 #include "lib/ui/scenic/cpp/commands.h"

@@ -11,7 +11,7 @@
 #include "garnet/public/lib/escher/test/gtest_escher.h"
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/fsl/vmo/vector.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 #include "gtest/gtest.h"

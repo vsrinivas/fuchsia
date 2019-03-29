@@ -18,8 +18,8 @@
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/files/path.h"
-#include "lib/fxl/strings/split_string.h"
-#include "lib/fxl/strings/utf_codecs.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/utf_codecs.h"
 
 using fidl::VectorPtr;
 using fidl::test::compatibility::Struct;

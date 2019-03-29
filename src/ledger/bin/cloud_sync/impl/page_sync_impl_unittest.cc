@@ -16,7 +16,7 @@
 #include <lib/callback/set_when_called.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fsl/socket/strings.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "src/ledger/bin/cloud_sync/impl/constants.h"

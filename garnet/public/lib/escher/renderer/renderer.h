@@ -9,8 +9,8 @@
 #include "lib/escher/renderer/frame.h"
 #include "lib/escher/renderer/semaphore.h"
 #include "lib/escher/vk/vulkan_context.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

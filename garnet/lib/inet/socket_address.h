@@ -12,7 +12,7 @@
 
 #include "garnet/lib/inet/ip_address.h"
 #include "garnet/lib/inet/ip_port.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 #include <fuchsia/netstack/cpp/fidl.h>
 

@@ -8,7 +8,7 @@
 #include <map>
 
 #include <fuchsia/auth/cpp/fidl.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 
 #include "src/ledger/lib/firebase_auth/testing/service_account_token_minter.h"
 

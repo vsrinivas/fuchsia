@@ -7,7 +7,7 @@
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/naive_gpu_allocator.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace {
 

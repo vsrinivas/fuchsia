@@ -16,7 +16,7 @@
 
 #include "lib/fsl/socket/socket_drainer.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 // Reads bytes from stdin and writes them to a socket provided by the guest.
 // These bytes are generally delivered to emulated serial devices (ex:

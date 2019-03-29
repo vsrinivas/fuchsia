@@ -12,7 +12,7 @@
 #include <grpc++/grpc++.h>
 
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace dockyard {
 

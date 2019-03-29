@@ -7,7 +7,7 @@
 #include <utility>
 
 #include "src/lib/files/file.h"
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 

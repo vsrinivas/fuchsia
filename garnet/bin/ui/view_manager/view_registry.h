@@ -20,8 +20,8 @@
 #include "garnet/bin/ui/view_manager/view_tree_state.h"
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
 #include "lib/component/cpp/startup_context.h"
-#include "lib/fxl/macros.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "lib/ui/scenic/cpp/session.h"
 
 namespace view_manager {

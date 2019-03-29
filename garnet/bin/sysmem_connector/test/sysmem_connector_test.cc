@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/interface_ptr.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 // The sysmem-test in zircon covers more functionality of sysmem itself.  This
 // test is only meant to verify that sysmem_connector establishes a connection

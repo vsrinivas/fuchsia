@@ -7,7 +7,7 @@
 
 #include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace cobalt {
 namespace testapp {

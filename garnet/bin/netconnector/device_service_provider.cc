@@ -9,7 +9,7 @@
 #include "garnet/bin/netconnector/netconnector_impl.h"
 #include "garnet/bin/netconnector/requestor_agent.h"
 #include "garnet/lib/inet/socket_address.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace netconnector {
 

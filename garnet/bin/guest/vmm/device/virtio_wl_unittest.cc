@@ -9,7 +9,7 @@
 #include <virtio/wl.h>
 
 #include <fbl/algorithm.h>
-#include <lib/fxl/arraysize.h>
+#include <src/lib/fxl/arraysize.h>
 #include <lib/zx/socket.h>
 
 #include "garnet/bin/guest/vmm/device/test_with_device.h"

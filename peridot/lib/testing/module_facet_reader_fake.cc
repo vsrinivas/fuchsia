@@ -4,7 +4,7 @@
 
 #include "peridot/lib/testing/module_facet_reader_fake.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 namespace modular {
 

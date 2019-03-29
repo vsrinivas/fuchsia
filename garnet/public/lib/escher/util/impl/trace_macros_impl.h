@@ -6,7 +6,7 @@
 #define LIB_ESCHER_UTIL_IMPL_TRACE_MACROS_IMPL_H_
 
 #include "lib/escher/util/tracer.h"
-#include "lib/fxl/build_config.h"
+#include "src/lib/fxl/build_config.h"
 
 #ifdef OS_FUCHSIA
 #error Should only be included on Linux.

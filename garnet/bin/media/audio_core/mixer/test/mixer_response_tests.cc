@@ -6,7 +6,7 @@
 
 #include "garnet/bin/media/audio_core/mixer/test/audio_result.h"
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media::audio::test {
 

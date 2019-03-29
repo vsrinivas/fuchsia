@@ -10,7 +10,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/socket.h>
 
-#include "lib/fxl/fxl_export.h"
+#include "src/lib/fxl/fxl_export.h"
 
 namespace fsl {
 

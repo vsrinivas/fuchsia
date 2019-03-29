@@ -6,7 +6,7 @@
 
 #include <functional>
 
-#include "lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace zxdb {
 

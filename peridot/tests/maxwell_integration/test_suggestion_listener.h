@@ -8,7 +8,7 @@
 #include <map>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "gtest/gtest.h"
 

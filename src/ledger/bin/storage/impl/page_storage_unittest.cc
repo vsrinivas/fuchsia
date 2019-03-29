@@ -14,10 +14,10 @@
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
 #include <lib/fsl/vmo/strings.h>
-#include <lib/fxl/arraysize.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/arraysize.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"

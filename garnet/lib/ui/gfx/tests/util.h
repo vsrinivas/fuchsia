@@ -10,8 +10,8 @@
 
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fsl/vmo/shared_vmo.h"
-#include "lib/fxl/memory/ref_ptr.h"
-#include "lib/fxl/time/time_delta.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace scenic_impl {
 namespace gfx {

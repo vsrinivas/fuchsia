@@ -9,7 +9,7 @@
 
 #include <lib/callback/cancellable.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/network_wrapper/network_wrapper.h>
 
 #include "src/ledger/lib/firebase_auth/testing/credentials.h"

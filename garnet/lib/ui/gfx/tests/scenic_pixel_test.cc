@@ -13,7 +13,7 @@
 #include <gtest/gtest.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fsl/vmo/vector.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>

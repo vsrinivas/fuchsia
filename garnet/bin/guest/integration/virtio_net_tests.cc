@@ -8,7 +8,7 @@
 #include <garnet/lib/inet/ip_address.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <sys/socket.h>
 #include <future>
 #include "src/lib/files/unique_fd.h"

@@ -11,7 +11,7 @@
 #include <leveldb/db.h>
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/vector.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 #include <rapidjson/document.h>
 
 namespace convert {

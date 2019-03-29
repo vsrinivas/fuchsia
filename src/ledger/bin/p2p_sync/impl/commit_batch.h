@@ -10,8 +10,8 @@
 #include <vector>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/weak_ptr.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 #include "src/ledger/bin/storage/public/page_storage.h"
 

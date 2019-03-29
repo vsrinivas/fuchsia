@@ -10,7 +10,7 @@
 #include <sys/types.h>
 
 #include "gtest/gtest.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "local_roughtime_server.h"
 #include "settable_time_source.h"
 #include "third_party/roughtime/protocol.h"

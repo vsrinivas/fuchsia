@@ -15,10 +15,10 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/join_strings.h"
-#include "lib/fxl/strings/split_string.h"
-#include "lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/files/file.h"
 
 namespace benchmarking {

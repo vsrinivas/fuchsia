@@ -12,7 +12,7 @@
 
 #include <stdlib.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/url/url_canon.h"
 
 namespace url {

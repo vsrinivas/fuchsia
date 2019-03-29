@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/strings/substitute.h"
 
 namespace sysmgr {
 namespace {

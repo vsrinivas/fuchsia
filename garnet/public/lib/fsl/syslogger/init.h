@@ -5,8 +5,8 @@
 #ifndef LIB_FSL_SYSLOGGER_INIT_H_
 #define LIB_FSL_SYSLOGGER_INIT_H_
 
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/fxl_export.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/fxl_export.h"
 #include "lib/syslog/cpp/logger.h"
 
 namespace fsl {

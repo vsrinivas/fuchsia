@@ -7,8 +7,8 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/strings/string_view.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/job.h>
 #include <src/lib/files/unique_fd.h>

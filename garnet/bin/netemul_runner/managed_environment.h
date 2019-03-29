@@ -6,7 +6,7 @@
 #define GARNET_BIN_NETEMUL_RUNNER_MANAGED_ENVIRONMENT_H_
 
 #include <fuchsia/netemul/environment/cpp/fidl.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <memory>
 #include "managed_launcher.h"

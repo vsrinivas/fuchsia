@@ -22,7 +22,7 @@
 #include <glm/gtx/transform.hpp>
 
 #include "lib/escher/util/debug_print.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace escher {
 

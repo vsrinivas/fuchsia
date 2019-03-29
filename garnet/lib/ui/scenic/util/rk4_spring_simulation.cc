@@ -8,8 +8,8 @@
 #include <algorithm>
 #include <cmath>
 
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace scenic_impl {
 RK4SpringSimulation::RK4SpringSimulation(float initial_value, float tension,

@@ -5,7 +5,7 @@
 #include "garnet/bin/guest/manager/environment_controller_impl.h"
 
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/guest/manager/guest_services.h"
 

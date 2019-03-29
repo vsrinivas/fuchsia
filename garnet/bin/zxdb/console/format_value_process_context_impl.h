@@ -5,7 +5,7 @@
 #pragma once
 
 #include "garnet/bin/zxdb/console/format_value.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 

@@ -4,7 +4,7 @@
 
 #include "garnet/bin/guest/vmm/virtio_vsock.h"
 
-#include <lib/fxl/arraysize.h>
+#include <src/lib/fxl/arraysize.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "garnet/bin/guest/vmm/phys_mem_fake.h"

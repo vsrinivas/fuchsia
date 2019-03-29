@@ -10,10 +10,10 @@
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/socket/strings.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/memory/ref_counted.h>
-#include <lib/fxl/memory/ref_ptr.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/memory/ref_counted.h>
+#include <src/lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/strings/string_printf.h>
 
 #include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/impl/btree/encoding.h"

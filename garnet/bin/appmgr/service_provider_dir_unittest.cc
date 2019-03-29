@@ -9,7 +9,7 @@
 #include <fs/synchronous-vfs.h>
 #include "garnet/bin/appmgr/util.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/strings/substitute.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "lib/gtest/real_loop_fixture.h"
 
 namespace component {

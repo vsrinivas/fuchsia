@@ -6,7 +6,7 @@
 
 #include <grpc++/grpc++.h>
 #include <lib/fit/function.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "src/ledger/cloud_provider_firestore/bin/firestore/firestore_service_impl.h"
 

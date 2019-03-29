@@ -4,7 +4,7 @@
 
 #include "semantic_tree_impl.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/syslog/cpp/logger.h>
 
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"

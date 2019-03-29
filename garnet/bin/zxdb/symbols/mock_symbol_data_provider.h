@@ -7,7 +7,7 @@
 #include <map>
 
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 

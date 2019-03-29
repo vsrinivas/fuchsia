@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "harvester_local.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace harvester {
 

@@ -24,7 +24,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
-#include <lib/fxl/strings/string_printf.h>
+#include <src/lib/fxl/strings/string_printf.h>
 #include <trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>

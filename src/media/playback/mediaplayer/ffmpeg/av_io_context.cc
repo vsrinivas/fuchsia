@@ -6,7 +6,7 @@
 
 #include "src/media/playback/mediaplayer/ffmpeg/av_io_context.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/demux/reader.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_init.h"
 extern "C" {

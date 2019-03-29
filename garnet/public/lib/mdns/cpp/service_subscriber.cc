@@ -4,7 +4,7 @@
 
 #include "lib/mdns/cpp/service_subscriber.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace mdns {
 

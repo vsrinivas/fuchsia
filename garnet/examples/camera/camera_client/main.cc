@@ -6,7 +6,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <lib/zx/eventpair.h>
 
 #include "garnet/examples/camera/camera_client/camera_client.h"

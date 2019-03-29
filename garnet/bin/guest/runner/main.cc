@@ -5,7 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "garnet/bin/guest/runner/runner_impl.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);

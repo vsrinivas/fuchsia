@@ -6,7 +6,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/ipc/debug/logging.h"
 #include "src/developer/debug/shared/component_utils.h"

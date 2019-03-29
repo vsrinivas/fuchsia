@@ -7,7 +7,7 @@
 
 #include "garnet/examples/media/tones/tone_generator.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace examples {
 

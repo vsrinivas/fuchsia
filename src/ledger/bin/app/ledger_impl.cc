@@ -11,7 +11,7 @@
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <lib/callback/trace_callback.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 #include <zircon/syscalls.h>
 

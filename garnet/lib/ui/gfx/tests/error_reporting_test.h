@@ -10,7 +10,7 @@
 
 #include "garnet/lib/ui/scenic/util/error_reporter.h"
 #include "gtest/gtest.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace scenic_impl {

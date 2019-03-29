@@ -4,7 +4,7 @@
 
 #include "garnet/public/lib/rapidjson_utils/rapidjson_validation.h"
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <rapidjson/error/en.h>
 
 namespace rapidjson_utils {

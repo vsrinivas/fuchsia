@@ -8,7 +8,7 @@
 #include <lib/async/dispatcher.h>
 #include <queue>
 #include <unordered_set>
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer_tmp/graph/formatting.h"
 #include "src/media/playback/mediaplayer_tmp/util/callback_joiner.h"
 

@@ -14,8 +14,8 @@
 #include "lib/escher/escher.h"
 #include "lib/escher/resources/resource.h"
 #include "lib/escher/util/stopwatch.h"
-#include "lib/fxl/memory/ref_counted.h"
-#include "lib/fxl/memory/weak_ptr.h"
+#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace shadertoy {
 

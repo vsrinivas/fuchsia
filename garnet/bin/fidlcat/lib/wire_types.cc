@@ -5,7 +5,7 @@
 #include "wire_types.h"
 
 #include <endian.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/fidlcat/lib/library_loader.h"
 #include "rapidjson/error/en.h"

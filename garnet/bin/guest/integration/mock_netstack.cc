@@ -8,7 +8,7 @@
 #include <netinet/ip6.h>
 
 #include <lib/fit/defer.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/device/ethernet.h>
 
 #include "mock_netstack.h"

@@ -4,7 +4,7 @@
 
 #include "src/lib/files/scoped_temp_dir.h"
 
-#include "lib/fxl/build_config.h"
+#include "src/lib/fxl/build_config.h"
 
 #include <fcntl.h>
 #include <stdlib.h>
@@ -16,7 +16,7 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/unique_fd.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace files {
 

@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 #include "lib/callback/capture.h"
 #include "lib/callback/set_when_called.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/public/types.h"

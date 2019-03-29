@@ -10,9 +10,9 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fxl/command_line.h>
-#include <lib/fxl/log_settings_command_line.h>
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/logging.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 

@@ -9,8 +9,8 @@
 #include <lib/async_promise/executor.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/scope.h>
-#include <lib/fxl/macros.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/macros.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 
 #include <list>
 #include <memory>

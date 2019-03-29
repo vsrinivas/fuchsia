@@ -7,7 +7,7 @@
 #include <lib/async/cpp/future.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
-#include <lib/fxl/memory/weak_ptr.h>
+#include <src/lib/fxl/memory/weak_ptr.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 #include "gtest/gtest.h"

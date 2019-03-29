@@ -11,7 +11,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 #include "OMX_Component.h"
 #include "OMX_Core.h"

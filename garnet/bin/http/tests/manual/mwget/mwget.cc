@@ -8,8 +8,8 @@
 #include <lib/async-loop/cpp/loop.h>
 
 #include "lib/sys/cpp/component_context.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace examples {
 

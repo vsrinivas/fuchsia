@@ -17,7 +17,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/fsl/handles/object_info.h"
-#include "lib/fxl/strings/split_string.h"
+#include "src/lib/fxl/strings/split_string.h"
 #include "lib/gtest/real_loop_fixture.h"
 
 #include <zircon/syscalls/object.h>

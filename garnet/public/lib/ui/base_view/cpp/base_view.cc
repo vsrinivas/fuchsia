@@ -6,7 +6,7 @@
 
 #include <trace/event.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/ui/gfx/cpp/math.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"

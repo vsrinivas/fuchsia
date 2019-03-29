@@ -6,7 +6,7 @@
 #define LIB_ESCHER_SHAPE_MESH_BUILDER_H_
 
 #include "lib/escher/shape/mesh.h"
-#include "lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_counted.h"
 
 namespace escher {
 

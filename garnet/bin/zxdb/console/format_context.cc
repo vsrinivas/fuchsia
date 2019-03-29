@@ -18,7 +18,7 @@
 #include "garnet/bin/zxdb/console/source_util.h"
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/symbols/location.h"
-#include "lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/lib/files/file.h"
 

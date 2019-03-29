@@ -12,7 +12,7 @@
 #include <trace-reader/reader.h>
 
 #include "garnet/lib/measure/event_spec.h"
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 
 namespace tracing {
 namespace measure {

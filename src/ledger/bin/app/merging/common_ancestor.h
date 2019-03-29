@@ -9,7 +9,7 @@
 #include <memory>
 
 #include <lib/fit/function.h>
-#include <lib/fxl/memory/ref_counted.h>
+#include <src/lib/fxl/memory/ref_counted.h>
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"

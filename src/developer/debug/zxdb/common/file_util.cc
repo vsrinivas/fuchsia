@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/common/file_util.h"
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

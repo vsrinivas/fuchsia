@@ -13,7 +13,7 @@
 #include "lib/escher/renderer/frame.h"
 #include "lib/escher/util/stopwatch.h"
 #include "lib/escher/util/trace_macros.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 
 static constexpr size_t kOffscreenBenchmarkFrameCount = 1000;
 

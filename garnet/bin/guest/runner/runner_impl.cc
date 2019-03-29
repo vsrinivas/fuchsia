@@ -10,7 +10,7 @@
 #include <lib/async/default.h>
 #include <memory>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
 
 namespace guest_runner {

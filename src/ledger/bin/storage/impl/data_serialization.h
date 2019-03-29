@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_DATA_SERIALIZATION_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_DATA_SERIALIZATION_H_
 
-#include <lib/fxl/strings/string_view.h>
+#include <src/lib/fxl/strings/string_view.h>
 
 namespace storage {
 

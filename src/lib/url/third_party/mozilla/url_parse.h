@@ -7,7 +7,7 @@
 
 #include <stddef.h>
 
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "src/lib/url/url_export.h"
 
 namespace url {

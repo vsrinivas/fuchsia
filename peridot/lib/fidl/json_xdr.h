@@ -12,8 +12,8 @@
 
 #include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/string.h>
-#include <lib/fxl/logging.h>
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "rapidjson/document.h"

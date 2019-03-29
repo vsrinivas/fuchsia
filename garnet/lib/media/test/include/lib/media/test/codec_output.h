@@ -7,7 +7,7 @@
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 
-#include <lib/fxl/macros.h>
+#include <src/lib/fxl/macros.h>
 #include <memory>
 
 // Each CodecOutput represents a Packet, and the correct associated

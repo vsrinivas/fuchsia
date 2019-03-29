@@ -5,11 +5,11 @@
 #ifndef LIB_FXL_LOG_SETTINGS_H_
 #define LIB_FXL_LOG_SETTINGS_H_
 
-#include "lib/fxl/log_level.h"
+#include "src/lib/fxl/log_level.h"
 
 #include <string>
 
-#include "lib/fxl/fxl_export.h"
+#include "src/lib/fxl/fxl_export.h"
 
 namespace fxl {
 

@@ -9,7 +9,7 @@
 #include <iostream>
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
-#include "lib/fxl/logging.h"
+#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/type_converters.h"
 #include "lib/url/gurl.h"
 #include "src/media/playback/mediaplayer_tmp/graph/formatting.h"

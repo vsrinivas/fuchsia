@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "lib/fxl/macros.h"
+#include "src/lib/fxl/macros.h"
 #include "lib/zx/event.h"
 #include "zircon/pixelformat.h"
 

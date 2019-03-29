@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <limits>
 
-#include <lib/fxl/logging.h>
+#include <src/lib/fxl/logging.h>
 
 #include "gtest/gtest.h"
 
