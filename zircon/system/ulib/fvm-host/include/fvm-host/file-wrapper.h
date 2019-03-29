@@ -32,6 +32,9 @@ public:
     // Returns ZX_OK on success, ZX_ERR_NOT_SUPPORTED if truncate is
     // not supported, or -1 if truncate operation fails.
     virtual zx_status_t Truncate(size_t size) = 0;
+
+    // Flushes pending data.
+    virtual zx_status_t Sync() = 0;
 };
 
 // Implementation of FileWrapper that wraps a raw file descripter.
@@ -48,6 +51,7 @@ public:
     ssize_t Size() override;
     ssize_t Tell() override;
     zx_status_t Truncate(size_t size) override;
+    zx_status_t Sync() override;
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(FdWrapper);
 
@@ -71,6 +75,7 @@ public:
     ssize_t Size() override;
     ssize_t Tell() override;
     zx_status_t Truncate(size_t size) override;
+    zx_status_t Sync() override;
 
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(UniqueFdWrapper);
 

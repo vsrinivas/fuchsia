@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("ftl-mtd") {
+  testonly = true
+
+  deps = [
+    ":ftl-volume-wrapper-integration",
+  ]
+}
+
+test("ftl-volume-wrapper-integration") {
+  sources = [
+    "ftl-volume-wrapper-integration-tests.cpp",
+  ]
+
+  deps = [
+    "$zx/system/ulib/ftl-mtd",
+    "$zx/system/ulib/fvm-host",
+    "$zx/system/ulib/mtd",
+    "$zx/system/ulib/zxtest",
+  ]
+}

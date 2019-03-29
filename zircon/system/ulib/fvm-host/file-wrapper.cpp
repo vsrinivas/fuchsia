@@ -33,6 +33,10 @@ zx_status_t FdWrapper::Truncate(size_t size) {
     return ftruncate(fd_, size);
 }
 
+zx_status_t FdWrapper::Sync() {
+    return fsync(fd_);
+}
+
 zx_status_t UniqueFdWrapper::Open(
     const char* path, int flags, mode_t mode, fbl::unique_ptr<UniqueFdWrapper>* out) {
     fbl::unique_fd fd(open(path, flags, mode));
@@ -69,6 +73,10 @@ ssize_t UniqueFdWrapper::Tell() {
 
 zx_status_t UniqueFdWrapper::Truncate(size_t size) {
     return ftruncate(fd_.get(), size);
+}
+
+zx_status_t UniqueFdWrapper::Sync() {
+    return fsync(fd_.get());
 }
 
 } // namespace fvm::host

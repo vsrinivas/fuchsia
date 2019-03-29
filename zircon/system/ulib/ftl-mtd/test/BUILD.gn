@@ -4,8 +4,10 @@
 
 group("test") {
   testonly = true
+
   deps = [
-    ":ftl-mtd",
+    ":ftl-volume-wrapper",
+    ":nand-volume-driver",
   ]
 }
 
@@ -21,7 +23,7 @@ source_set("common") {
   ]
 }
 
-test("ftl-mtd") {
+test("nand-volume-driver") {
   sources = [
     "nand-volume-driver-tests.cpp",
   ]
@@ -29,6 +31,19 @@ test("ftl-mtd") {
   deps = [
     ":common",
     "$zx/system/ulib/ftl-mtd",
+    "$zx/system/ulib/mtd",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("ftl-volume-wrapper") {
+  sources = [
+    "ftl-volume-wrapper-tests.cpp",
+  ]
+
+  deps = [
+    "$zx/system/ulib/ftl-mtd",
+    "$zx/system/ulib/fvm-host",
     "$zx/system/ulib/mtd",
     "$zx/system/ulib/zxtest",
   ]
