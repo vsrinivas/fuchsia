@@ -74,6 +74,8 @@
 
 #define LOCAL_TRACE 0
 
+static void x86_perfmon_reset_task(void* raw_context);
+
 // TODO(cja): Sort out headers so the kernel can include these sorts of definitions
 // without needing DDK access
 #define PCI_CONFIG_VENDOR_ID        0x00
@@ -218,6 +220,7 @@ enum LbrFormat {
 };
 
 static bool supports_perfmon = false;
+static bool perfmon_hw_initialized = false;
 
 static uint16_t perfmon_version = 0;
 static uint16_t perfmon_num_programmable_counters = 0;
@@ -1611,6 +1614,12 @@ zx_status_t arch_perfmon_start() {
         return ZX_ERR_BAD_STATE;
     if (!perfmon_state)
         return ZX_ERR_BAD_STATE;
+
+    // Make sure all relevant sysregs have been wiped clean.
+    if (!perfmon_hw_initialized) {
+        mp_sync_exec(MP_IPI_TARGET_ALL, 0, x86_perfmon_reset_task, nullptr);
+        perfmon_hw_initialized = true;
+    }
 
     // Sanity check the buffers and map them in.
     // This is deferred until now so that they are mapped in as minimally as
