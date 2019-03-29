@@ -4,6 +4,15 @@
 
 import("//peridot/build/executable_package.gni")
 
+group("suggestion") {
+  testonly = true
+  deps = [
+    ":defs",
+    ":suggestion_test_module",
+    ":suggestion_test_session_shell",
+  ]
+}
+
 source_set("defs") {
   testonly = true
 

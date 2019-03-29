@@ -2,15 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//peridot/build/modular_config/modular_config.gni")
-
-group("modular_config") {
+group("bin") {
   testonly = true
   deps = [
-    ":test_config",
+    "agents",
+    "basemgr",
+    "context_engine",
+    "module_resolver",
+    "sessionctl",
+    "sessionmgr",
+    "suggestion_engine",
+    "test_driver",
+    "voila",
   ]
-}
-
-modular_config("test_config") {
-  config = "test_config.json"
 }

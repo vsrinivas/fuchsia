@@ -4,6 +4,24 @@
 
 import("//build/fidl/toolchain.gni")
 
+group("lib") {
+  testonly = true
+  deps = [
+    ":just_fidl",
+    ":peridot_public_lib_unittests",
+    ":services",
+    "agent",
+    "app_driver",
+    "async",
+    "context",
+    "entity",
+    "fostr",
+    "integration_testing",
+    "lifecycle",
+    "message_queue",
+  ]
+}
+
 group("services") {
   deps = [
     "//sdk/fidl/fuchsia.modular",

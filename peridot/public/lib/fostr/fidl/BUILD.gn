@@ -2,15 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//peridot/build/modular_config/modular_config.gni")
-
-group("modular_config") {
+group("fidl") {
   testonly = true
   deps = [
-    ":test_config",
+    "fuchsia.ledger",
+    "fuchsia.modular",
+    "fuchsia.modular.auth",
+    "fuchsia.modular.internal",
+    "fuchsia.modular.storymodel",
+    "fuchsia.speech",
   ]
-}
-
-modular_config("test_config") {
-  config = "test_config.json"
 }

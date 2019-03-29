@@ -4,6 +4,13 @@
 
 import("//peridot/build/executable_package.gni")
 
+group("story_shell_factory") {
+  testonly = true
+  deps = [
+    ":story_shell_factory_test_session_shell",
+  ]
+}
+
 executable_package("story_shell_factory_test_session_shell") {
   testonly = true
 

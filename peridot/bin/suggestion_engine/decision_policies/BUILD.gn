@@ -4,7 +4,7 @@
 
 import("//peridot/build/executable_package.gni")
 
-group("all") {
+group("decision_policies") {
   public_deps = [
     ":decision_policy",
     ":rank_over_threshold_decision_policy",

@@ -4,6 +4,13 @@
 
 import("//peridot/build/executable_package.gni")
 
+group("test_driver") {
+  testonly = true
+  deps = [
+    ":test_driver_module",
+  ]
+}
+
 executable_package("test_driver_module") {
   testonly = true
 

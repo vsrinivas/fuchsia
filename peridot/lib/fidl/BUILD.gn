@@ -4,6 +4,25 @@
 
 import("//build/fidl/fidl.gni")
 
+group("fidl") {
+  testonly = true
+  deps = [
+    ":app_client",
+    ":app_client_unittest",
+    ":app_client_unittest_fidl",
+    ":array_to_string",
+    ":clone",
+    ":environment",
+    ":json_xdr",
+    ":json_xdr_unittest",
+    ":json_xdr_unittest_fidl",
+    ":proxy",
+    ":single_service_app",
+    ":unittests",
+    ":view_host",
+  ]
+}
+
 source_set("app_client") {
   sources = [
     "app_client.cc",

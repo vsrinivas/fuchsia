@@ -5,6 +5,19 @@
 import("//build/testing/environments.gni")
 import("//peridot/build/tests_package.gni")
 
+group("maxwell_integration") {
+  testonly = true
+  deps = [
+    ":common",
+    ":context_common",
+    ":context_engine_test",
+    ":maxwell_integration_tests",
+    ":maxwell_service_provider_bridge",
+    ":suggestion_engine_test",
+    ":test_suggestion_listener",
+  ]
+}
+
 hermetic_tests_package("maxwell_integration_tests") {
   deps = [
     ":context_engine_test",

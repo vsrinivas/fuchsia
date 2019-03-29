@@ -6,6 +6,16 @@ import("//build/testing/environments.gni")
 import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
+group("clipboard") {
+  testonly = true
+  deps = [
+    ":clipboard_agent",
+    ":clipboard_impl_unittest",
+    ":clipboard_sources",
+    ":clipboard_unittests",
+  ]
+}
+
 executable_package("clipboard_agent") {
   meta = [
     {

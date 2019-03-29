@@ -5,6 +5,15 @@
 import("//build/fidl/fidl.gni")
 import("//peridot/build/executable_package.gni")
 
+group("simple") {
+  testonly = true
+  deps = [
+    ":interfaces",
+    ":simple_agent",
+    ":simple_module",
+  ]
+}
+
 executable_package("simple_agent") {
   meta = [
     {

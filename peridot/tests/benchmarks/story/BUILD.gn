@@ -4,6 +4,15 @@
 
 import("//peridot/build/executable_package.gni")
 
+group("story") {
+  testonly = true
+  deps = [
+    ":modular_benchmark_story_module",
+    ":modular_benchmark_story_session_shell",
+    ":tracing_waiter",
+  ]
+}
+
 executable_package("modular_benchmark_story_module") {
   testonly = true
 

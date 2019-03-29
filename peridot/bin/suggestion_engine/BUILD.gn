@@ -61,10 +61,10 @@ source_set("suggestion_engine_impl") {
     ":models",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/timeline",
-    "//peridot/bin/suggestion_engine/decision_policies:all",
-    "//peridot/bin/suggestion_engine/filters:all",
-    "//peridot/bin/suggestion_engine/rankers:all",
-    "//peridot/bin/suggestion_engine/ranking_features:all",
+    "//peridot/bin/suggestion_engine/decision_policies",
+    "//peridot/bin/suggestion_engine/filters",
+    "//peridot/bin/suggestion_engine/rankers",
+    "//peridot/bin/suggestion_engine/ranking_features",
     "//peridot/lib/bound_set",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/public/lib/context/cpp:context_helper",
@@ -106,7 +106,7 @@ source_set("interruption_processor") {
 
   deps = [
     ":models",
-    "//peridot/bin/suggestion_engine/decision_policies:all",
+    "//peridot/bin/suggestion_engine/decision_policies",
     "//peridot/bin/suggestion_engine/ranking_features:ranking_feature",
     "//sdk/fidl/fuchsia.modular",
   ]

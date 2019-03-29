@@ -37,6 +37,14 @@ import("//build/package.gni")
 #
 # 5. Add an entry for the test to run_modular_benchmarks.sh.
 
+group("benchmarks") {
+  testonly = true
+  deps = [
+    ":peridot_benchmarks_bin",
+    "story",
+  ]
+}
+
 package("modular_benchmarks") {
   testonly = true
 

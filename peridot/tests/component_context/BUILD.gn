@@ -5,6 +5,18 @@
 import("//build/fidl/fidl.gni")
 import("//peridot/build/executable_package.gni")
 
+group("component_context") {
+  testonly = true
+  deps = [
+    ":component_context_test_module",
+    ":component_context_test_one_agent",
+    ":component_context_test_service",
+    ":component_context_test_two_agent",
+    ":component_context_test_unstoppable_agent",
+    ":defs",
+  ]
+}
+
 executable_package("component_context_test_module") {
   testonly = true
 

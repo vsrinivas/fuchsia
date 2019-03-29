@@ -5,6 +5,32 @@
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 
+group("lib") {
+  testonly = true
+  deps = [
+    ":maxwell_internal",
+    ":peridot_lib_unittests",
+    "base64url",
+    "bound_set",
+    "commit_pack",
+    "common",
+    "convert",
+    "device_info",
+    "entity",
+    "fidl",
+    "firebase",
+    "ledger_client",
+    "module_manifest",
+    "module_manifest_source",
+    "rapidjson",
+    "rng",
+    "scoped_tmpfs",
+    "socket",
+    "testing",
+    "util",
+  ]
+}
+
 executable("peridot_lib_unittests") {
   testonly = true
 

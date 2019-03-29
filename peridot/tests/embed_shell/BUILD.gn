@@ -4,6 +4,17 @@
 
 import("//peridot/build/executable_package.gni")
 
+group("embed_shell") {
+  testonly = true
+  deps = [
+    ":defs",
+    ":embed_shell_test_child_module",
+    ":embed_shell_test_parent_module",
+    ":embed_shell_test_session_shell",
+    ":embed_shell_test_story_shell",
+  ]
+}
+
 source_set("defs") {
   testonly = true
 

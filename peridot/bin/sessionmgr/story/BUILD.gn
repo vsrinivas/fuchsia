@@ -5,6 +5,15 @@
 import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
+group("story") {
+  testonly = true
+  deps = [
+    ":system",
+    "model",
+    "systems",
+  ]
+}
+
 source_set("system") {
   sources = [
     "system.cc",

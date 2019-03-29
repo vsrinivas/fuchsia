@@ -6,6 +6,20 @@ import("//build/package.gni")
 import("//build/testing/environments.gni")
 import("//peridot/build/tests_package.gni")
 
+group("peridot") {
+  testonly = true
+  deps = [
+    ":peridot_tests",
+    "bin",
+    "cloud",
+    "examples",
+    "lib",
+    "public",
+    "tests",
+    "third_party",
+  ]
+}
+
 config("internal") {
   include_dirs = [
     ".",

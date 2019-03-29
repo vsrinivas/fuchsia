@@ -4,6 +4,16 @@
 
 import("//peridot/build/executable_package.gni")
 
+group("module_context") {
+  testonly = true
+  deps = [
+    ":defs",
+    ":module_context_test_entity_module",
+    ":module_context_test_module",
+    ":module_context_test_session_shell",
+  ]
+}
+
 executable_package("module_context_test_session_shell") {
   testonly = true
 

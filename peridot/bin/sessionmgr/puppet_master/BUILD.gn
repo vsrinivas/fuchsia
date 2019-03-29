@@ -5,6 +5,21 @@
 import("//build/testing/environments.gni")
 import("//peridot/build/tests_package.gni")
 
+group("puppet_master") {
+  testonly = true
+  deps = [
+    ":dispatch_story_command_executor",
+    ":dispatch_story_command_executor_unittest",
+    ":make_production_impl",
+    ":puppet_master_impl",
+    ":puppet_master_impl_unittest",
+    ":puppet_master_unittests",
+    ":story_command_executor",
+    ":story_command_executor_unittest",
+    "command_runners",
+  ]
+}
+
 hermetic_tests_package("puppet_master_unittests") {
   deps = [
     ":dispatch_story_command_executor_unittest",

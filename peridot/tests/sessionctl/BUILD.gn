@@ -5,6 +5,14 @@
 import("//build/testing/environments.gni")
 import("//peridot/build/tests_package.gni")
 
+group("sessionctl") {
+  testonly = true
+  deps = [
+    ":sessionctl_integration_tests",
+    ":sessionctl_test",
+  ]
+}
+
 executable("sessionctl_test") {
   testonly = true
   output_name = "sessionctl_test"

@@ -5,6 +5,16 @@
 import("//build/fidl/fidl.gni")
 import("//peridot/build/executable_package.gni")
 
+group("queue_persistence") {
+  testonly = true
+  deps = [
+    ":defs",
+    ":queue_persistence_test_agent",
+    ":queue_persistence_test_module",
+    ":queue_persistence_test_service",
+  ]
+}
+
 source_set("defs") {
   testonly = true
 

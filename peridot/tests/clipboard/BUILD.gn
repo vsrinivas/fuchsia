@@ -4,6 +4,14 @@
 
 import("//peridot/build/executable_package.gni")
 
+group("clipboard") {
+  testonly = true
+  deps = [
+    ":clipboard_test_module",
+    ":defs",
+  ]
+}
+
 executable_package("clipboard_test_module") {
   testonly = true
 

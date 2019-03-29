@@ -2,6 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("testing") {
+  testonly = true
+  deps = [
+    ":component_base",
+    ":component_context_fake",
+    ":component_main",
+    ":entity_resolver_fake",
+    ":fake_agent_runner_storage",
+    ":ledger_repository_for_testing",
+    ":mock_base",
+    ":module_facet_reader_fake",
+    ":module_resolver_fake",
+    ":session_shell_base",
+    ":session_shell_impl",
+    ":story_controller_mock",
+    ":story_provider_mock",
+    ":test_driver",
+    ":test_story_command_executor",
+    ":test_with_ledger",
+    ":test_with_session_storage",
+    ":wait_until_idle",
+  ]
+}
+
 source_set("component_base") {
   testonly = true
 

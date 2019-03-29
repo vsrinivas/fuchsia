@@ -4,6 +4,15 @@
 
 import("//peridot/build/executable_package.gni")
 
+group("intents") {
+  testonly = true
+  deps = [
+    ":defs",
+    ":intent_test_child_module",
+    ":intent_test_parent_module",
+  ]
+}
+
 source_set("defs") {
   testonly = true
 

@@ -2,15 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//peridot/build/modular_config/modular_config.gni")
-
-group("modular_config") {
+group("examples") {
   testonly = true
   deps = [
-    ":test_config",
+    "simple",
+    "swap_cpp",
+    "todo_cpp",
   ]
-}
-
-modular_config("test_config") {
-  config = "test_config.json"
 }

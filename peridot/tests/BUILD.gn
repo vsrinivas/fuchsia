@@ -50,6 +50,30 @@
 import("//build/package.gni")
 import("//build/testing/environments.gni")
 
+group("tests") {
+  testonly = true
+  deps = [
+    "benchmarks",
+    "clipboard",
+    "common",
+    "component_context",
+    "embed_shell",
+    "intents",
+    "last_focus_time",
+    "maxwell_integration",
+    "modular_config",
+    "module_context",
+    "parent_child",
+    "queue_persistence",
+    "session_shell",
+    "sessionctl",
+    "story_shell",
+    "story_shell_factory",
+    "suggestion",
+    "trigger",
+  ]
+}
+
 package("modular_tests") {
   testonly = true
 

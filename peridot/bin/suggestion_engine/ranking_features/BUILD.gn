@@ -4,7 +4,7 @@
 
 import("//peridot/build/executable_package.gni")
 
-group("all") {
+group("ranking_features") {
   public_deps = [
     ":affinity_ranking_feature",
     ":annoyance_ranking_feature",

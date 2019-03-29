@@ -4,12 +4,14 @@
 
 import("//peridot/build/executable_package.gni")
 
-group("all") {
+group("filters") {
   public_deps = [
     ":base",
     ":conjugate_ranked_passive_filter",
     ":ranked_active_filter",
     ":ranked_passive_filter",
+    ":suggestion_active_filter",
+    ":suggestion_passive_filter",
   ]
 }
 

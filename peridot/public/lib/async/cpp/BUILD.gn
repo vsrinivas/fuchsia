@@ -2,6 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("cpp") {
+  testonly = true
+  deps = [
+    ":future",
+    ":future_unittest",
+    ":operation",
+    ":operation_unittest",
+    ":unittests",
+  ]
+}
+
 source_set("future") {
   sources = [
     "future.cc",

@@ -5,6 +5,17 @@
 import("//build/fidl/fidl.gni")
 import("//peridot/build/executable_package.gni")
 
+group("trigger") {
+  testonly = true
+  deps = [
+    ":defs",
+    ":trigger_test_agent",
+    ":trigger_test_module",
+    ":trigger_test_service",
+    ":trigger_test_session_shell",
+  ]
+}
+
 source_set("defs") {
   testonly = true
 

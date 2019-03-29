@@ -5,6 +5,15 @@
 import("//build/testing/environments.gni")
 import("//peridot/build/tests_package.gni")
 
+group("systems") {
+  testonly = true
+  deps = [
+    ":story_systems_unittests",
+    ":story_visibility_system",
+    ":story_visibility_system_unittest",
+  ]
+}
+
 hermetic_tests_package("story_systems_unittests") {
   deps = [
     ":story_visibility_system_unittest",

@@ -4,6 +4,16 @@
 
 import("//peridot/build/executable_package.gni")
 
+group("parent_child") {
+  testonly = true
+  deps = [
+    ":defs",
+    ":parent_child_test_child_module1",
+    ":parent_child_test_child_module2",
+    ":parent_child_test_parent_module",
+  ]
+}
+
 source_set("defs") {
   testonly = true
 
