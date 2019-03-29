@@ -1008,8 +1008,6 @@ int BtHciMediatek::Thread() {
             return thrd_error;
         }
 
-        CardSetOwn(true);
-
         if (packet.type == ZX_PKT_TYPE_SIGNAL_ONE && packet.key == kCommandChannelKey) {
             bool rearm = true;
             if (packet.signal.observed & ZX_CHANNEL_READABLE) {
@@ -1091,8 +1089,6 @@ int BtHciMediatek::Thread() {
             zxlogf(WARN, "%s: Unknown packet type %u or key %lu\n", __FILE__, packet.type,
                    packet.key);
         }
-
-        CardSetOwn(false);
 
         if (!cmd_channel_.is_valid() && !acl_channel_.is_valid() && !snoop_channel_.is_valid()) {
             thread_running_ = false;
