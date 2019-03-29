@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "dev": [ "misc/sysinfo" ],
+        "features": [ "shell" ],
         "services": [ "fuchsia.net.SocketProvider" ]
     }
 }
