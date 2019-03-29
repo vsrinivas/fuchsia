@@ -547,7 +547,10 @@ struct LlcHeader {
     uint8_t ssap;
     uint8_t control;
     uint8_t oui[3];
-    uint16_t protocol_id;
+    uint16_t protocol_id_be;  // In network byte order (big endian).
+
+    uint16_t protocol_id() const { return be16toh(protocol_id_be); }
+    void set_protocol_id(uint16_t protocol_id) { protocol_id_be = htobe16(protocol_id); }
 
     constexpr size_t len() const { return sizeof(*this); }
     static constexpr size_t max_len() { return sizeof(LlcHeader); }
@@ -558,7 +561,7 @@ struct AmsduSubframeHeader {
     // Note this is the same as the IEEE 802.3 frame format.
     common::MacAddr da;
     common::MacAddr sa;
-    uint16_t msdu_len_be;  // Stored in network byte order. Use accessors.
+    uint16_t msdu_len_be;  // In network byte order (big endian).
 
     uint16_t msdu_len() const { return be16toh(msdu_len_be); }
 
@@ -581,7 +584,10 @@ const uint8_t kLlcOui[3] = {};
 struct EthernetII {
     common::MacAddr dest;
     common::MacAddr src;
-    uint16_t ether_type;
+    uint16_t ether_type_be;  // In network byte order (big endian).
+
+    uint16_t ether_type() const { return be16toh(ether_type_be); }
+    void set_ether_type(uint16_t ether_type) { ether_type_be = htobe16(ether_type); }
 
     constexpr size_t len() const { return sizeof(*this); }
     static constexpr size_t max_len() { return sizeof(EthernetII); }

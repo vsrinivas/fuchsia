@@ -68,7 +68,7 @@ std::string Describe(const LlcHeader& hdr) {
     BUFFER("ssap:0x%02x", hdr.ssap);
     BUFFER("ctrl:0x%02x", hdr.control);
     BUFFER("oui:[%02x:%02x:%02x]", hdr.oui[0], hdr.oui[1], hdr.oui[2]);
-    BUFFER("proto:0x%04x", hdr.protocol_id);
+    BUFFER("proto:0x%04x", hdr.protocol_id_be);
     return std::string(buf);
 }
 

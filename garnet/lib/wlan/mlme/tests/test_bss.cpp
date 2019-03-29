@@ -524,7 +524,7 @@ fbl::unique_ptr<Packet> CreateDataFrame(Span<const uint8_t> payload) {
     llc_hdr->ssap = kLlcSnapExtension;
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
-    llc_hdr->protocol_id = 42;
+    llc_hdr->protocol_id_be = 42;
     w.Write(payload);
 
     packet->set_len(w.WrittenBytes());
@@ -572,7 +572,7 @@ fbl::unique_ptr<Packet> CreateAmsduDataFramePacket(
         llc_hdr->ssap = kLlcSnapExtension;
         llc_hdr->control = kLlcUnnumberedInformation;
         std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
-        llc_hdr->protocol_id = 42;
+        llc_hdr->protocol_id_be = 42;
         w.Write(payloads[i]);
         if (i != payloads.size() - 1) {
             w.Write(padding_span.subspan(0, (6 - payloads[i].size_bytes()) % 4));
@@ -624,7 +624,7 @@ fbl::unique_ptr<Packet> CreateEthFrame(Span<const uint8_t> payload) {
     auto eth_hdr = w.Write<EthernetII>();
     eth_hdr->src = client;
     eth_hdr->dest = bssid;
-    eth_hdr->ether_type = 2;
+    eth_hdr->ether_type_be = 2;
     w.Write(payload);
 
     return packet;

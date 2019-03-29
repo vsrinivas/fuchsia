@@ -307,7 +307,7 @@ void MeshMlme::HandleEthTx(EthFrame&& frame) {
     }
 
     auto llc_hdr = w.Write<LlcHeader>();
-    FillEtherLlcHeader(llc_hdr, frame.hdr()->ether_type);
+    FillEtherLlcHeader(llc_hdr, frame.hdr()->ether_type_be);
     w.Write(frame.body_data());
     packet->set_len(w.WrittenBytes());
     SendDataFrame(std::move(packet));
@@ -522,7 +522,7 @@ void MeshMlme::DeliverData(const common::ParsedMeshDataHeader& header, Span<uint
     EthernetII eth_hdr = {
         .dest = GetDestAddr(header),
         .src = GetSrcAddr(header),
-        .ether_type = header.llc->protocol_id,
+        .ether_type_be = header.llc->protocol_id_be,
     };
 
     memcpy(eth_frame.data(), &eth_hdr, sizeof(EthernetII));

@@ -77,7 +77,7 @@ static inline fbl::unique_ptr<Packet> MakeEthPacket(const common::MacAddr& dest_
     auto eth = w.Write<EthernetII>();
     eth->dest = dest_addr;
     eth->src = src_addr;
-    eth->ether_type = 0;
+    eth->ether_type_be = 0;
 
     for (auto byte : payload) {
         w.WriteByte(byte);

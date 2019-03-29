@@ -321,11 +321,11 @@ TEST(Frame, AdvanceThroughEapolFrame) {
     ASSERT_TRUE(opt_data_llc_frame);
     auto data_llc_frame = opt_data_llc_frame.CheckLength();
     ASSERT_TRUE(data_llc_frame);
-    ASSERT_EQ(be16toh(data_llc_frame.body()->protocol_id), kEapolProtocolId);
+    ASSERT_EQ(data_llc_frame.body()->protocol_id(), kEapolProtocolId);
 
     auto llc_frame = data_llc_frame.SkipHeader();
     ASSERT_TRUE(llc_frame);
-    ASSERT_EQ(be16toh(llc_frame.hdr()->protocol_id), kEapolProtocolId);
+    ASSERT_EQ(llc_frame.hdr()->protocol_id(), kEapolProtocolId);
     auto opt_llc_eapol_frame = llc_frame.CheckBodyType<EapolHdr>();
     ASSERT_TRUE(opt_llc_eapol_frame);
     auto llc_eapol_frame = opt_llc_eapol_frame.CheckLength();

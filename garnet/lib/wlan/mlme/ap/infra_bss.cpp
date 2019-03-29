@@ -433,7 +433,7 @@ std::optional<DataFrame<LlcHeader>> InfraBss::EthToDataFrame(const EthFrame& eth
     llc_hdr->ssap = kLlcSnapExtension;
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
-    llc_hdr->protocol_id = eth_frame.hdr()->ether_type;
+    llc_hdr->protocol_id_be = eth_frame.hdr()->ether_type_be;
     w.Write(eth_frame.body_data());
 
     packet->set_len(w.WrittenBytes());

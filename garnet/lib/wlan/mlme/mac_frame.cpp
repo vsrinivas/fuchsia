@@ -12,12 +12,12 @@
 
 namespace wlan {
 
-void FillEtherLlcHeader(LlcHeader* llc, uint16_t protocol_id) {
+void FillEtherLlcHeader(LlcHeader* llc, uint16_t protocol_id_be) {
     llc->dsap = kLlcSnapExtension;
     llc->ssap = kLlcSnapExtension;
     llc->control = kLlcUnnumberedInformation;
     std::memcpy(llc->oui, kLlcOui, sizeof(llc->oui));
-    llc->protocol_id = protocol_id;
+    llc->protocol_id_be = protocol_id_be;
 }
 
 }  // namespace wlan

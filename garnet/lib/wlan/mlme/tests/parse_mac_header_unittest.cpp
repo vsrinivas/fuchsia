@@ -163,7 +163,7 @@ TEST(ParseMeshDataHeader, NoAddrExt) {
 
     EXPECT_EQ(0xddccbbaau, parsed->mesh_ctrl->seq);
     EXPECT_EQ(0u, parsed->addr_ext.size());
-    EXPECT_EQ(0x3412u, parsed->llc->protocol_id);
+    EXPECT_EQ(0x3412u, parsed->llc->protocol_id_be);
     EXPECT_EQ(0u, r.RemainingBytes());
 }
 
@@ -198,7 +198,7 @@ TEST(ParseMeshDataHeader, Addr4Ext) {
 
     EXPECT_RANGES_EQ(std::vector<MacAddr>({MacAddr("44:44:44:44:44:44")}), parsed->addr_ext);
     EXPECT_EQ(0xddccbbaau, parsed->mesh_ctrl->seq);
-    EXPECT_EQ(0x3412u, parsed->llc->protocol_id);
+    EXPECT_EQ(0x3412u, parsed->llc->protocol_id_be);
     EXPECT_EQ(0u, r.RemainingBytes());
 }
 
@@ -237,7 +237,7 @@ TEST(ParseMeshDataHeader, Addr56Ext) {
         std::vector<MacAddr>({MacAddr("55:55:55:55:55:55"), MacAddr("66:66:66:66:66:66")}),
         parsed->addr_ext);
     EXPECT_EQ(0xddccbbaau, parsed->mesh_ctrl->seq);
-    EXPECT_EQ(0x3412u, parsed->llc->protocol_id);
+    EXPECT_EQ(0x3412u, parsed->llc->protocol_id_be);
     EXPECT_EQ(0u, r.RemainingBytes());
 }
 

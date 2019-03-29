@@ -193,7 +193,7 @@ struct Context {
         ASSERT_NE(hdr, nullptr);
         EXPECT_EQ(std::memcmp(hdr->src.byte, client_addr.byte, 6), 0);
         EXPECT_EQ(std::memcmp(hdr->dest.byte, kBssid1, 6), 0);
-        EXPECT_EQ(hdr->ether_type, 42);
+        EXPECT_EQ(hdr->ether_type_be, 42);
         auto payload = rdr.ReadRemaining();
         EXPECT_RANGES_EQ(payload, expected_payload);
     }
@@ -652,7 +652,7 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
-    EXPECT_EQ(frame.body()->protocol_id, htobe16(kEapolProtocolId));
+    EXPECT_EQ(frame.body()->protocol_id_be, htobe16(kEapolProtocolId));
     auto type_checked_frame = frame.SkipHeader().CheckBodyType<EapolHdr>();
     ASSERT_TRUE(type_checked_frame);
     auto llc_eapol_frame = type_checked_frame.CheckLength();

@@ -139,7 +139,7 @@ template <> struct FrameTypeValidator<LlcHeader, EapolHdr> {
         if (len < sizeof(LlcHeader)) { return false; }
 
         auto hdr = reinterpret_cast<const LlcHeader*>(buf);
-        return be16toh(hdr->protocol_id) == kEapolProtocolId;
+        return hdr->protocol_id() == kEapolProtocolId;
     }
 };
 

@@ -495,7 +495,7 @@ void AssociatedState::HandleDataLlcFrame(DataFrame<LlcHeader>&& frame) {
     auto eth_hdr = w.Write<EthernetII>();
     eth_hdr->dest = data_hdr->addr3;
     eth_hdr->src = data_hdr->addr2;
-    eth_hdr->ether_type = llc_frame.hdr()->protocol_id;
+    eth_hdr->set_ether_type(llc_frame.hdr()->protocol_id());
     w.Write(llc_frame.body_data());
 
     packet->set_len(w.WrittenBytes());
@@ -592,7 +592,7 @@ zx_status_t AssociatedState::HandleMlmeEapolReq(const MlmeMsg<wlan_mlme::EapolRe
     llc_hdr->ssap = kLlcSnapExtension;
     llc_hdr->control = kLlcUnnumberedInformation;
     std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
-    llc_hdr->protocol_id = htobe16(kEapolProtocolId);
+    llc_hdr->set_protocol_id(kEapolProtocolId);
     w.Write({req.body()->data.data(), eapol_pdu_len});
 
     packet->set_len(w.WrittenBytes());

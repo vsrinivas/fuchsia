@@ -699,7 +699,7 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
     // TODO(porce): Construct htc_order field
 
     auto llc_hdr = w.Write<LlcHeader>();
-    FillEtherLlcHeader(llc_hdr, eth_hdr->ether_type);
+    FillEtherLlcHeader(llc_hdr, eth_hdr->ether_type_be);
     w.Write(eth_frame.body_data());
 
     packet->set_len(w.WrittenBytes());

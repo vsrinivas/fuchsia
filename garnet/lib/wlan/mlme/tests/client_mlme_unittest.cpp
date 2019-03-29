@@ -346,7 +346,7 @@ TEST_F(ClientTest, ExchangeEapolFrames) {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     EXPECT_EQ(frame.hdr()->fc.protected_frame(), 0);
-    EXPECT_EQ(frame.body()->protocol_id, htobe16(kEapolProtocolId));
+    EXPECT_EQ(frame.body()->protocol_id_be, htobe16(kEapolProtocolId));
     auto type_checked_frame = frame.SkipHeader().CheckBodyType<EapolHdr>();
     ASSERT_TRUE(type_checked_frame);
     auto llc_eapol_frame = type_checked_frame.CheckLength();
