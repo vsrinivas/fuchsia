@@ -103,8 +103,8 @@ use futures::{select, TryFutureExt, TryStreamExt};
 use log::{error, info};
 
 use netstack3_core::{
-    add_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout, receive_frame,
-    set_ip_addr_subnet, AddrSubnet, AddrSubnetEither, Context, DeviceId,
+    add_device_route, del_device_route, get_all_routes, get_ip_addr_subnet, handle_timeout,
+    receive_frame, set_ip_addr_subnet, AddrSubnet, AddrSubnetEither, Context, DeviceId,
     DeviceLayerEventDispatcher, EntryDest, EntryEither, EventDispatcher, Mac, NetstackError,
     StackState, Subnet, SubnetEither, TimerId, TransportLayerEventDispatcher, UdpEventDispatcher,
 };
@@ -531,7 +531,6 @@ impl EventLoop {
         match entry.destination {
             fidl_net_stack::ForwardingDestination::DeviceId(id) => {
                 if let Some(device_id) = self.ctx.dispatcher().get_device_client(id).map(|x| x.id) {
-                    // TODO(joshlf): Return an error if the subnet is invalid.
                     if let Some(subnet) = SubnetEither::new(
                         fidl_net_ext::IpAddress::from(entry.subnet.addr).0.into(),
                         entry.subnet.prefix_len,
@@ -565,8 +564,20 @@ impl EventLoop {
         &mut self,
         subnet: fidl_net::Subnet,
     ) -> Option<fidl_net_stack::Error> {
-        // TODO(eyalsoha): Implement this.
-        None
+        if let Some(subnet) = SubnetEither::new(
+            fidl_net_ext::IpAddress::from(subnet.addr).0.into(),
+            subnet.prefix_len,
+        ) {
+            match del_device_route(&mut self.ctx, subnet) {
+                Ok(_) => None,
+                Err(NetstackError::NotFound) => {
+                    Some(fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::NotFound })
+                }
+                Err(_) => unreachable!(),
+            }
+        } else {
+            Some(fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::InvalidArgs })
+        }
     }
 }
 

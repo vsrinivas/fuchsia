@@ -245,6 +245,16 @@ pub fn add_device_route<D: EventDispatcher>(
         .map_err(From::from)
 }
 
+/// Delete a route from the forwarding table, returning `Err` if no
+/// route was found to be deleted.
+pub fn del_device_route<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    subnet: SubnetEither,
+) -> Result<(), error::NetstackError> {
+    map_addr_version!(SubnetEither, subnet, crate::ip::del_device_route(ctx, subnet))
+        .map_err(From::from)
+}
+
 /// Get all the routes.
 pub fn get_all_routes<'a, D: EventDispatcher>(
     ctx: &'a Context<D>,

@@ -22,6 +22,10 @@ pub enum NetstackError {
     /// Error when item already exists.
     #[fail(display = "Item already exists")]
     Exists,
+
+    /// Error when item is not found.
+    #[fail(display = "Item not found")]
+    NotFound,
     // Add error types here as we add more to the stack
 }
 
@@ -46,5 +50,15 @@ pub(crate) struct ExistsError;
 impl From<ExistsError> for NetstackError {
     fn from(_: ExistsError) -> NetstackError {
         NetstackError::Exists
+    }
+}
+
+/// Error when something unexpectedly doesn't exist, such as trying to
+/// remove an element when the element is not present.
+pub(crate) struct NotFoundError;
+
+impl From<NotFoundError> for NetstackError {
+    fn from(_: NotFoundError) -> NetstackError {
+        NetstackError::NotFound
     }
 }

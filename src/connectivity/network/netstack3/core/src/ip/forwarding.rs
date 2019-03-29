@@ -80,6 +80,20 @@ impl<I: Ip> ForwardingTable<I> {
         }
     }
 
+    /// Delete a route from the forwarding table, returning `Err` if
+    /// no route was found to be deleted.
+    pub(crate) fn del_route(&mut self, subnet: Subnet<I::Addr>) -> Result<(), NotFoundError> {
+        debug!("deleting route: {}", subnet);
+        let pos = self.entries.iter().position(|entry| entry.subnet == subnet);
+        match pos {
+            Some(pos) => {
+                self.entries.remove(pos);
+                Ok(())
+            }
+            None => Err(NotFoundError),
+        }
+    }
+
     /// Look up an address in the table.
     ///
     /// Look up an IP address in the table, returning a next hop IP address and

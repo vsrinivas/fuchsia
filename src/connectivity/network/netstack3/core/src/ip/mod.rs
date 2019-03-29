@@ -26,6 +26,7 @@ use specialize_ip_macro::specialize_ip_address;
 
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::ExistsError;
+use crate::error::NotFoundError;
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::{Context, EventDispatcher};
 
@@ -425,6 +426,21 @@ pub(crate) fn add_device_route<D: EventDispatcher, A: IpAddress>(
     return state.v4.table.add_device_route(subnet, device);
     #[ipv6addr]
     return state.v6.table.add_device_route(subnet, device);
+}
+
+/// Delete a route from the forwarding table, returning `Err` if no
+/// route was found to be deleted.
+#[specialize_ip_address]
+pub(crate) fn del_device_route<D: EventDispatcher, A: IpAddress>(
+    ctx: &mut Context<D>,
+    subnet: Subnet<A>,
+) -> Result<(), NotFoundError> {
+    let state = &mut ctx.state_mut().ip;
+
+    #[ipv4addr]
+    return state.v4.table.del_route(subnet);
+    #[ipv6addr]
+    return state.v6.table.del_route(subnet);
 }
 
 /// Return the routes for the provided `IpAddress` type
