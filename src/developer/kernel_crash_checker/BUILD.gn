@@ -41,10 +41,11 @@ executable("main") {
 }
 
 config_data("config") {
+  for_pkg = "sysmgr"
   sources = [
     "config/config.json",
   ]
   outputs = [
-    "sysmgr/kernel_crash_checker.config",
+    "kernel_crash_checker.config",
   ]
 }

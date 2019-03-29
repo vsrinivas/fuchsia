@@ -68,7 +68,8 @@ package("sysmgr") {
 
 template("cfg") {
   config_data(target_name) {
-    outputs = "sysmgr/{{source_name_part}}"
+    for_pkg = "sysmgr"
+    outputs = "{{source_name_part}}"
     sources = [
       rebase_path("config/${invoker.name}"),
     ]

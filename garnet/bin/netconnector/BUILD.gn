@@ -76,8 +76,9 @@ package("netconnector") {
 }
 
 config_data("netconnector_config") {
+  for_pkg = "sysmgr"
   outputs = [
-    "sysmgr/netconnector.config",
+    "netconnector.config",
   ]
   sources = [
     "service.config",

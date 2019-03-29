@@ -80,10 +80,11 @@ source_set("src") {
 }
 
 config_data("upload_to_prod_server_config") {
+  for_pkg = "crashpad_agent"
   sources = [
     "configs/upload_to_prod_server.json",
   ]
   outputs = [
-    "crashpad_agent/override_config.json",
+    "override_config.json",
   ]
 }

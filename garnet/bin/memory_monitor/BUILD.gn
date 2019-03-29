@@ -57,8 +57,9 @@ package("memory_monitor") {
 }
 
 config_data("config") {
+  for_pkg = "sysmgr"
   outputs = [
-    "sysmgr/memory_monitor.config",
+    "memory_monitor.config",
   ]
   sources = [
     "memory_monitor.config",

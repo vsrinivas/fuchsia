@@ -69,8 +69,9 @@ package("netcfg") {
 }
 
 config_data("config") {
+  for_pkg = "sysmgr"
   outputs = [
-    "sysmgr/netcfg.config",
+    "netcfg.config",
   ]
   sources = [
     "netcfg.config",

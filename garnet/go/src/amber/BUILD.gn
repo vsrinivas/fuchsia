@@ -206,8 +206,9 @@ package("test_config") {
 }
 
 config_data("config") {
+  for_pkg = "sysmgr"
   outputs = [
-    "sysmgr/amber.config",
+    "amber.config",
   ]
   sources = [
     "startup.config",

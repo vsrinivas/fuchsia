@@ -7,6 +7,8 @@ import("//build/package.gni")
 # Define configuration data that can be aggregated into other packages. This is
 # primarily used to aggregate configuration files into the config-data package
 # that supplies the /config/data namespace.
+#   for_pkg (required)
+#     [string] The name of the package this is configuration for.
 #
 #   outputs (required)
 #     [list of one path] This must be a relative path (no leading `/`). It can use
@@ -31,7 +33,12 @@ template("config_data") {
     # If sources and outputs are empty, mark them as not_needed otherwise GN
     # will complain there was no side effect.
     if (invoker.sources == [] && invoker.outputs == []) {
-      not_needed(invoker, ["sources", "outputs"])
+      not_needed(invoker,
+                 [
+                   "sources",
+                   "outputs",
+                   "for_pkg",
+                 ])
     }
 
     metadata = {
@@ -44,7 +51,8 @@ template("config_data") {
           assert(rebase_path(target, "foo") != target,
                  "`outputs` in config_data() cannot start with /")
           config_package_entries +=
-              [ "data/" + target + "=" + rebase_path(source, root_build_dir) ]
+              [ "data/" + invoker.for_pkg + "/" + target + "=" +
+                rebase_path(source, root_build_dir) ]
         }
       }
     }

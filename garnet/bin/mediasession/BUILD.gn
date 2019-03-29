@@ -65,8 +65,9 @@ package("mediasession") {
 }
 
 config_data("mediasession_config") {
+  for_pkg = "sysmgr"
   outputs = [
-    "sysmgr/mediasession.config",
+    "mediasession.config",
   ]
   sources = [
     "service.config",

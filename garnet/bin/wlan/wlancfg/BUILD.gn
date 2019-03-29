@@ -66,12 +66,21 @@ package("wlancfg") {
 }
 
 config_data("config") {
+  for_pkg = "wlancfg"
   if (wlancfg_config_type == "ap") {
-    sources = [ rebase_path("config/ap.json") ]
-    outputs = [ "wlancfg/default.json" ]
+    sources = [
+      rebase_path("config/ap.json"),
+    ]
+    outputs = [
+      "default.json",
+    ]
   } else if (wlancfg_config_type == "client") {
-    sources = [ rebase_path("config/client.json") ]
-    outputs = [ "wlancfg/default.json" ]
+    sources = [
+      rebase_path("config/client.json"),
+    ]
+    outputs = [
+      "default.json",
+    ]
   }
 }
 

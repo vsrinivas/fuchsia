@@ -43,8 +43,9 @@ executable("virtual_audio_bin") {
 }
 
 config_data("virtual_audio_config") {
+  for_pkg = "sysmgr"
   outputs = [
-    "sysmgr/virtual_audio_service.config",
+    "virtual_audio_service.config",
   ]
   sources = [
     "service.config",

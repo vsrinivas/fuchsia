@@ -125,8 +125,9 @@ package("mdns") {
 }
 
 config_data("mdns_config") {
+  for_pkg = "sysmgr"
   outputs = [
-    "sysmgr/mdns.config",
+    "mdns.config",
   ]
   sources = [
     rebase_path("service.config"),

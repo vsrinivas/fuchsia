@@ -52,8 +52,9 @@ package("thermd") {
 }
 
 config_data("config") {
+  for_pkg = "sysmgr"
   outputs = [
-    "sysmgr/thermd.config",
+    "thermd.config",
   ]
   sources = [
     "thermd.config",

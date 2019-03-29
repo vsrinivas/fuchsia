@@ -61,13 +61,15 @@ package("ta-image") {
 config_data("config") {
   # Don't launch without a TA to use.
   if (have_secmem_ta) {
+    for_pkg = "sysmgr"
     outputs = [
-      "sysmgr/sysmem-assistant.config",
+      "sysmem-assistant.config",
     ]
     sources = [
       "sysmem-assistant.config",
     ]
   } else {
+    for_pkg = ""
     outputs = []
     sources = []
   }
