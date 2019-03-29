@@ -77,6 +77,7 @@ use {
 /// an additional #[derive(Debug)] will produce a compilation error because of conflicting
 /// implementations.
 ///
+///
 /// Custom "Newtypes" for Fields
 /// ----------------------------
 /// By default, generated functions take and return values of the same integer type as
@@ -96,7 +97,8 @@ use {
 /// }
 /// ```
 ///
-/// Then, the `FrameControl` bitfield can use the `FrameType` struct as a type for the "type" field:
+/// Then, the `FrameControl` bitfield can use the `FrameType` struct as a type
+/// for the "frame_type" field:
 ///
 /// ```
 /// #[bitfield(
@@ -126,6 +128,29 @@ use {
 /// ```
 ///
 /// Note that the custom type is required to implement the `Debug` trait.
+///
+///
+/// Aliases
+/// -------
+/// One can specify more than one name and "newtype" for a given range of bits using the `union`
+/// keyword, for example:
+///
+/// ```
+/// #[bitfield(
+///     ...
+///     4..=7   union {
+///                 frame_subtype,
+///                 mgmt_subtype as MgmtSubtype(u8),
+///                 data_subtype as DataSubtype(u8),
+///             }
+///     ...
+/// )]
+/// pub struct FrameControl(pub u16);
+/// ```
+///
+/// Here, the names `frame_subtype`, `mgmt_subtype` and `data_subtype` refer to the same bit range
+/// but have different data types. This allows interpreting the same bits differently,
+/// depending on context.
 ///
 #[proc_macro_attribute]
 pub fn bitfield(
@@ -166,8 +191,8 @@ fn generate(
 
     let mut methods = vec![];
     for f in &fields.fields {
-        if let IdentOrUnderscore::Ident(name) = &f.name {
-            methods.push(generate_methods_for_field(f, name, len_bits));
+        for name in f.aliases.all_aliases() {
+            methods.push(generate_methods_for_alias(f, name, len_bits));
         }
     }
 
@@ -214,7 +239,11 @@ fn check_overlaps_and_gaps(fields: &FieldList, len_bits: usize, errors: &mut Vec
             if let Some(other_field) = used_by[i] {
                 errors.push(Error::new(
                     f.bits.span(),
-                    format!("fields `{}` and `{}` overlap", f.name, other_field.name),
+                    format!(
+                        "fields `{}` and `{}` overlap",
+                        f.aliases.first_name(),
+                        other_field.aliases.first_name()
+                    ),
                 ));
             }
             used_by[i] = Some(f);
@@ -247,39 +276,41 @@ fn check_overlaps_and_gaps(fields: &FieldList, len_bits: usize, errors: &mut Vec
 
 fn check_user_types(fields: &FieldList, errors: &mut Vec<Error>) {
     for field in &fields.fields {
-        if let Some(user_type) = &field.user_type {
-            match &field.bits {
-                BitRange::Closed { start_inclusive, end_inclusive, .. } => {
-                    let field_len = if start_inclusive.value() <= end_inclusive.value() {
-                        (end_inclusive.value() - start_inclusive.value() + 1) as usize
-                    } else {
-                        continue;
-                    };
-                    let inner = &user_type.inner_int_type;
-                    let user_type_len = match get_bit_len_from_unsigned_type(inner) {
-                        Some(len) => len,
-                        None => {
+        for alias in field.aliases.all_aliases() {
+            if let Some(user_type) = &alias.user_type {
+                match &field.bits {
+                    BitRange::Closed { start_inclusive, end_inclusive, .. } => {
+                        let field_len = if start_inclusive.value() <= end_inclusive.value() {
+                            (end_inclusive.value() - start_inclusive.value() + 1) as usize
+                        } else {
+                            continue;
+                        };
+                        let inner = &user_type.inner_int_type;
+                        let user_type_len = match get_bit_len_from_unsigned_type(inner) {
+                            Some(len) => len,
+                            None => {
+                                errors.push(Error::new(
+                                    inner.span(),
+                                    "expected bool, u8, u16, u32, u64 or u128",
+                                ));
+                                continue;
+                            }
+                        };
+                        if user_type_len < field_len {
                             errors.push(Error::new(
                                 inner.span(),
-                                "expected bool, u8, u16, u32, u64 or u128",
+                                format!("type is too small to hold {} bits", field_len),
                             ));
-                            continue;
                         }
-                    };
-                    if user_type_len < field_len {
-                        errors.push(Error::new(
-                            inner.span(),
-                            format!("type is too small to hold {} bits", field_len),
-                        ));
                     }
-                }
-                BitRange::SingleBit { .. } => {
-                    match &user_type.inner_int_type {
-                        Type::Path(path) if path.path.is_ident("bool") => (),
-                        other => errors.push(Error::new(other.span(), "expected `bool`")),
-                    };
-                }
-            };
+                    BitRange::SingleBit { .. } => {
+                        match &user_type.inner_int_type {
+                            Type::Path(path) if path.path.is_ident("bool") => (),
+                            other => errors.push(Error::new(other.span(), "expected `bool`")),
+                        };
+                    }
+                };
+            }
         }
     }
 }
@@ -331,12 +362,12 @@ fn add_suffix(ident: &Ident, suffix: &str) -> Ident {
     syn::Ident::new(&format!("{}{}", ident, suffix), Span::call_site())
 }
 
-fn generate_methods_for_field(field: &FieldDef, name: &Ident, len_bits: usize) -> TokenStream {
+fn generate_methods_for_alias(field: &FieldDef, alias: &Alias, len_bits: usize) -> TokenStream {
     let int_type = syn::Ident::new(&format!("u{}", len_bits), Span::call_site());
-    let getter_fn_name = name;
-    let setter_fn_name = syn::Ident::new(&format!("set_{}", name), name.span());
-    let builder_fn_name = syn::Ident::new(&format!("with_{}", name), name.span());
-    let (raw_getter_fn_name, raw_setter_fn_name, raw_builder_fn_name) = match field.user_type {
+    let getter_fn_name = &alias.name;
+    let setter_fn_name = syn::Ident::new(&format!("set_{}", alias.name), alias.name.span());
+    let builder_fn_name = syn::Ident::new(&format!("with_{}", alias.name), alias.name.span());
+    let (raw_getter_fn_name, raw_setter_fn_name, raw_builder_fn_name) = match alias.user_type {
         None => (getter_fn_name.clone(), setter_fn_name.clone(), builder_fn_name.clone()),
         Some(_) => {
             // If a custom newtype is provided, generate regular method with a "_raw" suffix
@@ -389,7 +420,7 @@ fn generate_methods_for_field(field: &FieldDef, name: &Ident, len_bits: usize) -
             (code, quote! { bool })
         }
     };
-    match &field.user_type {
+    match &alias.user_type {
         None => raw,
         Some(user_type) => {
             let user_int_type = &user_type.inner_int_type;
@@ -412,10 +443,10 @@ fn generate_methods_for_field(field: &FieldDef, name: &Ident, len_bits: usize) -
 }
 
 fn generate_debug_impl(struct_name: &Ident, fields: &FieldList, len_bits: usize) -> TokenStream {
-    let mut per_field = vec![];
+    let mut per_alias = vec![];
     for f in fields.fields.iter() {
-        if let IdentOrUnderscore::Ident(name) = &f.name {
-            per_field.push(generate_debug_for_field(f, name));
+        for alias in f.aliases.all_aliases() {
+            per_alias.push(generate_debug_for_alias(f, alias));
         }
     }
     let struct_name_str = struct_name.to_string();
@@ -425,16 +456,17 @@ fn generate_debug_impl(struct_name: &Ident, fields: &FieldList, len_bits: usize)
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
                 f.debug_struct(#struct_name_str)
                     .field("0", &format_args!(#format_string, self.0))
-                    #( #per_field )*
+                    #( #per_alias )*
                     .finish()
             }
         }
     }
 }
 
-fn generate_debug_for_field(field: &FieldDef, name: &Ident) -> TokenStream {
+fn generate_debug_for_alias(field: &FieldDef, alias: &Alias) -> TokenStream {
+    let name = &alias.name;
     let name_string = name.to_string();
-    let format_string = match &field.user_type {
+    let format_string = match &alias.user_type {
         None => match &field.bits {
             BitRange::Closed { .. } => "{:#x}",
             BitRange::SingleBit { .. } => "{}",

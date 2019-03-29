@@ -171,4 +171,37 @@ mod tests {
             string
         );
     }
+
+    #[bitfield(
+        0..=3   head,
+        4..=7   union {
+                    foo,
+                    bar as CustomType(u8),
+                },
+        8..=15  tail
+    )]
+    struct Aliased(pub u16);
+
+    #[test]
+    pub fn aliased() {
+        let mut a = Aliased(0).with_head(5).with_tail(0x77);
+        assert_eq!(5, a.head());
+        assert_eq!(0, a.foo());
+        assert_eq!(0, a.bar().0);
+        assert_eq!(0x77, a.tail());
+
+        a.set_foo(0xf);
+        assert_eq!(0x77f5, a.0);
+        assert_eq!(5, a.head());
+        assert_eq!(0xf, a.foo());
+        assert_eq!(0xf, a.bar().0);
+        assert_eq!(0x77, a.tail());
+
+        a.set_bar(CustomType(1));
+        assert_eq!(0x7715, a.0);
+        assert_eq!(5, a.head());
+        assert_eq!(1, a.foo());
+        assert_eq!(1, a.bar().0);
+        assert_eq!(0x77, a.tail());
+    }
 }

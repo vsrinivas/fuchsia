@@ -5,7 +5,7 @@
 use {
     proc_macro2::TokenStream,
     syn::{
-        parenthesized,
+        braced, parenthesized,
         parse::{Parse, ParseStream},
         punctuated::Punctuated,
         token, Ident, LitInt, Path, Result, Token, Type,
@@ -16,6 +16,22 @@ use {
 pub enum BitRange {
     Closed { start_inclusive: LitInt, separator: Token![..=], end_inclusive: LitInt },
     SingleBit { index: LitInt },
+}
+
+impl Parse for BitRange {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let start: LitInt = input.parse()?;
+        let lookahead = input.lookahead1();
+        if lookahead.peek(Token![..=]) {
+            Ok(BitRange::Closed {
+                start_inclusive: start,
+                separator: input.parse()?,
+                end_inclusive: input.parse()?,
+            })
+        } else {
+            Ok(BitRange::SingleBit { index: start })
+        }
+    }
 }
 
 impl ToTokens for BitRange {
@@ -31,28 +47,17 @@ impl ToTokens for BitRange {
     }
 }
 
-pub enum IdentOrUnderscore {
-    Ident(Ident),
-    Underscore(Token![_]),
+pub struct Alias {
+    pub name: Ident,
+    pub user_type: Option<UserType>,
 }
 
-impl std::fmt::Display for IdentOrUnderscore {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            IdentOrUnderscore::Ident(ident) => ident.fmt(f),
-            IdentOrUnderscore::Underscore(_) => write!(f, "_"),
-        }
-    }
-}
-
-impl Parse for IdentOrUnderscore {
+impl Parse for Alias {
     fn parse(input: ParseStream) -> Result<Self> {
+        let name = input.parse()?;
         let lookahead = input.lookahead1();
-        Ok(if lookahead.peek(Token![_]) {
-            IdentOrUnderscore::Underscore(input.parse()?)
-        } else {
-            IdentOrUnderscore::Ident(input.parse()?)
-        })
+        let user_type = if lookahead.peek(Token![as]) { Some(input.parse()?) } else { None };
+        Ok(Alias { name, user_type })
     }
 }
 
@@ -75,40 +80,68 @@ impl Parse for UserType {
     }
 }
 
-pub struct FieldDef {
-    pub bits: BitRange,
-    pub name: IdentOrUnderscore,
-    pub user_type: Option<UserType>,
+pub enum AliasSpec {
+    Unnamed(Token![_]),
+    SingleName(Alias),
+    Union {
+        union_keyword: Token![union],
+        brace: token::Brace,
+        aliases: Punctuated<Alias, Token![,]>,
+    },
 }
 
-pub struct FieldList {
-    pub fields: Punctuated<FieldDef, Token![,]>,
-}
+impl AliasSpec {
+    pub fn all_aliases(&self) -> Vec<&Alias> {
+        match self {
+            AliasSpec::Unnamed(_) => vec![],
+            AliasSpec::SingleName(name) => vec![name],
+            AliasSpec::Union { aliases, .. } => aliases.iter().collect(),
+        }
+    }
 
-impl Parse for BitRange {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let start: LitInt = input.parse()?;
-        let lookahead = input.lookahead1();
-        if lookahead.peek(Token![..=]) {
-            Ok(BitRange::Closed {
-                start_inclusive: start,
-                separator: input.parse()?,
-                end_inclusive: input.parse()?,
-            })
-        } else {
-            Ok(BitRange::SingleBit { index: start })
+    pub fn first_name(&self) -> String {
+        match self {
+            AliasSpec::Unnamed(_) => "_".to_string(),
+            AliasSpec::SingleName(alias) => alias.name.to_string(),
+            AliasSpec::Union { aliases, .. } => match aliases.first() {
+                None => "_".to_string(),
+                Some(alias) => alias.value().name.to_string(),
+            },
         }
     }
 }
 
+impl Parse for AliasSpec {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let lookahead = input.lookahead1();
+        Ok(if lookahead.peek(Token![_]) {
+            AliasSpec::Unnamed(input.parse()?)
+        } else if lookahead.peek(Token![union]) {
+            let brace_contents;
+            AliasSpec::Union {
+                union_keyword: input.parse()?,
+                brace: braced!(brace_contents in input),
+                aliases: brace_contents.parse_terminated(Alias::parse)?,
+            }
+        } else {
+            AliasSpec::SingleName(input.parse()?)
+        })
+    }
+}
+
+pub struct FieldDef {
+    pub bits: BitRange,
+    pub aliases: AliasSpec,
+}
+
 impl Parse for FieldDef {
     fn parse(input: ParseStream) -> Result<Self> {
-        let bits = input.parse()?;
-        let name = input.parse()?;
-        let lookahead = input.lookahead1();
-        let user_type = if lookahead.peek(Token![as]) { Some(input.parse()?) } else { None };
-        Ok(FieldDef { bits, name, user_type })
+        Ok(FieldDef { bits: input.parse()?, aliases: input.parse()? })
     }
+}
+
+pub struct FieldList {
+    pub fields: Punctuated<FieldDef, Token![,]>,
 }
 
 impl Parse for FieldList {
