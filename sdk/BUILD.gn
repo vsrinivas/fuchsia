@@ -132,6 +132,7 @@ sdk("core") {
     "//garnet/go/src/fidl:fidlgen_sdk($host_toolchain)",
     "//garnet/go/src/pm:pm_bin_sdk($host_toolchain)",
     "//garnet/lib/vulkan:vulkan_layers",
+    "//sdk/fidl/fuchsia.auth.oldtokens:fuchsia.auth.oldtokens_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.camera:fuchsia.camera_sdk($fidl_toolchain)",
