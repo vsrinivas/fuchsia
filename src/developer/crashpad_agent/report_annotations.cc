@@ -25,6 +25,13 @@ namespace fuchsia {
 namespace crash {
 namespace {
 
+// The crash server expects specific key and values for some annotations in Dart
+// crash reports.
+const char kDartTypeKey[] = "type";
+const char kDartTypeValue[] = "DartError";
+const char kDartErrorMessageKey[] = "error_message";
+const char kDartErrorRuntimeTypeKey[] = "error_runtime_type";
+
 std::string GetBoardName() {
   const char kSysInfoPath[] = "/dev/misc/sysinfo";
   const int fd = open(kSysInfoPath, O_RDWR);
@@ -82,30 +89,23 @@ std::map<std::string, std::string> MakeDefaultAnnotations(
 }
 
 std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
-    ManagedRuntimeLanguage language, const std::string& component_url,
-    const std::string& exception) {
+    const std::string& component_url, ManagedRuntimeException* exception) {
   std::map<std::string, std::string> annotations =
       MakeDefaultAnnotations(component_url);
-  if (language == ManagedRuntimeLanguage::DART) {
-    annotations["type"] = "DartError";
-    // In the Dart C++ runner, the runtime type has already been pre-pended to
-    // the error message so we expect the format to be '$RuntimeType: $Message'.
-    const size_t delimiter_pos = exception.find_first_of(':');
-    if (delimiter_pos == std::string::npos) {
-      FX_LOGS(ERROR) << "error parsing Dart exception: expected format "
-                        "'$RuntimeType: $Message', got '"
-                     << exception << "'";
-      // We still need to specify a type, otherwise the stack trace does not
-      // show up in the crash server UI.
-      annotations["error_runtime_type"] = "UnknownError";
-      annotations["error_message"] = exception;
-    } else {
-      annotations["error_runtime_type"] = exception.substr(0, delimiter_pos);
-      annotations["error_message"] = exception.substr(
-          delimiter_pos + 2 /*to get rid of the leading ': '*/);
-    }
-  } else {
-    annotations["error_message"] = exception;
+  switch (exception->Which()) {
+    case ManagedRuntimeException::Tag::Invalid:
+      FX_LOGS(ERROR) << "invalid ManagedRuntimeException";
+      break;
+    case ManagedRuntimeException::Tag::kUnknown_:
+      // No additional annotations, just a single attachment.
+      break;
+    case ManagedRuntimeException::Tag::kDart:
+      annotations[kDartTypeKey] = kDartTypeValue;
+      annotations[kDartErrorRuntimeTypeKey] = std::string(
+          reinterpret_cast<const char*>(exception->dart().type.data()));
+      annotations[kDartErrorMessageKey] = std::string(
+          reinterpret_cast<const char*>(exception->dart().message.data()));
+      break;
   }
   return annotations;
 }

@@ -28,6 +28,14 @@ namespace crash {
 const char kAttachmentKernelLog[] = "kernel_log";
 const char kAttachmentBuildInfoSnapshot[] = "build.snapshot";
 
+namespace {
+
+// The crash server expects a specific filename for the attached stack trace in
+// Dart crash reports.
+const char kAttachmentDartStackTraceFilename[] = "DartError";
+
+}  // namespace
+
 std::string WriteKernelLogToFile(const std::string& dir) {
   std::string filename =
       files::SimplifyPath(fxl::Concatenate({dir, "/kernel_log.XXXXXX"}));
@@ -115,13 +123,23 @@ zx_status_t AddAttachment(crashpad::CrashReportDatabase::NewReport* report,
 
 zx_status_t AddManagedRuntimeExceptionAttachments(
     crashpad::CrashReportDatabase::NewReport* report,
-    ManagedRuntimeLanguage language, fuchsia::mem::Buffer stack_trace) {
-  const std::string& stack_trace_filename =
-      (language == ManagedRuntimeLanguage::DART)
-          ? "DartError"  // the crash server expects a specific name for Dart.
-          : "stack_trace";
-  AddAttachment(report, stack_trace_filename, std::move(stack_trace),
-                "stack trace");
+    ManagedRuntimeException* exception) {
+  // Language-specific attachments.
+  switch (exception->Which()) {
+    case ManagedRuntimeException::Tag::Invalid:
+      FX_LOGS(ERROR) << "invalid ManagedRuntimeException";
+      break;
+    case ManagedRuntimeException::Tag::kUnknown_:
+      AddAttachment(report, "data", std::move(exception->unknown_().data),
+                    "data");
+      break;
+    case ManagedRuntimeException::Tag::kDart:
+      AddAttachment(report, kAttachmentDartStackTraceFilename,
+                    std::move(exception->dart().stack_trace), "stack trace");
+      break;
+  }
+
+  // Language-agnostic attachments.
   AddAttachment(report, kAttachmentBuildInfoSnapshot,
                 "/config/build-info/snapshot");
   // TODO(DX-581): attach syslog as well.
@@ -131,8 +149,8 @@ zx_status_t AddManagedRuntimeExceptionAttachments(
 
 zx_status_t AddKernelPanicAttachments(
     crashpad::CrashReportDatabase::NewReport* report,
-    fuchsia::mem::Buffer crashlog) {
-  AddAttachment(report, "log", std::move(crashlog), "kernel panic crashlog");
+    fuchsia::mem::Buffer crash_log) {
+  AddAttachment(report, "log", std::move(crash_log), "kernel panic crash log");
   AddAttachment(report, kAttachmentBuildInfoSnapshot,
                 "/config/build-info/snapshot");
   return ZX_OK;

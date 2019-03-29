@@ -32,16 +32,16 @@ class CrashAnalyzer {
     context_->svc()->Connect(analyzer.NewRequest());
     FXL_DCHECK(analyzer);
 
-    zx_status_t out_status = ZX_ERR_UNAVAILABLE;
+    fuchsia::crash::Analyzer_OnKernelPanicCrashLog_Result out_result;
     const zx_status_t status =
-        analyzer->ProcessKernelPanicCrashlog(std::move(crashlog), &out_status);
+        analyzer->OnKernelPanicCrashLog(std::move(crashlog), &out_result);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "failed to connect to crash analyzer: " << status
                      << " (" << zx_status_get_string(status) << ")";
-    } else if (out_status != ZX_OK) {
+    } else if (out_result.is_err()) {
       FX_LOGS(ERROR) << "failed to process kernel panic crash log: "
-                     << out_status << " (" << zx_status_get_string(out_status)
-                     << ")";
+                     << out_result.err() << " ("
+                     << zx_status_get_string(out_result.err()) << ")";
     }
   }
 

@@ -32,30 +32,34 @@ class CrashpadAgent : public Analyzer {
   static std::unique_ptr<CrashpadAgent> TryCreate();
   static std::unique_ptr<CrashpadAgent> TryCreate(Config config);
 
-  void HandleNativeException(zx::process process, zx::thread thread,
-                             zx::port exception_port,
-                             HandleNativeExceptionCallback callback) override;
+  void OnNativeException(zx::process process, zx::thread thread,
+                         zx::port exception_port,
+                         OnNativeExceptionCallback callback) override;
 
+  void OnManagedRuntimeException(
+      std::string component_url, ManagedRuntimeException exception,
+      OnManagedRuntimeExceptionCallback callback) override;
+
+  void OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log,
+                             OnKernelPanicCrashLogCallback callback) override;
+
+  // DEPRECATED
+  // TODO(DX-1097): remove once callers have been switched to
+  // OnManagedRuntimeException().
   void HandleManagedRuntimeException(
       ManagedRuntimeLanguage language, std::string component_url,
       std::string exception, fuchsia::mem::Buffer stack_trace,
       HandleManagedRuntimeExceptionCallback callback) override;
 
-  void ProcessKernelPanicCrashlog(
-      fuchsia::mem::Buffer crashlog,
-      ProcessKernelPanicCrashlogCallback callback) override;
-
  private:
   explicit CrashpadAgent(
       Config config, std::unique_ptr<crashpad::CrashReportDatabase> database);
 
-  zx_status_t HandleNativeException(zx::process process, zx::thread thread,
-                                    zx::port exception_port);
-  zx_status_t HandleManagedRuntimeException(ManagedRuntimeLanguage language,
-                                            std::string component_url,
-                                            std::string exception,
-                                            fuchsia::mem::Buffer stack_trace);
-  zx_status_t ProcessKernelPanicCrashlog(fuchsia::mem::Buffer crashlog);
+  zx_status_t OnNativeException(zx::process process, zx::thread thread,
+                                zx::port exception_port);
+  zx_status_t OnManagedRuntimeException(std::string component_url,
+                                        ManagedRuntimeException exception);
+  zx_status_t OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log);
 
   // Uploads local crash report of ID |local_report_id|, attaching either the
   // passed |annotations| or reading the annotations from its minidump.

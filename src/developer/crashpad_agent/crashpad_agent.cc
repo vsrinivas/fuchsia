@@ -110,15 +110,53 @@ CrashpadAgent::CrashpadAgent(
   FXL_DCHECK(database_);
 }
 
-void CrashpadAgent::HandleNativeException(
-    zx::process process, zx::thread thread, zx::port exception_port,
-    HandleNativeExceptionCallback callback) {
-  const zx_status_t status = HandleNativeException(
+void CrashpadAgent::OnNativeException(zx::process process, zx::thread thread,
+                                      zx::port exception_port,
+                                      OnNativeExceptionCallback callback) {
+  const zx_status_t status = OnNativeException(
       std::move(process), std::move(thread), std::move(exception_port));
+  Analyzer_OnNativeException_Result result;
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "failed to handle native exception. Won't retry.";
+    result.set_err(status);
+  } else {
+    Analyzer_OnNativeException_Response response;
+    result.set_response(response);
   }
-  callback(status);
+  callback(std::move(result));
+  PruneDatabase();
+}
+
+void CrashpadAgent::OnManagedRuntimeException(
+    std::string component_url, ManagedRuntimeException exception,
+    OnManagedRuntimeExceptionCallback callback) {
+  const zx_status_t status =
+      OnManagedRuntimeException(component_url, std::move(exception));
+  Analyzer_OnManagedRuntimeException_Result result;
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR)
+        << "failed to handle managed runtime exception. Won't retry.";
+    result.set_err(status);
+  } else {
+    Analyzer_OnManagedRuntimeException_Response response;
+    result.set_response(response);
+  }
+  callback(std::move(result));
+  PruneDatabase();
+}
+
+void CrashpadAgent::OnKernelPanicCrashLog(
+    fuchsia::mem::Buffer crash_log, OnKernelPanicCrashLogCallback callback) {
+  const zx_status_t status = OnKernelPanicCrashLog(std::move(crash_log));
+  Analyzer_OnKernelPanicCrashLog_Result result;
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to process kernel panic crash log. Won't retry.";
+    result.set_err(status);
+  } else {
+    Analyzer_OnKernelPanicCrashLog_Response response;
+    result.set_response(response);
+  }
+  callback(std::move(result));
   PruneDatabase();
 }
 
@@ -126,25 +164,9 @@ void CrashpadAgent::HandleManagedRuntimeException(
     ManagedRuntimeLanguage language, std::string component_url,
     std::string exception, fuchsia::mem::Buffer stack_trace,
     HandleManagedRuntimeExceptionCallback callback) {
-  const zx_status_t status = HandleManagedRuntimeException(
-      language, component_url, exception, std::move(stack_trace));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR)
-        << "failed to handle managed runtime exception. Won't retry.";
-  }
-  callback(status);
-  PruneDatabase();
-}
-
-void CrashpadAgent::ProcessKernelPanicCrashlog(
-    fuchsia::mem::Buffer crashlog,
-    ProcessKernelPanicCrashlogCallback callback) {
-  const zx_status_t status = ProcessKernelPanicCrashlog(std::move(crashlog));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to process kernel panic crashlog. Won't retry.";
-  }
-  callback(status);
-  PruneDatabase();
+  FX_LOGS(ERROR)
+      << "Deprecated method. Please use OnManagedRuntimeException() instead.";
+  callback(ZX_ERR_NOT_SUPPORTED);
 }
 
 namespace {
@@ -159,9 +181,9 @@ std::string GetPackageName(const zx::process& process) {
 
 }  // namespace
 
-zx_status_t CrashpadAgent::HandleNativeException(zx::process process,
-                                                 zx::thread thread,
-                                                 zx::port exception_port) {
+zx_status_t CrashpadAgent::OnNativeException(zx::process process,
+                                             zx::thread thread,
+                                             zx::port exception_port) {
   const std::string package_name = GetPackageName(process);
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
                 << package_name;
@@ -211,9 +233,8 @@ zx_status_t CrashpadAgent::HandleNativeException(zx::process process,
                       /*read_annotations_from_minidump=*/true);
 }
 
-zx_status_t CrashpadAgent::HandleManagedRuntimeException(
-    ManagedRuntimeLanguage language, std::string component_url,
-    std::string exception, fuchsia::mem::Buffer stack_trace) {
+zx_status_t CrashpadAgent::OnManagedRuntimeException(
+    std::string component_url, ManagedRuntimeException exception) {
   FX_LOGS(INFO) << "generating crash report for exception thrown by "
                 << component_url;
 
@@ -230,10 +251,9 @@ zx_status_t CrashpadAgent::HandleManagedRuntimeException(
 
   // Prepare annotations and attachments.
   const std::map<std::string, std::string> annotations =
-      MakeManagedRuntimeExceptionAnnotations(language, component_url,
-                                             exception);
-  if (AddManagedRuntimeExceptionAttachments(report.get(), language,
-                                            std::move(stack_trace)) != ZX_OK) {
+      MakeManagedRuntimeExceptionAnnotations(component_url, &exception);
+  if (AddManagedRuntimeExceptionAttachments(report.get(), &exception) !=
+      ZX_OK) {
     FX_LOGS(WARNING) << "error adding attachments to local crash report";
   }
 
@@ -251,8 +271,8 @@ zx_status_t CrashpadAgent::HandleManagedRuntimeException(
                       /*read_annotations_from_minidump=*/false);
 }
 
-zx_status_t CrashpadAgent::ProcessKernelPanicCrashlog(
-    fuchsia::mem::Buffer crashlog) {
+zx_status_t CrashpadAgent::OnKernelPanicCrashLog(
+    fuchsia::mem::Buffer crash_log) {
   FX_LOGS(INFO) << "generating crash report for previous kernel panic";
 
   crashpad::CrashReportDatabase::OperationStatus database_status;
@@ -269,7 +289,7 @@ zx_status_t CrashpadAgent::ProcessKernelPanicCrashlog(
   // Prepare annotations and attachments.
   const std::map<std::string, std::string> annotations =
       MakeDefaultAnnotations(/*package_name=*/"kernel");
-  if (AddKernelPanicAttachments(report.get(), std::move(crashlog)) != ZX_OK) {
+  if (AddKernelPanicAttachments(report.get(), std::move(crash_log)) != ZX_OK) {
     FX_LOGS(WARNING) << "error adding attachments to local crash report";
   }
 

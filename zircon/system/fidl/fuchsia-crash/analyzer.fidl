@@ -1,0 +1,96 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.crash;
+
+using fuchsia.mem;
+using zx;
+
+/// Analyzes crashed processes, string exceptions from managed runtimes or
+/// kernel panic crashlogs.
+[Discoverable, Layout = "Simple"]
+protocol Analyzer {
+    /// Requests that the crash analyzer handles the exception thrown by the
+    /// given |thread| in |process|.
+    ///
+    /// |exception_port| is the port on which the exception was delivered and
+    /// can be passed to zx_task_resume_from_exception(). This method is
+    /// responsible for resuming or stopping the thread once the analysis is
+    /// done. This might get changed to a more generic FIDL struct later on.
+    ///
+    /// A typical implementation might print a crash dump to the system log or
+    /// upload a crash report to a server.
+    // The type of |exception_port| will be changed to some exception-specific
+    // FIDL struct eventually.
+    OnNativeException(handle<process> process,
+                      handle<thread> thread,
+                      handle<port> exception_port)
+        -> () error zx.status;
+
+    /// Requests that the crash analyzer handles the exception thrown in the
+    /// managed runtime.
+    ///
+    /// |component_url| is the full Fuchsia URL of the component that crashed.
+    ///
+    /// A typical implementation might print the exception message and stack
+    /// trace to the system log or upload a crash report to a server.
+    // The type of |component_url| will be changed to some component-specific
+    // FIDL struct eventually.
+    OnManagedRuntimeException(string:1024 component_url,
+                              ManagedRuntimeException exception)
+        -> () error zx.status;
+
+    /// Requests that the crash analyzer processes the kernel panic crash log.
+    ///
+    /// A typical implementation might print the crash log to the system log or
+    /// upload a crash report to a server with the log as attachment.
+    OnKernelPanicCrashLog(fuchsia.mem.Buffer crash_log) -> () error zx.status;
+
+    // DEPRECATED
+    // TODO(DX-1097): remove once callers have been switched to
+    // OnManagedRuntimeException().
+    HandleManagedRuntimeException(ManagedRuntimeLanguage language,
+                                  string:4096 componentUrl,
+                                  string:4096 exception,
+                                  fuchsia.mem.Buffer stackTrace)
+        -> (zx.status status);
+};
+
+/// Represents a managed runtime exception.
+///
+/// unknown is intended to capture any language, meaning the handling will be
+/// language-agnostic. Choose a more specific member if available for handling
+/// that language more specifically.
+union ManagedRuntimeException {
+    UnknownException unknown;
+
+    GenericException dart;
+};
+
+/// Represents a language-agnostic exception.
+struct UnknownException {
+    /// A general buffer to hold some exception data.
+    fuchsia.mem.Buffer data;
+};
+
+/// Represents a generic exception that works for many managed runtime languages.
+// We use array<byte> instead of string because the protocol has a simple layout.
+struct GenericException {
+    /// Exception type, e.g., "FileSystemException".
+    array<byte>:128 type;
+
+    /// Exception message, e.g., "cannot open file".
+    array<byte>:1024 message;
+
+    /// Text representation of the stack trace.
+    fuchsia.mem.Buffer stack_trace;
+};
+
+// DEPRECATED
+// TODO(DX-1097): remove along HandleManagedRuntimeException().
+enum ManagedRuntimeLanguage {
+    UNKNOWN_LANGUAGE = 0;
+    OTHER_LANGUAGE = 1;
+    DART = 2;
+};

@@ -22,15 +22,15 @@ TEST(CrashpadAgentIntegrationTest, SmokeTest) {
   auto environment_services = sys::ServiceDirectory::CreateFromNamespace();
   environment_services->Connect(crash_analyzer.NewRequest());
 
-  // We call ProcessKernelPanicCrashlog() to smoke test the service is up and
+  // We call OnKernelPanicCrashLog() to smoke test the service is up and
   // running because it is the easiest to call.
-  ::fuchsia::mem::Buffer crashlog;
-  ASSERT_TRUE(::fsl::VmoFromString("ZIRCON KERNEL PANIC", &crashlog));
-  zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  ASSERT_EQ(crash_analyzer->ProcessKernelPanicCrashlog(std::move(crashlog),
-                                                       &out_status),
-            ZX_OK);
-  EXPECT_EQ(out_status, ZX_OK);
+  ::fuchsia::mem::Buffer crash_log;
+  ASSERT_TRUE(::fsl::VmoFromString("ZIRCON KERNEL PANIC", &crash_log));
+  Analyzer_OnKernelPanicCrashLog_Result out_result;
+  ASSERT_EQ(
+      crash_analyzer->OnKernelPanicCrashLog(std::move(crash_log), &out_result),
+      ZX_OK);
+  EXPECT_TRUE(out_result.is_response());
 }
 
 }  // namespace

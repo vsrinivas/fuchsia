@@ -33,11 +33,11 @@ static int crash_server(void* ctx) {
             ASSERT_EQ(actual_handles, 3u, "");
             zx_handle_close_many(handles, actual_handles);
             fidl_message_header_t* req = (fidl_message_header_t*)msg;
-            fuchsia_crash_AnalyzerHandleNativeExceptionResponse response;
+            fuchsia_crash_AnalyzerOnNativeExceptionResponse response;
             memset(&response, 0, sizeof(response));
             response.hdr.txid = req->txid;
             response.hdr.ordinal = req->ordinal;
-            response.status = ZX_OK;
+            response.result.tag = fuchsia_crash_Analyzer_OnNativeException_ResultTag_response;
             status = zx_channel_write(server, 0, &response, sizeof(response), NULL, 0);
             ASSERT_EQ(ZX_OK, status, "");
         } else {
@@ -67,10 +67,10 @@ static bool crash_analyzer_test(void) {
     zx_handle_t port;
     ASSERT_EQ(ZX_OK, zx_port_create(0, &port), "");
 
-    zx_status_t out_status;
-    status = fuchsia_crash_AnalyzerHandleNativeException(client, h0, h1, port, &out_status);
+    fuchsia_crash_Analyzer_OnNativeException_Result analyzer_result;
+    status = fuchsia_crash_AnalyzerOnNativeException(client, h0, h1, port, &analyzer_result);
     ASSERT_EQ(ZX_OK, status, "");
-    ASSERT_EQ(ZX_OK, out_status, "");
+    ASSERT_EQ(fuchsia_crash_Analyzer_OnNativeException_ResultTag_response, analyzer_result.tag, "");
 
     status = zx_handle_close(client);
     ASSERT_EQ(ZX_OK, status, "");

@@ -27,20 +27,18 @@ extern const char kAttachmentBuildInfoSnapshot[];
 std::string WriteKernelLogToFile(const std::string& dir);
 
 // Adds the set of file attachments we want in a crash report for managed
-// runtime exceptions for the given |language| to the |report|.
-//
-// Today, we only attach the |stack_trace| VMO as a text file attachment.
+// runtime exceptions to the |report|.
 zx_status_t AddManagedRuntimeExceptionAttachments(
     crashpad::CrashReportDatabase::NewReport* report,
-    ManagedRuntimeLanguage language, fuchsia::mem::Buffer stack_trace);
+    ManagedRuntimeException* exception);
 
 // Adds the set of file attachments we want in a crash report for kernel
 // panics to the |report|.
 //
-// Today, we only attach the |crashlog| VMO as a text file attachment.
+// Today, we only attach the |crash_log| VMO as a text file attachment.
 zx_status_t AddKernelPanicAttachments(
     crashpad::CrashReportDatabase::NewReport* report,
-    fuchsia::mem::Buffer crashlog);
+    fuchsia::mem::Buffer crash_log);
 
 }  // namespace crash
 }  // namespace fuchsia

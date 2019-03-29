@@ -28,13 +28,13 @@ static bool dispatch_test(void) {
     BEGIN_TEST;
 
     fuchsia_crash_Analyzer_ops_t ops = {
-        .HandleNativeException = handle_exception,
+        .OnNativeException = handle_exception,
     };
 
-    fuchsia_crash_AnalyzerHandleNativeExceptionRequest request;
+    fuchsia_crash_AnalyzerOnNativeExceptionRequest request;
     memset(&request, 0, sizeof(request));
     request.hdr.txid = 42;
-    request.hdr.ordinal = fuchsia_crash_AnalyzerHandleNativeExceptionOrdinal;
+    request.hdr.ordinal = fuchsia_crash_AnalyzerOnNativeExceptionOrdinal;
     request.process = FIDL_HANDLE_PRESENT;
     request.thread = FIDL_HANDLE_PRESENT;
     request.exception_port = FIDL_HANDLE_PRESENT;
@@ -128,7 +128,7 @@ typedef struct my_connection {
 
 static zx_status_t reply_handler(fidl_txn_t* txn, const fidl_msg_t* msg) {
     my_connection_t* my_txn = (my_connection_t*)txn;
-    EXPECT_EQ(sizeof(fuchsia_crash_AnalyzerHandleNativeExceptionResponse), msg->num_bytes, "");
+    EXPECT_EQ(sizeof(fuchsia_crash_AnalyzerOnNativeExceptionResponse), msg->num_bytes, "");
     EXPECT_EQ(0u, msg->num_handles, "");
     ++my_txn->count;
     return ZX_OK;
@@ -141,7 +141,8 @@ static bool reply_test(void) {
     conn.txn.reply = reply_handler;
     conn.count = 0u;
 
-    zx_status_t status = fuchsia_crash_AnalyzerHandleNativeException_reply(&conn.txn, ZX_OK);
+    fuchsia_crash_Analyzer_OnNativeException_Result result = {};
+    zx_status_t status = fuchsia_crash_AnalyzerOnNativeException_reply(&conn.txn, &result);
     ASSERT_EQ(ZX_OK, status, "");
     EXPECT_EQ(1u, conn.count, "");
 
@@ -159,13 +160,13 @@ static bool error_test(void) {
     BEGIN_TEST;
 
     fuchsia_crash_Analyzer_ops_t ops = {
-        .HandleNativeException = return_async,
+        .OnNativeException = return_async,
     };
 
-    fuchsia_crash_AnalyzerHandleNativeExceptionRequest request;
+    fuchsia_crash_AnalyzerOnNativeExceptionRequest request;
     memset(&request, 0, sizeof(request));
     request.hdr.txid = 42;
-    request.hdr.ordinal = fuchsia_crash_AnalyzerHandleNativeExceptionOrdinal;
+    request.hdr.ordinal = fuchsia_crash_AnalyzerOnNativeExceptionOrdinal;
     request.process = FIDL_HANDLE_PRESENT;
     request.thread = FIDL_HANDLE_PRESENT;
     request.exception_port = FIDL_HANDLE_PRESENT;

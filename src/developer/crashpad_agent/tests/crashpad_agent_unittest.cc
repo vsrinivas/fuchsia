@@ -116,7 +116,7 @@ class CrashpadAgentTest : public ::testing::Test {
   std::string attachments_dir_;
 };
 
-TEST_F(CrashpadAgentTest, HandleNativeException_C_Basic) {
+TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
   // We create a parent job and a child job. The child job will spawn the
   // crashing program and analyze the crash. The parent job is just here to
   // swallow the exception potentially bubbling up from the child job once the
@@ -164,11 +164,13 @@ TEST_F(CrashpadAgentTest, HandleNativeException_C_Basic) {
             ZX_OK);
 
   // Test crash analysis.
-  zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  agent_->HandleNativeException(
+  Analyzer_OnNativeException_Result out_result;
+  agent_->OnNativeException(
       std::move(process), std::move(thread), std::move(exception_port),
-      [&out_status](zx_status_t status) { out_status = status; });
-  EXPECT_EQ(out_status, ZX_OK);
+      [&out_result](Analyzer_OnNativeException_Result result) {
+        out_result = std::move(result);
+      });
+  EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"build.snapshot", "kernel_log"});
 
   // The parent job just swallows the exception, i.e. not RESUME_TRY_NEXT it,
@@ -184,51 +186,52 @@ TEST_F(CrashpadAgentTest, HandleNativeException_C_Basic) {
   job.kill();
 }
 
-TEST_F(CrashpadAgentTest, HandleManagedRuntimeException_Dart_Basic) {
-  fuchsia::mem::Buffer stack_trace;
-  ASSERT_TRUE(fsl::VmoFromString("#0", &stack_trace));
-  zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  agent_->HandleManagedRuntimeException(
-      ManagedRuntimeLanguage::DART, "component_url", "UnhandledException: Foo",
-      std::move(stack_trace),
-      [&out_status](zx_status_t status) { out_status = status; });
-  EXPECT_EQ(out_status, ZX_OK);
+TEST_F(CrashpadAgentTest, OnManagedRuntimeException_Dart_Basic) {
+  GenericException exception = {};
+  const std::string type = "FileSystemException";
+  std::copy(type.begin(), type.end(), exception.type.data());
+  const std::string message = "cannot open file";
+  std::copy(message.begin(), message.end(), exception.message.data());
+  ASSERT_TRUE(fsl::VmoFromString("#0", &exception.stack_trace));
+  ManagedRuntimeException dart_exception;
+  dart_exception.set_dart(std::move(exception));
+
+  Analyzer_OnManagedRuntimeException_Result out_result;
+  agent_->OnManagedRuntimeException(
+      "component_url", std::move(dart_exception),
+      [&out_result](Analyzer_OnManagedRuntimeException_Result result) {
+        out_result = std::move(result);
+      });
+  EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"build.snapshot", "DartError"});
 }
 
-TEST_F(CrashpadAgentTest,
-       HandleManagedRuntimeException_Dart_ExceptionStringInBadFormat) {
-  fuchsia::mem::Buffer stack_trace;
-  ASSERT_TRUE(fsl::VmoFromString("#0", &stack_trace));
-  zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  agent_->HandleManagedRuntimeException(
-      ManagedRuntimeLanguage::DART, "component_url", "wrong format",
-      std::move(stack_trace),
-      [&out_status](zx_status_t status) { out_status = status; });
-  EXPECT_EQ(out_status, ZX_OK);
-  CheckAttachments({"build.snapshot", "DartError"});
+TEST_F(CrashpadAgentTest, OnManagedRuntimeException_UnknownLanguage_Basic) {
+  UnknownException exception;
+  ASSERT_TRUE(fsl::VmoFromString("#0", &exception.data));
+  ManagedRuntimeException unknown_exception;
+  unknown_exception.set_unknown_(std::move(exception));
+
+  Analyzer_OnManagedRuntimeException_Result out_result;
+  agent_->OnManagedRuntimeException(
+      "component_url", std::move(unknown_exception),
+      [&out_result](Analyzer_OnManagedRuntimeException_Result result) {
+        out_result = std::move(result);
+      });
+  EXPECT_TRUE(out_result.is_response());
+  CheckAttachments({"build.snapshot", "data"});
 }
 
-TEST_F(CrashpadAgentTest, HandleManagedRuntimeException_OtherLanguage_Basic) {
-  fuchsia::mem::Buffer stack_trace;
-  ASSERT_TRUE(fsl::VmoFromString("#0", &stack_trace));
-  zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  agent_->HandleManagedRuntimeException(
-      ManagedRuntimeLanguage::OTHER_LANGUAGE, "component_url", "error",
-      std::move(stack_trace),
-      [&out_status](zx_status_t status) { out_status = status; });
-  EXPECT_EQ(out_status, ZX_OK);
-  CheckAttachments({"build.snapshot", "stack_trace"});
-}
-
-TEST_F(CrashpadAgentTest, ProcessKernelPanicCrashlog_Basic) {
-  fuchsia::mem::Buffer crashlog;
-  ASSERT_TRUE(fsl::VmoFromString("ZIRCON KERNEL PANIC", &crashlog));
-  zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  agent_->ProcessKernelPanicCrashlog(
-      std::move(crashlog),
-      [&out_status](zx_status_t status) { out_status = status; });
-  EXPECT_EQ(out_status, ZX_OK);
+TEST_F(CrashpadAgentTest, OnKernelPanicCrashLog_Basic) {
+  fuchsia::mem::Buffer crash_log;
+  ASSERT_TRUE(fsl::VmoFromString("ZIRCON KERNEL PANIC", &crash_log));
+  Analyzer_OnKernelPanicCrashLog_Result out_result;
+  agent_->OnKernelPanicCrashLog(
+      std::move(crash_log),
+      [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
+        out_result = std::move(result);
+      });
+  EXPECT_TRUE(out_result.is_response());
   CheckAttachments({"build.snapshot", "log"});
 }
 
@@ -240,16 +243,18 @@ TEST_F(CrashpadAgentTest, PruneDatabase_ZeroSize) {
                     /*enable_upload_to_crash_server=*/false,
                     /*crash_server_url=*/nullptr});
 
-  // We generate a crash report, using ProcessKernelPanicCrashlog() because
+  // We generate a crash report, using OnKernelPanicCrashLog() because
   // there are fewer arguments!
-  fuchsia::mem::Buffer crashlog;
+  fuchsia::mem::Buffer crash_log;
   ASSERT_TRUE(
-      fsl::VmoFromString("just big enough to be greater than 0", &crashlog));
-  zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  agent_->ProcessKernelPanicCrashlog(
-      std::move(crashlog),
-      [&out_status](zx_status_t status) { out_status = status; });
-  EXPECT_EQ(out_status, ZX_OK);
+      fsl::VmoFromString("just big enough to be greater than 0", &crash_log));
+  Analyzer_OnKernelPanicCrashLog_Result out_result;
+  agent_->OnKernelPanicCrashLog(
+      std::move(crash_log),
+      [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
+        out_result = std::move(result);
+      });
+  EXPECT_TRUE(out_result.is_response());
 
   // We check that all the attachments have been cleaned up.
   EXPECT_TRUE(GetAttachmentSubdirs().empty());
@@ -266,25 +271,27 @@ std::string GenerateString(const uint64_t string_size_in_kb) {
 TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
   // We reset the agent with a max database size equivalent to the expected
   // size of a report plus the value of an especially large attachment.
-  const uint64_t crashlog_size_in_kb = 2u * kMaxTotalReportSizeInKb;
-  const std::string large_string = GenerateString(crashlog_size_in_kb);
+  const uint64_t crash_log_size_in_kb = 2u * kMaxTotalReportSizeInKb;
+  const std::string large_string = GenerateString(crash_log_size_in_kb);
   ResetAgent(
       Config{/*local_crashpad_database_path=*/database_path_.path(),
              /*max_crashpad_database_size_in_kb=*/kMaxTotalReportSizeInKb +
-                 crashlog_size_in_kb,
+                 crash_log_size_in_kb,
              /*enable_upload_to_crash_server=*/false,
              /*crash_server_url=*/nullptr});
 
-  // We generate a crash report, using ProcessKernelPanicCrashlog() because
+  // We generate a crash report, using OnKernelPanicCrashLog() because
   // we can more easily control the total report size as there are no minidumps
-  // and the crashlog is one of the attachments.
-  fuchsia::mem::Buffer crashlog;
-  ASSERT_TRUE(fsl::VmoFromString(large_string, &crashlog));
-  zx_status_t out_status = ZX_ERR_UNAVAILABLE;
-  agent_->ProcessKernelPanicCrashlog(
-      std::move(crashlog),
-      [&out_status](zx_status_t status) { out_status = status; });
-  EXPECT_EQ(out_status, ZX_OK);
+  // and the crash log is one of the attachments.
+  fuchsia::mem::Buffer crash_log;
+  ASSERT_TRUE(fsl::VmoFromString(large_string, &crash_log));
+  Analyzer_OnKernelPanicCrashLog_Result out_result;
+  agent_->OnKernelPanicCrashLog(
+      std::move(crash_log),
+      [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
+        out_result = std::move(result);
+      });
+  EXPECT_TRUE(out_result.is_response());
 
   // We check that only one set of attachments is there.
   const std::vector<std::string> attachment_subdirs = GetAttachmentSubdirs();
@@ -295,13 +302,15 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
   zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
 
   // We generate a new crash report.
-  fuchsia::mem::Buffer new_crashlog;
-  ASSERT_TRUE(fsl::VmoFromString(large_string, &new_crashlog));
-  zx_status_t new_out_status = ZX_ERR_UNAVAILABLE;
-  agent_->ProcessKernelPanicCrashlog(
-      std::move(new_crashlog),
-      [&new_out_status](zx_status_t status) { new_out_status = status; });
-  EXPECT_EQ(new_out_status, ZX_OK);
+  fuchsia::mem::Buffer new_crash_log;
+  ASSERT_TRUE(fsl::VmoFromString(large_string, &new_crash_log));
+  Analyzer_OnKernelPanicCrashLog_Result new_out_result;
+  agent_->OnKernelPanicCrashLog(
+      std::move(new_crash_log),
+      [&new_out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
+        new_out_result = std::move(result);
+      });
+  EXPECT_TRUE(new_out_result.is_response());
 
   // We check that only one set of attachments is there and that it is a
   // different directory than previously (the directory name is the local crash

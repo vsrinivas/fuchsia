@@ -24,12 +24,12 @@ std::map<std::string, std::string> MakeDefaultAnnotations(
     const std::string& package_name);
 
 // Returns the annotations we want in a crash report for managed runtime
-// exceptions for the given |language|.
+// exceptions.
 //
-// Augments the default annotation map from MakeDefaultAnnotations().
+// May augment the default annotation map from MakeDefaultAnnotations() or
+// simply return the default.
 std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
-    ManagedRuntimeLanguage language, const std::string& component_url,
-    const std::string& exception);
+    const std::string& component_url, ManagedRuntimeException* exception);
 
 }  // namespace crash
 }  // namespace fuchsia

@@ -10,9 +10,9 @@
 #include <fuchsia/crash/c/fidl.h>
 #include <inspector/inspector.h>
 
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/job.h>
@@ -120,14 +120,15 @@ static void HandOffException(const crash_ctx& ctx, const zx_port_packet_t& packe
         zx::thread resume_thread;
         thread.duplicate(ZX_RIGHT_SAME_RIGHTS, &resume_thread);
 
-        zx_status_t analyzer_status = ZX_ERR_INTERNAL;
-        const zx_status_t exception_status = fuchsia_crash_AnalyzerHandleNativeException(
+        fuchsia_crash_Analyzer_OnNativeException_Result analyzer_result;
+        const zx_status_t exception_status = fuchsia_crash_AnalyzerOnNativeException(
             ctx.svc_request.get(), process.release(), thread.release(), port.release(),
-            &analyzer_status);
+            &analyzer_result);
 
-        if ((exception_status != ZX_OK) || (analyzer_status != ZX_OK)) {
+        if ((exception_status != ZX_OK) ||
+            (analyzer_result.tag == fuchsia_crash_Analyzer_OnNativeException_ResultTag_err)) {
             fprintf(stderr, "crashsvc: analyzer failed, err (%d | %d)\n", exception_status,
-                    analyzer_status);
+                    analyzer_result.err);
             if (resume_thread) {
                 zx_task_resume_from_exception(resume_thread.get(), ctx.exception_port.get(),
                                               ZX_RESUME_TRY_NEXT);
