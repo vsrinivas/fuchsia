@@ -182,6 +182,8 @@ struct Device : public fbl::RefCounted<Device>, public AsyncLoopRefCountedRpcHan
     uint64_t local_id() const { return local_id_; }
 
 private:
+    zx_status_t HandleRead();
+
     fbl::RefPtr<Device> parent_;
     uint32_t protocol_id_ = 0;
 

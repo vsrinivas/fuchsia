@@ -52,6 +52,8 @@ public:
     SuspendContext(SuspendContext&&) = default;
     SuspendContext& operator=(SuspendContext&&) = default;
 
+    void ContinueSuspend(const zx::resource& root_resource);
+
     Coordinator* coordinator() { return coordinator_; }
 
     zx_status_t status() const { return status_; }
@@ -204,7 +206,6 @@ public:
     zx_status_t DmOpenVirtcon(zx::channel virtcon_receiver) const;
     void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 
-    zx_status_t HandleDeviceRead(const fbl::RefPtr<Device>& dev);
     void HandleNewDevice(const fbl::RefPtr<Device>& dev);
     zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev, Devhost* target_devhost);
 
@@ -329,5 +330,12 @@ bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
 
 // Path to driver that should be bound to components of composite devices
 extern const char* kComponentDriverPath;
+
+zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket, const char* command_data,
+                           size_t command_size, fidl_txn_t* txn);
+zx_status_t fidl_DmOpenVirtcon(void* ctx, zx_handle_t raw_vc_receiver);
+zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata);
+zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options,
+                                zx_handle_t raw_watcher, fidl_txn_t* txn);
 
 } // namespace devmgr
