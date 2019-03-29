@@ -10,7 +10,6 @@ use super::Cohort;
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#request
 #[derive(Debug)]
-#[allow(dead_code)] // to be removed shortly.
 pub struct Request {
     /// The current Omaha protocol version (which this is meant to be used with, is 3.0.  This
     /// should always be set to "3.0".
@@ -57,8 +56,7 @@ pub enum InstallSource {
 /// Information about the platform / operating system.
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#os
-#[derive(Debug, Clone)]
-#[allow(dead_code)] // to be removed shortly.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OS {
     /// The device platform (e.g. 'Fuchsia')
     pub platform: String,
@@ -75,13 +73,11 @@ pub struct OS {
 
 /// Information about an individual app that an update check is being performed for.
 ///
-/// Each app in a request may have at most one 'ping' children, and either a single 'updatecheck'
-/// child, or one or more 'event' children.  This is enforced in the App struct by the use of the
-/// CheckOrEvents enum.
+/// While unlikely, it's possible for a single request to have an update check, a ping, and for it
+/// to be reporting an event.
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#app-request
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // to be removed shortly.
 pub struct App {
     /// This is the GUID or product ID that uniquely identifies the product to Omaha.
     ///
@@ -107,32 +103,20 @@ pub struct App {
     ///   cohortname
     pub cohort: Option<Cohort>,
 
-    /// Either a single update check, multiple events, or nothing.
-    ///
-    /// These are children objects of the app object.
-    pub check_or_events: Option<CheckOrEvents>,
+    /// If present, this request is an update check.
+    pub update_check: Option<UpdateCheck>,
+
+    /// These are events to report to Omaha.
+    pub events: Vec<Event>,
 
     /// An optional status ping.
     pub ping: Option<Ping>,
 }
 
-/// This enum enforces the requirement that either a single UpdateCheck, or multiple Events are
-/// present in the request for a single application.
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub enum CheckOrEvents {
-    /// This is an update check request.
-    Check(UpdateCheck),
-
-    /// This is a reporting of one or more update-related events.
-    Events(Vec<Event>),
-}
-
 /// This is an update check for the parent App object.
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#updatecheck-request
-#[derive(Debug, Default, Clone)]
-#[allow(dead_code)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct UpdateCheck {
     /// If the update is disabled, the client will not honor an 'update' response.  The default
     /// value of false indicates that the client will attempt an update if instructed that one is
@@ -146,8 +130,7 @@ pub struct UpdateCheck {
 ///
 /// These pings only support the Client-Regulated Counting method (Date-based).  For more info, see
 /// https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#client-regulated-Counting-days-based
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Ping {
     /// This is the January 1, 2007 epoch-based value for the date that was previously sent to the
     /// client by the service, as the elapsed_days value of the daystart object, if the application
@@ -167,8 +150,7 @@ pub struct Ping {
 /// An event that is being reported to the Omaha service.
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#event-request
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Event {
     /// This is the event type for the event (see the enum for more information).
     ///
@@ -189,8 +171,7 @@ pub struct Event {
 /// The type of event that is being reported.  These are specified by the Omaha protocol.
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#event-request
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum EventType {
     Unknown = 0,
 
@@ -217,8 +198,7 @@ pub enum EventType {
 /// The result of event that is being reported.  These are specified by the Omaha protocol.
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#event-request
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum EventResult {
     Error = 0,
     Success = 1,

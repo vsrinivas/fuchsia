@@ -9,7 +9,6 @@ use super::{common::Version, protocol::request::OS};
 /// This is how the updater identifies itself with the Omaha service.
 ///
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub struct Updater {
     /// The string identifying the updater itself.  (e.g. 'Omaha', 'Fuchsia/Rust')
     pub name: String,
@@ -21,7 +20,6 @@ pub struct Updater {
 /// This struct wraps up the configuration data that an updater binary needs to supply.
 ///
 #[derive(Clone, Debug)]
-#[allow(dead_code)]
 pub struct Config {
     pub updater: Updater,
 
