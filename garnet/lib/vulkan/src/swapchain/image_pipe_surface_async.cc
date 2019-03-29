@@ -10,8 +10,9 @@ namespace image_pipe_swapchain {
 
 bool ImagePipeSurfaceAsync::CreateImage(
     VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
-    VkImageUsageFlags usage, fuchsia::images::ImageInfo image_info,
-    uint32_t image_count, const VkAllocationCallbacks* pAllocator,
+    VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
+    fuchsia::images::ImageInfo image_info, uint32_t image_count,
+    const VkAllocationCallbacks* pAllocator,
     std::vector<ImageInfo>* image_info_out) {
   for (uint32_t i = 0; i < image_count; ++i) {
     // Allocate a buffer.

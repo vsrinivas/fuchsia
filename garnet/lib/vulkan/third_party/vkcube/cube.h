@@ -149,6 +149,7 @@ struct demo {
   PFN_vkGetSwapchainImagesKHR fpGetSwapchainImagesKHR;
   PFN_vkAcquireNextImageKHR fpAcquireNextImageKHR;
   PFN_vkQueuePresentKHR fpQueuePresentKHR;
+  PFN_vkGetDeviceQueue2 fpGetDeviceQueue2;
   PFN_vkCreateSamplerYcbcrConversionKHR fpCreateSamplerYcbcrConversionKHR;
   uint32_t swapchainImageCount;
   VkSwapchainKHR swapchain;
@@ -208,6 +209,7 @@ struct demo {
   bool validate;
   bool use_break;
   bool suppress_popups;
+  bool protected_output = false;
   PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallback;
   PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallback;
   VkDebugReportCallbackEXT msg_callback;

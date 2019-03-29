@@ -122,8 +122,8 @@ VkResult ImagePipeSwapchain::Initialize(
   std::vector<ImagePipeSurface::ImageInfo> image_infos;
 
   if (!surface_->CreateImage(device, pDisp, pCreateInfo->imageFormat, usage,
-                             image_info, num_images, pAllocator,
-                             &image_infos)) {
+                             pCreateInfo->flags, image_info, num_images,
+                             pAllocator, &image_infos)) {
     return VK_ERROR_OUT_OF_DEVICE_MEMORY;
   }
   for (uint32_t i = 0; i < num_images; i++) {

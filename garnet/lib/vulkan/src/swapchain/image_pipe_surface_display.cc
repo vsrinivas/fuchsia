@@ -89,8 +89,9 @@ void ImagePipeSurfaceDisplay::ControllerDisplaysChanged(
 
 bool ImagePipeSurfaceDisplay::CreateImage(
     VkDevice device, VkLayerDispatchTable* pDisp, VkFormat format,
-    VkImageUsageFlags usage, fuchsia::images::ImageInfo image_info,
-    uint32_t image_count, const VkAllocationCallbacks* pAllocator,
+    VkImageUsageFlags usage, VkSwapchainCreateFlagsKHR swapchain_flags,
+    fuchsia::images::ImageInfo image_info, uint32_t image_count,
+    const VkAllocationCallbacks* pAllocator,
     std::vector<ImageInfo>* image_info_out) {
   VkResult result;
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
@@ -172,10 +173,14 @@ bool ImagePipeSurfaceDisplay::CreateImage(
     return false;
   }
 
+  uint32_t image_flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+  if (swapchain_flags & VK_SWAPCHAIN_CREATE_PROTECTED_BIT_KHR)
+    image_flags |= VK_IMAGE_CREATE_PROTECTED_BIT;
+
   VkImageCreateInfo image_create_info = {
       .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
       .pNext = nullptr,
-      .flags = VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT,
+      .flags = image_flags,
       .imageType = VK_IMAGE_TYPE_2D,
       .format = format,
       .extent = VkExtent3D{image_info.width, image_info.height, 1},

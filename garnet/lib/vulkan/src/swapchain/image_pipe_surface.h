@@ -57,6 +57,7 @@ class ImagePipeSurface {
 
   virtual bool CreateImage(VkDevice device, VkLayerDispatchTable* pDisp,
                            VkFormat format, VkImageUsageFlags usage,
+                           VkSwapchainCreateFlagsKHR swapchain_flags,
                            fuchsia::images::ImageInfo image_info,
                            uint32_t image_count,
                            const VkAllocationCallbacks* pAllocator,
