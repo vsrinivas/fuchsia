@@ -2,19 +2,14 @@
 
 Carnelian is a prototype framework for writing Fuchsia modules in Rust.
 
-To build the included samples, add `--available garnet/packages/examples/carnelian` to
-your fx set line. `--product terminal` is sufficient to support Carnelian samples.
+To build the included samples, add `--with garnet/packages/examples:carnelian` to
+your fx set line. `terminal.x86` is sufficient to support Carnelian samples. See
+[these fx set](https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md#build)
+instructions for more details.
 
 # Tentative Roadmap
 
-1. Mouse, touch and keyboard input
-1. Text rendering with RustType
 1. Flutter-style flex-box layout
-1. Single-line text editor
-
-## Mouse, touch and keyboard input
-
-Design and implement a way to pass input events from Scenic to app and view assistants.
 
 ## Flutter-style flex-box layout
 
@@ -29,12 +24,6 @@ Mature application frameworks usually have some mechanism for commands that migh
 multiple items in the view hierarchy to be handled by the most specific first and proceeding
 to less specific items. This command handling structure can also be used to show/enable menu
 items if Fuchsia ever has such a menu.
-
-## Complex Rendering
-
-Scenic currently allows easy rendering of shapes with colors or textures. One area of exploration
-is using the [Lyon path tessellation tool](https://github.com/nical/lyon) to turn arbitrary paths
-into triangle meshes for use with Scenic's mesh drawing commands.
 
 ## Animation
 
