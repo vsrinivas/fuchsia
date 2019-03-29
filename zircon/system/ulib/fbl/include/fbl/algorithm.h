@@ -5,7 +5,6 @@
 #ifndef FBL_ALGORITHM_H_
 #define FBL_ALGORITHM_H_
 
-#include <fbl/type_support.h>
 #include <stdlib.h>
 #include <type_traits>
 

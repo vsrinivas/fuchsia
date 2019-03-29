@@ -37,7 +37,7 @@ zx_status_t SendLoggerSimpleCreateRequest(zx::channel* logger_factory_client,
     request->logger = logger_svc->release();
 
     request->profile.release_stage =
-        static_cast<fbl::underlying_type<ReleaseStage>::type>(release_stage);
+        static_cast<std::underlying_type<ReleaseStage>::type>(release_stage);
     request->profile.config.size = config_size;
     request->profile.config.vmo = config->release();
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -64,7 +64,7 @@ zx_status_t SendLoggerSimpleCreateRequest(zx::channel* logger_factory_client,
     request->logger = logger_svc->release();
     request->project_id = static_cast<uint32_t>(project_id);
 
-    request->release_stage = static_cast<fbl::underlying_type<ReleaseStage>::type>(release_stage);
+    request->release_stage = static_cast<std::underlying_type<ReleaseStage>::type>(release_stage);
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t num_handles = 0;
     zx_status_t result =

@@ -19,6 +19,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_counted_upgradeable.h>
 #include <fbl/ref_ptr.h>
+#include <ktl/type_traits.h>
 #include <ktl/unique_ptr.h>
 #include <ktl/move.h>
 
@@ -437,8 +438,8 @@ inline fbl::RefPtr<Dispatcher> DownCastDispatcher(fbl::RefPtr<Dispatcher>* disp)
 // const Dispatcher -> const FooDispatcher
 template <typename T>
 fbl::RefPtr<T> DownCastDispatcher(fbl::RefPtr<const Dispatcher>* disp) {
-    static_assert(fbl::is_const<T>::value, "");
-    return (likely(DispatchTag<typename fbl::remove_const<T>::type>::ID == (*disp)->get_type())) ?
+    static_assert(ktl::is_const<T>::value, "");
+    return (likely(DispatchTag<typename ktl::remove_const<T>::type>::ID == (*disp)->get_type())) ?
             fbl::RefPtr<T>::Downcast(ktl::move(*disp)) :
             nullptr;
 }
@@ -467,8 +468,8 @@ inline Dispatcher* DownCastDispatcher(Dispatcher* disp) {
 // const Dispatcher -> const FooDispatcher
 template <typename T>
 const T* DownCastDispatcher(const Dispatcher* disp) {
-    static_assert(fbl::is_const<T>::value, "");
-    return (likely(DispatchTag<typename fbl::remove_const<T>::type>::ID == disp->get_type())) ?
+    static_assert(ktl::is_const<T>::value, "");
+    return (likely(DispatchTag<typename ktl::remove_const<T>::type>::ID == disp->get_type())) ?
         reinterpret_cast<const T*>(disp) : nullptr;
 }
 

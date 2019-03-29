@@ -53,7 +53,7 @@ public:
     Type Load() const { return counter_.load(kMemoryOrder); }
 
 protected:
-    static_assert(fbl::is_integral<Type>::value, "Can only count integral types");
+    static_assert(std::is_integral<Type>::value, "Can only count integral types");
 
     std::atomic<Type> counter_;
 };

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <type_traits>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -354,7 +355,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
 }
 
 void VPartition::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
-    static_assert(fbl::is_same<decltype(info_out), decltype(&info_)>::value, "Info type mismatch");
+    static_assert(std::is_same<decltype(info_out), decltype(&info_)>::value, "Info type mismatch");
     memcpy(info_out, &info_, sizeof(info_));
     *block_op_size_out = mgr_->BlockOpSize();
 }

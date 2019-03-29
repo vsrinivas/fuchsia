@@ -254,10 +254,10 @@ void Buffer::CopyTransaction(WriteTxn* txn) {
             total_len += buf_len;
 
             // Shift down all following write requests.
-            static_assert(fbl::is_pod<WriteRequest>::value, "Can't memmove non-POD");
+            static_assert(std::is_pod<WriteRequest>::value, "Can't memmove non-POD");
 
             // Shift down all following write requests
-            static_assert(fbl::is_pod<WriteRequest>::value, "Can't memmove non-POD");
+            static_assert(std::is_pod<WriteRequest>::value, "Can't memmove non-POD");
             // Insert the "new" request, which is the latter half of the last request
             WriteRequest request;
             request.vmo = vmo;

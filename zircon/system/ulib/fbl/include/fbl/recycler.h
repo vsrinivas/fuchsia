@@ -6,7 +6,6 @@
 #define FBL_RECYCLER_H_
 
 #include <zircon/assert.h>
-#include <fbl/type_support.h>
 
 #include <type_traits>
 

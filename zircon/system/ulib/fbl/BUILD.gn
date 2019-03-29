@@ -37,7 +37,6 @@ library("fbl") {
     "fbl/string_printf.h",
     "fbl/string_traits.h",
     "fbl/type_info.h",
-    "fbl/type_support.h",
     "fbl/unique_fd.h",
     "fbl/unique_free_ptr.h",
     "fbl/unique_ptr.h",

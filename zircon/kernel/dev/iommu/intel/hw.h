@@ -10,6 +10,7 @@
 #include <err.h>
 #include <hwreg/bitfields.h>
 #include <kernel/atomic.h>
+#include <ktl/type_traits.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 
@@ -315,14 +316,14 @@ struct RootEntry {
     RootEntrySubentry lower;
     RootEntrySubentry upper;
 };
-static_assert(fbl::is_pod<RootEntry>::value, "not POD");
+static_assert(ktl::is_pod<RootEntry>::value, "not POD");
 static_assert(sizeof(RootEntry) == 16, "wrong size");
 
 struct RootTable {
     static constexpr size_t kNumEntries = 256;
     RootEntry entry[kNumEntries];
 };
-static_assert(fbl::is_pod<RootTable>::value, "not POD");
+static_assert(ktl::is_pod<RootTable>::value, "not POD");
 static_assert(sizeof(RootTable) == 4096, "wrong size");
 
 struct ContextEntry {
@@ -366,14 +367,14 @@ struct ContextEntry {
         k64Bit = 0b100,
     };
 };
-static_assert(fbl::is_pod<ContextEntry>::value, "not POD");
+static_assert(ktl::is_pod<ContextEntry>::value, "not POD");
 static_assert(sizeof(ContextEntry) == 16, "wrong size");
 
 struct ContextTable {
     static constexpr size_t kNumEntries = 256;
     ContextEntry entry[kNumEntries];
 };
-static_assert(fbl::is_pod<ContextTable>::value, "not POD");
+static_assert(ktl::is_pod<ContextTable>::value, "not POD");
 static_assert(sizeof(ContextTable) == 4096, "wrong size");
 
 struct ExtendedContextEntry {
@@ -443,14 +444,14 @@ struct ExtendedContextEntry {
         k64Bit = 0b100,
     };
 };
-static_assert(fbl::is_pod<ExtendedContextEntry>::value, "not POD");
+static_assert(ktl::is_pod<ExtendedContextEntry>::value, "not POD");
 static_assert(sizeof(ExtendedContextEntry) == 32, "wrong size");
 
 struct ExtendedContextTable {
     static constexpr size_t kNumEntries = 128;
     ExtendedContextEntry entry[kNumEntries];
 };
-static_assert(fbl::is_pod<ExtendedContextTable>::value, "not POD");
+static_assert(ktl::is_pod<ExtendedContextTable>::value, "not POD");
 static_assert(sizeof(ExtendedContextTable) == 4096, "wrong size");
 
 struct PasidEntry {
@@ -466,7 +467,7 @@ struct PasidEntry {
         dst->raw = raw;
     }
 };
-static_assert(fbl::is_pod<PasidEntry>::value, "not POD");
+static_assert(ktl::is_pod<PasidEntry>::value, "not POD");
 static_assert(sizeof(PasidEntry) == 8, "wrong size");
 
 struct PasidState {
@@ -491,7 +492,7 @@ struct PasidState {
         atomic_or_u64(&raw, 1ull << 63);
     }
 };
-static_assert(fbl::is_pod<PasidState>::value, "not POD");
+static_assert(ktl::is_pod<PasidState>::value, "not POD");
 static_assert(sizeof(PasidState) == 8, "wrong size");
 
 } // namespace ds

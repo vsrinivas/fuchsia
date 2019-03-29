@@ -60,7 +60,7 @@ private:
     zx_status_t RegisterRead(const I2cRegister<T>& reg, T* out) {
         // TODO(teisenbe): If we ever support a big-endian host, we need to do
         // endianness swapping here.
-        static_assert(fbl::is_integral<T>::value, "T must be integral");
+        static_assert(std::is_integral<T>::value, "T must be integral");
         return RegisterRead(I2cRegister<uint8_t[]>(reg.addr), reinterpret_cast<uint8_t*>(out),
                             sizeof(T));
     }
@@ -68,7 +68,7 @@ private:
     // Template for enforcing correct access size for each register write
     template <typename T>
     zx_status_t RegisterWrite(const I2cRegister<T>& reg, const T& val) {
-        static_assert(fbl::is_integral<T>::value, "T must be integral");
+        static_assert(std::is_integral<T>::value, "T must be integral");
         return RegisterWrite(I2cRegister<uint8_t[]>(reg.addr),
                              reinterpret_cast<const uint8_t*>(&val), sizeof(T));
     }

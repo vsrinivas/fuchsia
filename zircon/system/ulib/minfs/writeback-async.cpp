@@ -6,6 +6,8 @@
 
 #include "minfs-private.h"
 
+#include <type_traits>
+
 namespace minfs {
 
 Buffer::~Buffer() {
@@ -111,7 +113,7 @@ void Buffer::CopyTransaction(WriteTxn* write_transaction) {
             total_len += buf_len;
 
             // Shift down all following write requests.
-            static_assert(fbl::is_pod<WriteRequest>::value, "Can't memmove non-POD");
+            static_assert(std::is_pod<WriteRequest>::value, "Can't memmove non-POD");
 
             // Insert the "new" request, which is the latter half of the last request.
             WriteRequest request;

@@ -11,6 +11,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <threads.h>
+#include <type_traits>
 #include <utility>
 #include <utime.h>
 
@@ -74,7 +75,7 @@ struct real_disk_info {
 
 static bool gEnableOutput = true;
 
-static_assert(fbl::is_pod<real_disk_info>::value, "Global variables should contain exclusively POD"
+static_assert(std::is_pod<real_disk_info>::value, "Global variables should contain exclusively POD"
                                                   "data");
 
 #define RUN_TEST_WRAPPER(test_size, test_name, test_type) \

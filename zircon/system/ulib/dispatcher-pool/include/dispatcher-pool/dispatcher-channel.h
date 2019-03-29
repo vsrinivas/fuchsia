@@ -14,6 +14,8 @@
 #include <fbl/ref_ptr.h>
 #include <unistd.h>
 
+#include <type_traits>
+
 #include <dispatcher-pool/dispatcher-event-source.h>
 
 namespace dispatcher {
@@ -115,7 +117,7 @@ public:
     // 'friend class Channel' and 'friend class fbl::RefPtr<T>'.
     template <typename T = Channel, typename... ConstructorSignature>
     static fbl::RefPtr<T> Create(ConstructorSignature&&... args) {
-        static_assert(fbl::is_base_of<Channel, T>::value, "Class must derive from Channel!");
+        static_assert(std::is_base_of<Channel, T>::value, "Class must derive from Channel!");
 
         fbl::AllocChecker ac;
         auto ptr = fbl::AdoptRef(new (&ac) T(std::forward<ConstructorSignature>(args)...));

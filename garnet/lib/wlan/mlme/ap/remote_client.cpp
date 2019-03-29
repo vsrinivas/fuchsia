@@ -16,6 +16,8 @@
 #include <wlan/mlme/service.h>
 #include <zircon/status.h>
 
+#include <type_traits>
+
 namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
@@ -23,7 +25,7 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 // BaseState implementation.
 
 template <typename S, typename... Args> void BaseState::MoveToState(Args&&... args) {
-    static_assert(fbl::is_base_of<BaseState, S>::value, "State class must implement BaseState");
+    static_assert(std::is_base_of<BaseState, S>::value, "State class must implement BaseState");
     client_->MoveToState(fbl::make_unique<S>(client_, std::forward<Args>(args)...));
 }
 

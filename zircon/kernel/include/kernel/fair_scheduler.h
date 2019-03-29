@@ -16,7 +16,6 @@
 
 #include <fbl/intrusive_pointer_traits.h>
 #include <fbl/intrusive_wavl_tree.h>
-#include <fbl/type_support.h>
 #include <ffl/fixed.h>
 
 // Guard the definition of this class because TaskTraits directly refers to

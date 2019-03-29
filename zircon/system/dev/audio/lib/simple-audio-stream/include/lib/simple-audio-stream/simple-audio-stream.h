@@ -18,6 +18,7 @@
 #include <zircon/types.h>
 
 #include <atomic>
+#include <type_traits>
 #include <utility>
 
 namespace audio {
@@ -54,7 +55,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // sure to 'friend class SimpleAudioStream', and to 'friend class fbl::RefPtr<T>'
     template <typename T, typename... ConstructorSignature>
     static fbl::RefPtr<T> Create(ConstructorSignature&&... args) {
-        static_assert(fbl::is_base_of<SimpleAudioStream, T>::value,
+        static_assert(std::is_base_of<SimpleAudioStream, T>::value,
                       "Class must derive from SimpleAudioStream!");
 
         fbl::AllocChecker ac;

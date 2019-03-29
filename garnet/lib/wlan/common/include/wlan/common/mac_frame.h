@@ -19,6 +19,7 @@
 #include <zircon/types.h>
 
 #include <cstdint>
+#include <type_traits>
 
 namespace wlan {
 
@@ -39,7 +40,7 @@ static constexpr zx::duration TimeUnit = zx::usec(1024);
 //     foo(WLAN_TU(-1));
 //
 template <typename T> static inline constexpr zx::duration WLAN_TU(T n) {
-    static_assert(fbl::is_unsigned_integer<T>::value, "Time unit must be an unsigned integer");
+    static_assert(std::is_unsigned<T>::value, "Time unit must be an unsigned integer");
     return TimeUnit * n;
 }
 

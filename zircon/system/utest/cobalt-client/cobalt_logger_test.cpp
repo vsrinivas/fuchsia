@@ -128,7 +128,7 @@ public:
         EXPECT_EQ(profile->config.size, kVmoSize);
         EXPECT_EQ(actual_size, expected_size);
         EXPECT_EQ(profile->release_stage,
-                  static_cast<fbl::underlying_type<ReleaseStage>::type>(kReleaseStage));
+                  static_cast<std::underlying_type<ReleaseStage>::type>(kReleaseStage));
         if (logger_binder_) {
             logger_binder_(logger);
         } else {
@@ -142,7 +142,7 @@ public:
                                                 zx_handle_t logger, fidl_txn_t* txn) {
         EXPECT_EQ(project_id, kProjectId);
         EXPECT_EQ(release_stage,
-                  static_cast<fbl::underlying_type<ReleaseStage>::type>(kReleaseStage));
+                  static_cast<std::underlying_type<ReleaseStage>::type>(kReleaseStage));
         if (logger_binder_) {
             logger_binder_(logger);
         } else {

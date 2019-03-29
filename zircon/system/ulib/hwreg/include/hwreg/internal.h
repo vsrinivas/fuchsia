@@ -10,17 +10,19 @@
 #include <stdint.h>
 #include <zircon/assert.h>
 
+#include <type_traits>
+
 namespace hwreg {
 
 struct EnablePrinter;
 
 namespace internal {
 
-template <typename T> struct IsSupportedInt : fbl::false_type {};
-template <> struct IsSupportedInt<uint8_t> : fbl::true_type {};
-template <> struct IsSupportedInt<uint16_t> : fbl::true_type {};
-template <> struct IsSupportedInt<uint32_t> : fbl::true_type {};
-template <> struct IsSupportedInt<uint64_t> : fbl::true_type {};
+template <typename T> struct IsSupportedInt : std::false_type {};
+template <> struct IsSupportedInt<uint8_t> : std::true_type {};
+template <> struct IsSupportedInt<uint16_t> : std::true_type {};
+template <> struct IsSupportedInt<uint32_t> : std::true_type {};
+template <> struct IsSupportedInt<uint64_t> : std::true_type {};
 
 template <class IntType> constexpr IntType ComputeMask(uint32_t num_bits) {
     if (num_bits == sizeof(IntType) * CHAR_BIT) {

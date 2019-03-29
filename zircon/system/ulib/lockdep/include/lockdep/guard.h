@@ -7,12 +7,13 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
-#include <fbl/type_support.h>
-
 #include <lockdep/common.h>
 #include <lockdep/lock_class.h>
 #include <lockdep/lock_policy.h>
 #include <lockdep/lock_traits.h>
+
+#include <type_traits>
+#include <utility>
 
 namespace lockdep {
 
@@ -44,20 +45,20 @@ struct IsSharedLockPolicy {
 };
 template <typename LockPolicy>
 struct IsSharedLockPolicy<LockPolicy,
-                          fbl::void_t<typename LockPolicy::Shared>> {
+                          std::void_t<typename LockPolicy::Shared>> {
     static constexpr bool Value = true;
 };
 
 // Enable if the given T is nestable and uses same type as LockType.
 template <typename T, typename LockType>
 using EnableIfNestable = typename std::enable_if<
-    fbl::is_same<GetLockType<T>, LockType>::value &&
+    std::is_same<GetLockType<T>, LockType>::value &&
     IsNestable<GetLockType<T>>::Value>::type;
 
 // Enable if the given T is not nestable and uses same type as LockType.
 template <typename T, typename LockType>
 using EnableIfNotNestable = typename std::enable_if<
-    fbl::is_same<GetLockType<T>, LockType>::value &&
+    std::is_same<GetLockType<T>, LockType>::value &&
     !IsNestable<GetLockType<T>>::Value>::type;
 
 template <typename LockType, typename Option>
@@ -89,7 +90,7 @@ template <typename LockType, typename Option>
 class __TA_SCOPED_CAPABILITY Guard<LockType, Option,
                                    internal::EnableIfNotShared<LockType, Option>> {
     static_assert(
-        !fbl::is_same<LockPolicy<LockType, Option>, AmbiguousOption>::value,
+        !std::is_same<LockPolicy<LockType, Option>, AmbiguousOption>::value,
         "The Option argument of Guard<LockType, Option> must always "
         "be specified when the policy for LockType is defined using "
         "the macro LOCK_DEP_POLICY_OPTION(). See the macro docs for "
@@ -108,7 +109,7 @@ public:
     Guard(Lockable* lock, Args&&... state_args)
         __TA_ACQUIRE(lock) __TA_ACQUIRE(lock->capability())
         : validator_{lock->id()}, lock_{&lock->lock()},
-          state_{fbl::forward<Args>(state_args)...} { ValidateAndAcquire(); }
+          state_{std::forward<Args>(state_args)...} { ValidateAndAcquire(); }
 
     // Acquires the given lock. This constructor participates in overload
     // resolution when the underlying lock type is nestable.
@@ -116,7 +117,7 @@ public:
               typename = internal::EnableIfNestable<Lockable, LockType>>
     Guard(Lockable* lock, uintptr_t order, Args&&... state_args)
         __TA_ACQUIRE(lock) __TA_ACQUIRE(lock->capability())
-        : Guard{OrderedLock, lock, order, fbl::forward<Args>(state_args)...} {}
+        : Guard{OrderedLock, lock, order, std::forward<Args>(state_args)...} {}
 
     // Destructor that automatically releases the lock if not already released.
     ~Guard() __TA_RELEASE() {
@@ -128,7 +129,7 @@ public:
     void Release(Args&&... args) __TA_RELEASE() {
         if (lock_ != nullptr) {
             LockPolicy<LockType, Option>::Release(lock_, &state_,
-                                                  fbl::forward<Args>(args)...);
+                                                  std::forward<Args>(args)...);
             validator_.ValidateRelease();
             lock_ = nullptr;
         }
@@ -188,10 +189,10 @@ public:
         ZX_DEBUG_ASSERT(lock_ != nullptr);
 
         LockPolicy<LockType, Option>::Release(
-            lock_, &state_, fbl::forward<ReleaseArgs>(release_args)...);
+            lock_, &state_, std::forward<ReleaseArgs>(release_args)...);
         validator_.ValidateRelease();
 
-        fbl::forward<Op>(op)();
+        std::forward<Op>(op)();
 
         ValidateAndAcquire();
     }
@@ -221,7 +222,7 @@ private:
           uintptr_t order, Args&&... state_args)
         __TA_ACQUIRE(lock) __TA_ACQUIRE(lock->capability())
         : validator_{lock->id(), order}, lock_{&lock->lock()},
-          state_{fbl::forward<Args>(state_args)...} { ValidateAndAcquire(); }
+          state_{std::forward<Args>(state_args)...} { ValidateAndAcquire(); }
 
     // Validator type used when lock validation is enabled. Provides the
     // AcquiredLockEntry instance and bookkeeping calls required by
@@ -266,7 +267,7 @@ template <typename LockType, typename Option>
 class __TA_SCOPED_CAPABILITY Guard<LockType, Option,
                                    internal::EnableIfShared<LockType, Option>> {
     static_assert(
-        !fbl::is_same<LockPolicy<LockType, Option>, AmbiguousOption>::value,
+        !std::is_same<LockPolicy<LockType, Option>, AmbiguousOption>::value,
         "The Option argument of Guard<LockType, Option> must always "
         "be specified when the policy for LockType is defined using "
         "the macro LOCK_DEP_POLICY_OPTION(). See the macro docs for "
@@ -285,7 +286,7 @@ public:
     Guard(Lockable* lock, Args&&... state_args)
         __TA_ACQUIRE_SHARED(lock) __TA_ACQUIRE_SHARED(lock->capability())
         : validator_{lock->id()}, lock_{&lock->lock()},
-          state_{fbl::forward<Args>(state_args)...} { ValidateAndAcquire(); }
+          state_{std::forward<Args>(state_args)...} { ValidateAndAcquire(); }
 
     // Acquires the given lock. This constructor participates in overload
     // resolution when the underlying lock type is nestable.
@@ -293,7 +294,7 @@ public:
               typename = internal::EnableIfNestable<Lockable, LockType>>
     Guard(Lockable* lock, uintptr_t order, Args&&... state_args)
         __TA_ACQUIRE_SHARED(lock) __TA_ACQUIRE_SHARED(lock->capability())
-        : Guard{OrderedLock, lock, order, fbl::forward<Args>(state_args)...} {}
+        : Guard{OrderedLock, lock, order, std::forward<Args>(state_args)...} {}
 
     // Destructor that automatically releases the lock if not already released.
     ~Guard() __TA_RELEASE() {
@@ -305,7 +306,7 @@ public:
     void Release(Args&&... args) __TA_RELEASE() {
         if (lock_ != nullptr) {
             LockPolicy<LockType, Option>::Release(lock_, &state_,
-                                                  fbl::forward<Args>(args)...);
+                                                  std::forward<Args>(args)...);
             validator_.ValidateRelease();
             lock_ = nullptr;
         }
@@ -365,10 +366,10 @@ public:
         ZX_DEBUG_ASSERT(lock_ != nullptr);
 
         LockPolicy<LockType, Option>::Release(
-            lock_, &state_, fbl::forward<ReleaseArgs>(release_args)...);
+            lock_, &state_, std::forward<ReleaseArgs>(release_args)...);
         validator_.ValidateRelease();
 
-        fbl::forward<Op>(op)();
+        std::forward<Op>(op)();
 
         ValidateAndAcquire();
     }
@@ -398,7 +399,7 @@ private:
           uintptr_t order, Args&&... state_args)
         __TA_ACQUIRE_SHARED(lock) __TA_ACQUIRE_SHARED(lock->capability())
         : validator_{lock->id(), order}, lock_{&lock->lock()},
-          state_{fbl::forward<Args>(state_args)...} { ValidateAndAcquire(); }
+          state_{std::forward<Args>(state_args)...} { ValidateAndAcquire(); }
 
     // Validator type used when lock validation is enabled. Provides the
     // AcquiredLockEntry instance and bookkeeping calls required by

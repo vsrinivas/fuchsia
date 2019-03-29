@@ -14,6 +14,8 @@
 #include <lockdep/lock_dependency_set.h>
 #include <lockdep/lock_traits.h>
 
+#include <type_traits>
+
 namespace lockdep {
 
 // Type that holds the essential information and state for a lock class. This is
@@ -200,7 +202,7 @@ private:
         // LoopNode. This allows the loop detector to mostly operate in terms
         // of LoopNode instances, simplifying expressions in the main algorithm.
         LockClassState* ToState() {
-            static_assert(fbl::is_standard_layout<LockClassState>::value,
+            static_assert(std::is_standard_layout<LockClassState>::value,
                           "LockClassState must be standard layout!");
             uint8_t* byte_pointer = reinterpret_cast<uint8_t*>(this);
             uint8_t* state_pointer =

@@ -13,6 +13,7 @@
 
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_ptr.h>
+#include <ktl/forward.h>
 
 namespace fbl {
 
@@ -146,7 +147,7 @@ public:
         mutex_.Acquire();
         void* addr = arena_.Alloc();
         mutex_.Release();
-        return addr ? new (addr) T(fbl::forward<Args>(args)...) : nullptr;
+        return addr ? new (addr) T(ktl::forward<Args>(args)...) : nullptr;
     }
 
     void Delete(T* obj) {

@@ -10,7 +10,6 @@
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
-#include <fbl/type_support.h>
 
 #include <zircon/types.h>
 

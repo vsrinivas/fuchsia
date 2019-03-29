@@ -17,6 +17,7 @@
 
 #include <intel-hda/utils/codec-caps.h>
 
+#include <type_traits>
 #include <utility>
 
 namespace audio {
@@ -28,8 +29,8 @@ zx_status_t WaitCondition(zx_duration_t timeout,
                           zx_duration_t poll_interval,
                           WaitConditionFn cond);
 
-template <typename E> constexpr typename fbl::underlying_type<E>::type to_underlying(E e) {
-    return static_cast<typename fbl::underlying_type<E>::type>(e);
+template <typename E> constexpr typename std::underlying_type<E>::type to_underlying(E e) {
+    return static_cast<typename std::underlying_type<E>::type>(e);
 }
 
 zx_obj_type_t GetHandleType(const zx::handle& handle);
@@ -48,7 +49,7 @@ class RefCountedBti : public fbl::RefCounted<RefCountedBti> {
 
 template <typename T>
 zx_status_t ConvertHandle(zx::handle* abstract_handle, T* concrete_handle) {
-    static_assert(fbl::is_base_of<zx::object<T>, T>::value,
+    static_assert(std::is_base_of<zx::object<T>, T>::value,
                   "Target of ConvertHandle must be a concrete zx:: handle wrapper type!");
 
     if ((abstract_handle == nullptr) ||

@@ -17,7 +17,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
-#include <fbl/type_support.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 

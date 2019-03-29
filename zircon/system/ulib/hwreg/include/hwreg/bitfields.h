@@ -14,6 +14,8 @@
 #include <stdint.h>
 #include <zircon/assert.h>
 
+#include <type_traits>
+
 // This file provides some helpers for accessing bitfields in registers.
 //
 // Example usage:
@@ -102,12 +104,12 @@ struct EnablePrinter;
 template <class DerivedType, class IntType, class PrinterState = void>
 class RegisterBase {
     static_assert(internal::IsSupportedInt<IntType>::value, "unsupported register access width");
-    static_assert(fbl::is_same<PrinterState, void>::value ||
-                  fbl::is_same<PrinterState, EnablePrinter>::value, "unsupported printer state");
+    static_assert(std::is_same<PrinterState, void>::value ||
+                  std::is_same<PrinterState, EnablePrinter>::value, "unsupported printer state");
 public:
     using SelfType = DerivedType;
     using ValueType = IntType;
-    using PrinterEnabled = fbl::is_same<PrinterState, EnablePrinter>;
+    using PrinterEnabled = std::is_same<PrinterState, EnablePrinter>;
 
     uint32_t reg_addr() const { return reg_addr_; }
     void set_reg_addr(uint32_t addr) { reg_addr_ = addr; }
@@ -189,9 +191,9 @@ template <class RegType> class RegisterAddr {
 public:
     RegisterAddr(uint32_t reg_addr) : reg_addr_(reg_addr) {}
 
-    static_assert(fbl::is_base_of<RegisterBase<RegType,
+    static_assert(std::is_base_of<RegisterBase<RegType,
                                                typename RegType::ValueType>, RegType>::value ||
-                  fbl::is_base_of<RegisterBase<RegType,
+                  std::is_base_of<RegisterBase<RegType,
                                                typename RegType::ValueType,
                                                EnablePrinter>, RegType>::value,
                   "Parameter of RegisterAddr<> should derive from RegisterBase");
@@ -243,7 +245,7 @@ public:
     IntType get() const { return static_cast<IntType>((*value_ptr_ >> shift_) & mask_); }
 
     void set(IntType field_val) {
-        static_assert(!fbl::is_const<IntType>::value, "");
+        static_assert(!std::is_const<IntType>::value, "");
         ZX_DEBUG_ASSERT((field_val & ~mask_) == 0);
         *value_ptr_ = static_cast<IntType>(*value_ptr_ & ~(mask_ << shift_));
         *value_ptr_ = static_cast<IntType>(*value_ptr_ | (field_val << shift_));
@@ -311,16 +313,16 @@ private:
 // reads/modifies the declared bitrange.  Both bit indices are inclusive.
 #define DEF_SUBFIELD(FIELD, BIT_HIGH, BIT_LOW, NAME)                                              \
     static_assert(hwreg::internal::IsSupportedInt<                                                \
-                      typename fbl::remove_reference<decltype(FIELD)>::type>::value,              \
+                      typename std::remove_reference<decltype(FIELD)>::type>::value,              \
                   #FIELD " has unsupported type");                                                \
     static_assert((BIT_HIGH) >= (BIT_LOW), "Upper bit goes before lower bit");                    \
     static_assert((BIT_HIGH) < sizeof(decltype(FIELD)) * CHAR_BIT, "Upper bit is out of range");  \
-    typename fbl::remove_reference<decltype(FIELD)>::type NAME() const {                          \
-        return hwreg::BitfieldRef<const typename fbl::remove_reference<decltype(FIELD)>::type>(   \
+    typename std::remove_reference<decltype(FIELD)>::type NAME() const {                          \
+        return hwreg::BitfieldRef<const typename std::remove_reference<decltype(FIELD)>::type>(   \
             &FIELD, (BIT_HIGH), (BIT_LOW)).get();                                                 \
     }                                                                                             \
-    auto& set_ ## NAME(typename fbl::remove_reference<decltype(FIELD)>::type val) {               \
-        hwreg::BitfieldRef<typename fbl::remove_reference<decltype(FIELD)>::type>(                \
+    auto& set_ ## NAME(typename std::remove_reference<decltype(FIELD)>::type val) {               \
+        hwreg::BitfieldRef<typename std::remove_reference<decltype(FIELD)>::type>(                \
                 &FIELD, (BIT_HIGH), (BIT_LOW)).set(val);                                          \
         return *this;                                                                             \
     }                                                                   \

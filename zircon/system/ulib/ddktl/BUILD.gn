@@ -27,7 +27,7 @@ library("ddktl") {
     # <ddktl/pdev.h> has #include <ddktl/protocol/platform/device.h>.
     "$zx/system/banjo/ddk-protocol-platform-device",
 
-    # <ddktl/device-internal.h> has #include <fbl/type_support.h>.
+    # <ddktl/device-internal.h> has #include <fbl/macros.h>.
     "$zx/system/ulib/fbl:headers",
 
     # <ddktl/protocol/display-controller.h> has #include <lib/zx/vmo.h>.

@@ -13,6 +13,7 @@
 #include <tee-client-api/tee-client-types.h>
 #include <zircon/assert.h>
 
+#include <type_traits>
 #include <utility>
 
 #include "optee-smc.h"
@@ -135,8 +136,8 @@ private:
 
 template <typename PtrType>
 class MessageBase {
-    static_assert(fbl::is_same<PtrType, SharedMemory*>::value ||
-                      fbl::is_same<PtrType, fbl::unique_ptr<SharedMemory>>::value,
+    static_assert(std::is_same<PtrType, SharedMemory*>::value ||
+                      std::is_same<PtrType, fbl::unique_ptr<SharedMemory>>::value,
                   "Template type of MessageBase must be a pointer (raw or smart) to SharedMemory!");
 
 public:

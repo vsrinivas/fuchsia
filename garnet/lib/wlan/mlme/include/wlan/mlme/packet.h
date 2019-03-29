@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <type_traits>
 
 typedef struct ethmac_netbuf ethmac_netbuf_t;
 
@@ -220,14 +221,14 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
     template <typename T> bool has_ctrl_data() const { return ctrl_len_ == sizeof(T); }
 
     template <typename T> const T* ctrl_data() const {
-        static_assert(fbl::is_standard_layout<T>::value, "Control data must have standard layout");
+        static_assert(std::is_standard_layout<T>::value, "Control data must have standard layout");
         static_assert(kCtrlSize >= sizeof(T),
                       "Control data type too large for Buffer ctrl_data field");
         return FromBytes<T>(buffer_->ctrl(), ctrl_len_);
     }
 
     template <typename T> void CopyCtrlFrom(const T& t) {
-        static_assert(fbl::is_standard_layout<T>::value, "Control data must have standard layout");
+        static_assert(std::is_standard_layout<T>::value, "Control data must have standard layout");
         static_assert(kCtrlSize >= sizeof(T),
                       "Control data type too large for Buffer ctrl_data field");
         std::memcpy(buffer_->ctrl(), &t, sizeof(T));

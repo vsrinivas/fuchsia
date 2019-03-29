@@ -24,7 +24,6 @@ test("fbl") {
     "string_tests.cpp",
     "string_traits_tests.cpp",
     "type_info_tests.cpp",
-    "type_support_tests.cpp",
     "unique_fd_tests.cpp",
     "unique_free_ptr_tests.cpp",
     "unique_ptr_tests.cpp",

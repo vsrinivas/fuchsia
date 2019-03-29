@@ -14,6 +14,9 @@
 #include <lockdep/lock_traits.h>
 #include <lockdep/thread_lock_state.h>
 
+#include <type_traits>
+#include <utility>
+
 namespace lockdep {
 
 // Looks up a lock traits type using ADL to perform cross-namespace matching.
@@ -34,7 +37,7 @@ struct LockTraits {
 // Returns the flags for a lock type when the type is tagged with
 // LOCK_DEP_TRAITS(type, flags).
 template <typename T>
-struct LockTraits<T, fbl::void_t<LookupLockTraits<T>>> {
+struct LockTraits<T, std::void_t<LookupLockTraits<T>>> {
     static constexpr LockFlags Flags = LookupLockTraits<T>::Flags;
 };
 
@@ -188,7 +191,7 @@ protected:
     // additional arguments to the underlying lock constructor.
     template <typename... Args>
     constexpr Lock(LockClassId id, Args&&... args)
-        : id_{id}, lock_(fbl::forward<Args>(args)...) {}
+        : id_{id}, lock_(std::forward<Args>(args)...) {}
 
 private:
     template <typename, typename, typename>
@@ -302,14 +305,14 @@ public:
     // arguments.
     template <typename... Args>
     constexpr LockDep(Args&&... args)
-        : Lock<LockType>{LockClass<>::Id(), fbl::forward<Args>(args)...} {}
+        : Lock<LockType>{LockClass<>::Id(), std::forward<Args>(args)...} {}
 
     // Constructor that accepts additional LockFlags to apply to the lock class
     // for this lock. The additional arguments are passed to the underlying
     // lock.
     template <LockFlags Flags, typename... Args>
     constexpr LockDep(ExtraFlags<Flags>, Args&&... args)
-        : Lock<LockType>{LockClass<Flags>::Id(), fbl::forward<Args>(args)...} {}
+        : Lock<LockType>{LockClass<Flags>::Id(), std::forward<Args>(args)...} {}
 };
 
 // Singleton version of the lock wrapper above. This type is appropriate for
@@ -336,7 +339,7 @@ protected:
     // additional arguments are pass to the underlying lock.
     template <typename... Args>
     constexpr SingletonLockDep(Args&&... args)
-        : Lock<LockType>{LockClass::Id(), fbl::forward<Args>(args)...} {}
+        : Lock<LockType>{LockClass::Id(), std::forward<Args>(args)...} {}
 };
 
 } // namespace lockdep
