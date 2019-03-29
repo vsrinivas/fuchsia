@@ -92,6 +92,7 @@ source_set("tests") {
     "job_policy_tests.cpp",
     "mbuf_tests.cpp",
     "message_packet_tests.cpp",
+    "semaphore_tests.cpp",
     "state_tracker_tests.cpp",
   ]
   deps = [
