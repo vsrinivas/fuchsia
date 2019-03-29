@@ -57,6 +57,7 @@ zx_status_t HikeyUsb::Init() {
     }
 
     zx_device_prop_t props[] = {
+        {BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV},
         {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
         {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
         {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_USB_DWC3},

@@ -16,7 +16,8 @@ static zx_driver_ops_t rtl8211f_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(rtl8211f, rtl8211f_driver_ops, "rtl8211-phy", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(rtl8211f, rtl8211f_driver_ops, "rtl8211-phy", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_REALTEK),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_RTL8211F),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ETH_PHY),

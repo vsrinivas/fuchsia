@@ -654,6 +654,7 @@ zx_status_t DsiMt::Bind() {
     }
 
     zx_device_prop_t props[] = {
+        {BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV},
         {BIND_PLATFORM_DEV_VID, 0, display_info.vid},
         {BIND_PLATFORM_DEV_PID, 0, display_info.pid},
         {BIND_PLATFORM_DEV_DID, 0, display_info.did},

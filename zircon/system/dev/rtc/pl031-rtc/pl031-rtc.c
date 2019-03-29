@@ -168,7 +168,8 @@ static zx_driver_ops_t pl031_rtc_driver_ops = {
 
 // The formatter does not play nice with these macros.
 // clang-format off
-ZIRCON_DRIVER_BEGIN(pl031, pl031_rtc_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(pl031, pl031_rtc_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_RTC_PL031),

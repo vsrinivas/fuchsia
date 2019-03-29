@@ -580,7 +580,8 @@ static zx_driver_ops_t driver_ops = [](){
 } // namespace usb_virtual_bus
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_virtual_bus, usb_virtual_bus::driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(usb_virtual_bus, usb_virtual_bus::driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_USB_VBUS_TEST),
     BI_MATCH()

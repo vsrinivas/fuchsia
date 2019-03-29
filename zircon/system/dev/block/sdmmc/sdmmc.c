@@ -403,8 +403,9 @@ static int sdmmc_worker_thread(void* arg) {
         zx_device_t* hci_zxdev =  device_get_parent(dev->zxdev);
 
         zx_device_prop_t props[] = {
-             { BIND_SDIO_VID, 0, dev->sdio_dev.funcs[0].hw_info.manufacturer_id},
-             { BIND_SDIO_PID, 0, dev->sdio_dev.funcs[0].hw_info.product_id},
+            {BIND_PROTOCOL, 0, ZX_PROTOCOL_SDIO},
+            { BIND_SDIO_VID, 0, dev->sdio_dev.funcs[0].hw_info.manufacturer_id},
+            { BIND_SDIO_PID, 0, dev->sdio_dev.funcs[0].hw_info.product_id},
         };
 
         device_add_args_t sdio_args = {

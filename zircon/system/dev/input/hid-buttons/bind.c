@@ -16,7 +16,8 @@ static zx_driver_ops_t hid_buttons_driver_ops = {
 };
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(hid_buttons, hid_buttons_driver_ops, "zircon", "0.1", 3)
+ZIRCON_DRIVER_BEGIN(hid_buttons, hid_buttons_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_HID_BUTTONS),

@@ -52,7 +52,7 @@ zx_status_t Vim::MaliInit() {
     mali_dev.name = "mali";
     mali_dev.vid = PDEV_VID_AMLOGIC;
     mali_dev.pid = PDEV_PID_AMLOGIC_S912;
-    mali_dev.did = PDEV_DID_ARM_MALI_INIT;
+    mali_dev.did = PDEV_DID_AMLOGIC_MALI_INIT;
     mali_dev.mmio_list = mali_mmios;
     mali_dev.mmio_count = countof(mali_mmios);
     mali_dev.irq_list = mali_irqs;
