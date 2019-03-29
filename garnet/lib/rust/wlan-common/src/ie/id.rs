@@ -9,4 +9,5 @@ pub const SSID: Id = Id(0);
 pub const SUPPORTED_RATES: Id = Id(1);
 pub const DSSS_PARAM_SET: Id = Id(3);
 pub const TIM: Id = Id(5);
+pub const HT_CAPABILITIES: Id = Id(45);
 pub const EXT_SUPPORTED_RATES: Id = Id(50);
