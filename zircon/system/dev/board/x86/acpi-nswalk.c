@@ -232,8 +232,7 @@ static zx_status_t report_current_resources(acpi_device_t* dev) {
     return ZX_OK;
 }
 
-static zx_status_t acpi_op_map_resource(void* ctx, uint32_t res_id, uint32_t cache_policy,
-        void** out_vaddr, size_t* out_size, zx_handle_t* out_handle) {
+static zx_status_t acpi_op_get_mmio(void* ctx, uint32_t index, acpi_mmio_t* out_mmio) {
     acpi_device_t* dev = (acpi_device_t*)ctx;
     mtx_lock(&dev->lock);
 
@@ -242,44 +241,31 @@ static zx_status_t acpi_op_map_resource(void* ctx, uint32_t res_id, uint32_t cac
         goto unlock;
     }
 
-    if (res_id >= dev->resource_count) {
+    if (index >= dev->resource_count) {
         st = ZX_ERR_NOT_FOUND;
         goto unlock;
     }
 
-    acpi_device_resource_t* res = dev->resources + res_id;
+    acpi_device_resource_t* res = dev->resources + index;
     if (((res->base_address & (PAGE_SIZE - 1)) != 0) ||
         ((res->address_length & (PAGE_SIZE - 1)) != 0)) {
         zxlogf(ERROR, "acpi-bus[%s]: resource id=%d addr=0x%08x len=0x%x is not page aligned\n",
-                device_get_name(dev->zxdev), res_id, res->base_address, res->address_length);
+                device_get_name(dev->zxdev), index, res->base_address, res->address_length);
         st = ZX_ERR_NOT_FOUND;
         goto unlock;
     }
 
     zx_handle_t vmo;
-    zx_vaddr_t vaddr;
     size_t size = res->address_length;
     st = zx_vmo_create_physical(get_root_resource(), res->base_address, size, &vmo);
     if (st != ZX_OK) {
         goto unlock;
     }
 
-    st = zx_vmo_set_cache_policy(vmo, cache_policy);
-    if (st != ZX_OK) {
-        zx_handle_close(vmo);
-        goto unlock;
-    }
+    out_mmio->offset = 0;
+    out_mmio->size = size;
+    out_mmio->vmo = vmo;
 
-    st = zx_vmar_map(zx_vmar_root_self(),
-                     ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE,
-                     0, vmo, 0, size, &vaddr);
-    if (st != ZX_OK) {
-        zx_handle_close(vmo);
-    } else {
-        *out_handle = vmo;
-        *out_vaddr = (void*)vaddr;
-        *out_size = size;
-    }
 unlock:
     mtx_unlock(&dev->lock);
     return st;
@@ -351,9 +337,8 @@ unlock:
     return st;
 }
 
-// TODO marking unused until we publish some devices
-static __attribute__ ((unused)) acpi_protocol_ops_t acpi_proto = {
-    .map_resource = acpi_op_map_resource,
+static acpi_protocol_ops_t acpi_proto = {
+    .get_mmio = acpi_op_get_mmio,
     .map_interrupt = acpi_op_map_interrupt,
 };
 

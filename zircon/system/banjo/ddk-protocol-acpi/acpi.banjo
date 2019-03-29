@@ -6,9 +6,16 @@ library ddk.protocol.acpi;
 
 using zx;
 
+struct AcpiMmio {
+    /// Offset from beginning of VMO where the mmio region begins.
+    zx.off offset;
+    /// Size of mmio region.
+    usize size;
+    handle<vmo> vmo;
+};
+
 [Layout = "ddk-protocol"]
 interface Acpi {
-    MapResource(uint32 resource_id, uint32 cache_policy) -> (zx.status s, vector<voidptr>? vaddr,
-                                                             handle<resource> @handle);
-    MapInterrupt(int64 irq_id) -> (zx.status s, handle<interrupt> @handle);
+    GetMmio(uint32 index) -> (zx.status s, AcpiMmio mmio);
+    MapInterrupt(int64 index) -> (zx.status s, handle<interrupt> @handle);
 };
