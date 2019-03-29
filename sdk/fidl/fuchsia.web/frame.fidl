@@ -1,0 +1,194 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.web;
+
+using fuchsia.mem;
+using fuchsia.sys;
+using fuchsia.ui.views;
+
+using Url = string;
+
+// TODO(WEB-29): Consider using fuchsia.logger.LogLevelFilter if possible.
+enum ConsoleLogLevel : int32 {
+    /// No logging.
+    NONE = 100;
+
+    /// Outputs messages from console.debug() and above levels.
+    DEBUG = -1;
+
+    /// Outputs messages from console.log(), console.info() and above levels.
+    INFO = 0;
+
+    /// Outputs messages from console.warn() and console.error().
+    WARN = 1;
+
+    /// Outputs messages from console.error().
+    ERROR = 2;
+};
+
+/// Represents the return status of a Frame method.
+enum FrameError : int32 {
+    /// An internal error occured.
+    INTERNAL_ERROR = 1;
+
+    /// The provided buffer is not UTF-8 encoded.
+    BUFFER_NOT_UTF8 = 2;
+
+    /// The Frame's URL does not match any of the origins provided by the
+    /// caller.
+    INVALID_ORIGIN = 3;
+
+    /// The required |data| property is missing from a WebMessage
+    NO_DATA_IN_MESSAGE = 4;
+};
+
+protocol Frame {
+    /// Creates a new view using the specified |view_token|. Caller should pass
+    /// the other end of the token to CreateViewHolderCmd() to attach the new
+    /// view to a the view tree.
+    ///
+    /// |view_token|: Token for the new view.
+    CreateView(fuchsia.ui.views.ViewToken view_token);
+
+    /// Returns an interface through which the frame may be navigated to
+    /// a desired URL, reloaded, etc.
+    ///
+    /// |controller|: An asynchronous interface request for the Frame's
+    /// NavigationController.
+    GetNavigationController(request<NavigationController> controller);
+
+    /// Executes a UTF-8 encoded |script| in the frame if the frame's URL has
+    /// an origin which matches entries in |origins|.
+    /// At least one |origins| entry must be specified.
+    /// If a wildcard "*" is specified in |origins|, then the script will be
+    /// evaluated unconditionally.
+    ///
+    /// Note that scripts share the same execution context as the document,
+    /// meaning that document may modify variables, classes, or objects set by
+    /// the script in arbitrary or unpredictable ways.
+    ///
+    /// If an error occured, the FrameError will be set to one of these values:
+    /// BUFFER_NOT_UTF8: |script| is not UTF-8 encoded.
+    /// INVALID_ORIGIN: The Frame's current URL does not match any of the
+    ///                 values in |origins| or |origins| is an empty vector.
+    // TODO(crbug.com/900391): Investigate if we can run the scripts in
+    // isolated JS worlds.
+    ExecuteJavaScriptNoResult(
+        vector<Url> origins,
+        fuchsia.mem.Buffer script)
+        -> () error FrameError;
+
+    /// Executes a UTF-8 encoded |script| for every subsequent page load where
+    /// the frame's URL has an origin reflected in |origins|. The script is
+    /// executed early, prior to the execution of the document's scripts.
+    ///
+    /// Scripts are identified by a client-managed identifier |id|. Any
+    /// script previously injected using the same |id| will be replaced.
+    ///
+    /// The order in which multiple bindings are executed is the same as the
+    /// order in which the bindings were Added. If a script is added which
+    /// clobbers an existing script of the same |id|, the previous script's
+    /// precedence in the injection order will be preserved.
+    ///
+    /// At least one |origins| entry must be specified.
+    /// If a wildcard "*" is specified in |origins|, then the script will be
+    /// evaluated for all documents.
+    ///
+    /// If an error occured, the FrameError will be set to one of these values:
+    /// BUFFER_NOT_UTF8: |script| is not UTF-8 encoded.
+    /// INVALID_ORIGIN: |origins| is an empty vector.
+    AddBeforeLoadJavaScript(
+        uint64 id,
+        vector<Url> origins,
+        fuchsia.mem.Buffer script)
+        -> () error FrameError;
+
+    /// Removes a previously added JavaScript snippet identified by |id|.
+    /// This is a no-op if there is no JavaScript snippet identified by |id|.
+    RemoveBeforeLoadJavaScript(uint64 id);
+
+    /// Posts a message to the frame's onMessage handler.
+    ///
+    /// |target_origin| restricts message delivery to the specified origin.
+    /// If |target_origin| is "*", then the message will be sent to the
+    /// document regardless of its origin.
+    /// See html.spec.whatwg.org/multipage/web-messaging.html sect. 9.4.3
+    /// for more details on how the target origin policy is applied.
+    ///
+    /// If an error occured, the FrameError will be set to one of these values:
+    /// INTERNAL_ERROR: The WebEngine failed to create a message pipe.
+    /// BUFFER_NOT_UTF8: The script in |message|'s |data| property is not
+    ///                  UTF-8 encoded.
+    /// INVALID_ORIGIN: |origins| is an empty vector.
+    /// NO_DATA_IN_MESSAGE: The |data| property is missing in |message|.
+    PostMessage(Url target_origin, WebMessage message)
+        -> () error FrameError;
+
+    /// Sets the listener for handling page navigation events.
+    ///
+    /// |listener|: The observer to use. Unregisters any existing listener if
+    ///             null.
+    SetNavigationEventListener(NavigationEventListener? listener);
+
+    /// If set to a value other than NONE, allows web content to log messages
+    /// to the system logger using the console APIs (debug(), log(), info(),
+    /// warn() and error()).
+    /// When logged to the system logger:
+    /// * debug(), log() and info() logs are logged with LogLevelFilter.INFO
+    ///   severity level.
+    /// * warn() logs are logged with LogLevelFilter.WARN severity level.
+    /// * error() logs are logged with LogLevelFilter.ERROR severity level.
+    SetJavaScriptLogLevel(ConsoleLogLevel level);
+
+    /// Used at runtime to enable or disable user input processing
+    /// (e.g. keyboard, mouse, touch) on a Frame.
+    /// Input is enabled by default.
+    SetEnableInput(bool enable_input);
+};
+
+table WebMessage {
+    /// The message payload, encoded as an UTF-8 string. This is a required
+    /// property.
+    1: fuchsia.mem.Buffer data;
+
+    /// Optional list of objects transferred into the MessagePort from the FIDL
+    /// client.
+    2: vector<IncomingTransferable> incoming_transfer;
+
+    /// Optional list of objects transferred out of the MessagePort to the FIDL
+    /// client.
+    3: vector<OutgoingTransferable> outgoing_transfer;
+};
+
+xunion OutgoingTransferable {
+    request<MessagePort> message_port;
+};
+
+xunion IncomingTransferable {
+    MessagePort message_port;
+};
+
+/// Represents one end of an HTML5 MessageChannel. Can be used to send
+/// and exchange Messages with the peered MessagePort in the Frame's script
+/// context. The port is destroyed when either end of the MessagePort channel
+/// is torn down.
+protocol MessagePort {
+    /// Sends a WebMessage to the peer. These are processed in order, one at a
+    /// time. It is not necessary for the caller to wait for the completion
+    /// callback before calling PostMessage() again.
+    ///
+    /// If an error occured, the FrameError will be set to this value:
+    /// BUFFER_NOT_UTF8: The script in |message|'s |data| property is not
+    ///                  UTF-8 encoded.
+    /// NO_DATA_IN_MESSAGE: The |data| property is missing in |message|.
+    PostMessage(WebMessage message) -> () error FrameError;
+
+    /// Asynchronously reads the next message from the channel.
+    /// The client should invoke the callback when it is ready to process
+    /// another message.
+    /// Unreceived messages are buffered on the sender's side and bounded
+    /// by its available resources.
+    ReceiveMessage() -> (WebMessage message);
+};

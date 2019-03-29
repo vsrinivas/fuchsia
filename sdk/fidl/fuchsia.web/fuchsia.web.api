@@ -1,0 +1,5 @@
+{
+  "fidl/fuchsia.web/context.fidl": "9c8e5383e7187b4a33e0a9fc7f6eb973",
+  "fidl/fuchsia.web/frame.fidl": "80b4ee7109072e8662b8e1752437853c",
+  "fidl/fuchsia.web/navigation.fidl": "2e9313d4c41a43733f4778dbb4d74c78"
+}

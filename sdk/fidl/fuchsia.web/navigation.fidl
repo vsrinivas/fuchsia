@@ -1,0 +1,110 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.web;
+
+using fuchsia.net.http;
+
+/// Interface supplied by the embedder for receiving notifications about
+/// navigation events in a Frame.
+protocol NavigationEventListener {
+    /// Called when user-visible navigation state has changed since Frame
+    /// creation or the last acknowledgement callback, whichever occurred last.
+    /// |change| will contain all the differences in navigation state since the
+    /// last acknowledgement. Any unchanged properties will be left unset in
+    /// |change|.
+    /// Implementer must call the acknowledgement callback to receive new
+    /// navigation events.
+    OnNavigationStateChanged(NavigationEntry change) -> ();
+};
+
+/// Represents the return status of a NavigationController method.
+enum NavigationControllerError : int32 {
+    /// The provided URL is invalid.
+    INVALID_URL = 1;
+};
+
+/// Provides methods for controlling and querying the navigation state
+/// of a Frame.
+protocol NavigationController {
+    /// Tells the Frame to navigate to a |url|.
+    ///
+    /// |url|:    The address to navigate to.
+    /// |params|: Additional parameters that affect how the resource will be
+    ///           loaded (e.g. cookies, HTTP headers, etc.)
+    ///
+    /// If an error occured, the NavigationControllerError will be set:
+    /// INVALID_URL: The |url| parameter is invalid.
+    LoadUrl(Url url, LoadUrlParams params)
+        -> () error NavigationControllerError;
+
+    GoBack();
+
+    GoForward();
+
+    Stop();
+
+    Reload(ReloadType type);
+
+    /// Returns information for the currently visible content regardless of
+    /// loading state, or an empty entry if no content is being displayed.
+    GetVisibleEntry() -> (NavigationEntry entry);
+};
+
+/// Additional parameters for modifying the behavior of LoadUrl().
+table LoadUrlParams {
+    /// Provides a hint to the browser UI about how LoadUrl was triggered.
+    1: LoadUrlReason type;
+
+    /// The URL that linked to the resource being requested.
+    2: Url referrer_url;
+
+    /// Should be set to true to propagate user activation to the frame. User
+    /// activation implies that the user is interacting with the web frame. It
+    /// enables some web features that are not available otherwise. For example
+    /// autoplay will work only when this flag is set to true.
+    3: bool was_user_activated;
+
+    /// Custom HTTP headers.
+    4: vector<fuchsia.net.http.Header> headers;
+};
+
+/// Contains information about the Frame's navigation state.
+table NavigationEntry {
+    /// The page's URL.
+    1: Url url;
+
+    /// The user-visible page title.
+    2: string title;
+
+    /// Indicates whether this was a navigation to an error page.
+    3: PageType page_type;
+};
+
+/// Characterizes the type of reload.
+enum ReloadType : uint32 {
+    /// Reloads the current entry, bypassing the cache for the main resource.
+    PARTIAL_CACHE = 0;
+
+    /// Reloads the current entry, bypassing the cache entirely.
+    NO_CACHE = 1;
+};
+
+/// Characterizes the origin of a LoadUrl request.
+enum LoadUrlReason : uint32 {
+    /// Navigation was initiated by the user following a link.
+    LINK = 0;
+
+    /// Navigation was initiated by a user-provided URL.
+    TYPED = 1;
+};
+
+/// Characterizes the page type in a NavigationEntry.
+enum PageType {
+    /// Regular web page.
+    NORMAL = 0;
+
+    /// Error page.
+    ERROR = 1;
+};

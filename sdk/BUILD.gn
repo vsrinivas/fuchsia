@@ -160,6 +160,7 @@ sdk("core") {
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.web:fuchsia.web_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service_sdk($fidl_toolchain)",
     "//sdk/lib/fidl/cpp:cpp_sdk",
     "//sdk/lib/svc:svc_sdk",
