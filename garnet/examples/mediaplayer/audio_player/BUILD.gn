@@ -15,7 +15,7 @@ executable("audio_player") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/timeline",
     "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.mediaplayer",
+    "//sdk/fidl/fuchsia.media.playback",
     "//sdk/lib/sys/cpp",
     "//src/lib/url",
     "//zircon/public/lib/async-loop-cpp",

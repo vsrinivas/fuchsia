@@ -10,14 +10,14 @@ rustc_binary("audio_player_rust") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
-    "//sdk/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",
+    "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:structopt",

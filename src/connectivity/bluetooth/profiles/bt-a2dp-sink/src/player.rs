@@ -11,7 +11,7 @@ use {
         StreamPacket, StreamType, AUDIO_ENCODING_SBC, NO_TIMESTAMP,
         STREAM_PACKET_FLAG_DISCONTINUITY,
     },
-    fidl_fuchsia_mediaplayer::{
+    fidl_fuchsia_media_playback::{
         PlayerEvent, PlayerEventStream, PlayerMarker, PlayerProxy, SourceMarker,
     },
     fuchsia_zircon as zx,
@@ -132,7 +132,7 @@ impl Player {
             .context("Failed to connect to media player")?;
         let (source_client, source) = fidl::endpoints::create_endpoints()?;
         let source_proxy = source_client.into_proxy()?;
-        player.create_stream_source(0, false, false, None, source)?;
+        player.create_elementary_source(0, false, false, None, source)?;
 
         let audio_stream_type = AudioStreamType {
             sample_format: AudioSampleFormat::Signed16,

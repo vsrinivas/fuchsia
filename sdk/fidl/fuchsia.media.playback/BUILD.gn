@@ -17,6 +17,7 @@ fidl("fuchsia.media.playback") {
   public_deps = [
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/fidl/fuchsia.media.audio",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/fidl/fuchsia.ui.viewsv1token",

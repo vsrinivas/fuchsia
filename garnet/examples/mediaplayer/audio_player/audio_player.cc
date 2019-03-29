@@ -4,8 +4,6 @@
 
 #include "garnet/examples/mediaplayer/audio_player/audio_player.h"
 
-#include <iomanip>
-
 #include <fcntl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
@@ -13,7 +11,7 @@
 #include <lib/fit/function.h>
 #include <poll.h>
 #include <unistd.h>
-
+#include <iomanip>
 #include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
@@ -32,9 +30,9 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
 
   auto startup_context = sys::ComponentContext::Create();
 
-  player_ = startup_context->svc()->Connect<fuchsia::mediaplayer::Player>();
+  player_ = startup_context->svc()->Connect<fuchsia::media::playback::Player>();
   player_.events().OnStatusChanged =
-      [this](fuchsia::mediaplayer::PlayerStatus status) {
+      [this](fuchsia::media::playback::PlayerStatus status) {
         HandleStatusChanged(status);
       };
 
@@ -56,7 +54,7 @@ AudioPlayer::AudioPlayer(const AudioPlayerParams& params,
 AudioPlayer::~AudioPlayer() {}
 
 void AudioPlayer::HandleStatusChanged(
-    const fuchsia::mediaplayer::PlayerStatus& status) {
+    const fuchsia::media::playback::PlayerStatus& status) {
   // Process status received from the player.
   if (status.end_of_stream && quit_when_done_) {
     quit_callback_();
@@ -79,7 +77,7 @@ void AudioPlayer::HandleStatusChanged(
 
   if (status.metadata && !metadata_shown_) {
     FXL_LOG(INFO) << "duration   " << std::fixed << std::setprecision(1)
-                  << double(status.duration_ns) / 1000000000.0 << " seconds";
+                  << double(status.duration) / 1000000000.0 << " seconds";
     MaybeLogMetadataProperty(
         *status.metadata, fuchsia::media::METADATA_LABEL_TITLE, "title      ");
     MaybeLogMetadataProperty(

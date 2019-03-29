@@ -6,14 +6,14 @@
 #define GARNET_EXAMPLES_MEDIAPLAYER_AUDIO_PLAYER_AUDIO_PLAYER_H_
 
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/mediaplayer/cpp/fidl.h>
+#include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/fit/function.h>
 
 #include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
-#include "lib/sys/cpp/component_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"
+#include "lib/sys/cpp/component_context.h"
 
 namespace examples {
 
@@ -25,7 +25,8 @@ class AudioPlayer {
 
  private:
   // Handles a status update from the player.
-  void HandleStatusChanged(const fuchsia::mediaplayer::PlayerStatus& status);
+  void HandleStatusChanged(
+      const fuchsia::media::playback::PlayerStatus& status);
 
   // Logs a metadata property, if it exists.
   void MaybeLogMetadataProperty(const fuchsia::media::Metadata& metadata,
@@ -36,7 +37,7 @@ class AudioPlayer {
   void HandleKeystroke(zx_status_t status, uint32_t events);
 
   fit::closure quit_callback_;
-  fuchsia::mediaplayer::PlayerPtr player_;
+  fuchsia::media::playback::PlayerPtr player_;
   bool metadata_shown_ = false;
   bool problem_shown_ = false;
   bool quit_when_done_;

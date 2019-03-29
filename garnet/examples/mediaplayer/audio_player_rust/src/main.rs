@@ -7,12 +7,9 @@
 use {
     failure::{bail, Error, ResultExt},
     fdio,
-    fidl_fuchsia_mediaplayer::*,
+    fidl_fuchsia_media_playback::*,
     fuchsia_app::client::connect_to_service,
-    fuchsia_async as fasync,
-    fuchsia_zircon::{
-        self as zx,
-    },
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::prelude::*,
     std::fs::File,
     structopt::StructOpt,
@@ -22,8 +19,10 @@ use {
 #[derive(StructOpt, Debug)]
 #[structopt(name = "audio_player_rust")]
 struct Opt {
-    #[structopt(parse(try_from_str),
-    default_value = "https://storage.googleapis.com/fuchsia/assets/video/656a7250025525ae5a44b43d23c51e38b466d146")]
+    #[structopt(
+        parse(try_from_str),
+        default_value = "https://storage.googleapis.com/fuchsia/assets/video/656a7250025525ae5a44b43d23c51e38b466d146"
+    )]
     url: Url,
 }
 
@@ -41,7 +40,8 @@ impl App {
     pub async fn run(&mut self) -> Result<(), Error> {
         let Opt { url } = Opt::from_args();
 
-        let player = connect_to_service::<PlayerMarker>().context("Failed to connect to media player")?;
+        let player =
+            connect_to_service::<PlayerMarker>().context("Failed to connect to media player")?;
         if url.scheme() == "file" {
             let file = File::open(url.path())?;
             let handle = fdio::transfer_fd(file)?;
@@ -69,7 +69,7 @@ impl App {
 
             self.metadata_displayed = true;
 
-            print!("Duration = {} ns\n", status.duration_ns);
+            print!("Duration = {} ns\n", status.duration);
 
             for property in &metadata.properties {
                 print!("{} = {}\n", property.label, property.value);
