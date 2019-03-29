@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/console_main.h"
+#pragma once
 
-int main(int argc, char* argv[]) {
-  return zxdb::ConsoleMain(argc, const_cast<const char**>(argv));
-}
+namespace zxdb {
+
+// Main function for the console frontend.
+int ConsoleMain(int argc, const char* argv[]);
+
+}  // namespace zxdb

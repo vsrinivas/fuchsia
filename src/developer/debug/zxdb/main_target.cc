@@ -8,12 +8,12 @@
 #include <memory>
 #include <thread>
 
-#include "garnet/bin/zxdb/console/console.h"
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/remote_api_adapter.h"
 #include "src/developer/debug/shared/buffered_zx_socket.h"
 #include "src/developer/debug/shared/message_loop_zircon.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/console/console.h"
 
 namespace {
 

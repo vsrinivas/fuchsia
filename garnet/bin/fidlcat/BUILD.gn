@@ -18,7 +18,7 @@ import("//build/testing/environments.gni")
 #     deps = [
 #       "//src/developer/debug/zxdb/client",
 #       "//src/developer/debug/zxdb/common",
-#       "//garnet/bin/zxdb/console",
+#       "//src/developer/debug/zxdb/console",
 #       "//src/developer/debug/ipc:client",
 #       "//garnet/public/lib/fxl",
 #     ]

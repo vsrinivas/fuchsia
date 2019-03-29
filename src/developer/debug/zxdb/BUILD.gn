@@ -16,20 +16,20 @@ if (current_toolchain == host_toolchain) {
       "main_host.cc",
     ]
     deps = [
-      "//garnet/bin/zxdb/console",
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
+      "//src/developer/debug/zxdb/console",
     ]
   }
 
   test("zxdb_tests") {
     deps = [
-      "//garnet/bin/zxdb/console:tests",
       "//garnet/bin/zxdb/expr:tests",
       "//src/developer/debug/ipc:tests",
       "//src/developer/debug/shared:tests",
       "//src/developer/debug/zxdb/client:tests",
       "//src/developer/debug/zxdb/common:tests",
+      "//src/developer/debug/zxdb/console:tests",
       "//third_party/googletest:gtest",
       "//third_party/googletest:gtest_main",
     ]
