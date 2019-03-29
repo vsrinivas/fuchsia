@@ -53,7 +53,7 @@ and that hardware is a scarce resource.
 ### Predefined environments
 
 One may import
-[//build/testing/environments.gni](https://fuchsia.googlesource.com/build/+/master/testing/environments.gni)
+[//build/testing/environments.gni](https://fuchsia.googlesource.com/fuchsia/+/master/build/testing/environments.gni)
 and use the environment-related convenience variables defined within. For
 example, `basic_envs` includes all of the environments that are available to
 anyone without special consultation with the infra team.
