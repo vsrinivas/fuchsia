@@ -8,7 +8,6 @@ using fuchsia.io;
 using fuchsia.mem;
 
 const uint32 KEY_ID_SIZE = 16;
-const uint32 MAX_INIT_DATA_SIZE = 16;
 
 // Encryption modes as defined by ISO 23001-7: Common encryption in ISO base
 // media file format files. These are defined as strings rather than enums so as
@@ -66,7 +65,7 @@ struct LicenseInitData {
     /// data. Common types include "cenc", "keyids", "webm", and "hls". CDMs may
     /// also define their own.
     string type;
-    bytes:MAX_INIT_DATA_SIZE data;
+    bytes data;
 };
 
 /// LicenseMessage is for messages originating from the LicenseSession that the
