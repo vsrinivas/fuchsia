@@ -22,29 +22,30 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-static constexpr zx::duration DEFAULT_TIMEOUT = zx::msec(500);
+static constexpr zx::duration DEFAULT_TIMEOUT = zx::sec(5);
 static constexpr zx::duration DEFAULT_POLL_INTERVAL = zx::usec(100);
 
-// Poll until the kernel says that the given thread is blocked on a futex.
-static bool WaitUntilBlockedOnSomeFutex(const zx::thread& thread) {
-    BEGIN_HELPER;
+// Poll until the user provided Callable |should_stop| tells us to stop by
+// returning true.
+template <typename Callable>
+static zx_status_t WaitFor(const Callable& should_stop,
+                           zx::duration timeout = DEFAULT_TIMEOUT,
+                           zx::duration poll_interval = DEFAULT_POLL_INTERVAL) {
+    static_assert(std::is_same_v<decltype(should_stop()), bool>,
+                  "should_stop() must return a bool!");
 
-    zx::time deadline = zx::deadline_after(DEFAULT_TIMEOUT);
+    zx::time deadline = zx::deadline_after(timeout);
     zx::time now;
 
     while ((now = zx::clock::get_monotonic()) < deadline) {
-        zx_info_thread_t info;
-        ASSERT_EQ(thread.get_info(ZX_INFO_THREAD, &info,
-                                  sizeof(info), nullptr, nullptr), ZX_OK);
-        if (info.state != ZX_THREAD_STATE_BLOCKED_FUTEX) {
-            zx::nanosleep(zx::deadline_after(DEFAULT_POLL_INTERVAL));
-            continue;
+        if (should_stop()) {
+            return ZX_OK;
         }
-        return true;
+
+        zx::nanosleep(zx::deadline_after(DEFAULT_POLL_INTERVAL));
     }
 
-    ASSERT_LT(now.get(), deadline.get(), "timeout waiting for thread to block on futex");
-    END_HELPER;
+    return ZX_ERR_TIMED_OUT;
 }
 
 // This starts a thread which waits on a futex.  We can do futex_wake()
@@ -102,9 +103,9 @@ public:
 
         ASSERT_FALSE(thread_handle_.is_valid());
 
-        futex_addr_.store(futex_addr, std::memory_order_relaxed);
+        futex_addr_.store(futex_addr);
         timeout_ = timeout;
-        wait_result_.store(ZX_ERR_INTERNAL, std::memory_order_relaxed);
+        wait_result_.store(ZX_ERR_INTERNAL);
 
         auto ret = thrd_create_with_name(&thread_,
                 [](void* ctx) -> int { return reinterpret_cast<TestThread*>(ctx)->ThreadFunc(); },
@@ -117,9 +118,7 @@ public:
         zx::unowned_thread(thrd_get_zx_handle(thread_))->duplicate(ZX_RIGHT_SAME_RIGHTS,
                                                                    &thread_handle_);
 
-        while (state() == State::STARTED) {
-            sched_yield();
-        }
+        EXPECT_EQ(WaitFor([this]() { return state() != State::WAITING_TO_START; }), ZX_OK);
 
         // Note that this could fail if futex_wait() gets a spurious wakeup.
         EXPECT_EQ(state(), State::ABOUT_TO_WAIT, "wrong state");
@@ -127,7 +126,7 @@ public:
         // We should only do this after state_ is State::ABOUT_TO_WAIT,
         // otherwise it could return when the thread has temporarily
         // blocked on a libc-internal futex.
-        EXPECT_TRUE(WaitUntilBlockedOnSomeFutex(get_thread_handle()));
+        EXPECT_TRUE(WaitForKernelState(ZX_THREAD_STATE_BLOCKED_FUTEX));
 
         // This could also fail if futex_wait() gets a spurious wakeup.
         EXPECT_EQ(state(), State::ABOUT_TO_WAIT, "wrong state");
@@ -140,7 +139,7 @@ public:
 
         if (thread_handle_.is_valid()) {
             zx_status_t res = thread_handle_.wait_one(ZX_THREAD_TERMINATED,
-                                                      zx::deadline_after(zx::msec(500)),
+                                                      zx::deadline_after(zx::sec(10)),
                                                       NULL);
             EXPECT_EQ(res, ZX_OK, "Thread did not terminate in a timely fashion!\n");
             if (res == ZX_OK) {
@@ -194,21 +193,35 @@ public:
         *out_state = info.state;
 
         END_HELPER;
+    }
 
+    bool WaitForKernelState(zx_thread_state_t target_state,
+                            zx::duration timeout = zx::duration::infinite()) {
+        BEGIN_HELPER;
+
+        zx_status_t wait_res = ZX_ERR_INTERNAL;
+        bool check_res = false;
+        zx_thread_state_t state = 0;
+
+        wait_res = WaitFor([&]() {
+            check_res = GetThreadState(&state);
+            // stop if we have hit the state we want, or we have an error attempting
+            // to fetch our kernel thread state.
+            return !check_res || (state == target_state);
+        });
+
+        EXPECT_EQ(wait_res, ZX_OK);
+        EXPECT_TRUE(check_res);
+        EXPECT_EQ(state, target_state);
+
+        END_HELPER;
     }
 
     bool WaitThreadWoken() const {
         BEGIN_HELPER;
 
-        zx::time deadline = zx::deadline_after(zx::msec(500));
-        zx::time now;
-
-        while (((now = zx::clock::get_monotonic()) < deadline) &&
-                (state() != State::WAIT_RETURNED)) {
-            zx::nanosleep(zx::deadline_after(zx::usec(100)));
-        }
-
-        EXPECT_LT(now.get(), deadline.get(), "timeout waiting for thread wake");
+        zx_status_t res = WaitFor([this]() { return state() == State::WAIT_RETURNED; });
+        EXPECT_EQ(res, ZX_OK);
         EXPECT_EQ(state(), State::WAIT_RETURNED, "wrong state");
 
         END_HELPER;
@@ -221,9 +234,9 @@ public:
         ASSERT_TRUE(explicitly_killed_);
 
         zx_status_t res = thread_handle_.wait_one(ZX_THREAD_TERMINATED,
-                                                  zx::deadline_after(zx::msec(500)),
+                                                  zx::time::infinite(),
                                                   NULL);
-        EXPECT_EQ(res, ZX_OK, "Thread did not terminate in a timely fashion!\n");
+        EXPECT_EQ(res, ZX_OK, "failed to wait for thread temination.");
         EXPECT_EQ(state(), State::ABOUT_TO_WAIT);
         EXPECT_EQ(wait_result(), ZX_ERR_INTERNAL);
 
@@ -249,32 +262,28 @@ public:
     }
 
     const zx::thread& get_thread_handle() const { return thread_handle_; }
-    zx_status_t wait_result() const { return wait_result_.load(std::memory_order_relaxed); }
+    zx_status_t wait_result() const { return wait_result_.load(); }
 
 private:
     enum class State {
-        STARTED = 100,
+        WAITING_TO_START = 100,
         ABOUT_TO_WAIT = 200,
         WAIT_RETURNED = 300,
     };
 
     int ThreadFunc() {
-        state_.store(State::ABOUT_TO_WAIT, std::memory_order_relaxed);
+        state_.store(State::ABOUT_TO_WAIT);
 
-        zx::time deadline = timeout_ == zx::duration::infinite() ?
-                                        zx::time::infinite() :
-                                        zx::deadline_after(timeout_);
-
+        zx::time deadline = zx::deadline_after(timeout_);
         wait_result_.store(zx_futex_wait(futex_addr(), *futex_addr(),
-                                         ZX_HANDLE_INVALID, deadline.get()),
-                           std::memory_order_relaxed);
+                                         ZX_HANDLE_INVALID, deadline.get()));
 
-        state_.store(State::WAIT_RETURNED, std::memory_order_relaxed);
+        state_.store(State::WAIT_RETURNED);
         return 0;
     }
 
-    State state() const { return state_.load(std::memory_order_relaxed); }
-    zx_futex_t* futex_addr() const { return futex_addr_.load(std::memory_order_relaxed); }
+    State state() const { return state_.load(); }
+    zx_futex_t* futex_addr() const { return futex_addr_.load(); }
 
     thrd_t thread_;
     std::atomic<zx_status_t> wait_result_{ ZX_ERR_INTERNAL };
@@ -283,7 +292,7 @@ private:
     zx::thread thread_handle_;
     bool explicitly_killed_ = false;
 
-    std::atomic<State> state_{ State::STARTED };
+    std::atomic<State> state_{ State::WAITING_TO_START };
 };
 
 static bool TestFutexWaitValueMismatch() {
@@ -297,9 +306,11 @@ static bool TestFutexWaitValueMismatch() {
 
 static bool TestFutexWaitTimeout() {
     BEGIN_TEST;
+
     int32_t futex_value = 123;
     zx_status_t rc = zx_futex_wait(&futex_value, futex_value, ZX_HANDLE_INVALID, 0);
     ASSERT_EQ(rc, ZX_ERR_TIMED_OUT, "Futex wait should have reurned timeout");
+
     END_TEST;
 }
 
@@ -316,11 +327,10 @@ static bool TestFutexWaitTimeoutElapsed() {
 
         ASSERT_EQ(rc, ZX_ERR_TIMED_OUT, "wait should time out");
         EXPECT_GE(zx::clock::get_monotonic().get(), deadline.get(), "wait returned early");
-
     }
+
     END_TEST;
 }
-
 
 static bool TestFutexWaitBadAddress() {
     BEGIN_TEST;
@@ -329,7 +339,6 @@ static bool TestFutexWaitBadAddress() {
     ASSERT_EQ(rc, ZX_ERR_INVALID_ARGS, "Futex wait should have reurned invalid_arg");
     END_TEST;
 }
-
 
 // Test that we can wake up a single thread.
 bool TestFutexWakeup() {
@@ -605,12 +614,12 @@ static bool TestFutexThreadSuspended() {
     zx::suspend_token suspend_token;
     ASSERT_EQ(thread.get_thread_handle().suspend(&suspend_token), ZX_OK);
 
-    // Wait some time for the thread suspension to take effect.
-    zx::nanosleep(zx::deadline_after(zx::msec(10)));
+    // Wait until the thread is suspended.
+    ASSERT_TRUE(thread.WaitForKernelState(ZX_THREAD_STATE_SUSPENDED));
     ASSERT_EQ(zx_handle_close(suspend_token.release()), ZX_OK);
 
     // Wait some time for the thread to resume and execute.
-    zx::nanosleep(zx::deadline_after(zx::msec(10)));
+    ASSERT_TRUE(thread.WaitForKernelState(ZX_THREAD_STATE_BLOCKED_FUTEX));
     ASSERT_TRUE(thread.AssertThreadBlockedOnFutex());
 
     ASSERT_EQ(zx_futex_wake(&futex_value1, 1), ZX_OK);
@@ -701,6 +710,28 @@ static int signal_thread3(void* arg) {
     return 0;
 }
 
+static bool wait_blocked_on_futex(thrd_t thread) {
+    BEGIN_HELPER;
+
+    zx_handle_t thrd_handle = thrd_get_zx_handle(thread);
+    ASSERT_NE(thrd_handle, ZX_HANDLE_INVALID);
+
+    zx_info_thread_t info;
+    zx_status_t get_info_res = ZX_ERR_INTERNAL;
+    zx_status_t wait_res = ZX_ERR_INTERNAL;
+
+    wait_res = WaitFor([&]() {
+        get_info_res = zx_object_get_info(thrd_handle, ZX_INFO_THREAD, &info, sizeof(info), nullptr, nullptr);
+        return (get_info_res != ZX_OK) || (info.state == ZX_THREAD_STATE_BLOCKED_FUTEX);
+    });
+
+    EXPECT_EQ(get_info_res, ZX_OK);
+    EXPECT_EQ(wait_res, ZX_OK);
+    EXPECT_EQ(info.state, ZX_THREAD_STATE_BLOCKED_FUTEX);
+
+    END_HELPER;
+}
+
 static bool TestEventSignaling() {
     BEGIN_TEST;
     thrd_t thread1, thread2, thread3;
@@ -710,7 +741,10 @@ static bool TestEventSignaling() {
     thrd_create_with_name(&thread2, signal_thread2, NULL, "thread 2");
     thrd_create_with_name(&thread3, signal_thread3, NULL, "thread 3");
 
-    zx::nanosleep(zx::deadline_after(zx::msec(300)));
+    ASSERT_TRUE(wait_blocked_on_futex(thread1));
+    ASSERT_TRUE(wait_blocked_on_futex(thread2));
+    ASSERT_TRUE(wait_blocked_on_futex(thread3));
+
     log("signaling event\n");
     event.signal();
 
