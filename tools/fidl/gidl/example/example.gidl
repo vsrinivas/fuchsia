@@ -1,0 +1,37 @@
+success("OneStringOfMaxLengthFive-empty") {
+	value = OneStringOfMaxLengthFive {
+		the_string: "",
+	}
+	bytes = {
+		0, 0, 0, 0, 0, 0, 0, 0, // length
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+	}
+}
+
+success("OneStringOfMaxLengthFive-exactly-five-characters") {
+	value = OneStringOfMaxLengthFive {
+		the_string: "hello", // 5 characters
+	}
+	bytes = {
+		5, 0, 0, 0, 0, 0, 0, 0, // length
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		'h', 'e', 'l', 'l', 'o', // "hello"
+		0, 0, 0, // padding
+	}
+}
+
+fails_to_encode("OneStringOfMaxLengthFive-too-long") {
+	value = OneStringOfMaxLengthFive {
+		the_string: "bonjour", // 6 characters
+	}
+	err = FIDL_STRING_TOO_LONG
+}
+
+fails_to_decode("OneStringOfMaxLengthFive-wrong-length") {
+	bytes = {
+		1, 0, 0, 0, 0, 0, 0, 0, // length
+		255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+		// one character missing
+	}
+	err = FIDL_STRING_INCORRECT_SIZE
+}

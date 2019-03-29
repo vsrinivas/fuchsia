@@ -1,0 +1,41 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/host.gni")
+
+go_library("lib") {
+  name = "gidl"
+
+  deps = [
+    "//garnet/go/src/fidl:fidl_lib",
+  ]
+}
+
+go_binary("gidl") {
+  gopackage = "gidl"
+
+  deps = [
+    ":lib",
+  ]
+}
+
+install_host_tools("host") {
+  deps = [
+    ":gidl",
+  ]
+  outputs = [
+    "gidl",
+  ]
+}
+
+go_test("gidl_parser_test") {
+  gopackage = "gidl/parser"
+
+  deps = [
+    ":lib",
+  ]
+}

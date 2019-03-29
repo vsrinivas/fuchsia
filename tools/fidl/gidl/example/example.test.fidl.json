@@ -1,0 +1,53 @@
+{
+  "version": "0.0.1",
+  "name": "example",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "example/OneStringOfMaxLengthFive",
+      "location": {
+        "filename": "tools/fidl/gidl/example/example.test.fidl",
+        "line": 3,
+        "column": 7
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "string",
+            "maybe_element_count": 5,
+            "nullable": false
+          },
+          "name": "the_string",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 4,
+            "column": 13
+          },
+          "size": 16,
+          "max_out_of_line": 8,
+          "alignment": 8,
+          "offset": 0,
+          "max_handles": 0
+        }
+      ],
+      "size": 16,
+      "max_out_of_line": 8,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "example/OneStringOfMaxLengthFive"
+  ],
+  "declarations": {
+    "example/OneStringOfMaxLengthFive": "struct"
+  }
+}
