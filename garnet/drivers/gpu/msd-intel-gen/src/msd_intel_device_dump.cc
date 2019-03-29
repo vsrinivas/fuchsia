@@ -359,9 +359,10 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out)
     }
 
     bool is_mapped = false;
-    std::shared_ptr<GpuMapping> fault_mapping;
-    std::shared_ptr<GpuMapping> closest_mapping;
-    GpuMapping* faulted_batch_mapping = nullptr;
+    std::vector<GpuMappingView*> mappings;
+    GpuMappingView* fault_mapping;
+    GpuMappingView* closest_mapping;
+    const GpuMappingView* faulted_batch_mapping = nullptr;
     uint64_t closest_mapping_distance = UINT64_MAX;
 
     if (!dump_state.render_cs.inflight_batches.empty()) {
@@ -392,20 +393,16 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out)
                 continue;
 
             auto cmd_buf = static_cast<CommandBuffer*>(batch);
-
-            for (auto mapping : cmd_buf->exec_resource_mappings()) {
-                fmt = "    Mapping %p, aspace %p, buffer 0x%lx, gpu addr range [0x%lx, 0x%lx), "
+            cmd_buf->GetMappings(&mappings);
+            for (const auto& mapping : mappings) {
+                fmt = "    Mapping %p, buffer 0x%lx, gpu addr range [0x%lx, 0x%lx), "
                       "offset 0x%lx, mapping length 0x%lx\n";
                 gpu_addr_t mapping_start = mapping->gpu_addr();
                 gpu_addr_t mapping_end = mapping->gpu_addr() + mapping->length();
-                size = std::snprintf(nullptr, 0, fmt, mapping.get(),
-                                     mapping->address_space().lock().get(),
-                                     mapping->buffer()->platform_buffer()->id(), mapping_start,
+                size = std::snprintf(nullptr, 0, fmt, mapping, mapping->BufferId(), mapping_start,
                                      mapping_end, mapping->offset(), mapping->length());
                 std::vector<char> buf(size + 1);
-                std::snprintf(&buf[0], buf.size(), fmt, mapping.get(),
-                              mapping->address_space().lock().get(),
-                              mapping->buffer()->platform_buffer()->id(), mapping_start,
+                std::snprintf(&buf[0], buf.size(), fmt, mapping, mapping->BufferId(), mapping_start,
                               mapping_end, mapping->offset(), mapping->length());
                 dump_out.append(&buf[0]);
                 if (dump_state.fault_gpu_address >= mapping_start &&
@@ -423,10 +420,10 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out)
 
     if (is_mapped) {
         fmt = "Fault address appears to be within mapping %p addr [0x%lx, 0x%lx)\n";
-        size = std::snprintf(nullptr, 0, fmt, fault_mapping.get(), fault_mapping->gpu_addr(),
+        size = std::snprintf(nullptr, 0, fmt, fault_mapping, fault_mapping->gpu_addr(),
                              fault_mapping->gpu_addr() + fault_mapping->length());
         std::vector<char> buf(size + 1);
-        std::snprintf(&buf[0], buf.size(), fmt, fault_mapping.get(), fault_mapping->gpu_addr(),
+        std::snprintf(&buf[0], buf.size(), fmt, fault_mapping, fault_mapping->gpu_addr(),
                       fault_mapping->gpu_addr() + fault_mapping->length());
         dump_out.append(&buf[0]);
     } else {
@@ -434,27 +431,24 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out)
         if (closest_mapping_distance < UINT64_MAX) {
             fmt = "Fault address is 0x%lx past the end of mapping %p addr [0x%08lx, 0x%08lx), size "
                   "0x%lx, buffer size 0x%lx\n";
-            size = std::snprintf(nullptr, 0, fmt, closest_mapping_distance, closest_mapping.get(),
+            size = std::snprintf(nullptr, 0, fmt, closest_mapping_distance, closest_mapping,
                                  closest_mapping->gpu_addr(),
                                  closest_mapping->gpu_addr() + closest_mapping->length(),
-                                 closest_mapping->length(),
-                                 closest_mapping->buffer()->platform_buffer()->size());
+                                 closest_mapping->length(), closest_mapping->BufferSize());
             std::vector<char> buf(size + 1);
-            std::snprintf(&buf[0], buf.size(), fmt, closest_mapping_distance, closest_mapping.get(),
+            std::snprintf(&buf[0], buf.size(), fmt, closest_mapping_distance, closest_mapping,
                           closest_mapping->gpu_addr(),
                           closest_mapping->gpu_addr() + closest_mapping->length(),
-                          closest_mapping->length(),
-                          closest_mapping->buffer()->platform_buffer()->size());
+                          closest_mapping->length(), closest_mapping->BufferSize());
             dump_out.append(&buf[0]);
         }
     }
 
     if (faulted_batch_mapping) {
         dump_out.append("Batch instructions immediately surrounding the active head:\n");
-        uint32_t* batch_data = nullptr;
+        std::vector<uint32_t> batch_data;
         // dont early out because we always want to print the "dump end" line
-        if (faulted_batch_mapping->buffer()->platform_buffer()->MapCpu(
-                reinterpret_cast<void**>(&batch_data))) {
+        if (faulted_batch_mapping->Copy(&batch_data)) {
             uint64_t active_head_offset =
                 dump_state.render_cs.active_head_pointer - faulted_batch_mapping->gpu_addr();
             DASSERT(active_head_offset <= faulted_batch_mapping->length());

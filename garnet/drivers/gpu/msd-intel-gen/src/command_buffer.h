@@ -53,12 +53,15 @@ public:
         return std::move(wait_semaphores_);
     }
 
-    std::vector<std::shared_ptr<GpuMapping>>& exec_resource_mappings()
+    void GetMappings(std::vector<GpuMappingView*>* mappings_out)
     {
-        return exec_resource_mappings_;
+        mappings_out->clear();
+        for (const auto& mapping : exec_resource_mappings_) {
+            mappings_out->emplace_back(mapping.get());
+        }
     }
 
-    GpuMapping* GetBatchMapping() override
+    const GpuMappingView* GetBatchMapping() override
     {
         DASSERT(prepared_to_execute_);
         return exec_resource_mappings_[batch_buffer_index_].get();

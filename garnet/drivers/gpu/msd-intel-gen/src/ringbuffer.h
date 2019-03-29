@@ -11,6 +11,7 @@
 #include <memory>
 
 class AddressSpace;
+class GpuMapping;
 
 class Ringbuffer : public InstructionWriter {
 public:

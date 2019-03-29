@@ -22,7 +22,7 @@ public:
     virtual uint64_t GetBatchBufferId() { return 0; }
     virtual uint32_t GetPipeControlFlags() { return 0; }
     virtual bool IsCommandBuffer() { return false; }
-    virtual GpuMapping* GetBatchMapping() = 0;
+    virtual const GpuMappingView* GetBatchMapping() = 0;
 
     void scheduled() { scheduled_ = true; }
     bool was_scheduled() { return scheduled_; }
@@ -52,7 +52,7 @@ public:
         sequence_number_ = sequence_number;
     }
 
-    GpuMapping* GetBatchMapping() override { return batch_buffer_mapping_.get(); }
+    const GpuMappingView* GetBatchMapping() override { return batch_buffer_mapping_.get(); }
 
 private:
     std::shared_ptr<MsdIntelContext> context_;
@@ -65,7 +65,7 @@ class NullBatch : public MappedBatch {
 public:
     bool GetGpuAddress(gpu_addr_t* gpu_addr_out) override { return false; }
     void SetSequenceNumber(uint32_t sequence_number) override {}
-    GpuMapping* GetBatchMapping() override { return nullptr; }
+    const GpuMappingView* GetBatchMapping() override { return nullptr; }
 };
 
 // Releases the list of bus mappings when destroyed.

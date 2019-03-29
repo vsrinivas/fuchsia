@@ -13,7 +13,35 @@
 class AddressSpace;
 class MsdIntelBuffer;
 
-class GpuMapping {
+// GpuMappingView exposes a non-mutable interface to a GpuMapping.
+class GpuMappingView {
+public:
+    GpuMappingView(std::shared_ptr<MsdIntelBuffer> buffer, gpu_addr_t gpu_addr, uint64_t offset,
+                   uint64_t length);
+
+    gpu_addr_t gpu_addr() const { return gpu_addr_; }
+
+    uint64_t offset() const { return offset_; }
+
+    // Length of a GpuMapping is mutable; this method is racy if called from a thread other
+    // than the owning connection thread.
+    uint64_t length() const { return length_; }
+
+    uint64_t BufferId() const;
+    uint64_t BufferSize() const;
+
+    bool Copy(std::vector<uint32_t>* buffer_out) const;
+
+protected:
+    ~GpuMappingView() {}
+
+    std::shared_ptr<MsdIntelBuffer> buffer_;
+    const gpu_addr_t gpu_addr_;
+    const uint64_t offset_;
+    uint64_t length_;
+};
+
+class GpuMapping : public GpuMappingView {
 public:
     GpuMapping(std::shared_ptr<AddressSpace> address_space, std::shared_ptr<MsdIntelBuffer> buffer,
                uint64_t offset, uint64_t length, gpu_addr_t gpu_addr,
@@ -26,24 +54,10 @@ public:
 
     MsdIntelBuffer* buffer() { return buffer_.get(); }
 
-    gpu_addr_t gpu_addr()
-    {
-        DASSERT(!address_space_.expired());
-        return gpu_addr_;
-    }
-
-    std::weak_ptr<AddressSpace> address_space() { return address_space_; }
-
-    uint64_t offset() { return offset_; }
-
-    uint64_t length() { return length_; }
+    std::weak_ptr<AddressSpace> address_space() const { return address_space_; }
 
 private:
     std::weak_ptr<AddressSpace> address_space_;
-    std::shared_ptr<MsdIntelBuffer> buffer_;
-    uint64_t offset_;
-    uint64_t length_;
-    gpu_addr_t gpu_addr_;
     std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping_;
 };
 

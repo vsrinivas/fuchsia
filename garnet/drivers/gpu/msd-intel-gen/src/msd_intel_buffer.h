@@ -16,7 +16,6 @@
 #include <unordered_map>
 #include <vector>
 
-class GpuMapping;
 class AddressSpace;
 
 class MsdIntelBuffer {
