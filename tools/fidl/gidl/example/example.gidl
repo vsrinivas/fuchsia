@@ -49,6 +49,30 @@ success("UnionOnlyPrimitives-variant-i") {
 	}
 }
 
+success("UnionWithTableStructString-variant-table") {
+	value = UnionWithTableStructString {
+		table: TableOnlyPrimitives {
+			i: -42,
+			u: 142,
+		},
+	}
+	bytes = {
+		// not important
+	}
+}
+
+success("UnionWithTableStructString-variant-struct") {
+	value = UnionWithTableStructString {
+		struct: StructOnlyPrimitives {
+			i: -42,
+			u: 142,
+		},
+	}
+	bytes = {
+		// not important
+	}
+}
+
 fails_to_encode("OneStringOfMaxLengthFive-too-long") {
 	value = OneStringOfMaxLengthFive {
 		the_string: "bonjour", // 6 characters

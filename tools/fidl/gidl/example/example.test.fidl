@@ -4,6 +4,12 @@ struct OneStringOfMaxLengthFive {
     string:5 the_string;
 };
 
+struct StructOnlyPrimitives {
+    int32 i;
+    bool b;
+    uint16 u;
+};
+
 table TableOnlyPrimitives {
     1: int32 i;
     2: bool b;
@@ -14,4 +20,10 @@ xunion UnionOnlyPrimitives {
     int32 i;
     bool b;
     uint16 u;
+};
+
+xunion UnionWithTableStructString {
+    StructOnlyPrimitives struct;
+    TableOnlyPrimitives table;
+    UnionOnlyPrimitives union;
 };

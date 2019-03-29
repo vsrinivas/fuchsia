@@ -7,6 +7,7 @@ package mixer
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	fidlir "fidl/compiler/backend/types"
 	gidlir "gidl/ir"
@@ -327,6 +328,12 @@ func (s schema) LookupDeclByType(typ fidlir.Type) (Declaration, bool) {
 		default:
 			panic(fmt.Sprintf("unsupported primitive subtype: %s", typ.PrimitiveSubtype))
 		}
+	case fidlir.IdentifierType:
+		parts := strings.Split(string(typ.Identifier), "/")
+		if len(parts) != 2 {
+			panic(fmt.Sprintf("malformed identifier: %s", typ.Identifier))
+		}
+		return s.LookupDeclByName(parts[1])
 	default:
 		// TODO(pascallouis): many more cases.
 		panic("not implemented")

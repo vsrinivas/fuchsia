@@ -39,6 +39,72 @@
       "max_out_of_line": 8,
       "alignment": 8,
       "max_handles": 0
+    },
+    {
+      "name": "example/StructOnlyPrimitives",
+      "location": {
+        "filename": "tools/fidl/gidl/example/example.test.fidl",
+        "line": 7,
+        "column": 7
+      },
+      "anonymous": false,
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "i",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 8,
+            "column": 10
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "bool"
+          },
+          "name": "b",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 9,
+            "column": 9
+          },
+          "size": 1,
+          "max_out_of_line": 0,
+          "alignment": 1,
+          "offset": 4,
+          "max_handles": 0
+        },
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint16"
+          },
+          "name": "u",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 10,
+            "column": 11
+          },
+          "size": 2,
+          "max_out_of_line": 0,
+          "alignment": 2,
+          "offset": 6,
+          "max_handles": 0
+        }
+      ],
+      "size": 8,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0
     }
   ],
   "table_declarations": [
@@ -46,7 +112,7 @@
       "name": "example/TableOnlyPrimitives",
       "location": {
         "filename": "tools/fidl/gidl/example/example.test.fidl",
-        "line": 7,
+        "line": 13,
         "column": 6
       },
       "members": [
@@ -60,7 +126,7 @@
           "name": "i",
           "location": {
             "filename": "tools/fidl/gidl/example/example.test.fidl",
-            "line": 8,
+            "line": 14,
             "column": 13
           },
           "size": 4,
@@ -78,7 +144,7 @@
           "name": "b",
           "location": {
             "filename": "tools/fidl/gidl/example/example.test.fidl",
-            "line": 9,
+            "line": 15,
             "column": 12
           },
           "size": 1,
@@ -96,7 +162,7 @@
           "name": "u",
           "location": {
             "filename": "tools/fidl/gidl/example/example.test.fidl",
-            "line": 10,
+            "line": 16,
             "column": 14
           },
           "size": 2,
@@ -117,7 +183,7 @@
       "name": "example/UnionOnlyPrimitives",
       "location": {
         "filename": "tools/fidl/gidl/example/example.test.fidl",
-        "line": 13,
+        "line": 19,
         "column": 7
       },
       "members": [
@@ -130,7 +196,7 @@
           "name": "i",
           "location": {
             "filename": "tools/fidl/gidl/example/example.test.fidl",
-            "line": 14,
+            "line": 20,
             "column": 10
           },
           "size": 4,
@@ -147,7 +213,7 @@
           "name": "b",
           "location": {
             "filename": "tools/fidl/gidl/example/example.test.fidl",
-            "line": 15,
+            "line": 21,
             "column": 9
           },
           "size": 1,
@@ -164,7 +230,7 @@
           "name": "u",
           "location": {
             "filename": "tools/fidl/gidl/example/example.test.fidl",
-            "line": 16,
+            "line": 22,
             "column": 11
           },
           "size": 2,
@@ -177,16 +243,88 @@
       "max_out_of_line": 8,
       "alignment": 8,
       "max_handles": 0
+    },
+    {
+      "name": "example/UnionWithTableStructString",
+      "location": {
+        "filename": "tools/fidl/gidl/example/example.test.fidl",
+        "line": 25,
+        "column": 7
+      },
+      "members": [
+        {
+          "ordinal": 999827751,
+          "type": {
+            "kind": "identifier",
+            "identifier": "example/StructOnlyPrimitives",
+            "nullable": false
+          },
+          "name": "struct",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 26,
+            "column": 25
+          },
+          "size": 8,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0
+        },
+        {
+          "ordinal": 618808300,
+          "type": {
+            "kind": "identifier",
+            "identifier": "example/TableOnlyPrimitives",
+            "nullable": false
+          },
+          "name": "table",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 27,
+            "column": 24
+          },
+          "size": 16,
+          "max_out_of_line": 72,
+          "alignment": 8,
+          "offset": 0
+        },
+        {
+          "ordinal": 1790719835,
+          "type": {
+            "kind": "identifier",
+            "identifier": "example/UnionOnlyPrimitives",
+            "nullable": false
+          },
+          "name": "union",
+          "location": {
+            "filename": "tools/fidl/gidl/example/example.test.fidl",
+            "line": 28,
+            "column": 24
+          },
+          "size": 24,
+          "max_out_of_line": 8,
+          "alignment": 8,
+          "offset": 0
+        }
+      ],
+      "size": 24,
+      "max_out_of_line": 88,
+      "alignment": 8,
+      "max_handles": 0
     }
   ],
   "declaration_order": [
     "example/OneStringOfMaxLengthFive",
+    "example/StructOnlyPrimitives",
     "example/UnionOnlyPrimitives",
-    "example/TableOnlyPrimitives"
+    "example/TableOnlyPrimitives",
+    "example/UnionWithTableStructString"
   ],
   "declarations": {
     "example/OneStringOfMaxLengthFive": "struct",
+    "example/StructOnlyPrimitives": "struct",
     "example/TableOnlyPrimitives": "table",
-    "example/UnionOnlyPrimitives": "xunion"
+    "example/UnionOnlyPrimitives": "xunion",
+    "example/UnionWithTableStructString": "xunion"
   }
 }
