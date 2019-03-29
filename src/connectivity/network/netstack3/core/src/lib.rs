@@ -157,6 +157,9 @@ enum TimerIdInner {
     IpLayer(IpLayerTimerId),
     /// A timer event in the transport layer.
     TransportLayer(TransportLayerTimerId),
+    /// A no-op timer event (used for tests)
+    #[cfg(test)]
+    Nop(usize),
 }
 
 /// Handle a generic timer event.
@@ -170,6 +173,10 @@ pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: TimerId) {
         }
         TimerId(TimerIdInner::TransportLayer(x)) => {
             transport::handle_timeout(ctx, x);
+        }
+        #[cfg(test)]
+        TimerId(TimerIdInner::Nop(_)) => {
+            increment_counter!(ctx, "timer::nop");
         }
     }
 }

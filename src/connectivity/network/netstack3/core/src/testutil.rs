@@ -26,6 +26,7 @@ use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::EthernetFrame;
 use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpParseArgs};
 use crate::{handle_timeout, Context, EventDispatcher, TimerId};
+use std::hash::Hash;
 
 use specialize_ip_macro::specialize_ip_address;
 
@@ -568,12 +569,287 @@ impl EventDispatcher for DummyEventDispatcher {
     }
 }
 
+/// A dummy network, composed of many `Context`s backed by
+/// `DummyEventDispatcher`s.
+///
+/// Provides a quick utility to have many contexts keyed by `N` that can
+/// exchange frames between their interfaces, which are mapped by `mapper`.
+pub(crate) struct DummyNetwork<N: Eq + Hash + Clone, F: Fn(&N, DeviceId) -> (N, DeviceId)> {
+    contexts: HashMap<N, Context<DummyEventDispatcher>>,
+    mapper: F,
+}
+
+/// The result of a single step in a `DummyNetwork`
+#[derive(Debug, PartialEq)]
+pub(crate) enum StepResult {
+    /// No operation was performed in requested step.
+    Idle,
+    /// All the queued frames were exchanged in this step.
+    FramesSent,
+    /// A single timer was fired in this step.
+    TimerFired,
+}
+
+/// Error type that marks that one of the `run_until` family of functions
+/// reached a maximum number of iterations.
+#[derive(Debug)]
+pub(crate) struct LoopLimitReachedError;
+
+impl<N, F> DummyNetwork<N, F>
+where
+    N: Eq + Hash + Clone + std::fmt::Debug,
+    F: Fn(&N, DeviceId) -> (N, DeviceId),
+{
+    /// Creates a new `DummyNetwork`.
+    ///
+    /// Creates a new `DummyNetwork` with the collection of `Context`s in
+    /// `contexts`. `Context`s are named by type parameter `N`. `mapper`
+    /// is used to route frames from one pair of (named `Context`, `DeviceId`)
+    /// to another.
+    ///
+    /// # Panics
+    ///
+    /// `mapper` must map to a valid name, otherwise calls to `step` will panic.
+    ///
+    /// Calls to `new` will panic if given a `Context` with timer events.
+    /// `Context`s given to `DummyNetwork` **must not** have any timer events
+    /// already attached to them, because `DummyNetwork` maintains all the
+    /// internal timers in dispatchers in sync to enable synchronous simulation
+    /// steps.
+    pub(crate) fn new<I: Iterator<Item = (N, Context<DummyEventDispatcher>)>>(
+        contexts: I,
+        mapper: F,
+    ) -> Self {
+        let mut ret = Self { contexts: contexts.collect(), mapper };
+
+        // We can't guarantee that all contexts are safely running their timers
+        // together if we receive a context with any timers already set.
+        assert!(
+            !ret.contexts.iter().any(|(n, ctx)| { !ctx.dispatcher.timer_events.is_empty() }),
+            "can't start network with contexts that already have timers set"
+        );
+
+        let beginning_of_time = Instant::now();
+
+        // synchronize all dispatchers current time to the same value:
+        ret.contexts.iter_mut().for_each(|(n, ctx)| {
+            ctx.dispatcher.current_time = beginning_of_time;
+        });
+
+        ret
+    }
+
+    /// Retrieves a `Context` named `context`.
+    pub(crate) fn context<K: Into<N>>(&mut self, context: K) -> &mut Context<DummyEventDispatcher> {
+        self.contexts.get_mut(&context.into()).unwrap()
+    }
+
+    /// Performs a single step in network simulation.
+    ///
+    /// `step` performs a single logical step in the collection of `Context`s
+    /// held by this `DummyNetwork`. A single step consists of only one of the
+    /// following operations:
+    ///
+    /// - All pending frames, kept in `frames_sent` of `DummyEventDispatcher`
+    /// are mapped to their destination `Context`/`DeviceId` pairs and injected
+    /// with `receive_frame`.
+    /// - A **single** timer event is fired (the next in line) and the internal
+    /// clock of all `Context`s is moved up to the resulting time.
+    ///
+    /// The return value of `step` indicates which of the operations was
+    /// performed, returning `StepResult::Idle` if no frames or timers are
+    /// queued.
+    ///
+    /// # Panics
+    ///
+    /// If `DummyNetwork` was set up with a bad `mapper`, calls to `step` may
+    /// panic when trying to route frames to their `Context`/`DeviceId`
+    /// destinations.
+    pub(crate) fn step(&mut self) -> StepResult {
+        if self.dispatch_frames() {
+            return StepResult::FramesSent;
+        }
+
+        // check if we should fire any timers:
+        match self
+            .contexts
+            .iter()
+            .filter_map(|(n, ctx)| match ctx.dispatcher.timer_events.keys().next() {
+                Some(tmr) => Some((n.clone(), tmr.clone())),
+                None => None,
+            })
+            .min_by(|(n1, t1), (n2, t2)| t1.cmp(t2))
+        {
+            // If a timer is present
+            Some((n, t)) => {
+                let ctx = self.context(n);
+                trigger_next_timer(ctx);
+                // triggering the next timer should cause all the contexts
+                // to move forward in time:
+                let cur_time = ctx.dispatcher.current_time;
+                self.contexts.iter_mut().for_each(|(n, ctx)| {
+                    ctx.dispatcher.current_time = cur_time;
+                });
+                StepResult::TimerFired
+            }
+            // otherwise there's nothing to do so we're idling
+            None => StepResult::Idle,
+        }
+    }
+
+    /// Dispatches all queued frames.
+    ///
+    /// Collects all pending frames and dispatches them to the destination
+    /// `Context`/`DeviceId` based on the result of `mapper`. Returns `false` if
+    /// no pending frames were available to be dispatched.
+    ///
+    /// # Panics
+    ///
+    /// If `DummyNetwork` was set up with a bad `mapper`, calls to
+    /// `dispatch_frames` may panic when trying to route frames to their
+    /// `Context`/`DeviceId` destinations.
+    pub(crate) fn dispatch_frames(&mut self) -> bool {
+        let all_frames: Vec<(N, Vec<(DeviceId, Vec<u8>)>)> = self
+            .contexts
+            .iter_mut()
+            .filter_map(|(n, ctx)| {
+                if ctx.dispatcher.frames_sent.is_empty() {
+                    None
+                } else {
+                    Some((n.clone(), ctx.dispatcher.frames_sent.drain(..).collect()))
+                }
+            })
+            .collect();
+
+        if !all_frames.is_empty() {
+            // if we got frames to send, we should prioritize sending them:
+            all_frames.into_iter().for_each(|(n, frames)| {
+                frames.into_iter().for_each(|(device_id, mut frame)| {
+                    let (dst_n, dst_device) = (self.mapper)(&n, device_id);
+                    crate::receive_frame(
+                        self.contexts.get_mut(&dst_n).unwrap(),
+                        dst_device,
+                        &mut frame,
+                    );
+                })
+            });
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Runs the dummy network simulation until no frames are queued.
+    ///
+    /// Dispatches all pending frames in discrete steps until all `Context`s
+    /// are starved of outgoing frames, or a total of 1,000,000 steps is
+    /// reached. The imposed limit in steps is there to prevent the call from
+    /// blocking; reaching that limit should be considered a logic error.
+    ///
+    /// # Panics
+    ///
+    /// See [`dispatch_frames`] for possible panic conditions.
+    pub(crate) fn run_until_no_frames(&mut self) -> Result<(), LoopLimitReachedError> {
+        for _ in 0..1_000_000 {
+            if !self.dispatch_frames() {
+                return Ok(());
+            }
+        }
+        debug!("DummyNetwork seems to have gotten stuck in a loop.");
+        Err(LoopLimitReachedError)
+    }
+
+    /// Runs the dummy network simulation until it is starved of events.
+    ///
+    /// Runs `step` until it returns `StepResult::Idle` or a total of 1,000,000
+    /// steps is performed. The imposed limit in steps is there to prevent the
+    /// call from blocking; reaching that limit should be considered a logic
+    /// error.
+    ///
+    /// # Panics
+    ///
+    /// See [`step`] for possible panic conditions.
+    pub(crate) fn run_until_idle(&mut self) -> Result<(), LoopLimitReachedError> {
+        for _ in 0..1_000_000 {
+            match self.step() {
+                StepResult::Idle => return Ok(()),
+                _ => {}
+            }
+        }
+        debug!("DummyNetwork seems to have gotten stuck in a loop.");
+        Err(LoopLimitReachedError)
+    }
+
+    /// Runs the dummy network simulation until it is starved of events or
+    /// `stop` returns `true`.
+    ///
+    /// Runs `step` until it returns `StepResult::Idle` or the provided function
+    /// `stop` returns `true`, or a total of 1,000,000 steps is performed. The
+    /// imposed limit in steps is there to prevent the call from blocking;
+    /// reaching that limit should be considered a logic error.
+    ///
+    /// # Panics
+    ///
+    /// See [`step`] for possible panic conditions.
+    pub(crate) fn run_until_idle_or<S: Fn(&mut Self) -> bool>(
+        &mut self,
+        stop: S,
+    ) -> Result<(), LoopLimitReachedError> {
+        for _ in 0..1_000_000 {
+            match self.step() {
+                StepResult::Idle => return Ok(()),
+                _ => {
+                    if stop(self) {
+                        return Ok(());
+                    }
+                }
+            }
+        }
+        debug!("DummyNetwork seems to have gotten stuck in a loop.");
+        Err(LoopLimitReachedError)
+    }
+}
+
+/// Convenience function to create `DummyNetwork`s
+///
+/// `new_dummy_network_from_config` creates a `DummyNetwork` with two `Context`s
+/// named `a` and `b`. `Context` `a` is created from the configuration provided
+/// in `cfg`, and `Context` `b` is created from the symmetric configuration
+/// generated by `DummyEventDispatcherConfig::swap`. A default `mapper` function
+/// is provided that maps all frames from (`a`, ethernet device `1`) to
+/// (`b`, ethernet device `1`) and vice-versa.
+pub(crate) fn new_dummy_network_from_config<A: IpAddress, N>(
+    a: N,
+    b: N,
+    cfg: DummyEventDispatcherConfig<A>,
+) -> DummyNetwork<N, impl Fn(&N, DeviceId) -> (N, DeviceId)>
+where
+    N: Eq + Hash + Clone + std::fmt::Debug,
+{
+    let bob = DummyEventDispatcherBuilder::from_config(cfg.swap()).build();
+    let alice = DummyEventDispatcherBuilder::from_config(cfg).build();
+    let contexts = vec![(a.clone(), alice), (b.clone(), bob)].into_iter();
+    DummyNetwork::<N, _>::new(contexts, move |net, device_id| {
+        if *net == a {
+            (b.clone(), DeviceId::new_ethernet(1))
+        } else {
+            (a.clone(), DeviceId::new_ethernet(1))
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-    use crate::wire::icmp::{IcmpDestUnreachable, IcmpEchoReply, Icmpv4DestUnreachableCode};
+    use crate::ip::{self, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+    use crate::wire::icmp::{
+        IcmpDestUnreachable, IcmpEchoReply, IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode,
+        Icmpv4DestUnreachableCode,
+    };
+    use crate::TimerIdInner;
+    use packet::{Buf, BufferSerializer, Serializer};
+    use std::time::Duration;
 
     #[test]
     fn test_parse_ethernet_frame() {
@@ -645,5 +921,107 @@ mod tests {
         assert_eq!(dst_mac, Mac::new([0x8c, 0x85, 0x90, 0xc9, 0xc9, 0x00]));
         assert_eq!(src_ip, Ipv4Addr::new([172, 217, 6, 46]));
         assert_eq!(dst_ip, Ipv4Addr::new([192, 168, 0, 105]));
+    }
+
+    #[test]
+    fn test_dummy_network_transmits_packets() {
+        set_logger_for_test();
+        let mut net =
+            new_dummy_network_from_config("alice".to_string(), "bob".to_string(), DUMMY_CONFIG_V4);
+
+        // alice sends bob a ping:
+        ip::send_ip_packet(
+            net.context("alice"),
+            DUMMY_CONFIG_V4.remote_ip,
+            ip::IpProto::Icmp,
+            |_| {
+                let req = IcmpEchoRequest::new(0, 0);
+                let req_body = &[1, 2, 3, 4];
+                BufferSerializer::new_vec(Buf::new(req_body.to_vec(), ..)).encapsulate(
+                    IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
+                        DUMMY_CONFIG_V4.local_ip,
+                        DUMMY_CONFIG_V4.remote_ip,
+                        IcmpUnusedCode,
+                        req,
+                    ),
+                )
+            },
+        );
+
+        // send from alice to bob
+        assert_eq!(net.step(), StepResult::FramesSent);
+        // respond from bob to alice
+        assert_eq!(net.step(), StepResult::FramesSent);
+        // should've starved all events:
+        assert_eq!(net.step(), StepResult::Idle);
+    }
+
+    #[test]
+    fn test_dummy_network_timers() {
+        set_logger_for_test();
+        let mut net = new_dummy_network_from_config(1, 2, DUMMY_CONFIG_V4);
+
+        net.context(1)
+            .dispatcher
+            .schedule_timeout(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1)));
+        net.context(2)
+            .dispatcher
+            .schedule_timeout(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2)));
+        net.context(2)
+            .dispatcher
+            .schedule_timeout(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3)));
+        net.context(1)
+            .dispatcher
+            .schedule_timeout(Duration::from_secs(4), TimerId(TimerIdInner::Nop(4)));
+
+        // no timers fired before:
+        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 0);
+        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 0);
+        assert_eq!(net.step(), StepResult::TimerFired);
+        // only timer in context 1 should have fired:
+        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 1);
+        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 0);
+        assert_eq!(net.step(), StepResult::TimerFired);
+        // only timer in context 2 should have fired:
+        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 1);
+        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 1);
+        assert_eq!(net.step(), StepResult::TimerFired);
+        // only timer in context 2 should have fired:
+        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 1);
+        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 2);
+        assert_eq!(net.step(), StepResult::TimerFired);
+        // only timer in context 1 should have fired:
+        assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 2);
+        assert_eq!(*net.context(2).state.test_counters.get("timer::nop"), 2);
+
+        assert_eq!(net.step(), StepResult::Idle);
+        // check that current time on contexts tick together:
+        let t1 = net.context(1).dispatcher.current_time;
+        let t2 = net.context(2).dispatcher.current_time;
+        assert_eq!(t1, t2);
+    }
+
+    #[test]
+    fn test_dummy_network_until_idle() {
+        set_logger_for_test();
+        let mut net = new_dummy_network_from_config(1, 2, DUMMY_CONFIG_V4);
+        net.context(1)
+            .dispatcher
+            .schedule_timeout(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1)));
+        net.context(2)
+            .dispatcher
+            .schedule_timeout(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2)));
+        net.context(2)
+            .dispatcher
+            .schedule_timeout(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3)));
+
+        net.run_until_idle_or(|net| {
+            *net.context(1).state.test_counters.get("timer::nop") == 1
+                && *net.context(2).state.test_counters.get("timer::nop") == 1
+        })
+        .unwrap();
+        // assert that we stopped before all times were fired, meaning we can
+        // step again:
+        assert_eq!(net.step(), StepResult::TimerFired);
     }
 }
