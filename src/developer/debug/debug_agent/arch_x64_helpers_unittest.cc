@@ -6,8 +6,8 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/ipc/debug/file_line_function.h"
 #include "src/developer/debug/ipc/register_test_support.h"
+#include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/zx_status.h"
 
 #include "src/lib/fxl/logging.h"

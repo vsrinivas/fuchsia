@@ -14,8 +14,8 @@
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/developer/debug/ipc/debug/debug.h"
 #include "src/developer/debug/shared/buffered_fd.h"
+#include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 
@@ -104,6 +104,8 @@ int ConsoleMain(int argc, const char* argv[]) {
     buffer.set_data_available_callback(
         [&session]() { session.OnStreamReadable(); });
 
+    // TODO(donosoc): Do correct category setup.
+    debug_ipc::SetLogCategories({debug_ipc::LogCategory::kAll});
     if (options.debug_mode) {
       session.system().settings().SetBool(ClientSettings::System::kDebugMode,
                                           true);

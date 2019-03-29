@@ -12,14 +12,14 @@
 #include <lib/zx/process.h>
 #include <zircon/syscalls/exception.h>
 
-#include "src/lib/fxl/compiler_specific.h"
-#include "src/lib/fxl/logging.h"
-#include "src/developer/debug/ipc/debug/logging.h"
 #include "src/developer/debug/shared/event_handlers.h"
 #include "src/developer/debug/shared/fd_watcher.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/socket_watcher.h"
 #include "src/developer/debug/shared/zircon_exception_watcher.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/lib/fxl/compiler_specific.h"
+#include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 
@@ -239,7 +239,7 @@ zx_status_t MessageLoopAsync::WatchProcessExceptions(
   if (status != ZX_OK)
     return status;
 
-  DEBUG_LOG() << "Watching process " << info.resource_name;
+  DEBUG_LOG(MessageLoop) << "Watching process " << info.resource_name;
 
   watches_[watch_id] = info;
   *out = WatchHandle(this, watch_id);
@@ -269,7 +269,7 @@ zx_status_t MessageLoopAsync::WatchJobExceptions(
   if (status != ZX_OK)
     return status;
 
-  DEBUG_LOG() << "Watching job " << info.resource_name;
+  DEBUG_LOG(MessageLoop) << "Watching job " << info.resource_name;
 
   watches_[watch_id] = info;
   *out = WatchHandle(this, watch_id);
@@ -416,8 +416,8 @@ void MessageLoopAsync::StopWatching(int id) {
   // BufferedFD constantly creates and destroys FD handles, flooding the log
   // with non-helpful logging statements.
   if (info.type != WatchType::kFdio) {
-    DEBUG_LOG() << "Stop watching " << WatchTypeToString(info.type) << " "
-                << info.resource_name;
+    DEBUG_LOG(MessageLoop) << "Stop watching " << WatchTypeToString(info.type)
+                           << " " << info.resource_name;
   }
 
   switch (info.type) {

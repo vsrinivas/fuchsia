@@ -8,8 +8,8 @@
 
 #include "src/lib/fxl/logging.h"
 #include "lib/sys/cpp/service_directory.h"
-#include "src/developer/debug/ipc/debug/logging.h"
 #include "src/developer/debug/shared/component_utils.h"
+#include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
 
@@ -42,10 +42,6 @@ fuchsia::sys::ComponentControllerPtr ComponentLauncher::Launch() {
   FXL_DCHECK(services_);
 
   auto& pkg_url = argv_.front();
-  DEBUG_LOG() << "Launching component. Url: " << pkg_url
-              << ", name: " << desc_.process_name
-              << ", filter: " << desc_.filter;
-
   fuchsia::sys::LaunchInfo launch_info = {};
   launch_info.url = pkg_url;
   for (size_t i = 1; i < argv_.size(); i++) {

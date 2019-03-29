@@ -13,7 +13,7 @@
 #include "garnet/bin/zxdb/client/system_impl.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/developer/debug/ipc/debug/logging.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 
@@ -165,7 +165,7 @@ void JobContextImpl::SendAndUpdateFilters(std::vector<std::string> filters,
     return;
   }
 
-  DEBUG_LOG() << "Updating filters for job " << job_->GetName();
+  DEBUG_LOG(Job) << "Updating filters for job " << job_->GetName();
   if (!force_send && filters_ == filters) {
     return;
   }

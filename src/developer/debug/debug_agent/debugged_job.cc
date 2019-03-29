@@ -8,8 +8,8 @@
 #include "src/developer/debug/debug_agent/debugged_job.h"
 #include "src/developer/debug/debug_agent/object_util.h"
 #include "src/developer/debug/debug_agent/system_info.h"
-#include "src/developer/debug/ipc/debug/logging.h"
 #include "src/developer/debug/shared/component_utils.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/regex.h"
 #include "src/developer/debug/shared/zx_status.h"
 
@@ -46,8 +46,8 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   // logging for this with a lot of "/boot/bin/sh" starting.
   // We filter this out as it makes debugging much harder.
   if (proc_name != "/boot/bin/sh") {
-    DEBUG_LOG() << "Debugged job " << koid_ << ": Process " << proc_name
-                << " starting.";
+    DEBUG_LOG(Job) << "Debugged job " << koid_ << ": Process " << proc_name
+                   << " starting.";
   }
 
   // Search through the available filters. If the regex is not valid, fallback
@@ -69,8 +69,8 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
   }
 
   if (matching_filter) {
-    DEBUG_LOG() << "Filter " << matching_filter->filter << " matches process "
-                << proc_name << ". Attaching.";
+    DEBUG_LOG(Job) << "Filter " << matching_filter->filter
+                   << " matches process " << proc_name << ". Attaching.";
     handler_->OnProcessStart(matching_filter->filter, std::move(process));
   }
 
@@ -98,7 +98,7 @@ void DebuggedJob::SetFilters(std::vector<std::string> filters) {
     if (!regex.Init(filter))
       FXL_LOG(WARNING) << "Could not initialize regex for filter " << filter;
 
-    DEBUG_LOG() << "Debug job " << koid_ << ": Adding filter " << filter;
+    DEBUG_LOG(Job) << "Debug job " << koid_ << ": Adding filter " << filter;
 
     FilterInfo filter_info = {};
     filter_info.filter = std::move(filter);
@@ -119,7 +119,7 @@ void DebuggedJob::AppendFilter(std::string filter) {
     FXL_LOG(WARNING) << "Could not initialize regex for filter " << filter;
   }
 
-  DEBUG_LOG() << "Debugged job " << koid_ << ": Appending filter " << filter;
+  DEBUG_LOG(Job) << "Debugged job " << koid_ << ": Appending filter " << filter;
 
   FilterInfo filter_info = {};
   filter_info.filter = std::move(filter);

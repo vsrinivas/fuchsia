@@ -9,8 +9,8 @@
 #include <map>
 #include <mutex>
 
+#include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/lib/fxl/macros.h"
-#include "src/developer/debug/ipc/debug/file_line_function.h"
 
 #if defined(__Fuchsia__)
 #include <zircon/compiler.h>

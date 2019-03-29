@@ -4,7 +4,7 @@
 
 #include "garnet/bin/zxdb/client/socket_connect.h"
 
-#include "src/developer/debug/ipc/debug/logging.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 #if defined(__APPLE__)
@@ -50,8 +50,8 @@ Err ResolveTargetAddress(const std::string& host, uint16_t port,
     return Err();
   }
 
-  DEBUG_LOG() << "Could not resolve IPv6: " << strerror(errno)
-              << " (res: " << res << ").";
+  DEBUG_LOG(RemoteAPI) << "Could not resolve IPv6: " << strerror(errno)
+                       << " (res: " << res << ").";
 
   // We now try IPv4.
   struct sockaddr_in addr4 = {};  // zero-out.

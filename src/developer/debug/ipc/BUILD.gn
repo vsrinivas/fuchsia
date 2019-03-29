@@ -11,7 +11,6 @@ group("ipc") {
     ":client",
     ":shared",
     ":tests",
-    "debug",
   ]
 }
 

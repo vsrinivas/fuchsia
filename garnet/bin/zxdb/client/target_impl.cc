@@ -13,7 +13,7 @@
 #include "garnet/bin/zxdb/client/target_observer.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/developer/debug/ipc/debug/block_timer.h"
+#include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 

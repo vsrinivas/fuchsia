@@ -4,9 +4,9 @@
 
 #pragma once
 
+#include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/time/stopwatch.h"
-#include "src/developer/debug/ipc/debug/file_line_function.h"
 
 namespace debug_ipc {
 
@@ -20,9 +20,7 @@ namespace debug_ipc {
 // in order to proxy calls (see message_loop.cc for an example).
 class BlockTimer {
  public:
-  // If |msg| is not null, it will be added to the debug msg.
-  // The easier way is to used the TIME_BLOCK_MSG macro.
-  BlockTimer(FileLineFunction origin, const char* msg = nullptr);
+  BlockTimer(FileLineFunction origin);
   ~BlockTimer();  // Will log on destruction.
 
   // This is what get called on destruction. You can call it before destruction
@@ -37,7 +35,6 @@ class BlockTimer {
   FileLineFunction origin_;  // Where this timer was called from.
   fxl::Stopwatch timer_;
   bool should_log_;
-  const char* msg_;
 };
 
 // We use this macro to ensure the concatenation of the values. Oh macros :)
@@ -47,7 +44,4 @@ class BlockTimer {
 #define TIME_BLOCK() \
   ::debug_ipc::BlockTimer TIME_BLOCK_TOKEN2(block_timer_, __LINE__)(FROM_HERE)
 
-#define TIME_BLOCK_MSG(msg)                                                    \
-  ::debug_ipc::BlockTimer TIME_BLOCK_TOKEN2(block_timer_, __LINE__)(FROM_HERE, \
-                                                                    msg)
 }  // namespace debug_ipc

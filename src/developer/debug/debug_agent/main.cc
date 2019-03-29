@@ -18,8 +18,8 @@
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/remote_api_adapter.h"
 #include "src/developer/debug/debug_agent/unwind.h"
-#include "src/developer/debug/ipc/debug/debug.h"
 #include "src/developer/debug/shared/buffered_fd.h"
+#include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/message_loop_async.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/message_loop_zircon.h"
@@ -247,6 +247,8 @@ int main(int argc, char* argv[]) {
     message_loop_type = MessageLoopTarget::Type::kZircon;
   }
 
+  // TODO(donosoc): Do correct category setup.
+  debug_ipc::SetLogCategories({LogCategory::kAll});
   if (cmdline.HasOption("debug-mode")) {
     printf("Running the debug agent in debug mode.\n");
     debug_ipc::SetDebugMode(true);

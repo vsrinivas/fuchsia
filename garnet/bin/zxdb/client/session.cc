@@ -30,14 +30,13 @@
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/client_protocol.h"
-#include "src/developer/debug/ipc/debug/block_timer.h"
-#include "src/developer/debug/ipc/debug/debug.h"
-#include "src/developer/debug/ipc/debug/logging.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/stream_buffer.h"
+#include "src/developer/debug/shared/logging/block_timer.h"
+#include "src/developer/debug/shared/logging/debug.h"
 
 namespace zxdb {
 
@@ -626,9 +625,6 @@ void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
                                    std::vector<char> data) {
   debug_ipc::MessageReader reader(std::move(data));
-
-  DEBUG_LOG() << "Got " << debug_ipc::MsgHeader::TypeToString(header.type)
-              << " notification.";
 
   switch (header.type) {
     case debug_ipc::MsgHeader::Type::kNotifyProcessExiting: {

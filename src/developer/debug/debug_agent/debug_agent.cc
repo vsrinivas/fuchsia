@@ -23,10 +23,10 @@
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/system_info.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
-#include "src/developer/debug/ipc/debug/block_timer.h"
-#include "src/developer/debug/ipc/debug/logging.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/shared/logging/block_timer.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/shared/zx_status.h"
@@ -55,9 +55,9 @@ void DebugAgent::OnProcessStart(const std::string& filter,
   if (it != expected_components_.end())
     notify.component_id = it->second;
 
-  DEBUG_LOG() << "Process starting. Name: " << process_name
-              << ", filter: " << filter
-              << ", component id: " << notify.component_id;
+  DEBUG_LOG(Process) << "Process starting. Name: " << process_name
+                     << ", filter: " << filter
+                     << ", component id: " << notify.component_id;
 
   // Send notification, then create debug process so that thread notification is
   // sent after this.
@@ -524,7 +524,7 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
                                debug_ipc::LaunchReply* reply) {
   FXL_DCHECK(!request.argv.empty());
   reply->inferior_type = debug_ipc::InferiorType::kBinary;
-  DEBUG_LOG() << "Launching binary " << request.argv.front();
+  DEBUG_LOG(Process) << "Launching binary " << request.argv.front();
 
   BinaryLauncher launcher(services_);
 
@@ -570,7 +570,6 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
     return;
   }
 
-
   ComponentLauncher component_launcher(services_);
 
   LaunchComponentDescription desc;
@@ -589,6 +588,10 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   uint32_t component_id = next_component_id_++;
   expected_components_[desc.filter] = component_id;
   reply->component_id = component_id;
+
+  DEBUG_LOG(Process) << "Launching component. Url: " << desc.url
+                     << ", name: " << desc.process_name
+                     << ", filter: " << desc.filter;
 
   auto controller = component_launcher.Launch();
   if (!controller) {

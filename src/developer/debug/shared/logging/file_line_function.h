@@ -22,10 +22,9 @@ class FileLineFunction {
 
   const std::string& file() const { return file_; }
   int line() const { return line_; }
+  const std::string& function() const { return function_; }
 
   std::string ToString() const;
-  // Removes everything up the the filename from the file path.
-  std::string ToStringWithBasename() const;
 
  private:
   std::string file_;

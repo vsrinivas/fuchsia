@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 # This library contains utilities useful to debug all clients of the zxdb suite.
-source_set("debug") {
+source_set("logging") {
   public = [
     "block_timer.h",
     "debug.h",

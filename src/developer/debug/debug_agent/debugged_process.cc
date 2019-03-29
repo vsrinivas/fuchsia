@@ -17,9 +17,9 @@
 #include "src/developer/debug/debug_agent/process_memory_accessor.h"
 #include "src/developer/debug/debug_agent/process_watchpoint.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
-#include "src/developer/debug/ipc/debug/logging.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zx_status.h"
 
@@ -463,7 +463,7 @@ zx_status_t DebuggedProcess::WriteProcessMemory(uintptr_t address,
 void DebuggedProcess::OnStdout(bool close) {
   FXL_DCHECK(stdout_.valid());
   if (close) {
-    DEBUG_LOG() << "Process " << name_ << ": stdout closed.";
+    DEBUG_LOG(Process) << "Process " << name_ << ": stdout closed.";
     stdout_.Reset();
     return;
   }
@@ -476,7 +476,7 @@ void DebuggedProcess::OnStdout(bool close) {
 void DebuggedProcess::OnStderr(bool close) {
   FXL_DCHECK(stderr_.valid());
   if (close) {
-    DEBUG_LOG() << "Process " << name_ << ": stderr closed.";
+    DEBUG_LOG(Process) << "Process " << name_ << ": stderr closed.";
     stderr_.Reset();
     return;
   }

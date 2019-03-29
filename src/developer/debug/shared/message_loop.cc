@@ -4,8 +4,8 @@
 
 #include "src/developer/debug/shared/message_loop.h"
 
+#include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/lib/fxl/logging.h"
-#include "src/developer/debug/ipc/debug/block_timer.h"
 
 namespace debug_ipc {
 

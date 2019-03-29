@@ -39,6 +39,8 @@ class ComponentLauncher {
   // The lifetime of the controller is bound to the lifetime of the component.
   fuchsia::sys::ComponentControllerPtr Launch();
 
+  const LaunchComponentDescription& desc() const { return desc_; }
+
  private:
   std::shared_ptr<sys::ServiceDirectory> services_;
   LaunchComponentDescription desc_;

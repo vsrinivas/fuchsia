@@ -12,7 +12,7 @@
 #include "garnet/bin/zxdb/client/setting_schema_definition.h"
 #include "garnet/bin/zxdb/client/system_observer.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
-#include "src/developer/debug/ipc/debug/debug.h"
+#include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 
