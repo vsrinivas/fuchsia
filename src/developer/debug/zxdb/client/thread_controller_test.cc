@@ -4,12 +4,12 @@
 
 #include "src/developer/debug/zxdb/client/thread_controller_test.h"
 
-#include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 
 namespace zxdb {
 

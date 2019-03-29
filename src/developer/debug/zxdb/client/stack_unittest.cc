@@ -4,7 +4,6 @@
 
 #include <map>
 
-#include "garnet/bin/zxdb/symbols/function.h"
 #include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -13,6 +12,7 @@
 #include "src/developer/debug/zxdb/client/stack.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 
 namespace zxdb {
 

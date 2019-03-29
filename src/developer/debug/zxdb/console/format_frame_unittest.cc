@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/console/format_frame.h"
-#include "garnet/bin/zxdb/symbols/function.h"
-#include "garnet/bin/zxdb/symbols/location.h"
-#include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
@@ -13,6 +10,9 @@
 #include "src/developer/debug/zxdb/console/format_value.h"
 #include "src/developer/debug/zxdb/console/mock_format_value_process_context.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/symbol_context.h"
 
 namespace zxdb {
 

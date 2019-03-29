@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 
-#include "garnet/bin/zxdb/symbols/base_type.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
 
 namespace zxdb {
 

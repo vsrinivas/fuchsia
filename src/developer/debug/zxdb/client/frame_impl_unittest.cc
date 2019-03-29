@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/client/frame_impl.h"
-#include "garnet/bin/zxdb/symbols/function.h"
-#include "garnet/bin/zxdb/symbols/location.h"
 #include "gtest/gtest.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
@@ -13,6 +11,8 @@
 #include "src/developer/debug/zxdb/client/register.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
 
 namespace zxdb {
 

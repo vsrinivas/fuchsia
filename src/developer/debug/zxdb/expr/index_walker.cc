@@ -11,9 +11,9 @@
 
 #include "src/developer/debug/zxdb/common/err.h"
 //#include "src/developer/debug/zxdb/common/string_util.h"
-#include "garnet/bin/zxdb/symbols/module_symbol_index.h"
-#include "garnet/bin/zxdb/symbols/module_symbol_index_node.h"
 #include "src/lib/fxl/logging.h"
+#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
+#include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
 
 namespace zxdb {
 

@@ -8,11 +8,6 @@
 #include <algorithm>
 #include <map>
 
-#include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
-#include "garnet/bin/zxdb/symbols/module_symbols.h"
-#include "garnet/bin/zxdb/symbols/process_symbols.h"
-#include "garnet/bin/zxdb/symbols/resolve_options.h"
-#include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/breakpoint_location_impl.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -22,6 +17,11 @@
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/developer/debug/zxdb/symbols/resolve_options.h"
+#include "src/developer/debug/zxdb/symbols/target_symbols.h"
 
 namespace zxdb {
 

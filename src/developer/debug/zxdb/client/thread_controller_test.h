@@ -6,9 +6,9 @@
 
 #include <memory>
 
-#include "garnet/bin/zxdb/symbols/system_symbols.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
+#include "src/developer/debug/zxdb/symbols/system_symbols.h"
 
 namespace zxdb {
 

@@ -7,12 +7,15 @@
 #include <optional>
 #include <vector>
 
-#include "garnet/bin/zxdb/symbols/symbol.h"
-#include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
+#include "src/developer/debug/zxdb/expr/found_name.h"
+#include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
+#include "src/developer/debug/zxdb/symbols/symbol.h"
+#include "src/developer/debug/zxdb/symbols/symbol_context.h"
 
 namespace zxdb {
 

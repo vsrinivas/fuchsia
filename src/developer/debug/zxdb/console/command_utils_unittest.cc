@@ -8,17 +8,17 @@
 
 #include <limits>
 
-#include "garnet/bin/zxdb/symbols/base_type.h"
-#include "garnet/bin/zxdb/symbols/function.h"
-#include "garnet/bin/zxdb/symbols/location.h"
-#include "garnet/bin/zxdb/symbols/namespace.h"
-#include "garnet/bin/zxdb/symbols/type_test_support.h"
-#include "garnet/bin/zxdb/symbols/variable_test_support.h"
 #include "gtest/gtest.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/namespace.h"
+#include "src/developer/debug/zxdb/symbols/type_test_support.h"
+#include "src/developer/debug/zxdb/symbols/variable_test_support.h"
 
 namespace zxdb {
 

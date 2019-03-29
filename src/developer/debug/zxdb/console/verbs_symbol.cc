@@ -10,19 +10,6 @@
 #include <set>
 #include <vector>
 
-#include "garnet/bin/zxdb/symbols/collection.h"
-#include "garnet/bin/zxdb/symbols/data_member.h"
-#include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
-#include "garnet/bin/zxdb/symbols/location.h"
-#include "garnet/bin/zxdb/symbols/module_symbol_index.h"
-#include "garnet/bin/zxdb/symbols/module_symbol_status.h"
-#include "garnet/bin/zxdb/symbols/module_symbols.h"
-#include "garnet/bin/zxdb/symbols/process_symbols.h"
-#include "garnet/bin/zxdb/symbols/resolve_options.h"
-#include "garnet/bin/zxdb/symbols/system_symbols.h"
-#include "garnet/bin/zxdb/symbols/target_symbols.h"
-#include "garnet/bin/zxdb/symbols/type.h"
-#include "garnet/bin/zxdb/symbols/variable.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/ascii.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -44,6 +31,19 @@
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/identifier.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
+#include "src/developer/debug/zxdb/symbols/module_symbol_status.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/developer/debug/zxdb/symbols/resolve_options.h"
+#include "src/developer/debug/zxdb/symbols/system_symbols.h"
+#include "src/developer/debug/zxdb/symbols/target_symbols.h"
+#include "src/developer/debug/zxdb/symbols/type.h"
+#include "src/developer/debug/zxdb/symbols/variable.h"
 
 namespace zxdb {
 

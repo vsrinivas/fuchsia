@@ -4,10 +4,9 @@
 
 #include "src/developer/debug/zxdb/expr/found_name.h"
 
-#include "garnet/bin/zxdb/symbols/collection.h"
-#include "garnet/bin/zxdb/symbols/data_member.h"
-#include "garnet/bin/zxdb/symbols/variable.h"
-#include "lib/fxl/logging.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/variable.h"
 
 namespace zxdb {
 

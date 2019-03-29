@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/zxdb/client/inline_thread_controller_test.h"
 
-#include "garnet/bin/zxdb/symbols/function.h"
-#include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/symbol_context.h"
 
 namespace zxdb {
 

@@ -4,22 +4,21 @@
 
 #include "src/developer/debug/zxdb/expr/find_name.h"
 
-#include "garnet/bin/zxdb/symbols/code_block.h"
-#include "garnet/bin/zxdb/symbols/collection.h"
-#include "garnet/bin/zxdb/symbols/data_member.h"
-#include "garnet/bin/zxdb/symbols/function.h"
-#include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
-#include "garnet/bin/zxdb/symbols/module_symbol_index.h"
-#include "garnet/bin/zxdb/symbols/module_symbol_index_node.h"
-#include "garnet/bin/zxdb/symbols/module_symbols.h"
-#include "garnet/bin/zxdb/symbols/namespace.h"
-#include "garnet/bin/zxdb/symbols/process_symbols.h"
-#include "garnet/bin/zxdb/symbols/type_utils.h"
-#include "garnet/bin/zxdb/symbols/visit_scopes.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/expr/index_walker.h"
+#include "src/developer/debug/zxdb/symbols/code_block.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
+#include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/developer/debug/zxdb/symbols/type_utils.h"
+#include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 
 namespace zxdb {
 

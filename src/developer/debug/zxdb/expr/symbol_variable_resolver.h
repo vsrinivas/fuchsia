@@ -7,10 +7,10 @@
 #include <functional>
 #include <vector>
 
-#include "garnet/bin/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 
 namespace zxdb {
 

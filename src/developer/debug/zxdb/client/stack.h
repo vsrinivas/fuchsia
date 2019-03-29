@@ -8,10 +8,10 @@
 #include <optional>
 #include <vector>
 
-#include "garnet/bin/zxdb/symbols/location.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
 
 namespace zxdb {
 

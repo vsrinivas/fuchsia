@@ -111,7 +111,6 @@ static_library("client") {
   ]
 
   public_deps = [
-    "//garnet/bin/zxdb/symbols",
     "//garnet/public/lib/fxl",
     "//garnet/third_party/libunwindstack",
     "//garnet/third_party/llvm:LLVMAArch64Desc",
@@ -122,6 +121,7 @@ static_library("client") {
     "//src/developer/debug/shared",
     "//src/developer/debug/zxdb/common",
     "//src/developer/debug/zxdb/expr",
+    "//src/developer/debug/zxdb/symbols",
   ]
 
   deps = [
@@ -153,7 +153,7 @@ source_set("test_support") {
 
   public_deps = [
     ":client",
-    "//garnet/bin/zxdb/symbols:test_support",
+    "//src/developer/debug/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
   ]
 }
@@ -224,9 +224,9 @@ source_set("tests") {
   deps = [
     ":client",
     ":test_support",
-    "//garnet/bin/zxdb/symbols:test_support",
-    "//garnet/bin/zxdb/symbols:tests",
     "//src/developer/debug/zxdb/common:test_support",
+    "//src/developer/debug/zxdb/symbols:test_support",
+    "//src/developer/debug/zxdb/symbols:tests",
     "//third_party/googletest:gtest",
   ]
 }

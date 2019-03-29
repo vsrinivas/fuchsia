@@ -4,17 +4,17 @@
 
 #include "src/developer/debug/zxdb/client/frame_impl.h"
 
-#include "garnet/bin/zxdb/symbols/dwarf_expr_eval.h"
-#include "garnet/bin/zxdb/symbols/function.h"
-#include "garnet/bin/zxdb/symbols/input_location.h"
-#include "garnet/bin/zxdb/symbols/symbol.h"
-#include "garnet/bin/zxdb/symbols/variable_location.h"
 #include "src/lib/fxl/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/client/process_impl.h"
 #include "src/developer/debug/zxdb/client/thread_impl.h"
 #include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/input_location.h"
+#include "src/developer/debug/zxdb/symbols/symbol.h"
+#include "src/developer/debug/zxdb/symbols/variable_location.h"
 
 namespace zxdb {
 

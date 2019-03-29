@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/client/thread_impl.h"
-#include "garnet/bin/zxdb/symbols/input_location.h"
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/frame.h"
@@ -11,6 +10,7 @@
 #include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread_impl_test_support.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/input_location.h"
 
 namespace zxdb {
 

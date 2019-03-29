@@ -9,8 +9,8 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/bin/zxdb/symbols/system_symbols.h"
 #include "src/developer/debug/zxdb/client/system.h"
+#include "src/developer/debug/zxdb/symbols/system_symbols.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 

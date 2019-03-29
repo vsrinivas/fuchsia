@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/breakpoint_location.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
@@ -17,6 +16,7 @@
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
 
 namespace zxdb {
 

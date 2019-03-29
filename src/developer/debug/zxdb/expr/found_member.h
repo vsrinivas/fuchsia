@@ -6,8 +6,8 @@
 
 #include <stdint.h>
 
-#include "garnet/bin/zxdb/symbols/data_member.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/developer/debug/zxdb/symbols/data_member.h"
 
 namespace zxdb {
 

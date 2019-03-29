@@ -7,10 +7,10 @@
 #include <memory>
 #include <optional>
 
-#include "garnet/bin/zxdb/symbols/location.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
 
 namespace zxdb {
 

@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
-#include "garnet/bin/zxdb/symbols/base_type.h"
-#include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
-#include "garnet/bin/zxdb/symbols/symbol_context.h"
-#include "garnet/bin/zxdb/symbols/type_test_support.h"
-#include "garnet/bin/zxdb/symbols/variable_test_support.h"
 #include "gtest/gtest.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
+#include "src/developer/debug/zxdb/symbols/symbol_context.h"
+#include "src/developer/debug/zxdb/symbols/type_test_support.h"
+#include "src/developer/debug/zxdb/symbols/variable_test_support.h"
 
 namespace zxdb {
 

@@ -8,10 +8,12 @@
 
 #include <functional>
 
-#include "garnet/bin/zxdb/symbols/input_location.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/developer/debug/zxdb/client/frame_fingerprint.h"
+#include "src/developer/debug/zxdb/client/thread_controller.h"
+#include "src/developer/debug/zxdb/symbols/input_location.h"
 
 namespace zxdb {
 

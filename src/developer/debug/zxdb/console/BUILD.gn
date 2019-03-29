@@ -113,9 +113,9 @@ source_set("tests") {
 
   deps = [
     ":console",
-    "//garnet/bin/zxdb/symbols:test_support",
     "//src/developer/debug/zxdb/client:test_support",
     "//src/developer/debug/zxdb/common:test_support",
+    "//src/developer/debug/zxdb/symbols:test_support",
     "//third_party/googletest:gtest",
   ]
 }

@@ -7,20 +7,6 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "garnet/bin/zxdb/symbols/array_type.h"
-#include "garnet/bin/zxdb/symbols/base_type.h"
-#include "garnet/bin/zxdb/symbols/collection.h"
-#include "garnet/bin/zxdb/symbols/data_member.h"
-#include "garnet/bin/zxdb/symbols/enumeration.h"
-#include "garnet/bin/zxdb/symbols/function.h"
-#include "garnet/bin/zxdb/symbols/function_type.h"
-#include "garnet/bin/zxdb/symbols/inherited_from.h"
-#include "garnet/bin/zxdb/symbols/location.h"
-#include "garnet/bin/zxdb/symbols/member_ptr.h"
-#include "garnet/bin/zxdb/symbols/modified_type.h"
-#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
-#include "garnet/bin/zxdb/symbols/variable.h"
-#include "garnet/bin/zxdb/symbols/visit_scopes.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
@@ -28,6 +14,20 @@
 #include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/symbols/array_type.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/enumeration.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/function_type.h"
+#include "src/developer/debug/zxdb/symbols/inherited_from.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/member_ptr.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
+#include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 
 namespace zxdb {
 

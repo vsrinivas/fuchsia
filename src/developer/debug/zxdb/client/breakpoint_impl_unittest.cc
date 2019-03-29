@@ -4,7 +4,6 @@
 
 #include <utility>
 
-#include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/breakpoint_impl.h"
@@ -12,6 +11,7 @@
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
+#include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 
 namespace zxdb {
 

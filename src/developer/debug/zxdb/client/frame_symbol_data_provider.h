@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
+#include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 
 namespace zxdb {
 

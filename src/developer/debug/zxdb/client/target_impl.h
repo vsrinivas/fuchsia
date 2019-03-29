@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_ZXDB_CLIENT_TARGET_IMPL_H_
 #define GARNET_BIN_ZXDB_CLIENT_TARGET_IMPL_H_
 
-#include "garnet/bin/zxdb/symbols/target_symbols.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/target_observer.h"
+#include "src/developer/debug/zxdb/symbols/target_symbols.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 

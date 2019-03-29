@@ -6,7 +6,7 @@
 
 #include <string_view>
 
-#include "garnet/bin/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
 
 namespace zxdb {
 

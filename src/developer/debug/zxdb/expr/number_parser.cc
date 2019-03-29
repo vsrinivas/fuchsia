@@ -7,8 +7,8 @@
 #include <ctype.h>
 #include <stdlib.h>
 
-#include "garnet/bin/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
 
 namespace zxdb {
 

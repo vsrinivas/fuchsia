@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/console/analyze_memory.h"
-#include "garnet/bin/zxdb/symbols/process_symbols_test_setup.h"
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
@@ -12,6 +11,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/stack.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 
 namespace zxdb {
 

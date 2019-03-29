@@ -8,9 +8,6 @@
 
 #include <map>
 
-#include "garnet/bin/zxdb/symbols/input_location.h"
-#include "garnet/bin/zxdb/symbols/process_symbols.h"
-#include "garnet/bin/zxdb/symbols/symbol_utils.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/records.h"
@@ -24,6 +21,9 @@
 #include "src/developer/debug/zxdb/console/format_register.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/symbols/input_location.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 
 namespace zxdb {
 

@@ -8,7 +8,6 @@
 #include <algorithm>
 #include <utility>
 
-#include "garnet/bin/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/job.h"
@@ -27,6 +26,7 @@
 #include "src/developer/debug/zxdb/console/format_value_process_context_impl.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

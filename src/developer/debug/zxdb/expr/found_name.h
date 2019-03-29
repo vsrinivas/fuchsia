@@ -4,9 +4,8 @@
 
 #pragma once
 
-#include "garnet/bin/zxdb/symbols/type.h"
-#include "garnet/bin/zxdb/symbols/variable.h"
 #include "src/developer/debug/zxdb/expr/found_member.h"
+#include "src/developer/debug/zxdb/symbols/variable.h"
 
 namespace zxdb {
 

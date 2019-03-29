@@ -4,13 +4,13 @@
 
 #include "src/developer/debug/zxdb/expr/eval_operators.h"
 
-#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/cast.h"
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 
 namespace zxdb {
 

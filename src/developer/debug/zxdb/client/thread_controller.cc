@@ -6,9 +6,9 @@
 
 #include <stdarg.h>
 
-#include "garnet/bin/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 
 namespace zxdb {
 

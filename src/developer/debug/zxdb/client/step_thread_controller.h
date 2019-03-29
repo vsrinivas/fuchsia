@@ -4,11 +4,11 @@
 
 #pragma once
 
-#include "garnet/bin/zxdb/symbols/file_line.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
 #include "src/developer/debug/zxdb/client/step_mode.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
 #include "src/developer/debug/zxdb/common/address_ranges.h"
+#include "src/developer/debug/zxdb/symbols/file_line.h"
 
 namespace zxdb {
 

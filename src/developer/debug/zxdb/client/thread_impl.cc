@@ -9,7 +9,6 @@
 #include <iostream>
 #include <limits>
 
-#include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "src/lib/fxl/logging.h"
 #include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -21,6 +20,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/client/thread_controller.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
 
 namespace zxdb {
 

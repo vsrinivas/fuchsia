@@ -4,13 +4,13 @@
 
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 
-#include "garnet/bin/zxdb/symbols/arch.h"
-#include "garnet/bin/zxdb/symbols/array_type.h"
-#include "garnet/bin/zxdb/symbols/modified_type.h"
-#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
-#include "garnet/bin/zxdb/symbols/type.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/symbols/arch.h"
+#include "src/developer/debug/zxdb/symbols/array_type.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
+#include "src/developer/debug/zxdb/symbols/type.h"
 
 namespace zxdb {
 

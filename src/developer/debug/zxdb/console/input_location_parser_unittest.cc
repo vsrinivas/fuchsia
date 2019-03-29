@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
-#include "garnet/bin/zxdb/symbols/location.h"
-#include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
-#include "garnet/bin/zxdb/symbols/process_symbols_test_setup.h"
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 
 namespace zxdb {
 

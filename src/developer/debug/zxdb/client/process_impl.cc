@@ -8,14 +8,14 @@
 
 #include <set>
 
-#include "garnet/bin/zxdb/symbols/input_location.h"
-#include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/client/thread_impl.h"
+#include "src/developer/debug/zxdb/symbols/input_location.h"
+#include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {

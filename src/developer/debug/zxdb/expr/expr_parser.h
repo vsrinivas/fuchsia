@@ -7,11 +7,11 @@
 #include <memory>
 #include <vector>
 
-#include "garnet/bin/zxdb/symbols/dwarf_tag.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
 
 namespace zxdb {
 

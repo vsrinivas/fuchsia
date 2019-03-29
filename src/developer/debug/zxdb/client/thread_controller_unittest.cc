@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/client/thread_controller.h"
-#include "garnet/bin/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/client/inline_thread_controller_test.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/stack.h"
 #include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 
 namespace zxdb {
 

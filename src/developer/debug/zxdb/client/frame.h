@@ -9,8 +9,8 @@
 #include <functional>
 #include <optional>
 
-#include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
+#include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/macros.h"
 
 namespace zxdb {

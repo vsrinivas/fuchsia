@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/client/step_over_thread_controller.h"
-#include "garnet/bin/zxdb/symbols/function.h"
-#include "garnet/bin/zxdb/symbols/line_details.h"
-#include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/inline_thread_controller_test.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/address_ranges.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/line_details.h"
+#include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 
 namespace zxdb {
 

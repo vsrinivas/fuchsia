@@ -4,9 +4,9 @@
 
 #include "src/developer/debug/zxdb/client/breakpoint_location_impl.h"
 
-#include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/client/breakpoint_impl.h"
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
 
 namespace zxdb {
 

@@ -6,12 +6,14 @@
 
 #include <algorithm>
 
-#include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/template_type_extractor.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/expr/name_lookup.h"
+#include "src/developer/debug/zxdb/expr/template_type_extractor.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
 
 // The parser is a Pratt parser. The basic idea there is to have the
 // precedences (and associativities) encoded relative to each other and only

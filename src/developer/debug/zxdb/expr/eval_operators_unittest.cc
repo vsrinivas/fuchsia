@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/expr/eval_operators.h"
-#include "garnet/bin/zxdb/symbols/base_type.h"
-#include "garnet/bin/zxdb/symbols/type_test_support.h"
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/mock_expr_node.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
 

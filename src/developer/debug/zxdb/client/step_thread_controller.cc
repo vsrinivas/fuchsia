@@ -6,13 +6,13 @@
 
 #include <inttypes.h>
 
-#include "garnet/bin/zxdb/symbols/line_details.h"
-#include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/client/finish_thread_controller.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/line_details.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
 
 namespace zxdb {
 

@@ -4,10 +4,10 @@
 
 #include "src/developer/debug/zxdb/expr/cast.h"
 
-#include "garnet/bin/zxdb/symbols/base_type.h"
-#include "garnet/bin/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
 
 namespace zxdb {
 

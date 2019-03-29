@@ -8,8 +8,8 @@
 #include <stdint.h>
 #include <string>
 
-#include "garnet/bin/zxdb/symbols/input_location.h"
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/zxdb/symbols/input_location.h"
 
 namespace zxdb {
 

@@ -7,8 +7,6 @@
 #include <iomanip>
 #include <sstream>
 
-#include "garnet/bin/zxdb/symbols/code_block.h"
-#include "garnet/bin/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/disassembler.h"
 #include "src/developer/debug/zxdb/client/frame.h"
@@ -28,6 +26,8 @@
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/symbols/code_block.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
 
 namespace zxdb {
 

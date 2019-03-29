@@ -7,9 +7,9 @@
 #include <map>
 #include <string>
 
-#include "garnet/bin/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
+#include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 
 namespace zxdb {
 

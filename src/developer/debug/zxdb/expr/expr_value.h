@@ -8,9 +8,10 @@
 
 #include <vector>
 
-#include "garnet/bin/zxdb/symbols/type.h"
 #include "src/developer/debug/zxdb/expr/expr_value_source.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/developer/debug/zxdb/expr/expr_value_source.h"
+#include "src/developer/debug/zxdb/symbols/type.h"
 
 namespace zxdb {
 

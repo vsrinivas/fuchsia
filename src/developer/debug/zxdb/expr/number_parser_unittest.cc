@@ -4,11 +4,11 @@
 
 #include <variant>
 
-#include "garnet/bin/zxdb/symbols/base_type.h"
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
 #include "src/lib/fxl/arraysize.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
 
 namespace zxdb {
 

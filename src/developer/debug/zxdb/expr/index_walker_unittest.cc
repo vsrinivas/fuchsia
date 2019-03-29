@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include "src/developer/debug/zxdb/expr/index_walker.h"
-#include "garnet/bin/zxdb/symbols/module_symbol_index.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 
 namespace zxdb {
 

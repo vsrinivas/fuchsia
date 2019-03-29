@@ -6,11 +6,14 @@
 
 #include <vector>
 
-#include "garnet/bin/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/client/mock_frame.h"
 #include "src/developer/debug/zxdb/client/thread_controller_test.h"
 #include "src/developer/debug/zxdb/common/address_ranges.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/developer/debug/zxdb/client/mock_frame.h"
+#include "src/developer/debug/zxdb/client/thread_controller_test.h"
+#include "src/developer/debug/zxdb/common/address_ranges.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
 
 namespace zxdb {
 

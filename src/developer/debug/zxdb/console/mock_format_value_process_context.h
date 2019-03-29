@@ -6,8 +6,8 @@
 
 #include <map>
 
-#include "garnet/bin/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/console/format_value.h"
+#include "src/developer/debug/zxdb/symbols/location.h"
 
 namespace zxdb {
 

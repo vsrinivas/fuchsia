@@ -4,12 +4,12 @@
 
 #include "src/developer/debug/zxdb/client/finish_physical_frame_thread_controller.h"
 
-#include "garnet/bin/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/until_thread_controller.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/lib/fxl/logging.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 
 namespace zxdb {
 
