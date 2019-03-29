@@ -155,10 +155,10 @@ class VirtioBlockZirconGuest : public ZirconEnclosedGuest {
 };
 
 template <fuchsia::guest::BlockMode Mode, fuchsia::guest::BlockFormat Format>
-class VirtioBlockLinuxGuest : public LinuxEnclosedGuest {
+class VirtioBlockDebianGuest : public DebianEnclosedGuest {
  public:
   zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override {
-    zx_status_t status = LinuxEnclosedGuest::LaunchInfo(launch_info);
+    zx_status_t status = DebianEnclosedGuest::LaunchInfo(launch_info);
     if (status != ZX_OK) {
       return status;
     }
@@ -210,12 +210,12 @@ using RawGuestTypes = ::testing::Types<
                            fuchsia::guest::BlockFormat::RAW>,
     VirtioBlockZirconGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
                            fuchsia::guest::BlockFormat::RAW>,
-    VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::READ_ONLY,
-                          fuchsia::guest::BlockFormat::RAW>,
-    VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::READ_WRITE,
-                          fuchsia::guest::BlockFormat::RAW>,
-    VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
-                          fuchsia::guest::BlockFormat::RAW>>;
+    VirtioBlockDebianGuest<fuchsia::guest::BlockMode::READ_ONLY,
+                           fuchsia::guest::BlockFormat::RAW>,
+    VirtioBlockDebianGuest<fuchsia::guest::BlockMode::READ_WRITE,
+                           fuchsia::guest::BlockFormat::RAW>,
+    VirtioBlockDebianGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
+                           fuchsia::guest::BlockFormat::RAW>>;
 TYPED_TEST_SUITE(RawVirtioBlockGuestTest, RawGuestTypes);
 
 TYPED_TEST(RawVirtioBlockGuestTest, BlockDeviceExists) {
@@ -316,10 +316,10 @@ using QcowGuestTypes = ::testing::Types<
                            fuchsia::guest::BlockFormat::QCOW>,
     VirtioBlockZirconGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
                            fuchsia::guest::BlockFormat::QCOW>,
-    VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::READ_ONLY,
-                          fuchsia::guest::BlockFormat::QCOW>,
-    VirtioBlockLinuxGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
-                          fuchsia::guest::BlockFormat::QCOW>>;
+    VirtioBlockDebianGuest<fuchsia::guest::BlockMode::READ_ONLY,
+                           fuchsia::guest::BlockFormat::QCOW>,
+    VirtioBlockDebianGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
+                           fuchsia::guest::BlockFormat::QCOW>>;
 TYPED_TEST_SUITE(QcowVirtioBlockGuestTest, QcowGuestTypes);
 
 TYPED_TEST(QcowVirtioBlockGuestTest, BlockDeviceExists) {

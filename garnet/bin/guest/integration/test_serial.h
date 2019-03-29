@@ -17,12 +17,17 @@ class TestSerial {
   // ensure the command finished executing and to capture output. Blocks on the
   // serial socket being writable and readable at various points and on the
   // command completing.
-  zx_status_t ExecuteBlocking(const std::string& command, const std::string& prompt,
+  zx_status_t ExecuteBlocking(const std::string& command,
+                              const std::string& prompt,
                               std::string* result = nullptr);
 
  private:
+  // Sends a message to the guest's serial. Blocks until the entire message is
+  // written to the socket but doesn't wait for a response.
   zx_status_t SendBlocking(const std::string& message);
 
+  // Waits for a marker string to be read from the guest's serial. Optionally
+  // fills |result| with everything read.
   zx_status_t WaitForMarker(const std::string& marker,
                             std::string* result = nullptr);
 

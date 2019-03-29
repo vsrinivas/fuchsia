@@ -30,20 +30,18 @@ class SingleCpuZirconEnclosedGuest : public ZirconEnclosedGuest {
   }
 };
 
-class SingleCpuLinuxEnclosedGuest : public LinuxEnclosedGuest {
+class SingleCpuDebianEnclosedGuest : public DebianEnclosedGuest {
   zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override {
-    launch_info->url = kLinuxGuestUrl;
+    launch_info->url = kDebianGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--cpus=1");
-    launch_info->args.push_back(
-        "--cmdline=loglevel=0 console=hvc0 root=/dev/vda rw");
     return ZX_OK;
   }
 };
 
 using GuestTypes =
     ::testing::Types<ZirconEnclosedGuest, SingleCpuZirconEnclosedGuest,
-                     LinuxEnclosedGuest, SingleCpuLinuxEnclosedGuest>;
+                     DebianEnclosedGuest, SingleCpuDebianEnclosedGuest>;
 TYPED_TEST_SUITE(GuestTest, GuestTypes);
 
 TYPED_TEST(GuestTest, LaunchGuest) {

@@ -16,7 +16,8 @@ static constexpr size_t kSerialBufferSize = 1024;
 static constexpr zx::duration kTestTimeout = zx::sec(15);
 static constexpr zx::duration kSerialStableDelay = zx::msec(800);
 
-// This is the maximum line length of dash in both zircon_guest and linux_guest.
+// This is the maximum line length of dash in both zircon_guest and
+// debian_guest.
 static constexpr size_t kMaximumLineLength = 4096;
 
 static std::string command_hash(const std::string& command) {
@@ -27,8 +28,8 @@ static std::string command_hash(const std::string& command) {
 zx_status_t TestSerial::Start(zx::socket socket) {
   socket_ = std::move(socket);
 
-  // Wait for something to be sent over serial. Both Zircon and Linux will send
-  // at least a command prompt. For Linux, this is necessary since any commands
+  // Wait for something to be sent over serial. Both Zircon and Debian will send
+  // at least a command prompt. For Debian, this is necessary since any commands
   // we send will be ignored until the guest is ready.
   zx_status_t status = WaitForAny();
   if (status != ZX_OK) {

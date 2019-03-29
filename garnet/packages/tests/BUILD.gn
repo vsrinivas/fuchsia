@@ -568,7 +568,7 @@ group("guest") {
     "//garnet/bin/guest/manager:guest_manager_tests",
     "//garnet/bin/guest/vmm:vmm_tests",
     "//garnet/bin/vsock_service:vsock_service-tests",
-    "//garnet/packages/experimental:linux_guest",
+    "//garnet/packages/experimental:debian_guest",
     "//garnet/packages/experimental:zircon_guest",
   ]
 }

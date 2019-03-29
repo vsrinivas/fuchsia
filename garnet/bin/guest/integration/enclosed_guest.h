@@ -15,8 +15,8 @@
 
 static constexpr char kZirconGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cmx";
-static constexpr char kLinuxGuestUrl[] =
-    "fuchsia-pkg://fuchsia.com/linux_guest#meta/linux_guest.cmx";
+static constexpr char kDebianGuestUrl[] =
+    "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx";
 
 enum class GuestKernel {
   ZIRCON,
@@ -27,7 +27,7 @@ enum class GuestKernel {
 // encapsulated in an EnclosingEnvironment. A derived class must define the
 // |LaunchInfo| to send to the guest environment controller, as well as methods
 // for waiting for the guest to be ready and running test utilities. Most tests
-// will derive from either ZirconEnclosedGuest or LinuxEnclosedGuest below and
+// will derive from either ZirconEnclosedGuest or DebianEnclosedGuest below and
 // override LaunchInfo only. EnclosedGuest is designed to be used with
 // GuestTest.
 class EnclosedGuest {
@@ -102,7 +102,7 @@ class ZirconEnclosedGuest : public EnclosedGuest {
   std::string SerialPrompt() override { return "$ "; }
 };
 
-class LinuxEnclosedGuest : public EnclosedGuest {
+class DebianEnclosedGuest : public EnclosedGuest {
  public:
   zx_status_t RunUtil(const std::string& util, const std::string& args,
                       std::string* result = nullptr) override;
@@ -112,7 +112,7 @@ class LinuxEnclosedGuest : public EnclosedGuest {
  protected:
   zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
-  std::string SerialPrompt() override { return "# "; }
+  std::string SerialPrompt() override { return "$ "; }
 };
 
 #endif  // GARNET_BIN_GUEST_INTEGRATION_ENCLOSED_GUEST_H_

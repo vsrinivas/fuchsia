@@ -17,8 +17,8 @@ static constexpr char kRealm[] = "realmguestintegrationtest";
 // TODO(MAC-229): Use consistent naming for the test utils here.
 static constexpr char kFuchsiaTestUtilsUrl[] =
     "fuchsia-pkg://fuchsia.com/guest_integration_tests_utils";
-static constexpr char kLinuxTestUtilDir[] = "/test_utils";
-static constexpr zx::duration kLoopTimeout = zx::sec(5);
+static constexpr char kDebianTestUtilDir[] = "/test_utils";
+static constexpr zx::duration kLoopTimeout = zx::sec(20);
 static constexpr zx::duration kLoopConditionStep = zx::msec(10);
 static constexpr size_t kNumRetries = 40;
 static constexpr zx::duration kRetryStep = zx::msec(200);
@@ -139,16 +139,14 @@ zx_status_t ZirconEnclosedGuest::RunUtil(const std::string& util,
   return Execute(cmd, result);
 }
 
-zx_status_t LinuxEnclosedGuest::LaunchInfo(
+zx_status_t DebianEnclosedGuest::LaunchInfo(
     fuchsia::guest::LaunchInfo* launch_info) {
-  launch_info->url = kLinuxGuestUrl;
+  launch_info->url = kDebianGuestUrl;
   launch_info->args.push_back("--virtio-gpu=false");
-  launch_info->args.push_back(
-      "--cmdline=loglevel=0 console=hvc0 root=/dev/vda rw");
   return ZX_OK;
 }
 
-zx_status_t LinuxEnclosedGuest::WaitForSystemReady() {
+zx_status_t DebianEnclosedGuest::WaitForSystemReady() {
   for (size_t i = 0; i != kNumRetries; ++i) {
     std::string response;
     zx_status_t status = Execute("echo guest ready", &response);
@@ -166,10 +164,10 @@ zx_status_t LinuxEnclosedGuest::WaitForSystemReady() {
   return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t LinuxEnclosedGuest::RunUtil(const std::string& util,
-                                        const std::string& args,
-                                        std::string* result) {
-  std::string cmd = fxl::StringPrintf("%s/%s %s", kLinuxTestUtilDir,
+zx_status_t DebianEnclosedGuest::RunUtil(const std::string& util,
+                                         const std::string& args,
+                                         std::string* result) {
+  std::string cmd = fxl::StringPrintf("%s/%s %s", kDebianTestUtilDir,
                                       util.c_str(), args.c_str());
   return Execute(cmd, result);
 }

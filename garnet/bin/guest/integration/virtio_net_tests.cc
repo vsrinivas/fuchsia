@@ -8,10 +8,10 @@
 #include <garnet/lib/inet/ip_address.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include "src/lib/files/unique_fd.h"
 #include <lib/fxl/strings/string_printf.h>
 #include <sys/socket.h>
 #include <future>
+#include "src/lib/files/unique_fd.h"
 
 #include "enclosed_guest.h"
 #include "guest_test.h"
@@ -43,15 +43,12 @@ class VirtioNetZirconGuest : public ZirconEnclosedGuest {
   }
 };
 
-class VirtioNetLinuxGuest : public LinuxEnclosedGuest {
+class VirtioNetDebianGuest : public DebianEnclosedGuest {
  public:
   zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override {
-    launch_info->url = kLinuxGuestUrl;
+    launch_info->url = kDebianGuestUrl;
     launch_info->args.push_back("--virtio-gpu=false");
     launch_info->args.push_back("--virtio-net=true");
-    launch_info->args.push_back("--cmdline=console=hvc0 root=/dev/vda rw");
-    // launch_info->args.push_back(
-    //    "--cmdline=loglevel=0 console=hvc0 root=/dev/vda rw");
     launch_info->args.push_back("--legacy-net=false");
     return ZX_OK;
   }
@@ -118,9 +115,9 @@ TEST_F(VirtioNetZirconGuestTest, ReceiveAndSend) {
   handle.wait();
 }
 
-using VirtioNetLinuxGuestTest = GuestTest<VirtioNetLinuxGuest>;
+using VirtioNetDebianGuestTest = GuestTest<VirtioNetDebianGuest>;
 
-TEST_F(VirtioNetLinuxGuestTest, ReceiveAndSend) {
+TEST_F(VirtioNetDebianGuestTest, DISABLED_ReceiveAndSend) {
   std::string result;
   EXPECT_EQ(this->RunUtil(kVirtioNetUtil, "up", &result), ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
