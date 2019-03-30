@@ -6,7 +6,7 @@
         "services": [
             "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.logger.LogSink",
-            "fuchsia.mediaplayer.Player"
+            "fuchsia.media.playback.Player"
         ]
     }
 }
