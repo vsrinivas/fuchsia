@@ -122,8 +122,11 @@ generated_file("pseudo_tests") {
   ]
   data_keys = [ "pseudo_test_spec" ]
   output_conversion = "json"
+  # TODO(joshuaseaton|jinwoo): have this depend on a top-level //tests target,
+  # when such a target exists.
   deps = [
     ":host_tests",
+    "//build/images:packages",
   ]
 }
 
