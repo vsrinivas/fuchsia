@@ -103,11 +103,7 @@ pub struct ServiceSet {
 
 impl ServiceSet {
     pub fn new() -> Self {
-        ServiceSet {
-            structures: HashMap::new(),
-            results: HashMap::new(),
-            services: vec![],
-        }
+        ServiceSet { structures: HashMap::new(), results: HashMap::new(), services: vec![] }
     }
 
     pub fn get_structure(&self, key: &String) -> Result<&Structure, Error> {
@@ -144,10 +140,7 @@ where
         let mut inner_map = HashMap::new();
         for (code, s) in item.1 {
             assert_eq!(&s[0..2], "0x");
-            inner_map.insert(
-                code,
-                u16::from_str_radix(&s[2..], 16).map_err(de::Error::custom)?,
-            );
+            inner_map.insert(code, u16::from_str_radix(&s[2..], 16).map_err(de::Error::custom)?);
         }
         map.insert(item.0.clone(), inner_map);
     }

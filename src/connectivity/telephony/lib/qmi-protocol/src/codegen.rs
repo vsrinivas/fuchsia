@@ -61,15 +61,12 @@ impl<'a, W: io::Write> Codegen<'a, W> {
     }
 
     pub fn codegen_svc_tlv_encode(
-        &mut self, field: &TLV, _structure: &Structure,
+        &mut self,
+        field: &TLV,
+        _structure: &Structure,
     ) -> Result<(), Error> {
         if field.optional {
-            writeln_indent!(
-                self,
-                "if let Some(ref {}) = self.{} {{",
-                field.param,
-                field.param
-            );
+            writeln_indent!(self, "if let Some(ref {}) = self.{} {{", field.param, field.param);
             indent!(self);
         } else {
             if field.has_sub_params() {
@@ -88,11 +85,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         match field.size {
             None => {
                 // service msg length (variable)
-                writeln_indent!(
-                    self,
-                    "buf.put_u16_le({}.as_bytes().len() as u16);",
-                    field.param
-                );
+                writeln_indent!(self, "buf.put_u16_le({}.as_bytes().len() as u16);", field.param);
                 // service msg value
                 writeln_indent!(self, "buf.put_slice({}.as_bytes());", field.param);
             }
@@ -159,10 +152,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
     pub fn codegen_svc_decode_field(&mut self, field: &TLV) -> Result<(), Error> {
         match field.size {
             None => {
-                writeln_indent!(
-                    self,
-                    "let dst = buf.by_ref().take(tlv_len as usize).collect();"
-                );
+                writeln_indent!(self, "let dst = buf.by_ref().take(tlv_len as usize).collect();");
                 writeln_indent!(self, "total_len -= tlv_len;");
                 if field.optional {
                     writeln_indent!(
@@ -222,7 +212,10 @@ impl<'a, W: io::Write> Codegen<'a, W> {
     }
 
     pub fn codegen_svc_decode(
-        &mut self, _svc_id: u16, msg: &Message, _structure: &Structure,
+        &mut self,
+        _svc_id: u16,
+        msg: &Message,
+        _structure: &Structure,
     ) -> Result<(), Error> {
         // define the request struct
         writeln_indent!(self, "impl Decodable for {}Resp {{", msg.name);
@@ -316,7 +309,10 @@ impl<'a, W: io::Write> Codegen<'a, W> {
         Ok(())
     }
     pub fn codegen_svc_encode(
-        &mut self, svc_id: u16, msg: &Message, structure: &Structure,
+        &mut self,
+        svc_id: u16,
+        msg: &Message,
+        structure: &Structure,
     ) -> Result<(), Error> {
         // define the request struct
         writeln_indent!(self, "impl Encodable for {}Req {{", msg.name);
@@ -355,12 +351,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
                 None => field.param.clone(),
             };
             if field.optional {
-                writeln_indent!(
-                    self,
-                    "if let Some(ref {}) = self.{} {{",
-                    field_name,
-                    field.param
-                );
+                writeln_indent!(self, "if let Some(ref {}) = self.{} {{", field_name, field.param);
                 indent!(self);
                 writeln_indent!(self, "{}_len += 1; // tlv type length;", msg.name);
                 writeln_indent!(self, "{}_len += 2; // tlv length length;", msg.name);
@@ -447,12 +438,7 @@ impl<'a, W: io::Write> Codegen<'a, W> {
                     )?;
                 }
             } else {
-                write!(
-                    self.w,
-                    "{}: {},",
-                    field.param,
-                    type_fmt(field.size, field.optional)
-                )?;
+                write!(self.w, "{}: {},", field.param, type_fmt(field.size, field.optional))?;
             }
         }
         writeln!(self.w, ") -> Self {{")?;
@@ -562,11 +548,7 @@ pub trait Decodable {{
         for (error_type, error_set) in &svc_set.results {
             writeln_indent!(self, "// {} error types", error_type);
             for (name, code) in error_set {
-                writeln_indent!(
-                    self,
-                    "#[fail(display = \"Qmi Result Error Code: {:#X}\")]",
-                    code
-                );
+                writeln_indent!(self, "#[fail(display = \"Qmi Result Error Code: {:#X}\")]", code);
                 writeln_indent!(self, "{},", name);
             }
         }
