@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"cloud.google.com/go/storage"
+	"fuchsia.googlesource.com/tools/gcs"
+	"go.chromium.org/luci/auth"
 )
 
 // Client provides access to the artifacts produced by Fuchsia CI tasks.
@@ -17,8 +19,9 @@ type Client struct {
 }
 
 // NewClient creates a new Client.
-func NewClient(ctx context.Context) (*Client, error) {
-	client, err := storage.NewClient(ctx)
+func NewClient(ctx context.Context, opts auth.Options) (*Client, error) {
+	opts.Scopes = append(opts.Scopes, storage.ScopeReadWrite)
+	client, err := gcs.NewClient(ctx, opts)
 	if err != nil {
 		return nil, err
 	}

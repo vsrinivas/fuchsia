@@ -17,6 +17,9 @@ import (
 
 	"fuchsia.googlesource.com/tools/artifacts"
 	"github.com/google/subcommands"
+	"go.chromium.org/luci/auth"
+	"go.chromium.org/luci/auth/client/authcli"
+	"go.chromium.org/luci/hardcoded/chromeinfra"
 )
 
 const (
@@ -40,6 +43,7 @@ type TestOutputs struct {
 
 // StoreTestOutputsCommand performs a batch upload of test outputs to Cloud Storage.
 type StoreTestOutputsCommand struct {
+	authFlags authcli.Flags
 	bucket  string
 	build   string
 	testEnv string
@@ -69,12 +73,18 @@ func (*StoreTestOutputsCommand) Synopsis() string {
 }
 
 func (cmd *StoreTestOutputsCommand) SetFlags(f *flag.FlagSet) {
+	cmd.authFlags.Register(flag.CommandLine, chromeinfra.DefaultAuthOptions())
 	f.StringVar(&cmd.bucket, "bucket", "", "The Cloud Storage bucket to write to")
 	f.StringVar(&cmd.build, "build", "", "The BuildBucket build ID")
 	f.StringVar(&cmd.testEnv, "testenv", "", "A canonical name for the test environment")
 }
 
 func (cmd *StoreTestOutputsCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	opts, err := cmd.authFlags.Options()
+	if err != nil {
+		log.Println(err)
+		return subcommands.ExitFailure
+	}
 	if err := cmd.validateFlags(f); err != nil {
 		log.Println(err)
 		return subcommands.ExitFailure
@@ -84,7 +94,7 @@ func (cmd *StoreTestOutputsCommand) Execute(ctx context.Context, f *flag.FlagSet
 		log.Println(err)
 		return subcommands.ExitFailure
 	}
-	if !cmd.execute(ctx, manifest) {
+	if !cmd.execute(ctx, manifest, opts) {
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
@@ -120,14 +130,14 @@ func (cmd *StoreTestOutputsCommand) validateFlags(f *flag.FlagSet) error {
 
 // execute spawns a worker pool to perform the upload. The pool is limited in size by
 // maxConcurrentUploads to avoid load failures in the storage API.
-func (cmd *StoreTestOutputsCommand) execute(ctx context.Context, manifest TestOutputsManifest) bool {
+func (cmd *StoreTestOutputsCommand) execute(ctx context.Context, manifest TestOutputsManifest, opts auth.Options) bool {
 	const workerCount = maxConcurrentUploads
 	success := true
 	outputs := make(chan TestOutputs)
 	errs := make(chan error, workerCount)
 	for i := 0; i < workerCount; i++ {
 		cmd.workers.Add(1)
-		go cmd.worker(ctx, &cmd.workers, outputs, errs)
+		go cmd.worker(ctx, &cmd.workers, outputs, errs, opts)
 	}
 	for _, entry := range manifest {
 		outputs <- entry
@@ -144,9 +154,9 @@ func (cmd *StoreTestOutputsCommand) execute(ctx context.Context, manifest TestOu
 	return success
 }
 
-func (cmd *StoreTestOutputsCommand) worker(ctx context.Context, wg *sync.WaitGroup, outputs <-chan TestOutputs, errs chan<- error) {
+func (cmd *StoreTestOutputsCommand) worker(ctx context.Context, wg *sync.WaitGroup, outputs <-chan TestOutputs, errs chan<- error, opts auth.Options) {
 	defer wg.Done()
-	cli, err := artifacts.NewClient(ctx)
+	cli, err := artifacts.NewClient(ctx, opts)
 	if err != nil {
 		errs <- err
 		return

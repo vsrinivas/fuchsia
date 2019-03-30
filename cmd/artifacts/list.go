@@ -58,7 +58,7 @@ func (cmd *ListCommand) validateAndExecute(ctx context.Context) error {
 		return fmt.Errorf("failed to create builds client: %v", err)
 	}
 
-	artifactsCli, err := artifacts.NewClient(ctx)
+	artifactsCli, err := artifacts.NewClient(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("failed to create artifacts client: %v", err)
 	}
