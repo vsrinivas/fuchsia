@@ -14,6 +14,7 @@
 #include <zircon/syscalls.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 
 #include "filesystems.h"
@@ -27,11 +28,10 @@ bool check_file_contains(const char* filename, const void* data, ssize_t len) {
 
     ASSERT_EQ(stat(filename, &st), 0);
     ASSERT_EQ(st.st_size, len);
-    int fd = open(filename, O_RDWR, 0644);
-    ASSERT_GT(fd, 0);
-    ASSERT_STREAM_ALL(read, fd, buf, len);
+    fbl::unique_fd fd(open(filename, O_RDWR, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_STREAM_ALL(read, fd.get(), buf, len);
     ASSERT_EQ(memcmp(buf, data, len), 0);
-    ASSERT_EQ(close(fd), 0);
 
     return true;
 }
@@ -52,19 +52,19 @@ bool TestTruncateSmall(void) {
     const char* filename = "::alpha";
 
     // Try writing a string to a file
-    int fd = open(filename, O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0);
-    ASSERT_STREAM_ALL(write, fd, str, strlen(str));
+    fbl::unique_fd fd(open(filename, O_RDWR | O_CREAT, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_STREAM_ALL(write, fd.get(), str, strlen(str));
     ASSERT_TRUE(check_file_contains(filename, str, strlen(str)));
 
     // Check that opening a file with O_TRUNC makes it empty
-    int fd2 = open(filename, O_RDWR | O_TRUNC, 0644);
-    ASSERT_GT(fd2, 0);
+    fbl::unique_fd fd2(open(filename, O_RDWR | O_TRUNC, 0644));
+    ASSERT_TRUE(fd2);
     ASSERT_TRUE(check_file_empty(filename));
 
     // Check that we can still write to a file that has been truncated
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-    ASSERT_STREAM_ALL(write, fd, str, strlen(str));
+    ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
+    ASSERT_STREAM_ALL(write, fd.get(), str, strlen(str));
     ASSERT_TRUE(check_file_contains(filename, str, strlen(str)));
 
     // Check that we can truncate the file using the "truncate" function
@@ -82,8 +82,8 @@ bool TestTruncateSmall(void) {
     ASSERT_EQ(truncate(filename, 5), 0);
     ASSERT_TRUE(check_file_contains(filename, empty, 5));
 
-    ASSERT_EQ(close(fd), 0);
-    ASSERT_EQ(close(fd2), 0);
+    ASSERT_EQ(close(fd.release()), 0);
+    ASSERT_EQ(close(fd2.release()), 0);
     ASSERT_EQ(unlink(filename), 0);
 
     END_TEST;
@@ -126,29 +126,28 @@ bool checked_truncate(const char* filename, uint8_t* u8, ssize_t new_len) {
     ssize_t old_len = st.st_size;
 
     // Truncate the file, verify the size gets updated
-    int fd = open(filename, O_RDWR, 0644);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(ftruncate(fd, new_len), 0);
+    fbl::unique_fd fd(open(filename, O_RDWR, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(ftruncate(fd.get(), new_len), 0);
     ASSERT_EQ(stat(filename, &st), 0);
     ASSERT_EQ(st.st_size, new_len);
 
     // Close and reopen the file; verify the inode stays updated
-    ASSERT_EQ(close(fd), 0);
-    fd = open(filename, O_RDWR, 0644);
-    ASSERT_GT(fd, 0);
+    ASSERT_EQ(close(fd.release()), 0);
+    fd.reset(open(filename, O_RDWR, 0644));
+    ASSERT_TRUE(fd);
     ASSERT_EQ(stat(filename, &st), 0);
     ASSERT_EQ(st.st_size, new_len);
 
     if (Remount) {
-        ASSERT_EQ(close(fd), 0);
+        ASSERT_EQ(close(fd.release()), 0);
         ASSERT_TRUE(check_remount(), "Could not remount filesystem");
         ASSERT_EQ(stat(filename, &st), 0);
         ASSERT_EQ(st.st_size, new_len);
-        fd = open(filename, O_RDWR, 0644);
+        fd.reset(open(filename, O_RDWR, 0644));
     }
 
-    ASSERT_TRUE(fill_file(fd, u8, new_len, old_len));
-    ASSERT_EQ(close(fd), 0);
+    ASSERT_TRUE(fill_file(fd.get(), u8, new_len, old_len));
     END_HELPER;
 }
 
@@ -200,26 +199,26 @@ bool TestTruncateLarge(void) {
 
     // Start a file filled with a buffer
     const char* filename = "::alpha";
-    int fd = open(filename, O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0);
-    ASSERT_STREAM_ALL(write, fd, buf.get(), BufSize);
+    fbl::unique_fd fd(open(filename, O_RDWR | O_CREAT, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_STREAM_ALL(write, fd.get(), buf.get(), BufSize);
 
     if (Test != KeepOpen) {
-        ASSERT_EQ(close(fd), 0);
+        ASSERT_EQ(close(fd.release()), 0);
     }
 
     // Repeatedly truncate / write to the file
     for (size_t i = 0; i < Iterations; i++) {
         size_t len = rand_r(&seed) % BufSize;
         if (Test == KeepOpen) {
-            ASSERT_TRUE(fchecked_truncate(fd, buf.get(), len));
+            ASSERT_TRUE(fchecked_truncate(fd.get(), buf.get(), len));
         } else {
             ASSERT_TRUE(checked_truncate<Test == Remount>(filename, buf.get(), len));
         }
     }
     ASSERT_EQ(unlink(filename), 0);
     if (Test == KeepOpen) {
-        ASSERT_EQ(close(fd), 0);
+        ASSERT_EQ(close(fd.release()), 0);
     }
 
     END_TEST;
@@ -266,19 +265,19 @@ bool TestTruncatePartialBlockSparse(void) {
 
     for (size_t i = 0; i < fbl::count_of(write_offsets); i++) {
         off_t write_off = write_offsets[i];
-        int fd = open("::truncate-sparse", O_CREAT | O_RDWR);
-        ASSERT_GT(fd, 0);
-        ASSERT_EQ(lseek(fd, write_off, SEEK_SET), write_off);
-        ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf));
-        ASSERT_EQ(ftruncate(fd, write_off + 2 * kBlockSize), 0);
-        ASSERT_EQ(ftruncate(fd, write_off + kBlockSize + kBlockSize / 2), 0);
-        ASSERT_EQ(ftruncate(fd, write_off + kBlockSize / 2), 0);
-        ASSERT_EQ(ftruncate(fd, write_off - kBlockSize / 2), 0);
+        fbl::unique_fd fd(open("::truncate-sparse", O_CREAT | O_RDWR));
+        ASSERT_TRUE(fd);
+        ASSERT_EQ(lseek(fd.get(), write_off, SEEK_SET), write_off);
+        ASSERT_EQ(write(fd.get(), buf, sizeof(buf)), sizeof(buf));
+        ASSERT_EQ(ftruncate(fd.get(), write_off + 2 * kBlockSize), 0);
+        ASSERT_EQ(ftruncate(fd.get(), write_off + kBlockSize + kBlockSize / 2), 0);
+        ASSERT_EQ(ftruncate(fd.get(), write_off + kBlockSize / 2), 0);
+        ASSERT_EQ(ftruncate(fd.get(), write_off - kBlockSize / 2), 0);
         if (Test == UnlinkThenClose) {
             ASSERT_EQ(unlink("::truncate-sparse"), 0);
-            ASSERT_EQ(close(fd), 0);
+            ASSERT_EQ(close(fd.release()), 0);
         } else {
-            ASSERT_EQ(close(fd), 0);
+            ASSERT_EQ(close(fd.release()), 0);
             ASSERT_EQ(unlink("::truncate-sparse"), 0);
         }
     }
@@ -289,17 +288,17 @@ bool TestTruncatePartialBlockSparse(void) {
 bool TestTruncateErrno(void) {
     BEGIN_TEST;
 
-    int fd = open("::truncate_errno", O_RDWR | O_CREAT | O_EXCL);
-    ASSERT_GT(fd, 0);
+    fbl::unique_fd fd(open("::truncate_errno", O_RDWR | O_CREAT | O_EXCL));
+    ASSERT_TRUE(fd);
 
-    ASSERT_EQ(ftruncate(fd, -1), -1);
+    ASSERT_EQ(ftruncate(fd.get(), -1), -1);
     ASSERT_EQ(errno, EINVAL);
     errno = 0;
-    ASSERT_EQ(ftruncate(fd, 1UL << 60), -1);
+    ASSERT_EQ(ftruncate(fd.get(), 1UL << 60), -1);
     ASSERT_EQ(errno, EINVAL);
 
     ASSERT_EQ(unlink("::truncate_errno"), 0);
-    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(fd.release()), 0);
     END_TEST;
 }
 

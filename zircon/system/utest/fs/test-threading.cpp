@@ -13,6 +13,7 @@
 #include <threads.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
@@ -92,9 +93,9 @@ bool TestCreateUnlinkExclusive(void) {
     BEGIN_TEST;
     for (size_t i = 0; i < kIterCount; i++) {
         ASSERT_TRUE((thread_action_test<10, 1>([](void* arg) {
-            int fd = open("::exclusive", O_RDWR | O_CREAT | O_EXCL);
-            if (fd > 0) {
-                return close(fd) == 0 ? kSuccess : kUnexpectedFailure;
+            fbl::unique_fd fd(open("::exclusive", O_RDWR | O_CREAT | O_EXCL));
+            if (fd) {
+                return close(fd.release()) == 0 ? kSuccess : kUnexpectedFailure;
             } else if (errno == EEXIST) {
                 return kFailure;
             }
@@ -223,9 +224,9 @@ bool TestLinkExclusive(void) {
     }
 
     for (size_t i = 0; i < kIterCount; i++) {
-        int fd = open("::link_start", O_RDWR | O_CREAT | O_EXCL);
-        ASSERT_GT(fd, 0);
-        ASSERT_EQ(close(fd), 0);
+        fbl::unique_fd fd(open("::link_start", O_RDWR | O_CREAT | O_EXCL));
+        ASSERT_TRUE(fd);
+        ASSERT_EQ(close(fd.release()), 0);
 
         ASSERT_TRUE((thread_action_test<10, 1>([](void* arg) {
             if (link("::link_start", "::link_end") == 0) {

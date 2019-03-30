@@ -17,6 +17,7 @@
 #include <zircon/compiler.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
 
 #include "filesystems.h"
 #include "misc.h"
@@ -35,9 +36,9 @@ bool TestDirectoryFilenameMax(void) {
 
     // Largest possible file length
     snprintf(path, sizeof(path), "::%0*d", max_file_len, 0x1337);
-    int fd = open(path, O_RDWR | O_CREAT | O_EXCL, 0644);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(close(fd), 0);
+    fbl::unique_fd fd(open(path, O_RDWR | O_CREAT | O_EXCL, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(close(fd.release()), 0);
     ASSERT_EQ(unlink(path), 0);
 
     // Slightly too large file length
@@ -63,9 +64,8 @@ bool TestDirectoryLarge(void) {
     for (int i = 0; i < num_files; i++) {
         char path[LARGE_PATH_LENGTH + 1];
         snprintf(path, sizeof(path), "::%0*d", LARGE_PATH_LENGTH - 2, i);
-        int fd = open(path, O_RDWR | O_CREAT | O_EXCL, 0644);
-        ASSERT_GT(fd, 0);
-        ASSERT_EQ(close(fd), 0);
+        fbl::unique_fd fd(open(path, O_RDWR | O_CREAT | O_EXCL, 0644));
+        ASSERT_TRUE(fd);
     }
 
     // Unlink all those files
@@ -92,12 +92,11 @@ bool TestDirectoryMax(void) {
             printf(" Allocating: %s\n", path);
         }
 
-        int fd = open(path, O_RDWR | O_CREAT | O_EXCL, 0644);
-        if (fd < 0) {
+        fbl::unique_fd fd(open(path, O_RDWR | O_CREAT | O_EXCL, 0644));
+        if (!fd) {
             printf("    wrote %d direntries\n", i);
             break;
         }
-        ASSERT_EQ(close(fd), 0);
     }
 
     // Unlink all those files
@@ -124,9 +123,8 @@ bool TestDirectoryCoalesceHelper(const int* unlink_order) {
     // Allocate a bunch of files in a directory
     ASSERT_EQ(mkdir("::coalesce", 0755), 0);
     for (int i = 0; i < num_files; i++) {
-        int fd = open(files[i], O_RDWR | O_CREAT | O_EXCL, 0644);
-        ASSERT_GT(fd, 0);
-        ASSERT_EQ(close(fd), 0);
+        fbl::unique_fd fd(open(files[i], O_RDWR | O_CREAT | O_EXCL, 0644));
+        ASSERT_TRUE(fd);
     }
 
     // Unlink all those files in the order specified
@@ -175,8 +173,8 @@ bool TestDirectoryCoalesceLargeRecord(void) {
 
     char buf[NAME_MAX + 1];
     ASSERT_EQ(mkdir("::coalesce_lr", 0666), 0);
-    int dirfd = open("::coalesce_lr", O_RDONLY | O_DIRECTORY);
-    ASSERT_GT(dirfd, 0);
+    fbl::unique_fd dirfd(open("::coalesce_lr", O_RDONLY | O_DIRECTORY));
+    ASSERT_GT(dirfd.get(), 0);
 
     const int kNumEntries = 20;
 
@@ -184,32 +182,32 @@ bool TestDirectoryCoalesceLargeRecord(void) {
     for (int i = 0; i < kNumEntries; i++) {
         memset(buf, 'a' + i, 50);
         buf[50] = '\0';
-        ASSERT_EQ(mkdirat(dirfd, buf, 0666), 0);
+        ASSERT_EQ(mkdirat(dirfd.get(), buf, 0666), 0);
     }
 
     // Unlink all the entries except the last one
     for (int i = 0; i < kNumEntries - 1; i++) {
         memset(buf, 'a' + i, 50);
         buf[50] = '\0';
-        ASSERT_EQ(unlinkat(dirfd, buf, AT_REMOVEDIR), 0);
+        ASSERT_EQ(unlinkat(dirfd.get(), buf, AT_REMOVEDIR), 0);
     }
 
     // Check that the 'large remaining entry', which may
     // have a fairly large size, isn't marked as 'invalid' by
     // fsck.
     if (test_info->can_be_mounted) {
-        ASSERT_EQ(close(dirfd), 0);
+        ASSERT_EQ(close(dirfd.release()), 0);
         ASSERT_TRUE(check_remount());
-        dirfd = open("::coalesce_lr", O_RDONLY | O_DIRECTORY);
-        ASSERT_GT(dirfd, 0);
+        dirfd.reset(open("::coalesce_lr", O_RDONLY | O_DIRECTORY));
+        ASSERT_GT(dirfd.get(), 0);
     }
 
     // Unlink the final entry
     memset(buf, 'a' + kNumEntries - 1, 50);
     buf[50] = '\0';
-    ASSERT_EQ(unlinkat(dirfd, buf, AT_REMOVEDIR), 0);
+    ASSERT_EQ(unlinkat(dirfd.get(), buf, AT_REMOVEDIR), 0);
 
-    ASSERT_EQ(close(dirfd), 0);
+    ASSERT_EQ(close(dirfd.release()), 0);
     ASSERT_EQ(rmdir("::coalesce_lr"), 0);
 
     END_TEST;
@@ -237,15 +235,15 @@ bool TestDirectoryTrailingSlash(void) {
     ASSERT_EQ(rmdir("::d"), 0);
 
     // We can make / unlink a file...
-    int fd = open("::a", O_RDWR | O_CREAT | O_EXCL, 0644);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(close(fd), 0);
+    fbl::unique_fd fd(open("::a", O_RDWR | O_CREAT | O_EXCL, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(close(fd.release()), 0);
     ASSERT_EQ(unlink("::a"), 0);
 
     // ... But we cannot refer to that file using a trailing '/'.
-    fd = open("::a", O_RDWR | O_CREAT | O_EXCL, 0644);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(close(fd), 0);
+    fd.reset(open("::a", O_RDWR | O_CREAT | O_EXCL, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(close(fd.release()), 0);
     ASSERT_EQ(open("::a/", O_RDWR, 0644), -1);
 
     // We can rename the file...
@@ -273,13 +271,13 @@ bool TestDirectoryReaddir(void) {
     ASSERT_TRUE(check_dir_contents("::a", empty_dir, fbl::count_of(empty_dir)));
 
     ASSERT_EQ(mkdir("::a/dir1", 0755), 0);
-    int fd = open("::a/file1", O_RDWR | O_CREAT | O_EXCL, 0644);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(close(fd), 0);
+    fbl::unique_fd fd(open("::a/file1", O_RDWR | O_CREAT | O_EXCL, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(close(fd.release()), 0);
 
-    fd = open("::a/file2", O_RDWR | O_CREAT | O_EXCL, 0644);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(close(fd), 0);
+    fd.reset(open("::a/file2", O_RDWR | O_CREAT | O_EXCL, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(close(fd.release()), 0);
 
     ASSERT_EQ(mkdir("::a/dir2", 0755), 0);
     expected_dirent_t filled_dir[] = {
@@ -439,16 +437,17 @@ bool TestDirectoryAfterRmdir(void) {
     // But we can't make new files / directories, by path...
     ASSERT_EQ(mkdir("::dir/subdir", 0755), -1);
     // ... Or with the open fd.
-    int fd = dirfd(dir);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(openat(fd, "file", O_CREAT | O_RDWR), -1, "Can't make new files in deleted dirs");
-    ASSERT_EQ(mkdirat(fd, "dir", 0755), -1, "Can't make new files in deleted dirs");
+    fbl::unique_fd fd(dirfd(dir));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(openat(fd.get(), "file", O_CREAT | O_RDWR), -1,
+              "Can't make new files in deleted dirs");
+    ASSERT_EQ(mkdirat(fd.get(), "dir", 0755), -1, "Can't make new files in deleted dirs");
 
     // In fact, the "dir" path should still be usable, even as a file!
-    fd = open("::dir", O_CREAT | O_EXCL | O_RDWR);
-    ASSERT_GT(fd, 0);
+    fbl::unique_fd fd2(open("::dir", O_CREAT | O_EXCL | O_RDWR));
+    ASSERT_TRUE(fd2);
     ASSERT_TRUE(fcheck_dir_contents(dir, empty_dir, fbl::count_of(empty_dir)));
-    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(fd2.release()), 0);
     ASSERT_EQ(unlink("::dir"), 0);
 
     // After all that, dir still looks like an empty directory...

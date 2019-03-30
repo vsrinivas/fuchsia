@@ -18,6 +18,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/string_piece.h>
+#include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 
 #include "filesystems.h"
@@ -48,9 +49,8 @@ bool TestPersistSimple(void) {
         if (is_directory(paths[i])) {
             ASSERT_EQ(mkdir(paths[i], 0644), 0);
         } else {
-            int fd = open(paths[i], O_RDWR | O_CREAT | O_EXCL, 0644);
-            ASSERT_GT(fd, 0);
-            ASSERT_EQ(close(fd), 0);
+            fbl::unique_fd fd(open(paths[i], O_RDWR | O_CREAT | O_EXCL, 0644));
+            ASSERT_TRUE(fd);
         }
     }
 
@@ -120,11 +120,10 @@ bool TestPersistWithData(void) {
         for (size_t j = 0; j < BufferSize; j++) {
             buffers[i][j] = (uint8_t) rand_r(&seed);
         }
-        int fd = open(files[i], O_RDWR | O_CREAT, 0644);
-        ASSERT_GT(fd, 0);
-        ASSERT_EQ(write(fd, &buffers[i][0], BufferSize), BufferSize);
-        ASSERT_EQ(fsync(fd), 0);
-        ASSERT_EQ(close(fd), 0);
+        fbl::unique_fd fd(open(files[i], O_RDWR | O_CREAT, 0644));
+        ASSERT_TRUE(fd);
+        ASSERT_EQ(write(fd.get(), &buffers[i][0], BufferSize), BufferSize);
+        ASSERT_EQ(fsync(fd.get()), 0);
     }
 
     ASSERT_TRUE(check_remount(), "Could not remount filesystem");
@@ -133,20 +132,18 @@ bool TestPersistWithData(void) {
     for (size_t i = 0; i < fbl::count_of(files); i++) {
         fbl::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[BufferSize]);
         ASSERT_TRUE(ac.check());
-        int fd = open(files[i], O_RDONLY, 0644);
-        ASSERT_GT(fd, 0);
+        fbl::unique_fd fd(open(files[i], O_RDONLY, 0644));
+        ASSERT_TRUE(fd);
 
         struct stat buf;
-        ASSERT_EQ(fstat(fd, &buf), 0);
+        ASSERT_EQ(fstat(fd.get(), &buf), 0);
         ASSERT_EQ(buf.st_nlink, 1);
         ASSERT_EQ(buf.st_size, BufferSize);
 
-        ASSERT_EQ(read(fd, &rbuf[0], BufferSize), BufferSize);
+        ASSERT_EQ(read(fd.get(), &rbuf[0], BufferSize), BufferSize);
         for (size_t j = 0; j < BufferSize; j++) {
             ASSERT_EQ(rbuf[j], buffers[i][j]);
         }
-
-        ASSERT_EQ(close(fd), 0);
     }
 
     ASSERT_TRUE(check_remount(), "Could not remount filesystem");
@@ -196,9 +193,8 @@ bool TestRenameLoop(void) {
     if (MoveDirectory) {
         ASSERT_EQ(mkdir("::a/target", 0644), 0);
     } else {
-        int fd = open("::a/target", O_RDWR | O_CREAT);
-        ASSERT_GT(fd, 0);
-        ASSERT_EQ(close(fd), 0);
+        fbl::unique_fd fd(open("::a/target", O_RDWR | O_CREAT));
+        ASSERT_TRUE(fd);
     }
 
     // Move the target through the loop a bunch of times

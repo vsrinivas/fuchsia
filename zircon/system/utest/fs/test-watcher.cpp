@@ -102,9 +102,9 @@ bool TestWatcherAdd(void) {
     ASSERT_TRUE(check_for_empty(&wb, client));
 
     // Creating a file in the directory should trigger the watcher
-    int fd = open("::dir/foo", O_RDWR | O_CREAT);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(close(fd), 0);
+    fbl::unique_fd fd(open("::dir/foo", O_RDWR | O_CREAT));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(close(fd.release()), 0);
     ASSERT_TRUE(check_for_event(&wb, client, "foo", fuchsia_io_WATCH_EVENT_ADDED));
 
     // Renaming into directory should trigger the watcher
@@ -142,12 +142,12 @@ bool TestWatcherExisting(void) {
     ASSERT_NONNULL(dir);
 
     // Create a couple files in the directory
-    int fd = open("::dir/foo", O_RDWR | O_CREAT);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(close(fd), 0);
-    fd = open("::dir/bar", O_RDWR | O_CREAT);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(close(fd), 0);
+    fbl::unique_fd fd(open("::dir/foo", O_RDWR | O_CREAT));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(close(fd.release()), 0);
+    fd.reset(open("::dir/bar", O_RDWR | O_CREAT));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(close(fd.release()), 0);
 
     // These files should be visible to the watcher through the "EXISTING"
     // mechanism.
@@ -171,9 +171,9 @@ bool TestWatcherExisting(void) {
 
     // Now, if we choose to add additional files, they'll show up separately
     // with an "ADD" event.
-    fd = open("::dir/baz", O_RDWR | O_CREAT);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(close(fd), 0);
+    fd.reset(open("::dir/baz", O_RDWR | O_CREAT));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(close(fd.release()), 0);
     ASSERT_TRUE(check_for_event(&wb, client, "baz", fuchsia_io_WATCH_EVENT_ADDED));
     ASSERT_TRUE(check_for_empty(&wb, client));
 
@@ -236,9 +236,9 @@ bool TestWatcherRemoved(void) {
 
     ASSERT_TRUE(check_for_empty(&wb, client));
 
-    int fd = openat(dirfd(dir), "foo", O_CREAT | O_RDWR | O_EXCL);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(close(fd), 0);
+    fbl::unique_fd fd(openat(dirfd(dir), "foo", O_CREAT | O_RDWR | O_EXCL));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(close(fd.release()), 0);
 
     ASSERT_TRUE(check_for_event(&wb, client, "foo", fuchsia_io_WATCH_EVENT_ADDED));
     ASSERT_TRUE(check_for_empty(&wb, client));

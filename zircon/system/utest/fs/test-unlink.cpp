@@ -15,6 +15,7 @@
 
 #include <zircon/compiler.h>
 #include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
 
 #include "filesystems.h"
 
@@ -23,9 +24,8 @@ bool TestUnlinkSimple(void) {
     BEGIN_TEST;
     const char* const paths[] = {"::abc", "::def", "::ghi", "::jkl", "::mnopqrstuvxyz"};
     for (size_t i = 0; i < fbl::count_of(paths); i++) {
-        int fd = open(paths[i], O_RDWR | O_CREAT | O_EXCL, 0644);
-        ASSERT_GT(fd, 0);
-        ASSERT_EQ(close(fd), 0);
+        fbl::unique_fd fd(open(paths[i], O_RDWR | O_CREAT | O_EXCL, 0644));
+        ASSERT_TRUE(fd);
     }
     for (size_t i = 0; i < fbl::count_of(paths); i++) {
         ASSERT_EQ(unlink(paths[i]), 0);
@@ -61,16 +61,16 @@ bool TestUnlinkUseAfterwards(void) {
     BEGIN_TEST;
 
     const char* path = "::foobar";
-    int fd = open(path, O_RDWR | O_CREAT | O_EXCL, 0644);
-    ASSERT_GT(fd, 0);
+    fbl::unique_fd fd(open(path, O_RDWR | O_CREAT | O_EXCL, 0644));
+    ASSERT_TRUE(fd);
 
-    ASSERT_TRUE(simple_write_test(fd, 1));
+    ASSERT_TRUE(simple_write_test(fd.get(), 1));
 
     // When we unlink path, fd is still open.
     ASSERT_EQ(unlink(path), 0);
-    ASSERT_TRUE(simple_read_test(fd, 1)); // It should contain the same data as before
-    ASSERT_TRUE(simple_write_test(fd, 2)); // It should still be writable
-    ASSERT_EQ(close(fd), 0);           // This actually releases the file
+    ASSERT_TRUE(simple_read_test(fd.get(), 1)); // It should contain the same data as before
+    ASSERT_TRUE(simple_write_test(fd.get(), 2)); // It should still be writable
+    ASSERT_EQ(close(fd.release()), 0);           // This actually releases the file
 
     // Now, opening the file should fail without O_CREAT
     ASSERT_EQ(open(path, O_RDWR, 0644), -1);
@@ -82,19 +82,19 @@ bool TestUnlinkOpenElsewhere(void) {
     BEGIN_TEST;
 
     const char* path = "::foobar";
-    int fd1 = open(path, O_RDWR | O_CREAT | O_EXCL, 0644);
-    ASSERT_GT(fd1, 0);
-    int fd2 = open(path, O_RDWR, 0644);
-    ASSERT_GT(fd2, 0);
+    fbl::unique_fd fd1(open(path, O_RDWR | O_CREAT | O_EXCL, 0644));
+    ASSERT_TRUE(fd1);
+    fbl::unique_fd fd2(open(path, O_RDWR, 0644));
+    ASSERT_TRUE(fd2);
 
-    ASSERT_TRUE(simple_write_test(fd1, 0));
-    ASSERT_EQ(close(fd1), 0);
+    ASSERT_TRUE(simple_write_test(fd1.get(), 0));
+    ASSERT_EQ(close(fd1.release()), 0);
 
     // When we unlink path, fd2 is still open.
     ASSERT_EQ(unlink(path), 0);
-    ASSERT_TRUE(simple_read_test(fd2, 0));  // It should contain the same data as before
-    ASSERT_TRUE(simple_write_test(fd2, 1)); // It should still be writable
-    ASSERT_EQ(close(fd2), 0);           // This actually releases the file
+    ASSERT_TRUE(simple_read_test(fd2.get(), 0));  // It should contain the same data as before
+    ASSERT_TRUE(simple_write_test(fd2.get(), 1)); // It should still be writable
+    ASSERT_EQ(close(fd2.release()), 0);           // This actually releases the file
 
     // Now, opening the file should fail without O_CREAT
     ASSERT_EQ(open(path, O_RDWR, 0644), -1);
@@ -107,12 +107,12 @@ bool test_remove(void) {
 
     // Test the trivial cases of removing files and directories
     const char* filename = "::file";
-    int fd = open(filename, O_RDWR | O_CREAT | O_EXCL, 0644);
-    ASSERT_GT(fd, 0);
+    fbl::unique_fd fd(open(filename, O_RDWR | O_CREAT | O_EXCL, 0644));
+    ASSERT_TRUE(fd);
     ASSERT_EQ(remove(filename), 0);
     ASSERT_EQ(remove(filename), -1);
     ASSERT_EQ(errno, ENOENT);
-    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(fd.release()), 0);
 
     const char* dirname = "::dir";
     ASSERT_EQ(mkdir(dirname, 0666), 0);

@@ -112,10 +112,9 @@ bool TestQueryInfo() {
         char path[128];
         snprintf(path, sizeof(path) - 1, "%s/file_%d", kMountPath, i);
 
-        int fd = open(path, O_CREAT | O_RDWR);
-        ASSERT_GT(fd, 0, "Failed to create file");
-        ASSERT_EQ(ftruncate(fd, 30 * 1024), 0);
-        ASSERT_EQ(close(fd), 0);
+        fbl::unique_fd fd(open(path, O_CREAT | O_RDWR));
+        ASSERT_GT(fd.get(), 0, "Failed to create file");
+        ASSERT_EQ(ftruncate(fd.get(), 30 * 1024), 0);
     }
 
     // Adjust our query expectations: We should see 16 new nodes, but no other

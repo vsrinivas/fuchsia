@@ -22,8 +22,8 @@ template <size_t WriteOffset, size_t ReadOffset, size_t WriteSize>
 bool test_sparse(void) {
     BEGIN_TEST;
 
-    int fd = open("::my_file", O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0);
+    fbl::unique_fd fd(open("::my_file", O_RDWR | O_CREAT, 0644));
+    ASSERT_TRUE(fd);
 
     // Create a random write buffer of data
     fbl::AllocChecker ac;
@@ -36,12 +36,12 @@ bool test_sparse(void) {
     }
 
     // Dump write buffer to file
-    ASSERT_EQ(pwrite(fd, &wbuf[0], WriteSize, WriteOffset), WriteSize);
+    ASSERT_EQ(pwrite(fd.get(), &wbuf[0], WriteSize, WriteOffset), WriteSize);
 
     // Reopen file
-    ASSERT_EQ(close(fd), 0);
-    fd = open("::my_file", O_RDWR, 0644);
-    ASSERT_GT(fd, 0);
+    ASSERT_EQ(close(fd.release()), 0);
+    fd.reset(open("::my_file", O_RDWR, 0644));
+    ASSERT_TRUE(fd);
 
     // Access read buffer from file
     constexpr size_t kFileSize = WriteOffset + WriteSize;
@@ -50,7 +50,7 @@ bool test_sparse(void) {
     static_assert(kBytesToRead > 0, "We want to test writing AND reading");
     fbl::unique_ptr<uint8_t[]> rbuf(new (&ac) uint8_t[kBytesToRead]);
     ASSERT_EQ(ac.check(), true);
-    ASSERT_EQ(pread(fd, &rbuf[0], kBytesToRead, ReadOffset), kBytesToRead);
+    ASSERT_EQ(pread(fd.get(), &rbuf[0], kBytesToRead, ReadOffset), kBytesToRead);
 
     constexpr size_t kSparseLength = (ReadOffset < WriteOffset) ?
                                       WriteOffset - ReadOffset : 0;
@@ -72,7 +72,7 @@ bool test_sparse(void) {
     }
 
     // Clean up
-    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(fd.release()), 0);
     ASSERT_EQ(unlink("::my_file"), 0);
     END_TEST;
 }

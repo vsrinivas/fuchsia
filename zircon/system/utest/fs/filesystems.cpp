@@ -83,18 +83,18 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
     }
 
     if (test_class == FS_TEST_FVM) {
-        int fd = open(test_disk_path, O_RDWR);
-        if (fd < 0) {
+        fbl::unique_fd fd(open(test_disk_path, O_RDWR));
+        if (!fd) {
             fprintf(stderr, "[FAILED]: Could not open test disk\n");
             exit(-1);
         }
-        if (fvm_init(fd, disk.slice_size) != ZX_OK) {
+        if (fvm_init(fd.get(), disk.slice_size) != ZX_OK) {
             fprintf(stderr, "[FAILED]: Could not format disk with FVM\n");
             exit(-1);
         }
 
         zx::channel fvm_channel;
-        if (fdio_get_service_handle(fd, fvm_channel.reset_and_get_address()) != ZX_OK) {
+        if (fdio_get_service_handle(fd.get(), fvm_channel.reset_and_get_address()) != ZX_OK) {
             fprintf(stderr, "[FAILED]: Could not convert fd to channel\n");
             exit(-1);
         }
@@ -116,8 +116,8 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
 
         // Open "fvm" driver
         fvm_channel.reset();
-        int fvm_fd;
-        if ((fvm_fd = open(fvm_disk_path, O_RDWR)) < 0) {
+        fbl::unique_fd fvm_fd(open(fvm_disk_path, O_RDWR));
+        if (!fvm_fd) {
             fprintf(stderr, "[FAILED]: Could not open FVM driver\n");
             exit(-1);
         }
@@ -129,18 +129,18 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
         memcpy(request.type, kTestPartGUID, sizeof(request.type));
         memcpy(request.guid, kTestUniqueGUID, sizeof(request.guid));
 
-        if ((fd = fvm_allocate_partition(fvm_fd, &request)) < 0) {
+        fd.reset(fvm_allocate_partition(fvm_fd.get(), &request));
+        if (!fd) {
             fprintf(stderr, "[FAILED]: Could not allocate FVM partition\n");
             exit(-1);
         }
-        close(fvm_fd);
-        close(fd);
+        close(fvm_fd.release());
 
-        if ((fd = open_partition(kTestUniqueGUID, kTestPartGUID, 0, test_disk_path)) < 0) {
+        fd.reset(open_partition(kTestUniqueGUID, kTestPartGUID, 0, test_disk_path));
+        if (!fd) {
             fprintf(stderr, "[FAILED]: Could not locate FVM partition\n");
             exit(-1);
         }
-        close(fd);
 
         // Restore the "fvm_disk_path" to the containing disk, so it can
         // be destroyed when the test completes
@@ -286,9 +286,9 @@ static int fsck_common(const char* disk_path, disk_format_t fs_type) {
 
 static int mount_common(const char* disk_path, const char* mount_path,
                         disk_format_t fs_type) {
-    int fd = open(disk_path, O_RDWR);
+    fbl::unique_fd fd(open(disk_path, O_RDWR));
 
-    if (fd < 0) {
+    if (!fd) {
         fprintf(stderr, "Could not open disk: %s\n", disk_path);
         return -1;
     }
@@ -296,7 +296,7 @@ static int mount_common(const char* disk_path, const char* mount_path,
     // fd consumed by mount. By default, mount waits until the filesystem is
     // ready to accept commands.
     zx_status_t status;
-    if ((status = mount(fd, mount_path, fs_type, &default_mount_options,
+    if ((status = mount(fd.release(), mount_path, fs_type, &default_mount_options,
                         launch_stdio_async)) != ZX_OK) {
         fprintf(stderr, "Could not mount %s filesystem\n",
                 disk_format_string(fs_type));

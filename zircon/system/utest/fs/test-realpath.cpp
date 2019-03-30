@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
 #include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
@@ -46,8 +47,8 @@ static bool is_resolved(const char* path) {
 bool TestRealpathAbsolute(void) {
     BEGIN_TEST;
 
-    int fd = open(kName, O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0);
+    fbl::unique_fd fd(open(kName, O_RDWR | O_CREAT, 0644));
+    ASSERT_TRUE(fd);
 
     struct stat sb;
     ASSERT_EQ(stat(kName, &sb), 0);
@@ -73,7 +74,7 @@ bool TestRealpathAbsolute(void) {
     ASSERT_TRUE(is_resolved(buf2));
 
     // Clean up
-    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(fd.release()), 0);
     ASSERT_EQ(unlink(kName), 0);
     END_TEST;
 }
@@ -88,9 +89,9 @@ bool TestRealpathRelative(void) {
     BEGIN_TEST;
 
     ASSERT_EQ(mkdir(kNameDir, 0666), 0);
-    int fd = open(kNameFile, O_RDWR | O_CREAT, 0644);
-    ASSERT_GT(fd, 0);
-    close(fd);
+    fbl::unique_fd fd(open(kNameFile, O_RDWR | O_CREAT, 0644));
+    ASSERT_TRUE(fd);
+    close(fd.release());
 
     struct stat sb;
     ASSERT_EQ(stat(kNameFile, &sb), 0);

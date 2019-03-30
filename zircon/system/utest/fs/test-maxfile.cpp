@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
 #include <zircon/syscalls.h>
 
 #include "filesystems.h"
@@ -43,8 +44,8 @@ bool test_maxfile(void) {
     const size_t physmem = zx_system_get_physmem();
     const size_t max_cap = physmem / 2;
 
-    int fd = open("::bigfile", O_CREAT | O_RDWR, 0644);
-    ASSERT_GT(fd, 0);
+    fbl::unique_fd fd(open("::bigfile", O_CREAT | O_RDWR, 0644));
+    ASSERT_TRUE(fd);
     char data_a[8192];
     char data_b[8192];
     char data_c[8192];
@@ -72,7 +73,7 @@ bool test_maxfile(void) {
             break;
         }
 
-        if ((r = write(fd, data, sizeof(data_a))) < 0) {
+        if ((r = write(fd.get(), data, sizeof(data_a))) < 0) {
             fprintf(stderr, "bigfile received error: %s\n", strerror(errno));
             if ((errno == EFBIG) || (errno == ENOSPC)) {
                 // Either the file should be too big (EFBIG) or the file should
@@ -95,23 +96,23 @@ bool test_maxfile(void) {
     fprintf(stderr, "wrote %lu bytes\n", sz);
 
     struct stat buf;
-    ASSERT_EQ(fstat(fd, &buf), 0, "Couldn't stat max file");
+    ASSERT_EQ(fstat(fd.get(), &buf), 0, "Couldn't stat max file");
     ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz), "Unexpected max file size");
 
     // Try closing, re-opening, and verifying the file
-    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(fd.release()), 0);
     if (mt == DoRemount) {
         ASSERT_TRUE(check_remount(), "Could not remount filesystem");
     }
-    fd = open("::bigfile", O_RDWR, 0644);
-    ASSERT_GT(fd, 0);
-    ASSERT_EQ(fstat(fd, &buf), 0, "Couldn't stat max file");
+    fd.reset(open("::bigfile", O_RDWR, 0644));
+    ASSERT_TRUE(fd);
+    ASSERT_EQ(fstat(fd.get(), &buf), 0, "Couldn't stat max file");
     ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz), "Unexpected max file size");
     char readbuf[8192];
     size_t bytes_read = 0;
     data = data_a;
     while (bytes_read < sz) {
-        r = read(fd, readbuf, sizeof(readbuf));
+        r = read(fd.get(), readbuf, sizeof(readbuf));
         ASSERT_EQ(r, static_cast<ssize_t>(fbl::min(sz - bytes_read, sizeof(readbuf))));
         ASSERT_EQ(memcmp(readbuf, data, r), 0, "File failed to verify");
         data = rotate(data);
@@ -121,7 +122,7 @@ bool test_maxfile(void) {
     ASSERT_EQ(bytes_read, sz);
 
     ASSERT_EQ(unlink("::bigfile"), 0);
-    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(close(fd.release()), 0);
     END_TEST;
 }
 
@@ -144,10 +145,10 @@ bool TestZippedMaxfiles(void) {
     const size_t physmem = zx_system_get_physmem();
     const size_t max_cap = physmem / 4;
 
-    int fda = open("::bigfile-A", O_CREAT | O_RDWR, 0644);
-    int fdb = open("::bigfile-B", O_CREAT | O_RDWR, 0644);
-    ASSERT_GT(fda, 0);
-    ASSERT_GT(fdb, 0);
+    fbl::unique_fd fda(open("::bigfile-A", O_CREAT | O_RDWR, 0644));
+    fbl::unique_fd fdb(open("::bigfile-B", O_CREAT | O_RDWR, 0644));
+    ASSERT_TRUE(fda);
+    ASSERT_TRUE(fdb);
     char data_a[8192];
     char data_b[8192];
     memset(data_a, 0xaa, sizeof(data_a));
@@ -157,7 +158,7 @@ bool TestZippedMaxfiles(void) {
     ssize_t r;
 
     size_t* sz = &sz_a;
-    int fd = fda;
+    int fd = fda.get();
     const char* data = data_a;
     for (;;) {
         if (*sz >= max_cap) {
@@ -180,7 +181,7 @@ bool TestZippedMaxfiles(void) {
         *sz += r;
         ASSERT_EQ(r, sizeof(data_a));
 
-        fd = (fd == fda) ? fdb : fda;
+        fd = (fd == fda.get()) ? fdb.get() : fda.get();
         data = (data == data_a) ? data_b : data_a;
         sz = (sz == &sz_a) ? &sz_b : &sz_a;
     }
@@ -188,27 +189,27 @@ bool TestZippedMaxfiles(void) {
     fprintf(stderr, "wrote %lu bytes (to B)\n", sz_b);
 
     struct stat buf;
-    ASSERT_EQ(fstat(fda, &buf), 0, "Couldn't stat max file");
+    ASSERT_EQ(fstat(fda.get(), &buf), 0, "Couldn't stat max file");
     ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz_a), "Unexpected max file size");
-    ASSERT_EQ(fstat(fdb, &buf), 0, "Couldn't stat max file");
+    ASSERT_EQ(fstat(fdb.get(), &buf), 0, "Couldn't stat max file");
     ASSERT_EQ(buf.st_size, static_cast<ssize_t>(sz_b), "Unexpected max file size");
 
     // Try closing, re-opening, and verifying the file
-    ASSERT_EQ(close(fda), 0);
-    ASSERT_EQ(close(fdb), 0);
+    ASSERT_EQ(close(fda.release()), 0);
+    ASSERT_EQ(close(fdb.release()), 0);
     if (mt == DoRemount) {
         ASSERT_TRUE(check_remount(), "Could not remount filesystem");
     }
-    fda = open("::bigfile-A", O_RDWR, 0644);
-    fdb = open("::bigfile-B", O_RDWR, 0644);
-    ASSERT_GT(fda, 0);
-    ASSERT_GT(fdb, 0);
+    fda.reset(open("::bigfile-A", O_RDWR, 0644));
+    fdb.reset(open("::bigfile-B", O_RDWR, 0644));
+    ASSERT_TRUE(fda);
+    ASSERT_TRUE(fdb);
 
     char readbuf[8192];
     size_t bytes_read_a = 0;
     size_t bytes_read_b = 0;
 
-    fd = fda;
+    fd = fda.get();
     data = data_a;
     sz = &sz_a;
     size_t* bytes_read = &bytes_read_a;
@@ -218,7 +219,7 @@ bool TestZippedMaxfiles(void) {
         ASSERT_EQ(memcmp(readbuf, data, r), 0, "File failed to verify");
         *bytes_read += r;
 
-        fd = (fd == fda) ? fdb : fda;
+        fd = (fd == fda.get()) ? fdb.get() : fda.get();
         data = (data == data_a) ? data_b : data_a;
         sz = (sz == &sz_a) ? &sz_b : &sz_a;
         bytes_read = (bytes_read == &bytes_read_a) ? &bytes_read_b : &bytes_read_a;
@@ -229,8 +230,8 @@ bool TestZippedMaxfiles(void) {
 
     ASSERT_EQ(unlink("::bigfile-A"), 0);
     ASSERT_EQ(unlink("::bigfile-B"), 0);
-    ASSERT_EQ(close(fda), 0);
-    ASSERT_EQ(close(fdb), 0);
+    ASSERT_EQ(close(fda.release()), 0);
+    ASSERT_EQ(close(fdb.release()), 0);
 
     END_TEST;
 }
