@@ -109,7 +109,6 @@ zx_status_t AmlEthernet::Bind() {
     }
 
     zx_device_prop_t props[] = {
-        {BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV},
         {BIND_PLATFORM_DEV_VID, 0, mac_info.vid},
         {BIND_PLATFORM_DEV_DID, 0, mac_info.did},
     };

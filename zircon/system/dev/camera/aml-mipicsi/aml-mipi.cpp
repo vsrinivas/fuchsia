@@ -231,7 +231,6 @@ zx_status_t AmlMipiDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol)
 zx_status_t AmlMipiDevice::Bind(camera_sensor_t* sensor_info) {
 
     zx_device_prop_t props[] = {
-        {BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV},
         {BIND_PLATFORM_DEV_VID, 0, sensor_info->vid},
         {BIND_PLATFORM_DEV_PID, 0, sensor_info->pid},
         {BIND_PLATFORM_DEV_DID, 0, sensor_info->did},
@@ -307,8 +306,7 @@ static zx_driver_ops_t driver_ops = []() {
 } // namespace camera
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_mipi, camera::driver_ops, "aml-mipi-csi2", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+ZIRCON_DRIVER_BEGIN(aml_mipi, camera::driver_ops, "aml-mipi-csi2", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_T931),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_MIPI_CSI),

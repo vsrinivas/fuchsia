@@ -53,7 +53,6 @@ zx_status_t ArmISPImplDevice::IspImplDeRegisterCallbacks() {
 zx_status_t ArmISPImplDevice::Bind(mipi_adapter_t* mipi_info) {
 
     zx_device_prop_t props[] = {
-        {BIND_PROTOCOL, 0, ZX_PROTOCOL_PDEV},
         {BIND_PLATFORM_DEV_VID, 0, mipi_info->vid},
         {BIND_PLATFORM_DEV_PID, 0, mipi_info->pid},
         {BIND_PLATFORM_DEV_DID, 0, mipi_info->did},
@@ -154,8 +153,7 @@ static zx_driver_ops_t driver_ops = []() {
 } // namespace camera
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(arm_isp, camera::driver_ops, "arm-isp", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+ZIRCON_DRIVER_BEGIN(arm_isp, camera::driver_ops, "arm-isp", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_ARM),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_ISP),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_ARM_MALI_IV009),
