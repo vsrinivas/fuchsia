@@ -18,6 +18,7 @@ use futures::channel::{mpsc, oneshot};
 use log::error;
 use std::collections::HashMap;
 use std::sync::Arc;
+use wlan_common::format::MacFmt;
 use wlan_common::RadioConfig;
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
@@ -270,7 +271,12 @@ impl super::Station for ClientSme {
                                         state.connect(cmd, &mut self.context)
                                     }
                                     Err(err) => {
-                                        error!("cannot join BSS {:02X?} {}", best_bss.bssid, err);
+                                        error!(
+                                            "cannot join '{}' ({}): {}",
+                                            String::from_utf8_lossy(&best_bss.ssid[..]),
+                                            best_bss.bssid.to_mac_str(),
+                                            err
+                                        );
                                         report_connect_finished(
                                             Some(token.responder),
                                             &self.context,

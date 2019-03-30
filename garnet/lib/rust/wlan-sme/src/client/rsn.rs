@@ -87,7 +87,11 @@ pub fn get_rsna(
     password: &[u8],
     bss: &BssDescription,
 ) -> Result<Option<Rsna>, failure::Error> {
-    ensure!(bss.rsn.is_none() == password.is_empty(), "invalid password param for BSS");
+    if bss.rsn.is_none() {
+        ensure!(password.is_empty(), "password provided for open network, but none expected");
+    } else {
+        ensure!(!password.is_empty(), "password required for secure network, but none provided");
+    }
     let a_rsne_bytes = match &bss.rsn {
         None => return Ok(None),
         Some(x) => x,

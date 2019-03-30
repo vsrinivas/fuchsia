@@ -13,6 +13,7 @@ pub mod buffer_writer;
 pub mod channel;
 pub mod data_writer;
 pub mod error;
+pub mod format;
 pub mod ie;
 pub mod mac;
 pub mod mgmt_writer;
