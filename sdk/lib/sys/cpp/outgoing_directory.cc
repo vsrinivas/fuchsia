@@ -21,7 +21,8 @@ OutgoingDirectory::~OutgoingDirectory() = default;
 
 zx_status_t OutgoingDirectory::Serve(zx::channel directory_request,
                                      async_dispatcher_t* dispatcher) {
-  return root_->Serve(fuchsia::io::OPEN_RIGHT_READABLE,
+  return root_->Serve(fuchsia::io::OPEN_RIGHT_READABLE |
+                          fuchsia::io::OPEN_RIGHT_WRITABLE,
                       std::move(directory_request), dispatcher);
 }
 

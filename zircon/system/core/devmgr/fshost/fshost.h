@@ -90,9 +90,15 @@ private:
     // Invokes |ConnectRoot| internally.
     zx_status_t ServeRoot(zx::channel* out);
 
-    zx_status_t ServeVnode(fbl::RefPtr<memfs::VnodeDir>& vn, zx::channel server);
-    zx_status_t LocalMount(memfs::VnodeDir* parent, const char* name,
-                           fbl::RefPtr<memfs::VnodeDir>& subtree);
+    zx_status_t ServeVnode(fbl::RefPtr<memfs::VnodeDir>& vn, zx::channel server, uint32_t rights);
+
+    // Convenience wrapper for |ServeVnode| with maximum default permissions.
+    zx_status_t ServeVnode(fbl::RefPtr<memfs::VnodeDir>& vn, zx::channel server) {
+        return ServeVnode(vn, std::move(server), ZX_FS_RIGHTS);
+    }
+
+    zx_status_t LocalMountReadOnly(memfs::VnodeDir* parent, const char* name,
+                                   fbl::RefPtr<memfs::VnodeDir>& subtree);
 
     static constexpr const char* kMountPoints[] = {"/bin",     "/data", "/volume", "/system",
                                                    "/install", "/blob", "/pkgfs"};

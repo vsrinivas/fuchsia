@@ -101,6 +101,7 @@ const uint32 OPEN_FLAG_CREATE = 0x00010000;
 const uint32 OPEN_FLAG_CREATE_IF_ABSENT = 0x00020000;
 /// Truncate the object before usage.
 const uint32 OPEN_FLAG_TRUNCATE = 0x00040000;
+/// Assert that the object to be opened is a directory.
 /// Return an error if the target object is not a directory.
 const uint32 OPEN_FLAG_DIRECTORY = 0x00080000;
 /// Seek to the end of the object before all writes.
@@ -108,21 +109,22 @@ const uint32 OPEN_FLAG_APPEND = 0x00100000;
 /// If the object is a mount point, open the local directory.
 const uint32 OPEN_FLAG_NO_REMOTE = 0x00200000;
 /// Open a reference to the object, not the object itself.
-///
-/// If an object is opened or cloned using this method, all other flags
-/// except for:
+/// It is ONLY valid to pass the following flags together with OPEN_FLAG_NODE_REFERENCE:
 /// - OPEN_FLAG_DIRECTORY
+/// - OPEN_FLAG_NOT_DIRECTORY
 /// - OPEN_FLAG_DESCRIBE
-/// Are ignored.
+/// otherwise an error is returned.
+/// If an object is opened or cloned using this method, the resulting connection does not carry
+/// any permission flags.
+/// The resulting node allows a limited set of operations: |GetAttr|, |Clone|, |Close|, |Describe|,
+/// and, if the node is a file, these extra operations: |GetFlags|, |SetFlags|.
 const uint32 OPEN_FLAG_NODE_REFERENCE = 0x00400000;
-/// TODO(ZX-1723): Unimplemented.
 /// Binary OR of OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_DESCRIBE, and
 /// OPEN_FLAG_NODE_REFERENCE. Flags used when opening a node reference must fall within this mask.
 const uint32 OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE = 0x02c80000;
-/// Requests that an "OnOpen" event is sent, with
-/// a non-null NodeInfo (if the open is successful).
+/// Requests that an "OnOpen" event is sent to the interface request.
+/// The event will contain a non-null NodeInfo if the open/clone is successful.
 const uint32 OPEN_FLAG_DESCRIBE = 0x00800000;
-/// TODO(ZX-1723): Unimplemented.
 /// Specify this flag to request POSIX-compatibility. Currently, it affects permission handling.
 /// During Open:
 /// - If the target path is a directory, the rights on the new connection expands to include
@@ -140,11 +142,9 @@ const uint32 OPEN_FLAG_DESCRIBE = 0x00800000;
 /// necessary to enforce hierarchical permissions across mount points, and should have no effect
 /// on the expected behavior for clients.
 const uint32 OPEN_FLAG_POSIX = 0x01000000;
-/// TODO(ZX-1723): Unimplemented.
 /// Assert that the object to be opened is not a directory.
 /// Return an error if the target object is a directory.
 const uint32 OPEN_FLAG_NOT_DIRECTORY = 0x02000000;
-/// TODO(ZX-1723): Unimplemented.
 /// When used during clone, the new connection inherits the rights on the source connection,
 /// regardless if it is a file or directory. Otherwise, clone attempts to use the requested rights.
 /// It is invalid to pass any of the OPEN_RIGHT_* flags together with CLONE_FLAGS_SAME_RIGHTS.
@@ -160,13 +160,12 @@ protocol Node {
     /// - OPEN_FLAG_APPEND
     /// - OPEN_FLAG_NO_REMOTE
     /// - OPEN_FLAG_DESCRIBE
+    /// - CLONE_FLAG_SAME_RIGHTS
     ///
     /// All other flags are ignored.
     ///
+    /// TODO(ZX-3676): |flags| should restrict the rights on the resulting cloned object.
     /// The cloned object must have rights less than or equal to the original object.
-    ///
-    /// TODO: Currently, ulib/fs ignores OPEN_RIGHT_*, and uses the rights of the original
-    /// connection. This is a bug.
     Clone(uint32 flags, request<Node> object);
 
     /// Terminates connection with object.
@@ -188,6 +187,8 @@ protocol Node {
     -> OnOpen(zx.status s, NodeInfo? info);
 
     /// Synchronizes updates to the node to the underlying media, if it exists.
+    ///
+    /// This method does not require any rights.
     Sync() -> (zx.status s);
 
     /// Acquires information about the node.
@@ -199,7 +200,6 @@ protocol Node {
     /// |flags| may be any of NODE_ATTRIBUTE_FLAG_*.
     ///
     /// This method requires following rights: OPEN_RIGHT_WRITABLE.
-    /// TODO(ZX-1262): This access restriction is not implemented in ulib/fs.
     SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.status s);
 
     /// Deprecated. Only for use with compatibility with devhost.
@@ -429,6 +429,17 @@ protocol Directory {
     /// If an unknown value is sent for either flags or mode, the connection should
     /// be closed.
     // TODO(smklein): Who uses mode? Can it be removed?
+    ///
+    /// OPEN_RIGHTS_* flags provided in |flags| will restrict access rights on the |object| channel
+    /// which will be connected to the opened entity.
+    ///
+    /// Rights are never increased. When you open a nested entity within a directory, you may only
+    /// request the same rights as what the directory connection already has, or a subset of those.
+    /// Exceeding those rights causes an access denied error to be transmitted in the
+    /// |OnOpen| event if applicable, and the |object| connection closed.
+    ///
+    /// The caller must specify either one or more of the OPEN_RIGHT_* flags, or
+    /// the OPEN_FLAG_NODE_REFERENCE flag.
     Open(uint32 flags, uint32 mode, string:MAX_PATH path, request<Node> object);
 
     /// Detaches an object from this directory object.
@@ -456,6 +467,8 @@ protocol Directory {
     ///   ZX_ERR_UNAVAILABLE if |path| is ".".
     ///
     /// Other errors may be returned for filesystem-specific reasons.
+    ///
+    /// This method requires following rights: OPEN_RIGHT_WRITABLE.
     Unlink(string:MAX_PATH path) -> (zx.status s);
 
     /// Reads a collection of variably sized dirents into a buffer.
@@ -476,6 +489,8 @@ protocol Directory {
     ///   char name[0];
     /// }
     ///
+    /// This method does not require any rights, since one could always probe for
+    /// directory contents by triggering name conflicts during file creation.
     // TODO(smklein): Convert to a vector of variable-length objects, when
     // llcpp arrives.
     // TODO(smklein): Get rid of "max_bytes".
@@ -483,17 +498,25 @@ protocol Directory {
     ReadDirents(uint64 max_bytes) -> (zx.status s, vector<uint8>:MAX_BUF dirents);
 
     /// Resets the directory seek offset.
+    ///
+    /// This method does not require any rights, similar to ReadDirents.
     Rewind() -> (zx.status s);
 
     /// Acquires a token to a Directory which can be used to identify
     /// access to it at a later point in time.
+    ///
+    /// This method requires following rights: OPEN_RIGHT_WRITABLE.
     GetToken() -> (zx.status s, handle? token);
 
     /// Renames an object named src to the name dst, in a directory represented by token.
+    ///
+    /// This method requires following rights: OPEN_RIGHT_WRITABLE.
     Rename(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
     /// Creates a link to an object named src by the name dst, within a directory represented by
     /// token.
+    ///
+    /// This method requires following rights: OPEN_RIGHT_WRITABLE.
     Link(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
     /// Watches a directory, receiving events of added messages on the
@@ -511,6 +534,8 @@ protocol Directory {
     ///
     /// Mask specifies a bitmask of events to observe.
     /// Options must be zero; it is reserved.
+    ///
+    /// This method does not require any rights, similar to ReadDirents.
     Watch(uint32 mask, uint32 options, handle<channel> watcher) -> (zx.status s);
 };
 

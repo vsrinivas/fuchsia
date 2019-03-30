@@ -957,6 +957,10 @@ void Blob::Sync(SyncCallback closure) {
     }
 }
 
+bool Blob::IsDirectory() const {
+    return false;
+}
+
 void Blob::CompleteSync() {
     atomic_store(&syncing_, false);
 }

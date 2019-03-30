@@ -42,6 +42,10 @@ zx_status_t PseudoFile::Getattr(vnattr_t* attr) {
     return ZX_OK;
 }
 
+bool PseudoFile::IsDirectory() const {
+    return false;
+}
+
 BufferedPseudoFile::BufferedPseudoFile(ReadHandler read_handler, WriteHandler write_handler,
                                        size_t input_buffer_capacity)
     : PseudoFile(std::move(read_handler), std::move(write_handler)),
@@ -152,6 +156,10 @@ zx_status_t BufferedPseudoFile::Content::Truncate(size_t length) {
     return ZX_OK;
 }
 
+bool BufferedPseudoFile::Content::IsDirectory() const {
+    return false;
+}
+
 void BufferedPseudoFile::Content::SetInputLength(size_t length) {
     ZX_DEBUG_ASSERT(length <= file_->input_buffer_capacity_);
 
@@ -254,6 +262,10 @@ zx_status_t UnbufferedPseudoFile::Content::Truncate(size_t length) {
 
     truncated_since_last_successful_write_ = true;
     return ZX_OK;
+}
+
+bool UnbufferedPseudoFile::Content::IsDirectory() const {
+    return false;
 }
 
 } // namespace fs

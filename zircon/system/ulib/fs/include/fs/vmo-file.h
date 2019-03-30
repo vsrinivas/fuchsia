@@ -78,6 +78,7 @@ public:
     zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
     zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
     zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    bool IsDirectory() const final;
 
 private:
     zx_status_t AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset);

@@ -54,7 +54,8 @@ zx::channel Util::OpenAsDirectory(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> node) {
   zx::channel h1, h2;
   if (zx::channel::create(0, &h1, &h2) != ZX_OK)
     return zx::channel();
-  if (vfs->ServeDirectory(std::move(node), std::move(h1)) != ZX_OK)
+  if (vfs->ServeDirectory(std::move(node), std::move(h1),
+                          ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE) != ZX_OK)
     return zx::channel();
   return h2;
 }

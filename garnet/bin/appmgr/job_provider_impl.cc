@@ -19,4 +19,8 @@ void JobProviderImpl::AddBinding(
   bindings_.AddBinding(this, std::move(request));
 }
 
+bool JobProviderImpl::IsDirectory() const {
+  return false;
+}
+
 }  // namespace component

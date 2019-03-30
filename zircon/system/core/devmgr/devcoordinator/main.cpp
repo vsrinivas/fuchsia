@@ -148,6 +148,8 @@ zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
     }
     status = fdio_service_connect(kItemsPath, remote.release());
     if (status != ZX_OK) {
+        fprintf(stderr, "devcoordinator: get_arguments: fdio_service_connect returned %d\n",
+                status);
         return status;
     }
     uint32_t length;
@@ -858,8 +860,8 @@ int main(int argc, char** argv) {
             return 1;
         }
     } else {
-        fprintf(stderr, "devcoordinator: failed to get boot arguments, assuming test "
-                        "environment and continuing\n");
+        fprintf(stderr, "devcoordinator: failed to get boot arguments (status: %d), assuming test "
+                        "environment and continuing\n", status);
     }
 
     if (boot_args.GetBool("devmgr.verbose", false)) {

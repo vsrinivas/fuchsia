@@ -38,8 +38,10 @@ namespace devmgr {
 #define FS_FOR_FSPROC (FS_SVC)
 #define FS_FOR_APPMGR (FS_ALL & (~FS_HUB))
 
-#define FS_DIR_FLAGS                                                                               \
+#define FS_READONLY_DIR_FLAGS                                                                      \
     (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
+
+#define FS_DIR_FLAGS (FS_READONLY_DIR_FLAGS | ZX_FS_RIGHT_WRITABLE)
 
 // If |executable| is invalid, then argv[0] is used as the path to the binary
 // If |loader| is invalid, the default loader service is used.

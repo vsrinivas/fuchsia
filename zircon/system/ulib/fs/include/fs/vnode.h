@@ -29,8 +29,7 @@
 #ifdef __Fuchsia__
 #include <fuchsia/io/c/fidl.h>
 #include <lib/zx/channel.h>
-
-#include <utility>
+#include <zircon/device/vfs.h>
 #endif // __Fuchsia__
 
 namespace fs {
@@ -88,12 +87,12 @@ public:
 #ifdef __Fuchsia__
     // Serves a connection to the Vnode over the specified channel.
     //
-    // The default implementation creates and registers an RIO |Connection| with the VFS.
+    // The default implementation creates and registers a FIDL |Connection| with the VFS.
     // Subclasses may override this behavior to serve custom protocols over the channel.
     //
     // |vfs| is the VFS which manages the Vnode.
     // |channel| is the channel over which the client will exchange messages with the Vnode.
-    // |flags| are the flags which were previously provided to |Open()|.
+    // |flags| are the flags and rights which were previously provided to |Open()|.
     virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags);
 
     // Extract handle, type, and extra info from a vnode.
@@ -208,8 +207,11 @@ public:
     virtual zx::channel DetachRemote();
     virtual zx_handle_t GetRemote() const;
     virtual void SetRemote(zx::channel remote);
-
 #endif
+
+    // Return if the Vnode is a directory; as a guideline, a directory Vnode should
+    // support |Lookup| and opening a child Vnode.
+    virtual bool IsDirectory() const = 0;
 
 protected:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);

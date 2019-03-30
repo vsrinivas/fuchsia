@@ -41,6 +41,10 @@ public:
         return ZX_OK;
     }
 
+    bool IsDirectory() const final {
+        return false;
+    }
+
 private:
     int fd_count_;
 };

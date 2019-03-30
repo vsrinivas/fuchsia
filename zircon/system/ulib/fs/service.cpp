@@ -39,4 +39,8 @@ zx_status_t Service::Serve(Vfs* vfs, zx::channel channel, uint32_t flags) {
     return connector_(std::move(channel));
 }
 
+bool Service::IsDirectory() const {
+    return false;
+}
+
 } // namespace fs

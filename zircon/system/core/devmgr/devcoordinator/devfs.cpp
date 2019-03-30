@@ -713,6 +713,9 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
         DEFINE_REQUEST(msg, NodeClone);
         zx_handle_t h = request->object;
         uint32_t flags = request->flags;
+        if (request->flags & ZX_FS_FLAG_CLONE_SAME_RIGHTS) {
+            flags |= ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE;
+        }
         char path[] = ".";
         devfs_open(dn, dispatcher, h, path, flags | ZX_FS_FLAG_NOREMOTE);
         return ZX_OK;

@@ -49,6 +49,10 @@ public:
         using_memory_ = true;
     }
 
+    bool IsDirectory() const final {
+        return false;
+    }
+
 private:
     BlobCache* cache_;
     bool should_cache_;

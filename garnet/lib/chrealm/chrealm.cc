@@ -78,7 +78,9 @@ zx_status_t SpawnBinaryInRealmAsync(
 
   // Open the provided path, which is the realm's hub directory.
   zx_handle_t realm_hub_dir = ZX_HANDLE_INVALID;
-  status = fdio_ns_open(ns, realm_path.c_str(), ZX_FS_RIGHT_READABLE,
+  status = fdio_ns_open(ns,
+                        realm_path.c_str(),
+                        ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
                         &realm_hub_dir);
   if (status != ZX_OK) {
     *error = fxl::StringPrintf("Could not open hub in realm: %s",
@@ -89,8 +91,10 @@ zx_status_t SpawnBinaryInRealmAsync(
   // Open the services dir in the realm's hub directory.
   zx_handle_t realm_svc_dir = ZX_HANDLE_INVALID;
   const std::string svc_path = fxl::Concatenate({realm_path, "/svc"});
-  status =
-      fdio_ns_open(ns, svc_path.c_str(), ZX_FS_RIGHT_READABLE, &realm_svc_dir);
+  status = fdio_ns_open(ns,
+                        svc_path.c_str(),
+                        ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                        &realm_svc_dir);
   if (status != ZX_OK) {
     *error =
         fxl::StringPrintf("Could not open svc in realm: %s", svc_path.c_str());

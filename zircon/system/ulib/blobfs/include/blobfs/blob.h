@@ -161,6 +161,7 @@ private:
     zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
     zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
     void Sync(SyncCallback closure) final;
+    bool IsDirectory() const final;
 
     ////////////////
     // blobfs::CacheNode interface.

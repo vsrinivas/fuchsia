@@ -87,7 +87,9 @@ FsManager::FsManager() {
     for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {
         fbl::StringPiece pathout;
         status = root_vfs_.Open(global_root_, &mount_nodes[n], fbl::StringPiece(kMountPoints[n]),
-                                &pathout, ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_CREATE, S_IFDIR);
+                                &pathout,
+                                ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CREATE,
+                                S_IFDIR);
         ZX_ASSERT(status == ZX_OK);
     }
 
@@ -106,7 +108,7 @@ zx_status_t FsManager::MountSystem() {
     ZX_ASSERT(systemfs_root_ == nullptr);
     zx_status_t status = CreateFilesystem("system", &system_vfs_, &systemfs_root_);
     ZX_ASSERT(status == ZX_OK);
-    return LocalMount(global_root_.get(), "system", systemfs_root_);
+    return LocalMountReadOnly(global_root_.get(), "system", systemfs_root_);
 }
 
 void FsManager::SystemfsSetReadonly(bool value) {
@@ -133,7 +135,7 @@ zx_status_t FsManager::InitializeConnections(zx::channel root, zx::channel devfs
 
     zx::channel fs_root;
     if ((status = ServeRoot(&fs_root)) != ZX_OK) {
-        printf("fshost: cannot create global root\n");
+        printf("fshost: cannot create global root: %d\n", status);
     }
 
     connections_ = fbl::make_unique<FshostConnections>(std::move(devfs_root), std::move(svc_root),
@@ -174,12 +176,13 @@ void FsManager::WatchExit() {
     global_shutdown_.Begin(global_loop_->dispatcher());
 }
 
-zx_status_t FsManager::ServeVnode(fbl::RefPtr<memfs::VnodeDir>& vn, zx::channel server) {
-    return vn->vfs()->ServeDirectory(vn, std::move(server));
+zx_status_t FsManager::ServeVnode(fbl::RefPtr<memfs::VnodeDir>& vn, zx::channel server,
+                                  uint32_t rights) {
+    return vn->vfs()->ServeDirectory(vn, std::move(server), rights);
 }
 
-zx_status_t FsManager::LocalMount(memfs::VnodeDir* parent, const char* name,
-                                  fbl::RefPtr<memfs::VnodeDir>& subtree) {
+zx_status_t FsManager::LocalMountReadOnly(memfs::VnodeDir* parent, const char* name,
+                                          fbl::RefPtr<memfs::VnodeDir>& subtree) {
     fbl::RefPtr<fs::Vnode> vn;
     zx_status_t status = parent->Lookup(&vn, fbl::StringPiece(name));
     if (status != ZX_OK) {
@@ -190,7 +193,8 @@ zx_status_t FsManager::LocalMount(memfs::VnodeDir* parent, const char* name,
     if (status != ZX_OK) {
         return ZX_OK;
     }
-    if ((status = ServeVnode(subtree, std::move(server))) != ZX_OK) {
+    uint32_t rights = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN;
+    if ((status = ServeVnode(subtree, std::move(server), rights)) != ZX_OK) {
         return status;
     }
     return parent->vfs()->InstallRemote(std::move(vn), fs::MountChannel(std::move(client)));

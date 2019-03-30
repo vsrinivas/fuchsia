@@ -30,9 +30,10 @@ struct OnOpenMsg {
     fuchsia_io_NodeInfo extra;
 };
 
-// Connection represents an open connection to a Vnode (the server-side
-// component of a file descriptor).  The Vnode's methods will be invoked
-// in response to RIO protocol messages received over the channel.
+// Connection represents an open connection to a Vnode (the server-side component
+// of a file descriptor). Connections will be managed in a |fbl::DoublyLinkedList|.
+// The Vnode's methods will be invoked in response to FIDL protocol messages
+// received over the channel.
 //
 // This class is thread-safe.
 class Connection : public fbl::DoublyLinkedListable<fbl::unique_ptr<Connection>> {
@@ -43,11 +44,10 @@ public:
     //
     // |vfs| is the VFS which is responsible for dispatching operations to the vnode.
     // |vnode| is the vnode which will handle I/O requests.
-    // |channel| is the channel on which the RIO protocol will be served.
-    // |flags| are the file flags passed to |open()|, such as
-    // |ZX_FS_RIGHT_READABLE|.
-    Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-               uint32_t flags);
+    // |channel| is the channel on which the FIDL protocol will be served.
+    // |flags| are the file flags passed to |open()|, such as |ZX_FS_FLAG_VNODE_REF_ONLY|;
+    //         they include rights granted to this connection, such as |ZX_FS_RIGHT_READABLE|.
+    Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel, uint32_t flags);
 
     // Closes the connection.
     //
@@ -135,6 +135,8 @@ protected:
     fs::Vnode& GetVnode() const { return *vnode_.get(); }
 
 private:
+    // Callback for when new signals arrive on the channel, which could be:
+    // readable, peer closed, async teardown request, etc.
     void HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal);
 
@@ -165,7 +167,11 @@ private:
     // The object field is |ZX_HANDLE_INVALID| when not actively waiting.
     async::WaitMethod<Connection, &Connection::HandleSignals> wait_;
 
-    // Open flags such as |ZX_FS_RIGHT_READABLE|, and other bits.
+    // Open flags such as |ZX_FS_RIGHT_READABLE|, |ZX_FS_FLAG_VNODE_REF_ONLY|, and other bits.
+    // Permissions on the underlying Vnode are granted on a per-connection basis,
+    // and expressed as a combination of ZX_FS_RIGHT flags.
+    // Importantly, ZX_FS_RIGHT flags are hierarchical over Open/Clone. It is never allowed
+    // to derive a Connection with more rights than the originating connection.
     uint32_t flags_;
 
     // Handle to event which allows client to refer to open vnodes in multi-path

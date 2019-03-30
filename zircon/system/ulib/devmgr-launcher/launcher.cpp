@@ -78,7 +78,8 @@ zx_status_t Launch(Args args, zx::channel bootsvc_client, zx::job* devmgr_job,
         if (status != ZX_OK) {
             return status;
         }
-        status = fdio_ns_connect(ns, "/svc", ZX_FS_RIGHT_READABLE, svc_server.release());
+        status = fdio_ns_connect(ns, "/svc", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                                 svc_server.release());
         if (status != ZX_OK) {
             return status;
         }

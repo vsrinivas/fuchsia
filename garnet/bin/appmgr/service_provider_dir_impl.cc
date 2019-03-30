@@ -103,6 +103,10 @@ void ServiceProviderDirImpl::ConnectToService(std::string service_name,
   }
 }
 
+bool ServiceProviderDirImpl::IsDirectory() const {
+  return true;
+}
+
 zx_status_t ServiceProviderDirImpl::Getattr(vnattr_t* a) {
   return root_->Getattr(a);
 }

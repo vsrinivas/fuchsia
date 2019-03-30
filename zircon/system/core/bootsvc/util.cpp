@@ -165,7 +165,9 @@ zx_status_t CreateVnodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx
     }
 
     auto conn = fbl::make_unique<fs::Connection>(vfs, vnode, std::move(local),
-                                                 ZX_FS_FLAG_DIRECTORY | ZX_FS_RIGHT_READABLE);
+                                                 ZX_FS_FLAG_DIRECTORY |
+                                                 ZX_FS_RIGHT_READABLE |
+                                                 ZX_FS_RIGHT_WRITABLE);
     status = vfs->ServeConnection(std::move(conn));
     if (status != ZX_OK) {
         return status;

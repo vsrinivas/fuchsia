@@ -51,6 +51,8 @@ public:
     zx_status_t ValidateFlags(uint32_t flags) override;
     zx_status_t Getattr(vnattr_t* a) final;
 
+    bool IsDirectory() const final;
+
 protected:
     PseudoFile(ReadHandler read_handler, WriteHandler write_handler);
 
@@ -111,6 +113,7 @@ private:
         zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
         zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
         zx_status_t Truncate(size_t length) final;
+        bool IsDirectory() const final;
 
     private:
         void SetInputLength(size_t length);
@@ -194,6 +197,7 @@ private:
         zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
         zx_status_t Append(const void* data, size_t length, size_t* out_end, size_t* out_actual) final;
         zx_status_t Truncate(size_t length) final;
+        bool IsDirectory() const final;
 
     private:
         fbl::RefPtr<UnbufferedPseudoFile> const file_;

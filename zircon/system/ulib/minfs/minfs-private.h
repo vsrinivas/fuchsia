@@ -390,7 +390,7 @@ public:
     // Doesn't update create / modify times of the node.
     static zx_status_t Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out);
 
-    bool IsDirectory() const { return inode_.magic == kMinfsMagicDir; }
+    bool IsDirectory() const final { return inode_.magic == kMinfsMagicDir; }
     bool IsUnlinked() const { return inode_.link_count == 0; }
     zx_status_t CanUnlink() const;
 

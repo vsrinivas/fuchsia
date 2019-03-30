@@ -78,8 +78,7 @@ class MinfsConnection : public fs::Connection {
 public:
     using MinfsConnectionBinder = fidl::Binder<MinfsConnection>;
 
-    MinfsConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel,
-                    uint32_t flags)
+    MinfsConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, zx::channel channel, uint32_t flags)
             : Connection(vfs, std::move(vnode), std::move(channel), flags) {}
 
 private:
@@ -1289,7 +1288,7 @@ zx_status_t VnodeMinfs::ValidateFlags(uint32_t flags) {
         return ZX_ERR_NOT_DIR;
     }
 
-    if ((flags & ZX_FS_RIGHT_WRITABLE) && IsDirectory()) {
+    if ((flags & ZX_FS_FLAG_NOT_DIRECTORY) && IsDirectory()) {
         return ZX_ERR_NOT_FILE;
     }
     return ZX_OK;

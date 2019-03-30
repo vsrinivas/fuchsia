@@ -10,19 +10,26 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
+#include <fbl/unique_fd.h>
+#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/directory.h>
+#include <lib/fzl/fdio.h>
 #include <unittest/unittest.h>
+#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 #include "filesystems.h"
 #include "misc.h"
 
-bool TestAccessReadable(void) {
+namespace {
+
+bool TestAccessReadable() {
     BEGIN_TEST;
 
     const char* filename = "::alpha";
@@ -58,7 +65,7 @@ bool TestAccessReadable(void) {
     END_TEST;
 }
 
-bool TestAccessWritable(void) {
+bool TestAccessWritable() {
     BEGIN_TEST;
 
     const char* filename = "::alpha";
@@ -91,7 +98,7 @@ bool TestAccessWritable(void) {
     END_TEST;
 }
 
-bool TestAccessBadflags(void) {
+bool TestAccessBadFlags() {
     BEGIN_TEST;
 
     const char* filename = "::foobar";
@@ -108,7 +115,7 @@ bool TestAccessBadflags(void) {
     END_TEST;
 }
 
-bool TestAccessDirectory(void) {
+bool TestAccessDirectory() {
     BEGIN_TEST;
 
     const char* filename = "::foobar";
@@ -127,12 +134,232 @@ bool TestAccessDirectory(void) {
     fd = open(filename, O_RDONLY, 0644);
     ASSERT_GT(fd, 0);
     ASSERT_EQ(close(fd), 0);
+
+    // Although the directory is opened with O_RDONLY,
+    // its subtree should still be writable under POSIX.
+    const char* subtree_filename = "::foobar/file";
+    fd = open(subtree_filename, O_RDWR | O_TRUNC | O_CREAT, 0644);
+    ASSERT_GT(fd, 0);
+    const char buf[] = "Hello, World!\n";
+    ASSERT_EQ(write(fd, buf, sizeof(buf)), sizeof(buf));
+    ASSERT_EQ(close(fd), 0);
+    ASSERT_EQ(unlink(subtree_filename), 0);
+
+    // Remove the directory we just created
     ASSERT_EQ(rmdir(filename), 0);
 
     END_TEST;
 }
 
-bool TestAccessOpath(void) {
+// Fixture setup for hierarchical directory permission tests
+class DirectoryPermissionTestFixture {
+    // This class creates and tears down a nested structure
+    // ::foo/
+    //       sub_dir/
+    //               sub_file
+    //       bar_file
+public:
+    DirectoryPermissionTestFixture() {
+        ok_ = Setup();
+        EXPECT_TRUE(ok_);
+    }
+
+    ~DirectoryPermissionTestFixture() {
+        EXPECT_TRUE(Teardown());
+    }
+
+    bool ok() const { return ok_; }
+
+    bool Setup() {
+        BEGIN_HELPER;
+
+        EXPECT_EQ(mkdir("::foo", 0666), 0);
+        EXPECT_EQ(mkdir("::foo/sub_dir", 0666), 0);
+        int fd = open("::foo/sub_dir/sub_file", O_RDWR | O_TRUNC | O_CREAT, 0644);
+        EXPECT_EQ(close(fd), 0);
+        fd = open("::foo/bar_file", O_RDWR | O_TRUNC | O_CREAT, 0644);
+        EXPECT_EQ(close(fd), 0);
+
+        END_HELPER;
+    }
+
+    bool Teardown() {
+        BEGIN_HELPER;
+
+        EXPECT_EQ(unlink("::foo/bar_file"), 0);
+        EXPECT_EQ(unlink("::foo/sub_dir/sub_file"), 0);
+        EXPECT_EQ(rmdir("::foo/sub_dir"), 0);
+        EXPECT_EQ(rmdir("::foo"), 0);
+
+        END_HELPER;
+    }
+
+private:
+    bool ok_;
+};
+
+bool CloneFdAsReadOnlyHelper(fbl::unique_fd in_fd, fbl::unique_fd* out_fd) {
+    BEGIN_HELPER;
+
+    // Obtain the underlying connection behind |in_fd|.
+    fzl::FdioCaller fdio_caller(std::move(in_fd));
+    zx_handle_t foo_handle = fdio_caller.borrow_channel();
+
+    // Clone |in_fd| as read-only; the entire tree under the new connection now becomes read-only
+    zx::channel foo_handle_read_only, foo_request_read_only;
+    ASSERT_EQ(zx::channel::create(0, &foo_handle_read_only, &foo_request_read_only), ZX_OK);
+    ASSERT_EQ(fuchsia_io_NodeClone(foo_handle,
+                                   fuchsia_io_OPEN_RIGHT_READABLE,
+                                   foo_request_read_only.release()),
+              ZX_OK);
+
+    // Turn the handle back to an fd to test posix functions
+    fbl::unique_fd fd = ([&]() -> fbl::unique_fd {
+        int tmp_fd = -1;
+        zx_status_t status = fdio_fd_create(foo_handle_read_only.release(), &tmp_fd);
+        EXPECT_GT(tmp_fd, 0);
+        EXPECT_EQ(status, ZX_OK);
+        return fbl::unique_fd(tmp_fd);
+    })();
+    ASSERT_TRUE(fd.is_valid());
+    *out_fd = std::move(fd);
+
+    END_HELPER;
+}
+
+bool TestFaccessat() {
+    BEGIN_TEST;
+
+    {
+        DirectoryPermissionTestFixture fixture;
+        ASSERT_TRUE(fixture.ok());
+
+        fbl::unique_fd foo_fd(open("::foo", O_RDONLY | O_DIRECTORY, 0644));
+        ASSERT_GT(foo_fd.get(), 0);
+
+        // Verify the tree is read-write
+        EXPECT_EQ(faccessat(foo_fd.get(), "bar_file", R_OK | W_OK, 0), 0);
+        EXPECT_EQ(faccessat(foo_fd.get(), "sub_dir", R_OK, 0), 0);
+        EXPECT_EQ(faccessat(foo_fd.get(), "sub_dir", W_OK, 0), 0);
+        EXPECT_EQ(faccessat(foo_fd.get(), "sub_dir", R_OK | W_OK, 0), 0);
+        EXPECT_EQ(faccessat(foo_fd.get(), "sub_dir/", R_OK, 0), 0);
+        EXPECT_EQ(faccessat(foo_fd.get(), "sub_dir/", W_OK, 0), 0);
+        EXPECT_EQ(faccessat(foo_fd.get(), "sub_dir/", R_OK | W_OK, 0), 0);
+        EXPECT_EQ(faccessat(foo_fd.get(), "sub_dir/sub_file", R_OK | W_OK, 0), 0);
+
+        fbl::unique_fd rdonly_fd;
+        ASSERT_TRUE(CloneFdAsReadOnlyHelper(std::move(foo_fd), &rdonly_fd));
+
+        // Verify the tree is read-only
+        EXPECT_EQ(faccessat(rdonly_fd.get(), "bar_file", R_OK, 0), 0);
+        EXPECT_EQ(faccessat(rdonly_fd.get(), "bar_file", W_OK, 0), -1);
+    }
+
+    END_TEST;
+}
+
+bool TestOpathDirectoryAccess() {
+    BEGIN_TEST;
+
+    {
+        DirectoryPermissionTestFixture fixture;
+        ASSERT_TRUE(fixture.ok());
+
+        fbl::unique_fd foo_fd(open("::foo", O_RDONLY | O_DIRECTORY, 0644));
+        ASSERT_TRUE(foo_fd.is_valid());
+
+        // If sub_dir is opened with O_PATH,
+        // it should not be possible to open sub_file from there as O_RDWR,
+        // because Fuchsia's O_PATH disallows this explicitly
+        fbl::unique_fd sub_dir_fd(openat(foo_fd.get(), "sub_dir", O_PATH, 0644));
+        ASSERT_TRUE(sub_dir_fd.is_valid());
+
+        fbl::unique_fd sub_file_fd(openat(sub_dir_fd.get(), "sub_file", O_RDWR, 0644));
+        ASSERT_FALSE(sub_file_fd.is_valid());
+    }
+
+    END_TEST;
+}
+
+bool TestRestrictDirectoryAccess() {
+    BEGIN_TEST;
+
+    {
+        DirectoryPermissionTestFixture fixture;
+        ASSERT_TRUE(fixture.ok());
+
+        // Open ::foo and get the underlying connection
+        fbl::unique_fd foo_fd(open("::foo", O_RDONLY | O_DIRECTORY, 0644));
+        ASSERT_GT(foo_fd.get(), 0);
+
+        fbl::unique_fd rdonly_fd;
+        ASSERT_TRUE(CloneFdAsReadOnlyHelper(std::move(foo_fd), &rdonly_fd));
+
+        // Verify the tree is read-only
+        int bar_file_fd = openat(rdonly_fd.get(), "bar_file", O_RDONLY, 0644);
+        ASSERT_GT(bar_file_fd, 0);
+        ASSERT_EQ(close(bar_file_fd), 0);
+
+        bar_file_fd = openat(rdonly_fd.get(), "bar_file", O_RDWR, 0644);
+        ASSERT_LT(bar_file_fd, 0);
+        ASSERT_EQ(errno, EACCES);
+
+        int sub_file_fd = openat(rdonly_fd.get(), "sub_dir/sub_file", O_RDONLY, 0644);
+        ASSERT_GT(sub_file_fd, 0);
+        ASSERT_EQ(close(sub_file_fd), 0);
+
+        sub_file_fd = openat(rdonly_fd.get(), "sub_dir/sub_file", O_RDWR, 0644);
+        ASSERT_LT(sub_file_fd, 0);
+        ASSERT_EQ(errno, EACCES);
+    }
+
+    END_TEST;
+}
+
+bool TestModifyingFileTime() {
+    BEGIN_TEST;
+
+    struct timespec ts[2] = {};
+    ASSERT_EQ(clock_gettime(CLOCK_REALTIME, &ts[0]), 0);
+    ASSERT_EQ(clock_gettime(CLOCK_REALTIME, &ts[1]), 0);
+
+    {
+        DirectoryPermissionTestFixture fixture;
+        ASSERT_TRUE(fixture.ok());
+
+        // Open ::foo; it will be read-write.
+        fbl::unique_fd foo_fd(open("::foo", O_RDONLY | O_DIRECTORY, 0644));
+        ASSERT_GT(foo_fd.get(), 0);
+        // futimens on foo_fd is allowed because it is writable
+        ASSERT_EQ(futimens(foo_fd.get(), ts), 0);
+        // utimensat on bar_file is allowed because the parent is writable
+        ASSERT_EQ(utimensat(foo_fd.get(), "bar_file", ts, 0), 0);
+        // utimensat on sub_dir is allowed because the parent is writable
+        ASSERT_EQ(utimensat(foo_fd.get(), "sub_dir", ts, 0), 0);
+        ASSERT_EQ(utimensat(foo_fd.get(), "sub_dir/", ts, 0), 0);
+
+        // Clone foo_fd it as read-only.
+        fbl::unique_fd rdonly_fd;
+        ASSERT_TRUE(CloneFdAsReadOnlyHelper(std::move(foo_fd), &rdonly_fd));
+
+        // futimens on the read-only clone is not allowed
+        ASSERT_LT(futimens(rdonly_fd.get(), ts), 0);
+        // utimensat on bar_file is not allowed because the parent is read-only
+        ASSERT_LT(utimensat(rdonly_fd.get(), "bar_file", ts, 0), 0);
+        // utimensat on sub_dir is not allowed because the parent is read-only
+        ASSERT_LT(utimensat(rdonly_fd.get(), "sub_dir", ts, 0), 0);
+        ASSERT_LT(utimensat(rdonly_fd.get(), "sub_dir/", ts, 0), 0);
+        // futimens on bar_file is not allowed because it requires write access
+        int bar_file_fd = openat(rdonly_fd.get(), "bar_file", O_RDONLY, 0644);
+        ASSERT_GT(bar_file_fd, 0);
+        ASSERT_LT(futimens(bar_file_fd, ts), 0);
+        ASSERT_EQ(close(bar_file_fd), 0);
+    }
+
+    END_TEST;
+}
+
+bool TestAccessOpath() {
     BEGIN_TEST;
 
     const char* dirname = "::foo";
@@ -209,16 +436,9 @@ bool TestAccessOpath(void) {
     fd = open(dirname, O_PATH | O_DIRECTORY);
     ASSERT_GE(fd, 0);
 
-    // The *at functions are allowed
-    ASSERT_EQ(renameat(fd, "bar", fd, "baz"), 0);
-    if (test_info->supports_hardlinks) {
-        // TODO(smklein): Implement linkat, use it here
-        // ASSERT_EQ(linkat(fd, "baz", fd, "bar", 0), 0);
-        ASSERT_EQ(link("::foo/baz", filename), 0);
-        ASSERT_EQ(unlinkat(fd, "baz", 0), 0);
-    } else {
-        ASSERT_EQ(renameat(fd, "baz", fd, "bar"), 0);
-    }
+    // The *at functions are not allowed on Fuchsia, for an O_PATH-opened directory.
+    ASSERT_LT(renameat(fd, "bar", fd, "baz"), 0);
+    ASSERT_EQ(errno, EBADF);
 
     // Readdir is not allowed
     DIR* dir = fdopendir(fd);
@@ -240,7 +460,7 @@ bool TestAccessOpath(void) {
 // opened without "O_PATH" do cause the underlying object to
 // be opened. Cloning the object should not invalidate the
 // internal file descriptor count.
-bool TestOpathFdcount(void) {
+bool TestOpathFdCount() {
     BEGIN_TEST;
 
     const char* dirname = "::foo";
@@ -266,11 +486,17 @@ bool TestOpathFdcount(void) {
     END_TEST;
 }
 
+}
+
 RUN_FOR_ALL_FILESYSTEMS(access_tests,
-    RUN_TEST_MEDIUM(TestAccessReadable)
-    RUN_TEST_MEDIUM(TestAccessWritable)
-    RUN_TEST_MEDIUM(TestAccessBadflags)
-    RUN_TEST_MEDIUM(TestAccessDirectory)
-    RUN_TEST_MEDIUM(TestAccessOpath)
-    RUN_TEST_MEDIUM(TestOpathFdcount)
+    RUN_TEST_SMALL(TestAccessReadable)
+    RUN_TEST_SMALL(TestAccessWritable)
+    RUN_TEST_SMALL(TestAccessBadFlags)
+    RUN_TEST_SMALL(TestAccessDirectory)
+    RUN_TEST_SMALL(TestFaccessat)
+    RUN_TEST_SMALL(TestOpathDirectoryAccess)
+    RUN_TEST_SMALL(TestRestrictDirectoryAccess)
+    RUN_TEST_SMALL(TestModifyingFileTime)
+    RUN_TEST_SMALL(TestAccessOpath)
+    RUN_TEST_SMALL(TestOpathFdCount)
 )

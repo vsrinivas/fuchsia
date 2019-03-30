@@ -42,7 +42,7 @@ DetachedPath DetachedPath::SubPath(
 
 fxl::UniqueFD DetachedPath::OpenFD(DetachedPath* detatched_path) const {
   fxl::UniqueFD fd(
-      openat(root_fd_, path_.c_str(), O_RDONLY | O_PATH | O_DIRECTORY));
+      openat(root_fd_, path_.c_str(), O_RDONLY | O_DIRECTORY));
   if (fd.is_valid()) {
     *detatched_path = ledger::DetachedPath(fd.get());
   }

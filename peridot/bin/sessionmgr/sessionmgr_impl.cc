@@ -276,7 +276,7 @@ zx::channel SessionmgrImpl::GetLedgerRepositoryDirectory() {
                    << kLedgerRepositoryDirectory;
     return zx::channel();
   }
-  fxl::UniqueFD dir(open(kLedgerRepositoryDirectory, O_PATH));
+  fxl::UniqueFD dir(open(kLedgerRepositoryDirectory, O_RDONLY));
   if (!dir.is_valid()) {
     FXL_LOG(ERROR) << "Unable to open directory at "
                    << kLedgerRepositoryDirectory << ". errno: " << errno;

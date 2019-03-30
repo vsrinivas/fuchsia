@@ -77,7 +77,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
 ::testing::AssertionResult LedgerRepositoryFactoryImplTest::CallGetRepository(
     const std::string& name,
     ledger_internal::LedgerRepositoryPtr* ledger_repository_ptr) {
-  fxl::UniqueFD fd(openat(tmpfs_.root_fd(), name.c_str(), O_PATH));
+  fxl::UniqueFD fd(openat(tmpfs_.root_fd(), name.c_str(), O_RDONLY));
   if (!fd.is_valid()) {
     return ::testing::AssertionFailure()
            << "Failed to validate directory \"" << name << "\"!";

@@ -108,7 +108,8 @@ void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_roo
     if (zx::channel::create(0, &systemChan, &systemReq) != ZX_OK) {
         return;
     }
-    if (fdio_open_at(pkgfs_root.get(), "system", FS_DIR_FLAGS, systemReq.release()) != ZX_OK) {
+    if (fdio_open_at(pkgfs_root.get(), "system", FS_READONLY_DIR_FLAGS,
+                     systemReq.release()) != ZX_OK) {
         return;
     }
     // re-export /pkgfs/packages/shell-commands/0/bin as /bin
@@ -116,7 +117,7 @@ void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_roo
     if (zx::channel::create(0, &binChan, &binReq) != ZX_OK) {
         return;
     }
-    if (fdio_open_at(pkgfs_root.get(), "packages/shell-commands/0/bin", FS_DIR_FLAGS,
+    if (fdio_open_at(pkgfs_root.get(), "packages/shell-commands/0/bin", FS_READONLY_DIR_FLAGS,
                      binReq.release()) != ZX_OK) {
         // non-fatal.
         printf("fshost: failed to install /bin (could not open shell-commands)\n");

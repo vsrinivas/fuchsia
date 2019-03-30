@@ -103,4 +103,8 @@ zx_status_t ServiceProviderBridge::ServiceProviderDir::Getattr(vnattr_t* attr) {
   return ZX_OK;
 }
 
+bool ServiceProviderBridge::ServiceProviderDir::IsDirectory() const {
+  return true;
+}
+
 }  // namespace component

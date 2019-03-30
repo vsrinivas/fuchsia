@@ -33,6 +33,7 @@ public:
     zx_status_t ValidateFlags(uint32_t flags) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags) final;
+    bool IsDirectory() const final;
 
 private:
     Connector connector_;

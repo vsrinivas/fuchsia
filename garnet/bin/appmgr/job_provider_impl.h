@@ -26,6 +26,8 @@ class JobProviderImpl : public fuchsia::sys::JobProvider, public fs::Vnode {
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::sys::JobProvider> request);
 
+  bool IsDirectory() const final;
+
  private:
   fidl::BindingSet<fuchsia::sys::JobProvider> bindings_;
   Realm* const realm_;  // Not owned.

@@ -36,7 +36,7 @@ VnodeDir::VnodeDir(Vfs* vfs) : VnodeMemfs(vfs) {
 VnodeDir::~VnodeDir() {}
 
 zx_status_t VnodeDir::ValidateFlags(uint32_t flags) {
-    if (flags & ZX_FS_RIGHT_WRITABLE) {
+    if (flags & ZX_FS_FLAG_NOT_DIRECTORY) {
         return ZX_ERR_NOT_FILE;
     }
     return ZX_OK;

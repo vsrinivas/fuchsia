@@ -28,7 +28,8 @@ namespace devmgr {
 namespace {
 
 constexpr uint32_t kFsDirFlags =
-    ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
+    ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_ADMIN |
+    ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
 
 // TODO: When the dependencies surrounding fs_clone are simplified, this global
 // should be removed. fshost and devmgr each supply their own version of
@@ -195,7 +196,8 @@ int main(int argc, char** argv) {
         fdio_ns_t* ns;
         status = fdio_ns_get_installed(&ns);
         ZX_ASSERT(status == ZX_OK);
-        status = fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE, devfs_root_remote.release());
+        status = fdio_ns_connect(ns, "/dev", ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE,
+                                 devfs_root_remote.release());
         ZX_ASSERT_MSG(status == ZX_OK, "fshost: failed to connect to /dev: %s\n",
                       zx_status_get_string(status));
     }

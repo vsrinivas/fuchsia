@@ -63,6 +63,8 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
   void ConnectToService(std::string service_name,
                         zx::channel channel) override;
 
+  bool IsDirectory() const final;
+
  private:
   bool IsServiceWhitelisted(const std::string& service_name) {
     return (!has_services_whitelist_ ||

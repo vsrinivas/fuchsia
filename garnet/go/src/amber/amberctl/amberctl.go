@@ -207,11 +207,11 @@ func addSource(a *amber.ControlInterface) error {
 	}
 
 	added, err := a.AddSrc(cfg)
-	if !added {
-		return fmt.Errorf("request arguments properly formatted, but possibly otherwise invalid")
-	}
 	if err != nil {
 		return fmt.Errorf("IPC encountered an error: %s", err)
+	}
+	if !added {
+		return fmt.Errorf("request arguments properly formatted, but possibly otherwise invalid")
 	}
 
 	if isSourceConfigEnabled(&cfg) && !*nonExclusive {

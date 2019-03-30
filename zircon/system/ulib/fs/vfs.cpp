@@ -27,6 +27,8 @@
 #include <utility>
 #endif
 
+#include "debug.h"
+
 namespace fs {
 namespace {
 
@@ -70,7 +72,7 @@ zx_status_t PrevalidateFlags(uint32_t flags) {
             return ZX_ERR_INVALID_ARGS;
         }
     } else if (!(flags & ZX_FS_RIGHTS)) {
-        if (!IsPathOnly(flags)) {
+        if (!IsVnodeRefOnly(flags)) {
             return ZX_ERR_INVALID_ARGS;
         }
     }
@@ -120,7 +122,8 @@ zx_status_t Vfs::Open(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
 zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
                             fbl::StringPiece path, fbl::StringPiece* out_path,
                             uint32_t flags, uint32_t mode) {
-    FS_TRACE_DEBUG("VfsOpen: path='%s' flags=%d\n", path.begin(), flags);
+    FS_PRETTY_TRACE_DEBUG("VfsOpen: path='", Path(path.data(), path.size()),
+                          "' flags=", ZxFlags(flags));
     zx_status_t r;
     if ((r = PrevalidateFlags(flags)) != ZX_OK) {
         return r;
@@ -182,7 +185,9 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
             return ZX_OK;
         }
 
-        flags |= (must_be_dir ? ZX_FS_FLAG_DIRECTORY : 0);
+        if (must_be_dir) {
+            flags |= ZX_FS_FLAG_DIRECTORY;
+        }
 #endif
         if (ReadonlyLocked() && IsWritable(flags)) {
             return ZX_ERR_ACCESS_DENIED;
@@ -190,9 +195,9 @@ zx_status_t Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, fbl::RefPtr<Vnode>* out,
         if ((r = vn->ValidateFlags(flags)) != ZX_OK) {
             return r;
         }
-        // VNODE_REF_ONLY requests that we don't actually open the underlying
-        // Vnode.
-        if (!IsPathOnly(flags)) {
+        // VNODE_REF_ONLY requests that we don't actually open the underlying Vnode,
+        // but use the connection as a reference to the Vnode.
+        if (!IsVnodeRefOnly(flags)) {
             if ((r = OpenVnode(flags, &vn)) != ZX_OK) {
                 return r;
             }
@@ -411,8 +416,8 @@ void Vfs::OnConnectionClosedRemotely(Connection* connection) {
     UnregisterConnection(connection);
 }
 
-zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) {
-    uint32_t flags = ZX_FS_FLAG_DIRECTORY;
+zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel, uint32_t rights) {
+    const uint32_t flags = ZX_FS_FLAG_DIRECTORY;
     zx_status_t r;
     if ((r = vn->ValidateFlags(flags)) != ZX_OK) {
         return r;
@@ -427,7 +432,7 @@ zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn, zx::channel channel) 
         return r;
     }
 
-    return vn->Serve(this, std::move(channel), ZX_FS_RIGHT_ADMIN);
+    return vn->Serve(this, std::move(channel), flags | rights);
 }
 
 #endif // ifdef __Fuchsia__
