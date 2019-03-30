@@ -1141,6 +1141,55 @@ mod tests {
     }
 
     #[test]
+    fn read_dirents_rewind() {
+        let root = pseudo_directory! {
+            "etc" => pseudo_directory! { },
+            "files" => read_only(|| Ok(b"Content".to_vec())),
+            "more" => read_only(|| Ok(b"Content".to_vec())),
+            "uname" => read_only(|| Ok(b"Fuchsia".to_vec())),
+        };
+
+        run_server_client(OPEN_RIGHT_READABLE, root, async move |root| {
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                // Entry header is 10 bytes + length of the name in bytes.
+                expected
+                    // (10 + 1) = 11
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    // 11 + (10 + 3) = 24
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                    // 24 + (10 + 5) = 39
+                    .add(DIRENT_TYPE_FILE, b"files");
+                assert_read_dirents!(root, 39, expected.into_vec());
+            }
+
+            assert_rewind!(root);
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                // Entry header is 10 bytes + length of the name in bytes.
+                expected
+                    // (10 + 1) = 11
+                    .add(DIRENT_TYPE_DIRECTORY, b".")
+                    // 11 + (10 + 3) = 24
+                    .add(DIRENT_TYPE_DIRECTORY, b"etc");
+                assert_read_dirents!(root, 24, expected.into_vec());
+            }
+
+            {
+                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+                expected
+                    .add(DIRENT_TYPE_FILE, b"files")
+                    .add(DIRENT_TYPE_FILE, b"more")
+                    .add(DIRENT_TYPE_FILE, b"uname");
+                assert_read_dirents!(root, 200, expected.into_vec());
+            }
+
+            assert_read_dirents!(root, 100, vec![]);
+        });
+    }
+
+    #[test]
     fn node_reference_ignores_read_access() {
         let root = pseudo_directory! {
             "file" => read_only(|| Ok(b"Content".to_vec())),

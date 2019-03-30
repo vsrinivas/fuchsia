@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 //! Common utilities used by directory related tests.
+//!
+//! Most assertions are macros as they need to call async functions themselves.  As a typical test
+//! will have multiple assertions, it save a bit of typing to write `assert_something!(arg)`
+//! instead of `await!(assert_something(arg))`.
 
 #![cfg(test)]
 
@@ -158,6 +162,14 @@ impl DirentsSameInodeBuilder {
     pub fn into_vec(self) -> Vec<u8> {
         self.expected
     }
+}
+
+/// Calls `rewind` on the provided `proxy`, checking that the result status is Status::OK.
+macro_rules! assert_rewind {
+    ($proxy:expr) => {
+        let status = await!($proxy.rewind()).expect("rewind failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+    };
 }
 
 /// Opens the specified path as a file and checks its content.  Also see all the `assert_*` macros
