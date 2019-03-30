@@ -6,8 +6,8 @@
 
 #include <string>
 
-#include "garnet/bin/zxdb/client/setting_store.h"
-#include "garnet/bin/zxdb/client/setting_value.h"
+#include "src/developer/debug/zxdb/client/setting_store.h"
+#include "src/developer/debug/zxdb/client/setting_value.h"
 
 namespace zxdb {
 

@@ -8,13 +8,6 @@
 #include <stdio.h>
 #include <limits>
 
-#include "garnet/bin/zxdb/client/breakpoint.h"
-#include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/job.h"
-#include "garnet/bin/zxdb/client/job_context.h"
-#include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/target.h"
-#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/console_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -27,10 +20,17 @@
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/symbol_utils.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
+#include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/job.h"
+#include "src/developer/debug/zxdb/client/job_context.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/common/err.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
-#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

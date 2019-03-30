@@ -6,8 +6,6 @@
 
 #include <inttypes.h>
 
-#include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_value.h"
@@ -17,6 +15,8 @@
 #include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/value.h"
+#include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/thread.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

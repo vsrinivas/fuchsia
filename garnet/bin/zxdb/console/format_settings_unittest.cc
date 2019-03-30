@@ -6,9 +6,9 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/bin/zxdb/client/setting_schema.h"
-#include "garnet/bin/zxdb/client/setting_store.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/client/setting_schema.h"
+#include "src/developer/debug/zxdb/client/setting_store.h"
 
 namespace zxdb {
 
@@ -45,7 +45,6 @@ TEST(FormatSetting, NotFound) {
   EXPECT_TRUE(err.has_error());
 }
 
-
 TEST(FormatSetting, Setting) {
   SettingStore store(GetSchema(), nullptr);
 
@@ -53,16 +52,17 @@ TEST(FormatSetting, Setting) {
   Err err = FormatSetting(store, "setting-string2", &out);
   EXPECT_FALSE(err.has_error()) << err.msg();
 
-  EXPECT_EQ("setting-string2\n"
-            "\n"
-            "  Setting string description,\n"
-            "  with many lines.\n"
-            "\n"
-            "Type: string\n"
-            "\n"
-            "Value(s):\n"
-            "Test string\n",
-            out.AsString());
+  EXPECT_EQ(
+      "setting-string2\n"
+      "\n"
+      "  Setting string description,\n"
+      "  with many lines.\n"
+      "\n"
+      "Type: string\n"
+      "\n"
+      "Value(s):\n"
+      "Test string\n",
+      out.AsString());
 }
 
 TEST(FormatSetting, SchemaItemList) {
@@ -83,21 +83,28 @@ TEST(FormatSetting, SchemaItemList) {
   // clang-format makes this one very hard to read.
   // Leave this text easier.
   EXPECT_EQ(
-  "setting-list2\n"
-  "\n"
-  "  Some very long description about how this setting is very important to the\n"
-  "  company and all its customers.\n"
-  "\n"
-  "Type: list\n"
-  "\n"
-  "Value(s):\n"
-  "• /some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
-  "• /another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
-  "• /yet/another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
-  "\n"
-  "See \"help set\" about using the set value for lists.\n"
-  "Set value: /some/very/long/and/annoying/path/that/actually/leads/nowhere:/another/some/very/long/and/annoying/path/that/actually/leads/nowhere:/yet/another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n",
-  out.AsString());
+      "setting-list2\n"
+      "\n"
+      "  Some very long description about how this setting is very important "
+      "to the\n"
+      "  company and all its customers.\n"
+      "\n"
+      "Type: list\n"
+      "\n"
+      "Value(s):\n"
+      "• /some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
+      "• "
+      "/another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n"
+      "• "
+      "/yet/another/some/very/long/and/annoying/path/that/actually/leads/"
+      "nowhere\n"
+      "\n"
+      "See \"help set\" about using the set value for lists.\n"
+      "Set value: "
+      "/some/very/long/and/annoying/path/that/actually/leads/nowhere:/another/"
+      "some/very/long/and/annoying/path/that/actually/leads/nowhere:/yet/"
+      "another/some/very/long/and/annoying/path/that/actually/leads/nowhere\n",
+      out.AsString());
 }
 
 }  // namespace zxdb

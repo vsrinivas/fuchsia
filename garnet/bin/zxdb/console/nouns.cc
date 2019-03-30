@@ -8,13 +8,6 @@
 #include <algorithm>
 #include <utility>
 
-#include "garnet/bin/zxdb/client/breakpoint.h"
-#include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/job.h"
-#include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/system.h"
-#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -26,9 +19,16 @@
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/job.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/system.h"
+#include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/common/err.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 

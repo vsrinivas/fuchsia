@@ -4,15 +4,6 @@
 
 #include <inttypes.h>
 
-#include "garnet/bin/zxdb/client/finish_thread_controller.h"
-#include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/register.h"
-#include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/step_over_thread_controller.h"
-#include "garnet/bin/zxdb/client/step_thread_controller.h"
-#include "garnet/bin/zxdb/client/thread.h"
-#include "garnet/bin/zxdb/client/until_thread_controller.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -32,6 +23,15 @@
 #include "garnet/bin/zxdb/symbols/variable.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/client/finish_thread_controller.h"
+#include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/register.h"
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/step_over_thread_controller.h"
+#include "src/developer/debug/zxdb/client/step_thread_controller.h"
+#include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/client/until_thread_controller.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

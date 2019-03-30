@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_ZXDB_CONSOLE_CONSOLE_CONTEXT_H_
 #define GARNET_BIN_ZXDB_CONSOLE_CONSOLE_CONTEXT_H_
 
-#include "garnet/bin/zxdb/client/breakpoint_observer.h"
-#include "garnet/bin/zxdb/client/process_observer.h"
-#include "garnet/bin/zxdb/client/session_observer.h"
-#include "garnet/bin/zxdb/client/system_observer.h"
-#include "garnet/bin/zxdb/client/target_observer.h"
-#include "garnet/bin/zxdb/client/thread_observer.h"
 #include "garnet/bin/zxdb/console/command.h"
+#include "src/developer/debug/zxdb/client/breakpoint_observer.h"
+#include "src/developer/debug/zxdb/client/process_observer.h"
+#include "src/developer/debug/zxdb/client/session_observer.h"
+#include "src/developer/debug/zxdb/client/system_observer.h"
+#include "src/developer/debug/zxdb/client/target_observer.h"
+#include "src/developer/debug/zxdb/client/thread_observer.h"
 
 namespace zxdb {
 
@@ -87,8 +87,7 @@ class ConsoleContext : public ProcessObserver,
   // Outputs to the console information on the given stopped thread with the
   // given reasons for stopping.
   void OutputThreadContext(
-      const Thread* thread,
-      debug_ipc::NotifyException::Type type,
+      const Thread* thread, debug_ipc::NotifyException::Type type,
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) const;
 
   // Fills the current effective process, thread, etc. into the given Command

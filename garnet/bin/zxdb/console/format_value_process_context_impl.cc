@@ -4,10 +4,10 @@
 
 #include "garnet/bin/zxdb/console/format_value_process_context_impl.h"
 
-#include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/target.h"
 
 namespace zxdb {
 

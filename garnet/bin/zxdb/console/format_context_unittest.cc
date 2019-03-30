@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/console/format_context.h"
-#include "garnet/bin/zxdb/client/arch_info.h"
-#include "garnet/bin/zxdb/client/memory_dump.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/client/arch_info.h"
+#include "src/developer/debug/zxdb/client/memory_dump.h"
 
 namespace zxdb {
 

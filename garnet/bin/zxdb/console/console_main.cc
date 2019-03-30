@@ -6,18 +6,18 @@
 
 #include <cstdlib>
 
-#include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/setting_schema_definition.h"
 #include "garnet/bin/zxdb/console/actions.h"
 #include "garnet/bin/zxdb/console/command_line_options.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/lib/fxl/command_line.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 

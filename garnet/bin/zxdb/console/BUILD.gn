@@ -73,9 +73,9 @@ static_library("console") {
 
   deps = []
   public_deps = [
-    "//garnet/bin/zxdb/client",
     "//garnet/bin/zxdb/expr",
     "//garnet/public/lib/fxl",
+    "//src/developer/debug/zxdb/client",
     "//zircon/public/lib/fit",
   ]
 
@@ -113,8 +113,8 @@ source_set("tests") {
 
   deps = [
     ":console",
-    "//garnet/bin/zxdb/client:test_support",
     "//garnet/bin/zxdb/symbols:test_support",
+    "//src/developer/debug/zxdb/client:test_support",
     "//src/developer/debug/zxdb/common:test_support",
     "//third_party/googletest:gtest",
   ]

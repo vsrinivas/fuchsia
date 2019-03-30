@@ -8,11 +8,6 @@
 
 #include <map>
 
-#include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/memory_dump.h"
-#include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/register.h"
-#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
@@ -23,6 +18,11 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/memory_dump.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/register.h"
+#include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {

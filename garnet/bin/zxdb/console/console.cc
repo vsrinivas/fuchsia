@@ -10,21 +10,21 @@
 
 #include <filesystem>
 
-#include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/system.h"
-#include "garnet/bin/zxdb/client/target.h"
-#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/system.h"
+#include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/client/thread.h"
+#include "src/developer/debug/zxdb/common/err.h"
+#include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
-#include "src/developer/debug/zxdb/common/err.h"
-#include "src/lib/files/file.h"
 
 namespace zxdb {
 

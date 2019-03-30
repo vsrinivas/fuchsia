@@ -4,14 +4,14 @@
 
 #include "garnet/bin/zxdb/console/verbs.h"
 
-#include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/setting_schema.h"
-#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_settings.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema.h"
+#include "src/developer/debug/zxdb/client/thread.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

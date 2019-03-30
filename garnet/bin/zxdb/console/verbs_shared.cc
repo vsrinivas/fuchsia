@@ -4,10 +4,10 @@
 
 #include "garnet/bin/zxdb/console/verbs.h"
 
-#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/console_context.h"
+#include "src/developer/debug/zxdb/client/session.h"
 
 namespace zxdb {
 

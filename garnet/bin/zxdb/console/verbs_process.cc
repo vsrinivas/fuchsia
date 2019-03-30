@@ -8,10 +8,6 @@
 #include <algorithm>
 #include <vector>
 
-#include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/remote_api.h"
-#include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -19,6 +15,10 @@
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/zx_status.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/remote_api.h"
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

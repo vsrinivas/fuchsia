@@ -9,7 +9,7 @@ static_library("symbols") {
   # the non-public headers.
   friend = [
     ":*",
-    "//garnet/bin/zxdb/client/*",
+    "//src/developer/debug/zxdb/client/*",
   ]
 
   public = [

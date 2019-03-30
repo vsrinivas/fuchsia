@@ -16,7 +16,7 @@ import("//build/testing/environments.gni")
 #       "main.cc",
 #     ]
 #     deps = [
-#       "//garnet/bin/zxdb/client",
+#       "//src/developer/debug/zxdb/client",
 #       "//src/developer/debug/zxdb/common",
 #       "//garnet/bin/zxdb/console",
 #       "//src/developer/debug/ipc:client",

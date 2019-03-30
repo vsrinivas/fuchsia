@@ -6,18 +6,18 @@
 
 #include <inttypes.h>
 
-#include "garnet/bin/zxdb/client/breakpoint.h"
-#include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/target.h"
-#include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/client/thread.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -198,11 +198,10 @@ int ConsoleContext::GetActiveFrameIdForThread(const Thread* thread) const {
   }
 
   // Should be a valid frame index in the thread (or no frames and == 0).
-  FXL_DCHECK((thread->GetStack().empty() &&
-              record->active_frame_id == 0) ||
-             (record->active_frame_id >= 0 &&
-              record->active_frame_id <
-                  static_cast<int>(thread->GetStack().size())));
+  FXL_DCHECK(
+      (thread->GetStack().empty() && record->active_frame_id == 0) ||
+      (record->active_frame_id >= 0 &&
+       record->active_frame_id < static_cast<int>(thread->GetStack().size())));
   return record->active_frame_id;
 }
 
@@ -464,9 +463,9 @@ void ConsoleContext::DidCreateProcess(Target* target, Process* process,
 
   if (autoattached_to_new_process) {
     out.Append(Syntax::kComment,
-        "\n  The process is currently in an initializing state. You can "
-        "set pending\n  breakpoints (symbols haven't been loaded yet) "
-        "and \"continue\".");
+               "\n  The process is currently in an initializing state. You can "
+               "set pending\n  breakpoints (symbols haven't been loaded yet) "
+               "and \"continue\".");
   }
   Console::get()->Output(out);
 }
@@ -485,8 +484,8 @@ void ConsoleContext::WillDestroyProcess(Target* target, Process* process,
   std::string msg;
   switch (reason) {
     case TargetObserver::DestroyReason::kExit:
-      msg = fxl::StringPrintf("Process %d exited with code %d.",
-          process_index, exit_code);
+      msg = fxl::StringPrintf("Process %d exited with code %d.", process_index,
+                              exit_code);
       break;
     case TargetObserver::DestroyReason::kDetach:
       msg = fxl::StringPrintf("Process %d detached.", process_index);
@@ -801,8 +800,7 @@ Err ConsoleContext::FillOutFrame(Command* cmd,
   //
   // Check for the presence of any frames because the thread might not be
   // in a state to have frames (i.e. it's running).
-  if (!stack.empty() &&
-      !thread_record->thread->GetStack().has_all_frames()) {
+  if (!stack.empty() && !thread_record->thread->GetStack().has_all_frames()) {
     return Err(ErrType::kInput,
                "The frames for this thread haven't been synced.\n"
                "Use \"frame\" to list the frames before selecting one to "

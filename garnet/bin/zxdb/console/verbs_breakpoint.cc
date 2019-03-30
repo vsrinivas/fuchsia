@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/client/breakpoint.h"
-#include "garnet/bin/zxdb/client/breakpoint_location.h"
-#include "garnet/bin/zxdb/client/breakpoint_settings.h"
-#include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -16,6 +11,11 @@
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/verbs.h"
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/breakpoint_location.h"
+#include "src/developer/debug/zxdb/client/breakpoint_settings.h"
+#include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -154,7 +154,7 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
     }
   } else if (cmd.args().size() == 1u) {
     Err err =
-      ParseInputLocation(cmd.frame(), cmd.args()[0], &settings.location);
+        ParseInputLocation(cmd.frame(), cmd.args()[0], &settings.location);
     if (err.has_error())
       return err;
   } else {

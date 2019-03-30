@@ -8,7 +8,7 @@
 
 #include <limits>
 
-#include "garnet/bin/zxdb/client/memory_dump.h"
+#include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

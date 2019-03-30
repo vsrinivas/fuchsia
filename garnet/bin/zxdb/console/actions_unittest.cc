@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/console/actions.h"
-#include "garnet/bin/zxdb/client/session.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 

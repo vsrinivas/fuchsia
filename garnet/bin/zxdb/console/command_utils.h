@@ -8,12 +8,12 @@
 #include <initializer_list>
 #include <string>
 
-#include "garnet/bin/zxdb/client/breakpoint_settings.h"
-#include "garnet/bin/zxdb/client/job_context.h"
-#include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/zxdb/client/breakpoint_settings.h"
+#include "src/developer/debug/zxdb/client/job_context.h"
+#include "src/developer/debug/zxdb/client/target.h"
 
 namespace zxdb {
 

@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/console/analyze_memory.h"
-#include "garnet/bin/zxdb/client/mock_frame.h"
-#include "garnet/bin/zxdb/client/mock_process.h"
-#include "garnet/bin/zxdb/client/register.h"
-#include "garnet/bin/zxdb/client/session.h"
-#include "garnet/bin/zxdb/client/stack.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/symbols/process_symbols_test_setup.h"
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/zxdb/client/mock_frame.h"
+#include "src/developer/debug/zxdb/client/mock_process.h"
+#include "src/developer/debug/zxdb/client/register.h"
+#include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/stack.h"
 
 namespace zxdb {
 

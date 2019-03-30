@@ -6,12 +6,12 @@
 
 #include <inttypes.h>
 
-#include "garnet/bin/zxdb/client/frame.h"
-#include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
+#include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {

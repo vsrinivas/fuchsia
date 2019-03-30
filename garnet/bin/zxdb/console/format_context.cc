@@ -7,20 +7,20 @@
 #include <algorithm>
 #include <vector>
 
-#include "garnet/bin/zxdb/client/arch_info.h"
-#include "garnet/bin/zxdb/client/disassembler.h"
-#include "garnet/bin/zxdb/client/memory_dump.h"
-#include "garnet/bin/zxdb/client/process.h"
-#include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/source_util.h"
 #include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/symbols/location.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/client/arch_info.h"
+#include "src/developer/debug/zxdb/client/disassembler.h"
+#include "src/developer/debug/zxdb/client/memory_dump.h"
+#include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
