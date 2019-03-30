@@ -18,7 +18,6 @@ group("tests") {
   if (have_libvulkan || use_vulkan_loader_for_tests) {
     deps += [
       "benchmark",
-      "vkcube",
       "vkext",
       "vkloop",
       "vkpriority",

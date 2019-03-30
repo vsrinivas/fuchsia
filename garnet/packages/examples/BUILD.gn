@@ -92,7 +92,6 @@ group("all") {
     "//garnet/packages/examples:rust",
     "//garnet/packages/examples:scenic",
     "//garnet/packages/examples:tcp",
-    "//garnet/packages/examples:vkcube",
     "//garnet/packages/examples:vkcube_on_fb",
     "//garnet/packages/examples:vkcube_on_scenic",
     "//garnet/packages/examples:vulkaninfo",
@@ -146,13 +145,6 @@ group("overnet") {
   public_deps = [
     "//src/connectivity/overnet/examples/echo:overnet-echo",
     "//src/connectivity/overnet/examples/interface_passing:overnet-interface-passing",
-  ]
-}
-
-group("vkcube") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/magma:vkcube",
   ]
 }
 

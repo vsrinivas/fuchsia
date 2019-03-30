@@ -23,29 +23,6 @@ package("magma-tools") {
   ]
 }
 
-package("vkcube") {
-  if (have_libvulkan || use_vulkan_loader_for_tests) {
-    deps = [
-      "//garnet/lib/magma/tests/vkcube",
-    ]
-
-    binary = "vkcube"
-
-    meta = [
-      {
-        path = rebase_path("meta/vkcube.cmx")
-        dest = "vkcube.cmx"
-      },
-    ]
-
-    if (use_vulkan_loader_for_tests) {
-      public_deps = vulkan_validation_layers.public_deps
-      loadable_modules = vulkan_validation_layers.loadable_modules
-      resources = vulkan_validation_layers.resources
-    }
-  }
-}
-
 # This config allows inclusion of headers via relative paths from src
 config("magma_src_include_config") {
   include_dirs = [ "src" ]
