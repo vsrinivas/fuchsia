@@ -46,6 +46,18 @@ type Netdev struct {
 	// ID is the network device identifier.
 	ID string
 
+	// User is a netdev user backend.
+	User *NetdevUser
+
+	// Tap is a netdev tap backend.
+	Tap *NetdevTap
+
+	// MAC is the network device MAC address.
+	MAC string
+}
+
+// NetdevUser defines a netdev backend giving user networking.
+type NetdevUser struct {
 	// Network is the network block.
 	Network string
 
@@ -60,9 +72,12 @@ type Netdev struct {
 
 	// Forwards are the host forwardings.
 	Forwards []Forward
+}
 
-	// MAC is the network device MAC address.
-	MAC string
+// NetdevTap defines a netdev backend giving a tap interface.
+type NetdevTap struct {
+	// Name is the name of the interface.
+	Name string
 }
 
 // Config gives a high-level configuration for QEMU on Fuchsia.
@@ -162,22 +177,37 @@ func CreateInvocation(cfg Config, cmdlineArgs []string) ([]string, error) {
 	}
 
 	for _, n := range cfg.Networks {
+		if n.ID == "" {
+			return nil, fmt.Errorf("a network must have an ID")
+		}
+
 		var netdev strings.Builder
-		fmt.Fprintf(&netdev, "user,id=%s", n.ID)
-		if n.Network != "" {
-			fmt.Fprintf(&netdev, ",net=%s", n.Network)
-		}
-		if n.DHCPStart != "" {
-			fmt.Fprintf(&netdev, ",dhcpstart=%s", n.DHCPStart)
-		}
-		if n.DNS != "" {
-			fmt.Fprintf(&netdev, ",dns=%s", n.DNS)
-		}
-		if n.Host != "" {
-			fmt.Fprintf(&netdev, ",host=%s", n.Host)
-		}
-		for _, f := range n.Forwards {
-			fmt.Fprintf(&netdev, ",hostfwd=tcp::%d-:%d", f.HostPort, f.GuestPort)
+		if n.Tap != nil {
+			if n.Tap.Name == "" {
+				return nil, fmt.Errorf("network %q must specify a TAP interface name", n.ID)
+			}
+			// Overwrite any default configuration scripts with none; there is not currently a
+			// good use case for these parameters.
+			fmt.Fprintf(&netdev, "tap,id=%s,ifname=%s,script=no,downscript=no", n.ID, n.Tap.Name)
+		} else if n.User != nil {
+			fmt.Fprintf(&netdev, "user,id=%s", n.ID)
+			if n.User.Network != "" {
+				fmt.Fprintf(&netdev, ",net=%s", n.User.Network)
+			}
+			if n.User.DHCPStart != "" {
+				fmt.Fprintf(&netdev, ",dhcpstart=%s", n.User.DHCPStart)
+			}
+			if n.User.DNS != "" {
+				fmt.Fprintf(&netdev, ",dns=%s", n.User.DNS)
+			}
+			if n.User.Host != "" {
+				fmt.Fprintf(&netdev, ",host=%s", n.User.Host)
+			}
+			for _, f := range n.User.Forwards {
+				fmt.Fprintf(&netdev, ",hostfwd=tcp::%d-:%d", f.HostPort, f.GuestPort)
+			}
+		} else {
+			return nil, fmt.Errorf("network %q must specify a netdev backend", n.ID)
 		}
 		invocation = append(invocation, "-netdev", netdev.String())
 
@@ -187,6 +217,10 @@ func CreateInvocation(cfg Config, cmdlineArgs []string) ([]string, error) {
 			fmt.Fprintf(&device, ",mac=%s", n.MAC)
 		}
 		invocation = append(invocation, "-device", device.String())
+	}
+	// Treat the absense of specified networks as a directive to disable networking entirely.
+	if len(cfg.Networks) == 0 {
+		invocation = append(invocation, "-net", "none")
 	}
 
 	invocation = append(invocation, "-append", strings.Join(cmdlineArgs, " "))
