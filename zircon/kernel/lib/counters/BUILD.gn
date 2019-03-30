@@ -3,8 +3,15 @@
 # found in the LICENSE file.
 
 library("counters") {
-  kernel = true
-  sources = [
-    "counters.cpp",
+  visibility = [
+    "$zx/kernel/*",
+    "$zx/system/uapp/kcounter/*",
+    "$zx/system/utest/kcounter/*",
   ]
+  kernel = true
+  static = true
+  sources = []
+  if (is_kernel) {
+    sources += [ "counters.cpp" ]
+  }
 }

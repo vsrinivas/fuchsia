@@ -11,7 +11,8 @@
 #include <kernel/percpu.h>
 
 #include <zircon/compiler.h>
-#include <zircon/kernel-counters.h>
+
+#include "counter-vmo-abi.h"
 
 // Kernel counters are a facility designed to help field diagnostics and
 // to help devs properly dimension the load/clients/size of the kernel

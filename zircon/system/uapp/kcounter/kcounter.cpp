@@ -10,12 +10,12 @@
 #include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <lib/counter-vmo-abi.h>
 #include <lib/fdio/io.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 #include <utility>
-#include <zircon/kernel-counters.h>
 #include <zircon/status.h>
 
 namespace {
