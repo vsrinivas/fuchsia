@@ -11,10 +11,8 @@ group("ui") {
     "embedder",
     "lab/direct_input",
     "lab/direct_input/child",
-    "lab/pose_buffer",
     "lab/pose_buffer_provider",
     "lab/scenic_dev_app",
-    "lab/stereo_app",
     "shadertoy/client",
     "shadertoy/service",
     "simplest_app",
@@ -100,21 +98,6 @@ package("direct_input_child") {
   ]
 }
 
-package("pose_buffer") {
-  deps = [
-    "lab/pose_buffer",
-  ]
-
-  binary = "pose_buffer"
-
-  meta = [
-    {
-      path = rebase_path("meta/ui_example.cmx")
-      dest = "pose_buffer.cmx"
-    },
-  ]
-}
-
 package("pose_buffer_provider") {
   deps = [
     "lab/pose_buffer_provider",
@@ -146,21 +129,6 @@ package("scenic_dev_app") {
     {
       path = rebase_path("meta/ui_example.cmx")
       dest = "scenic_dev_app.cmx"
-    },
-  ]
-}
-
-package("stereo_app") {
-  deps = [
-    "lab/stereo_app",
-  ]
-
-  binary = "stereo_app"
-
-  meta = [
-    {
-      path = rebase_path("meta/ui_example.cmx")
-      dest = "stereo_app.cmx"
     },
   ]
 }

@@ -131,6 +131,7 @@ executable("pixeltests") {
     "//third_party/glm",
   ]
   deps = [
+    "//garnet/public/lib/escher",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",

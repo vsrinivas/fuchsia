@@ -13,15 +13,32 @@
 #include <gtest/gtest.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fsl/vmo/vector.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
+#include "lib/escher/hmd/pose_buffer.h"
 
 #include "garnet/testing/views/background_view.h"
 #include "garnet/testing/views/coordinate_test_view.h"
 #include "garnet/testing/views/test_view.h"
+
+#if defined(countof)
+// Workaround for compiler error due to Zircon defining countof() as a macro.
+// Redefines countof() using GLM_COUNTOF(), which currently provides a more
+// sophisticated implementation anyway. (SCN-666)
+#undef countof
+#include <glm/glm.hpp>
+#define countof(X) GLM_COUNTOF(X)
+#else
+// No workaround required.
+#include <glm/glm.hpp>
+#endif
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 namespace {
 
@@ -333,6 +350,351 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
               get_color_at_coordinates(.75f, .75f));
     EXPECT_EQ(scenic::Color({0, 255, 0, 255}),
               get_color_at_coordinates(.5f, .5f));
+  }
+}
+
+// Draws a white rectangle on a black background rendered with a stereo
+// camera, which produces an image something like this:
+// _____________________________________
+// |                                   |
+// |   ___________       ___________   |
+// |   |         |       |         |   |
+// |   |         |       |         |   |
+// |   |  WHITE  | BLACK |  WHITE  |   |
+// |   |         |       |         |   |
+// |   |_________|       |_________|   |
+// |                                   |
+// |___________________________________|
+//
+
+TEST_F(ScenicPixelTest, StereoCamera) {
+  // Synchronously get display dimensions
+  float display_width;
+  float display_height;
+  scenic_->GetDisplayInfo([this, &display_width, &display_height](
+      fuchsia::ui::gfx::DisplayInfo display_info) {
+    display_width = static_cast<float>(display_info.width_in_px);
+    display_height = static_cast<float>(display_info.height_in_px);
+    QuitLoop();
+  });
+  RunLoop();
+
+  static const float viewport_width = display_width / 2;
+  static const float viewport_height = display_height;
+
+  // Initialize session
+  auto unique_session = std::make_unique<scenic::Session>(scenic_.get());
+  auto session = unique_session.get();
+  session->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+
+  scenic::DisplayCompositor compositor(session);
+  scenic::LayerStack layer_stack(session);
+  scenic::Layer layer(session);
+  scenic::Renderer renderer(session);
+  scenic::Scene scene(session);
+  scenic::StereoCamera camera(scene);
+
+  float camera_offset = 1001;
+  float eye_position[3] = {display_width / 2.f, display_height / 2.f,
+                           -camera_offset};
+  float look_at[3] = {display_width / 2.f, display_height / 2.f, 1};
+  float up[3] = {0, -1, 0};
+  camera.SetTransform(eye_position, look_at, up);
+
+  float fovy = 2 * atan((display_height / 2.f) / abs(eye_position[2]));
+  glm::mat4 projection = glm::perspective(
+      fovy, viewport_width / viewport_height, 0.1f, camera_offset);
+  projection = glm::scale(projection, glm::vec3(1.f, -1.f, 1.f));
+
+  camera.SetStereoProjection(glm::value_ptr(projection),
+                             glm::value_ptr(projection));
+
+  compositor.SetLayerStack(layer_stack);
+  layer_stack.AddLayer(layer);
+  layer.SetSize(display_width, display_height);
+  layer.SetRenderer(renderer);
+  renderer.SetCamera(camera.id());
+
+  // Set up lights.
+  scenic::AmbientLight ambient_light(session);
+  scene.AddLight(ambient_light);
+  ambient_light.SetColor(1.f, 1.f, 1.f);
+
+  // Create an EntityNode to serve as the scene root.
+  scenic::EntityNode root_node(session);
+  scene.AddChild(root_node.id());
+
+  static const float pane_width = viewport_width / 2;
+  static const float pane_height = viewport_height / 2;
+
+  glm::vec3 translation(display_width * 0.5, display_height * 0.5, -10);
+
+  scenic::Rectangle pane_shape(session, pane_width, pane_height);
+
+  scenic::Material pane_material(session);
+  pane_material.SetColor(255, 255, 255, 255);
+
+  scenic::ShapeNode pane_shape_node(session);
+  pane_shape_node.SetShape(pane_shape);
+  pane_shape_node.SetMaterial(pane_material);
+  pane_shape_node.SetTranslation(translation.x, translation.y, translation.z);
+  root_node.AddChild(pane_shape_node);
+
+  session->Present(
+      0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+  RunLoop();
+
+  fuchsia::ui::scenic::ScreenshotData screenshot = TakeScreenshot();
+  std::vector<uint8_t> data;
+  EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data))
+      << "Failed to read screenshot";
+
+  auto get_color_at_coordinates = [&display_width, &display_height, &data](
+      float x, float y) -> scenic::Color {
+    auto pixels = reinterpret_cast<scenic::Color*>(data.data());
+    uint32_t index_x = x * display_width;
+    uint32_t index_y = y * display_height;
+    uint32_t index = index_y * display_width + index_x;
+    return pixels[index];
+  };
+
+  // Color array to index 0=BLACK 1=WHITE
+  scenic::Color colors[2] = {scenic::Color({0, 0, 0, 0}),
+                             scenic::Color({255, 255, 255, 255})};
+
+  // Expected results by index into colors array. Column major.
+  // Note how this is a transposed, low-res version of the scene being drawn.
+  // clang-format off
+  int expected[8][4] = {{0, 0, 0, 0},
+                        {0, 1, 1, 0},
+                        {0, 1, 1, 0},
+                        {0, 0, 0, 0},
+                        {0, 0, 0, 0},
+                        {0, 1, 1, 0},
+                        {0, 1, 1, 0},
+                        {0, 0, 0, 0}};
+  // clang-format on
+
+  // Test 8 columns of 4 samples each
+  int num_x_samples = 8;
+  int num_y_samples = 4;
+  float x_step = 1.f / num_x_samples;
+  float y_step = 1.f / num_y_samples;
+  // i maps to x, j maps to y
+  for (int i = 0; i < num_x_samples; i++) {
+    for (int j = 0; j < num_y_samples; j++) {
+      float x = x_step / 2 + i * x_step;
+      float y = y_step / 2 + j * y_step;
+      EXPECT_EQ(colors[expected[i][j]], get_color_at_coordinates(x, y))
+          << "i = " << i << ", j = " << j << ", Sample Location: {" << x << ", "
+          << y << "}";
+    }
+  }
+}
+
+// At a high level this test puts a camera inside a cube where each face is a
+// different color, then uses a pose buffer to point the camera at different
+// faces, using the colors to verify the pose buffer is working as expected.
+TEST_F(ScenicPixelTest, PoseBuffer) {
+  // Synchronously get display dimensions
+  float display_width;
+  float display_height;
+  scenic_->GetDisplayInfo([this, &display_width, &display_height](
+      fuchsia::ui::gfx::DisplayInfo display_info) {
+    display_width = static_cast<float>(display_info.width_in_px);
+    display_height = static_cast<float>(display_info.height_in_px);
+    QuitLoop();
+  });
+  RunLoop();
+
+  // Initialize session
+  auto unique_session = std::make_unique<scenic::Session>(scenic_.get());
+  auto session = unique_session.get();
+  session->set_error_handler([this](zx_status_t status) {
+    FXL_LOG(ERROR) << "Session terminated.";
+    QuitLoop();
+  });
+
+  scenic::DisplayCompositor compositor(session);
+  scenic::LayerStack layer_stack(session);
+  scenic::Layer layer(session);
+  scenic::Renderer renderer(session);
+  scenic::Scene scene(session);
+  scenic::StereoCamera camera(scene);
+
+  static const float viewport_width = display_width / 2;
+  static const float viewport_height = display_height;
+  static const float camera_offset = 500;
+  // View matrix matches vulkan clip space +Y down, looking in direction of +Z
+  static const glm::vec3 eye(display_width / 2.f, display_height / 2.f,
+                             -camera_offset);
+  static const glm::vec3 look_at(eye + glm::vec3(0, 0, 1));
+  static const glm::vec3 up(0, -1, 0);
+
+  camera.SetTransform(glm::value_ptr(eye), glm::value_ptr(look_at),
+                      glm::value_ptr(up));
+
+  glm::mat4 projection =
+      glm::perspective(glm::radians(120.f), viewport_width / viewport_height,
+                       0.1f, camera_offset);
+  // projection = glm::scale(projection, glm::vec3(1.f, -1.f, 1.f));
+
+  glm::mat4 clip(1.0f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+                 0.5f, 0.0f, 0.0f, 0.0f, 0.5f, 1.0f);
+  projection = clip * projection;
+
+  glm::mat4 view = glm::lookAt(eye, look_at, up);
+
+  camera.SetStereoProjection(glm::value_ptr(projection),
+                             glm::value_ptr(projection));
+
+  compositor.SetLayerStack(layer_stack);
+  layer_stack.AddLayer(layer);
+  layer.SetSize(display_width, display_height);
+  layer.SetRenderer(renderer);
+  renderer.SetCamera(camera.id());
+
+  // Set up lights.
+  scenic::AmbientLight ambient_light(session);
+  scene.AddLight(ambient_light);
+  ambient_light.SetColor(1.f, 1.f, 1.f);
+
+  // Create an EntityNode to serve as the scene root.
+  scenic::EntityNode root_node(session);
+  scene.AddChild(root_node.id());
+
+  // Configure PoseBuffer
+
+  uint64_t vmo_size = PAGE_SIZE;
+  zx::vmo pose_buffer_vmo;
+  zx::vmo remote_vmo;
+  zx_status_t status;
+  status = zx::vmo::create(vmo_size, 0u, &pose_buffer_vmo);
+  FXL_DCHECK(status == ZX_OK);
+  status = pose_buffer_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &remote_vmo);
+  FXL_DCHECK(status == ZX_OK);
+
+  zx_time_t base_time = zx::clock::get_monotonic().get();
+  // Normally the time interval is the period of time between each entry in the
+  // pose buffer. In this example we only use one entry so the time interval is
+  // pretty meaningless. Set to 1 for simplicity (see ARGO-21).
+  zx_time_t time_interval = 1;
+  uint32_t num_entries = 1;
+
+  scenic::Memory mem(session, std::move(remote_vmo), vmo_size,
+                     fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
+  scenic::Buffer pose_buffer(mem, 0, vmo_size);
+
+  camera.SetPoseBuffer(pose_buffer, num_entries, base_time, time_interval);
+
+  // Setup Scene.
+
+  float pane_width = camera_offset / 2.f;
+  scenic::Rectangle pane_shape(session, pane_width, pane_width);
+
+  static const int num_panes = 6;
+
+  scenic::Color colors[num_panes] = {
+      scenic::Color({255, 0, 0, 255}),    // RED
+      scenic::Color({0, 255, 255, 255}),  // CYAN
+      scenic::Color({0, 255, 0, 255}),    // GREEN
+      scenic::Color({255, 0, 255, 255}),  // MAGENTA
+      scenic::Color({0, 0, 255, 255}),    // BLUE
+      scenic::Color({255, 255, 0, 255}),  // YELLOW
+  };
+
+  static const float pane_offset = pane_width / 2;
+
+  glm::vec3 translations[num_panes] = {
+      eye + glm::vec3(0, 0, pane_offset),   // In front of camera.
+      eye + glm::vec3(0, 0, -pane_offset),  // Behind camera.
+      eye + glm::vec3(-pane_offset, 0, 0),  // Left of Camera
+      eye + glm::vec3(pane_offset, 0, 0),   // Right of camera
+      eye + glm::vec3(0, -pane_offset, 0),  // Above Camera
+      eye + glm::vec3(0, pane_offset, 0),   // Below Camera
+  };
+
+  static const float pi = glm::pi<float>();
+  glm::quat orientations[num_panes] = {
+      glm::quat(),  // identity quaternion
+      glm::angleAxis(pi, glm::vec3(1, 0, 0)),
+      glm::angleAxis(-pi / 2, glm::vec3(0, 1, 0)),
+      glm::angleAxis(pi / 2, glm::vec3(0, 1, 0)),
+      glm::angleAxis(pi / 2, glm::vec3(1, 0, 0)),
+      glm::angleAxis(-pi / 2, glm::vec3(1, 0, 0)),
+  };
+
+  for (int i = 0; i < num_panes; i++) {
+    scenic::Color color = colors[i];
+    glm::vec3 translation = translations[i];
+    glm::quat orientation = orientations[i];
+
+    FXL_LOG(ERROR) << "translation: " << glm::to_string(translation);
+    FXL_LOG(ERROR) << "orientation: " << glm::to_string(orientation);
+
+    scenic::Material pane_material(session);
+    pane_material.SetColor(color.r, color.g, color.b, color.a);
+    scenic::ShapeNode pane_shape_node(session);
+    pane_shape_node.SetShape(pane_shape);
+    pane_shape_node.SetMaterial(pane_material);
+    pane_shape_node.SetTranslation(translation.x, translation.y, translation.z);
+    pane_shape_node.SetRotation(orientation.x, orientation.y, orientation.z,
+                                orientation.w);
+    root_node.AddChild(pane_shape_node);
+  }
+
+  static const int num_quaternions = 8;
+
+  glm::quat quaternions[num_quaternions] = {
+      glm::quat(),                                 // dead ahead
+      glm::angleAxis(pi, glm::vec3(0, 0, 1)),      // dead ahead but upside down
+      glm::angleAxis(pi, glm::vec3(1, 0, 0)),      // behind around X
+      glm::angleAxis(pi, glm::vec3(0, 1, 0)),      // behind around Y
+      glm::angleAxis(pi / 2, glm::vec3(0, 1, 0)),  // left
+      glm::angleAxis(-pi / 2, glm::vec3(0, 1, 0)),  // right
+      glm::angleAxis(pi / 2, glm::vec3(1, 0, 0)),   // up
+      glm::angleAxis(-pi / 2, glm::vec3(1, 0, 0)),  // down
+  };
+
+  int expected_color_index[num_quaternions] = {0, 0, 1, 1, 2, 3, 4, 5};
+
+  for (int i = 0; i < num_quaternions; i++) {
+    // Put pose into pose buffer.
+    // Only testing orientation so position is always the origin.
+    // Quaternion describes head orientation, so invert it to get a transform
+    // that takes you into head space.
+    escher::hmd::Pose pose(glm::inverse(quaternions[i]), glm::vec3(0, 0, 0));
+
+    // Use vmo::write here for test simplicity. In a real case the vmo should be
+    // mapped into a vmar so we dont need a syscall per write
+    zx_status_t status =
+        pose_buffer_vmo.write(&pose, 0, sizeof(escher::hmd::Pose));
+    FXL_DCHECK(status == ZX_OK);
+
+    session->Present(
+        0, [this](fuchsia::images::PresentationInfo info) { QuitLoop(); });
+    RunLoop();
+
+    fuchsia::ui::scenic::ScreenshotData screenshot = TakeScreenshot();
+    std::vector<uint8_t> data;
+    EXPECT_TRUE(fsl::VectorFromVmo(screenshot.data, &data))
+        << "Failed to read screenshot";
+
+    auto get_color_at_coordinates = [&display_width, &display_height, &data](
+        float x, float y) -> scenic::Color {
+      auto pixels = reinterpret_cast<scenic::Color*>(data.data());
+      uint32_t index_x = x * display_width;
+      uint32_t index_y = y * display_height;
+      uint32_t index = index_y * display_width + index_x;
+      return pixels[index];
+    };
+
+    EXPECT_EQ(colors[expected_color_index[i]],
+              get_color_at_coordinates(0.25, 0.5))
+        << "i = " << i;
   }
 }
 
