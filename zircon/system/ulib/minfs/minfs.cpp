@@ -309,23 +309,26 @@ zx_status_t Minfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
 #endif
 }
 
-#ifdef __Fuchsia__
-void Minfs::EnqueueAllocation(fbl::unique_ptr<Transaction> transaction) {
-    fbl::RefPtr<DataAssignableVnode> vnode = transaction->TakeTargetVnode();
-    transaction.reset();
-    if (vnode != nullptr) {
-        assigner_->EnqueueAllocation(std::move(vnode));
-    }
-}
-#endif
-
 zx_status_t Minfs::CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
 #ifdef __Fuchsia__
     ZX_DEBUG_ASSERT(writeback_ != nullptr);
     // TODO(planders): Move this check to Journal enqueue.
     ZX_DEBUG_ASSERT(transaction->GetWork()->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
+
+    // First, we take the transaction's metadata updates, and pass them back to the writeback
+    // buffer.
+    //
+    // This begins the pipeline of "actually writing these updates out to persistent storage".
     zx_status_t status = EnqueueWork(transaction->RemoveWork());
-    EnqueueAllocation(std::move(transaction));
+
+    // Next, we begin processing data updates in a background thread.
+    fbl::RefPtr<DataAssignableVnode> vnode = transaction->TakeTargetVnode();
+    transaction.reset();
+    if (vnode != nullptr) {
+        // NOTE: This is only ever true for non-directory vnodes.
+        // TODO: Make this a compile-time validation.
+        assigner_->EnqueueAllocation(std::move(vnode));
+    }
     return status;
 #else
     return EnqueueWork(transaction->RemoveWork());
@@ -372,28 +375,28 @@ zx_status_t Minfs::FVMQuery(fuchsia_hardware_block_volume_VolumeInfo* info) cons
 #endif
 
 zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
-    TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->ino_);
+    TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->GetIno());
 
 #ifdef __Fuchsia__
-    vn->allocation_state_.Reset(vn->inode_.size);
+    vn->CancelDataWriteback();
 #endif
 
-    inodes_->Free(transaction->GetWork(), vn->ino_);
-    uint32_t block_count = vn->inode_.block_count;
+    inodes_->Free(transaction->GetWork(), vn->GetIno());
+    uint32_t block_count = vn->GetInode()->block_count;
 
     // release all direct blocks
     for (unsigned n = 0; n < kMinfsDirect; n++) {
-        if (vn->inode_.dnum[n] == 0) {
+        if (vn->GetInode()->dnum[n] == 0) {
             continue;
         }
-        ValidateBno(vn->inode_.dnum[n]);
+        ValidateBno(vn->GetInode()->dnum[n]);
         block_count--;
-        block_allocator_->Free(transaction->GetWork(), vn->inode_.dnum[n]);
+        block_allocator_->Free(transaction->GetWork(), vn->GetInode()->dnum[n]);
     }
 
     // release all indirect blocks
     for (unsigned n = 0; n < kMinfsIndirect; n++) {
-        if (vn->inode_.inum[n] == 0) {
+        if (vn->GetInode()->inum[n] == 0) {
             continue;
         }
 
@@ -407,7 +410,7 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
         vn->ReadIndirectVmoBlock(n, &entry);
 #else
         uint32_t entry[kMinfsBlockSize];
-        vn->ReadIndirectBlock(vn->inode_.inum[n], entry);
+        vn->ReadIndirectBlock(vn->GetInode()->inum[n], entry);
 #endif
 
         // release the direct blocks pointed at by the entries in the indirect block
@@ -420,12 +423,12 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
         }
         // release the direct block itself
         block_count--;
-        block_allocator_->Free(transaction->GetWork(), vn->inode_.inum[n]);
+        block_allocator_->Free(transaction->GetWork(), vn->GetInode()->inum[n]);
     }
 
     // release doubly indirect blocks
     for (unsigned n = 0; n < kMinfsDoublyIndirect; n++) {
-        if (vn->inode_.dinum[n] == 0) {
+        if (vn->GetInode()->dinum[n] == 0) {
             continue;
         }
 #ifdef __Fuchsia__
@@ -438,7 +441,7 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
         vn->ReadIndirectVmoBlock(GetVmoOffsetForDoublyIndirect(n), &dentry);
 #else
         uint32_t dentry[kMinfsBlockSize];
-        vn->ReadIndirectBlock(vn->inode_.dinum[n], dentry);
+        vn->ReadIndirectBlock(vn->GetInode()->dinum[n], dentry);
 #endif
         // release indirect blocks
         for (unsigned m = 0; m < kMinfsDirectPerIndirect; m++) {
@@ -475,7 +478,7 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
 
         // release the doubly indirect block itself
         block_count--;
-        block_allocator_->Free(transaction->GetWork(), vn->inode_.dinum[n]);
+        block_allocator_->Free(transaction->GetWork(), vn->GetInode()->dinum[n]);
     }
 
     ZX_DEBUG_ASSERT(block_count == 0);
@@ -484,16 +487,15 @@ zx_status_t Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
 }
 
 void Minfs::AddUnlinked(Transaction* transaction, VnodeMinfs* vn) {
-    ZX_DEBUG_ASSERT(vn->inode_.link_count == 0);
-    ZX_DEBUG_ASSERT(vn->fd_count_ > 0);
+    ZX_DEBUG_ASSERT(vn->GetInode()->link_count == 0);
 
     Superblock* info = sb_->MutableInfo();
 
     if (info->unlinked_tail == 0) {
         // If no other vnodes are unlinked, |vn| is now both the head and the tail.
         ZX_DEBUG_ASSERT(info->unlinked_head == 0);
-        info->unlinked_head = vn->ino_;
-        info->unlinked_tail = vn->ino_;
+        info->unlinked_head = vn->GetIno();
+        info->unlinked_tail = vn->GetIno();
     } else {
         // Since all vnodes in the unlinked list are necessarily open, the last vnode
         // must currently exist in the vnode lookup.
@@ -501,9 +503,9 @@ void Minfs::AddUnlinked(Transaction* transaction, VnodeMinfs* vn) {
         ZX_DEBUG_ASSERT(last_vn != nullptr);
 
         // Add |vn| to the end of the unlinked list.
-        last_vn->inode_.next_inode = vn->ino_;
-        vn->inode_.last_inode = last_vn->ino_;
-        info->unlinked_tail = vn->ino_;
+        last_vn->SetNextInode(vn->GetIno());
+        vn->SetLastInode(last_vn->GetIno());
+        info->unlinked_tail = vn->GetIno();
 
         last_vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
         vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
@@ -513,31 +515,31 @@ void Minfs::AddUnlinked(Transaction* transaction, VnodeMinfs* vn) {
 }
 
 void Minfs::RemoveUnlinked(Transaction* transaction, VnodeMinfs* vn) {
-    if (vn->inode_.last_inode == 0) {
+    if (vn->GetInode()->last_inode == 0) {
         // If |vn| is the first unlinked inode, we just need to update the list head
         // to the next inode (which may not exist).
-        ZX_DEBUG_ASSERT_MSG(Info().unlinked_head == vn->ino_,
-            "Vnode %u has no previous link, but is not listed as unlinked list head", vn->ino_);
-        sb_->MutableInfo()->unlinked_head = vn->inode_.next_inode;
+        ZX_DEBUG_ASSERT_MSG(Info().unlinked_head == vn->GetIno(),
+            "Vnode %u has no previous link, but is not listed as unlinked list head", vn->GetIno());
+        sb_->MutableInfo()->unlinked_head = vn->GetInode()->next_inode;
     } else {
         // Set the previous vnode's next to |vn|'s next.
-        fbl::RefPtr<VnodeMinfs> last_vn = VnodeLookupInternal(vn->inode_.last_inode);
+        fbl::RefPtr<VnodeMinfs> last_vn = VnodeLookupInternal(vn->GetInode()->last_inode);
         ZX_DEBUG_ASSERT(last_vn != nullptr);
-        last_vn->inode_.next_inode = vn->inode_.next_inode;
+        last_vn->SetNextInode(vn->GetInode()->next_inode);
         last_vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
     }
 
-    if (vn->inode_.next_inode == 0) {
+    if (vn->GetInode()->next_inode == 0) {
         // If |vn| is the last unlinked inode, we just need to update the list tail
         // to the previous inode (which may not exist).
-        ZX_DEBUG_ASSERT_MSG(Info().unlinked_tail == vn->ino_,
-            "Vnode %u has no next link, but is not listed as unlinked list tail", vn->ino_);
-        sb_->MutableInfo()->unlinked_tail = vn->inode_.last_inode;
+        ZX_DEBUG_ASSERT_MSG(Info().unlinked_tail == vn->GetIno(),
+            "Vnode %u has no next link, but is not listed as unlinked list tail", vn->GetIno());
+        sb_->MutableInfo()->unlinked_tail = vn->GetInode()->last_inode;
     } else {
         // Set the next vnode's previous to |vn|'s previous.
-        fbl::RefPtr<VnodeMinfs> next_vn = VnodeLookupInternal(vn->inode_.next_inode);
+        fbl::RefPtr<VnodeMinfs> next_vn = VnodeLookupInternal(vn->GetInode()->next_inode);
         ZX_DEBUG_ASSERT(next_vn != nullptr);
-        next_vn->inode_.last_inode = vn->inode_.last_inode;
+        next_vn->SetLastInode(vn->GetInode()->last_inode);
         next_vn->InodeSync(transaction->GetWork(), kMxFsSyncDefault);
     }
 }

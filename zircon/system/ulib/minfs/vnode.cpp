@@ -27,6 +27,7 @@
 #endif
 
 #include "minfs-private.h"
+#include "vnode.h"
 
 namespace minfs {
 namespace {
@@ -169,13 +170,12 @@ zx_status_t VnodeMinfs::BlocksShrink(Transaction* transaction, blk_t start) {
 }
 
 #ifdef __Fuchsia__
-zx_status_t VnodeMinfs::BlocksSwap(Transaction* state, blk_t start, blk_t count,
+zx_status_t VnodeMinfs::BlocksSwap(Transaction* transaction, blk_t start, blk_t count,
                                    blk_t* bnos) {
     ZX_DEBUG_ASSERT(!IsDirectory());
     BlockOpArgs op_args(start, count, bnos);
-    return ApplyOperation(state, BlockOp::kSwap, &op_args);
+    return ApplyOperation(transaction, BlockOp::kSwap, &op_args);
 }
-
 
 zx_status_t VnodeMinfs::LoadIndirectBlocks(blk_t* iarray, uint32_t count, uint32_t offset,
                                            uint64_t size) {
