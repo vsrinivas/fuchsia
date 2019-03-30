@@ -67,6 +67,7 @@ library("minfs") {
       "$zx/system/ulib/zxcpp",
     ]
     sources += [
+      "data-assigner.cpp",
       "vnode-allocation.cpp",
       "writeback-async.cpp",
     ]

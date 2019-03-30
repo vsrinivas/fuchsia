@@ -23,6 +23,7 @@
 #include <lib/zx/vmo.h>
 #include <minfs/writeback-async.h>
 
+#include "data-assigner.h"
 #include "vnode-allocation.h"
 #endif
 
@@ -209,6 +210,8 @@ public:
     // Enqueues a WritebackWork to the WritebackQueue.
     zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) __WARN_UNUSED_RESULT;
 
+    void EnqueueAllocation(fbl::RefPtr<VnodeMinfs> vnode);
+
     // Complete a transaction by enqueueing its WritebackWork to the WritebackQueue.
     zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) __WARN_UNUSED_RESULT;
 
@@ -346,6 +349,7 @@ private:
     fbl::Closure on_unmount_{};
     fuchsia_minfs_Metrics metrics_ = {};
     fbl::unique_ptr<WritebackQueue> writeback_;
+    DataBlockAssigner assigner_;
     uint64_t fs_id_ = 0;
 #else
     // Store start block + length for all extents. These may differ from info block for
@@ -370,7 +374,24 @@ struct DirArgs {
     DirectoryOffset offs;
 };
 
-class VnodeMinfs final : public fs::Vnode,
+// This class exists as an interface into the VnodeMinfs for processing pending data block
+// allocations. Defining this separately allows VnodeMinfs to be substituted for a simpler version
+// in unit testing, and also prevents clients from abusing other parts of the VnodeMinfs public API.
+class DataAssignableVnode : public fs::Vnode, public fbl::Recyclable<DataAssignableVnode> {
+public:
+    DataAssignableVnode() = default;
+    virtual ~DataAssignableVnode() = default;
+
+    virtual void fbl_recycle() = 0;
+
+#ifdef __Fuchsia__
+    // Using the provided |transaction|, allocate all pending data blocks. Returns the number of
+    // reserved blocks that were freed up during this operation.
+    virtual void AllocateData(Transaction* transaction) = 0;
+#endif
+};
+
+class VnodeMinfs final : public DataAssignableVnode,
                          public fbl::SinglyLinkedListable<VnodeMinfs*>,
                          public fbl::Recyclable<VnodeMinfs> {
 public:
@@ -418,7 +439,7 @@ public:
     zx_status_t GetAllocatedRegions(fidl_txn_t* transaction) const;
 
     // Using the provided |transaction|, allocate all data blocks pending in |allocation_state_|.
-    void AllocateData(Transaction* transaction);
+    void AllocateData(Transaction* transaction) final;
 #endif
 
     Minfs* Vfs() { return fs_; }

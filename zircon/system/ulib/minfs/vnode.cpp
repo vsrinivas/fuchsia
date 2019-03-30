@@ -1248,13 +1248,14 @@ void VnodeMinfs::AllocateData(Transaction* transaction) {
         }
     }
 
-    ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
     transaction->GetDataWork()->PinVnode(fbl::WrapRefPtr(this));
     status = fs_->EnqueueWork(transaction->RemoveDataWork());
 
     InodeSync(transaction->GetWork(), kMxFsSyncMtime);
-
     transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+    transaction->Resolve();
+
+    ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
 }
 #endif // __Fuchsia__
 
@@ -1464,6 +1465,10 @@ zx_status_t VnodeMinfs::Write(const void* data, size_t len, size_t offset,
         transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
         return fs_->CommitTransaction(std::move(transaction));
     }
+
+#ifdef __Fuchsia__
+    ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
+#endif
     return ZX_OK;
 }
 
@@ -1582,10 +1587,8 @@ zx_status_t VnodeMinfs::WriteInternal(Transaction* transaction, const void* data
     ValidateVmoTail(GetSize());
 #ifdef __Fuchsia__
     if (new_data_blocks > 0) {
-        AllocateData(transaction);
+        fs_->EnqueueAllocation(fbl::WrapRefPtr(this));
     }
-
-    ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
 #endif
     return ZX_OK;
 }
@@ -1998,7 +2001,12 @@ zx_status_t VnodeMinfs::Truncate(size_t len) {
 
     InodeSync(transaction->GetWork(), kMxFsSyncMtime);
     transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-    return fs_->CommitTransaction(std::move(transaction));
+
+    status = fs_->CommitTransaction(std::move(transaction));
+#ifdef __Fuchsia__
+    ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
+#endif
+    return status;
 }
 
 zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
@@ -2074,7 +2082,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
                     // metadata updates.
                     // Now that we have updated the vmo based on the truncation, it is safe to
                     // allocate and enqueue the data block transaction.
-                    AllocateData(transaction);
+                    fs_->EnqueueAllocation(fbl::WrapRefPtr(this));
                 }
             }
 #else // __Fuchsia__
@@ -2106,11 +2114,6 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
     }
 
     SetSize(static_cast<uint32_t>(len));
-
-#ifdef __Fuchsia__
-    ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
-#endif
-
     ValidateVmoTail(GetSize());
     return ZX_OK;
 }

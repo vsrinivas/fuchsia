@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [
+    ":minfs-data-assigner-unit",
+  ]
+}
+
+test("minfs-data-assigner-unit") {
+  test_group = "fs"
+  sources = [
+    "data-assigner-test.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-minfs:c",
+    "$zx/system/ulib/block-client",
+    "$zx/system/ulib/minfs",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zxtest",
+  ]
+  include_dirs = [ "$zx/system/ulib/minfs" ]
+}

@@ -47,6 +47,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/id_allocator/test",
       "$zx/system/ulib/kvstore:kvstore-test",
       "$zx/system/ulib/minfs/allocator/test",
+      "$zx/system/ulib/minfs/test",
       "$zx/system/ulib/pretty:pretty-test",
       "$zx/system/ulib/simplehid/test",
       "$zx/system/ulib/tftp:tftp-test",

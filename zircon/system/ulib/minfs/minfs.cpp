@@ -302,12 +302,18 @@ zx_status_t Minfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
 #endif
 }
 
+#ifdef __Fuchsia__
+void Minfs::EnqueueAllocation(fbl::RefPtr<VnodeMinfs> vnode) {
+    assigner_.EnqueueAllocation(std::move(vnode));
+}
+#endif
+
 zx_status_t Minfs::CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
 #ifdef __Fuchsia__
     ZX_DEBUG_ASSERT(writeback_ != nullptr);
     // TODO(planders): Move this check to Journal enqueue.
     ZX_DEBUG_ASSERT(transaction->GetWork()->BlockCount() <= limits_.GetMaximumEntryDataBlocks());
-    transaction->Resolve();
+    assigner_.Process(transaction.get());
 #endif
     return EnqueueWork(transaction->RemoveWork());
 }
@@ -833,9 +839,8 @@ zx_status_t Minfs::Create(fbl::unique_ptr<Bcache> bc, const Superblock* info,
         return status;
     }
 
-    *out =
-        fbl::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
-                                         std::move(inodes), id));
+    *out = fbl::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb),
+                                            std::move(block_allocator), std::move(inodes), id));
 #else
     *out =
         fbl::unique_ptr<Minfs>(new Minfs(std::move(bc), std::move(sb), std::move(block_allocator),
