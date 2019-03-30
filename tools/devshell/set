@@ -156,6 +156,9 @@ function main {
       local board_name="${1##*.}"
       local product="$(find_config "products" "${product_name}")"
       local board="$(find_config "boards" "${board_name}")"
+      if [[ "${product}" == "" ]] || [[ "${board}" == "" ]]; then
+        exit 1
+      fi
       gn_args+=" import(\"//${board}\") import(\"//${product}\")"
       ;;
     *)
