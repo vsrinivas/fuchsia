@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,6 +23,16 @@ const (
 	// qemuSystemPrefix is the prefix of the QEMU binary name, which is of the
 	// form qemu-system-<QEMU arch suffix>.
 	qemuSystemPrefix = "qemu-system"
+
+	// DefaultInterfaceName is the name given to the emulated tap interface.
+	defaultInterfaceName = "qemu"
+
+	// DefaultMACAddr is the default MAC address given to a QEMU target.
+	defaultMACAddr       = "52:54:00:63:5e:7a"
+
+	// DefaultNodename is the default nodename given to an target with the default QEMU MAC address.
+	defaultNodename      = "step-atom-yard-juicy"
+
 )
 
 // qemuTargetMapping maps the Fuchsia target name to the name recognized by QEMU.
@@ -63,6 +74,7 @@ type QEMUConfig struct {
 // QEMUTarget is a QEMU target.
 type QEMUTarget struct {
 	config QEMUConfig
+	opts   Options
 
 	c chan error
 
@@ -71,24 +83,40 @@ type QEMUTarget struct {
 }
 
 // NewQEMUTarget returns a new QEMU target with a given configuration.
-func NewQEMUTarget(config QEMUConfig) *QEMUTarget {
+func NewQEMUTarget(config QEMUConfig, opts Options) *QEMUTarget {
 	return &QEMUTarget{
 		config: config,
+		opts:   opts,
 		c:      make(chan error),
 	}
 }
 
+// Nodename returns the name of the target node.
+func (t *QEMUTarget) Nodename() string {
+	return defaultNodename
+}
+
+// IPv4Addr returns a nil address, as DHCP is not currently configured.
+func (t *QEMUTarget) IPv4Addr() (net.IP, error) {
+	return  nil, nil
+}
+
+// SSHKey returns the private SSH key path associated with the authorized key to be pavet.
+func (t *QEMUTarget) SSHKey() string {
+	return t.opts.SSHKey
+}
+
 // Start starts the QEMU target.
-func (d *QEMUTarget) Start(ctx context.Context, images build.Images, args []string) error {
-	qemuTarget, ok := qemuTargetMapping[d.config.Target]
+func (t *QEMUTarget) Start(ctx context.Context, images build.Images, args []string) error {
+	qemuTarget, ok := qemuTargetMapping[t.config.Target]
 	if !ok {
-		return fmt.Errorf("invalid target %q", d.config.Target)
+		return fmt.Errorf("invalid target %q", t.config.Target)
 	}
 
-	if d.config.Path == "" {
+	if t.config.Path == "" {
 		return fmt.Errorf("directory must be set")
 	}
-	qemuSystem := filepath.Join(d.config.Path, fmt.Sprintf("%s-%s", qemuSystemPrefix, qemuTarget))
+	qemuSystem := filepath.Join(t.config.Path, fmt.Sprintf("%s-%s", qemuSystemPrefix, qemuTarget))
 	if _, err := os.Stat(qemuSystem); err != nil {
 		return fmt.Errorf("could not find qemu-system binary %q: %v", qemuSystem, err)
 	}
@@ -109,11 +137,11 @@ func (d *QEMUTarget) Start(ctx context.Context, images build.Images, args []stri
 			File: storageFull.Path,
 		})
 	}
-	if d.config.MinFS != nil {
-		if _, err := os.Stat(d.config.MinFS.Image); err != nil {
-			return fmt.Errorf("could not find minfs image %q: %v", d.config.MinFS.Image, err)
+	if t.config.MinFS != nil {
+		if _, err := os.Stat(t.config.MinFS.Image); err != nil {
+			return fmt.Errorf("could not find minfs image %q: %v", t.config.MinFS.Image, err)
 		}
-		file, err := filepath.Abs(d.config.MinFS.Image)
+		file, err := filepath.Abs(t.config.MinFS.Image)
 		if err != nil {
 			return err
 		}
@@ -126,22 +154,26 @@ func (d *QEMUTarget) Start(ctx context.Context, images build.Images, args []stri
 		drives = append(drives, qemu.Drive{
 			ID:   "testdisk",
 			File: file,
-			Addr: d.config.MinFS.PCIAddress,
+			Addr: t.config.MinFS.PCIAddress,
 		})
 	}
 
 	networks := []qemu.Netdev{
 		qemu.Netdev{
 			ID: "net0",
+			Tap: &qemu.NetdevTap{
+				Name: defaultInterfaceName,
+			},
+			MAC: defaultMACAddr,
 		},
 	}
 
 	config := qemu.Config{
 		Binary:   qemuSystem,
 		Target:   qemuTarget,
-		CPU:      d.config.CPU,
-		Memory:   d.config.Memory,
-		KVM:      d.config.KVM,
+		CPU:      t.config.CPU,
+		Memory:   t.config.Memory,
+		KVM:      t.config.KVM,
 		Kernel:   qemuKernel.Path,
 		Initrd:   zirconA.Path,
 		Drives:   drives,
@@ -154,7 +186,7 @@ func (d *QEMUTarget) Start(ctx context.Context, images build.Images, args []stri
 	args = append(args, "devmgr.suspend-timeout-debug=true")
 	// Do not print colors.
 	args = append(args, "TERM=dumb")
-	if d.config.Target == "x64" {
+	if t.config.Target == "x64" {
 		// Necessary to redirect to stdout.
 		args = append(args, "kernel.serial=legacy")
 	}
@@ -172,7 +204,7 @@ func (d *QEMUTarget) Start(ctx context.Context, images build.Images, args []stri
 		return err
 	}
 
-	d.cmd = &exec.Cmd{
+	t.cmd = &exec.Cmd{
 		Path:   invocation[0],
 		Args:   invocation,
 		Dir:    workdir,
@@ -181,7 +213,7 @@ func (d *QEMUTarget) Start(ctx context.Context, images build.Images, args []stri
 	}
 	log.Printf("QEMU invocation:\n%s", invocation)
 
-	if err := d.cmd.Start(); err != nil {
+	if err := t.cmd.Start(); err != nil {
 		os.RemoveAll(workdir)
 		return fmt.Errorf("failed to start: %v", err)
 	}
@@ -190,20 +222,25 @@ func (d *QEMUTarget) Start(ctx context.Context, images build.Images, args []stri
 	// method is invoked or not.
 	go func() {
 		defer os.RemoveAll(workdir)
-		d.c <- qemu.CheckExitCode(d.cmd.Wait())
+		t.c <- qemu.CheckExitCode(t.cmd.Wait())
 	}()
 
 	return nil
 }
 
+// Wait waits for the QEMU target to stop.
+func (t *QEMUTarget) Restart(ctx context.Context) error {
+	return ErrUnimplemented
+}
+
 // Stop stops the QEMU target.
-func (d *QEMUTarget) Stop(ctx context.Context) error {
-	return d.cmd.Process.Kill()
+func (t *QEMUTarget) Stop(ctx context.Context) error {
+	return t.cmd.Process.Kill()
 }
 
 // Wait waits for the QEMU target to stop.
-func (d *QEMUTarget) Wait(ctx context.Context) error {
-	return <-d.c
+func (t *QEMUTarget) Wait(ctx context.Context) error {
+	return <-t.c
 }
 
 func overwriteFileWithCopy(path string) error {

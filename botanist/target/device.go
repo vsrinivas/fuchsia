@@ -49,23 +49,6 @@ type NetworkProperties struct {
 	IPv4Addr string `json:"ipv4"`
 }
 
-// DeviceOptions represents lifecycle options for a target.
-type DeviceOptions struct {
-	// Netboot gives whether to netboot or pave. Netboot here is being used in the
-	// colloquial sense of only sending netsvc a kernel to mexec. If false, the target
-	// will be paved.
-	Netboot bool
-
-	// SSHKey is a private SSH key file. If provided, the corresponding authorized key
-	// will be paved.
-	SSHKey string
-
-	// Fastboot is a path to the fastboot binary. If provided, it will be assumed that
-	// the device is waiting in fastboot mode, and it will be attempted to 'continue'
-	// it into zedboot.
-	Fastboot string
-}
-
 // LoadDeviceConfigs unmarshalls a slice of device configs from a given file.
 func LoadDeviceConfigs(path string) ([]DeviceConfig, error) {
 	data, err := ioutil.ReadFile(path)
@@ -82,13 +65,13 @@ func LoadDeviceConfigs(path string) ([]DeviceConfig, error) {
 
 // DeviceTarget represents a target device.
 type DeviceTarget struct {
-	config  *DeviceConfig
-	opts    *DeviceOptions
+	config  DeviceConfig
+	opts    Options
 	signers []ssh.Signer
 }
 
 // NewDeviceTarget returns a new device target with a given configuration.
-func NewDeviceTarget(config DeviceConfig, opts DeviceOptions) (*DeviceTarget, error) {
+func NewDeviceTarget(config DeviceConfig, opts Options) (*DeviceTarget, error) {
 	// If an SSH key is specified in the options, prepend it the configs list so that it
 	// corresponds to the authorized key that would be paved.
 	if opts.SSHKey != "" {
@@ -99,8 +82,8 @@ func NewDeviceTarget(config DeviceConfig, opts DeviceOptions) (*DeviceTarget, er
 		return nil, fmt.Errorf("could not parse out signers from private keys: %v", err)
 	}
 	return &DeviceTarget{
-		config:  &config,
-		opts:    &opts,
+		config:  config,
+		opts:    opts,
 		signers: signers,
 	}, nil
 }
@@ -112,8 +95,7 @@ func (t *DeviceTarget) Nodename() string {
 
 // IPv6 returns the link-local IPv6 address of the node.
 func (t *DeviceTarget) IPv6Addr() (*net.UDPAddr, error) {
-	addr, err := netutil.GetNodeAddress(context.Background(), t.Nodename(), false)
-	return addr, err
+	return netutil.GetNodeAddress(context.Background(), t.Nodename(), false)
 }
 
 // IPv4Addr returns the IPv4 address of the node. If not provided in the config, then it
@@ -122,8 +104,7 @@ func (t *DeviceTarget) IPv4Addr() (net.IP, error) {
 	if t.config.Network.IPv4Addr != "" {
 		return net.ParseIP(t.config.Network.IPv4Addr), nil
 	}
-	addr, err := botanist.ResolveIPv4(context.Background(), t.Nodename(), netstackTimeout)
-	return addr, err
+	return botanist.ResolveIPv4(context.Background(), t.Nodename(), netstackTimeout)
 }
 
 // SSHKey returns the private SSH key path associated with the authorized key to be paved.
@@ -193,6 +174,16 @@ func (t *DeviceTarget) Restart(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+// Stop stops the device.
+func (t *DeviceTarget) Stop(ctx context.Context) error {
+	return ErrUnimplemented
+}
+
+// Wait waits for the device target to stop.
+func (t *DeviceTarget) Wait(ctx context.Context) error {
+	return ErrUnimplemented
 }
 
 func parseOutSigners(keyPaths []string) ([]ssh.Signer, error) {

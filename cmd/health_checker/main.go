@@ -109,7 +109,7 @@ func main() {
 
 	var devices []*target.DeviceTarget
 	for _, config := range configs {
-		device, err := target.NewDeviceTarget(config, target.DeviceOptions{})
+		device, err := target.NewDeviceTarget(config, target.Options{})
 		if err != nil {
 			log.Fatal(err)
 		}

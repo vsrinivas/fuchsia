@@ -198,7 +198,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	if err != nil {
 		return fmt.Errorf("failed to load target config file %q", cmd.configFile)
 	}
-	opts := target.DeviceOptions{
+	opts := target.Options{
 		Netboot:  cmd.netboot,
 		Fastboot: cmd.fastboot,
 	}

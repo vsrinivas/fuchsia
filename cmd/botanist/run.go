@@ -5,10 +5,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"time"
 
@@ -23,13 +25,39 @@ import (
 	"github.com/google/subcommands"
 )
 
-const netstackTimeout time.Duration = 1 * time.Minute
+const (
+	netstackTimeout time.Duration = 1 * time.Minute
+)
+
+// Target represents a fuchsia instance.
+type Target interface {
+	// Nodename returns the name of the target node.
+	Nodename() string
+
+	// IPv4Addr returns the IPv4 address of the target.
+	IPv4Addr() (net.IP, error)
+
+	// SSHKey returns the private key corresponding an authorized SSH key of the target.
+	SSHKey() string
+
+	// Start starts the target.
+	Start(ctx context.Context, images build.Images, args []string) error
+
+	// Restart restarts the target.
+	Restart(ctx context.Context) error
+
+	// Stop stops the target.
+	Stop(ctx context.Context) error
+
+	// Wait waits for the target to finish running.
+	Wait(ctx context.Context) error
+}
 
 // RunCommand is a Command implementation for booting a device and running a
 // given command locally.
 type RunCommand struct {
-	// DeviceFile is the path to a file of device config.
-	deviceFile string
+	// ConfigFile is the path to the target configurations.
+	configFile string
 
 	// ImageManifests is a list of paths to image manifests (e.g., images.json)
 	imageManifests command.StringsFlag
@@ -77,7 +105,7 @@ func (*RunCommand) Synopsis() string {
 }
 
 func (r *RunCommand) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&r.deviceFile, "device", "/etc/botanist/config.json", "path to file of device config")
+	f.StringVar(&r.configFile, "config", "/etc/botanist/device.json", "path to file of device config")
 	f.Var(&r.imageManifests, "images", "paths to image manifests")
 	f.BoolVar(&r.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
 	f.StringVar(&r.fastboot, "fastboot", "", "path to the fastboot tool; if set, the device will be flashed into Zedboot. A zircon-r must be supplied via -images")
@@ -89,11 +117,11 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 }
 
-func (r *RunCommand) runCmd(ctx context.Context, args []string, device *target.DeviceTarget, syslog io.Writer) error {
-	nodename := device.Nodename()
+func (r *RunCommand) runCmd(ctx context.Context, args []string, t Target, syslog io.Writer) error {
+	nodename := t.Nodename()
 	// If having paved, SSH in and stream syslogs back to a file sink.
 	if !r.netboot && syslog != nil {
-		p, err := ioutil.ReadFile(device.SSHKey())
+		p, err := ioutil.ReadFile(t.SSHKey())
 		if err != nil {
 			return err
 		}
@@ -115,7 +143,7 @@ func (r *RunCommand) runCmd(ctx context.Context, args []string, device *target.D
 		}()
 	}
 
-	ip, err := device.IPv4Addr()
+	ip, err := t.IPv4Addr()
 	if err == nil {
 		logger.Infof(ctx, "IPv4 address of %s found: %s", nodename, ip)
 	} else {
@@ -126,7 +154,7 @@ func (r *RunCommand) runCmd(ctx context.Context, args []string, device *target.D
 		os.Environ(),
 		fmt.Sprintf("FUCHSIA_NODENAME=%s", nodename),
 		fmt.Sprintf("FUCHSIA_IPV4_ADDR=%v", ip),
-		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", device.SSHKey()),
+		fmt.Sprintf("FUCHSIA_SSH_KEY=%s", t.SSHKey()),
 	)
 
 	ctx, cancel := context.WithTimeout(ctx, r.timeout)
@@ -169,21 +197,34 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		return fmt.Errorf("failed to load images: %v", err)
 	}
 
-	configs, err := target.LoadDeviceConfigs(r.deviceFile)
-	if err != nil {
-		return fmt.Errorf("failed to load target config file %q", r.deviceFile)
-	} else if len(configs) != 1 {
-		return fmt.Errorf("`botanist run` only supports configuration for a single target")
-	}
-	opts := target.DeviceOptions{
+	opts := target.Options{
 		Netboot:  r.netboot,
 		Fastboot: r.fastboot,
 		SSHKey:   r.sshKey,
 	}
-	device, err := target.NewDeviceTarget(configs[0], opts)
+
+	data, err := ioutil.ReadFile(r.configFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not open config file: %v", err)
 	}
+	var objs []json.RawMessage
+	if err := json.Unmarshal(data, &objs); err != nil {
+		return fmt.Errorf("could not unmarshal config file as a JSON list: %v", err)
+	}
+
+	var targets []Target
+	for _, obj := range objs {
+		t, err := DeriveTarget(obj, opts)
+		if err != nil {
+			return err
+		}
+		targets = append(targets, t)
+	}
+
+	if len(targets) != 1 {
+		return fmt.Errorf("`botanist run` only supports configuration for a single target")
+	}
+	t := targets[0]
 
 	var syslog io.WriteCloser
 	if r.syslogFile != "" {
@@ -195,20 +236,25 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}
 
 	defer func() {
-		logger.Debugf(ctx, "rebooting the node %q\n", device.Nodename())
-		device.Restart(ctx)
+		logger.Debugf(ctx, "stopping or rebooting the node %q\n", t.Nodename())
+		if err := t.Stop(ctx); err == target.ErrUnimplemented {
+			t.Restart(ctx)
+		}
 	}()
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	errs := make(chan error)
 	go func() {
-		if err := device.Start(ctx, imgs, r.zirconArgs); err != nil {
+		if err := t.Start(ctx, imgs, r.zirconArgs); err != nil {
+			errs <- err
+		}
+		if err := t.Wait(ctx); err != nil && err != target.ErrUnimplemented {
 			errs <- err
 		}
 	}()
 	go func() {
-		errs <- r.runCmd(ctx, args, device, syslog)
+		errs <- r.runCmd(ctx, args, t, syslog)
 	}()
 
 	select {
@@ -229,4 +275,32 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess
+}
+
+func DeriveTarget(obj []byte, opts target.Options) (Target, error) {
+	type typed struct {
+		Type string `json:"type"`
+	}
+	var x typed
+
+	if err := json.Unmarshal(obj, &x); err != nil {
+		return nil, fmt.Errorf("object in list has no \"type\" field: %v", err)
+	}
+	switch x.Type {
+	case "qemu":
+		var cfg target.QEMUConfig
+		if err := json.Unmarshal(obj, &cfg); err != nil {
+			return nil, fmt.Errorf("invalid QEMU config found: %v", err)
+		}
+		return target.NewQEMUTarget(cfg, opts), nil
+	case "device":
+		var cfg target.DeviceConfig
+		if err := json.Unmarshal(obj, &cfg); err != nil {
+			return nil, fmt.Errorf("invalid device config found: %v", err)
+		}
+		t, err := target.NewDeviceTarget(cfg, opts)
+		return t, err
+	default:
+		return nil, fmt.Errorf("unknown type found: %q", x.Type)
+	}
 }
