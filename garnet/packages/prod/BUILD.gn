@@ -328,6 +328,7 @@ group("sysmem-assistant") {
     "//garnet/bin/sysmem-assistant",
     "//garnet/bin/sysmem-assistant:config",
     "//garnet/bin/sysmem-assistant:ta-image",
+    "//garnet/packages/prod:tee_manager",
   ]
 }
 

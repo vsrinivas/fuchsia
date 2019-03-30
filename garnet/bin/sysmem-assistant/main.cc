@@ -238,11 +238,6 @@ int main(int argc, const char* const* argv) {
 
   // Only wait after checking whether there should really be protected memory
   // allocated; otherwise this process will exit early before this call.
-  if (WaitForDriver("/dev/class/tee") != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to wait for TEE driver";
-    return -1;
-  }
-
   auto session = std::make_unique<SecmemSession>();
   if (session->Init() != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to initialize secmem session";
