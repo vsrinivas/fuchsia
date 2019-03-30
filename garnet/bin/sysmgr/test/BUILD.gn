@@ -5,6 +5,14 @@
 import("//build/package.gni")
 import("//build/testing/environments.gni")
 
+group("test") {
+  testonly = true
+  deps = [
+    ":config_test",
+    ":sysmgr_tests",
+  ]
+}
+
 executable("config_test") {
   testonly = true
   output_name = "config_test"

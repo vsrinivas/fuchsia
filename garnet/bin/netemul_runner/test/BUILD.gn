@@ -5,6 +5,22 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("test") {
+  testonly = true
+  deps = [
+    ":netemul_empty_binaries",
+    ":netemul_sandbox_test",
+    "dummy_proc",
+    "dynamic_devices",
+    "easy_netstack_cfg",
+    "env_build",
+    "inheritance",
+    "netstack_socks",
+    "sandbox_service",
+    "svc_list",
+  ]
+}
+
 # netemul tests are defined only by their .cmx file.
 # currently, there's a limitation on runtests where every test
 # needs an associated binary. Some changes to how this is set up

@@ -6,6 +6,16 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("components") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":bin2",
+    ":components_binary_argv_test",
+    ":components_binary_test",
+  ]
+}
+
 executable("bin") {
   output_name = "components_test_app"
 

@@ -4,6 +4,14 @@
 
 import("//build/package.gni")
 
+group("runner") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":netemul_runner",
+  ]
+}
+
 executable("bin") {
   testonly = true
   output_name = "netemul_runner"

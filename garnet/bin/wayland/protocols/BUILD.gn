@@ -4,6 +4,13 @@
 
 import("//garnet/bin/wayland/protocol.gni")
 
+group("protocols") {
+  testonly = true
+  deps = [
+    ":wayland",
+  ]
+}
+
 wayland_protocol("wayland") {
   protocol = "//third_party/wayland/protocol/wayland.xml"
 }

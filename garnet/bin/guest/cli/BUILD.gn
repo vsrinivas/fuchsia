@@ -4,6 +4,14 @@
 
 import("//build/package.gni")
 
+group("cli") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":guest",
+  ]
+}
+
 executable("bin") {
   output_name = "guest"
 

@@ -2,10 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 #
+
 visibility = [ "//garnet/bin/auth/*" ]
 
 import("//build/package.gni")
 import("//build/testing/environments.gni")
+
+group("token_manager_integration") {
+  testonly = true
+  deps = [
+    ":e2e_dev",
+    ":token_manager_integration_tests",
+  ]
+}
 
 package("token_manager_integration_tests") {
   testonly = true

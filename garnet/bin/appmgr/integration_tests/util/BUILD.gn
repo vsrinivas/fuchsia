@@ -5,6 +5,16 @@
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 
+group("util") {
+  testonly = true
+  deps = [
+    ":data_file_reader_writer",
+    ":data_file_reader_writer_util",
+    ":persistent_storage_test_util",
+    ":persistent_storage_test_util_bin",
+  ]
+}
+
 fidl("data_file_reader_writer") {
   testonly = true
   name = "test.appmgr.integration"

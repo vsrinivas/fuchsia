@@ -4,6 +4,14 @@
 
 import("//build/package.gni")
 
+group("util") {
+  testonly = true
+  deps = [
+    ":virtual_audio_bin",
+    ":virtual_audio_util",
+  ]
+}
+
 package("virtual_audio_util") {
   deps = [
     ":virtual_audio_bin",

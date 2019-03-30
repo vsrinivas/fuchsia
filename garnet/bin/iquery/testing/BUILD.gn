@@ -5,6 +5,15 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("testing") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":iquery_golden_test",
+    ":test",
+  ]
+}
+
 executable("bin") {
   output_name = "iquery_example_component"
 

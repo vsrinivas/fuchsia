@@ -4,6 +4,13 @@
 
 import("//build/package/component.gni")
 
+group("cpp") {
+  testonly = true
+  deps = [
+    ":logger_integration_cpp_tests",
+  ]
+}
+
 executable("logger_integration_cpp_tests") {
   testonly = true
 

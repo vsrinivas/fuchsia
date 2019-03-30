@@ -2,6 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("aac") {
+  testonly = true
+  deps = [
+    ":libFraunhoferAAC",
+  ]
+}
+
 config("public_include_dirs") {
   visibility = [ ":*" ]
   include_dirs = [
@@ -14,7 +21,10 @@ config("public_include_dirs") {
 }
 
 static_library("libFraunhoferAAC") {
-  visibility = [ "//garnet/bin/media/codecs/sw/omx/dec/aac/*" ]
+  visibility = [
+    ":*",
+    "//garnet/bin/media/codecs/sw/omx/dec/aac/*",
+  ]
   public = [
     "//third_party/android/platform/external/aac/libAACdec/include/aacdecoder_lib.h",
   ]

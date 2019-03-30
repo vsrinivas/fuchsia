@@ -5,6 +5,17 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("test") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":exiter_bin",
+    ":run_return_value_test",
+    ":run_test_exiter",
+    ":run_tests",
+  ]
+}
+
 # Test `run` with a stubbed launcher implementation
 executable("bin") {
   testonly = true

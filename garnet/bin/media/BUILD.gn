@@ -4,6 +4,30 @@
 
 import("//build/package.gni")
 
+group("media") {
+  testonly = true
+  deps = [
+    ":audio",
+    ":audio_core",
+    ":codec_factory",
+    ":codec_runner_sw_ffmpeg",
+    ":codec_runner_sw_omx",
+    ":services",
+    ":tools",
+    "audio",
+    "audio_core",
+    "camera_manager",
+    "codec_factory",
+    "codecs",
+    "signal_generator",
+    "util",
+    "vim2_media_config",
+    "virtual_audio",
+    "vol",
+    "wav_recorder",
+  ]
+}
+
 group("services") {
   public_deps = [
     "//garnet/bin/media/codec_factory",

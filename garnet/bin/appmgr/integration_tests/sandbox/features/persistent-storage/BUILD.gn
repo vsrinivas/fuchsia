@@ -6,6 +6,17 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
+group("persistent-storage") {
+  testonly = true
+  deps = [
+    ":has_isolated_persistent_storage",
+    ":has_persistent_storage",
+    ":isolated_persistent_storage",
+    ":isolated_persistent_storage_bin",
+    ":no_persistent_storage",
+  ]
+}
+
 sandbox_test_package("has_persistent_storage") {
   deprecated_global_persistent_storage = "//build"
   sources = [

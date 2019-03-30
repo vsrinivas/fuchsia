@@ -2,6 +2,14 @@
 # this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("print") {
+  testonly = true
+  deps = [
+    ":insntrace_print",
+    "third_party",
+  ]
+}
+
 # Note: insntrace_print can run on the build host (e.g., linux or macos).
 # TODO(dje): At the moment it only runs on linux or macos.
 

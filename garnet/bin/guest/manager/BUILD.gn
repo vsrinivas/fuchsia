@@ -5,6 +5,17 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("manager") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":guest_manager",
+    ":guest_manager_tests",
+    ":guest_manager_unittests",
+    ":lib",
+  ]
+}
+
 source_set("lib") {
   visibility = [ ":*" ]
 

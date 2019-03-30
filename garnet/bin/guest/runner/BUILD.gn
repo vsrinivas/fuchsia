@@ -4,6 +4,15 @@
 
 import("//build/package.gni")
 
+group("runner") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":guest_runner",
+    ":lib",
+  ]
+}
+
 source_set("lib") {
   visibility = [ ":*" ]
 

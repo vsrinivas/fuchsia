@@ -6,6 +6,18 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("inspect") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":bin-vmo",
+    ":inspect_integration_tests",
+    ":inspect_vmo_integration_tests",
+    ":test",
+    ":test-vmo",
+  ]
+}
+
 executable("bin") {
   output_name = "inspect_test_app"
 

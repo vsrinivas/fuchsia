@@ -6,6 +6,15 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("test") {
+  testonly = true
+  deps = [
+    ":raw_frames",
+    ":raw_frames_test",
+    ":raw_frames_test_bin",
+  ]
+}
+
 source_set("raw_frames") {
   sources = [
     "raw_frames.cc",

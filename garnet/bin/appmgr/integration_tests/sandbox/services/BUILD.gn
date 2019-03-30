@@ -5,6 +5,15 @@
 import("//build/testing/environments.gni")
 import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
+group("services") {
+  testonly = true
+  deps = [
+    ":multiple_components",
+    ":no_services",
+    ":some_services",
+  ]
+}
+
 sandbox_test_package("some_services") {
   sources = [
     "some_services.cc",

@@ -5,6 +5,15 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("mixer") {
+  testonly = true
+  deps = [
+    ":audio_mixer_lib",
+    ":audio_mixer_tests",
+    ":test_bin",
+  ]
+}
+
 source_set("audio_mixer_lib") {
   sources = [
     "//garnet/public/lib/media/audio_dfx/audio_device_fx.h",

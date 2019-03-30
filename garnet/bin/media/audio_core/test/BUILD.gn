@@ -5,6 +5,17 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("test") {
+  testonly = true
+  deps = [
+    ":audio_device_tests",
+    ":audio_device_tests_bin",
+    ":audio_fidl_tests",
+    ":audio_fidl_tests_bin",
+    ":audio_loopback_tests_bin",
+  ]
+}
+
 executable("audio_fidl_tests_bin") {
   testonly = true
   output_name = "audio_fidl_tests"

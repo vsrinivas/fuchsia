@@ -7,6 +7,19 @@ import("//build/package.gni")
 # TODO(MF-206): all of the following should be moved to components. In the
 # future, only run-integration-tests should remain as a shell=true binary.
 
+group("test_runner") {
+  testonly = true
+  deps = [
+    ":run_integration_tests",
+    ":run_test",
+    ":test_runner_tests",
+    "report_result",
+    "run_integration_tests",
+    "run_test",
+    "test",
+  ]
+}
+
 package("run_integration_tests") {
   deps = [
     "report_result",

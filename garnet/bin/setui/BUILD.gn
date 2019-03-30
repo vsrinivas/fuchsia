@@ -6,6 +6,15 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 
+group("setui") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":setui_service",
+    ":setui_service_tests",
+  ]
+}
+
 rustc_binary("bin") {
   name = "setui_service"
   with_unit_tests = true

@@ -2,6 +2,13 @@
 # this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("simple-pt") {
+  testonly = true
+  deps = [
+    ":printer",
+  ]
+}
+
 source_set("printer") {
   sources = [
     "call-printer.cc",

@@ -5,6 +5,14 @@
 import("//build/testing/environments.gni")
 import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
+group("system-temp") {
+  testonly = true
+  deps = [
+    ":has_system_temp",
+    ":no_system_temp",
+  ]
+}
+
 sandbox_test_package("has_system_temp") {
   sources = [
     "has_system_temp.cc",

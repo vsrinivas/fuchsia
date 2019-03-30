@@ -5,6 +5,16 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
+group("tests") {
+  testonly = true
+  deps = [
+    ":cpuperf_raw_printer_test",
+    ":raw_printer_test_data",
+    ":raw_printer_test_data_deprecated",
+    ":raw_printer_test_lib",
+  ]
+}
+
 copy("raw_printer_test_data") {
   sources = [
     "raw-expected-output.txt",

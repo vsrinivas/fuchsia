@@ -4,6 +4,20 @@
 
 import("//build/package.gni")
 
+group("netemul_runner") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":netemul_sandbox",
+    ":sandbox_unittest",
+    ":src",
+    "helpers",
+    "model",
+    "runner",
+    "test",
+  ]
+}
+
 source_set("src") {
   testonly = true
   sources = [

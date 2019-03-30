@@ -5,6 +5,14 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("test") {
+  testonly = true
+  deps = [
+    ":system_time_updater_test",
+    ":system_time_updater_test_bin",
+  ]
+}
+
 executable("system_time_updater_test_bin") {
   testonly = true
   output_name = "system_time_updater_test"

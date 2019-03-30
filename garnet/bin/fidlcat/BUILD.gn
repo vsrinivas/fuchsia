@@ -7,6 +7,15 @@ import("//build/host.gni")
 import("//build/package.gni")
 import("//build/testing/environments.gni")
 
+group("fidlcat") {
+  testonly = true
+  deps = [
+    ":fidlcat_lib_tests",
+    ":fidlcat_tests",
+    "lib",
+  ]
+}
+
 # Not a thing yet.
 # if (current_toolchain == host_toolchain) {
 #   sdk_executable("fidlcat") {

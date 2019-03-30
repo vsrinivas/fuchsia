@@ -4,6 +4,14 @@
 
 import("//build/package.gni")
 
+group("harvester") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":system_monitor_harvester",
+  ]
+}
+
 executable("bin") {
   output_name = "system_monitor_harvester"
 

@@ -4,6 +4,19 @@
 
 import("//build/test/test_package.gni")
 
+group("sw") {
+  testonly = true
+  deps = [
+    ":codec_adapter_sw",
+    ":codec_runner_sw",
+    ":mpsc_queue",
+    ":mpsc_queue_test_bin",
+    ":mpsc_queue_tests",
+    "ffmpeg",
+    "omx",
+  ]
+}
+
 config("codec_runner_sw_include_config") {
   include_dirs = [ "." ]
 }

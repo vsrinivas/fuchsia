@@ -4,6 +4,15 @@
 
 import("//build/package.gni")
 
+group("testing") {
+  testonly = true
+  deps = [
+    ":dev_auth_providers",
+    "dev_auth_provider",
+    "dev_auth_provider_iotid",
+  ]
+}
+
 package("dev_auth_providers") {
   testonly = true
   deps = [

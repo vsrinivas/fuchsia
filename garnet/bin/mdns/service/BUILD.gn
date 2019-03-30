@@ -9,6 +9,20 @@ import("//build/test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("service") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":mdns",
+    ":mdns_config",
+    ":mdns_fuzzers",
+    ":mdns_tests",
+    ":packet_reader_fuzzer",
+    ":source_set",
+    ":tests",
+  ]
+}
+
 executable("bin") {
   output_name = "mdns"
 

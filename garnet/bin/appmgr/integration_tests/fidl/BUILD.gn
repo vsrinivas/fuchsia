@@ -4,6 +4,14 @@
 
 import("//build/fidl/fidl.gni")
 
+group("fidl") {
+  testonly = true
+  deps = [
+    ":test.component.mockrunner",
+    "fuchsia.testing.appmgr",
+  ]
+}
+
 fidl("test.component.mockrunner") {
   sources = [
     "runner.fidl",

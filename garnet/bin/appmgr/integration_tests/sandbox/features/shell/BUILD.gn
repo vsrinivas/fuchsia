@@ -5,6 +5,14 @@
 import("//build/testing/environments.gni")
 import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
+group("shell") {
+  testonly = true
+  deps = [
+    ":has_shell",
+    ":no_shell",
+  ]
+}
+
 sandbox_test_package("has_shell") {
   sources = [
     "has_shell.cc",

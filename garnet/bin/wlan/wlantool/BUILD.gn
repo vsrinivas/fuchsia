@@ -6,6 +6,15 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 
+group("wlantool") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":wlantool2",
+    ":wlantool2-tests",
+  ]
+}
+
 rustc_binary("bin") {
   name = "wlantool2"
   with_unit_tests = true

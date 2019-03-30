@@ -6,6 +6,15 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/testing/environments.gni")
 
+group("device_settings") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":device_settings_manager",
+    ":device_settings_manager_tests",
+  ]
+}
+
 rustc_binary("bin") {
   name = "device_settings_manager"
   with_unit_tests = true

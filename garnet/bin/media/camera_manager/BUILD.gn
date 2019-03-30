@@ -4,6 +4,15 @@
 
 import("//build/package.gni")
 
+group("camera_manager") {
+  testonly = true
+  deps = [
+    ":bin",
+    ":camera_manager_cpp",
+    ":lib",
+  ]
+}
+
 source_set("lib") {
   sources = [
     "camera_manager_impl.cc",

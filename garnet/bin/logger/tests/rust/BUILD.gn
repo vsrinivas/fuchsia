@@ -5,6 +5,13 @@
 import("//build/package/component.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("rust") {
+  testonly = true
+  deps = [
+    ":bin",
+  ]
+}
+
 rustc_binary("bin") {
   name = "logger_integration"
   edition = "2018"

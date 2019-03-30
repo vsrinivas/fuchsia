@@ -5,6 +5,16 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("wayland") {
+  testonly = true
+  deps = [
+    ":wayland_tests",
+    "bridge",
+    "core",
+    "protocols",
+  ]
+}
+
 test_package("wayland_tests") {
   deps = [
     "bridge:tests",

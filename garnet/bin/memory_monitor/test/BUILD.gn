@@ -5,6 +5,14 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("test") {
+  testonly = true
+  deps = [
+    ":memory_monitor_tests",
+    ":memory_monitor_unittests",
+  ]
+}
+
 executable("memory_monitor_unittests") {
   testonly = true
 

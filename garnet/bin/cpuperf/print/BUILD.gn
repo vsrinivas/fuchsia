@@ -4,6 +4,15 @@
 
 import("//build/host.gni")
 
+group("print") {
+  testonly = true
+  deps = [
+    ":cpuperf_print",
+    ":host_cpuperf_print",
+    "tests",
+  ]
+}
+
 # TODO(dje): At the moment it only runs on linux or macos.
 
 executable("cpuperf_print") {

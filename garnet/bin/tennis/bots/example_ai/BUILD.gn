@@ -5,6 +5,14 @@
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
+group("example_ai") {
+  testonly = true
+  deps = [
+    ":tennis_example_ai",
+    ":tennis_example_ai_bin",
+  ]
+}
+
 package("tennis_example_ai") {
   deps = [
     ":tennis_example_ai_bin",

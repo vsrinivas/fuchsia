@@ -7,6 +7,15 @@ import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
 
+group("golang") {
+  testonly = true
+  deps = [
+    ":compatibility_test_server_go_bin",
+    ":fidl_compatibility_test_server_go",
+    ":lib",
+  ]
+}
+
 go_binary("compatibility_test_server_go_bin") {
   gopackage = "compatibility_test"
 

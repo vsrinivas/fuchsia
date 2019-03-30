@@ -7,6 +7,38 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
+group("ui") {
+  testonly = true
+  deps = [
+    ":ime_service",
+    ":ime_service_tests",
+    ":root_presenter",
+    ":scenic",
+    ":scenic_tests",
+    ":set_renderer_params",
+    ":view_manager",
+    "benchmarks",
+    "gltf_export",
+    "ime",
+    "input",
+    "input_reader",
+    "present_view",
+    "presentation_mode",
+    "print_input",
+    "recovery_ui",
+    "root_presenter",
+    "scenic",
+    "screencap",
+    "set_renderer_params_HACK",
+    "set_root_view",
+    "sketchy",
+    "snapshot",
+    "tests",
+    "text",
+    "view_manager",
+  ]
+}
+
 declare_args() {
   # Include the vulkan validation layers in scenic.
   scenic_enable_vulkan_validation = is_debug

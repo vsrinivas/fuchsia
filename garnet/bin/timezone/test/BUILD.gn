@@ -5,6 +5,14 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+group("test") {
+  testonly = true
+  deps = [
+    ":timezone_tests",
+    ":timezone_unittests",
+  ]
+}
+
 executable("timezone_unittests") {
   testonly = true
 
