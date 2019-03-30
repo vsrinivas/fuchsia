@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sync"
+	"syscall"
 	"time"
 
 	"fidl/fuchsia/amber"
@@ -847,7 +848,24 @@ func (f *Source) saveLocked() error {
 		return err
 	}
 
-	return os.Rename(file.Name(), p)
+	if err := os.Rename(file.Name(), p); err != nil {
+		return err
+	}
+
+	// We do not report an error back to the caller down the sync path, as our
+	// state change did complete in the running system. The state of the filesystem
+	// is undefined, and we can not provide meaningful information ourselves.
+	d, err := os.OpenFile(f.dir, syscall.O_RDONLY|syscall.O_DIRECTORY, 0600)
+	if err != nil {
+		log.Printf("save config error: open dir for sync: %s", err)
+		return nil
+	}
+	defer d.Close()
+	if err := d.Sync(); err != nil {
+		log.Printf("save config error: sync: %s", err)
+		return nil
+	}
+	return nil
 }
 
 func needsInit(s tuf.LocalStore) bool {
