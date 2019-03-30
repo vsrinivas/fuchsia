@@ -101,7 +101,7 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer,
 
  private:
   // Determines if we care currently playing.
-  bool progressing() { return timeline_function_.invertable(); }
+  bool progressing() { return timeline_function_.invertible(); }
 
   // Schedules the retirement of the oldest queued packet if there are any
   // packets and if we're playing.

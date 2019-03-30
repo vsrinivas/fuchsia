@@ -58,8 +58,8 @@ class TimelineFunction {
   explicit TimelineFunction(TimelineRate rate)
       : subject_time_(0), reference_time_(0), rate_(rate) {}
 
-  // Determines whether this |TimelineFunction| is invertable.
-  bool invertable() const { return rate_.invertable(); }
+  // Determines whether this |TimelineFunction| is invertible.
+  bool invertible() const { return rate_.invertible(); }
 
   // Applies the function. Returns TimelineRate::kOverflow on overflow.
   int64_t Apply(int64_t reference_input) const {

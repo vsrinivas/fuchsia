@@ -905,7 +905,7 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(
                    ZX_ERR_NO_MEMORY);
       return ZX_ERR_NO_MEMORY;
     }
-    FXL_DCHECK(!clock_mono_to_ring_pos_bytes_.invertable());
+    FXL_DCHECK(!clock_mono_to_ring_pos_bytes_.invertible());
 
     ring_buffer_state_gen_.Next();
   }
@@ -938,7 +938,7 @@ zx_status_t AudioDriver::ProcessStartResponse(
                         ZX_SEC(1));
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
-    FXL_DCHECK(!clock_mono_to_ring_pos_bytes_.invertable());
+    FXL_DCHECK(!clock_mono_to_ring_pos_bytes_.invertible());
     FXL_DCHECK(ring_buffer_ != nullptr);
     clock_mono_to_ring_pos_bytes_ = func;
     ring_buffer_state_gen_.Next();

@@ -78,7 +78,7 @@ void CommandQueue::MaybeFinishWaitingForStatusCondition() {
 void CommandQueue::MaybeScheduleWaitForPositionTask() {
   if (wait_for_position_ != fuchsia::media::NO_TIMESTAMP) {
     wait_for_position_task_.Cancel();
-    if (timeline_function_.invertable()) {
+    if (timeline_function_.invertible()) {
       // Apply the timeline function in reverse to find the CLOCK_MONOTONIC
       // time at which we should resume executing commands.
       int64_t wait_for_time =

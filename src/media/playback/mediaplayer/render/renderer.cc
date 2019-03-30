@@ -125,7 +125,7 @@ void Renderer::ApplyPendingChanges(int64_t reference_time) {
     return;
   }
 
-  bool was_paused = !current_timeline_function_.invertable();
+  bool was_paused = !current_timeline_function_.invertible();
 
   current_timeline_function_ = pending_timeline_function_;
   ClearPendingTimelineFunction();
@@ -138,7 +138,7 @@ void Renderer::ApplyPendingChanges(int64_t reference_time) {
 
 void Renderer::MaybeScheduleEndOfStreamPublication() {
   if (!end_of_stream_published_ && end_of_stream_pts_ != Packet::kNoPts &&
-      current_timeline_function_.invertable()) {
+      current_timeline_function_.invertible()) {
     // Make sure we wake up to signal end-of-stream when the time comes.
     UpdateTimelineAt(
         current_timeline_function_.ApplyInverse(end_of_stream_pts_));

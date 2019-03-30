@@ -335,7 +335,7 @@ void FidlAudioRenderer::BindGainControl(
 void FidlAudioRenderer::OnTimelineTransition() {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
-  if (end_of_stream_pending() && current_timeline_function().invertable()) {
+  if (end_of_stream_pending() && current_timeline_function().invertible()) {
     // Make sure we wake up to signal end-of-stream when the time comes.
     UpdateTimelineAt(
         current_timeline_function().ApplyInverse(end_of_stream_pts()));
@@ -375,7 +375,7 @@ bool FidlAudioRenderer::NeedMorePackets() {
     return true;
   }
 
-  if (!current_timeline_function().invertable()) {
+  if (!current_timeline_function().invertible()) {
     // We don't need packets now, and the timeline isn't progressing, so we
     // won't need packets until the timeline starts progressing.
     return false;

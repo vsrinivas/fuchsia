@@ -166,7 +166,7 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   arrivals_.AddSample(now, current_timeline_function()(now), packet_pts_ns,
                       Progressing());
 
-  if (current_timeline_function().invertable()) {
+  if (current_timeline_function().invertible()) {
     // We have a non-zero rate, so we can translate the packet PTS to system
     // time.
     PresentPacket(packet,
@@ -380,7 +380,7 @@ void FidlVideoRenderer::MaybeCompleteFlush() {
 }
 
 void FidlVideoRenderer::OnTimelineTransition() {
-  if (!current_timeline_function().invertable()) {
+  if (!current_timeline_function().invertible()) {
     // The rate is zero, so we still can't present any images other than
     // the initial one.
     return;

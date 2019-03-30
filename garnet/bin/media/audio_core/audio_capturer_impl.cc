@@ -612,7 +612,7 @@ zx_status_t AudioCapturerImpl::Process() {
         // If we don't know our timeline transformation, then the next buffer we
         // produce is guaranteed to be discontinuous relative to the previous
         // one (if any).
-        if (!frames_to_clock_mono_.invertable()) {
+        if (!frames_to_clock_mono_.invertible()) {
           p.flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
         }
 
@@ -673,7 +673,7 @@ zx_status_t AudioCapturerImpl::Process() {
     // matches their frame rate, align our start time exactly with one of their
     // sample boundaries.
     int64_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
-    if (!frames_to_clock_mono_.invertable()) {
+    if (!frames_to_clock_mono_.invertible()) {
       // TODO(johngro) : It would be nice if we could alter the offsets in a
       // timeline function without needing to change the scale factor. This
       // would allow us to establish a new mapping here without needing to
@@ -683,7 +683,7 @@ zx_status_t AudioCapturerImpl::Process() {
       frames_to_clock_mono_ =
           TimelineFunction(now, frame_count_, frames_to_clock_mono_rate_);
       frames_to_clock_mono_gen_.Next();
-      FXL_DCHECK(frames_to_clock_mono_.invertable());
+      FXL_DCHECK(frames_to_clock_mono_.invertible());
     }
 
     // Limit our job size to our max job size.
@@ -748,7 +748,7 @@ zx_status_t AudioCapturerImpl::Process() {
 
           // Assign a timestamp if one has not already been assigned.
           if (p.capture_timestamp == fuchsia::media::NO_TIMESTAMP) {
-            FXL_DCHECK(frames_to_clock_mono_.invertable());
+            FXL_DCHECK(frames_to_clock_mono_.invertible());
             p.capture_timestamp = frames_to_clock_mono_.Apply(frame_count_);
           }
 
@@ -867,7 +867,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // ring buffer position transformation, then there is nothing to do (at the
     // moment). Just skip this source and move on to the next one.
     if ((rb_snap.ring_buffer == nullptr) ||
-        (!rb_snap.clock_mono_to_ring_pos_bytes.invertable())) {
+        (!rb_snap.clock_mono_to_ring_pos_bytes.invertible())) {
       continue;
     }
 
@@ -1091,7 +1091,7 @@ void AudioCapturerImpl::UpdateTransformation(
 
   FXL_DCHECK(rb_snap.ring_buffer != nullptr);
   FXL_DCHECK(rb_snap.ring_buffer->frame_size() != 0);
-  FXL_DCHECK(rb_snap.clock_mono_to_ring_pos_bytes.invertable());
+  FXL_DCHECK(rb_snap.clock_mono_to_ring_pos_bytes.invertible());
 
   TimelineRate src_bytes_to_frac_frames(1u << kPtsFractionalBits,
                                         rb_snap.ring_buffer->frame_size());

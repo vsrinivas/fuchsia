@@ -56,7 +56,7 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& local_to_output) {
 
   // If the output device's clock is not running, then it isn't possible to
   // convert from output frames to wallclock (local) time.
-  FXL_CHECK(local_to_output.invertable()) << "Output clock must be running!";
+  FXL_CHECK(local_to_output.invertible()) << "Output clock must be running!";
 
   frames_ramped_ += num_frames;
   zx_duration_t advance_ns = local_to_output.Inverse().Scale(frames_ramped_);
@@ -105,7 +105,7 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
   } else {
     // If the output device's clock is not running, then it isn't possible to
     // convert from output frames to wallclock (local) time.
-    FXL_CHECK(local_to_output.invertable()) << "Output clock must be running!";
+    FXL_CHECK(local_to_output.invertible()) << "Output clock must be running!";
 
     // Compose the ramp, in pieces
     TimelineRate output_to_local = local_to_output.Inverse();
