@@ -124,12 +124,6 @@ impl FrilService {
                 let mut lock = await!(modem.lock());
                 let status = lock.connect_transport(channel);
                 fx_log_info!("Connecting the service to the transport driver: {}", status);
-                if let Ok(client) = await!(lock.create_client()) {
-                    let resp802: QmiResult<WDA::SetDataFormatResp> =
-                        await!(client.send_msg(WDA::SetDataFormatReq::new(None, Some(0x01))))
-                            .unwrap();
-                    fx_log_info!("802 Resp: {:?}", resp802);
-                }
                 return responder.send(status);
             }
             RadioInterfaceLayerRequest::GetNetworkSettings { responder } => {

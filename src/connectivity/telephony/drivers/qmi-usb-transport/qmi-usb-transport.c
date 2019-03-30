@@ -249,7 +249,7 @@ static zx_status_t fidl_SetChannel(void* ctx, zx_handle_t transport, fidl_txn_t*
   qmi_ctx_t* qmi_ctx = ctx;
   fuchsia_hardware_telephony_transport_Qmi_SetChannel_Result res;
   zx_status_t set_channel_res = set_channel(ctx, transport);
-  if (ZX_OK == set_channel_res) {
+  if (set_channel_res == ZX_OK) {
     res.tag = 0;
     res.response._reserved = 0;
   } else {
@@ -260,9 +260,11 @@ static zx_status_t fidl_SetChannel(void* ctx, zx_handle_t transport, fidl_txn_t*
   if (status != ZX_OK) {
     goto done;
   }
-  status = set_async_wait(qmi_ctx);
-  if (status != ZX_OK) {
+  if (set_channel_res == ZX_OK) {
+    status = set_async_wait(qmi_ctx);
+    if (status != ZX_OK) {
     zx_handle_close(qmi_ctx->channel);
+    }
   }
 done:
   return status;
@@ -478,6 +480,12 @@ static int qmi_transport_thread(void* cookie) {
              zx_status_get_string(status));
     } else {
       if (packet.key == CHANNEL_MSG) {
+        if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED) {
+          zxlogf(INFO, "qmi-usb-transport: channel closed\n");
+          status = zx_handle_close(ctx->channel);
+          ctx->channel = ZX_HANDLE_INVALID;
+          continue;
+        }
         status = zx_channel_read(ctx->channel, 0, buffer, NULL, sizeof(buffer),
                                  0, &length, NULL);
         if (status != ZX_OK) {
