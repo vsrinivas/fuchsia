@@ -10,8 +10,17 @@ config("config") {
   ]
 }
 
+config("config_private") {
+  defines = [ "FUCHSIA" ]
+
+  if (is_mac) {
+    include_dirs = [ target_gen_dir ]
+  }
+}
+
 static_library("libunwindstack") {
   public_configs = [ ":config" ]
+  configs += [ ":config_private" ]
 
   sources = [
     "ArmExidx.cpp",
@@ -30,7 +39,6 @@ static_library("libunwindstack") {
     "Unwinder.cpp",
     "fuchsia/LogFuchsia.cpp",
     "fuchsia/MapsFuchsia.cpp",
-    "fuchsia/MemoryFuchsia.cpp",
 
     # These files are Android-specific and aren't compiled for Fuchsia.
     #"DexFile.cpp",
@@ -38,26 +46,49 @@ static_library("libunwindstack") {
     #"LocalUnwinder.cpp",
     #"Log.cpp",
     #"Maps.cpp",
-    #"Memory.cpp",
-    #"RegsArm64.cpp",
-    #"RegsArm.cpp",
-    #"Regs.cpp",
-    #"RegsMips64.cpp",
-    #"RegsMips.cpp",
-    #"RegsX86_64.cpp",
-    #"RegsX86.cpp",
   ]
 
-  if (target_cpu == "x64") {
-    sources += [ "fuchsia/RegsFuchsiaX86_64.cpp" ]
-  } else if (target_cpu == "arm64") {
-    sources += [ "fuchsia/RegsFuchsiaArm64.cpp" ]
-  }
+  if (current_toolchain != host_toolchain) {
+    # This project does some locking but doesn't annotate usage.
+    configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
 
-  # This project does some locking but doesn't annotate usage.
-  configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
+    sources += [ "fuchsia/MemoryFuchsia.cpp" ]
+
+    if (target_cpu == "x64") {
+      sources += [ "fuchsia/RegsFuchsiaX86_64.cpp" ]
+    } else if (target_cpu == "arm64") {
+      sources += [ "fuchsia/RegsFuchsiaArm64.cpp" ]
+    }
+  } else {
+    sources += [
+      "Memory.cpp",
+      "Regs.cpp",
+      "RegsArm.cpp",
+      "RegsArm64.cpp",
+      "RegsMips.cpp",
+      "RegsMips64.cpp",
+      "RegsX86.cpp",
+      "RegsX86_64.cpp",
+    ]
+  }
 
   deps = [
     "//garnet/public/lib/fxl",
   ]
+  if (is_mac) {
+    deps += [ ":copy_elf_h" ]
+  }
+}
+
+if (is_mac) {
+  # libunwindstack needs elf.h which doesn't come on Mac. Copy the one out of
+  # Zircon and use it in this build.
+  copy("copy_elf_h") {
+    sources = [
+      "//zircon/third_party/ulib/musl/include/elf.h",
+    ]
+    outputs = [
+      "$target_gen_dir/elf.h",
+    ]
+  }
 }

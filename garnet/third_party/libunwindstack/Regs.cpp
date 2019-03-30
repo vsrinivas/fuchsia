@@ -15,7 +15,9 @@
  */
 
 #include <stdint.h>
+#ifndef FUCHSIA
 #include <sys/ptrace.h>
+#endif
 #include <sys/uio.h>
 
 #include <vector>
@@ -38,12 +40,17 @@
 
 namespace unwindstack {
 
+#ifndef FUCHSIA
 // The largest user structure.
 constexpr size_t MAX_USER_REGS_SIZE = sizeof(mips64_user_regs) + 10;
+#endif
 
 // This function assumes that reg_data is already aligned to a 64 bit value.
 // If not this could crash with an unaligned access.
 Regs* Regs::RemoteGet(pid_t pid) {
+#ifdef FUCHSIA
+  return nullptr;
+#else
   // Make the buffer large enough to contain the largest registers type.
   std::vector<uint64_t> buffer(MAX_USER_REGS_SIZE / sizeof(uint64_t));
   struct iovec io;
@@ -69,6 +76,7 @@ Regs* Regs::RemoteGet(pid_t pid) {
     return RegsMips64::Read(buffer.data());
   }
   return nullptr;
+#endif
 }
 
 Regs* Regs::CreateFromUcontext(ArchEnum arch, void* ucontext) {

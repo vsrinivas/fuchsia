@@ -17,7 +17,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#ifndef FUCHSIA
 #include <sys/ptrace.h>
+#endif
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -32,8 +34,19 @@
 
 #include "Check.h"
 
+#ifndef TEMP_FAILURE_RETRY
+#define TEMP_FAILURE_RETRY(x) ({ \
+  int i; \
+  do { \
+    i = (x); \
+  } while (i < 0 && errno == EINTR); \
+  i })
+#endif
+
+
 namespace unwindstack {
 
+#ifndef FUCHSIA
 static size_t ProcessVmRead(pid_t pid, uint64_t remote_src, void* dst, size_t len) {
 
   // Split up the remote read across page boundaries.
@@ -89,7 +102,9 @@ static size_t ProcessVmRead(pid_t pid, uint64_t remote_src, void* dst, size_t le
   }
   return total_read;
 }
+#endif
 
+#ifndef FUCHSIA
 static bool PtraceReadLong(pid_t pid, uint64_t addr, long* value) {
   // ptrace() returns -1 and sets errno when the operation fails.
   // To disambiguate -1 from a valid result, we clear errno beforehand.
@@ -143,6 +158,7 @@ static size_t PtraceRead(pid_t pid, uint64_t addr, void* dst, size_t bytes) {
   }
   return bytes_read;
 }
+#endif
 
 bool Memory::ReadFully(uint64_t addr, void* dst, size_t size) {
   size_t rc = Read(addr, dst, size);
@@ -213,6 +229,9 @@ void MemoryFileAtOffset::Clear() {
 }
 
 bool MemoryFileAtOffset::Init(const std::string& file, uint64_t offset, uint64_t size) {
+#ifdef FUCHSIA
+  return false;
+#else
   // Clear out any previous data if it exists.
   Clear();
 
@@ -221,7 +240,7 @@ bool MemoryFileAtOffset::Init(const std::string& file, uint64_t offset, uint64_t
     return false;
   }
   struct stat buf;
-  if (fstat(fd, &buf) == -1) {
+  if (fstat(fd.get(), &buf) == -1) {
     return false;
   }
   if (offset >= static_cast<uint64_t>(buf.st_size)) {
@@ -241,7 +260,8 @@ bool MemoryFileAtOffset::Init(const std::string& file, uint64_t offset, uint64_t
     // Truncate the mapped size.
     size_ = max_size;
   }
-  void* map = mmap(nullptr, size_, PROT_READ, MAP_PRIVATE, fd, aligned_offset);
+  void* map = mmap(nullptr, size_, PROT_READ, MAP_PRIVATE, fd.get(),
+                   aligned_offset);
   if (map == MAP_FAILED) {
     return false;
   }
@@ -250,6 +270,7 @@ bool MemoryFileAtOffset::Init(const std::string& file, uint64_t offset, uint64_t
   size_ -= offset_;
 
   return true;
+#endif
 }
 
 size_t MemoryFileAtOffset::Read(uint64_t addr, void* dst, size_t size) {
@@ -278,6 +299,9 @@ size_t MemoryRemote::Read(uint64_t addr, void* dst, size_t size) {
   if (read_func != nullptr) {
     return read_func(pid_, addr, dst, size);
   } else {
+#ifdef FUCHSIA
+    return 0;
+#else
     // Prefer process_vm_read, try it first. If it doesn't work, use the
     // ptrace function. If at least one of them returns at least some data,
     // set that as the permanent function to use.
@@ -293,11 +317,16 @@ size_t MemoryRemote::Read(uint64_t addr, void* dst, size_t size) {
       read_redirect_func_ = reinterpret_cast<uintptr_t>(PtraceRead);
     }
     return bytes;
+#endif
   }
 }
 
 size_t MemoryLocal::Read(uint64_t addr, void* dst, size_t size) {
+#ifdef FUCHSIA
+  return 0;
+#else
   return ProcessVmRead(getpid(), addr, dst, size);
+#endif
 }
 
 MemoryRange::MemoryRange(const std::shared_ptr<Memory>& memory, uint64_t begin, uint64_t length,

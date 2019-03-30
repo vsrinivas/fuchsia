@@ -101,13 +101,7 @@ class MemoryFileAtOffset : public Memory {
 
   size_t Size() { return size_; }
 
-#ifdef __Fuchsia__
-  // TODO(brettw) upstream this "override" addition. It being missing is caught
-  // by our clang plugin.
   void Clear() override;
-#else
-  void Clear();
-#endif
 
  protected:
   size_t size_ = 0;

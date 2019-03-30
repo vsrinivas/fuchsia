@@ -384,6 +384,17 @@ void Session::Connect(const std::string& host, uint16_t port,
                                 std::move(callback));
 }
 
+Err Session::SetArch(debug_ipc::Arch arch) {
+  arch_info_ = std::make_unique<ArchInfo>();
+
+  Err arch_err = arch_info_->Init(arch);
+  if (!arch_err.has_error()) {
+    arch_ = arch;
+  }
+
+  return arch_err;
+}
+
 void Session::OpenMinidump(const std::string& path,
                            std::function<void(const Err&)> callback) {
   if (!ConnectCanProceed(callback)) {
@@ -394,8 +405,22 @@ void Session::OpenMinidump(const std::string& path,
   remote_api_ = std::make_unique<MinidumpRemoteAPI>(this);
   Err err = reinterpret_cast<MinidumpRemoteAPI*>(remote_api_.get())->Open(path);
 
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [callback, err]() { callback(err); });
+  if (err.has_error()) {
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [callback, err]() { callback(err); });
+
+    return;
+  }
+
+  remote_api_->Hello(debug_ipc::HelloRequest(),
+                     [callback, weak_this = GetWeakPtr()](
+                         const Err& err, debug_ipc::HelloReply reply) {
+                       if (weak_this && !err.has_error()) {
+                         weak_this->SetArch(reply.arch);
+                       }
+
+                       callback(err);
+                     });
 }
 
 void Session::Disconnect(std::function<void(const Err&)> callback) {
@@ -714,8 +739,7 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
   }
 
   // Initialize arch-specific stuff.
-  arch_info_ = std::make_unique<ArchInfo>();
-  Err arch_err = arch_info_->Init(reply.arch);
+  Err arch_err = SetArch(reply.arch);
   if (arch_err.has_error()) {
     if (callback)
       callback(arch_err);
@@ -725,7 +749,6 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
   // Success, connect up the stream buffers.
   connection_storage_ = std::move(buffer);
 
-  arch_ = reply.arch;
   stream_ = &connection_storage_->stream();
   connection_storage_->set_data_available_callback(
       [this]() { OnStreamReadable(); });

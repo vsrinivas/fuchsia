@@ -114,6 +114,7 @@ static_library("client") {
     "//garnet/bin/zxdb/expr",
     "//garnet/bin/zxdb/symbols",
     "//garnet/public/lib/fxl",
+    "//garnet/third_party/libunwindstack",
     "//garnet/third_party/llvm:LLVMAArch64Desc",
     "//garnet/third_party/llvm:LLVMAArch64Disassembler",
     "//garnet/third_party/llvm:LLVMX86Desc",

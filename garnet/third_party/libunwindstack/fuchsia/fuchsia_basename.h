@@ -5,6 +5,7 @@
 #ifndef GARNET_THIRD_PARTY_LIBUNWINDSTACK_FUCHSIA_FUCHSIA_BASENAME_H_
 #define GARNET_THIRD_PARTY_LIBUNWINDSTACK_FUCHSIA_FUCHSIA_BASENAME_H_
 
+#ifndef __USE_GNU
 #include "src/lib/fxl/logging.h"
 
 // Empty implementation of the POSIX libgen basename call. The Fuchsia
@@ -16,5 +17,6 @@ inline const char* basename(const char* path) {
   FXL_CHECK(false);
   return path;
 }
+#endif
 
 #endif  // GARNET_THIRD_PARTY_LIBUNWINDSTACK_FUCHSIA_FUCHSIA_BASENAME_H_

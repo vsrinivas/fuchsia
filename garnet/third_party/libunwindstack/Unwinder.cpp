@@ -36,7 +36,7 @@
 #include <unwindstack/DexFiles.h>
 #endif
 
-#ifdef __Fuchsia__
+#ifdef FUCHSIA
 #include "garnet/third_party/libunwindstack/fuchsia/fuchsia_basename.h"
 #endif
 

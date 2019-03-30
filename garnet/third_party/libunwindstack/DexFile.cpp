@@ -36,6 +36,15 @@
 
 #include "DexFile.h"
 
+#ifndef TEMP_FAILURE_RETRY
+#define TEMP_FAILURE_RETRY(x) ({ \
+  int i; \
+  do { \
+    i = (x); \
+  } while (i < 0 && errno == EINTR); \
+  i })
+#endif
+
 namespace unwindstack {
 
 DexFile* DexFile::Create(uint64_t dex_file_offset_in_memory, Memory* memory, MapInfo* info) {

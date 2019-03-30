@@ -12,13 +12,10 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/client/session.h"
-
-namespace crashpad {
-
-class ProcessSnapshotMinidump;
-class MemorySnapshot;
-
-}  // namespace crashpad
+#include "garnet/third_party/libunwindstack/include/unwindstack/Regs.h"
+#include "third_party/crashpad/snapshot/cpu_context.h"
+#include "third_party/crashpad/snapshot/memory_snapshot.h"
+#include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
 
 namespace zxdb {
 
@@ -107,12 +104,21 @@ class MinidumpRemoteAPI : public RemoteAPI {
   };
 
  private:
-
   // Initialization routine. Iterates minidump structures and finds all the
   // readable memory.
   void CollectMemory();
 
+  // Get all the modules out of the dump in debug ipc form.
+  std::vector<debug_ipc::Module> GetModules();
+
   std::string ProcessName();
+
+  const crashpad::ThreadSnapshot* GetThreadById(uint64_t koid);
+
+  std::unique_ptr<unwindstack::Regs> GetUnwindRegsARM64(
+      const crashpad::CPUContextARM64& ctx, size_t stack_size);
+  std::unique_ptr<unwindstack::Regs> GetUnwindRegsX86_64(
+      const crashpad::CPUContextX86_64& ctx, size_t stack_size);
 
   bool attached_ = false;
   Session* session_;

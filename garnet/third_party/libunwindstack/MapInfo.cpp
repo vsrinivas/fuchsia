@@ -30,7 +30,7 @@
 namespace unwindstack {
 
 Memory* MapInfo::GetFileMemory() {
-#ifdef __Fuchsia__
+#ifdef FUCHSIA
   // Unimplemented on Fuchsia since shared objects aren't actually loaded
   // from the filesystem in the traditional way.
   return nullptr;

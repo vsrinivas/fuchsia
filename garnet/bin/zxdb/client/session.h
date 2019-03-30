@@ -145,6 +145,9 @@ class Session {
   // be issued with the error instead of trying to deserialize.
   using Callback = std::function<void(const Err&, std::vector<char>)>;
 
+  // Set the arch_ and arch_info_ fields.
+  Err SetArch(debug_ipc::Arch arch);
+
   // Checks whether it's safe to begin establishing a connection. If not, the
   // callback is invoked with details.
   bool ConnectCanProceed(std::function<void(const Err&)> callback);

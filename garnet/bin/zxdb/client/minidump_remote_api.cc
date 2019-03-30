@@ -4,17 +4,21 @@
 
 #include "garnet/bin/zxdb/client/minidump_remote_api.h"
 
+// This has to go up here due to some strange header conflicts.
+#include "src/lib/elflib/elflib.h"
+
+#include <algorithm>
 #include <cstring>
 
-#include "src/lib/fxl/strings/string_printf.h"
+#include "garnet/third_party/libunwindstack/include/unwindstack/UcontextArm64.h"
+#include "garnet/third_party/libunwindstack/include/unwindstack/UcontextX86_64.h"
+#include "garnet/third_party/libunwindstack/include/unwindstack/Unwinder.h"
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
-#include "src/lib/elflib/elflib.h"
+#include "src/lib/fxl/strings/string_printf.h"
 #include "third_party/crashpad/snapshot/memory_map_region_snapshot.h"
-#include "third_party/crashpad/snapshot/memory_snapshot.h"
-#include "third_party/crashpad/snapshot/minidump/process_snapshot_minidump.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
 namespace zxdb {
@@ -25,8 +29,6 @@ Err ErrNoLive() {
   return Err(ErrType::kNoConnection, "System is no longer live");
 }
 
-Err ErrNoImpl() { return Err("Feature not implemented for minidump"); }
-
 Err ErrNoDump() { return Err("Core dump failed to open"); }
 
 Err ErrNoArch() { return Err("Architecture not supported"); }
@@ -35,12 +37,6 @@ template <typename ReplyType>
 void ErrNoLive(std::function<void(const Err&, ReplyType)> cb) {
   debug_ipc::MessageLoop::Current()->PostTask(
       FROM_HERE, [cb]() { cb(ErrNoLive(), ReplyType()); });
-}
-
-template <typename ReplyType>
-void ErrNoImpl(std::function<void(const Err&, ReplyType)> cb) {
-  debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb]() { cb(ErrNoImpl(), ReplyType()); });
 }
 
 template <typename ReplyType>
@@ -392,6 +388,54 @@ std::string MinidumpGetUUID(const crashpad::ModuleSnapshot& mod) {
   return ret;
 }
 
+class MinidumpUnwindMemory : public unwindstack::Memory {
+ public:
+  MinidumpUnwindMemory(
+      const std::vector<std::unique_ptr<MinidumpRemoteAPI::MemoryRegion>>&
+          regions)
+      : regions_(regions) {}
+
+  size_t Read(uint64_t addr, void* dst, size_t size) override {
+    uint8_t* dst8 = reinterpret_cast<uint8_t*>(dst);
+    size_t read = 0;
+
+    for (const auto& region : regions_) {
+      if (region->start > addr) {
+        return read;
+      }
+
+      if ((region->start + region->size) <= addr) {
+        continue;
+      }
+
+      size_t offset = addr - region->start;
+      size_t to_read = std::min(region->size - offset, size);
+
+      auto data = region->Read(offset, to_read);
+
+      if (!data) {
+        return read;
+      }
+
+      std::copy(data->begin(), data->end(), dst8);
+
+      dst8 += data->size();
+      addr += data->size();
+      size -= data->size();
+      read += data->size();
+
+      if (!size) {
+        break;
+      }
+    }
+
+    return read;
+  }
+
+ private:
+  const std::vector<std::unique_ptr<MinidumpRemoteAPI::MemoryRegion>>& regions_;
+};
+
 }  // namespace
 
 MinidumpRemoteAPI::MinidumpRemoteAPI(Session* session) : session_(session) {}
@@ -410,6 +454,82 @@ std::string MinidumpRemoteAPI::ProcessName() {
   }
 
   return mods[0]->Name();
+}
+
+std::vector<debug_ipc::Module> MinidumpRemoteAPI::GetModules() {
+  if (!minidump_) {
+    return {};
+  }
+
+  std::vector<debug_ipc::Module> ret;
+
+  for (const auto& minidump_mod : minidump_->Modules()) {
+    auto& mod = ret.emplace_back();
+    mod.name = minidump_mod->Name();
+    mod.base = minidump_mod->Address();
+
+    mod.build_id = MinidumpGetUUID(*minidump_mod);
+  }
+
+  return ret;
+}
+
+const crashpad::ThreadSnapshot* MinidumpRemoteAPI::GetThreadById(uint64_t id) {
+  for (const auto& item : minidump_->Threads()) {
+    if (item->ThreadID() == id) {
+      return item;
+    }
+  }
+
+  return nullptr;
+}
+
+std::unique_ptr<unwindstack::Regs> MinidumpRemoteAPI::GetUnwindRegsARM64(
+    const crashpad::CPUContextARM64& ctx, size_t stack_size) {
+  unwindstack::arm64_ucontext_t ucontext;
+
+  ucontext.uc_stack.ss_sp = ctx.sp;
+  ucontext.uc_stack.ss_size = stack_size;
+  ucontext.uc_mcontext.pstate = ctx.spsr;
+
+  for (size_t i = 0; i <= 31; i++) {
+    ucontext.uc_mcontext.regs[i] = ctx.regs[i];
+  }
+
+  ucontext.uc_mcontext.regs[unwindstack::Arm64Reg::ARM64_REG_PC] = ctx.pc;
+
+  return std::unique_ptr<unwindstack::Regs>(
+      unwindstack::Regs::CreateFromUcontext(unwindstack::ArchEnum::ARCH_ARM64,
+                                            &ucontext));
+}
+
+std::unique_ptr<unwindstack::Regs> MinidumpRemoteAPI::GetUnwindRegsX86_64(
+    const crashpad::CPUContextX86_64& ctx, size_t stack_size) {
+  unwindstack::x86_64_ucontext_t ucontext;
+
+  ucontext.uc_stack.ss_sp = ctx.rsp;
+  ucontext.uc_stack.ss_size = stack_size;
+  ucontext.uc_mcontext.rax = ctx.rax;
+  ucontext.uc_mcontext.rbx = ctx.rbx;
+  ucontext.uc_mcontext.rcx = ctx.rcx;
+  ucontext.uc_mcontext.rdx = ctx.rdx;
+  ucontext.uc_mcontext.rsi = ctx.rsi;
+  ucontext.uc_mcontext.rdi = ctx.rdi;
+  ucontext.uc_mcontext.rbp = ctx.rbp;
+  ucontext.uc_mcontext.rsp = ctx.rsp;
+  ucontext.uc_mcontext.r8 = ctx.r8;
+  ucontext.uc_mcontext.r9 = ctx.r9;
+  ucontext.uc_mcontext.r10 = ctx.r10;
+  ucontext.uc_mcontext.r11 = ctx.r11;
+  ucontext.uc_mcontext.r12 = ctx.r12;
+  ucontext.uc_mcontext.r13 = ctx.r13;
+  ucontext.uc_mcontext.r14 = ctx.r14;
+  ucontext.uc_mcontext.r15 = ctx.r15;
+  ucontext.uc_mcontext.rip = ctx.rip;
+
+  return std::unique_ptr<unwindstack::Regs>(
+      unwindstack::Regs::CreateFromUcontext(unwindstack::ArchEnum::ARCH_X86_64,
+                                            &ucontext));
 }
 
 void MinidumpRemoteAPI::CollectMemory() {
@@ -439,11 +559,11 @@ void MinidumpRemoteAPI::CollectMemory() {
       const auto& segment = segments[i];
 
       // Only PT_LOAD segments are actually mapped. The rest are informational.
-      if (segment.p_type != elflib::PT_LOAD) {
+      if (segment.p_type != PT_LOAD) {
         continue;
       }
 
-      if (segment.p_flags & elflib::PF_W) {
+      if (segment.p_flags & PF_W) {
         // Writable segment. Data in the ELF file might not match what was
         // present at the time of the crash.
         continue;
@@ -498,7 +618,32 @@ Err MinidumpRemoteAPI::Close() {
 void MinidumpRemoteAPI::Hello(
     const debug_ipc::HelloRequest& request,
     std::function<void(const Err&, debug_ipc::HelloReply)> cb) {
-  Succeed(cb, debug_ipc::HelloReply());
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
+  debug_ipc::HelloReply reply;
+
+  const auto& threads = minidump_->Threads();
+  if (threads.empty()) {
+    Succeed(cb, reply);
+  }
+
+  const auto& context = *threads[0]->Context();
+
+  switch (context.architecture) {
+    case crashpad::CPUArchitecture::kCPUArchitectureARM64:
+      reply.arch = debug_ipc::Arch::kArm64;
+      break;
+    case crashpad::CPUArchitecture::kCPUArchitectureX86_64:
+      reply.arch = debug_ipc::Arch::kX64;
+      break;
+    default:
+      break;
+  }
+
+  Succeed(cb, reply);
 }
 
 void MinidumpRemoteAPI::Launch(
@@ -547,15 +692,22 @@ void MinidumpRemoteAPI::Attach(
   }
 
   Session* session = session_;
+  debug_ipc::NotifyModules mod_notification;
+
+  mod_notification.process_koid = minidump_->ProcessID();
+  mod_notification.modules = GetModules();
 
   std::function<void(const Err&, debug_ipc::AttachReply)> new_cb =
-      [cb, notifications, session](const Err& e, debug_ipc::AttachReply a) {
+      [cb, notifications, mod_notification, session](const Err& e,
+                                                     debug_ipc::AttachReply a) {
         cb(e, a);
 
         for (const auto& notification : notifications) {
           session->DispatchNotifyThread(
               debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notification);
         }
+
+        session->DispatchNotifyModules(mod_notification);
       };
 
   Succeed(new_cb, reply);
@@ -596,13 +748,7 @@ void MinidumpRemoteAPI::Modules(
     return;
   }
 
-  for (const auto& minidump_mod : minidump_->Modules()) {
-    auto& mod = reply.modules.emplace_back();
-    mod.name = minidump_mod->Name();
-    mod.base = minidump_mod->Address();
-
-    mod.build_id = MinidumpGetUUID(*minidump_mod);
-  }
+  reply.modules = GetModules();
 
   Succeed(cb, reply);
 }
@@ -732,14 +878,7 @@ void MinidumpRemoteAPI::ReadRegisters(
     return;
   }
 
-  const crashpad::ThreadSnapshot* thread = nullptr;
-
-  for (const auto& item : minidump_->Threads()) {
-    if (item->ThreadID() == request.thread_koid) {
-      thread = item;
-      break;
-    }
-  }
+  const crashpad::ThreadSnapshot* thread = GetThreadById(request.thread_koid);
 
   if (thread == nullptr) {
     Succeed(cb, reply);
@@ -778,8 +917,84 @@ void MinidumpRemoteAPI::RemoveBreakpoint(
 void MinidumpRemoteAPI::ThreadStatus(
     const debug_ipc::ThreadStatusRequest& request,
     std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
-  // TODO
-  ErrNoImpl(cb);
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
+  debug_ipc::ThreadStatusReply reply;
+
+  if (static_cast<pid_t>(request.process_koid) != minidump_->ProcessID()) {
+    Succeed(cb, reply);
+    return;
+  }
+
+  const crashpad::ThreadSnapshot* thread = GetThreadById(request.thread_koid);
+
+  if (thread == nullptr) {
+    Succeed(cb, reply);
+    return;
+  }
+
+  reply.record.koid = thread->ThreadID();
+  reply.record.state = debug_ipc::ThreadRecord::State::kCoreDump;
+  reply.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
+
+  size_t stack_size = 0;
+  if (auto stack = thread->Stack()) {
+    stack_size = stack->Size();
+  }
+
+  const auto& context = *thread->Context();
+  std::unique_ptr<unwindstack::Regs> regs;
+  uint64_t bp;
+
+  switch (context.architecture) {
+    case crashpad::CPUArchitecture::kCPUArchitectureARM64:
+      regs = GetUnwindRegsARM64(*context.arm64, stack_size);
+      bp = context.arm64->regs[29];
+      break;
+    case crashpad::CPUArchitecture::kCPUArchitectureX86_64:
+      regs = GetUnwindRegsX86_64(*context.x86_64, stack_size);
+      bp = context.x86_64->rbp;
+      break;
+    default:
+      ErrNoArch(cb);
+      return;
+  }
+
+  auto modules = minidump_->Modules();
+
+  std::sort(
+      modules.begin(), modules.end(),
+      [](const crashpad::ModuleSnapshot* a, const crashpad::ModuleSnapshot* b) {
+        return a->Address() < b->Address();
+      });
+
+  unwindstack::Maps maps;
+  for (const auto& mod : modules) {
+    maps.Add(mod->Address(), mod->Address() + mod->Size(), 0, 0, mod->Name(),
+             0);
+  }
+
+  unwindstack::Unwinder unwinder(
+      40, &maps, regs.get(), std::make_shared<MinidumpUnwindMemory>(memory_));
+
+  unwinder.Unwind();
+
+  reply.record.frames.resize(unwinder.NumFrames());
+  for (size_t i = 0; i < unwinder.NumFrames(); i++) {
+    const auto& src = unwinder.frames()[i];
+    debug_ipc::StackFrame& dest = reply.record.frames[i];
+    dest.ip = src.pc;
+    dest.sp = src.sp;
+  }
+
+  if (!reply.record.frames.empty()) {
+    reply.record.frames[0].bp = bp;
+  }
+
+  Succeed(cb, reply);
 }
 
 void MinidumpRemoteAPI::AddressSpace(

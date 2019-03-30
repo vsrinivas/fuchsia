@@ -25,7 +25,7 @@
 #include <unwindstack/Maps.h>
 #include <unwindstack/Memory.h>
 
-#ifdef __Fuchsia__
+#ifdef FUCHSIA
 #include "garnet/third_party/libunwindstack/fuchsia/fuchsia_basename.h"
 #endif
 
