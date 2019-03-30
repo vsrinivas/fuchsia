@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fxl/strings/string_printf.h>
 #include <zircon/processargs.h>
 
 #include "fidl/examples/echo/cpp/fidl.h"
@@ -11,6 +10,7 @@
 #include "lib/async/dispatcher.h"
 #include "lib/sys/cpp/testing/enclosing_environment.h"
 #include "lib/sys/cpp/testing/test_with_environment.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 using namespace fuchsia::sys;
 namespace echo = ::fidl::examples::echo;

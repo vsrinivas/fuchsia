@@ -2,10 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-config("transition_config") {
-  include_dirs = [ "//src" ]
-}
-
 source_set("common") {
   visibility = [ ":*" ]
 
@@ -18,7 +14,6 @@ source_set("common") {
   ]
 
   public_configs = [
-    ":transition_config",
     "//garnet/public:config",
   ]
 }
@@ -71,7 +66,6 @@ source_set("memory") {
   ]
 
   public_configs = [
-    ":transition_config",
     "//garnet/public:config",
   ]
 }
@@ -112,7 +106,6 @@ source_set("strings") {
   ]
 
   public_configs = [
-    ":transition_config",
     "//garnet/public:config",
   ]
 }
@@ -134,7 +127,6 @@ source_set("time") {
   ]
 
   public_configs = [
-    ":transition_config",
     "//garnet/public:config",
   ]
 }
@@ -154,7 +146,6 @@ source_set("functional") {
   ]
 
   public_configs = [
-    ":transition_config",
     "//garnet/public:config",
   ]
 }
@@ -196,7 +187,6 @@ source_set("printers") {
     ":fxl",
   ]
   public_configs = [
-    ":transition_config",
     "//garnet/public:config",
   ]
 }

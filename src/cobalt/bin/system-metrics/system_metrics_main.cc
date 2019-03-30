@@ -8,11 +8,11 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fxl/logging.h>
 #include <lib/sys/cpp/component_context.h>
 #include <trace-provider/provider.h>
 
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
+#include "src/lib/fxl/logging.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);

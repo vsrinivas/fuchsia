@@ -7,6 +7,7 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/lib/fxl/logging.h"
 
 namespace zxdb {
 

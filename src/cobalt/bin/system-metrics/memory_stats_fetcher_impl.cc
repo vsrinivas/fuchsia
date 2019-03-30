@@ -8,9 +8,10 @@
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fxl/logging.h>
 #include <lib/zx/resource.h>
 #include <zircon/status.h>
+
+#include "src/lib/fxl/logging.h"
 
 namespace cobalt {
 
