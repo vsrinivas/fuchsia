@@ -54,6 +54,7 @@ source_set("common") {
     "fidl-proxy.cpp",
     "fidl-proxy.h",
     "fidl.cpp",
+    "task.cpp",
     "vmo-writer.cpp",
     "vmo-writer.h",
   ]
@@ -91,6 +92,7 @@ test("devcoordinator-test") {
     "binding-test.cpp",
     "boot-args-test.cpp",
     "coordinator-test.cpp",
+    "task-test.cpp",
   ]
   deps = [
     ":common",
