@@ -369,7 +369,7 @@ struct X86PmuConfig {
     // If zero, then no timebase is in use: Each event must trigger its own
     // data collection. Otherwise the value is the id of the timebase counter
     // to use, which must appear in one of |programmable_ids| or |fixed_ids|.
-    perfmon_event_id_t timebase_id;
+    perfmon_event_id_t timebase_event;
 
     // Ids of each event. These values are written to the trace buffer to
     // identify the event.
@@ -392,15 +392,15 @@ struct X86PmuConfig {
 #define IPM_CONFIG_FLAG_MASK     0x7
 // Collect aspace+pc values.
 // Cannot be set with IPM_CONFIG_FLAG_TIMEBASE unless the counter is
-// |timebase_id|.
+// |timebase_event|.
 #define IPM_CONFIG_FLAG_PC       (1u << 0)
-// Collect this event's value when |timebase_id| counter's data is collected.
-// While redundant, it is ok to set this for the |timebase_id| counter.
+// Collect this event's value when |timebase_event| counter's data is collected.
+// While redundant, it is ok to set this for the |timebase_event| counter.
 #define IPM_CONFIG_FLAG_TIMEBASE (1u << 1)
 // Collect the available set of last branches.
 // Branch data is emitted as PERFMON_RECORD_LBR records.
 // Cannot be set with IPM_CONFIG_FLAG_TIMEBASE unless the counter is
-// |timebase_id|.
+// |timebase_event|.
 // This is only available when the underlying system supports it.
 #define IPM_CONFIG_FLAG_LBR      (1u << 2)
 

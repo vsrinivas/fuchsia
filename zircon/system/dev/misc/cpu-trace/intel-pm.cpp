@@ -535,7 +535,7 @@ zx_status_t PerfmonDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     }
 
     if (ss->have_timebase0_user) {
-        ocfg->timebase_id = icfg->events[0];
+        ocfg->timebase_event = icfg->events[0];
     }
 
 #if TRY_FREEZE_ON_PMI

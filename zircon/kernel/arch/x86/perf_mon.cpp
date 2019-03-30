@@ -102,7 +102,7 @@ typedef enum {
 
 // At a minimum we require Performance Monitoring version 4.
 // KISS: Skylake supports version 4.
-#define MINIMUM_PERFMON_VERSION 4
+#define MINIMUM_INTEL_PERFMON_VERSION 4
 
 // MSRs
 
@@ -307,7 +307,7 @@ struct PerfmonState {
     bool need_mchbar = false;
 
     // See intel-pm.h:zx_x86_pmu_config_t.
-    perfmon_event_id_t timebase_id = PERFMON_EVENT_ID_NONE;
+    perfmon_event_id_t timebase_event = PERFMON_EVENT_ID_NONE;
 
     // The number of each kind of event in use, so we don't have to iterate
     // over the entire arrays.
@@ -534,7 +534,7 @@ static void x86_perfmon_init_once(uint level)
             (1ul << perfmon_fixed_counter_width) - 1;
     }
 
-    supports_perfmon = perfmon_version >= MINIMUM_PERFMON_VERSION;
+    supports_perfmon = perfmon_version >= MINIMUM_INTEL_PERFMON_VERSION;
 
     if (x86_feature_test(X86_FEATURE_PDCM)) {
         perfmon_capabilities = static_cast<uint32_t>(read_msr(IA32_PERF_CAPABILITIES));
@@ -816,7 +816,7 @@ static zx_status_t x86_perfmon_verify_fixed_config(
                 return ZX_ERR_NOT_SUPPORTED;
             }
             if ((config->fixed_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
-                    config->timebase_id == PERFMON_EVENT_ID_NONE) {
+                    config->timebase_event == PERFMON_EVENT_ID_NONE) {
                 TRACEF("Timebase requested for |fixed_flags[%u]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
@@ -884,7 +884,7 @@ static zx_status_t x86_perfmon_verify_programmable_config(
                 return ZX_ERR_NOT_SUPPORTED;
             }
             if ((config->programmable_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
-                    config->timebase_id == PERFMON_EVENT_ID_NONE) {
+                    config->timebase_event == PERFMON_EVENT_ID_NONE) {
                 TRACEF("Timebase requested for |programmable_flags[%u]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
@@ -930,7 +930,7 @@ static zx_status_t x86_perfmon_verify_misc_config(
                 return ZX_ERR_INVALID_ARGS;
             }
             if ((config->misc_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
-                    config->timebase_id == PERFMON_EVENT_ID_NONE) {
+                    config->timebase_event == PERFMON_EVENT_ID_NONE) {
                 TRACEF("Timebase requested for |misc_flags[%zu]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
@@ -952,12 +952,12 @@ static zx_status_t x86_perfmon_verify_misc_config(
 static zx_status_t x86_perfmon_verify_timebase_config(
         zx_x86_pmu_config_t* config,
         unsigned num_fixed, unsigned num_programmable) {
-    if (config->timebase_id == PERFMON_EVENT_ID_NONE) {
+    if (config->timebase_event == PERFMON_EVENT_ID_NONE) {
         return ZX_OK;
     }
 
     for (unsigned i = 0; i < num_fixed; ++i) {
-        if (config->fixed_ids[i] == config->timebase_id) {
+        if (config->fixed_ids[i] == config->timebase_event) {
             // The PMI code is simpler if this is the case.
             config->fixed_flags[i] &= ~IPM_CONFIG_FLAG_TIMEBASE;
             return ZX_OK;
@@ -965,14 +965,14 @@ static zx_status_t x86_perfmon_verify_timebase_config(
     }
 
     for (unsigned i = 0; i < num_programmable; ++i) {
-        if (config->programmable_ids[i] == config->timebase_id) {
+        if (config->programmable_ids[i] == config->timebase_event) {
             // The PMI code is simpler if this is the case.
             config->programmable_flags[i] &= ~IPM_CONFIG_FLAG_TIMEBASE;
             return ZX_OK;
         }
     }
 
-    TRACEF("Timebase 0x%x requested but not present\n", config->timebase_id);
+    TRACEF("Timebase 0x%x requested but not present\n", config->timebase_event);
     return ZX_ERR_INVALID_ARGS;
 }
 
@@ -1112,7 +1112,7 @@ zx_status_t arch_perfmon_stage_config(zx_x86_pmu_config_t* config) {
     state->global_ctrl = config->global_ctrl;
     state->fixed_ctrl = config->fixed_ctrl;
     state->debug_ctrl = config->debug_ctrl;
-    state->timebase_id = config->timebase_id;
+    state->timebase_event = config->timebase_event;
 
     if (state->debug_ctrl & IA32_DEBUGCTL_LBR_MASK) {
         if (!x86_perfmon_lbr_is_supported()) {
@@ -1945,7 +1945,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             // Counters using a separate timebase are handled below.
             // We shouldn't get an interrupt on a counter using a timebase.
             // TODO(dje): The counter could still overflow. Later.
-            if (id == state->timebase_id) {
+            if (id == state->timebase_event) {
                 saw_timebase = true;
             } else if (state->programmable_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) {
                 continue;
@@ -1973,7 +1973,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             // Counters using a separate timebase are handled below.
             // We shouldn't get an interrupt on a counter using a timebase.
             // TODO(dje): The counter could still overflow. Later.
-            if (id == state->timebase_id) {
+            if (id == state->timebase_event) {
                 saw_timebase = true;
             } else if (state->fixed_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) {
                 continue;
