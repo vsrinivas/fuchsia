@@ -54,13 +54,8 @@ public:
 };
 
 // A TransactionEndpoint is an Endpoint which dispatches requests to a Transaction for processing.
-// The templated type here is a Transaction-type which the endpoint uses to manage the lifetime of a
-// USB transfer.
-template <typename T>
 class TransactionEndpoint : public Endpoint {
 public:
-    static_assert(std::is_base_of<Transaction, T>::value, "T must be derived from a Transaction");
-
     TransactionEndpoint(ddk::MmioView usb, uint8_t faddr,
                         const usb_endpoint_descriptor_t& descriptor)
         : usb_(usb),
@@ -84,7 +79,7 @@ protected:
     ddk::MmioView usb_;
 
     // A transaction type used by this endpoint.
-    std::unique_ptr<T> transaction_;
+    std::unique_ptr<Transaction> transaction_;
 
     // The id of the device this endpoint is associated with.
     uint8_t faddr_;
@@ -92,10 +87,16 @@ protected:
     // The maximum usb packet size for this transaction.
     size_t max_pkt_sz_;
 
+    // The enumerated endpoint descriptor describing the behavior of this endpoint.
+    usb_endpoint_descriptor_t descriptor_;
+
+    // True if this endpoint has been halted.
+    std::atomic_bool halted_;
+
 private:
     // Dispatch and process a request transaction.  This method blocks until the transaction is
     // complete.
-    zx_status_t DispatchRequest(usb::UnownedRequest<> req);
+    virtual zx_status_t DispatchRequest(usb::UnownedRequest<> req) = 0;
 
     // Queue thread which services enqueued requests in serial FIFO order.
     int QueueThread();
@@ -111,18 +112,12 @@ private:
     fbl::Mutex pending_lock_;
     fbl::ConditionVariable pending_cond_ TA_GUARDED(pending_lock_);
 
-    // The enumerated endpoint descriptor describing the behavior of this endpoint.
-    usb_endpoint_descriptor_t descriptor_;
-
-    // True if this endpoint has been halted.
-    std::atomic_bool halted_;
-
     // A completion that is signaled upon completing the halt process.
     sync_completion_t complete_;
 };
 
 // A ControlEndpoint is an Endpoint dispatching control-type transactions.
-class ControlEndpoint : public TransactionEndpoint<Control> {
+class ControlEndpoint : public TransactionEndpoint {
 public:
     // Note that initially all enumeration control transactions are performed on the default
     // control-pipe address of 0 using the spec. default maximum packet size of 8 bytes (encoded in
@@ -141,6 +136,8 @@ public:
     zx_status_t SetAddress(uint8_t addr);
 
 private:
+    zx_status_t DispatchRequest(usb::UnownedRequest<> req) override;
+
     // A minimal descriptor describing only the initial desired ControlEndpoint properties.
     static constexpr usb_endpoint_descriptor_t descriptor_ = {
         0,            // .bLength
@@ -153,18 +150,24 @@ private:
 };
 
 // A BulkEndpoint is an Endpoint dispatching bulk-type transactions.
-class BulkEndpoint : public TransactionEndpoint<Bulk> {
+class BulkEndpoint : public TransactionEndpoint {
 public:
     BulkEndpoint(ddk::MmioView usb, uint8_t faddr, const usb_endpoint_descriptor_t& descriptor)
         : TransactionEndpoint(usb, faddr, descriptor) {}
+
+private:
+    zx_status_t DispatchRequest(usb::UnownedRequest<> req) override;
 };
 
 // An InterruptEndpoint is an Endpoint dispatching to interrupt-type transactions.
-class InterruptEndpoint : public TransactionEndpoint<Interrupt> {
+class InterruptEndpoint : public TransactionEndpoint {
 public:
     InterruptEndpoint(ddk::MmioView usb, uint8_t faddr,
                       const usb_endpoint_descriptor_t& descriptor)
         : TransactionEndpoint(usb, faddr, descriptor) {}
+
+private:
+    zx_status_t DispatchRequest(usb::UnownedRequest<> req) override;
 };
 
 } // namespace mt_usb_hci

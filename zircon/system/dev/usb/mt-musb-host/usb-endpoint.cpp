@@ -14,12 +14,7 @@
 
 namespace mt_usb_hci {
 
-template class TransactionEndpoint<Control>;
-template class TransactionEndpoint<Bulk>;
-template class TransactionEndpoint<Interrupt>;
-
-template <typename T>
-zx_status_t TransactionEndpoint<T>::QueueRequest(usb::UnownedRequest<> req) {
+zx_status_t TransactionEndpoint::QueueRequest(usb::UnownedRequest<> req) {
     fbl::AutoLock _(&pending_lock_);
 
     // To prevent a race condition by which a request is enqueued after having stopped the
@@ -34,9 +29,8 @@ zx_status_t TransactionEndpoint<T>::QueueRequest(usb::UnownedRequest<> req) {
     return ZX_OK;
 }
 
-template <typename T>
-zx_status_t TransactionEndpoint<T>::StartQueueThread() {
-    auto go = [](void* arg) { return static_cast<TransactionEndpoint<T>*>(arg)->QueueThread(); };
+zx_status_t TransactionEndpoint::StartQueueThread() {
+    auto go = [](void* arg) { return static_cast<TransactionEndpoint*>(arg)->QueueThread(); };
     auto rc = thrd_create_with_name(&pending_thread_, go, this, "usb-endpoint-thread");
     if (rc != thrd_success) {
         return ZX_ERR_INTERNAL;
@@ -44,8 +38,7 @@ zx_status_t TransactionEndpoint<T>::StartQueueThread() {
     return ZX_OK;
 }
 
-template <typename T>
-zx_status_t TransactionEndpoint<T>::CancelAll() {
+zx_status_t TransactionEndpoint::CancelAll() {
     fbl::AutoLock _(&pending_lock_);
     if (transaction_) {
         transaction_->Cancel();
@@ -59,13 +52,11 @@ zx_status_t TransactionEndpoint<T>::CancelAll() {
     return ZX_OK;
 }
 
-template <typename T>
-size_t TransactionEndpoint<T>::GetMaxTransferSize() {
+size_t TransactionEndpoint::GetMaxTransferSize() {
     return static_cast<size_t>(max_pkt_sz_);
 }
 
-template <typename T>
-zx_status_t TransactionEndpoint<T>::Halt() {
+zx_status_t TransactionEndpoint::Halt() {
     fbl::AutoLock _(&pending_lock_);
     if (transaction_) {
         transaction_->Cancel();
@@ -77,104 +68,7 @@ zx_status_t TransactionEndpoint<T>::Halt() {
     return ZX_OK;
 }
 
-template <>
-zx_status_t TransactionEndpoint<Control>::DispatchRequest(usb::UnownedRequest<> req) {
-    zx_status_t status;
-    usb_setup_t setup = req.request()->setup;
-
-    if (setup.wLength == 0) { // See: USB 2.0 spec. section 9.3.5.
-        transaction_ = std::make_unique<Control>(ControlType::ZERO, usb_.View(0), setup, nullptr, 0,
-                                                 max_pkt_sz_, faddr_);
-    } else {
-        void* vmo_addr;
-        status = req.Mmap(&vmo_addr);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "could not map request vmo: %s\n", zx_status_get_string(status));
-            req.Complete(status, 0);
-            return status;
-        }
-
-        size_t size = req.request()->header.length;
-        if ((setup.bmRequestType & USB_DIR_MASK) == USB_DIR_IN) {
-            transaction_ = std::make_unique<Control>(ControlType::READ, usb_.View(0), setup,
-                                                     vmo_addr, size, max_pkt_sz_, faddr_);
-        } else { // USB_DIR_OUT
-            transaction_ = std::make_unique<Control>(ControlType::WRITE, usb_.View(0), setup,
-                                                     vmo_addr, size, max_pkt_sz_, faddr_);
-        }
-    }
-
-    transaction_->Advance();
-    transaction_->Wait();
-
-    if (halted_.load()) {
-        req.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
-        return ZX_OK;
-    } else if (!transaction_->Ok()) {
-        zxlogf(ERROR, "usb control transfer did not complete successfully\n");
-        req.Complete(ZX_ERR_INTERNAL, 0);
-        return ZX_ERR_INTERNAL;
-    }
-    req.Complete(ZX_OK, transaction_->actual());
-    return ZX_OK;
-}
-
-template <>
-zx_status_t TransactionEndpoint<Bulk>::DispatchRequest(usb::UnownedRequest<> req) {
-    void* vmo_addr;
-    auto status = req.Mmap(&vmo_addr);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "could not map request vmo: %s\n", zx_status_get_string(status));
-        req.Complete(status, 0);
-        return status;
-    }
-
-    size_t size = req.request()->header.length;
-    transaction_ = std::make_unique<Bulk>(usb_.View(0), faddr_, vmo_addr, size, descriptor_);
-    transaction_->Advance();
-    transaction_->Wait();
-
-    if (halted_.load()) {
-        req.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
-        return ZX_OK;
-    } else if (!transaction_->Ok()) {
-        zxlogf(ERROR, "usb bulk transfer did not complete successfully\n");
-        req.Complete(ZX_ERR_INTERNAL, 0);
-        return ZX_ERR_INTERNAL;
-    }
-    req.Complete(ZX_OK, transaction_->actual());
-    return ZX_OK;
-}
-
-template <>
-zx_status_t TransactionEndpoint<Interrupt>::DispatchRequest(usb::UnownedRequest<> req) {
-    void* vmo_addr;
-    auto status = req.Mmap(&vmo_addr);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "could not map request vmo: %s\n", zx_status_get_string(status));
-        req.Complete(status, 0);
-        return status;
-    }
-
-    size_t size = req.request()->header.length;
-    transaction_ = std::make_unique<Interrupt>(usb_.View(0), faddr_, vmo_addr, size, descriptor_);
-    transaction_->Advance();
-    transaction_->Wait();
-
-    if (halted_.load()) {
-        req.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
-        return ZX_OK;
-    } else if (!transaction_->Ok()) {
-        zxlogf(ERROR, "usb interrupt transfer did not complete successfully\n");
-        req.Complete(ZX_ERR_INTERNAL, 0);
-        return ZX_ERR_INTERNAL;
-    }
-    req.Complete(ZX_OK, transaction_->actual());
-    return ZX_OK;
-}
-
-template <typename T>
-int TransactionEndpoint<T>::QueueThread() {
+int TransactionEndpoint::QueueThread() {
     zx_status_t status;
     std::optional<usb::UnownedRequest<>> req;
 
@@ -260,6 +154,99 @@ zx_status_t ControlEndpoint::SetAddress(uint8_t addr) {
     zx::nanosleep(zx::deadline_after(zx::msec(5)));
 
     faddr_ = addr;
+    return ZX_OK;
+}
+
+zx_status_t ControlEndpoint::DispatchRequest(usb::UnownedRequest<> req) {
+    zx_status_t status;
+    usb_setup_t setup = req.request()->setup;
+
+    if (setup.wLength == 0) { // See: USB 2.0 spec. section 9.3.5.
+        transaction_ = std::make_unique<Control>(ControlType::ZERO, usb_.View(0), setup, nullptr, 0,
+                                                 max_pkt_sz_, faddr_);
+    } else {
+        void* vmo_addr;
+        status = req.Mmap(&vmo_addr);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "could not map request vmo: %s\n", zx_status_get_string(status));
+            req.Complete(status, 0);
+            return status;
+        }
+
+        size_t size = req.request()->header.length;
+        if ((setup.bmRequestType & USB_DIR_MASK) == USB_DIR_IN) {
+            transaction_ = std::make_unique<Control>(ControlType::READ, usb_.View(0), setup,
+                                                     vmo_addr, size, max_pkt_sz_, faddr_);
+        } else { // USB_DIR_OUT
+            transaction_ = std::make_unique<Control>(ControlType::WRITE, usb_.View(0), setup,
+                                                     vmo_addr, size, max_pkt_sz_, faddr_);
+        }
+    }
+
+    transaction_->Advance();
+    transaction_->Wait();
+
+    if (halted_.load()) {
+        req.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+        return ZX_OK;
+    } else if (!transaction_->Ok()) {
+        zxlogf(ERROR, "usb control transfer did not complete successfully\n");
+        req.Complete(ZX_ERR_INTERNAL, 0);
+        return ZX_ERR_INTERNAL;
+    }
+    req.Complete(ZX_OK, transaction_->actual());
+    return ZX_OK;
+}
+
+zx_status_t BulkEndpoint::DispatchRequest(usb::UnownedRequest<> req) {
+    void* vmo_addr;
+    auto status = req.Mmap(&vmo_addr);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "could not map request vmo: %s\n", zx_status_get_string(status));
+        req.Complete(status, 0);
+        return status;
+    }
+
+    size_t size = req.request()->header.length;
+    transaction_ = std::make_unique<Bulk>(usb_.View(0), faddr_, vmo_addr, size, descriptor_);
+    transaction_->Advance();
+    transaction_->Wait();
+
+    if (halted_.load()) {
+        req.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+        return ZX_OK;
+    } else if (!transaction_->Ok()) {
+        zxlogf(ERROR, "usb bulk transfer did not complete successfully\n");
+        req.Complete(ZX_ERR_INTERNAL, 0);
+        return ZX_ERR_INTERNAL;
+    }
+    req.Complete(ZX_OK, transaction_->actual());
+    return ZX_OK;
+}
+
+zx_status_t InterruptEndpoint::DispatchRequest(usb::UnownedRequest<> req) {
+    void* vmo_addr;
+    auto status = req.Mmap(&vmo_addr);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "could not map request vmo: %s\n", zx_status_get_string(status));
+        req.Complete(status, 0);
+        return status;
+    }
+
+    size_t size = req.request()->header.length;
+    transaction_ = std::make_unique<Interrupt>(usb_.View(0), faddr_, vmo_addr, size, descriptor_);
+    transaction_->Advance();
+    transaction_->Wait();
+
+    if (halted_.load()) {
+        req.Complete(ZX_ERR_IO_NOT_PRESENT, 0);
+        return ZX_OK;
+    } else if (!transaction_->Ok()) {
+        zxlogf(ERROR, "usb interrupt transfer did not complete successfully\n");
+        req.Complete(ZX_ERR_INTERNAL, 0);
+        return ZX_ERR_INTERNAL;
+    }
+    req.Complete(ZX_OK, transaction_->actual());
     return ZX_OK;
 }
 
