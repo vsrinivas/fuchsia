@@ -421,8 +421,7 @@ public:
     void AllocateData(Transaction* transaction);
 #endif
 
-    // TODO(rvargas): Make private.
-    Minfs* const fs_;
+    Minfs* Vfs() { return fs_; }
 
 private:
     // Fsck can introspect Minfs
@@ -714,6 +713,7 @@ private:
     void ClearIndirectBlock(blk_t bno);
 #endif
 
+    Minfs* const fs_;
 #ifdef __Fuchsia__
     // TODO(smklein): When we have can register MinFS as a pager service, and
     // it can properly handle pages faults on a vnode's contents, then we can

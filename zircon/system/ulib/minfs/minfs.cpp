@@ -917,7 +917,7 @@ zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispa
         return status;
     }
 
-    Minfs* vfs = vn->fs_;
+    Minfs* vfs = vn->Vfs();
     vfs->SetReadonly(options.readonly);
     vfs->SetMetrics(options.metrics);
     vfs->SetUnmountCallback(std::move(on_unmount));

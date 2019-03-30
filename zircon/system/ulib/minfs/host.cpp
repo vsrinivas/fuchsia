@@ -150,22 +150,24 @@ int emu_mount(const char* path) {
     off_t size = s.st_size / minfs::kMinfsBlockSize;
 
     fbl::unique_ptr<minfs::Bcache> bc;
-    if (minfs::Bcache::Create(&bc, std::move(fd), (uint32_t) size) < 0) {
+    if (minfs::Bcache::Create(&bc, std::move(fd), (uint32_t) size) != ZX_OK) {
         FS_TRACE_ERROR("error: cannot create block cache\n");
         return -1;
     }
 
-    int r = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root);
-    if (r == 0) {
-        fakeFs.fake_vfs.reset(fakeFs.fake_root->fs_);
+    zx_status_t status = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root);
+    if (status != ZX_OK) {
+        return -1;
     }
-    return r;
+
+    fakeFs.fake_vfs.reset(fakeFs.fake_root->Vfs());
+    return 0;
 }
 
 int emu_mount_bcache(fbl::unique_ptr<minfs::Bcache> bc) {
     int r = minfs::Mount(std::move(bc), kDefaultMountOptions, &fakeFs.fake_root) == ZX_OK ? 0 : -1;
     if (r == 0) {
-        fakeFs.fake_vfs.reset(fakeFs.fake_root->fs_);
+        fakeFs.fake_vfs.reset(fakeFs.fake_root->Vfs());
     }
     return r;
 }
