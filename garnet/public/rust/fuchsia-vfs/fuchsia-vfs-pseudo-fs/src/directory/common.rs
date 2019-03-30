@@ -65,6 +65,32 @@ pub fn new_connection_validate_flags(
     Ok(flags)
 }
 
+/// Splits a `path` string into components, also checking if it is in a canonical form, disallowing
+/// any "." and ".." components, as well as empty component names.
+pub fn validate_and_split_path(path: &str) -> Result<(impl Iterator<Item = &str>, bool), Status> {
+    let is_dir = path.ends_with('/');
+
+    // Disallow empty components, ".", and ".."s.  Path is expected to be canonicalized.  See
+    // US-569 for discussion of empty components.
+    {
+        let mut check = path.split('/');
+        // Allow trailing slash to indicate a directory.
+        if is_dir {
+            let _ = check.next_back();
+        }
+
+        if check.any(|c| c.is_empty() || c == ".." || c == ".") {
+            return Err(Status::INVALID_ARGS);
+        }
+    }
+
+    let mut res = path.split('/');
+    if is_dir {
+        let _ = res.next_back();
+    }
+    Ok((res, is_dir))
+}
+
 /// A helper to generate binary encodings for the ReadDirents response.  This function will append
 /// an entry description as specified by `entry` and `name` to the `buf`, and would return `true`.
 /// In case this would cause the buffer size to exceed `max_bytes`, the buffer is then left

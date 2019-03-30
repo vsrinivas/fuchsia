@@ -7,7 +7,7 @@
 use {
     crate::common::send_on_open_with_error,
     crate::directory::{
-        common::encode_dirent,
+        common::{encode_dirent, validate_and_split_path},
         connection::DirectoryConnection,
         controllable::Controllable,
         entry::{DirectoryEntry, EntryInfo},
@@ -120,30 +120,6 @@ impl<'entries> Simple<'entries> {
         }
     }
 
-    fn validate_and_split_path(path: &str) -> Result<(impl Iterator<Item = &str>, bool), Status> {
-        let is_dir = path.ends_with('/');
-
-        // Disallow empty components, ".", and ".."s.  Path is expected to be canonicalized.  See
-        // US-569 for discussion of empty components.
-        {
-            let mut check = path.split('/');
-            // Allow trailing slash to indicate a directory.
-            if is_dir {
-                let _ = check.next_back();
-            }
-
-            if check.any(|c| c.is_empty() || c == ".." || c == ".") {
-                return Err(Status::INVALID_ARGS);
-            }
-        }
-
-        let mut res = path.split('/');
-        if is_dir {
-            let _ = res.next_back();
-        }
-        Ok((res, is_dir))
-    }
-
     fn handle_request(
         &mut self,
         req: DirectoryRequest,
@@ -251,7 +227,7 @@ impl<'entries> Simple<'entries> {
             return;
         }
 
-        let (mut names, is_dir) = match Self::validate_and_split_path(path) {
+        let (mut names, is_dir) = match validate_and_split_path(path) {
             Ok(v) => v,
             Err(status) => {
                 send_on_open_with_error(flags, server_end, status);
