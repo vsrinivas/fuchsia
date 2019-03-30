@@ -8,7 +8,9 @@
 #include <memory>
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/logging.h>
 #include <lib/sys/cpp/component_context.h>
+#include <trace-provider/provider.h>
 
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
 
@@ -18,7 +20,10 @@ int main(int argc, const char** argv) {
 
   // Create the SystemMetricsDaemon and start it.
   SystemMetricsDaemon daemon(loop.dispatcher(), context.get());
-  daemon.Work();
+  FXL_LOG(INFO) << "Cobalt SystemMetricsDaemon: System metrics daemon created.";
+  trace::TraceProvider trace_provider(loop.dispatcher(),
+                                      "system_metrics_daemon_provider");
+  daemon.StartLogging();
   loop.Run();
   return 0;
 }

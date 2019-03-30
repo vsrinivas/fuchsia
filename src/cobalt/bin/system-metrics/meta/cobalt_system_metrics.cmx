@@ -3,9 +3,13 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "misc" ],
+        "dev": [
+            "misc",
+            "misc/sysinfo"
+        ],
         "services": [
-          "fuchsia.cobalt.LoggerFactory"
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.tracelink.Registry"
         ]
     }
 }
