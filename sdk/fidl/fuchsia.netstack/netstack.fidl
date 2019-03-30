@@ -89,6 +89,7 @@ struct AggregateStats {
 
 struct InterfaceConfig {
     string name;
+    uint32 metric;
     // Deprecated; to configure a network interface, use SetDhcpClientStatus
     // and SetInterfaceAddress instead.
     IpAddressConfig ip_address_config;

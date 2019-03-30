@@ -542,7 +542,7 @@ func (ns *Netstack) getNodeName() string {
 func (ns *Netstack) addLoopback() error {
 	ifs, err := ns.addEndpoint(func(tcpip.NICID) string {
 		return "lo"
-	}, stack.FindLinkEndpoint(loopback.New()), link.NewLoopbackController(), false)
+	}, stack.FindLinkEndpoint(loopback.New()), link.NewLoopbackController(), false, defaultInterfaceMetric)
 	if err != nil {
 		return err
 	}
@@ -604,7 +604,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	b := bridge.New(links)
 	return ns.addEndpoint(func(nicid tcpip.NICID) string {
 		return fmt.Sprintf("br%d", nicid)
-	}, b, b, false)
+	}, b, b, false, defaultInterfaceMetric)
 }
 
 func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.Device) (*ifState, error) {
@@ -618,7 +618,7 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 			return fmt.Sprintf("eth%d", nicid)
 		}
 		return config.Name
-	}, eth.NewLinkEndpoint(client), client, true)
+	}, eth.NewLinkEndpoint(client), client, true, routes.Metric(config.Metric))
 	if err != nil {
 		return nil, err
 	}
@@ -633,6 +633,7 @@ func (ns *Netstack) addEndpoint(
 	ep stack.LinkEndpoint,
 	controller link.Controller,
 	doFilter bool,
+	metric routes.Metric,
 ) (*ifState, error) {
 	ifs := &ifState{
 		ns:  ns,
@@ -642,7 +643,7 @@ func (ns *Netstack) addEndpoint(
 	ifs.mu.nic = &netiface.NIC{
 		Addr:    zeroIpAddr,
 		Netmask: zeroIpMask,
-		Metric:  defaultInterfaceMetric,
+		Metric:  metric,
 	}
 	ifs.mu.dhcp.running = func() bool { return false }
 	ifs.mu.dhcp.cancel = func() {}

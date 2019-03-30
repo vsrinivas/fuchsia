@@ -202,6 +202,12 @@ fn main() -> Result<(), failure::Error> {
         }
     };
 
+    // Interface metrics are used to sort the route table. An interface with a
+    // lower metric is favored over one with a higher metric.
+    // For now favor WLAN over Ethernet.
+    const INTF_METRIC_WLAN: u32 = 90;
+    const INTF_METRIC_ETH: u32 = 100;
+
     const ETHDIR: &str = "/dev/class/ethernet";
     let mut interface_ids = HashMap::new();
     // TODO(chunyingw): Add the loopback interfaces through netcfg
@@ -268,10 +274,20 @@ fn main() -> Result<(), failure::Error> {
                             ),
                         )?;
 
+                        // Hardcode the interface metric. Eventually this should
+                        // be part of the config file.
+                        let metric: u32 = match device_info
+                            .features
+                            .contains(fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::WLAN)
+                        {
+                            true => INTF_METRIC_WLAN,
+                            false => INTF_METRIC_ETH,
+                        };
                         let mut derived_interface_config = matchers::config_for_device(
                             &device_info,
                             name.to_string(),
                             &topological_path,
+                            metric,
                             &default_config_rules,
                         );
                         let nic_id = await!(netstack.add_ethernet_device(

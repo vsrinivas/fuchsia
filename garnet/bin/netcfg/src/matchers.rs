@@ -9,12 +9,14 @@ pub fn config_for_device(
     device_info: &fidl_fuchsia_hardware_ethernet_ext::EthernetInfo,
     name: String,
     topological_path: &str,
+    metric: u32,
     rules: &Vec<InterfaceSpec>,
 ) -> fidl_fuchsia_netstack::InterfaceConfig {
     rules.iter().filter_map(|spec| matches_info(&spec, &topological_path, device_info)).fold(
         fidl_fuchsia_netstack::InterfaceConfig {
             ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(true),
             name: name,
+            metric: metric,
         },
         |seed, opt| match opt {
             ConfigOption::IpConfig(value) => fidl_fuchsia_netstack::InterfaceConfig {
@@ -191,6 +193,7 @@ mod tests {
             },
             "".to_string(),
             "",
+            100,
             &vec![
                 InterfaceSpec {
                     matcher: InterfaceMatcher::All,

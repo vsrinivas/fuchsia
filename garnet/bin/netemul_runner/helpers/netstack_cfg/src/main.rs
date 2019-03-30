@@ -32,6 +32,7 @@ struct Opt {
 }
 
 const IGNORED_IP_ADDRESS_CONFIG: IpAddressConfig = IpAddressConfig::Dhcp(true);
+const DEFAULT_METRIC: u32 = 100;
 
 async fn config_netstack(opt: Opt) -> Result<(), Error> {
     println!("Configuring endpoint {}", opt.endpoint);
@@ -73,8 +74,11 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
             }
         },
     );
-    let mut cfg =
-        InterfaceConfig { name: if_name.to_string(), ip_address_config: IGNORED_IP_ADDRESS_CONFIG };
+    let mut cfg = InterfaceConfig {
+        name: if_name.to_string(),
+        metric: DEFAULT_METRIC,
+        ip_address_config: IGNORED_IP_ADDRESS_CONFIG,
+    };
     let nicid =
         await!(netstack.add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth))
             .context("can't add ethernet device")?;
