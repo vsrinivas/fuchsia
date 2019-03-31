@@ -300,7 +300,7 @@ struct Arm64PmuConfig {
     uint32_t programmable_initial_value[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS];
 
     // Flags for each counter.
-    // The values of the flags is the same as for perfmon_config_t::flags.
+    // The values are |perfmon::kPmuConfigFlag*|.
     uint32_t fixed_flags[ARM64_PMU_MAX_FIXED_COUNTERS];
     uint32_t programmable_flags[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS];
 

@@ -385,24 +385,10 @@ struct X86PmuConfig {
     uint64_t programmable_initial_value[IPM_MAX_PROGRAMMABLE_COUNTERS];
 
     // Flags for each counter.
+    // The values are |perfmon::kPmuConfigFlag*|.
     uint32_t fixed_flags[IPM_MAX_FIXED_COUNTERS];
     uint32_t programmable_flags[IPM_MAX_PROGRAMMABLE_COUNTERS];
     uint32_t misc_flags[IPM_MAX_MISC_EVENTS];
-// Both of IPM_CONFIG_FLAG_{PC,TIMEBASE} cannot be set.
-#define IPM_CONFIG_FLAG_MASK     0x7
-// Collect aspace+pc values.
-// Cannot be set with IPM_CONFIG_FLAG_TIMEBASE unless the counter is
-// |timebase_event|.
-#define IPM_CONFIG_FLAG_PC       (1u << 0)
-// Collect this event's value when |timebase_event| counter's data is collected.
-// While redundant, it is ok to set this for the |timebase_event| counter.
-#define IPM_CONFIG_FLAG_TIMEBASE (1u << 1)
-// Collect the available set of last branches.
-// Branch data is emitted as PERFMON_RECORD_LBR records.
-// Cannot be set with IPM_CONFIG_FLAG_TIMEBASE unless the counter is
-// |timebase_event|.
-// This is only available when the underlying system supports it.
-#define IPM_CONFIG_FLAG_LBR      (1u << 2)
 
     // IA32_PERFEVTSEL_*
     uint64_t programmable_events[IPM_MAX_PROGRAMMABLE_COUNTERS];

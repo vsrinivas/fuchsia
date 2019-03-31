@@ -338,7 +338,7 @@ struct PerfmonState {
     uint64_t fixed_initial_value[IPM_MAX_FIXED_COUNTERS] = {};
     uint64_t programmable_initial_value[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
 
-    // Flags for each event/counter, IPM_CONFIG_FLAG_*.
+    // Flags for each event/counter, perfmon::kPmuConfigFlag*.
     uint32_t fixed_flags[IPM_MAX_FIXED_COUNTERS] = {};
     uint32_t programmable_flags[IPM_MAX_PROGRAMMABLE_COUNTERS] = {};
     uint32_t misc_flags[IPM_MAX_MISC_EVENTS] = {};
@@ -805,17 +805,17 @@ static zx_status_t x86_perfmon_verify_fixed_config(
                 TRACEF("Initial value too large for |fixed_initial_value[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
-            if (config->fixed_flags[i] & ~IPM_CONFIG_FLAG_MASK) {
+            if (config->fixed_flags[i] & ~perfmon::kPmuConfigFlagMask) {
                 TRACEF("Unused bits set in |fixed_flags[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
             if (!x86_perfmon_lbr_is_supported() &&
-                (config->fixed_flags[i] & IPM_CONFIG_FLAG_LBR) != 0) {
+                (config->fixed_flags[i] & perfmon::kPmuConfigFlagLastBranch) != 0) {
                 TRACEF("Last branch records requested for |fixed_flags[%u]|,"
                        " but not supported\n", i);
                 return ZX_ERR_NOT_SUPPORTED;
             }
-            if ((config->fixed_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
+            if ((config->fixed_flags[i] & perfmon::kPmuConfigFlagTimebase0) &&
                     config->timebase_event == PERFMON_EVENT_ID_NONE) {
                 TRACEF("Timebase requested for |fixed_flags[%u]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
@@ -873,17 +873,17 @@ static zx_status_t x86_perfmon_verify_programmable_config(
                 TRACEF("Initial value too large for |programmable_initial_value[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
-            if (config->programmable_flags[i] & ~IPM_CONFIG_FLAG_MASK) {
+            if (config->programmable_flags[i] & ~perfmon::kPmuConfigFlagMask) {
                 TRACEF("Unused bits set in |programmable_flags[%u]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
             if (!x86_perfmon_lbr_is_supported() &&
-                (config->programmable_flags[i] & IPM_CONFIG_FLAG_LBR) != 0) {
+                (config->programmable_flags[i] & perfmon::kPmuConfigFlagLastBranch) != 0) {
                 TRACEF("Last branch records requested for |programmable_flags[%u]|,"
                        " but not supported\n", i);
                 return ZX_ERR_NOT_SUPPORTED;
             }
-            if ((config->programmable_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
+            if ((config->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0) &&
                     config->timebase_event == PERFMON_EVENT_ID_NONE) {
                 TRACEF("Timebase requested for |programmable_flags[%u]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
@@ -918,18 +918,19 @@ static zx_status_t x86_perfmon_verify_misc_config(
                 return ZX_ERR_INVALID_ARGS;
             }
         } else {
-            if (config->misc_flags[i] & ~IPM_CONFIG_FLAG_MASK) {
+            if (config->misc_flags[i] & ~perfmon::kPmuConfigFlagMask) {
                 TRACEF("Unused bits set in |misc_flags[%zu]|\n", i);
                 return ZX_ERR_INVALID_ARGS;
             }
             // Currently we only support the MCHBAR events.
             // They cannot provide pc. We ignore the OS/USER bits.
-            if (config->misc_flags[i] & (IPM_CONFIG_FLAG_PC | IPM_CONFIG_FLAG_LBR)) {
+            if (config->misc_flags[i] & (perfmon::kPmuConfigFlagPc |
+                                         perfmon::kPmuConfigFlagLastBranch)) {
                 TRACEF("Invalid bits (0x%x) in |misc_flags[%zu]|\n",
                        config->misc_flags[i], i);
                 return ZX_ERR_INVALID_ARGS;
             }
-            if ((config->misc_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) &&
+            if ((config->misc_flags[i] & perfmon::kPmuConfigFlagTimebase0) &&
                     config->timebase_event == PERFMON_EVENT_ID_NONE) {
                 TRACEF("Timebase requested for |misc_flags[%zu]|, but not provided\n", i);
                 return ZX_ERR_INVALID_ARGS;
@@ -959,7 +960,7 @@ static zx_status_t x86_perfmon_verify_timebase_config(
     for (unsigned i = 0; i < num_fixed; ++i) {
         if (config->fixed_ids[i] == config->timebase_event) {
             // The PMI code is simpler if this is the case.
-            config->fixed_flags[i] &= ~IPM_CONFIG_FLAG_TIMEBASE;
+            config->fixed_flags[i] &= ~perfmon::kPmuConfigFlagTimebase0;
             return ZX_OK;
         }
     }
@@ -967,7 +968,7 @@ static zx_status_t x86_perfmon_verify_timebase_config(
     for (unsigned i = 0; i < num_programmable; ++i) {
         if (config->programmable_ids[i] == config->timebase_event) {
             // The PMI code is simpler if this is the case.
-            config->programmable_flags[i] &= ~IPM_CONFIG_FLAG_TIMEBASE;
+            config->programmable_flags[i] &= ~perfmon::kPmuConfigFlagTimebase0;
             return ZX_OK;
         }
     }
@@ -1947,15 +1948,15 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             // TODO(dje): The counter could still overflow. Later.
             if (id == state->timebase_event) {
                 saw_timebase = true;
-            } else if (state->programmable_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) {
+            } else if (state->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0) {
                 continue;
             }
-            if (state->programmable_flags[i] & IPM_CONFIG_FLAG_PC) {
+            if (state->programmable_flags[i] & perfmon::kPmuConfigFlagPc) {
                 next = arch_perfmon_write_pc_record(next, id, cr3, frame->ip);
             } else {
                 next = arch_perfmon_write_tick_record(next, id);
             }
-            if (state->programmable_flags[i] & IPM_CONFIG_FLAG_LBR) {
+            if (state->programmable_flags[i] & perfmon::kPmuConfigFlagLastBranch) {
                 request_lbr = true;
                 lbr_id = id;
             }
@@ -1975,15 +1976,15 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             // TODO(dje): The counter could still overflow. Later.
             if (id == state->timebase_event) {
                 saw_timebase = true;
-            } else if (state->fixed_flags[i] & IPM_CONFIG_FLAG_TIMEBASE) {
+            } else if (state->fixed_flags[i] & perfmon::kPmuConfigFlagTimebase0) {
                 continue;
             }
-            if (state->fixed_flags[i] & IPM_CONFIG_FLAG_PC) {
+            if (state->fixed_flags[i] & perfmon::kPmuConfigFlagPc) {
                 next = arch_perfmon_write_pc_record(next, id, cr3, frame->ip);
             } else {
                 next = arch_perfmon_write_tick_record(next, id);
             }
-            if (state->fixed_flags[i] & IPM_CONFIG_FLAG_LBR) {
+            if (state->fixed_flags[i] & perfmon::kPmuConfigFlagLastBranch) {
                 request_lbr = true;
                 lbr_id = id;
             }
@@ -1994,10 +1995,10 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
 
         bits_to_clear |= perfmon_counter_status_bits;
 
-        // Now handle events that have IPM_CONFIG_FLAG_TIMEBASE set.
+        // Now handle events that have kPmuConfigFlagTimebase0 set.
         if (saw_timebase) {
             for (unsigned i = 0; i < state->num_used_programmable; ++i) {
-                if (!(state->programmable_flags[i] & IPM_CONFIG_FLAG_TIMEBASE))
+                if (!(state->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0))
                     continue;
                 perfmon_event_id_t id = state->programmable_ids[i];
                 uint64_t count = read_msr(IA32_PMC_FIRST + i);
@@ -2009,7 +2010,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                 write_msr(IA32_PMC_FIRST + i, state->programmable_initial_value[i]);
             }
             for (unsigned i = 0; i < state->num_used_fixed; ++i) {
-                if (!(state->fixed_flags[i] & IPM_CONFIG_FLAG_TIMEBASE))
+                if (!(state->fixed_flags[i] & perfmon::kPmuConfigFlagTimebase0))
                     continue;
                 perfmon_event_id_t id = state->fixed_ids[i];
                 unsigned hw_num = state->fixed_hw_map[i];
@@ -2032,7 +2033,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
             // ameliorates the problem somewhat.
             if (cpu == 0) {
                 for (unsigned i = 0; i < state->num_used_misc; ++i) {
-                    if (!(state->misc_flags[i] & IPM_CONFIG_FLAG_TIMEBASE)) {
+                    if (!(state->misc_flags[i] & perfmon::kPmuConfigFlagTimebase0)) {
                         // While a timebase is required for all current misc
                         // counters, we don't assume this here.
                         continue;

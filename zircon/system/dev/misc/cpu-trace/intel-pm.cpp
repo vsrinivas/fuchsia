@@ -274,9 +274,9 @@ static zx_status_t PmuStageFixedConfig(const perfmon_config_t* icfg,
     ocfg->fixed_ctrl |= enable << IA32_FIXED_CTR_CTRL_EN_SHIFT(counter);
     ocfg->global_ctrl |= IA32_PERF_GLOBAL_CTRL_FIXED_EN_MASK(counter);
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0)
-        ocfg->fixed_flags[ss->num_fixed] |= IPM_CONFIG_FLAG_TIMEBASE;
+        ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagTimebase0;
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_PC)
-        ocfg->fixed_flags[ss->num_fixed] |= IPM_CONFIG_FLAG_PC;
+        ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagPc;
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
         if (!PmuLbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
@@ -290,7 +290,7 @@ static zx_status_t PmuStageFixedConfig(const perfmon_config_t* icfg,
                    , __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
-        ocfg->fixed_flags[ss->num_fixed] |= IPM_CONFIG_FLAG_LBR;
+        ocfg->fixed_flags[ss->num_fixed] |= kPmuConfigFlagLastBranch;
         ocfg->debug_ctrl |= IA32_DEBUGCTL_LBR_MASK;
     }
 
@@ -372,9 +372,9 @@ static zx_status_t PmuStageProgrammableConfig(const perfmon_config_t* icfg,
     ocfg->programmable_events[ss->num_programmable] = evtsel;
     ocfg->global_ctrl |= IA32_PERF_GLOBAL_CTRL_PMC_EN_MASK(ss->num_programmable);
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0)
-        ocfg->programmable_flags[ss->num_programmable] |= IPM_CONFIG_FLAG_TIMEBASE;
+        ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagTimebase0;
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_PC)
-        ocfg->programmable_flags[ss->num_programmable] |= IPM_CONFIG_FLAG_PC;
+        ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagPc;
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_LAST_BRANCH) {
         if (!PmuLbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
@@ -388,7 +388,7 @@ static zx_status_t PmuStageProgrammableConfig(const perfmon_config_t* icfg,
                    , __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
-        ocfg->programmable_flags[ss->num_programmable] |= IPM_CONFIG_FLAG_LBR;
+        ocfg->programmable_flags[ss->num_programmable] |= kPmuConfigFlagLastBranch;
         ocfg->debug_ctrl |= IA32_DEBUGCTL_LBR_MASK;
     }
 
@@ -421,7 +421,7 @@ static zx_status_t PmuStageMiscConfig(const perfmon_config_t* icfg,
     ss->have_misc[event / 64] |= 1ul << (event % 64);
     ocfg->misc_ids[ss->num_misc] = id;
     if (icfg->flags[ii] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
-        ocfg->misc_flags[ss->num_misc] |= IPM_CONFIG_FLAG_TIMEBASE;
+        ocfg->misc_flags[ss->num_misc] |= kPmuConfigFlagTimebase0;
     } else {
         if (icfg->rate[ii] != 0) {
             zxlogf(ERROR, "%s: Misc event [%u] requires a timebase\n",

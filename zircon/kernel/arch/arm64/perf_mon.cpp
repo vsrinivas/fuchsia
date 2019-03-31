@@ -122,7 +122,7 @@ struct PerfmonState {
     uint64_t fixed_initial_value[ARM64_PMU_MAX_FIXED_COUNTERS] = {};
     uint32_t programmable_initial_value[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS] = {};
 
-    // Flags for each event/counter, ARM64_PMU_CONFIG_FLAG_*.
+    // Flags for each event/counter, perfmon::kPmuConfigFlag*.
     uint32_t fixed_flags[ARM64_PMU_MAX_FIXED_COUNTERS] = {};
     uint32_t programmable_flags[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS] = {};
 
@@ -391,7 +391,7 @@ static zx_status_t arm64_perfmon_verify_fixed_config(
     // |config->fixed_initial_value| here.
 
     // Sanity check on the driver.
-    if ((config->fixed_flags[0] & PERFMON_CONFIG_FLAG_TIMEBASE0) &&
+    if ((config->fixed_flags[0] & perfmon::kPmuConfigFlagTimebase0) &&
         config->timebase_event == PERFMON_EVENT_ID_NONE) {
         TRACEF("Timebase requested for |fixed_flags[0]|, but not provided\n");
         return ZX_ERR_INVALID_ARGS;
@@ -422,7 +422,7 @@ static zx_status_t arm64_perfmon_verify_programmable_config(
         // it here.
 
         // Sanity check on the driver.
-        if ((config->programmable_flags[i] & PERFMON_CONFIG_FLAG_TIMEBASE0) &&
+        if ((config->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0) &&
             config->timebase_event == PERFMON_EVENT_ID_NONE) {
             TRACEF("Timebase requested for |programmable_flags[%u]|, but not provided\n", i);
             return ZX_ERR_INVALID_ARGS;
@@ -443,7 +443,7 @@ static zx_status_t arm64_perfmon_verify_timebase_config(
     for (unsigned i = 0; i < num_fixed; ++i) {
         if (config->fixed_events[i] == config->timebase_event) {
             // The PMI code is simpler if this is the case.
-            config->fixed_flags[i] &= ~PERFMON_CONFIG_FLAG_TIMEBASE0;
+            config->fixed_flags[i] &= ~perfmon::kPmuConfigFlagTimebase0;
             return ZX_OK;
         }
     }
@@ -451,7 +451,7 @@ static zx_status_t arm64_perfmon_verify_timebase_config(
     for (unsigned i = 0; i < num_programmable; ++i) {
         if (config->programmable_events[i] == config->timebase_event) {
             // The PMI code is simpler if this is the case.
-            config->programmable_flags[i] &= ~PERFMON_CONFIG_FLAG_TIMEBASE0;
+            config->programmable_flags[i] &= ~perfmon::kPmuConfigFlagTimebase0;
             return ZX_OK;
         }
     }
@@ -514,7 +514,7 @@ static void arm64_perfmon_stage_fixed_config(const zx_arm64_pmu_config_t* config
         // Don't generate PMI's for counters that use another as the timebase.
         // We still generate interrupts in "counting mode" in case the counter
         // overflows.
-        if (!(config->fixed_flags[0] & PERFMON_CONFIG_FLAG_TIMEBASE0)) {
+        if (!(config->fixed_flags[0] & perfmon::kPmuConfigFlagTimebase0)) {
             state->pmintenset_el1 |= ARM64_PMINTENSET_EL1_C_MASK;
         }
         state->pm_counter_ctrl |= ARM64_PMOVSCLR_EL0_C_MASK;
@@ -522,10 +522,10 @@ static void arm64_perfmon_stage_fixed_config(const zx_arm64_pmu_config_t* config
         // We leave the NSK,NSU bits as zero here, which translates as
         // non-secure EL0,EL1 modes being treated same as secure modes.
         // TODO(dje): Review.
-        if (!(config->fixed_flags[0] & PERFMON_CONFIG_FLAG_OS)) {
+        if (!(config->fixed_flags[0] & perfmon::kPmuConfigFlagOs)) {
             ctrl |= ARM64_PMCCFILTR_EL0_P_MASK;
         }
-        if (!(config->fixed_flags[0] & PERFMON_CONFIG_FLAG_USER)) {
+        if (!(config->fixed_flags[0] & perfmon::kPmuConfigFlagUser)) {
             ctrl |= ARM64_PMCCFILTR_EL0_U_MASK;
         }
         state->fixed_hw_events[0] |= ctrl;
@@ -555,7 +555,7 @@ static void arm64_perfmon_stage_programmable_config(const zx_arm64_pmu_config_t*
         // Don't generate PMI's for counters that use another as the timebase.
         // We still generate interrupts in "counting mode" in case the counter
         // overflows.
-        if (!(config->programmable_flags[i] & PERFMON_CONFIG_FLAG_TIMEBASE0)) {
+        if (!(config->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0)) {
             state->pmintenset_el1 |= ARM64_PMU_PROGRAMMABLE_COUNTER_MASK(i);
         }
         state->pm_counter_ctrl |= ARM64_PMU_PROGRAMMABLE_COUNTER_MASK(i);
@@ -563,10 +563,10 @@ static void arm64_perfmon_stage_programmable_config(const zx_arm64_pmu_config_t*
         // We leave the NSK,NSU bits as zero here, which translates as
         // non-secure EL0,EL1 modes being treated same as secure modes.
         // TODO(dje): Review.
-        if (!(config->programmable_flags[i] & PERFMON_CONFIG_FLAG_OS)) {
+        if (!(config->programmable_flags[i] & perfmon::kPmuConfigFlagOs)) {
             ctrl |= ARM64_PMEVTYPERn_EL0_P_MASK;
         }
-        if (!(config->programmable_flags[i] & PERFMON_CONFIG_FLAG_USER)) {
+        if (!(config->programmable_flags[i] & perfmon::kPmuConfigFlagUser)) {
             ctrl |= ARM64_PMEVTYPERn_EL0_U_MASK;
         }
         // TODO(dje): MT bit
@@ -997,11 +997,11 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
             // TODO(dje): The counter could still overflow. Later.
             if (id == state->timebase_event) {
                 saw_timebase = true;
-            } else if (state->programmable_flags[i] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
+            } else if (state->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0) {
                 continue;
             }
             // TODO(dje): Counter still counting.
-            if (state->programmable_flags[i] & PERFMON_CONFIG_FLAG_PC) {
+            if (state->programmable_flags[i] & perfmon::kPmuConfigFlagPc) {
                 next = arch_perfmon_write_pc_record(next, id, aspace, frame->elr);
             } else {
                 next = arch_perfmon_write_tick_record(next, id);
@@ -1023,11 +1023,11 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
             // TODO(dje): The counter could still overflow. Later.
             if (id == state->timebase_event) {
                 saw_timebase = true;
-            } else if (state->fixed_flags[0] & PERFMON_CONFIG_FLAG_TIMEBASE0) {
+            } else if (state->fixed_flags[0] & perfmon::kPmuConfigFlagTimebase0) {
                 continue;
             }
             // TODO(dje): Counter still counting.
-            if (state->fixed_flags[0] & PERFMON_CONFIG_FLAG_PC) {
+            if (state->fixed_flags[0] & perfmon::kPmuConfigFlagPc) {
                 next = arch_perfmon_write_pc_record(next, id, aspace, frame->elr);
             } else {
                 next = arch_perfmon_write_tick_record(next, id);
@@ -1037,10 +1037,10 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
             __arm_wsr64("pmccntr_el0", state->fixed_initial_value[0]);
         }
 
-        // Now handle events that have PERFMON_CONFIG_FLAG_TIMEBASE0 set.
+        // Now handle events that have perfmon::kPmuConfigFlagTimebase0 set.
         if (saw_timebase) {
             for (unsigned i = 0; i < state->num_used_programmable; ++i) {
-                if (!(state->programmable_flags[i] & PERFMON_CONFIG_FLAG_TIMEBASE0)) {
+                if (!(state->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0)) {
                     continue;
                 }
                 perfmon_event_id_t id = state->programmable_events[i];
@@ -1056,7 +1056,7 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
             }
             for (unsigned i = 0; i < state->num_used_fixed; ++i) {
                 DEBUG_ASSERT(state->num_used_fixed == 1);
-                if (!(state->fixed_flags[0] & PERFMON_CONFIG_FLAG_TIMEBASE0)) {
+                if (!(state->fixed_flags[0] & perfmon::kPmuConfigFlagTimebase0)) {
                     continue;
                 }
                 perfmon_event_id_t id = state->fixed_events[0];
