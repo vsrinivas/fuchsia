@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("$zx/public/gn/host_tool_action.gni")
+import("$zx/public/gn/manifest.gni")
 import("$zx/public/gn/resource.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 
@@ -20,7 +21,8 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 #
 # It's not necessary to use an explicit zbi_input() target just to collect
 # files into the BOOTFS of a zbi().  Use zbi_input() explicitly to get the
-# manifest file as an explicit build artifact, or to include other types.
+# manifest file as an explicit build artifact, to apply a target directory
+# prefix to the manfiest file, or to include other types.
 #
 # Parameters
 #
@@ -28,30 +30,15 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 #     Optional: Dependencies examined for metadata.  Any other zbi_input()
 #     or zbi() targets in this dependency graph will flow into any zbi()
 #     target that depends on this one.  Any manifest metadata will be collected
-#     here into a manifest file.
+#     here into a manifest file; see manifest_file().
 #     Type: list(label)
 #
-#   output_dir
-#     Optional: Directory where a manifest file is written.
-#     Type: dir
-#     Default: target_gen_dir
-#
-#   output_extension
-#     Optional: Extension added to $output_name.
+#   prefix
+#     Optional: Directory prefix prepended to the target path in each
+#     manifest entry.  This is normalized when nonempty so it need not end
+#     with a `/`.
 #     Type: string
-#     Default: "manifest"
-#
-#   output_name
-#     Optional: Name of the manifest file written out.
-#     Type: string
-#     Default: target_name
-#
-#   manifest
-#     Optional: Literal manifest entries for the BOOTFS.  These augment the
-#     entries collected from `manifest_lines` metadata.  Each entry is
-#     either a string that's a literal manifest entry line, or a scope
-#     with $sources and $outputs like a resource() target.
-#     Type: list(string or scope)
+#     Default: ""
 #
 #   type
 #     Optional: The input type for any $sources or $args, as in the
@@ -73,82 +60,38 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 #     The most common use is "--entry=..." to provide literal contents right
 #     in the GN file (e.g. for `type = "cmdline"`).
 #
+#   See manifest_file() for additional parameters.  The manifest file
+#   produced from those parameters contributes to the BOOTFS (as modified
+#   by $prefix).
+#
 template("zbi_input") {
-  input_target = target_name
-  manifest_target = "_zbi_input.manifest.$target_name"
-
-  forward_variables_from(invoker,
-                         [
-                           "output_dir",
-                           "output_extension",
-                           "output_name",
-                         ])
-  if (!defined(output_dir)) {
-    output_dir = target_gen_dir
-  }
-  if (!defined(output_extension)) {
-    output_extension = "manifest"
-  }
-  if (!defined(output_name)) {
-    output_name = target_name
-  }
-
-  manifest_file = "$output_dir/$output_name"
-  if (output_extension != "") {
-    manifest_file += ".$output_extension"
-  }
-
-  generated_file(manifest_target) {
-    visibility = [ ":$input_target" ]
+  manifest_file(target_name) {
+    prefix = ""
     forward_variables_from(invoker,
+                           "*",
                            [
-                             "data_deps",
-                             "deps",
-                             "testonly",
+                             "args",
+                             "metadata",
+                             "type",
+                             "sources",
                            ])
-    outputs = [
-      manifest_file,
-    ]
-    output_conversion = "list lines"
-    data_keys = [ "manifest_lines" ]
-    walk_keys = [ "manifest_barrier" ]
 
-    # An embedded manifest contributes to metadata.manifest_lines directly.
-    if (defined(invoker.manifest)) {
-      entries = []
-      foreach(entry, invoker.manifest) {
-        if (entry == "$entry") {
-          # It's a literal manifest entry string.
-          # Note this doesn't express any dependency on its source file!
-          entries += [ entry ]
-        } else {
-          # It's a manifest entry in the style of a copy() target.
-          foreach(source, entry.sources) {
-            inputs += [ source ]
-            source_path = rebase_path(source, root_build_dir)
-            foreach(target, process_file_template([ source ], entry.outputs)) {
-              entries += [ "${target}=${source_path}" ]
-            }
-          }
-        }
-      }
-      metadata = {
-        manifest_lines = entries
-      }
+    # Elaborate the defaults identically to manifest_file() so that we know
+    # the file name to pass to `zbi`.
+    if (!defined(output_dir)) {
+      output_dir = target_gen_dir
     }
-  }
+    if (!defined(output_extension)) {
+      output_extension = "manifest"
+    }
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
 
-  # This is separate from the manifest target just because the metadata
-  # contributed here must not be included in the manifest metadata query.
-  group(input_target) {
-    forward_variables_from(invoker,
-                           [
-                             "visibility",
-                             "testonly",
-                           ])
-    deps = [
-      ":$manifest_target",
-    ]
+    manifest_file = "$output_dir/$output_name"
+    if (output_extension != "") {
+      manifest_file += ".$output_extension"
+    }
 
     metadata = {
       zbi_input_args = []
@@ -169,33 +112,16 @@ template("zbi_input") {
       }
 
       # Always include the manifest generated from the deps here.  The
-      # barrier will prevent zbi() from collecting manifest_lines that are
-      # redundant with this manifest.
+      # `manifest_barrier` in manifest_file() will prevent zbi() from
+      # collecting `manifest_lines` that are redundant with this manifest.
       zbi_input_args += [
+        "--prefix=$prefix",
         "--files",
         rebase_path(manifest_file, root_build_dir),
       ]
-      manifest_barrier = []
-
-      # For the //:images build_api_module().
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = output_name
-          path = rebase_path(manifest_file, root_build_dir)
-          type = "manifest"
-          cpu = current_cpu
-        },
-      ]
 
       if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata,
-                               "*",
-                               [
-                                 "manifest_barrier",
-                                 "manifest_lines",
-                                 "zbi_input_args",
-                               ])
+        forward_variables_from(invoker.metadata, "*", [ "zbi_input_args" ])
       }
     }
   }
