@@ -9,8 +9,8 @@ driver("hikey960") {
     "hikey960-gpio.c",
     "hikey960-i2c.c",
     "hikey960-sysmem.c",
-    "hikey960-usb.c",
     "hikey960-ufs.c",
+    "hikey960-usb.c",
     "hikey960.c",
   ]
   deps = [

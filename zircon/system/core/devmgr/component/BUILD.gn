@@ -7,7 +7,7 @@ driver("component") {
     "component.cpp",
   ]
   data_deps = [
-    ":component.proxy"
+    ":component.proxy",
   ]
   deps = [
     "$zx/system/ulib/ddk",

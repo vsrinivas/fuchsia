@@ -4,26 +4,26 @@
 
 driver("dsi-mt") {
   sources = [
-    "dsi-mt.cpp"
+    "dsi-mt.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-dsiimpl",
-    "$zx/system/banjo/ddk-protocol-sysmem",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-gpio",
     "$zx/system/banjo/ddk-protocol-i2c",
+    "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-sysmem:c",
     "$zx/system/ulib/bitmap",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/mipi-dsi",
     "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
   ]
 }

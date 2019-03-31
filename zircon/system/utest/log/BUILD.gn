@@ -4,8 +4,8 @@
 
 test("log") {
   sources = [
-    "main.c",
     "log_test.c",
+    "main.c",
   ]
   deps = [
     "$zx/system/ulib/c",

@@ -10,8 +10,8 @@ library("simple-audio-stream") {
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-hardware-audio:c",
-    "$zx/system/ulib/dispatcher-pool",
     "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/dispatcher-pool",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zx",
   ]

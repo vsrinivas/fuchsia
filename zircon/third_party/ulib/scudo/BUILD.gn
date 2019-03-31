@@ -7,8 +7,8 @@ source_set("scudo") {
     "$zx/third_party/ulib/musl:musl_internal",
   ]
   sources = [
-    "common.cc",
     "checksum.cc",
+    "common.cc",
     "crc32_hw.cc",
     "flags.cc",
     "flags_parser.cc",
@@ -18,4 +18,3 @@ source_set("scudo") {
     "wrappers_c.cc",
   ]
 }
-

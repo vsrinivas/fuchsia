@@ -70,4 +70,3 @@ test("sysmem-unittest") {
     "$zx/system/ulib/zxtest",
   ]
 }
-

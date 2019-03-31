@@ -34,8 +34,8 @@ library("zircon-crypto") {
     "$zx/system/ulib/explicit-memory",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/system/ulib/zxcpp",
     "$zx/third_party/ulib/uboringssl",
   ]

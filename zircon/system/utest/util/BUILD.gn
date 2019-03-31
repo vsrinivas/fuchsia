@@ -11,8 +11,8 @@ test("util") {
   ]
   if (is_fuchsia) {
     deps += [
-      "$zx/system/ulib/zircon",
       "$zx/system/ulib/fdio",
+      "$zx/system/ulib/zircon",
     ]
   }
 }

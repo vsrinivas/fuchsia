@@ -7,6 +7,8 @@ group("display") {
     "aml-canvas",
     "astro-display",
     "display",
+    "dsi-dw",
+    "dsi-mt",
     "dummy",
     "hikey-display",
     "imx8m-display",
@@ -14,8 +16,6 @@ group("display") {
     "mt8167s-display",
     "simple",
     "vim-display",
-    "dsi-dw",
-    "dsi-mt",
   ]
   if (current_cpu == "x64") {
     deps += [ "intel-i915" ]

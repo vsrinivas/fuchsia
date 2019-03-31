@@ -26,7 +26,6 @@ library("async-testutils") {
 
     # <lib/async-testutils/dispatcher.h_stub> has #include <lib/zx/time.h>.
     "$zx/system/ulib/zx:headers",
-
   ]
   deps = [
     "$zx/system/ulib/async",

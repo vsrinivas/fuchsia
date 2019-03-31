@@ -3,6 +3,5 @@
 # found in the LICENSE file.
 
 library("msm8x53") {
-  sources = [
-  ]
+  sources = []
 }

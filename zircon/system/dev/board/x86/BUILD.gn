@@ -29,7 +29,6 @@ config("config") {
 
 driver("platform-bus-x86") {
   sources = [
-    "acpi-nswalk.c",
     "acpi-dev/dev-battery.c",
     "acpi-dev/dev-cros-ec/dev.cpp",
     "acpi-dev/dev-cros-ec/motion.cpp",
@@ -38,6 +37,7 @@ driver("platform-bus-x86") {
     "acpi-dev/dev-pwrsrc.c",
     "acpi-dev/dev-tbmc.cpp",
     "acpi-dev/dev-thermal.c",
+    "acpi-nswalk.c",
     "debug.c",
     "init.c",
     "iommu.c",

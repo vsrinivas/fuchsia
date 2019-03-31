@@ -27,7 +27,7 @@ template("subtarget_aliases") {
                                  "visibility",
                                ])
         public_deps = [
-          ":$invoker_name.$subtarget"
+          ":$invoker_name.$subtarget",
         ]
       }
     }

@@ -5,8 +5,8 @@
 group("misc") {
   deps = [
     "builtin",
-    "cpu-trace",
     "console",
+    "cpu-trace",
     "ktrace",
     "pty",
     "sysinfo",

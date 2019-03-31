@@ -17,7 +17,6 @@ test("hid-parser") {
     "$zx/system/ulib/zxcpp",
   ]
 }
-
 # TODO(BLD-356): hid-parser-fuzzer
 # sources=["hid-parser-fuzztest.cpp"]
 # deps= hid-parser fbl fdio unittest
