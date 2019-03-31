@@ -3310,7 +3310,7 @@ static zx_status_t ath10k_pci_probe(void* ctx, zx_device_t* dev) {
     ath10k_info("Probed chip %s ver: %.1f\n", chip_name, version);
 
     ret =
-        ath10k_core_create(&ar, sizeof(*ar_pci), dev, ATH10K_BUS_PCI, hw_rev, &ath10k_pci_hif_ops);
+        ath10k_core_create(&ar, sizeof(*ar_pci), ATH10K_BUS_PCI, hw_rev, &ath10k_pci_hif_ops);
     if (ret != ZX_OK) {
         ath10k_err("failed to create core\n");
         return ret;

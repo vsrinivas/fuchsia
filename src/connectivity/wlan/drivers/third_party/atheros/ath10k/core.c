@@ -2447,7 +2447,7 @@ void ath10k_core_unregister(struct ath10k* ar) {
 }
 #endif  // NEEDS PORTING
 
-zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size, zx_device_t* dev,
+zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size,
                                enum ath10k_bus bus, enum ath10k_hw_rev hw_rev,
                                const struct ath10k_hif_ops* hif_ops) {
     struct ath10k* ar;
@@ -2456,7 +2456,6 @@ zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size, zx_devi
     ar = ath10k_mac_create(priv_size);
     if (!ar) { return ZX_ERR_NO_MEMORY; }
 
-    ar->zxdev = dev;
     ar->hw_rev = hw_rev;
     ar->hif.ops = hif_ops;
     ar->hif.bus = bus;

@@ -732,7 +732,7 @@ struct ath10k_vif {
 };
 
 struct ath10k {
-    zx_device_t* zxdev;         // Or 'zxdev_phy', which binds to the hardware device.
+    zx_device_t* zxdev;  // Or 'zxdev_phy', which binds to the hardware device.
     zx_device_t* zxdev_mac;
     uint8_t mac_addr[ETH_ALEN];
 
@@ -1015,9 +1015,8 @@ static inline bool ath10k_peer_stats_enabled(struct ath10k* ar) {
     return false;
 }
 
-zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size, zx_device_t* dev,
-                               enum ath10k_bus bus, enum ath10k_hw_rev hw_rev,
-                               const struct ath10k_hif_ops* hif_ops);
+zx_status_t ath10k_core_create(struct ath10k** ar_ptr, size_t priv_size, enum ath10k_bus bus,
+                               enum ath10k_hw_rev hw_rev, const struct ath10k_hif_ops* hif_ops);
 void ath10k_core_destroy(struct ath10k* ar);
 void ath10k_core_get_fw_features_str(struct ath10k* ar, char* buf, size_t max_len);
 zx_status_t ath10k_core_fetch_firmware_api_n(struct ath10k* ar, const char* name,
