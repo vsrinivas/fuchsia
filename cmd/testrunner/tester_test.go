@@ -7,12 +7,16 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 
+	"fuchsia.googlesource.com/tools/sshutil"
 	"fuchsia.googlesource.com/tools/testsharder"
+
+	"golang.org/x/crypto/ssh"
 )
 
 func TestTester(t *testing.T) {
@@ -118,7 +122,19 @@ func TestSSHTester(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			tester, err := NewSSHTester(nodename, sshKey)
+			newClient := func(ctx context.Context) (*ssh.Client, error) {
+				config, err := sshutil.DefaultSSHConfig(sshKey)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create an SSH client config: %v", err)
+				}
+				client, err := sshutil.ConnectToNode(ctx, nodename, config)
+				if err != nil {
+					return nil, fmt.Errorf("failed to connect to node %q: %v", nodename, err)
+				}
+				return client, nil
+			}
+
+			tester, err := NewSSHTester(newClient)
 			if err != nil {
 				t.Errorf("failed to intialize tester: %v", err)
 				return

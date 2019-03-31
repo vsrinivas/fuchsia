@@ -10,6 +10,7 @@ import (
 	"io"
 	"path"
 
+	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/runner"
 	"fuchsia.googlesource.com/tools/sshutil"
 	"fuchsia.googlesource.com/tools/testsharder"
@@ -19,6 +20,10 @@ import (
 const (
 	// The test output directory to create on the Fuchsia device.
 	fuchsiaOutputDir = "/data/infra/testrunner"
+
+	// A conventionally used global request name for checking the status of a client
+	// connection to an OpenSSH server.
+	keepAliveOpenSSH = "keepalive@openssh.com"
 )
 
 // Tester is executes a Test.
@@ -51,22 +56,29 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 // contains the command line to execute on the remote machine. The caller should Close() the
 // tester when finished. Once closed, this object can no longer be used.
 type SSHTester struct {
-	client *ssh.Client
+	client    *ssh.Client
+	newClient func(ctx context.Context) (*ssh.Client, error)
 }
 
-func NewSSHTester(nodename string, sshKey []byte) (*SSHTester, error) {
-	config, err := sshutil.DefaultSSHConfig(sshKey)
+func NewSSHTester(newClient func(context.Context) (*ssh.Client, error)) (*SSHTester, error) {
+	client, err := newClient(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create an SSH client config: %v", err)
+		return nil, err
 	}
-	client, err := sshutil.ConnectToNode(context.Background(), nodename, config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to node %q: %v", nodename, err)
-	}
-	return &SSHTester{client: client}, nil
+	return &SSHTester{client: client, newClient: newClient}, nil
 }
 
 func (t *SSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
+	if _, _, err := t.client.Conn.SendRequest(keepAliveOpenSSH, true, nil); err != nil {
+		logger.Errorf(ctx, "SSH client not responsive: %v", err)
+		client, err := t.newClient(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to create new SSH client: %v", err)
+		}
+		t.client.Close()
+		t.client = client
+	}
+
 	session, err := t.client.NewSession()
 	if err != nil {
 		return err
@@ -98,7 +110,19 @@ type FuchsiaTester struct {
 // NewFuchsiaTester creates a FuchsiaTester object and starts a log_listener process on
 // the remote device. The log_listener output can be read from SysLogOutput().
 func NewFuchsiaTester(nodename string, sshKey []byte) (*FuchsiaTester, error) {
-	delegate, err := NewSSHTester(nodename, sshKey)
+	newClient := func(ctx context.Context) (*ssh.Client, error) {
+		config, err := sshutil.DefaultSSHConfig(sshKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create an SSH client config: %v", err)
+		}
+		client, err := sshutil.ConnectToNode(ctx, nodename, config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to node %q: %v", nodename, err)
+		}
+		return client, nil
+	}
+
+	delegate, err := NewSSHTester(newClient)
 	if err != nil {
 		return nil, err
 	}
