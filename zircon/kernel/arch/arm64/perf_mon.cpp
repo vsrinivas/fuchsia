@@ -245,58 +245,58 @@ size_t get_max_space_needed_for_all_records(PerfmonState* state) {
             num_events * kMaxEventRecordSize);
 }
 
-static void arm64_perfmon_write_header(perfmon_record_header_t* hdr,
-                                       perfmon_record_type_t type,
-                                       perfmon_event_id_t event) {
+static void arch_perfmon_write_header(perfmon_record_header_t* hdr,
+                                      perfmon_record_type_t type,
+                                      perfmon_event_id_t event) {
     hdr->type = type;
     hdr->reserved_flags = 0;
     hdr->event = event;
 }
 
-static perfmon_record_header_t* arm64_perfmon_write_time_record(
+static perfmon_record_header_t* arch_perfmon_write_time_record(
         perfmon_record_header_t* hdr,
         perfmon_event_id_t event, zx_ticks_t time) {
     auto rec = reinterpret_cast<perfmon_time_record_t*>(hdr);
-    arm64_perfmon_write_header(&rec->header, PERFMON_RECORD_TIME, event);
+    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_TIME, event);
     rec->time = time;
     ++rec;
     return reinterpret_cast<perfmon_record_header_t*>(rec);
 }
 
-static perfmon_record_header_t* arm64_perfmon_write_tick_record(
+static perfmon_record_header_t* arch_perfmon_write_tick_record(
         perfmon_record_header_t* hdr,
         perfmon_event_id_t event) {
     auto rec = reinterpret_cast<perfmon_tick_record_t*>(hdr);
-    arm64_perfmon_write_header(&rec->header, PERFMON_RECORD_TICK, event);
+    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_TICK, event);
     ++rec;
     return reinterpret_cast<perfmon_record_header_t*>(rec);
 }
 
-static perfmon_record_header_t* arm64_perfmon_write_count_record(
+static perfmon_record_header_t* arch_perfmon_write_count_record(
         perfmon_record_header_t* hdr,
         perfmon_event_id_t event, uint64_t count) {
     auto rec = reinterpret_cast<perfmon_count_record_t*>(hdr);
-    arm64_perfmon_write_header(&rec->header, PERFMON_RECORD_COUNT, event);
+    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_COUNT, event);
     rec->count = count;
     ++rec;
     return reinterpret_cast<perfmon_record_header_t*>(rec);
 }
 
-static perfmon_record_header_t* arm64_perfmon_write_value_record(
+static perfmon_record_header_t* arch_perfmon_write_value_record(
         perfmon_record_header_t* hdr,
         perfmon_event_id_t event, uint64_t value) {
     auto rec = reinterpret_cast<perfmon_value_record_t*>(hdr);
-    arm64_perfmon_write_header(&rec->header, PERFMON_RECORD_VALUE, event);
+    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_VALUE, event);
     rec->value = value;
     ++rec;
     return reinterpret_cast<perfmon_record_header_t*>(rec);
 }
 
-static perfmon_record_header_t* arm64_perfmon_write_pc_record(
+static perfmon_record_header_t* arch_perfmon_write_pc_record(
         perfmon_record_header_t* hdr,
         perfmon_event_id_t event, uint64_t aspace, uint64_t pc) {
     auto rec = reinterpret_cast<perfmon_pc_record_t*>(hdr);
-    arm64_perfmon_write_header(&rec->header, PERFMON_RECORD_PC, event);
+    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_PC, event);
     rec->aspace = aspace;
     rec->pc = pc;
     ++rec;
@@ -776,7 +776,7 @@ static void arm64_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) 
     perfmon_record_header_t* next = data->buffer_next;
 
     zx_ticks_t now = current_ticks();
-    next = arm64_perfmon_write_time_record(next, PERFMON_EVENT_ID_NONE, now);
+    next = arch_perfmon_write_time_record(next, PERFMON_EVENT_ID_NONE, now);
 
     // If the counter triggers interrupts then the PMI handler will
     // continually reset it to its initial value. To keep things simple
@@ -800,7 +800,7 @@ static void arm64_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) 
             count += (kMaxProgrammableCounterValue -
                       state->programmable_initial_value[i] + 1);
         }
-        next = arm64_perfmon_write_count_record(next, id, count);
+        next = arch_perfmon_write_count_record(next, id, count);
     }
 
     // There is only one fixed counter, the cycle counter.
@@ -814,7 +814,7 @@ static void arm64_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) 
             count += (kMaxFixedCounterValue -
                       state->fixed_initial_value[0] + 1);
         }
-        next = arm64_perfmon_write_count_record(next, id, count);
+        next = arch_perfmon_write_count_record(next, id, count);
     }
 
     data->buffer_next = next;
@@ -979,7 +979,7 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
         auto next = data->buffer_next;
         bool saw_timebase = false;
 
-        next = arm64_perfmon_write_time_record(next, PERFMON_EVENT_ID_NONE, now);
+        next = arch_perfmon_write_time_record(next, PERFMON_EVENT_ID_NONE, now);
 
         // Note: We don't write "value" records here instead prefering the
         // smaller "tick" record. If the user is tallying the counts the user
@@ -1002,9 +1002,9 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
             }
             // TODO(dje): Counter still counting.
             if (state->programmable_flags[i] & PERFMON_CONFIG_FLAG_PC) {
-                next = arm64_perfmon_write_pc_record(next, id, aspace, frame->elr);
+                next = arch_perfmon_write_pc_record(next, id, aspace, frame->elr);
             } else {
-                next = arm64_perfmon_write_tick_record(next, id);
+                next = arch_perfmon_write_tick_record(next, id);
             }
             LTRACEF("cpu %u: resetting PMC %u to 0x%x\n",
                     cpu, i, state->programmable_initial_value[i]);
@@ -1028,9 +1028,9 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
             }
             // TODO(dje): Counter still counting.
             if (state->fixed_flags[0] & PERFMON_CONFIG_FLAG_PC) {
-                next = arm64_perfmon_write_pc_record(next, id, aspace, frame->elr);
+                next = arch_perfmon_write_pc_record(next, id, aspace, frame->elr);
             } else {
-                next = arm64_perfmon_write_tick_record(next, id);
+                next = arch_perfmon_write_tick_record(next, id);
             }
             LTRACEF("cpu %u: resetting cycle counter to 0x%lx\n",
                     cpu, state->fixed_initial_value[0]);
@@ -1046,7 +1046,7 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
                 perfmon_event_id_t id = state->programmable_events[i];
                 __arm_wsr64("pmselr_el0", i);
                 uint64_t count = __arm_rsr64("pmxevcntr_el0");
-                next = arm64_perfmon_write_count_record(next, id, count);
+                next = arch_perfmon_write_count_record(next, id, count);
                 // We could leave the counter alone, but it could overflow.
                 // Instead reduce the risk and just always reset to zero.
                 LTRACEF("cpu %u: resetting PMC %u to 0x%x\n",
@@ -1061,7 +1061,7 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
                 }
                 perfmon_event_id_t id = state->fixed_events[0];
                 uint64_t count = __arm_rsr64("pmccntr_el0");
-                next = arm64_perfmon_write_count_record(next, id, count);
+                next = arch_perfmon_write_count_record(next, id, count);
                 // We could leave the counter alone, but it could overflow.
                 // Instead reduce the risk and just always reset to zero.
                 LTRACEF("cpu %u: resetting cycle counter to 0x%lx\n",
