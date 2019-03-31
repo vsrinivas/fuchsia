@@ -3,10 +3,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Run this command in Fuchsia development environment, or at minimum,
-# source ${FUCHSIA_DIR}/tools/devshell/lib/vars.sh || exit $?
-
 ### register Zircon tools at MacOS Application Firewall
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
 
 FIREWALL_CMD="/usr/libexec/ApplicationFirewall/socketfilterfw"
 
