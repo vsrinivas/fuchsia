@@ -20,7 +20,7 @@ type Client struct {
 
 // NewClient creates a new Client.
 func NewClient(ctx context.Context, opts auth.Options) (*Client, error) {
-	opts.Scopes = append(opts.Scopes, storage.ScopeFullControl)
+	opts.Scopes = append(opts.Scopes, storage.ScopeReadWrite)
 	client, err := gcs.NewClient(ctx, opts)
 	if err != nil {
 		return nil, err
