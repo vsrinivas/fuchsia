@@ -348,6 +348,17 @@ public:
         return device_add(this->parent_, &args, &this->zxdev_);
     }
 
+    zx_status_t DdkAddComposite(const char* name, const zx_device_prop_t* props, size_t props_count,
+                                const device_component_t* components, size_t components_count,
+                                uint32_t coresident_device_index) {
+        if (this->zxdev_ != nullptr) {
+            return ZX_ERR_BAD_STATE;
+        }
+
+        return device_add_composite(this->parent_, name, props, props_count, components,
+                                    components_count, coresident_device_index);
+    }
+
     void DdkMakeVisible() {
         device_make_visible(zxdev());
     }
