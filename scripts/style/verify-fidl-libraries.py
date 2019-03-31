@@ -15,18 +15,24 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # style
     os.path.abspath(__file__))))
 
-NAMESPACES = [
+VENDOR_REGEX = r'^%s/vendor/(\w+)' % FUCHSIA_ROOT
+
+DEFAULT_NAMESPACES = [
     'fidl',
     'fuchsia',
     'test',
 ]
 
+IGNORED_DIRS = ['scripts', 'tools']
+
 
 def main():
     parser = argparse.ArgumentParser(
-            description=('Checks that FIDL libraries in a given layer are '
+            description=('Checks that FIDL libraries in a given repo are '
                          'properly namespaced'))
-    layer_group = parser.add_mutually_exclusive_group(required=True)
+    parser.add_argument('--repo',
+                        help='The repo to analyze')
+    layer_group = parser.add_mutually_exclusive_group()
     layer_group.add_argument('--layer',
                              help='Name of the layer to analyze',
                              choices=['zircon', 'garnet', 'peridot', 'topaz'])
@@ -34,21 +40,35 @@ def main():
                              help='Name of the vendor layer to analyze')
     parser.add_argument('--namespaces',
                         help='The list of allowed namespaces, defaults to '
-                             '[%s]' % ', '.join(NAMESPACES),
+                             '[%s]' % ', '.join(DEFAULT_NAMESPACES),
                         nargs='*',
-                        default=NAMESPACES)
+                        default=DEFAULT_NAMESPACES)
     args = parser.parse_args()
 
-    if args.layer:
-        base = os.path.join(FUCHSIA_ROOT, args.layer)
-    else:
-        base = os.path.join(FUCHSIA_ROOT, 'vendor', args.vendor_layer)
+    if args.repo:
+        repo = os.path.abspath(args.repo)
+        vendor_match = re.search(VENDOR_REGEX, repo)
+        if vendor_match:
+          vendor = vendor_match.group(1)
+          namespaces = [vendor]
+        else:
+          namespaces = DEFAULT_NAMESPACES
 
-    files = subprocess.check_output(['git', '-C', base, 'ls-files', '*.fidl'])
+    else:
+        namespaces = args.namespaces
+        if args.layer:
+            repo = os.path.join(FUCHSIA_ROOT, args.layer)
+        else:
+            repo = os.path.join(FUCHSIA_ROOT, 'vendor', args.vendor_layer)
+
+    files = subprocess.check_output(['git', '-C', repo, 'ls-files', '*.fidl'])
 
     has_errors = False
     for file in files.splitlines():
-        with open(os.path.join(base, file), 'r') as fidl:
+        if any(file.startswith(ignored) for ignored in IGNORED_DIRS):
+          continue
+
+        with open(os.path.join(repo, file), 'r') as fidl:
             contents = fidl.read()
             result = re.search(r'^library ([^\.;]+)[^;]*;$', contents,
                                re.MULTILINE)
@@ -57,10 +77,10 @@ def main():
                 has_errors = True
                 continue
             namespace = result.group(1)
-            if namespace not in args.namespaces:
+            if namespace not in namespaces:
                 print(
                     'Invalid namespace %s (%s), namespace must begin with one of [%s].'
-                    % (namespace, file, ', '.join(NAMESPACES)))
+                    % (namespace, file, ', '.join(namespaces)))
                 has_errors = True
 
     return 1 if has_errors else 0
