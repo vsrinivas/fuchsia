@@ -75,6 +75,15 @@ _fx_config_lines = [
 ]
 write_file("$root_build_dir/fx.config", _fx_config_lines)
 
+# This file indicates what Ninja invocation must be done to build Zircon
+# prerequisites before *any* Ninja invocation for this build.
+write_file("$root_build_dir/zircon.json",
+           {
+             dir = rebase_path(zircon_root_build_dir, root_build_dir)
+             targets = [ "legacy-$target_cpu" ]
+           },
+           "json")
+
 # Permit dependencies on testonly targets from packages.
 testonly = true
 
@@ -122,6 +131,7 @@ generated_file("pseudo_tests") {
   ]
   data_keys = [ "pseudo_test_spec" ]
   output_conversion = "json"
+
   # TODO(joshuaseaton|jinwoo): have this depend on a top-level //tests target,
   # when such a target exists.
   deps = [

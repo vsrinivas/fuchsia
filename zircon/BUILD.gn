@@ -149,6 +149,7 @@ if (current_toolchain == default_toolchain) {
       deps = [
         ":ids-$cpu",
         ":legacy-fdio-$cpu",
+        ":legacy-host_tests",
         ":legacy-image-$cpu",
         ":legacy-tests-$cpu",
         ":tools",
