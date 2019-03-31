@@ -189,3 +189,10 @@ group("gidl") {
     "//tools/fidl/gidl:host",
   ]
 }
+
+group("fidlcat") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/fidlcat:fidlcat_host",
+  ]
+}

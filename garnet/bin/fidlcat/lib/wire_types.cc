@@ -4,11 +4,24 @@
 
 #include "wire_types.h"
 
-#include <endian.h>
 #include <src/lib/fxl/logging.h>
 
 #include "garnet/bin/fidlcat/lib/library_loader.h"
 #include "rapidjson/error/en.h"
+
+#if defined(__APPLE__)
+
+#include <libkern/OSByteOrder.h>
+
+#define le16toh(x) OSSwapLittleToHostInt16(x)
+#define le32toh(x) OSSwapLittleToHostInt32(x)
+#define le64toh(x) OSSwapLittleToHostInt64(x)
+
+#else
+
+#include <endian.h>
+
+#endif
 
 // See wire_types.h for details.
 

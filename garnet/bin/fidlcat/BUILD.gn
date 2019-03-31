@@ -5,34 +5,48 @@
 import("//build/cpp/sdk_executable.gni")
 import("//build/host.gni")
 import("//build/package.gni")
+import("//build/test.gni")
 import("//build/testing/environments.gni")
 
 group("fidlcat") {
   testonly = true
   deps = [
+    ":fidlcat_host_tests($host_toolchain)",
     ":fidlcat_lib_tests",
     ":fidlcat_tests",
     "lib",
   ]
 }
 
-# Not a thing yet.
-# if (current_toolchain == host_toolchain) {
-#   sdk_executable("fidlcat") {
-#     category = "partner"
+if (current_toolchain == host_toolchain) {
+  sdk_executable("bin") {
+    category = "partner"
 
-#     sources = [
-#       "main.cc",
-#     ]
-#     deps = [
-#       "//src/developer/debug/zxdb/client",
-#       "//src/developer/debug/zxdb/common",
-#       "//src/developer/debug/zxdb/console",
-#       "//src/developer/debug/ipc:client",
-#       "//garnet/public/lib/fxl",
-#     ]
-#   }
-# }
+    output_name = "fidlcat"
+
+    sources = [
+      "main.cc",
+    ]
+    deps = [
+      "//garnet/bin/fidlcat/lib",
+      "//garnet/bin/fidlcat/lib:host_lib",
+      "//garnet/public/lib/fxl",
+      "//src/developer/debug/ipc:client",
+      "//src/developer/debug/zxdb/client",
+      "//src/developer/debug/zxdb/common",
+      "//src/developer/debug/zxdb/console",
+      "//third_party/rapidjson",
+      "//zircon/public/lib/fidl_base",
+    ]
+  }
+
+  test("fidlcat_host_tests") {
+    deps = [
+      "//garnet/bin/fidlcat/lib:host_tests",
+      "//third_party/googletest:gtest_main",
+    ]
+  }
+}
 
 executable("fidlcat_lib_tests") {
   testonly = true
@@ -55,11 +69,12 @@ package("fidlcat_tests") {
     },
   ]
 }
-# install_host_tools("fidlcat_host") {
-#   deps = [
-#     ":fidlcat",
-#   ]
-#   outputs = [
-#     "fidlcat",
-#   ]
-# }
+
+install_host_tools("fidlcat_host") {
+  deps = [
+    ":bin",
+  ]
+  outputs = [
+    "fidlcat",
+  ]
+}

@@ -398,6 +398,7 @@ group("fidl_llcpp_conformance_test") {
 group("fidlcat") {
   testonly = true
   public_deps = [
+    "//garnet/bin/fidlcat:fidlcat_host_tests($host_toolchain)",
     "//garnet/bin/fidlcat:fidlcat_tests",
   ]
 }

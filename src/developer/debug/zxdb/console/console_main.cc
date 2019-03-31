@@ -136,11 +136,6 @@ int ConsoleMain(int argc, const char* argv[]) {
     repo_paths.insert(repo_paths.end(), options.symbol_repo_paths.begin(),
                       options.symbol_repo_paths.end());
 
-    // Let the user's home folder be the default symbol repo.
-    if (const char* home = std::getenv("HOME")) {
-      repo_paths.emplace_back(home);
-    }
-
     // Adding it to the settings will trigger the loading of the symbols.
     // Redundant adds are ignored.
     session.system().settings().SetList(ClientSettings::System::kSymbolPaths,

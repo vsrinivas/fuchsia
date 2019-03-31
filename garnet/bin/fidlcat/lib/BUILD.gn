@@ -20,10 +20,49 @@ static_library("lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/fidl_base",
   ]
+}
+
+if (current_toolchain == host_toolchain) {
+  static_library("host_lib") {
+    public = [
+      "interception_workflow.h",
+      "zx_channel_params.h",
+    ]
+
+    sources = [
+      "interception_workflow.cc",
+      "zx_channel_params.cc",
+    ]
+
+    deps = [
+      "//src/developer/debug/ipc:client",
+      "//src/developer/debug/zxdb/client",
+      "//src/developer/debug/zxdb/common",
+      "//src/developer/debug/zxdb/console",
+      "//src/lib/fxl",
+      "//zircon/public/lib/fit",
+    ]
+  }
+
+  source_set("host_tests") {
+    testonly = true
+
+    sources = [
+      "interception_workflow_test.cc",
+    ]
+
+    deps = [
+      ":host_lib",
+      "//src/developer/debug/ipc:client",
+      "//src/developer/debug/zxdb/client:test_support",
+      "//third_party/googletest:gtest",
+      "//zircon/system/public",
+    ]
+  }
 }
 
 source_set("tests") {
