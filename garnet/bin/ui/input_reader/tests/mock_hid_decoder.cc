@@ -52,6 +52,16 @@ const std::vector<uint8_t>& MockHidDecoder::Read(int* bytes_read) {
   return report_.data;
 }
 
+zx_status_t MockHidDecoder::Send(ReportType type, uint8_t report_id,
+                                 const std::vector<uint8_t>& report) {
+  last_output_report_ = report;
+  return ZX_OK;
+}
+
+std::vector<uint8_t> MockHidDecoder::GetLastOutputReport() {
+  return last_output_report_;
+}
+
 void MockHidDecoder::SetHidDecoderRead(std::vector<uint8_t> bytes, int length) {
   FXL_CHECK(report_.length == 0);
   report_.data = std::move(bytes);

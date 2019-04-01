@@ -142,6 +142,13 @@ TEST_F(ReaderInterpreterInputTest, ParadiseTouchscreen) {
   fxl::WeakPtr<MockHidDecoder> device = AddDevice(report_descriptor);
   RunLoopUntilIdle();
 
+  std::vector<uint8_t> feature_report = device->GetLastOutputReport();
+  ASSERT_EQ(3U, feature_report.size());
+  uint8_t multitouch_enable_report[3] = {14, 2, 0};
+  for (int i = 0; i < 3; i++) {
+    EXPECT_EQ(multitouch_enable_report[i], feature_report[i]);
+  }
+
   // Create a single touch report.
   paradise_touch_t touch_report = {};
   touch_report.rpt_id = PARADISE_RPT_ID_TOUCH;

@@ -46,13 +46,13 @@ class MockHidDecoder : public HidDecoder {
   const std::vector<uint8_t>& Read(int* bytes_read) override;
   // |HidDecoder|
   zx_status_t Send(ReportType type, uint8_t report_id,
-                   const std::vector<uint8_t>& report) override {
-    return ZX_OK;
-  }
+                   const std::vector<uint8_t>& report) override;
 
   // Emulates the Device sending a report, which will be read by |Read|.
   // There must not be a pending report that has not been |Read|.
   void SetHidDecoderRead(std::vector<uint8_t> bytes, int length);
+  // Returns a copy of the last output report sent to |MockHidDecoder|.
+  std::vector<uint8_t> GetLastOutputReport();
   // Sets the report descripter, which will be read by
   // |ReadReportDescriptor|. This should only be called once at the beginning
   // of setting up |MockHidDecoder|.
@@ -76,6 +76,7 @@ class MockHidDecoder : public HidDecoder {
   zx::event event_;
   Report report_ = {};
   Report report_descriptor_ = {};
+  std::vector<uint8_t> last_output_report_;
   HidDecoder::BootMode boot_mode_ = HidDecoder::BootMode::NONE;
 
   fxl::WeakPtrFactory<MockHidDecoder> weak_ptr_factory_;

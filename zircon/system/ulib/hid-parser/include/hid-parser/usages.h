@@ -333,6 +333,14 @@ enum class Consumer : uint32_t {
     kGenericGUIAppControls      = 0x200
 };
 
+// These are the values that Digitizer::kTouchscreenInputMode can
+// take and their respective meanings.
+enum class TouchScreenInputMode : uint32_t {
+    kMouse                          = 0x00,
+    kSingleInput                    = 0x01,
+    kMultipleInput                  = 0x02,
+};
+
 enum class Digitizer : uint32_t {
     kUndefined                      = 0x00,
 
@@ -349,9 +357,11 @@ enum class Digitizer : uint32_t {
     kArmature                       = 0x0b,
     kMultiplePointDigitizer         = 0x0c,
     kFreeSpaceWand                  = 0x0d,
+    kTouchScreenConfiguration       = 0x0E,
 
     kStylus                         = 0x20,
     kFinger                         = 0x22,
+    kTouchScreenDeviceSettings      = 0x23,
 
     kTipPressure                    = 0x30,
     kBarrelPressure                 = 0x31,
@@ -381,6 +391,7 @@ enum class Digitizer : uint32_t {
     kHeight                         = 0x49,
 
     kContactID                      = 0x51,
+    kTouchScreenInputMode           = 0x52,
     kContactCount                   = 0x54,
     kScanTime                       = 0x56,
 };

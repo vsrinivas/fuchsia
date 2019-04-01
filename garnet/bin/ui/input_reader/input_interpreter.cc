@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <hid-parser/parser.h>
+#include <hid-parser/report.h>
 #include <hid-parser/usages.h>
 #include <hid/acer12.h>
 #include <hid/ambient-light.h>
@@ -808,6 +809,48 @@ Protocol InputInterpreter::ExtractProtocol(hid::Usage input) {
   return Protocol::Other;
 }
 
+bool InputInterpreter::ParseHidFeatureReportDescriptor(
+    const hid::ReportDescriptor& report_desc) {
+  // Traverse up the nested collections to the Application collection.
+  auto collection = report_desc.input_fields[0].col;
+  while (collection != nullptr) {
+    if (collection->type == hid::CollectionType::kApplication) {
+      break;
+    }
+    collection = collection->parent;
+  }
+
+  if (collection == nullptr) {
+    FXL_LOG(ERROR) << "Can't process HID feature report descriptor for "
+                   << name()
+                   << "; Needed a valid Collection but didn't get one";
+    return false;
+  }
+
+  // If we have a touchscreen feature report then we enable multitouch mode.
+  if (collection->usage ==
+      hid::USAGE(hid::usage::Page::kDigitizer,
+                 hid::usage::Digitizer::kTouchScreenConfiguration)) {
+    std::vector<uint8_t> feature_report(report_desc.feature_byte_sz);
+    if (report_desc.report_id != 0) {
+      feature_report[0] = report_desc.report_id;
+    }
+    for (size_t i = 0; i < report_desc.feature_count; i++) {
+      const hid::ReportField& field = report_desc.input_fields[i];
+      if (field.attr.usage ==
+          hid::USAGE(hid::usage::Page::kDigitizer,
+                     hid::usage::Digitizer::kTouchScreenInputMode)) {
+        InsertUint(feature_report.data(), feature_report.size(), field.attr,
+                   static_cast<uint32_t>(
+                       hid::usage::TouchScreenInputMode::kMultipleInput));
+      }
+    }
+    hid_decoder_->Send(HidDecoder::ReportType::FEATURE, report_desc.report_id,
+                       feature_report);
+  }
+  return true;
+}
+
 bool InputInterpreter::ParseHidInputReportDescriptor(
     const hid::ReportDescriptor* input_desc) {
   FXL_CHECK(input_desc);
@@ -1011,6 +1054,11 @@ bool InputInterpreter::ParseProtocol() {
     const hid::ReportDescriptor* desc = &dev_desc->report[rep];
     if (desc->input_count != 0) {
       if (!ParseHidInputReportDescriptor(desc)) {
+        return false;
+      }
+    }
+    if (desc->feature_count != 0) {
+      if (!ParseHidFeatureReportDescriptor(*desc)) {
         return false;
       }
     }

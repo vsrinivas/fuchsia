@@ -78,6 +78,15 @@ class InputInterpreter {
   // returns true then the |devices_| array will have been extended by one extra
   // |InputDevice|.
   bool ParseHidInputReportDescriptor(const hid::ReportDescriptor* input_desc);
+
+  // Takes in a ReportDescriptor representing a feature report and sends it
+  // to a the device. Should be called on each feature report descriptor in
+  // order to initialize the device. Returns true if the report descriptor
+  // doesn't match, or if it matches and successfully initializes the device.
+  // Only returns false if there is an error.
+  bool ParseHidFeatureReportDescriptor(
+      const hid::ReportDescriptor& report_desc);
+
   // Helper function called during Init() that determines which protocol
   // is going to be used. It is responsible for reading the HID device's
   // Report Descriptor and determining what type of device it is.
