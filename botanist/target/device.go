@@ -93,11 +93,6 @@ func (t *DeviceTarget) Nodename() string {
 	return t.config.Network.Nodename
 }
 
-// IPv6 returns the link-local IPv6 address of the node.
-func (t *DeviceTarget) IPv6Addr() (*net.UDPAddr, error) {
-	return netutil.GetNodeAddress(context.Background(), t.Nodename(), false)
-}
-
 // IPv4Addr returns the IPv4 address of the node. If not provided in the config, then it
 // will be resolved against the target-side MDNS server.
 func (t *DeviceTarget) IPv4Addr() (net.IP, error) {
@@ -151,7 +146,7 @@ func (t *DeviceTarget) Start(ctx context.Context, images build.Images, args []st
 		}
 	}()
 
-	addr, err := t.IPv6Addr()
+	addr, err := netutil.GetNodeAddress(ctx, t.Nodename(), false)
 	if err != nil {
 		return err
 	}

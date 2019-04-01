@@ -22,6 +22,7 @@ import (
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/command"
 	"fuchsia.googlesource.com/tools/logger"
+	"fuchsia.googlesource.com/tools/netutil"
 	"fuchsia.googlesource.com/tools/runner"
 	"fuchsia.googlesource.com/tools/runtests"
 
@@ -233,7 +234,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 		}(device)
 	}
 	go func() {
-		addr, err := devices[0].IPv6Addr()
+		addr, err := netutil.GetNodeAddress(ctx, devices[0].Nodename(), false)
 		if err != nil {
 			errs <- err
 			return
