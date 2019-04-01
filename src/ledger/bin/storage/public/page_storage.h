@@ -89,7 +89,8 @@ class PageStorage : public PageSyncClient {
       std::unique_ptr<const Commit> right) = 0;
 
   // Commits the given |journal| and when finished, returns the success/failure
-  // status and the created Commit object through the given |callback|.
+  // status and the created Commit object through the given |callback|. If the
+  // operation is a no-op, the returned commit will be null.
   virtual void CommitJournal(
       std::unique_ptr<Journal> journal,
       fit::function<void(Status, std::unique_ptr<const Commit>)> callback) = 0;

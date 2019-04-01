@@ -100,11 +100,10 @@ TEST_F(JournalTest, CommitEmptyJournal) {
       callback::Capture(callback::SetWhenCalled(&called), &status, &commit));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
+  // Commiting an empty journal should result in a successful status, but a null
+  // commit.
   ASSERT_EQ(Status::OK, status);
-  ASSERT_NE(nullptr, commit);
-  // If the journal's result is a no-op, we should not create a new commit, but
-  // rather return the base commit.
-  EXPECT_EQ(kFirstPageCommitId, commit->GetId());
+  ASSERT_EQ(nullptr, commit);
 }
 
 TEST_F(JournalTest, JournalsPutDeleteCommit) {

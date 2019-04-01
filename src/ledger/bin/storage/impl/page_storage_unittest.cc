@@ -2241,10 +2241,10 @@ TEST_F(PageStorageTest, NoOpCommit) {
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
 
+  // Commiting a no-op commit should result in a successful status, but a null
+  // commit.
   ASSERT_EQ(Status::OK, status);
-  ASSERT_TRUE(commit);
-  // Expect that the commit id is the same as the original one.
-  EXPECT_EQ(heads[0]->GetId(), commit->GetId());
+  ASSERT_FALSE(commit);
 }
 
 // Check that receiving a remote commit and commiting locally at the same time

@@ -50,8 +50,10 @@ class JournalImpl : public Journal {
 
   // Commits the changes of this |Journal|. Trying to update entries or rollback
   // will fail after a successful commit. The callback will be called with the
-  // returned status and the new commit. This Journal object should not be
-  // deleted before |callback| is called.
+  // returned status and:
+  // - the new commit if a new commit object has been created.
+  // - a null commit if the operation is a no-op.
+  // This Journal object should not be deleted before |callback| is called.
   void Commit(
       fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback);

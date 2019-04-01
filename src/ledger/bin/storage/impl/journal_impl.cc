@@ -175,7 +175,7 @@ void JournalImpl::CreateCommitFromChanges(
           // transaction, |ApplyChanges| might have re-created some nodes that
           // already exist. Because they already exist in a pre-existing commit,
           // there is no need to update their state.
-          callback(Status::OK, std::move(parents.front()));
+          callback(Status::OK, nullptr);
           return;
         }
         std::unique_ptr<const storage::Commit> commit =

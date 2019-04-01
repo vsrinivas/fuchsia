@@ -850,6 +850,86 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
   EXPECT_EQ(0u, watcher.changes_seen);
 }
 
+TEST_P(PageWatcherIntegrationTest, NoChangeTransactionForwardState) {
+  auto instance = NewLedgerAppInstance();
+
+  PagePtr page1 = instance->GetTestPage();
+
+  auto waiter =  NewWaiter();
+  PageId page_id;
+  page1->GetId(callback::Capture(waiter->GetCallback(), &page_id));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+
+  page1->StartTransactionNew();
+
+  PageWatcherPtr watcher_ptr;
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
+  PageSnapshotPtr snapshot;
+  page1->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher_ptr));
+  waiter = NewWaiter();
+  page1->Sync(waiter->GetCallback());
+  ASSERT_TRUE(waiter->RunUntilCalled());
+
+  auto page2 = instance->GetPage(fidl::MakeOptional(page_id));
+  page2->PutNew(convert::ToArray("00-key"), convert::ToArray("value-00"));
+  waiter = NewWaiter();
+  page2->Sync(waiter->GetCallback());
+  ASSERT_TRUE(waiter->RunUntilCalled());
+
+  // Commit the transaction, and immediately starts another one before letting
+  // the Ledger code run anything. The commit should be enough to allow the new
+  // state from |page2| to propagate to |page1| given that the transaction is a
+  // no-op.
+  page1->CommitNew();
+  page1->StartTransactionNew();
+
+  ASSERT_TRUE(watcher_waiter->RunUntilCalled());
+  EXPECT_EQ(1u, watcher.changes_seen);
+  page1->RollbackNew();
+}
+
+TEST_P(PageWatcherIntegrationTest, RollbackTransactionForwardState) {
+  auto instance = NewLedgerAppInstance();
+
+  PagePtr page1 = instance->GetTestPage();
+
+  auto waiter =  NewWaiter();
+  PageId page_id;
+  page1->GetId(callback::Capture(waiter->GetCallback(), &page_id));
+  ASSERT_TRUE(waiter->RunUntilCalled());
+
+  page1->StartTransactionNew();
+
+  PageWatcherPtr watcher_ptr;
+  auto watcher_waiter = NewWaiter();
+  Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
+  PageSnapshotPtr snapshot;
+  page1->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher_ptr));
+  waiter = NewWaiter();
+  page1->Sync(waiter->GetCallback());
+  ASSERT_TRUE(waiter->RunUntilCalled());
+
+  auto page2 = instance->GetPage(fidl::MakeOptional(page_id));
+  page2->PutNew(convert::ToArray("00-key"), convert::ToArray("value-00"));
+  waiter = NewWaiter();
+  page2->Sync(waiter->GetCallback());
+  ASSERT_TRUE(waiter->RunUntilCalled());
+
+  // Rollback the transaction, and immediately starts another one before letting
+  // the Ledger code run anything. The rollback should be enough to allow the
+  // new state from |page2| to propagate to |page1| given that the transaction
+  // is a no-op.
+  page1->RollbackNew();
+  page1->StartTransactionNew();
+
+  ASSERT_TRUE(watcher_waiter->RunUntilCalled());
+  EXPECT_EQ(1u, watcher.changes_seen);
+  page1->RollbackNew();
+}
+
 INSTANTIATE_TEST_SUITE_P(
     PageWatcherIntegrationTest, PageWatcherIntegrationTest,
     ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()));
