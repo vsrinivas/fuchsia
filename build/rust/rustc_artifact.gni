@@ -581,6 +581,15 @@ template("rustc_artifact") {
       rebase_path(third_party_deps_data),
     ]
 
+    if (defined(invoker.features)) {
+      foreach(feature, invoker.features) {
+        args += [
+          "--feature",
+          feature,
+        ]
+      }
+    }
+
     if (with_lto != "none") {
       args += [
         "--lto",

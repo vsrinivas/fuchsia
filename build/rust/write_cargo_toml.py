@@ -42,6 +42,11 @@ repository = "https://fuchsia.googlesource.com"
 %(is_proc_macro)s
 name = "%(crate_name)s"%(lib_crate_type)s
 path = "%(source_root)s"
+
+[features]
+default = [%(features_array_items)s]
+
+%(features_no_deps)s
 '''
 
 def cur_year():
@@ -81,6 +86,11 @@ def main():
     parser.add_argument("--dep-data",
                         action="append",
                         help="Path to metadata from a previous invocation of this script",
+                        required=False)
+    parser.add_argument("--feature",
+                        help="Feature to enable",
+                        action="append",
+                        dest="features",
                         required=False)
 
     parser.add_argument
@@ -124,6 +134,8 @@ def main():
                         "version": dep_data["version"],
                     }
 
+    features = args.features or []
+
     with open(cargo_toml_path, "w") as file:
         file.write(CARGO_TOML_CONTENTS % {
             "package_name": args.package_name,
@@ -138,6 +150,8 @@ def main():
                 '\ncrate_type = ["%s"]' % args.crate_type
             ),
             "source_root": args.source_root,
+            "features_array_items": ", ".join(['"%s"' % f for f in features]),
+            "features_no_deps": "\n".join(["%s = []" % f for f in features]),
         })
         dependencies = { "dependencies": deps }
         file.write(pytoml.dumps({
