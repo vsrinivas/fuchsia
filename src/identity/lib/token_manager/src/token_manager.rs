@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::tokens::{AccessTokenKey, FirebaseAuthToken, FirebaseTokenKey, IdTokenKey, OAuthToken};
 use crate::{AuthProviderSupplier, ResultExt, TokenManagerContext, TokenManagerError};
 use failure::format_err;
 use fidl;
@@ -18,7 +19,7 @@ use fidl_fuchsia_auth::{
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use futures::try_join;
-use identity_token_cache::{AuthCacheError, CacheKey, FirebaseAuthToken, OAuthToken, TokenCache};
+use identity_token_cache::{AuthCacheError, TokenCache};
 use identity_token_store::file::AuthDbFile;
 use identity_token_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 use log::{error, info, warn};
@@ -302,17 +303,20 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         user_profile_id: String,
         app_scopes: Vec<String>,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
-        let (db_key, cache_key) = Self::create_keys(&app_config, &user_profile_id)?;
-
+        let cache_key = AccessTokenKey::new(
+            app_config.auth_provider_type.clone(),
+            user_profile_id.clone(),
+            &app_scopes,
+        )
+        .map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
         // Attempt to read the token from cache.
-        if let Some(cached_token) =
-            self.token_cache.lock().get_access_token(&cache_key, &app_scopes)
-        {
+        if let Some(cached_token) = self.token_cache.lock().get(&cache_key) {
             return Ok(cached_token);
         }
 
         // If no cached entry was found use an auth provider to mint a new one from the refresh
         // token, then place it in the cache.
+        let db_key = Self::create_db_key(&app_config, &user_profile_id)?;
         let refresh_token = self.get_refresh_token(&db_key)?;
 
         // TODO(ukode, jsankey): This iotid check against the auth_provider_type is brittle and is
@@ -340,7 +344,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         user_profile_id: String,
         refresh_token: String,
         app_scopes: Vec<String>,
-        cache_key: CacheKey,
+        cache_key: AccessTokenKey,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
         let auth_provider_type = &app_config.auth_provider_type;
         let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
@@ -394,11 +398,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
 
                 // Cache access token
                 let native_token = Arc::new(OAuthToken::from(*access_token));
-                self.token_cache.lock().put_access_token(
-                    cache_key,
-                    &app_scopes,
-                    Arc::clone(&native_token),
-                );
+                self.token_cache.lock().put(cache_key, Arc::clone(&native_token));
 
                 // TODO(ukode): Cache auth_challenge
                 Ok(native_token)
@@ -414,7 +414,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         app_config: AppConfig,
         refresh_token: String,
         app_scopes: Vec<String>,
-        cache_key: CacheKey,
+        cache_key: AccessTokenKey,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
         let auth_provider_type = &app_config.auth_provider_type;
         let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
@@ -431,7 +431,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
 
         let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
         let native_token = Arc::new(OAuthToken::from(*provider_token));
-        self.token_cache.lock().put_access_token(cache_key, &app_scopes, Arc::clone(&native_token));
+        self.token_cache.lock().put(cache_key, Arc::clone(&native_token));
         Ok(native_token)
     }
 
@@ -442,17 +442,22 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         user_profile_id: String,
         audience: Option<String>,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
-        let (db_key, cache_key) = Self::create_keys(&app_config, &user_profile_id)?;
         let audience_str = audience.clone().unwrap_or("".to_string());
+        let cache_key = IdTokenKey::new(
+            app_config.auth_provider_type.clone(),
+            user_profile_id.clone(),
+            audience_str,
+        )
+        .map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
 
         // Attempt to read the token from cache.
-        if let Some(cached_token) = self.token_cache.lock().get_id_token(&cache_key, &audience_str)
-        {
+        if let Some(cached_token) = self.token_cache.lock().get(&cache_key) {
             return Ok(cached_token);
         }
 
         // If no cached entry was found use an auth provider to mint a new one from the refresh
         // token, then place it in the cache.
+        let db_key = Self::create_db_key(&app_config, &user_profile_id)?;
         let refresh_token = self.get_refresh_token(&db_key)?;
         let auth_provider_type = &app_config.auth_provider_type;
         let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
@@ -466,7 +471,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
 
         let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
         let native_token = Arc::new(OAuthToken::from(*provider_token));
-        self.token_cache.lock().put_id_token(cache_key, audience_str, Arc::clone(&native_token));
+        self.token_cache.lock().put(cache_key, Arc::clone(&native_token));
         Ok(native_token)
     }
 
@@ -478,11 +483,15 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         audience: String,
         api_key: String,
     ) -> TokenManagerResult<Arc<FirebaseAuthToken>> {
-        let (_, cache_key) = Self::create_keys(&app_config, &user_profile_id)?;
+        let cache_key = FirebaseTokenKey::new(
+            app_config.auth_provider_type.clone(),
+            user_profile_id.clone(),
+            api_key.clone(),
+        )
+        .map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
 
         // Attempt to read the token from cache.
-        if let Some(cached_token) = self.token_cache.lock().get_firebase_token(&cache_key, &api_key)
-        {
+        if let Some(cached_token) = self.token_cache.lock().get(&cache_key) {
             return Ok(cached_token);
         }
 
@@ -501,7 +510,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         })?;
         let provider_token = provider_token.ok_or(TokenManagerError::from(status))?;
         let native_token = Arc::new(FirebaseAuthToken::from(*provider_token));
-        self.token_cache.lock().put_firebase_token(cache_key, api_key, Arc::clone(&native_token));
+        self.token_cache.lock().put(cache_key, Arc::clone(&native_token));
         Ok(native_token)
     }
 
@@ -515,7 +524,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
         user_profile_id: String,
         force: bool,
     ) -> TokenManagerResult<()> {
-        let (db_key, cache_key) = Self::create_keys(&app_config, &user_profile_id)?;
+        let db_key = Self::create_db_key(&app_config, &user_profile_id)?;
 
         // Try to find an associated refresh token, returning immediately with a success if we
         // can't.
@@ -543,7 +552,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             }
         }
 
-        match self.token_cache.lock().delete(&cache_key) {
+        match self.token_cache.lock().delete_matching(&auth_provider_type, &user_profile_id) {
             Ok(()) | Err(AuthCacheError::KeyNotFound) => {}
             Err(err) => return Err(TokenManagerError::from(err)),
         }
@@ -567,18 +576,15 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             .collect())
     }
 
-    /// Returns index keys for referencing a token in both the database and cache.
-    fn create_keys(
+    /// Returns index keys for referencing a token in the database.
+    fn create_db_key(
         app_config: &AppConfig,
         user_profile_id: &String,
-    ) -> Result<(CredentialKey, CacheKey), TokenManagerError> {
+    ) -> Result<CredentialKey, TokenManagerError> {
         let db_key =
             CredentialKey::new(app_config.auth_provider_type.clone(), user_profile_id.clone())
                 .map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
-        let cache_key =
-            CacheKey::new(app_config.auth_provider_type.clone(), user_profile_id.clone())
-                .map_err(|_| TokenManagerError::new(Status::InvalidRequest))?;
-        Ok((db_key, cache_key))
+        Ok(db_key)
     }
 
     /// Returns an `AuthProviderProxy` for the specified `auth_provider_type` either by returning

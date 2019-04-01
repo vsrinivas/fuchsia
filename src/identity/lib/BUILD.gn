@@ -24,6 +24,7 @@ test_package("identity_lib_unittests") {
     "oauth:oauth_unittests",
     "token_cache:token_cache",
     "token_store:token_store",
+    "token_manager:token_manager",
   ]
 
   tests = [
@@ -39,5 +40,9 @@ test_package("identity_lib_unittests") {
       name = "oauth_unittests"
       environments = basic_envs
     },
+    {
+      name = "token_manager_lib_test"
+      environments = basic_envs
+    }
   ]
 }

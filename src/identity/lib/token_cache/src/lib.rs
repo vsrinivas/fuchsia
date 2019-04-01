@@ -8,11 +8,11 @@
 
 use chrono::offset::Utc;
 use chrono::DateTime;
-use failure::{format_err, Error, Fail};
-use log::warn;
-use std::borrow::Cow;
+use failure::Fail;
+use log::{info, warn};
+use std::any::Any;
 use std::collections::HashMap;
-use std::ops::Deref;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
@@ -31,151 +31,71 @@ pub enum AuthCacheError {
     KeyNotFound,
 }
 
-/// Representation of a single OAuth token including its expiry time.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct OAuthToken {
-    expiry_time: SystemTime,
-    token: String,
+/// Trait for keys used in the cache.  `CacheKey` requires the `Any` trait for
+/// dynamic typing.  As `Any` is not implemented for any struct containing a
+/// non-'static reference, any valid implementation of `CacheKey` may not
+/// contain references of non-'static lifetimes.
+pub trait CacheKey: Any + Send + Sync {
+    /// Returns the identity provider type, ex. 'google'
+    fn auth_provider_type(&self) -> &str;
+    /// Returns the account identifier as given by the identity provider.
+    fn user_profile_id(&self) -> &str;
+    /// Returns an identifier appropriate for differentiating CacheKeys of the
+    /// same concrete type with the same auth_provider_type and user_profile_id.
+    fn subkey(&self) -> &str;
 }
 
-impl OAuthToken {
-    /// Gets the `SystemTime` at which the token will no longer be valid.
-    pub fn expiry_time(&self) -> &SystemTime {
-        &self.expiry_time
+impl Hash for CacheKey {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.auth_provider_type().hash(state);
+        self.user_profile_id().hash(state);
+        self.subkey().hash(state);
+        self.type_id().hash(state);
     }
 }
 
-impl Deref for OAuthToken {
-    type Target = str;
-
-    fn deref(&self) -> &str {
-        &*self.token
+impl PartialEq for CacheKey {
+    fn eq(&self, other: &(CacheKey + 'static)) -> bool {
+        self.auth_provider_type() == other.auth_provider_type()
+            && self.user_profile_id() == other.user_profile_id()
+            && self.subkey() == other.subkey()
+            && self.type_id() == other.type_id()
     }
 }
 
-impl From<fidl_fuchsia_auth::AuthToken> for OAuthToken {
-    fn from(auth_token: fidl_fuchsia_auth::AuthToken) -> OAuthToken {
-        OAuthToken {
-            expiry_time: SystemTime::now() + Duration::from_secs(auth_token.expires_in),
-            token: auth_token.token,
-        }
-    }
+impl Eq for CacheKey {}
+
+/// Trait that specifies the concrete token type a token key can put or
+/// retrieve from the cache.
+pub trait KeyFor {
+    /// Token type the key exclusively identifies.
+    type TokenType;
 }
 
-/// Representation of a single Firebase token including its expiry time.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct FirebaseAuthToken {
-    id_token: String,
-    local_id: Option<String>,
-    email: Option<String>,
-    expiry_time: SystemTime,
+/// Trait for tokens stored in the cache.  `CacheToken` requires the `Any`
+/// trait for dynamic typing.  As `Any` is not implemented for any struct
+/// containing a non-'static reference, any valid implementation of
+/// `CacheToken` may not contain references of non-'static lifetimes.
+pub trait CacheToken: Any + Send + Sync {
+    /// Returns the time at which a token becomes invalid.
+    fn expiry_time(&self) -> &SystemTime;
 }
 
-impl From<fidl_fuchsia_auth::FirebaseToken> for FirebaseAuthToken {
-    fn from(firebase_token: fidl_fuchsia_auth::FirebaseToken) -> FirebaseAuthToken {
-        FirebaseAuthToken {
-            id_token: firebase_token.id_token,
-            local_id: firebase_token.local_id,
-            email: firebase_token.email,
-            expiry_time: SystemTime::now() + Duration::from_secs(firebase_token.expires_in),
-        }
-    }
-}
-
-impl FirebaseAuthToken {
-    /// Returns a new FIDL `FirebaseToken` using data cloned from our
-    /// internal representation.
-    pub fn to_fidl(&self) -> fidl_fuchsia_auth::FirebaseToken {
-        fidl_fuchsia_auth::FirebaseToken {
-            id_token: self.id_token.clone(),
-            local_id: self.local_id.clone(),
-            email: self.email.clone(),
-            expires_in: match self.expiry_time.duration_since(SystemTime::now()) {
-                Ok(duration) => duration.as_secs(),
-                Err(_) => 0,
-            },
-        }
-    }
-}
-
-/// A collection of OAuth and Firebase tokens associated with an identity
-/// provider and profile. Any combination of ID tokens, access tokens,
-/// and Firebase tokens may be present in a cache entry.
-#[derive(Clone, Debug, PartialEq, Eq)]
-struct TokenSet {
-    /// A map from audience strings to cached OAuth ID tokens.
-    id_token_map: HashMap<String, Arc<OAuthToken>>,
-    /// A map from concatenations of OAuth scope strings to cached OAuth Access
-    /// tokens.
-    access_token_map: HashMap<String, Arc<OAuthToken>>,
-    /// A map from firebase API keys to cached Firebase tokens.
-    firebase_token_map: HashMap<String, Arc<FirebaseAuthToken>>,
-}
-
-impl TokenSet {
-    /// Constructs a new, empty, `TokenSet`.
-    fn new() -> Self {
-        TokenSet {
-            id_token_map: HashMap::new(),
-            access_token_map: HashMap::new(),
-            firebase_token_map: HashMap::new(),
-        }
-    }
-
-    /// Returns true iff this set contains at least one valid OAuth or Firebase
-    /// token.
-    fn is_valid(&self) -> bool {
-        !self.id_token_map.is_empty()
-            || !self.access_token_map.is_empty()
-            || !self.firebase_token_map.is_empty()
-    }
-
-    /// Removes any expired OAuth and Firebase tokens from this set and
-    /// returns true iff no valid OAuth tokens remain.
-    fn remove_expired_tokens(&mut self) -> bool {
-        let current_time = SystemTime::now();
-        self.id_token_map.retain(|_, v| current_time <= (v.expiry_time - PADDING_FOR_TOKEN_EXPIRY));
-        self.access_token_map
-            .retain(|_, v| current_time <= (v.expiry_time - PADDING_FOR_TOKEN_EXPIRY));
-        self.firebase_token_map
-            .retain(|_, v| current_time <= (v.expiry_time - PADDING_FOR_TOKEN_EXPIRY));
-        !self.is_valid()
-    }
-}
-
-/// A unique key for accessing an entry in the token cache.
-#[derive(Clone, Hash, PartialEq, Eq)]
-pub struct CacheKey {
-    idp_provider: String,
-    idp_credential_id: String,
-}
-
-impl CacheKey {
-    /// Create a new `CacheKey`, or returns `Error` if any input is empty.
-    pub fn new(idp_provider: String, idp_credential_id: String) -> Result<CacheKey, Error> {
-        if idp_provider.is_empty() {
-            Err(format_err!("idp_provider cannot be empty"))
-        } else if idp_credential_id.is_empty() {
-            Err(format_err!("idp_credential_id cannot be empty"))
-        } else {
-            Ok(CacheKey { idp_provider, idp_credential_id })
-        }
-    }
-}
-
-/// A cache of recently used OAuth and Firebase tokens. All tokens contain
-/// an expiry time and are removed when this time is reached.
+/// A cache of recently used authentication tokens. All tokens contain an
+/// expiry time and are removed when this time is reached.
 pub struct TokenCache {
-    // TODO(jsankey): Define and enforce a max size on the number of cache
+    // TODO(satsukiu): Define and enforce a max size on the number of cache
     // entries
-    map: HashMap<CacheKey, TokenSet>,
+    /// A mapping holding cached tokens of arbitrary types.
+    token_map: HashMap<Box<CacheKey>, Arc<Any + Send + Sync>>,
+    /// `SystemTime` of the last cache operation.  Used to validate time progression.
     last_time: SystemTime,
 }
 
 impl TokenCache {
     /// Creates a new `TokenCache` with the specified initial size.
     pub fn new(size: usize) -> TokenCache {
-        TokenCache { map: HashMap::with_capacity(size), last_time: SystemTime::now() }
+        TokenCache { token_map: HashMap::with_capacity(size), last_time: SystemTime::now() }
     }
 
     /// Sanity check that system time has not jumped backwards since last time this method was
@@ -189,435 +109,300 @@ impl TokenCache {
                 "time jumped backwards from {:?} to {:?}, clearing {:?} token cache entries",
                 <DateTime<Utc>>::from(current_time),
                 <DateTime<Utc>>::from(self.last_time),
-                self.map.len()
+                self.token_map.len(),
             );
-            self.map.clear();
+            self.token_map.clear();
         }
         self.last_time = current_time;
     }
 
-    /// Returns the OAuth ID token for the specified `cache_key` and `audience` if present and
-    /// not expired. This will cause any expired tokens on the same key to
-    /// be purged from the underlying cache.
-    pub fn get_id_token(
-        &mut self,
-        cache_key: &CacheKey,
-        audience: &str,
-    ) -> Option<Arc<OAuthToken>> {
-        self.get_token_set(cache_key)
-            .and_then(|ts| ts.id_token_map.get(audience).map(|t| t.clone()))
-    }
-
-    /// Returns an OAuth Access token for the specified `cache_key` and `scopes`,
-    /// if present and not expired. This will cause any expired tokens on
-    /// the same key to be purged from the underlying cache.
-    pub fn get_access_token<T: Deref<Target = str>>(
-        &mut self,
-        cache_key: &CacheKey,
-        scopes: &[T],
-    ) -> Option<Arc<OAuthToken>> {
-        self.get_token_set(cache_key)
-            .and_then(|ts| ts.access_token_map.get(&*Self::scope_key(scopes)).map(|t| t.clone()))
-    }
-
-    /// Returns a Firebase token for the specified `cache_key` and `firebase_api_key`, if present
-    /// and not expired. This will cause any expired tokens on the same key to
-    /// be purged from the underlying cache.
-    pub fn get_firebase_token(
-        &mut self,
-        cache_key: &CacheKey,
-        firebase_api_key: &str,
-    ) -> Option<Arc<FirebaseAuthToken>> {
-        self.get_token_set(cache_key)
-            .and_then(|ts| ts.firebase_token_map.get(firebase_api_key).map(|t| t.clone()))
-    }
-
-    /// Returns the set of unexpired tokens stored in the cache for the given
-    /// `cache_key`. Any expired tokens are also purged from the underlying cache.
-    fn get_token_set(&mut self, cache_key: &CacheKey) -> Option<&TokenSet> {
-        self.validate_time_progression();
-        // First remove any expired tokens from the value if it exists then
-        // delete the entire entry if this now means it is invalid.
-        let mut expired_token_set = false;
-        if let Some(token_set) = self.map.get_mut(cache_key) {
-            expired_token_set = token_set.remove_expired_tokens();
-        }
-        if expired_token_set {
-            self.map.remove(cache_key);
-            return None;
-        }
-
-        // Any remaining key is now valid
-        self.map.get(cache_key)
-    }
-
-    /// Adds an OAuth ID token to the cache, replacing any existing token for the same `cache_key`
-    /// and `audience`.
-    pub fn put_id_token(&mut self, cache_key: CacheKey, audience: String, token: Arc<OAuthToken>) {
-        self.put_token(cache_key, |ts| {
-            ts.id_token_map.insert(audience, token);
-        });
-    }
-
-    /// Adds an OAuth Access token to the cache, replacing any existing token for the same
-    /// `cache_key` and `scopes`.
-    pub fn put_access_token<T: Deref<Target = str>>(
-        &mut self,
-        cache_key: CacheKey,
-        scopes: &[T],
-        token: Arc<OAuthToken>,
-    ) {
-        self.put_token(cache_key, |ts| {
-            ts.access_token_map.insert(Self::scope_key(scopes).into_owned(), token);
-        });
-    }
-
-    /// Adds a Firebase token to the cache, replacing any existing token for
-    /// the same `cache_key` and `firebase_api_key`.
-    pub fn put_firebase_token(
-        &mut self,
-        cache_key: CacheKey,
-        firebase_api_key: String,
-        token: Arc<FirebaseAuthToken>,
-    ) {
-        self.put_token(cache_key, |ts| {
-            ts.firebase_token_map.insert(firebase_api_key, token);
-        });
-    }
-
-    /// Adds a token to the cache, using a supplied fn to perform the token set
-    /// manipulation.
-    fn put_token<F>(&mut self, cache_key: CacheKey, update_fn: F)
+    /// Returns a token for the specified key if present and not expired.
+    pub fn get<K, V>(&mut self, key: &K) -> Option<Arc<V>>
     where
-        F: FnOnce(&mut TokenSet),
+        K: CacheKey + KeyFor<TokenType = V>,
+        V: CacheToken,
     {
         self.validate_time_progression();
-        if let Some(token_set) = self.map.get_mut(&cache_key) {
-            update_fn(token_set);
-            return;
-        }
-        let mut token_set = TokenSet::new();
-        update_fn(&mut token_set);
-        self.map.insert(cache_key, token_set);
-    }
+        let uncast_token = self.token_map.get(key as &CacheKey)?;
 
-    /// Removes all tokens associated with the supplied `cache_key`, returning an error
-    /// if none exist.
-    pub fn delete(&mut self, cache_key: &CacheKey) -> Result<(), AuthCacheError> {
-        self.validate_time_progression();
-        if !self.map.contains_key(cache_key) {
-            Err(AuthCacheError::KeyNotFound)
+        let downcast_token = if let Ok(downcast_token) = uncast_token.clone().downcast::<V>() {
+            downcast_token
         } else {
-            self.map.remove(cache_key);
+            warn!("Error downcasting token in cache.");
+            return None;
+        };
+
+        if Self::is_token_expired(downcast_token.as_ref()) {
+            self.token_map.remove(key as &CacheKey);
+            None
+        } else {
+            Some(downcast_token)
+        }
+    }
+
+    /// Adds a token to the cache, replacing any existing token for the same key.
+    pub fn put<K, V>(&mut self, key: K, token: Arc<V>)
+    where
+        K: CacheKey + KeyFor<TokenType = V>,
+        V: CacheToken,
+    {
+        self.validate_time_progression();
+        self.token_map.insert(Box::new(key), token);
+    }
+
+    /// Deletes all the tokens associated with the given auth_provider_type and
+    /// user_profile_id.  Returns an error if no matching keys are found.
+    pub fn delete_matching(
+        &mut self,
+        auth_provider_type: &str,
+        user_profile_id: &str,
+    ) -> Result<(), AuthCacheError> {
+        self.validate_time_progression();
+        // TODO(satsukiu): evict expired tokens first.  This gives consistent behavior when
+        // the only matching tokens are expired.
+
+        let entries_before_delete = self.token_map.len();
+        self.token_map.retain(|key, _| {
+            key.auth_provider_type() != auth_provider_type
+                || key.user_profile_id() != user_profile_id
+        });
+
+        let entries_after_delete = self.token_map.len();
+        if entries_after_delete < entries_before_delete {
+            info!(
+                "Deleted {:?} matching entries from the token cache.",
+                entries_before_delete - entries_after_delete
+            );
             Ok(())
+        } else {
+            Err(AuthCacheError::KeyNotFound)
         }
     }
 
-    /// Returns true iff the supplied `cache_key` is present in this cache.
-    pub fn has_key(&self, cache_key: &CacheKey) -> bool {
-        self.map.contains_key(cache_key)
-    }
-
-    /// Constructs an access token hashing key based on a vector of OAuth scope
-    /// strings.
-    fn scope_key<'a, T: Deref<Target = str>>(scopes: &'a [T]) -> Cow<'a, str> {
-        // Use the scope strings concatenated with a newline as the key. Note that this
-        // is order dependent; a client that requested the same scopes with two
-        // different orders would create two cache entries. We argue that the
-        // harm of this is limited compared to the cost of sorting scopes to
-        // create a canonical ordering on every access. Most clients are likely
-        // to use a consistent order anyway and we request this behaviour in the
-        // interface. TODO(jsankey): Consider a zero-copy solution for the
-        // simple case of a single scope.
-        match scopes.len() {
-            0 => Cow::Borrowed(""),
-            1 => Cow::Borrowed(scopes.first().unwrap()),
-            _ => Cow::Owned(scopes.iter().fold(String::new(), |acc, el| {
-                let sep = if acc.is_empty() { "" } else { "\n" };
-                acc + sep + el
-            })),
-        }
+    /// Returns true if the given token is expired.
+    fn is_token_expired(token: &CacheToken) -> bool {
+        let current_time = SystemTime::now();
+        current_time > (*token.expiry_time() - PADDING_FOR_TOKEN_EXPIRY)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_auth::TokenType;
 
     const CACHE_SIZE: usize = 3;
 
-    const TEST_IDP: &str = "test.com";
-    const TEST_CREDENTIAL_ID: &str = "test.com/profiles/user";
-    const TEST_EMAIL: &str = "user@test.com";
-    const TEST_AUDIENCE: &str = "test_audience";
-    const TEST_SCOPE_A: &str = "test_scope_a";
-    const TEST_SCOPE_B: &str = "test_scope_b";
-    const TEST_ID_TOKEN: &str = "ID token for test user";
-    const TEST_ACCESS_TOKEN: &str = "Access token for test user";
-    const TEST_API_KEY: &str = "Test API key";
-    const TEST_FIREBASE_ID_TOKEN: &str = "Firebase token for test user";
-    const TEST_FIREBASE_LOCAL_ID: &str = "Local ID for test firebase token";
+    const TEST_AUTH_PROVIDER: &str = "test_auth_provider";
+    const TEST_USER_ID: &str = "test_auth_provider/profiles/user";
+    const TEST_TOKEN_CONTENTS: &str = "Token contents";
     const LONG_EXPIRY: Duration = Duration::from_secs(3000);
     const ALREADY_EXPIRED: Duration = Duration::from_secs(1);
 
-    fn build_test_cache_key(suffix: &str) -> CacheKey {
-        CacheKey {
-            idp_provider: TEST_IDP.to_string(),
-            idp_credential_id: TEST_CREDENTIAL_ID.to_string() + suffix,
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct TestToken {
+        expiry_time: SystemTime,
+        token: String,
+    }
+
+    impl CacheToken for TestToken {
+        fn expiry_time(&self) -> &SystemTime {
+            &self.expiry_time
         }
     }
 
-    fn build_test_id_token(time_until_expiry: Duration, suffix: &str) -> Arc<OAuthToken> {
-        Arc::new(OAuthToken {
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct TestKey {
+        auth_provider_type: String,
+        user_profile_id: String,
+        audience: String,
+    }
+
+    impl CacheKey for TestKey {
+        fn auth_provider_type(&self) -> &str {
+            &self.auth_provider_type
+        }
+
+        fn user_profile_id(&self) -> &str {
+            &self.user_profile_id
+        }
+
+        fn subkey(&self) -> &str {
+            &self.audience
+        }
+    }
+
+    impl KeyFor for TestKey {
+        type TokenType = TestToken;
+    }
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct AlternateTestToken {
+        expiry_time: SystemTime,
+        metadata: Vec<String>,
+        token: String,
+    }
+
+    impl CacheToken for AlternateTestToken {
+        fn expiry_time(&self) -> &SystemTime {
+            &self.expiry_time
+        }
+    }
+
+    #[derive(Clone, Debug, PartialEq, Eq)]
+    struct AlternateTestKey {
+        auth_provider_type: String,
+        user_profile_id: String,
+        scopes: String,
+    }
+
+    impl CacheKey for AlternateTestKey {
+        fn auth_provider_type(&self) -> &str {
+            &self.auth_provider_type
+        }
+
+        fn user_profile_id(&self) -> &str {
+            &self.user_profile_id
+        }
+
+        fn subkey(&self) -> &str {
+            &self.scopes
+        }
+    }
+
+    impl KeyFor for AlternateTestKey {
+        type TokenType = AlternateTestToken;
+    }
+
+    fn build_test_key(user_suffix: &str, audience: &str) -> TestKey {
+        TestKey {
+            auth_provider_type: TEST_AUTH_PROVIDER.to_string(),
+            user_profile_id: TEST_USER_ID.to_string() + user_suffix,
+            audience: audience.to_string(),
+        }
+    }
+
+    fn build_alternate_test_key(user_suffix: &str, scopes: &str) -> AlternateTestKey {
+        AlternateTestKey {
+            auth_provider_type: TEST_AUTH_PROVIDER.to_string(),
+            user_profile_id: TEST_USER_ID.to_string() + user_suffix,
+            scopes: scopes.to_string(),
+        }
+    }
+
+    fn build_test_token(time_until_expiry: Duration, suffix: &str) -> Arc<TestToken> {
+        Arc::new(TestToken {
             expiry_time: SystemTime::now() + time_until_expiry,
-            token: TEST_ID_TOKEN.to_string() + suffix,
+            token: TEST_TOKEN_CONTENTS.to_string() + suffix,
         })
     }
 
-    fn build_test_access_token(time_until_expiry: Duration, suffix: &str) -> Arc<OAuthToken> {
-        Arc::new(OAuthToken {
-            expiry_time: SystemTime::now() + time_until_expiry,
-            token: TEST_ACCESS_TOKEN.to_string() + suffix,
-        })
-    }
-
-    fn build_test_firebase_token(
+    fn build_alternate_test_token(
         time_until_expiry: Duration,
         suffix: &str,
-    ) -> Arc<FirebaseAuthToken> {
-        Arc::new(FirebaseAuthToken {
+    ) -> Arc<AlternateTestToken> {
+        Arc::new(AlternateTestToken {
             expiry_time: SystemTime::now() + time_until_expiry,
-            id_token: TEST_FIREBASE_ID_TOKEN.to_string() + suffix,
-            local_id: Some(TEST_FIREBASE_LOCAL_ID.to_string() + suffix),
-            email: Some(TEST_EMAIL.to_string()),
+            token: TEST_TOKEN_CONTENTS.to_string() + suffix,
+            metadata: vec![suffix.to_string()],
         })
     }
 
     #[test]
-    fn test_oauth_from_fidl() {
-        let fidl_type = fidl_fuchsia_auth::AuthToken {
-            token_type: TokenType::AccessToken,
-            expires_in: LONG_EXPIRY.as_secs(),
-            token: TEST_ACCESS_TOKEN.to_string(),
-        };
-
-        let time_before_conversion = SystemTime::now();
-        let native_type = OAuthToken::from(fidl_type);
-        let time_after_conversion = SystemTime::now();
-
-        assert_eq!(&native_type.token, TEST_ACCESS_TOKEN);
-        assert!(native_type.expiry_time >= time_before_conversion + LONG_EXPIRY);
-        assert!(native_type.expiry_time <= time_after_conversion + LONG_EXPIRY);
-
-        // Also verify our implementation of the Deref trait
-        assert_eq!(&*native_type, TEST_ACCESS_TOKEN);
-    }
-
-    #[test]
-    fn test_firebase_from_fidl() {
-        let fidl_type = fidl_fuchsia_auth::FirebaseToken {
-            id_token: TEST_FIREBASE_ID_TOKEN.to_string(),
-            local_id: Some(TEST_FIREBASE_LOCAL_ID.to_string()),
-            email: Some(TEST_EMAIL.to_string()),
-            expires_in: LONG_EXPIRY.as_secs(),
-        };
-
-        let time_before_conversion = SystemTime::now();
-        let native_type = FirebaseAuthToken::from(fidl_type);
-        let time_after_conversion = SystemTime::now();
-
-        assert_eq!(&native_type.id_token, TEST_FIREBASE_ID_TOKEN);
-        assert_eq!(native_type.local_id, Some(TEST_FIREBASE_LOCAL_ID.to_string()));
-        assert_eq!(native_type.email, Some(TEST_EMAIL.to_string()));
-        assert!(native_type.expiry_time >= time_before_conversion + LONG_EXPIRY);
-        assert!(native_type.expiry_time <= time_after_conversion + LONG_EXPIRY);
-    }
-
-    #[test]
-    fn test_firebase_to_fidl() {
-        let time_before_conversion = SystemTime::now();
-        let native_type = FirebaseAuthToken {
-            id_token: TEST_FIREBASE_ID_TOKEN.to_string(),
-            local_id: Some(TEST_FIREBASE_LOCAL_ID.to_string()),
-            email: Some(TEST_EMAIL.to_string()),
-            expiry_time: time_before_conversion + LONG_EXPIRY,
-        };
-
-        let fidl_type = native_type.to_fidl();
-        let elapsed_time_during_conversion =
-            SystemTime::now().duration_since(time_before_conversion).unwrap();
-
-        assert_eq!(&fidl_type.id_token, TEST_FIREBASE_ID_TOKEN);
-        assert_eq!(fidl_type.local_id, Some(TEST_FIREBASE_LOCAL_ID.to_string()));
-        assert_eq!(fidl_type.email, Some(TEST_EMAIL.to_string()));
-        assert!(fidl_type.expires_in <= LONG_EXPIRY.as_secs());
-        assert!(
-            fidl_type.expires_in
-                >= (LONG_EXPIRY.as_secs() - elapsed_time_during_conversion.as_secs()) - 1
-        );
-    }
-
-    #[test]
-    fn test_get_and_put_id_token() {
+    fn test_get_and_put_token() {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
 
         // Verify requesting an entry from an cache that does not contain it fails.
-        let key = build_test_cache_key("");
-        assert_eq!(token_cache.get_id_token(&key, TEST_AUDIENCE), None);
+        let key_1 = build_test_key("", "audience_1");
+        assert_eq!(token_cache.get(&key_1), None);
 
         // Verify inserting then retrieving a token succeeds.
-        let token_1 = build_test_id_token(LONG_EXPIRY, "1");
-        token_cache.put_id_token(key.clone(), TEST_AUDIENCE.to_string(), token_1.clone());
-        assert_eq!(token_cache.get_id_token(&key, TEST_AUDIENCE), Some(token_1.clone()));
+        let token_1 = build_test_token(LONG_EXPIRY, "1");
+        token_cache.put(key_1.clone(), token_1.clone());
+        assert_eq!(token_cache.get(&key_1), Some(token_1.clone()));
 
-        // Verify a second token on a different audience can be stored in the key
-        // without conflict.
-        let audience_2 = "";
-        let token_2 = build_test_id_token(LONG_EXPIRY, "2");
-        assert_eq!(token_cache.get_id_token(&key, audience_2), None);
-        token_cache.put_id_token(key.clone(), audience_2.to_string(), token_2.clone());
-        assert_eq!(token_cache.get_id_token(&key, audience_2), Some(token_2));
+        // Verify a second token can be stored without conflict.
+        let key_2 = build_test_key("", "audience_2");
+        let token_2 = build_test_token(LONG_EXPIRY, "2");
+        assert_eq!(token_cache.get(&key_2), None);
+        token_cache.put(key_2.clone(), token_2.clone());
+        assert_eq!(token_cache.get(&key_2), Some(token_2));
+        assert_eq!(token_cache.get(&key_1), Some(token_1));
     }
 
     #[test]
-    fn test_get_and_put_access_token() {
+    fn test_get_and_put_multiple_token_types() {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
 
-        // Verify requesting an entry from an cache that does not contain it fails.
-        let key = build_test_cache_key("");
-        let scopes = vec![TEST_SCOPE_A, TEST_SCOPE_B];
-        assert_eq!(token_cache.get_access_token(&key, &scopes), None);
+        // Verify cache will get and put different datatypes
+        let key = build_test_key("", "audience_1");
+        let token = build_test_token(LONG_EXPIRY, "1");
+        token_cache.put(key.clone(), token.clone());
+        let alternate_key = build_alternate_test_key("", "scope");
+        let alternate_token = build_alternate_test_token(LONG_EXPIRY, "2");
+        token_cache.put(alternate_key.clone(), alternate_token.clone());
+        assert_eq!(token_cache.get(&key), Some(token));
+        assert_eq!(token_cache.get(&alternate_key), Some(alternate_token));
 
-        // Verify inserting then retrieving a token succeeds.
-        let token_1 = build_test_access_token(LONG_EXPIRY, "1");
-        token_cache.put_access_token(key.clone(), &scopes, token_1.clone());
-        assert_eq!(token_cache.get_access_token(&key, &scopes), Some(token_1.clone()));
+        // Verify keys of identical contents but different types do not clash.
+        let key_2 = build_test_key("", "clash-test");
+        let token_2 = build_test_token(LONG_EXPIRY, "3");
+        token_cache.put(key_2.clone(), token_2.clone());
+        let alternate_key_2 = build_alternate_test_key("", "clash-test");
+        let alternate_token_2 = build_alternate_test_token(LONG_EXPIRY, "4");
+        token_cache.put(alternate_key_2.clone(), alternate_token_2.clone());
 
-        // We don't create a canonical ordering of scopes, so can store a different
-        // token with the same scopes in reverse order.
-        let reversed_scopes = vec![TEST_SCOPE_B, TEST_SCOPE_A];
-        let token_2 = build_test_id_token(LONG_EXPIRY, "2");
-        token_cache.put_access_token(key.clone(), &reversed_scopes, token_2.clone());
-        assert_eq!(token_cache.get_access_token(&key, &reversed_scopes), Some(token_2));
-
-        // Check that storing with a single scope and an empty scope vector also work.
-        let single_scope = vec![TEST_SCOPE_A];
-        let token_3 = build_test_id_token(LONG_EXPIRY, "3");
-        token_cache.put_access_token(key.clone(), &single_scope, token_3.clone());
-        assert_eq!(token_cache.get_access_token(&key, &single_scope), Some(token_3));
-        let no_scopes: Vec<String> = vec![];
-        let token_4 = build_test_id_token(LONG_EXPIRY, "4");
-        token_cache.put_access_token(key.clone(), &no_scopes, token_4.clone());
-        assert_eq!(token_cache.get_access_token(&key, &no_scopes), Some(token_4));
-
-        // And finally check that we didn't dork up the original entry.
-        assert_eq!(token_cache.get_access_token(&key, &scopes), Some(token_1.clone()));
+        assert_eq!(token_cache.get(&key_2), Some(token_2));
+        assert_eq!(token_cache.get(&alternate_key_2), Some(alternate_token_2));
     }
 
     #[test]
-    fn test_has_key() {
+    fn test_delete_matching() {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
-        let key = build_test_cache_key("");
-        assert_eq!(token_cache.has_key(&key), false);
-        token_cache.put_id_token(
-            key.clone(),
-            TEST_AUDIENCE.to_string(),
-            build_test_id_token(LONG_EXPIRY, ""),
+        let key = build_test_key("", "audience");
+
+        // Verify deleting when cache is empty fails.
+        assert_eq!(
+            token_cache.delete_matching(key.auth_provider_type(), key.user_profile_id()),
+            Err(AuthCacheError::KeyNotFound)
         );
-        assert_eq!(token_cache.has_key(&key), true);
-    }
 
-    #[test]
-    fn test_delete() {
-        let mut token_cache = TokenCache::new(CACHE_SIZE);
-        let key = build_test_cache_key("");
-        assert_eq!(token_cache.delete(&key), Err(AuthCacheError::KeyNotFound));
-        token_cache.put_access_token(
-            key.clone(),
-            &vec![TEST_SCOPE_A],
-            build_test_access_token(LONG_EXPIRY, ""),
+        // Verify matching keys are removed.
+        token_cache.put(key.clone(), build_test_token(LONG_EXPIRY, ""));
+        assert_eq!(
+            token_cache.delete_matching(key.auth_provider_type(), key.user_profile_id()),
+            Ok(())
         );
-        assert_eq!(token_cache.has_key(&key), true);
-        assert_eq!(token_cache.delete(&key), Ok(()));
-        assert_eq!(token_cache.has_key(&key), false);
+        assert!(token_cache.get(&key).is_none());
+
+        // Verify non-matching keys are not removed.
+        let matching_key = build_test_key("matching", "");
+        let non_matching_key = build_test_key("non-matching", "");
+        let non_matching_token = build_test_token(LONG_EXPIRY, "non-matching");
+        token_cache.put(matching_key.clone(), build_test_token(LONG_EXPIRY, "matching"));
+        token_cache.put(non_matching_key.clone(), non_matching_token.clone());
+        assert_eq!(
+            token_cache
+                .delete_matching(matching_key.auth_provider_type(), matching_key.user_profile_id()),
+            Ok(())
+        );
+        assert!(token_cache.get(&matching_key).is_none());
+        assert_eq!(token_cache.get(&non_matching_key), Some(non_matching_token));
     }
 
     #[test]
-    fn test_remove_oauth_on_expiry() {
+    fn test_remove_expired_tokens() {
         let mut token_cache = TokenCache::new(CACHE_SIZE);
 
         // Insert one entry that's already expired and one that hasn't.
-        let scopes = vec![TEST_SCOPE_A, TEST_SCOPE_B];
-        let key_1 = build_test_cache_key("1");
-        let access_token_1 = build_test_access_token(LONG_EXPIRY, "1");
-        token_cache.put_access_token(key_1.clone(), &scopes, access_token_1.clone());
-        let key_2 = build_test_cache_key("2");
-        let access_token_2 = build_test_access_token(ALREADY_EXPIRED, "2");
-        token_cache.put_access_token(key_2.clone(), &scopes, access_token_2.clone());
+        let key = build_test_key("valid", "audience_1");
+        let token = build_test_token(LONG_EXPIRY, "1");
+        token_cache.put(key.clone(), token.clone());
+        let expired_key = build_alternate_test_key("expired", "scope");
+        let expired_token = build_alternate_test_token(ALREADY_EXPIRED, "2");
+        token_cache.put(expired_key.clone(), expired_token.clone());
 
-        // Both keys should be present.
-        assert_eq!(token_cache.has_key(&key_1), true);
-        assert_eq!(token_cache.has_key(&key_2), true);
-
-        // Getting the expired key should fail and remove it from the cache.
-        assert_eq!(token_cache.get_access_token(&key_1, &scopes), Some(access_token_1));
-        assert_eq!(token_cache.get_access_token(&key_2, &scopes), None);
-        assert_eq!(token_cache.has_key(&key_1), true);
-        assert_eq!(token_cache.has_key(&key_2), false);
-    }
-
-    #[test]
-    fn test_get_and_put_firebase_token() {
-        let mut token_cache = TokenCache::new(CACHE_SIZE);
-
-        // Create a new entry in the cache without any firebase tokens.
-        let key = build_test_cache_key("1");
-        token_cache.put_id_token(
-            key.clone(),
-            TEST_AUDIENCE.to_string(),
-            build_test_access_token(LONG_EXPIRY, ""),
-        );
-        assert_eq!(token_cache.get_firebase_token(&key, TEST_API_KEY), None);
-
-        // Add a firebase token and verify it can be retrieved.
-        let firebase_token = build_test_firebase_token(LONG_EXPIRY, "");
-        token_cache.put_firebase_token(
-            key.clone(),
-            TEST_API_KEY.to_string(),
-            firebase_token.clone(),
-        );
-        assert_eq!(token_cache.get_firebase_token(&key, TEST_API_KEY), Some(firebase_token));
-    }
-
-    #[test]
-    fn test_remove_firebase_on_expiry() {
-        let mut token_cache = TokenCache::new(CACHE_SIZE);
-
-        // Create a new entry in the cache without any firebase tokens.
-        let key = build_test_cache_key("1");
-
-        // Add two firebase tokens, one expired, one not.
-        let firebase_token_1 = build_test_firebase_token(LONG_EXPIRY, "1");
-        let firebase_api_key_1 = TEST_API_KEY.to_string() + "1";
-        token_cache.put_firebase_token(
-            key.clone(),
-            firebase_api_key_1.clone(),
-            firebase_token_1.clone(),
-        );
-        let firebase_token_2 = build_test_firebase_token(ALREADY_EXPIRED, "2");
-        let firebase_api_key_2 = TEST_API_KEY.to_string() + "2";
-        token_cache.put_firebase_token(
-            key.clone(),
-            firebase_api_key_2.clone(),
-            firebase_token_2.clone(),
-        );
-
-        // Verify only the not expired token is accessible.
-        assert_eq!(
-            token_cache.get_firebase_token(&key, &firebase_api_key_1),
-            Some(firebase_token_1)
-        );
-        assert_eq!(token_cache.get_firebase_token(&key, &firebase_api_key_2), None);
+        // Getting the expired key should fail.
+        assert_eq!(token_cache.get(&key), Some(token));
+        assert_eq!(token_cache.get(&expired_key), None);
     }
 }
