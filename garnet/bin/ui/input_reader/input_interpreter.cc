@@ -38,6 +38,7 @@ namespace {
 // Variable to quickly re-enable the hardcoded touchpad reports.
 // TODO(ZX-3219): Remove this once touchpads are stable
 bool USE_TOUCHPAD_HARDCODED_REPORTS = false;
+bool USE_TOUCHSCREEN_HARDCODED_REPORTS = false;
 
 int64_t InputEventTimestampNow() {
   return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
@@ -935,26 +936,42 @@ bool InputInterpreter::ParseProtocol() {
     return false;
   }
 
-  if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
-    protocol_ = Protocol::Acer12Touch;
-    return true;
-  }
-  if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
-    hid_decoder_->SetupDevice(HidDecoder::Device::SAMSUNG);
-    protocol_ = Protocol::SamsungTouch;
-    return true;
-  }
-  if (is_paradise_touch_report_desc(desc.data(), desc.size())) {
-    protocol_ = Protocol::ParadiseV1Touch;
-    return true;
-  }
-  if (is_paradise_touch_v2_report_desc(desc.data(), desc.size())) {
-    protocol_ = Protocol::ParadiseV2Touch;
-    return true;
-  }
-  if (is_paradise_touch_v3_report_desc(desc.data(), desc.size())) {
-    protocol_ = Protocol::ParadiseV3Touch;
-    return true;
+  if (USE_TOUCHSCREEN_HARDCODED_REPORTS) {
+    if (is_acer12_touch_report_desc(desc.data(), desc.size())) {
+      protocol_ = Protocol::Acer12Touch;
+      return true;
+    }
+    if (is_samsung_touch_report_desc(desc.data(), desc.size())) {
+      hid_decoder_->SetupDevice(HidDecoder::Device::SAMSUNG);
+      protocol_ = Protocol::SamsungTouch;
+      return true;
+    }
+    if (is_paradise_touch_report_desc(desc.data(), desc.size())) {
+      protocol_ = Protocol::ParadiseV1Touch;
+      return true;
+    }
+    if (is_paradise_touch_v2_report_desc(desc.data(), desc.size())) {
+      protocol_ = Protocol::ParadiseV2Touch;
+      return true;
+    }
+    if (is_paradise_touch_v3_report_desc(desc.data(), desc.size())) {
+      protocol_ = Protocol::ParadiseV3Touch;
+      return true;
+    }
+    if (is_egalax_touchscreen_report_desc(desc.data(), desc.size())) {
+      protocol_ = Protocol::EgalaxTouch;
+      return true;
+    }
+    if (is_eyoyo_touch_report_desc(desc.data(), desc.size())) {
+      hid_decoder_->SetupDevice(HidDecoder::Device::EYOYO);
+      protocol_ = Protocol::EyoyoTouch;
+      return true;
+    }
+    if (is_ft3x27_touch_report_desc(desc.data(), desc.size())) {
+      hid_decoder_->SetupDevice(HidDecoder::Device::FT3X27);
+      protocol_ = Protocol::Ft3x27Touch;
+      return true;
+    }
   }
   if (USE_TOUCHPAD_HARDCODED_REPORTS) {
     if (is_paradise_touchpad_v1_report_desc(desc.data(), desc.size())) {
@@ -966,24 +983,8 @@ bool InputInterpreter::ParseProtocol() {
       return true;
     }
   }
-  if (is_egalax_touchscreen_report_desc(desc.data(), desc.size())) {
-    protocol_ = Protocol::EgalaxTouch;
-    return true;
-  }
   if (is_paradise_sensor_report_desc(desc.data(), desc.size())) {
     protocol_ = Protocol::ParadiseSensor;
-    return true;
-  }
-  if (is_eyoyo_touch_report_desc(desc.data(), desc.size())) {
-    hid_decoder_->SetupDevice(HidDecoder::Device::EYOYO);
-    protocol_ = Protocol::EyoyoTouch;
-    return true;
-  }
-  // TODO(SCN-867) Use HID parsing for all touch devices
-  // will remove the need for this
-  if (is_ft3x27_touch_report_desc(desc.data(), desc.size())) {
-    hid_decoder_->SetupDevice(HidDecoder::Device::FT3X27);
-    protocol_ = Protocol::Ft3x27Touch;
     return true;
   }
 
