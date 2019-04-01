@@ -7,6 +7,7 @@ sdk://fidl/fuchsia.bluetooth.gatt
 sdk://fidl/fuchsia.bluetooth.le
 sdk://fidl/fuchsia.camera
 sdk://fidl/fuchsia.castauth
+sdk://fidl/fuchsia.castsetup
 sdk://fidl/fuchsia.cobalt
 sdk://fidl/fuchsia.developer.tiles
 sdk://fidl/fuchsia.feedback
