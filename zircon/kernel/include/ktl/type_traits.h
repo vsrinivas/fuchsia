@@ -17,6 +17,9 @@ using is_lvalue_reference = std::is_lvalue_reference<T>;
 template <typename T>
 using is_pod = std::is_pod<T>;
 
+template <typename T, typename U>
+using is_same = std::is_same<T, U>;
+
 template <typename T>
 using remove_const = std::remove_const<T>;
 
