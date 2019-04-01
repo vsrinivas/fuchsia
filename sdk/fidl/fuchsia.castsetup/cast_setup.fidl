@@ -1,0 +1,28 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.castsetup;
+
+/// Interface that allows watching of changes to the cast setup state.
+[Discoverable]
+protocol StateWatcher {
+  /// Will immediately return on first call; subsequent calls will return on
+  /// change.
+  Watch() -> (State state);
+};
+
+/// Enum of different possible setup states
+enum State {
+  /// State is not determined.
+  UNKNOWN = 0;
+
+  /// Setup is not complete and is in progress.
+  IN_PROGRESS = 1;
+
+  /// Configured once but disconnected for now.
+  OFFLINE = 2;
+
+  /// Setup is complete and device is connected.
+  COMPLETE = 3;
+};
