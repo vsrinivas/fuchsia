@@ -691,13 +691,13 @@ where
                                 self.connections.push(connection.into_future())
                             }
                             Ok(ConnectionState::Closed) => (),
-                            // An error occured while processing a request.  We will just close the
-                            // connection, effectively closing the underlying channel in the
-                            // desctructor.
+                            // An error occurred while processing a request.  We will just close
+                            // the connection, effectively closing the underlying channel in the
+                            // destructor.
                             _ => (),
                         }
                     }
-                    // Similarly to the error that occures while handing a FIDL request, any
+                    // Similarly to the error that occurs while handing a FIDL request, any
                     // connection level errors cause the connection to be closed.
                 }
                 // Even when we have no connections any more we still report Pending state, as we
