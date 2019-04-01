@@ -104,16 +104,19 @@ ExceptionHandler& ExceptionHandler::operator=(ExceptionHandler&&) = default;
 
 zx_status_t ExceptionHandler::Init(int id, zx_handle_t object,
                                    uint32_t options) {
-  handle_ = std::make_unique<async_exception_t>();
-  *handle_ = {};  // Need to zero it out.
-  handle_->state = ASYNC_STATE_INIT;
-  handle_->handler = Handler;
-  handle_->task = object;
-  handle_->options = options;
+  auto handle = std::make_unique<async_exception_t>();
+  *handle = {};     // Need to zero it out.
+  handle->state = ASYNC_STATE_INIT;
+  handle->handler = Handler;
+  handle->task = object;
+  handle->options = options;
 
   zx_status_t status =
-      async_bind_exception_port(async_get_default_dispatcher(), handle_.get());
+      async_bind_exception_port(async_get_default_dispatcher(), handle.get());
+  if (status != ZX_OK)
+    return status;
 
+  handle_ = std::move(handle);
   watch_info_id_ = id;
   return status;
 }
