@@ -16,6 +16,7 @@
       <entry name="entry2" value="2" />
       <entry name="0_starts_with_number" value="0x4" />
     </enum>
+
     <!-- Opcode 0: uint request/event -->
     <request name="uint">
       <arg name="arg" type="uint"/>
@@ -106,6 +107,22 @@
     </request>
     <event name="untyped_new_id">
       <arg name="arg" type="new_id" />
+    </event>
+
+    <!-- Opcode 10: interpret enum arg as int -->
+    <request name="test_int_enum">
+      <arg name="arg" type="int" enum="test_enum" />
+    </request>
+    <event name="test_int_enum">
+      <arg name="arg" type="int" enum="test_enum" />
+    </event>
+
+    <!-- Opcode 11: interpret enum arg as uint -->
+    <request name="test_uint_enum">
+      <arg name="arg" type="uint" enum="test_enum" />
+    </request>
+    <event name="test_uint_enum">
+      <arg name="arg" type="uint" enum="test_enum" />
     </event>
 
     <!-- Summary test -->

@@ -573,6 +573,9 @@ fn format_wire_arg_rust(arg: &ast::Arg) -> Cow<str> {
 }
 
 fn format_arg_kind(arg: &ast::Arg) -> &'static str {
+    if arg.enum_type.is_some() {
+        return "ArgKind::Uint";
+    }
     match arg.kind {
         ArgKind::Int => "ArgKind::Int",
         ArgKind::Uint => "ArgKind::Uint",

@@ -6,7 +6,7 @@
 
 #[cfg(test)]
 mod test {
-    use fuchsia_wayland_core::{Arg, Fixed, FromArgs, IntoMessage};
+    use fuchsia_wayland_core::{Arg, Enum, Fixed, FromArgs, IntoMessage};
     use fuchsia_zircon::{self as zx, HandleBased};
     use test_protocol::{test_interface, TestInterfaceEvent, TestInterfaceRequest};
     use zerocopy::AsBytes;
@@ -422,5 +422,33 @@ mod test {
             Some(test_interface::TestBitfield::_0StartsWithNumber),
             test_interface::TestBitfield::from_bits(4)
         );
+    }
+
+    #[test]
+    fn test_serialize_uint_enum_arg() {
+        let event = TestInterfaceEvent::TestUintEnum { arg: test_interface::TestEnum::Entry2 };
+        let (bytes, handles) = event.into_message(SENDER_ID).unwrap().take();
+        assert!(handles.is_empty());
+        assert_eq!(bytes, message_bytes!(SENDER_ID, 11 /* opcode */, 1));
+    }
+
+    #[test]
+    fn test_deserialize_uint_enum_arg() {
+        let request = TestInterfaceRequest::from_args(11 /* opcode */, vec![Arg::Uint(1)]).unwrap();
+        assert_match!(request, TestInterfaceRequest::TestUintEnum{arg} => assert_eq!(arg, Enum::Recognized(test_interface::TestEnum::Entry2)));
+    }
+
+    #[test]
+    fn test_serialize_int_enum_arg() {
+        let event = TestInterfaceEvent::TestIntEnum { arg: test_interface::TestEnum::Entry2 };
+        let (bytes, handles) = event.into_message(SENDER_ID).unwrap().take();
+        assert!(handles.is_empty());
+        assert_eq!(bytes, message_bytes!(SENDER_ID, 10 /* opcode */, 1));
+    }
+
+    #[test]
+    fn test_deserialize_int_enum_arg() {
+        let request = TestInterfaceRequest::from_args(10 /* opcode */, vec![Arg::Uint(1)]).unwrap();
+        assert_match!(request, TestInterfaceRequest::TestIntEnum{arg} => assert_eq!(arg, Enum::Recognized(test_interface::TestEnum::Entry2)));
     }
 }

@@ -112,13 +112,13 @@ impl UnknownEnumValue {
 
 /// Thin wrapper around the typed enum values that allow us to transport
 /// unknown enum values.
-#[derive(Copy, Clone, Debug)]
-pub enum Enum<E: Copy> {
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum Enum<E: Copy + PartialEq> {
     Recognized(E),
     Unrecognized(u32),
 }
 
-impl<E: Copy> Enum<E> {
+impl<E: Copy + PartialEq> Enum<E> {
     /// Extract the inner enum type as a result.
     ///
     /// Ex:
@@ -131,7 +131,7 @@ impl<E: Copy> Enum<E> {
     }
 }
 
-impl<E: Copy + Display> Display for Enum<E> {
+impl<E: Copy + PartialEq + Display> Display for Enum<E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match self {
             Enum::Recognized(e) => write!(f, "{}", e),
