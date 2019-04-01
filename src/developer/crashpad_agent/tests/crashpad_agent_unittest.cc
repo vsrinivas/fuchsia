@@ -24,6 +24,7 @@
 #include <zircon/time.h>
 
 #include "src/developer/crashpad_agent/config.h"
+#include "src/developer/crashpad_agent/crash_server.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -42,6 +43,30 @@ namespace {
 // For now, a single report should take up to 1MB.
 constexpr uint64_t kMaxTotalReportSizeInKb = 1024u;
 
+const char kStubCrashServerUrl[] = "localhost:1234";
+
+constexpr bool alwaysReturnSuccess = true;
+constexpr bool alwaysReturnFailure = false;
+
+class StubCrashServer : public CrashServer {
+ public:
+  StubCrashServer(bool request_return_value)
+      : CrashServer(kStubCrashServerUrl),
+        request_return_value_(request_return_value) {}
+
+  bool MakeRequest(const crashpad::HTTPHeaders& headers,
+                   std::unique_ptr<crashpad::HTTPBodyStream> stream,
+                   std::string* server_report_id) override {
+    // TODO(frousseau): check this is the one written in the local Crashpad
+    // database.
+    *server_report_id = "untestedRepordId";
+    return request_return_value_;
+  }
+
+ private:
+  const bool request_return_value_;
+};
+
 // Unit-tests the implementation of the fuchsia.crash.Analyzer FIDL interface.
 //
 // This does not test the environment service. It directly instantiates the
@@ -54,19 +79,32 @@ class CrashpadAgentTest : public ::testing::Test {
     ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
                       /*max_crashpad_database_size_in_kb=*/
                       kMaxTotalReportSizeInKb,
-                      /*enable_upload_to_crash_server=*/false,
-                      /*crash_server_url=*/nullptr});
+                      /*enable_upload_to_crash_server=*/true,
+                      /*crash_server_url=*/
+                      std::make_unique<std::string>(kStubCrashServerUrl)},
+               std::make_unique<StubCrashServer>(alwaysReturnSuccess));
   }
 
  protected:
-  // Resets the underlying agent using the given |config|.
-  void ResetAgent(Config config) {
+  // Resets the underlying agent using the given |config| and |crash_server|.
+  void ResetAgent(Config config,
+                  std::unique_ptr<StubCrashServer> crash_server) {
+    FXL_CHECK(config.enable_upload_to_crash_server ^ !crash_server);
+    crash_server_ = std::move(crash_server);
+
     // "attachments" should be kept in sync with the value defined in
     // //crashpad/client/crash_report_database_generic.cc
     attachments_dir_ =
         files::JoinPath(config.local_crashpad_database_path, "attachments");
-    agent_ = CrashpadAgent::TryCreate(std::move(config));
-    FXL_DCHECK(agent_);
+    agent_ =
+        CrashpadAgent::TryCreate(std::move(config), std::move(crash_server_));
+    FXL_CHECK(agent_);
+  }
+
+  // Resets the underlying agent using the given |config|.
+  void ResetAgent(Config config) {
+    FXL_CHECK(!config.enable_upload_to_crash_server);
+    return ResetAgent(std::move(config), /*crash_server=*/nullptr);
   }
 
   // Checks that there is:
@@ -135,6 +173,7 @@ class CrashpadAgentTest : public ::testing::Test {
 
   std::unique_ptr<CrashpadAgent> agent_;
   files::ScopedTempDir database_path_;
+  std::unique_ptr<StubCrashServer> crash_server_;
 
  private:
   void RemoveCurrentDirectory(std::vector<std::string>* dirs) {
@@ -321,6 +360,28 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
   EXPECT_THAT(
       new_attachment_subdirs,
       testing::Not(testing::UnorderedElementsAreArray(attachment_subdirs)));
+}
+
+TEST_F(CrashpadAgentTest, AnalysisFailOnFailedUpload) {
+  ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
+                    /*max_crashpad_database_size_in_kb=*/
+                    kMaxTotalReportSizeInKb,
+                    /*enable_upload_to_crash_server=*/true,
+                    /*crash_server_url=*/
+                    std::make_unique<std::string>(kStubCrashServerUrl)},
+             std::make_unique<StubCrashServer>(alwaysReturnFailure));
+
+  EXPECT_TRUE(RunOneCrashAnalysis().is_err());
+}
+
+TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoUpload) {
+  ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
+                    /*max_crashpad_database_size_in_kb=*/
+                    kMaxTotalReportSizeInKb,
+                    /*enable_upload_to_crash_server=*/false,
+                    /*crash_server_url=*/nullptr});
+
+  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
 }
 
 }  // namespace

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_ANALYZER_IMPL_H_
-#define SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_ANALYZER_IMPL_H_
+#ifndef SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_AGENT_H_
+#define SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_AGENT_H_
 
 #include <string>
 #include <utility>
@@ -11,13 +11,14 @@
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fidl/cpp/string.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 #include <zircon/status.h>
 
 #include "src/developer/crashpad_agent/config.h"
+#include "src/developer/crashpad_agent/crash_server.h"
+#include "src/lib/fxl/macros.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/util/misc/uuid.h"
 
@@ -31,6 +32,8 @@ class CrashpadAgent : public Analyzer {
   // local report database cannot be accessed.
   static std::unique_ptr<CrashpadAgent> TryCreate();
   static std::unique_ptr<CrashpadAgent> TryCreate(Config config);
+  static std::unique_ptr<CrashpadAgent> TryCreate(
+      Config config, std::unique_ptr<CrashServer> crash_server);
 
   void OnNativeException(zx::process process, zx::thread thread,
                          zx::port exception_port,
@@ -52,8 +55,9 @@ class CrashpadAgent : public Analyzer {
       HandleManagedRuntimeExceptionCallback callback) override;
 
  private:
-  explicit CrashpadAgent(
-      Config config, std::unique_ptr<crashpad::CrashReportDatabase> database);
+  CrashpadAgent(Config config,
+                std::unique_ptr<crashpad::CrashReportDatabase> database,
+                std::unique_ptr<CrashServer> crash_server);
 
   zx_status_t OnNativeException(zx::process process, zx::thread thread,
                                 zx::port exception_port);
@@ -80,6 +84,7 @@ class CrashpadAgent : public Analyzer {
 
   const Config config_;
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
+  const std::unique_ptr<CrashServer> crash_server_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);
 };
@@ -87,4 +92,4 @@ class CrashpadAgent : public Analyzer {
 }  // namespace crash
 }  // namespace fuchsia
 
-#endif  // SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_ANALYZER_IMPL_H_
+#endif  // SRC_DEVELOPER_CRASHPAD_AGENT_CRASHPAD_AGENT_H_

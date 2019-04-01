@@ -11,14 +11,15 @@
 #include <utility>
 
 #include <fuchsia/crash/cpp/fidl.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/syslog/cpp/logger.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 
 #include "src/developer/crashpad_agent/config.h"
+#include "src/developer/crashpad_agent/crash_server.h"
 #include "src/developer/crashpad_agent/report_annotations.h"
 #include "src/developer/crashpad_agent/report_attachments.h"
 #include "src/developer/crashpad_agent/scoped_unlink.h"
@@ -81,6 +82,15 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate() {
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(Config config) {
+  std::unique_ptr<CrashServer> crash_server;
+  if (config.enable_upload_to_crash_server && config.crash_server_url) {
+    crash_server = std::make_unique<CrashServer>(*config.crash_server_url);
+  }
+  return CrashpadAgent::TryCreate(std::move(config), std::move(crash_server));
+}
+
+std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
+    Config config, std::unique_ptr<CrashServer> crash_server) {
   if (!files::IsDirectory(config.local_crashpad_database_path)) {
     files::CreateDirectory(config.local_crashpad_database_path);
   }
@@ -100,14 +110,20 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(Config config) {
   database->GetSettings()->SetUploadsEnabled(
       config.enable_upload_to_crash_server);
 
-  return std::unique_ptr<CrashpadAgent>(
-      new CrashpadAgent(std::move(config), std::move(database)));
+  return std::unique_ptr<CrashpadAgent>(new CrashpadAgent(
+      std::move(config), std::move(database), std::move(crash_server)));
 }
 
 CrashpadAgent::CrashpadAgent(
-    Config config, std::unique_ptr<crashpad::CrashReportDatabase> database)
-    : config_(std::move(config)), database_(std::move(database)) {
+    Config config, std::unique_ptr<crashpad::CrashReportDatabase> database,
+    std::unique_ptr<CrashServer> crash_server)
+    : config_(std::move(config)),
+      database_(std::move(database)),
+      crash_server_(std::move(crash_server)) {
   FXL_DCHECK(database_);
+  if (config.enable_upload_to_crash_server) {
+    FXL_DCHECK(crash_server_);
+  }
 }
 
 void CrashpadAgent::OnNativeException(zx::process process, zx::thread thread,
@@ -379,20 +395,13 @@ zx_status_t CrashpadAgent::UploadReport(
   http_multipart_builder.SetFileAttachment(
       "uploadFileMinidump", report->uuid.ToString() + ".dmp", report->Reader(),
       "application/octet-stream");
-
-  std::unique_ptr<crashpad::HTTPTransport> http_transport(
-      crashpad::HTTPTransport::Create());
   crashpad::HTTPHeaders content_headers;
   http_multipart_builder.PopulateContentHeaders(&content_headers);
-  for (const auto& content_header : content_headers) {
-    http_transport->SetHeader(content_header.first, content_header.second);
-  }
-  http_transport->SetBodyStream(http_multipart_builder.GetBodyStream());
-  http_transport->SetTimeout(60.0);  // 1 minute.
-  http_transport->SetURL(*config_.crash_server_url);
 
   std::string server_report_id;
-  if (!http_transport->ExecuteSynchronously(&server_report_id)) {
+  if (!crash_server_->MakeRequest(content_headers,
+                                  http_multipart_builder.GetBodyStream(),
+                                  &server_report_id)) {
     database_->SkipReportUpload(
         report->uuid, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
     FX_LOGS(ERROR) << "error uploading local crash report, ID "

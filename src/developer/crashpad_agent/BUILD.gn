@@ -47,6 +47,8 @@ source_set("src") {
   sources = [
     "config.cc",
     "config.h",
+    "crash_server.cc",
+    "crash_server.h",
     "crashpad_agent.cc",
     "crashpad_agent.h",
     "report_annotations.cc",
