@@ -5,6 +5,7 @@
 use {
     failure::{err_msg, Error},
     fuchsia_bluetooth::hci,
+    rand::{self, Rng},
     std::{
         fs::{File, OpenOptions},
         path::Path,
@@ -45,7 +46,7 @@ fn main() {
 
     match command.as_str() {
         "add" => {
-            match hci::create_and_bind_device() {
+            match create_and_bind_random_device() {
                 Ok((_, id)) => println!("fake device added: {}", id),
                 Err(e) => eprintln!("{}", e),
             };
@@ -62,4 +63,12 @@ fn main() {
         }
         _ => usage(appname),
     };
+}
+
+// Create a device with a random id so it (hopefully) won't clash
+// In future, we should provide a more reliable guarantee
+fn create_and_bind_random_device() -> Result<(File, String), Error> {
+    let mut rng = rand::thread_rng();
+    let name = format!("bt-hci-{}", rng.gen::<u16>());
+    hci::create_and_bind_device(&name)
 }

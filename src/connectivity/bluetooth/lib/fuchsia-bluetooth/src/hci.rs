@@ -5,14 +5,13 @@
 #![allow(missing_docs)]
 
 use {
-    failure::{format_err, Error},
+    failure::{bail, format_err, Error},
     fidl_fuchsia_device::ControllerSynchronousProxy,
     fidl_fuchsia_device_test::{
-        DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE,
+        DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE, MAX_DEVICE_NAME_LEN,
     },
     fidl_fuchsia_hardware_bluetooth::HciSynchronousProxy,
     fuchsia_zircon as zx,
-    rand::{self, Rng},
     std::{
         fs::{File, OpenOptions},
         path::Path,
@@ -23,11 +22,13 @@ pub const DEV_TEST: &str = CONTROL_DEVICE;
 pub const BTHCI_DRIVER_NAME: &str = "/system/driver/bt-hci-fake.so";
 
 // Returns the name of the fake device and a File representing the device on success.
-pub fn create_and_bind_device() -> Result<(File, String), Error> {
-    let mut rng = rand::thread_rng();
-    let id = format!("bt-hci-{}", rng.gen::<u8>());
-    let devpath = create_fake_device(DEV_TEST, id.as_str())?;
+pub fn create_and_bind_device(name: &str) -> Result<(File, String), Error> {
+    if name.len() > (MAX_DEVICE_NAME_LEN as usize) {
+        bail!("Device name '{}' too long (must be {} or fewer chars)", name, MAX_DEVICE_NAME_LEN);
+    }
+    let devpath = create_fake_device(DEV_TEST, name)?;
 
+    // TODO(BT-799) - Replace this logic with a cleaner and more reliable implementation
     let mut retry = 0;
     let mut dev = None;
     {
@@ -41,7 +42,7 @@ pub fn create_and_bind_device() -> Result<(File, String), Error> {
     }
     let dev = dev.ok_or_else(|| format_err!("could not open {:?}", devpath))?;
     bind_fake_device(&dev)?;
-    Ok((dev, id))
+    Ok((dev, name.to_string()))
 }
 
 pub fn create_fake_device(test_path: &str, dev_name: &str) -> Result<String, Error> {
@@ -51,10 +52,7 @@ pub fn create_fake_device(test_path: &str, dev_name: &str) -> Result<String, Err
 
     let (status, devpath) = interface.create_device(dev_name, zx::Time::INFINITE)?;
     zx::Status::ok(status)?;
-    match devpath {
-        Some(path) => Ok(path),
-        None => Err(format_err!("RootDevice.CreateDevice received no devpath?")),
-    }
+    devpath.ok_or(format_err!("RootDevice.CreateDevice received no devpath?"))
 }
 
 pub fn bind_fake_device(device: &File) -> Result<(), Error> {

@@ -16,7 +16,7 @@ use {
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_bluetooth::{
-        self as bt, bt_fidl_status, error::Error as BTError, util::clone_host_info,
+        self as bt, bt_fidl_status, error::Error as BTError, hci, util::clone_host_info,
         util::clone_remote_device,
     },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog},
@@ -470,7 +470,9 @@ impl HostDispatcher {
     /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
     /// watcher
     pub async fn add_adapter(self, host_path: &Path) -> Result<(), Error> {
-        fx_log_info!("Adding Adapter: {:?}", host_path);
+        let host_dev = hci::open_rdwr(host_path)?;
+        let device_topo = fdio::device_get_topo_path(&host_dev)?;
+        fx_log_info!("Adding Adapter: {:?} (topology: {:?})", host_path, device_topo);
         let host_device = await!(init_host(host_path))?;
 
         let address = host_device.read().get_info().address.clone();

@@ -142,9 +142,6 @@ pub mod control_expectation {
 
     pub fn host_not_present(id: String) -> Predicate<ControlState> {
         let msg = format!("bt-host {} is no longer present", id);
-        Predicate::new(
-            move |state: &ControlState| !state.hosts.contains_key(&id),
-            Some(&msg),
-        )
+        Predicate::new(move |state: &ControlState| !state.hosts.contains_key(&id), Some(&msg))
     }
 }

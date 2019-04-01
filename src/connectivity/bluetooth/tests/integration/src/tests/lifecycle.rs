@@ -22,7 +22,7 @@ fn sleep() -> () {
 // Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.
 pub fn lifecycle_test() -> Result<(), Error> {
     let original_hosts = host::list_host_devices();
-    let fake_hci = FakeHciDevice::new()?;
+    let fake_hci = FakeHciDevice::new("bt-hci-integration-lifecycle")?;
 
     // TODO(armansito): Use a device watcher instead of polling.
 

@@ -11,8 +11,8 @@ pub struct FakeHciDevice(File);
 
 impl FakeHciDevice {
     /// Publishes a new fake bt-hci device and constructs a FakeHciDevice with it.
-    pub fn new() -> Result<FakeHciDevice, Error> {
-        let (dev, _) = hci::create_and_bind_device()?;
+    pub fn new(name: &str) -> Result<FakeHciDevice, Error> {
+        let (dev, _) = hci::create_and_bind_device(name)?;
         Ok(FakeHciDevice(dev))
     }
 

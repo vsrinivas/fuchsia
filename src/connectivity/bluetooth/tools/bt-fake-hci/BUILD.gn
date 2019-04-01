@@ -12,5 +12,6 @@ rustc_binary("bt-fake-hci") {
   deps = [
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:rand",
   ]
 }

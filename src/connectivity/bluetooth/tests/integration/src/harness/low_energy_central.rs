@@ -17,7 +17,7 @@ use {
 
 use crate::harness::{
     control::{
-        new_control_harness, control_expectation, control_timeout, ControlHarness, ControlState,
+        control_expectation, control_timeout, new_control_harness, ControlHarness, ControlState,
     },
     TestHarness,
 };
@@ -50,8 +50,9 @@ where
     drop(fake_hci);
 
     // Wait for BT-GAP to unregister the associated fake host
-    await!(control.when_satisfied(control_expectation::host_not_present(fake_host),
-                                  control_timeout()))?;
+    await!(
+        control.when_satisfied(control_expectation::host_not_present(fake_host), control_timeout())
+    )?;
     result
 }
 
@@ -64,7 +65,7 @@ async fn activate_fake_host(control: &ControlHarness) -> Result<(FakeHciDevice, 
     let initial_hosts: Vec<String> = control.read().hosts.keys().cloned().collect();
     let initial_hosts_ = initial_hosts.clone();
 
-    let hci = FakeHciDevice::new()?;
+    let hci = FakeHciDevice::new("bt-hci-integration-le-0")?;
 
     let control_state = await!(control.when_satisfied(
         Predicate::<ControlState>::new(
@@ -86,7 +87,10 @@ async fn activate_fake_host(control: &ControlHarness) -> Result<(FakeHciDevice, 
         .identifier
         .to_string(); // We can safely unwrap here as this is guarded by the previous expectation
     await!(control.aux().set_active_adapter(&fake_host))?;
-    await!(control.when_satisfied(control_expectation::active_host_is(fake_host.clone()), control_timeout()))?;
+    await!(control.when_satisfied(
+        control_expectation::active_host_is(fake_host.clone()),
+        control_timeout()
+    ))?;
     Ok((hci, fake_host))
 }
 

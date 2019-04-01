@@ -387,7 +387,7 @@ async fn wait_for_host_removal(watcher: VfsWatcher, path: String) -> Result<(), 
 
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
 async fn setup_emulated_host_test() -> Result<HostDriverHarness, Error> {
-    let fake_hci = FakeHciDevice::new()?;
+    let fake_hci = FakeHciDevice::new("bt-hci-integration-test-0")?;
     let fake_hci_topo_path = fdio::device_get_topo_path(fake_hci.file())?;
 
     let dir = File::open(&BT_HOST_DIR)?;
