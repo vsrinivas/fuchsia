@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <utility>
+
 #include <ddk/debug.h>
 #include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <fbl/vector.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <tee-client-api/tee-client-types.h>
-
-#include <utility>
+#include <zircon/time.h>
 
 #include "optee-client.h"
 #include "optee-smc.h"
@@ -494,9 +496,13 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
         }
         return HandleRpcCommandFileSystem(&fs_msg);
     }
-    case RpcMessage::Command::kGetTime:
-        zxlogf(ERROR, "optee: RPC command to access file system recognized but not implemented\n");
-        return ZX_ERR_NOT_SUPPORTED;
+    case RpcMessage::Command::kGetTime: {
+        GetTimeRpcMessage get_time_msg(std::move(message));
+        if (!get_time_msg.is_valid()) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return HandleRpcCommandGetTime(&get_time_msg);
+    }
     case RpcMessage::Command::kWaitQueue:
         zxlogf(ERROR, "optee: RPC command wait queue recognized but not implemented\n");
         return ZX_ERR_NOT_SUPPORTED;
@@ -618,6 +624,33 @@ zx_status_t OpteeClient::HandleRpcCommandLoadTa(LoadTaRpcMessage* message) {
     }
 
     message->set_return_code(TEEC_SUCCESS);
+    return ZX_OK;
+}
+
+zx_status_t OpteeClient::HandleRpcCommandGetTime(GetTimeRpcMessage* message) {
+    ZX_DEBUG_ASSERT(message->is_valid());
+
+    // Mark that the return code will originate from driver
+    message->set_return_origin(TEEC_ORIGIN_COMMS);
+
+    zx::time_utc now;
+    zx_status_t status = zx::clock::get(&now);
+    if (status != ZX_OK) {
+        message->set_return_code(TEEC_ERROR_GENERIC);
+        return status;
+    }
+
+    static constexpr const zx::duration kDurationSecond = zx::duration(zx_duration_from_sec(1));
+    static constexpr const zx::time_utc kUtcEpoch = zx::time_utc(0);
+
+    zx::duration now_since_epoch = now - kUtcEpoch;
+    auto seconds = static_cast<uint64_t>(now_since_epoch / kDurationSecond);
+    auto ns_remainder = static_cast<uint64_t>(now_since_epoch % kDurationSecond);
+
+    message->set_output_seconds(seconds);
+    message->set_output_nanoseconds(ns_remainder);
+    message->set_return_code(TEEC_SUCCESS);
+
     return ZX_OK;
 }
 

@@ -82,6 +82,10 @@ struct MessageParam {
         } generic;
         TEEC_UUID uuid_big_endian;
         struct {
+            uint64_t seconds;
+            uint64_t nanoseconds;
+        } get_time_specs;
+        struct {
             uint64_t memory_type;
             uint64_t memory_size;
         } allocate_memory_specs;
@@ -450,6 +454,49 @@ protected:
     size_t mem_size_;
     zx_off_t mem_offset_;
     uint64_t* out_ta_size_;
+
+private:
+    bool TryInitializeMembers();
+};
+
+// GetTimeRpcMessage
+//
+// A RpcMessage that should be interpreted with the command of getting the current time.
+// A RpcMessage can be converted into a GetTimeRpcMessage via a constructor.
+class GetTimeRpcMessage : public RpcMessage {
+public:
+    // GetTimeRpcMessage
+    //
+    // Move constructor for GetTimeRpcMessage. Uses the default implicit implementation.
+    GetTimeRpcMessage(GetTimeRpcMessage&&) = default;
+
+    // GetTimeRpcMessage
+    //
+    // Constructs a GetTimeRpcMessage from a moved-in RpcMessage.
+    explicit GetTimeRpcMessage(RpcMessage&& rpc_message)
+        : RpcMessage(std::move(rpc_message)) {
+        ZX_DEBUG_ASSERT(is_valid()); // The RPC message passed in should've been valid
+        ZX_DEBUG_ASSERT(command() == RpcMessage::Command::kGetTime);
+
+        is_valid_ = is_valid_ && TryInitializeMembers();
+    }
+
+    void set_output_seconds(uint64_t secs) {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        *out_secs_ = secs;
+    }
+
+    void set_output_nanoseconds(uint64_t nanosecs) {
+        ZX_DEBUG_ASSERT_MSG(is_valid(), "Accessing invalid OP-TEE RPC message");
+        *out_nanosecs_ = nanosecs;
+    }
+
+protected:
+    static constexpr size_t kNumParams = 1;
+    static constexpr size_t kTimeParamIndex = 0;
+
+    uint64_t* out_secs_;
+    uint64_t* out_nanosecs_;
 
 private:
     bool TryInitializeMembers();

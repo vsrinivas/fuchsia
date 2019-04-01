@@ -521,6 +521,31 @@ bool LoadTaRpcMessage::TryInitializeMembers() {
     return true;
 }
 
+bool GetTimeRpcMessage::TryInitializeMembers() {
+    if (header()->num_params != kNumParams) {
+        zxlogf(ERROR,
+               "optee: RPC command to get current time received unexpected number of parameters!"
+               "\n");
+        set_return_origin(TEEC_ORIGIN_COMMS);
+        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+        return false;
+    }
+
+    // Parse the output time parameter
+    MessageParam& time_param = params()[kTimeParamIndex];
+    if (time_param.attribute != MessageParam::kAttributeTypeValueOutput) {
+        zxlogf(ERROR,
+               "optee: RPC command to get current time received unexpected first parameter!\n");
+        set_return_origin(TEEC_ORIGIN_COMMS);
+        set_return_code(TEEC_ERROR_BAD_PARAMETERS);
+    }
+
+    out_secs_ = &time_param.payload.value.get_time_specs.seconds;
+    out_nanosecs_ = &time_param.payload.value.get_time_specs.nanoseconds;
+
+    return true;
+}
+
 bool AllocateMemoryRpcMessage::TryInitializeMembers() {
     if (header()->num_params != kNumParams) {
         zxlogf(ERROR,
