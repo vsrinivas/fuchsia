@@ -805,10 +805,16 @@ generate_fvm("fvm.blk") {
     {
       type = "blob"
       dep = ":blob.blk"
+      minimum_inodes = blobfs_minimum_inodes
+      minimum_data_bytes = blobfs_minimum_data_bytes
+      maximum_bytes = blobfs_maximum_bytes
     },
     {
       type = "data"
       dep = ":data.blk"
+      minimum_inodes = minfs_minimum_inodes
+      minimum_data_bytes = minfs_minimum_data_bytes
+      maximum_bytes = minfs_maximum_bytes
     },
   ]
 }
@@ -844,10 +850,16 @@ generate_fvm("fvm.sparse.blk") {
     {
       type = "blob"
       dep = ":blob.blk"
+      minimum_inodes = blobfs_minimum_inodes
+      minimum_data_bytes = blobfs_minimum_data_bytes
+      maximum_bytes = blobfs_maximum_bytes
     },
     {
       type = "data"
       dep = ":data.blk"
+      minimum_inodes = minfs_minimum_inodes
+      minimum_data_bytes = minfs_minimum_data_bytes
+      maximum_bytes = minfs_maximum_bytes
     },
   ]
 }
