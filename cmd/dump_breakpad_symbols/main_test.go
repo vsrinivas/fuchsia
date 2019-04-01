@@ -79,7 +79,6 @@ func TestRunCommand(t *testing.T) {
 	// Expects dump_breakpad_symbols to produce the specified summary and
 	// ninja depfile from the given input sources.
 	expectOutputs := func(t *testing.T, inputs []*FakeFile, expectedDepFile string, expectedTarFileContents map[string][]byte, outDir string) {
-		depFile := NewFakeFile("deps.d", "")
 		tarFile := NewFakeFile("breakpad_symbols.tar.gz", "")
 
 		// Callback to mock executing the breakpad dump_syms binary.
@@ -110,20 +109,6 @@ func TestRunCommand(t *testing.T) {
 		inputPaths := make([]string, len(inputs))
 		for i := range inputs {
 			inputPaths[i] = inputs[i].Name()
-		}
-
-		// Write the dep file.
-		if err := writeDepFile(depFile, tarFile.Name(), inputPaths); err != nil {
-			t.Fatalf("failed to write depfile %s: %v", depFile.Name(), err)
-		}
-
-		// Expect matching depfile.
-		actualDepFile, err := ioutil.ReadAll(depFile)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if string(actualDepFile) != expectedDepFile {
-			t.Errorf("expected depfile: %s. Got %s", expectedDepFile, actualDepFile)
 		}
 
 		// Expect matching tarball.
