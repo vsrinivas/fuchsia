@@ -2,44 +2,46 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This tool upload debug symbols in ids.txt to Cloud storage
+// Uploads binary debug symbols to Google Cloud Storage.
 //
 // Example Usage:
-// $ upload_debug_symbols -bucket=/bucket_name -idsFilePath=/path/to/ids.txt
+//
+// $ upload_debug_symbols -j 20 -bucket bucket-name /path/to/.build-id
 
 package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
-	"strings"
 	"sync"
 
-	"cloud.google.com/go/storage"
 	"fuchsia.googlesource.com/tools/elflib"
-	"google.golang.org/api/iterator"
 )
-
-const usage = `upload_debug_symbols [flags] bucket idsFilePath
-
-Upload debug symbol files listed in ids.txt to Cloud storage
-`
 
 const (
-	// The maximum number of files to upload at once. The storage API returns 4xx errors
+	usage = `upload_debug_symbols [flags] [paths..]
+
+	Uploads binary debug symbols to Google Cloud Storage.
+	`
+
+	// The default number of files to upload at once. The storage API returns 4xx errors
 	// when we spawn too many go routines at once, and we can't predict the number of
-	// symbol files we'll have to upload.
-	maxConcurrentUploads = 100
+	// symbol files we'll have to upload. 100 is chosen as a sensible default. This can be
+	// overriden on the command line.
+	defaultConccurrentUploadCount = 100
 )
 
-// Command line flag values
+// Command line flags.
 var (
-	gcsBucket   string
-	idsFilePath string
+	// The GCS bucket to upload files to.
+	gcsBucket string
+
+	// The maximum number of files to upload at once.
+	concurrentUploadCount int
 )
 
 func init() {
@@ -49,145 +51,101 @@ func init() {
 		os.Exit(0)
 	}
 
-	flag.StringVar(&gcsBucket, "bucket", "", "The bucket to upload")
-	flag.StringVar(&idsFilePath, "idsFilePath", "", "The path to file ids.txt")
+	flag.StringVar(&gcsBucket, "bucket", "", "GCS Bucket to upload to")
+	flag.IntVar(&concurrentUploadCount, "j", defaultConccurrentUploadCount, "Number of concurrent threads to use to upload files")
 }
 
 func main() {
 	flag.Parse()
-
+	if flag.NArg() == 0 {
+		log.Fatal("expected at least one path to a .build-id directory")
+	}
 	if gcsBucket == "" {
-		log.Fatal("Error: gcsBucket is not specified.")
+		log.Fatal("missing -bucket")
 	}
-	if idsFilePath == "" {
-		log.Fatal("Error: idsFilePath is not specified.")
-	}
-
-	if err := execute(context.Background()); err != nil {
+	if err := execute(context.Background(), flag.Args()); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func execute(ctx context.Context) error {
-	client, err := storage.NewClient(ctx)
+func execute(ctx context.Context, paths []string) error {
+	bfrs, err := collectDebugSymbolFiles(paths)
 	if err != nil {
-		return fmt.Errorf("failed to create client: %v", err)
+		return fmt.Errorf("failed to collect symbol files: %v", err)
 	}
-
-	bkt := client.Bucket(gcsBucket)
-	if _, err = bkt.Attrs(ctx); err != nil {
-		return fmt.Errorf("failed to fetch bucket attributes: %v", err)
-	}
-
-	objMap, err := getObjects(context.Background(), bkt)
+	jobs, err := queueJobs(bfrs)
 	if err != nil {
-		return fmt.Errorf("failed to fetch object list from GCS: %v", err)
+		return fmt.Errorf("failed to queue jobs: %v", err)
 	}
-
-	myClient := gcsClient{bkt: bkt, objMap: objMap}
-
-	if err = uploadSymbolFiles(ctx, &myClient, idsFilePath); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func uploadSymbolFiles(ctx context.Context, client GCSClient, idsFilePath string) error {
-	file, err := os.Open(idsFilePath)
+	bkt, err := prepareGCSBucket(ctx, gcsBucket)
 	if err != nil {
-		return fmt.Errorf("failed to open %s: %v", idsFilePath, err)
+		return fmt.Errorf("failed to fetch GCS bucket information: %v", err)
 	}
-	defer file.Close()
-	binaries, err := elflib.ReadIDsFile(file)
-	if err != nil {
-		return fmt.Errorf("failed to read %s with elflib: %v", idsFilePath, err)
-	}
-
-	var wg sync.WaitGroup
-	jobsc := make(chan elflib.BinaryFileRef, len(binaries))
-	const workerCount = maxConcurrentUploads
-	for i := 0; i < workerCount; i++ {
-		wg.Add(1)
-		go worker(ctx, client, &wg, jobsc)
-	}
-
-	// Emit jobs
-	for i := range binaries {
-		jobsc <- binaries[i]
-	}
-	close(jobsc)
-
-	wg.Wait() // Wait for workers to finish.
-	return nil
-}
-
-func worker(ctx context.Context, client GCSClient, wg *sync.WaitGroup, jobs <-chan elflib.BinaryFileRef) {
-	defer wg.Done()
-	for binaryFileRef := range jobs {
-		log.Printf("uploading %s", binaryFileRef.Filepath)
-		objectName := binaryFileRef.BuildID + ".debug"
-		if client.exists(objectName) {
-			log.Printf("skipping %q which already exists", objectName)
-			continue
-		}
-		if err := client.uploadSingleFile(context.Background(), objectName, binaryFileRef.Filepath); err != nil {
-			log.Println(err)
-		}
-	}
-}
-
-func (client *gcsClient) exists(name string) bool {
-	return client.objMap[name]
-}
-
-func (client *gcsClient) uploadSingleFile(ctx context.Context, name, localPath string) error {
-	content, err := ioutil.ReadFile(localPath)
-	if err != nil {
-		return fmt.Errorf("unable to read file in uploadSingleFile: %v", err)
-	}
-	// This writer only perform write when the precondition of DoesNotExist is true.
-	wc := client.bkt.Object(name).If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
-	if _, err := wc.Write(content); err != nil {
-		return fmt.Errorf("failed to write to buffer of GCS onject writer: %v", err)
-	}
-	// Close completes the write operation and flushes any buffered data.
-	if err := wc.Close(); err != nil {
-		// Error 412 means the precondition of DoesNotExist doesn't match.
-		// It is the expected behavior since we don't want to upload duplicated files.
-		if !strings.Contains(err.Error(), "Error 412") {
-			return fmt.Errorf("failed in close: %v", err)
-		}
+	if !upload(ctx, bkt, jobs) {
+		return errors.New("completed with errors")
 	}
 	return nil
 }
 
-// getObjects returns a set of all binaries that currently exist in Cloud Storage.
-// TODO(IN-1050)
-func getObjects(ctx context.Context, bkt *storage.BucketHandle) (map[string]bool, error) {
-	existingObjects := make(map[string]bool)
-	it := bkt.Objects(ctx, nil)
-	for {
-		objAttrs, err := it.Next()
-		if err == iterator.Done {
-			break
-		}
+// Creates BinaryFileRefs for all debug symbol files in the directories named in dirs.
+func collectDebugSymbolFiles(dirs []string) ([]elflib.BinaryFileRef, error) {
+	var out []elflib.BinaryFileRef
+	for _, dir := range dirs {
+		refs, err := elflib.WalkBuildIDDir(dir)
 		if err != nil {
 			return nil, err
 		}
-		existingObjects[objAttrs.Name] = true
+		out = append(out, refs...)
 	}
-	return existingObjects, nil
+	return out, nil
 }
 
-// GCSClient provide method to upload single file to gcs
-type GCSClient interface {
-	uploadSingleFile(ctx context.Context, name, localPath string) error
-	exists(object string) bool
+// Returns a read-only channel of jobs to upload each file referenced in bfrs.
+func queueJobs(bfrs []elflib.BinaryFileRef) (<-chan job, error) {
+	jobs := make(chan job, len(bfrs))
+	for _, bfr := range bfrs {
+		jobs <- job{
+			dstBucket: gcsBucket,
+			bfr:       bfr,
+		}
+	}
+	close(jobs)
+	return jobs, nil
 }
 
-// gcsClient is the object that implement GCSClient
-type gcsClient struct {
-	objMap map[string]bool
-	bkt    *storage.BucketHandle
+// Upload executes all of the jobs to upload files from the input channel. Returns true
+// iff all uploads succeeded without error.
+func upload(ctx context.Context, bkt *GCSBucket, jobs <-chan job) (succeeded bool) {
+	errs := make(chan error, defaultConccurrentUploadCount)
+	defer close(errs)
+
+	// Spawn workers to execute the uploads.
+	workerCount := concurrentUploadCount
+	var wg sync.WaitGroup
+	wg.Add(workerCount)
+	for i := 0; i < workerCount; i++ {
+		go worker(ctx, bkt, &wg, jobs, errs)
+	}
+
+	// Let the caller know whether any errors were emitted.
+	succeeded = true
+	go func() {
+		for e := range errs {
+			succeeded = false
+			log.Printf("error: %v", e)
+		}
+	}()
+	wg.Wait()
+	return succeeded
+}
+
+// worker processes all jobs on the input channel, emitting any errors on errs.
+func worker(ctx context.Context, bkt *GCSBucket, wg *sync.WaitGroup, jobs <-chan job, errs chan<- error) {
+	defer wg.Done()
+	for job := range jobs {
+		log.Printf("executing %s", job.name())
+		if err := job.execute(context.Background(), bkt); err != nil {
+			errs <- fmt.Errorf("job %s failed: %v", job.name(), err)
+		}
+	}
 }

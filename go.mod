@@ -21,9 +21,10 @@ require (
 	go.chromium.org/luci v0.0.0-20181004001148-1bfb80352368
 	go.opencensus.io v0.19.0 // indirect
 	golang.org/x/arch v0.0.0-20190226203302-36aee92af9e8 // indirect
-	golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
-	golang.org/x/net v0.0.0-20181217023233-e147a9138326
-	golang.org/x/sys v0.0.0-20181218192612-074acd46bca6
+	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a
+	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a
+	golang.org/x/tools v0.0.0-20190321211322-a94d7df2cbc8
 	google.golang.org/api v0.1.0
 	google.golang.org/appengine v1.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20190201180003-4b09977fb922

@@ -13,10 +13,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 const NT_GNU_BUILD_ID uint32 = 3
+
+// The file suffix used by unstripped debug binaries.
+const DebugFileSuffix = ".debug"
 
 // BinaryFileRef represents a reference to an ELF file. The build id
 // and filepath are stored here. BinaryFileRefs can verify that their
@@ -183,4 +187,44 @@ func ReadIDsFile(file io.Reader) ([]BinaryFileRef, error) {
 		out = append(out, BinaryFileRef{Filepath: filename, BuildID: build})
 	}
 	return out, nil
+}
+
+// WalkBuildIDDir walks the directory containing symbol files at dirpath and creates a
+// BinaryFileRef for each symbol file it finds. Files without a ".debug" suffix are
+// skipped. Each output BinaryFileRef's BuildID is formed by concatenating the file's
+// basename with its parent directory's basename. For example:
+//
+// Input directory:
+//
+//   de/
+//     eadbeef.debug
+//     eadmeat.debug
+//
+// Output BuildIDs:
+//
+//   deadbeef.debug
+//   deadmeat.debug
+func WalkBuildIDDir(dirpath string) ([]BinaryFileRef, error) {
+	var refs []BinaryFileRef
+	if err := filepath.Walk(dirpath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("%q: %v", path, err)
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, DebugFileSuffix) {
+			return nil
+		}
+		dir, basename := filepath.Split(path)
+		buildID := filepath.Base(dir) + strings.TrimSuffix(basename, DebugFileSuffix)
+		refs = append(refs, BinaryFileRef{
+			Filepath: path,
+			BuildID:  buildID,
+		})
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return refs, nil
 }
