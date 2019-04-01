@@ -8,24 +8,17 @@ function get_build_dir {
 }
 
 function commands {
-  local -r newline=$'\n'
-
-  local cmds=""
-  for dir in "${fuchsia_dir}/tools/devshell"{,/contrib}
-  do
-    cmds="${cmds}${newline}$(ls "$dir" | grep -v -e '^lib$' -e '^tests$')"
-  done
-
-  local -r build_dir=$(get_build_dir)
+  local dirs=()
+  dirs+=("${fuchsia_dir}"/tools/devshell{,/contrib})
+  local -r build_dir="$(get_build_dir)"
   if [[ -n "${build_dir}" ]]; then
-    cmds="${cmds}${newline}$(ls "${build_dir}/tools" 2>/dev/null)"
+    dirs+=("${build_dir}/tools")
   fi
 
-  for tool in ${buildtools_whitelist}; do
-    cmds="${cmds}${newline}${tool}"
-  done
-
-  echo "$(echo "${cmds}" | sort)"
+  (
+    find "${dirs[@]}" -maxdepth 1 -type f -perm +0111 -exec basename {} \;
+    echo "${buildtools_whitelist}"
+  ) | sort -u
 }
 
 function find_command {
