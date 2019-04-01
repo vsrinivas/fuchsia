@@ -69,12 +69,9 @@ enum nl80211_iftype {
 #define le32_to_cpup(x) (*x)
 #define cpu_to_le32(x) (x)
 
-#define BITS_PER_LONG 32
+#define BITS_PER_LONG (sizeof(long) * 8)
 
 #define BITS_TO_LONGS(nr) (nr / BITS_PER_LONG)
-#define BITS_TO_U64(nr) (nr / 64)
-#define BITS_TO_U32(nr) (nr / 32)
-#define BITS_TO_BYTES(nr) (nr / 8)
 
 #define ETHTOOL_FWVERS_LEN 32
 
