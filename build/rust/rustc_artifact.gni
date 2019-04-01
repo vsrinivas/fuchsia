@@ -70,7 +70,7 @@ template("copy_with_build_id") {
     # TODO(tmandry): Enable for linux when ELF note bug is fixed.
     if (os == "fuchsia") {
       args += [
-        rebase_path("${root_build_dir}/${clang_prefix}/llvm-objcopy"),
+        rebase_path("${clang_prefix}/llvm-objcopy", "", root_build_dir),
         "--build-id-link-dir=.build-id",
       ]
       if (use_strip) {
