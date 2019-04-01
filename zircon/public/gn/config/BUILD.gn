@@ -6,6 +6,9 @@ import("$zx/public/gn/config/standard.gni")
 import("levels.gni")
 
 declare_args() {
+  # Clang crash reports directory path. Use empty path to disable altogether.
+  crash_diagnostics_dir = "$root_build_dir/clang-crashreports"
+
   # The `--sysroot` directory for host compilations.
   # This can be a string, which only applies to $host_os-$host_cpu.
   # Or it can be a list of scopes containing `cpu`, `os`, and `sysroot`.
@@ -140,6 +143,11 @@ config("compiler") {
     if (!is_gcc) {
       ldflags += [ "-Wno-unused-command-line-argument" ]
     }
+  }
+
+  if (!is_gcc && crash_diagnostics_dir != "") {
+    compiler_flags += [ "-fcrash-diagnostics-dir=" +
+                        rebase_path(crash_diagnostics_dir, root_build_dir) ]
   }
 
   include_dirs = toolchain.include_dirs

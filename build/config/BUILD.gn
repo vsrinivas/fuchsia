@@ -5,6 +5,9 @@
 import("//build/config/compiler.gni")
 
 declare_args() {
+  # Clang crash reports directory path. Use empty path to disable altogether.
+  crash_diagnostics_dir = "$root_build_dir/clang-crashreports"
+
   if (is_fuchsia) {
     # Controls whether the compiler emits full stack frames for function calls.
     # This reduces performance but increases the ability to generate good
@@ -51,6 +54,11 @@ config("compiler") {
   # Linker on macOS does not support `color-diagnostics`
   if (current_os != "mac") {
     ldflags += [ "-Wl,--color-diagnostics" ]
+  }
+
+  if (crash_diagnostics_dir != "") {
+    cflags += [ "-fcrash-diagnostics-dir=" +
+                rebase_path(crash_diagnostics_dir, root_build_dir) ]
   }
 
   asmflags += cflags
