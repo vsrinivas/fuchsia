@@ -2,7 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/go/toolchain.gni")
 import("//build/toolchain/clang_toolchain.gni")
+import("//build/toolchain/concurrent_jobs.gni")
+
+declare_args() {
+  # Maximum number of Go processes to run in parallel.
+  concurrent_go_jobs = default_concurrent_jobs.go
+}
+
+if (current_toolchain == default_toolchain) {
+  pool("pool") {
+    depth = concurrent_go_jobs
+  }
+}
 
 # A toolchain dedicated to processing Go code.
 # The only targets in this toolchain are action() targets, so it

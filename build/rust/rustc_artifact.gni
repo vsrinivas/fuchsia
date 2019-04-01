@@ -5,6 +5,7 @@
 import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/rust/config.gni")  # for rust_config
+import("//build/rust/toolchain.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/test_spec.gni")
 
@@ -121,6 +122,8 @@ template("rustc_third_party_artifact") {
   action(build_target_name) {
     script = "//build/rust/write_3p_crate_dep_info.py"
     forward_variables_from(invoker, [ "crate_name" ])
+
+    pool = "//build/rust:pool($default_toolchain)"
 
     out_info_path = "${target_out_dir}/${target_name}_info.json"
 
@@ -304,6 +307,8 @@ template("rustc_artifact") {
   # Declare the action target that performs the build itself
   action(build_target_name) {
     script = "//build/rust/build_rustc_target.py"
+
+    pool = "//build/rust:pool($default_toolchain)"
 
     forward_variables_from(invoker,
                            [

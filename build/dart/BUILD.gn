@@ -3,14 +3,23 @@
 # found in the LICENSE file.
 
 import("//build/dart/toolchain.gni")
+import("//build/toolchain/clang_toolchain.gni")
+import("//build/toolchain/concurrent_jobs.gni")
+
+declare_args() {
+  # Maximum number of Dart processes to run in parallel.
+  #
+  # Dart analyzer uses a lot of memory which may cause issues when building
+  # with many parallel jobs e.g. when using goma. To avoid out-of-memory
+  # errors we explicitly reduce the number of jobs.
+  concurrent_dart_jobs = default_concurrent_jobs.dart
+}
 
 if (current_toolchain == dart_toolchain) {
   pool("dart_pool") {
-    depth = dart_pool_depth
+    depth = concurrent_dart_jobs
   }
 } else {
-  import("//build/toolchain/clang_toolchain.gni")
-
   # A toolchain dedicated to processing and analyzing Dart packages.
   # The only targets in this toolchain are action() targets, so it
   # has no real tools.  But every toolchain needs stamp and copy.

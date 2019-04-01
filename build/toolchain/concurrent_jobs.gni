@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/lto/config.gni")
+
+_args = [ "--reserve-memory=1GB" ]
+if (use_thinlto) {
+  _args += [
+    "--memory-per-job",
+    "link=2GB",
+  ]
+} else if (use_lto) {
+  _args += [
+    "--memory-per-job",
+    "link=4GB",
+  ]
+} else {
+  _args += [
+    "--memory-per-job",
+    "link=1GB",
+  ]
+}
+_args += [
+  "--memory-per-job",
+  "rust=4GB",
+  "--memory-per-job",
+  "dart=1GB",
+  "--memory-per-job",
+  "go=1GB",
+]
+default_concurrent_jobs = exec_script("get_concurrent_jobs.py", _args, "json")

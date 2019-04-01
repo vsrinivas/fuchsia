@@ -101,6 +101,8 @@ template("go_build") {
       deps += invoker.non_go_deps
     }
 
+    pool = "//build/go:pool($default_toolchain)"
+
     use_strip = is_fuchsia
 
     outputs = [
