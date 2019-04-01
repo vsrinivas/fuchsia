@@ -41,12 +41,16 @@ public:
         return duration(value_ / divisor);
     }
 
-    constexpr duration operator%(duration divisor) const {
-        return duration(value_ % divisor.value_);
-    }
-
     constexpr int64_t operator/(duration other) const {
         return value_ / other.value_;
+    }
+
+    constexpr duration operator%(int64_t divisor) const {
+        return duration(value_ % divisor);
+    }
+
+    constexpr int64_t operator%(duration other) const {
+        return value_ % other.value_;
     }
 
     constexpr duration& operator+=(duration other) {
@@ -66,6 +70,11 @@ public:
 
     constexpr duration& operator/=(int64_t divisor) {
         value_ /= divisor;
+        return *this;
+    }
+
+    constexpr duration& operator%=(int64_t divisor) {
+        value_ %= divisor;
         return *this;
     }
 
@@ -128,6 +137,14 @@ public:
         return value_ / other.value_;
     }
 
+    constexpr ticks operator%(uint64_t divisor) const {
+        return ticks(value_ % divisor);
+    }
+
+    constexpr uint64_t operator%(ticks other) const {
+        return value_ % other.value_;
+    }
+
     constexpr ticks& operator+=(ticks other) {
         value_ += other.value_;
         return *this;
@@ -145,6 +162,11 @@ public:
 
     constexpr ticks& operator/=(uint64_t divisor) {
         value_ /= divisor;
+        return *this;
+    }
+
+    constexpr ticks& operator%=(uint64_t divisor) {
+        value_ %= divisor;
         return *this;
     }
 
