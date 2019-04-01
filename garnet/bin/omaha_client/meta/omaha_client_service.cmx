@@ -3,6 +3,9 @@
         "binary": "bin/omaha_client_service"
     },
     "sandbox": {
+        "features": [
+            "root-ssl-certificates"
+        ],
         "services": []
     }
 }

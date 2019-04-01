@@ -9,5 +9,8 @@ pub trait HttpRequest {
     fn request(&mut self, req: Request<Body>) -> FutureObj<Result<Response<Body>, hyper::Error>>;
 }
 
+#[cfg(target_os = "fuchsia")]
+pub mod fuchsia_hyper;
+
 #[cfg(test)]
 pub mod mock;

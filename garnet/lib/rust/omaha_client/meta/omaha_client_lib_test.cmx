@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/omaha_client_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "root-ssl-certificates"
+        ]
     }
 }

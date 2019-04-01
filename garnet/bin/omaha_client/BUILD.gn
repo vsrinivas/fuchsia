@@ -14,7 +14,10 @@ rustc_binary("bin") {
 
   deps = [
     "//garnet/lib/rust/omaha_client",
+    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:log",
   ]
 }
