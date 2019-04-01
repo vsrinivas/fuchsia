@@ -96,7 +96,8 @@ class ticks final {
 public:
     constexpr ticks() = default;
 
-    explicit constexpr ticks(zx_ticks_t value) : value_(value) {}
+    explicit constexpr ticks(zx_ticks_t value)
+        : value_(value) {}
 
     // Constructs a tick object for the current tick counter in the system.
     static ticks now() { return ticks(zx_ticks_get()); }
@@ -163,7 +164,8 @@ class basic_time final {
 public:
     constexpr basic_time() = default;
 
-    explicit constexpr basic_time(zx_time_t value) : value_(value) {}
+    explicit constexpr basic_time(zx_time_t value)
+        : value_(value) {}
 
     static constexpr basic_time<kClockId> infinite() {
         return basic_time<kClockId>(ZX_TIME_INFINITE);
@@ -190,13 +192,13 @@ public:
     }
 
     constexpr basic_time<kClockId>& operator+=(duration delta) {
-      value_ = zx_time_add_duration(value_, delta.get());
-      return *this;
+        value_ = zx_time_add_duration(value_, delta.get());
+        return *this;
     }
 
     constexpr basic_time<kClockId>& operator-=(duration delta) {
-      value_ = zx_time_sub_duration(value_, delta.get());
-      return *this;
+        value_ = zx_time_sub_duration(value_, delta.get());
+        return *this;
     }
 
     constexpr bool operator==(basic_time<kClockId> other) const { return value_ == other.value_; }
@@ -224,21 +226,33 @@ public:
     }
 
     static time get_monotonic() {
-      return time(zx_clock_get_monotonic());
+        return time(zx_clock_get_monotonic());
     }
 };
 
-constexpr inline duration nsec(int64_t n) { return duration(ZX_NSEC(n)); }
+constexpr inline duration nsec(int64_t n) {
+    return duration(ZX_NSEC(n));
+}
 
-constexpr inline duration usec(int64_t n) { return duration(ZX_USEC(n)); }
+constexpr inline duration usec(int64_t n) {
+    return duration(ZX_USEC(n));
+}
 
-constexpr inline duration msec(int64_t n) { return duration(ZX_MSEC(n)); }
+constexpr inline duration msec(int64_t n) {
+    return duration(ZX_MSEC(n));
+}
 
-constexpr inline duration sec(int64_t n) { return duration(ZX_SEC(n)); }
+constexpr inline duration sec(int64_t n) {
+    return duration(ZX_SEC(n));
+}
 
-constexpr inline duration min(int64_t n) { return duration(ZX_MIN(n)); }
+constexpr inline duration min(int64_t n) {
+    return duration(ZX_MIN(n));
+}
 
-constexpr inline duration hour(int64_t n) { return duration(ZX_HOUR(n)); }
+constexpr inline duration hour(int64_t n) {
+    return duration(ZX_HOUR(n));
+}
 
 inline zx_status_t nanosleep(zx::time deadline) {
     return zx_nanosleep(deadline.get());
@@ -250,4 +264,4 @@ inline time deadline_after(zx::duration nanoseconds) {
 
 } // namespace zx
 
-#endif  // LIB_ZX_TIME_H_
+#endif // LIB_ZX_TIME_H_
