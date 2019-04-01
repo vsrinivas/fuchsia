@@ -10,11 +10,12 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
+#include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/fxl/strings/string_number_conversions.h>
-#include <lib/zx/time.h>
 #include <trace/event.h>
 
 #include "peridot/lib/convert/convert.h"
@@ -30,6 +31,19 @@
 
 namespace ledger {
 namespace {
+
+constexpr fxl::StringView kBinaryPath =
+    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/put.cmx";
+constexpr fxl::StringView kEntryCountFlag = "entry-count";
+constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
+constexpr fxl::StringView kKeySizeFlag = "key-size";
+constexpr fxl::StringView kValueSizeFlag = "value-size";
+constexpr fxl::StringView kRefsFlag = "refs";
+constexpr fxl::StringView kUpdateFlag = "update";
+constexpr fxl::StringView kSeedFlag = "seed";
+
+constexpr fxl::StringView kRefsOnFlag = "on";
+constexpr fxl::StringView kRefsOffFlag = "off";
 
 // Benchmark that measures performance of the Put() operation.
 //
@@ -109,12 +123,6 @@ class PutBenchmark : public PageWatcher {
   FXL_DISALLOW_COPY_AND_ASSIGN(PutBenchmark);
 };
 
-}  // namespace
-}  // namespace ledger
-
-namespace ledger {
-namespace {
-
 constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/put";
 
 PutBenchmark::PutBenchmark(
@@ -143,15 +151,16 @@ PutBenchmark::PutBenchmark(
 }
 
 void PutBenchmark::Run() {
-  FXL_LOG(INFO) << "--entry-count=" << entry_count_
-                << " --transaction-size=" << transaction_size_
-                << " --key-size=" << key_size_
-                << " --value-size=" << value_size_ << " --refs="
+  FXL_LOG(INFO) << "--" << kEntryCountFlag << "=" << entry_count_             //
+                << " --" << kTransactionSizeFlag << "=" << transaction_size_  //
+                << " --" << kKeySizeFlag << "=" << key_size_                  //
+                << " --" << kValueSizeFlag << "=" << value_size_              //
+                << " --" << kRefsFlag << "="
                 << (reference_strategy_ ==
                             PageDataGenerator::ReferenceStrategy::INLINE
-                        ? "off"
-                        : "on")
-                << (update_ ? " --update" : "");
+                        ? kRefsOffFlag
+                        : kRefsOnFlag)
+                << (update_ ? fxl::Concatenate({" --", kUpdateFlag}) : "");
   Status status = GetLedger(
       startup_context_.get(), component_controller_.NewRequest(), nullptr, "",
       "put", DetachedPath(tmp_dir_.path()), QuitLoopClosure(), &ledger_);
@@ -360,24 +369,6 @@ void PutBenchmark::ShutDown() {
 fit::closure PutBenchmark::QuitLoopClosure() {
   return [this] { loop_->Quit(); };
 }
-
-}  // namespace
-}  // namespace ledger
-
-namespace ledger {
-namespace {
-constexpr fxl::StringView kBinaryPath =
-    "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/put.cmx";
-constexpr fxl::StringView kEntryCountFlag = "entry-count";
-constexpr fxl::StringView kTransactionSizeFlag = "transaction-size";
-constexpr fxl::StringView kKeySizeFlag = "key-size";
-constexpr fxl::StringView kValueSizeFlag = "value-size";
-constexpr fxl::StringView kRefsFlag = "refs";
-constexpr fxl::StringView kUpdateFlag = "update";
-constexpr fxl::StringView kSeedFlag = "seed";
-
-constexpr fxl::StringView kRefsOnFlag = "on";
-constexpr fxl::StringView kRefsOffFlag = "off";
 
 void PrintUsage() {
   std::cout << "Usage: trace record "
