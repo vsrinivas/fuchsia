@@ -5,7 +5,10 @@
 //! Crate omaha_client
 //! This is for Omaha client binaries written in Rust.
 
+#![feature(async_await, await_macro, futures_api)]
+
 pub mod common;
 pub mod configuration;
+pub mod http_request;
 pub mod protocol;
 pub mod requests;
