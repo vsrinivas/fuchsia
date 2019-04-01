@@ -163,7 +163,7 @@ inline void Swap(T& a, T& b) noexcept {
 // to a container never need to set the sentinel bit.  Currently, bit 0 is being
 // used because it should never be possible to have a proper container instance
 // which is odd-aligned.
-constexpr uintptr_t kContainerSentinelBit = 1u;
+constexpr uintptr_t kContainerSentinelBit = 1U;
 
 // Create a sentinel pointer from a raw pointer, converting it to the specified
 // type in the process.

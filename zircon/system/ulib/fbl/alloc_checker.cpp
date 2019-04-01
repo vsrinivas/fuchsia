@@ -31,7 +31,7 @@ void* checked(size_t size, AllocChecker* ac, void* mem) {
 } // namespace
 
 AllocChecker::AllocChecker()
-    : state_(0u) {
+    : state_(0U) {
 }
 
 AllocChecker::~AllocChecker() {
@@ -41,7 +41,7 @@ AllocChecker::~AllocChecker() {
 void AllocChecker::arm(size_t size, bool result) {
     panic_if_armed(state_);
     state_ = alloc_armed |
-             ((size == 0u) ? alloc_ok : (result ? alloc_ok : 0u));
+             ((size == 0U) ? alloc_ok : (result ? alloc_ok : 0U));
 }
 
 bool AllocChecker::check() {

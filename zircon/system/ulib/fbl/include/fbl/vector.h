@@ -110,7 +110,7 @@ public:
 
 #ifndef _KERNEL
     Vector(std::initializer_list<T> init)
-        : ptr_(init.size() != 0u ? reinterpret_cast<T*>(AllocatorTraits::Allocate(
+        : ptr_(init.size() != 0U ? reinterpret_cast<T*>(AllocatorTraits::Allocate(
                                        init.size() * sizeof(T)))
                                  : nullptr),
           size_(init.size()),
@@ -144,7 +144,7 @@ public:
     // Reserve enough size to hold at least capacity elements.
     void reserve(size_t capacity, AllocChecker* ac) {
         if (capacity <= capacity_) {
-            ac->arm(0u, true);
+            ac->arm(0U, true);
             return;
         }
         reallocate(capacity, ac);
@@ -389,7 +389,7 @@ private:
                 return false;
             }
         } else {
-            ac->arm(0u, true);
+            ac->arm(0U, true);
         }
         return true;
     }
@@ -430,14 +430,14 @@ private:
         ZX_DEBUG_ASSERT(newCapacity >= size_);
         auto newPtr = reinterpret_cast<T*>(AllocatorTraits::Allocate(newCapacity * sizeof(T)));
         if (newPtr == nullptr) {
-            ac->arm(1u, false);
+            ac->arm(1U, false);
             return false;
         }
         transfer_to(newPtr, size_);
         AllocatorTraits::Deallocate(ptr_);
         capacity_ = newCapacity;
         ptr_ = newPtr;
-        ac->arm(0u, true);
+        ac->arm(0U, true);
         return true;
     }
 

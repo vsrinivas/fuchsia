@@ -88,7 +88,7 @@ public:
     explicit InlineFunctionTarget(Callable target)
         : target_(std::move(target)) {}
     InlineFunctionTarget(Callable target, AllocChecker* ac)
-        : target_(std::move(target)) { ac->arm(0u, true); }
+        : target_(std::move(target)) { ac->arm(0U, true); }
     InlineFunctionTarget(InlineFunctionTarget&& other)
         : target_(std::move(other.target_)) {}
     ~InlineFunctionTarget() final = default;

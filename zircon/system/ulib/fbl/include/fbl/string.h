@@ -125,7 +125,7 @@ public:
     size_t size() const { return length(); }
 
     // Returns true if the string's length is zero.
-    bool empty() const { return length() == 0u; }
+    bool empty() const { return length() == 0U; }
 
     // Character iterators, excluding the null terminator.
     const char* begin() const { return data(); }
@@ -158,7 +158,7 @@ public:
     // Move assigns from another string.
     // The other string is set to empty.
     // Does not allocate heap memory.
-    String& operator=(String&& other);
+    String& operator=(String&& other) noexcept;
 
     // Assigns this string from the contents of a null-terminated C string.
     // Allocates heap memory only if |data| is non-empty.
@@ -263,7 +263,7 @@ private:
     // followed by a null-terminated string.  To make access faster, we offset
     // the |data_| pointer to point at the first byte of the content instead of
     // at the beginning of the string buffer itself.
-    static constexpr size_t kLengthFieldOffset = 0u;
+    static constexpr size_t kLengthFieldOffset = 0U;
     static constexpr size_t kRefCountFieldOffset = sizeof(size_t);
     static constexpr size_t kDataFieldOffset = sizeof(size_t) + sizeof(std::atomic_uint);
 
@@ -274,7 +274,7 @@ private:
         return reinterpret_cast<std::atomic_uint*>(data - kDataFieldOffset + kRefCountFieldOffset);
     }
     static constexpr size_t buffer_size(size_t length) {
-        return kDataFieldOffset + length + 1u;
+        return kDataFieldOffset + length + 1U;
     }
 
     // For use by test code only.
@@ -284,8 +284,8 @@ private:
 
     // Storage for an empty string.
     struct EmptyBuffer {
-        size_t length{0u};
-        std::atomic_uint ref_count{1u};
+        size_t length{0U};
+        std::atomic_uint ref_count{1U};
         char nul{0};
     };
     static_assert(offsetof(EmptyBuffer, length) == kLengthFieldOffset, "");

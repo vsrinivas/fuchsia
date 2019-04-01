@@ -7,21 +7,19 @@
 #include <stdio.h>
 #include <string.h>
 
-namespace fbl {
-namespace internal {
+namespace fbl::internal {
 
 size_t StringBufferAppendPrintf(char* dest, size_t remaining,
                                 const char* format, va_list ap) {
-    if (remaining == 0u) {
-        return 0u;
+    if (remaining == 0U) {
+        return 0U;
     }
-    int count = vsnprintf(dest, remaining + 1u, format, ap);
+    int count = vsnprintf(dest, remaining + 1U, format, ap);
     if (count < 0) {
-        return 0u;
+        return 0U;
     }
     size_t length = static_cast<size_t>(count);
     return length >= remaining ? remaining : length;
 }
 
-} // namespace internal
-} // namespace fbl
+} // namespace fbl::internal

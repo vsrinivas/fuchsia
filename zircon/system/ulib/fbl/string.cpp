@@ -16,7 +16,7 @@ namespace {
 
 size_t SumLengths(const String* begin, const String* end,
                   const String** last_non_empty_string) {
-    size_t total_length = 0u;
+    size_t total_length = 0U;
     for (const String* it = begin; it != end; it++) {
         if (!it->empty()) {
             *last_non_empty_string = it;
@@ -68,7 +68,7 @@ String& String::operator=(const String& other) {
     return *this;
 }
 
-String& String::operator=(String&& other) {
+String& String::operator=(String&& other) noexcept {
     ReleaseRef(data_);
     data_ = other.data_;
     other.InitWithEmpty();
@@ -110,11 +110,11 @@ String String::Concat(std::initializer_list<String> strings,
     size_t total_length = SumLengths(strings.begin(), strings.end(),
                                      &last_non_empty_string);
     if (last_non_empty_string == nullptr) {
-        ac->arm(0u, true);
+        ac->arm(0U, true);
         return String();
     }
     if (total_length == last_non_empty_string->length()) {
-        ac->arm(0u, true);
+        ac->arm(0U, true);
         return *last_non_empty_string;
     }
 
@@ -128,19 +128,19 @@ String String::Concat(std::initializer_list<String> strings,
 }
 
 void String::Init(const char* data, size_t length) {
-    if (length == 0u) {
+    if (length == 0U) {
         InitWithEmpty();
         return;
     }
 
     data_ = AllocData(length);
     memcpy(data_, data, length);
-    data_[length] = 0u;
+    data_[length] = 0U;
 }
 
 void String::Init(const char* data, size_t length, AllocChecker* ac) {
-    if (length == 0u) {
-        ac->arm(0u, true);
+    if (length == 0U) {
+        ac->arm(0U, true);
         InitWithEmpty();
         return;
     }
@@ -151,23 +151,23 @@ void String::Init(const char* data, size_t length, AllocChecker* ac) {
         return;
     }
     memcpy(data_, data, length);
-    data_[length] = 0u;
+    data_[length] = 0U;
 }
 
 void String::Init(size_t count, char ch) {
-    if (count == 0u) {
+    if (count == 0U) {
         InitWithEmpty();
         return;
     }
 
     data_ = AllocData(count);
     memset(data_, ch, count);
-    data_[count] = 0u;
+    data_[count] = 0U;
 }
 
 void String::Init(size_t count, char ch, AllocChecker* ac) {
-    if (count == 0u) {
-        ac->arm(0u, true);
+    if (count == 0U) {
+        ac->arm(0U, true);
         InitWithEmpty();
         return;
     }
@@ -178,11 +178,11 @@ void String::Init(size_t count, char ch, AllocChecker* ac) {
         return;
     }
     memset(data_, ch, count);
-    data_[count] = 0u;
+    data_[count] = 0U;
 }
 
 void String::InitWithEmpty() {
-    gEmpty.ref_count.fetch_add(1u, std::memory_order_relaxed);
+    gEmpty.ref_count.fetch_add(1U, std::memory_order_relaxed);
     data_ = &gEmpty.nul;
 }
 
@@ -201,18 +201,18 @@ char* String::AllocData(size_t length, AllocChecker* ac) {
 char* String::InitData(void* buffer, size_t length) {
     char* data = static_cast<char*>(buffer) + kDataFieldOffset;
     *length_field_of(data) = length;
-    new (ref_count_field_of(data)) std::atomic_uint(1u);
+    new (ref_count_field_of(data)) std::atomic_uint(1U);
     return data;
 }
 
 void String::AcquireRef(char* data) {
-    ref_count_field_of(data)->fetch_add(1u, std::memory_order_relaxed);
+    ref_count_field_of(data)->fetch_add(1U, std::memory_order_relaxed);
 }
 
 void String::ReleaseRef(char* data) {
-    unsigned int prior_count = ref_count_field_of(data)->fetch_sub(1u, std::memory_order_release);
-    ZX_DEBUG_ASSERT(prior_count != 0u);
-    if (prior_count == 1u) {
+    unsigned int prior_count = ref_count_field_of(data)->fetch_sub(1U, std::memory_order_release);
+    ZX_DEBUG_ASSERT(prior_count != 0U);
+    if (prior_count == 1U) {
         atomic_thread_fence(std::memory_order_acquire);
         operator delete(data - kDataFieldOffset);
     }

@@ -36,7 +36,7 @@ template <typename T, typename Enable = void> struct IsPow2Helper;
 template <typename T>
 struct IsPow2Helper<T, std::enable_if_t<std::is_unsigned_v<T>>> {
     static constexpr bool is_pow2(T val) {
-        return (val != 0) && (((val - 1u) & val) == 0);
+        return (val != 0) && (((val - 1U) & val) == 0);
     }
 };
 }

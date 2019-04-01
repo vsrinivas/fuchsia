@@ -291,7 +291,7 @@ struct SlabAllocatorTraits;
 template <typename SATraits, typename = void> class SlabAllocator;
 template <typename SATraits, typename = void> class SlabAllocated;
 
-constexpr size_t DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE = (16 << 10u);
+constexpr size_t DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE = (16 << 10U);
 
 namespace internal {
 
