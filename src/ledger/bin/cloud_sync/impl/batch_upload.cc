@@ -134,13 +134,13 @@ void BatchUpload::GetObjectContentAndUpload(
 void BatchUpload::UploadObject(storage::ObjectIdentifier object_identifier,
                                std::string object_name,
                                std::unique_ptr<const storage::Object> object) {
-  fsl::SizedVmo data;
-  auto status = object->GetVmo(&data);
+  fxl::StringView data;
+  auto status = object->GetData(&data);
   // TODO(ppi): LE-225 Handle disk IO errors.
   FXL_DCHECK(status == storage::Status::OK);
 
   encryption_service_->EncryptObject(
-      std::move(object_identifier), std::move(data),
+      std::move(object_identifier), data,
       callback::MakeScoped(weak_ptr_factory_.GetWeakPtr(),
                            [this, object_identifier = object->GetIdentifier(),
                             object_name = std::move(object_name)](

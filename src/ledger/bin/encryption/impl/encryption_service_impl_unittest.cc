@@ -51,11 +51,11 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
   }
 
   void EncryptObject(storage::ObjectIdentifier object_identifier,
-                     fsl::SizedVmo content, Status* status,
+                     fxl::StringView content, Status* status,
                      std::string* result) {
     bool called;
     encryption_service_.EncryptObject(
-        std::move(object_identifier), std::move(content),
+        std::move(object_identifier), content,
         callback::Capture(callback::SetWhenCalled(&called), status, result));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
@@ -110,12 +110,12 @@ TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
   std::string content(256u, '\0');
   auto object =
       std::make_unique<storage::fake::FakeObject>(identifier, content);
-  fsl::SizedVmo content_vmo;
-  ASSERT_EQ(storage::Status::OK, object->GetVmo(&content_vmo));
+  fxl::StringView content_data;
+  ASSERT_EQ(storage::Status::OK, object->GetData(&content_data));
 
   Status status;
   std::string encrypted_bytes;
-  EncryptObject(object->GetIdentifier(), std::move(content_vmo), &status,
+  EncryptObject(object->GetIdentifier(), content_data, &status,
                 &encrypted_bytes);
   EXPECT_EQ(Status::OK, status);
   EXPECT_FALSE(encrypted_bytes.empty());

@@ -63,7 +63,7 @@ class EncryptionService {
 
   // Encrypts the given object.
   virtual void EncryptObject(
-      storage::ObjectIdentifier object_identifier, fsl::SizedVmo content,
+      storage::ObjectIdentifier object_identifier, fxl::StringView content,
       fit::function<void(Status, std::string)> callback) = 0;
 
   // Decrypts the given object.

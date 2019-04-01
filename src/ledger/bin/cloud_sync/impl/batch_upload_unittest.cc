@@ -690,7 +690,7 @@ class FailingEncryptObjectEncryptionService
 
   void EncryptObject(
       storage::ObjectIdentifier /*object_identifier*/,
-      fsl::SizedVmo /*content*/,
+      fxl::StringView /*content*/,
       fit::function<void(encryption::Status, std::string)> callback) override {
     callback(encryption::Status::INVALID_ARGUMENT, "");
   }

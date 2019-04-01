@@ -69,14 +69,9 @@ void FakeEncryptionService::GetObjectName(
 }
 
 void FakeEncryptionService::EncryptObject(
-    storage::ObjectIdentifier /*object_identifier*/, fsl::SizedVmo content,
+    storage::ObjectIdentifier /*object_identifier*/, fxl::StringView content,
     fit::function<void(Status, std::string)> callback) {
-  std::string content_as_string;
-  if (!fsl::StringFromVmo(content, &content_as_string)) {
-    callback(Status::IO_ERROR, "");
-    return;
-  }
-  std::string result = EncryptObjectSynchronous(content_as_string);
+  std::string result = EncryptObjectSynchronous(content.ToString());
   async::PostTask(dispatcher_, [callback = std::move(callback),
                                 result = std::move(result)]() mutable {
     callback(Status::OK, std::move(result));

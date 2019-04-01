@@ -185,14 +185,10 @@ void EncryptionServiceImpl::GetObjectName(
 }
 
 void EncryptionServiceImpl::EncryptObject(
-    storage::ObjectIdentifier object_identifier, fsl::SizedVmo content,
+    storage::ObjectIdentifier object_identifier, fxl::StringView content,
     fit::function<void(Status, std::string)> callback) {
-  std::string data;
-  if (!fsl::StringFromVmo(content, &data)) {
-    callback(Status::IO_ERROR, "");
-    return;
-  }
-  Encrypt(object_identifier.key_index(), std::move(data), std::move(callback));
+  Encrypt(object_identifier.key_index(), content.ToString(),
+          std::move(callback));
 }
 
 void EncryptionServiceImpl::DecryptObject(
