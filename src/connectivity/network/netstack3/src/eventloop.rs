@@ -333,7 +333,7 @@ impl EventLoop {
                 responder.send(&mut await!(self.fidl_list_interfaces()).iter_mut());
             }
             StackRequest::GetInterfaceInfo { id, responder } => {
-                let (mut info, mut error) = match (self.fidl_get_interface_info(id)) {
+                let (mut info, mut error) = match (await!(self.fidl_get_interface_info(id))) {
                     Ok(info) => (Some(info), None),
                     Err(error) => (None, Some(error)),
                 };
@@ -429,12 +429,36 @@ impl EventLoop {
         devices
     }
 
-    fn fidl_get_interface_info(
-        &self,
+    async fn fidl_get_interface_info(
+        &mut self,
         id: u64,
     ) -> Result<fidl_net_stack::InterfaceInfo, fidl_net_stack::Error> {
-        // TODO(eyalsoha): Implement this.
-        Err(fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::NotFound })
+        let device = self
+            .ctx
+            .dispatcher()
+            .get_device_client(id)
+            .ok_or(fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::NotFound })?;
+        // TODO(wesleyac): Cache info and status
+        let info = await!(device.client.info())
+            .map_err(|_| fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::Internal })?;
+        let status = await!(device.client.get_status())
+            .map_err(|_| fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::Internal })?;
+        return Ok(InterfaceInfo {
+            id: device.id.id(),
+            properties: InterfaceProperties {
+                path: device.path.clone(),
+                mac: Some(Box::new(info.mac.into())),
+                mtu: info.mtu,
+                features: info.features.bits(),
+                administrative_status: AdministrativeStatus::Enabled, // TODO(wesleyac) this
+                physical_status: if status.contains(EthernetStatus::ONLINE) {
+                    PhysicalStatus::Up
+                } else {
+                    PhysicalStatus::Down
+                },
+                addresses: vec![], //TODO(wesleyac): this
+            },
+        });
     }
 
     fn fidl_enable_interface(&mut self, id: u64) -> Option<fidl_net_stack::Error> {
