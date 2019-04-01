@@ -57,7 +57,8 @@ void WriteDescribeError(zx::channel channel, zx_status_t status) {
 zx_status_t GetNodeInfo(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
                         fuchsia_io_NodeInfo* info) {
     if (IsVnodeRefOnly(flags)) {
-        return vn->Vnode::GetNodeInfo(flags, info);
+        info->tag = fuchsia_io_NodeInfoTag_service;
+        return ZX_OK;
     } else {
         return vn->GetNodeInfo(flags, info);
     }

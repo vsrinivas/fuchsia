@@ -46,6 +46,11 @@ public:
         return false;
     }
 
+    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+        info->tag = fuchsia_io_NodeInfoTag_service;
+        return ZX_OK;
+    }
+
 private:
     int fd_count_;
 };

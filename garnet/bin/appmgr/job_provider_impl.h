@@ -28,6 +28,8 @@ class JobProviderImpl : public fuchsia::sys::JobProvider, public fs::Vnode {
 
   bool IsDirectory() const final;
 
+  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+
  private:
   fidl::BindingSet<fuchsia::sys::JobProvider> bindings_;
   Realm* const realm_;  // Not owned.

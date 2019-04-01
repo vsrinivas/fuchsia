@@ -30,4 +30,9 @@ zx_handle_t RemoteDir::GetRemote() const {
     return remote_dir_client_.get();
 }
 
+zx_status_t RemoteDir::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+    info->tag = fuchsia_io_NodeInfoTag_directory;
+    return ZX_OK;
+}
+
 } // namespace fs

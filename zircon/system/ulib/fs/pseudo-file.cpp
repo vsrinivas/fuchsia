@@ -46,6 +46,11 @@ bool PseudoFile::IsDirectory() const {
     return false;
 }
 
+zx_status_t PseudoFile::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+    info->tag = fuchsia_io_NodeInfoTag_file;
+    return ZX_OK;
+}
+
 BufferedPseudoFile::BufferedPseudoFile(ReadHandler read_handler, WriteHandler write_handler,
                                        size_t input_buffer_capacity)
     : PseudoFile(std::move(read_handler), std::move(write_handler)),
@@ -160,6 +165,10 @@ bool BufferedPseudoFile::Content::IsDirectory() const {
     return false;
 }
 
+zx_status_t BufferedPseudoFile::Content::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+    return file_->GetNodeInfo(flags, info);
+}
+
 void BufferedPseudoFile::Content::SetInputLength(size_t length) {
     ZX_DEBUG_ASSERT(length <= file_->input_buffer_capacity_);
 
@@ -266,6 +275,10 @@ zx_status_t UnbufferedPseudoFile::Content::Truncate(size_t length) {
 
 bool UnbufferedPseudoFile::Content::IsDirectory() const {
     return false;
+}
+
+zx_status_t UnbufferedPseudoFile::Content::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+    return file_->GetNodeInfo(flags, info);
 }
 
 } // namespace fs

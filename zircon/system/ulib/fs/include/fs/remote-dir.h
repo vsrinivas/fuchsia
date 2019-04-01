@@ -36,6 +36,7 @@ public:
     bool IsRemote() const final;
     zx_handle_t GetRemote() const final;
     bool IsDirectory() const final { return true; }
+    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
 private:
     zx::channel const remote_dir_client_;

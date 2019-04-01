@@ -54,6 +54,8 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
   zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                       size_t* out_actual) final;
 
+  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+
   //
   // Overridden from |fuchsia::sys::ServiceProvider|:
   //

@@ -108,4 +108,10 @@ bool ServiceProviderBridge::ServiceProviderDir::IsDirectory() const {
   return true;
 }
 
+zx_status_t ServiceProviderBridge::ServiceProviderDir::GetNodeInfo(
+    uint32_t flags, fuchsia_io_NodeInfo* info) {
+  info->tag = fuchsia_io_NodeInfoTag_directory;
+  return ZX_OK;
+}
+
 }  // namespace component

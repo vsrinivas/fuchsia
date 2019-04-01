@@ -105,6 +105,11 @@ public:
 
     bool IsDirectory() const { return false; }
 
+    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+        info->tag = fuchsia_io_NodeInfoTag_service;
+        return ZX_OK;
+    }
+
 private:
     blk_t reserved_ = 0;
     bool* recycled_;

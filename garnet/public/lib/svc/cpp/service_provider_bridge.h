@@ -77,6 +77,7 @@ class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
                        fbl::StringPiece name) final;
     zx_status_t Getattr(vnattr_t* a) final;
     bool IsDirectory() const final;
+    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
    private:
     fxl::WeakPtr<ServiceProviderBridge> const bridge_;

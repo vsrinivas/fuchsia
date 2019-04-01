@@ -87,4 +87,9 @@ zx_status_t LazyDir::Readdir(vdircookie_t* cookie, void* dirents, size_t len, si
     return ZX_OK;
 }
 
+zx_status_t LazyDir::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
+    info->tag = fuchsia_io_NodeInfoTag_directory;
+    return ZX_OK;
+}
+
 } // namespace fs

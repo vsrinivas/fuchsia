@@ -97,7 +97,7 @@ public:
     virtual zx_status_t Serve(fs::Vfs* vfs, zx::channel channel, uint32_t flags);
 
     // Extract handle, type, and extra info from a vnode.
-    virtual zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info);
+    virtual zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) = 0;
 
     virtual zx_status_t WatchDir(Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher);
 #endif

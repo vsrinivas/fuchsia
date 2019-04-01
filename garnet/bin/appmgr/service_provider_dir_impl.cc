@@ -114,6 +114,12 @@ zx_status_t ServiceProviderDirImpl::Readdir(fs::vdircookie_t* cookie,
   return root_->Readdir(cookie, dirents, len, out_actual);
 }
 
+zx_status_t ServiceProviderDirImpl::GetNodeInfo(uint32_t flags,
+                                                fuchsia_io_NodeInfo* info) {
+  info->tag = fuchsia_io_NodeInfoTag_directory;
+  return ZX_OK;
+}
+
 zx_status_t ServiceProviderDirImpl::Lookup(fbl::RefPtr<fs::Vnode>* out,
                                            fbl::StringPiece name) {
   const std::string sname(name.data(), name.length());
