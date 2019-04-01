@@ -35,6 +35,6 @@
 
 #include "iwl-trans.h"
 
-int iwl_read_eeprom(struct iwl_trans* trans, u8** eeprom, size_t* eeprom_size);
+int iwl_read_eeprom(struct iwl_trans* trans, uint8_t** eeprom, size_t* eeprom_size);
 
 #endif /* __iwl_eeprom_h__ */

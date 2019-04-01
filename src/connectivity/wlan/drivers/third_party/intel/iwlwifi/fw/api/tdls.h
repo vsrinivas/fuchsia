@@ -80,7 +80,7 @@ struct iwl_tdls_channel_switch_timing {
 struct iwl_tdls_channel_switch_frame {
     __le32 switch_time_offset;
     struct iwl_tx_cmd tx_cmd;
-    u8 data[IWL_TDLS_CH_SW_FRAME_MAX_SIZE];
+    uint8_t data[IWL_TDLS_CH_SW_FRAME_MAX_SIZE];
 } __packed; /* TDLS_STA_CHANNEL_SWITCH_FRAME_API_S_VER_1 */
 
 /**
@@ -96,7 +96,7 @@ struct iwl_tdls_channel_switch_frame {
  * @frame: channel-switch request/response template, depending to switch_type
  */
 struct iwl_tdls_channel_switch_cmd {
-    u8 switch_type;
+    uint8_t switch_type;
     __le32 peer_sta_id;
     struct iwl_fw_channel_info ci;
     struct iwl_tdls_channel_switch_timing timing;
@@ -125,8 +125,8 @@ struct iwl_tdls_channel_switch_notif {
  * @is_initiator: 1 if the peer is the TDLS link initiator, 0 otherwise
  */
 struct iwl_tdls_sta_info {
-    u8 sta_id;
-    u8 tx_to_peer_tid;
+    uint8_t sta_id;
+    uint8_t tx_to_peer_tid;
     __le16 tx_to_peer_ssn;
     __le32 is_initiator;
 } __packed; /* TDLS_STA_INFO_VER_1 */
@@ -145,14 +145,14 @@ struct iwl_tdls_sta_info {
  */
 struct iwl_tdls_config_cmd {
     __le32 id_and_color; /* mac id and color */
-    u8 tdls_peer_count;
-    u8 tx_to_ap_tid;
+    uint8_t tdls_peer_count;
+    uint8_t tx_to_ap_tid;
     __le16 tx_to_ap_ssn;
     struct iwl_tdls_sta_info sta_info[IWL_MVM_TDLS_STA_COUNT];
 
     __le32 pti_req_data_offset;
     struct iwl_tx_cmd pti_req_tx_cmd;
-    u8 pti_req_template[0];
+    uint8_t pti_req_template[0];
 } __packed; /* TDLS_CONFIG_CMD_API_S_VER_1 */
 
 /**

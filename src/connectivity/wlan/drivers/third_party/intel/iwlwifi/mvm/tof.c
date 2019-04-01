@@ -75,7 +75,7 @@ void iwl_mvm_tof_clean(struct iwl_mvm* mvm) {
     mvm->init_status &= ~IWL_MVM_INIT_STATUS_TOF_INIT_COMPLETE;
 }
 
-static void iwl_tof_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_tof_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     bool* enabled = _data;
 
     /* non bss vif exists */
@@ -102,7 +102,7 @@ int iwl_mvm_tof_config_cmd(struct iwl_mvm* mvm) {
                                 cmd);
 }
 
-int iwl_mvm_tof_range_abort_cmd(struct iwl_mvm* mvm, u8 id) {
+int iwl_mvm_tof_range_abort_cmd(struct iwl_mvm* mvm, uint8_t id) {
     struct iwl_tof_range_abort_cmd cmd = {
         .sub_grp_cmd_id = cpu_to_le32(TOF_RANGE_ABORT_CMD),
         .request_id = id,

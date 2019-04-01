@@ -15,24 +15,17 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FUCHSIA_PORTING_H_
 
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <netinet/if_ether.h>
 #include <zircon/compiler.h>
 
-// TODO(WLAN-1038): Use Fuchsia-style integer types.
-typedef unsigned long long u64;
-typedef u64 __le64;
-typedef unsigned long u32;
-typedef u32 __le32;
-typedef unsigned short u16;
-typedef u16 __le16;
-typedef unsigned char u8;
-typedef u8 __u8;
-typedef signed long s32;
-typedef signed short s16;
-typedef signed char s8;
+typedef uint64_t __le64;
+typedef uint32_t __le32;
+typedef uint16_t __le16;
+typedef uint8_t __u8;
 
 typedef uint32_t netdev_features_t;
 
@@ -103,7 +96,7 @@ struct sk_buff_head {};
 struct mutex {};
 struct firmware {
     size_t size;
-    const u8* data;
+    const uint8_t* data;
     // NEEDS_PORTING struct page **pages;
 
     /* firmware loader private fields */

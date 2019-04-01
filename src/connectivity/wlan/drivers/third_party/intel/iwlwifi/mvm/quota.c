@@ -52,10 +52,10 @@ struct iwl_mvm_quota_iterator_data {
     struct ieee80211_vif* disabled_vif;
 };
 
-static void iwl_mvm_quota_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_quota_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_quota_iterator_data* data = _data;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-    u16 id;
+    uint16_t id;
 
     /* skip disabled interfaces here immediately */
     if (vif == data->disabled_vif) { return; }
@@ -123,8 +123,8 @@ static void iwl_mvm_adjust_quota_for_p2p_wa(struct iwl_mvm* mvm, struct iwl_time
 
     phy_id = mvm->p2p_opps_test_wa_vif->phy_ctxt->id;
     for (i = 0; i < MAX_BINDINGS; i++) {
-        u32 id;
-        u32 id_n_c;
+        uint32_t id;
+        uint32_t id_n_c;
 
         quota = iwl_mvm_quota_cmd_get_quota(mvm, cmd, i);
         id_n_c = le32_to_cpu(quota->id_and_color);
@@ -152,9 +152,9 @@ static void iwl_mvm_adjust_quota_for_noa(struct iwl_mvm* mvm, struct iwl_time_qu
 
     for (i = 0; i < MAX_BINDINGS; i++) {
         struct iwl_time_quota_data* data = iwl_mvm_quota_cmd_get_quota(mvm, cmd, i);
-        u32 id_n_c = le32_to_cpu(data->id_and_color);
-        u32 id = (id_n_c & FW_CTXT_ID_MSK) >> FW_CTXT_ID_POS;
-        u32 quota = le32_to_cpu(data->quota);
+        uint32_t id_n_c = le32_to_cpu(data->id_and_color);
+        uint32_t id = (id_n_c & FW_CTXT_ID_MSK) >> FW_CTXT_ID_POS;
+        uint32_t quota = le32_to_cpu(data->quota);
 
         if (id != phy_id) { continue; }
 
@@ -177,7 +177,7 @@ static void iwl_mvm_adjust_quota_for_noa(struct iwl_mvm* mvm, struct iwl_time_qu
 int iwl_mvm_dhc_quota_enforce(struct iwl_mvm* mvm, struct iwl_mvm_vif* vif, int quota_percent) {
     struct iwl_dhc_cmd* dhc_cmd;
     struct iwl_dhc_quota_enforce* dhc_quota_cmd;
-    u32 cmd_id = iwl_cmd_id(DEBUG_HOST_COMMAND, IWL_ALWAYS_LONG_GROUP, 0);
+    uint32_t cmd_id = iwl_cmd_id(DEBUG_HOST_COMMAND, IWL_ALWAYS_LONG_GROUP, 0);
     int ret;
 
     lockdep_assert_held(&mvm->mutex);

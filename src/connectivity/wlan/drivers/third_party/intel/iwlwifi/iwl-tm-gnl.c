@@ -55,7 +55,7 @@
  */
 static int iwl_tm_validate_fw_cmd(struct iwl_tm_data* data_in) {
     struct iwl_tm_cmd_request* cmd_req;
-    u32 data_buf_size;
+    uint32_t data_buf_size;
 
     if (!data_in->data || (data_in->len < sizeof(struct iwl_tm_cmd_request))) { return -EINVAL; }
 
@@ -74,8 +74,8 @@ static int iwl_tm_validate_fw_cmd(struct iwl_tm_data* data_in) {
  */
 static int iwl_tm_validate_reg_ops(struct iwl_tm_data* data_in) {
     struct iwl_tm_regs_request* request;
-    u32 request_size;
-    u32 idx;
+    uint32_t request_size;
+    uint32_t idx;
 
     if (!data_in->data || (data_in->len < sizeof(struct iwl_tm_regs_request))) { return -EINVAL; }
 
@@ -150,7 +150,7 @@ static int iwl_tm_trace_begin(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* da
     if (!resp) { return -ENOMEM; }
     resp->size = dev->dnt->mon_buf_size;
     /* Casting to avoid compilation warnings when DMA address is 32bit */
-    resp->addr = (u64)dev->dnt->mon_base_addr;
+    resp->addr = (uint64_t)dev->dnt->mon_base_addr;
 
     data_out->data = resp;
     data_out->len = sizeof(*resp);
@@ -158,7 +158,7 @@ static int iwl_tm_trace_begin(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* da
     return 0;
 }
 
-static bool iwl_tm_gnl_valid_hw_addr(u32 addr) {
+static bool iwl_tm_gnl_valid_hw_addr(uint32_t addr) {
     /* TODO need to implement */
     return true;
 }
@@ -170,7 +170,7 @@ static bool iwl_tm_gnl_valid_hw_addr(u32 addr) {
  */
 static int iwl_tm_validate_sram_write_req(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* data_in) {
     struct iwl_tm_sram_write_request* cmd_in;
-    u32 data_buf_size;
+    uint32_t data_buf_size;
 
     if (!dev->trans->op_mode) {
         IWL_ERR(dev->trans, "No op_mode!\n");
@@ -228,14 +228,14 @@ static int iwl_tm_validate_sram_read_req(struct iwl_tm_gnl_dev* dev, struct iwl_
 /**
  * iwl_tm_notifications_en() - Checks input for enable test notifications
  * @tst:    Device's test data pointer
- * @data_in:    u32 notification (flag)
+ * @data_in:    uint32_t notification (flag)
  */
 static int iwl_tm_notifications_en(struct iwl_test* tst, struct iwl_tm_data* data_in) {
-    u32 notification_en;
+    uint32_t notification_en;
 
-    if (!data_in->data || (data_in->len != sizeof(u32))) { return -EINVAL; }
+    if (!data_in->data || (data_in->len != sizeof(uint32_t))) { return -EINVAL; }
 
-    notification_en = *(u32*)data_in->data;
+    notification_en = *(uint32_t*)data_in->data;
     if ((notification_en != NOTIFICATIONS_ENABLE) && (notification_en != NOTIFICATIONS_DISABLE)) {
         return -EINVAL;
     }
@@ -252,7 +252,7 @@ static int iwl_tm_notifications_en(struct iwl_test* tst, struct iwl_tm_data* dat
  */
 static int iwl_tm_validate_tx_cmd(struct iwl_tm_data* data_in) {
     struct iwl_tm_mod_tx_request* cmd_req;
-    u32 data_buf_size;
+    uint32_t data_buf_size;
 
     if (!data_in->data || (data_in->len < sizeof(struct iwl_tm_mod_tx_request))) { return -EINVAL; }
 
@@ -419,7 +419,7 @@ static int iwl_tm_gnl_get_rfid(struct iwl_trans* trans, struct iwl_tm_data* data
  */
 struct iwl_tm_gnl_cmd {
     const char* dev_name;
-    u32 cmd;
+    uint32_t cmd;
     struct iwl_tm_data data_in;
     struct iwl_tm_data data_out;
 };
@@ -487,7 +487,7 @@ static struct iwl_tm_gnl_dev* iwl_tm_gnl_get_dev(const char* dev_name) {
  * @cmd_data:   Message's data
  * @flags:  Resources allocation flags
  */
-static struct sk_buff* iwl_tm_gnl_create_msg(u32 pid, u32 seq, struct iwl_tm_gnl_cmd cmd_data,
+static struct sk_buff* iwl_tm_gnl_create_msg(uint32_t pid, uint32_t seq, struct iwl_tm_gnl_cmd cmd_data,
                                              gfp_t flags) {
     void* nlmsg_head;
     struct sk_buff* skb;
@@ -531,12 +531,12 @@ send_msg_err:
  * to replying to a message that was initiated by user
  * space). Uses multicast broadcasting method.
  */
-int iwl_tm_gnl_send_msg(struct iwl_trans* trans, u32 cmd, bool check_notify, void* data_out,
-                        u32 data_len, gfp_t flags) {
+int iwl_tm_gnl_send_msg(struct iwl_trans* trans, uint32_t cmd, bool check_notify, void* data_out,
+                        uint32_t data_len, gfp_t flags) {
     struct iwl_tm_gnl_dev* dev;
     struct iwl_tm_gnl_cmd cmd_data;
     struct sk_buff* skb;
-    u32 nlportid;
+    uint32_t nlportid;
 
     if (WARN_ON_ONCE(!trans)) { return -EINVAL; }
 
@@ -703,7 +703,7 @@ static int iwl_tm_mem_dump(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* data_
  */
 static int iwl_tm_trace_dump(struct iwl_tm_gnl_dev* dev, struct iwl_tm_data* data_out) {
     int ret;
-    u32 buf_size;
+    uint32_t buf_size;
 
     if (!(dev->dnt->iwl_dnt_status & IWL_DNT_STATUS_MON_CONFIGURED)) {
         IWL_ERR(dev->trans, "Invalid monitor status\n");
@@ -847,7 +847,7 @@ static int iwl_tm_gnl_dump(struct sk_buff* skb, struct netlink_callback* cb) {
         if (!cb->args[2]) { return -ENODATA; }
     }
 
-    dump_addr = (u8*)cb->args[1];
+    dump_addr = (uint8_t*)cb->args[1];
     dump_size = cb->args[2];
     dump_offset = cb->args[3];
 

@@ -42,27 +42,27 @@
 #include "iwl-io.h"
 #include "iwl-prph.h"
 
-void iwl_write8(struct iwl_trans* trans, u32 ofs, u8 val) {
+void iwl_write8(struct iwl_trans* trans, uint32_t ofs, uint8_t val) {
     trace_iwlwifi_dev_iowrite8(trans->dev, ofs, val);
     iwl_trans_write8(trans, ofs, val);
 }
 IWL_EXPORT_SYMBOL(iwl_write8);
 
-void iwl_write32(struct iwl_trans* trans, u32 ofs, u32 val) {
+void iwl_write32(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
     trace_iwlwifi_dev_iowrite32(trans->dev, ofs, val);
     iwl_trans_write32(trans, ofs, val);
 }
 IWL_EXPORT_SYMBOL(iwl_write32);
 
-void iwl_write64(struct iwl_trans* trans, u64 ofs, u64 val) {
+void iwl_write64(struct iwl_trans* trans, uint64_t ofs, uint64_t val) {
     trace_iwlwifi_dev_iowrite64(trans->dev, ofs, val);
     iwl_trans_write32(trans, ofs, lower_32_bits(val));
     iwl_trans_write32(trans, ofs + 4, upper_32_bits(val));
 }
 IWL_EXPORT_SYMBOL(iwl_write64);
 
-u32 iwl_read32(struct iwl_trans* trans, u32 ofs) {
-    u32 val = iwl_trans_read32(trans, ofs);
+uint32_t iwl_read32(struct iwl_trans* trans, uint32_t ofs) {
+    uint32_t val = iwl_trans_read32(trans, ofs);
 
     trace_iwlwifi_dev_ioread32(trans->dev, ofs, val);
     return val;
@@ -71,7 +71,7 @@ IWL_EXPORT_SYMBOL(iwl_read32);
 
 #define IWL_POLL_INTERVAL 10 /* microseconds */
 
-int iwl_poll_bit(struct iwl_trans* trans, u32 addr, u32 bits, u32 mask, int timeout) {
+int iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask, int timeout) {
     int t = 0;
 
     do {
@@ -84,8 +84,8 @@ int iwl_poll_bit(struct iwl_trans* trans, u32 addr, u32 bits, u32 mask, int time
 }
 IWL_EXPORT_SYMBOL(iwl_poll_bit);
 
-u32 iwl_read_direct32(struct iwl_trans* trans, u32 reg) {
-    u32 value = 0x5a5a5a5a;
+uint32_t iwl_read_direct32(struct iwl_trans* trans, uint32_t reg) {
+    uint32_t value = 0x5a5a5a5a;
     unsigned long flags;
     if (iwl_trans_grab_nic_access(trans, &flags)) {
         value = iwl_read32(trans, reg);
@@ -96,7 +96,7 @@ u32 iwl_read_direct32(struct iwl_trans* trans, u32 reg) {
 }
 IWL_EXPORT_SYMBOL(iwl_read_direct32);
 
-void iwl_write_direct32(struct iwl_trans* trans, u32 reg, u32 value) {
+void iwl_write_direct32(struct iwl_trans* trans, uint32_t reg, uint32_t value) {
     unsigned long flags;
 
     if (iwl_trans_grab_nic_access(trans, &flags)) {
@@ -106,7 +106,7 @@ void iwl_write_direct32(struct iwl_trans* trans, u32 reg, u32 value) {
 }
 IWL_EXPORT_SYMBOL(iwl_write_direct32);
 
-void iwl_write_direct64(struct iwl_trans* trans, u64 reg, u64 value) {
+void iwl_write_direct64(struct iwl_trans* trans, uint64_t reg, uint64_t value) {
     unsigned long flags;
 
     if (iwl_trans_grab_nic_access(trans, &flags)) {
@@ -116,7 +116,7 @@ void iwl_write_direct64(struct iwl_trans* trans, u64 reg, u64 value) {
 }
 IWL_EXPORT_SYMBOL(iwl_write_direct64);
 
-int iwl_poll_direct_bit(struct iwl_trans* trans, u32 addr, u32 mask, int timeout) {
+int iwl_poll_direct_bit(struct iwl_trans* trans, uint32_t addr, uint32_t mask, int timeout) {
     int t = 0;
 
     do {
@@ -129,29 +129,29 @@ int iwl_poll_direct_bit(struct iwl_trans* trans, u32 addr, u32 mask, int timeout
 }
 IWL_EXPORT_SYMBOL(iwl_poll_direct_bit);
 
-u32 iwl_read_prph_no_grab(struct iwl_trans* trans, u32 ofs) {
-    u32 val = iwl_trans_read_prph(trans, ofs);
+uint32_t iwl_read_prph_no_grab(struct iwl_trans* trans, uint32_t ofs) {
+    uint32_t val = iwl_trans_read_prph(trans, ofs);
     trace_iwlwifi_dev_ioread_prph32(trans->dev, ofs, val);
     return val;
 }
 IWL_EXPORT_SYMBOL(iwl_read_prph_no_grab);
 
-void iwl_write_prph_no_grab(struct iwl_trans* trans, u32 ofs, u32 val) {
+void iwl_write_prph_no_grab(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
     trace_iwlwifi_dev_iowrite_prph32(trans->dev, ofs, val);
     iwl_trans_write_prph(trans, ofs, val);
 }
 IWL_EXPORT_SYMBOL(iwl_write_prph_no_grab);
 
-void iwl_write_prph64_no_grab(struct iwl_trans* trans, u64 ofs, u64 val) {
+void iwl_write_prph64_no_grab(struct iwl_trans* trans, uint64_t ofs, uint64_t val) {
     trace_iwlwifi_dev_iowrite_prph64(trans->dev, ofs, val);
     iwl_write_prph_no_grab(trans, ofs, val & 0xffffffff);
     iwl_write_prph_no_grab(trans, ofs + 4, val >> 32);
 }
 IWL_EXPORT_SYMBOL(iwl_write_prph64_no_grab);
 
-u32 iwl_read_prph(struct iwl_trans* trans, u32 ofs) {
+uint32_t iwl_read_prph(struct iwl_trans* trans, uint32_t ofs) {
     unsigned long flags;
-    u32 val = 0x5a5a5a5a;
+    uint32_t val = 0x5a5a5a5a;
 
     if (iwl_trans_grab_nic_access(trans, &flags)) {
         val = iwl_read_prph_no_grab(trans, ofs);
@@ -161,7 +161,7 @@ u32 iwl_read_prph(struct iwl_trans* trans, u32 ofs) {
 }
 IWL_EXPORT_SYMBOL(iwl_read_prph);
 
-void iwl_write_prph(struct iwl_trans* trans, u32 ofs, u32 val) {
+void iwl_write_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
     unsigned long flags;
 
     if (iwl_trans_grab_nic_access(trans, &flags)) {
@@ -171,7 +171,7 @@ void iwl_write_prph(struct iwl_trans* trans, u32 ofs, u32 val) {
 }
 IWL_EXPORT_SYMBOL(iwl_write_prph);
 
-int iwl_poll_prph_bit(struct iwl_trans* trans, u32 addr, u32 bits, u32 mask, int timeout) {
+int iwl_poll_prph_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask, int timeout) {
     int t = 0;
 
     do {
@@ -183,7 +183,7 @@ int iwl_poll_prph_bit(struct iwl_trans* trans, u32 addr, u32 bits, u32 mask, int
     return -ETIMEDOUT;
 }
 
-void iwl_set_bits_prph(struct iwl_trans* trans, u32 ofs, u32 mask) {
+void iwl_set_bits_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t mask) {
     unsigned long flags;
 
     if (iwl_trans_grab_nic_access(trans, &flags)) {
@@ -193,7 +193,7 @@ void iwl_set_bits_prph(struct iwl_trans* trans, u32 ofs, u32 mask) {
 }
 IWL_EXPORT_SYMBOL(iwl_set_bits_prph);
 
-void iwl_set_bits_mask_prph(struct iwl_trans* trans, u32 ofs, u32 bits, u32 mask) {
+void iwl_set_bits_mask_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t bits, uint32_t mask) {
     unsigned long flags;
 
     if (iwl_trans_grab_nic_access(trans, &flags)) {
@@ -203,9 +203,9 @@ void iwl_set_bits_mask_prph(struct iwl_trans* trans, u32 ofs, u32 bits, u32 mask
 }
 IWL_EXPORT_SYMBOL(iwl_set_bits_mask_prph);
 
-void iwl_clear_bits_prph(struct iwl_trans* trans, u32 ofs, u32 mask) {
+void iwl_clear_bits_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t mask) {
     unsigned long flags;
-    u32 val;
+    uint32_t val;
 
     if (iwl_trans_grab_nic_access(trans, &flags)) {
         val = iwl_read_prph_no_grab(trans, ofs);
@@ -255,14 +255,14 @@ static const char* get_rfh_string(int cmd) {
 }
 
 struct reg {
-    u32 addr;
+    uint32_t addr;
     bool is64;
 };
 
 static int iwl_dump_rfh(struct iwl_trans* trans, char** buf) {
     int i, q;
     int num_q = trans->num_rx_queues;
-    static const u32 rfh_tbl[] = {
+    static const uint32_t rfh_tbl[] = {
         RFH_RXF_DMA_CFG, RFH_GEN_CFG, RFH_GEN_STATUS, FH_TSSR_TX_STATUS_REG, FH_TSSR_TX_ERROR_REG,
     };
     static const struct reg rfh_mq_tbl[] = {
@@ -295,7 +295,7 @@ static int iwl_dump_rfh(struct iwl_trans* trans, char** buf) {
 
         for (i = 0; i < ARRAY_SIZE(rfh_mq_tbl); i++)
             for (q = 0; q < num_q; q++) {
-                u32 addr = rfh_mq_tbl[i].addr;
+                uint32_t addr = rfh_mq_tbl[i].addr;
 
                 addr += q * (rfh_mq_tbl[i].is64 ? 8 : 4);
                 pos += scnprintf(*buf + pos, bufsz - pos, "%34s(q %2d): 0X%08x\n",
@@ -313,7 +313,7 @@ static int iwl_dump_rfh(struct iwl_trans* trans, char** buf) {
 
     for (i = 0; i < ARRAY_SIZE(rfh_mq_tbl); i++)
         for (q = 0; q < num_q; q++) {
-            u32 addr = rfh_mq_tbl[i].addr;
+            uint32_t addr = rfh_mq_tbl[i].addr;
 
             addr += q * (rfh_mq_tbl[i].is64 ? 8 : 4);
             IWL_ERR(trans, "  %34s(q %d): 0X%08x\n", get_rfh_string(addr), q,
@@ -342,7 +342,7 @@ static const char* get_fh_string(int cmd) {
 
 int iwl_dump_fh(struct iwl_trans* trans, char** buf) {
     int i;
-    static const u32 fh_tbl[] = {
+    static const uint32_t fh_tbl[] = {
         FH_RSCSR_CHNL0_STTS_WPTR_REG,      FH_RSCSR_CHNL0_RBDCB_BASE_REG, FH_RSCSR_CHNL0_WPTR,
         FH_MEM_RCSR_CHNL0_CONFIG_REG,      FH_MEM_RSSR_SHARED_CTRL_REG,   FH_MEM_RSSR_RX_STATUS_REG,
         FH_MEM_RSSR_RX_ENABLE_ERR_IRQ2DRV, FH_TSSR_TX_STATUS_REG,         FH_TSSR_TX_ERROR_REG};

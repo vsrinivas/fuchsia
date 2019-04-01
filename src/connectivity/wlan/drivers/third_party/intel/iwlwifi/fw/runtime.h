@@ -54,12 +54,12 @@ struct iwl_fwrt_shared_mem_cfg {
     int num_lmacs;
     int num_txfifo_entries;
     struct {
-        u32 txfifo_size[TX_FIFO_MAX_NUM];
-        u32 rxfifo1_size;
+        uint32_t txfifo_size[TX_FIFO_MAX_NUM];
+        uint32_t rxfifo1_size;
     } lmac[MAX_NUM_LMAC];
-    u32 rxfifo2_size;
-    u32 internal_txfifo_addr;
-    u32 internal_txfifo_size[TX_FIFO_INTERNAL_MAX_NUM];
+    uint32_t rxfifo2_size;
+    uint32_t internal_txfifo_addr;
+    uint32_t internal_txfifo_size[TX_FIFO_INTERNAL_MAX_NUM];
 };
 
 enum iwl_fw_runtime_status {
@@ -95,8 +95,8 @@ struct iwl_fw_runtime {
 
     /* Paging */
     struct iwl_fw_paging fw_paging_db[NUM_OF_FW_PAGING_BLOCKS];
-    u16 num_of_paging_blk;
-    u16 num_of_pages_in_last_blk;
+    uint16_t num_of_paging_blk;
+    uint16_t num_of_pages_in_last_blk;
 
     enum iwl_ucode_type cur_fw_img;
 
@@ -109,21 +109,21 @@ struct iwl_fw_runtime {
         bool monitor_only;
         struct delayed_work wk;
 
-        u8 conf;
+        uint8_t conf;
 
         /* ts of the beginning of a non-collect fw dbg data period */
         unsigned long non_collect_ts_start[IWL_FW_TRIGGER_ID_NUM - 1];
-        u32* d3_debug_data;
+        uint32_t* d3_debug_data;
         struct iwl_fw_ini_active_regs active_regs[IWL_FW_INI_MAX_REGION_ID];
         struct iwl_fw_ini_active_triggers active_trigs[IWL_FW_TRIGGER_ID_NUM];
-        u32 lmac_err_id[MAX_NUM_LMAC];
-        u32 umac_err_id;
+        uint32_t lmac_err_id[MAX_NUM_LMAC];
+        uint32_t umac_err_id;
     } dump;
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
     struct {
         struct delayed_work wk;
-        u32 delay;
-        u64 seq;
+        uint32_t delay;
+        uint64_t seq;
     } timestamp;
     bool tpc_enabled;
 #endif /* CPTCFG_IWLWIFI_DEBUGFS */

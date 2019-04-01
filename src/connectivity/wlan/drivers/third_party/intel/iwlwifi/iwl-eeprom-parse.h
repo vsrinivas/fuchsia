@@ -41,9 +41,9 @@
 
 struct iwl_nvm_data {
     int n_hw_addrs;
-    u8 hw_addr[ETH_ALEN];
+    uint8_t hw_addr[ETH_ALEN];
 
-    u8 calib_version;
+    uint8_t calib_version;
     __le16 calib_voltage;
 
     __le16 raw_temperature;
@@ -60,14 +60,14 @@ struct iwl_nvm_data {
     bool sku_cap_ipan_enable;
     bool sku_cap_mimo_disabled;
 
-    u16 radio_cfg_type;
-    u8 radio_cfg_step;
-    u8 radio_cfg_dash;
-    u8 radio_cfg_pnum;
-    u8 valid_tx_ant, valid_rx_ant;
+    uint16_t radio_cfg_type;
+    uint8_t radio_cfg_step;
+    uint8_t radio_cfg_dash;
+    uint8_t radio_cfg_pnum;
+    uint8_t valid_tx_ant, valid_rx_ant;
 
-    u32 nvm_version;
-    s8 max_tx_pwr_half_dbm;
+    uint32_t nvm_version;
+    int8_t max_tx_pwr_half_dbm;
 
     bool lar_enabled;
     bool vht160_supported;
@@ -89,13 +89,13 @@ struct iwl_nvm_data {
  * later with iwl_free_nvm_data().
  */
 struct iwl_nvm_data* iwl_parse_eeprom_data(struct device* dev, const struct iwl_cfg* cfg,
-                                           const u8* eeprom, size_t eeprom_size);
+                                           const uint8_t* eeprom, size_t eeprom_size);
 
 int iwl_init_sband_channels(struct iwl_nvm_data* data, struct ieee80211_supported_band* sband,
                             int n_channels, enum nl80211_band band);
 
 void iwl_init_ht_hw_capab(const struct iwl_cfg* cfg, struct iwl_nvm_data* data,
                           struct ieee80211_sta_ht_cap* ht_info, enum nl80211_band band,
-                          u8 tx_chains, u8 rx_chains);
+                          uint8_t tx_chains, uint8_t rx_chains);
 
 #endif /* __iwl_eeprom_parse_h__ */

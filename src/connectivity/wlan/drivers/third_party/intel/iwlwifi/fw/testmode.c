@@ -43,7 +43,7 @@ static int iwl_tm_send_hcmd(struct iwl_testmode* testmode, struct iwl_tm_data* d
                             struct iwl_tm_data* data_out) {
     struct iwl_tm_cmd_request* hcmd_req = data_in->data;
     struct iwl_tm_cmd_request* cmd_resp;
-    u32 reply_len, resp_size;
+    uint32_t reply_len, resp_size;
     struct iwl_rx_packet* pkt;
     struct iwl_host_cmd host_cmd = {
         .id = hcmd_req->id,
@@ -92,7 +92,7 @@ static void iwl_tm_execute_reg_ops(struct iwl_testmode* testmode,
                                    struct iwl_tm_regs_request* request,
                                    struct iwl_tm_regs_request* result) {
     struct iwl_tm_reg_op* cur_op;
-    u32 idx, read_idx;
+    uint32_t idx, read_idx;
 
     for (idx = 0, read_idx = 0; idx < request->num; idx++) {
         cur_op = &request->reg_ops[idx];
@@ -113,8 +113,8 @@ static int iwl_tm_reg_ops(struct iwl_testmode* testmode, struct iwl_tm_data* dat
     struct iwl_tm_reg_op* cur_op;
     struct iwl_tm_regs_request* request = data_in->data;
     struct iwl_tm_regs_request* result;
-    u32 result_size;
-    u32 idx, read_idx;
+    uint32_t result_size;
+    uint32_t idx, read_idx;
     bool is_grab_nic_access_required = true;
     unsigned long flags;
 
@@ -153,9 +153,9 @@ static int iwl_tm_reg_ops(struct iwl_testmode* testmode, struct iwl_tm_data* dat
 
 static int iwl_tm_get_dev_info(struct iwl_testmode* testmode, struct iwl_tm_data* data_out) {
     struct iwl_tm_dev_info* dev_info;
-    const u8 driver_ver[] = BACKPORTS_GIT_TRACKED;
+    const uint8_t driver_ver[] = BACKPORTS_GIT_TRACKED;
 
-    dev_info = kzalloc(sizeof(*dev_info) + (strlen(driver_ver) + 1) * sizeof(u8), GFP_KERNEL);
+    dev_info = kzalloc(sizeof(*dev_info) + (strlen(driver_ver) + 1) * sizeof(uint8_t), GFP_KERNEL);
     if (!dev_info) { return -ENOMEM; }
 
     dev_info->dev_id = testmode->trans->hw_id;
@@ -178,19 +178,19 @@ static int iwl_tm_indirect_read(struct iwl_testmode* testmode, struct iwl_tm_dat
                                 struct iwl_tm_data* data_out) {
     struct iwl_trans* trans = testmode->trans;
     struct iwl_tm_sram_read_request* cmd_in = data_in->data;
-    u32 addr = cmd_in->offset;
-    u32 size = cmd_in->length;
-    u32 *buf32, size32, i;
+    uint32_t addr = cmd_in->offset;
+    uint32_t size = cmd_in->length;
+    uint32_t *buf32, size32, i;
     unsigned long flags;
 
-    if (size & (sizeof(u32) - 1)) { return -EINVAL; }
+    if (size & (sizeof(uint32_t) - 1)) { return -EINVAL; }
 
     data_out->data = kmalloc(size, GFP_KERNEL);
     if (!data_out->data) { return -ENOMEM; }
 
     data_out->len = size;
 
-    size32 = size / sizeof(u32);
+    size32 = size / sizeof(uint32_t);
     buf32 = data_out->data;
 
     mutex_lock(testmode->mutex);
@@ -202,7 +202,7 @@ static int iwl_tm_indirect_read(struct iwl_testmode* testmode, struct iwl_tm_dat
             return -EBUSY;
         }
         for (i = 0; i < size32; i++) {
-            buf32[i] = iwl_trans_read_prph(trans, addr + i * sizeof(u32));
+            buf32[i] = iwl_trans_read_prph(trans, addr + i * sizeof(uint32_t));
         }
         iwl_trans_release_nic_access(trans, &flags);
     } else {
@@ -217,12 +217,12 @@ static int iwl_tm_indirect_read(struct iwl_testmode* testmode, struct iwl_tm_dat
 static int iwl_tm_indirect_write(struct iwl_testmode* testmode, struct iwl_tm_data* data_in) {
     struct iwl_trans* trans = testmode->trans;
     struct iwl_tm_sram_write_request* cmd_in = data_in->data;
-    u32 addr = cmd_in->offset;
-    u32 size = cmd_in->len;
-    u8* buf = cmd_in->buffer;
-    u32 *buf32 = (u32*)buf, size32 = size / sizeof(u32);
+    uint32_t addr = cmd_in->offset;
+    uint32_t size = cmd_in->len;
+    uint8_t* buf = cmd_in->buffer;
+    uint32_t *buf32 = (uint32_t*)buf, size32 = size / sizeof(uint32_t);
     unsigned long flags;
-    u32 val, i;
+    uint32_t val, i;
 
     mutex_lock(testmode->mutex);
     if (addr >= IWL_ABS_PRPH_START && addr < IWL_ABS_PRPH_START + PRPH_END) {
@@ -237,13 +237,13 @@ static int iwl_tm_indirect_write(struct iwl_testmode* testmode, struct iwl_tm_da
             iwl_write32(trans, HBUS_TARG_PRPH_WDAT, val);
             iwl_trans_release_nic_access(trans, &flags);
         } else {
-            if (size % sizeof(u32)) {
+            if (size % sizeof(uint32_t)) {
                 mutex_unlock(testmode->mutex);
                 return -EINVAL;
             }
 
             for (i = 0; i < size32; i++) {
-                iwl_write_prph(trans, addr + i * sizeof(u32), buf32[i]);
+                iwl_write_prph(trans, addr + i * sizeof(uint32_t), buf32[i]);
             }
         }
     } else {
@@ -256,8 +256,8 @@ static int iwl_tm_indirect_write(struct iwl_testmode* testmode, struct iwl_tm_da
 
 static int iwl_tm_get_fw_info(struct iwl_testmode* testmode, struct iwl_tm_data* data_out) {
     struct iwl_tm_get_fw_info* fw_info;
-    u32 api_len, capa_len;
-    u32* bitmap;
+    uint32_t api_len, capa_len;
+    uint32_t* bitmap;
     int i;
 
     if (!testmode->fw_major_ver || !testmode->fw_minor_ver) { return -EOPNOTSUPP; }
@@ -274,14 +274,14 @@ static int iwl_tm_get_fw_info(struct iwl_testmode* testmode, struct iwl_tm_data*
     fw_info->fw_capa_flags = testmode->fw->ucode_capa.flags;
     fw_info->fw_capa_len = capa_len;
 
-    bitmap = (u32*)fw_info->data;
+    bitmap = (uint32_t*)fw_info->data;
     for (i = 0; i < NUM_IWL_UCODE_TLV_API; i++) {
         if (fw_has_api(&testmode->fw->ucode_capa, (__force iwl_ucode_tlv_api_t)i)) {
             bitmap[i / 32] |= BIT(i % 32);
         }
     }
 
-    bitmap = (u32*)(fw_info->data + api_len);
+    bitmap = (uint32_t*)(fw_info->data + api_len);
     for (i = 0; i < NUM_IWL_UCODE_TLV_CAPA; i++) {
         if (fw_has_capa(&testmode->fw->ucode_capa, (__force iwl_ucode_tlv_capa_t)i)) {
             bitmap[i / 32] |= BIT(i % 32);
@@ -305,7 +305,7 @@ static int iwl_tm_get_fw_info(struct iwl_testmode* testmode, struct iwl_tm_data*
  * @data_out:     Will be allocated inside, freeing is in the caller's
  *        responsibility
  */
-int iwl_tm_execute_cmd(struct iwl_testmode* testmode, u32 cmd, struct iwl_tm_data* data_in,
+int iwl_tm_execute_cmd(struct iwl_testmode* testmode, uint32_t cmd, struct iwl_tm_data* data_in,
                        struct iwl_tm_data* data_out) {
     const struct iwl_test_ops* test_ops;
     bool cmd_supported = false;
@@ -374,7 +374,7 @@ void iwl_tm_init(struct iwl_trans* trans, const struct iwl_fw* fw, struct mutex*
 }
 IWL_EXPORT_SYMBOL(iwl_tm_init);
 
-void iwl_tm_set_fw_ver(struct iwl_trans* trans, u32 fw_major_ver, u32 fw_minor_var) {
+void iwl_tm_set_fw_ver(struct iwl_trans* trans, uint32_t fw_major_ver, uint32_t fw_minor_var) {
     struct iwl_testmode* testmode = &trans->testmode;
 
     testmode->fw_major_ver = fw_major_ver;

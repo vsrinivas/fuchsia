@@ -81,7 +81,7 @@ static ssize_t iwl_dnt_debugfs_log_read(struct file* file, char __user* user_buf
              * which the trace viewer will ignore (outside of a
              * specific trace item/event)
              */
-            ret = sizeof(u32);
+            ret = sizeof(uint32_t);
             break;
         }
 
@@ -130,7 +130,7 @@ static bool iwl_dnt_configure_prepare_dma(struct iwl_dnt* dnt, struct iwl_trans*
         dma_alloc_coherent(trans->dev, dnt->mon_buf_size, &dnt->mon_dma_addr, GFP_KERNEL);
     if (!dnt->mon_buf_cpu_addr) { return false; }
 
-    dnt->mon_base_addr = (u64)dnt->mon_dma_addr;
+    dnt->mon_base_addr = (uint64_t)dnt->mon_dma_addr;
     dnt->mon_end_addr = dnt->mon_base_addr + dnt->mon_buf_size;
     dnt->iwl_dnt_status |= IWL_DNT_STATUS_DMA_BUFFER_ALLOCATED;
 
@@ -150,8 +150,8 @@ static bool iwl_dnt_validate_configuration(struct iwl_trans* trans) {
     return false;
 }
 
-static int iwl_dnt_conf_monitor(struct iwl_trans* trans, u32 output, u32 monitor_type,
-                                u32 target_mon_mode) {
+static int iwl_dnt_conf_monitor(struct iwl_trans* trans, uint32_t output, uint32_t monitor_type,
+                                uint32_t target_mon_mode) {
     struct iwl_dnt* dnt = trans->tmdev->dnt;
 
     if (dnt->cur_input_mask & MONITOR_INPUT_MODE_MASK) {
@@ -206,7 +206,7 @@ void iwl_dnt_start(struct iwl_trans* trans) {
 IWL_EXPORT_SYMBOL(iwl_dnt_start);
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-static int iwl_dnt_conf_ucode_msgs_via_rx(struct iwl_trans* trans, u32 output) {
+static int iwl_dnt_conf_ucode_msgs_via_rx(struct iwl_trans* trans, uint32_t output) {
     struct iwl_dnt* dnt = trans->tmdev->dnt;
 
     dnt->cur_input_mask |= UCODE_MESSAGES;

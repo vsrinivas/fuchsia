@@ -58,7 +58,7 @@ static inline unsigned long lsb2ord(unsigned long x) {
 }
 
 // TODO - move to coex.c
-static bool btCoexManagerIsAntAvailable(struct iwl_mvm* mvm, u8 ant) {
+static bool btCoexManagerIsAntAvailable(struct iwl_mvm* mvm, uint8_t ant) {
     if (mvm->cfg->bt_shared_single_ant) { return true; }
 
     if (!(ant & ~mvm->cfg->non_shared_ant)) { return true; }

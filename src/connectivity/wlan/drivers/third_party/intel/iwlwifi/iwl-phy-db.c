@@ -44,8 +44,8 @@
 #define CHANNEL_NUM_SIZE 4 /* num of channels in calib_ch size */
 
 struct iwl_phy_db_entry {
-    u16 size;
-    u8* data;
+    uint16_t size;
+    uint8_t* data;
 };
 
 /**
@@ -108,7 +108,7 @@ IWL_EXPORT_SYMBOL(iwl_phy_db_init);
  */
 static struct iwl_phy_db_entry* iwl_phy_db_get_section(struct iwl_phy_db* phy_db,
                                                        enum iwl_phy_db_section_type type,
-                                                       u16 chg_id) {
+                                                       uint16_t chg_id) {
     if (!phy_db || type >= IWL_PHY_DB_MAX) { return NULL; }
 
     switch (type) {
@@ -129,7 +129,7 @@ static struct iwl_phy_db_entry* iwl_phy_db_get_section(struct iwl_phy_db* phy_db
 }
 
 static void iwl_phy_db_free_section(struct iwl_phy_db* phy_db, enum iwl_phy_db_section_type type,
-                                    u16 chg_id) {
+                                    uint16_t chg_id) {
     struct iwl_phy_db_entry* entry = iwl_phy_db_get_section(phy_db, type, chg_id);
     if (!entry) { return; }
 
@@ -163,9 +163,9 @@ IWL_EXPORT_SYMBOL(iwl_phy_db_free);
 int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt) {
     struct iwl_calib_res_notif_phy_db* phy_db_notif = (struct iwl_calib_res_notif_phy_db*)pkt->data;
     enum iwl_phy_db_section_type type = le16_to_cpu(phy_db_notif->type);
-    u16 size = le16_to_cpu(phy_db_notif->length);
+    uint16_t size = le16_to_cpu(phy_db_notif->length);
     struct iwl_phy_db_entry* entry;
-    u16 chg_id = 0;
+    uint16_t chg_id = 0;
 
     if (!phy_db) { return -EINVAL; }
 
@@ -214,7 +214,7 @@ int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt)
 }
 IWL_EXPORT_SYMBOL(iwl_phy_db_set_section);
 
-static int is_valid_channel(u16 ch_id) {
+static int is_valid_channel(uint16_t ch_id) {
     if (ch_id <= 14 || (36 <= ch_id && ch_id <= 64 && ch_id % 4 == 0) ||
         (100 <= ch_id && ch_id <= 140 && ch_id % 4 == 0) ||
         (145 <= ch_id && ch_id <= 165 && ch_id % 4 == 1)) {
@@ -223,7 +223,7 @@ static int is_valid_channel(u16 ch_id) {
     return 0;
 }
 
-static u8 ch_id_to_ch_index(u16 ch_id) {
+static uint8_t ch_id_to_ch_index(uint16_t ch_id) {
     if (WARN_ON(!is_valid_channel(ch_id))) { return 0xff; }
 
     if (ch_id <= 14) { return ch_id - 1; }
@@ -232,7 +232,7 @@ static u8 ch_id_to_ch_index(u16 ch_id) {
     return (ch_id - 13) / 4;
 }
 
-static u16 channel_id_to_papd(u16 ch_id) {
+static uint16_t channel_id_to_papd(uint16_t ch_id) {
     if (WARN_ON(!is_valid_channel(ch_id))) { return 0xff; }
 
     if (1 <= ch_id && ch_id <= 14) { return 0; }
@@ -241,10 +241,10 @@ static u16 channel_id_to_papd(u16 ch_id) {
     return 3;
 }
 
-static u16 channel_id_to_txp(struct iwl_phy_db* phy_db, u16 ch_id) {
+static uint16_t channel_id_to_txp(struct iwl_phy_db* phy_db, uint16_t ch_id) {
     struct iwl_phy_db_chg_txp* txp_chg;
     int i;
-    u8 ch_index = ch_id_to_ch_index(ch_id);
+    uint8_t ch_index = ch_id_to_ch_index(ch_id);
     if (ch_index == 0xff) { return 0xff; }
 
     for (i = 0; i < phy_db->n_group_txp; i++) {
@@ -262,10 +262,10 @@ static u16 channel_id_to_txp(struct iwl_phy_db* phy_db, u16 ch_id) {
 static
 #endif
     int
-    iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, u32 type, u8** data, u16* size,
-                                u16 ch_id) {
+    iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, uint32_t type, uint8_t** data, uint16_t* size,
+                                uint16_t ch_id) {
     struct iwl_phy_db_entry* entry;
-    u16 ch_group_id = 0;
+    uint16_t ch_group_id = 0;
 
     if (!phy_db) { return -EINVAL; }
 
@@ -291,7 +291,7 @@ static
 IWL_EXPORT_SYMBOL(iwl_phy_db_get_section_data);
 #endif
 
-static int iwl_send_phy_db_cmd(struct iwl_phy_db* phy_db, u16 type, u16 length, void* data) {
+static int iwl_send_phy_db_cmd(struct iwl_phy_db* phy_db, uint16_t type, uint16_t length, void* data) {
     struct iwl_phy_db_cmd phy_db_cmd;
     struct iwl_host_cmd cmd = {
         .id = PHY_DB_CMD,
@@ -314,8 +314,8 @@ static int iwl_send_phy_db_cmd(struct iwl_phy_db* phy_db, u16 type, u16 length, 
 }
 
 static int iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
-                                              enum iwl_phy_db_section_type type, u8 max_ch_groups) {
-    u16 i;
+                                              enum iwl_phy_db_section_type type, uint8_t max_ch_groups) {
+    uint16_t i;
     int err;
     struct iwl_phy_db_entry* entry;
 
@@ -340,8 +340,8 @@ static int iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
 }
 
 int iwl_send_phy_db_data(struct iwl_phy_db* phy_db) {
-    u8* data = NULL;
-    u16 size = 0;
+    uint8_t* data = NULL;
+    uint16_t size = 0;
     int err;
 
     IWL_DEBUG_INFO(phy_db->trans, "Sending phy db data and configuration to runtime image\n");

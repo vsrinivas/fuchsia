@@ -47,7 +47,7 @@ int iwl_xvt_send_cmd(struct iwl_xvt* xvt, struct iwl_host_cmd* cmd) {
     return iwl_trans_send_cmd(xvt->trans, cmd);
 }
 
-int iwl_xvt_send_cmd_pdu(struct iwl_xvt* xvt, u32 id, u32 flags, u16 len, const void* data) {
+int iwl_xvt_send_cmd_pdu(struct iwl_xvt* xvt, uint32_t id, uint32_t flags, uint16_t len, const void* data) {
     struct iwl_host_cmd cmd = {
         .id = id,
         .len =
@@ -66,7 +66,7 @@ int iwl_xvt_send_cmd_pdu(struct iwl_xvt* xvt, u32 id, u32 flags, u16 len, const 
 
 static struct {
     char* name;
-    u8 num;
+    uint8_t num;
 } advanced_lookup[] = {
     {"NMI_INTERRUPT_WDG", 0x34},
     {"SYSASSERT", 0x35},
@@ -86,7 +86,7 @@ static struct {
     {"ADVANCED_SYSASSERT", 0},
 };
 
-static const char* desc_lookup(u32 num) {
+static const char* desc_lookup(uint32_t num) {
     int i;
 
     for (i = 0; i < ARRAY_SIZE(advanced_lookup) - 1; i++)
@@ -96,12 +96,12 @@ static const char* desc_lookup(u32 num) {
     return advanced_lookup[i].name;
 }
 
-#define ERROR_START_OFFSET (1 * sizeof(u32))
-#define ERROR_ELEM_SIZE (7 * sizeof(u32))
+#define ERROR_START_OFFSET (1 * sizeof(uint32_t))
+#define ERROR_ELEM_SIZE (7 * sizeof(uint32_t))
 
 void iwl_xvt_get_nic_error_log_v1(struct iwl_xvt* xvt, struct iwl_error_event_table_v1* table) {
     struct iwl_trans* trans = xvt->trans;
-    u32 base;
+    uint32_t base;
     /* TODO: support CDB */
     base = xvt->error_event_table[0];
     if (xvt->fwrt.cur_fw_img == IWL_UCODE_INIT) {
@@ -151,7 +151,7 @@ void iwl_xvt_dump_nic_error_log_v1(struct iwl_xvt* xvt, struct iwl_error_event_t
 
 void iwl_xvt_get_nic_error_log_v2(struct iwl_xvt* xvt, struct iwl_error_event_table_v2* table) {
     struct iwl_trans* trans = xvt->trans;
-    u32 base;
+    uint32_t base;
     /* TODO: support CDB */
     base = xvt->error_event_table[0];
     if (xvt->fwrt.cur_fw_img == IWL_UCODE_INIT) {
@@ -202,7 +202,7 @@ void iwl_xvt_dump_nic_error_log_v2(struct iwl_xvt* xvt, struct iwl_error_event_t
 
 void iwl_xvt_get_umac_error_log(struct iwl_xvt* xvt, struct iwl_umac_error_event_table* table) {
     struct iwl_trans* trans = xvt->trans;
-    u32 base;
+    uint32_t base;
 
     base = xvt->umac_error_event_table;
 

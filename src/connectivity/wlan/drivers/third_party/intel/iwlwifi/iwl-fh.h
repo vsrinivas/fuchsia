@@ -615,8 +615,8 @@ struct iwl_rb_status {
 #define IWL_NUM_OF_TBS 20
 #define IWL_TFH_NUM_TBS 25
 
-static inline u8 iwl_get_dma_hi_addr(dma_addr_t addr) {
-    return (sizeof(addr) > sizeof(u32) ? upper_32_bits(addr) : 0) & 0xF;
+static inline uint8_t iwl_get_dma_hi_addr(dma_addr_t addr) {
+    return (sizeof(addr) > sizeof(uint32_t) ? upper_32_bits(addr) : 0) & 0xF;
 }
 
 /**
@@ -686,8 +686,8 @@ struct iwl_tfh_tb {
  * @ __pad  padding
  */
 struct iwl_tfd {
-    u8 __reserved1[3];
-    u8 num_tbs;
+    uint8_t __reserved1[3];
+    uint8_t num_tbs;
     struct iwl_tfd_tb tbs[IWL_NUM_OF_TBS];
     __le32 __pad;
 } __packed;

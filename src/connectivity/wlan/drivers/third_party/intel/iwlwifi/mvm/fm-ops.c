@@ -64,7 +64,7 @@ static struct work_struct fm_chan_notif_wk;
 /*
  * Search for an interface with a given frequency
  */
-static void iwl_mvm_fm_iface_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_fm_iface_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct chan_ifaces* data = _data;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct ieee80211_chanctx_conf* chanctx_conf;
@@ -100,7 +100,7 @@ static void iwl_mvm_fm_iface_iterator(void* _data, u8* mac, struct ieee80211_vif
 /*
  * Search for an interface with a given frequency
  */
-static void iwl_mvm_fm_chan_vldt_iter(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_fm_chan_vldt_iter(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct chan_ifaces* data = _data;
     struct ieee80211_chanctx_conf* chanctx_conf;
 
@@ -144,7 +144,7 @@ static void iwl_mvm_fm_chan_iterator(struct ieee80211_hw* hw, struct ieee80211_c
                                      void* _data) {
     int i;
     enum nl80211_chan_width band;
-    u32 freq;
+    uint32_t freq;
     struct chan_list* data = _data;
     struct iui_fm_wlan_info* winfo = data->winfo;
 
@@ -177,7 +177,7 @@ static enum iui_fm_mitigation_status iwl_mvm_fm_mitig_txpwr(struct iui_fm_wlan_m
     int i;
     struct chan_ifaces chan_ifaces;
     struct iui_fm_wlan_channel_tx_power* chan_txpwr_list = mit->channel_tx_pwr;
-    u32 num_channels = mit->num_channels;
+    uint32_t num_channels = mit->num_channels;
 
     /* Not required to mitigate tx power */
     if (!(mit->bitmask & WLAN_MITI)) { goto ret; }
@@ -206,7 +206,7 @@ ret:
  */
 static enum iui_fm_mitigation_status iwl_mvm_fm_mitig_adc_dac_freq(
     struct iui_fm_wlan_mitigation* mit) {
-    u32 adc_dac_freq = mit->wlan_adc_dac_freq;
+    uint32_t adc_dac_freq = mit->wlan_adc_dac_freq;
 
     /* Not required to mitigate adc dac */
     if (!(mit->bitmask & WLAN_MITI)) { goto ret; }
@@ -245,7 +245,7 @@ static enum iui_fm_mitigation_status iwl_mvm_fm_2g_coex(struct iui_fm_wlan_mitig
     int i;
     struct iui_fm_wlan_channel_tx_power* chan;
     struct iui_fm_wlan_channel_tx_power* chan_txpwr_list = mit->channel_tx_pwr;
-    u32 num_channels = mit->num_channels;
+    uint32_t num_channels = mit->num_channels;
 
     /* Not required to mitigate 2g coex */
     if (!(mit->bitmask & WLAN_MITI)) { return ret; }
@@ -302,7 +302,7 @@ sofia_xmm:
     return ret;
 }
 
-static int iwl_mvm_fm_send_dcdc_cmd(u32 div0, u32 div1, u32 flags) {
+static int iwl_mvm_fm_send_dcdc_cmd(uint32_t div0, uint32_t div1, uint32_t flags) {
     int ret;
     struct iwl_dc2dc_config_resp* resp;
     struct iwl_rx_packet* pkt;
@@ -415,8 +415,8 @@ out:
  */
 static bool iwl_mvm_fm_invalid_channel_list(struct iui_fm_wlan_mitigation* mit) {
     struct iui_fm_wlan_channel_tx_power* chan_txpwr_list = mit->channel_tx_pwr;
-    u32 num_channels = mit->num_channels;
-    u8 i, j;
+    uint32_t num_channels = mit->num_channels;
+    uint8_t i, j;
 
     /* Check if the same frequency appears twice */
     for (i = 0; i < num_channels; i++) {

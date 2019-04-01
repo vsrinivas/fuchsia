@@ -68,7 +68,7 @@
 void iwl_xvt_send_user_rx_notif(struct iwl_xvt* xvt, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     void* data = pkt->data;
-    u32 size = iwl_rx_packet_payload_len(pkt);
+    uint32_t size = iwl_rx_packet_payload_len(pkt);
 
     IWL_DEBUG_INFO(xvt, "rx notification: group=0x%x, id=0x%x\n", pkt->hdr.group_id, pkt->hdr.cmd);
 
@@ -195,7 +195,7 @@ static int iwl_xvt_get_dev_info(struct iwl_xvt* xvt, struct iwl_tm_data* data_in
                                 struct iwl_tm_data* data_out) {
     struct iwl_tm_dev_info_req* dev_info_req;
     struct iwl_tm_dev_info* dev_info;
-    const u8 driver_ver[] = BACKPORTS_GIT_TRACKED;
+    const uint8_t driver_ver[] = BACKPORTS_GIT_TRACKED;
     int sv_step = 0x00;
     int dev_info_size;
     bool read_sv_drop = true;
@@ -210,7 +210,7 @@ static int iwl_xvt_get_dev_info(struct iwl_xvt* xvt, struct iwl_tm_data* data_in
         if (sv_step < 0) { return sv_step; }
     }
 
-    dev_info_size = sizeof(struct iwl_tm_dev_info) + (strlen(driver_ver) + 1) * sizeof(u8);
+    dev_info_size = sizeof(struct iwl_tm_dev_info) + (strlen(driver_ver) + 1) * sizeof(uint8_t);
     dev_info = kzalloc(dev_info_size, GFP_KERNEL);
     if (!dev_info) { return -ENOMEM; }
 
@@ -330,7 +330,7 @@ static int iwl_xvt_get_sw_config(struct iwl_xvt* xvt, struct iwl_tm_data* data_i
     return 0;
 }
 
-static int iwl_xvt_send_phy_cfg_cmd(struct iwl_xvt* xvt, u32 ucode_type) {
+static int iwl_xvt_send_phy_cfg_cmd(struct iwl_xvt* xvt, uint32_t ucode_type) {
     struct iwl_phy_cfg_cmd* calib_cmd_cfg = &xvt->sw_stack_cfg.fw_calib_cmd_cfg[ucode_type];
     int err;
 
@@ -353,7 +353,7 @@ static int iwl_xvt_send_phy_cfg_cmd(struct iwl_xvt* xvt, u32 ucode_type) {
 static int iwl_xvt_continue_init_unified(struct iwl_xvt* xvt) {
     struct iwl_nvm_access_complete_cmd nvm_complete = {};
     struct iwl_notification_wait init_complete_wait;
-    static const u16 init_complete[] = {INIT_COMPLETE_NOTIF};
+    static const uint16_t init_complete[] = {INIT_COMPLETE_NOTIF};
     int err;
 
     err = iwl_xvt_send_cmd_pdu(xvt, WIDE_ID(REGULATORY_AND_NVM_GROUP, NVM_ACCESS_COMPLETE), 0,
@@ -435,7 +435,7 @@ static bool iwl_xvt_wait_phy_db_entry(struct iwl_notif_wait_data* notif_wait,
  */
 static int iwl_xvt_start_op_mode(struct iwl_xvt* xvt) {
     int err = 0;
-    u32 ucode_type = IWL_UCODE_INIT;
+    uint32_t ucode_type = IWL_UCODE_INIT;
 
     /*
      * If init FW and runtime FW are both enabled,
@@ -509,7 +509,7 @@ static void iwl_xvt_stop_op_mode(struct iwl_xvt* xvt) {
  */
 static int iwl_xvt_continue_init(struct iwl_xvt* xvt) {
     struct iwl_notification_wait calib_wait;
-    static const u16 init_complete[] = {INIT_COMPLETE_NOTIF, CALIB_RES_NOTIF_PHY_DB};
+    static const uint16_t init_complete[] = {INIT_COMPLETE_NOTIF, CALIB_RES_NOTIF_PHY_DB};
     int err;
 
     if (xvt->state != IWL_XVT_STATE_INIT_STARTED) { return -EINVAL; }
@@ -556,9 +556,9 @@ static int iwl_xvt_get_phy_db(struct iwl_xvt* xvt, struct iwl_tm_data* data_in,
                               struct iwl_tm_data* data_out) {
     struct iwl_xvt_phy_db_request* phy_db_req = (struct iwl_xvt_phy_db_request*)data_in->data;
     struct iwl_xvt_phy_db_request* phy_db_resp;
-    u8* phy_data;
-    u16 phy_size;
-    u32 resp_size;
+    uint8_t* phy_data;
+    uint16_t phy_size;
+    uint32_t resp_size;
     int err;
 
     if ((data_in->len < sizeof(struct iwl_xvt_phy_db_request)) || (phy_db_req->size != 0)) {
@@ -595,9 +595,9 @@ static struct iwl_device_cmd* iwl_xvt_init_tx_dev_cmd(struct iwl_xvt* xvt) {
     return dev_cmd;
 }
 
-static u16 iwl_xvt_get_offload_assist(struct ieee80211_hdr* hdr) {
+static uint16_t iwl_xvt_get_offload_assist(struct ieee80211_hdr* hdr) {
     int hdrlen = ieee80211_hdrlen(hdr->frame_control);
-    u16 offload_assist = 0;
+    uint16_t offload_assist = 0;
     bool amsdu;
 
     amsdu = ieee80211_is_data_qos(hdr->frame_control) &&
@@ -616,14 +616,14 @@ static u16 iwl_xvt_get_offload_assist(struct ieee80211_hdr* hdr) {
 }
 
 static struct iwl_device_cmd* iwl_xvt_set_tx_params_gen3(struct iwl_xvt* xvt, struct sk_buff* skb,
-                                                         u32 rate_flags, u32 tx_flags)
+                                                         uint32_t rate_flags, uint32_t tx_flags)
 
 {
     struct iwl_device_cmd* dev_cmd;
     struct iwl_tx_cmd_gen3* cmd;
     struct ieee80211_hdr* hdr = (struct ieee80211_hdr*)skb->data;
     struct iwl_xvt_skb_info* skb_info = (void*)skb->cb;
-    u32 header_length = ieee80211_hdrlen(hdr->frame_control);
+    uint32_t header_length = ieee80211_hdrlen(hdr->frame_control);
 
     dev_cmd = iwl_xvt_init_tx_dev_cmd(xvt);
     if (unlikely(!dev_cmd)) { return NULL; }
@@ -632,7 +632,7 @@ static struct iwl_device_cmd* iwl_xvt_set_tx_params_gen3(struct iwl_xvt* xvt, st
 
     cmd->offload_assist |= cpu_to_le32(iwl_xvt_get_offload_assist(hdr));
 
-    cmd->len = cpu_to_le16((u16)skb->len);
+    cmd->len = cpu_to_le16((uint16_t)skb->len);
 
     cmd->flags = cpu_to_le16(tx_flags);
     if (ieee80211_has_morefrags(hdr->frame_control))
@@ -656,18 +656,18 @@ static struct iwl_device_cmd* iwl_xvt_set_tx_params_gen3(struct iwl_xvt* xvt, st
 }
 
 static struct iwl_device_cmd* iwl_xvt_set_tx_params_gen2(struct iwl_xvt* xvt, struct sk_buff* skb,
-                                                         u32 rate_flags, u32 flags) {
+                                                         uint32_t rate_flags, uint32_t flags) {
     struct iwl_device_cmd* dev_cmd;
     struct iwl_xvt_skb_info* skb_info = (void*)skb->cb;
     struct iwl_tx_cmd_gen2* tx_cmd;
     struct ieee80211_hdr* hdr = (struct ieee80211_hdr*)skb->data;
-    u32 header_length = ieee80211_hdrlen(hdr->frame_control);
+    uint32_t header_length = ieee80211_hdrlen(hdr->frame_control);
 
     dev_cmd = iwl_xvt_init_tx_dev_cmd(xvt);
     if (unlikely(!dev_cmd)) { return NULL; }
 
     tx_cmd = (struct iwl_tx_cmd_gen2*)dev_cmd->payload;
-    tx_cmd->len = cpu_to_le16((u16)skb->len);
+    tx_cmd->len = cpu_to_le16((uint16_t)skb->len);
     tx_cmd->offload_assist |= cpu_to_le16(iwl_xvt_get_offload_assist(hdr));
     tx_cmd->flags = cpu_to_le32(flags);
     if (ieee80211_has_morefrags(hdr->frame_control))
@@ -693,7 +693,7 @@ static struct iwl_device_cmd* iwl_xvt_set_tx_params_gen2(struct iwl_xvt* xvt, st
  * Allocates and sets the Tx cmd the driver data pointers in the skb
  */
 static struct iwl_device_cmd* iwl_xvt_set_mod_tx_params(struct iwl_xvt* xvt, struct sk_buff* skb,
-                                                        u8 sta_id, u32 rate_flags, u32 flags) {
+                                                        uint8_t sta_id, uint32_t rate_flags, uint32_t flags) {
     struct iwl_device_cmd* dev_cmd;
     struct iwl_xvt_skb_info* skb_info = (void*)skb->cb;
     struct iwl_tx_cmd* tx_cmd;
@@ -703,7 +703,7 @@ static struct iwl_device_cmd* iwl_xvt_set_mod_tx_params(struct iwl_xvt* xvt, str
 
     tx_cmd = (struct iwl_tx_cmd*)dev_cmd->payload;
 
-    tx_cmd->len = cpu_to_le16((u16)skb->len);
+    tx_cmd->len = cpu_to_le16((uint16_t)skb->len);
     tx_cmd->life_time = cpu_to_le32(TX_CMD_LIFE_TIME_INFINITE);
 
     tx_cmd->sta_id = sta_id;
@@ -724,9 +724,9 @@ static struct iwl_device_cmd* iwl_xvt_set_mod_tx_params(struct iwl_xvt* xvt, str
 }
 
 static void iwl_xvt_set_seq_number(struct iwl_xvt* xvt, struct tx_meta_data* meta_tx,
-                                   struct sk_buff* skb, u8 frag_num) {
+                                   struct sk_buff* skb, uint8_t frag_num) {
     struct ieee80211_hdr* hdr = (struct ieee80211_hdr*)skb->data;
-    u8 *qc, tid;
+    uint8_t *qc, tid;
 
     if (!ieee80211_is_data_qos(hdr->frame_control) || is_multicast_ether_addr(hdr->addr1)) {
         return;
@@ -743,12 +743,12 @@ static void iwl_xvt_set_seq_number(struct iwl_xvt* xvt, struct tx_meta_data* met
 }
 
 static int iwl_xvt_send_packet(struct iwl_xvt* xvt, struct iwl_tm_mod_tx_request* tx_req,
-                               u32* status, struct tx_meta_data* meta_tx) {
+                               uint32_t* status, struct tx_meta_data* meta_tx) {
     struct sk_buff* skb;
     struct iwl_device_cmd* dev_cmd;
     int time_remain, err = 0;
-    u32 flags = 0;
-    u32 rate_flags = tx_req->rate_flags;
+    uint32_t flags = 0;
+    uint32_t rate_flags = tx_req->rate_flags;
 
     if (xvt->fw_error) {
         IWL_ERR(xvt, "FW Error while sending Tx\n");
@@ -833,13 +833,13 @@ err:
 
 static struct iwl_device_cmd* iwl_xvt_set_tx_params(struct iwl_xvt* xvt, struct sk_buff* skb,
                                                     struct iwl_xvt_tx_start* tx_start,
-                                                    u8 packet_index) {
+                                                    uint8_t packet_index) {
     struct iwl_device_cmd* dev_cmd;
     struct iwl_xvt_skb_info* skb_info = (void*)skb->cb;
     struct iwl_tx_cmd* tx_cmd;
     /* the skb should already hold the data */
     struct ieee80211_hdr* hdr = (struct ieee80211_hdr*)skb->data;
-    u32 header_length = ieee80211_hdrlen(hdr->frame_control);
+    uint32_t header_length = ieee80211_hdrlen(hdr->frame_control);
 
     dev_cmd = iwl_xvt_init_tx_dev_cmd(xvt);
     if (unlikely(!dev_cmd)) { return NULL; }
@@ -851,7 +851,7 @@ static struct iwl_device_cmd* iwl_xvt_set_tx_params(struct iwl_xvt* xvt, struct 
         tx_cmd->tx_flags |= cpu_to_le32(TX_CMD_FLG_SEQ_CTL);
     }
 
-    tx_cmd->len = cpu_to_le16((u16)skb->len);
+    tx_cmd->len = cpu_to_le16((uint16_t)skb->len);
     tx_cmd->offload_assist |= cpu_to_le16(iwl_xvt_get_offload_assist(hdr));
     tx_cmd->tx_flags |= cpu_to_le32(tx_start->tx_data.tx_flags);
     if (ieee80211_has_morefrags(hdr->frame_control)) {
@@ -881,9 +881,9 @@ static struct iwl_device_cmd* iwl_xvt_set_tx_params(struct iwl_xvt* xvt, struct 
 static struct sk_buff* iwl_xvt_set_skb(struct iwl_xvt* xvt, struct ieee80211_hdr* hdr,
                                        struct tx_payload* payload) {
     struct sk_buff* skb;
-    u32 header_size = ieee80211_hdrlen(hdr->frame_control);
-    u32 payload_length = payload->length;
-    u32 packet_length = payload_length + header_size;
+    uint32_t header_size = ieee80211_hdrlen(hdr->frame_control);
+    uint32_t payload_length = payload->length;
+    uint32_t packet_length = payload_length + header_size;
 
     skb = alloc_skb(packet_length, GFP_KERNEL);
     if (!skb) { return NULL; }
@@ -896,12 +896,12 @@ static struct sk_buff* iwl_xvt_set_skb(struct iwl_xvt* xvt, struct ieee80211_hdr
 }
 
 static struct sk_buff* iwl_xvt_create_fragment_skb(struct iwl_xvt* xvt, struct ieee80211_hdr* hdr,
-                                                   struct tx_payload* payload, u32 fragment_size,
-                                                   u8 frag_num) {
+                                                   struct tx_payload* payload, uint32_t fragment_size,
+                                                   uint8_t frag_num) {
     struct sk_buff* skb;
     const __le16 morefrags = cpu_to_le16(IEEE80211_FCTL_MOREFRAGS);
-    u32 header_size = ieee80211_hdrlen(hdr->frame_control);
-    u32 skb_size, offset, payload_remain, payload_chunck_size;
+    uint32_t header_size = ieee80211_hdrlen(hdr->frame_control);
+    uint32_t skb_size, offset, payload_remain, payload_chunck_size;
 
     if (WARN(fragment_size <= header_size || !ieee80211_is_data_qos(hdr->frame_control),
              "can't fragment, fragment_size small big or not qos data")) {
@@ -936,7 +936,7 @@ static struct sk_buff* iwl_xvt_create_fragment_skb(struct iwl_xvt* xvt, struct i
 }
 
 static struct sk_buff* iwl_xvt_get_skb(struct iwl_xvt* xvt, struct ieee80211_hdr* hdr,
-                                       struct tx_payload* payload, u32 fragment_size, u8 frag_num) {
+                                       struct tx_payload* payload, uint32_t fragment_size, uint8_t frag_num) {
     if (fragment_size == 0) { /* no framgmentation */
         return iwl_xvt_set_skb(xvt, hdr, payload);
     }
@@ -945,14 +945,14 @@ static struct sk_buff* iwl_xvt_get_skb(struct iwl_xvt* xvt, struct ieee80211_hdr
 }
 
 static int iwl_xvt_transmit_packet(struct iwl_xvt* xvt, struct sk_buff* skb,
-                                   struct iwl_xvt_tx_start* tx_start, u8 packet_index, u8 frag_num,
-                                   u32* status) {
+                                   struct iwl_xvt_tx_start* tx_start, uint8_t packet_index, uint8_t frag_num,
+                                   uint32_t* status) {
     struct iwl_device_cmd* dev_cmd;
     int time_remain, err = 0;
-    u8 queue = tx_start->frames_data[packet_index].queue;
+    uint8_t queue = tx_start->frames_data[packet_index].queue;
     struct tx_queue_data* queue_data = &xvt->queue_data[queue];
-    u32 rate_flags = tx_start->tx_data.rate_flags;
-    u32 tx_flags = tx_start->tx_data.tx_flags;
+    uint32_t rate_flags = tx_start->tx_data.rate_flags;
+    uint32_t tx_flags = tx_start->tx_data.tx_flags;
 
     /* set tx number */
     iwl_xvt_set_seq_number(xvt, &xvt->tx_meta_data[XVT_LMAC_0_ID], skb, frag_num);
@@ -1011,9 +1011,9 @@ on_err:
     return err;
 }
 
-static int iwl_xvt_send_tx_done_notif(struct iwl_xvt* xvt, u32 status) {
+static int iwl_xvt_send_tx_done_notif(struct iwl_xvt* xvt, uint32_t status) {
     struct iwl_xvt_tx_done* done_notif;
-    u32 i, j, done_notif_size, num_of_queues = 0;
+    uint32_t i, j, done_notif_size, num_of_queues = 0;
     int err;
 
     for (i = 1; i < IWL_MAX_HW_QUEUES; i++) {
@@ -1048,11 +1048,11 @@ static int iwl_xvt_start_tx_handler(void* data) {
     struct iwl_xvt_enhanced_tx_data* task_data = data;
     struct iwl_xvt_tx_start* tx_start = &task_data->tx_start_data;
     struct iwl_xvt* xvt = task_data->xvt;
-    u8 num_of_frames;
-    u32 status, packets_in_cycle = 0;
+    uint8_t num_of_frames;
+    uint32_t status, packets_in_cycle = 0;
     int time_remain, err = 0, sent_packets = 0;
-    u32 num_of_cycles = tx_start->num_of_cycles;
-    u64 i, num_of_iterations;
+    uint32_t num_of_cycles = tx_start->num_of_cycles;
+    uint64_t i, num_of_iterations;
 
     /* reset tx parameters */
     xvt->num_of_tx_resp = 0;
@@ -1076,13 +1076,13 @@ static int iwl_xvt_start_tx_handler(void* data) {
     num_of_iterations = num_of_cycles * num_of_frames;
 
     for (i = 0; (i < num_of_iterations) && !kthread_should_stop(); i++) {
-        u16 j, times;
-        u8 frame_index, payload_idx, frag_idx, frag_num;
+        uint16_t j, times;
+        uint8_t frame_index, payload_idx, frag_idx, frag_num;
         struct ieee80211_hdr* hdr;
         struct sk_buff* skb;
-        u8 frag_size = tx_start->tx_data.fragment_size;
+        uint8_t frag_size = tx_start->tx_data.fragment_size;
         struct tx_payload* payload;
-        u8 frag_array_size = ARRAY_SIZE(tx_start->tx_data.frag_num);
+        uint8_t frag_array_size = ARRAY_SIZE(tx_start->tx_data.frag_num);
 
         frame_index = i % num_of_frames;
         payload_idx = tx_start->frames_data[frame_index].payload_index;
@@ -1141,11 +1141,11 @@ on_exit:
 }
 
 static int iwl_xvt_modulated_tx_handler(void* data) {
-    u64 tx_count, max_tx;
+    uint64_t tx_count, max_tx;
     int time_remain, num_of_packets, err = 0;
     struct iwl_xvt* xvt;
     struct iwl_xvt_tx_mod_done* done_notif;
-    u32 status = XVT_TX_DRIVER_SUCCESSFUL;
+    uint32_t status = XVT_TX_DRIVER_SUCCESSFUL;
     struct iwl_xvt_tx_mod_task_data* task_data = (struct iwl_xvt_tx_mod_task_data*)data;
     struct tx_meta_data* xvt_tx;
 
@@ -1198,7 +1198,7 @@ static int iwl_xvt_modulated_tx_handler(void* data) {
 
 static int iwl_xvt_modulated_tx_infinite_stop(struct iwl_xvt* xvt, struct iwl_tm_data* data_in) {
     int err = 0;
-    u32 lmac_id = ((struct iwl_xvt_tx_mod_stop*)data_in->data)->lmac_id;
+    uint32_t lmac_id = ((struct iwl_xvt_tx_mod_stop*)data_in->data)->lmac_id;
     struct tx_meta_data* xvt_tx = &xvt->tx_meta_data[lmac_id];
 
     if (xvt_tx->tx_mod_thread && xvt_tx->tx_task_operating) {
@@ -1209,7 +1209,7 @@ static int iwl_xvt_modulated_tx_infinite_stop(struct iwl_xvt* xvt, struct iwl_tm
     return err;
 }
 
-static inline int map_sta_to_lmac(struct iwl_xvt* xvt, u8 sta_id) {
+static inline int map_sta_to_lmac(struct iwl_xvt* xvt, uint8_t sta_id) {
     switch (sta_id) {
     case XVT_LMAC_0_STA_ID:
         return XVT_LMAC_0_ID;
@@ -1223,7 +1223,7 @@ static inline int map_sta_to_lmac(struct iwl_xvt* xvt, u8 sta_id) {
 
 static int iwl_xvt_tx_queue_cfg(struct iwl_xvt* xvt, struct iwl_tm_data* data_in) {
     struct iwl_xvt_tx_queue_cfg* input = (struct iwl_xvt_tx_queue_cfg*)data_in->data;
-    u8 sta_id = input->sta_id;
+    uint8_t sta_id = input->sta_id;
     int lmac_id = map_sta_to_lmac(xvt, sta_id);
 
     if (lmac_id < 0) { return lmac_id; }
@@ -1285,7 +1285,7 @@ static int iwl_xvt_stop_tx(struct iwl_xvt* xvt) {
 
 static int iwl_xvt_set_tx_payload(struct iwl_xvt* xvt, struct iwl_xvt_driver_command_req* req) {
     struct iwl_xvt_set_tx_payload* input = (struct iwl_xvt_set_tx_payload*)req->input_data;
-    u32 size = sizeof(struct tx_payload) + input->length;
+    uint32_t size = sizeof(struct tx_payload) + input->length;
     struct tx_payload* payload_struct;
 
     if (WARN(input->index >= IWL_XVT_MAX_PAYLOADS_AMOUNT, "invalid payload index\n")) {
@@ -1307,11 +1307,11 @@ static int iwl_xvt_set_tx_payload(struct iwl_xvt* xvt, struct iwl_xvt_driver_com
 }
 
 static int iwl_xvt_modulated_tx(struct iwl_xvt* xvt, struct iwl_tm_data* data_in) {
-    u32 pkt_length = ((struct iwl_tm_mod_tx_request*)data_in->data)->len;
-    u32 req_length = sizeof(struct iwl_tm_mod_tx_request) + pkt_length;
-    u32 task_data_length = sizeof(struct iwl_xvt_tx_mod_task_data) + pkt_length;
+    uint32_t pkt_length = ((struct iwl_tm_mod_tx_request*)data_in->data)->len;
+    uint32_t req_length = sizeof(struct iwl_tm_mod_tx_request) + pkt_length;
+    uint32_t task_data_length = sizeof(struct iwl_xvt_tx_mod_task_data) + pkt_length;
     struct tx_meta_data* xvt_tx = &xvt->tx_meta_data[XVT_LMAC_0_ID];
-    u8 sta_id;
+    uint8_t sta_id;
     int lmac_id;
     struct iwl_xvt_tx_mod_task_data* task_data;
 
@@ -1405,7 +1405,7 @@ static int iwl_xvt_allocate_dma(struct iwl_xvt* xvt, struct iwl_tm_data* data_in
     }
     dma_res->size = dma_req->size;
     /* Casting to avoid compilation warnings when DMA address is 32bit */
-    dma_res->addr = (u64)xvt->dma_addr;
+    dma_res->addr = (uint64_t)xvt->dma_addr;
 
     data_out->data = dma_res;
     data_out->len = sizeof(struct iwl_xvt_alloc_dma);
@@ -1417,7 +1417,7 @@ static int iwl_xvt_allocate_dma(struct iwl_xvt* xvt, struct iwl_tm_data* data_in
 static int iwl_xvt_get_dma(struct iwl_xvt* xvt, struct iwl_tm_data* data_in,
                            struct iwl_tm_data* data_out) {
     struct iwl_xvt_get_dma* get_dma_resp;
-    u32 resp_size;
+    uint32_t resp_size;
 
     if (!xvt->dma_cpu_addr) { return -ENOMEM; }
 
@@ -1465,9 +1465,9 @@ static int iwl_xvt_get_chip_id(struct iwl_xvt* xvt, struct iwl_tm_data* data_out
 
 static int iwl_xvt_get_mac_addr_info(struct iwl_xvt* xvt, struct iwl_tm_data* data_out) {
     struct iwl_xvt_mac_addr_info* mac_addr_info;
-    u32 mac_addr0, mac_addr1;
+    uint32_t mac_addr0, mac_addr1;
     __u8 temp_mac_addr[ETH_ALEN];
-    const u8* hw_addr;
+    const uint8_t* hw_addr;
 
     mac_addr_info = kzalloc(sizeof(*mac_addr_info), GFP_KERNEL);
     if (!mac_addr_info) { return -ENOMEM; }
@@ -1483,13 +1483,13 @@ static int iwl_xvt_get_mac_addr_info(struct iwl_xvt* xvt, struct iwl_tm_data* da
             mac_addr0 = iwl_trans_read_prph(xvt->trans, WFMP_MAC_ADDR_0);
             mac_addr1 = iwl_trans_read_prph(xvt->trans, WFMP_MAC_ADDR_1);
 
-            hw_addr = (const u8*)&mac_addr0;
+            hw_addr = (const uint8_t*)&mac_addr0;
             temp_mac_addr[0] = hw_addr[3];
             temp_mac_addr[1] = hw_addr[2];
             temp_mac_addr[2] = hw_addr[1];
             temp_mac_addr[3] = hw_addr[0];
 
-            hw_addr = (const u8*)&mac_addr1;
+            hw_addr = (const uint8_t*)&mac_addr1;
             temp_mac_addr[4] = hw_addr[1];
             temp_mac_addr[5] = hw_addr[0];
 
@@ -1503,7 +1503,7 @@ static int iwl_xvt_get_mac_addr_info(struct iwl_xvt* xvt, struct iwl_tm_data* da
     return 0;
 }
 
-static int iwl_xvt_add_txq(struct iwl_xvt* xvt, struct iwl_scd_txq_cfg_cmd* cmd, u16 ssn, u16 flags,
+static int iwl_xvt_add_txq(struct iwl_xvt* xvt, struct iwl_scd_txq_cfg_cmd* cmd, uint16_t ssn, uint16_t flags,
                            int size) {
     int queue_id = cmd->scd_queue, ret;
 
@@ -1686,7 +1686,7 @@ out_free:
     return err;
 }
 
-int iwl_xvt_user_cmd_execute(struct iwl_testmode* testmode, u32 cmd, struct iwl_tm_data* data_in,
+int iwl_xvt_user_cmd_execute(struct iwl_testmode* testmode, uint32_t cmd, struct iwl_tm_data* data_in,
                              struct iwl_tm_data* data_out, bool* supported_cmd) {
     struct iwl_xvt* xvt = testmode->op_mode;
     int ret = 0;

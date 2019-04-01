@@ -94,7 +94,7 @@ struct iwl_tm_data;
 struct iwl_test_ops {
     int (*send_hcmd)(void* op_mode, struct iwl_host_cmd* host_cmd);
     int (*cmd_exec_start)(struct iwl_testmode* testmode);
-    int (*cmd_exec)(struct iwl_testmode* testmode, u32 cmd, struct iwl_tm_data* data_in,
+    int (*cmd_exec)(struct iwl_testmode* testmode, uint32_t cmd, struct iwl_tm_data* data_in,
                     struct iwl_tm_data* data_out, bool* cmd_supported);
     void (*cmd_exec_end)(struct iwl_testmode* testmode);
 };

@@ -68,7 +68,7 @@ struct iwl_stored_beacon_notif {
     __le16 channel;
     __le32 rates;
     __le32 byte_count;
-    u8 data[MAX_STORED_BEACON_SIZE];
+    uint8_t data[MAX_STORED_BEACON_SIZE];
 } __packed; /* WOWLAN_STROED_BEACON_INFO_S_VER_2 */
 
 #endif /* __iwl_fw_api_offload_h__ */

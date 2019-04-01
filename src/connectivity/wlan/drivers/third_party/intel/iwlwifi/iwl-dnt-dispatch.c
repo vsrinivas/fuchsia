@@ -71,7 +71,7 @@ static void iwl_dnt_dispatch_free_collect_db(struct dnt_collect_db* db) {
     kfree(db);
 }
 
-static int iwl_dnt_dispatch_get_list_data(struct dnt_collect_db* db, u8* buffer, u32 buffer_size) {
+static int iwl_dnt_dispatch_get_list_data(struct dnt_collect_db* db, uint8_t* buffer, uint32_t buffer_size) {
     struct dnt_collect_entry* cur_entry;
     int data_offset = 0;
 
@@ -96,7 +96,7 @@ static int iwl_dnt_dispatch_get_list_data(struct dnt_collect_db* db, u8* buffer,
  * iwl_dnt_dispatch_push_ftrace_handler - handles data ad push it to ftrace.
  *
  */
-static void iwl_dnt_dispatch_push_ftrace_handler(struct iwl_dnt* dnt, u8* buffer, u32 buffer_size) {
+static void iwl_dnt_dispatch_push_ftrace_handler(struct iwl_dnt* dnt, uint8_t* buffer, uint32_t buffer_size) {
     trace_iwlwifi_dev_dnt_data(dnt->dev, buffer, buffer_size);
 }
 
@@ -105,12 +105,12 @@ static void iwl_dnt_dispatch_push_ftrace_handler(struct iwl_dnt* dnt, u8* buffer
  *
  */
 static int iwl_dnt_dispatch_push_netlink_handler(struct iwl_dnt* dnt, struct iwl_trans* trans,
-                                                 unsigned int cmd_id, u8* buffer, u32 buffer_size) {
+                                                 unsigned int cmd_id, uint8_t* buffer, uint32_t buffer_size) {
     return iwl_tm_gnl_send_msg(trans, cmd_id, false, buffer, buffer_size, GFP_ATOMIC);
 }
 
-static int iwl_dnt_dispatch_pull_monitor(struct iwl_dnt* dnt, struct iwl_trans* trans, u8* buffer,
-                                         u32 buffer_size) {
+static int iwl_dnt_dispatch_pull_monitor(struct iwl_dnt* dnt, struct iwl_trans* trans, uint8_t* buffer,
+                                         uint32_t buffer_size) {
     int ret = 0;
 
     if (dnt->cur_mon_type == INTERFACE) {
@@ -121,7 +121,7 @@ static int iwl_dnt_dispatch_pull_monitor(struct iwl_dnt* dnt, struct iwl_trans* 
     return ret;
 }
 
-int iwl_dnt_dispatch_pull(struct iwl_trans* trans, u8* buffer, u32 buffer_size, u32 input) {
+int iwl_dnt_dispatch_pull(struct iwl_trans* trans, uint8_t* buffer, uint32_t buffer_size, uint32_t input) {
     struct iwl_dnt* dnt = trans->tmdev->dnt;
     int ret = 0;
 
@@ -145,7 +145,7 @@ int iwl_dnt_dispatch_pull(struct iwl_trans* trans, u8* buffer, u32 buffer_size, 
 static int iwl_dnt_dispatch_collect_data(struct iwl_dnt* dnt, struct dnt_collect_db* db,
                                          struct iwl_rx_packet* pkt) {
     struct dnt_collect_entry* wr_entry;
-    u32 data_size;
+    uint32_t data_size;
 
     data_size = GET_RX_PACKET_SIZE(pkt);
     spin_lock(&db->db_lock);
@@ -267,7 +267,7 @@ static void iwl_dnt_dispatch_retrieve_crash_rx(struct iwl_dnt* dnt, struct iwl_t
 
 static void iwl_dnt_dispatch_retrieve_crash_dbgm(struct iwl_dnt* dnt, struct iwl_trans* trans) {
     int ret;
-    u32 buf_size;
+    uint32_t buf_size;
     struct dnt_crash_data* crash = &dnt->dispatch.crash;
 
     if (crash->dbgm) {
@@ -281,7 +281,7 @@ static void iwl_dnt_dispatch_retrieve_crash_dbgm(struct iwl_dnt* dnt, struct iwl
         break;
     case MARBH_ADC:
     case MARBH_DBG:
-        buf_size = 0x2000 * sizeof(u32);
+        buf_size = 0x2000 * sizeof(uint32_t);
         break;
     case INTERFACE:
         if (dnt->dispatch.mon_output == NETLINK) { return; }
@@ -307,19 +307,19 @@ static void iwl_dnt_dispatch_retrieve_crash_dbgm(struct iwl_dnt* dnt, struct iwl
     crash->dbgm_buf_size = buf_size;
 }
 
-static void iwl_dnt_dispatch_create_tlv(struct iwl_fw_error_dump_data* tlv, u32 type, u32 len,
-                                        u8* value) {
+static void iwl_dnt_dispatch_create_tlv(struct iwl_fw_error_dump_data* tlv, uint32_t type, uint32_t len,
+                                        uint8_t* value) {
     tlv->type = cpu_to_le32(type);
     tlv->len = cpu_to_le32(len);
     memcpy(tlv->data, value, len);
 }
 
-static u32 iwl_dnt_dispatch_create_crash_tlv(struct iwl_trans* trans, u8** tlv_buf) {
+static uint32_t iwl_dnt_dispatch_create_crash_tlv(struct iwl_trans* trans, uint8_t** tlv_buf) {
     struct iwl_fw_error_dump_file* dump_file;
     struct iwl_fw_error_dump_data* cur_tlv;
     struct iwl_dnt* dnt = trans->tmdev->dnt;
     struct dnt_crash_data* crash;
-    u32 total_size;
+    uint32_t total_size;
 
     if (!dnt) {
         IWL_DEBUG_INFO(trans, "DnT is not intialized\n");
@@ -331,19 +331,19 @@ static u32 iwl_dnt_dispatch_create_crash_tlv(struct iwl_trans* trans, u8** tlv_b
     /*
      * data will be represented as TLV - each buffer is represented as
      * follow:
-     * u32 - type (SRAM/DBGM/RX/TX/PERIPHERY)
-     * u32 - length
-     * u8[] - data
+     * uint32_t - type (SRAM/DBGM/RX/TX/PERIPHERY)
+     * uint32_t - length
+     * uint8_t[] - data
      */
     total_size = sizeof(*dump_file) + crash->sram_buf_size + crash->dbgm_buf_size +
                  crash->rx_buf_size + crash->tx_buf_size + crash->periph_buf_size +
-                 sizeof(u32) * 10;
+                 sizeof(uint32_t) * 10;
     dump_file = vmalloc(total_size);
     if (!dump_file) { return 0; }
 
     dump_file->file_len = cpu_to_le32(total_size);
     dump_file->barker = cpu_to_le32(IWL_FW_ERROR_DUMP_BARKER);
-    *tlv_buf = (u8*)dump_file;
+    *tlv_buf = (uint8_t*)dump_file;
 
     cur_tlv = (void*)dump_file->data;
     if (crash->sram_buf_size) {
@@ -370,8 +370,8 @@ static u32 iwl_dnt_dispatch_create_crash_tlv(struct iwl_trans* trans, u8** tlv_b
 
 static void iwl_dnt_dispatch_handle_crash_netlink(struct iwl_dnt* dnt, struct iwl_trans* trans) {
     int ret;
-    u8* tlv_buf;
-    u32 tlv_buf_size;
+    uint8_t* tlv_buf;
+    uint32_t tlv_buf_size;
     struct iwl_tm_crash_data* crash_notif;
 
     tlv_buf_size = iwl_dnt_dispatch_create_crash_tlv(trans, &tlv_buf);

@@ -45,9 +45,9 @@ static inline int iwl_mvm_check_pn(struct iwl_mvm* mvm, struct sk_buff* skb, int
     struct ieee80211_rx_status* stats = IEEE80211_SKB_RXCB(skb);
     struct iwl_mvm_key_pn* ptk_pn;
     int res;
-    u8 tid, keyidx;
-    u8 pn[IEEE80211_CCMP_PN_LEN];
-    u8* extiv;
+    uint8_t tid, keyidx;
+    uint8_t pn[IEEE80211_CCMP_PN_LEN];
+    uint8_t* extiv;
 
     /* do PN checking */
 
@@ -72,7 +72,7 @@ static inline int iwl_mvm_check_pn(struct iwl_mvm* mvm, struct sk_buff* skb, int
 
     mvmsta = iwl_mvm_sta_from_mac80211(sta);
 
-    extiv = (u8*)hdr + ieee80211_hdrlen(hdr->frame_control);
+    extiv = (uint8_t*)hdr + ieee80211_hdrlen(hdr->frame_control);
     keyidx = extiv[3] >> 6;
 
     ptk_pn = rcu_dereference(mvmsta->ptk_pn[keyidx]);
@@ -106,8 +106,8 @@ static inline int iwl_mvm_check_pn(struct iwl_mvm* mvm, struct sk_buff* skb, int
 }
 
 /* iwl_mvm_create_skb Adds the rxb to a new skb */
-static void iwl_mvm_create_skb(struct sk_buff* skb, struct ieee80211_hdr* hdr, u16 len,
-                               u8 crypt_len, struct iwl_rx_cmd_buffer* rxb) {
+static void iwl_mvm_create_skb(struct sk_buff* skb, struct ieee80211_hdr* hdr, uint16_t len,
+                               uint8_t crypt_len, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_rx_mpdu_desc* desc = (void*)pkt->data;
     unsigned int headlen, fraglen, pad_len = 0;
@@ -139,7 +139,7 @@ static void iwl_mvm_create_skb(struct sk_buff* skb, struct ieee80211_hdr* hdr, u
      */
     hdrlen += crypt_len;
     skb_put_data(skb, hdr, hdrlen);
-    skb_put_data(skb, (u8*)hdr + hdrlen + pad_len, headlen - hdrlen);
+    skb_put_data(skb, (uint8_t*)hdr + hdrlen + pad_len, headlen - hdrlen);
 
     fraglen = len - headlen;
 
@@ -173,9 +173,9 @@ static void iwl_mvm_pass_packet_to_mac80211(struct iwl_mvm* mvm, struct napi_str
 }
 
 static void iwl_mvm_get_signal_strength(struct iwl_mvm* mvm, struct ieee80211_rx_status* rx_status,
-                                        u32 rate_n_flags, int energy_a, int energy_b) {
+                                        uint32_t rate_n_flags, int energy_a, int energy_b) {
     int max_energy;
-    u32 rate_flags = rate_n_flags;
+    uint32_t rate_flags = rate_n_flags;
 
     energy_a = energy_a ? -energy_a : S8_MIN;
     energy_b = energy_b ? -energy_b : S8_MIN;
@@ -191,10 +191,10 @@ static void iwl_mvm_get_signal_strength(struct iwl_mvm* mvm, struct ieee80211_rx
 }
 
 static int iwl_mvm_rx_crypto(struct iwl_mvm* mvm, struct ieee80211_hdr* hdr,
-                             struct ieee80211_rx_status* stats, u16 phy_info,
-                             struct iwl_rx_mpdu_desc* desc, u32 pkt_flags, int queue,
-                             u8* crypt_len) {
-    u16 status = le16_to_cpu(desc->status);
+                             struct ieee80211_rx_status* stats, uint16_t phy_info,
+                             struct iwl_rx_mpdu_desc* desc, uint32_t pkt_flags, int queue,
+                             uint8_t* crypt_len) {
+    uint16_t status = le16_to_cpu(desc->status);
 
     /*
      * Drop UNKNOWN frames in aggregation, unless in monitor mode
@@ -270,8 +270,8 @@ static void iwl_mvm_rx_csum(struct ieee80211_sta* sta, struct sk_buff* skb,
                             struct iwl_rx_mpdu_desc* desc) {
     struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
-    u16 flags = le16_to_cpu(desc->l3l4_flags);
-    u8 l3_prot = (u8)((flags & IWL_RX_L3L4_L3_PROTO_MASK) >> IWL_RX_L3_PROTO_POS);
+    uint16_t flags = le16_to_cpu(desc->l3l4_flags);
+    uint8_t l3_prot = (uint8_t)((flags & IWL_RX_L3L4_L3_PROTO_MASK) >> IWL_RX_L3_PROTO_POS);
 
     if (mvmvif->features & NETIF_F_RXCSUM && flags & IWL_RX_L3L4_TCP_UDP_CSUM_OK &&
         (flags & IWL_RX_L3L4_IP_HDR_CSUM_OK || l3_prot == IWL_RX_L3_TYPE_IPV6 ||
@@ -289,7 +289,7 @@ static bool iwl_mvm_is_dup(struct ieee80211_sta* sta, int queue,
                            struct iwl_rx_mpdu_desc* desc) {
     struct iwl_mvm_sta* mvm_sta;
     struct iwl_mvm_rxq_dup_data* dup_data;
-    u8 tid, sub_frame_idx;
+    uint8_t tid, sub_frame_idx;
 
     if (WARN_ON(IS_ERR_OR_NULL(sta))) { return false; }
 
@@ -335,9 +335,9 @@ static bool iwl_mvm_is_dup(struct ieee80211_sta* sta, int queue,
     return false;
 }
 
-int iwl_mvm_notify_rx_queue(struct iwl_mvm* mvm, u32 rxq_mask, const u8* data, u32 count) {
+int iwl_mvm_notify_rx_queue(struct iwl_mvm* mvm, uint32_t rxq_mask, const uint8_t* data, uint32_t count) {
     struct iwl_rxq_sync_cmd* cmd;
-    u32 data_size = sizeof(*cmd) + count;
+    uint32_t data_size = sizeof(*cmd) + count;
     int ret;
 
     /* should be DWORD aligned */
@@ -364,7 +364,7 @@ int iwl_mvm_notify_rx_queue(struct iwl_mvm* mvm, u32 rxq_mask, const u8* data, u
  * We fully trust NSSN unless it is behind us due to reorder timeout.
  * Reorder timeout can only bring us up to buffer_size SNs ahead of NSSN.
  */
-static bool iwl_mvm_is_sn_less(u16 sn1, u16 sn2, u16 buffer_size) {
+static bool iwl_mvm_is_sn_less(uint16_t sn1, uint16_t sn2, uint16_t buffer_size) {
     return ieee80211_sn_less(sn1, sn2) && !ieee80211_sn_less(sn1, sn2 - buffer_size);
 }
 
@@ -372,10 +372,10 @@ static bool iwl_mvm_is_sn_less(u16 sn1, u16 sn2, u16 buffer_size) {
 
 static void iwl_mvm_release_frames(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
                                    struct napi_struct* napi, struct iwl_mvm_baid_data* baid_data,
-                                   struct iwl_mvm_reorder_buffer* reorder_buf, u16 nssn) {
+                                   struct iwl_mvm_reorder_buffer* reorder_buf, uint16_t nssn) {
     struct iwl_mvm_reorder_buf_entry* entries =
         &baid_data->entries[reorder_buf->queue * baid_data->entries_per_queue];
-    u16 ssn = reorder_buf->head_sn;
+    uint16_t ssn = reorder_buf->head_sn;
 
     lockdep_assert_held(&reorder_buf->lock);
 
@@ -403,7 +403,7 @@ static void iwl_mvm_release_frames(struct iwl_mvm* mvm, struct ieee80211_sta* st
 
 set_timer:
     if (reorder_buf->num_stored && !reorder_buf->removed) {
-        u16 index = reorder_buf->head_sn % reorder_buf->buf_size;
+        uint16_t index = reorder_buf->head_sn % reorder_buf->buf_size;
 
         while (skb_queue_empty(&entries[index].e.frames)) {
             index = (index + 1) % reorder_buf->buf_size;
@@ -422,7 +422,7 @@ void iwl_mvm_reorder_timer_expired(struct timer_list* t) {
     struct iwl_mvm_reorder_buf_entry* entries =
         &baid_data->entries[buf->queue * baid_data->entries_per_queue];
     int i;
-    u16 sn = 0, index = 0;
+    uint16_t sn = 0, index = 0;
     bool expired = false;
     bool cont = false;
 
@@ -458,7 +458,7 @@ void iwl_mvm_reorder_timer_expired(struct timer_list* t) {
     if (expired) {
         struct ieee80211_sta* sta;
         struct iwl_mvm_sta* mvmsta;
-        u8 sta_id = baid_data->sta_id;
+        uint8_t sta_id = baid_data->sta_id;
 
         rcu_read_lock();
         sta = rcu_dereference(buf->mvm->fw_id_to_mac_id[sta_id]);
@@ -485,7 +485,7 @@ static void iwl_mvm_del_ba(struct iwl_mvm* mvm, int queue, struct iwl_mvm_delba_
     struct iwl_mvm_baid_data* ba_data;
     struct ieee80211_sta* sta;
     struct iwl_mvm_reorder_buffer* reorder_buf;
-    u8 baid = data->baid;
+    uint8_t baid = data->baid;
 
     if (WARN_ONCE(baid >= IWL_MAX_BAID, "invalid BAID: %x\n", baid)) { return; }
 
@@ -550,15 +550,15 @@ static bool iwl_mvm_reorder(struct iwl_mvm* mvm, struct napi_struct* napi, int q
     struct iwl_mvm_baid_data* baid_data;
     struct iwl_mvm_reorder_buffer* buffer;
     struct sk_buff* tail;
-    u32 reorder = le32_to_cpu(desc->reorder_data);
+    uint32_t reorder = le32_to_cpu(desc->reorder_data);
     bool amsdu = desc->mac_flags2 & IWL_RX_MPDU_MFLG2_AMSDU;
     bool last_subframe = desc->amsdu_info & IWL_RX_MPDU_AMSDU_LAST_SUBFRAME;
-    u8 tid = ieee80211_get_tid(hdr);
-    u8 sub_frame_idx = desc->amsdu_info & IWL_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK;
+    uint8_t tid = ieee80211_get_tid(hdr);
+    uint8_t sub_frame_idx = desc->amsdu_info & IWL_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK;
     struct iwl_mvm_reorder_buf_entry* entries;
     int index;
-    u16 nssn, sn;
-    u8 baid;
+    uint16_t nssn, sn;
+    uint8_t baid;
 
     baid = (reorder & IWL_RX_MPDU_REORDER_BAID_MASK) >> IWL_RX_MPDU_REORDER_BAID_SHIFT;
 
@@ -629,7 +629,7 @@ static bool iwl_mvm_reorder(struct iwl_mvm* mvm, struct napi_struct* napi, int q
      */
     if (!iwl_mvm_is_sn_less(nssn, buffer->head_sn + buffer->buf_size, buffer->buf_size) ||
         !ieee80211_sn_less(sn, buffer->head_sn + buffer->buf_size)) {
-        u16 min_sn = ieee80211_sn_less(sn, nssn) ? sn : nssn;
+        uint16_t min_sn = ieee80211_sn_less(sn, nssn) ? sn : nssn;
 
         iwl_mvm_release_frames(mvm, sta, napi, baid_data, buffer, min_sn);
     }
@@ -714,7 +714,7 @@ drop:
     return true;
 }
 
-static void iwl_mvm_agg_rx_received(struct iwl_mvm* mvm, u32 reorder_data, u8 baid) {
+static void iwl_mvm_agg_rx_received(struct iwl_mvm* mvm, uint32_t reorder_data, uint8_t baid) {
     unsigned long now = jiffies;
     unsigned long timeout;
     struct iwl_mvm_baid_data* data;
@@ -747,9 +747,9 @@ out:
     rcu_read_unlock();
 }
 
-static void iwl_mvm_flip_address(u8* addr) {
+static void iwl_mvm_flip_address(uint8_t* addr) {
     int i;
-    u8 mac_addr[ETH_ALEN];
+    uint8_t mac_addr[ETH_ALEN];
 
     for (i = 0; i < ETH_ALEN; i++) {
         mac_addr[i] = addr[ETH_ALEN - i - 1];
@@ -764,10 +764,10 @@ struct iwl_mvm_rx_phy_data {
 };
 
 static void iwl_mvm_decode_he_mu_ext(struct iwl_mvm* mvm, struct iwl_mvm_rx_phy_data* phy_data,
-                                     u32 rate_n_flags, struct ieee80211_radiotap_he_mu* he_mu) {
-    u32 phy_data2 = le32_to_cpu(phy_data->d2);
-    u32 phy_data3 = le32_to_cpu(phy_data->d3);
-    u16 phy_data4 = le16_to_cpu(phy_data->d4);
+                                     uint32_t rate_n_flags, struct ieee80211_radiotap_he_mu* he_mu) {
+    uint32_t phy_data2 = le32_to_cpu(phy_data->d2);
+    uint32_t phy_data3 = le32_to_cpu(phy_data->d3);
+    uint16_t phy_data4 = le16_to_cpu(phy_data->d4);
 
     if (FIELD_GET(IWL_RX_PHY_DATA4_HE_MU_EXT_CH1_CRC_OK, phy_data4)) {
         he_mu->flags1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_MU_FLAGS1_CH1_RU_KNOWN |
@@ -799,7 +799,7 @@ static void iwl_mvm_decode_he_mu_ext(struct iwl_mvm* mvm, struct iwl_mvm_rx_phy_
     }
 }
 
-static void iwl_mvm_decode_he_phy_ru_alloc(struct iwl_mvm_rx_phy_data* phy_data, u32 rate_n_flags,
+static void iwl_mvm_decode_he_phy_ru_alloc(struct iwl_mvm_rx_phy_data* phy_data, uint32_t rate_n_flags,
                                            struct ieee80211_radiotap_he* he,
                                            struct ieee80211_radiotap_he_mu* he_mu,
                                            struct ieee80211_rx_status* rx_status) {
@@ -811,8 +811,8 @@ static void iwl_mvm_decode_he_phy_ru_alloc(struct iwl_mvm_rx_phy_data* phy_data,
      * happen though as management frames where we need
      * the TSF/timers are not be transmitted in HE-MU.
      */
-    u8 ru = le32_get_bits(phy_data->d1, IWL_RX_PHY_DATA1_HE_RU_ALLOC_MASK);
-    u8 offs = 0;
+    uint8_t ru = le32_get_bits(phy_data->d1, IWL_RX_PHY_DATA1_HE_RU_ALLOC_MASK);
+    uint8_t offs = 0;
 
     rx_status->bw = RATE_INFO_BW_HE_RU;
 
@@ -869,7 +869,7 @@ static void iwl_mvm_decode_he_phy_ru_alloc(struct iwl_mvm_rx_phy_data* phy_data,
 static void iwl_mvm_decode_he_phy_data(struct iwl_mvm* mvm, struct iwl_mvm_rx_phy_data* phy_data,
                                        struct ieee80211_radiotap_he* he,
                                        struct ieee80211_radiotap_he_mu* he_mu,
-                                       struct ieee80211_rx_status* rx_status, u32 rate_n_flags,
+                                       struct ieee80211_rx_status* rx_status, uint32_t rate_n_flags,
                                        int queue) {
     switch (phy_data->info_type) {
     case IWL_RX_PHY_INFO_TYPE_NONE:
@@ -976,13 +976,13 @@ static void iwl_mvm_decode_he_phy_data(struct iwl_mvm* mvm, struct iwl_mvm_rx_ph
 }
 
 static void iwl_mvm_rx_he(struct iwl_mvm* mvm, struct sk_buff* skb,
-                          struct iwl_mvm_rx_phy_data* phy_data, u32 rate_n_flags, u16 phy_info,
+                          struct iwl_mvm_rx_phy_data* phy_data, uint32_t rate_n_flags, uint16_t phy_info,
                           int queue) {
     struct ieee80211_rx_status* rx_status = IEEE80211_SKB_RXCB(skb);
     struct ieee80211_radiotap_he* he = NULL;
     struct ieee80211_radiotap_he_mu* he_mu = NULL;
-    u32 he_type = rate_n_flags & RATE_MCS_HE_TYPE_MSK;
-    u8 stbc, ltf;
+    uint32_t he_type = rate_n_flags & RATE_MCS_HE_TYPE_MSK;
+    uint8_t stbc, ltf;
     static const struct ieee80211_radiotap_he known = {
         .data1 = cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_DATA_MCS_KNOWN |
                              IEEE80211_RADIOTAP_HE_DATA1_DATA_DCM_KNOWN |
@@ -1149,12 +1149,12 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_rx_mpdu_desc* desc = (void*)pkt->data;
     struct ieee80211_hdr* hdr;
-    u32 len = le16_to_cpu(desc->mpdu_len);
-    u32 rate_n_flags, gp2_on_air_rise;
-    u16 phy_info = le16_to_cpu(desc->phy_info);
+    uint32_t len = le16_to_cpu(desc->mpdu_len);
+    uint32_t rate_n_flags, gp2_on_air_rise;
+    uint16_t phy_info = le16_to_cpu(desc->phy_info);
     struct ieee80211_sta* sta = NULL;
     struct sk_buff* skb;
-    u8 crypt_len = 0, channel, energy_a, energy_b;
+    uint8_t crypt_len = 0, channel, energy_a, energy_b;
     size_t desc_size;
     struct iwl_mvm_rx_phy_data phy_data = {
         .d4 = desc->phy_data4,
@@ -1257,7 +1257,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     }
 
     if (likely(!(phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD))) {
-        u64 tsf_on_air_rise;
+        uint64_t tsf_on_air_rise;
 
         if (mvm->trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
             tsf_on_air_rise = le64_to_cpu(desc->v3.tsf_on_air_rise);
@@ -1291,7 +1291,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     rcu_read_lock();
 
     if (desc->status & cpu_to_le16(IWL_RX_MPDU_STATUS_SRC_STA_FOUND)) {
-        u8 id = desc->sta_id_flags & IWL_RX_MPDU_SIF_STA_ID_MASK;
+        uint8_t id = desc->sta_id_flags & IWL_RX_MPDU_SIF_STA_ID_MASK;
 
         if (!WARN_ON_ONCE(id >= ARRAY_SIZE(mvm->fw_id_to_mac_id))) {
             sta = rcu_dereference(mvm->fw_id_to_mac_id[id]);
@@ -1308,7 +1308,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     if (sta) {
         struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
         struct ieee80211_vif* tx_blocked_vif = rcu_dereference(mvm->csa_tx_blocked_vif);
-        u8 baid = (u8)((le32_to_cpu(desc->reorder_data) & IWL_RX_MPDU_REORDER_BAID_MASK) >>
+        uint8_t baid = (uint8_t)((le32_to_cpu(desc->reorder_data) & IWL_RX_MPDU_REORDER_BAID_MASK) >>
                        IWL_RX_MPDU_REORDER_BAID_SHIFT);
         struct iwl_fw_dbg_trigger_tlv* trig;
         struct ieee80211_vif* vif = mvmsta->vif;
@@ -1338,7 +1338,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
 
         if (trig && ieee80211_is_beacon(hdr->frame_control)) {
             struct iwl_fw_dbg_trigger_low_rssi* rssi_trig;
-            s32 rssi;
+            int32_t rssi;
 
             rssi_trig = (void*)trig->data;
             rssi = le32_to_cpu(rssi_trig->rssi);
@@ -1369,7 +1369,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
          */
         if ((desc->mac_flags2 & IWL_RX_MPDU_MFLG2_AMSDU) &&
             !WARN_ON(!ieee80211_is_data_qos(hdr->frame_control))) {
-            u8* qc = ieee80211_get_qos_ctl(hdr);
+            uint8_t* qc = ieee80211_get_qos_ctl(hdr);
 
             *qc &= ~IEEE80211_QOS_CTL_A_MSDU_PRESENT;
 
@@ -1380,7 +1380,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
             }
         }
         if (baid != IWL_RX_REORDER_DATA_INVALID_BAID) {
-            u32 reorder_data = le32_to_cpu(desc->reorder_data);
+            uint32_t reorder_data = le32_to_cpu(desc->reorder_data);
 
             iwl_mvm_agg_rx_received(mvm, reorder_data, baid);
         }
@@ -1392,12 +1392,12 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     if (rate_n_flags & RATE_HT_MCS_GF_MSK) { rx_status->enc_flags |= RX_ENC_FLAG_HT_GF; }
     if (rate_n_flags & RATE_MCS_LDPC_MSK) { rx_status->enc_flags |= RX_ENC_FLAG_LDPC; }
     if (rate_n_flags & RATE_MCS_HT_MSK) {
-        u8 stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
+        uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
         rx_status->encoding = RX_ENC_HT;
         rx_status->rate_idx = rate_n_flags & RATE_HT_MCS_INDEX_MSK;
         rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
     } else if (rate_n_flags & RATE_MCS_VHT_MSK) {
-        u8 stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
+        uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
         rx_status->nss = ((rate_n_flags & RATE_VHT_MCS_NSS_MSK) >> RATE_VHT_MCS_NSS_POS) + 1;
         rx_status->rate_idx = rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK;
         rx_status->encoding = RX_ENC_VHT;
@@ -1441,14 +1441,14 @@ void iwl_mvm_rx_monitor_ndp(struct iwl_mvm* mvm, struct napi_struct* napi,
     struct ieee80211_rx_status* rx_status;
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_rx_no_data* desc = (void*)pkt->data;
-    u32 rate_n_flags = le32_to_cpu(desc->rate);
-    u32 gp2_on_air_rise = le32_to_cpu(desc->on_air_rise_time);
-    u32 rssi = le32_to_cpu(desc->rssi);
-    u32 info_type = le32_to_cpu(desc->info) & RX_NO_DATA_INFO_TYPE_MSK;
-    u16 phy_info = IWL_RX_MPDU_PHY_TSF_OVERLOAD;
+    uint32_t rate_n_flags = le32_to_cpu(desc->rate);
+    uint32_t gp2_on_air_rise = le32_to_cpu(desc->on_air_rise_time);
+    uint32_t rssi = le32_to_cpu(desc->rssi);
+    uint32_t info_type = le32_to_cpu(desc->info) & RX_NO_DATA_INFO_TYPE_MSK;
+    uint16_t phy_info = IWL_RX_MPDU_PHY_TSF_OVERLOAD;
     struct ieee80211_sta* sta = NULL;
     struct sk_buff* skb;
-    u8 channel, energy_a, energy_b;
+    uint8_t channel, energy_a, energy_b;
     struct iwl_mvm_rx_phy_data phy_data = {
         .d0 = desc->phy_info[0],
         .info_type = IWL_RX_PHY_INFO_TYPE_NONE,
@@ -1515,12 +1515,12 @@ void iwl_mvm_rx_monitor_ndp(struct iwl_mvm* mvm, struct napi_struct* napi,
     if (rate_n_flags & RATE_HT_MCS_GF_MSK) { rx_status->enc_flags |= RX_ENC_FLAG_HT_GF; }
     if (rate_n_flags & RATE_MCS_LDPC_MSK) { rx_status->enc_flags |= RX_ENC_FLAG_LDPC; }
     if (rate_n_flags & RATE_MCS_HT_MSK) {
-        u8 stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
+        uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
         rx_status->encoding = RX_ENC_HT;
         rx_status->rate_idx = rate_n_flags & RATE_HT_MCS_INDEX_MSK;
         rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
     } else if (rate_n_flags & RATE_MCS_VHT_MSK) {
-        u8 stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
+        uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
         rx_status->rate_idx = rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK;
         rx_status->encoding = RX_ENC_VHT;
         rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;

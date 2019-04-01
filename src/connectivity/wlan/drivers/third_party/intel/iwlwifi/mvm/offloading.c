@@ -46,14 +46,14 @@ void iwl_mvm_set_wowlan_qos_seq(struct iwl_mvm_sta* mvm_ap_sta, struct iwl_wowla
      * increment after using the value (i.e. store the next value to use).
      */
     for (i = 0; i < IWL_MAX_TID_COUNT; i++) {
-        u16 seq = mvm_ap_sta->tid_data[i].seq_number;
+        uint16_t seq = mvm_ap_sta->tid_data[i].seq_number;
         seq -= 0x10;
         cmd->qos_seq[i] = cpu_to_le16(seq);
     }
 }
 
 int iwl_mvm_send_proto_offload(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                               bool disable_offloading, bool offload_ns, u32 cmd_flags) {
+                               bool disable_offloading, bool offload_ns, uint32_t cmd_flags) {
     union {
         struct iwl_proto_offload_cmd_v1 v1;
         struct iwl_proto_offload_cmd_v2 v2;
@@ -67,8 +67,8 @@ int iwl_mvm_send_proto_offload(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
         .dataflags[0] = IWL_HCMD_DFL_DUP,
     };
     struct iwl_proto_offload_cmd_common* common;
-    u32 enabled = 0, size;
-    u32 capa_flags = mvm->fw->ucode_capa.flags;
+    uint32_t enabled = 0, size;
+    uint32_t capa_flags = mvm->fw->ucode_capa.flags;
 #if IS_ENABLED(CONFIG_IPV6)
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     int i;

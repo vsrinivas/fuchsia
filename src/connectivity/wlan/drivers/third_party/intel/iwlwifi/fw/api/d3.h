@@ -95,7 +95,7 @@ struct iwl_proto_offload_cmd_common {
     __le32 enabled;
     __be32 remote_ipv4_addr;
     __be32 host_ipv4_addr;
-    u8 arp_mac_addr[ETH_ALEN];
+    uint8_t arp_mac_addr[ETH_ALEN];
     __le16 reserved;
 } __packed;
 
@@ -111,10 +111,10 @@ struct iwl_proto_offload_cmd_common {
  */
 struct iwl_proto_offload_cmd_v1 {
     struct iwl_proto_offload_cmd_common common;
-    u8 remote_ipv6_addr[16];
-    u8 solicited_node_ipv6_addr[16];
-    u8 target_ipv6_addr[IWL_PROTO_OFFLOAD_NUM_IPV6_ADDRS_V1][16];
-    u8 ndp_mac_addr[ETH_ALEN];
+    uint8_t remote_ipv6_addr[16];
+    uint8_t solicited_node_ipv6_addr[16];
+    uint8_t target_ipv6_addr[IWL_PROTO_OFFLOAD_NUM_IPV6_ADDRS_V1][16];
+    uint8_t ndp_mac_addr[ETH_ALEN];
     __le16 reserved2;
 } __packed; /* PROT_OFFLOAD_CONFIG_CMD_DB_S_VER_1 */
 
@@ -131,18 +131,18 @@ struct iwl_proto_offload_cmd_v1 {
  */
 struct iwl_proto_offload_cmd_v2 {
     struct iwl_proto_offload_cmd_common common;
-    u8 remote_ipv6_addr[16];
-    u8 solicited_node_ipv6_addr[16];
-    u8 target_ipv6_addr[IWL_PROTO_OFFLOAD_NUM_IPV6_ADDRS_V2][16];
-    u8 ndp_mac_addr[ETH_ALEN];
-    u8 num_valid_ipv6_addrs;
-    u8 reserved2[3];
+    uint8_t remote_ipv6_addr[16];
+    uint8_t solicited_node_ipv6_addr[16];
+    uint8_t target_ipv6_addr[IWL_PROTO_OFFLOAD_NUM_IPV6_ADDRS_V2][16];
+    uint8_t ndp_mac_addr[ETH_ALEN];
+    uint8_t num_valid_ipv6_addrs;
+    uint8_t reserved2[3];
 } __packed; /* PROT_OFFLOAD_CONFIG_CMD_DB_S_VER_2 */
 
 struct iwl_ns_config {
     struct in6_addr source_ipv6_addr;
     struct in6_addr dest_ipv6_addr;
-    u8 target_mac_addr[ETH_ALEN];
+    uint8_t target_mac_addr[ETH_ALEN];
     __le16 reserved;
 } __packed; /* NS_OFFLOAD_CONFIG */
 
@@ -186,10 +186,10 @@ struct iwl_proto_offload_cmd_v3_large {
 #define IWL_WOWLAN_MAX_PATTERN_LEN 128
 
 struct iwl_wowlan_pattern {
-    u8 mask[IWL_WOWLAN_MAX_PATTERN_LEN / 8];
-    u8 pattern[IWL_WOWLAN_MAX_PATTERN_LEN];
-    u8 mask_size;
-    u8 pattern_size;
+    uint8_t mask[IWL_WOWLAN_MAX_PATTERN_LEN / 8];
+    uint8_t pattern[IWL_WOWLAN_MAX_PATTERN_LEN];
+    uint8_t mask_size;
+    uint8_t pattern_size;
     __le16 reserved;
 } __packed; /* WOWLAN_PATTERN_API_S_VER_1 */
 
@@ -253,11 +253,11 @@ struct iwl_wowlan_config_cmd {
     __le32 wakeup_filter;
     __le16 non_qos_seq;
     __le16 qos_seq[8];
-    u8 wowlan_ba_teardown_tids;
-    u8 is_11n_connection;
-    u8 offloading_tid;
-    u8 flags;
-    u8 reserved[2];
+    uint8_t wowlan_ba_teardown_tids;
+    uint8_t is_11n_connection;
+    uint8_t offloading_tid;
+    uint8_t flags;
+    uint8_t reserved[2];
 } __packed; /* WOWLAN_CONFIG_API_S_VER_4 */
 
 /*
@@ -298,9 +298,9 @@ struct iwl_wowlan_rsc_tsc_params_cmd {
 
 #define IWL_MIC_KEY_SIZE 8
 struct iwl_mic_keys {
-    u8 tx[IWL_MIC_KEY_SIZE];
-    u8 rx_unicast[IWL_MIC_KEY_SIZE];
-    u8 rx_mcast[IWL_MIC_KEY_SIZE];
+    uint8_t tx[IWL_MIC_KEY_SIZE];
+    uint8_t rx_unicast[IWL_MIC_KEY_SIZE];
+    uint8_t rx_mcast[IWL_MIC_KEY_SIZE];
 } __packed; /* MIC_KEYS_API_S_VER_1 */
 
 #define IWL_P1K_SIZE 5
@@ -321,8 +321,8 @@ struct iwl_wowlan_tkip_params_cmd {
 #define IWL_KEK_MAX_SIZE 32
 
 struct iwl_wowlan_kek_kck_material_cmd {
-    u8 kck[IWL_KCK_MAX_SIZE];
-    u8 kek[IWL_KEK_MAX_SIZE];
+    uint8_t kck[IWL_KCK_MAX_SIZE];
+    uint8_t kek[IWL_KEK_MAX_SIZE];
     __le16 kck_len;
     __le16 kek_len;
     __le64 replay_ctr;
@@ -358,10 +358,10 @@ enum iwl_wowlan_wakeup_reason {
 }; /* WOWLAN_WAKE_UP_REASON_API_E_VER_2 */
 
 struct iwl_wowlan_gtk_status_v1 {
-    u8 key_index;
-    u8 reserved[3];
-    u8 decrypt_key[16];
-    u8 tkip_mic_key[8];
+    uint8_t key_index;
+    uint8_t reserved[3];
+    uint8_t decrypt_key[16];
+    uint8_t tkip_mic_key[8];
     struct iwl_wowlan_rsc_tsc_params_cmd rsc;
 } __packed; /* WOWLAN_GTK_MATERIAL_VER_1 */
 
@@ -382,11 +382,11 @@ struct iwl_wowlan_gtk_status_v1 {
  * @rsc: TSC RSC counters
  */
 struct iwl_wowlan_gtk_status {
-    u8 key[WOWLAN_KEY_MAX_SIZE];
-    u8 key_len;
-    u8 key_flags;
-    u8 reserved[2];
-    u8 tkip_mic_key[8];
+    uint8_t key[WOWLAN_KEY_MAX_SIZE];
+    uint8_t key_len;
+    uint8_t key_flags;
+    uint8_t reserved[2];
+    uint8_t tkip_mic_key[8];
     struct iwl_wowlan_rsc_tsc_params_cmd rsc;
 } __packed; /* WOWLAN_GTK_MATERIAL_VER_2 */
 
@@ -403,10 +403,10 @@ struct iwl_wowlan_gtk_status {
  *  bit[6]:     Set iff this is the currently used IGTK
  */
 struct iwl_wowlan_igtk_status {
-    u8 key[WOWLAN_KEY_MAX_SIZE];
-    u8 ipn[6];
-    u8 key_len;
-    u8 key_flags;
+    uint8_t key[WOWLAN_KEY_MAX_SIZE];
+    uint8_t ipn[6];
+    uint8_t key_len;
+    uint8_t key_flags;
 } __packed; /* WOWLAN_IGTK_MATERIAL_VER_1 */
 
 /**
@@ -436,7 +436,7 @@ struct iwl_wowlan_status_v6 {
     __le32 received_beacons;
     __le32 wake_packet_length;
     __le32 wake_packet_bufsize;
-    u8 wake_packet[]; /* can be truncated from _length to _bufsize */
+    uint8_t wake_packet[]; /* can be truncated from _length to _bufsize */
 } __packed;           /* WOWLAN_STATUSES_API_S_VER_6 */
 
 /**
@@ -468,10 +468,10 @@ struct iwl_wowlan_status {
     __le32 received_beacons;
     __le32 wake_packet_length;
     __le32 wake_packet_bufsize;
-    u8 wake_packet[]; /* can be truncated from _length to _bufsize */
+    uint8_t wake_packet[]; /* can be truncated from _length to _bufsize */
 } __packed;           /* WOWLAN_STATUSES_API_S_VER_7 */
 
-static inline u8 iwlmvm_wowlan_gtk_idx(struct iwl_wowlan_gtk_status* gtk) {
+static inline uint8_t iwlmvm_wowlan_gtk_idx(struct iwl_wowlan_gtk_status* gtk) {
     return gtk->key_flags & IWL_WOWLAN_GTK_IDX_MASK;
 }
 
@@ -486,23 +486,23 @@ struct iwl_tcp_packet_info {
 
 struct iwl_tcp_packet {
     struct iwl_tcp_packet_info info;
-    u8 rx_mask[IWL_WOWLAN_MAX_PATTERN_LEN / 8];
-    u8 data[IWL_WOWLAN_TCP_MAX_PACKET_LEN];
+    uint8_t rx_mask[IWL_WOWLAN_MAX_PATTERN_LEN / 8];
+    uint8_t data[IWL_WOWLAN_TCP_MAX_PACKET_LEN];
 } __packed; /* TCP_PROTOCOL_PACKET_API_S_VER_1 */
 
 struct iwl_remote_wake_packet {
     struct iwl_tcp_packet_info info;
-    u8 rx_mask[IWL_WOWLAN_MAX_PATTERN_LEN / 8];
-    u8 data[IWL_WOWLAN_REMOTE_WAKE_MAX_PACKET_LEN];
+    uint8_t rx_mask[IWL_WOWLAN_MAX_PATTERN_LEN / 8];
+    uint8_t data[IWL_WOWLAN_REMOTE_WAKE_MAX_PACKET_LEN];
 } __packed; /* TCP_PROTOCOL_PACKET_API_S_VER_1 */
 
 struct iwl_wowlan_remote_wake_config {
     __le32 connection_max_time; /* unused */
     /* TCP_PROTOCOL_CONFIG_API_S_VER_1 */
-    u8 max_syn_retries;
-    u8 max_data_retries;
-    u8 tcp_syn_ack_timeout;
-    u8 tcp_ack_timeout;
+    uint8_t max_syn_retries;
+    uint8_t max_data_retries;
+    uint8_t tcp_syn_ack_timeout;
+    uint8_t tcp_ack_timeout;
 
     struct iwl_tcp_packet syn_tx;
     struct iwl_tcp_packet synack_rx;
@@ -513,15 +513,15 @@ struct iwl_wowlan_remote_wake_config {
     struct iwl_remote_wake_packet wake_rx;
 
     /* REMOTE_WAKE_OFFSET_INFO_API_S_VER_1 */
-    u8 sequence_number_offset;
-    u8 sequence_number_length;
-    u8 token_offset;
-    u8 token_length;
+    uint8_t sequence_number_offset;
+    uint8_t sequence_number_length;
+    uint8_t token_offset;
+    uint8_t token_length;
     /* REMOTE_WAKE_PROTOCOL_PARAMS_API_S_VER_1 */
     __le32 initial_sequence_number;
     __le16 keepalive_interval;
     __le16 num_tokens;
-    u8 tokens[IWL_WOWLAN_REMOTE_WAKE_MAX_TOKENS];
+    uint8_t tokens[IWL_WOWLAN_REMOTE_WAKE_MAX_TOKENS];
 } __packed; /* REMOTE_WAKE_CONFIG_API_S_VER_2 */
 
 /* TODO: NetDetect API */

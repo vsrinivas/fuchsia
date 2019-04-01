@@ -110,8 +110,8 @@ static enum iwl_bt_coex_lut_type iwl_get_coex_type(struct iwl_mvm* mvm,
                                                    const struct ieee80211_vif* vif) {
     struct ieee80211_chanctx_conf* chanctx_conf;
     enum iwl_bt_coex_lut_type ret;
-    u16 phy_ctx_id;
-    u32 primary_ch_phy_id, secondary_ch_phy_id;
+    uint16_t phy_ctx_id;
+    uint32_t primary_ch_phy_id, secondary_ch_phy_id;
 
     /*
      * Checking that we hold mvm->mutex is a good idea, but the rate
@@ -137,7 +137,7 @@ static enum iwl_bt_coex_lut_type iwl_get_coex_type(struct iwl_mvm* mvm,
         return ret;
     }
 
-    phy_ctx_id = *((u16*)chanctx_conf->drv_priv);
+    phy_ctx_id = *((uint16_t*)chanctx_conf->drv_priv);
     primary_ch_phy_id = le32_to_cpu(mvm->last_bt_ci_cmd.primary_ch_phy_id);
     secondary_ch_phy_id = le32_to_cpu(mvm->last_bt_ci_cmd.secondary_ch_phy_id);
 
@@ -155,7 +155,7 @@ static enum iwl_bt_coex_lut_type iwl_get_coex_type(struct iwl_mvm* mvm,
 
 int iwl_mvm_send_bt_init_conf(struct iwl_mvm* mvm) {
     struct iwl_bt_coex_cmd bt_cmd = {};
-    u32 mode;
+    uint32_t mode;
 
     lockdep_assert_held(&mvm->mutex);
 
@@ -196,10 +196,10 @@ send_cmd:
     return iwl_mvm_send_cmd_pdu(mvm, BT_CONFIG, 0, sizeof(bt_cmd), &bt_cmd);
 }
 
-static int iwl_mvm_bt_coex_reduced_txp(struct iwl_mvm* mvm, u8 sta_id, bool enable) {
+static int iwl_mvm_bt_coex_reduced_txp(struct iwl_mvm* mvm, uint8_t sta_id, bool enable) {
     struct iwl_bt_coex_reduced_txp_update_cmd cmd = {};
     struct iwl_mvm_sta* mvmsta;
-    u32 value;
+    uint32_t value;
     int ret;
 
     mvmsta = iwl_mvm_sta_from_staid_protected(mvm, sta_id);
@@ -228,8 +228,8 @@ struct iwl_bt_iterator_data {
     struct ieee80211_chanctx_conf* primary;
     struct ieee80211_chanctx_conf* secondary;
     bool primary_ll;
-    u8 primary_load;
-    u8 secondary_load;
+    uint8_t primary_load;
+    uint8_t secondary_load;
 };
 
 static inline void iwl_mvm_bt_coex_enable_rssi_event(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
@@ -261,14 +261,14 @@ static void iwl_mvm_bt_coex_tcm_based_ci(struct iwl_mvm* mvm, struct iwl_bt_iter
 }
 
 /* must be called under rcu_read_lock */
-static void iwl_mvm_bt_notif_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_bt_notif_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_bt_iterator_data* data = _data;
     struct iwl_mvm* mvm = data->mvm;
     struct ieee80211_chanctx_conf* chanctx_conf;
     /* default smps_mode is AUTOMATIC - only used for client modes */
     enum ieee80211_smps_mode smps_mode = IEEE80211_SMPS_AUTOMATIC;
-    u32 bt_activity_grading, min_ag_for_static_smps;
+    uint32_t bt_activity_grading, min_ag_for_static_smps;
     int ave_rssi;
 
     lockdep_assert_held(&mvm->mutex);
@@ -412,7 +412,7 @@ static void iwl_mvm_bt_coex_notif_handle(struct iwl_mvm* mvm) {
         .notif = &mvm->last_bt_notif,
     };
     struct iwl_bt_coex_ci_cmd cmd = {};
-    u8 ci_bw_idx;
+    uint8_t ci_bw_idx;
 
     /* Ignore updates if we are in force mode */
     if (unlikely(mvm->bt_force_ant_mode != BT_FORCE_ANT_DIS)) { return; }
@@ -441,7 +441,7 @@ static void iwl_mvm_bt_coex_notif_handle(struct iwl_mvm* mvm) {
         }
 
         cmd.bt_primary_ci = iwl_ci_mask[chan->def.chan->hw_value][ci_bw_idx];
-        cmd.primary_ch_phy_id = cpu_to_le32(*((u16*)data.primary->drv_priv));
+        cmd.primary_ch_phy_id = cpu_to_le32(*((uint16_t*)data.primary->drv_priv));
     }
 
     if (data.secondary) {
@@ -462,7 +462,7 @@ static void iwl_mvm_bt_coex_notif_handle(struct iwl_mvm* mvm) {
         }
 
         cmd.bt_secondary_ci = iwl_ci_mask[chan->def.chan->hw_value][ci_bw_idx];
-        cmd.secondary_ch_phy_id = cpu_to_le32(*((u16*)data.secondary->drv_priv));
+        cmd.secondary_ch_phy_id = cpu_to_le32(*((uint16_t*)data.secondary->drv_priv));
     }
 
     rcu_read_unlock();
@@ -531,7 +531,7 @@ void iwl_mvm_bt_rssi_event(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
 #define LINK_QUAL_AGG_TIME_LIMIT_DEF (4000)
 #define LINK_QUAL_AGG_TIME_LIMIT_BT_ACT (1200)
 
-u16 iwl_mvm_coex_agg_time_limit(struct iwl_mvm* mvm, struct ieee80211_sta* sta) {
+uint16_t iwl_mvm_coex_agg_time_limit(struct iwl_mvm* mvm, struct ieee80211_sta* sta) {
     struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
     struct iwl_mvm_phy_ctxt* phy_ctxt = mvmvif->phy_ctxt;
@@ -578,7 +578,7 @@ bool iwl_mvm_bt_coex_is_mimo_allowed(struct iwl_mvm* mvm, struct ieee80211_sta* 
     return lut_type != BT_COEX_LOOSE_LUT;
 }
 
-bool iwl_mvm_bt_coex_is_ant_avail(struct iwl_mvm* mvm, u8 ant) {
+bool iwl_mvm_bt_coex_is_ant_avail(struct iwl_mvm* mvm, uint8_t ant) {
     /* there is no other antenna, shared antenna is always available */
     if (mvm->cfg->bt_shared_single_ant) { return true; }
 
@@ -595,14 +595,14 @@ bool iwl_mvm_bt_coex_is_shared_ant_avail(struct iwl_mvm* mvm) {
 }
 
 bool iwl_mvm_bt_coex_is_tpc_allowed(struct iwl_mvm* mvm, enum nl80211_band band) {
-    u32 bt_activity = le32_to_cpu(mvm->last_bt_notif.bt_activity_grading);
+    uint32_t bt_activity = le32_to_cpu(mvm->last_bt_notif.bt_activity_grading);
 
     if (band != NL80211_BAND_2GHZ) { return false; }
 
     return bt_activity >= BT_LOW_TRAFFIC;
 }
 
-u8 iwl_mvm_bt_coex_get_single_ant_msk(struct iwl_mvm* mvm, u8 enabled_ants) {
+uint8_t iwl_mvm_bt_coex_get_single_ant_msk(struct iwl_mvm* mvm, uint8_t enabled_ants) {
     if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_COEX_SCHEMA_2) &&
         (mvm->cfg->non_shared_ant & enabled_ants)) {
         return mvm->cfg->non_shared_ant;
@@ -611,8 +611,8 @@ u8 iwl_mvm_bt_coex_get_single_ant_msk(struct iwl_mvm* mvm, u8 enabled_ants) {
     return first_antenna(enabled_ants);
 }
 
-u8 iwl_mvm_bt_coex_tx_prio(struct iwl_mvm* mvm, struct ieee80211_hdr* hdr,
-                           struct ieee80211_tx_info* info, u8 ac) {
+uint8_t iwl_mvm_bt_coex_tx_prio(struct iwl_mvm* mvm, struct ieee80211_hdr* hdr,
+                           struct ieee80211_tx_info* info, uint8_t ac) {
     __le16 fc = hdr->frame_control;
     bool mplut_enabled = iwl_mvm_is_mplut_supported(mvm);
 

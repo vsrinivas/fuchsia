@@ -78,10 +78,10 @@ enum iwl_mac_context_info {
  * about the reception of the packet.
  */
 struct iwl_rx_phy_info {
-    u8 non_cfg_phy_cnt;
-    u8 cfg_phy_cnt;
-    u8 stat_id;
-    u8 reserved1;
+    uint8_t non_cfg_phy_cnt;
+    uint8_t cfg_phy_cnt;
+    uint8_t stat_id;
+    uint8_t reserved1;
     __le32 system_timestamp;
     __le64 timestamp;
     __le32 beacon_time_stamp;
@@ -90,8 +90,8 @@ struct iwl_rx_phy_info {
     __le32 non_cfg_phy[IWL_RX_INFO_PHY_CNT];
     __le32 rate_n_flags;
     __le32 byte_count;
-    u8 mac_active_msk;
-    u8 mac_context_info;
+    uint8_t mac_active_msk;
+    uint8_t mac_context_info;
     __le16 frame_time;
 } __packed;
 
@@ -447,19 +447,19 @@ struct iwl_rx_mpdu_desc_v1 {
     /**
      * @energy_a: energy chain A
      */
-    u8 energy_a;
+    uint8_t energy_a;
     /**
      * @energy_b: energy chain B
      */
-    u8 energy_b;
+    uint8_t energy_b;
     /**
      * @channel: channel number
      */
-    u8 channel;
+    uint8_t channel;
     /**
      * @mac_context: MAC context mask
      */
-    u8 mac_context;
+    uint8_t mac_context;
     /* DW11 */
     /**
      * @gp2_on_air_rise: GP2 timer value on air rise (INA)
@@ -538,19 +538,19 @@ struct iwl_rx_mpdu_desc_v3 {
     /**
      * @energy_a: energy chain A
      */
-    u8 energy_a;
+    uint8_t energy_a;
     /**
      * @energy_b: energy chain B
      */
-    u8 energy_b;
+    uint8_t energy_b;
     /**
      * @channel: channel number
      */
-    u8 channel;
+    uint8_t channel;
     /**
      * @mac_context: MAC context mask
      */
-    u8 mac_context;
+    uint8_t mac_context;
     /* DW13 */
     /**
      * @gp2_on_air_rise: GP2 timer value on air rise (INA)
@@ -597,16 +597,16 @@ struct iwl_rx_mpdu_desc {
     /**
      * @mac_flags1: &enum iwl_rx_mpdu_mac_flags1
      */
-    u8 mac_flags1;
+    uint8_t mac_flags1;
     /**
      * @mac_flags2: &enum iwl_rx_mpdu_mac_flags2
      */
-    u8 mac_flags2;
+    uint8_t mac_flags2;
     /* DW3 */
     /**
      * @amsdu_info: &enum iwl_rx_mpdu_amsdu_info
      */
-    u8 amsdu_info;
+    uint8_t amsdu_info;
     /**
      * @phy_info: &enum iwl_rx_mpdu_phy_info
      */
@@ -614,7 +614,7 @@ struct iwl_rx_mpdu_desc {
     /**
      * @mac_phy_idx: MAC/PHY index
      */
-    u8 mac_phy_idx;
+    uint8_t mac_phy_idx;
     /* DW4 - carries csum data only when rpa_en == 1 */
     /**
      * @raw_csum: raw checksum (alledgedly unreliable)
@@ -640,11 +640,11 @@ struct iwl_rx_mpdu_desc {
     /**
      * @hash_filter: hash filter value
      */
-    u8 hash_filter;
+    uint8_t hash_filter;
     /**
      * @sta_id_flags: &enum iwl_rx_mpdu_sta_id_flags
      */
-    u8 sta_id_flags;
+    uint8_t sta_id_flags;
     /* DW6 */
     /**
      * @reorder_data: &enum iwl_rx_mpdu_reorder_data
@@ -775,8 +775,8 @@ enum iwl_completion_desc_wifi_status {
 };
 
 struct iwl_frame_release {
-    u8 baid;
-    u8 reserved;
+    uint8_t baid;
+    uint8_t reserved;
     __le16 nssn;
 };
 
@@ -804,10 +804,10 @@ enum iwl_rss_hash_func_en {
  */
 struct iwl_rss_config_cmd {
     __le32 flags;
-    u8 hash_mask;
-    u8 reserved[3];
+    uint8_t hash_mask;
+    uint8_t reserved[3];
     __le32 secret_key[IWL_RSS_HASH_KEY_CNT];
-    u8 indirection_table[IWL_RSS_INDIRECTION_TABLE_SIZE];
+    uint8_t indirection_table[IWL_RSS_INDIRECTION_TABLE_SIZE];
 } __packed; /* RSS_CONFIG_CMD_API_S_VER_1 */
 
 #define IWL_MULTI_QUEUE_SYNC_MSG_MAX_SIZE 128
@@ -826,7 +826,7 @@ struct iwl_rxq_sync_cmd {
     __le32 flags;
     __le32 rxq_mask;
     __le32 count;
-    u8 payload[];
+    uint8_t payload[];
 } __packed; /* MULTI_QUEUE_DRV_SYNC_HDR_CMD_API_S_VER_1 */
 
 /**
@@ -838,7 +838,7 @@ struct iwl_rxq_sync_cmd {
  */
 struct iwl_rxq_sync_notification {
     __le32 count;
-    u8 payload[];
+    uint8_t payload[];
 } __packed; /* MULTI_QUEUE_DRV_SYNC_HDR_CMD_API_S_VER_1 */
 
 /**
@@ -863,10 +863,10 @@ enum iwl_mvm_rxq_notif_type {
  * @data: payload
  */
 struct iwl_mvm_internal_rxq_notif {
-    u16 type;
-    u16 sync;
-    u32 cookie;
-    u8 data[];
+    uint16_t type;
+    uint16_t sync;
+    uint32_t cookie;
+    uint8_t data[];
 } __packed;
 
 /**
@@ -889,8 +889,8 @@ enum iwl_mvm_pm_event {
  * @type: the new powersave state, see &enum iwl_mvm_pm_event
  */
 struct iwl_mvm_pm_state_notification {
-    u8 sta_id;
-    u8 type;
+    uint8_t sta_id;
+    uint8_t type;
     /* private: */
     __le16 reserved;
 } __packed; /* PEER_PM_NTFY_API_S_VER_1 */
@@ -926,8 +926,8 @@ struct iwl_ba_window_status_notif {
  * @fr_bd_wid: Initial index of the free table
  */
 struct iwl_rfh_queue_data {
-    u8 q_num;
-    u8 enable;
+    uint8_t q_num;
+    uint8_t enable;
     __le16 reserved;
     __le64 urbd_stts_wrptr;
     __le64 fr_bd_cb;
@@ -942,8 +942,8 @@ struct iwl_rfh_queue_data {
  * @data: DMA addresses per-queue
  */
 struct iwl_rfh_queue_config {
-    u8 num_queues;
-    u8 reserved[3];
+    uint8_t num_queues;
+    uint8_t reserved[3];
     struct iwl_rfh_queue_data data[];
 } __packed; /* RFH_QUEUE_CONFIG_API_S_VER_1 */
 

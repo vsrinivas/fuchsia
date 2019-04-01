@@ -116,14 +116,14 @@ IWL_EXPORT_SYMBOL(iwl_trans_send_cmd);
  */
 static int iwl_hcmd_names_cmp(const void* key, const void* elt) {
     const struct iwl_hcmd_names* name = elt;
-    u8 cmd1 = *(u8*)key;
-    u8 cmd2 = name->cmd_id;
+    uint8_t cmd1 = *(uint8_t*)key;
+    uint8_t cmd2 = name->cmd_id;
 
     return (cmd1 - cmd2);
 }
 
-const char* iwl_get_cmd_string(struct iwl_trans* trans, u32 id) {
-    u8 grp, cmd;
+const char* iwl_get_cmd_string(struct iwl_trans* trans, uint32_t id) {
+    uint8_t grp, cmd;
     struct iwl_hcmd_names* ret;
     const struct iwl_hcmd_arr* arr;
     size_t size = sizeof(struct iwl_hcmd_names);

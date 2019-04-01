@@ -111,7 +111,7 @@ struct iwl_fw_error_dump_data {
 struct iwl_fw_error_dump_file {
     __le32 barker;
     __le32 file_len;
-    u8 data[0];
+    uint8_t data[0];
 } __packed;
 
 /**
@@ -123,7 +123,7 @@ struct iwl_fw_error_dump_file {
 struct iwl_fw_error_dump_txcmd {
     __le32 cmdlen;
     __le32 caplen;
-    u8 data[];
+    uint8_t data[];
 } __packed;
 
 /**
@@ -144,7 +144,7 @@ struct iwl_fw_error_dump_fifo {
     __le32 rd_ptr;
     __le32 fence_ptr;
     __le32 fence_mode;
-    u8 data[];
+    uint8_t data[];
 } __packed;
 
 enum iwl_fw_error_dump_family {
@@ -170,10 +170,10 @@ enum iwl_fw_error_dump_family {
 struct iwl_fw_error_dump_info {
     __le32 device_family;
     __le32 hw_step;
-    u8 fw_human_readable[FW_VER_HUMAN_READABLE_SZ];
-    u8 dev_human_readable[64];
-    u8 bus_human_readable[8];
-    u8 num_of_lmacs;
+    uint8_t fw_human_readable[FW_VER_HUMAN_READABLE_SZ];
+    uint8_t dev_human_readable[64];
+    uint8_t bus_human_readable[8];
+    uint8_t num_of_lmacs;
     __le32 umac_err_id;
     __le32 lmac_err_id[MAX_NUM_LMAC];
 } __packed;
@@ -191,7 +191,7 @@ struct iwl_fw_error_dump_fw_mon {
     __le32 fw_mon_base_ptr;
     __le32 fw_mon_cycle_cnt;
     __le32 reserved[3];
-    u8 data[];
+    uint8_t data[];
 } __packed;
 
 #define MAX_NUM_LMAC 2
@@ -243,7 +243,7 @@ enum iwl_fw_error_dump_mem_type {
 struct iwl_fw_error_dump_mem {
     __le32 type;
     __le32 offset;
-    u8 data[];
+    uint8_t data[];
 };
 
 /**
@@ -257,9 +257,9 @@ struct iwl_fw_error_dump_mem {
 struct iwl_fw_error_dump_named_mem {
     __le32 type;
     __le32 offset;
-    u8 name_len;
-    u8 name[32];
-    u8 data[];
+    uint8_t name_len;
+    uint8_t name[32];
+    uint8_t data[];
 };
 
 /**
@@ -273,7 +273,7 @@ struct iwl_fw_error_dump_rb {
     __le32 index;
     __le32 rxq;
     __le32 reserved;
-    u8 data[];
+    uint8_t data[];
 };
 
 /**
@@ -286,7 +286,7 @@ struct iwl_fw_error_dump_rb {
 struct iwl_fw_error_dump_paging {
     __le32 index;
     __le32 reserved;
-    u8 data[];
+    uint8_t data[];
 };
 
 /**
@@ -360,7 +360,7 @@ enum iwl_fw_dbg_trigger {
  */
 struct iwl_fw_error_dump_trigger_desc {
     __le32 type;
-    u8 data[];
+    uint8_t data[];
 };
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_ERROR_DUMP_H_

@@ -251,8 +251,8 @@ struct iwl_time_event_cmd {
     __le32 depends_on;
     __le32 interval;
     __le32 duration;
-    u8 repeat;
-    u8 max_frags;
+    uint8_t repeat;
+    uint8_t max_frags;
     __le16 policy;
 } __packed; /* MAC_TIME_EVENT_CMD_API_S_VER_2 */
 
@@ -324,7 +324,7 @@ struct iwl_hs20_roc_req {
     __le32 event_unique_id;
     __le32 sta_id_and_color;
     struct iwl_fw_channel_info channel_info;
-    u8 node_addr[ETH_ALEN];
+    uint8_t node_addr[ETH_ALEN];
     __le16 reserved;
     __le32 apply_time;
     __le32 apply_time_max_delay;

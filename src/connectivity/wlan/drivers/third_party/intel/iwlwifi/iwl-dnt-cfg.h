@@ -102,8 +102,8 @@ enum {
 };
 
 struct dnt_collect_entry {
-    u8* data;
-    u32 size;
+    uint8_t* data;
+    uint32_t size;
 };
 
 /**
@@ -129,16 +129,16 @@ struct dnt_collect_db {
  * @periph: periphery registers data pointer
  */
 struct dnt_crash_data {
-    u8* sram;
-    u32 sram_buf_size;
-    u8* dbgm;
-    u32 dbgm_buf_size;
-    u8* rx;
-    u32 rx_buf_size;
-    u8* tx;
-    u32 tx_buf_size;
-    u8* periph;
-    u32 periph_buf_size;
+    uint8_t* sram;
+    uint32_t sram_buf_size;
+    uint8_t* dbgm;
+    uint32_t dbgm_buf_size;
+    uint8_t* rx;
+    uint32_t rx_buf_size;
+    uint8_t* tx;
+    uint32_t tx_buf_size;
+    uint8_t* periph;
+    uint32_t periph_buf_size;
 };
 
 /**
@@ -150,15 +150,15 @@ struct dnt_crash_data {
  * @um_list: uCodeMessages link list
  */
 struct iwl_dnt_dispatch {
-    u32 mon_in_mode;
-    u32 mon_out_mode;
-    u32 mon_output;
+    uint32_t mon_in_mode;
+    uint32_t mon_out_mode;
+    uint32_t mon_output;
 
-    u32 ucode_msgs_in_mode;
-    u32 ucode_msgs_out_mode;
-    u32 ucode_msgs_output;
+    uint32_t ucode_msgs_in_mode;
+    uint32_t ucode_msgs_out_mode;
+    uint32_t ucode_msgs_output;
 
-    u32 crash_out_mode;
+    uint32_t crash_out_mode;
 
     struct dnt_collect_db* dbgm_db;
     struct dnt_collect_db* um_db;
@@ -189,22 +189,22 @@ struct iwl_dnt {
     struct device* dev;
     const struct fw_img* image;
 
-    u32 iwl_dnt_status;
+    uint32_t iwl_dnt_status;
     bool is_configuration_valid;
-    u8 cur_input_mask;
-    u8 cur_output_mask;
+    uint8_t cur_input_mask;
+    uint8_t cur_output_mask;
 
-    u32 cur_mon_type;
-    u8* mon_buf_cpu_addr;
+    uint32_t cur_mon_type;
+    uint8_t* mon_buf_cpu_addr;
     dma_addr_t mon_dma_addr;
-    u64 mon_base_addr;
-    u64 mon_end_addr;
-    u32 mon_buf_size;
-    u32 cur_mon_mode;
+    uint64_t mon_base_addr;
+    uint64_t mon_end_addr;
+    uint32_t mon_buf_size;
+    uint32_t cur_mon_mode;
 
     struct iwl_dnt_dispatch dispatch;
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
-    u8 debugfs_counter;
+    uint8_t debugfs_counter;
     wait_queue_head_t debugfs_waitq;
     struct dentry* debugfs_entry;
 #endif

@@ -87,7 +87,7 @@ enum iwl_nan_subcmd_ids {
  * @chan_bitmap: channel bitmap
  */
 struct iwl_fw_chan_avail {
-    u8 op_class;
+    uint8_t op_class;
     __le16 chan_bitmap;
 } __packed;
 
@@ -109,10 +109,10 @@ struct iwl_nan_umac_cfg {
     __le32 action;
     __le32 tsf_id;
     __le32 sta_id;
-    u8 node_addr[6];
+    uint8_t node_addr[6];
     __le16 reserved1;
-    u8 master_pref;
-    u8 master_rand;
+    uint8_t master_pref;
+    uint8_t master_rand;
     __le16 cluster_id;
     __le32 dual_band;
     __le32 beacon_template_id;
@@ -130,10 +130,10 @@ struct iwl_nan_umac_cfg {
  * @action_delay: usecs to delay SDFs (DEBUG)
  */
 struct iwl_nan_testbed_cfg {
-    u8 chan24;
-    u8 chan52;
-    u8 hop_count;
-    u8 op_bands;
+    uint8_t chan24;
+    uint8_t chan52;
+    uint8_t hop_count;
+    uint8_t op_bands;
     __le32 warmup_timer;
     __le64 custom_tsf;
     __le32 action_delay;
@@ -149,8 +149,8 @@ struct iwl_nan_testbed_cfg {
  */
 struct iwl_nan_nan2_cfg {
     __le16 cdw;
-    u8 op_mode;
-    u8 pot_avail_len;
+    uint8_t op_mode;
+    uint8_t pot_avail_len;
     struct iwl_fw_chan_avail pot_avail[20];
 } __packed; /* NAN_CONFIG_CMD_API_S_VER_1 */
 
@@ -234,22 +234,22 @@ enum iwl_fw_nan_func_flags {
  */
 struct iwl_nan_add_func_common {
     __le32 action;
-    u8 instance_id;
-    u8 type;
-    u8 service_id[6];
+    uint8_t instance_id;
+    uint8_t type;
+    uint8_t service_id[6];
     __le16 flags;
-    u8 flw_up_id;
-    u8 flw_up_req_id;
-    u8 flw_up_addr[6];
+    uint8_t flw_up_id;
+    uint8_t flw_up_req_id;
+    uint8_t flw_up_addr[6];
     __le16 reserved1;
     __le32 ttl;
     struct iwl_fw_channel_info faw_ci;
-    u8 faw_attrtype;
-    u8 serv_info_len;
-    u8 srf_len;
-    u8 rx_filter_len;
-    u8 tx_filter_len;
-    u8 dw_interval;
+    uint8_t faw_attrtype;
+    uint8_t serv_info_len;
+    uint8_t srf_len;
+    uint8_t rx_filter_len;
+    uint8_t tx_filter_len;
+    uint8_t dw_interval;
 } __packed; /* NAN_DISCO_FUNC_FIXED_CMD_API_S_VER_1 */
 
 /**
@@ -265,11 +265,11 @@ struct iwl_nan_add_func_common {
  */
 struct iwl_nan_add_func_cmd_v2 {
     struct iwl_nan_add_func_common cmn;
-    u8 cipher_capa;
-    u8 cipher_suite_id;
+    uint8_t cipher_capa;
+    uint8_t cipher_suite_id;
     __le16 security_ctx_len;
     __le16 sdea_ctrl;
-    u8 data[0];
+    uint8_t data[0];
 } __packed; /* NAN_DISCO_FUNC_FIXED_CMD_API_S_VER_2 */
 
 /**
@@ -281,8 +281,8 @@ struct iwl_nan_add_func_cmd_v2 {
  */
 struct iwl_nan_add_func_cmd {
     struct iwl_nan_add_func_common cmn;
-    u8 reserved[2];
-    u8 data[0];
+    uint8_t reserved[2];
+    uint8_t data[0];
 } __packed; /* NAN_DISCO_FUNC_FIXED_CMD_API_S_VER_1 */
 
 enum iwl_nan_add_func_resp_status {
@@ -301,8 +301,8 @@ enum iwl_nan_add_func_resp_status {
  * @reserved: reserved
  */
 struct iwl_nan_add_func_res {
-    u8 instance_id;
-    u8 status;
+    uint8_t instance_id;
+    uint8_t status;
     __le16 reserved;
 } __packed; /* NAN_DISCO_FUNC_CMD_API_S_VER_1 */
 
@@ -351,14 +351,14 @@ enum iwl_nan_de_func_sdea_flags {
  * @buf: service specific information followed by attributes
  */
 struct iwl_nan_disc_evt_notify_v1 {
-    u8 peer_mac_addr[6];
+    uint8_t peer_mac_addr[6];
     __le16 reserved1;
-    u8 type;
-    u8 instance_id;
-    u8 peer_instance;
-    u8 service_info_len;
+    uint8_t type;
+    uint8_t instance_id;
+    uint8_t peer_instance;
+    uint8_t service_info_len;
     __le32 attrs_len;
-    u8 buf[0];
+    uint8_t buf[0];
 } __packed; /* NAN_DISCO_EVENT_NTFY_API_S_VER_1 */
 
 /**
@@ -370,10 +370,10 @@ struct iwl_nan_disc_evt_notify_v1 {
  * @buf: security context data
  */
 struct iwl_nan_sec_ctxt_info {
-    u8 type;
-    u8 reserved;
+    uint8_t type;
+    uint8_t reserved;
     __le16 len;
-    u8 buf[0];
+    uint8_t buf[0];
 } __packed; /* NAN_DISCO_SEC_CTXT_ID_API_S_VER_1 */
 
 /**
@@ -393,16 +393,16 @@ struct iwl_nan_sec_ctxt_info {
  *     more iwl_nan_sec_ctxt_info entries.
  */
 struct iwl_nan_disc_info {
-    u8 type;
-    u8 instance_id;
-    u8 peer_instance;
-    u8 service_info_len;
+    uint8_t type;
+    uint8_t instance_id;
+    uint8_t peer_instance;
+    uint8_t service_info_len;
     __le16 sdea_control;
     __le16 sdea_service_info_len;
     __le16 sec_ctxt_len;
-    u8 cipher_suite_ids;
-    u8 sdea_update_indicator;
-    u8 buf[0];
+    uint8_t cipher_suite_ids;
+    uint8_t sdea_update_indicator;
+    uint8_t buf[0];
 } __packed; /* NAN_DISCO_INFO_API_S_VER_1 */
 
 /**
@@ -418,11 +418,11 @@ struct iwl_nan_disc_info {
  *     dword aligned address.
  */
 struct iwl_nan_disc_evt_notify_v2 {
-    u8 peer_mac_addr[6];
+    uint8_t peer_mac_addr[6];
     __le16 reserved1;
     __le32 match_len;
     __le32 avail_attrs_len;
-    u8 buf[0];
+    uint8_t buf[0];
 } __packed; /* NAN_DISCO_EVENT_NTFY_API_S_VER_2 */
 
 /* NAN function termination reasons */
@@ -441,10 +441,10 @@ enum iwl_fw_nan_de_term_reason {
  * @reserved1: reserved
  */
 struct iwl_nan_de_term {
-    u8 type;
-    u8 instance_id;
-    u8 reason;
-    u8 reserved1;
+    uint8_t type;
+    uint8_t instance_id;
+    uint8_t reason;
+    uint8_t reserved1;
 } __packed; /* NAN_DISCO_TERM_NTFY_API_S_VER_1 */
 
 enum iwl_fw_post_nan_type {
@@ -472,10 +472,10 @@ enum iwl_fw_config_flags {
 struct iwl_nan_faw_config {
     __le32 id_n_color;
     struct iwl_fw_channel_info faw_ci;
-    u8 type;
-    u8 slots;
-    u8 flags;
-    u8 op_class;
+    uint8_t type;
+    uint8_t slots;
+    uint8_t flags;
+    uint8_t op_class;
 } __packed; /* _NAN_DISCO_FAW_CMD_API_S_VER_1 */
 
 #endif /* __iwl_fw_api_nan_h__ */

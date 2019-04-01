@@ -74,15 +74,15 @@ enum {
 struct xvt_alive_resp_ver2 {
     __le16 status;
     __le16 flags;
-    u8 ucode_minor;
-    u8 ucode_major;
+    uint8_t ucode_minor;
+    uint8_t ucode_major;
     __le16 id;
-    u8 api_minor;
-    u8 api_major;
-    u8 ver_subtype;
-    u8 ver_type;
-    u8 mac;
-    u8 opt;
+    uint8_t api_minor;
+    uint8_t api_major;
+    uint8_t ver_subtype;
+    uint8_t ver_type;
+    uint8_t mac;
+    uint8_t opt;
     __le16 reserved2;
     __le32 timestamp;
     __le32 error_event_table_ptr; /* SRAM address for error log */
@@ -93,8 +93,8 @@ struct xvt_alive_resp_ver2 {
     __le32 scd_base_ptr; /* SRAM address for SCD */
     __le32 st_fwrd_addr; /* pointer to Store and forward */
     __le32 st_fwrd_size;
-    u8 umac_minor;          /* UMAC version: minor */
-    u8 umac_major;          /* UMAC version: major */
+    uint8_t umac_minor;          /* UMAC version: minor */
+    uint8_t umac_major;          /* UMAC version: major */
     __le16 umac_id;         /* UMAC version: id */
     __le32 error_info_addr; /* SRAM address for UMAC error log */
     __le32 dbg_print_buff_addr;

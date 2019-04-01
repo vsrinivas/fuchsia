@@ -175,7 +175,7 @@ static void iwl_fw_timestamp_marker_wk(struct work_struct* work) {
                  jiffies_to_msecs(delay) / 1000);
 }
 
-void iwl_fw_trigger_timestamp(struct iwl_fw_runtime* fwrt, u32 delay) {
+void iwl_fw_trigger_timestamp(struct iwl_fw_runtime* fwrt, uint32_t delay) {
     IWL_INFO(fwrt, "starting timestamp_marker trigger with delay: %us\n", delay);
 
     iwl_fw_cancel_timestamp(fwrt);
@@ -188,7 +188,7 @@ void iwl_fw_trigger_timestamp(struct iwl_fw_runtime* fwrt, u32 delay) {
 static ssize_t iwl_dbgfs_timestamp_marker_write(struct iwl_fw_runtime* fwrt, char* buf,
                                                 size_t count) {
     int ret;
-    u32 delay;
+    uint32_t delay;
 
     ret = kstrtou32(buf, 10, &delay);
     if (ret < 0) { return ret; }
@@ -200,7 +200,7 @@ static ssize_t iwl_dbgfs_timestamp_marker_write(struct iwl_fw_runtime* fwrt, cha
 
 static ssize_t iwl_dbgfs_timestamp_marker_read(struct iwl_fw_runtime* fwrt, size_t size,
                                                char* buf) {
-    u32 delay_secs = jiffies_to_msecs(fwrt->timestamp.delay) / 1000;
+    uint32_t delay_secs = jiffies_to_msecs(fwrt->timestamp.delay) / 1000;
 
     return scnprintf(buf, size, "%d\n", delay_secs);
 }
@@ -211,11 +211,11 @@ struct hcmd_write_data {
     __be32 cmd_id;
     __be32 flags;
     __be16 length;
-    u8 data[0];
+    uint8_t data[0];
 } __packed;
 
 static ssize_t iwl_dbgfs_send_hcmd_write(struct iwl_fw_runtime* fwrt, char* buf, size_t count) {
-    size_t header_size = (sizeof(u32) * 2 + sizeof(u16)) * 2;
+    size_t header_size = (sizeof(uint32_t) * 2 + sizeof(uint16_t)) * 2;
     size_t data_size = (count - 1) / 2;
     int ret;
     struct hcmd_write_data* data;
@@ -239,7 +239,7 @@ static ssize_t iwl_dbgfs_send_hcmd_write(struct iwl_fw_runtime* fwrt, char* buf,
     data = kmalloc(data_size, GFP_KERNEL);
     if (!data) { return -ENOMEM; }
 
-    ret = hex2bin((u8*)data, buf, data_size);
+    ret = hex2bin((uint8_t*)data, buf, data_size);
     if (ret) { goto out; }
 
     hcmd.id = be32_to_cpu(data->cmd_id);
@@ -279,8 +279,8 @@ struct iwl_dhc_write_data {
 static ssize_t iwl_dbgfs_send_dhc_write(struct iwl_fw_runtime* fwrt, char* buf, size_t count) {
     int ret, i;
     struct iwl_dhc_write_data* data;
-    u32 length;
-    size_t header_size = sizeof(u32) * 2 * 2;
+    uint32_t length;
+    size_t header_size = sizeof(uint32_t) * 2 * 2;
     size_t data_size = (count - 1) / 2, cmd_size;
     struct iwl_dhc_cmd* dhc_cmd = NULL;
     struct iwl_host_cmd hcmd = {
@@ -305,18 +305,18 @@ static ssize_t iwl_dbgfs_send_dhc_write(struct iwl_fw_runtime* fwrt, char* buf, 
     data = kmalloc(data_size, GFP_KERNEL);
     if (!data) { return -ENOMEM; }
 
-    ret = hex2bin((u8*)data, buf, data_size);
+    ret = hex2bin((uint8_t*)data, buf, data_size);
     if (ret) { goto out; }
 
     length = be32_to_cpu(data->length);
 
-    if (count != header_size + sizeof(u32) * length * 2 + 1) {
+    if (count != header_size + sizeof(uint32_t) * length * 2 + 1) {
         IWL_ERR(fwrt, "DHC data size does not match length header\n");
         ret = -EINVAL;
         goto out;
     }
 
-    cmd_size = sizeof(*dhc_cmd) + length * sizeof(u32);
+    cmd_size = sizeof(*dhc_cmd) + length * sizeof(uint32_t);
     dhc_cmd = kzalloc(cmd_size, GFP_KERNEL);
     if (!dhc_cmd) {
         ret = -ENOMEM;
@@ -351,7 +351,7 @@ struct iwl_dhc_tlc_whole_cmd {
 } __packed;
 
 static void iwl_fw_build_dhc_tlc_cmd(struct iwl_dhc_tlc_whole_cmd* cmd,
-                                     enum iwl_tlc_debug_flags flag, u32 data) {
+                                     enum iwl_tlc_debug_flags flag, uint32_t data) {
     cmd->dhc.length = cpu_to_le32(sizeof(cmd->tlc_data) >> 2);
     cmd->dhc.index_and_mask =
         cpu_to_le32(DHC_TABLE_INTEGRATION | DHC_TARGET_UMAC | DHC_INTEGRATION_TLC_DEBUG_CONFIG);

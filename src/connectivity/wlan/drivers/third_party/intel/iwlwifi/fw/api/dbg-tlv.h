@@ -44,7 +44,7 @@
 struct iwl_fw_ini_header {
     __le32 tlv_version;
     __le32 apply_point;
-    u8 data[0];
+    uint8_t data[0];
 } __packed; /* FW_INI_HEADER_TLV_S */
 
 /**
@@ -79,10 +79,10 @@ struct iwl_fw_ini_allocation_tlv {
  * @data: all of the relevant command (0xf6/0xf5) to be sent
  */
 struct iwl_fw_ini_hcmd {
-    u8 id;
-    u8 group;
+    uint8_t id;
+    uint8_t group;
     __le16 padding;
-    u8 data[0];
+    uint8_t data[0];
 } __packed; /* FW_INI_HCMD_S */
 
 /**
@@ -123,7 +123,7 @@ struct iwl_fw_ini_region_cfg {
     __le32 region_id;
     __le32 region_type;
     __le32 name_len;
-    u8 name[IWL_FW_INI_MAX_NAME];
+    uint8_t name[IWL_FW_INI_MAX_NAME];
     union {
         __le32 num_regions;
         __le32 allocation_id;

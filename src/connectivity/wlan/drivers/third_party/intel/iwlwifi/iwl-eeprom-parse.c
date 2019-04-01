@@ -77,8 +77,8 @@
 
 /* calibration */
 struct iwl_eeprom_calib_hdr {
-    u8 version;
-    u8 pa_type;
+    uint8_t version;
+    uint8_t pa_type;
     __le16 voltage;
 } __packed;
 
@@ -113,25 +113,25 @@ enum eeprom_sku_bits {
  * that EEPROM bands aren't the same as mac80211 bands, and
  * there are even special "ht40 bands" in the EEPROM.
  */
-static const u8 iwl_eeprom_band_1[14] = {/* 2.4 GHz */
+static const uint8_t iwl_eeprom_band_1[14] = {/* 2.4 GHz */
                                          1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14};
 
-static const u8 iwl_eeprom_band_2[] = {/* 4915-5080MHz */
+static const uint8_t iwl_eeprom_band_2[] = {/* 4915-5080MHz */
                                        183, 184, 185, 187, 188, 189, 192, 196, 7, 8, 11, 12, 16};
 
-static const u8 iwl_eeprom_band_3[] = {/* 5170-5320MHz */
+static const uint8_t iwl_eeprom_band_3[] = {/* 5170-5320MHz */
                                        34, 36, 38, 40, 42, 44, 46, 48, 52, 56, 60, 64};
 
-static const u8 iwl_eeprom_band_4[] = {/* 5500-5700MHz */
+static const uint8_t iwl_eeprom_band_4[] = {/* 5500-5700MHz */
                                        100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140};
 
-static const u8 iwl_eeprom_band_5[] = {/* 5725-5825MHz */
+static const uint8_t iwl_eeprom_band_5[] = {/* 5725-5825MHz */
                                        145, 149, 153, 157, 161, 165};
 
-static const u8 iwl_eeprom_band_6[] = {/* 2.4 ht40 channel */
+static const uint8_t iwl_eeprom_band_6[] = {/* 2.4 ht40 channel */
                                        1, 2, 3, 4, 5, 6, 7};
 
-static const u8 iwl_eeprom_band_7[] = {/* 5.2 ht40 channel */
+static const uint8_t iwl_eeprom_band_7[] = {/* 5.2 ht40 channel */
                                        36, 44, 52, 60, 100, 108, 116, 124, 132, 149, 157};
 
 #define IWL_NUM_CHANNELS                                             \
@@ -212,13 +212,13 @@ static struct ieee80211_rate iwl_cfg80211_rates[] = {
 
 /* EEPROM reading functions */
 
-static u16 iwl_eeprom_query16(const u8* eeprom, size_t eeprom_size, int offset) {
-    if (WARN_ON(offset + sizeof(u16) > eeprom_size)) { return 0; }
+static uint16_t iwl_eeprom_query16(const uint8_t* eeprom, size_t eeprom_size, int offset) {
+    if (WARN_ON(offset + sizeof(uint16_t) > eeprom_size)) { return 0; }
     return le16_to_cpup((__le16*)(eeprom + offset));
 }
 
-static u32 eeprom_indirect_address(const u8* eeprom, size_t eeprom_size, u32 address) {
-    u16 offset = 0;
+static uint32_t eeprom_indirect_address(const uint8_t* eeprom, size_t eeprom_size, uint32_t address) {
+    uint16_t offset = 0;
 
     if ((address & INDIRECT_ADDRESS) == 0) { return address; }
 
@@ -256,15 +256,15 @@ static u32 eeprom_indirect_address(const u8* eeprom, size_t eeprom_size, u32 add
     return (address & ADDRESS_MSK) + (offset << 1);
 }
 
-static const u8* iwl_eeprom_query_addr(const u8* eeprom, size_t eeprom_size, u32 offset) {
-    u32 address = eeprom_indirect_address(eeprom, eeprom_size, offset);
+static const uint8_t* iwl_eeprom_query_addr(const uint8_t* eeprom, size_t eeprom_size, uint32_t offset) {
+    uint32_t address = eeprom_indirect_address(eeprom, eeprom_size, offset);
 
     if (WARN_ON(address >= eeprom_size)) { return NULL; }
 
     return &eeprom[address];
 }
 
-static int iwl_eeprom_read_calib(const u8* eeprom, size_t eeprom_size, struct iwl_nvm_data* data) {
+static int iwl_eeprom_read_calib(const uint8_t* eeprom, size_t eeprom_size, struct iwl_nvm_data* data) {
     struct iwl_eeprom_calib_hdr* hdr;
 
     hdr = (void*)iwl_eeprom_query_addr(eeprom, eeprom_size, EEPROM_CALIB_ALL);
@@ -299,8 +299,8 @@ enum iwl_eeprom_channel_flags {
  * @max_power_avg: max power (in dBm) on this channel, at most 31 dBm
  */
 struct iwl_eeprom_channel {
-    u8 flags;
-    s8 max_power_avg;
+    uint8_t flags;
+    int8_t max_power_avg;
 } __packed;
 
 enum iwl_eeprom_enhanced_txpwr_flags {
@@ -329,19 +329,19 @@ enum iwl_eeprom_enhanced_txpwr_flags {
  * in an EEPROM image.
  */
 struct iwl_eeprom_enhanced_txpwr {
-    u8 flags;
-    u8 channel;
-    s8 chain_a_max;
-    s8 chain_b_max;
-    s8 chain_c_max;
-    u8 delta_20_in_40;
-    s8 mimo2_max;
-    s8 mimo3_max;
+    uint8_t flags;
+    uint8_t channel;
+    int8_t chain_a_max;
+    int8_t chain_b_max;
+    int8_t chain_c_max;
+    uint8_t delta_20_in_40;
+    int8_t mimo2_max;
+    int8_t mimo3_max;
 } __packed;
 
-static s8 iwl_get_max_txpwr_half_dbm(const struct iwl_nvm_data* data,
+static int8_t iwl_get_max_txpwr_half_dbm(const struct iwl_nvm_data* data,
                                      struct iwl_eeprom_enhanced_txpwr* txp) {
-    s8 result = 0; /* (.5 dBm) */
+    int8_t result = 0; /* (.5 dBm) */
 
     /* Take the highest tx power from any valid chains */
     if (data->valid_tx_ant & ANT_A && txp->chain_a_max > result) { result = txp->chain_a_max; }
@@ -369,7 +369,7 @@ static s8 iwl_get_max_txpwr_half_dbm(const struct iwl_nvm_data* data,
 
 static void iwl_eeprom_enh_txp_read_element(struct iwl_nvm_data* data,
                                             struct iwl_eeprom_enhanced_txpwr* txp, int n_channels,
-                                            s8 max_txpower_avg) {
+                                            int8_t max_txpower_avg) {
     int ch_idx;
     enum nl80211_band band;
 
@@ -391,11 +391,11 @@ static void iwl_eeprom_enh_txp_read_element(struct iwl_nvm_data* data,
 }
 
 static void iwl_eeprom_enhanced_txpower(struct device* dev, struct iwl_nvm_data* data,
-                                        const u8* eeprom, size_t eeprom_size, int n_channels) {
+                                        const uint8_t* eeprom, size_t eeprom_size, int n_channels) {
     struct iwl_eeprom_enhanced_txpwr *txp_array, *txp;
     int idx, entries;
     __le16* txp_len;
-    s8 max_txp_avg_halfdbm;
+    int8_t max_txp_avg_halfdbm;
 
     BUILD_BUG_ON(sizeof(struct iwl_eeprom_enhanced_txpwr) != 8);
 
@@ -436,11 +436,11 @@ static void iwl_eeprom_enhanced_txpower(struct device* dev, struct iwl_nvm_data*
     }
 }
 
-static void iwl_init_band_reference(const struct iwl_cfg* cfg, const u8* eeprom, size_t eeprom_size,
+static void iwl_init_band_reference(const struct iwl_cfg* cfg, const uint8_t* eeprom, size_t eeprom_size,
                                     int eeprom_band, int* eeprom_ch_count,
                                     const struct iwl_eeprom_channel** ch_info,
-                                    const u8** eeprom_ch_array) {
-    u32 offset = cfg->eeprom_params->regulatory_bands[eeprom_band - 1];
+                                    const uint8_t** eeprom_ch_array) {
+    uint32_t offset = cfg->eeprom_params->regulatory_bands[eeprom_band - 1];
 
     offset |= INDIRECT_ADDRESS | INDIRECT_REGULATORY;
 
@@ -485,9 +485,9 @@ static void iwl_init_band_reference(const struct iwl_cfg* cfg, const u8* eeprom,
 #define CHECK_AND_PRINT(x) ((eeprom_ch->flags & EEPROM_CHANNEL_##x) ? #x " " : "")
 
 static void iwl_mod_ht40_chan_info(struct device* dev, struct iwl_nvm_data* data, int n_channels,
-                                   enum nl80211_band band, u16 channel,
+                                   enum nl80211_band band, uint16_t channel,
                                    const struct iwl_eeprom_channel* eeprom_ch,
-                                   u8 clear_ht40_extension_channel) {
+                                   uint8_t clear_ht40_extension_channel) {
     struct ieee80211_channel* chan = NULL;
     int i;
 
@@ -515,10 +515,10 @@ static void iwl_mod_ht40_chan_info(struct device* dev, struct iwl_nvm_data* data
 #define CHECK_AND_PRINT_I(x) ((eeprom_ch_info[ch_idx].flags & EEPROM_CHANNEL_##x) ? #x " " : "")
 
 static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
-                                struct iwl_nvm_data* data, const u8* eeprom, size_t eeprom_size) {
+                                struct iwl_nvm_data* data, const uint8_t* eeprom, size_t eeprom_size) {
     int band, ch_idx;
     const struct iwl_eeprom_channel* eeprom_ch_info;
-    const u8* eeprom_ch_array;
+    const uint8_t* eeprom_ch_array;
     int eeprom_ch_count;
     int n_channels = 0;
 
@@ -595,7 +595,7 @@ static int iwl_init_channel_map(struct device* dev, const struct iwl_cfg* cfg,
 
         for (i = 0; i < n_channels; i++)
             data->max_tx_pwr_half_dbm =
-                max_t(s8, data->max_tx_pwr_half_dbm, data->channels[i].max_power * 2);
+                max_t(int8_t, data->max_tx_pwr_half_dbm, data->channels[i].max_power * 2);
     }
 
     /* Check if we do have HT40 channels */
@@ -655,7 +655,7 @@ int iwl_init_sband_channels(struct iwl_nvm_data* data, struct ieee80211_supporte
 
 void iwl_init_ht_hw_capab(const struct iwl_cfg* cfg, struct iwl_nvm_data* data,
                           struct ieee80211_sta_ht_cap* ht_info, enum nl80211_band band,
-                          u8 tx_chains, u8 rx_chains) {
+                          uint8_t tx_chains, uint8_t rx_chains) {
     int max_bit_rate = 0;
 
     tx_chains = hweight8(tx_chains);
@@ -721,7 +721,7 @@ void iwl_init_ht_hw_capab(const struct iwl_cfg* cfg, struct iwl_nvm_data* data,
 }
 
 static void iwl_init_sbands(struct device* dev, const struct iwl_cfg* cfg,
-                            struct iwl_nvm_data* data, const u8* eeprom, size_t eeprom_size) {
+                            struct iwl_nvm_data* data, const uint8_t* eeprom, size_t eeprom_size) {
     int n_channels = iwl_init_channel_map(dev, cfg, data, eeprom, eeprom_size);
     int n_used = 0;
     struct ieee80211_supported_band* sband;
@@ -750,10 +750,10 @@ static void iwl_init_sbands(struct device* dev, const struct iwl_cfg* cfg,
 /* EEPROM data functions */
 
 struct iwl_nvm_data* iwl_parse_eeprom_data(struct device* dev, const struct iwl_cfg* cfg,
-                                           const u8* eeprom, size_t eeprom_size) {
+                                           const uint8_t* eeprom, size_t eeprom_size) {
     struct iwl_nvm_data* data;
     const void* tmp;
-    u16 radio_cfg, sku;
+    uint16_t radio_cfg, sku;
 
     if (WARN_ON(!cfg || !cfg->eeprom_params)) { return NULL; }
 

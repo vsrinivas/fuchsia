@@ -41,9 +41,9 @@
  * enum iwl_testmode_attrs - testmode attributes inside
  *  NL80211_ATTR_TESTDATA
  * @IWL_TM_ATTR_UNSPEC: (invalid attribute)
- * @IWL_TM_ATTR_CMD: sub command, see &enum iwl_testmode_commands (u32)
- * @IWL_TM_ATTR_NOA_DURATION: requested NoA duration (u32)
- * @IWL_TM_ATTR_BEACON_FILTER_STATE: beacon filter state (0 or 1, u32)
+ * @IWL_TM_ATTR_CMD: sub command, see &enum iwl_testmode_commands (uint32_t)
+ * @IWL_TM_ATTR_NOA_DURATION: requested NoA duration (uint32_t)
+ * @IWL_TM_ATTR_BEACON_FILTER_STATE: beacon filter state (0 or 1, uint32_t)
  * @NUM_IWL_TM_ATTRS: number of attributes in the enum
  * @IWL_TM_ATTR_MAX: max amount of attributes
  */
@@ -80,8 +80,8 @@ struct iwl_testmode {
     struct mutex* mutex;
     void* op_mode;
     int (*send_hcmd)(void* op_mode, struct iwl_host_cmd* host_cmd);
-    u32 fw_major_ver;
-    u32 fw_minor_ver;
+    uint32_t fw_major_ver;
+    uint32_t fw_minor_ver;
 };
 
 /**
@@ -95,15 +95,15 @@ struct iwl_testmode {
  */
 struct iwl_tm_data {
     void* data;
-    u32 len;
+    uint32_t len;
 };
 
 void iwl_tm_init(struct iwl_trans* trans, const struct iwl_fw* fw, struct mutex* mutex,
                  void* op_mode);
 
-void iwl_tm_set_fw_ver(struct iwl_trans* trans, u32 fw_major_ver, u32 fw_minor_var);
+void iwl_tm_set_fw_ver(struct iwl_trans* trans, uint32_t fw_major_ver, uint32_t fw_minor_var);
 
-int iwl_tm_execute_cmd(struct iwl_testmode* testmode, u32 cmd, struct iwl_tm_data* data_in,
+int iwl_tm_execute_cmd(struct iwl_testmode* testmode, uint32_t cmd, struct iwl_tm_data* data_in,
                        struct iwl_tm_data* data_out);
 
 #define ADDR_IN_AL_MSK (0x80000000)

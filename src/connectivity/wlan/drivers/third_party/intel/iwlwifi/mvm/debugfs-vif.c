@@ -193,7 +193,7 @@ static ssize_t iwl_dbgfs_mac_params_read(struct file* file, char __user* user_bu
     struct ieee80211_vif* vif = file->private_data;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm* mvm = mvmvif->mvm;
-    u8 ap_sta_id;
+    uint8_t ap_sta_id;
     struct ieee80211_chanctx_conf* chanctx_conf;
     char buf[512];
     int bufsz = sizeof(buf);
@@ -441,8 +441,8 @@ static ssize_t iwl_dbgfs_os_device_timediff_read(struct file* file, char __user*
     struct ieee80211_vif* vif = file->private_data;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm* mvm = mvmvif->mvm;
-    u32 curr_gp2;
-    u64 curr_os;
+    uint32_t curr_gp2;
+    uint64_t curr_os;
     s64 diff;
     char buf[64];
     const size_t bufsz = sizeof(buf);
@@ -460,7 +460,7 @@ static ssize_t iwl_dbgfs_tof_enable_write(struct ieee80211_vif* vif, char* buf, 
                                           loff_t* ppos) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm* mvm = mvmvif->mvm;
-    u32 value;
+    uint32_t value;
     int ret = -EINVAL;
     char* data;
 
@@ -537,7 +537,7 @@ static ssize_t iwl_dbgfs_tof_responder_params_write(struct ieee80211_vif* vif, c
                                                     size_t count, loff_t* ppos) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm* mvm = mvmvif->mvm;
-    u32 value;
+    uint32_t value;
     int ret = 0;
     char* data;
 
@@ -615,7 +615,7 @@ static ssize_t iwl_dbgfs_tof_responder_params_write(struct ieee80211_vif* vif, c
 
     data = iwl_dbgfs_is_match("bssid=", buf);
     if (data) {
-        u8* mac = mvm->tof_data.responder_cfg.bssid;
+        uint8_t* mac = mvm->tof_data.responder_cfg.bssid;
 
         if (!mac_pton(data, mac)) {
             ret = -EINVAL;
@@ -738,7 +738,7 @@ static ssize_t iwl_dbgfs_tof_range_request_write(struct ieee80211_vif* vif, char
                                                  loff_t* ppos) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm* mvm = mvmvif->mvm;
-    u32 value;
+    uint32_t value;
     int ret = 0;
     char* data;
 
@@ -795,7 +795,7 @@ static ssize_t iwl_dbgfs_tof_range_request_write(struct ieee80211_vif* vif, char
 
     data = iwl_dbgfs_is_match("macaddr_template=", buf);
     if (data) {
-        u8 mac[ETH_ALEN];
+        uint8_t mac[ETH_ALEN];
 
         if (!mac_pton(data, mac)) {
             ret = -EINVAL;
@@ -807,7 +807,7 @@ static ssize_t iwl_dbgfs_tof_range_request_write(struct ieee80211_vif* vif, char
 
     data = iwl_dbgfs_is_match("macaddr_mask=", buf);
     if (data) {
-        u8 mac[ETH_ALEN];
+        uint8_t mac[ETH_ALEN];
 
         if (!mac_pton(data, mac)) {
             ret = -EINVAL;
@@ -821,8 +821,8 @@ static ssize_t iwl_dbgfs_tof_range_request_write(struct ieee80211_vif* vif, char
     if (data) {
         struct iwl_tof_range_req_ap_entry ap = {};
         int size = sizeof(struct iwl_tof_range_req_ap_entry);
-        u16 burst_period;
-        u8* mac = ap.bssid;
+        uint16_t burst_period;
+        uint8_t* mac = ap.bssid;
         unsigned int i;
 
         if (sscanf(data,
@@ -914,7 +914,7 @@ static ssize_t iwl_dbgfs_tof_range_req_ext_write(struct ieee80211_vif* vif, char
                                                  loff_t* ppos) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm* mvm = mvmvif->mvm;
-    u32 value;
+    uint32_t value;
     int ret = 0;
     char* data;
 
@@ -1000,7 +1000,7 @@ static ssize_t iwl_dbgfs_tof_range_abort_write(struct ieee80211_vif* vif, char* 
                                                loff_t* ppos) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm* mvm = mvmvif->mvm;
-    u32 value;
+    uint32_t value;
     int abort_id, ret = 0;
     char* data;
 
@@ -1091,7 +1091,7 @@ static ssize_t iwl_dbgfs_low_latency_write(struct ieee80211_vif* vif, char* buf,
                                            loff_t* ppos) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm* mvm = mvmvif->mvm;
-    u8 value;
+    uint8_t value;
     int ret;
 
     ret = kstrtou8(buf, 0, &value);
@@ -1150,7 +1150,7 @@ static ssize_t iwl_dbgfs_rx_phyinfo_write(struct ieee80211_vif* vif, char* buf, 
     struct iwl_mvm* mvm = mvmvif->mvm;
     struct ieee80211_chanctx_conf* chanctx_conf;
     struct iwl_mvm_phy_ctxt* phy_ctxt;
-    u16 value;
+    uint16_t value;
     int ret;
 
     ret = kstrtou16(buf, 0, &value);
@@ -1167,7 +1167,7 @@ static ssize_t iwl_dbgfs_rx_phyinfo_write(struct ieee80211_vif* vif, char* buf, 
         return -EINVAL;
     }
 
-    phy_ctxt = &mvm->phy_ctxts[*(u16*)chanctx_conf->drv_priv];
+    phy_ctxt = &mvm->phy_ctxts[*(uint16_t*)chanctx_conf->drv_priv];
     rcu_read_unlock();
 
     mvm->dbgfs_rx_phyinfo = value;
@@ -1191,7 +1191,7 @@ static ssize_t iwl_dbgfs_rx_phyinfo_read(struct file* file, char __user* user_bu
     return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
 
-static void iwl_dbgfs_quota_check(void* data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_dbgfs_quota_check(void* data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     int* ret = data;
 
@@ -1202,7 +1202,7 @@ static ssize_t iwl_dbgfs_quota_min_write(struct ieee80211_vif* vif, char* buf, s
                                          loff_t* ppos) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm* mvm = mvmvif->mvm;
-    u16 value;
+    uint16_t value;
     int ret;
 
 #ifdef CPTCFG_IWLMVM_ADVANCED_QUOTA_MGMT
@@ -1248,15 +1248,15 @@ static ssize_t iwl_dbgfs_twt_setup_write(struct ieee80211_vif* vif, char* buf, s
     struct iwl_dhc_twt_operation* dhc_twt_cmd;
     struct iwl_dhc_cmd* cmd;
 
-    u32 twt_operation;
-    u64 target_wake_time;
-    u32 interval_exp;
-    u32 interval_mantissa;
-    u32 min_wake_duration;
-    u8 trigger;
-    u8 flow_type;
-    u8 flow_id;
-    u8 protection;
+    uint32_t twt_operation;
+    uint64_t target_wake_time;
+    uint32_t interval_exp;
+    uint32_t interval_mantissa;
+    uint32_t min_wake_duration;
+    uint8_t trigger;
+    uint8_t flow_type;
+    uint8_t flow_id;
+    uint8_t protection;
     int ret;
 
     ret = sscanf(buf, "%u %llu %u %u %u %hhu %hhu %hhu %hhu", &twt_operation, &target_wake_time,

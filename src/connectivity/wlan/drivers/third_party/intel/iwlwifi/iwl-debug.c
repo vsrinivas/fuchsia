@@ -81,7 +81,7 @@ void __iwl_err(struct device* dev, bool rfkill_prefix, bool trace_only, const ch
 }
 
 #if defined(CPTCFG_IWLWIFI_DEBUG) || defined(CPTCFG_IWLWIFI_DEVICE_TRACING)
-void __iwl_dbg(struct device* dev, u32 level, bool limit, const char* function, const char* fmt,
+void __iwl_dbg(struct device* dev, uint32_t level, bool limit, const char* function, const char* fmt,
                ...) {
     struct va_format vaf = {
         .fmt = fmt,

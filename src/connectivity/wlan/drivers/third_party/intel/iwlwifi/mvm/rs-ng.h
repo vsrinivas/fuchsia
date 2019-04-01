@@ -41,10 +41,10 @@
 #include "fw-api.h"
 #include "iwl-trans.h"
 
-#define U08 u8
-#define U16 u16
-#define U32 u32
-#define U64 u64
+#define U08 uint8_t
+#define U16 uint16_t
+#define U32 uint32_t
+#define U64 uint64_t
 #define MAX(x, y) ((x) > (y) ? (x) : (y))
 #define INLINE inline
 
@@ -67,18 +67,18 @@ struct iwl_mvm_sta;
 
 struct iwl_lq_sta_rs_fw_pers {
     struct iwl_mvm* drv;
-    u32 sta_id;
-    u8 chains;
-    s8 chain_signal[IEEE80211_MAX_CHAINS];
-    s8 last_rssi;
+    uint32_t sta_id;
+    uint8_t chains;
+    int8_t chain_signal[IEEE80211_MAX_CHAINS];
+    int8_t last_rssi;
 #ifdef CPTCFG_MAC80211_DEBUGFS
-    u32 dbg_fixed_rate;
-    u32 dbg_agg_frame_count_lim;
+    uint32_t dbg_fixed_rate;
+    uint32_t dbg_agg_frame_count_lim;
 #endif
 };
 
 struct iwl_lq_sta_rs_fw {
-    u32 last_rate_n_flags;
+    uint32_t last_rate_n_flags;
 
     struct iwl_lq_sta_rs_fw_pers pers;
 };

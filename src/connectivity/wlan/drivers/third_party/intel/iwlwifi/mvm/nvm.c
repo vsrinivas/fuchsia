@@ -57,8 +57,8 @@ enum { READ_NVM_CHUNK_SUCCEED = 0, READ_NVM_CHUNK_NOT_VALID_ADDRESS = 1 };
  * prepare the NVM host command w/ the pointers to the nvm buffer
  * and send it to fw
  */
-static int iwl_nvm_write_chunk(struct iwl_mvm* mvm, u16 section, u16 offset, u16 length,
-                               const u8* data) {
+static int iwl_nvm_write_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t offset, uint16_t length,
+                               const uint8_t* data) {
     struct iwl_nvm_access_cmd nvm_access_cmd = {
         .offset = cpu_to_le16(offset),
         .length = cpu_to_le16(length),
@@ -93,7 +93,7 @@ static int iwl_nvm_write_chunk(struct iwl_mvm* mvm, u16 section, u16 offset, u16
     return ret;
 }
 
-static int iwl_nvm_read_chunk(struct iwl_mvm* mvm, u16 section, u16 offset, u16 length, u8* data) {
+static int iwl_nvm_read_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t offset, uint16_t length, uint8_t* data) {
     struct iwl_nvm_access_cmd nvm_access_cmd = {
         .offset = cpu_to_le16(offset),
         .length = cpu_to_le16(length),
@@ -111,7 +111,7 @@ static int iwl_nvm_read_chunk(struct iwl_mvm* mvm, u16 section, u16 offset, u16 
             },
     };
     int ret, bytes_read, offset_read;
-    u8* resp_data;
+    uint8_t* resp_data;
 
     cmd.len[0] = sizeof(struct iwl_nvm_access_cmd);
 
@@ -165,7 +165,7 @@ exit:
     return ret;
 }
 
-static int iwl_nvm_write_section(struct iwl_mvm* mvm, u16 section, const u8* data, u16 length) {
+static int iwl_nvm_write_section(struct iwl_mvm* mvm, uint16_t section, const uint8_t* data, uint16_t length) {
     int offset = 0;
 
     /* copy data in chunks of 2k (and remainder if any) */
@@ -194,8 +194,8 @@ static int iwl_nvm_write_section(struct iwl_mvm* mvm, u16 section, const u8* dat
  * the uCode fills the response with as much data as we can,
  * without overflowing, so no check is needed.
  */
-static int iwl_nvm_read_section(struct iwl_mvm* mvm, u16 section, u8* data, u32 size_read) {
-    u16 length, offset = 0;
+static int iwl_nvm_read_section(struct iwl_mvm* mvm, uint16_t section, uint8_t* data, uint32_t size_read) {
+    uint16_t length, offset = 0;
     int ret;
 
     /* Set nvm section read length */
@@ -305,8 +305,8 @@ int iwl_mvm_load_nvm_to_nic(struct iwl_mvm* mvm) {
 
 int iwl_nvm_init(struct iwl_mvm* mvm) {
     int ret, section;
-    u32 size_read = 0;
-    u8 *nvm_buffer, *temp;
+    uint32_t size_read = 0;
+    uint8_t *nvm_buffer, *temp;
     const char* nvm_file_C = mvm->cfg->default_nvm_file_C_step;
 
     if (WARN_ON_ONCE(mvm->cfg->nvm_hw_section_num >= NVM_MAX_NUM_SECTIONS)) { return -EINVAL; }
@@ -396,7 +396,7 @@ struct iwl_mcc_update_resp* iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* 
                                                enum iwl_mcc_source src_id) {
     struct iwl_mcc_update_cmd mcc_update_cmd = {
         .mcc = cpu_to_le16(alpha2[0] << 8 | alpha2[1]),
-        .source_id = (u8)src_id,
+        .source_id = (uint8_t)src_id,
     };
     struct iwl_mcc_update_resp* resp_cp;
     struct iwl_rx_packet* pkt;
@@ -407,9 +407,9 @@ struct iwl_mcc_update_resp* iwl_mvm_update_mcc(struct iwl_mvm* mvm, const char* 
     };
 
     int ret;
-    u32 status;
+    uint32_t status;
     int resp_len, n_channels;
-    u16 mcc;
+    uint16_t mcc;
 
     if (WARN_ON_ONCE(!iwl_mvm_is_lar_supported(mvm))) { return ERR_PTR(-EOPNOTSUPP); }
 

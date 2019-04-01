@@ -206,8 +206,8 @@ struct iwl_bt_coex_profile_notif {
     __le32 primary_ch_lut;
     __le32 secondary_ch_lut;
     __le32 bt_activity_grading;
-    u8 ttc_status;
-    u8 rrc_status;
+    uint8_t ttc_status;
+    uint8_t rrc_status;
     __le16 reserved;
 } __packed; /* BT_COEX_PROFILE_NTFY_API_S_VER_4 */
 
@@ -251,7 +251,7 @@ struct iwl_lte_coex_config_cmd {
     __le32 tx_safe_freq_max;
     __le32 rx_safe_freq_min;
     __le32 rx_safe_freq_max;
-    u8 max_tx_power[WIFI_BAND_24_NUM_CHANNELS];
+    uint8_t max_tx_power[WIFI_BAND_24_NUM_CHANNELS];
 } __packed; /* LTE_COEX_CONFIG_CMD_API_S_VER_1 */
 
 /**
@@ -264,7 +264,7 @@ struct iwl_lte_coex_config_cmd {
  */
 struct iwl_lte_coex_static_params_cmd {
     __le32 mfu_config[LTE_COEX_MFUART_CONFIG_LENGTH];
-    s8 tx_power_in_dbm[32];
+    int8_t tx_power_in_dbm[32];
 } __packed; /* LTE_COEX_STATIC_PARAMS_CMD_API_S_VER_1 */
 
 /**

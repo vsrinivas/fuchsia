@@ -74,10 +74,10 @@
  * @ctrl channel: PHY_[VHT|LEGACY]_CTRL_*
  */
 struct iwl_fw_channel_info {
-    u8 band;
-    u8 channel;
-    u8 width;
-    u8 ctrl_pos;
+    uint8_t band;
+    uint8_t channel;
+    uint8_t width;
+    uint8_t ctrl_pos;
 } __packed;
 
 #define PHY_RX_CHAIN_DRIVER_FORCE_POS (0)

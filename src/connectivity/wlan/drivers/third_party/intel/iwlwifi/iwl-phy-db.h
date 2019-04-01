@@ -46,8 +46,8 @@ void iwl_phy_db_free(struct iwl_phy_db* phy_db);
 int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt);
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
-int iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, u32 type, u8** data, u16* size,
-                                u16 ch_id);
+int iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, uint32_t type, uint8_t** data, uint16_t* size,
+                                uint16_t ch_id);
 #endif
 
 int iwl_send_phy_db_data(struct iwl_phy_db* phy_db);

@@ -250,10 +250,10 @@ struct iwl_context_info_gen3 {
     __le16 mcr_doorbell_vec;
     __le16 mtr_msi_vec;
     __le16 mcr_msi_vec;
-    u8 mtr_opt_header_size;
-    u8 mtr_opt_footer_size;
-    u8 mcr_opt_header_size;
-    u8 mcr_opt_footer_size;
+    uint8_t mtr_opt_header_size;
+    uint8_t mtr_opt_footer_size;
+    uint8_t mcr_opt_header_size;
+    uint8_t mcr_opt_footer_size;
     __le16 msg_rings_ctrl_flags;
     __le16 prph_info_msi_vec;
     __le64 prph_scratch_base_addr;

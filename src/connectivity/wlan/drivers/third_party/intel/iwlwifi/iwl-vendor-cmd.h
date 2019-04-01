@@ -206,7 +206,7 @@ enum iwl_mvm_vendor_gscan_report_mode {
  * enum iwl_mvm_vendor_gscan_channel_spec - gscan channel specification
  * @IWL_MVM_VENDOR_CHANNEL_SPEC_INVALID: attribute number 0 is reserved
  * @IWL_MVM_VENDOR_CHANNEL_SPEC_CHANNEL: channel number
- * @IWL_MVM_VENDOR_CHANNEL_SPEC_DWELL_TIME: u16 attribute specifying dwell
+ * @IWL_MVM_VENDOR_CHANNEL_SPEC_DWELL_TIME: uint16_t attribute specifying dwell
  *  time on this channel.
  * @IWL_MVM_VENDOR_CHANNEL_SPEC_PASSIVE: flag attribute. If set, passive
  *  scan should be performed on this channel.
@@ -457,14 +457,14 @@ enum iwl_mvm_vendor_phy_type {
  * @__IWL_MVM_VENDOR_NEIGHBOR_INVALID: attribute number 0 is reserved
  * @IWL_MVM_VENDOR_NEIGHBOR_BSSID: the BSSID of the neighbor AP.
  * @IWL_MVM_VENDOR_NEIGHBOR_BSSID_INFO: the BSSID information field as
- *  defined in IEEE802.11-2016, figure 9-296 (u32)
+ *  defined in IEEE802.11-2016, figure 9-296 (uint32_t)
  * @IWL_MVM_VENDOR_NEIGHBOR_OPERATING_CLASS: the operating class of the
- *  neighbor AP (u8)
+ *  neighbor AP (uint8_t)
  * @IWL_MVM_VENDOR_NEIGHBOR_CHANNEL: the primary channel number of the
- *  neighbor AP (u8)
+ *  neighbor AP (uint8_t)
  * @IWL_MVM_VENDOR_NEIGHBOR_PHY_TYPE: the phy type of the neighbor AP
- *  as specified in &enum iwl_mvm_vendor_phy_type (u8)
- * @IWL_MVM_VENDOR_NEIGHBOR_CHANNEL_WIDTH: u32 attribute containing one of the
+ *  as specified in &enum iwl_mvm_vendor_phy_type (uint8_t)
+ * @IWL_MVM_VENDOR_NEIGHBOR_CHANNEL_WIDTH: uint32_t attribute containing one of the
  *  values of &enum iwl_mvm_vendor_nr_chan_width, describing the
  *  channel width.
  * @IWL_MVM_VENDOR_NEIGHBOR_CENTER_FREQ_IDX_0: Center frequency of the first
@@ -501,9 +501,9 @@ enum iwl_mvm_vendor_neighbor_report {
  * enum iwl_vendor_sar_per_chain_geo_table - per chain tx power table
  *
  * @IWL_VENDOR_SAR_GEO_INVALID: attribute number 0 is reserved.
- * @IWL_VENDOR_SAR_GEO_CHAIN_A_OFFSET: allowed offset for chain a (u8).
- * @IWL_VENDOR_SAR_GEO_CHAIN_B_OFFSET: allowed offset for chain b (u8).
- * @IWL_VENDOR_SAR_GEO_MAX_TXP: maximum allowed tx power (u8).
+ * @IWL_VENDOR_SAR_GEO_CHAIN_A_OFFSET: allowed offset for chain a (uint8_t).
+ * @IWL_VENDOR_SAR_GEO_CHAIN_B_OFFSET: allowed offset for chain b (uint8_t).
+ * @IWL_VENDOR_SAR_GEO_MAX_TXP: maximum allowed tx power (uint8_t).
  */
 enum iwl_vendor_sar_per_chain_geo_table {
     IWL_VENDOR_SAR_GEO_INVALID,
@@ -617,11 +617,11 @@ enum iwl_vendor_fips_test_vector_hw {
  * @__IWL_MVM_VENDOR_ATTR_INVALID: attribute 0 is invalid
  * @IWL_MVM_VENDOR_ATTR_LOW_LATENCY: low-latency flag attribute
  * @IWL_MVM_VENDOR_ATTR_VIF_ADDR: interface MAC address
- * @IWL_MVM_VENDOR_ATTR_VIF_LL: vif-low-latency (u8, 0/1)
- * @IWL_MVM_VENDOR_ATTR_LL: global low-latency (u8, 0/1)
- * @IWL_MVM_VENDOR_ATTR_VIF_LOAD: vif traffic load (u8, see load enum)
- * @IWL_MVM_VENDOR_ATTR_LOAD: global traffic load (u8, see load enum)
- * @IWL_MVM_VENDOR_ATTR_COUNTRY: MCC to set, for regulatory information (u16)
+ * @IWL_MVM_VENDOR_ATTR_VIF_LL: vif-low-latency (uint8_t, 0/1)
+ * @IWL_MVM_VENDOR_ATTR_LL: global low-latency (uint8_t, 0/1)
+ * @IWL_MVM_VENDOR_ATTR_VIF_LOAD: vif traffic load (uint8_t, see load enum)
+ * @IWL_MVM_VENDOR_ATTR_LOAD: global traffic load (uint8_t, see load enum)
+ * @IWL_MVM_VENDOR_ATTR_COUNTRY: MCC to set, for regulatory information (uint16_t)
  * IWL_MVM_VENDOR_ATTR_FILTER_ARP_NA: filter gratuitous ARP and unsolicited
  *  Neighbor Advertisement frames
  * IWL_MVM_VENDOR_ATTR_FILTER_GTK: filter Filtering Frames Encrypted using
@@ -630,7 +630,7 @@ enum iwl_vendor_fips_test_vector_hw {
  * @IWL_MVM_VENDOR_ATTR_TX_BYTES: number of bytes transmitted to peer
  * @IWL_MVM_VENDOR_ATTR_RX_BYTES: number of bytes received from peer
  * @IWL_MVM_VENDOR_ATTR_TXP_LIMIT_24: TX power limit for 2.4 GHz
- *  (s32 in units of 1/8 dBm)
+ *  (int32_t in units of 1/8 dBm)
  * @IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52L: TX power limit for 5.2 GHz low (as 2.4)
  * @IWL_MVM_VENDOR_ATTR_TXP_LIMIT_52H: TX power limit for 5.2 GHz high (as 2.4)
  * @IWL_MVM_VENDOR_ATTR_OPPPS_WA: wa to pass Sigma test
@@ -677,15 +677,15 @@ enum iwl_vendor_fips_test_vector_hw {
  * @IWL_MVM_VENDOR_ATTR_GSCAN_SIG_CHANGE_RESULTS: array of significant
  *  change results. Each result is a nested attribute of &enum
  *  iwl_mvm_vendor_significant_change_result.
- * @IWL_MVM_VENDOR_ATTR_RXFILTER: u32 attribute.
+ * @IWL_MVM_VENDOR_ATTR_RXFILTER: uint32_t attribute.
  *      See %iwl_mvm_vendor_rxfilter_flags.
- * @IWL_MVM_VENDOR_ATTR_RXFILTER_OP: u32 attribute.
+ * @IWL_MVM_VENDOR_ATTR_RXFILTER_OP: uint32_t attribute.
  *      See %iwl_mvm_vendor_rxfilter_op.
  * @IWL_MVM_VENDOR_ATTR_DBG_COLLECT_TRIGGER: description of collect debug data
  *  trigger.
- * @IWL_MVM_VENDOR_ATTR_NAN_FAW_FREQ: u32 attribute. Frequency (in MHz) to be
+ * @IWL_MVM_VENDOR_ATTR_NAN_FAW_FREQ: uint32_t attribute. Frequency (in MHz) to be
  *  used for NAN further availability.
- * @IWL_MVM_VENDOR_ATTR_NAN_FAW_SLOTS: u8 attribute. Number of 16TU slots
+ * @IWL_MVM_VENDOR_ATTR_NAN_FAW_SLOTS: uint8_t attribute. Number of 16TU slots
  *  the NAN device will be available on it's FAW between DWs.
  * @IWL_MVM_VENDOR_ATTR_GSCAN_MAX_HOTLIST_SSIDS: maximum number of entries for
  *  hotlist SSID's
@@ -704,7 +704,7 @@ enum iwl_vendor_fips_test_vector_hw {
  *  %IWL_MVM_VENDOR_ATTR_CHANNEL_WIDTH and if needed
  *  %IWL_MVM_VENDOR_ATTR_CENTER_FREQ1 and
  *  %IWL_MVM_VENDOR_ATTR_CENTER_FREQ2.
- * @IWL_MVM_VENDOR_ATTR_CHANNEL_WIDTH: u32 attribute containing one of the
+ * @IWL_MVM_VENDOR_ATTR_CHANNEL_WIDTH: uint32_t attribute containing one of the
  *  values of &enum nl80211_chan_width, describing the channel width.
  *  See the documentation of the enum for more information.
  * @IWL_MVM_VENDOR_ATTR_CENTER_FREQ1: Center frequency of the first part of the
@@ -719,11 +719,11 @@ enum iwl_vendor_fips_test_vector_hw {
  * @IWL_MVM_VENDOR_ATTR_LAST_MSG: Indicates that this message is the last one
  *  in the series of messages. (flag)
  * @IWL_MVM_VENDOR_ATTR_SAR_CHAIN_A_PROFILE: SAR table idx for chain A.
- *  This is a u8.
+ *  This is a uint8_t.
  * @IWL_MVM_VENDOR_ATTR_SAR_CHAIN_B_PROFILE: SAR table idx for chain B.
- *  This is a u8.
+ *  This is a uint8_t.
  * @IWL_MVM_VENDOR_ATTR_SAR_ENABLED_PROFILE_NUM: number of enabled SAR profile
- *  This is a u8.
+ *  This is a uint8_t.
  * @IWL_MVM_VENDOR_ATTR_SSID: SSID (binary attribute, 0..32 octets)
  * @IWL_MVM_VENDOR_ATTR_NEIGHBOR_LCI: Flag attribute specifying that the
  *  neighbor request shall query for LCI information.

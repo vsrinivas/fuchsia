@@ -46,7 +46,7 @@ struct iwl_ucode_header {
             __le32 init_size;      /* bytes of init code */
             __le32 init_data_size; /* bytes of init data */
             __le32 boot_size;      /* bytes of bootstrap code */
-            u8 data[0];            /* in same order as sizes */
+            uint8_t data[0];            /* in same order as sizes */
         } v1;
         struct {
             __le32 build;          /* build number */
@@ -55,7 +55,7 @@ struct iwl_ucode_header {
             __le32 init_size;      /* bytes of init code */
             __le32 init_data_size; /* bytes of init data */
             __le32 boot_size;      /* bytes of bootstrap code */
-            u8 data[0];            /* in same order as sizes */
+            uint8_t data[0];            /* in same order as sizes */
         } v2;
     } u;
 };
@@ -76,7 +76,7 @@ enum iwl_ucode_tlv_type {
     IWL_UCODE_TLV_INIT = 3,
     IWL_UCODE_TLV_INIT_DATA = 4,
     IWL_UCODE_TLV_BOOT = 5,
-    IWL_UCODE_TLV_PROBE_MAX_LEN = 6, /* a u32 value */
+    IWL_UCODE_TLV_PROBE_MAX_LEN = 6, /* a uint32_t value */
     IWL_UCODE_TLV_PAN = 7,
     IWL_UCODE_TLV_RUNT_EVTLOG_PTR = 8,
     IWL_UCODE_TLV_RUNT_EVTLOG_SIZE = 9,
@@ -127,7 +127,7 @@ enum iwl_ucode_tlv_type {
 struct iwl_ucode_tlv {
     __le32 type;   /* see above */
     __le32 length; /* not including type/length fields */
-    u8 data[0];
+    uint8_t data[0];
 };
 
 #define IWL_TLV_FW_DBG_MAGIC 0xb5221389
@@ -143,7 +143,7 @@ struct iwl_tlv_ucode_header {
      */
     __le32 zero;
     __le32 magic;
-    u8 human_readable[FW_VER_HUMAN_READABLE_SZ];
+    uint8_t human_readable[FW_VER_HUMAN_READABLE_SZ];
     /* major/minor/API/serial or major in new format */
     __le32 ver;
     __le32 build;
@@ -154,7 +154,7 @@ struct iwl_tlv_ucode_header {
      * Note that each TLV is padded to a length
      * that is a multiple of 4 for alignment.
      */
-    u8 data[0];
+    uint8_t data[0];
 };
 
 /*
@@ -487,15 +487,15 @@ enum iwl_fw_phy_cfg {
  */
 struct iwl_fw_cipher_scheme {
     __le32 cipher;
-    u8 flags;
-    u8 hdr_len;
-    u8 pn_len;
-    u8 pn_off;
-    u8 key_idx_off;
-    u8 key_idx_mask;
-    u8 key_idx_shift;
-    u8 mic_len;
-    u8 hw_cipher;
+    uint8_t flags;
+    uint8_t hdr_len;
+    uint8_t pn_len;
+    uint8_t pn_off;
+    uint8_t key_idx_off;
+    uint8_t key_idx_mask;
+    uint8_t key_idx_shift;
+    uint8_t mic_len;
+    uint8_t hw_cipher;
 } __packed;
 
 enum iwl_fw_dbg_reg_operator {
@@ -522,8 +522,8 @@ enum iwl_fw_dbg_reg_operator {
  * @val: value
  */
 struct iwl_fw_dbg_reg_op {
-    u8 op;
-    u8 reserved[3];
+    uint8_t op;
+    uint8_t reserved[3];
     __le32 addr;
     __le32 val;
 } __packed;
@@ -575,16 +575,16 @@ struct iwl_fw_dbg_mem_seg_tlv {
  * This parses IWL_UCODE_TLV_FW_DBG_DEST
  */
 struct iwl_fw_dbg_dest_tlv_v1 {
-    u8 version;
-    u8 monitor_mode;
-    u8 size_power;
-    u8 reserved;
+    uint8_t version;
+    uint8_t monitor_mode;
+    uint8_t size_power;
+    uint8_t reserved;
     __le32 base_reg;
     __le32 end_reg;
     __le32 write_ptr_reg;
     __le32 wrap_count;
-    u8 base_shift;
-    u8 end_shift;
+    uint8_t base_shift;
+    uint8_t end_shift;
     struct iwl_fw_dbg_reg_op reg_ops[0];
 } __packed;
 
@@ -596,23 +596,23 @@ struct iwl_fw_dbg_dest_tlv_v1 {
 #define IWL_M2S_UNIT_SIZE 0x100
 
 struct iwl_fw_dbg_dest_tlv {
-    u8 version;
-    u8 monitor_mode;
-    u8 size_power;
-    u8 reserved;
+    uint8_t version;
+    uint8_t monitor_mode;
+    uint8_t size_power;
+    uint8_t reserved;
     __le32 cfg_reg;
     __le32 write_ptr_reg;
     __le32 wrap_count;
-    u8 base_shift;
-    u8 size_shift;
+    uint8_t base_shift;
+    uint8_t size_shift;
     struct iwl_fw_dbg_reg_op reg_ops[0];
 } __packed;
 
 struct iwl_fw_dbg_conf_hcmd {
-    u8 id;
-    u8 reserved;
+    uint8_t id;
+    uint8_t reserved;
     __le16 len;
-    u8 data[0];
+    uint8_t data[0];
 } __packed;
 
 /**
@@ -682,14 +682,14 @@ struct iwl_fw_dbg_trigger_tlv {
     __le32 vif_type;
     __le32 stop_conf_ids;
     __le32 stop_delay;
-    u8 mode;
-    u8 start_conf_id;
+    uint8_t mode;
+    uint8_t start_conf_id;
     __le16 occurrences;
     __le16 trig_dis_ms;
-    u8 flags;
-    u8 reserved[5];
+    uint8_t flags;
+    uint8_t reserved[5];
 
-    u8 data[0];
+    uint8_t data[0];
 } __packed;
 
 #define FW_DBG_START_FROM_ALIVE 0
@@ -720,8 +720,8 @@ struct iwl_fw_dbg_trigger_missed_bcon {
  */
 struct iwl_fw_dbg_trigger_cmd {
     struct cmd {
-        u8 cmd_id;
-        u8 group_id;
+        uint8_t cmd_id;
+        uint8_t group_id;
     } __packed cmds[16];
 } __packed;
 
@@ -765,25 +765,25 @@ struct iwl_fw_dbg_trigger_low_rssi {
  * @start_connection_loss: number of connection loss to start recording
  */
 struct iwl_fw_dbg_trigger_mlme {
-    u8 stop_auth_denied;
-    u8 stop_auth_timeout;
-    u8 stop_rx_deauth;
-    u8 stop_tx_deauth;
+    uint8_t stop_auth_denied;
+    uint8_t stop_auth_timeout;
+    uint8_t stop_rx_deauth;
+    uint8_t stop_tx_deauth;
 
-    u8 stop_assoc_denied;
-    u8 stop_assoc_timeout;
-    u8 stop_connection_loss;
-    u8 reserved;
+    uint8_t stop_assoc_denied;
+    uint8_t stop_assoc_timeout;
+    uint8_t stop_connection_loss;
+    uint8_t reserved;
 
-    u8 start_auth_denied;
-    u8 start_auth_timeout;
-    u8 start_rx_deauth;
-    u8 start_tx_deauth;
+    uint8_t start_auth_denied;
+    uint8_t start_auth_timeout;
+    uint8_t start_rx_deauth;
+    uint8_t start_tx_deauth;
 
-    u8 start_assoc_denied;
-    u8 start_assoc_timeout;
-    u8 start_connection_loss;
-    u8 reserved2;
+    uint8_t start_assoc_denied;
+    uint8_t start_assoc_timeout;
+    uint8_t start_connection_loss;
+    uint8_t reserved2;
 } __packed;
 
 /**
@@ -877,10 +877,10 @@ struct iwl_fw_dbg_trigger_tx_latency {
  * @peer: the TDLS peer to trigger the collection on
  */
 struct iwl_fw_dbg_trigger_tdls {
-    u8 action_bitmap;
-    u8 peer_mode;
-    u8 peer[ETH_ALEN];
-    u8 reserved[4];
+    uint8_t action_bitmap;
+    uint8_t peer_mode;
+    uint8_t peer[ETH_ALEN];
+    uint8_t reserved[4];
 } __packed;
 
 /**
@@ -890,8 +890,8 @@ struct iwl_fw_dbg_trigger_tdls {
  */
 struct iwl_fw_dbg_trigger_tx_status {
     struct tx_status {
-        u8 status;
-        u8 reserved[3];
+        uint8_t status;
+        uint8_t reserved[3];
     } __packed statuses[16];
     __le32 reserved[2];
 } __packed;
@@ -908,10 +908,10 @@ struct iwl_fw_dbg_trigger_tx_status {
  * %FW_DBG_CONF_MAX configuration per run.
  */
 struct iwl_fw_dbg_conf_tlv {
-    u8 id;
-    u8 usniffer;
-    u8 reserved;
-    u8 num_of_hcmds;
+    uint8_t id;
+    uint8_t usniffer;
+    uint8_t reserved;
+    uint8_t num_of_hcmds;
     struct iwl_fw_dbg_conf_hcmd hcmd;
 } __packed;
 

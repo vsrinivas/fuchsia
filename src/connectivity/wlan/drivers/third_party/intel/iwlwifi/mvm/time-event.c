@@ -216,9 +216,9 @@ static void iwl_mvm_te_check_trigger(struct iwl_mvm* mvm, struct iwl_time_event_
     te_trig = (void*)trig->data;
 
     for (i = 0; i < ARRAY_SIZE(te_trig->time_events); i++) {
-        u32 trig_te_id = le32_to_cpu(te_trig->time_events[i].id);
-        u32 trig_action_bitmap = le32_to_cpu(te_trig->time_events[i].action_bitmap);
-        u32 trig_status_bitmap = le32_to_cpu(te_trig->time_events[i].status_bitmap);
+        uint32_t trig_te_id = le32_to_cpu(te_trig->time_events[i].id);
+        uint32_t trig_action_bitmap = le32_to_cpu(te_trig->time_events[i].action_bitmap);
+        uint32_t trig_status_bitmap = le32_to_cpu(te_trig->time_events[i].status_bitmap);
 
         if (trig_te_id != te_data->id || !(trig_action_bitmap & le32_to_cpu(notif->action)) ||
             !(trig_status_bitmap & BIT(le32_to_cpu(notif->status)))) {
@@ -435,7 +435,7 @@ static bool iwl_mvm_time_event_response(struct iwl_notif_wait_data* notif_wait,
 static int iwl_mvm_time_event_send_add(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                        struct iwl_mvm_time_event_data* te_data,
                                        struct iwl_time_event_cmd* te_cmd) {
-    static const u16 time_event_response[] = {TIME_EVENT_CMD};
+    static const uint16_t time_event_response[] = {TIME_EVENT_CMD};
     struct iwl_notification_wait wait_time_event;
     int ret;
 
@@ -488,11 +488,11 @@ static int iwl_mvm_time_event_send_add(struct iwl_mvm* mvm, struct ieee80211_vif
     return ret;
 }
 
-void iwl_mvm_protect_session(struct iwl_mvm* mvm, struct ieee80211_vif* vif, u32 duration,
-                             u32 min_duration, u32 max_delay, bool wait_for_notif) {
+void iwl_mvm_protect_session(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t duration,
+                             uint32_t min_duration, uint32_t max_delay, bool wait_for_notif) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm_time_event_data* te_data = &mvmvif->time_event_data;
-    const u16 te_notif_response[] = {TIME_EVENT_NOTIFICATION};
+    const uint16_t te_notif_response[] = {TIME_EVENT_NOTIFICATION};
     struct iwl_notification_wait wait_te_notif;
     struct iwl_time_event_cmd time_cmd = {};
 
@@ -555,8 +555,8 @@ void iwl_mvm_protect_session(struct iwl_mvm* mvm, struct ieee80211_vif* vif, u32
 }
 
 static bool __iwl_mvm_remove_time_event(struct iwl_mvm* mvm,
-                                        struct iwl_mvm_time_event_data* te_data, u32* uid) {
-    u32 id;
+                                        struct iwl_mvm_time_event_data* te_data, uint32_t* uid) {
+    uint32_t id;
 
     /*
      * It is possible that by the time we got to this point the time
@@ -596,7 +596,7 @@ static bool __iwl_mvm_remove_time_event(struct iwl_mvm* mvm,
 static void iwl_mvm_remove_aux_roc_te(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
                                       struct iwl_mvm_time_event_data* te_data) {
     struct iwl_hs20_roc_req aux_cmd = {};
-    u32 uid;
+    uint32_t uid;
     int ret;
 
     if (!__iwl_mvm_remove_time_event(mvm, te_data, &uid)) { return; }
@@ -618,7 +618,7 @@ static void iwl_mvm_remove_aux_roc_te(struct iwl_mvm* mvm, struct iwl_mvm_vif* m
 void iwl_mvm_remove_time_event(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
                                struct iwl_mvm_time_event_data* te_data) {
     struct iwl_time_event_cmd time_cmd = {};
-    u32 uid;
+    uint32_t uid;
     int ret;
 
     if (!__iwl_mvm_remove_time_event(mvm, te_data, &uid)) { return; }
@@ -636,7 +636,7 @@ void iwl_mvm_remove_time_event(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
 void iwl_mvm_stop_session_protection(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm_time_event_data* te_data = &mvmvif->time_event_data;
-    u32 id;
+    uint32_t id;
 
     lockdep_assert_held(&mvm->mutex);
 
@@ -727,7 +727,7 @@ out:
 
 void iwl_mvm_cleanup_roc_te(struct iwl_mvm* mvm) {
     struct iwl_mvm_time_event_data* te_data;
-    u32 uid;
+    uint32_t uid;
 
     te_data = iwl_mvm_get_roc_te(mvm);
     if (te_data) { __iwl_mvm_remove_time_event(mvm, te_data, &uid); }
@@ -755,8 +755,8 @@ void iwl_mvm_stop_roc(struct iwl_mvm* mvm) {
     iwl_mvm_roc_finished(mvm);
 }
 
-int iwl_mvm_schedule_csa_period(struct iwl_mvm* mvm, struct ieee80211_vif* vif, u32 duration,
-                                u32 apply_time) {
+int iwl_mvm_schedule_csa_period(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t duration,
+                                uint32_t apply_time) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm_time_event_data* te_data = &mvmvif->time_event_data;
     struct iwl_time_event_cmd time_cmd = {};
@@ -764,7 +764,7 @@ int iwl_mvm_schedule_csa_period(struct iwl_mvm* mvm, struct ieee80211_vif* vif, 
     lockdep_assert_held(&mvm->mutex);
 
     if (te_data->running) {
-        u32 id;
+        uint32_t id;
 
         spin_lock_bh(&mvm->time_event_lock);
         id = te_data->id;

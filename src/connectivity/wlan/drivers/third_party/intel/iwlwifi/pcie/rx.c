@@ -162,7 +162,7 @@ static int iwl_rxq_space(const struct iwl_rxq* rxq) {
  * iwl_dma_addr2rbd_ptr - convert a DMA address to a uCode read buffer ptr
  */
 static inline __le32 iwl_pcie_dma_addr2rbd_ptr(dma_addr_t dma_addr) {
-    return cpu_to_le32((u32)(dma_addr >> 8));
+    return cpu_to_le32((uint32_t)(dma_addr >> 8));
 }
 
 /*
@@ -187,7 +187,7 @@ int iwl_pcie_rx_stop(struct iwl_trans* trans) {
  * iwl_pcie_rxq_inc_wr_ptr - Update the write pointer for the RX queue
  */
 static void iwl_pcie_rxq_inc_wr_ptr(struct iwl_trans* trans, struct iwl_rxq* rxq) {
-    u32 reg;
+    uint32_t reg;
 
     lockdep_assert_held(&rxq->lock);
 
@@ -249,7 +249,7 @@ static void iwl_pcie_restock_bd(struct iwl_trans* trans, struct iwl_rxq* rxq,
         bd[rxq->write] = cpu_to_le64(rxb->page_dma | rxb->vid);
     }
 
-    IWL_DEBUG_RX(trans, "Assigned virtual RB ID %u to queue %d index %d\n", (u32)rxb->vid, rxq->id,
+    IWL_DEBUG_RX(trans, "Assigned virtual RB ID %u to queue %d index %d\n", (uint32_t)rxb->vid, rxq->id,
                  rxq->write);
 }
 
@@ -722,9 +722,9 @@ int iwl_pcie_rx_alloc(struct iwl_trans* trans) {
 
 static void iwl_pcie_rx_hw_init(struct iwl_trans* trans, struct iwl_rxq* rxq) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    u32 rb_size;
+    uint32_t rb_size;
     unsigned long flags;
-    const u32 rfdnlog = RX_QUEUE_SIZE_LOG; /* 256 RBDs */
+    const uint32_t rfdnlog = RX_QUEUE_SIZE_LOG; /* 256 RBDs */
 
     switch (trans_pcie->rx_buf_size) {
     case IWL_AMSDU_4K:
@@ -754,7 +754,7 @@ static void iwl_pcie_rx_hw_init(struct iwl_trans* trans, struct iwl_rxq* rxq) {
     iwl_write32(trans, FH_RSCSR_CHNL0_RBDCB_WPTR_REG, 0);
 
     /* Tell device where to find RBD circular buffer in DRAM */
-    iwl_write32(trans, FH_RSCSR_CHNL0_RBDCB_BASE_REG, (u32)(rxq->bd_dma >> 8));
+    iwl_write32(trans, FH_RSCSR_CHNL0_RBDCB_BASE_REG, (uint32_t)(rxq->bd_dma >> 8));
 
     /* Tell device where in DRAM to update its Rx status */
     iwl_write32(trans, FH_RSCSR_CHNL0_STTS_WPTR_REG, rxq->rb_stts_dma >> 4);
@@ -786,7 +786,7 @@ static void iwl_pcie_rx_hw_init(struct iwl_trans* trans, struct iwl_rxq* rxq) {
 
 static void iwl_pcie_rx_mq_hw_init(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    u32 rb_size, enabled = 0;
+    uint32_t rb_size, enabled = 0;
     unsigned long flags;
     int i;
 
@@ -946,7 +946,7 @@ int _iwl_pcie_rx_init(struct iwl_trans* trans) {
             list_add(&rxb->list, &def_rxq->rx_used);
         }
         trans_pcie->global_table[i] = rxb;
-        rxb->vid = (u16)(i + 1);
+        rxb->vid = (uint16_t)(i + 1);
         rxb->invalid = true;
     }
 
@@ -1062,15 +1062,15 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
     struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
     bool page_stolen = false;
     int max_len = PAGE_SIZE << trans_pcie->rx_page_order;
-    u32 offset = 0;
+    uint32_t offset = 0;
 
     if (WARN_ON(!rxb)) { return; }
 
     dma_unmap_page(trans->dev, rxb->page_dma, max_len, DMA_FROM_DEVICE);
 
-    while (offset + sizeof(u32) + sizeof(struct iwl_cmd_header) < max_len) {
+    while (offset + sizeof(uint32_t) + sizeof(struct iwl_cmd_header) < max_len) {
         struct iwl_rx_packet* pkt;
-        u16 sequence;
+        uint16_t sequence;
         bool reclaim;
         int index, cmd_index, len;
         struct iwl_rx_cmd_buffer rxcb = {
@@ -1101,7 +1101,7 @@ static void iwl_pcie_rx_handle_rb(struct iwl_trans* trans, struct iwl_rxq* rxq,
                      pkt->hdr.group_id, pkt->hdr.cmd, le16_to_cpu(pkt->hdr.sequence));
 
         len = iwl_rx_packet_len(pkt);
-        len += sizeof(u32); /* account for status word */
+        len += sizeof(uint32_t); /* account for status word */
         trace_iwlwifi_dev_rx(trans->dev, trans, pkt, len);
         trace_iwlwifi_dev_rx_data(trans->dev, trans, pkt, len);
 
@@ -1194,7 +1194,7 @@ static struct iwl_rx_mem_buffer* iwl_pcie_get_rxb(struct iwl_trans* trans, struc
                                                   int i) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_rx_mem_buffer* rxb;
-    u16 vid;
+    uint16_t vid;
 
     if (!trans->cfg->mq_rx_supported) {
         rxb = rxq->queue[i];
@@ -1214,7 +1214,7 @@ static struct iwl_rx_mem_buffer* iwl_pcie_get_rxb(struct iwl_trans* trans, struc
     rxb = trans_pcie->global_table[vid - 1];
     if (rxb->invalid) { goto out_err; }
 
-    IWL_DEBUG_RX(trans, "Got virtual RB ID %u\n", (u32)rxb->vid);
+    IWL_DEBUG_RX(trans, "Got virtual RB ID %u\n", (uint32_t)rxb->vid);
 
     if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
         rxb->size = le32_to_cpu(rxq->cd[i].size) & IWL_RX_CD_SIZE;
@@ -1225,7 +1225,7 @@ static struct iwl_rx_mem_buffer* iwl_pcie_get_rxb(struct iwl_trans* trans, struc
     return rxb;
 
 out_err:
-    WARN(1, "Invalid rxb from HW %u\n", (u32)vid);
+    WARN(1, "Invalid rxb from HW %u\n", (uint32_t)vid);
     iwl_force_nmi(trans);
     return NULL;
 }
@@ -1236,7 +1236,7 @@ out_err:
 static void iwl_pcie_rx_handle(struct iwl_trans* trans, int queue) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_rxq* rxq = &trans_pcie->rxq[queue];
-    u32 r, i, count = 0;
+    uint32_t r, i, count = 0;
     bool emergency = false;
 
 restart:
@@ -1256,7 +1256,7 @@ restart:
         struct iwl_rb_allocator* rba = &trans_pcie->rba;
         struct iwl_rx_mem_buffer* rxb;
         /* number of RBDs still waiting for page allocation */
-        u32 rb_pending_alloc = atomic_read(&trans_pcie->rba.req_pending) * RX_CLAIM_REQ_ALLOC;
+        uint32_t rb_pending_alloc = atomic_read(&trans_pcie->rba.req_pending) * RX_CLAIM_REQ_ALLOC;
 
         if (unlikely(rb_pending_alloc >= rxq->queue_size / 2 && !emergency)) {
             iwl_pcie_rx_move_to_allocator(rxq, rba);
@@ -1325,7 +1325,7 @@ out:
 }
 
 static struct iwl_trans_pcie* iwl_pcie_get_trans_pcie(struct msix_entry* entry) {
-    u8 queue = entry->entry;
+    uint8_t queue = entry->entry;
     struct msix_entry* entries = entry - queue;
 
     return container_of(entries, struct iwl_trans_pcie, msix_entries[0]);
@@ -1387,8 +1387,8 @@ static void iwl_pcie_irq_handle_error(struct iwl_trans* trans) {
     wake_up(&trans_pcie->wait_command_queue);
 }
 
-static u32 iwl_pcie_int_cause_non_ict(struct iwl_trans* trans) {
-    u32 inta;
+static uint32_t iwl_pcie_int_cause_non_ict(struct iwl_trans* trans) {
+    uint32_t inta;
 
     lockdep_assert_held(&IWL_TRANS_GET_PCIE_TRANS(trans)->irq_lock);
 
@@ -1404,7 +1404,7 @@ static u32 iwl_pcie_int_cause_non_ict(struct iwl_trans* trans) {
 /* a device (PCI-E) page is 4096 bytes long */
 #define ICT_SHIFT 12
 #define ICT_SIZE (1 << ICT_SHIFT)
-#define ICT_COUNT (ICT_SIZE / sizeof(u32))
+#define ICT_COUNT (ICT_SIZE / sizeof(uint32_t))
 
 /* interrupt handler using ict table, with this interrupt driver will
  * stop using INTA register to get device's interrupt, reading this register
@@ -1414,11 +1414,11 @@ static u32 iwl_pcie_int_cause_non_ict(struct iwl_trans* trans) {
  * the interrupt we need to service, driver will set the entries back to 0 and
  * set index.
  */
-static u32 iwl_pcie_int_cause_ict(struct iwl_trans* trans) {
+static uint32_t iwl_pcie_int_cause_ict(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    u32 inta;
-    u32 val = 0;
-    u32 read;
+    uint32_t inta;
+    uint32_t val = 0;
+    uint32_t read;
 
     trace_iwlwifi_dev_irq(trans->dev);
 
@@ -1499,8 +1499,8 @@ irqreturn_t iwl_pcie_irq_handler(int irq, void* dev_id) {
     struct iwl_trans* trans = dev_id;
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct isr_statistics* isr_stats = &trans_pcie->isr_stats;
-    u32 inta = 0;
-    u32 handled = 0;
+    uint32_t inta = 0;
+    uint32_t handled = 0;
 
     lock_map_acquire(&trans->sync_cmd_lockdep_map);
 
@@ -1774,7 +1774,7 @@ int iwl_pcie_alloc_ict(struct iwl_trans* trans) {
  */
 void iwl_pcie_reset_ict(struct iwl_trans* trans) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    u32 val;
+    uint32_t val;
 
     if (!trans_pcie->ict_tbl) { return; }
 
@@ -1830,7 +1830,7 @@ irqreturn_t iwl_pcie_irq_msix_handler(int irq, void* dev_id) {
     struct iwl_trans_pcie* trans_pcie = iwl_pcie_get_trans_pcie(entry);
     struct iwl_trans* trans = trans_pcie->trans;
     struct isr_statistics* isr_stats = &trans_pcie->isr_stats;
-    u32 inta_fh, inta_hw;
+    uint32_t inta_fh, inta_hw;
 
     lock_map_acquire(&trans->sync_cmd_lockdep_map);
 

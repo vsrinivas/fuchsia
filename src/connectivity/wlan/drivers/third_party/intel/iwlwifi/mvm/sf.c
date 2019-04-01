@@ -37,16 +37,16 @@
 /* For counting bound interfaces */
 struct iwl_mvm_active_iface_iterator_data {
     struct ieee80211_vif* ignore_vif;
-    u8 sta_vif_ap_sta_id;
+    uint8_t sta_vif_ap_sta_id;
     enum iwl_sf_state sta_vif_state;
-    u32 num_active_macs;
+    uint32_t num_active_macs;
 };
 
 /*
  * Count bound interfaces which are not p2p, besides data->ignore_vif.
  * data->station_vif will point to one bound vif of type station, if exists.
  */
-static void iwl_mvm_bound_iface_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_bound_iface_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_active_iface_iterator_data* data = _data;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
@@ -142,7 +142,7 @@ static void iwl_mvm_fill_sf_command(struct iwl_mvm* mvm, struct iwl_sf_cfg_cmd* 
     }
 }
 
-static int iwl_mvm_sf_config(struct iwl_mvm* mvm, u8 sta_id, enum iwl_sf_state new_state) {
+static int iwl_mvm_sf_config(struct iwl_mvm* mvm, uint8_t sta_id, enum iwl_sf_state new_state) {
     struct iwl_sf_cfg_cmd sf_cmd = {
         .state = cpu_to_le32(new_state),
     };
@@ -199,7 +199,7 @@ static int iwl_mvm_sf_config(struct iwl_mvm* mvm, u8 sta_id, enum iwl_sf_state n
  */
 int iwl_mvm_sf_update(struct iwl_mvm* mvm, struct ieee80211_vif* changed_vif, bool remove_vif) {
     enum iwl_sf_state new_state;
-    u8 sta_id = IWL_MVM_INVALID_STA;
+    uint8_t sta_id = IWL_MVM_INVALID_STA;
     struct iwl_mvm_vif* mvmvif = NULL;
     struct iwl_mvm_active_iface_iterator_data data = {
         .ignore_vif = changed_vif,

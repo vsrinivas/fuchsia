@@ -38,7 +38,7 @@
 #include "mvm.h"
 
 /* Maps the driver specific channel width definition to the fw values */
-u8 iwl_mvm_get_channel_width(struct cfg80211_chan_def* chandef) {
+uint8_t iwl_mvm_get_channel_width(struct cfg80211_chan_def* chandef) {
     switch (chandef->width) {
     case NL80211_CHAN_WIDTH_20_NOHT:
     case NL80211_CHAN_WIDTH_20:
@@ -59,7 +59,7 @@ u8 iwl_mvm_get_channel_width(struct cfg80211_chan_def* chandef) {
  * Maps the driver specific control channel position (relative to the center
  * freq) definitions to the the fw values
  */
-u8 iwl_mvm_get_ctrl_pos(struct cfg80211_chan_def* chandef) {
+uint8_t iwl_mvm_get_ctrl_pos(struct cfg80211_chan_def* chandef) {
     switch (chandef->chan->center_freq - chandef->center_freq1) {
     case -70:
         return PHY_VHT_CTRL_POS_4_BELOW;
@@ -93,7 +93,7 @@ u8 iwl_mvm_get_ctrl_pos(struct cfg80211_chan_def* chandef) {
  * Construct the generic fields of the PHY context command
  */
 static void iwl_mvm_phy_ctxt_cmd_hdr(struct iwl_mvm_phy_ctxt* ctxt, struct iwl_phy_context_cmd* cmd,
-                                     u32 action, u32 apply_time) {
+                                     uint32_t action, uint32_t apply_time) {
     memset(cmd, 0, sizeof(struct iwl_phy_context_cmd));
 
     cmd->id_and_color = cpu_to_le32(FW_CMD_ID_AND_COLOR(ctxt->id, ctxt->color));
@@ -105,9 +105,9 @@ static void iwl_mvm_phy_ctxt_cmd_hdr(struct iwl_mvm_phy_ctxt* ctxt, struct iwl_p
  * Add the phy configuration to the PHY context command
  */
 static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_context_cmd* cmd,
-                                      struct cfg80211_chan_def* chandef, u8 chains_static,
-                                      u8 chains_dynamic) {
-    u8 active_cnt, idle_cnt;
+                                      struct cfg80211_chan_def* chandef, uint8_t chains_static,
+                                      uint8_t chains_dynamic) {
+    uint8_t active_cnt, idle_cnt;
 
     /* Set the channel info data */
     cmd->ci.band = (chandef->chan->band == NL80211_BAND_2GHZ ? PHY_BAND_24 : PHY_BAND_5);
@@ -149,8 +149,8 @@ static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_contex
  * configuration changed from the previous apply.
  */
 static int iwl_mvm_phy_ctxt_apply(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                                  struct cfg80211_chan_def* chandef, u8 chains_static,
-                                  u8 chains_dynamic, u32 action, u32 apply_time) {
+                                  struct cfg80211_chan_def* chandef, uint8_t chains_static,
+                                  uint8_t chains_dynamic, uint32_t action, uint32_t apply_time) {
     struct iwl_phy_context_cmd cmd;
     int ret;
 
@@ -169,7 +169,7 @@ static int iwl_mvm_phy_ctxt_apply(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* 
  * Send a command to add a PHY context based on the current HW configuration.
  */
 int iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                         struct cfg80211_chan_def* chandef, u8 chains_static, u8 chains_dynamic) {
+                         struct cfg80211_chan_def* chandef, uint8_t chains_static, uint8_t chains_dynamic) {
     WARN_ON(!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) && ctxt->ref);
     lockdep_assert_held(&mvm->mutex);
 
@@ -198,8 +198,8 @@ void iwl_mvm_phy_ctxt_ref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt) {
  * changed.
  */
 int iwl_mvm_phy_ctxt_changed(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                             struct cfg80211_chan_def* chandef, u8 chains_static,
-                             u8 chains_dynamic) {
+                             struct cfg80211_chan_def* chandef, uint8_t chains_static,
+                             uint8_t chains_dynamic) {
     enum iwl_ctxt_action action = FW_CTXT_ACTION_MODIFY;
 
     lockdep_assert_held(&mvm->mutex);
@@ -244,7 +244,7 @@ void iwl_mvm_phy_ctxt_unref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt) 
     }
 }
 
-static void iwl_mvm_binding_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_binding_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     unsigned long* data = _data;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 

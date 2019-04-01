@@ -62,8 +62,8 @@ enum ext_nvm_offsets {
  * prepare the NVM host command w/ the pointers to the nvm buffer
  * and send it to fw
  */
-static int iwl_nvm_write_chunk(struct iwl_xvt* xvt, u16 section, u16 offset, u16 length,
-                               const u8* data) {
+static int iwl_nvm_write_chunk(struct iwl_xvt* xvt, uint16_t section, uint16_t offset, uint16_t length,
+                               const uint8_t* data) {
     struct iwl_nvm_access_cmd nvm_access_cmd = {
         .offset = cpu_to_le16(offset),
         .length = cpu_to_le16(length),
@@ -82,7 +82,7 @@ static int iwl_nvm_write_chunk(struct iwl_xvt* xvt, u16 section, u16 offset, u16
     return iwl_xvt_send_cmd(xvt, &cmd);
 }
 
-static int iwl_nvm_write_section(struct iwl_xvt* xvt, u16 section, const u8* data, u16 length) {
+static int iwl_nvm_write_section(struct iwl_xvt* xvt, uint16_t section, const uint8_t* data, uint16_t length) {
     int offset = 0;
 
     /* copy data in chunks of 2k (and remainder if any) */
@@ -124,16 +124,16 @@ static int iwl_nvm_write_section(struct iwl_xvt* xvt, u16 section, const u8* dat
  */
 static int iwl_xvt_load_external_nvm(struct iwl_xvt* xvt) {
     int ret, section_size;
-    u16 section_id;
+    uint16_t section_id;
     const struct firmware* fw_entry;
     const struct {
         __le16 word1;
         __le16 word2;
-        u8 data[];
+        uint8_t data[];
     } * file_sec;
-    const u8* eof;
+    const uint8_t* eof;
     const __le32* dword_buff;
-    const u8* hw_addr;
+    const uint8_t* hw_addr;
 
 #define NVM_WORD1_LEN(x) (8 * (x & 0x03FF))
 #define NVM_WORD2_ID(x) (x >> 12)
@@ -141,7 +141,7 @@ static int iwl_xvt_load_external_nvm(struct iwl_xvt* xvt) {
 #define EXT_NVM_WORD1_ID(x) ((x) >> 4)
 #define NVM_HEADER_0 (0x2A504C54)
 #define NVM_HEADER_1 (0x4E564D2A)
-#define NVM_HEADER_SIZE (4 * sizeof(u32))
+#define NVM_HEADER_SIZE (4 * sizeof(uint32_t))
 
     /*
      * Obtain NVM image via request_firmware. Since we already used
@@ -222,7 +222,7 @@ static int iwl_xvt_load_external_nvm(struct iwl_xvt* xvt) {
         }
 
         if (section_id == xvt->cfg->nvm_hw_section_num) {
-            hw_addr = (const u8*)((const __le16*)file_sec->data + HW_ADDR);
+            hw_addr = (const uint8_t*)((const __le16*)file_sec->data + HW_ADDR);
 
             /* The byte order is little endian 16 bit, meaning 214365 */
             xvt->nvm_hw_addr[0] = hw_addr[1];
@@ -234,7 +234,7 @@ static int iwl_xvt_load_external_nvm(struct iwl_xvt* xvt) {
         }
         if (section_id == NVM_SECTION_TYPE_MAC_OVERRIDE) {
             xvt->is_nvm_mac_override = true;
-            hw_addr = (const u8*)((const __le16*)file_sec->data + MAC_ADDRESS_OVERRIDE_EXT_NVM);
+            hw_addr = (const uint8_t*)((const __le16*)file_sec->data + MAC_ADDRESS_OVERRIDE_EXT_NVM);
 
             /*
              * Store the MAC address from MAO section.

@@ -41,7 +41,7 @@ struct mvm_statistics_dbg {
     __le32 burst_check;
     __le32 burst_count;
     __le32 wait_for_silence_timeout_cnt;
-    u8 reserved[12];
+    uint8_t reserved[12];
 } __packed; /* STATISTICS_DEBUG_API_S_VER_2 */
 
 struct mvm_statistics_div {
@@ -288,10 +288,10 @@ struct mvm_statistics_general_common_v19 {
     __le32 num_of_sos_states;
     __le32 beacon_filtered;
     __le32 missed_beacons;
-    u8 beacon_filter_average_energy;
-    u8 beacon_filter_reason;
-    u8 beacon_filter_current_energy;
-    u8 beacon_filter_reserved;
+    uint8_t beacon_filter_average_energy;
+    uint8_t beacon_filter_reason;
+    uint8_t beacon_filter_current_energy;
+    uint8_t beacon_filter_reserved;
     __le32 beacon_filter_delta_time;
     struct mvm_statistics_bt_activity bt_activity;
     __le64 rx_time;
@@ -317,10 +317,10 @@ struct mvm_statistics_general_common {
     __le32 num_of_sos_states;
     __le32 beacon_filtered;
     __le32 missed_beacons;
-    u8 beacon_filter_average_energy;
-    u8 beacon_filter_reason;
-    u8 beacon_filter_current_energy;
-    u8 beacon_filter_reserved;
+    uint8_t beacon_filter_average_energy;
+    uint8_t beacon_filter_reason;
+    uint8_t beacon_filter_current_energy;
+    uint8_t beacon_filter_reserved;
     __le32 beacon_filter_delta_time;
     struct mvm_statistics_bt_activity bt_activity;
     __le64 rx_time;
@@ -332,15 +332,15 @@ struct mvm_statistics_general_common {
 struct mvm_statistics_general_v8 {
     struct mvm_statistics_general_common_v19 common;
     __le32 beacon_counter[NUM_MAC_INDEX];
-    u8 beacon_average_energy[NUM_MAC_INDEX];
-    u8 reserved[4 - (NUM_MAC_INDEX % 4)];
+    uint8_t beacon_average_energy[NUM_MAC_INDEX];
+    uint8_t reserved[4 - (NUM_MAC_INDEX % 4)];
 } __packed; /* STATISTICS_GENERAL_API_S_VER_8 */
 
 struct mvm_statistics_general {
     struct mvm_statistics_general_common common;
     __le32 beacon_counter[MAC_INDEX_AUX];
-    u8 beacon_average_energy[MAC_INDEX_AUX];
-    u8 reserved[8 - MAC_INDEX_AUX];
+    uint8_t beacon_average_energy[MAC_INDEX_AUX];
+    uint8_t reserved[8 - MAC_INDEX_AUX];
 } __packed; /* STATISTICS_GENERAL_API_S_VER_10 */
 
 /**
@@ -354,14 +354,14 @@ struct mvm_statistics_load {
     __le32 air_time[MAC_INDEX_AUX];
     __le32 byte_count[MAC_INDEX_AUX];
     __le32 pkt_count[MAC_INDEX_AUX];
-    u8 avg_energy[IWL_MVM_STATION_COUNT];
+    uint8_t avg_energy[IWL_MVM_STATION_COUNT];
 } __packed; /* STATISTICS_RX_MAC_STATION_S_VER_3 */
 
 struct mvm_statistics_load_v1 {
     __le32 air_time[NUM_MAC_INDEX];
     __le32 byte_count[NUM_MAC_INDEX];
     __le32 pkt_count[NUM_MAC_INDEX];
-    u8 avg_energy[IWL_MVM_STATION_COUNT];
+    uint8_t avg_energy[IWL_MVM_STATION_COUNT];
 } __packed; /* STATISTICS_RX_MAC_STATION_S_VER_1 */
 
 struct mvm_statistics_rx {

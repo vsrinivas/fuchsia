@@ -158,8 +158,8 @@ enum iwl_power_flags {
 struct iwl_powertable_cmd {
     /* PM_POWER_TABLE_CMD_API_S_VER_6 */
     __le16 flags;
-    u8 keep_alive_seconds;
-    u8 debug_flags;
+    uint8_t keep_alive_seconds;
+    uint8_t debug_flags;
     __le32 rx_data_timeout;
     __le32 tx_data_timeout;
     __le32 sleep_interval[IWL_POWER_VEC_SIZE];
@@ -243,20 +243,20 @@ struct iwl_mac_power_cmd {
     __le32 tx_data_timeout;
     __le32 rx_data_timeout_uapsd;
     __le32 tx_data_timeout_uapsd;
-    u8 lprx_rssi_threshold;
-    u8 skip_dtim_periods;
+    uint8_t lprx_rssi_threshold;
+    uint8_t skip_dtim_periods;
     __le16 snooze_interval;
     __le16 snooze_window;
-    u8 snooze_step;
-    u8 qndp_tid;
-    u8 uapsd_ac_flags;
-    u8 uapsd_max_sp;
-    u8 heavy_tx_thld_packets;
-    u8 heavy_rx_thld_packets;
-    u8 heavy_tx_thld_percentage;
-    u8 heavy_rx_thld_percentage;
-    u8 limited_ps_threshold;
-    u8 reserved;
+    uint8_t snooze_step;
+    uint8_t qndp_tid;
+    uint8_t uapsd_ac_flags;
+    uint8_t uapsd_max_sp;
+    uint8_t heavy_tx_thld_packets;
+    uint8_t heavy_rx_thld_packets;
+    uint8_t heavy_tx_thld_percentage;
+    uint8_t heavy_rx_thld_percentage;
+    uint8_t limited_ps_threshold;
+    uint8_t reserved;
 } __packed;
 
 /*
@@ -268,8 +268,8 @@ struct iwl_mac_power_cmd {
  */
 struct iwl_uapsd_misbehaving_ap_notif {
     __le32 sta_id;
-    u8 mac_id;
-    u8 reserved[3];
+    uint8_t mac_id;
+    uint8_t reserved[3];
 } __packed;
 
 /**
@@ -280,8 +280,8 @@ struct iwl_uapsd_misbehaving_ap_notif {
  * @pwr_restriction: TX power restriction in dBms.
  */
 struct iwl_reduce_tx_power_cmd {
-    u8 flags;
-    u8 mac_context_id;
+    uint8_t flags;
+    uint8_t mac_context_id;
     __le16 pwr_restriction;
 } __packed; /* TX_REDUCED_POWER_API_S_VER_1 */
 
@@ -330,8 +330,8 @@ struct iwl_dev_tx_power_cmd_v3 {
 struct iwl_dev_tx_power_cmd_v4 {
     /* v4 is just an extension of v3 - keep this here */
     struct iwl_dev_tx_power_cmd_v3 v3;
-    u8 enable_ack_reduction;
-    u8 reserved[3];
+    uint8_t enable_ack_reduction;
+    uint8_t reserved[3];
 } __packed; /* TX_REDUCED_POWER_API_S_VER_4 */
 
 /**
@@ -350,9 +350,9 @@ struct iwl_dev_tx_power_cmd_v4 {
 struct iwl_dev_tx_power_cmd {
     /* v5 is just an extension of v3 - keep this here */
     struct iwl_dev_tx_power_cmd_v3 v3;
-    u8 enable_ack_reduction;
-    u8 per_chain_restriction_changed;
-    u8 reserved[2];
+    uint8_t enable_ack_reduction;
+    uint8_t per_chain_restriction_changed;
+    uint8_t reserved[2];
     __le32 timer_period;
 } __packed; /* TX_REDUCED_POWER_API_S_VER_5 */
 
@@ -376,8 +376,8 @@ enum iwl_geo_per_chain_offset_operation {
  */
 struct iwl_per_chain_offset {
     __le16 max_tx_power;
-    u8 chain_a;
-    u8 chain_b;
+    uint8_t chain_a;
+    uint8_t chain_b;
 } __packed; /* PER_CHAIN_LIMIT_OFFSET_PER_CHAIN_S_VER_1 */
 
 struct iwl_per_chain_offset_group {

@@ -42,7 +42,7 @@
 /**
  * iwl_dnt_dispatch_pull - pulling debug data.
  */
-int iwl_dnt_dispatch_pull(struct iwl_trans* trans, u8* buffer, u32 buffer_size, u32 input);
+int iwl_dnt_dispatch_pull(struct iwl_trans* trans, uint8_t* buffer, uint32_t buffer_size, uint32_t input);
 
 int iwl_dnt_dispatch_collect_ucode_message(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* rxb);
 

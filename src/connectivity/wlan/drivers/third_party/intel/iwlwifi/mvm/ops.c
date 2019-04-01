@@ -117,9 +117,9 @@ module_exit(iwl_mvm_exit);
 
 static void iwl_mvm_nic_config(struct iwl_op_mode* op_mode) {
     struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
-    u8 radio_cfg_type, radio_cfg_step, radio_cfg_dash;
-    u32 reg_val = 0;
-    u32 phy_config = iwl_mvm_get_phy_config(mvm);
+    uint8_t radio_cfg_type, radio_cfg_step, radio_cfg_dash;
+    uint32_t reg_val = 0;
+    uint32_t phy_config = iwl_mvm_get_phy_config(mvm);
 
     radio_cfg_type = (phy_config & FW_PHY_CFG_RADIO_TYPE) >> FW_PHY_CFG_RADIO_TYPE_POS;
     radio_cfg_step = (phy_config & FW_PHY_CFG_RADIO_STEP) >> FW_PHY_CFG_RADIO_STEP_POS;
@@ -181,8 +181,8 @@ static void iwl_mvm_rx_dhn(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_dhn_hdr* notif = (void*)pkt->data;
 
-    u32 length = le32_to_cpu(notif->length);
-    u32 index_and_mask = le32_to_cpu(notif->index_and_mask);
+    uint32_t length = le32_to_cpu(notif->length);
+    uint32_t index_and_mask = le32_to_cpu(notif->index_and_mask);
 
     IWL_DEBUG_INFO(mvm,
                    "Received Debug Host Notifcation:\n"
@@ -215,7 +215,7 @@ enum iwl_rx_handler_context {
  * @fn: the function is called when notification is received
  */
 struct iwl_rx_handlers {
-    u16 cmd_id;
+    uint16_t cmd_id;
     enum iwl_rx_handler_context context;
     void (*fn)(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 };
@@ -515,9 +515,9 @@ static void iwl_mvm_async_handlers_wk(struct work_struct* wk);
 static void iwl_mvm_d0i3_exit_work(struct work_struct* wk);
 #endif
 
-static u32 iwl_mvm_min_backoff(struct iwl_mvm* mvm) {
+static uint32_t iwl_mvm_min_backoff(struct iwl_mvm* mvm) {
     const struct iwl_pwr_tx_backoff* backoff = mvm->cfg->pwr_tx_backoffs;
-    u64 dflt_pwr_limit;
+    uint64_t dflt_pwr_limit;
 
     if (!backoff) { return 0; }
 
@@ -646,11 +646,11 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     struct iwl_op_mode* op_mode;
     struct iwl_mvm* mvm;
     struct iwl_trans_config trans_cfg = {};
-    static const u8 no_reclaim_cmds[] = {
+    static const uint8_t no_reclaim_cmds[] = {
         TX_CMD,
     };
     int err, scan_size;
-    u32 min_backoff;
+    uint32_t min_backoff;
     enum iwl_amsdu_size rb_size_default;
 
     /*
@@ -1122,7 +1122,7 @@ static void iwl_mvm_rx(struct iwl_op_mode* op_mode, struct napi_struct* napi,
                        struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
-    u16 cmd = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
+    uint16_t cmd = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
     /*
@@ -1147,7 +1147,7 @@ static void iwl_mvm_rx_mq(struct iwl_op_mode* op_mode, struct napi_struct* napi,
                           struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
-    u16 cmd = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
+    uint16_t cmd = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
 
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
     /*
@@ -1184,7 +1184,7 @@ static void iwl_mvm_async_cb(struct iwl_op_mode* op_mode, const struct iwl_devic
 
 static void iwl_mvm_queue_state_change(struct iwl_op_mode* op_mode, int hw_queue, bool start) {
     struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
-    u8 sta_id = mvm->queue_info[hw_queue].ra_sta_id;
+    uint8_t sta_id = mvm->queue_info[hw_queue].ra_sta_id;
     struct ieee80211_sta* sta;
     struct ieee80211_txq* txq;
     struct iwl_mvm_txq* mvmtxq;
@@ -1369,9 +1369,9 @@ static void iwl_mvm_cmd_queue_full(struct iwl_op_mode* op_mode) {
 struct iwl_d0i3_iter_data {
     struct iwl_mvm* mvm;
     struct ieee80211_vif* connected_vif;
-    u8 ap_sta_id;
-    u8 vif_count;
-    u8 offloading_tid;
+    uint8_t ap_sta_id;
+    uint8_t vif_count;
+    uint8_t offloading_tid;
     bool disable_offloading;
 };
 
@@ -1379,8 +1379,8 @@ static bool iwl_mvm_disallow_offloading(struct iwl_mvm* mvm, struct ieee80211_vi
                                         struct iwl_d0i3_iter_data* iter_data) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm_sta* mvmsta;
-    u32 available_tids = 0;
-    u8 tid;
+    uint32_t available_tids = 0;
+    uint8_t tid;
 
     if (WARN_ON(vif->type != NL80211_IFTYPE_STATION || mvmvif->ap_sta_id == IWL_MVM_INVALID_STA)) {
         return false;
@@ -1419,11 +1419,11 @@ static bool iwl_mvm_disallow_offloading(struct iwl_mvm* mvm, struct ieee80211_vi
     return false;
 }
 
-static void iwl_mvm_enter_d0i3_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_enter_d0i3_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_d0i3_iter_data* data = _data;
     struct iwl_mvm* mvm = data->mvm;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-    u32 flags = CMD_ASYNC | CMD_HIGH_PRIO | CMD_SEND_IN_IDLE;
+    uint32_t flags = CMD_ASYNC | CMD_HIGH_PRIO | CMD_SEND_IN_IDLE;
 
     IWL_DEBUG_RPM(mvm, "entering D0i3 - vif %pM\n", vif->addr);
     if (vif->type != NL80211_IFTYPE_STATION || !vif->bss_conf.assoc) { return; }
@@ -1482,7 +1482,7 @@ out:
 
 int iwl_mvm_enter_d0i3(struct iwl_op_mode* op_mode) {
     struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
-    u32 flags = CMD_ASYNC | CMD_HIGH_PRIO | CMD_SEND_IN_IDLE;
+    uint32_t flags = CMD_ASYNC | CMD_HIGH_PRIO | CMD_SEND_IN_IDLE;
     int ret;
     struct iwl_d0i3_iter_data d0i3_iter_data = {
         .mvm = mvm,
@@ -1559,9 +1559,9 @@ int iwl_mvm_enter_d0i3(struct iwl_op_mode* op_mode) {
                                 &d3_cfg_cmd);
 }
 
-static void iwl_mvm_exit_d0i3_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_exit_d0i3_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm* mvm = _data;
-    u32 flags = CMD_ASYNC | CMD_HIGH_PRIO;
+    uint32_t flags = CMD_ASYNC | CMD_HIGH_PRIO;
 
     IWL_DEBUG_RPM(mvm, "exiting D0i3 - vif %pM\n", vif->addr);
     if (vif->type != NL80211_IFTYPE_STATION || !vif->bss_conf.assoc) { return; }
@@ -1572,13 +1572,13 @@ static void iwl_mvm_exit_d0i3_iterator(void* _data, u8* mac, struct ieee80211_vi
 struct iwl_mvm_d0i3_exit_work_iter_data {
     struct iwl_mvm* mvm;
     struct iwl_wowlan_status* status;
-    u32 wakeup_reasons;
+    uint32_t wakeup_reasons;
 };
 
-static void iwl_mvm_d0i3_exit_work_iter(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_d0i3_exit_work_iter(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_d0i3_exit_work_iter_data* data = _data;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-    u32 reasons = data->wakeup_reasons;
+    uint32_t reasons = data->wakeup_reasons;
 
     /* consider only the relevant station interface */
     if (vif->type != NL80211_IFTYPE_STATION || !vif->bss_conf.assoc ||
@@ -1622,7 +1622,7 @@ void iwl_mvm_d0i3_enable_tx(struct iwl_mvm* mvm, __le16* qos_seq) {
         /* update qos seq numbers if offloading was enabled */
         mvm_ap_sta = iwl_mvm_sta_from_mac80211(sta);
         for (i = 0; i < IWL_MAX_TID_COUNT; i++) {
-            u16 seq = le16_to_cpu(qos_seq[i]);
+            uint16_t seq = le16_to_cpu(qos_seq[i]);
             /* firmware stores last-used one, we store next one */
             seq += 0x10;
             mvm_ap_sta->tid_data[i].seq_number = seq;
@@ -1653,7 +1653,7 @@ static void iwl_mvm_d0i3_exit_work(struct work_struct* wk) {
     };
 
     struct iwl_wowlan_status* status;
-    u32 wakeup_reasons = 0;
+    uint32_t wakeup_reasons = 0;
     __le16* qos_seq = NULL;
 
     mutex_lock(&mvm->mutex);
@@ -1691,7 +1691,7 @@ out:
 }
 
 int _iwl_mvm_exit_d0i3(struct iwl_mvm* mvm) {
-    u32 flags = CMD_ASYNC | CMD_HIGH_PRIO | CMD_SEND_IN_IDLE | CMD_WAKE_UP_TRANS;
+    uint32_t flags = CMD_ASYNC | CMD_HIGH_PRIO | CMD_SEND_IN_IDLE | CMD_WAKE_UP_TRANS;
     int ret;
 
     IWL_DEBUG_RPM(mvm, "MVM exiting D0i3\n");
@@ -1758,7 +1758,7 @@ static void iwl_mvm_rx_mq_rss(struct iwl_op_mode* op_mode, struct napi_struct* n
                               struct iwl_rx_cmd_buffer* rxb, unsigned int queue) {
     struct iwl_mvm* mvm = IWL_OP_MODE_GET_MVM(op_mode);
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
-    u16 cmd = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
+    uint16_t cmd = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
 
     if (unlikely(cmd == WIDE_ID(LEGACY_GROUP, FRAME_RELEASE))) {
         iwl_mvm_rx_frame_release(mvm, napi, rxb, queue);

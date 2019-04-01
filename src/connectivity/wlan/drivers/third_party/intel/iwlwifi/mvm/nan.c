@@ -47,7 +47,7 @@ enum srf_type {
     SRF_BLOOM_FILTER_IDX = BIT(2) | BIT(3),
 };
 
-static bool iwl_mvm_can_beacon(struct ieee80211_vif* vif, enum nl80211_band band, u8 channel) {
+static bool iwl_mvm_can_beacon(struct ieee80211_vif* vif, enum nl80211_band band, uint8_t channel) {
     struct wiphy* wiphy = ieee80211_vif_to_wdev(vif)->wiphy;
     int freq = ieee80211_channel_to_frequency(channel, band);
     struct ieee80211_channel* chan = ieee80211_get_channel(wiphy, freq);
@@ -97,7 +97,7 @@ int iwl_mvm_start_nan(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
     struct iwl_nan_nan2_cfg* nan2_cfg;
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
     int ret = 0;
-    u16 cdw = 0;
+    uint16_t cdw = 0;
 
     IWL_DEBUG_MAC80211(IWL_MAC80211_GET_MVM(hw), "Start NAN\n");
 
@@ -205,7 +205,7 @@ static enum iwl_fw_nan_func_type iwl_fw_nan_func_type(enum nl80211_nan_function_
     }
 }
 
-static u8 iwl_mvm_get_match_filter_len(struct cfg80211_nan_func_filter* filters, u8 num_filters) {
+static uint8_t iwl_mvm_get_match_filter_len(struct cfg80211_nan_func_filter* filters, uint8_t num_filters) {
     int i;
     unsigned int len = 0;
 
@@ -219,13 +219,13 @@ static u8 iwl_mvm_get_match_filter_len(struct cfg80211_nan_func_filter* filters,
     return len;
 }
 
-static void iwl_mvm_copy_filters(struct cfg80211_nan_func_filter* filters, u8 num_filters,
-                                 u8* cmd_data) {
+static void iwl_mvm_copy_filters(struct cfg80211_nan_func_filter* filters, uint8_t num_filters,
+                                 uint8_t* cmd_data) {
     int i;
-    u8 offset = 0;
+    uint8_t offset = 0;
 
     for (i = 0; i < num_filters; i++) {
-        memcpy(cmd_data + offset, &filters[i].len, sizeof(u8));
+        memcpy(cmd_data + offset, &filters[i].len, sizeof(uint8_t));
         offset++;
         if (filters[i].len > 0) { memcpy(cmd_data + offset, filters[i].filter, filters[i].len); }
 
@@ -244,7 +244,7 @@ static inline struct iwl_nan_add_func_common* iwl_mvm_nan_get_add_func_common(
                                    : &((struct iwl_nan_add_func_cmd*)nan_add_func_cmd)->cmn;
 }
 
-static inline u8* iwl_mvm_nan_get_add_func_data(struct ieee80211_hw* hw, void* nan_add_func_cmd) {
+static inline uint8_t* iwl_mvm_nan_get_add_func_data(struct ieee80211_hw* hw, void* nan_add_func_cmd) {
     return iwl_mvm_nan_is_ver2(hw) ? ((struct iwl_nan_add_func_cmd_v2*)nan_add_func_cmd)->data
                                    : ((struct iwl_nan_add_func_cmd*)nan_add_func_cmd)->data;
 }
@@ -260,9 +260,9 @@ int iwl_mvm_add_nan_func(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
     };
     struct iwl_nan_add_func_res* resp;
     struct iwl_rx_packet* pkt;
-    u8* cmd_data;
-    u16 flags = 0;
-    u8 tx_filt_len, rx_filt_len;
+    uint8_t* cmd_data;
+    uint16_t flags = 0;
+    uint8_t tx_filt_len, rx_filt_len;
     size_t cmd_len;
     int ret = 0;
 
@@ -342,7 +342,7 @@ int iwl_mvm_add_nan_func(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
 
     cmd_data += ALIGN(cmn->serv_info_len, 4);
     if (nan_func->srf_bf_len) {
-        u8 srf_ctl = 0;
+        uint8_t srf_ctl = 0;
 
         srf_ctl |= SRF_BF_TYPE;
         srf_ctl |= (nan_func->srf_bf_idx << 2) & SRF_BLOOM_FILTER_IDX;
@@ -352,7 +352,7 @@ int iwl_mvm_add_nan_func(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
         memcpy(cmd_data, &srf_ctl, sizeof(srf_ctl));
         memcpy(cmd_data + 1, nan_func->srf_bf, nan_func->srf_bf_len);
     } else if (nan_func->srf_num_macs) {
-        u8 srf_ctl = 0;
+        uint8_t srf_ctl = 0;
         int i;
 
         if (nan_func->srf_include) { srf_ctl |= SRF_INCLUDE; }
@@ -425,7 +425,7 @@ unlock:
     return ret;
 }
 
-void iwl_mvm_del_nan_func(struct ieee80211_hw* hw, struct ieee80211_vif* vif, u8 instance_id) {
+void iwl_mvm_del_nan_func(struct ieee80211_hw* hw, struct ieee80211_vif* vif, uint8_t instance_id) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
     void* cmd;
     struct iwl_nan_add_func_common* cmn;
@@ -454,7 +454,7 @@ void iwl_mvm_del_nan_func(struct ieee80211_hw* hw, struct ieee80211_vif* vif, u8
     kfree(cmd);
 }
 
-static u8 iwl_cfg_nan_func_type(u8 fw_type) {
+static uint8_t iwl_cfg_nan_func_type(uint8_t fw_type) {
     switch (fw_type) {
     case IWL_NAN_DE_FUNC_PUBLISH:
         return NL80211_NAN_FUNC_PUBLISH;
@@ -507,8 +507,8 @@ static void iwl_mvm_nan_match_v1(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* 
 static void iwl_mvm_nan_match_v2(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_nan_disc_evt_notify_v2* ev = (void*)pkt->data;
-    u32 len = iwl_rx_packet_payload_len(pkt);
-    u32 i = 0;
+    uint32_t len = iwl_rx_packet_payload_len(pkt);
+    uint32_t i = 0;
 
     if (WARN_ONCE(!mvm->nan_vif, "NAN vif is NULL")) { return; }
 
@@ -523,7 +523,7 @@ static void iwl_mvm_nan_match_v2(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* 
     i = 0;
     while (i < le32_to_cpu(ev->match_len)) {
         struct cfg80211_nan_match_params match = {0};
-        struct iwl_nan_disc_info* disc_info = (struct iwl_nan_disc_info*)(((u8*)(ev + 1)) + i);
+        struct iwl_nan_disc_info* disc_info = (struct iwl_nan_disc_info*)(((uint8_t*)(ev + 1)) + i);
 
         match.type = iwl_cfg_nan_func_type(disc_info->type);
         match.inst_id = disc_info->instance_id;
@@ -583,7 +583,7 @@ void iwl_mvm_nan_de_term_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rx
 }
 
 int iwl_mvm_nan_config_nan_faw_cmd(struct iwl_mvm* mvm, struct cfg80211_chan_def* chandef,
-                                   u8 slots) {
+                                   uint8_t slots) {
     struct iwl_nan_faw_config cmd = {};
     struct iwl_mvm_vif* mvmvif;
     int ret;

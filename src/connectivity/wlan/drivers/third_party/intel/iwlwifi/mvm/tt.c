@@ -41,7 +41,7 @@
 
 void iwl_mvm_enter_ctkill(struct iwl_mvm* mvm) {
     struct iwl_mvm_tt_mgmt* tt = &mvm->thermal_throttle;
-    u32 duration = tt->params.ct_kill_duration;
+    uint32_t duration = tt->params.ct_kill_duration;
 
     if (test_bit(IWL_MVM_STATUS_HW_CTKILL, &mvm->status)) { return; }
 
@@ -69,7 +69,7 @@ static void iwl_mvm_exit_ctkill(struct iwl_mvm* mvm) {
     iwl_mvm_set_hw_ctkill_state(mvm, false);
 }
 
-void iwl_mvm_tt_temp_changed(struct iwl_mvm* mvm, u32 temp) {
+void iwl_mvm_tt_temp_changed(struct iwl_mvm* mvm, uint32_t temp) {
     /* ignore the notification if we are in test mode */
     if (mvm->temperature_test) { return; }
 
@@ -96,7 +96,7 @@ static int iwl_mvm_temp_notif_parse(struct iwl_mvm* mvm, struct iwl_rx_packet* p
 
     temp = le32_to_cpu(notif_v1->temp);
 
-    /* shouldn't be negative, but since it's s32, make sure it isn't */
+    /* shouldn't be negative, but since it's int32_t, make sure it isn't */
     if (WARN_ON_ONCE(temp < 0)) { temp = 0; }
 
     IWL_DEBUG_TEMP(mvm, "DTS_MEASUREMENT_NOTIFICATION - %d\n", temp);
@@ -123,7 +123,7 @@ void iwl_mvm_temp_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_dts_measurement_notif_v2* notif_v2;
     int len = iwl_rx_packet_payload_len(pkt);
     int temp;
-    u32 ths_crossed;
+    uint32_t ths_crossed;
 
     /* the notification is handled synchronously in ctkill, so skip here */
     if (test_bit(IWL_MVM_STATUS_HW_CTKILL, &mvm->status)) { return; }
@@ -184,7 +184,7 @@ static int iwl_mvm_get_temp_cmd(struct iwl_mvm* mvm) {
     struct iwl_ext_dts_measurement_cmd extcmd = {
         .control_mode = cpu_to_le32(DTS_AUTOMATIC),
     };
-    u32 cmdid;
+    uint32_t cmdid;
 
     cmdid = iwl_cmd_id(CMD_DTS_MEASUREMENT_TRIGGER_WIDE, PHY_OPS_GROUP, 0);
 
@@ -195,9 +195,9 @@ static int iwl_mvm_get_temp_cmd(struct iwl_mvm* mvm) {
     return iwl_mvm_send_cmd_pdu(mvm, cmdid, 0, sizeof(extcmd), &extcmd);
 }
 
-int iwl_mvm_get_temp(struct iwl_mvm* mvm, s32* temp) {
+int iwl_mvm_get_temp(struct iwl_mvm* mvm, int32_t* temp) {
     struct iwl_notification_wait wait_temp_notif;
-    static u16 temp_notif[] = {WIDE_ID(PHY_OPS_GROUP, DTS_MEASUREMENT_NOTIF_WIDE)};
+    static uint16_t temp_notif[] = {WIDE_ID(PHY_OPS_GROUP, DTS_MEASUREMENT_NOTIF_WIDE)};
     int ret;
 
     lockdep_assert_held(&mvm->mutex);
@@ -222,8 +222,8 @@ int iwl_mvm_get_temp(struct iwl_mvm* mvm, s32* temp) {
 static void check_exit_ctkill(struct work_struct* work) {
     struct iwl_mvm_tt_mgmt* tt;
     struct iwl_mvm* mvm;
-    u32 duration;
-    s32 temp;
+    uint32_t duration;
+    int32_t temp;
     int ret;
 
     tt = container_of(work, struct iwl_mvm_tt_mgmt, ct_kill_exit.work);
@@ -268,7 +268,7 @@ reschedule:
     schedule_delayed_work(&mvm->thermal_throttle.ct_kill_exit, round_jiffies(duration * HZ));
 }
 
-static void iwl_mvm_tt_smps_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_tt_smps_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm* mvm = _data;
     enum ieee80211_smps_mode smps_mode;
 
@@ -304,12 +304,12 @@ static void iwl_mvm_tt_tx_protection(struct iwl_mvm* mvm, bool enable) {
     }
 }
 
-void iwl_mvm_tt_tx_backoff(struct iwl_mvm* mvm, u32 backoff) {
+void iwl_mvm_tt_tx_backoff(struct iwl_mvm* mvm, uint32_t backoff) {
     struct iwl_host_cmd cmd = {
         .id = REPLY_THERMAL_MNG_BACKOFF,
         .len =
             {
-                sizeof(u32),
+                sizeof(uint32_t),
             },
         .data =
             {
@@ -330,10 +330,10 @@ void iwl_mvm_tt_tx_backoff(struct iwl_mvm* mvm, u32 backoff) {
 void iwl_mvm_tt_handler(struct iwl_mvm* mvm) {
     struct iwl_tt_params* params = &mvm->thermal_throttle.params;
     struct iwl_mvm_tt_mgmt* tt = &mvm->thermal_throttle;
-    s32 temperature = mvm->temperature;
+    int32_t temperature = mvm->temperature;
     bool throttle_enable = false;
     int i;
-    u32 tx_backoff;
+    uint32_t tx_backoff;
 
     IWL_DEBUG_TEMP(mvm, "NIC temperature: %d\n", mvm->temperature);
 
@@ -415,7 +415,7 @@ static const struct iwl_tt_params iwl_mvm_default_tt_params = {
 };
 
 /* budget in mWatt */
-static const u32 iwl_mvm_cdev_budgets[] = {
+static const uint32_t iwl_mvm_cdev_budgets[] = {
     2000, /* cooling state 0 */
     1800, /* cooling state 1 */
     1600, /* cooling state 2 */
@@ -438,14 +438,14 @@ static const u32 iwl_mvm_cdev_budgets[] = {
     150,  /* cooling state 19 */
 };
 
-int iwl_mvm_ctdp_command(struct iwl_mvm* mvm, u32 op, u32 state) {
+int iwl_mvm_ctdp_command(struct iwl_mvm* mvm, uint32_t op, uint32_t state) {
     struct iwl_mvm_ctdp_cmd cmd = {
         .operation = cpu_to_le32(op),
         .budget = cpu_to_le32(iwl_mvm_cdev_budgets[state]),
         .window_size = 0,
     };
     int ret;
-    u32 status;
+    uint32_t status;
 
     lockdep_assert_held(&mvm->mutex);
 
@@ -483,7 +483,7 @@ int iwl_mvm_ctdp_command(struct iwl_mvm* mvm, u32 op, u32 state) {
 
 #ifdef CONFIG_THERMAL
 static int compare_temps(const void* a, const void* b) {
-    return ((s16)le16_to_cpu(*(__le16*)a) - (s16)le16_to_cpu(*(__le16*)b));
+    return ((int16_t)le16_to_cpu(*(__le16*)a) - (int16_t)le16_to_cpu(*(__le16*)b));
 }
 
 int iwl_mvm_send_temp_report_ths_cmd(struct iwl_mvm* mvm) {
@@ -509,7 +509,7 @@ int iwl_mvm_send_temp_report_ths_cmd(struct iwl_mvm* mvm) {
     if (!idx) { goto send; }
 
     /*sort cmd array*/
-    sort(cmd.thresholds, idx, sizeof(s16), compare_temps, NULL);
+    sort(cmd.thresholds, idx, sizeof(int16_t), compare_temps, NULL);
 
     /* we should save the indexes of trips because we sort
      * and compress the orginal array
@@ -575,7 +575,7 @@ static int iwl_mvm_tzone_set_trip_temp(struct thermal_zone_device* device, int t
     struct iwl_mvm* mvm = (struct iwl_mvm*)device->devdata;
     struct iwl_mvm_thermal_device* tzone;
     int i, ret;
-    s16 temperature;
+    int16_t temperature;
 
     mutex_lock(&mvm->mutex);
 
@@ -594,7 +594,7 @@ static int iwl_mvm_tzone_set_trip_temp(struct thermal_zone_device* device, int t
         goto out;
     }
 
-    temperature = (s16)(temp / 1000);
+    temperature = (int16_t)(temp / 1000);
     tzone = &mvm->tz_device;
 
     if (!tzone) {
@@ -745,7 +745,7 @@ static void iwl_mvm_cooling_device_unregister(struct iwl_mvm* mvm) {
 }
 #endif /* CONFIG_THERMAL */
 
-void iwl_mvm_thermal_initialize(struct iwl_mvm* mvm, u32 min_backoff) {
+void iwl_mvm_thermal_initialize(struct iwl_mvm* mvm, uint32_t min_backoff) {
     struct iwl_mvm_tt_mgmt* tt = &mvm->thermal_throttle;
 
     IWL_DEBUG_TEMP(mvm, "Initialize Thermal Throttling\n");

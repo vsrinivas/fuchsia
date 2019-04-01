@@ -83,10 +83,10 @@ struct iwl_host_cmd;
 struct iwl_rx_mem_buffer {
     dma_addr_t page_dma;
     struct page* page;
-    u16 vid;
+    uint16_t vid;
     bool invalid;
     struct list_head list;
-    u32 size;
+    uint32_t size;
 };
 
 /**
@@ -94,17 +94,17 @@ struct iwl_rx_mem_buffer {
  *
  */
 struct isr_statistics {
-    u32 hw;
-    u32 sw;
-    u32 err_code;
-    u32 sch;
-    u32 alive;
-    u32 rfkill;
-    u32 ctkill;
-    u32 wakeup;
-    u32 rx;
-    u32 tx;
-    u32 unhandled;
+    uint32_t hw;
+    uint32_t sw;
+    uint32_t err_code;
+    uint32_t sch;
+    uint32_t alive;
+    uint32_t rfkill;
+    uint32_t ctkill;
+    uint32_t wakeup;
+    uint32_t rx;
+    uint32_t tx;
+    uint32_t unhandled;
 };
 
 #define IWL_RX_TD_TYPE_MSK 0xff000000
@@ -141,12 +141,12 @@ struct iwl_rx_transfer_desc {
  * @reserved2: reserved
  */
 struct iwl_rx_completion_desc {
-    u8 type;
-    u8 status;
+    uint8_t type;
+    uint8_t status;
     __le16 reserved1;
     __le16 rbid;
     __le32 size;
-    u8 reserved2[22];
+    uint8_t reserved2[22];
 } __packed;
 
 /**
@@ -191,12 +191,12 @@ struct iwl_rxq {
     dma_addr_t tr_tail_dma;
     __le16* cr_tail;
     dma_addr_t cr_tail_dma;
-    u32 read;
-    u32 write;
-    u32 free_count;
-    u32 used_count;
-    u32 write_actual;
-    u32 queue_size;
+    uint32_t read;
+    uint32_t write;
+    uint32_t free_count;
+    uint32_t used_count;
+    uint32_t write_actual;
+    uint32_t queue_size;
     struct list_head rx_free;
     struct list_head rx_used;
     bool need_update;
@@ -270,8 +270,8 @@ static inline int iwl_queue_dec_wrap(struct iwl_trans* trans, int index) {
 struct iwl_cmd_meta {
     /* only for SYNC commands, iff the reply skb is wanted */
     struct iwl_host_cmd* source;
-    u32 flags;
-    u32 tbs;
+    uint32_t flags;
+    uint32_t tbs;
 };
 
 #define TFD_TX_CMD_SLOTS 256
@@ -298,7 +298,7 @@ struct iwl_pcie_txq_entry {
 };
 
 struct iwl_pcie_first_tb_buf {
-    u8 buf[IWL_FIRST_TB_SIZE_ALIGN];
+    uint8_t buf[IWL_FIRST_TB_SIZE_ALIGN];
 };
 
 /**
@@ -364,7 +364,7 @@ struct iwl_txq {
     int read_ptr;
     dma_addr_t dma_addr;
     int n_window;
-    u32 id;
+    uint32_t id;
     int low_mark;
     int high_mark;
 };
@@ -375,7 +375,7 @@ static inline dma_addr_t iwl_pcie_get_first_tb_dma(struct iwl_txq* txq, int idx)
 
 struct iwl_tso_hdr_page {
     struct page* page;
-    u8* pos;
+    uint8_t* pos;
 };
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
@@ -443,9 +443,9 @@ struct iwl_self_init_dram {
  */
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 struct cont_rec {
-    u32 prev_wr_ptr;
-    u32 prev_wrap_cnt;
-    u8 state;
+    uint32_t prev_wr_ptr;
+    uint32_t prev_wrap_cnt;
+    uint8_t state;
     /* Used to sync monitor_data debugfs file with driver unload flow */
     struct mutex mutex;
 };
@@ -536,8 +536,8 @@ struct iwl_trans_pcie {
 
     spinlock_t irq_lock;
     struct mutex mutex;
-    u32 inta_mask;
-    u32 scd_base_addr;
+    uint32_t inta_mask;
+    uint32_t scd_base_addr;
     struct iwl_dma_ptr scd_bc_tbls;
     struct iwl_dma_ptr kw;
 
@@ -555,23 +555,23 @@ struct iwl_trans_pcie {
     wait_queue_head_t wait_command_queue;
     wait_queue_head_t d0i3_waitq;
 
-    u8 page_offs, dev_cmd_offs;
+    uint8_t page_offs, dev_cmd_offs;
 
-    u8 cmd_queue;
-    u8 def_rx_queue;
-    u8 cmd_fifo;
+    uint8_t cmd_queue;
+    uint8_t def_rx_queue;
+    uint8_t cmd_fifo;
     unsigned int cmd_q_wdg_timeout;
-    u8 n_no_reclaim_cmds;
-    u8 no_reclaim_cmds[MAX_NO_RECLAIM_CMDS];
-    u8 max_tbs;
-    u16 tfd_size;
+    uint8_t n_no_reclaim_cmds;
+    uint8_t no_reclaim_cmds[MAX_NO_RECLAIM_CMDS];
+    uint8_t max_tbs;
+    uint16_t tfd_size;
 
     enum iwl_amsdu_size rx_buf_size;
     bool bc_table_dword;
     bool scd_set_active;
     bool sw_csum_tx;
     bool pcie_dbg_dumped_once;
-    u32 rx_page_order;
+    uint32_t rx_page_order;
 
     /*protect hw register */
     spinlock_t reg_lock;
@@ -584,13 +584,13 @@ struct iwl_trans_pcie {
 
     struct msix_entry msix_entries[IWL_MAX_RX_HW_QUEUES];
     bool msix_enabled;
-    u8 shared_vec_mask;
-    u32 alloc_vecs;
-    u32 def_irq;
-    u32 fh_init_mask;
-    u32 hw_init_mask;
-    u32 fh_mask;
-    u32 hw_mask;
+    uint8_t shared_vec_mask;
+    uint32_t alloc_vecs;
+    uint32_t def_irq;
+    uint32_t fh_init_mask;
+    uint32_t hw_init_mask;
+    uint32_t fh_mask;
+    uint32_t hw_mask;
     cpumask_t affinity_mask[IWL_MAX_RX_HW_QUEUES];
     bool in_rescan;
 };
@@ -655,13 +655,13 @@ void iwl_pcie_disable_ict(struct iwl_trans* trans);
  ******************************************************/
 int iwl_pcie_tx_init(struct iwl_trans* trans);
 int iwl_pcie_gen2_tx_init(struct iwl_trans* trans, int txq_id, int queue_size);
-void iwl_pcie_tx_start(struct iwl_trans* trans, u32 scd_base_addr);
+void iwl_pcie_tx_start(struct iwl_trans* trans, uint32_t scd_base_addr);
 int iwl_pcie_tx_stop(struct iwl_trans* trans);
 void iwl_pcie_tx_free(struct iwl_trans* trans);
-bool iwl_trans_pcie_txq_enable(struct iwl_trans* trans, int queue, u16 ssn,
+bool iwl_trans_pcie_txq_enable(struct iwl_trans* trans, int queue, uint16_t ssn,
                                const struct iwl_trans_txq_scd_cfg* cfg, unsigned int wdg_timeout);
 void iwl_trans_pcie_txq_disable(struct iwl_trans* trans, int queue, bool configure_scd);
-void iwl_trans_pcie_txq_set_shared_mode(struct iwl_trans* trans, u32 txq_id, bool shared_mode);
+void iwl_trans_pcie_txq_set_shared_mode(struct iwl_trans* trans, uint32_t txq_id, bool shared_mode);
 void iwl_trans_pcie_log_scd_error(struct iwl_trans* trans, struct iwl_txq* txq);
 int iwl_trans_pcie_tx(struct iwl_trans* trans, struct sk_buff* skb, struct iwl_device_cmd* dev_cmd,
                       int txq_id);
@@ -674,9 +674,9 @@ void iwl_trans_pcie_reclaim(struct iwl_trans* trans, int txq_id, int ssn,
                             struct sk_buff_head* skbs);
 void iwl_trans_pcie_tx_reset(struct iwl_trans* trans);
 void iwl_pcie_gen2_update_byte_tbl(struct iwl_trans_pcie* trans_pcie, struct iwl_txq* txq,
-                                   u16 byte_cnt, int num_tbs);
+                                   uint16_t byte_cnt, int num_tbs);
 
-static inline u16 iwl_pcie_tfd_tb_get_len(struct iwl_trans* trans, void* _tfd, u8 idx) {
+static inline uint16_t iwl_pcie_tfd_tb_get_len(struct iwl_trans* trans, void* _tfd, uint8_t idx) {
     if (trans->cfg->use_tfh) {
         struct iwl_tfh_tfd* tfd = _tfd;
         struct iwl_tfh_tb* tb = &tfd->tbs[idx];
@@ -798,14 +798,14 @@ static inline void iwl_enable_interrupts(struct iwl_trans* trans) {
     _iwl_enable_interrupts(trans);
     spin_unlock(&trans_pcie->irq_lock);
 }
-static inline void iwl_enable_hw_int_msk_msix(struct iwl_trans* trans, u32 msk) {
+static inline void iwl_enable_hw_int_msk_msix(struct iwl_trans* trans, uint32_t msk) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     iwl_write32(trans, CSR_MSIX_HW_INT_MASK_AD, ~msk);
     trans_pcie->hw_mask = msk;
 }
 
-static inline void iwl_enable_fh_int_msk_msix(struct iwl_trans* trans, u32 msk) {
+static inline void iwl_enable_fh_int_msk_msix(struct iwl_trans* trans, uint32_t msk) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     iwl_write32(trans, CSR_MSIX_FH_INT_MASK_AD, ~msk);
@@ -825,7 +825,7 @@ static inline void iwl_enable_fw_load_int(struct iwl_trans* trans) {
     }
 }
 
-static inline u16 iwl_pcie_get_cmd_index(const struct iwl_txq* q, u32 index) {
+static inline uint16_t iwl_pcie_get_cmd_index(const struct iwl_txq* q, uint32_t index) {
     return index & (q->n_window - 1);
 }
 
@@ -914,9 +914,9 @@ static inline bool iwl_is_rfkill_set(struct iwl_trans* trans) {
     return !(iwl_read32(trans, CSR_GP_CNTRL) & CSR_GP_CNTRL_REG_FLAG_HW_RF_KILL_SW);
 }
 
-static inline void __iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, u32 reg, u32 mask,
-                                                  u32 value) {
-    u32 v;
+static inline void __iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask,
+                                                  uint32_t value) {
+    uint32_t v;
 
 #ifdef CPTCFG_IWLWIFI_DEBUG
     WARN_ON_ONCE(value & ~mask);
@@ -928,11 +928,11 @@ static inline void __iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, u32 r
     iwl_write32(trans, reg, v);
 }
 
-static inline void __iwl_trans_pcie_clear_bit(struct iwl_trans* trans, u32 reg, u32 mask) {
+static inline void __iwl_trans_pcie_clear_bit(struct iwl_trans* trans, uint32_t reg, uint32_t mask) {
     __iwl_trans_pcie_set_bits_mask(trans, reg, mask, 0);
 }
 
-static inline void __iwl_trans_pcie_set_bit(struct iwl_trans* trans, u32 reg, u32 mask) {
+static inline void __iwl_trans_pcie_set_bit(struct iwl_trans* trans, uint32_t reg, uint32_t mask) {
     __iwl_trans_pcie_set_bits_mask(trans, reg, mask, mask);
 }
 
@@ -979,18 +979,18 @@ struct iwl_tso_hdr_page* get_page_hdr(struct iwl_trans* trans, size_t len);
 #endif
 
 /* common functions that are used by gen3 transport */
-void iwl_pcie_alloc_fw_monitor(struct iwl_trans* trans, u8 max_power);
+void iwl_pcie_alloc_fw_monitor(struct iwl_trans* trans, uint8_t max_power);
 
 /* transport gen 2 exported functions */
 int iwl_trans_pcie_gen2_start_fw(struct iwl_trans* trans, const struct fw_img* fw,
                                  bool run_in_rfkill);
-void iwl_trans_pcie_gen2_fw_alive(struct iwl_trans* trans, u32 scd_addr);
+void iwl_trans_pcie_gen2_fw_alive(struct iwl_trans* trans, uint32_t scd_addr);
 void iwl_pcie_gen2_txq_free_memory(struct iwl_trans* trans, struct iwl_txq* txq);
 int iwl_trans_pcie_dyn_txq_alloc_dma(struct iwl_trans* trans, struct iwl_txq** intxq, int size,
                                      unsigned int timeout);
 int iwl_trans_pcie_txq_alloc_response(struct iwl_trans* trans, struct iwl_txq* txq,
                                       struct iwl_host_cmd* hcmd);
-int iwl_trans_pcie_dyn_txq_alloc(struct iwl_trans* trans, __le16 flags, u8 sta_id, u8 tid,
+int iwl_trans_pcie_dyn_txq_alloc(struct iwl_trans* trans, __le16 flags, uint8_t sta_id, uint8_t tid,
                                  int cmd_id, int size, unsigned int timeout);
 void iwl_trans_pcie_dyn_txq_free(struct iwl_trans* trans, int queue);
 int iwl_trans_pcie_gen2_tx(struct iwl_trans* trans, struct sk_buff* skb,

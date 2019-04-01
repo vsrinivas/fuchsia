@@ -42,16 +42,16 @@ struct iwl_mvm_iface_iterator_data {
 
     struct iwl_mvm_phy_ctxt* phyctxt;
 
-    u16 ids[MAX_MACS_IN_BINDING];
-    u16 colors[MAX_MACS_IN_BINDING];
+    uint16_t ids[MAX_MACS_IN_BINDING];
+    uint16_t colors[MAX_MACS_IN_BINDING];
 };
 
-static int iwl_mvm_binding_cmd(struct iwl_mvm* mvm, u32 action,
+static int iwl_mvm_binding_cmd(struct iwl_mvm* mvm, uint32_t action,
                                struct iwl_mvm_iface_iterator_data* data) {
     struct iwl_binding_cmd cmd;
     struct iwl_mvm_phy_ctxt* phyctxt = data->phyctxt;
     int i, ret;
-    u32 status;
+    uint32_t status;
     int size;
 
     memset(&cmd, 0, sizeof(cmd));
@@ -93,7 +93,7 @@ static int iwl_mvm_binding_cmd(struct iwl_mvm* mvm, u32 action,
     return ret;
 }
 
-static void iwl_mvm_iface_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_iface_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_iface_iterator_data* data = _data;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
@@ -115,7 +115,7 @@ static int iwl_mvm_binding_update(struct iwl_mvm* mvm, struct ieee80211_vif* vif
         .ignore_vif = vif,
         .phyctxt = phyctxt,
     };
-    u32 action = FW_CTXT_ACTION_MODIFY;
+    uint32_t action = FW_CTXT_ACTION_MODIFY;
 
     lockdep_assert_held(&mvm->mutex);
 

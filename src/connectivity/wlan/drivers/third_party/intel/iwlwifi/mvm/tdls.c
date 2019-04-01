@@ -160,7 +160,7 @@ void iwl_mvm_recalc_tdls_state(struct iwl_mvm* mvm, struct ieee80211_vif* vif, b
 
 void iwl_mvm_mac_mgd_protect_tdls_discover(struct ieee80211_hw* hw, struct ieee80211_vif* vif) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    u32 duration = 2 * vif->bss_conf.dtim_period * vif->bss_conf.beacon_int;
+    uint32_t duration = 2 * vif->bss_conf.dtim_period * vif->bss_conf.beacon_int;
 
     /*
      * iwl_mvm_protect_session() reads directly from the device
@@ -215,7 +215,7 @@ void iwl_mvm_rx_tdls_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     unsigned int delay;
     struct iwl_mvm_sta* mvmsta;
     struct ieee80211_vif* vif;
-    u32 sta_id = le32_to_cpu(notif->sta_id);
+    uint32_t sta_id = le32_to_cpu(notif->sta_id);
 
     lockdep_assert_held(&mvm->mutex);
 
@@ -245,7 +245,7 @@ void iwl_mvm_rx_tdls_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
 }
 
 static int iwl_mvm_tdls_check_action(struct iwl_mvm* mvm, enum iwl_tdls_channel_switch_type type,
-                                     const u8* peer, bool peer_initiator, u32 timestamp) {
+                                     const uint8_t* peer, bool peer_initiator, uint32_t timestamp) {
     bool same_peer = false;
     int ret = 0;
 
@@ -324,10 +324,10 @@ static int iwl_mvm_tdls_check_action(struct iwl_mvm* mvm, enum iwl_tdls_channel_
 
 static int iwl_mvm_tdls_config_channel_switch(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                               enum iwl_tdls_channel_switch_type type,
-                                              const u8* peer, bool peer_initiator, u8 oper_class,
-                                              struct cfg80211_chan_def* chandef, u32 timestamp,
-                                              u16 switch_time, u16 switch_timeout,
-                                              struct sk_buff* skb, u32 ch_sw_tm_ie) {
+                                              const uint8_t* peer, bool peer_initiator, uint8_t oper_class,
+                                              struct cfg80211_chan_def* chandef, uint32_t timestamp,
+                                              uint16_t switch_time, uint16_t switch_timeout,
+                                              struct sk_buff* skb, uint32_t ch_sw_tm_ie) {
     struct ieee80211_sta* sta;
     struct iwl_mvm_sta* mvmsta;
     struct ieee80211_tx_info* info;
@@ -470,9 +470,9 @@ out:
 }
 
 int iwl_mvm_tdls_channel_switch(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
-                                struct ieee80211_sta* sta, u8 oper_class,
+                                struct ieee80211_sta* sta, uint8_t oper_class,
                                 struct cfg80211_chan_def* chandef, struct sk_buff* tmpl_skb,
-                                u32 ch_sw_tm_ie) {
+                                uint32_t ch_sw_tm_ie) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
     struct iwl_mvm_sta* mvmsta;
     unsigned int delay;
@@ -619,9 +619,9 @@ retry:
 }
 
 #ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-void iwl_mvm_tdls_peer_cache_pkt(struct iwl_mvm* mvm, struct ieee80211_hdr* hdr, u32 len, int rxq) {
+void iwl_mvm_tdls_peer_cache_pkt(struct iwl_mvm* mvm, struct ieee80211_hdr* hdr, uint32_t len, int rxq) {
     struct iwl_mvm_tdls_peer_counter* cnt;
-    u8* addr;
+    uint8_t* addr;
 
     /*
      * To reduce code runtime and complexity, we don't check the packet
@@ -670,7 +670,7 @@ void iwl_mvm_tdls_peer_cache_clear(struct iwl_mvm* mvm, struct ieee80211_vif* vi
 
 /* requires RCU read side lock taken */
 struct iwl_mvm_tdls_peer_counter* iwl_mvm_tdls_peer_cache_find(struct iwl_mvm* mvm,
-                                                               const u8* addr) {
+                                                               const uint8_t* addr) {
     struct iwl_mvm_tdls_peer_counter* cnt;
 
     list_for_each_entry_rcu(cnt, &mvm->tdls_peer_cache_list,

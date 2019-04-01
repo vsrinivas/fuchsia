@@ -70,13 +70,13 @@ enum iwl_mac_conf_subcmd_ids {
  * @reserved: reserved for alignment purposes
  */
 struct iwl_p2p_noa_attr {
-    u8 id;
-    u8 len_low;
-    u8 len_high;
-    u8 idx;
-    u8 ctwin;
+    uint8_t id;
+    uint8_t len_low;
+    uint8_t len_high;
+    uint8_t idx;
+    uint8_t ctwin;
     struct ieee80211_p2p_noa_desc desc[IWL_P2P_NOA_DESC_COUNT];
-    u8 reserved;
+    uint8_t reserved;
 } __packed;
 
 #define IWL_PROBE_RESP_DATA_NO_CSA (0xff)
@@ -94,8 +94,8 @@ struct iwl_probe_resp_data_notif {
     __le32 mac_id;
     __le32 noa_active;
     struct iwl_p2p_noa_attr noa_attr;
-    u8 csa_counter;
-    u8 reserved[3];
+    uint8_t csa_counter;
+    uint8_t reserved[3];
 } __packed; /* PROBE_RESPONSE_DATA_NTFY_API_S_VER_1 */
 
 /**
@@ -117,8 +117,8 @@ struct iwl_channel_switch_noa_notif {
  */
 struct iwl_mac_low_latency_cmd {
     __le32 mac_id;
-    u8 low_latency_rx;
-    u8 low_latency_tx;
+    uint8_t low_latency_rx;
+    uint8_t low_latency_tx;
     __le16 reserved;
 } __packed; /* MAC_LOW_LATENCY_API_S_VER_1 */
 

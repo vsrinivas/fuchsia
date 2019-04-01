@@ -81,11 +81,11 @@ struct tx_meta_data {
     wait_queue_head_t mod_tx_wq;
     bool tx_task_operating;
     int queue;
-    u64 tx_counter;
-    u32 tot_tx;
+    uint64_t tx_counter;
+    uint32_t tot_tx;
     wait_queue_head_t mod_tx_done_wq;
     bool txq_full;
-    u16 seq_num[IWL_MAX_TID_COUNT];
+    uint16_t seq_num[IWL_MAX_TID_COUNT];
 };
 
 /*
@@ -97,10 +97,10 @@ struct tx_meta_data {
  * @reordered: number of frames gone through the reorder buffer (unordered)
  */
 struct iwl_xvt_reorder_statistics {
-    u32 dropped;
-    u32 released;
-    u32 skipped;
-    u32 reordered;
+    uint32_t dropped;
+    uint32_t released;
+    uint32_t skipped;
+    uint32_t reordered;
 };
 
 /**
@@ -118,20 +118,20 @@ struct iwl_xvt_reorder_statistics {
  * @stats: reorder buffer statistics
  */
 struct iwl_xvt_reorder_buffer {
-    u16 head_sn;
-    u16 num_stored;
-    u8 buf_size;
-    u8 sta_id;
-    u8 tid;
+    uint16_t head_sn;
+    uint16_t num_stored;
+    uint8_t buf_size;
+    uint8_t sta_id;
+    uint8_t tid;
     int queue;
-    u16 last_amsdu;
-    u8 last_sub_index;
+    uint16_t last_amsdu;
+    uint8_t last_sub_index;
 
     /*
      * we don't care about the actual frames, only their count.
      * avoid messing with reorder timer for that reason as well
      */
-    u16 entries[IEEE80211_MAX_AMPDU_BUF_HT];
+    uint16_t entries[IEEE80211_MAX_AMPDU_BUF_HT];
 
     spinlock_t lock; /* protect reorder buffer internal state */
     struct iwl_xvt_reorder_statistics stats;
@@ -146,7 +146,7 @@ struct iwl_xvt_reorder_buffer {
  */
 struct tx_queue_data {
     wait_queue_head_t tx_wq;
-    u64 tx_counter;
+    uint64_t tx_counter;
     bool txq_full;
     bool allocated_queue;
 };
@@ -157,8 +157,8 @@ struct tx_queue_data {
  * @payload: Payload buffer
  */
 struct tx_payload {
-    u16 length;
-    u8 payload[];
+    uint16_t length;
+    uint8_t payload[];
 };
 
 /**
@@ -167,153 +167,153 @@ struct tx_payload {
  * @iwl_phy_cfg_cmd: Which calibrations should be done
  */
 struct iwl_sw_stack_config {
-    u32 load_mask;
-    u32 calib_override_mask;
-    u32 fw_dbg_flags;
+    uint32_t load_mask;
+    uint32_t calib_override_mask;
+    uint32_t fw_dbg_flags;
     struct iwl_phy_cfg_cmd fw_calib_cmd_cfg[IWL_UCODE_TYPE_MAX];
 };
 
 /* Note: This structure is read from the device with IO accesses,
  * and the reading already does the endian conversion. As it is
- * read with u32-sized accesses, any members with a different size
+ * read with uint32_t-sized accesses, any members with a different size
  * need to be ordered correctly though!
  */
 struct iwl_error_event_table_v1 {
-    u32 valid;          /* (nonzero) valid, (0) log is empty */
-    u32 error_id;       /* type of error */
-    u32 pc;             /* program counter */
-    u32 blink1;         /* branch link */
-    u32 blink2;         /* branch link */
-    u32 ilink1;         /* interrupt link */
-    u32 ilink2;         /* interrupt link */
-    u32 data1;          /* error-specific data */
-    u32 data2;          /* error-specific data */
-    u32 data3;          /* error-specific data */
-    u32 bcon_time;      /* beacon timer */
-    u32 tsf_low;        /* network timestamp function timer */
-    u32 tsf_hi;         /* network timestamp function timer */
-    u32 gp1;            /* GP1 timer register */
-    u32 gp2;            /* GP2 timer register */
-    u32 gp3;            /* GP3 timer register */
-    u32 ucode_ver;      /* uCode version */
-    u32 hw_ver;         /* HW Silicon version */
-    u32 brd_ver;        /* HW board version */
-    u32 log_pc;         /* log program counter */
-    u32 frame_ptr;      /* frame pointer */
-    u32 stack_ptr;      /* stack pointer */
-    u32 hcmd;           /* last host command header */
-    u32 isr0;           /* isr status register LMPM_NIC_ISR0:
+    uint32_t valid;          /* (nonzero) valid, (0) log is empty */
+    uint32_t error_id;       /* type of error */
+    uint32_t pc;             /* program counter */
+    uint32_t blink1;         /* branch link */
+    uint32_t blink2;         /* branch link */
+    uint32_t ilink1;         /* interrupt link */
+    uint32_t ilink2;         /* interrupt link */
+    uint32_t data1;          /* error-specific data */
+    uint32_t data2;          /* error-specific data */
+    uint32_t data3;          /* error-specific data */
+    uint32_t bcon_time;      /* beacon timer */
+    uint32_t tsf_low;        /* network timestamp function timer */
+    uint32_t tsf_hi;         /* network timestamp function timer */
+    uint32_t gp1;            /* GP1 timer register */
+    uint32_t gp2;            /* GP2 timer register */
+    uint32_t gp3;            /* GP3 timer register */
+    uint32_t ucode_ver;      /* uCode version */
+    uint32_t hw_ver;         /* HW Silicon version */
+    uint32_t brd_ver;        /* HW board version */
+    uint32_t log_pc;         /* log program counter */
+    uint32_t frame_ptr;      /* frame pointer */
+    uint32_t stack_ptr;      /* stack pointer */
+    uint32_t hcmd;           /* last host command header */
+    uint32_t isr0;           /* isr status register LMPM_NIC_ISR0:
                          * rxtx_flag
                          */
-    u32 isr1;           /* isr status register LMPM_NIC_ISR1:
+    uint32_t isr1;           /* isr status register LMPM_NIC_ISR1:
                          * host_flag
                          */
-    u32 isr2;           /* isr status register LMPM_NIC_ISR2:
+    uint32_t isr2;           /* isr status register LMPM_NIC_ISR2:
                          * enc_flag
                          */
-    u32 isr3;           /* isr status register LMPM_NIC_ISR3:
+    uint32_t isr3;           /* isr status register LMPM_NIC_ISR3:
                          * time_flag
                          */
-    u32 isr4;           /* isr status register LMPM_NIC_ISR4:
+    uint32_t isr4;           /* isr status register LMPM_NIC_ISR4:
                          * wico interrupt
                          */
-    u32 isr_pref;       /* isr status register LMPM_NIC_PREF_STAT */
-    u32 wait_event;     /* wait event() caller address */
-    u32 l2p_control;    /* L2pControlField */
-    u32 l2p_duration;   /* L2pDurationField */
-    u32 l2p_mhvalid;    /* L2pMhValidBits */
-    u32 l2p_addr_match; /* L2pAddrMatchStat */
-    u32 lmpm_pmg_sel;   /* indicate which clocks are turned on
+    uint32_t isr_pref;       /* isr status register LMPM_NIC_PREF_STAT */
+    uint32_t wait_event;     /* wait event() caller address */
+    uint32_t l2p_control;    /* L2pControlField */
+    uint32_t l2p_duration;   /* L2pDurationField */
+    uint32_t l2p_mhvalid;    /* L2pMhValidBits */
+    uint32_t l2p_addr_match; /* L2pAddrMatchStat */
+    uint32_t lmpm_pmg_sel;   /* indicate which clocks are turned on
                          * (LMPM_PMG_SEL)
                          */
-    u32 u_timestamp;    /* indicate when the date and time of the
+    uint32_t u_timestamp;    /* indicate when the date and time of the
                          * compilation
                          */
-    u32 flow_handler;   /* FH read/write pointers, RX credit */
+    uint32_t flow_handler;   /* FH read/write pointers, RX credit */
 } __packed;
 
 /* Note: This structure is read from the device with IO accesses,
  * and the reading already does the endian conversion. As it is
- * read with u32-sized accesses, any members with a different size
+ * read with uint32_t-sized accesses, any members with a different size
  * need to be ordered correctly though!
  */
 struct iwl_error_event_table_v2 {
-    u32 valid;          /* (nonzero) valid, (0) log is empty */
-    u32 error_id;       /* type of error */
-    u32 trm_hw_status0; /* TRM HW status */
-    u32 trm_hw_status1; /* TRM HW status */
-    u32 blink2;         /* branch link */
-    u32 ilink1;         /* interrupt link */
-    u32 ilink2;         /* interrupt link */
-    u32 data1;          /* error-specific data */
-    u32 data2;          /* error-specific data */
-    u32 data3;          /* error-specific data */
-    u32 bcon_time;      /* beacon timer */
-    u32 tsf_low;        /* network timestamp function timer */
-    u32 tsf_hi;         /* network timestamp function timer */
-    u32 gp1;            /* GP1 timer register */
-    u32 gp2;            /* GP2 timer register */
-    u32 fw_rev_type;    /* firmware revision type */
-    u32 major;          /* uCode version major */
-    u32 minor;          /* uCode version minor */
-    u32 hw_ver;         /* HW Silicon version */
-    u32 brd_ver;        /* HW board version */
-    u32 log_pc;         /* log program counter */
-    u32 frame_ptr;      /* frame pointer */
-    u32 stack_ptr;      /* stack pointer */
-    u32 hcmd;           /* last host command header */
-    u32 isr0;           /* isr status register LMPM_NIC_ISR0:
+    uint32_t valid;          /* (nonzero) valid, (0) log is empty */
+    uint32_t error_id;       /* type of error */
+    uint32_t trm_hw_status0; /* TRM HW status */
+    uint32_t trm_hw_status1; /* TRM HW status */
+    uint32_t blink2;         /* branch link */
+    uint32_t ilink1;         /* interrupt link */
+    uint32_t ilink2;         /* interrupt link */
+    uint32_t data1;          /* error-specific data */
+    uint32_t data2;          /* error-specific data */
+    uint32_t data3;          /* error-specific data */
+    uint32_t bcon_time;      /* beacon timer */
+    uint32_t tsf_low;        /* network timestamp function timer */
+    uint32_t tsf_hi;         /* network timestamp function timer */
+    uint32_t gp1;            /* GP1 timer register */
+    uint32_t gp2;            /* GP2 timer register */
+    uint32_t fw_rev_type;    /* firmware revision type */
+    uint32_t major;          /* uCode version major */
+    uint32_t minor;          /* uCode version minor */
+    uint32_t hw_ver;         /* HW Silicon version */
+    uint32_t brd_ver;        /* HW board version */
+    uint32_t log_pc;         /* log program counter */
+    uint32_t frame_ptr;      /* frame pointer */
+    uint32_t stack_ptr;      /* stack pointer */
+    uint32_t hcmd;           /* last host command header */
+    uint32_t isr0;           /* isr status register LMPM_NIC_ISR0:
                          * rxtx_flag
                          */
-    u32 isr1;           /* isr status register LMPM_NIC_ISR1:
+    uint32_t isr1;           /* isr status register LMPM_NIC_ISR1:
                          * host_flag
                          */
-    u32 isr2;           /* isr status register LMPM_NIC_ISR2:
+    uint32_t isr2;           /* isr status register LMPM_NIC_ISR2:
                          * enc_flag
                          */
-    u32 isr3;           /* isr status register LMPM_NIC_ISR3:
+    uint32_t isr3;           /* isr status register LMPM_NIC_ISR3:
                          * time_flag
                          */
-    u32 isr4;           /* isr status register LMPM_NIC_ISR4:
+    uint32_t isr4;           /* isr status register LMPM_NIC_ISR4:
                          * wico interrupt
                          */
-    u32 last_cmd_id;    /* last HCMD id handled by the firmware */
-    u32 wait_event;     /* wait event() caller address */
-    u32 l2p_control;    /* L2pControlField */
-    u32 l2p_duration;   /* L2pDurationField */
-    u32 l2p_mhvalid;    /* L2pMhValidBits */
-    u32 l2p_addr_match; /* L2pAddrMatchStat */
-    u32 lmpm_pmg_sel;   /* indicate which clocks are turned on
+    uint32_t last_cmd_id;    /* last HCMD id handled by the firmware */
+    uint32_t wait_event;     /* wait event() caller address */
+    uint32_t l2p_control;    /* L2pControlField */
+    uint32_t l2p_duration;   /* L2pDurationField */
+    uint32_t l2p_mhvalid;    /* L2pMhValidBits */
+    uint32_t l2p_addr_match; /* L2pAddrMatchStat */
+    uint32_t lmpm_pmg_sel;   /* indicate which clocks are turned on
                          * (LMPM_PMG_SEL)
                          */
-    u32 u_timestamp;    /* indicate when the date and time of the
+    uint32_t u_timestamp;    /* indicate when the date and time of the
                          * compilation
                          */
-    u32 flow_handler;   /* FH read/write pointers, RX credit */
+    uint32_t flow_handler;   /* FH read/write pointers, RX credit */
 } __packed /* LOG_ERROR_TABLE_API_S_VER_3 */;
 
 /* UMAC error struct - relevant starting from family 8000 chip.
  * Note: This structure is read from the device with IO accesses,
  * and the reading already does the endian conversion. As it is
- * read with u32-sized accesses, any members with a different size
+ * read with uint32_t-sized accesses, any members with a different size
  * need to be ordered correctly though!
  */
 struct iwl_umac_error_event_table {
-    u32 valid;    /* (nonzero) valid, (0) log is empty */
-    u32 error_id; /* type of error */
-    u32 blink1;   /* branch link */
-    u32 blink2;   /* branch link */
-    u32 ilink1;   /* interrupt link */
-    u32 ilink2;   /* interrupt link */
-    u32 data1;    /* error-specific data */
-    u32 data2;    /* error-specific data */
-    u32 data3;    /* error-specific data */
-    u32 umac_major;
-    u32 umac_minor;
-    u32 frame_pointer; /* core register 27*/
-    u32 stack_pointer; /* core register 28 */
-    u32 cmd_header;    /* latest host cmd sent to UMAC */
-    u32 nic_isr_pref;  /* ISR status register */
+    uint32_t valid;    /* (nonzero) valid, (0) log is empty */
+    uint32_t error_id; /* type of error */
+    uint32_t blink1;   /* branch link */
+    uint32_t blink2;   /* branch link */
+    uint32_t ilink1;   /* interrupt link */
+    uint32_t ilink2;   /* interrupt link */
+    uint32_t data1;    /* error-specific data */
+    uint32_t data2;    /* error-specific data */
+    uint32_t data3;    /* error-specific data */
+    uint32_t umac_major;
+    uint32_t umac_minor;
+    uint32_t frame_pointer; /* core register 27*/
+    uint32_t stack_pointer; /* core register 28 */
+    uint32_t cmd_header;    /* latest host cmd sent to UMAC */
+    uint32_t nic_isr_pref;  /* ISR status register */
 } __packed;
 
 /**
@@ -350,9 +350,9 @@ struct iwl_xvt {
 
     struct iwl_notif_wait_data notif_wait;
 
-    u32 error_event_table[2];
+    uint32_t error_event_table[2];
     bool fw_running;
-    u32 umac_error_event_table;
+    uint32_t umac_error_event_table;
     bool support_umac_log;
 
     struct iwl_sw_stack_config sw_stack_cfg;
@@ -360,15 +360,15 @@ struct iwl_xvt {
 
     bool apmg_pd_en;
     /* DMA buffer information */
-    u32 dma_buffer_size;
-    u8* dma_cpu_addr;
+    uint32_t dma_buffer_size;
+    uint8_t* dma_cpu_addr;
     dma_addr_t dma_addr;
 
     struct iwl_fw_runtime fwrt;
 
     bool is_nvm_mac_override;
-    u8 nvm_hw_addr[ETH_ALEN];
-    u8 nvm_mac_addr[ETH_ALEN];
+    uint8_t nvm_hw_addr[ETH_ALEN];
+    uint8_t nvm_mac_addr[ETH_ALEN];
 
     struct tx_meta_data tx_meta_data[NUM_OF_LMACS];
 
@@ -380,8 +380,8 @@ struct iwl_xvt {
     bool is_enhanced_tx;
     bool send_tx_resp;
     bool send_rx_mpdu;
-    u64 num_of_tx_resp;
-    u64 expected_tx_amount;
+    uint64_t num_of_tx_resp;
+    uint64_t expected_tx_amount;
     wait_queue_head_t tx_done_wq;
     struct tx_queue_data queue_data[IWL_MAX_HW_QUEUES];
 };
@@ -394,7 +394,7 @@ struct iwl_xvt {
 
 /* Host Commands */
 int __must_check iwl_xvt_send_cmd(struct iwl_xvt* xvt, struct iwl_host_cmd* cmd);
-int __must_check iwl_xvt_send_cmd_pdu(struct iwl_xvt* xvt, u32 id, u32 flags, u16 len,
+int __must_check iwl_xvt_send_cmd_pdu(struct iwl_xvt* xvt, uint32_t id, uint32_t flags, uint16_t len,
                                       const void* data);
 
 /* Utils */
@@ -406,11 +406,11 @@ void iwl_xvt_get_umac_error_log(struct iwl_xvt* xvt, struct iwl_umac_error_event
 void iwl_xvt_dump_umac_error_log(struct iwl_xvt* xvt, struct iwl_umac_error_event_table* table);
 
 /* User interface */
-int iwl_xvt_user_cmd_execute(struct iwl_testmode* testmode, u32 cmd, struct iwl_tm_data* data_in,
+int iwl_xvt_user_cmd_execute(struct iwl_testmode* testmode, uint32_t cmd, struct iwl_tm_data* data_in,
                              struct iwl_tm_data* data_out, bool* supported_cmd);
 
 /* FW */
-int iwl_xvt_run_fw(struct iwl_xvt* xvt, u32 ucode_type, bool cont_run);
+int iwl_xvt_run_fw(struct iwl_xvt* xvt, uint32_t ucode_type, bool cont_run);
 
 /* NVM */
 int iwl_xvt_nvm_init(struct iwl_xvt* xvt);
@@ -448,7 +448,7 @@ static inline struct agg_tx_status* iwl_xvt_get_agg_status(struct iwl_xvt* xvt,
     }
 }
 
-static inline u32 iwl_xvt_get_scd_ssn(struct iwl_xvt* xvt, struct iwl_mvm_tx_resp* tx_resp) {
+static inline uint32_t iwl_xvt_get_scd_ssn(struct iwl_xvt* xvt, struct iwl_mvm_tx_resp* tx_resp) {
     return le32_to_cpup((__le32*)iwl_xvt_get_agg_status(xvt, tx_resp) + tx_resp->frame_count) &
            0xfff;
 }
@@ -457,9 +457,9 @@ static inline bool iwl_xvt_has_default_txq(struct iwl_xvt* xvt) {
     return !(xvt->sw_stack_cfg.fw_dbg_flags & IWL_XVT_DBG_FLAGS_NO_DEFAULT_TXQ);
 }
 
-void iwl_xvt_free_tx_queue(struct iwl_xvt* xvt, u8 lmac_id);
+void iwl_xvt_free_tx_queue(struct iwl_xvt* xvt, uint8_t lmac_id);
 
-int iwl_xvt_allocate_tx_queue(struct iwl_xvt* xvt, u8 sta_id, u8 lmac_id);
+int iwl_xvt_allocate_tx_queue(struct iwl_xvt* xvt, uint8_t sta_id, uint8_t lmac_id);
 
 void iwl_xvt_txq_disable(struct iwl_xvt* xvt);
 

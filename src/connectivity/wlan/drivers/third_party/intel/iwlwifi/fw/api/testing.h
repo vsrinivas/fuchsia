@@ -80,12 +80,12 @@ struct iwl_fips_test_cmd {
     __le32 flags;
     __le32 payload_len;
     __le32 aad_len;
-    u8 key[FIPS_MAX_KEY_LEN];
-    u8 aad[FIPS_MAX_AAD_LEN];
+    uint8_t key[FIPS_MAX_KEY_LEN];
+    uint8_t aad[FIPS_MAX_AAD_LEN];
     __le16 reserved;
-    u8 nonce[FIPS_MAX_NONCE_LEN];
-    u8 reserved2[3];
-    u8 payload[0];
+    uint8_t nonce[FIPS_MAX_NONCE_LEN];
+    uint8_t reserved2[3];
+    uint8_t payload[0];
 } __packed; /* AES_SEC_TEST_VECTOR_HDR_API_S_VER_1 */
 
 /**
@@ -102,12 +102,12 @@ enum iwl_fips_test_status {
 /**
  * struct iwl_fips_test_resp - FIPS test response
  * @len: the length of the result in bytes.
- * @payload: @len bytes of response followed by status code (u32, one of
+ * @payload: @len bytes of response followed by status code (uint32_t, one of
  *  &enum iwl_fips_test_status).
  */
 struct iwl_fips_test_resp {
     __le32 len;
-    u8 payload[0];
+    uint8_t payload[0];
 } __packed; /* AES_SEC_TEST_VECTOR_RESP_API_S_VER_1 */
 
 #endif

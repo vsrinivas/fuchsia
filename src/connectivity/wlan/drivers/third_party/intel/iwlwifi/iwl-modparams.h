@@ -110,7 +110,7 @@ struct iwl_mod_params {
     bool power_save;
     int power_level;
 #ifdef CPTCFG_IWLWIFI_DEBUG
-    u32 debug_level;
+    uint32_t debug_level;
 #endif
     int antenna_coupling;
 #if IS_ENABLED(CPTCFG_IWLXVT)
@@ -120,7 +120,7 @@ struct iwl_mod_params {
     bool trans_test;
 #endif
     char* nvm_file;
-    u32 uapsd_disable;
+    uint32_t uapsd_disable;
     bool d0i3_disable;
     unsigned int d0i3_timeout;
     bool lar_disable;

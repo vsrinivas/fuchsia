@@ -48,7 +48,7 @@
 #define POWER_KEEP_ALIVE_PERIOD_SEC 25
 
 static int iwl_mvm_beacon_filter_send_cmd(struct iwl_mvm* mvm, struct iwl_beacon_filter_cmd* cmd,
-                                          u32 flags) {
+                                          uint32_t flags) {
     IWL_DEBUG_POWER(mvm, "ba_enable_beacon_abort is: %d\n",
                     le32_to_cpu(cmd->ba_enable_beacon_abort));
     IWL_DEBUG_POWER(mvm, "ba_escape_timer is: %d\n", le32_to_cpu(cmd->ba_escape_timer));
@@ -198,7 +198,7 @@ struct iwl_allow_uapsd_iface_iterator_data {
     bool allow_uapsd;
 };
 
-static void iwl_mvm_allow_uapsd_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_allow_uapsd_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_allow_uapsd_iface_iterator_data* data = _data;
     struct iwl_mvm_vif* other_mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mvm_vif* curr_mvmvif = iwl_mvm_vif_from_mac80211(data->current_vif);
@@ -292,7 +292,7 @@ static void iwl_mvm_power_config_skip_dtim(struct iwl_mvm* mvm, struct ieee80211
 
         if (WARN_ON(!dtimper_tu)) { return; }
         /* configure skip over dtim up to 306TU - 314 msec */
-        skip = max_t(u8, 1, 306 / dtimper_tu);
+        skip = max_t(uint8_t, 1, 306 / dtimper_tu);
     }
 
     /* the firmware really expects "look at every X DTIMs", so add 1 */
@@ -394,7 +394,7 @@ static void iwl_mvm_power_build_cmd(struct iwl_mvm* mvm, struct ieee80211_vif* v
         }
     }
     if (mvmvif->dbgfs_pm.mask & MVM_DEBUGFS_PM_UAPSD_MISBEHAVING) {
-        u16 flag = POWER_FLAGS_UAPSD_MISBEHAVING_ENA_MSK;
+        uint16_t flag = POWER_FLAGS_UAPSD_MISBEHAVING_ENA_MSK;
         if (mvmvif->dbgfs_pm.uapsd_misbehaving) {
             cmd->flags |= cpu_to_le16(flag);
         } else {
@@ -444,9 +444,9 @@ void iwl_mvm_power_vif_assoc(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
     }
 }
 
-static void iwl_mvm_power_uapsd_misbehav_ap_iterator(void* _data, u8* mac,
+static void iwl_mvm_power_uapsd_misbehav_ap_iterator(void* _data, uint8_t* mac,
                                                      struct ieee80211_vif* vif) {
-    u8* ap_sta_id = _data;
+    uint8_t* ap_sta_id = _data;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
     /* The ap_sta_id is not expected to change during current association
@@ -460,7 +460,7 @@ static void iwl_mvm_power_uapsd_misbehav_ap_iterator(void* _data, u8* mac,
 void iwl_mvm_power_uapsd_misbehaving_ap_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_uapsd_misbehaving_ap_notif* notif = (void*)pkt->data;
-    u8 ap_sta_id = le32_to_cpu(notif->sta_id);
+    uint8_t ap_sta_id = le32_to_cpu(notif->sta_id);
 
     ieee80211_iterate_active_interfaces_atomic(
         mvm->hw, IEEE80211_IFACE_ITER_NORMAL, iwl_mvm_power_uapsd_misbehav_ap_iterator, &ap_sta_id);
@@ -478,13 +478,13 @@ struct iwl_power_vifs {
     bool monitor_active;
 };
 
-static void iwl_mvm_power_disable_pm_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_power_disable_pm_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
     mvmvif->pm_enabled = false;
 }
 
-static void iwl_mvm_power_ps_disabled_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_power_ps_disabled_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     bool* disable_ps = _data;
 
@@ -493,7 +493,7 @@ static void iwl_mvm_power_ps_disabled_iterator(void* _data, u8* mac, struct ieee
     }
 }
 
-static void iwl_mvm_power_get_vifs_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_power_get_vifs_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_power_vifs* power_iterator = _data;
     bool active = mvmvif->phy_ctxt && mvmvif->phy_ctxt->id < NUM_PHY_CTX;
@@ -692,7 +692,7 @@ void iwl_mvm_beacon_filter_debugfs_parameters(struct ieee80211_vif* vif,
 #endif
 
 static int _iwl_mvm_enable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                         struct iwl_beacon_filter_cmd* cmd, u32 cmd_flags,
+                                         struct iwl_beacon_filter_cmd* cmd, uint32_t cmd_flags,
                                          bool d0i3) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     int ret;
@@ -712,7 +712,7 @@ static int _iwl_mvm_enable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_v
     return ret;
 }
 
-int iwl_mvm_enable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif, u32 flags) {
+int iwl_mvm_enable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t flags) {
     struct iwl_beacon_filter_cmd cmd = {
         IWL_BF_CMD_CONFIG_DEFAULTS,
         .bf_enable_beacon_filter = cpu_to_le32(1),
@@ -721,7 +721,7 @@ int iwl_mvm_enable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
     return _iwl_mvm_enable_beacon_filter(mvm, vif, &cmd, flags, false);
 }
 
-static int _iwl_mvm_disable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif, u32 flags,
+static int _iwl_mvm_disable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t flags,
                                           bool d0i3) {
     struct iwl_beacon_filter_cmd cmd = {};
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
@@ -737,7 +737,7 @@ static int _iwl_mvm_disable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_
     return ret;
 }
 
-int iwl_mvm_disable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif, u32 flags) {
+int iwl_mvm_disable_beacon_filter(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t flags) {
     return _iwl_mvm_disable_beacon_filter(mvm, vif, flags, false);
 }
 
@@ -838,7 +838,7 @@ int iwl_mvm_power_update_mac(struct iwl_mvm* mvm) {
 }
 
 int iwl_mvm_update_d0i3_power_mode(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool enable,
-                                   u32 flags) {
+                                   uint32_t flags) {
     int ret;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mac_power_cmd cmd = {};

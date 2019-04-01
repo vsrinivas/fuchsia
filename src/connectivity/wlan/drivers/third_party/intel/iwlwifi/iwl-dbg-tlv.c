@@ -38,7 +38,7 @@
 void iwl_fw_dbg_copy_tlv(struct iwl_trans* trans, struct iwl_ucode_tlv* tlv, bool ext) {
     struct iwl_apply_point_data* data;
     struct iwl_fw_ini_header* header = (void*)&tlv->data[0];
-    u32 apply_point = le32_to_cpu(header->apply_point);
+    uint32_t apply_point = le32_to_cpu(header->apply_point);
 
     int copy_size = le32_to_cpu(tlv->length) + sizeof(*tlv);
 
@@ -66,13 +66,13 @@ void iwl_fw_dbg_copy_tlv(struct iwl_trans* trans, struct iwl_ucode_tlv* tlv, boo
     data->offset += copy_size;
 }
 
-void iwl_alloc_dbg_tlv(struct iwl_trans* trans, size_t len, const u8* data, bool ext) {
+void iwl_alloc_dbg_tlv(struct iwl_trans* trans, size_t len, const uint8_t* data, bool ext) {
     struct iwl_ucode_tlv* tlv;
-    u32 size[IWL_FW_INI_APPLY_NUM] = {0};
+    uint32_t size[IWL_FW_INI_APPLY_NUM] = {0};
     int i;
 
     while (len >= sizeof(*tlv)) {
-        u32 tlv_len, tlv_type, apply;
+        uint32_t tlv_len, tlv_type, apply;
         struct iwl_fw_ini_header* hdr;
 
         len -= sizeof(*tlv);
@@ -136,10 +136,10 @@ void iwl_fw_dbg_free(struct iwl_trans* trans) {
     }
 }
 
-static int iwl_parse_fw_dbg_tlv(struct iwl_trans* trans, const u8* data, size_t len) {
+static int iwl_parse_fw_dbg_tlv(struct iwl_trans* trans, const uint8_t* data, size_t len) {
     struct iwl_ucode_tlv* tlv;
     enum iwl_ucode_tlv_type tlv_type;
-    u32 tlv_len;
+    uint32_t tlv_len;
 
     while (len >= sizeof(*tlv)) {
         len -= sizeof(*tlv);

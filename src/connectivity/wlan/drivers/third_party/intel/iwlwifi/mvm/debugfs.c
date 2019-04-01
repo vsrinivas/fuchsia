@@ -51,7 +51,7 @@ static ssize_t iwl_dbgfs_tt_tx_backoff_write(struct iwl_mvm* mvm, char* buf, siz
                                              loff_t* ppos) {
     int i = 0;
     int ret;
-    u32 temperature, backoff;
+    uint32_t temperature, backoff;
     char* value_str;
     char* seps = "\n ";
     char* buf_ptr = buf;
@@ -167,7 +167,7 @@ static ssize_t iwl_dbgfs_force_ctkill_write(struct iwl_mvm* mvm, char* buf, size
 static ssize_t iwl_dbgfs_tx_flush_write(struct iwl_mvm* mvm, char* buf, size_t count,
                                         loff_t* ppos) {
     int ret;
-    u32 flush_arg;
+    uint32_t flush_arg;
 
     if (!iwl_mvm_firmware_running(mvm) || mvm->fwrt.cur_fw_img != IWL_UCODE_REGULAR) {
         return -EIO;
@@ -226,7 +226,7 @@ static ssize_t iwl_dbgfs_sram_read(struct file* file, char __user* user_buf, siz
     const struct fw_img* img;
     unsigned int ofs, len;
     size_t ret;
-    u8* ptr;
+    uint8_t* ptr;
 
     if (!iwl_mvm_firmware_running(mvm)) { return -EINVAL; }
 
@@ -254,8 +254,8 @@ static ssize_t iwl_dbgfs_sram_read(struct file* file, char __user* user_buf, siz
 
 static ssize_t iwl_dbgfs_sram_write(struct iwl_mvm* mvm, char* buf, size_t count, loff_t* ppos) {
     const struct fw_img* img;
-    u32 offset, len;
-    u32 img_offset, img_len;
+    uint32_t offset, len;
+    uint32_t img_offset, img_len;
 
     if (!iwl_mvm_firmware_running(mvm)) { return -EINVAL; }
 
@@ -344,7 +344,7 @@ static ssize_t iwl_dbgfs_nic_temp_read(struct file* file, char __user* user_buf,
     struct iwl_mvm* mvm = file->private_data;
     char buf[16];
     int pos, ret;
-    s32 temp;
+    int32_t temp;
 
     if (!iwl_mvm_firmware_running(mvm)) { return -EIO; }
 
@@ -367,7 +367,7 @@ static ssize_t iwl_dbgfs_sar_geo_profile_read(struct file* file, char __user* us
     int pos = 0;
     int bufsz = sizeof(buf);
     int tbl_idx;
-    u8* value;
+    uint8_t* value;
 
     if (!iwl_mvm_firmware_running(mvm)) { return -EIO; }
 
@@ -463,7 +463,7 @@ static ssize_t iwl_dbgfs_rs_data_read(struct file* file, char __user* user_buf, 
 static void iwl_rs_set_fixed_rate(struct iwl_mvm* mvm, struct iwl_lq_sta_rs_fw* lq_sta) {
     struct iwl_dhc_cmd* dhc_cmd;
     struct iwl_dhc_tlc_cmd* dhc_tlc_cmd;
-    u32 cmd_id = iwl_cmd_id(DEBUG_HOST_COMMAND, IWL_ALWAYS_LONG_GROUP, 0);
+    uint32_t cmd_id = iwl_cmd_id(DEBUG_HOST_COMMAND, IWL_ALWAYS_LONG_GROUP, 0);
     int ret;
 
     dhc_cmd = kzalloc(sizeof(*dhc_cmd) + sizeof(*dhc_tlc_cmd), GFP_KERNEL);
@@ -497,7 +497,7 @@ static ssize_t iwl_dbgfs_fixed_rate_write(struct ieee80211_sta* sta, char* buf, 
     struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
     struct iwl_lq_sta_rs_fw* lq_sta = &mvmsta->lq_sta.rs_fw;
     struct iwl_mvm* mvm = lq_sta->pers.drv;
-    u32 parsed_rate;
+    uint32_t parsed_rate;
 
     if (kstrtou32(buf, 0, &parsed_rate)) {
         lq_sta->pers.dbg_fixed_rate = 0;
@@ -512,7 +512,7 @@ static ssize_t iwl_dbgfs_fixed_rate_write(struct ieee80211_sta* sta, char* buf, 
 static void iwl_rs_set_ampdu_size(struct iwl_mvm* mvm, struct iwl_lq_sta_rs_fw* lq_sta) {
     struct iwl_dhc_cmd* dhc_cmd;
     struct iwl_dhc_tlc_cmd* dhc_tlc_cmd;
-    u32 cmd_id = iwl_cmd_id(DEBUG_HOST_COMMAND, IWL_ALWAYS_LONG_GROUP, 0);
+    uint32_t cmd_id = iwl_cmd_id(DEBUG_HOST_COMMAND, IWL_ALWAYS_LONG_GROUP, 0);
     int ret;
 
     dhc_cmd = kzalloc(sizeof(*dhc_cmd) + sizeof(*dhc_tlc_cmd), GFP_KERNEL);
@@ -548,7 +548,7 @@ static ssize_t iwl_dbgfs_ampdu_size_write(struct ieee80211_sta* sta, char* buf, 
     struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
     struct iwl_lq_sta_rs_fw* lq_sta = &mvmsta->lq_sta.rs_fw;
     struct iwl_mvm* mvm = lq_sta->pers.drv;
-    u32 ampdu_size;
+    uint32_t ampdu_size;
 
     if (kstrtou32(buf, 0, &ampdu_size)) {
         lq_sta->pers.dbg_agg_frame_count_lim = 0;
@@ -601,7 +601,7 @@ static ssize_t iwl_dbgfs_disable_power_off_write(struct iwl_mvm* mvm, char* buf,
 #ifdef CPTCFG_IWLMVM_AX_SOFTAP_TESTMODE
 static ssize_t iwl_dbgfs_ax_softap_client_testmode_write(struct iwl_mvm* mvm, char* buf,
                                                          size_t count, loff_t* ppos) {
-    u32 status;
+    uint32_t status;
     int ret;
     bool is_enabled;
     struct ax_softap_client_testmode_cmd cmd;
@@ -756,7 +756,7 @@ static ssize_t iwl_dbgfs_bt_cmd_read(struct file* file, char __user* user_buf, s
 
 static ssize_t iwl_dbgfs_bt_tx_prio_write(struct iwl_mvm* mvm, char* buf, size_t count,
                                           loff_t* ppos) {
-    u32 bt_tx_prio;
+    uint32_t bt_tx_prio;
 
     if (sscanf(buf, "%u", &bt_tx_prio) != 1) { return -EINVAL; }
     if (bt_tx_prio > 4) { return -EINVAL; }
@@ -1110,7 +1110,7 @@ static ssize_t iwl_dbgfs_scan_ant_rxchain_read(struct file* file, char __user* u
 
 static ssize_t iwl_dbgfs_scan_ant_rxchain_write(struct iwl_mvm* mvm, char* buf, size_t count,
                                                 loff_t* ppos) {
-    u8 scan_rx_ant;
+    uint8_t scan_rx_ant;
 
     if (!iwl_mvm_firmware_running(mvm)) { return -EIO; }
 
@@ -1370,7 +1370,7 @@ static ssize_t iwl_dbgfs_bcast_filters_write(struct iwl_mvm* mvm, char* buf, siz
     int pos, next_pos;
     struct iwl_fw_bcast_filter filter = {};
     struct iwl_bcast_filter_cmd cmd;
-    u32 filter_id, attr_id, mask, value;
+    uint32_t filter_id, attr_id, mask, value;
     int err = 0;
 
     if (sscanf(buf, "%d %hhi %hhi %n", &filter_id, &filter.discard, &filter.frame_type, &pos) !=
@@ -1449,7 +1449,7 @@ static ssize_t iwl_dbgfs_bcast_filters_macs_write(struct iwl_mvm* mvm, char* buf
                                                   loff_t* ppos) {
     struct iwl_bcast_filter_cmd cmd;
     struct iwl_fw_bcast_mac mac = {};
-    u32 mac_id, attached_filters;
+    uint32_t mac_id, attached_filters;
     int err = 0;
 
     if (!mvm->bcast_filters) { return -ENOENT; }
@@ -1497,7 +1497,7 @@ static ssize_t iwl_dbgfs_d3_sram_read(struct file* file, char __user* user_buf, 
     int ofs, len, pos = 0;
     size_t bufsz, ret;
     char* buf;
-    u8* ptr = mvm->d3_resume_sram;
+    uint8_t* ptr = mvm->d3_resume_sram;
 
     img = &mvm->fw->img[IWL_UCODE_WOWLAN];
     len = img->sec[IWL_UCODE_SECTION_DATA].len;
@@ -1538,7 +1538,7 @@ static ssize_t iwl_dbgfs_d0i3_refs_read(struct file* file, char __user* user_buf
     int i, pos = 0;
     char buf[256];
     const size_t bufsz = sizeof(buf);
-    u32 refs = 0;
+    uint32_t refs = 0;
 
     for (i = 0; i < IWL_MVM_REF_COUNT; i++)
         if (mvm->refs[i]) { refs |= BIT(i); }
@@ -1646,8 +1646,8 @@ static ssize_t iwl_dbgfs_prph_reg_read(struct file* file, char __user* user_buf,
 
 static ssize_t iwl_dbgfs_prph_reg_write(struct iwl_mvm* mvm, char* buf, size_t count,
                                         loff_t* ppos) {
-    u8 args;
-    u32 value;
+    uint8_t args;
+    uint32_t value;
     int ret;
 
     args = sscanf(buf, "%i %i", &mvm->dbgfs_prph_reg_addr, &value);
@@ -1683,7 +1683,7 @@ static ssize_t iwl_dbgfs_send_echo_cmd_write(struct iwl_mvm* mvm, char* buf, siz
 static ssize_t iwl_dbgfs_he_sniffer_params_write(struct iwl_mvm* mvm, char* buf, size_t count,
                                                  loff_t* ppos) {
     struct iwl_he_monitor_cmd he_mon_cmd = {};
-    u32 aid;
+    uint32_t aid;
     int ret;
 
     if (!iwl_mvm_firmware_running(mvm)) { return -EIO; }
@@ -1706,7 +1706,7 @@ static ssize_t iwl_dbgfs_he_sniffer_params_write(struct iwl_mvm* mvm, char* buf,
 static ssize_t iwl_dbgfs_uapsd_noagg_bssids_read(struct file* file, char __user* user_buf,
                                                  size_t count, loff_t* ppos) {
     struct iwl_mvm* mvm = file->private_data;
-    u8 buf[IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM * ETH_ALEN * 3 + 1];
+    uint8_t buf[IWL_MVM_UAPSD_NOAGG_BSSIDS_NUM * ETH_ALEN * 3 + 1];
     unsigned int pos = 0;
     size_t bufsz = sizeof(buf);
     int i;
@@ -1729,11 +1729,11 @@ static ssize_t iwl_dbgfs_tx_power_status_read(struct file* file, char __user* us
     char buf[64];
     int bufsz = sizeof(buf);
     int pos = 0;
-    u32 mode = le32_to_cpu(mvm->txp_cmd.v5.v3.set_mode);
+    uint32_t mode = le32_to_cpu(mvm->txp_cmd.v5.v3.set_mode);
     bool txp_cmd_valid = mode == IWL_TX_POWER_MODE_SET_DEVICE;
-    u16 val_24 = le16_to_cpu(mvm->txp_cmd.v5.v3.dev_24);
-    u16 val_52l = le16_to_cpu(mvm->txp_cmd.v5.v3.dev_52_low);
-    u16 val_52h = le16_to_cpu(mvm->txp_cmd.v5.v3.dev_52_high);
+    uint16_t val_24 = le16_to_cpu(mvm->txp_cmd.v5.v3.dev_24);
+    uint16_t val_52l = le16_to_cpu(mvm->txp_cmd.v5.v3.dev_52_low);
+    uint16_t val_52h = le16_to_cpu(mvm->txp_cmd.v5.v3.dev_52_high);
     char buf_24[15] = "(not limited)";
     char buf_52l[15] = "(not limited)";
     char buf_52h[15] = "(not limited)";
@@ -1765,7 +1765,7 @@ static ssize_t iwl_dbgfs_debug_profile_write(struct iwl_mvm* mvm, char* buf, siz
         .id = iwl_cmd_id(DEBUG_HOST_COMMAND, IWL_ALWAYS_LONG_GROUP, 0),
     };
     int ret;
-    u32 report, reset, period, metrics;
+    uint32_t report, reset, period, metrics;
 
     if (sscanf(buf, "%x,%x,%x,%x", &report, &reset, &period, &metrics) != 4) { return -EINVAL; }
 
@@ -1801,9 +1801,9 @@ static ssize_t iwl_dbgfs_debug_profile_write(struct iwl_mvm* mvm, char* buf, siz
     return ret ?: count;
 }
 
-static ssize_t iwl_dbgfs_send_dhc(struct iwl_mvm* mvm, char* buf, u32 index_and_mask) {
+static ssize_t iwl_dbgfs_send_dhc(struct iwl_mvm* mvm, char* buf, uint32_t index_and_mask) {
     int ret;
-    u32 user_val;
+    uint32_t user_val;
     __le32 cmd_data;
 
     struct iwl_dhc_cmd cmd = {
@@ -1836,7 +1836,7 @@ out:
 static ssize_t iwl_dbgfs_enable_adwell_fine_tune_report_write(struct iwl_mvm* mvm, char* buf,
                                                               size_t count, loff_t* ppos) {
     int ret;
-    u32 index_and_mask = DHC_AUTO_UMAC_ADAPTIVE_DWELL_SCAN_FINE_TUNE_ENABLE_REPORT |
+    uint32_t index_and_mask = DHC_AUTO_UMAC_ADAPTIVE_DWELL_SCAN_FINE_TUNE_ENABLE_REPORT |
                          DHC_TABLE_AUTOMATION | DHC_TARGET_UMAC;
 
     ret = iwl_dbgfs_send_dhc(mvm, buf, index_and_mask);
@@ -1847,7 +1847,7 @@ static ssize_t iwl_dbgfs_enable_adwell_fine_tune_report_write(struct iwl_mvm* mv
 static ssize_t iwl_dbgfs_enable_adwell_channel_dwell_report_write(struct iwl_mvm* mvm, char* buf,
                                                                   size_t count, loff_t* ppos) {
     int ret;
-    u32 index_and_mask =
+    uint32_t index_and_mask =
         DHC_AUTO_UMAC_SCAN_CHANNEL_DWELL_ENABLE_REPORT | DHC_TABLE_AUTOMATION | DHC_TARGET_UMAC;
 
     ret = iwl_dbgfs_send_dhc(mvm, buf, index_and_mask);
@@ -1859,7 +1859,7 @@ static ssize_t iwl_dbgfs_disable_tx_fifo_mask_write(struct iwl_mvm* mvm, char* b
                                                     loff_t* ppos) {
     int ret;
 
-    u32 index_and_mask = DHC_TOOLS_LMAC_TXF_FIFO_DISABLE;
+    uint32_t index_and_mask = DHC_TOOLS_LMAC_TXF_FIFO_DISABLE;
 
     ret = iwl_dbgfs_send_dhc(mvm, buf, index_and_mask);
 
@@ -1869,7 +1869,7 @@ static ssize_t iwl_dbgfs_disable_tx_fifo_mask_write(struct iwl_mvm* mvm, char* b
 static ssize_t iwl_dbgfs_ps_config_write(struct iwl_mvm* mvm, char* buf, size_t count,
                                          loff_t* ppos) {
     int ret;
-    u32 index_and_mask =
+    uint32_t index_and_mask =
         DHC_AUTO_UMAC_CONFIGURE_POWER_FLAGS | DHC_TABLE_AUTOMATION | DHC_TARGET_UMAC;
 
     ret = iwl_dbgfs_send_dhc(mvm, buf, index_and_mask);
@@ -2013,7 +2013,7 @@ static ssize_t iwl_dbgfs_mem_write(struct file* file, const char __user* user_bu
     struct iwl_host_cmd hcmd = {};
     size_t cmd_size;
     size_t data_size;
-    u32 op, len;
+    uint32_t op, len;
     ssize_t ret;
 
     if (!iwl_mvm_firmware_running(mvm)) { return -EIO; }

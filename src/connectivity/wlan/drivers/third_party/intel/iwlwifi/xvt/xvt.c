@@ -185,10 +185,10 @@ static struct iwl_op_mode* iwl_xvt_start(struct iwl_trans* trans, const struct i
     struct iwl_op_mode* op_mode;
     struct iwl_xvt* xvt;
     struct iwl_trans_config trans_cfg = {};
-    static const u8 no_reclaim_cmds[] = {
+    static const uint8_t no_reclaim_cmds[] = {
         TX_CMD,
     };
-    u8 i, num_of_lmacs;
+    uint8_t i, num_of_lmacs;
     int err;
 
     op_mode = kzalloc(sizeof(struct iwl_op_mode) + sizeof(struct iwl_xvt), GFP_KERNEL);
@@ -331,8 +331,8 @@ static void iwl_xvt_stop(struct iwl_op_mode* op_mode) {
     kfree(op_mode);
 }
 
-static void iwl_xvt_reclaim_and_free(struct iwl_xvt* xvt, struct tx_meta_data* tx_data, u16 txq_id,
-                                     u16 ssn) {
+static void iwl_xvt_reclaim_and_free(struct iwl_xvt* xvt, struct tx_meta_data* tx_data, uint16_t txq_id,
+                                     uint16_t ssn) {
     struct sk_buff_head skbs;
     struct sk_buff* skb;
     struct iwl_xvt_skb_info* skb_info;
@@ -362,8 +362,8 @@ static void iwl_xvt_reclaim_and_free(struct iwl_xvt* xvt, struct tx_meta_data* t
     }
 }
 
-static struct tx_meta_data* iwl_xvt_rx_get_tx_meta_data(struct iwl_xvt* xvt, u16 txq_id) {
-    u8 lmac_id;
+static struct tx_meta_data* iwl_xvt_rx_get_tx_meta_data(struct iwl_xvt* xvt, uint16_t txq_id) {
+    uint8_t lmac_id;
 
     /*
      * in case of enhanced_tx, tx_meta_data->queue is not
@@ -396,9 +396,9 @@ static void iwl_xvt_rx_tx_cmd_single(struct iwl_xvt* xvt, struct iwl_rx_packet* 
     /* struct iwl_mvm_tx_resp_v3 is almost the same */
     struct iwl_mvm_tx_resp* tx_resp = (void*)pkt->data;
     int txq_id = SEQ_TO_QUEUE(le16_to_cpu(pkt->hdr.sequence));
-    u16 ssn = iwl_xvt_get_scd_ssn(xvt, tx_resp);
+    uint16_t ssn = iwl_xvt_get_scd_ssn(xvt, tx_resp);
     struct tx_meta_data* tx_data;
-    u16 status = le16_to_cpu(iwl_xvt_get_agg_status(xvt, tx_resp)->status) & TX_STATUS_MSK;
+    uint16_t status = le16_to_cpu(iwl_xvt_get_agg_status(xvt, tx_resp)->status) & TX_STATUS_MSK;
 
     tx_data = iwl_xvt_rx_get_tx_meta_data(xvt, txq_id);
     if (!tx_data) { return; }
@@ -421,14 +421,14 @@ static void iwl_xvt_rx_tx_cmd_handler(struct iwl_xvt* xvt, struct iwl_rx_packet*
 static void iwl_xvt_rx_ba_notif(struct iwl_xvt* xvt, struct iwl_rx_packet* pkt) {
     struct iwl_mvm_ba_notif* ba_notif;
     struct tx_meta_data* tx_data;
-    u16 scd_flow;
-    u16 scd_ssn;
+    uint16_t scd_flow;
+    uint16_t scd_ssn;
 
     if (iwl_xvt_is_unified_fw(xvt)) {
         struct iwl_mvm_compressed_ba_notif* ba_res = (void*)pkt->data;
-        u8 tid;
-        u16 queue;
-        u16 tfd_idx;
+        uint8_t tid;
+        uint16_t queue;
+        uint16_t tfd_idx;
 
         if (!le16_to_cpu(ba_res->tfd_cnt)) { goto out; }
 
@@ -505,8 +505,8 @@ static void iwl_xvt_rx_dispatch(struct iwl_op_mode* op_mode, struct napi_struct*
 
 static void iwl_xvt_nic_config(struct iwl_op_mode* op_mode) {
     struct iwl_xvt* xvt = IWL_OP_MODE_GET_XVT(op_mode);
-    u8 radio_cfg_type, radio_cfg_step, radio_cfg_dash;
-    u32 reg_val = 0;
+    uint8_t radio_cfg_type, radio_cfg_step, radio_cfg_dash;
+    uint32_t reg_val = 0;
 
     radio_cfg_type = (xvt->fw->phy_config & FW_PHY_CFG_RADIO_TYPE) >> FW_PHY_CFG_RADIO_TYPE_POS;
     radio_cfg_step = (xvt->fw->phy_config & FW_PHY_CFG_RADIO_STEP) >> FW_PHY_CFG_RADIO_STEP_POS;
@@ -598,7 +598,7 @@ static void iwl_xvt_nic_error(struct iwl_op_mode* op_mode) {
 
 static bool iwl_xvt_set_hw_rfkill_state(struct iwl_op_mode* op_mode, bool state) {
     struct iwl_xvt* xvt = IWL_OP_MODE_GET_XVT(op_mode);
-    u32 rfkill_state = state ? IWL_XVT_RFKILL_ON : IWL_XVT_RFKILL_OFF;
+    uint32_t rfkill_state = state ? IWL_XVT_RFKILL_ON : IWL_XVT_RFKILL_OFF;
     int err;
 
     err = iwl_xvt_user_send_notif(xvt, IWL_XVT_CMD_SEND_RFKILL, &rfkill_state, sizeof(rfkill_state),
@@ -618,7 +618,7 @@ static void iwl_xvt_free_skb(struct iwl_op_mode* op_mode, struct sk_buff* skb) {
 
 static void iwl_xvt_stop_sw_queue(struct iwl_op_mode* op_mode, int queue) {
     struct iwl_xvt* xvt = IWL_OP_MODE_GET_XVT(op_mode);
-    u8 i;
+    uint8_t i;
 
     if (xvt->queue_data[queue].allocated_queue) {
         xvt->queue_data[queue].txq_full = true;
@@ -634,7 +634,7 @@ static void iwl_xvt_stop_sw_queue(struct iwl_op_mode* op_mode, int queue) {
 
 static void iwl_xvt_wake_sw_queue(struct iwl_op_mode* op_mode, int queue) {
     struct iwl_xvt* xvt = IWL_OP_MODE_GET_XVT(op_mode);
-    u8 i;
+    uint8_t i;
 
     if (xvt->queue_data[queue].allocated_queue) {
         xvt->queue_data[queue].txq_full = false;
@@ -667,7 +667,7 @@ static const struct iwl_op_mode_ops iwl_xvt_ops = {
         },
 };
 
-void iwl_xvt_free_tx_queue(struct iwl_xvt* xvt, u8 lmac_id) {
+void iwl_xvt_free_tx_queue(struct iwl_xvt* xvt, uint8_t lmac_id) {
     if (xvt->tx_meta_data[lmac_id].queue == -1) { return; }
 
     iwl_trans_txq_free(xvt->trans, xvt->tx_meta_data[lmac_id].queue);
@@ -675,7 +675,7 @@ void iwl_xvt_free_tx_queue(struct iwl_xvt* xvt, u8 lmac_id) {
     xvt->tx_meta_data[lmac_id].queue = -1;
 }
 
-int iwl_xvt_allocate_tx_queue(struct iwl_xvt* xvt, u8 sta_id, u8 lmac_id) {
+int iwl_xvt_allocate_tx_queue(struct iwl_xvt* xvt, uint8_t sta_id, uint8_t lmac_id) {
     int ret;
 
     ret = iwl_trans_txq_alloc(xvt->trans, cpu_to_le16(TX_QUEUE_CFG_ENABLE_QUEUE), sta_id,

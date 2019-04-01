@@ -38,15 +38,15 @@
 #include "iwl-prph.h"
 #include "iwl-trans.h"
 
-static inline void iwl_scd_txq_set_chain(struct iwl_trans* trans, u16 txq_id) {
+static inline void iwl_scd_txq_set_chain(struct iwl_trans* trans, uint16_t txq_id) {
     iwl_set_bits_prph(trans, SCD_QUEUECHAIN_SEL, BIT(txq_id));
 }
 
-static inline void iwl_scd_txq_enable_agg(struct iwl_trans* trans, u16 txq_id) {
+static inline void iwl_scd_txq_enable_agg(struct iwl_trans* trans, uint16_t txq_id) {
     iwl_set_bits_prph(trans, SCD_AGGR_SEL, BIT(txq_id));
 }
 
-static inline void iwl_scd_txq_disable_agg(struct iwl_trans* trans, u16 txq_id) {
+static inline void iwl_scd_txq_disable_agg(struct iwl_trans* trans, uint16_t txq_id) {
     iwl_clear_bits_prph(trans, SCD_AGGR_SEL, BIT(txq_id));
 }
 
@@ -62,7 +62,7 @@ static inline void iwl_scd_deactivate_fifos(struct iwl_trans* trans) {
     iwl_write_prph(trans, SCD_TXFACT, 0);
 }
 
-static inline void iwl_scd_enable_set_active(struct iwl_trans* trans, u32 value) {
+static inline void iwl_scd_enable_set_active(struct iwl_trans* trans, uint32_t value) {
     iwl_write_prph(trans, SCD_EN_CTRL, value);
 }
 
@@ -84,7 +84,7 @@ static inline unsigned int SCD_QUEUE_STATUS_BITS(unsigned int chnl) {
     return SCD_BASE + 0x334 + chnl * 4;
 }
 
-static inline void iwl_scd_txq_set_inactive(struct iwl_trans* trans, u16 txq_id) {
+static inline void iwl_scd_txq_set_inactive(struct iwl_trans* trans, uint16_t txq_id) {
     iwl_write_prph(trans, SCD_QUEUE_STATUS_BITS(txq_id),
                    (0 << SCD_QUEUE_STTS_REG_POS_ACTIVE) | (1 << SCD_QUEUE_STTS_REG_POS_SCD_ACT_EN));
 }

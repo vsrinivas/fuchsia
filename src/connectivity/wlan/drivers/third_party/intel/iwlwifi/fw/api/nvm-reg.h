@@ -108,12 +108,12 @@ enum iwl_nvm_section_type {
  * @data: if write operation, the data to write. On read its empty
  */
 struct iwl_nvm_access_cmd {
-    u8 op_code;
-    u8 target;
+    uint8_t op_code;
+    uint8_t target;
     __le16 type;
     __le16 offset;
     __le16 length;
-    u8 data[];
+    uint8_t data[];
 } __packed; /* NVM_ACCESS_CMD_API_S_VER_2 */
 
 /**
@@ -129,7 +129,7 @@ struct iwl_nvm_access_resp {
     __le16 length;
     __le16 type;
     __le16 status;
-    u8 data[];
+    uint8_t data[];
 } __packed; /* NVM_ACCESS_CMD_RESP_API_S_VER_2 */
 
 /*
@@ -157,8 +157,8 @@ enum iwl_nvm_info_general_flags {
 struct iwl_nvm_get_info_general {
     __le32 flags;
     __le16 nvm_version;
-    u8 board_type;
-    u8 n_hw_addrs;
+    uint8_t board_type;
+    uint8_t n_hw_addrs;
 } __packed; /* REGULATORY_NVM_GET_INFO_GENERAL_S_VER_2 */
 
 /**
@@ -255,10 +255,10 @@ struct iwl_nvm_access_complete_cmd {
  */
 struct iwl_mcc_update_cmd {
     __le16 mcc;
-    u8 source_id;
-    u8 reserved;
+    uint8_t source_id;
+    uint8_t reserved;
     __le32 key;
-    u8 reserved2[20];
+    uint8_t reserved2[20];
 } __packed; /* LAR_UPDATE_MCC_CMD_API_S_VER_2 */
 
 /**
@@ -291,8 +291,8 @@ enum iwl_geo_information {
 struct iwl_mcc_update_resp_v3 {
     __le32 status;
     __le16 mcc;
-    u8 cap;
-    u8 source_id;
+    uint8_t cap;
+    uint8_t source_id;
     __le16 time;
     __le16 geo_info;
     __le32 n_channels;
@@ -322,8 +322,8 @@ struct iwl_mcc_update_resp {
     __le16 cap;
     __le16 time;
     __le16 geo_info;
-    u8 source_id;
-    u8 reserved[3];
+    uint8_t source_id;
+    uint8_t reserved[3];
     __le32 n_channels;
     __le32 channels[0];
 } __packed; /* LAR_UPDATE_MCC_CMD_RESP_S_VER_4 */
@@ -345,8 +345,8 @@ struct iwl_mcc_update_resp {
  */
 struct iwl_mcc_chub_notif {
     __le16 mcc;
-    u8 source_id;
-    u8 reserved1;
+    uint8_t source_id;
+    uint8_t reserved1;
 } __packed; /* LAR_MCC_NOTIFY_S */
 
 enum iwl_mcc_update_status {

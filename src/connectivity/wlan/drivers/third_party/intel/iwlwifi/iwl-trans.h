@@ -113,14 +113,14 @@ struct iwl_rx_packet {
      */
     __le32 len_n_flags;
     struct iwl_cmd_header hdr;
-    u8 data[];
+    uint8_t data[];
 } __packed;
 
-static inline u32 iwl_rx_packet_len(const struct iwl_rx_packet* pkt) {
+static inline uint32_t iwl_rx_packet_len(const struct iwl_rx_packet* pkt) {
     return le32_to_cpu(pkt->len_n_flags) & FH_RSCSR_FRAME_SIZE_MSK;
 }
 
-static inline u32 iwl_rx_packet_payload_len(const struct iwl_rx_packet* pkt) {
+static inline uint32_t iwl_rx_packet_payload_len(const struct iwl_rx_packet* pkt) {
     return iwl_rx_packet_len(pkt) - sizeof(pkt->hdr);
 }
 
@@ -164,11 +164,11 @@ struct iwl_device_cmd {
     union {
         struct {
             struct iwl_cmd_header hdr; /* uCode API */
-            u8 payload[DEF_CMD_PAYLOAD_SIZE];
+            uint8_t payload[DEF_CMD_PAYLOAD_SIZE];
         };
         struct {
             struct iwl_cmd_header_wide hdr_wide;
-            u8 payload_wide[DEF_CMD_PAYLOAD_SIZE - sizeof(struct iwl_cmd_header_wide) +
+            uint8_t payload_wide[DEF_CMD_PAYLOAD_SIZE - sizeof(struct iwl_cmd_header_wide) +
                             sizeof(struct iwl_cmd_header)];
         };
     };
@@ -219,12 +219,12 @@ struct iwl_host_cmd {
     const void* data[IWL_MAX_CMD_TBS_PER_TFD];
     struct iwl_rx_packet* resp_pkt;
     unsigned long _rx_page_addr;
-    u32 _rx_page_order;
+    uint32_t _rx_page_order;
 
-    u32 flags;
-    u32 id;
-    u16 len[IWL_MAX_CMD_TBS_PER_TFD];
-    u8 dataflags[IWL_MAX_CMD_TBS_PER_TFD];
+    uint32_t flags;
+    uint32_t id;
+    uint16_t len[IWL_MAX_CMD_TBS_PER_TFD];
+    uint8_t dataflags[IWL_MAX_CMD_TBS_PER_TFD];
 };
 
 #if 0   // NEEDS_PORTING
@@ -236,9 +236,9 @@ struct iwl_rx_cmd_buffer {
     struct page* _page;
     int _offset;
     bool _page_stolen;
-    u32 _rx_page_order;
+    uint32_t _rx_page_order;
     unsigned int truesize;
-    u8 status;
+    uint8_t status;
 };
 
 static inline void* rxb_addr(struct iwl_rx_cmd_buffer* r) {
@@ -335,7 +335,7 @@ iwl_trans_get_rb_size_order(enum iwl_amsdu_size rb_size) {
 #endif  // NEEDS_PORTING
 
 struct iwl_hcmd_names {
-    u8 cmd_id;
+    uint8_t cmd_id;
     const char* const cmd_name;
 };
 
@@ -378,10 +378,10 @@ struct iwl_hcmd_arr {
 struct iwl_trans_config {
     struct iwl_op_mode* op_mode;
 
-    u8 cmd_queue;
-    u8 cmd_fifo;
+    uint8_t cmd_queue;
+    uint8_t cmd_fifo;
     unsigned int cmd_q_wdg_timeout;
-    const u8* no_reclaim_cmds;
+    const uint8_t* no_reclaim_cmds;
     unsigned int n_no_reclaim_cmds;
 
     enum iwl_amsdu_size rx_buf_size;
@@ -391,20 +391,20 @@ struct iwl_trans_config {
     const struct iwl_hcmd_arr* command_groups;
     int command_groups_size;
 
-    u8 cb_data_offs;
+    uint8_t cb_data_offs;
 };
 
 struct iwl_trans_dump_data {
-    u32 len;
-    u8 data[];
+    uint32_t len;
+    uint8_t data[];
 };
 
 struct iwl_trans;
 
 struct iwl_trans_txq_scd_cfg {
-    u8 fifo;
-    u8 sta_id;
-    u8 tid;
+    uint8_t fifo;
+    uint8_t sta_id;
+    uint8_t tid;
     bool aggregate;
     int frame_limit;
 };
@@ -417,10 +417,10 @@ struct iwl_trans_txq_scd_cfg {
  * @ur_bd_cb: DMA address of used BD cyclic buffer
  */
 struct iwl_trans_rxq_dma_data {
-    u64 fr_bd_cb;
-    u32 fr_bd_wid;
-    u64 urbd_stts_wrptr;
-    u64 ur_bd_cb;
+    uint64_t fr_bd_cb;
+    uint32_t fr_bd_wid;
+    uint64_t urbd_stts_wrptr;
+    uint64_t ur_bd_cb;
 };
 
 /**
@@ -482,9 +482,9 @@ struct iwl_trans_rxq_dma_data {
  *  will be called several times with block = true, and then the queues
  *  need to be unblocked only after the same number of calls with
  *  block = false.
- * @write8: write a u8 to a register at offset ofs from the BAR
- * @write32: write a u32 to a register at offset ofs from the BAR
- * @read32: read a u32 register at offset ofs from the BAR
+ * @write8: write a uint8_t to a register at offset ofs from the BAR
+ * @write32: write a uint32_t to a register at offset ofs from the BAR
+ * @read32: read a uint32_t register at offset ofs from the BAR
  * @read_prph: read a DWORD from a periphery register
  * @write_prph: write a DWORD to a periphery register
  * @read_mem: read device's SRAM in DWORD
@@ -516,11 +516,11 @@ struct iwl_trans_ops {
     void (*op_mode_leave)(struct iwl_trans* iwl_trans);
 #if IS_ENABLED(CPTCFG_IWLXVT)
     int (*start_fw_dbg)(struct iwl_trans* trans, const struct fw_img* fw, bool run_in_rfkill,
-                        u32 fw_dbg_flags);
+                        uint32_t fw_dbg_flags);
     int (*test_mode_cmd)(struct iwl_trans* trans, bool enable);
 #endif
     int (*start_fw)(struct iwl_trans* trans, const struct fw_img* fw, bool run_in_rfkill);
-    void (*fw_alive)(struct iwl_trans* trans, u32 scd_addr);
+    void (*fw_alive)(struct iwl_trans* trans, uint32_t scd_addr);
     void (*stop_device)(struct iwl_trans* trans, bool low_power);
 
     void (*d3_suspend)(struct iwl_trans* trans, bool test, bool reset);
@@ -532,41 +532,41 @@ struct iwl_trans_ops {
               int queue);
     void (*reclaim)(struct iwl_trans* trans, int queue, int ssn, struct sk_buff_head* skbs);
 
-    bool (*txq_enable)(struct iwl_trans* trans, int queue, u16 ssn,
+    bool (*txq_enable)(struct iwl_trans* trans, int queue, uint16_t ssn,
                        const struct iwl_trans_txq_scd_cfg* cfg, unsigned int queue_wdg_timeout);
     void (*txq_disable)(struct iwl_trans* trans, int queue, bool configure_scd);
     /* 22000 functions */
-    int (*txq_alloc)(struct iwl_trans* trans, __le16 flags, u8 sta_id, u8 tid, int cmd_id, int size,
+    int (*txq_alloc)(struct iwl_trans* trans, __le16 flags, uint8_t sta_id, uint8_t tid, int cmd_id, int size,
                      unsigned int queue_wdg_timeout);
     void (*txq_free)(struct iwl_trans* trans, int queue);
     int (*rxq_dma_data)(struct iwl_trans* trans, int queue, struct iwl_trans_rxq_dma_data* data);
 
-    void (*txq_set_shared_mode)(struct iwl_trans* trans, u32 txq_id, bool shared);
+    void (*txq_set_shared_mode)(struct iwl_trans* trans, uint32_t txq_id, bool shared);
 
-    int (*wait_tx_queues_empty)(struct iwl_trans* trans, u32 txq_bm);
+    int (*wait_tx_queues_empty)(struct iwl_trans* trans, uint32_t txq_bm);
     int (*wait_txq_empty)(struct iwl_trans* trans, int queue);
     void (*freeze_txq_timer)(struct iwl_trans* trans, unsigned long txqs, bool freeze);
     void (*block_txq_ptrs)(struct iwl_trans* trans, bool block);
 
-    void (*write8)(struct iwl_trans* trans, u32 ofs, u8 val);
-    void (*write32)(struct iwl_trans* trans, u32 ofs, u32 val);
-    u32 (*read32)(struct iwl_trans* trans, u32 ofs);
-    u32 (*read_prph)(struct iwl_trans* trans, u32 ofs);
-    void (*write_prph)(struct iwl_trans* trans, u32 ofs, u32 val);
-    int (*read_mem)(struct iwl_trans* trans, u32 addr, void* buf, int dwords);
-    int (*write_mem)(struct iwl_trans* trans, u32 addr, const void* buf, int dwords);
+    void (*write8)(struct iwl_trans* trans, uint32_t ofs, uint8_t val);
+    void (*write32)(struct iwl_trans* trans, uint32_t ofs, uint32_t val);
+    uint32_t (*read32)(struct iwl_trans* trans, uint32_t ofs);
+    uint32_t (*read_prph)(struct iwl_trans* trans, uint32_t ofs);
+    void (*write_prph)(struct iwl_trans* trans, uint32_t ofs, uint32_t val);
+    int (*read_mem)(struct iwl_trans* trans, uint32_t addr, void* buf, int dwords);
+    int (*write_mem)(struct iwl_trans* trans, uint32_t addr, const void* buf, int dwords);
     void (*configure)(struct iwl_trans* trans, const struct iwl_trans_config* trans_cfg);
     void (*set_pmi)(struct iwl_trans* trans, bool state);
     void (*sw_reset)(struct iwl_trans* trans);
     bool (*grab_nic_access)(struct iwl_trans* trans, unsigned long* flags);
     void (*release_nic_access)(struct iwl_trans* trans, unsigned long* flags);
-    void (*set_bits_mask)(struct iwl_trans* trans, u32 reg, u32 mask, u32 value);
+    void (*set_bits_mask)(struct iwl_trans* trans, uint32_t reg, uint32_t mask, uint32_t value);
     void (*ref)(struct iwl_trans* trans);
     void (*unref)(struct iwl_trans* trans);
     int (*suspend)(struct iwl_trans* trans);
     void (*resume)(struct iwl_trans* trans);
 
-    struct iwl_trans_dump_data* (*dump_data)(struct iwl_trans* trans, u32 dump_mask);
+    struct iwl_trans_dump_data* (*dump_data)(struct iwl_trans* trans, uint32_t dump_mask);
     void (*debugfs_cleanup)(struct iwl_trans* trans);
 };
 
@@ -667,8 +667,8 @@ struct iwl_dram_data {
  * @dev - pointer to struct device * that represents the device
  * @max_skb_frags: maximum number of fragments an SKB can have when transmitted.
  *  0 indicates that frag SKBs (NETIF_F_SG) aren't supported.
- * @hw_rf_id a u32 with the device RF ID
- * @hw_id: a u32 with the ID of the device / sub-device.
+ * @hw_rf_id a uint32_t with the device RF ID
+ * @hw_id: a uint32_t with the ID of the device / sub-device.
  *  Set during transport allocation.
  * @hw_id_str: a string with info about HW ID. Set during transport allocation.
  * @pm_support: set to true in start_hw if link pm is supported
@@ -709,13 +709,13 @@ struct iwl_trans {
     unsigned long status;
 
     struct device* dev;
-    u32 max_skb_frags;
-    u32 hw_rev;
-    u32 hw_rf_id;
-    u32 hw_id;
+    uint32_t max_skb_frags;
+    uint32_t hw_rev;
+    uint32_t hw_rf_id;
+    uint32_t hw_id;
     char hw_id_str[52];
 
-    u8 rx_mpdu_cmd, rx_mpdu_cmd_hdr_size;
+    uint8_t rx_mpdu_cmd, rx_mpdu_cmd_hdr_size;
 
     bool pm_support;
     bool ltr_enabled;
@@ -724,10 +724,10 @@ struct iwl_trans {
     int command_groups_size;
     bool wide_cmd_header;
 
-    u8 num_rx_queues;
+    uint8_t num_rx_queues;
 
     size_t iml_len;
-    u8* iml;
+    uint8_t* iml;
 
     /* The following fields are internal only */
     struct kmem_cache* dev_cmd_pool;
@@ -751,7 +751,7 @@ struct iwl_trans {
     const struct iwl_fw_dbg_dest_tlv_v1* dbg_dest_tlv;
     const struct iwl_fw_dbg_conf_tlv* dbg_conf_tlv[FW_DBG_CONF_MAX];
     struct iwl_fw_dbg_trigger_tlv* const* dbg_trigger_tlv;
-    u8 dbg_n_dest_reg;
+    uint8_t dbg_n_dest_reg;
     int num_blocks;
     struct iwl_dram_data fw_mon[IWL_FW_INI_APPLY_NUM];
 
@@ -769,7 +769,7 @@ struct iwl_trans {
     char trans_specific[0] __aligned(sizeof(void*));
 };
 
-const char* iwl_get_cmd_string(struct iwl_trans* trans, u32 id);
+const char* iwl_get_cmd_string(struct iwl_trans* trans, uint32_t id);
 int iwl_cmd_groups_verify_sorted(const struct iwl_trans_config* trans);
 
 static inline void iwl_trans_configure(struct iwl_trans* trans,
@@ -800,7 +800,7 @@ static inline void iwl_trans_op_mode_leave(struct iwl_trans* trans) {
     trans->state = IWL_TRANS_NO_FW;
 }
 
-static inline void iwl_trans_fw_alive(struct iwl_trans* trans, u32 scd_addr) {
+static inline void iwl_trans_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) {
     might_sleep();
 
     trans->state = IWL_TRANS_FW_ALIVE;
@@ -825,7 +825,7 @@ enum iwl_xvt_dbg_flags {
 };
 
 static inline int iwl_trans_start_fw_dbg(struct iwl_trans* trans, const struct fw_img* fw,
-                                         bool run_in_rfkill, u32 dbg_flags) {
+                                         bool run_in_rfkill, uint32_t dbg_flags) {
     might_sleep();
 
     if (WARN_ON_ONCE(!trans->ops->start_fw_dbg && dbg_flags)) { return -ENOTSUPP; }
@@ -875,7 +875,7 @@ static inline void iwl_trans_resume(struct iwl_trans* trans) {
 }
 
 static inline struct iwl_trans_dump_data* iwl_trans_dump_data(struct iwl_trans* trans,
-                                                              u32 dump_mask) {
+                                                              uint32_t dump_mask) {
     if (!trans->ops->dump_data) { return NULL; }
     return trans->ops->dump_data(trans, dump_mask);
 }
@@ -923,7 +923,7 @@ static inline void iwl_trans_txq_disable(struct iwl_trans* trans, int queue,
 }
 
 static inline bool
-iwl_trans_txq_enable_cfg(struct iwl_trans* trans, int queue, u16 ssn,
+iwl_trans_txq_enable_cfg(struct iwl_trans* trans, int queue, uint16_t ssn,
                          const struct iwl_trans_txq_scd_cfg* cfg,
                          unsigned int queue_wdg_timeout) {
     might_sleep();
@@ -958,7 +958,7 @@ iwl_trans_txq_free(struct iwl_trans* trans, int queue) {
 
 static inline int
 iwl_trans_txq_alloc(struct iwl_trans* trans,
-                    __le16 flags, u8 sta_id, u8 tid,
+                    __le16 flags, uint8_t sta_id, uint8_t tid,
                     int cmd_id, int size,
                     unsigned int wdg_timeout) {
     might_sleep();
@@ -985,7 +985,7 @@ static inline void iwl_trans_txq_set_shared_mode(struct iwl_trans* trans,
 
 static inline void iwl_trans_txq_enable(struct iwl_trans* trans, int queue,
                                         int fifo, int sta_id, int tid,
-                                        int frame_limit, u16 ssn,
+                                        int frame_limit, uint16_t ssn,
                                         unsigned int queue_wdg_timeout) {
     struct iwl_trans_txq_scd_cfg cfg = {
         .fifo = fifo,
@@ -1038,7 +1038,7 @@ static inline void iwl_trans_block_txq_ptrs(struct iwl_trans* trans,
 }
 
 static inline int iwl_trans_wait_tx_queues_empty(struct iwl_trans* trans,
-        u32 txqs) {
+        uint32_t txqs) {
     if (WARN_ON_ONCE(!trans->ops->wait_tx_queues_empty)) {
         return -ENOTSUPP;
     }
@@ -1073,40 +1073,40 @@ static inline int iwl_trans_test_mode_cmd(struct iwl_trans* trans, bool enable) 
 }
 #endif
 
-static inline void iwl_trans_write8(struct iwl_trans* trans, u32 ofs, u8 val) {
+static inline void iwl_trans_write8(struct iwl_trans* trans, uint32_t ofs, uint8_t val) {
     trans->ops->write8(trans, ofs, val);
 }
 
-static inline void iwl_trans_write32(struct iwl_trans* trans, u32 ofs, u32 val) {
+static inline void iwl_trans_write32(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
     trans->ops->write32(trans, ofs, val);
 }
 
-static inline u32 iwl_trans_read32(struct iwl_trans* trans, u32 ofs) {
+static inline uint32_t iwl_trans_read32(struct iwl_trans* trans, uint32_t ofs) {
     return trans->ops->read32(trans, ofs);
 }
 
-static inline u32 iwl_trans_read_prph(struct iwl_trans* trans, u32 ofs) {
+static inline uint32_t iwl_trans_read_prph(struct iwl_trans* trans, uint32_t ofs) {
     return trans->ops->read_prph(trans, ofs);
 }
 
-static inline void iwl_trans_write_prph(struct iwl_trans* trans, u32 ofs,
-                                        u32 val) {
+static inline void iwl_trans_write_prph(struct iwl_trans* trans, uint32_t ofs,
+                                        uint32_t val) {
     return trans->ops->write_prph(trans, ofs, val);
 }
 
-static inline int iwl_trans_read_mem(struct iwl_trans* trans, u32 addr,
+static inline int iwl_trans_read_mem(struct iwl_trans* trans, uint32_t addr,
                                      void* buf, int dwords) {
     return trans->ops->read_mem(trans, addr, buf, dwords);
 }
 
 #define iwl_trans_read_mem_bytes(trans, addr, buf, bufsize)                       \
     do {                                                                          \
-        if (__builtin_constant_p(bufsize)) BUILD_BUG_ON((bufsize) % sizeof(u32)); \
-        iwl_trans_read_mem(trans, addr, buf, (bufsize) / sizeof(u32));            \
+        if (__builtin_constant_p(bufsize)) BUILD_BUG_ON((bufsize) % sizeof(uint32_t)); \
+        iwl_trans_read_mem(trans, addr, buf, (bufsize) / sizeof(uint32_t));            \
     } while (0)
 
-static inline u32 iwl_trans_read_mem32(struct iwl_trans* trans, u32 addr) {
-    u32 value;
+static inline uint32_t iwl_trans_read_mem32(struct iwl_trans* trans, uint32_t addr) {
+    uint32_t value;
 
     if (WARN_ON(iwl_trans_read_mem(trans, addr, &value, 1))) {
         return 0xa5a5a5a5;
@@ -1115,13 +1115,13 @@ static inline u32 iwl_trans_read_mem32(struct iwl_trans* trans, u32 addr) {
     return value;
 }
 
-static inline int iwl_trans_write_mem(struct iwl_trans* trans, u32 addr,
+static inline int iwl_trans_write_mem(struct iwl_trans* trans, uint32_t addr,
                                       const void* buf, int dwords) {
     return trans->ops->write_mem(trans, addr, buf, dwords);
 }
 
-static inline u32 iwl_trans_write_mem32(struct iwl_trans* trans, u32 addr,
-                                        u32 val) {
+static inline uint32_t iwl_trans_write_mem32(struct iwl_trans* trans, uint32_t addr,
+                                        uint32_t val) {
     return iwl_trans_write_mem(trans, addr, &val, 1);
 }
 
@@ -1138,7 +1138,7 @@ static inline void iwl_trans_sw_reset(struct iwl_trans* trans) {
 }
 
 static inline void
-iwl_trans_set_bits_mask(struct iwl_trans* trans, u32 reg, u32 mask, u32 value) {
+iwl_trans_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask, uint32_t value) {
     trans->ops->set_bits_mask(trans, reg, mask, value);
 }
 

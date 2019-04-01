@@ -55,9 +55,9 @@
  * @ssid: element (SSID) data
  */
 struct iwl_ssid_ie {
-    u8 id;
-    u8 len;
-    u8 ssid[IEEE80211_MAX_SSID_LEN];
+    uint8_t id;
+    uint8_t len;
+    uint8_t ssid[IEEE80211_MAX_SSID_LEN];
 } __packed; /* SCAN_DIRECT_SSID_IE_API_S_VER_1 */
 
 /* scan offload */
@@ -90,9 +90,9 @@ enum scan_framework_client {
  * @client_bitmap: clients ignore this entry  - enum scan_framework_client
  */
 struct iwl_scan_offload_blacklist {
-    u8 ssid[ETH_ALEN];
-    u8 reported_rssi;
-    u8 client_bitmap;
+    uint8_t ssid[ETH_ALEN];
+    uint8_t reported_rssi;
+    uint8_t client_bitmap;
 } __packed;
 
 enum iwl_scan_offload_network_type {
@@ -118,13 +118,13 @@ enum iwl_scan_offload_band_selection {
  * @reserved:       reserved
  */
 struct iwl_scan_offload_profile {
-    u8 ssid_index;
-    u8 unicast_cipher;
-    u8 auth_alg;
-    u8 network_type;
-    u8 band_selection;
-    u8 client_bitmap;
-    u8 reserved[2];
+    uint8_t ssid_index;
+    uint8_t unicast_cipher;
+    uint8_t auth_alg;
+    uint8_t network_type;
+    uint8_t band_selection;
+    uint8_t client_bitmap;
+    uint8_t reserved[2];
 } __packed;
 
 /**
@@ -140,13 +140,13 @@ struct iwl_scan_offload_profile {
  */
 struct iwl_scan_offload_profile_cfg {
     struct iwl_scan_offload_profile profiles[IWL_SCAN_MAX_PROFILES];
-    u8 blacklist_len;
-    u8 num_profiles;
-    u8 match_notify;
-    u8 pass_match;
-    u8 active_clients;
-    u8 any_beacon_notify;
-    u8 reserved[2];
+    uint8_t blacklist_len;
+    uint8_t num_profiles;
+    uint8_t match_notify;
+    uint8_t pass_match;
+    uint8_t active_clients;
+    uint8_t any_beacon_notify;
+    uint8_t reserved[2];
 } __packed;
 
 /**
@@ -157,8 +157,8 @@ struct iwl_scan_offload_profile_cfg {
  */
 struct iwl_scan_schedule_lmac {
     __le16 delay;
-    u8 iterations;
-    u8 full_scan_mul;
+    uint8_t iterations;
+    uint8_t full_scan_mul;
 } __packed; /* SCAN_SCHEDULE_API_S */
 
 enum iwl_scan_offload_complete_status {
@@ -184,8 +184,8 @@ enum iwl_scan_ebs_status {
 struct iwl_scan_req_tx_cmd {
     __le32 tx_flags;
     __le32 rate_n_flags;
-    u8 sta_id;
-    u8 reserved[3];
+    uint8_t sta_id;
+    uint8_t reserved[3];
 } __packed;
 
 enum iwl_scan_channel_flags_lmac {
@@ -228,7 +228,7 @@ struct iwl_scan_probe_req {
     struct iwl_scan_probe_segment mac_header;
     struct iwl_scan_probe_segment band_data[2];
     struct iwl_scan_probe_segment common_data;
-    u8 buf[SCAN_OFFLOAD_PROBE_REQ_SIZE];
+    uint8_t buf[SCAN_OFFLOAD_PROBE_REQ_SIZE];
 } __packed;
 
 enum iwl_scan_channel_flags {
@@ -322,12 +322,12 @@ enum iwl_scan_priority_ext {
 struct iwl_scan_req_lmac {
     /* SCAN_REQUEST_FIXED_PART_API_S_VER_7 */
     __le32 reserved1;
-    u8 n_channels;
-    u8 active_dwell;
-    u8 passive_dwell;
-    u8 fragmented_dwell;
-    u8 extended_dwell;
-    u8 reserved2;
+    uint8_t n_channels;
+    uint8_t active_dwell;
+    uint8_t passive_dwell;
+    uint8_t fragmented_dwell;
+    uint8_t extended_dwell;
+    uint8_t reserved2;
     __le16 rx_chain_select;
     __le32 scan_flags;
     __le32 max_out_time;
@@ -343,7 +343,7 @@ struct iwl_scan_req_lmac {
     __le32 delay;
     struct iwl_scan_schedule_lmac schedule[IWL_MAX_SCHED_SCAN_PLANS];
     struct iwl_scan_channel_opt channel_opt[2];
-    u8 data[];
+    uint8_t data[];
 } __packed;
 
 /**
@@ -356,10 +356,10 @@ struct iwl_scan_req_lmac {
  * @duration: duration spent in channel, in usecs
  */
 struct iwl_scan_results_notif {
-    u8 channel;
-    u8 band;
-    u8 probe_status;
-    u8 num_probe_not_sent;
+    uint8_t channel;
+    uint8_t band;
+    uint8_t probe_status;
+    uint8_t num_probe_not_sent;
     __le32 duration;
 } __packed;
 
@@ -375,10 +375,10 @@ struct iwl_scan_results_notif {
  * @results: an array of scan results, only "scanned_channels" of them are valid
  */
 struct iwl_lmac_scan_complete_notif {
-    u8 scanned_channels;
-    u8 status;
-    u8 bt_status;
-    u8 last_channel;
+    uint8_t scanned_channels;
+    uint8_t status;
+    uint8_t bt_status;
+    uint8_t last_channel;
     __le32 tsf_low;
     __le32 tsf_high;
     struct iwl_scan_results_notif results[];
@@ -394,10 +394,10 @@ struct iwl_lmac_scan_complete_notif {
  * @reserved: reserved
  */
 struct iwl_periodic_scan_complete {
-    u8 last_schedule_line;
-    u8 last_schedule_iteration;
-    u8 status;
-    u8 ebs_status;
+    uint8_t last_schedule_line;
+    uint8_t last_schedule_iteration;
+    uint8_t status;
+    uint8_t ebs_status;
     __le32 time_after_last_iter;
     __le32 reserved;
 } __packed;
@@ -471,10 +471,10 @@ enum iwl_channel_flags {
  * @extended:       default dwell time for channels 1, 6 and 11
  */
 struct iwl_scan_dwell {
-    u8 active;
-    u8 passive;
-    u8 fragmented;
-    u8 extended;
+    uint8_t active;
+    uint8_t passive;
+    uint8_t fragmented;
+    uint8_t extended;
 } __packed;
 
 /**
@@ -500,10 +500,10 @@ struct iwl_scan_config_v1 {
     __le32 out_of_channel_time;
     __le32 suspend_time;
     struct iwl_scan_dwell dwell;
-    u8 mac_addr[ETH_ALEN];
-    u8 bcast_sta_id;
-    u8 channel_flags;
-    u8 channel_array[];
+    uint8_t mac_addr[ETH_ALEN];
+    uint8_t bcast_sta_id;
+    uint8_t channel_flags;
+    uint8_t channel_array[];
 } __packed; /* SCAN_CONFIG_DB_CMD_API_S */
 
 #define SCAN_TWO_LMACS 2
@@ -518,10 +518,10 @@ struct iwl_scan_config {
     __le32 out_of_channel_time[SCAN_TWO_LMACS];
     __le32 suspend_time[SCAN_TWO_LMACS];
     struct iwl_scan_dwell dwell;
-    u8 mac_addr[ETH_ALEN];
-    u8 bcast_sta_id;
-    u8 channel_flags;
-    u8 channel_array[];
+    uint8_t mac_addr[ETH_ALEN];
+    uint8_t bcast_sta_id;
+    uint8_t channel_flags;
+    uint8_t channel_array[];
 } __packed; /* SCAN_CONFIG_DB_CMD_API_S_3 */
 
 /**
@@ -586,8 +586,8 @@ enum iwl_umac_scan_general_flags2 {
  */
 struct iwl_scan_channel_cfg_umac {
     __le32 flags;
-    u8 channel_num;
-    u8 iter_count;
+    uint8_t channel_num;
+    uint8_t iter_count;
     __le16 iter_interval;
 } __packed; /* SCAN_CHANNEL_CFG_S_VER2 */
 
@@ -599,8 +599,8 @@ struct iwl_scan_channel_cfg_umac {
  */
 struct iwl_scan_umac_schedule {
     __le16 interval;
-    u8 iter_count;
-    u8 reserved;
+    uint8_t iter_count;
+    uint8_t reserved;
 } __packed; /* SCAN_SCHED_PARAM_API_S_VER_1 */
 
 /**
@@ -629,8 +629,8 @@ struct iwl_scan_req_umac_tail {
  * @reserved: for future use and alignment
  */
 struct iwl_scan_umac_chan_param {
-    u8 flags;
-    u8 count;
+    uint8_t flags;
+    uint8_t count;
     __le16 reserved;
 } __packed; /*SCAN_CHANNEL_PARAMS_API_S_VER_1 */
 
@@ -669,59 +669,59 @@ struct iwl_scan_req_umac {
     __le32 uid;
     __le32 ooc_priority;
     __le16 general_flags;
-    u8 reserved;
-    u8 scan_start_mac_id;
+    uint8_t reserved;
+    uint8_t scan_start_mac_id;
     union {
         struct {
-            u8 extended_dwell;
-            u8 active_dwell;
-            u8 passive_dwell;
-            u8 fragmented_dwell;
+            uint8_t extended_dwell;
+            uint8_t active_dwell;
+            uint8_t passive_dwell;
+            uint8_t fragmented_dwell;
             __le32 max_out_time;
             __le32 suspend_time;
             __le32 scan_priority;
             struct iwl_scan_umac_chan_param channel;
-            u8 data[];
+            uint8_t data[];
         } v1; /* SCAN_REQUEST_CMD_UMAC_API_S_VER_1 */
         struct {
-            u8 extended_dwell;
-            u8 active_dwell;
-            u8 passive_dwell;
-            u8 fragmented_dwell;
+            uint8_t extended_dwell;
+            uint8_t active_dwell;
+            uint8_t passive_dwell;
+            uint8_t fragmented_dwell;
             __le32 max_out_time[SCAN_TWO_LMACS];
             __le32 suspend_time[SCAN_TWO_LMACS];
             __le32 scan_priority;
             struct iwl_scan_umac_chan_param channel;
-            u8 data[];
+            uint8_t data[];
         } v6; /* SCAN_REQUEST_CMD_UMAC_API_S_VER_6 */
         struct {
-            u8 active_dwell;
-            u8 passive_dwell;
-            u8 fragmented_dwell;
-            u8 adwell_default_n_aps;
-            u8 adwell_default_n_aps_social;
-            u8 reserved3;
+            uint8_t active_dwell;
+            uint8_t passive_dwell;
+            uint8_t fragmented_dwell;
+            uint8_t adwell_default_n_aps;
+            uint8_t adwell_default_n_aps_social;
+            uint8_t reserved3;
             __le16 adwell_max_budget;
             __le32 max_out_time[SCAN_TWO_LMACS];
             __le32 suspend_time[SCAN_TWO_LMACS];
             __le32 scan_priority;
             struct iwl_scan_umac_chan_param channel;
-            u8 data[];
+            uint8_t data[];
         } v7; /* SCAN_REQUEST_CMD_UMAC_API_S_VER_7 */
         struct {
-            u8 active_dwell[SCAN_TWO_LMACS];
-            u8 reserved2;
-            u8 adwell_default_n_aps;
-            u8 adwell_default_n_aps_social;
-            u8 general_flags2;
+            uint8_t active_dwell[SCAN_TWO_LMACS];
+            uint8_t reserved2;
+            uint8_t adwell_default_n_aps;
+            uint8_t adwell_default_n_aps_social;
+            uint8_t general_flags2;
             __le16 adwell_max_budget;
             __le32 max_out_time[SCAN_TWO_LMACS];
             __le32 suspend_time[SCAN_TWO_LMACS];
             __le32 scan_priority;
-            u8 passive_dwell[SCAN_TWO_LMACS];
-            u8 num_of_fragments[SCAN_TWO_LMACS];
+            uint8_t passive_dwell[SCAN_TWO_LMACS];
+            uint8_t num_of_fragments[SCAN_TWO_LMACS];
             struct iwl_scan_umac_chan_param channel;
-            u8 data[];
+            uint8_t data[];
         } v8; /* SCAN_REQUEST_CMD_UMAC_API_S_VER_8 */
     };
 } __packed;
@@ -753,10 +753,10 @@ struct iwl_umac_scan_abort {
  */
 struct iwl_umac_scan_complete {
     __le32 uid;
-    u8 last_schedule;
-    u8 last_iter;
-    u8 status;
-    u8 ebs_status;
+    uint8_t last_schedule;
+    uint8_t last_iter;
+    uint8_t status;
+    uint8_t ebs_status;
     __le32 time_from_last_iter;
     __le32 reserved;
 } __packed; /* SCAN_COMPLETE_NTF_UMAC_API_S_VER_1 */
@@ -773,12 +773,12 @@ struct iwl_umac_scan_complete {
  *  the channels passed in tue scan offload request
  */
 struct iwl_scan_offload_profile_match {
-    u8 bssid[ETH_ALEN];
+    uint8_t bssid[ETH_ALEN];
     __le16 reserved;
-    u8 channel;
-    u8 energy;
-    u8 matching_feature;
-    u8 matching_channels[SCAN_OFFLOAD_MATCHING_CHANNELS_LEN];
+    uint8_t channel;
+    uint8_t energy;
+    uint8_t matching_feature;
+    uint8_t matching_channels[SCAN_OFFLOAD_MATCHING_CHANNELS_LEN];
 } __packed; /* SCAN_OFFLOAD_PROFILE_MATCH_RESULTS_S_VER_1 */
 
 /**
@@ -800,8 +800,8 @@ struct iwl_scan_offload_profiles_query {
     __le32 n_scans_done;
     __le32 gp2_d0u;
     __le32 gp2_invoked;
-    u8 resume_while_scanning;
-    u8 self_recovery;
+    uint8_t resume_while_scanning;
+    uint8_t self_recovery;
     __le16 reserved;
     struct iwl_scan_offload_profile_match matches[IWL_SCAN_MAX_PROFILES];
 } __packed; /* SCAN_OFFLOAD_PROFILES_QUERY_RSP_S_VER_2 */
@@ -820,10 +820,10 @@ struct iwl_scan_offload_profiles_query {
  */
 struct iwl_umac_scan_iter_complete_notif {
     __le32 uid;
-    u8 scanned_channels;
-    u8 status;
-    u8 bt_status;
-    u8 last_channel;
+    uint8_t scanned_channels;
+    uint8_t status;
+    uint8_t bt_status;
+    uint8_t last_channel;
     __le64 start_tsf;
     struct iwl_scan_results_notif results[];
 } __packed; /* SCAN_ITER_COMPLETE_NTF_UMAC_API_S_VER_2 */

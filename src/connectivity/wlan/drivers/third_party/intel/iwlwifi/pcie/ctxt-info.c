@@ -126,7 +126,7 @@ int iwl_pcie_ctxt_info_init(struct iwl_trans* trans, const struct fw_img* fw) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_context_info* ctxt_info;
     struct iwl_context_info_rbd_cfg* rx_cfg;
-    u32 control_flags = 0, rb_size;
+    uint32_t control_flags = 0, rb_size;
     int ret;
 
     ctxt_info = dma_alloc_coherent(trans->dev, sizeof(*ctxt_info), &trans_pcie->ctxt_info_dma_addr,
@@ -134,7 +134,7 @@ int iwl_pcie_ctxt_info_init(struct iwl_trans* trans, const struct fw_img* fw) {
     if (!ctxt_info) { return -ENOMEM; }
 
     ctxt_info->version.version = 0;
-    ctxt_info->version.mac_id = cpu_to_le16((u16)iwl_read32(trans, CSR_HW_REV));
+    ctxt_info->version.mac_id = cpu_to_le16((uint16_t)iwl_read32(trans, CSR_HW_REV));
     /* size is in DWs */
     ctxt_info->version.size = cpu_to_le16(sizeof(*ctxt_info) / 4);
 

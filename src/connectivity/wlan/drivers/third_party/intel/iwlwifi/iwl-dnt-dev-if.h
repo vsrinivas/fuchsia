@@ -42,7 +42,7 @@
 struct iwl_dnt;
 
 #define DNT_LDBG_CMD_SIZE 80
-#define DNT_MARBH_BUF_SIZE (0x3cff * sizeof(u32))
+#define DNT_MARBH_BUF_SIZE (0x3cff * sizeof(uint32_t))
 #define DNT_SMEM_BUF_SIZE (0x18004)
 
 #define DNT_CHUNK_SIZE 512
@@ -66,8 +66,8 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt* dnt, struct iwl_trans* tran
  * retrieve monitor data - depends on the monitor mode.
  * Note: monitor must be stopped in order to retrieve data.
  */
-int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt* dnt, struct iwl_trans* trans, u8* buffer,
-                                         u32 buffer_size);
+int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt* dnt, struct iwl_trans* trans, uint8_t* buffer,
+                                         uint32_t buffer_size);
 /**
  * iwl_dnt_dev_if_start_monitor - start monitor data.
  *

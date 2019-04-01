@@ -44,13 +44,13 @@
  * We fully trust NSSN unless it is behind us due to reorder timeout.
  * Reorder timeout can only bring us up to buffer_size SNs ahead of NSSN.
  */
-static bool iwl_xvt_is_sn_less(u16 sn1, u16 sn2, u16 buffer_size) {
+static bool iwl_xvt_is_sn_less(uint16_t sn1, uint16_t sn2, uint16_t buffer_size) {
     return ieee80211_sn_less(sn1, sn2) && !ieee80211_sn_less(sn1, sn2 - buffer_size);
 }
 
 static void iwl_xvt_release_frames(struct iwl_xvt* xvt, struct iwl_xvt_reorder_buffer* reorder_buf,
-                                   u16 nssn) {
-    u16 ssn = reorder_buf->head_sn;
+                                   uint16_t nssn) {
+    uint16_t ssn = reorder_buf->head_sn;
 
     lockdep_assert_held(&reorder_buf->lock);
     IWL_DEBUG_HT(xvt, "reorder: release nssn=%d\n", nssn);
@@ -60,7 +60,7 @@ static void iwl_xvt_release_frames(struct iwl_xvt* xvt, struct iwl_xvt_reorder_b
 
     while (iwl_xvt_is_sn_less(ssn, nssn, reorder_buf->buf_size)) {
         int index = ssn % reorder_buf->buf_size;
-        u16 frames_count = reorder_buf->entries[index];
+        uint16_t frames_count = reorder_buf->entries[index];
 
         ssn = ieee80211_sn_inc(ssn);
 
@@ -107,8 +107,8 @@ void iwl_xvt_destroy_reorder_buffer(struct iwl_xvt* xvt, struct iwl_xvt_reorder_
     spin_unlock_bh(&buf->lock);
 }
 
-static bool iwl_xvt_init_reorder_buffer(struct iwl_xvt_reorder_buffer* buf, u8 sta_id, u8 tid,
-                                        u16 ssn, u8 buf_size) {
+static bool iwl_xvt_init_reorder_buffer(struct iwl_xvt_reorder_buffer* buf, uint8_t sta_id, uint8_t tid,
+                                        uint16_t ssn, uint8_t buf_size) {
     int j;
 
     if (WARN_ON(buf_size > ARRAY_SIZE(buf->entries))) { return false; }
@@ -132,17 +132,17 @@ static bool iwl_xvt_init_reorder_buffer(struct iwl_xvt_reorder_buffer* buf, u8 s
 bool iwl_xvt_reorder(struct iwl_xvt* xvt, struct iwl_rx_packet* pkt) {
     struct iwl_rx_mpdu_desc* desc = (void*)pkt->data;
     struct ieee80211_hdr* hdr;
-    u32 reorder = le32_to_cpu(desc->reorder_data);
+    uint32_t reorder = le32_to_cpu(desc->reorder_data);
     struct iwl_xvt_reorder_buffer* buffer;
-    u16 tail;
+    uint16_t tail;
     bool last_subframe = desc->amsdu_info & IWL_RX_MPDU_AMSDU_LAST_SUBFRAME;
-    u8 sub_frame_idx = desc->amsdu_info & IWL_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK;
+    uint8_t sub_frame_idx = desc->amsdu_info & IWL_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK;
     bool amsdu = desc->mac_flags2 & IWL_RX_MPDU_MFLG2_AMSDU;
-    u16 nssn, sn, min_sn;
+    uint16_t nssn, sn, min_sn;
     int index;
-    u8 baid;
-    u8 sta_id = desc->sta_id_flags & IWL_RX_MPDU_SIF_STA_ID_MASK;
-    u8 tid;
+    uint8_t baid;
+    uint8_t sta_id = desc->sta_id_flags & IWL_RX_MPDU_SIF_STA_ID_MASK;
+    uint8_t tid;
 
     baid = (reorder & IWL_RX_MPDU_REORDER_BAID_MASK) >> IWL_RX_MPDU_REORDER_BAID_SHIFT;
 

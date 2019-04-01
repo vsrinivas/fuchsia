@@ -302,8 +302,8 @@ enum iwl_mac_qos_flags {
 struct iwl_ac_qos {
     __le16 cw_min;
     __le16 cw_max;
-    u8 aifsn;
-    u8 fifos_mask;
+    uint8_t aifsn;
+    uint8_t fifos_mask;
     __le16 edca_txop;
 } __packed; /* AC_QOS_API_S_VER_2 */
 
@@ -334,9 +334,9 @@ struct iwl_mac_ctx_cmd {
     /* MAC_CONTEXT_COMMON_DATA_API_S_VER_1 */
     __le32 mac_type;
     __le32 tsf_id;
-    u8 node_addr[6];
+    uint8_t node_addr[6];
     __le16 reserved_for_node_addr;
-    u8 bssid_addr[6];
+    uint8_t bssid_addr[6];
     __le16 reserved_for_bssid_addr;
     __le32 cck_rates;
     __le32 ofdm_rates;
@@ -430,7 +430,7 @@ struct iwl_he_backoff_conf {
  *  (0-low_th, 1-high_th)
  */
 struct iwl_he_pkt_ext {
-    u8 pkt_ext_qam_th[MAX_HE_SUPP_NSS][MAX_HE_CHANNEL_BW_INDX][2];
+    uint8_t pkt_ext_qam_th[MAX_HE_SUPP_NSS][MAX_HE_CHANNEL_BW_INDX][2];
 } __packed; /* PKT_EXT_DOT11AX_API_S */
 
 /**
@@ -522,35 +522,35 @@ enum iwl_he_htc_flags {
  * @trig_based_txf: MU EDCA Parameter set for the trigger based traffic queues
  */
 struct iwl_he_sta_context_cmd {
-    u8 sta_id;
-    u8 tid_limit;
-    u8 reserved1;
-    u8 reserved2;
+    uint8_t sta_id;
+    uint8_t tid_limit;
+    uint8_t reserved1;
+    uint8_t reserved2;
     __le32 flags;
 
     /* The below fields are set via Multiple BSSID IE */
-    u8 ref_bssid_addr[6];
+    uint8_t ref_bssid_addr[6];
     __le16 reserved0;
 
     /* The below fields are set via HE-capabilities IE */
     __le32 htc_flags;
 
-    u8 frag_flags;
-    u8 frag_level;
-    u8 frag_max_num;
-    u8 frag_min_size;
+    uint8_t frag_flags;
+    uint8_t frag_level;
+    uint8_t frag_max_num;
+    uint8_t frag_min_size;
 
     /* The below fields are set via PPE thresholds element */
     struct iwl_he_pkt_ext pkt_ext;
 
     /* The below fields are set via HE-Operation IE */
-    u8 bss_color;
-    u8 htc_trig_based_pkt_ext;
+    uint8_t bss_color;
+    uint8_t htc_trig_based_pkt_ext;
     __le16 frame_time_rts_th;
 
     /* Random access parameter set (i.e. RAPS) */
-    u8 rand_alloc_ecwmin;
-    u8 rand_alloc_ecwmax;
+    uint8_t rand_alloc_ecwmin;
+    uint8_t rand_alloc_ecwmax;
     __le16 reserved3;
 
     /* The below fields are set via MU EDCA parameter set element */
@@ -565,10 +565,10 @@ struct iwl_he_sta_context_cmd {
  * @reserved2: reserved for future use
  */
 struct iwl_he_monitor_cmd {
-    u8 bssid[6];
+    uint8_t bssid[6];
     __le16 reserved1;
     __le16 aid;
-    u8 reserved2[6];
+    uint8_t reserved2[6];
 } __packed; /* HE_AIR_SNIFFER_CONFIG_CMD_API_S_VER_1 */
 
 #endif /* __iwl_fw_api_mac_h__ */

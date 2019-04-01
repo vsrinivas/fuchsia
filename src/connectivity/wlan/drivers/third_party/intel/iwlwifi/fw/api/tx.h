@@ -246,26 +246,26 @@ struct iwl_tx_cmd {
     __le16 offload_assist;
     __le32 tx_flags;
     struct {
-        u8 try_cnt;
-        u8 btkill_cnt;
+        uint8_t try_cnt;
+        uint8_t btkill_cnt;
         __le16 reserved;
     } scratch; /* DRAM_SCRATCH_API_U_VER_1 */
     __le32 rate_n_flags;
-    u8 sta_id;
-    u8 sec_ctl;
-    u8 initial_rate_index;
-    u8 reserved2;
-    u8 key[16];
+    uint8_t sta_id;
+    uint8_t sec_ctl;
+    uint8_t initial_rate_index;
+    uint8_t reserved2;
+    uint8_t key[16];
     __le32 reserved3;
     __le32 life_time;
     __le32 dram_lsb_ptr;
-    u8 dram_msb_ptr;
-    u8 rts_retry_limit;
-    u8 data_retry_limit;
-    u8 tid_tspec;
+    uint8_t dram_msb_ptr;
+    uint8_t rts_retry_limit;
+    uint8_t data_retry_limit;
+    uint8_t tid_tspec;
     __le16 pm_frame_timeout;
     __le16 reserved4;
-    u8 payload[0];
+    uint8_t payload[0];
     struct ieee80211_hdr hdr[0];
 } __packed; /* TX_CMD_API_S_VER_6 */
 
@@ -534,26 +534,26 @@ struct agg_tx_status {
  * %iwl_mvm_get_scd_ssn for more details.
  */
 struct iwl_mvm_tx_resp_v3 {
-    u8 frame_count;
-    u8 bt_kill_count;
-    u8 failure_rts;
-    u8 failure_frame;
+    uint8_t frame_count;
+    uint8_t bt_kill_count;
+    uint8_t failure_rts;
+    uint8_t failure_frame;
     __le32 initial_rate;
     __le16 wireless_media_time;
 
-    u8 pa_status;
-    u8 pa_integ_res_a[3];
-    u8 pa_integ_res_b[3];
-    u8 pa_integ_res_c[3];
+    uint8_t pa_status;
+    uint8_t pa_integ_res_a[3];
+    uint8_t pa_integ_res_b[3];
+    uint8_t pa_integ_res_c[3];
     __le16 measurement_req_id;
-    u8 reduced_tpc;
-    u8 reserved;
+    uint8_t reduced_tpc;
+    uint8_t reserved;
 
     __le32 tfd_info;
     __le16 seq_ctl;
     __le16 byte_cnt;
-    u8 tlc_info;
-    u8 ra_tid;
+    uint8_t tlc_info;
+    uint8_t ra_tid;
     __le16 frame_ctrl;
     struct agg_tx_status status[];
 } __packed; /* TX_RSP_API_S_VER_3 */
@@ -592,26 +592,26 @@ struct iwl_mvm_tx_resp_v3 {
  * %iwl_mvm_get_scd_ssn for more details.
  */
 struct iwl_mvm_tx_resp {
-    u8 frame_count;
-    u8 bt_kill_count;
-    u8 failure_rts;
-    u8 failure_frame;
+    uint8_t frame_count;
+    uint8_t bt_kill_count;
+    uint8_t failure_rts;
+    uint8_t failure_frame;
     __le32 initial_rate;
     __le16 wireless_media_time;
 
-    u8 pa_status;
-    u8 pa_integ_res_a[3];
-    u8 pa_integ_res_b[3];
-    u8 pa_integ_res_c[3];
+    uint8_t pa_status;
+    uint8_t pa_integ_res_a[3];
+    uint8_t pa_integ_res_b[3];
+    uint8_t pa_integ_res_c[3];
     __le16 measurement_req_id;
-    u8 reduced_tpc;
-    u8 reserved;
+    uint8_t reduced_tpc;
+    uint8_t reserved;
 
     __le32 tfd_info;
     __le16 seq_ctl;
     __le16 byte_cnt;
-    u8 tlc_info;
-    u8 ra_tid;
+    uint8_t tlc_info;
+    uint8_t ra_tid;
     __le16 frame_ctrl;
     __le16 tx_queue;
     __le16 reserved2;
@@ -637,19 +637,19 @@ struct iwl_mvm_tx_resp {
  * @reserved1: reserved
  */
 struct iwl_mvm_ba_notif {
-    u8 sta_addr[ETH_ALEN];
+    uint8_t sta_addr[ETH_ALEN];
     __le16 reserved;
 
-    u8 sta_id;
-    u8 tid;
+    uint8_t sta_id;
+    uint8_t tid;
     __le16 seq_ctl;
     __le64 bitmap;
     __le16 scd_flow;
     __le16 scd_ssn;
-    u8 txed;
-    u8 txed_2_done;
-    u8 reduced_txp;
-    u8 reserved1;
+    uint8_t txed;
+    uint8_t txed_2_done;
+    uint8_t reduced_txp;
+    uint8_t reserved1;
 } __packed;
 
 /**
@@ -663,9 +663,9 @@ struct iwl_mvm_ba_notif {
 struct iwl_mvm_compressed_ba_tfd {
     __le16 q_num;
     __le16 tfd_index;
-    u8 scd_queue;
-    u8 tid;
-    u8 reserved[2];
+    uint8_t scd_queue;
+    uint8_t tid;
+    uint8_t reserved[2];
 } __packed; /* COMPRESSED_BA_TFD_API_S_VER_1 */
 
 /**
@@ -675,8 +675,8 @@ struct iwl_mvm_compressed_ba_tfd {
  * @ssn: BA window current SSN
  */
 struct iwl_mvm_compressed_ba_ratid {
-    u8 q_num;
-    u8 tid;
+    uint8_t q_num;
+    uint8_t tid;
     __le16 ssn;
 } __packed; /* COMPRESSED_BA_RATID_API_S_VER_1 */
 
@@ -725,10 +725,10 @@ enum iwl_mvm_ba_resp_flags {
  */
 struct iwl_mvm_compressed_ba_notif {
     __le32 flags;
-    u8 sta_id;
-    u8 reduced_txp;
-    u8 tlc_rate_info;
-    u8 retry_cnt;
+    uint8_t sta_id;
+    uint8_t reduced_txp;
+    uint8_t tlc_rate_info;
+    uint8_t retry_cnt;
     __le32 query_byte_cnt;
     __le16 query_frame_cnt;
     __le16 txed;
@@ -887,14 +887,14 @@ enum iwl_scd_cfg_actions {
  * @reserved: reserved
  */
 struct iwl_scd_txq_cfg_cmd {
-    u8 token;
-    u8 sta_id;
-    u8 tid;
-    u8 scd_queue;
-    u8 action;
-    u8 aggregate;
-    u8 tx_fifo;
-    u8 window;
+    uint8_t token;
+    uint8_t sta_id;
+    uint8_t tid;
+    uint8_t scd_queue;
+    uint8_t action;
+    uint8_t aggregate;
+    uint8_t tx_fifo;
+    uint8_t window;
     __le16 ssn;
     __le16 reserved;
 } __packed; /* SCD_QUEUE_CFG_CMD_API_S_VER_1 */
@@ -907,10 +907,10 @@ struct iwl_scd_txq_cfg_cmd {
  * @scd_queue: scd_queue from the command
  */
 struct iwl_scd_txq_cfg_rsp {
-    u8 token;
-    u8 sta_id;
-    u8 tid;
-    u8 scd_queue;
+    uint8_t token;
+    uint8_t sta_id;
+    uint8_t tid;
+    uint8_t scd_queue;
 } __packed; /* SCD_QUEUE_CFG_RSP_API_S_VER_1 */
 
 #endif /* __iwl_fw_api_tx_h__ */

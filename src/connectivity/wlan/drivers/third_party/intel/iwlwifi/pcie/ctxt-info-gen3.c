@@ -44,7 +44,7 @@ int iwl_pcie_ctxt_info_gen3_init(struct iwl_trans* trans, const struct fw_img* f
     struct iwl_prph_scratch_ctrl_cfg* prph_sc_ctrl;
     struct iwl_prph_info* prph_info;
     void* iml_img;
-    u32 control_flags = 0;
+    uint32_t control_flags = 0;
     int ret;
 
     /* Allocate prph scratch */
@@ -55,7 +55,7 @@ int iwl_pcie_ctxt_info_gen3_init(struct iwl_trans* trans, const struct fw_img* f
     prph_sc_ctrl = &prph_scratch->ctrl_cfg;
 
     prph_sc_ctrl->version.version = 0;
-    prph_sc_ctrl->version.mac_id = cpu_to_le16((u16)iwl_read32(trans, CSR_HW_REV));
+    prph_sc_ctrl->version.mac_id = cpu_to_le16((uint16_t)iwl_read32(trans, CSR_HW_REV));
     prph_sc_ctrl->version.size = cpu_to_le16(sizeof(*prph_scratch) / 4);
 
     control_flags = IWL_PRPH_SCRATCH_RB_SIZE_4K | IWL_PRPH_SCRATCH_MTR_MODE |

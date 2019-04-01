@@ -44,7 +44,7 @@
  * If there is a need in replacing the interface, it
  * should be done only here.
  */
-static inline int iwl_xvt_user_send_notif(struct iwl_xvt* xvt, u32 cmd, void* data, u32 size,
+static inline int iwl_xvt_user_send_notif(struct iwl_xvt* xvt, uint32_t cmd, void* data, uint32_t size,
                                           gfp_t flags) {
     int err;
     IWL_DEBUG_INFO(xvt, "send user notification: cmd=0x%x, size=%d\n", cmd, size);
@@ -56,7 +56,7 @@ static inline int iwl_xvt_user_send_notif(struct iwl_xvt* xvt, u32 cmd, void* da
 
 void iwl_xvt_send_user_rx_notif(struct iwl_xvt* xvt, struct iwl_rx_cmd_buffer* rxb);
 
-int iwl_xvt_user_cmd_execute(struct iwl_testmode* testmode, u32 cmd, struct iwl_tm_data* data_in,
+int iwl_xvt_user_cmd_execute(struct iwl_testmode* testmode, uint32_t cmd, struct iwl_tm_data* data_in,
                              struct iwl_tm_data* data_out, bool* supported_cmd);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_XVT_USER_INFC_H_

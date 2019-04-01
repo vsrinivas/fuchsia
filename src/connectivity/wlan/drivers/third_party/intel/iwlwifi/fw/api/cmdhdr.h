@@ -55,23 +55,23 @@
  * the command id, the group id and the version of the command
  * and vice versa
  */
-static inline u8 iwl_cmd_opcode(u32 cmdid) {
+static inline uint8_t iwl_cmd_opcode(uint32_t cmdid) {
     return cmdid & 0xFF;
 }
 
-static inline u8 iwl_cmd_groupid(u32 cmdid) {
+static inline uint8_t iwl_cmd_groupid(uint32_t cmdid) {
     return ((cmdid & 0xFF00) >> 8);
 }
 
-static inline u8 iwl_cmd_version(u32 cmdid) {
+static inline uint8_t iwl_cmd_version(uint32_t cmdid) {
     return ((cmdid & 0xFF0000) >> 16);
 }
 
-static inline u32 iwl_cmd_id(u8 opcode, u8 groupid, u8 version) {
+static inline uint32_t iwl_cmd_id(uint8_t opcode, uint8_t groupid, uint8_t version) {
     return opcode + (groupid << 8) + (version << 16);
 }
 
-/* make u16 wide id out of u8 group and opcode */
+/* make uint16_t wide id out of uint8_t group and opcode */
 #define WIDE_ID(grp, opcode) (((grp) << 8) | (opcode))
 #define DEF_ID(opcode) ((1 << 8) | (opcode))
 
@@ -90,11 +90,11 @@ struct iwl_cmd_header {
     /**
      * @cmd: Command ID: REPLY_RXON, etc.
      */
-    u8 cmd;
+    uint8_t cmd;
     /**
      * @group_id: group ID, for commands with groups
      */
-    u8 group_id;
+    uint8_t group_id;
     /**
      * @sequence:
      * Sequence number for the command.
@@ -137,12 +137,12 @@ struct iwl_cmd_header {
  * @version: command version
  */
 struct iwl_cmd_header_wide {
-    u8 cmd;
-    u8 group_id;
+    uint8_t cmd;
+    uint8_t group_id;
     __le16 sequence;
     __le16 length;
-    u8 reserved;
-    u8 version;
+    uint8_t reserved;
+    uint8_t version;
 } __packed;
 
 /**
@@ -154,7 +154,7 @@ struct iwl_cmd_header_wide {
 struct iwl_calib_res_notif_phy_db {
     __le16 type;
     __le16 length;
-    u8 data[];
+    uint8_t data[];
 } __packed;
 
 /**
@@ -166,7 +166,7 @@ struct iwl_calib_res_notif_phy_db {
 struct iwl_phy_db_cmd {
     __le16 type;
     __le16 length;
-    u8 data[];
+    uint8_t data[];
 } __packed;
 
 /**

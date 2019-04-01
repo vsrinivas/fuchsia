@@ -51,7 +51,7 @@ static void iwl_start_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int ti
     }
 }
 
-static u8 rs_fw_bw_from_sta_bw(struct ieee80211_sta* sta) {
+static uint8_t rs_fw_bw_from_sta_bw(struct ieee80211_sta* sta) {
     switch (sta->bandwidth) {
     case IEEE80211_STA_RX_BW_160:
         return IWL_TLC_MNG_CH_WIDTH_160MHZ;
@@ -65,8 +65,8 @@ static u8 rs_fw_bw_from_sta_bw(struct ieee80211_sta* sta) {
     }
 }
 
-static u8 rs_fw_set_active_chains(u8 chains) {
-    u8 fw_chains = 0;
+static uint8_t rs_fw_set_active_chains(uint8_t chains) {
+    uint8_t fw_chains = 0;
 
     if (chains & ANT_A) { fw_chains |= IWL_TLC_MNG_CHAIN_A_MSK; }
     if (chains & ANT_B) { fw_chains |= IWL_TLC_MNG_CHAIN_B_MSK; }
@@ -75,11 +75,11 @@ static u8 rs_fw_set_active_chains(u8 chains) {
     return fw_chains;
 }
 
-static u8 rs_fw_sgi_cw_support(struct ieee80211_sta* sta) {
+static uint8_t rs_fw_sgi_cw_support(struct ieee80211_sta* sta) {
     struct ieee80211_sta_ht_cap* ht_cap = &sta->ht_cap;
     struct ieee80211_sta_vht_cap* vht_cap = &sta->vht_cap;
     struct ieee80211_sta_he_cap* he_cap = &sta->he_cap;
-    u8 supp = 0;
+    uint8_t supp = 0;
 
     if (he_cap && he_cap->has_he) { return 0; }
 
@@ -91,12 +91,12 @@ static u8 rs_fw_sgi_cw_support(struct ieee80211_sta* sta) {
     return supp;
 }
 
-static u16 rs_fw_set_config_flags(struct iwl_mvm* mvm, struct ieee80211_sta* sta) {
+static uint16_t rs_fw_set_config_flags(struct iwl_mvm* mvm, struct ieee80211_sta* sta) {
     struct ieee80211_sta_ht_cap* ht_cap = &sta->ht_cap;
     struct ieee80211_sta_vht_cap* vht_cap = &sta->vht_cap;
     struct ieee80211_sta_he_cap* he_cap = &sta->he_cap;
     bool vht_ena = vht_cap && vht_cap->vht_supported;
-    u16 flags = 0;
+    uint16_t flags = 0;
 
     if (mvm->cfg->ht_params->stbc && (num_of_ant(iwl_mvm_get_valid_tx_ant(mvm)) > 1)) {
         if (he_cap && he_cap->has_he) {
@@ -127,7 +127,7 @@ static u16 rs_fw_set_config_flags(struct iwl_mvm* mvm, struct ieee80211_sta* sta
 }
 
 static int rs_fw_vht_highest_rx_mcs_index(const struct ieee80211_sta_vht_cap* vht_cap, int nss) {
-    u16 rx_mcs = le16_to_cpu(vht_cap->vht_mcs.rx_mcs_map) & (0x3 << (2 * (nss - 1)));
+    uint16_t rx_mcs = le16_to_cpu(vht_cap->vht_mcs.rx_mcs_map) & (0x3 << (2 * (nss - 1)));
     rx_mcs >>= (2 * (nss - 1));
 
     switch (rx_mcs) {
@@ -148,7 +148,7 @@ static int rs_fw_vht_highest_rx_mcs_index(const struct ieee80211_sta_vht_cap* vh
 static void rs_fw_vht_set_enabled_rates(const struct ieee80211_sta* sta,
                                         const struct ieee80211_sta_vht_cap* vht_cap,
                                         TLC_MNG_CONFIG_PARAMS_CMD_API_S* cmd) {
-    u16 supp;
+    uint16_t supp;
     int i, highest_mcs;
 
     for (i = 0; i < sta->rx_nss; i++) {
@@ -165,7 +165,7 @@ static void rs_fw_vht_set_enabled_rates(const struct ieee80211_sta* sta,
     }
 }
 
-static u16 rs_fw_he_ieee80211_mcs_to_rs_mcs(u16 mcs) {
+static uint16_t rs_fw_he_ieee80211_mcs_to_rs_mcs(uint16_t mcs) {
     switch (mcs) {
     case IEEE80211_HE_MCS_SUPPORT_0_7:
         return BIT(IWL_TLC_MNG_HT_RATE_MCS7 + 1) - 1;
@@ -184,13 +184,13 @@ static u16 rs_fw_he_ieee80211_mcs_to_rs_mcs(u16 mcs) {
 static void rs_fw_he_set_enabled_rates(const struct ieee80211_sta* sta,
                                        const struct ieee80211_sta_he_cap* he_cap,
                                        TLC_MNG_CONFIG_PARAMS_CMD_API_S* cmd) {
-    u16 mcs_160 = le16_to_cpu(he_cap->he_mcs_nss_supp.rx_mcs_160);
-    u16 mcs_80 = le16_to_cpu(he_cap->he_mcs_nss_supp.rx_mcs_80);
+    uint16_t mcs_160 = le16_to_cpu(he_cap->he_mcs_nss_supp.rx_mcs_160);
+    uint16_t mcs_80 = le16_to_cpu(he_cap->he_mcs_nss_supp.rx_mcs_80);
     int i;
 
     for (i = 0; i < sta->rx_nss && i < MAX_NSS; i++) {
-        u16 _mcs_160 = (mcs_160 >> (2 * i)) & 0x3;
-        u16 _mcs_80 = (mcs_80 >> (2 * i)) & 0x3;
+        uint16_t _mcs_160 = (mcs_160 >> (2 * i)) & 0x3;
+        uint16_t _mcs_80 = (mcs_80 >> (2 * i)) & 0x3;
 
         cmd->mcs[i][0] = (rs_fw_he_ieee80211_mcs_to_rs_mcs(_mcs_80));
         cmd->mcs[i][1] = (rs_fw_he_ieee80211_mcs_to_rs_mcs(_mcs_160));
@@ -306,10 +306,10 @@ void iwl_mvm_rs_tx_status(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int ti
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
 void iwl_mvm_reset_frame_stats(struct iwl_mvm* mvm) {}
 
-void iwl_mvm_update_frame_stats(struct iwl_mvm* mvm, u32 rate, bool agg) {}
+void iwl_mvm_update_frame_stats(struct iwl_mvm* mvm, uint32_t rate, bool agg) {}
 
 /* TODO */
-int rs_pretty_print_rate(char* buf, int bufsz, const u32 rate) {
+int rs_pretty_print_rate(char* buf, int bufsz, const uint32_t rate) {
     return 0;
 }
 #endif
@@ -337,7 +337,7 @@ static void rs_rate_init(void* priv, struct ieee80211_supported_band* sband,
 
 static void rs_rate_update(void* priv, struct ieee80211_supported_band* sband,
                            struct cfg80211_chan_def* chandef, struct ieee80211_sta* sta,
-                           void* priv_sta, u32 changed) {
+                           void* priv_sta, uint32_t changed) {
     struct iwl_mvm* mvm = priv;
     struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
     int tid;
@@ -353,7 +353,7 @@ static void rs_rate_update(void* priv, struct ieee80211_supported_band* sband,
 
 static void rs_free_sta(void* priv, struct ieee80211_sta* sta, void* priv_sta) {}
 
-static inline u8 rs_get_tid(struct ieee80211_hdr* hdr) {
+static inline uint8_t rs_get_tid(struct ieee80211_hdr* hdr) {
     int tid = IWL_MAX_TID_COUNT;
 
     if (ieee80211_is_data_qos(hdr->frame_control)) { tid = ieee80211_get_tid(hdr); }
@@ -381,7 +381,7 @@ static void rs_tx_status(void* priv, struct ieee80211_supported_band* sband,
 static void rs_get_rate(void* priv, struct ieee80211_sta* sta, void* priv_sta,
                         struct ieee80211_tx_rate_control* txrc) {
     struct iwl_mvm_sta* mvmsta = NULL;
-    u32 hwrate;
+    uint32_t hwrate;
     struct ieee80211_tx_info* info = IEEE80211_SKB_CB(txrc->skb);
 
     if (sta) {

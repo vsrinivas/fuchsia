@@ -58,10 +58,10 @@ enum iwl_mvm_tof_sub_grp_ids {
  */
 struct iwl_tof_config_cmd {
     __le32 sub_grp_cmd_id;
-    u8 tof_disabled;
-    u8 one_sided_disabled;
-    u8 is_debug_mode;
-    u8 is_buf_required;
+    uint8_t tof_disabled;
+    uint8_t one_sided_disabled;
+    uint8_t is_debug_mode;
+    uint8_t is_buf_required;
 } __packed;
 
 /**
@@ -113,23 +113,23 @@ struct iwl_tof_config_cmd {
 struct iwl_tof_responder_config_cmd {
     __le32 sub_grp_cmd_id;
     __le16 burst_period;
-    u8 min_delta_ftm;
-    u8 burst_duration;
-    u8 num_of_burst_exp;
-    u8 get_ch_est;
-    u8 abort_responder;
-    u8 recv_sta_req_params;
-    u8 channel_num;
-    u8 bandwidth;
-    u8 rate;
-    u8 ctrl_ch_position;
-    u8 ftm_per_burst;
-    u8 ftm_resp_ts_avail;
-    u8 asap_mode;
-    u8 sta_id;
+    uint8_t min_delta_ftm;
+    uint8_t burst_duration;
+    uint8_t num_of_burst_exp;
+    uint8_t get_ch_est;
+    uint8_t abort_responder;
+    uint8_t recv_sta_req_params;
+    uint8_t channel_num;
+    uint8_t bandwidth;
+    uint8_t rate;
+    uint8_t ctrl_ch_position;
+    uint8_t ftm_per_burst;
+    uint8_t ftm_resp_ts_avail;
+    uint8_t asap_mode;
+    uint8_t sta_id;
     __le16 tsf_timer_offset_msecs;
     __le16 toa_offset;
-    u8 bssid[ETH_ALEN];
+    uint8_t bssid[ETH_ALEN];
 } __packed;
 
 /**
@@ -150,10 +150,10 @@ struct iwl_tof_range_req_ext_cmd {
     __le32 sub_grp_cmd_id;
     __le16 tsf_timer_offset_msec;
     __le16 reserved;
-    u8 min_delta_ftm;
-    u8 ftm_format_and_bw20M;
-    u8 ftm_format_and_bw40M;
-    u8 ftm_format_and_bw80M;
+    uint8_t min_delta_ftm;
+    uint8_t ftm_format_and_bw20M;
+    uint8_t ftm_format_and_bw40M;
+    uint8_t ftm_format_and_bw80M;
 } __packed;
 
 #define IWL_MVM_TOF_MAX_APS 21
@@ -190,21 +190,21 @@ struct iwl_tof_range_req_ext_cmd {
  *    leagal values: -128-0 (0x7f). above 0x0 indicating an invalid value.
  */
 struct iwl_tof_range_req_ap_entry {
-    u8 channel_num;
-    u8 bandwidth;
-    u8 tsf_delta_direction;
-    u8 ctrl_ch_position;
-    u8 bssid[ETH_ALEN];
-    u8 measure_type;
-    u8 num_of_bursts;
+    uint8_t channel_num;
+    uint8_t bandwidth;
+    uint8_t tsf_delta_direction;
+    uint8_t ctrl_ch_position;
+    uint8_t bssid[ETH_ALEN];
+    uint8_t measure_type;
+    uint8_t num_of_bursts;
     __le16 burst_period;
-    u8 samples_per_burst;
-    u8 retries_per_sample;
+    uint8_t samples_per_burst;
+    uint8_t retries_per_sample;
     __le32 tsf_delta;
-    u8 location_req;
-    u8 asap_mode;
-    u8 enable_dyn_ack;
-    s8 rssi;
+    uint8_t location_req;
+    uint8_t asap_mode;
+    uint8_t enable_dyn_ack;
+    int8_t rssi;
 } __packed;
 
 /**
@@ -249,16 +249,16 @@ enum iwl_tof_response_mode {
  */
 struct iwl_tof_range_req_cmd {
     __le32 sub_grp_cmd_id;
-    u8 request_id;
-    u8 initiator;
-    u8 one_sided_los_disable;
-    u8 req_timeout;
-    u8 report_policy;
-    u8 los_det_disable;
-    u8 num_of_ap;
-    u8 macaddr_random;
-    u8 macaddr_template[ETH_ALEN];
-    u8 macaddr_mask[ETH_ALEN];
+    uint8_t request_id;
+    uint8_t initiator;
+    uint8_t one_sided_los_disable;
+    uint8_t req_timeout;
+    uint8_t report_policy;
+    uint8_t los_det_disable;
+    uint8_t num_of_ap;
+    uint8_t macaddr_random;
+    uint8_t macaddr_template[ETH_ALEN];
+    uint8_t macaddr_mask[ETH_ALEN];
     struct iwl_tof_range_req_ap_entry ap[IWL_MVM_TOF_MAX_APS];
 } __packed;
 
@@ -269,7 +269,7 @@ struct iwl_tof_range_req_cmd {
  */
 struct iwl_tof_gen_resp_cmd {
     __le32 sub_grp_cmd_id;
-    u8 data[];
+    uint8_t data[];
 } __packed;
 
 /**
@@ -293,14 +293,14 @@ struct iwl_tof_gen_resp_cmd {
  *         uploaded by the LMAC
  */
 struct iwl_tof_range_rsp_ap_entry_ntfy {
-    u8 bssid[ETH_ALEN];
-    u8 measure_status;
-    u8 measure_bw;
+    uint8_t bssid[ETH_ALEN];
+    uint8_t measure_status;
+    uint8_t measure_bw;
     __le32 rtt;
     __le32 rtt_variance;
     __le32 rtt_spread;
-    s8 rssi;
-    u8 rssi_spread;
+    int8_t rssi;
+    uint8_t rssi_spread;
     __le16 reserved;
     __le32 range;
     __le32 range_variance;
@@ -316,10 +316,10 @@ struct iwl_tof_range_rsp_ap_entry_ntfy {
  * @ap: per-AP data
  */
 struct iwl_tof_range_rsp_ntfy {
-    u8 request_id;
-    u8 request_status;
-    u8 last_in_batch;
-    u8 num_of_aps;
+    uint8_t request_id;
+    uint8_t request_status;
+    uint8_t last_in_batch;
+    uint8_t num_of_aps;
     struct iwl_tof_range_rsp_ap_entry_ntfy ap[IWL_MVM_TOF_MAX_APS];
 } __packed;
 
@@ -334,12 +334,12 @@ struct iwl_tof_range_rsp_ntfy {
  * @mcsi_buffer: debug data
  */
 struct iwl_tof_mcsi_notif {
-    u8 token;
-    u8 role;
+    uint8_t token;
+    uint8_t role;
     __le16 reserved;
-    u8 initiator_bssid[ETH_ALEN];
-    u8 responder_bssid[ETH_ALEN];
-    u8 mcsi_buffer[IWL_MVM_TOF_MCSI_BUF_SIZE * 4];
+    uint8_t initiator_bssid[ETH_ALEN];
+    uint8_t responder_bssid[ETH_ALEN];
+    uint8_t mcsi_buffer[IWL_MVM_TOF_MCSI_BUF_SIZE * 4];
 } __packed;
 
 /**
@@ -351,11 +351,11 @@ struct iwl_tof_mcsi_notif {
  * @data: the IEs
  */
 struct iwl_tof_neighbor_report {
-    u8 bssid[ETH_ALEN];
-    u8 request_token;
-    u8 status;
+    uint8_t bssid[ETH_ALEN];
+    uint8_t request_token;
+    uint8_t status;
     __le16 report_ie_len;
-    u8 data[];
+    uint8_t data[];
 } __packed;
 
 /**
@@ -366,8 +366,8 @@ struct iwl_tof_neighbor_report {
  */
 struct iwl_tof_range_abort_cmd {
     __le32 sub_grp_cmd_id;
-    u8 request_id;
-    u8 reserved[3];
+    uint8_t request_id;
+    uint8_t reserved[3];
 } __packed;
 
 #endif

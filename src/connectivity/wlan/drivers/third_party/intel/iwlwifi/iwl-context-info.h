@@ -136,8 +136,8 @@ struct iwl_context_info_rbd_cfg {
  */
 struct iwl_context_info_hcmd_cfg {
     __le64 cmd_queue_addr;
-    u8 cmd_queue_size;
-    u8 reserved[7];
+    uint8_t cmd_queue_size;
+    uint8_t reserved[7];
 } __packed;
 
 /*

@@ -44,7 +44,7 @@
 #include "mvm.h"
 #include "sta.h"
 
-static void iwl_mvm_bar_check_trigger(struct iwl_mvm* mvm, const u8* addr, u16 tid, u16 ssn) {
+static void iwl_mvm_bar_check_trigger(struct iwl_mvm* mvm, const uint8_t* addr, uint16_t tid, uint16_t ssn) {
     struct iwl_fw_dbg_trigger_tlv* trig;
     struct iwl_fw_dbg_trigger_ba* ba_trig;
 
@@ -60,11 +60,11 @@ static void iwl_mvm_bar_check_trigger(struct iwl_mvm* mvm, const u8* addr, u16 t
 
 #define OPT_HDR(type, skb, off) (type*)(skb_network_header(skb) + (off))
 
-static u16 iwl_mvm_tx_csum(struct iwl_mvm* mvm, struct sk_buff* skb, struct ieee80211_hdr* hdr,
-                           struct ieee80211_tx_info* info, u16 offload_assist) {
+static uint16_t iwl_mvm_tx_csum(struct iwl_mvm* mvm, struct sk_buff* skb, struct ieee80211_hdr* hdr,
+                           struct ieee80211_tx_info* info, uint16_t offload_assist) {
 #if IS_ENABLED(CONFIG_INET)
-    u16 mh_len = ieee80211_hdrlen(hdr->frame_control);
-    u8 protocol = 0;
+    uint16_t mh_len = ieee80211_hdrlen(hdr->frame_control);
+    uint8_t protocol = 0;
 
     /*
      * Do not compute checksum if already computed or if transport will
@@ -157,13 +157,13 @@ out:
  * Sets most of the Tx cmd's fields
  */
 void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, struct sk_buff* skb, struct iwl_tx_cmd* tx_cmd,
-                        struct ieee80211_tx_info* info, u8 sta_id) {
+                        struct ieee80211_tx_info* info, uint8_t sta_id) {
     struct ieee80211_hdr* hdr = (void*)skb->data;
     __le16 fc = hdr->frame_control;
-    u32 tx_flags = le32_to_cpu(tx_cmd->tx_flags);
-    u32 len = skb->len + FCS_LEN;
-    u16 offload_assist = 0;
-    u8 ac;
+    uint32_t tx_flags = le32_to_cpu(tx_cmd->tx_flags);
+    uint32_t len = skb->len + FCS_LEN;
+    uint16_t offload_assist = 0;
+    uint8_t ac;
 
     if (!(info->flags & IEEE80211_TX_CTL_NO_ACK)) {
         tx_flags |= TX_CMD_FLG_ACK;
@@ -176,14 +176,14 @@ void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, struct sk_buff* skb, struct iwl_tx_
     if (ieee80211_has_morefrags(fc)) { tx_flags |= TX_CMD_FLG_MORE_FRAG; }
 
     if (ieee80211_is_data_qos(fc)) {
-        u8* qc = ieee80211_get_qos_ctl(hdr);
+        uint8_t* qc = ieee80211_get_qos_ctl(hdr);
         tx_cmd->tid_tspec = qc[0] & 0xf;
         tx_flags &= ~TX_CMD_FLG_SEQ_CTL;
         if (*qc & IEEE80211_QOS_CTL_A_MSDU_PRESENT) { offload_assist |= BIT(TX_CMD_OFFLD_AMSDU); }
     } else if (ieee80211_is_back_req(fc)) {
         struct ieee80211_bar* bar = (void*)skb->data;
-        u16 control = le16_to_cpu(bar->control);
-        u16 ssn = le16_to_cpu(bar->start_seq_num);
+        uint16_t control = le16_to_cpu(bar->control);
+        uint16_t ssn = le16_to_cpu(bar->start_seq_num);
 
         tx_flags |= TX_CMD_FLG_ACK | TX_CMD_FLG_BAR;
         tx_cmd->tid_tspec =
@@ -244,7 +244,7 @@ void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, struct sk_buff* skb, struct iwl_tx_
 
     tx_cmd->tx_flags = cpu_to_le32(tx_flags);
     /* Total # bytes to be transmitted - PCIe code will adjust for A-MSDU */
-    tx_cmd->len = cpu_to_le16((u16)skb->len);
+    tx_cmd->len = cpu_to_le16((uint16_t)skb->len);
     tx_cmd->life_time = cpu_to_le32(TX_CMD_LIFE_TIME_INFINITE);
     tx_cmd->sta_id = sta_id;
 
@@ -256,7 +256,7 @@ void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, struct sk_buff* skb, struct iwl_tx_
     tx_cmd->offload_assist |= cpu_to_le16(iwl_mvm_tx_csum(mvm, skb, hdr, info, offload_assist));
 }
 
-static u32 iwl_mvm_get_tx_ant(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
+static uint32_t iwl_mvm_get_tx_ant(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
                               struct ieee80211_sta* sta, __le16 fc) {
     if (info->band == NL80211_BAND_2GHZ && !iwl_mvm_bt_coex_is_shared_ant_avail(mvm)) {
         return mvm->cfg->non_shared_ant << RATE_MCS_ANT_POS;
@@ -271,11 +271,11 @@ static u32 iwl_mvm_get_tx_ant(struct iwl_mvm* mvm, struct ieee80211_tx_info* inf
     return BIT(mvm->mgmt_last_antenna_idx) << RATE_MCS_ANT_POS;
 }
 
-static u32 iwl_mvm_get_tx_rate(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
+static uint32_t iwl_mvm_get_tx_rate(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
                                struct ieee80211_sta* sta) {
     int rate_idx;
-    u8 rate_plcp;
-    u32 rate_flags = 0;
+    uint8_t rate_plcp;
+    uint32_t rate_flags = 0;
 
     /* HT rate doesn't make sense for a non data frame */
     WARN_ONCE(info->control.rates[0].flags & IEEE80211_TX_RC_MCS,
@@ -306,10 +306,10 @@ static u32 iwl_mvm_get_tx_rate(struct iwl_mvm* mvm, struct ieee80211_tx_info* in
         rate_flags |= RATE_MCS_CCK_MSK;
     }
 
-    return (u32)rate_plcp | rate_flags;
+    return (uint32_t)rate_plcp | rate_flags;
 }
 
-static u32 iwl_mvm_get_tx_rate_n_flags(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
+static uint32_t iwl_mvm_get_tx_rate_n_flags(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
                                        struct ieee80211_sta* sta, __le16 fc) {
     return iwl_mvm_get_tx_rate(mvm, info, sta) | iwl_mvm_get_tx_ant(mvm, info, sta, fc);
 }
@@ -359,9 +359,9 @@ void iwl_mvm_set_tx_cmd_rate(struct iwl_mvm* mvm, struct iwl_tx_cmd* tx_cmd,
     tx_cmd->rate_n_flags = cpu_to_le32(iwl_mvm_get_tx_rate_n_flags(mvm, info, sta, fc));
 }
 
-static inline void iwl_mvm_set_tx_cmd_pn(struct ieee80211_tx_info* info, u8* crypto_hdr) {
+static inline void iwl_mvm_set_tx_cmd_pn(struct ieee80211_tx_info* info, uint8_t* crypto_hdr) {
     struct ieee80211_key_conf* keyconf = info->control.hw_key;
-    u64 pn;
+    uint64_t pn;
 
     pn = atomic64_inc_return(&keyconf->tx_pn);
     crypto_hdr[0] = pn;
@@ -381,9 +381,9 @@ static void iwl_mvm_set_tx_cmd_crypto(struct iwl_mvm* mvm, struct ieee80211_tx_i
                                       struct iwl_tx_cmd* tx_cmd, struct sk_buff* skb_frag,
                                       int hdrlen) {
     struct ieee80211_key_conf* keyconf = info->control.hw_key;
-    u8* crypto_hdr = skb_frag->data + hdrlen;
+    uint8_t* crypto_hdr = skb_frag->data + hdrlen;
     enum iwl_tx_cmd_sec_ctrl type = TX_CMD_SEC_CCM;
-    u64 pn;
+    uint64_t pn;
 
     switch (keyconf->cipher) {
     case WLAN_CIPHER_SUITE_CCMP:
@@ -432,7 +432,7 @@ static void iwl_mvm_set_tx_cmd_crypto(struct iwl_mvm* mvm, struct ieee80211_tx_i
  */
 static struct iwl_device_cmd* iwl_mvm_set_tx_params(struct iwl_mvm* mvm, struct sk_buff* skb,
                                                     struct ieee80211_tx_info* info, int hdrlen,
-                                                    struct ieee80211_sta* sta, u8 sta_id) {
+                                                    struct ieee80211_sta* sta, uint8_t sta_id) {
     struct ieee80211_hdr* hdr = (struct ieee80211_hdr*)skb->data;
     struct iwl_device_cmd* dev_cmd;
     struct iwl_tx_cmd* tx_cmd;
@@ -449,13 +449,13 @@ static struct iwl_device_cmd* iwl_mvm_set_tx_params(struct iwl_mvm* mvm, struct 
     dev_cmd->hdr.cmd = TX_CMD;
 
     if (iwl_mvm_has_new_tx_api(mvm)) {
-        u16 offload_assist = 0;
-        u32 rate_n_flags = 0;
-        u16 flags = 0;
+        uint16_t offload_assist = 0;
+        uint32_t rate_n_flags = 0;
+        uint16_t flags = 0;
         struct iwl_mvm_sta* mvmsta = sta ? iwl_mvm_sta_from_mac80211(sta) : NULL;
 
         if (ieee80211_is_data_qos(hdr->frame_control)) {
-            u8* qc = ieee80211_get_qos_ctl(hdr);
+            uint8_t* qc = ieee80211_get_qos_ctl(hdr);
 
             if (*qc & IEEE80211_QOS_CTL_A_MSDU_PRESENT) {
                 offload_assist |= BIT(TX_CMD_OFFLD_AMSDU);
@@ -489,7 +489,7 @@ static struct iwl_device_cmd* iwl_mvm_set_tx_params(struct iwl_mvm* mvm, struct 
             cmd->offload_assist |= cpu_to_le32(offload_assist);
 
             /* Total # bytes to be transmitted */
-            cmd->len = cpu_to_le16((u16)skb->len);
+            cmd->len = cpu_to_le16((uint16_t)skb->len);
 
             /* Copy MAC header from skb into command buffer */
             memcpy(cmd->hdr, hdr, hdrlen);
@@ -502,7 +502,7 @@ static struct iwl_device_cmd* iwl_mvm_set_tx_params(struct iwl_mvm* mvm, struct 
             cmd->offload_assist |= cpu_to_le16(offload_assist);
 
             /* Total # bytes to be transmitted */
-            cmd->len = cpu_to_le16((u16)skb->len);
+            cmd->len = cpu_to_le16((uint16_t)skb->len);
 
             /* Copy MAC header from skb into command buffer */
             memcpy(cmd->hdr, hdr, hdrlen);
@@ -582,10 +582,10 @@ static void iwl_mvm_probe_resp_set_noa(struct iwl_mvm* mvm, struct sk_buff* skb)
     struct ieee80211_tx_info* info = IEEE80211_SKB_CB(skb);
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(info->control.vif);
     struct ieee80211_mgmt* mgmt = (struct ieee80211_mgmt*)skb->data;
-    int base_len = (u8*)mgmt->u.probe_resp.variable - (u8*)mgmt;
+    int base_len = (uint8_t*)mgmt->u.probe_resp.variable - (uint8_t*)mgmt;
     struct iwl_probe_resp_data* resp_data;
-    u8 *ie, *pos;
-    u8 match[] = {
+    uint8_t *ie, *pos;
+    uint8_t match[] = {
         (WLAN_OUI_WFA >> 16) & 0xff,
         (WLAN_OUI_WFA >> 8) & 0xff,
         WLAN_OUI_WFA & 0xff,
@@ -599,7 +599,7 @@ static void iwl_mvm_probe_resp_set_noa(struct iwl_mvm* mvm, struct sk_buff* skb)
 
     if (!resp_data->notif.noa_active) { goto out; }
 
-    ie = (u8*)cfg80211_find_ie_match(WLAN_EID_VENDOR_SPECIFIC, mgmt->u.probe_resp.variable,
+    ie = (uint8_t*)cfg80211_find_ie_match(WLAN_EID_VENDOR_SPECIFIC, mgmt->u.probe_resp.variable,
                                      skb->len - base_len, match, 4, 2);
     if (!ie) {
         IWL_DEBUG_TX(mvm, "probe resp doesn't have P2P IE\n");
@@ -634,7 +634,7 @@ int iwl_mvm_tx_skb_non_sta(struct iwl_mvm* mvm, struct sk_buff* skb) {
     struct ieee80211_hdr* hdr = (struct ieee80211_hdr*)skb->data;
     struct ieee80211_tx_info info;
     struct iwl_device_cmd* dev_cmd;
-    u8 sta_id;
+    uint8_t sta_id;
     int hdrlen = ieee80211_hdrlen(hdr->frame_control);
     __le16 fc = hdr->frame_control;
     bool offchannel = IEEE80211_SKB_CB(skb)->flags & IEEE80211_TX_CTL_TX_OFFCHAN;
@@ -701,7 +701,7 @@ unsigned int iwl_mvm_max_amsdu_size(struct iwl_mvm* mvm, struct ieee80211_sta* s
                                     unsigned int tid) {
     struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
     enum nl80211_band band = mvmsta->vif->bss_conf.chandef.chan->band;
-    u8 ac = tid_to_mac80211_ac[tid];
+    uint8_t ac = tid_to_mac80211_ac[tid];
     unsigned int txf;
     int lmac = IWL_LMAC_24G_INDEX;
 
@@ -729,11 +729,11 @@ static int iwl_mvm_tx_tso_segment(struct sk_buff* skb, unsigned int num_subframe
     struct sk_buff *tmp, *next;
     struct ieee80211_hdr* hdr = (void*)skb->data;
     char cb[sizeof(skb->cb)];
-    u16 i = 0;
+    uint16_t i = 0;
     unsigned int tcp_payload_len;
     unsigned int mss = skb_shinfo(skb)->gso_size;
     bool ipv4 = (skb->protocol == htons(ETH_P_IP));
-    u16 ip_base_id = ipv4 ? ntohs(ip_hdr(skb)->id) : 0;
+    uint16_t ip_base_id = ipv4 ? ntohs(ip_hdr(skb)->id) : 0;
 
     skb_shinfo(skb)->gso_size = num_subframes * mss;
     memcpy(cb, skb->cb, sizeof(cb));
@@ -766,7 +766,7 @@ static int iwl_mvm_tx_tso_segment(struct sk_buff* skb, unsigned int num_subframe
             skb_shinfo(tmp)->gso_size = mss;
         } else {
             if (ieee80211_is_data_qos(hdr->frame_control)) {
-                u8* qc;
+                uint8_t* qc;
 
                 if (ipv4) { ip_send_check(ip_hdr(tmp)); }
 
@@ -792,10 +792,10 @@ static int iwl_mvm_tx_tso(struct iwl_mvm* mvm, struct sk_buff* skb, struct ieee8
     struct ieee80211_hdr* hdr = (void*)skb->data;
     unsigned int mss = skb_shinfo(skb)->gso_size;
     unsigned int num_subframes, tcp_payload_len, subf_len, max_amsdu_len;
-    u16 snap_ip_tcp, pad;
+    uint16_t snap_ip_tcp, pad;
     unsigned int dbg_max_amsdu_len;
     netdev_features_t netdev_flags = NETIF_F_CSUM_MASK | NETIF_F_SG;
-    u8 tid;
+    uint8_t tid;
 
     snap_ip_tcp = 8 + skb_transport_header(skb) - skb_network_header(skb) + tcp_hdrlen(skb);
 
@@ -934,7 +934,7 @@ static void iwl_mvm_tx_airtime(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, 
 }
 
 static int iwl_mvm_tx_pkt_queued(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, int tid) {
-    u32 ac = tid_to_mac80211_ac[tid];
+    uint32_t ac = tid_to_mac80211_ac[tid];
     int mac = mvmsta->mac_id_n_color & FW_CTXT_ID_MSK;
     struct iwl_mvm_tcm_mac* mdata;
 
@@ -956,9 +956,9 @@ static int iwl_mvm_tx_mpdu(struct iwl_mvm* mvm, struct sk_buff* skb, struct ieee
     struct iwl_mvm_sta* mvmsta;
     struct iwl_device_cmd* dev_cmd;
     __le16 fc;
-    u16 seq_number = 0;
-    u8 tid = IWL_MAX_TID_COUNT;
-    u16 txq_id;
+    uint16_t seq_number = 0;
+    uint8_t tid = IWL_MAX_TID_COUNT;
+    uint16_t txq_id;
     bool is_ampdu = false;
     int hdrlen;
 
@@ -1107,11 +1107,11 @@ int iwl_mvm_tx_skb(struct iwl_mvm* mvm, struct sk_buff* skb, struct ieee80211_st
     return 0;
 }
 
-static void iwl_mvm_check_ratid_empty(struct iwl_mvm* mvm, struct ieee80211_sta* sta, u8 tid) {
+static void iwl_mvm_check_ratid_empty(struct iwl_mvm* mvm, struct ieee80211_sta* sta, uint8_t tid) {
     struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
     struct iwl_mvm_tid_data* tid_data = &mvmsta->tid_data[tid];
     struct ieee80211_vif* vif = mvmsta->vif;
-    u16 normalized_ssn;
+    uint16_t normalized_ssn;
 
     lockdep_assert_held(&mvmsta->lock);
 
@@ -1155,7 +1155,7 @@ static void iwl_mvm_check_ratid_empty(struct iwl_mvm* mvm, struct ieee80211_sta*
 }
 
 #ifdef CPTCFG_IWLWIFI_DEBUG
-const char* iwl_mvm_get_tx_fail_reason(u32 status) {
+const char* iwl_mvm_get_tx_fail_reason(uint32_t status) {
 #define TX_STATUS_FAIL(x)    \
     case TX_STATUS_FAIL_##x: \
         return #x
@@ -1197,7 +1197,7 @@ const char* iwl_mvm_get_tx_fail_reason(u32 status) {
 }
 #endif /* CPTCFG_IWLWIFI_DEBUG */
 
-void iwl_mvm_hwrate_to_tx_rate(u32 rate_n_flags, enum nl80211_band band,
+void iwl_mvm_hwrate_to_tx_rate(uint32_t rate_n_flags, enum nl80211_band band,
                                struct ieee80211_tx_rate* r) {
     if (rate_n_flags & RATE_HT_MCS_GF_MSK) { r->flags |= IEEE80211_TX_RC_GREEN_FIELD; }
     switch (rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) {
@@ -1229,7 +1229,7 @@ void iwl_mvm_hwrate_to_tx_rate(u32 rate_n_flags, enum nl80211_band band,
 /**
  * translate ucode response to mac80211 tx status control values
  */
-static void iwl_mvm_hwrate_to_tx_status(u32 rate_n_flags, struct ieee80211_tx_info* info) {
+static void iwl_mvm_hwrate_to_tx_status(uint32_t rate_n_flags, struct ieee80211_tx_info* info) {
     struct ieee80211_tx_rate* r = &info->status.rates[0];
 
     info->status.antenna = ((rate_n_flags & RATE_MCS_ANT_ABC_MSK) >> RATE_MCS_ANT_POS);
@@ -1250,7 +1250,7 @@ static void iwl_mvm_tx_lat_add_ts_ack(struct sk_buff* skb) {
 }
 #endif
 
-static void iwl_mvm_tx_status_check_trigger(struct iwl_mvm* mvm, u32 status) {
+static void iwl_mvm_tx_status_check_trigger(struct iwl_mvm* mvm, uint32_t status) {
     struct iwl_fw_dbg_trigger_tlv* trig;
     struct iwl_fw_dbg_trigger_tx_status* status_trig;
     int i;
@@ -1285,26 +1285,26 @@ static void iwl_mvm_tx_status_check_trigger(struct iwl_mvm* mvm, u32 status) {
  * whole struct at a variable offset. This function knows how to cope with the
  * variable offset and returns the SSN of the SCD.
  */
-static inline u32 iwl_mvm_get_scd_ssn(struct iwl_mvm* mvm, struct iwl_mvm_tx_resp* tx_resp) {
+static inline uint32_t iwl_mvm_get_scd_ssn(struct iwl_mvm* mvm, struct iwl_mvm_tx_resp* tx_resp) {
     return le32_to_cpup((__le32*)iwl_mvm_get_agg_status(mvm, tx_resp) + tx_resp->frame_count) &
            0xfff;
 }
 
 static void iwl_mvm_rx_tx_cmd_single(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt) {
     struct ieee80211_sta* sta;
-    u16 sequence = le16_to_cpu(pkt->hdr.sequence);
+    uint16_t sequence = le16_to_cpu(pkt->hdr.sequence);
     int txq_id = SEQ_TO_QUEUE(sequence);
     /* struct iwl_mvm_tx_resp_v3 is almost the same */
     struct iwl_mvm_tx_resp* tx_resp = (void*)pkt->data;
     int sta_id = IWL_MVM_TX_RES_GET_RA(tx_resp->ra_tid);
     int tid = IWL_MVM_TX_RES_GET_TID(tx_resp->ra_tid);
     struct agg_tx_status* agg_status = iwl_mvm_get_agg_status(mvm, tx_resp);
-    u32 status = le16_to_cpu(agg_status->status);
-    u16 ssn = iwl_mvm_get_scd_ssn(mvm, tx_resp);
+    uint32_t status = le16_to_cpu(agg_status->status);
+    uint16_t ssn = iwl_mvm_get_scd_ssn(mvm, tx_resp);
     struct sk_buff_head skbs;
-    u8 skb_freed = 0;
-    u8 lq_color;
-    u16 next_reclaimed, seq_ctl;
+    uint8_t skb_freed = 0;
+    uint8_t lq_color;
+    uint16_t next_reclaimed, seq_ctl;
     bool is_ndp = false;
 
     __skb_queue_head_init(&skbs);
@@ -1520,7 +1520,7 @@ out:
 #define AGG_TX_STATE_(x)   \
     case AGG_TX_STATE_##x: \
         return #x
-static const char* iwl_get_agg_tx_status(u16 status) {
+static const char* iwl_get_agg_tx_status(uint16_t status) {
     switch (status & AGG_TX_STATE_STATUS_MSK) {
         AGG_TX_STATE_(TRANSMITTED);
         AGG_TX_STATE_(UNDERRUN);
@@ -1546,7 +1546,7 @@ static void iwl_mvm_rx_tx_cmd_agg_dbg(struct iwl_mvm* mvm, struct iwl_rx_packet*
     int i;
 
     for (i = 0; i < tx_resp->frame_count; i++) {
-        u16 fstatus = le16_to_cpu(frame_status[i].status);
+        uint16_t fstatus = le16_to_cpu(frame_status[i].status);
 
         IWL_DEBUG_TX_REPLY(mvm, "status %s (0x%04x), try-count (%d) seq (0x%x)\n",
                            iwl_get_agg_tx_status(fstatus), fstatus & AGG_TX_STATE_STATUS_MSK,
@@ -1562,7 +1562,7 @@ static void iwl_mvm_rx_tx_cmd_agg(struct iwl_mvm* mvm, struct iwl_rx_packet* pkt
     struct iwl_mvm_tx_resp* tx_resp = (void*)pkt->data;
     int sta_id = IWL_MVM_TX_RES_GET_RA(tx_resp->ra_tid);
     int tid = IWL_MVM_TX_RES_GET_TID(tx_resp->ra_tid);
-    u16 sequence = le16_to_cpu(pkt->hdr.sequence);
+    uint16_t sequence = le16_to_cpu(pkt->hdr.sequence);
     struct iwl_mvm_sta* mvmsta;
     int queue = SEQ_TO_QUEUE(sequence);
     struct ieee80211_sta* sta;
@@ -1606,7 +1606,7 @@ void iwl_mvm_rx_tx_cmd(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
 }
 
 static void iwl_mvm_tx_reclaim(struct iwl_mvm* mvm, int sta_id, int tid, int txq, int index,
-                               struct ieee80211_tx_info* ba_info, u32 rate) {
+                               struct ieee80211_tx_info* ba_info, uint32_t rate) {
     struct sk_buff_head reclaimed_skbs;
     struct iwl_mvm_tid_data* tid_data;
     struct ieee80211_sta* sta;
@@ -1738,13 +1738,13 @@ void iwl_mvm_rx_ba_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
 
     if (iwl_mvm_has_new_tx_api(mvm)) {
         struct iwl_mvm_compressed_ba_notif* ba_res = (void*)pkt->data;
-        u8 lq_color = TX_RES_RATE_TABLE_COL_GET(ba_res->tlc_rate_info);
+        uint8_t lq_color = TX_RES_RATE_TABLE_COL_GET(ba_res->tlc_rate_info);
         int i;
 
         sta_id = ba_res->sta_id;
-        ba_info.status.ampdu_ack_len = (u8)le16_to_cpu(ba_res->done);
-        ba_info.status.ampdu_len = (u8)le16_to_cpu(ba_res->txed);
-        ba_info.status.tx_time = (u16)le32_to_cpu(ba_res->wireless_time);
+        ba_info.status.ampdu_ack_len = (uint8_t)le16_to_cpu(ba_res->done);
+        ba_info.status.ampdu_len = (uint8_t)le16_to_cpu(ba_res->txed);
+        ba_info.status.tx_time = (uint16_t)le32_to_cpu(ba_res->wireless_time);
         ba_info.status.status_driver_data[0] = (void*)(uintptr_t)ba_res->reduced_txp;
 
         if (!le16_to_cpu(ba_res->tfd_cnt)) { goto out; }
@@ -1824,7 +1824,7 @@ void iwl_mvm_rx_ba_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
  * 2) flush the Tx path
  * 3) wait for the transport queues to be empty
  */
-int iwl_mvm_flush_tx_path(struct iwl_mvm* mvm, u32 tfd_msk, u32 flags) {
+int iwl_mvm_flush_tx_path(struct iwl_mvm* mvm, uint32_t tfd_msk, uint32_t flags) {
     int ret;
     struct iwl_tx_path_flush_cmd_v1 flush_cmd = {
         .queues_ctl = cpu_to_le32(tfd_msk),
@@ -1838,7 +1838,7 @@ int iwl_mvm_flush_tx_path(struct iwl_mvm* mvm, u32 tfd_msk, u32 flags) {
     return ret;
 }
 
-int iwl_mvm_flush_sta_tids(struct iwl_mvm* mvm, u32 sta_id, u16 tids, u32 flags) {
+int iwl_mvm_flush_sta_tids(struct iwl_mvm* mvm, uint32_t sta_id, uint16_t tids, uint32_t flags) {
     int ret;
     struct iwl_tx_path_flush_cmd flush_cmd = {
         .sta_id = cpu_to_le32(sta_id),
@@ -1852,7 +1852,7 @@ int iwl_mvm_flush_sta_tids(struct iwl_mvm* mvm, u32 sta_id, u16 tids, u32 flags)
     return ret;
 }
 
-int iwl_mvm_flush_sta(struct iwl_mvm* mvm, void* sta, bool internal, u32 flags) {
+int iwl_mvm_flush_sta(struct iwl_mvm* mvm, void* sta, bool internal, uint32_t flags) {
     struct iwl_mvm_int_sta* int_sta = sta;
     struct iwl_mvm_sta* mvm_sta = sta;
 

@@ -71,10 +71,10 @@ enum {
 struct iwl_lmac_alive {
     __le32 ucode_major;
     __le32 ucode_minor;
-    u8 ver_subtype;
-    u8 ver_type;
-    u8 mac;
-    u8 opt;
+    uint8_t ver_subtype;
+    uint8_t ver_type;
+    uint8_t mac;
+    uint8_t opt;
     __le32 timestamp;
     __le32 error_event_table_ptr; /* SRAM address for error log */
     __le32 log_event_table_ptr;   /* SRAM address for LMAC event log */

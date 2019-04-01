@@ -540,9 +540,9 @@ struct iwl_channel_dwell_report {
  */
 struct iwl_adwell_fine_tune_metrics_report {
     struct iwl_dhn_hdr header;
-    s8 index[IWL_SCAN_MAX_NUM_OF_CHANNELS];
-    u8 scan_counter[IWL_SCAN_MAX_NUM_OF_CHANNELS];
-    u8 success_counter[IWL_SCAN_MAX_NUM_OF_CHANNELS];
+    int8_t index[IWL_SCAN_MAX_NUM_OF_CHANNELS];
+    uint8_t scan_counter[IWL_SCAN_MAX_NUM_OF_CHANNELS];
+    uint8_t success_counter[IWL_SCAN_MAX_NUM_OF_CHANNELS];
 } __packed; /* ADAPTIVE_DWELL_SCAN_FINE_TUNE_METRICS_REPORT_API_S */
 
 /**
@@ -565,8 +565,8 @@ enum iwl_dhc_quota_enforce_type {
  * @quota_percentage: quota to enforce as percentage [0 - 100]
  */
 struct iwl_dhc_quota_enforce {
-    u8 macs;
-    u8 quota_enforce_type;
+    uint8_t macs;
+    uint8_t quota_enforce_type;
     __le16 reserved;
     __le32 quota_percentage[MAC_INDEX_AUX];
 } __packed; /* DHC_QUOTA_ENFORCE_API_S */
@@ -625,18 +625,18 @@ struct iwl_dhc_twt_operation {
     __le32 interval_exp;
     __le32 interval_mantissa;
     __le32 min_wake_duration;
-    u8 trigger;
-    u8 flow_type;
-    u8 flow_id;
-    u8 protection;
-    u8 ndo_paging_indicator;
-    u8 responder_pm_mode;
-    u8 negotiation_type;
-    u8 twt_request;
-    u8 implicit;
-    u8 twt_group_assignment;
-    u8 twt_channel;
-    u8 reserved;
+    uint8_t trigger;
+    uint8_t flow_type;
+    uint8_t flow_id;
+    uint8_t protection;
+    uint8_t ndo_paging_indicator;
+    uint8_t responder_pm_mode;
+    uint8_t negotiation_type;
+    uint8_t twt_request;
+    uint8_t implicit;
+    uint8_t twt_group_assignment;
+    uint8_t twt_channel;
+    uint8_t reserved;
 }; /* DHC_TWT_OPERATION_API_S */
 
 #endif /* __iwl_fw_api_dhc_h__ */

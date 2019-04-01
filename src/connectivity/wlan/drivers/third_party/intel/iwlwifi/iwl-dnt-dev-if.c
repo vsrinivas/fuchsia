@@ -74,7 +74,7 @@ static void iwl_dnt_dev_if_configure_mipi(struct iwl_trans* trans) {
 
 static void iwl_dnt_dev_if_configure_marbh(struct iwl_trans* trans) {
     struct iwl_dbg_cfg* cfg = &trans->dbg_cfg;
-    u32 ret, reg_val = 0;
+    uint32_t ret, reg_val = 0;
 
     if (cfg->dbg_marbh_access_type == ACCESS_TYPE_DIRECT) {
         iwl_trans_set_bits_mask(trans, cfg->dbg_marbh_conf_reg, cfg->dbg_marbh_conf_mask,
@@ -96,8 +96,8 @@ static void iwl_dnt_dev_if_configure_marbh(struct iwl_trans* trans) {
     }
 }
 
-static void iwl_dnt_dev_if_configure_dbgc_registers(struct iwl_trans* trans, u32 base_addr,
-                                                    u32 end_addr) {
+static void iwl_dnt_dev_if_configure_dbgc_registers(struct iwl_trans* trans, uint32_t base_addr,
+                                                    uint32_t end_addr) {
     struct iwl_dbg_cfg* cfg = &trans->dbg_cfg;
 
     switch (trans->tmdev->dnt->cur_mon_type) {
@@ -127,8 +127,8 @@ static void iwl_dnt_dev_if_configure_dbgc_registers(struct iwl_trans* trans, u32
     };
 }
 
-static void iwl_dnt_dev_if_configure_dbgm_registers(struct iwl_trans* trans, u32 base_addr,
-                                                    u32 end_addr) {
+static void iwl_dnt_dev_if_configure_dbgm_registers(struct iwl_trans* trans, uint32_t base_addr,
+                                                    uint32_t end_addr) {
     struct iwl_dbg_cfg* cfg = &trans->dbg_cfg;
 
     /* If we're running a device that supports DBGC - use it */
@@ -152,9 +152,9 @@ static void iwl_dnt_dev_if_configure_dbgm_registers(struct iwl_trans* trans, u32
 }
 
 static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt* dnt, struct iwl_trans* trans,
-                                                    void* buffer, u32 buffer_size) {
+                                                    void* buffer, uint32_t buffer_size) {
     struct iwl_dbg_cfg* cfg = &trans->dbg_cfg;
-    u32 wr_ptr, wrap_cnt;
+    uint32_t wr_ptr, wrap_cnt;
     bool dont_reorder = false;
     /* FIXME send stop command to FW */
     if (WARN_ON_ONCE(!dnt->mon_buf_cpu_addr)) {
@@ -215,10 +215,10 @@ static int iwl_dnt_dev_if_retrieve_dma_monitor_data(struct iwl_dnt* dnt, struct 
 }
 
 static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt* dnt, struct iwl_trans* trans,
-                                                      u8* buffer, u32 buffer_size) {
+                                                      uint8_t* buffer, uint32_t buffer_size) {
     struct iwl_dbg_cfg* cfg = &trans->dbg_cfg;
     int buf_size_in_dwords, buf_index, i;
-    u32 wr_ptr, read_val;
+    uint32_t wr_ptr, read_val;
 
     /* FIXME send stop command to FW */
 
@@ -252,20 +252,20 @@ static int iwl_dnt_dev_if_retrieve_marbh_monitor_data(struct iwl_dnt* dnt, struc
         /* reordering cyclic buffer */
         buf_index = (i + (buf_size_in_dwords - wr_ptr)) % buf_size_in_dwords;
         read_val = iwl_read_prph(trans, cfg->dbg_mon_dmarb_rd_data_addr);
-        memcpy(&buffer[buf_index * sizeof(u32)], &read_val, sizeof(u32));
+        memcpy(&buffer[buf_index * sizeof(uint32_t)], &read_val, sizeof(uint32_t));
     }
     iwl_write_prph(trans, cfg->dbg_mon_dmarb_rd_ctl_addr, 0x00000000);
 
-    return buf_size_in_dwords * sizeof(u32);
+    return buf_size_in_dwords * sizeof(uint32_t);
 }
 
 static int iwl_dnt_dev_if_retrieve_smem_monitor_data(struct iwl_dnt* dnt, struct iwl_trans* trans,
-                                                     u8* buffer, u32 buffer_size) {
+                                                     uint8_t* buffer, uint32_t buffer_size) {
     struct iwl_dbg_cfg* cfg = &trans->dbg_cfg;
-    u32 i, bytes_to_end, calc_size;
-    u32 base_addr, end_addr, wr_ptr_addr, wr_ptr_shift;
-    u32 base, end, wr_ptr, pos, chunks_num, wr_ptr_offset, wrap_cnt;
-    u8* temp_buffer;
+    uint32_t i, bytes_to_end, calc_size;
+    uint32_t base_addr, end_addr, wr_ptr_addr, wr_ptr_shift;
+    uint32_t base, end, wr_ptr, pos, chunks_num, wr_ptr_offset, wrap_cnt;
+    uint8_t* temp_buffer;
 
     /* assuming B-step or C-step */
     base_addr = cfg->dbg_mon_buff_base_addr_reg_addr_b_step;
@@ -321,12 +321,12 @@ static int iwl_dnt_dev_if_retrieve_smem_monitor_data(struct iwl_dnt* dnt, struct
 
     for (i = 0; i < chunks_num; i++)
         iwl_trans_read_mem(trans, pos + (i * DNT_CHUNK_SIZE), temp_buffer + (i * DNT_CHUNK_SIZE),
-                           DNT_CHUNK_SIZE / sizeof(u32));
+                           DNT_CHUNK_SIZE / sizeof(uint32_t));
 
     if (calc_size % DNT_CHUNK_SIZE)
         iwl_trans_read_mem(trans, pos + (chunks_num * DNT_CHUNK_SIZE),
                            temp_buffer + (chunks_num * DNT_CHUNK_SIZE),
-                           (calc_size - (chunks_num * DNT_CHUNK_SIZE)) / sizeof(u32));
+                           (calc_size - (chunks_num * DNT_CHUNK_SIZE)) / sizeof(uint32_t));
 
     if (cfg->dbgc_wrap_count_addr) {
         wrap_cnt = iwl_read_prph(trans, cfg->dbgc_wrap_count_addr);
@@ -348,7 +348,7 @@ static int iwl_dnt_dev_if_retrieve_smem_monitor_data(struct iwl_dnt* dnt, struct
 }
 
 int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt* dnt, struct iwl_trans* trans) {
-    u32 base_addr, end_addr;
+    uint32_t base_addr, end_addr;
 
     switch (dnt->cur_mon_type) {
     case NO_MONITOR:
@@ -464,8 +464,8 @@ int iwl_dnt_dev_if_set_log_level(struct iwl_dnt* dnt, struct iwl_trans* trans) {
     return ret;
 }
 
-int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt* dnt, struct iwl_trans* trans, u8* buffer,
-                                         u32 buffer_size) {
+int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt* dnt, struct iwl_trans* trans, uint8_t* buffer,
+                                         uint32_t buffer_size) {
     switch (dnt->cur_mon_type) {
     case DMA:
         return iwl_dnt_dev_if_retrieve_dma_monitor_data(dnt, trans, buffer, buffer_size);
@@ -492,15 +492,15 @@ int iwl_dnt_dev_if_read_sram(struct iwl_dnt* dnt, struct iwl_trans* trans) {
     if (!crash->sram) { return -ENOMEM; }
 
     crash->sram_buf_size = len;
-    return iwl_trans_read_mem(trans, ofs, crash->sram, len / sizeof(u32));
+    return iwl_trans_read_mem(trans, ofs, crash->sram, len / sizeof(uint32_t));
 }
 IWL_EXPORT_SYMBOL(iwl_dnt_dev_if_read_sram);
 
 int iwl_dnt_dev_if_read_rx(struct iwl_dnt* dnt, struct iwl_trans* trans) {
     struct dnt_crash_data* crash = &dnt->dispatch.crash;
     int i, reg_val;
-    u32 buf32_size, offset = 0;
-    u32* buf32;
+    uint32_t buf32_size, offset = 0;
+    uint32_t* buf32;
     unsigned long flags;
 
     /* reading buffer size */
@@ -512,12 +512,12 @@ int iwl_dnt_dev_if_read_rx(struct iwl_dnt* dnt, struct iwl_trans* trans) {
 
     if (!crash->rx_buf_size) { return -ENOMEM; }
 
-    buf32_size = crash->rx_buf_size / sizeof(u32);
+    buf32_size = crash->rx_buf_size / sizeof(uint32_t);
 
     crash->rx = vmalloc(crash->rx_buf_size);
     if (!crash->rx) { return -ENOMEM; }
 
-    buf32 = (u32*)crash->rx;
+    buf32 = (uint32_t*)crash->rx;
 
     if (!iwl_trans_grab_nic_access(trans, &flags)) {
         vfree(crash->rx);
@@ -525,7 +525,7 @@ int iwl_dnt_dev_if_read_rx(struct iwl_dnt* dnt, struct iwl_trans* trans) {
     }
     for (i = 0; i < buf32_size; i++) {
         iwl_trans_write_prph(trans, RXF_LD_FENCE_OFFSET_ADDR, offset);
-        offset += sizeof(u32);
+        offset += sizeof(uint32_t);
         buf32[i] = iwl_trans_read_prph(trans, RXF_FIFO_RD_FENCE_ADDR);
     }
     iwl_trans_release_nic_access(trans, &flags);

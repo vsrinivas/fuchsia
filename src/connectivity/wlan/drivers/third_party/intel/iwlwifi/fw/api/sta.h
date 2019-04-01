@@ -232,12 +232,12 @@ enum iwl_sta_sleep_flag {
  */
 struct iwl_mvm_keyinfo {
     __le16 key_flags;
-    u8 tkip_rx_tsc_byte2;
-    u8 reserved1;
+    uint8_t tkip_rx_tsc_byte2;
+    uint8_t reserved1;
     __le16 tkip_rx_ttak[5];
-    u8 key_offset;
-    u8 reserved2;
-    u8 key[16];
+    uint8_t key_offset;
+    uint8_t reserved2;
+    uint8_t key[16];
     __le64 tx_secur_seq_cnt;
     __le64 hw_tkip_mic_rx_key;
     __le64 hw_tkip_mic_tx_key;
@@ -290,19 +290,19 @@ struct iwl_mvm_keyinfo {
  * entry, or modifying a pre-existing one.
  */
 struct iwl_mvm_add_sta_cmd_v7 {
-    u8 add_modify;
-    u8 awake_acs;
+    uint8_t add_modify;
+    uint8_t awake_acs;
     __le16 tid_disable_tx;
     __le32 mac_id_n_color;
-    u8 addr[ETH_ALEN]; /* _STA_ID_MODIFY_INFO_API_S_VER_1 */
+    uint8_t addr[ETH_ALEN]; /* _STA_ID_MODIFY_INFO_API_S_VER_1 */
     __le16 reserved2;
-    u8 sta_id;
-    u8 modify_mask;
+    uint8_t sta_id;
+    uint8_t modify_mask;
     __le16 reserved3;
     __le32 station_flags;
     __le32 station_flags_msk;
-    u8 add_immediate_ba_tid;
-    u8 remove_immediate_ba_tid;
+    uint8_t add_immediate_ba_tid;
+    uint8_t remove_immediate_ba_tid;
     __le16 add_immediate_ba_ssn;
     __le16 sleep_tx_count;
     __le16 sleep_state_flags;
@@ -377,29 +377,29 @@ enum iwl_sta_type {
  * entry, or modifying a pre-existing one.
  */
 struct iwl_mvm_add_sta_cmd {
-    u8 add_modify;
-    u8 awake_acs;
+    uint8_t add_modify;
+    uint8_t awake_acs;
     __le16 tid_disable_tx;
     __le32 mac_id_n_color;
-    u8 addr[ETH_ALEN]; /* _STA_ID_MODIFY_INFO_API_S_VER_1 */
+    uint8_t addr[ETH_ALEN]; /* _STA_ID_MODIFY_INFO_API_S_VER_1 */
     __le16 reserved2;
-    u8 sta_id;
-    u8 modify_mask;
+    uint8_t sta_id;
+    uint8_t modify_mask;
     __le16 reserved3;
     __le32 station_flags;
     __le32 station_flags_msk;
-    u8 add_immediate_ba_tid;
-    u8 remove_immediate_ba_tid;
+    uint8_t add_immediate_ba_tid;
+    uint8_t remove_immediate_ba_tid;
     __le16 add_immediate_ba_ssn;
     __le16 sleep_tx_count;
-    u8 sleep_state_flags;
-    u8 station_type;
+    uint8_t sleep_state_flags;
+    uint8_t station_type;
     __le16 assoc_id;
     __le16 beamform_flags;
     __le32 tfd_queue_msk;
     __le16 rx_ba_window;
-    u8 sp_length;
-    u8 uapsd_acs;
+    uint8_t sp_length;
+    uint8_t uapsd_acs;
 } __packed; /* ADD_STA_CMD_API_S_VER_10 */
 
 /**
@@ -412,11 +412,11 @@ struct iwl_mvm_add_sta_cmd {
  * @rx_secur_seq_cnt: RX security sequence counter for the key
  */
 struct iwl_mvm_add_sta_key_common {
-    u8 sta_id;
-    u8 key_offset;
+    uint8_t sta_id;
+    uint8_t key_offset;
     __le16 key_flags;
-    u8 key[32];
-    u8 rx_secur_seq_cnt[16];
+    uint8_t key[32];
+    uint8_t rx_secur_seq_cnt[16];
 } __packed;
 
 /**
@@ -428,8 +428,8 @@ struct iwl_mvm_add_sta_key_common {
  */
 struct iwl_mvm_add_sta_key_cmd_v1 {
     struct iwl_mvm_add_sta_key_common common;
-    u8 tkip_rx_tsc_byte2;
-    u8 reserved;
+    uint8_t tkip_rx_tsc_byte2;
+    uint8_t reserved;
     __le16 tkip_rx_ttak[5];
 } __packed; /* ADD_MODIFY_STA_KEY_API_S_VER_1 */
 
@@ -469,8 +469,8 @@ enum iwl_mvm_add_sta_rsp_status {
  * @reserved: reserved
  */
 struct iwl_mvm_rm_sta_cmd {
-    u8 sta_id;
-    u8 reserved[3];
+    uint8_t sta_id;
+    uint8_t reserved[3];
 } __packed; /* REMOVE_STA_CMD_API_S_VER_2 */
 
 /**
@@ -486,9 +486,9 @@ struct iwl_mvm_rm_sta_cmd {
  */
 struct iwl_mvm_mgmt_mcast_key_cmd_v1 {
     __le32 ctrl_flags;
-    u8 igtk[16];
-    u8 k1[16];
-    u8 k2[16];
+    uint8_t igtk[16];
+    uint8_t k1[16];
+    uint8_t k2[16];
     __le32 key_id;
     __le32 sta_id;
     __le64 receive_seq_cnt;
@@ -505,27 +505,27 @@ struct iwl_mvm_mgmt_mcast_key_cmd_v1 {
  */
 struct iwl_mvm_mgmt_mcast_key_cmd {
     __le32 ctrl_flags;
-    u8 igtk[32];
+    uint8_t igtk[32];
     __le32 key_id;
     __le32 sta_id;
     __le64 receive_seq_cnt;
 } __packed; /* SEC_MGMT_MULTICAST_KEY_CMD_API_S_VER_2 */
 
 struct iwl_mvm_wep_key {
-    u8 key_index;
-    u8 key_offset;
+    uint8_t key_index;
+    uint8_t key_offset;
     __le16 reserved1;
-    u8 key_size;
-    u8 reserved2[3];
-    u8 key[16];
+    uint8_t key_size;
+    uint8_t reserved2[3];
+    uint8_t key[16];
 } __packed;
 
 struct iwl_mvm_wep_key_cmd {
     __le32 mac_id_n_color;
-    u8 num_keys;
-    u8 decryption_type;
-    u8 flags;
-    u8 reserved;
+    uint8_t num_keys;
+    uint8_t decryption_type;
+    uint8_t flags;
+    uint8_t reserved;
     struct iwl_mvm_wep_key wep_key[0];
 } __packed; /* SEC_CURR_WEP_KEY_CMD_API_S_VER_2 */
 

@@ -77,7 +77,7 @@ union acpi_object* iwl_acpi_get_wifi_pkg(struct device* dev, union acpi_object* 
  */
 int iwl_acpi_get_mcc(struct device* dev, char* mcc);
 
-u64 iwl_acpi_get_pwr_limit(struct device* dev);
+uint64_t iwl_acpi_get_pwr_limit(struct device* dev);
 
 #else /* CONFIG_ACPI */
 
@@ -96,7 +96,7 @@ static inline zx_status_t iwl_acpi_get_mcc(struct device* dev, char* mcc) {
     return ZX_ERR_NOT_FOUND;
 }
 
-static inline u64 iwl_acpi_get_pwr_limit(struct device* dev) {
+static inline uint64_t iwl_acpi_get_pwr_limit(struct device* dev) {
     return 0;
 }
 

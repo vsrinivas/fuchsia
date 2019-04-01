@@ -41,7 +41,7 @@
 /* all calculations are done in percentages, but the firmware wants
  * fractions of 128, so provide a conversion.
  */
-static inline u32 iwl_mvm_quota_from_pct(u32 pct) {
+static inline uint32_t iwl_mvm_quota_from_pct(uint32_t pct) {
     return (pct * IWL_MVM_MAX_QUOTA) / 100;
 }
 
@@ -52,16 +52,16 @@ struct iwl_mvm_quota_iterator_data {
      * to outside is a bug, but all the code here is protected by
      * the mvm mutex, so nothing can be added/removed and race.
      */
-    u32 num_active_macs;
+    uint32_t num_active_macs;
     struct ieee80211_vif* vifs[NUM_MAC_INDEX_DRIVER];
     bool monitor;
 };
 
-static void iwl_mvm_quota_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_quota_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_quota_iterator_data* data = _data;
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-    u32 num_active_macs = data->num_active_macs;
-    u16 id;
+    uint32_t num_active_macs = data->num_active_macs;
+    uint16_t id;
 
     /* reset tracked quota but otherwise skip interfaces being disabled */
     if (vif == data->disabled_vif) { goto out; }
@@ -113,9 +113,9 @@ out:
     if (num_active_macs == data->num_active_macs) { mvmvif->pct_quota = 0; }
 }
 
-static u32 iwl_mvm_next_quota(struct iwl_mvm* mvm, u32 usage, u32 alloc, u32 unused, u32 n_vifs) {
-    u32 result;
-    u32 m;
+static uint32_t iwl_mvm_next_quota(struct iwl_mvm* mvm, uint32_t usage, uint32_t alloc, uint32_t unused, uint32_t n_vifs) {
+    uint32_t result;
+    uint32_t m;
 
     IWL_DEBUG_QUOTA(mvm, "next_quota usage=%d, alloc=%d, unused=%d, n_vifs=%d\n", usage, alloc,
                     unused, n_vifs);
@@ -141,7 +141,7 @@ static u32 iwl_mvm_next_quota(struct iwl_mvm* mvm, u32 usage, u32 alloc, u32 unu
         return alloc;
     }
 
-    m = min_t(u32, IWL_MVM_DYNQUOTA_MIN_PERCENT + unused / n_vifs,
+    m = min_t(uint32_t, IWL_MVM_DYNQUOTA_MIN_PERCENT + unused / n_vifs,
               IWL_MVM_DYNQUOTA_LOW_WM_PERCENT - usage);
     if (alloc > IWL_MVM_DYNQUOTA_MIN_PERCENT + m) {
         result = alloc - m;
@@ -161,12 +161,12 @@ enum iwl_mvm_quota_result iwl_mvm_calculate_advanced_quotas(struct iwl_mvm* mvm,
         .disabled_vif = disabled_vif,
     };
     struct iwl_time_quota_data* quota;
-    u32 usage[NUM_MAC_INDEX_DRIVER];
-    u32 unused;
-    u32 total;
+    uint32_t usage[NUM_MAC_INDEX_DRIVER];
+    uint32_t unused;
+    uint32_t total;
     int n_lowlat = 0;
     int iter;
-    u32 new_quota[NUM_MAC_INDEX_DRIVER];
+    uint32_t new_quota[NUM_MAC_INDEX_DRIVER];
     bool significant_change = false;
 
     lockdep_assert_held(&mvm->mutex);
@@ -205,7 +205,7 @@ enum iwl_mvm_quota_result iwl_mvm_calculate_advanced_quotas(struct iwl_mvm* mvm,
         /* expressed as percentage of the assigned quota */
         usage[id] = (100 * usage[id]) / mvmvif->pct_quota;
         /* can be > 1 when sharing channel contexts */
-        usage[id] = min_t(u32, 100, usage[id]);
+        usage[id] = min_t(uint32_t, 100, usage[id]);
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
         mvm->quotadbg.quota_used[id] = usage[id];
 #endif
@@ -223,7 +223,7 @@ enum iwl_mvm_quota_result iwl_mvm_calculate_advanced_quotas(struct iwl_mvm* mvm,
             iwl_mvm_next_quota(mvm, usage[id], mvmvif->pct_quota, unused, data.num_active_macs);
 
         if (iwl_mvm_vif_low_latency(mvmvif)) {
-            u32 ll_min;
+            uint32_t ll_min;
 
             switch (ieee80211_vif_type_p2p(data.vifs[i])) {
             case NL80211_IFTYPE_P2P_CLIENT:
@@ -237,7 +237,7 @@ enum iwl_mvm_quota_result iwl_mvm_calculate_advanced_quotas(struct iwl_mvm* mvm,
                 ll_min = IWL_MVM_LOWLAT_QUOTA_MIN_PERCENT;
                 break;
             }
-            new_quota[id] = max_t(u32, ll_min, new_quota[id]);
+            new_quota[id] = max_t(uint32_t, ll_min, new_quota[id]);
             n_lowlat++;
         }
         total += new_quota[id];
@@ -299,7 +299,7 @@ enum iwl_mvm_quota_result iwl_mvm_calculate_advanced_quotas(struct iwl_mvm* mvm,
     for (i = 0; i < data.num_active_macs; i++) {
         struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(data.vifs[i]);
 
-        if (abs((s32)new_quota[mvmvif->id] - (s32)mvmvif->pct_quota) > IWL_MVM_QUOTA_THRESHOLD) {
+        if (abs((int32_t)new_quota[mvmvif->id] - (int32_t)mvmvif->pct_quota) > IWL_MVM_QUOTA_THRESHOLD) {
             significant_change = true;
             mvmvif->pct_quota = new_quota[mvmvif->id];
         }
@@ -317,7 +317,7 @@ enum iwl_mvm_quota_result iwl_mvm_calculate_advanced_quotas(struct iwl_mvm* mvm,
 
     for (i = 0; i < data.num_active_macs; i++) {
         struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(data.vifs[i]);
-        u32 color;
+        uint32_t color;
 
         /* we always set binding id/color == phy id/color */
         idx = mvmvif->phy_ctxt->id;
@@ -365,13 +365,13 @@ enum iwl_mvm_quota_result iwl_mvm_calculate_advanced_quotas(struct iwl_mvm* mvm,
 struct quota_mac_data {
     struct {
         enum nl80211_iftype iftype;
-        s32 phy_id;
+        int32_t phy_id;
         bool low_latency;
-        u32 quota;
+        uint32_t quota;
     } macs[NUM_MAC_INDEX_DRIVER];
 };
 
-static void iwl_mvm_quota_dbg_iterator(void* _data, u8* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_quota_dbg_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct quota_mac_data* md = _data;
 

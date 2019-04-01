@@ -39,7 +39,7 @@
 
 #include "iwl-modparams.h"
 
-static inline bool iwl_have_debug_level(u32 level) {
+static inline bool iwl_have_debug_level(uint32_t level) {
 #ifdef CPTCFG_IWLWIFI_DEBUG
     return iwlwifi_mod_params.debug_level & level;
 #else
@@ -86,10 +86,10 @@ void __iwl_crit(struct device* dev, const char* fmt, ...) __printf(2, 3);
     } while (0)
 
 #if defined(CPTCFG_IWLWIFI_DEBUG) || defined(CPTCFG_IWLWIFI_DEVICE_TRACING)
-void __iwl_dbg(struct device* dev, u32 level, bool limit, const char* function, const char* fmt,
+void __iwl_dbg(struct device* dev, uint32_t level, bool limit, const char* function, const char* fmt,
                ...) __printf(5, 6);
 #else
-__printf(5, 6) static inline void __iwl_dbg(struct device* dev, u32 level, bool limit,
+__printf(5, 6) static inline void __iwl_dbg(struct device* dev, uint32_t level, bool limit,
                                             const char* function, const char* fmt, ...) {}
 #endif
 

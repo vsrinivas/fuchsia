@@ -40,8 +40,8 @@
 #include "fw/testmode.h"
 
 struct iwl_test_trace {
-    u32 size;
-    u8* cpu_addr;
+    uint32_t size;
+    uint8_t* cpu_addr;
     dma_addr_t dma_addr;
     bool enabled;
 };
@@ -67,11 +67,11 @@ struct iwl_tm_gnl_dev {
     struct iwl_dnt* dnt;
     struct iwl_trans* trans;
     const char* dev_name;
-    u32 nl_events_portid;
+    uint32_t nl_events_portid;
 };
 
-int iwl_tm_gnl_send_msg(struct iwl_trans* trans, u32 cmd, bool check_notify, void* data_out,
-                        u32 data_len, gfp_t flags);
+int iwl_tm_gnl_send_msg(struct iwl_trans* trans, uint32_t cmd, bool check_notify, void* data_out,
+                        uint32_t data_len, gfp_t flags);
 
 void iwl_tm_gnl_add(struct iwl_trans* trans);
 void iwl_tm_gnl_remove(struct iwl_trans* trans);

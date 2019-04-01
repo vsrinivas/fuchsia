@@ -160,18 +160,18 @@ enum iwl_tlc_mng_ht_rates {
  * @reserved2: reserved
  */
 struct iwl_tlc_config_cmd {
-    u8 sta_id;
-    u8 reserved1[3];
-    u8 max_ch_width;
-    u8 mode;
-    u8 chains;
-    u8 amsdu;
+    uint8_t sta_id;
+    uint8_t reserved1[3];
+    uint8_t max_ch_width;
+    uint8_t mode;
+    uint8_t chains;
+    uint8_t amsdu;
     __le16 flags;
     __le16 non_ht_rates;
     __le16 ht_rates[MAX_NSS][2];
     __le16 max_mpdu_len;
-    u8 sgi_ch_width_supp;
-    u8 reserved2[1];
+    uint8_t sgi_ch_width_supp;
+    uint8_t reserved2[1];
 } __packed; /* TLC_MNG_CONFIG_CMD_API_S_VER_2 */
 
 /**
@@ -194,8 +194,8 @@ enum iwl_tlc_update_flags {
  * @amsdu_enabled: bitmap for per-TID AMSDU enablement
  */
 struct iwl_tlc_update_notif {
-    u8 sta_id;
-    u8 reserved[3];
+    uint8_t sta_id;
+    uint8_t reserved[3];
     __le32 flags;
     __le32 rate;
     __le32 amsdu_size;
@@ -231,8 +231,8 @@ enum iwl_tlc_debug_flags {
  * @data: for each bit i set in te %flags, data[i] holds the corresponding data
  */
 struct iwl_dhc_tlc_cmd {
-    u8 sta_id;
-    u8 reserved1[3];
+    uint8_t sta_id;
+    uint8_t reserved1[3];
     __le32 flags;
     __le32 data[IWL_TLC_DEBUG_FLAGS_NUM];
 } __packed; /* TLC_MNG_DEBUG_CMD_S */
@@ -593,19 +593,19 @@ enum {
  * @ss_params: single stream features. declare whether STBC or BFER are allowed.
  */
 struct iwl_lq_cmd {
-    u8 sta_id;
-    u8 reduced_tpc;
+    uint8_t sta_id;
+    uint8_t reduced_tpc;
     __le16 control;
     /* LINK_QUAL_GENERAL_PARAMS_API_S_VER_1 */
-    u8 flags;
-    u8 mimo_delim;
-    u8 single_stream_ant_msk;
-    u8 dual_stream_ant_msk;
-    u8 initial_rate_index[AC_NUM];
+    uint8_t flags;
+    uint8_t mimo_delim;
+    uint8_t single_stream_ant_msk;
+    uint8_t dual_stream_ant_msk;
+    uint8_t initial_rate_index[AC_NUM];
     /* LINK_QUAL_AGG_PARAMS_API_S_VER_1 */
     __le16 agg_time_limit;
-    u8 agg_disable_start_th;
-    u8 agg_frame_cnt_limit;
+    uint8_t agg_disable_start_th;
+    uint8_t agg_frame_cnt_limit;
     __le32 reserved2;
     __le32 rs_table[LQ_MAX_RETRY_NUM];
     __le32 ss_params;

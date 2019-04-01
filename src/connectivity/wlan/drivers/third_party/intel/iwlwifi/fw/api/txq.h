@@ -117,8 +117,8 @@ enum iwl_tx_queue_cfg_actions {
  * @tfdq_addr: address of TFD circular buffer
  */
 struct iwl_tx_queue_cfg_cmd {
-    u8 sta_id;
-    u8 tid;
+    uint8_t sta_id;
+    uint8_t tid;
     __le16 flags;
     __le32 cb_size;
     __le64 byte_cnt_addr;

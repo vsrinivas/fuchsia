@@ -618,17 +618,17 @@ struct iwl_xvt_driver_command_resp {
  * @queue_size: size of configured queue
  */
 struct iwl_xvt_txq_config {
-    u8 sta_id;
-    u8 tid;
-    u8 scd_queue;
-    u8 action;
-    u8 aggregate;
-    u8 tx_fifo;
-    u8 window;
-    u8 reserved;
-    u16 ssn;
-    u16 flags;
-    u16 reserved2;
+    uint8_t sta_id;
+    uint8_t tid;
+    uint8_t scd_queue;
+    uint8_t action;
+    uint8_t aggregate;
+    uint8_t tx_fifo;
+    uint8_t window;
+    uint8_t reserved;
+    uint16_t ssn;
+    uint16_t flags;
+    uint16_t reserved2;
     int queue_size;
 } __packed __aligned(4);
 
@@ -640,10 +640,10 @@ struct iwl_xvt_txq_config {
  * @reserved: for alignment
  */
 struct iwl_xvt_txq_config_resp {
-    u8 sta_id;
-    u8 tid;
-    u8 scd_queue;
-    u8 reserved;
+    uint8_t sta_id;
+    uint8_t tid;
+    uint8_t scd_queue;
+    uint8_t reserved;
 } __packed __aligned(4);
 
 /**
@@ -653,9 +653,9 @@ struct iwl_xvt_txq_config_resp {
  * @payload: buffer containing payload
  */
 struct iwl_xvt_set_tx_payload {
-    u16 index;
-    u16 length;
-    u8 payload[];
+    uint16_t index;
+    uint16_t length;
+    uint8_t payload[];
 } __packed __aligned(4);
 
 /**
@@ -670,13 +670,13 @@ struct iwl_xvt_set_tx_payload {
  * @frag_num: Array of fragments numbers
  */
 struct tx_cmd_commom_data {
-    u32 rate_flags;
-    u32 tx_flags;
-    u8 initial_rate_index;
-    u8 rts_retry_limit;
-    u8 data_retry_limit;
-    u8 fragment_size;
-    u8 frag_num[32];
+    uint32_t rate_flags;
+    uint32_t tx_flags;
+    uint8_t initial_rate_index;
+    uint8_t rts_retry_limit;
+    uint8_t data_retry_limit;
+    uint8_t fragment_size;
+    uint8_t frag_num[32];
 } __packed __aligned(4);
 
 /**
@@ -691,15 +691,15 @@ struct tx_cmd_commom_data {
  * @header: MAC header
  */
 struct tx_cmd_frame_data {
-    u16 times;
-    u8 sta_id;
-    u8 queue;
-    u8 tid_tspec;
-    u8 sec_ctl;
-    u8 payload_index;
-    u8 reserved;
-    u8 key[16];
-    u8 header[IWL_XVT_MAX_MAC_HEADER_LENGTH];
+    uint16_t times;
+    uint8_t sta_id;
+    uint8_t queue;
+    uint8_t tid_tspec;
+    uint8_t sec_ctl;
+    uint8_t payload_index;
+    uint8_t reserved;
+    uint8_t key[16];
+    uint8_t header[IWL_XVT_MAX_MAC_HEADER_LENGTH];
 } __packed __aligned(4);
 
 /**
@@ -715,11 +715,11 @@ struct tx_cmd_frame_data {
  * @frames_data: array of specific frame data for each queue
  */
 struct iwl_xvt_tx_start {
-    u16 num_of_cycles;
-    u16 num_of_different_frames;
-    u8 send_tx_resp;
-    u8 reserved1;
-    u16 reserved2;
+    uint16_t num_of_cycles;
+    uint16_t num_of_different_frames;
+    uint8_t send_tx_resp;
+    uint8_t reserved1;
+    uint16_t reserved2;
     struct tx_cmd_commom_data tx_data;
     struct tx_cmd_frame_data frames_data[IWL_XVT_MAX_NUM_OF_FRAMES];
 } __packed __aligned(4);
@@ -740,9 +740,9 @@ struct iwl_xvt_enhanced_tx_data {
  * @queue: queue packets were sent on
  */
 struct iwl_xvt_post_tx_data {
-    u64 num_of_packets;
-    u16 queue;
-    u16 reserved;
+    uint64_t num_of_packets;
+    uint16_t queue;
+    uint16_t reserved;
 } __packed __aligned(4);
 
 /**
@@ -753,8 +753,8 @@ struct iwl_xvt_post_tx_data {
  * @tx_data: data of sent frames for each queue
  */
 struct iwl_xvt_tx_done {
-    u32 status;
-    u32 num_of_queues;
+    uint32_t status;
+    uint32_t num_of_queues;
     struct iwl_xvt_post_tx_data tx_data[];
 } __packed __aligned(4);
 
@@ -765,9 +765,9 @@ struct iwl_xvt_tx_done {
  * @reserved: reserved
  */
 struct iwl_xvt_get_rx_agg_stats {
-    u8 sta_id;
-    u8 tid;
-    u16 reserved;
+    uint8_t sta_id;
+    uint8_t tid;
+    uint16_t reserved;
 } __packed __aligned(4);
 
 /*
@@ -779,10 +779,10 @@ struct iwl_xvt_get_rx_agg_stats {
  * @reordered: number of frames gone through the reorder buffer (unordered)
  */
 struct iwl_xvt_get_rx_agg_stats_resp {
-    u32 dropped;
-    u32 released;
-    u32 skipped;
-    u32 reordered;
+    uint32_t dropped;
+    uint32_t released;
+    uint32_t skipped;
+    uint32_t reordered;
 } __packed __aligned(4);
 
 /* struct iwl_xvt_config_rx_mpdu - Whether to send RX MPDU notifications to user
@@ -790,8 +790,8 @@ struct iwl_xvt_get_rx_agg_stats_resp {
  * @reserved: reserved
  */
 struct iwl_xvt_config_rx_mpdu_req {
-    u8 enable;
-    u8 reserved[3];
+    uint8_t enable;
+    uint8_t reserved[3];
 } __packed __aligned(4);
 
 #endif

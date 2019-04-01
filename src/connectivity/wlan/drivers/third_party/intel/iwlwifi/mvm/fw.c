@@ -62,7 +62,7 @@
 
 struct iwl_mvm_alive_data {
     bool valid;
-    u32 scd_base_addr;
+    uint32_t scd_base_addr;
 };
 
 /* set device type and latency */
@@ -80,7 +80,7 @@ static int iwl_set_soc_latency(struct iwl_mvm* mvm) {
     return ret;
 }
 
-static int iwl_send_tx_ant_cfg(struct iwl_mvm* mvm, u8 valid_tx_ant) {
+static int iwl_send_tx_ant_cfg(struct iwl_mvm* mvm, uint8_t valid_tx_ant) {
     struct iwl_tx_ant_cfg_cmd tx_ant_cmd = {
         .valid = cpu_to_le32(valid_tx_ant),
     };
@@ -142,7 +142,7 @@ static int iwl_mvm_send_dqa_cmd(struct iwl_mvm* mvm) {
     struct iwl_dqa_enable_cmd dqa_cmd = {
         .cmd_queue = cpu_to_le32(IWL_MVM_DQA_CMD_QUEUE),
     };
-    u32 cmd_id = iwl_cmd_id(DQA_ENABLE_CMD, DATA_PATH_GROUP, 0);
+    uint32_t cmd_id = iwl_cmd_id(DQA_ENABLE_CMD, DATA_PATH_GROUP, 0);
     int ret;
 
     ret = iwl_mvm_send_cmd_pdu(mvm, cmd_id, 0, sizeof(dqa_cmd), &dqa_cmd);
@@ -181,8 +181,8 @@ static bool iwl_alive_fn(struct iwl_notif_wait_data* notif_wait, struct iwl_rx_p
     struct iwl_umac_alive* umac;
     struct iwl_lmac_alive* lmac1;
     struct iwl_lmac_alive* lmac2 = NULL;
-    u16 status;
-    u32 umac_error_event_table;
+    uint16_t status;
+    uint32_t umac_error_event_table;
 
     if (iwl_rx_packet_payload_len(pkt) == sizeof(*palive)) {
         palive = (void*)pkt->data;
@@ -259,7 +259,7 @@ static int iwl_mvm_load_ucode_wait_alive(struct iwl_mvm* mvm, enum iwl_ucode_typ
     const struct fw_img* fw;
     int ret;
     enum iwl_ucode_type old_type = mvm->fwrt.cur_fw_img;
-    static const u16 alive_cmd[] = {MVM_ALIVE};
+    static const uint16_t alive_cmd[] = {MVM_ALIVE};
 
     set_bit(IWL_FWRT_STATUS_WAIT_ALIVE, &mvm->fwrt.status);
     if (ucode_type == IWL_UCODE_REGULAR &&
@@ -344,7 +344,7 @@ static int iwl_run_unified_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
     struct iwl_init_extended_cfg_cmd init_cfg = {
         .init_flags = cpu_to_le32(BIT(IWL_INIT_NVM)),
     };
-    static const u16 init_complete[] = {
+    static const uint16_t init_complete[] = {
         INIT_COMPLETE_NOTIF,
     };
     int ret;
@@ -419,8 +419,8 @@ static int iwl_send_phy_cfg_cmd(struct iwl_mvm* mvm) {
     struct iwl_phy_cfg_cmd phy_cfg_cmd;
     enum iwl_ucode_type ucode_type = mvm->fwrt.cur_fw_img;
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-    u32 override_mask, flow_override, flow_src;
-    u32 event_override, event_src;
+    uint32_t override_mask, flow_override, flow_src;
+    uint32_t event_override, event_src;
     const struct iwl_tlv_calib_ctrl* default_calib = &mvm->fw->default_calib[ucode_type];
 #endif
 
@@ -496,7 +496,7 @@ static int iwl_send_phy_cfg_cmd(struct iwl_mvm* mvm) {
 
 int iwl_run_init_mvm_ucode(struct iwl_mvm* mvm, bool read_nvm) {
     struct iwl_notification_wait calib_wait;
-    static const u16 init_complete[] = {INIT_COMPLETE_NOTIF, CALIB_RES_NOTIF_PHY_DB};
+    static const uint16_t init_complete[] = {INIT_COMPLETE_NOTIF, CALIB_RES_NOTIF_PHY_DB};
     int ret;
 
     if (iwl_mvm_has_unified_ucode(mvm)) { return iwl_run_unified_mvm_ucode(mvm, true); }
@@ -841,7 +841,7 @@ static int iwl_mvm_sar_geo_init(struct iwl_mvm* mvm) {
         .ops = cpu_to_le32(IWL_PER_CHAIN_OFFSET_SET_TABLES),
     };
     int ret, i, j;
-    u16 cmd_wide_id = WIDE_ID(PHY_OPS_GROUP, GEO_TX_POWER_LIMIT);
+    uint16_t cmd_wide_id = WIDE_ID(PHY_OPS_GROUP, GEO_TX_POWER_LIMIT);
 
     ret = iwl_mvm_sar_get_wgds_table(mvm);
     if (ret < 0) {
@@ -861,7 +861,7 @@ static int iwl_mvm_sar_geo_init(struct iwl_mvm* mvm) {
         struct iwl_per_chain_offset* chain = (struct iwl_per_chain_offset*)&cmd.table[i];
 
         for (j = 0; j < ACPI_WGDS_NUM_BANDS; j++) {
-            u8* value;
+            uint8_t* value;
 
             value = &mvm->geo_profiles[i].values[j * ACPI_GEO_PER_CHAIN_SIZE];
             chain[j].max_tx_power = cpu_to_le16(value[0]);
@@ -1008,12 +1008,12 @@ int iwl_mvm_up(struct iwl_mvm* mvm) {
     if (iwl_fw_dbg_trigger_enabled(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY)) {
         struct iwl_fw_dbg_trigger_tlv* trig;
         struct iwl_fw_dbg_trigger_tx_latency* thrshold_trig;
-        u32 thrshld;
-        u32 vif;
-        u32 iface = 0;
-        u16 tid;
-        u16 mode;
-        u32 window;
+        uint32_t thrshld;
+        uint32_t vif;
+        uint32_t iface = 0;
+        uint16_t tid;
+        uint16_t mode;
+        uint32_t window;
 
         trig = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_TX_LATENCY);
         vif = le32_to_cpu(trig->vif_type);
@@ -1252,7 +1252,7 @@ error:
 void iwl_mvm_rx_card_state_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
     struct iwl_rx_packet* pkt = rxb_addr(rxb);
     struct iwl_card_state_notif* card_state_notif = (void*)pkt->data;
-    u32 flags = le32_to_cpu(card_state_notif->flags);
+    uint32_t flags = le32_to_cpu(card_state_notif->flags);
 
     IWL_DEBUG_RF_KILL(mvm, "Card state received: HW:%s SW:%s CT:%s\n",
                       (flags & HW_CARD_DISABLED) ? "Kill" : "On",

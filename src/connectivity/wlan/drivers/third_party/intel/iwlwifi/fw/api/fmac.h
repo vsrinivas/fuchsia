@@ -389,20 +389,20 @@ enum iwl_fmac_cmds {
  * notification.
  */
 struct iwl_fmac_scan_cmd {
-    u8 vif_id;
-    u8 random_mac;
-    u8 n_ssids;
-    u8 n_freqs;
+    uint8_t vif_id;
+    uint8_t random_mac;
+    uint8_t n_ssids;
+    uint8_t n_freqs;
     __le32 flags;
     __le16 rates_24;
     __le16 rates_52;
-    u8 ssids[IWL_FMAC_MAX_SSIDS][IEEE80211_MAX_SSID_LEN];
-    u8 ssids_lengths[IWL_FMAC_MAX_SSIDS];
+    uint8_t ssids[IWL_FMAC_MAX_SSIDS][IEEE80211_MAX_SSID_LEN];
+    uint8_t ssids_lengths[IWL_FMAC_MAX_SSIDS];
     __le16 freqs[IWL_FMAC_MAX_CHANS];
-    u8 bssid[ETH_ALEN];
+    uint8_t bssid[ETH_ALEN];
     __le16 ie_len;
 #ifndef _MSC_VER
-    u8 ie[0];
+    uint8_t ie[0];
 #endif
     /* pad to a multiple of 4 bytes */
 } __packed;
@@ -415,8 +415,8 @@ struct iwl_fmac_scan_cmd {
  * Request to abort an ongoing scan operation initiated by %FMAC_SCAN command.
  */
 struct iwl_fmac_scan_abort_cmd {
-    u8 vif_id;
-    u8 reserved[3];
+    uint8_t vif_id;
+    uint8_t reserved[3];
 } __packed;
 
 /**
@@ -455,7 +455,7 @@ enum iwl_fmac_tx_fifo {
     IWL_FMAC_TX_FIFO_CMD = 7,
 };
 
-static const u8 iwl_fmac_tid_to_tx_fifo[] = {
+static const uint8_t iwl_fmac_tid_to_tx_fifo[] = {
     IWL_FMAC_TX_FIFO_BE, IWL_FMAC_TX_FIFO_BK, IWL_FMAC_TX_FIFO_BK,
     IWL_FMAC_TX_FIFO_BE, IWL_FMAC_TX_FIFO_VI, IWL_FMAC_TX_FIFO_VI,
     IWL_FMAC_TX_FIFO_VO, IWL_FMAC_TX_FIFO_VO, IWL_FMAC_TX_FIFO_VO /* MGMT is mapped to VO */
@@ -471,9 +471,9 @@ static const u8 iwl_fmac_tid_to_tx_fifo[] = {
  * completion, the operation result is conveyed using &iwl_fmac_add_vif_resp.
  */
 struct iwl_fmac_add_vif_cmd {
-    u8 addr[ETH_ALEN];
-    u8 type;
-    u8 reserved;
+    uint8_t addr[ETH_ALEN];
+    uint8_t type;
+    uint8_t reserved;
 } __packed;
 
 /**
@@ -493,8 +493,8 @@ enum iwl_fw_add_vif_resp_status {
  * successful %FMAC_ADD_VIF command.
  */
 struct iwl_fmac_del_vif_cmd {
-    u8 id;
-    u8 reserved[3];
+    uint8_t id;
+    uint8_t reserved[3];
 } __packed;
 
 /**
@@ -504,8 +504,8 @@ struct iwl_fmac_del_vif_cmd {
  * @reserved: for alignment.
  */
 struct iwl_fmac_add_vif_resp {
-    u8 status;
-    u8 id;
+    uint8_t status;
+    uint8_t id;
     __le16 reserved;
 } __packed;
 
@@ -622,18 +622,18 @@ struct iwl_fmac_crypto {
     __le32 cipher_group;
     __le32 ciphers_pairwise;
     __le32 key_mgmt;
-    u8 mfp;
-    u8 reserved[3];
+    uint8_t mfp;
+    uint8_t reserved[3];
     union {
         struct {
-            u8 psk[32];
+            uint8_t psk[32];
             __le32 proto;
         } __packed wpa;
         struct {
-            u8 key[IWL_NUM_WEP_KEYS][IWL_MAX_WEP_KEY_LEN];
-            u8 key_len[IWL_NUM_WEP_KEYS];
-            u8 def_key;
-            u8 reserved1[3];
+            uint8_t key[IWL_NUM_WEP_KEYS][IWL_MAX_WEP_KEY_LEN];
+            uint8_t key_len[IWL_NUM_WEP_KEYS];
+            uint8_t def_key;
+            uint8_t reserved1[3];
         } __packed wep;
     } u;
 } __packed;
@@ -669,19 +669,19 @@ struct iwl_fmac_crypto {
  * the operation result is conveyed by %FMAC_CONNECT_RESULT.
  */
 struct iwl_fmac_connect_cmd {
-    u8 vif_id;
-    u8 max_retries;
+    uint8_t vif_id;
+    uint8_t max_retries;
     __le16 center_freq;
     __le32 flags;
-    u8 bssid[ETH_ALEN];
-    u8 reserved1;
-    u8 ssid_len;
-    u8 ssid[IEEE80211_MAX_SSID_LEN];
+    uint8_t bssid[ETH_ALEN];
+    uint8_t reserved1;
+    uint8_t ssid_len;
+    uint8_t ssid[IEEE80211_MAX_SSID_LEN];
 
     struct iwl_fmac_crypto crypto;
-    u8 reserved2[3];
-    u8 n_bssids;
-    u8 bssids[IWL_FMAC_MAX_BSSIDS * ETH_ALEN];
+    uint8_t reserved2[3];
+    uint8_t n_bssids;
+    uint8_t bssids[IWL_FMAC_MAX_BSSIDS * ETH_ALEN];
 } __packed;
 
 /**
@@ -690,8 +690,8 @@ struct iwl_fmac_connect_cmd {
  * @reserved: reserved for 4 byte alignment.
  */
 struct iwl_fmac_port_authorized_cmd {
-    u8 vif_id;
-    u8 reserved[3];
+    uint8_t vif_id;
+    uint8_t reserved[3];
 } __packed;
 
 #define UMAC_DEFAULT_KEYS 4
@@ -712,16 +712,16 @@ struct iwl_fmac_port_authorized_cmd {
  * @reserved: reserved for none 9000 family support
  */
 struct iwl_fmac_key {
-    u8 valid;
-    u8 keyidx;
-    u8 hw_keyidx;
-    u8 rx_pn_len;
-    u8 rx_pn[IWL_FMAC_MAX_PN_LEN];
+    uint8_t valid;
+    uint8_t keyidx;
+    uint8_t hw_keyidx;
+    uint8_t rx_pn_len;
+    uint8_t rx_pn[IWL_FMAC_MAX_PN_LEN];
     __le32 cipher;
 #ifdef CPTCFG_IWLFMAC_9000_SUPPORT
-    u8 tkip_mcast_rx_mic_key[IWL_FMAC_TKIP_MCAST_RX_MIC_KEY];
+    uint8_t tkip_mcast_rx_mic_key[IWL_FMAC_TKIP_MCAST_RX_MIC_KEY];
 #else
-    u8 reserved[IWL_FMAC_TKIP_MCAST_RX_MIC_KEY];
+    uint8_t reserved[IWL_FMAC_TKIP_MCAST_RX_MIC_KEY];
 #endif /* CPTCFG_IWLFMAC_9000_SUPPORT */
 } __packed;
 
@@ -735,8 +735,8 @@ struct iwl_fmac_key {
 struct iwl_fmac_keys {
     struct iwl_fmac_key ptk[UMAC_DEFAULT_KEYS];
     struct iwl_fmac_key gtk[UMAC_DEFAULT_KEYS];
-    u8 wep_tx_keyidx;
-    u8 reserved[3];
+    uint8_t wep_tx_keyidx;
+    uint8_t reserved[3];
 } __packed;
 
 /**
@@ -747,14 +747,14 @@ struct iwl_fmac_connect_result {
      * @vif_id:
      * the interface identifier returned in &iwl_fmac_add_vif_resp
      */
-    u8 vif_id;
+    uint8_t vif_id;
 
     /**
      * @sta_id:
      * on successful connection, holds a station entry index associated
      * with AP the station interface associated with.
      */
-    u8 sta_id;
+    uint8_t sta_id;
 
     /**
      * @center_freq:
@@ -773,7 +773,7 @@ struct iwl_fmac_connect_result {
      * @bssid:
      * on successful connection, the bssid of the BSS.
      */
-    u8 bssid[ETH_ALEN];
+    uint8_t bssid[ETH_ALEN];
 
     /**
      * @signal:
@@ -827,48 +827,48 @@ struct iwl_fmac_connect_result {
      * @qos:
      * 1 iff the BSS supports WMM.
      */
-    u8 qos;
+    uint8_t qos;
 
     /**
      * @bk_acm:
      * 1 iff %qos and the BK AC requires admission control.
      */
-    u8 bk_acm;
+    uint8_t bk_acm;
 
     /**
      * @be_acm:
      * 1 iff %qos and the BE AC requires admission control.
      */
-    u8 be_acm;
+    uint8_t be_acm;
 
     /**
      * @vi_acm:
      * 1 iff %qos and the VI AC requires admission control.
      */
-    u8 vi_acm;
+    uint8_t vi_acm;
 
     /**
      * @vo_acm:
      * 1 iff %qos and the VO AC requires admission control.
      */
-    u8 vo_acm;
+    uint8_t vo_acm;
 
     /**
      * @not_found:
      * 1 iff no BSS was found suitable for connection.
      */
-    u8 not_found;
+    uint8_t not_found;
 
     /**
      * @authorized: TODO
      */
-    u8 authorized;
+    uint8_t authorized;
 
     /**
      * @reassoc:
      * flag indicates if the assoc request was reassoc.
      */
-    u8 reassoc;
+    uint8_t reassoc;
 
     /**
      * @keys:
@@ -886,7 +886,7 @@ struct iwl_fmac_connect_result {
      * (&assoc_resp_ie_len).
      */
 #ifndef _MSC_VER
-    u8 ie_data[0];
+    uint8_t ie_data[0];
 #endif
 } __packed;
 
@@ -903,8 +903,8 @@ struct iwl_fmac_connect_result {
  * connection is no longer valid.
  */
 struct iwl_fmac_disconnect_cmd {
-    u8 vif_id;
-    u8 locally_generated;
+    uint8_t vif_id;
+    uint8_t locally_generated;
     __le16 reason;
 } __packed;
 
@@ -936,10 +936,10 @@ enum iwl_fmac_dbg_type {
  * components.
  */
 struct iwl_fmac_debug_notif {
-    u8 type;
-    u8 reserved[3];
+    uint8_t type;
+    uint8_t reserved[3];
 #ifndef _MSC_VER
-    u8 data[0];
+    uint8_t data[0];
 #endif
 } __packed;
 
@@ -956,9 +956,9 @@ struct iwl_fmac_debug_notif {
  * the given station.
  */
 struct iwl_fmac_keys_update_notif {
-    u8 vif_id;
-    u8 sta_id;
-    u8 reserved[2];
+    uint8_t vif_id;
+    uint8_t sta_id;
+    uint8_t reserved[2];
 
     struct iwl_fmac_keys keys;
 } __packed;
@@ -972,8 +972,8 @@ struct iwl_fmac_keys_update_notif {
  * %FMAC_SCAN.
  */
 struct iwl_fmac_scan_complete_notif {
-    u8 aborted;
-    u8 reserved[3];
+    uint8_t aborted;
+    uint8_t reserved[3];
 } __packed;
 
 /**
@@ -1115,10 +1115,10 @@ enum iwl_fmac_nvm_vht_cap {
  * See 9.4.2.56.4 ("Supported MCS Set field") in P802.11Revmc_D5.0.
  */
 struct iwl_fmac_nvm_mcs_info {
-    u8 rx_mask[NVM_HT_MCS_MASK_LEN];
+    uint8_t rx_mask[NVM_HT_MCS_MASK_LEN];
     __le16 rx_highest;
-    u8 tx_params;
-    u8 reserved[3];
+    uint8_t tx_params;
+    uint8_t reserved[3];
 } __packed;
 
 /**
@@ -1155,11 +1155,11 @@ enum iwl_fmac_nvm_bands { NVM_BAND_24GHZ, NVM_BAND_52GHZ, NVM_NUM_BANDS };
  * @mcs: See &iwl_fmac_nvm_mcs_info.
  */
 struct iwl_fmac_nvm_ht {
-    u8 ht_supported;
-    u8 reserved[3];
+    uint8_t ht_supported;
+    uint8_t reserved[3];
     __le16 cap;
-    u8 ampdu_factor;
-    u8 ampdu_density;
+    uint8_t ampdu_factor;
+    uint8_t ampdu_density;
     struct iwl_fmac_nvm_mcs_info mcs;
 } __packed;
 
@@ -1171,8 +1171,8 @@ struct iwl_fmac_nvm_ht {
  * @vht_mcs: See %iwl_fmac_nvm_vht_mcs_info
  */
 struct iwl_fmac_nvm_vht {
-    u8 vht_supported;
-    u8 reserved[3];
+    uint8_t vht_supported;
+    uint8_t reserved[3];
     __le32 cap;
     struct iwl_fmac_nvm_vht_mcs_info vht_mcs;
 } __packed;
@@ -1192,13 +1192,13 @@ struct iwl_fmac_nvm_vht {
  * features of fmac.
  */
 struct iwl_fmac_nvm_cmd {
-    u8 sku_cap;
-    u8 n_addr;
-    u8 hw_addr[ETH_ALEN];
+    uint8_t sku_cap;
+    uint8_t n_addr;
+    uint8_t hw_addr[ETH_ALEN];
 #define NVM_CMD_TX_ANT(_x) ((_x)&0xf)
 #define NVM_CMD_RX_ANT(_x) (((_x)&0xf0) >> 4)
-    u8 valid_ant;
-    u8 reserved[3];
+    uint8_t valid_ant;
+    uint8_t reserved[3];
     struct iwl_fmac_nvm_ht ht[NVM_NUM_BANDS];
     struct iwl_fmac_nvm_vht vht[NVM_NUM_BANDS];
 } __packed;
@@ -1217,10 +1217,10 @@ struct iwl_fmac_nvm_cmd {
  * Note that this is only used with 9000-series devices.
  */
 struct iwl_fmac_req_queue {
-    u8 vif_id;
-    u8 sta_id;
-    u8 tid;
-    u8 reserved;
+    uint8_t vif_id;
+    uint8_t sta_id;
+    uint8_t tid;
+    uint8_t reserved;
 } __packed;
 
 /**
@@ -1232,8 +1232,8 @@ struct iwl_fmac_req_queue {
  * Note that this is only used with 9000-series devices.
  */
 struct iwl_fmac_req_queue_response {
-    u8 queue;
-    u8 reserved[3];
+    uint8_t queue;
+    uint8_t reserved[3];
 } __packed;
 
 /**
@@ -1249,10 +1249,10 @@ struct iwl_fmac_req_queue_response {
  * Note that this is only used with 9000-series devices.
  */
 struct iwl_fmac_rel_queue {
-    u8 vif_id;
-    u8 sta_id;
-    u8 tid;
-    u8 reserved;
+    uint8_t vif_id;
+    uint8_t sta_id;
+    uint8_t tid;
+    uint8_t reserved;
 } __packed;
 
 /**
@@ -1264,8 +1264,8 @@ struct iwl_fmac_rel_queue {
  * Note that this is only used with 9000-series devices.
  */
 struct iwl_fmac_rel_queue_response {
-    u8 free_queue;
-    u8 reserved[3];
+    uint8_t free_queue;
+    uint8_t reserved[3];
 } __packed;
 #endif
 
@@ -1281,10 +1281,10 @@ struct iwl_fmac_rel_queue_response {
  * algorithm, and instead use the given fixed rate.
  */
 struct iwl_fmac_rs_fixed_cmd {
-    u8 sta_id;
-    u8 vif_id;
-    u8 reduced_txp;
-    u8 reserved;
+    uint8_t sta_id;
+    uint8_t vif_id;
+    uint8_t reduced_txp;
+    uint8_t reserved;
     __le32 hw_rate;
 } __packed;
 
@@ -1307,16 +1307,16 @@ struct iwl_fmac_rs_fixed_cmd {
  * Note that this is only used with 9000-series devices.
  */
 struct iwl_fmac_scd_txq_cfg_cmd {
-    u8 vif_id;
-    u8 reserved1[3];
-    u8 token;
-    u8 sta_id;
-    u8 tid;
-    u8 scd_queue;
-    u8 enable;
-    u8 aggregate;
-    u8 tx_fifo;
-    u8 window;
+    uint8_t vif_id;
+    uint8_t reserved1[3];
+    uint8_t token;
+    uint8_t sta_id;
+    uint8_t tid;
+    uint8_t scd_queue;
+    uint8_t enable;
+    uint8_t aggregate;
+    uint8_t tx_fifo;
+    uint8_t window;
     __le16 ssn;
     __le16 reserved2;
 } __packed;
@@ -1352,11 +1352,11 @@ enum iwl_fmac_sync_type {
  * FMAC firmware and possibly for use by the driver.
  */
 struct iwl_rxq_sync_payload {
-    u8 src;
-    u8 type;
-    u8 reserved[2];
+    uint8_t src;
+    uint8_t type;
+    uint8_t reserved[2];
 #ifndef _MSC_VER
-    u8 payload[0];
+    uint8_t payload[0];
 #endif
 } __packed;
 
@@ -1369,9 +1369,9 @@ struct iwl_rxq_sync_payload {
  */
 struct iwl_rx_sync_delba {
     struct iwl_rxq_sync_payload hdr;
-    u8 sta_id;
-    u8 ba_id;
-    u8 reserved[2];
+    uint8_t sta_id;
+    uint8_t ba_id;
+    uint8_t reserved[2];
 } __packed;
 
 /**
@@ -1451,7 +1451,7 @@ enum fmac_sad_mode {
 /**
  * enum iwl_fmac_config_id - configuration id.
  * @IWL_FMAC_STATIC_CONFIG_U32_START: first static global config that fit a
- *  u32. A static config is a config that can't be modified after
+ *  uint32_t. A static config is a config that can't be modified after
  *  @IWL_FMAC_STATIC_CONFIG_COMPLETE has been sent.
  * @IWL_FMAC_STATIC_CONFIG_POWER_SCHEME: see &enum fmac_ps_mode.
  * @IWL_FMAC_STATIC_CONFIG_COEX_MODE: see &enum fmac_bt_cfg_mode.
@@ -1469,10 +1469,10 @@ enum fmac_sad_mode {
  * @IWL_FMAC_STATIC_CONFIG_U32_MAX: highest index of static global
  *  configuration.
  * @IWL_FMAC_STATIC_CONFIG_U32_NUM: number of static global configs that fit
- *  a u32. A static config is a config that can't be modified after
+ *  a uint32_t. A static config is a config that can't be modified after
  *  @IWL_FMAC_STATIC_CONFIG_COMPLETE has been sent.
  *
- * @IWL_FMAC_CONFIG_U32_START: first u32 config that is global but can be
+ * @IWL_FMAC_CONFIG_U32_START: first uint32_t config that is global but can be
  *  changed on the fly.
  * @IWL_FMAC_CONFIG_INTERNAL_CMD_TO_HOST: forward internal commands to
  *  host for debug.
@@ -1480,20 +1480,20 @@ enum fmac_sad_mode {
  *  notifications from LMAC.
  * @IWL_FMAC_CONFIG_SCAN_TYPE: force scan type, regardless of internal
  *  policies, according to &enum umac_scan_type.
- * @IWL_FMAC_CONFIG_U32_MAX:highest index of configs that fit a u32 and that
+ * @IWL_FMAC_CONFIG_U32_MAX:highest index of configs that fit a uint32_t and that
  *  can be changed on the fly.
- * @IWL_FMAC_CONFIG_U32_NUM: number of configs that fit a u32 and that can
+ * @IWL_FMAC_CONFIG_U32_NUM: number of configs that fit a uint32_t and that can
  *  be changed on the fly.
  *
- * @IWL_FMAC_CONFIG_START: first config that doesn't fit a u32. Those
+ * @IWL_FMAC_CONFIG_START: first config that doesn't fit a uint32_t. Those
  *  configurations may or may not be modified on the fly. Depending
  *  on the configuration. The firmware will not enforce any policy.
  * @IWL_FMAC_CONFIG_DEBUG_LEVEL: debug level of the FMAC component in the
  *  firmware. Since it can't be stored in the same place as other
  *  CONFIG_U32 confs, it is in this section.
  * @IWL_FMAC_CONFIG_TRIGGER: trigger configuration
- * @IWL_FMAC_CONFIG_MAX: highest index of configs that don't fit a u32.
- * @IWL_FMAC_CONFIG_NUM: number of configs that don't git a u32.
+ * @IWL_FMAC_CONFIG_MAX: highest index of configs that don't fit a uint32_t.
+ * @IWL_FMAC_CONFIG_NUM: number of configs that don't git a uint32_t.
  *
  * @IWL_FMAC_CONFIG_VIF_START: first per-vif configuration
  * @IWL_FMAC_CONFIG_VIF_POWER_DISABLED: power save disablement
@@ -1565,12 +1565,12 @@ enum iwl_fmac_config_id {
  * @data: the data of the configuration.
  */
 struct iwl_fmac_config_cmd {
-    u8 vif_id;
-    u8 reserved[3];
+    uint8_t vif_id;
+    uint8_t reserved[3];
     __le16 config_id;
     __le16 len;
 #ifndef _MSC_VER
-    u8 data[0];
+    uint8_t data[0];
 #endif
 } __packed;
 
@@ -1623,8 +1623,8 @@ struct iwl_fmac_chandef {
     __le16 control_freq;
     __le16 center_freq1;
     __le16 reserved;
-    u8 bandwidth;
-    u8 reserved2;
+    uint8_t bandwidth;
+    uint8_t reserved2;
 } __packed;
 
 /**
@@ -1687,8 +1687,8 @@ struct iwl_fmac_ac_params {
     __le16 txop;
     __le16 cw_min;
     __le16 cw_max;
-    u8 aifs;
-    u8 reserved;
+    uint8_t aifs;
+    uint8_t reserved;
 } __packed;
 
 /**
@@ -1732,12 +1732,12 @@ struct iwl_fmac_ac_params {
  * in the host.
  */
 struct iwl_fmac_host_ap_cmd {
-    u8 vif_id;
-    u8 action;
-    u8 dtim_period;
-    u8 use_cts_prot;
-    u8 use_short_preamble;
-    u8 use_short_slot;
+    uint8_t vif_id;
+    uint8_t action;
+    uint8_t dtim_period;
+    uint8_t use_cts_prot;
+    uint8_t use_short_preamble;
+    uint8_t use_short_slot;
     __le16 basic_rates_bitmap;
     __le16 ht_opmode;
     __le16 beacon_int;
@@ -1748,7 +1748,7 @@ struct iwl_fmac_host_ap_cmd {
     __le16 tim_idx;
     __le32 changed;
 #ifndef _MSC_VER
-    u8 frame[0];
+    uint8_t frame[0];
 #endif
 } __packed;
 
@@ -1760,7 +1760,7 @@ struct iwl_fmac_host_ap_resp {
      * @vif_id:
      * the interface identifier returned in &iwl_fmac_add_vif_resp.
      */
-    u8 vif_id;
+    uint8_t vif_id;
 
     /**
      * @mcast_sta_id:
@@ -1768,7 +1768,7 @@ struct iwl_fmac_host_ap_resp {
      * transmissions. Relevant only if the %action was
      * %IWL_FMAC_START_HOST_BASED_AP.
      */
-    u8 mcast_sta_id;
+    uint8_t mcast_sta_id;
 
     /**
      * @bcast_sta_id:
@@ -1776,7 +1776,7 @@ struct iwl_fmac_host_ap_resp {
      * frames. Relevant only if the %action was
      * %IWL_FMAC_START_HOST_BASED_AP.
      */
-    u8 bcast_sta_id;
+    uint8_t bcast_sta_id;
 
 #ifdef CPTCFG_IWLFMAC_9000_SUPPORT
     /**
@@ -1786,7 +1786,7 @@ struct iwl_fmac_host_ap_resp {
      * Relevant only if the %action was
      * %IWL_FMAC_START_HOST_BASED_AP.
      */
-    u8 mcast_queue;
+    uint8_t mcast_queue;
 
     /**
      * @bcast_queue:
@@ -1795,18 +1795,18 @@ struct iwl_fmac_host_ap_resp {
      * Relevant only if the %action was
      * %IWL_FMAC_START_HOST_BASED_AP.
      */
-    u8 bcast_queue;
+    uint8_t bcast_queue;
 
     /**
      * @reserved:
      * for alignment.
      */
-    u8 reserved[3];
+    uint8_t reserved[3];
 #else
     /**
      * @reserved: reserved
      */
-    u8 reserved[5];
+    uint8_t reserved[5];
 #endif
 
     /**
@@ -1877,18 +1877,18 @@ enum iwl_fmac_host_ap_sta_flags {
  * @vht_cap: the VHT capability Information Element
  */
 struct iwl_fmac_host_ap_sta_cmd {
-    u8 action;
-    u8 sta_id;
-    u8 vif_id;
-    u8 flags;
-    u8 addr[ETH_ALEN];
+    uint8_t action;
+    uint8_t sta_id;
+    uint8_t vif_id;
+    uint8_t flags;
+    uint8_t addr[ETH_ALEN];
     __le16 aid;
     __le16 changed;
     __le16 supp_rates_bitmap;
-    u8 ht_cap[26];
-    u8 uapsd_ac;
-    u8 sp_length;
-    u8 vht_cap[12];
+    uint8_t ht_cap[26];
+    uint8_t uapsd_ac;
+    uint8_t sp_length;
+    uint8_t vht_cap[12];
 } __packed;
 
 #define IWL_FMAC_HOST_AP_INVALID_STA 0xffffffff
@@ -1940,15 +1940,15 @@ enum iwl_fmac_temporal_key_type {
  * @reserved: reserved
  */
 struct iwl_fmac_temporal_key_cmd {
-    u8 action;
-    u8 sta_id;
-    u8 keyidx;
-    u8 keylen;
+    uint8_t action;
+    uint8_t sta_id;
+    uint8_t keyidx;
+    uint8_t keylen;
     __le32 cipher;
-    u8 key[32];
-    u8 key_type;
-    u8 vif_id;
-    u8 reserved[2];
+    uint8_t key[32];
+    uint8_t key_type;
+    uint8_t vif_id;
+    uint8_t reserved[2];
 };
 
 /**
@@ -1966,9 +1966,9 @@ struct iwl_fmac_temporal_key_resp {
  * @reserved: reserved
  */
 struct iwl_fmac_sta_removed {
-    u8 vif_id;
-    u8 sta_id;
-    u8 reserved[2];
+    uint8_t vif_id;
+    uint8_t sta_id;
+    uint8_t reserved[2];
 } __packed;
 
 /**
@@ -2012,7 +2012,7 @@ struct iwl_fmac_trigger_cmd {
     __le32 id;
     __le32 vif_type;
 #ifndef _MSC_VER
-    u8 data[0];
+    uint8_t data[0];
 #endif
 } __packed;
 
@@ -2024,7 +2024,7 @@ struct iwl_fmac_trigger_cmd {
  */
 struct iwl_fmac_trigger_notif {
     __le32 id;
-    u8 data[MAX_TRIGGER_STR];
+    uint8_t data[MAX_TRIGGER_STR];
 } __packed;
 
 enum iwl_fmac_mcc_source {
@@ -2050,8 +2050,8 @@ enum iwl_fmac_mcc_source {
  */
 struct iwl_fmac_reg_cmd {
     __le16 mcc;
-    u8 source_id;
-    u8 reserved;
+    uint8_t source_id;
+    uint8_t reserved;
 } __packed;
 
 /**
@@ -2069,8 +2069,8 @@ struct iwl_fmac_reg_cmd {
  */
 struct iwl_fmac_reg_resp {
     __le16 mcc;
-    u8 source_id;
-    u8 reserved[1];
+    uint8_t source_id;
+    uint8_t reserved[1];
     __le32 n_channels;
 #ifndef _MSC_VER
     __le32 channels[0];
@@ -2088,7 +2088,7 @@ struct iwl_fmac_reg_resp {
 struct iwl_fmac_dbg_trigger_missed_bcon {
     __le32 stop_consec_missed_bcon;
     __le32 stop_consec_missed_bcon_since_rx;
-    u8 reserved[24];
+    uint8_t reserved[24];
 } __packed;
 
 /**
@@ -2103,10 +2103,10 @@ struct iwl_fmac_dbg_trigger_missed_bcon {
  * disconnect reason 23 (IEEE 802.1x authentication failed).
  */
 struct iwl_fmac_rx_eapol_notif {
-    u8 addr[ETH_ALEN];
+    uint8_t addr[ETH_ALEN];
     __le16 len;
 #ifndef _MSC_VER
-    u8 data[0];
+    uint8_t data[0];
 #endif
 } __packed;
 
@@ -2126,14 +2126,14 @@ struct iwl_fmac_rx_eapol_notif {
  * FMAC.
  */
 struct iwl_fmac_send_frame_notif {
-    u8 vif_id;
-    u8 reserved;
+    uint8_t vif_id;
+    uint8_t reserved;
     __le16 len;
-    u8 dst_addr[ETH_ALEN];
-    u8 src_addr[ETH_ALEN];
+    uint8_t dst_addr[ETH_ALEN];
+    uint8_t src_addr[ETH_ALEN];
     __be16 proto;
 #ifndef _MSC_VER
-    u8 data[0];
+    uint8_t data[0];
 #endif
 } __packed;
 #endif
@@ -2165,10 +2165,10 @@ enum iwl_fmac_key_type {
  *  of the key as specified in &key_type. See also &enum iwl_fmac_key_type.
  */
 struct iwl_fmac_mlme_set_pmk_cmd {
-    u8 vif_id;
-    u8 key_type;
-    u8 aa[ETH_ALEN];
-    u8 key[KEY_MAX_LEN];
+    uint8_t vif_id;
+    uint8_t key_type;
+    uint8_t aa[ETH_ALEN];
+    uint8_t key[KEY_MAX_LEN];
 };
 
 /**
@@ -2178,9 +2178,9 @@ struct iwl_fmac_mlme_set_pmk_cmd {
  * @reserved: reserved for 4 byte alignment.
  */
 struct iwl_fmac_mic_failure {
-    u8 vif_id;
-    u8 pairwise;
-    u8 reserved[2];
+    uint8_t vif_id;
+    uint8_t pairwise;
+    uint8_t reserved[2];
 } __packed;
 
 /**
@@ -2205,10 +2205,10 @@ enum iwl_fmac_sha_type {
  * @msg: the message to generate the hash for.
  */
 struct iwl_fmac_vector_sha {
-    u8 type;
-    u8 msg_len;
+    uint8_t type;
+    uint8_t msg_len;
     __le16 reserved;
-    u8 msg[SHA_MAX_MSG_LEN];
+    uint8_t msg[SHA_MAX_MSG_LEN];
 } __packed;
 
 #define HMAC_KDF_MAX_KEY_LEN 192
@@ -2224,12 +2224,12 @@ struct iwl_fmac_vector_sha {
  * @msg: the message to generate the MAC for.
  */
 struct iwl_fmac_vector_hmac_kdf {
-    u8 type;
-    u8 res_len;
-    u8 key_len;
-    u8 msg_len;
-    u8 key[HMAC_KDF_MAX_KEY_LEN];
-    u8 msg[HMAC_KDF_MAX_MSG_LEN];
+    uint8_t type;
+    uint8_t res_len;
+    uint8_t key_len;
+    uint8_t msg_len;
+    uint8_t key[HMAC_KDF_MAX_KEY_LEN];
+    uint8_t msg[HMAC_KDF_MAX_MSG_LEN];
 } __packed;
 
 /**
@@ -2258,9 +2258,9 @@ union iwl_fmac_fips_test_vector {
  * @vector: buffer with vector data. Union &iwl_fmac_fips_test_vector.
  */
 struct iwl_fmac_test_fips_cmd {
-    u8 type;
-    u8 reserved[3];
-    u8 vector[MAX_FIPS_VECTOR_LEN];
+    uint8_t type;
+    uint8_t reserved[3];
+    uint8_t vector[MAX_FIPS_VECTOR_LEN];
 } __packed;
 
 /**
@@ -2290,10 +2290,10 @@ enum iwl_fmac_test_fips_status {
  * &IWL_FMAC_TEST_FIPS_STATUS_SUCCESS. Otherwise it should be ignored.
  */
 struct iwl_fmac_test_fips_resp {
-    u8 status;
-    u8 len;
+    uint8_t status;
+    uint8_t len;
     __le16 reserved;
-    u8 buf[FIPS_MAX_RES_LEN];
+    uint8_t buf[FIPS_MAX_RES_LEN];
 } __packed;
 
 /**
@@ -2303,8 +2303,8 @@ struct iwl_fmac_test_fips_resp {
  * @chandef: channel to set
  */
 struct iwl_fmac_set_monitor_chan_cmd {
-    u8 vif_id;
-    u8 reserved[3];
+    uint8_t vif_id;
+    uint8_t reserved[3];
     struct iwl_fmac_chandef chandef;
 } __packed;
 
@@ -2317,9 +2317,9 @@ struct iwl_fmac_set_monitor_chan_cmd {
  *  is the candidate list for roam.
  */
 struct iwl_fmac_roam_is_needed {
-    u8 vif_id;
-    u8 n_bssids;
-    u8 bssids[IWL_FMAC_MAX_BSSIDS * ETH_ALEN];
+    uint8_t vif_id;
+    uint8_t n_bssids;
+    uint8_t bssids[IWL_FMAC_MAX_BSSIDS * ETH_ALEN];
 } __packed;
 
 /**
@@ -2349,9 +2349,9 @@ enum iwl_fmac_roam_result_status {
  * @connect_result: as defined in &struct iwl_fmac_connect_result.
  */
 struct iwl_fmac_roam_result {
-    u8 status;
-    u8 vif_id;
-    u8 reserved[2];
+    uint8_t status;
+    uint8_t vif_id;
+    uint8_t reserved[2];
     struct iwl_fmac_connect_result connect_result;
 } __packed;
 
@@ -2366,11 +2366,11 @@ struct iwl_fmac_roam_result {
  * @reserved: for alignment.
  */
 struct iwl_fmac_tkip_mcast_rsc {
-    u8 vif_id;
-    u8 key_idx;
-    u8 addr[ETH_ALEN];
-    u8 rsc[6];
-    u8 reserved[2];
+    uint8_t vif_id;
+    uint8_t key_idx;
+    uint8_t addr[ETH_ALEN];
+    uint8_t rsc[6];
+    uint8_t reserved[2];
 };
 
 /**
@@ -2380,8 +2380,8 @@ struct iwl_fmac_tkip_mcast_rsc {
  * @reserved: for alignment
  */
 struct iwl_fmac_inactive_sta {
-    u8 vif_id;
-    u8 sta_id;
+    uint8_t vif_id;
+    uint8_t sta_id;
     __le16 reserved;
 };
 
@@ -2399,13 +2399,13 @@ struct iwl_fmac_inactive_sta {
  * @blob: raw data read by the host upon firmware crash
  */
 struct iwl_fmac_recover_cmd {
-    u8 add_vif_bitmap;
-    u8 restore_vif_bitmap;
-    u8 reserved[2];
-    u8 vif_types[IWL_FMAC_RECOVERY_NUM_VIFS];
-    u8 vif_addrs[IWL_FMAC_RECOVERY_NUM_VIFS * ETH_ALEN];
+    uint8_t add_vif_bitmap;
+    uint8_t restore_vif_bitmap;
+    uint8_t reserved[2];
+    uint8_t vif_types[IWL_FMAC_RECOVERY_NUM_VIFS];
+    uint8_t vif_addrs[IWL_FMAC_RECOVERY_NUM_VIFS * ETH_ALEN];
 #ifndef _MSC_VER
-    u8 blob[0];
+    uint8_t blob[0];
 #endif
 } __packed;
 
@@ -2431,9 +2431,9 @@ enum iwl_fmac_recovery_complete_status {
  * @reserved: for alignment
  */
 struct iwl_fmac_recovery_complete {
-    u8 status;
-    u8 vif_id_bitmap;
-    u8 reserved[2];
+    uint8_t status;
+    uint8_t vif_id_bitmap;
+    uint8_t reserved[2];
 } __packed;
 
 #endif /* __iwl_fw_api_fmac_h__ */

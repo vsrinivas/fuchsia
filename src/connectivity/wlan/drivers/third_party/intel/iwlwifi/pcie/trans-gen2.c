@@ -237,7 +237,7 @@ static int iwl_pcie_gen2_nic_init(struct iwl_trans* trans) {
     return 0;
 }
 
-void iwl_trans_pcie_gen2_fw_alive(struct iwl_trans* trans, u32 scd_addr) {
+void iwl_trans_pcie_gen2_fw_alive(struct iwl_trans* trans, uint32_t scd_addr) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
     iwl_pcie_reset_ict(trans);

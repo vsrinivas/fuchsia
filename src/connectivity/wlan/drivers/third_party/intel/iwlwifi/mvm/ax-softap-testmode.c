@@ -41,7 +41,7 @@ static ssize_t iwl_dbgfs_ax_softap_testmode_dl_basic_write(struct iwl_mvm* mvm, 
     struct ax_softap_testmode_dl_basic_cmd* cmd = (struct ax_softap_testmode_dl_basic_cmd*)buf;
 
     int ret;
-    u32 status;
+    uint32_t status;
 
     if (sizeof(*cmd) != count) {
         IWL_ERR(mvm, "Bad size for softap dl basic cmd (%zd) should be (%zd)\n", count,
@@ -73,7 +73,7 @@ static ssize_t iwl_dbgfs_ax_softap_testmode_dl_mu_bar_write(struct iwl_mvm* mvm,
     struct ax_softap_testmode_dl_mu_bar_cmd* cmd = (struct ax_softap_testmode_dl_mu_bar_cmd*)buf;
 
     int ret;
-    u32 status;
+    uint32_t status;
 
     if (sizeof(*cmd) != count) {
         IWL_ERR(mvm, "Bad size for softap dl mu bar cmd (%zd) should be (%zd)\n", count,
@@ -105,7 +105,7 @@ static ssize_t iwl_dbgfs_ax_softap_testmode_ul_write(struct iwl_mvm* mvm, char* 
     struct ax_softap_testmode_ul_cmd* cmd = (struct ax_softap_testmode_ul_cmd*)buf;
 
     int ret;
-    u32 status;
+    uint32_t status;
 
     if (sizeof(*cmd) != count) {
         IWL_ERR(mvm, "Bad size for softap ul cmd (%zd) should be (%zd)\n", count, sizeof(*cmd));

@@ -64,7 +64,7 @@ bool iwl_notification_wait(struct iwl_notif_wait_data* notif_wait, struct iwl_rx
             if (w->triggered || w->aborted) { continue; }
 
             for (i = 0; i < w->n_cmds; i++) {
-                u16 rec_id = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
+                uint16_t rec_id = WIDE_ID(pkt->hdr.group_id, pkt->hdr.cmd);
 
                 if (w->cmds[i] == rec_id ||
                     (!iwl_cmd_groupid(w->cmds[i]) && DEF_ID(w->cmds[i]) == rec_id)) {
@@ -98,7 +98,7 @@ void iwl_abort_notification_waits(struct iwl_notif_wait_data* notif_wait) {
 IWL_EXPORT_SYMBOL(iwl_abort_notification_waits);
 
 void iwl_init_notification_wait(struct iwl_notif_wait_data* notif_wait,
-                                struct iwl_notification_wait* wait_entry, const u16* cmds,
+                                struct iwl_notification_wait* wait_entry, const uint16_t* cmds,
                                 int n_cmds,
                                 bool (*fn)(struct iwl_notif_wait_data* notif_wait,
                                            struct iwl_rx_packet* pkt, void* data),
@@ -108,7 +108,7 @@ void iwl_init_notification_wait(struct iwl_notif_wait_data* notif_wait,
     wait_entry->fn = fn;
     wait_entry->fn_data = fn_data;
     wait_entry->n_cmds = n_cmds;
-    memcpy(wait_entry->cmds, cmds, n_cmds * sizeof(u16));
+    memcpy(wait_entry->cmds, cmds, n_cmds * sizeof(uint16_t));
     wait_entry->triggered = false;
     wait_entry->aborted = false;
 

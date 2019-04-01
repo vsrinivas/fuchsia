@@ -92,15 +92,15 @@ static const char dbg_cfg_magic[] = "[IWL DEBUG CONFIG DATA]";
         printk(KERN_INFO "iwlwifi debug config: %s=%d\n", name, *(_type*)out);                    \
     }
 
-DBG_CFG_LOADER(u8)
-DBG_CFG_LOADER(u16)
-DBG_CFG_LOADER(u32)
+DBG_CFG_LOADER(uint8_t)
+DBG_CFG_LOADER(uint16_t)
+DBG_CFG_LOADER(uint32_t)
 DBG_CFG_LOADER(int)
 DBG_CFG_LOADER(uint)
 
 static void __maybe_unused dbg_cfg_load_bool(const char* name, const char* val, void* out, s64 min,
                                              s64 max) {
-    u8 v;
+    uint8_t v;
 
     if (kstrtou8(val, 0, &v)) {
         printk(KERN_INFO "iwlwifi debug config: Invalid data for %s: %s\n", name, val);
@@ -113,7 +113,7 @@ static void __maybe_unused dbg_cfg_load_bool(const char* name, const char* val, 
 static int __maybe_unused dbg_cfg_load_bin(const char* name, const char* val,
                                            struct iwl_dbg_cfg_bin* out) {
     int len = strlen(val);
-    u8* data;
+    uint8_t* data;
 
     if (len % 2) { goto error; }
     len /= 2;
@@ -182,7 +182,7 @@ struct iwl_dbg_cfg_loader {
     const char* name;
     s64 min, max;
     void (*loader)(const char* name, const char* val, void* out, s64 min, s64 max);
-    u32 offset;
+    uint32_t offset;
 };
 
 static const struct iwl_dbg_cfg_loader iwl_dbg_cfg_loaders[] = {
@@ -274,7 +274,7 @@ void iwl_dbg_cfg_load_ini(struct device* dev, struct iwl_dbg_cfg* dbgcfg) {
             l = &iwl_dbg_cfg_loaders[idx];
 
             if (strncmp(l->name, line, strlen(l->name)) == 0 && line[strlen(l->name)] == '=') {
-                l->loader(l->name, line + strlen(l->name) + 1, (void*)((u8*)dbgcfg + l->offset),
+                l->loader(l->name, line + strlen(l->name) + 1, (void*)((uint8_t*)dbgcfg + l->offset),
                           l->min, l->max);
                 loaded = true;
             }

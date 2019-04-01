@@ -65,7 +65,7 @@
 #define EEPROM_SEM_RETRY_LIMIT 1000 /* number of attempts (not time) */
 
 static int iwl_eeprom_acquire_semaphore(struct iwl_trans* trans) {
-    u16 count;
+    uint16_t count;
     int ret;
 
     for (count = 0; count < EEPROM_SEM_RETRY_LIMIT; count++) {
@@ -89,7 +89,7 @@ static void iwl_eeprom_release_semaphore(struct iwl_trans* trans) {
 }
 
 static int iwl_eeprom_verify_signature(struct iwl_trans* trans, bool nvm_is_otp) {
-    u32 gp = iwl_read32(trans, CSR_EEPROM_GP) & CSR_EEPROM_GP_VALID_MSK;
+    uint32_t gp = iwl_read32(trans, CSR_EEPROM_GP) & CSR_EEPROM_GP_VALID_MSK;
 
     IWL_DEBUG_EEPROM(trans->dev, "EEPROM signature=0x%08x\n", gp);
 
@@ -128,7 +128,7 @@ static void iwl_set_otp_access_absolute(struct iwl_trans* trans) {
 }
 
 static int iwl_nvm_is_otp(struct iwl_trans* trans) {
-    u32 otpgp;
+    uint32_t otpgp;
 
     /* OTP only valid for CP/PP and after */
     switch (trans->hw_rev & CSR_HW_REV_TYPE_MSK) {
@@ -175,10 +175,10 @@ static int iwl_init_otp_access(struct iwl_trans* trans) {
     return ret;
 }
 
-static int iwl_read_otp_word(struct iwl_trans* trans, u16 addr, __le16* eeprom_data) {
+static int iwl_read_otp_word(struct iwl_trans* trans, uint16_t addr, __le16* eeprom_data) {
     int ret = 0;
-    u32 r;
-    u32 otpgp;
+    uint32_t r;
+    uint32_t otpgp;
 
     iwl_write32(trans, CSR_EEPROM_REG, CSR_EEPROM_REG_MSK_ADDR & (addr << 1));
     ret = iwl_poll_bit(trans, CSR_EEPROM_REG, CSR_EEPROM_REG_READ_VALID_MSK,
@@ -211,7 +211,7 @@ static int iwl_read_otp_word(struct iwl_trans* trans, u16 addr, __le16* eeprom_d
  * iwl_is_otp_empty: check for empty OTP
  */
 static bool iwl_is_otp_empty(struct iwl_trans* trans) {
-    u16 next_link_addr = 0;
+    uint16_t next_link_addr = 0;
     __le16 link_value;
     bool is_empty = false;
 
@@ -238,8 +238,8 @@ static bool iwl_is_otp_empty(struct iwl_trans* trans) {
  *   we should read and used to configure the device.
  *   only perform this operation if shadow RAM is disabled
  */
-static int iwl_find_otp_image(struct iwl_trans* trans, u16* validblockaddr) {
-    u16 next_link_addr = 0, valid_addr;
+static int iwl_find_otp_image(struct iwl_trans* trans, uint16_t* validblockaddr) {
+    uint16_t next_link_addr = 0, valid_addr;
     __le16 link_value = 0;
     int usedblocks = 0;
 
@@ -259,7 +259,7 @@ static int iwl_find_otp_image(struct iwl_trans* trans, u16* validblockaddr) {
          * check for more block on the link list
          */
         valid_addr = next_link_addr;
-        next_link_addr = le16_to_cpu(link_value) * sizeof(u16);
+        next_link_addr = le16_to_cpu(link_value) * sizeof(uint16_t);
         IWL_DEBUG_EEPROM(trans->dev, "OTP blocks %d addr 0x%x\n", usedblocks, next_link_addr);
         if (iwl_read_otp_word(trans, next_link_addr, &link_value)) { return -EINVAL; }
         if (!link_value) {
@@ -290,14 +290,14 @@ static int iwl_find_otp_image(struct iwl_trans* trans, u16* validblockaddr) {
  *
  * NOTE:  This routine uses the non-debug IO access functions.
  */
-int iwl_read_eeprom(struct iwl_trans* trans, u8** eeprom, size_t* eeprom_size) {
+int iwl_read_eeprom(struct iwl_trans* trans, uint8_t** eeprom, size_t* eeprom_size) {
     __le16* e;
-    u32 gp = iwl_read32(trans, CSR_EEPROM_GP);
+    uint32_t gp = iwl_read32(trans, CSR_EEPROM_GP);
     int sz;
     int ret;
-    u16 addr;
-    u16 validblockaddr = 0;
-    u16 cache_addr = 0;
+    uint16_t addr;
+    uint16_t validblockaddr = 0;
+    uint16_t cache_addr = 0;
     int nvm_is_otp;
 
     if (!eeprom || !eeprom_size) { return -EINVAL; }
@@ -341,18 +341,18 @@ int iwl_read_eeprom(struct iwl_trans* trans, u8** eeprom, size_t* eeprom_size) {
             ret = iwl_find_otp_image(trans, &validblockaddr);
             if (ret) { goto err_unlock; }
         }
-        for (addr = validblockaddr; addr < validblockaddr + sz; addr += sizeof(u16)) {
+        for (addr = validblockaddr; addr < validblockaddr + sz; addr += sizeof(uint16_t)) {
             __le16 eeprom_data;
 
             ret = iwl_read_otp_word(trans, addr, &eeprom_data);
             if (ret) { goto err_unlock; }
             e[cache_addr / 2] = eeprom_data;
-            cache_addr += sizeof(u16);
+            cache_addr += sizeof(uint16_t);
         }
     } else {
         /* eeprom is an array of 16bit values */
-        for (addr = 0; addr < sz; addr += sizeof(u16)) {
-            u32 r;
+        for (addr = 0; addr < sz; addr += sizeof(uint16_t)) {
+            uint32_t r;
 
             iwl_write32(trans, CSR_EEPROM_REG, CSR_EEPROM_REG_MSK_ADDR & (addr << 1));
 
@@ -372,7 +372,7 @@ int iwl_read_eeprom(struct iwl_trans* trans, u8** eeprom, size_t* eeprom_size) {
     iwl_eeprom_release_semaphore(trans);
 
     *eeprom_size = sz;
-    *eeprom = (u8*)e;
+    *eeprom = (uint8_t*)e;
     return 0;
 
 err_unlock:

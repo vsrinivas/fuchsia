@@ -115,7 +115,7 @@ IWL_EXPORT_SYMBOL(iwl_acpi_get_wifi_pkg);
 
 int iwl_acpi_get_mcc(struct device* dev, char* mcc) {
     union acpi_object *wifi_pkg, *data;
-    u32 mcc_val;
+    uint32_t mcc_val;
     int ret;
 
     data = iwl_acpi_get_object(dev, ACPI_WRDD_METHOD);
@@ -145,9 +145,9 @@ out_free:
 }
 IWL_EXPORT_SYMBOL(iwl_acpi_get_mcc);
 
-u64 iwl_acpi_get_pwr_limit(struct device* dev) {
+uint64_t iwl_acpi_get_pwr_limit(struct device* dev) {
     union acpi_object *data, *wifi_pkg;
-    u64 dflt_pwr_limit;
+    uint64_t dflt_pwr_limit;
 
     data = iwl_acpi_get_object(dev, ACPI_SPLC_METHOD);
     if (IS_ERR(data)) {

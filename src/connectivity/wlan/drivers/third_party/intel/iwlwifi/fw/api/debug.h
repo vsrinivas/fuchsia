@@ -96,8 +96,8 @@ enum {
  */
 struct iwl_error_resp {
     __le32 error_type;
-    u8 cmd_id;
-    u8 reserved1;
+    uint8_t cmd_id;
+    uint8_t reserved1;
     __le16 bad_cmd_seq_num;
     __le32 error_service;
     __le64 timestamp;
@@ -256,8 +256,8 @@ enum iwl_mvm_marker_id {
  * @metadata: additional meta data that will be written to the unsiffer log
  */
 struct iwl_mvm_marker {
-    u8 dw_len;
-    u8 marker_id;
+    uint8_t dw_len;
+    uint8_t marker_id;
     __le16 reserved;
     __le64 timestamp;
     __le32 metadata[0];
@@ -335,7 +335,7 @@ struct iwl_continuous_record_mode {
  */
 struct iwl_continuous_record_cmd {
     struct iwl_continuous_record_mode record_mode;
-    u8 pad[CONT_REC_COMMAND_SIZE - sizeof(struct iwl_continuous_record_mode)];
+    uint8_t pad[CONT_REC_COMMAND_SIZE - sizeof(struct iwl_continuous_record_mode)];
 } __packed;
 
 /* maximum fragments to be allocated per target of allocationId */

@@ -122,7 +122,7 @@ static ssize_t iwl_mvm_fm_debug_notify_read(struct file* file, char __user* user
     char buf[512];
     int bufsz = sizeof(buf);
     int pos = 0;
-    u8 i;
+    uint8_t i;
 
     pos += scnprintf(buf + pos, bufsz - pos, "num_channels=%d\n", fm_notif.num_channels);
     for (i = 0; i < fm_notif.num_channels; i++)

@@ -122,7 +122,7 @@ static int iwl_alloc_fw_paging_mem(struct iwl_fw_runtime* fwrt, const struct fw_
 
 static int iwl_fill_paging_mem(struct iwl_fw_runtime* fwrt, const struct fw_img* image) {
     int sec_idx, idx, ret;
-    u32 offset = 0;
+    uint32_t offset = 0;
 
     /*
      * find where is the paging image start point:
