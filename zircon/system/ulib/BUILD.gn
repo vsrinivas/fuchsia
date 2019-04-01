@@ -95,7 +95,7 @@ if (current_cpu != "") {
       "fvm",
       "fzl",
       "gfx",
-      "gfx:gfx-nofont",
+      "gfx-font-data",
       "gpt",
       "hid",
       "hid-parser",

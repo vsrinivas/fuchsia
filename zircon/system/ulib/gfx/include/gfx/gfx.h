@@ -13,6 +13,8 @@
 #include <zircon/types.h>
 #include <zircon/pixelformat.h>
 
+#include "gfx-font.h"
+
 __BEGIN_CDECLS
 
 // gfx library
@@ -24,7 +26,6 @@ __BEGIN_CDECLS
 #define GFX_FLAG_FLUSH_CPU_CACHE (1 << 1) // do a cache flush during gfx_flush
 
 typedef struct gfx_surface gfx_surface;
-typedef struct gfx_font gfx_font;
 
 /**
  * @brief  Describe a graphics drawing surface
@@ -53,12 +54,6 @@ struct gfx_surface {
     void (*putpixel)(gfx_surface*, unsigned x, unsigned y, unsigned color);
     void (*putchar)(gfx_surface*, const gfx_font*, unsigned ch, unsigned x, unsigned y, unsigned fg, unsigned bg);
     void (*flush)(unsigned starty, unsigned endy);
-};
-
-struct gfx_font {
-    const uint16_t* data;
-    unsigned width;
-    unsigned height;
 };
 
 // copy a rect from x,y with width x height to x2, y2
@@ -107,10 +102,5 @@ void gfx_surface_destroy(struct gfx_surface* surface);
 
 // utility routine to fill the display with a little moire pattern
 void gfx_draw_pattern(void);
-
-#if defined(GFX_HAVE_FONT)
-extern const gfx_font font9x16;
-extern const gfx_font font18x32;
-#endif
 
 __END_CDECLS

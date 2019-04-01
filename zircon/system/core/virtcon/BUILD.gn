@@ -32,6 +32,7 @@ group("common") {
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/gfx",
+    "$zx/system/ulib/gfx-font-data",
     "$zx/system/ulib/hid",
     "$zx/system/ulib/port",
     "$zx/system/ulib/zircon",

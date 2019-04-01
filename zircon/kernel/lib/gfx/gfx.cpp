@@ -22,25 +22,11 @@
 #include <debug.h>
 #include <dev/display.h>
 #include <err.h>
+#include <lib/gfx-font-data/gfx-font-data.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <trace.h>
-
-#include <zircon/font/font-18x32.h>
-#include <zircon/font/font-9x16.h>
-
-const struct gfx_font font_9x16 = {
-    .data = FONT9X16,
-    .width = FONT9X16_WIDTH,
-    .height = FONT9X16_HEIGHT,
-};
-
-const struct gfx_font font_18x32 = {
-    .data = FONT18X32,
-    .width = FONT18X32_WIDTH,
-    .height = FONT18X32_HEIGHT,
-};
 
 #define LOCAL_TRACE 0
 

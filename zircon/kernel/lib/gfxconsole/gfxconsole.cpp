@@ -67,7 +67,7 @@ void gfxconsole_putpixel(unsigned x, unsigned y, unsigned color) {
     gfx_putpixel(gfxconsole.surface, x, y, color);
 }
 
-static const struct gfx_font* font = &font_9x16;
+static const struct gfx_font* font = &gfx_font_9x16;
 
 static bool gfxconsole_putc(char c) {
     static enum { NORMAL,
@@ -174,9 +174,9 @@ static void gfxconsole_setup(gfx_surface* surface, gfx_surface* hw_surface) {
     const char* fname = cmdline_get("gfxconsole.font");
     if (fname != NULL) {
         if (!strcmp(fname, "18x32")) {
-            font = &font_18x32;
+            font = &gfx_font_18x32;
         } else if (!strcmp(fname, "9x16")) {
-            font = &font_9x16;
+            font = &gfx_font_9x16;
         }
     }
     // set up the surface

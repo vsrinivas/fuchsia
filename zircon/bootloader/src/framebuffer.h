@@ -6,6 +6,7 @@
 
 #include <efi/protocol/graphics-output.h>
 #include <efi/system-table.h>
+#include <lib/gfx-font-data/gfx-font-data.h>
 
 // Gets the current framebuffer graphics mode.
 uint32_t get_gfx_mode(void);
@@ -31,15 +32,14 @@ void print_fb_modes(void);
 // Clears the screen and draws the Fuchsia logo.
 void draw_logo(void);
 
-typedef struct font_t {
-    const uint16_t* data;
-    unsigned width;
-    unsigned height;
+typedef struct fb_font {
+    const gfx_font* font;
     efi_graphics_output_blt_pixel* color;
 } fb_font;
 
 // Draws provided text at coordinate x and y of the framebuffer.
-void draw_text(const char* text, size_t length, fb_font* font, int x, int y);
+void draw_text(const char* text, size_t length, const fb_font* font,
+               int x, int y);
 void draw_version(const char*);
 
 // Draws nodename in appropriate location based on mode.

@@ -12,6 +12,7 @@
 #include <zircon/syscalls.h>
 
 #include <fbl/auto_lock.h>
+#include <lib/gfx-font-data/gfx-font-data.h>
 
 #include "vc.h"
 
@@ -449,14 +450,14 @@ const gfx_font* vc_get_font() {
     char* fname = getenv("virtcon.font");
     if (fname) {
         if (!strcmp(fname, "9x16")) {
-            return &font9x16;
+            return &gfx_font_9x16;
         } else if (!strcmp(fname, "18x32")) {
-            return &font18x32;
+            return &gfx_font_18x32;
         } else {
             printf("gfxconsole: no such font '%s'\n", fname);
         }
     }
-    return &font9x16;
+    return &gfx_font_9x16;
 }
 
 void vc_attach_gfx(vc_t* vc) {

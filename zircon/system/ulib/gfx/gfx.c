@@ -16,11 +16,11 @@
 
 #include <assert.h>
 #include <err.h>
-#include <zircon/compiler.h>
-#include <zircon/syscalls.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/compiler.h>
+#include <zircon/syscalls.h>
 
 #define TRACE 0
 
@@ -715,20 +715,3 @@ void gfx_surface_destroy(struct gfx_surface* surface) {
         free(surface->ptr);
     free(surface);
 }
-
-#if defined(GFX_HAVE_FONT)
-#include <zircon/font/font-9x16.h>
-#include <zircon/font/font-18x32.h>
-
-const gfx_font font9x16 = {
-    .data = FONT9X16,
-    .width = FONT9X16_WIDTH,
-    .height = FONT9X16_HEIGHT,
-};
-
-const gfx_font font18x32 = {
-    .data = FONT18X32,
-    .width = FONT18X32_WIDTH,
-    .height = FONT18X32_HEIGHT,
-};
-#endif

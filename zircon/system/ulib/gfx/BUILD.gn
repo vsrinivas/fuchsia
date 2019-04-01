@@ -2,21 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-config("font") {
-  defines = [ "GFX_HAVE_FONT" ]
-}
 library("gfx") {
-  sources = [
-    "gfx.c",
-  ]
-  configs += [ "$zx/public/gn/config:visibility_hidden" ]
-  public_configs = [ ":font" ]
-  deps = [
-    "$zx/system/ulib/zircon",
-  ]
-}
-
-library("gfx-nofont") {
   sdk = "source"
   sdk_headers = [ "gfx/gfx.h" ]
   sources = [

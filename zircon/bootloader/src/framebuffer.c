@@ -4,6 +4,7 @@
 
 #include <framebuffer.h>
 #include <xefi.h>
+#include <lib/gfx-font-data/gfx-font-data.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -183,10 +184,11 @@ void draw_logo() {
              logo_width, logo_height, 0);
 }
 
-#include <zircon/font/font-9x16.h>
-#include <zircon/font/font-18x32.h>
-
-static void putchar(efi_graphics_output_protocol* gop, fb_font* font, unsigned ch, unsigned x, unsigned y, unsigned scale_x, unsigned scale_y, efi_graphics_output_blt_pixel* fg, efi_graphics_output_blt_pixel* bg) {
+static void putchar(efi_graphics_output_protocol* gop, const gfx_font* font,
+                    unsigned ch, unsigned x, unsigned y, unsigned scale_x,
+                    unsigned scale_y,
+                    efi_graphics_output_blt_pixel* fg,
+                    efi_graphics_output_blt_pixel* bg) {
     const uint16_t* cdata = font->data + ch * font->height;
     unsigned fw = font->width;
     for (unsigned i = 0; i <= font->height; i++) {
@@ -198,7 +200,7 @@ static void putchar(efi_graphics_output_protocol* gop, fb_font* font, unsigned c
     }
 }
 
-void draw_text(const char* text, size_t length, fb_font* font, int x, int y) {
+void draw_text(const char* text, size_t length, const fb_font* font, int x, int y) {
     efi_graphics_output_protocol* gop = fb_get_gop();
     efi_graphics_output_blt_pixel* fg_color = &font_white;
     if (!gop)
@@ -214,8 +216,9 @@ void draw_text(const char* text, size_t length, fb_font* font, int x, int y) {
         unsigned char c = text[i];
         if (c > 127)
             continue;
-        putchar(gop, font, c, x + offset, y, scale, scale, fg_color, &font_black);
-        offset += font->width * scale;
+        putchar(gop, font->font, c, x + offset, y, scale, scale,
+                fg_color, &font_black);
+        offset += font->font->width * scale;
     }
 }
 
@@ -224,17 +227,17 @@ void draw_nodename(const char* nodename) {
     if (!gop)
         return;
 
-    fb_font font = {
-        .data = FONT18X32,
-        .width = FONT18X32_WIDTH,
-        .height = FONT18X32_HEIGHT,
+    const fb_font font = {
+        .font = &gfx_font_18x32,
         .color = &font_white,
     };
 
     const uint32_t h_res = gop->Mode->Info->HorizontalResolution;
     const uint32_t v_res = gop->Mode->Info->VerticalResolution;
     size_t length = strlen(nodename);
-    draw_text(nodename, length, &font, h_res - (length + 1) * font.width, v_res / 100 + font.height);
+    draw_text(nodename, length, &font,
+              h_res - (length + 1) * font.font->width,
+              v_res / 100 + font.font->height);
 }
 
 void draw_version(const char* version) {
@@ -246,13 +249,12 @@ void draw_version(const char* version) {
     size_t prefix_len = strlen(prefix);
     size_t version_len = strlen(version);
 
-    fb_font font = {
-        .data = FONT9X16,
-        .width = FONT9X16_WIDTH,
-        .height = FONT9X16_HEIGHT,
+    const fb_font font = {
+        .font = &gfx_font_9x16,
         .color = &font_fuchsia,
     };
 
     draw_text(prefix, prefix_len, &font, 0, 0);
-    draw_text(version, version_len, &font, (prefix_len + 1) * font.width, 0);
+    draw_text(version, version_len, &font,
+              (prefix_len + 1) * font.font->width, 0);
 }

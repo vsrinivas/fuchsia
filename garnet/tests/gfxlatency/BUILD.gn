@@ -30,7 +30,7 @@ executable("gfxlatency_executable") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/gfx-nofont",
+    "//zircon/public/lib/gfx",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-engine",
