@@ -29,6 +29,7 @@ Use [`zx_port_wait()`] to retrieve the packets.
 *handle* points to the object that is to be watched for changes and must be a waitable object.
 
 The *options* argument can be either **ZX_WAIT_ASYNC_ONCE** or **ZX_WAIT_ASYNC_REPEATING**.
+See notes below for **ZX_WAIT_ASYNC_REPEATING**.
 
 In both cases, *signals* indicates which signals on the object specified by *handle*
 will cause a packet to be enqueued, and if **any** of those signals are asserted when
@@ -99,6 +100,10 @@ In a future build this error will no longer occur.
 ## NOTES
 
 See [signals](../signals.md) for more information about signals and their terminology.
+
+**ZX_WAIT_ASYNC_REPEATING** is being deprecated and should not be used. After a
+packet has been retrieved, it can be re-armed with **ZX_WAIT_ASYNC_ONCE** to achieve
+similar behavior.
 
 ## SEE ALSO
 
