@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/examples/ui/lab/pose_buffer_provider/app.h"
+#include "garnet/examples/ui/lab/pose_buffer_presenter/app.h"
 
 // This header is intentionally out of order because it contains a workaround
 // for both glm and zircon defining countof(), and must be included before
@@ -24,14 +24,14 @@
 #include "lib/component/cpp/connect.h"
 #include "lib/escher/hmd/pose_buffer.h"
 #include "lib/escher/util/image_utils.h"
-#include "src/lib/fxl/logging.h"
 #include "lib/ui/scenic/cpp/commands.h"
 #include "lib/ui/scenic/cpp/host_memory.h"
 #include "lib/ui/scenic/cpp/util/mesh_utils.h"
+#include "src/lib/fxl/logging.h"
 
 using namespace scenic;
 
-namespace pose_buffer_provider {
+namespace pose_buffer_presenter {
 
 namespace {
 
@@ -241,4 +241,4 @@ void App::ReleaseSessionResources() {
   session_.reset();
 }
 
-}  // namespace pose_buffer_provider
+}  // namespace pose_buffer_presenter

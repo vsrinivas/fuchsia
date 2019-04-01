@@ -37,7 +37,7 @@ group("scenic") {
     "//garnet/examples/ui:direct_input",
     "//garnet/examples/ui:direct_input_child",
     "//garnet/examples/ui:embedder",
-    "//garnet/examples/ui:pose_buffer_provider",
+    "//garnet/examples/ui:pose_buffer_presenter",
     "//garnet/examples/ui:scenic_dev_app",
     "//garnet/examples/ui:shadertoy_client",
     "//garnet/examples/ui:shadertoy_service",

@@ -80,7 +80,7 @@ source_set("cpp") {
     "//garnet/examples/ui/lab/direct_input/*",
     "//garnet/examples/ui/lab/direct_input/child/*",
     "//garnet/examples/ui/lab/pose_buffer/*",
-    "//garnet/examples/ui/lab/pose_buffer_provider/*",
+    "//garnet/examples/ui/lab/pose_buffer_presenter/*",
     "//garnet/examples/ui/lab/scenic_dev_app/*",
     "//garnet/examples/ui/lab/stereo_app/*",
     "//garnet/examples/ui/shadertoy/client/*",

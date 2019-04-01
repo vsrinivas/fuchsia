@@ -11,7 +11,7 @@
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 
-namespace pose_buffer_provider {
+namespace pose_buffer_presenter {
 
 class App {
  public:
@@ -52,6 +52,6 @@ class App {
   fuchsia::ui::gfx::PoseBufferProviderPtr provider_;
 };
 
-}  // namespace pose_buffer_provider
+}  // namespace pose_buffer_presenter
 
 #endif  // GARNET_EXAMPLES_UI_LAB_POSE_BUFFER_PROVIDER_APP_H_

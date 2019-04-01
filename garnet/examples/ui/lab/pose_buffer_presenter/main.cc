@@ -6,7 +6,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
 
-#include "garnet/examples/ui/lab/pose_buffer_provider/app.h"
+#include "garnet/examples/ui/lab/pose_buffer_presenter/app.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 
@@ -16,7 +16,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  pose_buffer_provider::App app(&loop);
+  pose_buffer_presenter::App app(&loop);
   loop.Run();
   return 0;
 }

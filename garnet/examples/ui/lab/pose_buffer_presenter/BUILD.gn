@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("pose_buffer_provider") {
-  output_name = "pose_buffer_provider"
+executable("pose_buffer_presenter") {
+  output_name = "pose_buffer_presenter"
 
   sources = [
     "app.cc",
