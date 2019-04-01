@@ -96,13 +96,6 @@ class ComponentContext final {
   // ```
   static std::unique_ptr<ComponentContext> Create();
 
-  // Creates a component context from |fuchsia::sys::StartupInfo|.
-  //
-  // Typically used by implementations of |fuchsia::sys::Runner| to obtain the
-  // |ComponentContext| for components being run by the runner.
-  static std::unique_ptr<ComponentContext> CreateFrom(
-      fuchsia::sys::StartupInfo startup_info);
-
   // The directory of services.
   //
   // Use this object to connect to services offered by other components.

@@ -11,11 +11,6 @@
 #include <zircon/processargs.h>
 
 namespace sys {
-namespace {
-
-constexpr char kServiceRootPath[] = "/svc";
-
-}  // namespace
 
 ComponentContext::ComponentContext(MakePrivate make_private,
                                    std::shared_ptr<ServiceDirectory> svc,
@@ -32,26 +27,6 @@ std::unique_ptr<ComponentContext> ComponentContext::Create() {
   return std::make_unique<ComponentContext>(
       MakePrivate{}, ServiceDirectory::CreateFromNamespace(),
       zx::channel(directory_request));
-}
-
-std::unique_ptr<ComponentContext> ComponentContext::CreateFrom(
-    fuchsia::sys::StartupInfo startup_info) {
-  fuchsia::sys::FlatNamespace& flat = startup_info.flat_namespace;
-  if (flat.paths.size() != flat.directories.size())
-    return nullptr;
-
-  zx::channel service_root;
-  for (size_t i = 0; i < flat.paths.size(); ++i) {
-    if (flat.paths.at(i) == kServiceRootPath) {
-      service_root = std::move(flat.directories.at(i));
-      break;
-    }
-  }
-
-  return std::make_unique<ComponentContext>(
-      MakePrivate{},
-      std::make_shared<ServiceDirectory>(std::move(service_root)),
-      std::move(startup_info.launch_info.directory_request));
 }
 
 }  // namespace sys

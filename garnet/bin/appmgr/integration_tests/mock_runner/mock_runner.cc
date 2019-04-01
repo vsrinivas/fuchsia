@@ -9,6 +9,7 @@
 #include <lib/fdio/fdio.h>
 #include <src/lib/fxl/logging.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/outgoing_directory.h>
 #include <memory>
 
 namespace component {
@@ -19,13 +20,19 @@ FakeSubComponent::FakeSubComponent(
     fuchsia::sys::StartupInfo startup_info,
     ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
     MockRunner* runner)
-    : id_(id),
-      return_code_(0),
-      alive_(true),
-      binding_(this),
-      runner_(runner),
-      component_context_(
-          sys::ComponentContext::CreateFrom(std::move(startup_info))) {
+    : id_(id), return_code_(0), alive_(true), binding_(this), runner_(runner) {
+  outgoing_.Serve(std::move(startup_info.launch_info.directory_request));
+
+  auto* flat = &startup_info.flat_namespace;
+  for (size_t i = 0; i < flat->paths.size(); ++i) {
+    zx::channel dir;
+    if (flat->paths.at(i) == "/svc") {
+      svc_ = std::make_unique<sys::ServiceDirectory>(
+          std::move(flat->directories.at(i)));
+      break;
+    }
+  }
+
   if (controller.is_valid()) {
     binding_.Bind(std::move(controller));
     binding_.set_error_handler([this](zx_status_t status) { Kill(); });
@@ -57,7 +64,7 @@ void FakeSubComponent::PublishService(::std::string service_name,
   // publish to root as appmgr assumes that all the components started by
   // runners publish services using legacy style
   std::string sname = service_name;
-  component_context_->outgoing()->AddPublicService(
+  outgoing_.AddPublicService(
       std::make_unique<vfs::Service>(
           [sname, this](zx::channel channel, async_dispatcher_t* dispatcher) {
             fdio_service_connect_at(service_dir_.get(), sname.c_str(),

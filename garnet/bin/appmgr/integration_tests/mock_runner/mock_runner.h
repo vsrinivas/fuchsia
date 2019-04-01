@@ -5,14 +5,15 @@
 #ifndef GARNET_BIN_APPMGR_INTEGRATION_TESTS_MOCK_RUNNER_MOCK_RUNNER_H_
 #define GARNET_BIN_APPMGR_INTEGRATION_TESTS_MOCK_RUNNER_MOCK_RUNNER_H_
 
-#include <unordered_map>
-
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/outgoing_directory.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <src/lib/fxl/macros.h>
 #include <test/component/mockrunner/cpp/fidl.h>
+#include <unordered_map>
 
 namespace component {
 namespace testing {
@@ -46,7 +47,7 @@ class FakeSubComponent : public fuchsia::sys::ComponentController,
 
   void ConnectToService(::std::string service_name,
                         zx::channel channel) override {
-    component_context_->svc()->Connect(service_name, std::move(channel));
+    svc_->Connect(service_name, std::move(channel));
   }
 
   void SetServiceDirectory(zx::channel channel) override {
@@ -67,11 +68,12 @@ class FakeSubComponent : public fuchsia::sys::ComponentController,
   uint64_t id_;
   uint64_t return_code_;
   bool alive_;
+  std::shared_ptr<sys::ServiceDirectory> svc_;
   zx::channel service_dir_;
   fidl::Binding<fuchsia::sys::ComponentController> binding_;
   fidl::BindingSet<mockrunner::MockComponent> mock_bindings_;
   MockRunner* runner_;
-  std::unique_ptr<sys::ComponentContext> component_context_;
+  sys::OutgoingDirectory outgoing_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FakeSubComponent);
 };
