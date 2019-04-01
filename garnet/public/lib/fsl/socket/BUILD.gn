@@ -22,4 +22,8 @@ source_set("socket") {
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/zx",
   ]
+
+  public_configs = [
+    "//garnet/public:config",
+  ]
 }

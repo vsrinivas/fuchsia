@@ -14,4 +14,8 @@ source_set("handles") {
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/zx",
   ]
+
+  public_configs = [
+    "//garnet/public:config",
+  ]
 }

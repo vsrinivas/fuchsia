@@ -189,7 +189,10 @@ source_set("vk_mem_alloc") {
     "vk/vk_mem_alloc.cc",
   ]
 
-  public_configs = [ ":vk_mem_alloc_error_suppression" ]
+  public_configs = [
+    ":vk_mem_alloc_error_suppression",
+    "//garnet/public:config",
+  ]
 }
 
 source_set("escher") {
@@ -573,6 +576,7 @@ source_set("escher") {
   public_configs = [
     ":glm_config",
     ":thread_safety_warning",
+    "//garnet/public:config",
   ]
 }
 

@@ -14,4 +14,8 @@ source_set("types") {
     "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
   ]
+
+  public_configs = [
+    "//garnet/public:config",
+  ]
 }

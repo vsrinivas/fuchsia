@@ -14,6 +14,10 @@ source_set("backoff") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
+
+  public_configs = [
+    "//garnet/public:config",
+  ]
 }
 
 source_set("unittests") {

@@ -24,6 +24,10 @@ loadable_module("audio_dfx") {
     "//garnet/public/lib/fxl",
     "//zircon/public/lib/fbl",
   ]
+
+  public_configs = [
+    "//garnet/public:config",
+  ]
 }
 
 # This standalone test expects to find a audio_dfx.so in this package.

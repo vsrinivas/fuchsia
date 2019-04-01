@@ -33,6 +33,10 @@ source_set("callback") {
     "//zircon/public/lib/zx",
   ]
 
+  public_configs = [
+    "//garnet/public:config",
+  ]
+
   deps = [
     "//zircon/public/lib/async-cpp",
   ]

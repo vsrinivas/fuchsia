@@ -104,6 +104,10 @@ if (is_mac) {
 
     libs = [ "pthread" ]
 
+    public_configs = [
+      "//garnet/public:config",
+    ]
+
     include_dirs = [
       "//lib",
       "//garnet/public/lib/escher",

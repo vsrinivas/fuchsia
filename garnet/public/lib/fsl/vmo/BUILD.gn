@@ -26,4 +26,8 @@ source_set("vmo") {
     "//zircon/public/fidl/fuchsia-mem",
     "//zircon/public/lib/zx",
   ]
+
+  public_configs = [
+    "//garnet/public:config",
+  ]
 }
