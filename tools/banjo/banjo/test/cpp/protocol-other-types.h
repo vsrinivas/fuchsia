@@ -180,13 +180,13 @@
 //     InterfaceDevice(zx_device_t* parent)
 //         : InterfaceDeviceType(parent) {}
 //
-//     void InterfaceValue(const other_types_t* intf, other_types_t* out_intf);
+//     void InterfaceValue(const other_types_protocol_t* intf, other_types_protocol_t* out_intf);
 //
-//     void InterfaceReference(const other_types_t* intf, other_types_t** out_intf);
+//     void InterfaceReference(const other_types_protocol_t* intf, other_types_protocol_t** out_intf);
 //
-//     void InterfaceAsync(const other_types_t* intf, interface_async_callback callback, void* cookie);
+//     void InterfaceAsync(const other_types_protocol_t* intf, interface_async_callback callback, void* cookie);
 //
-//     void InterfaceAsyncRefernce(const other_types_t* intf, interface_async_refernce_callback callback, void* cookie);
+//     void InterfaceAsyncRefernce(const other_types_protocol_t* intf, interface_async_refernce_callback callback, void* cookie);
 //
 //     ...
 // };
@@ -617,16 +617,16 @@ protected:
     interface_protocol_ops_t interface_protocol_ops_ = {};
 
 private:
-    static void InterfaceValue(void* ctx, const other_types_t* intf, other_types_t* out_intf) {
+    static void InterfaceValue(void* ctx, const other_types_protocol_t* intf, other_types_protocol_t* out_intf) {
         static_cast<D*>(ctx)->InterfaceValue(intf, out_intf);
     }
-    static void InterfaceReference(void* ctx, const other_types_t* intf, other_types_t** out_intf) {
+    static void InterfaceReference(void* ctx, const other_types_protocol_t* intf, other_types_protocol_t** out_intf) {
         static_cast<D*>(ctx)->InterfaceReference(intf, out_intf);
     }
-    static void InterfaceAsync(void* ctx, const other_types_t* intf, interface_async_callback callback, void* cookie) {
+    static void InterfaceAsync(void* ctx, const other_types_protocol_t* intf, interface_async_callback callback, void* cookie) {
         static_cast<D*>(ctx)->InterfaceAsync(intf, callback, cookie);
     }
-    static void InterfaceAsyncRefernce(void* ctx, const other_types_t* intf, interface_async_refernce_callback callback, void* cookie) {
+    static void InterfaceAsyncRefernce(void* ctx, const other_types_protocol_t* intf, interface_async_refernce_callback callback, void* cookie) {
         static_cast<D*>(ctx)->InterfaceAsyncRefernce(intf, callback, cookie);
     }
 };
@@ -661,39 +661,39 @@ public:
         ops_ = nullptr;
     }
 
-    void Value(void* intf_ctx, other_types_ops_t* intf_ops, other_types_t* out_intf) const {
-        const other_types_t intf2 = {
+    void Value(void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t* out_intf) const {
+        const other_types_protocol_t intf2 = {
             .ops = intf_ops,
             .ctx = intf_ctx,
         };
-        const other_types_t* intf = &intf2;
+        const other_types_protocol_t* intf = &intf2;
         ops_->value(ctx_, intf, out_intf);
     }
 
-    void Reference(void* intf_ctx, other_types_ops_t* intf_ops, other_types_t** out_intf) const {
-        const other_types_t intf2 = {
+    void Reference(void* intf_ctx, other_types_protocol_ops_t* intf_ops, other_types_protocol_t** out_intf) const {
+        const other_types_protocol_t intf2 = {
             .ops = intf_ops,
             .ctx = intf_ctx,
         };
-        const other_types_t* intf = &intf2;
+        const other_types_protocol_t* intf = &intf2;
         ops_->reference(ctx_, intf, out_intf);
     }
 
-    void Async(void* intf_ctx, other_types_ops_t* intf_ops, interface_async_callback callback, void* cookie) const {
-        const other_types_t intf2 = {
+    void Async(void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_callback callback, void* cookie) const {
+        const other_types_protocol_t intf2 = {
             .ops = intf_ops,
             .ctx = intf_ctx,
         };
-        const other_types_t* intf = &intf2;
+        const other_types_protocol_t* intf = &intf2;
         ops_->async(ctx_, intf, callback, cookie);
     }
 
-    void AsyncRefernce(void* intf_ctx, other_types_ops_t* intf_ops, interface_async_refernce_callback callback, void* cookie) const {
-        const other_types_t intf2 = {
+    void AsyncRefernce(void* intf_ctx, other_types_protocol_ops_t* intf_ops, interface_async_refernce_callback callback, void* cookie) const {
+        const other_types_protocol_t intf2 = {
             .ops = intf_ops,
             .ctx = intf_ctx,
         };
-        const other_types_t* intf = &intf2;
+        const other_types_protocol_t* intf = &intf2;
         ops_->async_refernce(ctx_, intf, callback, cookie);
     }
 

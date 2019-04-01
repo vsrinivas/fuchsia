@@ -442,13 +442,13 @@ struct unions {
 };
 
 struct interfaces {
-    this_is_an_interface_t nonnullable_interface;
-    this_is_an_interface_t nullable_interface;
+    this_is_an_interface_protocol_t nonnullable_interface;
+    this_is_an_interface_protocol_t nullable_interface;
 };
 
 struct interfaces {
-    this_is_an_interface_t i;
-    this_is_an_interface_t nullable_i;
+    this_is_an_interface_protocol_t i;
+    this_is_an_interface_protocol_t nullable_i;
 };
 
 

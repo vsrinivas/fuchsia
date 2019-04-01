@@ -40,7 +40,7 @@
 //     BakerDevice(zx_device_t* parent)
 //         : BakerDeviceType(parent) {}
 //
-//     void BakerRegister(const cookie_maker_t* intf);
+//     void BakerRegister(const cookie_maker_protocol_t* intf);
 //
 //     void BakerDeRegister();
 //
@@ -51,17 +51,17 @@ namespace ddk {
 // An interface for a device that's able to create and deliver cookies!
 
 template <typename D>
-class CookieMaker : public internal::base_mixin {
+class CookieMakerProtocol : public internal::base_mixin {
 public:
-    CookieMaker() {
-        internal::CheckCookieMakerSubclass<D>();
-        cookie_maker_ops_.prep = CookieMakerPrep;
-        cookie_maker_ops_.bake = CookieMakerBake;
-        cookie_maker_ops_.deliver = CookieMakerDeliver;
+    CookieMakerProtocol() {
+        internal::CheckCookieMakerProtocolSubclass<D>();
+        cookie_maker_protocol_ops_.prep = CookieMakerPrep;
+        cookie_maker_protocol_ops_.bake = CookieMakerBake;
+        cookie_maker_protocol_ops_.deliver = CookieMakerDeliver;
     }
 
 protected:
-    cookie_maker_ops_t cookie_maker_ops_ = {};
+    cookie_maker_protocol_ops_t cookie_maker_protocol_ops_ = {};
 
 private:
     // Asynchonously preps a cookie.
@@ -81,14 +81,14 @@ private:
     }
 };
 
-class CookieMakerClient {
+class CookieMakerProtocolClient {
 public:
-    CookieMakerClient()
+    CookieMakerProtocolClient()
         : ops_(nullptr), ctx_(nullptr) {}
-    CookieMakerClient(const cookie_maker_t* proto)
+    CookieMakerProtocolClient(const cookie_maker_protocol_t* proto)
         : ops_(proto->ops), ctx_(proto->ctx) {}
 
-    void GetProto(cookie_maker_t* proto) const {
+    void GetProto(cookie_maker_protocol_t* proto) const {
         proto->ctx = ctx_;
         proto->ops = ops_;
     }
@@ -118,7 +118,7 @@ public:
     }
 
 private:
-    cookie_maker_ops_t* ops_;
+    cookie_maker_protocol_ops_t* ops_;
     void* ctx_;
 };
 // Protocol for a baker who outsources all of it's baking duties to others.
@@ -145,7 +145,7 @@ protected:
 
 private:
     // Registers a cookie maker device which the baker can use.
-    static void BakerRegister(void* ctx, const cookie_maker_t* intf) {
+    static void BakerRegister(void* ctx, const cookie_maker_protocol_t* intf) {
         static_cast<D*>(ctx)->BakerRegister(intf);
     }
     // De-registers a cookie maker device when it's no longer available.
@@ -185,12 +185,12 @@ public:
     }
 
     // Registers a cookie maker device which the baker can use.
-    void Register(void* intf_ctx, cookie_maker_ops_t* intf_ops) const {
-        const cookie_maker_t intf2 = {
+    void Register(void* intf_ctx, cookie_maker_protocol_ops_t* intf_ops) const {
+        const cookie_maker_protocol_t intf2 = {
             .ops = intf_ops,
             .ctx = intf_ctx,
         };
-        const cookie_maker_t* intf = &intf2;
+        const cookie_maker_protocol_t* intf = &intf2;
         ops_->register(ctx_, intf);
     }
 

@@ -10,7 +10,8 @@ BANJO_FILES="$BANJO_DIR/test/banjo"
 C_FILES="$BANJO_DIR/test/c"
 CPP_FILES="$BANJO_DIR/test/cpp"
 RUST_FILES="$BANJO_DIR/test/rust"
-BANJO_BIN=${BANJO_BIN:-"$FUCHSIA/zircon/prebuilt/downloads/banjo/banjo_bin"}
+#BANJO_BIN=${BANJO_BIN:-"$FUCHSIA/zircon/prebuilt/downloads/banjo/banjo_bin"}
+BANJO_BIN="$FUCHSIA/out/default/host_x64/banjo_bin"
 
 for f in $BANJO_FILES/*
 do

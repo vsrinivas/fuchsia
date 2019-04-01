@@ -1,3 +1,3 @@
-typedef struct {c_name}_{protocol}ops {{
+typedef struct {c_name}_protocol_ops {{
 {fns}
-}} {c_name}_{protocol}ops_t;
+}} {c_name}_protocol_ops_t;

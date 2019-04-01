@@ -67,8 +67,15 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
                 Ok(format!("zx_{}_t", id.name()))
             } else {
                 match ast.id_to_type(id) {
-                    ast::Ty::Struct | ast::Ty::Union | ast::Ty::Protocol | ast::Ty::Enum => {
+                    ast::Ty::Struct | ast::Ty::Union | ast::Ty::Enum => {
                         return Ok(to_c_name(&id.name()) + "_t");
+                    }
+                    ast::Ty::Protocol => {
+                        if not_callback(ast, id) {
+                            return Ok(format!("{}_protocol_t", to_c_name(id.name())));
+                        } else {
+                            return Ok(format!("{}_t", to_c_name(id.name())));
+                        }
                     }
                     t => Err(format_err!("unknown ident type in ty_to_cpp_str {:?}", t)),
                 }
@@ -88,7 +95,7 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
 fn protocol_to_ops_cpp_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     if let ast::Ty::Identifier { id, .. } = ty {
         if ast.id_to_type(id) == ast::Ty::Protocol {
-            return Ok(to_c_name(&id.name()) + "_ops_t");
+            return Ok(to_c_name(&id.name()) + "_protocol_ops_t");
         }
     }
     Err(format_err!("unknown ident type in protocol_to_ops_cpp_str {:?}", ty))
@@ -377,7 +384,6 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
         &self,
         name: &str,
         methods: &Vec<ast::Method>,
-        protocol: bool,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
         methods
@@ -388,12 +394,10 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
 
                 let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
-                let protocol = if protocol { "protocol_" } else { "" };
                 Ok(format!(
                     include_str!("templates/cpp/internal_decl.h"),
                     return_param = return_param,
                     params = params,
-                    protocol = protocol,
                     protocol_name = to_cpp_name(name),
                     protocol_name_snake = to_c_name(name),
                     method_name = to_cpp_name(m.name.as_str()),
@@ -408,7 +412,6 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
         &self,
         name: &str,
         methods: &Vec<ast::Method>,
-        protocol: bool,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
         methods
@@ -419,12 +422,10 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
 
                 let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
-                let protocol = if protocol { "protocol_" } else { "" };
                 Ok(format!(
                     include_str!("templates/cpp/internal_static_assert.h"),
                     return_param = return_param,
                     params = params,
-                    protocol = protocol,
                     protocol_name = to_cpp_name(name),
                     protocol_name_snake = to_c_name(name),
                     method_name = to_cpp_name(m.name.as_str()),
@@ -447,9 +448,8 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
                 Ok(format!(
                     include_str!("templates/cpp/internal_protocol.h"),
                     protocol_name = to_cpp_name(name.name()),
-                    decls = self.codegen_decls(name.name(), &methods, true, ast)?,
-                    static_asserts =
-                        self.codegen_static_asserts(name.name(), &methods, true, ast)?
+                    decls = self.codegen_decls(name.name(), &methods, ast)?,
+                    static_asserts = self.codegen_static_asserts(name.name(), &methods, ast)?
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()
@@ -466,11 +466,10 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
             .filter_map(filter_interface)
             .map(|(name, methods, _)| {
                 Ok(format!(
-                    include_str!("templates/cpp/internal_interface.h"),
+                    include_str!("templates/cpp/internal_protocol.h"),
                     protocol_name = to_cpp_name(name.name()),
-                    decls = self.codegen_decls(name.name(), &methods, false, ast)?,
-                    static_asserts =
-                        self.codegen_static_asserts(name.name(), &methods, false, ast)?
+                    decls = self.codegen_decls(name.name(), &methods, ast)?,
+                    static_asserts = self.codegen_static_asserts(name.name(), &methods, ast)?
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()
@@ -545,8 +544,8 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
             .into_iter()
             .map(|m| {
                 format!(
-                    "        {protocol_name_snake}_ops_.{c_name} = {protocol_name}{cpp_name};",
-                    protocol_name_snake = to_c_name(&name),
+                    "        {protocol_name_c}_protocol_ops_.{c_name} = {protocol_name}{cpp_name};",
+                    protocol_name_c = to_c_name(&name),
                     protocol_name = to_cpp_name(&name),
                     c_name = to_c_name(&m.name),
                     cpp_name = to_cpp_name(&m.name)

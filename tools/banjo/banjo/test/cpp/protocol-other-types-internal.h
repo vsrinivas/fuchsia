@@ -187,35 +187,35 @@ constexpr void CheckOtherTypesAsyncReferenceProtocolSubclass() {
 }
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_value, InterfaceValue,
-        void (C::*)(const other_types_t* intf, other_types_t* out_intf));
+        void (C::*)(const other_types_protocol_t* intf, other_types_protocol_t* out_intf));
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_reference, InterfaceReference,
-        void (C::*)(const other_types_t* intf, other_types_t** out_intf));
+        void (C::*)(const other_types_protocol_t* intf, other_types_protocol_t** out_intf));
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_async, InterfaceAsync,
-        void (C::*)(const other_types_t* intf, interface_async_callback callback, void* cookie));
+        void (C::*)(const other_types_protocol_t* intf, interface_async_callback callback, void* cookie));
 
 DECLARE_HAS_MEMBER_FN_WITH_SIGNATURE(has_interface_protocol_async_refernce, InterfaceAsyncRefernce,
-        void (C::*)(const other_types_t* intf, interface_async_refernce_callback callback, void* cookie));
+        void (C::*)(const other_types_protocol_t* intf, interface_async_refernce_callback callback, void* cookie));
 
 
 template <typename D>
 constexpr void CheckInterfaceProtocolSubclass() {
     static_assert(internal::has_interface_protocol_value<D>::value,
         "InterfaceProtocol subclasses must implement "
-        "void InterfaceValue(const other_types_t* intf, other_types_t* out_intf);");
+        "void InterfaceValue(const other_types_protocol_t* intf, other_types_protocol_t* out_intf);");
 
     static_assert(internal::has_interface_protocol_reference<D>::value,
         "InterfaceProtocol subclasses must implement "
-        "void InterfaceReference(const other_types_t* intf, other_types_t** out_intf);");
+        "void InterfaceReference(const other_types_protocol_t* intf, other_types_protocol_t** out_intf);");
 
     static_assert(internal::has_interface_protocol_async<D>::value,
         "InterfaceProtocol subclasses must implement "
-        "void InterfaceAsync(const other_types_t* intf, interface_async_callback callback, void* cookie);");
+        "void InterfaceAsync(const other_types_protocol_t* intf, interface_async_callback callback, void* cookie);");
 
     static_assert(internal::has_interface_protocol_async_refernce<D>::value,
         "InterfaceProtocol subclasses must implement "
-        "void InterfaceAsyncRefernce(const other_types_t* intf, interface_async_refernce_callback callback, void* cookie);");
+        "void InterfaceAsyncRefernce(const other_types_protocol_t* intf, interface_async_refernce_callback callback, void* cookie);");
 
 }
 

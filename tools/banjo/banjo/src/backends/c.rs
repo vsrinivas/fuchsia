@@ -80,8 +80,15 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
                 Ok(format!("zx_{}_t", id.name()))
             } else {
                 match ast.id_to_type(id) {
-                    ast::Ty::Struct | ast::Ty::Union | ast::Ty::Protocol | ast::Ty::Enum => {
+                    ast::Ty::Struct | ast::Ty::Union | ast::Ty::Enum => {
                         return Ok(format!("{}_t", to_c_name(id.name())));
+                    }
+                    ast::Ty::Protocol => {
+                        if not_callback(ast, id) {
+                            return Ok(format!("{}_protocol_t", to_c_name(id.name())));
+                        } else {
+                            return Ok(format!("{}_t", to_c_name(id.name())));
+                        }
                     }
                     t => return ty_to_c_str(ast, &t),
                 }
@@ -106,7 +113,7 @@ pub fn array_bounds(ast: &ast::BanjoAst, ty: &ast::Ty) -> Option<String> {
 fn protocol_to_ops_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     if let ast::Ty::Identifier { id, .. } = ty {
         if ast.id_to_type(id) == ast::Ty::Protocol {
-            return Ok(to_c_name(id.name()) + "_ops_t");
+            return Ok(to_c_name(id.name()) + "_protocol_ops_t");
         }
     }
     Err(format_err!("unknown ident type in protocol_to_ops_c_str {:?}", ty))
@@ -618,7 +625,6 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         &self,
         name: &str,
         methods: &Vec<ast::Method>,
-        protocol: bool,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
         let fns = methods
@@ -641,20 +647,13 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             })
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
-        let protocol = if protocol { "protocol_" } else { "" };
-        Ok(format!(
-            include_str!("templates/c/protocol_ops.h"),
-            c_name = to_c_name(name),
-            protocol = protocol,
-            fns = fns
-        ))
+        Ok(format!(include_str!("templates/c/protocol_ops.h"), c_name = to_c_name(name), fns = fns))
     }
 
     fn codegen_helper_def(
         &self,
         name: &str,
         methods: &Vec<ast::Method>,
-        protocol: bool,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
         methods
@@ -666,8 +665,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 let (out_params, return_param) = get_out_params(&m, name, ast)?;
                 let in_params = get_in_params(&m, true, ast)?;
 
-                let protocol = if protocol { "_protocol" } else { "" };
-                let first_param = format!("const {}{}_t* proto", to_c_name(name), protocol);
+                let first_param = format!("const {}_protocol_t* proto", to_c_name(name));
 
                 let params = iter::once(first_param)
                     .chain(in_params)
@@ -744,17 +742,11 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         ast: &BanjoAst,
     ) -> Result<String, Error> {
         Ok(match ProtocolType::from(attributes) {
-            ProtocolType::Interface => format!(
-                include_str!("templates/c/interface.h"),
-                protocol_name = to_c_name(name.name()),
-                protocol_def = self.codegen_protocol_def2(name.name(), methods, false, ast)?,
-                helper_def = self.codegen_helper_def(name.name(), methods, false, ast)?
-            ),
-            ProtocolType::Protocol => format!(
+            ProtocolType::Interface | ProtocolType::Protocol => format!(
                 include_str!("templates/c/protocol.h"),
                 protocol_name = to_c_name(name.name()),
-                protocol_def = self.codegen_protocol_def2(name.name(), methods, true, ast)?,
-                helper_def = self.codegen_helper_def(name.name(), methods, true, ast)?
+                protocol_def = self.codegen_protocol_def2(name.name(), methods, ast)?,
+                helper_def = self.codegen_helper_def(name.name(), methods, ast)?
             ),
             ProtocolType::Callback => {
                 let m = methods.get(0).ok_or(format_err!("callback has no methods"))?;
@@ -821,12 +813,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
         ast: &BanjoAst,
     ) -> Result<String, Error> {
         Ok(match ProtocolType::from(attributes) {
-            ProtocolType::Interface => format!(
-                "{async_decls}typedef struct {c_name} {c_name}_t;",
-                async_decls = self.codegen_async_decls(name, methods, ast)?,
-                c_name = to_c_name(name.name())
-            ),
-            ProtocolType::Protocol => format!(
+            ProtocolType::Interface | ProtocolType::Protocol => format!(
                 "{async_decls}typedef struct {c_name}_protocol {c_name}_protocol_t;",
                 async_decls = self.codegen_async_decls(name, methods, ast)?,
                 c_name = to_c_name(name.name())
