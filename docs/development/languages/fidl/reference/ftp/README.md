@@ -1,5 +1,9 @@
 # FIDL Tuning Proposals
 
+> Note that documents are sorted by date reviewed.
+
+## Accepted Proposals
+
 FTP                   | Submitted  | Reviewed   | Title
 ----------------------|------------|------------|----------------------------------
 [FTP-001](ftp-001.md) | 2018-07-17 | 2018-08-01 | FTP process
@@ -19,3 +23,10 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-025](ftp-025.md) | 2019-01-09 | 2019-01-24 | Bit Flags &mdash; Just a Little Bit
 [FTP-030](ftp-030.md) | 2019-01-30 | 2019-01-30 | FIDL is little endian
 [FTP-027](ftp-027.md) | 2019-01-19 | 2019-02-04 | You only pay for what you use
+
+## Rejected Proposals
+
+FTP                   | Submitted  | Reviewed   | Title
+----------------------|------------|------------|----------------------------------
+[FTP-016](ftp-016.md) | 2018-09-27 | 2018-10-25 | No Optional Strings or Vectors
+[FTP-036](ftp-036.md) | 2019-03-07 | 2019-03-14 | Update to Struct Declarations
