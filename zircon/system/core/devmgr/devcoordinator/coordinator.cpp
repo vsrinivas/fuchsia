@@ -259,14 +259,6 @@ zx_status_t Coordinator::DmCommand(size_t len, const char* cmd) {
         Suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
         return ZX_OK;
     }
-    if ((len > 11) && !memcmp(cmd, "add-driver:", 11)) {
-        len -= 11;
-        char path[len + 1];
-        memcpy(path, cmd + 11, len);
-        path[len] = 0;
-        load_driver(path, fit::bind_member(this, &Coordinator::DriverAdded));
-        return ZX_OK;
-    }
     log(ERROR, "dmctl: unknown command '%.*s'\n", (int)len, cmd);
     return ZX_ERR_NOT_SUPPORTED;
 }
