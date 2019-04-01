@@ -132,17 +132,20 @@ void netboot_advertise(const char* nodename) {
     if (xfer_active)
         return;
 
-    uint8_t buffer[sizeof(nbmsg) + MAX_ADVERTISE_DATA_LEN];
-    nbmsg* msg = reinterpret_cast<nbmsg*>(buffer);
+    struct {
+        nbmsg msg;
+        char data[MAX_ADVERTISE_DATA_LEN];
+    } packet_data;
+    nbmsg* msg = &packet_data.msg;
     msg->magic = NB_MAGIC;
     msg->cookie = 0;
     msg->cmd = NB_ADVERTISE;
     msg->arg = NB_VERSION_CURRENT;
 
-    snprintf(reinterpret_cast<char*>(msg->data), MAX_ADVERTISE_DATA_LEN, "version=%s;nodename=%s",
+    snprintf(packet_data.data, MAX_ADVERTISE_DATA_LEN, "version=%s;nodename=%s",
              BOOTLOADER_VERSION, nodename);
-    const size_t data_len = strlen(reinterpret_cast<char*>(msg->data)) + 1;
-    udp6_send(buffer, sizeof(nbmsg) + data_len, &ip6_ll_all_nodes, NB_ADVERT_PORT, NB_SERVER_PORT,
+    const size_t data_len = strlen(packet_data.data) + 1;
+    udp6_send(&packet_data, sizeof(nbmsg) + data_len, &ip6_ll_all_nodes, NB_ADVERT_PORT, NB_SERVER_PORT,
               false);
 }
 
