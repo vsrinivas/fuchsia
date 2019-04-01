@@ -48,7 +48,7 @@ bool GetOptionValue(const fxl::CommandLine& command_line,
   if (!command_line.GetOptionValue(option, value)) {
     fprintf(stderr,
             "error: Missing --%s argument.\n"
-            "Usuage: far %s\n",
+            "Usage: far %s\n",
             option.data(), usage.data());
     return false;
   }
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
   if (argc < 2) {
     fprintf(stderr,
             "error: Missing command.\n"
-            "Usuage: far <command> ...\n"
+            "Usage: far <command> ...\n"
             "  where <command> is %s.\n",
             archive::kKnownCommands.data());
     return -1;
