@@ -75,6 +75,7 @@ template("rustc_library") {
           "source_root",
           "testonly",
           "features",
+          "visibility",
           "__unstable_recovery_netstack_only_specialization_bypass",
         ])
     type = "lib"

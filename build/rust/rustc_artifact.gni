@@ -117,11 +117,17 @@ template("copy_with_build_id") {
 }
 
 template("rustc_third_party_artifact") {
+  forward_variables_from(invoker, [ "visibility" ])
+
   # Dummy build target to match the one in rustc_artifact
   build_target_name = "${target_name}_build"
   action(build_target_name) {
     script = "//build/rust/write_3p_crate_dep_info.py"
-    forward_variables_from(invoker, [ "crate_name" ])
+    forward_variables_from(invoker,
+                           [
+                             "crate_name",
+                             "testonly",
+                           ])
 
     pool = "//build/rust:pool($default_toolchain)"
 
@@ -145,6 +151,8 @@ template("rustc_third_party_artifact") {
   }
 
   group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
     public_deps = [
       ":${build_target_name}",
     ]
@@ -160,6 +168,8 @@ template("rustc_third_party_artifact") {
 # the kind of artifact that is produced by rustc.
 #
 template("rustc_artifact") {
+  forward_variables_from(invoker, [ "visibility" ])
+
   assert(defined(invoker.type),
          "Must specify an artifact type (bin/lib/staticlib/proc-macro)")
   type = invoker.type

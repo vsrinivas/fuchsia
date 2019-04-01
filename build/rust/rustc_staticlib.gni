@@ -53,6 +53,8 @@ import("//build/rust/rustc_artifact.gni")
 #     with_unit_tests = true
 #   }
 template("rustc_staticlib") {
+  forward_variables_from(invoker, [ "visibility" ])
+
   rustc_target = "_${target_name}_rustc_artifact"
   group_target = "${target_name}"
 

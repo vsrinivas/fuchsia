@@ -62,6 +62,8 @@ template("rustc_macro") {
   # conflicts, the outputs of the original (host) artifact are built with a
   # `_proc_macro` suffix added onto the end, which is removed when they're copied
   # into the final target directory.
+  forward_variables_from(invoker, [ "visibility" ])
+
   proc_macro_target = "${target_name}_proc_macro"
   proc_macro_host_target = ":${proc_macro_target}($host_toolchain)"
 

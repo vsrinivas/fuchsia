@@ -86,6 +86,7 @@ template("rustc_binary") {
                              "with_lto",
                              "sdk_category",
                              "features",
+                             "visibility",
                            ])
     type = "bin"
   }
