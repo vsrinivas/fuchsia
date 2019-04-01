@@ -15,7 +15,7 @@ executable("scenic_dev_app") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",

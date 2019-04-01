@@ -9,7 +9,7 @@ source_set("graph_create") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/media/playback/mediaplayer/decode",
     "//src/media/playback/mediaplayer/demux",
     "//src/media/playback/mediaplayer/ffmpeg",

@@ -25,7 +25,7 @@ source_set("core") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.playback",
@@ -59,7 +59,7 @@ test("tests") {
   deps = [
     ":core",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//src/media/playback/mediaplayer/decode",
     "//src/media/playback/mediaplayer/demux",

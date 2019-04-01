@@ -25,7 +25,7 @@ executable("vkcube_on_scenic") {
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/scenic",
@@ -49,7 +49,7 @@ executable("vkcube_on_fb") {
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
     "$zircon_build_root/public/lib/trace-provider",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/vulkan",
   ]
   public_deps = [

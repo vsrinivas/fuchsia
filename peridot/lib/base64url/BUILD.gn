@@ -15,7 +15,7 @@ source_set("base64url") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 
   deps = [

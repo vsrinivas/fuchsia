@@ -21,7 +21,7 @@ loadable_module("audio_dfx") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fbl",
   ]
 
@@ -49,7 +49,7 @@ executable("test_bin") {
   # We include mixer_lib to use its fx_loader, to directly test it and FX libs.
   deps = [
     "//garnet/bin/media/audio_core/mixer:audio_mixer_lib",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
   ]

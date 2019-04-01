@@ -17,7 +17,7 @@ source_set("primitives") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/rng",
     "//peridot/third_party/modp_b64",
     "//third_party/boringssl",
@@ -37,7 +37,7 @@ source_set("unittests") {
 
   deps = [
     ":primitives",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/rng:testing",
     "//third_party/googletest:gtest",
   ]

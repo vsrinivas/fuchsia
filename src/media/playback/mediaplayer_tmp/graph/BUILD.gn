@@ -57,7 +57,7 @@ source_set("graph") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/media/playback/mediaplayer_tmp/util",
   ]
 }

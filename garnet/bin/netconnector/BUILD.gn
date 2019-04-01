@@ -35,7 +35,7 @@ executable("bin") {
     "//garnet/lib/inet",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/mdns/cpp",
     "//garnet/public/lib/netconnector/cpp",
     "//garnet/public/lib/svc/cpp",

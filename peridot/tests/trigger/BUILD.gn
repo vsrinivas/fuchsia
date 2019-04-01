@@ -41,7 +41,7 @@ executable_package("trigger_test_session_shell") {
   deps = [
     ":defs",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",
     "//peridot/lib/testing:session_shell_base",

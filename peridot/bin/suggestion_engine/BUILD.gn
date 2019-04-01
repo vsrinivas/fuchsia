@@ -120,7 +120,7 @@ source_set("state") {
 
   deps = [
     ":models",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/bin/suggestion_engine/filters:base",
     "//peridot/bin/suggestion_engine/rankers:ranker",
     "//peridot/public/lib/context/cpp:context_helper",
@@ -140,7 +140,7 @@ source_set("models") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 
   public_deps = [
@@ -157,7 +157,7 @@ source_set("debug") {
   deps = [
     ":models",
     ":state",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
   ]
 

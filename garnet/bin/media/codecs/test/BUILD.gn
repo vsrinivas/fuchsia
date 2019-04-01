@@ -45,7 +45,7 @@ executable("raw_frames_test_bin") {
     ":raw_frames",
     "//garnet/lib/media/test:frame_sink",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/boringssl:crypto",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-loop-cpp",

@@ -13,7 +13,7 @@ source_set("context") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/ledger/lib/coroutine/context/$target_cpu",
   ]
 
@@ -33,7 +33,7 @@ source_set("unittests") {
 
   deps = [
     ":context",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fit",
   ]

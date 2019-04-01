@@ -63,7 +63,7 @@ source_set("unittests") {
     ":impl",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/cloud_sync/impl/testing",
     "//src/ledger/bin/cloud_sync/testing",

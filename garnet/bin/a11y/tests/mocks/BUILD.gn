@@ -13,7 +13,7 @@ source_set("mocks") {
   deps = [
     "//garnet/bin/a11y/fuchsiavox:lib",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.viewsv1",

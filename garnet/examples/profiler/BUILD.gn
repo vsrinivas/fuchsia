@@ -15,7 +15,7 @@ executable("profiler_example_bin") {
   public_deps = [
     "//garnet/lib/profiler",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 

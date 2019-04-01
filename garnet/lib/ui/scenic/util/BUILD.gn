@@ -15,7 +15,7 @@ source_set("util") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 
@@ -26,7 +26,7 @@ source_set("rk4_spring_simulation") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fbl",
   ]
 }

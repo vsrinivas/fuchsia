@@ -24,7 +24,7 @@ static_library("perfmon") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/zircon-internal",
   ]
 

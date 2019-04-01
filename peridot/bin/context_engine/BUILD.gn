@@ -42,7 +42,7 @@ source_set("context_index") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
   ]
 }
@@ -123,7 +123,7 @@ source_set("context_writer_impl") {
 
   deps = [
     ":context_repository",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/bound_set",
     "//peridot/public/lib/async/cpp:future",
     "//peridot/public/lib/entity/cpp",
@@ -159,7 +159,7 @@ source_set("scope_utils") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
     "//third_party/boringssl",  # for sha256
   ]

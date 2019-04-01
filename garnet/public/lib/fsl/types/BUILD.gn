@@ -12,7 +12,7 @@ source_set("types") {
 
   public_deps = [
     "//sdk/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 
   public_configs = [

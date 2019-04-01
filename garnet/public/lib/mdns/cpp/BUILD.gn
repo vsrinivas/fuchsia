@@ -10,7 +10,7 @@ source_set("cpp") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.mdns",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 }

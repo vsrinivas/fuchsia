@@ -16,7 +16,7 @@ executable("stacktrace_unittest") {
   deps = [
     "//garnet/lib/profiler:profiler_static",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 
@@ -40,7 +40,7 @@ executable("profiler_unittest") {
     ":testutil",
     "//garnet/lib/profiler:profiler_static",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 
@@ -55,7 +55,7 @@ executable("profiledata_unittest") {
     ":testutil",
     "//garnet/lib/profiler:profiler_static",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 

@@ -36,7 +36,7 @@ source_set("component_base") {
   public_deps = [
     ":component_main",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/public/lib/integration_testing/cpp",
   ]
@@ -65,7 +65,7 @@ source_set("component_context_fake") {
 
   public_deps = [
     ":entity_resolver_fake",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
   ]
 }
@@ -79,7 +79,7 @@ source_set("entity_resolver_fake") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
   ]
 }
@@ -107,7 +107,7 @@ source_set("module_facet_reader_fake") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/module_manifest:module_facet_reader",
     "//sdk/fidl/fuchsia.modular",
   ]
@@ -137,7 +137,7 @@ source_set("session_shell_impl") {
   public_deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/public/lib/integration_testing/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
@@ -155,7 +155,7 @@ source_set("story_controller_mock") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.views",
   ]
@@ -173,7 +173,7 @@ source_set("story_provider_mock") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
   ]
 
@@ -210,7 +210,7 @@ source_set("test_with_ledger") {
     ":ledger_repository_for_testing",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//peridot/lib/ledger_client:page_client",
     "//third_party/googletest:gtest",
@@ -241,7 +241,7 @@ source_set("fake_agent_runner_storage") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/agent_runner:public",
   ]
 }
@@ -257,7 +257,7 @@ source_set("ledger_repository_for_testing") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/common:teardown",
     "//peridot/lib/fidl:app_client",
     "//peridot/lib/ledger_client:constants",
@@ -282,7 +282,7 @@ source_set("mock_base") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

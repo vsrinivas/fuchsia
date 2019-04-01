@@ -12,7 +12,7 @@ source_set("ethertap") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-hardware-ethernet",
     "//zircon/public/fidl/fuchsia-hardware-ethertap",
     "//zircon/public/lib/async-default",
@@ -45,7 +45,7 @@ source_set("network_service") {
 
   deps = [
     ":ethertap",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fbl",
@@ -64,7 +64,7 @@ source_set("netdump") {
     "netdump_types.h",
   ]
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
   public_deps = [
     "//garnet/public/lib/netemul/fidl:network",
@@ -89,8 +89,8 @@ executable("network_test_bin") {
     ":ethertap",
     ":netdump",
     ":network_service",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
     "//zircon/public/lib/fzl",
   ]

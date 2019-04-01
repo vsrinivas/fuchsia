@@ -23,7 +23,7 @@ executable("bin") {
     "//zircon/public/lib/inspect-vmo",
   ]
   public_deps = [
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/inspect",
     "//garnet/public/lib/inspect:reader",

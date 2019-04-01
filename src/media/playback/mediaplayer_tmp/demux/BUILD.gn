@@ -23,7 +23,7 @@ source_set("demux") {
   deps = [
     "//garnet/bin/http:errors",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//src/media/playback/mediaplayer_tmp/graph",
     "//src/media/playback/mediaplayer_tmp/util",

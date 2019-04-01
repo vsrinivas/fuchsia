@@ -13,7 +13,7 @@ source_set("grpc") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/grpc:grpc++",
   ]
 }

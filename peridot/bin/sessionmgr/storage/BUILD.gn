@@ -28,7 +28,7 @@ source_set("constants_and_utils") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/util",
     "//sdk/lib/fidl/cpp",
   ]
@@ -49,7 +49,7 @@ executable("constants_and_utils_unittest") {
   deps = [
     ":constants_and_utils",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
     "//third_party/googletest:gtest_main",
   ]

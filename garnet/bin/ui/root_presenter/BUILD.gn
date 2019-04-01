@@ -33,7 +33,7 @@ executable("root_presenter") {
     "//garnet/bin/ui/presentation_mode",
     "//garnet/lib/ui/scenic/util:rk4_spring_simulation",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/ui/input",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
@@ -60,7 +60,7 @@ source_set("renderer_params") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.ui.gfx",
   ]
 }

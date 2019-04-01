@@ -13,7 +13,7 @@ executable("bin") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",

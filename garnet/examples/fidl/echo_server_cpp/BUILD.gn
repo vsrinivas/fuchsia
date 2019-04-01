@@ -56,7 +56,7 @@ executable("echo_server_cpp_unittests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
   ]

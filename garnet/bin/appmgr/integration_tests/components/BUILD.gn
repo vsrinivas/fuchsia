@@ -24,7 +24,7 @@ executable("bin") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 
@@ -36,7 +36,7 @@ executable("bin2") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 
@@ -48,8 +48,8 @@ executable("components_binary_argv_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
   ]
 }

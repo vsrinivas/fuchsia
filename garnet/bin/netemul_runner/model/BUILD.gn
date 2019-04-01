@@ -20,7 +20,7 @@ source_set("model") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/json:json",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
@@ -35,7 +35,7 @@ executable("model_unittest") {
 
   deps = [
     ":model",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
     "//src/lib/pkg_url",

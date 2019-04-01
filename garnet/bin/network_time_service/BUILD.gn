@@ -14,7 +14,7 @@ source_set("lib") {
     "//garnet/bin/network_time:lib",
     "//sdk/fidl/fuchsia.timezone",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -31,7 +31,7 @@ executable("bin") {
     ":lib",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]

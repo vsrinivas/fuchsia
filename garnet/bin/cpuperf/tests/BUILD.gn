@@ -62,7 +62,7 @@ executable("cpuperf_integration_tests") {
     "//garnet/bin/cpuperf:session_result_spec",
     "//garnet/bin/cpuperf:session_spec",
     "//garnet/lib/perfmon",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",

@@ -67,7 +67,7 @@ static_library("lib") {
 
   public_deps = [
     "//garnet/lib/process",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//garnet/third_party/libunwindstack",
     "//src/developer/debug/ipc:agent",
@@ -149,7 +149,7 @@ executable("unit_tests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//src/developer/debug/ipc:tests",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

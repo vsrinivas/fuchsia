@@ -20,7 +20,7 @@ source_set("input") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",

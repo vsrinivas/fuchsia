@@ -15,7 +15,7 @@ source_set("pkg_url") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 
@@ -31,7 +31,7 @@ executable("tests") {
 
   deps = [
     ":pkg_url",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

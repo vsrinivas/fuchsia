@@ -73,7 +73,7 @@ static_library("console") {
 
   deps = []
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/developer/debug/zxdb/client",
     "//src/developer/debug/zxdb/expr",
     "//zircon/public/lib/fit",
@@ -81,7 +81,7 @@ static_library("console") {
 
   if (current_toolchain != host_toolchain) {
     deps += [
-      "//garnet/public/lib/fxl",
+      "//src/lib/fxl",
       "//zircon/public/lib/fdio",
       "//zircon/public/lib/zx",
     ]

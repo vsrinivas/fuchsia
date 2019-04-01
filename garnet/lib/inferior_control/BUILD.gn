@@ -48,7 +48,7 @@ static_library("inferior_control") {
   deps = [
     "//garnet/lib/debugger_utils",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/lib/files",
     "//zircon/public/lib/zx",
   ]
@@ -80,7 +80,7 @@ executable("tests") {
     ":inferior_control",
     "//garnet/lib/debugger_utils",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/lib/sys/cpp",
     "//third_party/googletest:gtest",
   ]
@@ -113,7 +113,7 @@ executable("run-inferior") {
   deps = [
     ":inferior_control",
     "//garnet/lib/debugger_utils",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 
   libs = [ "zircon" ]

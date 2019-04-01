@@ -16,7 +16,7 @@ source_set("device") {
   ]
   defines = [ "_ALL_SOURCE=1" ]
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.guest.device",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fit",
@@ -344,7 +344,7 @@ executable("device_unittests") {
 
   deps = [
     ":qcow_test_data",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fbl",
   ]

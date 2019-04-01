@@ -75,7 +75,7 @@ if (is_mac) {
       ":force_waterfall_to_build_on_host",
       ":gtest_escher",
       "base:base_unittests",
-      "//garnet/public/lib/fxl",
+      "//src/lib/fxl",
       "//third_party/googletest:gmock",
       "//third_party/shaderc/libshaderc",
       "//third_party/shaderc/third_party/glslang",

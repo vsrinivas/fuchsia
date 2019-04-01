@@ -16,8 +16,8 @@ executable("intl_wisdom_test_bin") {
   deps = [
     "//garnet/examples/intl:intl_wisdom",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gmock",
   ]

@@ -13,7 +13,7 @@ source_set("fidl_helpers") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
   ]
 

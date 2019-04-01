@@ -45,7 +45,7 @@ source_set("puppet_master_impl") {
 
   deps = [
     ":story_command_executor",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 
   public_deps = [
@@ -79,7 +79,7 @@ source_set("story_command_executor") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
   ]
 }

@@ -29,7 +29,7 @@ source_set("views") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/ui/gfx/cpp",
   ]
 }
@@ -43,7 +43,7 @@ executable("test_views_app") {
 
   deps = [
     ":views",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop",

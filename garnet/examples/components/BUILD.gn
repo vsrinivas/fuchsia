@@ -71,7 +71,7 @@ executable("hello_world_test") {
     "hello_world_test.cc",
   ]
   deps = [
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

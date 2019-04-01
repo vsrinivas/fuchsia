@@ -29,7 +29,7 @@ executable("bin") {
     "//garnet/lib/system_monitor/dockyard:lib",
     "//garnet/lib/system_monitor/dockyard:protos",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/grpc:grpc++",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/task-utils",

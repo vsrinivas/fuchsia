@@ -41,8 +41,8 @@ executable("test") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gmock",
   ]
@@ -72,8 +72,8 @@ executable("test-vmo") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/inspect:reader",
     "//garnet/public/lib/inspect/testing",
     "//sdk/lib/sys/cpp",

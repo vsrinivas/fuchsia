@@ -37,7 +37,7 @@ executable_package("last_focus_time_test_session_shell") {
   deps = [
     ":defs",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",

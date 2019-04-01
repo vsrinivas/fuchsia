@@ -18,7 +18,7 @@ executable_package("test_driver_module") {
     "test_driver_module.cc",
   ]
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:test_driver",
     "//peridot/public/lib/app_driver/cpp",

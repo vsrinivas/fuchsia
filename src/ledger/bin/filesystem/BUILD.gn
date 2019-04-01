@@ -15,7 +15,7 @@ source_set("filesystem") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 }
@@ -31,7 +31,7 @@ source_set("unittests") {
 
   deps = [
     ":filesystem",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/scoped_tmpfs",
     "//third_party/googletest:gtest",
   ]

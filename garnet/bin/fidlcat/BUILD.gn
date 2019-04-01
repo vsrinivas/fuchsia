@@ -30,7 +30,7 @@ if (current_toolchain == host_toolchain) {
     deps = [
       "//garnet/bin/fidlcat/lib",
       "//garnet/bin/fidlcat/lib:host_lib",
-      "//garnet/public/lib/fxl",
+      "//src/lib/fxl",
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/common",

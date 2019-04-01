@@ -12,7 +12,7 @@ source_set("wav_writer") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.media",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
   ]

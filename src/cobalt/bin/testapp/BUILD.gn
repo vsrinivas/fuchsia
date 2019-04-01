@@ -43,7 +43,7 @@ executable("cobalt_testapp") {
   deps = [
     ":generate_testapp_metrics_cc",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
     "//third_party/cobalt/config:id",

@@ -16,7 +16,7 @@ source_set("entity_watcher") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 
   deps = [

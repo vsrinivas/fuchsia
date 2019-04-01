@@ -10,7 +10,7 @@ static_library("common") {
     "demo_harness.cc",
   ]
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",
     "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",

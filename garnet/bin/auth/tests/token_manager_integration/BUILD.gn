@@ -70,7 +70,7 @@ executable("e2e_dev") {
   deps = [
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/test_runner/cpp/reporting",
     "//sdk/fidl/fuchsia.auth",

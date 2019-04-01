@@ -29,8 +29,8 @@ executable("integration_tests") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
     "//src/developer/debug/debug_agent:lib",

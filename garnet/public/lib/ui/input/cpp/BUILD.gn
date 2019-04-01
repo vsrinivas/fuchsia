@@ -9,11 +9,11 @@ source_set("cpp") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.input",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }

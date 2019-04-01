@@ -22,7 +22,7 @@ executable_package("module_resolver") {
   deps = [
     ":local_module_resolver",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/module_manifest_source:firebase_source",
     "//peridot/lib/module_manifest_source:module_package_source",
     "//peridot/public/lib/app_driver/cpp:app_driver",
@@ -47,7 +47,7 @@ source_set("local_module_resolver") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/module_manifest_source",
     "//peridot/public/lib/async/cpp:operation",
@@ -67,7 +67,7 @@ executable("local_module_resolver_unittest") {
   deps = [
     ":local_module_resolver",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/testing:entity_resolver_fake",

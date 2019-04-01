@@ -28,7 +28,7 @@ static_library("shared") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/developer/debug/shared/logging",
   ]
 

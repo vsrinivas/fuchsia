@@ -50,7 +50,7 @@ executable("bin") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/mdns/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

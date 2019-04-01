@@ -16,7 +16,7 @@ source_set("scoped_tmpfs") {
 
   public_deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/sync",
@@ -36,7 +36,7 @@ source_set("unittests") {
 
   deps = [
     ":scoped_tmpfs",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

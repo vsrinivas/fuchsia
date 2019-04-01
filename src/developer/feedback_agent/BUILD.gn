@@ -59,7 +59,7 @@ source_set("src") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/files",

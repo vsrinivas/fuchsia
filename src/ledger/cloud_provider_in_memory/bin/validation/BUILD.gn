@@ -13,7 +13,7 @@ executable("validation") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/bin/tests/cloud_provider/launcher",
     "//zircon/public/lib/async-loop-cpp",

@@ -20,7 +20,7 @@ sandbox_test_package("has_shell") {
 
   deps = [
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
   environments = basic_envs
 }
@@ -32,7 +32,7 @@ sandbox_test_package("no_shell") {
 
   deps = [
     "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
   environments = basic_envs
 }

@@ -28,7 +28,7 @@ executable_package("clipboard_test_module") {
 
   deps = [
     ":defs",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",

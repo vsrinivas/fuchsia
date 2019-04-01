@@ -22,7 +22,7 @@ source_set("printer") {
   deps = [
     "//garnet/lib/debugger_utils",
     "//garnet/lib/intel_pt_decode",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/processor-trace/libipt",
     "//zircon/public/lib/fit",
   ]

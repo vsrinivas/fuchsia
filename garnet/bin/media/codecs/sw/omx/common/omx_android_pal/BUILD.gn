@@ -165,7 +165,7 @@ source_set("omx_android_pal") {
     ":omx_android_pal_config_source_set",
   ]
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 }

@@ -15,7 +15,7 @@ source_set("fake") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/ledger/bin/encryption/public",
   ]
 

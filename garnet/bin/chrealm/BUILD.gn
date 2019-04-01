@@ -13,7 +13,7 @@ executable("bin") {
 
   deps = [
     "//garnet/lib/chrealm",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 

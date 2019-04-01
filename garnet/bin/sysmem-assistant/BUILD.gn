@@ -14,7 +14,7 @@ executable("bin") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/fidl/fuchsia-hardware-tee",
     "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",

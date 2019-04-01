@@ -24,7 +24,7 @@ source_set("lib") {
   configs += [ "//third_party/cobalt:cobalt_config" ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/cobalt/util/crypto_util",
     "//third_party/rapidjson",
   ]
@@ -49,7 +49,7 @@ executable("bin") {
     ":lib",
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

@@ -36,7 +36,7 @@ source_set("lib") {
   public_deps = [
     "//garnet/lib/wlan/mlme:mlme",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/network_wrapper",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/utils:fuchsia_http_client",
@@ -122,7 +122,7 @@ executable("cobalt_app_unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//zircon/public/fidl/fuchsia-cobalt",

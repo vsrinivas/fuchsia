@@ -50,7 +50,7 @@ executable("sysmem_connector_test_executable") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/fidl/fuchsia-sysmem",
     "//zircon/public/lib/async-loop-cpp",

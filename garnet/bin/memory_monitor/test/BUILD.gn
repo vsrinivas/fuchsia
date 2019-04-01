@@ -25,7 +25,7 @@ executable("memory_monitor_unittests") {
   deps = [
     "//garnet/bin/memory_monitor:lib",
     "//garnet/public/lib/component/cpp/testing",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

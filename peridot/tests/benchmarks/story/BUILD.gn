@@ -47,7 +47,7 @@ executable_package("modular_benchmark_story_session_shell") {
   deps = [
     ":tracing_waiter",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",
@@ -77,6 +77,6 @@ source_set("tracing_waiter") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }

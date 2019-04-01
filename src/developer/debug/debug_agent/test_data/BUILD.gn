@@ -91,7 +91,7 @@ executable("process_spawner") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
@@ -116,7 +116,7 @@ if (current_cpu == "arm64") {
     ]
 
     deps = [
-      "//garnet/public/lib/fxl",
+      "//src/lib/fxl",
       "//src/developer/debug/shared",
       "//zircon/public/lib/zx",
     ]

@@ -1008,8 +1008,8 @@ group("asio") {
 group("fxl") {
   testonly = true
   public_deps = [
-    "//garnet/public/lib/fxl:fxl_tests",
-    "//garnet/public/lib/fxl:fxl_unittests($host_toolchain)",
+    "//src/lib/fxl:fxl_tests",
+    "//src/lib/fxl:fxl_unittests($host_toolchain)",
   ]
 }
 

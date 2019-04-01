@@ -20,7 +20,7 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/cmx",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/sys/cpp",
@@ -90,7 +90,7 @@ executable("test_bin") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
   ]
 }

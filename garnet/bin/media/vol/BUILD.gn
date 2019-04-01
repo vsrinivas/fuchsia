@@ -28,7 +28,7 @@ executable("vol_bin") {
     "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/media/audio",
     "//zircon/public/lib/async-loop-cpp",
   ]

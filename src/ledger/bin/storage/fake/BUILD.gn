@@ -33,7 +33,7 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/testing",

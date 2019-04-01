@@ -133,7 +133,7 @@ source_set("test_suggestion_listener") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular",
   ]

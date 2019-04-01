@@ -98,7 +98,7 @@ executable("audio_loopback_tests_bin") {
 
   deps = [
     "//garnet/public/lib/component/cpp/testing",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.media",
     "//third_party/googletest:gtest_main",

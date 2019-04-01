@@ -26,7 +26,7 @@ source_set("tiles_lib") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 
@@ -39,7 +39,7 @@ executable("bin") {
 
   deps = [
     ":tiles_lib",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -71,7 +71,7 @@ executable("tiles_unittests") {
 
   deps = [
     ":tiles_lib",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//third_party/googletest:gtest_main",

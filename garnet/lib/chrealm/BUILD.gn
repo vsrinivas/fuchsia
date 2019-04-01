@@ -12,7 +12,7 @@ source_set("chrealm") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.sys",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",

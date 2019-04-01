@@ -19,6 +19,6 @@ source_set("logging") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }

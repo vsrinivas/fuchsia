@@ -9,7 +9,7 @@ source_set("device_info") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/lib/uuid",
   ]
 }
@@ -25,7 +25,7 @@ source_set("device_profile") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/rapidjson",
   ]
 }

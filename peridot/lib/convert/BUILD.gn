@@ -17,7 +17,7 @@ source_set("convert") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
     "//third_party/flatbuffers",
     "//third_party/leveldb",

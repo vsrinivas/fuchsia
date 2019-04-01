@@ -41,7 +41,7 @@ source_set("trace_app") {
     "//garnet/lib/trace_converters:chromium",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.tracing",
     "//third_party/zlib:zfstream",
     "//zircon/public/lib/async-loop-cpp",
@@ -64,7 +64,7 @@ source_set("spec") {
 
   public_deps = [
     "//garnet/lib/measure",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/rapidjson_utils",
   ]
 
@@ -83,7 +83,7 @@ source_set("unittests") {
   deps = [
     ":spec",
     ":trace_app",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

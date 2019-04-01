@@ -53,7 +53,7 @@ static_library("expr") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/developer/debug/zxdb/common",
     "//src/developer/debug/zxdb/symbols",
   ]

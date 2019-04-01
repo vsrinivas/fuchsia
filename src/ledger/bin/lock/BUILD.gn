@@ -12,7 +12,7 @@ source_set("lock") {
 
   public_deps = [
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/ledger/lib/coroutine",
   ]
 
@@ -28,7 +28,7 @@ source_set("unittests") {
 
   deps = [
     ":lock",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 

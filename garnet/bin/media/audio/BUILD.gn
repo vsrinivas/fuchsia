@@ -14,7 +14,7 @@ source_set("audio_core_client_lib") {
     "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

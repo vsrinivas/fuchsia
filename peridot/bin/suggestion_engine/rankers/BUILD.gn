@@ -34,7 +34,7 @@ source_set("linear_ranker") {
 
   deps = [
     ":ranker",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
   ]
 

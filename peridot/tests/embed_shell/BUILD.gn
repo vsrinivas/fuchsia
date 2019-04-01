@@ -117,7 +117,7 @@ executable_package("embed_shell_test_story_shell") {
 
   deps = [
     ":defs",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_base",

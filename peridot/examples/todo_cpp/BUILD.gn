@@ -15,7 +15,7 @@ executable_package("todo_cpp") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/fidl/cpp",

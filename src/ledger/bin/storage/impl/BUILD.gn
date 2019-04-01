@@ -100,7 +100,7 @@ source_set("lib") {
     ":file_index",
     ":object_identifier_lib",
     "//garnet/public/lib/callback",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/base64url",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/cobalt",
@@ -143,7 +143,7 @@ source_set("test_utils") {
 
   public_deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/rng",
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/storage/public",
@@ -179,7 +179,7 @@ source_set("unittests") {
     ":lib",
     ":test_utils",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/rng",
     "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/cloud_sync/impl",

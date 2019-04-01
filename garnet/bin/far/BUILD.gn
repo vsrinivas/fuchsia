@@ -17,7 +17,7 @@ sdk_executable("bin") {
 
   deps = [
     "//garnet/lib/far",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 

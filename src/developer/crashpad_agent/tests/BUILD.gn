@@ -116,7 +116,7 @@ executable("crashpad_agent_unittest") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
     "//src/developer/crashpad_agent:src",
     "//third_party/googletest:gmock",

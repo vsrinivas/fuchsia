@@ -44,7 +44,7 @@ executable("ledger_unittests") {
   testonly = true
 
   deps = [
-    "//garnet/public/lib/fxl:printers",
+    "//src/lib/fxl:printers",
     "//src/ledger/bin/app:unittests",
     "//src/ledger/bin/cache:unittests",
     "//src/ledger/bin/cloud_sync/impl:unittests",

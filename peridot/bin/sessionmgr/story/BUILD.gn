@@ -21,6 +21,6 @@ source_set("system") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }

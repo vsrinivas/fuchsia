@@ -71,7 +71,7 @@ source_set("mock_device_watcher") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/hid-parser",
   ]
 }
@@ -89,7 +89,7 @@ source_set("mock_hid_decoder") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/hid-parser",
   ]
 }

@@ -14,7 +14,7 @@ executable("sessionctl_bin") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.modular",

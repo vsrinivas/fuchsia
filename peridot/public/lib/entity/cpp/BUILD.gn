@@ -23,7 +23,7 @@ source_set("json") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/rapidjson",
   ]
 

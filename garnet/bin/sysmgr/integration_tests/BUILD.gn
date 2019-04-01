@@ -39,7 +39,7 @@ executable("mock_resolver") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.pkg",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async-default",
@@ -59,8 +59,8 @@ executable("service_startup_test") {
     ":interface",
     "//garnet/bin/appmgr:appmgr_for_test",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
   ]
 }
@@ -76,8 +76,8 @@ executable("package_updating_loader_test") {
     ":interface",
     "//garnet/bin/sysmgr:lib",
     "//garnet/examples/fidl/services:echo",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:integration",
     "//zircon/public/lib/fs",

@@ -34,7 +34,7 @@ source_set("data_file_reader_writer_util") {
 
   deps = [
     ":data_file_reader_writer",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/lib/sys/cpp/testing:integration",
   ]
 }
@@ -49,7 +49,7 @@ executable("persistent_storage_test_util_bin") {
 
   deps = [
     ":data_file_reader_writer",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

@@ -28,7 +28,7 @@ executable_package("sessionmgr") {
     ":user_intelligence_provider",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/bin/basemgr/cobalt",
     "//peridot/bin/sessionmgr/agent_runner",
     "//peridot/bin/sessionmgr/entity_provider_runner",
@@ -103,7 +103,7 @@ executable_package("dev_session_shell") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
@@ -125,7 +125,7 @@ source_set("session_ctl") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/puppet_master:puppet_master_impl",
     "//zircon/public/lib/fs",
   ]
@@ -139,7 +139,7 @@ source_set("component_context") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/agent_runner:public",
     "//peridot/bin/sessionmgr/entity_provider_runner",
     "//peridot/bin/sessionmgr/message_queue",
@@ -164,7 +164,7 @@ source_set("focus") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:clone",
@@ -188,7 +188,7 @@ source_set("presentation_provider") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fidl/cpp",

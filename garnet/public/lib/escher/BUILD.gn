@@ -181,7 +181,7 @@ config("vk_mem_alloc_error_suppression") {
 source_set("vk_mem_alloc") {
   public_deps = [
     ":vulkan",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 
   sources = [
@@ -214,7 +214,7 @@ source_set("escher") {
     ":vk_mem_alloc",
     ":vulkan",
     "//garnet/public/lib/escher/base:escher_base",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 
   sources = [

@@ -14,7 +14,7 @@ source_set("errors") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 
@@ -46,7 +46,7 @@ source_set("lib") {
   public_deps = [
     ":errors",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/sys/cpp",
@@ -65,7 +65,7 @@ executable("bin") {
   deps = [
     ":lib",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 }
 

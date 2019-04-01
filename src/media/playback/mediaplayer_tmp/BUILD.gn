@@ -39,7 +39,7 @@ executable("mediaplayer_bin") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.media",

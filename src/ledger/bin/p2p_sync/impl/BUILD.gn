@@ -25,7 +25,7 @@ source_set("impl") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.modular.auth",
     "//src/ledger/bin/environment",
@@ -58,7 +58,7 @@ source_set("unittests") {
   deps = [
     ":impl",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/p2p_provider/impl",
     "//src/ledger/bin/storage/fake:lib",

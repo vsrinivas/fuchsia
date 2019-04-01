@@ -9,7 +9,7 @@ source_set("session_shell_settings") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/rapidjson:rapidjson",
     "//sdk/fidl/fuchsia.ui.policy",
   ]
@@ -24,7 +24,7 @@ executable("session_shell_settings_unittest") {
 
   deps = [
     ":session_shell_settings",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
   ]
 }

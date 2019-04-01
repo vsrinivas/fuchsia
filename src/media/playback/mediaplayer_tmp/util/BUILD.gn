@@ -16,7 +16,7 @@ source_set("util") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fit",
   ]

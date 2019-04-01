@@ -12,7 +12,7 @@ source_set("message_queue") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/agent_runner:public",
     "//peridot/bin/sessionmgr/entity_provider_runner",
     "//peridot/bin/sessionmgr/storage:constants_and_utils",

@@ -16,7 +16,7 @@ static_library("inet") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.netstack",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-net",
   ]
 }

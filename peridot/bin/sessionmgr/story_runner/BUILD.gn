@@ -38,7 +38,7 @@ source_set("story_runner") {
 
   public_deps = [
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/bin/basemgr/cobalt",
     "//peridot/bin/sessionmgr:component_context",
     "//peridot/bin/sessionmgr:focus",
@@ -109,7 +109,7 @@ executable_package("dev_story_shell") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
     "//peridot/public/lib/app_driver/cpp",

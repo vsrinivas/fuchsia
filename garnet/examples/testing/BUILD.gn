@@ -15,7 +15,7 @@ executable("component_context_provider_example_bin") {
 
   deps = [
     "//garnet/examples/fidl/echo_client_cpp:lib",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
   ]

@@ -47,7 +47,7 @@ source_set("run_test") {
     "//garnet/bin/trace:spec",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
@@ -64,7 +64,7 @@ source_set("integration_test_utils") {
 
   public_deps = [
     "//garnet/bin/trace:spec",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -86,7 +86,7 @@ source_set("integration_test_utils_with_trace_with_static_engine") {
 
   public_deps = [
     "//garnet/bin/trace:spec",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -142,7 +142,7 @@ executable("basic_integration_test_app") {
   deps = [
     ":integration_test_utils",
     "//garnet/lib/measure",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider",
@@ -159,7 +159,7 @@ executable("two_providers_one_engine") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
@@ -178,7 +178,7 @@ shared_library("self_contained_provider") {
 
   deps = [
     ":integration_test_utils_with_trace_with_static_engine",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider-fdio-connect",
     "//zircon/public/lib/trace-provider-with-static-engine",
@@ -200,7 +200,7 @@ executable("two_providers_two_engines_test_app") {
     ":integration_test_utils",
     ":self_contained_provider",
     "//garnet/bin/trace:spec",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider",

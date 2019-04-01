@@ -73,7 +73,7 @@ static_library("libunwindstack") {
   }
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
   if (is_mac) {
     deps += [ ":copy_elf_h" ]

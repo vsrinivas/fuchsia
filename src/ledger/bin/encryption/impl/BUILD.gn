@@ -23,7 +23,7 @@ source_set("impl") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//src/ledger/bin/encryption/public",
   ]
 

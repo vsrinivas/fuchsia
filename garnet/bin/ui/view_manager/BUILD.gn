@@ -47,7 +47,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/ui/views/cpp",

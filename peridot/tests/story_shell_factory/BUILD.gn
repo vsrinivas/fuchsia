@@ -31,7 +31,7 @@ executable_package("story_shell_factory_test_session_shell") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/rapidjson",

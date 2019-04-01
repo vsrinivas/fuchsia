@@ -12,7 +12,7 @@ source_set("intel_pt_decode") {
   deps = [
     "third_party/simple-pt:reader",
     "//garnet/lib/debugger_utils",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//third_party/processor-trace/libipt",
     "//zircon/public/lib/fit",
   ]

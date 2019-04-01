@@ -213,7 +213,7 @@ source_set("gfx") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/vulkan",
     "//sdk/fidl/fuchsia.math",
@@ -243,7 +243,7 @@ source_set("object_linker") {
   public_deps = [
     "//garnet/lib/ui/scenic/util",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 }

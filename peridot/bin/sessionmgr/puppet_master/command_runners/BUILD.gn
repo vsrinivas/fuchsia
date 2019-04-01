@@ -42,7 +42,7 @@ source_set("set_link_value_command_runner") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:set_link_value_call",
   ]
 
@@ -76,7 +76,7 @@ source_set("add_mod_command_runner") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
     "//peridot/lib/module_manifest:module_facet_reader",
   ]
@@ -97,7 +97,7 @@ executable("add_mod_command_runner_unittest") {
   deps = [
     ":add_mod_command_runner",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//peridot/lib/testing:entity_resolver_fake",
     "//peridot/lib/testing:module_facet_reader_fake",
@@ -115,7 +115,7 @@ source_set("remove_mod_command_runner") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 
   public_deps = [
@@ -146,7 +146,7 @@ source_set("set_focus_state_command_runner") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
   ]
 
   public_deps = [

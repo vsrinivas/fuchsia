@@ -22,8 +22,8 @@ executable("sessionctl_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/test_runner/cpp",
     "//peridot/bin/sessionctl:lib",
     "//peridot/public/lib/integration_testing/cpp",

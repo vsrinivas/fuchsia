@@ -41,8 +41,8 @@ executable("realm_tests") {
     "util:data_file_reader_writer_util",
     "//garnet//examples/fidl/services:echo",
     "//garnet/bin/appmgr:lib",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
@@ -65,8 +65,8 @@ executable("hub_tests") {
 
   deps = [
     "//garnet/bin/sysmgr:lib",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",

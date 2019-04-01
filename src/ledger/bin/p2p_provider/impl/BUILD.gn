@@ -18,7 +18,7 @@ source_set("impl") {
 
   public_deps = [
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//garnet/public/lib/netconnector/cpp",
     "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.netconnector",
@@ -55,7 +55,7 @@ source_set("unittests") {
     ":impl",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",
-    "//garnet/public/lib/fxl",
+    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/bin/testing/netconnector",

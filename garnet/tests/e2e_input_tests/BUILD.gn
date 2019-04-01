@@ -43,8 +43,8 @@ executable("minimal_input_test") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fxl",
-    "//garnet/public/lib/fxl/test:gtest_main",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/input/cpp",
