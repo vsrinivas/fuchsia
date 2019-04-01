@@ -7,6 +7,6 @@ library ddk.protocol.iommu;
 using zx;
 
 [Layout = "ddk-protocol"]
-interface Iommu {
+protocol Iommu {
     GetBti(uint32 iommu_index, uint32 bti_id) -> (zx.status s, handle<bti> @handle);
 };

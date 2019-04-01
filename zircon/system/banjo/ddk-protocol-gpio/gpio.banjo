@@ -19,7 +19,7 @@ enum GpioPolarity : uint32 {
 };
 
 [Layout = "ddk-protocol"]
-interface Gpio {
+protocol Gpio {
     /// Configures a GPIO for input.
     ConfigIn(uint32 flags) -> (zx.status s);
     /// Configures a GPIO for output.

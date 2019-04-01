@@ -88,7 +88,7 @@ struct SdmmcHostInfo {
 };
 
 [Layout = "ddk-protocol"]
-interface Sdmmc {
+protocol Sdmmc {
     /// Get host info.
     HostInfo() -> (zx.status s, SdmmcHostInfo info);
     /// Set signal voltage.

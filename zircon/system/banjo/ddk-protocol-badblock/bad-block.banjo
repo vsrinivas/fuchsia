@@ -7,7 +7,7 @@ library ddk.protocol.badblock;
 using zx;
 
 [Layout = "ddk-protocol"]
-interface BadBlock {
+protocol BadBlock {
     /// Fills in |bad_blocks| with a list of bad blocks, up until
     /// |bad_blocks_count|. The order of blocks is undefined.
     /// |bad_blocks_actual| will be filled in with the actual number of bad

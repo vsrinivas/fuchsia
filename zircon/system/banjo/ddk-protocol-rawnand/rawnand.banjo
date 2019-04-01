@@ -8,7 +8,7 @@ using zircon.device.nand;
 using zx;
 
 [Layout = "ddk-protocol"]
-interface RawNand {
+protocol RawNand {
     /// Read one nand page with hwecc.
     ReadPageHwecc(uint32 nandpage) -> (zx.status s, vector<voidptr> data, vector<voidptr> oob,
                                        uint32 ecc_correct);

@@ -19,7 +19,7 @@ struct SerialPortInfo {
 /// the list of serial ports assigned to your device rather than the global
 /// list of serial ports.
 [Layout = "ddk-protocol"]
-interface Serial {
+protocol Serial {
     GetInfo() -> (zx.status s, SerialPortInfo info);
     /// Configures the given serial port.
     Config(uint32 baud_rate, uint32 flags) -> (zx.status s);

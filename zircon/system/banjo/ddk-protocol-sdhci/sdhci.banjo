@@ -29,7 +29,7 @@ enum SdhciQuirk : uint64 {
 };
 
 [Layout = "ddk-protocol"]
-interface Sdhci {
+protocol Sdhci {
     // TODO: should be replaced with a generic busdev mechanism
     GetInterrupt() -> (zx.status s, handle<interrupt> irq);
     /// mmio size minus offset must be at least 512 bytes as per the SDHCI specification.

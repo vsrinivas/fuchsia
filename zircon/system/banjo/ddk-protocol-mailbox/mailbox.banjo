@@ -28,6 +28,6 @@ struct MailboxChannel {
 };
 
 [Layout = "ddk-protocol"]
-interface Mailbox {
+protocol Mailbox {
     SendCommand(MailboxChannel channel, MailboxDataBuf mdata) -> (zx.status s);
 };

@@ -89,7 +89,7 @@ struct SensorInfo {
 };
 
 [Layout = "ddk-interface"]
-interface IspCallbacks {
+protocol IspCallbacks {
     // Initializes the Camera Sensor.
     Init() -> (zx.status s);
     // De-Initializes the Camera Sensor.
@@ -115,7 +115,7 @@ interface IspCallbacks {
 };
 
 [Layout = "ddk-protocol"]
-interface IspImpl {
+protocol IspImpl {
     RegisterCallbacks(IspCallbacks intf) -> (zx.status s);
     DeRegisterCallbacks() -> (zx.status s);
 };

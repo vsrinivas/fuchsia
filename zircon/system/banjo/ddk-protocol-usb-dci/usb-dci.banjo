@@ -9,7 +9,7 @@ using zircon.hw.usb;
 using zx;
 
 [Layout = "ddk-protocol"]
-interface UsbDci {
+protocol UsbDci {
     /// Queues a USB request with the DCI driver.
     RequestQueue(ddk.protocol.usb.request.UsbRequest? usb_request,
                  ddk.protocol.usb.request.UsbRequestComplete? complete_cb) -> ();
@@ -33,7 +33,7 @@ interface UsbDci {
 
 /// Interface for use by the DCI controller to call into the USB peripheral driver.
 [Layout = "ddk-interface"]
-interface UsbDciInterface {
+protocol UsbDciInterface {
     /// Callback for handling ep0 control requests.
     Control(zircon.hw.usb.UsbSetup setup, vector<voidptr> write) -> (zx.status status,
                                                                      vector<voidptr> read);

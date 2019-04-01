@@ -12,12 +12,12 @@ struct ZxPcieDeviceInfo {
 };
 
 [Layout = "ddk-callback"]
-interface IhdaDspIrq {
+protocol IhdaDspIrq {
     Callback() -> ();
 };
 
 [Layout = "ddk-protocol"]
-interface IhdaDsp {
+protocol IhdaDsp {
     /// Fetch the parent HDA controller's PCI device info.
     GetDevInfo() -> (ZxPcieDeviceInfo out);
 

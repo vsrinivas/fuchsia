@@ -53,7 +53,7 @@ struct EthmacNetbuf {
 };
 
 [Layout = "ddk-interface"]
-interface EthmacIfc {
+protocol EthmacIfc {
     /// Value with bits set from the |ETHMAC_STATUS_*| flags
     Status(uint32 status) -> ();
 
@@ -102,7 +102,7 @@ const uint32 ETHMAC_SETPARAM_DUMP_REGS = 4;
 /// can call send() methods at the same time as non-send
 /// methods.
 [Layout = "ddk-protocol"]
-interface Ethmac {
+protocol Ethmac {
     /// Obtain information about the ethermac device and supported features
     /// Safe to call at any time.
     Query(uint32 options) -> (zx.status s, EthmacInfo info);

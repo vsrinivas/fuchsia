@@ -38,13 +38,13 @@ struct HidInfo {
 };
 
 [Layout = "ddk-interface"]
-interface HidbusIfc {
+protocol HidbusIfc {
     /// Queues a report received by the hidbus device.
     IoQueue(vector<voidptr> buf) -> ();
 };
 
 [Layout = "ddk-protocol"]
-interface Hidbus {
+protocol Hidbus {
     /// Obtain information about the hidbus device and supported features.
     /// Safe to call at any time.
     Query(uint32 options) -> (zx.status s, HidInfo info);

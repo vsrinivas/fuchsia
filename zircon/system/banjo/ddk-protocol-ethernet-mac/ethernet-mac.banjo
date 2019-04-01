@@ -9,12 +9,12 @@ using zx;
 const uint32 MAC_ARRAY_LENGTH = 6;
 
 [Layout = "ddk-callback"]
-interface EthMacCallbacks {
+protocol EthMacCallbacks {
     ConfigPhy(array<uint8>:MAC_ARRAY_LENGTH mac) -> (zx.status s);
 };
 
 [Layout = "ddk-protocol"]
-interface EthMac {
+protocol EthMac {
     MdioRead(uint32 reg) -> (zx.status s, uint32 val);
     MdioWrite(uint32 reg, uint32 val) -> (zx.status s);
     RegisterCallbacks(EthMacCallbacks cb) -> (zx.status s);

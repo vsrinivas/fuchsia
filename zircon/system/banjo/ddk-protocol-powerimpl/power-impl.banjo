@@ -8,7 +8,7 @@ using zx;
 using ddk.protocol.power;
 
 [Layout = "ddk-protocol"]
-interface PowerImpl {
+protocol PowerImpl {
     /// Get status of a power domain
     GetPowerDomainStatus(uint32 index) -> (zx.status s,
                                            ddk.protocol.power.PowerDomainStatus status);

@@ -9,7 +9,7 @@ using zircon.hw.usb;
 using zx;
 
 [Layout = "ddk-protocol"]
-interface Usb {
+protocol Usb {
     // Initiates a control transfer with the device in the OUT direction.
     ControlOut(uint8 request_type, uint8 request, uint16 value, uint16 index, zx.time timeout,
                vector<voidptr> write) -> (zx.status status);

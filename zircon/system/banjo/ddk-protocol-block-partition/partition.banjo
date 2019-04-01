@@ -23,7 +23,7 @@ enum GUIDType : uint8 {
 };
 
 [Layout = "ddk-protocol"]
-interface BlockPartition {
+protocol BlockPartition {
     /// Get a GUID of the partition (if one exists).
     GetGuid(GUIDType guid_type) -> (zx.status status, GUID guid);
 

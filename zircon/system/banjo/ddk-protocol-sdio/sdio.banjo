@@ -70,7 +70,7 @@ struct SdioRwTxn {
 };
 
 [Layout = "ddk-protocol"]
-interface Sdio {
+protocol Sdio {
     GetDevHwInfo() -> (zx.status s, SdioHwInfo hw_info);
     EnableFn(uint8 fn_idx) -> (zx.status s);
     DisableFn(uint8 fn_idx) -> (zx.status s);

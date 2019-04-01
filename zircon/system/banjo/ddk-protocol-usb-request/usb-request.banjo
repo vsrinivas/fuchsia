@@ -80,6 +80,6 @@ struct UsbRequest {
 };
 
 [Layout="ddk-callback"]
-interface UsbRequestComplete {
+protocol UsbRequestComplete {
     Callback(UsbRequest? req) -> ();
 };

@@ -15,7 +15,7 @@ struct AcpiMmio {
 };
 
 [Layout = "ddk-protocol"]
-interface Acpi {
+protocol Acpi {
     GetMmio(uint32 index) -> (zx.status s, AcpiMmio mmio);
     MapInterrupt(int64 index) -> (zx.status s, handle<interrupt> @handle);
 };

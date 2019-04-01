@@ -11,12 +11,12 @@ const uint32 IMAGE_TYPE_Y_LEGACY_TILED = 2;
 const uint32 IMAGE_TYPE_YF_TILED = 3;
 
 [Layout="ddk-callback"]
-interface ZxIntelGpuCoreInterrupt {
+protocol ZxIntelGpuCoreInterrupt {
     Callback(uint32 master_interrupt_control) -> ();
 };
 
 [Layout="ddk-protocol"]
-interface ZxIntelGpuCore {
+protocol ZxIntelGpuCore {
     /// Reads 16 bits from pci config space; returned in |value_out|.
     ReadPciConfig16(uint16 addr) -> (zx.status s, uint16 value);
 

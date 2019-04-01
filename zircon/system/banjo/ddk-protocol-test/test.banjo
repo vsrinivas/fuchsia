@@ -13,12 +13,12 @@ struct TestReport {
 };
 
 [Layout = "ddk-callback"]
-interface TestFunc {
+protocol TestFunc {
     Callback() -> (zx.status s, TestReport report);
 };
 
 [Layout = "ddk-protocol"]
-interface Test {
+protocol Test {
     /// Sets test output socket.
     SetOutputSocket(handle<socket> @handle) -> ();
 

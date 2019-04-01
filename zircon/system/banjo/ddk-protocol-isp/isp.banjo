@@ -6,6 +6,6 @@ library ddk.protocol.isp;
 using zx;
 
 [Layout = "ddk-protocol"]
-interface Isp {
+protocol Isp {
     DummyCall() -> ();
 };

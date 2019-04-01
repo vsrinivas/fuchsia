@@ -8,7 +8,7 @@ using ddk.protocol.gpio;
 using zx;
 
 [Layout = "ddk-protocol"]
-interface GpioImpl {
+protocol GpioImpl {
     /// Configures a GPIO for input.
     ConfigIn(uint32 index, uint32 flags) -> (zx.status s);
     /// Configures a GPIO for output.

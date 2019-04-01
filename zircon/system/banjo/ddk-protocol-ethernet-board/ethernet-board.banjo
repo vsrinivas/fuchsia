@@ -5,6 +5,6 @@
 library ddk.protocol.ethernet.board;
 
 [Layout = "ddk-protocol"]
-interface EthBoard {
+protocol EthBoard {
     ResetPhy() -> ();
 };

@@ -39,7 +39,7 @@ enum PciAddressSpace : uint8 {
 };
 
 [Layout = "ddk-protocol"]
-interface Pciroot {
+protocol Pciroot {
     /// Legacy methods
     GetAuxdata(string args) -> (zx.status s, vector<voidptr> data);
     GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);

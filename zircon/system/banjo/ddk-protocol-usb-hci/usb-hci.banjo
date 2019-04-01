@@ -11,7 +11,7 @@ using zircon.hw.usb;
 using zircon.hw.usb.hub;
 
 [Layout="ddk-protocol"]
-interface UsbHci {
+protocol UsbHci {
     /// Queues a USB request with the HCI driver.
     RequestQueue(ddk.protocol.usb.request.UsbRequest? usb_request,
                  ddk.protocol.usb.request.UsbRequestComplete? complete_cb) -> ();

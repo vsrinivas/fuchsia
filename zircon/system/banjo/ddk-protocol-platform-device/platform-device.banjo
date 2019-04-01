@@ -44,7 +44,7 @@ struct PdevMmio {
 };
 
 [Layout = "ddk-protocol"]
-interface PDev {
+protocol PDev {
     GetMmio(uint32 index) -> (zx.status s, PdevMmio mmio);
     GetInterrupt(uint32 index, uint32 flags) -> (zx.status s, handle<interrupt> irq);
     GetBti(uint32 index) -> (zx.status s, handle<bti> bti);

@@ -106,7 +106,7 @@ union NandOperation {
 };
 
 [Layout = "ddk-protocol"]
-interface Nand {
+protocol Nand {
     /// Obtains the parameters of the nand device and the required
     /// size of |NandOperation|. The |NandOperation| submitted via Queue() must have
     /// `nand_op_size - sizeof(NandOperation)` bytes available at the end of the

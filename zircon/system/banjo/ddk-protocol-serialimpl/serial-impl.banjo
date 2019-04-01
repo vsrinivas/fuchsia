@@ -17,12 +17,12 @@ enum SerialState : uint32 {
 /// and return as soon as possible. In particular, it may not be safe to make protocol calls
 /// from these callbacks.
 [Layout = "ddk-callback"]
-interface SerialNotify {
+protocol SerialNotify {
     Callback(SerialState state) -> ();
 };
 
 [Layout = "ddk-protocol"]
-interface SerialImpl {
+protocol SerialImpl {
     GetInfo() -> (zx.status s, ddk.protocol.serial.SerialPortInfo info);
     /// Configures the given serial port.
     Config(uint32 baud_rate, uint32 flags) -> (zx.status s);

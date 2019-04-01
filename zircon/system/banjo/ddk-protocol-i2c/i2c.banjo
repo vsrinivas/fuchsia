@@ -17,7 +17,7 @@ struct I2cOp {
 };
 
 [Layout = "ddk-protocol", HandleWrappers]
-interface I2c {
+protocol I2c {
     /// Writes and reads data on an i2c channel. Up to I2C_MAX_RW_OPS operations can be passed in.
     /// For write ops, i2c_op_t.data points to data to write.  The data to write does not need to be
     /// kept alive after this call.  For read ops, i2c_op_t.data is ignored.  Any combination of reads

@@ -119,7 +119,7 @@ struct AddedDisplayInfo {
 /// The client will not make any `ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL` calls into the device
 /// during these callbacks.
 [Layout = "ddk-interface"]
-interface DisplayControllerInterface {
+protocol DisplayControllerInterface {
     /// Callbacks which are invoked when displays are added or removed. |added_display_list| and
     /// |removed_display_list| point to arrays of the display ids which were added and removed. If
     /// |added_display_count| or |removed_display_count| is 0, the corresponding array can be NULL.
@@ -331,7 +331,7 @@ enum Client : uint32 {
 /// The client guarantees that check_configuration and apply_configuration are always
 /// made from a single thread. The client makes no other threading guarantees.
 [Layout = "ddk-protocol"]
-interface DisplayControllerImpl {
+protocol DisplayControllerImpl {
     /// The function will only be called once, and it will be called before any other
     /// functions are called.
     SetDisplayControllerInterface(DisplayControllerInterface intf) -> ();

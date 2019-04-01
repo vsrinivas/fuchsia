@@ -12,7 +12,7 @@ enum PowerDomainStatus : uint8 {
 };
 
 [Layout = "ddk-protocol"]
-interface Power {
+protocol Power {
     EnablePowerDomain() -> (zx.status s);
     DisablePowerDomain() -> (zx.status s);
     GetPowerDomainStatus() -> (zx.status s, PowerDomainStatus status);

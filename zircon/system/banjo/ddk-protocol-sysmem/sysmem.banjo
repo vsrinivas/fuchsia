@@ -7,7 +7,7 @@ library ddk.protocol.sysmem;
 using zx;
 
 [Layout = "ddk-protocol"]
-interface Sysmem {
+protocol Sysmem {
     /// Takes the server end of a FIDL connection that'll serve
     /// fuchsia.sysmem.Allocator2.  If the connection fails, the channel will
     /// close.

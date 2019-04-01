@@ -21,7 +21,7 @@ struct CanvasInfo {
 };
 
 [Layout = "ddk-protocol"]
-interface AmlogicCanvas {
+protocol AmlogicCanvas {
     /// Configures a canvas.
     /// Adds a framebuffer to the canvas lookup table.
     Config(handle<vmo> vmo, usize offset, CanvasInfo info) -> (zx.status s, uint8 canvas_idx);

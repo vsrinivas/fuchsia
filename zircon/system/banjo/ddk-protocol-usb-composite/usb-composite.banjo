@@ -8,7 +8,7 @@ using zircon.hw.usb;
 using zx;
 
 [Layout = "ddk-protocol"]
-interface UsbComposite {
+protocol UsbComposite {
     /// Returns the length of the additional descriptor list.
     GetAdditionalDescriptorLength() -> (usize length);
     /// Returns the USB descriptors following the interface's existing descriptors.

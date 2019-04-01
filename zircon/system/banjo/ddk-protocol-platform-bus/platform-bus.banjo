@@ -99,13 +99,13 @@ struct PbusBoardInfo {
 };
 
 [Layout = "ddk-callback"]
-interface PbusSysSuspend {
+protocol PbusSysSuspend {
     Callback(uint32 flags) -> (zx.status out_status);
 };
 
 
 [Layout="ddk-protocol", DefaultProtocol]
-interface PBus {
+protocol PBus {
     /// Adds a new platform device to the bus, using configuration provided by |dev|.
     /// Platform devices are created in their own separate devhosts.
     DeviceAdd(PbusDev dev) -> (zx.status s);

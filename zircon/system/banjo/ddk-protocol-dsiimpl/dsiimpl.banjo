@@ -79,7 +79,7 @@ struct MipiDsiCmd {
 };
 
 [Layout = "ddk-protocol"]
-interface DsiImpl {
+protocol DsiImpl {
     /// This function is used to configure all the DSI parameters needed to operated in both
     /// Command and Video Mode
     Config(DsiConfig dsi_config) -> (zx.status s);

@@ -87,7 +87,7 @@ const uint32 BLOCK_FL_BARRIER_BEFORE = 0x00000100;
 const uint32 BLOCK_FL_BARRIER_AFTER = 0x00000200;
 
 [Layout = "ddk-protocol"]
-interface BlockImpl {
+protocol BlockImpl {
     /// Obtains the parameters of the block device (block_info_t) and
     /// the required size of block_txn_t.  The block_txn_t's submitted
     /// via queue() must have block_op_size_out - sizeof(block_op_t) bytes
@@ -103,7 +103,7 @@ interface BlockImpl {
 };
 
 [Layout = "ddk-protocol"]
-interface Block {
+protocol Block {
     /// Obtains the parameters of the block device (block_info_t) and
     /// the required size of block_txn_t.  The block_txn_t's submitted
     /// via queue() must have block_op_size_out - sizeof(block_op_t) bytes

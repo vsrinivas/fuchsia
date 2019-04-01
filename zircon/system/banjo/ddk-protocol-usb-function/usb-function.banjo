@@ -9,7 +9,7 @@ using zircon.hw.usb;
 using zx;
 
 [Layout = "ddk-protocol"]
-interface UsbFunction {
+protocol UsbFunction {
     /// Registers callbacks to the USB function driver.
     SetInterface(UsbFunctionInterface @interface) -> (zx.status s);
 
@@ -46,7 +46,7 @@ interface UsbFunction {
 
 /// Interface implemented by the USB function driver.
 [Layout = "ddk-interface"]
-interface UsbFunctionInterface {
+protocol UsbFunctionInterface {
     /// Returns the size of the descriptor list for the function.
     GetDescriptorsSize() -> (usize size);
 

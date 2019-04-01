@@ -8,7 +8,7 @@ using ddk.driver;
 using zx;
 
 [Layout = "ddk-protocol"]
-interface Composite {
+protocol Composite {
     /// Returns the number of components that can be returned by GetComponents().
     GetComponentCount() -> (uint32 count);
     /// Returns a list of all of the components of this device, in the order

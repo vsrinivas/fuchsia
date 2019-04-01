@@ -14,7 +14,7 @@ enum UsbSpeed : uint32 {
 };
 
 [Layout = "ddk-protocol"]
-interface UsbBus {
+protocol UsbBus {
     /// Configures a new hub based on its USB hub descriptor.
     ConfigureHub(ddk.driver.ZxDevice? hub_device, UsbSpeed speed,
                  zircon.hw.usb.hub.UsbHubDescriptor desc) -> (zx.status s);
@@ -29,7 +29,7 @@ interface UsbBus {
 
 /// Interface for use by the HCI controller to use to notify when devices are added and removed.
 [Layout = "ddk-interface"]
-interface UsbBusInterface {
+protocol UsbBusInterface {
     /// Notifies the USB bus driver that a new device has been added.
     AddDevice(uint32 device_id, uint32 hub_id, UsbSpeed speed) -> (zx.status s);
     /// Notifies the USB bus driver that a device has been removed.

@@ -86,12 +86,12 @@ struct BtGattChr {
 
 /// Value change notification callback of the |EnableNotifications| function.
 [Layout = "ddk-callback"]
-interface BtGattNotificationValue {
+protocol BtGattNotificationValue {
     Callback(BtGattId id, vector<voidptr> value) -> ();
 };
 
 [Layout = "ddk-protocol"]
-interface BtGattSvc {
+protocol BtGattSvc {
     /// Connects to and starts characteristic discovery on the remote service.
     ///
     /// |status| will contain the result of the characteristic discovery procedure if it was

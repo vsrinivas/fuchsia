@@ -40,7 +40,7 @@ enum PciCapId : uint8 {
 };
 
 [Layout = "ddk-protocol"]
-interface Pci {
+protocol Pci {
     GetBar(uint32 bar_id) -> (zx.status s, zircon.syscalls.pci.ZxPciBar res);
     EnableBusMaster(bool enable) -> (zx.status s);
     ResetDevice() -> (zx.status s);

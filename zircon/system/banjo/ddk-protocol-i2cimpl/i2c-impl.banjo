@@ -16,7 +16,7 @@ struct I2cImplOp {
 
 /// Low-level protocol for i2c drivers.
 [Layout = "ddk-protocol"]
-interface I2cImpl {
+protocol I2cImpl {
     GetBusCount() -> (uint32 count);
     GetMaxTransferSize(uint32 bus_id) -> (zx.status s, usize size);
     /// Sets the bitrate for the i2c bus in KHz units.
