@@ -28,6 +28,7 @@ class App {
 
   // Parameters expressed in pixels
   void CreateExampleScene(float display_width, float display_height);
+  void StartPoseBufferProvider();
   void ConfigurePoseBuffer();
 
   void ReleaseSessionResources();

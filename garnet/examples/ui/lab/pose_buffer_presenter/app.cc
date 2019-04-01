@@ -29,6 +29,8 @@
 #include "lib/ui/scenic/cpp/util/mesh_utils.h"
 #include "src/lib/fxl/logging.h"
 
+#define DEBUG_BOX 0
+
 using namespace scenic;
 
 namespace pose_buffer_presenter {
@@ -89,19 +91,28 @@ void App::CreateExampleScene(float display_width, float display_height) {
   Scene scene(session);
   camera_ = std::make_unique<StereoCamera>(scene);
 
-  float eye_position[3] = {0, 0, 0};
-  float look_at[3] = {0, -1, 0};
-  float up[3] = {0, 0, 1};
-
-  camera_->SetTransform(eye_position, look_at, up);
+  // Produces the Identity View Matrix
+  static const glm::vec3 eye(0, 0, 0);
+  static const glm::vec3 look_at(0, 0, -1);
+  static const glm::vec3 up(0, 1, 0);
+  camera_->SetTransform(glm::value_ptr(eye), glm::value_ptr(look_at),
+                        glm::value_ptr(up));
 
   float fovy = glm::radians(30.f);
+  float f = 1.0f / tan(0.5f * fovy);
+  float aspect_ratio = (display_width * 0.5f) / display_height;
+  float near = 0.1;
+  float far = 10;
   // Use (display_width * 0.5f) / display_height because the stereo camera uses
   // half of the display for each eye, so the aspect ratio for each eye has 1/2
   // the width:height ratio of the display.
-  glm::mat4 projection =
-      glm::perspective(fovy, (display_width * 0.5f) / display_height,
-                       kEdgeLength / 100.f, kEdgeLength * 8);
+  // clang-format off
+  glm::mat4 projection( f / aspect_ratio,  0.0f, 0.0f,                        0.0f,
+                        0.0f,                -f, 0.0f,                        0.0f,
+                        0.0f,              0.0f, far / (near - far),         -1.0f,
+                        0.0f,              0.0f, (near * far) / (near - far), 0.0f);
+  // clang-format on
+
   camera_->SetStereoProjection(glm::value_ptr(projection),
                                glm::value_ptr(projection));
 
@@ -141,9 +152,87 @@ void App::CreateExampleScene(float display_width, float display_height) {
   // kEdgeLength to end up with a cube whose edge length is kEdgeLength long.
   float scale_factor = 0.5 * kEdgeLength;
   cube_node_->SetScale(scale_factor, scale_factor, scale_factor);
-  cube_node_->SetTranslation(0, 0, -4.0 * kEdgeLength);
+  cube_node_->SetTranslation(0, 4.0 * kEdgeLength, 0);
 
   root_node.AddChild(*cube_node_);
+
+// Adds a colored box arround the camera to help debug orientation problems
+#if DEBUG_BOX
+  float pane_width = 10;
+  scenic::Rectangle pane_shape(session, pane_width, pane_width);
+
+  static const int num_panes = 6;
+
+  glm::vec4 colors[num_panes] = {
+      glm::vec4(255, 0, 0, 255),    // RED
+      glm::vec4(0, 255, 255, 255),  // CYAN
+      glm::vec4(0, 255, 0, 255),    // GREEN
+      glm::vec4(255, 0, 255, 255),  // MAGENTA
+      glm::vec4(0, 0, 255, 255),    // BLUE
+      glm::vec4(255, 255, 0, 255),  // YELLOW
+  };
+
+  static const float pane_offset = pane_width / 2;
+
+  glm::vec3 translations[num_panes] = {
+      glm::vec3(0, 0, pane_offset),   // Above Camera
+      glm::vec3(0, 0, -pane_offset),  // Below Camera
+      glm::vec3(pane_offset, 0, 0),   // Right of camera
+      glm::vec3(-pane_offset, 0, 0),  // Left of Camera
+      glm::vec3(0, pane_offset, 0),   // In front of camera.
+      glm::vec3(0, -pane_offset, 0),  // Behind camera.
+  };
+
+  float pi = glm::pi<float>();
+  glm::quat orientations[num_panes] = {
+      glm::quat(),  // identity quaternion
+      glm::angleAxis(pi, glm::vec3(1, 0, 0)),
+      glm::angleAxis(pi / 2, glm::vec3(0, 1, 0)),
+      glm::angleAxis(-pi / 2, glm::vec3(0, 1, 0)),
+      glm::angleAxis(-pi / 2, glm::vec3(1, 0, 0)),
+      glm::angleAxis(pi / 2, glm::vec3(1, 0, 0)),
+
+  };
+
+  for (int i = 0; i < num_panes; i++) {
+    glm::vec4 color = colors[i];
+    glm::vec3 translation = translations[i];
+    glm::quat orientation = orientations[i];
+
+    scenic::Material pane_material(session);
+    pane_material.SetColor(color.r, color.g, color.b, color.a);
+    scenic::ShapeNode pane_shape_node(session);
+    pane_shape_node.SetShape(pane_shape);
+    pane_shape_node.SetMaterial(pane_material);
+    pane_shape_node.SetTranslation(translation.x, translation.y, translation.z);
+    pane_shape_node.SetRotation(orientation.x, orientation.y, orientation.z,
+                                orientation.w);
+    root_node.AddChild(pane_shape_node);
+  }
+#endif
+}
+
+void App::StartPoseBufferProvider() {
+  FXL_LOG(INFO) << "Launching PoseBufferProvider";
+
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url =
+      "fuchsia-pkg://fuchsia.com/pose_buffer_provider#meta/"
+      "pose_buffer_provider.cmx";
+  launch_info.directory_request = services_.NewRequest();
+  startup_context_->launcher()->CreateComponent(std::move(launch_info),
+                                                controller_.NewRequest());
+  controller_.set_error_handler([](zx_status_t status) {
+    FXL_LOG(ERROR) << "Lost connection to controller_. Status: " << status;
+  });
+
+  services_.ConnectToService(provider_.NewRequest().TakeChannel(),
+                             fuchsia::ui::gfx::PoseBufferProvider::Name_);
+
+  provider_.set_error_handler([](zx_status_t status) {
+    FXL_LOG(ERROR) << "Lost connection to PoseBufferProvider service. Status: "
+                   << status;
+  });
 }
 
 void App::ConfigurePoseBuffer() {
@@ -170,25 +259,6 @@ void App::ConfigurePoseBuffer() {
 
   camera_->SetPoseBuffer(pose_buffer, num_entries, base_time, time_interval);
 
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url =
-      "fuchsia-pkg://fuchsia.com/pose_buffer_provider#meta/"
-      "pose_buffer_provider.cmx";
-  launch_info.directory_request = services_.NewRequest();
-  startup_context_->launcher()->CreateComponent(std::move(launch_info),
-                                                controller_.NewRequest());
-  controller_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "Lost connection to controller_. Status: " << status;
-  });
-
-  services_.ConnectToService(provider_.NewRequest().TakeChannel(),
-                             fuchsia::ui::gfx::PoseBufferProvider::Name_);
-
-  provider_.set_error_handler([](zx_status_t status) {
-    FXL_LOG(ERROR) << "Lost connection to PoseBufferProvider service. Status: "
-                   << status;
-  });
-
   status = pose_buffer_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
   FXL_DCHECK(status == ZX_OK);
 
@@ -197,6 +267,7 @@ void App::ConfigurePoseBuffer() {
 }
 
 void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
+  StartPoseBufferProvider();
   FXL_LOG(INFO) << "Creating new Session";
 
   // TODO: set up SessionListener.
