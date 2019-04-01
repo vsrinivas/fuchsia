@@ -1020,28 +1020,44 @@ the protocol fails to work as designed.
 
 Flow control is a broad, complex topic, and there are a number of effective
 design patterns.  This section discusses some of the more popular flow control
-patterns but is not exhaustive.  Protocols are free to use whatever flow control
-mechanisms best suit their use cases, even if that mechanism is not listed
-below.
+patterns but is not exhaustive. The patterns are listed in descending order of
+preference. If one of these patterns works well for a particular use case it
+should be used but if not protocols are free to use alternative flow control
+mechanisms that are not listed below.
 
 #### Prefer pull to push
 
 Without careful design, protocols in which the server pushes data to the client
 often have poor flow control.  One approach to providing better flow control is
 to have the client pull one or a range from the server.  Pull models have
-built-in flow control the client naturally limits the rate at which the server
-produces data and avoids getting overwhelmed by messages pushed from the server.
+built-in flow control since the client naturally limits the rate at which the
+server produces data and avoids getting overwhelmed by messages pushed from the
+server.
+
+#### Delay responses using hanging gets
 
 A simple way to implement a pull-based protocol is to "park a callback" with the
-server using the _hanging get pattern_.  In this pattern, the client sends a
-`GetFoo` message, but the server does not reply immediately.  Instead, the
-server replies when a "foo" is available.  The client consumes the foo and
-immediately sends another hanging get.  The client and server each do one unit
-of work per data item, which means neither gets ahead of the other.
+server using the _hanging get pattern_:
+
+```fidl
+protocol FooProvider {
+    WatchFoo(...) -> (Foo foo);
+};
+```
+
+In this pattern, the client sends a `WatchFoo` message but the server does not
+reply until it has new information to send to the client. The client consumes
+the foo and immediately sends another hanging get.  The client and server each
+do one unit of work per data item, which means neither gets ahead of the other.
 
 The hanging get pattern works well when the set of data items being transferred
 is bounded in size and the server-side state is simple, but does not work well
 in situations where the client and server need to synchronize their work.
+
+For example, a server might implement the hanging get pattern for some mutable
+state foo using a "dirty" bit for each client. It would initialize this bit to
+true, clear it on each `WatchFoo` response, and set it on each change of foo.
+The server would only respond to a `WatchFoo` message when the dirty bit is set.
 
 #### Throttle push using acknowledgements
 
@@ -1064,7 +1080,7 @@ produces messages to match the rate at which the callee consumes them.  For
 example, the caller might arrange for only one (or a fixed number) of messages
 to be in flight (i.e., waiting for acknowledgement).
 
-#### Events
+#### Push bounded data using events
 
 In FIDL, servers can send clients unsolicited messages called _events_.
 Protocols that use events need to provide particular attention to flow control
@@ -1094,12 +1110,14 @@ protocol NetworkScanner {
 };
 ```
 
+#### Throttle events using acknowledgements
+
 If there is no a priori bound on the number of events, consider having the
 client acknowledge the events by sending a message.  This pattern is a more
-awkward version of the acknowledgement pattern in which the roles of client and
-server are switched.  As in the acknowledgement pattern, the server should
-throttle event production to match the rate at which the client consumes the
-events:
+awkward version of the throttle push using acknowledgements pattern in which the
+roles of client and server are switched.  As in the other pattern, the server
+should throttle event production to match the rate at which the client consumes
+the events:
 
 ```fidl
 protocol View {
@@ -1122,6 +1140,11 @@ protocol View {
     NotifyEventsHandled(uint64 last_seq);
 };
 ```
+
+Unlike throttle push using acknowledgements, this pattern does not express the
+relationship between the request and the response in FIDL syntax and therefore
+it is prone to misuse. Flow control will only work when clients correctly
+implement sending of the notification message.
 
 ### Feed-forward dataflow
 
