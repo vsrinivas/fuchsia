@@ -25,6 +25,7 @@ library("pc") {
     "$zx/kernel/lib/acpi_tables",
     "$zx/kernel/lib/cbuf",
     "$zx/kernel/lib/console",
+    "$zx/kernel/lib/efi",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/fixed_point",
     "$zx/kernel/lib/gfxconsole",

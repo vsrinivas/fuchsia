@@ -20,6 +20,7 @@ source_set("src") {
   ]
   include_dirs = [ "." ]
   deps = [
+    "$zx/kernel/lib/efi",
     "$zx/system/ulib/tftp",
   ]
 }

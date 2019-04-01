@@ -17,4 +17,7 @@ source_set("lib") {
     "strings.c",
     "xefi.c",
   ]
+  deps = [
+    "$zx/kernel/lib/efi",
+  ]
 }
