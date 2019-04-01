@@ -15,7 +15,6 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fsl/vmo/strings.h>
-#include <src/lib/fxl/strings/concatenate.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>
 #include <lib/zx/port.h>
@@ -103,6 +102,35 @@ class CrashpadAgentTest : public ::testing::Test {
     FXL_CHECK(files::ReadDirContents(attachments_dir_, &subdirs));
     RemoveCurrentDirectory(&subdirs);
     return subdirs;
+  }
+
+  // Runs one crash analysis. Useful to test shared logic among all crash
+  // analysis flows.
+  //
+  // |attachment| allows to control the lower bound of the size of the report.
+  //
+  // Today we use the kernel panic flow because it requires fewer arguments to
+  // set up.
+  Analyzer_OnKernelPanicCrashLog_Result RunOneCrashAnalysis(
+      const std::string& attachment) {
+    fuchsia::mem::Buffer crash_log;
+    FXL_CHECK(fsl::VmoFromString(attachment, &crash_log));
+    Analyzer_OnKernelPanicCrashLog_Result out_result;
+    agent_->OnKernelPanicCrashLog(
+        std::move(crash_log),
+        [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
+          out_result = std::move(result);
+        });
+    return out_result;
+  }
+
+  // Runs one crash analysis. Useful to test shared logic among all crash
+  // analysis flows.
+  //
+  // Today we use the kernel panic flow because it requires fewer arguments to
+  // set up.
+  Analyzer_OnKernelPanicCrashLog_Result RunOneCrashAnalysis() {
+    return RunOneCrashAnalysis("irrelevant, just not empty");
   }
 
   std::unique_ptr<CrashpadAgent> agent_;
@@ -243,18 +271,8 @@ TEST_F(CrashpadAgentTest, PruneDatabase_ZeroSize) {
                     /*enable_upload_to_crash_server=*/false,
                     /*crash_server_url=*/nullptr});
 
-  // We generate a crash report, using OnKernelPanicCrashLog() because
-  // there are fewer arguments!
-  fuchsia::mem::Buffer crash_log;
-  ASSERT_TRUE(
-      fsl::VmoFromString("just big enough to be greater than 0", &crash_log));
-  Analyzer_OnKernelPanicCrashLog_Result out_result;
-  agent_->OnKernelPanicCrashLog(
-      std::move(crash_log),
-      [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
-        out_result = std::move(result);
-      });
-  EXPECT_TRUE(out_result.is_response());
+  // We generate a crash report.
+  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
 
   // We check that all the attachments have been cleaned up.
   EXPECT_TRUE(GetAttachmentSubdirs().empty());
@@ -280,18 +298,8 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
              /*enable_upload_to_crash_server=*/false,
              /*crash_server_url=*/nullptr});
 
-  // We generate a crash report, using OnKernelPanicCrashLog() because
-  // we can more easily control the total report size as there are no minidumps
-  // and the crash log is one of the attachments.
-  fuchsia::mem::Buffer crash_log;
-  ASSERT_TRUE(fsl::VmoFromString(large_string, &crash_log));
-  Analyzer_OnKernelPanicCrashLog_Result out_result;
-  agent_->OnKernelPanicCrashLog(
-      std::move(crash_log),
-      [&out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
-        out_result = std::move(result);
-      });
-  EXPECT_TRUE(out_result.is_response());
+  // We generate a first crash report.
+  EXPECT_TRUE(RunOneCrashAnalysis(large_string).is_response());
 
   // We check that only one set of attachments is there.
   const std::vector<std::string> attachment_subdirs = GetAttachmentSubdirs();
@@ -302,15 +310,7 @@ TEST_F(CrashpadAgentTest, PruneDatabase_SizeForOneReport) {
   zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
 
   // We generate a new crash report.
-  fuchsia::mem::Buffer new_crash_log;
-  ASSERT_TRUE(fsl::VmoFromString(large_string, &new_crash_log));
-  Analyzer_OnKernelPanicCrashLog_Result new_out_result;
-  agent_->OnKernelPanicCrashLog(
-      std::move(new_crash_log),
-      [&new_out_result](Analyzer_OnKernelPanicCrashLog_Result result) {
-        new_out_result = std::move(result);
-      });
-  EXPECT_TRUE(new_out_result.is_response());
+  EXPECT_TRUE(RunOneCrashAnalysis(large_string).is_response());
 
   // We check that only one set of attachments is there and that it is a
   // different directory than previously (the directory name is the local crash
