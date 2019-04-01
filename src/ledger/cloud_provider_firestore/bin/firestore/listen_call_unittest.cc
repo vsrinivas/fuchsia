@@ -180,6 +180,42 @@ TEST_F(ListenCallTest, ReadError) {
   EXPECT_EQ(1, on_finished_calls_);
 }
 
+TEST_F(ListenCallTest, ReadAndWriteError) {
+  auto handler = call_->MakeHandler();
+  (*stream_->connect_tag)(true);
+  EXPECT_EQ(1, on_connected_calls_);
+
+  (*stream_->read_tag)(true);
+  EXPECT_EQ(1, on_response_calls_);
+  EXPECT_FALSE(stream_->finish_tag);
+
+  handler->Write(google::firestore::v1beta1::ListenRequest());
+  (*stream_->read_tag)(false);
+  (*stream_->write_tag)(false);
+  EXPECT_TRUE(stream_->finish_tag);
+
+  (*stream_->finish_tag)(true);
+  EXPECT_EQ(1, on_finished_calls_);
+}
+
+TEST_F(ListenCallTest, WriteAndReadError) {
+  auto handler = call_->MakeHandler();
+  (*stream_->connect_tag)(true);
+  EXPECT_EQ(1, on_connected_calls_);
+
+  (*stream_->read_tag)(true);
+  EXPECT_EQ(1, on_response_calls_);
+  EXPECT_FALSE(stream_->finish_tag);
+
+  handler->Write(google::firestore::v1beta1::ListenRequest());
+  (*stream_->write_tag)(false);
+  (*stream_->read_tag)(false);
+  EXPECT_TRUE(stream_->finish_tag);
+
+  (*stream_->finish_tag)(true);
+  EXPECT_EQ(1, on_finished_calls_);
+}
+
 // Verifies that we don't crash when the handler outlives the call object, see
 // LE-584.
 TEST_F(ListenCallTest, DeleteCallObjectBeforeHandler) {
