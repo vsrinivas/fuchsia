@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_SERVICE_H_
+#define FS_SERVICE_H_
 
 #include <fbl/function.h>
 #include <fbl/macros.h>
@@ -42,3 +43,5 @@ private:
 };
 
 } // namespace fs
+
+#endif // FS_SERVICE_H_

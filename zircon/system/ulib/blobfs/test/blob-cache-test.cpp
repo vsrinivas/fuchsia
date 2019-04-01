@@ -384,7 +384,6 @@ bool CachePolicyNeverEvictTest() {
     END_TEST;
 }
 
-
 } // namespace
 } // namespace blobfs
 

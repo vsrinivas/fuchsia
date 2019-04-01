@@ -16,23 +16,22 @@
 #include <fs/trace.h>
 #include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/zircon-internal/debug.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
+#include <lib/zircon-internal/debug.h>
 #include <lib/zx/handle.h>
 #include <zircon/assert.h>
 
-#include <utility>
 #include <memory>
+#include <utility>
 
 #include "debug.h"
 
 #ifdef __Fuchsia__
-static_assert(fuchsia_io_OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE == (
-                  fuchsia_io_OPEN_FLAG_DIRECTORY |
-                  fuchsia_io_OPEN_FLAG_NOT_DIRECTORY |
-                  fuchsia_io_OPEN_FLAG_DESCRIBE |
-                  fuchsia_io_OPEN_FLAG_NODE_REFERENCE),
+static_assert(fuchsia_io_OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE == (fuchsia_io_OPEN_FLAG_DIRECTORY |
+                                                                    fuchsia_io_OPEN_FLAG_NOT_DIRECTORY |
+                                                                    fuchsia_io_OPEN_FLAG_DESCRIBE |
+                                                                    fuchsia_io_OPEN_FLAG_NODE_REFERENCE),
               "OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE value mismatch");
 #endif
 
@@ -107,9 +106,7 @@ void Describe(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
 
     // If a valid response was returned, encode it.
     response->primary.s = r;
-    response->primary.info = reinterpret_cast<fuchsia_io_NodeInfo*>(r == ZX_OK ?
-                                                                    FIDL_ALLOC_PRESENT :
-                                                                    FIDL_ALLOC_ABSENT);
+    response->primary.info = reinterpret_cast<fuchsia_io_NodeInfo*>(r == ZX_OK ? FIDL_ALLOC_PRESENT : FIDL_ALLOC_ABSENT);
 }
 
 // Perform basic flags sanitization and extract |ZX_FS_FLAG_DESCRIBE| bit into bool |out_describe|.
@@ -238,13 +235,13 @@ void OpenAt(Vfs* vfs, fbl::RefPtr<Vnode> parent, zx::channel channel,
 //      zx_status_t Connection::Foo(Args... args);
 //
 // Such that FooOp may be used in the fuchsia_io_* ops table.
-#define ZXFIDL_OPERATION(Method)                                          \
-template <typename... Args>                                               \
-zx_status_t Method ## Op(void* ctx, Args... args) {                       \
-    TRACE_DURATION("vfs", #Method);                                       \
-    auto connection = reinterpret_cast<Connection*>(ctx);                 \
-    return (connection->Connection::Method)(std::forward<Args>(args)...); \
-}
+#define ZXFIDL_OPERATION(Method)                                              \
+    template <typename... Args>                                               \
+    zx_status_t Method##Op(void* ctx, Args... args) {                         \
+        TRACE_DURATION("vfs", #Method);                                       \
+        auto connection = reinterpret_cast<Connection*>(ctx);                 \
+        return (connection->Connection::Method)(std::forward<Args>(args)...); \
+    }
 
 ZXFIDL_OPERATION(NodeClone)
 ZXFIDL_OPERATION(NodeClose)
@@ -302,7 +299,7 @@ ZXFIDL_OPERATION(DirectoryRename)
 ZXFIDL_OPERATION(DirectoryLink)
 ZXFIDL_OPERATION(DirectoryWatch)
 
-const fuchsia_io_Directory_ops kDirectoryOps {
+const fuchsia_io_Directory_ops kDirectoryOps{
     .Clone = NodeCloneOp,
     .Close = NodeCloseOp,
     .Describe = NodeDescribeOp,
@@ -327,7 +324,7 @@ ZXFIDL_OPERATION(DirectoryAdminUnmountNode)
 ZXFIDL_OPERATION(DirectoryAdminQueryFilesystem)
 ZXFIDL_OPERATION(DirectoryAdminGetDevicePath)
 
-const fuchsia_io_DirectoryAdmin_ops kDirectoryAdminOps {
+const fuchsia_io_DirectoryAdmin_ops kDirectoryAdminOps{
     .Clone = NodeCloneOp,
     .Close = NodeCloseOp,
     .Describe = NodeDescribeOp,
@@ -427,7 +424,7 @@ void Connection::HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* 
             status = ZX_ERR_PEER_CLOSED;
         } else if (signal->observed & ZX_CHANNEL_READABLE) {
             // Handle the message.
-            status = ReadMessage(channel_.get(), [this] (fidl_msg_t* msg, FidlConnection* txn) {
+            status = ReadMessage(channel_.get(), [this](fidl_msg_t* msg, FidlConnection* txn) {
                 return HandleMessage(msg, txn->Txn());
             });
             switch (status) {
@@ -466,7 +463,7 @@ void Connection::Terminate(bool call_close) {
 }
 
 void Connection::CallClose() {
-    CloseMessage([this] (fidl_msg_t* msg, FidlConnection* txn) {
+    CloseMessage([this](fidl_msg_t* msg, FidlConnection* txn) {
         return HandleMessage(msg, txn->Txn());
     });
     set_closed();
@@ -476,8 +473,8 @@ zx_status_t Connection::NodeClone(uint32_t flags, zx_handle_t object) {
     FS_PRETTY_TRACE_DEBUG("[NodeClone] our flags: ", ZxFlags(flags_),
                           ", incoming flags: ", ZxFlags(flags));
     zx::channel channel(object);
-    auto write_error = [describe = flags & ZX_FS_FLAG_DESCRIBE] (zx::channel channel,
-                                                                 zx_status_t error) {
+    auto write_error = [describe = flags & ZX_FS_FLAG_DESCRIBE](zx::channel channel,
+                                                                zx_status_t error) {
         if (describe) {
             WriteDescribeError(std::move(channel), error);
         }
@@ -558,8 +555,7 @@ zx_status_t Connection::NodeSync(fidl_txn_t* txn) {
     if (IsVnodeRefOnly(flags_)) {
         return fuchsia_io_NodeSync_reply(txn, ZX_ERR_BAD_HANDLE);
     }
-    Vnode::SyncCallback closure([this, ctxn = FidlConnection::CopyTxn(txn)]
-                                (zx_status_t status) mutable {
+    Vnode::SyncCallback closure([this, ctxn = FidlConnection::CopyTxn(txn)](zx_status_t status) mutable {
         fuchsia_io_NodeSync_reply(ctxn.Txn(), status);
 
         // Try to reset the wait object
@@ -825,8 +821,8 @@ zx_status_t Connection::DirectoryOpen(uint32_t open_flags, uint32_t mode, const 
                           ", path: ", Path(path_data, path_size));
 
     zx::channel channel(object);
-    auto write_error = [describe = open_flags & ZX_FS_FLAG_DESCRIBE] (zx::channel channel,
-                                                                      zx_status_t error) {
+    auto write_error = [describe = open_flags & ZX_FS_FLAG_DESCRIBE](zx::channel channel,
+                                                                     zx_status_t error) {
         if (describe) {
             WriteDescribeError(std::move(channel), error);
         }
@@ -977,7 +973,7 @@ zx_status_t Connection::DirectoryAdminMount(zx_handle_t remote, fidl_txn_t* txn)
     }
     MountChannel c = MountChannel(remote);
     zx_status_t status = vfs_->InstallRemote(vnode_, std::move(c));
-    return fuchsia_io_DirectoryAdminMount_reply(txn, status);;
+    return fuchsia_io_DirectoryAdminMount_reply(txn, status);
 }
 
 zx_status_t Connection::DirectoryAdminMountAndCreate(zx_handle_t remote, const char* name,
@@ -1004,8 +1000,7 @@ zx_status_t Connection::DirectoryAdminUnmount(fidl_txn_t* txn) {
 
     // Unmount is fatal to the requesting connections.
     Vfs::ShutdownCallback closure([ch = std::move(channel_),
-                                   ctxn = FidlConnection::CopyTxn(txn)]
-                                  (zx_status_t status) mutable {
+                                   ctxn = FidlConnection::CopyTxn(txn)](zx_status_t status) mutable {
         fuchsia_io_DirectoryAdminUnmount_reply(ctxn.Txn(), status);
     });
     Vfs* vfs = vfs_;

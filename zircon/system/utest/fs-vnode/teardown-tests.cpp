@@ -4,13 +4,13 @@
 
 #include <fs/managed-vfs.h>
 #include <fs/synchronous-vfs.h>
-#include <fs/vnode.h>
 #include <fs/vfs.h>
+#include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
-#include <lib/async/cpp/task.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/zx/channel.h>
+#include <lib/async/cpp/task.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/channel.h>
 #include <zircon/assert.h>
 
 #include <unittest/unittest.h>
@@ -21,7 +21,8 @@ namespace {
 
 class FdCountVnode : public fs::Vnode {
 public:
-    FdCountVnode() : fd_count_(0) {}
+    FdCountVnode()
+        : fd_count_(0) {}
     virtual ~FdCountVnode() {
         ZX_ASSERT(fd_count_ == 0);
     }
@@ -51,8 +52,8 @@ private:
 
 class AsyncTearDownVnode : public FdCountVnode {
 public:
-    AsyncTearDownVnode(sync_completion_t* completions) :
-        callback_(nullptr), completions_(completions) {}
+    AsyncTearDownVnode(sync_completion_t* completions)
+        : callback_(nullptr), completions_(completions) {}
 
     ~AsyncTearDownVnode() {
         // C) Tear down the Vnode.
@@ -72,7 +73,7 @@ private:
         fs::Vnode::SyncCallback callback;
         {
             fbl::RefPtr<AsyncTearDownVnode> vn =
-                    fbl::WrapRefPtr(reinterpret_cast<AsyncTearDownVnode*>(arg));
+                fbl::WrapRefPtr(reinterpret_cast<AsyncTearDownVnode*>(arg));
             // A) Identify when the sync has started being processed.
             sync_completion_signal(&vn->completions_[0]);
             // B) Wait until the connection has been closed.
@@ -128,7 +129,7 @@ bool sync_start(sync_completion_t* completions, async::Loop* loop,
 bool TestUnpostedTeardown() {
     BEGIN_TEST;
 
-     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     sync_completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -157,7 +158,7 @@ bool TestUnpostedTeardown() {
 bool TestPostedTeardown() {
     BEGIN_TEST;
 
-     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     sync_completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -169,14 +170,15 @@ bool TestPostedTeardown() {
     sync_completion_t* vnode_destroyed = &completions[2];
     sync_completion_t shutdown_done;
     ASSERT_EQ(async::PostTask(loop.dispatcher(), [&]() {
-        vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
-            ZX_ASSERT(status == ZX_OK);
-            // C) Issue an explicit shutdown, check that the Vnode has
-            // already torn down.
-            ZX_ASSERT(sync_completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
-            sync_completion_signal(&shutdown_done);
-        });
-    }), ZX_OK);
+                  vfs->Shutdown([&vnode_destroyed, &shutdown_done](zx_status_t status) {
+                      ZX_ASSERT(status == ZX_OK);
+                      // C) Issue an explicit shutdown, check that the Vnode has
+                      // already torn down.
+                      ZX_ASSERT(sync_completion_wait(vnode_destroyed, ZX_SEC(0)) == ZX_OK);
+                      sync_completion_signal(&shutdown_done);
+                  });
+              }),
+              ZX_OK);
     ASSERT_EQ(sync_completion_wait(&shutdown_done, ZX_SEC(3)), ZX_OK);
     vfs = nullptr;
 
@@ -187,7 +189,7 @@ bool TestPostedTeardown() {
 bool TestTeardownDeleteThis() {
     BEGIN_TEST;
 
-     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     sync_completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -217,7 +219,7 @@ bool TestTeardownDeleteThis() {
 bool TestTeardownSlowAsyncCallback() {
     BEGIN_TEST;
 
-     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     sync_completion_t completions[3];
     fbl::unique_ptr<fs::ManagedVfs> vfs;
 
@@ -251,7 +253,7 @@ bool TestTeardownSlowAsyncCallback() {
 bool TestTeardownSlowClone() {
     BEGIN_TEST;
 
-     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     sync_completion_t completions[3];
     auto vfs = fbl::make_unique<fs::ManagedVfs>(loop.dispatcher());
     ASSERT_EQ(loop.StartThread(), ZX_OK);
@@ -305,7 +307,7 @@ bool TestTeardownSlowClone() {
 
 bool TestSynchronousTeardown() {
     BEGIN_TEST;
-     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
     zx::channel client;
 

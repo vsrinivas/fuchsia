@@ -116,7 +116,9 @@ public:
     static zx_status_t Create(fbl::unique_ptr<DataAssignerTest>* out) {
         fbl::unique_ptr<DataAssignerTest> test(new DataAssignerTest());
         zx_status_t status = DataBlockAssigner::Create(&test->minfs_, &test->assigner_);
-        if (status != ZX_OK) { return status;}
+        if (status != ZX_OK) {
+            return status;
+        }
         *out = std::move(test);
         return ZX_OK;
     }
@@ -174,7 +176,7 @@ public:
         fbl::AutoLock lock(&mutex);
 
         zx_status_t result;
-        SyncCallback callback = [&mutex, &cvar, &result](zx_status_t status){
+        SyncCallback callback = [&mutex, &cvar, &result](zx_status_t status) {
             fbl::AutoLock lock(&mutex);
             cvar.Signal();
             result = status;
@@ -249,8 +251,12 @@ TEST(DataAssignerTest, EnqueueFull) {
 
     auto process_tasks = [](void* arg) {
         DataAssignerTest* test = static_cast<DataAssignerTest*>(arg);
-        if (!test->BlockUntilWaiting()) { return -1; }
-        if (test->Unpause() != ZX_OK) { return -1; }
+        if (!test->BlockUntilWaiting()) {
+            return -1;
+        }
+        if (test->Unpause() != ZX_OK) {
+            return -1;
+        }
         return 0;
     };
 
@@ -278,7 +284,7 @@ TEST(DataAssignerTest, EnqueueCallback) {
     fbl::unique_ptr<DataAssignerTest> test;
     ASSERT_OK(DataAssignerTest::Create(&test));
     zx_status_t result = ZX_ERR_INVALID_ARGS;
-    SyncCallback callback = [&](zx_status_t status){ result = status; };
+    SyncCallback callback = [&](zx_status_t status) { result = status; };
     test->EnqueueCallback(std::move(callback));
     ASSERT_OK(test->Sync());
     ASSERT_OK(result);

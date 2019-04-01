@@ -7,9 +7,9 @@
 #include <fcntl.h>
 #include <fs/service.h>
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <zircon/device/vfs.h>
 
 #include <utility>
@@ -29,7 +29,8 @@ void ServiceProviderBridge::AddBinding(
   bindings_.AddBinding(this, std::move(request));
 }
 
-fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> ServiceProviderBridge::AddBinding() {
+fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
+ServiceProviderBridge::AddBinding() {
   return bindings_.AddBinding(this);
 }
 

@@ -5,9 +5,9 @@
 #include "garnet/bin/appmgr/service_provider_dir_impl.h"
 
 #include <lib/async/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <zircon/status.h>
 
 #include "src/lib/fxl/logging.h"
@@ -98,14 +98,11 @@ void ServiceProviderDirImpl::ConnectToService(std::string service_name,
                                             status);
     }
   } else {
-    FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name,
-                                          status);
+    FXL_LOG(ERROR) << ErrorServingService(component_url_, service_name, status);
   }
 }
 
-bool ServiceProviderDirImpl::IsDirectory() const {
-  return true;
-}
+bool ServiceProviderDirImpl::IsDirectory() const { return true; }
 
 zx_status_t ServiceProviderDirImpl::Getattr(vnattr_t* a) {
   return root_->Getattr(a);

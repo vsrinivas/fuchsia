@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_VNODE_H_
+#define FS_VNODE_H_
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -10,8 +11,8 @@
 #include <sys/types.h>
 
 #include <fbl/function.h>
-#include <fbl/intrusive_single_list.h>
 #include <fbl/intrusive_double_list.h>
+#include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted_internal.h>
 #include <fbl/ref_ptr.h>
@@ -254,8 +255,8 @@ private:
 // particular Vnode.
 class VnodeToken : public fbl::SinglyLinkedListable<std::unique_ptr<VnodeToken>> {
 public:
-    VnodeToken(zx_koid_t koid, fbl::RefPtr<Vnode> vnode) :
-        koid_(koid), vnode_(std::move(vnode)) {
+    VnodeToken(zx_koid_t koid, fbl::RefPtr<Vnode> vnode)
+        : koid_(koid), vnode_(std::move(vnode)) {
     }
 
     zx_koid_t get_koid() const { return koid_; }
@@ -271,3 +272,5 @@ private:
 };
 
 } // namespace fs
+
+#endif // FS_VNODE_H_

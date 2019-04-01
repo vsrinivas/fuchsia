@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef FS_LAZY_DIR_H_
+#define FS_LAZY_DIR_H_
 
 #include "vnode.h"
 #include <fbl/function.h>
@@ -51,3 +52,5 @@ protected:
 };
 
 } // namespace fs
+
+#endif // FS_LAZY_DIR_H_

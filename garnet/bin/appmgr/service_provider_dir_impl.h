@@ -35,9 +35,7 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
   // Sets the parent of this. Parent should be fully initialized.
   void set_parent(fbl::RefPtr<ServiceProviderDirImpl> parent);
 
-  void set_component_url(const std::string& url) {
-    component_url_ = url;
-  }
+  void set_component_url(const std::string& url) { component_url_ = url; }
 
   void AddService(const std::string& service_name,
                   fbl::RefPtr<fs::Service> service);
@@ -60,8 +58,7 @@ class ServiceProviderDirImpl : public fuchsia::sys::ServiceProvider,
   // Overridden from |fuchsia::sys::ServiceProvider|:
   //
 
-  void ConnectToService(std::string service_name,
-                        zx::channel channel) override;
+  void ConnectToService(std::string service_name, zx::channel channel) override;
 
   bool IsDirectory() const final;
 

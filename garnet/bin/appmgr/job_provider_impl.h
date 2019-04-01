@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_APPMGR_JOB_PROVIDER_IMPL_H
-#define GARNET_BIN_APPMGR_JOB_PROVIDER_IMPL_H
+#ifndef GARNET_BIN_APPMGR_JOB_PROVIDER_IMPL_H_
+#define GARNET_BIN_APPMGR_JOB_PROVIDER_IMPL_H_
 
 #include <fs/vnode.h>
 #include <fuchsia/sys/cpp/fidl.h>

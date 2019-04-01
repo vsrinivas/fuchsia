@@ -83,8 +83,7 @@ class ServiceProviderBridge : public fuchsia::sys::ServiceProvider {
   };
 
   // Overridden from |ServiceProvider|:
-  void ConnectToService(std::string service_name,
-                        zx::channel channel) override;
+  void ConnectToService(std::string service_name, zx::channel channel) override;
 
   fs::SynchronousVfs vfs_;
   fidl::BindingSet<ServiceProvider> bindings_;

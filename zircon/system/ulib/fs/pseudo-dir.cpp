@@ -16,8 +16,8 @@ namespace fs {
 PseudoDir::PseudoDir() = default;
 
 PseudoDir::~PseudoDir() {
-  entries_by_name_.clear_unsafe();
-  entries_by_id_.clear();
+    entries_by_name_.clear_unsafe();
+    entries_by_id_.clear();
 }
 
 zx_status_t PseudoDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
@@ -75,7 +75,7 @@ zx_status_t PseudoDir::Readdir(vdircookie_t* cookie, void* data, size_t len, siz
             continue;
         }
         if (df.Next(it->name().ToStringPiece(),
-                         VTYPE_TO_DTYPE(attr.mode), attr.inode) != ZX_OK) {
+                    VTYPE_TO_DTYPE(attr.mode), attr.inode) != ZX_OK) {
             *out_actual = df.BytesFilled();
             return ZX_OK;
         }
