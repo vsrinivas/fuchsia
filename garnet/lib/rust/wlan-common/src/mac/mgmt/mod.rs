@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use zerocopy::{ByteSlice, LayoutVerified};
+use {
+    super::MgmtSubtype,
+    zerocopy::{ByteSlice, LayoutVerified},
+};
 
 mod fields;
 mod reason;
@@ -10,36 +13,29 @@ mod status;
 
 pub use {fields::*, reason::*, status::*};
 
-// IEEE Std 802.11-2016, 9.2.4.1.3
-// Management subtypes:
-pub const MGMT_SUBTYPE_ASSOC_RESP: u16 = 0x01;
-pub const MGMT_SUBTYPE_BEACON: u16 = 0x08;
-pub const MGMT_SUBTYPE_AUTH: u16 = 0x0B;
-pub const MGMT_SUBTYPE_DEAUTH: u16 = 0x0C;
-
-pub enum MgmtSubtype<B> {
+pub enum MgmtBody<B> {
     Beacon { bcn_hdr: LayoutVerified<B, BeaconHdr>, elements: B },
     Authentication { auth_hdr: LayoutVerified<B, AuthHdr>, elements: B },
     AssociationResp { assoc_resp_hdr: LayoutVerified<B, AssocRespHdr>, elements: B },
-    Unsupported { subtype: u16 },
+    Unsupported { subtype: MgmtSubtype },
 }
 
-impl<B: ByteSlice> MgmtSubtype<B> {
-    pub fn parse(subtype: u16, bytes: B) -> Option<MgmtSubtype<B>> {
+impl<B: ByteSlice> MgmtBody<B> {
+    pub fn parse(subtype: MgmtSubtype, bytes: B) -> Option<Self> {
         match subtype {
-            MGMT_SUBTYPE_BEACON => {
+            MgmtSubtype::BEACON => {
                 let (bcn_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-                Some(MgmtSubtype::Beacon { bcn_hdr, elements })
+                Some(MgmtBody::Beacon { bcn_hdr, elements })
             }
-            MGMT_SUBTYPE_AUTH => {
+            MgmtSubtype::AUTH => {
                 let (auth_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-                Some(MgmtSubtype::Authentication { auth_hdr, elements })
+                Some(MgmtBody::Authentication { auth_hdr, elements })
             }
-            MGMT_SUBTYPE_ASSOC_RESP => {
+            MgmtSubtype::ASSOC_RESP => {
                 let (assoc_resp_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-                Some(MgmtSubtype::AssociationResp { assoc_resp_hdr, elements })
+                Some(MgmtBody::AssociationResp { assoc_resp_hdr, elements })
             }
-            subtype => Some(MgmtSubtype::Unsupported { subtype }),
+            subtype => Some(MgmtBody::Unsupported { subtype }),
         }
     }
 }
@@ -63,8 +59,8 @@ mod tests {
             3,3, // capabilities
             0,5,1,2,3,4,5 // SSID IE: "12345"
         ];
-        match MgmtSubtype::parse(MGMT_SUBTYPE_BEACON, &bytes[..]) {
-            Some(MgmtSubtype::Beacon { bcn_hdr, elements }) => {
+        match MgmtBody::parse(MgmtSubtype::BEACON, &bytes[..]) {
+            Some(MgmtBody::Beacon { bcn_hdr, elements }) => {
                 assert_eq!(0x0101010101010101, { bcn_hdr.timestamp });
                 assert_eq!(0x0202, { bcn_hdr.beacon_interval });
                 assert_eq!(0x0303, { bcn_hdr.capabilities.0 });

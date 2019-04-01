@@ -27,8 +27,8 @@ pub fn write_open_auth_frame<B: Appendable>(
     seq_mgr: &mut SequenceManager,
 ) -> Result<(), Error> {
     let frame_ctrl = mac::FrameControl(0)
-        .with_frame_type(mac::FRAME_TYPE_MGMT)
-        .with_frame_subtype(mac::MGMT_SUBTYPE_AUTH);
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::AUTH);
     let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid) as u16);
     mgmt_writer::write_mgmt_hdr(
         buf,
@@ -49,8 +49,8 @@ pub fn write_deauth_frame<B: Appendable>(
     seq_mgr: &mut SequenceManager,
 ) -> Result<(), Error> {
     let frame_ctrl = mac::FrameControl(0)
-        .with_frame_type(mac::FRAME_TYPE_MGMT)
-        .with_frame_subtype(mac::MGMT_SUBTYPE_DEAUTH);
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::DEAUTH);
     let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid) as u16);
     mgmt_writer::write_mgmt_hdr(
         buf,
@@ -70,8 +70,8 @@ pub fn write_keep_alive_resp_frame<B: Appendable>(
     seq_mgr: &mut SequenceManager,
 ) -> Result<(), Error> {
     let frame_ctrl = mac::FrameControl(0)
-        .with_frame_type(mac::FRAME_TYPE_DATA)
-        .with_frame_subtype(mac::DATA_SUBTYPE_NULL_DATA);
+        .with_frame_type(mac::FrameType::DATA)
+        .with_data_subtype(mac::DataSubtype(0).with_null(true));
     let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid) as u16);
 
     data_writer::write_data_hdr(
@@ -82,7 +82,7 @@ pub fn write_keep_alive_resp_frame<B: Appendable>(
     Ok(())
 }
 
-/// Extracts aggregated and non-aggregated MSDUs from the data frame, 
+/// Extracts aggregated and non-aggregated MSDUs from the data frame,
 /// converts those into Ethernet frames and delivers those frames via the given device.
 pub fn handle_data_frame<B: ByteSlice>(device: &device::Device, bytes: B, has_padding: bool) {
     if let Some(msdus) = mac::MsduIterator::from_raw_data_frame(bytes, has_padding) {
@@ -146,8 +146,8 @@ pub fn write_data_frame<B: Appendable>(
     payload: &[u8],
 ) -> Result<(), Error> {
     let frame_ctrl = mac::FrameControl(0)
-        .with_frame_type(mac::FRAME_TYPE_DATA)
-        .with_frame_subtype(if qos_ctrl { mac::DATA_SUBTYPE_QOS_DATA } else { mac::DATA_SUBTYPE_DATA })
+        .with_frame_type(mac::FrameType::DATA)
+        .with_data_subtype(mac::DataSubtype(0).with_qos(qos_ctrl))
         .with_protected(protected)
         .with_to_ds(true);
 
@@ -157,7 +157,7 @@ pub fn write_data_frame<B: Appendable>(
         None => mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&dst) as u16),
         Some(qos_ctrl) => {
             mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns2(&dst, qos_ctrl.tid()) as u16)
-        },
+        }
     };
     data_writer::write_data_hdr(
         buf,

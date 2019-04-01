@@ -81,19 +81,17 @@ impl<B: ByteSlice> MsduIterator<B> {
         match MacFrame::parse(data_frame, body_aligned)? {
             MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
                 let fc = fixed_fields.frame_ctrl;
-                match DataSubtype::parse(fc.frame_subtype(), qos_ctrl.map(|x| x.get()), body)? {
-                    DataSubtype::Data(DataFrameBody::Llc { llc_frame }) => {
-                        Some(MsduIterator::Llc {
-                            dst_addr: data_dst_addr(&fixed_fields),
-                            // Safe to unwrap because data frame parsing has been successful.
-                            src_addr: data_src_addr(&fixed_fields, addr4.map(|a| *a)).unwrap(),
-                            body: Some(llc_frame),
-                        })
-                    }
-                    DataSubtype::Data(DataFrameBody::Amsdu { amsdu }) => {
-                        Some(MsduIterator::Amsdu(BufferReader::new(amsdu)))
-                    }
-                    _ => None,
+                if fc.data_subtype().null() {
+                    None
+                } else if qos_ctrl.map_or(false, |x| x.get().amsdu_present()) {
+                    Some(MsduIterator::Amsdu(BufferReader::new(body)))
+                } else {
+                    Some(MsduIterator::Llc {
+                        dst_addr: data_dst_addr(&fixed_fields),
+                        // Safe to unwrap because data frame parsing has been successful.
+                        src_addr: data_src_addr(&fixed_fields, addr4.map(|a| *a)).unwrap(),
+                        body: Some(body),
+                    })
                 }
             }
             _ => None,
@@ -147,21 +145,15 @@ mod tests {
     fn parse_llc_with_addr4_ht_ctrl() {
         let bytes = make_data_frame_single_llc(Some([1, 2, 3, 4, 5, 6]), Some([4, 3, 2, 1]));
         match MacFrame::parse(&bytes[..], false) {
-            Some(MacFrame::Data { fixed_fields, qos_ctrl, body, .. }) => {
-                let fc = fixed_fields.frame_ctrl;
-                match DataSubtype::parse(fc.frame_subtype(), qos_ctrl.map(|x| x.get()), &body[..]) {
-                    Some(DataSubtype::Data(DataFrameBody::Llc { llc_frame })) => {
-                        let llc = LlcFrame::parse(llc_frame).expect("LLC frame too short");
-                        assert_eq!(7, llc.hdr.dsap);
-                        assert_eq!(7, llc.hdr.ssap);
-                        assert_eq!(7, llc.hdr.control);
-                        assert_eq!([8, 8, 8], llc.hdr.oui);
-                        assert_eq!([9, 10], llc.hdr.protocol_id.0);
-                        assert_eq!(0x090A, llc.hdr.protocol_id.to_native());
-                        assert_eq!(&[11, 11, 11], llc.body);
-                    }
-                    _ => panic!("failed parsing LLC"),
-                }
+            Some(MacFrame::Data { body, .. }) => {
+                let llc = LlcFrame::parse(body).expect("LLC frame too short");
+                assert_eq!(7, llc.hdr.dsap);
+                assert_eq!(7, llc.hdr.ssap);
+                assert_eq!(7, llc.hdr.control);
+                assert_eq!([8, 8, 8], llc.hdr.oui);
+                assert_eq!([9, 10], llc.hdr.protocol_id.0);
+                assert_eq!(0x090A, llc.hdr.protocol_id.to_native());
+                assert_eq!(&[11, 11, 11], llc.body);
             }
             _ => panic!("failed parsing data frame"),
         };

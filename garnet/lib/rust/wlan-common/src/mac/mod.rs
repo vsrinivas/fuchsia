@@ -27,11 +27,6 @@ macro_rules! frame_len {
 type MacAddr = [u8; 6];
 pub const BCAST_ADDR: MacAddr = [0xFF; 6];
 
-// IEEE Std 802.11-2016, 9.2.4.1.3
-// Frame types:
-pub const FRAME_TYPE_MGMT: u16 = 0;
-pub const FRAME_TYPE_DATA: u16 = 2;
-
 pub enum MacFrame<B> {
     Mgmt {
         // Management Header: fixed fields
@@ -52,7 +47,7 @@ pub enum MacFrame<B> {
         body: B,
     },
     Unsupported {
-        type_: u16,
+        type_: FrameType,
     },
 }
 
@@ -62,7 +57,7 @@ impl<B: ByteSlice> MacFrame<B> {
         let mut reader = BufferReader::new(bytes);
         let fc = FrameControl(reader.peek_value()?);
         match fc.frame_type() {
-            FRAME_TYPE_MGMT => {
+            FrameType::MGMT => {
                 // Parse fixed header fields
                 let mgmt_hdr = reader.read()?;
 
@@ -76,18 +71,15 @@ impl<B: ByteSlice> MacFrame<B> {
                 }
                 Some(MacFrame::Mgmt { mgmt_hdr, ht_ctrl, body: reader.into_remaining() })
             }
-            FRAME_TYPE_DATA => {
+            FrameType::DATA => {
                 // Parse fixed header fields
                 let fixed_fields = reader.read()?;
 
                 // Parse optional header fields
                 let addr4 = if fc.to_ds() && fc.from_ds() { Some(reader.read()?) } else { None };
 
-                let qos_ctrl = if fc.frame_subtype() & BITMASK_QOS != 0 {
-                    Some(reader.read_unaligned()?)
-                } else {
-                    None
-                };
+                let qos_ctrl =
+                    if fc.data_subtype().qos() { Some(reader.read_unaligned()?) } else { None };
 
                 let ht_ctrl = if fc.htc_order() { Some(reader.read_unaligned()?) } else { None };
 
@@ -159,7 +151,7 @@ mod tests {
 
         // Unsupported frame type.
         match MacFrame::parse(&[0xFF; 24][..], false) {
-            Some(MacFrame::Unsupported { type_ }) => assert_eq!(3, type_),
+            Some(MacFrame::Unsupported { type_ }) => assert_eq!(3, type_.0),
             _ => panic!("didn't detect unsupported frame"),
         };
     }

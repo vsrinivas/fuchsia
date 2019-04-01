@@ -20,8 +20,8 @@ pub fn mgmt_hdr_client_to_ap(
 }
 
 fn validate_frame_ctrl(fc: FrameControl, ht_ctrl: Option<HtControl>) -> Result<(), String> {
-    if fc.frame_type() != mac::FRAME_TYPE_MGMT {
-        return Err(format!("invalid frame type {}", fc.frame_type()));
+    if fc.frame_type() != mac::FrameType::MGMT {
+        return Err(format!("invalid frame type {}", fc.frame_type().0));
     }
 
     if ht_ctrl.is_some() && !fc.htc_order() {

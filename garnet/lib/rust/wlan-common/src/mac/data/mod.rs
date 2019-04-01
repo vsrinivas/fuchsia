@@ -2,51 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use zerocopy::ByteSlice;
-
 mod amsdu;
 mod fields;
 mod msdu;
 
 pub use {amsdu::*, fields::*, msdu::*};
-
-// IEEE Std 802.11-2016, 9.2.4.1.3
-// Data subtypes:
-pub const DATA_SUBTYPE_DATA: u16 = 0x00;
-pub const DATA_SUBTYPE_NULL_DATA: u16 = 0x04;
-pub const DATA_SUBTYPE_QOS_DATA: u16 = 0x08;
-pub const DATA_SUBTYPE_NULL_QOS_DATA: u16 = 0x0C;
-
-// IEEE Std 802.11-2016, 9.2.4.1.3, Table 9-1
-pub const BITMASK_NULL: u16 = 1 << 2;
-pub const BITMASK_QOS: u16 = 1 << 3;
-
-pub enum DataFrameBody<B> {
-    Llc { llc_frame: B },
-    Amsdu { amsdu: B },
-}
-
-pub enum DataSubtype<B> {
-    // QoS or regular data type.
-    Data(DataFrameBody<B>),
-    Unsupported { subtype: u16 },
-}
-
-impl<B: ByteSlice> DataSubtype<B> {
-    pub fn parse(subtype: u16, qos_ctrl: Option<QosControl>, bytes: B) -> Option<DataSubtype<B>> {
-        Some(match subtype {
-            DATA_SUBTYPE_DATA => DataSubtype::Data(DataFrameBody::Llc { llc_frame: bytes }),
-            DATA_SUBTYPE_QOS_DATA => {
-                if qos_ctrl?.amsdu_present() {
-                    DataSubtype::Data(DataFrameBody::Amsdu { amsdu: bytes })
-                } else {
-                    DataSubtype::Data(DataFrameBody::Llc { llc_frame: bytes })
-                }
-            }
-            subtype => DataSubtype::Unsupported { subtype },
-        })
-    }
-}
 
 #[cfg(test)]
 mod tests {

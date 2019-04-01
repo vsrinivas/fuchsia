@@ -8,11 +8,60 @@ use {
     zerocopy::{AsBytes, FromBytes},
 };
 
+// IEEE Std 802.11-2016, 9.2.4.1.3
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct FrameType(pub u8);
+
+impl FrameType {
+    pub const MGMT: Self = Self(0);
+    pub const CTRL: Self = Self(1);
+    pub const DATA: Self = Self(2);
+    pub const EXT: Self = Self(3);
+}
+
+// IEEE Std 802.11-2016, 9.2.4.1.3
+#[bitfield(
+    0 cf_ack,
+    1 cf_poll,
+    2 null,
+    3 qos,
+    4..=7 _ // subtype is a 4-bit number
+)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct DataSubtype(pub u8);
+
+// IEEE Std 802.11-2016, 9.2.4.1.3
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MgmtSubtype(u8);
+
+impl MgmtSubtype {
+    pub const ASSOC_REQ: Self = Self(0b0000);
+    pub const ASSOC_RESP: Self = Self(0b0001);
+    pub const REASSOC_REQ: Self = Self(0b0010);
+    pub const REASSOC_RESP: Self = Self(0b0011);
+    pub const PROBE_REQ: Self = Self(0b0100);
+    pub const PROBE_RESP: Self = Self(0b0101);
+    pub const TIMING_AD: Self = Self(0b0110);
+    // 0111 reserved
+    pub const BEACON: Self = Self(0b1000);
+    pub const ATIM: Self = Self(0b1001);
+    pub const DISASSOC: Self = Self(0b1010);
+    pub const AUTH: Self = Self(0b1011);
+    pub const DEAUTH: Self = Self(0b1100);
+    pub const ACTION: Self = Self(0b1101);
+    pub const ACTION_NO_ACK: Self = Self(0b1110);
+    // 1111 reserved
+}
+
 // IEEE Std 802.11-2016, 9.2.4.1.1
 #[bitfield(
     0..=1   protocol_version,
-    2..=3   frame_type,
-    4..=7   frame_subtype,
+    2..=3   frame_type as FrameType(u8),
+    4..=7   union {
+                frame_subtype,
+                mgmt_subtype as MgmtSubtype(u8),
+                data_subtype as DataSubtype(u8),
+            },
     8       to_ds,
     9       from_ds,
     10      more_fragments,

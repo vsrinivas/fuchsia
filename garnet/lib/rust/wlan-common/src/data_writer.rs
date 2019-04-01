@@ -32,8 +32,8 @@ pub fn data_hdr_client_to_ap(
 }
 
 fn validate_frame_ctrl(fc: FrameControl, optional: &OptionalDataHdrFields) -> Result<(), String> {
-    if fc.frame_type() != mac::FRAME_TYPE_DATA {
-        return Err(format!("invalid frame type {}", fc.frame_type()));
+    if fc.frame_type() != mac::FrameType::DATA {
+        return Err(format!("invalid frame type {}", fc.frame_type().0));
     }
 
     if optional.addr4.is_some() && !(fc.to_ds() && fc.from_ds()) {
@@ -42,9 +42,9 @@ fn validate_frame_ctrl(fc: FrameControl, optional: &OptionalDataHdrFields) -> Re
         return Err("to_ds and from_ds are both set but addr4 is missing".to_string());
     }
 
-    if optional.qos_ctrl.is_some() && (fc.frame_subtype() & mac::BITMASK_QOS == 0) {
+    if optional.qos_ctrl.is_some() && !fc.data_subtype().qos() {
         return Err("qos_ctrl is present but QoS bit is not set".to_string());
-    } else if optional.qos_ctrl.is_none() && (fc.frame_subtype() & mac::BITMASK_QOS != 0) {
+    } else if optional.qos_ctrl.is_none() && fc.data_subtype().qos() {
         return Err("QoS bit is set but qos_ctrl is missing".to_string());
     }
 
@@ -95,7 +95,7 @@ pub fn write_snap_llc_hdr<B: Appendable>(w: &mut B, protocol_id: u16) -> Result<
 mod tests {
     use {
         super::*,
-        crate::{buffer_writer::BufferWriter, mac::HtControl, mac::QosControl},
+        crate::{buffer_writer::BufferWriter, mac::FrameType, mac::HtControl, mac::QosControl},
     };
 
     #[test]
@@ -123,7 +123,7 @@ mod tests {
         let result = write_data_hdr(
             &mut BufferWriter::new(&mut bytes[..]),
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0).with_frame_type(2),
+                frame_ctrl: FrameControl(0).with_frame_type(FrameType::DATA),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -140,7 +140,7 @@ mod tests {
         let result = write_data_hdr(
             &mut vec![],
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0).with_frame_type(0),
+                frame_ctrl: FrameControl(0).with_frame_type(FrameType::MGMT),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -157,7 +157,7 @@ mod tests {
         let result = write_data_hdr(
             &mut vec![],
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0).with_frame_type(2).with_htc_order(true),
+                frame_ctrl: FrameControl(0).with_frame_type(FrameType::DATA).with_htc_order(true),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -174,7 +174,7 @@ mod tests {
         let result = write_data_hdr(
             &mut vec![],
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0).with_frame_type(2),
+                frame_ctrl: FrameControl(0).with_frame_type(FrameType::DATA),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -191,7 +191,10 @@ mod tests {
         let result = write_data_hdr(
             &mut vec![],
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0).with_frame_type(2).with_to_ds(true).with_from_ds(true),
+                frame_ctrl: FrameControl(0)
+                    .with_frame_type(FrameType::DATA)
+                    .with_to_ds(true)
+                    .with_from_ds(true),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -208,7 +211,7 @@ mod tests {
         let result = write_data_hdr(
             &mut vec![],
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0).with_frame_type(2).with_to_ds(true),
+                frame_ctrl: FrameControl(0).with_frame_type(FrameType::DATA).with_to_ds(true),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -225,7 +228,9 @@ mod tests {
         let result = write_data_hdr(
             &mut vec![],
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0).with_frame_type(2).with_frame_subtype(0x8),
+                frame_ctrl: FrameControl(0)
+                    .with_frame_type(FrameType::DATA)
+                    .with_frame_subtype(0x8),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],
@@ -242,7 +247,7 @@ mod tests {
         let result = write_data_hdr(
             &mut vec![],
             FixedDataHdrFields {
-                frame_ctrl: FrameControl(0).with_frame_type(2),
+                frame_ctrl: FrameControl(0).with_frame_type(FrameType::DATA),
                 duration: 0,
                 addr1: [1; 6],
                 addr2: [2; 6],

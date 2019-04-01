@@ -27,8 +27,8 @@ pub fn make_data_hdr(
     ht_ctrl: Option<[u8; 4]>,
 ) -> Vec<u8> {
     let mut fc = FrameControl(0);
-    fc.set_frame_type(FRAME_TYPE_DATA);
-    fc.set_frame_subtype(DATA_SUBTYPE_QOS_DATA);
+    fc.set_frame_type(FrameType::DATA);
+    fc.set_data_subtype(DataSubtype(0).with_qos(true));
     fc.set_from_ds(addr4.is_some());
     fc.set_to_ds(addr4.is_some());
     fc.set_htc_order(ht_ctrl.is_some());
