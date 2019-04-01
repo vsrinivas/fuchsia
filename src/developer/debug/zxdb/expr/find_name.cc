@@ -40,7 +40,7 @@ const Variable* SearchVariableVector(const std::vector<LazySymbol>& vect,
 
 // Searches the list for a reference to a name and returns the first variable,
 // namespace, or type it finds.
-std::optional<FoundName> GetNameFromDieList(
+FoundName GetNameFromDieList(
     const ModuleSymbols* module_symbols,
     const std::vector<ModuleSymbolIndexNode::DieRef>& dies) {
   for (const ModuleSymbolIndexNode::DieRef& cur : dies) {
@@ -56,7 +56,7 @@ std::optional<FoundName> GetNameFromDieList(
     if (const Type* type = symbol->AsType())
       return FoundName(fxl::RefPtr<Type>(const_cast<Type*>(type)));
   }
-  return std::nullopt;
+  return FoundName();
 }
 
 // Dispatcher for doing a find operation on each module in a process. This
@@ -66,14 +66,14 @@ std::optional<FoundName> GetNameFromDieList(
 //
 // If the symbol context is null, the modules will be iterated in arbitrary
 // order.
-std::optional<FoundName> FindPerModule(
+FoundName FindPerModule(
     const ProcessSymbols* process_symbols,
     const SymbolContext* optional_symbol_context,
-    std::function<std::optional<FoundName>(const ModuleSymbols*)> per_module) {
+    std::function<FoundName(const ModuleSymbols*)> per_module) {
   std::vector<const LoadedModuleSymbols*> modules =
       process_symbols->GetLoadedModuleSymbols();
   if (modules.empty())
-    return std::nullopt;
+    return FoundName();
 
   // When we're given a block to start searching from, always search
   // that module for symbol matches first. If there are duplicates in other
@@ -92,7 +92,7 @@ std::optional<FoundName> FindPerModule(
 
     if (current_module) {
       // Search the current module.
-      if (auto found = per_module(current_module->module_symbols()))
+      if (FoundName found = per_module(current_module->module_symbols()))
         return found;
     }
   }
@@ -100,31 +100,33 @@ std::optional<FoundName> FindPerModule(
   // Search all non-current modules.
   for (const LoadedModuleSymbols* loaded_mod : modules) {
     if (loaded_mod != current_module) {
-      if (auto found = per_module(loaded_mod->module_symbols()))
+      if (FoundName found = per_module(loaded_mod->module_symbols()))
         return found;
     }
   }
-  return std::nullopt;
+  return FoundName();
 }
 
 }  // namespace
 
-std::optional<FoundName> FindName(const ProcessSymbols* process_symbols,
-                                  const CodeBlock* block,
-                                  const SymbolContext* block_symbol_context,
-                                  const Identifier& identifier) {
+FoundName FindName(const ProcessSymbols* optional_process_symbols,
+                   const CodeBlock* block,
+                   const SymbolContext* optional_block_symbol_context,
+                   const Identifier& identifier) {
   if (block && !identifier.InGlobalNamespace()) {
     // Search for local variables and function parameters.
-    if (auto found = FindLocalVariable(block, identifier))
+    if (FoundName found = FindLocalVariable(block, identifier))
       return found;
 
     // Search the "this" object.
-    if (auto found = FindMemberOnThis(block, identifier))
+    if (FoundName found =
+            FindMemberOnThis(optional_process_symbols, block,
+                             optional_block_symbol_context, identifier))
       return found;
   }
 
   // Fall back to searching global vars.
-  if (process_symbols) {
+  if (optional_process_symbols) {
     // Get the scope for the current function. This may fail in which case
     // we'll be left with an empty current scope. This is non-fatal: it just
     // means we won't implicitly search the current namespace and will search
@@ -136,20 +138,20 @@ std::optional<FoundName> FindName(const ProcessSymbols* process_symbols,
         current_scope = func_name.GetScope();
     }
 
-    return FindGlobalName(process_symbols, current_scope, block_symbol_context,
-                          identifier);
+    return FindGlobalName(optional_process_symbols, current_scope,
+                          optional_block_symbol_context, identifier);
   }
-  return std::nullopt;
+  return FoundName();
 }
 
-std::optional<FoundName> FindLocalVariable(const CodeBlock* block,
-                                           const Identifier& identifier) {
+FoundName FindLocalVariable(const CodeBlock* block,
+                            const Identifier& identifier) {
   // TODO(DX-1214) lookup type names defined locally in this function.
 
   // Local variables can only be simple names.
   const std::string* name = identifier.GetSingleComponentName();
   if (!name)
-    return std::nullopt;
+    return FoundName();
 
   // Search backwards in the nested lexical scopes searching for the first
   // variable or function parameter with the given name.
@@ -169,81 +171,87 @@ std::optional<FoundName> FindLocalVariable(const CodeBlock* block,
       break;
     cur_block = cur_block->parent().Get()->AsCodeBlock();
   }
-  return std::nullopt;
+  return FoundName();
 }
 
-std::optional<FoundName> FindMember(const Collection* object,
-                                    const Identifier& identifier,
-                                    const Variable* optional_object_ptr) {
-  // TODO(brettw) allow "BaseClass::foo" syntax for specifically naming a
-  // member of a base class. Watch out: the base class could be qualified (or
-  // not) in various ways: ns::BaseClass::foo, BaseClass::foo, etc.
-  const std::string* ident_name = identifier.GetSingleComponentName();
-  if (!ident_name)
-    return std::nullopt;
-
+FoundName FindMember(const ProcessSymbols* optional_process_symbols,
+                     const SymbolContext* optional_block_symbol_context,
+                     const Collection* object, const Identifier& identifier,
+                     const Variable* optional_object_ptr) {
   // This code will check the object and all base classes.
-  std::optional<FoundName> result;
+  FoundName result;
   VisitClassHierarchy(
       object,
-      [ident_name, optional_object_ptr, &result](
-          const Collection* cur_collection,
-          uint32_t cur_offset) -> VisitResult {
+      [optional_process_symbols, optional_block_symbol_context, identifier,
+       optional_object_ptr, &result](const Collection* cur_collection,
+                                     uint32_t cur_offset) -> VisitResult {
         // Called for each collection in the hierarchy.
 
         // Data lookup.
-        for (const auto& lazy : cur_collection->data_members()) {
-          const DataMember* data = lazy.Get()->AsDataMember();
-          if (data && data->GetAssignedName() == *ident_name) {
-            result.emplace(optional_object_ptr, data,
-                           cur_offset + data->member_location());
-            return VisitResult::kDone;
+        if (const std::string* ident_name =
+                identifier.GetSingleComponentName()) {
+          // TODO(brettw) allow "BaseClass::foo" syntax for specifically naming
+          // a member of a base class. Watch out: the base class could be
+          // qualified (or not) in various ways: ns::BaseClass::foo,
+          // BaseClass::foo, etc.
+          for (const auto& lazy : cur_collection->data_members()) {
+            const DataMember* data = lazy.Get()->AsDataMember();
+            if (data && data->GetAssignedName() == *ident_name) {
+              result = FoundName(optional_object_ptr, data,
+                                 cur_offset + data->member_location());
+              return VisitResult::kDone;
+            }
           }
         }
 
-        // Type lookup.
-        /*
-        TODO(brettw) hook up type names here. This requires piping through
-        the ProcessSymbols so the names can be looked up in the index. It will
-        look something like this:
-
-        auto [err, ident] Identifier::FromString(cur_collection->GetFullName());
-        if (!err.has_error) {
-          ident.Append(identifier);
-          if (auto found_type = FindExactNameInIndex(process_symbols, ident))
-            return found_type;
+        // Type lookup if the caller gave us symbols.
+        if (optional_process_symbols) {
+          auto [err, to_look_up] =
+              Identifier::FromString(cur_collection->GetFullName());
+          if (!err.has_error()) {
+            to_look_up.Append(identifier);
+            if (FoundName found_type = FindExactNameInIndex(
+                    optional_process_symbols, optional_block_symbol_context,
+                    to_look_up)) {
+              result = found_type;
+              return VisitResult::kDone;
+            }
+          }
         }
-        */
 
         return VisitResult::kNotFound;  // Continue search.
       });
   return result;
 }
 
-std::optional<FoundName> FindMemberOnThis(const CodeBlock* block,
-                                          const Identifier& identifier) {
+FoundName FindMemberOnThis(const ProcessSymbols* optional_process_symbols,
+                           const CodeBlock* block,
+                           const SymbolContext* optional_block_symbol_context,
+                           const Identifier& identifier) {
   const Function* function = block->GetContainingFunction();
   if (!function)
-    return std::nullopt;
+    return FoundName();
   const Variable* this_var = function->GetObjectPointerVariable();
   if (!this_var)
-    return std::nullopt;  // No "this" pointer.
+    return FoundName();  // No "this" pointer.
 
   // Pointed-to type for "this".
   const Collection* collection = nullptr;
   if (GetPointedToCollection(this_var->type().Get()->AsType(), &collection)
           .has_error())
-    return std::nullopt;  // Symbols likely corrupt.
+    return FoundName();  // Symbols likely corrupt.
 
-  if (auto member = FindMember(collection, identifier, this_var))
-    return std::move(*member);
-  return std::nullopt;
+  if (FoundName member =
+          FindMember(optional_process_symbols, optional_block_symbol_context,
+                     collection, identifier, this_var))
+    return member;
+  return FoundName();
 }
 
-std::optional<FoundName> FindGlobalName(const ProcessSymbols* process_symbols,
-                                        const Identifier& current_scope,
-                                        const SymbolContext* symbol_context,
-                                        const Identifier& identifier) {
+FoundName FindGlobalName(const ProcessSymbols* process_symbols,
+                         const Identifier& current_scope,
+                         const SymbolContext* symbol_context,
+                         const Identifier& identifier) {
   return FindPerModule(process_symbols, symbol_context,
                        [&current_scope, &identifier](const ModuleSymbols* ms) {
                          return FindGlobalNameInModule(ms, current_scope,
@@ -251,9 +259,9 @@ std::optional<FoundName> FindGlobalName(const ProcessSymbols* process_symbols,
                        });
 }
 
-std::optional<FoundName> FindGlobalNameInModule(
-    const ModuleSymbols* module_symbols, const Identifier& current_scope,
-    const Identifier& identifier) {
+FoundName FindGlobalNameInModule(const ModuleSymbols* module_symbols,
+                                 const Identifier& current_scope,
+                                 const Identifier& identifier) {
   IndexWalker walker(&module_symbols->GetIndex());
   if (!identifier.InGlobalNamespace()) {
     // Unless the input identifier is fully qualified, start the search in the
@@ -275,23 +283,23 @@ std::optional<FoundName> FindGlobalNameInModule(
     // No variable match, move up one level of scope and try again.
   } while (walker.WalkUp());
 
-  return std::nullopt;
+  return FoundName();
 }
 
-std::optional<FoundName> FindExactNameInIndex(
-    const ProcessSymbols* process_symbols, const SymbolContext* symbol_context,
-    const Identifier& identifier) {
+FoundName FindExactNameInIndex(const ProcessSymbols* process_symbols,
+                               const SymbolContext* symbol_context,
+                               const Identifier& identifier) {
   return FindPerModule(process_symbols, symbol_context,
                        [&identifier](const ModuleSymbols* ms) {
                          return FindExactNameInModuleIndex(ms, identifier);
                        });
 }
 
-std::optional<FoundName> FindExactNameInModuleIndex(
-    const ModuleSymbols* module_symbols, const Identifier& identifier) {
+FoundName FindExactNameInModuleIndex(const ModuleSymbols* module_symbols,
+                                     const Identifier& identifier) {
   std::vector<std::string> comps = identifier.GetAsIndexComponents();
   if (comps.empty())
-    return std::nullopt;
+    return FoundName();
 
   // Given input "foo::bar" first look up whether there's a variable,
   // namespace, or type name with that exact match.
@@ -306,7 +314,7 @@ std::optional<FoundName> FindExactNameInModuleIndex(
   if (identifier.components().back().has_template()) {
     // When the input already has an explicit template (e.g. "vector<int>"),
     // there's no sense in doing the prefix search.
-    return std::nullopt;
+    return FoundName();
   }
 
   comps.back().push_back('<');
@@ -318,7 +326,7 @@ std::optional<FoundName> FindExactNameInModuleIndex(
     return FoundName(FoundName::kTemplate);
   }
 
-  return std::nullopt;
+  return FoundName();
 }
 
 }  // namespace zxdb

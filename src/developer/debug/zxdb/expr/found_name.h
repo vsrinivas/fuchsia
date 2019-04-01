@@ -50,7 +50,9 @@ class FoundName {
 
   Kind kind() const { return kind_; }
 
+  // Implicit conversion to bool to test for a found value.
   bool is_found() const { return kind_ != kNone; }
+  operator bool() const { return kind_ != kNone; }
 
   // Use when kind == kVariable and kMemberVariable. The variable may be null
   // for member pointers if the call is just looking up the

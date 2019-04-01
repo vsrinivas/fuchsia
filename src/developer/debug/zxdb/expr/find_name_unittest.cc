@@ -8,13 +8,16 @@
 #include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable_test_support.h"
+#include "src/lib/fxl/logging.h"
 
 // NOTE: Finding variables on *this* and subclasses is
 // SymbolEvalContextTest.FoundThis which tests both of our file's finding code
@@ -24,22 +27,35 @@ namespace zxdb {
 
 namespace {
 
-// Creates a global variable that's inserted into the index and the mock
-// ModuleSymbols.
-struct TestGlobalVariable {
+ModuleSymbolIndexNode::RefType RefTypeForSymbol(
+    const fxl::RefPtr<Symbol>& sym) {
+  if (sym->AsType())
+    return ModuleSymbolIndexNode::RefType::kType;
+  if (sym->AsNamespace())
+    return ModuleSymbolIndexNode::RefType::kNamespace;
+  if (sym->AsFunction())
+    return ModuleSymbolIndexNode::RefType::kFunction;
+  if (sym->AsVariable())
+    return ModuleSymbolIndexNode::RefType::kVariable;
+
+  FXL_NOTREACHED();
+  return ModuleSymbolIndexNode::RefType::kVariable;
+}
+
+// Creates a symbol in the index and the mock module symbols.
+struct TestIndexedSymbol {
   // Index of the next DieRef to generated. This ensures the generated IDs are
   // unique.
   static int next_die_ref;
 
-  TestGlobalVariable(MockModuleSymbols* mod_sym,
-                     ModuleSymbolIndexNode* index_parent,
-                     const std::string& var_name)
-      : die_ref(ModuleSymbolIndexNode::RefType::kVariable, next_die_ref++),
-        index_node(index_parent->AddChild(std::string(var_name))) {
+  TestIndexedSymbol(MockModuleSymbols* mod_sym,
+                    ModuleSymbolIndexNode* index_parent,
+                    const std::string& name, fxl::RefPtr<Symbol> sym)
+      : die_ref(RefTypeForSymbol(sym), next_die_ref++),
+        index_node(index_parent->AddChild(std::string(name))),
+        symbol(std::move(sym)) {
     index_node->AddDie(die_ref);
-    var = MakeVariableForTest(var_name, MakeInt32Type(), 0x100, 0x200,
-                              std::vector<uint8_t>());
-    mod_sym->AddDieRef(die_ref, var);
+    mod_sym->AddDieRef(die_ref, symbol);
   }
 
   // The DieRef links the index and the entry injected into the ModuleSymbols.
@@ -48,11 +64,25 @@ struct TestGlobalVariable {
   // Place where this variable is indexed.
   ModuleSymbolIndexNode* index_node;
 
+  fxl::RefPtr<Symbol> symbol;
+};
+
+int TestIndexedSymbol::next_die_ref = 1;
+
+// Creates a global variable that's inserted into the index and the mock
+// ModuleSymbols.
+struct TestGlobalVariable : public TestIndexedSymbol {
+  TestGlobalVariable(MockModuleSymbols* mod_sym,
+                     ModuleSymbolIndexNode* index_parent,
+                     const std::string& var_name)
+      : TestIndexedSymbol(mod_sym, index_parent, var_name,
+                          MakeVariableForTest(var_name, MakeInt32Type(), 0x100,
+                                              0x200, std::vector<uint8_t>())),
+        var(symbol->AsVariable()) {}
+
   // The variable itself.
   fxl::RefPtr<Variable> var;
 };
-
-int TestGlobalVariable::next_die_ref = 1;
 
 }  // namespace
 
@@ -145,14 +175,15 @@ TEST(FindName, FindLocalVariable) {
   // Find "value" in the nested block should give the block's one.
   Identifier value_ident(
       ExprToken(ExprTokenType::kName, var_value->GetAssignedName(), 0));
-  auto found = FindName(nullptr, block.get(), &symbol_context, value_ident);
+  FoundName found =
+      FindName(nullptr, block.get(), &symbol_context, value_ident);
   EXPECT_TRUE(found);
-  EXPECT_EQ(block_value.get(), found->variable());
+  EXPECT_EQ(block_value.get(), found.variable());
 
   // Find "value" in the function block should give the function's one.
   found = FindName(nullptr, function.get(), &symbol_context, value_ident);
   EXPECT_TRUE(found);
-  EXPECT_EQ(var_value.get(), found->variable());
+  EXPECT_EQ(var_value.get(), found.variable());
 
   // Find "::value" should match nothing.
   Identifier value_global_ident(Identifier::Component(
@@ -168,7 +199,7 @@ TEST(FindName, FindLocalVariable) {
       ExprToken(ExprTokenType::kName, block_other->GetAssignedName(), 0));
   found = FindName(nullptr, block.get(), &symbol_context, block_local_ident);
   EXPECT_TRUE(found);
-  EXPECT_EQ(block_other.get(), found->variable());
+  EXPECT_EQ(block_other.get(), found.variable());
   found = FindName(nullptr, function.get(), &symbol_context, block_local_ident);
   EXPECT_FALSE(found);
 
@@ -177,7 +208,7 @@ TEST(FindName, FindLocalVariable) {
       ExprToken(ExprTokenType::kName, param_other->GetAssignedName(), 0));
   found = FindName(nullptr, block.get(), &symbol_context, other_param_ident);
   EXPECT_TRUE(found);
-  EXPECT_EQ(param_other.get(), found->variable());
+  EXPECT_EQ(param_other.get(), found.variable());
 
   // Look up the variable "ns::ns_value" using the name "ns_value" (no
   // namespace) from within the context of the "ns::function()" function.
@@ -186,7 +217,7 @@ TEST(FindName, FindLocalVariable) {
   found =
       FindName(&setup.process(), block.get(), &symbol_context, ns_value_ident);
   EXPECT_TRUE(found);
-  EXPECT_EQ(ns_value.var.get(), found->variable());
+  EXPECT_EQ(ns_value.var.get(), found.variable());
 
   // Loop up the global "ns_value" var with no global symbol context. This
   // should fail and not crash.
@@ -236,26 +267,26 @@ TEST(FindName, FindGlobalName) {
   auto found = FindGlobalName(&setup.process(), Identifier(), &symbol_context1,
                               global_ident);
   ASSERT_TRUE(found);
-  EXPECT_EQ(global1.var.get(), found->variable());
+  EXPECT_EQ(global1.var.get(), found.variable());
 
   // Searching for "global" in module2's context should give the global in that
   // module.
   found = FindGlobalName(&setup.process(), Identifier(), &symbol_context2,
                          global_ident);
   ASSERT_TRUE(found);
-  EXPECT_EQ(global2.var.get(), found->variable());
+  EXPECT_EQ(global2.var.get(), found.variable());
 
   // Searching for "var1" in module2's context should still find it even though
   // its in the other module.
   found = FindGlobalName(&setup.process(), Identifier(), &symbol_context2,
                          var1_ident);
   ASSERT_TRUE(found);
-  EXPECT_EQ(var1.var.get(), found->variable());
+  EXPECT_EQ(var1.var.get(), found.variable());
 
   // Searching for "var2" with no context should still find it.
   found = FindGlobalName(&setup.process(), Identifier(), nullptr, var2_ident);
   ASSERT_TRUE(found);
-  EXPECT_EQ(var2.var.get(), found->variable());
+  EXPECT_EQ(var2.var.get(), found.variable());
 }
 
 TEST(FindName, FindGlobalNameInModule) {
@@ -272,14 +303,14 @@ TEST(FindName, FindGlobalNameInModule) {
   Identifier var_ident(ExprToken(ExprTokenType::kName, kVarName, 0));
   auto found = FindGlobalNameInModule(&mod_sym, Identifier(), var_ident);
   ASSERT_TRUE(found);
-  EXPECT_EQ(global.var.get(), found->variable());
+  EXPECT_EQ(global.var.get(), found.variable());
 
   // Say we're in some nested namespace and search for the same name. It should
   // find the variable in the upper namespace.
   Identifier nested_ns(ExprToken(ExprTokenType::kName, kNsName, 0));
   found = FindGlobalNameInModule(&mod_sym, nested_ns, var_ident);
   ASSERT_TRUE(found);
-  EXPECT_EQ(global.var.get(), found->variable());
+  EXPECT_EQ(global.var.get(), found.variable());
 
   // Add a variable in the nested namespace with the same name.
   auto ns_node = root.AddChild(kNsName);
@@ -289,7 +320,7 @@ TEST(FindName, FindGlobalNameInModule) {
   // nested one first.
   found = FindGlobalNameInModule(&mod_sym, nested_ns, var_ident);
   ASSERT_TRUE(found);
-  EXPECT_EQ(ns.var.get(), found->variable());
+  EXPECT_EQ(ns.var.get(), found.variable());
 
   // Now do the same search but globally qualify the input "::var" which should
   // match only the toplevel one.
@@ -298,7 +329,85 @@ TEST(FindName, FindGlobalNameInModule) {
                             ExprToken(ExprTokenType::kName, kVarName, 0)));
   found = FindGlobalNameInModule(&mod_sym, nested_ns, var_global_ident);
   ASSERT_TRUE(found);
-  EXPECT_EQ(global.var.get(), found->variable());
+  EXPECT_EQ(global.var.get(), found.variable());
+}
+
+TEST(FindName, FindTypeName) {
+  ProcessSymbolsTestSetup setup;
+  auto mod = std::make_unique<MockModuleSymbols>("mod.so");
+  auto& root = mod->index().root();  // Root of the index for module 1.
+
+  const char kGlobalTypeName[] = "GlobalType";
+  const char kChildTypeName[] = "ChildType";  // "GlobalType::ChildType".
+
+  // Global class name.
+  Identifier global_type_name(
+      ExprToken(ExprTokenType::kName, kGlobalTypeName, 0));
+  auto global_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+  global_type->set_assigned_name(kGlobalTypeName);
+  TestIndexedSymbol global_indexed(mod.get(), &root, kGlobalTypeName,
+                                   global_type);
+
+  // Child type definition inside the global class name. Currently types don't
+  // have child types and everything is found via the index.
+  Identifier child_type_name(
+      ExprToken(ExprTokenType::kName, kChildTypeName, 0));
+  auto [err, full_child_type_name] =
+      Identifier::FromString("GlobalType::ChildType");
+  ASSERT_FALSE(err.has_error());
+  auto child_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+  child_type->set_assigned_name(kChildTypeName);
+  TestIndexedSymbol child_indexed(mod.get(), global_indexed.index_node,
+                                  kChildTypeName, child_type);
+
+  // Declares a variable that points to the GlobalType. It will be the "this"
+  // pointer for the function. The address range of this variable doesn't
+  // overlap the function. This means we can never compute its value, but since
+  // it's syntactically in-scope, we should still be able to use its type
+  // to resolve type names on the current class.
+  auto global_type_ptr = fxl::MakeRefCounted<ModifiedType>(
+      DwarfTag::kPointerType, LazySymbol(global_type));
+  auto this_var = MakeVariableForTest(
+      "this", global_type_ptr, 0x9000, 0x9001,
+      {llvm::dwarf::DW_OP_reg0, llvm::dwarf::DW_OP_stack_value});
+
+  // Function as a member of GlobalType.
+  auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  function->set_assigned_name("function");
+  uint64_t kFunctionBeginAddr = 0x1000;
+  uint64_t kFunctionEndAddr = 0x2000;
+  function->set_code_ranges(
+      AddressRanges(AddressRange(kFunctionBeginAddr, kFunctionEndAddr)));
+  function->set_object_pointer(LazySymbol(this_var));
+
+  // Warning: this moves out the "mod" variable so all variable setup needs to
+  // go before here.
+  constexpr uint64_t kLoadAddress = 0x1000;
+  SymbolContext symbol_context(kLoadAddress);
+  setup.InjectModule("mod", "1234", kLoadAddress, std::move(mod));
+
+  // Look up the global function.
+  FoundName found = FindName(&setup.process(), function.get(), &symbol_context,
+                             global_type_name);
+  EXPECT_TRUE(found);
+  EXPECT_EQ(FoundName::kType, found.kind());
+  EXPECT_EQ(global_type.get(), found.type().get());
+
+  // Look up the child function by full name.
+  found = FindName(&setup.process(), function.get(), &symbol_context,
+                   full_child_type_name);
+  EXPECT_TRUE(found);
+  EXPECT_EQ(FoundName::kType, found.kind());
+  EXPECT_EQ(child_type.get(), found.type().get());
+
+  // Look up the child function by just the child name. Since the function is
+  // a member of GlobalType, ChildType is a member of "this" so it should be
+  // found.
+  found = FindName(&setup.process(), function.get(), &symbol_context,
+                   child_type_name);
+  EXPECT_TRUE(found);
+  EXPECT_EQ(FoundName::kType, found.kind());
+  EXPECT_EQ(child_type.get(), found.type().get());
 }
 
 }  // namespace zxdb

@@ -4,8 +4,6 @@
 
 #include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
@@ -22,6 +20,8 @@
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 namespace {
@@ -74,10 +74,26 @@ SymbolEvalContext::~SymbolEvalContext() = default;
 
 void SymbolEvalContext::GetNamedValue(const Identifier& identifier,
                                       ValueCallback cb) {
-  if (auto found = FindName(process_symbols_.get(), block_.get(),
-                            &symbol_context_, identifier)) {
-    DoResolve(std::move(*found), std::move(cb));
-    return;
+  if (FoundName found = FindName(process_symbols_.get(), block_.get(),
+                                 &symbol_context_, identifier)) {
+    switch (found.kind()) {
+      case FoundName::kVariable:
+      case FoundName::kMemberVariable:
+        DoResolve(std::move(found), std::move(cb));
+        return;
+      case FoundName::kNamespace:
+        cb(Err("Can not evaluate a namespace."), nullptr, ExprValue());
+        return;
+      case FoundName::kTemplate:
+        cb(Err("Can not evaluate a template with no parameters."), nullptr,
+           ExprValue());
+        return;
+      case FoundName::kType:
+        cb(Err("Can not evaluate a type."), nullptr, ExprValue());
+        return;
+      case FoundName::kNone:
+        break;  // Fall through to checking other stuff.
+    }
   }
 
   auto reg = GetRegister(identifier);
@@ -163,8 +179,8 @@ void SymbolEvalContext::DoResolve(FoundName found, ValueCallback cb) const {
 
 FoundName SymbolEvalContext::DoTargetSymbolsNameLookup(
     const Identifier& ident) {
-  // TODO(brettw) hook up actual symbol lookup here.
-  return FoundName();
+  return FindName(process_symbols_.get(), block_.get(), &symbol_context_,
+                  ident);
 }
 
 }  // namespace zxdb

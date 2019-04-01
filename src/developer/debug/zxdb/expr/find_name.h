@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <optional>
 #include <string>
 
 namespace zxdb {
@@ -30,12 +29,13 @@ class Variable;
 // the block is from. This also allows prioritization of symbols from the
 // current process.
 //
-// The process_symbols is used to search for global variables, it can be null
-// in which case only local variables will be searched.
-std::optional<FoundName> FindName(const ProcessSymbols* process_symbols,
-                                  const CodeBlock* block,
-                                  const SymbolContext* block_symbol_context,
-                                  const Identifier& identifier);
+// The optional_process_symbols is used to search for global variables and
+// all type names (including local and |this| member types), it can be null in
+// which case only local variables will be searched.
+FoundName FindName(const ProcessSymbols* optional_process_symbols,
+                   const CodeBlock* block,
+                   const SymbolContext* optional_block_symbol_context,
+                   const Identifier& identifier);
 
 // Type-specific finding -------------------------------------------------------
 
@@ -43,42 +43,59 @@ std::optional<FoundName> FindName(const ProcessSymbols* process_symbols,
 // blocks and function parameters, but does not go into the "this" class or any
 // non-function scopes like the current or global namespace (that's what the
 // later functions do).
-std::optional<FoundName> FindLocalVariable(const CodeBlock* block,
-                                           const Identifier& identifier);
+FoundName FindLocalVariable(const CodeBlock* block,
+                            const Identifier& identifier);
 
 // Searches for the named variable or type on the given collection. This is the
 // lower-level function and assumes a valid object. The result can be either a
 // kType or a kMemberVariable.
 //
+// If the ProcessSymbols is non-null, this function will also search for
+// type names defined in the collection. Otherwise, only data members will be
+// searched.
+//
+// The optional symbol context is the symbol context for the current code. it
+// will be used to prioritize symbol searching to the current module if given.
+//
 // If the result is a member variable, the optional_object_ptr will be used to
 // construct the FoundName object. It can be null if the caller does not have
 // a variable for the object it's looking up (just doing a type query).
-std::optional<FoundName> FindMember(const Collection* object,
-                                    const Identifier& identifier,
-                                    const Variable* optional_object_ptr);
+FoundName FindMember(const ProcessSymbols* optional_process_symbols,
+                     const SymbolContext* optional_block_symbol_context,
+                     const Collection* object, const Identifier& identifier,
+                     const Variable* optional_object_ptr);
 
 // Attempts the resolve the given named member variable or type on the "this"
 // pointer associated with the given code block. Fails if the function has no
 // "this" pointer or the type name / data member isn't found.
-std::optional<FoundName> FindMemberOnThis(const CodeBlock* block,
-                                          const Identifier& identifier);
+//
+// If the ProcessSymbols is non-null, this function will also search for
+// type names defined in the collection. Otherwise, only data members will be
+// searched.
+//
+// The optional symbol context is the symbol context for the current code. it
+// will be used to prioritize symbol searching to the current module if given.
+FoundName FindMemberOnThis(const ProcessSymbols* optional_process_symbols,
+                           const CodeBlock* block,
+                           const SymbolContext* optional_block_symbol_context,
+                           const Identifier& identifier);
 
 // Attempts to resolve the named variable or type in the global namespace and
 // any other namespaces that the given block is in.
 //
 // The symbol_context is used to prioritize the current module. It can be null
 // to search in a non-guaranteed order.
-std::optional<FoundName> FindGlobalName(const ProcessSymbols* process_symbols,
-                                        const Identifier& current_scope,
-                                        const SymbolContext* symbol_context,
-                                        const Identifier& identifier);
+FoundName FindGlobalName(const ProcessSymbols* process_symbols,
+                         const Identifier& current_scope,
+                         const SymbolContext* symbol_context,
+                         const Identifier& identifier);
 
 // Searches a specific index and current namespace for a global variable or
 // type of the given name. The current_scope would be the current namespace +
 // class from where to start the search.
-std::optional<FoundName> FindGlobalNameInModule(
-    const ModuleSymbols* module_symbols, const Identifier& current_scope,
-    const Identifier& identifier);
+FoundName FindGlobalNameInModule(const ModuleSymbols* module_symbols,
+                                 const Identifier& current_scope,
+                                 const Identifier& identifier);
 
 // Searches the index for the exact identifier name. Unlike
 // FindGlobalName[InModule] it doesn't take into account the current scope: the
@@ -90,14 +107,12 @@ std::optional<FoundName> FindGlobalNameInModule(
 //
 // The symbol_context is used to prioritize the current module. It can be null
 // to search in a non-guaranteed order.
-std::optional<FoundName> FindExactNameInIndex(
-    const ProcessSymbols* process_symbols,
-    const SymbolContext* symbol_context,
-    const Identifier& identifier);
+FoundName FindExactNameInIndex(const ProcessSymbols* process_symbols,
+                               const SymbolContext* symbol_context,
+                               const Identifier& identifier);
 
 // Per-module version of FindExactNameInIndex().
-std::optional<FoundName> FindExactNameInModuleIndex(
-    const ModuleSymbols* module_symbols,
-    const Identifier& identifier);
+FoundName FindExactNameInModuleIndex(const ModuleSymbols* module_symbols,
+                                     const Identifier& identifier);
 
 }  // namespace zxdb
