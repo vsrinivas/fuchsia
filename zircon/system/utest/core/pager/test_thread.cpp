@@ -7,7 +7,6 @@
 #include <string.h>
 #include <threads.h>
 #include <zircon/process.h>
-#include <zircon/stack.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/port.h>

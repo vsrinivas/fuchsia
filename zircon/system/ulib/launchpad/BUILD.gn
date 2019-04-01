@@ -11,6 +11,7 @@ library("launchpad") {
     "vmo.c",
   ]
   deps = [
+    "$zx/system/ulib/elf-psabi",
     "$zx/system/ulib/elfload",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/ldmsg",

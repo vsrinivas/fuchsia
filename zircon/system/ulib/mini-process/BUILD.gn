@@ -10,6 +10,7 @@ library("mini-process") {
   ]
   deps = [
     ":subprocess",
+    "$zx/system/ulib/elf-psabi",
     "$zx/system/ulib/elfload",
     "$zx/system/ulib/zircon",
   ]

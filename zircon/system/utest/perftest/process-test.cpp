@@ -3,8 +3,9 @@
 // found in the LICENSE file.
 
 #include <dlfcn.h>
-#include <limits.h>
 #include <launchpad/launchpad.h>
+#include <lib/elf-psabi/sp.h>
+#include <limits.h>
 #include <perftest/perftest.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
@@ -14,19 +15,6 @@ namespace {
 
 constexpr char pname[] = "benchmark-process";
 constexpr char tname[] = "benchmark-thread";
-
-// Computes the stack pointer. Modeled after zircon/stack.h.
-uintptr_t compute_stack_pointer(uintptr_t stack_base, size_t stack_size) {
-    uintptr_t sp = stack_base + stack_size;
-    sp &= -16;
-#ifdef __x86_64__
-    sp -= 8;
-#elif defined(__arm__) || defined(__aarch64__)
-#else
-#error unknown machine
-#endif
-    return sp;
-}
 
 // ProcessFixture is a reusable test fixture for creating a minimal child process.
 //
@@ -121,7 +109,7 @@ void ProcessFixture::Init() {
     uintptr_t stack_base;
     ZX_ASSERT(zx_vmar_map(vmar_handle_, stack_perm, 0, stack_vmo_, 0, stack_size,
                           &stack_base) == ZX_OK);
-    sp_ = compute_stack_pointer(stack_base, stack_size);
+    sp_ = compute_initial_stack_pointer(stack_base, stack_size);
 
     // The child process needs a thread.
     ZX_ASSERT(zx_thread_create(proc_handle_, tname, sizeof(tname), 0, &thread_handle_) == ZX_OK);

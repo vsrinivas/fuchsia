@@ -15,9 +15,9 @@
 #include <string.h>
 
 #include <kernel/cmdline.h>
-#include <vm/vm_object_paged.h>
 #include <lib/console.h>
 #include <lib/counters.h>
+#include <lib/elf-psabi/sp.h>
 #include <lib/vdso.h>
 #include <lk/init.h>
 #include <mexec.h>
@@ -30,6 +30,7 @@
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
+#include <vm/vm_object_paged.h>
 
 #include <zircon/processargs.h>
 #include <zircon/stack.h>

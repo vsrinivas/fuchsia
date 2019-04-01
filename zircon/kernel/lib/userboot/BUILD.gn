@@ -16,6 +16,7 @@ source_set("userboot") {
     "$zx/kernel/lib/counters",
     "$zx/kernel/lib/vdso",
     "$zx/kernel/vm",
+    "$zx/system/ulib/elf-psabi",
   ]
 }
 

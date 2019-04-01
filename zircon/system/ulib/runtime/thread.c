@@ -4,10 +4,10 @@
 
 #include <runtime/thread.h>
 
-#include <zircon/stack.h>
-#include <zircon/syscalls.h>
+#include <lib/elf-psabi/sp.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/syscalls.h>
 
 // An zxr_thread_t starts its life JOINABLE.
 // - If someone calls zxr_thread_join on it, it transitions to JOINED.

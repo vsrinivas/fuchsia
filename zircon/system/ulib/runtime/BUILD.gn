@@ -8,6 +8,7 @@ library("runtime") {
   ]
 
   deps = [
+    "$zx/system/ulib/elf-psabi",
     "$zx/system/ulib/zircon",
   ]
 

@@ -6,15 +6,10 @@
 #include <launchpad/vmo.h>
 #include "elf.h"
 
-#include <zircon/assert.h>
-#include <zircon/dlfcn.h>
-#include <zircon/process.h>
-#include <zircon/processargs.h>
-#include <zircon/stack.h>
-#include <zircon/syscalls.h>
-#include <ldmsg/ldmsg.h>
-#include <lib/fdio/io.h>
 #include <assert.h>
+#include <ldmsg/ldmsg.h>
+#include <lib/elf-psabi/sp.h>
+#include <lib/fdio/io.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -23,6 +18,12 @@
 #include <string.h>
 #include <sys/param.h>
 #include <threads.h>
+#include <zircon/assert.h>
+#include <zircon/dlfcn.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
+#include <zircon/stack.h>
+#include <zircon/syscalls.h>
 
 enum special_handles {
     HND_LDSVC_LOADER,

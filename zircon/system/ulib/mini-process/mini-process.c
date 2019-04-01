@@ -5,13 +5,11 @@
 #include <mini-process/mini-process.h>
 
 #include <dlfcn.h>
-#include <stdint.h>
-
 #include <elfload/elfload.h>
-
+#include <lib/elf-psabi/sp.h>
+#include <stdint.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-#include <zircon/stack.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
