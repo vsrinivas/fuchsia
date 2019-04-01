@@ -55,8 +55,8 @@ pub struct Account {
     /// A device-local identifier for this account.
     id: LocalAccountId,
 
-    /// A directory containing data about the Fuchsia account. It is exclusively created, modified
-    /// and deleted by the Account only. Its parent directory must exist.
+    /// A directory containing data about the Fuchsia account, managed exclusively by one instance
+    /// of this type. It should exist prior to constructing an Account object.
     account_dir: PathBuf,
 
     /// The default persona for this account.
@@ -76,7 +76,7 @@ impl Account {
     fn new(
         account_id: LocalAccountId,
         persona_id: LocalPersonaId,
-        account_dir: &Path,
+        account_dir: PathBuf,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
         let token_db_path = account_dir.join(TOKEN_DB);
@@ -86,7 +86,7 @@ impl Account {
         );
         Ok(Self {
             id: account_id.clone(),
-            account_dir: account_dir.to_owned(),
+            account_dir,
             default_persona: Arc::new(Persona::new(persona_id, account_id, token_manager)),
         })
     }
@@ -94,27 +94,20 @@ impl Account {
     /// Creates a new Fuchsia account and persist it on disk.
     pub fn create(
         account_id: LocalAccountId,
-        account_dir: &Path,
+        account_dir: PathBuf,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
-        fs::create_dir_all(account_dir).map_err(|err| {
-            warn!("Failed to create account dir: {:?}", err);
-            AccountManagerError::new(Status::IoError).with_cause(err)
-        })?;
-        if StoredAccount::path(account_dir).exists() {
+        if StoredAccount::path(&account_dir).exists() {
             info!("Attempting to create account twice with local id: {:?}", account_id);
             return Err(AccountManagerError::new(Status::InvalidRequest));
         }
 
         let local_persona_id = LocalPersonaId::new(rand::random::<u64>());
         let stored_account = StoredAccount::new(local_persona_id.clone());
-        match stored_account.save(account_dir) {
+        match stored_account.save(&account_dir) {
             Ok(_) => Self::new(account_id, local_persona_id, account_dir, context_proxy),
             Err(err) => {
                 warn!("Failed to initialize new Account: {:?}", err);
-                if let Err(err) = fs::remove_dir(account_dir) {
-                    warn!("and failed to remove redundant dir: {:?}", err);
-                }
                 Err(err)
             }
         }
@@ -123,20 +116,24 @@ impl Account {
     /// Loads an existing Fuchsia account from disk.
     pub fn load(
         account_id: LocalAccountId,
-        account_dir: &Path,
+        account_dir: PathBuf,
         context_proxy: AccountHandlerContextProxy,
     ) -> Result<Account, AccountManagerError> {
-        if !account_dir.exists() {
-            return Err(AccountManagerError::new(Status::NotFound));
-        };
-        let stored_account = StoredAccount::load(account_dir)?;
+        let stored_account = StoredAccount::load(&account_dir)?;
         Self::new(account_id, stored_account.default_persona_id, account_dir, context_proxy)
     }
 
     /// Removes the account from disk.
     pub fn remove(&self) -> Result<(), AccountManagerError> {
-        fs::remove_dir_all(&self.account_dir).map_err(|err| {
-            warn!("Failed to delete account dir: {:?}", err);
+        let token_db_path = &self.account_dir.join(TOKEN_DB);
+        if token_db_path.exists() {
+            fs::remove_file(token_db_path).map_err(|err| {
+                warn!("Failed to delete token db: {:?}", err);
+                AccountManagerError::new(Status::IoError).with_cause(err)
+            })?;
+        }
+        fs::remove_file(StoredAccount::path(&self.account_dir)).map_err(|err| {
+            warn!("Failed to delete account doc: {:?}", err);
             AccountManagerError::new(Status::IoError).with_cause(err)
         })
     }
@@ -304,7 +301,7 @@ impl StoredAccount {
         let path = Self::path(account_dir);
         if !path.exists() {
             warn!("Failed to locate account doc: {:?}", path);
-            return Err(AccountManagerError::new(Status::InternalError));
+            return Err(AccountManagerError::new(Status::NotFound));
         };
         let file = File::open(path).map_err(|err| {
             warn!("Failed to read account doc: {:?}", err);
@@ -378,7 +375,7 @@ mod tests {
                 create_endpoints::<AccountHandlerContextMarker>().unwrap();
             Account::create(
                 TEST_ACCOUNT_ID.clone(),
-                &self.location.test_path(),
+                self.location.path.clone(),
                 account_handler_context_client_end.into_proxy().unwrap(),
             )
         }
@@ -388,7 +385,7 @@ mod tests {
                 create_endpoints::<AccountHandlerContextMarker>().unwrap();
             Account::load(
                 TEST_ACCOUNT_ID.clone(),
-                &self.location.test_path(),
+                self.location.path.clone(),
                 account_handler_context_client_end.into_proxy().unwrap(),
             )
         }

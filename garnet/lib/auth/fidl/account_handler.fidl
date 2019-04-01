@@ -24,20 +24,21 @@ protocol AccountHandlerControl {
     //
     // |context| An |AccountHandlerContext| that can supply account and
     //           authentication services and contextual state.
+    // |id| The new account's local identifier.
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    //          |id| The new account's local identifier, if successful
-    CreateAccount(AccountHandlerContext context)
-        -> (fuchsia.auth.account.Status status,
-            fuchsia.auth.account.LocalAccountId? id);
+    CreateAccount(
+        AccountHandlerContext context,
+        fuchsia.auth.account.LocalAccountId id)
+        -> (fuchsia.auth.account.Status status);
 
     // Loads information about a Fuchsia account that was previously provisioned
     // on the current device.
     //
     // |context| An |AccountHandlerContext| that can supply account and
     //           authentication services and contextual state.
-    // |id| The account's local identifier
+    // |id| The account's local identifier.
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
@@ -102,11 +103,4 @@ protocol AccountHandlerContext {
     GetAuthProvider(string auth_provider_type,
                     request<fuchsia.auth.AuthProvider> auth_provider)
         -> (fuchsia.auth.account.Status status);
-
-    // Returns the directory path to use for files concerning account
-    // definitions and credentials. Each account's data is located in a
-    // sub-directory named after the account's local id.
-    //
-    // Returns: |string| Path to the parent of all account directories.
-    GetAccountDirParent() -> (string path);
 };

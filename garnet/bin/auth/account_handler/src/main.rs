@@ -8,7 +8,7 @@
 
 #![deny(warnings)]
 #![deny(missing_docs)]
-#![feature(async_await, await_macro, futures_api)]
+#![feature(async_await, await_macro, futures_api, result_map_or_else)]
 
 mod account;
 mod account_handler;
@@ -31,12 +31,14 @@ use std::sync::Arc;
 
 type TokenManager = token_manager::TokenManager<auth_provider_supplier::AuthProviderSupplier>;
 
+const DATA_DIR: &str = "/data";
+
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting account handler");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let account_handler = Arc::new(AccountHandler::new());
+    let account_handler = Arc::new(AccountHandler::new(DATA_DIR.into()));
 
     let fut = ServicesServer::new()
         .add_service((AccountHandlerControlMarker::NAME, move |chan| {

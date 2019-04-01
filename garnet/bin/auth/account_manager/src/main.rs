@@ -30,9 +30,6 @@ use log::{error, info};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-// Default accounts parent directory, where individual accounts are stored.
-const ACCOUNT_DIR_PARENT: &str = "/data/account";
-
 // Default data directory for the AccountManager.
 const DATA_DIR: &str = "/data";
 
@@ -42,11 +39,10 @@ fn main() -> Result<(), Error> {
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
-    let account_manager = AccountManager::new(ACCOUNT_DIR_PARENT, PathBuf::from(DATA_DIR))
-        .map_err(|e| {
-            error!("Error initializing AccountManager {:?}", e);
-            e
-        })?;
+    let account_manager = AccountManager::new(PathBuf::from(DATA_DIR)).map_err(|e| {
+        error!("Error initializing AccountManager {:?}", e);
+        e
+    })?;
     let account_manager = Arc::new(account_manager);
 
     let fut = ServicesServer::new()

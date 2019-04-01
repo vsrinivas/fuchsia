@@ -11,7 +11,9 @@ use fidl_fuchsia_auth_account_internal::{
     AccountHandlerContextMarker, AccountHandlerContextRequestStream, AccountHandlerControlMarker,
     AccountHandlerControlProxy,
 };
-use fuchsia_app::client::{App, Launcher};
+use fidl_fuchsia_sys::EnvironmentControllerProxy;
+use fuchsia_app::client::App;
+use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
@@ -30,6 +32,12 @@ pub struct AccountHandlerConnection {
     /// read.
     _app: App,
 
+    /// An `EnvController` object for the launched AccountHandler.
+    ///
+    /// Note: This must remain in scope for the component to remain running, but never needs to be
+    /// read.
+    _env_controller: EnvironmentControllerProxy,
+
     /// A `Proxy` connected to the AccountHandlerControl interface on the launched AccountHandler.
     proxy: AccountHandlerControlProxy,
 }
@@ -41,21 +49,31 @@ impl AccountHandlerConnection {
     /// Note: This method is not public. Callers should use one of the factory methods that also
     /// sends an initialization call to the AccountHandler after connection, such as `load_account`
     /// or `create_account`
-    fn new() -> Result<Self, AccountManagerError> {
+    fn new(account_id: LocalAccountId) -> Result<Self, AccountManagerError> {
         info!("Launching new AccountHandler instance");
 
-        let launcher = Launcher::new()
+        // Note: The combination of component URL and environment label determines the location of
+        // the data directory for the launched component. It is critical that the label is unique
+        // and stable per-account, which we achieve through using the local account id as
+        // the environment name.
+        let env_label = account_id.to_canonical_string();
+        let (server, env_controller, app) = ServicesServer::new()
+            .launch_component_in_nested_environment(
+                ACCOUNT_HANDLER_URL.to_string(),
+                None,
+                env_label.as_ref(),
+            )
             .context("Failed to start launcher")
             .account_manager_status(Status::IoError)?;
-        let app = launcher
-            .launch(ACCOUNT_HANDLER_URL.to_string(), None)
-            .context("Failed to launch AccountHandler")
-            .account_manager_status(Status::IoError)?;
+        fasync::spawn(server.unwrap_or_else(|err| {
+            error!("AccountHandlerConnection terminated unexpectedly: {:?}", err);
+        }));
         let proxy = app
             .connect_to_service(AccountHandlerControlMarker)
             .context("Failed to connect to AccountHandlerControl")
-            .account_manager_status(Status::InternalError)?;
-        Ok(AccountHandlerConnection { _app: app, proxy })
+            .account_manager_status(Status::IoError)?;
+
+        Ok(AccountHandlerConnection { _app: app, _env_controller: env_controller, proxy })
     }
 
     /// Creates a new `AccountHandlerContext` channel, spawns a task to handle requests received on
@@ -86,11 +104,12 @@ impl AccountHandlerConnection {
         account_id: &LocalAccountId,
         context: Arc<AccountHandlerContext>,
     ) -> Result<Self, AccountManagerError> {
-        let connection = Self::new()?;
+        let connection = Self::new(account_id.clone())?;
         let context_client_end = Self::spawn_context_channel(context)?;
-        let mut fidl_account_id = account_id.clone().into();
-        match await!(connection.proxy.load_account(context_client_end, &mut fidl_account_id))
-            .account_manager_status(Status::IoError)?
+        match await!(connection
+            .proxy
+            .load_account(context_client_end, account_id.clone().as_mut().into()))
+        .account_manager_status(Status::IoError)?
         {
             Status::Ok => Ok(connection),
             stat => Err(AccountManagerError::new(stat)
@@ -103,23 +122,23 @@ impl AccountHandlerConnection {
     pub async fn create_account(
         context: Arc<AccountHandlerContext>,
     ) -> Result<(Self, LocalAccountId), AccountManagerError> {
-        let connection = Self::new()?;
+        let account_id = LocalAccountId::new(rand::random::<u64>());
+        let connection = Self::new(account_id.clone())?;
         let context_client_end = Self::spawn_context_channel(context)?;
-        let account_id = match await!(connection.proxy().create_account(context_client_end))
-            .account_manager_status(Status::IoError)?
-        {
-            (Status::Ok, Some(account_id)) => LocalAccountId::from(*account_id),
-            (Status::Ok, None) => {
-                return Err(AccountManagerError::new(Status::InternalError)
-                    .with_cause(format_err!("Account handler returned success without ID")));
-            }
-            (stat, _) => {
-                return Err(AccountManagerError::new(stat)
-                    .with_cause(format_err!("Account handler returned error")));
-            }
-        };
 
-        Ok((connection, account_id))
+        match await!(connection
+            .proxy()
+            .create_account(context_client_end, account_id.clone().as_mut().into()))
+        .account_manager_status(Status::IoError)?
+        {
+            Status::Ok => {
+                // TODO(jsankey): Longer term, local ID may need to be related to the global ID
+                // rather than just a random number.
+                Ok((connection, account_id))
+            }
+            status => Err(AccountManagerError::new(status)
+                .with_cause(format_err!("Account handler returned error"))),
+        }
     }
 
     /// Returns the AccountHandlerControlProxy for this connection

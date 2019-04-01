@@ -8,6 +8,7 @@
 use account_common::{LocalAccountId, LocalPersonaId};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::AppConfig;
+use fidl_fuchsia_auth_account::Status;
 use fidl_fuchsia_auth_account_internal::{
     AccountHandlerContextMarker, AccountHandlerContextRequest, AccountHandlerContextRequestStream,
 };
@@ -63,14 +64,12 @@ impl TempLocation {
 /// A fake meant for tests which rely on an AccountHandlerContext, but the context itself
 /// isn't under test. As opposed to the real type, this doesn't depend on any other
 /// components. Panics when getting unexpected messages or args, as defined by the implementation.
-pub struct FakeAccountHandlerContext {
-    account_dir_parent: String,
-}
+pub struct FakeAccountHandlerContext {}
 
 impl FakeAccountHandlerContext {
     /// Creates new fake account handler context
-    pub fn new(account_dir_parent: &str) -> Self {
-        Self { account_dir_parent: account_dir_parent.to_string() }
+    pub fn new() -> Self {
+        Self {}
     }
 
     /// Asynchronously handles the supplied stream of `AccountHandlerContextRequest` messages.
@@ -87,10 +86,9 @@ impl FakeAccountHandlerContext {
     /// Asynchronously handles a single `AccountHandlerContextRequest`.
     async fn handle_request(&self, req: AccountHandlerContextRequest) -> Result<(), fidl::Error> {
         match req {
-            AccountHandlerContextRequest::GetAccountDirParent { responder } => {
-                responder.send(&self.account_dir_parent)
+            AccountHandlerContextRequest::GetAuthProvider { responder, .. } => {
+                responder.send(Status::InternalError)
             }
-            _ => panic!("Not implemented"),
         }
     }
 }
@@ -116,14 +114,15 @@ pub fn spawn_context_channel(
 mod tests {
     use super::*;
 
-    const TEST_DIR: &str = "/some/dir";
-
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_context_fake() {
-        let fake_context = Arc::new(FakeAccountHandlerContext::new(TEST_DIR));
+        let fake_context = Arc::new(FakeAccountHandlerContext::new());
         let client_end = spawn_context_channel(fake_context.clone());
         let proxy = client_end.into_proxy().unwrap();
-        let dir = await!(proxy.get_account_dir_parent()).unwrap();
-        assert_eq!(dir, TEST_DIR);
+        let (_, ap_server_end) = create_endpoints().expect("failed creating channel pair");
+        assert_eq!(
+            await!(proxy.get_auth_provider("dummy_auth_provider", ap_server_end)).unwrap(),
+            Status::InternalError
+        );
     }
 }
