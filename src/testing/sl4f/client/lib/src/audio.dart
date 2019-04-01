@@ -58,10 +58,23 @@ class Audio {
 
   Future<AudioTrack> getOutputAudio() async {
     // The response body is just base64encoded audio
-    String response = await _sl4f.request('audio_facade.GetOutputAudio');
+    final String response = await _sl4f.request('audio_facade.GetOutputAudio');
+    final Uint8List bytes = base64Decode(response);
+    bool silence = true;
+    // There is a 44 byte wave header in the returned data, each sample is 2
+    // bytes
+    for (int i = 44; i < bytes.length; i += 2) {
+      // We test left/right/left/right for each sample, so just do 1 int16 at a
+      // time.
+      final int value = ((bytes[i] << 8) | (bytes[i + 1]));
+      silence = value == 0;
+      if (!silence) {
+        break;
+      }
+    }
     return AudioTrack()
-      ..audioData = base64Decode(response)
-      ..isSilence = response.isEmpty;
+      ..audioData = bytes
+      ..isSilence = silence;
   }
 }
 
