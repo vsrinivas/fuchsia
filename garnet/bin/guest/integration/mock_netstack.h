@@ -63,10 +63,6 @@ class MockNetstack : public fuchsia::netstack::Netstack {
     return bindings_.GetHandler(this);
   }
 
-  // Send a ICMP6 neighbor advertisement packet informing the guest that the
-  // host is available over the network.
-  zx_status_t SendAdvertisement() const;
-
   // Send a packet with UDP headers, including the ethernet and IPv6 headers.
   zx_status_t SendUdpPacket(void* packet, size_t length) const;
 

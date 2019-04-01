@@ -23,8 +23,8 @@ static constexpr char kVirtioNetUtil[] = "virtio_net_test_util";
 static constexpr size_t kMtu = 1500;
 static constexpr size_t kTestPacketSize = 1000;
 
-// Includes ethernet + IPv6 + UDP headers.
-static constexpr size_t kHeadersSize = 62;
+// Includes ethernet + IPv4 + UDP headers.
+static constexpr size_t kHeadersSize = 42;
 
 template <class T>
 T* GuestTest<T>::enclosed_guest_ = nullptr;
@@ -58,16 +58,11 @@ static void TestThread(const MockNetstack& netstack, uint8_t receive_byte,
                        uint8_t send_byte, bool use_raw_packets) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  zx_status_t status;
-  if (!use_raw_packets) {
-    status = netstack.SendAdvertisement();
-    ASSERT_EQ(status, ZX_OK);
-  }
-
   // This thread will loop indefinitely until it receives the correct packet.
   // The test will time out via RunUtil in the test fixture if we fail to
   // receive the correct packet.
   uint8_t pkt[kMtu];
+  zx_status_t status;
   while (true) {
     size_t actual;
     status = netstack.ReceivePacket(static_cast<void*>(pkt), kMtu, &actual);
@@ -117,18 +112,21 @@ TEST_F(VirtioNetZirconGuestTest, ReceiveAndSend) {
 
 using VirtioNetDebianGuestTest = GuestTest<VirtioNetDebianGuest>;
 
-TEST_F(VirtioNetDebianGuestTest, DISABLED_ReceiveAndSend) {
-  std::string result;
-  EXPECT_EQ(this->RunUtil(kVirtioNetUtil, "up", &result), ZX_OK);
-  EXPECT_THAT(result, HasSubstr("PASS"));
-
+TEST_F(VirtioNetDebianGuestTest, ReceiveAndSend) {
   auto handle = std::async(std::launch::async, [this] {
     MockNetstack* netstack = this->GetEnclosedGuest()->GetNetstack();
     TestThread(*netstack, 0xab, 0xba, false /* use_raw_packets */);
   });
 
+  // Configure the guest IPv4 address.
+  EXPECT_EQ(this->Execute("ifconfig enp0s5 192.168.0.10"), ZX_OK);
+
+  // Manually add a route to the host.
+  EXPECT_EQ(this->Execute("arp -s 192.168.0.1 02:1a:11:00:00:00"), ZX_OK);
+
   std::string args =
-      fxl::StringPrintf("xfer %u %u %zu", 0xab, 0xba, kTestPacketSize);
+      fxl::StringPrintf("%u %u %zu", 0xab, 0xba, kTestPacketSize);
+  std::string result;
   EXPECT_EQ(this->RunUtil(kVirtioNetUtil, args, &result), ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
 
