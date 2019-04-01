@@ -3,16 +3,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### `gn gen` the FUCHSIA_BUILD_DIR
+### `gn gen` the Zircon and Fuchsia build directories.
 
-## If FUCHSIA_BUILD_DIR is out/x64, this is simply:
+## Execute a `gn gen` against the Zircon build
+## If successful, execute a `gn gen` against the Fuchsia build.
+##
+## In abstract, if FUCHSIA_BUILD_DIR is out/x64, this is simply:
+##   scripts/build-zircon.sh -g &&\
 ##   gn gen out/x64
 ## It is useful if one has by some mechanism deleted the ninja artifacts, but
 ## not the args.gn, e.g. if one CTRL+C's a regen step (gn bug).
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
-fx-config-read
 
-set -ex
+if ! fx-build-dir-if-present; then
+  fx-error "No build directory found."
+  fx-error "Run \"fx set\" to create a new build directory, or specify one with --dir"
+  exit 1
+fi
 
-"${FUCHSIA_DIR}/buildtools/gn" gen "$FUCHSIA_BUILD_DIR" "$@"
+fx-gen

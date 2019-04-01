@@ -57,7 +57,6 @@ _fx() {
   commands+=("ninja:invoke the ninja command")
 
   _arguments \
-    "--config[config file]:filename:_files" \
     "--dir[build directory]:directory:_files -/" \
     "-d[target device]:device:__fx_nodename" \
     "-i[iterative mode]" \
@@ -69,12 +68,10 @@ _fx() {
     return
   fi
 
-  # get the config file location from --config, $FUCHSIA_CONFIG or ${fuchsia_dir}/.config
-  typeset -l fuchsia_config="${opt_args[--config]:-${FUCHSIA_CONFIG:-${fuchsia_dir}/.config}}"
-  # if a config file is found read the build dir into a local variable
-  typeset -l fuchsia_build_dir=
-  if [[ -e ${fuchsia_config} ]]; then
-    fuchsia_build_dir="$(source ${fuchsia_config};echo ${FUCHSIA_BUILD_DIR})"
+  # get the config file location from --dir or ${fuchsia_dir}/.fx-build-dir
+  typeset -l fuchsia_build_dir="${opt_args[--dir]}"
+  if [[ -z "$fuchsia_build_dir" && -f "${fuchsia_dir}/.fx-build-dir" ]]; then
+    fuchsia_build_dir="$(<"${fuchsia_dir}/.fx-build-dir")"
   fi
 
   # look for a completion function

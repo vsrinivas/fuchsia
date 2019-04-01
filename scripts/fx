@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 function get_build_dir {
-  (source "${vars_sh}" && fx-config-read-if-present && echo "${FUCHSIA_BUILD_DIR}")
+  (fx-build-dir-if-present && echo "${FUCHSIA_BUILD_DIR}")
 }
 
 function commands {
@@ -84,7 +84,7 @@ function help {
 
 function usage {
   cat <<END
-usage: fx [--config CONFIG_FILE | --dir BUILD_DIR] [-d DEVICE_NAME] [-i] [-x] COMMAND [...]
+usage: fx [--dir BUILD_DIR] [-d DEVICE_NAME] [-i] [-x] COMMAND [...]
 
 Run Fuchsia development commands. Must be run with either a current working
 directory that is contained in a Platform Source Tree or the FUCHSIA_DIR
@@ -94,11 +94,6 @@ commands:
 $(help)
 
 optional arguments:
-  --config=CONFIG_FILE  Path to the config file use when running COMMAND.
-                        Defaults to FUCHSIA_CONFIG if set in the
-                        environment and //.config otherwise.  The config
-                        file determines which build directory (and therefore
-                        build configuration) is used by COMMAND.
   --dir=BUILD_DIR       Path to the build directory to use when running COMMAND.
   -d=DEVICE_NAME        Target a specific device. DEVICE_NAME may be a Fuchsia
                         device name. Note: "fx set-device" can be used to set a
@@ -132,7 +127,7 @@ if [[ -z "${fuchsia_dir}" ]]; then
   while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
     fuchsia_dir="$(dirname "${fuchsia_dir}")"
     if [[ "${fuchsia_dir}" == "/" ]]; then
-      echo >& 2 "error: Cannot find Platform Source Tree containing $(pwd)"
+      fx-error "Cannot find Platform Source Tree containing $(pwd)"
       exit 1
     fi
   done
@@ -151,36 +146,32 @@ while [[ $# -ne 0 ]]; do
       continue
       ;;
     --config)
+      fx-warn "DEPRECATION NOTICE: --config is deprecated, use --dir instead."
+      sleep 5
       if [[ $# -lt 2 ]]; then
         usage
-        echo >&2 "ERROR: Missing path to config file for --config argument"
+        fx-error "Missing path to config file for --config argument"
         exit 1
       fi
       shift # Removes --config.
-      export FUCHSIA_CONFIG="$1"
+      export _FX_BUILD_DIR="$(source "$1"; echo "${FUCHSIA_BUILD_DIR}")"
       ;;
     --dir)
       if [[ $# -lt 2 ]]; then
         usage
-        echo >&2 "ERROR: Missing path to build directory for --dir argument"
+        fx-error "Missing path to build directory for --dir argument"
         exit 1
       fi
       shift # Removes --dir.
-      export FUCHSIA_BUILD_DIR="$1"
-      if [[ "$FUCHSIA_BUILD_DIR" == //* ]]; then
-        FUCHSIA_BUILD_DIR="${fuchsia_dir}/${FUCHSIA_BUILD_DIR#//}"
+      export _FX_BUILD_DIR="$1"
+      if [[ "$_FX_BUILD_DIR" == //* ]]; then
+        _FX_BUILD_DIR="${fuchsia_dir}/${_FX_BUILD_DIR#//}"
       fi
-      if [[ ! -d "$FUCHSIA_BUILD_DIR" ]]; then
-        echo >&2 "ERROR: Build directory $FUCHSIA_BUILD_DIR does not exist"
-        exit 1
-      fi
-      # This tells fx-config-read not to use the file.
-      export FUCHSIA_CONFIG=-
       ;;
     -d)
       if [[ $# -lt 2 ]]; then
         usage
-        echo >&2 "ERROR: Missing device name for -d argument"
+        fx-error "Missing device name for -d argument"
         exit 1
       fi
       shift # removes -d
@@ -208,7 +199,7 @@ while [[ $# -ne 0 ]]; do
       ;;
     -*)
       usage
-      echo >& 2 "error: Unknown global argument $1"
+      fx-error "Unknown global argument $1"
       exit 1
       ;;
     *)
@@ -220,7 +211,7 @@ done
 
 if [[ $# -lt 1 ]]; then
   usage
-  echo >& 2 "error: Missing command name"
+  fx-error "Missing command name"
   exit 1
 fi
 
@@ -229,7 +220,7 @@ command_path="$(find_command ${command_name})"
 
 if [[ $? -ne 0 ]]; then
   usage
-  echo >& 2 "error: Unknown command ${command_name}"
+  fx-error "Unknown command ${command_name}"
   exit 1
 fi
 

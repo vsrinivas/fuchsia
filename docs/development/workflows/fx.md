@@ -439,11 +439,11 @@ keep several different devices in several build configurations, and could be
 setup as follows:
 
 ```shell
-$ fx set workstation.x64 --build-dir out/workstation
+$ fx --dir out/workstation set workstation.x64
 $ fx full-build
 $ fx set-device <workstation-node-name>
 
-$ fx set core.arm64 --build-dir out/core
+$ fx --dir out/core set core.arm64
 $ fx full-build
 $ fx set-device <core-node-name>
 

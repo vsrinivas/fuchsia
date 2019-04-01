@@ -6,6 +6,7 @@
 .checkstyle
 .classpath
 .config
+.fx-build-dir
 .cproject
 .DS_Store
 .gdb_history
