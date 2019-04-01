@@ -47,7 +47,14 @@ std::vector<Location> MockModuleSymbols::ResolveInputLocation(
       result.emplace_back(Location::State::kAddress, input_location.address);
       break;
     case InputLocation::Type::kSymbol: {
-      auto found = symbols_.find(input_location.symbol);
+      std::string as_string;
+      for (const auto& cur : input_location.symbol) {
+        if (!as_string.empty())
+          as_string += "::";
+        as_string += cur;
+      }
+
+      auto found = symbols_.find(as_string);
       if (found != symbols_.end())
         result = found->second;
       break;

@@ -20,7 +20,8 @@ TEST(InputLocationParser, Parse) {
   Err err = ParseInputLocation(nullptr, "Foo::Bar", &location);
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(InputLocation::Type::kSymbol, location.type);
-  EXPECT_EQ("Foo::Bar", location.symbol);
+  std::vector<std::string> expected = {"Foo", "Bar"};
+  EXPECT_EQ(expected, location.symbol);
 
   // Valid file/line.
   location = InputLocation();

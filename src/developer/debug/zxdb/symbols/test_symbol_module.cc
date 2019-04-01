@@ -93,4 +93,27 @@ bool TestSymbolModule::LoadSpecific(const std::string& path,
   return true;
 }
 
+// static
+std::vector<std::string> TestSymbolModule::SplitName(std::string_view input) {
+  const std::string separator("::");
+  std::vector<std::string> components;
+
+  size_t input_index = 0;
+  while (input_index < input.size()) {
+    size_t next = input.find(separator, input_index);
+
+    std::string cur_name;
+    if (next == std::string::npos) {
+      cur_name = input.substr(input_index);
+      input_index = input.size();
+    } else {
+      cur_name = input.substr(input_index, next - input_index);
+      input_index = next + separator.size();  // Skip over "::".
+    }
+
+    components.push_back(std::move(cur_name));
+  }
+  return components;
+}
+
 }  // namespace zxdb

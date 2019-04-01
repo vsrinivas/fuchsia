@@ -23,7 +23,10 @@ void InterceptingThreadObserver::OnThreadStopped(
     const std::vector<fxl::WeakPtr<zxdb::Breakpoint>>& hit_breakpoints) {
   for (auto& bp_ptr : hit_breakpoints) {
     zxdb::BreakpointSettings settings = bp_ptr->GetSettings();
-    if (settings.location.symbol == InterceptionWorkflow::kZxChannelWriteName) {
+    if (settings.location.type == zxdb::InputLocation::Type::kSymbol &&
+        settings.location.symbol.size() == 1u &&
+        settings.location.symbol[0] ==
+            InterceptionWorkflow::kZxChannelWriteName) {
       workflow_->OnZxChannelWrite(thread);
     }
   }
@@ -141,7 +144,7 @@ void InterceptionWorkflow::SetBreakpoints(SimpleErrorFunction and_then_each) {
     settings.enabled = true;
     settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
     settings.type = debug_ipc::BreakpointType::kSoftware;
-    settings.location.symbol = kZxChannelWriteName;
+    settings.location.symbol = {kZxChannelWriteName};
     settings.location.type = zxdb::InputLocation::Type::kSymbol;
     settings.scope = zxdb::BreakpointSettings::Scope::kTarget;
     settings.scope_target = target;

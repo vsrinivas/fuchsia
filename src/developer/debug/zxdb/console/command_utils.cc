@@ -23,14 +23,14 @@
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/strings/trim.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/fxl/strings/trim.h"
 
 namespace zxdb {
 
@@ -425,8 +425,16 @@ std::string DescribeInputLocation(const InputLocation& location) {
       return "<no location>";
     case InputLocation::Type::kLine:
       return DescribeFileLine(location.line);
-    case InputLocation::Type::kSymbol:
-      return location.symbol;
+    case InputLocation::Type::kSymbol: {
+      std::string output;
+      // TODO(brettw) need to disambiguate symbols with leading "::".
+      for (const auto& cur : location.symbol) {
+        if (!output.empty())
+          output += "::";
+        output += cur;
+      }
+      return output;
+    }
     case InputLocation::Type::kAddress:
       return fxl::StringPrintf("0x%" PRIx64, location.address);
   }

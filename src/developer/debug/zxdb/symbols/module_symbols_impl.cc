@@ -259,9 +259,11 @@ std::vector<Location> ModuleSymbolsImpl::ResolveLineInputLocation(
 std::vector<Location> ModuleSymbolsImpl::ResolveSymbolInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
-  if (StringEndsWith(input_location.symbol, "@plt")) {
-    auto found = plt_locations_.find(
-        input_location.symbol.substr(0, input_location.symbol.size() - 4));
+  if (input_location.type == InputLocation::Type::kSymbol &&
+      input_location.symbol.size() == 1 &&
+      StringEndsWith(input_location.symbol[0], "@plt")) {
+    auto found = plt_locations_.find(input_location.symbol[0].substr(
+        0, input_location.symbol[0].size() - 4));
 
     if (found == plt_locations_.end()) {
       return {};

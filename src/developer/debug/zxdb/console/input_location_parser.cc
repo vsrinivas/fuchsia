@@ -10,9 +10,10 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -62,28 +63,32 @@ Err ParseInputLocation(const Frame* frame, const std::string& input,
 
   uint64_t line = 0;
   Err err = StringToUint64(input, &line);
-  if (err.has_error()) {
-    // Not a number, assume symbol.
-    location->type = InputLocation::Type::kSymbol;
-    location->symbol = input;
+  if (!err.has_error()) {
+    // A number, assume line number and use the file name from the frame.
+    if (!frame) {
+      return Err(
+          "There is no current frame to get a file name, you'll have to "
+          "specify an explicit frame or file name.");
+    }
+    const Location& frame_location = frame->GetLocation();
+    if (frame_location.file_line().file().empty()) {
+      return Err(
+          "The current frame doesn't have a file name to use, you'll "
+          "have to specify a file.");
+    }
+    location->type = InputLocation::Type::kLine;
+    location->line =
+        FileLine(frame_location.file_line().file(), static_cast<int>(line));
     return Err();
   }
 
-  // Just a number, use the file name from the specified frame.
-  if (!frame) {
-    return Err(
-        "There is no current frame to get a file name, you'll have to "
-        "specify an explicit frame or file name.");
-  }
-  const Location& frame_location = frame->GetLocation();
-  if (frame_location.file_line().file().empty()) {
-    return Err(
-        "The current frame doesn't have a file name to use, you'll "
-        "have to specify a file.");
-  }
-  location->type = InputLocation::Type::kLine;
-  location->line =
-      FileLine(frame_location.file_line().file(), static_cast<int>(line));
+  // Anything else, assume its an identifier.
+  auto [ident_err, ident] = Identifier::FromString(input);
+  if (ident_err.has_error())
+    return ident_err;
+
+  location->type = InputLocation::Type::kSymbol;
+  location->symbol = ident.GetAsIndexComponents();
   return Err();
 }
 

@@ -67,7 +67,7 @@ TEST(ModuleSymbols, Basic) {
 
   // MyFunction() should have one implementation.
   std::vector<Location> addrs = module.ResolveInputLocation(
-      symbol_context, InputLocation(TestSymbolModule::kMyFunctionName));
+      symbol_context, InputLocation({TestSymbolModule::kMyFunctionName}));
   ASSERT_EQ(1u, addrs.size());
 
   // On one occasion Clang generated a symbol file that listed many functions
@@ -234,7 +234,9 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
   // Look up "kGlobal" which should be a variable of type "int" at some
   // nonzero location.
   addrs = module.ResolveInputLocation(
-      symbol_context, InputLocation(TestSymbolModule::kGlobalName), options);
+      symbol_context,
+      InputLocation(TestSymbolModule::SplitName(TestSymbolModule::kGlobalName)),
+      options);
   ASSERT_LE(1u, addrs.size());
   EXPECT_TRUE(addrs[0].symbol());
   const Variable* var = addrs[0].symbol().Get()->AsVariable();
@@ -249,9 +251,10 @@ TEST(ModuleSymbols, ResolveGlobalVariable) {
   EXPECT_EQ(0x2000u, addrs[0].address());
 
   // Look up the class static.
-  addrs = module.ResolveInputLocation(
-      symbol_context, InputLocation(TestSymbolModule::kClassStaticName),
-      options);
+  addrs = module.ResolveInputLocation(symbol_context,
+                                      InputLocation(TestSymbolModule::SplitName(
+                                          TestSymbolModule::kClassStaticName)),
+                                      options);
   ASSERT_LE(1u, addrs.size());
   EXPECT_TRUE(addrs[0].symbol());
   var = addrs[0].symbol().Get()->AsVariable();
@@ -275,7 +278,7 @@ TEST(ModuleSymbols, ResolvePLTEntry) {
 
   auto addrs = module.ResolveInputLocation(
       symbol_context,
-      InputLocation(std::string(TestSymbolModule::kPltFunctionName) + "@plt"),
+      InputLocation({std::string(TestSymbolModule::kPltFunctionName) + "@plt"}),
       ResolveOptions());
 
   ASSERT_EQ(1u, addrs.size());

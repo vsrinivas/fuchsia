@@ -24,7 +24,6 @@ namespace zxdb {
 
 class Err;
 class Frame;
-struct InputLocation;
 class Process;
 class RegisterSet;
 class ThreadController;

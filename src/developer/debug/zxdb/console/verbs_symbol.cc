@@ -10,10 +10,6 @@
 #include <set>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/ascii.h"
-#include "src/lib/fxl/strings/join_strings.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/shared/regex.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -44,6 +40,10 @@
 #include "src/developer/debug/zxdb/symbols/target_symbols.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/ascii.h"
+#include "src/lib/fxl/strings/join_strings.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -225,7 +225,7 @@ Err ParseListLocation(const TargetSymbols* target_symbols,
                    input_location.line.file().c_str());
       case InputLocation::Type::kSymbol:
         return Err("There are no symbols matching \"%s\".",
-                   input_location.symbol.c_str());
+                   DescribeInputLocation(input_location).c_str());
       case InputLocation::Type::kAddress:
       case InputLocation::Type::kNone:
       default:

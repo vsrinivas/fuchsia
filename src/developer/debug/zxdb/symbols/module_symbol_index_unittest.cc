@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
+#include "src/lib/fxl/strings/split_string.h"
 
 namespace zxdb {
 
@@ -29,31 +30,38 @@ TEST(ModuleSymbolIndex, FindExactFunction) {
 #endif
 
   // Standalone function search.
-  auto result = index.FindExact(TestSymbolModule::kMyFunctionName);
+  auto result = index.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kMyFunctionName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Standalone function inside a namespace.
-  result = index.FindExact(TestSymbolModule::kNamespaceFunctionName);
+  result = index.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kNamespaceFunctionName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Namespace + class member function search.
-  result = index.FindExact(TestSymbolModule::kMyMemberOneName);
+  result = index.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kMyMemberOneName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Same but in the 2nd compilation unit (tests unit-relative addressing).
-  result = index.FindExact(TestSymbolModule::kFunctionInTest2Name);
+  result = index.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kFunctionInTest2Name));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Namespace + class + struct with static member function search.
-  result = index.FindExact(TestSymbolModule::kMyMemberTwoName);
+  result = index.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kMyMemberTwoName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Global variable.
-  result = index.FindExact(TestSymbolModule::kGlobalName);
+  result = index.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kGlobalName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 
   // Class static variable.
-  result = index.FindExact(TestSymbolModule::kClassStaticName);
+  result = index.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kClassStaticName));
   EXPECT_EQ(1u, result.size()) << "Symbol not found.";
 }
 
@@ -144,19 +152,22 @@ TEST(ModuleSymbolIndex, FindTypeAndNamespace) {
   index.CreateIndex(module.object_file());
 
   // Should have one namespace.
-  auto result = index.FindExact(TestSymbolModule::kMyNamespaceName);
+  auto result = index.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kMyNamespaceName));
   EXPECT_EQ(1u, result.size()) << "Namespace not found.";
 
   // Outer class name.
-  result = index.FindExact(TestSymbolModule::kMyClassName);
+  result = index.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kMyClassName));
   EXPECT_EQ(1u, result.size()) << "Class not found.";
 
   // Inner class name.
-  result = index.FindExact(TestSymbolModule::kMyInnerClassName);
+  result = index.FindExact(
+      TestSymbolModule::SplitName(TestSymbolModule::kMyInnerClassName));
   EXPECT_EQ(1u, result.size()) << "Class not found.";
 
   // Should also have deifned an "int" type.
-  result = index.FindExact("int");
+  result = index.FindExact({"int"});
   EXPECT_EQ(1u, result.size()) << "int not found.";
 }
 

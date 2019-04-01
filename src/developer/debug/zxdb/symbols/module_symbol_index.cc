@@ -370,37 +370,6 @@ size_t ModuleSymbolIndex::CountSymbolsIndexed() const {
 }
 
 const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
-    const std::string& input) const {
-  // Split the input on "::" which we'll traverse the tree with.
-  //
-  // TODO(brettw) this doesn't handle a lot of things like templates. By
-  // blindly splitting on "::" we'll never find functions like
-  // "std::vector<Foo::Bar>::insert". This version should be deleted and all
-  // callers should use the one that takes a pre-split string.
-  std::string separator("::");
-
-  std::vector<std::string> components;
-
-  size_t input_index = 0;
-  while (input_index < input.size()) {
-    size_t next = input.find(separator, input_index);
-
-    std::string cur_name;
-    if (next == std::string::npos) {
-      cur_name = input.substr(input_index);
-      input_index = input.size();
-    } else {
-      cur_name = input.substr(input_index, next - input_index);
-      input_index = next + separator.size();  // Skip over "::".
-    }
-
-    components.push_back(std::move(cur_name));
-  }
-
-  return FindExact(components);
-}
-
-const std::vector<ModuleSymbolIndexNode::DieRef>& ModuleSymbolIndex::FindExact(
     const std::vector<std::string>& input) const {
   const ModuleSymbolIndexNode* cur = &root_;
 
