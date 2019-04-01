@@ -36,7 +36,7 @@ use {
     crate::common::send_on_open_with_error,
     crate::directory::entry::{DirectoryEntry, EntryInfo},
     crate::file::{
-        connection::FileConnection, PseudoFile, DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
+        connection::FileConnection, DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
         DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES, DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
     },
     failure::Error,
@@ -70,7 +70,7 @@ use {
 /// to read at offset 0, and all of the content returned by the handler is returned by the read
 /// operation.  Subsequent reads act the same - there is no seek position, nor ability to read
 /// content in chunks.
-pub fn read_only<OnRead>(on_read: OnRead) -> impl PseudoFile
+pub fn read_only<OnRead>(on_read: OnRead) -> PseudoFile<OnRead, fn(Vec<u8>) -> Result<(), Status>>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
 {
@@ -79,11 +79,13 @@ where
 
 /// See [`read_only()`].  Wraps the callback, allowing it to return a String instead of a Vec<u8>,
 /// but otherwise behaves identical to #read_only().
-pub fn read_only_str<OnReadStr>(mut on_read: OnReadStr) -> impl PseudoFile
+pub fn read_only_str<OnReadStr>(
+    mut on_read: OnReadStr,
+) -> PseudoFile<impl FnMut() -> Result<Vec<u8>, Status> + Send, fn(Vec<u8>) -> Result<(), Status>>
 where
     OnReadStr: FnMut() -> Result<String, Status> + Send,
 {
-    PseudoFileImpl::<_, fn(Vec<u8>) -> Result<(), Status>>::new(
+    PseudoFile::<_, fn(Vec<u8>) -> Result<(), Status>>::new(
         DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
         Some(move || on_read().map(|content| content.into_bytes())),
         0,
@@ -94,11 +96,14 @@ where
 /// Same as [`read_only()`] but also allows to select custom attributes for the POSIX emulation
 /// layer.  Note that only the MODE_PROTECTION_MASK part of the protection_attributes argument will
 /// be stored.
-pub fn read_only_attr<OnRead>(protection_attributes: u32, on_read: OnRead) -> impl PseudoFile
+pub fn read_only_attr<OnRead>(
+    protection_attributes: u32,
+    on_read: OnRead,
+) -> PseudoFile<OnRead, fn(Vec<u8>) -> Result<(), Status>>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
 {
-    PseudoFileImpl::<_, fn(Vec<u8>) -> Result<(), Status>>::new(
+    PseudoFile::<_, fn(Vec<u8>) -> Result<(), Status>>::new(
         protection_attributes & MODE_PROTECTION_MASK,
         Some(on_read),
         0,
@@ -112,7 +117,10 @@ where
 /// allowed to write at offset 0, and all of the new content should be provided to a single write
 /// operation.  Subsequent writes act the same - there is no seek position, nor ability to write
 /// content in chunks.
-pub fn write_only<OnWrite>(capacity: u64, on_write: OnWrite) -> impl PseudoFile
+pub fn write_only<OnWrite>(
+    capacity: u64,
+    on_write: OnWrite,
+) -> PseudoFile<fn() -> Result<Vec<u8>, Status>, OnWrite>
 where
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
@@ -122,11 +130,14 @@ where
 /// See [`write_only()`].  Only allows valid UTF-8 content to be written into the file.  Written
 /// bytes are converted into a string instance an std::str::from_utf8() call, and the passed to the
 /// handler.
-pub fn write_only_str<OnWriteStr>(capacity: u64, mut on_write: OnWriteStr) -> impl PseudoFile
+pub fn write_only_str<OnWriteStr>(
+    capacity: u64,
+    mut on_write: OnWriteStr,
+) -> PseudoFile<fn() -> Result<Vec<u8>, Status>, impl FnMut(Vec<u8>) -> Result<(), Status> + Send>
 where
     OnWriteStr: FnMut(String) -> Result<(), Status> + Send,
 {
-    PseudoFileImpl::<fn() -> Result<Vec<u8>, Status>, _>::new(
+    PseudoFile::<fn() -> Result<Vec<u8>, Status>, _>::new(
         DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
         None,
         capacity,
@@ -144,11 +155,11 @@ pub fn write_only_attr<OnWrite>(
     protection_attributes: u32,
     capacity: u64,
     on_write: OnWrite,
-) -> impl PseudoFile
+) -> PseudoFile<fn() -> Result<Vec<u8>, Status>, OnWrite>
 where
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
-    PseudoFileImpl::<fn() -> Result<Vec<u8>, Status>, _>::new(
+    PseudoFile::<fn() -> Result<Vec<u8>, Status>, _>::new(
         protection_attributes & MODE_PROTECTION_MASK,
         None,
         capacity,
@@ -171,7 +182,7 @@ pub fn read_write<OnRead, OnWrite>(
     on_read: OnRead,
     capacity: u64,
     on_write: OnWrite,
-) -> impl PseudoFile
+) -> PseudoFile<OnRead, OnWrite>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
@@ -188,12 +199,15 @@ pub fn read_write_str<OnReadStr, OnWriteStr>(
     mut on_read: OnReadStr,
     capacity: u64,
     mut on_write: OnWriteStr,
-) -> impl PseudoFile
+) -> PseudoFile<
+    impl FnMut() -> Result<Vec<u8>, Status> + Send,
+    impl FnMut(Vec<u8>) -> Result<(), Status> + Send,
+>
 where
     OnReadStr: FnMut() -> Result<String, Status> + Send,
     OnWriteStr: FnMut(String) -> Result<(), Status> + Send,
 {
-    PseudoFileImpl::new(
+    PseudoFile::new(
         DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
         Some(move || on_read().map(|content| content.into_bytes())),
         capacity,
@@ -212,12 +226,12 @@ pub fn read_write_attr<OnRead, OnWrite>(
     on_read: OnRead,
     capacity: u64,
     on_write: OnWrite,
-) -> impl PseudoFile
+) -> PseudoFile<OnRead, OnWrite>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
-    PseudoFileImpl::new(
+    PseudoFile::new(
         protection_attributes & MODE_PROTECTION_MASK,
         Some(on_read),
         capacity,
@@ -225,7 +239,13 @@ where
     )
 }
 
-struct PseudoFileImpl<OnRead, OnWrite>
+/// An implementation of a pseudo file, as described by the module level documentation - [`file`].
+// TODO I think we should split this into 3 different implementations: read_only, write_only and
+// read_write.  We can avoid code duplication by composing all 3 out of a common base with
+// additional functionality specific to each one.  The upside of having 3 different types would be
+// better return types for the `read_only`, `write_only` and `read_write`, constructors.  And we
+// would be able to remove some of the conditional logic related to `Option`.
+pub struct PseudoFile<OnRead, OnWrite>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
@@ -254,13 +274,13 @@ where
     connections: FuturesUnordered<StreamFuture<FileConnection>>,
 }
 
-/// Return type for PseudoFileImpl::handle_request().
+/// Return type for PseudoFile::handle_request().
 enum ConnectionState {
     Alive,
     Closed,
 }
 
-impl<OnRead, OnWrite> PseudoFileImpl<OnRead, OnWrite>
+impl<OnRead, OnWrite> PseudoFile<OnRead, OnWrite>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
@@ -271,7 +291,7 @@ where
         capacity: u64,
         on_write: Option<OnWrite>,
     ) -> Self {
-        PseudoFileImpl {
+        PseudoFile {
             protection_attributes,
             on_read,
             capacity,
@@ -337,7 +357,7 @@ where
             FileRequest::SetAttr { flags: _, attributes: _, responder } => {
                 // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
                 // modified through this call is OPEN_FLAG_APPEND, and it is not supported by the
-                // PseudoFileImpl.
+                // PseudoFile.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             FileRequest::Ioctl { opcode: _, max_out: _, handles: _, in_: _, responder } => {
@@ -608,7 +628,7 @@ where
     }
 }
 
-impl<OnRead, OnWrite> DirectoryEntry for PseudoFileImpl<OnRead, OnWrite>
+impl<OnRead, OnWrite> DirectoryEntry for PseudoFile<OnRead, OnWrite>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
@@ -633,21 +653,14 @@ where
     }
 }
 
-impl<OnRead, OnWrite> PseudoFile for PseudoFileImpl<OnRead, OnWrite>
+impl<OnRead, OnWrite> Unpin for PseudoFile<OnRead, OnWrite>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
 {
 }
 
-impl<OnRead, OnWrite> Unpin for PseudoFileImpl<OnRead, OnWrite>
-where
-    OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
-    OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
-{
-}
-
-impl<OnRead, OnWrite> FusedFuture for PseudoFileImpl<OnRead, OnWrite>
+impl<OnRead, OnWrite> FusedFuture for PseudoFile<OnRead, OnWrite>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
@@ -661,7 +674,7 @@ where
     }
 }
 
-impl<OnRead, OnWrite> Future for PseudoFileImpl<OnRead, OnWrite>
+impl<OnRead, OnWrite> Future for PseudoFile<OnRead, OnWrite>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status> + Send,
@@ -716,7 +729,7 @@ mod tests {
 
     fn run_server_client<GetClientRes>(
         flags: u32,
-        server: impl PseudoFile,
+        server: impl DirectoryEntry,
         get_client: impl FnOnce(FileProxy) -> GetClientRes,
     ) where
         GetClientRes: Future<Output = ()>,
@@ -727,7 +740,7 @@ mod tests {
     fn run_server_client_with_mode<GetClientRes>(
         flags: u32,
         mode: u32,
-        mut server: impl PseudoFile,
+        mut server: impl DirectoryEntry,
         get_client: impl FnOnce(FileProxy) -> GetClientRes,
     ) where
         GetClientRes: Future<Output = ()>,
@@ -758,7 +771,7 @@ mod tests {
 
     fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
         mut exec: fasync::Executor,
-        mut server: impl PseudoFile,
+        mut server: impl DirectoryEntry,
         get_client: impl FnOnce(mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>) -> GetClientRes,
         executor: impl FnOnce(&mut FnMut() -> Poll<((), ())>),
     ) where
@@ -796,7 +809,7 @@ mod tests {
     }
 
     fn run_server_client_with_open_requests_channel<GetClientRes>(
-        server: impl PseudoFile,
+        server: impl DirectoryEntry,
         get_client: impl FnOnce(mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>) -> GetClientRes,
     ) where
         GetClientRes: Future<Output = ()>,
@@ -1078,7 +1091,7 @@ mod tests {
     #[test]
     /// When the read handler returns a value that is larger then the specified capacity of the
     /// file, write handler will receive it as is, uncut.  This behaviour is specified in the
-    /// description of [`PseudoFileImpl::capacity`].
+    /// description of [`PseudoFile::capacity`].
     fn read_returns_more_than_capacity() {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
