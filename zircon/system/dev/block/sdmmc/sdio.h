@@ -7,6 +7,7 @@
 #include <ddk/protocol/sdio.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/sdio.h>
+#include <ddktl/protocol/sdmmc.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/compiler.h>
 
@@ -46,20 +47,20 @@ private:
     };
 
     Sdio(zx_device_t* parent, struct sdmmc_device* sdmmc_dev)
-        : DeviceType(parent), sdmmc_dev_(sdmmc_dev) {}
+        : DeviceType(parent), sdmmc_dev_(sdmmc_dev), sdmmc_client_(&sdmmc_dev->host) {}
 
     zx_status_t SdioReset();
     // Reads the card common control registers (CCCR) to enumerate the card's capabilities.
     zx_status_t ProcessCccr();
     // Reads the card information structure (CIS) for the given function to get the manufacturer
     // identification and function extensions tuples.
-    zx_status_t ProcessCis(uint32_t fn_idx);
+    zx_status_t ProcessCis(uint8_t fn_idx);
     // Parses a tuple read from the CIS.
-    zx_status_t ParseFnTuple(uint32_t fn_idx, SdioFuncTuple* tup);
+    zx_status_t ParseFnTuple(uint8_t fn_idx, const SdioFuncTuple& tup);
     // Parses the manufacturer ID tuple and saves it in the given function's struct.
-    zx_status_t ParseMfidTuple(uint32_t fn_idx, SdioFuncTuple* tup);
+    zx_status_t ParseMfidTuple(uint8_t fn_idx, const SdioFuncTuple& tup);
     // Parses the function extensions tuple and saves it in the given function's struct.
-    zx_status_t ParseFuncExtTuple(uint32_t fn_idx, SdioFuncTuple* tup);
+    zx_status_t ParseFuncExtTuple(uint8_t fn_idx, const SdioFuncTuple& tup);
     // Reads the I/O function code and saves it in the given function's struct.
     zx_status_t ProcessFbr(uint8_t fn_idx);
     // Popluates the given function's struct by calling the methods above. Also enables the
@@ -76,6 +77,7 @@ private:
     zx_status_t WriteData16(uint8_t fn_idx, uint32_t addr, uint16_t word);
 
     sdmmc_device* sdmmc_dev_;
+    const ddk::SdmmcProtocolClient sdmmc_client_;
 };
 
 }  // namespace sdmmc

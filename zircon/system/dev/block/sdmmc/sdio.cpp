@@ -14,7 +14,9 @@
 #include <ddk/device.h>
 #include <ddk/protocol/sdio.h>
 #include <ddk/protocol/sdmmc.h>
+
 #include <fbl/algorithm.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <hw/sdio.h>
 #include <zircon/process.h>
 #include <zircon/threads.h>
@@ -25,7 +27,7 @@ namespace {
 
 constexpr uint32_t kBcmManufacturerId = 0x02d0;
 
-uint32_t SdioReadTupleBody(uint8_t* tuple_body, size_t start, size_t numbytes) {
+uint32_t SdioReadTupleBody(const uint8_t* tuple_body, size_t start, size_t numbytes) {
     uint32_t res = 0;
 
     for (size_t i = start; i < (start + numbytes); i++) {
@@ -159,10 +161,10 @@ zx_status_t Sdio::SdioProbe() {
 }
 
 zx_status_t Sdio::SdioGetDevHwInfo(sdio_hw_info_t* out_hw_info) {
-    sdio_device_t* sdio_dev = &sdmmc_dev_->sdio_dev;
-    memcpy(&out_hw_info->dev_hw_info, &sdio_dev->hw_info, sizeof(sdio_device_hw_info_t));
-    for (size_t i = 0; i < sdio_dev->hw_info.num_funcs; i++) {
-        memcpy(&out_hw_info->funcs_hw_info[i], &sdio_dev->funcs[i].hw_info,
+    const sdio_device_t& sdio_dev = sdmmc_dev_->sdio_dev;
+    memcpy(&out_hw_info->dev_hw_info, &sdio_dev.hw_info, sizeof(sdio_device_hw_info_t));
+    for (size_t i = 0; i < sdio_dev.hw_info.num_funcs; i++) {
+        memcpy(&out_hw_info->funcs_hw_info[i], &sdio_dev.funcs[i].hw_info,
                sizeof(sdio_func_hw_info_t));
     }
     out_hw_info->host_max_transfer_size =
@@ -389,11 +391,12 @@ zx_status_t Sdio::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn) {
     uint8_t* buf = use_dma ? nullptr : reinterpret_cast<uint8_t*>(txn->virt_buffer);
     zx_handle_t dma_vmo = use_dma ? txn->dma_vmo : ZX_HANDLE_INVALID;
     uint64_t buf_offset = txn->buf_offset;
+    fzl::VmoMapper mapper;
 
     if (txn->use_dma && !dma_supported) {
         // host does not support dma
-        st = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, txn->dma_vmo,
-                         txn->buf_offset, data_size, reinterpret_cast<uintptr_t*>(&buf));
+        st = mapper.Map(*zx::unowned_vmo(txn->dma_vmo), txn->buf_offset, data_size,
+                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
         if (st != ZX_OK) {
             zxlogf(TRACE, "sdio_rw_data: vmo map error %d\n", st);
             return ZX_ERR_IO;
@@ -439,10 +442,6 @@ zx_status_t Sdio::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn) {
                                  buf_offset + data_processed);
     }
 
-    if (txn->use_dma && !dma_supported) {
-        zx_vmar_unmap(zx_vmar_root_self(), reinterpret_cast<zx_vaddr_t>(buf), data_size);
-    }
-
     return st;
 }
 
@@ -457,7 +456,7 @@ zx_status_t Sdio::SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_
 }
 
 zx_status_t Sdio::SdioGetInBandIntr(zx::interrupt* out_irq) {
-    return sdmmc_get_in_band_interrupt(&sdmmc_dev_->host, out_irq->reset_and_get_address());
+    return sdmmc_client_.GetInBandInterrupt(out_irq);
 }
 
 zx_status_t Sdio::SdioReset() {
@@ -556,7 +555,7 @@ zx_status_t Sdio::ProcessCccr() {
     return status;
 }
 
-zx_status_t Sdio::ProcessCis(uint32_t fn_idx) {
+zx_status_t Sdio::ProcessCis(uint8_t fn_idx) {
     zx_status_t st = ZX_OK;
 
     if (fn_idx >= SDIO_MAX_FUNCS) {
@@ -618,14 +617,14 @@ zx_status_t Sdio::ProcessCis(uint32_t fn_idx) {
                 return st;
             }
         }
-        ParseFnTuple(fn_idx, &cur_tup);
+        ParseFnTuple(fn_idx, cur_tup);
     }
     return st;
 }
 
-zx_status_t Sdio::ParseFnTuple(uint32_t fn_idx, SdioFuncTuple* tup) {
+zx_status_t Sdio::ParseFnTuple(uint8_t fn_idx, const SdioFuncTuple& tup) {
     zx_status_t st = ZX_OK;
-    switch (tup->tuple_code) {
+    switch (tup.tuple_code) {
     case SDIO_CIS_TPL_CODE_MANFID:
         st = ParseMfidTuple(fn_idx, tup);
         break;
@@ -638,44 +637,44 @@ zx_status_t Sdio::ParseFnTuple(uint32_t fn_idx, SdioFuncTuple* tup) {
     return st;
 }
 
-zx_status_t Sdio::ParseFuncExtTuple(uint32_t fn_idx, SdioFuncTuple* tup) {
+zx_status_t Sdio::ParseFuncExtTuple(uint8_t fn_idx, const SdioFuncTuple& tup) {
     sdio_function_t* func = &sdmmc_dev_->sdio_dev.funcs[fn_idx];
     if (fn_idx == 0) {
-        if (tup->tuple_body_size < SDIO_CIS_TPL_FUNC0_FUNCE_MIN_BDY_SZ) {
+        if (tup.tuple_body_size < SDIO_CIS_TPL_FUNC0_FUNCE_MIN_BDY_SZ) {
             return ZX_ERR_IO;
         }
         func->hw_info.max_blk_size =
-            SdioReadTupleBody(tup->tuple_body, SDIO_CIS_TPL_FUNCE_FUNC0_MAX_BLK_SIZE_LOC, 2);
+            SdioReadTupleBody(tup.tuple_body, SDIO_CIS_TPL_FUNCE_FUNC0_MAX_BLK_SIZE_LOC, 2);
         func->hw_info.max_blk_size = static_cast<uint32_t>(fbl::min<uint64_t>(
             sdmmc_dev_->host_info.max_transfer_size, func->hw_info.max_blk_size));
         uint8_t speed_val =
-            GetBitsU8(tup->tuple_body[3], SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_VAL_MASK,
+            GetBitsU8(tup.tuple_body[3], SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_VAL_MASK,
                       SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_VAL_LOC);
         uint8_t speed_unit =
-            GetBitsU8(tup->tuple_body[3], SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_UNIT_MASK,
+            GetBitsU8(tup.tuple_body[3], SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_UNIT_MASK,
                       SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_UNIT_LOC);
         func->hw_info.max_tran_speed = sdio_cis_tpl_funce_tran_speed_val[speed_val] *
                                        sdio_cis_tpl_funce_tran_speed_unit[speed_unit];
         return ZX_OK;
     }
 
-    if (tup->tuple_body_size < SDIO_CIS_TPL_FUNCx_FUNCE_MIN_BDY_SZ) {
+    if (tup.tuple_body_size < SDIO_CIS_TPL_FUNCx_FUNCE_MIN_BDY_SZ) {
         zxlogf(ERROR, "sdio_parse_func_ext: Invalid body size: %d for func_ext tuple\n",
-               tup->tuple_body_size);
+               tup.tuple_body_size);
         return ZX_ERR_IO;
     }
     func->hw_info.max_blk_size =
-        SdioReadTupleBody(tup->tuple_body, SDIO_CIS_TPL_FUNCE_FUNCx_MAX_BLK_SIZE_LOC, 2);
+        SdioReadTupleBody(tup.tuple_body, SDIO_CIS_TPL_FUNCE_FUNCx_MAX_BLK_SIZE_LOC, 2);
     return ZX_OK;
 }
 
-zx_status_t Sdio::ParseMfidTuple(uint32_t fn_idx, SdioFuncTuple* tup) {
-    if (tup->tuple_body_size < SDIO_CIS_TPL_MANFID_MIN_BDY_SZ) {
+zx_status_t Sdio::ParseMfidTuple(uint8_t fn_idx, const SdioFuncTuple& tup) {
+    if (tup.tuple_body_size < SDIO_CIS_TPL_MANFID_MIN_BDY_SZ) {
         return ZX_ERR_IO;
     }
     sdio_function_t* func = &sdmmc_dev_->sdio_dev.funcs[fn_idx];
-    func->hw_info.manufacturer_id = SdioReadTupleBody(tup->tuple_body, 0, 2);
-    func->hw_info.product_id = SdioReadTupleBody(tup->tuple_body, 2, 2);
+    func->hw_info.manufacturer_id = SdioReadTupleBody(tup.tuple_body, 0, 2);
+    func->hw_info.product_id = SdioReadTupleBody(tup.tuple_body, 2, 2);
     return ZX_OK;
 }
 
@@ -731,7 +730,7 @@ zx_status_t Sdio::InitFunc(uint8_t fn_idx) {
 
 zx_status_t Sdio::SwitchFreq(uint32_t new_freq) {
     zx_status_t st;
-    if ((st = sdmmc_set_bus_freq(&sdmmc_dev_->host, new_freq)) != ZX_OK) {
+    if ((st = sdmmc_client_.SetBusFreq(new_freq)) != ZX_OK) {
         zxlogf(ERROR, "sdio: Error while switching host bus frequency, retcode = %d\n", st);
         return st;
     }
@@ -764,7 +763,7 @@ zx_status_t Sdio::TrySwitchHs() {
         return st;
     }
     // Switch the host timing
-    if ((st = sdmmc_set_timing(&sdmmc_dev_->host, SDMMC_TIMING_HS)) != ZX_OK) {
+    if ((st = sdmmc_client_.SetTiming(SDMMC_TIMING_HS)) != ZX_OK) {
         zxlogf(ERROR, "sdio: failed to switch to hs timing on host : %d\n", st);
         return st;
     }
@@ -830,7 +829,7 @@ zx_status_t Sdio::TrySwitchUhs() {
         return st;
     }
     // Switch the host timing
-    if ((st = sdmmc_set_timing(&sdmmc_dev_->host, timing)) != ZX_OK) {
+    if ((st = sdmmc_client_.SetTiming(timing)) != ZX_OK) {
         zxlogf(ERROR, "sdio: failed to switch to hs timing on host : %d\n", st);
         return st;
     }
@@ -841,7 +840,7 @@ zx_status_t Sdio::TrySwitchUhs() {
     }
 
     if ((hw_caps & SDIO_CARD_UHS_SDR104) || (hw_caps & SDIO_CARD_UHS_SDR50)) {
-        st = sdmmc_perform_tuning(&sdmmc_dev_->host, SD_SEND_TUNING_BLOCK);
+        st = sdmmc_client_.PerformTuning(SD_SEND_TUNING_BLOCK);
         if (st != ZX_OK) {
             zxlogf(ERROR, "mmc: tuning failed %d\n", st);
             return st;
@@ -870,7 +869,7 @@ zx_status_t Sdio::Enable4BitBus() {
         zxlogf(ERROR, "sdio: Error while switching the bus width\n");
         return st;
     }
-    if ((st = sdmmc_set_bus_width(&sdmmc_dev_->host, SDMMC_BUS_WIDTH_FOUR)) != ZX_OK) {
+    if ((st = sdmmc_client_.SetBusWidth(SDMMC_BUS_WIDTH_FOUR)) != ZX_OK) {
         zxlogf(ERROR, "sdio: failed to switch the host bus width to %d, retcode = %d\n",
                SDMMC_BUS_WIDTH_FOUR, st);
         return ZX_ERR_INTERNAL;

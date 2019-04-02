@@ -18,6 +18,7 @@ driver("sdmmc") {
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace:trace-driver",
