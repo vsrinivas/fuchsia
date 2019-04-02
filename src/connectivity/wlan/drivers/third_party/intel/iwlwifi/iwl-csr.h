@@ -32,8 +32,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_csr_h__
-#define __iwl_csr_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CSR_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CSR_H_
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 
@@ -585,4 +585,4 @@ enum msix_hw_int_causes {
 #define CSR_MAC_ADDR0_STRAP (CSR_ADDR_BASE + 8)
 #define CSR_MAC_ADDR1_STRAP (CSR_ADDR_BASE + 0xC)
 
-#endif /* !__iwl_csr_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CSR_H_

@@ -32,7 +32,10 @@ driver_module("iwlwifi_driver") {
     "iwl-csr.h",
     "iwl-debug.c",
     "iwl-drv.c",
+    "iwl-drv.h",
+    "iwl-fh.h",
     "pcie/drv.c",
+    "pcie/internal.h",
   ]
 
   deps = [

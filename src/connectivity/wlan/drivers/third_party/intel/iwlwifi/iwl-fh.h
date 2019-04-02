@@ -32,13 +32,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_fh_h__
-#define __iwl_fh_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_FH_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_FH_H_
 
-#include <linux/bitfield.h>
-#include <linux/types.h>
-
-#include "iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 
 /****************************/
 /* Flow Handler Definitions */
@@ -616,7 +613,7 @@ struct iwl_rb_status {
 #define IWL_TFH_NUM_TBS 25
 
 static inline uint8_t iwl_get_dma_hi_addr(dma_addr_t addr) {
-    return (sizeof(addr) > sizeof(uint32_t) ? upper_32_bits(addr) : 0) & 0xF;
+    return (sizeof(addr) > sizeof(uint32_t) ? (uint32_t)(addr >> 32) : 0) & 0xF;
 }
 
 /**
@@ -736,4 +733,4 @@ struct iwl_gen3_bc_tbl {
     __le16 tfd_offset[TFD_QUEUE_BC_SIZE_GEN3];
 } __packed;
 
-#endif /* !__iwl_fh_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_FH_H_

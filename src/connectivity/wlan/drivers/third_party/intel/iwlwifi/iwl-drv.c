@@ -40,21 +40,21 @@
 #include <lib/sync/completion.h>
 #include <zircon/listnode.h>
 
-#include "fw/img.h"
-#include "iwl-agn-hw.h"
-#include "iwl-config.h"
-#include "iwl-csr.h"
-#include "iwl-dbg-tlv.h"
-#include "iwl-debug.h"
-#include "iwl-drv.h"
-#include "iwl-modparams.h"
-#include "iwl-op-mode.h"
-#include "iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-agn-hw.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dbg-tlv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-modparams.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-#include "iwl-dbg-cfg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dbg-cfg.h"
 #endif
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-#include "iwl-tm-gnl.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-tm-gnl.h"
 #endif
 
 /******************************************************************************
@@ -1652,13 +1652,13 @@ free:
     }
 }
 
-struct iwl_drv* iwl_drv_start(struct iwl_trans* trans) {
+zx_status_t iwl_drv_start(struct iwl_trans* trans) {
     struct iwl_drv* drv;
-    zx_status_t ret;
+    zx_status_t status;
 
     drv = calloc(1, sizeof(*drv));
     if (!drv) {
-        ret = ZX_ERR_NO_MEMORY;
+        status = ZX_ERR_NO_MEMORY;
         goto err;
     }
 
@@ -1681,7 +1681,7 @@ struct iwl_drv* iwl_drv_start(struct iwl_trans* trans) {
 
     if (!drv->dbgfs_drv) {
         IWL_ERR(drv, "failed to create debugfs directory\n");
-        ret = ZX_ERR_NO_MEMORY;
+        status = ZX_ERR_NO_MEMORY;
         goto err_free_tlv;
     }
 
@@ -1690,7 +1690,7 @@ struct iwl_drv* iwl_drv_start(struct iwl_trans* trans) {
 
     if (!drv->trans->dbgfs_dir) {
         IWL_ERR(drv, "failed to create transport debugfs directory\n");
-        ret = ZX_ERR_NO_MEMORY;
+        status = ZX_ERR_NO_MEMORY;
         goto err_free_dbgfs;
     }
 #endif
@@ -1699,21 +1699,22 @@ struct iwl_drv* iwl_drv_start(struct iwl_trans* trans) {
     iwl_tm_gnl_add(drv->trans);
 #endif
 
-    ret = iwl_request_firmware(drv, true);
-    if (ret) {
+    status = iwl_request_firmware(drv, true);
+    if (status != ZX_OK) {
         IWL_ERR(trans, "Couldn't request the fw\n");
         goto err_fw;
     }
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
-    ret = iwl_create_sysfs_file(drv);
-    if (ret) {
+    status = iwl_create_sysfs_file(drv);
+    if (status != ZX_OK) {
         IWL_ERR(trans, "Couldn't create sysfs entry\n");
         goto err_fw;
     }
 #endif
 
-    return drv;
+    trans->drv = drv;
+    return status;
 
 err_fw:
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
@@ -1727,8 +1728,7 @@ err_free_tlv:
 #endif
     kfree(drv);
 err:
-    // NEEDS_PORTING: return ERR_PTR(ret);
-    return NULL;
+    return status;
 }
 
 void iwl_drv_stop(struct iwl_drv* drv) {

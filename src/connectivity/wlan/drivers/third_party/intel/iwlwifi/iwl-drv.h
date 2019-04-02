@@ -34,7 +34,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DRV_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DRV_H_
 
-#include "fuchsia_porting.h"
+#include <zircon/types.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 
 /* for all modules */
 #define DRV_NAME "iwlwifi"
@@ -84,17 +86,18 @@
 struct iwl_drv;
 struct iwl_trans;
 struct iwl_cfg;
+
 /**
  * iwl_drv_start - start the drv
  *
- * @trans_ops: the ops of the transport
+ * @trans: the transport object
  *
  * starts the driver: fetches the firmware. This should be called by bus
  * specific system flows implementations. For example, the bus specific probe
  * function should do bus related operations only, and then call to this
- * function. It returns the driver object or %NULL if an error occurred.
+ * function. On success, writes the new driver object to trans->drv.
  */
-struct iwl_drv* iwl_drv_start(struct iwl_trans* trans);
+zx_status_t iwl_drv_start(struct iwl_trans* trans);
 
 /**
  * iwl_drv_stop - stop the drv
