@@ -16,10 +16,16 @@ namespace debug_agent {
 
 // When preparing a component, this is information the debugger will use in
 // order to be able to attach to the newly starting process.
-struct LaunchComponentDescription {
+struct ComponentDescription {
+  uint64_t component_id = 0;  // 0 is invalid.
   std::string url;
   std::string process_name;
   std::string filter;
+};
+
+struct ComponentHandles {
+  zx::socket out;
+  zx::socket err;
 };
 
 // Class designed to help setup a component and then launch it. These setps are
@@ -33,18 +39,16 @@ class ComponentLauncher {
   // Will fail if |argv| is invalid. The first element should be the component
   // url needed to launch.
   zx_status_t Prepare(std::vector<std::string> argv,
-                      LaunchComponentDescription* out);
+                      ComponentDescription* description,
+                      ComponentHandles* handles);
 
   // The launcher has to be already successfully prepared.
   // The lifetime of the controller is bound to the lifetime of the component.
   fuchsia::sys::ComponentControllerPtr Launch();
 
-  const LaunchComponentDescription& desc() const { return desc_; }
-
  private:
   std::shared_ptr<sys::ServiceDirectory> services_;
-  LaunchComponentDescription desc_;
-  std::vector<std::string> argv_;
+  fuchsia::sys::LaunchInfo launch_info_;
 };
 
 }  // namespace debug_agent

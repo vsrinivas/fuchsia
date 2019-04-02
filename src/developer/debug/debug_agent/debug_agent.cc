@@ -36,41 +36,12 @@ namespace debug_agent {
 
 DebugAgent::DebugAgent(debug_ipc::StreamBuffer* stream,
                        std::shared_ptr<sys::ServiceDirectory> services)
-    : stream_(stream), services_(services) {}
+    : stream_(stream), services_(services), weak_factory_(this) {}
 
 DebugAgent::~DebugAgent() = default;
 
-void DebugAgent::OnProcessStart(const std::string& filter,
-                                zx::process process) {
-  TIME_BLOCK();
-  auto process_koid = KoidForObject(process);
-  auto process_name = NameForObject(process);
-
-  debug_ipc::NotifyProcessStarting notify;
-  notify.koid = process_koid;
-  notify.name = process_name;
-
-  // We check whether this is a component launch we're expecting.
-  auto it = expected_components_.find(filter);
-  if (it != expected_components_.end())
-    notify.component_id = it->second;
-
-  DEBUG_LOG(Process) << "Process starting. Name: " << process_name
-                     << ", filter: " << filter
-                     << ", component id: " << notify.component_id;
-
-  // Send notification, then create debug process so that thread notification is
-  // sent after this.
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyProcessStarting(notify, &writer);
-  stream()->Write(writer.MessageComplete());
-
-  DebuggedProcessCreateInfo create_info;
-  create_info.koid = process_koid;
-  create_info.name = process_name;
-  create_info.handle = std::move(process);
-  create_info.resume_initial_thread = false;
-  AddDebuggedProcess(std::move(create_info));
+fxl::WeakPtr<DebugAgent> DebugAgent::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
 }
 
 void DebugAgent::RemoveDebuggedProcess(zx_koid_t process_koid) {
@@ -572,30 +543,50 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
 
   ComponentLauncher component_launcher(services_);
 
-  LaunchComponentDescription desc;
-  zx_status_t status = component_launcher.Prepare(request.argv, &desc);
+  ComponentDescription description;
+  ComponentHandles handles;
+  zx_status_t status = component_launcher.Prepare(request.argv, &description,
+                                                  &handles);
   if (status != ZX_OK) {
     reply->status = status;
     return;
   }
+  FXL_DCHECK(expected_components_.count(description.filter) == 0);
 
   // Create the filter
   DebuggedJob* job = GetDebuggedJob(component_root_job_koid_);
-  FXL_DCHECK(job);
-  job->AppendFilter(desc.filter);
+  if (!job) {
+    FXL_LOG(WARNING) << "Could not obtain component root job. Are you running "
+                        "attached to another debugger?";
+    reply->status = ZX_ERR_BAD_STATE;
+    return;
+  }
+  job->AppendFilter(description.filter);
 
-  // Store the filter associate to the unique id for that filter.
-  uint32_t component_id = next_component_id_++;
-  expected_components_[desc.filter] = component_id;
-  reply->component_id = component_id;
+  if (debug_ipc::IsDebugModeActive()) {
+    std::stringstream ss;
 
-  DEBUG_LOG(Process) << "Launching component. Url: " << desc.url
-                     << ", name: " << desc.process_name
-                     << ", filter: " << desc.filter;
+    ss << "Launching component. " << std::endl
+       << "Url: " << description.url << std::endl
+       << ", name: " << description.process_name << std::endl
+       << ", filter: " << description.filter << std::endl
+       << ", component_id: " << description.component_id << std::endl;
 
+    auto& filters = job->filters();
+    ss << "Current component filters: " << filters.size();
+    for (auto& filter : filters) {
+      ss << std::endl << "* " << filter.filter;
+    }
+
+    DEBUG_LOG(Process) << ss.str();
+  }
+
+  reply->component_id = description.component_id;
+
+  // Launch the component.
   auto controller = component_launcher.Launch();
   if (!controller) {
-    FXL_LOG(WARNING) << "Could not launch component " << desc.url;
+    FXL_LOG(WARNING) << "Could not launch component " << description.url;
     reply->status = ZX_ERR_BAD_STATE;
     return;
   }
@@ -604,24 +595,94 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   //                shutdown the state associated with waiting for this
   //                component.
   controller.events().OnTerminated =
-      [pkg_url = desc.url](int64_t return_code,
-                           fuchsia::sys::TerminationReason reason) {
-        if (reason != fuchsia::sys::TerminationReason::EXITED) {
-          FXL_LOG(WARNING) << "Component " << pkg_url << " exited with "
-                           << sys::HumanReadableTerminationReason(reason);
-        }
+      [agent = GetWeakPtr(), description](
+          int64_t return_code, fuchsia::sys::TerminationReason reason) {
+        // If the agent is gone, there isn't anything more to do.
+        if (!agent)
+          return;
+
+        agent->OnComponentTerminated(return_code, description, reason);
       };
 
-  // TODO(donosoc): We should hold on to the controller to better control the
-  //                component lifetime.
-  controller->Detach();
+  ExpectedComponent expected_component;
+  expected_component.description = description;
+  expected_component.handles = std::move(handles);
+  expected_component.controller = std::move(controller);
+  expected_components_[description.filter] = std::move(expected_component);
 
-  // TODO(donosoc): This should be replaced with the actual TerminationReason
-  //                provided by the fidl interface. But this requires to put
-  //                it in debug_ipc/helper so that the client can interpret
-  //                it and this CL is big enough already.
-  //                For now, we just reply OK.
   reply->status = ZX_OK;
+}
+
+void DebugAgent::OnProcessStart(const std::string& filter,
+                                zx::process process_handle) {
+  TIME_BLOCK();
+  ComponentDescription description;
+  ComponentHandles handles;
+  auto it = expected_components_.find(filter);
+  if (it != expected_components_.end()) {
+    description = std::move(it->second.description);
+    handles = std::move(it->second.handles);
+
+    // Add to the list of running components.
+    running_components_[description.component_id] =
+        std::move(it->second.controller);
+    expected_components_.erase(it);
+  } else {
+    description.process_name = NameForObject(process_handle);
+  }
+
+  auto process_koid = KoidForObject(process_handle);
+
+  DEBUG_LOG(Process) << "Process starting. Name: " << description.process_name
+                     << ", koid: " << process_koid
+                     << ", filter: " << filter
+                     << ", component id: " << description.component_id;
+
+  // Send notification, then create debug process so that thread notification is
+  // sent after this.
+  debug_ipc::NotifyProcessStarting notify;
+  notify.koid = process_koid;
+  notify.name = description.process_name;
+  notify.component_id = description.component_id;
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyProcessStarting(notify, &writer);
+  stream()->Write(writer.MessageComplete());
+
+  DebuggedProcessCreateInfo create_info;
+  create_info.koid = process_koid;
+  create_info.handle = std::move(process_handle);
+  create_info.name = description.process_name;
+  create_info.resume_initial_thread = false;
+  create_info.out = std::move(handles.out);
+  create_info.err = std::move(handles.err);
+  AddDebuggedProcess(std::move(create_info));
+}
+
+void DebugAgent::OnComponentTerminated(int64_t return_code,
+                                       const ComponentDescription& description,
+                                       fuchsia::sys::TerminationReason reason) {
+  DEBUG_LOG(Process) << "Component " << description.url << " exited with "
+                     << sys::HumanReadableTerminationReason(reason);
+
+  // TODO(donosoc): This need to be communicated over to the client.
+  if (reason != fuchsia::sys::TerminationReason::EXITED) {
+    FXL_LOG(WARNING) << "Component " << description.url << " exited with "
+                     << sys::HumanReadableTerminationReason(reason);
+  }
+
+  // We look for the filter and remove it.
+  // If we couldn't find it, the component was already caught and cleaned.
+  expected_components_.erase(description.filter);
+
+  if (debug_ipc::IsDebugModeActive()) {
+    std::stringstream ss;
+    ss << "Still expecting the following components: "
+       << expected_components_.size();
+    for (auto& expected : expected_components_) {
+      ss << std::endl << "* " << expected.first;
+    }
+    DEBUG_LOG(Process) << ss.str();
+  }
 }
 
 }  // namespace debug_agent

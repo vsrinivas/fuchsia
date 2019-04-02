@@ -5,6 +5,9 @@
 #include "src/developer/debug/debug_agent/component_launcher.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/io.h>
+#include <zircon/processargs.h>
 
 #include "src/lib/fxl/logging.h"
 #include "lib/sys/cpp/service_directory.h"
@@ -13,40 +16,78 @@
 
 namespace debug_agent {
 
+namespace {
+
+uint64_t kNextComponentId = 1;
+
+// Attemps to link a zircon socket into the new component's file descriptor
+// number represented by |fd|. If successful, the socket will be connected and
+// a (one way) communication channel with that file descriptor will be made.
+zx::socket AddStdio(int fd, fuchsia::sys::LaunchInfo* launch_info) {
+  zx::socket local;
+  zx::socket target;
+
+  zx_status_t status = zx::socket::create(0, &local, &target);
+  if (status != ZX_OK)
+    return zx::socket();
+
+  auto io = fuchsia::sys::FileDescriptor::New();
+  io->type0 = PA_HND(PA_FD, fd);
+  io->handle0 = std::move(target);
+
+  if (fd == STDOUT_FILENO) {
+    launch_info->out = std::move(io);
+  } else if (fd == STDERR_FILENO) {
+    launch_info->err = std::move(io);
+  } else {
+    FXL_NOTREACHED() << "Invalid file descriptor: " << fd;
+    return zx::socket();
+  }
+
+  return local;
+}
+
+}  // namespace
+
 ComponentLauncher::ComponentLauncher(
     std::shared_ptr<sys::ServiceDirectory> services)
    : services_(std::move(services)) {}
 
 zx_status_t ComponentLauncher::Prepare(std::vector<std::string> argv,
-                                       LaunchComponentDescription* out) {
+                                       ComponentDescription* description,
+                                       ComponentHandles* handles) {
   FXL_DCHECK(services_);
+  FXL_DCHECK(!argv.empty());
 
-  auto& pkg_url = argv.front();
-  debug_ipc::ComponentDescription desc;
-  if (!debug_ipc::ExtractComponentFromPackageUrl(pkg_url, &desc)) {
+  auto pkg_url = argv.front();
+  debug_ipc::ComponentDescription url_desc;
+  if (!debug_ipc::ExtractComponentFromPackageUrl(pkg_url, &url_desc)) {
     FXL_LOG(WARNING) << "Invalid package url: " << pkg_url;
     return ZX_ERR_INVALID_ARGS;
   }
 
-  argv_ = std::move(argv);
+  // Prepare the launch info.
+  launch_info_.url = argv.front();
+  launch_info_.arguments->reserve(argv.size());
+  for (auto& arg : argv) {
+    launch_info_.arguments->push_back(std::move(arg));
+  }
 
-  desc_.url = pkg_url;
-  desc_.process_name = desc.component_name;
-  desc_.filter = desc.component_name;
+  *description = {};
+  description->component_id = kNextComponentId++;
+  description->url = pkg_url;
+  description->process_name = url_desc.component_name;
+  description->filter = url_desc.component_name;
 
-  *out = desc_;
+  *handles = {};
+  handles->out = AddStdio(STDOUT_FILENO, &launch_info_);
+  handles->err = AddStdio(STDERR_FILENO, &launch_info_);
+
   return ZX_OK;
 };
 
 fuchsia::sys::ComponentControllerPtr ComponentLauncher::Launch() {
   FXL_DCHECK(services_);
-
-  auto& pkg_url = argv_.front();
-  fuchsia::sys::LaunchInfo launch_info = {};
-  launch_info.url = pkg_url;
-  for (size_t i = 1; i < argv_.size(); i++) {
-    launch_info.arguments.push_back(argv_[i]);
-  }
 
   fuchsia::sys::LauncherSyncPtr launcher;
   services_->Connect(launcher.NewRequest());
@@ -56,7 +97,7 @@ fuchsia::sys::ComponentControllerPtr ComponentLauncher::Launch() {
   // started event. This also makes us need an async::Loop so that the fidl
   // plumbing can work.
   fuchsia::sys::ComponentControllerPtr controller;
-  launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
+  launcher->CreateComponent(std::move(launch_info_), controller.NewRequest());
 
   return controller;
 }

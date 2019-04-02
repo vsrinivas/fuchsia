@@ -34,6 +34,14 @@ class ProcessStartHandler {
 
 class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
  public:
+  struct FilterInfo {
+    std::string filter;
+    // Filter used to compare against this filter.
+    // We keep it around so we don't need to recompile it everytime we compare
+    // against a new process.
+    debug_ipc::Regex regex;
+  };
+
   // Caller must call Init immediately after construction and delete the
   // object if that fails.
   DebuggedJob(ProcessStartHandler* handler, zx_koid_t job_koid, zx::job job);
@@ -44,6 +52,7 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
 
   void SetFilters(std::vector<std::string> filters);
   void AppendFilter(std::string filter);
+  const std::vector<FilterInfo>& filters() const { return filters_; }
 
   // Returns ZX_OK on success. On failure, the object may not be used further.
   zx_status_t Init();
@@ -59,13 +68,6 @@ class DebuggedJob : public debug_ipc::ZirconExceptionWatcher {
 
   // Handle for watching the process exceptions.
   debug_ipc::MessageLoop::WatchHandle job_watch_handle_;
-  struct FilterInfo {
-    std::string filter;
-    // Filter used to compare against this filter.
-    // We keep it around so we don't need to recompile it everytime we compare
-    // against a new process.
-    debug_ipc::Regex regex;
-  };
   std::vector<FilterInfo> filters_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebuggedJob);

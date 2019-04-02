@@ -11,8 +11,10 @@
 #include <zircon/types.h>
 
 #include "src/lib/fxl/macros.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
+#include "src/developer/debug/debug_agent/component_launcher.h"
 #include "src/developer/debug/debug_agent/debugged_job.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/remote_api.h"
@@ -35,6 +37,8 @@ class DebugAgent : public RemoteAPI,
   explicit DebugAgent(debug_ipc::StreamBuffer* stream,
                       std::shared_ptr<sys::ServiceDirectory> services);
   ~DebugAgent();
+
+  fxl::WeakPtr<DebugAgent> GetWeakPtr();
 
   debug_ipc::StreamBuffer* stream() { return stream_; }
 
@@ -120,8 +124,12 @@ class DebugAgent : public RemoteAPI,
                                     zx_koid_t thread_koid);
 
   void LaunchProcess(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
+
   void LaunchComponent(const debug_ipc::LaunchRequest&,
                        debug_ipc::LaunchReply*);
+  void OnComponentTerminated(int64_t return_code,
+                             const ComponentDescription& description,
+                             fuchsia::sys::TerminationReason reason);
 
   debug_ipc::StreamBuffer* stream_;
 
@@ -145,15 +153,22 @@ class DebugAgent : public RemoteAPI,
   //                so we can only filter on that.
   zx_koid_t component_root_job_koid_ = 0;
 
-  // Launching a component is an async operation. Each launch is assigned an
-  // unique id so it can be comunicated to the client.
-  uint32_t next_component_id_ = 1;
-
   // Each component launch is asigned an unique filter and id. This is because
   // new components are attached via the job filter mechanism. When a particular
   // filter attached, we use this id to know which component launch just
   // happened and we can comunicate it to the client.
-  std::map<std::string, uint32_t> expected_components_;
+  struct ExpectedComponent {
+    ComponentDescription description;
+    ComponentHandles handles;
+    fuchsia::sys::ComponentControllerPtr controller;
+  };
+  std::map<std::string, ExpectedComponent> expected_components_;
+
+  // Once we caught the component, we hold on into the controller to be able
+  // to detach/kill it correctly.
+  std::map<uint64_t, fuchsia::sys::ComponentControllerPtr> running_components_;
+
+  fxl::WeakPtrFactory<DebugAgent> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(DebugAgent);
 };
