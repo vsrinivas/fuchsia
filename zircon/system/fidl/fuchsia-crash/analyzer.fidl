@@ -46,15 +46,6 @@ protocol Analyzer {
     /// A typical implementation might print the crash log to the system log or
     /// upload a crash report to a server with the log as attachment.
     OnKernelPanicCrashLog(fuchsia.mem.Buffer crash_log) -> () error zx.status;
-
-    // DEPRECATED
-    // TODO(DX-1097): remove once callers have been switched to
-    // OnManagedRuntimeException().
-    HandleManagedRuntimeException(ManagedRuntimeLanguage language,
-                                  string:4096 componentUrl,
-                                  string:4096 exception,
-                                  fuchsia.mem.Buffer stackTrace)
-        -> (zx.status status);
 };
 
 /// Represents a managed runtime exception.
@@ -85,12 +76,4 @@ struct GenericException {
 
     /// Text representation of the stack trace.
     fuchsia.mem.Buffer stack_trace;
-};
-
-// DEPRECATED
-// TODO(DX-1097): remove along HandleManagedRuntimeException().
-enum ManagedRuntimeLanguage {
-    UNKNOWN_LANGUAGE = 0;
-    OTHER_LANGUAGE = 1;
-    DART = 2;
 };

@@ -46,14 +46,6 @@ class CrashpadAgent : public Analyzer {
   void OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log,
                              OnKernelPanicCrashLogCallback callback) override;
 
-  // DEPRECATED
-  // TODO(DX-1097): remove once callers have been switched to
-  // OnManagedRuntimeException().
-  void HandleManagedRuntimeException(
-      ManagedRuntimeLanguage language, std::string component_url,
-      std::string exception, fuchsia::mem::Buffer stack_trace,
-      HandleManagedRuntimeExceptionCallback callback) override;
-
  private:
   CrashpadAgent(Config config,
                 std::unique_ptr<crashpad::CrashReportDatabase> database,

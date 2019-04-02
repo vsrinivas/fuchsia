@@ -175,15 +175,6 @@ void CrashpadAgent::OnKernelPanicCrashLog(
   PruneDatabase();
 }
 
-void CrashpadAgent::HandleManagedRuntimeException(
-    ManagedRuntimeLanguage language, std::string component_url,
-    std::string exception, fuchsia::mem::Buffer stack_trace,
-    HandleManagedRuntimeExceptionCallback callback) {
-  FX_LOGS(ERROR)
-      << "Deprecated method. Please use OnManagedRuntimeException() instead.";
-  callback(ZX_ERR_NOT_SUPPORTED);
-}
-
 namespace {
 
 std::string GetPackageName(const zx::process& process) {
