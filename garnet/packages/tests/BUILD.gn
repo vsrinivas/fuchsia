@@ -987,6 +987,7 @@ group("runtime") {
     "//garnet/bin/appmgr/integration_tests/sandbox/services:some_services",
     "//garnet/bin/appmgr/integration_tests/util:persistent_storage_test_util",
     "//garnet/bin/glob",
+    "//garnet/examples/fidl/echo_server_cpp",
     "//garnet/packages/prod:runtime",
   ]
 }
