@@ -2,7 +2,10 @@
 
 This document describes how to run Netstack3, as well as a few possible dev
 workflows. The instructions are for how to set up QEMU, but are also applicable
-to real hardware.
+to real hardware. The instructions here are for running Netstack3 as a 
+*replacement* netstack. If you want to run Netstack3 alongside the default
+netstack, but bound to a specific interface, check the instructions in
+[enclosed_runner](../tools/enclosed_runner/README.md).
 
 ## (Step 1) QEMU Setup
 
@@ -56,6 +59,11 @@ This comes with the caveat that when you _do_ want to edit the file and check it
 in (or someone else has made a breaking change to the config format), you need
 to remember that you've done this, though. It can be undone by the same command
 with the `--no-skip-worktree` flag.
+
+**NOTE:** At the time of this writing, Netstack3 is not complete enough to allow
+for dynamic package download and install. So make sure that every package that
+you'll need is included in your `fx set` line using the `--with-base` argument,
+which will have those packages be part of the monolith system image.
 
 ## Running
 

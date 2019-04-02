@@ -157,10 +157,11 @@ async fn main() -> Result<(), Error> {
     println!("enclosed netstack is running...");
     println!("environment name: {}", env_name);
     println!("run:");
-    println!("chrealm /hub/r/sys/[koid]/r/{}/[koid]", env_name);
+    println!("chrealm /hub/r/{}/[koid]", env_name);
     println!("to shell into the tailored environment (you can use tab completions for koid)");
     println!("to stop the netstack and this environment, run:");
     println!("killall enclosed_runner.cmx");
+    println!("or CTRL^C out.");
 
     // Await forever on an empty future.
     // This will cause enclosed_runner to never exit, unless it's killed
