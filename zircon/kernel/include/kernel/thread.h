@@ -11,6 +11,7 @@
 #include <arch/ops.h>
 #include <arch/thread.h>
 #include <debug.h>
+#include <fbl/intrusive_double_list.h>
 #include <kernel/cpu.h>
 #include <kernel/fair_task_state.h>
 #include <kernel/spinlock.h>
@@ -22,7 +23,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-// fwd decl for the user_thread member below.
+// fwd decls
+class OwnedWaitQueue;
 class ThreadDispatcher;
 
 __BEGIN_CDECLS
@@ -91,6 +93,12 @@ typedef struct lockdep_state {
 } lockdep_state_t;
 
 typedef struct thread {
+    // Default constructor/destructor declared to be not-inline in order to
+    // avoid circular include dependencies involving thread, wait_queue, and
+    // OwnedWaitQueue.
+    thread();
+    ~thread();
+
     int magic;
     struct list_node thread_list_node;
 
@@ -134,7 +142,10 @@ typedef struct thread {
     cpu_mask_t cpu_affinity; // mask of cpus that this thread can run on
 
     // if blocked, a pointer to the wait queue
-    struct wait_queue* blocking_wait_queue;
+    struct wait_queue* blocking_wait_queue TA_GUARDED(thread_lock) = nullptr;
+
+    // a list of the wait queues currently owned by this thread.
+    fbl::DoublyLinkedList<OwnedWaitQueue*> owned_wait_queues TA_GUARDED(thread_lock);
 
     // list of other wait queue heads if we're a head
     struct list_node wait_queue_heads_node;
@@ -243,6 +254,14 @@ typedef struct thread {
 #else
 #define DEFAULT_STACK_SIZE ARCH_DEFAULT_STACK_SIZE
 #endif
+
+// TODO(johngro): Remove this when we have addressed ZX-3683.  Right now, this
+// is used in only one place (x86_bringup_aps in arch/x86/smp.cpp) outside of
+// thread.cpp.
+//
+// Normal users should only ever need to call either thread_create, or
+// thread_create_etc.
+void init_thread_struct(thread_t* t, const char* name);
 
 // functions
 void thread_init_early(void);

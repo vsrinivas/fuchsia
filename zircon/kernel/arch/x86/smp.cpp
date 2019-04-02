@@ -80,11 +80,14 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
     memset(&bootstrap_data->per_cpu, 0, sizeof(bootstrap_data->per_cpu));
     // Allocate kstacks and threads for all processors
     for (unsigned int i = 0; i < count; ++i) {
+        // TODO(johngro): Clean this up when we fix ZX-3683.  Users should not be directly
+        // calloc'ing and initializing thread structures.
         thread_t* thread = static_cast<thread_t*>(calloc(1, sizeof(thread_t)));
         if (!thread) {
             status = ZX_ERR_NO_MEMORY;
             goto cleanup_all;
         }
+        init_thread_struct(thread, "");
 
         status = vm_allocate_kstack(&thread->stack);
         bootstrap_data->per_cpu[i].kstack_base = thread->stack.base;

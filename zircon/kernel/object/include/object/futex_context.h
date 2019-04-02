@@ -11,6 +11,7 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/lockdep.h>
+#include <kernel/owned_wait_queue.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
 #include <lib/user_copy/user_ptr.h>
@@ -39,6 +40,19 @@ class ThreadDispatcher;
 //
 class FutexContext {
 public:
+    // Owner action is an enum used to signal what to do when threads are woken
+    // from a futex.  The defined behaviors are as follows.
+    //
+    // RELEASE
+    // Remove any owner regardless of how many threads are woken (including zero
+    // threads)
+    //
+    // ASSIGN_WOKEN
+    // Only permitted when wake_count is exactly 1.  Assign ownership to the
+    // thread who was woken if there was a thread to wake, and there are still
+    // threads left in the futex after waking.  Otherwise, set the futex queue
+    // owner to nothing.
+    //
     enum class OwnerAction {
         RELEASE,
         ASSIGN_WOKEN,
@@ -156,9 +170,16 @@ private:
         FutexState& operator=(const FutexState&) = delete;
 
         uintptr_t id_ = 0;
-        fbl::RefPtr<ThreadDispatcher> owner_;
-        WaitQueue waiters_;
+        OwnedWaitQueue waiters_;
     };
+
+    // Definition of a small callback hook used with OwnedWaitQueue::Wake and
+    // OwnedWaitQueue::WakeAndRequeue in order to allow us to maintain user
+    // thread blocked futex ID info as the OwnedWaitQueue code selects threads
+    // to be woken/requeued.
+    template <OwnedWaitQueue::Hook::Action action>
+    static OwnedWaitQueue::Hook::Action SetBlockingFutexId(thread_t* thrd, void* ctx)
+    TA_NO_THREAD_SAFETY_ANALYSIS;
 
     // FutexContexts may not be copied, moved, or allocated on the heap.  They
     // are to exist as singleton members of the ProcessDispatcher class and
@@ -169,15 +190,6 @@ private:
     FutexContext& operator=(FutexContext&&) = delete;
     static void* operator new(size_t) = delete;
     static void* operator new[](size_t) = delete;
-
-    // Wake up to the specified number of threads from the FutexState's wait
-    // queue, reassigning ownership of the futex to the first thread woken
-    // if asked to do so.
-    //
-    // Returns true if we should request a reschedule, or false otherwise.
-    bool WakeThreads(FutexState* futex,
-                     uint32_t wake_count,
-                     OwnerAction owner_action) TA_REQ(lock_, thread_lock);
 
     // Find a the futex state for a given ID in the futex table and return a raw
     // (borrowed) pointer to it, or nullptr if there is no such ID in the table.
@@ -195,7 +207,7 @@ private:
 
         DEBUG_ASSERT(new_state != nullptr);
         DEBUG_ASSERT(new_state->id() == 0);
-        DEBUG_ASSERT(new_state->owner_ == nullptr);
+        new_state->waiters_.AssertNotOwned();
 
         new_state->id_ = id;
         futex_table_.insert(ktl::move(new_state));
@@ -203,20 +215,18 @@ private:
     }
 
     // Return a futex which is currently in the futex hash table to the free
-    // pool.  Returns the owner of the FutexState if there was one.
-    fbl::RefPtr<ThreadDispatcher> ReturnToPool(FutexState* futex) TA_REQ(lock_) {
+    // pool.  Note, any owner of the wait queue must have already been released by now.
+    void ReturnToPool(FutexState* futex) TA_REQ(lock_) {
         DEBUG_ASSERT(futex != nullptr);
         DEBUG_ASSERT(futex->id() != 0);
         DEBUG_ASSERT(futex->InContainer());
+        futex->waiters_.AssertNotOwned();
 
-        fbl::RefPtr<ThreadDispatcher> ret = ktl::move(futex->owner_);
         free_futexes_.push_front(futex_table_.erase(*futex));
         futex->id_ = 0;
-
-        return ret;
     }
 
-    // protects futex_table_
+    // Protects the futex_table_.  Must be held before acquiring the thread lock.
     DECLARE_MUTEX(FutexContext) lock_ TA_ACQ_BEFORE(thread_lock);
 
     // Hash table for FutexStates currently in use (eg; futexes with waiters).

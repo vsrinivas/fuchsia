@@ -26,17 +26,23 @@ extern spin_lock_t thread_lock;
 #define WAIT_QUEUE_MAGIC (0x77616974) // 'wait'
 
 typedef struct wait_queue {
+    // Note: Wait queues come in 2 flavors (traditional and owned) which are
+    // distinguished using the magic number.  The point here is that, unlike
+    // most other magic numbers in the system, the wait_queue_t serves a
+    // functional purpose beyond checking for corruption debug builds.
     int magic;
     int count;
     struct list_node heads;
 } wait_queue_t;
 
-#define WAIT_QUEUE_INITIAL_VALUE(q)             \
-    {                                           \
-        .magic = WAIT_QUEUE_MAGIC,              \
-        .count = 0,                             \
-        .heads = LIST_INITIAL_VALUE((q).heads), \
+#define WAIT_QUEUE_INITIAL_VALUE_MAGIC(q, _magic)   \
+    {                                               \
+        .magic = (_magic),                          \
+        .count = 0,                                 \
+        .heads = LIST_INITIAL_VALUE((q).heads),     \
     }
+
+#define WAIT_QUEUE_INITIAL_VALUE(q) WAIT_QUEUE_INITIAL_VALUE_MAGIC(q, WAIT_QUEUE_MAGIC)
 
 // When blocking this enum indicates the kind of resource ownership that is being waited for
 // that is causing the block.
@@ -88,13 +94,22 @@ int wait_queue_wake_one(wait_queue_t*, bool reschedule,
 
 int wait_queue_wake_all(wait_queue_t*, bool reschedule,
                         zx_status_t wait_queue_error) TA_REQ(thread_lock);
+
+// Dequeue the first waiting thread, and set its blocking status, then return a
+// pointer to the thread which was dequeued.  Do not actually schedule the
+// thread to run.
 struct thread* wait_queue_dequeue_one(wait_queue_t* wait,
                                       zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
-// Move a single thread from the source wait queue to the destination wait
-// queue, and return a pointer the the thread which was moved.  If there were
-// no threads in the source wait queue, do nothing and return NULL.
-struct thread* wait_queue_requeue_one(wait_queue_t* src, wait_queue_t* dst) TA_REQ(thread_lock);
+// Dequeue the specified thread and set its blocked_status.  Do not actually
+// schedule the thread to run.
+void wait_queue_dequeue_thread(wait_queue_t* wait,
+                               struct thread* t,
+                               zx_status_t wait_queue_error) TA_REQ(thread_lock);
+
+// Move the specified thread from the source wait queue to the dest wait queue.
+void wait_queue_move_thread(wait_queue_t* source, wait_queue_t* dest, struct thread* t)
+    TA_REQ(thread_lock);
 
 // is the wait queue currently empty
 bool wait_queue_is_empty(const wait_queue_t*) TA_REQ(thread_lock);
@@ -103,9 +118,10 @@ bool wait_queue_is_empty(const wait_queue_t*) TA_REQ(thread_lock);
 zx_status_t wait_queue_unblock_thread(struct thread* t,
                                       zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
-// a thread's priority has changed, potentially modify the wait queue it's in
-void wait_queue_priority_changed(struct thread* t,
-                                 int old_prio) TA_REQ(thread_lock);
+// a thread's priority has changed, potentially modify the wait queue it's in.
+// Returns true if the change of priority has affected the priority of another
+// thread due to priority inheritance, or false otherwise.
+bool wait_queue_priority_changed(struct thread* t, int old_prio) TA_REQ(thread_lock);
 
 // validate that the queue of a given wait queue is valid
 void wait_queue_validate_queue(wait_queue_t* wait) TA_REQ(thread_lock);
@@ -114,49 +130,56 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-class WaitQueue {
+class WaitQueue : protected wait_queue_t {
 public:
-    WaitQueue() {}
-    ~WaitQueue() { wait_queue_destroy(&wq_); }
+    constexpr WaitQueue() : WaitQueue(WAIT_QUEUE_MAGIC) {}
+    ~WaitQueue() { wait_queue_destroy(this); }
 
     WaitQueue(WaitQueue&) = delete;
     WaitQueue(WaitQueue&&) = delete;
     WaitQueue& operator=(WaitQueue&) = delete;
     WaitQueue& operator=(WaitQueue&&) = delete;
 
-    static struct thread* RequeueOne(WaitQueue* src, WaitQueue* dst) TA_REQ(thread_lock) {
-        return wait_queue_requeue_one(&src->wq_, &dst->wq_);
-    }
-
-    zx_status_t Block(const Deadline& deadline) TA_REQ(thread_lock) {
-        return wait_queue_block_etc(&wq_, deadline, 0, ResourceOwnership::Normal);
-    }
-
-    zx_status_t BlockReadLock(const Deadline& deadline) TA_REQ(thread_lock) {
-        return wait_queue_block_etc(&wq_, deadline, 0, ResourceOwnership::Reader);
-    }
-
-    struct thread* Peek() TA_REQ(thread_lock) {
-        return wait_queue_peek(&wq_);
-    }
-
-    int WakeOne(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-        return wait_queue_wake_one(&wq_, reschedule, wait_queue_error);
-    }
-
-    bool IsEmpty() TA_REQ(thread_lock) { return wait_queue_is_empty(&wq_); }
-
     static zx_status_t UnblockThread(struct thread* t, zx_status_t wait_queue_error)
         TA_REQ(thread_lock) {
         return wait_queue_unblock_thread(t, wait_queue_error);
     }
 
-    struct thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock) {
-        return wait_queue_dequeue_one(&wq_, wait_queue_error);
+    zx_status_t Block(const Deadline& deadline) TA_REQ(thread_lock) {
+        return wait_queue_block_etc(this, deadline, 0, ResourceOwnership::Normal);
     }
 
-private:
-    wait_queue_t wq_ = WAIT_QUEUE_INITIAL_VALUE(wq_);
+    zx_status_t BlockReadLock(const Deadline& deadline) TA_REQ(thread_lock) {
+        return wait_queue_block_etc(this, deadline, 0, ResourceOwnership::Reader);
+    }
+
+    struct thread* Peek() TA_REQ(thread_lock) {
+        return wait_queue_peek(this);
+    }
+
+    int WakeOne(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
+        return wait_queue_wake_one(this, reschedule, wait_queue_error);
+    }
+
+    bool IsEmpty() const TA_REQ(thread_lock) { return (this->count == 0); }
+
+    struct thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock) {
+        return wait_queue_dequeue_one(this, wait_queue_error);
+    }
+
+    void DequeueThread(struct thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
+        wait_queue_dequeue_thread(this, t, wait_queue_error);
+    }
+
+protected:
+    explicit constexpr WaitQueue(int magic)
+        : wait_queue_t(WAIT_QUEUE_INITIAL_VALUE_MAGIC(*this, magic)) {}
+
+    static void MoveThread(WaitQueue* source,
+                           WaitQueue* dest,
+                           struct thread* t) TA_REQ(thread_lock) {
+        return wait_queue_move_thread(source, dest, t);
+    }
 };
 
 #endif // __cplusplus

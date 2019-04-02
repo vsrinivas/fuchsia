@@ -26,6 +26,7 @@
 #include <kernel/dpc.h>
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
+#include <kernel/owned_wait_queue.h>
 #include <kernel/percpu.h>
 #include <kernel/sched.h>
 #include <kernel/stats.h>
@@ -107,8 +108,26 @@ static void init_thread_lock_state(thread_t* t) {
 #endif
 }
 
-static void init_thread_struct(thread_t* t, const char* name) {
+// Default constructor/destructor.
+thread::thread() {}
+thread::~thread() {
+    DEBUG_ASSERT(blocking_wait_queue == nullptr);
+    // owned_wait_queues is a fbl:: list of unmanaged pointers.  It will debug
+    // assert if it is not empty when it destructs; we do not need to do so
+    // here.
+}
+
+void init_thread_struct(thread_t* t, const char* name) {
     memset(t, 0, sizeof(thread_t));
+
+    // Placement new to trigger any special construction requirements of the
+    // thread_t structure.
+    //
+    // TODO(johngro): now that we have converted thread_t over to C++, consider
+    // switching to using C++ constructors/destructors and new/delete to handle
+    // all of this instead of using init_thread_struct and free_thread_resources
+    new (t) thread();
+
     t->magic = THREAD_MAGIC;
     strlcpy(t->name, name, sizeof(t->name));
     wait_queue_init(&t->retcode_wait_queue);
@@ -192,7 +211,6 @@ thread_t* thread_create_etc(
     t->arg = arg;
     t->state = THREAD_INITIAL;
     t->signals = 0;
-    t->blocking_wait_queue = NULL;
     t->blocked_status = ZX_OK;
     t->interruptable = false;
     t->curr_cpu = INVALID_CPU;
@@ -252,9 +270,13 @@ static void free_thread_resources(thread_t* t) {
         }
     }
 
-    // free the thread structure itself
+    // free the thread structure itself.  Manually trigger the struct's
+    // destructor so that DEBUG_ASSERTs present in the owned_wait_queues member
+    // get triggered.
+    bool thread_needs_free = (t->flags & THREAD_FLAG_FREE_STRUCT) != 0;
     t->magic = 0;
-    if (t->flags & THREAD_FLAG_FREE_STRUCT) {
+    t->~thread();
+    if (thread_needs_free) {
         free(t);
     }
 }
@@ -515,6 +537,16 @@ __NO_RETURN static void thread_exit_locked(thread_t* current_thread,
     // enter the dead state
     current_thread->state = THREAD_DEATH;
     current_thread->retcode = retcode;
+
+    // Make sure that we have released any wait queues we may have owned when we
+    // exited.  TODO(johngro):  Should we log a warning or take any other
+    // actions here?  Normally, if a thread exits while owning a wait queue, it
+    // means that it exited while holding some sort of mutex or other
+    // synchronization object which will now never be released.  This is usually
+    // Very Bad.  If any of the OwnedWaitQueues are being used for user-mode
+    // futexes, who can say what the right thing to do is.  In the case of a
+    // kernel mode mutex, it might be time to panic.
+    OwnedWaitQueue::DisownAllQueues(current_thread);
 
     // if we're detached, then do our teardown here
     if (current_thread->flags & THREAD_FLAG_DETACHED) {
@@ -1252,8 +1284,10 @@ void dump_thread_locked(thread_t* t, bool full_dump) {
                 (t->flags & THREAD_FLAG_FREE_STRUCT) ? "Ft" : "",
                 (t->flags & THREAD_FLAG_REAL_TIME) ? "Rt" : "",
                 (t->flags & THREAD_FLAG_IDLE) ? "Id" : "");
+
         dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %d, mutexes held %d\n",
                 t->blocking_wait_queue, t->blocked_status, t->interruptable, t->mutexes_held);
+
         dprintf(INFO, "\taspace %p\n", t->aspace);
         dprintf(INFO, "\tuser_thread %p, pid %" PRIu64 ", tid %" PRIu64 "\n",
                 t->user_thread, t->user_pid, t->user_tid);

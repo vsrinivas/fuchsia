@@ -856,6 +856,76 @@ static bool RequeueOwnershipTest() {
     END_TEST;
 }
 
+static bool OwnerExitTest() {
+    BEGIN_TEST;
+
+    fbl::futex_t the_futex(0);
+    Thread the_owner;
+    Thread the_waiter;
+    std::atomic<zx_status_t> waiter_res;
+    zx_status_t res;
+
+    // If things go wrong, and we bail out early, do out best to shut down all
+    // of the threads.
+    auto cleanup = fbl::MakeAutoCall([&]() {
+        zx_futex_wake(&the_futex, std::numeric_limits<uint32_t>::max());
+        the_owner.Stop();
+        the_waiter.Stop();
+    });
+
+    // Start the "owner" thread.  Have it do nothing at all.  It will end up
+    // blocking on an internal signal, waiting for us to tell it to stop.
+    ASSERT_TRUE(the_owner.Start("OwnerExitTest owner", []() -> int { return 0; }));
+
+    // Start the "waiter" thread.  Have it wait on the futex, and declare the
+    // owner thread to be the owner of the_futex.
+    waiter_res.store(ZX_ERR_INTERNAL);
+    ASSERT_TRUE(the_waiter.Start("OwnerExitTest waiter",
+        [&waiter_res, &the_futex, test_thread_handle = the_owner.handle().get()]() -> int {
+            waiter_res.store(zx_futex_wait(&the_futex, 0,
+                                           test_thread_handle,
+                                           ZX_TIME_INFINITE));
+            return 0;
+        }));
+
+    // Wait until our waiter has become blocked by the futex.
+    ASSERT_TRUE(WaitFor(ZX_MSEC(1000), [&the_waiter, &res]() -> bool {
+        // If we fail to fetch thread state, stop waiting.
+        uint32_t state;
+        res = the_waiter.GetRunState(&state);
+        if (res != ZX_OK) {
+            return true;
+        }
+
+        // We are done if the thread has reached the BLOCKED_FUTEX state
+        return (state == ZX_THREAD_STATE_BLOCKED_FUTEX);
+    }));
+    ASSERT_EQ(res, ZX_OK);
+
+    // Verify that our futex is owned by our owner thread.
+    zx_koid_t koid = ~ZX_KOID_INVALID;
+    res = zx_futex_get_owner(&the_futex, &koid);
+    ASSERT_EQ(res, ZX_OK);
+    ASSERT_EQ(koid, the_owner.koid());
+
+    // OK, now let the owner thread exit.  Ownership of the futex should become
+    // automatically released.
+    ASSERT_EQ(the_owner.Stop(), ZX_OK);
+    koid = ~ZX_KOID_INVALID;
+    res = zx_futex_get_owner(&the_futex, &koid);
+    ASSERT_EQ(res, ZX_OK);
+    ASSERT_EQ(koid, ZX_KOID_INVALID);
+
+    // Release our waiter thread and shut down.
+    res = zx_futex_wake(&the_futex, std::numeric_limits<uint32_t>::max());
+    ASSERT_EQ(res, ZX_OK);
+    ASSERT_EQ(the_waiter.Stop(), ZX_OK);
+    ASSERT_EQ(waiter_res.load(), ZX_OK);
+
+    cleanup.cancel();
+    END_TEST;
+}
+
 }  // anon namespace
 
 BEGIN_TEST_CASE(futex_ownership_tests)
@@ -866,4 +936,5 @@ RUN_TEST(WakeOwnershipTest<OpType::kRequeue>);
 RUN_TEST(WakeZeroOwnershipTest<OpType::kStandard>);
 RUN_TEST(WakeZeroOwnershipTest<OpType::kRequeue>);
 RUN_TEST(RequeueOwnershipTest);
+RUN_TEST(OwnerExitTest);
 END_TEST_CASE(futex_ownership_tests)

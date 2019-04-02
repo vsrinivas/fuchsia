@@ -8,6 +8,7 @@
 
 #include <trace.h>
 
+#include <object/futex_context.h>
 #include <object/process_dispatcher.h>
 #include <zircon/types.h>
 

@@ -11,6 +11,7 @@
 #include <arch/exception.h>
 #include <kernel/dpc.h>
 #include <kernel/event.h>
+#include <kernel/owned_wait_queue.h>
 #include <kernel/thread.h>
 #include <object/channel_dispatcher.h>
 #include <object/dispatcher.h>
@@ -185,9 +186,6 @@ public:
     // For ChannelDispatcher use.
     ChannelDispatcher::MessageWaiter* GetMessageWaiter() { return &channel_waiter_; }
 
-    // For FutexContext use.
-    uintptr_t& blocking_futex_id() { return blocking_futex_id_; }
-
     // Blocking syscalls, once they commit to a path that will likely block the
     // thread, use this helper class to properly set/restore |blocked_reason_|.
     class AutoBlocked final {
@@ -210,6 +208,11 @@ private:
     ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, uint32_t flags);
     ThreadDispatcher(const ThreadDispatcher&) = delete;
     ThreadDispatcher& operator=(const ThreadDispatcher&) = delete;
+
+    // friend FutexContext so that it can manipulate the blocking_futex_id_ member of
+    // ThreadDispatcher, and so that it can access the "thread_" member of the class so that
+    // wait_queue opertations can be performed on ThreadDispatchers
+    friend class FutexContext;
 
     // kernel level entry point
     static int StartRoutine(void* arg);

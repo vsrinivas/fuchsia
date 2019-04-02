@@ -15,6 +15,7 @@ source_set("kernel") {
     "init.cpp",
     "mp.cpp",
     "mutex.cpp",
+    "owned_wait_queue.cpp",
     "percpu.cpp",
     "thread.cpp",
     "timer.cpp",

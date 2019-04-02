@@ -238,6 +238,11 @@ static void mp_unplug_trampoline(void) {
     // should be quick), then this CPU may execute the task.
     mp_set_curr_cpu_online(false);
 
+    // We had better not be holding any OwnedWaitQueues at this point in time
+    // (it is unclear how we would have ever obtained any in the first place
+    // since everything this thread ever does is in this function).
+    DEBUG_ASSERT(ct->owned_wait_queues.is_empty());
+
     // do *not* enable interrupts, we want this CPU to never receive another
     // interrupt
     spin_unlock(&thread_lock);

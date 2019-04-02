@@ -6,8 +6,10 @@
 // https://opensource.org/licenses/MIT
 
 #include <kernel/wait.h>
+#include <kernel/wait_queue_internal.h>
 
 #include <err.h>
+#include <kernel/owned_wait_queue.h>
 #include <kernel/sched.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
@@ -20,6 +22,14 @@
 // add expensive code to do a full validation of the wait queue at various entry points
 // to this module.
 #define WAIT_QUEUE_VALIDATION (0 || (LK_DEBUGLEVEL > 2))
+
+// Wait queues come in 2 flavors (traditional and owned) which are distinguished
+// using the magic number.  When DEBUG_ASSERT checking the magic number, check
+// against both of the possible valid magic numbers.
+#define DEBUG_ASSERT_MAGIC_CHECK(_queue)                            \
+    DEBUG_ASSERT_MSG(((_queue)->magic == WAIT_QUEUE_MAGIC) ||       \
+                     ((_queue)->magic == OwnedWaitQueue::MAGIC),    \
+                     "magic 0x%08x", static_cast<uint32_t>((_queue)->magic));
 
 // Wait queues are building blocks that other locking primitives use to
 // handle blocking threads.
@@ -54,46 +64,21 @@
 //   |   pri 31    |
 //   |             |
 //   +-------------+
+//
 
-void wait_queue_init(wait_queue_t* wait) {
-    *wait = (wait_queue_t)WAIT_QUEUE_INITIAL_VALUE(*wait);
-}
-
-void wait_queue_validate_queue(wait_queue_t* wait) {
-    DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-
-    // validate that the queue is sorted properly
-    thread_t* last = NULL;
-    thread_t* temp;
-    list_for_every_entry (&wait->heads, temp, thread_t, wait_queue_heads_node) {
-        DEBUG_ASSERT(temp->magic == THREAD_MAGIC);
-
-        // validate that the queue is sorted high to low priority
-        if (last) {
-            DEBUG_ASSERT_MSG(last->effec_priority > temp->effec_priority,
-                             "%p:%d  %p:%d",
-                             last, last->effec_priority,
-                             temp, temp->effec_priority);
-        }
-
-        // walk any threads linked to this head, validating that they're the same priority
-        thread_t* temp2;
-        list_for_every_entry (&temp->queue_node, temp2, thread_t, queue_node) {
-            DEBUG_ASSERT(temp2->magic == THREAD_MAGIC);
-            DEBUG_ASSERT_MSG(temp->effec_priority == temp2->effec_priority,
-                             "%p:%d  %p:%d",
-                             temp, temp->effec_priority,
-                             temp2, temp2->effec_priority);
-        }
-
-        last = temp;
-    }
-}
+// Utility functions meant to be used *only* by wait queue internal code.
+// Normally, these would be static and restricted to this translation unit, but
+// there are reasons that some of this code needs to be accessible outside of
+// this TU (see wait_queue_interal.h and wait_queue_block_etc_(pre|post).)
+//
+// Instead of having two styles, one where some of these functions are static
+// and others are members of internal::, all of the previously static functions
+// have been moved into the internal:: namespace instead (just for consistency's
+// sake).
+namespace internal {
 
 // add a thread to the tail of a wait queue, sorted by priority
-static void wait_queue_insert(wait_queue_t* wait, thread_t* t) {
+void wait_queue_insert(wait_queue_t* wait, thread_t* t) TA_REQ(thread_lock) {
     if (likely(list_is_empty(&wait->heads))) {
         // we're the first thread
         list_initialize(&t->queue_node);
@@ -125,7 +110,7 @@ static void wait_queue_insert(wait_queue_t* wait, thread_t* t) {
 
 // remove a thread from whatever wait queue its in
 // thread must be the head of a queue
-static void remove_queue_head(thread_t* t) {
+void wait_queue_remove_head(thread_t* t) TA_REQ(thread_lock) {
     // are there any nodes in the queue for this priority?
     if (list_is_empty(&t->queue_node)) {
         // no, remove ourself from the queue list
@@ -141,28 +126,90 @@ static void remove_queue_head(thread_t* t) {
     }
 }
 
-// remove the head of the highest priority queue
-static thread_t* wait_queue_pop_head(wait_queue_t* wait) {
-    thread_t* t = NULL;
-
-    t = list_peek_head_type(&wait->heads, thread_t, wait_queue_heads_node);
-    if (!t) {
-        return NULL;
-    }
-
-    remove_queue_head(t);
-
-    return t;
-}
-
 // remove the thread from whatever wait queue its in
-static void wait_queue_remove_thread(thread_t* t) {
+void wait_queue_remove_thread(thread_t* t) TA_REQ(thread_lock) {
     if (!list_in_list(&t->wait_queue_heads_node)) {
         // we're just in a queue, not a head
         list_delete(&t->queue_node);
     } else {
         // we're the head of a queue
-        remove_queue_head(t);
+        wait_queue_remove_head(t);
+    }
+}
+
+void wait_queue_timeout_handler(timer_t* timer, zx_time_t now, void* arg) {
+    thread_t* thread = (thread_t*)arg;
+
+    DEBUG_ASSERT(thread->magic == THREAD_MAGIC);
+
+    // spin trylocking on the thread lock since the routine that set up the callback,
+    // wait_queue_block, may be trying to simultaneously cancel this timer while holding the
+    // thread_lock.
+    if (timer_trylock_or_cancel(timer, &thread_lock)) {
+        return;
+    }
+
+    wait_queue_unblock_thread(thread, ZX_ERR_TIMED_OUT);
+
+    spin_unlock(&thread_lock);
+}
+
+// Deal with the consequences of a change of maximum priority across the set of
+// waiters in a wait queue.
+bool wait_queue_waiters_priority_changed(wait_queue_t* wq, int old_prio) TA_REQ(thread_lock) {
+    // If this is an owned wait queue, and the maximum priority of its set of
+    // waiters has changed, make sure to apply any needed priority inheritance.
+    if ((wq->magic == OwnedWaitQueue::MAGIC) &&
+        (old_prio != wait_queue_blocked_priority(wq))) {
+        return static_cast<OwnedWaitQueue*>(wq)->WaitersPriorityChanged(old_prio);
+    }
+
+    return false;
+}
+
+}  // namespace internal
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// End internal::
+// Begin user facing API
+//
+////////////////////////////////////////////////////////////////////////////////
+
+void wait_queue_init(wait_queue_t* wait) {
+    *wait = (wait_queue_t)WAIT_QUEUE_INITIAL_VALUE(*wait);
+}
+
+void wait_queue_validate_queue(wait_queue_t* wait) TA_REQ(thread_lock) {
+    DEBUG_ASSERT_MAGIC_CHECK(wait);
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    // validate that the queue is sorted properly
+    thread_t* last = NULL;
+    thread_t* temp;
+    list_for_every_entry (&wait->heads, temp, thread_t, wait_queue_heads_node) {
+        DEBUG_ASSERT(temp->magic == THREAD_MAGIC);
+
+        // validate that the queue is sorted high to low priority
+        if (last) {
+            DEBUG_ASSERT_MSG(last->effec_priority > temp->effec_priority,
+                             "%p:%d  %p:%d",
+                             last, last->effec_priority,
+                             temp, temp->effec_priority);
+        }
+
+        // walk any threads linked to this head, validating that they're the same priority
+        thread_t* temp2;
+        list_for_every_entry (&temp->queue_node, temp2, thread_t, queue_node) {
+            DEBUG_ASSERT(temp2->magic == THREAD_MAGIC);
+            DEBUG_ASSERT_MSG(temp->effec_priority == temp2->effec_priority,
+                             "%p:%d  %p:%d",
+                             temp, temp->effec_priority,
+                             temp2, temp2->effec_priority);
+        }
+
+        last = temp;
     }
 }
 
@@ -179,24 +226,6 @@ int wait_queue_blocked_priority(const wait_queue_t* wait) {
 // returns a reference to the highest priority thread queued
 thread_t* wait_queue_peek(wait_queue_t* wait) {
     return list_peek_head_type(&wait->heads, thread_t, wait_queue_heads_node);
-}
-
-static void wait_queue_timeout_handler(timer_t* timer, zx_time_t now,
-                                       void* arg) {
-    thread_t* thread = (thread_t*)arg;
-
-    DEBUG_ASSERT(thread->magic == THREAD_MAGIC);
-
-    // spin trylocking on the thread lock since the routine that set up the callback,
-    // wait_queue_block, may be trying to simultaneously cancel this timer while holding the
-    // thread_lock.
-    if (timer_trylock_or_cancel(timer, &thread_lock)) {
-        return;
-    }
-
-    wait_queue_unblock_thread(thread, ZX_ERR_TIMED_OUT);
-
-    spin_unlock(&thread_lock);
 }
 
 /**
@@ -225,11 +254,9 @@ zx_status_t wait_queue_block_etc(wait_queue_t* wait,
                                  const Deadline& deadline,
                                  uint signal_mask,
                                  ResourceOwnership reason) TA_REQ(thread_lock) {
-    timer_t timer;
-
     thread_t* current_thread = get_current_thread();
 
-    DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
+    DEBUG_ASSERT_MAGIC_CHECK(wait);
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
@@ -238,43 +265,12 @@ zx_status_t wait_queue_block_etc(wait_queue_t* wait,
         wait_queue_validate_queue(wait);
     }
 
-    if (deadline.when() != ZX_TIME_INFINITE && deadline.when() <= current_time()) {
-        return ZX_ERR_TIMED_OUT;
+    zx_status_t res = internal::wait_queue_block_etc_pre(wait, deadline, signal_mask, reason);
+    if (res != ZX_OK) {
+        return res;
     }
 
-    if (current_thread->interruptable &&
-        (unlikely(current_thread->signals & ~signal_mask))) {
-        if (current_thread->signals & THREAD_SIGNAL_KILL) {
-            return ZX_ERR_INTERNAL_INTR_KILLED;
-        } else if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
-            return ZX_ERR_INTERNAL_INTR_RETRY;
-        }
-    }
-
-    wait_queue_insert(wait, current_thread);
-    wait->count++;
-    current_thread->state = reason == ResourceOwnership::Normal ? THREAD_BLOCKED : THREAD_BLOCKED_READ_LOCK;
-    current_thread->blocking_wait_queue = wait;
-    current_thread->blocked_status = ZX_OK;
-
-    // if the deadline is nonzero or noninfinite, set a callback to yank us out of the queue
-    if (deadline.when() != ZX_TIME_INFINITE) {
-        timer_init(&timer);
-        timer_set(&timer, deadline, wait_queue_timeout_handler, (void*)current_thread);
-    }
-
-    ktrace_ptr(TAG_KWAIT_BLOCK, wait, 0, 0);
-
-    sched_block();
-
-    ktrace_ptr(TAG_KWAIT_UNBLOCK, wait, current_thread->blocked_status, 0);
-
-    // we don't really know if the timer fired or not, so it's better safe to try to cancel it
-    if (deadline.when() != ZX_TIME_INFINITE) {
-        timer_cancel(&timer);
-    }
-
-    return current_thread->blocked_status;
+    return internal::wait_queue_block_etc_post(wait, deadline);
 }
 
 /**
@@ -317,6 +313,10 @@ int wait_queue_wake_one(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
     thread_t* t;
     int ret = 0;
 
+    // Note(johngro): No one should ever calling wait_queue_wake_one on an
+    // instance of an OwnedWaitQueue.  OwnedWaitQueues need to deal with
+    // priority inheritance, and all wake operations on an OwnedWaitQueue should
+    // be going through their interface instead.
     DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
@@ -325,12 +325,9 @@ int wait_queue_wake_one(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
         wait_queue_validate_queue(wait);
     }
 
-    t = wait_queue_pop_head(wait);
+    t = wait_queue_peek(wait);
     if (t) {
-        wait->count--;
-        DEBUG_ASSERT(t->state == THREAD_BLOCKED || t->state == THREAD_BLOCKED_READ_LOCK);
-        t->blocked_status = wait_queue_error;
-        t->blocking_wait_queue = NULL;
+        internal::wait_queue_dequeue_thread_internal(wait, t, wait_queue_error);
 
         ktrace_ptr(TAG_KWAIT_WAKE, wait, 0, 0);
 
@@ -348,51 +345,58 @@ int wait_queue_wake_one(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
 }
 
 thread_t* wait_queue_dequeue_one(wait_queue_t* wait, zx_status_t wait_queue_error) {
-    thread_t* t;
+    DEBUG_ASSERT_MAGIC_CHECK(wait);
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     if (WAIT_QUEUE_VALIDATION) {
         wait_queue_validate_queue(wait);
     }
 
-    DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(spin_lock_held(&thread_lock));
-
-    t = wait_queue_pop_head(wait);
+    thread_t* t = wait_queue_peek(wait);
     if (t) {
-        wait->count--;
-        DEBUG_ASSERT(t->state == THREAD_BLOCKED || t->state == THREAD_BLOCKED_READ_LOCK);
-        t->blocked_status = wait_queue_error;
-        t->blocking_wait_queue = NULL;
+        internal::wait_queue_dequeue_thread_internal(wait, t, wait_queue_error);
     }
 
     return t;
 }
 
-struct thread* wait_queue_requeue_one(wait_queue_t* src, wait_queue_t* dst) {
-    thread_t* t;
-
-    if (WAIT_QUEUE_VALIDATION) {
-        wait_queue_validate_queue(src);
-        wait_queue_validate_queue(dst);
-    }
-
-    DEBUG_ASSERT(src->magic == WAIT_QUEUE_MAGIC);
-    DEBUG_ASSERT(dst->magic == WAIT_QUEUE_MAGIC);
+void wait_queue_dequeue_thread(wait_queue_t* wait,
+                               thread_t* t,
+                               zx_status_t wait_queue_error) {
+    DEBUG_ASSERT_MAGIC_CHECK(wait);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    t = wait_queue_pop_head(src);
-    if (t) {
-        DEBUG_ASSERT(t->state == THREAD_BLOCKED);
-        DEBUG_ASSERT(t->blocking_wait_queue == src);
-        src->count--;
-        dst->count++;
-        t->blocking_wait_queue = dst;
-        wait_queue_insert(dst, t);
+    if (WAIT_QUEUE_VALIDATION) {
+        wait_queue_validate_queue(wait);
     }
 
-    return t;
+    internal::wait_queue_dequeue_thread_internal(wait, t, wait_queue_error);
+}
+
+void wait_queue_move_thread(wait_queue_t* source, wait_queue_t* dest, thread_t* t) {
+    DEBUG_ASSERT_MAGIC_CHECK(source);
+    DEBUG_ASSERT_MAGIC_CHECK(dest);
+    DEBUG_ASSERT(arch_ints_disabled());
+    DEBUG_ASSERT(spin_lock_held(&thread_lock));
+
+    if (WAIT_QUEUE_VALIDATION) {
+        wait_queue_validate_queue(source);
+        wait_queue_validate_queue(dest);
+    }
+
+    DEBUG_ASSERT(t != nullptr);
+    DEBUG_ASSERT(list_in_list(&t->queue_node));
+    DEBUG_ASSERT(t->state == THREAD_BLOCKED || t->state == THREAD_BLOCKED_READ_LOCK);
+    DEBUG_ASSERT(t->blocking_wait_queue == source);
+    DEBUG_ASSERT(source->count > 0);
+
+    internal::wait_queue_remove_thread(t);
+    internal::wait_queue_insert(dest, t);
+    --source->count;
+    ++dest->count;
+    t->blocking_wait_queue = dest;
 }
 
 /**
@@ -413,6 +417,8 @@ int wait_queue_wake_all(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
     thread_t* t;
     int ret = 0;
 
+    // Note(johngro): See the note in wake_one.  On one should ever be calling
+    // this method on an OwnedWaitQueue
     DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
@@ -429,15 +435,9 @@ int wait_queue_wake_all(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
 
     // pop all the threads off the wait queue into the run queue
     // TODO: optimize with custom pop all routine
-    while ((t = wait_queue_pop_head(wait))) {
-        wait->count--;
-
-        DEBUG_ASSERT(t->state == THREAD_BLOCKED || t->state == THREAD_BLOCKED_READ_LOCK);
-        t->blocked_status = wait_queue_error;
-        t->blocking_wait_queue = NULL;
-
+    while ((t = wait_queue_peek(wait))) {
+        internal::wait_queue_dequeue_thread_internal(wait, t, wait_queue_error);
         list_add_tail(&list, &t->queue_node);
-
         ret++;
     }
 
@@ -457,7 +457,7 @@ int wait_queue_wake_all(wait_queue_t* wait, bool reschedule, zx_status_t wait_qu
 }
 
 bool wait_queue_is_empty(const wait_queue_t* wait) {
-    DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
+    DEBUG_ASSERT_MAGIC_CHECK(wait);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
@@ -474,7 +474,7 @@ bool wait_queue_is_empty(const wait_queue_t* wait) {
  * queue.
  */
 void wait_queue_destroy(wait_queue_t* wait) {
-    DEBUG_ASSERT(wait->magic == WAIT_QUEUE_MAGIC);
+    DEBUG_ASSERT_MAGIC_CHECK(wait);
 
     if (wait->count != 0) {
         panic("wait_queue_destroy() called on non-empty wait_queue_t\n");
@@ -504,18 +504,18 @@ zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error)
         return ZX_ERR_BAD_STATE;
     }
 
-    DEBUG_ASSERT(t->blocking_wait_queue != NULL);
-    DEBUG_ASSERT(t->blocking_wait_queue->magic == WAIT_QUEUE_MAGIC);
+    wait_queue_t* wq = t->blocking_wait_queue;
+    DEBUG_ASSERT(wq != NULL);
+    DEBUG_ASSERT_MAGIC_CHECK(wq);
     DEBUG_ASSERT(list_in_list(&t->queue_node));
 
     if (WAIT_QUEUE_VALIDATION) {
-        wait_queue_validate_queue(t->blocking_wait_queue);
+        wait_queue_validate_queue(wq);
     }
 
-    wait_queue_remove_thread(t);
-    t->blocking_wait_queue->count--;
-    t->blocking_wait_queue = NULL;
-    t->blocked_status = wait_queue_error;
+    int old_wq_prio = wait_queue_blocked_priority(wq);
+    internal::wait_queue_dequeue_thread_internal(wq, t, wait_queue_error);
+    internal::wait_queue_waiters_priority_changed(wq, old_wq_prio);
 
     if (sched_unblock(t)) {
         sched_reschedule();
@@ -524,14 +524,15 @@ zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error)
     return ZX_OK;
 }
 
-void wait_queue_priority_changed(struct thread* t, int old_prio) {
+bool wait_queue_priority_changed(struct thread* t, int old_prio) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
-
     DEBUG_ASSERT(t->state == THREAD_BLOCKED || t->state == THREAD_BLOCKED_READ_LOCK);
-    DEBUG_ASSERT(t->blocking_wait_queue != NULL);
-    DEBUG_ASSERT(t->blocking_wait_queue->magic == WAIT_QUEUE_MAGIC);
+
+    wait_queue_t* wq = t->blocking_wait_queue;
+    DEBUG_ASSERT(wq != NULL);
+    DEBUG_ASSERT_MAGIC_CHECK(wq);
 
     LTRACEF("%p %d -> %d\n", t, old_prio, t->effec_priority);
 
@@ -539,13 +540,13 @@ void wait_queue_priority_changed(struct thread* t, int old_prio) {
     // TODO: implement optimal algorithm depending on all the different edge
     // cases of how the thread was previously queued and what priority its
     // switching to.
-    wait_queue_remove_thread(t);
-    wait_queue_insert(t->blocking_wait_queue, t);
+    int old_wq_prio = wait_queue_blocked_priority(wq);
+    internal::wait_queue_remove_thread(t);
+    internal::wait_queue_insert(wq, t);
 
-    // TODO: find a way to call into wrapper mutex object if present and
-    // have the holder inherit the new priority
-
+    bool ret = internal::wait_queue_waiters_priority_changed(wq, old_wq_prio);
     if (WAIT_QUEUE_VALIDATION) {
         wait_queue_validate_queue(t->blocking_wait_queue);
     }
+    return ret;
 }
