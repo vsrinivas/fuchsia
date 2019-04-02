@@ -1,0 +1,63 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/resource.gni")
+import("$zx/public/gn/zbi.gni")
+
+resource("test-zbi") {
+  sources = [
+    "$target_out_dir/test-image.zbi",
+  ]
+  outputs = [
+    "test/test-image.zbi",
+  ]
+  deps = [
+    "$zx/system/ulib/zbi-bootfs/test:test-image",
+  ]
+  testonly = true
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":zbi-bootfs-test",
+  ]
+}
+
+test("zbi-bootfs-test") {
+  sources = [
+    "zbi-bootfs-test.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-hardware-skipblock:c",
+    "$zx/system/ulib/bootdata",
+    "$zx/system/ulib/bootfs",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zbi-bootfs",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxcpp",
+  ]
+
+  data_deps = [
+    ":test-zbi",
+  ]
+}
+
+zbi_input("create-zbi-image") {
+  testonly = true
+  sources = [
+    "$zx/system/ulib/zbi-bootfs/test/payload/",
+  ]
+}
+
+# This makes a zbi() to run tests.
+zbi("test-image") {
+  testonly = true
+  cpu = ""
+  deps = [
+    "$zx/system/ulib/zbi-bootfs/test:create-zbi-image",
+  ]
+}

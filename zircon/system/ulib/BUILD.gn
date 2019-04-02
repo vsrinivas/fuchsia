@@ -149,6 +149,7 @@ if (current_cpu != "") {
       "virtio",
       "xdc-host-utils",
       "xdc-server-utils",
+      "zbi-bootfs",
       "zircon",
       "zircon-internal",
       "zx",

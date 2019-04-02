@@ -1,0 +1,23 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("zbi-bootfs") {
+  sdk_headers = [ "zbi-bootfs/zbi-bootfs.h" ]
+  sdk = "static"
+  static = true
+  kernel = true
+
+  sources = [
+    "zbi-bootfs.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-hardware-skipblock:c",
+    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/ulib/bootdata",
+    "$zx/system/ulib/bootfs",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zxcpp",
+  ]
+}
