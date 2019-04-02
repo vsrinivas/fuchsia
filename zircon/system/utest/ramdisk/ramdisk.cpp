@@ -158,6 +158,44 @@ static bool RamdiskTestSimple(void) {
     END_TEST;
 }
 
+static bool RamdiskTestStats(void) {
+
+    BEGIN_TEST;
+    fbl::unique_ptr<RamdiskTest> ramdisk;
+    constexpr size_t kBlockSize = 512;
+    constexpr size_t kBlockCount = 512;
+    ASSERT_TRUE(RamdiskTest::Create(kBlockSize, kBlockCount, &ramdisk));
+    fzl::UnownedFdioCaller ramdisk_connection(ramdisk->block_fd());
+    zx::unowned_channel channel(ramdisk_connection.borrow_channel());
+
+    constexpr size_t kBlocksToWrite = 2;
+    uint8_t buf[kBlockSize * kBlocksToWrite];
+    memset(buf, 'a', sizeof(buf));
+
+    // Query stats. Until we have isolated devmgr integration, only query write
+    // stats to avoid a race condition with the block watcher.
+    bool clear = true;
+    zx_status_t status;
+    fuchsia_hardware_block_BlockStats block_stats;
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetStats(channel->get(), clear,
+                                                   &status, &block_stats), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(block_stats.writes, 0);
+    ASSERT_EQ(block_stats.blocks_written, 0);
+
+    // Write a couple blocks to the device.
+    ASSERT_EQ(write(ramdisk->block_fd(), buf, sizeof(buf)), (ssize_t)sizeof(buf));
+
+    // Observe that those writes are measurable via stats.
+    ASSERT_EQ(fuchsia_hardware_block_BlockGetStats(channel->get(), clear,
+                                                   &status, &block_stats), ZX_OK);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(block_stats.writes, 1);
+    ASSERT_EQ(block_stats.blocks_written, kBlocksToWrite);
+
+    END_TEST;
+}
+
 static bool RamdiskGrowTestDimensionsChange(void) {
     BEGIN_TEST;
     constexpr size_t kBlockCount = 512;
@@ -1640,6 +1678,7 @@ RUN_TEST_SMALL(RamdiskGrowTestDimensionsChange)
 RUN_TEST_SMALL(RamdiskGrowTestReadFromOldBlocks)
 RUN_TEST_SMALL(RamdiskGrowTestWriteToAddedBlocks)
 RUN_TEST_SMALL(RamdiskTestSimple)
+RUN_TEST_SMALL(RamdiskTestStats)
 RUN_TEST_SMALL(RamdiskTestGuid)
 RUN_TEST_SMALL(RamdiskTestVmo)
 RUN_TEST_SMALL(RamdiskTestFilesystem)

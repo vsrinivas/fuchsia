@@ -725,57 +725,6 @@ bool CheckStats(fuchsia_hardware_block_BlockStats stats, int64_t total_ops, int6
     END_HELPER;
 }
 
-bool GetStatsTest(fs_test_utils::Fixture* fixture) {
-    fbl::StringBuffer<512> test_data;
-    test_data.Resize(512, 'c');
-    char test_read[512];
-
-    BEGIN_TEST;
-    fbl::unique_fd ram_fd(open(fixture->block_device_path().c_str(), O_RDONLY));
-    ASSERT_TRUE(ram_fd);
-    fzl::FdioCaller caller(std::move(ram_fd));
-    fuchsia_hardware_block_BlockStats block_stats;
-    // Clear stats from creating ramdisk
-    bool clear = true;
-    zx_status_t status;
-    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
-                                                   &status, &block_stats));
-    // Retrieve cleared stats
-    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
-                                                   &status, &block_stats));
-    ASSERT_TRUE(CheckStats(block_stats, 0, 0, 0, 0, 0, 0));
-
-    fbl::StringBuffer<fs_test_utils::kPathSize> myfile;
-    myfile.AppendPrintf("%s/my_file.txt", fixture->fs_path().c_str());
-    fbl::unique_fd file_to_create(open(myfile.c_str(), O_RDWR | O_CREAT));
-    fsync(file_to_create.get());
-
-    // Clear stats from creating file
-    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
-                                                   &status, &block_stats));
-    ASSERT_EQ(write(file_to_create.get(), test_data.data(), 512), 512);
-    fsync(file_to_create.get());
-    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
-                                                   &status, &block_stats));
-    // 6 ops total, 5 for the write and 1 for the sync, 80 blocks written by 5 16 block writes.
-    // 1 extra write is required since the inode is updated synchronously and asynchronously.
-    ASSERT_TRUE(CheckStats(block_stats, 6, 80, 0, 0, 5, 80));
-    ASSERT_EQ(lseek(file_to_create.get(), 0, SEEK_SET), 0);
-    // Reset file to clear it from the cache
-    file_to_create.reset();
-    fixture->Remount();
-    file_to_create.reset(open(myfile.c_str(), O_RDONLY));
-    // Clear the stats from reseting the file
-    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
-                                                   &status, &block_stats));
-    ASSERT_EQ(read(file_to_create.get(), test_read, 512), 512);
-    ASSERT_OK(fuchsia_hardware_block_BlockGetStats(caller.borrow_channel(), clear,
-                                                   &status, &block_stats));
-    // 1 op for reading 16 blocks, no writes
-    ASSERT_TRUE(CheckStats(block_stats, 1, 16, 1, 16, 0, 0));
-    END_TEST;
-}
-
 bool GetPartitionSliceCount(const zx::unowned_channel& channel, size_t* out_count) {
     BEGIN_HELPER;
 
@@ -852,10 +801,6 @@ RUN_TEST_MEDIUM(MountBlockReadonly)
 RUN_TEST_MEDIUM(StatfsTest)
 RUN_TEST_MEDIUM(StatvfsTest)
 END_TEST_CASE(fs_management_tests)
-
-BEGIN_FS_TEST_CASE(fs_management_get_stats, MinfsRamdiskOptions)
-RUN_FS_TEST_F(GetStatsTest)
-END_FS_TEST_CASE(fs_management_get_stats, MinfsRamdiskOptions)
 
 BEGIN_FS_TEST_CASE(fs_management_mkfs_tests, PartitionOverFvmWithRamdisk)
 RUN_FS_TEST_F(MkfsMinfsWithMinFvmSlices)
