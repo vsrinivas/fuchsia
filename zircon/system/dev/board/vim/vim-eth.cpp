@@ -124,8 +124,8 @@ zx_status_t Vim::EthInit() {
 
     pbus_dev_t eth_board_dev = {};
     eth_board_dev.name = "ethernet_mac";
-    eth_board_dev.vid = PDEV_VID_KHADAS;
-    eth_board_dev.pid = PDEV_PID_VIM2;
+    eth_board_dev.vid = PDEV_VID_AMLOGIC;
+    eth_board_dev.pid = PDEV_PID_AMLOGIC_S912;
     eth_board_dev.did = PDEV_DID_AMLOGIC_ETH;
     eth_board_dev.mmio_list = eth_board_mmios;
     eth_board_dev.mmio_count = countof(eth_board_mmios);

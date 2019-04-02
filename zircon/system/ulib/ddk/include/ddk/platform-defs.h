@@ -24,7 +24,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_DW_PCIE            10  // Designware PCIe
 #define PDEV_DID_LED2472G           11  // RPi Sense Hat LED2472G
 #define PDEV_DID_GPU_VSL_GC         12  // Verisilicon GC series GPU
-#define PDEV_DID_ARM_MALI_INIT      13  // ARM MALI GPU (Zircon)
+// 13 unused
 #define PDEV_DID_OPTEE              14  // OP-TEE OS Driver
 #define PDEV_DID_RTC_FALLBACK       15  // Synthetic RTC device
 #define PDEV_DID_ETH_MAC            16  // Ethernet MAC
@@ -112,7 +112,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AMLOGIC_G12B_CLK   20
 #define PDEV_DID_AMLOGIC_MIPI_CSI   21
 #define PDEV_DID_SHERLOCK_PDM       22
-
+#define PDEV_DID_AMLOGIC_MALI_INIT  23
 
 // Broadcom
 #define PDEV_VID_BROADCOM           6

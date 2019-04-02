@@ -197,8 +197,8 @@ static const pbus_dev_t mailbox_children[] = {
 zx_status_t Vim::ThermalInit() {
     pbus_dev_t mailbox_dev = {};
     mailbox_dev.name = "mailbox";
-    mailbox_dev.vid = PDEV_VID_KHADAS;
-    mailbox_dev.pid = PDEV_PID_VIM2;
+    mailbox_dev.vid = PDEV_VID_AMLOGIC;
+    mailbox_dev.pid = PDEV_PID_AMLOGIC_S912;
     mailbox_dev.did = PDEV_DID_AMLOGIC_MAILBOX;
     mailbox_dev.mmio_list = mailbox_mmios;
     mailbox_dev.mmio_count = countof(mailbox_mmios);
