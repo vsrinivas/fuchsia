@@ -8,8 +8,7 @@ import("//build/go/go_test.gni")
 group("tests") {
   testonly = true
   deps = [
-    # TODO: Restore this once build warnings from it are fixed.
-    # ":cpuperf_raw_printer_test",
+    ":cpuperf_raw_printer_test",
   ]
 }
 
@@ -27,20 +26,22 @@ copy("raw_printer_test_data") {
   ]
 }
 
-# TODO(IN-819): Delete the following target once cpuperf tests are no
-# longer being run out of $root_build_dir/host_tests/.
-copy("raw_printer_test_data_deprecated") {
-  sources = [
-    "raw-expected-output.txt",
-    "raw-test.0.0.cpuperf",
-    "raw-test.0.1.cpuperf",
-    "raw-test.0.2.cpuperf",
-    "raw-test.0.3.cpuperf",
-    "raw-test.cpsession",
-  ]
-  outputs = [
-    "$root_build_dir/host_tests/test_data/cpuperf/{{source_file_part}}",
-  ]
+if (current_toolchain == host_toolchain) {
+  # TODO(IN-819): Delete the following target once cpuperf tests are no
+  # longer being run out of $root_build_dir/host_tests/.
+  copy("raw_printer_test_data_deprecated") {
+    sources = [
+      "raw-expected-output.txt",
+      "raw-test.0.0.cpuperf",
+      "raw-test.0.1.cpuperf",
+      "raw-test.0.2.cpuperf",
+      "raw-test.0.3.cpuperf",
+      "raw-test.cpsession",
+    ]
+    outputs = [
+      "$root_build_dir/host_tests/test_data/cpuperf/{{source_file_part}}",
+    ]
+  }
 }
 
 go_library("raw_printer_test_lib") {
@@ -48,8 +49,10 @@ go_library("raw_printer_test_lib") {
   non_go_deps = [
     "//garnet/bin/cpuperf/print:cpuperf_print($host_toolchain)",
     ":raw_printer_test_data",
-    ":raw_printer_test_data_deprecated",
   ]
+  if (current_toolchain == host_toolchain) {
+    non_go_deps += [ ":raw_printer_test_data_deprecated" ]
+  }
   metadata = {
     test_runtime_deps = [ "$root_out_dir/cpuperf_print" ] +
                         get_target_outputs(":raw_printer_test_data")
