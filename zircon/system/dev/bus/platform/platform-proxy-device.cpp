@@ -755,7 +755,7 @@ zx_status_t ProxyDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
         return ZX_OK;
     }
     default:
-        return proxy_->GetProtocol(proto_id, out);;
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
