@@ -8,7 +8,6 @@
 
 namespace ktl {
 
-template <typename T>
-using numeric_limits = std::numeric_limits<T>;
+using std::numeric_limits;
 
 } // namespace ktl

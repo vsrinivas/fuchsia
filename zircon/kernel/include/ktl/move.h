@@ -4,13 +4,10 @@
 
 #pragma once
 
-#include <type_traits>
+#include <utility>
 
 namespace ktl {
 
-template <typename T>
-constexpr typename std::remove_reference<T>::type&& move(T&& t) {
-    return static_cast<typename std::remove_reference<T>::type&&>(t);
-}
+using std::move;
 
 } // namespace ktl

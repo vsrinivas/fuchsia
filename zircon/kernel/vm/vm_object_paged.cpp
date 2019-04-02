@@ -1211,7 +1211,7 @@ zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSplice
         return ZX_ERR_BAD_STATE;
     }
 
-    *pages = ktl::move(page_list_.TakePages(offset, len));
+    *pages = page_list_.TakePages(offset, len);
 
     return ZX_OK;
 }

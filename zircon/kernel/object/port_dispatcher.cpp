@@ -509,7 +509,7 @@ void PortDispatcher::LinkExceptionPortEportLocked(ExceptionPort* eport) {
     Guard<fbl::Mutex> guard{get_lock()};
     DEBUG_ASSERT_COND(eport->PortMatchesLocked(this, /* allow_null */ false));
     DEBUG_ASSERT(!eport->InContainer());
-    eports_.push_back(ktl::move(AdoptRef(eport)));
+    eports_.push_back(AdoptRef(eport));
 }
 
 void PortDispatcher::UnlinkExceptionPortEportLocked(ExceptionPort* eport) {

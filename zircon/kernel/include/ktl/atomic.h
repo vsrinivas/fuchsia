@@ -9,26 +9,17 @@
 
 namespace ktl {
 
-template <typename T>
-using atomic = std::atomic<T>;
+using std::atomic;
 
-using memory_order = std::memory_order;
+using std::memory_order;
 
-inline constexpr const memory_order memory_order_relaxed = std::memory_order_relaxed;
-inline constexpr const memory_order memory_order_consume = std::memory_order_consume;
-inline constexpr const memory_order memory_order_acquire = std::memory_order_acquire;
-inline constexpr const memory_order memory_order_release = std::memory_order_release;
-inline constexpr const memory_order memory_order_acq_rel = std::memory_order_acq_rel;
-inline constexpr const memory_order memory_order_seq_cst = std::memory_order_seq_cst;
+using std::memory_order_relaxed;
+using std::memory_order_consume;
+using std::memory_order_acquire;
+using std::memory_order_release;
+using std::memory_order_acq_rel;
+using std::memory_order_seq_cst;
 
-template <typename T>
-void atomic_init(atomic<T>* pointer, T&& value) {
-    std::atomic_init(pointer, std::forward<T>(value));
-}
-
-template <typename T>
-void atomic_init(volatile atomic<T>* pointer, T&& value) {
-    std::atomic_init(pointer, std::forward<T>(value));
-}
+using std::atomic_init;
 
 } // namespace ktl

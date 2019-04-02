@@ -214,7 +214,7 @@ fbl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
     }
 
     // return a ref pointer to the aspace
-    return ktl::move(aspace);
+    return aspace;
 }
 
 void VmAspace::Rename(const char* name) {
@@ -247,8 +247,7 @@ VmAspace::~VmAspace() {
 
 fbl::RefPtr<VmAddressRegion> VmAspace::RootVmar() {
     Guard<fbl::Mutex> guard{&lock_};
-    fbl::RefPtr<VmAddressRegion> ref(root_vmar_);
-    return ktl::move(ref);
+    return fbl::RefPtr<VmAddressRegion>(root_vmar_);
 }
 
 zx_status_t VmAspace::Destroy() {

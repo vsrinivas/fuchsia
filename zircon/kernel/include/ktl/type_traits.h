@@ -8,22 +8,22 @@
 
 namespace ktl {
 
-template <typename T>
-using is_const = std::is_const<T>;
+using std::is_const;
+using std::is_const_v;
 
-template <typename T>
-using is_lvalue_reference = std::is_lvalue_reference<T>;
+using std::is_lvalue_reference;
+using std::is_lvalue_reference_v;
 
-template <typename T>
-using is_pod = std::is_pod<T>;
+using std::is_pod;
+using std::is_pod_v;
 
-template <typename T, typename U>
-using is_same = std::is_same<T, U>;
+using std::is_same;
+using std::is_same_v;
 
-template <typename T>
-using remove_const = std::remove_const<T>;
+using std::remove_const;
+using std::remove_const_t;
 
-template <typename T>
-using remove_reference = std::remove_reference<T>;
+using std::remove_reference;
+using std::remove_reference_t;
 
 } // namespace ktl
