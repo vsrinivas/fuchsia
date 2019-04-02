@@ -80,6 +80,16 @@ static zx_status_t job_callback(void* ctx, int depth, zx_handle_t job,
         // about job_stack.
         return status;
     }
+
+    zx_info_job_t info;
+    status = zx_object_get_info(job, ZX_INFO_JOB, &info, sizeof(info), NULL, NULL);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (info.kill_on_oom) {
+        snprintf(e.state_str, sizeof(e.state_str), "killoom");
+    }
+
     snprintf(e.koid_str, sizeof(e.koid_str), "%" PRIu64, koid);
     snprintf(e.parent_koid_str, sizeof(e.koid_str), "%" PRIu64, parent_koid);
 
@@ -192,11 +202,11 @@ static void print_header(int id_w, const ps_options_t* options) {
         printf("%*s %7s %7s %7s %7s %s\n",
                -id_w, "TASK", "PSS", "PRIVATE", "SHARED", "STATE", "NAME");
     } else if (options->only_show_jobs) {
-        printf("%*s %7s %7s %s\n",
-               -id_w, "TASK", "PSS", "PRIVATE", "NAME");
-    } else {
         printf("%*s %7s %7s %7s %s\n",
-               -id_w, "TASK", "PSS", "PRIVATE", "SHARED", "NAME");
+               -id_w, "TASK", "PSS", "PRIVATE", "STATE", "NAME");
+    } else {
+        printf("%*s %7s %7s %7s %7s %s\n",
+               -id_w, "TASK", "PSS", "PRIVATE", "SHARED", "STATE", "NAME");
     }
 }
 
@@ -251,17 +261,19 @@ static void print_table(task_table_t* table, const ps_options_t* options) {
                    e->state_str,
                    e->name);
         } else if (options->only_show_jobs) {
-            printf("%*s %7s %7s %s\n",
-                   -id_w, idbuf,
-                   pss_bytes_str,
-                   private_bytes_str,
-                   e->name);
-        } else {
             printf("%*s %7s %7s %7s %s\n",
                    -id_w, idbuf,
                    pss_bytes_str,
                    private_bytes_str,
+                   e->state_str,
+                   e->name);
+        } else {
+            printf("%*s %7s %7s %7s %7s %s\n",
+                   -id_w, idbuf,
+                   pss_bytes_str,
+                   private_bytes_str,
                    shared_bytes_str,
+                   e->state_str,
                    e->name);
         }
     }
