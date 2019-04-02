@@ -14,5 +14,5 @@ struct stat {
     struct timespec st_atim;
     struct timespec st_mtim;
     struct timespec st_ctim;
-    unsigned __unused[2];
+    unsigned __unused1[2];
 };
