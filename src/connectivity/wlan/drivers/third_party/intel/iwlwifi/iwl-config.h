@@ -35,7 +35,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONFIG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONFIG_H_
 
-#include "iwl-csr.h"
+#include <stdbool.h>
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 
 enum iwl_device_family {
     IWL_DEVICE_FAMILY_UNDEFINED,
@@ -462,7 +465,7 @@ extern const struct iwl_cfg iwl105_bgn_cfg;
 extern const struct iwl_cfg iwl105_bgn_d_cfg;
 extern const struct iwl_cfg iwl135_bgn_cfg;
 #endif /* CPTCFG_IWLDVM */
-#if IS_ENABLED(CPTCFG_IWLMVM)
+#ifdef CPTCFG_IWLMVM
 extern const struct iwl_cfg iwl7260_2ac_cfg;
 extern const struct iwl_cfg iwl7260_2ac_cfg_high_temp;
 extern const struct iwl_cfg iwl7260_2n_cfg;
@@ -483,7 +486,7 @@ extern const struct iwl_cfg iwl8260_2ac_cfg;
 extern const struct iwl_cfg iwl8265_2ac_cfg;
 extern const struct iwl_cfg iwl8275_2ac_cfg;
 extern const struct iwl_cfg iwl4165_2ac_cfg;
-#endif /* IS_ENABLED(CPTCFG_IWLMVM) */
+#endif /* CPTCFG_IWLMVM */
 #if IS_ENABLED(CPTCFG_IWLMVM) || IS_ENABLED(CPTCFG_IWLFMAC)
 extern const struct iwl_cfg iwl9160_2ac_cfg;
 extern const struct iwl_cfg iwl9260_2ac_cfg;

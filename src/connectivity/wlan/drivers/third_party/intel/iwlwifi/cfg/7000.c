@@ -34,9 +34,7 @@
  *
  *****************************************************************************/
 
-#include <linux/module.h>
-#include <linux/stringify.h>
-#include "iwl-config.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
 
 /* Highest firmware API version supported */
 #define IWL7260_UCODE_API_MAX 17
@@ -311,9 +309,3 @@ const struct iwl_cfg iwl7265d_n_cfg = {
     .pwr_tx_backoffs = iwl7265_pwr_tx_backoffs,
     .dccm_len = IWL7265_DCCM_LEN,
 };
-
-MODULE_FIRMWARE(IWL7260_MODULE_FIRMWARE(IWL7260_UCODE_API_MAX));
-MODULE_FIRMWARE(IWL3160_MODULE_FIRMWARE(IWL7260_UCODE_API_MAX));
-MODULE_FIRMWARE(IWL3168_MODULE_FIRMWARE(IWL3168_UCODE_API_MAX));
-MODULE_FIRMWARE(IWL7265_MODULE_FIRMWARE(IWL7265_UCODE_API_MAX));
-MODULE_FIRMWARE(IWL7265D_MODULE_FIRMWARE(IWL7265D_UCODE_API_MAX));

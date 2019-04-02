@@ -19,7 +19,17 @@ import("//build/package.gni")
 driver_module("iwlwifi_driver") {
   output_name = "iwlwifi"
 
+  defines = [
+    "CPTCFG_IWL_TIMEOUT_FACTOR=1",
+    "CPTCFG_IWLMVM=1",
+  ]
+
   sources = [
+    "cfg/7000.c",
+    "fuchsia_porting.h",
+    "ieee80211.h",
+    "iwl-config.h",
+    "iwl-csr.h",
     "iwl-debug.c",
     "iwl-drv.c",
     "pcie/drv.c",

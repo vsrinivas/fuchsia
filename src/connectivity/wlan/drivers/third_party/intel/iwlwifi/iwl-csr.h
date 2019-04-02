@@ -34,6 +34,9 @@
  *****************************************************************************/
 #ifndef __iwl_csr_h__
 #define __iwl_csr_h__
+
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
+
 /*
  * CSR (control and status registers)
  *

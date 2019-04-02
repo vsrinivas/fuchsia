@@ -33,7 +33,6 @@ typedef uint64_t dma_addr_t;
 
 typedef char* acpi_string;
 
-// TODO(yjlou@): move to ieee80211.h
 enum nl80211_iftype {
     NL80211_IFTYPE_UNSPECIFIED,
     NL80211_IFTYPE_ADHOC,
@@ -52,6 +51,12 @@ enum nl80211_iftype {
     /* keep last */
     NUM_NL80211_IFTYPES,
     NL80211_IFTYPE_MAX = NUM_NL80211_IFTYPES - 1
+};
+
+enum nl80211_band {
+    NL80211_BAND_2GHZ,
+    NL80211_BAND_5GHZ,
+    NL80211_BAND_60GHZ,
 };
 
 #define BIT(x) (1 << x)
