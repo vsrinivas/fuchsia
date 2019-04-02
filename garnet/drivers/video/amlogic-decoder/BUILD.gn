@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 import("//build/testing/environments.gni")
-import("//garnet/tools/cipd.gni")
 
 declare_args() {
   amlogic_decoder_tests = false
