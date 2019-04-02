@@ -54,16 +54,6 @@ fit::function<void(zx_status_t)> NewErrorHandler(fit::closure quit_callback,
   };
 }
 
-fit::function<void(fuchsia::ledger::Status)> HandleResponse(
-    fit::closure quit_callback, std::string description) {
-  return [description, &quit_callback](fuchsia::ledger::Status status) {
-    if (status != fuchsia::ledger::Status::OK) {
-      FXL_LOG(ERROR) << description << " failed";
-      quit_callback();
-    }
-  };
-}
-
 void GetEntries(fuchsia::ledger::PageSnapshotPtr snapshot,
                 std::vector<fuchsia::ledger::Entry> entries,
                 std::unique_ptr<fuchsia::ledger::Token> token,
@@ -119,9 +109,8 @@ TodoApp::TodoApp(async::Loop* loop)
   ledger_->GetRootPage(page_.NewRequest());
 
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     page_watcher_binding_.NewBinding(),
-                     HandleResponse([this] { loop_->Quit(); }, "Watch"));
+  page_->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                        page_watcher_binding_.NewBinding());
   List(std::move(snapshot));
 
   async::PostTask(loop_->dispatcher(), [this] { Act(); });
@@ -164,8 +153,7 @@ void TodoApp::List(fuchsia::ledger::PageSnapshotPtr snapshot) {
 
 void TodoApp::GetKeys(fit::function<void(std::vector<Key>)> callback) {
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  page_->GetSnapshot(snapshot.NewRequest(), {}, nullptr,
-                     HandleResponse([this] { loop_->Quit(); }, "GetSnapshot"));
+  page_->GetSnapshotNew(snapshot.NewRequest(), {}, nullptr);
 
   fuchsia::ledger::PageSnapshot* snapshot_ptr = snapshot.get();
   snapshot_ptr->GetKeys(
@@ -177,15 +165,13 @@ void TodoApp::GetKeys(fit::function<void(std::vector<Key>)> callback) {
 }
 
 void TodoApp::AddNew() {
-  page_->Put(MakeKey(), ToArray(generator_.Generate()),
-             HandleResponse([this] { loop_->Quit(); }, "Put"));
+  page_->PutNew(MakeKey(), ToArray(generator_.Generate()));
 }
 
 void TodoApp::DeleteOne(std::vector<Key> keys) {
   FXL_DCHECK(keys.size());
   std::uniform_int_distribution<> distribution(0, keys.size() - 1);
-  page_->Delete(std::move(keys.at(distribution(rng_))),
-                HandleResponse([this] { loop_->Quit(); }, "Delete"));
+  page_->DeleteNew(std::move(keys.at(distribution(rng_))));
 }
 
 void TodoApp::Act() {

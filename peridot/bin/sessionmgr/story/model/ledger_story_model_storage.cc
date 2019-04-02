@@ -219,12 +219,12 @@ fit::promise<T> ReadObjectFromKey(fuchsia::ledger::PageSnapshot* snapshot,
 
 // Writes |value| to |key|.
 template <class T>
-fit::promise<> WriteObjectToKey(fuchsia::ledger::Page* page,
-                                const std::string& key, T value) {
+void WriteObjectToKey(fuchsia::ledger::Page* page, const std::string& key,
+                      T value) {
   auto bytes = EncodeForStorage(&value);
   // TODO(thatguy): Calculate if this value is too big for a FIDL message.  If
   // so, fall back on Page.CreateReferenceFromBuffer() and Page.PutReference().
-  return PagePromise::Put(page, key, std::move(bytes));
+  page->PutNew(to_array(key), std::move(bytes));
 }
 
 // Reads the latest device-local state, applies |commands| to it, and then
@@ -249,7 +249,8 @@ fit::promise<> UpdateDeviceState(fuchsia::ledger::Page* page,
       .and_then([page, key, commands = std::move(commands)](
                     const StoryModel& current_value) {
         auto new_value = ApplyMutations(current_value, commands);
-        return WriteObjectToKey(page, key, std::move(new_value));
+        WriteObjectToKey(page, key, std::move(new_value));
+        return fit::ok();
       });
 }
 
@@ -281,36 +282,24 @@ fit::promise<> LedgerStoryModelStorage::Load() {
   };
   auto state = std::make_unique<State>();
 
-  return fit::make_promise([this, state = state.get()](fit::context& c) {
-           // Get a snapshot. Join on the result later and take advantage of
-           // pipelining instead.
-           auto get_snapshot_promise = PagePromise::GetSnapshot(
-               page(), state->page_snapshot.NewRequest());
+  page()->GetSnapshotNew(state->page_snapshot.NewRequest(),
+                         fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */,
+                         nullptr /* watcher */);
+  auto key = MakeDeviceKey(device_id_);
+  auto read_promise =
+      PageSnapshotPromise::GetInline(state->page_snapshot.get(), key)
+          .and_then(
+              [state = state.get()](const std::unique_ptr<std::vector<uint8_t>>&
+                                        device_state_bytes) {
+                if (device_state_bytes) {
+                  GenerateObservedMutationsForDeviceState(
+                      std::move(*device_state_bytes), &state->commands);
+                }
+                return fit::ok();
+              });
 
-           auto key = MakeDeviceKey(device_id_);
-           auto read_promise =
-               PageSnapshotPromise::GetInline(state->page_snapshot.get(), key)
-                   .and_then([state](
-                                 const std::unique_ptr<std::vector<uint8_t>>&
-                                     device_state_bytes) {
-                     if (device_state_bytes) {
-                       GenerateObservedMutationsForDeviceState(
-                           std::move(*device_state_bytes), &state->commands);
-                     }
-                     return fit::ok();
-                   });
-
-           return fit::join_promises(std::move(get_snapshot_promise),
-                                     std::move(read_promise));
-         })
-      .and_then([this, state = state.get()](
-                    std::tuple<fit::result<>, fit::result<>> results)
-                    -> fit::result<> {
-        auto [get_snapshot_result, read_result] = results;
-        if (get_snapshot_result.is_error() || read_result.is_error()) {
-          return fit::error();
-        }
-
+  return read_promise
+      .and_then([this, state = state.get()]() -> fit::result<> {
         Observe(std::move(state->commands));
         return fit::ok();
       })
@@ -349,60 +338,48 @@ fit::promise<> LedgerStoryModelStorage::Execute(
   };
   auto state = std::make_unique<State>();
 
-  return fit::make_promise(
-             [this, state = state.get(),
-              commands = std::move(commands)]() mutable -> fit::promise<> {
-               // Start the transaction, but don't block on its result. Rather,
-               // join it later to ensure that a failed StartTransaction()
-               // triggers a failure of the overall task.
-               auto start_transaction_promise =
-                   PagePromise::StartTransaction(page());
+  return fit::make_promise([this, state = state.get(),
+                            commands = std::move(
+                                commands)]() mutable -> fit::promise<> {
+           page()->StartTransactionNew();
+           page()->GetSnapshotNew(
+               state->page_snapshot.NewRequest(),
+               fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */,
+               nullptr /* watcher */);
 
-               // Get a snapshot. As with StartTransaction(), join on the
-               // result later and take advantage of pipelining instead.
-               auto get_snapshot_promise = PagePromise::GetSnapshot(
-                   page(), state->page_snapshot.NewRequest());
+           // Partition up the commands into those that affect device-only
+           // state, and those that affect shared (among all devices) state.
+           auto [device_commands, shared_commands] =
+               PartitionCommandsForDeviceAndShared(std::move(commands));
 
-               // Partition up the commands into those that affect device-only
-               // state, and those that affect shared (among all devices) state.
-               auto [device_commands, shared_commands] =
-                   PartitionCommandsForDeviceAndShared(std::move(commands));
+           // Dispatch the update commands.
+           auto update_device_state_promise =
+               UpdateDeviceState(page(), state->page_snapshot.get(), device_id_,
+                                 std::move(device_commands));
+           auto update_shared_state_promise = UpdateSharedState(
+               page(), state->page_snapshot.get(), std::move(shared_commands));
 
-               // Dispatch the update commands.
-               auto update_device_state_promise =
-                   UpdateDeviceState(page(), state->page_snapshot.get(),
-                                     device_id_, std::move(device_commands));
-               auto update_shared_state_promise =
-                   UpdateSharedState(page(), state->page_snapshot.get(),
-                                     std::move(shared_commands));
-
-               // Wait on all four pending promises. Fail if any one of them
-               // result in an error.
-               return fit::join_promises(std::move(start_transaction_promise),
-                                         std::move(get_snapshot_promise),
-                                         std::move(update_device_state_promise),
-                                         std::move(update_shared_state_promise))
-                   .and_then([](std::tuple<fit::result<>, fit::result<>,
-                                           fit::result<>, fit::result<>>
-                                    results) -> fit::result<> {
-                     auto [start_transaction_result, get_snapshot_result,
-                           device_result, shared_result] = results;
-                     if (start_transaction_result.is_error() ||
-                         get_snapshot_result.is_error() ||
-                         device_result.is_error() || shared_result.is_error()) {
-                       return fit::error();
-                     }
-                     return fit::ok();
-                   });
-             })
+           // Wait on all four pending promises. Fail if any one of them
+           // result in an error.
+           return fit::join_promises(std::move(update_device_state_promise),
+                                     std::move(update_shared_state_promise))
+               .and_then([](std::tuple<fit::result<>, fit::result<>> results)
+                             -> fit::result<> {
+                 auto [device_result, shared_result] = results;
+                 if (device_result.is_error() || shared_result.is_error()) {
+                   return fit::error();
+                 }
+                 return fit::ok();
+               });
+         })
       // Keep |state| alive until execution reaches here. It is not needed in
       // any subsequent continuation functions.
       .inspect([state = std::move(state)](fit::result<>& r) {})
-      .and_then([page = page()] { return PagePromise::Commit(page); })
+      .and_then([page = page()] { page->CommitNew(); })
       .or_else([page = page()] {
         // Even if RollbackTransaction() succeeds, fail the overall task.
-        return PagePromise::Rollback(page).and_then(
-            [] { return fit::error(); });
+        page->RollbackNew();
+        return fit::error();
       })
       .wrap_with(sequencer_)  // Waits until last Execute() is done.
       .wrap_with(scope_);     // Aborts if |this| is destroyed.

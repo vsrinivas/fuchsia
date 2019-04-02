@@ -46,12 +46,7 @@ class ClipboardStorage::PushCall : public Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    impl_->page()->Put(ToArray(kCurrentValueKey), ToArray(text_),
-                       [this, flow](fuchsia::ledger::Status status) {
-                         if (status != fuchsia::ledger::Status::OK) {
-                           FXL_LOG(ERROR) << "Failed to put text: " << text_;
-                         }
-                       });
+    impl_->page()->PutNew(ToArray(kCurrentValueKey), ToArray(text_));
   }
 
   ClipboardStorage* const impl_;  // not owned
@@ -73,14 +68,8 @@ class ClipboardStorage::PeekCall : public Operation<fidl::StringPtr> {
  private:
   void Run() override {
     FlowToken flow{this, &text_};
-    impl_->page()->GetSnapshot(
-        snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
-        [](fuchsia::ledger::Status status) {
-          if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << "Failed to get page snapshot";
-          }
-        });
-
+    impl_->page()->GetSnapshotNew(snapshot_.NewRequest(),
+                                  fidl::VectorPtr<uint8_t>::New(0), nullptr);
     snapshot_->Get(ToArray(kCurrentValueKey),
                    [this, flow](fuchsia::ledger::Status status,
                                 fuchsia::mem::BufferPtr value) {

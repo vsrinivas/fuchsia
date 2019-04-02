@@ -209,9 +209,7 @@ void FetchBenchmark::WaitForWriterUpload() {
       return;
     }
   };
-  writer_page_->SetSyncStateWatcher(
-      sync_watcher_binding_.NewBinding(),
-      QuitOnErrorCallback(QuitLoopClosure(), "Page::SetSyncStateWatcher"));
+  writer_page_->SetSyncStateWatcherNew(sync_watcher_binding_.NewBinding());
 }
 
 void FetchBenchmark::ConnectReader() {
@@ -239,16 +237,13 @@ void FetchBenchmark::WaitForReaderDownload() {
     if (download == SyncState::IDLE) {
       on_sync_state_changed_ = nullptr;
       PageSnapshotPtr snapshot;
-      reader_page_->GetSnapshot(
-          snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
-          QuitOnErrorCallback(QuitLoopClosure(), "GetSnapshot"));
+      reader_page_->GetSnapshotNew(snapshot.NewRequest(),
+                                   fidl::VectorPtr<uint8_t>::New(0), nullptr);
       FetchValues(std::move(snapshot), 0);
       return;
     }
   };
-  reader_page_->SetSyncStateWatcher(
-      sync_watcher_binding_.NewBinding(),
-      QuitOnErrorCallback(QuitLoopClosure(), "Page::SetSyncStateWatcher"));
+  reader_page_->SetSyncStateWatcherNew(sync_watcher_binding_.NewBinding());
 }
 
 void FetchBenchmark::FetchValues(PageSnapshotPtr snapshot, size_t i) {

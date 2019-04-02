@@ -143,12 +143,10 @@ TEST_F(LedgerEndToEndTest, PutAndGet) {
 
   fidl::SynchronousInterfacePtr<ledger::Page> page;
   ledger_->GetRootPage(page.NewRequest());
-  page->Put(TestArray(), TestArray(), &status);
-  EXPECT_EQ(ledger::Status::OK, status);
+  page->PutNew(TestArray(), TestArray());
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    nullptr, &status);
-  EXPECT_EQ(ledger::Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       nullptr);
   fuchsia::mem::BufferPtr value;
   snapshot->Get(TestArray(), &status, &value);
   EXPECT_EQ(ledger::Status::OK, status);
@@ -171,7 +169,6 @@ TEST_F(LedgerEndToEndTest, Terminate) {
 
 TEST_F(LedgerEndToEndTest, ClearPage) {
   Init({});
-  ledger::Status status;
   fidl::SynchronousInterfacePtr<ledger_internal::LedgerRepository>
       ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
@@ -210,12 +207,10 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
     page_paths.push_back(std::move(page_path));
 
     // Insert an entry.
-    page->Put(TestArray(), TestArray(), &status);
-    EXPECT_EQ(ledger::Status::OK, status);
+    page->PutNew(TestArray(), TestArray());
 
     // Clear the page and close it.
-    page->Clear(&status);
-    EXPECT_EQ(ledger::Status::OK, status);
+    page->ClearNew();
     page.Unbind();
   }
 
@@ -378,13 +373,11 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBeforePageInit) {
   fidl::SynchronousInterfacePtr<ledger::Page> page;
   ledger_->GetPage(nullptr, page.NewRequest());
   status = ledger::Status::INTERNAL_ERROR;
-  page->Put(TestArray(), TestArray(), &status);
-  EXPECT_EQ(ledger::Status::OK, status);
+  page->PutNew(TestArray(), TestArray());
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   status = ledger::Status::INTERNAL_ERROR;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    nullptr, &status);
-  EXPECT_EQ(ledger::Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       nullptr);
   fuchsia::mem::BufferPtr value;
   status = ledger::Status::INTERNAL_ERROR;
   snapshot->Get(TestArray(), &status, &value);
@@ -423,8 +416,7 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   fidl::SynchronousInterfacePtr<ledger::Page> page;
   ledger_->GetPage(nullptr, page.NewRequest());
   status = ledger::Status::INTERNAL_ERROR;
-  page->Put(TestArray(), TestArray(), &status);
-  EXPECT_EQ(ledger::Status::OK, status);
+  page->PutNew(TestArray(), TestArray());
 
   // Close the cloud provider channel.
   cloud_provider_binding.Unbind();
@@ -432,9 +424,8 @@ TEST_F(LedgerEndToEndTest, HandleCloudProviderDisconnectBetweenReadAndWrite) {
   // Read the data back.
   fidl::SynchronousInterfacePtr<ledger::PageSnapshot> snapshot;
   status = ledger::Status::INTERNAL_ERROR;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    nullptr, &status);
-  EXPECT_EQ(ledger::Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       nullptr);
   fuchsia::mem::BufferPtr value;
   status = ledger::Status::INTERNAL_ERROR;
   snapshot->Get(TestArray(), &status, &value);

@@ -9,6 +9,7 @@
 #include <lib/fsl/vmo/strings.h>
 #include <src/lib/fxl/strings/string_view.h>
 
+#include "fuchsia/ledger/cpp/fidl.h"
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
 #include "peridot/bin/sessionmgr/storage/story_storage_xdr.h"
 #include "peridot/lib/fidl/clone.h"
@@ -283,33 +284,22 @@ class WriteVmoCall : public Operation<StoryStorage::Status> {
     FlowToken flow{this, &status_};
     status_ = StoryStorage::Status::OK;
 
-    page_client_->page()->CreateReferenceFromBuffer(
+    page_client_->page()->CreateReferenceFromBufferNew(
         std::move(value_), [this, flow, weak_ptr = GetWeakPtr()](
-                               fuchsia::ledger::Status status,
+                               fuchsia::ledger::CreateReferenceStatus status,
                                fuchsia::ledger::ReferencePtr reference) {
           if (weak_ptr) {
-            if (status == fuchsia::ledger::Status::OK) {
+            if (status == fuchsia::ledger::CreateReferenceStatus::OK) {
               FXL_DCHECK(reference);
-              PutReference(std::move(reference), flow);
+              page_client_->page()->PutReferenceNew(
+                  to_array(key_), std::move(*reference),
+                  fuchsia::ledger::Priority::EAGER);
             } else {
               FXL_LOG(ERROR) << "StoryStorage.WriteVmoCall " << key_ << " "
                              << " Page.CreateReferenceFromBuffer() "
                              << fidl::ToUnderlying(status);
               status_ = StoryStorage::Status::LEDGER_ERROR;
             }
-          }
-        });
-  }
-
-  void PutReference(fuchsia::ledger::ReferencePtr reference, FlowToken flow) {
-    page_client_->page()->PutReference(
-        to_array(key_), std::move(*reference), fuchsia::ledger::Priority::EAGER,
-        [this, flow, weak_ptr = GetWeakPtr()](fuchsia::ledger::Status status) {
-          if (weak_ptr && status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << "StoryStorage.WriteVmoCall " << key_ << " "
-                           << " Page.PutReference() "
-                           << fidl::ToUnderlying(status);
-            status_ = StoryStorage::Status::LEDGER_ERROR;
           }
         });
   }
@@ -439,22 +429,11 @@ class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
               // instance will be deleted by the time this callback is
               // executed.
               if (status == StoryStorage::Status::OK) {
-                page->Commit([result_call = std::move(result_call)](
-                                 fuchsia::ledger::Status status) {
-                  if (status == fuchsia::ledger::Status::OK) {
-                    result_call(StoryStorage::Status::OK);
-                  } else {
-                    result_call(StoryStorage::Status::LEDGER_ERROR);
-                  }
-                });
+                page->CommitNew();
               } else {
-                page->Rollback(
-                    [result_call = std::move(result_call),
-                     story_status = status](fuchsia::ledger::Status status) {
-                      // Note, ledger status from rollback is ignored
-                      result_call(story_status);
-                    });
+                page->RollbackNew();
               }
+              result_call(status);
             }),
         page_client_(page_client),
         cookie_(cookie),
@@ -467,7 +446,7 @@ class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
     status_ = StoryStorage::Status::OK;
     // This transaction will be either committed or rolled back in the wrapped
     // result call.
-    page()->StartTransaction([](fuchsia::ledger::Status status) {});
+    page()->StartTransactionNew();
 
     // First verify the type of the data to write matches the existing entity
     // type.
@@ -504,31 +483,18 @@ class SetEntityDataCall : public PageOperation<StoryStorage::Status> {
 
   void WriteVmo(fuchsia::mem::Buffer data, const std::string& key,
                 FlowToken flow) {
-    page()->CreateReferenceFromBuffer(
+    page()->CreateReferenceFromBufferNew(
         std::move(data),
-        [this, key, flow](fuchsia::ledger::Status status,
+        [this, key, flow](fuchsia::ledger::CreateReferenceStatus status,
                           fuchsia::ledger::ReferencePtr reference) {
-          if (status == fuchsia::ledger::Status::OK) {
+          if (status == fuchsia::ledger::CreateReferenceStatus::OK) {
             FXL_DCHECK(reference);
-            PutReference(std::move(reference), key, flow);
+            page()->PutReferenceNew(to_array(key), std::move(*reference),
+                                    fuchsia::ledger::Priority::EAGER);
           } else {
             FXL_LOG(ERROR) << trace_name() << " "
                            << "SetEntityDataCall.CreateReferenceFromBuffer "
                            << key << " " << fidl::ToUnderlying(status);
-            status_ = StoryStorage::Status::LEDGER_ERROR;
-          }
-        });
-  }
-
-  void PutReference(fuchsia::ledger::ReferencePtr reference,
-                    const std::string& key, FlowToken flow) {
-    page()->PutReference(
-        to_array(key), std::move(*reference), fuchsia::ledger::Priority::EAGER,
-        [this, key, flow](fuchsia::ledger::Status status) {
-          if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << trace_name() << " "
-                           << "SetEntityDataCall.PutReference " << key << " "
-                           << fidl::ToUnderlying(status);
             status_ = StoryStorage::Status::LEDGER_ERROR;
           }
         });

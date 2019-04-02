@@ -257,27 +257,16 @@ class ConvergenceTest
     std::unique_ptr<PageWatcherImpl> watcher =
         std::make_unique<PageWatcherImpl>(page_watcher.NewRequest(),
                                           std::move(page_snapshot));
-    Status status = Status::UNKNOWN_ERROR;
-    auto loop_waiter = NewWaiter();
-    (*page)->GetSnapshot(
-        std::move(page_snapshot_request), fidl::VectorPtr<uint8_t>::New(0),
-        std::move(page_watcher),
-        callback::Capture(loop_waiter->GetCallback(), &status));
-    EXPECT_TRUE(loop_waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    (*page)->GetSnapshotNew(std::move(page_snapshot_request),
+                            fidl::VectorPtr<uint8_t>::New(0),
+                            std::move(page_watcher));
     return watcher;
   }
 
   std::unique_ptr<SyncWatcherImpl> WatchPageSyncState(PagePtr* page) {
     std::unique_ptr<SyncWatcherImpl> watcher =
         std::make_unique<SyncWatcherImpl>();
-    Status status = Status::UNKNOWN_ERROR;
-    auto loop_waiter = NewWaiter();
-    (*page)->SetSyncStateWatcher(
-        watcher->NewBinding(),
-        callback::Capture(loop_waiter->GetCallback(), &status));
-    EXPECT_TRUE(loop_waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    (*page)->SetSyncStateWatcherNew(watcher->NewBinding());
     return watcher;
   }
 
@@ -326,7 +315,6 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
   std::uniform_real_distribution<> distribution(1, 100);
 
   for (int i = 0; i < num_ledgers_; i++) {
-    Status status = Status::UNKNOWN_ERROR;
     if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
       ConflictResolverFactoryPtr resolver_factory_ptr;
       resolver_factories.push_back(
@@ -339,34 +327,25 @@ TEST_P(ConvergenceTest, NLedgersConverge) {
     watchers.push_back(WatchPageContents(&pages_[i]));
     sync_watchers.push_back(WatchPageSyncState(&pages_[i]));
 
-    auto loop_waiter = NewWaiter();
-    pages_[i]->StartTransaction(
-        callback::Capture(loop_waiter->GetCallback(), &status));
-    ASSERT_TRUE(loop_waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    pages_[i]->StartTransactionNew();
 
-    loop_waiter = NewWaiter();
     if (merge_function_type_ == MergeType::NON_ASSOCIATIVE_CUSTOM) {
-      pages_[i]->Put(convert::ToArray("value"),
-                     DoubleToArray(distribution(generator)),
-                     callback::Capture(loop_waiter->GetCallback(), &status));
+      pages_[i]->PutNew(convert::ToArray("value"),
+                        DoubleToArray(distribution(generator)));
     } else {
-      pages_[i]->Put(convert::ToArray("value"), data_generator_->MakeValue(50),
-                     callback::Capture(loop_waiter->GetCallback(), &status));
+      pages_[i]->PutNew(convert::ToArray("value"),
+                        data_generator_->MakeValue(50));
     }
-    ASSERT_TRUE(loop_waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
   }
 
-  auto commit_waiter =
-      fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
-  Status status = Status::UNKNOWN_ERROR;
+  auto sync_waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   for (int i = 0; i < num_ledgers_; i++) {
-    pages_[i]->Commit(commit_waiter->NewCallback());
+    pages_[i]->CommitNew();
+    pages_[i]->Sync(sync_waiter->NewCallback());
   }
+
   auto loop_waiter = NewWaiter();
-  commit_waiter->Finalize(
-      callback::Capture(loop_waiter->GetCallback(), &status));
+  sync_waiter->Finalize(callback::Capture(loop_waiter->GetCallback()));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
 
   // Function to verify if the visible Ledger state has not changed since last

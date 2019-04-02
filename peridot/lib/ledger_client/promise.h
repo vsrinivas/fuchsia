@@ -36,86 +36,11 @@ namespace modular {
 //     // Decode and use |bytes|.
 //   });
 
-// fit::promise wrapper functions for fuchsia.ledger.Page.
-class PagePromise {
- public:
-  static fit::promise<> StartTransaction(fuchsia::ledger::Page* page) {
-    fit::bridge<> bridge;
-    page->StartTransaction([completer = std::move(bridge.completer)](
-                               fuchsia::ledger::Status status) mutable {
-      if (status == fuchsia::ledger::Status::OK) {
-        completer.complete_ok();
-      } else {
-        completer.complete_error();
-      }
-    });
-    return bridge.consumer.promise();
-  }
-
-  static fit::promise<> Commit(fuchsia::ledger::Page* page) {
-    fit::bridge<> bridge;
-    page->Commit([completer = std::move(bridge.completer)](
-                     fuchsia::ledger::Status status) mutable {
-      if (status == fuchsia::ledger::Status::OK) {
-        completer.complete_ok();
-      } else {
-        completer.complete_error();
-      }
-    });
-    return bridge.consumer.promise();
-  }
-
-  static fit::promise<> Rollback(fuchsia::ledger::Page* page) {
-    fit::bridge<> bridge;
-    page->Commit([completer = std::move(bridge.completer)](
-                     fuchsia::ledger::Status status) mutable {
-      if (status == fuchsia::ledger::Status::OK) {
-        completer.complete_ok();
-      } else {
-        completer.complete_error();
-      }
-    });
-    return bridge.consumer.promise();
-  }
-
-  static fit::promise<> GetSnapshot(
-      fuchsia::ledger::Page* page,
-      fidl::InterfaceRequest<fuchsia::ledger::PageSnapshot> request) {
-    fit::bridge<> bridge;
-    page->GetSnapshot(std::move(request),
-                      fidl::VectorPtr<uint8_t>::New(0) /* key_prefix */,
-                      nullptr /* watcher */,
-                      [completer = std::move(bridge.completer)](
-                          fuchsia::ledger::Status status) mutable {
-                        if (status == fuchsia::ledger::Status::OK) {
-                          completer.complete_ok();
-                        } else {
-                          completer.complete_error();
-                        }
-                      });
-    return bridge.consumer.promise();
-  }
-
-  static fit::promise<> Put(fuchsia::ledger::Page* page, std::string key,
-                            std::vector<uint8_t> value) {
-    fit::bridge<> bridge;
-    page->Put(to_array(key), fidl::VectorPtr<uint8_t>(std::move(value)),
-              [completer = std::move(bridge.completer)](
-                  fuchsia::ledger::Status status) mutable {
-                if (status == fuchsia::ledger::Status::OK) {
-                  completer.complete_ok();
-                } else {
-                  completer.complete_error();
-                }
-              });
-    return bridge.consumer.promise();
-  }
-};
-
-// fit::promise wrapper functions for fuchsia.ledger.Page.
+// fit::promise wrapper functions for fuchsia.ledger.PageSnspahot.
 //
-// These methods match the signatures in fuchsia.ledger.Page with the exception
-// that the first parameter is always a fuchsia::ledger::Page*.
+// These methods match the signatures in fuchsia.ledger.PageSnapshot with the
+// exception that the first parameter is always a
+// fuchsia::ledger::PageSnapshot*.
 class PageSnapshotPromise {
  public:
   // fit::promise wrapper function for PageSnapshot.GetInline().

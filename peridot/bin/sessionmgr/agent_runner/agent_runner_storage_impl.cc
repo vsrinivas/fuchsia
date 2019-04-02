@@ -115,27 +115,15 @@ class AgentRunnerStorageImpl::WriteTaskCall : public Operation<bool> {
 
  private:
   void Run() override {
-    FlowToken flow{this, &success_result_};
-
     std::string key = MakeTriggerKey(agent_url_, data_.task_id);
     std::string value;
     XdrWrite(&value, &data_, XdrTriggerInfo);
 
-    storage_->page()->PutWithPriority(
-        to_array(key), to_array(value), fuchsia::ledger::Priority::EAGER,
-        [this, key, flow](fuchsia::ledger::Status status) {
-          if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << trace_name() << " " << key << " "
-                           << "Page.PutWithPriority() "
-                           << fidl::ToUnderlying(status);
-            return;
-          }
-
-          success_result_ = true;
-        });
+    storage_->page()->PutWithPriorityNew(to_array(key), to_array(value),
+                                         fuchsia::ledger::Priority::EAGER);
+    Done(true);
   }
 
-  bool success_result_ = false;
   AgentRunnerStorageImpl* const storage_;
   const std::string agent_url_;
   TriggerInfo data_;
@@ -152,25 +140,11 @@ class AgentRunnerStorageImpl::DeleteTaskCall : public Operation<bool> {
 
  private:
   void Run() override {
-    FlowToken flow{this, &success_result_};
-
     std::string key = MakeTriggerKey(agent_url_, task_id_);
-    storage_->page()->Delete(
-        to_array(key), [this, key, flow](fuchsia::ledger::Status status) {
-          // fuchsia::ledger::Status::INVALID_TOKEN is okay because we might
-          // have gotten a request to delete a token which does not exist. This
-          // is okay.
-          if (status != fuchsia::ledger::Status::OK &&
-              status != fuchsia::ledger::Status::INVALID_TOKEN) {
-            FXL_LOG(ERROR) << trace_name() << " " << key << " "
-                           << "Page.Delete() " << fidl::ToUnderlying(status);
-            return;
-          }
-          success_result_ = true;
-        });
+    storage_->page()->DeleteNew(to_array(key));
+    Done(true);
   }
 
-  bool success_result_ = false;
   AgentRunnerStorageImpl* const storage_;
   const std::string agent_url_;
   const std::string task_id_;

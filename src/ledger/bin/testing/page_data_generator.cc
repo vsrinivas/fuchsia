@@ -47,11 +47,8 @@ void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
       callback(Status::IO_ERROR);
       return;
     }
-    (*page)->PutWithPriority(std::move(key), std::move(value), priority,
-                             [callback = std::move(callback)](Status status) {
-                               LogOnError(status, "Page::PutWithPriority");
-                               callback(status);
-                             });
+    (*page)->PutWithPriorityNew(std::move(key), std::move(value), priority);
+    callback(Status::OK);
     return;
   }
   fsl::SizedVmo vmo;
@@ -60,19 +57,18 @@ void PageDataGenerator::PutEntry(PagePtr* page, std::vector<uint8_t> key,
     callback(Status::IO_ERROR);
     return;
   }
-  (*page)->CreateReferenceFromBuffer(
+  (*page)->CreateReferenceFromBufferNew(
       std::move(vmo).ToTransport(),
       [page, key = std::move(key), priority, callback = std::move(callback)](
-          Status status, ReferencePtr reference) mutable {
-        if (LogOnError(status, "Page::CreateReferenceFromBuffer")) {
-          callback(status);
+          CreateReferenceStatus status, ReferencePtr reference) mutable {
+        if (status != CreateReferenceStatus::OK) {
+          LogOnError(Status::IO_ERROR, "Page::CreateReferenceFromBuffer");
+          callback(Status::IO_ERROR);
           return;
         }
-        (*page)->PutReference(std::move(key), std::move(*reference), priority,
-                              [callback = std::move(callback)](Status status) {
-                                LogOnError(status, "Page::PutReference");
-                                callback(status);
-                              });
+        (*page)->PutReferenceNew(std::move(key), std::move(*reference),
+                                 priority);
+        callback(Status::OK);
       });
 }
 
@@ -107,38 +103,21 @@ void PageDataGenerator::PutInTransaction(
             keys.begin() + current_key_index + this_transaction_size,
             std::back_inserter(partial_keys));
 
-  (*page)->StartTransaction(
-      [this, page, partial_keys = std::move(partial_keys),
-       keys = std::move(keys), current_key_index, transaction_size, value_size,
-       ref_strategy, priority,
+  (*page)->StartTransactionNew();
+  PutMultipleEntries(
+      page, std::move(partial_keys), value_size, ref_strategy, priority,
+      [this, page, keys = std::move(keys), current_key_index, value_size,
+       ref_strategy, priority, transaction_size,
        callback = std::move(callback)](Status status) mutable {
-        if (LogOnError(status, "Page::StartTransaction")) {
+        if (LogOnError(status, "PutMultipleEntries")) {
           callback(status);
           return;
         }
-        PutMultipleEntries(
-            page, std::move(partial_keys), value_size, ref_strategy, priority,
-            [this, page, keys = std::move(keys), current_key_index, value_size,
-             ref_strategy, priority, transaction_size,
-             callback = std::move(callback)](Status status) mutable {
-              if (LogOnError(status, "PutMultipleEntries")) {
-                callback(status);
-                return;
-              }
-              (*page)->Commit(
-                  [this, page, keys = std::move(keys), current_key_index,
-                   value_size, ref_strategy, transaction_size, priority,
-                   callback = std::move(callback)](Status status) mutable {
-                    if (LogOnError(status, "Page::Commit")) {
-                      callback(status);
-                      return;
-                    }
-                    PutInTransaction(page, std::move(keys),
-                                     current_key_index + transaction_size,
-                                     value_size, transaction_size, ref_strategy,
-                                     priority, std::move(callback));
-                  });
-            });
+        (*page)->CommitNew();
+        PutInTransaction(page, std::move(keys),
+                         current_key_index + transaction_size, value_size,
+                         transaction_size, ref_strategy, priority,
+                         std::move(callback));
       });
 }
 

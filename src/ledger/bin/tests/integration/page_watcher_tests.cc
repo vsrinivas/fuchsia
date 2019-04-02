@@ -89,19 +89,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSimple) {
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  auto waiter = NewWaiter();
-  Status status;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(watcher_ptr));
+  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher.changes_seen);
@@ -122,18 +112,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherAggregatedNotifications) {
   // Call Put and don't let the OnChange callback be called, yet.
   watcher.DelayCallback(true);
   PageSnapshotPtr snapshot;
-  auto waiter = NewWaiter();
-  Status status;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  page->Put(convert::ToArray("key"), convert::ToArray("value1"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(watcher_ptr));
+  page->PutNew(convert::ToArray("key"), convert::ToArray("value1"));
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher.changes_seen);
@@ -144,14 +125,8 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherAggregatedNotifications) {
   EXPECT_EQ("value1", ToString(changed_entries.at(0).value));
 
   // Update the value of "key" initially to "value2" and then to "value3".
-  page->Put(convert::ToArray("key"), convert::ToArray("value2"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  page->Put(convert::ToArray("key"), convert::ToArray("value3"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->PutNew(convert::ToArray("key"), convert::ToArray("value2"));
+  page->PutNew(convert::ToArray("key"), convert::ToArray("value3"));
 
   // Since the previous OnChange callback hasn't been called yet, the next
   // notification should be blocked.
@@ -173,7 +148,6 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherAggregatedNotifications) {
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
   auto instance = NewLedgerAppInstance();
-  Status status;
   PagePtr page = instance->GetTestPage();
   PageWatcherPtr watcher_ptr;
   auto watcher_waiter = NewWaiter();
@@ -181,30 +155,20 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectClient) {
                                            watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  auto waiter = NewWaiter();
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(watcher_ptr));
   // Make a change on the page and verify that it was received.
-  waiter = NewWaiter();
-  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher->changes_seen);
 
   // Make another change and disconnect the watcher immediately.
-  waiter = NewWaiter();
-  page->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-            callback::Capture(waiter->GetCallback(), &status));
+  page->PutNew(convert::ToArray("name"), convert::ToArray("Bob"));
   watcher.reset();
+  auto waiter = NewWaiter();
+  page->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 }
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
@@ -216,18 +180,14 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
   {
     PagePtr page = instance->GetTestPage();
     PageSnapshotPtr snapshot;
-    Status status;
-    auto waiter = NewWaiter();
-    page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                      std::move(watcher_ptr),
-                      callback::Capture(waiter->GetCallback(), &status));
-    ASSERT_TRUE(waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    page->GetSnapshotNew(snapshot.NewRequest(),
+                         fidl::VectorPtr<uint8_t>::New(0),
+                         std::move(watcher_ptr));
 
     // Queue many put operations on the page.
     for (int i = 0; i < 1000; i++) {
-      page->Put(convert::ToArray("name"), convert::ToArray(std::to_string(i)),
-                [](Status status) { EXPECT_EQ(Status::OK, status); });
+      page->PutNew(convert::ToArray("name"),
+                   convert::ToArray(std::to_string(i)));
     }
   }
   // Page is out of scope now, but watcher is not. Verify that we don't crash
@@ -239,30 +199,17 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherDisconnectPage) {
 TEST_P(PageWatcherIntegrationTest, PageWatcherDelete) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
-  auto waiter = NewWaiter();
-  Status status;
-  page->Put(convert::ToArray("foo"), convert::ToArray("bar"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->PutNew(convert::ToArray("foo"), convert::ToArray("bar"));
 
   auto watcher_waiter = NewWaiter();
   PageWatcherPtr watcher_ptr;
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  waiter = NewWaiter();
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(watcher_ptr));
 
-  waiter = NewWaiter();
-  page->Delete(convert::ToArray("foo"),
-               callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->DeleteNew(convert::ToArray("foo"));
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   ASSERT_EQ(1u, watcher.changes_seen);
@@ -296,33 +243,17 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  auto waiter = NewWaiter();
-  Status status;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(watcher_ptr));
+  page->StartTransactionNew();
   for (size_t i = 0; i < entry_count; ++i) {
-    waiter = NewWaiter();
-    page->Put(convert::ToArray(key_generator(i)), convert::ToArray("value"),
-              callback::Capture(waiter->GetCallback(), &status));
-    ASSERT_TRUE(waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    page->PutNew(convert::ToArray(key_generator(i)), convert::ToArray("value"));
   }
 
   RunLoopFor(zx::msec(100));
   EXPECT_EQ(0u, watcher.changes_seen);
 
-  waiter = NewWaiter();
-  page->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->CommitNew();
 
   // Get the first OnChagne call.
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
@@ -361,34 +292,18 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  auto waiter = NewWaiter();
-  Status status;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(watcher_ptr));
+  page->StartTransactionNew();
   for (size_t i = 0; i < entry_count; ++i) {
-    waiter = NewWaiter();
-    page->Put(convert::ToArray(fxl::StringPrintf("key%02" PRIuMAX, i)),
-              convert::ToArray("value"),
-              callback::Capture(waiter->GetCallback(), &status));
-    ASSERT_TRUE(waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    page->PutNew(convert::ToArray(fxl::StringPrintf("key%02" PRIuMAX, i)),
+                 convert::ToArray("value"));
   }
 
   RunLoopFor(zx::msec(100));
   EXPECT_EQ(0u, watcher.changes_seen);
 
-  waiter = NewWaiter();
-  page->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->CommitNew();
 
   // Get the first OnChagne call.
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
@@ -426,19 +341,9 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherSnapshot) {
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  Status status;
-  auto waiter = NewWaiter();
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(watcher_ptr));
+  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher.changes_seen);
@@ -458,31 +363,15 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherTransaction) {
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  Status status;
-  auto waiter = NewWaiter();
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(watcher_ptr));
+  page->StartTransactionNew();
+  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
 
   RunLoopFor(zx::msec(100));
   EXPECT_EQ(0u, watcher.changes_seen);
 
-  waiter = NewWaiter();
-  page->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->CommitNew();
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher.changes_seen);
@@ -507,50 +396,29 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   auto watcher_waiter1 = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter1->GetCallback());
   PageSnapshotPtr snapshot1;
-  Status status;
-  waiter = NewWaiter();
-  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher1_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot1.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   auto watcher_waiter2 = NewWaiter();
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter2->GetCallback());
   PageSnapshotPtr snapshot2;
-  waiter = NewWaiter();
-  page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher2_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page2->GetSnapshotNew(snapshot2.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher2_ptr));
+  page1->StartTransactionNew();
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
 
   waiter = NewWaiter();
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page2->StartTransactionNew();
+  page2->PutNew(convert::ToArray("name"), convert::ToArray("Bob"));
 
   // Verify that each change is seen by the right watcher.
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->CommitNew();
 
   ASSERT_TRUE(watcher_waiter1->RunUntilCalled());
   EXPECT_EQ(1u, watcher1.changes_seen);
@@ -560,10 +428,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherParallel) {
   EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
   EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
 
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page2->CommitNew();
 
   ASSERT_TRUE(watcher_waiter2->RunUntilCalled());
   EXPECT_EQ(1u, watcher2.changes_seen);
@@ -594,23 +459,10 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherEmptyTransaction) {
   Watcher watcher(watcher_ptr.NewRequest());
 
   PageSnapshotPtr snapshot;
-  auto waiter = NewWaiter();
-  Status status;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(watcher_ptr));
+  page->StartTransactionNew();
+  page->CommitNew();
 
   RunLoopFor(zx::msec(100));
   EXPECT_EQ(0u, watcher.changes_seen);
@@ -630,30 +482,19 @@ TEST_P(PageWatcherIntegrationTest, PageWatcher1Change2Pages) {
   auto watcher1_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher1_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  waiter = NewWaiter();
-  Status status;
-  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher1_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot1.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher1_ptr));
 
   auto watcher2_waiter = NewWaiter();
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher2_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  waiter = NewWaiter();
-  page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher2_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page2->GetSnapshotNew(snapshot2.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher2_ptr));
 
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
 
   ASSERT_TRUE(watcher1_waiter->RunUntilCalled());
   ASSERT_TRUE(watcher2_waiter->RunUntilCalled());
@@ -713,33 +554,17 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
                          watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  auto waiter = NewWaiter();
-  Status status;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                       std::move(watcher_ptr));
+  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher.changes.size());
 
-  waiter = NewWaiter();
-  page->Put(convert::ToArray("foo"), convert::ToArray("bar"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
+  page->PutNew(convert::ToArray("foo"), convert::ToArray("bar"));
+  page->StartTransactionNew();
   auto transaction_waiter = NewWaiter();
-  Status start_transaction_status;
-  page->StartTransaction(callback::Capture(transaction_waiter->GetCallback(),
-                                           &start_transaction_status));
+  page->Sync(transaction_waiter->GetCallback());
 
   RunLoopFor(zx::msec(100));
 
@@ -764,7 +589,6 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherConcurrentTransaction) {
   watcher.changes[1].callback(nullptr);
 
   ASSERT_TRUE(transaction_waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, start_transaction_status);
 }
 
 TEST_P(PageWatcherIntegrationTest, PageWatcherPrefix) {
@@ -775,40 +599,13 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefix) {
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
-  auto waiter = NewWaiter();
-  Status status;
-  page->GetSnapshot(snapshot.NewRequest(), convert::ToArray("01"),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page->Put(convert::ToArray("00-key"), convert::ToArray("value-00"),
-
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page->Put(convert::ToArray("01-key"), convert::ToArray("value-01"),
-
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page->Put(convert::ToArray("02-key"), convert::ToArray("value-02"),
-
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->GetSnapshotNew(snapshot.NewRequest(), convert::ToArray("01"),
+                       std::move(watcher_ptr));
+  page->StartTransactionNew();
+  page->PutNew(convert::ToArray("00-key"), convert::ToArray("value-00"));
+  page->PutNew(convert::ToArray("01-key"), convert::ToArray("value-01"));
+  page->PutNew(convert::ToArray("02-key"), convert::ToArray("value-02"));
+  page->CommitNew();
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher.changes_seen);
@@ -826,24 +623,14 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherPrefixNoChange) {
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
 
   PageSnapshotPtr snapshot;
+  page->GetSnapshotNew(snapshot.NewRequest(), convert::ToArray("01"),
+                       std::move(watcher_ptr));
+  page->PutNew(convert::ToArray("00-key"), convert::ToArray("value-00"));
+  page->StartTransactionNew();
+
   auto waiter = NewWaiter();
-  Status status;
-  page->GetSnapshot(snapshot.NewRequest(), convert::ToArray("01"),
-                    std::move(watcher_ptr),
-                    callback::Capture(waiter->GetCallback(), &status));
+  page->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page->Put(convert::ToArray("00-key"), convert::ToArray("value-00"),
-
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  EXPECT_EQ(Status::OK, status);
 
   // Starting a transaction drains all watcher notifications, so if we were to
   // be called, we would know at this point.

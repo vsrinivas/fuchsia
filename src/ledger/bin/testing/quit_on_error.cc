@@ -4,27 +4,46 @@
 
 #include "src/ledger/bin/testing/quit_on_error.h"
 
+#include <sstream>
+
 #include <lib/fit/function.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
 
 namespace ledger {
 
-bool QuitOnError(fit::closure quit_callback, Status status,
-                 fxl::StringView description) {
-  if (status != Status::OK) {
-    FXL_LOG(ERROR) << description << " failed with status "
-                   << fidl::ToUnderlying(status) << ".";
-    quit_callback();
-    return true;
-  }
-  return false;
-}
+namespace internal {
 
-fit::function<void(Status)> QuitOnErrorCallback(fit::closure quit_callback,
-                                                std::string description) {
-  return [quit_callback = std::move(quit_callback),
-          description = std::move(description)](Status status) mutable {
-    QuitOnError(quit_callback.share(), status, description);
-  };
+namespace {
+template <typename E>
+std::string FidlEnumToString(E e) {
+  std::stringstream ss;
+  ss << fidl::ToUnderlying(e);
+  return ss.str();
+}
+}  // namespace
+
+StatusTranslater::StatusTranslater(Status status)
+    : ok_(status == Status::OK), description_(FidlEnumToString(status)) {}
+
+StatusTranslater::StatusTranslater(zx_status_t status)
+    : ok_(status == ZX_OK || status == ZX_ERR_PEER_CLOSED),
+      description_(zx_status_get_string(status)) {}
+
+StatusTranslater::StatusTranslater(CreateReferenceStatus status)
+    : ok_(status == CreateReferenceStatus::OK),
+      description_(FidlEnumToString(status)) {}
+}  // namespace internal
+
+bool QuitOnError(fit::closure quit_callback, internal::StatusTranslater status,
+                 fxl::StringView description) {
+  if (status.ok()) {
+    return false;
+  }
+  FXL_LOG(ERROR) << description << " failed with status "
+                 << status.description() << ".";
+  quit_callback();
+  return true;
 }
 
 }  // namespace ledger

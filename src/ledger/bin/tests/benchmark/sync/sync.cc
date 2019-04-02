@@ -194,14 +194,10 @@ void SyncBenchmark::Run() {
         page_id_ = id;
         beta_->GetPage(fidl::MakeOptional(id), beta_page_.NewRequest());
         PageSnapshotPtr snapshot;
-        beta_page_->GetSnapshot(
-            snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-            page_watcher_binding_.NewBinding(), [this](Status status) {
-              if (QuitOnError(QuitLoopClosure(), status, "GetSnapshot")) {
-                return;
-              }
-              RunSingleChange(0);
-            });
+        beta_page_->GetSnapshotNew(snapshot.NewRequest(),
+                                   fidl::VectorPtr<uint8_t>::New(0),
+                                   page_watcher_binding_.NewBinding());
+        beta_page_->Sync([this] { RunSingleChange(0); });
       });
 }
 

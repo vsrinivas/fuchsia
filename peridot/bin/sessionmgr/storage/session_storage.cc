@@ -6,6 +6,7 @@
 
 #include <lib/fidl/cpp/clone.h>
 #include <unordered_set>
+#include "fuchsia/ledger/cpp/fidl.h"
 #include "src/lib/uuid/uuid.h"
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
@@ -159,53 +160,22 @@ class DeleteStoryCall : public Operation<> {
           if (!story_data)
             return;
           story_data_ = std::move(*story_data);
-          Cont1(flow);
+          Cont(flow);
         }));
   }
 
-  void Cont1(FlowToken flow) {
+  void Cont(FlowToken flow) {
     // Get the story page so we can remove its contents.
     ledger_->GetPage(std::make_unique<fuchsia::ledger::PageId>(
                          *std::move(story_data_.mutable_story_page_id())),
                      story_page_.NewRequest());
-    story_page_->Clear([this, flow, story_name = story_data_.story_info().id](
-                           fuchsia::ledger::Status status) {
-      if (status != fuchsia::ledger::Status::OK) {
-        FXL_LOG(ERROR) << "Page.Clear() for story " << story_name << ": "
-                       << fidl::ToUnderlying(status);
-        return;
-      }
-      Cont2(flow);
-    });
-  }
-
-  void Cont2(FlowToken flow) {
+    story_page_->ClearNew();
     // Remove the story data in the session page.
-    session_page_->Delete(
-        to_array(StoryNameToStoryDataKey(story_data_.story_info().id)),
-        [this, flow](fuchsia::ledger::Status status) {
-          // Deleting a key that doesn't exist is OK, not
-          // KEY_NOT_FOUND.
-          if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << "SessionStorage: Page.Delete() "
-                           << fidl::ToUnderlying(status);
-          }
-          Cont3(flow);
-        });
-  }
-
-  void Cont3(FlowToken flow) {
+    session_page_->DeleteNew(
+        to_array(StoryNameToStoryDataKey(story_data_.story_info().id)));
     // Remove the story snapshot in the session page.
-    session_page_->Delete(
-        to_array(StoryNameToStorySnapshotKey(story_data_.story_info().id)),
-        [this, flow](fuchsia::ledger::Status status) {
-          // Deleting a key that doesn't exist is OK, not
-          // KEY_NOT_FOUND.
-          if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << "SessionStorage: Page.Delete() "
-                           << fidl::ToUnderlying(status);
-          }
-        });
+    session_page_->DeleteNew(
+        to_array(StoryNameToStorySnapshotKey(story_data_.story_info().id)));
   }
 
   fuchsia::ledger::Ledger* const ledger_;      // not owned
@@ -358,11 +328,11 @@ class WriteSnapshotCall : public Operation<> {
  private:
   void Run() override {
     FlowToken flow{this};
-    page_client_->page()->CreateReferenceFromBuffer(
+    page_client_->page()->CreateReferenceFromBufferNew(
         std::move(snapshot_),
-        [this, flow](fuchsia::ledger::Status status,
+        [this, flow](fuchsia::ledger::CreateReferenceStatus status,
                      std::unique_ptr<fuchsia::ledger::Reference> reference) {
-          if (status != fuchsia::ledger::Status::OK) {
+          if (status != fuchsia::ledger::CreateReferenceStatus::OK) {
             FXL_LOG(ERROR) << trace_name()
                            << " PageSnapshot.CreateReferenceFromBuffer() "
                            << fidl::ToUnderlying(status);
@@ -377,16 +347,10 @@ class WriteSnapshotCall : public Operation<> {
 
   void PutReference(std::unique_ptr<fuchsia::ledger::Reference> reference,
                     FlowToken flow) {
-    page_client_->page()->PutReference(
+    page_client_->page()->PutReferenceNew(
         to_array(key_), std::move(*reference),
         // TODO(MI4-1425): Experiment with declaring lazy priority.
-        fuchsia::ledger::Priority::EAGER,
-        [this, flow](fuchsia::ledger::Status status) {
-          if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << trace_name() << " PageSnapshot.PutReference() "
-                           << fidl::ToUnderlying(status);
-          }
-        });
+        fuchsia::ledger::Priority::EAGER);
   }
 
   PageClient* const page_client_;

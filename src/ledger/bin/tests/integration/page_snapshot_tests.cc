@@ -35,16 +35,8 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
   PageSnapshotPtr PageGetSnapshot(
       PagePtr* page,
       fidl::VectorPtr<uint8_t> prefix = fidl::VectorPtr<uint8_t>::New(0)) {
-    Status status;
     PageSnapshotPtr snapshot;
-    auto waiter = NewWaiter();
-    (*page)->GetSnapshot(snapshot.NewRequest(), std::move(prefix), nullptr,
-                         callback::Capture(waiter->GetCallback(), &status));
-    if (!waiter->RunUntilCalled()) {
-      ADD_FAILURE() << "|GetSnapshot| failed to call back.";
-      return nullptr;
-    }
-    EXPECT_EQ(Status::OK, status);
+    (*page)->GetSnapshotNew(snapshot.NewRequest(), std::move(prefix), nullptr);
     return snapshot;
   }
 
@@ -107,16 +99,12 @@ class PageSnapshotIntegrationTest : public IntegrationTest {
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotGet) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
-  Status status;
-  auto waiter = NewWaiter();
-  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   fuchsia::mem::BufferPtr value;
-  waiter = NewWaiter();
+  auto waiter = NewWaiter();
+  Status status;
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
   ASSERT_TRUE(waiter->RunUntilCalled());
@@ -137,27 +125,15 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetPipeline) {
   std::string expected_value = "Alice";
   expected_value.resize(100);
 
-  auto status_waiter =
-      fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
-
   PagePtr page = instance->GetTestPage();
-  page->Put(convert::ToArray("name"), convert::ToArray(expected_value),
-            status_waiter->NewCallback());
+  page->PutNew(convert::ToArray("name"), convert::ToArray(expected_value));
 
-  PageSnapshotPtr snapshot;
-  page->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                    nullptr, status_waiter->NewCallback());
-
+  PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   Status status;
   fuchsia::mem::BufferPtr value;
-  snapshot->Get(convert::ToArray("name"),
-                [&value, status_callback = status_waiter->NewCallback()](
-                    Status status, fuchsia::mem::BufferPtr received_value) {
-                  value = std::move(received_value);
-                  status_callback(status);
-                });
   auto waiter = NewWaiter();
-  status_waiter->Finalize(callback::Capture(waiter->GetCallback(), &status));
+  snapshot->Get(convert::ToArray("name"),
+                callback::Capture(waiter->GetCallback(), &status, &value));
   ASSERT_TRUE(waiter->RunUntilCalled());
   EXPECT_EQ(Status::OK, status);
   ASSERT_TRUE(value);
@@ -172,21 +148,13 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
 
   // Put the 2 values without waiting for the callbacks.
   PagePtr page = instance->GetTestPage();
-  auto status_waiter =
-      fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
-  page->Put(convert::ToArray("name"), convert::ToArray(value1),
-            status_waiter->NewCallback());
-  page->Put(convert::ToArray("name"), convert::ToArray(value2),
-            status_waiter->NewCallback());
-  Status status;
-  auto waiter = NewWaiter();
-  status_waiter->Finalize(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->PutNew(convert::ToArray("name"), convert::ToArray(value1));
+  page->PutNew(convert::ToArray("name"), convert::ToArray(value2));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+  Status status;
   fuchsia::mem::BufferPtr value;
-  waiter = NewWaiter();
+  auto waiter = NewWaiter();
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
   ASSERT_TRUE(waiter->RunUntilCalled());
@@ -197,12 +165,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotPutOrder) {
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
-  Status status;
-  auto waiter = NewWaiter();
-  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
   EXPECT_EQ("Alice",
@@ -229,8 +192,9 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotFetchPartial) {
             SnapshotFetchPartial(&snapshot, convert::ToArray("name"), -3, 1));
 
   // Attempt to get an entry that is not in the page.
+  Status status;
   fuchsia::mem::BufferPtr value;
-  waiter = NewWaiter();
+  auto waiter = NewWaiter();
   snapshot->FetchPartial(
       convert::ToArray("favorite book"), 0, -1,
       callback::Capture(waiter->GetCallback(), &status, &value));
@@ -257,13 +221,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeys) {
       RandomArray(GetRandom(), 20, {0, 1, 0}),
       RandomArray(GetRandom(), 20, {0, 1, 1}),
   };
-  Status status;
   for (auto& key : keys) {
-    auto waiter = NewWaiter();
-    page->Put(key, RandomArray(GetRandom(), 50),
-              callback::Capture(waiter->GetCallback(), &status));
-    ASSERT_TRUE(waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    page->PutNew(key, RandomArray(GetRandom(), 50));
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -340,13 +299,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetKeysMultiPart) {
         {static_cast<uint8_t>(i >> 8), static_cast<uint8_t>(i & 0xFF)});
   }
 
-  Status status;
   for (auto& key : keys) {
-    auto waiter = NewWaiter();
-    page->Put(key, RandomArray(GetRandom(), 10),
-              callback::Capture(waiter->GetCallback(), &status));
-    ASSERT_TRUE(waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    page->PutNew(key, RandomArray(GetRandom(), 10));
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -384,13 +338,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntries) {
       RandomArray(GetRandom(), 50),
       RandomArray(GetRandom(), 50),
   };
-  Status status;
   for (size_t i = 0; i < N; ++i) {
-    auto waiter = NewWaiter();
-    page->Put(keys[i], values[i],
-              callback::Capture(waiter->GetCallback(), &status));
-    ASSERT_TRUE(waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    page->PutNew(keys[i], values[i]);
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -469,15 +418,8 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartSize) {
     values[i] = RandomArray(GetRandom(), value_size);
   }
 
-  Status status;
   for (size_t i = 0; i < N; ++i) {
-    auto waiter = NewWaiter();
-    page->Put(keys[i], values[i],
-              callback::Capture(waiter->GetCallback(), &status));
-
-    ASSERT_TRUE(waiter->RunUntilCalled());
-
-    EXPECT_EQ(Status::OK, status);
+    page->PutNew(keys[i], values[i]);
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -519,12 +461,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGetEntriesMultiPartHandles) {
   }
 
   for (size_t i = 0; i < N; ++i) {
-    Status status;
-    auto waiter = NewWaiter();
-    page->Put(keys[i], values[i],
-              callback::Capture(waiter->GetCallback(), &status));
-    ASSERT_TRUE(waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    page->PutNew(keys[i], values[i]);
   }
   snapshot = PageGetSnapshot(&page);
 
@@ -557,12 +494,7 @@ TEST_P(PageSnapshotIntegrationTest, PageSnapshotGettersReturnSortedEntries) {
       RandomArray(GetRandom(), 20),
   };
   for (size_t i = 0; i < N; ++i) {
-    Status status;
-    auto waiter = NewWaiter();
-    page->Put(keys[i], values[i],
-              callback::Capture(waiter->GetCallback(), &status));
-    ASSERT_TRUE(waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    page->PutNew(keys[i], values[i]);
   }
 
   // Get a snapshot.
@@ -593,14 +525,14 @@ TEST_P(PageSnapshotIntegrationTest, PageCreateReferenceFromSocketWrongSize) {
 
   PagePtr page = instance->GetTestPage();
 
-  Status status;
+  CreateReferenceStatus status;
   ReferencePtr reference;
   auto waiter = NewWaiter();
-  page->CreateReferenceFromSocket(
+  page->CreateReferenceFromSocketNew(
       123, StreamDataToSocket(big_data),
       callback::Capture(waiter->GetCallback(), &status, &reference));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::INVALID_ARGUMENT, status);
+  EXPECT_EQ(CreateReferenceStatus::INVALID_ARGUMENT, status);
 }
 
 TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
@@ -610,25 +542,23 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromSocket) {
   PagePtr page = instance->GetTestPage();
 
   // Stream the data into the reference.
-  Status status;
+  CreateReferenceStatus create_reference_status;
   ReferencePtr reference;
   auto waiter = NewWaiter();
-  page->CreateReferenceFromSocket(
+  page->CreateReferenceFromSocketNew(
       big_data.size(), StreamDataToSocket(big_data),
-      callback::Capture(waiter->GetCallback(), &status, &reference));
+      callback::Capture(waiter->GetCallback(), &create_reference_status,
+                        &reference));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(CreateReferenceStatus::OK, create_reference_status);
 
   // Set the reference under a key.
-  waiter = NewWaiter();
-  page->PutReference(convert::ToArray("big data"), std::move(*reference),
-                     Priority::EAGER,
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->PutReferenceNew(convert::ToArray("big data"), std::move(*reference),
+                        Priority::EAGER);
 
   // Get a snapshot and read the value.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+  Status status;
   fuchsia::mem::BufferPtr value;
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("big data"),
@@ -648,25 +578,23 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
   PagePtr page = instance->GetTestPage();
 
   // Stream the data into the reference.
-  Status status;
+  CreateReferenceStatus create_reference_status;
   ReferencePtr reference;
   auto waiter = NewWaiter();
-  page->CreateReferenceFromBuffer(
+  page->CreateReferenceFromBufferNew(
       std::move(vmo).ToTransport(),
-      callback::Capture(waiter->GetCallback(), &status, &reference));
+      callback::Capture(waiter->GetCallback(), &create_reference_status,
+                        &reference));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  EXPECT_EQ(CreateReferenceStatus::OK, create_reference_status);
 
   // Set the reference under a key.
-  waiter = NewWaiter();
-  page->PutReference(convert::ToArray("big data"), std::move(*reference),
-                     Priority::EAGER,
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->PutReferenceNew(convert::ToArray("big data"), std::move(*reference),
+                        Priority::EAGER);
 
   // Get a snapshot and read the value.
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+  Status status;
   fuchsia::mem::BufferPtr value;
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("big data"),
@@ -680,20 +608,16 @@ TEST_P(PageSnapshotIntegrationTest, PageCreatePutLargeReferenceFromVmo) {
 TEST_P(PageSnapshotIntegrationTest, PageSnapshotClosePageGet) {
   auto instance = NewLedgerAppInstance();
   PagePtr page = instance->GetTestPage();
-  Status status;
-  auto waiter = NewWaiter();
-  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
 
   // Close the channel. PageSnapshotPtr should remain valid.
   page.Unbind();
 
+  Status status;
   fuchsia::mem::BufferPtr value;
-  waiter = NewWaiter();
+  auto waiter = NewWaiter();
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
   ASSERT_TRUE(waiter->RunUntilCalled());
@@ -717,12 +641,12 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   page->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
 
-  Status status;
+  page->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  // Waiting to sync, otherwise the snapshot requested in the rest of the test
+  // might be bound before |PutNew| has terminated.
   waiter = NewWaiter();
-  page->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-            callback::Capture(waiter->GetCallback(), &status));
+  page->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
   page.Unbind();
 
@@ -734,12 +658,13 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
   EXPECT_EQ(test_page_id.id, page_id.id);
 
   PageSnapshotPtr snapshot = PageGetSnapshot(&page);
+  Status status;
   fuchsia::mem::BufferPtr value;
   waiter = NewWaiter();
   snapshot->Get(convert::ToArray("name"),
                 callback::Capture(waiter->GetCallback(), &status, &value));
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  ASSERT_EQ(Status::OK, status);
   EXPECT_EQ("Alice", ToString(value));
 }
 

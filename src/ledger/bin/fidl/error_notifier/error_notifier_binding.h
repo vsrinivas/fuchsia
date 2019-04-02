@@ -37,7 +37,8 @@ namespace ledger {
 template <typename D>
 class ErrorNotifierBinding {
  public:
-  ErrorNotifierBinding(D* delegate) : impl_(delegate, this), binding_(&impl_) {
+  explicit ErrorNotifierBinding(D* delegate)
+      : impl_(delegate, this), binding_(&impl_) {
     binding_.set_error_handler(
         [this](zx_status_t /* status */) { CheckEmpty(); });
     sync_helper_.set_on_empty([this] { CheckEmpty(); });

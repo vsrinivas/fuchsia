@@ -447,61 +447,37 @@ TEST_P(MergingIntegrationTest, Merging) {
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher1_waiter->GetCallback());
 
   PageSnapshotPtr snapshot1;
-  Status status;
-  waiter = NewWaiter();
-  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher1_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot1.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   auto watcher2_waiter = NewWaiter();
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher2_waiter->GetCallback());
 
   PageSnapshotPtr snapshot2;
-  waiter = NewWaiter();
-  page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher2_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page2->GetSnapshotNew(snapshot2.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher2_ptr));
+
+  page1->StartTransactionNew();
+  page2->StartTransactionNew();
+
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page1->PutNew(convert::ToArray("city"), convert::ToArray("Paris"));
+
+  page2->PutNew(convert::ToArray("name"), convert::ToArray("Bob"));
+  page2->PutNew(convert::ToArray("phone"), convert::ToArray("0123456789"));
 
   waiter = NewWaiter();
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
   // Verify that each change is seen by the right watcher.
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->CommitNew();
   ASSERT_TRUE(watcher1_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher1.changes_seen);
   PageChange change = std::move(watcher1.last_page_change_);
@@ -511,10 +487,7 @@ TEST_P(MergingIntegrationTest, Merging) {
   EXPECT_EQ("name", convert::ToString(change.changed_entries.at(1).key));
   EXPECT_EQ("Alice", ToString(change.changed_entries.at(1).value));
 
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page2->CommitNew();
   ASSERT_TRUE(watcher2_waiter->RunUntilCalled());
 
   EXPECT_EQ(1u, watcher2.changes_seen);
@@ -560,7 +533,6 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
       resolver_factory_waiter->GetCallback());
   resolver_factory->set_use_dummy_resolver(true);
   LedgerPtr ledger_ptr = instance->GetTestLedger();
-  Status status;
   ledger_ptr->SetConflictResolverFactory(std::move(resolver_factory_ptr));
 
   // Wait for the conflict resolver factory policy to be requested.
@@ -572,59 +544,35 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   auto watcher1_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher1_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  waiter = NewWaiter();
-  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher1_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot1.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   auto watcher2_waiter = NewWaiter();
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher2_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  waiter = NewWaiter();
-  page2->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher2_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page2->GetSnapshotNew(snapshot2.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher2_ptr));
+
+  page1->StartTransactionNew();
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page1->PutNew(convert::ToArray("city"), convert::ToArray("Paris"));
+
+  page2->StartTransactionNew();
+  page2->PutNew(convert::ToArray("name"), convert::ToArray("Bob"));
+  page2->PutNew(convert::ToArray("phone"), convert::ToArray("0123456789"));
 
   waiter = NewWaiter();
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
   // Verify that each change is seen by the right watcher.
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->CommitNew();
 
   ASSERT_TRUE(watcher1_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher1.changes_seen);
@@ -635,10 +583,7 @@ TEST_P(MergingIntegrationTest, MergingWithConflictResolutionFactory) {
   EXPECT_EQ("name", convert::ToString(change.changed_entries.at(1).key));
   EXPECT_EQ("Alice", ToString(change.changed_entries.at(1).value));
 
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page2->CommitNew();
 
   ASSERT_TRUE(watcher2_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher2.changes_seen);
@@ -693,51 +638,30 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   ledger_ptr->SetConflictResolverFactory(std::move(resolver_factory_ptr));
 
   PagePtr page1 = instance->GetTestPage();
-  Status status;
   auto waiter = NewWaiter();
   PageId test_page_id;
   page1->GetId(callback::Capture(waiter->GetCallback(), &test_page_id));
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
-  waiter = NewWaiter();
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->StartTransactionNew();
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page1->PutNew(convert::ToArray("city"), convert::ToArray("Paris"));
+
+  page2->StartTransactionNew();
+  page2->PutNew(convert::ToArray("phone"), convert::ToArray("0123456789"));
+  page2->PutNew(convert::ToArray("email"),
+                convert::ToArray("alice@example.org"));
 
   waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->CommitNew();
+  page2->CommitNew();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -803,12 +727,9 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionNoConflict) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  waiter = NewWaiter();
-  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot2.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
@@ -837,35 +758,22 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
-  waiter = NewWaiter();
-  Status status;
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->StartTransactionNew();
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+
+  page2->StartTransactionNew();
+  page2->PutNew(convert::ToArray("email"),
+                convert::ToArray("alice@example.org"));
 
   waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->CommitNew();
+  page2->CommitNew();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -917,12 +825,9 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMergeValuesOrder) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  waiter = NewWaiter();
-  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot2.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
@@ -949,44 +854,32 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
-  waiter = NewWaiter();
-  Status status;
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->StartTransactionNew();
   int N = 50;
   std::vector<std::string> page1_keys;
   for (int i = 0; i < N; ++i) {
     page1_keys.push_back(fxl::StringPrintf("page1_key_%02d", i));
-    waiter = NewWaiter();
-    page1->Put(convert::ToArray(page1_keys.back()), convert::ToArray("value"),
-               callback::Capture(waiter->GetCallback(), &status));
-    ASSERT_TRUE(waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    page1->PutNew(convert::ToArray(page1_keys.back()),
+                  convert::ToArray("value"));
   }
 
-  waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page2->StartTransactionNew();
   std::vector<std::string> page2_keys;
   for (int i = 0; i < N; ++i) {
     page2_keys.push_back(fxl::StringPrintf("page2_key_%02d", i));
-    waiter = NewWaiter();
-    page2->Put(convert::ToArray(page2_keys.back()), convert::ToArray("value"),
-               callback::Capture(waiter->GetCallback(), &status));
-    ASSERT_TRUE(waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
+    page2->PutNew(convert::ToArray(page2_keys.back()),
+                  convert::ToArray("value"));
   }
 
   waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+
+  page1->CommitNew();
+  page2->CommitNew();
 
   // We now have a conflict, wait for the resolve to be called.
   resolver_factory->RunUntilNewConflictResolverCalled();
@@ -1034,35 +927,21 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionClosingPipe) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
-  waiter = NewWaiter();
-  Status status;
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->StartTransactionNew();
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+
+  page2->StartTransactionNew();
+  page2->PutNew(convert::ToArray("name"), convert::ToArray("Bob"));
 
   waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->CommitNew();
+  page2->CommitNew();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1120,35 +999,21 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionResetFactory) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
-  waiter = NewWaiter();
-  Status status;
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->StartTransactionNew();
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+
+  page2->StartTransactionNew();
+  page2->PutNew(convert::ToArray("name"), convert::ToArray("Bob"));
 
   waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->CommitNew();
+  page2->CommitNew();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1213,34 +1078,22 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
-  waiter = NewWaiter();
-  Status status;
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->StartTransactionNew();
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+
+  page2->StartTransactionNew();
+  page2->PutNew(convert::ToArray("email"),
+                convert::ToArray("alice@example.org"));
 
   waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
+  page1->CommitNew();
+  page2->CommitNew();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1284,12 +1137,8 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionMultipartMerge) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot;
-  waiter = NewWaiter();
-  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
                                                MergeType::MULTIPART));
@@ -1324,57 +1173,32 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoConflict) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  waiter = NewWaiter();
-  Status status;
-  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot2.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher_ptr));
+
+  page1->StartTransactionNew();
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page1->PutNew(convert::ToArray("city"), convert::ToArray("Paris"));
+
+  page2->StartTransactionNew();
+  page2->PutNew(convert::ToArray("email"),
+                convert::ToArray("alice@example.org"));
+  page2->PutNew(convert::ToArray("phone"), convert::ToArray("0123456789"));
 
   waiter = NewWaiter();
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
+  page1->CommitNew();
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   // We should have seen the first commit at this point.
   EXPECT_EQ(1u, watcher.changes_seen);
 
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page2->CommitNew();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1417,40 +1241,23 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
-  waiter = NewWaiter();
-  Status status;
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->StartTransactionNew();
+  page1->PutNew(convert::ToArray("city"), convert::ToArray("Paris"));
+
+  page2->StartTransactionNew();
+  page2->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page2->PutNew(convert::ToArray("city"), convert::ToArray("San Francisco"));
 
   waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page2->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("city"), convert::ToArray("San Francisco"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
+  page1->CommitNew();
+  page2->CommitNew();
   waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1496,12 +1303,9 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionWithConflict) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  waiter = NewWaiter();
-  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot2.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
@@ -1530,40 +1334,22 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
-  waiter = NewWaiter();
-  Status status;
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->StartTransactionNew();
+  page1->PutNew(convert::ToArray("city"), convert::ToArray("Paris"));
+
+  page2->StartTransactionNew();
+  page2->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page2->PutNew(convert::ToArray("city"), convert::ToArray("San Francisco"));
 
   waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page2->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("city"), convert::ToArray("San Francisco"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->CommitNew();
+  page2->CommitNew();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1600,12 +1386,8 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionMultipartMerge) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot;
-  waiter = NewWaiter();
-  page1->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values),
                                                MergeType::MULTIPART));
@@ -1643,69 +1425,35 @@ TEST_P(MergingIntegrationTest, AutoConflictResolutionNoRightChange) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  waiter = NewWaiter();
-  Status status;
-  page1->GetSnapshot(snapshot1.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot1.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher_ptr));
+
+  page1->StartTransactionNew();
+  page2->StartTransactionNew();
 
   waiter = NewWaiter();
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page1->CommitNew();
 
   // We should have seen the first commit of page 1.
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher.changes_seen);
 
-  waiter = NewWaiter();
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page1->Delete(convert::ToArray("name"),
-                callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->StartTransactionNew();
+  page1->DeleteNew(convert::ToArray("name"));
+  page1->CommitNew();
 
   // We should have seen the second commit of page 1.
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(2u, watcher.changes_seen);
 
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page2->PutNew(convert::ToArray("email"),
+                convert::ToArray("alice@example.org"));
+  page2->CommitNew();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1746,35 +1494,22 @@ TEST_P(MergingIntegrationTest, WaitForCustomMerge) {
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
   // Parallel put in transactions.
-  waiter = NewWaiter();
-  Status status;
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->StartTransactionNew();
+  page2->StartTransactionNew();
+
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page2->PutNew(convert::ToArray("email"),
+                convert::ToArray("alice@example.org"));
 
   waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page2->Put(convert::ToArray("email"), convert::ToArray("alice@example.org"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->CommitNew();
+  page2->CommitNew();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1826,45 +1561,23 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   ASSERT_TRUE(waiter->RunUntilCalled());
   PagePtr page2 = instance->GetPage(fidl::MakeOptional(test_page_id));
 
-  waiter = NewWaiter();
-  Status status;
-  page1->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page1->Put(convert::ToArray("city"), convert::ToArray("Paris"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->StartTransactionNew();
+  page1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+  page1->PutNew(convert::ToArray("city"), convert::ToArray("Paris"));
+
+  page2->StartTransactionNew();
+  page2->PutNew(convert::ToArray("name"), convert::ToArray("Bob"));
+  page2->PutNew(convert::ToArray("phone"), convert::ToArray("0123456789"));
 
   waiter = NewWaiter();
-  page2->StartTransaction(callback::Capture(waiter->GetCallback(), &status));
+  page1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-             callback::Capture(waiter->GetCallback(), &status));
+  page2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Put(convert::ToArray("phone"), convert::ToArray("0123456789"),
-             callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->CommitNew();
+  page2->CommitNew();
 
   resolver_factory->RunUntilNewConflictResolverCalled();
 
@@ -1902,12 +1615,9 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionConflictingMerge) {
   auto watcher_waiter = NewWaiter();
   Watcher watcher(watcher_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  waiter = NewWaiter();
-  page1->GetSnapshot(snapshot2.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     std::move(watcher_ptr),
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page1->GetSnapshotNew(snapshot2.NewRequest(),
+                        fidl::VectorPtr<uint8_t>::New(0),
+                        std::move(watcher_ptr));
 
   EXPECT_TRUE(resolver_impl->requests[0].Merge(std::move(merged_values)));
 
@@ -2031,52 +1741,31 @@ TEST_P(MergingIntegrationTest,
   auto watcher_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  waiter = NewWaiter();
-  Status status;
-  page_conn1->GetSnapshot(snapshot1.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0),
-                          std::move(watcher1_ptr),
-                          callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page_conn1->GetSnapshotNew(snapshot1.NewRequest(),
+                             fidl::VectorPtr<uint8_t>::New(0),
+                             std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  waiter = NewWaiter();
-  page_conn2->GetSnapshot(snapshot2.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0),
-                          std::move(watcher2_ptr),
-                          callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page_conn2->GetSnapshotNew(snapshot2.NewRequest(),
+                             fidl::VectorPtr<uint8_t>::New(0),
+                             std::move(watcher2_ptr));
+
+  page_conn1->StartTransactionNew();
+  page_conn1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+
+  page_conn2->StartTransactionNew();
+  page_conn2->PutNew(convert::ToArray("name"), convert::ToArray("Bob"));
 
   waiter = NewWaiter();
-  page_conn1->StartTransaction(
-      callback::Capture(waiter->GetCallback(), &status));
+  page_conn1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page_conn1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-                  callback::Capture(waiter->GetCallback(), &status));
+  page_conn2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page_conn2->StartTransaction(
-      callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page_conn2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-                  callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page_conn1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page_conn1->CommitNew();
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher1.changes_seen);
@@ -2085,10 +1774,7 @@ TEST_P(MergingIntegrationTest,
   EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
   EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
 
-  waiter = NewWaiter();
-  page_conn2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page_conn2->CommitNew();
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher2.changes_seen);
@@ -2099,15 +1785,12 @@ TEST_P(MergingIntegrationTest,
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   PageSnapshotPtr snapshot3;
-  waiter = NewWaiter();
-  page_conn1->GetSnapshot(snapshot3.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                          callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(status, Status::OK);
+  page_conn1->GetSnapshotNew(snapshot3.NewRequest(),
+                             fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   InlinedValuePtr val1;
   waiter = NewWaiter();
+  Status status;
   snapshot3->GetInline(
       convert::ToArray("name"),
       callback::Capture(waiter->GetCallback(), &status, &val1));
@@ -2115,12 +1798,8 @@ TEST_P(MergingIntegrationTest,
   EXPECT_EQ(status, Status::OK);
 
   PageSnapshotPtr snapshot4;
-  waiter = NewWaiter();
-  page_conn1->GetSnapshot(snapshot4.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                          callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(status, Status::OK);
+  page_conn1->GetSnapshotNew(snapshot4.NewRequest(),
+                             fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   InlinedValuePtr val2;
   waiter = NewWaiter();
@@ -2164,52 +1843,31 @@ TEST_P(MergingIntegrationTest,
   auto watcher_waiter = NewWaiter();
   Watcher watcher1(watcher1_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot1;
-  waiter = NewWaiter();
-  Status status;
-  page_conn1->GetSnapshot(snapshot1.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0),
-                          std::move(watcher1_ptr),
-                          callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page_conn1->GetSnapshotNew(snapshot1.NewRequest(),
+                             fidl::VectorPtr<uint8_t>::New(0),
+                             std::move(watcher1_ptr));
 
   PageWatcherPtr watcher2_ptr;
   Watcher watcher2(watcher2_ptr.NewRequest(), watcher_waiter->GetCallback());
   PageSnapshotPtr snapshot2;
-  waiter = NewWaiter();
-  page_conn2->GetSnapshot(snapshot2.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0),
-                          std::move(watcher2_ptr),
-                          callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page_conn2->GetSnapshotNew(snapshot2.NewRequest(),
+                             fidl::VectorPtr<uint8_t>::New(0),
+                             std::move(watcher2_ptr));
+
+  page_conn1->StartTransactionNew();
+  page_conn1->PutNew(convert::ToArray("name"), convert::ToArray("Alice"));
+
+  page_conn2->StartTransactionNew();
+  page_conn2->PutNew(convert::ToArray("name"), convert::ToArray("Bob"));
 
   waiter = NewWaiter();
-  page_conn1->StartTransaction(
-      callback::Capture(waiter->GetCallback(), &status));
+  page_conn1->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
   waiter = NewWaiter();
-  page_conn1->Put(convert::ToArray("name"), convert::ToArray("Alice"),
-                  callback::Capture(waiter->GetCallback(), &status));
+  page_conn2->Sync(waiter->GetCallback());
   ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
 
-  waiter = NewWaiter();
-  page_conn2->StartTransaction(
-      callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-  waiter = NewWaiter();
-  page_conn2->Put(convert::ToArray("name"), convert::ToArray("Bob"),
-                  callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
-
-  waiter = NewWaiter();
-  page_conn1->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page_conn1->CommitNew();
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher1.changes_seen);
@@ -2218,10 +1876,7 @@ TEST_P(MergingIntegrationTest,
   EXPECT_EQ("name", convert::ToString(change.changed_entries.at(0).key));
   EXPECT_EQ("Alice", ToString(change.changed_entries.at(0).value));
 
-  waiter = NewWaiter();
-  page_conn2->Commit(callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(Status::OK, status);
+  page_conn2->CommitNew();
 
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
   EXPECT_EQ(1u, watcher2.changes_seen);
@@ -2243,15 +1898,12 @@ TEST_P(MergingIntegrationTest,
   ASSERT_TRUE(watcher_waiter->RunUntilCalled());
 
   PageSnapshotPtr snapshot3;
-  waiter = NewWaiter();
-  page_conn1->GetSnapshot(snapshot3.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                          callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(status, Status::OK);
+  page_conn1->GetSnapshotNew(snapshot3.NewRequest(),
+                             fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   InlinedValuePtr val1;
   waiter = NewWaiter();
+  Status status;
   snapshot3->GetInline(
       convert::ToArray("name"),
       callback::Capture(waiter->GetCallback(), &status, &val1));
@@ -2259,12 +1911,8 @@ TEST_P(MergingIntegrationTest,
   EXPECT_EQ(status, Status::OK);
 
   PageSnapshotPtr snapshot4;
-  waiter = NewWaiter();
-  page_conn1->GetSnapshot(snapshot4.NewRequest(),
-                          fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                          callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  EXPECT_EQ(status, Status::OK);
+  page_conn1->GetSnapshotNew(snapshot4.NewRequest(),
+                             fidl::VectorPtr<uint8_t>::New(0), nullptr);
 
   InlinedValuePtr val2;
   waiter = NewWaiter();

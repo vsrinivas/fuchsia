@@ -17,18 +17,7 @@ class LongHistorySyncTest : public IntegrationTest {
  protected:
   std::unique_ptr<TestSyncStateWatcher> WatchPageSyncState(PagePtr* page) {
     auto watcher = std::make_unique<TestSyncStateWatcher>();
-
-    Status status = Status::INTERNAL_ERROR;
-    auto waiter = NewWaiter();
-    (*page)->SetSyncStateWatcher(
-        watcher->NewBinding(),
-        callback::Capture(waiter->GetCallback(), &status));
-    if (!waiter->RunUntilCalled()) {
-      return nullptr;
-    }
-    if (status != Status::OK) {
-      return nullptr;
-    }
+    (*page)->SetSyncStateWatcherNew(watcher->NewBinding());
     return watcher;
   }
 
@@ -51,15 +40,8 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   const int commit_history_length = 500;
   // Overwrite one key N times, creating N implicit commits.
   for (int i = 0; i < commit_history_length; i++) {
-    // TODO(ppi): switch to using a StatusWaiter to wait in parallel on all
-    // puts, once this does not crash w/ ZX_ERR_SHOULD_WAIT in the test loop
-    // dispatcher.
-    auto put_waiter = NewWaiter();
-    page1->Put(convert::ToArray("iteration"),
-               convert::ToArray(std::to_string(i)),
-               callback::Capture(put_waiter->GetCallback(), &status));
-    ASSERT_TRUE(put_waiter->RunUntilCalled());
-    ASSERT_EQ(Status::OK, status);
+    page1->PutNew(convert::ToArray("iteration"),
+                  convert::ToArray(std::to_string(i)));
   }
   // Wait until the commits are uploaded.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
@@ -79,12 +61,8 @@ TEST_P(LongHistorySyncTest, SyncLongHistory) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 
   PageSnapshotPtr snapshot;
-  waiter = NewWaiter();
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr,
-                     callback::Capture(waiter->GetCallback(), &status));
-  ASSERT_TRUE(waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
+  page2->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                        nullptr);
   std::unique_ptr<InlinedValue> inlined_value;
 
   waiter = NewWaiter();

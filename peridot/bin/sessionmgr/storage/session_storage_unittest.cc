@@ -13,6 +13,7 @@
 #include "peridot/lib/fidl/array_to_string.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/test_with_ledger.h"
+#include "zircon/system/public/zircon/errors.h"
 
 namespace modular {
 namespace {
@@ -257,11 +258,14 @@ TEST_F(SessionStorageTest, DeleteStoryDeletesStoryPage) {
   // Add some fake content to the story's page, so that we dan show that
   // it is deleted when we instruct SessionStorage to delete the story.
   fuchsia::ledger::PagePtr story_page;
+  story_page.set_error_handler([](zx_status_t status) {
+    FAIL() << "Unexpected disconnection on page, status: " << status;
+  });
   ledger_client()->ledger()->GetPage(std::move(story_page_id),
                                      story_page.NewRequest());
   done = false;
-  story_page->Put(to_array("key"), to_array("value"),
-                  [&](fuchsia::ledger::Status status) { done = true; });
+  story_page->PutNew(to_array("key"), to_array("value"));
+  story_page->Sync([&] { done = true; });
   RunLoopUntil([&] { return done; });
 
   // Delete the story.
@@ -271,11 +275,8 @@ TEST_F(SessionStorageTest, DeleteStoryDeletesStoryPage) {
 
   // Show that the underlying page is now empty.
   fuchsia::ledger::PageSnapshotPtr snapshot;
-  story_page->GetSnapshot(snapshot.NewRequest(), to_array("") /* prefix */,
-                          nullptr /* watcher */,
-                          [&](fuchsia::ledger::Status status) {
-                            ASSERT_EQ(fuchsia::ledger::Status::OK, status);
-                          });
+  story_page->GetSnapshotNew(snapshot.NewRequest(), to_array("") /* prefix */,
+                             nullptr /* watcher */);
   done = false;
   snapshot->GetEntries(to_array("") /* key_start */, nullptr /* token */,
                        [&](fuchsia::ledger::Status status,

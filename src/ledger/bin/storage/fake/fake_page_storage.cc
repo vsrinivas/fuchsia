@@ -184,7 +184,11 @@ void FakePageStorage::CommitJournal(
           for (CommitWatcher* watcher : watchers_) {
             async::PostTask(
                 environment_->dispatcher(),
-                [watcher, commit = commit->Clone()]() mutable {
+                [this, watcher, commit = commit->Clone()]() mutable {
+                  // Check that watcher was not unregistered.
+                  if (watchers_.find(watcher) == watchers_.end()) {
+                    return;
+                  }
                   std::vector<std::unique_ptr<const Commit>> commits;
                   commits.push_back(std::move(commit));
                   watcher->OnNewCommits(commits, ChangeSource::LOCAL);

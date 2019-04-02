@@ -151,11 +151,8 @@ void DeleteEntryBenchmark::Populate() {
           return;
         }
         if (transaction_size_ > 0) {
-          page_->StartTransaction([this](Status status) {
-            if (QuitOnError(QuitLoopClosure(), status,
-                            "Page::StartTransaction")) {
-              return;
-            }
+          page_->StartTransactionNew();
+          page_->Sync([this] {
             TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
             RunSingle(0);
           });
@@ -178,10 +175,8 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "delete_entry", i);
-  page_->Delete(std::move(keys_[i]), [this, i](Status status) {
-    if (QuitOnError(QuitLoopClosure(), status, "Page::Delete")) {
-      return;
-    }
+  page_->DeleteNew(std::move(keys_[i]));
+  page_->Sync([this, i]() {
     TRACE_ASYNC_END("benchmark", "delete_entry", i);
     if (transaction_size_ > 0 &&
         (i % transaction_size_ == transaction_size_ - 1 ||
@@ -195,10 +190,8 @@ void DeleteEntryBenchmark::RunSingle(size_t i) {
 
 void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
-  page_->Commit([this, i](Status status) {
-    if (QuitOnError(QuitLoopClosure(), status, "Page::Commit")) {
-      return;
-    }
+  page_->CommitNew();
+  page_->Sync([this, i]() {
     TRACE_ASYNC_END("benchmark", "commit", i / transaction_size_);
     TRACE_ASYNC_END("benchmark", "transaction", i / transaction_size_);
 
@@ -206,10 +199,8 @@ void DeleteEntryBenchmark::CommitAndRunNext(size_t i) {
       RunSingle(i + 1);
       return;
     }
-    page_->StartTransaction([this, i = i + 1](Status status) {
-      if (QuitOnError(QuitLoopClosure(), status, "Page::StartTransaction")) {
-        return;
-      }
+    page_->StartTransactionNew();
+    page_->Sync([this, i = i + 1]() {
       TRACE_ASYNC_BEGIN("benchmark", "transaction", i / transaction_size_);
       RunSingle(i);
     });

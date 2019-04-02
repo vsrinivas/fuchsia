@@ -272,6 +272,8 @@ void BacklogBenchmark::ConnectUploader() {
 
   TRACE_ASYNC_BEGIN("benchmark", "get_uploader_page", 0);
   TRACE_ASYNC_BEGIN("benchmark", "upload", 0);
+  uploader_page_.set_error_handler(
+      QuitOnErrorCallback(QuitLoopClosure(), "uploader page connection"));
   uploader_->GetPage(fidl::MakeOptional(page_id_), uploader_page_.NewRequest());
   uploader_->Sync([this] {
     TRACE_ASYNC_END("benchmark", "get_uploader_page", 0);
@@ -290,9 +292,7 @@ void BacklogBenchmark::WaitForUploaderUpload() {
       return;
     }
   };
-  uploader_page_->SetSyncStateWatcher(
-      sync_watcher_binding_.NewBinding(),
-      QuitOnErrorCallback(QuitLoopClosure(), "Page::SetSyncStateWatcher"));
+  uploader_page_->SetSyncStateWatcherNew(sync_watcher_binding_.NewBinding());
 }
 
 void BacklogBenchmark::ConnectReader() {
@@ -313,6 +313,8 @@ void BacklogBenchmark::ConnectReader() {
 
   TRACE_ASYNC_BEGIN("benchmark", "download", 0);
   TRACE_ASYNC_BEGIN("benchmark", "get_reader_page", 0);
+  reader_page_.set_error_handler(
+      QuitOnErrorCallback(QuitLoopClosure(), "reader page connection"));
   reader_->GetPage(fidl::MakeOptional(page_id_), reader_page_.NewRequest());
   reader_->Sync([this] {
     TRACE_ASYNC_END("benchmark", "get_reader_page", 0);
@@ -329,15 +331,12 @@ void BacklogBenchmark::WaitForReaderDownload() {
       return;
     }
   };
-  reader_page_->SetSyncStateWatcher(
-      sync_watcher_binding_.NewBinding(),
-      QuitOnErrorCallback(QuitLoopClosure(), "Page::SetSyncStateWatcher"));
+  reader_page_->SetSyncStateWatcherNew(sync_watcher_binding_.NewBinding());
 }
 
 void BacklogBenchmark::GetReaderSnapshot() {
-  reader_page_->GetSnapshot(
-      reader_snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
-      QuitOnErrorCallback(QuitLoopClosure(), "GetSnapshot"));
+  reader_page_->GetSnapshotNew(reader_snapshot_.NewRequest(),
+                               fidl::VectorPtr<uint8_t>::New(0), nullptr);
   TRACE_ASYNC_BEGIN("benchmark", "get_all_entries", 0);
   GetEntriesStep(nullptr, unique_key_count_);
 }

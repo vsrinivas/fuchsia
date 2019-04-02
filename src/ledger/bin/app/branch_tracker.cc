@@ -60,6 +60,7 @@ class BranchTracker::PageWatcherContainer {
 
   void UpdateCommit(std::unique_ptr<const storage::Commit> commit) {
     current_commit_ = std::move(commit);
+    FXL_DCHECK(current_commit_);
     SendCommit();
   }
 
@@ -285,6 +286,7 @@ storage::Status BranchTracker::Init() {
   }
 
   FXL_DCHECK(!commits.empty());
+  FXL_DCHECK(commits[0]);
   FXL_DCHECK(!current_commit_);
 
   current_commit_ = std::move(commits[0]);
@@ -303,6 +305,7 @@ std::unique_ptr<const storage::Commit> BranchTracker::GetBranchHead() {
 void BranchTracker::OnNewCommits(
     const std::vector<std::unique_ptr<const storage::Commit>>& commits,
     storage::ChangeSource /*source*/) {
+  FXL_DCHECK(current_commit_);
   bool changed = false;
   const std::unique_ptr<const storage::Commit>* new_current_commit =
       &current_commit_;
@@ -323,6 +326,7 @@ void BranchTracker::OnNewCommits(
   }
   if (changed) {
     current_commit_ = (*new_current_commit)->Clone();
+    FXL_DCHECK(current_commit_);
   }
 
   if (!changed || transaction_in_progress_) {
@@ -356,13 +360,6 @@ void BranchTracker::StopTransaction(
     current_commit_ = std::move(commit);
   }
 
-  if (!current_commit_) {
-    // current_commit_ has a null value only if OnNewCommits has neven been
-    // called. Here we are in the case where a transaction stops, but no new
-    // commits have arrived in between: there is no need to update the watchers.
-    return;
-  }
-
   for (auto& watcher : watchers_) {
     watcher.SetOnDrainedCallback(nullptr);
     watcher.UpdateCommit(current_commit_->Clone());
@@ -380,8 +377,9 @@ void BranchTracker::RegisterPageWatcher(
 bool BranchTracker::IsEmpty() { return watchers_.empty(); }
 
 void BranchTracker::CheckEmpty() {
-  if (on_empty_callback_ && IsEmpty())
+  if (on_empty_callback_ && IsEmpty()) {
     on_empty_callback_();
+  }
 }
 
 }  // namespace ledger

@@ -10,6 +10,7 @@
 
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
+#include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/testing/data_generator.h"
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/sync/test_sync_state_watcher.h"
@@ -21,15 +22,7 @@ class SyncIntegrationTest : public IntegrationTest {
  protected:
   std::unique_ptr<TestSyncStateWatcher> WatchPageSyncState(PagePtr* page) {
     auto watcher = std::make_unique<TestSyncStateWatcher>();
-
-    Status status = Status::INTERNAL_ERROR;
-    auto loop_waiter = NewWaiter();
-    (*page)->SetSyncStateWatcher(
-        watcher->NewBinding(),
-        callback::Capture(loop_waiter->GetCallback(), &status));
-    EXPECT_TRUE(loop_waiter->RunUntilCalled());
-    EXPECT_EQ(Status::OK, status);
-
+    (*page)->SetSyncStateWatcherNew(watcher->NewBinding());
     return watcher;
   }
 
@@ -48,21 +41,16 @@ class SyncIntegrationTest : public IntegrationTest {
 // the second instance is created and connected.
 TEST_P(SyncIntegrationTest, SerialConnection) {
   PageId page_id;
-  Status status;
 
   // Create the first instance and write the page entry.
   auto instance1 = NewLedgerAppInstance();
   auto page1 = instance1->GetTestPage();
   auto page1_state_watcher = WatchPageSyncState(&page1);
-  auto loop_waiter = NewWaiter();
-  page1->Put(convert::ToArray("Hello"), convert::ToArray("World"),
-             callback::Capture(loop_waiter->GetCallback(), &status));
-  ASSERT_TRUE(loop_waiter->RunUntilCalled());
+  page1->PutNew(convert::ToArray("Hello"), convert::ToArray("World"));
 
   // Retrieve the page ID so that we can later connect to the same page from
   // another app instance.
-  ASSERT_EQ(Status::OK, status);
-  loop_waiter = NewWaiter();
+  auto loop_waiter = NewWaiter();
   page1->GetId(callback::Capture(loop_waiter->GetCallback(), &page_id));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
 
@@ -77,15 +65,12 @@ TEST_P(SyncIntegrationTest, SerialConnection) {
   EXPECT_TRUE(WaitUntilSyncIsIdle(page2_state_watcher.get()));
 
   PageSnapshotPtr snapshot;
-  loop_waiter = NewWaiter();
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr,
-                     callback::Capture(loop_waiter->GetCallback(), &status));
-  ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
+  page2->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                        nullptr);
   std::unique_ptr<InlinedValue> inlined_value;
 
   loop_waiter = NewWaiter();
+  Status status;
   snapshot->GetInline(
       convert::ToArray("Hello"),
       callback::Capture(loop_waiter->GetCallback(), &status, &inlined_value));
@@ -122,12 +107,7 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
   int page2_initial_state_change_count =
       page2_state_watcher->state_change_count;
 
-  Status status;
-  loop_waiter = NewWaiter();
-  page1->Put(convert::ToArray("Hello"), convert::ToArray("World"),
-             callback::Capture(loop_waiter->GetCallback(), &status));
-  ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
+  page1->PutNew(convert::ToArray("Hello"), convert::ToArray("World"));
 
   // Wait until page1 finishes uploading the changes.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
@@ -144,12 +124,10 @@ TEST_P(SyncIntegrationTest, ConcurrentConnection) {
       }));
 
   PageSnapshotPtr snapshot;
-  loop_waiter = NewWaiter();
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr,
-                     callback::Capture(loop_waiter->GetCallback(), &status));
-  ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
+  page2->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                        nullptr);
+
+  Status status;
   std::unique_ptr<InlinedValue> inlined_value;
   loop_waiter = NewWaiter();
   snapshot->GetInline(
@@ -193,23 +171,20 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   rng::TestRandom rng(0);
   DataGenerator generator = DataGenerator(&rng);
 
-  Status status;
   std::vector<uint8_t> key = convert::ToArray("Hello");
   std::vector<uint8_t> big_value = generator.MakeValue(2 * 65536 + 1).take();
   fsl::SizedVmo vmo;
   ASSERT_TRUE(fsl::VmoFromVector(big_value, &vmo));
+  CreateReferenceStatus create_reference_status;
   ReferencePtr reference;
   loop_waiter = NewWaiter();
-  page1->CreateReferenceFromBuffer(
+  page1->CreateReferenceFromBufferNew(
       std::move(vmo).ToTransport(),
-      callback::Capture(loop_waiter->GetCallback(), &status, &reference));
+      callback::Capture(loop_waiter->GetCallback(), &create_reference_status,
+                        &reference));
   ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
-  loop_waiter = NewWaiter();
-  page1->PutReference(key, *reference, Priority::LAZY,
-                      callback::Capture(loop_waiter->GetCallback(), &status));
-  ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
+  ASSERT_EQ(CreateReferenceStatus::OK, create_reference_status);
+  page1->PutReferenceNew(key, *reference, Priority::LAZY);
 
   // Wait until page1 finishes uploading the changes.
   EXPECT_TRUE(WaitUntilSyncIsIdle(page1_state_watcher.get()));
@@ -222,12 +197,9 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
       }));
 
   PageSnapshotPtr snapshot;
-  loop_waiter = NewWaiter();
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr,
-                     callback::Capture(loop_waiter->GetCallback(), &status));
-  ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
+  page2->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                        nullptr);
+  Status status;
   fuchsia::mem::BufferPtr buffer;
   loop_waiter = NewWaiter();
   // Lazy value is not downloaded eagerly.
@@ -247,11 +219,7 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
   ASSERT_EQ(buffer->size, 10u);
 
   // Change priority to eager, re-upload.
-  loop_waiter = NewWaiter();
-  page1->PutReference(key, *reference, Priority::EAGER,
-                      callback::Capture(loop_waiter->GetCallback(), &status));
-  ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
+  page1->PutReferenceNew(key, *reference, Priority::EAGER);
 
   page2_initial_state_change_count = page2_state_watcher->state_change_count;
   // Wait until page1 finishes uploading the changes.
@@ -265,14 +233,11 @@ TEST_P(SyncIntegrationTest, LazyToEagerTransition) {
       }));
 
   loop_waiter = NewWaiter();
-  page2->GetSnapshot(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-                     nullptr,
-                     callback::Capture(loop_waiter->GetCallback(), &status));
-  ASSERT_TRUE(loop_waiter->RunUntilCalled());
-  ASSERT_EQ(Status::OK, status);
-  loop_waiter = NewWaiter();
+  page2->GetSnapshotNew(snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
+                        nullptr);
 
   // Now Get succeeds, as the value is no longer lazy.
+  loop_waiter = NewWaiter();
   snapshot->Get(
       convert::ToArray("Hello"),
       callback::Capture(loop_waiter->GetCallback(), &status, &buffer));

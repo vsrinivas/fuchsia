@@ -28,9 +28,9 @@ source_set("constants_and_utils") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//peridot/lib/util",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 
   public_deps = [
@@ -106,6 +106,7 @@ executable("session_storage_unittest") {
     "//peridot/public/lib/async/cpp:future",
     "//sdk/fidl/fuchsia.ledger",
     "//third_party/googletest:gtest_main",
+    "//zircon/system/public",
   ]
 }
 

@@ -104,13 +104,6 @@ class PageClientTest : public TestWithLedger {
     return page;
   }
 
-  // Factory for a ledger callback function that just logs errors.
-  fit::function<void(fuchsia::ledger::Status)> log(std::string context) {
-    return [context](fuchsia::ledger::Status status) {
-      EXPECT_EQ(fuchsia::ledger::Status::OK, status) << context;
-    };
-  }
-
   bool resolved() const { return resolved_; }
 
  private:
@@ -131,7 +124,7 @@ TEST_F(PageClientTest, DISABLED_SimpleWriteObserve) {
   // the resulting change in the PageClient.
   auto client = CreatePageClient("page");
 
-  client->page()->Put(to_array("key"), to_array("value"), log("Put"));
+  client->page()->PutNew(to_array("key"), to_array("value"));
 
   RunLoopWithTimeoutOrUntil([&] { return client->value("key") == "value"; },
                             kTimeout);
@@ -148,8 +141,8 @@ TEST_F(PageClientTest, PrefixWriteObserve) {
   auto client_b = CreatePageClient("page", "b/");
 
   auto page = CreatePagePtr("page");
-  page->Put(to_array("a/key"), to_array("value"), log("Put"));
-  page->Put(to_array("b/key"), to_array("value"), log("Put"));
+  page->PutNew(to_array("a/key"), to_array("value"));
+  page->PutNew(to_array("b/key"), to_array("value"));
 
   RunLoopWithTimeoutOrUntil(
       [&] {
@@ -173,8 +166,8 @@ TEST_F(PageClientTest, ConcurrentWrite) {
 
   auto page1 = CreatePagePtr("page");
   auto page2 = CreatePagePtr("page");
-  page1->Put(to_array("key1"), to_array("value1"), log("Put key1"));
-  page2->Put(to_array("key2"), to_array("value2"), log("Put key2"));
+  page1->PutNew(to_array("key1"), to_array("value1"));
+  page2->PutNew(to_array("key2"), to_array("value2"));
 
   RunLoopWithTimeoutOrUntil(
       [&] {
@@ -202,27 +195,16 @@ TEST_F(PageClientTest, ConflictWrite) {
 
   bool finished{};
 
-  page2->StartTransaction([&](fuchsia::ledger::Status status) {
-    EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-    page2->Put(to_array("key"), to_array("value2"),
-               [&](fuchsia::ledger::Status status) {
-                 EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                 page1->StartTransaction([&](fuchsia::ledger::Status status) {
-                   EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                   page1->Put(
-                       to_array("key"), to_array("value1"),
-                       [&](fuchsia::ledger::Status status) {
-                         EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                         page2->Commit([&](fuchsia::ledger::Status status) {
-                           EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                           page1->Commit([&](fuchsia::ledger::Status status) {
-                             EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                             finished = true;
-                           });
-                         });
-                       });
-                 });
-               });
+  page2->StartTransactionNew();
+  page2->PutNew(to_array("key"), to_array("value2"));
+  page2->Sync([&] {
+    page1->StartTransactionNew();
+    page1->PutNew(to_array("key"), to_array("value1"));
+    page1->Sync([&] {
+      page2->CommitNew();
+      page1->CommitNew();
+      finished = true;
+    });
   });
 
   RunLoopWithTimeoutOrUntil(
@@ -250,27 +232,16 @@ TEST_F(PageClientTest, ConflictPrefixWrite) {
   auto page2 = CreatePagePtr("page");
 
   bool finished{};
-  page2->StartTransaction([&](fuchsia::ledger::Status status) {
-    EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-    page2->Put(to_array("a/key"), to_array("value2"),
-               [&](fuchsia::ledger::Status status) {
-                 EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                 page1->StartTransaction([&](fuchsia::ledger::Status status) {
-                   EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                   page1->Put(
-                       to_array("a/key"), to_array("value1"),
-                       [&](fuchsia::ledger::Status status) {
-                         EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                         page2->Commit([&](fuchsia::ledger::Status status) {
-                           EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                           page1->Commit([&](fuchsia::ledger::Status status) {
-                             EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                             finished = true;
-                           });
-                         });
-                       });
-                 });
-               });
+  page2->StartTransactionNew();
+  page2->PutNew(to_array("a/key"), to_array("value2"));
+  page2->Sync([&] {
+    page1->StartTransactionNew();
+    page1->PutNew(to_array("a/key"), to_array("value1"));
+    page1->Sync([&] {
+      page2->CommitNew();
+      page1->CommitNew();
+      finished = true;
+    });
   });
 
   RunLoopWithTimeoutOrUntil(
@@ -298,29 +269,18 @@ TEST_F(PageClientTest, ConcurrentConflictWrite) {
   auto page2 = CreatePagePtr("page");
 
   bool finished{};
-  page2->StartTransaction([&](fuchsia::ledger::Status status) {
-    EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-    page2->Put(to_array("key2"), to_array("value2"), log("Put 2 key2"));
-    page2->Put(
-        to_array("key"), to_array("value2"),
-        [&](fuchsia::ledger::Status status) {
-          EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-          page1->StartTransaction([&](fuchsia::ledger::Status status) {
-            EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-            page1->Put(to_array("key1"), to_array("value1"), log("Put 1 key1"));
-            page1->Put(to_array("key"), to_array("value1"),
-                       [&](fuchsia::ledger::Status status) {
-                         EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                         page2->Commit([&](fuchsia::ledger::Status status) {
-                           EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                           page1->Commit([&](fuchsia::ledger::Status status) {
-                             EXPECT_EQ(fuchsia::ledger::Status::OK, status);
-                             finished = true;
-                           });
-                         });
-                       });
-          });
-        });
+  page2->StartTransactionNew();
+  page2->PutNew(to_array("key2"), to_array("value2"));
+  page2->PutNew(to_array("key"), to_array("value2"));
+  page2->Sync([&] {
+    page1->StartTransactionNew();
+    page1->PutNew(to_array("key1"), to_array("value1"));
+    page1->PutNew(to_array("key"), to_array("value1"));
+    page1->Sync([&] {
+      page2->CommitNew();
+      page1->CommitNew();
+      finished = true;
+    });
   });
 
   RunLoopWithTimeoutOrUntil(

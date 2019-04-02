@@ -175,22 +175,10 @@ void GetPageBenchmark::RunSingle(size_t request_number) {
 
 void GetPageBenchmark::PopulateAndClearPage(size_t page_index,
                                             fit::closure callback) {
-  pages_[page_index]->Put(
-      generator_.MakeKey(page_index, kKeySize),
-      generator_.MakeValue(kValueSize),
-      [this, page_index,
-       callback = std::move(callback)](Status status) mutable {
-        if (QuitOnError(QuitLoopClosure(), status, "Page::Put")) {
-          return;
-        }
-        pages_[page_index]->Clear(
-            [this, callback = std::move(callback)](Status status) {
-              if (QuitOnError(QuitLoopClosure(), status, "Page::Clear")) {
-                return;
-              }
-              callback();
-            });
-      });
+  pages_[page_index]->PutNew(generator_.MakeKey(page_index, kKeySize),
+                             generator_.MakeValue(kValueSize));
+  pages_[page_index]->ClearNew();
+  pages_[page_index]->Sync(std::move(callback));
 }
 
 void GetPageBenchmark::ShutDown() {

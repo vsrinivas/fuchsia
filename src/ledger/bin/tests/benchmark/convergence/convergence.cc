@@ -147,7 +147,7 @@ ConvergenceBenchmark::ConvergenceBenchmark(
 }
 
 void ConvergenceBenchmark::Run() {
-  auto waiter = fxl::MakeRefCounted<callback::StatusWaiter<Status>>(Status::OK);
+  auto waiter = fxl::MakeRefCounted<callback::CompletionWaiter>();
   for (auto& device_context : devices_) {
     // Initialize ledgers in different paths to emulate separate devices,
     // but with the same lowest-level directory name, so they correspond to the
@@ -174,16 +174,12 @@ void ConvergenceBenchmark::Run() {
         device_context->page_connection.NewRequest());
     PageSnapshotPtr snapshot;
     // Register a watcher; we don't really need the snapshot.
-    device_context->page_connection->GetSnapshot(
+    device_context->page_connection->GetSnapshotNew(
         snapshot.NewRequest(), fidl::VectorPtr<uint8_t>::New(0),
-        device_context->page_watcher->NewBinding(), waiter->NewCallback());
+        device_context->page_watcher->NewBinding());
+    device_context->page_connection->Sync(waiter->NewCallback());
   }
-  waiter->Finalize([this](Status status) {
-    if (QuitOnError(QuitLoopClosure(), status, "GetSnapshot")) {
-      return;
-    }
-    Start(0);
-  });
+  waiter->Finalize([this] { Start(0); });
 }
 
 void ConvergenceBenchmark::Start(int step) {
@@ -202,9 +198,8 @@ void ConvergenceBenchmark::Start(int step) {
       remaining_keys_.insert(convert::ToString(key));
     }
     fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
-    devices_[device_id]->page_connection->Put(
-        std::move(key), std::move(value),
-        QuitOnErrorCallback(QuitLoopClosure(), "Put"));
+    devices_[device_id]->page_connection->PutNew(std::move(key),
+                                                 std::move(value));
   }
 
   TRACE_ASYNC_BEGIN("benchmark", "convergence", step);

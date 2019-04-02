@@ -131,21 +131,8 @@ class ReadDataCall : public PageOperation<DataPtr> {
   void Run() override {
     FlowToken flow{this, &result_};
 
-    this->page()->GetSnapshot(
-        page_snapshot_.NewRequest(), fidl::VectorPtr<uint8_t>::New(0), nullptr,
-        this->Protect([this, flow](fuchsia::ledger::Status status) {
-          if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << this->trace_name() << " " << key_ << " "
-                           << "Page.GetSnapshot() "
-                           << fidl::ToUnderlying(status);
-            return;
-          }
-
-          Cont(flow);
-        }));
-  }
-
-  void Cont(FlowToken flow) {
+    this->page()->GetSnapshotNew(page_snapshot_.NewRequest(),
+                                 fidl::VectorPtr<uint8_t>::New(0), nullptr);
     page_snapshot_->Get(to_array(key_), [this, flow](
                                             fuchsia::ledger::Status status,
                                             fuchsia::mem::BufferPtr value) {
@@ -206,21 +193,8 @@ class ReadAllDataCall : public PageOperation<DataArray> {
   void Run() override {
     FlowToken flow{this, &data_};
 
-    this->page()->GetSnapshot(
-        page_snapshot_.NewRequest(), to_array(prefix_), nullptr,
-        this->Protect([this, flow](fuchsia::ledger::Status status) {
-          if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << this->trace_name() << " "
-                           << "Page.GetSnapshot() "
-                           << fidl::ToUnderlying(status);
-            return;
-          }
-
-          Cont1(flow);
-        }));
-  }
-
-  void Cont1(FlowToken flow) {
+    this->page()->GetSnapshotNew(page_snapshot_.NewRequest(), to_array(prefix_),
+                                 nullptr);
     GetEntries(page_snapshot_.get(), &entries_,
                [this, flow](fuchsia::ledger::Status status) {
                  if (status != fuchsia::ledger::Status::OK) {
@@ -230,11 +204,11 @@ class ReadAllDataCall : public PageOperation<DataArray> {
                    return;
                  }
 
-                 Cont2(flow);
+                 Cont(flow);
                });
   }
 
-  void Cont2(FlowToken /*flow*/) {
+  void Cont(FlowToken /*flow*/) {
     for (auto& entry : entries_) {
       std::string value_as_string;
       if (!fsl::StringFromVmo(*entry.value, &value_as_string)) {
@@ -279,10 +253,10 @@ class WriteDataCall : public PageOperation<> {
 
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(json, &vmo));
-    page()->CreateReferenceFromBuffer(
+    page()->CreateReferenceFromBufferNew(
         std::move(vmo).ToTransport(),
         [this, weak_ptr = GetWeakPtr(), flow](
-            fuchsia::ledger::Status status,
+            fuchsia::ledger::CreateReferenceStatus status,
             std::unique_ptr<fuchsia::ledger::Reference> reference) {
           if (!weak_ptr) {
             return;
@@ -299,14 +273,8 @@ class WriteDataCall : public PageOperation<> {
       return;
     }
 
-    page()->PutReference(
-        to_array(key_), std::move(*reference), fuchsia::ledger::Priority::EAGER,
-        Protect([this, flow](fuchsia::ledger::Status status) {
-          if (status != fuchsia::ledger::Status::OK) {
-            FXL_LOG(ERROR) << trace_name() << " " << key_ << " "
-                           << "Page.Put() " << fidl::ToUnderlying(status);
-          }
-        }));
+    page()->PutReferenceNew(to_array(key_), std::move(*reference),
+                            fuchsia::ledger::Priority::EAGER);
   }
 
   const std::string key_;
@@ -325,21 +293,8 @@ class DumpPageSnapshotCall : public PageOperation<std::string> {
   void Run() override {
     FlowToken flow{this, &dump_};
 
-    page()->GetSnapshot(page_snapshot_.NewRequest(),
-                        fidl::VectorPtr<uint8_t>::New(0), nullptr,
-                        Protect([this, flow](fuchsia::ledger::Status status) {
-                          if (status != fuchsia::ledger::Status::OK) {
-                            FXL_LOG(ERROR) << this->trace_name() << " "
-                                           << "Page.GetSnapshot() "
-                                           << fidl::ToUnderlying(status);
-                            return;
-                          }
-
-                          Cont1(flow);
-                        }));
-  }
-
-  void Cont1(FlowToken flow) {
+    page()->GetSnapshotNew(page_snapshot_.NewRequest(),
+                           fidl::VectorPtr<uint8_t>::New(0), nullptr);
     GetEntries(page_snapshot_.get(), &entries_,
                [this, flow](fuchsia::ledger::Status status) {
                  if (status != fuchsia::ledger::Status::OK) {
@@ -349,11 +304,11 @@ class DumpPageSnapshotCall : public PageOperation<std::string> {
                    return;
                  }
 
-                 Cont2(flow);
+                 Cont(flow);
                });
   }
 
-  void Cont2(FlowToken /*flow*/) {
+  void Cont(FlowToken /*flow*/) {
     std::ostringstream stream;
     for (auto& entry : entries_) {
       stream << "key: " << to_hex_string(entry.key) << std::endl;
