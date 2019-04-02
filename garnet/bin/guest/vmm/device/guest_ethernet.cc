@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/async/default.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/zx/fifo.h>
+#include <src/lib/fxl/logging.h>
 
 #include "guest_ethernet.h"
 
@@ -148,6 +148,10 @@ void GuestEthernet::Start(StartCallback callback) {
     callback(ZX_ERR_BAD_STATE);
     return;
   }
+
+  // Send a signal to netstack so that it knows to bring the link up.
+  tx_fifo_.signal(0, ZX_USER_SIGNAL_0);
+
   tx_fifo_wait_.set_object(tx_fifo_.get());
   tx_fifo_wait_.set_trigger(ZX_SOCKET_READABLE);
   zx_status_t status = tx_fifo_wait_.Begin(async_get_default_dispatcher());
@@ -171,7 +175,9 @@ void GuestEthernet::SetClientName(std::string name,
   callback(ZX_OK);
 }
 
-void GuestEthernet::GetStatus(GetStatusCallback callback) { callback(0); }
+void GuestEthernet::GetStatus(GetStatusCallback callback) {
+  callback(fuchsia::hardware::ethernet::DEVICE_STATUS_ONLINE);
+}
 
 void GuestEthernet::SetPromiscuousMode(bool enabled,
                                        SetPromiscuousModeCallback callback) {

@@ -206,6 +206,7 @@ executable("virtio_net_bin") {
   ]
   deps = [
     ":virtio",
+    "//garnet/public/lib/async_promise:async_promise",
     "//sdk/fidl/fuchsia.netstack",
     "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet",
   ]
@@ -277,7 +278,8 @@ package("virtio_wl") {
   # TODO(MA-520): don't hard-code the driver
   resources = [
     {
-      path = rebase_path("${root_build_dir}/linux_x64-shared/libvulkan_intel_linux.so")
+      path = rebase_path(
+              "${root_build_dir}/linux_x64-shared/libvulkan_intel_linux.so")
       dest = "drivers/libvulkan_intel_linux.so"
     },
   ]

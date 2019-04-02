@@ -33,7 +33,7 @@ class MockNetstack : public fuchsia::netstack::Netstack {
 
   void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr,
                            uint8_t prefixLen,
-                           SetInterfaceAddressCallback callback) override {}
+                           SetInterfaceAddressCallback callback) override;
 
   void RemoveInterfaceAddress(
       uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,

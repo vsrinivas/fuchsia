@@ -17,6 +17,7 @@ static constexpr char kVirtioNetUrl[] =
 static constexpr size_t kNumQueues = 2;
 static constexpr uint16_t kQueueSize = 16;
 static constexpr size_t kVmoSize = 1024;
+static constexpr uint16_t kFakeInterfaceId = 0;
 
 class VirtioNetTest : public TestWithDevice,
                       public fuchsia::netstack::Netstack {
@@ -42,7 +43,13 @@ class VirtioNetTest : public TestWithDevice,
 
   void SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress addr,
                            uint8_t prefixLen,
-                           SetInterfaceAddressCallback callback) override {}
+                           SetInterfaceAddressCallback callback) override {
+    fuchsia::netstack::NetErr err{
+        .status = fuchsia::netstack::Status::OK,
+        .message = "",
+    };
+    callback(err);
+  }
 
   void RemoveInterfaceAddress(
       uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
@@ -64,6 +71,7 @@ class VirtioNetTest : public TestWithDevice,
       AddEthernetDeviceCallback callback) override {
     eth_device_ = device.Bind();
     eth_device_added_ = true;
+    callback(kFakeInterfaceId);
   }
 
   void StartRouteTableTransaction(
@@ -90,8 +98,7 @@ class VirtioNetTest : public TestWithDevice,
 
     // Start device execution.
     services_->Connect(net_.NewRequest());
-    status = net_->Start(std::move(start_info));
-    ASSERT_EQ(ZX_OK, status);
+    net_->Start(std::move(start_info), [] {});
 
     // Wait for the device to call AddEthernetDevice on the netstack.
     ASSERT_TRUE(RunLoopWithTimeoutOrUntil([this] { return eth_device_added_; },
@@ -126,15 +133,14 @@ class VirtioNetTest : public TestWithDevice,
     for (size_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
       q->Configure(PAGE_SIZE * i, PAGE_SIZE);
-      status =
-          net_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
-      ASSERT_EQ(ZX_OK, status);
+      net_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used(),
+                           [] {});
     }
 
     eth_device_->Start([](zx_status_t status) { ASSERT_EQ(ZX_OK, status); });
   }
 
-  fuchsia::guest::device::VirtioNetSyncPtr net_;
+  fuchsia::guest::device::VirtioNetPtr net_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;
   ::fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;
@@ -175,8 +181,7 @@ TEST_F(VirtioNetTest, SendToGuest) {
   status = tx_.write(sizeof(entry), static_cast<void*>(&entry), 1, nullptr);
   ASSERT_EQ(status, ZX_OK);
 
-  status = net_->NotifyQueue(0);
-  ASSERT_EQ(status, ZX_OK);
+  net_->NotifyQueue(0);
 
   RunLoopUntilIdle();
 
@@ -235,8 +240,7 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
 
   RunLoopUntilIdle();
 
-  status = net_->NotifyQueue(1);
-  ASSERT_EQ(status, ZX_OK);
+  net_->NotifyQueue(1);
 
   RunLoopUntilIdle();
 

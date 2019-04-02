@@ -7,11 +7,15 @@
 
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async_promise/executor.h>
+#include <lib/fit/bridge.h>
 #include <lib/fit/defer.h>
+#include <lib/fit/promise.h>
+#include <lib/fit/scope.h>
+#include <lib/zx/fifo.h>
 #include <trace-provider/provider.h>
 #include <virtio/net.h>
 #include <zircon/device/ethernet.h>
-#include <lib/zx/fifo.h>
 
 #include "garnet/bin/guest/vmm/device/device_base.h"
 #include "garnet/bin/guest/vmm/device/stream_base.h"
@@ -21,6 +25,7 @@
 static constexpr char kInterfacePath[] = "/dev/class/ethernet/virtio";
 static constexpr char kInterfaceName[] = "ethv0";
 static constexpr uint8_t kIpv4Address[4] = {10, 0, 0, 1};
+static constexpr uint8_t kPrefixLength = 24;
 
 enum class Queue : uint16_t {
   RECEIVE = 0,
@@ -170,28 +175,76 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   // |fuchsia::guest::device::VirtioNet|
   void Start(fuchsia::guest::device::StartInfo start_info,
              StartCallback callback) override {
-    auto deferred = fit::defer(std::move(callback));
     PrepStart(std::move(start_info));
 
-    fuchsia::net::Subnet subnet;
     fuchsia::net::Ipv4Address ipv4;
     memcpy(ipv4.addr.data(), kIpv4Address, 4);
+
+    fuchsia::net::IpAddress addr;
+    addr.set_ipv4(ipv4);
+
+    fuchsia::net::Subnet subnet;
     subnet.addr.set_ipv4(ipv4);
-    subnet.prefix_len = 24;
+    subnet.prefix_len = kPrefixLength;
 
     fuchsia::netstack::InterfaceConfig config;
     config.name = kInterfaceName;
     config.ip_address_config.set_static_ip(std::move(subnet));
-    netstack_->AddEthernetDevice(kInterfacePath, std::move(config),
-                                 device_binding_.NewBinding(),
-                                 [&](uint32_t id) {});
 
-    rx_stream_.Init(&guest_ethernet_, phys_mem_,
-                    fit::bind_member<zx_status_t, DeviceBase>(
-                        this, &VirtioNetImpl::Interrupt));
-    tx_stream_.Init(&guest_ethernet_, phys_mem_,
-                    fit::bind_member<zx_status_t, DeviceBase>(
-                        this, &VirtioNetImpl::Interrupt));
+    executor_.schedule_task(
+        AddEthernetDevice(kInterfacePath, std::move(config))
+            .and_then([this, addr = std::move(addr)](uint32_t nic_id) mutable {
+              return SetInterfaceAddress(nic_id, std::move(addr));
+            })
+            .and_then([this](uint32_t nic_id) mutable {
+              netstack_->SetInterfaceStatus(nic_id, true);
+            })
+            .or_else([]() mutable {
+              FXL_CHECK(false) << "Failed to set ethernet IP address.";
+            })
+            .and_then([this]() {
+              rx_stream_.Init(&guest_ethernet_, phys_mem_,
+                              fit::bind_member<zx_status_t, DeviceBase>(
+                                  this, &VirtioNetImpl::Interrupt));
+              tx_stream_.Init(&guest_ethernet_, phys_mem_,
+                              fit::bind_member<zx_status_t, DeviceBase>(
+                                  this, &VirtioNetImpl::Interrupt));
+            })
+            .and_then(std::move(callback))
+            .wrap_with(scope_));
+  }
+
+  fit::promise<uint32_t> AddEthernetDevice(
+      const char* interface_path, fuchsia::netstack::InterfaceConfig config) {
+    fit::bridge<uint32_t> bridge;
+
+    netstack_->AddEthernetDevice(
+        interface_path, std::move(config), device_binding_.NewBinding(),
+        [completer = std::move(bridge.completer)](uint32_t id) mutable {
+          completer.complete_ok(id);
+        });
+
+    return bridge.consumer.promise();
+  }
+
+  fit::promise<uint32_t> SetInterfaceAddress(uint32_t nic_id,
+                                             fuchsia::net::IpAddress addr) {
+    fit::bridge<uint32_t> bridge;
+
+    netstack_->SetInterfaceAddress(
+        nic_id, std::move(addr), kPrefixLength,
+        [nic_id, completer = std::move(bridge.completer)](
+            fuchsia::netstack::NetErr err) mutable {
+          if (err.status == fuchsia::netstack::Status::OK) {
+            completer.complete_ok(nic_id);
+          } else {
+            FXL_LOG(ERROR) << "Failed to set interface address with "
+                           << static_cast<uint32_t>(err.status) << " "
+                           << err.message;
+            completer.complete_error();
+          }
+        });
+    return bridge.consumer.promise();
   }
 
   // |fuchsia::guest::device::VirtioDevice|
@@ -228,6 +281,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   TxStream tx_stream_;
 
   uint32_t negotiated_features_;
+  fit::scope scope_;
+  async::Executor executor_ = async::Executor(async_get_default_dispatcher());
 };
 
 int main(int argc, char** argv) {

@@ -28,13 +28,15 @@ static constexpr uint16_t kProtocolIpv4 = 0x0800;
 static constexpr uint8_t kPacketTypeUdp = 17;
 static constexpr uint16_t kTestPort = 4242;
 
+static constexpr uint32_t kMockNicId = 0;
+
 void MockNetstack::AddEthernetDevice(
     std::string topological_path,
     fuchsia::netstack::InterfaceConfig interfaceConfig,
     fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> device,
     AddEthernetDeviceCallback callback) {
   auto deferred =
-      fit::defer([callback = std::move(callback)]() { callback(0); });
+      fit::defer([callback = std::move(callback)]() { callback(kMockNicId); });
   eth_device_ = device.BindSync();
 
   zx_status_t status;
@@ -81,8 +83,7 @@ void MockNetstack::AddEthernetDevice(
   entry.length = kMtu;
   entry.flags = 0;
   entry.cookie = 0;
-  status = rx_.write(sizeof(eth_fifo_entry_t), &entry, 1,
-                     nullptr);
+  status = rx_.write(sizeof(eth_fifo_entry_t), &entry, 1, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to write to rx fifo: " << status;
     return;
@@ -95,10 +96,27 @@ void MockNetstack::AddEthernetDevice(
   }
 }
 
+void MockNetstack::SetInterfaceAddress(uint32_t nicid,
+                                       fuchsia::net::IpAddress addr,
+                                       uint8_t prefixLen,
+                                       SetInterfaceAddressCallback callback) {
+  fuchsia::netstack::NetErr err;
+
+  if (nicid != kMockNicId) {
+    err.status = fuchsia::netstack::Status::UNKNOWN_INTERFACE;
+    err.message = "No such interface.";
+  } else {
+    err.status = fuchsia::netstack::Status::OK;
+    err.message = "";
+  }
+
+  callback(std::move(err));
+}
+
 static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
   uint32_t sum = _sum;
   auto data = static_cast<const uint16_t*>(_data);
-  for (;len > 1; len -= 2) {
+  for (; len > 1; len -= 2) {
     sum += *data++;
   }
   if (len) {
@@ -110,7 +128,8 @@ static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
   return ~sum;
 }
 
-static size_t make_ip_header(uint8_t packet_type, size_t length, uint8_t* data) {
+static size_t make_ip_header(uint8_t packet_type, size_t length,
+                             uint8_t* data) {
   // First construct the ethernet header.
   ethhdr* eth = reinterpret_cast<ethhdr*>(data);
   memcpy(eth->h_dest, kGuestMacAddress, ETH_ALEN);
@@ -120,7 +139,7 @@ static size_t make_ip_header(uint8_t packet_type, size_t length, uint8_t* data) 
   // Now construct the IPv4 header.
   auto ip = reinterpret_cast<iphdr*>(data + sizeof(ethhdr));
   ip->version = 4;
-  ip->ihl = sizeof(iphdr) >> 2; // Header length in 32-bit words.
+  ip->ihl = sizeof(iphdr) >> 2;  // Header length in 32-bit words.
   ip->tos = 0;
   ip->tot_len = htons(sizeof(iphdr) + length);
   ip->id = 0;
@@ -178,8 +197,7 @@ zx_status_t MockNetstack::SendPacket(void* packet, size_t length) const {
   entry.cookie = 0;
   size_t count;
   memcpy(reinterpret_cast<void*>(io_addr_ + entry.offset), packet, length);
-  zx_status_t status = tx_.write(sizeof(eth_fifo_entry_t),
-                                 &entry, 1, &count);
+  zx_status_t status = tx_.write(sizeof(eth_fifo_entry_t), &entry, 1, &count);
   if (status != ZX_OK) {
     return status;
   }
@@ -196,8 +214,7 @@ zx_status_t MockNetstack::SendPacket(void* packet, size_t length) const {
     return ZX_ERR_PEER_CLOSED;
   }
 
-  status = tx_.read(sizeof(eth_fifo_entry_t), &entry, 1,
-                    nullptr);
+  status = tx_.read(sizeof(eth_fifo_entry_t), &entry, 1, nullptr);
   if (status != ZX_OK) {
     return status;
   }
@@ -221,8 +238,7 @@ zx_status_t MockNetstack::ReceivePacket(void* packet, size_t length,
     return ZX_ERR_PEER_CLOSED;
   }
 
-  status = rx_.read(sizeof(eth_fifo_entry_t), &entry, 1,
-                    nullptr);
+  status = rx_.read(sizeof(eth_fifo_entry_t), &entry, 1, nullptr);
   if (status != ZX_OK) {
     return status;
   }
@@ -240,8 +256,7 @@ zx_status_t MockNetstack::ReceivePacket(void* packet, size_t length,
   entry.length = kMtu;
   entry.flags = 0;
   entry.cookie = 0;
-  status = rx_.write(sizeof(eth_fifo_entry_t), &entry, 1,
-                     nullptr);
+  status = rx_.write(sizeof(eth_fifo_entry_t), &entry, 1, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to write to rx fifo: " << status;
     return status;
