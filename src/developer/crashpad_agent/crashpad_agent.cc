@@ -12,7 +12,6 @@
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <lib/syslog/cpp/logger.h>
-#include <src/lib/fxl/logging.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -360,8 +359,9 @@ zx_status_t CrashpadAgent::UploadReport(
     crashpad::FileOffset start_offset = reader->SeekGet();
     crashpad::ProcessSnapshotMinidump minidump_process_snapshot;
     if (!minidump_process_snapshot.Initialize(reader)) {
+      report.reset();
       database_->SkipReportUpload(
-          report->uuid,
+          local_report_id,
           crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
       FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
                      << local_report_id.ToString();
@@ -371,8 +371,9 @@ zx_status_t CrashpadAgent::UploadReport(
         &minidump_process_snapshot);
     final_annotations = &minidump_annotations;
     if (!reader->SeekSet(start_offset)) {
+      report.reset();
       database_->SkipReportUpload(
-          report->uuid,
+          local_report_id,
           crashpad::Metrics::CrashSkippedReason::kPrepareForUploadFailed);
       FX_LOGS(ERROR) << "error processing minidump for local crash report, ID "
                      << local_report_id.ToString();
@@ -402,10 +403,11 @@ zx_status_t CrashpadAgent::UploadReport(
   if (!crash_server_->MakeRequest(content_headers,
                                   http_multipart_builder.GetBodyStream(),
                                   &server_report_id)) {
+    report.reset();
     database_->SkipReportUpload(
-        report->uuid, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
+        local_report_id, crashpad::Metrics::CrashSkippedReason::kUploadFailed);
     FX_LOGS(ERROR) << "error uploading local crash report, ID "
-                   << report->uuid.ToString();
+                   << local_report_id.ToString();
     return ZX_ERR_INTERNAL;
   }
   database_->RecordUploadComplete(std::move(report), server_report_id);
