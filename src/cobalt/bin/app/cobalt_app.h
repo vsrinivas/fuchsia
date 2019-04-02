@@ -52,6 +52,13 @@ class CobaltApp {
   //                    back off until it reaches a periodic rhythm of
   //                    |target_interval|.
   //
+  // |event_aggregator_backfill_days| The number of past days, in addition to
+  //                                  the previous day, for which the
+  //                                  EventAggregator generates observations. If
+  //                                  a device is unable to generate
+  //                                  observations for more than this number of
+  //                                  days, we may lose older aggregated data.
+  //
   // |start_event_aggregator_worker| If true, starts the EventAggregator's
   //                                 worker thread after constructing the
   //                                 EventAggregator.
@@ -72,14 +79,12 @@ class CobaltApp {
   // REQUIRED:
   //   0 <= min_interval <= target_interval <= kMaxSeconds
   //   0 <= initial_interval <= target_interval
-  CobaltApp(async_dispatcher_t* dispatcher,
-            std::chrono::seconds target_interval,
-            std::chrono::seconds min_interval,
-            std::chrono::seconds initial_interval,
-            bool start_event_aggregator_worker,
-            bool use_memory_observation_store,
-            size_t max_bytes_per_observation_store,
-            const std::string& product_name, const std::string& board_name);
+  CobaltApp(
+      async_dispatcher_t* dispatcher, std::chrono::seconds target_interval,
+      std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
+      size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
+      bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+      const std::string& product_name, const std::string& board_name);
 
  private:
   static encoder::ClientSecret getClientSecret();

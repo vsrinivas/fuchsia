@@ -76,9 +76,9 @@ std::unique_ptr<ObservationStore> NewObservationStore(
 CobaltApp::CobaltApp(
     async_dispatcher_t* dispatcher, std::chrono::seconds target_interval,
     std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
-    bool start_event_aggregator_worker, bool use_memory_observation_store,
-    size_t max_bytes_per_observation_store, const std::string& product_name,
-    const std::string& board_name)
+    size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
+    bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+    const std::string& product_name, const std::string& board_name)
     : system_data_(product_name, board_name),
       context_(sys::ComponentContext::Create()),
       shuffler_client_(kCloudShufflerUri, true),
@@ -91,8 +91,8 @@ CobaltApp::CobaltApp(
       // max_bytes_per_observation. But when we start implementing non-immediate
       // observations this needs to be revisited.
       // TODO(pesk): Observations for UniqueActives reports are of comparable
-      // to the events logged for them, so no change is needed now. Update this
-      // comment as we add more non-immediate report types.
+      // size to the events logged for them, so no change is needed now. Update
+      // this comment as we add more non-immediate report types.
       legacy_observation_store_(NewObservationStore(
           fuchsia::cobalt::MAX_BYTES_PER_EVENT, kMaxBytesPerEnvelope,
           max_bytes_per_observation_store, kLegacyObservationStorePath,
@@ -140,12 +140,10 @@ CobaltApp::CobaltApp(
       observation_writer_(observation_store_.get(), &clearcut_shipping_manager_,
                           encrypt_to_analyzer_.get()),
       // Construct an EventAggregator using default values for the snapshot
-      // intervals and the number of backfill days.
-      // TODO(pesk): consider using non-default values for these arguments; in
-      // particular, a non-zero number of backfill days.
-      event_aggregator_(&logger_encoder_, &observation_writer_,
-                        &local_aggregate_proto_store_,
-                        &obs_history_proto_store_),
+      // intervals.
+      event_aggregator_(
+          &logger_encoder_, &observation_writer_, &local_aggregate_proto_store_,
+          &obs_history_proto_store_, event_aggregator_backfill_days),
       controller_impl_(new CobaltControllerImpl(
           dispatcher,
           {&legacy_shipping_manager_, &clearcut_shipping_manager_})) {

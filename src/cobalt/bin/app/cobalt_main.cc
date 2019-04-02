@@ -22,11 +22,11 @@
 #include <lib/zx/channel.h>
 #include <zircon/boot/image.h>
 
+#include "src/cobalt/bin/app/cobalt_app.h"
+#include "src/cobalt/bin/app/product_hack.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
-#include "src/cobalt/bin/app/cobalt_app.h"
-#include "src/cobalt/bin/app/product_hack.h"
 #include "third_party/cobalt/encoder/file_observation_store.h"
 #include "third_party/cobalt/encoder/memory_observation_store.h"
 #include "third_party/cobalt/util/posix_file_system.h"
@@ -42,6 +42,10 @@ constexpr fxl::StringView kInitialIntervalSecondsFlagName =
 
 // Used to override kMinIntervalDefault;
 constexpr fxl::StringView kMinIntervalSecondsFlagName = "min_interval_seconds";
+
+// Used to override kEventAggregatorBackfillDaysDefault
+constexpr fxl::StringView kEventAggregatorBackfillDaysFlagName =
+    "event_aggregator_backfill_days";
 
 // Used to override kStartEventAggregatorWorkerDefault
 constexpr fxl::StringView kStartEventAggregatorWorkerFlagName =
@@ -67,6 +71,10 @@ const std::chrono::minutes kInitialIntervalDefault(1);
 // is a safety parameter. We do not make two attempts within a period of this
 // specified length.
 const std::chrono::seconds kMinIntervalDefault(10);
+
+// The EventAggregator looks back 2 days, in addition to the previous day, to
+// make sure that all locally aggregated observations have been generated.
+const size_t kEventAggregatorBackfillDaysDefault(2);
 
 // We normally start the EventAggregator's worker thread after constructing the
 // EventAggregator.
@@ -159,6 +167,18 @@ int main(int argc, const char** argv) {
     }
   }
 
+  // Parse the event_aggregator_backfill_days flag.
+  size_t event_aggregator_backfill_days = kEventAggregatorBackfillDaysDefault;
+  flag_value.clear();
+  if (command_line.GetOptionValue(kEventAggregatorBackfillDaysFlagName,
+                                  &flag_value)) {
+    int num_days = std::stoi(flag_value);
+    // We allow num_days = 0.
+    if (num_days >= 0) {
+      event_aggregator_backfill_days = num_days;
+    }
+  }
+
   // Parse the start_event_aggregator_worker flag.
   bool start_event_aggregator_worker = kStartEventAggregatorWorkerDefault;
   flag_value.clear();
@@ -189,14 +209,18 @@ int main(int argc, const char** argv) {
                 << " seconds, min_interval=" << min_interval.count()
                 << " seconds, initial_interval=" << initial_interval.count()
                 << " seconds, max_bytes_per_observation_store="
-                << max_bytes_per_observation_store << ".";
+                << max_bytes_per_observation_store
+                << ", event_aggregator_backfill_days="
+                << event_aggregator_backfill_days
+                << ", start_event_aggregator_worker="
+                << start_event_aggregator_worker << ".";
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  cobalt::CobaltApp app(loop.dispatcher(), schedule_interval, min_interval,
-                        initial_interval, start_event_aggregator_worker,
-                        use_memory_observation_store,
-                        max_bytes_per_observation_store,
-                        cobalt::hack::GetLayer(), ReadBoardName());
+  cobalt::CobaltApp app(
+      loop.dispatcher(), schedule_interval, min_interval, initial_interval,
+      event_aggregator_backfill_days, start_event_aggregator_worker,
+      use_memory_observation_store, max_bytes_per_observation_store,
+      cobalt::hack::GetLayer(), ReadBoardName());
   loop.Run();
   return 0;
 }
