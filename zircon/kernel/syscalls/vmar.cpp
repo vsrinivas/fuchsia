@@ -76,14 +76,6 @@ zx_status_t sys_vmar_allocate(zx_handle_t parent_vmar_handle,
     return status;
 }
 
-// zx_status_t zx_vmar_allocate_old
-zx_status_t sys_vmar_allocate_old(zx_handle_t parent_vmar_handle,
-                                  uint64_t offset, uint64_t size, uint32_t map_flags,
-                                  user_out_handle* child_vmar,
-                                  user_out_ptr<zx_vaddr_t> child_addr) {
-    return sys_vmar_allocate(parent_vmar_handle, map_flags, offset, size, child_vmar, child_addr);
-}
-
 // zx_status_t zx_vmar_destroy
 zx_status_t sys_vmar_destroy(zx_handle_t handle) {
     auto up = ProcessDispatcher::GetCurrent();
@@ -189,13 +181,6 @@ zx_status_t sys_vmar_map(zx_handle_t handle, zx_vm_option_t options,
     return ZX_OK;
 }
 
-// zx_status_t zx_vmar_map_old
-zx_status_t sys_vmar_map_old(zx_handle_t vmar_handle, uint64_t vmar_offset,
-                             zx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t len,
-                             uint32_t map_flags, user_out_ptr<zx_vaddr_t> mapped_addr) {
-    return sys_vmar_map(vmar_handle, map_flags, vmar_offset, vmo_handle, vmo_offset, len, mapped_addr);
-}
-
 // zx_status_t zx_vmar_unmap
 zx_status_t sys_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, uint64_t len) {
     auto up = ProcessDispatcher::GetCurrent();
@@ -233,7 +218,3 @@ zx_status_t sys_vmar_protect(zx_handle_t handle, zx_vm_option_t options, zx_vadd
     return vmar->Protect(addr, len, options);
 }
 
-// zx_status_t zx_vmar_protect_old
-zx_status_t sys_vmar_protect_old(zx_handle_t vmar_handle, zx_vaddr_t addr, uint64_t len, uint32_t prot) {
-    return sys_vmar_protect(vmar_handle, prot, addr, len);
-}

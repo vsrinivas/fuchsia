@@ -622,25 +622,6 @@ syscall vmo_replace_as_executable
 
 # Address space management
 
-# TODO(davemoore): Updating vmar apis: zx-2264. Remove when no calls remain.
-# TODO(ZX-2967): Remove?
-syscall vmar_allocate_old
-    (parent_vmar: zx_handle_t, offset: uint64_t, size: uint64_t, map_flags: uint32_t)
-    returns (zx_status_t,
-        child_vmar: zx_handle_t handle_acquire, child_addr: zx_vaddr_t);
-
-# TODO(ZX-2967): Remove?
-syscall vmar_map_old
-    (handle: zx_handle_t, vmar_offset: uint64_t,
-        vmo: zx_handle_t, vmo_offset: uint64_t,
-        len: uint64_t, map_flags: uint32_t)
-    returns (zx_status_t, mapped_addr: zx_vaddr_t);
-
-# TODO(ZX-2967): Remove?
-syscall vmar_protect_old
-    (handle: zx_handle_t, addr: zx_vaddr_t, len: uint64_t, prot_flags: uint32_t)
-    returns (zx_status_t);
-
 #^ Allocate a new subregion.
 #! If options & ZX_VM_CAN_MAP_READ, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
 #! If options & ZX_VM_CAN_MAP_WRITE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
