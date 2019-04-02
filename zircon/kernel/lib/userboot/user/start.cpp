@@ -15,7 +15,7 @@
 #include <stdnoreturn.h>
 #include <string.h>
 #include <sys/param.h>
-#include <zircon/stack.h>
+#include <lib/zircon-internal/default_stack_size.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/system.h>

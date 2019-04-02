@@ -32,8 +32,8 @@
 #include <object/vm_object_dispatcher.h>
 #include <vm/vm_object_paged.h>
 
+#include <lib/zircon-internal/default_stack_size.h>
 #include <zircon/processargs.h>
-#include <zircon/stack.h>
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
 #include <lib/crypto/entropy/quality_test.h>

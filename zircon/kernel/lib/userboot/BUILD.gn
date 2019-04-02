@@ -17,6 +17,7 @@ source_set("userboot") {
     "$zx/kernel/lib/vdso",
     "$zx/kernel/vm",
     "$zx/system/ulib/elf-psabi",
+    "$zx/system/ulib/zircon-internal",
   ]
 }
 

@@ -5,11 +5,12 @@
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>
-#include <lib/fdio/io.h>
-#include <lib/fdio/spawn.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/spawn.h>
+#include <lib/zircon-internal/paths.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/job.h>
@@ -17,7 +18,6 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
-#include <zircon/paths.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>

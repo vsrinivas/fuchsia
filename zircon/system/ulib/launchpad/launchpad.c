@@ -10,6 +10,7 @@
 #include <ldmsg/ldmsg.h>
 #include <lib/elf-psabi/sp.h>
 #include <lib/fdio/io.h>
+#include <lib/zircon-internal/default_stack_size.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -22,7 +23,6 @@
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
-#include <zircon/stack.h>
 #include <zircon/syscalls.h>
 
 enum special_handles {

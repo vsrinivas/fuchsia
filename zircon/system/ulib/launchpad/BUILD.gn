@@ -16,5 +16,6 @@ library("launchpad") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/ldmsg",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
   ]
 }

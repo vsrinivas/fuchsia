@@ -32,7 +32,7 @@
  * SUCH DAMAGE.
  */
 
-#include <zircon/paths.h>
+#include <lib/zircon-internal/paths.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>

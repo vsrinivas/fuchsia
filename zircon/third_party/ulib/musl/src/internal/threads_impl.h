@@ -12,10 +12,10 @@
 #include <sys/uio.h>
 #include <threads.h>
 
-#include <zircon/stack.h>
-#include <zircon/tls.h>
+#include <lib/zircon-internal/default_stack_size.h>
 #include <runtime/thread.h>
 #include <runtime/tls.h>
+#include <zircon/tls.h>
 
 #define pthread __pthread
 

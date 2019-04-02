@@ -49,6 +49,7 @@ executable("dash") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
     "$zx/third_party/ulib/linenoise",
   ]
 }

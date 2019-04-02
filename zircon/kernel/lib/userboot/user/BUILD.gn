@@ -82,6 +82,7 @@ if (current_toolchain == default_toolchain) {
       "$zx/system/ulib/ldmsg",
       "$zx/system/ulib/processargs",
       "$zx/system/ulib/zircon:headers",
+      "$zx/system/ulib/zircon-internal",
       "$zx/third_party/ulib/lz4",
       "$zx/third_party/ulib/musl/src/string:minimal_str",
       "$zx/third_party/ulib/musl/src/string:stdmem",

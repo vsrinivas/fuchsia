@@ -5,6 +5,7 @@
 library("zircon-internal") {
   sdk = "source"
   sdk_headers = [
+    "lib/zircon-internal/default_stack_size.h",
     "lib/zircon-internal/device/cpu-trace/intel-pm-events.inc",
     "lib/zircon-internal/device/cpu-trace/intel-pm.h",
     "lib/zircon-internal/device/cpu-trace/intel-pt.h",
@@ -16,6 +17,7 @@ library("zircon-internal") {
     "lib/zircon-internal/ktrace.h",
     "lib/zircon-internal/macros.h",
     "lib/zircon-internal/mtrace.h",
+    "lib/zircon-internal/paths.h",
     "lib/zircon-internal/xorshiftrand.h",
   ]
   kernel = true
