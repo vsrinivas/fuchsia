@@ -1144,13 +1144,13 @@ fw_dbg_conf:
             IWL_DEBUG_FW(drv, "Paging: paging enabled (size = %u bytes)\n", paging_mem_size);
 
             if (paging_mem_size > MAX_PAGING_IMAGE_SIZE) {
-                IWL_ERR(drv, "Paging: driver supports up to %lu bytes for paging image\n",
+                IWL_ERR(drv, "Paging: driver supports up to %u bytes for paging image\n",
                         MAX_PAGING_IMAGE_SIZE);
                 return ZX_ERR_INVALID_ARGS;
             }
 
             if (paging_mem_size & (FW_PAGING_SIZE - 1)) {
-                IWL_ERR(drv, "Paging: image isn't multiple %lu\n", FW_PAGING_SIZE);
+                IWL_ERR(drv, "Paging: image isn't multiple %u\n", FW_PAGING_SIZE);
                 return ZX_ERR_INVALID_ARGS;
             }
 

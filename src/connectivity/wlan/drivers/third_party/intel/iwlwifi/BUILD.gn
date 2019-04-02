@@ -30,7 +30,6 @@ driver_module("iwlwifi_driver") {
     "ieee80211.h",
     "iwl-config.h",
     "iwl-csr.h",
-    "iwl-debug.c",
     "iwl-drv.c",
     "iwl-drv.h",
     "iwl-fh.h",

@@ -84,7 +84,7 @@ int _iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, enum iwl_fw_dbg_trigger tri
                         size_t len, struct iwl_fw_dbg_trigger_tlv* trigger);
 int iwl_fw_dbg_collect(struct iwl_fw_runtime* fwrt, uint32_t id, const char* str, size_t len);
 int iwl_fw_dbg_collect_trig(struct iwl_fw_runtime* fwrt, struct iwl_fw_dbg_trigger_tlv* trigger,
-                            const char* fmt, ...) __printf(3, 4);
+                            const char* fmt, ...);
 int iwl_fw_start_dbg_conf(struct iwl_fw_runtime* fwrt, uint8_t id);
 
 #define iwl_fw_dbg_trigger_enabled(fw, id)                 \

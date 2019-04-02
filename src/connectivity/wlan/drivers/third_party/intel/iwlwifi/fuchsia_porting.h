@@ -75,7 +75,6 @@ enum nl80211_band {
 
 #define IS_ENABLED(x) (false)
 
-#define __printf(x, y)
 #define __packed __PACKED
 #define __bitwise
 #define __force

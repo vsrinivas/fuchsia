@@ -36,6 +36,7 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <ddk/binding.h>
 #include <ddk/driver.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
@@ -1310,3 +1311,12 @@ void iwl_pci_unregister_driver(void) {
     pci_unregister_driver(&iwl_pci_driver);
 }
 #endif  // NEEDS_PORTING
+
+// TODO(yjlou@): temporarily add here for zxlogf. Will remove once the real one is created.
+static zx_driver_ops_t iwlwifi_pci_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = NULL,
+};
+ZIRCON_DRIVER_BEGIN(iwlwifi_pci, iwlwifi_pci_driver_ops, "zircon", "0.1", 1)
+BI_ABORT(),  // Never bind this driver.
+ZIRCON_DRIVER_END(iwlwifi_pci)

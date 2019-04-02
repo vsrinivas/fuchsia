@@ -37,6 +37,8 @@
 
 #include <stdbool.h>
 
+#include <ddk/debug.h>
+
 #include "iwl-modparams.h"
 
 static inline bool iwl_have_debug_level(uint32_t level) {
@@ -48,11 +50,11 @@ static inline bool iwl_have_debug_level(uint32_t level) {
 }
 
 struct device;
-void __iwl_err(struct device* dev, bool rfkill_prefix, bool only_trace, const char* fmt, ...)
-    __printf(4, 5);
-void __iwl_warn(struct device* dev, const char* fmt, ...) __printf(2, 3);
-void __iwl_info(struct device* dev, const char* fmt, ...) __printf(2, 3);
-void __iwl_crit(struct device* dev, const char* fmt, ...) __printf(2, 3);
+
+#define __iwl_err(dev, rfkill_prefix, only_trace, fmt, ...) zxlogf(ERROR, "iwlwifi: " fmt, ##__VA_ARGS__)
+#define __iwl_warn(dev, fmt, args...) zxlogf(WARN, "iwlwifi: " fmt, args)
+#define __iwl_info(dev, fmt, args...) zxlogf(INFO, "iwlwifi: " fmt, args)
+#define __iwl_crit(dev, fmt, args...) zxlogf(ERROR, "iwlwifi: " fmt, args)
 
 /* not all compilers can evaluate strlen() at compile time, so use sizeof() */
 #define CHECK_FOR_NEWLINE(f) BUILD_BUG_ON(f[sizeof(f) - 2] != '\n')
@@ -85,13 +87,8 @@ void __iwl_crit(struct device* dev, const char* fmt, ...) __printf(2, 3);
         __iwl_crit((m)->dev, f, ##a); \
     } while (0)
 
-#if defined(CPTCFG_IWLWIFI_DEBUG) || defined(CPTCFG_IWLWIFI_DEVICE_TRACING)
-void __iwl_dbg(struct device* dev, uint32_t level, bool limit, const char* function, const char* fmt,
-               ...) __printf(5, 6);
-#else
-__printf(5, 6) static inline void __iwl_dbg(struct device* dev, uint32_t level, bool limit,
-                                            const char* function, const char* fmt, ...) {}
-#endif
+#define __iwl_dbg(dev, level, limit, function, fmt, args...)  \
+            zxlogf(DEBUG1, "iwlwifi (%s): " fmt, function, args)
 
 #define iwl_print_hex_error(m, p, len)                                                \
     do {                                                                              \
