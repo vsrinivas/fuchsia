@@ -363,21 +363,21 @@ struct X86PmuConfig {
     // IA32_DEBUGCTL
     uint64_t debug_ctrl;
 
-    // The id of the timebase counter to use.
+    // The id of the timebase counter to use or PERFMON_EVENT_ID_NONE.
     // A "timebase counter" is used to trigger collection of data from other
     // events. In other words it sets the sample rate for those events.
     // If zero, then no timebase is in use: Each event must trigger its own
     // data collection. Otherwise the value is the id of the timebase counter
     // to use, which must appear in one of |programmable_ids| or |fixed_ids|.
-    perfmon_event_id_t timebase_event;
+    PmuEventId timebase_event;
 
     // Ids of each event. These values are written to the trace buffer to
     // identify the event.
     // The used entries begin at index zero and are consecutive (no holes).
-    perfmon_event_id_t fixed_ids[IPM_MAX_FIXED_COUNTERS];
-    perfmon_event_id_t programmable_ids[IPM_MAX_PROGRAMMABLE_COUNTERS];
+    PmuEventId fixed_ids[IPM_MAX_FIXED_COUNTERS];
+    PmuEventId programmable_ids[IPM_MAX_PROGRAMMABLE_COUNTERS];
     // Ids of other h/w events to collect data for.
-    perfmon_event_id_t misc_ids[IPM_MAX_MISC_EVENTS];
+    PmuEventId misc_ids[IPM_MAX_MISC_EVENTS];
 
     // Initial value of each counter.
     // The "misc" counters currently do not support initial values.

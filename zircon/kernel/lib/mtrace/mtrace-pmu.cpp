@@ -6,28 +6,14 @@
 
 #if defined(__x86_64__) || defined(__aarch64__)  // entire file
 
-#include <inttypes.h>
-
 #include "lib/mtrace.h"
 #include "trace.h"
 
 #include <arch/user_copy.h>
+#include <lib/perfmon.h>
+#include <lib/zircon-internal/mtrace.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
-
-#include <lib/zircon-internal/mtrace.h>
-
-#ifdef __x86_64__
-#include "arch/x86/perf_mon.h"
-using zx_arch_pmu_properties_t = zx_x86_pmu_properties_t;
-using zx_arch_pmu_config_t = zx_x86_pmu_config_t;
-#endif
-
-#ifdef __aarch64__
-#include "arch/arm64/perf_mon.h"
-using zx_arch_pmu_properties_t = zx_arm64_pmu_properties_t;
-using zx_arch_pmu_config_t = zx_arm64_pmu_config_t;
-#endif
 
 #define LOCAL_TRACE 0
 
@@ -38,7 +24,7 @@ zx_status_t mtrace_perfmon_control(uint32_t action, uint32_t options,
 
     switch (action) {
     case MTRACE_PERFMON_GET_PROPERTIES: {
-        zx_arch_pmu_properties_t props;
+        ArchPmuProperties props;
         if (size != sizeof(props))
             return ZX_ERR_INVALID_ARGS;
         if (options != 0)
@@ -46,7 +32,7 @@ zx_status_t mtrace_perfmon_control(uint32_t action, uint32_t options,
         auto status = arch_perfmon_get_properties(&props);
         if (status != ZX_OK)
             return status;
-        status = arg.reinterpret<zx_arch_pmu_properties_t>().copy_to_user(props);
+        status = arg.reinterpret<ArchPmuProperties>().copy_to_user(props);
         if (status != ZX_OK)
             return status;
         return ZX_OK;
@@ -90,10 +76,10 @@ zx_status_t mtrace_perfmon_control(uint32_t action, uint32_t options,
     }
 
     case MTRACE_PERFMON_STAGE_CONFIG: {
-        zx_arch_pmu_config_t config;
+        ArchPmuConfig config;
         if (size != sizeof(config))
             return ZX_ERR_INVALID_ARGS;
-        zx_status_t status = arg.reinterpret<zx_arch_pmu_config_t>().copy_from_user(&config);
+        zx_status_t status = arg.reinterpret<ArchPmuConfig>().copy_from_user(&config);
         if (status != ZX_OK)
             return status;
         if (options != 0)

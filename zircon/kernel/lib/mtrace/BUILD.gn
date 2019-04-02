@@ -9,6 +9,7 @@ source_set("mtrace") {
     "mtrace.cpp",
   ]
   deps = [
+    "$zx/kernel/lib/perfmon:headers",
     "$zx/kernel/object",
   ]
 }

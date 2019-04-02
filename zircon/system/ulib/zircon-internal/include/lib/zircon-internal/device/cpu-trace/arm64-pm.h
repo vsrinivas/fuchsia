@@ -287,13 +287,13 @@ struct Arm64PmuConfig {
     // If zero, then no timebase is in use: Each event must trigger its own
     // data collection. Otherwise the value is the id of the timebase counter
     // to use, which must appear in one of |programmable_ids| or |fixed_ids|.
-    perfmon_event_id_t timebase_event;
+    PmuEventId timebase_event;
 
     // Ids of each event. These values are written to the trace buffer to
     // identify the event.
     // The used entries begin at index zero and are consecutive (no holes).
-    perfmon_event_id_t fixed_events[ARM64_PMU_MAX_FIXED_COUNTERS];
-    perfmon_event_id_t programmable_events[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS];
+    PmuEventId fixed_events[ARM64_PMU_MAX_FIXED_COUNTERS];
+    PmuEventId programmable_events[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS];
 
     // Initial value of each counter.
     uint64_t fixed_initial_value[ARM64_PMU_MAX_FIXED_COUNTERS];

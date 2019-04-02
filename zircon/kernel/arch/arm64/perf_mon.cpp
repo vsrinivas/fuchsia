@@ -29,8 +29,7 @@
 #include <kernel/thread.h>
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
-#include <lib/zircon-internal/device/cpu-trace/arm64-pm.h>
-#include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+#include <lib/perfmon.h>
 #include <lib/zircon-internal/mtrace.h>
 #include <lk/init.h>
 #include <new>
@@ -93,8 +92,8 @@ struct PerfmonState {
     // collecting data.
     uint32_t pmcr_el0 = 0;
 
-    // See arm64-pm.h:zx_arm64_pmu_config_t.
-    perfmon_event_id_t timebase_event = PERFMON_EVENT_ID_NONE;
+    // See arm64-pm.h:Arm64PmuConfig.
+    PmuEventId timebase_event = PERFMON_EVENT_ID_NONE;
 
     // The number of each kind of event in use, so we don't have to iterate
     // over the entire arrays.
@@ -114,8 +113,8 @@ struct PerfmonState {
     // These are passed in from the driver and then written to the buffer,
     // but otherwise have no meaning to us.
     // All in-use entries appear consecutively.
-    perfmon_event_id_t fixed_events[ARM64_PMU_MAX_FIXED_COUNTERS] = {};
-    perfmon_event_id_t programmable_events[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS] = {};
+    PmuEventId fixed_events[ARM64_PMU_MAX_FIXED_COUNTERS] = {};
+    PmuEventId programmable_events[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS] = {};
 
     // The counters are reset to this at the start.
     // And again for those that are reset on overflow.
@@ -247,7 +246,7 @@ size_t get_max_space_needed_for_all_records(PerfmonState* state) {
 
 static void arch_perfmon_write_header(perfmon_record_header_t* hdr,
                                       perfmon_record_type_t type,
-                                      perfmon_event_id_t event) {
+                                      PmuEventId event) {
     hdr->type = type;
     hdr->reserved_flags = 0;
     hdr->event = event;
@@ -255,7 +254,7 @@ static void arch_perfmon_write_header(perfmon_record_header_t* hdr,
 
 static perfmon_record_header_t* arch_perfmon_write_time_record(
         perfmon_record_header_t* hdr,
-        perfmon_event_id_t event, zx_ticks_t time) {
+        PmuEventId event, zx_ticks_t time) {
     auto rec = reinterpret_cast<perfmon_time_record_t*>(hdr);
     arch_perfmon_write_header(&rec->header, PERFMON_RECORD_TIME, event);
     rec->time = time;
@@ -265,7 +264,7 @@ static perfmon_record_header_t* arch_perfmon_write_time_record(
 
 static perfmon_record_header_t* arch_perfmon_write_tick_record(
         perfmon_record_header_t* hdr,
-        perfmon_event_id_t event) {
+        PmuEventId event) {
     auto rec = reinterpret_cast<perfmon_tick_record_t*>(hdr);
     arch_perfmon_write_header(&rec->header, PERFMON_RECORD_TICK, event);
     ++rec;
@@ -274,7 +273,7 @@ static perfmon_record_header_t* arch_perfmon_write_tick_record(
 
 static perfmon_record_header_t* arch_perfmon_write_count_record(
         perfmon_record_header_t* hdr,
-        perfmon_event_id_t event, uint64_t count) {
+        PmuEventId event, uint64_t count) {
     auto rec = reinterpret_cast<perfmon_count_record_t*>(hdr);
     arch_perfmon_write_header(&rec->header, PERFMON_RECORD_COUNT, event);
     rec->count = count;
@@ -284,7 +283,7 @@ static perfmon_record_header_t* arch_perfmon_write_count_record(
 
 static perfmon_record_header_t* arch_perfmon_write_value_record(
         perfmon_record_header_t* hdr,
-        perfmon_event_id_t event, uint64_t value) {
+        PmuEventId event, uint64_t value) {
     auto rec = reinterpret_cast<perfmon_value_record_t*>(hdr);
     arch_perfmon_write_header(&rec->header, PERFMON_RECORD_VALUE, event);
     rec->value = value;
@@ -294,7 +293,7 @@ static perfmon_record_header_t* arch_perfmon_write_value_record(
 
 static perfmon_record_header_t* arch_perfmon_write_pc_record(
         perfmon_record_header_t* hdr,
-        perfmon_event_id_t event, uint64_t aspace, uint64_t pc) {
+        PmuEventId event, uint64_t aspace, uint64_t pc) {
     auto rec = reinterpret_cast<perfmon_pc_record_t*>(hdr);
     arch_perfmon_write_header(&rec->header, PERFMON_RECORD_PC, event);
     rec->aspace = aspace;
@@ -303,7 +302,7 @@ static perfmon_record_header_t* arch_perfmon_write_pc_record(
     return reinterpret_cast<perfmon_record_header_t*>(rec);
 }
 
-zx_status_t arch_perfmon_get_properties(zx_arm64_pmu_properties_t* props) {
+zx_status_t arch_perfmon_get_properties(ArchPmuProperties* props) {
     Guard<Mutex> guard(PerfmonLock::Get());
 
     if (!perfmon_supported) {
@@ -379,9 +378,9 @@ zx_status_t arch_perfmon_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo) 
 }
 
 static zx_status_t arm64_perfmon_verify_fixed_config(
-        const zx_arm64_pmu_config_t* config, unsigned* out_num_used) {
+        const ArchPmuConfig* config, unsigned* out_num_used) {
     // There's only one fixed counter on ARM64, the cycle counter.
-    perfmon_event_id_t id = config->fixed_events[0];
+    PmuEventId id = config->fixed_events[0];
     if (id == PERFMON_EVENT_ID_NONE) {
         *out_num_used = 0;
         return ZX_OK;
@@ -402,10 +401,10 @@ static zx_status_t arm64_perfmon_verify_fixed_config(
 }
 
 static zx_status_t arm64_perfmon_verify_programmable_config(
-        const zx_arm64_pmu_config_t* config, unsigned* out_num_used) {
+        const ArchPmuConfig* config, unsigned* out_num_used) {
     unsigned num_used = perfmon_num_programmable_counters;
     for (unsigned i = 0; i < perfmon_num_programmable_counters; ++i) {
-        perfmon_event_id_t id = config->programmable_events[i];
+        PmuEventId id = config->programmable_events[i];
         // As a rule this file is agnostic to event ids, it's the device
         // driver's job to map them to the hw values we use. Thus we don't
         // validate the ID here. We are given it so that we can include
@@ -434,7 +433,7 @@ static zx_status_t arm64_perfmon_verify_programmable_config(
 }
 
 static zx_status_t arm64_perfmon_verify_timebase_config(
-        zx_arm64_pmu_config_t* config,
+        ArchPmuConfig* config,
         unsigned num_fixed, unsigned num_programmable) {
     if (config->timebase_event == PERFMON_EVENT_ID_NONE) {
         return ZX_OK;
@@ -460,7 +459,7 @@ static zx_status_t arm64_perfmon_verify_timebase_config(
     return ZX_ERR_INVALID_ARGS;
 }
 
-static zx_status_t arm64_perfmon_verify_config(zx_arm64_pmu_config_t* config,
+static zx_status_t arm64_perfmon_verify_config(ArchPmuConfig* config,
                                                PerfmonState* state) {
     // It's the driver's job to verify user provided parameters.
     // Our only job is to verify that what the driver gives us makes sense
@@ -489,7 +488,7 @@ static zx_status_t arm64_perfmon_verify_config(zx_arm64_pmu_config_t* config,
     return ZX_OK;
 }
 
-static void arm64_perfmon_stage_fixed_config(const zx_arm64_pmu_config_t* config,
+static void arm64_perfmon_stage_fixed_config(const ArchPmuConfig* config,
                                              PerfmonState* state) {
     static_assert(sizeof(state->fixed_events) ==
                   sizeof(config->fixed_events), "");
@@ -532,7 +531,7 @@ static void arm64_perfmon_stage_fixed_config(const zx_arm64_pmu_config_t* config
     }
 }
 
-static void arm64_perfmon_stage_programmable_config(const zx_arm64_pmu_config_t* config,
+static void arm64_perfmon_stage_programmable_config(const ArchPmuConfig* config,
                                                     PerfmonState* state) {
     static_assert(sizeof(state->programmable_events) ==
                   sizeof(config->programmable_events), "");
@@ -578,7 +577,7 @@ static void arm64_perfmon_stage_programmable_config(const zx_arm64_pmu_config_t*
 // Stage the configuration for later activation by START.
 // One of the main goals of this function is to verify the provided config
 // is ok, e.g., it won't cause us to crash.
-zx_status_t arch_perfmon_stage_config(zx_arm64_pmu_config_t* config) {
+zx_status_t arch_perfmon_stage_config(ArchPmuConfig* config) {
     Guard<Mutex> guard(PerfmonLock::Get());
 
     if (!perfmon_supported) {
@@ -790,7 +789,7 @@ static void arm64_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) 
     // vast majority of cases.
 
     for (unsigned i = 0; i < state->num_used_programmable; ++i) {
-        perfmon_event_id_t id = state->programmable_events[i];
+        PmuEventId id = state->programmable_events[i];
         DEBUG_ASSERT(id != 0);
         __arm_wsr64("pmselr_el0", i);
         uint64_t count = __arm_rsr64("pmxevcntr_el0");
@@ -806,7 +805,7 @@ static void arm64_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) 
     // There is only one fixed counter, the cycle counter.
     if (state->num_used_fixed > 0) {
         DEBUG_ASSERT(state->num_used_fixed == 1);
-        perfmon_event_id_t id = state->fixed_events[0];
+        PmuEventId id = state->fixed_events[0];
         uint64_t count = __arm_rsr64("pmccntr_el0");
         if (count >= state->fixed_initial_value[0]) {
             count -= state->fixed_initial_value[0];
@@ -991,7 +990,7 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
             if (!(status & ARM64_PMU_PROGRAMMABLE_COUNTER_MASK(i))) {
                 continue;
             }
-            perfmon_event_id_t id = state->programmable_events[i];
+            PmuEventId id = state->programmable_events[i];
             // Counters using a separate timebase are handled below.
             // We shouldn't get an interrupt on a counter using a timebase.
             // TODO(dje): The counter could still overflow. Later.
@@ -1017,7 +1016,7 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
             if (!(status & ARM64_PMOVSSET_EL0_C_MASK)) {
                 continue;
             }
-            perfmon_event_id_t id = state->fixed_events[0];
+            PmuEventId id = state->fixed_events[0];
             // Counters using a separate timebase are handled below.
             // We shouldn't get an interrupt on a counter using a timebase.
             // TODO(dje): The counter could still overflow. Later.
@@ -1043,7 +1042,7 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
                 if (!(state->programmable_flags[i] & perfmon::kPmuConfigFlagTimebase0)) {
                     continue;
                 }
-                perfmon_event_id_t id = state->programmable_events[i];
+                PmuEventId id = state->programmable_events[i];
                 __arm_wsr64("pmselr_el0", i);
                 uint64_t count = __arm_rsr64("pmxevcntr_el0");
                 next = arch_perfmon_write_count_record(next, id, count);
@@ -1059,7 +1058,7 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
                 if (!(state->fixed_flags[0] & perfmon::kPmuConfigFlagTimebase0)) {
                     continue;
                 }
-                perfmon_event_id_t id = state->fixed_events[0];
+                PmuEventId id = state->fixed_events[0];
                 uint64_t count = __arm_rsr64("pmccntr_el0");
                 next = arch_perfmon_write_count_record(next, id, count);
                 // We could leave the counter alone, but it could overflow.
