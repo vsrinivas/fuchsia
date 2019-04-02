@@ -11,41 +11,59 @@ use {
     std::fmt,
 };
 
+pub mod data;
+
 /// Converts a fidl object into its corresponding native representation.
-trait FidlInto<T> {
-    fn fidl_into(self) -> T;
+pub trait FidlIntoNative<T> {
+    fn fidl_into_native(self) -> T;
 }
 
-/// Generates a `FidlInto` implementation for a basic type from `Option<type>` that simply
-/// unwraps the Option.
-macro_rules! fidl_into_opt_unwrap {
+pub trait NativeIntoFidl<T> {
+    fn native_into_fidl(self) -> T;
+}
+
+/// Generates `FidlIntoNative` and `NativeIntoFidl` implementations for a basic type from
+/// `Option<type>` that respectively unwraps the Option and wraps the internal value in a `Some()`.
+macro_rules! fidl_translations_opt_type {
     ($into_type:ty) => {
-        impl FidlInto<$into_type> for Option<$into_type> {
-            fn fidl_into(self) -> $into_type {
+        impl FidlIntoNative<$into_type> for Option<$into_type> {
+            fn fidl_into_native(self) -> $into_type {
                 self.unwrap()
+            }
+        }
+        impl NativeIntoFidl<Option<$into_type>> for $into_type {
+            fn native_into_fidl(self) -> Option<$into_type> {
+                Some(self)
             }
         }
     };
 }
 
-/// Generates a `FidlInto` implementation that leaves the input unchanged.
-macro_rules! fidl_into_identical {
+/// Generates `FidlIntoNative` and `NativeIntoFidl` implementations that leaves the input unchanged.
+macro_rules! fidl_translations_identical {
     ($into_type:ty) => {
-        impl FidlInto<$into_type> for $into_type {
-            fn fidl_into(self) -> $into_type {
+        impl FidlIntoNative<$into_type> for $into_type {
+            fn fidl_into_native(self) -> $into_type {
+                self
+            }
+        }
+        impl NativeIntoFidl<$into_type> for $into_type {
+            fn native_into_fidl(self) -> Self {
                 self
             }
         }
     };
 }
 
-/// Generates a struct with a `FidlInto` implementation that calls `fidl_into()` on each field.
+/// Generates a struct with a `FidlIntoNative` implementation that calls `fidl_into_native()` on each
+/// field.
 /// - `into_type` is the name of the struct and the into type for the conversion.
 /// - `into_ident` must be identical to `into_type`.
 /// - `from_type` is the from type for the conversion.
+/// - `from_ident` must be identical to `from_type`.
 /// - `field: type` form a list of fields and their types for the generated struct.
 macro_rules! fidl_into_struct {
-    ($into_type:ty, $into_ident:ident, $from_type:ty, { $( $field:ident: $type:ty, )+ } ) => {
+    ($into_type:ty, $into_ident:ident, $from_type:ty, $from_ident:path, { $( $field:ident: $type:ty, )+ } ) => {
         #[derive(Debug, PartialEq)]
         pub struct $into_ident {
             $(
@@ -53,35 +71,43 @@ macro_rules! fidl_into_struct {
             )+
         }
 
-        impl FidlInto<$into_type> for $from_type {
-            fn fidl_into(self) -> $into_type {
-                $into_ident { $( $field: self.$field.fidl_into(), )+ }
+        impl FidlIntoNative<$into_type> for $from_type {
+            fn fidl_into_native(self) -> $into_type {
+                $into_ident { $( $field: self.$field.fidl_into_native(), )+ }
+            }
+        }
+
+        use $from_ident as from_ident;
+        impl NativeIntoFidl<$from_type> for $into_type {
+            fn native_into_fidl(self) -> $from_type {
+                from_ident { $( $field: self.$field.native_into_fidl(), )+ }
             }
         }
     }
 }
 
-/// Generates a struct with a FidlInto implementation on the `Option<Vec<struct>>` that
-/// calls `fidl_into()` on each field.
+/// Generates a struct with a FidlIntoNative implementation on the `Option<Vec<struct>>` that
+/// calls `fidl_into_native()` on each field.
 /// - `into_type` is the name of the struct and the into type for the conversion.
 /// - `into_ident` must be identical to `into_type`.
 /// - `from_type` is the from type for the conversion.
+/// - `from_ident` must be identical to `from_type`.
 /// - `field: type` form a list of fields and their types for the generated struct.
 macro_rules! fidl_into_vec {
-    ($into_type:ty, $into_ident:ident, $from_type:ty, { $( $field:ident: $type:ty, )+ } ) => {
-        #[derive(Debug, PartialEq)]
+    ($into_type:ty, $into_ident:ident, $from_type:ty, $from_ident:path, { $( $field:ident: $type:ty, )+ } ) => {
+        #[derive(Debug, PartialEq, Clone)]
         pub struct $into_ident {
             $(
                 pub $field: $type,
             )+
         }
 
-        impl FidlInto<Vec<$into_type>> for Option<Vec<$from_type>> {
-            fn fidl_into(self) -> Vec<$into_type> {
+        impl FidlIntoNative<Vec<$into_type>> for Option<Vec<$from_type>> {
+            fn fidl_into_native(self) -> Vec<$into_type> {
                 if let Some(from) = self {
                     from.into_iter()
                         .map(|e: $from_type|
-                            $into_ident { $( $field: e.$field.fidl_into(), )+ }
+                            $into_ident { $( $field: e.$field.fidl_into_native(), )+ }
                         )
                         .collect()
                 } else {
@@ -89,10 +115,26 @@ macro_rules! fidl_into_vec {
                 }
             }
         }
+
+        impl NativeIntoFidl<Option<Vec<$from_type>>> for Vec<$into_type> {
+            fn native_into_fidl(self) -> Option<Vec<$from_type>> {
+                if self.is_empty() {
+                    None
+                } else {
+                    Some(self
+                         .into_iter()
+                         .map(|e: $into_type| {
+                             use $from_ident as from_ident;
+                             from_ident { $( $field: e.$field.native_into_fidl(), )+ }
+                         })
+                         .collect())
+                }
+            }
+        }
     }
 }
 
-fidl_into_struct!(ComponentDecl, ComponentDecl, fsys::ComponentDecl,
+fidl_into_struct!(ComponentDecl, ComponentDecl, fsys::ComponentDecl, fsys::ComponentDecl,
                   {
                       program: Option<fdata::Dictionary>,
                       uses: Vec<UseDecl>,
@@ -101,6 +143,19 @@ fidl_into_struct!(ComponentDecl, ComponentDecl, fsys::ComponentDecl,
                       children: Vec<ChildDecl>,
                       facets: Option<fdata::Dictionary>,
                   });
+
+impl Clone for ComponentDecl {
+    fn clone(&self) -> Self {
+        ComponentDecl {
+            program: data::clone_option_dictionary(&self.program),
+            uses: self.uses.clone(),
+            exposes: self.exposes.clone(),
+            offers: self.offers.clone(),
+            children: self.children.clone(),
+            facets: data::clone_option_dictionary(&self.facets),
+        }
+    }
+}
 
 impl ComponentDecl {
     /// Returns the ExposeDecl that exposes a capability under `target_path` with `type`, if it
@@ -137,42 +192,42 @@ impl ComponentDecl {
     }
 }
 
-fidl_into_vec!(UseDecl, UseDecl, fsys::UseDecl,
+fidl_into_vec!(UseDecl, UseDecl, fsys::UseDecl, fsys::UseDecl,
                {
                    type_: fsys::CapabilityType,
                    source_path: CapabilityPath,
                    target_path: CapabilityPath,
                });
-fidl_into_vec!(ExposeDecl, ExposeDecl, fsys::ExposeDecl,
+fidl_into_vec!(ExposeDecl, ExposeDecl, fsys::ExposeDecl, fsys::ExposeDecl,
                {
                    type_: fsys::CapabilityType,
                    source_path: CapabilityPath,
                    source: RelativeId,
                    target_path: CapabilityPath,
                });
-fidl_into_vec!(OfferDecl, OfferDecl, fsys::OfferDecl,
+fidl_into_vec!(OfferDecl, OfferDecl, fsys::OfferDecl, fsys::OfferDecl,
                {
                    type_: fsys::CapabilityType,
                    source_path: CapabilityPath,
                    source: RelativeId,
                    targets: Vec<OfferTarget>,
                });
-fidl_into_vec!(ChildDecl, ChildDecl, fsys::ChildDecl,
+fidl_into_vec!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
                {
                    name: String,
                    uri: String,
                    startup: fsys::StartupMode,
                });
-fidl_into_vec!(OfferTarget, OfferTarget, fsys::OfferTarget,
+fidl_into_vec!(OfferTarget, OfferTarget, fsys::OfferTarget, fsys::OfferTarget,
                {
                    target_path: CapabilityPath,
                    child_name: String,
                });
-fidl_into_opt_unwrap!(String);
-fidl_into_opt_unwrap!(fsys::CapabilityType);
-fidl_into_opt_unwrap!(fsys::StartupMode);
-fidl_into_opt_unwrap!(fdata::Dictionary);
-fidl_into_identical!(Option<fdata::Dictionary>);
+fidl_translations_opt_type!(String);
+fidl_translations_opt_type!(fsys::CapabilityType);
+fidl_translations_opt_type!(fsys::StartupMode);
+fidl_translations_opt_type!(fdata::Dictionary);
+fidl_translations_identical!(Option<fdata::Dictionary>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CapabilityPath {
@@ -226,16 +281,22 @@ impl fmt::Display for CapabilityPath {
 }
 
 // TODO: Runners and third parties can use this to parse `program` or `facets`.
-impl FidlInto<Option<HashMap<String, Value>>> for Option<fdata::Dictionary> {
-    fn fidl_into(self) -> Option<HashMap<String, Value>> {
+impl FidlIntoNative<Option<HashMap<String, Value>>> for Option<fdata::Dictionary> {
+    fn fidl_into_native(self) -> Option<HashMap<String, Value>> {
         self.map(|d| from_fidl_dict(d))
     }
 }
 
-impl FidlInto<CapabilityPath> for Option<String> {
-    fn fidl_into(self) -> CapabilityPath {
+impl FidlIntoNative<CapabilityPath> for Option<String> {
+    fn fidl_into_native(self) -> CapabilityPath {
         let s: &str = &self.unwrap();
         s.try_into().expect("invalid capability path")
+    }
+}
+
+impl NativeIntoFidl<Option<String>> for CapabilityPath {
+    fn native_into_fidl(self) -> Option<String> {
+        Some(self.to_string())
     }
 }
 
@@ -250,8 +311,8 @@ pub enum Value {
     Null,
 }
 
-impl FidlInto<Value> for Option<Box<fdata::Value>> {
-    fn fidl_into(self) -> Value {
+impl FidlIntoNative<Value> for Option<Box<fdata::Value>> {
+    fn fidl_into_native(self) -> Value {
         match self {
             Some(v) => match *v {
                 fdata::Value::Bit(b) => Value::Bit(b),
@@ -267,11 +328,11 @@ impl FidlInto<Value> for Option<Box<fdata::Value>> {
 }
 
 fn from_fidl_vec(vec: fdata::Vector) -> Vec<Value> {
-    vec.values.into_iter().map(|v| v.fidl_into()).collect()
+    vec.values.into_iter().map(|v| v.fidl_into_native()).collect()
 }
 
 fn from_fidl_dict(dict: fdata::Dictionary) -> HashMap<String, Value> {
-    dict.entries.into_iter().map(|e| (e.key, e.value.fidl_into())).collect()
+    dict.entries.into_iter().map(|e| (e.key, e.value.fidl_into_native())).collect()
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -281,14 +342,31 @@ pub enum RelativeId {
     Child(String),
 }
 
-impl FidlInto<RelativeId> for Option<fsys::RelativeId> {
-    fn fidl_into(self) -> RelativeId {
+impl FidlIntoNative<RelativeId> for Option<fsys::RelativeId> {
+    fn fidl_into_native(self) -> RelativeId {
         let from = self.unwrap();
         match from.relation.unwrap() {
             fsys::Relation::Realm => RelativeId::Realm,
             fsys::Relation::Myself => RelativeId::Myself,
             fsys::Relation::Child => RelativeId::Child(from.child_name.unwrap()),
         }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::RelativeId>> for RelativeId {
+    fn native_into_fidl(self) -> Option<fsys::RelativeId> {
+        Some(match self {
+            RelativeId::Realm => {
+                fsys::RelativeId { relation: Some(fsys::Relation::Realm), child_name: None }
+            }
+            RelativeId::Myself => {
+                fsys::RelativeId { relation: Some(fsys::Relation::Myself), child_name: None }
+            }
+            RelativeId::Child(child_name) => fsys::RelativeId {
+                relation: Some(fsys::Relation::Child),
+                child_name: Some(child_name),
+            },
+        })
     }
 }
 
@@ -300,7 +378,15 @@ impl TryFrom<fsys::ComponentDecl> for ComponentDecl {
 
     fn try_from(decl: fsys::ComponentDecl) -> Result<Self, Self::Error> {
         cm_fidl_validator::validate(&decl).map_err(|err| Error::Validate { err })?;
-        Ok(decl.fidl_into())
+        Ok(decl.fidl_into_native())
+    }
+}
+
+// Converts the contents of a CM-Rust declaration into a CM_FIDL declaration
+impl TryFrom<ComponentDecl> for fsys::ComponentDecl {
+    type Error = Error;
+    fn try_from(decl: ComponentDecl) -> Result<Self, Self::Error> {
+        Ok(decl.native_into_fidl())
     }
 }
 
@@ -320,17 +406,31 @@ pub enum Error {
 mod tests {
     use super::*;
 
-    fn try_from_test(input: fsys::ComponentDecl, expected_res: ComponentDecl) {
+    fn try_from_fidl_test(input: fsys::ComponentDecl, expected_res: ComponentDecl) {
         let res = ComponentDecl::try_from(input).expect("try_from failed");
         assert_eq!(res, expected_res);
     }
 
-    fn fidl_into_test<T, U>(input: T, expected_res: U)
+    fn try_from_rust_test(input: ComponentDecl, expected_res: fsys::ComponentDecl) {
+        let res = fsys::ComponentDecl::try_from(input).expect("try_from failed");
+        assert_eq!(res, expected_res);
+    }
+
+    fn fidl_into_rust_test<T, U>(input: T, expected_res: U)
     where
-        T: FidlInto<U>,
+        T: FidlIntoNative<U>,
         U: std::cmp::PartialEq + std::fmt::Debug,
     {
-        let res: U = input.fidl_into();
+        let res: U = input.fidl_into_native();
+        assert_eq!(res, expected_res);
+    }
+
+    fn rust_into_fidl_test<T, U>(input: T, expected_res: U)
+    where
+        T: NativeIntoFidl<U>,
+        U: std::cmp::PartialEq + std::fmt::Debug,
+    {
+        let res: U = input.native_into_fidl();
         assert_eq!(res, expected_res);
     }
 
@@ -354,7 +454,27 @@ mod tests {
             $(
                 #[test]
                 fn $test_name() {
-                    try_from_test($input, $result);
+                    try_from_fidl_test($input, $result);
+                    try_from_rust_test($result, $input);
+                }
+            )+
+        }
+    }
+
+    macro_rules! test_fidl_into_and_from {
+        (
+            $(
+                $test_name:ident => {
+                    input = $input:expr,
+                    result = $result:expr,
+                },
+            )+
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    fidl_into_rust_test($input, $result);
+                    rust_into_fidl_test($result, $input);
                 }
             )+
         }
@@ -372,7 +492,7 @@ mod tests {
             $(
                 #[test]
                 fn $test_name() {
-                    fidl_into_test($input, $result);
+                    fidl_into_rust_test($input, $result);
                 }
             )+
         }
@@ -478,59 +598,61 @@ mod tests {
                    },
                ]}),
             },
-            result = ComponentDecl {
-                program: Some(fdata::Dictionary{entries: vec![
-                    fdata::Entry{
-                        key: "binary".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("bin/app".to_string()))),
-                    },
-                ]}),
-                uses: vec![
-                    UseDecl {
-                        type_: fsys::CapabilityType::Directory,
-                        source_path: "/data/dir".try_into().unwrap(),
-                        target_path: "/data".try_into().unwrap(),
-                    },
-                ],
-                exposes: vec![
-                    ExposeDecl {
-                        type_: fsys::CapabilityType::Service,
-                        source_path: "/svc/mynetstack".try_into().unwrap(),
-                        source: RelativeId::Child("netstack".to_string()),
-                        target_path: "/svc/netstack".try_into().unwrap(),
-                    },
-                ],
-                offers: vec![
-                    OfferDecl {
-                        type_: fsys::CapabilityType::Service,
-                        source_path: "/svc/sys_logger".try_into().unwrap(),
-                        source: RelativeId::Realm,
-                        targets: vec![
-                            OfferTarget{
-                                target_path: "/svc/logger".try_into().unwrap(),
-                                child_name: "echo".to_string(),
-                            },
-                        ],
-                    },
-                ],
-                children: vec![
-                    ChildDecl {
-                        name: "netstack".to_string(),
-                        uri: "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm".to_string(),
-                        startup: fsys::StartupMode::Lazy,
-                    },
-                    ChildDecl {
-                        name: "echo".to_string(),
-                        uri: "fuchsia-pkg://fuchsia.com/echo#meta/echo.cm".to_string(),
-                        startup: fsys::StartupMode::Eager,
-                    },
-                ],
-                facets: Some(fdata::Dictionary{entries: vec![
-                   fdata::Entry{
-                       key: "author".to_string(),
-                       value: Some(Box::new(fdata::Value::Str("Fuchsia".to_string()))),
-                   },
-                ]}),
+            result = {
+                ComponentDecl {
+                    program: Some(fdata::Dictionary{entries: vec![
+                        fdata::Entry{
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::Value::Str("bin/app".to_string()))),
+                        },
+                    ]}),
+                    uses: vec![
+                        UseDecl {
+                            type_: fsys::CapabilityType::Directory,
+                            source_path: "/data/dir".try_into().unwrap(),
+                            target_path: "/data".try_into().unwrap(),
+                        },
+                    ],
+                    exposes: vec![
+                        ExposeDecl {
+                            type_: fsys::CapabilityType::Service,
+                            source_path: "/svc/mynetstack".try_into().unwrap(),
+                            source: RelativeId::Child("netstack".to_string()),
+                            target_path: "/svc/netstack".try_into().unwrap(),
+                        },
+                    ],
+                    offers: vec![
+                        OfferDecl {
+                            type_: fsys::CapabilityType::Service,
+                            source_path: "/svc/sys_logger".try_into().unwrap(),
+                            source: RelativeId::Realm,
+                            targets: vec![
+                                OfferTarget{
+                                    target_path: "/svc/logger".try_into().unwrap(),
+                                    child_name: "echo".to_string(),
+                                },
+                            ],
+                        },
+                    ],
+                    children: vec![
+                        ChildDecl {
+                            name: "netstack".to_string(),
+                            uri: "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm".to_string(),
+                            startup: fsys::StartupMode::Lazy,
+                        },
+                        ChildDecl {
+                            name: "echo".to_string(),
+                            uri: "fuchsia-pkg://fuchsia.com/echo#meta/echo.cm".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                    ],
+                    facets: Some(fdata::Dictionary{entries: vec![
+                       fdata::Entry{
+                           key: "author".to_string(),
+                           value: Some(Box::new(fdata::Value::Str("Fuchsia".to_string()))),
+                       },
+                    ]}),
+                }
             },
         },
     }
@@ -573,7 +695,7 @@ mod tests {
         },
     }
 
-    test_fidl_into! {
+    test_fidl_into_and_from! {
         fidl_into_relative_id_realm => {
             input = Some(fsys::RelativeId {
                 relation: Some(fsys::Relation::Realm),
@@ -595,6 +717,8 @@ mod tests {
             }),
             result = RelativeId::Child("foo".to_string()),
         },
+    }
+    test_fidl_into! {
         fidl_into_dictionary => {
             input = {
                 let dict_inner = fdata::Dictionary{entries: vec![
@@ -619,6 +743,10 @@ mod tests {
                         value: Some(Box::new(fdata::Value::Bit(true))),
                     },
                     fdata::Entry {
+                        key: "dict".to_string(),
+                        value: Some(Box::new(fdata::Value::Dict(dict_outer))),
+                    },
+                    fdata::Entry {
                         key: "float".to_string(),
                         value: Some(Box::new(fdata::Value::Fnum(3.14))),
                     },
@@ -627,16 +755,12 @@ mod tests {
                         value: Some(Box::new(fdata::Value::Inum(-42))),
                     },
                     fdata::Entry {
-                        key: "string".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("bar".to_string()))),
-                    },
-                    fdata::Entry {
-                        key: "dict".to_string(),
-                        value: Some(Box::new(fdata::Value::Dict(dict_outer))),
-                    },
-                    fdata::Entry {
                         key: "null".to_string(),
                         value: None,
+                    },
+                    fdata::Entry {
+                        key: "string".to_string(),
+                        value: Some(Box::new(fdata::Value::Str("bar".to_string()))),
                     },
                 ]};
                 Some(dict)

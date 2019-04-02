@@ -10,7 +10,6 @@
 // This is needed for the pseudo_directory nesting in crate::model::tests
 #![recursion_limit = "128"]
 
-mod data;
 mod directory_broker;
 mod elf_runner;
 mod fuchsia_boot_resolver;

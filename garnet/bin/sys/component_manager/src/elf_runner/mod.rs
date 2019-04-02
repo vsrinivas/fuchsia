@@ -5,9 +5,9 @@
 mod library_loader;
 
 use {
-    crate::data::DictionaryExt,
     crate::model::{Runner, RunnerError},
     crate::ns_util::{self, PKG_PATH},
+    cm_rust::data::DictionaryExt,
     failure::{err_msg, format_err, Error, ResultExt},
     fdio::fdio_sys,
     fidl_fuchsia_data as fdata, fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
