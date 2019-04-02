@@ -204,18 +204,6 @@ syscall object_set_property
     (handle: zx_handle_t, property: uint32_t, value: any[value_size] IN, value_size: size_t)
     returns (zx_status_t);
 
-#^ Set an object's cookie.
-# TODO(ZX-2967): TODO(scottmg): None is OK?
-syscall object_set_cookie
-    (handle: zx_handle_t, scope: zx_handle_t, cookie: uint64_t)
-    returns (zx_status_t);
-
-#^ Get an object's cookie.
-# TODO(ZX-2967): TODO(scottmg): None is OK?
-syscall object_get_cookie
-    (handle: zx_handle_t, scope: zx_handle_t)
-    returns (zx_status_t, cookie: uint64_t);
-
 #^ Query information about an object.
 #! If topic is ZX_INFO_PROCESS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.
 #! If topic is ZX_INFO_JOB, handle must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_INSPECT.

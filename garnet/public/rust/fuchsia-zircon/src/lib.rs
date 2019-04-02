@@ -189,7 +189,6 @@ pub use self::vmo::*;
 pub mod prelude {
     pub use crate::{
         AsHandleRef,
-        Cookied,
         DurationNum,
         HandleBased,
         Peered,
@@ -466,30 +465,6 @@ mod tests {
         assert_eq!(object_wait_many(&mut items, ten_ms.after_now()), Err(Status::TIMED_OUT));
         assert_eq!(items[0].pending, Signals::NONE);
         assert_eq!(items[1].pending, Signals::NONE);
-    }
-
-    #[test]
-    fn cookies() {
-        let event = Event::create().unwrap();
-        let scope = Event::create().unwrap();
-
-        // Getting a cookie when none has been set should fail.
-        assert_eq!(event.get_cookie(&scope.as_handle_ref()), Err(Status::ACCESS_DENIED));
-
-        // Set a cookie.
-        assert_eq!(event.set_cookie(&scope.as_handle_ref(), 42), Ok(()));
-
-        // Should get it back....
-        assert_eq!(event.get_cookie(&scope.as_handle_ref()), Ok(42));
-
-        // but not with the wrong scope!
-        assert_eq!(event.get_cookie(&event.as_handle_ref()), Err(Status::ACCESS_DENIED));
-
-        // Can change it, with the same scope...
-        assert_eq!(event.set_cookie(&scope.as_handle_ref(), 123), Ok(()));
-
-        // but not with a different scope.
-        assert_eq!(event.set_cookie(&event.as_handle_ref(), 123), Err(Status::ACCESS_DENIED));
     }
 }
 

@@ -24,7 +24,6 @@ public:
 
     ~EventPairDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_EVENTPAIR; }
-    CookieJar* get_cookie_jar() final { return &cookie_jar_; }
 
     // PeeredDispatcher implementation.
     void on_zero_handles_locked() TA_REQ(get_lock());
@@ -33,6 +32,4 @@ public:
 private:
     explicit EventPairDispatcher(fbl::RefPtr<PeerHolder<EventPairDispatcher>> holder);
     void Init(fbl::RefPtr<EventPairDispatcher> other);
-
-    CookieJar cookie_jar_;
 };

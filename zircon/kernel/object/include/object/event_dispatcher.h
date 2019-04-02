@@ -23,9 +23,7 @@ public:
 
     ~EventDispatcher() final;
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_EVENT; }
-    CookieJar* get_cookie_jar() final { return &cookie_jar_; }
 
 private:
     explicit EventDispatcher(uint32_t options);
-    CookieJar cookie_jar_;
 };

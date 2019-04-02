@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Zircon event pairs.
 
-use crate::{AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Peered, Status};
+use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Peered, Status};
 use crate::ok;
 use fuchsia_zircon_sys as sys;
 
@@ -17,7 +17,6 @@ use fuchsia_zircon_sys as sys;
 pub struct EventPair(Handle);
 impl_handle_based!(EventPair);
 impl Peered for EventPair {}
-impl Cookied for EventPair {}
 
 impl EventPair {
     /// Create an event pair, a pair of objects which can signal each other. Wraps the

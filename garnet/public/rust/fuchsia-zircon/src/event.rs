@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Zircon event objects.
 
-use crate::{AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Status};
+use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Status};
 use crate::ok;
 use fuchsia_zircon_sys as sys;
 
@@ -16,7 +16,6 @@ use fuchsia_zircon_sys as sys;
 #[repr(transparent)]
 pub struct Event(Handle);
 impl_handle_based!(Event);
-impl Cookied for Event {}
 
 impl Event {
     /// Create an event object, an object which is signalable but nothing else. Wraps the

@@ -8,10 +8,8 @@
 
 ## Objects
 + [object_get_child](syscalls/object_get_child.md) - find the child of an object by its koid
-+ [object_get_cookie](syscalls/object_get_cookie.md) - read an object cookie
 + [object_get_info](syscalls/object_get_info.md) - obtain information about an object
 + [object_get_property](syscalls/object_get_property.md) - read an object property
-+ [object_set_cookie](syscalls/object_set_cookie.md) - write an object cookie
 + [object_set_property](syscalls/object_set_property.md) - modify an object property
 + [object_signal](syscalls/object_signal.md) - set or clear the user signals on an object
 + [object_signal_peer](syscalls/object_signal_peer.md) - set or clear the user signals in the opposite end

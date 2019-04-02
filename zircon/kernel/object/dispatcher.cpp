@@ -26,9 +26,6 @@ KCOUNTER(dispatcher_observe_count, "dispatcher.observer.add")
 // counts the number of times observers have been canceled.
 KCOUNTER(dispatcher_cancel_bh_count, "dispatcher.observer.cancel.byhandle")
 KCOUNTER(dispatcher_cancel_bk_count, "dispatcher.observer.cancel.bykey")
-// counts the number of cookies set or changed (reset).
-KCOUNTER(dispatcher_cookie_set_count, "dispatcher.cookie.set")
-KCOUNTER(dispatcher_cookie_reset_count, "dispatcher.cookie.reset")
 
 namespace {
 ktl::atomic<zx_koid_t> global_koid(ZX_KOID_FIRST);
@@ -260,63 +257,4 @@ void Dispatcher::UpdateStateLocked(zx_signals_t clear_mask,
     struct DispatcherUpdateStateLocked {};
     DECLARE_LOCK(DispatcherUpdateStateLocked, fbl::NullLock) lock;
     UpdateStateHelper(clear_mask, set_mask, &lock);
-}
-
-zx_status_t Dispatcher::SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie) {
-    canary_.Assert();
-
-    if (cookiejar == nullptr)
-        return ZX_ERR_NOT_SUPPORTED;
-
-    Guard<fbl::Mutex> guard{get_lock()};
-
-    if (cookiejar->scope_ == ZX_KOID_INVALID) {
-        cookiejar->scope_ = scope;
-        cookiejar->cookie_ = cookie;
-
-        kcounter_add(dispatcher_cookie_set_count, 1);
-        return ZX_OK;
-    }
-
-    if (cookiejar->scope_ == scope) {
-        cookiejar->cookie_ = cookie;
-
-        kcounter_add(dispatcher_cookie_reset_count, 1);
-        return ZX_OK;
-    }
-
-    return ZX_ERR_ACCESS_DENIED;
-}
-
-zx_status_t Dispatcher::GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t* cookie) {
-    canary_.Assert();
-
-    if (cookiejar == nullptr)
-        return ZX_ERR_NOT_SUPPORTED;
-
-    Guard<fbl::Mutex> guard{get_lock()};
-
-    if (cookiejar->scope_ == scope) {
-        *cookie = cookiejar->cookie_;
-        return ZX_OK;
-    }
-
-    return ZX_ERR_ACCESS_DENIED;
-}
-
-zx_status_t Dispatcher::InvalidateCookieLocked(CookieJar* cookiejar) {
-    canary_.Assert();
-
-    if (cookiejar == nullptr)
-        return ZX_ERR_NOT_SUPPORTED;
-
-    cookiejar->scope_ = ZX_KOID_KERNEL;
-    return ZX_OK;
-}
-
-zx_status_t Dispatcher::InvalidateCookie(CookieJar* cookiejar) {
-    canary_.Assert();
-
-    Guard<fbl::Mutex> guard{get_lock()};
-    return InvalidateCookieLocked(cookiejar);
 }

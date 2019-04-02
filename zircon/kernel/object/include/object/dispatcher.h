@@ -32,11 +32,6 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
-struct CookieJar {
-    zx_koid_t scope_ = ZX_KOID_INVALID;
-    uint64_t cookie_ = 0u;
-};
-
 template <typename T> struct DispatchTag;
 template <typename T> struct CanaryTag;
 
@@ -155,16 +150,6 @@ public:
     //
     // May only be called when |is_waitable| reports true.
     bool CancelByKey(const Handle* handle, const void* port, uint64_t key);
-
-    // Dispatchers that support get/set cookie must provide
-    // a CookieJar for those cookies to be stored in.
-    virtual CookieJar* get_cookie_jar() { return nullptr; }
-
-    // Accessors for CookieJars.
-    zx_status_t SetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t cookie);
-    zx_status_t GetCookie(CookieJar* cookiejar, zx_koid_t scope, uint64_t* cookie);
-    zx_status_t InvalidateCookie(CookieJar* cookiejar);
-    zx_status_t InvalidateCookieLocked(CookieJar* cookiejar) TA_REQ(get_lock());
 
     // Interface for derived classes.
 

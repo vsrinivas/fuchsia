@@ -278,33 +278,6 @@ pub trait Peered: HandleBased {
     }
 }
 
-/// A trait implemented by all handles for objects which can have a cookie attached.
-pub trait Cookied: HandleBased {
-    /// Get the cookie attached to this object, if any. Wraps the
-    /// [zx_object_get_cookie](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_get_cookie.md)
-    /// syscall.
-    fn get_cookie(&self, scope: &HandleRef) -> Result<u64, Status> {
-        let mut cookie = 0;
-        let status = unsafe {
-            sys::zx_object_get_cookie(
-                self.raw_handle(), scope.raw_handle(), &mut cookie)
-        };
-        ok(status).map(|()| cookie)
-    }
-
-    /// Attach an opaque cookie to this object with the given scope. The cookie may be read or
-    /// changed in future only with the same scope. Wraps the
-    /// [zx_object_set_cookie](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_set_cookie.md)
-    /// syscall.
-    fn set_cookie(&self, scope: &HandleRef, cookie: u64) -> Result<(), Status> {
-        let status = unsafe {
-            sys::zx_object_set_cookie(
-                self.raw_handle(), scope.raw_handle(), cookie)
-        };
-        ok(status)
-    }
-}
-
 #[derive(Copy, Clone, Default)]
 #[repr(transparent)]
 pub struct HandleBasicInfo(sys::zx_info_handle_basic_t);

@@ -128,18 +128,6 @@ extern {
         value_size: usize
         ) -> zx_status_t;
 
-    pub fn zx_object_set_cookie(
-        handle: zx_handle_t,
-        scope: zx_handle_t,
-        cookie: u64
-        ) -> zx_status_t;
-
-    pub fn zx_object_get_cookie(
-        handle: zx_handle_t,
-        scope: zx_handle_t,
-        cookie: *mut u64
-        ) -> zx_status_t;
-
     pub fn zx_object_get_info(
         handle: zx_handle_t,
         topic: u32,

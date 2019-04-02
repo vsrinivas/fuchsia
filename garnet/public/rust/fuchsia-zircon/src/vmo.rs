@@ -4,7 +4,7 @@
 
 //! Type-safe bindings for Zircon vmo objects.
 
-use crate::{AsHandleRef, Cookied, HandleBased, Handle, HandleRef, Status};
+use crate::{AsHandleRef, HandleBased, Handle, HandleRef, Status};
 use crate::ok;
 use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
@@ -18,7 +18,6 @@ use std::ptr;
 #[repr(transparent)]
 pub struct Vmo(Handle);
 impl_handle_based!(Vmo);
-impl Cookied for Vmo {}
 
 impl Vmo {
     /// Create a virtual memory object.

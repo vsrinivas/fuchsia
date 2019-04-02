@@ -52,7 +52,6 @@ void EventPairDispatcher::on_zero_handles_locked() {
 }
 
 void EventPairDispatcher::OnPeerZeroHandlesLocked() {
-    InvalidateCookieLocked(get_cookie_jar());
     UpdateStateLocked(0u, ZX_EVENTPAIR_PEER_CLOSED);
 }
 

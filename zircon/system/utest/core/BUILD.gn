@@ -10,7 +10,6 @@ core_tests = [
   "c11-thread",
   "channel",
   "clock",
-  "cookies",
   "elf-tls",
   "event-pair",
   "fifo",
