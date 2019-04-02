@@ -20,7 +20,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"fuchsia.googlesource.com/tools/breakpad"
 	"fuchsia.googlesource.com/tools/elflib"
@@ -204,38 +203,6 @@ func generateSymbolFile(path string) (outputPath string, err error) {
 		return "", fmt.Errorf("failed to write symbol file %s: %v", outputPath, err)
 	}
 	return outputPath, nil
-}
-
-// Writes the given symbol file data to the given writer after massaging the data.
-func writeSymbolFile(w io.Writer, symbolData []byte) error {
-	// Many Fuchsia binaries are built as "something.elf", but then packaged as
-	// just "something". In the ids.txt file, the name still includes the ".elf"
-	// extension, which dump_syms emits into the .sym file, and the crash server
-	// uses as part of the lookup.  The binary name and this value written to
-	// the .sym file must match, so if the first header line ends in ".elf"
-	// strip it off.  This line usually looks something like:
-	// MODULE Linux x86_64 094B63014248508BA0636AD3AC3E81D10 sysconf.elf
-	lines := strings.SplitN(string(symbolData), "\n", 2)
-	if len(lines) != 2 {
-		return fmt.Errorf("got <2 lines in symbol data")
-	}
-
-	// Make sure the first line is not empty.
-	lines[0] = strings.TrimSpace(lines[0])
-	if lines[0] == "" {
-		return fmt.Errorf("unexpected blank first line in symbol data")
-	}
-
-	// Strip .elf from header if it exists.
-	if strings.HasSuffix(lines[0], ".elf") {
-		lines[0] = strings.TrimSuffix(lines[0], ".elf")
-		// Join the new lines of the symbol data.
-		symbolData = []byte(strings.Join(lines, "\n"))
-	}
-
-	// Write the symbol file.
-	_, err := w.Write(symbolData)
-	return err
 }
 
 // Creates the absolute path to the symbol file for the given binary.
