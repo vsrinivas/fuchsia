@@ -245,8 +245,8 @@ where
 
     let (mut body, src_mac, dst_mac, src_ip, dst_ip, proto) =
         parse_ip_packet_in_ethernet_frame::<I>(buf)?;
-    if proto != I::IP_PROTO {
-        debug!("unexpected IP protocol: {} (wanted {})", proto, I::IP_PROTO);
+    if proto != <I as IcmpIpExt<&[u8]>>::IP_PROTO {
+        debug!("unexpected IP protocol: {} (wanted {})", proto, <I as IcmpIpExt<&[u8]>>::IP_PROTO);
         return Err(ParseError::NotExpected);
     }
     let (message, code) = parse_icmp_packet(body, src_ip, dst_ip, f)?;

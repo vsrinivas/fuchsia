@@ -81,12 +81,12 @@ pub(crate) fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: IpLay
 ///
 /// `dispatch_receive_ip_packet` panics if the protocol is unrecognized and
 /// `parse_metadata` is `None`.
-fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddress, B: BufferMut>(
+fn dispatch_receive_ip_packet<D: EventDispatcher, A: IpAddress, B: BufferMut>(
     ctx: &mut Context<D>,
     device: Option<DeviceId>,
     frame_dst: FrameDestination,
-    src_ip: I,
-    dst_ip: I,
+    src_ip: A,
+    dst_ip: A,
     proto: IpProto,
     mut buffer: B,
     parse_metadata: Option<ParseMetadata>,

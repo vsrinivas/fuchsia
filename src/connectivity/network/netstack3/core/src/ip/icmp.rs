@@ -16,10 +16,11 @@ use crate::ip::{
     IPV6_MIN_MTU,
 };
 use crate::wire::icmp::{
-    peek_message_type, IcmpDestUnreachable, IcmpMessageType, IcmpPacketBuilder, IcmpParseArgs,
-    IcmpTimeExceeded, IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4MessageType, Icmpv4Packet,
-    Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode, Icmpv6MessageType, Icmpv6Packet,
-    Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode, Icmpv6TimeExceededCode,
+    peek_message_type, IcmpDestUnreachable, IcmpIpExt, IcmpMessageType, IcmpPacketBuilder,
+    IcmpParseArgs, IcmpTimeExceeded, IcmpUnusedCode, Icmpv4DestUnreachableCode, Icmpv4MessageType,
+    Icmpv4Packet, Icmpv4TimeExceededCode, Icmpv6DestUnreachableCode, Icmpv6MessageType,
+    Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblem, Icmpv6ParameterProblemCode,
+    Icmpv6TimeExceededCode,
 };
 use crate::{Context, EventDispatcher};
 
@@ -34,15 +35,15 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
 ) {
     trace!("receive_icmp_packet({}, {})", src_ip, dst_ip);
 
+    let packet = match buffer.parse_with::<_, <A::Version as IcmpIpExt<&[u8]>>::Packet>(
+        IcmpParseArgs::new(src_ip, dst_ip),
+    ) {
+        Ok(packet) => packet,
+        Err(err) => return, // TODO(joshlf): Do something else here?
+    };
+
     #[ipv4addr]
     {
-        let mut buffer = buffer;
-        let packet =
-            match buffer.parse_with::<_, Icmpv4Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)) {
-                Ok(packet) => packet,
-                Err(err) => return, // TODO(joshlf): Do something else here?
-            };
-
         match packet {
             Icmpv4Packet::EchoRequest(echo_request) => {
                 let req = *echo_request.message();
@@ -75,12 +76,6 @@ pub(crate) fn receive_icmp_packet<D: EventDispatcher, A: IpAddress, B: BufferMut
 
     #[ipv6addr]
     {
-        let packet =
-            match buffer.parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, dst_ip)) {
-                Ok(packet) => packet,
-                Err(err) => return, // TODO(joshlf): Do something else here?
-            };
-
         match packet {
             Icmpv6Packet::EchoRequest(echo_request) => {
                 let req = *echo_request.message();

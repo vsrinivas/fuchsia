@@ -27,7 +27,7 @@ use super::{
 /// knowing the message type ahead of time while still getting the benefits of a
 /// statically-typed packet struct after parsing is complete.
 #[allow(missing_docs)]
-pub(crate) enum Icmpv6Packet<B> {
+pub(crate) enum Icmpv6Packet<B: ByteSlice> {
     DestUnreachable(IcmpPacket<Ipv6, B, IcmpDestUnreachable>),
     PacketTooBig(IcmpPacket<Ipv6, B, Icmpv6PacketTooBig>),
     TimeExceeded(IcmpPacket<Ipv6, B, IcmpTimeExceeded>),

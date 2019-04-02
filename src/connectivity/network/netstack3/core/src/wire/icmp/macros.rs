@@ -8,7 +8,7 @@
 ///
 /// The arguments are:
 /// - `$ip` - `Ipv4` or `Ipv6`
-/// - `$typ` - the type to implement for
+/// - `$type` - the type to implement for
 /// - `$msg_variant` - the variant of `Icmpv4MessageType` or `icmpv6::MessageType`
 ///   associated with this message type
 /// - `$code` - the type to use for `IcmpMessage::Code`; if `()` is used, 0 will
@@ -17,12 +17,12 @@
 ///   supports a body
 macro_rules! impl_icmp_message {
     ($ip:ident, $type:ident, $msg_variant:ident, $code:tt, $body_type:ty) => {
-        impl<B> crate::wire::icmp::IcmpMessage<$ip, B> for $type {
+        impl<B: ByteSlice> crate::wire::icmp::IcmpMessage<$ip, B> for $type {
             type Code = $code;
 
             type Body = $body_type;
 
-            const TYPE: <$ip as IcmpIpExt>::IcmpMessageType =
+            const TYPE: <$ip as IcmpIpExt<B>>::IcmpMessageType =
                 impl_icmp_message_inner_message_type!($ip, $msg_variant);
 
             fn code_from_u8(u: u8) -> Option<Self::Code> {

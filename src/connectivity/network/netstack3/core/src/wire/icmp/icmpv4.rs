@@ -27,7 +27,7 @@ use super::{
 /// knowing the message type ahead of time while still getting the benefits of a
 /// statically-typed packet struct after parsing is complete.
 #[allow(missing_docs)]
-pub(crate) enum Icmpv4Packet<B> {
+pub(crate) enum Icmpv4Packet<B: ByteSlice> {
     EchoReply(IcmpPacket<Ipv4, B, IcmpEchoReply>),
     DestUnreachable(IcmpPacket<Ipv4, B, IcmpDestUnreachable>),
     Redirect(IcmpPacket<Ipv4, B, Icmpv4Redirect>),

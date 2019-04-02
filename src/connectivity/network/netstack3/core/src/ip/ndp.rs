@@ -330,7 +330,7 @@ fn send_neighbor_solicitation<D: EventDispatcher, ND: NdpDevice>(
         debug_assert!(device_addr.is_valid_unicast());
         let src_ll = ND::get_link_layer_addr(ctx, device_id);
         let dst_ip = lookup_addr.to_solicited_node_address();
-        send_ndp_packet::<_, ND, &u8, _>(
+        send_ndp_packet::<_, ND, &[u8], _>(
             ctx,
             device_id,
             device_addr,
@@ -375,7 +375,7 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
         ndp::OptionsSerializer::<_>::new(
             [NdpOption::TargetLinkLayerAddress(src_ll.bytes())].iter(),
         )
-        .encapsulate(IcmpPacketBuilder::<Ipv6, &u8, _>::new(
+        .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
             device_addr,
             dst_ip,
             IcmpUnusedCode,
@@ -386,7 +386,7 @@ fn send_neighbor_advertisement<D: EventDispatcher, ND: NdpDevice>(
 }
 
 /// Helper function to send ndp packet over an NdpDevice
-fn send_ndp_packet<D: EventDispatcher, ND: NdpDevice, B, M>(
+fn send_ndp_packet<D: EventDispatcher, ND: NdpDevice, B: ByteSlice, M>(
     ctx: &mut Context<D>,
     device_id: u64,
     src_ip: Ipv6Addr,

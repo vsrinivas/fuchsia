@@ -312,7 +312,7 @@ mod tests {
             }
         }
         let serialized = OptionsSerializer::<_>::new(collected.iter())
-            .encapsulate(IcmpPacketBuilder::<Ipv6, &u8, _>::new(
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
                 dst_ip,
                 IcmpUnusedCode,
@@ -342,7 +342,7 @@ mod tests {
         assert_eq!(icmp.ndp_options().iter().count(), 0);
 
         let serialized = []
-            .encapsulate(IcmpPacketBuilder::<Ipv6, &u8, _>::new(
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
                 dst_ip,
                 IcmpUnusedCode,
@@ -391,7 +391,7 @@ mod tests {
         }
 
         let serialized = OptionsSerializer::<_>::new(collected.iter())
-            .encapsulate(IcmpPacketBuilder::<Ipv6, &u8, _>::new(
+            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
                 dst_ip,
                 IcmpUnusedCode,
