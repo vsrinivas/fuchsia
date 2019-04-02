@@ -395,7 +395,15 @@ impl EventLoop {
     }
 
     fn fidl_del_ethernet_interface(&mut self, id: u64) -> Option<fidl_net_stack::Error> {
-        None
+        let pos = self.ctx.dispatcher().devices.iter().position(|device| device.id.id() == id);
+        match pos {
+            Some(pos) => {
+                // TODO(rheacock): ensure that the core client deletes all data
+                self.ctx.dispatcher().devices.remove(pos);
+                None
+            }
+            None => Some(fidl_net_stack::Error { type_: fidl_net_stack::ErrorType::NotFound }), // Invalid device ID
+        }
     }
 
     async fn fidl_list_interfaces(&mut self) -> Vec<fidl_net_stack::InterfaceInfo> {
