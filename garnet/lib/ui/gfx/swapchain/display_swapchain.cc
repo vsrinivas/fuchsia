@@ -221,7 +221,9 @@ bool DisplaySwapchain::InitializeFramebuffers(
       return false;
     }
 
-    // Set local buffer constraints (used so we can get a VMO out).
+    // Use the local collection so we can read out the error if allocation
+    // fails, and to ensure everything's allocated before trying to import it
+    // into another process.
     fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection =
         display_manager_->GetCollectionFromToken(std::move(local_token));
     if (!sysmem_collection) {
@@ -248,24 +250,17 @@ bool DisplaySwapchain::InitializeFramebuffers(
       return false;
     }
 
-    // Import the VMO (from sysmem collection) into vulkan.
+    // Import the collection into a vulkan image.
     if (info.buffer_count != 1) {
       FXL_LOG(ERROR) << "Incorrect buffer collection count: "
                      << info.buffer_count;
       return false;
     }
 
-    fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
-    encoder.Alloc(fidl::CodingTraits<
-                  fuchsia::sysmem::SingleBufferSettings>::encoded_size);
-    info.settings.Encode(&encoder, 0);
-    std::vector<uint8_t> encoded_data = encoder.TakeBytes();
-
-    vk::FuchsiaImageFormatFUCHSIA image_format_fuchsia;
-    image_format_fuchsia.imageFormat = encoded_data.data(),
-    image_format_fuchsia.imageFormatSize =
-        static_cast<uint32_t>(encoded_data.size());
-    create_info.setPNext(&image_format_fuchsia);
+    vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
+    collection_image_info.collection = import_result.value;
+    collection_image_info.index = 0;
+    create_info.setPNext(&collection_image_info);
 
     auto image_result = device_.createImage(create_info);
     if (image_result.result != vk::Result::eSuccess) {
@@ -274,20 +269,22 @@ bool DisplaySwapchain::InitializeFramebuffers(
       return false;
     }
 
-    zx::vmo memory = std::move(info.buffers[0].vmo);
-    if (!memory) {
-      FXL_LOG(ERROR) << "No vmo found";
+    auto memory_requirements =
+        device_.getImageMemoryRequirements(image_result.value);
+    auto collection_properties = device_.getBufferCollectionPropertiesFUCHSIA(
+        import_result.value, escher_->device()->dispatch_loader());
+    if (collection_properties.result != vk::Result::eSuccess) {
+      FXL_LOG(ERROR) << "VkGetBufferCollectionProperties failed: "
+                     << vk::to_string(collection_properties.result);
       return false;
     }
 
-    auto memory_requirements =
-        device_.getImageMemoryRequirements(image_result.value);
     uint32_t memory_type_index =
-        escher::CountTrailingZeros(memory_requirements.memoryTypeBits);
-    vk::ImportMemoryZirconHandleInfoFUCHSIA import_info;
-    import_info.setHandle(memory.release());
-    import_info.setHandleType(
-        vk::ExternalMemoryHandleTypeFlagBits::eTempZirconVmoFUCHSIA);
+        escher::CountTrailingZeros(memory_requirements.memoryTypeBits &
+                                   collection_properties.value.memoryTypeBits);
+    vk::ImportMemoryBufferCollectionFUCHSIA import_info;
+    import_info.collection = import_result.value;
+    import_info.index = 0;
     vk::MemoryAllocateInfo alloc_info;
     alloc_info.setPNext(&import_info);
     alloc_info.allocationSize = memory_requirements.size;
@@ -324,18 +321,6 @@ bool DisplaySwapchain::InitializeFramebuffers(
       device_.destroyImage(image_result.value);
       return false;
     }
-
-    // TODO(ES-39): Add stride to escher::ImageInfo so we can use
-    // getImageSubresourceLayout to look up rowPitch and use it appropriately.
-    /*vk::ImageSubresource subres;
-    subres.aspectMask = vk::ImageAspectFlagBits::eColor;
-    subres.mipLevel = 0;
-    subres.arrayLayer = 0;
-    auto layout = device_.getImageSubresourceLayout(image_result.value, subres);
-    FXL_DCHECK(layout.rowPitch ==
-               display_->width() *
-    escher::image_utils::BytesPerPixel(format_));
-    */
 
     buffer.fb_id = display_manager_->ImportImage(sysmem_collection,
                                                  display_collection_id, 0);
