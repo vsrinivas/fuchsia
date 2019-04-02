@@ -11,9 +11,7 @@
             "fuchsia.testing.runner.TestRunner",
             "fuchsia.testing.runner.TestRunnerStore",
             "fuchsia.tracelink.Registry",
-            "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.ui.viewsv1.ViewManager"
+            "fuchsia.ui.scenic.Scenic"
         ],
         "system": [
             "data/sysui"

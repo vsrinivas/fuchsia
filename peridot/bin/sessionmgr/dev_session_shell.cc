@@ -11,7 +11,8 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -20,10 +21,11 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/eventpair.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/zx/eventpair.h>
 
 #include "peridot/lib/fidl/single_service_app.h"
 #include "peridot/lib/fidl/view_host.h"
@@ -92,13 +94,13 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
           fuchsia::sys::ServiceProvider> /*incoming_services*/,
       fidl::InterfaceHandle<
           fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
-    view_token_ = std::move(view_token);
+    view_token_.value = std::move(view_token);
 
     Connect();
   }
 
   void Connect() {
-    FXL_CHECK(!!view_token_);
+    FXL_CHECK(!!view_token_.value);
     FXL_CHECK(!!story_provider_);
     FXL_CHECK(!!puppet_master_);
     FXL_LOG(INFO) << "DevSessionShell START " << settings_.root_module << " "
@@ -110,7 +112,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
     scenic::ViewContext context = {
         .session_and_listener_request =
             scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-        .view_token = std::move(view_token_),
+        .view_token2 = std::move(view_token_),
         .startup_context = startup_context(),
     };
 
@@ -208,7 +210,8 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
                   fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>
                       view_owner) override {
     FXL_LOG(INFO) << "DevSessionShell AttachView(): " << view_id.story_id;
-    view_->ConnectView(std::move(view_owner));
+    view_->ConnectView(scenic::ToViewHolderToken(
+        zx::eventpair(view_owner.TakeChannel().release())));
   }
 
   // |SessionShell|
@@ -258,7 +261,7 @@ class DevSessionShellApp : fuchsia::modular::StoryWatcher,
 
   fidl::BindingSet<fuchsia::modular::SessionShell> session_shell_bindings_;
 
-  zx::eventpair view_token_;
+  fuchsia::ui::views::ViewToken view_token_;
   std::unique_ptr<modular::ViewHost> view_;
 
   fuchsia::modular::SessionShellContextPtr session_shell_context_;

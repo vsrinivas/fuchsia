@@ -5,14 +5,15 @@
 #ifndef PERIDOT_LIB_FIDL_VIEW_HOST_H_
 #define PERIDOT_LIB_FIDL_VIEW_HOST_H_
 
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
+#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/scenic/cpp/resources.h>
+#include <lib/ui/scenic/cpp/session.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/macros.h>
 #include <map>
 #include <memory>
-
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
-#include <src/lib/fxl/macros.h>
-#include <lib/ui/base_view/cpp/v1_base_view.h>
-#include <lib/zx/eventpair.h>
 
 namespace modular {
 
@@ -21,33 +22,44 @@ namespace modular {
 // that play the role of a view controller (aka quarterback, recipe).
 // It supports to embed views of *multiple* children, which are laid
 // out horizontally.
-class ViewHost : public scenic::V1BaseView {
+class ViewHost : public scenic::BaseView {
  public:
   explicit ViewHost(scenic::ViewContext view_context);
-  ~ViewHost() override;
+  ~ViewHost() override = default;
 
   // Connects one more view. Calling this method multiple times adds
   // multiple views and lays them out horizontally next to each other.
   // This is experimental to establish data flow patterns in toy
   // applications and can be changed or extended as needed.
-  void ConnectView(zx::eventpair view_holder_token);
-  void ConnectView(
-      fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> view_owner);
+  void ConnectView(fuchsia::ui::views::ViewHolderToken view_holder_token);
 
  private:
-  struct ViewData;
+  struct ViewData {
+    explicit ViewData(scenic::Session* session,
+                      fuchsia::ui::views::ViewHolderToken view_holder_token)
+        : host_node(session),
+          host_view_holder(session, std::move(view_holder_token),
+                           "modular::ViewHost") {
+      host_node.Attach(host_view_holder);
+    }
 
-  // |scenic::V1BaseView|
+    scenic::EntityNode host_node;
+    scenic::ViewHolder host_view_holder;
+  };
+
+  // |scenic::SessionListener|
+  void OnScenicError(std::string error) override {
+    FXL_LOG(ERROR) << "Scenic Error " << error;
+  }
+
+  // |scenic::BaseView|
   void OnPropertiesChanged(
-      fuchsia::ui::viewsv1::ViewProperties old_properties) override;
-  void OnChildUnavailable(uint32_t child_key) override;
+      fuchsia::ui::gfx::ViewProperties old_properties) override;
+  void OnScenicEvent(fuchsia::ui::scenic::Event event) override;
 
   void UpdateScene();
 
-  scenic::EntityNode container_node_;
-
   std::map<uint32_t, std::unique_ptr<ViewData>> views_;
-  uint32_t next_child_key_{1u};
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewHost);
 };

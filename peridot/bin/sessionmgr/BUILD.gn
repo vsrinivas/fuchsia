@@ -28,7 +28,6 @@ executable_package("sessionmgr") {
     ":user_intelligence_provider",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/bin/basemgr/cobalt",
     "//peridot/bin/sessionmgr/agent_runner",
     "//peridot/bin/sessionmgr/entity_provider_runner",
@@ -67,10 +66,15 @@ executable_package("sessionmgr") {
     "//sdk/fidl/fuchsia.speech",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/ui/scenic/cpp",
     "//src/ledger/bin/fidl",
     "//src/ledger/cloud_provider_firestore/bin/fidl",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -103,7 +107,6 @@ executable_package("dev_session_shell") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/fidl:view_host",
@@ -111,9 +114,12 @@ executable_package("dev_session_shell") {
     "//peridot/lib/testing:test_driver",
     "//peridot/public/lib/app_driver/cpp",
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/trace-provider",
   ]
 }
 
@@ -125,8 +131,8 @@ source_set("session_ctl") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/puppet_master:puppet_master_impl",
+    "//src/lib/fxl",
     "//zircon/public/lib/fs",
   ]
 }
@@ -139,7 +145,6 @@ source_set("component_context") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/agent_runner:public",
     "//peridot/bin/sessionmgr/entity_provider_runner",
     "//peridot/bin/sessionmgr/message_queue",
@@ -153,6 +158,7 @@ source_set("component_context") {
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular",
     "//src/ledger/bin/fidl",
+    "//src/lib/fxl",
   ]
 }
 
@@ -164,7 +170,6 @@ source_set("focus") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/storage:constants_and_utils",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:clone",
@@ -178,6 +183,7 @@ source_set("focus") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 }
 
@@ -188,10 +194,10 @@ source_set("presentation_provider") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 }
 

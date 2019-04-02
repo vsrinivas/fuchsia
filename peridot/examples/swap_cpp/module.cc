@@ -4,28 +4,29 @@
 
 #include "peridot/examples/swap_cpp/module.h"
 
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <utility>
 
 namespace modular_example {
 
 ModuleView::ModuleView(scenic::ViewContext view_context, uint32_t color)
-    : V1BaseView(std::move(view_context), "ModuleView"),
+    : BaseView(std::move(view_context), "ModuleView"),
       background_node_(session()) {
   scenic::Material background_material(session());
   background_material.SetColor((color >> 16) & 0xff, (color >> 8) & 0xff,
                                color & 0xff, (color >> 24) & 0xff);
   background_node_.SetMaterial(background_material);
-  parent_node().AddChild(background_node_);
+  root_node().AddChild(background_node_);
 }
 
-void ModuleView::OnPropertiesChanged(fuchsia::ui::viewsv1::ViewProperties) {
-  scenic::Rectangle background_shape(session(), logical_size().width,
-                                     logical_size().height);
+void ModuleView::OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties) {
+  scenic::Rectangle background_shape(session(), logical_size().x,
+                                     logical_size().y);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslationRH(logical_size().width * .5f,
-                                    logical_size().height * .5f, 0.f);
-  InvalidateScene();
+  background_node_.SetTranslationRH(logical_size().x * .5f,
+                                    logical_size().y * .5f, 0.f);
 }
 
 ModuleApp::ModuleApp(component::StartupContext* const startup_context,
@@ -42,7 +43,7 @@ void ModuleApp::CreateView(
   scenic::ViewContext context = {
       .session_and_listener_request =
           scenic::CreateScenicSessionPtrAndListenerRequest(scenic.get()),
-      .view_token = std::move(view_token),
+      .view_token2 = scenic::ToViewToken(std::move(view_token)),
       .incoming_services = std::move(incoming_services),
       .outgoing_services = std::move(outgoing_services),
       .startup_context = startup_context(),

@@ -2,66 +2,73 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <array>
-#include <memory>
-
 #include <fuchsia/modular/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/app_driver/cpp/app_driver.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/component/cpp/startup_context.h>
-#include <lib/ui/base_view/cpp/v1_base_view.h>
-#include <trace-provider/provider.h>
+#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
+#include <src/lib/fxl/logging.h>
+#include <trace-provider/provider.h>
+#include <array>
+#include <memory>
 
 #include "peridot/lib/fidl/single_service_app.h"
 
 namespace {
 
-constexpr uint32_t kChildKey = 1;
 constexpr int kSwapSeconds = 5;
 constexpr std::array<const char*, 2> kModuleQueries{
     {"swap_module1", "swap_module2"}};
 
-class RecipeView : public scenic::V1BaseView {
+class RecipeView : public scenic::BaseView {
  public:
   explicit RecipeView(scenic::ViewContext view_context)
-      : V1BaseView(std::move(view_context), "RecipeView") {}
+      : BaseView(std::move(view_context), "RecipeView") {}
 
   ~RecipeView() override = default;
 
-  void SetChild(zx::eventpair view_token) {
+  void SetChild(fuchsia::ui::views::ViewHolderToken view_holder_token) {
     if (host_node_) {
-      GetViewContainer()->RemoveChild2(kChildKey, zx::eventpair());
       host_node_->Detach();
       host_node_.reset();
+      host_view_holder_.reset();
     }
 
-    if (view_token) {
+    if (view_holder_token.value) {
       host_node_ = std::make_unique<scenic::EntityNode>(session());
+      host_view_holder_ = std::make_unique<scenic::ViewHolder>(
+          session(), std::move(view_holder_token), "Swap");
 
-      zx::eventpair host_import_token;
-      host_node_->ExportAsRequest(&host_import_token);
-      parent_node().AddChild(*host_node_);
-
-      GetViewContainer()->AddChild2(kChildKey, std::move(view_token),
-                                    std::move(host_import_token));
+      host_node_->SetTranslationRH(0.f, 0.f, -0.1f);
+      host_node_->Attach(*host_view_holder_);
+      root_node().AddChild(*host_node_);
     }
   }
 
  private:
-  // |scenic::V1BaseView|
-  void OnPropertiesChanged(fuchsia::ui::viewsv1::ViewProperties) override {
+  // |scenic::SessionListener|
+  void OnScenicError(std::string error) override {
+    FXL_LOG(ERROR) << "Scenic Error " << error;
+  }
+
+  // |scenic::BaseView|
+  void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties) override {
     if (host_node_) {
-      auto child_properties = fuchsia::ui::viewsv1::ViewProperties::New();
-      fidl::Clone(properties(), child_properties.get());
-      GetViewContainer()->SetChildProperties(kChildKey,
-                                             std::move(child_properties));
+      auto child_properties = fuchsia::ui::gfx::ViewProperties::New();
+      fidl::Clone(view_properties(), child_properties.get());
+      host_view_holder_->SetViewProperties(*child_properties);
     }
   }
 
   std::unique_ptr<scenic::EntityNode> host_node_;
+  std::unique_ptr<scenic::ViewHolder> host_view_holder_;
 };
 
 class RecipeApp : public modular::ViewApp {
@@ -108,7 +115,8 @@ class RecipeApp : public modular::ViewApp {
     if (module_) {
       module_->Stop([this, module_query] {
         module_.Unbind();
-        module_view_.Unbind();
+        module_view_ =
+            fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner>();
         StartModule(module_query);
       });
       return;
@@ -126,14 +134,14 @@ class RecipeApp : public modular::ViewApp {
 
   void SetChild() {
     if (view_ && module_view_) {
-      view_->SetChild(
-          zx::eventpair(module_view_.Unbind().TakeChannel().release()));
+      view_->SetChild(scenic::ToViewHolderToken(
+          zx::eventpair(module_view_.TakeChannel().release())));
     }
   }
 
   fuchsia::modular::ModuleContextPtr module_context_;
   fuchsia::modular::ModuleControllerPtr module_;
-  fuchsia::ui::viewsv1token::ViewOwnerPtr module_view_;
+  fidl::InterfaceHandle<fuchsia::ui::viewsv1token::ViewOwner> module_view_;
   std::unique_ptr<RecipeView> view_;
 
   int query_index_ = 0;

@@ -5,15 +5,14 @@
     "sandbox": {
         "services": [
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.ledger.cloud.CloudProvider",
             "fuchsia.net.SocketProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",
             "fuchsia.tracelink.Registry",
             "fuchsia.ui.scenic.Scenic",
-            "fuchsia.ui.viewsv1.ViewManager",
-            "fuchsia.ui.viewsv1.ViewSnapshot",
-            "fuchsia.ledger.cloud.CloudProvider"
+            "fuchsia.ui.viewsv1.ViewSnapshot"
         ]
     }
 }

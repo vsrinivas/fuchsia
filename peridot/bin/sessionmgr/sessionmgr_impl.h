@@ -17,13 +17,13 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/speech/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
-#include <lib/zx/eventpair.h>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage_impl.h"
 #include "peridot/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
@@ -101,7 +101,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fuchsia::modular::AppConfig story_shell_config,
       bool use_session_shell_for_story_shell_factory);
   void InitializeSessionShell(fuchsia::modular::AppConfig session_shell_config,
-                              zx::eventpair view_token);
+                              fuchsia::ui::views::ViewToken view_token);
 
   void RunSessionShell(fuchsia::modular::AppConfig session_shell_config);
   // This is a termination sequence that may be used with |AtEnd()|, but also
