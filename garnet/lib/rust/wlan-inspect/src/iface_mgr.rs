@@ -18,6 +18,8 @@ type IfaceId = u16;
 /// (e.g., if the user unplugs and replugs the same device repeatedly, or tests continuously
 /// create and destroy virtual devices).
 pub struct IfaceManager {
+    /// Inspect node to which iface children nodes are added
+    node: SharedNodePtr,
     /// Iface devices still in use
     live_ifaces: HashSet<IfaceId>,
     /// Iface devices that have been removed but whose debug infos are still kept in Inspect tree
@@ -26,26 +28,26 @@ pub struct IfaceManager {
 }
 
 impl IfaceManager {
-    pub fn new(max_dead_nodes: usize) -> Self {
-        Self { live_ifaces: HashSet::new(), dead_ifaces: VecDeque::new(), max_dead_nodes }
+    pub fn new(node: SharedNodePtr, max_dead_nodes: usize) -> Self {
+        Self { node, live_ifaces: HashSet::new(), dead_ifaces: VecDeque::new(), max_dead_nodes }
     }
 
     /// Create iface node as child of |node| and return the iface child.
-    pub fn create_iface_child(&mut self, node: SharedNodePtr, iface_id: IfaceId) -> SharedNodePtr {
+    pub fn create_iface_child(&mut self, iface_id: IfaceId) -> SharedNodePtr {
         self.live_ifaces.insert(iface_id);
-        node.lock().create_child(&format!("iface-{}", iface_id))
+        self.node.lock().create_child(&format!("iface-{}", iface_id))
     }
 
     /// Mark |iface_id| as dead. If this causes the number of dead nodes to exceed
     /// the maximum number of dead nodes, remove the oldest dead node from |node|.
     ///
     /// This method is a no-op if |iface_id| is not tracked by `IfaceManager`
-    pub fn notify_iface_removed(&mut self, node: SharedNodePtr, iface_id: IfaceId) {
+    pub fn notify_iface_removed(&mut self, iface_id: IfaceId) {
         if self.live_ifaces.remove(&iface_id) {
             self.dead_ifaces.push_back(iface_id);
             if self.dead_ifaces.len() > self.max_dead_nodes {
                 if let Some(stale_iface_id) = self.dead_ifaces.pop_front() {
-                    node.lock().remove_child(&format!("iface-{}", stale_iface_id));
+                    self.node.lock().remove_child(&format!("iface-{}", stale_iface_id));
                 }
             }
         }
@@ -60,36 +62,34 @@ mod tests {
 
     #[test]
     fn test_iface_manager() {
-        let mut iface_mgr = IfaceManager::new(2);
         let node = finspect::ObjectTreeNode::new_root();
+        let mut iface_mgr = IfaceManager::new(node, 2);
 
-        iface_mgr.create_iface_child(node.clone(), 1);
-        iface_mgr.create_iface_child(node.clone(), 2);
-        iface_mgr.create_iface_child(node.clone(), 3);
-        iface_mgr.create_iface_child(node.clone(), 4);
-        verify_iface_children(&node, vec!["iface-1", "iface-2", "iface-3", "iface-4"]);
+        iface_mgr.create_iface_child(1);
+        iface_mgr.create_iface_child(2);
+        iface_mgr.create_iface_child(3);
+        iface_mgr.create_iface_child(4);
+        verify_iface_children(&iface_mgr, vec!["iface-1", "iface-2", "iface-3", "iface-4"]);
 
         // If threshold is not exceeded, `notify_iface_removed` should not cause removal yet
-        iface_mgr.notify_iface_removed(node.clone(), 2);
-        verify_iface_children(&node, vec!["iface-1", "iface-2", "iface-3", "iface-4"]);
-        iface_mgr.notify_iface_removed(node.clone(), 3);
-        verify_iface_children(&node, vec!["iface-1", "iface-2", "iface-3", "iface-4"]);
+        iface_mgr.notify_iface_removed(2);
+        verify_iface_children(&iface_mgr, vec!["iface-1", "iface-2", "iface-3", "iface-4"]);
+        iface_mgr.notify_iface_removed(3);
+        verify_iface_children(&iface_mgr, vec!["iface-1", "iface-2", "iface-3", "iface-4"]);
 
         // Ifaces are removed now that number of dead nodes exceeds threshold
-        iface_mgr.notify_iface_removed(node.clone(), 1);
-        verify_iface_children(&node, vec!["iface-1", "iface-3", "iface-4"]);
-        iface_mgr.notify_iface_removed(node.clone(), 4);
-        verify_iface_children(&node, vec!["iface-1", "iface-4"]);
+        iface_mgr.notify_iface_removed(1);
+        verify_iface_children(&iface_mgr, vec!["iface-1", "iface-3", "iface-4"]);
+        iface_mgr.notify_iface_removed(4);
+        verify_iface_children(&iface_mgr, vec!["iface-1", "iface-4"]);
 
         // Notify removal on nonexistent node should have no effect
-        iface_mgr.notify_iface_removed(node.clone(), 5);
-        verify_iface_children(&node, vec!["iface-1", "iface-4"]);
+        iface_mgr.notify_iface_removed(5);
+        verify_iface_children(&iface_mgr, vec!["iface-1", "iface-4"]);
     }
 
-    fn verify_iface_children(node: &SharedNodePtr, expected_children: Vec<&str>) {
-        let iface_children = node.lock().get_children_names();
-        let mut iface_children: Vec<String> =
-            iface_children.into_iter().filter(|name| name.starts_with("iface-")).collect();
+    fn verify_iface_children(iface_mgr: &IfaceManager, expected_children: Vec<&str>) {
+        let mut iface_children = iface_mgr.node.lock().get_children_names();
         iface_children.sort();
         assert_eq!(iface_children, expected_children);
     }

@@ -34,6 +34,7 @@ rustc_binary("bin") {
     "//garnet/lib/rust/eapol",
     "//garnet/lib/rust/fuchsia-wlan-dev",
     "//garnet/lib/rust/wlan-common",
+    "//garnet/lib/rust/wlan-inspect",
     "//garnet/lib/rust/wlan-sme",
     "//garnet/lib/rust/wlantap-client",
     "//garnet/lib/wlan/fidl:fidl-rustc",
@@ -45,6 +46,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-cobalt",
+    "//garnet/public/rust/fuchsia-inspect",
     "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
@@ -59,6 +61,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:void",
     "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+    "//zircon/public/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }

@@ -24,15 +24,18 @@ mod watcher_service;
 
 use failure::{format_err, Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
+use fidl_fuchsia_inspect as fidl_inspect;
 use fidl_fuchsia_wlan_device_service::DeviceServiceMarker;
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use fuchsia_cobalt;
+use fuchsia_inspect as finspect;
 use futures::channel::mpsc::{self, UnboundedReceiver};
 use futures::prelude::*;
 use log::info;
 use std::sync::Arc;
 use void::Void;
+use wlan_inspect;
 
 use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::watchable_map::MapEvent;
@@ -50,7 +53,7 @@ fn main() -> Result<(), Error> {
     info!("Starting");
 
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
-
+    let inspect_root = finspect::ObjectTreeNode::new_root();
     let (phys, phy_events) = device::PhyMap::new();
     let (ifaces, iface_events) = device::IfaceMap::new();
     let phys = Arc::new(phys);
@@ -61,9 +64,10 @@ fn main() -> Result<(), Error> {
         fuchsia_cobalt::serve(COBALT_BUFFER_SIZE, COBALT_CONFIG_PATH);
     let telemetry_server =
         telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
-    let iface_server = device::serve_ifaces(ifaces.clone(), cobalt_sender).map_ok(|x| match x {});
-    let services_server =
-        serve_fidl(phys, ifaces, phy_events, iface_events)?.map_ok(|void| match void {});
+    let iface_server = device::serve_ifaces(ifaces.clone(), cobalt_sender, inspect_root.clone())
+        .map_ok(|x| match x {});
+    let services_server = serve_fidl(phys, ifaces, phy_events, iface_events, inspect_root)?
+        .map_ok(|void| match void {});
 
     exec.run_singlethreaded(services_server.try_join5(
         phy_server,
@@ -79,6 +83,7 @@ fn serve_fidl(
     ifaces: Arc<IfaceMap>,
     phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
     iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
+    inspect_root: wlan_inspect::SharedNodePtr,
 ) -> Result<impl Future<Output = Result<Void, Error>>, Error> {
     let (sender, receiver) = mpsc::unbounded();
     let fdio_server = ServicesServer::new()
@@ -86,6 +91,9 @@ fn serve_fidl(
             sender
                 .unbounded_send(channel)
                 .expect("Failed to send a new client to the server future");
+        }))
+        .add_service((fidl_inspect::InspectMarker::NAME, move |channel| {
+            finspect::InspectService::new(inspect_root.clone(), channel)
         }))
         .start()
         .context("error configuring device service")?

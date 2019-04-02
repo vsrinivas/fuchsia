@@ -7,7 +7,9 @@
 
 use bitfield::bitfield;
 use bytes::{BufMut, Bytes};
-use nom::{be_u16, be_u64, be_u8, call, do_parse, eof, error_position, map, named_args, take, verify};
+use nom::{
+    be_u16, be_u64, be_u8, call, do_parse, eof, error_position, map, named_args, take, verify,
+};
 use std::convert::AsMut;
 
 pub trait FrameReceiver {
@@ -157,8 +159,8 @@ impl KeyFrame {
 }
 
 pub fn to_array<A>(slice: &[u8]) -> A
-    where
-        A: Sized + Default + AsMut<[u8]>,
+where
+    A: Sized + Default + AsMut<[u8]>,
 {
     let mut array = Default::default();
     <A as AsMut<[u8]>>::as_mut(&mut array).clone_from_slice(slice);

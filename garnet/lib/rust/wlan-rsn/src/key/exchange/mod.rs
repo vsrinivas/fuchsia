@@ -25,6 +25,21 @@ pub enum Key {
     Stk(Vec<u8>),
 }
 
+impl Key {
+    pub fn name(&self) -> &'static str {
+        match self {
+            Key::Pmk(..) => "PMK",
+            Key::Ptk(..) => "PTK",
+            Key::Gtk(..) => "GTK",
+            Key::Igtk(..) => "IGTK",
+            Key::MicRx(..) => "MIC_RX",
+            Key::MicTx(..) => "MIC_TX",
+            Key::Smk(..) => "SMK",
+            Key::Stk(..) => "STK",
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Method {
     FourWayHandshake(Fourway),

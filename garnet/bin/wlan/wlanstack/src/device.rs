@@ -15,9 +15,11 @@ use {
         stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
     },
     log::{error, info},
+    parking_lot::Mutex,
     std::{marker::Unpin, sync::Arc},
-    wlan_sme::{self, clone_utils},
     void::Void,
+    wlan_inspect,
+    wlan_sme::{self, clone_utils},
 };
 
 use crate::{
@@ -27,6 +29,8 @@ use crate::{
     stats_scheduler::{self, StatsScheduler},
     watchable_map::WatchableMap,
 };
+
+const MAX_DEAD_IFACE_NODES: usize = 3;
 
 pub struct PhyDevice {
     pub proxy: fidl_wlan_dev::PhyProxy,
@@ -90,16 +94,26 @@ async fn serve_phy(phys: &PhyMap, new_phy: device_watch::NewPhyDevice) {
 pub async fn serve_ifaces(
     ifaces: Arc<IfaceMap>,
     cobalt_sender: CobaltSender,
+    inspect_root: wlan_inspect::SharedNodePtr,
 ) -> Result<Void, Error> {
     let mut new_ifaces = device_watch::watch_iface_devices()?;
     let mut active_ifaces = FuturesUnordered::new();
+    let inspect_ifacemgr =
+        Arc::new(Mutex::new(wlan_inspect::IfaceManager::new(inspect_root, MAX_DEAD_IFACE_NODES)));
     loop {
         select! {
             new_iface = new_ifaces.next().fuse() => match new_iface {
                 None => bail!("new iface stream unexpectedly finished"),
                 Some(Err(e)) => bail!("new iface stream returned an error: {}", e),
                 Some(Ok(new_iface)) => {
-                    let fut = query_and_serve_iface(new_iface, &ifaces, cobalt_sender.clone());
+                    let iface_id = new_iface.id;
+                    let inspect_ifacemgr = inspect_ifacemgr.clone();
+                    let inspect_sme = inspect_ifacemgr.lock().create_iface_child(iface_id);
+                    let fut = query_and_serve_iface(new_iface, &ifaces, cobalt_sender.clone(),
+                                                    inspect_sme)
+                        .then(move |_| async move {
+                            inspect_ifacemgr.lock().notify_iface_removed(iface_id);
+                        });
                     active_ifaces.push(fut);
                 }
             },
@@ -112,6 +126,7 @@ async fn query_and_serve_iface(
     new_iface: NewIfaceDevice,
     ifaces: &IfaceMap,
     cobalt_sender: CobaltSender,
+    inspect_sme: wlan_inspect::SharedNodePtr,
 ) {
     let NewIfaceDevice { id, device, proxy } = new_iface;
     let event_stream = proxy.take_event_stream();
@@ -124,7 +139,14 @@ async fn query_and_serve_iface(
             return;
         }
     };
-    let result = create_sme(proxy.clone(), event_stream, &device_info, stats_reqs, cobalt_sender);
+    let result = create_sme(
+        proxy.clone(),
+        event_stream,
+        &device_info,
+        stats_reqs,
+        cobalt_sender,
+        inspect_sme,
+    );
     let (sme, sme_fut) = match result {
         Ok(x) => x,
         Err(e) => {
@@ -157,6 +179,7 @@ fn create_sme<S>(
     device_info: &DeviceInfo,
     stats_requests: S,
     cobalt_sender: CobaltSender,
+    inspect_sme: wlan_inspect::SharedNodePtr,
 ) -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
 where
     S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static,
@@ -178,6 +201,7 @@ where
                 receiver,
                 stats_requests,
                 cobalt_sender,
+                inspect_sme,
             );
             Ok((SmeServer::Client(sender), FutureObj::new(Box::new(fut))))
         }

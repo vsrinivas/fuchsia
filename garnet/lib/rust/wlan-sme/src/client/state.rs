@@ -5,6 +5,7 @@
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
 use log::{error, warn};
 use wlan_common::RadioConfig;
+use wlan_inspect::nodes::NodeExt;
 use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, SecAssocStatus, SecAssocUpdate};
 
@@ -14,6 +15,7 @@ use super::{ConnectFailure, ConnectResult, InfoEvent, Status};
 
 use crate::client::{
     event::{self, Event},
+    inspect::TransmitDirection,
     report_connect_finished, Context,
 };
 use crate::clone_utils::clone_bss_desc;
@@ -25,6 +27,13 @@ use crate::MlmeRequest;
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
+
+const IDLE_STATE: &str = "IdleState";
+const JOINING_STATE: &str = "JoiningState";
+const AUTHENTICATING_STATE: &str = "AuthenticatingState";
+const ASSOCIATING_STATE: &str = "AssociatingState";
+const RSNA_STATE: &str = "EstablishingRsnaState";
+const LINK_UP_STATE: &str = "LinkUpState";
 
 #[derive(Debug)]
 pub enum LinkState {
@@ -78,8 +87,24 @@ pub enum State {
 }
 
 impl State {
-    pub fn on_mlme_event(self, event: MlmeEvent, context: &mut Context) -> Self {
+    fn state_name(&self) -> &'static str {
         match self {
+            State::Idle => IDLE_STATE,
+            State::Joining { .. } => JOINING_STATE,
+            State::Authenticating { .. } => AUTHENTICATING_STATE,
+            State::Associating { .. } => ASSOCIATING_STATE,
+            State::Associated { link_state, .. } => match link_state {
+                LinkState::EstablishingRsna { .. } => RSNA_STATE,
+                LinkState::LinkUp(..) => LINK_UP_STATE,
+            },
+        }
+    }
+
+    pub fn on_mlme_event(self, event: MlmeEvent, context: &mut Context) -> Self {
+        let start_state = self.state_name();
+        let mut state_change_msg: Option<String> = None;
+
+        let new_state = match self {
             State::Idle => {
                 warn!("Unexpected MLME message while Idle: {:?}", event);
                 State::Idle
@@ -94,6 +119,7 @@ impl State {
                                 auth_failure_timeout: DEFAULT_AUTH_FAILURE_TIMEOUT,
                             },
                         ));
+                        state_change_msg.replace("successful join".to_string());
                         State::Authenticating { cmd }
                     }
                     other => {
@@ -104,6 +130,7 @@ impl State {
                             ConnectResult::Failed,
                             Some(ConnectFailure::JoinFailure(other)),
                         );
+                        state_change_msg.replace(format!("failed join; result code: {:?}", other));
                         State::Idle
                     }
                 },
@@ -112,6 +139,7 @@ impl State {
             State::Authenticating { cmd } => match event {
                 MlmeEvent::AuthenticateConf { resp } => match resp.result_code {
                     fidl_mlme::AuthenticateResultCodes::Success => {
+                        state_change_msg.replace("successful auth".to_string());
                         to_associating_state(cmd, &context.mlme_sink)
                     }
                     other => {
@@ -122,6 +150,7 @@ impl State {
                             ConnectResult::Failed,
                             Some(ConnectFailure::AuthenticationFailure(other)),
                         );
+                        state_change_msg.replace(format!("failed auth; result code: {:?}", other));
                         State::Idle
                     }
                 },
@@ -142,6 +171,8 @@ impl State {
                                         &context,
                                         e,
                                     );
+                                    state_change_msg
+                                        .replace("supplicant failed to start".to_string());
                                     State::Idle
                                 }
                                 Ok(_) => {
@@ -152,6 +183,7 @@ impl State {
                                     let rsna_timeout = Some(
                                         context.timer.schedule(Event::EstablishingRsnaTimeout),
                                     );
+                                    state_change_msg.replace("successful association".to_string());
                                     State::Associated {
                                         bss: cmd.bss,
                                         last_rssi: None,
@@ -172,6 +204,7 @@ impl State {
                                     ConnectResult::Success,
                                     None,
                                 );
+                                state_change_msg.replace("successful association".to_string());
                                 State::Associated {
                                     bss: cmd.bss,
                                     last_rssi: None,
@@ -189,6 +222,8 @@ impl State {
                             ConnectResult::Failed,
                             Some(ConnectFailure::AssociationFailure(other)),
                         );
+                        state_change_msg
+                            .replace(format!("failed association; result code: {:?}", other));
                         State::Idle
                     }
                 },
@@ -209,6 +244,7 @@ impl State {
 
                     let cmd = ConnectCommand { bss, responder, rsna, radio_cfg };
                     context.att_id += 1;
+                    state_change_msg.replace("received DisassociateInd msg".to_string());
                     to_associating_state(cmd, &context.mlme_sink)
                 }
                 MlmeEvent::DeauthenticateInd { ind } => {
@@ -216,6 +252,7 @@ impl State {
                         let connect_result = deauth_code_to_connect_result(ind.reason_code);
                         report_connect_finished(responder, &context, connect_result, None);
                     }
+                    state_change_msg.replace("received DeauthenticateInd msg".to_string());
                     State::Idle
                 }
                 MlmeEvent::SignalReport { ind } => {
@@ -244,12 +281,14 @@ impl State {
                                 ConnectResult::Success,
                                 None,
                             );
+                            state_change_msg.replace("RSNA established".to_string());
                             let link_state = LinkState::LinkUp(Some(rsna));
                             State::Associated { bss, last_rssi, link_state, radio_cfg }
                         }
                         RsnaStatus::Failed(result) => {
                             report_connect_finished(responder, &context, result, None);
                             send_deauthenticate_request(bss, &context.mlme_sink);
+                            state_change_msg.replace("RSNA failed".to_string());
                             State::Idle
                         }
                         RsnaStatus::Unchanged => {
@@ -289,11 +328,19 @@ impl State {
                 },
                 _ => State::Associated { bss, last_rssi, link_state, radio_cfg },
             },
+        };
+
+        if start_state != new_state.state_name() || state_change_msg.is_some() {
+            context.inspect.log_state_change(start_state, new_state.state_name(), state_change_msg);
         }
+        new_state
     }
 
     pub fn handle_timeout(self, event_id: EventId, event: Event, context: &mut Context) -> Self {
-        match self {
+        let start_state = self.state_name();
+        let mut state_change_msg: Option<String> = None;
+
+        let new_state = match self {
             State::Associated { bss, last_rssi, link_state, radio_cfg } => match link_state {
                 LinkState::EstablishingRsna {
                     responder,
@@ -311,6 +358,7 @@ impl State {
                             Some(ConnectFailure::RsnaTimeout),
                         );
                         send_deauthenticate_request(bss, &context.mlme_sink);
+                        state_change_msg.replace("RSNA timeout".to_string());
                         State::Idle
                     }
                     Event::KeyFrameExchangeTimeout { bssid, sta_addr, frame, attempt } => {
@@ -348,6 +396,7 @@ impl State {
                                 Some(ConnectFailure::RsnaTimeout),
                             );
                             send_deauthenticate_request(bss, &context.mlme_sink);
+                            state_change_msg.replace("key frame rx timeout".to_string());
                             State::Idle
                         }
                     }
@@ -364,10 +413,16 @@ impl State {
                 _ => State::Associated { bss, last_rssi, link_state, radio_cfg },
             },
             _ => self,
+        };
+
+        if start_state != new_state.state_name() || state_change_msg.is_some() {
+            context.inspect.log_state_change(start_state, new_state.state_name(), state_change_msg);
         }
+        new_state
     }
 
     pub fn connect(self, cmd: ConnectCommand, context: &mut Context) -> Self {
+        let start_state = self.state_name();
         self.disconnect_internal(context);
 
         let mut selected_bss = clone_bss_desc(&cmd.bss);
@@ -385,6 +440,9 @@ impl State {
         }));
         context.att_id += 1;
         context.info_sink.send(InfoEvent::AssociationStarted { att_id: context.att_id });
+
+        let msg = connect_cmd_inspect_summary(&cmd);
+        context.inspect.log_state_change(start_state, JOINING_STATE, Some(msg));
         State::Joining { cmd }
     }
 
@@ -427,6 +485,38 @@ impl State {
     }
 }
 
+/// Custom logging for ConnectCommand because its normal full debug string is too large, and we
+/// want to reduce how much we log in memory for Inspect. Additionally, in the future, we'd need
+/// to anonymize information like BSSID and SSID.
+fn connect_cmd_inspect_summary(cmd: &ConnectCommand) -> String {
+    let bss = &cmd.bss;
+    let ssid = match String::from_utf8(bss.ssid.clone()) {
+        Ok(ssid) => ssid,
+        Err(_) => format!("{:?}", bss.ssid),
+    };
+    format!(
+        "ConnectCmd {{ \
+         bssid: {bssid:2x?}, ssid: {ssid:?}, cap: {cap:?}, basic_rate_set: {basic_rate_set:?}, \
+         op_rate_set: {op_rate_set:?}, protected: {protected:?}, chan: {chan:?}, \
+         rcpi: {rcpi:?}, rsni: {rsni:?}, rssi: {rssi:?}, ht_cap: {ht_cap:?}, ht_op: {ht_op:?}, \
+         vht_cap: {vht_cap:?}, vht_op: {vht_op:?} }}",
+        bssid = bss.bssid,
+        ssid = ssid,
+        cap = bss.cap,
+        basic_rate_set = bss.basic_rate_set,
+        op_rate_set = bss.op_rate_set,
+        protected = bss.rsn.is_some(),
+        chan = bss.chan,
+        rcpi = bss.rcpi_dbmh,
+        rsni = bss.rsni_dbh,
+        rssi = bss.rssi_dbm,
+        ht_cap = bss.ht_cap.is_some(),
+        ht_op = bss.ht_op.is_some(),
+        vht_cap = bss.vht_cap.is_some(),
+        vht_op = bss.vht_op.is_some()
+    )
+}
+
 fn triggered(id: &Option<EventId>, received_id: EventId) -> bool {
     id.map_or(false, |id| id == received_id)
 }
@@ -450,10 +540,12 @@ fn process_eapol_ind(
 ) -> RsnaStatus {
     let mic_size = rsna.negotiated_rsne.mic_size;
     let eapol_pdu = &ind.data[..];
+    let node = context.inspect.log_eapol_frame(eapol_pdu.to_vec(), TransmitDirection::Rx);
     let eapol_frame = match eapol::key_frame_from_bytes(eapol_pdu, mic_size).to_full_result() {
         Ok(key_frame) => eapol::Frame::Key(key_frame),
         Err(e) => {
             error!("received invalid EAPOL Key frame: {:?}", e);
+            node.lock().insert_debug("parse_error", e);
             return RsnaStatus::Unchanged;
         }
     };
@@ -462,6 +554,7 @@ fn process_eapol_ind(
     match rsna.supplicant.on_eapol_frame(&mut update_sink, &eapol_frame) {
         Err(e) => {
             error!("error processing EAPOL key frame: {}", e);
+            node.lock().insert_debug("processing_error", e);
             return RsnaStatus::Unchanged;
         }
         Ok(_) if update_sink.is_empty() => return RsnaStatus::Unchanged,
@@ -472,6 +565,7 @@ fn process_eapol_ind(
     let sta_addr = ind.dst_addr;
     let mut new_resp_timeout = None;
     for update in update_sink {
+        context.inspect.log_supplicant_update(&update);
         match update {
             // ESS Security Association requests to send an EAPOL frame.
             // Forward EAPOL frame to MLME.
@@ -519,6 +613,7 @@ fn send_eapol_frame(
 
     let mut buf = Vec::with_capacity(frame.len());
     frame.as_bytes(false, &mut buf);
+    context.inspect.log_eapol_frame(buf.to_vec(), TransmitDirection::Tx);
     context.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
         src_addr: sta_addr,
         dst_addr: bssid,
@@ -604,6 +699,7 @@ fn handle_supplicant_start_failure(
 mod tests {
     use super::*;
     use failure::format_err;
+    use fuchsia_inspect as finspect;
     use futures::channel::{mpsc, oneshot};
     use std::error::Error;
     use std::sync::Arc;
@@ -614,7 +710,7 @@ mod tests {
         expect_info_event, fake_protected_bss_description, fake_unprotected_bss_description,
         mock_supplicant, MockSupplicant, MockSupplicantController,
     };
-    use crate::client::{InfoSink, TimeStream};
+    use crate::client::{inspect, InfoSink, TimeStream};
     use crate::{test_utils, timer, DeviceInfo, InfoStream, MlmeStream, Ssid};
 
     #[test]
@@ -1128,6 +1224,7 @@ mod tests {
                 info_sink: InfoSink::new(info_sink),
                 timer,
                 att_id: 0,
+                inspect: inspect::SmeNode::new(finspect::ObjectTreeNode::new_root()),
             };
             TestHelper { mlme_stream, info_stream, time_stream, context }
         }

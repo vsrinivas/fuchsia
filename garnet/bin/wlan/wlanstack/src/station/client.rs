@@ -14,12 +14,13 @@ use log::{error, info};
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
+use void::Void;
+use wlan_inspect;
 use wlan_sme::client::{
     BssInfo, ConnectResult, ConnectionAttemptId, DiscoveryError, EssDiscoveryResult, EssInfo,
     InfoEvent, ScanTxnId,
 };
 use wlan_sme::{client as client_sme, DeviceInfo, InfoStream};
-use void::Void;
 
 use crate::fidl_util::is_peer_closed;
 use crate::stats_scheduler::StatsRequest;
@@ -45,11 +46,12 @@ pub async fn serve<S>(
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
     stats_requests: S,
     cobalt_sender: CobaltSender,
+    inspect_sme: wlan_inspect::nodes::SharedNodePtr,
 ) -> Result<(), failure::Error>
 where
     S: Stream<Item = StatsRequest> + Unpin,
 {
-    let (sme, mlme_stream, info_stream, time_stream) = Sme::new(device_info);
+    let (sme, mlme_stream, info_stream, time_stream) = Sme::new(device_info, inspect_sme);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
         proxy,

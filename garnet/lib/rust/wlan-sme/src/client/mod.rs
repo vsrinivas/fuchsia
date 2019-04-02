@@ -4,6 +4,7 @@
 
 mod bss;
 mod event;
+mod inspect;
 mod rsn;
 mod scan;
 mod state;
@@ -20,6 +21,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use wlan_common::format::MacFmt;
 use wlan_common::RadioConfig;
+use wlan_inspect;
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
@@ -44,7 +46,7 @@ pub use self::scan::DiscoveryError;
 mod internal {
     use std::sync::Arc;
 
-    use crate::client::{event::Event, ConnectionAttemptId};
+    use crate::client::{event::Event, inspect, ConnectionAttemptId};
     use crate::sink::{InfoSink, MlmeSink};
     use crate::timer::Timer;
     use crate::DeviceInfo;
@@ -55,6 +57,7 @@ mod internal {
         pub info_sink: InfoSink,
         pub(crate) timer: Timer<Event>,
         pub att_id: ConnectionAttemptId,
+        pub(crate) inspect: inspect::SmeNode,
     }
 }
 
@@ -150,7 +153,10 @@ pub enum Standard {
 }
 
 impl ClientSme {
-    pub fn new(info: DeviceInfo) -> (Self, MlmeStream, InfoStream, TimeStream) {
+    pub fn new(
+        info: DeviceInfo,
+        inspect_node: wlan_inspect::SharedNodePtr,
+    ) -> (Self, MlmeStream, InfoStream, TimeStream) {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (info_sink, info_stream) = mpsc::unbounded();
@@ -165,6 +171,7 @@ impl ClientSme {
                     device_info,
                     timer,
                     att_id: 0,
+                    inspect: inspect::SmeNode::new(inspect_node),
                 },
             },
             mlme_stream,
@@ -374,6 +381,7 @@ fn report_connect_finished(
 mod tests {
     use super::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
+    use fuchsia_inspect as finspect;
     use std::error::Error;
     use wlan_common::RadioConfig;
 
@@ -608,6 +616,9 @@ mod tests {
     }
 
     fn create_sme() -> (ClientSme, MlmeStream, InfoStream, TimeStream) {
-        ClientSme::new(test_utils::fake_device_info(CLIENT_ADDR))
+        ClientSme::new(
+            test_utils::fake_device_info(CLIENT_ADDR),
+            finspect::ObjectTreeNode::new_root(),
+        )
     }
 }

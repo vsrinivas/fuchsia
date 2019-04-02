@@ -5,4 +5,5 @@
 pub mod iface_mgr;
 pub mod nodes;
 
+pub use iface_mgr::IfaceManager;
 pub use nodes::{NodeExt, SharedNodePtr};
