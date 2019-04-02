@@ -75,7 +75,7 @@ class ModuleSymbolIndex {
   // "vector<Aardvark>" node inside it and the end of the "std" mode. Nodes are
   // sorted by "std::string::operator<".
   //
-  // IF there are no matches both iterators will be the same (found == end).
+  // If there are no matches both iterators will be the same (found == end).
   //
   // If the caller wants to find all matching prefixes, it can advance the
   // iterator as long as the last input component is a prefix if the current

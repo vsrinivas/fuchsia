@@ -107,6 +107,50 @@ FoundName FindPerModule(
   return FoundName();
 }
 
+// Searches one particular index node for the given identifier.
+FoundName FindPerIndexNode(const ModuleSymbols* module_symbols,
+                           const IndexWalker& walker,
+                           const Identifier& identifier) {
+  if (identifier.components().empty())
+    return FoundName();
+
+  IndexWalker query_walker(walker);
+  if (query_walker.WalkInto(identifier)) {
+    // Found an exact match, see if it's actually something we can return.
+    const ModuleSymbolIndexNode* match = query_walker.current();
+    if (FoundName found = GetNameFromDieList(module_symbols, match->dies()))
+      return found;
+  }
+
+  // We also want to know if there are any templates with that name, which will
+  // look like "foo::bar<...". In that case, do a prefix search with an
+  // appended "<" and see if there are any results.
+  if (identifier.components().back().has_template()) {
+    // When the input already has an explicit template (e.g. "vector<int>"),
+    // there's no sense in doing the prefix search.
+    return FoundName();
+  }
+
+  // Walk into all but the last node of the identifier (the last one is
+  // potentially the template).
+  IndexWalker template_walker(walker);
+  if (!template_walker.WalkInto(identifier.GetScope()))
+    return FoundName();
+
+  // Now search that node for anything that could be a template.
+  std::string last_comp = identifier.components().back().GetName(false, false);
+  last_comp.push_back('<');
+  auto [cur, end] = template_walker.current()->FindPrefix(last_comp);
+  if (cur != end) {
+    // We could check every possible match with this prefix and see if there's
+    // one with a type name. But that seems unnecessary. Instead, assume that
+    // anything with a name containing a "<" is a template type name.
+    return FoundName(FoundName::kTemplate);
+  }
+
+  return FoundName();
+}
+
 }  // namespace
 
 FoundName FindName(const ProcessSymbols* optional_process_symbols,
@@ -271,15 +315,8 @@ FoundName FindGlobalNameInModule(const ModuleSymbols* module_symbols,
 
   // Search from the current namespace going up.
   do {
-    IndexWalker query_walker(walker);
-    if (query_walker.WalkInto(identifier)) {
-      // Found a match, see if it's actually something we can return.
-      const ModuleSymbolIndexNode* match = query_walker.current();
-      if (auto found = GetNameFromDieList(module_symbols, match->dies()))
-        return found;
-    }
-    // TODO(brettw) handle templates.
-
+    if (FoundName found = FindPerIndexNode(module_symbols, walker, identifier))
+      return found;
     // No variable match, move up one level of scope and try again.
   } while (walker.WalkUp());
 
@@ -297,36 +334,8 @@ FoundName FindExactNameInIndex(const ProcessSymbols* process_symbols,
 
 FoundName FindExactNameInModuleIndex(const ModuleSymbols* module_symbols,
                                      const Identifier& identifier) {
-  std::vector<std::string> comps = identifier.GetAsIndexComponents();
-  if (comps.empty())
-    return FoundName();
-
-  // Given input "foo::bar" first look up whether there's a variable,
-  // namespace, or type name with that exact match.
-  const std::vector<ModuleSymbolIndexNode::DieRef>& refs =
-      module_symbols->GetIndex().FindExact(comps);
-  if (auto found = GetNameFromDieList(module_symbols, refs))
-    return found;
-
-  // We also want to know if there are any templates with that name, which will
-  // look like "foo::bar<...". In that case, do a prefix search with an
-  // appended "<" and see if there are any results.
-  if (identifier.components().back().has_template()) {
-    // When the input already has an explicit template (e.g. "vector<int>"),
-    // there's no sense in doing the prefix search.
-    return FoundName();
-  }
-
-  comps.back().push_back('<');
-  auto [cur, end] = module_symbols->GetIndex().FindPrefix(comps);
-  if (cur != end) {
-    // We could check every possible match with this prefix and see if there's
-    // one with a type name. But that seems unnecessary. Instead, assume that
-    // anything with a name containing a "<" is a template type name.
-    return FoundName(FoundName::kTemplate);
-  }
-
-  return FoundName();
+  return FindPerIndexNode(module_symbols,
+                          IndexWalker(&module_symbols->GetIndex()), identifier);
 }
 
 }  // namespace zxdb

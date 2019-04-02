@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -112,6 +113,18 @@ void ModuleSymbolIndexNode::Merge(ModuleSymbolIndexNode&& other) {
         AddDie(cur);
     }
   }
+}
+
+std::pair<ModuleSymbolIndexNode::ConstIterator,
+          ModuleSymbolIndexNode::ConstIterator>
+ModuleSymbolIndexNode::FindPrefix(const std::string& input) const {
+  if (input.empty())
+    return std::make_pair(sub_.end(), sub_.end());
+
+  auto found = sub_.lower_bound(input);
+  if (found == sub_.end() || !StringBeginsWith(found->first, input))
+    return std::make_pair(sub_.end(), sub_.end());
+  return std::make_pair(found, sub_.end());
 }
 
 }  // namespace zxdb

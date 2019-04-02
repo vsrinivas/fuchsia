@@ -141,6 +141,22 @@ class ModuleSymbolIndexNode {
   // duplicate DIEs so the lists are just appended.
   void Merge(ModuleSymbolIndexNode&& other);
 
+  // Finds the first child node that contains the input string a prefix. The
+  // first return iterator points to this node.
+  //
+  // The second returned iterator points to the last node IN THE CONTAINER.
+  // This does not indicate the last node with the prefix. Many callers won't
+  // need all of the matches and doing it this way avoids a second lookup.
+  //
+  // If there are no matches both iterators will be the same (found == end).
+  //
+  // If the caller wants to find all matching prefixes, it can advance the
+  // iterator as long as the last input component is a prefix if the current
+  // iterator key and less than the end.
+  std::pair<ModuleSymbolIndexNode::ConstIterator,
+            ModuleSymbolIndexNode::ConstIterator>
+  FindPrefix(const std::string& input) const;
+
  private:
   // Performance note: The strings are all null-terminated C strings that come
   // from the mapped DWARF data. We should use that in the map instead to avoid

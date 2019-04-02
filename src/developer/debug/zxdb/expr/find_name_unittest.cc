@@ -410,4 +410,47 @@ TEST(FindName, FindTypeName) {
   EXPECT_EQ(child_type.get(), found.type().get());
 }
 
+TEST(FindName, FindTemplateName) {
+  ProcessSymbolsTestSetup setup;
+  auto mod = std::make_unique<MockModuleSymbols>("mod.so");
+  auto& root = mod->index().root();  // Root of the index for module 1.
+
+  // Declare two functions, one's a template, the other has the same prefix but
+  // isn't.
+  const char kTemplateIntName[] = "Template<int>";
+  const char kTemplateNotName[] = "TemplateNot";
+
+  Identifier template_int_name(
+      ExprToken(ExprTokenType::kName, kTemplateIntName, 0));
+  Identifier template_not_name(
+      ExprToken(ExprTokenType::kName, kTemplateNotName, 0));
+
+  auto template_int = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+  template_int->set_assigned_name(kTemplateIntName);
+  TestIndexedSymbol template_int_indexed(mod.get(), &root, kTemplateIntName,
+                                         template_int);
+
+  auto template_not = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
+  template_not->set_assigned_name(kTemplateNotName);
+  TestIndexedSymbol template_not_indexed(mod.get(), &root, kTemplateNotName,
+                                         template_not);
+
+  // Warning: this moves out the "mod" variable so all variable setup needs to
+  // go before here.
+  constexpr uint64_t kLoadAddress = 0x1000;
+  SymbolContext symbol_context(kLoadAddress);
+  setup.InjectModule("mod", "1234", kLoadAddress, std::move(mod));
+
+  // The string "Template" should be identified as one.
+  Identifier template_name(ExprToken(ExprTokenType::kName, "Template", 0));
+  auto found = FindName(&setup.process(), nullptr, nullptr, template_name);
+  EXPECT_TRUE(found);
+  EXPECT_EQ(FoundName::kTemplate, found.kind());
+
+  // The string "TemplateNot" is a
+  found = FindName(&setup.process(), nullptr, nullptr, template_not_name);
+  EXPECT_TRUE(found);
+  EXPECT_EQ(FoundName::kType, found.kind());
+}
+
 }  // namespace zxdb

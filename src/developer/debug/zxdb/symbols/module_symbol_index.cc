@@ -402,13 +402,7 @@ ModuleSymbolIndex::FindPrefix(const std::vector<std::string>& input) const {
     cur = &found->second;
   }
 
-  // Do a prefix match on the last input component.
-  const std::string& last = input.back();
-  auto found = cur->sub().lower_bound(last);
-  if (found == cur->sub().end() || !StringBeginsWith(found->first, last))
-    return std::make_pair(root_.sub().end(), root_.sub().end());
-
-  return std::make_pair(found, cur->sub().end());
+  return cur->FindPrefix(input.back());
 }
 
 std::vector<std::string> ModuleSymbolIndex::FindFileMatches(
