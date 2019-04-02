@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/drivers/video/amlogic-encoder:amlogic_video_encoder"
+    ]
+}
