@@ -401,7 +401,7 @@ impl DummyEventDispatcherBuilder {
     }
 
     /// Build a `Context<DummyEventDispatcher>` from the present configuration.
-    pub(crate) fn build(self) -> Context<DummyEventDispatcher> {
+    pub(crate) fn build<D: EventDispatcher + Default>(self) -> Context<D> {
         let mut ctx = Context::default();
 
         let DummyEventDispatcherBuilder {

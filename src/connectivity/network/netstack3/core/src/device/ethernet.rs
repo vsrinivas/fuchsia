@@ -666,7 +666,7 @@ mod tests {
     use packet::{Buf, BufferSerializer};
 
     use super::*;
-    use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
+    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
 
     #[test]
     fn test_mac_to_eui() {
@@ -702,7 +702,8 @@ mod tests {
         // and that we don't send an Ethernet frame whose size is greater than
         // the MTU.
         fn test(size: usize, expect_frames_sent: usize) {
-            let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4).build();
+            let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+                .build::<DummyEventDispatcher>();
             send_ip_frame(
                 &mut ctx,
                 1,

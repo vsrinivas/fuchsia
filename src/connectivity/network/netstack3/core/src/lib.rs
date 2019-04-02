@@ -19,12 +19,14 @@
 // run with that feature enabled.
 #![cfg_attr(feature = "benchmark", feature(test))]
 
-#[cfg(feature = "benchmark")]
+#[cfg(all(test, feature = "benchmark"))]
 extern crate test;
 
 #[macro_use]
 mod macros;
 
+#[cfg(all(test, feature = "benchmark"))]
+mod benchmarks;
 mod device;
 mod error;
 mod ip;

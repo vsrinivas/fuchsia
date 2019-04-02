@@ -554,7 +554,7 @@ mod tests {
     use super::*;
     use crate::device::{DeviceId, FrameDestination};
     use crate::ip::{receive_ip_packet, IpExt, Ipv4, Ipv4Addr};
-    use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
+    use crate::testutil::{DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
     use crate::wire::icmp::{
         IcmpEchoRequest, IcmpMessage, IcmpPacket, IcmpUnusedCode, MessageBody,
     };
@@ -597,7 +597,8 @@ mod tests {
             .serialize_outer()
             .unwrap();
 
-        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4).build();
+        let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
+            .build::<DummyEventDispatcher>();
         // currently only used by test_ttl_exceeded
         ctx.state_mut().ip.v4.forward = true;
         receive_ip_packet::<_, _, Ipv4>(

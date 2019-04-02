@@ -22,6 +22,10 @@ use self::options::Ipv4OptionsImpl;
 const HDR_PREFIX_LEN: usize = 20;
 pub(crate) const IPV4_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
 pub(crate) const IPV4_MAX_HDR_LEN: usize = 60;
+#[cfg(all(test, feature = "benchmark"))]
+pub(crate) const IPV4_TTL_OFFSET: usize = 8;
+#[cfg(all(test, feature = "benchmark"))]
+pub(crate) const IPV4_CHECKSUM_OFFSET: usize = 10;
 
 #[allow(missing_docs)]
 #[derive(Default, FromBytes, AsBytes, Unaligned)]

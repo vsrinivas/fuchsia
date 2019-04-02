@@ -22,7 +22,7 @@ use packet::{
     BufferMut, BufferSerializer, MtuError, ParsablePacket, ParseBufferMut, ParseMetadata,
     Serializer,
 };
-use specialize_ip_macro::specialize_ip_address;
+use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::ExistsError;
@@ -453,6 +453,15 @@ pub(crate) fn iter_routes<D: EventDispatcher, I: IpAddress>(
     return state.v4.table.iter_routes();
     #[ipv6addr]
     return state.v6.table.iter_routes();
+}
+
+/// Enable or disable forwarding for a particular IP version.
+#[specialize_ip]
+pub(crate) fn set_forward<D: EventDispatcher, I: Ip>(ctx: &mut Context<D>, forward: bool) {
+    #[ipv4]
+    ctx.state_mut().ip.v4.forward = forward;
+    #[ipv6]
+    ctx.state_mut().ip.v6.forward = forward;
 }
 
 /// Is this one of our local addresses?

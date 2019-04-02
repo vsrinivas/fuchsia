@@ -25,6 +25,10 @@ pub(crate) const ETHERNET_MIN_BODY_LEN_NO_TAG: usize = 46;
 pub(crate) const ETHERNET_MIN_BODY_LEN_WITH_TAG: usize = 42;
 #[cfg(test)]
 pub(crate) const ETHERNET_ETHERTYPE_BYTE_OFFSET: usize = 12;
+#[cfg(all(test, feature = "benchmark"))]
+pub(crate) const ETHERNET_DST_MAC_BYTE_OFFSET: usize = 0;
+#[cfg(all(test, feature = "benchmark"))]
+pub(crate) const ETHERNET_SRC_MAC_BYTE_OFFSET: usize = 6;
 
 const ETHERNET_MIN_ILLEGAL_ETHERTYPE: u16 = 1501;
 const ETHERNET_MAX_ILLEGAL_ETHERTYPE: u16 = 1535;
