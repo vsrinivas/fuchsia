@@ -14,6 +14,7 @@
 #include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
+#include <array>
 #include <memory>
 #include <utility>
 
@@ -442,6 +443,43 @@ bool NestedTasksAndWaitsAreDispatched() {
     END_TEST;
 }
 
+bool HugeAmountOfTaskAreDispatched() {
+    BEGIN_TEST;
+
+    constexpr size_t kPostCount = 128 * 1024;
+    async::TestLoop loop;
+    zx::event event;
+    ASSERT_EQ(ZX_OK, zx::event::create(0u, &event));
+
+    size_t called_count = 0;
+    size_t wait_count = 0;
+    // Creating the array on the heap as its size is greater than the available
+    // stack.
+    auto waits_ptr = fbl::make_unique<std::array<async::Wait, kPostCount>>();
+    auto& waits = *waits_ptr;
+
+    for (size_t i = 0; i < kPostCount; ++i) {
+        InitWait(
+            &waits[i],
+            [&] {
+                wait_count++;
+            },
+            event,
+            ZX_USER_SIGNAL_0);
+        ASSERT_EQ(ZX_OK, waits[i].Begin(loop.dispatcher()));
+    }
+    ASSERT_EQ(ZX_OK, event.signal(0u, ZX_USER_SIGNAL_0));
+    for (size_t i = 0; i < kPostCount; ++i) {
+        async::PostTask(loop.dispatcher(), [&] { called_count++; });
+    }
+
+    loop.RunUntilIdle();
+
+    EXPECT_EQ(kPostCount, called_count);
+    EXPECT_EQ(kPostCount, wait_count);
+    END_TEST;
+}
+
 bool TasksAreDispatchedOnManyLoops() {
     BEGIN_TEST;
 
@@ -622,6 +660,7 @@ bool DispatchOrderIsDeterministic() {
 BEGIN_TEST_CASE(SingleLoopTests)
 RUN_TEST(DefaultDispatcherIsSetAndUnset)
 RUN_TEST(FakeClockTimeIsCorrect)
+RUN_TEST(HugeAmountOfTaskAreDispatched)
 RUN_TEST(TasksAreDispatched)
 RUN_TEST(SameDeadlinesDispatchInPostingOrder)
 RUN_TEST(NestedTasksAreDispatched)

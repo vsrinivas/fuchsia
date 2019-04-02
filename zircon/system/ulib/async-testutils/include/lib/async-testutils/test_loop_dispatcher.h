@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <list>
+#include <set>
+
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
 #include <lib/async-testutils/dispatcher_stub.h>
@@ -19,7 +22,7 @@ namespace async {
 
 // An asynchronous dispatcher with an abstracted sense of time, controlled by an
 // external time-keeping object, for use in testing.
-class TestLoopDispatcher : public DispatcherStub, public TimerDispatcher {
+class TestLoopDispatcher : public DispatcherStub {
 public:
     TestLoopDispatcher(TimeKeeper* time_keeper);
     ~TestLoopDispatcher();
@@ -31,9 +34,6 @@ public:
     zx_status_t CancelWait(async_wait_t* wait) override;
     zx_status_t PostTask(async_task_t* task) override;
     zx_status_t CancelTask(async_task_t* task) override;
-
-    // TimerDispatcher operation implementation.
-    void FireTimer() override;
 
     // Dispatches the next due task or wait. Returns true iff a message was
     // dispatched.
@@ -47,37 +47,42 @@ public:
     zx::time GetNextTaskDueTime();
 
 private:
-    // Moves due tasks from |task_list_| to |due_list_|.
-    void ExtractDueTasks();
+    class Activable;
+    class TaskActivable;
+    class WaitActivable;
+    using ActivableList = std::list<fbl::unique_ptr<Activable>>;
 
-    // Dispatches the next due task.
-    void DispatchNextDueTask();
+    class AsyncTaskComparator {
+    public:
+        bool operator()(async_task_t* t1, async_task_t* t2) const { return t1->deadline < t2->deadline; }
+    };
 
-    // Dequeues from |port_| the next due packet. Must not be called if
-    // |due_packet_| is already non-null.
-    void ExtractNextDuePacket();
+    // Extracts activated tasks and waits to |activated_|.
+    void ExtractActivated();
+
+    // Removes the given task or wait from |activables_| and |activated_|.
+    zx_status_t CancelTaskOrWait(void* task_or_wait);
+
+    // Returns the position in |activables_| containing the given task or wait.
+    ActivableList::iterator FindActivable(void* task_or_wait);
 
     // Dispatches all remaining posted waits and tasks, invoking their handlers
     // with status ZX_ERR_CANCELED.
     void Shutdown();
 
-    // A reference to an external object that manages the current time and
-    // and timers.
+    // A reference to an external object that manages the current time.
     TimeKeeper* const time_keeper_;
 
-    // Port on which waits and timer expirations from |time_keeper_| are
-    // signaled.
-    zx::port port_;
-
-    // The most recent packet dequeued from |port_|.
-    fbl::unique_ptr<zx_port_packet_t> due_packet_;
-
-    // Pending tasks, earliest deadline first.
-    list_node_t task_list_;
-    // Due tasks, earliest deadlines first.
-    list_node_t due_list_;
-    // Pending waits, most recently added first.
-    list_node_t wait_list_;
+    // Pending tasks activable in the future.
+    // The ordering of the set is based on the task timeline. Multiple tasks
+    // with the same deadline will be equivalent, and be ordered by order of
+    // insertion.
+    std::multiset<async_task_t*, AsyncTaskComparator> future_tasks_;
+    // The list of tasks and waits that need to be checked for dispatch. Tasks
+    // are ordered by deadlines.
+    ActivableList activables_;
+    // Activated elements, ready to be dispatched.
+    std::list<std::pair<fbl::unique_ptr<Activable>, zx_port_packet_t>> activated_;
 };
 
 } // namespace async

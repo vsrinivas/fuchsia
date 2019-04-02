@@ -4,252 +4,252 @@
 
 #include <lib/async-testutils/test_loop_dispatcher.h>
 
+#include <fbl/unique_ptr.h>
 #include <zircon/assert.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/port.h>
 
 #define TO_NODE(type, ptr) ((list_node_t*)&ptr->state)
 #define FROM_NODE(type, ptr) ((type*)((char*)(ptr)-offsetof(type, state)))
 
 namespace async {
 
-namespace {
+// An element in the loop that can be activated. It is either a task or a wait.
+class TestLoopDispatcher::Activable {
+public:
+    virtual ~Activable() {}
 
-// The packet key used to signal timer expirations.
-constexpr uint64_t kTimerExpirationKey = 0u;
+    // Dispatch the element, calling its handler.
+    virtual void Dispatch(zx_port_packet_t* packet) const = 0;
+    // Cancel the element, calling its handler with a canceled status.
+    virtual void Cancel() const = 0;
+    // Enqueue the element in a port, to check if is is activated.
+    virtual void Enqueue(zx::port* port) const = 0;
+    // Returns whether this |Activable| corresponds to the given task or wait.
+    virtual bool Matches(void* task_or_wait) const = 0;
+    // Returns the due time for this |Activable|. If the |Activable| is a task,
+    // this corresponds to its deadline, otherwise this is an infinite time in
+    // the future.
+    virtual zx::time DueTime() const = 0;
+};
 
-// Convenience functions for task, wait, and list node management.
-inline list_node_t* WaitToNode(async_wait_t* wait) {
-    return TO_NODE(async_wait_t, wait);
-}
+class TestLoopDispatcher::TaskActivable : public Activable {
+public:
+    TaskActivable(async_dispatcher_t* dispatcher, async_task_t* task)
+        : dispatcher_(dispatcher), task_(task) {}
 
-inline async_wait_t* NodeToWait(list_node_t* node) {
-    return FROM_NODE(async_wait_t, node);
-}
-
-inline list_node_t* TaskToNode(async_task_t* task) {
-    return TO_NODE(async_task_t, task);
-}
-
-inline async_task_t* NodeToTask(list_node_t* node) {
-    return FROM_NODE(async_task_t, node);
-}
-
-inline void InsertTask(list_node_t* task_list, async_task_t* task) {
-    list_node_t* node;
-    for (node = task_list->prev; node != task_list; node = node->prev) {
-        if (task->deadline >= NodeToTask(node)->deadline) {
-            break;
-        }
+    void Dispatch(zx_port_packet_t* packet) const override {
+        task_->handler(dispatcher_, task_, packet->status);
     }
-    list_add_after(node, TaskToNode(task));
-}
-} // namespace
+
+    void Cancel() const override {
+        task_->handler(dispatcher_, task_, ZX_ERR_CANCELED);
+    }
+
+    void Enqueue(zx::port* port) const override {
+        zx_port_packet_t timer_packet{};
+        timer_packet.type = ZX_PKT_TYPE_USER;
+        zx_status_t status = port->queue(&timer_packet);
+        ZX_ASSERT_MSG(status == ZX_OK,
+                      "zx_port_queue: %s",
+                      zx_status_get_string(status));
+    }
+
+    bool Matches(void* task_or_wait) const override {
+        return task_or_wait == task_;
+    }
+
+    zx::time DueTime() const override {
+        return zx::time(task_->deadline);
+    }
+
+private:
+    async_dispatcher_t* const dispatcher_;
+    async_task_t* const task_;
+};
+
+class TestLoopDispatcher::WaitActivable : public Activable {
+public:
+    WaitActivable(async_dispatcher_t* dispatcher, async_wait_t* wait)
+        : dispatcher_(dispatcher), wait_(wait) {}
+
+    void Dispatch(zx_port_packet_t* packet) const override {
+        wait_->handler(dispatcher_, wait_, packet->status, &packet->signal);
+    }
+
+    void Cancel() const override {
+        wait_->handler(dispatcher_, wait_, ZX_ERR_CANCELED, nullptr);
+    }
+
+    void Enqueue(zx::port* port) const override {
+        zx_status_t status = zx_object_wait_async(wait_->object, port->get(),
+                                                  0,
+                                                  wait_->trigger,
+                                                  ZX_WAIT_ASYNC_ONCE);
+        ZX_ASSERT_MSG(status == ZX_OK,
+                      "zx_object_wait_async: %s",
+                      zx_status_get_string(status));
+    }
+
+    bool Matches(void* task_or_wait) const override { return task_or_wait == wait_; }
+
+    zx::time DueTime() const override {
+        return zx::time::infinite();
+    }
+
+private:
+    async_dispatcher_t* const dispatcher_;
+    async_wait_t* const wait_;
+};
 
 TestLoopDispatcher::TestLoopDispatcher(TimeKeeper* time_keeper)
     : time_keeper_(time_keeper) {
     ZX_DEBUG_ASSERT(time_keeper_);
-    list_initialize(&wait_list_);
-    list_initialize(&task_list_);
-    list_initialize(&due_list_);
-    zx_status_t status = zx::port::create(0u, &port_);
-    ZX_ASSERT_MSG(status == ZX_OK,
-                  "zx_port_create: %s",
-                  zx_status_get_string(status));
 }
 
 TestLoopDispatcher::~TestLoopDispatcher() {
     Shutdown();
-    time_keeper_->CancelTimers(this);
 }
 
-zx::time TestLoopDispatcher::Now() { return time_keeper_->Now(); }
+zx::time TestLoopDispatcher::Now() {
+    return time_keeper_->Now();
+}
 
 // TODO(ZX-2390): Return ZX_ERR_CANCELED if dispatcher is shutting down.
 zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
     ZX_DEBUG_ASSERT(wait);
 
-    // Along with the above assertion, the following check guarantees that the
-    // packet to be sent to |port_| on completion of this wait will not be
-    // mistaken for a timer expiration.
-    static_assert(0u == kTimerExpirationKey,
-                  "Timer expirations must be signaled with a packet key of 0");
-
-    list_add_head(&wait_list_, WaitToNode(wait));
-    zx_status_t status = zx_object_wait_async(wait->object, port_.get(),
-                                              reinterpret_cast<uintptr_t>(wait),
-                                              wait->trigger,
-                                              ZX_WAIT_ASYNC_ONCE);
-
-    if (status != ZX_OK) {
-        // In this rare condition, the wait failed. Since a dispatched handler will
-        // never be invoked on the wait object, we remove it ourselves.
-        list_delete(WaitToNode(wait));
-    }
-    return status;
+    activables_.push_back(fbl::make_unique<WaitActivable>(this, wait));
+    return ZX_OK;
 }
 
 zx_status_t TestLoopDispatcher::CancelWait(async_wait_t* wait) {
     ZX_DEBUG_ASSERT(wait);
 
-    list_node_t* node = WaitToNode(wait);
-    if (!list_in_list(node)) {
-        return ZX_ERR_NOT_FOUND;
-    }
-
-    // |wait| already might be encoded in |due_packet_|.
-    if (due_packet_ && due_packet_->key != kTimerExpirationKey) {
-        if (wait == reinterpret_cast<async_wait_t*>(due_packet_->key)) {
-            due_packet_.reset();
-            list_delete(node);
-            return ZX_OK;
-        }
-    }
-
-    zx_status_t status = port_.cancel(*zx::unowned_handle(wait->object),
-                                      reinterpret_cast<uintptr_t>(wait));
-    if (status == ZX_OK) {
-        list_delete(node);
-    }
-    return status;
+    return CancelTaskOrWait(wait);
 }
 
 // TODO(ZX-2390): Return ZX_ERR_CANCELED if dispatcher is shutting down.
 zx_status_t TestLoopDispatcher::PostTask(async_task_t* task) {
     ZX_DEBUG_ASSERT(task);
 
-    InsertTask(&task_list_, task);
-    if (NodeToTask(list_peek_head(&task_list_)) == task) {
-        time_keeper_->RegisterTimer(GetNextTaskDueTime(), this);
-    }
+    future_tasks_.insert(task);
     return ZX_OK;
 }
 
 zx_status_t TestLoopDispatcher::CancelTask(async_task_t* task) {
     ZX_DEBUG_ASSERT(task);
-    list_node_t* node = TaskToNode(task);
-    if (!list_in_list(node)) {
-        return ZX_ERR_NOT_FOUND;
-    }
-    list_delete(node);
-    return ZX_OK;
-}
 
-void TestLoopDispatcher::FireTimer() {
-    zx_port_packet_t timer_packet{};
-    timer_packet.key = kTimerExpirationKey;
-    timer_packet.type = ZX_PKT_TYPE_USER;
-    zx_status_t status = port_.queue(&timer_packet);
-    ZX_ASSERT_MSG(status == ZX_OK,
-                  "zx_port_queue: %s",
-                  zx_status_get_string(status));
+    auto task_it = std::find(future_tasks_.begin(), future_tasks_.end(), task);
+    if (task_it != future_tasks_.end()) {
+        future_tasks_.erase(task_it);
+        return ZX_OK;
+    }
+
+    return CancelTaskOrWait(task);
 }
 
 zx::time TestLoopDispatcher::GetNextTaskDueTime() {
-    list_node_t* node = list_is_empty(&due_list_) ?
-                        list_peek_head(&task_list_) :
-                        list_peek_head(&due_list_);
-    if (!node) {
-        return zx::time::infinite();
+    for (const auto& [activable, _] : activated_) {
+        if (activable->DueTime() < zx::time::infinite()) {
+            return activable->DueTime();
+        }
     }
-    return zx::time(NodeToTask(node)->deadline);
-}
-
-
-void TestLoopDispatcher::ExtractNextDuePacket() {
-    ZX_DEBUG_ASSERT(!due_packet_);
-    bool tasks_are_due = GetNextTaskDueTime() <= Now();
-
-    // If no tasks are due, flush all timer expiration packets until either
-    // there are no more packets to dequeue or a wait packet is reached.
-    do {
-        auto packet = fbl::make_unique<zx_port_packet_t>();
-        if (ZX_OK != port_.wait(zx::time(0), packet.get())) { return; }
-        due_packet_.swap(packet);
-    } while (!tasks_are_due && due_packet_->key == kTimerExpirationKey);
+    for (const auto& activable : activables_) {
+        if (activable->DueTime() < zx::time::infinite()) {
+            return activable->DueTime();
+        }
+    }
+    if (!future_tasks_.empty()) {
+        return zx::time((*future_tasks_.begin())->deadline);
+    }
+    return zx::time::infinite();
 }
 
 bool TestLoopDispatcher::HasPendingWork() {
-    if (GetNextTaskDueTime() <= Now()) { return true; }
-    if (!due_packet_) { ExtractNextDuePacket(); }
-    return !!due_packet_;
+    ExtractActivated();
+    return !activated_.empty();
 }
 
-void TestLoopDispatcher::DispatchNextDueTask() {
-    // if something is already in the due list, dispatch that.
-    list_node_t* node = list_peek_head(&due_list_);
-    if (node) {
-        list_delete(node);
-        async_task_t* task = NodeToTask(node);
-        task->handler(this, task, ZX_OK);
+bool TestLoopDispatcher::DispatchNextDueMessage() {
+    ExtractActivated();
+    if (activated_.empty()) {
+        return false;
+    }
 
-        // If the due list is now empty and there are still pending tasks,
-        // register a timer for the next due time.
-        if (list_is_empty(&due_list_) && !list_is_empty(&task_list_)) {
-            time_keeper_->RegisterTimer(GetNextTaskDueTime(), this);
+    auto activated_element = std::move(activated_.front());
+    activated_.erase(activated_.begin());
+    activated_element.first->Dispatch(&activated_element.second);
+    return true;
+}
+
+void TestLoopDispatcher::ExtractActivated() {
+    if (!activated_.empty()) {
+        return;
+    }
+
+    // Move all tasks that reach their deadline to the activable list.
+    while (!future_tasks_.empty() && (*future_tasks_.begin())->deadline <= Now().get()) {
+        activables_.push_back(fbl::make_unique<TaskActivable>(this, (*future_tasks_.begin())));
+        future_tasks_.erase(future_tasks_.begin());
+    }
+
+    for (auto activable_iterator = activables_.begin(); activable_iterator != activables_.end();) {
+        zx::port port;
+        zx_status_t status = zx::port::create(0u, &port);
+        ZX_ASSERT_MSG(status == ZX_OK,
+                      "zx_port_create: %s",
+                      zx_status_get_string(status));
+        (*activable_iterator)->Enqueue(&port);
+        zx_port_packet_t packet;
+        if (port.wait(zx::time(0), &packet) == ZX_OK) {
+            activated_.emplace_back(std::move(*activable_iterator), packet);
+            activable_iterator = activables_.erase(activable_iterator);
+        } else {
+            ++activable_iterator;
         }
     }
 }
 
-bool TestLoopDispatcher::DispatchNextDueMessage() {
-    if (!list_is_empty(&due_list_)) {
-        DispatchNextDueTask();
-        return true;
-    }
-
-    if (!due_packet_) { ExtractNextDuePacket(); }
-
-    if (!due_packet_) {
-        return false;
-    } else if (due_packet_->key == kTimerExpirationKey) {
-        ExtractDueTasks();
-        DispatchNextDueTask();
-        due_packet_.reset();
-    } else {  // |due_packet_| encodes a finished wait.
-        // Move the next due packet to the stack, as invoking the associated
-        // wait's handler might try to extract another.
-        zx_port_packet_t packet = *due_packet_;
-        due_packet_.reset();
-        async_wait_t* wait = reinterpret_cast<async_wait_t*>(packet.key);
-        list_delete(WaitToNode(wait));
-        wait->handler(this, wait, ZX_OK, &packet.signal);
-    }
-    return true;
-}
-
-void TestLoopDispatcher::ExtractDueTasks() {
-    list_node_t* node;
-    list_node_t* tail = nullptr;
-    zx::time current_time = time_keeper_->Now();
-    list_for_every(&task_list_, node) {
-        if (NodeToTask(node)->deadline > current_time.get()) { break; }
-        tail = node;
-    }
-    if (tail) {
-        list_node_t* head = task_list_.next;
-        task_list_.next = tail->next;
-        tail->next->prev = &task_list_;
-        due_list_.next = head;
-        head->prev = &due_list_;
-        due_list_.prev = tail;
-        tail->next = &due_list_;
-    }
-}
-
 void TestLoopDispatcher::Shutdown() {
-    list_node_t* node;
-    while ((node = list_remove_head(&wait_list_))) {
-        async_wait_t* wait = NodeToWait(node);
-        wait->handler(this, wait, ZX_ERR_CANCELED, nullptr);
-    }
-    while ((node = list_remove_head(&due_list_))) {
-        async_task_t* task = NodeToTask(node);
+    for (async_task_t* task : future_tasks_) {
         task->handler(this, task, ZX_ERR_CANCELED);
     }
-    while ((node = list_remove_head(&task_list_))) {
-        async_task_t* task = NodeToTask(node);
-        task->handler(this, task, ZX_ERR_CANCELED);
+    for (const auto& activable : activables_) {
+        activable->Cancel();
     }
+    for (const auto& activated : activated_) {
+        activated.first->Cancel();
+    }
+}
+
+zx_status_t TestLoopDispatcher::CancelTaskOrWait(void* task_or_wait) {
+    auto activable_it = FindActivable(task_or_wait);
+    if (activable_it != activables_.end()) {
+        activables_.erase(activable_it);
+        return ZX_OK;
+    }
+
+    auto activated_it =
+        std::find_if(
+            activated_.begin(),
+            activated_.end(),
+            [&](const auto& activated) { return activated.first->Matches(task_or_wait); });
+    if (activated_it != activated_.end()) {
+        activated_.erase(activated_it);
+        return ZX_OK;
+    }
+
+    return ZX_ERR_NOT_FOUND;
+}
+
+TestLoopDispatcher::ActivableList::iterator TestLoopDispatcher::FindActivable(void* task_or_wait) {
+    return std::find_if(
+        activables_.begin(),
+        activables_.end(),
+        [&](const auto& activable) { return activable->Matches(task_or_wait); });
 }
 
 } // namespace async

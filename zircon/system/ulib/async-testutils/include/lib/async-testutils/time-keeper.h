@@ -25,14 +25,6 @@ public:
 
     // Returns the current time.
     virtual zx::time Now() const = 0;
-
-    // Registers a time and a dispatcher so that when the current time is equal
-    // to or later than |deadline|, |dispatcher| will signal that the associated
-    // timer has expired.
-    virtual void RegisterTimer(zx::time deadline, TimerDispatcher* dispatcher) = 0;
-
-    // Cancel all timers registered with |dispatcher|.
-    virtual void CancelTimers(TimerDispatcher* dispatcher) = 0;
 };
 
 } // namespace
