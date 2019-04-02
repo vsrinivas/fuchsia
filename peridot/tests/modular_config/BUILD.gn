@@ -11,6 +11,6 @@ group("modular_config") {
   ]
 }
 
-modular_config("test_config") {
+modular_config_validate("test_config") {
   config = "test_config.json"
 }

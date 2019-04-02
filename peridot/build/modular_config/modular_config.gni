@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/json/validate_json.gni")
-import("//build/package.gni")
 
 # Validates a modular framework configuration file against a schema
 #
@@ -26,6 +26,8 @@ template("modular_config_validate") {
 }
 
 # Packages a modular framework configuration after validating the configuration.
+# Configurations will be found in /config/data/basemgr/startup.config and
+# /config/data/sessionmgr/startup.config.
 #
 # Parameters
 #   config (required)
@@ -43,18 +45,38 @@ template("modular_config") {
     config = invoker.config
   }
 
-  package(target_name) {
-    deprecated_system_image = true
-
-    resources = [
-      {
-        path = rebase_path(invoker.config)
-        dest = "config/startup.config"
-      },
+  config_data(invoker.target_name + "_basemgr") {
+    for_pkg = "basemgr"
+    sources = [
+      rebase_path(invoker.config),
+    ]
+    outputs = [
+      "startup.config",
     ]
 
     deps = [
-      ":${target_name}_validate",
+      ":${invoker.target_name}_validate",
+    ]
+  }
+
+  config_data(invoker.target_name + "_sessionmgr") {
+    for_pkg = "sessionmgr"
+    sources = [
+      rebase_path(invoker.config),
+    ]
+    outputs = [
+      "startup.config",
+    ]
+
+    deps = [
+      ":${invoker.target_name}_validate",
+    ]
+  }
+
+  group(invoker.target_name) {
+    deps = [
+      ":${invoker.target_name}_basemgr",
+      ":${invoker.target_name}_sessionmgr",
     ]
   }
 }
