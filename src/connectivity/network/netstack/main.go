@@ -80,7 +80,9 @@ func Main() {
 		icmp.ProtocolName4,
 		tcp.ProtocolName,
 		udp.ProtocolName,
-	}, tcpipstack.Options{})
+	}, tcpipstack.Options{
+		HandleLocal: true,
+	})
 	if err := stk.SetTransportProtocolOption(tcp.ProtocolNumber, tcp.SACKEnabled(true)); err != nil {
 		logger.Fatalf("method SetTransportProtocolOption(%v, tcp.SACKEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
 	}

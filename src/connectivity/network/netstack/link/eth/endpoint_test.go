@@ -6,9 +6,9 @@ package eth_test
 
 import (
 	"bytes"
-	"runtime"
 	"syscall/zx"
 	"testing"
+	"time"
 
 	"netstack/link/eth"
 
@@ -20,21 +20,38 @@ import (
 	"github.com/google/netstack/tcpip/stack"
 )
 
-var _ stack.NetworkDispatcher = dispatcherFunc(nil)
+type deliverNetworkPacketArgs struct {
+	srcLinkAddr, dstLinkAddr tcpip.LinkAddress
+	protocol                 tcpip.NetworkProtocolNumber
+	vv                       buffer.VectorisedView
+}
 
-type dispatcherFunc func(stack.LinkEndpoint, tcpip.LinkAddress, tcpip.LinkAddress, tcpip.NetworkProtocolNumber, buffer.VectorisedView)
+type dispatcherChan chan deliverNetworkPacketArgs
 
-func (f dispatcherFunc) DeliverNetworkPacket(linkEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
-	f(linkEP, srcLinkAddr, dstLinkAddr, protocol, vv)
+var _ stack.NetworkDispatcher = (*dispatcherChan)(nil)
+
+func (ch *dispatcherChan) DeliverNetworkPacket(_ stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
+	*ch <- deliverNetworkPacketArgs{
+		srcLinkAddr: srcLinkAddr,
+		dstLinkAddr: dstLinkAddr,
+		protocol:    protocol,
+		vv:          vv,
+	}
 }
 
 func TestEndpoint_WritePacket(t *testing.T) {
+	var outFifo, inFifo zx.Handle
+	if status := zx.Sys_fifo_create(1, eth.FifoEntrySize, 0, &outFifo, &inFifo); status != zx.ErrOk {
+		t.Fatal(status)
+	}
+
 	arena, err := eth.NewArena()
 	if err != nil {
 		t.Fatal(err)
 	}
+	arena.TestOnlyDisableOwnerCheck = true
 
-	d := ethernetext.Device{
+	baseDevice := ethernetext.Device{
 		TB: t,
 		GetInfoImpl: func() (ethernet.Info, error) {
 			return ethernet.Info{}, nil
@@ -48,64 +65,64 @@ func TestEndpoint_WritePacket(t *testing.T) {
 		SetClientNameImpl: func(string) (int32, error) {
 			return int32(zx.ErrOk), nil
 		},
-		GetFifosImpl: func() (int32, *ethernet.Fifos, error) {
-			return int32(zx.ErrOk), &ethernet.Fifos{}, nil
-		},
 	}
-	c, err := eth.NewClient(t.Name(), "topo", &d, arena)
+
+	outDevice := baseDevice
+	outDevice.GetFifosImpl = func() (int32, *ethernet.Fifos, error) {
+		return int32(zx.ErrOk), &ethernet.Fifos{Tx: outFifo, TxDepth: 1}, nil
+	}
+	outClient, err := eth.NewClient(t.Name(), "out", &outDevice, arena)
 	if err != nil {
 		t.Fatal(err)
 	}
-	e := eth.NewLinkEndpoint(c)
-	var packetsDelivered int
-	var dstLinkAddrDelivered, srcLinkAddrDelivered tcpip.LinkAddress
-	var protocolDelivered tcpip.NetworkProtocolNumber
-	var vvDelivered buffer.VectorisedView
-	e.Attach(dispatcherFunc(func(linkEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
-		packetsDelivered++
-		dstLinkAddrDelivered = dstLinkAddr
-		srcLinkAddrDelivered = srcLinkAddr
-		protocolDelivered = protocol
-		vvDelivered = vv
-	}))
-	const address = "\xff\xff\xff\xff"
+	outEndpoint := eth.NewLinkEndpoint(outClient)
+
+	inDevice := baseDevice
+	inDevice.GetFifosImpl = func() (int32, *ethernet.Fifos, error) {
+		return int32(zx.ErrOk), &ethernet.Fifos{Rx: inFifo, RxDepth: 1}, nil
+	}
+	inClient, err := eth.NewClient(t.Name(), "in", &inDevice, arena)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inEndpoint := eth.NewLinkEndpoint(inClient)
+
+	ch := make(dispatcherChan, 1)
+	inEndpoint.Attach(&ch)
 
 	// Test that the ethernet frame is built correctly.
 	const localLinkAddress = tcpip.LinkAddress("\x01\x02\x03\x04\x05\x06")
 	const remoteLinkAddress = tcpip.LinkAddress("\x11\x12\x13\x14\x15\x16")
-	// Only 3 of the 10 bytes are used to check that unused bytes are
-	// not accidentally put on the wire.
+	// Test that unused bytes are not accidentally put on the wire.
+	const header = "foo"
 	hdr := buffer.NewPrependable(10)
-	copy(hdr.Prepend(3), "foo")
-	payload := buffer.NewViewFromBytes([]byte("bar")).ToVectorisedView()
-	const fakeProtocolNumber = 45
-	const protocol = tcpip.NetworkProtocolNumber(fakeProtocolNumber)
-	if err := e.WritePacket(&stack.Route{
-		LocalAddress:      address,
-		RemoteAddress:     address,
+	if want, got := len(header), copy(hdr.Prepend(len(header)), header); got != want {
+		t.Fatalf("got copy() = %d, want = %d", got, want)
+	}
+	const body = "bar"
+	payload := buffer.NewViewFromBytes([]byte(body)).ToVectorisedView()
+	const protocol = tcpip.NetworkProtocolNumber(45)
+	if err := outEndpoint.WritePacket(&stack.Route{
 		LocalLinkAddress:  localLinkAddress,
 		RemoteLinkAddress: remoteLinkAddress,
 	}, nil, hdr, payload, protocol); err != nil {
 		t.Fatal(err)
 	}
-
-	if want := 1; packetsDelivered != want {
-		t.Errorf("got %d packets delivered, want = %d", packetsDelivered, want)
+	select {
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for ethernet packet")
+	case args := <-ch:
+		if want, got := localLinkAddress, args.srcLinkAddr; got != want {
+			t.Errorf("got srcLinkAddr = %+v, want = %+v", got, want)
+		}
+		if want, got := remoteLinkAddress, args.dstLinkAddr; got != want {
+			t.Errorf("got dstLinkAddr = %+v, want = %+v", got, want)
+		}
+		if want, got := protocol, args.protocol; got != want {
+			t.Errorf("got protocol = %d, want = %d", got, want)
+		}
+		if want, got := []byte(header+body), args.vv.ToView(); !bytes.Equal(got, want) {
+			t.Errorf("got vv = %x, want = %x", got, want)
+		}
 	}
-	if want := remoteLinkAddress; srcLinkAddrDelivered != want {
-		t.Errorf("got srcLinkAddrDelivered = %#v, want = %#v", srcLinkAddrDelivered, want)
-	}
-	if want := localLinkAddress; dstLinkAddrDelivered != want {
-		t.Errorf("got dstLinkAddrDelivered = %#v, want = %#v", dstLinkAddrDelivered, want)
-	}
-	if want := protocol; protocolDelivered != want {
-		t.Errorf("got protocolDelivered = %#v, want = %#v", protocolDelivered, want)
-	}
-	if want := buffer.NewViewFromBytes([]byte("foobar")); !bytes.Equal(vvDelivered.ToView(), want) {
-		t.Errorf("got vvDelivered.ToView() = %s, want = %s", vvDelivered.ToView(), want)
-	}
-	// We've created a driver with bogus fifos; the loop servicing them
-	// might crash. Give it a chance to run to make such crashes
-	// deterministic.
-	runtime.Gosched()
 }

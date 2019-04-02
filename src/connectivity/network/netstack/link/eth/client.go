@@ -61,6 +61,8 @@ import "C"
 
 const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
 
+const FifoEntrySize = C.sizeof_struct_eth_fifo_entry
+
 var _ link.Controller = (*Client)(nil)
 
 // A Client is an ethernet client.
