@@ -19,6 +19,10 @@
 
 #define RCA_ARG(dev) ((dev)->rca << 16)
 
+static inline uint32_t get_bits(uint32_t x, uint32_t mask, uint32_t loc) {
+    return (x & mask) >> loc;
+}
+
 zx_status_t sdmmc_request_helper(sdmmc_device_t* dev, sdmmc_req_t* req,
                                  uint8_t retries, uint32_t wait_time) {
     zx_status_t st;

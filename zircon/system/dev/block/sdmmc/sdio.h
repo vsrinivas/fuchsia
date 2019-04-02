@@ -39,21 +39,8 @@ static inline void update_bits(uint32_t *x, uint32_t mask, uint32_t loc, uint32_
     *x |= ((val << loc) & mask);
 }
 
-static inline uint32_t get_bits(uint32_t x, uint32_t mask, uint32_t loc) {
-    return (x & mask) >> loc;
-}
-
 static inline bool get_bit(uint32_t x, uint32_t mask) {
     return (x & mask) ? 1 : 0;
-}
-
-static inline void update_bits_u8(uint8_t *x, uint8_t mask, uint8_t loc, uint8_t val) {
-    *x &= ~mask;
-    *x |= ((val << loc) & mask);
-}
-
-static inline uint32_t get_bits_u8(uint8_t x, uint8_t mask, uint8_t loc) {
-    return (x & mask) >> loc;
 }
 
 static inline bool get_bit_u8(uint8_t x, uint8_t mask) {

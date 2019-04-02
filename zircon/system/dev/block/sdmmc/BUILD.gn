@@ -7,9 +7,9 @@ driver("sdmmc") {
     "mmc.c",
     "ops.c",
     "sd.c",
-    "sdio-interrupts.c",
-    "sdio.c",
-    "sdmmc.c",
+    "sdio-interrupts.cpp",
+    "sdio.cpp",
+    "sdmmc.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-block",

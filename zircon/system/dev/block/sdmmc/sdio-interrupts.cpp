@@ -18,7 +18,7 @@
 
 zx_status_t sdio_enable_interrupt(void *ctx, uint8_t fn_idx) {
     zx_status_t st = ZX_OK;
-    sdmmc_device_t *dev = ctx;
+    sdmmc_device_t *dev = reinterpret_cast<sdmmc_device_t*>(ctx);
 
     if (!sdio_fn_idx_valid(fn_idx)) {
         return ZX_ERR_INVALID_ARGS;
@@ -39,9 +39,9 @@ zx_status_t sdio_enable_interrupt(void *ctx, uint8_t fn_idx) {
     }
 
     // Enable fn intr
-    intr_byte |= 1 << fn_idx;
+    intr_byte = static_cast<uint8_t>(intr_byte | (1 << fn_idx));
     // Enable master intr
-    intr_byte |= 1;
+    intr_byte = static_cast<uint8_t>(intr_byte | 1);
 
     st = sdio_io_rw_direct(dev, true, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR,
                            intr_byte, NULL);
@@ -58,7 +58,7 @@ zx_status_t sdio_enable_interrupt(void *ctx, uint8_t fn_idx) {
 
 zx_status_t sdio_disable_interrupt(void *ctx, uint8_t fn_idx) {
     zx_status_t st = ZX_OK;
-    sdmmc_device_t *dev = ctx;
+    sdmmc_device_t *dev = reinterpret_cast<sdmmc_device_t*>(ctx);
 
     if (!sdio_fn_idx_valid(fn_idx)) {
         return ZX_ERR_INVALID_ARGS;
@@ -78,7 +78,7 @@ zx_status_t sdio_disable_interrupt(void *ctx, uint8_t fn_idx) {
         return st;
     }
 
-    intr_byte &= ~(1 << fn_idx);
+    intr_byte = static_cast<uint8_t>(intr_byte & ~(1 << fn_idx));
     if (!(intr_byte & SDIO_ALL_INTR_ENABLED_MASK)) {
         //disable master as well
         intr_byte = 0;
@@ -97,6 +97,6 @@ zx_status_t sdio_disable_interrupt(void *ctx, uint8_t fn_idx) {
 }
 
 zx_status_t sdio_get_interrupt(void *ctx, zx_handle_t *out_irq) {
-    sdmmc_device_t *dev = ctx;
+    sdmmc_device_t *dev = reinterpret_cast<sdmmc_device_t*>(ctx);
     return sdmmc_get_in_band_interrupt(&dev->host, out_irq);
 }

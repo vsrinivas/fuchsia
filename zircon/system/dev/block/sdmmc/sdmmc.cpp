@@ -67,12 +67,12 @@ static void block_complete(sdmmc_txn_t* txn, zx_status_t status, trace_async_id_
 }
 
 static zx_off_t sdmmc_get_size(void* ctx) {
-    sdmmc_device_t* dev = ctx;
+    sdmmc_device_t* dev = reinterpret_cast<sdmmc_device_t*>(ctx);
     return dev->block_info.block_count * dev->block_info.block_size;
 }
 
 static void sdmmc_unbind(void* ctx) {
-    sdmmc_device_t* dev = ctx;
+    sdmmc_device_t* dev = reinterpret_cast<sdmmc_device_t*>(ctx);
     SDMMC_LOCK(dev);
     if (dev->dead) {
         //Already in middle of release.
@@ -85,11 +85,14 @@ static void sdmmc_unbind(void* ctx) {
 }
 
 static void sdmmc_release(void* ctx) {
-    sdmmc_device_t* dev = ctx;
+    sdmmc_device_t* dev = reinterpret_cast<sdmmc_device_t*>(ctx);
     SDMMC_LOCK(dev);
     dev->dead = true;
     bool worker_thread_started = dev->worker_thread_started;
     SDMMC_UNLOCK(dev);
+
+    trace_async_id_t async_id;
+    sdmmc_txn_t* txn = NULL;
 
     if (worker_thread_started) {
         //Wait until the probe is done.If we know the type
@@ -110,8 +113,7 @@ static void sdmmc_release(void* ctx) {
     }
 
     // error out all pending requests
-    trace_async_id_t async_id = dev->async_id;
-    sdmmc_txn_t* txn = NULL;
+    async_id = dev->async_id;
     SDMMC_LOCK(dev);
     list_for_every_entry(&dev->txn_list, txn, sdmmc_txn_t, node) {
         SDMMC_UNLOCK(dev);
@@ -132,32 +134,38 @@ exit:
     free(dev);
 }
 
-static zx_protocol_device_t sdmmc_block_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .get_size = sdmmc_get_size,
-};
+static zx_protocol_device_t sdmmc_block_device_proto = []() -> zx_protocol_device_t {
+    zx_protocol_device_t proto;
+    proto.version = DEVICE_OPS_VERSION;
+    proto.get_size = sdmmc_get_size;
+    return proto;
+}();
 
-static zx_protocol_device_t sdmmc_sdio_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .get_size = sdmmc_get_size,
-};
+static zx_protocol_device_t sdmmc_sdio_device_proto = []() -> zx_protocol_device_t {
+    zx_protocol_device_t proto;
+    proto.version = DEVICE_OPS_VERSION;
+    proto.get_size = sdmmc_get_size;
+    return proto;
+}();
 
 // Device protocol.
-static zx_protocol_device_t sdmmc_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .unbind = sdmmc_unbind,
-    .release = sdmmc_release,
-};
+static zx_protocol_device_t sdmmc_device_proto = []() -> zx_protocol_device_t {
+    zx_protocol_device_t proto;
+    proto.version = DEVICE_OPS_VERSION;
+    proto.unbind = sdmmc_unbind;
+    proto.release = sdmmc_release;
+    return proto;
+}();
 
 static void sdmmc_query(void* ctx, block_info_t* info_out, size_t* block_op_size_out) {
-    sdmmc_device_t* dev = ctx;
+    sdmmc_device_t* dev = reinterpret_cast<sdmmc_device_t*>(ctx);
     memcpy(info_out, &dev->block_info, sizeof(*info_out));
     *block_op_size_out = sizeof(sdmmc_txn_t);
 }
 
 static void sdmmc_queue(void* ctx, block_op_t* btxn, block_impl_queue_callback completion_cb,
                         void* cookie) {
-    sdmmc_device_t* dev = ctx;
+    sdmmc_device_t* dev = reinterpret_cast<sdmmc_device_t*>(ctx);
     sdmmc_txn_t* txn = containerof(btxn, sdmmc_txn_t, bop);
     txn->completion_cb = completion_cb;
     txn->cookie = cookie;
@@ -207,18 +215,20 @@ static block_impl_protocol_ops_t block_proto = {
 };
 
 // SDIO protocol
-static sdio_protocol_ops_t sdio_proto = {
-    .enable_fn = sdio_enable_function,
-    .disable_fn = sdio_disable_function,
-    .enable_fn_intr = sdio_enable_interrupt,
-    .disable_fn_intr = sdio_disable_interrupt,
-    .update_block_size = sdio_modify_block_size,
-    .get_block_size = sdio_get_cur_block_size,
-    .do_rw_txn = sdio_rw_data,
-    .do_rw_byte = sdio_rw_byte,
-    .get_dev_hw_info = sdio_get_device_hw_info,
-    .get_in_band_intr = sdio_get_interrupt,
-};
+static sdio_protocol_ops_t sdio_proto = []() -> sdio_protocol_ops_t {
+    sdio_protocol_ops_t ops;
+    ops.enable_fn = sdio_enable_function;
+    ops.disable_fn = sdio_disable_function;
+    ops.enable_fn_intr = sdio_enable_interrupt;
+    ops.disable_fn_intr = sdio_disable_interrupt;
+    ops.update_block_size = sdio_modify_block_size;
+    ops.get_block_size = sdio_get_cur_block_size;
+    ops.do_rw_txn = sdio_rw_data;
+    ops.do_rw_byte = sdio_rw_byte;
+    ops.get_dev_hw_info = sdio_get_device_hw_info;
+    ops.get_in_band_intr = sdio_get_interrupt;
+    return ops;
+}();
 
 static zx_status_t sdmmc_wait_for_tran(sdmmc_device_t* dev) {
     uint32_t current_state;
@@ -307,9 +317,9 @@ static void sdmmc_do_txn(sdmmc_device_t* dev, sdmmc_txn_t* txn) {
     memset(req, 0, sizeof(*req));
     req->cmd_idx = cmd_idx;
     req->cmd_flags = cmd_flags;
-    req->arg = txn->bop.rw.offset_dev;
-    req->blockcount = txn->bop.rw.length;
-    req->blocksize = dev->block_info.block_size;
+    req->arg = static_cast<uint32_t>(txn->bop.rw.offset_dev);
+    req->blockcount = static_cast<uint16_t>(txn->bop.rw.length);
+    req->blocksize = static_cast<uint16_t>(dev->block_info.block_size);
 
     // convert offset_vmo and length to bytes
     txn->bop.rw.offset_vmo *= dev->block_info.block_size;
@@ -375,7 +385,7 @@ static int sdmmc_worker_thread(void* arg) {
            (dev->host_info.caps & SDMMC_HOST_CAP_BUS_WIDTH_8) ? 1 : 0,
            dev->host_info.max_transfer_size);
 
-    dev->block_info.max_transfer_size = dev->host_info.max_transfer_size;
+    dev->block_info.max_transfer_size = static_cast<uint32_t>(dev->host_info.max_transfer_size);
 
     // Reset the card.
     sdmmc_hw_reset(&dev->host);
@@ -407,16 +417,16 @@ static int sdmmc_worker_thread(void* arg) {
              { BIND_SDIO_PID, 0, dev->sdio_dev.funcs[0].hw_info.product_id},
         };
 
-        device_add_args_t sdio_args = {
-            .version = DEVICE_ADD_ARGS_VERSION,
-            .name = "sdio",
-            .ctx = dev,
-            .ops = &sdmmc_sdio_device_proto,
-            .proto_id = ZX_PROTOCOL_SDIO,
-            .proto_ops = &sdio_proto,
-            .props = props,
-            .prop_count = countof(props),
-        };
+        device_add_args_t sdio_args;
+        memset(&sdio_args, 0, sizeof(sdio_args));
+        sdio_args.version = DEVICE_ADD_ARGS_VERSION;
+        sdio_args.name = "sdio";
+        sdio_args.ctx = dev;
+        sdio_args.ops = &sdmmc_sdio_device_proto;
+        sdio_args.proto_id = ZX_PROTOCOL_SDIO;
+        sdio_args.proto_ops = &sdio_proto;
+        sdio_args.props = props;
+        sdio_args.prop_count = countof(props);
 
         // Use platform device protocol to create our SDIO device, if it is available.
         pdev_protocol_t pdev;
@@ -442,14 +452,14 @@ static int sdmmc_worker_thread(void* arg) {
             goto fail;
         }
 
-        device_add_args_t block_args = {
-            .version = DEVICE_ADD_ARGS_VERSION,
-            .name = "sdmmc-block",
-            .ctx = dev,
-            .ops = &sdmmc_block_device_proto,
-            .proto_id = ZX_PROTOCOL_BLOCK_IMPL,
-            .proto_ops = &block_proto,
-        };
+        device_add_args_t block_args;
+        memset(&block_args, 0, sizeof(block_args));
+        block_args.version = DEVICE_ADD_ARGS_VERSION;
+        block_args.name = "sdmmc-block";
+        block_args.ctx = dev;
+        block_args.ops = &sdmmc_block_device_proto;
+        block_args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
+        block_args.proto_ops = &block_proto;
 
         st = device_add(dev->zxdev, &block_args, &dev->child_zxdev);
         if (st != ZX_OK) {
@@ -508,7 +518,7 @@ fail:
 
 static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
     // Allocate the device.
-    sdmmc_device_t* dev = calloc(1, sizeof(*dev));
+    sdmmc_device_t* dev = reinterpret_cast<sdmmc_device_t*>(calloc(1, sizeof(*dev)));
     if (!dev) {
         zxlogf(ERROR, "sdmmc: no memory to allocate sdmmc device!\n");
         return ZX_ERR_NO_MEMORY;
@@ -523,13 +533,13 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
 
     mtx_init(&dev->lock, mtx_plain);
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "sdmmc",
-        .ctx = dev,
-        .ops = &sdmmc_device_proto,
-        .flags = DEVICE_ADD_NON_BINDABLE,
-    };
+    device_add_args_t args;
+    memset(&args, 0, sizeof(args));
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "sdmmc";
+    args.ctx = dev;
+    args.ops = &sdmmc_device_proto;
+    args.flags = DEVICE_ADD_NON_BINDABLE;
 
     SDMMC_LOCK(dev);
     st = device_add(parent, &args, &dev->zxdev);
@@ -565,10 +575,12 @@ static zx_status_t sdmmc_bind(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t sdmmc_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = sdmmc_bind,
-};
+static zx_driver_ops_t sdmmc_driver_ops = []() -> zx_driver_ops_t {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = sdmmc_bind;
+    return ops;
+}();
 
 // The formatter does not play nice with these macros.
 // clang-format off

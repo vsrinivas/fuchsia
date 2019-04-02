@@ -18,7 +18,7 @@
 #include "sdio.h"
 #include <threads.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 typedef enum sdmmc_type {
     SDMMC_TYPE_UNKNOWN,
@@ -148,4 +148,4 @@ zx_status_t sdmmc_probe_sd(sdmmc_device_t* dev);
 zx_status_t sdmmc_probe_mmc(sdmmc_device_t* dev);
 zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev);
 
-__END_CDECLS;
+__END_CDECLS
