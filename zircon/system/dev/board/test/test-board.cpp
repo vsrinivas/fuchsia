@@ -125,8 +125,10 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
         { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST },
         { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_COMPOSITE },
     };
+    // UINT32_MAX forces composite device to run in new devhost.
+    // Do this to force testing the protocol proxying support in the devmgr component driver.
     status = device_add_composite(parent, "composite-dev", props, fbl::count_of(props), composite1,
-                                  fbl::count_of(composite1), 0);
+                                  fbl::count_of(composite1), UINT32_MAX);
     if (status != ZX_OK) {
         zxlogf(ERROR, "TestBoard::Create: device_add_composite failed: %d\n", status);
     }

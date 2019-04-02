@@ -35,17 +35,21 @@ public:
     void DdkUnbind();
     void DdkRelease();
 
-    zx_status_t GpioImplConfigIn(uint32_t index, uint32_t flags);
-    zx_status_t GpioImplConfigOut(uint32_t index, uint8_t initial_value);
-    zx_status_t GpioImplSetAltFunction(uint32_t index, uint64_t function);
-    zx_status_t GpioImplRead(uint32_t index, uint8_t* out_value);
-    zx_status_t GpioImplWrite(uint32_t index, uint8_t value);
-    zx_status_t GpioImplGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq);
-    zx_status_t GpioImplReleaseInterrupt(uint32_t index);
-    zx_status_t GpioImplSetPolarity(uint32_t index, uint32_t polarity);
-    zx_status_t GpioImplSetDriveStrength(uint32_t index, uint8_t mA) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    zx_status_t GpioImplConfigIn(uint32_t pin, uint32_t flags);
+    zx_status_t GpioImplConfigOut(uint32_t pin, uint8_t initial_value);
+    zx_status_t GpioImplSetAltFunction(uint32_t pin, uint64_t function);
+    zx_status_t GpioImplRead(uint32_t pin, uint8_t* out_value);
+    zx_status_t GpioImplWrite(uint32_t pin, uint8_t value);
+    zx_status_t GpioImplGetInterrupt(uint32_t pin, uint32_t flags, zx::interrupt* out_irq);
+    zx_status_t GpioImplReleaseInterrupt(uint32_t pin);
+    zx_status_t GpioImplSetPolarity(uint32_t pin, uint32_t polarity);
+    zx_status_t GpioImplSetDriveStrength(uint32_t pin, uint8_t mA);
+
+private:
+    static constexpr uint32_t PIN_COUNT = 10;
+
+    // values for our pins
+    bool pins_[PIN_COUNT] = {};
 };
 
 zx_status_t TestGpioDevice::Init() {
@@ -97,37 +101,70 @@ void TestGpioDevice::DdkRelease() {
     delete this;
 }
 
-zx_status_t TestGpioDevice::GpioImplConfigIn(uint32_t index, uint32_t flags) {
-    return ZX_ERR_NOT_SUPPORTED;
+zx_status_t TestGpioDevice::GpioImplConfigIn(uint32_t pin, uint32_t flags) {
+    if (pin >= PIN_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
 }
 
-zx_status_t TestGpioDevice::GpioImplConfigOut(uint32_t index, uint8_t initial_value) {
-    return ZX_ERR_NOT_SUPPORTED;
+zx_status_t TestGpioDevice::GpioImplConfigOut(uint32_t pin, uint8_t initial_value) {
+    if (pin >= PIN_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
 }
 
-zx_status_t TestGpioDevice::GpioImplSetAltFunction(uint32_t index, uint64_t function) {
-    return ZX_ERR_NOT_SUPPORTED;
+zx_status_t TestGpioDevice::GpioImplSetAltFunction(uint32_t pin, uint64_t function) {
+    if (pin >= PIN_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
 }
 
-zx_status_t TestGpioDevice::GpioImplRead(uint32_t index, uint8_t* out_value) {
-    return ZX_ERR_NOT_SUPPORTED;
+zx_status_t TestGpioDevice::GpioImplRead(uint32_t pin, uint8_t* out_value) {
+    if (pin >= PIN_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    *out_value = pins_[pin]; 
+    return ZX_OK;
 }
 
-zx_status_t TestGpioDevice::GpioImplWrite(uint32_t index, uint8_t value) {
-    return ZX_ERR_NOT_SUPPORTED;
+zx_status_t TestGpioDevice::GpioImplWrite(uint32_t pin, uint8_t value) {
+    if (pin >= PIN_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    pins_[pin] = value;
+    return ZX_OK;
 }
 
-zx_status_t TestGpioDevice::GpioImplGetInterrupt(uint32_t index, uint32_t flags,
+zx_status_t TestGpioDevice::GpioImplGetInterrupt(uint32_t pin, uint32_t flags,
                                                  zx::interrupt* out_irq) {
-    return ZX_ERR_NOT_SUPPORTED;
+    if (pin >= PIN_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
 }
 
-zx_status_t TestGpioDevice::GpioImplReleaseInterrupt(uint32_t index) {
-    return ZX_ERR_NOT_SUPPORTED;
+zx_status_t TestGpioDevice::GpioImplReleaseInterrupt(uint32_t pin) {
+    if (pin >= PIN_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
 }
 
-zx_status_t TestGpioDevice::GpioImplSetPolarity(uint32_t index, uint32_t polarity) {
-    return ZX_ERR_NOT_SUPPORTED;
+zx_status_t TestGpioDevice::GpioImplSetPolarity(uint32_t pin, uint32_t polarity) {
+    if (pin >= PIN_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
+}
+
+zx_status_t TestGpioDevice::GpioImplSetDriveStrength(uint32_t pin, uint8_t mA) {
+    if (pin >= PIN_COUNT) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
 }
 
 zx_status_t test_gpio_bind(void* ctx, zx_device_t* parent) {

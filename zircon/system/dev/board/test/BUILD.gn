@@ -83,6 +83,7 @@ foreach(driver, simple_drivers) {
       "test/$driver.c",
     ]
     deps = [
+      "$zx/system/banjo/ddk-protocol-clock",
       "$zx/system/banjo/ddk-protocol-composite",
       "$zx/system/banjo/ddk-protocol-gpio",
       "$zx/system/banjo/ddk-protocol-platform-device",

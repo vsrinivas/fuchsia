@@ -10,6 +10,11 @@ driver("component") {
     ":component.proxy",
   ]
   deps = [
+    "$zx/system/banjo/ddk-protocol-amlogiccanvas",
+    "$zx/system/banjo/ddk-protocol-clock",
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-power",
+    "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
@@ -24,9 +29,15 @@ driver("component.proxy") {
     "component-proxy.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk-protocol-amlogiccanvas",
+    "$zx/system/banjo/ddk-protocol-clock",
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-power",
+    "$zx/system/banjo/ddk-protocol-sysmem",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",

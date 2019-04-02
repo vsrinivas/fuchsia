@@ -18,9 +18,9 @@ namespace {
 static const uint32_t clock_id_maps[] = {
     2, /* map_count */
     3, /* clock_count */
-    23, 45, 67, /* clock_ids */
+    2, 3, 4, /* clock_ids */
     4, /* clock_count */
-    11, 22, 33, 44, /* clock_ids */
+    5, 6, 7, 8, /* clock_ids */
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

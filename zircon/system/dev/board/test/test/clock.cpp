@@ -37,6 +37,10 @@ public:
 
     zx_status_t ClockImplEnable(uint32_t clock_id);
     zx_status_t ClockImplDisable(uint32_t clock_id);
+
+private:
+    static constexpr uint32_t MIN_CLOCK = 2;
+    static constexpr uint32_t MAX_CLOCK = 8;
 };
 
 zx_status_t TestClockDevice::Init() {
@@ -90,11 +94,17 @@ void TestClockDevice::DdkRelease() {
 }
 
 zx_status_t TestClockDevice::ClockImplEnable(uint32_t clock_id) {
-    return ZX_ERR_NOT_SUPPORTED;
+    if (clock_id < MIN_CLOCK || clock_id > MAX_CLOCK) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
 }
 
 zx_status_t TestClockDevice::ClockImplDisable(uint32_t clock_id) {
-    return ZX_ERR_NOT_SUPPORTED;
+    if (clock_id < MIN_CLOCK || clock_id > MAX_CLOCK) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
 }
 
 zx_status_t test_clock_bind(void* ctx, zx_device_t* parent) {

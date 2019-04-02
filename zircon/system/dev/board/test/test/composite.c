@@ -9,10 +9,14 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddk/protocol/clock.h>
 #include <ddk/protocol/composite.h>
+#include <ddk/protocol/gpio.h>
 #include <zircon/assert.h>
 
 #define DRIVER_NAME "test-composite"
+
+#define COMPONENT_COUNT 2
 
 typedef struct {
     zx_device_t* zxdev;
@@ -26,6 +30,49 @@ static zx_protocol_device_t test_device_protocol = {
     .version = DEVICE_OPS_VERSION,
     .release = test_release,
 };
+
+static zx_status_t test_gpio(gpio_protocol_t* gpio) {
+    zx_status_t status;
+    uint8_t value;
+
+    if ((status = gpio_config_out(gpio, 0)) != ZX_OK) {
+        return status;
+    }
+    if ((status = gpio_read(gpio, &value)) != ZX_OK || value != 0) {
+        return status;
+    }
+    if ((status = gpio_write(gpio, 1)) != ZX_OK) {
+        return status;
+    }
+    if ((status = gpio_read(gpio, &value)) != ZX_OK || value != 1) {
+        return status;
+    }
+
+    return ZX_OK;
+}
+
+static zx_status_t test_clock(clock_protocol_t* clock) {
+    zx_status_t status;
+
+    // We should have 4 clocks, so the first 4 calls should succeed and the fifth fail.
+    if ((status = clock_enable(clock, 0)) != ZX_OK) {
+        return status;
+    }
+    if ((status = clock_disable(clock, 1)) != ZX_OK) {
+        return status;
+    }
+    if ((status = clock_enable(clock, 2)) != ZX_OK) {
+        return status;
+    }
+    if ((status = clock_disable(clock, 3)) != ZX_OK) {
+        return status;
+    }
+    if ((status = clock_disable(clock, 4)) == ZX_OK) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    return ZX_OK;
+}
 
 static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     composite_protocol_t composite;
@@ -43,10 +90,34 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     size_t actual;
     zx_device_t* components[count];
     composite_get_components(&composite, components, count, &actual);
-    if (count != actual || count != 2) {
+    if (count != actual || count != COMPONENT_COUNT) {
         zxlogf(ERROR, "%s: got the wrong number of components (%u, %zu)\n", DRIVER_NAME, count,
                actual);
         return ZX_ERR_BAD_STATE;
+    }
+
+    gpio_protocol_t gpio;
+    clock_protocol_t clock;
+
+    status = device_get_protocol(components[0], ZX_PROTOCOL_GPIO, &gpio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO\n", DRIVER_NAME);
+        return status;
+    }
+    status = device_get_protocol(components[1], ZX_PROTOCOL_CLOCK, &clock);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
+        return status;
+    }
+
+    if ((status = test_gpio(&gpio)) != ZX_OK) {
+        zxlogf(ERROR, "%s: test_gpio failed: %d\n", DRIVER_NAME, status);
+        return status;
+    }
+
+    if ((status = test_clock(&clock)) != ZX_OK) {
+        zxlogf(ERROR, "%s: test_clock failed: %d\n", DRIVER_NAME, status);
+        return status;
     }
 
     test_t* test = calloc(1, sizeof(test_t));
