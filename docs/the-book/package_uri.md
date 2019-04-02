@@ -155,7 +155,7 @@ of the following latin-1 characters: digits (`0` to `9`) and lower-case letters
 
  * `15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b`
 
-[merkleroot]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/merkleroot.md
+[merkleroot]: /docs/the-book/merkleroot.md
 
 ## Resource Identity
 
@@ -180,7 +180,7 @@ Per [RFC 3986], resource paths are percent-encoded when they appear in URIs.
  * `assets/en/strings`
  * `hello/unicode/%F0%9F%98%81`, which decodes to `hello/unicode/😁`
 
-[Fuchsia filesystem paths]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/namespaces.md
+[Fuchsia filesystem paths]: /docs/the-book/namespaces.md
 [RFC 3986]: https://tools.ietf.org/html/rfc3986#page-11
 
 ## The fuchsia-pkg URI Scheme

@@ -33,7 +33,7 @@ environments = [
 ```
 
 See
-[guest_integration_tests](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/guest/integration/BUILD.gn#45)
+[guest_integration_tests](/garnet/bin/guest/integration/BUILD.gn#45)
 for an example - and below for definitions of 'dimension' and 'tags'
 
 ### Default Behavior
@@ -53,7 +53,7 @@ and that hardware is a scarce resource.
 ### Predefined environments
 
 One may import
-[//build/testing/environments.gni](https://fuchsia.googlesource.com/fuchsia/+/master/build/testing/environments.gni)
+[//build/testing/environments.gni](/build/testing/environments.gni)
 and use the environment-related convenience variables defined within. For
 example, `basic_envs` includes all of the environments that are available to
 anyone without special consultation with the infra team.
@@ -78,7 +78,7 @@ fuchsia-infra-team@google.com"
 ## Validation
 
 The `test_plaforms` list in
-[//build/testing/platforms.gni](https://fuchsia.googlesource.com/fuchsia/+/master/build/testing/platforms.gni)
+[//build/testing/platforms.gni](/build/testing/platforms.gni)
 is the source of truth for what platforms are are available for testing and what
 dimensions they possess to match against. Say an environment *matches* a
 platform entry if the former's `dimensions` is a subscope of the latter; say an

@@ -470,5 +470,5 @@ the system ABI. For instance, it may refer to an integer field that is
 less aligned than required by the language. This can be expressed via
 compiler extensions such as pragma pack.
 
-[compiler.h]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/public/zircon/compiler.h
+[compiler.h]: /zircon/system/public/zircon/compiler.h
 [library naming document]: ../languages/c-cpp/naming.md

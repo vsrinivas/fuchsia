@@ -1607,4 +1607,4 @@ interact with a potentially large set of logical objects through a single
 protocol.
 
 <!-- xrefs -->
-[ftp-025]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-025.md
+[ftp-025]: /docs/development/languages/fidl/reference/ftp/ftp-025.md

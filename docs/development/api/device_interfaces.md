@@ -49,5 +49,5 @@ any shared data structures with `struct` definitions and provide detailed
 documentation about participation in the protocol.  Packed structures are not
 currently supported.
 
-[fidl-readability-rubric]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md
-[bits]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md#bits
+[fidl-readability-rubric]: /docs/development/api/fidl.md
+[bits]: /docs/development/api/fidl.md#bits

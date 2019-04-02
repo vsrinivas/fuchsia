@@ -199,7 +199,7 @@ intending to satisfy a variety of distinct needs.
 
 ### MemFS: An in-memory filesystem
 
-[MemFS](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/memfs)
+[MemFS](/zircon/system/ulib/memfs)
 is used to implement requests to temporary filesystems like `/tmp`, where files
 exist entirely in RAM, and are not transmitted to an underlying block device.
 This filesystem is also currently used for the “bootfs” protocol, where a
@@ -209,7 +209,7 @@ unwrapped into user-accessible Vnodes at boot (these files are accessible in
 
 ### MinFS: A persistent filesystem
 
-[MinFS](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/uapp/minfs/)
+[MinFS](/zircon/system/uapp/minfs/)
 is a simple, traditional filesystem which is capable of storing files
 persistently. Like MemFS, it makes extensive use of the VFS layers mentioned
 earlier, but unlike MemFS, it requires an additional handle to a block device
@@ -220,7 +220,7 @@ filesystems to a namespace from the command line.
 
 ### Blobfs: An immutable, integrity-verifying package storage filesystem
 
-[Blobfs](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/uapp/blobfs/)
+[Blobfs](/zircon/system/uapp/blobfs/)
 is a simple, flat filesystem optimized for “write-once, then read-only” [signed
 data](merkleroot.md), such as [application packages](package_metadata.md).
 Other than two small prerequisites (file names which are deterministic, content
@@ -233,7 +233,7 @@ single flat directory of hashes, and blobs can be accessed by operations like
 
 ### ThinFS: A FAT filesystem written in Go
 
-[ThinFS](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/thinfs/) is an implementation of a
+[ThinFS](/garnet/go/src/thinfs/) is an implementation of a
 FAT filesystem in Go. It serves a dual purpose: first, proving that our system
 is actually modular, and capable of using novel filesystems, regardless of
 language or runtime. Secondly, it provides a mechanism for reading a universal
@@ -241,7 +241,7 @@ filesystem, found on EFI partitions and many USB sticks.
 
 ### FVM
 
-[Fuchsia Volume Manager](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/dev/block/fvm/)
+[Fuchsia Volume Manager](/zircon/system/dev/block/fvm/)
 is a "logical volume manager" that adds flexibility on top of existing block
 devices. The current features include ability to add, remove, extend and
 shrink virtual partitions. To make these features possible, internally, fvm
@@ -254,7 +254,7 @@ If a slice belongs to a partition then FVM maintains metadata about which
 partition is using the slice, and the virtual address of the slice within
 that partition.
 
-[Superblock](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/fvm/include/fvm/format.h#27)
+[Superblock](/zircon/system/ulib/fvm/include/fvm/format.h#27)
 at block zero describe the on-disk layout of the FVM, which may look like
 
 ```c
@@ -298,11 +298,11 @@ The slice allocation table is made up of tightly packed slice entries
    * what logical slice within partition the slice maps to
 
 FVM library can be found
-[here](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/ulib/fvm/). During
-[paving](https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/workflows/paving.md),
+[here](/zircon/system/ulib/fvm/). During
+[paving](/docs/development/workflows/paving.md),
 some partitions are copied from host to target. So the partitions and FVM
 file itself may be created on host. To do this there is host side utility
-[here](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/host/fvm).
+[here](/zircon/system/host/fvm).
 Integrity of the FVM device/file can be verbosely verified with
-[fvm-check](https://fuchsia.googlesource.com/fuchsia/+/HEAD/zircon/system/uapp/fvm-check)
+[fvm-check](/zircon/system/uapp/fvm-check)
 

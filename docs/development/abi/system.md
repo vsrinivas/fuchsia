@@ -48,13 +48,13 @@ The vDSO is a virtual shared library that provides access to the kernel.
 Concretely, the vDSO is an ELF shared library, called `libzircon.so`, that
 exports a number of symbols with a C calling convention. The source of truth for
 these symbols is
-[syscalls.abigen](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/public/zircon/syscalls.abigen).
+[syscalls.abigen](/zircon/system/public/zircon/syscalls.abigen).
 Their semantics are described in
-[the documentation](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/).
+[the documentation](/zircon/docs/syscalls/).
 
 Of particular importance are the semantics of the clocks defined by
 `libzircon.so`. The semantics of these clocks are described by
-[clock_get.md](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/clock_get.md#supported-clock-ids)
+[clock_get.md](/zircon/docs/syscalls/clock_get.md#supported-clock-ids)
 
 ### FIDL protocols
 
@@ -146,7 +146,7 @@ executable running in the process, but some of the initial structure of the
 process is controlled by the system and part of the system ABI.
 
 For additional details, see
-[Program Loading](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/program_loading.md).
+[Program Loading](/zircon/docs/program_loading.md).
 
 #### ELF loader
 

@@ -70,4 +70,4 @@ description in the present document.
 Note that only package files are allowed in such a directory, with the exception
 of `README.md` files for documentation purposes.
 
-[verify-layer]: https://fuchsia.googlesource.com/fuchsia/+/master/scripts/packages/README.md
+[verify-layer]: /scripts/packages/README.md

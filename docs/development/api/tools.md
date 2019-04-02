@@ -18,11 +18,11 @@ The core SDK will not contain only:
 
   * The tool binary itself.
 
-  * The [dev_finder](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/docs/device_discovery.md)
+  * The [dev_finder](/sdk/docs/device_discovery.md)
     tool which can enumerate Fuchsia devices to get their names.
 
   * A document in
-    [//sdk/docs](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/sdk/docs/)
+    [//sdk/docs](/sdk/docs/)
     describing the contract of this tool and how to connect it to the target
     system. The target audience of this document is people writing integration
     scripts rather than being an end-user-friendly “how-to” (debugger example).

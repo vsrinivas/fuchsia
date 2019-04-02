@@ -4,7 +4,7 @@
 
 Fuchsia tracing library and utilities require access to the `trace_manager`'s
 services in the environment, which is typically set up by the
-[boot sequence](https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/boot_sequence.md).
+[boot sequence](/docs/the-book/boot_sequence.md).
 
 Note that capturing traces requires that the `devtools` package be included.  If your build
 configuration does not include `devtools` by default, then you can add it manually by invoking

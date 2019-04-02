@@ -37,7 +37,7 @@ the [main FIDL page](../README.md)
 ## Example source code
 
 Most examples used in this tutorial are located in Garnet at:
-[//garnet/examples/fidl/](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/)
+[//garnet/examples/fidl/](/garnet/examples/fidl/)
 
 Language-specific examples may be found in other directories;
 this is indicated as appropriate.

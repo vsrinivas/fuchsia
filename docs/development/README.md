@@ -84,6 +84,6 @@ This section covers Fuchsia-wide conventions and best practices.
  - [CTU analysis in Zircon](workflows/ctu_analysis.md)
 
 
-[acer_12]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/targets/acer12.md "Acer 12"
-[intel_nuc]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/targets/nuc.md "Intel NUC"
+[acer_12]: /zircon/docs/targets/acer12.md "Acer 12"
+[intel_nuc]: /zircon/docs/targets/nuc.md "Intel NUC"
 [pixelbook]: hardware/pixelbook.md "Pixelbook"

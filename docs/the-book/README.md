@@ -93,20 +93,20 @@ also provides core drivers and Fuchsia's libc implementation.
  - Verified boot
  - Updater
 
-[zircon-concepts]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/concepts.md
-[zircon-syscalls]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls.md
-[zircon-vdso]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/vdso.md
-[zircon-ddk]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/ddk/overview.md
+[zircon-concepts]: /zircon/docs/concepts.md
+[zircon-syscalls]: /zircon/docs/syscalls.md
+[zircon-vdso]: /zircon/docs/vdso.md
+[zircon-ddk]: /zircon/docs/ddk/overview.md
 [FIDL]: ../development/languages/fidl/README.md
-[framework-story]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/modular/story.md
-[framework-module]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/modular/module.md
-[framework-agent]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/modular/agent.md
-[ledger]: https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/docs/README.md
-[bluetooth]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/bluetooth/README.md
-[telephony]: https://fuchsia.googlesource.com/fuchsia/+/master/src/connectivity/telephony/
-[magma]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/lib/magma/
-[escher]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/escher/
-[scenic]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/ui/scenic.md
-[input-manager]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/ui/input.md
-[view-manager]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/ui/view_manager/
+[framework-story]: /peridot/docs/modular/story.md
+[framework-module]: /peridot/docs/modular/module.md
+[framework-agent]: /peridot/docs/modular/agent.md
+[ledger]: /src/ledger/docs/README.md
+[bluetooth]: /garnet/bin/bluetooth/README.md
+[telephony]: /src/connectivity/telephony/
+[magma]: /garnet/lib/magma/
+[escher]: /garnet/public/lib/escher/
+[scenic]: /garnet/docs/ui/scenic.md
+[input-manager]: /garnet/docs/ui/input.md
+[view-manager]: /garnet/bin/ui/view_manager/
 [flutter]: https://flutter.io/

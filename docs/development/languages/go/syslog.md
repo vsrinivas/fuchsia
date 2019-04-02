@@ -68,4 +68,4 @@ logger.VLogTf(1, "tag", "my msg: %d", 10); // verbose logs
 ```
 
 ### Reference
-[Golang APIs](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/syslog/go/src/syslog/logger/logger.go)
+[Golang APIs](/garnet/public/lib/syslog/go/src/syslog/logger/logger.go)

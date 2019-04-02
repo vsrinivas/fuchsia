@@ -44,6 +44,6 @@ Jiri snapshot of the most recent ‘jiri update’
 
 # Kernel version
 ## Location:
-Stored in vDSO.  Accessed through [`zx_system_get_version`]( https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/system_get_version.md)
+Stored in vDSO.  Accessed through [`zx_system_get_version`]( /zircon/docs/syscalls/system_get_version.md)
 
 Zircon revision computed during the kernel build process.

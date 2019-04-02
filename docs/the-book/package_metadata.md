@@ -4,20 +4,20 @@ The Fuchsia package format contains an extensive metadata directory. This
 document describes the metadata extensions that are understood by Fuchsia
 itself.
 
-See [https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/pm#Structure-of-a-Fuchsia-Package] for
+See [/garnet/go/src/pm#Structure-of-a-Fuchsia-Package] for
 more information about where these files appear in a package.
 
 ## metadata
 
-See [https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/pm#metadata]
+See [/garnet/go/src/pm#metadata]
 
 ## contents
 
-See [https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/pm#contents]
+See [/garnet/go/src/pm#contents]
 
 ## signature
 
-See [https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/pm#signature]
+See [/garnet/go/src/pm#signature]
 
 ## Component manifest
 
@@ -221,4 +221,4 @@ The set of currently known features are as follows:
 See [sandboxing.md](sandboxing.md) for more information about sandboxing.
 
 
-[runner]: https://fuchsia.googlesource.com/fuchsia/+/master/sdk/fidl/fuchsia.sys/runner.fidl
+[runner]: /sdk/fidl/fuchsia.sys/runner.fidl

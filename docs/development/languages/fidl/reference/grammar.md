@@ -161,5 +161,5 @@ in the grammar, but the compiler limits this to an `int32`, `uint32`, or
 an enum thereof.
 
 <!-- xrefs -->
-[primitives]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/language.md#primitives
+[primitives]: /docs/development/languages/fidl/reference/language.md#primitives
 

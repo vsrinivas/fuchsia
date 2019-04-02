@@ -22,7 +22,7 @@ corresponding C++ type, and adds ownership semantics to those
 handles. It otherwise takes no opinions around naming or policy.
 
 For more information about libzx, see
-[its documentation](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/zx/README.md).
+[its documentation](/zircon/system/ulib/zx/README.md).
 
 ## FBL
 
@@ -39,7 +39,7 @@ are useful library code for kernel and device driver environments (for
 instance, slab allocation).
 
 For more information about FBL,
-[read its overview](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/cxx.md#fbl).
+[read its overview](/zircon/docs/cxx.md#fbl).
 
 # FXL
 

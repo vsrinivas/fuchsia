@@ -146,6 +146,6 @@ This is done by running a frontend. See the [frontend documentation][frontends]
 for more details.
 
 
-[backend]: https://fuchsia.googlesource.com/fuchsia/+/master/build/sdk/README.md
-[frontends]: https://fuchsia.googlesource.com/fuchsia/+/master/scripts/sdk/README.md
+[backend]: /build/sdk/README.md
+[frontends]: /scripts/sdk/README.md
 [bazel]: https://bazel.build/

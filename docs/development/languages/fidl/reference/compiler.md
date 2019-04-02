@@ -3,7 +3,7 @@
 This document describes the command-line interface to the FIDL compiler.
 
 Information on the internals of that tool lives
-[alongside the source of the tool](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/host/fidl/README.md).
+[alongside the source of the tool](/zircon/system/host/fidl/README.md).
 
 See [Overview](../intro/README.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
@@ -33,7 +33,7 @@ a number of arguments:
 
  * `--json JSON_PATH`. If present, this flag instructs `fidlc` to output the
    library's intermediate representation at the given path. The intermediate
-   representation is JSON that conforms to [a particular schema](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/host/fidl/schema.json).
+   representation is JSON that conforms to [a particular schema](/zircon/system/host/fidl/schema.json).
    The intermediate representation is used as input to the various backends.
 
  * `--name LIBRARY_NAME`. If present, this flag instructs `fidlc` to validate
@@ -59,7 +59,7 @@ takes a number of arguments:
 
  * `--json` (required). The path to the intermediate representation of the
    library. The intermediate representation is JSON that conforms to
-   [a particular schema](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/host/fidl/schema.json).
+   [a particular schema](/zircon/system/host/fidl/schema.json).
 
  * `--generators` (required). A comma-separated list of generators to run on the
    given library. The following generators are currently supported: `cpp`, `go`,

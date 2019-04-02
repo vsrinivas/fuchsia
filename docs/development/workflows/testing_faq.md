@@ -23,7 +23,7 @@ executable("unittests") {
 
 A: An unbroken chain of dependencies that roll up to a config file under
 `//<layer>/packages/tests/`, such as
-[`//garnet/packages/tests/`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/packages/tests/).
+[`//garnet/packages/tests/`](/garnet/packages/tests/).
 
 For example:
 

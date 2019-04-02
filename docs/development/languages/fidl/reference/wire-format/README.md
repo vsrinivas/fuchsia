@@ -810,5 +810,5 @@ Zero is also the value of the `ZX_HANDLE_INVALID` constant.
 New handle types can easily be added to the language without affecting the wire format
 since all handles are transferred the same way.
 
-[channel call]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_call.md
-[ordinal hashing]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-020.md
+[channel call]: /zircon/docs/syscalls/channel_call.md
+[ordinal hashing]: /docs/development/languages/fidl/reference/ftp/ftp-020.md

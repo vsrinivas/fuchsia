@@ -270,7 +270,7 @@ You may wish to peruse the [testing FAQ](development/workflows/testing_faq.md).
 
 ## Contribute changes
 
-* See [CONTRIBUTING.md](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/CONTRIBUTING.md).
+* See [CONTRIBUTING.md](/CONTRIBUTING.md).
 
 ## Additional helpful documents
 

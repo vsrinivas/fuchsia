@@ -12,7 +12,7 @@ particular block device driver, and eventually to real hardware.
 
 Particular block device drivers (USB, AHCI / SATA, Ramdisk, GPT, etc) implement
 the [`ZX_PROTOCOL_BLOCK_CORE`
-prototol](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/public/zircon/device/block.h),
+prototol](/zircon/system/public/zircon/device/block.h),
 which allows clients to queue transactions and query the block device.
 
 ## Fast Block I/O

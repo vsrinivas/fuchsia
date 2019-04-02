@@ -192,7 +192,7 @@ the [dashboard user guide] and the instructions for [automating benchmarks].
 
 [automating benchmarks]: running_on_ci.md
 [dashboard user guide]: catapult_user_guide.md
-[examples/benchmark]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/benchmark/
+[examples/benchmark]: /garnet/examples/benchmark/
 [results schema]: results_schema.md
 [best practices]: #best-practices
 [tracing]: ../tracing/tracing-usage-guide.md

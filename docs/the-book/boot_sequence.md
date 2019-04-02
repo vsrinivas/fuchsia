@@ -5,7 +5,7 @@ This document describes the boot sequence for Fuchsia from the time the Zircon
 layer hands control over to the Garnet layer.  This document is a work in
 progress that will need to be extended as we bring up more of the system.
 
-# Layer 1: [appmgr](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/appmgr)
+# Layer 1: [appmgr](/garnet/bin/appmgr)
 
 `appmgr`'s job is to host the environment tree and help create
 processes in these environments.  Processes created by `appmgr`
@@ -18,7 +18,7 @@ that environment. Typically, these applications create environments nested
 directly in the root environment. The default configuration contains one initial
 app: `bootstrap`.
 
-# Layer 2: [sysmgr](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/sysmgr/)
+# Layer 2: [sysmgr](/garnet/bin/sysmgr/)
 
 `sysmgr`'s job is to create the boot environment and create a number of
  initial components in the boot environment.
@@ -37,7 +37,7 @@ service implemented by that app.
 startup. The list of components to run at startup is contained in the
 `/system/data/bootstrap/apps.config` file.
 
-# Layer 3: [basemgr](https://fuchsia.googlesource.com/fuchsia/+/master/peridot/bin/basemgr/)
+# Layer 3: [basemgr](/peridot/bin/basemgr/)
 
 `basemgr`'s job is to setup the interactive flow for user login and user
 management.
@@ -52,7 +52,7 @@ enumerate all existing users and login as an existing user or in incognito mode.
 
 Adding a new user is done using an Account Manager service that can talk to an
 identity provider to get an id token to access the user's
-[Ledger](https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/bin/).
+[Ledger](/src/ledger/bin/).
 
 Logging-in as an existing user starts an instance of `sessionmgr` with that
 user's id token and with a namespace that is mapped within and managed by

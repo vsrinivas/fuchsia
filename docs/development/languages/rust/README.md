@@ -89,12 +89,12 @@ Googler-only channels, see [go/fuchsia-rust-googlers].
 - [Rust FIDL server/client tutorial][fidl-tutorial]
 - [Syslog API](syslog.md)
 
-[target-library-rustc]: https://fuchsia.googlesource.com/fuchsia/+/master/build/rust/rustc_library.gni "Rust library"
-[target-binary-rustc]: https://fuchsia.googlesource.com/fuchsia/+/master/build/rust/rustc_binary.gni "Rust binary"
-[rust-examples]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/rust/
+[target-library-rustc]: /build/rust/rustc_library.gni "Rust library"
+[target-binary-rustc]: /build/rust/rustc_binary.gni "Rust binary"
+[rust-examples]: /garnet/examples/rust/
 [fargo]: https://fuchsia.googlesource.com/fargo
 [rustfmt-install]: https://github.com/rust-lang-nursery/rustfmt#quick-start
-[rustfmt-toml]: https://fuchsia.googlesource.com/fuchsia/+/master/build/rustfmt.toml
+[rustfmt-toml]: /build/rustfmt.toml
 [fidl-tutorial]: ../fidl/tutorial/tutorial-rust.md
 [rust@fuchsia.com]: https://groups.google.com/a/fuchsia.com/forum/#!forum/rust-fuchsia
 [go/fuchsia-rust-googlers]: https://goto.google.com/fuchsia-rust-googlers

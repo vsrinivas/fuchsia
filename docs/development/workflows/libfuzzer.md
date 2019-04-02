@@ -532,9 +532,9 @@ become available.
 [todo]: #q-what-can-i-expect-in-the-future-for-fuzzing-in-fuchsia-
 [thin-air]: https://lcamtuf.blogspot.com/2014/11/pulling-jpegs-out-of-thin-air.html
 [startup initialization]: https://llvm.org/docs/LibFuzzer.html#startup-initialization
-[fuzzer.gni]: https://fuchsia.googlesource.com/fuchsia/+/master/build/fuzzing/fuzzer.gni
+[fuzzer.gni]: /build/fuzzing/fuzzer.gni
 [build macro]: https://llvm.org/docs/LibFuzzer.html#fuzzer-friendly-build-mode
-[compiler flags]: https://fuchsia.googlesource.com/fuchsia/+/master/build/config/sanitizers/BUILD.gn
+[compiler flags]: /build/config/sanitizers/BUILD.gn
 [corpus]: https://llvm.org/docs/LibFuzzer.html#corpus
 [3p-corpus]: #q-can-i-use-an-existing-third-party-corpus-
 [dictionaries]: https://llvm.org/docs/LibFuzzer.html#dictionaries

@@ -42,9 +42,9 @@ Get code-review+2, merge the change into [third_party/rust_crates][3p-crates].
 1. Add a patch section for the crate to the workspace;
 1. Run the update script.
 
-[3p-crates]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/third_party/rust_crates/
-[3p-cargo-toml]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/third_party/rust_crates/Cargo.toml
-[3p-vendor]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/third_party/rust_crates/vendor
+[3p-crates]: /third_party/rust_crates/
+[3p-cargo-toml]: /third_party/rust_crates/Cargo.toml
+[3p-vendor]: /third_party/rust_crates/vendor
 [osrb-process]: https://docs.google.com/document/d/1X3eNvc4keQxOpbkGUiyYBMtr3ueEnVQCPW61FT96o_E/edit#heading=h.7mb7m2qs89th
 [jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/master/runtimes/rust "Jiri manifest"
 

@@ -34,4 +34,4 @@ dependencies:
 
 [pub]: https://pub.dartlang.org/ "Pub"
 [dart-3p]: https://fuchsia.googlesource.com/third_party/dart-pkg/+/master "Third-party dependencies"
-[dart-3p-script]: https://fuchsia.googlesource.com/fuchsia/+/master/scripts/dart/update_3p_packages.py "Dependencies script"
+[dart-3p-script]: /scripts/dart/update_3p_packages.py "Dependencies script"

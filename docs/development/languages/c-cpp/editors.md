@@ -49,7 +49,7 @@ you are trying to solve
 
 ## VIM
 
-See [Helpful Vim tools for Fuchsia development](https://fuchsia.googlesource.com/fuchsia/+/master/scripts/vim/README.md).
+See [Helpful Vim tools for Fuchsia development](/scripts/vim/README.md).
 
 ## Visual Studio Code (vscode)
 

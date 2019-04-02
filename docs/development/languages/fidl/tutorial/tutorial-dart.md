@@ -14,7 +14,7 @@ design and implementation of FIDL, as well as the
 
 We'll use the `echo.fidl` sample that we discussed in the [FIDL Tutorial](README.md)
 introduction section, by opening
-[//garnet/examples/fidl/services/echo.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/services/echo.fidl).
+[//garnet/examples/fidl/services/echo.fidl](/garnet/examples/fidl/services/echo.fidl).
 
 <!-- NOTE: the code snippets here need to be kept up to date manually by
      copy-pasting from the actual source code. Please update a snippet

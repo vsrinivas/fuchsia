@@ -45,7 +45,7 @@ there can be many trace clients in a system.
 
 What's interesting about Fuchsia's distributed implementation is that
 for efficiency, the trace provider writes the data directly into a shared memory segment
-(a Zircon [**VMO** &mdash; Virtual Memory Object](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/vm_object.md)).
+(a Zircon [**VMO** &mdash; Virtual Memory Object](/zircon/docs/objects/vm_object.md)).
 The data isn't copied anywhere, it's stored in memory as it's generated.
 
 This means that the trace client must somehow find out where that data is stored.
@@ -650,7 +650,7 @@ end-to-end from the client, through the server, and back to the client.
 
 # References
 
-* [Adding Tracing to Device Drivers](../../../zircon/docs/ddk/tracing.md)
+* [Adding Tracing to Device Drivers](/zircon/docs/ddk/tracing.md)
   gives details on source code additions (e.g., what `#include` files to add) and Makefile
   additions required by the trace provider in order to add tracing, or disable it completely.
 * [Fuchsia Tracing System Design](design.md)

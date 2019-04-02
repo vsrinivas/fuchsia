@@ -49,7 +49,7 @@ FX_LOGF(INFO, NULL, "my msg: %d", 10);
 
 ### Reference
 
-[C APIs](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/syslog/include/lib/syslog/global.h)
+[C APIs](/zircon/system/ulib/syslog/include/lib/syslog/global.h)
 
 ## In C++
 
@@ -118,6 +118,6 @@ FX_LOGST(INFO, "tag") << "my message";
 
 ### Reference
 
-[C++ APIs](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/syslog/cpp/logger.h)
+[C++ APIs](/garnet/public/lib/syslog/cpp/logger.h)
 <br/>
-[FSL initialization API](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/fsl/syslogger/init.h)
+[FSL initialization API](/garnet/public/lib/fsl/syslogger/init.h)

@@ -838,5 +838,5 @@ protocol SystemClock {
 
 <!-- xref -->
 [mixin]: https://en.wikipedia.org/wiki/Mixin
-[ftp-023]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-023.md
+[ftp-023]: /docs/development/languages/fidl/reference/ftp/ftp-023.md
 

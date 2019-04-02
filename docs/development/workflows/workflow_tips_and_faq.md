@@ -207,7 +207,7 @@ git that provides support for managing more than one git repository in sync
 (the Fuchsia code base is composed of many git repositories), as well as
 synchronizing a set of prebuilt artifacts, such as those found in
 `//prebuilt` and `//buildtools`.
-[`fx`](https://fuchsia.googlesource.com/fuchsia/+/master/scripts/fx) is a
+[`fx`](/scripts/fx) is a
 convenience wrapper around many tools built in the Fuchsia tree, and helps
 with many daily workflow tasks, such as building, running tests, consuming
 logs, connecting to shells on devices, and many other operations.

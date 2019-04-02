@@ -6,19 +6,19 @@ Fuchsia.
 ## System calls
 
 The lowest level of Fuchsia support in a language provides access to the
-[Zircon system calls](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/).
+[Zircon system calls](/zircon/docs/syscalls/).
 Exposing these system calls lets programs written in the language interact with
 the kernel and, transitively, with the rest of the system.
 
 Programs cannot issue system calls directly. Instead, they make system calls by
-calling functions in the [vDSO](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/vdso.md),
+calling functions in the [vDSO](/zircon/docs/vdso.md),
 which is loaded into newly created processes by their creator.
 
 The public entry points for the vDSO are defined in
-[syscalls.abigen](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/public/zircon/syscalls.abigen).
-This file is processed by the [abigen](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/vdso.md#abigen-tool)
+[syscalls.abigen](/zircon/system/public/zircon/syscalls.abigen).
+This file is processed by the [abigen](/zircon/docs/vdso.md#abigen-tool)
 tool. When adding a new language, consider using the `-json` flag to dump
-[a JSON representation](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/host/abigen/syscall_schema.json)
+[a JSON representation](/zircon/system/host/abigen/syscall_schema.json)
 of the Zircon system calls:
 
 ```sh
@@ -36,9 +36,9 @@ sending messages to other processes), and then go back to sleep in their event
 loop.
 
 The fundamental building block for event loops in Fuchsia is the
-[port](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/port.md)
+[port](/zircon/docs/objects/port.md)
 object. A thread can sleep in a port using
-[`zx_port_wait`](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/port_wait.md).
+[`zx_port_wait`](/zircon/docs/syscalls/port_wait.md).
 When the kernel wakes up the thread, the kernel provides a *packet*, which is a
 data structure that describes why the kernel woke up the thread.
 
@@ -48,7 +48,7 @@ Rather than expose the port directly, language mantainers usually provide
 a library that abstracts over a port and provides asynchronous wait operations.
 
 Most asynchronous wait operations bottom out in
-[`zx_object_wait_async`](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_wait_async.md). Typically, the `port` and `key`
+[`zx_object_wait_async`](/zircon/docs/syscalls/object_wait_async.md). Typically, the `port` and `key`
 arguments are provided by the library and the `handle` and `signals`
 arguments are provided by the clients. When establishing a wait, the clients
 also typically provide an upcall (e.g., a closure) for the library to invoke
@@ -58,13 +58,13 @@ the upcall (e.g., from a hash table).
 No additional kernel object is needed to wake a thread up from another thread.
 You can wake up a thread by simply queuing a user packet to the thread's port
 using
-[zx_port_queue](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/port_queue.md).
+[zx_port_queue](/zircon/docs/syscalls/port_queue.md).
 
 ### Examples
 
-* [async](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/async)
+* [async](/zircon/system/ulib/async)
   (C and C++)
-* [fuchsia-async](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/rust/fuchsia-async/) (Rust)
+* [fuchsia-async](/garnet/public/rust/fuchsia-async/) (Rust)
 * [zxwait](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/zxwait/) (Go)
 
 ## FIDL
@@ -72,7 +72,7 @@ using
 The Zircon kernel itself largely provides memory management, scheduling, and
 interprocess communication. Rather than being provided directly by the kernel,
 the bulk of the system interface is actually provided through interprocess
-communication, typically using [channels](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/channel.md).
+communication, typically using [channels](/zircon/docs/objects/channel.md).
 The protocols used for interprocess communication are defined in
 [Fuchsia Interface Definition Language (FIDL)](../fidl/README.md).
 
@@ -98,17 +98,17 @@ the language runtime.
 
 ### FIDL compiler backend
 
-The [FIDL compiler](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/host/fidl/)
+The [FIDL compiler](/zircon/system/host/fidl/)
 has a single frontend that is used for all languages and multiple backends that
 support a diverse assortment of languages. The frontend produces a
-[JSON intermediate format](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/json-ir.md)
+[JSON intermediate format](/docs/development/languages/fidl/reference/json-ir.md)
 that is consumed by the language-specific backends.
 
 You should create a new backend for the FIDL compiler for your language. The
 backend can be written in whatever language you prefer. Typically, language
 maintainer choose either Go or the target language.
 
- * [fidlgen](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/fidl/compiler/backend) (C++, Rust, and Go)
+ * [fidlgen](/garnet/go/src/fidl/compiler/backend) (C++, Rust, and Go)
  * [fidlgen_dart](https://fuchsia.googlesource.com/topaz/+/master/bin/fidlgen_dart) (Dart)
 
 ### Generated code
@@ -117,9 +117,9 @@ The generated FIDL code varies substantially from one language to another.
 Typically the generated code will contain the following types of code:
 
 * Data structure definitions that represent the data structures defined in the
-  [FIDL language](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/language.md).
+  [FIDL language](/docs/development/languages/fidl/reference/language.md).
 * A codec that can serialize and deserialize these data structure into and from
-  the [FIDL wire format](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/wire-format/README.md).
+  the [FIDL wire format](/docs/development/languages/fidl/reference/wire-format/README.md).
 * Stub objects that represent the server end of a FIDL protocol. Typically,
   stub object have a *dispatch* method that deserializes a message read from a
   Zircon channel and perform an indirect jump into an implementation of the
@@ -133,13 +133,13 @@ Typically the generated code will contain the following types of code:
 Some languages offer multiple options for some of these types of generated code.
 For example, a common pattern is to offer both *synchronous* and *asynchronous*
 proxy objects. The synchronous proxies make use of
-[`zx_channel_call`](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_call.md)
+[`zx_channel_call`](/zircon/docs/syscalls/channel_call.md)
 to efficiently write a message, block waiting for a response, and then read the
 response, whereas asynchronous proxies use
-[`zx_channel_write`](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_write.md),
-[`zx_object_wait_async`](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_wait_async.md),
+[`zx_channel_write`](/zircon/docs/syscalls/channel_write.md),
+[`zx_object_wait_async`](/zircon/docs/syscalls/object_wait_async.md),
 and
-[`zx_channel_read`](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_read.md)
+[`zx_channel_read`](/zircon/docs/syscalls/channel_read.md)
 to avoid blocking on the remote end of the channel.
 
 Generally, we prefer to use *asynchronous* code whenever possible. Many FIDL
@@ -163,9 +163,9 @@ itself has no knowledge of FIDL. For example, most support libraries contain a
 on channels. The generated code can then be restricted to serialzation,
 deserialization, and dispatch.
 
- * [C](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl)
- * [C++](https://fuchsia.googlesource.com/fuchsia/+/master/sdk/lib/fidl/cpp/)
- * [Rust](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/fidl/rust/fidl)
+ * [C](/zircon/system/ulib/fidl)
+ * [C++](/sdk/lib/fidl/cpp/)
+ * [Rust](/garnet/public/lib/fidl/rust/fidl)
  * [Dart](https://fuchsia.googlesource.com/topaz/+/master/public/dart/fidl/)
  * [Go](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/)
 
@@ -173,12 +173,12 @@ deserialization, and dispatch.
 
 POSIX-style IO operations (e.g., `open`, `close`, `read`, and `write`) are
 layered on top of FIDL. If your language has C interop, you can use the
-[FDIO library](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fdio),
+[FDIO library](/zircon/system/ulib/fdio),
 which translates familiar POSIX operations into the underlying `fuchsia.io` FIDL
 protocol. If your language does not have C interop, you will need to interface
 directly with `fuchsia.io` to provide POSIX-style IO.
 
-You can recover the underlying Zircon handles for file descriptors using [`lib/fdio/unsafe.h`](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fdio/include/lib/fdio/unsafe.h).
+You can recover the underlying Zircon handles for file descriptors using [`lib/fdio/unsafe.h`](/zircon/system/ulib/fdio/include/lib/fdio/unsafe.h).
 Typically, languages have a tiny library that layers on top of the async library
 to perform asynchronous waits on file descriptors. This library typically
 provdes a less error-prone interface that abstracts these "unsafe" FDIO

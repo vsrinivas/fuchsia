@@ -10,7 +10,7 @@ documentation.
  - [Development](development/README.md) - instructions for building, running and
    testing Fuchsia and software that runs on Fuchsia
  - [System](the-book/README.md) - documentation for how Fuchsia works
- - [Contributing changes](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/CONTRIBUTING.md)
+ - [Contributing changes](/CONTRIBUTING.md)
 
 Other files in this repository are **system-wide** documentation articles for
 Fuchsia. **Individual subprojects** have their own documentation within each

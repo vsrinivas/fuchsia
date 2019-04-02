@@ -32,8 +32,8 @@ please read the [Fuchsia package documentation].
 
 We have shell scripts that run all of a layer's benchmarks at every commit to that layer.
 
-* Garnet: [//garnet/tests/benchmarks](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/tests/benchmarks)
-* Peridot: [//peridot/tests/benchmarks](https://fuchsia.googlesource.com/fuchsia/+/master/peridot/tests/benchmarks)
+* Garnet: [//garnet/tests/benchmarks](/garnet/tests/benchmarks)
+* Peridot: [//peridot/tests/benchmarks](/peridot/tests/benchmarks)
 * Topaz: [//topaz/tests/benchmarks](https://fuchsia.googlesource.com/topaz/+/master/tests/benchmarks)
 
 These shell scripts are written using a helper library called [Runbenchmarks].  Add a
@@ -77,6 +77,6 @@ NOTE: We do not yet have a User guide for the [Performance Dashboard Version 2].
 [Performance Dashboard]: https://chromeperf.appspot.com/report
 [Performance Dashboard User Guide]: catapult_user_guide.md
 [Performance Dashboard Version 2]: https://v2spa-dot-chromeperf.appspot.com/
-[Runbenchmarks]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/testing/runbenchmarks
-[//zircon/system/ulib/perftest]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/perftest/
-[//garnet/go/src/benchmarks]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/benchmarks
+[Runbenchmarks]: /garnet/testing/runbenchmarks
+[//zircon/system/ulib/perftest]: /zircon/system/ulib/perftest/
+[//garnet/go/src/benchmarks]: /garnet/go/src/benchmarks

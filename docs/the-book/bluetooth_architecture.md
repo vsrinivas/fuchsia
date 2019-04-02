@@ -73,7 +73,7 @@ devices. A bt-host device claims the HCI control and data endpoints of the under
 * Bus protocol for child devices for services implemented as device drivers
 
 Host devices are managed by the
-[Bluetooth system service](https://fuchsia.googlesource.com/fuchsia/+/master/src/connectivity/bluetooth/).
+[Bluetooth system service](/src/connectivity/bluetooth/).
 The service allows only one bt-host to be accessed for service requests at a given
 time. This bt-host is represented as the "active Adapter".
 [control.fidl](/sdk/fidl/fuchsia.bluetooth.control) provides a management

@@ -8,4 +8,4 @@
 - [Testing FAQ](testing_faq.md)
 - [Syslog](syslog.md)
 - [Perftest micro-benchmark library](
-https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/perftest/README.md)
+/zircon/system/ulib/perftest/README.md)

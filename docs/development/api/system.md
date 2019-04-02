@@ -7,8 +7,8 @@ and preprocessor macros must have names that start with `ZX_`.  Types defined as
 part of the interface must have names that begin with `zx_` and end with `_t`.
 
 Every function that is part of the interface must be documented with a markdown
-file in https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/ and
-linked from https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls.md .
+file in /zircon/docs/syscalls/ and
+linked from /zircon/docs/syscalls.md .
 
 ## Function Names
 

@@ -48,7 +48,7 @@ The BOOTFS RAM disk contains the files needed early in the boot process when no
 other filesystems are available. It is part of the [ZBI](#ZBI), and is
 decompressed and served by [bootsvc](#bootsvc). After the early boot process is
 complete, the BOOTFS is mounted at `/boot`.
-- [Documentation](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/userboot.md#BOOTFS)
+- [Documentation](/zircon/docs/userboot.md#BOOTFS)
 
 #### **bootsvc**
 
@@ -56,7 +56,7 @@ bootsvc is the second process started in Fuchsia. It provides a filesystem
 service for the [BOOTFS](#BOOTFS) and a loader service that loads programs from
 the same BOOTFS. After starting those services, it loads the third program,
 which defaults to `devmgr`.
-- [Documentation](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/bootsvc.md)
+- [Documentation](/zircon/docs/bootsvc.md)
 
 ### **Bus Driver**
 
@@ -88,7 +88,7 @@ These files end in `.cmx`, so they are also known as "cmx files".
 A channel is an IPC primitive provided by Zircon.  It is a bidirectional, datagram-like
 transport that can transfer small messages including [Handles](#Handle).  [FIDL](#FIDL)
 protocols typically use channels as their underlying transport.
-- [Channel Overview](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/channel.md)
+- [Channel Overview](/zircon/docs/objects/channel.md)
 
 ### **Concurrent Device Driver**
 
@@ -122,15 +122,15 @@ filesystem, launching [AppMgr]( #AppMgr), and so on).
 
 The Driver Development Kit is the documentation, APIs, and ABIs necessary to build Zircon Device
 Drivers.  Device drivers are implemented as ELF shared libraries loaded by Zircon's Device Manager.
-- [DDK Overview](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/ddk/overview.md)
-- [DDK includes](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/ddk/include/ddk/)
+- [DDK Overview](/zircon/docs/ddk/overview.md)
+- [DDK includes](/zircon/system/ulib/ddk/include/ddk/)
 
 #### **Driver**
 
 A driver is a dynamic shared library which [DevMgr](#DevMgr) can load into a [DevHost](#DevHost)
 and that enables, and controls one or more devices.
-- [Reference](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/ddk/driver-development.md)
-- [Driver Sources](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/dev)
+- [Reference](/zircon/docs/ddk/driver-development.md)
+- [Driver Sources](/zircon/system/dev)
 
 #### **Environment**
 
@@ -160,7 +160,7 @@ fdio is the Zircon IO Library.  It provides the implementation of posix-style op
 read(), write(), select(), poll(), etc, against the RemoteIO RPC protocol.  These APIs are return-
 not-supported stubs in libc, and linking against libfdio overrides these stubs with functional
 implementations.
-- [Source](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fdio/)
+- [Source](/zircon/system/ulib/fdio/)
 
 #### **FIDL**
 
@@ -229,7 +229,7 @@ named `BUILD.gn`, are located all over the repository.
 
 A Handle is how a userspace process refers to a [kernel object](#Kernel-Object). They can be passed
 to other processes over [Channels](#Channel).
-- [Reference](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/handles.md)
+- [Reference](/zircon/docs/handles.md)
 
 ###  **Hardware Driver**
 
@@ -263,14 +263,14 @@ various subcommands which makes it easy for developers to manage their local che
 A Job is a [kernel object](#Kernel-Object) that groups a set of related processes, their child
 processes and their jobs (if any). Every process in the system belongs to a job and all jobs form
 a single rooted tree.
-- [Job Overview](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/job.md)
+- [Job Overview](/zircon/docs/objects/job.md)
 
 #### **Kernel Object**
 
 A kernel object is a kernel data structure which is used to regulate access to system resources
 such as memory, i/o, processor time and access to other processes. Userspace can only reference
 kernel objects via [Handles](#Handle).
-- [Reference](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects.md)
+- [Reference](/zircon/docs/objects.md)
 
 #### **KOID**
 
@@ -279,7 +279,7 @@ A Kernel Object Identifier.
 
 #### **Ledger**
 
-[Ledger](https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/docs/README.md) is a distributed
+[Ledger](/src/ledger/docs/README.md) is a distributed
 storage system for Fuchsia. Applications use Ledger either directly or through state synchronization
 primitives exposed by the Modular framework that are based on Ledger under-the-hood.
 
@@ -296,7 +296,7 @@ A module is a role a [component](#Component) can play to participate in a [story
 component can be be used as a module, but typically a module is asked to show UI.  Additionally,
 a module can have a `module` metadata file which describes the Module's data compatibility and
 semantic role.
-- [module metadata format](https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/modular/module.md)
+- [module metadata format](/peridot/docs/modular/module.md)
 
 #### **Scenic**
 
@@ -305,7 +305,7 @@ The system compositor. Includes views, input, compositor, and GPU services.
 #### **Musl**
 
 Fuchsia's standard C library (libc) is based on Musl Libc.
-- [Source](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/third_party/ulib/musl/)
+- [Source](/zircon/third_party/ulib/musl/)
 - [Musl Homepage](https://www.musl-libc.org/)
 
 #### **Namespace**
@@ -392,7 +392,7 @@ userboot is the first process started by the Zircon kernel. It is loaded from
 the kernel image in the same way as the [vDSO](#vDSO), instead of being loaded
 from a filesystem. Its primary purpose is to load the second process,
 [bootsvc](#bootsvc), from the [BOOTFS](#BOOTFS).
-- [Documentation](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/userboot.md)
+- [Documentation](/zircon/docs/userboot.md)
 
 #### **vDSO**
 
@@ -406,21 +406,21 @@ representing the vDSO.
 
 A Virtual Memory Address Range is a Zircon [kernel object](#Kernel-Object) that controls where and
 how VMOs may be mapped into the address space of a process.
-- [VMAR Overview](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/vm_address_region.md)
+- [VMAR Overview](/zircon/docs/objects/vm_address_region.md)
 
 #### **VMO**
 
 A Virtual Memory Object is a Zircon [kernel object](#Kernel-Object) that represents a collection of
 pages (or the potential for pages) which may be read, written, mapped into the address space of a
 process, or shared with another process by passing a [Handle](#Handle) over a [Channel](#Channel).
-- [VMO Overview](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/vm_object.md)
+- [VMO Overview](/zircon/docs/objects/vm_object.md)
 
 #### **ZBI**
 
 A Zircon Boot Image contains everything needed during the boot process before
 any drivers are working. This includes the kernel image and a [RAM disk for the
 boot filesystem](#BOOTFS).
-- [ZBI header file](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/public/zircon/boot/image.h)
+- [ZBI header file](/zircon/system/public/zircon/boot/image.h)
 
 #### **Zedboot** ####
 
@@ -436,9 +436,9 @@ Zircon is the [microkernel](https://en.wikipedia.org/wiki/Microkernel) and lowes
 components (driver runtime environment, core drivers, libc, etc) at the core of Fuchsia.  In a
 traditional monolithic kernel, many of the userspace components of Zircon would be part of the
 kernel itself.
-- [Zircon Documentation](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/README.md)
-- [Zircon Concepts](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/concepts.md)
-- [Source](https://fuchsia.googlesource.com/fuchsia/+/master/zircon)
+- [Zircon Documentation](/zircon/README.md)
+- [Zircon Concepts](/zircon/docs/concepts.md)
+- [Source](/zircon)
 
 #### **ZX**
 
@@ -448,4 +448,4 @@ ZX is an abbreviation of "Zircon" used in Zircon C APIs/ABIs (`zx_channel_create
 #### **ZXDB**
 
 The native low-level system debugger.
-- [Reference](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/debugger.md)
+- [Reference](/garnet/docs/debugger.md)
