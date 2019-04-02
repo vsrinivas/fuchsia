@@ -16,13 +16,17 @@ extern "C" {
 #include <src/lib/fxl/macros.h>
 #include <lib/media/codec_impl/codec_packet.h>
 
-#include "buffer_pool.h"
-
 // Wraps AVCodecContext type from ffmpeg.
 class AvCodecContext {
  public:
+  // Describes the requirements of a buffer which can back a frame.
+  struct FrameBufferRequest {
+    fuchsia::media::VideoUncompressedFormat format;
+    size_t buffer_bytes_needed;
+  };
+
   using GetBufferCallback = fit::function<int(
-      const BufferPool::FrameBufferRequest& frame_buffer_request,
+      const FrameBufferRequest& frame_buffer_request,
       AVCodecContext* avcodec_context, AVFrame* frame, int flags)>;
 
   using AVFramePtr = std::unique_ptr<AVFrame, fit::function<void(AVFrame*)>>;
@@ -65,7 +69,7 @@ class AvCodecContext {
  private:
   // Returns info on the decoded output so it can be displayed and buffers can
   // be allocated for it.
-  BufferPool::FrameBufferRequest frame_buffer_request(AVFrame* frame) const;
+  FrameBufferRequest frame_buffer_request(AVFrame* frame) const;
 
   static int GetBufferCallbackRouter(AVCodecContext* avcodec_context,
                                      AVFrame* frame, int flag);

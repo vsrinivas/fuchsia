@@ -14,24 +14,7 @@ CodecAdapterFfmpegEncoder::CodecAdapterFfmpegEncoder(
 
 CodecAdapterFfmpegEncoder::~CodecAdapterFfmpegEncoder() = default;
 
-void CodecAdapterFfmpegEncoder::CoreCodecAddBuffer(CodecPort port,
-                                                   const CodecBuffer* buffer) {
-  ZX_ASSERT_MSG(false, "Not implemented.");
-}
-
 void CodecAdapterFfmpegEncoder::ProcessInputLoop() {
-  ZX_ASSERT_MSG(false, "Not implemented.");
-}
-
-void CodecAdapterFfmpegEncoder::UnreferenceOutputPacket(CodecPacket* packet) {
-  ZX_ASSERT_MSG(false, "Not implemented.");
-}
-
-void CodecAdapterFfmpegEncoder::UnreferenceClientBuffers() {
-  ZX_ASSERT_MSG(false, "Not implemented.");
-}
-
-void CodecAdapterFfmpegEncoder::BeginStopInputProcessing() {
   ZX_ASSERT_MSG(false, "Not implemented.");
 }
 

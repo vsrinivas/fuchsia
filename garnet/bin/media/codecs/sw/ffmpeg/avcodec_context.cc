@@ -122,7 +122,7 @@ int AvCodecContext::EndStream() {
   return avcodec_send_packet(avcodec_context_.get(), nullptr);
 }
 
-BufferPool::FrameBufferRequest AvCodecContext::frame_buffer_request(
+AvCodecContext::FrameBufferRequest AvCodecContext::frame_buffer_request(
     AVFrame* frame) const {
   ZX_DEBUG_ASSERT(avcodec_context_);
   ZX_DEBUG_ASSERT(avcodec_is_open(avcodec_context_.get()));

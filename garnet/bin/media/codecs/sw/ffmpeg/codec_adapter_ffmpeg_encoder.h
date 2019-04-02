@@ -7,24 +7,19 @@
 
 #include "codec_adapter_sw.h"
 
-class CodecAdapterFfmpegEncoder : public CodecAdapterSW {
+#include "avcodec_context.h"
+
+class CodecAdapterFfmpegEncoder
+    : public CodecAdapterSW<AvCodecContext::AVFramePtr> {
  public:
   CodecAdapterFfmpegEncoder(std::mutex& lock,
                             CodecAdapterEvents* codec_adapter_events);
   ~CodecAdapterFfmpegEncoder();
 
-  void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) override;
-
  protected:
   // Processes input in a loop. Should only execute on input_processing_thread_.
   // Loops for the lifetime of a stream.
   void ProcessInputLoop() override;
-
-  void UnreferenceOutputPacket(CodecPacket* packet) override;
-
-  void UnreferenceClientBuffers() override;
-
-  void BeginStopInputProcessing() override;
 
   void CleanUpAfterStream() override;
 

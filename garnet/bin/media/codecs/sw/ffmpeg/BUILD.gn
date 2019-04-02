@@ -23,8 +23,6 @@ executable("codec_runner_sw_ffmpeg") {
   sources = [
     "avcodec_context.cc",
     "avcodec_context.h",
-    "buffer_pool.cc",
-    "buffer_pool.h",
     "codec_adapter_ffmpeg_decoder.cc",
     "codec_adapter_ffmpeg_decoder.h",
     "codec_adapter_ffmpeg_encoder.cc",
@@ -39,6 +37,5 @@ executable("codec_runner_sw_ffmpeg") {
     "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.mediacodec",
     "//src/media/lib/ffmpeg",
-    "//zircon/public/lib/async-loop-cpp",
   ]
 }

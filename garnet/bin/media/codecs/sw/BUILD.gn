@@ -42,10 +42,11 @@ config("codec_adapter_sw_include_config") {
 
 source_set("codec_adapter_sw") {
   sources = [
-    "codec_adapter_sw.cc",
+    "buffer_pool.cc",
   ]
 
   public = [
+    "buffer_pool.h",
     "codec_adapter_sw.h",
   ]
 
