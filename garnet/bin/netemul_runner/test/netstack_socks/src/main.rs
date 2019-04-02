@@ -77,9 +77,9 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
     let (child_env, child_env_server) =
         fidl::endpoints::create_proxy::<ManagedEnvironmentMarker>()?;
 
-    let mut env_options = EnvironmentOptions {
-        name: String::from(env_name),
-        services: vec![
+    let env_options = EnvironmentOptions {
+        name: Some(String::from(env_name)),
+        services: Some(vec![
             LaunchService {
                 name: String::from(NetstackMarker::NAME),
                 url: String::from(NETSTACK_URL),
@@ -90,16 +90,16 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
                 url: String::from(NETSTACK_URL),
                 arguments: None,
             },
-        ],
+        ]),
         // pass the endpoint's proxy to create a virtual device
-        devices: vec![VirtualDevice {
+        devices: Some(vec![VirtualDevice {
             path: String::from(format!("class/ethernet/{}", env_name)),
             device: ep_proxy_client,
-        }],
-        inherit_parent_launch_services: false,
+        }]),
+        inherit_parent_launch_services: Some(false),
     };
     // launch the child env
-    env.create_child_environment(child_env_server, &mut env_options)?;
+    env.create_child_environment(child_env_server, env_options)?;
 
     // launch as a process in the created environment.
     let (launcher, launcher_req) = fidl::endpoints::create_proxy::<LauncherMarker>()?;

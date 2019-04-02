@@ -26,15 +26,21 @@ struct VirtualDevice {
 };
 
 /// Options used to create environment.
-struct EnvironmentOptions {
+table EnvironmentOptions {
     /// Environment name, for debugging purposes.
-    string name;
+    /// If none provided, a random name will be generated.
+    1: string name;
     /// Services to register on environment.
-    vector<LaunchService> services;
+    /// If none provided, no additional services will be registered.
+    /// However, a ManagedEnvironment may still register some default
+    /// services.
+    2: vector<LaunchService> services;
     /// Devices to make available.
-    vector<VirtualDevice> devices;
+    /// If none provided, no devices will be made available.
+    3: vector<VirtualDevice> devices;
     /// Whether to inherit service launch options from parent environment.
-    bool inherit_parent_launch_services;
+    /// If none provided, assume false.
+    4: bool inherit_parent_launch_services;
 };
 
 /// Managed environment is made available on netemul runners.

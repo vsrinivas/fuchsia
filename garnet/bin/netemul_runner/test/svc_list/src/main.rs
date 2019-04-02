@@ -115,19 +115,22 @@ async fn run_test() -> Result<(), Error> {
     let (child_env, child_env_server) =
         fidl::endpoints::create_proxy::<ManagedEnvironmentMarker>()?;
 
-    let mut env_options = EnvironmentOptions {
-        name: String::from("child_env"),
-        services: vec![LaunchService {
+    let env_options = EnvironmentOptions {
+        name: Some(String::from("child_env")),
+        services: Some(vec![LaunchService {
             name: String::from(NetstackMarker::NAME),
             url: String::from(NETSTACK_URL),
             arguments: None,
-        }],
+        }]),
         // pass the endpoint's proxy to create a virtual device
-        devices: vec![VirtualDevice { path: String::from(EP_MOUNT), device: ep_proxy_client }],
-        inherit_parent_launch_services: false,
+        devices: Some(vec![VirtualDevice {
+            path: String::from(EP_MOUNT),
+            device: ep_proxy_client,
+        }]),
+        inherit_parent_launch_services: Some(false),
     };
     // launch the child env
-    env.create_child_environment(child_env_server, &mut env_options)?;
+    env.create_child_environment(child_env_server, env_options)?;
 
     // launch as a process in the created environment.
     let (launcher, launcher_req) = fidl::endpoints::create_proxy::<LauncherMarker>()?;
@@ -184,26 +187,26 @@ fn check_vdata() -> Result<(), Error> {
 async fn launch_grandchild() -> Result<(), Error> {
     let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
 
-    let mut env_options = EnvironmentOptions {
-        name: String::from("grandchild_env"),
+    let env_options = EnvironmentOptions {
+        name: Some(String::from("grandchild_env")),
         // add some arbitrary service to the grandchild environment
-        services: vec![LaunchService {
+        services: Some(vec![LaunchService {
             name: String::from(FAKE_SVC_NAME),
             url: String::from(FAKE_SVC_URL),
             arguments: None,
-        }],
-        devices: vec![],
+        }]),
+        devices: None,
         // inherit parent configuration to check if netstack flows through
         // this won't be the same netstack *instance*, though. But it should be
         // launched with the same url as the "child" environment
-        inherit_parent_launch_services: true,
+        inherit_parent_launch_services: Some(true),
     };
 
     let (child_env, child_env_server) =
         fidl::endpoints::create_proxy::<ManagedEnvironmentMarker>()?;
 
     // launch the grandchild env
-    env.create_child_environment(child_env_server, &mut env_options)?;
+    env.create_child_environment(child_env_server, env_options)?;
 
     // launch info is our own package
     // plus the command line argument to run the grandchild proc

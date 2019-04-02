@@ -46,7 +46,16 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
                                 const ManagedEnvironment* managed_parent) {
   auto services = EnvironmentServices::Create(parent);
 
-  loggers_ = std::make_unique<ManagedLoggerCollection>(options.name);
+  // Nested environments without a name are not allowed, if empty name is
+  // provided, replace it with a default *randomized* value.
+  // Randomness there is necessary due to appmgr rules for environments with
+  // same name.
+  if (!options.has_name() || options.name().empty()) {
+    std::random_device rnd;
+    options.set_name(fxl::StringPrintf("netemul-env-%08x", rnd()));
+  }
+
+  loggers_ = std::make_unique<ManagedLoggerCollection>(options.name());
 
   // add network context service:
   services->AddService(sandbox_env_->network_context().GetHandler());
@@ -59,7 +68,8 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
 
   // prepare service configurations:
   service_config_.clear();
-  if (options.inherit_parent_launch_services && managed_parent != nullptr) {
+  if (options.has_inherit_parent_launch_services() &&
+      options.inherit_parent_launch_services() && managed_parent != nullptr) {
     for (const auto& a : managed_parent->service_config_) {
       LaunchService clone;
       a.Clone(&clone);
@@ -67,8 +77,11 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
     }
   }
 
-  std::move(options.services.begin(), options.services.end(),
-            std::back_inserter(service_config_));
+  if (options.has_services()) {
+    std::move(options.mutable_services()->begin(),
+              options.mutable_services()->end(),
+              std::back_inserter(service_config_));
+  }
 
   // push all the allowable launch services:
   for (const auto& svc : service_config_) {
@@ -89,9 +102,11 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
         svc.name);
   }
 
-  // save all handles for virtual devices
-  for (auto& dev : options.devices) {
-    virtual_devices_.AddEntry(dev.path, dev.device.Bind());
+  if (options.has_devices()) {
+    // save all handles for virtual devices
+    for (auto& dev : *options.mutable_devices()) {
+      virtual_devices_.AddEntry(dev.path, dev.device.Bind());
+    }
   }
 
   fuchsia::sys::EnvironmentOptions sub_options = {
@@ -99,17 +114,8 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
       .allow_parent_runners = false,
       .inherit_parent_services = false};
 
-  // Nested environments without a name are not allowed, if empty name is
-  // provided, replace it with a default *randomized* value.
-  // Randomness there is necessary due to appmgr rules for environments with
-  // same name.
-  if (options.name.empty()) {
-    std::random_device rnd;
-    options.name = fxl::StringPrintf("netemul-env-%08x", rnd());
-  }
-
-  env_ = EnclosingEnvironment::Create(options.name, parent, std::move(services),
-                                      sub_options);
+  env_ = EnclosingEnvironment::Create(options.name(), parent,
+                                      std::move(services), sub_options);
 
   env_->SetRunningChangedCallback([this](bool running) {
     if (running && running_callback_) {

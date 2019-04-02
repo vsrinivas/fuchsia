@@ -10,10 +10,10 @@
 #include <lib/fit/promise.h>
 #include <lib/fit/sequencer.h>
 #include <lib/fsl/io/fd.h>
-#include <src/lib/fxl/logging.h>
-#include <src/lib/fxl/strings/concatenate.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/termination_reason.h>
+#include <src/lib/fxl/logging.h>
+#include <src/lib/fxl/strings/concatenate.h>
 #include <src/lib/pkg_url/fuchsia_pkg_url.h>
 #include <zircon/status.h>
 #include "garnet/lib/cmx/cmx.h"
@@ -266,18 +266,17 @@ bool Sandbox::ConfigureNetworks() {
 bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
                                        ManagedEnvironment::Options* options) {
   ASSERT_HELPER_DISPATCHER;
-  options->name = config.name();
-  options->inherit_parent_launch_services = config.inherit_services();
+  options->set_name(config.name());
+  options->set_inherit_parent_launch_services(config.inherit_services());
 
-  std::vector<environment::VirtualDevice>& devices = options->devices;
-  ;
+  std::vector<environment::VirtualDevice>* devices = options->mutable_devices();
   if (!config.devices().empty()) {
     network::EndpointManagerSyncPtr epm;
     async::PostTask(main_dispatcher_, [req = epm.NewRequest(), this]() mutable {
       sandbox_env_->network_context().endpoint_manager().Bind(std::move(req));
     });
     for (const auto& device : config.devices()) {
-      auto& nd = devices.emplace_back();
+      auto& nd = devices->emplace_back();
       nd.path = fxl::Concatenate({std::string(kEndpointMountPath), device});
 
       fidl::InterfaceHandle<network::Endpoint> endp_h;
@@ -295,9 +294,10 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
     }
   }
 
-  std::vector<environment::LaunchService>& services = options->services;
+  std::vector<environment::LaunchService>* services =
+      options->mutable_services();
   for (const auto& svc : config.services()) {
-    auto& ns = services.emplace_back();
+    auto& ns = services->emplace_back();
     ns.name = svc.name();
     ns.url = svc.launch().GetUrlOrDefault(sandbox_env_->default_name());
     ns.arguments->insert(ns.arguments->end(), svc.launch().arguments().begin(),

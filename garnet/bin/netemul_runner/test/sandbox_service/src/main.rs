@@ -35,11 +35,11 @@ mod tests {
         }];
         sandbox.create_environment(
             env_server_end,
-            &mut EnvironmentOptions {
-                name: String::from(""), // don't care about the name, let it be created by itself
-                services: services,
-                devices: vec![],
-                inherit_parent_launch_services: false,
+            EnvironmentOptions {
+                name: None, // don't care about the name, let it be created by itself
+                services: Some(services),
+                devices: None,
+                inherit_parent_launch_services: Some(false),
             },
         )?;
 
