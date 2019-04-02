@@ -41,7 +41,6 @@ class FeedbackAgent : public DataProvider {
   ::sys::ComponentContext* context_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
-  bool is_connected_to_scenic_;
   // We keep track of the pending GetScreenshot callbacks so we can terminate
   // all of them when we lose the connection with Scenic.
   std::vector<std::unique_ptr<GetScreenshotCallback>>

@@ -18,9 +18,7 @@ namespace fuchsia {
 namespace feedback {
 
 FeedbackAgent::FeedbackAgent(::sys::ComponentContext* startup_context)
-    : context_(startup_context) {
-  ConnectToScenic();
-}
+    : context_(startup_context) {}
 
 void FeedbackAgent::GetData(GetDataCallback callback) {
   DataProvider_GetData_Response response;
@@ -38,9 +36,9 @@ void FeedbackAgent::GetScreenshot(ImageEncoding encoding,
   auto& saved_callback = get_png_screenshot_callbacks_.emplace_back(
       std::make_unique<GetScreenshotCallback>(std::move(callback)));
 
-  // If we previously lost the connection to Scenic, we re-attempt to establish
-  // it.
-  if (!is_connected_to_scenic_) {
+  // If we previously lost the connection to Scenic or never connected to
+  // Scenic, we (re-)attempt to establish the connection.
+  if (!scenic_) {
     ConnectToScenic();
   }
 
@@ -76,10 +74,8 @@ void FeedbackAgent::ConnectToScenic() {
   scenic_ = context_->svc()->Connect<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([this](zx_status_t status) {
     FX_LOGS(ERROR) << "Lost connection to Scenic service";
-    is_connected_to_scenic_ = false;
     this->TerminateAllGetScreenshotCallbacks();
   });
-  is_connected_to_scenic_ = true;
 }
 
 void FeedbackAgent::TerminateAllGetScreenshotCallbacks() {
