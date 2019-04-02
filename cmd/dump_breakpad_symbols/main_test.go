@@ -10,10 +10,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -147,120 +143,6 @@ func TestRunCommand(t *testing.T) {
 		}
 		expectedDepFile := fmt.Sprintf("breakpad_symbols.tar.gz: %s %s\n", "idsA.txt", "idsB.txt")
 		expectOutputs(t, inputSources, expectedDepFile, make(map[string][]byte), "out/")
-	})
-
-	t.Run("should handle a single input file", func(t *testing.T) {
-		// Create a testing input file with fake hash values and binary paths.
-		inputSources := []*FakeFile{
-			NewFakeFile("ids.txt", strings.TrimSpace(`
-				01634b09 /path/to/binaryA.elf
-				02298167 /path/to/binaryB
-				025abbbc /path/to/binaryC.so
-			`)),
-		}
-
-		files := []string{
-			"fe9881defb9ed1ddb9a89c38be973515f6ad7f0f.sym",
-			"f03de72df78157dd14ae1cc031ddba9873947179.sym",
-			"edbe4e45241c98dcde3538160073a0d6b097b780.sym",
-		}
-		expectedTarFileContents := make(map[string][]byte)
-
-		os.MkdirAll("out/", os.ModePerm)
-		outDir, err := filepath.Abs("out/")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(outDir)
-		for i := 0; i < 3; i++ {
-			ioutil.WriteFile(path.Join(outDir, files[i]), []byte(files[i]), 0644)
-			expectedTarFileContents[files[i]] = []byte(files[i])
-			defer os.Remove(path.Join(outDir, files[i]))
-		}
-
-		expectedDepFile := "breakpad_symbols.tar.gz: ids.txt\n"
-		expectOutputs(t, inputSources, expectedDepFile, expectedTarFileContents, outDir)
-	})
-
-	t.Run("should handle multiple input files", func(t *testing.T) {
-		inputSources := []*FakeFile{
-			NewFakeFile("idsA.txt", strings.TrimSpace(`
-				01634b09 /path/to/binaryA.elf
-				02298167 /path/to/binaryB
-				025abbbc /path/to/binaryC.so
-			`)),
-			NewFakeFile("idsB.txt", strings.TrimSpace(`
-				01634b09 /path/to/binaryD
-				02298167 /path/to/binaryE
-				025abbbc /path/to/binaryF
-			`)),
-		}
-		files := []string{
-			"fe9881defb9ed1ddb9a89c38be973515f6ad7f0f.sym",
-			"f03de72df78157dd14ae1cc031ddba9873947179.sym",
-			"edbe4e45241c98dcde3538160073a0d6b097b780.sym",
-			"8541277ee6941ac4c3c9ab2fc68edfb4c420861e.sym",
-			"906bc6368e6462a6cf7b78328a675ce57ef82209.sym",
-			"302cb9c3745652180c25e5da2ca3e420b8dd4e25.sym",
-		}
-		expectedTarFileContents := make(map[string][]byte)
-
-		os.MkdirAll("out/", os.ModePerm)
-		outDir, err := filepath.Abs("out/")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(outDir)
-		for i := 0; i < 6; i++ {
-			ioutil.WriteFile(path.Join(outDir, files[i]), []byte(files[i]), 0644)
-			expectedTarFileContents[files[i]] = []byte(files[i])
-			defer os.Remove(path.Join(outDir, files[i]))
-		}
-
-		expectedDepFile := "breakpad_symbols.tar.gz: idsA.txt idsB.txt\n"
-		expectOutputs(t, inputSources, expectedDepFile, expectedTarFileContents, outDir)
-	})
-
-	t.Run("should skip duplicate binary paths", func(t *testing.T) {
-		inputSources := []*FakeFile{
-			NewFakeFile("idsA.txt", strings.TrimSpace(`
-				01634b09 /path/to/binaryA
-				02298167 /path/to/binaryB
-				asdf87fs /path/to/binaryC
-			`)),
-			NewFakeFile("idsB.txt", strings.TrimSpace(`
-				01634b09 /path/to/binaryA
-				02298167 /path/to/binaryB
-				asdf87fs /path/to/binaryC
-			`)),
-			NewFakeFile("idsC.txt", strings.TrimSpace(`
-				01634b09 /path/to/binaryA
-				02298167 /path/to/binaryB
-				asdf87fs /path/to/binaryC
-			`)),
-		}
-
-		files := []string{
-			"43e5a3c9eb9829f2eb11007223de1fb0b721a909.sym",
-			"f03de72df78157dd14ae1cc031ddba9873947179.sym",
-			"565de70a22c63a819a959fda8b95d6f4dfc6c1de.sym",
-		}
-		expectedTarFileContents := make(map[string][]byte)
-
-		os.MkdirAll("out/", os.ModePerm)
-		outDir, err := filepath.Abs("out/")
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(outDir)
-		for i := 0; i < 3; i++ {
-			ioutil.WriteFile(path.Join(outDir, files[i]), []byte(files[i]), 0644)
-			expectedTarFileContents[files[i]] = []byte(files[i])
-			defer os.Remove(path.Join(outDir, files[i]))
-		}
-		expectedDepFile := "breakpad_symbols.tar.gz: idsA.txt idsB.txt idsC.txt\n"
-
-		expectOutputs(t, inputSources, expectedDepFile, expectedTarFileContents, outDir)
 	})
 }
 

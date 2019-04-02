@@ -7,6 +7,7 @@ package main
 import (
 	// TODO(kjharland): change crypto/sha1 to a safer hash algorithm. sha256 or sha2, etc.
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"crypto/sha1"
 	"encoding/hex"
@@ -21,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"fuchsia.googlesource.com/tools/breakpad"
 	"fuchsia.googlesource.com/tools/elflib"
 )
 
@@ -48,6 +50,13 @@ $ dump_breakpad_symbols \
 	-summary-file=/path/to/summary \
 	/path/to/ids1.txt
 `
+
+// The default module name for modules that don't have a soname, e.g., executables and
+// loadable modules. This allows us to use the same module name at runtime as sonames are
+// the only names that are guaranteed to be available at build and run times. This value
+// must be kept in sync with what Crashpad uses at run time for symbol resolution to work
+// properly.
+const defaultModuleName = "<_>"
 
 // Command line flag values
 var (
@@ -170,37 +179,59 @@ func processIdsFiles(idsFiles []io.Reader, outdir string, execDumpSyms ExecDumpS
 			// Record that we've seen this binary path.
 			visited[binaryPath] = true
 
-			// Generate the symbol file path.
-			symbolFilepath := createSymbolFilepath(outdir, binaryPath)
+			symbolFilepath, err := generateSymbolFile(binaryPath, createFile, execDumpSyms)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
 
 			// Record the mapping in the summary.
 			binaryToSymbolFile[binaryPath] = symbolFilepath
-
-			log.Printf("dumping symbols for %s into %s\n", binaryPath, symbolFilepath)
-
-			// Generate the symbol data.
-			symbolData, err := execDumpSyms([]string{binaryPath})
-			if err != nil {
-				log.Printf("ERROR: failed to generate symbol data for %s: %v", binaryPath, err)
-				continue
-			}
-
-			// Write the symbol file.
-			symbolFile, err := createFile(symbolFilepath)
-			if err != nil {
-				log.Printf("ERROR: failed to create symbol file %s: %v", symbolFilepath, err)
-				continue
-			}
-			if err := writeSymbolFile(symbolFile, symbolData); err != nil {
-				symbolFile.Close()
-				log.Printf("ERROR: failed to write symbol file %s: %v", symbolFilepath, err)
-				continue
-			}
-			symbolFile.Close()
 		}
 	}
 
 	return binaryToSymbolFile
+}
+
+func generateSymbolFile(path string, createFile CreateFile, execDumpSyms ExecDumpSyms) (outputPath string, err error) {
+	outputPath = createSymbolFilepath(outdir, path)
+	output, err := execDumpSyms([]string{path})
+	if err != nil {
+		return "", fmt.Errorf("failed to generate symbol data for %s: %v", path, err)
+	}
+	symbolFile, err := breakpad.ParseSymbolFile(bytes.NewReader(output))
+	if err != nil {
+		return "", fmt.Errorf("failed to read dump_syms output: %v", err)
+	}
+	// Ensure the module name is either the soname (for shared libraries) or the default
+	// value (for executables and loadable modules).
+	fd, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to open %q: %v", path, err)
+	}
+	defer fd.Close()
+	soname, err := elflib.GetSoName(path, fd)
+	if err != nil {
+		return "", fmt.Errorf("failed to read soname from %q: %v", path, err)
+	}
+	if soname == "" {
+		symbolFile.ModuleSection.ModuleName = defaultModuleName
+	} else {
+		symbolFile.ModuleSection.ModuleName = soname
+	}
+
+	// Ensure the module section specifies this is a Fuchsia binary instead of Linux
+	// binary, which is the default for the dump_syms tool.
+	symbolFile.ModuleSection.OS = "Fuchsia"
+	symbolFd, err := createFile(outputPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to create symbol file %s: %v", outputPath, err)
+	}
+	defer fd.Close()
+	if _, err := symbolFile.WriteTo(symbolFd); err != nil {
+		return "", fmt.Errorf("failed to write symbol file %s: %v", outputPath, err)
+	}
+	return outputPath, nil
 }
 
 // writeDepFile writes a ninja dep file to the given io.Writer.
