@@ -16,7 +16,7 @@ function commands {
   fi
 
   (
-    find "${dirs[@]}" -maxdepth 1 -type f -perm +0111 -exec basename {} \;
+    find "${dirs[@]}" -maxdepth 1 -type f -perm /0111 -exec basename {} \;
     echo "${buildtools_whitelist}"
   ) | sort -u
 }
