@@ -100,6 +100,7 @@ Fuzzer::Fuzzer()
 void Fuzzer::Reset() {
     cmd_ = kNone;
     name_.clear();
+    package_.clear();
     target_.clear();
     root_.clear();
     resource_path_.Reset();
@@ -268,8 +269,7 @@ void Fuzzer::FindFuzzers(const fbl::String& package, const fbl::String& target, 
         targets->keep_if(target);
         path.Pop();
         for (const char* t = targets->first(); t; t = targets->next()) {
-            if (path.IsFile(fbl::StringPrintf("data/%s/corpora", t)) &&
-                path.IsFile(fbl::StringPrintf("data/%s/dictionary", t)) &&
+            if (path.IsFile(fbl::StringPrintf("data/%s/dictionary", t)) &&
                 path.IsFile(fbl::StringPrintf("data/%s/options", t)) &&
                 path.IsFile(fbl::StringPrintf("meta/%s.cmx", t))) {
                 out->set(fbl::StringPrintf("%s/%s", p, t),
@@ -309,10 +309,8 @@ void Fuzzer::FindFuzzers(const fbl::String& name, StringMap* out) {
 
 void Fuzzer::GetArgs(StringList* out) {
     out->clear();
-    if (strstr(target_.c_str(), "fuchsia-pkg://fuchsia.com/") == target_.c_str()) {
-        out->push_back("/bin/run");
-    }
-    out->push_back(target_);
+    out->push_back("/bin/run");
+    out->push_back(url_);
     const char* key;
     const char* val;
     options_.begin();
@@ -421,16 +419,8 @@ private:
 bool Fuzzer::CheckProcess(zx_handle_t task, bool kill) const {
     char name[ZX_MAX_NAME_LEN];
 
-    if (zx_object_get_property(task, ZX_PROP_NAME, name, sizeof(name)) != ZX_OK) {
-        return false;
-    }
-
-    const char* target = target_.c_str();
-    const char* meta = strstr(target, "#meta/");
-    if (meta) {
-        target = meta + strlen("#meta/");
-    }
-    if (strncmp(name, target, sizeof(name) - 1) != 0) {
+    if (zx_object_get_property(task, ZX_PROP_NAME, name, sizeof(name)) != ZX_OK ||
+        strncmp(name, target_.c_str(), sizeof(name) - 1) != 0) {
         return false;
     }
     if (kill) {
@@ -517,30 +507,29 @@ zx_status_t Fuzzer::SetFuzzer(const char* name) {
     }
 
     fuzzers.begin();
-    fuzzers.next(&name_, &target_);
-
-    fbl::String package, target;
-    if ((rc = ParseName(name_, &package, &target)) != ZX_OK) {
+    fuzzers.next(&name_, &url_);
+    if ((rc = ParseName(name_, &package_, &target_)) != ZX_OK) {
         return rc;
     }
 
     // Determine the directory that holds the fuzzing resources. It may not be present if fuzzing
     // Zircon standalone.
-    if ((rc = GetPackagePath(package, &resource_path_)) != ZX_OK ||
+    if ((rc = GetPackagePath(package_, &resource_path_)) != ZX_OK ||
         (rc = resource_path_.Push("data")) != ZX_OK ||
-        (rc = resource_path_.Push(target)) != ZX_OK) {
+        (rc = resource_path_.Push(target_)) != ZX_OK) {
         // No-op: The directory may not be present when fuzzing standalone Zircon.
         resource_path_.Reset();
     }
 
+    fbl::String pkg_dir =
+        fbl::StringPrintf("fuchsia.com:%s:0#meta:%s.cmx", package_.c_str(), target_.c_str());
+
     // Ensure the directories that will hold the fuzzing outputs are present.
-    if ((rc = RebasePath("data", &data_path_)) != ZX_OK ||
-        (rc = data_path_.Ensure("fuzzing")) != ZX_OK ||
-        (rc = data_path_.Push("fuzzing")) != ZX_OK || (rc = data_path_.Ensure(package)) != ZX_OK ||
-        (rc = data_path_.Push(package)) != ZX_OK || (rc = data_path_.Ensure(target)) != ZX_OK ||
-        (rc = data_path_.Push(target)) != ZX_OK || (rc = data_path_.Ensure("corpus")) != ZX_OK) {
-        fprintf(err_, "Failed to establish data path for '%s/%s': %s\n", package.c_str(),
-                target.c_str(), zx_status_get_string(rc));
+    if ((rc = RebasePath("data", &data_path_)) != ZX_OK || (rc = data_path_.Push("r")) != ZX_OK ||
+        (rc = data_path_.Push("sys")) != ZX_OK || (rc = data_path_.Ensure(pkg_dir)) != ZX_OK ||
+        (rc = data_path_.Push(pkg_dir)) != ZX_OK || (rc = data_path_.Ensure("corpus")) != ZX_OK) {
+        fprintf(err_, "Failed to establish data path for '%s/%s': %s\n", package_.c_str(),
+                target_.c_str(), zx_status_get_string(rc));
         return ZX_ERR_IO;
     }
 
@@ -564,7 +553,7 @@ zx_status_t Fuzzer::LoadOptions() {
 
     case kMerge:
         if ((rc = SetOption("merge", "1")) != ZX_OK ||
-            (rc = SetOption("merge_control_file", data_path_.Join(".mergefile"))) != ZX_OK) {
+            (rc = SetOption("merge_control_file", "data/.mergefile")) != ZX_OK) {
             return rc;
         }
         break;
@@ -574,7 +563,7 @@ zx_status_t Fuzzer::LoadOptions() {
     }
 
     // Artifacts go in the data directory
-    if ((rc = SetOption("artifact_prefix", data_path_.c_str())) != ZX_OK) {
+    if ((rc = SetOption("artifact_prefix", "data")) != ZX_OK) {
         return rc;
     }
 
@@ -586,7 +575,8 @@ zx_status_t Fuzzer::LoadOptions() {
     // Record the (optional) dictionary
     size_t dict_size;
     if ((rc = resource_path_.GetSize("dictionary", &dict_size)) == ZX_OK && dict_size != 0 &&
-        (rc = SetOption("dict", resource_path_.Join("dictionary"))) != ZX_OK) {
+        (rc = SetOption("dict", fbl::StringPrintf("/pkg/data/%s/dictionary", target_.c_str()))) !=
+            ZX_OK) {
         fprintf(err_, "failed to set dictionary option: %s\n", zx_status_get_string(rc));
         return rc;
     }
@@ -677,7 +667,7 @@ zx_status_t Fuzzer::Start() {
             fprintf(err_, "Failed to make empty corpus: %s\n", zx_status_get_string(rc));
             return rc;
         }
-        inputs_.push_front(data_path_.Join("corpus"));
+        inputs_.push_front("data/corpus");
     }
 
     return Execute();
@@ -691,7 +681,7 @@ zx_status_t Fuzzer::Check() {
     }
 
     // Fuzzer details
-    fprintf(out_, "    Target info:  %s\n", target_.c_str());
+    fprintf(out_, "    Target info:  %s\n", url_.c_str());
     fprintf(out_, "    Output path:  %s\n", data_path_.c_str());
 
     // Report corpus details, if present
@@ -755,7 +745,7 @@ zx_status_t Fuzzer::Repro() {
     // Get full paths of artifacts
     inputs_.clear();
     for (const char* artifact = artifacts->first(); artifact; artifact = artifacts->next()) {
-        inputs_.push_back(data_path_.Join(artifact));
+        inputs_.push_back(fbl::StringPrintf("data/%s", artifact));
     }
 
     // Nothing to repro
@@ -788,7 +778,7 @@ zx_status_t Fuzzer::Merge() {
         }
     }
     if (inputs_.is_empty()) {
-        inputs_.push_back(data_path_.Join("corpus.prev"));
+        inputs_.push_back("data/corpus.prev");
     }
 
     // Make sure the corpus directory exists, and make sure the output corpus is the first argument
@@ -796,8 +786,8 @@ zx_status_t Fuzzer::Merge() {
         fprintf(err_, "Failed to ensure 'corpus': %s\n", zx_status_get_string(rc));
         return rc;
     }
-    inputs_.erase_if(data_path_.Join("corpus"));
-    inputs_.push_front(data_path_.Join("corpus"));
+    inputs_.erase_if("data/corpus");
+    inputs_.push_front("data/corpus");
 
     if ((rc = Execute()) != ZX_OK) {
         fprintf(err_, "Failed to execute: %s\n", zx_status_get_string(rc));

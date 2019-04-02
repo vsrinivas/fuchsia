@@ -122,7 +122,11 @@ private:
     uint32_t cmd_;
     // Fuzzer name; may be a user-supplied pattern until resolved into a package/target.
     fbl::String name_;
-    // Path on target to the fuzzer binary
+    // Fuchsia package URL for the fuzzing component.
+    fbl::String url_;
+    // Fuchsia package name; matches a `fuzz_package` as defined in //build/fuzzing/fuzzer.gni
+    fbl::String package_;
+    // Fuchsia component name; matches a `fuzz_target` as defined in //build/fuzzing/fuzzer.gni
     fbl::String target_;
     // Path that the resource and data paths are relative to; primarily used for testing.
     fbl::String root_;

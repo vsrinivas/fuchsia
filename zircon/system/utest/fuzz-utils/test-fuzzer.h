@@ -22,6 +22,7 @@ public:
     ~TestFuzzer() override;
 
     const FuzzerFixture& fixture() const { return fixture_; }
+    StringList* args() { return &args_; }
 
     // Resets the out and err buffers to be unallocated.
     void Reset() override;
@@ -46,13 +47,6 @@ public:
     // if it isn't found.
     int FindArg(const char* fmt, const fbl::String& arg);
     int FindArg(const fbl::String& arg) { return FindArg("%s", arg); }
-
-    // Various fixture locations
-    const char* executable() const { return executable_.c_str(); }
-    const char* manifest() const { return manifest_.c_str(); }
-    const char* dictionary() const { return dictionary_.c_str(); }
-    const char* data_path() const { return data_path_.c_str(); }
-    fbl::String data_path(const char* relpath) { return data_path_.Join(relpath); }
 
     // Expose parent class methods
     zx_status_t SetOption(const fbl::String& option) { return Fuzzer::SetOption(option); }
@@ -83,12 +77,6 @@ private:
 
     // The arguments passed to the subprocess
     StringList args_;
-
-    // Test info, captured by |Execute|
-    fbl::String executable_;
-    fbl::String manifest_;
-    fbl::String dictionary_;
-    Path data_path_;
 
     // Output stream
     FILE* out_;

@@ -32,10 +32,6 @@ TestFuzzer::~TestFuzzer() {
 void TestFuzzer::Reset() {
     Fuzzer::Reset();
     args_.clear();
-    executable_.clear();
-    manifest_.clear();
-    dictionary_.clear();
-    data_path_.Reset();
 
     if (out_) {
         fclose(out_);
@@ -132,39 +128,7 @@ bool TestFuzzer::CheckProcess(zx_handle_t process, const char* target) {
 // Protected methods
 
 zx_status_t TestFuzzer::Execute() {
-    zx_status_t rc;
-
     GetArgs(&args_);
-
-    fbl::String package, target;
-    const char* s = args_.first();
-    executable_.Set(s);
-    if (strcmp(s, "/bin/run") != 0) {
-        // BootFS path
-        // .../boot/test/fuzz/<target>
-        package.Set("zircon_fuzzers");
-        target.Set(s + fixture_.path("boot/test/fuzz/").length());
-    } else {
-        // PkgFS path
-        // fuchsia-pkg://fuchsia.com/<package>#meta/<target>.cmx
-        s = args_.next();
-        s += strlen("fuchsia-pkg://fuchsia.com/");
-        const char* t = strchr(s, '#');
-        package.Set(s, t - s);
-        s = t + strlen("#meta/");
-        t = strrchr(s, '.');
-        target.Set(s, t - s);
-    }
-    manifest_ = fbl::StringPrintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", package.c_str(),
-                                  target.c_str());
-    dictionary_ = fixture_.path("pkgfs/packages/%s/%s/data/%s/dictionary", package.c_str(),
-                                fixture_.max_version(package.c_str()), target.c_str());
-    data_path_.Reset();
-    if ((rc = data_path_.Push(fixture_.path("data/fuzzing"))) != ZX_OK ||
-        (rc = data_path_.Push(package)) != ZX_OK || (rc = data_path_.Push(target)) != ZX_OK) {
-        return rc;
-    }
-
     return ZX_OK;
 }
 

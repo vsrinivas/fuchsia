@@ -86,10 +86,12 @@ bool FuzzerFixture::CreatePackage(const char* package, long int version, const c
 bool FuzzerFixture::CreateData(const char* package, const char* target) {
     BEGIN_HELPER;
 
-    ASSERT_TRUE(CreateDirectory(path("data/fuzzing/%s/%s/corpus", package, target)));
-    ASSERT_TRUE(CreateFile(path("data/fuzzing/%s/%s/crash-deadbeef", package, target)));
-    ASSERT_TRUE(CreateFile(path("data/fuzzing/%s/%s/leak-deadfa11", package, target)));
-    ASSERT_TRUE(CreateFile(path("data/fuzzing/%s/%s/oom-feedface", package, target)));
+    fbl::String data_path =
+        fbl::StringPrintf("data/r/sys/fuchsia.com:%s:0#meta:%s.cmx", package, target);
+    ASSERT_TRUE(CreateDirectory(path("%s/corpus", data_path.c_str())));
+    ASSERT_TRUE(CreateFile(path("%s/crash-deadbeef", data_path.c_str())));
+    ASSERT_TRUE(CreateFile(path("%s/leak-deadfa11", data_path.c_str())));
+    ASSERT_TRUE(CreateFile(path("%s/oom-feedface", data_path.c_str())));
 
     END_HELPER;
 }

@@ -449,46 +449,46 @@ bool TestStart() {
     // Zircon fuzzer within Fuchsia
     ASSERT_TRUE(test.Eval("start zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_EQ(0, test.FindArg("/bin/run"));
+    EXPECT_EQ(1, test.FindArg("fuchsia-pkg://fuchsia.com/zircon_fuzzers#meta/target2.cmx"));
     EXPECT_LT(0, test.FindArg("-jobs=1"));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=data"));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
-    EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
+    EXPECT_LT(0, test.FindArg("-dict=/pkg/data/target2/dictionary"));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
+    EXPECT_LT(0, test.FindArg("data/corpus"));
 
     // Fuchsia fuzzer without resources
     ASSERT_TRUE(test.Eval("start fuchsia1/target1"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
+    EXPECT_EQ(0, test.FindArg("/bin/run"));
+    EXPECT_EQ(1, test.FindArg("fuchsia-pkg://fuchsia.com/fuchsia1_fuzzers#meta/target1.cmx"));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=data"));
 
     // Fuchsia fuzzer with resources
     ASSERT_TRUE(test.Eval("start fuchsia1/target3"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_EQ(0, test.FindArg("/bin/run"));
+    EXPECT_EQ(1, test.FindArg("fuchsia-pkg://fuchsia.com/fuchsia1_fuzzers#meta/target3.cmx"));
     EXPECT_LT(0, test.FindArg("-jobs=1"));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=data"));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
-    EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
+    EXPECT_LT(0, test.FindArg("-dict=/pkg/data/target3/dictionary"));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
+    EXPECT_LT(0, test.FindArg("data/corpus"));
 
     // Fuchsia fuzzer with resources, command-line option, and explicit corpus
     ASSERT_TRUE(test.Eval("start fuchsia2/target4 /path/to/another/corpus -foo=baz"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
+    EXPECT_EQ(0, test.FindArg("/bin/run"));
+    EXPECT_EQ(1, test.FindArg("fuchsia-pkg://fuchsia.com/fuchsia2_fuzzers#meta/target4.cmx"));
     EXPECT_LT(0, test.FindArg("-jobs=1"));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=data"));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
-    EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
+    EXPECT_LT(0, test.FindArg("-dict=/pkg/data/target4/dictionary"));
     EXPECT_LT(0, test.FindArg("-foo=baz"));
     EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
-    EXPECT_GT(0, test.FindArg(test.data_path("corpus")));
+    EXPECT_GT(0, test.FindArg("data/corpus"));
 
     END_TEST;
 }
@@ -501,24 +501,24 @@ bool TestCheck() {
     ASSERT_TRUE(test.Eval("check zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_TRUE(test.InStdOut("stopped"));
-    EXPECT_TRUE(test.InStdOut(test.executable()));
-    EXPECT_TRUE(test.InStdOut(test.data_path()));
+    EXPECT_TRUE(test.InStdOut("fuchsia-pkg://fuchsia.com/zircon_fuzzers#meta/target2.cmx"));
+    EXPECT_TRUE(test.InStdOut("data"));
     EXPECT_TRUE(test.InStdOut("0 inputs"));
     EXPECT_TRUE(test.InStdOut("crash"));
 
     ASSERT_TRUE(test.Eval("check fuchsia/target1"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_TRUE(test.InStdOut("stopped"));
-    EXPECT_TRUE(test.InStdOut(test.executable()));
-    EXPECT_TRUE(test.InStdOut(test.data_path()));
+    EXPECT_TRUE(test.InStdOut("fuchsia-pkg://fuchsia.com/fuchsia1_fuzzers#meta/target1.cmx"));
+    EXPECT_TRUE(test.InStdOut("data"));
     EXPECT_TRUE(test.InStdOut("0 inputs"));
     EXPECT_TRUE(test.InStdOut("none"));
 
     ASSERT_TRUE(test.Eval("check fuchsia/target4"));
     EXPECT_EQ(ZX_OK, test.Run());
     EXPECT_TRUE(test.InStdOut("stopped"));
-    EXPECT_TRUE(test.InStdOut(test.executable()));
-    EXPECT_TRUE(test.InStdOut(test.data_path()));
+    EXPECT_TRUE(test.InStdOut("fuchsia-pkg://fuchsia.com/fuchsia2_fuzzers#meta/target4.cmx"));
+    EXPECT_TRUE(test.InStdOut("data"));
     EXPECT_TRUE(test.InStdOut("0 inputs"));
     EXPECT_TRUE(test.InStdOut("crash"));
 
@@ -558,16 +558,16 @@ bool TestRepro() {
     // Zircon fuzzer within Fuchsia
     ASSERT_TRUE(test.Eval("repro zircon/target2 fa"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
+    EXPECT_EQ(0, test.FindArg("/bin/run"));
+    EXPECT_EQ(1, test.FindArg("fuchsia-pkg://fuchsia.com/zircon_fuzzers#meta/target2.cmx"));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=data"));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
-    EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
+    EXPECT_LT(0, test.FindArg("-dict=/pkg/data/target2/dictionary"));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
-    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11")));
-    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface")));
-    EXPECT_GT(0, test.FindArg(test.data_path("crash-deadbeef")));
-    EXPECT_GT(0, test.FindArg(test.data_path("corpus")));
+    EXPECT_LT(0, test.FindArg("data/leak-deadfa11"));
+    EXPECT_LT(0, test.FindArg("data/oom-feedface"));
+    EXPECT_GT(0, test.FindArg("data/crash-deadbeef"));
+    EXPECT_GT(0, test.FindArg("data/corpus"));
 
     ASSERT_TRUE(test.Eval("repro fuchsia1/target1"));
     EXPECT_NE(ZX_OK, test.Run());
@@ -576,16 +576,16 @@ bool TestRepro() {
     // Fuchsia fuzzer with resources
     ASSERT_TRUE(test.Eval("repro fuchsia2/target4"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
+    EXPECT_EQ(0, test.FindArg("/bin/run"));
+    EXPECT_EQ(1, test.FindArg("fuchsia-pkg://fuchsia.com/fuchsia2_fuzzers#meta/target4.cmx"));
+    EXPECT_LT(0, test.FindArg("-artifact_prefix=data"));
     EXPECT_LT(0, test.FindArg("-baz=qux"));
-    EXPECT_LT(0, test.FindArg("-dict=%s", test.dictionary()));
+    EXPECT_LT(0, test.FindArg("-dict=/pkg/data/target4/dictionary"));
     EXPECT_LT(0, test.FindArg("-foo=bar"));
-    EXPECT_LT(0, test.FindArg(test.data_path("leak-deadfa11")));
-    EXPECT_LT(0, test.FindArg(test.data_path("oom-feedface")));
-    EXPECT_LT(0, test.FindArg(test.data_path("crash-deadbeef")));
-    EXPECT_GT(0, test.FindArg(test.data_path("corpus")));
+    EXPECT_LT(0, test.FindArg("data/leak-deadfa11"));
+    EXPECT_LT(0, test.FindArg("data/oom-feedface"));
+    EXPECT_LT(0, test.FindArg("data/crash-deadbeef"));
+    EXPECT_GT(0, test.FindArg("data/corpus"));
 
     END_TEST;
 }
@@ -601,64 +601,64 @@ bool TestMerge() {
     // Zircon minimizing merge in Fuchsia
     ASSERT_TRUE(test.Eval("merge zircon/target2"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
-    EXPECT_LT(0, test.FindArg("-merge=1"));
-    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev")));
+    EXPECT_EQ(0, test.FindArg("/bin/run"));
+    EXPECT_EQ(1, test.FindArg("fuchsia-pkg://fuchsia.com/zircon_fuzzers#meta/target2.cmx"));
+    EXPECT_LT(1, test.FindArg("-artifact_prefix=data"));
+    EXPECT_LT(1, test.FindArg("-merge=1"));
+    EXPECT_LT(1, test.FindArg("-merge_control_file=data/.mergefile"));
+    EXPECT_LT(1, test.FindArg("data/corpus"));
+    EXPECT_LT(1, test.FindArg("data/corpus.prev"));
 
     path.Reset();
-    ASSERT_EQ(ZX_OK, path.Push(test.data_path()));
+    ASSERT_EQ(ZX_OK, path.Push("data"));
     EXPECT_NE(ZX_OK, path.Push("corpus.prev"));
     EXPECT_NE(ZX_OK, path.GetSize(".mergefile", &len));
 
     // Fuchsia minimizing merge
     ASSERT_TRUE(test.Eval("merge fuchsia2/target4"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
-    EXPECT_LT(0, test.FindArg("-merge=1"));
-    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus.prev")));
+    EXPECT_EQ(0, test.FindArg("/bin/run"));
+    EXPECT_EQ(1, test.FindArg("fuchsia-pkg://fuchsia.com/fuchsia2_fuzzers#meta/target4.cmx"));
+    EXPECT_LT(1, test.FindArg("-artifact_prefix=data"));
+    EXPECT_LT(1, test.FindArg("-merge=1"));
+    EXPECT_LT(1, test.FindArg("-merge_control_file=data/.mergefile"));
+    EXPECT_LT(1, test.FindArg("data/corpus"));
+    EXPECT_LT(1, test.FindArg("data/corpus.prev"));
 
     path.Reset();
-    ASSERT_EQ(ZX_OK, path.Push(test.data_path()));
+    ASSERT_EQ(ZX_OK, path.Push("data"));
     EXPECT_NE(ZX_OK, path.Push("corpus.prev"));
     EXPECT_NE(ZX_OK, path.GetSize(".mergefile", &len));
 
     // Fuchsia merge of another corpus without an existing corpus
     ASSERT_TRUE(test.Eval("merge fuchsia1/target3 /path/to/another/corpus"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
-    EXPECT_LT(0, test.FindArg("-merge=1"));
-    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
-    EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
+    EXPECT_EQ(0, test.FindArg("/bin/run"));
+    EXPECT_EQ(1, test.FindArg("fuchsia-pkg://fuchsia.com/fuchsia1_fuzzers#meta/target3.cmx"));
+    EXPECT_LT(1, test.FindArg("-artifact_prefix=data"));
+    EXPECT_LT(1, test.FindArg("-merge=1"));
+    EXPECT_LT(1, test.FindArg("-merge_control_file=data/.mergefile"));
+    EXPECT_LT(1, test.FindArg("data/corpus"));
+    EXPECT_LT(1, test.FindArg("/path/to/another/corpus"));
 
     path.Reset();
-    ASSERT_EQ(ZX_OK, path.Push(test.data_path()));
+    ASSERT_EQ(ZX_OK, path.Push("data"));
     EXPECT_NE(ZX_OK, path.Push("corpus.prev"));
     EXPECT_NE(ZX_OK, path.GetSize(".mergefile", &len));
 
     // Fuchsia merge of another corpus with an existing corpus
     ASSERT_TRUE(test.Eval("merge fuchsia2/target4 /path/to/another/corpus"));
     EXPECT_EQ(ZX_OK, test.Run());
-    EXPECT_EQ(0, test.FindArg(test.executable()));
-    EXPECT_LT(0, test.FindArg(test.manifest()));
-    EXPECT_LT(0, test.FindArg("-artifact_prefix=%s", test.data_path()));
-    EXPECT_LT(0, test.FindArg("-merge=1"));
-    EXPECT_LT(0, test.FindArg("-merge_control_file=%s", test.data_path(".mergefile")));
-    EXPECT_LT(0, test.FindArg(test.data_path("corpus")));
-    EXPECT_LT(0, test.FindArg("/path/to/another/corpus"));
+    EXPECT_EQ(0, test.FindArg("/bin/run"));
+    EXPECT_EQ(1, test.FindArg("fuchsia-pkg://fuchsia.com/fuchsia2_fuzzers#meta/target4.cmx"));
+    EXPECT_LT(1, test.FindArg("-artifact_prefix=data"));
+    EXPECT_LT(1, test.FindArg("-merge=1"));
+    EXPECT_LT(1, test.FindArg("-merge_control_file=data/.mergefile"));
+    EXPECT_LT(1, test.FindArg("data/corpus"));
+    EXPECT_LT(1, test.FindArg("/path/to/another/corpus"));
 
     path.Reset();
-    ASSERT_EQ(ZX_OK, path.Push(test.data_path()));
+    ASSERT_EQ(ZX_OK, path.Push("data"));
     EXPECT_NE(ZX_OK, path.Push("corpus.prev"));
     EXPECT_NE(ZX_OK, path.GetSize(".mergefile", &len));
 

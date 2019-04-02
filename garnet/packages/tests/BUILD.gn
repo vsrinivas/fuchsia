@@ -959,7 +959,6 @@ group("iquery_test") {
 group("zircon") {
   testonly = true
   public_deps = [
-    "//garnet/tests/zircon:zircon_fuzzers",
     "//garnet/tests/zircon/libdriver-integration-test:libdriver-integration-test",
   ]
 }

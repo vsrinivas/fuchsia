@@ -13,7 +13,9 @@ def main():
   parser = argparse.ArgumentParser("Creates a component manifest for a fuzzer")
   parser.add_argument("--out", help="Path to the output file", required=True)
   parser.add_argument(
-      "--bin", help="Package relative path to the binary", required=True)
+      "--bin",
+      help="Path to the binary; absolute or relative to package's bin directory",
+      required=True)
   parser.add_argument("--cmx", help="Optional starting manifest")
   args = parser.parse_args()
 
@@ -22,7 +24,12 @@ def main():
     with open(args.cmx, "r") as f:
       cmx = json.load(f)
 
-  cmx["program"]["binary"] = "bin/" + args.bin
+  if args.bin.startswith("/"):
+    # Zircon fuzz_targets are absolute paths in bootfs.
+    cmx["program"]["binary"] = args.bin
+  else:
+    # Fuchsia fuzz_targets are part of a package
+    cmx["program"]["binary"] = "bin/" + args.bin
 
   if "services" not in cmx["sandbox"]:
     cmx["sandbox"]["services"] = []
@@ -30,10 +37,8 @@ def main():
 
   if "features" not in cmx["sandbox"]:
     cmx["sandbox"]["features"] = []
-  # TODO(SEC-200): Fuzz tests currently broken anyway due to now invalid
-  # assumptions about persistent storage. Commenting this out until fixed.
-  #if "persistent-storage" not in cmx["sandbox"]["features"]:
-  #  cmx["sandbox"]["features"].append("persistent-storage")
+  if "isolated-persistent-storage" not in cmx["sandbox"]["features"]:
+    cmx["sandbox"]["features"].append("isolated-persistent-storage")
 
   with open(args.out, "w") as f:
     f.write(json.dumps(cmx, sort_keys=True, indent=4))
