@@ -287,6 +287,17 @@ void Session::EnqueueEvent(::fuchsia::ui::input::InputEvent event) {
   event_reporter_->EnqueueEvent(std::move(event));
 }
 
+bool Session::SetRootView(fxl::WeakPtr<View> view) {
+  // Check that the root view ID is being set or being cleared. If there is
+  // already a root view, another cannot be set.
+  if (root_view_) {
+    return false;
+  }
+
+  root_view_ = view;
+  return true;
+}
+
 bool Session::ApplyUpdate(CommandContext* command_context,
                           std::vector<::fuchsia::ui::gfx::Command> commands) {
   TRACE_DURATION("gfx", "Session::ApplyUpdate");

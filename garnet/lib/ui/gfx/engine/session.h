@@ -131,6 +131,9 @@ class Session {
   void IncrementResourceCount() { ++resource_count_; }
   void DecrementResourceCount() { --resource_count_; }
 
+  friend class GfxCommandApplier;
+  bool SetRootView(fxl::WeakPtr<View> view);
+
   struct Update {
     uint64_t presentation_time;
 
@@ -178,6 +181,10 @@ class Session {
   // alive that are not part of |resources_|, such as a Node that is referenced
   // by a parent Node in the scene graph.
   size_t resource_count_ = 0;
+  // A weak reference to the first View added to the ResourceMap. Cached while
+  // transitioning to a one-root-view-per-session model. See SCN-1249 for more
+  // details.
+  fxl::WeakPtr<View> root_view_;
 
   // Tracks the number of method calls for tracing.
   uint64_t scheduled_update_count_ = 0;

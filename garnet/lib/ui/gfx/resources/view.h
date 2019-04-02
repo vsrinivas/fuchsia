@@ -17,6 +17,7 @@
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 #include "garnet/lib/ui/gfx/resources/view_holder.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -25,6 +26,7 @@ class Session;
 
 using ViewNodePtr = fxl::RefPtr<ViewNode>;
 using ViewLinker = ObjectLinker<ViewHolder, View>;
+using ViewPtr = fxl::RefPtr<View>;
 
 // View and ViewHolder work together via the ViewLinker to allow scene
 // traversal across Session boundaries.
@@ -47,6 +49,8 @@ class View final : public Resource {
 
   View(Session* session, ResourceId id, ViewLinker::ImportLink link);
   ~View() override;
+
+  fxl::WeakPtr<View> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // |Resource|
   void Accept(class ResourceVisitor* visitor) override;
@@ -96,8 +100,9 @@ class View final : public Resource {
   // Handle signaled when any of this View's children are involved in a render
   // pass.
   zx_handle_t render_handle_;
+
+  fxl::WeakPtrFactory<View> weak_factory_;  // must be last
 };
-using ViewPtr = fxl::RefPtr<View>;
 
 }  // namespace gfx
 }  // namespace scenic_impl

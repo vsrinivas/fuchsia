@@ -16,7 +16,8 @@ namespace gfx {
 const ResourceTypeInfo View::kTypeInfo = {ResourceType::kView, "View"};
 
 View::View(Session* session, ResourceId id, ViewLinker::ImportLink link)
-    : Resource(session, id, View::kTypeInfo), link_(std::move(link)) {
+    :Resource(session, id, View::kTypeInfo), link_(std::move(link)),
+    weak_factory_(this) {
   node_ = fxl::AdoptRef<ViewNode>(new ViewNode(session, id));
 
   FXL_DCHECK(link_.valid());
