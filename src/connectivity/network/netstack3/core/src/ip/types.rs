@@ -111,7 +111,7 @@ mod internal {
 
     /// An IP address.
     #[allow(missing_docs)]
-    #[derive(Copy, Clone, Eq, PartialEq, Debug)]
+    #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
     pub enum IpAddr {
         V4(Ipv4Addr),
         V6(Ipv6Addr),

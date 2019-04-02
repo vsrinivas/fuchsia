@@ -124,6 +124,14 @@ pub(crate) trait NdpDevice: Sized {
         address: &Ipv6Addr,
         link_address: Self::LinkAddress,
     );
+
+    /// Notifies the device layer that the link-layer address resolution for
+    /// the neighbor in `address` failed.
+    fn address_resolution_failed<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+        address: &Ipv6Addr,
+    );
 }
 
 /// The state associated with an instance of the Neighbor Discovery Protocol
@@ -193,13 +201,7 @@ fn handle_timeout_inner<D: EventDispatcher, ND: NdpDevice>(ctx: &mut Context<D>,
                 ndp_state.neighbors.delete_neighbor_state(&id.neighbor_addr);
                 increment_counter!(ctx, "ndp::neighbor_solicitation_timeout");
 
-                // TODO(brunodalbo) maximum number of retries reached, RFC
-                //  says: "If no Neighbor Advertisement is received after
-                //  MAX_MULTICAST_SOLICIT solicitations, address resolution has
-                //  failed. The sender MUST return ICMP destination unreachable
-                //  indications with code 3 (Address Unreachable) for each
-                //  packet queued awaiting address resolution."
-                log_unimplemented!((), "Maximum number of neighbor solicitations reached");
+                ND::address_resolution_failed(ctx, id.device_id, &id.neighbor_addr);
             }
         }
         _ => debug!("ndp timeout fired for invalid neighbor state"),
@@ -547,7 +549,7 @@ mod tests {
     use crate::device::ethernet::{EthernetNdpDevice, Mac};
     use crate::ip::IPV6_MIN_MTU;
     use crate::testutil::{
-        self, set_logger_for_test, DummyEventDispatcher, DummyEventDispatcherBuilder,
+        self, set_logger_for_test, DummyEventDispatcher, DummyEventDispatcherBuilder, DummyNetwork,
     };
     use crate::wire::icmp::IcmpEchoRequest;
     use crate::StackState;
@@ -592,14 +594,22 @@ mod tests {
     #[test]
     fn test_address_resolution() {
         set_logger_for_test();
-        let mut builder = DummyEventDispatcherBuilder::default();
-        builder.add_device(TEST_LOCAL_MAC);
-        let mut local = builder.build();
-        builder = DummyEventDispatcherBuilder::default();
-        builder.add_device(TEST_REMOTE_MAC);
-        let mut remote = builder.build();
+        let mut local = DummyEventDispatcherBuilder::default();
+        local.add_device(TEST_LOCAL_MAC);
+        let mut remote = DummyEventDispatcherBuilder::default();
+        remote.add_device(TEST_REMOTE_MAC);
         let device_id = DeviceId::new_ethernet(1);
-        let mapper = |_: DeviceId| device_id;
+
+        let mut net = DummyNetwork::new(
+            vec![("local", local.build()), ("remote", remote.build())].into_iter(),
+            |ctx, dev| {
+                if *ctx == "local" {
+                    ("remote", device_id, None)
+                } else {
+                    ("local", device_id, None)
+                }
+            },
+        );
 
         // let's try to ping the remote device from the local device:
         let req = IcmpEchoRequest::new(0, 0);
@@ -608,7 +618,7 @@ mod tests {
             IcmpPacketBuilder::<Ipv6, &[u8], _>::new(local_ip(), remote_ip(), IcmpUnusedCode, req),
         );
         send_ip_packet_from_device(
-            &mut local,
+            net.context("local"),
             device_id,
             local_ip(),
             remote_ip(),
@@ -617,20 +627,24 @@ mod tests {
             body,
         );
         // this should've triggered a neighbor solicitation to come out of local
-        assert_eq!(local.dispatcher.frames_sent().len(), 1);
+        assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
         // and a timer should've been started.
-        assert_eq!(local.dispatcher.timer_events().count(), 1);
-        local.dispatcher.forward_frames(&mut remote, mapper);
+        assert_eq!(net.context("local").dispatcher.timer_events().count(), 1);
+
+        net.step();
+
         assert_eq!(
-            *remote.state().test_counters.get("ndp::rx_neighbor_solicitation"),
+            *net.context("remote").state().test_counters.get("ndp::rx_neighbor_solicitation"),
             1,
             "remote received solicitation"
         );
-        assert_eq!(remote.dispatcher.frames_sent().len(), 1);
+        assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 1);
+
         // forward advertisement response back to local
-        remote.dispatcher.forward_frames(&mut local, mapper);
+        net.step();
+
         assert_eq!(
-            *local.state().test_counters.get("ndp::rx_neighbor_advertisement"),
+            *net.context("local").state().test_counters.get("ndp::rx_neighbor_advertisement"),
             1,
             "local received advertisement"
         );
@@ -638,7 +652,7 @@ mod tests {
         // at the end of the exchange, both sides should have each other on
         // their ndp tables:
         assert_eq!(
-            EthernetNdpDevice::get_ndp_state::<_>(&mut local, device_id.id())
+            EthernetNdpDevice::get_ndp_state::<_>(net.context("local"), device_id.id())
                 .neighbors
                 .get_neighbor_state(&remote_ip())
                 .unwrap()
@@ -646,7 +660,7 @@ mod tests {
             LinkAddressResolutionValue::<Mac>::Known { address: TEST_REMOTE_MAC }
         );
         assert_eq!(
-            EthernetNdpDevice::get_ndp_state::<_>(&mut remote, device_id.id())
+            EthernetNdpDevice::get_ndp_state::<_>(net.context("remote"), device_id.id())
                 .neighbors
                 .get_neighbor_state(&local_ip())
                 .unwrap()
@@ -654,9 +668,19 @@ mod tests {
             LinkAddressResolutionValue::<Mac>::Known { address: TEST_LOCAL_MAC }
         );
         // and the local timer should've been unscheduled:
-        assert_eq!(local.dispatcher.timer_events().count(), 0);
+        assert_eq!(net.context("local").dispatcher.timer_events().count(), 0);
 
-        // TODO(brunodalbo) once we are able to dequeue the packets, we can
-        //  assert that "remote" receives the original IcmpEchoRequest.
+        // upon link layer resolution, the original ping request should've been
+        // sent out:
+        assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
+        net.step();
+        assert_eq!(
+            *net.context("remote").state().test_counters.get("receive_icmp_packet::echo_request"),
+            1
+        );
+
+        // TODO(brunodalbo): we should be able to verify that remote also sends
+        //  back an echo reply, but we're having some trouble with IPv6 link
+        //  local addresses.
     }
 }

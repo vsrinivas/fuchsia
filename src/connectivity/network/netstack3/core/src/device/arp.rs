@@ -130,6 +130,14 @@ pub(crate) trait ArpDevice<P: PType + Eq + Hash>: Sized {
         proto_addr: P,
         hw_addr: Self::HardwareAddr,
     );
+
+    /// Notifies the device layer that the hardware address resolution for
+    /// the the given protocol address `proto_addr` failed.
+    fn address_resolution_failed<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+        proto_addr: P,
+    );
 }
 
 /// Handle a ARP timer event
@@ -238,6 +246,8 @@ pub(crate) fn receive_arp_packet<
             device_id,
             packet.sender_protocol_address().addr(),
         ));
+
+        increment_counter!(ctx, "arp::rx_resolve");
         // Notify device layer:
         AD::address_resolved(
             ctx,
@@ -248,6 +258,7 @@ pub(crate) fn receive_arp_packet<
     }
     if addressed_to_me && packet.operation() == ArpOp::Request {
         let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
+        increment_counter!(ctx, "arp::rx_request");
         AD::send_arp_frame(
             ctx,
             device_id,
@@ -342,6 +353,7 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
         } else {
             ctx.dispatcher.cancel_timeout(id);
             AD::get_arp_state(ctx, device_id).table.remove(lookup_addr);
+            AD::address_resolution_failed(ctx, device_id, lookup_addr);
         }
     } else {
         // RFC 826 does not specify what to do if we don't have a local address, but there is no
@@ -429,11 +441,11 @@ mod tests {
     use super::*;
     use crate::device::ethernet::{set_ip_addr_subnet, EtherType, Mac};
     use crate::ip::{AddrSubnet, Ipv4Addr, IPV6_MIN_MTU};
-    use crate::testutil;
-    use crate::testutil::DummyEventDispatcher;
+    use crate::testutil::{set_logger_for_test, DummyEventDispatcher, DummyEventDispatcherBuilder};
     use crate::wire::arp::{peek_arp_types, ArpPacketBuilder};
     use crate::wire::ethernet::EthernetFrame;
-    use crate::StackState;
+    use crate::{testutil, Subnet};
+    use crate::{DeviceId, StackState};
 
     const TEST_LOCAL_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_REMOTE_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -552,7 +564,7 @@ mod tests {
 
     #[test]
     fn test_exhaust_retries_arp_request() {
-        //To fully test max retries of APR request, NUM_APR_REQUEST should be
+        //To fully test max retries of APR request, NUM_ARP_REQUEST should be
         // set >= DEFAULT_ARP_REQUEST_MAX_TRIES.
         const NUM_ARP_REQUESTS: usize = DEFAULT_ARP_REQUEST_MAX_TRIES + 1;
         let mut state = StackState::default();
@@ -643,7 +655,7 @@ mod tests {
                 &mut ctx,
                 device_id,
                 TEST_LOCAL_MAC,
-                TEST_REMOTE_IPV4
+                TEST_REMOTE_IPV4,
             )
             .unwrap(),
             TEST_REMOTE_MAC
@@ -669,5 +681,115 @@ mod tests {
         t.insert(Ipv4Addr::new([10, 0, 0, 1]), Mac::new([1, 2, 3, 4, 5, 6]));
         assert_eq!(*t.lookup(Ipv4Addr::new([10, 0, 0, 1])).unwrap(), Mac::new([1, 2, 3, 4, 5, 6]));
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 2])), None);
+    }
+
+    #[test]
+    fn test_address_resolution() {
+        use crate::device::ethernet::EthernetArpDevice;
+        use crate::ip::{send_ip_packet_from_device, IpProto, Ipv4};
+        use crate::wire::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
+        use packet::{serialize::BufferSerializer, Buf};
+
+        set_logger_for_test();
+
+        // We set up two contexts (local and remote) and add them to a
+        // DummyNetwork. We are not using the DUMMY_CONFIG_V4 configuration here
+        // because we *don't want* the ARP table to be pre-populated by the
+        // builder. The DummyNetwork is set up so that all frames from local are
+        // forwarded to remote and vice-versa.
+        let local_ip = Ipv4Addr::new([10, 0, 0, 1]);
+        let remote_ip = Ipv4Addr::new([10, 0, 0, 2]);
+        let subnet = Subnet::new(Ipv4Addr::new([10, 0, 0, 0]), 24).unwrap();
+
+        let mut local = DummyEventDispatcherBuilder::default();
+        local.add_device_with_ip(TEST_LOCAL_MAC, local_ip, subnet);
+        local.add_device_route(subnet, 0);
+
+        let mut remote = DummyEventDispatcherBuilder::default();
+        remote.add_device_with_ip(TEST_REMOTE_MAC, remote_ip, subnet);
+        remote.add_device_route(subnet, 0);
+
+        let device_id = DeviceId::new_ethernet(1);
+        let mut net = testutil::DummyNetwork::new(
+            vec![("local", local.build()), ("remote", remote.build())].into_iter(),
+            |ctx, device| {
+                if *ctx == "local" {
+                    ("remote", device_id, None)
+                } else {
+                    ("local", device_id, None)
+                }
+            },
+        );
+
+        // let's try to ping the remote device from the local device:
+        let req = IcmpEchoRequest::new(0, 0);
+        let req_body = &[1, 2, 3, 4];
+        let body = BufferSerializer::new_vec(Buf::new(req_body.to_vec(), ..)).encapsulate(
+            IcmpPacketBuilder::<Ipv4, &[u8], _>::new(local_ip, remote_ip, IcmpUnusedCode, req),
+        );
+        send_ip_packet_from_device(
+            net.context("local"),
+            device_id,
+            local_ip,
+            remote_ip,
+            remote_ip,
+            IpProto::Icmp,
+            body,
+        );
+        // this should've triggered an ARP request to come out of local
+        assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
+        // and a timer should've been started.
+        assert_eq!(net.context("local").dispatcher.timer_events().count(), 1);
+
+        net.step();
+
+        assert_eq!(
+            *net.context("remote").state().test_counters.get("arp::rx_request"),
+            1,
+            "remote received arp request"
+        );
+        assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 1);
+
+        net.step();
+
+        assert_eq!(
+            *net.context("local").state().test_counters.get("arp::rx_resolve"),
+            1,
+            "local received arp response"
+        );
+
+        // at the end of the exchange, both sides should have each other on
+        // their arp tables:
+        assert_eq!(
+            *EthernetArpDevice::get_arp_state::<_>(net.context("local"), device_id.id())
+                .table
+                .lookup(remote_ip)
+                .unwrap(),
+            TEST_REMOTE_MAC
+        );
+        assert_eq!(
+            *EthernetArpDevice::get_arp_state::<_>(net.context("remote"), device_id.id())
+                .table
+                .lookup(local_ip)
+                .unwrap(),
+            TEST_LOCAL_MAC
+        );
+        // and the local timer should've been unscheduled:
+        assert_eq!(net.context("local").dispatcher.timer_events().count(), 0);
+
+        // upon link layer resolution, the original ping request should've been
+        // sent out:
+        net.step();
+        assert_eq!(
+            *net.context("remote").state().test_counters.get("receive_icmp_packet::echo_request"),
+            1
+        );
+
+        // and the response should come back:
+        net.step();
+        assert_eq!(
+            *net.context("local").state().test_counters.get("receive_icmp_packet::echo_reply"),
+            1
+        );
     }
 }

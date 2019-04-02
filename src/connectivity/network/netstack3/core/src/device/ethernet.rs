@@ -14,15 +14,18 @@ use zerocopy::{AsBytes, FromBytes, Unaligned};
 use crate::device::arp::{ArpDevice, ArpHardwareType, ArpState};
 use crate::device::{DeviceId, FrameDestination};
 use crate::ip::ndp::NdpState;
-use crate::ip::{ndp, AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use crate::ip::{ndp, AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use crate::wire::arp::peek_arp_types;
 use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
 use crate::{Context, EventDispatcher};
+use std::collections::{HashMap, VecDeque};
 
 /// A media access control (MAC) address.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
 pub struct Mac([u8; 6]);
+
+const ETHERNET_MAX_PENDING_FRAMES: usize = 10;
 
 impl Mac {
     /// The broadcast MAC address.
@@ -181,6 +184,10 @@ pub(crate) struct EthernetDeviceState {
     ipv6_addr_sub: Option<AddrSubnet<Ipv6Addr>>,
     ipv4_arp: ArpState<Ipv4Addr, EthernetArpDevice>,
     ndp: ndp::NdpState<EthernetNdpDevice>,
+    // pending_frames stores a list of serialized frames indexed by their
+    // desintation IP addresses. The frames contain an entire EthernetFrame
+    // body and the MTU check is performed before queueing them here.
+    pending_frames: HashMap<IpAddr, VecDeque<Vec<u8>>>,
 }
 
 impl EthernetDeviceState {
@@ -190,10 +197,19 @@ impl EthernetDeviceState {
     /// and MTU. The MTU will be taken as a limit on the size of Ethernet
     /// payloads - the Ethernet header is not counted towards the MTU.
     pub(crate) fn new(mac: Mac, mtu: u32) -> EthernetDeviceState {
-        // TODO(joshlf): Ensure that the configured MTU meets the minimum IPv6
-        // MTU requirement. A few questions:
-        // - How do we wire error information back up the call stack? Should
-        //   this just return a Result or something?
+        // TODO(joshlf): Add a minimum MTU for all Ethernet devices such that
+        //  you cannot create an `EthernetDeviceState` with an MTU smaller than
+        //  the minimum. The absolute minimum needs to be at least the minimum
+        //  body size of an Ethernet frame. For IPv6-capable devices, the
+        //  minimum needs to be higher - the IPv6 minimum MTU. The easy path is
+        //  to simply use the IPv6 minimum MTU as the minimum in all cases,
+        //  although we may at some point want to figure out how to configure
+        //  devices which don't support IPv6, and allow smaller MTUs for those
+        //  devices.
+        //  A few questions:
+        //  - How do we wire error information back up the call stack? Should
+        //  this just return a Result or something?
+
         EthernetDeviceState {
             mac,
             mtu,
@@ -201,6 +217,30 @@ impl EthernetDeviceState {
             ipv6_addr_sub: None,
             ipv4_arp: ArpState::default(),
             ndp: NdpState::default(),
+            pending_frames: HashMap::new(),
+        }
+    }
+
+    /// Adds a pending frame `frame` associated with `local_addr` to the list
+    /// of pending frames in the current device state.
+    ///
+    /// If an older frame had to be dropped because it exceeds the maximum
+    /// allowed number of pending frames, it is returned.
+    fn add_pending_frame(&mut self, local_addr: IpAddr, frame: Vec<u8>) -> Option<Vec<u8>> {
+        let buff = self.pending_frames.entry(local_addr).or_insert_with(Default::default);
+        buff.push_back(frame);
+        if buff.len() > ETHERNET_MAX_PENDING_FRAMES {
+            buff.pop_front()
+        } else {
+            None
+        }
+    }
+
+    /// Takes all pending frames associated with address `local_addr`.
+    fn take_pending_frames(&mut self, local_addr: IpAddr) -> Option<impl Iterator<Item = Vec<u8>>> {
+        match self.pending_frames.remove(&local_addr) {
+            Some(mut buff) => Some(buff.into_iter()),
+            None => None,
         }
     }
 }
@@ -242,12 +282,9 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
         if let Some(dst_mac) = crate::device::arp::lookup::<_, _, EthernetArpDevice>(
             ctx, device_id, local_mac, local_addr,
         ) {
-            Some(dst_mac)
+            Ok(dst_mac)
         } else {
-            log_unimplemented!(
-                None,
-                "device::ethernet::send_ip_frame: unimplemented on arp cache miss"
-            )
+            Err(IpAddr::V4(local_addr))
         }
     };
 
@@ -256,29 +293,37 @@ pub(crate) fn send_ip_frame<D: EventDispatcher, A: IpAddress, S: Serializer>(
         if let Some(dst_mac) =
             crate::ip::ndp::lookup::<_, EthernetNdpDevice>(ctx, device_id, local_addr)
         {
-            Some(dst_mac)
+            Ok(dst_mac)
         } else {
-            // TODO(brunodalbo) On cache misses, packets need to be held
-            //  and retransmitted once the link layer address is resolved.
-            //  per RFC 4861 section 7.2.2 the buffer should be limited to the N
-            //  most *recent* entries where N must be at least 1.
-            //  Also, in case the link layer address CAN'T be resolved, we MUST
-            //  send an ICMP destination unreachable for each packet queued
-            //  awaiting address resolution.
-            log_unimplemented!(
-                None,
-                "device::ethernet::send_ip_frame: unimplemented on ndp cache miss"
-            )
+            Err(IpAddr::V6(local_addr))
         }
     };
 
-    if let Some(dst_mac) = dst_mac {
-        let buffer = body
-            .with_mtu(mtu as usize)
-            .encapsulate(EthernetFrameBuilder::new(local_mac, dst_mac, A::Version::ETHER_TYPE))
-            .serialize_outer()
-            .map_err(|(err, ser)| (err, ser.into_serializer().into_serializer()))?;
-        ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+    match dst_mac {
+        Ok(dst_mac) => {
+            let buffer = body
+                .with_mtu(mtu as usize)
+                .encapsulate(EthernetFrameBuilder::new(local_mac, dst_mac, A::Version::ETHER_TYPE))
+                .serialize_outer()
+                .map_err(|(err, ser)| (err, ser.into_serializer().into_serializer()))?;
+            ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+        }
+        Err(local_addr) => {
+            let state = get_device_state(ctx, device_id);
+            let dropped = state.add_pending_frame(
+                local_addr,
+                body.with_mtu(mtu as usize)
+                    .serialize_outer()
+                    .map_err(|(err, ser)| (err, ser.into_serializer()))?
+                    .as_ref()
+                    .to_vec(),
+            );
+            if let Some(dropped) = dropped {
+                // TODO(brunodalbo): Is it ok to silently just let this drop? Or
+                //  should the IP layer be notified in any way?
+                log_unimplemented!((), "Ethernet dropped frame because ran out of allowable space");
+            }
+        }
     }
 
     Ok(())
@@ -460,7 +505,15 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
         proto_addr: Ipv4Addr,
         hw_addr: Mac,
     ) {
-        log_unimplemented!((), "Ethernet frame queueing not implemented");
+        mac_resolved(ctx, device_id, IpAddr::V4(proto_addr), hw_addr);
+    }
+
+    fn address_resolution_failed<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+        proto_addr: Ipv4Addr,
+    ) {
+        mac_resolution_failed(ctx, device_id, IpAddr::V4(proto_addr));
     }
 }
 
@@ -531,7 +584,80 @@ impl ndp::NdpDevice for EthernetNdpDevice {
         address: &Ipv6Addr,
         link_address: Self::LinkAddress,
     ) {
-        log_unimplemented!((), "Ethernet packet queueing not implemented");
+        mac_resolved(ctx, device_id, IpAddr::V6(*address), link_address);
+    }
+
+    fn address_resolution_failed<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        device_id: u64,
+        address: &Ipv6Addr,
+    ) {
+        mac_resolution_failed(ctx, device_id, IpAddr::V6(*address));
+    }
+}
+
+/// Sends out any pending frames that are waiting for link layer address
+/// resolution.
+///
+/// `mac_resolved` is the common logic used when a link layer address is
+/// resolved either by ARP or NDP.
+fn mac_resolved<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device_id: u64,
+    address: IpAddr,
+    dst_mac: Mac,
+) {
+    let state = get_device_state(ctx, device_id);
+    let device_id = DeviceId::new_ethernet(device_id);
+    let src_mac = state.mac;
+    let ether_type = match &address {
+        IpAddr::V4(_) => EtherType::Ipv4,
+        IpAddr::V6(_) => EtherType::Ipv6,
+    };
+    if let Some(pending) = state.take_pending_frames(address) {
+        for frame in pending {
+            // NOTE(brunodalbo): We already performed MTU checking when we
+            //  saved the buffer waiting for address resolution. It should
+            //  be noted that the MTU check back then didn't account for
+            //  ethernet frame padding required by EthernetFrameBuilder,
+            //  but that's fine (as it stands right now) because the MTU
+            //  is guaranteed to be larger than an Ethernet minimum frame
+            //  body size.
+            let serialized = frame
+                .encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, ether_type))
+                .serialize_outer()
+                .map_err(|(err, _)| err);
+
+            match serialized {
+                Ok(buffer) => ctx.dispatcher().send_frame(device_id, buffer.as_ref()),
+                Err(e) => debug!("Failed to serialize pending frame {:?}", e),
+            }
+        }
+    }
+}
+
+/// Clears out any pending frames that are waiting for link layer address
+/// resolution.
+///
+/// `mac_resolution_failed` is the common logic used when a link layer address
+/// fails to resolve either by ARP or NDP.
+fn mac_resolution_failed<D: EventDispatcher>(
+    ctx: &mut Context<D>,
+    device_id: u64,
+    address: IpAddr,
+) {
+    // TODO(brunodalbo) what do we do here in regards to the pending frames?
+    //  NDP's RFC explicitly states unreachable ICMP messages must be generated:
+    //  "If no Neighbor Advertisement is received after MAX_MULTICAST_SOLICIT
+    //  solicitations, address resolution has failed. The sender MUST return
+    //  ICMP destination unreachable indications with code 3
+    //  (Address Unreachable) for each packet queued awaiting address
+    //  resolution."
+    //  For ARP, we don't have such a clear statement on the RFC, it would make
+    //  sense to do the same thing though.
+    let state = get_device_state(ctx, device_id);
+    if let Some(pending) = state.take_pending_frames(address) {
+        log_unimplemented!((), "ethernet mac resolution failed not implemented");
     }
 }
 
@@ -589,5 +715,29 @@ mod tests {
         // The Ethernet device MTU currently defaults to IPV6_MIN_MTU.
         test(crate::ip::IPV6_MIN_MTU as usize, 1);
         test(crate::ip::IPV6_MIN_MTU as usize + 1, 0);
+    }
+
+    #[test]
+    fn test_pending_frames() {
+        let mut state =
+            EthernetDeviceState::new(DUMMY_CONFIG_V4.local_mac, crate::ip::IPV6_MIN_MTU);
+        let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip);
+        state.add_pending_frame(ip, vec![1]);
+        state.add_pending_frame(ip, vec![2]);
+        state.add_pending_frame(ip, vec![3]);
+
+        // check that we're accumulating correctly...
+        assert_eq!(3, state.take_pending_frames(ip).unwrap().count());
+        // ...and that take_pending_frames clears all the buffered data.
+        assert!(state.take_pending_frames(ip).is_none());
+
+        for i in 0..ETHERNET_MAX_PENDING_FRAMES {
+            assert!(state.add_pending_frame(ip, vec![i as u8]).is_none());
+        }
+        // check that adding more than capacity will drop the older buffers as
+        // a proper FIFO queue.
+        assert_eq!(0, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
+        assert_eq!(1, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
+        assert_eq!(2, state.add_pending_frame(ip, vec![255]).unwrap()[0]);
     }
 }
