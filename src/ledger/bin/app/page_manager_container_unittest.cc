@@ -21,6 +21,40 @@ constexpr char kLedgerName[] = "test_ledger_name";
 
 using PageManagerContainerTest = TestWithEnvironment;
 
+TEST_F(PageManagerContainerTest, OneEarlyBindingNoPageManager) {
+  storage::PageId page_id = std::string(::fuchsia::ledger::kPageIdSize, 'a');
+  FakeDiskCleanupManager page_usage_listener;
+  PagePtr page;
+  bool callback_called;
+  storage::Status status;
+  bool on_empty_called;
+
+  PageManagerContainer page_manager_container(kLedgerName, page_id,
+                                              &page_usage_listener);
+  page_manager_container.set_on_empty(
+      callback::SetWhenCalled(&on_empty_called));
+  page_manager_container.BindPage(
+      page.NewRequest(),
+      callback::Capture(callback::SetWhenCalled(&callback_called), &status));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
+  EXPECT_FALSE(on_empty_called);
+
+  page_manager_container.SetPageManager(storage::Status::IO_ERROR, nullptr);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_called);
+  EXPECT_EQ(storage::Status::IO_ERROR, status);
+  EXPECT_TRUE(on_empty_called);
+
+  // We expect that the page unbinding will have no further effect.
+  callback_called = false;
+  on_empty_called = false;
+  page.Unbind();
+  RunLoopUntilIdle();
+  EXPECT_FALSE(callback_called);
+  EXPECT_FALSE(on_empty_called);
+}
+
 TEST_F(PageManagerContainerTest, BindBeforePageManager) {
   storage::PageId page_id = std::string(::fuchsia::ledger::kPageIdSize, '3');
   FakeDiskCleanupManager page_usage_listener;
@@ -34,9 +68,12 @@ TEST_F(PageManagerContainerTest, BindBeforePageManager) {
   PagePtr page;
   bool callback_called;
   storage::Status status;
+  bool on_empty_called;
 
   PageManagerContainer page_manager_container(kLedgerName, page_id,
                                               &page_usage_listener);
+  page_manager_container.set_on_empty(
+      callback::SetWhenCalled(&on_empty_called));
   page_manager_container.BindPage(
       page.NewRequest(),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status));
@@ -47,12 +84,15 @@ TEST_F(PageManagerContainerTest, BindBeforePageManager) {
 
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(storage::Status::OK, status);
-  callback_called = false;
+  EXPECT_FALSE(on_empty_called);
 
+  // We expect that the page unbinding will empty the PageManagerContainer but
+  // will not cause the page's own callback to be called again.
+  callback_called = false;
   page.Unbind();
   RunLoopUntilIdle();
-
   EXPECT_FALSE(callback_called);
+  EXPECT_TRUE(on_empty_called);
 }
 
 }  // namespace

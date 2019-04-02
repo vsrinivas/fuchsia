@@ -103,6 +103,8 @@ void PageManagerContainer::SetPageManager(
   if (page_manager_) {
     page_manager_->set_on_empty(
         [this] { connection_notifier_.UnregisterExternalRequests(); });
+  } else {
+    connection_notifier_.UnregisterExternalRequests();
   }
   // |CheckEmpty| called when |token| goes out of scope.
 }
