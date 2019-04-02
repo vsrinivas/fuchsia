@@ -338,3 +338,29 @@ func TestAvgDuration(t *testing.T) {
 	avg = AvgDuration(eventList)
 	compareAvgDurations(t, len(eventList), (eventList[0].Dur+eventList[1].Dur)/2.0, avg)
 }
+
+func TestTraceEventId(t *testing.T) {
+	testTrace := []byte(`
+	{
+		"displayTimeUnit": "ns",
+		"traceEvents": [
+			{ "cat": "a", "name": "E1", "ts": 10, "id": 7, "pid": 7009, "tid": 7022, "ph": "b"},
+			{ "cat": "a", "name": "E1", "ts": 11, "id": 7, "pid": 7009, "tid": 7022, "ph": "e"},
+			{ "cat": "a", "name": "E2", "ts": 10, "id": "44", "pid": 7009, "tid": 7022, "ph": "b"},
+			{ "cat": "a", "name": "E2", "ts": 12, "id": "44", "pid": 7009, "tid": 7022, "ph": "e"},
+			{ "cat": "a", "name": "E3", "ts": 10, "id": "0x123", "pid": 7009, "tid": 7022, "ph": "b"},
+			{ "cat": "a", "name": "E3", "ts": 13, "id": "0x123", "pid": 7009, "tid": 7022, "ph": "e"}
+		]
+	}`)
+
+	model, _ := ReadTrace(testTrace)
+
+	// Match Events by Id of type num
+	cat := "a"
+	events := model.FindEvents(EventsFilter{Cat: &cat})
+	expectedEvents := []*Event{
+		&Event{Type: 1, Cat: "a", Name: "E1", Pid: 7009, Tid: 7022, Start: 10, Dur: 1, Id: 7, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
+		&Event{Type: 1, Cat: "a", Name: "E2", Pid: 7009, Tid: 7022, Start: 10, Dur: 2, Id: 44, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)},
+		&Event{Type: 1, Cat: "a", Name: "E3", Pid: 7009, Tid: 7022, Start: 10, Dur: 3, Id: 291, Args: map[string]interface{}(nil), Parent: nil, Children: make([]*Event, 0)}}
+	compareEvents(t, "Match Events by Id of type num", expectedEvents, events)
+}

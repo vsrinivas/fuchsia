@@ -7,6 +7,7 @@ package benchmarking
 import (
 	"encoding/json"
 	"sort"
+	"strconv"
 )
 
 // Sorting helpers.
@@ -46,9 +47,15 @@ type traceEvent struct {
 	Pid  uint64
 	Tid  uint64
 	Ts   float64
-	Id   uint64
+	Id   json.Number // accomodates ids of the form: 7, "43", "0x123".
 	Dur  float64
 	Args map[string]interface{}
+}
+
+// Converts the Id from json.Number to uint64.
+func (t traceEvent) ID() uint64 {
+	val, _ := strconv.ParseUint(t.Id.String(), 0, 64)
+	return val
 }
 
 // A struct that represents objects within the "events" list in the
@@ -243,13 +250,13 @@ func combineArgsEventTraceEvent(e *Event, te *traceEvent) {
 
 // Structs used to match beginning and end of trace events.
 
-// Used to match sync events
+// Used to match sync events.
 type pidAndTid struct {
 	Pid uint64
 	Tid uint64
 }
 
-// Used to match async events
+// Used to match async events.
 type catAndID struct {
 	Cat string
 	Id  uint64
@@ -294,7 +301,7 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 		case "X":
 			// Complete event.
 			durationEvent := Event{DurationEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid,
-				traceEvent.Tid, traceEvent.Ts, traceEvent.Dur, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
+				traceEvent.Tid, traceEvent.Ts, traceEvent.Dur, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
 			thread.Events = append(thread.Events, &durationEvent)
 			durationStacks[pidAndTid] = append(durationStacks[pidAndTid], thread.Events[len(thread.Events)-1])
 			if len(durationStacks[pidAndTid]) > 1 {
@@ -305,7 +312,7 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 			}
 		case "B":
 			durationEvent := Event{DurationEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid,
-				traceEvent.Tid, traceEvent.Ts, -1.0, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
+				traceEvent.Tid, traceEvent.Ts, -1.0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
 			thread.Events = append(thread.Events, &durationEvent)
 			durationStacks[pidAndTid] = append(durationStacks[pidAndTid], thread.Events[len(thread.Events)-1])
 			if len(durationStacks[pidAndTid]) > 1 {
@@ -328,39 +335,39 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 				durationStacks[pidAndTid] = durationStacks[pidAndTid][:len(durationStacks[pidAndTid])-1]
 			}
 		case "b":
-			// Async begin duration event
-			asyncEvents[catAndID{traceEvent.Cat, traceEvent.Id}] = traceEvent
+			// Async begin duration event.
+			asyncEvents[catAndID{traceEvent.Cat, traceEvent.ID()}] = traceEvent
 		case "e":
-			// Async end duration event
-			beginEvent, ok := asyncEvents[catAndID{traceEvent.Cat, traceEvent.Id}]
+			// Async end duration event.
+			beginEvent, ok := asyncEvents[catAndID{traceEvent.Cat, traceEvent.ID()}]
 			if ok {
 				if beginEvent.Cat != traceEvent.Cat {
 					panic("Category for begin and end event does not match")
 				}
-				if beginEvent.Id != traceEvent.Id {
+				if beginEvent.ID() != traceEvent.ID() {
 					panic("Id for begin and end event does not match")
 				}
 				asyncEvent := Event{AsyncEvent, beginEvent.Cat,
 					beginEvent.Name, beginEvent.Pid, beginEvent.Tid,
-					beginEvent.Ts, traceEvent.Ts - beginEvent.Ts, beginEvent.Id,
+					beginEvent.Ts, traceEvent.Ts - beginEvent.Ts, beginEvent.ID(),
 					combineArgs(beginEvent, traceEvent), nil, make([]*Event, 0)}
 				thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
 				thread.Events = append(thread.Events, &asyncEvent)
 			}
 		case "i":
-			// Instant event
+			// Instant event.
 			instantEvent := Event{InstantEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid,
-				traceEvent.Tid, traceEvent.Ts, 0, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
+				traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
 			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
 			thread.Events = append(thread.Events, &instantEvent)
 		case "s":
-			flowId := FlowId{traceEvent.Id, traceEvent.Cat, traceEvent.Name}
+			flowId := FlowId{traceEvent.ID(), traceEvent.Cat, traceEvent.Name}
 			if _, found := liveFlowEvents[flowId]; found {
 				// Drop flow begins that already have flow ids in progress.
 				continue
 			}
 
-			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
+			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
 			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
 			thread.Events = append(thread.Events, &flowEvent)
 			liveFlowEvents[flowId] = thread.Events[len(thread.Events)-1]
@@ -371,13 +378,13 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 				top.Children = append(top.Children, thread.Events[len(thread.Events)-1])
 			}
 		case "t":
-			flowId := FlowId{traceEvent.Id, traceEvent.Cat, traceEvent.Name}
+			flowId := FlowId{traceEvent.ID(), traceEvent.Cat, traceEvent.Name}
 			if _, found := liveFlowEvents[flowId]; !found {
 				// Drop flow steps that are not in progress.
 				continue
 			}
 			previousFlowEvent := liveFlowEvents[flowId]
-			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
+			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
 			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
 			thread.Events = append(thread.Events, &flowEvent)
 			liveFlowEvents[flowId] = thread.Events[len(thread.Events)-1]
@@ -390,13 +397,13 @@ func (m *Model) processTraceEvents(traceEvents []traceEvent) {
 				top.Children = append(top.Children, thread.Events[len(thread.Events)-1])
 			}
 		case "f":
-			flowId := FlowId{traceEvent.Id, traceEvent.Cat, traceEvent.Name}
+			flowId := FlowId{traceEvent.ID(), traceEvent.Cat, traceEvent.Name}
 			if _, found := liveFlowEvents[flowId]; !found {
 				// Drop flow ends that are not in progress.
 				continue
 			}
 			previousFlowEvent := liveFlowEvents[flowId]
-			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.Id, traceEvent.Args, nil, make([]*Event, 0)}
+			flowEvent := Event{FlowEvent, traceEvent.Cat, traceEvent.Name, traceEvent.Pid, traceEvent.Tid, traceEvent.Ts, 0, traceEvent.ID(), traceEvent.Args, nil, make([]*Event, 0)}
 			thread := m.getOrCreateThreadById(traceEvent.Pid, traceEvent.Tid)
 			thread.Events = append(thread.Events, &flowEvent)
 			previousFlowEvent.Children = append(previousFlowEvent.Children, thread.Events[len(thread.Events)-1])
