@@ -13,6 +13,7 @@
 
 #include "garnet/bin/iquery/formatter.h"
 #include "garnet/bin/iquery/modes.h"
+#include "garnet/public/lib/inspect/discovery/object_source.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
@@ -39,7 +40,7 @@ int main(int argc, const char** argv) {
     return 0;
   }
 
-  fit::promise<std::vector<iquery::ObjectSource>> results;
+  fit::promise<std::vector<inspect::ObjectSource>> results;
   // Dispatch to the correct mode.
   if (options.mode == iquery::Options::Mode::CAT) {
     results = iquery::RunCat(&options);
@@ -55,7 +56,7 @@ int main(int argc, const char** argv) {
   executor.schedule_task(
       results
           .and_then(
-              [&options, &loop](std::vector<iquery::ObjectSource>& results) {
+              [&options, &loop](std::vector<inspect::ObjectSource>& results) {
                 // Sort the hierarchies if requested.
                 if (options.sort) {
                   for (auto& source : results) {

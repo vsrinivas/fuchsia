@@ -9,6 +9,7 @@
 
 #include "garnet/bin/iquery/formatters/text.h"
 #include "garnet/bin/iquery/options.h"
+#include "garnet/public/lib/inspect/discovery/object_source.h"
 
 namespace iquery {
 
@@ -23,7 +24,7 @@ inline std::string Indent(int indent) {
 // This version exists so we can pass in the indentation and path from the entry
 // point.
 std::string RecursiveFormatCat(const Options& options,
-                               const ObjectSource& entry_point,
+                               const inspect::ObjectSource& entry_point,
                                const inspect::ObjectHierarchy& root,
                                std::vector<std::string>* path) {
   // In each step of the indentation we output the path formatting. This is not
@@ -67,7 +68,7 @@ std::string RecursiveFormatCat(const Options& options,
 }
 
 std::string FormatFind(const Options& options,
-                       const std::vector<ObjectSource>& results) {
+                       const std::vector<inspect::ObjectSource>& results) {
   std::stringstream ss;
   for (const auto& entry_point : results) {
     entry_point.VisitObjectsInHierarchy(
@@ -83,7 +84,7 @@ std::string FormatFind(const Options& options,
 }
 
 std::string FormatLs(const Options& options,
-                     const std::vector<ObjectSource>& results) {
+                     const std::vector<inspect::ObjectSource>& results) {
   std::stringstream ss;
   for (const auto& entry_point : results) {
     const auto& hierarchy = entry_point.GetRootHierarchy();
@@ -98,7 +99,7 @@ std::string FormatLs(const Options& options,
 }
 
 std::string FormatCat(const Options& options,
-                      const std::vector<ObjectSource>& results) {
+                      const std::vector<inspect::ObjectSource>& results) {
   std::ostringstream ss;
   for (const auto& entry_point : results) {
     const auto& hierarchy = entry_point.GetRootHierarchy();
@@ -114,8 +115,8 @@ std::string FormatCat(const Options& options,
 
 }  // namespace
 
-std::string TextFormatter::Format(const Options& options,
-                                  const std::vector<ObjectSource>& results) {
+std::string TextFormatter::Format(
+    const Options& options, const std::vector<inspect::ObjectSource>& results) {
   switch (options.mode) {
     case Options::Mode::CAT:
       return FormatCat(options, results);

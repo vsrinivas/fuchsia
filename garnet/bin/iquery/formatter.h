@@ -19,7 +19,7 @@ class Formatter {
  public:
   virtual ~Formatter() = default;
   virtual std::string Format(const Options&,
-                             const std::vector<ObjectSource>&) = 0;
+                             const std::vector<inspect::ObjectSource>&) = 0;
 };
 
 }  // namespace iquery

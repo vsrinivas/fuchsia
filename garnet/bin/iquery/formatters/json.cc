@@ -34,7 +34,7 @@ std::unique_ptr<rapidjson::PrettyWriter<OutputStream>> GetJsonWriter(
 // FormatFind ------------------------------------------------------------------
 
 std::string FormatFind(const Options& options,
-                       const std::vector<ObjectSource>& results) {
+                       const std::vector<inspect::ObjectSource>& results) {
   rapidjson::StringBuffer sb;
   auto writer = GetJsonWriter(sb, options);
 
@@ -56,7 +56,7 @@ std::string FormatFind(const Options& options,
 // FormatLs --------------------------------------------------------------------
 
 std::string FormatLs(const Options& options,
-                     const std::vector<ObjectSource>& results) {
+                     const std::vector<inspect::ObjectSource>& results) {
   rapidjson::StringBuffer sb;
   auto writer = GetJsonWriter(sb, options);
 
@@ -79,7 +79,8 @@ std::string FormatLs(const Options& options,
 
 template <typename OutputStream>
 void RecursiveFormatCat(rapidjson::PrettyWriter<OutputStream>* writer,
-                        const Options& options, const ObjectSource& entry_point,
+                        const Options& options,
+                        const inspect::ObjectSource& entry_point,
                         const inspect::ObjectHierarchy& root) {
   writer->StartObject();
 
@@ -110,7 +111,7 @@ void RecursiveFormatCat(rapidjson::PrettyWriter<OutputStream>* writer,
 }
 
 std::string FormatCat(const Options& options,
-                      const std::vector<ObjectSource>& results) {
+                      const std::vector<inspect::ObjectSource>& results) {
   rapidjson::StringBuffer sb;
   auto writer = GetJsonWriter(sb, options);
 
@@ -137,8 +138,8 @@ std::string FormatCat(const Options& options,
 
 }  // namespace
 
-std::string JsonFormatter::Format(const Options& options,
-                                  const std::vector<ObjectSource>& results) {
+std::string JsonFormatter::Format(
+    const Options& options, const std::vector<inspect::ObjectSource>& results) {
   switch (options.mode) {
     case Options::Mode::CAT:
       return FormatCat(options, results);
