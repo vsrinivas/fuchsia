@@ -487,6 +487,19 @@ unlike GDB, “clear” takes a breakpoint context before the verb and there are
 never any arguments after it. Support for GDB-like “clear <location>” is
 [DX-594](https://fuchsia.atlassian.net/browse/DX-594).
 
+### Programatic breakpoints
+
+You can insert a hardcoded breakpoint in your code if you want to catch some
+specific condition. Clang has a builtin (it won't work in GCC Zircon builds):
+
+```
+__builtin_debugtrap();
+```
+
+If the debugger is already attached to the process, it will stop as if a normal
+breakpoint was hit. You can step or continue from there. If the debugger is
+not already attached, this will cause a crash.
+
 ### Working with threads
 
 To list the current process’ threads (see “Interaction model” above for more):
