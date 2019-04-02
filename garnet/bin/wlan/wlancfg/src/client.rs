@@ -105,7 +105,10 @@ async fn auto_connect_state(
     services: Services,
     mut next_req: NextReqFut,
 ) -> Result<State, failure::Error> {
-    println!("wlancfg: Starting auto-connect loop");
+    println!(
+        "wlancfg: Starting auto-connect loop with {} saved networks",
+        services.ess_store.known_network_count()
+    );
     let auto_connected = auto_connect(&services);
     pin_mut!(auto_connected);
     select! {
