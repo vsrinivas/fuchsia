@@ -64,6 +64,11 @@ fn make_profile_service_definition() -> ServiceDefinition {
     }
 }
 
+// SDP Attribute ID for the Supported Features of A2DP.
+// Defined in Assigned Numbers for SDP
+// https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
+const ATTR_A2DP_SUPPORTED_FEATURES: u16 = 0x0311;
+
 // Defined in the Bluetooth Assigned Numbers for Audio/Video applications
 // https://www.bluetooth.com/specifications/assigned-numbers/audio-video
 const AUDIO_CODEC_SBC: u8 = 0;
@@ -465,6 +470,14 @@ async fn main() -> Result<(), Error> {
         false
     ))?;
 
+    let attrs: Vec<u16> = vec![
+        ATTR_PROTOCOL_DESCRIPTOR_LIST,
+        ATTR_SERVICE_CLASS_ID_LIST,
+        ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
+        ATTR_A2DP_SUPPORTED_FEATURES,
+    ];
+    profile_svc.add_search(ServiceClassProfileIdentifier::AudioSource, &mut attrs.into_iter())?;
+
     fx_log_info!("Registered Service ID {}", service_id);
 
     if let Some(e) = status.error {
@@ -477,8 +490,13 @@ async fn main() -> Result<(), Error> {
     while let Some(evt) = await!(evt_stream.next()) {
         match evt {
             Err(e) => return Err(e.into()),
-            Ok(ProfileEvent::OnServiceFound { peer_id, .. }) => {
-                fx_log_info!("OnServiceFound on {}, ignoring.", peer_id);
+            Ok(ProfileEvent::OnServiceFound { peer_id, profile, attributes }) => {
+                fx_log_info!(
+                    "Audio Source on {} with profile {:?}: {:?}",
+                    peer_id,
+                    profile,
+                    attributes
+                );
             }
             Ok(ProfileEvent::OnConnected { device_id, service_id: _, channel, protocol }) => {
                 fx_log_info!("Connection from {}: {:?} {:?}!", device_id, channel, protocol);
