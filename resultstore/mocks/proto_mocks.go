@@ -10,10 +10,11 @@ package mocks
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	v2 "google.golang.org/genproto/googleapis/devtools/resultstore/v2"
 	grpc "google.golang.org/grpc"
-	reflect "reflect"
 )
 
 // MockResultStoreUploadClient is a mock of ResultStoreUploadClient interface

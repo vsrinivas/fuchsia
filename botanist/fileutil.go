@@ -7,65 +7,10 @@ package botanist
 import (
 	"archive/tar"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"net"
-	"os"
-	"path/filepath"
 
 	"fuchsia.googlesource.com/tools/tftp"
 )
-
-// ArchiveDirectory archives the given directory.
-func ArchiveDirectory(tw *tar.Writer, dir string) error {
-	return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.IsDir() {
-			return nil
-		}
-
-		hdr, err := tar.FileInfoHeader(info, path)
-		if err != nil {
-			return err
-		}
-		hdr.Name = path[len(dir)+1:]
-		if err := tw.WriteHeader(hdr); err != nil {
-			return err
-		}
-		fi, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		_, err = io.Copy(tw, fi)
-		return err
-	})
-}
-
-// ArchiveBuffer writes the given bytes to a given path within an archive.
-func ArchiveBuffer(tw *tar.Writer, buf []byte, path string) error {
-	hdr := &tar.Header{
-		Name: path,
-		Size: int64(len(buf)),
-		Mode: 0666,
-	}
-	if err := tw.WriteHeader(hdr); err != nil {
-		return err
-	}
-	_, err := tw.Write(buf)
-	return err
-}
-
-// ArchiveReader writes data from the given Reader to the given tar.Writer.
-func ArchiveReader(tw *tar.Writer, r io.Reader, path string) error {
-	bytes, err := ioutil.ReadAll(r)
-	if err != nil {
-		return err
-	}
-
-	return ArchiveBuffer(tw, bytes, path)
-}
 
 // FetchAndArchiveFile fetches a remote file via TFTP from a given node, and
 // writes it an archive.

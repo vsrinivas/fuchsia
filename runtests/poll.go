@@ -19,6 +19,7 @@ import (
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/retry"
+	"fuchsia.googlesource.com/tools/tarutil"
 	"fuchsia.googlesource.com/tools/tftp"
 )
 
@@ -62,7 +63,7 @@ func PollForSummary(ctx context.Context, addr *net.UDPAddr, summaryFilename, tes
 	tw := tar.NewWriter(outFile)
 	defer tw.Close()
 
-	if err = botanist.ArchiveBuffer(tw, buffer.Bytes(), summaryFilename); err != nil {
+	if err = tarutil.TarBuffer(tw, buffer.Bytes(), summaryFilename); err != nil {
 		return err
 	}
 

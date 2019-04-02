@@ -28,11 +28,10 @@ const (
 	defaultInterfaceName = "qemu"
 
 	// DefaultMACAddr is the default MAC address given to a QEMU target.
-	defaultMACAddr       = "52:54:00:63:5e:7a"
+	defaultMACAddr = "52:54:00:63:5e:7a"
 
 	// DefaultNodename is the default nodename given to an target with the default QEMU MAC address.
-	defaultNodename      = "step-atom-yard-juicy"
-
+	defaultNodename = "step-atom-yard-juicy"
 )
 
 // qemuTargetMapping maps the Fuchsia target name to the name recognized by QEMU.
@@ -98,7 +97,7 @@ func (t *QEMUTarget) Nodename() string {
 
 // IPv4Addr returns a nil address, as DHCP is not currently configured.
 func (t *QEMUTarget) IPv4Addr() (net.IP, error) {
-	return  nil, nil
+	return nil, nil
 }
 
 // SSHKey returns the private SSH key path associated with the authorized key to be pavet.

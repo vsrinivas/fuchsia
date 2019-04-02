@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"fuchsia.googlesource.com/tools/botanist"
+	"fuchsia.googlesource.com/tools/tarutil"
 	"fuchsia.googlesource.com/tools/botanist/target"
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/command"
@@ -135,17 +135,17 @@ func (cmd *ZedbootCommand) tarHostCmdArtifacts(summary []byte, cmdOutput []byte,
 	defer tw.Close()
 
 	// Write summary to archive
-	if err = botanist.ArchiveBuffer(tw, summary, cmd.summaryFilename); err != nil {
+	if err = tarutil.TarBuffer(tw, summary, cmd.summaryFilename); err != nil {
 		return err
 	}
 
 	// Write combined stdout & stderr output to archive
-	if err = botanist.ArchiveBuffer(tw, cmdOutput, runtests.TestOutputFilename); err != nil {
+	if err = tarutil.TarBuffer(tw, cmdOutput, runtests.TestOutputFilename); err != nil {
 		return err
 	}
 
 	// Write all output files from the host cmd to the archive.
-	return botanist.ArchiveDirectory(tw, outputDir)
+	return tarutil.TarDirectory(tw, outputDir)
 }
 
 // Executes host command and creates result tar from command output

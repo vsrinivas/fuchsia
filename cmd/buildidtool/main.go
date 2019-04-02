@@ -149,11 +149,11 @@ func main() {
 	buildID := []rune(hex.EncodeToString(buildIDs[0]))
 	buildIDPath := filepath.Join(buildIDDir, string(buildID[:2]), string(buildID[2:])) + extension
 	// Now perform the operations of the tool. The order in which these operations occur
-  // ensures that, from the perspective of the build system, all these operations occur
-  // atomically. This order is "valid" because unless the tool runs to the end
-  // then ninja will rerun the step and when the step is rerun once finished the end
-  // state will be valid. The order of the first 3 steps doesn't matter much but the
-  // stamp file must be emitted last.
+	// ensures that, from the perspective of the build system, all these operations occur
+	// atomically. This order is "valid" because unless the tool runs to the end
+	// then ninja will rerun the step and when the step is rerun once finished the end
+	// state will be valid. The order of the first 3 steps doesn't matter much but the
+	// stamp file must be emitted last.
 	if err = atomicLink(file, buildIDPath); err != nil {
 		l.Fatalf("atomically linking %s to %s: %v", file, buildIDPath, err)
 	}

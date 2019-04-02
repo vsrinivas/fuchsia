@@ -10,7 +10,7 @@ import (
 	"io"
 	"path"
 
-	"fuchsia.googlesource.com/tools/botanist"
+	"fuchsia.googlesource.com/tools/tarutil"
 	"fuchsia.googlesource.com/tools/runtests"
 	"fuchsia.googlesource.com/tools/testrunner"
 )
@@ -31,12 +31,12 @@ func (o *TarOutput) Record(result testrunner.TestResult) {
 	pathInArchive := path.Join(result.Name, runtests.TestOutputFilename)
 	stdout := bytes.NewReader(result.Stdout)
 	stderr := bytes.NewReader(result.Stderr)
-	botanist.ArchiveReader(o.w, io.MultiReader(stdout, stderr), pathInArchive)
+	tarutil.TarReader(o.w, io.MultiReader(stdout, stderr), pathInArchive)
 }
 
 // TarFile adds a file to the underlying archive.
 func (o *TarOutput) TarFile(bytes []byte, filename string) error {
-	return botanist.ArchiveBuffer(o.w, bytes, filename)
+	return tarutil.TarBuffer(o.w, bytes, filename)
 }
 
 // Close flushes all data to the archive.

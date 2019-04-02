@@ -44,10 +44,10 @@ type TestOutputs struct {
 // StoreTestOutputsCommand performs a batch upload of test outputs to Cloud Storage.
 type StoreTestOutputsCommand struct {
 	authFlags authcli.Flags
-	bucket  string
-	build   string
-	testEnv string
-	workers sync.WaitGroup
+	bucket    string
+	build     string
+	testEnv   string
+	workers   sync.WaitGroup
 }
 
 func (*StoreTestOutputsCommand) Name() string {

@@ -5,11 +5,12 @@ package secrets
 
 import (
 	"context"
-	"go.chromium.org/luci/lucictx"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"testing"
+
+	"go.chromium.org/luci/lucictx"
 )
 
 func TestGettingSecrets(t *testing.T) {
