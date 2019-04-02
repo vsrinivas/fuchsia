@@ -80,20 +80,10 @@ func init() {
 		os.Exit(0)
 	}
 
-	// First set the flags ...
-	flag.StringVar(&outdir, "out-dir", "",
-		"The directory where symbol output should be written")
-	flag.StringVar(&dumpSymsPath, "dump-syms-path", "",
-		"Path to the breakpad tools `dump_syms` executable")
-	flag.StringVar(&depFilepath, "depfile", "",
-		"Path to the ninja depfile to generate.  The file has the single line: "+
-			"`OUTPUT: INPUT1 INPUT2 ...` where OUTPUT is the value of -summary-file "+
-			"and INPUTX is the ids file in the same order it was provided on the "+
-			"command line. -summary-file must be provided with this flag. "+
-			"See `gn help depfile` for more information on depfiles.")
-	flag.StringVar(&tarFilepath, "tar-file", "",
-		"Path to the tarball that contains all Breakpad symbol files generated "+
-			" by the build")
+	flag.StringVar(&outdir, "out-dir", "", "The directory where symbol output should be written")
+	flag.StringVar(&dumpSymsPath, "dump-syms-path", "", "Path to the breakpad tools `dump_syms` executable")
+	flag.StringVar(&depFilepath, "depfile", "", "Path to the ninja depfile to generate")
+	flag.StringVar(&tarFilepath, "tar-file", "", "Path where the tar archive containing symbol files is written")
 }
 
 func main() {
