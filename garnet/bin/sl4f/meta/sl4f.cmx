@@ -14,7 +14,6 @@
             "fuchsia.bluetooth.le.Peripheral",
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
-            "fuchsia.media.Audio",
             "fuchsia.net.SocketProvider",
             "fuchsia.net.stack.Stack",
             "fuchsia.sys.Launcher",
@@ -23,6 +22,7 @@
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.virtualaudio.Control",
             "fuchsia.virtualaudio.Input",
+            "fuchsia.virtualaudio.Output",
             "fuchsia.wlan.device.service.DeviceService"
         ]
     }
