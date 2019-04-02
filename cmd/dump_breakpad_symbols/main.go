@@ -27,29 +27,15 @@ import (
 	"fuchsia.googlesource.com/tools/tarutil"
 )
 
-const usage = `usage: dump_breakpad_symbols [options] file1 file2 ... fileN
+const usage = `usage: dump_breakpad_symbols [options] paths...
 
-Dumps symbol data from a collection of IDs files. IDs files are generated as
-part of the build and contain a number of newline-separate records which have
-the syntax:
-
-  <hash-value> <absolute-path>
-
-This command does not care about <hash-value>.  <absolute-path> is the path to a
-binary generated as part of the Fuchsia build. This command collects every
-<absolute-path> from each of file1, file2 ... fileN and dumps symbol data for
-the binaries at each of those paths.  Duplicate paths are skipped.
-
-The output is a collection of symbol files, one for each binary, using an
-arbitrary naming scheme to ensure that every output file name is unique.
+Generates breakpad symbol files by running dump_syms on a collection of binaries. Produces
+a tar archive containing all generated files. Expects a list of paths to .build-id dirs as
+input.
 
 Example invocation:
 
-$ dump_breakpad_symbols \
-	-out-dir=/path/to/output/ \
-	-dump-syms-path=/path/to/breakpad/dump_syms \
-	-summary-file=/path/to/summary \
-	/path/to/ids1.txt
+$ dump_breakpad_symbols -dump-syms-path=dump_syms -tar-file=out.tar -depfile=dep.out ./.build-ids
 `
 
 // The default module name for modules that don't have a soname, e.g., executables and
