@@ -13,7 +13,11 @@
 ##
 ## The verbose flag is strongly discouraged unless you are debugging.
 ##
-## This command requires Topaz in order to run.
+## This command requires:
+##   > Ommitting `--release` from `fx set`
+##       (Observatory isn't available in --release builds).
+##
+##   > "bundles/tools" to be available on the system (for the `find` command).
 ##
 ## Arguments:
 ##   -h|--help    Print out this message.
