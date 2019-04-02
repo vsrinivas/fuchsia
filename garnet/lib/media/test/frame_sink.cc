@@ -72,7 +72,7 @@ void FrameSink::PutFrame(
   FXL_DCHECK(output_config->format_details().has_domain());
   FXL_DCHECK(output_config->format_details().domain().is_video());
   FXL_DCHECK(
-      output_config->format_details().domain().video().is_compressed());
+      output_config->format_details().domain().video().is_uncompressed());
   const fuchsia::media::VideoUncompressedFormat& video_format =
       output_config->format_details().domain().video().uncompressed();
 
