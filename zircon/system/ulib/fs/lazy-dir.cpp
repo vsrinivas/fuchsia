@@ -36,10 +36,11 @@ zx_status_t LazyDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
     return ZX_OK;
 }
 
-zx_status_t LazyDir::Getattr(vnattr_t* out_attr) {
-    memset(out_attr, 0, sizeof(vnattr_t));
-    out_attr->mode = V_TYPE_DIR | V_IRUSR;
-    out_attr->nlink = 1;
+zx_status_t LazyDir::Getattr(vnattr_t* attr) {
+    memset(attr, 0, sizeof(vnattr_t));
+    attr->mode = V_TYPE_DIR | V_IRUSR;
+    attr->inode = fuchsia_io_INO_UNKNOWN;
+    attr->nlink = 1;
     return ZX_OK;
 }
 

@@ -61,6 +61,7 @@ zx_status_t VmoFile::Getattr(vnattr_t* attr) {
     if (writable_) {
         attr->mode |= V_IWUSR;
     }
+    attr->inode = fuchsia_io_INO_UNKNOWN;
     attr->size = length_;
     attr->blksize = kVmoFileBlksize;
     attr->blkcount = fbl::round_up(attr->size, kVmoFileBlksize) / VNATTR_BLKSIZE;

@@ -141,8 +141,6 @@ protocol Control {
     // simple no-op that can be used to test the connection
     DoTest(int32 input) -> (string output);
 
-    GetProcessState(handle<channel> ch);
-
     // Add a TUF source repository.
     AddSrc(SourceConfig source) -> (bool res);
 

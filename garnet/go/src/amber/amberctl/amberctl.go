@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall/zx"
-	"syscall/zx/zxwait"
 	"time"
+	"unicode"
 
 	"amber/urlscope"
 	"app/context"
@@ -322,45 +322,6 @@ func disableAllSources(a *amber.ControlInterface, except string) error {
 	return nil
 }
 
-func printState(proxy *amber.ControlInterface) error {
-	rd, wr, e := zx.NewChannel(0)
-	if e != nil {
-		return fmt.Errorf("channel creation failed: %s", e)
-	}
-
-	err := proxy.GetProcessState(wr)
-	if err != nil {
-		log.Printf("Error getting state from service")
-		return err
-	}
-
-	defer rd.Close()
-	b := make([]byte, 64*1024)
-	for {
-		sigs, err := zxwait.Wait(*rd.Handle(), zx.SignalChannelReadable|zx.SignalChannelPeerClosed,
-			zx.TimensecInfinite)
-		if err != nil {
-			log.Printf("Unexpected error waiting on channel: %s", err)
-			return NewErrDaemon(
-				fmt.Sprintf("unknown error while waiting for response from channel: %s", err))
-		}
-
-		if sigs&zx.SignalChannelReadable != 0 {
-			sz, _, err := rd.Read(b, []zx.Handle{}, 0)
-			if err != nil {
-				return NewErrDaemon(fmt.Sprintf("error reading channel: %s", err))
-			}
-			fmt.Printf(string(b[:sz]))
-			continue
-		}
-
-		if sigs&zx.SignalChannelPeerClosed != 0 {
-			break
-		}
-	}
-	return nil
-}
-
 func do(amberProxy *amber.ControlInterface, resolverProxy *pkg.PackageResolverInterface) int {
 	switch os.Args[1] {
 	case "get_up":
@@ -459,8 +420,31 @@ func do(amberProxy *amber.ControlInterface, resolverProxy *pkg.PackageResolverIn
 		}
 		log.Printf("Started garbage collection. See logs for details")
 	case "print_state":
-		err := printState(amberProxy)
-		if err != nil {
+		if err := filepath.Walk("/hub", func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			switch name := info.Name(); name {
+			case "goroutines":
+				if f, err := os.Open(path); err != nil {
+					return err
+				} else {
+					_, err := io.Copy(os.Stdout, f)
+					return err
+				}
+			case "hub", "c", "r", "amber.cmx", "out", "debug":
+				return nil
+			default:
+				if info.IsDir() {
+					for _, r := range name {
+						if !unicode.IsDigit(r) {
+							return filepath.SkipDir
+						}
+					}
+				}
+				return nil
+			}
+		}); err != nil {
 			log.Printf("Error printing process state: %s", err)
 			return 1
 		}

@@ -27,6 +27,7 @@ zx_status_t PseudoDir::Open(uint32_t flags, fbl::RefPtr<Vnode>* out_redirect) {
 zx_status_t PseudoDir::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_DIR | V_IRUSR;
+    attr->inode = fuchsia_io_INO_UNKNOWN;
     attr->nlink = 1;
     return ZX_OK;
 }

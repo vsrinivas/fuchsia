@@ -26,6 +26,7 @@ zx_status_t Service::Getattr(vnattr_t* attr) {
     // TODO(ZX-1152): V_TYPE_FILE isn't right, we should use a type for services
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_FILE;
+    attr->inode = fuchsia_io_INO_UNKNOWN;
     attr->nlink = 1;
     return ZX_OK;
 }

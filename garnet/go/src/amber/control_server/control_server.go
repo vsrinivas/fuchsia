@@ -10,15 +10,13 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
-
-	"fidl/fuchsia/amber"
+	"syscall/zx"
 
 	"amber/daemon"
 	"amber/metrics"
 	"amber/sys_update"
 
-	"syscall/zx"
+	"fidl/fuchsia/amber"
 )
 
 type ControlServer struct {
@@ -42,50 +40,6 @@ func NewControlServer(d *daemon.Daemon, sum *sys_update.SystemUpdateMonitor) *Co
 func (c *ControlServer) DoTest(in int32) (out string, err error) {
 	r := fmt.Sprintf("Your number was %d\n", in)
 	return r, nil
-}
-
-func (c *ControlServer) GetProcessState(wr zx.Channel) error {
-	if err := dumpStacks(wr); err != nil {
-		log.Printf("control_server: stack dump failed: %s", err)
-	}
-	return nil
-}
-
-func dumpStacks(ch zx.Channel) error {
-	defer ch.Close()
-	buf := make([]byte, 1024)
-	for {
-		n := runtime.Stack(buf, true)
-		if n < len(buf) {
-			break
-		}
-		buf = make([]byte, 2*len(buf))
-	}
-
-	chunks := chunkBuffer(buf, 63*1024)
-	for _, chunk := range chunks {
-		err := ch.Write(chunk, []zx.Handle{}, 0)
-		if err != nil {
-			return fmt.Errorf("control_server: write to channel failed: %s", err)
-		}
-	}
-	return nil
-}
-
-func chunkBuffer(buf []byte, chunkSize int) [][]byte {
-	if chunkSize < 1 {
-		panic(fmt.Sprintf("chunk size of %d is invalid, must be greater than 0", chunkSize))
-	}
-
-	chunks := [][]byte{}
-	for sent := 0; sent < len(buf); {
-		if len(buf)-sent < chunkSize {
-			chunkSize = len(buf) - sent
-		}
-		chunks = append(chunks, buf[sent:sent+chunkSize])
-		sent += chunkSize
-	}
-	return chunks
 }
 
 func (c *ControlServer) AddSrc(cfg amber.SourceConfig) (bool, error) {

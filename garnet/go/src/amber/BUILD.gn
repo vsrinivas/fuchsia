@@ -151,10 +151,6 @@ test_targets = [
     name = "amber_urlscope_test"
     gopkg = "amber/urlscope"
   },
-  {
-    name = "amber_control_server_test"
-    gopkg = "amber/control_server"
-  },
 ]
 foreach(test, test_targets) {
   go_test(test.name) {

@@ -18,6 +18,7 @@ RemoteDir::~RemoteDir() = default;
 zx_status_t RemoteDir::Getattr(vnattr_t* attr) {
     memset(attr, 0, sizeof(vnattr_t));
     attr->mode = V_TYPE_DIR | V_IRUSR;
+    attr->inode = fuchsia_io_INO_UNKNOWN;
     attr->nlink = 1;
     return ZX_OK;
 }

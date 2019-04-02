@@ -38,6 +38,7 @@ zx_status_t PseudoFile::Getattr(vnattr_t* attr) {
         attr->mode |= V_IRUSR;
     if (write_handler_)
         attr->mode |= V_IWUSR;
+    attr->inode = fuchsia_io_INO_UNKNOWN;
     attr->nlink = 1;
     return ZX_OK;
 }
