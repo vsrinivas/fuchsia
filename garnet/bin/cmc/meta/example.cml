@@ -19,9 +19,9 @@
     {
       "service": "/svc/fuchsia.logger.Log",
       "from": "#logger",
-      "targets": [
+      "to": [
         {
-          "to": "#netstack",
+          "dest": "#netstack",
         },
       ],
     },

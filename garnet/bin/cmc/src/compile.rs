@@ -151,14 +151,14 @@ where
     Ok(ret)
 }
 
-// Extract "targets" from "targets".
+// Extract "targets" from "offer.to".
 fn extract_targets(in_obj: &cml::Offer, source_path: &str) -> Result<Vec<cm::Target>, Error> {
     let mut out_targets = vec![];
-    for target in in_obj.targets.iter() {
-        let target_path = extract_target_path(target, source_path);
-        let caps = match cml::CHILD_RE.captures(&target.to) {
+    for to in in_obj.to.iter() {
+        let target_path = extract_target_path(to, source_path);
+        let caps = match cml::CHILD_RE.captures(&to.dest) {
             Some(c) => Ok(c),
-            None => Err(Error::internal(format!("invalid \"to\": {}", target.to))),
+            None => Err(Error::internal(format!("invalid \"dest\": {}", to.dest))),
         }?;
         let child_name = caps[1].to_string();
         out_targets.push(cm::Target { target_path, child_name });
@@ -325,16 +325,16 @@ mod tests {
                     {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
-                        "targets": [
-                            { "to": "#netstack" },
-                            { "to": "#echo_server", "as": "/svc/fuchsia.logger.SysLog" }
+                        "to": [
+                            { "dest": "#netstack" },
+                            { "dest": "#echo_server", "as": "/svc/fuchsia.logger.SysLog" }
                         ]
                     },
                     {
                         "directory": "/data/assets",
                         "from": "realm",
-                        "targets": [
-                            { "to": "#echo_server" },
+                        "to": [
+                            { "dest": "#echo_server" },
                         ]
                     }
                 ],
@@ -485,8 +485,8 @@ mod tests {
                     {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
-                        "targets": [
-                          { "to": "#netstack" }
+                        "to": [
+                          { "dest": "#netstack" }
                         ]
                     }
                 ],

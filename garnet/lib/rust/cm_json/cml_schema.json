@@ -200,7 +200,7 @@
         "type": "object",
         "required": [
           "from",
-          "targets"
+          "to"
         ],
         "oneOf": [
           {
@@ -241,22 +241,22 @@
               "#scenic"
             ]
           },
-          "targets": {
-            "$id": "/properties/offer/items/properties/targets",
+          "to": {
+            "$id": "/properties/offer/items/properties/to",
             "type": "array",
             "title": "Offered capability targets",
             "description": "The components the capability is being offered to",
             "uniqueItems": true,
             "minItems": 1,
             "items": {
-              "$id": "/properties/offer/items/properties/targets/items",
+              "$id": "/properties/offer/items/properties/to/items",
               "type": "object",
               "required": [
-                "to"
+                "dest"
               ],
               "properties": {
-                "to": {
-                  "$id": "/properties/offer/items/properties/targets/items/properties/to",
+                "dest": {
+                  "$id": "/properties/offer/items/properties/to/items/properties/dest",
                   "title": "Offered capability target component",
                   "description": "The child component to which the capability is being offered, with the syntax \"#$CHILD\".",
                   "pattern": "^#[a-zA-Z0-9_-]+$",
@@ -266,7 +266,7 @@
                   ]
                 },
                 "as": {
-                  "$id": "/properties/offer/items/properties/targets/items/properties/as",
+                  "$id": "/properties/offer/items/properties/to/items/properties/as",
                   "title": "Offered capability target path",
                   "description": "The path by which the capability will be offered. The path is either a path in this component's namespace (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
                   "allOf": [{ "$ref": "#/definitions/relative-id-clause" }],

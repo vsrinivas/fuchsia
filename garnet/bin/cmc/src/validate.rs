@@ -149,17 +149,17 @@ impl<'a> ValidationContext<'a> {
         self.validate_source("offer", offer)?;
 
         let mut prev_targets = HashSet::new();
-        for target in offer.targets.iter() {
+        for to in offer.to.iter() {
             // Check that any referenced child in the target name is valid.
-            if let Some(caps) = cml::CHILD_RE.captures(&target.to) {
+            if let Some(caps) = cml::CHILD_RE.captures(&to.dest) {
                 if !self.all_children.contains(&caps[1]) {
                     return Err(Error::validate(format!(
                         "\"{}\" is an \"offer\" target but it does not appear in \"children\"",
-                        &target.to,
+                        &to.dest,
                     )));
                 }
             }
-            self.validate_target("offer", offer, target, &mut prev_targets, prev_target_paths)?;
+            self.validate_target("offer", offer, to, &mut prev_targets, prev_target_paths)?;
         }
         Ok(())
     }
@@ -200,7 +200,7 @@ impl<'a> ValidationContext<'a> {
     ) -> Result<(), Error>
     where
         T: cml::CapabilityClause,
-        U: cml::ToClause + cml::AsClause,
+        U: cml::DestClause + cml::AsClause,
     {
         // Get the source capability's path.
         let source_path = if let Some(p) = source_obj.service().as_ref() {
@@ -218,7 +218,7 @@ impl<'a> ValidationContext<'a> {
         };
 
         // Check that target path is not a duplicate of another capability.
-        let target_name = target_obj.to().unwrap_or("");
+        let target_name = target_obj.dest().unwrap_or("");
         let paths_for_target =
             prev_target_paths.entry(target_name.to_string()).or_insert(HashSet::new());
         if !paths_for_target.insert(target_path) {
@@ -235,7 +235,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Check that the target is not a duplicate of a previous target (for this source).
-        if let Some(target_name) = target_obj.to() {
+        if let Some(target_name) = target_obj.dest() {
             if !prev_targets.insert(target_name) {
                 return Err(Error::validate(format!(
                     "\"{}\" is a duplicate \"{}\" target for \"{}\"",
@@ -1085,23 +1085,23 @@ mod tests {
                     {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
-                        "targets": [
-                            { "to": "#echo_server" },
-                            { "to": "#scenic", "as": "/svc/fuchsia.logger.SysLog" }
+                        "to": [
+                            { "dest": "#echo_server" },
+                            { "dest": "#scenic", "as": "/svc/fuchsia.logger.SysLog" }
                         ]
                     },
                     {
                         "service": "/svc/fuchsia.fonts.Provider",
                         "from": "realm",
-                        "targets": [
-                            { "to": "#echo_server" },
+                        "to": [
+                            { "dest": "#echo_server" },
                         ]
                     },
                     {
                         "directory": "/data/assets",
                         "from": "self",
-                        "targets": [
-                            { "to": "#echo_server" },
+                        "to": [
+                            { "dest": "#echo_server" },
                         ]
                     }
                 ],
@@ -1128,9 +1128,9 @@ mod tests {
                     {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-",
-                        "targets": [
+                        "to": [
                             {
-                                "to": "#abcdefghijklmnopqrstuvwxyz0123456789_-"
+                                "dest": "#abcdefghijklmnopqrstuvwxyz0123456789_-"
                             }
                         ]
                     }
@@ -1148,15 +1148,15 @@ mod tests {
             input = json!({
                 "offer": [ {} ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /offer/0, This property is required at /offer/0/from, This property is required at /offer/0/targets")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /offer/0, This property is required at /offer/0/from, This property is required at /offer/0/to")),
         },
         test_cml_offer_missing_from => {
             input = json!({
                     "offer": [ {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#missing",
-                        "targets": [
-                            { "to": "#echo_server" },
+                        "to": [
+                            { "dest": "#echo_server" },
                         ]
                     } ]
                 }),
@@ -1167,8 +1167,8 @@ mod tests {
                     "offer": [ {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#invalid@",
-                        "targets": [
-                            { "to": "#echo_server" },
+                        "to": [
+                            { "dest": "#echo_server" },
                         ]
                     } ]
                 }),
@@ -1179,30 +1179,30 @@ mod tests {
                 "offer": [ {
                     "service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
-                    "targets": []
+                    "to": []
                 } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "MinItems condition is not met at /offer/0/targets")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "MinItems condition is not met at /offer/0/to")),
         },
         test_cml_offer_target_missing_props => {
             input = json!({
                 "offer": [ {
                     "service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
-                    "targets": [
+                    "to": [
                         { "as": "/svc/fuchsia.logger.SysLog" }
                     ]
                 } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /offer/0/targets/0/to")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /offer/0/to/0/dest")),
         },
         test_cml_offer_target_missing_to => {
             input = json!({
                 "offer": [ {
                     "service": "/snvc/fuchsia.logger.Log",
                     "from": "#logger",
-                    "targets": [
-                        { "to": "#missing" }
+                    "to": [
+                        { "dest": "#missing" }
                     ]
                 } ],
                 "children": [ {
@@ -1217,12 +1217,12 @@ mod tests {
                 "offer": [ {
                     "service": "/svc/fuchsia.logger.Log",
                     "from": "#logger",
-                    "targets": [
-                        { "to": "self", "as": "/svc/fuchsia.logger.SysLog" }
+                    "to": [
+                        { "dest": "self", "as": "/svc/fuchsia.logger.SysLog" }
                     ]
                 } ]
             }),
-            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/targets/0/to")),
+            result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/to/0/dest")),
         },
         test_cml_offer_duplicate_target_paths => {
             input = json!({
@@ -1230,16 +1230,16 @@ mod tests {
                     {
                         "service": "/svc/logger",
                         "from": "self",
-                        "targets": [
-                            { "to": "#echo_server", "as": "/thing" },
-                            { "to": "#scenic" }
+                        "to": [
+                            { "dest": "#echo_server", "as": "/thing" },
+                            { "dest": "#scenic" }
                         ]
                     },
                     {
                         "directory": "/thing",
                         "from": "realm",
-                        "targets": [
-                            { "to": "#echo_server" }
+                        "to": [
+                            { "dest": "#echo_server" }
                         ]
                     }
                 ],
