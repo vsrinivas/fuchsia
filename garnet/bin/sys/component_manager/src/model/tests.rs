@@ -6,7 +6,7 @@ use {
     crate::model::*,
     crate::{directory_broker, io_util},
     fdio,
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo, EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker},
@@ -213,7 +213,7 @@ async fn bind_instance_root() {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    let res = await!(model.bind_instance(AbsoluteMoniker::root()));
+    let res = await!(model.look_up_and_bind_instance(AbsoluteMoniker::root()));
     let expected_res: Result<(), ModelError> = Ok(());
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     let actual_uris = await!(uris_run.lock());
@@ -241,9 +241,10 @@ async fn bind_instance_root_non_existent() {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
-        "no-such-instance".to_string()
-    )])));
+    let res =
+        await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+            "no-such-instance".to_string()
+        )])));
     let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(
         AbsoluteMoniker::new(vec![ChildMoniker::new("no-such-instance".to_string())]),
     ));
@@ -280,8 +281,10 @@ async fn bind_instance_child() {
     });
     // bind to system
     {
-        let res = await!(model
-            .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("system".to_string()),])));
+        let res =
+            await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "system".to_string()
+            ),])));
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
@@ -306,8 +309,9 @@ async fn bind_instance_child() {
     // bind to echo
     {
         let res =
-            await!(model
-                .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("echo".to_string()),])));
+            await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "echo".to_string()
+            ),])));
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
@@ -347,8 +351,10 @@ async fn bind_instance_child_non_existent() {
     });
     // bind to system
     {
-        let res = await!(model
-            .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("system".to_string()),])));
+        let res =
+            await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "system".to_string()
+            ),])));
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
@@ -361,7 +367,7 @@ async fn bind_instance_child_non_existent() {
             ChildMoniker::new("system".to_string()),
             ChildMoniker::new("logger".to_string()),
         ]);
-        let res = await!(model.bind_instance(moniker.clone()));
+        let res = await!(model.look_up_and_bind_instance(moniker.clone()));
         let expected_res: Result<(), ModelError> = Err(ModelError::instance_not_found(moniker));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
@@ -409,8 +415,9 @@ async fn bind_instance_eager_child() {
     // Bind to the top component, and check that it and the eager components were started.
     {
         let res =
-            await!(model
-                .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("a".to_string()),])));
+            await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "a".to_string()
+            ),])));
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
@@ -456,8 +463,9 @@ async fn bind_instance_no_execute() {
     // is non-executable so it is not run.
     {
         let res =
-            await!(model
-                .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("a".to_string()),])));
+            await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "a".to_string()
+            ),])));
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
@@ -497,7 +505,7 @@ async fn bind_instance_recursive_child() {
     });
     // bind to logger (before ever binding to system)
     {
-        let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![
+        let res = await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![
             ChildMoniker::new("system".to_string()),
             ChildMoniker::new("logger".to_string())
         ])));
@@ -509,7 +517,7 @@ async fn bind_instance_recursive_child() {
     }
     // bind to netstack
     {
-        let res = await!(model.bind_instance(AbsoluteMoniker::new(vec![
+        let res = await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![
             ChildMoniker::new("system".to_string()),
             ChildMoniker::new("netstack".to_string()),
         ])));
@@ -522,8 +530,10 @@ async fn bind_instance_recursive_child() {
     }
     // finally, bind to system
     {
-        let res = await!(model
-            .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("system".to_string()),])));
+        let res =
+            await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "system".to_string()
+            ),])));
         let expected_res: Result<(), ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
         let actual_uris = await!(uris_run.lock());
@@ -658,10 +668,11 @@ async fn check_namespace_from_using() {
         root_default_runner: Box::new(runner),
     });
     // bind to root and system
-    let _ = await!(model.bind_instance(AbsoluteMoniker::new(vec![])));
+    let _ = await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![])));
     let res =
-        await!(model
-            .bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("system".to_string()),])));
+        await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+            "system".to_string()
+        ),])));
     let expected_res: Result<(), ModelError> = Ok(());
     assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     // Verify system has the expected namespaces.
@@ -750,21 +761,35 @@ fn host_svc_foo_hippo(server_end: ServerEnd<DirectoryMarker>) {
     );
 }
 
-async fn call_svc_hippo(ns: &mut fsys::ComponentNamespace) {
+async fn get_dir(
+    dir_string: &str,
+    resolved_uri: String,
+    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+) -> ClientEnd<DirectoryMarker> {
+    let mut ns_guard = await!(namespaces.lock());
+    let ns = ns_guard.get_mut(&resolved_uri).unwrap();
     while let Some(dir) = ns.directories.pop() {
-        if let Some("/svc") = ns.paths.pop().as_ref().map(|s| s.as_str()) {
-            let dir_proxy = dir.into_proxy().unwrap();
-            let path = PathBuf::from("hippo");
-            let node_proxy = io_util::open_node(&dir_proxy, &path, MODE_TYPE_SERVICE)
-                .expect("failed to open echo service");
-            let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
-            let res =
-                await!(echo_proxy.echo_string(Some("hippos"))).expect("failed to use echo service");
-            assert_eq!(res, Some("hippos".to_string()));
-            return;
+        if let Some(ds) = ns.paths.pop().as_ref().map(|s| s.as_str()) {
+            if ds == dir_string {
+                return dir;
+            }
         }
     }
-    panic!("didn't find /svc");
+    panic!("didn't find {}", dir_string);
+}
+
+async fn call_svc_hippo(
+    resolved_uri: String,
+    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+) {
+    let dir = await!(get_dir("/svc", resolved_uri, namespaces));
+    let dir_proxy = dir.into_proxy().unwrap();
+    let path = PathBuf::from("hippo");
+    let node_proxy = io_util::open_node(&dir_proxy, &path, MODE_TYPE_SERVICE)
+        .expect("failed to open echo service");
+    let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
+    let res = await!(echo_proxy.echo_string(Some("hippos"))).expect("failed to use echo service");
+    assert_eq!(res, Some("hippos".to_string()));
 }
 
 // TODO: cover services and directories in the same tests below, as in
@@ -824,16 +849,13 @@ async fn use_service_from_parent() {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    //TODO: remove these binds once we have lazy binding.
-    assert!(await!(model.bind_instance(AbsoluteMoniker::new(vec![]))).is_ok());
-    assert!(await!(
-        model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("b".to_string()),]))
-    )
+    assert!(await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![
+        ChildMoniker::new("b".to_string()),
+    ])))
     .is_ok());
 
     // use /svc/baz from b's incoming namespace
-    let mut namespaces = await!(namespaces.lock());
-    await!(call_svc_hippo(namespaces.get_mut("test:///b_resolved").unwrap()));
+    await!(call_svc_hippo("test:///b_resolved".to_string(), namespaces));
 }
 
 ///   a
@@ -913,21 +935,106 @@ async fn use_service_from_grandparent() {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    //TODO: remove these binds once we have lazy binding.
-    assert!(await!(model.bind_instance(AbsoluteMoniker::new(vec![]))).is_ok());
-    assert!(await!(
-        model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("b".to_string()),]))
-    )
-    .is_ok());
-    assert!(await!(model.bind_instance(AbsoluteMoniker::new(vec![
+    assert!(await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![
         ChildMoniker::new("b".to_string()),
         ChildMoniker::new("c".to_string()),
     ])))
     .is_ok());
 
     // use /svc/hippo from c's incoming namespace
-    let mut namespaces = await!(namespaces.lock());
-    await!(call_svc_hippo(namespaces.get_mut("test:///c_resolved").unwrap()));
+    await!(call_svc_hippo("test:///c_resolved".to_string(), namespaces));
+}
+
+///     a
+///    /
+///   b
+///  / \
+/// d   c
+///
+/// d: exposes service /svc/foo from self as /svc/bar
+/// b: offers service /svc/bar from d as /svc/foobar to c
+/// c: uses /svc/foobar as /svc/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_service_from_sibling_no_root() {
+    let mut resolver = ResolverRegistry::new();
+    let uris_run = Arc::new(Mutex::new(vec![]));
+    let namespaces = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
+    let runner = MockRunner {
+        uris_run: uris_run.clone(),
+        namespaces: namespaces.clone(),
+        host_fns: host_fns.clone(),
+    };
+
+    // Host /svc/foo from d's outgoing directory
+    await!(host_fns.lock()).insert("test:///d_resolved".to_string(), Box::new(host_svc_foo_hippo));
+
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
+        "a".to_string(),
+        vec![
+            ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Lazy },
+            ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Lazy },
+        ],
+    );
+    await!(mock_resolver.children.lock()).insert(
+        "b".to_string(),
+        vec![
+            ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Lazy },
+            ChildInfo { name: "d".to_string(), startup: fsys::StartupMode::Lazy },
+        ],
+    );
+
+    await!(mock_resolver.uses.lock()).insert(
+        "c".to_string(),
+        Some(vec![fsys::UseDecl {
+            type_: Some(fsys::CapabilityType::Service),
+            source_path: Some("/svc/foobar".to_string()),
+            target_path: Some("/svc/hippo".to_string()),
+        }]),
+    );
+
+    await!(mock_resolver.offers.lock()).insert(
+        "b".to_string(),
+        Some(vec![fsys::OfferDecl {
+            type_: Some(fsys::CapabilityType::Service),
+            source_path: Some("/svc/bar".to_string()),
+            source: Some(fsys::RelativeId {
+                relation: Some(fsys::Relation::Child),
+                child_name: Some("d".to_string()),
+            }),
+            targets: Some(vec![fsys::OfferTarget {
+                target_path: Some("/svc/foobar".to_string()),
+                child_name: Some("c".to_string()),
+            }]),
+        }]),
+    );
+    await!(mock_resolver.exposes.lock()).insert(
+        "d".to_string(),
+        Some(vec![fsys::ExposeDecl {
+            type_: Some(fsys::CapabilityType::Service),
+            source_path: Some("/svc/foo".to_string()),
+            source: Some(fsys::RelativeId {
+                relation: Some(fsys::Relation::Myself),
+                child_name: None,
+            }),
+            target_path: Some("/svc/bar".to_string()),
+        }]),
+    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
+    let model = Model::new(ModelParams {
+        root_component_uri: "test:///a".to_string(),
+        root_resolver_registry: resolver,
+        root_default_runner: Box::new(runner),
+    });
+    await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![
+        ChildMoniker::new("b".to_string()),
+        ChildMoniker::new("c".to_string()),
+    ])))
+    .expect("failed to bind to b/c");
+
+    // use /svc/hippo from c's incoming namespace
+    await!(call_svc_hippo("test:///c_resolved".to_string(), namespaces));
 }
 
 ///   a
@@ -938,7 +1045,7 @@ async fn use_service_from_grandparent() {
 /// a: offers service /svc/bar from b as /svc/baz to c
 /// c: uses /svc/baz as /svc/hippo
 #[fuchsia_async::run_singlethreaded(test)]
-async fn use_service_from_sibling() {
+async fn use_service_from_sibling_root() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
@@ -1001,16 +1108,13 @@ async fn use_service_from_sibling() {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    //TODO: remove these binds once we have lazy binding.
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![]))).expect("failed to bind to root");
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("b".to_string()),])))
-        .expect("failed to bind to b");
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("c".to_string()),])))
-        .expect("failed to bind to c");
+    await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+        "c".to_string()
+    ),])))
+    .expect("failed to bind to c");
 
     // use /svc/hippo from c's incoming namespace
-    let mut namespaces = await!(namespaces.lock());
-    await!(call_svc_hippo(namespaces.get_mut("test:///c_resolved").unwrap()));
+    await!(call_svc_hippo("test:///c_resolved".to_string(), namespaces));
 }
 
 ///     a
@@ -1103,21 +1207,13 @@ async fn use_service_from_niece() {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    //TODO: remove these binds once we have lazy binding.
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![]))).expect("failed to bind to root");
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("b".to_string()),])))
-        .expect("failed to bind to b");
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("c".to_string()),])))
-        .expect("failed to bind to c");
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![
-        ChildMoniker::new("b".to_string()),
-        ChildMoniker::new("d".to_string()),
-    ])))
-    .expect("failed to bind to b/d");
+    await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+        "c".to_string()
+    ),])))
+    .expect("failed to bind to c");
 
     // use /svc/hippo from c's incoming namespace
-    let mut namespaces = await!(namespaces.lock());
-    await!(call_svc_hippo(namespaces.get_mut("test:///c_resolved").unwrap()));
+    await!(call_svc_hippo("test:///c_resolved".to_string(), namespaces));
 }
 
 fn host_data_foo_hippo(server_end: ServerEnd<DirectoryMarker>) {
@@ -1144,20 +1240,15 @@ fn host_data_foo_hippo(server_end: ServerEnd<DirectoryMarker>) {
     );
 }
 
-async fn read_data_hippo_hippo(ns: &mut fsys::ComponentNamespace) {
-    while let Some(dir) = ns.directories.pop() {
-        if let Some("/data/hippo") = ns.paths.pop().as_ref().map(|s| s.as_str()) {
-            let dir_proxy = dir.into_proxy().unwrap();
-            let path = PathBuf::from("hippo");
-            let file_proxy = io_util::open_file(&dir_proxy, &path).expect("failed to open file");
-            assert_eq!(
-                "hippo",
-                await!(io_util::read_file(&file_proxy)).expect("failed to read file")
-            );
-            return;
-        }
-    }
-    panic!("didn't find /data/hippo");
+async fn read_data_hippo_hippo(
+    resolved_uri: String,
+    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+) {
+    let dir = await!(get_dir("/data/hippo", resolved_uri, namespaces));
+    let dir_proxy = dir.into_proxy().unwrap();
+    let path = PathBuf::from("hippo");
+    let file_proxy = io_util::open_file(&dir_proxy, &path).expect("failed to open file");
+    assert_eq!("hippo", await!(io_util::read_file(&file_proxy)).expect("failed to read file"));
 }
 
 ///   a
@@ -1215,16 +1306,13 @@ async fn use_directory_from_parent() {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    //TODO: remove these binds once we have lazy binding.
-    assert!(await!(model.bind_instance(AbsoluteMoniker::new(vec![]))).is_ok());
-    assert!(await!(
-        model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("b".to_string()),]))
-    )
+    assert!(await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![
+        ChildMoniker::new("b".to_string()),
+    ])))
     .is_ok());
 
     // use /data/hippo from b's incoming namespace
-    let mut namespaces = await!(namespaces.lock());
-    await!(read_data_hippo_hippo(namespaces.get_mut("test:///b_resolved").unwrap()));
+    await!(read_data_hippo_hippo("test:///b_resolved".to_string(), namespaces));
 }
 
 ///   a
@@ -1304,21 +1392,103 @@ async fn use_directory_from_grandparent() {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    //TODO: remove these binds once we have lazy binding.
-    assert!(await!(model.bind_instance(AbsoluteMoniker::new(vec![]))).is_ok());
-    assert!(await!(
-        model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("b".to_string()),]))
-    )
-    .is_ok());
-    assert!(await!(model.bind_instance(AbsoluteMoniker::new(vec![
+    assert!(await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![
         ChildMoniker::new("b".to_string()),
         ChildMoniker::new("c".to_string()),
     ])))
     .is_ok());
 
     // use /data/hippo from c's incoming namespace
-    let mut namespaces = await!(namespaces.lock());
-    await!(read_data_hippo_hippo(namespaces.get_mut("test:///c_resolved").unwrap()));
+    await!(read_data_hippo_hippo("test:///c_resolved".to_string(), namespaces));
+}
+
+///     a
+///    /
+///   b
+///  / \
+/// d   c
+///
+/// d: exposes directory /data/foo from self as /data/bar
+/// b: exposes directory /data/bar from d as /data/baz
+/// c: uses /data/foobar as /data/hippo
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_directory_from_sibling_no_root() {
+    let mut resolver = ResolverRegistry::new();
+    let uris_run = Arc::new(Mutex::new(vec![]));
+    let namespaces = Arc::new(Mutex::new(HashMap::new()));
+    let host_fns = Arc::new(Mutex::new(HashMap::new()));
+    let runner = MockRunner {
+        uris_run: uris_run.clone(),
+        namespaces: namespaces.clone(),
+        host_fns: host_fns.clone(),
+    };
+
+    // Host /data/foo from d's outgoing directory
+    await!(host_fns.lock()).insert("test:///d_resolved".to_string(), Box::new(host_data_foo_hippo));
+
+    let mock_resolver = MockResolver::new();
+    await!(mock_resolver.children.lock()).insert(
+        "a".to_string(),
+        vec![ChildInfo { name: "b".to_string(), startup: fsys::StartupMode::Lazy }],
+    );
+    await!(mock_resolver.children.lock()).insert(
+        "b".to_string(),
+        vec![
+            ChildInfo { name: "d".to_string(), startup: fsys::StartupMode::Lazy },
+            ChildInfo { name: "c".to_string(), startup: fsys::StartupMode::Lazy },
+        ],
+    );
+
+    await!(mock_resolver.uses.lock()).insert(
+        "c".to_string(),
+        Some(vec![fsys::UseDecl {
+            type_: Some(fsys::CapabilityType::Directory),
+            source_path: Some("/data/foobar".to_string()),
+            target_path: Some("/data/hippo".to_string()),
+        }]),
+    );
+
+    await!(mock_resolver.offers.lock()).insert(
+        "b".to_string(),
+        Some(vec![fsys::OfferDecl {
+            type_: Some(fsys::CapabilityType::Directory),
+            source_path: Some("/data/bar".to_string()),
+            source: Some(fsys::RelativeId {
+                relation: Some(fsys::Relation::Child),
+                child_name: Some("d".to_string()),
+            }),
+            targets: Some(vec![fsys::OfferTarget {
+                target_path: Some("/data/foobar".to_string()),
+                child_name: Some("c".to_string()),
+            }]),
+        }]),
+    );
+    await!(mock_resolver.exposes.lock()).insert(
+        "d".to_string(),
+        Some(vec![fsys::ExposeDecl {
+            type_: Some(fsys::CapabilityType::Directory),
+            source_path: Some("/data/foo".to_string()),
+            source: Some(fsys::RelativeId {
+                relation: Some(fsys::Relation::Myself),
+                child_name: None,
+            }),
+            target_path: Some("/data/bar".to_string()),
+        }]),
+    );
+    resolver.register("test".to_string(), Box::new(mock_resolver));
+    let model = Model::new(ModelParams {
+        root_component_uri: "test:///a".to_string(),
+        root_resolver_registry: resolver,
+        root_default_runner: Box::new(runner),
+    });
+    await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![
+        ChildMoniker::new("b".to_string()),
+        ChildMoniker::new("c".to_string()),
+    ])))
+    .expect("failed to bind to c");
+
+    // use /data/hippo from c's incoming namespace
+    await!(read_data_hippo_hippo("test:///c_resolved".to_string(), namespaces));
 }
 
 ///   a
@@ -1329,7 +1499,7 @@ async fn use_directory_from_grandparent() {
 /// a: offers directory /data/bar from b as /data/baz to c
 /// c: uses /data/baz as /data/hippo
 #[fuchsia_async::run_singlethreaded(test)]
-async fn use_directory_from_sibling() {
+async fn use_directory_from_sibling_root() {
     let mut resolver = ResolverRegistry::new();
     let uris_run = Arc::new(Mutex::new(vec![]));
     let namespaces = Arc::new(Mutex::new(HashMap::new()));
@@ -1392,16 +1562,13 @@ async fn use_directory_from_sibling() {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    //TODO: remove these binds once we have lazy binding.
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![]))).expect("failed to bind to root");
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("b".to_string()),])))
-        .expect("failed to bind to b");
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("c".to_string()),])))
-        .expect("failed to bind to c");
+    await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+        "c".to_string()
+    ),])))
+    .expect("failed to bind to c");
 
     // use /data/hippo from c's incoming namespace
-    let mut namespaces = await!(namespaces.lock());
-    await!(read_data_hippo_hippo(namespaces.get_mut("test:///c_resolved").unwrap()));
+    await!(read_data_hippo_hippo("test:///c_resolved".to_string(), namespaces));
 }
 
 ///     a
@@ -1494,19 +1661,11 @@ async fn use_directory_from_niece() {
         root_resolver_registry: resolver,
         root_default_runner: Box::new(runner),
     });
-    //TODO: remove these binds once we have lazy binding.
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![]))).expect("failed to bind to root");
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("b".to_string()),])))
-        .expect("failed to bind to b");
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new("c".to_string()),])))
-        .expect("failed to bind to c");
-    await!(model.bind_instance(AbsoluteMoniker::new(vec![
-        ChildMoniker::new("b".to_string()),
-        ChildMoniker::new("d".to_string()),
-    ])))
-    .expect("failed to bind to b/d");
+    await!(model.look_up_and_bind_instance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+        "c".to_string()
+    ),])))
+    .expect("failed to bind to c");
 
-    // use /svc/hippo from c's incoming namespace
-    let mut namespaces = await!(namespaces.lock());
-    await!(read_data_hippo_hippo(namespaces.get_mut("test:///c_resolved").unwrap()));
+    // use /data/hippo from c's incoming namespace
+    await!(read_data_hippo_hippo("test:///c_resolved".to_string(), namespaces));
 }

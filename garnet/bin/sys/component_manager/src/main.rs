@@ -82,7 +82,7 @@ fn main() -> Result<(), Error> {
 }
 
 async fn run_root(model: Arc<Model>) {
-    match await!(model.bind_instance(AbsoluteMoniker::root())) {
+    match await!(model.look_up_and_bind_instance(AbsoluteMoniker::root())) {
         Ok(()) => {
             // TODO: Exit the component manager when the root component's binding is lost
             // (when it terminates) or perhaps attempt to rebind automatically.

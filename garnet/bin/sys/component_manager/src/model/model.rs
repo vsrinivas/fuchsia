@@ -4,7 +4,10 @@
 
 use {
     crate::data,
+    crate::io_util,
     crate::model::*,
+    cm_rust::CapabilityPath,
+    failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -60,14 +63,49 @@ impl Model {
     /// Binds to the component instance with the specified moniker, causing it to start if it is
     /// not already running. Also binds to any descendant component instances that need to be
     /// eagerly started.
-    pub async fn bind_instance(&self, abs_moniker: AbsoluteMoniker) -> Result<(), ModelError> {
-        let realm = await!(self.look_up_realm(&abs_moniker))?;
-        // We may have to bind to multiple instances if this instance has children with the
-        // "eager" startup mode.
-        let mut instances_to_bind = vec![realm];
-        while let Some(realm) = instances_to_bind.pop() {
-            instances_to_bind.append(&mut await!(self.bind_instance_in_realm(realm))?);
-        }
+    pub async fn look_up_and_bind_instance(
+        &self,
+        abs_moniker: AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        let realm: Arc<Mutex<Realm>> = await!(self.look_up_realm(&abs_moniker))?;
+        let mut eager_children = {
+            let mut realm = await!(realm.lock());
+            await!(self.bind_instance(&mut realm))?
+        };
+        await!(self.bind_eager_children_recursive(&mut eager_children))?;
+        Ok(())
+    }
+
+    /// Given a realm and path, lazily bind to the instance in the realm, open, then bind its eager
+    /// children.
+    pub async fn bind_instance_and_open(
+        &self,
+        realm: Arc<Mutex<Realm>>,
+        flags: u32,
+        open_mode: u32,
+        path: CapabilityPath,
+        server_chan: zx::Channel,
+    ) -> Result<(), ModelError> {
+        let mut eager_children = {
+            let mut realm = await!(realm.lock());
+            let eager_children = await!(self.bind_instance(&mut realm))?;
+
+            let server_end = ServerEnd::new(server_chan);
+            let out_dir = &realm
+                .instance
+                .execution
+                .as_ref()
+                .ok_or(ModelError::capability_discovery_error(format_err!(
+                    "component hosting capability isn't running: {}",
+                    realm.abs_moniker
+                )))?
+                .outgoing_dir;
+            let path = io_util::canonicalize_path(&path.to_string());
+            out_dir.open(flags, open_mode, &path, server_end).expect("failed to send open message");
+
+            eager_children
+        };
+        await!(self.bind_eager_children_recursive(&mut eager_children))?;
         Ok(())
     }
 
@@ -98,13 +136,13 @@ impl Model {
 
     /// Binds to the component instance in the given realm, starting it if it's not
     /// already running. Returns the list of child realms whose instances need to be eagerly started
-    /// after this function returns.
-    async fn bind_instance_in_realm(
-        &self,
-        realm_cell: Arc<Mutex<Realm>>,
+    /// after this function returns. The caller is responsible for calling
+    /// bind_eager_children_recursive themselves to ensure eager children are recursively binded.
+    async fn bind_instance<'a>(
+        &'a self,
+        realm: &'a mut Realm,
     ) -> Result<Vec<Arc<Mutex<Realm>>>, ModelError> {
         // There can only be one task manipulating an instance's execution at a time.
-        let mut realm = await!(realm_cell.lock());
         let mut started = false;
         match &realm.instance.execution {
             Some(_) => {}
@@ -152,5 +190,17 @@ impl Model {
             }
         }
         Ok(eager_children)
+    }
+
+    /// Binds to a list of instances, and any eager children they may return.
+    async fn bind_eager_children_recursive<'a>(
+        &'a self,
+        instances_to_bind: &'a mut Vec<Arc<Mutex<Realm>>>,
+    ) -> Result<(), ModelError> {
+        while let Some(realm) = instances_to_bind.pop() {
+            let mut child_realm = await!(realm.lock());
+            instances_to_bind.append(&mut await!(self.bind_instance(&mut child_realm))?);
+        }
+        Ok(())
     }
 }

@@ -7,7 +7,6 @@ use {
     crate::model::*,
     cm_rust::{self, CapabilityPath, RelativeId},
     failure::format_err,
-    fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -15,6 +14,7 @@ use {
 };
 
 /// Describes the source of a capability, as determined by `find_capability_source`
+#[derive(Debug)]
 enum CapabilitySource {
     /// This capability source comes from the component described by this AbsoluteMoniker at
     /// this path. The Realm is provided as well, as it has already been looked up by this
@@ -83,21 +83,14 @@ async fn route_capability(
                 .map_err(|e| ModelError::capability_discovery_error(e))?
         }
         CapabilitySource::Component(path, realm) => {
-            let server_end = ServerEnd::new(server_chan);
-            let realm = await!(realm.lock());
-            let out_dir = &realm
-                .instance
-                .execution
-                .as_ref()
-                .ok_or(ModelError::capability_discovery_error(format_err!(
-                    "component hosting capability isn't running: {}",
-                    realm.abs_moniker
-                )))?
-                .outgoing_dir;
-
-            let path = io_util::canonicalize_path(&path.to_string());
-
-            out_dir.open(flags, open_mode, &path, server_end).expect("failed to send open message");
+            await!(Model::bind_instance_and_open(
+                &model,
+                realm,
+                flags,
+                open_mode,
+                path,
+                server_chan
+            ))?;
         }
     }
 
