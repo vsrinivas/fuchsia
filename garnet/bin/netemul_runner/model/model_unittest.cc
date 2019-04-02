@@ -64,13 +64,25 @@ TEST_F(ModelTest, ParseTest) {
                   "child-1-no-url"
                 ]
               }
-            ]
+            ],
+            "logger_options": {
+              "enabled": false,
+              "filters": null
+            }
           },
           {
             "inherit_services": false,
             "name": "child-2",
             "test": [ "fuchsia-pkg://fuchsia.com/some_test#meta/some_test.cmx" ],
-            "apps" : [ "fuchsia-pkg://fuchsia.com/some_app#meta/some_app.cmx" ]
+            "apps" : [ "fuchsia-pkg://fuchsia.com/some_app#meta/some_app.cmx" ],
+            "logger_options": {
+              "enabled": true,
+              "klogs_enabled": true,
+              "filters": {
+                "verbosity": 1,
+                "tags": ["testtag"]
+              }
+            }
           }
         ],
         "devices": [
@@ -155,6 +167,12 @@ TEST_F(ModelTest, ParseTest) {
             "fuchsia-pkg://fuchsia.com/some_service#meta/some_service.cmx");
   EXPECT_EQ(root_env.services()[2].launch().arguments().size(), 2ul);
 
+  // check the logger_options
+  EXPECT_TRUE(root_env.logger_options().enabled());
+  EXPECT_FALSE(root_env.logger_options().klogs_enabled());
+  EXPECT_EQ(root_env.logger_options().filters().verbosity(), 0);
+  EXPECT_TRUE(root_env.logger_options().filters().tags().empty());
+
   // check the child environments
   auto& c0 = root_env.children()[0];
   EXPECT_EQ(c0.name(), "child-1");
@@ -221,6 +239,18 @@ TEST_F(ModelTest, ParseTest) {
   EXPECT_EQ(ep1.mtu(), 1500u);  // default mtu check
   EXPECT_FALSE(ep1.mac());      // mac not set
   EXPECT_EQ(ep1.up(), true);    // default up
+
+  // check logger options
+  EXPECT_FALSE(c0.logger_options().enabled());
+  EXPECT_FALSE(c0.logger_options().klogs_enabled());
+  EXPECT_EQ(c0.logger_options().filters().verbosity(), 0);
+  EXPECT_TRUE(c0.logger_options().filters().tags().empty());
+
+  EXPECT_TRUE(c1.logger_options().enabled());
+  EXPECT_TRUE(c1.logger_options().klogs_enabled());
+  EXPECT_EQ(c1.logger_options().filters().verbosity(), 1);
+  EXPECT_EQ(c1.logger_options().filters().tags().size(), 1lu);
+  EXPECT_EQ(c1.logger_options().filters().tags()[0], "testtag");
 }
 
 TEST_F(ModelTest, NetworkNoName) {
@@ -255,6 +285,81 @@ TEST_F(ModelTest, EndpointBadMac) {
 TEST_F(ModelTest, TestBadUrl) {
   const char* json = R"({"environment":{"test":[{"url":"blablabla"}]}})";
   ExpectFailedParse(json, "test with bad url accepted");
+}
+
+TEST_F(ModelTest, TestBadLoggerOptions) {
+  const char* json = R"({"environment":{ "logger_options": [] }})";
+  ExpectFailedParse(json, "test with non object for logger_options accepted");
+
+  json = R"({"environment":{ "logger_options": {"enabled": 0 } }})";
+  ExpectFailedParse(
+      json, "test with non boolean for logger_options.enabled accepted");
+
+  json = R"({"environment":{ "logger_options": {"klogs_enabled": 0 } }})";
+  ExpectFailedParse(
+      json, "test with non boolean for logger_options.klogs_enabled accepted");
+}
+
+TEST_F(ModelTest, TestNullLoggerOptions) {
+  const char* json = R"({"environment": {"logger_options": null}})";
+
+  config::Config config;
+  json::JSONParser parser;
+  auto doc = parser.ParseFromString(json, "ParseTest");
+  EXPECT_FALSE(parser.HasError()) << "Parse error: " << parser.error_str();
+
+  EXPECT_TRUE(config.ParseFromJSON(doc, &parser))
+      << "Parse error: " << parser.error_str();
+
+  auto& root_env = config.environment();
+
+  // check the logger_options defaults with null is supplied to logger_options
+  EXPECT_EQ(root_env.logger_options().enabled(), true);
+  EXPECT_EQ(root_env.logger_options().klogs_enabled(), false);
+}
+
+TEST_F(ModelTest, TestBadLoggerFilterOptions) {
+  const char* json = R"({"environment": {"logger_options": {"filters": []}}})";
+  ExpectFailedParse(json,
+                    "test with non object for logger_options.filters accepted");
+
+  json =
+      R"({"environment": {"logger_options": {"filters": {"verbosity": true}}}})";
+  ExpectFailedParse(json,
+                    "test with non uint for logger_options.filters.verbosity");
+
+  json = R"({"environment": {"logger_options": {"filters": {"tags": {}}}}})";
+  ExpectFailedParse(json,
+                    "test with non array for logger_options.filters.tags");
+
+  json =
+      R"({"environment": {"logger_options": {"filters": {"tags": ["a", "b", "c", "d", "e", "f"]}}}})";
+  ExpectFailedParse(json,
+                    "test with too many tags for logger_options.filters.tags");
+
+  json =
+      R"({"environment": {"logger_options": {"filters": {"tags": ["sdfkjaskhfgaskjfhASFSADFSAFSADFsdfkjaskhfgaskjfhASFSADFSAFSADFDD"]}}}})";
+  ExpectFailedParse(
+      json, "test with too long of a tag for logger_options.filters.tags");
+}
+
+TEST_F(ModelTest, TestNullLoggerFilterOptions) {
+  const char* json =
+      R"({"environment": {"logger_options": {"filters": null}}})";
+
+  config::Config config;
+  json::JSONParser parser;
+  auto doc = parser.ParseFromString(json, "ParseTest");
+  EXPECT_FALSE(parser.HasError()) << "Parse error: " << parser.error_str();
+
+  EXPECT_TRUE(config.ParseFromJSON(doc, &parser))
+      << "Parse error: " << parser.error_str();
+
+  auto& root_env = config.environment();
+
+  // check the logger_options defaults with null is supplied to logger_options
+  EXPECT_EQ(root_env.logger_options().filters().verbosity(), 0);
+  EXPECT_TRUE(root_env.logger_options().filters().tags().empty());
 }
 
 TEST_F(ModelTest, ServiceBadUrl) {

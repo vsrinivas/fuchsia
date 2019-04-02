@@ -5,11 +5,11 @@
 #ifndef GARNET_BIN_NETEMUL_RUNNER_MODEL_CONFIG_H_
 #define GARNET_BIN_NETEMUL_RUNNER_MODEL_CONFIG_H_
 
+#include <lib/json/json_parser.h>
 #include <lib/zx/time.h>
+#include <src/lib/fxl/macros.h>
 #include <vector>
 #include "environment.h"
-#include "src/lib/fxl/macros.h"
-#include "lib/json/json_parser.h"
 #include "network.h"
 
 namespace netemul {

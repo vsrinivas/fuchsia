@@ -13,6 +13,7 @@ rustc_binary("easy_netstack_cfg") {
     "//garnet/public/lib/netemul/fidl:sync-rustc",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",

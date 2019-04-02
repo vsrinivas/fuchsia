@@ -15,7 +15,8 @@ mod tests {
         failure::{format_err, Error, ResultExt},
         fidl::endpoints::ServiceMarker,
         fidl_fuchsia_netemul_environment::{
-            EnvironmentOptions, LaunchService, ManagedEnvironmentMarker, ManagedEnvironmentProxy,
+            EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker,
+            ManagedEnvironmentProxy,
         },
         fidl_fuchsia_netemul_network::{
             NetworkConfig, NetworkContextMarker, NetworkManagerMarker, NetworkProxy,
@@ -40,6 +41,11 @@ mod tests {
                 services: Some(services),
                 devices: None,
                 inherit_parent_launch_services: Some(false),
+                logger_options: Some(LoggerOptions {
+                    enabled: Some(true),
+                    klogs_enabled: Some(false),
+                    filter_options: None,
+                }),
             },
         )?;
 

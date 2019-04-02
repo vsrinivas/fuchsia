@@ -304,6 +304,20 @@ bool Sandbox::CreateEnvironmentOptions(const config::Environment& config,
                          svc.launch().arguments().end());
   }
 
+  // Logger options
+  fuchsia::netemul::environment::LoggerOptions* logger_options =
+      options->mutable_logger_options();
+  const config::LoggerOptions& config_logger_options = config.logger_options();
+  logger_options->set_enabled(config_logger_options.enabled());
+  logger_options->set_klogs_enabled(config_logger_options.klogs_enabled());
+
+  fuchsia::logger::LogFilterOptions* log_filter_options =
+      logger_options->mutable_filter_options();
+  const config::LoggerFilterOptions& config_logger_filter_options =
+      config_logger_options.filters();
+  log_filter_options->verbosity = config_logger_filter_options.verbosity();
+  log_filter_options->tags = config_logger_filter_options.tags();
+
   return true;
 }
 

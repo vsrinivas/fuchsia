@@ -21,6 +21,10 @@ group("netemul_runner") {
 source_set("src") {
   testonly = true
   sources = [
+    "format.cc",
+    "format.h",
+    "log_listener.cc",
+    "log_listener.h",
     "managed_environment.cc",
     "managed_environment.h",
     "managed_launcher.cc",
@@ -44,7 +48,6 @@ source_set("src") {
     "//garnet/lib/process",
     "//garnet/public/lib/async_promise",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/json",
     "//garnet/public/lib/netemul/fidl:environment",
     "//garnet/public/lib/netemul/fidl:network",
@@ -55,7 +58,9 @@ source_set("src") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
+    "//src/lib/fxl",
     "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-logger:fuchsia-logger",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -80,8 +85,8 @@ executable("bin") {
 
   deps = [
     ":src",
-    "//src/lib/fxl",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/memfs-cpp",
@@ -97,10 +102,10 @@ executable("sandbox_unittest") {
   deps = [
     ":src",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.sys",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
     "//third_party/rapidjson",

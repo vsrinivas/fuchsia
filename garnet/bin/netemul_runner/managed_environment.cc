@@ -3,10 +3,18 @@
 // found in the LICENSE file.
 
 #include "managed_environment.h"
+#include <fuchsia/logger/cpp/fidl.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <random>
 
 namespace netemul {
+
+// Start the Log and LogSink service (the same component publishses both
+// services))
+static const char* kLogSinkServiceURL =
+    "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
+static const char* kLogServiceURL =
+    "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx";
 
 using sys::testing::EnclosingEnvironment;
 using sys::testing::EnvironmentServices;
@@ -65,6 +73,32 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
 
   // add managed environment itself as a handler
   services->AddService(bindings_.GetHandler(this));
+
+  // Inject LogSink service
+  services->AddServiceWithLaunchInfo(
+      kLogSinkServiceURL,
+      [this]() {
+        fuchsia::sys::LaunchInfo linfo;
+        linfo.url = kLogSinkServiceURL;
+        linfo.out = loggers_->CreateLogger(kLogSinkServiceURL, false);
+        linfo.err = loggers_->CreateLogger(kLogSinkServiceURL, true);
+        loggers_->IncrementCounter();
+        return linfo;
+      },
+      fuchsia::logger::LogSink::Name_);
+
+  // Inject Log service
+  services->AddServiceWithLaunchInfo(
+      kLogServiceURL,
+      [this]() {
+        fuchsia::sys::LaunchInfo linfo;
+        linfo.url = kLogServiceURL;
+        linfo.out = loggers_->CreateLogger(kLogServiceURL, false);
+        linfo.err = loggers_->CreateLogger(kLogServiceURL, true);
+        loggers_->IncrementCounter();
+        return linfo;
+      },
+      fuchsia::logger::Log::Name_);
 
   // prepare service configurations:
   service_config_.clear();
@@ -126,6 +160,10 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
   });
 
   launcher_ = std::make_unique<ManagedLauncher>(this);
+
+  // Start LogListener for this environment
+  log_listener_ =
+      LogListener::Create(this, options.logger_options(), options.name(), NULL);
 }
 
 zx::channel ManagedEnvironment::OpenVdevDirectory() {

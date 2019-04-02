@@ -150,6 +150,11 @@ allows for clients to expose specific *Endpoints* on the `vfs` under the created
 This feature is used to test components that perform `vfs` scanning to retrieve devices with minimal
 intrusion. This is used to go around the limitation that `/dev` is never hermetic to sandboxed environments.
 
+The ManagedEnvironment also provides hermetic fuchsia.logger.LogSink and fuchsia.logger.Log services so
+that environments can run components that use syslog. Users have the ability to enable and customize log
+printing from syslog -- they can also completely disable syslog outputs. See [LoggerOptions](#loggeroptions)
+for more information. If enabled, log prints will be tagged with the environment name and printed to stdout.
+
 ### SyncManager
 
 Along the same lines as *NetworkContext*, `netemul_sandbox` creates a **single** *Syncmanager* instance
@@ -195,17 +200,17 @@ test run. You can save the dump in hex format and then convert it to binary with
 
 ### Environment
 
-| Field            | Type                                   | Description                                                                                                                                                                                                                                                       |
-|------------------|----------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| name             | String                                 | environment's name, for debugging                                                                                                                                                                                                                                 |
+| Field            | Type                                    | Description                                                                                                                                                                                                                                                       |
+|------------------|-----------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| name             | String                                  | environment's name, for debugging                                                                                                                                                                                                                                 |
 | services         | Dictionary of [LaunchArgs](#launchargs) | Collection of services. Dictionary keys are the service's name and value contains launch information.                                                                                                                                                             |
 | children         | Array of [Environment](#environment)    | Collection of child environments to spawn.                                                                                                                                                                                                                        |
 | devices          | Array of String                         | Collection of endpoint names to attach to environment as VirtualDevices. Endpoints will be available under `/vdev/class/ethernet/[endpoint_name]` for every component launched by the cmx facet or with this environment's ManagedLauncher.                       |
 | test             | Array of [LaunchArgs](#launchargs)      | Collection of test processes. A test process will have its exit code monitored. If any test fails, the sandbox exits immediately and copies the return code. Otherwise, the sandbox will only exit when ALL tests have exited successfully                        |
 | apps             | Array of [LaunchArgs](#launchargs)      | Collection of applications to run. An application is spawned into the environment asynchronously and the sandbox doesn't care about its exit status.                                                                                                              |
 | setup            | Array of [LaunchArgs](#launchargs)      | Collection of setup processes to run. Setup processes will run sequentially and synchronously (sandbox waits for it to exit **successfully**) before the tests are executed. Any *setup* process that fails will cause the sandbox to exit with a failure status. |
-| inherit_services | Boolean                                | Whether to inherit the parent environment's service configuration. Defaults to **true**.                                                                                                                                                                          |
-
+| inherit_services | Boolean                                 | Whether to inherit the parent environment's service configuration. Defaults to **true**.                                                                                                                                                                          |
+| logger_options   | [LoggerOptions](#loggeroptions)         | Options for environment specific logger.
 
 ### LaunchArgs
 
@@ -233,6 +238,23 @@ In that case, it's as if only the *url* field had been specified.
 | mac   | String  | MAC address of virtual endpoint. If not set will be generated randomly using the endpoint's name as seed. |
 | mtu   | Number  | Endpoint's MTU. Defaults to **1500**.                                                                     |
 | up    | Boolean | Toggle endpoint to link up as part of setup process. Defaults to **true**.                                |
+
+
+### LoggerOptions
+
+| Field         | Type                                        | Description                                      |
+|---------------|---------------------------------------------|--------------------------------------------------|
+| enabled       | Boolean                                     | Enable the logger (default: true)                |
+| klogs_enabled | Boolean                                     | Enable printing kernel logs (default: false)     |
+| filters       | [LoggerFilterOptions](#loggerfilteroptions) | Options for log filterering                      |
+
+
+### LoggerFilterOptions
+
+| Field         | Type                | Description                                                                     |
+|---------------|---------------------|---------------------------------------------------------------------------------|
+| verbosity     | Integer             | Log verbosity level (default: 0)                                                |
+| tags          | Array of Strings    | Tags required to show log (empty array means no filters on tags) (default: [])  |
 
 
 ## Helpers

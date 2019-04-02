@@ -17,6 +17,7 @@ static const char* kTest = "test";
 static const char* kInheritServices = "inherit_services";
 static const char* kApps = "apps";
 static const char* kSetup = "setup";
+static const char* kLoggerOptions = "logger_options";
 static const bool kDefaultInheritServices = true;
 
 bool Environment::ParseFromJSON(const rapidjson::Value& value,
@@ -35,6 +36,7 @@ bool Environment::ParseFromJSON(const rapidjson::Value& value,
   children_.clear();
   apps_.clear();
   setup_.clear();
+  logger_options_.SetDefaults();
 
   // iterate over members:
   for (auto i = value.MemberBegin(); i != value.MemberEnd(); i++) {
@@ -122,6 +124,10 @@ bool Environment::ParseFromJSON(const rapidjson::Value& value,
           return false;
         }
       }
+    } else if (i->name == kLoggerOptions) {
+      if (!logger_options_.ParseFromJSON(i->value, parser)) {
+        return false;
+      }
     } else {
       parser->ReportError(fxl::StringPrintf(
           "Unrecognized environment member \"%s\"", i->name.GetString()));
@@ -153,6 +159,10 @@ bool Environment::inherit_services() const { return inherit_services_; }
 const std::vector<LaunchApp>& Environment::apps() const { return apps_; }
 
 const std::vector<LaunchApp>& Environment::setup() const { return setup_; }
+
+const LoggerOptions& Environment::logger_options() const {
+  return logger_options_;
+}
 
 }  // namespace config
 }  // namespace netemul

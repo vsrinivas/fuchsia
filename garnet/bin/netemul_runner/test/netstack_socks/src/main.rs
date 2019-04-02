@@ -7,7 +7,7 @@
 use failure::{format_err, Error, ResultExt};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_netemul_environment::{
-    EnvironmentOptions, LaunchService, ManagedEnvironmentMarker, VirtualDevice,
+    EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker, VirtualDevice,
 };
 use fidl_fuchsia_netemul_network::{
     DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker, EndpointProxy,
@@ -97,6 +97,11 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
             device: ep_proxy_client,
         }]),
         inherit_parent_launch_services: Some(false),
+        logger_options: Some(LoggerOptions {
+            enabled: Some(true),
+            klogs_enabled: Some(false),
+            filter_options: None,
+        }),
     };
     // launch the child env
     env.create_child_environment(child_env_server, env_options)?;

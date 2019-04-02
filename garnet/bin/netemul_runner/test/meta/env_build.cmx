@@ -14,7 +14,8 @@
             "fuchsia.netemul.network.NetworkContext",
             "fuchsia.netemul.sync.SyncManager",
             "fuchsia.netstack.Netstack",
-            "fuchsia.net.SocketProvider"
+            "fuchsia.net.SocketProvider",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

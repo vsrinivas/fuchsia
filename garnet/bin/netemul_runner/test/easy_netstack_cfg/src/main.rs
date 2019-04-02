@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker},
     fuchsia_app::client,
     fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_info,
     std::io::{Read, Write},
     std::net::{SocketAddr, TcpListener, TcpStream},
     structopt::StructOpt,
@@ -44,12 +45,12 @@ impl BusConnection {
 async fn run_server() -> Result<(), Error> {
     let listener =
         TcpListener::bind(&format!("{}:{}", SERVER_IP, PORT)).context("Can't bind to address")?;
-    println!("Waiting for connections...");
+    fx_log_info!("Waiting for connections...");
 
     let _bus = BusConnection::new(SERVER_NAME)?;
 
     let (mut stream, remote) = listener.accept().context("Accept failed")?;
-    println!("Accepted connection from {}", remote);
+    fx_log_info!("Accepted connection from {}", remote);
     let mut buffer = [0; 512];
     let rd = stream.read(&mut buffer).context("read failed")?;
 
@@ -57,17 +58,17 @@ async fn run_server() -> Result<(), Error> {
     if req != HELLO_MSG_REQ {
         return Err(format_err!("Got unexpected request from client: {}", req));
     }
-    println!("Got request {}", req);
+    fx_log_info!("Got request {}", req);
     stream.write(HELLO_MSG_RSP.as_bytes()).context("write failed")?;
     stream.flush().context("flush failed")?;
     Ok(())
 }
 
 async fn run_client() -> Result<(), Error> {
-    println!("Waiting for server...");
+    fx_log_info!("Waiting for server...");
     let mut bus = BusConnection::new(CLIENT_NAME)?;
     let () = await!(bus.wait_for_client(SERVER_NAME))?;
-    println!("Connecting to server...");
+    fx_log_info!("Connecting to server...");
     let addr: SocketAddr = format!("{}:{}", SERVER_IP, PORT).parse()?;
     let mut stream = TcpStream::connect(&addr).context("Tcp connection failed")?;
     let request = HELLO_MSG_REQ.as_bytes();
@@ -77,7 +78,7 @@ async fn run_client() -> Result<(), Error> {
     let mut buffer = [0; 512];
     let rd = stream.read(&mut buffer)?;
     let rsp = String::from_utf8_lossy(&buffer[0..rd]);
-    println!("Got response {}", rsp);
+    fx_log_info!("Got response {}", rsp);
     if rsp != HELLO_MSG_RSP {
         return Err(format_err!("Got unexpected echo from server: {}", rsp));
     }
@@ -91,6 +92,9 @@ struct Opt {
 }
 
 fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["easy-netstack-cfg"])?;
+    fx_log_info!("Started");
+
     let opt = Opt::from_args();
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     executor.run_singlethreaded(

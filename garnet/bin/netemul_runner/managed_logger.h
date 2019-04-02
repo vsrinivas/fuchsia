@@ -20,7 +20,7 @@ class ManagedLogger {
   using Ptr = std::unique_ptr<ManagedLogger>;
   using ClosedCallback = fit::function<void(ManagedLogger*)>;
 
-  ManagedLogger(std::string prefix, std::ostream* stream);
+  ManagedLogger(std::string env_name, std::string prefix, std::ostream* stream);
 
   zx::handle CreateHandle();
 
@@ -31,11 +31,13 @@ class ManagedLogger {
 
  private:
   void ConsumeBuffer();
+  void FormatTime();
 
   async_dispatcher_t* dispatcher_;
   // pointer to output stream, not owned
   std::ostream* stream_;
   ClosedCallback closed_callback_;
+  std::string env_name_;
   std::string prefix_;
   zx::socket out_;
   // buffer is lazily created to decrease memory consumption

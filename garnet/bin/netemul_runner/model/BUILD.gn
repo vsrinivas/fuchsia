@@ -14,16 +14,21 @@ source_set("model") {
     "launch_app.h",
     "launch_service.cc",
     "launch_service.h",
+    "logger_filter_options.cc",
+    "logger_filter_options.h",
+    "logger_options.cc",
+    "logger_options.h",
     "network.cc",
     "network.h",
   ]
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/json:json",
+    "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-logger:fuchsia-logger",
   ]
 }
 
@@ -35,9 +40,9 @@ executable("model_unittest") {
 
   deps = [
     ":model",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
   ]

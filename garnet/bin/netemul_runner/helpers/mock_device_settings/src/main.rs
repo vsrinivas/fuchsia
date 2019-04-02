@@ -12,6 +12,7 @@ use fidl_fuchsia_devicesettings::{
 };
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::{future, TryFutureExt, TryStreamExt};
 use std::collections::HashMap;
@@ -54,7 +55,7 @@ impl DeviceSettingsManagerServer {
                         }
                         _ => {}
                     };
-                    println!("Error call watcher: {:?}", e);
+                    fx_log_info!("Error call watcher: {:?}", e);
                 }
                 return true;
             });
@@ -72,14 +73,14 @@ fn split_once(in_string: &str) -> Result<(&str, &str), Error> {
 fn config_state(state: &mut DeviceSettingsManagerServer, opt: Opt) -> Result<(), Error> {
     for s_key in opt.string_key {
         let (k, v) = split_once(&s_key)?;
-        println!("Startup {}={}", k, v);
+        fx_log_info!("Startup {}={}", k, v);
         state.keys.insert(String::from(k), Key::StringKey(String::from(v)));
     }
 
     for i_key in opt.int_key {
         let (k, v) = split_once(&i_key)?;
         let v = v.parse::<i64>()?;
-        println!("Startup {}={}", k, v);
+        fx_log_info!("Startup {}={}", k, v);
         state.keys.insert(String::from(k), Key::IntKey(v));
     }
 
@@ -98,12 +99,12 @@ fn spawn_device_settings_server(
                     DeviceSettingsManagerRequest::GetInteger { key, responder } => {
                         match state.keys.get(&key) {
                             None => {
-                                println!("Key {} doesn't exist", key);
+                                fx_log_info!("Key {} doesn't exist", key);
                                 responder.send(0, Status::ErrNotSet)
                             }
                             Some(Key::IntKey(val)) => responder.send(*val, Status::Ok),
                             _ => {
-                                println!("Key {} is not an integer", key);
+                                fx_log_info!("Key {} is not an integer", key);
                                 responder.send(0, Status::ErrIncorrectType)
                             }
                         }
@@ -111,12 +112,12 @@ fn spawn_device_settings_server(
                     DeviceSettingsManagerRequest::GetString { key, responder } => {
                         match state.keys.get(&key) {
                             None => {
-                                println!("Key {} doesn't exist", key);
+                                fx_log_info!("Key {} doesn't exist", key);
                                 responder.send("", Status::ErrNotSet)
                             }
                             Some(Key::StringKey(val)) => responder.send(val, Status::Ok),
                             _ => {
-                                println!("Key {} is not a string", key);
+                                fx_log_info!("Key {} is not a string", key);
                                 responder.send("", Status::ErrIncorrectType)
                             }
                         }
@@ -124,13 +125,13 @@ fn spawn_device_settings_server(
                     DeviceSettingsManagerRequest::SetInteger { key, val, responder } => {
                         match state.keys.get(&key) {
                             Some(Key::IntKey(_)) => {
-                                println!("Set {}={}", key, val);
+                                fx_log_info!("Set {}={}", key, val);
                                 state.run_watchers(&key, ValueType::Number);
                                 state.keys.insert(key, Key::IntKey(val));
                                 responder.send(true)
                             }
                             _ => {
-                                println!("Failed to set integer key {}={}", key, val);
+                                fx_log_info!("Failed to set integer key {}={}", key, val);
                                 responder.send(false)
                             }
                         }
@@ -138,13 +139,13 @@ fn spawn_device_settings_server(
                     DeviceSettingsManagerRequest::SetString { key, val, responder } => {
                         match state.keys.get(&key) {
                             Some(Key::StringKey(_)) => {
-                                println!("Set {}={}", key, val);
+                                fx_log_info!("Set {}={}", key, val);
                                 state.run_watchers(&key, ValueType::Text);
                                 state.keys.insert(key, Key::StringKey(val));
                                 responder.send(true)
                             }
                             _ => {
-                                println!("Failed to set string key {}={}", key, val);
+                                fx_log_info!("Failed to set string key {}={}", key, val);
                                 responder.send(false)
                             }
                         }
@@ -152,7 +153,7 @@ fn spawn_device_settings_server(
                     DeviceSettingsManagerRequest::Watch { key, watcher, responder } => {
                         match state.keys.get(&key) {
                             None => {
-                                println!("Can't watch key {}, it doesn't exist", key);
+                                fx_log_info!("Can't watch key {}, it doesn't exist", key);
                                 responder.send(Status::ErrInvalidSetting)
                             }
                             _ => match watcher.into_proxy() {
@@ -162,7 +163,7 @@ fn spawn_device_settings_server(
                                     responder.send(Status::Ok)
                                 }
                                 Err(e) => {
-                                    println!("Error watching key {}: {}", key, e);
+                                    fx_log_info!("Error watching key {}: {}", key, e);
                                     responder.send(Status::ErrUnknown)
                                 }
                             },
@@ -171,12 +172,15 @@ fn spawn_device_settings_server(
                 })
             })
             .map_ok(|_| ())
-            .unwrap_or_else(|e| eprintln!("error running mock device settings server: {:?}", e)),
+            .unwrap_or_else(|e| fx_log_err!("error running mock device settings server: {:?}", e)),
     );
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["mock_device_settings"])?;
+    fx_log_info!("Started");
+
     let opt = Opt::from_args();
     let mut state = DeviceSettingsManagerServer { keys: HashMap::new(), watchers: HashMap::new() };
     let () = config_state(&mut state, opt)?;

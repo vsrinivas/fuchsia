@@ -5,10 +5,11 @@
 #ifndef GARNET_BIN_NETEMUL_RUNNER_MODEL_ENVIRONMENT_H_
 #define GARNET_BIN_NETEMUL_RUNNER_MODEL_ENVIRONMENT_H_
 
+#include <lib/json/json_parser.h>
+#include <src/lib/fxl/macros.h>
 #include "launch_app.h"
 #include "launch_service.h"
-#include "src/lib/fxl/macros.h"
-#include "lib/json/json_parser.h"
+#include "logger_options.h"
 
 namespace netemul {
 namespace config {
@@ -27,6 +28,7 @@ class Environment {
   const std::vector<LaunchApp>& test() const;
   const std::vector<LaunchApp>& apps() const;
   const std::vector<LaunchApp>& setup() const;
+  const LoggerOptions& logger_options() const;
   bool inherit_services() const;
 
  private:
@@ -38,6 +40,7 @@ class Environment {
   std::vector<LaunchApp> apps_;
   std::vector<LaunchApp> setup_;
   bool inherit_services_{};
+  LoggerOptions logger_options_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Environment);
 };

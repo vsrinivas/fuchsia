@@ -13,7 +13,7 @@ use std::path::Path;
 use fidl;
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_netemul_environment::{
-    EnvironmentOptions, LaunchService, ManagedEnvironmentMarker, VirtualDevice,
+    EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker, VirtualDevice,
 };
 use fidl_fuchsia_netemul_network::{
     DeviceProxy_Marker, EndpointBacking, EndpointConfig, EndpointManagerMarker,
@@ -128,6 +128,11 @@ async fn run_test() -> Result<(), Error> {
             device: ep_proxy_client,
         }]),
         inherit_parent_launch_services: Some(false),
+        logger_options: Some(LoggerOptions {
+            enabled: Some(true),
+            klogs_enabled: Some(false),
+            filter_options: None,
+        }),
     };
     // launch the child env
     env.create_child_environment(child_env_server, env_options)?;
@@ -200,6 +205,11 @@ async fn launch_grandchild() -> Result<(), Error> {
         // this won't be the same netstack *instance*, though. But it should be
         // launched with the same url as the "child" environment
         inherit_parent_launch_services: Some(true),
+        logger_options: Some(LoggerOptions {
+            enabled: Some(true),
+            klogs_enabled: Some(false),
+            filter_options: None,
+        }),
     };
 
     let (child_env, child_env_server) =

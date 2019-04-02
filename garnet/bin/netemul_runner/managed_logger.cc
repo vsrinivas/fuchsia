@@ -10,12 +10,14 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <iostream>
+#include "format.h"
 
 namespace netemul {
 
 static constexpr int BufferSize = 4096;
-static const char* kLogPrefixOut = "[netemul][%s/%s:%d] ";
-static const char* kLogPrefixErr = "[netemul][%s/%s:%d][err] ";
+static const char* kLogEnvNamePrefix = "[%s]";
+static const char* kLogPrefixOut = "[%s:%d] ";
+static const char* kLogPrefixErr = "[%s:%d][err] ";
 
 static std::string ExtractLabel(const std::string& url) {
   size_t last_slash = url.rfind('/');
@@ -24,9 +26,11 @@ static std::string ExtractLabel(const std::string& url) {
   return url.substr(last_slash + 1);
 }
 
-ManagedLogger::ManagedLogger(std::string prefix, std::ostream* stream)
+ManagedLogger::ManagedLogger(std::string env_name, std::string prefix,
+                             std::ostream* stream)
     : dispatcher_(async_get_default_dispatcher()),
       stream_(stream),
+      env_name_(std::move(env_name)),
       prefix_(std::move(prefix)),
       wait_(this) {}
 
@@ -89,6 +93,8 @@ void ManagedLogger::ConsumeBuffer() {
     // newline found, print it
     if (*ptr == '\n') {
       *ptr = 0x00;
+      (*stream_) << env_name_;
+      FormatTime();
       (*stream_) << prefix_ << mark << std::endl;
       mark = ptr + 1;
     }
@@ -106,9 +112,16 @@ void ManagedLogger::ConsumeBuffer() {
   } else if (ptr == full) {
     // buffer filled up, just print everything
     *ptr = 0x00;
+    (*stream_) << env_name_;
+    FormatTime();
     (*stream_) << prefix_ << buffer_.get() << std::endl;
     buffer_pos_ = 0;
   }
+}
+
+void ManagedLogger::FormatTime() {
+  zx_time_t timestamp = zx_clock_get_monotonic();
+  internal::FormatTime(stream_, timestamp);
 }
 
 void ManagedLogger::Start(netemul::ManagedLogger::ClosedCallback callback) {
@@ -121,13 +134,14 @@ void ManagedLogger::Start(netemul::ManagedLogger::ClosedCallback callback) {
 
 fuchsia::sys::FileDescriptorPtr ManagedLoggerCollection::CreateLogger(
     const std::string& url, bool err) {
+  auto env_name =
+      fxl::StringPrintf(kLogEnvNamePrefix, environment_name_.c_str());
   auto prefix = fxl::StringPrintf(err ? kLogPrefixErr : kLogPrefixOut,
-                                  environment_name_.c_str(),
                                   ExtractLabel(url).c_str(), counter_);
 
   auto* stream = err ? &std::cerr : &std::cout;
-  auto& logger =
-      loggers_.emplace_back(std::make_unique<ManagedLogger>(prefix, stream));
+  auto& logger = loggers_.emplace_back(std::make_unique<ManagedLogger>(
+      std::move(env_name), std::move(prefix), stream));
   auto handle = logger->CreateHandle();
   logger->Start([this](ManagedLogger* logger) {
     for (auto i = loggers_.begin(); i != loggers_.end(); i++) {

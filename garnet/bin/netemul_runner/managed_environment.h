@@ -6,9 +6,10 @@
 #define GARNET_BIN_NETEMUL_RUNNER_MANAGED_ENVIRONMENT_H_
 
 #include <fuchsia/netemul/environment/cpp/fidl.h>
-#include <src/lib/fxl/macros.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
+#include <src/lib/fxl/macros.h>
 #include <memory>
+#include "log_listener.h"
 #include "managed_launcher.h"
 #include "managed_logger.h"
 #include "sandbox_env.h"
@@ -64,6 +65,7 @@ class ManagedEnvironment
 
   SandboxEnv::Ptr sandbox_env_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
+  std::unique_ptr<LogListener> log_listener_;
   std::unique_ptr<ManagedLoggerCollection> loggers_;
   std::unique_ptr<ManagedLauncher> launcher_;
   EnvironmentRunningCallback running_callback_;

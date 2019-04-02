@@ -11,6 +11,7 @@ use {
     fidl_fuchsia_netstack::{InterfaceConfig, IpAddressConfig, NetstackMarker},
     fuchsia_app::client,
     fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_info,
     futures::TryStreamExt,
     structopt::StructOpt,
 };
@@ -35,7 +36,7 @@ const IGNORED_IP_ADDRESS_CONFIG: IpAddressConfig = IpAddressConfig::Dhcp(true);
 const DEFAULT_METRIC: u32 = 100;
 
 async fn config_netstack(opt: Opt) -> Result<(), Error> {
-    println!("Configuring endpoint {}", opt.endpoint);
+    fx_log_info!("Configuring endpoint {}", opt.endpoint);
 
     // get the network context service:
     let netctx = client::connect_to_service::<NetworkContextMarker>()?;
@@ -46,10 +47,10 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
     // retrieve the created endpoint:
     let ep = await!(epm.get_endpoint(&opt.endpoint))?;
     let ep = ep.ok_or_else(|| format_err!("can't find endpoint {}", opt.endpoint))?.into_proxy()?;
-    println!("Got endpoint.");
+    fx_log_info!("Got endpoint.");
     // and the ethernet device:
     let eth = await!(ep.get_ethernet_device())?;
-    println!("Got ethernet.");
+    fx_log_info!("Got ethernet.");
 
     let if_name = format!("eth-{}", opt.endpoint);
     // connect to netstack:
@@ -67,7 +68,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
                     {
                         futures::future::ok(Some((a.id, a.hwaddr.clone())))
                     } else {
-                        println!("Found interface, but it's down. waiting.");
+                        fx_log_info!("Found interface, but it's down. waiting.");
                         futures::future::ok(None)
                     }
                 }
@@ -83,7 +84,7 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         await!(netstack.add_ethernet_device(&format!("/vdev/{}", opt.endpoint), &mut cfg, eth))
             .context("can't add ethernet device")?;
     let () = netstack.set_interface_status(nicid as u32, true)?;
-    println!("Added ethernet to stack.");
+    fx_log_info!("Added ethernet to stack.");
 
     if let Some(ip) = opt.ip {
         let mut subnet: fidl_fuchsia_net::Subnet =
@@ -97,19 +98,22 @@ async fn config_netstack(opt: Opt) -> Result<(), Error> {
         let _ = await!(netstack.set_dhcp_client_status(nicid as u32, true))?;
     };
 
-    println!("Configured nic address.");
+    fx_log_info!("Configured nic address.");
 
-    println!("Waiting for interface up...");
+    fx_log_info!("Waiting for interface up...");
     let (if_id, hwaddr) = await!(if_changed.try_next())
         .context("wait for interfaces")?
         .ok_or_else(|| format_err!("interface added"))?;
 
-    println!("Found ethernet with id {} {:?}", if_id, hwaddr);
+    fx_log_info!("Found ethernet with id {} {:?}", if_id, hwaddr);
 
     Ok(())
 }
 
 fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["helper-netcfg"])?;
+    fx_log_info!("Started");
+
     let opt = Opt::from_args();
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     executor.run_singlethreaded(config_netstack(opt))

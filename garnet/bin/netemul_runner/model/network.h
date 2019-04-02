@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_NETEMUL_RUNNER_MODEL_NETWORK_H_
 #define GARNET_BIN_NETEMUL_RUNNER_MODEL_NETWORK_H_
 
+#include <lib/json/json_parser.h>
+#include <src/lib/fxl/macros.h>
 #include "endpoint.h"
-#include "src/lib/fxl/macros.h"
-#include "lib/json/json_parser.h"
 
 namespace netemul {
 namespace config {

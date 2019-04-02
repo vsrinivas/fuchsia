@@ -24,6 +24,7 @@ fidl("environment") {
   deps = [
     ":network",
     "//sdk/fidl/fuchsia.sys",
+    "//zircon/public/fidl/fuchsia-logger",
   ]
 }
 
