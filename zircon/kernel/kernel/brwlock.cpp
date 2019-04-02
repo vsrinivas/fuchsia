@@ -14,19 +14,8 @@ BrwLock::~BrwLock() {
 void BrwLock::Block(bool write) {
     thread_t* ct = get_current_thread();
 
-    if (state_.load(ktl::memory_order_relaxed) & kBrwLockWriter) {
-        thread_t* writer_copy = writer_.load(ktl::memory_order_relaxed);
-        // Boost the writers priority. As we have already registered ourselves as
-        // a waiter and we currently hold the thread_lock there is no race with
-        // a writer performing a release as it will be forced to acquire the
-        // thread_lock prior to deboosting itself.
-        // The check against nullptr here is to resolve the unlikely race in
-        // CommonWriteAcquire.
-        if (writer_copy != nullptr) {
-            bool unused;
-            sched_inherit_priority(writer_copy, ct->effec_priority, &unused);
-        }
-    }
+    // TODO(johngro): Block here in an OwnedWaitQueue where we specify the owner
+    // as writer_ in order to transmit our priority pressure for PI purposes.
 
     zx_status_t ret =
         write ? wait_.Block(Deadline::infinite()) : wait_.BlockReadLock(Deadline::infinite());
@@ -141,7 +130,6 @@ void BrwLock::ContendedWriteAcquire() {
 
 void BrwLock::WriteRelease() TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
-    thread_t* ct = get_current_thread();
 
 #if LK_DEBUG_LEVEL > 0
     thread_t* holder = writer_.load(ktl::memory_order_relaxed);
@@ -158,23 +146,12 @@ void BrwLock::WriteRelease() TA_NO_THREAD_SAFETY_ANALYSIS {
     // donation back.
     writer_.store(nullptr, ktl::memory_order_relaxed);
     uint64_t prev = state_.fetch_sub(kBrwLockWriter, ktl::memory_order_release);
-    ct->mutexes_held--;
 
     // Perform release wakeup prior to deboosting our priority as we can be
     // certain we aren't racing with someone trying to Block after that
     if (unlikely((prev & kBrwLockWaiterMask) != 0)) {
         // There are waiters, we need to wake them up
         ReleaseWakeup();
-    }
-
-    // deboost ourselves if this is the last mutex we held.
-    if (ct->inherited_priority >= 0 && ct->mutexes_held == 0) {
-        bool local_resched = false;
-        Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-        sched_inherit_priority(ct, -1, &local_resched);
-        if (local_resched) {
-            sched_reschedule();
-        }
     }
 }
 

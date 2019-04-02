@@ -145,7 +145,6 @@ private:
         }
 
         DEBUG_ASSERT(writer_.load(ktl::memory_order_relaxed) == ct);
-        ct->mutexes_held++;
     }
 
     fbl::Canary<fbl::magic("RWLK")> canary_;
