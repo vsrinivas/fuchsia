@@ -53,12 +53,18 @@ function fx-symbolize {
 function fx-gen {
     (
       set -ex
+      cd "${FUCHSIA_DIR}"
       "${FUCHSIA_DIR}/scripts/build-zircon.sh" -g
       "${FUCHSIA_DIR}/buildtools/gn" gen "${FUCHSIA_BUILD_DIR}"
     ) || return 1
 }
 
 function fx-build-config-load {
+  # Paths are relative to FUCHSIA_DIR unless they're absolute paths.
+  if [[ "${FUCHSIA_BUILD_DIR:0:1}" != "/" ]]; then
+    FUCHSIA_BUILD_DIR="${FUCHSIA_DIR}/${FUCHSIA_BUILD_DIR}"
+  fi
+
   if [[ ! -f "${FUCHSIA_BUILD_DIR}/fx.config" ]]; then
     if [[ ! -f "${FUCHSIA_BUILD_DIR}/args.gn" ]]; then
       fx-error "Build directory missing or removed. (${FUCHSIA_BUILD_DIR})"
@@ -72,11 +78,6 @@ function fx-build-config-load {
   if ! source "${FUCHSIA_BUILD_DIR}/fx.config"; then
     fx-error "${FUCHSIA_BUILD_DIR}/fx.config caused internal error"
     return 1
-  fi
-
-  # Paths are relative to FUCHSIA_DIR unless they're absolute paths.
-  if [[ "${FUCHSIA_BUILD_DIR:0:1}" != "/" ]]; then
-    FUCHSIA_BUILD_DIR="${FUCHSIA_DIR}/${FUCHSIA_BUILD_DIR}"
   fi
 
   export FUCHSIA_BUILD_DIR FUCHSIA_ARCH
