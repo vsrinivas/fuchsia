@@ -14,30 +14,41 @@ library fuchsia.ui.views;
 /// top-most view.  Different processes can contribute branches to the scene
 /// graph, and their content will be rendered together in a shared space.
 ///
+/// # Offering a View
 ///
 /// A component that wishes to offer a |View| can do so in one of two ways:
 ///
-/// 1. Expose a |View| interface. This is usually done by components that
-///    provide a single view, or have a clearly defined "main" view.
-/// 2. Offer a domain-specific interface that provides |View|s using a
-///    |request<View>| parameter. For example, an encyclopedia component
-///    might offer a method to expose article views:
+/// 1. Expose a |View| interface as a service. This is usually done by components
+///    that provide a single view, or have a clearly defined "main" view.
+///    In this case, the component may obtain relevant properties for configuring
+///    the view using services that may be available in its namespace, such as:
+///    - |fuchsia.intl.PropertyProvider|
+///    - |fuchsia.accessibility.PropertyProvider|
 ///
-///      GetArticleView(string article_id, request<View> view_request);
+/// 2. Offer a domain-specific interface that provides |View|s using a
+///    `request<View>` parameter.  In this case, the component may obtain relevant
+///    properties for configuring the view using services that may be provided by its
+///    client as part of the request.
+///
+///    For example, an encyclopedia component might offer a method to expose article views:
+///
+///      GetArticleView(string article_id,
+///                     fuchsia.intl.PropertyProvider intl_properties,
+///                     fuchsia.accessibility.PropertyProvider accessibility_properties,
+///                     request<View> view_request);
 ///
 ///    This latter case is probably less common, as controlling domain-specific
 ///    views tends to be the job of the component that creates them.
+///
+/// # Presenting a View
 ///
 /// A client of the |View| interface will:
 ///
 /// 1. Launch (or bind to) the component that provides the interface.
 /// 2. Connect to the component's |View| interface.
-/// 3. Call |Present()| to give the |View| its initial configuration and an
-///    attachment point into the scene graph via the |view_token|.  Subsequent
-///    calls to |Present()| will generate an error and cause the connection to
-///    be closed.
-/// 4. Optionally, while the View is attached, call |SetConfig()| again to
-///    modify any presentation parameters as needed.
+/// 3. Call |Present()| to give the |View| an attachment point into the scene graph
+///    via the |view_token|.  Subsequent calls to |Present()| will generate an error
+///    and cause the connection to be closed.
 ///
 /// When the client no longer needs the View, it should disconnect from the
 /// interface.
@@ -46,6 +57,7 @@ library fuchsia.ui.views;
 /// lifetime of the UI that it displays. If the |View| instance is destroyed,
 /// the connection will be dropped and all UI content will be destroyed.
 ///
+/// # Implementing a View
 ///
 /// On the implementation side, a component that exposes the |View| interface
 /// has the following responsibilities:
@@ -53,15 +65,23 @@ library fuchsia.ui.views;
 /// * When |Present()| is called, create a root for the |View|'s content in the
 ///   Scenic scene graph by passing the provided |view_token|.
 /// * Provide graphical content for the view and attach it to the root.
-/// * Adjust the appearance and/or contents of the view's content whenever
-///   its |ViewConfig| changes.
+/// * Adjust the appearance and/or contents of the view's content based on
+///   relevant internationalization and/or accessibility properties as described
+///   above.
 /// * Handle user interface events such as touches, key presses, and
 ///   |fuchsia.ui.gfx.ViewProperty| changes using other Scenic interfaces such
 ///   as |fuchsia.ui.Scenic| and |fuchsia.ui.SessionListener|.
 ///
-///  TODO(SCN-1198): Migrate all implementations of |ViewProvider| to use |View|.
+/// See also: |fuchsia.intl.PropertyProvider|, |fuchsia.accessibility.PropertyProvider|.
+///
+/// TODO(SCN-1198): Migrate all implementations of |ViewProvider| to use |View|.
+
 [Discoverable]
 protocol View {
+    /// DEPRECATED
+    [Transitional]
+    Present(ViewToken view_token, ViewConfig initial_config);
+
     /// Provides the View with an attachment point to Scenic's scene graph.
     ///
     /// When |Present()| is called the View's implementation should create a
@@ -69,19 +89,18 @@ protocol View {
     /// a |fuchsia.ui.gfx.CreateResourceCmd| and |fuchsia.ui.gfx.ViewArgs|).
     ///
     /// Then the implementation should attach its graphical content to the
-    /// newly-created View resource using a |fuchsia.ui.gfx.AddChildCmd|.  The
-    /// initial configuration describing the properties of this content is
-    /// provided in |initial_config|.
+    /// newly-created View resource using a |fuchsia.ui.gfx.AddChildCmd|.
     ///
     /// If the implementation already owns a View resource (because |Present()|
     /// had already been called before), then it should terminate the connection
     /// with an error.
-    /// TODO(SCN-1271): Allow re-parenting |View|s with a new |Present()| call.
-    Present(ViewToken view_token, ViewConfig initial_config);
-
-    /// Updates the View's configuration after it has been attached.
     ///
-    /// If |Present()| has not been called yet, then the implementation should
-    /// terminate the connection with an error.
+    /// TODO(SCN-1271): Allow re-parenting |View|s with a new |Present()| call.
+    /// TODO(SCN-1343): Rename to |Present()|.
+    [Transitional]
+    Present2(ViewToken view_token);
+
+    /// DEPRECATED
+    [Transitional]
     SetConfig(ViewConfig config);
 };

@@ -1,7 +1,7 @@
 {
   "fidl/fuchsia.ui.views/commands.fidl": "2715589e8c75085a4ed91977b2ac9605",
   "fidl/fuchsia.ui.views/events.fidl": "4f5c0d69b1c1458f7944c4238798029f",
-  "fidl/fuchsia.ui.views/view.fidl": "e4b10e68976a8f96769700560b2dc083",
+  "fidl/fuchsia.ui.views/view.fidl": "2beb38c3c5089d340fd66e56fd8cf12e",
   "fidl/fuchsia.ui.views/view_config.fidl": "125d69ad66f6d2fef3b9498b5d8c08c3",
   "fidl/fuchsia.ui.views/view_token.fidl": "3020ee0c3f85ac734587f6b1a54b0584"
 }
