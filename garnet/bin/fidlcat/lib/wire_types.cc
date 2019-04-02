@@ -5,6 +5,7 @@
 #include "wire_types.h"
 
 #include <src/lib/fxl/logging.h>
+#include <zircon/fidl.h>
 
 #include "garnet/bin/fidlcat/lib/library_loader.h"
 #include "rapidjson/error/en.h"
@@ -31,22 +32,23 @@ namespace {
 
 // Objects are 8-byte aligned.  This adds 7 to the current offset and masks out
 // the last three bits.
-inline size_t AlignToNextWordBoundary(size_t offset) {
-  return (offset + 7) & (~7);
+inline const uint8_t* AlignToNextWordBoundary(const uint8_t* offset) {
+  const uintptr_t val = reinterpret_cast<const uintptr_t>(offset);
+  return reinterpret_cast<uint8_t*>((val + 7) & (~7));
 }
 
 }  // namespace
 
-size_t ObjectTracker::RunCallbacksFrom(size_t offset) {
-  offset = AlignToNextWordBoundary(offset);
+Marker ObjectTracker::RunCallbacksFrom(Marker marker) {
+  marker.byte_pos = AlignToNextWordBoundary(marker.byte_pos);
   // We can't just iterate over the callbacks, because the callbacks may add
   // more callbacks.
   while (!callbacks_.empty()) {
     auto callback = std::move(callbacks_.front());
-    offset += callback(bytes_ + offset);
+    marker = callback(marker);
     callbacks_.erase(callbacks_.begin());
   }
-  return offset;
+  return marker;
 }
 
 void ObjectTracker::ObjectEnqueue(
@@ -54,29 +56,27 @@ void ObjectTracker::ObjectEnqueue(
     rapidjson::Value& target_object,
     rapidjson::Document::AllocatorType& allocator) {
   callbacks_.push_back([cb = std::move(callback), &target_object,
-                        key_string = key, &allocator](const uint8_t* bytes) {
+                        key_string = key, &allocator](Marker marker) {
     rapidjson::Value key;
     key.SetString(key_string.c_str(), allocator);
 
     rapidjson::Value& object =
         target_object.AddMember(key, rapidjson::Value(), allocator);
-    size_t new_offset = cb(bytes, object[key_string.c_str()], allocator);
-
-    return new_offset;
+    return cb(marker, object[key_string.c_str()], allocator);
   });
 }
 
 void ObjectTracker::ArrayEnqueue(
     ValueGeneratingCallback&& callback, rapidjson::Value& target_array,
     rapidjson::Document::AllocatorType& allocator) {
-  callbacks_.push_back([cb = std::move(callback), &target_array,
-                        &allocator](const uint8_t* bytes) {
-    rapidjson::Value element;
-    size_t new_offset = cb(bytes, element, allocator);
+  callbacks_.push_back(
+      [cb = std::move(callback), &target_array, &allocator](Marker marker) {
+        rapidjson::Value element;
+        Marker m = cb(marker, element, allocator);
 
-    target_array.PushBack(element, allocator);
-    return new_offset;
-  });
+        target_array.PushBack(element, allocator);
+        return m;
+      });
 }
 
 namespace internal {
@@ -105,11 +105,12 @@ uint64_t LeToHost<uint64_t>::le_to_host(const uint64_t* bytes) {
 
 // Prints out raw bytes as a C string of hex pairs ("af b0 1e...").  Useful for
 // debugging / unknown data.
-size_t UnknownType::GetValueCallback(const uint8_t* bytes, size_t length,
+Marker UnknownType::GetValueCallback(Marker marker, size_t length,
                                      ObjectTracker* tracker,
                                      ValueGeneratingCallback& callback) const {
-  callback = [length, bytes](const uint8_t* ignored, rapidjson::Value& value,
-                             rapidjson::Document::AllocatorType& allocator) {
+  callback = [length, bytes = marker.byte_pos](
+                 Marker marker, rapidjson::Value& value,
+                 rapidjson::Document::AllocatorType& allocator) {
     size_t size = length * 3 + 1;
     char output[size];
     for (size_t i = 0; i < length; i++) {
@@ -117,12 +118,13 @@ size_t UnknownType::GetValueCallback(const uint8_t* bytes, size_t length,
     }
     output[size - 2] = '\0';
     value.SetString(output, size, allocator);
-    return 0;
+    return marker;
   };
-  return length;
+  marker.byte_pos += length;
+  return marker;
 }
 
-bool Type::ValueEquals(const uint8_t* bytes, size_t length,
+bool Type::ValueEquals(Marker marker, size_t length,
                        const rapidjson::Value& value) const {
   FXL_LOG(FATAL) << "Equality operator for type not implemented";
   return false;
@@ -133,42 +135,47 @@ size_t Type::InlineSize() const {
   return 0;
 }
 
-size_t StringType::GetValueCallback(const uint8_t* bytes, size_t length,
+Marker StringType::GetValueCallback(Marker marker, size_t length,
                                     ObjectTracker* tracker,
                                     ValueGeneratingCallback& callback) const {
+  const uint8_t* bytes = marker.byte_pos;
   // Strings: First 8 bytes is length
   uint64_t string_length = internal::MemoryFrom<uint64_t>(bytes);
   // next 8 bytes are 0 if the string is null, and 0xffffffff otherwise.
   bool is_null = bytes[sizeof(uint64_t)] == 0x0;
   callback = [is_null, string_length](
-                 const uint8_t* bytes, rapidjson::Value& value,
+                 Marker marker, rapidjson::Value& value,
                  rapidjson::Document::AllocatorType& allocator) {
     if (is_null) {
       value.SetString("(null)", allocator);
-      return 0UL;
+      return marker;
     }
     // everything after that is the string.
-    value.SetString(reinterpret_cast<const char*>(bytes), string_length,
-                    allocator);
-    return AlignToNextWordBoundary(string_length);
+    value.SetString(reinterpret_cast<const char*>(marker.byte_pos),
+                    string_length, allocator);
+    marker.byte_pos = AlignToNextWordBoundary(marker.byte_pos + string_length);
+    return marker;
   };
-  return length;
+  marker.byte_pos += length;
+  return marker;
 }
 
-size_t BoolType::GetValueCallback(const uint8_t* bytes, size_t length,
+Marker BoolType::GetValueCallback(Marker marker, size_t length,
                                   ObjectTracker* tracker,
                                   ValueGeneratingCallback& callback) const {
-  callback = [val = *bytes](const uint8_t* bytes, rapidjson::Value& value,
-                            rapidjson::Document::AllocatorType& allocator) {
+  callback = [val = *marker.byte_pos](
+                 Marker marker, rapidjson::Value& value,
+                 rapidjson::Document::AllocatorType& allocator) {
     // assert that length == 1
     if (val) {
       value.SetString("true", allocator);
     } else {
       value.SetString("false", allocator);
     }
-    return 0;
+    return marker;
   };
-  return sizeof(bool);
+  marker.byte_pos += sizeof(bool);
+  return marker;
 }
 
 // This provides a Tracker for objects that may or may not be out-of-line.  If
@@ -181,8 +188,8 @@ class TrackerMark {
  public:
   // Tracker should be present if this is an in-line object, and absent if it
   // isn't.
-  TrackerMark(const uint8_t* bytes, std::optional<ObjectTracker*> tracker)
-      : inner_tracker_(bytes) {
+  TrackerMark(Marker marker, std::optional<ObjectTracker*> tracker)
+      : marker_(marker) {
     if (tracker) {
       tracker_ = *tracker;
     } else {
@@ -193,15 +200,17 @@ class TrackerMark {
   ObjectTracker* GetTracker() const { return tracker_; }
 
   // Run callbacks if this is an out-of-line object.
-  size_t MaybeRunCallbacks(size_t size) const {
+  Marker MaybeRunCallbacks(Marker end_marker) const {
     if (tracker_ == &inner_tracker_) {
-      return AlignToNextWordBoundary(tracker_->RunCallbacksFrom(size));
+      Marker m = tracker_->RunCallbacksFrom(end_marker);
+      m.byte_pos = AlignToNextWordBoundary(m.byte_pos);
+      return m;
     }
-    // The out-of-line size for an inline object is 0.
-    return 0;
+    return marker_;
   }
 
  private:
+  Marker marker_;
   ObjectTracker* tracker_;
   ObjectTracker inner_tracker_;
 };
@@ -209,38 +218,44 @@ class TrackerMark {
 StructType::StructType(const Struct& str, bool is_nullable)
     : struct_(str), is_nullable_(is_nullable) {}
 
-size_t StructType::GetValueCallback(const uint8_t* bytes, size_t length,
+Marker StructType::GetValueCallback(Marker marker, size_t length,
                                     ObjectTracker* tracker,
                                     ValueGeneratingCallback& callback) const {
   bool is_nullable = is_nullable_;
   const Struct& str = struct_;
-  callback = [inline_bytes = bytes, str, is_nullable, tracker](
-                 const uint8_t* outline_bytes, rapidjson::Value& value,
-                 rapidjson::Document::AllocatorType& allocator) -> size_t {
-    const uint8_t* bytes;
+  callback = [inline_marker = marker, str, is_nullable, tracker](
+                 Marker outline_marker, rapidjson::Value& value,
+                 rapidjson::Document::AllocatorType& allocator) {
+    Marker marker;
     std::optional<ObjectTracker*> tracker_for_mark;
     if (is_nullable) {
-      bytes = outline_bytes;
+      marker = outline_marker;
       tracker_for_mark = std::nullopt;
     } else {
-      bytes = inline_bytes;
+      marker = inline_marker;
       tracker_for_mark = std::optional<ObjectTracker*>(tracker);
     }
 
-    TrackerMark mark(bytes, tracker_for_mark);
+    TrackerMark mark(outline_marker, tracker_for_mark);
     value.SetObject();
     ObjectTracker* tracker = mark.GetTracker();
+    Marker prev_marker = marker;
     for (auto& member : str.members()) {
       std::unique_ptr<Type> member_type = member.GetType();
       ValueGeneratingCallback value_callback;
-      member_type->GetValueCallback(&bytes[member.offset()], member.size(),
-                                    tracker, value_callback);
+      Marker value_marker;
+      value_marker.byte_pos = marker.byte_pos + member.offset();
+      value_marker.handle_pos = prev_marker.handle_pos;
+      prev_marker = member_type->GetValueCallback(value_marker, member.size(),
+                                                  tracker, value_callback);
       tracker->ObjectEnqueue(member.name(), std::move(value_callback), value,
                              allocator);
     }
-    return mark.MaybeRunCallbacks(str.size());
+    marker.byte_pos += str.size();
+    return mark.MaybeRunCallbacks(marker);
   };
-  return length;
+  marker.byte_pos += length;
+  return marker;
 }
 
 ElementSequenceType::ElementSequenceType(std::unique_ptr<Type>&& component_type)
@@ -254,32 +269,32 @@ ElementSequenceType::ElementSequenceType(std::shared_ptr<Type> component_type)
 }
 
 ValueGeneratingCallback ElementSequenceType::GetIteratingCallback(
-    ObjectTracker* tracker, size_t count, const uint8_t* bytes,
-    size_t length) const {
+    ObjectTracker* tracker, size_t count, Marker marker, size_t length) const {
   std::shared_ptr<Type> component_type = component_type_;
-  return [tracker, component_type, count, bytes, length](
-             const uint8_t* ignored, rapidjson::Value& value,
+  return [tracker, component_type, count, captured_marker = marker, length](
+             Marker inline_marker, rapidjson::Value& value,
              rapidjson::Document::AllocatorType& allocator) {
     value.SetArray();
-    size_t offset = 0;
+    Marker marker = captured_marker;
     for (uint32_t i = 0; i < count; i++) {
       ValueGeneratingCallback value_callback;
-      offset += component_type->GetValueCallback(bytes + offset, length / count,
-                                                 tracker, value_callback);
+      marker = component_type->GetValueCallback(marker, length / count, tracker,
+                                                value_callback);
       tracker->ArrayEnqueue(std::move(value_callback), value, allocator);
     }
-    return 0;
+    return inline_marker;
   };
 }
 
 ArrayType::ArrayType(std::unique_ptr<Type>&& component_type, uint32_t count)
     : ElementSequenceType(std::move(component_type)), count_(count) {}
 
-size_t ArrayType::GetValueCallback(const uint8_t* bytes, size_t length,
+Marker ArrayType::GetValueCallback(Marker marker, size_t length,
                                    ObjectTracker* tracker,
                                    ValueGeneratingCallback& callback) const {
-  callback = GetIteratingCallback(tracker, count_, bytes, length);
-  return length;
+  callback = GetIteratingCallback(tracker, count_, marker, length);
+  marker.byte_pos += length;
+  return marker;
 }
 
 VectorType::VectorType(std::unique_ptr<Type>&& component_type)
@@ -289,44 +304,74 @@ VectorType::VectorType(std::shared_ptr<Type> component_type,
                        size_t element_size)
     : ElementSequenceType(component_type) {}
 
-size_t VectorType::GetValueCallback(const uint8_t* bytes, size_t length,
+Marker VectorType::GetValueCallback(Marker marker, size_t length,
                                     ObjectTracker* tracker,
                                     ValueGeneratingCallback& callback) const {
-  uint64_t count = internal::MemoryFrom<uint64_t>(bytes);
-  uint64_t data = internal::MemoryFrom<uint64_t>(bytes + sizeof(uint64_t));
+  uint64_t count = internal::MemoryFrom<uint64_t>(marker.byte_pos);
+  uint64_t data =
+      internal::MemoryFrom<uint64_t>(marker.byte_pos + sizeof(uint64_t));
   size_t element_size = component_type_->InlineSize();
   if (data == UINTPTR_MAX) {
     VectorType vt(component_type_, element_size);
     callback = [vt, tracker, element_size, count](
-                   const uint8_t* bytes, rapidjson::Value& value,
+                   Marker marker, rapidjson::Value& value,
                    rapidjson::Document::AllocatorType& allocator) {
       ValueGeneratingCallback value_cb =
-          vt.GetIteratingCallback(tracker, count, bytes, element_size * count);
-      value_cb(bytes, value, allocator);
-      return element_size * count;
+          vt.GetIteratingCallback(tracker, count, marker, element_size * count);
+      value_cb(marker, value, allocator);
+      marker.byte_pos += element_size * count;
+      return marker;
     };
   } else if (data == 0) {
-    callback = [](const uint8_t* bytes, rapidjson::Value& value,
+    callback = [](Marker marker, rapidjson::Value& value,
                   rapidjson::Document::AllocatorType& allocator) {
       value.SetNull();
-      return 0;
+      return marker;
     };
   }
-  return length;
+  marker.byte_pos += length;
+  return marker;
 }
 
 EnumType::EnumType(const Enum& e) : enum_(e) {}
 
-size_t EnumType::GetValueCallback(const uint8_t* bytes, size_t length,
+Marker EnumType::GetValueCallback(Marker marker, size_t length,
                                   ObjectTracker* tracker,
                                   ValueGeneratingCallback& callback) const {
-  std::string name = enum_.GetNameFromBytes(bytes, length);
-  callback = [name](const uint8_t* bytes, rapidjson::Value& value,
+  std::string name = enum_.GetNameFromBytes(marker.byte_pos, length);
+  callback = [name](Marker marker, rapidjson::Value& value,
                     rapidjson::Document::AllocatorType& allocator) {
     value.SetString(name, allocator);
-    return 0;
+    return marker;
   };
-  return length;
+  marker.byte_pos += length;
+  return marker;
+}
+
+Marker HandleType::GetValueCallback(Marker marker, size_t length,
+                                    ObjectTracker* tracker,
+                                    ValueGeneratingCallback& callback) const {
+  zx_handle_t val = internal::MemoryFrom<zx_handle_t>(marker.byte_pos);
+  if (val == FIDL_HANDLE_PRESENT) {
+    // Handle is out-of-line
+    callback = [](Marker marker, rapidjson::Value& value,
+                  rapidjson::Document::AllocatorType& allocator) {
+      zx_handle_t val = internal::MemoryFrom<zx_handle_t>(marker.handle_pos);
+      value.SetString(std::to_string(val).c_str(), allocator);
+      marker.handle_pos += 1;
+      return marker;
+    };
+  } else if (val == FIDL_HANDLE_ABSENT) {
+    callback = [val](Marker marker, rapidjson::Value& value,
+                     rapidjson::Document::AllocatorType& allocator) {
+      value.SetString(std::to_string(val).c_str(), allocator);
+      return marker;
+    };
+  } else {
+    FXL_LOG(INFO) << "Illegally encoded handle";
+  }
+  marker.byte_pos += sizeof(zx_handle_t);
+  return marker;
 }
 
 std::unique_ptr<Type> Type::get_illegal() {
@@ -409,8 +454,7 @@ std::unique_ptr<Type> Type::GetType(const LibraryLoader& loader,
   } else if (kind == "string") {
     return std::make_unique<StringType>();
   } else if (kind == "handle") {
-    // TODO: implement something useful.
-    return std::make_unique<NumericType<uint32_t>>();
+    return std::make_unique<HandleType>();
   } else if (kind == "request") {
     // TODO: implement something useful.
     return std::make_unique<NumericType<uint32_t>>();

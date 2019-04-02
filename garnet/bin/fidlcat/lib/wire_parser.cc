@@ -19,6 +19,15 @@ void PrintPayload(FILE* fstream, const fidl::Message& message) {
   for (size_t i = 0; i < amt; i++) {
     fprintf(fstream, "+0x%x\n", payload[i]);
   }
+  if (message.handles().actual() != 0) {
+    fprintf(fstream, "======\nhandles\n");
+    zx_handle_t* handles =
+        reinterpret_cast<zx_handle_t*>(message.handles().data());
+    amt = message.handles().actual();
+    for (size_t i = 0; i < amt; i++) {
+      fprintf(fstream, "+0x%x\n", handles[i]);
+    }
+  }
 }
 
 // Prints |value| and associated metadata to fstream
@@ -48,6 +57,7 @@ bool ParamsToJSON(const std::optional<std::vector<InterfaceMethodParameter>>& p,
   result.SetObject();
   const fidl::BytePart& bytes = message.bytes();
   uint64_t current_offset = sizeof(message.header());
+  const fidl::HandlePart& handles = message.handles();
 
   // Go in order of offset.
   std::vector<const InterfaceMethodParameter*> params;
@@ -60,21 +70,22 @@ bool ParamsToJSON(const std::optional<std::vector<InterfaceMethodParameter>>& p,
         return l->get_offset() < r->get_offset();
       });
 
-  ObjectTracker tracker(bytes.data());
+  Marker marker;
+  ObjectTracker tracker;
+  marker.handle_pos = handles.data();
   for (const InterfaceMethodParameter* param : params) {
-    current_offset = param->get_offset();
-
+    marker.byte_pos = bytes.data() + param->get_offset();
     std::unique_ptr<Type> type = param->GetType();
     ValueGeneratingCallback value_callback;
-    type->GetValueCallback(bytes.data() + current_offset, param->get_size(),
-                           &tracker, value_callback);
+    marker = type->GetValueCallback(marker, param->get_size(), &tracker,
+                                    value_callback);
 
     tracker.ObjectEnqueue(param->name(), std::move(value_callback), result,
                           result.GetAllocator());
 
     current_offset += param->get_size();
   }
-  tracker.RunCallbacksFrom(current_offset);
+  tracker.RunCallbacksFrom(marker);
   return true;
 }
 

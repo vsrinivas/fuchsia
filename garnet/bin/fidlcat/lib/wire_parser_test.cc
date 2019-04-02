@@ -155,19 +155,18 @@ TEST_F(WireParserTest, ParseSingleString) {
 
 // This is a general-purpose macro for calling InterceptRequest and checking its
 // results.  It can be generalized to a wide variety of types (and is, below).
-// _testname is the name of the test (prepended by Parse in the output)
 // _iface is the interface method name on examples::this_is_an_interface
 //    (TODO: generalize which interface to use)
 // _json_value is a JSON representation of the value in the previous parameter.
 // The remaining parameters are the parameters to _iface to generate the
 // _json_value.
-#define TEST_WIRE_TO_JSON(_testname, _iface, _json_value, ...)              \
-  TEST_F(WireParserTest, Parse##_testname) {                                \
+#define TEST_WIRE_TO_JSON_BODY(_iface, _json_value, ...)                    \
+  do {                                                                      \
     fidl::MessageBuffer buffer;                                             \
     fidl::Message message = buffer.CreateEmptyMessage();                    \
     using test::fidlcat::examples::this_is_an_interface;                    \
     InterceptRequest<this_is_an_interface>(                                 \
-        message, [](fidl::InterfacePtr<this_is_an_interface>& ptr) {        \
+        message, [&](fidl::InterfacePtr<this_is_an_interface>& ptr) {       \
           ptr->_iface(__VA_ARGS__);                                         \
         });                                                                 \
                                                                             \
@@ -194,11 +193,20 @@ TEST_F(WireParserTest, ParseSingleString) {
         << "expected = " << expected_string.GetString() << " ("             \
         << expected_source << ")"                                           \
         << " and actual = " << actual_string.GetString();                   \
-  }
+  } while (0)
 
-#define COMMA ,
-#define OPAREN (
-#define CPAREN )
+// This is a convenience wrapper for calling TEST_WIRE_TO_JSON_BODY that simply
+// executes the code in a test.
+// _testname is the name of the test (prepended by Parse in the output)
+// _iface is the interface method name on examples::this_is_an_interface
+//    (TODO: generalize which interface to use)
+// _json_value is a JSON representation of the value in the previous parameter.
+// The remaining parameters are the parameters to _iface to generate the
+// _json_value.
+#define TEST_WIRE_TO_JSON(_testname, _iface, _json_value, ...) \
+  TEST_F(WireParserTest, Parse##_testname) {                   \
+    TEST_WIRE_TO_JSON_BODY(_iface, _json_value, __VA_ARGS__);  \
+  }
 
 namespace {
 
@@ -224,7 +232,7 @@ std::string SingleToJson(std::string key, T value) {
 
 }  // namespace
 
-#define TEST_SINGLE(_iface, _key, _value)                                     \
+#define TEST_SINGLE(_iface, _key, _value) \
   TEST_WIRE_TO_JSON(_iface, _iface, SingleToJson(#_key, _value), _value)
 
 TEST_SINGLE(Float32, f32, 0.25)
@@ -240,11 +248,10 @@ TEST_SINGLE(Uint64, i64, std::numeric_limits<uint64_t>::max())
 
 TEST_WIRE_TO_JSON(SingleBool, Bool, R"({"b":"true"})", true)
 
-TEST_WIRE_TO_JSON(TwoTuple, Complex,
-                  R"({"real":"1", "imaginary":"2"})", 1, 2);
+TEST_WIRE_TO_JSON(TwoTuple, Complex, R"({"real":"1", "imaginary":"2"})", 1, 2);
 
-TEST_WIRE_TO_JSON(StringInt, StringInt,
-                  R"({"s":"groucho", "i32":"4"})", "groucho", 4)
+TEST_WIRE_TO_JSON(StringInt, StringInt, R"({"s":"groucho", "i32":"4"})",
+                  "groucho", 4)
 
 // Vector / Array Tests
 
@@ -417,15 +424,86 @@ TEST_WIRE_TO_JSON(TwoStringNullableStructInt, TwoStringNullableStructInt,
 
 // Enum Tests
 
-TEST_WIRE_TO_JSON(DefaultEnum, DefaultEnum,
-                  R"({"ev":"x"})",
+TEST_WIRE_TO_JSON(DefaultEnum, DefaultEnum, R"({"ev":"x"})",
                   test::fidlcat::examples::default_enum::x);
-TEST_WIRE_TO_JSON(I8Enum, I8Enum,
-                  R"({"ev":"x"})",
+TEST_WIRE_TO_JSON(I8Enum, I8Enum, R"({"ev":"x"})",
                   test::fidlcat::examples::i8_enum::x);
-TEST_WIRE_TO_JSON(I16Enum, I16Enum,
-                  R"({"ev":"x"})",
+TEST_WIRE_TO_JSON(I16Enum, I16Enum, R"({"ev":"x"})",
                   test::fidlcat::examples::i16_enum::x);
+
+// Handle Tests
+
+namespace {
+
+class HandleSupport {
+ public:
+  HandleSupport() {
+    zx::channel::create(0, &out1_, &out2_);
+    json_ = R"({"ch":")";
+    json_.append(std::to_string(out2_.get()));
+    json_.append(R"("})");
+  }
+  zx::channel handle() { return std::move(out2_); }
+  std::string GetJSON() { return json_; }
+
+ private:
+  zx::channel out1_;
+  zx::channel out2_;
+  std::string json_;
+};
+
+}  // namespace
+
+TEST_F(WireParserTest, ParseHandle) {
+  HandleSupport support;
+  TEST_WIRE_TO_JSON_BODY(Handle, support.GetJSON(), support.handle());
+}
+
+TEST_F(WireParserTest, ParseNullableHandle) {
+  HandleSupport support;
+  TEST_WIRE_TO_JSON_BODY(NullableHandle, support.GetJSON(), support.handle());
+}
+
+namespace {
+
+class HandleStructSupport {
+ public:
+  HandleStructSupport() {
+    zx::channel::create(0, &out1_, &out2_);
+    zx::channel::create(0, &out3_, &out4_);
+    json_ = R"({"hs":{"h1":")";
+    json_.append(std::to_string(out1_.get()));
+    json_.append(R"(", "h2":")");
+    json_.append(std::to_string(out2_.get()));
+    json_.append(R"(", "h3":")");
+    json_.append(std::to_string(out3_.get()));
+    json_.append(R"("}})");
+  }
+  test::fidlcat::examples::handle_struct handle_struct() {
+    test::fidlcat::examples::handle_struct hs;
+    hs.h1 = std::move(out1_);
+    hs.h2 = std::move(out2_);
+    hs.h3 = std::move(out3_);
+    return hs;
+  }
+  std::string GetJSON() { return json_; }
+
+ private:
+  zx::channel out1_;
+  zx::channel out2_;
+  zx::channel out3_;
+  zx::channel out4_;
+
+  std::string json_;
+};
+
+}  // namespace
+
+TEST_F(WireParserTest, ParseHandleStruct) {
+  HandleStructSupport support;
+  TEST_WIRE_TO_JSON_BODY(HandleStruct, support.GetJSON(),
+                         support.handle_struct());
+}
 
 TEST_F(WireParserTest, BadSchemaPrintHex) {
   std::vector<std::unique_ptr<std::istream>> library_files;

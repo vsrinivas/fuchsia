@@ -7,6 +7,12 @@
 
 #include <lib/fit/function.h>
 
+#ifdef __Fuchsia__
+#include <zircon/types.h>
+#else
+typedef uint32_t zx_handle_t;
+#endif
+
 #include <sstream>
 #include <string>
 #include <vector>
@@ -19,11 +25,20 @@
 
 namespace fidlcat {
 
-// A function that, given the location |bytes| of an object (in-line or
+// Indicates a position in the FIDL message, which is a combination of current
+// location in the byte part |byte_pos| and current location in the handle part
+// |handle_pos|.
+struct Marker {
+  const uint8_t* byte_pos;
+  const zx_handle_t* handle_pos;
+};
+
+// A function that, given the location |marker| of an object (in-line or
 // out-of-line), generates a JSON representation into |value| using |allocator|.
 //
-// Returns the out-of-line size, or 0 if it was in-line element.
-typedef fit::function<size_t(const uint8_t* bytes, rapidjson::Value& value,
+// Returns a Marker advanced by the out-of-line size of the object (which may be
+// 0).
+typedef fit::function<Marker(Marker marker, rapidjson::Value& value,
                              rapidjson::Document::AllocatorType& allocator)>
     ValueGeneratingCallback;
 
@@ -37,11 +52,11 @@ typedef fit::function<size_t(const uint8_t* bytes, rapidjson::Value& value,
 class ObjectTracker {
  public:
   // Creates a tracker for the given array of bytes.
-  explicit ObjectTracker(const uint8_t* bytes) : bytes_(bytes) {}
+  explicit ObjectTracker() {}
 
   // Executes all of the callbacks, starting at bytes (as passed to the
   // constructor) + the given offset.
-  size_t RunCallbacksFrom(size_t offset);
+  Marker RunCallbacksFrom(Marker marker);
 
   // Enqueues a callback to be executed when running RunCallbacksFrom.
   // |key| is the JSON key it will construct.
@@ -64,8 +79,7 @@ class ObjectTracker {
   ObjectTracker& operator=(const ObjectTracker&) = delete;
 
  private:
-  std::vector<fit::function<size_t(const uint8_t* bytes)>> callbacks_;
-  const uint8_t* bytes_;
+  std::vector<fit::function<Marker(const Marker& marker)>> callbacks_;
 };
 
 // A FIDL type.  Provides methods for generating instances of this type.
@@ -82,20 +96,22 @@ class Type {
   Type() {}
   virtual ~Type() {}
 
-  // Takes a series of bytes pointed to by |bytes| and of length |length|, and
+  // Takes a Marker |marker| and length of the data part |length|, and
   // tells |tracker| to invoke |callback| on their representation given this
   // type.
   //
   // A callback may outlive the Type that provided it.  They should therefore
   // not refer to anything in the containing type, as that might get deleted.
-  virtual size_t GetValueCallback(const uint8_t* bytes, size_t length,
+  //
+  // Returns a Marker pointing to the next element inline in this type.
+  virtual Marker GetValueCallback(Marker marker, size_t length,
                                   ObjectTracker* tracker,
                                   ValueGeneratingCallback& callback) const = 0;
 
-  // Takes a series of bytes pointed to by |bytes| and of length |length|, and
+  // Takes a Marker |marker| and length of the data part |length|, and
   // returns whether that is equal to the Value represented by |value| according
   // to this type.
-  virtual bool ValueEquals(const uint8_t* bytes, size_t length,
+  virtual bool ValueEquals(Marker marker, size_t length,
                            const rapidjson::Value& value) const;
 
   // Returns the size of this type when embedded in another object.
@@ -134,15 +150,15 @@ class Type {
 // spits back hex pairs.
 class UnknownType : public Type {
  public:
-  virtual size_t GetValueCallback(
-      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
 };
 
 class StringType : public Type {
  public:
-  virtual size_t GetValueCallback(
-      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
 
   virtual size_t InlineSize() const override {
@@ -178,8 +194,10 @@ struct GetUnsigned {
                                          uint32_t, uint64_t>::type;
 };
 
-template <typename T>
-T MemoryFrom(const uint8_t* bytes) {
+template <typename T, typename P>
+T MemoryFrom(P bytes) {
+  static_assert(std::is_pointer<P>::value,
+                "MemoryFrom can only be used on pointers");
   using U = typename std::conditional<std::is_integral<T>::value,
                                       std::make_unsigned<T>,
                                       GetUnsigned<T>>::type::type;
@@ -201,21 +219,22 @@ class NumericType : public Type {
                 "NumericType can only be used for numerics");
 
  public:
-  virtual size_t GetValueCallback(
-      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override {
-    T val = internal::MemoryFrom<T>(bytes);
-    callback = [val](const uint8_t* bytes, rapidjson::Value& value,
+    T val = internal::MemoryFrom<T, const uint8_t*>(marker.byte_pos);
+    callback = [val](Marker marker, rapidjson::Value& value,
                      rapidjson::Document::AllocatorType& allocator) {
       value.SetString(std::to_string(val).c_str(), allocator);
-      return 0;
+      return marker;
     };
-    return sizeof(T);
+    marker.byte_pos += sizeof(T);
+    return marker;
   }
 
-  virtual bool ValueEquals(const uint8_t* bytes, size_t length,
+  virtual bool ValueEquals(Marker marker, size_t length,
                            const rapidjson::Value& value) const override {
-    T lhs = internal::MemoryFrom<T>(bytes);
+    T lhs = internal::MemoryFrom<T, const uint8_t*>(marker.byte_pos);
     std::istringstream input(value["value"].GetString());
     // Because int8_t is really char, and we don't want to read that.
     using R =
@@ -230,8 +249,8 @@ class NumericType : public Type {
 
 class BoolType : public Type {
  public:
-  virtual size_t GetValueCallback(
-      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
 };
 
@@ -239,8 +258,8 @@ class StructType : public Type {
  public:
   StructType(const Struct& str, bool is_nullable);
 
-  virtual size_t GetValueCallback(
-      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
 
  private:
@@ -257,11 +276,10 @@ class ElementSequenceType : public Type {
 
   // |tracker| is the ObjectTracker to use for the callback.
   // |count| is the number of elements in this sequence
-  // |bytes| is a pointer to the byte sequence we're decoding.
+  // |marker| is a position in the message we're decoding
   // |length| is the length of the byte sequence.
   ValueGeneratingCallback GetIteratingCallback(ObjectTracker* tracker,
-                                               size_t count,
-                                               const uint8_t* bytes,
+                                               size_t count, Marker marker,
                                                size_t length) const;
 
   // The unique_ptr is converted to a shared_ptr so that it can be used by the
@@ -274,8 +292,8 @@ class ArrayType : public ElementSequenceType {
  public:
   ArrayType(std::unique_ptr<Type>&& component_type, uint32_t count);
 
-  virtual size_t GetValueCallback(
-      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
 
   virtual size_t InlineSize() const override {
@@ -290,8 +308,8 @@ class VectorType : public ElementSequenceType {
  public:
   VectorType(std::unique_ptr<Type>&& component_type);
 
-  virtual size_t GetValueCallback(
-      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
 
   virtual size_t InlineSize() const override {
@@ -306,12 +324,23 @@ class EnumType : public Type {
  public:
   EnumType(const Enum& e);
 
-  virtual size_t GetValueCallback(
-      const uint8_t* bytes, size_t length, ObjectTracker* tracker,
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override;
 
  private:
   const Enum& enum_;
+};
+
+class HandleType : public Type {
+ public:
+  HandleType() {}
+
+  virtual Marker GetValueCallback(
+      Marker marker, size_t length, ObjectTracker* tracker,
+      ValueGeneratingCallback& callback) const override;
+
+  virtual size_t InlineSize() const override { return sizeof(zx_handle_t); }
 };
 
 using Float32Type = NumericType<float>;

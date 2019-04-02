@@ -24,6 +24,8 @@ protocol this_is_an_interface {
     DefaultEnum(default_enum ev);
     I8Enum(i8_enum ev);
     I16Enum(i16_enum ev);
+    Handle(handle<channel> ch);
+    NullableHandle(handle<channel>? ch);
 
     Complex(int32 real, int32 imaginary);
     StringInt(string s, int32 i32);
@@ -31,6 +33,7 @@ protocol this_is_an_interface {
     TwoStringArrayInt(array<string>:2 arr, int32 i32);
     TwoStringVectorInt(vector<string> vec, int32 i32);
     TwoStringNullableStructInt(two_string_struct? s, int32 i32);
+    HandleStruct(handle_struct hs);
 };
 
 struct primitive_types {
@@ -62,4 +65,10 @@ enum i16_enum : int16 {
 struct two_string_struct {
     string value1;
     string value2;
+};
+
+struct handle_struct {
+    handle<channel> h1;
+    handle<channel> h2;
+    handle<channel> h3;
 };
