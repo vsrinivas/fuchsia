@@ -178,6 +178,12 @@ class LazyMetric final {
   // Operations on the metric will have no effect.
   LazyMetric();
 
+  LazyMetric(LazyMetric&&) = default;
+  LazyMetric(const LazyMetric&) = delete;
+
+  LazyMetric& operator=(LazyMetric&&) = default;
+  LazyMetric& operator=(const LazyMetric&) = delete;
+
   // Set the callback used to return the value of the metric.
   void Set(::component::Metric::ValueCallback callback);
 
@@ -265,6 +271,12 @@ class LazyStringProperty final {
   // Operations on the property will have no effect.
   LazyStringProperty();
 
+  LazyStringProperty(LazyStringProperty&&) = default;
+  LazyStringProperty(const LazyStringProperty&) = delete;
+
+  LazyStringProperty& operator=(LazyStringProperty&&) = default;
+  LazyStringProperty& operator=(const LazyStringProperty&) = delete;
+
   // Set the callback that generates the value of the property.
   void Set(StringValueCallback callback);
 
@@ -287,6 +299,12 @@ class LazyByteVectorProperty final {
   // Construct a default property.
   // Operations on the property will have no effect.
   LazyByteVectorProperty();
+
+  LazyByteVectorProperty(LazyByteVectorProperty&&) = default;
+  LazyByteVectorProperty(const LazyByteVectorProperty&) = delete;
+
+  LazyByteVectorProperty& operator=(LazyByteVectorProperty&&) = default;
+  LazyByteVectorProperty& operator=(const LazyByteVectorProperty&) = delete;
 
   // Set the callback that generates the value of the property.
   void Set(VectorValueCallback callback);
