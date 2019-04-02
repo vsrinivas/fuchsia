@@ -33,7 +33,7 @@ namespace {
 // Variable to quickly re-enable the hardcoded touchpad reports.
 // TODO(ZX-3219): Remove this once touchpads are stable
 bool USE_TOUCHPAD_HARDCODED_REPORTS = false;
-bool USE_TOUCHSCREEN_HARDCODED_REPORTS = false;
+bool USE_TOUCHSCREEN_HARDCODED_REPORTS = true;
 
 int64_t InputEventTimestampNow() {
   return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds();
