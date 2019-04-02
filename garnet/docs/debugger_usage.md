@@ -21,31 +21,120 @@ continue
 quit
 ```
 
-### Debug a component
+### Attaching to new processes or components
 
-Components can't be launched from within the debugger, but you can watch for
-their creation. See [Debugging a component](#debugging-a-component) below for
-more details.
+When zxdb is connected, it attaches itself to appmgr's job. This enables it to
+detect when new process are being launched. With this, zxdb has the ability of
+attaching to a process before it starts (before the first instruction has been
+run).
+
+Components are launched by appmgr, so they're always launched in a job that's a
+child of appmgr's job. Under the hood, they will appear as a new process so they
+can be attached in the same way.
+
+In order for the user to attach, they have to tell zxdb what processes they are
+interested in attaching to. For this, they can use the filter option:
 
 ```
-[zxdb] connect 192.168.3.1:2345
-[zxdb] set filters echo
+[zxdb] set filters some_substr_that_matches
+Set value(s) for job 1:
+• some_substr_that_matches
 ```
 
-Launch the component as under normal usage (not from within the debugger). The
-debugger should break when the component's process starts and you can do:
+With that, all new processes that match that filter will be caught by the
+debugger (run `get filters` and `help get` for more details). In this example,
+a new process called "awesome_substr_that_matches_process.cmx" was launched:
+
+```
+// Within zxdb you will see something like:
+Attached Process 1 [Running] koid=12345 awesome_substr_that_matches_process.cmx
+  The process is currently in an initializing state. You can set pending
+  breakpoints (symbols haven't been loaded yet) and "continue".
+[zxdb]
+```
+NOTE: The process has *not started*. This means that there is no code loaded,
+and hence no symbols to query. You will still be able to set pending breakpoints
+that will be set before starting the process. See
+[breakpoints](#working-with-breakpoints) for more information:
 
 ```
 [zxdb] break main
+Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
+Pending: No matches for location, it will be pending library loads.
+
 [zxdb] continue
-[zxdb] print argv[1]
-[zxdb] continue
-[zxdb] quit
+
+Thread 1 stopped on breakpoint 1 at main(…) • awesome_substr_that_matches_process.cc:15
+ ▶ 15 int main(int argc, const char** argv) {
 ```
 
-There is an extensive built-in help system. Type `help` and the command prompt
-for a list of commands, or `help <command>` for details about that command
-(much more than is in this document) as well as options and examples.
+#### As a complete example:
+
+```
+[zxdb] set filters some_comp
+Set value(s) for job 1:
+• some_comp
+
+[zxdb] break main
+Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
+Pending: No matches for location, it will be pending library loads.
+
+// Launch Component (within the target).
+$ run fuchsia-pkg://fuchsia.com/awesome_package#meta/awesome_component.cmx
+
+// Back in zxdb.
+Attached Process 1 [Running] koid=12345 awesome_component.cmx
+  The process is currently in an initializing state. You can set pending
+  breakpoints (symbols haven't been loaded yet) and "continue".
+
+[zxdb] process
+# State     Koid Name
+▶ 1 Running 3471 echo_client_cpp.cmx
+
+[zxdb] continue
+Thread 1 stopped on breakpoint 1 at main(…) • my_component_main.cc:15
+ ▶ 15 int main(int argc, const char** argv) {
+```
+
+### Attaching to an existing process
+
+You can attach to most running processes given the process’ KOID. You can get
+the KOID by running `ps` on the target Fuchsia system. zxdb also has a built-in
+`ps` command:
+
+```
+[zxdb] ps
+j: 1030 root
+  j: 1079 zircon-drivers
+    p: 1926 devhost:sys
+...
+```
+
+Then to attach:
+
+```
+[zxdb] attach 3517
+Process 1 Running koid=1249 pwrbtn-monitor
+```
+
+When you’re done, you can choose to `detach` (keep running) or `kill`
+(terminate) the process.
+
+### Launch a component (Experimental)
+
+Components can be launched through the debugger, though the support is in an
+*experimental* state, so YMMV. In general, the preferred way for now is to use
+filters to catch new components.
+See [Attach to a new process or component](#attaching-to-new-processes-or-components).
+
+In order to run the component, you can do:
+
+```
+[zxdb] run -c fuchsia-pkg://fuchsia.com/some_package#meta/some_component.cmx
+```
+
+Overall the functionality will be similar to what running a binary is, meaning
+that you can pause the process, set breakpoints before hand, etc.
 
 ## Interaction model
 
@@ -222,51 +311,6 @@ Or jump to the line after the loop:
 Work on this capability is ongoing
 ([DX-603](https://fuchsia.atlassian.net/browse/DX-603)).
 
-### Debugging a component
-
-Components are launched by appmgr, so they're always launched in a job that's a
-child of appmgr's job. When zxdb is connected, it attaches itself to appmgr's
-job. To debug a new component you need to add filters to attached jobs.
-
-To add filter (this attaches to any component with a name containing "echo",
-substitute your component name):
-
-```
-[zxdb] set filters echo
-```
-
-Now run the component from the appropriate environment. For example, to launch
-from the command line (not from within zxdb):
-
-```
-$ run fuchsia-pkg://fuchsia.com/echo_client_cpp#meta/echo_client_cpp.cmx
-```
-
-It should stop in the debugger upon startup and you should see it in the
-process list:
-
-```
-[zxdb] process
-# State       Koid Name
-▶ 1 Running 3471 echo_client_cpp.cmx
-```
-
-At this point the process is still very early in its initialization and
-symbols won't be loaded yet. But you can add pending
-[breakpoints](#working-with-breakpoints) that will be resolved automatically as
-things are loaded:
-
-```
-[zxdb] break main
-Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
-Pending: No matches for location, it will be pending library loads.
-
-[zxdb] continue
-
-Thread 1 stopped on breakpoint 1 at main(…) • echo_client.cc:15
- ▶ 15 int main(int argc, const char** argv) {
-```
-
 ### Directly running a new process
 
 You can start a new process from the debugger. Most applications in Fuchsia are
@@ -327,30 +371,6 @@ Or keep the process running outside of the debugger:
 ```
 [zxdb] detach
 ```
-
-### Attaching to an existing process
-
-You can attach to most running processes given the process’ KOID. You can get
-the KOID by running `ps` on the target Fuchsia system. zxdb also has a built-in
-`ps` command:
-
-```
-[zxdb] ps
-j: 1030 root
-  j: 1079 zircon-drivers
-    p: 1926 devhost:sys
-...
-```
-
-Then to attach:
-
-```
-[zxdb] attach 3517
-Process 1 Running koid=1249 pwrbtn-monitor
-```
-
-When you’re done, you can choose to `detach` (keep running) or `kill`
-(terminate) the process.
 
 ### Debugging multiple processes
 

@@ -1,18 +1,15 @@
 # zxdb: Fuchsia native debugger setup and troubleshooting
 
+## Overview
+
+The debugger is for C/C++ code running on Fuchsia compiled in-tree for either
+CPU (ARM64 or x64). The state of other languages (like Rust) can be seen
+[here](#other-languages).
+
 This is the very detailed setup guide. Please see:
 
   * The [user guide](debugger_usage.md) for help on debugger commands.
   * The [zxdb codelab](http://go/zxdb-codelab) (Googlers only).
-
-## Overview
-
-The debugger is for C/C++ code running on Fuchsia compiled in-tree for either
-CPU (ARM64 or x64). Rust kind of works but there [are
-issues](https://fuchsia.atlassian.net/browse/DX-604). I don’t know how to test
-Go. Please contact brettw if you’re interested in helping! Even if you don't
-know how to write debugger code, just defining the proper behavior for Rust or
-Go would be helpful (the team has no experience with these languages).
 
 The debugger runs remotely only (you can't do self-hosted debug).
 
@@ -30,7 +27,7 @@ The debugger runs remotely only (you can't do self-hosted debug).
 
   * Obviously many advanced features are missing.
 
-### Bugs
+### Bugs (Googlers only)
 
   * [Open zxdb bugs](https://fuchsia.atlassian.net/browse/DX-80?jql=project%20%3D%20DX%20AND%20component%20%3D%20zxdb%20order%20by%20lastViewed%20DESC)
 
@@ -49,12 +46,12 @@ as well for developers, but changes to the build and your local build
 configuration can affect this.
 
 If you're working in a vendor layer or aren't getting the debugger when
-building, you need to add `//bundles:tools` to the list of
-packages to build. This example shows how to add this onto the default peridot
-packages (replace with your build's default or whatever you're using):
+building, you need to add `//bundles:tools` to the list of packages to build.
+This example shows how to add this onto the default peridot packages
+(replace with your build's default or whatever you're using):
 
 ```sh
-fx set  core.x64 --with //bundles:tools
+fx set core.x64 --with //bundles:tools
 fx build
 ```
 
@@ -89,7 +86,7 @@ so, follow these steps:
 On the target system pick a port and run the debug agent:
 
 ```sh
-run debug_agent --port=2345
+run fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx --port=2345
 ```
 
 You will also want to note the target's IP address. Run `ifconfig` _on the
@@ -100,7 +97,7 @@ have to be annotated with the interface they apply to, so make sure the address
 you use includes the appropriate interface (should be the name of the bridge
 device).
 
-The address should look like this:
+The address should look like this (br0 is the interface name):
 
 ```
 fe80::5054:4d:fe63:5e7a%br0
@@ -112,7 +109,12 @@ On the host system (where you do the build), run the client. Use the IP
 address of the target and the port you picked above in the `connect` command.
 
 ```sh
-out/x64/host_x64/zxdb
+fx zxdb
+
+or
+
+out/<out_dir>/host_x64/zxdb
+
 [zxdb] connect [fe80::5054:4d:fe63:5e7a%br0]:2345
 ```
 (Substitute your build directory as-needed).
@@ -240,11 +242,19 @@ have a `-g` in it for gcc and Clang.
 
 ## Debugging the debugger and running the tests
 
-For developers working on the debugger, you can debug the client on GDB or LLDB
-on your host machine. You will want to run the unstripped binary:
-`out/<yourbuild>/host_x64/exe.unstripped/zxdb`. Since this path is different
-than the default, you will need to specify the location of ids.txt (in the root
-build directory) with `-s` on the command line.
+### Client
+
+For developers working on the debugger, you can activate the `--debug-mode` flag
+that will activate many logging statements for the debugger:
+
+```
+zxdb --debug-mode
+```
+
+You can also debug the client on GDB or LLDB on your host machine. You will want
+to run the unstripped binary: `out/<yourbuild>/host_x64/exe.unstripped/zxdb`.
+Since this path is different than the default, you will need to specify the
+location of ids.txt (in the root build directory) with `-s` on the command line.
 
 There are tests for the debugger that run on the host. These are relevant
 if you're working on the debugger client.
@@ -257,7 +267,62 @@ or directly with
 out/x64/host_tests/zxdb_tests
 ```
 
+### Debug Agent
+
+Similar as with the client, the debug agent is programmed to log many debug
+statements when run with the `--debug-mode` flag:
+
+```
+run fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx --debug-mode
+```
+
+It is also possible to attach the debugger to the debugger. The preferred way to
+do this is to make zxdb catch the debugger on launch using the filtering
+feature. This is done frequently by the debugger team. See the
+[user guide](debugger_usage.md) for more details:
+
+```
+// Run the debugger that will attach to the "to-be-debugged" debug agent.
+fx debug
+
+// * Within zxdb.
+[zxdb] set filters debug_agent
+
+// Launch another debug agent manually
+// * Within the target (requires another port).
+run fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx --port=5000 --debug-mode
+
+// * Within the first zxdb:
+Attached Process 1 [Running] koid=12345 debug_agent.cmx
+  The process is currently in an initializing state. You can set pending
+  breakpoints (symbols haven't been loaded yet) and "continue".
+[zxdb] continue
+
+// Now there is a running debug agent that is attached by the first zxdb run.
+// You can also attach to it using another client (notice the port):
+fx zxdb --connect [<IPv6 to target>]:5000 --debug-mode
+
+// Now you have two running instances of the debugger!
+```
+NOTE: Only one debugger can be attached to the main job in order to auto-attach
+to new processes. Since you're using it for the first debugger, you won't be
+able to launch components with the second one, only attach to them.
+
 The debug agent tests are in
 ```
 /pkgfs/packages/debug_agent_tests/0/test/debug_agent_tests
 ```
+
+To run them:
+```
+fx run-tests debug_agent_tests
+```
+
+## Other Languages
+
+Rust kind of works but there [are issues](https://fuchsia.atlassian.net/browse/DX-604).
+Go currently is currently not supported.
+
+Please contact brettw@ if you’re interested in helping! Even if you don't know
+how to write debugger code, just defining the proper behavior for Rust or Go
+would be helpful (the team has no experience with these languages).
