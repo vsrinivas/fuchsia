@@ -59,7 +59,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
 
     {
         ApiAutoLock lock;
-        r = devhost_device_create(drv, parent_ref, args->name, args->ctx, args->ops, &dev);
+        r = devhost_device_create(drv, args->name, args->ctx, args->ops, &dev);
         if (r != ZX_OK) {
             return r;
         }

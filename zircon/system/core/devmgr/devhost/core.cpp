@@ -271,8 +271,8 @@ static void enum_lock_release() REQ_DM_LOCK {
     }
 }
 
-zx_status_t devhost_device_create(zx_driver_t* drv, const fbl::RefPtr<zx_device_t>& parent,
-                                  const char* name, void* ctx, const zx_protocol_device_t* ops,
+zx_status_t devhost_device_create(zx_driver_t* drv, const char* name, void* ctx,
+                                  const zx_protocol_device_t* ops,
                                   fbl::RefPtr<zx_device_t>* out) REQ_DM_LOCK {
 
     if (!drv) {
