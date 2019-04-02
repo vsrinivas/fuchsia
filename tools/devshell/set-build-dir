@@ -1,0 +1,69 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### set the default build directory used by other fx commands
+
+## usage: fx set-build-dir DIR
+##    or: fx --dir DIR set-build-dir
+##    or: fx set-buil-dir
+##
+## Switches further `fx` commands to using a different build directory.
+## This only works if `fx --dir DIR set ...` succeeded previously
+## (and DIR has not been removed since).  The next `fx build` or other
+## such command will now refer to DIR.  The previous build directory is
+## left in place, so you can switch back again with `fx set-build-dir` later.
+##
+## fx set-build-dir without arguments will list the available build directories, naming
+## the current active build directory (if any).
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+function main {
+  local build_dir="$1"
+
+  case "${build_dir}" in
+  -h|--help)
+    fx-command-help
+    return 0
+    ;;
+  esac
+
+  if [[ -z "${build_dir}" ]]; then
+    build_dir="${_FX_BUILD_DIR}"
+  fi
+
+  if [[ -z "${build_dir}" ]]; then
+    fx-warn "no new build dir selected, listing build directories:"
+    fx-build-dir-if-present
+    local current="${FUCHSIA_BUILD_DIR##"${FUCHSIA_DIR}"/}"
+    if [[ -n "${current}" ]]; then
+      echo "${current} (current)"
+    fi
+    for d in ${FUCHSIA_DIR}/out/*; do
+      local build_dir="${d##"${FUCHSIA_DIR}"/}"
+      if [[ "${build_dir}" != "out/build-zircon" && "${build_dir}" != "${current}" ]]; then
+        echo "${build_dir}"
+      fi
+    done
+    return 1
+  fi
+
+  if [[ "$build_dir" == /* ]]; then
+    local -r full_build_dir="${build_dir}"
+  else
+    local -r full_build_dir="${FUCHSIA_DIR}/${build_dir}"
+  fi
+
+  if [[ -e "${full_build_dir}/args.gn" ]]; then
+    fx-build-dir-write "${build_dir}"
+  else
+    echo "\"${build_dir}\" is not a valid build dir."
+    echo ""
+    fx-command-help
+    exit 1
+  fi
+}
+
+main "$@"
