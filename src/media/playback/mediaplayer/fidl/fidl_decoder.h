@@ -76,7 +76,7 @@ class FidlDecoder : public Decoder {
   void AddInputBuffers();
 
   // Configures the output as appropriate. |ConfigureConnectors| calls this as
-  // does |OnOutputConfig|. If |constraints| is supplied, this method will
+  // does |OnOutputConstraints|. If |constraints| is supplied, this method will
   // either cache the value (if the node isn't ready) or use it to configure
   // the output (if the node is ready). If |constraints| is null, there are
   // cached constraints and the node is ready, this method will configure the
@@ -101,8 +101,11 @@ class FidlDecoder : public Decoder {
   // |ConfigureConnectors| is called.
   void OnInputConstraints(fuchsia::media::StreamBufferConstraints constraints);
 
-  // Handles the |OnOutputConfig| event from the outboard decoder.
-  void OnOutputConfig(fuchsia::media::StreamOutputConfig config);
+  // Handles the |OnOutputConstraints| event from the outboard decoder.
+  void OnOutputConstraints(fuchsia::media::StreamOutputConstraints config);
+
+  // Handles the |OnOutputFormat| event from the outboard decoder.
+  void OnOutputFormat(fuchsia::media::StreamOutputFormat format);
 
   // Handles the |OnOutputPacket| event from the outboard decoder.
   void OnOutputPacket(fuchsia::media::Packet output_packet,
@@ -127,7 +130,6 @@ class FidlDecoder : public Decoder {
   fuchsia::media::FormatDetails input_format_details_;
   fit::function<void(bool)> init_callback_;
   bool have_real_output_stream_type_ = false;
-  uint32_t pre_stream_type_packet_requests_remaining_ = 10;
   std::unique_ptr<StreamType> output_stream_type_;
   std::unique_ptr<StreamType> revised_output_stream_type_;
   bool add_input_buffers_pending_ = false;

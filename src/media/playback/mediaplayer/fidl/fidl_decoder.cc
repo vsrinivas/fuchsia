@@ -129,8 +129,10 @@ void FidlDecoder::Init(fuchsia::media::StreamProcessorPtr decoder,
       fit::bind_member(this, &FidlDecoder::OnStreamFailed);
   outboard_decoder_.events().OnInputConstraints =
       fit::bind_member(this, &FidlDecoder::OnInputConstraints);
-  outboard_decoder_.events().OnOutputConfig =
-      fit::bind_member(this, &FidlDecoder::OnOutputConfig);
+  outboard_decoder_.events().OnOutputConstraints =
+      fit::bind_member(this, &FidlDecoder::OnOutputConstraints);
+  outboard_decoder_.events().OnOutputFormat =
+      fit::bind_member(this, &FidlDecoder::OnOutputFormat);
   outboard_decoder_.events().OnOutputPacket =
       fit::bind_member(this, &FidlDecoder::OnOutputPacket);
   outboard_decoder_.events().OnOutputEndOfStream =
@@ -424,14 +426,6 @@ void FidlDecoder::MaybeRequestInputPacket() {
       return;
     }
 
-    if (!have_real_output_stream_type_) {
-      if (pre_stream_type_packet_requests_remaining_ != 0) {
-        --pre_stream_type_packet_requests_remaining_;
-      } else {
-        return;
-      }
-    }
-
     RequestInputPacket();
   }
 }
@@ -466,56 +460,24 @@ void FidlDecoder::OnInputConstraints(
   InitSucceeded();
 }
 
-void FidlDecoder::OnOutputConfig(fuchsia::media::StreamOutputConfig config) {
+void FidlDecoder::OnOutputConstraints(
+    fuchsia::media::StreamOutputConstraints constraints) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
-  if (!config.has_format_details()) {
-    FXL_LOG(ERROR) << "Config has no format details.";
-    InitFailed();
-    return;
-  }
-
-  auto stream_type =
-      fidl::To<std::unique_ptr<StreamType>>(config.format_details());
-  if (!stream_type) {
-    FXL_LOG(ERROR) << "Can't comprehend format details.";
-    InitFailed();
-    return;
-  }
-
-  if (!config.format_details().has_format_details_version_ordinal()) {
-    FXL_LOG(ERROR) << "Format details do not have version ordinal.";
-    InitFailed();
-    return;
-  }
-
-  if (output_stream_type_) {
-    if (output_format_details_version_ordinal_ !=
-        config.format_details().format_details_version_ordinal()) {
-      HandlePossibleOutputStreamTypeChange(*output_stream_type_, *stream_type);
-    }
-  }
-
-  output_format_details_version_ordinal_ =
-      config.format_details().format_details_version_ordinal();
-
-  output_stream_type_ = std::move(stream_type);
-  have_real_output_stream_type_ = true;
-
-  if (config.has_buffer_constraints_action_required() &&
-      config.buffer_constraints_action_required() &&
-      !config.has_buffer_constraints()) {
-    FXL_LOG(ERROR) << "OnOutputConfig: constraints action required but "
+  if (constraints.has_buffer_constraints_action_required() &&
+      constraints.buffer_constraints_action_required() &&
+      !constraints.has_buffer_constraints()) {
+    FXL_LOG(ERROR) << "OnOutputConstraints: constraints action required but "
                       "constraints missing";
     InitFailed();
     return;
   }
 
-  if (!config.has_buffer_constraints_action_required() ||
-      !config.buffer_constraints_action_required()) {
+  if (!constraints.has_buffer_constraints_action_required() ||
+      !constraints.buffer_constraints_action_required()) {
     if (init_callback_) {
-      FXL_LOG(ERROR) << "OnOutputConfig: constraints action not required on "
-                        "initial config.";
+      FXL_LOG(ERROR) << "OnOutputConstraints: constraints action not required on "
+                        "initial constraints.";
       InitFailed();
       return;
     }
@@ -530,10 +492,10 @@ void FidlDecoder::OnOutputConfig(fuchsia::media::StreamOutputConfig config) {
 
   // Use a single VMO for audio, VMO per buffer for video.
   const bool success = output_buffers_.ApplyConstraints(
-      config.buffer_constraints(),
+      constraints.buffer_constraints(),
       output_stream_type_->medium() == StreamType::Medium::kAudio);
   if (!success) {
-    FXL_LOG(ERROR) << "OnOutputConfig: Failed to apply constraints.";
+    FXL_LOG(ERROR) << "OnOutputConstraints: Failed to apply constraints.";
     InitFailed();
     return;
   }
@@ -544,9 +506,9 @@ void FidlDecoder::OnOutputConfig(fuchsia::media::StreamOutputConfig config) {
   outboard_decoder_->SetOutputBufferSettings(
       fidl::Clone(current_set.settings()));
 
-  if (config.has_buffer_constraints() &&
-      (!config.buffer_constraints().has_per_packet_buffer_bytes_max() ||
-       config.buffer_constraints().per_packet_buffer_bytes_max() == 0)) {
+  if (constraints.has_buffer_constraints() &&
+      (!constraints.buffer_constraints().has_per_packet_buffer_bytes_max() ||
+       constraints.buffer_constraints().per_packet_buffer_bytes_max() == 0)) {
     FXL_LOG(ERROR) << "Buffer constraints are missing non-zero per packet "
                       "buffer bytes max";
     InitFailed();
@@ -555,8 +517,43 @@ void FidlDecoder::OnOutputConfig(fuchsia::media::StreamOutputConfig config) {
 
   // Create the VMOs when we're ready, and add them to the outboard decoder.
   // Mutable so we can move the vmo handle out.
-  MaybeConfigureOutput(config.mutable_buffer_constraints());
+  MaybeConfigureOutput(constraints.mutable_buffer_constraints());
 };  // namespace media_player
+
+void FidlDecoder::OnOutputFormat(fuchsia::media::StreamOutputFormat format) {
+  if (!format.has_format_details()) {
+    FXL_LOG(ERROR) << "Config has no format details.";
+    InitFailed();
+    return;
+  }
+
+  auto stream_type =
+      fidl::To<std::unique_ptr<StreamType>>(format.format_details());
+  if (!stream_type) {
+    FXL_LOG(ERROR) << "Can't comprehend format details.";
+    InitFailed();
+    return;
+  }
+
+  if (!format.format_details().has_format_details_version_ordinal()) {
+    FXL_LOG(ERROR) << "Format details do not have version ordinal.";
+    InitFailed();
+    return;
+  }
+
+  if (output_stream_type_) {
+    if (output_format_details_version_ordinal_ !=
+        format.format_details().format_details_version_ordinal()) {
+      HandlePossibleOutputStreamTypeChange(*output_stream_type_, *stream_type);
+    }
+  }
+
+  output_format_details_version_ordinal_ =
+      format.format_details().format_details_version_ordinal();
+
+  output_stream_type_ = std::move(stream_type);
+  have_real_output_stream_type_ = true;
+}
 
 void FidlDecoder::OnOutputPacket(fuchsia::media::Packet packet,
                                  bool error_detected_before,
@@ -585,7 +582,12 @@ void FidlDecoder::OnOutputPacket(fuchsia::media::Packet packet,
   }
 
   if (!output_buffers_.has_current_set()) {
-    FXL_LOG(FATAL) << "OnOutputPacket event without prior OnOutputConfig event";
+    FXL_LOG(FATAL) << "OnOutputPacket event without prior OnOutputConstraints event";
+    // TODO(dalesat): Report error rather than crashing.
+  }
+
+  if (!have_real_output_stream_type_) {
+    FXL_LOG(FATAL) << "OnOutputPacket event without prior OnOutputFormat event";
     // TODO(dalesat): Report error rather than crashing.
   }
 

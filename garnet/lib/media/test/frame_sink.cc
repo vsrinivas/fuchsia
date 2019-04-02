@@ -43,7 +43,7 @@ FrameSink::~FrameSink() {
 // Must be called on main_loop_'s thread.
 void FrameSink::PutFrame(
     uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_offset,
-    std::shared_ptr<const fuchsia::media::StreamOutputConfig> output_config,
+    std::shared_ptr<const fuchsia::media::StreamOutputFormat> output_format,
     fit::closure on_done) {
   // This method fans out to the views_, and runs on_done async when all the
   // views_ are done with the frame.
@@ -67,13 +67,13 @@ void FrameSink::PutFrame(
   auto shared_done_runner =
       std::make_shared<decltype(done_runner)>(std::move(done_runner));
 
-  FXL_DCHECK(output_config->has_format_details());
-  FXL_DCHECK(output_config->format_details().has_domain());
-  FXL_DCHECK(output_config->format_details().domain().is_video());
+  FXL_DCHECK(output_format->has_format_details());
+  FXL_DCHECK(output_format->format_details().has_domain());
+  FXL_DCHECK(output_format->format_details().domain().is_video());
   FXL_DCHECK(
-      output_config->format_details().domain().video().is_uncompressed());
+      output_format->format_details().domain().video().is_uncompressed());
   const fuchsia::media::VideoUncompressedFormat& video_format =
-      output_config->format_details().domain().video().uncompressed();
+      output_format->format_details().domain().video().uncompressed();
 
   zx_time_t present_time;
   if (last_requested_present_time_ == ZX_TIME_INFINITE_PAST) {

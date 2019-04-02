@@ -20,11 +20,11 @@ static zx_status_t sysmem2_init(void** out_ctx) {
 
 static zx_status_t sysmem2_connect(
     void* ctx, async_dispatcher_t* dispatcher, const char* service_name,
-    zx_handle_t allocator2_request_param) {
-    zx::channel allocator2_request(allocator2_request_param);
+    zx_handle_t allocator_request_param) {
+    zx::channel allocator_request(allocator_request_param);
     sysmem_connector_t* connector = static_cast<sysmem_connector_t*>(ctx);
     if (!strcmp(service_name, fuchsia_sysmem_Allocator_Name)) {
-        sysmem_connector_queue_connection_request(connector, allocator2_request.release());
+        sysmem_connector_queue_connection_request(connector, allocator_request.release());
     }
     return ZX_ERR_NOT_SUPPORTED;
 }

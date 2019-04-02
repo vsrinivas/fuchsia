@@ -47,8 +47,8 @@ class FrameSink {
   // The on_done will get called on main_loop_'s thread.  If the callee
   // wants/needs to, the callee can post to a different thread.
   void PutFrame(uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_offset,
-                std::shared_ptr<const fuchsia::media::StreamOutputConfig>
-                    output_config,
+                std::shared_ptr<const fuchsia::media::StreamOutputFormat>
+                    output_format,
                 fit::closure on_done);
 
   // (Quickly) cause all frames to eventually be returned (assuming the rest of

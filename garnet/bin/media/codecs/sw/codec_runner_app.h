@@ -43,9 +43,12 @@ class CodecRunnerApp {
                   .deprecated_services()
                   ->RemoveService<fuchsia::mediacodec::CodecFactory>();
 
+              fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
+              startup_context_->ConnectToEnvironmentService(sysmem.NewRequest());
+
               codec_factory_ =
                   std::make_unique<LocalSingleCodecFactory<Decoder, Encoder>>(
-                      loop_.dispatcher(), std::move(request),
+                      loop_.dispatcher(), std::move(sysmem), std::move(request),
                       [this](
                           std::unique_ptr<CodecImpl> created_codec_instance) {
                         // Own codec implementation and bind it.

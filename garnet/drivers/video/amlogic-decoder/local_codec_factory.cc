@@ -231,7 +231,14 @@ void LocalCodecFactory::CreateDecoder(
           return;
         }
 
+        fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem =
+            device_->video()->ConnectToSysmem();
+        if (!sysmem) {
+          return;
+        }
+
         std::unique_ptr<CodecImpl> codec = std::make_unique<CodecImpl>(
+            std::move(sysmem),
             std::move(codec_admission),
             device_->driver()->shared_fidl_loop()->dispatcher(),
             device_->driver()->shared_fidl_thread(),

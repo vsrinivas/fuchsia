@@ -230,7 +230,7 @@ uint64_t DisplayManager::ImportBufferCollection(
   if (display_controller_->ImportBufferCollection(
           buffer_collection_id, std::move(token), &status) != ZX_OK ||
       status != ZX_OK) {
-    FXL_DLOG(ERROR) << "ImportBufferCollection failed";
+    FXL_DLOG(ERROR) << "ImportBufferCollection failed - status: " << status;
     return 0;
   }
 

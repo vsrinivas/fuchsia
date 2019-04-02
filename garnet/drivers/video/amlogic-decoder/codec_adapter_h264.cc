@@ -17,8 +17,8 @@
 //     the HW and send it to the Codec client, the other part to configure
 //     output buffers once the client has configured Codec output config based
 //     on the format info.  Wire up so that
-//     onCoreCodecMidStreamOutputConfigChange() gets called and so that
-//     CoreCodecBuildNewOutputConfig() will pick up the correct current format
+//     onCoreCodecMidStreamOutputConstraintsChange() gets called and so that
+//     CoreCodecBuildNewOutputConstraints() will pick up the correct current format
 //     info (whether still mid-stream, or at the start of a new stream that's
 //     starting before the mid-stream format change was processed for the old
 //     stream).
@@ -86,6 +86,16 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
          (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
 }
 
+// A client using the min shouldn't necessarily expect performance to be
+// acceptable when running higher bit-rates.
+//
+// TODO(MTWN-249): Set this to ~8k or so.  For now, we have to boost the
+// per-packet buffer size up to fit the largest AUs we expect to decode, until
+// MTWN-249 is fixed, in case avcC format is used.
+constexpr uint32_t kInputPerPacketBufferBytesMin = 512 * 1024;
+// This is an arbitrary cap for now.
+constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
+
 }  // namespace
 
 CodecAdapterH264::CodecAdapterH264(std::mutex& lock,
@@ -111,6 +121,23 @@ CodecAdapterH264::~CodecAdapterH264() {
 
 bool CodecAdapterH264::IsCoreCodecRequiringOutputConfigForFormatDetection() {
   return false;
+}
+
+bool CodecAdapterH264::IsCoreCodecMappedBufferNeeded(CodecPort port) {
+  // If protected buffers, then only in-band AnnexB is supported, because in
+  // that case we can't implement conversion of OOB AnnexB-like oob_bytes to
+  // in-band AnnexB (at least not yet, since that would require one buffer to be
+  // in normal non-protected RAM), and we can't implement avcC format conversion
+  // to AnnexB, because that would require the CPU reading from input buffers.
+  //
+  // TODO(dustingreen): Make the previous paragraph true.  For now we report
+  // true here to ensure we don't get secure buffers since the rest of this
+  // class doesn't yet constrain what it can do based on is_secure or not.
+  return true;
+}
+
+bool CodecAdapterH264::IsCoreCodecHwBased() {
+  return true;
 }
 
 void CodecAdapterH264::CoreCodecInit(
@@ -324,18 +351,25 @@ void CodecAdapterH264::CoreCodecStopStream() {
 
 void CodecAdapterH264::CoreCodecAddBuffer(CodecPort port,
                                           const CodecBuffer* buffer) {
+  if (port != kOutputPort) {
+    return;
+  }
   all_output_buffers_.push_back(buffer);
 }
 
 void CodecAdapterH264::CoreCodecConfigureBuffers(
     CodecPort port, const std::vector<std::unique_ptr<CodecPacket>>& packets) {
-  if (port == kOutputPort) {
-    ZX_DEBUG_ASSERT(all_output_packets_.empty());
-    ZX_DEBUG_ASSERT(!all_output_buffers_.empty());
-    ZX_DEBUG_ASSERT(all_output_buffers_.size() == packets.size());
-    for (auto& packet : packets) {
-      all_output_packets_.push_back(packet.get());
-    }
+  if (port != kOutputPort) {
+    return;
+  }
+  ZX_DEBUG_ASSERT(all_output_packets_.empty());
+  ZX_DEBUG_ASSERT(!all_output_buffers_.empty());
+  // TODO(dustingreen): Remove this assert - this CodecAdapter needs to stop
+  // forcing this to be true.  Or, set packet count based on buffer collection
+  // buffer_count, or enforce that packet count is >= buffer_count.
+  ZX_DEBUG_ASSERT(all_output_buffers_.size() == packets.size());
+  for (auto& packet : packets) {
+    all_output_packets_.push_back(packet.get());
   }
 }
 
@@ -399,11 +433,10 @@ void CodecAdapterH264::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   }
 }
 
-std::unique_ptr<const fuchsia::media::StreamOutputConfig>
-CodecAdapterH264::CoreCodecBuildNewOutputConfig(
+std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
+CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_buffer_constraints_version_ordinal,
-    uint64_t new_output_format_details_version_ordinal,
     bool buffer_constraints_action_required) {
   // bear.h264 decodes into 320x192 YUV buffers, but the video display
   // dimensions are 320x180.  A the bottom of the buffer only .25 of the last
@@ -429,17 +462,17 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   // to camp on more frames than this.
   constexpr uint32_t kDefaultPacketCountForClient = kPacketCountForClientForced;
 
-  uint32_t per_packet_buffer_bytes = stride_ * height_ * 3 / 2;
+  uint32_t per_packet_buffer_bytes = min_stride_ * height_ * 3 / 2;
 
-  std::unique_ptr<fuchsia::media::StreamOutputConfig> config =
-      std::make_unique<fuchsia::media::StreamOutputConfig>();
+  std::unique_ptr<fuchsia::media::StreamOutputConstraints> config =
+      std::make_unique<fuchsia::media::StreamOutputConstraints>();
 
   config->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
 
   auto* constraints = config->mutable_buffer_constraints();
   auto* default_settings = constraints->mutable_default_settings();
 
-  // For the moment, there will be only one StreamOutputConfig, and it'll need
+  // For the moment, there will be only one StreamOutputConstraints, and it'll need
   // output buffers configured for it.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
   config->set_buffer_constraints_action_required(
@@ -495,9 +528,174 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   // not the client.
   constraints->set_very_temp_kludge_bti_handle(std::move(very_temp_kludge_bti));
 
-  config->mutable_format_details()->set_format_details_version_ordinal(
+  return config;
+}
+
+fuchsia::sysmem::BufferCollectionConstraints
+CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
+    CodecPort port,
+    const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+    const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
+  fuchsia::sysmem::BufferCollectionConstraints result;
+
+  // For now, we didn't report support for single_buffer_mode, and CodecImpl
+  // will have failed the codec already by this point if the client tried to
+  // use single_buffer_mode.
+  //
+  // TODO(dustingreen): Support single_buffer_mode on input (only).
+  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() || !partial_settings.single_buffer_mode());
+  // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to
+  // have the token here.
+  ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
+
+  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_server());
+  ZX_DEBUG_ASSERT(partial_settings.has_packet_count_for_client());
+  uint32_t packet_count =
+      partial_settings.packet_count_for_server() +
+      partial_settings.packet_count_for_client();
+
+  // For now this is true - when we plumb more flexible buffer count range this
+  // will change to account for a range.
+  ZX_DEBUG_ASSERT(port != kOutputPort || packet_count == packet_count_total_);
+
+  // TODO(MTWN-250): plumb/permit range of buffer count from further down,
+  // instead of single number frame_count, and set this to the actual
+  // stream-required # of reference frames + # that can concurrently decode.
+  // For the moment we demand that buffer_count equals packet_count equals
+  // packet_count_for_server() + packet_count_for_client(), which is too
+  // inflexible.  Also, we rely on the server setting exactly and only
+  // min_buffer_count_for_camping to packet_count_for_server() and the client
+  // setting exactly and only min_buffer_count_for_camping to
+  // packet_count_for_client().
+  result.min_buffer_count_for_camping =
+      partial_settings.packet_count_for_server();
+  // Some slack is nice overall, but avoid having each participant ask for
+  // dedicated slack.  Using sysmem the client will ask for it's own buffers for
+  // camping and any slack, so the codec doesn't need to ask for any extra on
+  // behalf of the client.
+  ZX_DEBUG_ASSERT(result.min_buffer_count_for_dedicated_slack == 0);
+  ZX_DEBUG_ASSERT(result.min_buffer_count_for_shared_slack == 0);
+  result.max_buffer_count = packet_count;
+
+  uint32_t per_packet_buffer_bytes_min;
+  uint32_t per_packet_buffer_bytes_max;
+  if (port == kInputPort) {
+    per_packet_buffer_bytes_min = kInputPerPacketBufferBytesMin;
+    per_packet_buffer_bytes_max = kInputPerPacketBufferBytesMax;
+  } else {
+    ZX_DEBUG_ASSERT(port == kOutputPort);
+    // NV12, based on min stride.
+    per_packet_buffer_bytes_min = min_stride_ * height_ * 3 / 2;
+    // At least for now, don't cap the per-packet buffer size for output.  The
+    // HW only cares about the portion we set up for output anyway, and the
+    // client has no way to force output to occur into portions of the output
+    // buffer beyond what's implied by the max supported image dimensions.
+    per_packet_buffer_bytes_max = 0xFFFFFFFF;
+  }
+
+  result.has_buffer_memory_constraints = true;
+  result.buffer_memory_constraints.min_size_bytes = per_packet_buffer_bytes_min;
+  result.buffer_memory_constraints.max_size_bytes = per_packet_buffer_bytes_max;
+  // amlogic requires physically contiguous on both input and output
+  result.buffer_memory_constraints.physically_contiguous_required = true;
+  result.buffer_memory_constraints.secure_required = false;
+  // This isn't expected to fully work at first, but allow getting as far as we
+  // can.
+  result.buffer_memory_constraints.secure_permitted = true;
+
+  if (port == kOutputPort) {
+    result.image_format_constraints_count = 1;
+    fuchsia::sysmem::ImageFormatConstraints& image_constraints =
+        result.image_format_constraints[0];
+    image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+    // TODO(MTWN-251): confirm that REC709 is always what we want here, or plumb
+    // actual YUV color space if it can ever be REC601_*.  Since 2020 and 2100
+    // are minimum 10 bits per Y sample and we're outputting NV12, 601 is the
+    // only other potential possibility here.
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0].type =
+        fuchsia::sysmem::ColorSpaceType::REC709;
+
+    // The non-"required_" fields indicate the decoder's ability to potentially
+    // output frames at various dimensions as coded in the stream.  Aside from
+    // the current stream being somewhere in these bounds, these have nothing to
+    // do with the current stream in particular.
+    image_constraints.min_coded_width = 16;
+    image_constraints.max_coded_width = 3840;
+    image_constraints.min_coded_height = 16;
+    // This intentionally isn't the height of a 4k frame.  See
+    // max_coded_width_times_coded_height.  We intentionally constrain the max
+    // dimension in width or height to the width of a 4k frame.  While the HW
+    // might be able to go bigger than that as long as the other dimension is
+    // smaller to compensate, we don't really need to enable any larger than
+    // 4k's width in either dimension, so we don't.
+    image_constraints.max_coded_height = 3840;
+    image_constraints.min_bytes_per_row = 16;
+    // no hard-coded max stride, at least for now
+    image_constraints.max_bytes_per_row = 0xFFFFFFFF;
+    image_constraints.max_coded_width_times_coded_height = 3840 * 2160;
+    image_constraints.layers = 1;
+    image_constraints.coded_width_divisor = 16;
+    image_constraints.coded_height_divisor = 16;
+    image_constraints.bytes_per_row_divisor = 16;
+    // TODO(dustingreen): Since this is a producer that will always produce at
+    // offset 0 of a physical page, we don't really care if this field is
+    // consistent with any constraints re. what the HW can do.
+    image_constraints.start_offset_divisor = 1;
+    // Odd display dimensions are permitted, but these don't imply odd NV12
+    // dimensions - those are constrainted by coded_width_divisor and
+    // coded_height_divisor which are both 16.
+    image_constraints.display_width_divisor = 1;
+    image_constraints.display_height_divisor = 1;
+
+    // The decoder is producing frames and the decoder has no choice but to
+    // produce frames at their coded size.  The decoder wants to potentially be
+    // able to support a stream with dynamic resolution, potentially including
+    // dimensions both less than and greater than the dimensions that led to the
+    // current need to allocate a BufferCollection.  For this reason, the
+    // required_ fields are set to the exact current dimensions, and the
+    // permitted (non-required_) fields is set to the full potential range that
+    // the decoder could potentially output.  If an initiator wants to require a
+    // larger range of dimensions that includes the required range indicated
+    // here (via a-priori knowledge of the potential stream dimensions), an
+    // initiator is free to do so.
+    image_constraints.required_min_coded_width = width_;
+    image_constraints.required_max_coded_width = width_;
+    image_constraints.required_min_coded_height = height_;
+    image_constraints.required_max_coded_height = height_;
+  } else {
+    ZX_DEBUG_ASSERT(result.image_format_constraints_count == 0);
+  }
+
+  // We don't have to fill out usage - CodecImpl takes care of that.
+  ZX_DEBUG_ASSERT(!result.usage.cpu);
+  ZX_DEBUG_ASSERT(!result.usage.display);
+  ZX_DEBUG_ASSERT(!result.usage.vulkan);
+  ZX_DEBUG_ASSERT(!result.usage.video);
+
+  return result;
+}
+
+void CodecAdapterH264::CoreCodecSetBufferCollectionInfo(
+    CodecPort port,
+    const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
+  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
+  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.coherency_domain == fuchsia::sysmem::CoherencyDomain::Cpu);
+  if (port == kOutputPort) {
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type == fuchsia::sysmem::PixelFormatType::NV12);
+  }
+}
+
+fuchsia::media::StreamOutputFormat CodecAdapterH264::CoreCodecGetOutputFormat(
+    uint64_t stream_lifetime_ordinal,
+    uint64_t new_output_format_details_version_ordinal) {
+  fuchsia::media::StreamOutputFormat result;
+  result.set_stream_lifetime_ordinal(stream_lifetime_ordinal);
+  result.mutable_format_details()->set_format_details_version_ordinal(
       new_output_format_details_version_ordinal);
-  config->mutable_format_details()->set_mime_type("video/raw");
+
+  result.mutable_format_details()->set_mime_type("video/raw");
 
   // For the moment, we'll memcpy to NV12 without any extra padding.
   fuchsia::media::VideoUncompressedFormat video_uncompressed;
@@ -510,11 +708,11 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   // specify separately for primary / secondary.
   video_uncompressed.planar = true;
   video_uncompressed.swizzled = false;
-  video_uncompressed.primary_line_stride_bytes = stride_;
-  video_uncompressed.secondary_line_stride_bytes = stride_;
+  video_uncompressed.primary_line_stride_bytes = min_stride_;
+  video_uncompressed.secondary_line_stride_bytes = min_stride_;
   video_uncompressed.primary_start_offset = 0;
-  video_uncompressed.secondary_start_offset = stride_ * height_;
-  video_uncompressed.tertiary_start_offset = stride_ * height_ + 1;
+  video_uncompressed.secondary_start_offset = min_stride_ * height_;
+  video_uncompressed.tertiary_start_offset = min_stride_ * height_ + 1;
   video_uncompressed.primary_pixel_stride = 1;
   video_uncompressed.secondary_pixel_stride = 2;
   video_uncompressed.primary_display_width_pixels = display_width_;
@@ -523,17 +721,13 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   video_uncompressed.pixel_aspect_ratio_width = sar_width_;
   video_uncompressed.pixel_aspect_ratio_height = sar_height_;
 
-  // TODO(dustingreen): Switching to FIDL table should make this not be
-  // required.
-  video_uncompressed.special_formats.set_temp_field_todo_remove(0);
-
   fuchsia::media::VideoFormat video_format;
   video_format.set_uncompressed(std::move(video_uncompressed));
 
-  config->mutable_format_details()->mutable_domain()->set_video(
+  result.mutable_format_details()->mutable_domain()->set_video(
       std::move(video_format));
 
-  return config;
+  return result;
 }
 
 void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigPrepare() {
@@ -566,7 +760,7 @@ void CodecAdapterH264::CoreCodecMidStreamOutputBufferReConfigFinish() {
     }
     width = width_;
     height = height_;
-    stride = stride_;
+    stride = min_stride_;
   }  // ~lock
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
@@ -1026,7 +1220,7 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(
   // during InitializeStream().  Maybe delaying configuring of a canvas would
   // work, but in that case would the delayed configuring adversely impact
   // decoding performance consistency?  If we can do this, detect when we can,
-  // and call onCoreCodecMidStreamOutputConfigChange() but pass false instead of
+  // and call onCoreCodecMidStreamOutputConstraintsChange() but pass false instead of
   // true, and don't expect a response or block in here.  Still have to return
   // the vector of buffers, and will need to indicate which are actually
   // available to decode into.  The rest will get indicated via
@@ -1050,7 +1244,7 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(
     packet_count_total_ = frame_count;
     width_ = width;
     height_ = height;
-    stride_ = stride;
+    min_stride_ = stride;
     display_width_ = display_width;
     display_height_ = display_height;
     has_sar_ = has_sar;
@@ -1062,7 +1256,7 @@ zx_status_t CodecAdapterH264::InitializeFramesHandler(
   // CoreCodecMidStreamOutputBufferReConfigPrepare() and
   // CoreCodecMidStreamOutputBufferReConfigFinish() from the StreamControl
   // thread, _iff_ the client hasn't already moved on to a new stream by then.
-  events_->onCoreCodecMidStreamOutputConfigChange(true);
+  events_->onCoreCodecMidStreamOutputConstraintsChange(true);
 
   return ZX_OK;
 }

@@ -42,7 +42,7 @@ class CodecClient {
   // we want to be very sure that we'll be posting to the correct loop to send
   // messages using that loop's single thread, as ProxyController doesn't have
   // a lock_ in it.
-  CodecClient(async::Loop* loop);
+  CodecClient(async::Loop* loop, fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem);
   ~CodecClient();
 
   // Separate from Start() because we don't wan this class to handle the Codec
@@ -113,7 +113,29 @@ class CodecClient {
  private:
   friend class CodecStream;
 
+  void PostToFidlThread(fit::closure to_run);
+
   void CallSyncAndWaitForResponse();
+
+  void TrackOutputStreamLifetimeOrdinal(
+      uint64_t output_stream_lifetime_ordinal);
+
+  bool CreateAndSyncBufferCollection(
+      fuchsia::sysmem::BufferCollectionSyncPtr* out_buffer_collection,
+      fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken>*
+          out_codec_sysmem_token);
+
+  bool WaitForSysmemBuffersAllocated(
+      fuchsia::sysmem::BufferCollectionSyncPtr* buffer_collection_param,
+      fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info);
+
+  bool ConfigurePortBufferCollection(
+      bool is_output, uint64_t new_buffer_lifetime_ordinal,
+      uint64_t buffer_constraints_version_ordinal,
+      uint32_t packet_count_for_server, uint32_t packet_count_for_client,
+      uint32_t* out_packet_count,
+      fuchsia::sysmem::BufferCollectionPtr* out_buffer_collection,
+      fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info);
 
   //
   // Events:
@@ -137,7 +159,17 @@ class CodecClient {
   // more than one of this message per Codec instance (though not quite to the
   // degree needed to fully cover client handling of true mid-stream format
   // changes).
-  void OnOutputConfig(fuchsia::media::StreamOutputConfig output_config);
+  void OnOutputConstraints(
+      fuchsia::media::StreamOutputConstraints output_config);
+
+  // Ever output format is stream-specific with stream_lifetime_ordinal set, and
+  // the server is required to elide any unnecessary OnOutputFormat messages
+  // without any subsequent OnOutputPacket message to which the OnOutputFormat
+  // applies.  The format continues to apply to all subsequent output packets of
+  // the same stream until the stream ends or a new OnOutputFormat message is
+  // sent by the server.
+  void OnOutputFormat(
+      fuchsia::media::StreamOutputFormat output_format);
 
   // Every output packet is stream-specific with stream_lifetime_ordinal set.
   void OnOutputPacket(fuchsia::media::Packet output_packet,
@@ -153,6 +185,11 @@ class CodecClient {
   // constructor.  If the caller asks for this more than once, the subsequent
   // requests give back a !is_valid() request.
   fidl::InterfaceRequest<fuchsia::media::StreamProcessor> temp_codec_request_;
+
+  fuchsia::sysmem::AllocatorPtr sysmem_;
+
+  fuchsia::sysmem::BufferCollectionPtr input_buffer_collection_;
+  fuchsia::sysmem::BufferCollectionPtr output_buffer_collection_;
 
   // We're use unique_ptr<> here only for it's optional-ness.
   std::unique_ptr<fuchsia::media::StreamBufferConstraints> input_constraints_;
@@ -202,42 +239,61 @@ class CodecClient {
   // how we notice.
   std::vector<bool> output_free_bits_;
 
+  // The server must order its output strictly by stream_lifetime_ordinal - once
+  // a new stream_lifetime_ordinal has started the server can't output anything
+  // with an older stream_lifetime_ordinal.
+  uint64_t output_stream_lifetime_ordinal_ = 0;
+
   // In contrast to free input packets, we care about the content of emitted
-  // output packets and their order.  In addition, OnOutputConfig() is ordered
+  // output packets and their order.  In addition, OnOutputConstraints() is ordered
   // with respect to output packets, so we just queue those along with the
   // output packets to avoid any ambiguity.
   //
   // A client that is immediately processing every output packet and just tracks
   // the most recent output config would work as long as it always associates
-  // an output packet with the closest prior StreamOutputConfig.
+  // an output packet with the closest prior StreamOutputConstraints.
   std::list<std::unique_ptr<CodecOutput>> emitted_output_;
 
   // For input, in this example we just know what the input format details are
   // and we send those to CodecFactory as part of CreateAudioDecoder_Params,
   // so we don't really need them as a member variable.
 
-  // For output, we have StreamOutputConfig here as a shared_ptr<> so we can
+  // For output, we have StreamOutputConstraints here as a shared_ptr<> so we can
   // explicitly associate each output packet with the config that applies to the
   // output packet.
   //
   // Note that stream_lifetime_ordinal is nearly entirely orthogonal from which
   // config applies.  The only interaction is that sometimes a new stream will
   // happen to have a different format so will cause format_details to update.
-  std::shared_ptr<const fuchsia::media::StreamOutputConfig> last_output_config_;
-  std::shared_ptr<const fuchsia::media::StreamOutputConfig>
-      last_required_output_config_;
-  // Becomes true when we get a new last_output_config_ with action required,
-  // and becomes false just before taking the needed action based on
-  // last_output_config_.
-  bool output_config_action_pending_ = false;
+  std::shared_ptr<const fuchsia::media::StreamOutputConstraints> last_output_constraints_;
+  std::shared_ptr<const fuchsia::media::StreamOutputConstraints>
+      last_required_output_constraints_;
+  // Most non-test clients will want to track this per-stream, since a
+  // StreamOutputFormat from an old stream_lifetime_ordinal() isn't relevant to
+  // the current stream_lifetime_ordinal.  A server is not allowed to send
+  // OnOutputFormat for an old stream_lifetime_ordinal.
+  std::shared_ptr<const fuchsia::media::StreamOutputFormat> last_output_format_;
+  // True if OnOutputFormat is more recent than OnOutputPacket.  This is
+  // intentionally tracked regardless of whether last_output_format_ has
+  // since been "forgotten" (set to nullptr) and regardless of whether the
+  // stream has since switched to a new stream, because we require servers to
+  // elide all unnecessary OnOutputFormat messages.  An OnOutputFormat without
+  // any subsequent OnOutputPacket of the same stream is by definition
+  // unnecessary.
+  bool is_format_since_last_packet_ = false;
+  // Becomes true when we get a new last_output_constraints_ with action
+  // required, and becomes false just before taking the needed action based on
+  // last_output_constraints_.
+  bool output_constraints_action_pending_ = false;
   // Only odd values are allowed for buffer_lifetime_ordinal.
   uint64_t next_output_buffer_lifetime_ordinal_ = 1;
+  uint64_t current_output_buffer_lifetime_ordinal_ = 0;
 
   // Invariant:
   // output_pending_ == (!emitted_output_.empty() ||
   // output_config_action_pending_)
   bool ComputeOutputPendingLocked() {
-    return !emitted_output_.empty() || output_config_action_pending_;
+    return !emitted_output_.empty() || output_constraints_action_pending_;
   }
   bool output_pending_ = false;
   std::condition_variable output_pending_condition_;

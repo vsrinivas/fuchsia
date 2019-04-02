@@ -24,7 +24,7 @@ void CodecBuffer::SetPhysicallyContiguousRequired(
   FXL_CHECK(status == ZX_OK);
 }
 
-bool CodecBuffer::Init() {
+bool CodecBuffer::AllocateInternal() {
   zx::vmo local_vmo;
   zx_status_t res;
 
@@ -104,7 +104,37 @@ std::unique_ptr<CodecBuffer> CodecBuffer::Allocate(
     result->SetPhysicallyContiguousRequired(
         (constraints.very_temp_kludge_bti_handle()));
   }
-  if (!result->Init()) {
+  if (!result->AllocateInternal()) {
+    return nullptr;
+  }
+  return result;
+}
+
+bool CodecBuffer::CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start, uint32_t vmo_usable_size, bool need_write) {
+  zx_vm_option_t options = ZX_VM_PERM_READ;
+  if (need_write) {
+    options |= ZX_VM_PERM_WRITE;
+  }
+  uintptr_t tmp;
+  zx_status_t status = zx::vmar::root_self()->map(0, vmo, vmo_usable_start, vmo_usable_size, options, &tmp);
+  if (status != ZX_OK) {
+    FXL_LOG(WARNING) << "CodecBuffer::CreateFromVmoInternal failed to map VMO - status: " << status;
+    return false;
+  }
+  base_ = reinterpret_cast<uint8_t*>(tmp);
+  vmo_ = std::move(vmo);
+  return true;
+}
+
+std::unique_ptr<CodecBuffer> CodecBuffer::CreateFromVmo(
+    uint32_t buffer_index,
+    zx::vmo vmo,
+    uint32_t vmo_usable_start,
+    uint32_t vmo_usable_size,
+    bool need_write) {
+  std::unique_ptr<CodecBuffer> result(new CodecBuffer(
+    buffer_index, vmo_usable_size));
+  if (!result->CreateFromVmoInternal(std::move(vmo), vmo_usable_start, vmo_usable_size, need_write)) {
     return nullptr;
   }
   return result;

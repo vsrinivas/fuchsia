@@ -18,8 +18,8 @@
 //     the HW and send it to the Codec client, the other part to configure
 //     output buffers once the client has configured Codec output config based
 //     on the format info.  Wire up so that
-//     onCoreCodecMidStreamOutputConfigChange() gets called and so that
-//     CoreCodecBuildNewOutputConfig() will pick up the correct current format
+//     onCoreCodecMidStreamOutputConstraintsChange() gets called and so that
+//     CoreCodecBuildNewOutputConstraints() will pick up the correct current format
 //     info (whether still mid-stream, or at the start of a new stream that's
 //     starting before the mid-stream format change was processed for the old
 //     stream).
@@ -105,6 +105,20 @@ bool CodecAdapterVp9::IsCoreCodecRequiringOutputConfigForFormatDetection() {
   return false;
 }
 
+bool CodecAdapterVp9::IsCoreCodecMappedBufferNeeded(CodecPort port) {
+  // If buffers are protected, the decoder should/will call secmem TA to re-pack
+  // VP9 headers in the input.  Else the decoder will use a CPU mapping to do
+  // this repack.
+  //
+  // TODO(dustingreen): Make the previous paragraph true.  For now we have to
+  // re-pack using the CPU on REE side.
+  return true;
+}
+
+bool CodecAdapterVp9::IsCoreCodecHwBased() {
+  return true;
+}
+
 void CodecAdapterVp9::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
   zx_status_t result = input_processing_loop_.StartThread(
@@ -119,6 +133,26 @@ void CodecAdapterVp9::CoreCodecInit(
 
   // TODO(dustingreen): We do most of the setup in CoreCodecStartStream()
   // currently, but we should do more here and less there.
+}
+
+fuchsia::sysmem::BufferCollectionConstraints
+CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
+    CodecPort port,
+    const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+    const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
+  ZX_ASSERT_MSG(false, "not yet implemented");
+  return fuchsia::sysmem::BufferCollectionConstraints();
+}
+
+void CodecAdapterVp9::CoreCodecSetBufferCollectionInfo(
+    CodecPort port,
+    const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
+  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
+  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.coherency_domain == fuchsia::sysmem::CoherencyDomain::Cpu);
+  if (port == kOutputPort) {
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type == fuchsia::sysmem::PixelFormatType::NV12);
+  }
 }
 
 // TODO(dustingreen): A lot of the stuff created in this method should be able
@@ -378,11 +412,10 @@ void CodecAdapterVp9::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   }
 }
 
-std::unique_ptr<const fuchsia::media::StreamOutputConfig>
-CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
+std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
+CodecAdapterVp9::CoreCodecBuildNewOutputConstraints(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_buffer_constraints_version_ordinal,
-    uint64_t new_output_format_details_version_ordinal,
     bool buffer_constraints_action_required) {
   // bear.vp9 decodes into 320x192 YUV buffers, but the video display
   // dimensions are 320x180.  A the bottom of the buffer only .25 of the last
@@ -410,14 +443,14 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
 
   uint32_t per_packet_buffer_bytes = stride_ * height_ * 3 / 2;
 
-  auto config = std::make_unique<fuchsia::media::StreamOutputConfig>();
+  auto config = std::make_unique<fuchsia::media::StreamOutputConstraints>();
 
   config->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
 
   auto* constraints = config->mutable_buffer_constraints();
   auto* default_settings = constraints->mutable_default_settings();
 
-  // For the moment, there will be only one StreamOutputConfig, and it'll need
+  // For the moment, there will be only one StreamOutputConstraints, and it'll need
   // output buffers configured for it.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
   config->set_buffer_constraints_action_required(
@@ -473,9 +506,18 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
   // not the client.
   constraints->set_very_temp_kludge_bti_handle(std::move(very_temp_kludge_bti));
 
-  config->mutable_format_details()->set_format_details_version_ordinal(
+  return config;
+}
+
+fuchsia::media::StreamOutputFormat
+CodecAdapterVp9::CoreCodecGetOutputFormat(
+    uint64_t stream_lifetime_ordinal,
+    uint64_t new_output_format_details_version_ordinal) {
+  fuchsia::media::StreamOutputFormat result;
+  result.set_stream_lifetime_ordinal(stream_lifetime_ordinal);
+  result.mutable_format_details()->set_format_details_version_ordinal(
       new_output_format_details_version_ordinal);
-  config->mutable_format_details()->set_mime_type("video/raw");
+  result.mutable_format_details()->set_mime_type("video/raw");
 
   // For the moment, we'll memcpy to NV12 without any extra padding.
   fuchsia::media::VideoUncompressedFormat video_uncompressed;
@@ -501,17 +543,13 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
   video_uncompressed.pixel_aspect_ratio_width = sar_width_;
   video_uncompressed.pixel_aspect_ratio_height = sar_height_;
 
-  // TODO(dustingreen): Switching to FIDL table should make this not be
-  // required.
-  video_uncompressed.special_formats.set_temp_field_todo_remove(0);
-
   fuchsia::media::VideoFormat video_format;
   video_format.set_uncompressed(std::move(video_uncompressed));
 
-  config->mutable_format_details()->mutable_domain()->set_video(
+  result.mutable_format_details()->mutable_domain()->set_video(
       std::move(video_format));
 
-  return config;
+  return result;
 }
 
 void CodecAdapterVp9::CoreCodecMidStreamOutputBufferReConfigPrepare() {
@@ -826,7 +864,7 @@ zx_status_t CodecAdapterVp9::InitializeFramesHandler(
   // CoreCodecMidStreamOutputBufferReConfigPrepare() and
   // CoreCodecMidStreamOutputBufferReConfigFinish() from the StreamControl
   // thread, _iff_ the client hasn't already moved on to a new stream by then.
-  events_->onCoreCodecMidStreamOutputConfigChange(true);
+  events_->onCoreCodecMidStreamOutputConstraintsChange(true);
 
   return ZX_OK;
 }

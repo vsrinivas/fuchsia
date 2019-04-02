@@ -4,6 +4,8 @@
 
 library fuchsia.media;
 
+using fuchsia.sysmem;
+
 /// Value
 ///
 /// Generic "value" for use within generic "Parameter" struct.
@@ -98,7 +100,7 @@ union AudioCompressedFormat {
 
 enum AudioBitrateMode {
     // Used mainly when a client is configuring an encoder's output format.  May
-    // also be present in an OnOutputConfig() message from an encoder, but
+    // also be present in an OnOutputConstraints() message from an encoder, but
     // should not be relied upon to be present by any consumer downstream of an
     // encoder.
     UNSPECIFIED = 0;
@@ -124,7 +126,7 @@ struct AudioCompressedFormatAacEncoder {
     // max bits per second and min bits per second, with the aim in VBR being
     // constant perceived quality.
     //
-    // In OnOutputConfig():
+    // In OnOutputConstraints():
     //
     // In CBR, the nominal bits per second.  In VBR, the nominal max bits per
     // second.
@@ -135,7 +137,7 @@ struct AudioCompressedFormatAacEncoder {
     // If UNSPECIFIED, up to the encoder.  If CBR or VBR, a hint to the encoder
     // to use that mode.
     //
-    // In OnOutputConfig():
+    // In OnOutputConstraints():
     //
     // Actual mode being used.  UNSPECIFIED means the source is not specifying
     // which mode.
@@ -257,29 +259,12 @@ union AudioFormat {
 ///
 /// Compressed video format details.
 ///
-/// Mostly encoder settings will go under here.
-///
-// If a compressed video format is missing any fields here other than encoder
-// settings, it's because it's a good format and is already self-describing
-// given the mime_type + format-defined oob_bytes as appropriate +
-// in-band data.
+// If a compressed video format has no fields here, it's because it's a good
+// format and is already self-describing given the mime_type + format-defined
+// oob_bytes as appropriate + in-band data.
 union VideoCompressedFormat {
     // TODO(dustingreen): Any compressed video formats that aren't sufficiently
     // self-describing to select and create a Codec instance to decode it?
-
-    // TODO(dustingreen): temp field to make the compiler happy until we have at
-    // least one real field.
-    uint32 temp_field_todo_remove;
-};
-
-/// VideoUncompressedFormatSpecificDetails
-///
-/// Extended format-specific uncompressed video format details.
-///
-// TODO(dustingreen): Switch to FIDL table instead.
-union VideoUncompressedFormatSpecificDetails {
-    // TODO(dustingreen): Which formats that we care about really require
-    // special format-specific details here?
 
     // TODO(dustingreen): temp field to make the compiler happy until we have at
     // least one real field.
@@ -296,7 +281,13 @@ enum VideoColorSpace {
 /// Uncompressed video format details.
 ///
 // TODO(dustingreen): Integrate with a system-wide structure for this purpose.
+// In progress - see image_format field below which will take the place of this
+// struct/table.
 struct VideoUncompressedFormat {
+    // TODO(dustingreen): This will replace VideoUncompressedFormat (after
+    // struct to table change merges).
+    fuchsia.sysmem.ImageFormat_2 image_format;
+
     // fourcc
     //
     // A human-readable fourcc like RGBA should be 0x41424752 in the fourcc
@@ -383,23 +374,13 @@ struct VideoUncompressedFormat {
     bool has_pixel_aspect_ratio = false;
     uint32 pixel_aspect_ratio_width = 1;
     uint32 pixel_aspect_ratio_height = 1;
-
-    // TODO(dustingreen): Currently this assumes 8 bits per channel, but we'll
-    // need fields to indicate more bits per pixel such as 10 or 12 bits per
-    // pixel.  Also, potentially a way to indicate different number of bits per
-    // channel for 565 16 bit RGB + packing details.  Also, potentially
-    // endian-ness.
-    //
-    // TODO(dustingreen): Also, an easy way to get a template
-    // VideoUncompressedFormat that's pre-populated with reasonably-plausible
-    // values, based on a fourcc or enum value + maybe primary resolution.
-
-    VideoUncompressedFormatSpecificDetails special_formats;
 };
 
 /// VideoFormat
 ///
-// Video (compress or uncompressed) format details.
+/// Video (compress or uncompressed) format details.  In this context,
+/// "uncompressed" can include block-based image compression formats that still
+/// permit fairly fast random access to image data.
 union VideoFormat {
     VideoCompressedFormat compressed;
     VideoUncompressedFormat uncompressed;
@@ -417,8 +398,8 @@ const uint64 kMaxOobBytesSize = 8192;
 
 /// FormatDetails
 ///
-/// This describes/details the format on input or output of a StreamProcessor (separate
-/// instances for input vs. output).
+/// This describes/details the format on input or output of a StreamProcessor
+/// (separate instances for input vs. output).
 table FormatDetails {
     // Particular instances of FormatDetails will set this field to make it
     // easier for a receiver to determine if any part of the format has changed
@@ -484,7 +465,7 @@ table FormatDetails {
     // The encoder's compressed data output typically needs some configuration
     // (provided in this field) that's convenient to provide in a form that's
     // not oob_bytes, and the codec can convert that config to oob_bytes on
-    // encoder output via OnOutputConfig().  We retain these encoder settings
+    // encoder output via OnOutputConstraints().  We retain these encoder settings
     // in the output FormatDetails to allow for cases where a downstream
     // consumer knowing the encoder settings could be useful.
     //

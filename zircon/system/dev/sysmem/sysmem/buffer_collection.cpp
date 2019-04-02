@@ -59,7 +59,13 @@ const fuchsia_sysmem_BufferCollection_ops_t BufferCollection::kOps = {
 };
 
 BufferCollection::~BufferCollection() {
-    // nothing else to do here
+    // Close() the SimpleBinding<> before deleting the list of pending Txn(s),
+    // so that ~Txn doesn't complain about being deleted without being
+    // completed.
+    //
+    // Don't run the error handler; if any error handler remains it'll just get
+    // deleted here.
+    (void)binding_.Close();
 }
 
 zx_status_t BufferCollection::SetEventSink(

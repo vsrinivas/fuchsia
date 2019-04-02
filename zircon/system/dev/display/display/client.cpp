@@ -1789,6 +1789,8 @@ zx_status_t Client::Init(zx_handle_t server_handle) {
     if (status != ZX_OK) {
         // Not a fatal error, but BufferCollection functions won't work.
         // TODO(ZX-3355) TODO: Fail creation once all drivers implement this.
+        zxlogf(ERROR, "GetSysmemConnection failed (continuing) - status: %d\n",
+               status);
         sysmem_allocator_.reset();
     }
 

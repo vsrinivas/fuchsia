@@ -22,6 +22,9 @@ class CodecAdapterH264 : public CodecAdapter {
   ~CodecAdapterH264();
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
+  bool IsCoreCodecMappedBufferNeeded(CodecPort port) override;
+
+  bool IsCoreCodecHwBased() override;
   void CoreCodecInit(const fuchsia::media::FormatDetails&
                          initial_input_format_details) override;
   void CoreCodecStartStream() override;
@@ -37,12 +40,22 @@ class CodecAdapterH264 : public CodecAdapter {
       const std::vector<std::unique_ptr<CodecPacket>>& packets) override;
   void CoreCodecRecycleOutputPacket(CodecPacket* packet) override;
   void CoreCodecEnsureBuffersNotConfigured(CodecPort port) override;
-  std::unique_ptr<const fuchsia::media::StreamOutputConfig>
-  CoreCodecBuildNewOutputConfig(
+  std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
+  CoreCodecBuildNewOutputConstraints(
       uint64_t stream_lifetime_ordinal,
       uint64_t new_output_buffer_constraints_version_ordinal,
-      uint64_t new_output_format_details_version_ordinal,
       bool buffer_constraints_action_required) override;
+  fuchsia::sysmem::BufferCollectionConstraints
+  CoreCodecGetBufferCollectionConstraints(
+      CodecPort port,
+      const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+      const fuchsia::media::StreamBufferPartialSettings& partial_settings) override;
+  void CoreCodecSetBufferCollectionInfo(
+      CodecPort port,
+      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) override;
+  fuchsia::media::StreamOutputFormat CoreCodecGetOutputFormat(
+    uint64_t stream_lifetime_ordinal,
+    uint64_t new_output_format_details_version_ordinal) override;
   void CoreCodecMidStreamOutputBufferReConfigPrepare() override;
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
 
@@ -98,7 +111,7 @@ class CodecAdapterH264 : public CodecAdapter {
   uint32_t packet_count_total_ = 0;
   uint32_t width_ = 0;
   uint32_t height_ = 0;
-  uint32_t stride_ = 0;
+  uint32_t min_stride_ = 0;
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
   bool has_sar_ = false;

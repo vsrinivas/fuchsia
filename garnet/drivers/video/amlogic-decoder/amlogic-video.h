@@ -11,6 +11,7 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/platform/device.h>
+#include <ddk/protocol/sysmem.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <lib/zx/handle.h>
@@ -150,6 +151,10 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer,
                                                         uint32_t size);
 
+  // This gets started connecting to sysmem, but returns an InterfaceHandle
+  // instead of InterfacePtr so that the caller can bind to the dispatcher.
+  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> ConnectToSysmem();
+
  private:
   friend class TestH264;
   friend class TestMpeg2;
@@ -167,8 +172,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   void SwapInCurrentInstance() __TA_REQUIRES(video_decoder_lock_);
 
   zx_device_t* parent_ = nullptr;
-  pdev_protocol_t pdev_;
-  amlogic_canvas_protocol_t canvas_;
+  pdev_protocol_t pdev_{};
+  sysmem_protocol_t sysmem_{};
+  amlogic_canvas_protocol_t canvas_{};
   DeviceType device_type_ = DeviceType::kUnknown;
   std::unique_ptr<CbusRegisterIo> cbus_;
   std::unique_ptr<DosRegisterIo> dosbus_;

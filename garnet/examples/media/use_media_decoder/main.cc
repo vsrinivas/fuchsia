@@ -51,6 +51,10 @@ int main(int argc, char* argv[]) {
       ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
           codec_factory.NewRequest());
 
+  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
+  startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(
+    sysmem.NewRequest());
+
   std::string input_file = command_line.positional_args()[0];
   std::string output_file;
   if (command_line.positional_args().size() >= 2) {
@@ -103,22 +107,25 @@ int main(int argc, char* argv[]) {
   fit::closure use_decoder;
   if (command_line.HasOption("aac_adts")) {
     use_decoder = [&main_loop, codec_factory = std::move(codec_factory),
+                   sysmem = std::move(sysmem),
                    input_file, output_file, &md]() mutable {
-      use_aac_decoder(&main_loop, std::move(codec_factory), input_file,
+      use_aac_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), input_file,
                       output_file, md);
     };
   } else if (command_line.HasOption("h264")) {
     use_decoder = [&main_loop, codec_factory = std::move(codec_factory),
+                   sysmem = std::move(sysmem),
                    input_file, output_file, &md,
                    frame_sink = frame_sink.get()]() mutable {
-      use_h264_decoder(&main_loop, std::move(codec_factory), input_file,
+      use_h264_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), input_file,
                        output_file, md, nullptr, nullptr, frame_sink);
     };
   } else if (command_line.HasOption("vp9")) {
     use_decoder = [&main_loop, codec_factory = std::move(codec_factory),
+                   sysmem = std::move(sysmem),
                    input_file, output_file, &md,
                    frame_sink = frame_sink.get()]() mutable {
-      use_vp9_decoder(&main_loop, std::move(codec_factory), input_file,
+      use_vp9_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), input_file,
                       output_file, md, nullptr, frame_sink);
     };
   } else {

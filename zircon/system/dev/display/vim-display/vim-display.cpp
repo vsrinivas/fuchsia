@@ -475,7 +475,7 @@ static zx_status_t get_sysmem_connection(void* ctx, zx_handle_t handle) {
 
     zx_status_t status = sysmem_connect(&display->sysmem, request_handle.release());
     if (status != ZX_OK) {
-        DISP_ERROR("Could not connect to sysmem\n");
+        DISP_ERROR("Could not connect to sysmem - status: %d\n", status);
         return status;
     }
 

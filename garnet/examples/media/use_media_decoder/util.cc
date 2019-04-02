@@ -117,8 +117,6 @@ void SHA256_Update_VideoParameters(
   UpdateSha256(sha256_ctx, video.tertiary_start_offset);
   UpdateSha256(sha256_ctx, video.primary_pixel_stride);
   UpdateSha256(sha256_ctx, video.secondary_pixel_stride);
-  UpdateSha256(sha256_ctx, video.special_formats.is_temp_field_todo_remove());
-  UpdateSha256(sha256_ctx, video.special_formats.temp_field_todo_remove());
 }
 
 void SHA256_Update_VideoPlane(SHA256_CTX* sha256_ctx, uint8_t* start,

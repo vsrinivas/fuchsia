@@ -8,21 +8,20 @@
 
 namespace {
 
-// TODO(dustingreen): Other types of isolates can exist.  For some codecs we may
-// not use an isolate and instead delegate to the client end of a CodecFactory
-// instance that we got via other means (not by starting an isolate, but via a
-// factory registration initiated by a driver process, or by discovering a
-// device, or similar).
-const std::string kIsolateUrlOmx =
-    "fuchsia-pkg://fuchsia.com/codec_runner_sw_omx#meta/"
-    "codec_runner_sw_omx.cmx";
+// Other types of SW isolates can exist, but at the moment we only have one,
+// which uses ffmpeg for SW decode (or potentially encode).
+//
+// For HW-based codecs, we discover their "LocalCodecFactory" by watching for
+// their device and sending the server end of a (local) CodecFactory to the
+// driver.
 const std::string kIsolateUrlFfmpeg =
     "fuchsia-pkg://fuchsia.com/codec_runner_sw_ffmpeg#meta/"
     "codec_runner_sw_ffmpeg.cmx";
 
-// TODO(turnage): Devise a better routing system between ffmpeg and omx codec
-// factories. Using this should be fine for now because omx does not service
-// this mime type and it is the first one we will roll out with ffmpeg.
+// TODO(turnage): Devise a better routing system between SW-based codec
+// factories.  Using this should be fine for now since this is the first/only
+// type that we use ffmpeg for and we don't currently have any other SW-based
+// codecs.
 const std::string kFfmpegMimeType = "video/h264";
 
 }  // namespace
@@ -63,6 +62,11 @@ CodecFactoryImpl::CodecFactoryImpl(CodecFactoryApp* app,
 void CodecFactoryImpl::OwnSelf(std::unique_ptr<CodecFactoryImpl> self) {
   binding_ = std::make_unique<BindingType>(
       std::move(self), std::move(channel_temp_), app_->loop()->dispatcher());
+  binding_->set_error_handler([this](zx_status_t status){
+    FXL_LOG(INFO) << "CodecFactoryImpl channel failed (INFO) - status: " << status;
+    // this will also ~this
+    binding_.reset();
+  });
 }
 
 void CodecFactoryImpl::CreateDecoder(
@@ -116,7 +120,8 @@ void CodecFactoryImpl::CreateDecoder(
   if (params.input_details().mime_type() == kFfmpegMimeType) {
     url = kIsolateUrlFfmpeg;
   } else {
-    url = kIsolateUrlOmx;
+    // ~decoder
+    return;
   }
   launch_info.url = url;
   launch_info.directory_request = services.NewRequest();

@@ -52,6 +52,14 @@ class CodecAdapterSW : public CodecAdapter {
     return false;
   }
 
+  bool IsCoreCodecMappedBufferNeeded(CodecPort port) override {
+    return true;
+  }
+
+  bool IsCoreCodecHwBased() override {
+    return false;
+  }
+
   void CoreCodecInit(const fuchsia::media::FormatDetails&
                          initial_input_format_details) override {
     if (!initial_input_format_details.has_format_details_version_ordinal()) {
@@ -74,6 +82,21 @@ class CodecAdapterSW : public CodecAdapter {
     }
   }
 
+  void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) override {
+    if (port != kOutputPort) {
+      return;
+    }
+    // TODO(turnage): The core codec must not emit any output (format, AUs, or
+    // EOS) until CoreCodecMidStreamOutputBufferReConfigFinish has been called.
+    output_buffer_pool_.AddBuffer(buffer);
+  }
+
+  void CoreCodecConfigureBuffers(
+      CodecPort port,
+      const std::vector<std::unique_ptr<CodecPacket>>& packets) override {
+    // Nothing to do here.
+  }
+
   void CoreCodecStartStream() override {
     // It's ok for RecycleInputPacket to make a packet free anywhere in this
     // sequence. Nothing else ought to be happening during CoreCodecStartStream
@@ -88,13 +111,6 @@ class CodecAdapterSW : public CodecAdapter {
         post_result == ZX_OK,
         "async::PostTask() failed to post input processing loop - result: %d\n",
         post_result);
-  }
-
-  void CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) override {
-    if (port != kOutputPort) {
-      return;
-    }
-    output_buffer_pool_.AddBuffer(buffer);
   }
 
   void CoreCodecQueueInputFormatDetails(
@@ -139,12 +155,6 @@ class CodecAdapterSW : public CodecAdapter {
     }
   }
 
-  void CoreCodecConfigureBuffers(
-      CodecPort port,
-      const std::vector<std::unique_ptr<CodecPacket>>& packets) override {
-    // Nothing to do here.
-  }
-
   void CoreCodecRecycleOutputPacket(CodecPacket* packet) override {
     if (packet->buffer()) {
       LocalOutput local_output;
@@ -187,21 +197,23 @@ class CodecAdapterSW : public CodecAdapter {
 
   void CoreCodecMidStreamOutputBufferReConfigFinish() override {
     // Nothing to do here for now.
+    //
+    // TODO(turnage): The core codec must not emit any output (format, AUs, or
+    // EOS) until CoreCodecMidStreamOutputBufferReConfigFinish has been called.
   }
 
-  std::unique_ptr<const fuchsia::media::StreamOutputConfig>
-  CoreCodecBuildNewOutputConfig(
+  std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
+  CoreCodecBuildNewOutputConstraints(
       uint64_t stream_lifetime_ordinal,
       uint64_t new_output_buffer_constraints_version_ordinal,
-      uint64_t new_output_format_details_version_ordinal,
       bool buffer_constraints_action_required) override {
     auto [format_details, per_packet_buffer_bytes] = OutputFormatDetails();
 
-    auto config = std::make_unique<fuchsia::media::StreamOutputConfig>();
+    auto config = std::make_unique<fuchsia::media::StreamOutputConstraints>();
 
     config->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
 
-    // For the moment, there will be only one StreamOutputConfig, and it'll need
+    // For the moment, there will be only one StreamOutputConstraints, and it'll need
     // output buffers configured for it.
     ZX_DEBUG_ASSERT(buffer_constraints_action_required);
     config->set_buffer_constraints_action_required(
@@ -243,11 +255,20 @@ class CodecAdapterSW : public CodecAdapter {
     default_settings->set_per_packet_buffer_bytes(per_packet_buffer_bytes);
     default_settings->set_single_buffer_mode(false);
 
-    *config->mutable_format_details() = std::move(format_details);
-    config->mutable_format_details()->set_format_details_version_ordinal(
-        new_output_format_details_version_ordinal);
-
     return config;
+  }
+
+  fuchsia::media::StreamOutputFormat CoreCodecGetOutputFormat(
+      uint64_t stream_lifetime_ordinal,
+      uint64_t new_output_format_details_version_ordinal) override {
+    fuchsia::media::StreamOutputFormat result;
+    // format_details is fuchsia::media::FormatDetails
+    auto [format_details, per_packet_buffer_bytes] = OutputFormatDetails();
+    result.set_stream_lifetime_ordinal(stream_lifetime_ordinal);
+    result.set_format_details(std::move(format_details));
+    result.mutable_format_details()->set_format_details_version_ordinal(
+        new_output_format_details_version_ordinal);
+    return result;
   }
 
  protected:

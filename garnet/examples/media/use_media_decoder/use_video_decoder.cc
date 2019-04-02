@@ -252,6 +252,7 @@ void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
 
 static void use_video_decoder(
     async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
     Format format, const std::string& input_file,
     const std::string& output_file, uint8_t md_out[SHA256_DIGEST_LENGTH],
     std::vector<std::pair<bool, uint64_t>>* timestamps_out, uint32_t* fourcc,
@@ -260,7 +261,7 @@ static void use_video_decoder(
   FXL_DCHECK(!timestamps_out || timestamps_out->empty());
   memset(md_out, 0, SHA256_DIGEST_LENGTH);
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  loop.StartThread("use_h264_decoder_loop");
+  loop.StartThread("use_video_decoder_loop");
 
   // payload data for bear.h264 is 00 00 00 01 start code before each NAL, with
   // SPS / PPS NALs and also frame NALs.  We deliver to Codec NAL-by-NAL without
@@ -279,7 +280,7 @@ static void use_video_decoder(
   // document in codec.fidl how that's to be handled.
 
   VLOGF("before CodecClient::CodecClient()...\n");
-  CodecClient codec_client(&loop);
+  CodecClient codec_client(&loop, std::move(sysmem));
 
   const char* mime_type;
   switch (format) {
@@ -372,14 +373,16 @@ static void use_video_decoder(
         output_file.c_str());
     SHA256_CTX sha256_ctx;
     SHA256_Init(&sha256_ctx);
-    // We allow the server to send multiple output format updates if it wants;
-    // see implementation of BlockingGetEmittedOutput() which will hide
-    // multiple configs before the first packet from this code.
+    // We allow the server to send multiple output constraint updates if it
+    // wants; see implementation of BlockingGetEmittedOutput() which will hide
+    // multiple constraint updates before the first packet from this code.  In
+    // contrast we assert if the server sends multiple format updates with no
+    // packets in between since that's not compliant with the protocol rules.
     //
     // In this example, we only deal with one output format once we start seeing
     // stream output data show up, since our raw_video_writer is only really
     // meant to store one format per file.
-    std::shared_ptr<const fuchsia::media::StreamOutputConfig> stream_config;
+    std::shared_ptr<const fuchsia::media::StreamOutputFormat> stream_format;
     const fuchsia::media::VideoUncompressedFormat* raw = nullptr;
     while (true) {
       std::unique_ptr<CodecOutput> output =
@@ -418,8 +421,8 @@ static void use_video_decoder(
             // set state command, so if that occurs, exit.
             codec_client.RecycleOutputPacket(std::move(packet_header));
           });
-      std::shared_ptr<const fuchsia::media::StreamOutputConfig> config =
-          output->config();
+      std::shared_ptr<const fuchsia::media::StreamOutputFormat> format =
+          output->format();
 
       if (!packet.has_buffer_index()) {
         // The server should not generate any empty packets.
@@ -432,14 +435,14 @@ static void use_video_decoder(
           codec_client.GetOutputBufferByIndex(packet.buffer_index());
 
       ZX_ASSERT(
-          !stream_config ||
-          (stream_config->has_format_details() &&
-           stream_config->format_details().format_details_version_ordinal()));
-      if (stream_config &&
-          (!config->has_format_details() ||
-           !config->format_details().has_format_details_version_ordinal() ||
-           config->format_details().format_details_version_ordinal() !=
-               stream_config->format_details()
+          !stream_format ||
+          (stream_format->has_format_details() &&
+           stream_format->format_details().format_details_version_ordinal()));
+      if (stream_format &&
+          (!format->has_format_details() ||
+           !format->format_details().has_format_details_version_ordinal() ||
+           format->format_details().format_details_version_ordinal() !=
+               stream_format->format_details()
                     .format_details_version_ordinal())) {
         Exit(
             "codec server unexpectedly changed output format mid-stream - "
@@ -459,27 +462,27 @@ static void use_video_decoder(
 
       // We have a non-empty packet of the stream.
 
-      if (!stream_config) {
-        // Every output has a config.  This happens exactly once.
-        stream_config = config;
+      if (!stream_format) {
+        // Every output has a format.  This happens exactly once.
+        stream_format = format;
 
-        ZX_ASSERT(config->format_details().has_domain());
+        ZX_ASSERT(format->format_details().has_domain());
 
-        if (!stream_config->has_format_details()) {
+        if (!stream_format->has_format_details()) {
           Exit("!format_details");
         }
 
-        const fuchsia::media::FormatDetails& format =
-            stream_config->format_details();
-        if (!format.has_domain()) {
+        const fuchsia::media::FormatDetails& format_details =
+            stream_format->format_details();
+        if (!format_details.has_domain()) {
           Exit("!format.domain");
         }
 
-        if (!format.domain().is_video()) {
+        if (!format_details.domain().is_video()) {
           Exit("!format.domain.is_video()");
         }
         const fuchsia::media::VideoFormat& video_format =
-            format.domain().video();
+            format_details.domain().video();
         if (!video_format.is_uncompressed()) {
           Exit("!video.is_uncompressed()");
         }
@@ -621,8 +624,8 @@ static void use_video_decoder(
              &vmo = buffer.vmo(),
              vmo_offset = buffer.vmo_offset() + packet.start_offset() +
                           raw->primary_start_offset,
-             config, cleanup = std::move(cleanup)]() mutable {
-              frame_sink->PutFrame(image_id, vmo, vmo_offset, config,
+             format, cleanup = std::move(cleanup)]() mutable {
+              frame_sink->PutFrame(image_id, vmo, vmo_offset, format,
                                    [cleanup = std::move(cleanup)] {
                                      // The ~cleanup can run on any thread (the
                                      // current thread is main_loop's thread),
@@ -746,7 +749,7 @@ static void use_video_decoder(
   loop.JoinThreads();
   VLOGF("after loop.JoinThreads()\n");
 
-  // Close the channel explicitly (just so we can more easily print messages
+  // Close the channels explicitly (just so we can more easily print messages
   // before and after vs. ~codec_client).
   VLOGF("before codec_client stop...\n");
   codec_client.Stop();
@@ -773,24 +776,26 @@ static void use_video_decoder(
 
 void use_h264_decoder(async::Loop* main_loop,
                       fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                       const std::string& input_file,
                       const std::string& output_file,
                       uint8_t md_out[SHA256_DIGEST_LENGTH],
                       std::vector<std::pair<bool, uint64_t>>* timestamps_out,
                       uint32_t* fourcc, FrameSink* frame_sink) {
-  use_video_decoder(main_loop, std::move(codec_factory), Format::kH264,
+  use_video_decoder(main_loop, std::move(codec_factory), std::move(sysmem), Format::kH264,
                     input_file, output_file, md_out, timestamps_out, fourcc,
                     frame_sink);
 }
 
 void use_vp9_decoder(async::Loop* main_loop,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                      const std::string& input_file,
                      const std::string& output_file,
                      uint8_t md_out[SHA256_DIGEST_LENGTH],
                      std::vector<std::pair<bool, uint64_t>>* timestamps_out,
                      FrameSink* frame_sink) {
-  use_video_decoder(main_loop, std::move(codec_factory), Format::kVp9,
+  use_video_decoder(main_loop, std::move(codec_factory), std::move(sysmem), Format::kVp9,
                     input_file, output_file, md_out, timestamps_out, nullptr,
                     frame_sink);
 }

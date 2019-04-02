@@ -39,9 +39,9 @@ zx_protocol_device_t sysmem_device_ops = [] {
 }();
 
 zx_status_t in_proc_sysmem_Connect(void* ctx,
-                                   zx_handle_t allocator2_request_param) {
+                                   zx_handle_t allocator_request_param) {
     Device* self = static_cast<Device*>(ctx);
-    return self->Connect(allocator2_request_param);
+    return self->Connect(allocator_request_param);
 }
 
 // In-proc sysmem interface.  Essentially an in-proc version of

@@ -6,8 +6,8 @@
   "fidl/fuchsia.media/audio_renderer.fidl": "c36b624d329a6e80f3e9432794a038e9",
   "fidl/fuchsia.media/metadata.fidl": "fb11fd050505ea7a8fc661754b044012",
   "fidl/fuchsia.media/stream.fidl": "92dd4376d67914a882c7ae46874e6ca1",
-  "fidl/fuchsia.media/stream_common.fidl": "bdfa65aee3d20148233912c78101b4a8",
-  "fidl/fuchsia.media/stream_processor.fidl": "483e50cf3eb2859d47a0932308587e18",
+  "fidl/fuchsia.media/stream_common.fidl": "766af335abfd6779bd1924fa75e15326",
+  "fidl/fuchsia.media/stream_processor.fidl": "37d7c04a0dbca243a2c344a6b9a5508d",
   "fidl/fuchsia.media/stream_type.fidl": "84bed4307c847efb75e47bf49131d323",
   "fidl/fuchsia.media/timeline_function.fidl": "5ada023b93836a20fb45b278f3822ee4"
 }

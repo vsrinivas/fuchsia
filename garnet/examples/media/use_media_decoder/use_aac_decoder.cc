@@ -137,6 +137,7 @@ std::unique_ptr<uint8_t[]> make_AudioSpecificConfig_from_ADTS_header(
 // out_md - SHA256_DIGEST_LENGTH bytes long
 void use_aac_decoder(async::Loop* main_loop,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+                     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem, 
                      const std::string& input_adts_file,
                      const std::string& output_wav_file, uint8_t* out_md) {
   memset(out_md, 0, SHA256_DIGEST_LENGTH);
@@ -244,7 +245,7 @@ void use_aac_decoder(async::Loop* main_loop,
   // loop is already running, and we want the error handler to be set up by
   // CodecClient in advance of the channel potentially being closed.
   VLOGF("before CodecClient::CodecClient()...\n");
-  CodecClient codec_client(&loop);
+  CodecClient codec_client(&loop, std::move(sysmem));
   async::PostTask(
       main_loop->dispatcher(),
       [&codec_factory, create_params = std::move(create_params),
@@ -392,13 +393,15 @@ void use_aac_decoder(async::Loop* main_loop,
     bool is_wav_initialized = false;
     SHA256_CTX sha256_ctx;
     SHA256_Init(&sha256_ctx);
-    // We allow the server to send multiple output format updates if it wants;
-    // see implementation of BlockingGetEmittedOutput() which will hide
-    // multiple configs before the first packet from this code.
+    // We allow the server to send multiple output constraints updates if it
+    // wants; see implementation of BlockingGetEmittedOutput() which will hide
+    // multiple constraints before the first packet from this code.  In contrast
+    // we assert if the server sends multiple format updates without any
+    // packets in between, as that's not compliant with protocol rules.
     //
     // In this example, we only deal with one output format once we start seeing
     // stream data show up, since WAV only supports a single format per file.
-    std::shared_ptr<const fuchsia::media::StreamOutputConfig> stream_config;
+    std::shared_ptr<const fuchsia::media::StreamOutputFormat> stream_format;
     while (true) {
       std::unique_ptr<CodecOutput> output =
           codec_client.BlockingGetEmittedOutput();
@@ -437,19 +440,21 @@ void use_aac_decoder(async::Loop* main_loop,
         Exit("broken server sent packet without buffer index");
       }
 
-      std::shared_ptr<const fuchsia::media::StreamOutputConfig> config =
-          output->config();
+      // We don't really care about output->constraints() here, for now.
+
+      std::shared_ptr<const fuchsia::media::StreamOutputFormat> format =
+          output->format();
       // This will remain live long enough because this thread is the only
       // thread that re-allocates output buffers.
       const CodecBuffer& buffer =
           codec_client.GetOutputBufferByIndex(packet.header().packet_index());
 
-      ZX_ASSERT(!stream_config || stream_config->has_format_details());
-      if (stream_config &&
-          (!config->has_format_details() ||
-           !config->format_details().has_format_details_version_ordinal() ||
-           config->format_details().format_details_version_ordinal() !=
-               stream_config->format_details()
+      ZX_ASSERT(!stream_format || stream_format->has_format_details());
+      if (stream_format &&
+          (!format->has_format_details() ||
+           !format->format_details().has_format_details_version_ordinal() ||
+           format->format_details().format_details_version_ordinal() !=
+               stream_format->format_details()
                     .format_details_version_ordinal())) {
         Exit(
             "codec server unexpectedly changed output format mid-stream - "
@@ -469,24 +474,24 @@ void use_aac_decoder(async::Loop* main_loop,
 
       // We have a non-empty packet of the stream.
 
-      if (!stream_config) {
+      if (!stream_format) {
         // Every output has a config.  This happens exactly once.
-        stream_config = config;
+        stream_format = format;
 
-        if (!stream_config->has_format_details()) {
+        if (!stream_format->has_format_details()) {
           Exit("!format_details");
         }
 
-        const fuchsia::media::FormatDetails& format =
-            stream_config->format_details();
-        if (!format.has_domain()) {
+        const fuchsia::media::FormatDetails& format_details =
+            stream_format->format_details();
+        if (!format_details.has_domain()) {
           Exit("!format.domain");
         }
 
-        if (!format.domain().is_audio()) {
+        if (!format_details.domain().is_audio()) {
           Exit("!format.domain.is_audio() - unexpected");
         }
-        const fuchsia::media::AudioFormat& audio = format.domain().audio();
+        const fuchsia::media::AudioFormat& audio = format_details.domain().audio();
         if (!audio.is_uncompressed()) {
           Exit("!audio.is_uncompressed() - unexpected");
         }

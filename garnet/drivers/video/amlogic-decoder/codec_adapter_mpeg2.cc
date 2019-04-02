@@ -27,8 +27,34 @@ bool CodecAdapterMpeg2::IsCoreCodecRequiringOutputConfigForFormatDetection() {
   return false;
 }
 
+bool CodecAdapterMpeg2::IsCoreCodecMappedBufferNeeded(CodecPort port) {
+  // Since protected memory input/output isn't supported for mpeg2, may as well
+  // claim we need mapped buffers for now, in case we end up needing to re-pack
+  // input or fix output.
+  return true;
+}
+
+bool CodecAdapterMpeg2::IsCoreCodecHwBased() {
+  return true;
+}
+
 void CodecAdapterMpeg2::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
+  ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
+}
+
+fuchsia::sysmem::BufferCollectionConstraints
+CodecAdapterMpeg2::CoreCodecGetBufferCollectionConstraints(
+    CodecPort port,
+    const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+    const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
+  ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
+  return fuchsia::sysmem::BufferCollectionConstraints();
+}
+
+void CodecAdapterMpeg2::CoreCodecSetBufferCollectionInfo(
+    CodecPort port,
+    const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
   ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
 }
 
@@ -71,14 +97,21 @@ void CodecAdapterMpeg2::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
 }
 
-std::unique_ptr<const fuchsia::media::StreamOutputConfig>
-CodecAdapterMpeg2::CoreCodecBuildNewOutputConfig(
+std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
+CodecAdapterMpeg2::CoreCodecBuildNewOutputConstraints(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_buffer_constraints_version_ordinal,
-    uint64_t new_output_format_details_version_ordinal,
     bool buffer_constraints_action_required) {
   ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
-  return std::make_unique<const fuchsia::media::StreamOutputConfig>();
+  return std::make_unique<const fuchsia::media::StreamOutputConstraints>();
+}
+
+fuchsia::media::StreamOutputFormat
+CodecAdapterMpeg2::CoreCodecGetOutputFormat(
+    uint64_t stream_lifetime_ordinal,
+    uint64_t new_output_format_details_version_ordinal) {
+  ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
+  return fuchsia::media::StreamOutputFormat();
 }
 
 void CodecAdapterMpeg2::CoreCodecMidStreamOutputBufferReConfigPrepare() {

@@ -101,14 +101,11 @@ private:
 
     bool CombineConstraints();
 
-    bool CheckBufferCollectionConstraints(
-        const fuchsia_sysmem_BufferCollectionConstraints* constraints);
-
-    bool CheckImageFormatConstraints(
-        const fuchsia_sysmem_ImageFormatConstraints* constraints);
-
-    void SanitizeBufferCollectionConstraints(
+    bool CheckSanitizeBufferCollectionConstraints(
         fuchsia_sysmem_BufferCollectionConstraints* constraints);
+
+    bool CheckSanitizeImageFormatConstraints(
+        fuchsia_sysmem_ImageFormatConstraints* constraints);
 
     Constraints BufferCollectionConstraintsClone(
         const fuchsia_sysmem_BufferCollectionConstraints* input);

@@ -9,7 +9,7 @@ using zx;
 [Layout = "ddk-protocol"]
 protocol Sysmem {
     /// Takes the server end of a FIDL connection that'll serve
-    /// fuchsia.sysmem.Allocator2.  If the connection fails, the channel will
+    /// fuchsia.sysmem.Allocator.  If the connection fails, the channel will
     /// close.
-    Connect(handle<channel> allocator2_request) -> (zx.status s);
+    Connect(handle<channel> allocator_request) -> (zx.status s);
 };

@@ -2,7 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx"
+                "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx",
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
             }
         }
     },
@@ -11,13 +12,15 @@
     },
     "sandbox": {
         "dev": [
-            "class/media-codec"
+            "class/media-codec",
+            "class/sysmem"
         ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracelink.Registry"
+            "fuchsia.tracelink.Registry",
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }

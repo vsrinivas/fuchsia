@@ -34,6 +34,7 @@
 //     be set.
 void use_aac_decoder(async::Loop* main_loop,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+                     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                      const std::string& input_adts_file,
                      const std::string& output_wav_file,
                      uint8_t out_md[SHA256_DIGEST_LENGTH]);

@@ -53,6 +53,7 @@ const std::map<fuchsia_sysmem_PixelFormatType, SamplingInfo> kPixelFormatSamplin
     // 8 bits RGB when uncompressed - in this context, MJPEG is essentially
     // pretending to be uncompressed.
     {fuchsia_sysmem_PixelFormatType_MJPEG, {{8}, kColorType_RGB}},
+    {fuchsia_sysmem_PixelFormatType_YV12, {{8}, kColorType_YUV}},
 };
 
 class ImageFormatSet {
@@ -182,6 +183,7 @@ class LinearFormats : public ImageFormatSet {
         case fuchsia_sysmem_PixelFormatType_M420:
         case fuchsia_sysmem_PixelFormatType_NV12:
         case fuchsia_sysmem_PixelFormatType_YUY2:
+        case fuchsia_sysmem_PixelFormatType_YV12:
             return true;
         }
         return false;
@@ -203,6 +205,8 @@ class LinearFormats : public ImageFormatSet {
             return coded_height * bytes_per_row * 3 / 2;
         case fuchsia_sysmem_PixelFormatType_YUY2:
             return coded_height * bytes_per_row;
+        case fuchsia_sysmem_PixelFormatType_YV12:
+            return coded_height * bytes_per_row * 3 / 2;
         default:
             return 0u;
         }
@@ -287,6 +291,8 @@ uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem_PixelFormat* pixel_format)
             return 12u;
         case fuchsia_sysmem_PixelFormatType_YUY2:
             return 2u * 8u;
+        case fuchsia_sysmem_PixelFormatType_YV12:
+            return 12u;
     }
     ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
     return 0u;
@@ -313,6 +319,8 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(
             return 1u;
         case fuchsia_sysmem_PixelFormatType_YUY2:
             return 2u;
+        case fuchsia_sysmem_PixelFormatType_YV12:
+            return 1u;
     }
     ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
     return 0u;
@@ -348,6 +356,8 @@ uint32_t ImageFormatCodedWidthMinDivisor(
             return 2u;
         case fuchsia_sysmem_PixelFormatType_YUY2:
             return 2u;
+        case fuchsia_sysmem_PixelFormatType_YV12:
+            return 2u;
     }
     ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
     return 0u;
@@ -374,6 +384,8 @@ uint32_t ImageFormatCodedHeightMinDivisor(
             return 2u;
         case fuchsia_sysmem_PixelFormatType_YUY2:
             return 2u;
+        case fuchsia_sysmem_PixelFormatType_YV12:
+            return 2u;
     }
     ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));
     return 0u;
@@ -399,6 +411,8 @@ uint32_t ImageFormatSampleAlignment(
         case fuchsia_sysmem_PixelFormatType_NV12:
             return 2u;
         case fuchsia_sysmem_PixelFormatType_YUY2:
+            return 2u;
+        case fuchsia_sysmem_PixelFormatType_YV12:
             return 2u;
     }
     ZX_PANIC("Unknown Pixel Format: %d", static_cast<int>(pixel_format->type));

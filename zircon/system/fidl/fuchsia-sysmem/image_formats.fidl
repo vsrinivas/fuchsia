@@ -50,6 +50,9 @@ enum PixelFormatType {
     // for this is (including any variants that are specified / permitted /
     // indicated in-band / prohibited).
     MJPEG = 106; // For UVC compliance.
+
+    // YUV only, 8 bits per Y sample
+    YV12 = 107;
 };
 
 // Describes how the pixels within an image are meant to be presented.

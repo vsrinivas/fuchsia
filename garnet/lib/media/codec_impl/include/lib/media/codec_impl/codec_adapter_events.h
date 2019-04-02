@@ -32,12 +32,22 @@ class CodecAdapterEvents {
   // call is propertly ordered with respect to onCoreCodecOutputPacket() and
   // onCoreCodecOutputEndOfStream() calls.
   //
-  // A call to onCoreCodecMidStreamOutputConfigChange(true) must not be
+  // A call to onCoreCodecMidStreamOutputConstraintsChange(true) must not be
   // followed by any more output (including EndOfStream) until the associated
   // output re-config is completed by a call to
   // CoreCodecMidStreamOutputBufferReConfigFinish().
-  virtual void onCoreCodecMidStreamOutputConfigChange(
+  virtual void onCoreCodecMidStreamOutputConstraintsChange(
       bool output_re_config_required) = 0;
+
+  // When the core codec calls this method, the CodecImpl will note that the
+  // format has changed, and on next onCoreCodecOutputPacket(), the CodecImpl
+  // will ask the core codec for the format and generate and send an
+  // OnOutputformat() message before that output packet.  This way, the core
+  // codec is free to call onCoreCodecOutputFormat() repeatedly without any
+  // packet in between, with CodecImpl collapsing these into one
+  // OnOutputFormat() to avoid the extra message (so it doesn't have to be sent
+  // and doesn't have to be handled by clients).
+  virtual void onCoreCodecOutputFormatChange() = 0;
 
   virtual void onCoreCodecInputPacketDone(CodecPacket* packet) = 0;
 

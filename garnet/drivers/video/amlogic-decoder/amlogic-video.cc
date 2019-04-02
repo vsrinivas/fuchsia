@@ -658,27 +658,48 @@ void AmlogicVideo::SwapInCurrentInstance() {
   video_decoder_->SwappedIn();
 }
 
+fidl::InterfaceHandle<fuchsia::sysmem::Allocator> AmlogicVideo::ConnectToSysmem() {
+  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> client_end;
+  fidl::InterfaceRequest<fuchsia::sysmem::Allocator> server_end =
+      client_end.NewRequest();
+  zx_status_t connect_status =
+      sysmem_connect(&sysmem_, server_end.TakeChannel().release());
+  if (connect_status != ZX_OK) {
+    // failure
+    return fidl::InterfaceHandle<fuchsia::sysmem::Allocator>();
+  }
+  return client_end;
+}
+
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
   zx_status_t status =
       device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev_);
-
   if (status != ZX_OK) {
     DECODE_ERROR("Failed to get parent protocol");
     return ZX_ERR_NO_MEMORY;
   }
+
+  status = device_get_protocol(parent_, ZX_PROTOCOL_SYSMEM, &sysmem_);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Could not get SYSMEM protocol\n");
+    return status;
+  }
+
   status = device_get_protocol(parent_, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
   if (status != ZX_OK) {
     DECODE_ERROR("Could not get video CANVAS protocol\n");
     return status;
   }
+
   pdev_device_info_t info;
   status = pdev_get_device_info(&pdev_, &info);
   if (status != ZX_OK) {
     DECODE_ERROR("pdev_get_device_info failed");
     return status;
   }
+
   switch (info.pid) {
     case PDEV_PID_AMLOGIC_S912:
       device_type_ = DeviceType::kGXM;

@@ -173,10 +173,6 @@ AvCodecContext::FrameBufferRequest AvCodecContext::frame_buffer_request(
         frame->sample_aspect_ratio.den;
   }
 
-  // TODO(dustingreen): Switching to FIDL table should make this not be
-  // required.
-  uncompressed_format.special_formats.set_temp_field_todo_remove(0);
-
   size_t buffer_bytes_needed = av_image_get_buffer_size(
       static_cast<AVPixelFormat>(frame->format), frame->width, frame->height,
       /*align=*/1);

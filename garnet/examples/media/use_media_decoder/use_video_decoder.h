@@ -43,6 +43,7 @@ class FrameSink;
 //     call back when the frame has been released by the sink.
 void use_h264_decoder(async::Loop* main_loop,
                       fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                       const std::string& input_file,
                       const std::string& output_file,
                       uint8_t md_out[SHA256_DIGEST_LENGTH],
@@ -52,6 +53,7 @@ void use_h264_decoder(async::Loop* main_loop,
 // The same as use_h264_decoder, but for a VP9 file wrapped in an IVF container.
 void use_vp9_decoder(async::Loop* main_loop,
                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
+                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
                      const std::string& input_file,
                      const std::string& output_file,
                      uint8_t md_out[SHA256_DIGEST_LENGTH],

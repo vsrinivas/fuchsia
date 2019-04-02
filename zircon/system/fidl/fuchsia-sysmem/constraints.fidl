@@ -77,6 +77,9 @@ struct BufferCollectionConstraints {
     /// accounted for in min_buffer_count_for_camping.
     uint32 min_buffer_count_for_shared_slack;
 
+    // 0 is treated as 0xFFFFFFFF.
+    uint32 max_buffer_count;
+
     /// Constraints on BufferCollectionSettings.buffer_settings.
     ///
     /// A participant that intends to specify image_format_constraints_count > 1
@@ -142,7 +145,7 @@ struct BufferCollectionInfo_2 {
 
 struct SingleBufferInfo {
     SingleBufferSettings settings;
-    handle<vmo>? vmo;
+    VmoBuffer buffer;
 };
 
 // After the initial buffer allocation, it's allowed to close old buffers and
@@ -218,8 +221,16 @@ struct ImageFormatConstraints {
     uint32 color_spaces_count;
     array<ColorSpace>:32 color_space;
 
-    /// Minimum width in pixels.  For example a video decoder participant may
-    /// set this field to the coded_width specified by a stream.
+    /// Minimum permitted width in pixels.
+    ///
+    /// For example a video decoder participant may set this field to the
+    /// minimum coded_width that might potentially be specified by a stream.  In
+    /// contrast, required_min_coded_width would be set to the current
+    /// coded_width specified by the stream.  While min_coded_width aggregates
+    /// by taking the max, required_min_coded_width aggregates by taking the
+    /// min.
+    ///
+    /// See also required_min_coded_width.
     uint32 min_coded_width;
     /// Maximum width in pixels.  For example Scenic may set this field
     /// (directly or via sub-participants) to the maximum width that can be
@@ -265,6 +276,39 @@ struct ImageFormatConstraints {
 
     /// display_height % display_height_divisor must be 0.
     uint32 display_height_divisor = 1;
+
+    /// required_ dimension bounds.
+    ///
+    /// In contrast to the corresponding fields without "required_" at the
+    /// start, these fields (when set to non-zero values) express a requirement
+    /// that the resulting aggregated non-required_ fields specify a space that
+    /// fully contain the space expressed by each participant's required_
+    /// fields.
+    ///
+    /// For example, a producer video decoder is perfectly happy for the
+    /// consumer to be willing to accept anything, and the video decoder doesn't
+    /// really want to constrain the potential space of dimensions that might be
+    /// seen in a stream and may be acceptable to the consumer, but the video
+    /// decoder needs to ensure that the resulting dimension ranges contain
+    /// at least the current dimensions decoded from the stream.
+    ///
+    /// Similarly, an initiator with a particular dynamic-dimension scenario in
+    /// mind may wish to require up front that participants agree to handle at
+    /// least the range of dimensions expected by the initiator in that
+    /// scenario (else fail earlier rather than later, maybe trying again with
+    /// smaller required_ space).
+    ///
+    /// It's much more common for a producer or initiator to set these fields
+    /// than for a consumer to set these fields.
+    ///
+    /// While the non-required_ fields aggregate by taking the intersection, the
+    /// required_ fields aggregate by taking the union.
+    uint32 required_min_coded_width;
+    uint32 required_max_coded_width;
+    uint32 required_min_coded_height;
+    uint32 required_max_coded_height;
+    uint32 required_min_bytes_per_row;
+    uint32 required_max_bytes_per_row;
 };
 
 /// Describes how an image is represented.
@@ -297,4 +341,23 @@ struct ImageFormat_2 {
 
     /// Color space.
     ColorSpace color_space;
+
+    // The pixel_aspect_ratio_width : pixel_aspect_ratio_height is the
+    // pixel aspect ratio (AKA sample aspect ratio aka SAR) for the luma
+    // (AKA Y) samples. A pixel_aspect_ratio of 1:1 mean square pixels. A
+    // pixel_aspect_ratio of 2:1 would mean pixels that are displayed twice
+    // as wide as they are tall. Codec implementation should ensure these
+    // two values are relatively prime by reducing the fraction (dividing
+    // both by GCF) if necessary.
+    //
+    // When has_pixel_aspect_ratio == false, pixel_aspect_ratio_width and
+    // pixel_aspect_ratio_height will both be 1, but in that case the
+    // pixel_aspect_ratio_width : pixel_aspect_ratio_height of 1:1 is just
+    // a very weak suggestion re. reasonable-ish handling, not in any way
+    // authoritative. In this case (or in any case really) the receiver of
+    // this message may have other OOB means to determine the actual
+    // pixel_aspect_ratio.
+    bool has_pixel_aspect_ratio = false;
+    uint32 pixel_aspect_ratio_width = 1;
+    uint32 pixel_aspect_ratio_height = 1;
 };

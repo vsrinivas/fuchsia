@@ -59,6 +59,15 @@ class CodecAdapter {
   // or may require an output config (false).
   virtual bool IsCoreCodecRequiringOutputConfigForFormatDetection() = 0;
 
+  // If true, the codec requires that the buffer VMOs be mappable for direct
+  // access by the CPU.
+  virtual bool IsCoreCodecMappedBufferNeeded(CodecPort port) = 0;
+
+  // If true, the codec is HW-based, in the sense that at least some of the
+  // processing is performed by specialized processing HW running separately
+  // from any CPU execution context.
+  virtual bool IsCoreCodecHwBased() = 0;
+
   // The initial input format details and later input format details will
   // _often_ remain the same overall format, and only differ in ways that are
   // reasonable on a format-specific basis.  However, not always.  A core codec
@@ -87,6 +96,78 @@ class CodecAdapter {
   // more is nailed down re. exactly how the core codec relates to CodecImpl.
   virtual void CoreCodecInit(
       const fuchsia::media::FormatDetails& initial_input_format_details) = 0;
+
+  // All codecs must implement this for both ports.  The returned structure will
+  // be sent to sysmem in a SetConstraints() call.  This method can be called
+  // on the FIDL thread or the StreamControl domain (thread for now).
+  //
+  // Input:
+  //
+  // For now, a core codec has no way to trigger being asked for new input
+  // constraints, so the input constraints (for now) need to be generally
+  // applicable to any potential setting/property of the input.
+  //
+  // A decoder should permit a fairly wide range of buffer space, without
+  // worrying whether the min is enough to efficiently handle a high bitrate.
+  // The CodecImpl will own bumping up the min based on approximate bitrate
+  // provided in the initial decoder creation parameters and/or per-stream input
+  // format details (this logic is shared because it can reasonably be shared).
+  // A core codec that has special requirements for extra input buffer space
+  // given a particular bitrate can take it upon itself to set the input min
+  // buffer space, but the idea is that typically it won't be necessary for a
+  // decoder to increase the min based on input bitrate beyond what CodecImpl
+  // does, so needing to do this should be fairly rare.
+  //
+  // A video encoder which needs to vary it's input BufferCollectionConstraints
+  // based on encoder settings can do so, using the data provided to
+  // CoreCodecInit().  If later use of QueueInputFormatDetails() (per-stream)
+  // results in an input packet that conforms to the old
+  // BufferCollectionConstraints but does not conform to the effective new
+  // BufferCollectionConstraints, the core codec can use
+  // CodecAdapterEvents::onCoreCodecFailCodec() (the core codec should fail the
+  // codec instance in this case rather than attempt to handle input data that
+  // is outside the bounds that would have been indicated by the core codec had
+  // the current input format details been used as the initial format details).
+  // Clients that change the input format details on the fly should be willing
+  // to re-request a new codec instance at least once starting with the new
+  // input format details via the CodecFactory.  This is true for additional
+  // reasons beyond this paragraph involving the possibility of accelerated but
+  // partial codec implementations.  If a client needs to change input format
+  // details but doesn't want to concern itself with tracking whether the
+  // current codec was created with the current input format details, a client
+  // can instead choose to always create a new codec via CodecFactory on any
+  // change to the input format details.
+  //
+  // Output:
+  //
+  // A core codec can trigger this method to get called again by indicating an
+  // output format detection/change with action_required true via
+  // CoreCodecEvents::onCoreCodecMidStreamOutputConstraintsChange().
+  //
+  // Filling out the usage bits is optional.  If the usage bits are not filled
+  // out (all still 0), the caller will fill them out based on
+  // IsCoreCodecMappedBufferNeeded() and IsCoreCodecHwBased().  The core codec
+  // must either leave usage set to all 0, or completely fill them out.
+  virtual fuchsia::sysmem::BufferCollectionConstraints
+  CoreCodecGetBufferCollectionConstraints(
+      CodecPort port,
+      const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+      const fuchsia::media::StreamBufferPartialSettings& partial_settings) = 0;
+
+  // There are no VMO handles in the buffer_collection_info.  Those are instead
+  // provided via calls to CoreCodecAddBuffer(), as CodecImpl handles allocation
+  // of CodecBuffer instances (each of which has a VMO).
+  //
+  // This method allows a core codec to know things like buffer_count, whether
+  // sysmem selected CPU domain or RAM domain for sharing of buffers, whether
+  // protected buffers were allocated, etc.
+  //
+  // This call occurs regardless of whether "settings" or "partial settings" are
+  // set (regardless of whether the client is using sysmem), after the client
+  // sets input or output settings, and before the first buffer is added.
+  virtual void CoreCodecSetBufferCollectionInfo(
+      CodecPort port,
+      const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) = 0;
 
   // Stream lifetime:
   //
@@ -148,6 +229,12 @@ class CodecAdapter {
 
   // Add input or output buffer.
   //
+  // The buffers added via this method correspond to the buffers of the buffer
+  // collection - these are buffers of the collection most recently indicated via
+  // a call to CoreCodecSetBufferCollectionInfo().  While the VMOs are
+  // intentionally not included in that call, the VMOs are indicated here (this
+  // lets the CodecImpl own allocation of CodecBuffer instances).
+  //
   // A core codec may be able to fully configure a buffer during this call and
   // later ignore CoreCodecConfigureBuffers(), or a core codec may use
   // CoreCodecConfigureBuffers() to finish configuring buffers.
@@ -183,7 +270,7 @@ class CodecAdapter {
   // be called while there's no active stream, or after a stream is started but
   // before any input data is queued, or during processing shortly after the
   // core codec calling
-  // onCoreCodecMidStreamOutputConfigChange(true), after
+  // onCoreCodecMidStreamOutputConstraintsChange(true), after
   // CoreCodecMidStreamOutputBufferReConfigPrepare() and before
   // CoreCodecMidStreamOutputBufferReConfigFinish().
   //
@@ -207,22 +294,34 @@ class CodecAdapter {
   // output_re_config_required false:
   //
   // This is called on the same thread and same stack as
-  // onCoreCodecMidStreamOutputConfigChange() (and with same stream still
+  // onCoreCodecMidStreamOutputConstraintsChange() (and with same stream still
   // active).
-  virtual std::unique_ptr<const fuchsia::media::StreamOutputConfig>
-  CoreCodecBuildNewOutputConfig(
+  virtual std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
+  CoreCodecBuildNewOutputConstraints(
       uint64_t stream_lifetime_ordinal,
       uint64_t new_output_buffer_constraints_version_ordinal,
-      uint64_t new_output_format_details_version_ordinal,
       bool buffer_constraints_action_required) = 0;
+
+  // This will be called on the InputData domain, during the core codec's call
+  // to onCoreCodecOutputPacket(), so that the format will be delivered at most
+  // once before any packet which needs a new format to be indicated.  The core
+  // codec can trigger this to occur during the next onCoreCodecOutputPacket()
+  // by calling onCoreCodecOutputFormatChange().  The tracking of pending
+  // output format is per-stream, and all streams start with a pending output
+  // format, so a core codec need not call onCoreCodecOutputFormatChange()
+  // unless the format change is mid-stream (but calling before the first packet
+  // is allowed and not harmful).
+  virtual fuchsia::media::StreamOutputFormat CoreCodecGetOutputFormat(
+      uint64_t stream_lifetime_ordinal,
+      uint64_t new_output_format_details_version_ordinal) = 0;
 
   // CoreCodecMidStreamOutputBufferReConfigPrepare()
   //
   // For a mid-stream format change where output buffer re-configuration is
   // needed (as initiated async by the core codec calling
-  // CodecAdapterEvents::onCoreCodecMidStreamOutputConfigChange(true)), this
+  // CodecAdapterEvents::onCoreCodecMidStreamOutputConstraintsChange(true)), this
   // method is called on the StreamControl thread before the client is notified
-  // of the need for output buffer re-config (via OnOutputConfig() with
+  // of the need for output buffer re-config (via OnOutputConstraints() with
   // buffer_constraints_action_required true).
   //
   // The core codec should do whatever is necessary to ensure that output
@@ -261,6 +360,16 @@ class CodecAdapter {
   //
   // The core codec should do whatever is necessary to get back into normal
   // steady-state operation in this method.
+  //
+  // The core codec must not onCoreCodecOutputPacket() or
+  // onCoreCodecOutputEndOfStream() until this method has been called, or until
+  // CoreCodecStartStream() is called and some input is available, should the
+  // current stream be stopped before completing mid-stream output buffer
+  // re-config.  This works partly because the CodecImpl guarantees that if a
+  // mid-stream re-config didn't finish, there will be a complete output
+  // re-config before the CoreCodecStartStream() - in other words this re-config
+  // is abandoned and a new one takes its place and is fully complete prior to
+  // the new stream starting.
   virtual void CoreCodecMidStreamOutputBufferReConfigFinish() = 0;
 
  protected:

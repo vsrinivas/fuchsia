@@ -4,6 +4,8 @@
 
 library fuchsia.media;
 
+using fuchsia.sysmem;
+
 // See stream_processor.md for detailed interface documentation. The comments
 // here are a summary only.  Client implementers should see stream_processor.md
 // for more detail on any message that doesn't seem sufficiently-described
@@ -24,7 +26,7 @@ library fuchsia.media;
 //   * QueueInputPacket() + OnFreeInputPacket(), for as long as it takes,
 //     possibly working through all input packets repeatedly before...
 // 5. Get output constraints and format
-//   * OnOutputConfig() - may be delivered as early as before
+//   * OnOutputConstraints() - may be delivered as early as before
 //     OnInputConstraints() by some stream processors, but a client must
 //     tolerate as late as after substantial input data has been delivered
 //     including lots of input packet recycling via OnFreeInputPacket().
@@ -54,6 +56,10 @@ library fuchsia.media;
 
 // There are separate instances of this struct for stream input and stream
 // output.
+//
+// TODO(dustingreen): Some of the buffer-focused fields in this structure will
+// go away in favor of using sysmem for those aspects.  The packet count fields
+// will stay.  The single-buffer fields will stay.
 table StreamBufferConstraints {
     // This is a version number the server sets on the constraints to allow the
     // server to determine when the client has caught up with the latest
@@ -230,8 +236,11 @@ table StreamBufferConstraints {
     12: bool single_buffer_mode_allowed;
 
     // If true, the buffers need to be physically contiguous pages, such as can
-    // be allocated using zx_vmo_create_contiguous().
+    // be allocated using zx_vmo_create_contiguous() (this syscall requires a
+    // bti handle which many clients won't have - the client will most likely
+    // want to use sysmem to allocate buffers).
     13: bool is_physically_contiguous_required;
+
     // VERY TEMPORARY HACK / KLUDGE - we want the BufferAllocator (or one of
     // the participant drivers that needs physically contiguous buffers) to
     // call zx_vmo_create_contiguous(), definitely not the StreamProcessor
@@ -242,10 +251,14 @@ table StreamBufferConstraints {
     // allocates buffers in the StreamProcessor interface to avoid this hack
     // even before BufferAllocator, but the overall path seems shorter if we
     // jump directly from this to using BufferAllocator.
+    //
+    // TODO(dustingreen): remove once zero clients need this (zero clients that
+    // need to allocate physically contiguous buffers directly / all relevant
+    // clients using sysmem).
     14: handle very_temp_kludge_bti_handle;
 };
 
-// StreamOutputConfig
+// StreamOutputConstraints
 //
 // The stream-processor-controlled output configuration, including both
 // StreamBufferConstraints for the output and FormatDetails for the output.
@@ -256,17 +269,17 @@ table StreamBufferConstraints {
 // It's different than output buffer settings, which the client does get to
 // control to some extent.  It's different than any configurable output
 // settings the client might specify for output of an encoder.
-table StreamOutputConfig {
+table StreamOutputConstraints {
     // A client which always immediately re-configures output buffers on
-    // receipt of OnOutputConfig() with buffer_constraints_action_required true
+    // receipt of OnOutputConstraints() with buffer_constraints_action_required true
     // can safely ignore this field.
 
-    // A client is permitted to ignore an OnOutputConfig() message even with
+    // A client is permitted to ignore an OnOutputConstraints() message even with
     // buffer_constraints_action_required true if the client knows the server
     // has already been told to discard the remainder of the stream with the
     // same stream_lifetime_ordinal or if this stream_lifetime_ordinal field is
     // set to 0.  The server is required to re-send needed output config via
-    // OnOutputConfig() with new stream_lifetime_ordinal and
+    // OnOutputConstraints() with new stream_lifetime_ordinal and
     // buffer_constraints_action_required true, if the most recent completed
     // server-side output config isn't what the server wants/needs yet for the
     // new stream.
@@ -306,6 +319,22 @@ table StreamOutputConfig {
     // See stream_processor.md for more on buffer_constraints_action_required.
     2: bool buffer_constraints_action_required;
     3: StreamBufferConstraints buffer_constraints;
+};
+
+table StreamOutputFormat {
+    // A client is permitted to ignore an OnOutputFormat() message even with
+    // buffer_constraints_action_required true if the client knows the server
+    // has already been told to discard the remainder of the stream with the
+    // same stream_lifetime_ordinal or if this stream_lifetime_ordinal field is
+    // set to 0.  The server is required to re-send needed output config via
+    // OnOutputConstraints() with new stream_lifetime_ordinal and
+    // buffer_constraints_action_required true, if the most recent completed
+    // server-side output config isn't what the server wants/needs yet for the
+    // new stream.
+    //
+    // The server is required to send an OnOutputFormat() before the first
+    // output packet of a stream.
+    1: uint64 stream_lifetime_ordinal;
 
     // format_details
     //
@@ -366,6 +395,15 @@ table StreamOutputConfig {
     // technically supports mid-stream format change, but the client happens to
     // know that none of the streams the client intends to process will ever
     // have a mid-stream format change.
+    2: FormatDetails format_details;
+};
+
+// DEPRECATED - this is splitting into StreamOutputConstraints and
+// StreamOutputFormat instead.  See those tables.
+table StreamOutputConfig {
+    1: uint64 stream_lifetime_ordinal;
+    2: bool buffer_constraints_action_required;
+    3: StreamBufferConstraints buffer_constraints;
     4: FormatDetails format_details;
 };
 
@@ -470,7 +508,7 @@ table StreamBufferSettings {
     // server's use. This must be >=
     // StreamBufferConstraints.packet_count_for_server_min.  If constraints
     // change such that this would no longer be true, the server will send an
-    // OnOutputConfig() event.
+    // OnOutputConstraints() event.
     //
     // The stream processor server is allowed to demand that all of
     // packet_count_for_server become free before making further progress, even
@@ -539,6 +577,102 @@ table StreamBufferSettings {
     6: bool single_buffer_mode;
 };
 
+// StreamBufferPartialSettings
+//
+// This struct is used instead of StreamBufferSettings when sysmem is used to
+// allocate buffers.  The settings in StreamBufferSettings that are missing from
+// StreamBufferPartialSettings can be conveyed from the client directly to
+// sysmem.
+//
+// TODO(dustingreen): Consider renaming this to StreamBufferSettings once that's
+// an option.
+table StreamBufferPartialSettings {
+    // buffer_lifetime_ordinal
+    //
+    // The containing message starts a new buffer_lifetime_ordinal.
+    //
+    // There is a separate buffer_lifetime_ordinal for input vs. output.
+    //
+    // Re-use of the same value is not allowed.  Values must be odd.  Values
+    // must only increase (increasing by more than 2 is permitted).
+    //
+    // A buffer_lifetime_ordinal lifetime starts at SetInputBufferSettings() or
+    // SetOutputBufferSettings(), and ends at the earlier of
+    // CloseCurrentStream() with release_input_buffers/release_output_buffers
+    // set or SetOutputBufferSettings() with new buffer_lifetime_ordinal in the
+    // case of mid-stream output config change.
+    //
+    // See stream_processor.md for more on buffer_lifetime_ordinal.
+    1: uint64 buffer_lifetime_ordinal;
+
+    // buffer_constraints_version_ordinal
+    //
+    // This value indicates which version of constraints the client is/was aware
+    // of so far.
+    //
+    // For input, this must always be 0 because constraints don't change for
+    // input (settings can change, but there's no settings vs current
+    // constraints synchronization issue on input).
+    //
+    // For output, this allows the server to know when the client is
+    // sufficiently caught up before the server will generate any more output.
+    //
+    // When there is no active stream, a client is permitted to re-configure
+    // buffers again using the same buffer_constraints_version_ordinal.
+    //
+    // See stream_processor.md for more on buffer_constraints_version_ordinal.
+    2: uint64 buffer_constraints_version_ordinal;
+
+    // If true, there is only one buffer, but still typically more than one
+    // packet.  If false, the # of packets == the number of buffers.
+    //
+    // While it's possible to set up single_buffer_mode false with each buffer
+    // referring to the same underlying VMO, single_buffer_mode true is more
+    // efficient for that case since only one mapping is created.
+    //
+    // This setting is specified by the client, and influences the constraints
+    // delivered from the StreamProcessor to sysmem (whether there's more than
+    // one buffer allocated overall or not).  For single_buffer_mode true, the
+    // StreamProcessor is the one to ask sysmem for a buffer - the client should
+    // refrain from doing so or the StreamProcessor will just fail when more
+    // than one buffer gets allocated by sysmem.
+    3: bool single_buffer_mode;
+
+    // When single_buffer_mode is false:
+    //
+    // The actual packet count will be
+    // max(packet_count_for_server + packet_count_for_client, sysmem_buffers).
+    // The sysmem_buffers is BufferCollectionInfo.buffer_count from sysmem if
+    // using sysmem, or 0 if not using sysmem.
+    //
+    // When single_buffer_mode is true:
+    //
+    // The actual packet count is packet_count_for_server +
+    // packet_count_for_client.
+    //
+    // If not using sysmem, or if using single_buffer_mode, these fields must be
+    // set and consistent with correpsonding fields in StreamBufferConstraints.
+    //
+    // If single_buffer_mode false and using sysmem, these fields can both be
+    // non-set, or can both be set and consistent with correpsonding fields in
+    // StreamBufferConstraints.  If not set, the value used for the fields in
+    // the "max" expression above is 0, so buffer_count.
+    //
+    // TODO(dustingreen): Try to change FIDL generated code to not require has
+    // if the field has a default specified in the FIDL file like these do.
+    4: uint32 packet_count_for_server = 0;
+    5: uint32 packet_count_for_client = 0;
+
+    // The client end of a BufferCollectionToken channel, which the
+    // StreamProcessor will use to deliver constraints to sysmem and learn of
+    // buffers allocated by sysmem.
+    //
+    // The client guarantees that the token is already known to sysmem (via
+    // BufferCollectionToken.Sync(), BufferCollection.Sync(), or
+    // BufferCollectionEvents.OnDuplicatedTokensKnownByServer()).
+    6: fuchsia.sysmem.BufferCollectionToken sysmem_token;
+};
+
 // StreamBuffer
 //
 // The StreamBuffer struct represents a pre-configured buffer.
@@ -591,25 +725,23 @@ table StreamBuffer {
     3: StreamBufferData data;
 };
 
-// StreamBufferData
-//
-// For the moment, a VMO per buffer is the only type of buffer.
-//
-
-// This is extremely likely to change significantly when adding gralloc stuff,
-// but the idea with this union is to have a struct per logical way of storing
-// the data.  Any multi-domain storage within a gralloc buffer will likely be
-// only indirectly represented here.
+/// StreamBufferData
+///
+/// For the moment, a VMO per buffer is the only type of buffer.
+///
+/// This is extremely likely to change significantly when adding gralloc stuff,
+/// but the idea with this union is to have a struct per logical way of storing
+/// the data.  Any multi-domain storage within a gralloc buffer will likely be
+/// only indirectly represented here.
 union StreamBufferData {
     StreamBufferDataVmo vmo;
 
     // TODO(dustingreen): add the gralloc way
 };
 
-// StreamBufferDataVmo
-//
-
-// Details for a buffer backed by a VMO.
+/// StreamBufferDataVmo
+///
+/// Details for a buffer backed by a VMO.
 table StreamBufferDataVmo {
     // The same VMO can be used by more than one StreamBuffer (only of the same
     // buffer_lifetime_ordinal), but each vmo_handle must be a separate handle.
@@ -627,14 +759,13 @@ table StreamBufferDataVmo {
     3: uint64 vmo_usable_size;
 };
 
-// PacketHeader
-//
-// When referring to a free packet, we use PacketHeader alone instead of
-// Packet, since while a packet is free it doesn't really have meaningful
-// offset or length etc.
-//
-
-// A populated Packet also has a PacketHeader.
+/// PacketHeader
+///
+/// When referring to a free packet, we use PacketHeader alone instead of
+/// Packet, since while a packet is free it doesn't really have meaningful
+/// offset or length etc.
+///
+/// A populated Packet also has a PacketHeader.
 table PacketHeader {
     // This is which buffer configuration lifetime this header is referring to.
     //
@@ -705,6 +836,10 @@ table Packet {
     // likely (will tend to complain in an obvious way if not filled out
     // instead of a non-obvious data corruption when decoding buffer 0
     // repeatedly instead of the correct buffers).
+    //
+    // TODO(dustingreen): Try to make FIDL table defaults have meaning, and not
+    // complain about !has when accessing the field.  For now the default
+    // specified here does nothing.
     2: uint32 buffer_index = 0x80000000;
 
     // stream_lifetime_ordinal
@@ -943,16 +1078,16 @@ protocol StreamProcessor {
     // This message is guaranteed to be sent unsolicited to the StreamProcessor
     // client during or shortly after StreamProcessor creation.  Clients should
     // not depend on this being the very first message to arrive at the client.
-    // OnOutputConfig() may be sent first by some stream processors that
+    // OnOutputConstraints() may be sent first by some stream processors that
     // already know their initial output config without any input data, to
     // encourage (but not strictly require) the client to configure output
     // buffers before feeding the first input, to avoid a wasteful
-    // OnOutputConfig() being generated for that first stream if the client has
+    // OnOutputConstraints() being generated for that first stream if the client has
     // started configuring output but isn't done configuring output before the
     // client sends the first input data for the first stream. A client is free
-    // to ignore OnOutputConfig() with a stale stream_lifetime_ordinal, but
-    // handling OnOutputConfig() with stream_lifetime_ordinal 0 (if any are
-    // sent) can help reduce latency to first output.  See OnOutputConfig() for
+    // to ignore OnOutputConstraints() with a stale stream_lifetime_ordinal, but
+    // handling OnOutputConstraints() with stream_lifetime_ordinal 0 (if any are
+    // sent) can help reduce latency to first output.  See OnOutputConstraints() for
     // more details.
     //
     // The "min" and "max" input constraints are guaranteed not to change for a
@@ -1008,31 +1143,175 @@ protocol StreamProcessor {
     // QueueInputPacket() after sending the last AddInputBuffer().
     AddInputBuffer(StreamBuffer buffer);
 
-    // OnOutputConfig()
+    // SetInputBufferPartialSettings()
     //
-    // This event informs the client of new output config.  The server will
-    // send at least one of these messages before the first output packet of a
-    // stream, but that message might not have
+    // When the client is using sysmem to allocate buffers, this message is
+    // used instead of SetInputBufferSettings()+AddInputBuffer().  Instead, a
+    // single SetInputBufferPartialSettings() provides the StreamProcessor with
+    // the client-specified input settings and a BufferCollectionToken which
+    // the StreamProcessor will use to convey constraints to sysmem.  Both the
+    // client and the StreamProcessor will be informed of the allocated buffers
+    // directly by sysmem via their BufferCollection channel (not via the
+    // StreamProcessor channel).
+    //
+    // The client must not QueueInput...() until after sysmem informs the client
+    // that buffer allocation has completed and was successful.
+    //
+    // The server should be prepared to see QueueInput...() before the server
+    // has necessarily heard from sysmem that the buffers are allocated - the
+    // server must tolerate either ordering, as the QueueInput...() and
+    // notification of sysmem allocation completion arrive on different
+    // channels, so the client having heard that allocation is complete doesn't
+    // mean the server knows that allocation is complete yet.  However, the
+    // server can expect that allocation is in fact complete and can expect to
+    // get the allocation information from sysmem immediately upon requesting
+    // the information from sysmem.
+    SetInputBufferPartialSettings(StreamBufferPartialSettings input_settings);
+
+    // OnOutputConstraints()
+    //
+    // This event informs the client of new output constraints.
+    //
+    // This message is ordered with respect to other output (such as output
+    // packets, output format, output end-of-stream).
+    //
+    // Before the first OnOutputPacket() of a stream, the server guarantees that
+    // at least one OnOutputConstraints() and exactly one OnOutputFormat() will
+    // be sent.  The server may not set buffer_constraints_action_required true
+    // in OnOutputConstraints() if the buffer config is already suitable for the
+    // stream (buffer_constraints_action_required false means the buffer config
+    // is already fine).  The client must tolerate multiple
+    // OnOutputConstraints() (and 1 OnOutputFormat() message) before the first
+    // output packet.  As long as the client hasn't moved to a new stream, the
+    // server won't send another OnOutputConstraints() until after the client
+    // has configured output buffers.
+    //
+    // This message can be sent mid-stream by a server.  If
+    // buffer_constraints_action_required false, the message is safe to
+    // ignore, but a client may choose to stash the new constraints for
+    // later use the next time the client wants to unilaterally re-configure
+    // buffers (when allowed).  If later the server needs the output config to
+    // change, the server may send a new OnOutputConstraints() with
     // buffer_constraints_action_required true.
     //
-    // If buffer_constraints_action_required is true and the
-    // stream_lifetime_ordinal matches the current stream, the client must react
-    // by configuring or re-configuring output buffers.
+    // On buffer_constraints_action_required true, a client that does not wish
+    // to fully handle mid-stream output buffer config changes should either
+    // give up completely on the processing, or at least re-config the output
+    // as specified before starting a new stream (and possibly re-delivering
+    // input data, if the client wants).  This avoids useless retry with a new
+    // stream starting from just before the output buffer config change which
+    // would hit the same mid-stream output config change again.
     //
-    // Some clients may prefer not to support mid-stream output config changes,
-    // but even those clients are required to process OnOutputConfig() messages
-    // up to the first output packet of each stream, as OnOutputConfig() is used
-    // for stream format detection as well as for potential mid-stream output
-    // config changes.
+    // Similarly, some servers may only partly support mid-stream format
+    // changes, or only support a mid-stream format change if the buffers are
+    // already large enough to handle both before and after the format change.
+    // Such servers should still indicate buffer_constraints_action_required
+    // true, but then send OnStreamFailed() after the client has re-configured
+    // output buffers (seamlessly dealing with the mid-stream output config
+    // change is even better of course, but is not always feasible depending on
+    // format).  When the client retries with a new stream starting from a
+    // nearby location in the client's logical overall media timeline, the
+    // output buffers will already be suitable for the larger size output, so
+    // the new stream will not need any mid-stream output buffer re-config,
+    // only a mid-stream OnOutputFormat().  This strategy avoids the problem
+    // that would otherwise occur if a client were to retry with a new stream
+    // starting just before the mid-stream output buffer config change (the
+    // retry wouldn't be effective since the same need for an output buffer
+    // config change would be hit again).  Servers are discouraged from sending
+    // OnStreamFailed() solely due to a mid-stream need for different output
+    // buffer config without first sending OnOutputConstraints() with
+    // buffer_constraints_action_required true and waiting for the client to
+    // re-configure output buffers (to avoid the useless client retry with a
+    // new stream from a logical location before the config change).
     //
-    // For more on OnOutputConfig(), see cocec.md.
+    // When buffer_constraints_action_required true, the server will not send
+    // any OnOutputPacket() for this stream until after the client has
+    // configured/re-configured output buffers.
+    //
+    // A client that gives up on processing on any mid-stream
+    // OnOutputConstraints() or mid-stream OnOuptutFormat() should completely
+    // ignore any OnOutputConstraints() with buffer_constraints_action_required
+    // false.  Otherwise the client may needlessly fail processing, or server
+    // implementations might not be able to use
+    // buffer_constraints_action_required false for fear of simpler clients
+    // just disconnecting.
+    //
+    // All clients, even those which don't want to support any mid-stream
+    // output buffer re-config or mid-stream OnOutputFormat() are required to
+    // deal with 1..multiple OnOutputConstraints() messages before the first
+    // output packet, and 1 OnOutputFormat() messages before the first output
+    // packet.
+    //
+    // This message is ordered with respect to output packets, and with respect
+    // to OnOutputFormat().
+    //
+    // For more on OnOutputConstraints(), see cocec.md.
+    -> OnOutputConstraints(StreamOutputConstraints output_config);
+
+    // OnOutputFormat()
+    //
+    // This message is sent by the server before the first output packet of any
+    // stream, and potentially mid-stream between output packets of the stream,
+    // ordered with respect to output packets, and ordered with respect to
+    // OnOutputConstraints().
+    //
+    // The server guarantees that the first packet of every stream will be
+    // preceeded by an OnOutputFormat().
+    //
+    // The server guarantees that there will be an OnOutputFormat() between an
+    // OnOutputConstraints() with buffer_constraints_action_required true and an
+    // OnOutputPacket().  In other words, the client is essentially allowed to
+    // forget what the output format is on any OnOutputConstraints() with
+    // buffer_constraints_action_required true, because the server promises a
+    // subsequent OnOutputFormat() before any OnOutputPacket().
+    //
+    // If the server sets buffer_constraints_action_required true in
+    // OnOutputConstraints(), the server won't send OnOutputFormat() (and therefore
+    // also won't send OnOutputPacket()) until the client has re-configured
+    // output buffers.
+    //
+    // The server is allowed to send an OnOutputFormat() mid-stream between two
+    // output packets.
+    //
+    // A server won't send two adjacent OnOutputFormat() messages without any
+    // output packet in between.  However an OnOutputFormat() message doesn't
+    // guarantee a subsequent packet, because for example the server could send
+    // OnOutputEndOfStream() or OnStreamFailed() instead.
+    //
+    // A client that does not wish to seamlessly handle mid-stream output format
+    // changes should either ensure that no stream processed by the client
+    // ever has any mid-stream format change, or the client should ensure that
+    // any retry of processing starts the new attempt at a point logically at or
+    // after the ponit where the old format has ended and the new format starts,
+    // else the client could just hit the same mid-stream format change again.
+    //
+    // An example of this message being sent mid-stream is mid-stream change
+    // of dimensions of video frames output from a video decoder.
+    //
+    // Not all servers will support seamless handling of format change.  Those
+    // that do support seamless handling of format change may require that the
+    // format change not also require output buffer re-config, in order for the
+    // handling to be seamless.  See the comment block for OnOutputConstraints() for
+    // more discussion of how servers and clients should behave - in particular
+    // when they don't seamlessly handle output constraint change and/or output
+    // format change.
+    //
+    // If this message isn't being sent by the server when expected at the
+    // start of a stream, the most common reason is that a previous
+    // OnOutputConstraints() with buffer_constraints_action_required true hasn't
+    // been processed by the client (by configuring output buffers using
+    // SetOutputBufferPartialSettings() etc).
+    -> OnOutputFormat(StreamOutputFormat output_format);
+
+    // DEPRECATED - this is temporarily still sent in addition to
+    // OnOutputConstraints and OnOutputConfig.  Soon this will be removed.
     -> OnOutputConfig(StreamOutputConfig output_config);
 
     // SetOutputBufferSettings() and AddOutputBuffer()
     //
-    // These are not permitted until after the first OnOutputConfig().
+    // These are not permitted until after the first OnOutputConstraints().
     //
-    // Roughly speaking, these messages are sent in response to OnOutputConfig()
+    // Roughly speaking, these messages are sent in response to OnOutputConstraints()
     // with buffer_constraints_action_required true.
     //
     // Configuring output buffers consists of calling SetOutputBufferSettings()
@@ -1041,7 +1320,7 @@ protocol StreamProcessor {
     // mode, this is the same as the number of packets.  In single-buffer mode,
     // this is 1.
     //
-    // Configuring output buffers is _required_ after OnOutputConfig() is
+    // Configuring output buffers is _required_ after OnOutputConstraints() is
     // received by the client with buffer_constraints_action_required true and
     // stream_lifetime_ordinal equal to the client's current
     // stream_lifetime_ordinal (even if there is an active stream), and is
@@ -1051,6 +1330,37 @@ protocol StreamProcessor {
     // stream_processor.md.
     SetOutputBufferSettings(StreamBufferSettings output_settings);
     AddOutputBuffer(StreamBuffer buffer);
+
+    // SetOutputBufferPartialSettings()
+    //
+    // When the client is using sysmem to allocate buffers, this message is
+    // used instead of SetOutputBufferSettings()+AddOutputBuffer(). Instead, a
+    // single SetOutputBufferPartialSettings() provides the StreamProcessor
+    // with the client-specified output settings and a BufferCollectionToken
+    // which the StreamProcessor will use to convey constraints to sysmem.
+    // Both the client and the StreamProcessor will be informed of the
+    // allocated buffers directly by sysmem via their BufferCollection channel
+    // (not via the StreamProcessor channel).
+    //
+    // See also ClientReadyForOutput().
+    SetOutputBufferPartialSettings(StreamBufferPartialSettings output_settings);
+
+    // After SetOutputBufferPartialSettings(), the server won't send
+    // OnOutputConstraints(), OnOutputFormat(), OnOutputPacket(), or
+    // OnOutputEndOfStream() until after the client sends
+    // CompleteOutputBufferPartialSettings().
+    //
+    // Some clients may be able to send
+    // CompleteOutputBufferPartialSettings() immediately after
+    // SetOutputBufferPartialSettings() - in that case the client needs to be
+    // prepared to receive output without knowing the buffer count or packet
+    // count yet - such clients may internally delay processing the received
+    // output until the client has heard from sysmem (which is when the client
+    // will learn the buffer count and packet count).
+    //
+    // Other clients may first wait for sysmem to allocate, prepare to receive
+    // output, and then send CompleteOutputBufferPartialSettings().
+    CompleteOutputBufferPartialSettings(uint64 buffer_lifetime_ordinal);
 
     // FlushEndOfStreamAndCloseStream()
     //
@@ -1090,7 +1400,7 @@ protocol StreamProcessor {
     //
     // Because the old stream is not done processing yet and the old stream's
     // data is not being discarded, the client must be prepared to continue to
-    // process OnOutputConfig() messages until the stream_lifetime_ordinal is
+    // process OnOutputConstraints() messages until the stream_lifetime_ordinal is
     // done.  The client will know the stream_lifetime_ordinal is done when
     // OnOutputEndOfStream(), OnStreamFailed(), or the StreamProcessor channel
     // closes.
@@ -1242,7 +1552,7 @@ protocol StreamProcessor {
     // the only ways that an OnOutputEndOfStream() won't happen after
     // QueueInputEndOfStream().
     //
-    // There will be no more OnOutputPacket() or OnOutputConfig() messages for
+    // There will be no more OnOutputPacket() or OnOutputConstraints() messages for
     // this stream_lifetime_ordinal after this message - if a server doesn't
     // follow this rule, a client should close the StreamProcessor channel.
     //
@@ -1257,6 +1567,9 @@ protocol StreamProcessor {
     //
 
     // QueueInputFormatDetails()
+    //
+    // TODO(dustingreen): Rename from QueueInputFormatDetails() to
+    // QueueInputFormat().
     //
     // If the input format details are still the same as specified during
     // StreamProcessor creation, this message is unnecessary and does not need
@@ -1294,15 +1607,15 @@ protocol StreamProcessor {
     // If the stream doesn't exist yet, this message creates the new stream.
     //
     // The client is required to be willing to send QueueInputPacket() prior to
-    // the server's first OnOutputConfig(), and is permitted to start a new
+    // the server's first OnOutputConstraints(), and is permitted to start a new
     // stream without output buffers configured yet.
     //
     // The client must continue to deliver input data via this message even if
-    // the stream processor has not yet generated the first OnOutputConfig(),
+    // the stream processor has not yet generated the first OnOutputConstraints(),
     // and even if the StreamProcessor is generating OnFreeInputPacket() for
     // previously-queued input packets.  The input data must continue as long
     // as there are free packets to be assured that the server will ever
-    // generate the first OnOutputConfig().
+    // generate the first OnOutputConstraints().
     //
     // For more on QueueInputPacket(), see stream_processor.md.
     QueueInputPacket(Packet packet);

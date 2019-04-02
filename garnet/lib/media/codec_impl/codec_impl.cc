@@ -62,8 +62,10 @@ constexpr uint32_t kInputPacketCountForCodecMax = 64;
 constexpr uint32_t kInputDefaultPacketCountForCodec =
     kInputPacketCountForCodecRecommended;
 
+constexpr uint32_t kInputPacketCountForClientMin = 1;
 constexpr uint32_t kInputPacketCountForClientMax =
     std::numeric_limits<uint32_t>::max();
+
 // This is fairly arbitrary, but rough speaking, 1 to be filling, 1 to be in
 // flight toward the codec, and 1 to be in flight from the codec.  This doesn't
 // intend to be large enough to ride out any hypothetical decoder performance
@@ -124,43 +126,30 @@ class ScopedRelock {
   DISALLOW_COPY_ASSIGN_AND_MOVE(ScopedRelock);
 };
 
-uint32_t PacketCountFromPortSettings(
-    const fuchsia::media::StreamBufferSettings& settings) {
-  ZX_DEBUG_ASSERT(settings.has_packet_count_for_server());
-  ZX_DEBUG_ASSERT(settings.has_packet_count_for_client());
-  return settings.packet_count_for_server() +
-         settings.packet_count_for_client();
-}
-
-uint32_t BufferCountFromPortSettings(
-    const fuchsia::media::StreamBufferSettings& settings) {
-  if (settings.has_single_buffer_mode() && settings.single_buffer_mode()) {
-    return 1;
-  }
-  return PacketCountFromPortSettings(settings);
-}
-
 }  // namespace
 
 CodecImpl::CodecImpl(
+    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
     std::unique_ptr<CodecAdmission> codec_admission,
     async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
     std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
     fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request)
-    : CodecImpl(std::move(codec_admission), shared_fidl_dispatcher,
-                shared_fidl_thread, std::move(decoder_params), nullptr,
-                std::move(codec_request)) {}
+    : CodecImpl(std::move(sysmem), std::move(codec_admission),
+                shared_fidl_dispatcher, shared_fidl_thread,
+                std::move(decoder_params), nullptr, std::move(codec_request)) {}
 
 CodecImpl::CodecImpl(
+    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
     std::unique_ptr<CodecAdmission> codec_admission,
     async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
     std::unique_ptr<fuchsia::mediacodec::CreateEncoder_Params> encoder_params,
     fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request)
-    : CodecImpl(std::move(codec_admission), shared_fidl_dispatcher,
-                shared_fidl_thread, nullptr, std::move(encoder_params),
-                std::move(codec_request)) {}
+    : CodecImpl(std::move(sysmem), std::move(codec_admission),
+                shared_fidl_dispatcher, shared_fidl_thread, nullptr,
+                std::move(encoder_params), std::move(codec_request)) {}
 
 CodecImpl::CodecImpl(
+    fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
     std::unique_ptr<CodecAdmission> codec_admission,
     async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
     std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
@@ -171,18 +160,31 @@ CodecImpl::CodecImpl(
       codec_admission_(std::move(codec_admission)),
       shared_fidl_dispatcher_(shared_fidl_dispatcher),
       shared_fidl_thread_(shared_fidl_thread),
-      // TODO(dustingreen): Maybe have another parameter for encoder params, or
-      // maybe separate constructor.
       decoder_params_(std::move(decoder_params)),
       encoder_params_(std::move(encoder_params)),
+      tmp_sysmem_(std::move(sysmem)),
       tmp_interface_request_(std::move(codec_request)),
       binding_(this),
       stream_control_loop_(&kAsyncLoopConfigNoAttachToThread) {
+  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   ZX_DEBUG_ASSERT(!!decoder_params_ ^ !!encoder_params_);
+  ZX_DEBUG_ASSERT(tmp_sysmem_);
   ZX_DEBUG_ASSERT(tmp_interface_request_);
+
+  // If the fuchsia::sysmem::Allocator connection dies, so does this CodecImpl.
+  sysmem_.set_error_handler([this](zx_status_t status) {
+    // This handler can't run until after sysmem_ is bound.
+    ZX_DEBUG_ASSERT(was_logically_bound_);
+    this->Fail("CodecImpl sysmem_ channel failed");
+  });
+
   // This is the binding_'s error handler, not the owner_error_handler_ which
   // is related but separate.
-  binding_.set_error_handler([this](zx_status_t status) { this->Unbind(); });
+  binding_.set_error_handler([this](zx_status_t status) {
+    // This handler can't run until after binding_ is bound.
+    ZX_DEBUG_ASSERT(was_logically_bound_);
+    this->Fail("CodecImpl binding_ channel failed");
+  });
   initial_input_format_details_ = decoder_params_
                                       ? &decoder_params_->input_details()
                                       : &encoder_params_->input_format();
@@ -270,9 +272,16 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
     // of that dispatching would tend to land in FailLocked().  The concurrency
     // is just worth keeping in mind for the rest of the current lambda is all.
     PostToSharedFidl([this] {
-      zx_status_t bind_result = binding_.Bind(std::move(tmp_interface_request_),
+      zx_status_t status = sysmem_.Bind(std::move(tmp_sysmem_), shared_fidl_dispatcher_);
+      if (status != ZX_OK) {
+        Fail("sysmem_.Bind() failed");
+        return;
+      }
+      ZX_DEBUG_ASSERT(!tmp_sysmem_);
+
+      status = binding_.Bind(std::move(tmp_interface_request_),
                                               shared_fidl_dispatcher_);
-      if (bind_result != ZX_OK) {
+      if (status != ZX_OK) {
         Fail("binding_.Bind() failed");
         return;
       }
@@ -309,6 +318,8 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
         kInputPacketCountForCodecRecommended);
     buffer_constraints.set_packet_count_for_server_max(
         kInputPacketCountForCodecMax);
+    buffer_constraints.set_packet_count_for_client_min(
+        kInputPacketCountForClientMin);
     buffer_constraints.set_packet_count_for_client_max(
         kInputPacketCountForClientMax);
     buffer_constraints.set_single_buffer_mode_allowed(
@@ -318,7 +329,7 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
         std::make_unique<fuchsia::media::StreamBufferConstraints>(
             std::move(buffer_constraints));
 
-    // If/when this sends OnOutputConfig(), it posts to do so.
+    // If/when this sends OnOutputConstraints(), it posts to do so.
     onInputConstraintsReady();
 
     sent_buffer_constraints_version_ordinal_[kInputPort] =
@@ -354,23 +365,19 @@ void CodecImpl::SetInputBufferSettings_StreamControl(
     if (IsStoppingLocked()) {
       return;
     }
-    if (IsStreamActiveLocked()) {
-      Fail("client sent SetInputBufferSettings() with stream active");
-      return;
-    }
-    SetBufferSettingsCommon(lock, kInputPort, std::move(input_settings),
-                            *input_constraints_);
+    SetInputBufferSettingsCommon(lock, &input_settings, nullptr);
   }  // ~lock
 }
 
 void CodecImpl::AddInputBuffer(fuchsia::media::StreamBuffer buffer) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   PostToStreamControl([this, buffer = std::move(buffer)]() mutable {
-    AddInputBuffer_StreamControl(std::move(buffer));
+    AddInputBuffer_StreamControl(true, std::move(buffer));
   });
 }
 
 void CodecImpl::AddInputBuffer_StreamControl(
+    bool is_client,
     fuchsia::media::StreamBuffer buffer) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   if (IsStopping()) {
@@ -378,63 +385,175 @@ void CodecImpl::AddInputBuffer_StreamControl(
   }
   // We must check, because __WARN_UNUSED_RESULT, and it's worth it for the
   // enforcement and consistency.
-  if (!AddBufferCommon(kInputPort, std::move(buffer))) {
+  if (!AddBufferCommon(is_client, kInputPort, std::move(buffer))) {
     return;
   }
+}
+
+void CodecImpl::SetInputBufferPartialSettings(
+    fuchsia::media::StreamBufferPartialSettings input_settings) {
+  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  PostToStreamControl([this, input_settings = std::move(input_settings)]() mutable {
+    SetInputBufferPartialSettings_StreamControl(std::move(input_settings));
+  });
+}
+
+void CodecImpl::SetInputBufferPartialSettings_StreamControl(
+    fuchsia::media::StreamBufferPartialSettings input_partial_settings) {
+  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    if (!sysmem_) {
+      FailLocked("client sent SetInputBufferPartialSettings() to a CodecImpl that lacks sysmem_");
+      return;
+    }
+    SetInputBufferSettingsCommon(lock, nullptr, &input_partial_settings);
+  }  // ~lock
+}
+
+void CodecImpl::SetInputBufferSettingsCommon(
+    std::unique_lock<std::mutex>& lock,
+    fuchsia::media::StreamBufferSettings* input_settings,
+    fuchsia::media::StreamBufferPartialSettings* input_partial_settings) {
+  if (IsStoppingLocked()) {
+    return;
+  }
+  if (IsStreamActiveLocked()) {
+    FailLocked("client sent SetInputBuffer*Settings() with stream active");
+    return;
+  }
+  SetBufferSettingsCommon(lock, kInputPort, input_settings,
+                          input_partial_settings, *input_constraints_);
 }
 
 void CodecImpl::SetOutputBufferSettings(
     fuchsia::media::StreamBufferSettings output_settings) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
-
-    if (!output_config_) {
-      // invalid client behavior
-      //
-      // client must have received at least the initial OnOutputConfig() first
-      // before sending SetOutputBufferSettings().
-      FailLocked(
-          "client sent SetOutputBufferSettings() when no output_config_");
-      return;
-    }
-
-    // For a mid-stream output format change, this also enforces that the client
-    // can only catch up to the mid-stream format change once.  In other words,
-    // if the client has already caught up to the mid-stream config change, the
-    // client no longer has an excuse to re-configure again with a stream
-    // active.
-    //
-    // There's a check in SetBufferSettingsCommonLocked() that ignores this
-    // message if the client's buffer_constraints_version_ordinal is behind
-    // last_required_buffer_constraints_version_ordinal_, which gets updated
-    // under the same lock hold interval as the server's de-configuring of
-    // output buffers.
-    //
-    // There's a check in SetBufferSettingsCommonLocked() that closes the
-    // channel if the client is sending a buffer_constraints_version_ordinal
-    // that's newer than the last sent_buffer_constraints_version_ordinal_.
-    if (IsOutputConfiguredLocked() && IsStreamActiveLocked()) {
-      FailLocked(
-          "client sent SetOutputBufferSettings() with IsStreamActiveLocked() + "
-          "already-configured output");
-      return;
-    }
-
-    SetBufferSettingsCommon(lock, kOutputPort, std::move(output_settings),
-                            output_config_->buffer_constraints());
+    SetOutputBufferSettingsCommon(lock, &output_settings, nullptr);
   }  // ~lock
+}
+
+void CodecImpl::SetOutputBufferSettingsCommon(
+    std::unique_lock<std::mutex>& lock,
+    fuchsia::media::StreamBufferSettings* output_settings,
+    fuchsia::media::StreamBufferPartialSettings* output_partial_settings) {
+  if (!output_constraints_) {
+    // invalid client behavior
+    //
+    // client must have received at least the initial OnOutputConstraints() first
+    // before sending SetOutputBufferSettings().
+    FailLocked(
+        "client sent SetOutputBufferSettings()/SetOutputBufferPartialSettings()"
+        " when no output_constraints_");
+    return;
+  }
+
+  // For a mid-stream output format change, this also enforces that the client
+  // can only catch up to the mid-stream format change once.  In other words,
+  // if the client has already caught up to the mid-stream config change, the
+  // client no longer has an excuse to re-configure again with a stream
+  // active.
+  //
+  // There's a check in SetBufferSettingsCommonLocked() that ignores this
+  // message if the client's buffer_constraints_version_ordinal is behind
+  // last_required_buffer_constraints_version_ordinal_, which gets updated
+  // under the same lock hold interval as the server's de-configuring of
+  // output buffers.
+  //
+  // There's a check in SetBufferSettingsCommonLocked() that closes the
+  // channel if the client is sending a buffer_constraints_version_ordinal
+  // that's newer than the last sent_buffer_constraints_version_ordinal_.
+  if (IsStreamActiveLocked() && IsOutputConfiguredLocked()) {
+    FailLocked(
+        "client sent SetOutputBufferSettings()/SetOutputBufferPartialSettings()"
+        " with IsStreamActiveLocked() + already-fully-configured output");
+    return;
+  }
+
+  SetBufferSettingsCommon(lock, kOutputPort, output_settings,
+                          output_partial_settings,
+                          output_constraints_->buffer_constraints());
 }
 
 void CodecImpl::AddOutputBuffer(fuchsia::media::StreamBuffer buffer) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-  bool output_done_configuring =
-      AddBufferCommon(kOutputPort, std::move(buffer));
-  if (output_done_configuring) {
+  AddOutputBufferInternal(true, std::move(buffer));
+}
+
+void CodecImpl::AddOutputBufferInternal(bool is_client, fuchsia::media::StreamBuffer buffer) {
+  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  bool output_buffers_done_configuring =
+      AddBufferCommon(is_client, kOutputPort, std::move(buffer));
+  if (output_buffers_done_configuring) {
     // The StreamControl domain _might_ be waiting for output to be configured.
     wake_stream_control_condition_.notify_all();
   }
+}
+
+void CodecImpl::SetOutputBufferPartialSettings(
+  fuchsia::media::StreamBufferPartialSettings output_partial_settings) {
+  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    if (!sysmem_) {
+      FailLocked("client sent SetOutputBufferPartialSettings() to a CodecImpl "
+                 "that lacks a sysmem_");
+      return;
+    }
+    SetOutputBufferSettingsCommon(lock, nullptr, &output_partial_settings);
+  }  // ~lock
+}
+
+void CodecImpl::CompleteOutputBufferPartialSettings(
+    uint64_t buffer_lifetime_ordinal) {
+  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+
+    if (buffer_lifetime_ordinal % 2 == 0) {
+      FailLocked(
+          "CompleteOutputBufferPartialSettings client sent even "
+          "buffer_lifetime_ordinal, but must be odd");
+      return;
+    }
+
+    if (buffer_lifetime_ordinal !=
+        protocol_buffer_lifetime_ordinal_[kOutputPort]) {
+      FailLocked(
+          "CompleteOutputBufferPartialSettings bad buffer_lifetime_ordinal");
+      return;
+    }
+
+    // If the server is not interested in the client's buffer_lifetime_ordinal,
+    // the client's buffer_lifetime_ordinal won't match the server's
+    // buffer_lifetime_ordinal_.  The client will probably later catch up.
+    if (buffer_lifetime_ordinal != buffer_lifetime_ordinal_[kOutputPort]) {
+      // The case that ends up here is when a client's output configuration
+      // (whole or last part) is being ignored because it's not yet caught up
+      // with last_required_buffer_constraints_version_ordinal_.
+
+      // Ignore the client's message.  The client will probably catch up later.
+      return;
+    }
+
+    if (!IsPortBuffersAtLeastPartiallyConfiguredLocked(kOutputPort)) {
+      FailLocked("CompleteOutputBufferPartialSettings seen without prior "
+                 "SetOutputBufferPartialSettings");
+      return;
+    }
+
+    if (port_settings_[kOutputPort]->is_complete_seen_output()) {
+      FailLocked("CompleteOutputBufferPartialSettings permitted exactly once "
+                 "after each SetOutputBufferPartialSettings");
+      return;
+    }
+
+    // This will cause IsOutputConfiguredLocked() to start returning true.
+    port_settings_[kOutputPort]->SetCompleteSeenOutput();
+  }  // ~lock
+  wake_stream_control_condition_.notify_all();
 }
 
 void CodecImpl::FlushEndOfStreamAndCloseStream(
@@ -482,7 +601,7 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(
     // At this point we know that the stream is not discarded, and not already
     // flushed previously (because flush will discard the stream as there's
     // nothing more that the stream is permitted to do).
-    ZX_DEBUG_ASSERT(stream_);
+    ZX_DEBUG_ASSERT(IsStreamActiveLocked());
     ZX_DEBUG_ASSERT(stream_->stream_lifetime_ordinal() ==
                     stream_lifetime_ordinal);
     if (!stream_->input_end_of_stream()) {
@@ -493,7 +612,7 @@ void CodecImpl::FlushEndOfStreamAndCloseStream_StreamControl(
     }
     while (!stream_->output_end_of_stream()) {
       // While waiting, we'll continue to send OnOutputPacket(),
-      // OnOutputConfig(), and continue to process RecycleOutputPacket(), until
+      // OnOutputConstraints(), and continue to process RecycleOutputPacket(), until
       // the client catches up to the latest config (as needed) and we've
       // started the send of output end_of_stream packet to the client.
       //
@@ -572,7 +691,14 @@ void CodecImpl::Sync_StreamControl(SyncCallback callback) {
     // closed soon instead, and the client has to tolerate that.
     return;
   }
-  callback();
+  // We post back to FIDL thread to respond to ensure we're not racing with
+  // channel close which could lead to attempting to send to handle value 0
+  // which can cause process termination.  Also, because this fences
+  // BufferAllocation clean close which itself is done async from StreamControl
+  // to FIDL in some cases.
+  PostToSharedFidl([callback = std::move(callback)]{
+    callback();
+  });
 }
 
 void CodecImpl::RecycleOutputPacket(
@@ -635,7 +761,7 @@ void CodecImpl::RecycleOutputPacket(
     // Before handing the packet to the core codec, clear some fields that the
     // core codec is expected to set (or optionally set in the case of
     // timestamp_ish).  In addition to these parameters, a core codec can emit
-    // output config changes via onCoreCodecMidStreamOutputConfigChange().
+    // output config changes via onCoreCodecMidStreamOutputConstraintsChange().
     packet = all_packets_[kOutputPort][packet_index].get();
     packet->ClearStartOffset();
     packet->ClearValidLengthBytes();
@@ -689,6 +815,12 @@ void CodecImpl::QueueInputFormatDetails_StreamControl(
   if (!CheckStreamLifetimeOrdinalLocked(stream_lifetime_ordinal)) {
     return;
   }
+
+  if (!CheckWaitEnsureInputConfigured(lock)) {
+    ZX_DEBUG_ASSERT(IsStoppingLocked() || !stream_ || stream_->future_discarded());
+    return;
+  }
+
   ZX_DEBUG_ASSERT(stream_lifetime_ordinal >= stream_lifetime_ordinal_);
   if (stream_lifetime_ordinal > stream_lifetime_ordinal_) {
     if (!StartNewStream(lock, stream_lifetime_ordinal)) {
@@ -788,12 +920,26 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       return;
     }
 
+    if (!packet.has_stream_lifetime_ordinal()) {
+      FailLocked(
+          "client QueueInputPacket() without packet stream_lifetime_ordinal.");
+      return;
+    }
+    if (!CheckStreamLifetimeOrdinalLocked(packet.stream_lifetime_ordinal())) {
+      return;
+    }
+
+    if (!CheckWaitEnsureInputConfigured(lock)) {
+      ZX_DEBUG_ASSERT(IsStoppingLocked() || (stream_ && stream_->future_discarded()));
+      return;
+    }
+
     // For input, mid-stream config changes are not a thing and input buffers
     // are never unilaterally de-configured by the Codec server.
     ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[kInputPort] ==
                     port_settings_[kInputPort]->buffer_lifetime_ordinal());
-    // For this message we're extra-strict re. buffer_lifetime_ordinal, at least
-    // for now.
+
+    // For this message we're strict re. buffer_lifetime_ordinal.
     //
     // In contrast to output, the server doesn't use even values to track config
     // changes that the client doesn't know about yet, since the server can't
@@ -810,15 +956,6 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
       return;
     }
 
-    if (!packet.has_stream_lifetime_ordinal()) {
-      FailLocked(
-          "client QueueInputPacket() without packet stream_lifetime_ordinal.");
-      return;
-    }
-
-    if (!CheckStreamLifetimeOrdinalLocked(packet.stream_lifetime_ordinal())) {
-      return;
-    }
     ZX_DEBUG_ASSERT(packet.stream_lifetime_ordinal() >=
                     stream_lifetime_ordinal_);
 
@@ -836,16 +973,12 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
     ZX_DEBUG_ASSERT(packet.stream_lifetime_ordinal() ==
                     stream_lifetime_ordinal_);
 
-    if (!IsInputConfiguredLocked()) {
-      FailLocked("client QueueInputPacket() with input buffers not configured");
-      return;
-    }
     if (!packet.header().has_packet_index()) {
       FailLocked("client QueueInputPacket() with packet has no packet index");
       return;
     }
     if (packet.header().packet_index() >= all_packets_[kInputPort].size()) {
-      FailLocked("client QueueInputPacket() with packet_index out of range");
+      FailLocked("client QueueInputPacket() with packet_index out of range - packet_index: %u size: %u", packet.header().packet_index(), all_packets_[kInputPort].size());
       return;
     }
     if (!packet.has_buffer_index()) {
@@ -952,6 +1085,12 @@ void CodecImpl::QueueInputEndOfStream_StreamControl(
     if (!CheckStreamLifetimeOrdinalLocked(stream_lifetime_ordinal)) {
       return;
     }
+
+    if (!CheckWaitEnsureInputConfigured(lock)) {
+      ZX_DEBUG_ASSERT(IsStoppingLocked() || (stream_ && stream_->future_discarded()));
+      return;
+    }
+
     ZX_DEBUG_ASSERT(stream_lifetime_ordinal >= stream_lifetime_ordinal_);
     if (stream_lifetime_ordinal > stream_lifetime_ordinal_) {
       // We start a new stream given an end-of-stream for a stream we've not
@@ -969,16 +1108,84 @@ void CodecImpl::QueueInputEndOfStream_StreamControl(
     stream_->SetInputEndOfStream();
 
     if (stream_->future_discarded()) {
-      // Don't queue to OMX.  The stream_ may have never fully started, or may
-      // have been future-discarded since.  Either way, skip queueing to OMX. We
-      // only really must do this because the stream may not have ever fully
-      // started, in the case where the client moves on to a new stream before
-      // catching up to latest output config.
+      // Don't queue to core codec.  The stream_ may have never fully started,
+      // or may have been future-discarded since. Either way, skip queueing to
+      // core codec. We only really must do this because the stream may not have
+      // ever fully started, in the case where the client moves on to a new
+      // stream before catching up to latest output config.
       return;
     }
   }  // ~lock
 
   CoreCodecQueueInputEndOfStream();
+}
+
+bool CodecImpl::CheckWaitEnsureInputConfigured(std::unique_lock<std::mutex>& lock) {
+  // Ensure/finish input configuration.
+  if (!IsPortBuffersAtLeastPartiallyConfiguredLocked(kInputPort)) {
+    FailLocked("client QueueInput*() with input buffers not at least partially configured");
+    return false;
+  }
+  ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[kInputPort] % 2 == 1);
+  // The client is required to know that sysmem is in fact done allocating the
+  // BufferCollection successfully before the client sends
+  // QueueInput...StreamControl.  We can't trust a client to necessarily get
+  // that right however, so rather than just getting stuck indefinitely in that
+  // case, we detect by asking sysmem to verify that it has allocated the
+  // BufferCollection successfully.  This verification happens async, but will
+  // shortly cause WaitEnsureSysmemReadyOnInput() to return and
+  // IsStoppingLocked() to return true if verification fails.
+  if (!IsInputConfiguredLocked()) {
+    PostToSharedFidl([this, buffer_lifetime_ordinal = buffer_lifetime_ordinal_[kInputPort]]{
+      std::unique_lock<std::mutex> lock(lock_);
+      if (IsStoppingLocked()) {
+        return;
+      }
+      if (buffer_lifetime_ordinal != buffer_lifetime_ordinal_[kInputPort]) {
+        // stale; no problem; old buffers were allocated fine and client already
+        // moved on after that.
+        return;
+      }
+      // Else previous buffer_lifetime_ordinal check would have noticed.
+      ZX_DEBUG_ASSERT(port_settings_[kInputPort]);
+      // paranoid check - assert above believed to be valid
+      if (!port_settings_[kInputPort]) {
+        return;
+      }
+      // Else IsStoppingLocked() check above would have returned.
+      ZX_DEBUG_ASSERT(port_settings_[kInputPort]->buffer_collection().is_bound());
+      // paranoid check - assert above believed to be valid
+      if (!port_settings_[kInputPort]->buffer_collection().is_bound()) {
+        return;
+      }
+      port_settings_[kInputPort]->buffer_collection()->CheckBuffersAllocated([this, buffer_lifetime_ordinal](zx_status_t status){
+        std::unique_lock<std::mutex> lock(lock_);
+        if (IsStoppingLocked()) {
+          return;
+        }
+        if (buffer_lifetime_ordinal != buffer_lifetime_ordinal_[kInputPort]) {
+          // stale; no problem; old buffers were allocated fine and client
+          // already moved on after that.
+          return;
+        }
+        if (status != ZX_OK) {
+          // This will cause any in-progress WaitEnsureSysmemReadyOnInput() to
+          // return shortly and IsStoppingLocked() will be true.
+          FailLocked("Probably client did QueueInput* before the client determined that sysmem was done successfully allocating buffers after most recent SetInputBufferPartialSettings()");
+          return;
+        }
+      });
+    });
+    if (!WaitEnsureSysmemReadyOnInput(lock)) {
+      ZX_DEBUG_ASSERT(IsStoppingLocked());
+      return false;
+    }
+  }
+  if (!IsInputConfiguredLocked()) {
+    FailLocked("client QueueInput*() with input buffers not configured");
+    return false;
+  }
+  return true;
 }
 
 void CodecImpl::onInputConstraintsReady() {
@@ -988,7 +1195,7 @@ void CodecImpl::onInputConstraintsReady() {
   }
   std::unique_lock<std::mutex> lock(lock_);
   StartIgnoringClientOldOutputConfig(lock);
-  GenerateAndSendNewOutputConfig(lock, true);
+  GenerateAndSendNewOutputConstraints(lock, true);
 }
 
 void CodecImpl::UnbindLocked() {
@@ -1102,6 +1309,22 @@ void CodecImpl::UnbindLocked() {
       // being safe to just delete.
       stream_control_loop_.Shutdown();
 
+      {  // scope lock
+        std::lock_guard<std::mutex> lock(lock_);
+        // This unbinds any BufferCollection bindings.  This is effectively part
+        // of the overall unbind of anything generating activity on FIDL thread
+        // based on incoming channel messages.
+        if (port_settings_[kInputPort] && port_settings_[kInputPort]->is_partial_settings()) {
+          port_settings_[kInputPort]->UnbindBufferCollection();
+        }
+        if (port_settings_[kOutputPort] && port_settings_[kOutputPort]->is_partial_settings()) {
+          port_settings_[kOutputPort]->UnbindBufferCollection();
+        }
+        // Unbind the sysmem_ fuchsia::sysmem::Allocator connection - this also
+        // ensures that any in-flight requests' completions will not run.
+        sysmem_.Unbind();
+      }  // ~lock
+
       // Before calling the owner_error_handler_, we declare that unbind is
       // done so that during the destructor we can check that unbind is done.
       was_unbind_completed_ = true;
@@ -1135,7 +1358,10 @@ void CodecImpl::UnbindLocked() {
       // fidl_thread() re. this CodecImpl to not re-post to the fidl_thread().
       // In contrast, it is ok if a FIDL dispatch (on FIDL thread) re-posts to
       // the fidl_thread(); this is ok because we've already stopped any more
-      // FIDL dispatching by binding_.Unbind() above.
+      // FIDL dispatching by binding_.Unbind() above.  It's also ok if a posted
+      // lambda starts a FIDL request that will complete async on the FIDL
+      // thread since the unbind above will prevent the completion from
+      // running.
       PostSerial(shared_fidl_dispatcher_,
                  [client_error_handler = std::move(owner_error_handler_)] {
                    // This call deletes the CodecImpl.
@@ -1159,13 +1385,15 @@ void CodecImpl::Unbind() {
 }
 
 bool CodecImpl::IsStreamActiveLocked() {
-  return stream_lifetime_ordinal_ % 2 == 1;
+  ZX_DEBUG_ASSERT(!!stream_ == (stream_lifetime_ordinal_ % 2 == 1));
+  return !!stream_;
 }
 
 void CodecImpl::SetBufferSettingsCommon(
     std::unique_lock<std::mutex>& lock, CodecPort port,
-    fuchsia::media::StreamBufferSettings settings,
-    const fuchsia::media::StreamBufferConstraints& constraints) {
+    fuchsia::media::StreamBufferSettings* settings,
+    fuchsia::media::StreamBufferPartialSettings* partial_settings,
+    const fuchsia::media::StreamBufferConstraints& stream_constraints) {
   ZX_DEBUG_ASSERT(port == kInputPort &&
                       thrd_current() == stream_control_thread_ ||
                   port == kOutputPort && thrd_current() == fidl_thread());
@@ -1177,41 +1405,91 @@ void CodecImpl::SetBufferSettingsCommon(
   // is either the last accepted from the client or one more than that as a way
   // of cleanly permitting the server to unilaterally de-configure output
   // buffers.
-  if (!settings.has_buffer_lifetime_ordinal()) {
-    FailLocked("settings do not have buffer lifetime ordinal");
-    return;
+  if (settings) {
+    if (!settings->has_buffer_lifetime_ordinal()) {
+      FailLocked("settings missing buffer lifetime ordinal");
+      return;
+    }
+    if (!settings->has_buffer_constraints_version_ordinal()) {
+      FailLocked("settings missing buffer constraints version ordinal");
+      return;
+    }
+    if (!settings->has_packet_count_for_server()) {
+      FailLocked("settings missing packet_count_for_server");
+      return;
+    }
+    if (!settings->has_packet_count_for_client()) {
+      FailLocked("settings missing packet_count_for_client");
+      return;
+    }
+    if (!settings->has_per_packet_buffer_bytes()) {
+      FailLocked("settings missing per_packet_buffer_bytes");
+      return;
+    }
+  } else {
+    if (!partial_settings->has_buffer_lifetime_ordinal()) {
+      FailLocked("partial_settings do not have buffer lifetime ordinal");
+      return;
+    }
+    if (!partial_settings->has_buffer_constraints_version_ordinal()) {
+      FailLocked(
+          "partial_settings do not have buffer constraints version ordinal");
+      return;
+    }
+    if (!partial_settings->has_packet_count_for_server()) {
+      FailLocked("partial_settings missing packet_count_for_server");
+      return;
+    }
+    if (!partial_settings->has_packet_count_for_client()) {
+      FailLocked("partial_settings missing packet_count_for_client");
+      return;
+    }
+    if (!partial_settings->has_sysmem_token() || !partial_settings->sysmem_token().is_valid()) {
+      FailLocked("partial_settings missing valid sysmem_token");
+      return;
+    }
   }
 
   ZX_DEBUG_ASSERT(
-      (!port_settings_[port && buffer_lifetime_ordinal_[port] == 0]) ||
+      !port_settings_[port] ||
       (buffer_lifetime_ordinal_[port] >=
            port_settings_[port]->buffer_lifetime_ordinal() &&
        buffer_lifetime_ordinal_[port] <=
            port_settings_[port]->buffer_lifetime_ordinal() + 1));
-  if (settings.buffer_lifetime_ordinal() <=
+
+  // The caller may be providing StreamBufferSettings or
+  // StreamBufferPartialSettings, but not both.
+  ZX_DEBUG_ASSERT(!!settings ^ !!partial_settings);
+
+  // Extract buffer_lifetime_ordinal and buffer_constraints_version_ordinal from
+  // whichever of StreamBufferSettings or StreamBufferPartialSettings the caller
+  // is providing.
+  uint64_t buffer_lifetime_ordinal = settings ?
+      settings->buffer_lifetime_ordinal() :
+      partial_settings->buffer_lifetime_ordinal();
+
+  uint64_t buffer_constraints_version_ordinal = settings ?
+      settings->buffer_constraints_version_ordinal() :
+      partial_settings->buffer_constraints_version_ordinal();
+
+  if (buffer_lifetime_ordinal <=
       protocol_buffer_lifetime_ordinal_[port]) {
     FailLocked(
-        "settings.buffer_lifetime_ordinal <= "
+        "buffer_lifetime_ordinal <= "
         "protocol_buffer_lifetime_ordinal_[port] - port: %d",
         port);
     return;
   }
-  protocol_buffer_lifetime_ordinal_[port] = settings.buffer_lifetime_ordinal();
-
-  if (settings.buffer_lifetime_ordinal() % 2 == 0) {
+  if (buffer_lifetime_ordinal % 2 == 0) {
     FailLocked(
         "Only odd values for buffer_lifetime_ordinal are permitted - port: %d "
         "value %lu",
-        port, settings.buffer_lifetime_ordinal());
+        port, buffer_lifetime_ordinal);
     return;
   }
+  protocol_buffer_lifetime_ordinal_[port] = buffer_lifetime_ordinal;
 
-  if (!settings.has_buffer_constraints_version_ordinal()) {
-    FailLocked("settings do not have buffer constraints version ordinal");
-    return;
-  }
-
-  if (settings.buffer_constraints_version_ordinal() >
+  if (buffer_constraints_version_ordinal >
       sent_buffer_constraints_version_ordinal_[port]) {
     FailLocked(
         "Client sent too-new buffer_constraints_version_ordinal - port: %d",
@@ -1219,37 +1497,292 @@ void CodecImpl::SetBufferSettingsCommon(
     return;
   }
 
-  if (settings.buffer_constraints_version_ordinal() <
+  if (buffer_constraints_version_ordinal <
       last_required_buffer_constraints_version_ordinal_[port]) {
     // ignore - client will probably catch up later
     return;
   }
 
   // We've peeled off too new and too old above.
-  ZX_DEBUG_ASSERT(settings.buffer_constraints_version_ordinal() >=
+  ZX_DEBUG_ASSERT(buffer_constraints_version_ordinal >=
                       last_required_buffer_constraints_version_ordinal_[port] &&
-                  settings.buffer_constraints_version_ordinal() <=
+                  buffer_constraints_version_ordinal <=
                       sent_buffer_constraints_version_ordinal_[port]);
 
   // We've already checked above that the buffer_lifetime_ordinal is in
   // sequence.
-  ZX_DEBUG_ASSERT(!port_settings_[port] || settings.buffer_lifetime_ordinal() >
+  ZX_DEBUG_ASSERT(!port_settings_[port] || buffer_lifetime_ordinal >
                                                buffer_lifetime_ordinal_[port]);
 
-  if (!ValidateBufferSettingsVsConstraintsLocked(port, settings, constraints)) {
-    // This assert is safe only because this thread still holds lock_.
-    ZX_DEBUG_ASSERT(IsStoppingLocked());
-    return;
+  if (settings) {
+    if (!ValidateBufferSettingsVsConstraintsLocked(port, *settings, stream_constraints)) {
+      // This assert is safe only because this thread still holds lock_.  This
+      // is asserting that ValidateBufferSettingsVsConstraintsLocked() already
+      // called FailLocked().
+      ZX_DEBUG_ASSERT(IsStoppingLocked());
+      return;
+    }
+  } else {
+    if (!ValidatePartialBufferSettingsVsConstraintsLocked(port, *partial_settings, stream_constraints)) {
+      // This assert is safe only because this thread still holds lock_.  This
+      // is asserting that ValidateBufferSettingsVsConstraintsLocked() already
+      // called FailLocked().
+      ZX_DEBUG_ASSERT(IsStoppingLocked());
+      return;
+    }
   }
 
   // Little if any reason to do this outside the lock.
   EnsureBuffersNotConfigured(lock, port);
 
   // This also starts the new buffer_lifetime_ordinal.
-  port_settings_[port] = std::make_unique<fuchsia::media::StreamBufferSettings>(
-      std::move(settings));
+  {  // scope port_settings, to enforce not using it after we've moved it out
+    std::unique_ptr<PortSettings> port_settings;
+    if (settings) {
+      port_settings = std::make_unique<PortSettings>(this, port,
+        std::move(*settings));
+    } else {
+      port_settings = std::make_unique<PortSettings>(this, port,
+        std::move(*partial_settings));
+    }
+    port_settings_[port] = std::move(port_settings);
+  }  // ~port_settings, which has been moved out, so we can't use it anyway
   buffer_lifetime_ordinal_[port] =
       port_settings_[port]->buffer_lifetime_ordinal();
+
+  // If partial_settings_param, the client won't be doing any AddInputBuffer()
+  // or AddOutputBuffer().  Instead, CodecImpl uses the token in
+  // partial_settings to get a fuchsia.sysmem.BufferCollection view,
+  // SetConstraints() on that BufferCollection, and then get allocated buffers
+  // from sysmem directly.
+
+  if (port_settings_[port]->is_partial_settings()) {
+    fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token =
+        port_settings_[port]->TakeToken();
+    // We intentionally don't want to hand the sysmem token directly to the core
+    // codec, at least for now (maybe later it'll be necessary).
+    ZX_DEBUG_ASSERT(!port_settings_[port]->partial_settings().has_sysmem_token());
+    fuchsia::sysmem::BufferCollectionConstraints buffer_collection_constraints = [this, port, &lock, &stream_constraints](){
+      // port_settings_[port] can only change on this thread so are safe to read
+      // outside the lock.
+      ScopedUnlock unlock(lock);
+      return CoreCodecGetBufferCollectionConstraints(
+          port, stream_constraints, port_settings_[port]->partial_settings());
+    }();
+    // The core codec doesn't fill out usage directly.  Instead we fill it out
+    // here.
+    if (!FixupBufferCollectionConstraints(
+        port, port_settings_[port]->partial_settings(),
+        &buffer_collection_constraints)) {
+      // FixupBufferCollectionConstraints() already called Fail().
+      ZX_DEBUG_ASSERT(IsStopping());
+      return;
+    }
+    // For output, the only reason we re-post here is to share the lock
+    // acquisition code with input.  Because we're presently on a FIDL handler
+    // it's ok to re-post back to the FIDL thread, so for output we pass true
+    // for promise_not_on_previously_posted_fidl_thread_lambda.
+    PostToSharedFidl([this, port, buffer_lifetime_ordinal = buffer_lifetime_ordinal_[port], token = std::move(token), buffer_collection_constraints = std::move(buffer_collection_constraints)]() mutable {
+      std::lock_guard<std::mutex> lock(lock_);
+      if (buffer_lifetime_ordinal != buffer_lifetime_ordinal_[port]) {
+        return;
+      }
+      if (!sysmem_) {
+        return;
+      }
+      if (IsStoppingLocked()) {
+        return;
+      }
+      sysmem_->BindSharedCollection(std::move(token), port_settings_[port]->NewBufferCollectionRequest(shared_fidl_dispatcher_));
+      port_settings_[port]->buffer_collection().set_error_handler(
+        [this, port, buffer_lifetime_ordinal](zx_status_t status){
+        std::lock_guard<std::mutex> lock(lock_);
+        if (buffer_lifetime_ordinal != buffer_lifetime_ordinal_[port]) {
+          // It's fine if a BufferCollection fails after we're already done
+          // using it.
+          return;
+        }
+        // We're intentionally picky about the BufferCollection failing too
+        // soon, as all clean closes should use Close(), which will avoid
+        // causing this.  If we find a case where a client legitimately needs to
+        // try one way then if that fails try another way, we should see if we
+        // can avoid the need to do that by expressing in sysmem constraints, or
+        // more likely just accept that such a client will need to start with a
+        // new codec instance for the 2nd try.
+        FailLocked("CodecImpl's BufferCollection failed - status: %d", status);
+      });
+      port_settings_[port]->buffer_collection()->SetConstraints(
+          true, std::move(buffer_collection_constraints));
+      port_settings_[port]->buffer_collection()->WaitForBuffersAllocated([this, port, buffer_lifetime_ordinal](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) mutable {
+        OnBufferCollectionInfo(port, buffer_lifetime_ordinal, status, std::move(buffer_collection_info));
+      });
+    }, port == kOutputPort);
+  } else {
+    // This path probably won't stick around for very long, and involves a
+    // substantial amount of simulation of the new way based on old settings. To
+    // the degree that it's more indirect than usual, it's to try and
+    // use/simulate the new way as much as possible despite the client using the
+    // old way.
+
+    const fuchsia::media::StreamBufferSettings& settings =
+        port_settings_[port]->settings();
+
+    // If !port_settings_[port]->is_partial_settings(), we'll simulate the new
+    // way based on the old-style settings.  This way we can get the core codec
+    // to fill out image_format_constraints, and can inform the core codec of
+    // BufferCollectionInfo_2, even if we're not actually using sysmem (in this
+    // path for now).
+    fuchsia::media::StreamBufferPartialSettings fake_partial_settings;
+    fake_partial_settings.set_buffer_lifetime_ordinal(settings.buffer_lifetime_ordinal());
+    fake_partial_settings.set_buffer_constraints_version_ordinal(settings.buffer_constraints_version_ordinal());
+    fake_partial_settings.set_packet_count_for_server(settings.packet_count_for_server());
+    fake_partial_settings.set_packet_count_for_client(settings.packet_count_for_client());
+    fake_partial_settings.set_single_buffer_mode(settings.has_single_buffer_mode() && settings.single_buffer_mode());
+    ZX_DEBUG_ASSERT(!fake_partial_settings.has_sysmem_token());
+
+    fuchsia::sysmem::BufferCollectionConstraints buffer_collection_constraints = [this, port, &lock, &stream_constraints, &fake_partial_settings]{
+        ScopedUnlock unlock(lock);
+        return CoreCodecGetBufferCollectionConstraints(port, stream_constraints, fake_partial_settings);
+    }();
+
+    // The core codec doesn't fill out usage directly.  Instead we fill it out
+    // here.
+    if (!FixupBufferCollectionConstraints(
+        port, fake_partial_settings,
+        &buffer_collection_constraints)) {
+      // FixupBufferCollectionConstraints() already called Fail().
+      ZX_DEBUG_ASSERT(IsStopping());
+      return;
+    }
+
+    fuchsia::sysmem::BufferCollectionInfo_2 fake;
+    fake.buffer_count = fake_partial_settings.single_buffer_mode() ? 1 : fake_partial_settings.packet_count_for_server() + fake_partial_settings.packet_count_for_client();
+    fake.settings.buffer_settings.size_bytes = fake_partial_settings.single_buffer_mode() ? settings.per_packet_buffer_bytes() * fake.buffer_count : settings.per_packet_buffer_bytes();
+    fake.settings.buffer_settings.is_physically_contiguous = buffer_collection_constraints.has_buffer_memory_constraints && buffer_collection_constraints.buffer_memory_constraints.physically_contiguous_required;
+    // The client should use sysmem (and SetInputBufferPartialSettings /
+    // SetOutputBufferPartialSettings) if secure is required.
+    fake.settings.buffer_settings.is_secure = false;
+    if (buffer_collection_constraints.image_format_constraints_count != 0) {
+      fake.settings.has_image_format_constraints = true;
+      // pick option 0 arbitrarily (essentially picking PixelFormat 0 among possibly multiple PixelFormat(s))
+      fake.settings.image_format_constraints = fidl::Clone(buffer_collection_constraints.image_format_constraints[0]);
+    } else {
+      fake.settings.has_image_format_constraints = false;
+    }
+    CoreCodecSetBufferCollectionInfo(port, fake);
+  }
+}
+
+void CodecImpl::OnBufferCollectionInfo(
+    CodecPort port, uint64_t buffer_lifetime_ordinal, zx_status_t status,
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
+  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+
+  if (port == kInputPort) {
+    PostSysmemCompletion([this, port, buffer_lifetime_ordinal, status, buffer_collection_info = std::move(buffer_collection_info)]() mutable {
+      OnBufferCollectionInfoInternal(port, buffer_lifetime_ordinal, status, std::move(buffer_collection_info));
+    });
+  } else {
+    ZX_DEBUG_ASSERT(port == kOutputPort);
+    OnBufferCollectionInfoInternal(port, buffer_lifetime_ordinal, status, std::move(buffer_collection_info));
+  }
+}
+
+void CodecImpl::OnBufferCollectionInfoInternal(CodecPort port, uint64_t buffer_lifetime_ordinal, zx_status_t allocate_status, fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
+  ZX_DEBUG_ASSERT(port == kInputPort && thrd_current() == stream_control_thread_ ||
+                  port == kOutputPort && thrd_current() == fidl_thread());
+
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+    if (IsStoppingLocked()) {
+      return;
+    }
+
+    // The buffer_lifetime_ordinal_[port] can only change on the current thread.
+    if (buffer_lifetime_ordinal != buffer_lifetime_ordinal_[port]) {
+      // stale response
+      return;
+    }
+    if (allocate_status != ZX_OK) {
+      Fail("OnBufferCollectionInfoLocked() sees failure - port: %d allocate_status: %d", port, allocate_status);
+      return;
+    }
+  }  // ~lock
+
+  uint32_t buffer_count = buffer_collection_info.buffer_count;
+
+  // This code trusts sysmem to really be sysmem and to behave correctly, but
+  // doesn't hurt to double-check some things in debug build.
+  ZX_DEBUG_ASSERT(buffer_count >= 1);
+  ZX_DEBUG_ASSERT(buffer_count <= countof(buffer_collection_info.buffers));
+  // Spot check that the boundary between valid and invalid handles is where it
+  // should be.
+  ZX_DEBUG_ASSERT(buffer_collection_info.buffers[buffer_count-1].vmo.is_valid());
+  ZX_DEBUG_ASSERT(buffer_count == countof(buffer_collection_info.buffers) ||
+      !buffer_collection_info.buffers[buffer_count].vmo.is_valid());
+
+  // Let's move the VMO handles out first, so that the BufferCollectionInfo_2 we
+  // send to the core codec doesn't have the VMO handles.  We want the core
+  // codec to get its VMO handles via the CodecBuffer*(s) we'll provide shortly
+  // below.
+  zx::vmo vmos[countof(buffer_collection_info.buffers)];
+  for (uint32_t i = 0; i < buffer_count; ++i) {
+    vmos[i] = std::move(buffer_collection_info.buffers[i].vmo);
+    ZX_DEBUG_ASSERT(!buffer_collection_info.buffers[i].vmo.is_valid());
+  }
+
+  // Now we can tell the core codec about the collection info.  The core codec
+  // can clone the FIDL struct if it wants, or can just copy out any info it
+  // wants from specific fields.
+  CoreCodecSetBufferCollectionInfo(port, buffer_collection_info);
+
+  {  // scope lock
+    std::lock_guard<std::mutex> lock(lock_);
+
+    ZX_DEBUG_ASSERT(
+        buffer_lifetime_ordinal == buffer_lifetime_ordinal_[port]);
+
+    // The only way port_settings_[port] gets cleared is if
+    // buffer_lifetime_ordinal changes.
+    ZX_DEBUG_ASSERT(port_settings_[port]);
+
+    // This completes the settings, analogous to having completed
+    // SetInputBufferSettings()/SetOutputBufferSettings().
+    port_settings_[port]->SetBufferCollectionInfo(
+        std::move(buffer_collection_info));
+  }
+
+  // We convert the buffer_collection_info into AddInputBuffer_StreamControl()
+  // and AddOutputBufferInternal() calls, almost as if the client were adding
+  // the buffers itself (but without the check that the client isn't adding
+  // buffers itself while using sysmem).
+  for (uint32_t i = 0; i < buffer_count; i++) {
+    // While under the lock we'll move out the stuff we need into codec_buffer.
+    fuchsia::media::StreamBuffer stream_buffer;
+    {  // scope lock
+      std::lock_guard<std::mutex> lock(lock_);
+
+      ZX_DEBUG_ASSERT(
+          buffer_lifetime_ordinal == buffer_lifetime_ordinal_[port]);
+      ZX_DEBUG_ASSERT(port_settings_[port]);
+
+      stream_buffer.set_buffer_lifetime_ordinal(buffer_lifetime_ordinal);
+      stream_buffer.set_buffer_index(i);
+      fuchsia::media::StreamBufferDataVmo data_vmo;
+      data_vmo.set_vmo_handle(std::move(vmos[i]));
+      data_vmo.set_vmo_usable_start(port_settings_[port]->vmo_usable_start(i));
+      data_vmo.set_vmo_usable_size(port_settings_[port]->vmo_usable_size());
+      fuchsia::media::StreamBufferData data;
+      data.set_vmo(std::move(data_vmo));
+      stream_buffer.set_data(std::move(data));
+    }  // ~lock
+    if (port == kInputPort) {
+      AddInputBuffer_StreamControl(false, std::move(stream_buffer));
+    } else {
+      ZX_DEBUG_ASSERT(port == kOutputPort);
+      AddOutputBufferInternal(false, std::move(stream_buffer));
+    }
+  }
 }
 
 void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock,
@@ -1261,17 +1794,29 @@ void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock,
   //
   // On input, this can only be called on stream_control_thread_.
   //
-  // On output, this can be called on stream_control_thread_ or output_thread_.
-  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_ ||
-                  (port == kOutputPort && (thrd_current() == fidl_thread())));
+  // On output, this can be called on stream_control_thread_ or fidl_thread().
+  ZX_DEBUG_ASSERT(port == kInputPort && thrd_current() == stream_control_thread_ ||
+                  port == kOutputPort && (thrd_current() == stream_control_thread_ || thrd_current() == fidl_thread()));
 
-  is_port_configured_[port] = false;
+  is_port_buffers_configured_[port] = false;
+  if (buffer_lifetime_ordinal_[port] % 2 == 1) {
+    buffer_lifetime_ordinal_[port]++;
+  }
+  if (port_settings_[port]) {
+    // This will close the BufferCollection async cleanly, without causing the
+    // LogicalBufferCollection to fail.  Mainly we care so we can more easily
+    // tell during debugging whether a LogicalBufferCollection was cleanly
+    // closed by all participants, vs. potentially getting failed by a
+    // participant exiting or non-cleanly closing.  A Sync() by the client is
+    // sufficient to ensure this async close is done.
+    port_settings_[port].reset();
+  }
 
   // Ensure that buffers aren't with the core codec.
   {  // scope unlock
     ScopedUnlock unlock(lock);
     CoreCodecEnsureBuffersNotConfigured(port);
-  }
+  }  // ~unlock
 
   // For mid-stream output config change, the caller is responsible for ensuring
   // that buffers are not with the HW first.
@@ -1306,12 +1851,15 @@ bool CodecImpl::ValidateBufferSettingsVsConstraintsLocked(
     FailLocked("packet_count_for_server > packet_count_for_server_max");
     return false;
   }
-
   if (!settings.has_packet_count_for_client()) {
     FailLocked("settings do not have packet count for client");
     return false;
   }
-
+  if (settings.packet_count_for_client() <
+      constraints.packet_count_for_client_min()) {
+    FailLocked("packet_count_for_client < packet_count_for_client_min - port: %d %d < %d", port, settings.packet_count_for_client(), constraints.packet_count_for_client_min());
+    return false;
+  }
   if (settings.packet_count_for_client() >
       constraints.packet_count_for_client_max()) {
     FailLocked("packet_count_for_client > packet_count_for_client_max");
@@ -1343,17 +1891,75 @@ bool CodecImpl::ValidateBufferSettingsVsConstraintsLocked(
   return true;
 }
 
-bool CodecImpl::AddBufferCommon(CodecPort port,
+bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
+    CodecPort port, const fuchsia::media::StreamBufferPartialSettings& partial_settings,
+    const fuchsia::media::StreamBufferConstraints& constraints) {
+  // Most of the constraints will be handled by telling sysmem about them, not
+  // via the client, so there's not a ton to validate here.
+  if ((partial_settings.has_single_buffer_mode() && partial_settings.single_buffer_mode()) && !constraints.single_buffer_mode_allowed()) {
+    FailLocked("single_buffer_mode && !single_buffer_mode_allowed");
+    return false;
+  }
+  bool packet_count_needed = partial_settings.has_single_buffer_mode() && partial_settings.single_buffer_mode();
+  ZX_DEBUG_ASSERT(partial_settings.sysmem_token().is_valid());
+  if (packet_count_needed) {
+    if (!partial_settings.has_packet_count_for_server()) {
+      FailLocked("missing packet_count_for_server");
+      return false;
+    }
+    if (!partial_settings.has_packet_count_for_client()) {
+      FailLocked("missing packet_count_for_client");
+      return false;
+    }
+  } else {
+    // If packet count isn't required, it can still be provided, but if it's
+    // provided, it should be provided in two parts like usual.
+    if (partial_settings.has_packet_count_for_server() !=
+        partial_settings.has_packet_count_for_client()) {
+      FailLocked("has_packet_count_for_server != has_packet_count_for_client");
+      return false;
+    }
+  }
+  // if needed or provided anyway
+  if (partial_settings.has_packet_count_for_server()) {
+    if (partial_settings.packet_count_for_server() <
+        constraints.packet_count_for_server_min()) {
+      FailLocked("packet_count_for_server < packet_count_for_server_min");
+      return false;
+    }
+    if (partial_settings.packet_count_for_server() >
+        constraints.packet_count_for_server_max()) {
+      FailLocked("packet_count_for_server > packet_count_for_server_max");
+      return false;
+    }
+  }
+  // if needed or provided anyway
+  if (partial_settings.has_packet_count_for_client()) {
+    if (partial_settings.packet_count_for_client() <
+        constraints.packet_count_for_client_min()) {
+      FailLocked("packet_count_for_client > packet_count_for_client_max");
+      return false;
+    }
+    if (partial_settings.packet_count_for_client() >
+        constraints.packet_count_for_client_max()) {
+      FailLocked("packet_count_for_client > packet_count_for_client_max");
+      return false;
+    }
+  }
+  return true;
+}
+
+bool CodecImpl::AddBufferCommon(bool is_client, CodecPort port,
                                 fuchsia::media::StreamBuffer buffer) {
   ZX_DEBUG_ASSERT(port == kInputPort &&
                       (thrd_current() == stream_control_thread_) ||
                   port == kOutputPort && (thrd_current() == fidl_thread()));
-  bool done_configuring = false;
+  bool buffers_done_configuring = false;
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
 
     if (!buffer.has_buffer_lifetime_ordinal()) {
-      FailFatalLocked("Client send a buffer without a buffer_lifetime_ordinal");
+      FailLocked("Client send a buffer without a buffer_lifetime_ordinal");
       return false;
     }
 
@@ -1392,6 +1998,11 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
       return false;
     }
 
+    if (is_client && port_settings_[port]->is_partial_settings()) {
+      FailLocked(
+          "AddInputBuffer()/AddOutputBuffer() not permitted when using sysmem");
+      return false;
+    }
     if (!buffer.has_buffer_index()) {
       FailLocked("client sent buffer without index");
       return false;
@@ -1404,8 +2015,7 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
       return false;
     }
 
-    uint32_t required_buffer_count =
-        BufferCountFromPortSettings(*port_settings_[port]);
+    uint32_t required_buffer_count = port_settings_[port]->buffer_count();
     if (buffer.buffer_index() >= required_buffer_count) {
       FailLocked("AddOutputBuffer()/AddInputBuffer() extra buffer - port: %d",
                  port);
@@ -1441,15 +2051,13 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
           port_settings_[port]->buffer_constraints_version_ordinal();
       // Now we allocate all_packets_[port].
       ZX_DEBUG_ASSERT(all_packets_[port].empty());
-      uint32_t packet_count =
-          PacketCountFromPortSettings(*port_settings_[port]);
+      uint32_t packet_count = port_settings_[port]->packet_count();
       for (uint32_t i = 0; i < packet_count; i++) {
         // Private constructor to prevent core codec maybe creating its own
         // Packet instances (which isn't the intent) seems worth the hassle of
         // not using make_unique<>() here.
-        all_packets_[port].push_back(
-            std::unique_ptr<CodecPacket>(new CodecPacket(
-                port_settings_[port]->buffer_lifetime_ordinal(), i)));
+        all_packets_[port].push_back(std::unique_ptr<CodecPacket>(
+            new CodecPacket(port_settings_[port]->buffer_lifetime_ordinal(), i)));
       }
 
       {  // scope unlock
@@ -1470,20 +2078,19 @@ bool CodecImpl::AddBufferCommon(CodecPort port,
         }
       }  // ~unlock
 
-      // For OMX case, we tell OMX about the potentially-new buffer count
-      // separately later, just before moving from OMX loaded to OMX idle, or as
-      // part of mid-stream output config change.
+      is_port_buffers_configured_[port] = true;
+      buffers_done_configuring = true;
 
-      // For OMX case, we don't allocate OMX_BUFFERHEADERTYPE yet here by
-      // calling OMX UseBuffer() yet, because we can be in OMX_StateLoaded
-      // currently, and OMX UseBuffer() isn't valid until we're moving from
-      // OMX_StateLoaded to OMX_StateIdle.
-
-      is_port_configured_[port] = true;
-      done_configuring = true;
+      // For client-called AddOutputBuffer(), the last buffer being added is
+      // analogous to CompleteOutputBufferPartialSettings(); we handle that
+      // analogous-ness in IsOutputConfiguredLocked() (not by pretending we got
+      // a CompleteOutputBufferPartialSettings() here), so
+      // is_port_buffers_configured_[port] = true above is enough to make
+      // IsOutputConfiguredLocked() return true if this is a client-driven
+      // AddOutputBuffer().
     }
   }
-  return done_configuring;
+  return buffers_done_configuring;
 }
 
 bool CodecImpl::CheckOldBufferLifetimeOrdinalLocked(
@@ -1539,10 +2146,7 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
   }
 
   EnsureStreamClosed(lock);
-
-  ZX_DEBUG_ASSERT((stream_lifetime_ordinal_ % 2 == 0) &&
-                  "expecting no current stream");
-  ZX_DEBUG_ASSERT(!stream_);
+  ZX_DEBUG_ASSERT(!IsStreamActiveLocked());
 
   // Now it's time to start the new stream.  We start the new stream at
   // Codec layer first then core codec layer.
@@ -1630,8 +2234,7 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
     // detection.
     is_new_config_needed = true;
   } else if (IsOutputConfiguredLocked() &&
-             port_settings_[kOutputPort]
-                     ->buffer_constraints_version_ordinal() <=
+             port_settings_[kOutputPort]->buffer_constraints_version_ordinal() <=
                  core_codec_meh_output_buffer_constraints_version_ordinal_) {
     // The core codec previously expressed "meh" regarding the current config's
     // buffer_constraints_version_ordinal, so to avoid mixing that with core
@@ -1652,13 +2255,13 @@ bool CodecImpl::StartNewStream(std::unique_lock<std::mutex>& lock,
     // at the start of a stream - it's still while a stream is active, and still
     // prevents this stream from outputting any data to the Codec client until
     // the Codec client re-configures output while this stream is active.
-    GenerateAndSendNewOutputConfig(lock, true);
+    GenerateAndSendNewOutputConstraints(lock, true);
 
     // Now we can wait for the client to catch up to the current output config
     // or for the client to tell the server to discard the current stream.
     while (!IsStoppingLocked() && !stream_->future_discarded() &&
            !IsOutputConfiguredLocked()) {
-      wake_stream_control_condition_.wait(lock);
+      RunAnySysmemCompletionsOrWait(lock);
     }
 
     if (IsStoppingLocked()) {
@@ -1703,9 +2306,7 @@ void CodecImpl::EnsureStreamClosed(std::unique_lock<std::mutex>& lock) {
   // Now close the old stream at the Codec layer.
   EnsureCodecStreamClosedLockedInternal();
 
-  ZX_DEBUG_ASSERT((stream_lifetime_ordinal_ % 2 == 0) &&
-                  "expecting no current stream");
-  ZX_DEBUG_ASSERT(!stream_);
+  ZX_DEBUG_ASSERT(!IsStreamActiveLocked());
 }
 
 // The only valid caller of this is EnsureStreamClosed().  We have this in a
@@ -1724,6 +2325,87 @@ void CodecImpl::EnsureCodecStreamClosedLockedInternal() {
   stream_lifetime_ordinal_++;
   // Even values mean no current stream.
   ZX_DEBUG_ASSERT(stream_lifetime_ordinal_ % 2 == 0);
+}
+
+bool CodecImpl::RunAnySysmemCompletions(std::unique_lock<std::mutex>& lock) {
+  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  // Typically this loop will run once, but on return we want the queue to be
+  // empty even if more showed up while in this method, for condition_variable
+  // signalling reasons.
+  bool any_ran = false;
+  while (!sysmem_completion_queue_.empty()) {
+    // We'll run them all, so extract all the items and run them all.
+    std::queue<fit::closure> local_batch_to_run;
+    local_batch_to_run.swap(sysmem_completion_queue_);
+    // The unlock doesn't cause queue re-ordering, though so far none of these
+    // items care anyway.
+    ScopedUnlock unlock(lock);
+    while (!local_batch_to_run.empty()) {
+      any_ran = true;
+      fit::closure to_run = std::move(local_batch_to_run.front());
+      local_batch_to_run.pop();
+      to_run();
+    }
+  }
+  return any_ran;
+}
+
+void CodecImpl::PostSysmemCompletion(fit::closure to_run) {
+  ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
+
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    sysmem_completion_queue_.emplace(std::move(to_run));
+    // In case there is no WaitEnsureSysmemReadyOnInput(), we post to
+    // StreamControl to ensure that RunAnySysmemCompletions() runs soon.
+    // Don't let them accumulate though.
+    if (!is_sysmem_runner_pending_) {
+      is_sysmem_runner_pending_ = true;
+      PostToStreamControl([this]{
+        std::unique_lock<std::mutex> lock(lock_);
+        RunAnySysmemCompletions(lock);
+        ZX_DEBUG_ASSERT(sysmem_completion_queue_.empty());
+        is_sysmem_runner_pending_ = false;
+      });
+    }
+  }  // ~lock
+
+  // In case to_run needs to get run by a QueueInput...StreamControl() method
+  // via WaitEnsureSysmemReadyOnInput(), we wake the StreamControl thread.  We
+  // must do this even if is_sysmem_runner_pending_, in case that runner won't
+  // run for a while due to WaitEnsureSysmemReadyOnInput() blocking
+  // StreamControl.
+  wake_stream_control_condition_.notify_all();
+}
+
+bool CodecImpl::WaitEnsureSysmemReadyOnInput(std::unique_lock<std::mutex>& lock) {
+  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  // Input buffer re-config is not permitted unless there's no current stream.
+  ZX_DEBUG_ASSERT(!IsStreamActiveLocked());
+  while (!IsInputConfiguredLocked()) {
+    RunAnySysmemCompletionsOrWait(lock);
+    // No need to check for stream switch since it's not permitted for a client
+    // to be sending any message that can cause a new stream until after the
+    // client is done configuring input buffers (enforced elsewhere).
+    if (IsStoppingLocked()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void CodecImpl::RunAnySysmemCompletionsOrWait(
+    std::unique_lock<std::mutex>& lock) {
+  // If any sysmem completions ran, we immediately return, so that conditions
+  // can be checked again in the caller immediately.
+  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  bool any_completions_ran = RunAnySysmemCompletions(lock);
+  ZX_DEBUG_ASSERT(sysmem_completion_queue_.empty());
+  if (!any_completions_ran) {
+    // We know sysmem_completion_queue_.empty() and the lock is held just before
+    // this wait().
+    wake_stream_control_condition_.wait(lock);
+  }
 }
 
 // This is called on Output ordering domain (FIDL thread) any time a message is
@@ -1836,10 +2518,10 @@ bool CodecImpl::EnsureFutureStreamFlushSeenLocked(
 }
 
 // This method is only called when buffer_constraints_action_required will be
-// true in an OnOutputConfig() message sent shortly after this method call.
+// true in an OnOutputConstraints() message sent shortly after this method call.
 //
 // Even if the client is switching streams rapidly without configuring output,
-// this method and GenerateAndSendNewOutputConfig() with
+// this method and GenerateAndSendNewOutputConstraints() with
 // buffer_constraints_action_required true always run in pairs.
 //
 // This is what starts the interval during which
@@ -1863,12 +2545,11 @@ void CodecImpl::StartIgnoringClientOldOutputConfig(
     buffer_lifetime_ordinal_[kOutputPort]++;
     ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[kOutputPort] % 2 == 0);
     ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[kOutputPort] ==
-                    port_settings_[kOutputPort]->buffer_lifetime_ordinal() +
-                        1);
+                    port_settings_[kOutputPort]->buffer_lifetime_ordinal() + 1);
   }
 
   // When buffer_constraints_action_required true, we can assert in
-  // GenerateAndSendNewOutputConfig() that this value is still the
+  // GenerateAndSendNewOutputConstraints() that this value is still the
   // next_output_buffer_constraints_version_ordinal_ in that method.
   last_required_buffer_constraints_version_ordinal_[kOutputPort] =
       next_output_buffer_constraints_version_ordinal_;
@@ -1900,7 +2581,7 @@ void CodecImpl::StartIgnoringClientOldOutputConfig(
   ZX_DEBUG_ASSERT(is_output_ordering_domain_done_with_recycle_output_packet);
 }
 
-void CodecImpl::GenerateAndSendNewOutputConfig(
+void CodecImpl::GenerateAndSendNewOutputConstraints(
     std::unique_lock<std::mutex>& lock,
     bool buffer_constraints_action_required) {
   // When client action is required, this can only happen on the StreamControl
@@ -1914,8 +2595,6 @@ void CodecImpl::GenerateAndSendNewOutputConfig(
   uint64_t current_stream_lifetime_ordinal = stream_lifetime_ordinal_;
   uint64_t new_output_buffer_constraints_version_ordinal =
       next_output_buffer_constraints_version_ordinal_++;
-  uint64_t new_output_format_details_version_ordinal =
-      next_output_format_details_version_ordinal_++;
 
   // If buffer_constraints_action_required true, the caller bumped the
   // last_required_buffer_constraints_version_ordinal_[kOutputPort] before
@@ -1928,67 +2607,87 @@ void CodecImpl::GenerateAndSendNewOutputConfig(
       (last_required_buffer_constraints_version_ordinal_[kOutputPort] ==
        new_output_buffer_constraints_version_ordinal));
 
-  // printf("GenerateAndSendNewOutputConfig
+  // printf("GenerateAndSendNewOutputConstraints
   // new_output_buffer_constraints_version_ordinal: %lu
   // buffer_constraints_action_required: %d\n",
   // new_output_buffer_constraints_version_ordinal,
   // buffer_constraints_action_required);
 
-  std::unique_ptr<const fuchsia::media::StreamOutputConfig> output_config;
+  std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
+      output_constraints;
+  uint64_t next_output_format_details_version_ordinal =
+      next_output_format_details_version_ordinal_;
+  fuchsia::media::StreamOutputConfig output_config;
   {  // scope unlock
     ScopedUnlock unlock(lock);
+
     // Don't call the core codec under the lock_, because we can avoid doing so,
     // and to allow the core codec to use this thread to call back into
     // CodecImpl using this stack if needed.  So far we don't have any actual
     // known examples of a core codec using this thread to call back into
     // CodecImpl using this stack.
-    output_config = CoreCodecBuildNewOutputConfig(
+    output_constraints = CoreCodecBuildNewOutputConstraints(
         current_stream_lifetime_ordinal,
         new_output_buffer_constraints_version_ordinal,
-        new_output_format_details_version_ordinal,
         buffer_constraints_action_required);
+
+    // Temporarily still generate config also by converting from constraints and
+    // getting format also - this only works for now because core codecs happen
+    // to be able to provide format this early because they can only generate 1
+    // for now etc - but for now it can work during the transition.
+    fuchsia::media::StreamOutputFormat output_format = CoreCodecGetOutputFormat(
+        current_stream_lifetime_ordinal,
+        next_output_format_details_version_ordinal);
+    output_config.set_stream_lifetime_ordinal(
+        output_constraints->stream_lifetime_ordinal());
+    output_config.set_buffer_constraints_action_required(
+        output_constraints->buffer_constraints_action_required());
+    output_config.set_buffer_constraints(
+        fidl::Clone(output_constraints->buffer_constraints()));
+    output_config.set_format_details(
+        fidl::Clone(output_format.format_details()));
   }  // ~unlock
-  // We only call GenerateAndSendNewOutputConfig() from contexts that won't be
+
+  // We only call GenerateAndSendNewOutputConstraints() from contexts that won't be
   // changing the stream_lifetime_ordinal_, so the fact that we released the
   // lock above doesn't mean the stream_lifetime_ordinal_ could have changed, so
   // we can assert here that it's still the same as above.
   ZX_DEBUG_ASSERT(current_stream_lifetime_ordinal == stream_lifetime_ordinal_);
 
-  output_config_ = std::move(output_config);
+  output_constraints_ = std::move(output_constraints);
 
-  // Stay under lock after setting output_config_, to get proper ordering of
+  // Stay under lock after setting output_constraints_, to get proper ordering of
   // sent messages even if a hostile client deduces the content of this message
   // before we've sent it and manages to get the server to send another
-  // subsequent OnOutputConfig().
+  // subsequent OnOutputConstraints().
 
   ZX_DEBUG_ASSERT(sent_buffer_constraints_version_ordinal_[kOutputPort] + 1 ==
                   new_output_buffer_constraints_version_ordinal);
-  ZX_DEBUG_ASSERT(sent_format_details_version_ordinal_[kOutputPort] + 1 ==
-                  new_output_format_details_version_ordinal);
 
   // Setting this within same lock hold interval as we queue the message to be
-  // sent in order vs. other OnOutputConfig() messages.  This way we can verify
+  // sent in order vs. other OnOutputConstraints() messages.  This way we can verify
   // that the client's incoming messages are not trying to configure with
   // respect to a buffer_constraints_version_ordinal that is newer than we've
   // actually sent the client.
   sent_buffer_constraints_version_ordinal_[kOutputPort] =
       new_output_buffer_constraints_version_ordinal;
-  sent_format_details_version_ordinal_[kOutputPort] =
-      new_output_format_details_version_ordinal;
 
-  // Intentional copy of fuchsia::media::OutputConfig output_config_ here,
-  // as we want output_config_ to remain valid (at least for debugging reasons
-  // for now).
+  // Intentional copy of fuchsia::media::OutputConfig output_constraints_ here,
+  // as we want output_constraints_ to remain valid (at least for debugging
+  // reasons for now).
   PostToSharedFidl(
-      [this, output_config = fidl::Clone(*output_config_)]() mutable {
+      [this, output_constraints = fidl::Clone(*output_constraints_),
+       output_config = std::move(output_config)]() mutable {
         // See "is_bound_checks" comment up top.
         if (binding_.is_bound()) {
+          binding_.events().OnOutputConstraints(std::move(output_constraints));
+          // DEPRECATED - keep sending this temporarily.
           binding_.events().OnOutputConfig(std::move(output_config));
         }
       });
 }
 
-void CodecImpl::MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal) {
+void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordinal) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -2020,13 +2719,13 @@ void CodecImpl::MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal) {
 
     EnsureBuffersNotConfigured(lock, kOutputPort);
 
-    GenerateAndSendNewOutputConfig(lock, true);
+    GenerateAndSendNewOutputConstraints(lock, true);
 
     // Now we can wait for the client to catch up to the current output config
     // or for the client to tell the server to discard the current stream.
     while (!IsStoppingLocked() && !stream_->future_discarded() &&
            !IsOutputConfiguredLocked()) {
-      wake_stream_control_condition_.wait(lock);
+      RunAnySysmemCompletionsOrWait(lock);
     }
 
     if (IsStoppingLocked()) {
@@ -2040,11 +2739,117 @@ void CodecImpl::MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal) {
       // the start of the new stream.
       return;
     }
+
+    // For asserts.
+    stream_->ClearMidStreamOutputConstraintsChangeActive();
   }  // ~lock
 
   CoreCodecMidStreamOutputBufferReConfigFinish();
 
   VLOGF("Done with mid-stream format change.\n");
+}
+
+bool CodecImpl::FixupBufferCollectionConstraints(
+    CodecPort port,
+    const fuchsia::media::StreamBufferPartialSettings& partial_settings,
+    fuchsia::sysmem::BufferCollectionConstraints* buffer_collection_constraints) {
+  fuchsia::sysmem::BufferUsage& usage = buffer_collection_constraints->usage;
+
+  if (IsCoreCodecMappedBufferNeeded(port)) {
+    // Not surprisingly, both decoders and encoders read from input and write to
+    // output.
+    if (port == kInputPort) {
+      if (usage.cpu & ~(fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften)) {
+        Fail("Core codec set disallowed CPU usage bits (input port).");
+        return false;
+      }
+      usage.cpu |=
+          fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften;
+    } else {
+      if (usage.cpu & ~(fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften)) {
+        Fail("Core codec set disallowed CPU usage bit(s) (output port).");
+        return false;
+      }
+      usage.cpu |=
+          fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften;
+    }
+  } else {
+    if (usage.cpu) {
+      Fail("Core codec set usage.cpu despite !IsCoreCodecMappedBufferNeeded()");
+      return false;
+    }
+    // The CPU won't touch the buffers at all.
+    usage.cpu = 0;
+  }
+  if (usage.vulkan) {
+    Fail("Core codec set usage.vulkan bits");
+    return false;
+  }
+  ZX_DEBUG_ASSERT(!usage.vulkan);
+  if (usage.display) {
+    Fail("Core codec set usage.display bits");
+    return false;
+  }
+  ZX_DEBUG_ASSERT(!usage.display);
+  if (IsCoreCodecHwBased()) {
+    // Let's see if we can deprecate videoUsageHwProtected, since it's redundant
+    // with secure_required and secure_permitted.
+    if (usage.video & fuchsia::sysmem::videoUsageHwProtected) {
+      Fail("Core codec set deprecated videoUsageHwProtected - disallow");
+      return false;
+    }
+    uint32_t allowed_video_usage_bits = IsDecoder() ? fuchsia::sysmem::videoUsageHwDecoder : fuchsia::sysmem::videoUsageHwEncoder;
+    if (usage.video & ~allowed_video_usage_bits) {
+      Fail("Core codec set disallowed video usage bit(s) - port: %d, usage: 0x%08x, allowed: 0x%08x", port, usage.video, allowed_video_usage_bits);
+      return false;
+    }
+    if (IsDecoder()) {
+      usage.video |= fuchsia::sysmem::videoUsageHwDecoder;
+    } else {
+      usage.video |= fuchsia::sysmem::videoUsageHwEncoder;
+    }
+  } else {
+    // Despite being a video decoder or encoder, a SW decoder or encoder doesn't
+    // count as videoUsageHwDecoder or videoUsageHwEncoder.  And definitely not
+    // videoUsageHwProtected.
+    usage.video = 0;
+  }
+
+  bool is_single_buffer_mode = partial_settings.has_single_buffer_mode() && partial_settings.single_buffer_mode();
+
+  uint32_t required_min_buffer_count_for_camping;
+  if (is_single_buffer_mode) {
+    required_min_buffer_count_for_camping =
+        static_cast<uint32_t>(partial_settings.packet_count_for_server() != 0);
+  } else {
+    required_min_buffer_count_for_camping =
+        partial_settings.packet_count_for_server();
+  }
+  if (buffer_collection_constraints->min_buffer_count_for_camping <
+      required_min_buffer_count_for_camping) {
+    Fail("Core codec set min_buffer_count_for_camping too low - min_buffer_count_for_camping: %lu required_min_buffer_count_for_camping: %lu", buffer_collection_constraints->min_buffer_count_for_camping, required_min_buffer_count_for_camping);
+    return false;
+  }
+
+  if (is_single_buffer_mode) {
+    if (buffer_collection_constraints->min_buffer_count_for_camping > 1) {
+      Fail("Core codec set min_buffer_count_for_camping too high for single_buffer_mode - min_buffer_count_for_camping: %lu", buffer_collection_constraints->min_buffer_count_for_camping);
+      return false;
+    }
+    if (buffer_collection_constraints->min_buffer_count_for_dedicated_slack != 0 ||
+        buffer_collection_constraints->min_buffer_count_for_shared_slack != 0) {
+      Fail("Core codec set slack with single_buffer_mode - min_buffer_count_for_dedicated_slack: %lu min_buffer_count_for_shared_slack: %lu", buffer_collection_constraints->min_buffer_count_for_dedicated_slack, buffer_collection_constraints->min_buffer_count_for_shared_slack);
+      return false;
+    }
+    if (buffer_collection_constraints->max_buffer_count != 1) {
+      Fail("CoreCodec must specify max_buffer_count 1 when single_buffer_mode");
+      return false;
+    }
+  }
+
+  // The rest of the constraints are entirely up to the core codec.
+
+  return true;
 }
 
 thrd_t CodecImpl::fidl_thread() { return shared_fidl_thread_; }
@@ -2067,22 +2872,46 @@ void CodecImpl::SendFreeInputPacketLocked(fuchsia::media::PacketHeader header) {
 }
 
 bool CodecImpl::IsInputConfiguredLocked() {
-  return IsPortConfiguredCommonLocked(kInputPort);
+  return IsPortBuffersConfiguredCommonLocked(kInputPort);
 }
 
 bool CodecImpl::IsOutputConfiguredLocked() {
-  return IsPortConfiguredCommonLocked(kOutputPort);
+  if (!IsPortBuffersConfiguredCommonLocked(kOutputPort)) {
+    return false;
+  }
+  ZX_DEBUG_ASSERT(port_settings_[kOutputPort]);
+  if (!port_settings_[kOutputPort]->is_partial_settings()) {
+    return true;
+  }
+  if (!port_settings_[kOutputPort]->is_complete_seen_output()) {
+    return false;
+  }
+  return true;
 }
 
-bool CodecImpl::IsPortConfiguredCommonLocked(CodecPort port) {
+bool CodecImpl::IsPortBuffersConfiguredCommonLocked(CodecPort port) {
   // In addition to what we're able to assert here, when
-  // is_port_configured_[port], the core codec also has the port
+  // is_port_buffers_configured_[port], the core codec also has the port
   // configured.
-  ZX_DEBUG_ASSERT(!is_port_configured_[port] ||
+  ZX_DEBUG_ASSERT(!is_port_buffers_configured_[port] ||
                   port_settings_[port] &&
-                      all_buffers_[port].size() ==
-                          BufferCountFromPortSettings(*port_settings_[port]));
-  return is_port_configured_[port];
+                      all_buffers_[port].size() == port_settings_[port]->buffer_count());
+  return is_port_buffers_configured_[port];
+}
+
+bool CodecImpl::IsPortBuffersAtLeastPartiallyConfiguredLocked(CodecPort port) {
+  if (IsPortBuffersConfiguredCommonLocked(port)) {
+    return true;
+  }
+  if (!port_settings_[port]) {
+    return false;
+  }
+  if (!port_settings_[port]->is_partial_settings()) {
+    return false;
+  }
+  ZX_DEBUG_ASSERT(port_settings_[port] && port_settings_[port]->is_partial_settings());
+  ZX_DEBUG_ASSERT(buffer_lifetime_ordinal_[port] % 2 == 1);
+  return true;
 }
 
 void CodecImpl::Fail(const char* format, ...) {
@@ -2118,7 +2947,7 @@ void CodecImpl::FailFatalLocked(const char* format, ...) {
 void CodecImpl::vFail(bool is_fatal, const char* format, va_list args) {
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
-    vFailLocked(false, format, args);
+    vFailLocked(is_fatal, format, args);
   }  // ~lock
 }
 
@@ -2200,6 +3029,16 @@ bool CodecImpl::IsStoppingLocked() { return was_unbind_started_; }
 bool CodecImpl::IsStopping() {
   std::lock_guard<std::mutex> lock(lock_);
   return IsStoppingLocked();
+}
+
+bool CodecImpl::IsDecoder() {
+  ZX_DEBUG_ASSERT(!!decoder_params_ ^ !!encoder_params_);
+  return !!decoder_params_;
+}
+
+bool CodecImpl::IsEncoder() {
+  ZX_DEBUG_ASSERT(!!decoder_params_ ^ !!encoder_params_);
+  return !!encoder_params_;
 }
 
 // true - maybe it's the core codec thread.
@@ -2291,27 +3130,29 @@ void CodecImpl::onCoreCodecFailStream() {
   }  // ~lock
 }
 
-void CodecImpl::onCoreCodecMidStreamOutputConfigChange(
+void CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(
     bool output_re_config_required) {
+  VLOGF("CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(): %d\n",
+        output_re_config_required);
   // For now, the core codec thread is the only thread this gets called from.
   ZX_DEBUG_ASSERT(IsPotentiallyCoreCodecThread());
   // For a OMX_EventPortSettingsChanged that doesn't demand output buffer
   // re-config before more output data, this translates to an ordered emit
-  // of a no-action-required OnOutputConfig() that just updates to the new
+  // of a no-action-required OnOutputConstraints() that just updates to the new
   // format, without demanding output buffer re-config.  HDR info can be
   // conveyed this way, ordered with respect to output frames.  OMX
   // requires that we use this thread to collect OMX format info during
   // EventHandler().
   if (!output_re_config_required) {
     std::unique_lock<std::mutex> lock(lock_);
-    GenerateAndSendNewOutputConfig(
+    GenerateAndSendNewOutputConstraints(
         lock,
         false);  // buffer_constraints_action_required
     return;
   }
 
-  // We have an OMX_EventPortSettingsChanged that does demand output
-  // buffer re-config before more output data.
+  // We have an output constraints change that does demand output buffer
+  // re-config before more output data.
   ZX_DEBUG_ASSERT(output_re_config_required);
 
   // We post over to StreamControl domain because we need to synchronize
@@ -2319,7 +3160,7 @@ void CodecImpl::onCoreCodecMidStreamOutputConfigChange(
   // When we get over there to StreamControl, we'll check if we're still
   // talking about the same stream_lifetime_ordinal, and if not, we ignore
   // the event, because a new stream may or may not have the same output
-  // settings, and we'll be re-generating an OnOutputConfig() as needed
+  // settings, and we'll be re-generating an OnOutputConstraints() as needed
   // from current/later OMX output config anyway.  Here are the
   // possibilities:
   //   * Prior to the client moving to a new stream, we process this event
@@ -2332,16 +3173,29 @@ void CodecImpl::onCoreCodecMidStreamOutputConfigChange(
   //     StreamControl.  In this case we ignore the event on StreamControl
   //     domain since its stale by that point, but instead we use
   //     omx_meh_output_buffer_constraints_version_ordinal_ to cause the
-  //     client's next stream to start with a new OnOutputConfig() that
+  //     client's next stream to start with a new OnOutputConstraints() that
   //     the client must catch up to before the stream can fully start.
   //     This way we know we're not ignoring a potential change to
   //     nBufferCountMin or anything like that.
   uint64_t local_stream_lifetime_ordinal;
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
+
+    // The core codec is only allowed to call this mehtod while there's an
+    // active stream.
+    ZX_DEBUG_ASSERT(IsStreamActiveLocked());
+
+    // The client is allowed to essentially forget what the format is on any
+    // mid-stream buffer config change, so remember to re-send the format to the
+    // client before the next output packet of this stream.
+    stream_->SetOutputFormatPending();
+
+    // For asserts.
+    stream_->SetMidStreamOutputConstraintsChangeActive();
+
     // This part is not speculative.  OMX has indicated that it's at least
     // meh about the current output config, so ensure we do a required
-    // OnOutputConfig() before the next stream starts, even if the client
+    // OnOutputConstraints() before the next stream starts, even if the client
     // moves on to a new stream such that the speculative part below becomes
     // stale.
     core_codec_meh_output_buffer_constraints_version_ordinal_ =
@@ -2356,8 +3210,21 @@ void CodecImpl::onCoreCodecMidStreamOutputConfigChange(
   }  // ~lock
   PostToStreamControl(
       [this, stream_lifetime_ordinal = local_stream_lifetime_ordinal] {
-        MidStreamOutputConfigChange(stream_lifetime_ordinal);
+        MidStreamOutputConstraintsChange(stream_lifetime_ordinal);
       });
+}
+
+void CodecImpl::onCoreCodecOutputFormatChange() {
+  ZX_DEBUG_ASSERT(IsPotentiallyCoreCodecThread());
+  std::lock_guard<std::mutex> lock(lock_);
+  ZX_DEBUG_ASSERT(IsStreamActiveLocked());
+  // In future we could relax this requirement, but for now we don't allow
+  // output format changes, output packets, or EOS while mid-stream constraints
+  // change is active.
+  ZX_DEBUG_ASSERT(!stream_->is_mid_stream_output_constraints_change_active());
+  // Next time the core codec asks to output a packet, we'll send the format
+  // first.
+  stream_->SetOutputFormatPending();
 }
 
 void CodecImpl::onCoreCodecInputPacketDone(CodecPacket* packet) {
@@ -2389,6 +3256,56 @@ void CodecImpl::onCoreCodecInputPacketDone(CodecPacket* packet) {
 void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
                                         bool error_detected_before,
                                         bool error_detected_during) {
+  ZX_DEBUG_ASSERT(IsPotentiallyCoreCodecThread());
+
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+
+    // The core codec shouldn't output a packet until after
+    // CoreCodecStartStream() and input data availability in the case that
+    // output buffer config was already suitable, or until after
+    // CoreCodecMidStreamOutputBufferReConfigFinish() in the case that output
+    // buffer config wasn't suitable (not configured or not suitable) or
+    // changed mid-stream.  See also comments in codec_adapter.h.
+    ZX_DEBUG_ASSERT(IsOutputConfiguredLocked());
+
+    // Before we send the packet, we check whether the stream has output format
+    // pending, which means we need to send the output format before the output
+    // packet (and clear the pending state).
+    ZX_DEBUG_ASSERT(IsStreamActiveLocked());
+
+    ZX_DEBUG_ASSERT(!stream_->is_mid_stream_output_constraints_change_active());
+
+    if (stream_->output_format_pending()) {
+      stream_->ClearOutputFormatPending();
+      uint64_t stream_lifetime_ordinal = stream_lifetime_ordinal_;
+      uint64_t new_output_format_details_version_ordinal =
+          next_output_format_details_version_ordinal_++;
+      fuchsia::media::StreamOutputFormat output_format;
+      {  // scope unlock
+        ScopedUnlock unlock(lock);
+        output_format = CoreCodecGetOutputFormat(
+              stream_lifetime_ordinal,
+              new_output_format_details_version_ordinal);
+      }  // ~unlock
+      // Stream change while unlocked above won't happen because we're on
+      // InputData domain which is fenced as part of stream switch.
+      ZX_DEBUG_ASSERT(stream_lifetime_ordinal == stream_lifetime_ordinal_);
+      ZX_DEBUG_ASSERT(new_output_format_details_version_ordinal ==
+                      next_output_format_details_version_ordinal_ - 1);
+      ZX_DEBUG_ASSERT(sent_format_details_version_ordinal_[kOutputPort] + 1 ==
+                      new_output_format_details_version_ordinal);
+      sent_format_details_version_ordinal_[kOutputPort] =
+          new_output_format_details_version_ordinal;
+      PostToSharedFidl([this, output_format = std::move(output_format)]() mutable {
+        // See "is_bound_checks" comment up top.
+        if (binding_.is_bound()) {
+          binding_.events().OnOutputFormat(std::move(output_format));
+        }
+      });
+    }
+  }
+
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     // This helps verify that packet lifetimes are coherent, but we can't do the
@@ -2434,11 +3351,13 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
 }
 
 void CodecImpl::onCoreCodecOutputEndOfStream(bool error_detected_before) {
+  VLOGF("CodecImpl::onCoreCodecOutputEndOfStream()\n");
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
+    ZX_DEBUG_ASSERT(IsStreamActiveLocked());
+    ZX_DEBUG_ASSERT(!stream_->is_mid_stream_output_constraints_change_active());
     stream_->SetOutputEndOfStream();
     output_end_of_stream_seen_.notify_all();
-    VLOGF("sending OnOutputEndOfStream()\n");
     PostSerial(shared_fidl_dispatcher_,
                [this, stream_lifetime_ordinal = stream_lifetime_ordinal_,
                 error_detected_before] {
@@ -2520,6 +3439,190 @@ void CodecImpl::Stream::SetFailureSeen() {
 
 bool CodecImpl::Stream::failure_seen() { return failure_seen_; }
 
+void CodecImpl::Stream::SetOutputFormatPending() {
+  output_format_pending_ = true;
+}
+
+void CodecImpl::Stream::ClearOutputFormatPending() {
+  output_format_pending_ = false;
+}
+
+bool CodecImpl::Stream::output_format_pending() {
+  return output_format_pending_;
+}
+
+void CodecImpl::Stream::SetMidStreamOutputConstraintsChangeActive() {
+  ZX_DEBUG_ASSERT(!is_mid_stream_output_constraints_change_active_);
+  is_mid_stream_output_constraints_change_active_ = true;
+}
+
+void CodecImpl::Stream::ClearMidStreamOutputConstraintsChangeActive() {
+  ZX_DEBUG_ASSERT(is_mid_stream_output_constraints_change_active_);
+  is_mid_stream_output_constraints_change_active_ = false;
+}
+
+bool CodecImpl::Stream::is_mid_stream_output_constraints_change_active() {
+  return is_mid_stream_output_constraints_change_active_;
+}
+
+CodecImpl::PortSettings::PortSettings(CodecImpl* parent, CodecPort port, fuchsia::media::StreamBufferSettings settings)
+  : parent_(parent), port_(port), settings_(std::make_unique<fuchsia::media::StreamBufferSettings>(std::move(settings))) {
+  // nothing else to do here
+}
+
+CodecImpl::PortSettings::PortSettings(CodecImpl* parent, CodecPort port,
+    fuchsia::media::StreamBufferPartialSettings partial_settings)
+  : parent_(parent), port_(port), partial_settings_(
+      std::make_unique<fuchsia::media::StreamBufferPartialSettings>(
+        std::move(partial_settings))) {
+  // nothing else to do here
+}
+
+CodecImpl::PortSettings::~PortSettings() {
+  // To be safe, the unbind needs to occur on the FIDL thread.  In addition, we
+  // want to send a clean Close() to avoid causing the LogicalBufferCollection
+  // to fail.  Since we're not a crashing process, this is a clean close by
+  // definition.
+  if (buffer_collection_ && thrd_current() != parent_->fidl_thread()) {
+    parent_->PostToSharedFidl([buffer_collection = std::move(buffer_collection_)]{
+      // Sysmem will notice the Close() before the PEER_CLOSED.
+      buffer_collection->Close();
+      // ~buffer_collection on FIDL thread
+    });
+  }
+}
+
+void CodecImpl::PortSettings::SetBufferCollectionInfo(fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) {
+  ZX_DEBUG_ASSERT(!buffer_collection_info_);
+  buffer_collection_info_ = std::make_unique<fuchsia::sysmem::BufferCollectionInfo_2>(std::move(buffer_collection_info));
+}
+
+const fuchsia::sysmem::BufferCollectionInfo_2& CodecImpl::PortSettings::buffer_collection_info() {
+  ZX_DEBUG_ASSERT(buffer_collection_info_);
+  return *buffer_collection_info_;
+}
+
+uint64_t CodecImpl::PortSettings::buffer_lifetime_ordinal() {
+  if (is_partial_settings()) {
+    return partial_settings_->buffer_lifetime_ordinal();
+  } else {
+    return settings_->buffer_lifetime_ordinal();
+  }
+}
+
+uint64_t CodecImpl::PortSettings::buffer_constraints_version_ordinal() {
+  if (is_partial_settings()) {
+    return partial_settings_->buffer_constraints_version_ordinal();
+  } else {
+    return settings_->buffer_constraints_version_ordinal();
+  }
+}
+
+uint32_t CodecImpl::PortSettings::packet_count() {
+  if (is_partial_settings()) {
+    // Asking before we have buffer_collection_info_ would potentially get the
+    // wrong answer.
+    ZX_DEBUG_ASSERT(buffer_collection_info_);
+    return std::max(
+      partial_settings_->packet_count_for_server() +
+          partial_settings_->packet_count_for_client(),
+      buffer_collection_info_->buffer_count);
+  } else {
+    return settings_->packet_count_for_server() + settings_->packet_count_for_client();
+  }
+}
+
+uint32_t CodecImpl::PortSettings::buffer_count() {
+  if (is_partial_settings()) {
+    ZX_DEBUG_ASSERT(buffer_collection_info_);
+    return buffer_collection_info_->buffer_count;
+  } else {
+    if (settings_->single_buffer_mode()) {
+      return 1;
+    }
+    return packet_count();
+  }
+}
+
+bool CodecImpl::PortSettings::is_partial_settings() {
+  // Exactly one of settings_ or partial_settings_ is set.
+  ZX_DEBUG_ASSERT(!!settings_ ^ !!partial_settings_);
+  return !!partial_settings_;
+}
+
+const fuchsia::media::StreamBufferPartialSettings& CodecImpl::PortSettings::partial_settings() {
+  ZX_DEBUG_ASSERT(is_partial_settings());
+  return *partial_settings_;
+}
+
+const fuchsia::media::StreamBufferSettings& CodecImpl::PortSettings::settings() {
+  ZX_DEBUG_ASSERT(!is_partial_settings());
+  return *settings_;
+}
+
+fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> CodecImpl::PortSettings::TakeToken() {
+  ZX_DEBUG_ASSERT(is_partial_settings());
+  ZX_DEBUG_ASSERT(partial_settings_->has_sysmem_token());
+  fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token =
+      std::move(*partial_settings_->mutable_sysmem_token());
+  partial_settings_->clear_sysmem_token();
+  return token;
+}
+
+zx::vmo CodecImpl::PortSettings::TakeVmo(uint32_t buffer_index) {
+  ZX_DEBUG_ASSERT(is_partial_settings());
+  ZX_DEBUG_ASSERT(buffer_collection_info_);
+  ZX_DEBUG_ASSERT(buffer_index < buffer_collection_info_->buffer_count);
+  return std::move(buffer_collection_info_->buffers[buffer_index].vmo);
+}
+
+fidl::InterfaceRequest<fuchsia::sysmem::BufferCollection> CodecImpl::PortSettings::NewBufferCollectionRequest(async_dispatcher_t* dispatcher) {
+  ZX_DEBUG_ASSERT(thrd_current() == parent_->fidl_thread());
+  ZX_DEBUG_ASSERT(is_partial_settings());
+  ZX_DEBUG_ASSERT(!buffer_collection_);
+  return buffer_collection_.NewRequest(dispatcher);
+}
+
+fuchsia::sysmem::BufferCollectionPtr& CodecImpl::PortSettings::buffer_collection() {
+  ZX_DEBUG_ASSERT(thrd_current() == parent_->fidl_thread());
+  ZX_DEBUG_ASSERT(is_partial_settings());
+  return buffer_collection_;
+}
+
+void CodecImpl::PortSettings::UnbindBufferCollection() {
+  ZX_DEBUG_ASSERT(thrd_current() == parent_->fidl_thread());
+  ZX_DEBUG_ASSERT(is_partial_settings());
+  // return value intentionally ignored and deleted
+  buffer_collection_.Unbind();
+}
+
+bool CodecImpl::PortSettings::is_complete_seen_output() {
+  ZX_DEBUG_ASSERT(port_ == kOutputPort);
+  ZX_DEBUG_ASSERT(is_partial_settings());
+  return is_complete_seen_output_;
+}
+
+void CodecImpl::PortSettings::SetCompleteSeenOutput() {
+  ZX_DEBUG_ASSERT(port_ == kOutputPort);
+  ZX_DEBUG_ASSERT(thrd_current() == parent_->fidl_thread());
+  ZX_DEBUG_ASSERT(is_partial_settings());
+  ZX_DEBUG_ASSERT(!is_complete_seen_output_);
+  is_complete_seen_output_ = true;
+}
+
+uint64_t CodecImpl::PortSettings::vmo_usable_start(uint32_t buffer_index) {
+  ZX_DEBUG_ASSERT(is_partial_settings());
+  ZX_DEBUG_ASSERT(buffer_collection_info_);
+  ZX_DEBUG_ASSERT(buffer_index < buffer_collection_info_->buffer_count);
+  return buffer_collection_info_->buffers[buffer_index].vmo_usable_start;
+}
+
+uint64_t CodecImpl::PortSettings::vmo_usable_size() {
+  ZX_DEBUG_ASSERT(is_partial_settings());
+  ZX_DEBUG_ASSERT(buffer_collection_info_);
+  return buffer_collection_info_->settings.buffer_settings.size_bytes;
+}
+
 //
 // CoreCodec wrappers, for the asserts.  These asserts, and the way we ensure
 // at compile time that this class has a method for every method of
@@ -2533,6 +3636,31 @@ void CodecImpl::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   codec_adapter_->CoreCodecInit(initial_input_format_details);
+}
+
+fuchsia::sysmem::BufferCollectionConstraints
+CodecImpl::CoreCodecGetBufferCollectionConstraints(
+    CodecPort port,
+    const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
+    const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
+  ZX_DEBUG_ASSERT(port == kInputPort &&
+                      thrd_current() == stream_control_thread_ ||
+                  port == kOutputPort && thrd_current() == fidl_thread());
+  // We don't intend to send the sysmem token to the core codec directly, just
+  // because it doesn't really need to participate directly that way, and this
+  // lets us keep direct interaction with sysmem in CodecImpl instead of each
+  // core codec.
+  ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
+  return codec_adapter_->CoreCodecGetBufferCollectionConstraints(port, stream_buffer_constraints, partial_settings);
+}
+
+void CodecImpl::CoreCodecSetBufferCollectionInfo(
+    CodecPort port,
+    const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
+  ZX_DEBUG_ASSERT(port == kInputPort &&
+                      thrd_current() == stream_control_thread_ ||
+                  port == kOutputPort && thrd_current() == fidl_thread());
+  codec_adapter_->CoreCodecSetBufferCollectionInfo(port, buffer_collection_info);
 }
 
 void CodecImpl::CoreCodecAddBuffer(CodecPort port, const CodecBuffer* buffer) {
@@ -2591,22 +3719,57 @@ bool CodecImpl::IsCoreCodecRequiringOutputConfigForFormatDetection() {
   return codec_adapter_->IsCoreCodecRequiringOutputConfigForFormatDetection();
 }
 
+bool CodecImpl::IsCoreCodecMappedBufferNeeded(CodecPort port) {
+  ZX_DEBUG_ASSERT(port == kInputPort && thrd_current() == stream_control_thread_ ||
+                  port == kOutputPort && thrd_current() == fidl_thread());
+  return codec_adapter_->IsCoreCodecMappedBufferNeeded(port);
+}
+
+bool CodecImpl::IsCoreCodecHwBased() {
+  return codec_adapter_->IsCoreCodecHwBased();
+}
+
 // Caller must ensure that this is called only on one thread at a time, only
 // during setup, during a core codec initiated mid-stream format change, or
 // during stream start before any input data has been delivered for the new
 // stream.
-std::unique_ptr<const fuchsia::media::StreamOutputConfig>
-CodecImpl::CoreCodecBuildNewOutputConfig(
+std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
+CodecImpl::CoreCodecBuildNewOutputConstraints(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_buffer_constraints_version_ordinal,
-    uint64_t new_output_format_details_version_ordinal,
     bool buffer_constraints_action_required) {
   ZX_DEBUG_ASSERT(IsPotentiallyCoreCodecThread() ||
                   thrd_current() == stream_control_thread_);
-  return codec_adapter_->CoreCodecBuildNewOutputConfig(
-      stream_lifetime_ordinal, new_output_buffer_constraints_version_ordinal,
-      new_output_format_details_version_ordinal,
-      buffer_constraints_action_required);
+  std::unique_ptr<const fuchsia::media::StreamOutputConstraints> constraints =
+      codec_adapter_->CoreCodecBuildNewOutputConstraints(
+          stream_lifetime_ordinal,
+          new_output_buffer_constraints_version_ordinal,
+          buffer_constraints_action_required);
+  ZX_DEBUG_ASSERT(constraints);
+  ZX_DEBUG_ASSERT(constraints->has_stream_lifetime_ordinal());
+  ZX_DEBUG_ASSERT(constraints->stream_lifetime_ordinal() == stream_lifetime_ordinal);
+  ZX_DEBUG_ASSERT(constraints->has_buffer_constraints());
+  ZX_DEBUG_ASSERT(constraints->buffer_constraints().has_buffer_constraints_version_ordinal());
+  ZX_DEBUG_ASSERT(constraints->buffer_constraints().buffer_constraints_version_ordinal() == new_output_buffer_constraints_version_ordinal);
+  ZX_DEBUG_ASSERT(constraints->has_buffer_constraints_action_required());
+  ZX_DEBUG_ASSERT(constraints->buffer_constraints_action_required() == buffer_constraints_action_required);
+  return constraints;
+}
+
+fuchsia::media::StreamOutputFormat CodecImpl::CoreCodecGetOutputFormat(
+    uint64_t stream_lifetime_ordinal,
+    uint64_t new_output_format_details_version_ordinal) {
+  // TODO(dustingreen): Remove the 2nd part of this assert condition along with
+  // removal of SetOutputBufferSettings() and OnOutputConfig() messages.
+  ZX_DEBUG_ASSERT(IsPotentiallyCoreCodecThread() || thrd_current() == stream_control_thread_);
+  fuchsia::media::StreamOutputFormat format =
+      codec_adapter_->CoreCodecGetOutputFormat(stream_lifetime_ordinal, new_output_format_details_version_ordinal);
+  ZX_DEBUG_ASSERT(format.has_stream_lifetime_ordinal());
+  ZX_DEBUG_ASSERT(format.stream_lifetime_ordinal() == stream_lifetime_ordinal);
+  ZX_DEBUG_ASSERT(format.has_format_details());
+  ZX_DEBUG_ASSERT(format.format_details().has_format_details_version_ordinal());
+  ZX_DEBUG_ASSERT(format.format_details().format_details_version_ordinal() == new_output_format_details_version_ordinal);
+  return format;
 }
 
 void CodecImpl::CoreCodecMidStreamOutputBufferReConfigPrepare() {

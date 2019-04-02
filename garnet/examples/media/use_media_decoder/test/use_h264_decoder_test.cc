@@ -28,10 +28,13 @@ constexpr char kInputFilePath[] = "/pkg/data/bear.h264";
 
 const std::map<uint32_t, const char*> GoldenSha256s = {
     {make_fourcc('Y', 'V', '1', '2'),
-     "f40cd9c876ef429da421cf4ae4a5a0df1795c4519ddac098a5c3f427f5566281"},
+     "39e861466dede78e5be008f85dba53efcee23b7a064170e4c00361383e67690d"},
+     // YV12 without SHA256_Update_VideoParameters():
+     // f3116ef8cf0f69c3d9316246a3896f96684f513ce9664b9b55e195c964cc64a0
     {make_fourcc('N', 'V', '1', '2'),
-     "29c86f37972b5b70768620f8f702c37f3579e0cd84bec7159900680075026460"}};
-
+     "2ab4b1f47636ac367b5cc0da2bf8d901a9e2b5db40126b50f5f75ee5b3b8c8df"}};
+     // NV12 without SHA256_Update_VideoParameters():
+     // 84ae3e279d8b85d3a3b10c06489d9ffb0a968d99baa498d20f28788c0090c1d5
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -42,7 +45,7 @@ int main(int argc, char* argv[]) {
   codec_factory.set_error_handler([](zx_status_t status) {
     // TODO(dustingreen): get and print CodecFactory channel epitaph once that's
     // possible.
-    FXL_LOG(ERROR) << "codec_factory failed - unexpected";
+    FXL_LOG(FATAL) << "codec_factory failed - unexpected";
   });
 
   std::unique_ptr<component::StartupContext> startup_context =
@@ -51,13 +54,17 @@ int main(int argc, char* argv[]) {
       ->ConnectToEnvironmentService<fuchsia::mediacodec::CodecFactory>(
           codec_factory.NewRequest());
 
+  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
+  startup_context->ConnectToEnvironmentService<fuchsia::sysmem::Allocator>(
+    sysmem.NewRequest());
+
   printf("The test file is: %s\n", kInputFilePath);
   printf("Decoding test file and computing sha256...\n");
 
   uint8_t md[SHA256_DIGEST_LENGTH];
   std::vector<std::pair<bool, uint64_t>> timestamps;
   uint32_t fourcc;
-  use_h264_decoder(&main_loop, std::move(codec_factory), kInputFilePath, "", md,
+  use_h264_decoder(&main_loop, std::move(codec_factory), std::move(sysmem), kInputFilePath, "", md,
                    &timestamps, &fourcc, nullptr);
 
   std::set<uint64_t> expected_timestamps;

@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/media:codec_factory",
+        "//garnet/bin/media:codec_runner_sw_ffmpeg"
+    ]
+}

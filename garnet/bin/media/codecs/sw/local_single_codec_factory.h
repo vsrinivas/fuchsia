@@ -25,11 +25,13 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
  public:
   LocalSingleCodecFactory(
       async_dispatcher_t* fidl_dispatcher,
+      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
       fidl::InterfaceRequest<CodecFactory> request,
       fit::function<void(std::unique_ptr<CodecImpl>)> factory_done_callback,
       CodecAdmissionControl* codec_admission_control,
       fit::function<void(zx_status_t)> error_handler)
       : fidl_dispatcher_(fidl_dispatcher),
+        sysmem_(std::move(sysmem)),
         binding_(this),
         factory_done_callback_(std::move(factory_done_callback)),
         codec_admission_control_(codec_admission_control) {
@@ -69,7 +71,14 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
             return;
           }
 
+          if (!sysmem_) {
+            printf("VendCodecAdapter() only meant to be used once per LocalSingleCodecFactory\n");
+            // ~codec_request closes channel.
+            return;
+          }
+
           auto codec_impl = std::make_unique<CodecImpl>(
+              std::move(sysmem_),
               std::move(codec_admission), fidl_dispatcher_, thrd_current(),
               std::make_unique<Params>(std::move(params)),
               std::move(codec_request));
@@ -100,6 +109,7 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
   }
 
   async_dispatcher_t* fidl_dispatcher_;
+  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem_;
   fidl::Binding<CodecFactory, LocalSingleCodecFactory*> binding_;
   // Returns the codec implementation and requests drop of self.
   fit::function<void(std::unique_ptr<CodecImpl>)> factory_done_callback_;
