@@ -38,14 +38,14 @@ def main():
 
     args = parser.parse_args()
 
-    out_dir = lib.rust.find_out_dir()
+    build_dir = os.environ["FUCHSIA_BUILD_DIR"]
 
-    if args.print_sources and not all(os.path.exists(gn_target.manifest_path(out_dir)) for gn_target in args.gn_targets):
+    if args.print_sources and not all(os.path.exists(gn_target.manifest_path(build_dir)) for gn_target in args.gn_targets):
         return 0
 
     cargo_tomls = []  # List of (gn_target, cargo_toml)
     for gn_target in args.gn_targets:
-        with open(gn_target.manifest_path(out_dir), "r") as fin:
+        with open(gn_target.manifest_path(build_dir), "r") as fin:
             cargo_tomls.append((gn_target, toml.load(fin)))
 
     main_files = []  # List of (gn_target, main_file)

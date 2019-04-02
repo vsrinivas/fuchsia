@@ -19,7 +19,7 @@ def manifest_path_from_path_or_gn_target(arg):
         return os.path.abspath(arg)
     else:
         gn_target = lib.rust.GnTarget(arg)
-        return gn_target.manifest_path(lib.rust.find_out_dir())
+        return gn_target.manifest_path(os.environ["FUCHSIA_BUILD_DIR"])
 
 def main():
     parser = argparse.ArgumentParser("Compiles all third-party Rust crates")
@@ -39,7 +39,7 @@ def main():
                         help="Target triple for which this crate is being compiled",
                         default="x86_64-fuchsia")
     parser.add_argument("--out-dir",
-                        help="Path to the Fuchsia output directory",
+                        help="Path to the Fuchsia build directory",
                         required=False)
     parser.add_argument("--no-deps",
                         action="store_true",
@@ -53,10 +53,10 @@ def main():
 
     args = parser.parse_args()
 
-    if args.out_dir:
-        out_dir = args.out_dir
+    if args.build_dir:
+        build_dir = args.out_dir
     else:
-        out_dir = lib.rust.find_out_dir()
+        build_dir = os.environ["FUCHSIA_BUILD_DIR"]
 
     env = os.environ.copy()
 
@@ -84,8 +84,8 @@ def main():
     rustc = os.path.join(buildtools_dir, "rust", "bin", "rustc")
     rustdoc = os.path.join(ROOT_PATH, "scripts", "rust", "rustdoc_no_ld_library_path.sh")
 
-    shared_libs_root = os.path.join(ROOT_PATH, out_dir)
-    sysroot = os.path.join(ROOT_PATH, out_dir, "sdk", "exported", "zircon_sysroot", \
+    shared_libs_root = os.path.join(ROOT_PATH, build_dir)
+    sysroot = os.path.join(ROOT_PATH, build_dir, "sdk", "exported", "zircon_sysroot", \
             "arch", target_cpu, "sysroot")
 
     clang_c_compiler = os.path.join(clang_prefix, "clang")

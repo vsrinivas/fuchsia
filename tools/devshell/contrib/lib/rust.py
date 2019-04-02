@@ -8,7 +8,7 @@ import subprocess
 
 ROOT_PATH = os.path.abspath(__file__ + "/../../../../..")
 FX_PATH = os.path.join(ROOT_PATH, "scripts", "fx")
-CONFIG_PATH = os.path.join(ROOT_PATH, ".config")
+BUILD_DIR_PATH = os.path.join(ROOT_PATH, ".fx-build-dir")
 
 def _walk_up_path(path):
     res = set([path])
@@ -35,15 +35,6 @@ def _find_cargo_target(path, target_filter=None):
                     path=target_path,
                     target=gn_target,
             )
-
-def find_out_dir():
-    with open(CONFIG_PATH, "r") as config:
-        for line in config.readlines():
-            if line.startswith("FUCHSIA_BUILD_DIR="):
-                key, value = line.split("=")
-                return value.strip().strip("'")
-    print "Invalid fuchsia/.config: no FUCHSIA_BUILD_DIR entry found"
-    sys.exit(1)
 
 class GnTarget:
     def __init__(self, gn_target):
@@ -76,7 +67,7 @@ class GnTarget:
     def path(self):
         return os.path.join(ROOT_PATH, self.parts[0])
 
-    def manifest_path(self, out_dir=None):
+    def manifest_path(self, build_dir=None):
         if len(self.parts) == 1:
             # Turn foo/bar into foo/bar/bar
             path = os.path.join(self.gn_target, os.path.basename(self.gn_target))
@@ -84,5 +75,5 @@ class GnTarget:
             # Turn foo/bar:baz into foo/bar/baz
             path = self.gn_target.replace(":", os.sep)
 
-        return os.path.join(ROOT_PATH, out_dir, "gen", path, "Cargo.toml")
+        return os.path.join(ROOT_PATH, build_dir, "gen", path, "Cargo.toml")
 

@@ -28,16 +28,16 @@ def main():
                         help="Path to Cargo.toml to generate",
                         required=False)
     parser.add_argument("--out-dir",
-                        help="Path to the Fuchsia output directory",
+                        help="Path to the Fuchsia build directory",
                         required=False)
     args = parser.parse_args()
 
-    if args.out_dir:
-        out_dir = args.out_dir
+    if args.build_dir:
+        build_dir = args.out_dir
     else:
-        out_dir = lib.rust.find_out_dir()
+        build_dir = os.environ["FUCHSIA_BUILD_DIR"]
 
-    path = args.gn_target.manifest_path(out_dir)
+    path = args.gn_target.manifest_path(build_dir)
 
     if args.output:
         output = args.output
