@@ -376,6 +376,7 @@ mod tests {
 
 mod hex_serde {
     use {hex, serde::Deserialize};
+
     pub fn serialize<S>(bytes: &[u8], serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -383,12 +384,13 @@ mod hex_serde {
         let s = hex::encode(bytes);
         serializer.serialize_str(&s)
     }
+
     pub fn deserialize<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        let value = <&str>::deserialize(deserializer)?;
-        hex::decode(&value)
+        let value = String::deserialize(deserializer)?;
+        hex::decode(value.as_bytes())
             .map_err(|e| serde::de::Error::custom(format!("bad hex value: {:?}: {}", value, e)))
     }
 }
