@@ -14,9 +14,10 @@
 #include <lib/fdio/fdio.h>
 #include <zircon/status.h>
 
+#include "dockyard_proxy.h"
+#include "dockyard_proxy_grpc.h"
+#include "dockyard_proxy_local.h"
 #include "harvester.h"
-#include "harvester_grpc.h"
-#include "harvester_local.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
@@ -105,7 +106,7 @@ int main(int argc, char** argv) {
   }
 
   // Set up.
-  std::unique_ptr<harvester::Harvester> harvester;
+  std::unique_ptr<harvester::DockyardProxy> dockyard_proxy;
   if (use_grpc) {
     const auto& positional_args = command_line.positional_args();
     if (positional_args.size() < 1) {
@@ -117,14 +118,16 @@ int main(int argc, char** argv) {
 
     // TODO(dschuyler): This channel isn't authenticated
     // (InsecureChannelCredentials()).
-    harvester = std::make_unique<harvester::HarvesterGrpc>(grpc::CreateChannel(
-        positional_args[0], grpc::InsecureChannelCredentials()));
+    dockyard_proxy =
+        std::make_unique<harvester::DockyardProxyGrpc>(grpc::CreateChannel(
+            positional_args[0], grpc::InsecureChannelCredentials()));
 
-    if (!harvester || harvester->Init() != harvester::HarvesterStatus::OK) {
+    if (!dockyard_proxy ||
+        dockyard_proxy->Init() != harvester::DockyardProxyStatus::OK) {
       exit(EXIT_CODE_GENERAL_ERROR);
     }
   } else {
-    harvester = std::make_unique<harvester::HarvesterLocal>();
+    dockyard_proxy = std::make_unique<harvester::DockyardProxyLocal>();
   }
 
   zx_handle_t root_resource;
@@ -135,10 +138,10 @@ int main(int argc, char** argv) {
 
   // The main loop.
   while (true) {
-    harvester::GatherCpuSamples(root_resource, harvester);
-    harvester::GatherMemorySamples(root_resource, harvester);
-    harvester::GatherThreadSamples(root_resource, harvester);
-    harvester::GatherComponentIntrospection(root_resource, harvester);
+    harvester::GatherCpuSamples(root_resource, dockyard_proxy);
+    harvester::GatherMemorySamples(root_resource, dockyard_proxy);
+    harvester::GatherThreadSamples(root_resource, dockyard_proxy);
+    harvester::GatherComponentIntrospection(root_resource, dockyard_proxy);
     // TODO(dschuyler): make this actually run at rate (i.e. remove drift from
     // execution time).
     std::this_thread::sleep_for(std::chrono::milliseconds(cycle_msec_rate));

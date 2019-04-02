@@ -32,8 +32,8 @@ class TaskHarvester final : public TaskEnumerator {
  public:
   TaskHarvester() {}
 
-  // After gathering the data, upload it to |harvester|.
-  void UploadTaskInfo(const std::unique_ptr<Harvester>& harvester) {
+  // After gathering the data, upload it to |dockyard|.
+  void UploadTaskInfo(const std::unique_ptr<DockyardProxy>& dockyard_proxy) {
     // TODO(dschuyler): Send data to dockyard.
     for (auto iter = list_.begin(); iter != list_.end(); ++iter) {
       FXL_LOG(INFO) << iter->first << ": " << iter->second;
@@ -86,19 +86,20 @@ class TaskHarvester final : public TaskEnumerator {
 
 }  // namespace
 
-std::ostream& operator<<(std::ostream& out, const HarvesterStatus& status) {
+std::ostream& operator<<(std::ostream& out, const DockyardProxyStatus& status) {
   switch (status) {
-    case HarvesterStatus::OK:
+    case DockyardProxyStatus::OK:
       return out << "OK (0)";
-    case HarvesterStatus::ERROR:
+    case DockyardProxyStatus::ERROR:
       return out << "ERROR (-1)";
   }
   FXL_NOTREACHED();
   return out;
 }
 
-void GatherCpuSamples(zx_handle_t root_resource,
-                      const std::unique_ptr<harvester::Harvester>& harvester) {
+void GatherCpuSamples(
+    zx_handle_t root_resource,
+    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy) {
   // TODO(dschuyler): Determine the array size at runtime (32 is arbitrary).
   zx_info_cpu_stats_t stats[32];
   size_t actual, avail;
@@ -138,15 +139,15 @@ void GatherCpuSamples(zx_handle_t root_resource,
     AddCpuValue(&list, i, "reschedule_ipis", stats[i].reschedule_ipis);
     AddCpuValue(&list, i, "generic_ipis", stats[i].generic_ipis);
   }
-  HarvesterStatus status = harvester->SendSampleList(list);
-  if (status != HarvesterStatus::OK) {
+  DockyardProxyStatus status = dockyard_proxy->SendSampleList(list);
+  if (status != DockyardProxyStatus::OK) {
     FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
   }
 }
 
 void GatherMemorySamples(
     zx_handle_t root_resource,
-    const std::unique_ptr<harvester::Harvester>& harvester) {
+    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy) {
   zx_info_kmem_stats_t stats;
   zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_KMEM_STATS,
                                        &stats, sizeof(stats), NULL, NULL);
@@ -172,26 +173,26 @@ void GatherMemorySamples(
   list.push_back(std::make_pair(FREE_HEAP_BYTES, stats.free_heap_bytes));
   list.push_back(std::make_pair(VMO_BYTES, stats.vmo_bytes));
   list.push_back(std::make_pair(IPC_BYTES, stats.ipc_bytes));
-  HarvesterStatus status = harvester->SendSampleList(list);
-  if (status != HarvesterStatus::OK) {
+  DockyardProxyStatus status = dockyard_proxy->SendSampleList(list);
+  if (status != DockyardProxyStatus::OK) {
     FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
   }
 }
 
 void GatherThreadSamples(
     zx_handle_t root_resource,
-    const std::unique_ptr<harvester::Harvester>& harvester) {
+    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy) {
   TaskHarvester task_harvester;
-  task_harvester.UploadTaskInfo(harvester);
+  task_harvester.UploadTaskInfo(dockyard_proxy);
 }
 
 void GatherComponentIntrospection(
     zx_handle_t root_resource,
-    const std::unique_ptr<harvester::Harvester>& harvester) {
+    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy) {
   std::string fake_json_data = "{ \"test\": 5 }";
-  HarvesterStatus status = harvester->SendInspectJson(
+  DockyardProxyStatus status = dockyard_proxy->SendInspectJson(
       "inspect:/hub/fake/234/faux.Inspect", fake_json_data);
-  if (status != HarvesterStatus::OK) {
+  if (status != DockyardProxyStatus::OK) {
     FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
   }
 }

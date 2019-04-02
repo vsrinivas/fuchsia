@@ -16,12 +16,13 @@ executable("bin") {
   output_name = "system_monitor_harvester"
 
   sources = [
+    "dockyard_proxy.h",
+    "dockyard_proxy_grpc.cc",
+    "dockyard_proxy_grpc.h",
+    "dockyard_proxy_local.cc",
+    "dockyard_proxy_local.h",
     "harvester.cc",
     "harvester.h",
-    "harvester_grpc.cc",
-    "harvester_grpc.h",
-    "harvester_local.cc",
-    "harvester_local.h",
     "harvester_main.cc",
   ]
 

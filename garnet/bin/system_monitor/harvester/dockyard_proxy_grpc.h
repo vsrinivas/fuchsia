@@ -2,35 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_GRPC_H_
-#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_GRPC_H_
+#ifndef GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_GRPC_H_
+#define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_GRPC_H_
 
 #include <grpc++/grpc++.h>
 
+#include "dockyard_proxy.h"
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
 #include "garnet/lib/system_monitor/protos/dockyard.grpc.pb.h"
-#include "harvester.h"
 
 namespace harvester {
 
-class HarvesterGrpc : public Harvester {
+class DockyardProxyGrpc : public DockyardProxy {
  public:
-  HarvesterGrpc(std::shared_ptr<grpc::Channel> channel)
+  DockyardProxyGrpc(std::shared_ptr<grpc::Channel> channel)
       : stub_(dockyard_proto::Dockyard::NewStub(channel)) {}
 
-  // |Harvester|.
-  virtual HarvesterStatus Init() override;
+  // |DockyardProxy|.
+  virtual DockyardProxyStatus Init() override;
 
-  // |Harvester|.
-  virtual HarvesterStatus SendInspectJson(const std::string& stream_name,
-                                          const std::string& json) override;
+  // |DockyardProxy|.
+  virtual DockyardProxyStatus SendInspectJson(const std::string& stream_name,
+                                              const std::string& json) override;
 
-  // |Harvester|.
-  virtual HarvesterStatus SendSample(const std::string& stream_name,
-                                     uint64_t value) override;
+  // |DockyardProxy|.
+  virtual DockyardProxyStatus SendSample(const std::string& stream_name,
+                                         uint64_t value) override;
 
-  // |Harvester|.
-  virtual HarvesterStatus SendSampleList(const SampleList list) override;
+  // |DockyardProxy|.
+  virtual DockyardProxyStatus SendSampleList(const SampleList list) override;
 
  private:
   // A local stub for the remote Dockyard instance.
@@ -64,4 +64,4 @@ class HarvesterGrpc : public Harvester {
 
 }  // namespace harvester
 
-#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_HARVESTER_GRPC_H_
+#endif  // GARNET_BIN_SYSTEM_MONITOR_HARVESTER_DOCKYARD_PROXY_GRPC_H_
