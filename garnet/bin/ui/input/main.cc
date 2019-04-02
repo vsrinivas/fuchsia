@@ -10,20 +10,20 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/component/cpp/connect.h>
+#include <lib/component/cpp/startup_context.h>
+#include <lib/ui/input/cpp/formatting.h>
+#include <lib/zx/time.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
-#include <lib/zx/time.h>
 
 #include "garnet/bin/ui/input/inverse_keymap.h"
-#include "lib/component/cpp/connect.h"
-#include "lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/time/time_point.h"
-#include "lib/ui/input/cpp/formatting.h"
 
 namespace {
 
@@ -53,7 +53,6 @@ class InputApp {
     }
 
     zx::duration duration;
-
     {
       std::string duration_str;
       if (command_line.GetOptionValue("duration", &duration_str)) {
@@ -86,7 +85,18 @@ class InputApp {
       }
 
       if (positional_args[0] == "tap") {
-        TapEventCommand(positional_args, width, height, duration);
+        uint32_t tap_event_count = 1;
+        std::string tap_event_count_str;
+        if (command_line.GetOptionValue("tap_event_count",
+                                        &tap_event_count_str)) {
+          if (!fxl::StringToNumberWithError(tap_event_count_str,
+                                            &tap_event_count)) {
+            Error("Invalid tap_event_count parameter");
+            return;
+          }
+        }
+        TapEventCommand(positional_args, width, height, duration,
+                        tap_event_count);
       } else {
         uint32_t move_event_count = 100;
         std::string move_event_count_str;
@@ -158,6 +168,9 @@ commands:
       --move_event_count=<count>  the number of move events to send in between the down and up
                                   events of the swipe (default: 100)
 
+      --tap_event_count=<count>   the number of tap events to send (default: 1)
+                                  The --duration option is divided over the tap events.
+
 For further details, see README.md.
 )END";
 
@@ -207,7 +220,8 @@ For further details, see README.md.
   }
 
   void TapEventCommand(const std::vector<std::string>& args, uint32_t width,
-                       uint32_t height, zx::duration duration) {
+                       uint32_t height, zx::duration duration,
+                       uint32_t tap_event_count) {
     if (args.size() != 3) {
       Usage();
       return;
@@ -226,9 +240,13 @@ For further details, see README.md.
 
     FXL_VLOG(1) << "TapEvent " << x << "x" << y;
 
+    zx::duration tap_duration = duration;
+    if (tap_event_count > 1)
+      tap_duration = duration / tap_event_count;
+
     fuchsia::ui::input::InputDevicePtr input_device =
         RegisterTouchscreen(width, height);
-    SendTap(std::move(input_device), x, y, duration);
+    SendTap(std::move(input_device), x, y, tap_duration, tap_event_count, 0);
   }
 
   void KeyEventCommand(const std::vector<std::string>& args,
@@ -318,8 +336,10 @@ For further details, see README.md.
   }
 
   void SendTap(fuchsia::ui::input::InputDevicePtr input_device, uint32_t x,
-               uint32_t y, zx::duration duration) {
+               uint32_t y, zx::duration tap_duration, uint32_t max_tap_count,
+               uint32_t cur_tap_count) {
     TRACE_DURATION("input", "SendTap");
+
     // DOWN
     fuchsia::ui::input::Touch touch;
     touch.finger_id = 1;
@@ -339,7 +359,8 @@ For further details, see README.md.
 
     async::PostDelayedTask(
         async_get_default_dispatcher(),
-        [this, device = std::move(input_device)] {
+        [this, device = std::move(input_device), x, y, tap_duration,
+         max_tap_count, cur_tap_count]() mutable {
           TRACE_DURATION("input", "SendTap");
           // UP
           fuchsia::ui::input::TouchscreenReportPtr touchscreen =
@@ -353,9 +374,14 @@ For further details, see README.md.
           FXL_VLOG(1) << "SendTap " << report;
           TRACE_FLOW_BEGIN("input", "hid_read_to_listener", report.trace_id);
           device->DispatchReport(std::move(report));
-          loop_->Quit();
+          if (++cur_tap_count >= max_tap_count) {
+            loop_->Quit();
+            return;
+          }
+          SendTap(std::move(device), x, y, tap_duration, max_tap_count,
+                  cur_tap_count);
         },
-        duration);
+        tap_duration);
   }
 
   void SendKeyPress(fuchsia::ui::input::InputDevicePtr input_device,
