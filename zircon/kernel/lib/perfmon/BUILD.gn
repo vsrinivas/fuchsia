@@ -8,5 +8,10 @@ config("config") {
 
 library("perfmon") {
   kernel = true
-  sources = []
+  sources = [
+    "perfmon.cpp",
+  ]
+  deps = [
+    "$zx/kernel/vm",
+  ]
 }

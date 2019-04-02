@@ -16,6 +16,50 @@
 
 using PmuEventId = perfmon_event_id_t;
 
+// While the last-branch record is far larger, it is not emitted for each
+// event.
+static constexpr size_t kMaxEventRecordSize = sizeof(perfmon_pc_record_t);
+
+struct PerfmonCpuData {
+    // The trace buffer, passed in from userspace.
+    fbl::RefPtr<VmObject> buffer_vmo;
+    size_t buffer_size = 0;
+
+    // The trace buffer when mapped into kernel space.
+    // This is only done while the trace is running.
+    fbl::RefPtr<VmMapping> buffer_mapping;
+    perfmon_buffer_header_t* buffer_start = 0;
+    void* buffer_end = 0;
+
+    // The next record to fill.
+    perfmon_record_header_t* buffer_next = nullptr;
+} __CPU_ALIGN;
+
+struct PerfmonStateBase {
+    explicit PerfmonStateBase(unsigned n_cpus);
+    ~PerfmonStateBase();
+
+    // Helper to allocate space for per-cpu state.
+    // This data must be properly aligned so it is allocated specially.
+    bool AllocatePerCpuData();
+
+    // Number of entries in |cpu_data|.
+    const unsigned num_cpus;
+
+    // An array with one entry for each cpu.
+    // TODO(dje): Ideally this would be something like
+    // ktl::unique_ptr<PerfmonCpuData[]> cpu_data;
+    // but that will need to wait for a "new" that handles aligned allocs.
+    PerfmonCpuData* cpu_data = nullptr;
+};
+
+// True if the chip supports perfmon at the version we require.
+extern bool perfmon_supported;
+
+// This is accessed atomically as it is also accessed by the PMI handler.
+extern int perfmon_active;
+
+
 // The functions performing |mtrace_control()| operations.
 
 // Perform MTRACE_PERFMON_GET_PROPERTIES: Store PMU properties in |state|.
@@ -44,3 +88,64 @@ zx_status_t arch_perfmon_stop();
 // Perform MTRACE_PERFMON_FINI: Terminate data collection, reset all PMU
 // registers.
 zx_status_t arch_perfmon_fini();
+
+
+// This section contains helper routines to write perfmon records.
+
+static inline void arch_perfmon_write_header(perfmon_record_header_t* hdr,
+                                             perfmon_record_type_t type,
+                                             perfmon_event_id_t event) {
+    hdr->type = type;
+    hdr->reserved_flags = 0;
+    hdr->event = event;
+}
+
+static inline perfmon_record_header_t* arch_perfmon_write_time_record(
+        perfmon_record_header_t* hdr,
+        perfmon_event_id_t event, zx_ticks_t time) {
+    auto rec = reinterpret_cast<perfmon_time_record_t*>(hdr);
+    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_TIME, event);
+    rec->time = time;
+    ++rec;
+    return reinterpret_cast<perfmon_record_header_t*>(rec);
+}
+
+static inline perfmon_record_header_t* arch_perfmon_write_tick_record(
+        perfmon_record_header_t* hdr,
+        perfmon_event_id_t event) {
+    auto rec = reinterpret_cast<perfmon_tick_record_t*>(hdr);
+    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_TICK, event);
+    ++rec;
+    return reinterpret_cast<perfmon_record_header_t*>(rec);
+}
+
+static inline perfmon_record_header_t* arch_perfmon_write_count_record(
+        perfmon_record_header_t* hdr,
+        perfmon_event_id_t event, uint64_t count) {
+    auto rec = reinterpret_cast<perfmon_count_record_t*>(hdr);
+    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_COUNT, event);
+    rec->count = count;
+    ++rec;
+    return reinterpret_cast<perfmon_record_header_t*>(rec);
+}
+
+static inline perfmon_record_header_t* arch_perfmon_write_value_record(
+        perfmon_record_header_t* hdr,
+        perfmon_event_id_t event, uint64_t value) {
+    auto rec = reinterpret_cast<perfmon_value_record_t*>(hdr);
+    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_VALUE, event);
+    rec->value = value;
+    ++rec;
+    return reinterpret_cast<perfmon_record_header_t*>(rec);
+}
+
+static inline perfmon_record_header_t* arch_perfmon_write_pc_record(
+        perfmon_record_header_t* hdr,
+        perfmon_event_id_t event, uint64_t aspace, uint64_t pc) {
+    auto rec = reinterpret_cast<perfmon_pc_record_t*>(hdr);
+    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_PC, event);
+    rec->aspace = aspace;
+    rec->pc = pc;
+    ++rec;
+    return reinterpret_cast<perfmon_record_header_t*>(rec);
+}

@@ -46,14 +46,11 @@
 
 static void arm64_perfmon_reset_task(void* raw_context);
 
-static constexpr size_t kMaxEventRecordSize = sizeof(perfmon_pc_record_t);
-
 static constexpr int kProgrammableCounterWidth = 32;
 static constexpr int kFixedCounterWidth = 64;
 static constexpr uint32_t kMaxProgrammableCounterValue = UINT32_MAX;
 static constexpr uint64_t kMaxFixedCounterValue = UINT64_MAX;
 
-static bool perfmon_supported = false;
 static bool perfmon_hw_initialized = false;
 
 static uint32_t perfmon_imp = 0;
@@ -67,25 +64,9 @@ static uint32_t perfmon_counter_status_bits = 0;
 
 namespace {
 
-struct PerfmonCpuData {
-    // The trace buffer, passed in from userspace.
-    fbl::RefPtr<VmObject> buffer_vmo;
-    size_t buffer_size = 0;
-
-    // The trace buffer when mapped into kernel space.
-    // This is only done while the trace is running.
-    fbl::RefPtr<VmMapping> buffer_mapping;
-    perfmon_buffer_header_t* buffer_start = 0;
-    void* buffer_end = 0;
-
-    // The next record to fill.
-    perfmon_record_header_t* buffer_next = nullptr;
-} __CPU_ALIGN;
-
-struct PerfmonState {
+struct PerfmonState : public PerfmonStateBase  {
     static zx_status_t Create(unsigned n_cpus, ktl::unique_ptr<PerfmonState>* out_state);
     explicit PerfmonState(unsigned n_cpus);
-    ~PerfmonState();
 
     // The value of the pmcr register.
     // TODO(dje): Review access to cycle counter, et.al., when not
@@ -99,15 +80,6 @@ struct PerfmonState {
     // over the entire arrays.
     unsigned num_used_fixed = 0;
     unsigned num_used_programmable = 0;
-
-    // Number of entries in |cpu_data|.
-    const unsigned num_cpus;
-
-    // An array with one entry for each cpu.
-    // TODO(dje): Ideally this would be something like
-    // ktl::unique_ptr<PerfmonCpuData[]> cpu_data;
-    // but that will need to wait for a "new" that handles aligned allocs.
-    PerfmonCpuData* cpu_data = nullptr;
 
     // The ids for each of the in-use events, or zero if not used.
     // These are passed in from the driver and then written to the buffer,
@@ -146,9 +118,6 @@ DECLARE_SINGLETON_MUTEX(PerfmonLock);
 
 static ktl::unique_ptr<PerfmonState> perfmon_state TA_GUARDED(PerfmonLock::Get());
 
-// This is accessed atomically as it is also accessed by the PMI handler.
-static int perfmon_active = false;
-
 zx_status_t PerfmonState::Create(unsigned n_cpus, ktl::unique_ptr<PerfmonState>* out_state) {
     fbl::AllocChecker ac;
     auto state = ktl::unique_ptr<PerfmonState>(new (&ac) PerfmonState(n_cpus));
@@ -156,35 +125,16 @@ zx_status_t PerfmonState::Create(unsigned n_cpus, ktl::unique_ptr<PerfmonState>*
         return ZX_ERR_NO_MEMORY;
     }
 
-    size_t space_needed = sizeof(PerfmonCpuData) * n_cpus;
-    auto cpu_data = reinterpret_cast<PerfmonCpuData*>(
-        memalign(alignof(PerfmonCpuData), space_needed));
-    if (!cpu_data) {
+    if (!state->AllocatePerCpuData()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    for (unsigned cpu = 0; cpu < n_cpus; ++cpu) {
-        new (&cpu_data[cpu]) PerfmonCpuData();
-    }
-
-    state->cpu_data = cpu_data;
     *out_state = ktl::move(state);
     return ZX_OK;
 }
 
 PerfmonState::PerfmonState(unsigned n_cpus)
-        : num_cpus(n_cpus) { }
-
-PerfmonState::~PerfmonState() {
-    DEBUG_ASSERT(!atomic_load(&perfmon_active));
-    if (cpu_data) {
-        for (unsigned cpu = 0; cpu < num_cpus; ++cpu) {
-            auto data = &cpu_data[cpu];
-            data->~PerfmonCpuData();
-        }
-        free(cpu_data);
-    }
-}
+        : PerfmonStateBase(n_cpus) {}
 
 static void arm64_perfmon_init_once(uint level) {
     uint64_t pmcr = __arm_rsr64("pmcr_el0");
@@ -242,64 +192,6 @@ size_t get_max_space_needed_for_all_records(PerfmonState* state) {
                          state->num_used_fixed);
     return (sizeof(perfmon_time_record_t) +
             num_events * kMaxEventRecordSize);
-}
-
-static void arch_perfmon_write_header(perfmon_record_header_t* hdr,
-                                      perfmon_record_type_t type,
-                                      PmuEventId event) {
-    hdr->type = type;
-    hdr->reserved_flags = 0;
-    hdr->event = event;
-}
-
-static perfmon_record_header_t* arch_perfmon_write_time_record(
-        perfmon_record_header_t* hdr,
-        PmuEventId event, zx_ticks_t time) {
-    auto rec = reinterpret_cast<perfmon_time_record_t*>(hdr);
-    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_TIME, event);
-    rec->time = time;
-    ++rec;
-    return reinterpret_cast<perfmon_record_header_t*>(rec);
-}
-
-static perfmon_record_header_t* arch_perfmon_write_tick_record(
-        perfmon_record_header_t* hdr,
-        PmuEventId event) {
-    auto rec = reinterpret_cast<perfmon_tick_record_t*>(hdr);
-    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_TICK, event);
-    ++rec;
-    return reinterpret_cast<perfmon_record_header_t*>(rec);
-}
-
-static perfmon_record_header_t* arch_perfmon_write_count_record(
-        perfmon_record_header_t* hdr,
-        PmuEventId event, uint64_t count) {
-    auto rec = reinterpret_cast<perfmon_count_record_t*>(hdr);
-    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_COUNT, event);
-    rec->count = count;
-    ++rec;
-    return reinterpret_cast<perfmon_record_header_t*>(rec);
-}
-
-static perfmon_record_header_t* arch_perfmon_write_value_record(
-        perfmon_record_header_t* hdr,
-        PmuEventId event, uint64_t value) {
-    auto rec = reinterpret_cast<perfmon_value_record_t*>(hdr);
-    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_VALUE, event);
-    rec->value = value;
-    ++rec;
-    return reinterpret_cast<perfmon_record_header_t*>(rec);
-}
-
-static perfmon_record_header_t* arch_perfmon_write_pc_record(
-        perfmon_record_header_t* hdr,
-        PmuEventId event, uint64_t aspace, uint64_t pc) {
-    auto rec = reinterpret_cast<perfmon_pc_record_t*>(hdr);
-    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_PC, event);
-    rec->aspace = aspace;
-    rec->pc = pc;
-    ++rec;
-    return reinterpret_cast<perfmon_record_header_t*>(rec);
 }
 
 zx_status_t arch_perfmon_get_properties(ArchPmuProperties* props) {
