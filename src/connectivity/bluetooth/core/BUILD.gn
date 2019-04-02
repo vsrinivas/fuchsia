@@ -6,6 +6,7 @@ group("core") {
   testonly = true
   deps = [
     "bt-gap",
+    "bt-gap:tests",
     "bt-host",
     "bt-init",
   ]

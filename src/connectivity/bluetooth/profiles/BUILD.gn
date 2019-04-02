@@ -6,6 +6,7 @@ group("profiles") {
   testonly = true
   deps = [
     "bt-a2dp-sink",
+    "bt-a2dp-sink:tests",
     "bt-hog",
   ]
 }

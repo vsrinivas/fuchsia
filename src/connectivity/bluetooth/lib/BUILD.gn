@@ -6,6 +6,8 @@ group("lib") {
   testonly = true
   deps = [
     "bt-avdtp",
+    "bt-avdtp:tests",
     "fuchsia-bluetooth",
+    "fuchsia-bluetooth:tests",
   ]
 }
