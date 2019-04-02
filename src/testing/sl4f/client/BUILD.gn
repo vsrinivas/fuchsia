@@ -10,7 +10,6 @@ dart_library("client") {
   sources = [
     "sl4f.dart",
     "src/audio.dart",
-    "src/dump.dart",
     "src/exceptions.dart",
     "src/scenic.dart",
     "src/sl4f_client.dart",
