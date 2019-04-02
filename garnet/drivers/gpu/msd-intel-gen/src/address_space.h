@@ -78,10 +78,16 @@ public:
                                       uint64_t page_offset, uint64_t page_count,
                                       std::shared_ptr<GpuMapping>* gpu_mapping_out);
 
+    magma::Status GrowMapping(GpuMapping* mapping, uint64_t page_count);
+
     std::shared_ptr<GpuMapping> FindGpuMapping(std::shared_ptr<MsdIntelBuffer> buffer,
-                                               uint64_t offset, uint64_t length);
+                                               uint64_t offset, uint64_t length) const;
+    std::shared_ptr<GpuMapping> FindGpuMapping(uint64_t gpu_addr) const;
 
     bool AddMapping(std::shared_ptr<GpuMapping> gpu_mapping);
+
+    bool ReleaseMapping(magma::PlatformBuffer* buffer, gpu_addr_t gpu_addr,
+                        std::shared_ptr<GpuMapping>* mapping_out);
 
     void ReleaseBuffer(magma::PlatformBuffer* buffer,
                        std::vector<std::shared_ptr<GpuMapping>>* released_mappings_out);

@@ -89,10 +89,6 @@ magma::Status AddressSpace::MapBufferGpu(std::shared_ptr<AddressSpace> address_s
                         "page_offset (%lu) + page_count (%lu) > buffer size (0x%lx)", page_offset,
                         page_count, platform_buffer->size());
 
-    if (page_count * PAGE_SIZE > address_space->Size())
-        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "page_count (%lu) > address space size (0x%lx)",
-                        page_count, address_space->Size());
-
     std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping =
         address_space->owner_->GetBusMapper()->MapPageRangeBus(platform_buffer, page_offset,
                                                                page_count);
@@ -109,18 +105,24 @@ magma::Status AddressSpace::MapBufferGpu(std::shared_ptr<AddressSpace> address_s
 }
 
 std::shared_ptr<GpuMapping> AddressSpace::FindGpuMapping(std::shared_ptr<MsdIntelBuffer> buffer,
-                                                         uint64_t offset, uint64_t length)
+                                                         uint64_t offset, uint64_t length) const
 {
     DASSERT(buffer);
 
     auto range = mappings_by_buffer_.equal_range(buffer->platform_buffer());
     for (auto iter = range.first; iter != range.second; iter++) {
         auto& mapping = iter->second->second;
-        if (mapping->offset() == offset && mapping->length() == GetMappedSize(length))
+        if (mapping->offset() == offset && mapping->length() >= GetMappedSize(length))
             return mapping;
     }
 
     return nullptr;
+}
+
+std::shared_ptr<GpuMapping> AddressSpace::FindGpuMapping(uint64_t gpu_addr) const
+{
+    auto iter = mappings_.find(gpu_addr);
+    return (iter != mappings_.end()) ? iter->second : nullptr;
 }
 
 bool AddressSpace::AddMapping(std::shared_ptr<GpuMapping> gpu_mapping)
@@ -146,6 +148,22 @@ bool AddressSpace::AddMapping(std::shared_ptr<GpuMapping> gpu_mapping)
     return true;
 }
 
+bool AddressSpace::ReleaseMapping(magma::PlatformBuffer* buffer, gpu_addr_t gpu_addr,
+                                  std::shared_ptr<GpuMapping>* mapping_out)
+{
+    auto range = mappings_by_buffer_.equal_range(buffer);
+    for (auto iter = range.first; iter != range.second; iter++) {
+        std::shared_ptr<GpuMapping> gpu_mapping = iter->second->second;
+        if (gpu_mapping->gpu_addr() == gpu_addr) {
+            mappings_.erase(iter->second);
+            mappings_by_buffer_.erase(iter);
+            *mapping_out = std::move(gpu_mapping);
+            return true;
+        }
+    }
+    return DRETF(false, "failed to remove mapping");
+}
+
 void AddressSpace::ReleaseBuffer(magma::PlatformBuffer* buffer,
                                  std::vector<std::shared_ptr<GpuMapping>>* released_mappings_out)
 {
@@ -157,4 +175,39 @@ void AddressSpace::ReleaseBuffer(magma::PlatformBuffer* buffer,
         mappings_.erase(iter->second);
         iter = mappings_by_buffer_.erase(iter);
     }
+}
+
+magma::Status AddressSpace::GrowMapping(GpuMapping* mapping, uint64_t page_increment)
+{
+    const uint64_t length = mapping->length() + page_increment * PAGE_SIZE;
+
+    if (mapping->gpu_addr() + length > Size())
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                        "gpu_addr 0x%lx + length %lu > address space size (0x%lx)",
+                        mapping->gpu_addr(), length, Size());
+
+    auto iter = mappings_.upper_bound(mapping->gpu_addr());
+    if (iter != mappings_.end() && (mapping->gpu_addr() + length > iter->second->gpu_addr()))
+        return DRETF(false, "Mapping overlaps existing mapping");
+
+    magma::PlatformBuffer* platform_buffer = mapping->buffer()->platform_buffer();
+
+    if (mapping->offset() + length > platform_buffer->size())
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                        "offset (%lu) + length (%lu) > buffer size (0x%lx)", mapping->offset(),
+                        length, platform_buffer->size());
+
+    std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping =
+        owner_->GetBusMapper()->MapPageRangeBus(
+            platform_buffer, (mapping->offset() + mapping->length()) / magma::page_size(),
+            page_increment);
+    if (!bus_mapping)
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "failed to map page range to bus");
+
+    if (!Insert(mapping->gpu_addr() + mapping->length(), bus_mapping.get()))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to insert into address_space");
+
+    mapping->Grow(std::move(bus_mapping));
+
+    return MAGMA_STATUS_OK;
 }

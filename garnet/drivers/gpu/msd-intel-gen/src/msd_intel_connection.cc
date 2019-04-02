@@ -35,7 +35,24 @@ magma_status_t msd_connection_map_buffer_gpu(msd_connection_t* abi_connection,
 {
     auto connection = MsdIntelAbiConnection::cast(abi_connection)->ptr();
 
-    std::shared_ptr<GpuMapping> mapping;
+    std::shared_ptr<GpuMapping> mapping = connection->per_process_gtt()->FindGpuMapping(gpu_addr);
+    if (mapping) {
+        if (mapping->offset() != page_offset * magma::page_size())
+            return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
+                            "Existing mapping offset mismatch %lu != %lu",
+                            page_offset * magma::page_size(), mapping->offset());
+
+        if (mapping->length() >= page_count * magma::page_size())
+            return MAGMA_STATUS_OK;
+
+        magma::Status status = connection->per_process_gtt()->GrowMapping(
+            mapping.get(), page_count - mapping->length() / magma::page_size());
+        if (!status.ok())
+            return DRET_MSG(status.get(), "GrowMapping failed");
+
+        return MAGMA_STATUS_OK;
+    }
+
     magma::Status status = AddressSpace::MapBufferGpu(connection->per_process_gtt(),
                                                       MsdIntelAbiBuffer::cast(abi_buffer)->ptr(),
                                                       gpu_addr, page_offset, page_count, &mapping);
@@ -79,7 +96,11 @@ void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer)
             // Bus mappings are held in the connection and passed through the command stream to
             // ensure the memory isn't released until the tlbs are invalidated, which happens
             // implicitly on every pipeline flush.
-            mappings_to_release_.push_back(mapping->Release());
+            std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mappings;
+            mapping->Release(&bus_mappings);
+            for (uint32_t i = 0; i < bus_mappings.size(); i++) {
+                mappings_to_release_.emplace_back(std::move(bus_mappings[i]));
+            }
         } else {
             // It's an error to release a buffer while it has inflight mappings, as that
             // can fault the gpu.

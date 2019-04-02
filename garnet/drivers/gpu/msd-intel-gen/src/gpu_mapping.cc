@@ -33,12 +33,13 @@ GpuMapping::GpuMapping(std::shared_ptr<AddressSpace> address_space,
                        std::shared_ptr<MsdIntelBuffer> buffer, uint64_t offset, uint64_t length,
                        gpu_addr_t gpu_addr,
                        std::unique_ptr<magma::PlatformBusMapper::BusMapping> bus_mapping)
-    : GpuMappingView(std::move(buffer), gpu_addr, offset, length), address_space_(address_space),
-      bus_mapping_(std::move(bus_mapping))
+    : GpuMappingView(std::move(buffer), gpu_addr, offset, length), address_space_(address_space)
 {
+    bus_mappings_.emplace_back(std::move(bus_mapping));
 }
 
-std::unique_ptr<magma::PlatformBusMapper::BusMapping> GpuMapping::Release()
+void GpuMapping::Release(
+    std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>>* bus_mappings_out)
 {
     std::shared_ptr<AddressSpace> address_space = address_space_.lock();
     if (address_space) {
@@ -52,5 +53,8 @@ std::unique_ptr<magma::PlatformBusMapper::BusMapping> GpuMapping::Release()
     buffer_.reset();
     address_space_.reset();
     length_ = 0;
-    return std::move(bus_mapping_);
+    if (bus_mappings_out) {
+        *bus_mappings_out = std::move(bus_mappings_);
+    }
+    bus_mappings_.clear();
 }

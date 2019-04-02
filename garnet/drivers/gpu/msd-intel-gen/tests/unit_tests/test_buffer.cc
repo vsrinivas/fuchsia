@@ -239,6 +239,124 @@ public:
         ASSERT_TRUE(found_mapping_high);
         EXPECT_EQ(found_mapping_high.get(), mapping_high.get());
     }
+
+    static void GrowMapping()
+    {
+        constexpr uint32_t kSpaceSizeInPages = 10;
+        constexpr uint32_t kBufferSizeInPages = 8;
+        constexpr uint32_t kBufferPagesToGrow = 1;
+
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space = std::make_shared<MockNonAllocatingAddressSpace>(
+            address_space_owner.get(), magma::page_size() * kSpaceSizeInPages);
+        EXPECT_EQ(address_space->type(), ADDRESS_SPACE_PPGTT);
+
+        std::shared_ptr<MsdIntelBuffer> buffer(
+            MsdIntelBuffer::Create(kBufferSizeInPages * magma::page_size(), "test"));
+        ASSERT_TRUE(buffer);
+
+        std::shared_ptr<GpuMapping> mapping;
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                               0, // gpu addr
+                                               0, // page offset
+                                               kBufferSizeInPages - kBufferPagesToGrow, &mapping));
+        ASSERT_TRUE(mapping);
+
+        uint64_t orig_length = (kBufferSizeInPages - kBufferPagesToGrow) * magma::page_size();
+        EXPECT_EQ(mapping->length(), orig_length);
+
+        EXPECT_TRUE(address_space->GrowMapping(mapping.get(), kBufferPagesToGrow));
+        EXPECT_EQ(mapping->length(), kBufferSizeInPages * magma::page_size());
+
+        // Can't map on top of grown area
+        std::shared_ptr<GpuMapping> mapping2;
+        EXPECT_FALSE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                                orig_length, // gpu addr
+                                                0,           // page offset
+                                                kBufferSizeInPages, &mapping2));
+    }
+
+    static void GrowMappingErrorOutsideBuffer()
+    {
+        constexpr uint32_t kSpaceSizeInPages = 10;
+        constexpr uint32_t kBufferSizeInPages = 8;
+        constexpr uint32_t kBufferPagesToGrow = 1;
+
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space = std::make_shared<MockNonAllocatingAddressSpace>(
+            address_space_owner.get(), magma::page_size() * kSpaceSizeInPages);
+        EXPECT_EQ(address_space->type(), ADDRESS_SPACE_PPGTT);
+
+        std::shared_ptr<MsdIntelBuffer> buffer(
+            MsdIntelBuffer::Create(kBufferSizeInPages * magma::page_size(), "test"));
+        ASSERT_TRUE(buffer);
+
+        std::shared_ptr<GpuMapping> mapping;
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                               0, // gpu addr
+                                               0, // page offset
+                                               kBufferSizeInPages, &mapping));
+        ASSERT_TRUE(mapping);
+
+        EXPECT_FALSE(address_space->GrowMapping(mapping.get(), kBufferPagesToGrow));
+    }
+
+    static void GrowMappingErrorOutsideSpace()
+    {
+        constexpr uint32_t kSpaceSizeInPages = 10;
+        constexpr uint32_t kBufferSizeInPages = 12;
+        constexpr uint32_t kBufferPagesToGrow = 1;
+
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space = std::make_shared<MockNonAllocatingAddressSpace>(
+            address_space_owner.get(), magma::page_size() * kSpaceSizeInPages);
+        EXPECT_EQ(address_space->type(), ADDRESS_SPACE_PPGTT);
+
+        std::shared_ptr<MsdIntelBuffer> buffer(
+            MsdIntelBuffer::Create(kBufferSizeInPages * magma::page_size(), "test"));
+        ASSERT_TRUE(buffer);
+
+        std::shared_ptr<GpuMapping> mapping;
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                               0, // gpu addr
+                                               0, // page offset
+                                               kSpaceSizeInPages, &mapping));
+        ASSERT_TRUE(mapping);
+
+        EXPECT_FALSE(address_space->GrowMapping(mapping.get(), kBufferPagesToGrow));
+    }
+
+    static void GrowMappingErrorOverlapped()
+    {
+        constexpr uint32_t kSpaceSizeInPages = 10;
+        constexpr uint32_t kBufferSizeInPages = 4;
+        constexpr uint32_t kBufferPagesToGrow = 1;
+
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space = std::make_shared<MockNonAllocatingAddressSpace>(
+            address_space_owner.get(), magma::page_size() * kSpaceSizeInPages);
+        EXPECT_EQ(address_space->type(), ADDRESS_SPACE_PPGTT);
+
+        std::shared_ptr<MsdIntelBuffer> buffer(
+            MsdIntelBuffer::Create(kBufferSizeInPages * magma::page_size(), "test"));
+        ASSERT_TRUE(buffer);
+
+        std::shared_ptr<GpuMapping> mapping;
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                               0, // gpu addr
+                                               0, // page offset
+                                               kBufferSizeInPages, &mapping));
+        ASSERT_TRUE(mapping);
+
+        std::shared_ptr<GpuMapping> mapping2;
+        EXPECT_TRUE(AddressSpace::MapBufferGpu(address_space, buffer,
+                                               kBufferSizeInPages * magma::page_size(), // gpu addr
+                                               0, // page offset
+                                               kBufferSizeInPages, &mapping2));
+        ASSERT_TRUE(mapping2);
+
+        EXPECT_FALSE(address_space->GrowMapping(mapping.get(), kBufferPagesToGrow));
+    }
 };
 
 TEST(MsdIntelBuffer, CreateAndDestroy) { TestMsdIntelBuffer::CreateAndDestroy(); }
@@ -257,3 +375,20 @@ TEST(MsdIntelBuffer, SharedMapping)
 }
 
 TEST(MsdIntelBuffer, OverlappedMapping) { TestMsdIntelBuffer::OverlappedMapping(); }
+
+TEST(MsdIntelBuffer, GrowMapping) { TestMsdIntelBuffer::GrowMapping(); }
+
+TEST(MsdIntelBuffer, GrowMappingErrorOutsideBuffer)
+{
+    TestMsdIntelBuffer::GrowMappingErrorOutsideBuffer();
+}
+
+TEST(MsdIntelBuffer, GrowMappingErrorOutsideSpace)
+{
+    TestMsdIntelBuffer::GrowMappingErrorOutsideSpace();
+}
+
+TEST(MsdIntelBuffer, GrowMappingErrorOverlapped)
+{
+    TestMsdIntelBuffer::GrowMappingErrorOverlapped();
+}

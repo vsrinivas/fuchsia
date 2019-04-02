@@ -293,8 +293,8 @@ public:
         std::shared_ptr<GpuMapping> mapping =
             AddressSpace::MapBufferGpu(address_space_, MsdIntelBuffer::Create(PAGE_SIZE, "test"));
 
-        std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mappings(1);
-        bus_mappings[0] = mapping->Release();
+        std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> bus_mappings;
+        mapping->Release(&bus_mappings);
 
         auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
         render_cs->MoveBatchToInflight(
