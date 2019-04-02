@@ -53,14 +53,11 @@ const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
       Adds the given directory or file to the symbol search path. Multiple
       -s switches can be passed to add multiple locations. When a directory
       path is passed, the directory will be enumerated non-recursively to
-      index all ELF files. When a .txt file is passed, it will be treated
+      index all ELF files, unless the directory contains a .build-id
+      subdirectory, in which case that directory is assumed to contain an index
+      of all ELF files within. When a .txt file is passed, it will be treated
       as a mapping database from build ID to file path. Otherwise, the path
       will be loaded as an ELF file (if possible).)";
-
-const char kSymbolRepoHelp[] = R"(  --symbol-repo=<path>
-      Adds the given directory as a symbol repo. Debug symbol files are expected
-      to live at <path>/.build-id in a specially organized hierarchy by build
-      ID. This switch can be passed multiple times to add multiple locations.)";
 
 }  // namespace
 
@@ -78,8 +75,6 @@ Err ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
                    &CommandLineOptions::script_file);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp,
                    &CommandLineOptions::symbol_paths);
-  parser.AddSwitch("symbol-repo", 0, kSymbolRepoHelp,
-                   &CommandLineOptions::symbol_repo_paths);
 
   // Special --help switch which doesn't exist in the options structure.
   bool requested_help = false;

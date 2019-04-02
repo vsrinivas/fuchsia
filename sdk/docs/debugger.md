@@ -51,21 +51,17 @@ The path can be any of:
 
   * An individual symbolized ELF file.
   * An ids.txt file mapping build IDs to local files.
-  * A directory name. The directory will be searched (non-recursively) for
-    symbolized ELF files.
+  * A directory name. If the directory is a GNU-style symbol repo (see below),
+    symbols will be taken from the .build-id folder beneath it, otherwise the
+    directory will be searched (non-recursively) for symbolized ELF files.
 
-GNU-style symbol repos are also supported. These directories are expected to
-contain a directory called `.build-id` which contains the symbolized binaries
-indexed by the binaries' build IDs. The passed-in directory should be the
-parent directory containing the `.build-id` directory as a member.
-
+GNU-style symbol repos are directories of any layout which contain a folder at
+the root called .build-id. This folder contains the symbolized binaries
+indexed by the binaries' build IDs. Often these are symlinks pointing to
+various locations in the folder itself.
 ```
-zxdb --symbol-repo=/path/to/repo
-```
-
-Multiple `--symbol-repo` and `--symbol-path` parameters may be specified if
-there are symbols in more than one location. All locations will be searched.
+Multiple `--symbol-path` parameters may be specified if there are symbols in
+more than one location. All locations will be searched.
 
 Symbol locations can also be edited interactively in the client using the
-global "symbol-paths" and "symbol-repo-paths" settings (see the interactive
-"get" and "set" commands).
+global "symbol-paths" setting (see the interactive "get" and "set" commands).

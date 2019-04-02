@@ -59,13 +59,11 @@ InterceptionWorkflow::~InterceptionWorkflow() {
 }
 
 void InterceptionWorkflow::Initialize(
-    std::vector<std::string>& symbol_paths,
-    std::vector<std::string>& symbol_repo_paths) {
+    const std::vector<std::string>& symbol_paths) {
   //// Set up symbol index.
 
   // Stolen from console/console_main.cc
   std::vector<std::string> paths;
-  std::vector<std::string> repo_paths;
 
   // At this moment, the build index has all the "default" paths.
   zxdb::BuildIDIndex& build_id_index =
@@ -80,20 +78,11 @@ void InterceptionWorkflow::Initialize(
 
   // We add the options paths given paths.
   paths.insert(paths.end(), symbol_paths.begin(), symbol_paths.end());
-  repo_paths.insert(repo_paths.end(), symbol_repo_paths.begin(),
-                    symbol_repo_paths.end());
-
-  // Let the user's home folder be the default symbol repo.
-  if (const char* home = std::getenv("HOME")) {
-    repo_paths.emplace_back(home);
-  }
 
   // Adding it to the settings will trigger the loading of the symbols.
   // Redundant adds are ignored.
   session_->system().settings().SetList(
       zxdb::ClientSettings::System::kSymbolPaths, std::move(paths));
-  session_->system().settings().SetList(
-      zxdb::ClientSettings::System::kSymbolRepoPaths, std::move(repo_paths));
 
   //// Ensure that the session correctly reads data off of the loop.
   buffer_.set_data_available_callback(

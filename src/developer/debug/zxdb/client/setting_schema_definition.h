@@ -21,7 +21,6 @@ struct ClientSettings {
   struct System {
     static const char* kDebugMode;
     static const char* kSymbolPaths;
-    static const char* kSymbolRepoPaths;
     static const char* kPauseNewProcesses;
     static const char* kQuitAgentOnExit;
   };

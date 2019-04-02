@@ -98,8 +98,7 @@ class InterceptionWorkflow {
   // Some initialization steps:
   // - Set the paths for the zxdb client to look for symbols.
   // - Make sure that the data are routed from the client to the session
-  void Initialize(std::vector<std::string>& symbol_paths,
-                  std::vector<std::string>& symbol_repo_paths);
+  void Initialize(const std::vector<std::string>& symbol_paths);
 
   // Connect the workflow to the host/port pair given.  |and_then| is posted to
   // the loop on completion.

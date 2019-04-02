@@ -201,7 +201,7 @@ TEST_F(InterceptionWorkflowTest, ZxChannelWrite) {
 
   zxdb::Err err;
   std::vector<std::string> blank;
-  workflow.Initialize(blank, blank);
+  workflow.Initialize(blank);
 
   // This will be executed when the zx_channel_write breakpoint is triggered.
   workflow.SetZxChannelWriteCallback(

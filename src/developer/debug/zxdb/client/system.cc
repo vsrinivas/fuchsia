@@ -19,17 +19,11 @@ const char* ClientSettings::System::kSymbolPaths = "symbol-paths";
 static const char* kSymbolPathsDescription =
     R"(  List of mapping databases, ELF files or directories for symbol lookup.
   When a directory path is passed, the directory will be enumerated
-  non-recursively to index all ELF files within. When a .txt file is passed,
-  it will be treated as a mapping database from build ID to file path.
-  Otherwise, the path will be loaded as an ELF file.)";
-
-const char* ClientSettings::System::kSymbolRepoPaths = "symbol-repo-paths";
-static const char* kSymbolRepoPathsDescription =
-    R"(  List of GNU-style repositories for symbol lookup. When a directory path
-  is passed, a folder called .debug-id will be expected beneath it. From there,
-  a file called ab/cdefg will be assumed to contain the stripped binary with
-  debug id "abcdefg" and a file called ab/cdefg.debug will be expected to
-  contain the unstripped binary or stripped symbols.)";
+  non-recursively to index all ELF files within, unless it contains a .build-id
+  subfolder, in which case that is presumed to contain an index of all ELF
+  files within. When a .txt file is passed, it will be treated as a mapping
+  database from build ID to file path. Otherwise, the path will be loaded as an
+  ELF file.)";
 
 const char* ClientSettings::System::kPauseNewProcesses = "pause-new-processes";
 static const char* kPauseNewProcessDescription =
@@ -49,8 +43,6 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
                   false);
   schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription,
                   {});
-  schema->AddList(ClientSettings::System::kSymbolRepoPaths,
-                  kSymbolRepoPathsDescription, {});
   schema->AddBool(ClientSettings::System::kPauseNewProcesses,
                   kPauseNewProcessDescription, true);
   schema->AddBool(ClientSettings::System::kQuitAgentOnExit,

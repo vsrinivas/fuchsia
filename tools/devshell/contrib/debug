@@ -105,7 +105,7 @@ done
 "${FUCHSIA_BUILD_DIR}/host_x64/zxdb" \
   "--connect" "[${target}]:${port}" \
   "--quit-agent-on-exit" \
-  "--symbol-repo=${FUCHSIA_BUILD_DIR}" \
-  "--symbol-repo=${ZIRCON_BUILDROOT}" \
-  "--symbol-repo=${BUILDTOOLS_CLANG_DIR}/lib/debug" \
+  "-s" "${FUCHSIA_BUILD_DIR}" \
+  "-s" "${ZIRCON_BUILDROOT}" \
+  "-s" "${BUILDTOOLS_CLANG_DIR}/lib/debug" \
   "$@"

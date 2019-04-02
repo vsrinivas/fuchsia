@@ -121,7 +121,6 @@ int ConsoleMain(int argc, const char* argv[]) {
 
     // Symbol paths
     std::vector<std::string> paths;
-    std::vector<std::string> repo_paths;
     // At this moment, the build index has all the "default" paths.
     BuildIDIndex& build_id_index =
         session.system().GetSymbols()->build_id_index();
@@ -133,15 +132,11 @@ int ConsoleMain(int argc, const char* argv[]) {
     // We add the options paths given paths.
     paths.insert(paths.end(), options.symbol_paths.begin(),
                  options.symbol_paths.end());
-    repo_paths.insert(repo_paths.end(), options.symbol_repo_paths.begin(),
-                      options.symbol_repo_paths.end());
 
     // Adding it to the settings will trigger the loading of the symbols.
     // Redundant adds are ignored.
     session.system().settings().SetList(ClientSettings::System::kSymbolPaths,
                                         std::move(paths));
-    session.system().settings().SetList(
-        ClientSettings::System::kSymbolRepoPaths, std::move(repo_paths));
 
     if (!actions.empty()) {
       ScheduleActions(session, console, std::move(actions));

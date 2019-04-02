@@ -245,6 +245,14 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
 void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
   std::error_code ec;
   if (std::filesystem::is_directory(path, ec)) {
+    auto build_id_path = std::filesystem::path(path) / ".build-id";
+
+    if (std::filesystem::is_directory(build_id_path, ec)) {
+      repo_sources_.emplace_back(path);
+      status_.emplace_back(path, BuildIDIndex::kStatusIsFolder);
+      return;
+    }
+
     // Iterate through all files in this directory, but don't recurse.
     int indexed = 0;
     for (const auto& child : std::filesystem::directory_iterator(path, ec)) {

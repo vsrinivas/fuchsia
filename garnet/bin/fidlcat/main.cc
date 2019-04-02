@@ -35,7 +35,6 @@ struct CommandLineOptions {
   std::optional<std::string> connect;
   std::optional<std::string> remote_pid;
   std::vector<std::string> symbol_paths;
-  std::vector<std::string> symbol_repo_paths;
   std::vector<std::string> fidl_ir_paths;
 };
 
@@ -46,18 +45,23 @@ const char kRemoteHostHelp[] = R"(--connect
 const char kRemotePidHelp[] = R"(--remote-pid
       The koid of the remote process.)";
 
-// Copied from console.
-const char kSymbolRepoHelp[] = R"(--symbol-repo=<path>
-      Adds the given directory as a symbol repo. Debug symbol files are expected
-      to live at <path>/.build-id in a specially organized hierarchy by build
-      ID. This switch can be passed multiple times to add multiple locations.)";
-
 const char kFidlIrPathHelp[] = R"(--fidl-ir-path=<path>
       Adds the given path as a repository for FIDL IR, in the form of .fidl.json
       files.  Passing a file adds the given file.  Passing a directory adds all
       of the .fidl.json files in that directory and any directory transitively
       reachable from there. This switch can be passed multiple times to add
       multiple locations.)";
+
+const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
+  -s <path>
+      Adds the given directory or file to the symbol search path. Multiple
+      -s switches can be passed to add multiple locations. When a directory
+      path is passed, the directory will be enumerated non-recursively to
+      index all ELF files, unless the directory contains a .build-id
+      subdirectory, in which case that directory is assumed to contain an index
+      of all ELF files within. When a .txt file is passed, it will be treated
+      as a mapping database from build ID to file path. Otherwise, the path
+      will be loaded as an ELF file (if possible).)";
 
 zxdb::Err ParseCommandLine(int argc, const char* argv[],
                            CommandLineOptions* options,
@@ -68,10 +72,10 @@ zxdb::Err ParseCommandLine(int argc, const char* argv[],
                    &CommandLineOptions::connect);
   parser.AddSwitch("remote-pid", 'p', kRemotePidHelp,
                    &CommandLineOptions::remote_pid);
-  parser.AddSwitch("symbol-repo", 0, kSymbolRepoHelp,
-                   &CommandLineOptions::symbol_repo_paths);
   parser.AddSwitch("fidl-ir-path", 0, kFidlIrPathHelp,
                    &CommandLineOptions::fidl_ir_paths);
+  parser.AddSwitch("symbol-path", 's', kSymbolPathHelp,
+                   &CommandLineOptions::symbol_paths);
   zxdb::Err err = parser.Parse(argc, argv, options, params);
   if (err.has_error()) {
     return err;
@@ -247,7 +251,7 @@ int ConsoleMain(int argc, const char* argv[]) {
   }
 
   InterceptionWorkflow workflow;
-  workflow.Initialize(options.symbol_paths, options.symbol_repo_paths);
+  workflow.Initialize(options.symbol_paths);
 
   std::vector<std::unique_ptr<std::istream>> paths;
   ExpandFidlPathsFromOptions(options.fidl_ir_paths, paths);
