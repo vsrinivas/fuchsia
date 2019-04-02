@@ -222,7 +222,7 @@ impl HostDispatcherState {
     }
 
     pub fn get_active_adapter_info(&mut self) -> Option<AdapterInfo> {
-        self.get_active_host().map(|host| util::clone_host_info(host.read().get_info()))
+        self.get_active_host().map(|host| clone_host_info(host.read().get_info()))
     }
 
     pub fn notify_event_listeners<F>(&mut self, mut f: F)
@@ -373,13 +373,12 @@ impl HostDispatcher {
     }
 
     pub async fn get_adapters(&self) -> fidl::Result<Vec<AdapterInfo>> {
-        let _ = await!(self.on_adapters_found());
-        let mut result = vec![];
-        for host in self.state.read().host_devices.values() {
-            let host = host.read();
-            result.push(util::clone_host_info(host.get_info()));
-        }
-        Ok(result)
+        let hosts = self.state.read();
+        Ok(hosts
+            .host_devices
+            .values()
+            .map(|host| clone_host_info(host.read().get_info()))
+            .collect())
     }
 
     pub async fn request_host_service(mut self, chan: fasync::Channel, service: HostService) {
