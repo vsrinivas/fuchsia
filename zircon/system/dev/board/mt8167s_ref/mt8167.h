@@ -30,6 +30,7 @@ enum {
     BTI_AUDIO_OUT,
     BTI_AUDIO_IN,
     BTI_SYSMEM,
+    BTI_GPU,
 };
 
 class Mt8167;
