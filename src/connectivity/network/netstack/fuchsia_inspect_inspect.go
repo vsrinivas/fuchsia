@@ -5,20 +5,17 @@
 package netstack
 
 import (
+	"encoding/binary"
 	"fmt"
 	"reflect"
 	"syscall/zx"
 	"syscall/zx/fidl"
-	"syscall/zx/io"
 
 	"app/context"
 
 	"fidl/fuchsia/inspect"
-
 	"github.com/google/netstack/tcpip"
 )
-
-// TODO(tamird): expose statsEP?
 
 var _ inspect.Inspect = (*statCounterInspectImpl)(nil)
 
@@ -46,14 +43,12 @@ func (v *statCounterInspectImpl) ReadData() (inspect.Object, error) {
 		switch field := typ.Field(i); field.Type.Kind() {
 		case reflect.Struct:
 		case reflect.Ptr:
-			if s, ok := v.Field(i).Interface().(*tcpip.StatCounter); ok {
-				var value inspect.MetricValue
-				value.SetUintValue(s.Value())
-				metrics = append(metrics, inspect.Metric{
-					Key:   field.Name,
-					Value: value,
-				})
-			}
+			var value inspect.MetricValue
+			value.SetUintValue(v.Field(i).Interface().(*tcpip.StatCounter).Value())
+			metrics = append(metrics, inspect.Metric{
+				Key:   field.Name,
+				Value: value,
+			})
 		default:
 			panic(fmt.Sprintf("unexpected field %+v", field))
 		}
@@ -71,7 +66,15 @@ func (v *statCounterInspectImpl) ListChildren() (*[]string, error) {
 		switch field := typ.Field(i); field.Type.Kind() {
 		case reflect.Ptr:
 		case reflect.Struct:
-			childNames = append(childNames, field.Name)
+			if field.Anonymous {
+				names, err := (&statCounterInspectImpl{Value: v.Field(i)}).ListChildren()
+				if err != nil {
+					return nil, err
+				}
+				childNames = append(childNames, *names...)
+			} else {
+				childNames = append(childNames, field.Name)
+			}
 		default:
 			panic(fmt.Sprintf("unexpected field %+v", field))
 		}
@@ -80,6 +83,9 @@ func (v *statCounterInspectImpl) ListChildren() (*[]string, error) {
 }
 
 func (v *statCounterInspectImpl) OpenChild(childName string, childChannel inspect.InspectInterfaceRequest) (bool, error) {
+	if v.Kind() != reflect.Struct {
+		return false, nil
+	}
 	if v := v.FieldByName(childName); v.IsValid() {
 		return true, (&statCounterInspectImpl{
 			name:  childName,
@@ -98,6 +104,75 @@ func (v *statCounterInspectImpl) Get(name string) (context.Node, bool) {
 	return nil, false
 }
 
-func (v *statCounterInspectImpl) ForEach(fn func(string, io.Node)) {
+func (v *statCounterInspectImpl) ForEach(fn func(string, context.Node)) {
 	fn(inspect.InspectName, context.ServiceFn(v.bind))
+}
+
+var _ context.File = (*statCounterFile)(nil)
+
+type statCounterFile struct {
+	*tcpip.StatCounter
+}
+
+func (s *statCounterFile) GetBytes() []byte {
+	var b [8]byte
+	binary.LittleEndian.PutUint64(b[:], s.Value())
+	return b[:]
+}
+
+type reflectNode struct {
+	reflect.Value
+}
+
+var _ context.Directory = (*reflectNode)(nil)
+
+func (v *reflectNode) Get(name string) (context.Node, bool) {
+	if v.Kind() != reflect.Struct {
+		return nil, false
+	}
+	if v := v.FieldByName(name); v.IsValid() {
+		switch typ := v.Type(); typ.Kind() {
+		case reflect.Struct:
+			return &context.DirectoryWrapper{
+				Directory: &reflectNode{
+					Value: v,
+				},
+			}, true
+		case reflect.Ptr:
+			return &context.FileWrapper{
+				File: &context.FileWrapper{
+					File: &statCounterFile{StatCounter: v.Interface().(*tcpip.StatCounter)},
+				},
+			}, true
+		default:
+			panic(fmt.Sprintf("unexpected type %s", typ))
+		}
+	}
+	return nil, false
+}
+
+func (v *reflectNode) ForEach(fn func(string, context.Node)) {
+	typ := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		v := v.Field(i)
+		switch field := typ.Field(i); field.Type.Kind() {
+		case reflect.Struct:
+			n := reflectNode{
+				Value: v,
+			}
+			if field.Anonymous {
+				n.ForEach(fn)
+			} else {
+				fn(field.Name, &context.DirectoryWrapper{
+					Directory: &n,
+				})
+			}
+		case reflect.Ptr:
+			fn(field.Name, &context.FileWrapper{
+				File: &statCounterFile{StatCounter: v.Interface().(*tcpip.StatCounter)},
+			})
+		default:
+			panic(fmt.Sprintf("unexpected field %+v", field))
+		}
+	}
 }

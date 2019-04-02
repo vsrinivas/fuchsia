@@ -18,7 +18,6 @@ import (
 	"netstack/link"
 	"netstack/link/bridge"
 	"netstack/link/eth"
-	"netstack/link/stats"
 	"netstack/netiface"
 	"netstack/routes"
 	"netstack/util"
@@ -105,9 +104,6 @@ type ifState struct {
 	// endpoint functionality happens by wrapping other link endpoints).
 	endpoint stack.LinkEndpoint
 
-	// statsEP and bridgeable are wrapper LinkEndpoint implementations that need
-	// to be accessed by their concrete type.
-	statsEP    *stats.StatsEndpoint
 	bridgeable *bridge.BridgeableEndpoint
 }
 
@@ -662,7 +658,6 @@ func (ns *Netstack) addEndpoint(
 	if doFilter {
 		linkID = filter.NewEndpoint(ns.filter, linkID)
 	}
-	linkID, ifs.statsEP = stats.NewEndpoint(linkID)
 	linkID, ifs.bridgeable = bridge.NewEndpoint(linkID)
 	ifs.endpoint = ifs.bridgeable
 
@@ -706,7 +701,6 @@ func (ns *Netstack) addEndpoint(
 
 	ifs.mu.nic.Name = name
 	ifs.mu.nic.ID = nicid
-	ifs.statsEP.Nic = ifs.mu.nic
 
 	return ifs, nil
 }

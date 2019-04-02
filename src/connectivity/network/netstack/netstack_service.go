@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"syscall/zx"
+	"syscall/zx/fidl"
 	"syscall/zx/zxwait"
 
 	"syslog/logger"
@@ -18,6 +19,7 @@ import (
 	"netstack/routes"
 
 	"fidl/fuchsia/hardware/ethernet"
+	"fidl/fuchsia/io"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 
@@ -27,7 +29,8 @@ import (
 )
 
 type netstackImpl struct {
-	ns *Netstack
+	ns    *Netstack
+	getIO func() io.Directory
 }
 
 func toSubnets(addrs []tcpip.Address) []net.Subnet {
@@ -353,49 +356,38 @@ func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, uint
 	return netstack.NetErr{Status: netstack.StatusOk}, uint32(ifs.mu.nic.ID), nil
 }
 
-func (ni *netstackImpl) GetAggregateStats() (stats netstack.AggregateStats, err error) {
-	s := ni.ns.mu.stack.Stats()
-	return netstack.AggregateStats{
-		UnknownProtocolReceivedPackets: s.UnknownProtocolRcvdPackets.Value(),
-		MalformedReceivedPackets:       s.MalformedRcvdPackets.Value(),
-		DroppedPackets:                 s.DroppedPackets.Value(),
-		IpStats: netstack.IpStats{
-			PacketsReceived:          s.IP.PacketsReceived.Value(),
-			InvalidAddressesReceived: s.IP.InvalidAddressesReceived.Value(),
-			PacketsDelivered:         s.IP.PacketsDelivered.Value(),
-			PacketsSent:              s.IP.PacketsSent.Value(),
-			OutgoingPacketErrors:     s.IP.OutgoingPacketErrors.Value(),
-		},
-		TcpStats: netstack.TcpStats{
-			ActiveConnectionOpenings:  s.TCP.ActiveConnectionOpenings.Value(),
-			PassiveConnectionOpenings: s.TCP.PassiveConnectionOpenings.Value(),
-			FailedConnectionAttempts:  s.TCP.FailedConnectionAttempts.Value(),
-			ValidSegmentsReceived:     s.TCP.ValidSegmentsReceived.Value(),
-			InvalidSegmentsReceived:   s.TCP.InvalidSegmentsReceived.Value(),
-			SegmentsSent:              s.TCP.SegmentsSent.Value(),
-			ResetsSent:                s.TCP.ResetsSent.Value(),
-		},
-		UdpStats: netstack.UdpStats{
-			PacketsReceived:          s.UDP.PacketsReceived.Value(),
-			UnknownPortErrors:        s.UDP.UnknownPortErrors.Value(),
-			ReceiveBufferErrors:      s.UDP.ReceiveBufferErrors.Value(),
-			MalformedPacketsReceived: s.UDP.MalformedPacketsReceived.Value(),
-			PacketsSent:              s.UDP.PacketsSent.Value(),
-		},
-	}, nil
+func (ni *netstackImpl) GetAggregateStats(request io.NodeInterfaceRequest) error {
+	b := fidl.Binding{
+		Stub:    &io.DirectoryStub{Impl: ni.getIO()},
+		Channel: request.Channel,
+	}
+	return b.Init(func(error) {
+		if err := b.Close(); err != nil {
+			panic(err)
+		}
+	})
 }
 
 func (ni *netstackImpl) GetStats(nicid uint32) (stats netstack.NetInterfaceStats, err error) {
 	ni.ns.mu.Lock()
-	ifState, ok := ni.ns.mu.ifStates[tcpip.NICID(nicid)]
+	nicinfo := ni.ns.mu.stack.NICInfo()
 	ni.ns.mu.Unlock()
 
-	if !ok {
-		// TODO(stijlist): refactor to return NetErr and use StatusUnknownInterface
-		return netstack.NetInterfaceStats{}, fmt.Errorf("no such interface id: %d", nicid)
+	if info, ok := nicinfo[tcpip.NICID(nicid)]; ok {
+		return netstack.NetInterfaceStats{
+			Tx: netstack.NetTrafficStats{
+				PktsTotal:  info.Stats.Tx.Packets.Value(),
+				BytesTotal: info.Stats.Tx.Bytes.Value(),
+			},
+			Rx: netstack.NetTrafficStats{
+				PktsTotal:  info.Stats.Rx.Packets.Value(),
+				BytesTotal: info.Stats.Rx.Bytes.Value(),
+			},
+		}, nil
 	}
 
-	return ifState.statsEP.Stats, nil
+	// TODO(stijlist): refactor to return NetErr and use StatusUnknownInterface
+	return netstack.NetInterfaceStats{}, fmt.Errorf("no such interface id: %d", nicid)
 }
 
 func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) error {

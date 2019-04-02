@@ -37,7 +37,8 @@ class VirtioNetTest : public TestWithDevice,
 
   void GetStats(uint32_t nicid, GetStatsCallback callback) override {}
 
-  void GetAggregateStats(GetAggregateStatsCallback callback) override {}
+  void GetAggregateStats(
+      ::fidl::InterfaceRequest<::fuchsia::io::Node> object) override {}
 
   void SetInterfaceStatus(uint32_t nicid, bool enabled) override {}
 

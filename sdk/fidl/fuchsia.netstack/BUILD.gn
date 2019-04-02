@@ -13,6 +13,7 @@ fidl("fuchsia.netstack") {
 
   public_deps = [
     "//zircon/public/fidl/fuchsia-hardware-ethernet",
+    "//zircon/public/fidl/fuchsia-io",
     "//zircon/public/fidl/fuchsia-net",
   ]
 }

@@ -120,6 +120,7 @@ go_library("netstack_lib") {
     "//garnet/public/go/third_party:github.com/google/btree",
     "//garnet/public/go/third_party:github.com/google/go-cmp",
     "//garnet/public/go/third_party:github.com/google/netstack",
+    "//garnet/public/go/third_party:github.com/pkg/errors",
     "//garnet/public/go/third_party:golang.org/x/net",
     "//garnet/public/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",

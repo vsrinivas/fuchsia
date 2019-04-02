@@ -125,19 +125,26 @@ func Main() {
 		}
 	}
 
+	stats := reflect.ValueOf(stk.Stats())
 	ctx.OutgoingService.AddObjects("counters", &context.DirectoryWrapper{
-		Directory: context.DirectoryWrapper{
+		Directory: &context.DirectoryWrapper{
 			Directory: &statCounterInspectImpl{
 				name:  "Networking Stat Counters",
-				Value: reflect.ValueOf(stk.Stats()),
+				Value: stats,
 			},
 		},
 	})
 
+	netstackImpl := &netstackImpl{
+		ns: ns,
+		getIO: (&context.DirectoryWrapper{
+			Directory: &reflectNode{
+				Value: stats,
+			},
+		}).GetDirectory,
+	}
 	ctx.OutgoingService.AddService(netstack.NetstackName, func(c zx.Channel) error {
-		k, err := netstackService.Add(&netstackImpl{
-			ns: ns,
-		}, c, nil)
+		k, err := netstackService.Add(netstackImpl, c, nil)
 		if err != nil {
 			logger.Fatalf("%v", err)
 		}

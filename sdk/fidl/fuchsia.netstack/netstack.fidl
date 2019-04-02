@@ -4,6 +4,7 @@
 
 library fuchsia.netstack;
 
+using fuchsia.io;
 using fuchsia.net;
 using fuchsia.hardware.ethernet;
 using zx;
@@ -29,15 +30,7 @@ struct NetErr {
 };
 
 struct NetTrafficStats {
-    // See network interface stats in Linux for future ideas:
-    // https://chromium.googlesource.com/native_client/linux-headers-for-nacl/+/2dc04f8190a54defc0d59e693fa6cff3e8a916a9/include/linux/if_link.h#7
-
     uint64 pkts_total;
-    uint64 pkts_echo_req; // request
-    uint64 pkts_echo_rep; // reply
-    uint64 pkts_echo_req_v6; // request
-    uint64 pkts_echo_rep_v6; // reply
-
     uint64 bytes_total;
 };
 
@@ -49,42 +42,6 @@ struct NetInterfaceStats {
 
     NetTrafficStats rx;
     NetTrafficStats tx;
-};
-
-struct IpStats {
-    uint64 packets_received;
-    uint64 invalid_addresses_received;
-    uint64 packets_delivered;
-    uint64 packets_sent;
-    uint64 outgoing_packet_errors;
-};
-
-struct TcpStats {
-    uint64 active_connection_openings;
-    uint64 passive_connection_openings;
-    uint64 failed_connection_attempts;
-    uint64 valid_segments_received;
-    uint64 invalid_segments_received;
-    uint64 segments_sent;
-    uint64 resets_sent;
-};
-
-struct UdpStats {
-    uint64 packets_received;
-    uint64 unknown_port_errors;
-    uint64 receive_buffer_errors;
-    uint64 malformed_packets_received;
-    uint64 packets_sent;
-};
-
-// Mirrors tcpip.Stats in third_party/netstack/tcpip/tcpip.go.
-struct AggregateStats {
-    uint64 unknown_protocol_received_packets;
-    uint64 malformed_received_packets;
-    uint64 dropped_packets;
-    IpStats ip_stats;
-    TcpStats tcp_stats;
-    UdpStats udp_stats;
 };
 
 struct InterfaceConfig {
@@ -186,7 +143,7 @@ protocol Netstack {
     GetStats(uint32 nicid) -> (NetInterfaceStats stats);
 
     // Get stats for all NICs on the stack.
-    GetAggregateStats() -> (AggregateStats stats);
+    GetAggregateStats(request<fuchsia.io.Node> object);
 
     // Sets the status (up or down) for the interface with the given nicid.
     SetInterfaceStatus(uint32 nicid, bool enabled);

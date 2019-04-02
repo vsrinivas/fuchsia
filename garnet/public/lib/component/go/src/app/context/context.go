@@ -10,8 +10,8 @@ import (
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
-	"syscall/zx/io"
 
+	"fidl/fuchsia/io"
 	"fidl/fuchsia/sys"
 )
 
@@ -105,7 +105,7 @@ func CreateFromStartupInfo() *Context {
 		OutgoingService: make(OutDirectory),
 	}
 
-	c.OutgoingService.AddDebug("goroutines", &goroutineFile{})
+	c.OutgoingService.AddDebug("goroutines", &FileWrapper{File: &goroutineFile{}})
 
 	if directoryRequest := GetStartupHandle(HandleInfo{
 		Type: HandleDirectoryRequest,
@@ -115,7 +115,7 @@ func CreateFromStartupInfo() *Context {
 			Directory: mapDirectory(c.OutgoingService),
 		}).addConnection(0, 0, io.NodeInterfaceRequest{
 			Channel: zx.Channel(directoryRequest),
-		}, false); err != nil {
+		}); err != nil {
 			panic(err)
 		}
 	}

@@ -14,14 +14,15 @@ import (
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
-	zxio "syscall/zx/io"
-	"syscall/zx/mem"
 	"unsafe"
+
+	fidlio "fidl/fuchsia/io"
+	"fidl/fuchsia/mem"
 )
 
-func respond(flags uint32, req zxio.NodeInterfaceRequest, err error, node zxio.Node) error {
-	if flags&zxio.OpenFlagDescribe != 0 {
-		proxy := zxio.NodeEventProxy{Channel: req.Channel}
+func respond(flags uint32, req fidlio.NodeInterfaceRequest, err error, node fidlio.Node) error {
+	if flags&fidlio.OpenFlagDescribe != 0 {
+		proxy := fidlio.NodeEventProxy{Channel: req.Channel}
 		switch err := err.(type) {
 		case nil:
 			info, err := node.Describe()
@@ -39,25 +40,25 @@ func respond(flags uint32, req zxio.NodeInterfaceRequest, err error, node zxio.N
 }
 
 type Node interface {
-	GetIO() zxio.Node
-	AddConnection(flags, mode uint32, req zxio.NodeInterfaceRequest) error
+	getIO() fidlio.Node
+	addConnection(flags, mode uint32, req fidlio.NodeInterfaceRequest) error
 }
 
 type ServiceFn func(zx.Channel) error
 
 var _ Node = (*ServiceFn)(nil)
-var _ zxio.Node = (*ServiceFn)(nil)
+var _ fidlio.Node = (*ServiceFn)(nil)
 
-func (s ServiceFn) GetIO() zxio.Node {
+func (s ServiceFn) getIO() fidlio.Node {
 	return s
 }
 
-func (s ServiceFn) AddConnection(flags, mode uint32, req zxio.NodeInterfaceRequest) error {
+func (s ServiceFn) addConnection(flags, mode uint32, req fidlio.NodeInterfaceRequest) error {
 	// TODO(ZX-3805): this does not implement the node protocol correctly,
 	// but matches the behaviour of SDK FVS.
-	if flags&zxio.OpenFlagNodeReference != 0 {
+	if flags&fidlio.OpenFlagNodeReference != 0 {
 		b := fidl.Binding{
-			Stub:    &zxio.NodeStub{Impl: s},
+			Stub:    &fidlio.NodeStub{Impl: s},
 			Channel: req.Channel,
 		}
 		return respond(flags, req, b.Init(func(error) {
@@ -70,30 +71,31 @@ func (s ServiceFn) AddConnection(flags, mode uint32, req zxio.NodeInterfaceReque
 	return respond(flags, req, s(req.Channel), s)
 }
 
-func (s ServiceFn) Clone(flags uint32, req zxio.NodeInterfaceRequest) error {
-	return s.AddConnection(flags, 0, req)
+func (s ServiceFn) Clone(flags uint32, req fidlio.NodeInterfaceRequest) error {
+	return s.addConnection(flags, 0, req)
 }
 
 func (s ServiceFn) Close() (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (s ServiceFn) Describe() (zxio.NodeInfo, error) {
-	return zxio.NodeInfo{NodeInfoTag: zxio.NodeInfoService}, nil
+func (s ServiceFn) Describe() (fidlio.NodeInfo, error) {
+	return fidlio.NodeInfo{NodeInfoTag: fidlio.NodeInfoService}, nil
 }
 
 func (s ServiceFn) Sync() (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (s ServiceFn) GetAttr() (int32, zxio.NodeAttributes, error) {
-	return int32(zx.ErrOk), zxio.NodeAttributes{
-		Mode:      zxio.ModeTypeService,
+func (s ServiceFn) GetAttr() (int32, fidlio.NodeAttributes, error) {
+	return int32(zx.ErrOk), fidlio.NodeAttributes{
+		Mode:      fidlio.ModeTypeService,
+		Id:        fidlio.InoUnknown,
 		LinkCount: 1,
 	}, nil
 }
 
-func (s ServiceFn) SetAttr(flags uint32, attributes zxio.NodeAttributes) (int32, error) {
+func (s ServiceFn) SetAttr(flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -103,7 +105,7 @@ func (s ServiceFn) Ioctl(opcode uint32, maxOut uint64, handles []zx.Handle, in [
 
 type Directory interface {
 	Get(string) (Node, bool)
-	ForEach(func(string, zxio.Node))
+	ForEach(func(string, Node))
 }
 
 var _ Directory = mapDirectory(nil)
@@ -115,9 +117,9 @@ func (md mapDirectory) Get(name string) (Node, bool) {
 	return node, ok
 }
 
-func (md mapDirectory) ForEach(fn func(string, zxio.Node)) {
+func (md mapDirectory) ForEach(fn func(string, Node)) {
 	for name, node := range md {
-		fn(name, node.GetIO())
+		fn(name, node)
 	}
 }
 
@@ -127,18 +129,18 @@ type DirectoryWrapper struct {
 
 var _ Node = (*DirectoryWrapper)(nil)
 
-func (dir *DirectoryWrapper) getIO() zxio.Directory {
+func (dir *DirectoryWrapper) GetDirectory() fidlio.Directory {
 	return &directoryState{DirectoryWrapper: dir}
 }
 
-func (dir *DirectoryWrapper) GetIO() zxio.Node {
-	return dir.getIO()
+func (dir *DirectoryWrapper) getIO() fidlio.Node {
+	return dir.GetDirectory()
 }
 
-func (dir *DirectoryWrapper) addConnection(flags, mode uint32, req zxio.NodeInterfaceRequest, copy bool) error {
-	ioDir := dir.getIO()
+func (dir *DirectoryWrapper) addConnection(flags, mode uint32, req fidlio.NodeInterfaceRequest) error {
+	ioDir := dir.GetDirectory()
 	b := fidl.Binding{
-		Stub:    &zxio.DirectoryStub{Impl: ioDir},
+		Stub:    &fidlio.DirectoryStub{Impl: ioDir},
 		Channel: req.Channel,
 	}
 	return respond(flags, req, b.Init(func(error) {
@@ -148,11 +150,7 @@ func (dir *DirectoryWrapper) addConnection(flags, mode uint32, req zxio.NodeInte
 	}), ioDir)
 }
 
-func (dir *DirectoryWrapper) AddConnection(flags, mode uint32, req zxio.NodeInterfaceRequest) error {
-	return dir.addConnection(flags, mode, req, true)
-}
-
-var _ zxio.Directory = (*directoryState)(nil)
+var _ fidlio.Directory = (*directoryState)(nil)
 
 type directoryState struct {
 	*DirectoryWrapper
@@ -161,30 +159,31 @@ type directoryState struct {
 	dirents bytes.Buffer
 }
 
-func (dirState *directoryState) Clone(flags uint32, req zxio.NodeInterfaceRequest) error {
-	return dirState.AddConnection(flags, 0, req)
+func (dirState *directoryState) Clone(flags uint32, req fidlio.NodeInterfaceRequest) error {
+	return dirState.addConnection(flags, 0, req)
 }
 
 func (dirState *directoryState) Close() (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (dirState *directoryState) Describe() (zxio.NodeInfo, error) {
-	return zxio.NodeInfo{NodeInfoTag: zxio.NodeInfoDirectory}, nil
+func (dirState *directoryState) Describe() (fidlio.NodeInfo, error) {
+	return fidlio.NodeInfo{NodeInfoTag: fidlio.NodeInfoDirectory}, nil
 }
 
 func (dirState *directoryState) Sync() (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (dirState *directoryState) GetAttr() (int32, zxio.NodeAttributes, error) {
-	return int32(zx.ErrOk), zxio.NodeAttributes{
-		Mode:      zxio.ModeTypeDirectory | uint32(fdio.VtypeIRUSR),
+func (dirState *directoryState) GetAttr() (int32, fidlio.NodeAttributes, error) {
+	return int32(zx.ErrOk), fidlio.NodeAttributes{
+		Mode:      fidlio.ModeTypeDirectory | uint32(fdio.VtypeIRUSR),
+		Id:        fidlio.InoUnknown,
 		LinkCount: 1,
 	}, nil
 }
 
-func (dirState *directoryState) SetAttr(flags uint32, attributes zxio.NodeAttributes) (int32, error) {
+func (dirState *directoryState) SetAttr(flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -194,26 +193,26 @@ func (dirState *directoryState) Ioctl(opcode uint32, maxOut uint64, handles []zx
 
 const dot = "."
 
-func (dirState *directoryState) Open(flags, mode uint32, path string, req zxio.NodeInterfaceRequest) error {
+func (dirState *directoryState) Open(flags, mode uint32, path string, req fidlio.NodeInterfaceRequest) error {
 	if path == dot {
-		return dirState.AddConnection(flags, mode, req)
+		return dirState.addConnection(flags, mode, req)
 	}
 	const slash = "/"
 	if strings.HasSuffix(path, slash) {
-		mode |= zxio.ModeTypeDirectory
+		mode |= fidlio.ModeTypeDirectory
 		path = path[:len(path)-len(slash)]
 	}
 
 	if i := strings.Index(path, slash); i != -1 {
 		if node, ok := dirState.Get(path[:i]); ok {
-			node := node.GetIO()
-			if dir, ok := node.(zxio.Directory); ok {
+			node := node.getIO()
+			if dir, ok := node.(fidlio.Directory); ok {
 				return dir.Open(flags, mode, path[i+len(slash):], req)
 			}
 			return respond(flags, req, zx.Error{Status: zx.ErrNotDir}, node)
 		}
 	} else if node, ok := dirState.Get(path); ok {
-		return node.AddConnection(flags, mode, req)
+		return node.addConnection(flags, mode, req)
 	}
 
 	return respond(flags, req, zx.Error{Status: zx.ErrNotFound}, dirState)
@@ -225,8 +224,9 @@ func (dirState *directoryState) Unlink(path string) (int32, error) {
 
 func (dirState *directoryState) ReadDirents(maxOut uint64) (int32, []uint8, error) {
 	if !dirState.reading {
-		writeFn := func(name string, node zxio.Node) {
-			status, attr, err := node.GetAttr()
+		writeFn := func(name string, node Node) {
+			ioNode := node.getIO()
+			status, attr, err := ioNode.GetAttr()
 			if err != nil {
 				panic(err)
 			}
@@ -236,7 +236,7 @@ func (dirState *directoryState) ReadDirents(maxOut uint64) (int32, []uint8, erro
 			dirent := syscall.Dirent{
 				Ino:  attr.Id,
 				Size: uint8(len(name)),
-				Type: uint8(attr.Mode & zxio.ModeTypeMask),
+				Type: uint8(attr.Mode & fidlio.ModeTypeMask),
 			}
 			if err := binary.Write(&dirState.dirents, binary.LittleEndian, dirent); err != nil {
 				panic(err)
@@ -286,32 +286,43 @@ func (dirState *directoryState) Watch(mask uint32, options uint32, watcher zx.Ch
 	return int32(zx.ErrNotSupported), nil
 }
 
-var _ Node = (*goroutineFile)(nil)
+type File interface {
+	GetBytes() []byte
+}
 
 type goroutineFile struct{}
 
-func (gf *goroutineFile) getIO() zxio.File {
+func (*goroutineFile) GetBytes() []byte {
 	buf := make([]byte, 1024)
 	for {
 		if n := runtime.Stack(buf, true); n < len(buf) {
-			buf = buf[:n]
-			break
+			return buf[:n]
 		}
 		buf = make([]byte, 2*len(buf))
 	}
-	fState := fileState{goroutineFile: gf}
+}
+
+var _ Node = (*FileWrapper)(nil)
+
+type FileWrapper struct {
+	File
+}
+
+func (file *FileWrapper) getFile() fidlio.File {
+	buf := file.GetBytes()
+	fState := fileState{FileWrapper: file}
 	fState.Reset(buf)
 	return &fState
 }
 
-func (gf *goroutineFile) GetIO() zxio.Node {
-	return gf.getIO()
+func (file *FileWrapper) getIO() fidlio.Node {
+	return file.getFile()
 }
 
-func (gf *goroutineFile) AddConnection(flags, mode uint32, req zxio.NodeInterfaceRequest) error {
-	ioFile := gf.getIO()
+func (file *FileWrapper) addConnection(flags, mode uint32, req fidlio.NodeInterfaceRequest) error {
+	ioFile := file.getFile()
 	b := fidl.Binding{
-		Stub:    &zxio.FileStub{Impl: ioFile},
+		Stub:    &fidlio.FileStub{Impl: ioFile},
 		Channel: req.Channel,
 	}
 	return respond(flags, req, b.Init(func(error) {
@@ -321,38 +332,39 @@ func (gf *goroutineFile) AddConnection(flags, mode uint32, req zxio.NodeInterfac
 	}), ioFile)
 }
 
-var _ zxio.File = (*fileState)(nil)
+var _ fidlio.File = (*fileState)(nil)
 
 type fileState struct {
-	*goroutineFile
+	*FileWrapper
 	bytes.Reader
 }
 
-func (fState *fileState) Clone(flags uint32, req zxio.NodeInterfaceRequest) error {
-	return fState.AddConnection(flags, 0, req)
+func (fState *fileState) Clone(flags uint32, req fidlio.NodeInterfaceRequest) error {
+	return fState.addConnection(flags, 0, req)
 }
 
 func (fState *fileState) Close() (int32, error) {
 	return int32(zx.ErrOk), nil
 }
 
-func (fState *fileState) Describe() (zxio.NodeInfo, error) {
-	return zxio.NodeInfo{NodeInfoTag: zxio.NodeInfoFile}, nil
+func (fState *fileState) Describe() (fidlio.NodeInfo, error) {
+	return fidlio.NodeInfo{NodeInfoTag: fidlio.NodeInfoFile}, nil
 }
 
 func (fState *fileState) Sync() (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
-func (fState *fileState) GetAttr() (int32, zxio.NodeAttributes, error) {
-	return int32(zx.ErrOk), zxio.NodeAttributes{
-		Mode:        zxio.ModeTypeFile | uint32(fdio.VtypeIRUSR),
+func (fState *fileState) GetAttr() (int32, fidlio.NodeAttributes, error) {
+	return int32(zx.ErrOk), fidlio.NodeAttributes{
+		Mode:        fidlio.ModeTypeFile | uint32(fdio.VtypeIRUSR),
+		Id:          fidlio.InoUnknown,
 		ContentSize: uint64(fState.Size()),
 		LinkCount:   1,
 	}, nil
 }
 
-func (fState *fileState) SetAttr(flags uint32, attributes zxio.NodeAttributes) (int32, error) {
+func (fState *fileState) SetAttr(flags uint32, attributes fidlio.NodeAttributes) (int32, error) {
 	return int32(zx.ErrNotSupported), nil
 }
 
@@ -394,7 +406,7 @@ func (fState *fileState) WriteAt(data []uint8, offset uint64) (int32, uint64, er
 	return int32(zx.ErrNotSupported), 0, nil
 }
 
-func (fState *fileState) Seek(offset int64, start zxio.SeekOrigin) (int32, uint64, error) {
+func (fState *fileState) Seek(offset int64, start fidlio.SeekOrigin) (int32, uint64, error) {
 	n, err := fState.Reader.Seek(offset, int(start))
 	return int32(zx.ErrOk), uint64(n), err
 }

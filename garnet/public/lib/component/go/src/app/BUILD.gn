@@ -10,5 +10,6 @@ go_library("app") {
 
   deps = [
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//zircon/public/fidl/fuchsia-io($go_toolchain)",
   ]
 }
