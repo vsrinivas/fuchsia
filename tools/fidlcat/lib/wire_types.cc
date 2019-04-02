@@ -7,8 +7,8 @@
 #include <src/lib/fxl/logging.h>
 #include <zircon/fidl.h>
 
-#include "garnet/bin/fidlcat/lib/library_loader.h"
 #include "rapidjson/error/en.h"
+#include "tools/fidlcat/lib/library_loader.h"
 
 #if defined(__APPLE__)
 

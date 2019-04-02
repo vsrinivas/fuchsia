@@ -193,6 +193,6 @@ group("gidl") {
 group("fidlcat") {
   testonly = true
   public_deps = [
-    "//garnet/bin/fidlcat:fidlcat_host",
+    "//tools/fidlcat:fidlcat_host",
   ]
 }

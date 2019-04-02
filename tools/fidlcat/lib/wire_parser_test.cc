@@ -11,13 +11,13 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/fidlcat/lib/library_loader_test_data.h"
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
 #include "library_loader.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 #include "test/fidlcat/examples/cpp/fidl.h"
+#include "tools/fidlcat/lib/library_loader_test_data.h"
 
 namespace fidlcat {
 
@@ -519,7 +519,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
     {
       "name": "test.fidlcat.examples/this_is_an_interface",
       "location": {
-        "filename": "../../garnet/bin/fidlcat/lib/testdata/types.test.fidl",
+        "filename": "../../tools/fidlcat/lib/testdata/types.test.fidl",
         "line": 7,
         "column": 9
       },
@@ -529,7 +529,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
           "generated_ordinal": 912304001,
           "name": "Int32",
           "location": {
-            "filename": "../../garnet/bin/fidlcat/lib/testdata/types.test.fidl",
+            "filename": "../../tools/fidlcat/lib/testdata/types.test.fidl",
             "line": 12,
             "column": 4
           },
@@ -541,7 +541,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
               },
               "name": "i32",
               "location": {
-                "filename": "../../garnet/bin/fidlcat/lib/testdata/types.test.fidl",
+                "filename": "../../tools/fidlcat/lib/testdata/types.test.fidl",
                 "line": 12,
                 "column": 16
               },

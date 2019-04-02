@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_FIDLCAT_LIB_WIRE_TYPES_H_
-#define GARNET_BIN_FIDLCAT_LIB_WIRE_TYPES_H_
+#ifndef TOOLS_FIDLCAT_LIB_WIRE_TYPES_H_
+#define TOOLS_FIDLCAT_LIB_WIRE_TYPES_H_
 
 #include <lib/fit/function.h>
 
@@ -17,8 +17,8 @@ typedef uint32_t zx_handle_t;
 #include <string>
 #include <vector>
 
-#include "garnet/bin/fidlcat/lib/library_loader.h"
 #include "rapidjson/document.h"
+#include "tools/fidlcat/lib/library_loader.h"
 
 // This file contains classes that help parse FIDL messages as they come in off
 // the wire.
@@ -356,4 +356,4 @@ using Uint64Type = NumericType<uint64_t>;
 
 }  // namespace fidlcat
 
-#endif  // GARNET_BIN_FIDLCAT_LIB_WIRE_TYPES_H_
+#endif  // TOOLS_FIDLCAT_LIB_WIRE_TYPES_H_

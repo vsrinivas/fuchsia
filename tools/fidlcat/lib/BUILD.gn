@@ -103,7 +103,7 @@ action("json_for_test") {
     rebase_path(root_build_dir) +
         "/fidling/gen/zircon/public/fidl/fuchsia-io/fuchsia-io.fidl.json",
     rebase_path(root_build_dir) +
-        "/fidling/gen/garnet/bin/fidlcat/lib/fidl.fidl.json",
+        "/fidling/gen/tools/fidlcat/lib/fidl.fidl.json",
   ]
 }
 

@@ -23,7 +23,6 @@ group("bin") {
     "display_manager",
     "far",
     "fidl_compatibility_test",
-    "fidlcat",
     "fonts",
     "glob",
     "guest",

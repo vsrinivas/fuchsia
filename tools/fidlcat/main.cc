@@ -13,21 +13,21 @@
 #include <thread>
 #include <vector>
 
-#include "garnet/bin/fidlcat/lib/interception_workflow.h"
+#include "tools/fidlcat/lib/interception_workflow.h"
 
 // TODO: Look into this.  Removing the hack that led to this (in
 // debug_ipc/helper/message_loop.h) seems to work, except it breaks SDK builds
 // on CQ in a way I can't repro locally.
 #undef __TA_REQUIRES
 
-#include "garnet/bin/fidlcat/lib/library_loader.h"
-#include "garnet/bin/fidlcat/lib/wire_parser.h"
-#include "garnet/bin/fidlcat/lib/zx_channel_params.h"
 #include "lib/fidl/cpp/message.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
 #include "src/developer/debug/zxdb/common/command_line_parser.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
+#include "tools/fidlcat/lib/library_loader.h"
+#include "tools/fidlcat/lib/wire_parser.h"
+#include "tools/fidlcat/lib/zx_channel_params.h"
 
 namespace fidlcat {
 

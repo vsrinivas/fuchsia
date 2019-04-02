@@ -7,9 +7,9 @@
 #include <string>
 #include <vector>
 
-#include "garnet/bin/fidlcat/lib/library_loader_test_data.h"
 #include "gtest/gtest.h"
 #include "library_loader.h"
+#include "tools/fidlcat/lib/library_loader_test_data.h"
 
 namespace fidlcat {
 

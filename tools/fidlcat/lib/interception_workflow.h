@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_FIDLCAT_LIB_INTERCEPTION_WORKFLOW_H_
-#define GARNET_BIN_FIDLCAT_LIB_INTERCEPTION_WORKFLOW_H_
+#ifndef TOOLS_FIDLCAT_LIB_INTERCEPTION_WORKFLOW_H_
+#define TOOLS_FIDLCAT_LIB_INTERCEPTION_WORKFLOW_H_
 
 #include <lib/fit/function.h>
 
 #include <string>
 
-#include "garnet/bin/fidlcat/lib/zx_channel_params.h"
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -19,6 +18,7 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "tools/fidlcat/lib/zx_channel_params.h"
 
 namespace fidlcat {
 
@@ -148,4 +148,4 @@ class InterceptionWorkflow {
 
 }  // namespace fidlcat
 
-#endif  // GARNET_BIN_FIDLCAT_LIB_INTERCEPTION_WORKFLOW_H_
+#endif  // TOOLS_FIDLCAT_LIB_INTERCEPTION_WORKFLOW_H_

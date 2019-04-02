@@ -4,7 +4,7 @@
 
 #include "wire_parser.h"
 
-#include "garnet/bin/fidlcat/lib/wire_types.h"
+#include "tools/fidlcat/lib/wire_types.h"
 
 namespace fidlcat {
 

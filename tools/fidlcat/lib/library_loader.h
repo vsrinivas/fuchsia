@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_FIDLCAT_LIB_LIBRARY_LOADER_H_
-#define GARNET_BIN_FIDLCAT_LIB_LIBRARY_LOADER_H_
+#ifndef TOOLS_FIDLCAT_LIB_LIBRARY_LOADER_H_
+#define TOOLS_FIDLCAT_LIB_LIBRARY_LOADER_H_
 
 #include <iostream>
 #include <map>
@@ -400,4 +400,4 @@ class LibraryLoader {
 
 }  // namespace fidlcat
 
-#endif  // GARNET_BIN_FIDLCAT_LIB_LIBRARY_LOADER_H_
+#endif  // TOOLS_FIDLCAT_LIB_LIBRARY_LOADER_H_
