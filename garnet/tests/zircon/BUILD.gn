@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/zircon.gni")
+import("//build/package.gni")
+
+action("zircon-test-manifest") {
+  visibility = [ ":*" ]
+  foreach(image, zircon_images) {
+    if (image.type == "manifest" && image.name == "legacy-tests-$target_cpu") {
+      sources = [
+        "$zircon_root_build_dir/${image.path}",
+      ]
+    }
+  }
+  outputs = [
+    "$target_gen_dir/zircon-tests.manifest",
+  ]
+  script = "//build/images/manifest.py"
+  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  foreach(manifest, sources) {
+    args += [
+      "--cwd=" + rebase_path(get_path_info(manifest, "dir"), root_build_dir),
+      "--manifest=" + rebase_path(manifest, root_build_dir),
+    ]
+  }
+}
+
+package("zircon_tests") {
+  deprecated_system_image = true
+  deps = [
+    ":zircon-test-manifest",
+  ]
+  extra = get_target_outputs(":zircon-test-manifest")
+}

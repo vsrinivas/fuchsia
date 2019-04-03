@@ -86,6 +86,7 @@ def collect_auxiliaries(manifest, examined):
 def collect_binaries(manifest, input_binaries, aux_binaries, examined):
     # As we go, we'll collect the actual binaries for the output
     # in this dictionary mapping entry.target to binary_entry.
+    unexamined_binaries = {}
     binaries = {}
 
     # We'll collect entries in the manifest that aren't binaries here.
@@ -200,18 +201,23 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
                 "missing '%s' needed by auxiliary %r via %r" %
                  (target, binary, context.root_dependent))
 
-            # It must be in the shared_toolchain output directory.
-            # Context like group is inherited from the dependent.
-            lib_entry = binary.entry._replace(
-                source=os.path.join(context.variant.shared_toolchain, soname),
-                target=target)
+            # Check if it's elsewhere in the input set.
+            lib = unexamined_binaries.get(target)
+            if lib is None:
+              # It must be in the shared_toolchain output directory.
+              # Context like group is inherited from the dependent.
+              lib_entry = binary.entry._replace(
+                  source=os.path.join(context.variant.shared_toolchain,
+                                      soname),
+                  target=target)
 
-            assert os.path.exists(lib_entry.source), (
-                "missing %r needed by %r via %r" %
-                (lib_entry, binary, context.root_dependent))
+              assert os.path.exists(lib_entry.source), (
+                  "missing %r needed by %r via %r" %
+                  (lib_entry, binary, context.root_dependent))
 
-            # Read its ELF info and sanity-check.
-            lib = binary_entry(lib_entry, binary_info(lib_entry.source))
+              # Read its ELF info and sanity-check.
+              lib = binary_entry(lib_entry, binary_info(lib_entry.source))
+
             assert lib.info and lib.info.soname == soname, (
                 "SONAME '%s' expected in %r, needed by %r via %r" %
                 (soname, lib, binary, context.root_dependent))
@@ -220,19 +226,26 @@ def collect_binaries(manifest, input_binaries, aux_binaries, examined):
             add_binary(lib, context)
 
     for entry in manifest:
+        info = None
+        # Don't inspect data or firmware resources in the manifest.  Regardless
+        # of the bits in these files, we treat them as opaque data.
         try:
-            info = None
-            # Don't inspect data or firmware resources in the manifest. Regardless of the
-            # bits in these files, we treat them as opaque data.
             if not entry.target.startswith(
-                    'data/') and not entry.target.startswith('lib/firmware/'):
+                'data/') and not entry.target.startswith('lib/firmware/'):
                 info = binary_info(entry.source)
         except IOError as e:
             raise Exception('%s from %s' % (e, entry))
         if info:
-            add_binary(binary_entry(entry, info))
+            if (entry.target not in unexamined_binaries or
+                entry.group < unexamined_binaries[entry.target].entry.group):
+                unexamined_binaries[entry.target] = binary_entry(entry, info)
         else:
             nonbinaries.append(entry)
+
+    for binary in unexamined_binaries.itervalues():
+        add_binary(binary)
+    for target in unexamined_binaries.iterkeys():
+        assert target in binaries
 
     matched_binaries = set()
     for input_binary in input_binaries:
