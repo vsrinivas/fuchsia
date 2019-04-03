@@ -122,6 +122,10 @@ function fx-build-dir-if-present {
     if [[ -z "${FUCHSIA_BUILD_DIR}" ]]; then
       return 1
     fi
+    # Paths are relative to FUCHSIA_DIR unless they're absolute paths.
+    if [[ "${FUCHSIA_BUILD_DIR:0:1}" != "/" ]]; then
+      FUCHSIA_BUILD_DIR="${FUCHSIA_DIR}/${FUCHSIA_BUILD_DIR}"
+    fi
   fi
   return 0
 }
