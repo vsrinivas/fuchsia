@@ -48,11 +48,16 @@ class ViewProviderComponent {
     ~ViewImpl() override = default;
 
     // |fuchsia::ui::views::View|
+    [[deprecated("SCN-1343: ViewConfig is going away")]]
     void SetConfig(fuchsia::ui::views::ViewConfig view_config) override;
 
     // |fuchsia::ui::views::View|
+    [[deprecated("SCN-1343: ViewConfig is going away")]]
     void Present(fuchsia::ui::views::ViewToken view_token,
                  fuchsia::ui::views::ViewConfig initial_config) override;
+
+    // |fuchsia::ui::views::View|
+    void Present2(fuchsia::ui::views::ViewToken view_token) override;
 
     // Sets the given closure as an error handler for all error types.
     void SetErrorHandler(fit::closure error_handler);

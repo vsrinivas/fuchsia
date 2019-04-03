@@ -46,15 +46,6 @@ void BaseView::SetConfig(fuchsia::ui::views::ViewConfig view_config) {
   }
 }
 
-void BaseView::SetConfig(fuchsia::ui::app::ViewConfig view_config) {
-  if (view_config != view_config_deprecated_) {
-    fuchsia::ui::app::ViewConfig old_config =
-        std::move(view_config_deprecated_);
-    view_config_deprecated_ = std::move(view_config);
-    OnConfigChanged(std::move(old_config));
-  }
-}
-
 void BaseView::SetReleaseHandler(fit::function<void(zx_status_t)> callback) {
   listener_binding_.set_error_handler(std::move(callback));
 }

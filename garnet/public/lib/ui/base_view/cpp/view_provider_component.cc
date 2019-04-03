@@ -64,6 +64,7 @@ void ViewProviderComponent::ViewImpl::SetConfig(
   view_->SetConfig(std::move(view_config));
 }
 
+[[deprecated("SCN-1343: ViewConfig is going away")]]
 void ViewProviderComponent::ViewImpl::Present(
     fuchsia::ui::views::ViewToken view_token,
     fuchsia::ui::views::ViewConfig initial_config) {
@@ -84,6 +85,26 @@ void ViewProviderComponent::ViewImpl::Present(
   };
   view_ = factory_(std::move(context));
   view_->SetConfig(std::move(initial_config));
+}
+
+void ViewProviderComponent::ViewImpl::Present2(
+    fuchsia::ui::views::ViewToken view_token) {
+  if (view_) {
+    // This should only be called once.
+    FXL_LOG(ERROR) << "Present() can only be called once";
+    OnError();
+    return;
+  }
+
+  ViewContext context = {
+      .session_and_listener_request =
+      CreateScenicSessionPtrAndListenerRequest(scenic_),
+      .view_token2 = std::move(view_token),
+      .incoming_services = {},
+      .outgoing_services = {},
+      .startup_context = startup_context_,
+  };
+  view_ = factory_(std::move(context));
 }
 
 void ViewProviderComponent::ViewImpl::SetErrorHandler(
