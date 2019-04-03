@@ -93,7 +93,10 @@ def _get_files(element_meta):
     elif type == 'fidl_library':
         common_files.update(element_meta['sources'])
     elif type == 'host_tool':
-        common_files.update(element_meta['files'])
+        if 'files' in element_meta:
+            common_files.update(element_meta['files'])
+        if 'target_files' in element_meta:
+            arch_files.update(element_meta['target_files'])
     elif type == 'image':
         for arch, file in element_meta['file'].iteritems():
             arch_files[arch] = set([file])
@@ -187,9 +190,14 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
     elif type == 'sysroot':
         meta = meta_one
         meta['versions'].update(meta_two['versions'])
+    elif type == 'host_tool':
+        meta = meta_one
+        if not 'target_files' in meta:
+            meta['target_files'] = {}
+        if 'target_files' in meta_two:
+            meta['target_files'].update(meta_two['target_files'])
     elif (type == 'cc_source_library' or type == 'dart_library' or
-          type == 'fidl_library' or type == 'host_tool' or
-          type == 'documentation'):
+          type == 'fidl_library' or type == 'documentation'):
         # These elements are arch-independent, the metadata does not need any
         # update.
         meta = meta_one
@@ -198,7 +206,8 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
     meta_path = os.path.join(dest_dir, element)
     _ensure_directory(meta_path)
     with open(meta_path, 'w') as meta_file:
-        json.dump(meta, meta_file, indent=2, sort_keys=True)
+        json.dump(meta, meta_file, indent=2, sort_keys=True,
+                  separators=(',', ': '))
     return True
 
 

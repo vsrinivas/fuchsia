@@ -20,14 +20,27 @@
         },
         "files": {
           "description": "The list of files pertaining to the element",
-          "type": "array",
-          "items": {
-            "$ref": "common.json#/definitions/file"
-          }
+          "$ref": "#/definitions/fileGroup"
+        },
+        "target_files": {
+          "description": "The target-specific files, per architecture",
+          "type": "object",
+          "properties": {
+            "x64": {
+              "description": "Files for the x64 architecture",
+              "$ref": "#/definitions/fileGroup"
+            },
+            "arm64": {
+              "description": "Files for the arm64 architecture",
+              "$ref": "#/definitions/fileGroup"
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1,
+          "maxProperties": 2
         }
       },
       "required": [
-        "files",
         "root",
 
         "name",
@@ -35,5 +48,14 @@
       ],
       "additionalProperties": false
     }
-  ]
+  ],
+  "definitions": {
+    "fileGroup": {
+      "description": "A collection of files",
+      "type": "array",
+      "items": {
+        "$ref": "common.json#/definitions/file"
+      }
+    }
+  }
 }
