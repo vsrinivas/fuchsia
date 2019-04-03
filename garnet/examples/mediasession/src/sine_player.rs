@@ -22,8 +22,8 @@ use fidl_fuchsia_media::{
     StreamPacket, TimelineFunction, METADATA_LABEL_ARTIST, NO_TIMESTAMP,
 };
 use fidl_fuchsia_mediasession::*;
-use fuchsia_app as app;
 use fuchsia_async as fasync;
+use fuchsia_component as component;
 use fuchsia_zircon as zx;
 use futures::{select, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use std::f32;
@@ -85,7 +85,7 @@ fn sine_wave_payload(i: usize) -> StreamPacket {
 }
 
 fn renderer_proxy() -> Result<AudioRendererProxy> {
-    let audio_proxy = app::client::connect_to_service::<AudioMarker>()?;
+    let audio_proxy = component::client::connect_to_service::<AudioMarker>()?;
     let (renderer_client_end, renderer_server_end) = create_endpoints()?;
     audio_proxy.create_audio_renderer(renderer_server_end)?;
     Ok(renderer_client_end.into_proxy()?)
@@ -277,7 +277,7 @@ async fn main() -> Result<()> {
     // used to request a client end from Media Session Service, and can be handed
     // off to interested parties.
     let publisher_proxy =
-        app::client::connect_to_service::<PublisherMarker>().context("Connecting to publisher.")?;
+        component::client::connect_to_service::<PublisherMarker>().context("Connecting to publisher.")?;
     let session_id = await!(publisher_proxy.publish(controller_client_end))
         .context("Publishing our session client end.")?;
     println!("Registered with Media Session API. Our id is {:?}.", session_id);
