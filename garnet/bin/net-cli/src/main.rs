@@ -12,7 +12,7 @@ use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_filter::{self as filter, FilterMarker, FilterProxy};
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
 use fidl_fuchsia_net_stack_ext as pretty;
-use fuchsia_app::client::connect_to_service;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use std::fs::File;
