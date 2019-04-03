@@ -48,9 +48,6 @@ rustc_binary("bin") {
 
 config_data("config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "tee_manager.config",
-  ]
   sources = [
     "tee_manager.config",
   ]

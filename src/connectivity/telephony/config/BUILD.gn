@@ -6,9 +6,6 @@ import("//build/config.gni")
 
 config_data("config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "telephony.config",
-  ]
   sources = [
     "telephony.config",
   ]

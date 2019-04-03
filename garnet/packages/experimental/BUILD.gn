@@ -104,6 +104,9 @@ group("zircon_guest") {
     "//garnet/bin/guest/pkg/zircon_guest",
     "//garnet/packages/prod:guest_runner",
   ]
+  metadata = {
+    config_package_barrier = []
+  }
 }
 
 group("tennis") {

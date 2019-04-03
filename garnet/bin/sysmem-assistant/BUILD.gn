@@ -62,9 +62,6 @@ config_data("config") {
   # Don't launch without a TA to use.
   if (have_secmem_ta) {
     for_pkg = "sysmgr"
-    outputs = [
-      "sysmem-assistant.config",
-    ]
     sources = [
       "sysmem-assistant.config",
     ]

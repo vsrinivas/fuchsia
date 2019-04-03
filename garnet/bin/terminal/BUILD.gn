@@ -53,9 +53,6 @@ package("terminal") {
 
 config_data("tiles_with_terminal_config") {
   for_pkg = "sysmgr"
-  outputs = [
-    "tiles_with_terminal.config",
-  ]
   sources = [
     "config/tiles_with_terminal.config",
   ]
