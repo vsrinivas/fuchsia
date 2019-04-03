@@ -99,7 +99,7 @@ static void boost_thread(thread_t* t) TA_REQ(thread_lock) {
         return;
     }
 
-    if (unlikely(thread_is_real_time_or_idle(t))) {
+    if (unlikely(thread_cannot_boost(t))) {
         return;
     }
 
@@ -118,7 +118,7 @@ static void deboost_thread(thread_t* t, bool quantum_expiration) TA_REQ(thread_l
         return;
     }
 
-    if (unlikely(thread_is_real_time_or_idle(t))) {
+    if (unlikely(thread_cannot_boost(t))) {
         return;
     }
 

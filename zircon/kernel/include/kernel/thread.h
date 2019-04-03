@@ -63,6 +63,7 @@ typedef void (*thread_tls_callback_t)(void* tls_value);
 #define THREAD_FLAG_FREE_STRUCT              (1 << 1)
 #define THREAD_FLAG_REAL_TIME                (1 << 2)
 #define THREAD_FLAG_IDLE                     (1 << 3)
+#define THREAD_FLAG_NO_BOOST                 (1 << 4)
 
 #define THREAD_SIGNAL_KILL                   (1 << 0)
 #define THREAD_SIGNAL_SUSPEND                (1 << 1)
@@ -387,6 +388,25 @@ static inline bool thread_is_idle(thread_t* t) {
 static inline bool thread_is_real_time_or_idle(thread_t* t) {
     return !!(t->flags & (THREAD_FLAG_REAL_TIME | THREAD_FLAG_IDLE));
 }
+
+// A thread may not participate in the scheduler's boost behavior if it is...
+//
+// 1) flagged as real-time
+// 2) flagged as idle
+// 3) flagged as "no boost"
+//
+// Note that flag #3 should *only* ever be used by kernel test code when
+// attempting to test priority inheritance chain propagation.  It is important
+// that these tests maintain rigorous control of the relationship between base
+// priority, inherited priority, and the resulting effective priority.  Allowing
+// the scheduler to introduce the concept of dynamic boost priority into the
+// calculation of effective priority makes writing tests like this more
+// difficult which is why we have an internal flag which can be used for
+// disabling this behavior.
+static inline bool thread_cannot_boost(thread_t* t) {
+    return !!(t->flags & (THREAD_FLAG_REAL_TIME | THREAD_FLAG_IDLE | THREAD_FLAG_NO_BOOST));
+}
+
 
 // the current thread
 #include <arch/current_thread.h>
