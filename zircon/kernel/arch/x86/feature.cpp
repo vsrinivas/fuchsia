@@ -34,6 +34,7 @@ static struct x86_model_info model_info;
 bool g_x86_feature_fsgsbase;
 bool g_x86_feature_pcid_good;
 bool g_has_meltdown;
+bool g_has_l1tf;
 
 enum x86_hypervisor_list x86_hypervisor;
 
@@ -134,8 +135,10 @@ void x86_feature_init(void) {
 
     x86_hypervisor = get_hypervisor();
 
-    if (x86_vendor == X86_VENDOR_INTEL)
+    if (x86_vendor == X86_VENDOR_INTEL) {
         g_has_meltdown = x86_intel_cpu_has_meltdown();
+        g_has_l1tf = x86_intel_cpu_has_l1tf();
+    }
 }
 
 static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
@@ -380,6 +383,8 @@ void x86_feature_debug(void) {
     printf("Properties: ");
     if (g_has_meltdown)
         printf("meltdown ");
+    if (g_has_l1tf)
+        printf("l1tf ");
     if (g_x86_feature_pcid_good)
         printf("pcid_good ");
     printf("\n");

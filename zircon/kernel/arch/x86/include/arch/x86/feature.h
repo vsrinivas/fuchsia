@@ -314,5 +314,6 @@ static inline const x86_microarch_config_t* x86_get_microarch_config(void) {
 void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);
 bool x86_intel_cpu_has_meltdown(void);
+bool x86_intel_cpu_has_l1tf(void);
 
 __END_CDECLS
