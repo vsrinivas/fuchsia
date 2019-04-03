@@ -97,6 +97,13 @@ async fn resolve<'a>(
         Err(Status::INVALID_ARGS)
     })?;
 
+    // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
+    // given one.
+    if uri.resource().is_some() {
+        fx_log_err!("package uri should not contain a resource name: {}", uri);
+        return Err(Status::INVALID_ARGS);
+    }
+
     // FIXME: need to implement selectors.
     if !selectors.is_empty() {
         fx_log_warn!("resolve does not support selectors yet");
@@ -542,12 +549,6 @@ mod tests {
         // Package name, variant, and merkle
         let url = format!("fuchsia-pkg://fuchsia.com/bar/stable?hash={}", gen_merkle('b'));
         await!(test.run_resolve(&url, Ok(vec![gen_merkle_file('b')],)));
-
-        // Package resource
-        await!(test.run_resolve(
-            "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx",
-            Ok(vec![gen_merkle_file('a')])
-        ));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
