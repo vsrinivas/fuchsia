@@ -9,7 +9,6 @@ use fidl::endpoints::{create_proxy, ClientEnd};
 use fidl_fuchsia_developer_tiles as tiles;
 use fidl_fuchsia_ui_app::ViewProviderMarker;
 use fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy};
-use fidl_fuchsia_ui_viewsv1::{ViewManagerMarker, ViewManagerProxy};
 use fuchsia_app::client::{connect_to_service, App, Launcher};
 use fuchsia_async as fasync;
 use fuchsia_scenic as scenic;
@@ -25,10 +24,6 @@ pub trait ViewSink: Send + Sync {
     /// Compositor objects that create top level surfaces should pass the
     /// `ViewProvider` to the `ViewSink` so that they can be presented.
     fn new_view_provider(&self, view_provider: ClientEnd<ViewProviderMarker>);
-
-    /// Gets a reference to the ViewManager service. This enables components
-    /// to easily create new views.
-    fn view_manager(&self) -> &ViewManagerProxy;
 
     /// Gets a reference to the Scenic service.
     fn scenic(&self) -> &ScenicProxy;
@@ -54,8 +49,6 @@ pub struct TileViewSink {
 
     /// A connection to the 'Scenic' service.
     scenic: ScenicProxy,
-    /// A connection to the 'ViewManager' service.
-    view_manager: ViewManagerProxy,
     /// A ref-counted pointer to a scenic 'session'.
     scenic_session: scenic::SessionPtr,
 }
@@ -68,7 +61,6 @@ impl TileViewSink {
     pub fn new() -> Result<ViewSinkPtr, Error> {
         // Connect to Scenic
         let scenic = connect_to_service::<ScenicMarker>()?;
-        let view_manager = connect_to_service::<ViewManagerMarker>()?;
         let (session_proxy, session_request) = create_proxy()?;
         scenic.create_session(session_request, None)?;
         let scenic_session = scenic::Session::new(session_proxy);
@@ -79,13 +71,7 @@ impl TileViewSink {
         let app =
             launcher.launch("fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx".to_string(), None)?;
         let tiles_controller = app.connect_to_service(tiles::ControllerMarker)?;
-        Ok(Arc::new(Box::new(TileViewSink {
-            _app: app,
-            scenic,
-            scenic_session,
-            view_manager,
-            tiles_controller,
-        })))
+        Ok(Arc::new(Box::new(TileViewSink { _app: app, scenic, scenic_session, tiles_controller })))
     }
 }
 
@@ -93,10 +79,6 @@ impl ViewSink for TileViewSink {
     fn new_view_provider(&self, view_provider: ClientEnd<ViewProviderMarker>) {
         let fut = self.tiles_controller.add_tile_from_view_provider("tile", view_provider);
         fasync::spawn_local(fut.map_ok(|_| ()).unwrap_or_else(|e| println!("Failed {:?}", e)));
-    }
-
-    fn view_manager(&self) -> &ViewManagerProxy {
-        &self.view_manager
     }
 
     fn scenic(&self) -> &ScenicProxy {

@@ -1,13 +1,12 @@
 {
-  "program": {
-    "binary": "bin/app"
-  },
-  "sandbox": {
-    "services": [
-        "fuchsia.examples.shadertoy.ShadertoyFactory",
-        "fuchsia.tracelink.Registry",
-        "fuchsia.ui.scenic.Scenic",
-        "fuchsia.ui.viewsv1.ViewManager"
-    ]
-  }
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.examples.shadertoy.ShadertoyFactory",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
 }
