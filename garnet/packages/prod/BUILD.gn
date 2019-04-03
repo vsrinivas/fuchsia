@@ -86,6 +86,7 @@ group("scenic") {
     "//garnet/bin/ui:root_presenter",
     "//garnet/bin/ui:scenic",
     "//garnet/bin/ui:view_manager",
+    "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:vulkan",
   ]
 }
@@ -769,6 +770,7 @@ group("vulkan") {
   testonly = true
   public_deps = [
     "//garnet/bin/vulkan_loader",
+    "//garnet/packages/prod:sysmem_connector",
   ]
 }
 
