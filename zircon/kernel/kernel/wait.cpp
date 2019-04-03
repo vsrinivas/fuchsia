@@ -524,7 +524,7 @@ zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error)
     return ZX_OK;
 }
 
-bool wait_queue_priority_changed(struct thread* t, int old_prio) {
+bool wait_queue_priority_changed(struct thread* t, int old_prio, PropagatePI propagate) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
@@ -536,15 +536,25 @@ bool wait_queue_priority_changed(struct thread* t, int old_prio) {
 
     LTRACEF("%p %d -> %d\n", t, old_prio, t->effec_priority);
 
+    // |t|'s effective priority has already been re-calculated.  If |t| is
+    // currently at the head of the wait queue, then |t|'s old priority is the
+    // previous priority of the wait queue.  Otherwise, it is the priority of
+    // the wait queue as it stands before we re-insert |t|
+    int old_wq_prio = (wait_queue_peek(wq) == t)
+                    ? old_prio
+                    : wait_queue_blocked_priority(wq);
+
     // simple algorithm: remove the thread from the queue and add it back
     // TODO: implement optimal algorithm depending on all the different edge
     // cases of how the thread was previously queued and what priority its
     // switching to.
-    int old_wq_prio = wait_queue_blocked_priority(wq);
     internal::wait_queue_remove_thread(t);
     internal::wait_queue_insert(wq, t);
 
-    bool ret = internal::wait_queue_waiters_priority_changed(wq, old_wq_prio);
+    bool ret = (propagate == PropagatePI::Yes)
+             ? internal::wait_queue_waiters_priority_changed(wq, old_wq_prio)
+             : false;
+
     if (WAIT_QUEUE_VALIDATION) {
         wait_queue_validate_queue(t->blocking_wait_queue);
     }

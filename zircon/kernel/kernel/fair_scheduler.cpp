@@ -843,7 +843,8 @@ void FairScheduler::MigrateUnpinnedThreads(cpu_num_t current_cpu) {
 void FairScheduler::UpdateWeightCommon(thread_t* thread,
                                        int original_priority,
                                        SchedWeight weight,
-                                       cpu_mask_t* cpus_to_reschedule_mask) {
+                                       cpu_mask_t* cpus_to_reschedule_mask,
+                                       PropagatePI propagate) {
     FairTaskState* const state = &thread->fair_task_state;
 
     switch (thread->state) {
@@ -889,7 +890,7 @@ void FairScheduler::UpdateWeightCommon(thread_t* thread,
         // but has not yet transitioned to ready.
         state->weight_ = weight;
         if (thread->blocking_wait_queue) {
-            wait_queue_priority_changed(thread, original_priority);
+            wait_queue_priority_changed(thread, original_priority, propagate);
         }
         break;
 
@@ -934,7 +935,8 @@ void FairScheduler::ChangeWeight(thread_t* thread, SchedWeight weight,
     // Perform the state-specific updates if the effective priority changed.
     if (thread->effec_priority != original_priority) {
         UpdateWeightCommon(thread, original_priority, weight,
-                           cpus_to_reschedule_mask);
+                           cpus_to_reschedule_mask,
+                           PropagatePI::Yes);
     }
 
     trace.End(original_priority, thread->effec_priority);
@@ -954,10 +956,6 @@ void FairScheduler::InheritWeight(thread_t* thread, SchedWeight weight,
                   WeightToPriority(weight));
 
     const int priority = WeightToPriority(weight);
-    if (priority >= 0 && priority <= thread->inherited_priority) {
-        return;
-    }
-
     const int original_priority = thread->effec_priority;
     thread->inherited_priority = priority;
     thread->priority_boost = 0;
@@ -972,7 +970,8 @@ void FairScheduler::InheritWeight(thread_t* thread, SchedWeight weight,
     // Perform the state-specific updates if the effective priority changed.
     if (thread->effec_priority != original_priority) {
         UpdateWeightCommon(thread, original_priority, weight,
-                           cpus_to_reschedule_mask);
+                           cpus_to_reschedule_mask,
+                           PropagatePI::No);
     }
 
     trace.End(original_priority, thread->effec_priority);
@@ -1030,17 +1029,14 @@ void sched_migrate(thread_t* thread) {
 }
 
 void sched_inherit_priority(thread_t* thread, int priority,
-                            bool* local_reschedule) {
-    cpu_mask_t cpus_to_reschedule_mask = 0;
+                            bool* local_reschedule,
+                            cpu_mask_t* cpus_to_reschedule_mask) {
     FairScheduler::InheritWeight(thread, PriorityToWeight(priority),
-                                 &cpus_to_reschedule_mask);
+                                 cpus_to_reschedule_mask);
 
     const cpu_mask_t current_cpu_mask = cpu_num_to_mask(arch_curr_cpu_num());
-    if (cpus_to_reschedule_mask & current_cpu_mask) {
+    if (*cpus_to_reschedule_mask & current_cpu_mask) {
         *local_reschedule = true;
-    }
-    if (cpus_to_reschedule_mask & ~current_cpu_mask) {
-        mp_reschedule(cpus_to_reschedule_mask, 0);
     }
 }
 

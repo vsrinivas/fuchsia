@@ -54,6 +54,11 @@ enum class ResourceOwnership {
     Reader,
 };
 
+// When signaling to a wait queue that the priority of one of its blocked
+// threads has changed, this enum is used as a signal indicating whether or not
+// the priority change should be propagated down the PI chain (if any) or not.
+enum class PropagatePI : bool { No = false, Yes };
+
 // wait queue primitive
 // NOTE: must be inside critical section when using these
 void wait_queue_init(wait_queue_t* wait);
@@ -118,10 +123,18 @@ bool wait_queue_is_empty(const wait_queue_t*) TA_REQ(thread_lock);
 zx_status_t wait_queue_unblock_thread(struct thread* t,
                                       zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
-// a thread's priority has changed, potentially modify the wait queue it's in.
-// Returns true if the change of priority has affected the priority of another
-// thread due to priority inheritance, or false otherwise.
-bool wait_queue_priority_changed(struct thread* t, int old_prio) TA_REQ(thread_lock);
+// A thread's priority has changed.  Update the wait queue bookkeeping to
+// properly reflect this change.
+//
+// If |propagate| is PropagatePI::Yes, call into the wait queue code to
+// propagate the priority change down the PI chain (if any).  Then returns true
+// if the change of priority has affected the priority of another thread due to
+// priority inheritance, or false otherwise.
+//
+// If |propagate| is PropagatePI::No, do not attempt to propagate the PI change.
+// This is the mode used by OwnedWaitQueue during a batch update of a PI chain.
+bool wait_queue_priority_changed(struct thread* t, int old_prio, PropagatePI propagate)
+    TA_REQ(thread_lock);
 
 // validate that the queue of a given wait queue is valid
 void wait_queue_validate_queue(wait_queue_t* wait) TA_REQ(thread_lock);

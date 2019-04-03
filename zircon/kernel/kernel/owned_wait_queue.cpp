@@ -11,15 +11,136 @@
 #include <kernel/owned_wait_queue.h>
 #include <kernel/sched.h>
 #include <kernel/wait_queue_internal.h>
+#include <ktl/popcount.h>
+#include <lib/counters.h>
+
+// Notes on the defined kernel counters.
+//
+// Adjustments (aka promotions and demotions)
+// The number of times that a thread increased or decreased its priority because
+// of a priority inheritance related event.
+//
+// Note that the number of promotions does not have to equal the number of
+// demotions in the system.  For example, a thread could slowly climb up in priority as
+// threads of increasing priority join a wait queue it owns, then suddenly drop
+// back down to its base priority when it releases its queue.
+//
+// There are other (more complicated) sequences which could cause a thread to
+// jump up in priority with one promotion, then slowly step back down again over
+// multiple demotions.
+//
+// Reschedule events.
+// Counts of the number of times that a local reschedule was requested, as well
+// as the total number of reschedule IPIs which were sent, as a result of
+// priority inheritance related events.
+//
+// Max chain traversal.
+// The maximum traversed length of a PI chain during exection of the propagation
+// algorithm.
+//
+// IOW - if a change to a wait queue's maximum effective priority ends up
+// changing the inherited priority of thread A, but nothing else is needed, this
+// is a traversal length of 1.  OTOH, if thread A was blocked by a wait queue
+// (Qa) which was owned by thread B, and Qa's maximum effective priority, then
+// the algorithm would need to traverse another link in the chain, and our
+// traversed chain length would be at least 2.
+//
+// Note that the maximum traversed chain length does not have to be the length
+// maximum PI chain ever assembled in the system.  This is a result of the fact
+// that the PI algortim attempt to terminate propagation as soon as it can, as
+// well as the fact that changes can start to propagate in the middle of a chain
+// instead of being required to start at the end (for example, 2 chains of
+// length 2 could merge to form a chain of length 4, but still result in a
+// traversal of only length 1).
+KCOUNTER(pi_promotions,                  "kernel.pi.adj.promotions")
+KCOUNTER(pi_demotions,                   "kernel.pi.adj.demotions")
+KCOUNTER(pi_triggered_local_reschedules, "kernel.pi.resched.local")
+KCOUNTER(pi_triggered_ipis,              "kernel.pi.resched.ipis")
+KCOUNTER_DECLARE(max_pi_chain_traverse,  "kernel.pi.max_chain_traverse", Max)
 
 namespace {
+// A couple of small stateful helper classes which drop out of release builds
+// which perform some sanity checks for us when propagating priority
+// inheritance.  In specific, we want to make sure that...
+//
+// ++ We never recurse from any of the calls we make into the scheduler into
+//    this code.
+// ++ When propagating iteratively, we are always making progress, and we never
+//    exceed any completely insane limits for a priority inheritance chain.
+constexpr bool kEnablePIChainGuards = LK_DEBUGLEVEL > 0;
+template <bool Enable = kEnablePIChainGuards> class RecursionGuard;
+template <bool Enable = kEnablePIChainGuards> class InfiniteLoopGuard;
+
+template <>
+class RecursionGuard<false> {
+public:
+    void Acquire() {}
+    void Release() {}
+};
+
+template <>
+class RecursionGuard<true> {
+public:
+    constexpr RecursionGuard() = default;
+
+    void Acquire() {
+        ASSERT(!acquired_);
+        acquired_ = true;
+    }
+    void Release() { acquired_ = false; }
+
+private:
+    bool acquired_ = false;
+};
+
+template <>
+class InfiniteLoopGuard<false> {
+public:
+    constexpr InfiniteLoopGuard() = default;
+    void CheckProgress(uint32_t) {}
+};
+
+template <>
+class InfiniteLoopGuard<true> {
+public:
+    constexpr InfiniteLoopGuard() = default;
+    void CheckProgress(uint32_t next) {
+        // ASSERT that we are making progress
+        ASSERT(expected_next_ == next);
+        expected_next_ = next + 1;
+
+        // ASSERT that we have not exceeded any completely ludicrous loop
+        // bounds.  Note that in practice, a PI chain can technically be as long
+        // as the user has resources for.  In reality, chains tend to be 2-3
+        // nodes long at most.  If we see anything on the order to 2000, it
+        // almost certainly indicates that something went Very Wrong, and we
+        // should stop and investigate.
+        constexpr uint32_t kMaxChainLen = 2048;
+        ASSERT(next <= kMaxChainLen);
+    }
+
+private:
+    uint32_t expected_next_ = 1;
+};
 
 // Update our reschedule related kernel counters and send a request for any
 // needed IPIs.
 inline void UpdateStatsAndSendIPIs(bool local_resched, cpu_mask_t accum_cpu_mask)
     TA_REQ(thread_lock) {
-    // TODO(johngro): Implement this when we actually implement PI propagation
+
+    accum_cpu_mask &= ~cpu_num_to_mask(arch_curr_cpu_num());
+
+    if (accum_cpu_mask) {
+        mp_reschedule(accum_cpu_mask, 0);
+        pi_triggered_ipis.Add(ktl::popcount(accum_cpu_mask));
+    }
+
+    if (local_resched) {
+        pi_triggered_local_reschedules.Add(1);
+    }
 }
+
+RecursionGuard qpc_recursion_guard;
 
 }  // anon namespace
 
@@ -47,8 +168,111 @@ bool OwnedWaitQueue::QueuePressureChanged(thread_t* t,
                                           int old_prio,
                                           int new_prio,
                                           cpu_mask_t* accum_cpu_mask) TA_REQ(thread_lock) {
-    // TODO(johngro): Implement this when we actually implement PI propagation
-    return false;
+    fbl::AutoLock guard(&qpc_recursion_guard);
+    DEBUG_ASSERT(old_prio != new_prio);
+
+    bool local_resched = false;
+    uint32_t traverse_len = 1;
+
+    // When we have finally finished updating everything, make sure to update
+    // our max traversal statistic.
+    //
+    // Note, the only real reason that this is an accurate max at all is because
+    // the counter is effectively protected by the thread lock (although there
+    // is no real good way to annotate that fact).
+    auto on_exit = fbl::MakeAutoCall([&traverse_len]() {
+        auto old = max_pi_chain_traverse.Value();
+        if (old < traverse_len) {
+            max_pi_chain_traverse.Add(traverse_len - old);
+        }
+    });
+
+    DEBUG_ASSERT(t != nullptr);
+
+    InfiniteLoopGuard inf_loop_guard;
+    while (true) {
+        inf_loop_guard.CheckProgress(traverse_len);
+        if (new_prio < old_prio) {
+            // If the pressure just dropped, but the old pressure was strictly
+            // lower than the current inherited priority of the thread, then
+            // there is nothing to do.  We can just stop.  The maximum inherited
+            // priority must have come from a different wait queue.
+            //
+            if (old_prio < t->inherited_priority) {
+                return local_resched;
+            }
+
+            // Since the pressure from one of our queues just dropped, we need
+            // to recompute the new maximum priority across all of the wait
+            // queues currently owned by this thread.
+            __UNUSED int orig_new_prio = new_prio;
+            for (const auto& owq : t->owned_wait_queues) {
+                int queue_prio = wait_queue_blocked_priority(&owq);
+
+                // If our bookkeeping is accurate, it should be impossible for
+                // our original new priority to be greater than the priority of
+                // any of the queues currently owned by this thread.
+                DEBUG_ASSERT(orig_new_prio <= queue_prio);
+                new_prio = fbl::max(new_prio, queue_prio);
+            }
+
+            // If our calculated new priority is still the same as our current
+            // inherited priority, then we are done.
+            if (new_prio == t->inherited_priority) {
+                return local_resched;
+            }
+        } else {
+            // Likewise, if the pressure just went up, but the new pressure is
+            // not strictly higher than the current inherited priority, then
+            // there is nothing to do.
+            if (new_prio <= t->inherited_priority) {
+                return local_resched;
+            }
+        }
+
+        // OK, at this point in time, we know that there has been a change to
+        // our inherited priority.  Update it, and check to see if that resulted
+        // in a change of the maximum waiter priority of the wait queue blocking
+        // this thread (if any).  If not, then we are done.
+        const wait_queue_t* bwq = t->blocking_wait_queue;
+        int old_effec_prio = t->effec_priority;
+        int old_queue_prio = bwq ? wait_queue_blocked_priority(bwq) : -1;
+        int new_queue_prio;
+
+        sched_inherit_priority(t, new_prio, &local_resched, accum_cpu_mask);
+
+        new_queue_prio = bwq ? wait_queue_blocked_priority(bwq) : -1;
+
+        // If the effective priority of this thread has gone up or down, record
+        // it in the kernel counters as a PI promotion or demotion.
+        if (old_effec_prio != t->effec_priority) {
+            if (old_effec_prio < t->effec_priority) {
+                pi_promotions.Add(1);
+            } else {
+                pi_demotions.Add(1);
+            }
+        }
+
+        if (old_queue_prio == new_queue_prio) {
+            return local_resched;
+        }
+
+        // It looks the change of this thread's inherited priority affected its
+        // blocking wait queue in a meaningful way.  If this wait_queue is an
+        // OwnedWait queue, and it currently has an owner, then continue to
+        // propagate the change.  Otherwise, we are done.
+        if ((bwq != nullptr) && (bwq->magic == OwnedWaitQueue::MAGIC)) {
+            t = static_cast<const OwnedWaitQueue*>(bwq)->owner();
+            if (t != nullptr) {
+                old_prio = old_queue_prio;
+                new_prio = new_queue_prio;
+                ++traverse_len;
+                continue;
+            }
+        }
+
+        return local_resched;
+    }
 }
 
 bool OwnedWaitQueue::WaitersPriorityChanged(int old_prio) {
@@ -100,6 +324,11 @@ bool OwnedWaitQueue::UpdateBookkeeping(thread_t* new_owner,
             if ((old_prio >= 0) && QueuePressureChanged(old_owner, old_prio, -1, &accum_cpu_mask)) {
                 local_resched = true;
             }
+
+            // If we no longer own any queues, then we had better not be inheriting any priority at
+            // this point in time.
+            DEBUG_ASSERT(!old_owner->owned_wait_queues.is_empty() ||
+                         (old_owner->inherited_priority == -1));
         }
 
         // Update to the new owner.  If there is a new owner, fix the

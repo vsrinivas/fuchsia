@@ -11,6 +11,7 @@
 #include <kernel/fair_task_state.h>
 #include <kernel/sched.h>
 #include <kernel/thread.h>
+#include <kernel/wait.h>
 
 #include <platform.h>
 
@@ -64,7 +65,10 @@ private:
     friend void sched_resched_internal(void);
     friend void sched_unblock_idle(thread_t* t);
     friend void sched_migrate(thread_t* t);
-    friend void sched_inherit_priority(thread_t* t, int pri, bool* local_resched);
+    friend void sched_inherit_priority(thread_t* t,
+                                       int pri,
+                                       bool* local_resched,
+                                       cpu_mask_t* cpus_to_reschedule_mask);
     friend void sched_change_priority(thread_t* t, int pri);
     friend bool sched_unblock(thread_t* t);
     friend bool sched_unblock_list(struct list_node* list);
@@ -119,7 +123,9 @@ private:
     static void UpdateWeightCommon(thread_t*,
                                    int original_priority,
                                    SchedWeight weight,
-                                   cpu_mask_t* cpus_to_reschedule_mask) TA_REQ(thread_lock);
+                                   cpu_mask_t* cpus_to_reschedule_mask,
+                                   PropagatePI propagate) TA_REQ(thread_lock);
+
 
     // Common logic for reschedule API.
     void RescheduleCommon(SchedTime now) TA_REQ(thread_lock);

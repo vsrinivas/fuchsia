@@ -156,9 +156,6 @@ typedef struct thread {
     // are we allowed to be interrupted on the current thing we're blocked/sleeping on
     bool interruptable;
 
-    // number of mutexes we currently hold
-    int mutexes_held;
-
 #if WITH_LOCK_DEP
     // state for runtime lock validation when in thread context
     lockdep_state_t lock_state;

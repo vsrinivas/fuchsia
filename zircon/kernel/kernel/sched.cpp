@@ -14,6 +14,7 @@
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
 #include <lib/ktrace.h>
+#include <lib/counters.h>
 #include <list.h>
 #include <platform.h>
 #include <printf.h>
@@ -53,6 +54,10 @@
 // threads get 10ms to run before they use up their time slice and the scheduler is invoked
 #define THREAD_INITIAL_TIME_SLICE ZX_MSEC(10)
 
+KCOUNTER(boost_promotions, "kernel.thread.boost.promotions")
+KCOUNTER(boost_demotions,  "kernel.thread.boost.demotions")
+KCOUNTER(boost_wq_recalcs, "kernel.thread.boost.wait_queue_recalcs")
+
 static bool local_migrate_if_needed(thread_t* curr_thread);
 
 // compute the effective priority of a thread
@@ -67,8 +72,29 @@ static void compute_effec_priority(thread_t* t) {
     t->effec_priority = ep;
 }
 
+static inline void post_boost_bookkeeping(thread_t* t) TA_REQ(thread_lock) {
+    DEBUG_ASSERT(!NO_BOOST);
+
+    int old_ep = t->effec_priority;
+
+    compute_effec_priority(t);
+
+    if (old_ep != t->effec_priority) {
+        if (old_ep < t->effec_priority) {
+            boost_promotions.Add(1);
+        } else {
+            boost_demotions.Add(1);
+        }
+
+        if (t->blocking_wait_queue != nullptr) {
+            boost_wq_recalcs.Add(1);
+            wait_queue_priority_changed(t, old_ep, PropagatePI::Yes);
+        }
+    }
+}
+
 // boost the priority of the thread by +1
-static void boost_thread(thread_t* t) {
+static void boost_thread(thread_t* t) TA_REQ(thread_lock) {
     if (NO_BOOST) {
         return;
     }
@@ -80,14 +106,14 @@ static void boost_thread(thread_t* t) {
     if (t->priority_boost < MAX_PRIORITY_ADJ &&
         likely((t->base_priority + t->priority_boost) < HIGHEST_PRIORITY)) {
         t->priority_boost++;
-        compute_effec_priority(t);
+        post_boost_bookkeeping(t);
     }
 }
 
 // deboost the priority of the thread by -1.
 // If deboosting because the thread is using up all of its time slice,
 // then allow the boost to go negative, otherwise only deboost to 0.
-static void deboost_thread(thread_t* t, bool quantum_expiration) {
+static void deboost_thread(thread_t* t, bool quantum_expiration) TA_REQ(thread_lock) {
     if (NO_BOOST) {
         return;
     }
@@ -118,7 +144,7 @@ static void deboost_thread(thread_t* t, bool quantum_expiration) {
 
     // drop a level
     t->priority_boost--;
-    compute_effec_priority(t);
+    post_boost_bookkeeping(t);
 }
 
 // pick a 'random' cpu out of the passed in mask of cpus
@@ -613,7 +639,8 @@ void sched_migrate(thread_t* t) {
 // from different queues and inform us if we need to reschedule
 static void sched_priority_changed(thread_t* t, int old_prio,
                                    bool* local_resched,
-                                   cpu_mask_t* accum_cpu_mask) TA_REQ(thread_lock) {
+                                   cpu_mask_t* accum_cpu_mask,
+                                   PropagatePI propagate) TA_REQ(thread_lock) {
     switch (t->state) {
     case THREAD_RUNNING:
         if (t->effec_priority < old_prio) {
@@ -652,7 +679,7 @@ static void sched_priority_changed(thread_t* t, int old_prio,
         // note it's possible to be blocked but not in a wait queue if the thread is in transition
         // from blocked to running
         if (t->blocking_wait_queue) {
-            wait_queue_priority_changed(t, old_prio);
+            wait_queue_priority_changed(t, old_prio, propagate);
         }
         break;
     default:
@@ -661,18 +688,13 @@ static void sched_priority_changed(thread_t* t, int old_prio,
     }
 }
 
-// set the priority to the higher value of what it was before and the newly inherited value
+// Set the inherited priority to |pri|.
 // pri < 0 disables priority inheritance and goes back to the naturally computed values
-void sched_inherit_priority(thread_t* t, int pri, bool* local_resched) {
+void sched_inherit_priority(thread_t* t, int pri, bool* local_resched, cpu_mask_t* accum_cpu_mask) {
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     if (pri > HIGHEST_PRIORITY) {
         pri = HIGHEST_PRIORITY;
-    }
-
-    // if we're setting it to something real and it's less than the current, skip
-    if (pri >= 0 && pri <= t->inherited_priority) {
-        return;
     }
 
     // adjust the priority and remember the old value
@@ -685,13 +707,7 @@ void sched_inherit_priority(thread_t* t, int pri, bool* local_resched) {
     }
 
     // see if we need to do something based on the state of the thread
-    cpu_mask_t accum_cpu_mask = 0;
-    sched_priority_changed(t, old_ep, local_resched, &accum_cpu_mask);
-
-    // send some ipis based on the previous code
-    if (accum_cpu_mask) {
-        mp_reschedule(accum_cpu_mask, 0);
-    }
+    sched_priority_changed(t, old_ep, local_resched, accum_cpu_mask, PropagatePI::No);
 }
 
 // changes the thread's base priority and if the re-computed effective priority changed
@@ -722,7 +738,7 @@ void sched_change_priority(thread_t* t, int pri) {
     bool local_resched = false;
 
     // see if we need to do something based on the state of the thread.
-    sched_priority_changed(t, old_ep, &local_resched, &accum_cpu_mask);
+    sched_priority_changed(t, old_ep, &local_resched, &accum_cpu_mask, PropagatePI::Yes);
 
     // send some ipis based on the previous code
     if (accum_cpu_mask) {

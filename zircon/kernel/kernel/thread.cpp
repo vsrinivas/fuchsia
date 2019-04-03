@@ -1285,18 +1285,20 @@ void dump_thread_locked(thread_t* t, bool full_dump) {
                 (t->flags & THREAD_FLAG_REAL_TIME) ? "Rt" : "",
                 (t->flags & THREAD_FLAG_IDLE) ? "Id" : "");
 
-        dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %d, mutexes held %d\n",
-                t->blocking_wait_queue, t->blocked_status, t->interruptable, t->mutexes_held);
+        dprintf(INFO,
+                "\twait queue %p, blocked_status %d, interruptable %d, wait queues owned %s\n",
+                t->blocking_wait_queue, t->blocked_status, t->interruptable,
+                t->owned_wait_queues.is_empty() ? "no" : "yes");
 
         dprintf(INFO, "\taspace %p\n", t->aspace);
         dprintf(INFO, "\tuser_thread %p, pid %" PRIu64 ", tid %" PRIu64 "\n",
                 t->user_thread, t->user_pid, t->user_tid);
         arch_dump_thread(t);
     } else {
-        printf("thr %p st %4s m %d pri %2d [%d:%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n",
-               t, thread_state_to_str(t->state), t->mutexes_held, t->effec_priority, t->base_priority,
-               t->priority_boost, t->inherited_priority, t->user_pid,
-               t->user_tid, oname, t->name);
+        printf("thr %p st %4s owq %d pri %2d [%d:%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n",
+               t, thread_state_to_str(t->state), !t->owned_wait_queues.is_empty(),
+               t->effec_priority, t->base_priority, t->priority_boost, t->inherited_priority,
+               t->user_pid, t->user_tid, oname, t->name);
     }
 }
 
