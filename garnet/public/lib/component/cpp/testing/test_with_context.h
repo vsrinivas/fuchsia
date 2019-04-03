@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_APP_CPP_TESTING_TEST_WITH_CONTEXT_H_
-#define LIB_APP_CPP_TESTING_TEST_WITH_CONTEXT_H_
+// !!! DEPRECATED !!!
+// New usages should reference sdk/lib/sys/cpp/...
+
+#ifndef LIB_COMPONENT_CPP_TESTING_TEST_WITH_CONTEXT_H_
+#define LIB_COMPONENT_CPP_TESTING_TEST_WITH_CONTEXT_H_
 
 #include "lib/component/cpp/testing/startup_context_for_test.h"
 #include "lib/gtest/test_loop_fixture.h"
@@ -30,4 +33,4 @@ class TestWithContext : public gtest::TestLoopFixture {
 }  // namespace testing
 }  // namespace component
 
-#endif  // LIB_APP_CPP_TESTING_TEST_WITH_CONTEXT_H_
+#endif  // LIB_COMPONENT_CPP_TESTING_TEST_WITH_CONTEXT_H_

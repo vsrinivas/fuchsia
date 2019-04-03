@@ -2,13 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// !!! DEPRECATED !!!
+// New usages should reference sdk/lib/sys/cpp/...
+
 // Helpers for using |ServiceProvider|s.
 //
 // The functions in this header deprecated along with |ServiceProvider| itself.
 // Please use the functions in lib/svc/cpp/services.h instead.
 
-#ifndef LIB_APP_CPP_CONNECT_H_
-#define LIB_APP_CPP_CONNECT_H_
+#ifndef LIB_COMPONENT_CPP_CONNECT_H_
+#define LIB_COMPONENT_CPP_CONNECT_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include "lib/fidl/cpp/interface_request.h"
@@ -41,4 +44,4 @@ inline void ConnectToService(
 
 }  // namespace component
 
-#endif  // LIB_APP_CPP_CONNECT_H_
+#endif  // LIB_COMPONENT_CPP_CONNECT_H_

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// !!! DEPRECATED !!!
+// New usages should reference garnet/public/lib/inpect/cpp...
+
 #ifndef LIB_COMPONENT_CPP_EXPOSED_OBJECT_H_
 #define LIB_COMPONENT_CPP_EXPOSED_OBJECT_H_
 

@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_APP_CPP_TESTING_FAKE_COMPONENT_H_
-#define LIB_APP_CPP_TESTING_FAKE_COMPONENT_H_
+// !!! DEPRECATED !!!
+// New usages should reference sdk/lib/sys/cpp/...
+
+#ifndef LIB_COMPONENT_CPP_TESTING_FAKE_COMPONENT_H_
+#define LIB_COMPONENT_CPP_TESTING_FAKE_COMPONENT_H_
 
 #include <fs/pseudo-dir.h>
 #include <fs/synchronous-vfs.h>
@@ -53,4 +56,4 @@ class FakeComponent {
 }  // namespace testing
 }  // namespace component
 
-#endif  // LIB_APP_CPP_TESTING_FAKE_COMPONENT_H_
+#endif  // LIB_COMPONENT_CPP_TESTING_FAKE_COMPONENT_H_

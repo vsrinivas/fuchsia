@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// !!! DEPRECATED !!!
+// New usages should reference sdk/lib/sys/cpp/...
+
 #ifndef LIB_COMPONENT_CPP_TESTING_TERMINATION_RESULT_H_
 #define LIB_COMPONENT_CPP_TESTING_TERMINATION_RESULT_H_
 
