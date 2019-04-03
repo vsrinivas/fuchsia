@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/build_id.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")
 import("//build/host.gni")
@@ -95,22 +96,46 @@ template("go_build") {
     }
   }
 
-  action(main_target_name) {
+  main_target_name_binary = output_name + "_binary"
+  group_deps = []
+  use_strip = is_fuchsia
+  if (use_strip) {
+    unstripped_output_path = "${root_out_dir}/exe.unstripped/${output_name}"
+  }
+
+  if (use_strip) {
+    main_target_name_build_id = output_name + "_build_id"
+    group_deps += [ ":${main_target_name_build_id}" ]
+    build_id_entry(main_target_name_build_id) {
+      deps = [
+        ":${main_target_name_binary}",
+      ]
+      module = output_path
+      extension = ".debug"
+    }
+
+    main_target_name_build_id_unstripped = output_name + "_build_id_unstripped"
+    group_deps += [ ":${main_target_name_build_id_unstripped}" ]
+    build_id_entry(main_target_name_build_id_unstripped) {
+      deps = [
+        ":${main_target_name_binary}",
+      ]
+      module = unstripped_output_path
+    }
+  }
+
+  group_deps += [ ":${main_target_name_binary}" ]
+  action(main_target_name_binary) {
     deps = []
     if (defined(invoker.non_go_deps)) {
       deps += invoker.non_go_deps
     }
-
-    pool = "//build/go:pool($default_toolchain)"
-
-    use_strip = is_fuchsia
 
     outputs = [
       output_path,
     ]
 
     if (use_strip) {
-      unstripped_output_path = "${root_out_dir}/exe.unstripped/${output_name}"
       outputs += [ unstripped_output_path ]
     }
 
@@ -214,6 +239,10 @@ template("go_build") {
       "--package",
       invoker.gopackage,
     ]
+  }
+
+  group(main_target_name) {
+    public_deps = group_deps
   }
 
   # Allow host binaries to be published in SDKs.

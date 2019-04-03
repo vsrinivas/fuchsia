@@ -179,9 +179,6 @@ def main():
         else:
             retcode = subprocess.call([args.objcopy,
                                        '--strip-sections',
-                                       '--build-id-link-dir=%s' % build_id_dir,
-                                       '--build-id-link-input=.debug',
-                                       '--build-id-link-output=',
                                        output_name,
                                        stripped_output_name],
                                       env=env)

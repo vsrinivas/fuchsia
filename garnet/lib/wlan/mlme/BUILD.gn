@@ -95,7 +95,10 @@ source_set("mlme") {
   ]
 
   public_deps = [
-    "//garnet/lib/rust/wlan-mlme-c",
+    # Rust targets don't respect toolchains right now. Always use the default
+    # toolchain for this source set to avoid rebuilding multiple times,
+    # producing multiple artifacts with the same build ID.
+    "//garnet/lib/rust/wlan-mlme-c($default_toolchain)",
     "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/protocol",
     "//garnet/public/lib/svc/cpp",
