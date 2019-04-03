@@ -91,11 +91,6 @@ TEST(FuchsiaPkgUrl, GetComponentDefaults) {
   EXPECT_EQ("meta/sysmgr.cmx",
             ParseFuchsiaPkgUrl("fuchsia-pkg://fuchsia.com/sysmgr#meta/blah.cmx")
                 .GetDefaultComponentCmxPath());
-  EXPECT_EQ("sysmgr", ParseFuchsiaPkgUrl("fuchsia-pkg://fuchsia.com/sysmgr")
-                          .GetDefaultComponentName());
-  EXPECT_EQ("sysmgr",
-            ParseFuchsiaPkgUrl("fuchsia-pkg://fuchsia.com/sysmgr#meta/blah.cmx")
-                .GetDefaultComponentName());
 }
 
 }  // namespace

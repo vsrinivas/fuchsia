@@ -724,17 +724,10 @@ void Realm::CreateComponentFromPackage(
     return;
   }
 
-  // TODO(CF-156): Remove this logic once all URLs are fuchsia-pkg.
   if (!is_fuchsia_pkg_url) {
     FXL_LOG(ERROR)
-        << "Component " << fp.GetDefaultComponentName()
-        << " was launched without using fuchsia-pkg URLs! Use "
-        << package->resolved_url << "#" << fp.GetDefaultComponentCmxPath()
-        << " instead. See "
-           "https://fuchsia.googlesource.com/fuchsia/+/master/docs/"
-        << "glossary.md#fuchsia_pkg-url for more information. The component "
-        << "was not whitelisted to launch with bare package URLs, and it "
-        << "cannot be launched!";
+        << "Component could not be launched from " << package->resolved_url
+        << " because it is not a valid Fuchsia component URL!";
     component_request.SetReturnValues(kComponentCreationFailed,
                                       TerminationReason::INTERNAL_ERROR);
     return;
@@ -779,7 +772,7 @@ void Realm::CreateComponentFromPackage(
   } else {
     // Read 'data' path from cmx, or assume to be /pkg/data/<component-name>.
     std::string data_path = program.IsDataNull()
-                                ? kDataPathPrefix + fp.GetDefaultComponentName()
+                                ? kDataPathPrefix + fp.package_name()
                                 : program.data();
     // Pass a {"data", "data/<component-name>"} pair through StartupInfo, so
     // components can identify their directory under /pkg/data.
@@ -818,7 +811,7 @@ void Realm::CreateComponentFromPackage(
     const auto& sandbox = cmx.sandbox_meta();
     service_whitelist = &sandbox.services();
 
-    builder.AddConfigData(sandbox, fp.GetDefaultComponentName());
+    builder.AddConfigData(sandbox, fp.package_name());
 
     builder.AddSandbox(
         sandbox,

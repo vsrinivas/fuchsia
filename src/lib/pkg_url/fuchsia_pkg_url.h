@@ -25,9 +25,6 @@ class FuchsiaPkgUrl {
   // meta/<package_name>.cmx
   std::string GetDefaultComponentCmxPath() const;
 
-  // Returns the default component's name.
-  std::string GetDefaultComponentName() const;
-
   bool Parse(const std::string& url);
 
   const std::string& host_name() const { return host_name_; }

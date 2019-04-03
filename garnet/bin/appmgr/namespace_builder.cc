@@ -87,12 +87,12 @@ void NamespaceBuilder::AddPackage(zx::channel package) {
   PushDirectoryFromChannel("/pkg", std::move(package));
 }
 
-void NamespaceBuilder::AddConfigData(const SandboxMetadata& sandbox, const std::string& component_name) {
+void NamespaceBuilder::AddConfigData(const SandboxMetadata& sandbox, const std::string& pkg_name) {
   for (const auto& feature : sandbox.features()) {
     if (feature == "config-data") {
-      FXL_LOG(INFO) << "config-data for " << component_name;
-      PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/data/" + component_name,
-                              "/config/data/" + component_name);
+      FXL_LOG(INFO) << "config-data for " << pkg_name;
+      PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/data/" + pkg_name,
+                              "/config/data/" + pkg_name);
     }
   }
 }
