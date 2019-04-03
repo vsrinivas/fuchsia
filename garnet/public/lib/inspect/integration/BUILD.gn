@@ -1,0 +1,65 @@
+#Copyright 2018 The Fuchsia Authors.All rights reserved.
+#Use of this source code is governed by a BSD - style license that can be
+#found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+executable("bin") {
+  output_name = "libinspect_example_component"
+
+  sources = [
+    "example.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/inspect",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("test") {
+  testonly = true
+  output_name = "libinspect_integration_tests"
+
+  sources = [
+    "test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("libinspect_integration_tests") {
+  deps = [
+    ":bin",
+    ":test",
+  ]
+
+  binaries = [
+    {
+      name = "libinspect_example_component"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/libinspect_example_component.cmx")
+      dest = "libinspect_example_component.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "libinspect_integration_tests"
+      environments = basic_envs
+    },
+  ]
+}

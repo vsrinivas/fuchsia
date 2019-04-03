@@ -456,8 +456,8 @@ $ iquery --find /hub
 /hub/r/sys/4566/c/http.cmx/19226/out/objects
 /hub/r/sys/4566/c/http.cmx/19226/system_objects
 ...
-/hub/r/sys/4566/c/libinspect_example_app.cmx/8123/out/objects
-/hub/r/sys/4566/c/libinspect_example_app.cmx/8123/system_objects
+/hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/objects
+/hub/r/sys/4566/c/libinspect_example_component.cmx/8123/system_objects
 ...
 ```
 
@@ -465,7 +465,7 @@ The above command cause `iquery` to find all the processes that have registered 
 as providing Inspect data.
 The output has been shortened for the example.
 
-The last two lines shown, containing `libinspect_example_app.cmx`,
+The last two lines shown, containing `libinspect_example_component.cmx`,
 correspond to our employee database example.
 The `8123` is the process ID of the employee database, and there are two object paths:
 
@@ -485,7 +485,7 @@ To view the employee database's exposed objects, you can run `iquery` with the
 `--recursive` command line option:
 
 ```
-$ iquery --recursive /hub/r/sys/4566/c/libinspect_example_app.cmx/8123/out/objects
+$ iquery --recursive /hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/objects
 objects:
   task_count = 16
   employee_count = 12
@@ -509,7 +509,7 @@ If you wanted to dump the data in JSON (perhaps for some post processing), you
 can specify the `--format=json` parameter to `iquery`:
 
 ```
-$ iquery --recursive --format=json /hub/r/sys/4566/c/libinspect_example_app.cmx/8123/out/objects
+$ iquery --recursive --format=json /hub/r/sys/4566/c/libinspect_example_component.cmx/8123/out/objects
 [
   {
     "path": "objects",
@@ -564,13 +564,13 @@ From Chris:
     The example app is built as a component here
     <https://fuchsia-review.googlesource.com/c/fuchsia/+/251575/2/garnet/public/lib/inspect/integration/BUILD.gn#51>.
     This means it has a component manifest here
-    <https://fuchsia-review.googlesource.com/c/fuchsia/+/251575/2/garnet/public/lib/inspect/integration/meta/libinspect_example_app.cmx>.
+    <https://fuchsia-review.googlesource.com/c/fuchsia/+/251575/2/garnet/public/lib/inspect/integration/meta/libinspect_example_component.cmx>.
     The manifest is standard boilerplate specifying which binary to run when
     the component is started, and says it has access to the Launcher and
     Environment services (this part may not be necessary, I'll take a look at
     it).
 
-    We include the libinspect_example_app component in the "tests" group here
+    We include the libinspect_example_component component in the "tests" group here
     <https://fuchsia-review.googlesource.com/c/fuchsia/+/251575/2/garnet/packages/tests/all#54>
     by
     including the file we defined here
@@ -581,9 +581,9 @@ From Chris:
     We first need to start our component on the Fuchsia system using:
 
     $ run -d fuchsia-pkg://
-    fuchsia.com/libinspect_example_app#meta/libinspect_example_app.cmx
+    fuchsia.com/libinspect_integration_tests#meta/libinspect_example_component.cmx
 
-    This specifies the URL of the package and #meta/libinspect_example_app.cmx
+    This specifies the URL of the package and #meta/libinspect_example_component.cmx
     specifies which component inside the package to run. run -d starts the
     component in the background.
 
@@ -597,13 +597,13 @@ From Chris:
     the target. `fx shell` logs the user into the "sys" realm. If you use fx
     shell you will see:
 
-    /hub/c/libinspect_example_app.cmx/<process_id>/out/objects
-    /hub/c/libinspect_example_app.cmx/<process_id>/system_objects
+    /hub/c/libinspect_example_component.cmx/<process_id>/out/objects
+    /hub/c/libinspect_example_component.cmx/<process_id>/system_objects
 
     If you directly type in the target you will see:
 
-    /hub/r/sys/<realm_id>/c/libinspect_example_app.cmx/<process_id>/out/objects
-    /hub/r/sys/<realm_id>/c/libinspect_example_app.cmx/<process_id>/system_objects
+    /hub/r/sys/<realm_id>/c/libinspect_example_component.cmx/<process_id>/out/objects
+    /hub/r/sys/<realm_id>/c/libinspect_example_component.cmx/<process_id>/system_objects
 
     There are two object trees exposed for the example. The system_objects tree
     is populated by appmgr and includes data about the process itself (open
@@ -614,7 +614,7 @@ From Chris:
     A comprehensive command to automatically find your component and output its
     objects is:
 
-    $ iquery --recursive `iquery --find /hub | grep libinspect_example_app.cmx
+    $ iquery --recursive `iquery --find /hub | grep libinspect_example_component.cmx
     | grep out/objects`
 
     This will find the component wherever it is and output its information.

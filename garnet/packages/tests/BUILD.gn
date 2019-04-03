@@ -315,6 +315,7 @@ group("all") {
     "//garnet/packages/tests:kms",
     "//garnet/packages/tests:lib",
     "//garnet/packages/tests:libc",
+    "//garnet/packages/tests:libinspect_integration_tests",
     "//garnet/packages/tests:log_listener",
     "//garnet/packages/tests:logger",
     "//garnet/packages/tests:magma",
@@ -953,6 +954,13 @@ group("iquery_test") {
   testonly = true
   public_deps = [
     "//garnet/bin/iquery:iquery_test",
+  ]
+}
+
+group("libinspect_integration_tests") {
+  testonly = true
+  public_deps = [
+    "//garnet/public/lib/inspect/integration:libinspect_integration_tests",
   ]
 }
 
