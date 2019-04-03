@@ -112,6 +112,4 @@ fuzz_target("encoding_fuzzer") {
     ":lib",
     "//src/ledger/bin/storage/public",
   ]
-  corpora =
-      [ "848002de6109d94118c57d79b2a8c0cfbd16ba8691bb390e3eb7437089ad99cc" ]
 }

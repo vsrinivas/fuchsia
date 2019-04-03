@@ -34,11 +34,6 @@ import("//build/package.gni")
 #     [file] If specified, a file containing inputs, one per line, that the
 #     fuzzer will use to generate new mutations.
 #
-#   corpora (optional)
-#     [list of strings] One or more locations from which to get a fuzzing
-#     corpus, e.g. a project path to a directory of artifacts, a project
-#     path to a CIPD ensure file, or a GCS URL.
-#
 template("fuzz_target") {
   assert(
       (defined(invoker.binary) && !defined(invoker.sources)) ||
@@ -48,14 +43,13 @@ template("fuzz_target") {
 
   # If not specified, generate the component binary
   if (!defined(invoker.binary)) {
-    executable(target_name) {
+    executable(fuzz_target_name) {
       # Explicitly forward visibility, implicitly forward everything else.
       # See comment in //build/config/BUILDCONFIG.gn for details on this pattern.
       forward_variables_from(invoker, [ "visibility" ])
       forward_variables_from(invoker,
                              "*",
                              [
-                               "corpora",
                                "dictionary",
                                "options",
                                "visibility",
@@ -210,11 +204,10 @@ template("fuzz_package") {
     ]
   }
 
-  # Collect components for the fuzz targets listed in this package based on the
-  # variants selected in args.gn and filter by the package's list of supported
-  # sanitizers.
-  fuzz_components = []
-  host_fuzzers = []
+  # Collect the selected fuzz targets listed in this package based on the
+  # variants selected in args.gn and filtered by the package's list of
+  # supported sanitizers.
+  selected_targets = []
   foreach(fuzz_target, invoker.targets) {
     selected = false
     foreach(sanitizer, sanitizers) {
@@ -226,8 +219,7 @@ template("fuzz_package") {
              (defined(selector.output_name) &&
               selector.output_name == [ fuzz_target ]))) {
           selected = true
-          fuzz_components += [ "${fuzz_target}_component" ]
-          host_fuzzers += [ fuzz_target ]
+          selected_targets += [ fuzz_target ]
         }
       }
     }
@@ -237,7 +229,7 @@ template("fuzz_package") {
   }
 
   # Assemble the Fuchsia package
-  if (fuzz_components != []) {
+  if (selected_targets != []) {
     package(target_name) {
       components = []
       forward_variables_from(invoker, [ "visibility" ])
@@ -250,7 +242,9 @@ template("fuzz_package") {
                                "fuzz_host",
                              ])
       testonly = true
-      components += fuzz_components
+      foreach(selected_target, selected_targets) {
+        components += [ "${selected_target}_component" ]
+      }
     }
   } else {
     # Dummy package for non-fuzzed builds
@@ -263,9 +257,7 @@ template("fuzz_package") {
   group("host_${target_name}") {
     testonly = true
     if (defined(invoker.fuzz_host) && invoker.fuzz_host) {
-      deps = host_fuzzers
-    } else {
-      not_needed([ "host_fuzzers" ])
+      deps = selected_targets
     }
   }
 }
