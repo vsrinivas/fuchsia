@@ -882,6 +882,7 @@ group("vulkan") {
 group("magma") {
   testonly = true
   public_deps = [
+    "//garnet/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
     "//garnet/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
     "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_integration_tests",
     "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_nonhardware_tests",

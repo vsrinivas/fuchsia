@@ -155,6 +155,9 @@ test_package("msd-arm-mali-integration-tests") {
     tests += [
       {
         name = "msd_arm_mali_integration_tests"
+
+        # This test can only run on VIM2, which isn't targetable yet.
+        disabled = true
       },
     ]
   }

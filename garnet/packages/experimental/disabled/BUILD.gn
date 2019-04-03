@@ -65,13 +65,6 @@ group("dev_escher_linux") {
   ]
 }
 
-group("tests_magma") {
-  testonly = true
-  public_deps = [
-    "//garnet/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
-  ]
-}
-
 group("screenshot_layer") {
   testonly = true
   public_deps = [
