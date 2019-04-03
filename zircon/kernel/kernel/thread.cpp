@@ -1191,7 +1191,13 @@ thread_t* thread_create_idle_thread(cpu_num_t cpu_num) {
     DEBUG_ASSERT(cpu_num != 0 && cpu_num < SMP_MAX_CPUS);
 
     // Shouldn't be initialized yet
-    DEBUG_ASSERT(percpu[cpu_num].idle_thread.magic != THREAD_MAGIC);
+    // ZX-3672: if the idle thread appears initialized, dump some data
+    // around it
+    if (unlikely(percpu[cpu_num].idle_thread.magic != 0)) {
+        platform_panic_start();
+        hexdump(&percpu[cpu_num].idle_thread, 256);
+        panic("ZX-3672: detected non zeroed idle thread for core %u\n", cpu_num);
+    }
 
     char name[16];
     snprintf(name, sizeof(name), "idle %u", cpu_num);
