@@ -10,7 +10,7 @@ You can find a modified [EBNF description of the FIDL grammar here](grammar.md).
 
 [TOC]
 
-## Syntax
+# Syntax
 
 FIDL provides a syntax for declaring named
 bits, constants, enums, structs, tables, unions, xunions, and protocols.
@@ -21,9 +21,9 @@ sequence of semicolon-delimited declarations. The order of declarations within a
 FIDL file, or among FIDL files within a library, is irrelevant. FIDL does not
 require (or support) forward declarations of any kind.
 
-### Tokens
+## Tokens
 
-#### Comments
+### Comments
 
 FIDL comments start with two (`//`) or three (`///`) forward slashes, continue
 to the end of the line, and can contain UTF-8 content (which is, of course, ignored).
@@ -42,17 +42,16 @@ struct Foo { // plain comment
 Note that documentation comments can also be provided via the
 [`[Doc]` attribute](attributes.md#Doc).
 
-#### Keywords
+### Keywords
 
 The following are keywords in FIDL.
 
 ```
-array, as, bits, bool, const, enum, float32, float64, handle, int8, int16,
-int32, int64, library, protocol, request, string, struct, table, uint8,
-uint16, uint32, uint64, union, using, xunion, vector
+as, bits, compose, const, enum, library,
+protocol, struct, table, union, using, xunion.
 ```
 
-#### Identifiers
+### Identifiers
 
 FIDL identifiers must match the regex `[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?`.
 
@@ -76,7 +75,7 @@ struct struct { };
 > and should the be considered on a case-by-case basis. See the `Names` section of the
 > [Readability Rubric](../../../api/fidl.md#Names)
 
-#### Qualified Identifiers
+### Qualified Identifiers
 
 FIDL always looks for unqualified symbols within the scope of the current
 library. To reference symbols in other libraries, they must be qualified by
@@ -109,12 +108,12 @@ struct Color {
 };
 ```
 
-#### Literals
+### Literals
 
 FIDL supports integer, floating point, boolean, string, and enumeration literals, using
 a simplified syntax familiar to C programmers (see below for examples).
 
-#### Constants
+### Constants
 
 FIDL supports the following constant types: bits, booleans, signed and unsigned
 integers, floating point values, strings, and enumerations.
@@ -143,7 +142,7 @@ constant expressions.
 > you *cannot* declare a constant as having the value `6 + 5`, for
 > example.
 
-#### Default Initialization
+### Default Initialization
 
 Primitive structure members may have initialization values specified
 in the declaration.
@@ -172,12 +171,12 @@ There is a subtlety about the semantics and what defaults mean:
     * then it MAY provide support that programmers can optoinally
       invoke (e.g., a macro in C).
 
-#### Declaration Separator
+### Declaration Separator
 
 FIDL uses the semi-colon **';'** to separate adjacent declarations within the
 file, much like C.
 
-### Libraries
+## Libraries
 
 Libraries are named containers of FIDL declarations.
 
@@ -223,9 +222,9 @@ FIDL library "fuchsia.ui" within the C++ namespace
 have their own module system, each FIDL library is compiled as a
 module for that language.
 
-### Types and Type Declarations
+## Types and Type Declarations
 
-#### Primitives
+### Primitives
 
 *   Simple value types.
 *   Not nullable.
@@ -240,9 +239,9 @@ The following primitive types are supported:
 Numbers are suffixed with their size in bits, **`bool`** is 1
 byte.
 
-We also alias **`byte`** to mean `uint8`.
+We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built_in-aliases).
 
-##### Use
+#### Use
 
 ```fidl
 // A record which contains fields of a few primitive types.
@@ -255,7 +254,7 @@ struct Sprite {
 };
 ```
 
-#### Bits
+### Bits
 
 *   Named bit types.
 *   Discrete subset of bit values chosen from an underlying integer primitive
@@ -263,7 +262,7 @@ struct Sprite {
 *   Not nullable.
 *   Bits must have at least one member.
 
-##### Use
+#### Use
 
 ```fidl
 // Bit definitions for Info.features field
@@ -274,7 +273,7 @@ bits InfoFeatures : uint32 {
 };
 ```
 
-#### Enums
+### Enums
 
 *   Proper enumerated types.
 *   Discrete subset of named values chosen from an underlying integer primitive
@@ -282,7 +281,7 @@ bits InfoFeatures : uint32 {
 *   Not nullable.
 *   Enums must have at least one member.
 
-##### Declaration
+#### Declaration
 
 The ordinal index is **required** for each enum element. The underlying type of
 an enum must be one of: **int8, uint8, int16, uint16, int32, uint32, int64,
@@ -307,7 +306,7 @@ enum Vessel {
 };
 ```
 
-##### Use
+#### Use
 
 Enum types are denoted by their identifier, which may be qualified if needed.
 
@@ -319,14 +318,14 @@ struct Order {
 };
 ```
 
-#### Arrays
+### Arrays
 
 *   Fixed-length sequences of homogeneous elements.
 *   Elements can be of any type including: primitives, enums, arrays, strings,
     vectors, handles, structs, tables, unions.
 *   Not nullable themselves; may contain nullable types.
 
-##### Use
+#### Use
 
 Arrays are denoted **`array<T>:n`** where _T_ can
 be any FIDL type (including an array) and _n_ is a positive
@@ -344,14 +343,14 @@ struct Record {
 };
 ```
 
-#### Strings
+### Strings
 
 *   Variable-length sequence of UTF-8 encoded characters representing text.
 *   Nullable; null strings and empty strings are distinct.
 *   Can specify a maximum size, eg. **`string:40`** for a
     maximum 40 byte string.
 
-##### Use
+#### Use
 
 Strings are denoted as follows:
 
@@ -379,7 +378,7 @@ struct Record {
 > [Should I use string or vector?](../../../api/fidl.md#should-i-use-string-or-vector)
 > for details.
 
-#### Vectors
+### Vectors
 
 *   Variable-length sequence of homogeneous elements.
 *   Nullable; null vectors and empty vectors are distinct.
@@ -387,10 +386,11 @@ struct Record {
     maximum 40 element vector.
 *   There is no special case for vectors of bools. Each bool element takes one
     byte as usual.
-*   We alias **`bytes`** to mean `vector<uint8>`, and it can be size bound in a
-    similar fashion e.g. `bytes:1024`.
+*   We have a [built-in alias](#built_in-aliases) for **`bytes`** to mean
+    `vector<uint8>`, and it can be size bound in a similar fashion e.g.
+    `bytes:1024`.
 
-##### Use
+#### Use
 
 Vectors are denoted as follows:
 
@@ -423,13 +423,13 @@ struct Record {
 };
 ```
 
-#### Handles
+### Handles
 
 *   Transfers a Zircon capability by handle value.
 *   Stored as a 32-bit unsigned integer.
 *   Nullable by encoding as a zero-valued handle.
 
-##### Use
+#### Use
 
 Handles are denoted:
 
@@ -457,7 +457,7 @@ struct Record {
 };
 ```
 
-#### Structs
+### Structs
 
 *   Record type consisting of a sequence of typed fields.
 *   Declaration is not intended to be modified once deployed; use interface
@@ -465,7 +465,7 @@ struct Record {
 *   Reference may be nullable.
 *   Structs contain zero or more members.
 
-##### Declaration
+#### Declaration
 
 ```fidl
 struct Point {
@@ -496,14 +496,14 @@ struct Circle {
 };
 ```
 
-#### Tables
+### Tables
 
 *   Record type consisting of a sequence of typed fields with ordinals.
 *   Declaration is intended for forward and backward compatibility in the face of schema changes.
 *   Reference may be nullable.
 *   Tables contain zero or more members.
 
-##### Declaration
+#### Declaration
 
 ```fidl
 table Profile {
@@ -539,7 +539,7 @@ table Profile {
 };
 ```
 
-#### Unions
+### Unions
 
 *   Tagged option type consisting of tag field and variadic contents.
 *   Declaration is not intended to be modified once deployed; use protocol
@@ -548,7 +548,7 @@ table Profile {
 *   Unions contain one or more members. A union with no members would have
     no inhabitants and thus would make little sense in a wire format.
 
-##### Declaration
+#### Declaration
 
 ```fidl
 union Pattern {
@@ -563,14 +563,14 @@ struct Color {
 struct Texture { string name; };
 ```
 
-##### Use
+#### Use
 
 Unions are denoted by their declared name (eg. **Pattern**) and nullability:
 
 *   **`Pattern`** : non-nullable Pattern
 *   **`Pattern?`** : nullable Pattern
 
-#### Xunions
+### Xunions
 
 *   Record type consisting of an ordinal and an envelope.
 *   Ordinal indicates member selection, envelope holds contents.
@@ -580,7 +580,7 @@ Unions are denoted by their declared name (eg. **Pattern**) and nullability:
 *   Xunions contain one or more members. An xunion with no members would have
     no inhabitants and thus would make little sense in a wire format.
 
-##### Declaration
+#### Declaration
 
 ```fidl
 xunion Value {
@@ -590,14 +590,14 @@ xunion Value {
 };
 ```
 
-##### Use
+#### Use
 
 Xunions are denoted by their declared name (eg. **Value**) and nullability:
 
 *   **`Value`** : non-nullable Value
 *   **`Value?`** : nullable Value
 
-#### Protocols
+### Protocols
 
 *   Describe methods which can be invoked by sending messages over a channel.
 *   Methods are identified by their ordinal index. The compiler calculates the ordinal by
@@ -628,7 +628,7 @@ Xunions are denoted by their declared name (eg. **Value**) and nullability:
     error codes.  Positive values are reserved for application errors.  A status
     of ZX_OK indicates successful operation.
 
-##### Declaration
+#### Declaration
 
 ```fidl
 protocol Calculator {
@@ -655,7 +655,7 @@ protocol ScientificCalculator : RealCalculator, Science {
 };
 ```
 
-##### Use
+#### Use
 
 Protocols are denoted by their name, directionality of the channel, and
 optionality:
@@ -681,7 +681,7 @@ struct Record {
     RealCalculator? r;
 };
 ```
-#### Protocol Composition
+### Protocol Composition
 
 A protocol can include methods from other protocols.
 This is called composition: you compose one protocol from other protocols.
@@ -690,7 +690,7 @@ Composition is used in the following cases:
 1. you have multiple protocols that all share some common behavior(s)
 2. you have varying levels of functionality you want to expose to different audiences
 
-##### Common behavior
+#### Common behavior
 
 In the first case, there might be behavior that's shared across multiple protocols.
 For example, in a graphics system, several different protocols might all share a
@@ -762,7 +762,7 @@ protocol SceneryController {
 
 we've now extended both `Drawer` and `Writer` to be able to support alpha blending.
 
-##### Multiple compositions
+#### Multiple compositions
 
 Composition is not a one-to-one relationship &mdash; we can include multiple compositions
 into a given protocol, and not all protocols need be composed of the same mix of
@@ -801,7 +801,7 @@ without disturbing the `Drawer` protocol (which doesn't need to know anything ab
 Protocol composition is similar to [mixin].
 More details are discussed in [FTP-023: Compositional Model][ftp-023].
 
-##### Layering
+#### Layering
 
 At the beginning of this section, we mentioned a second use for composition, namely
 exposing various levels of functionality to different audiences.
@@ -836,7 +836,71 @@ protocol SystemClock {
 }
 ```
 
+### Aliasing
+
+Type aliasing is supported.
+For example:
+
+```fidl
+using StoryID = string:MAX_SIZE;
+using up_to_five = vector:5;
+```
+
+In the above, the identifier `StoryID` is an alias for the declaration of a `string`
+with a maximum size of `MAX_SIZE`.
+The identifier `up_to_five` is an alias for a vector declaration of five elements.
+
+The identifiers `StoryID` and `up_to_five` can be used wherever their aliased
+definitions can be used.
+Consider:
+
+```fidl
+struct Message {
+    StoryID baseline;
+    up_to_five<StoryID> chapters;
+};
+```
+
+Here, the `Message` struct contains a string of `MAX_SIZE` bytes called `baseline`,
+and a vector of up to `5` strings of `MAX_SIZE` called `chapters`.
+
+Note that **`byte`** and **`bytes`** are built in aliases, [see below](#built_in-aliases).
+
+### Built-ins
+
+FIDL provides several built-ins:
+
+* convenience types (**`byte`** and **`bytes`**)
+* `zx library` [see below](#zx-library)
+
+#### Built-in aliases
+
+The types **`byte`** and **`bytes`** are built-in, and are conceptually
+equivalent to:
+
+```fidl
+library builtin;
+
+using byte = uint8;
+using bytes = vector<byte>;
+```
+
+When you refer to a name without specific scope, e.g.:
+
+```fidl
+struct SomeName {
+    byte here;
+};
+```
+
+we treat this as `builtin.byte` automatically (so long as there isn't a
+more-specific name in scope).
+
+#### ZX Library
+
+The `fidlc` compiler automatically generates an internal [ZX library](library-zx.md)
+for you that contains commonly used Zircon definitions.
+
 <!-- xref -->
 [mixin]: https://en.wikipedia.org/wiki/Mixin
 [ftp-023]: /docs/development/languages/fidl/reference/ftp/ftp-023.md
-
