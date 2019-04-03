@@ -5,6 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/gpio.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 
@@ -17,6 +18,7 @@
 #include "vim.h"
 
 namespace vim {
+
 // S905X and S912 have same MMIO addresses
 static const pbus_mmio_t gpio_mmios[] = {
     {
@@ -77,6 +79,21 @@ static const pbus_irq_t gpio_irqs[] = {
     },
 };
 
+// GPIOs to expose from generic GPIO driver.
+static const gpio_pin_t gpio_pins[] = {
+    // For wifi.
+    { S912_WIFI_SDIO_WAKE_HOST },
+    { S912_GPIODV(13) },
+};
+
+static const pbus_metadata_t gpio_metadata[] = {
+    {
+        .type = DEVICE_METADATA_GPIO_PINS,
+        .data_buffer = &gpio_pins,
+        .data_size = sizeof(gpio_pins),
+    }
+};
+
 zx_status_t Vim::GpioInit() {
 
     pbus_dev_t gpio_dev = {};
@@ -88,6 +105,8 @@ zx_status_t Vim::GpioInit() {
     gpio_dev.mmio_count = countof(gpio_mmios);
     gpio_dev.irq_list = gpio_irqs;
     gpio_dev.irq_count = countof(gpio_irqs);
+    gpio_dev.metadata_list = gpio_metadata;
+    gpio_dev.metadata_count = countof(gpio_metadata);
 
     zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
     if (status != ZX_OK) {

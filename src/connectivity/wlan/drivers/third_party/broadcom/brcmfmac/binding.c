@@ -20,6 +20,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/platform-defs.h>
 #include <zircon/types.h>
 #include <hw/pci.h>
 
@@ -34,7 +35,7 @@ static zx_driver_ops_t brcmfmac_driver_ops = {
 };
 
 ZIRCON_DRIVER_BEGIN(brcmfmac, brcmfmac_driver_ops, "zircon", "0.1", 33)
-    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SDIO, 5910),
+    BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE, 5910),
     BI_GOTO_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_USB, 758),
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, BRCM_PCIE_VENDOR_ID_BROADCOM),
@@ -63,9 +64,10 @@ ZIRCON_DRIVER_BEGIN(brcmfmac, brcmfmac_driver_ops, "zircon", "0.1", 33)
     BI_ABORT_IF(NE, BIND_USB_VID, 0x043e),
     BI_MATCH_IF(EQ, BIND_USB_PID, 0x3101),
     BI_ABORT(),
+    // Composite binding used for SDIO.
     BI_LABEL(5910),
-    BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
-    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
-    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4359),
-    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4356), // Used in VIM2 Basic
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_BROADCOM),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_DID, PDEV_DID_BCM_WIFI),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_BCM4356),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_BCM43458),
 ZIRCON_DRIVER_END(brcmfmac)

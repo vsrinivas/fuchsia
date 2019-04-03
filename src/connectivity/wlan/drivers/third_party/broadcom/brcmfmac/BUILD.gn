@@ -91,6 +91,7 @@ source_set("brcmfmac_srcs") {
 
   deps = [
     "//garnet/lib/wlan/protocol",
+    "//zircon/public/banjo/ddk-protocol-composite",
     "//zircon/public/banjo/ddk-protocol-ethernet",
     "//zircon/public/banjo/ddk-protocol-gpio",
     "//zircon/public/banjo/ddk-protocol-pci",

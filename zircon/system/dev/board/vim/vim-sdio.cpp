@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <fbl/algorithm.h>
 #include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <soc/aml-common/aml-sd-emmc.h>
@@ -15,50 +17,6 @@
 #include "vim.h"
 
 namespace vim {
-static const pbus_gpio_t wifi_gpios[] = {
-    {
-        .gpio = S912_WIFI_SDIO_WAKE_HOST,
-    },
-    {
-        // For debugging purposes.
-        .gpio = S912_GPIODV(13),
-    },
-};
-
-static const wifi_config_t wifi_config = {
-    .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-};
-
-static const pbus_metadata_t wifi_metadata[] = {
-    {
-        .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &wifi_config,
-        .data_size = sizeof(wifi_config),
-    }};
-
-static const pbus_dev_t sdio_children[] = {
-    []() {
-        // Wifi driver.
-        pbus_dev_t dev;
-        dev.name = "vim2-wifi";
-        dev.gpio_list = wifi_gpios;
-        dev.gpio_count = countof(wifi_gpios);
-        dev.metadata_list = wifi_metadata;
-        dev.metadata_count = countof(wifi_metadata);
-        return dev;
-    }(),
-};
-
-static const pbus_dev_t aml_sd_emmc_children[] = {
-    []() {
-        // Generic SDIO driver.
-        pbus_dev_t dev;
-        dev.name = "sdio";
-        dev.child_list = sdio_children;
-        dev.child_count = countof(sdio_children);
-        return dev;
-    }(),
-};
 
 static const pbus_mmio_t aml_sd_emmc_mmios[] = {
     {
@@ -94,12 +52,23 @@ static aml_sd_emmc_config_t config = {
     .max_freq = 100000000,
 };
 
+static const wifi_config_t wifi_config = {
+    .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+};
+
+
 static const pbus_metadata_t aml_sd_emmc_metadata[] = {
     {
-        .type = DEVICE_METADATA_PRIVATE,
+        .type = DEVICE_METADATA_EMMC_CONFIG,
         .data_buffer = &config,
         .data_size = sizeof(config),
-    }};
+    },
+    {
+        .type = DEVICE_METADATA_WIFI_CONFIG,
+        .data_buffer = &wifi_config,
+        .data_size = sizeof(wifi_config),
+    },
+};
 
 static const pbus_dev_t aml_sd_emmc_dev = []() {
     pbus_dev_t dev;
@@ -118,10 +87,45 @@ static const pbus_dev_t aml_sd_emmc_dev = []() {
     dev.bti_count = countof(aml_sd_emmc_btis);
     dev.metadata_list = aml_sd_emmc_metadata;
     dev.metadata_count = countof(aml_sd_emmc_metadata);
-    dev.child_list = aml_sd_emmc_children;
-    dev.child_count = countof(aml_sd_emmc_children);
     return dev;
 }();
+
+// Composite binding rules for wifi driver.
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t sdio_match[]  = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO),
+    BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4359),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4356), // Used in VIM2 Basic
+};
+static const zx_bind_inst_t oob_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, S912_WIFI_SDIO_WAKE_HOST),
+};
+static const zx_bind_inst_t debug_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, S912_GPIODV(13)),
+};
+static const device_component_part_t sdio_component[] = {
+    { fbl::count_of(root_match), root_match },
+    { fbl::count_of(sdio_match), sdio_match },
+};
+static const device_component_part_t oob_gpio_component[] = {
+    { fbl::count_of(root_match), root_match },
+    { fbl::count_of(oob_gpio_match), oob_gpio_match },
+};
+static const device_component_part_t debug_gpio_component[] = {
+    { fbl::count_of(root_match), root_match },
+    { fbl::count_of(debug_gpio_match), debug_gpio_match },
+};
+static const device_component_t wifi_composite[] = {
+    { fbl::count_of(sdio_component), sdio_component },
+    { fbl::count_of(oob_gpio_component), oob_gpio_component },
+    { fbl::count_of(debug_gpio_component), debug_gpio_component },
+};
 
 zx_status_t Vim::SdioInit() {
     zx_status_t status;
@@ -136,6 +140,20 @@ zx_status_t Vim::SdioInit() {
 
     if ((status = pbus_.DeviceAdd(&aml_sd_emmc_dev)) != ZX_OK) {
         zxlogf(ERROR, "SdioInit could not add aml_sd_emmc_dev: %d\n", status);
+        return status;
+    }
+
+    // Add a composite device for wifi driver.
+    constexpr zx_device_prop_t props[] = {
+        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_BROADCOM },
+        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_BCM4356 },
+        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_BCM_WIFI },
+    };
+
+    status = DdkAddComposite("wifi", props, fbl::count_of(props), wifi_composite,
+                             fbl::count_of(wifi_composite), 0);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: device_add_composite failed: %d\n", __func__, status);
         return status;
     }
 

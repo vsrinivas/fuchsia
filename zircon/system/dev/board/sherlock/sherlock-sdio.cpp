@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <ddktl/protocol/gpioimpl.h>
+#include <fbl/algorithm.h>
 #include <hw/reg.h>
 #include <lib/zx/handle.h>
 #include <soc/aml-common/aml-sd-emmc.h>
@@ -22,53 +24,12 @@ namespace sherlock {
 
 namespace {
 
-constexpr pbus_gpio_t wifi_gpios[] = {
-    {
-        .gpio = T931_WIFI_HOST_WAKE,
-    },
-};
-
-constexpr wifi_config_t wifi_config = {
-    .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-};
-
-constexpr pbus_metadata_t wifi_metadata[] = {
-    {
-        .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &wifi_config,
-        .data_size = sizeof(wifi_config),
-    },
-};
 
 constexpr pbus_boot_metadata_t wifi_boot_metadata[] = {
     {
         .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
         .zbi_extra = MACADDR_WIFI,
     },
-};
-
-const pbus_dev_t sdio_children[] = {
-    []() {
-        pbus_dev_t dev;
-        dev.name = "sherlock-wifi";
-        dev.gpio_list = wifi_gpios;
-        dev.gpio_count = countof(wifi_gpios);
-        dev.metadata_list = wifi_metadata;
-        dev.metadata_count = countof(wifi_metadata);
-        dev.boot_metadata_list = wifi_boot_metadata;
-        dev.boot_metadata_count = countof(wifi_boot_metadata);
-        return dev;
-    }(),
-};
-
-const pbus_dev_t sd_emmc_children[] = {
-    []() {
-        pbus_dev_t dev;
-        dev.name = "sherlock-sdio";
-        dev.child_list = sdio_children;
-        dev.child_count = countof(sdio_children);
-        return dev;
-    }(),
 };
 
 constexpr pbus_mmio_t sd_emmc_mmios[] = {
@@ -104,11 +65,20 @@ constexpr aml_sd_emmc_config_t sd_emmc_config = {
     .max_freq = 50000000, // 50MHz
 };
 
+constexpr wifi_config_t wifi_config = {
+    .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+};
+
 constexpr pbus_metadata_t sd_emmc_metadata[] = {
     {
-        .type = DEVICE_METADATA_PRIVATE,
+        .type = DEVICE_METADATA_EMMC_CONFIG,
         .data_buffer = &sd_emmc_config,
         .data_size = sizeof(sd_emmc_config),
+    },
+    {
+        .type = DEVICE_METADATA_WIFI_CONFIG,
+        .data_buffer = &wifi_config,
+        .data_size = sizeof(wifi_config),
     },
 };
 
@@ -128,10 +98,37 @@ const pbus_dev_t sdio_dev = []() {
     dev.gpio_count = countof(sd_emmc_gpios);
     dev.metadata_list = sd_emmc_metadata;
     dev.metadata_count = countof(sd_emmc_metadata);
-    dev.child_list = sd_emmc_children;
-    dev.child_count = countof(sd_emmc_children);
+    dev.boot_metadata_list = wifi_boot_metadata;
+    dev.boot_metadata_count = countof(wifi_boot_metadata);
     return dev;
 }();
+
+// Composite binding rules for wifi driver.
+constexpr zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+constexpr zx_bind_inst_t sdio_match[]  = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO),
+    BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4359),
+};
+constexpr zx_bind_inst_t oob_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, T931_WIFI_HOST_WAKE),
+};
+constexpr device_component_part_t sdio_component[] = {
+    { fbl::count_of(root_match), root_match },
+    { fbl::count_of(sdio_match), sdio_match },
+};
+constexpr device_component_part_t oob_gpio_component[] = {
+    { fbl::count_of(root_match), root_match },
+    { fbl::count_of(oob_gpio_match), oob_gpio_match },
+};
+constexpr device_component_t wifi_composite[] = {
+    { fbl::count_of(sdio_component), sdio_component },
+    { fbl::count_of(oob_gpio_component), oob_gpio_component },
+};
 
 } // namespace
 
@@ -196,6 +193,21 @@ zx_status_t Sherlock::SdioInit() {
         zxlogf(ERROR, "%s: DeviceAdd() error: %d\n", __func__, status);
         return status;
     }
+
+    // Add a composite device for wifi driver.
+    constexpr zx_device_prop_t props[] = {
+        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_BROADCOM },
+        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_BCM43458 },
+        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_BCM_WIFI },
+    };
+
+    status = DdkAddComposite("wifi", props, fbl::count_of(props), wifi_composite,
+                             fbl::count_of(wifi_composite), 0);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: device_add_composite failed: %d\n", __func__, status);
+        return status;
+    }
+
     return ZX_OK;
 }
 

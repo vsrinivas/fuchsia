@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/mmio-buffer.h>
@@ -14,50 +15,10 @@
 
 #include "astro.h"
 
-static const pbus_gpio_t wifi_gpios[] = {
-    {
-        .gpio = S905D2_WIFI_SDIO_WAKE_HOST,
-    },
-};
-
-static const wifi_config_t wifi_config = {
-    .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
-};
-
-static const pbus_metadata_t wifi_metadata[] = {
-    {
-        .type        = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &wifi_config,
-        .data_size   = sizeof(wifi_config),
-    }
-};
-
 static const pbus_boot_metadata_t wifi_boot_metadata[] = {
     {
         .zbi_type = DEVICE_METADATA_MAC_ADDRESS,
         .zbi_extra = MACADDR_WIFI,
-    },
-};
-
-static const pbus_dev_t sdio_children[] = {
-    {
-        // Wifi driver.
-        .name = "astro-wifi",
-        .gpio_list = wifi_gpios,
-        .gpio_count = countof(wifi_gpios),
-        .metadata_list = wifi_metadata,
-        .metadata_count = countof(wifi_metadata),
-        .boot_metadata_list = wifi_boot_metadata,
-        .boot_metadata_count = countof(wifi_boot_metadata),
-    },
-};
-
-static const pbus_dev_t aml_sd_emmc_children[] = {
-    {
-        // Generic SDIO driver.
-        .name = "sdio",
-        .child_list = sdio_children,
-        .child_count = countof(sdio_children),
     },
 };
 
@@ -102,12 +63,21 @@ static aml_sd_emmc_config_t config = {
     .max_freq = 50000000,
 };
 
+static const wifi_config_t wifi_config = {
+    .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
+};
+
 static const pbus_metadata_t aml_sd_emmc_metadata[] = {
     {
-        .type        = DEVICE_METADATA_PRIVATE,
+        .type        = DEVICE_METADATA_EMMC_CONFIG,
         .data_buffer = &config,
         .data_size   = sizeof(config),
-    }
+    },
+    {
+        .type        = DEVICE_METADATA_WIFI_CONFIG,
+        .data_buffer = &wifi_config,
+        .data_size   = sizeof(wifi_config),
+    },
 };
 
 static const pbus_dev_t aml_sd_emmc_dev = {
@@ -125,8 +95,35 @@ static const pbus_dev_t aml_sd_emmc_dev = {
     .gpio_count = countof(aml_sd_emmc_gpios),
     .metadata_list = aml_sd_emmc_metadata,
     .metadata_count = countof(aml_sd_emmc_metadata),
-    .child_list = aml_sd_emmc_children,
-    .child_count = countof(aml_sd_emmc_children),
+    .boot_metadata_list = wifi_boot_metadata,
+    .boot_metadata_count = countof(wifi_boot_metadata),
+};
+
+// Composite binding rules for wifi driver.
+static const zx_bind_inst_t root_match[] = {
+    BI_MATCH(),
+};
+static const zx_bind_inst_t sdio_match[]  = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO),
+    BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
+    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4359),
+};
+static const zx_bind_inst_t oob_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, S905D2_WIFI_SDIO_WAKE_HOST),
+};
+static const device_component_part_t sdio_component[] = {
+    { countof(root_match), root_match },
+    { countof(sdio_match), sdio_match },
+};
+static const device_component_part_t oob_gpio_component[] = {
+    { countof(root_match), root_match },
+    { countof(oob_gpio_match), oob_gpio_match },
+};
+static const device_component_t wifi_composite[] = {
+    { countof(sdio_component), sdio_component },
+    { countof(oob_gpio_component), oob_gpio_component },
 };
 
 static zx_status_t aml_sd_emmc_configure_portB(aml_bus_t* bus) {
@@ -211,6 +208,20 @@ zx_status_t aml_sdio_init(aml_bus_t* bus) {
 
     if ((status = pbus_device_add(&bus->pbus, &aml_sd_emmc_dev)) != ZX_OK) {
         zxlogf(ERROR, "aml_sdio_init could not add aml_sd_emmc_dev: %d\n", status);
+        return status;
+    }
+
+    // Add a composite device for wifi driver.
+    const zx_device_prop_t props[] = {
+        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_BROADCOM },
+        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_BCM43458 },
+        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_BCM_WIFI },
+    };
+
+    status = device_add_composite(bus->parent, "wifi", props, countof(props), wifi_composite,
+                                  countof(wifi_composite), 0);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: device_add_composite failed: %d\n", __func__, status);
         return status;
     }
 

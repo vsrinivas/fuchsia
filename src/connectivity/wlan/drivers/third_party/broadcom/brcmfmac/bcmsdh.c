@@ -16,7 +16,6 @@
 /* ****************** SDIO CARD Interface Functions **************************/
 
 // TODO(cphoenix): Do we need sdio, completion, status, stdatomic, threads?
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sdio.h>
 #include <ddk/metadata.h>
 #include <ddk/trace/event.h>
@@ -78,41 +77,7 @@ static void brcmf_sdiod_dummy_irqhandler(struct brcmf_sdio_dev* sdiodev) {}
 
 zx_status_t brcmf_sdiod_configure_oob_interrupt(struct brcmf_sdio_dev* sdiodev,
                                                 wifi_config_t *config) {
-    pdev_protocol_t pdev;
-    zx_status_t ret = ZX_OK;
-
-    if ((ret = device_get_protocol(sdiodev->dev.zxdev, ZX_PROTOCOL_PDEV, &pdev))
-                                                                                != ZX_OK) {
-        zxlogf(ERROR, "brcmf_sdiod_intr_register: ZX_PROTOCOL_PDEV not available\n");
-        //TODO: This driver could be run on X64 platforms. When X64 platforms have parallel apis,
-        // we need to check for those apis instead of returning an error.
-        return ZX_ERR_INTERNAL;
-    }
-
-    pdev_device_info_t info;
-    ret = pdev_get_device_info(&pdev, &info);
-    if (ret != ZX_OK) {
-        zxlogf(ERROR, "brcmf_sdiod_intr_register: pdev_get_device_info failed: %d\n", ret);
-        return ret;
-    }
-
-    if (info.gpio_count < 1) {
-        zxlogf(ERROR, "brcmf_sdiod_intr_register: OOB gpio not available\n");
-        return ZX_ERR_INTERNAL;
-    }
-    const size_t size = sizeof(sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX]);
-    size_t actual;
-    if ((ret = pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, WIFI_OOB_IRQ_GPIO_INDEX,
-                                 &sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX], size,
-                                 &actual)) != ZX_OK) {
-        zxlogf(ERROR, "brcmf_sdiod_intr_register: GPIO WIFI_OOB_IRQ_GPIO_INDEX not available\n");
-        return ret;
-    }
-    // Debug GPIO is optional.
-    pdev_get_protocol(&pdev, ZX_PROTOCOL_GPIO, DEBUG_GPIO_INDEX, &sdiodev->gpios[DEBUG_GPIO_INDEX],
-                      size, &actual);
-
-    ret = gpio_config_in(&sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX], GPIO_NO_PULL);
+    zx_status_t ret = gpio_config_in(&sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX], GPIO_NO_PULL);
     if (ret != ZX_OK) {
         zxlogf(ERROR, "brcmf_sdiod_intr_register: gpio_config failed: %d\n", ret);
         return ret;
@@ -155,7 +120,7 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
     pdata->oob_irq_supported = false;
     wifi_config_t config;
     size_t actual;
-    ret = device_get_metadata(sdiodev->dev.zxdev, DEVICE_METADATA_PRIVATE,
+    ret = device_get_metadata(sdiodev->dev.zxdev, DEVICE_METADATA_WIFI_CONFIG,
                               &config, sizeof(wifi_config_t), &actual);
     if ((ret != ZX_OK && ret != ZX_ERR_NOT_FOUND) ||
         (ret == ZX_OK && actual != sizeof(wifi_config_t))) {
@@ -889,9 +854,10 @@ static void brcmf_sdiod_acpi_set_power_manageable(struct brcmf_device* dev, int 
 #endif
 }
 
-zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto) {
+zx_status_t brcmf_sdio_register(zx_device_t* zxdev, composite_protocol_t* composite_proto) {
     zx_status_t err;
     struct brcmf_device* dev;
+    zx_status_t status;
 
     struct brcmf_bus* bus_if = NULL;
     struct sdio_func* func1 = NULL;
@@ -899,8 +865,49 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto)
     struct brcmf_sdio_dev* sdiodev = NULL;
 
     brcmf_dbg(SDIO, "Enter\n");
+
+    uint32_t component_count = composite_get_component_count(composite_proto);
+    if (component_count < 2) {
+        brcmf_err("Not enough components (need atleast 2, have %u)", component_count);
+        return ZX_ERR_INTERNAL;
+    }
+    // One for SDIO, one or two GPIOs.
+    zx_device_t* components[COMPONENT_COUNT];
+    size_t actual;
+    composite_get_components(composite_proto, components, countof(components), &actual);
+    if (actual < 2) {
+        brcmf_err("Not enough components (need atleast 2, have %zu)", actual);
+        return ZX_ERR_INTERNAL;
+    }
+
+    sdio_protocol_t sdio_proto;
+    gpio_protocol_t gpio_protos[GPIO_COUNT];
+    bool has_debug_gpio = false;
+
+    status = device_get_protocol(components[COMPONENT_SDIO], ZX_PROTOCOL_SDIO, &sdio_proto);
+    if (status != ZX_OK) {
+        brcmf_err("ZX_PROTOCOL_SDIO not found, err=%d\n", status);
+        return status;
+    }
+    status = device_get_protocol(components[COMPONENT_OOB_GPIO], ZX_PROTOCOL_GPIO,
+                                 &gpio_protos[WIFI_OOB_IRQ_GPIO_INDEX]);
+    if (status != ZX_OK) {
+        brcmf_err("ZX_PROTOCOL_GPIO not found, err=%d\n", status);
+        return status;
+    }
+    // Debug GPIO is optional
+    if (component_count > 2) {
+        status = device_get_protocol(components[COMPONENT_DEBUG_GPIO], ZX_PROTOCOL_GPIO,
+                                     &gpio_protos[DEBUG_GPIO_INDEX]);
+        if (status != ZX_OK) {
+            brcmf_err("ZX_PROTOCOL_GPIO not found, err=%d\n", status);
+            return status;
+        }
+        has_debug_gpio = true;
+    }
+
     sdio_hw_info_t devinfo;
-    sdio_get_dev_hw_info(sdio_proto, &devinfo);
+    sdio_get_dev_hw_info(&sdio_proto, &devinfo);
     if (devinfo.dev_hw_info.num_funcs < 3) {
         brcmf_err("Not enough SDIO funcs (need 3, have %d)", devinfo.dev_hw_info.num_funcs);
         return ZX_ERR_IO;
@@ -963,8 +970,14 @@ zx_status_t brcmf_sdio_register(zx_device_t* zxdev, sdio_protocol_t* sdio_proto)
     }
     dev = &sdiodev->dev;
     dev->zxdev = zxdev;
-    memcpy(&sdiodev->sdio_proto, sdio_proto, sizeof(sdiodev->sdio_proto));
-
+    memcpy(&sdiodev->sdio_proto, &sdio_proto, sizeof(sdiodev->sdio_proto));
+    memcpy(&sdiodev->gpios[WIFI_OOB_IRQ_GPIO_INDEX], &gpio_protos[WIFI_OOB_IRQ_GPIO_INDEX],
+           sizeof(gpio_protos[WIFI_OOB_IRQ_GPIO_INDEX]));
+    if (has_debug_gpio) {
+        memcpy(&sdiodev->gpios[DEBUG_GPIO_INDEX], &gpio_protos[DEBUG_GPIO_INDEX],
+               sizeof(gpio_protos[DEBUG_GPIO_INDEX]));
+        sdiodev->has_debug_gpio = true;
+    }
     sdiodev->bus_if = bus_if;
     sdiodev->func1 = func1;
     sdiodev->func2 = func2;

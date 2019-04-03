@@ -518,7 +518,8 @@ static zx_status_t aml_gpio_bind(void* ctx, zx_device_t* parent) {
         .name = "aml-axg-gpio",
         .ctx = gpio,
         .ops = &gpio_device_proto,
-        .flags = DEVICE_ADD_NON_BINDABLE,
+        .proto_id = ZX_PROTOCOL_GPIO_IMPL,
+        .proto_ops = &gpio->gpio,
     };
 
     status = device_add(parent, &args, &gpio->zxdev);

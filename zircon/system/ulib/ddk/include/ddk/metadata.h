@@ -72,6 +72,12 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: clock_id_maps_t
 #define DEVICE_METADATA_CLOCK_MAPS                0x4D4B4C43 // CLKM
 
+// type: vendor specific eMMC configuration
+#define DEVICE_METADATA_EMMC_CONFIG               0x434D4D45 // EMMC
+
+// type: vendor specific Wifi configuration
+#define DEVICE_METADATA_WIFI_CONFIG               0x49464957 // WIFI
+
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
 // This allows creating metadata types to be defined local to a particular

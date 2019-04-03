@@ -4,6 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/gpio.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 
@@ -64,6 +66,20 @@ static const pbus_irq_t gpio_irqs[] = {
     },
 };
 
+// GPIOs to expose from generic GPIO driver.
+static const gpio_pin_t gpio_pins[] = {
+    // For wifi.
+    { T931_WIFI_HOST_WAKE },
+};
+
+static const pbus_metadata_t gpio_metadata[] = {
+    {
+        .type = DEVICE_METADATA_GPIO_PINS,
+        .data_buffer = &gpio_pins,
+        .data_size = sizeof(gpio_pins),
+    }
+};
+
 static pbus_dev_t gpio_dev = [](){
     pbus_dev_t dev;
     dev.name = "gpio";
@@ -74,6 +90,8 @@ static pbus_dev_t gpio_dev = [](){
     dev.mmio_count = countof(gpio_mmios);
     dev.irq_list = gpio_irqs;
     dev.irq_count = countof(gpio_irqs);
+    dev.metadata_list = gpio_metadata;
+    dev.metadata_count = countof(gpio_metadata);
     return dev;
 }();
 

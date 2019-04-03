@@ -172,6 +172,13 @@
 enum brcmf_sdiod_state { BRCMF_SDIOD_DOWN, BRCMF_SDIOD_DATA, BRCMF_SDIOD_NOMEDIUM };
 
 enum {
+    COMPONENT_SDIO,
+    COMPONENT_OOB_GPIO,
+    COMPONENT_DEBUG_GPIO,
+    COMPONENT_COUNT,
+};
+
+enum {
     WIFI_OOB_IRQ_GPIO_INDEX,
     DEBUG_GPIO_INDEX,
     GPIO_COUNT,
@@ -193,6 +200,7 @@ struct brcmf_sdio_dev {
     uint32_t product_id;
     sdio_protocol_t sdio_proto;
     gpio_protocol_t gpios[GPIO_COUNT];
+    bool has_debug_gpio;
     zx_handle_t irq_handle;
     thrd_t isr_thread;
     struct brcmf_device dev;

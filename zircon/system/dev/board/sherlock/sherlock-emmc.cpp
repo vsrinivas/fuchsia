@@ -65,7 +65,7 @@ static_assert(sizeof(guid_map) / sizeof(guid_map[0]) <= DEVICE_METADATA_GUID_MAP
 
 static const pbus_metadata_t emmc_metadata[] = {
     {
-        .type       = DEVICE_METADATA_PRIVATE,
+        .type       = DEVICE_METADATA_EMMC_CONFIG,
         .data_buffer       = &config,
         .data_size        = sizeof(config),
     },

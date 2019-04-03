@@ -967,7 +967,8 @@ zx_status_t AmlSdEmmc::Create(void* ctx, zx_device_t* parent) {
     // Populate board specific information
     aml_sd_emmc_config_t config;
     size_t actual;
-    status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &config, sizeof(config), &actual);
+    status = device_get_metadata(parent, DEVICE_METADATA_EMMC_CONFIG, &config, sizeof(config),
+                                 &actual);
     if (status != ZX_OK || actual != sizeof(config)) {
         zxlogf(ERROR, "AmlSdEmmc::Create: Failed to get metadata: %d\n", status);
         return status;

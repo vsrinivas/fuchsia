@@ -1266,12 +1266,12 @@ zx_status_t brcmf_core_init(zx_device_t* device) {
 #endif // CONFIG_BRCMFMAC_USB
 
 #ifdef CONFIG_BRCMFMAC_SDIO
-    sdio_protocol_t sdev;
-    result = device_get_protocol(device, ZX_PROTOCOL_SDIO, &sdev);
+    composite_protocol_t composite;
+    result = device_get_protocol(device, ZX_PROTOCOL_COMPOSITE, &composite);
     if (result == ZX_OK) {
-        result = brcmf_sdio_register(device, &sdev);
+        result = brcmf_sdio_register(device, &composite);
         if (result != ZX_OK) {
-            brcmf_err("USB driver registration failed, err=%d\n", result);
+            brcmf_err("SDIO driver registration failed, err=%d\n", result);
         }
         return result;
     }

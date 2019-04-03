@@ -4,6 +4,8 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
+#include <ddk/metadata/gpio.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 
@@ -69,6 +71,20 @@ static const pbus_irq_t gpio_irqs[] = {
     */
 };
 
+// GPIOs to expose from generic GPIO driver.
+static const gpio_pin_t gpio_pins[] = {
+    // For wifi.
+    { S905D2_WIFI_SDIO_WAKE_HOST },
+};
+
+static const pbus_metadata_t gpio_metadata[] = {
+    {
+        .type = DEVICE_METADATA_GPIO_PINS,
+        .data_buffer = &gpio_pins,
+        .data_size = sizeof(gpio_pins),
+    }
+};
+
 static pbus_dev_t gpio_dev = {
     .name = "gpio",
     .vid = PDEV_VID_AMLOGIC,
@@ -78,6 +94,8 @@ static pbus_dev_t gpio_dev = {
     .mmio_count = countof(gpio_mmios),
     .irq_list = gpio_irqs,
     .irq_count = countof(gpio_irqs),
+    .metadata_list = gpio_metadata,
+    .metadata_count = countof(gpio_metadata),
 };
 
 zx_status_t aml_gpio_init(aml_bus_t* bus) {
