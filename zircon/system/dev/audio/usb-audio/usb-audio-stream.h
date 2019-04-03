@@ -12,6 +12,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 #include <fuchsia/hardware/audio/c/fidl.h>
+#include <lib/zx/profile.h>
 #include <lib/zx/vmo.h>
 #include <usb/usb.h>
 #include <zircon/listnode.h>
@@ -173,6 +174,7 @@ private:
 
     // TODO(johngro) : See MG-940.  eliminate this ASAP
     bool req_complete_prio_bumped_ = false;
+    zx::profile profile_handle_;
 };
 
 }  // namespace usb

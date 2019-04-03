@@ -136,6 +136,14 @@ zx_status_t UsbAudioStream::Bind() {
             name, status);
     }
 
+    status = device_get_profile(zxdev_, 24 /* HIGH_PRIORITY in LK */,
+                                "zircon/system/dev/audio/usb-audio/usb-audio-stream",
+                                profile_handle_.reset_and_get_address());
+    if (status != ZX_OK) {
+        LOG(ERROR, "Failed to retrieve profile, status %d\n", status);
+        return status;
+    }
+
     return status;
 }
 
@@ -928,7 +936,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
     uint64_t complete_time = zx_clock_get_monotonic();
     Action when_finished = Action::NONE;
 
-    // TODO(johngro) : See MG-940.  Eliminate this as soon as we have a more
+    // TODO(johngro) : See ZX-940.  Eliminate this as soon as we have a more
     // official way of meeting real-time latency requirements.  Also, the fact
     // that this boosting gets done after the first transaction completes
     // degrades the quality of the startup time estimate (if the system is under
@@ -937,7 +945,7 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
     // the first transaction gets queued.  Therefor, we just have a poor
     // estimate for now and will need to live with the consequences.
     if (!req_complete_prio_bumped_) {
-        zx_thread_set_priority(24 /* HIGH_PRIORITY in LK */);
+        zx_object_set_profile(zx_thread_self(), profile_handle_.get(), 0);
         req_complete_prio_bumped_ = true;
     }
 
