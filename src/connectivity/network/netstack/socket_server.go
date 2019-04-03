@@ -92,7 +92,8 @@ func (ios *iostate) loopWrite() error {
 			case zx.ErrOk:
 				switch {
 				case obs&zx.SignalSocketReadDisabled != 0:
-				// The next Read will return zx.BadState.
+					// The next Read will return zx.BadState.
+					continue
 				case obs&zx.SignalSocketReadable != 0:
 					// The client might have written some data into the socket.
 					// Always continue to the 'for' loop below and try to read them
