@@ -16,8 +16,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/zx/resource.h>
+#include <src/lib/fxl/logging.h>
 #include <trace/event.h>
 #include <zircon/status.h>
 
@@ -250,6 +250,12 @@ std::chrono::seconds SystemMetricsDaemon::LogMemoryUsage() {
                     stats.mmu_overhead_bytes);
   LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::IpcBytes,
                     stats.ipc_bytes);
+  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::KernelTotalHeapBytes,
+                    stats.total_heap_bytes);
+  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::WiredBytes,
+                    stats.wired_bytes);
+  LogOneMemoryUsage(FuchsiaMemoryExperimentalEventCode::OtherBytes,
+                    stats.other_bytes);
   return std::chrono::minutes(1);
 }
 

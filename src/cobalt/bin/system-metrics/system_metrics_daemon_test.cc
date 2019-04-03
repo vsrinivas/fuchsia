@@ -400,10 +400,10 @@ TEST_F(SystemMetricsDaemonTest, RepeatedlyLogUpTimeAndLifeTimeEvents) {
 // does not use FIDL. Does not use the message loop.
 TEST_F(SystemMetricsDaemonTest, LogMemoryUsage) {
   fake_logger_.reset();
-  // When LogMemoryUsage() is invoked it should log 7 event
+  // When LogMemoryUsage() is invoked it should log 10 events
   // for each of the memory breakdowns and return 1 minute.
   EXPECT_EQ(seconds(60).count(), LogMemoryUsage().count());
-  CheckValues(cobalt::kLogMemoryUsage, 7,
+  CheckValues(cobalt::kLogMemoryUsage, 10,
               fuchsia_system_metrics::kFuchsiaMemoryExperimentalMetricId,
-              FuchsiaMemoryExperimentalEventCode::IpcBytes);
+              FuchsiaMemoryExperimentalEventCode::OtherBytes);
 }
