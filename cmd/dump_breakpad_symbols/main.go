@@ -10,16 +10,12 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/sha1"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"os/exec"
-	"path"
-	"path/filepath"
 
 	"fuchsia.googlesource.com/tools/breakpad"
 	"fuchsia.googlesource.com/tools/elflib"
@@ -34,7 +30,7 @@ input.
 
 Example invocation:
 
-$ dump_breakpad_symbols -dump-syms-path=dump_syms -tar-file=out.tar -depfile=dep.out ./.build-ids
+$ dump_breakpad_symbols -dump-syms-path=dump_syms -tar-file=out.tar.gz -depfile=dep.out ./.build-ids
 `
 
 // The default module name for modules that don't have a soname, e.g., executables and
@@ -48,7 +44,6 @@ const defaultModuleName = "<_>"
 var (
 	depFilepath  string
 	dumpSymsPath string
-	outdir       string
 	tarFilepath  string
 )
 
@@ -59,7 +54,8 @@ func init() {
 		os.Exit(0)
 	}
 
-	flag.StringVar(&outdir, "out-dir", "", "The directory where symbol output should be written")
+	var unused string
+	flag.StringVar(&unused, "out-dir", "", "DEPRECATED. This is not used")
 	flag.StringVar(&dumpSymsPath, "dump-syms-path", "", "Path to the breakpad tools `dump_syms` executable")
 	flag.StringVar(&depFilepath, "depfile", "", "Path to the ninja depfile to generate")
 	flag.StringVar(&tarFilepath, "tar-file", "", "Path where the tar archive containing symbol files is written")
@@ -87,7 +83,7 @@ func execute(ctx context.Context) error {
 	}
 
 	// Process the IDsFiles.
-	summary := processIdsFiles(inputReaders, outdir)
+	symbolFiles := processIdsFiles(inputReaders)
 
 	// Write the Ninja dep file.
 	depfile := depfile{outputPath: tarFilepath, inputPaths: inputPaths}
@@ -111,79 +107,84 @@ func execute(ctx context.Context) error {
 	gzw := gzip.NewWriter(tarfd)
 	defer gzw.Close()
 	tw := tar.NewWriter(gzw)
-	for _, fp := range summary {
-		fd, err := os.Open(fp)
-		if err != nil {
-			return err
-		}
-		defer fd.Close()
-		if err := tarutil.TarReader(tw, fd, fp); err != nil {
-			return fmt.Errorf("failed to archive %q: %v", fp, err)
+	defer tw.Close()
+	for sf := range symbolFiles {
+		if err := tarutil.TarReader(tw, sf.Reader(), sf.ModuleSection.BuildID); err != nil {
+			return fmt.Errorf("failed to archive %q: %v", sf.ModuleSection.BuildID, err)
 		}
 	}
 	return nil
 }
 
 // processIdsFiles dumps symbol data for each executable in a set of ids files.
-func processIdsFiles(idsFiles []io.Reader, outdir string) map[string]string {
-	// Binary paths we've already seen.  Duplicates are skipped.
-	visited := make(map[string]bool)
-	binaryToSymbolFile := make(map[string]string)
+func processIdsFiles(idsFiles []io.Reader) <-chan breakpad.SymbolFile {
+	output := make(chan breakpad.SymbolFile, 10000) // Arbitrary capacity.
 
-	// Iterate through the given set of filepaths.
-	for _, idsFile := range idsFiles {
-		// Extract the paths to each binary from the IDs file.
-		binaries, err := elflib.ReadIDsFile(idsFile)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			continue
-		}
+	go func() {
+		// Binary paths we've already seen.  Duplicates are skipped.
+		visited := make(map[string]bool)
 
-		// Generate the symbol file for each binary.
-		for _, bin := range binaries {
-			binaryPath := bin.Filepath
-
-			// Check whether we've seen this path already. Skip if so.
-			if _, ok := visited[binaryPath]; ok {
-				continue
-			}
-			// Record that we've seen this binary path.
-			visited[binaryPath] = true
-
-			symbolFilepath, err := generateSymbolFile(binaryPath)
+		// Iterate through the given set of filepaths.
+		for _, idsFile := range idsFiles {
+			// Extract the paths to each binary from the IDs file.
+			binaries, err := elflib.ReadIDsFile(idsFile)
 			if err != nil {
-				log.Println(err)
+				fmt.Fprintln(os.Stderr, err)
 				continue
 			}
 
-			// Record the mapping in the summary.
-			binaryToSymbolFile[binaryPath] = symbolFilepath
-		}
-	}
+			// Generate the symbol file for each binary.
+			for _, bin := range binaries {
+				binaryPath := bin.Filepath
 
-	return binaryToSymbolFile
+				// Check whether we've seen this path already. Skip if so.
+				if _, ok := visited[binaryPath]; ok {
+					continue
+				}
+				// Record that we've seen this binary path.
+				visited[binaryPath] = true
+
+				sf, err := generateSymbolFile(binaryPath)
+				if err != nil {
+					log.Println(err)
+					continue
+				}
+
+				output <- *sf
+			}
+		}
+		close(output)
+	}()
+
+	return output
 }
 
-func generateSymbolFile(path string) (outputPath string, err error) {
-	outputPath = createSymbolFilepath(outdir, path)
-	output, err := exec.Command(dumpSymsPath, path).Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to generate symbol data for %s: %v", path, err)
+func generateSymbolFile(path string) (*breakpad.SymbolFile, error) {
+	var stdout bytes.Buffer
+	cmd := exec.Cmd{
+		Path:   dumpSymsPath,
+		Args:   []string{dumpSymsPath, path},
+		Stdout: &stdout,
 	}
-	symbolFile, err := breakpad.ParseSymbolFile(bytes.NewReader(output))
-	if err != nil {
-		return "", fmt.Errorf("failed to read dump_syms output: %v", err)
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("cmd failed %v: %v", cmd.Args, err)
 	}
+
+	symbolFile, err := breakpad.ParseSymbolFile(&stdout)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse dump_syms output: %v", err)
+	}
+
 	// Ensure the module name is either the soname (for shared libraries) or the default
 	// value (for executables and loadable modules).
 	fd, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("failed to open %q: %v", path, err)
+		return nil, fmt.Errorf("failed to open %q: %v", path, err)
 	}
 	defer fd.Close()
 	soname, err := elflib.GetSoName(path, fd)
 	if err != nil {
-		return "", fmt.Errorf("failed to read soname from %q: %v", path, err)
+		return nil, fmt.Errorf("failed to read soname from %q: %v", path, err)
 	}
 	if soname == "" {
 		symbolFile.ModuleSection.ModuleName = defaultModuleName
@@ -194,41 +195,5 @@ func generateSymbolFile(path string) (outputPath string, err error) {
 	// Ensure the module section specifies this is a Fuchsia binary instead of Linux
 	// binary, which is the default for the dump_syms tool.
 	symbolFile.ModuleSection.OS = "Fuchsia"
-	symbolFd, err := os.Create(outputPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to create symbol file %s: %v", outputPath, err)
-	}
-	defer fd.Close()
-	if _, err := symbolFile.WriteTo(symbolFd); err != nil {
-		return "", fmt.Errorf("failed to write symbol file %s: %v", outputPath, err)
-	}
-	return outputPath, nil
-}
-
-// Creates the absolute path to the symbol file for the given binary.
-//
-// The returned path is generated as a subpath of parentDir.
-func createSymbolFilepath(parentDir string, binaryPath string) string {
-	// Create the symbole file basename as a hash of the path to the binary.
-	// This ensures that filenames are unique within the output directory.
-	hash := sha1.New()
-	n, err := hash.Write([]byte(binaryPath))
-	if err != nil {
-		panic(err)
-	}
-	if n == 0 {
-		// Empty text should never be passed to this function and likely signifies
-		// an error in the input file. Panic here as well.
-		panic("0 bytes written for hash of input text '" + binaryPath + "'")
-	}
-	basename := hex.EncodeToString(hash.Sum(nil)) + ".sym"
-
-	// Generate the filepath as an subdirectory of the given parent directory.
-	absPath, err := filepath.Abs(path.Join(parentDir, basename))
-	if err != nil {
-		// Panic because if this fails once it's likely to keep failing.
-		panic(fmt.Sprintf("failed to get path to symbol file for %s: %v", binaryPath, err))
-	}
-
-	return absPath
+	return symbolFile, nil
 }

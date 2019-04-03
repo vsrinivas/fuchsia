@@ -47,9 +47,16 @@ type SymbolFile struct {
 }
 
 func (f SymbolFile) WriteTo(w io.Writer) (int64, error) {
-	lines := append([]string{f.ModuleSection.String()}, f.remainder)
-	content := strings.Join(lines, "\n")
-	return io.Copy(w, bytes.NewReader([]byte(content)))
+	return io.Copy(w, f.Reader())
+}
+
+// Reader returns an io.Reader for this SymbolFile data as it would be written to a file.
+func (f SymbolFile) Reader() io.Reader {
+	var buf bytes.Buffer
+	buf.WriteString(f.ModuleSection.String())
+	buf.WriteString("\n")
+	buf.WriteString(f.remainder)
+	return &buf
 }
 
 // ModuleSection represents the first section/line of a symbol file.
@@ -60,7 +67,7 @@ type ModuleSection struct {
 	ModuleName string
 }
 
-// String formats this ModuleSection as it would be written in a symbol file.
+// String formats this ModuleSection as it would be written to a file.
 func (mod *ModuleSection) String() string {
 	content := fmt.Sprintf("MODULE %s %s %s %s", mod.OS, mod.Arch, mod.BuildID, mod.ModuleName)
 	return strings.TrimSpace(content)
