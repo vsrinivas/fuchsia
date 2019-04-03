@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/build_id.gni")
 import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/rust/config.gni")  # for rust_config
@@ -44,66 +43,73 @@ template("copy_with_build_id") {
     os = override_os
   }
   use_strip = os == "fuchsia"
+
   group_deps = []
 
-  copy_target_name = "${target_name}_copy"
-  group_deps += [ ":${copy_target_name}" ]
-  if (use_strip) {
-    action(copy_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "testonly",
-                             ])
+  objcopy_target_name = "${target_name}_objcopy"
+  group_deps += [ ":${objcopy_target_name}" ]
+  action(objcopy_target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "visibility",
+                             "sources",
+                             "outputs",
+                           ])
 
-      script = rebase_path("${clang_prefix}/llvm-objcopy", "", root_build_dir)
-      sources = srcs
-      outputs = outs
-      args = [
-        "--strip-all",
-        rebase_path(srcs[0]),
-        rebase_path(outs[0]),
+    stamp_file = outs[0] + ".build-id.stamp"
+
+    script = "//build/rust/stamp.sh"
+    args = [ rebase_path(stamp_file) ]
+    sources = srcs
+    outputs = [
+      stamp_file,
+    ]
+
+    # Link all ELF files into .build-id.
+    # TODO(tmandry): Enable for linux when ELF note bug is fixed.
+    if (os == "fuchsia") {
+      args += [
+        rebase_path("${clang_prefix}/llvm-objcopy", "", root_build_dir),
+        "--build-id-link-dir=.build-id",
       ]
-    }
-
-    build_id_target_stripped_name = "${target_name}_build_id_stripped"
-    group_deps += [ ":${build_id_target_stripped_name}" ]
-    build_id_entry(build_id_target_stripped_name) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "testonly",
-                             ])
-      if (!defined(deps)) {
-        deps = []
+      if (use_strip) {
+        args += [
+          # TODO(jakehehrlich): Make this use --strip-sections.
+          "--strip-all",
+          "--build-id-link-input=.debug",
+          "--build-id-link-output=",
+          rebase_path(sources[0]),
+          rebase_path(outs[0]),
+        ]
+        outputs += [ outs[0] ]
+      } else {
+        # This invocation replaces the input file with (what should be) an
+        # identical copy of itself. This is the reason that the file should not
+        # have been copied (i.e. hard linked) before, or we will have duplicate
+        # data in the build directory.
+        #
+        # Ideally, we would have a tool that only does .build-id linking without
+        # making a copy, but this works okay for now.
+        args += [
+          "--build-id-link-output=.debug",
+          rebase_path(sources[0]),
+        ]
       }
-      deps += [ ":${copy_target_name}" ]
-      module = outs[0]
-    }
-
-    # TODO(jakehehrlich): Enable for linux when ELF note bug is fixed.
-    build_id_target_name = "${target_name}_build_id"
-    group_deps += [ ":${build_id_target_name}" ]
-    build_id_entry(build_id_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "testonly",
-                             ])
-      extension = ".debug"
-      module = srcs[0]
-    }
-  } else {
-    copy(copy_target_name) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "testonly",
-                             ])
-      sources = srcs
-      outputs = outs
     }
   }
+
+  # If we did not produce a stripped copy above, we should copy the source to
+  # the destination.
+  if (!use_strip) {
+    copy_target_name = "${target_name}_copy"
+    group_deps += [ ":${copy_target_name}" ]
+    copy(copy_target_name) {
+      forward_variables_from(invoker, "*", [ "visibility" ])
+      # sources, outputs forwarded
+    }
+  }
+
   group(target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     public_deps = group_deps
