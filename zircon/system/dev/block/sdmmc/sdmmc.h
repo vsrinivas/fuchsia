@@ -15,7 +15,6 @@
 
 #include <stdbool.h>
 
-#include "sdio.h"
 #include <threads.h>
 
 __BEGIN_CDECLS
@@ -33,6 +32,20 @@ typedef enum sdmmc_type {
 // pending txns, etc. Print them whenever the block
 // info is queried (lsblk will provoke this)
 #define WITH_STATS 1
+
+// SDIO cards support one common function and up to seven I/O functions. This struct is used to keep
+// track of each function's state as they can be configured independently.
+typedef struct sdio_function {
+    sdio_func_hw_info_t hw_info;
+    uint16_t cur_blk_size;
+    bool enabled;
+    bool intr_enabled;
+} sdio_function_t;
+
+typedef struct sdio_device {
+    sdio_device_hw_info_t hw_info;
+    sdio_function_t funcs[SDIO_MAX_FUNCS];
+} sdio_device_t;
 
 typedef struct sdmmc_device {
     trace_async_id_t async_id;
@@ -121,18 +134,6 @@ zx_status_t sdio_io_rw_extended(sdmmc_device_t *dev, bool write, uint32_t fn_idx
                                 uint32_t reg_addr, bool incr, uint32_t blk_count,
                                 uint32_t blk_size,  bool use_dma, uint8_t *buf,
                                 zx_handle_t dma_vmo, uint64_t buf_offset);
-zx_status_t sdio_enable_interrupt(void *ctx, uint8_t fn_idx);
-zx_status_t sdio_disable_interrupt(void *ctx, uint8_t fn_idx);
-zx_status_t sdio_enable_function(void *ctx, uint8_t fn_idx);
-zx_status_t sdio_disable_function(void *ctx, uint8_t fn_idx);
-zx_status_t sdio_modify_block_size(void *ctx, uint8_t fn_idx, uint16_t blk_sz, bool deflt);
-zx_status_t sdio_rw_data(void *ctx, uint8_t fn_idx, sdio_rw_txn_t *txn);
-zx_status_t sdio_rw_byte(void *ctx, bool write, uint8_t fn_idx, uint32_t addr,
-                         uint8_t write_byte, uint8_t *read_byte);
-zx_status_t sdio_get_interrupt(void* ctx, zx_handle_t* out_irq);
-zx_status_t sdio_get_device_hw_info(void *ctx, sdio_hw_info_t *dev_info);
-zx_status_t sdio_get_cur_block_size(void *ctx, uint8_t fn_idx,
-                                    uint16_t *cur_blk_size);
 
 // MMC ops
 

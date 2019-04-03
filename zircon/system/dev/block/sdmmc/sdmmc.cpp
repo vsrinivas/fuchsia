@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "sdmmc.h"
+
 // Standard Includes
 #include <endian.h>
 #include <inttypes.h>
@@ -29,7 +31,7 @@
 #include <zircon/threads.h>
 #include <zircon/device/block.h>
 
-#include "sdmmc.h"
+#include "sdio.h"
 
 #define SDMMC_TXN_RECEIVED          ZX_EVENT_SIGNALED
 #define SDMMC_SHUTDOWN              ZX_USER_SIGNAL_0
@@ -141,13 +143,6 @@ static zx_protocol_device_t sdmmc_block_device_proto = []() -> zx_protocol_devic
     return proto;
 }();
 
-static zx_protocol_device_t sdmmc_sdio_device_proto = []() -> zx_protocol_device_t {
-    zx_protocol_device_t proto;
-    proto.version = DEVICE_OPS_VERSION;
-    proto.get_size = sdmmc_get_size;
-    return proto;
-}();
-
 // Device protocol.
 static zx_protocol_device_t sdmmc_device_proto = []() -> zx_protocol_device_t {
     zx_protocol_device_t proto;
@@ -213,22 +208,6 @@ static block_impl_protocol_ops_t block_proto = {
     .query = sdmmc_query,
     .queue = sdmmc_queue,
 };
-
-// SDIO protocol
-static sdio_protocol_ops_t sdio_proto = []() -> sdio_protocol_ops_t {
-    sdio_protocol_ops_t ops;
-    ops.enable_fn = sdio_enable_function;
-    ops.disable_fn = sdio_disable_function;
-    ops.enable_fn_intr = sdio_enable_interrupt;
-    ops.disable_fn_intr = sdio_disable_interrupt;
-    ops.update_block_size = sdio_modify_block_size;
-    ops.get_block_size = sdio_get_cur_block_size;
-    ops.do_rw_txn = sdio_rw_data;
-    ops.do_rw_byte = sdio_rw_byte;
-    ops.get_dev_hw_info = sdio_get_device_hw_info;
-    ops.get_in_band_intr = sdio_get_interrupt;
-    return ops;
-}();
 
 static zx_status_t sdmmc_wait_for_tran(sdmmc_device_t* dev) {
     uint32_t current_state;
@@ -371,6 +350,7 @@ static int sdmmc_worker_thread(void* arg) {
     zx_status_t st = ZX_OK;
     sdmmc_device_t* dev = (sdmmc_device_t*)arg;
     bool dead = false;
+    fbl::unique_ptr<sdmmc::Sdio> sdio_dev;
 
     SDMMC_LOCK(dev);
     st = sdmmc_host_info(&dev->host, &dev->host_info);
@@ -398,8 +378,10 @@ static int sdmmc_worker_thread(void* arg) {
         goto fail;
     }
 
+    sdmmc::Sdio::Create(dev->zxdev, dev, &sdio_dev);
+
     // Probe for SDIO, SD and then MMC
-    if ((st = sdmmc_probe_sdio(dev)) != ZX_OK) {
+    if ((st = sdio_dev->SdioProbe()) != ZX_OK) {
         if ((st = sdmmc_probe_sd(dev)) != ZX_OK) {
             if ((st = sdmmc_probe_mmc(dev)) != ZX_OK) {
                 zxlogf(ERROR, "sdmmc: failed to probe\n");
@@ -410,37 +392,19 @@ static int sdmmc_worker_thread(void* arg) {
     }
 
     if (dev->type == SDMMC_TYPE_SDIO) {
-        zx_device_t* hci_zxdev =  device_get_parent(dev->zxdev);
-
         zx_device_prop_t props[] = {
              { BIND_SDIO_VID, 0, dev->sdio_dev.funcs[0].hw_info.manufacturer_id},
              { BIND_SDIO_PID, 0, dev->sdio_dev.funcs[0].hw_info.product_id},
         };
 
-        device_add_args_t sdio_args;
-        memset(&sdio_args, 0, sizeof(sdio_args));
-        sdio_args.version = DEVICE_ADD_ARGS_VERSION;
-        sdio_args.name = "sdio";
-        sdio_args.ctx = dev;
-        sdio_args.ops = &sdmmc_sdio_device_proto;
-        sdio_args.proto_id = ZX_PROTOCOL_SDIO;
-        sdio_args.proto_ops = &sdio_proto;
-        sdio_args.props = props;
-        sdio_args.prop_count = countof(props);
-
-        // Use platform device protocol to create our SDIO device, if it is available.
-        pdev_protocol_t pdev;
-        st = device_get_protocol(hci_zxdev, ZX_PROTOCOL_PDEV, &pdev);
-        if (st == ZX_OK) {
-            st = pdev_device_add(&pdev, 0, &sdio_args, &dev->child_zxdev);
-        } else {
-            st = device_add(dev->zxdev, &sdio_args, &dev->child_zxdev);
-        }
+        st = sdio_dev->DdkAdd("sdio", 0, props, countof(props));
         if (st != ZX_OK) {
             zxlogf(ERROR, "sdmmc: Failed to add sdio device, retcode = %d\n", st);
             SDMMC_UNLOCK(dev);
             goto fail;
         }
+
+        __UNUSED auto* dummy = sdio_dev.release();
         zx_object_signal(dev->worker_event, 0, SDMMC_SHUTDOWN_DONE);
         SDMMC_UNLOCK(dev);
     } else {

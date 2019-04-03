@@ -7,7 +7,6 @@ driver("sdmmc") {
     "mmc.c",
     "ops.c",
     "sd.c",
-    "sdio-interrupts.cpp",
     "sdio.cpp",
     "sdmmc.cpp",
   ]
@@ -17,11 +16,13 @@ driver("sdmmc") {
     "$zx/system/banjo/ddk-protocol-sdio",
     "$zx/system/banjo/ddk-protocol-sdmmc",
     "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/pretty",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/trace:trace-driver",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
 
     # TODO(BLD-353): This is actually a transitive dependency of the ddk
     # library, but the library doesn't express it properly because of

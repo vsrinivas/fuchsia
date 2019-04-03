@@ -4,46 +4,78 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
 #include <ddk/protocol/sdio.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/sdio.h>
+#include <fbl/unique_ptr.h>
+#include <zircon/compiler.h>
 
-typedef struct sdio_func_tuple {
-    uint8_t t_code;
-    uint8_t t_body_size;
-    uint8_t *t_body;
-} sdio_func_tuple_t;
+#include "sdmmc.h"
 
-typedef struct sdio_function {
-    sdio_func_hw_info_t hw_info;
-    uint16_t cur_blk_size;
-    bool enabled;
-    bool intr_enabled;
-} sdio_function_t;
+namespace sdmmc {
 
-typedef struct sdio_device {
-    sdio_device_hw_info_t hw_info;
-    sdio_function_t funcs[SDIO_MAX_FUNCS];
-} sdio_device_t;
+class Sdio;
+using DeviceType = ddk::Device<Sdio>;
 
-static inline bool sdio_fn_idx_valid(uint8_t fn_idx) {
-    return (fn_idx < SDIO_MAX_FUNCS);
-}
+class Sdio : public DeviceType, public ddk::SdioProtocol<Sdio, ddk::base_protocol> {
+public:
+    static void Create(zx_device_t* parent, sdmmc_device* sdmmc_dev,
+                       fbl::unique_ptr<Sdio>* out_dev);
 
-static inline bool sdio_is_uhs_supported(uint32_t hw_caps) {
-    return ((hw_caps & SDIO_CARD_UHS_SDR50) || (hw_caps & SDIO_CARD_UHS_SDR104) ||
-           (hw_caps & SDIO_CARD_UHS_DDR50));
-}
+    void DdkRelease() {}
 
-static inline void update_bits(uint32_t *x, uint32_t mask, uint32_t loc, uint32_t val) {
-    *x &= ~mask;
-    *x |= ((val << loc) & mask);
-}
+    zx_status_t SdioProbe();
 
-static inline bool get_bit(uint32_t x, uint32_t mask) {
-    return (x & mask) ? 1 : 0;
-}
+    zx_status_t SdioGetDevHwInfo(sdio_hw_info_t* out_hw_info);
+    zx_status_t SdioEnableFn(uint8_t fn_idx);
+    zx_status_t SdioDisableFn(uint8_t fn_idx);
+    zx_status_t SdioEnableFnIntr(uint8_t fn_idx);
+    zx_status_t SdioDisableFnIntr(uint8_t fn_idx);
+    zx_status_t SdioUpdateBlockSize(uint8_t fn_idx, uint16_t blk_sz, bool deflt);
+    zx_status_t SdioGetBlockSize(uint8_t fn_idx, uint16_t* out_cur_blk_size);
+    zx_status_t SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn);
+    zx_status_t SdioDoRwByte(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
+                             uint8_t* out_read_byte);
+    zx_status_t SdioGetInBandIntr(zx::interrupt* out_irq);
 
-static inline bool get_bit_u8(uint8_t x, uint8_t mask) {
-    return (x & mask) ? 1 : 0;
-}
+private:
+    struct SdioFuncTuple {
+        uint8_t tuple_code;
+        uint8_t tuple_body_size;
+        uint8_t tuple_body[UINT8_MAX];
+    };
 
+    Sdio(zx_device_t* parent, struct sdmmc_device* sdmmc_dev)
+        : DeviceType(parent), sdmmc_dev_(sdmmc_dev) {}
+
+    zx_status_t SdioReset();
+    // Reads the card common control registers (CCCR) to enumerate the card's capabilities.
+    zx_status_t ProcessCccr();
+    // Reads the card information structure (CIS) for the given function to get the manufacturer
+    // identification and function extensions tuples.
+    zx_status_t ProcessCis(uint32_t fn_idx);
+    // Parses a tuple read from the CIS.
+    zx_status_t ParseFnTuple(uint32_t fn_idx, SdioFuncTuple* tup);
+    // Parses the manufacturer ID tuple and saves it in the given function's struct.
+    zx_status_t ParseMfidTuple(uint32_t fn_idx, SdioFuncTuple* tup);
+    // Parses the function extensions tuple and saves it in the given function's struct.
+    zx_status_t ParseFuncExtTuple(uint32_t fn_idx, SdioFuncTuple* tup);
+    // Reads the I/O function code and saves it in the given function's struct.
+    zx_status_t ProcessFbr(uint8_t fn_idx);
+    // Popluates the given function's struct by calling the methods above. Also enables the
+    // function and sets its default block size.
+    zx_status_t InitFunc(uint8_t fn_idx);
+
+    zx_status_t SwitchFreq(uint32_t new_freq);
+    zx_status_t TrySwitchHs();
+    zx_status_t TrySwitchUhs();
+    zx_status_t Enable4BitBus();
+    zx_status_t SwitchBusWidth(uint32_t bw);
+
+    zx_status_t ReadData16(uint8_t fn_idx, uint32_t addr, uint16_t* word);
+    zx_status_t WriteData16(uint8_t fn_idx, uint32_t addr, uint16_t word);
+
+    sdmmc_device* sdmmc_dev_;
+};
+
+}  // namespace sdmmc

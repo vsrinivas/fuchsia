@@ -23,6 +23,11 @@ static inline uint32_t get_bits(uint32_t x, uint32_t mask, uint32_t loc) {
     return (x & mask) >> loc;
 }
 
+static inline void update_bits(uint32_t *x, uint32_t mask, uint32_t loc, uint32_t val) {
+    *x &= ~mask;
+    *x |= ((val << loc) & mask);
+}
+
 zx_status_t sdmmc_request_helper(sdmmc_device_t* dev, sdmmc_req_t* req,
                                  uint8_t retries, uint32_t wait_time) {
     zx_status_t st;
