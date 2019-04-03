@@ -10,8 +10,7 @@ Escher is a physically based renderer.
  * Lens effect
 
 ## Building for Fuchsia
-Escher is part of the default Fuchsia build.  The "waterfall" demo is installed
-as `system/bin/waterfall`.
+Escher is part of the default Fuchsia build.  The "waterfall" and "waterfall2" demos are not installed in `/system/bin`, but they used to be!
 
 ## Building for Linux
 Escher can also build on Linux.  In order to do so, you need to:
@@ -35,17 +34,14 @@ Escher can also build on Linux.  In order to do so, you need to:
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$VULKAN_SDK/lib
     export VK_LAYER_PATH=$VULKAN_SDK/etc/explicit_layer.d
     ```
-  * specify that you want to build only Escher (+ examples/tests), for Linux:
+  * Specify that you want the Escher examples to be built:
     ```
     cd $FUCHSIA_DIR
-    fx set x64 --monolith garnet/packages/experimental/disabled/dev_escher_linux --args escher_use_null_vulkan_config_on_host=false
+    fx set terminal.x64 --with //garnet/packages/examples:escher --args escher_use_null_vulkan_config_on_host=false
     ```
     * See `$FUCHSIA_DIR/docs/getting_source.md` for how to set up the `fx` tool.
-  * Do this once only (then you can skip to the next step for iterative development):
+    * Adding `--with //garnet/packages/examples:all` would also work, or anything else that includes `//garnet/packages/examples:escher`.  This should also work with any other product than `terminal`.
+  * Do the following each time you want to rebuild and run the `waterfall2` example:
     ```
-    fx full-build
-    ```
-  * BUILD!! AND RUN!!!
-    ```
-    buildtools/ninja -C out/x64/ && out/x64/host_x64/waterfall
+    fx build host_x64/waterfall2 && out/default/host_x64/waterfall2
     ```
