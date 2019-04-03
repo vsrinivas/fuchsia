@@ -8,16 +8,6 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//build/testing/environments.gni")
 
-group("fidlcat") {
-  testonly = true
-  deps = [
-    ":fidlcat_host_tests($host_toolchain)",
-    ":fidlcat_lib_tests",
-    ":fidlcat_tests",
-    "lib",
-  ]
-}
-
 if (current_toolchain == host_toolchain) {
   sdk_executable("bin") {
     category = "partner"
