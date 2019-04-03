@@ -99,6 +99,43 @@ public:
         EXPECT_LT(i, 100u);
     }
 
+    static void MapWithFlags()
+    {
+        std::unique_ptr<magma::PlatformBuffer> buffer =
+            magma::PlatformBuffer::Create(PAGE_SIZE * 2, "test");
+        std::unique_ptr<magma::PlatformBuffer::Mapping> read_only;
+        std::unique_ptr<magma::PlatformBuffer::Mapping> partial;
+        std::unique_ptr<magma::PlatformBuffer::Mapping> entire;
+        EXPECT_TRUE(
+            buffer->MapCpuWithFlags(0, PAGE_SIZE, magma::PlatformBuffer::kMapRead, &read_only));
+        EXPECT_TRUE(buffer->MapCpuWithFlags(
+            PAGE_SIZE, PAGE_SIZE,
+            magma::PlatformBuffer::kMapWrite | magma::PlatformBuffer::kMapRead, &partial));
+        EXPECT_TRUE(buffer->MapCpuWithFlags(
+            0, 2 * PAGE_SIZE, magma::PlatformBuffer::kMapWrite | magma::PlatformBuffer::kMapRead,
+            &entire));
+
+        // Try reading/writing at different locations in the partial/full maps.
+        uint32_t temp_data = 5;
+        memcpy(partial->address(), &temp_data, sizeof(temp_data));
+        memcpy(&temp_data, reinterpret_cast<uint8_t*>(entire->address()) + PAGE_SIZE,
+               sizeof(temp_data));
+        EXPECT_EQ(5u, temp_data);
+        memcpy(entire->address(), &temp_data, sizeof(temp_data));
+        memcpy(&temp_data, read_only->address(), sizeof(temp_data));
+        EXPECT_EQ(5u, temp_data);
+
+        std::unique_ptr<magma::PlatformBuffer::Mapping> bad;
+        // Try mapping with bad offsets or flags.
+        EXPECT_FALSE(buffer->MapCpuWithFlags(1u, PAGE_SIZE, magma::PlatformBuffer::kMapRead, &bad));
+        EXPECT_FALSE(
+            buffer->MapCpuWithFlags(0u, PAGE_SIZE + 1, magma::PlatformBuffer::kMapRead, &bad));
+        EXPECT_FALSE(buffer->MapCpuWithFlags(PAGE_SIZE, 2 * PAGE_SIZE,
+                                             magma::PlatformBuffer::kMapRead, &bad));
+        EXPECT_FALSE(
+            buffer->MapCpuWithFlags(0u, PAGE_SIZE, magma::PlatformBuffer::kMapWrite, &bad));
+    }
+
     static void CachePolicy()
     {
         std::unique_ptr<magma::PlatformBuffer> buffer =
@@ -323,6 +360,8 @@ TEST(PlatformBuffer, Basic)
     TestPlatformBuffer::Basic(20 * PAGE_SIZE);
     TestPlatformBuffer::Basic(10 * 1024 * 1024);
 }
+
+TEST(PlatformBuffer, MapWithFlags) { TestPlatformBuffer::MapWithFlags(); }
 
 TEST(PlatformBuffer, MapSpecific) { TestPlatformBuffer::MapSpecific(); }
 TEST(PlatformBuffer, CachePolicy) { TestPlatformBuffer::CachePolicy(); }

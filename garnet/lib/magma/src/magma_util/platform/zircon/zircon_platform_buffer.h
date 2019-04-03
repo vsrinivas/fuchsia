@@ -10,9 +10,9 @@
 #include "platform_buffer.h"
 #include "platform_object.h"
 #include "zircon_platform_handle.h"
-#include <limits.h> // PAGE_SIZE
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <limits.h> // PAGE_SIZE
 
 namespace magma {
 
@@ -55,6 +55,8 @@ public:
     bool MapCpu(void** addr_out, uintptr_t alignment) override;
     bool UnmapCpu() override;
     bool MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length) override;
+    bool MapCpuWithFlags(uint64_t offset, uint64_t length, uint64_t flags,
+                         std::unique_ptr<Mapping>* mapping_out) override;
 
     bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) override;
     bool SetCachePolicy(magma_cache_policy_t cache_policy) override;

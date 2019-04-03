@@ -14,12 +14,49 @@
 
 namespace magma {
 
+class ZirconPlatformBufferMapping : public PlatformBuffer::Mapping {
+public:
+    ZirconPlatformBufferMapping(uint64_t addr, uint64_t size) : addr_(addr), size_(size) {}
+
+    ~ZirconPlatformBufferMapping() override { zx::vmar::root_self()->unmap(addr_, size_); }
+
+    void* address() override { return reinterpret_cast<void*>(addr_); }
+
+private:
+    uint64_t addr_;
+    uint64_t size_;
+};
+
 // static
 uint64_t PlatformBuffer::MinimumMappableAddress()
 {
     zx_info_vmar_t root_info;
     zx::vmar::root_self()->get_info(ZX_INFO_VMAR, &root_info, sizeof(root_info), nullptr, nullptr);
     return root_info.base;
+}
+
+bool ZirconPlatformBuffer::MapCpuWithFlags(uint64_t offset, uint64_t length, uint64_t flags,
+                                           std::unique_ptr<Mapping>* mapping_out)
+{
+    if (!magma::is_page_aligned(offset))
+        return DRETF(false, "offset %lx isn't page aligned", offset);
+    if (!magma::is_page_aligned(length))
+        return DRETF(false, "length %lx isn't page aligned", length);
+    if (offset + length > size())
+        return DRETF(false, "offset %lx + length %lx > size %lx", offset, length, size());
+
+    uint32_t map_flags = 0;
+    if (flags & kMapRead)
+        map_flags |= ZX_VM_PERM_READ;
+    if (flags & kMapWrite)
+        map_flags |= ZX_VM_PERM_WRITE;
+    uintptr_t ptr;
+    zx_status_t status = zx::vmar::root_self()->map(0, vmo_, offset, length, flags, &ptr);
+    if (status != ZX_OK) {
+        return DRETF(false, "Failed to map: %d", status);
+    }
+    *mapping_out = std::make_unique<ZirconPlatformBufferMapping>(ptr, length);
+    return true;
 }
 
 bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length)

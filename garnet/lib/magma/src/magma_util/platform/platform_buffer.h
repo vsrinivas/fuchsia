@@ -14,6 +14,17 @@ namespace magma {
 // In general only the const functions in this class must be implemented in a threadsafe way
 class PlatformBuffer {
 public:
+    class Mapping {
+    public:
+        virtual ~Mapping() {}
+        virtual void* address() = 0;
+    };
+
+    enum Flags {
+        kMapRead = 1,
+        kMapWrite = 2,
+    };
+
     static std::unique_ptr<PlatformBuffer> Create(uint64_t size, const char* name);
     // Import takes ownership of the handle.
     static std::unique_ptr<PlatformBuffer> Import(uint32_t handle);
@@ -39,6 +50,10 @@ public:
     virtual bool UnmapCpu() = 0;
 
     virtual bool MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length) = 0;
+
+    // |flags| is a set of elements of Flags, above.
+    virtual bool MapCpuWithFlags(uint64_t offset, uint64_t length, uint64_t flags,
+                                 std::unique_ptr<Mapping>* mapping_out) = 0;
 
     virtual bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) = 0;
 
