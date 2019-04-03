@@ -29,6 +29,10 @@ You can reference this library with the `using` statement:
 using zx;
 ```
 
+The types generally correspond to [Zircon System
+Types](/docs/development/api/system.md#types). For example,
+`zx.duration` corresponds to `zx_duration_t`.
+
 > The `CHANNEL_MAX_MSG_BYTES` and `CHANNEL_MAX_MSG_HANDLES`
 > are bound at `fidlc` compile time (that is, when the **compiler**
 > is compiled) and reflect the constants present at that time.
