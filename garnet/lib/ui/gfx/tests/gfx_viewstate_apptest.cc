@@ -12,13 +12,13 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <gtest/gtest.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/base_view/cpp/embedded_view_utils.h>
 #include <lib/ui/scenic/cpp/session.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 
 #include "garnet/testing/views/embedder_view.h"
@@ -90,17 +90,14 @@ TEST_F(ViewEmbedderTest, BouncingBall) {
   scenic::EmbedderView embedder_view(CreatePresentationContext());
 
   bool view_state_changed_observed = false;
-  auto view_state_callback = [this,
-                              &view_state_changed_observed](auto view_state) {
-    view_state_changed_observed = true;
-    QuitLoop();
-  };
-  embedder_view.EmbedView(std::move(info), std::move(view_state_callback));
+  embedder_view.EmbedView(std::move(info),
+                          [&view_state_changed_observed](auto) {
+                            view_state_changed_observed = true;
+                          });
 
-  // Run the loop until we observe the view state changing, or hit a 10 second
-  // timeout.
-  RunLoopWithTimeout(zx::sec(10));
-  EXPECT_TRUE(view_state_changed_observed);
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&view_state_changed_observed] { return view_state_changed_observed; },
+      zx::sec(10)));
 }
 
 }  // namespace

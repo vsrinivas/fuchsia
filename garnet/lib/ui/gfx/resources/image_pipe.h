@@ -27,6 +27,12 @@ namespace gfx {
 
 class ImagePipe;
 using ImagePipePtr = fxl::RefPtr<ImagePipe>;
+using PresentImageCallback = fuchsia::images::ImagePipe::PresentImageCallback;
+
+struct ImagePipeUpdateResults {
+  bool image_updated;
+  std::queue<PresentImageCallback> callbacks;
+};
 
 class ImagePipe : public ImageBase {
  public:
@@ -51,15 +57,17 @@ class ImagePipe : public ImageBase {
   void Accept(class ResourceVisitor* visitor) override;
 
   // Update to use the most current frame for the specified presentation time.
-  // Called before rendering a frame using this ImagePipe.  Return true if the
-  // current Image changed since the last time Update() was called, and false
-  // otherwise.
+  // Called before rendering a frame using this ImagePipe. Returns
+  // |image_updated| as true if the current Image changed since the last time
+  // Update() was called, and false otherwise. |callbacks| is the list of
+  // callbacks passed into |ImagePipe.PresentImage()|.
   //
   // |release_fence_signaller| is a dependency required for signalling
   // release fences correctly, since it has knowledge of when command buffers
   // are released. Cannot be null.
-  bool Update(escher::ReleaseFenceSignaller* release_fence_signaller,
-              uint64_t presentation_time, uint64_t presentation_interval);
+  ImagePipeUpdateResults Update(
+      escher::ReleaseFenceSignaller* release_fence_signaller,
+      uint64_t presentation_time);
 
   // Updates the Escher image to the current frame. This should be called after
   // Update() indicates the current Image changed, and before calling
@@ -100,7 +108,7 @@ class ImagePipe : public ImageBase {
 
     // Callback to report when the update has been applied in response to
     // an invocation of |ImagePipe.PresentImage()|.
-    fuchsia::images::ImagePipe::PresentImageCallback present_image_callback;
+    PresentImageCallback present_image_callback;
   };
   std::queue<Frame> frames_;
   std::unique_ptr<ImagePipeHandler> handler_;

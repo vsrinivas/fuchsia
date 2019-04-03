@@ -61,6 +61,7 @@ Engine::Engine(component::StartupContext* startup_context,
       imported_memory_type_index_(GetImportedMemoryTypeIndex(
           escher()->vk_physical_device(), escher()->vk_device())),
       has_vulkan_(escher_ && escher_->vk_device()),
+      command_context_(CreateCommandContext(/* frame number */ 0)),
       weak_factory_(this) {
   FXL_DCHECK(frame_scheduler_);
   FXL_DCHECK(display_manager_);
@@ -87,6 +88,7 @@ Engine::Engine(
                                                escher_->vk_device())
                   : 0),
       has_vulkan_(escher_ && escher_->vk_device()),
+      command_context_(CreateCommandContext(/* frame number */ 0)),
       weak_factory_(this) {
   FXL_DCHECK(frame_scheduler_);
   FXL_DCHECK(display_manager_);
@@ -131,70 +133,92 @@ CommandContext Engine::CreateCommandContext(uint64_t frame_number_for_tracing) {
 
 // Applies scheduled updates to a session. If the update fails, the session is
 // killed. Returns true if a new render is needed, false otherwise.
-bool Engine::UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
-                            uint64_t frame_number, zx_time_t presentation_time,
-                            zx_duration_t presentation_interval) {
-  auto command_context = CreateCommandContext(frame_number);
-
-  bool needs_render = false;
-  for (auto session_to_update : sessions_to_update) {
-    auto session_handler =
-        session_manager_->FindSessionHandler(session_to_update.session_id);
+SessionUpdater::UpdateResults Engine::UpdateSessions(
+    std::unordered_set<SessionId> sessions_to_update,
+    zx_time_t presentation_time) {
+  SessionUpdater::UpdateResults update_results;
+  for (auto session_id : sessions_to_update) {
+    auto session_handler = session_manager_->FindSessionHandler(session_id);
     if (!session_handler) {
       // This means the session that requested the update died after the
       // request. Requiring the scene to be re-rendered to reflect the session's
       // disappearance is probably desirable. ImagePipe also relies on this to
       // be true, since it calls ScheduleUpdate() in it's destructor.
-      needs_render = true;
+      update_results.needs_render = true;
       continue;
     }
 
     auto session = session_handler->session();
 
-    auto update_results = session->ApplyScheduledUpdates(
-        &command_context, session_to_update.requested_presentation_time,
-        presentation_time, presentation_interval, needs_render_count_);
+    auto apply_results = session->ApplyScheduledUpdates(
+        &command_context_, presentation_time, needs_render_count_);
 
     // If update fails, kill the entire client session.
-    if (!update_results.success) {
+    if (!apply_results.success) {
       session_handler->KillSession();
+    } else {
+      if (!apply_results.all_fences_ready) {
+        update_results.sessions_to_reschedule.insert(session_id);
+      }
+
+      //  Collect the callbacks for later.
+      while (!apply_results.callbacks.empty()) {
+        callbacks_this_frame_.push(std::move(apply_results.callbacks.front()));
+        apply_results.callbacks.pop();
+      }
+      while (!apply_results.image_pipe_callbacks.empty()) {
+        callbacks_this_frame_.push(
+            std::move(apply_results.image_pipe_callbacks.front()));
+        apply_results.image_pipe_callbacks.pop();
+      }
     }
 
-    if (update_results.needs_render) {
-      needs_render |= true;
+    if (apply_results.needs_render) {
+      update_results.needs_render = true;
       ++needs_render_count_;
     }
   }
 
-  // Flush work to the gpu
-  command_context.Flush();
+  return update_results;
+}
 
-  return needs_render;
+void Engine::NewFrame() {
+  while (!callbacks_this_frame_.empty()) {
+    pending_callbacks_.push(std::move(callbacks_this_frame_.front()));
+    callbacks_this_frame_.pop();
+  }
+}
+
+void Engine::SignalSuccessfulPresentCallbacks(
+    fuchsia::images::PresentationInfo presentation_info) {
+  while (!pending_callbacks_.empty()) {
+    // TODO(SCN-1346): Make this unique per session via id().
+    TRACE_FLOW_BEGIN("gfx", "present_callback",
+                     presentation_info.presentation_time);
+    pending_callbacks_.front()(presentation_info);
+    pending_callbacks_.pop();
+  }
 }
 
 bool Engine::RenderFrame(const FrameTimingsPtr& timings,
-                         zx_time_t presentation_time,
-                         zx_duration_t presentation_interval) {
+                         zx_time_t presentation_time) {
+  uint64_t frame_number = timings->frame_number();
+
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
   // without also updating the "process_gfx_trace.go" script.
-  TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),
-                 "time", presentation_time, "interval", presentation_interval);
+  TRACE_DURATION("gfx", "RenderFrame", "frame_number", frame_number, "time",
+                 presentation_time);
 
   while (processed_needs_render_count_ < needs_render_count_) {
     TRACE_FLOW_END("gfx", "needs_render", processed_needs_render_count_);
     ++processed_needs_render_count_;
   }
 
-  // TODO(SCN-1092): make |timings| non-nullable, and unconditionally use
-  // timings->frame_number() below.  When this is done, uncomment the following
-  // line:
-  // FXL_DCHECK(timings);
-  UpdateAndDeliverMetrics(presentation_time);
+  // Flush work to the gpu.
+  command_context_.Flush();
+  command_context_ = CreateCommandContext(frame_number + 1);
 
-  // Some updates were applied; we interpret this to mean that the scene may
-  // have changed, and therefore needs to be rendered.
-  // TODO(SCN-1091): this is a very conservative approach that may result in
-  // excessive rendering.
+  UpdateAndDeliverMetrics(presentation_time);
 
   // TODO(SCN-1089): the FrameTimings are passed to the Compositor's swapchain
   // to notify when the frame is finished rendering, presented, dropped, etc.
@@ -225,7 +249,7 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
   }
 
   escher::FramePtr frame =
-      escher()->NewFrame("Scenic Compositor", timings->frame_number());
+      escher()->NewFrame("Scenic Compositor", frame_number);
 
   bool success = true;
   for (size_t i = 0; i < hlas.size(); ++i) {
@@ -234,7 +258,8 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
 
     success &= hla.swapchain->DrawAndPresentFrame(
         timings, hla,
-        [is_last_hla, &frame, escher{escher_}, engine_renderer{engine_renderer_.get()}](
+        [is_last_hla, &frame, escher{escher_},
+         engine_renderer{engine_renderer_.get()}](
             zx_time_t target_presentation_time,
             const escher::ImagePtr& output_image,
             const HardwareLayerAssignment::Item hla_item,
@@ -245,10 +270,11 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
                                         output_image, hla_item.layers);
 
           // Create a flow event that ends in the magma system driver.
-          zx::event semaphore_event = GetEventForSemaphore(escher->device(), frame_done_semaphore);
+          zx::event semaphore_event =
+              GetEventForSemaphore(escher->device(), frame_done_semaphore);
           zx_info_handle_basic_t info;
-          zx_status_t status = semaphore_event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
-                                                        nullptr, nullptr);
+          zx_status_t status = semaphore_event.get_info(
+              ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
           ZX_DEBUG_ASSERT(status == ZX_OK);
           TRACE_FLOW_BEGIN("gfx", "semaphore", info.koid);
 

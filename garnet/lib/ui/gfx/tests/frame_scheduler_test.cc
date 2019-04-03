@@ -24,7 +24,7 @@ void FrameSchedulerTest::TearDown() {
 }
 
 std::unique_ptr<DefaultFrameScheduler>
-  FrameSchedulerTest::CreateDefaultFrameScheduler() {
+FrameSchedulerTest::CreateDefaultFrameScheduler() {
   auto scheduler = std::make_unique<DefaultFrameScheduler>(fake_display_.get());
   scheduler->SetDelegate({.session_updater = mock_updater_->GetWeakPtr(),
                           .frame_renderer = mock_renderer_->GetWeakPtr()});
@@ -32,13 +32,10 @@ std::unique_ptr<DefaultFrameScheduler>
 }
 
 void FrameSchedulerTest::SetupDefaultVsyncValues() {
-  fake_display_->SetLastVsyncTime(Now().get());
   // Needs to be big enough so that FrameScheduler can always fit a latch point
   // in the frame.
   const auto vsync_interval = zx::msec(100).get();
   fake_display_->SetVsyncInterval(vsync_interval);
-  mock_updater_->SetUpdateSessionsReturnValue(true);
-  mock_renderer_->SetRenderFrameReturnValue(true);
 }
 
 }  // namespace test

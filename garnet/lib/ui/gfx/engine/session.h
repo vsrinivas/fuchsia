@@ -27,6 +27,8 @@ namespace gfx {
 
 class ImagePipe;
 using ImagePipePtr = fxl::RefPtr<ImagePipe>;
+using PresentCallback = fuchsia::ui::scenic::Session::PresentCallback;
+using PresentImageCallback = fuchsia::images::ImagePipe::PresentImageCallback;
 
 class CommandContext;
 class Engine;
@@ -39,7 +41,10 @@ class Session {
   // Return type for ApplyScheduledUpdate
   struct ApplyUpdateResult {
     bool success;
+    bool all_fences_ready;
     bool needs_render;
+    std::queue<PresentCallback> callbacks;
+    std::queue<PresentImageCallback> image_pipe_callbacks;
   };
 
   Session(SessionId id, SessionContext context,
@@ -84,9 +89,9 @@ class Session {
                       std::vector<::fuchsia::ui::gfx::Command> commands,
                       std::vector<zx::event> acquire_fences,
                       std::vector<zx::event> release_fences,
-                      fuchsia::ui::scenic::Session::PresentCallback callback);
+                      PresentCallback callback);
 
-  // Called by ImagePipe::PresentImage().  Stashes the arguments without
+  // Called by ImagePipe::PresentImage(). Stashes the arguments without
   // applying them; they will later be applied by ApplyScheduledUpdates().
   void ScheduleImagePipeUpdate(uint64_t presentation_time,
                                ImagePipePtr image_pipe);
@@ -105,9 +110,7 @@ class Session {
   // RenderFrame event for this Session if it is setting
   // ApplyUpdateResult::needs_render.
   ApplyUpdateResult ApplyScheduledUpdates(CommandContext* command_context,
-                                          uint64_t requested_presentation_time,
-                                          uint64_t actual_presentation_time,
-                                          uint64_t presentation_interval,
+                                          uint64_t target_presentation_time,
                                           uint64_t needs_render_id);
 
   // Convenience.  Forwards an event to the EventReporter.
@@ -143,7 +146,7 @@ class Session {
 
     // Callback to report when the update has been applied in response to
     // an invocation of |Session.Present()|.
-    fuchsia::ui::scenic::Session::PresentCallback present_callback;
+    PresentCallback present_callback;
   };
   bool ApplyUpdate(CommandContext* command_context,
                    std::vector<::fuchsia::ui::gfx::Command> commands);

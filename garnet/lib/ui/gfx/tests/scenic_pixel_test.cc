@@ -146,19 +146,14 @@ class ScenicPixelTest : public sys::testing::TestWithEnvironment {
     // 8. The callback schedules a quit for the presentation timestamp we got.
     // 9. The message loop eventually dispatches the quit and exits.
 
-    view->set_present_callback([this](fuchsia::images::PresentationInfo info) {
-      zx::time presentation_time =
-          static_cast<zx::time>(info.presentation_time);
-      FXL_LOG(INFO)
-          << "Present scheduled for "
-          << (presentation_time - zx::clock::get_monotonic()).to_msecs()
-          << " ms from now";
-      async::PostTaskForTime(dispatcher(), QuitLoopClosure(),
-                             presentation_time);
-    });
+    bool present_received = false;
+    view->set_present_callback(
+        [&present_received](fuchsia::images::PresentationInfo info) {
+          present_received = true;
+        });
 
-    EXPECT_FALSE(RunLoopWithTimeout(kTimeout))
-        << "Timed out waiting for present. See surrounding logs for details.";
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&present_received] { return present_received; }, zx::sec(10)));
   }
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
@@ -372,7 +367,7 @@ TEST_F(ScenicPixelTest, StereoCamera) {
   float display_width;
   float display_height;
   scenic_->GetDisplayInfo([this, &display_width, &display_height](
-      fuchsia::ui::gfx::DisplayInfo display_info) {
+                              fuchsia::ui::gfx::DisplayInfo display_info) {
     display_width = static_cast<float>(display_info.width_in_px);
     display_height = static_cast<float>(display_info.height_in_px);
     QuitLoop();
@@ -453,7 +448,7 @@ TEST_F(ScenicPixelTest, StereoCamera) {
       << "Failed to read screenshot";
 
   auto get_color_at_coordinates = [&display_width, &display_height, &data](
-      float x, float y) -> scenic::Color {
+                                      float x, float y) -> scenic::Color {
     auto pixels = reinterpret_cast<scenic::Color*>(data.data());
     uint32_t index_x = x * display_width;
     uint32_t index_y = y * display_height;
@@ -503,7 +498,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   float display_width;
   float display_height;
   scenic_->GetDisplayInfo([this, &display_width, &display_height](
-      fuchsia::ui::gfx::DisplayInfo display_info) {
+                              fuchsia::ui::gfx::DisplayInfo display_info) {
     display_width = static_cast<float>(display_info.width_in_px);
     display_height = static_cast<float>(display_info.height_in_px);
     QuitLoop();
@@ -684,7 +679,7 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
         << "Failed to read screenshot";
 
     auto get_color_at_coordinates = [&display_width, &display_height, &data](
-        float x, float y) -> scenic::Color {
+                                        float x, float y) -> scenic::Color {
       auto pixels = reinterpret_cast<scenic::Color*>(data.data());
       uint32_t index_x = x * display_width;
       uint32_t index_y = y * display_height;

@@ -22,6 +22,8 @@ namespace gfx {
 using SessionUpdate = SessionUpdater::SessionUpdate;
 class Display;
 
+// TODOs can be found in the frame scheduler epic: SCN-1202. Any new bugs filed
+// concerning the frame scheduler should be added to it as well.
 class DefaultFrameScheduler : public FrameScheduler {
  public:
   explicit DefaultFrameScheduler(const Display* display);
@@ -81,8 +83,7 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   // Executes updates that are scheduled up to and including a given
   // presentation time. Returns true if rendering is needed.
-  bool ApplyScheduledSessionUpdates(zx_time_t presentation_time,
-                                    zx_duration_t presentation_interval);
+  bool ApplyScheduledSessionUpdates(zx_time_t presentation_time);
 
   // References.
   async_dispatcher_t* const dispatcher_;

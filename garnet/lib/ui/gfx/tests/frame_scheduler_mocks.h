@@ -14,10 +14,6 @@ namespace gfx {
 namespace test {
 
 class MockFrameScheduler : public FrameScheduler {
- private:
-  uint32_t frame_presented_call_count_ = 0;
-  uint32_t frame_rendered_call_count_ = 0;
-
  public:
   MockFrameScheduler() = default;
   void SetDelegate(FrameSchedulerDelegate delegate) override{};
@@ -34,6 +30,10 @@ class MockFrameScheduler : public FrameScheduler {
 
   uint32_t frame_presented_call_count() { return frame_presented_call_count_; }
   uint32_t frame_rendered_call_count() { return frame_rendered_call_count_; }
+
+ private:
+  uint32_t frame_presented_call_count_ = 0;
+  uint32_t frame_rendered_call_count_ = 0;
 };
 
 class FakeDisplay : public Display {
@@ -57,21 +57,28 @@ class MockSessionUpdater : public SessionUpdater {
  public:
   MockSessionUpdater() : weak_factory_(this) {}
 
-  bool UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
-                      uint64_t frame_number, zx_time_t presentation_time,
-                      zx_duration_t presentation_interval) override {
-    ++update_sessions_call_count_;
-    last_requested_updates_ = std::move(sessions_to_update);
-    return update_sessions_return_value_;
-  };
+  SessionUpdater::UpdateResults UpdateSessions(
+      std::unordered_set<SessionId> sessions_to_update,
+      zx_time_t presentation_time) override;
+
+  void NewFrame() override { ++new_frame_call_count_; }
+
+  void SignalSuccessfulPresentCallbacks(
+      fuchsia::images::PresentationInfo) override {
+    ++signal_previous_frames_presented_call_count_;
+  }
 
   // Manually set value returned from UpdateSessions.
-  void SetUpdateSessionsReturnValue(bool new_value) {
+  void SetUpdateSessionsReturnValue(UpdateResults new_value) {
     update_sessions_return_value_ = new_value;
   }
+
   uint32_t update_sessions_call_count() { return update_sessions_call_count_; }
-  const std::vector<SessionUpdate>& last_requested_updates() {
-    return last_requested_updates_;
+
+  uint32_t new_frame_call_count() { return new_frame_call_count_; }
+
+  uint32_t signal_previous_frames_presented_call_count() {
+    return signal_previous_frames_presented_call_count_;
   }
 
   fxl::WeakPtr<MockSessionUpdater> GetWeakPtr() {
@@ -79,9 +86,12 @@ class MockSessionUpdater : public SessionUpdater {
   }
 
  private:
-  bool update_sessions_return_value_ = true;
+  SessionUpdater::UpdateResults update_sessions_return_value_ = {.needs_render =
+                                                                     true};
+
   uint32_t update_sessions_call_count_ = 0;
-  std::vector<SessionUpdate> last_requested_updates_;
+  uint32_t signal_previous_frames_presented_call_count_ = 0;
+  uint32_t new_frame_call_count_ = 0;
 
   fxl::WeakPtrFactory<MockSessionUpdater> weak_factory_;  // must be last
 };
@@ -92,8 +102,7 @@ class MockFrameRenderer : public FrameRenderer {
 
   // |FrameRenderer|
   bool RenderFrame(const FrameTimingsPtr& frame_timings,
-                   zx_time_t presentation_time,
-                   zx_duration_t presentation_interval);
+                   zx_time_t presentation_time);
 
   // Need to call this in order to trigger the OnFramePresented() callback in
   // FrameScheduler, but is not valid to do until after RenderFrame has returned
@@ -105,6 +114,9 @@ class MockFrameRenderer : public FrameRenderer {
 
   // Signal frame |frame_index| that it has been presented.
   void SignalFramePresented(size_t frame_index);
+
+  // Signal frame |frame_index| that it has been dropped.
+  void SignalFrameDropped(size_t frame_index);
 
   // Manually set value returned from RenderFrame.
   void SetRenderFrameReturnValue(bool new_value) {
@@ -122,10 +134,9 @@ class MockFrameRenderer : public FrameRenderer {
   uint32_t render_frame_call_count_ = 0;
 
   struct Timings {
-    FrameTimings* frame_timings;
+    FrameTimingsPtr frame_timings;
     uint32_t frame_rendered = false;
     uint32_t frame_presented = false;
-    Timings(FrameTimings* ft) { frame_timings = ft; }
   };
   std::vector<Timings> frames_;
 

@@ -163,101 +163,88 @@ void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
 }
 
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
-    CommandContext* command_context, uint64_t requested_presentation_time,
-    uint64_t actual_presentation_time, uint64_t presentation_interval,
+    CommandContext* command_context, uint64_t target_presentation_time,
     uint64_t needs_render_id) {
-  TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "session_id", id_,
-                 "session_debug_name", debug_name_, "requested time",
-                 requested_presentation_time, "time", actual_presentation_time,
-                 "interval", presentation_interval);
+  FXL_DCHECK(target_presentation_time >= last_presentation_time_);
 
-  ApplyUpdateResult update_results{false, false};
-
-  if (actual_presentation_time < last_presentation_time_) {
-    error_reporter_->ERROR()
-        << "scenic_impl::gfx::Session: ApplyScheduledUpdates called with "
-           "expected_presentation_time="
-        << actual_presentation_time
-        << ", which is less than last_presentation_time_="
-        << last_presentation_time_ << ".";
-    update_results.success = false;
-    return update_results;
-  }
+  ApplyUpdateResult update_results{
+      .success = false, .needs_render = false, .all_fences_ready = true};
 
   while (!scheduled_updates_.empty() &&
-         scheduled_updates_.front().presentation_time <=
-             actual_presentation_time) {
-    if (!scheduled_updates_.front().acquire_fences->ready()) {
+         scheduled_updates_.front().presentation_time <
+             target_presentation_time) {
+    auto& update = scheduled_updates_.front();
+    FXL_DCHECK(last_applied_update_presentation_time_ <=
+               update.presentation_time);
+
+    if (!update.acquire_fences->ready()) {
       TRACE_INSTANT("gfx", "Session missed frame", TRACE_SCOPE_PROCESS,
                     "session_id", id(), "session_debug_name", debug_name_,
                     "target presentation time (usecs)",
-                    actual_presentation_time / 1000,
+                    target_presentation_time / 1000,
                     "session target presentation time (usecs)",
-                    scheduled_updates_.front().presentation_time / 1000);
+                    update.presentation_time / 1000);
+      update_results.all_fences_ready = false;
       break;
     }
+    TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "session_id", id_,
+                   "session_debug_name", debug_name_, "requested time",
+                   update.presentation_time, "time", target_presentation_time);
 
     ++applied_update_count_;
     TRACE_FLOW_END("gfx", "scheduled_update",
                    SESSION_TRACE_ID(id_, applied_update_count_));
 
-    if (ApplyUpdate(command_context,
-                    std::move(scheduled_updates_.front().commands))) {
-      update_results.needs_render = true;
-      auto info = fuchsia::images::PresentationInfo();
-      info.presentation_time = actual_presentation_time;
-      info.presentation_interval = presentation_interval;
-      // TODO(emircan): Make this unique per session via id().
-      TRACE_FLOW_BEGIN("gfx", "present_callback", info.presentation_time);
-      scheduled_updates_.front().present_callback(std::move(info));
-
-      FXL_DCHECK(last_applied_update_presentation_time_ <=
-                 scheduled_updates_.front().presentation_time);
-      last_applied_update_presentation_time_ =
-          scheduled_updates_.front().presentation_time;
-
-      for (size_t i = 0; i < fences_to_release_on_next_update_.size(); ++i) {
-        session_context_.release_fence_signaller->AddCPUReleaseFence(
-            std::move(fences_to_release_on_next_update_.at(i)));
-      }
-      fences_to_release_on_next_update_ =
-          std::move(scheduled_updates_.front().release_fences);
-
-      scheduled_updates_.pop();
-
-      // TODO(SCN-1202): gather statistics about how close the actual
-      // presentation_time was to the requested time.
-    } else {
+    if (!ApplyUpdate(command_context, std::move(update.commands))) {
       // An error was encountered while applying the update.
       FXL_LOG(WARNING) << "scenic_impl::gfx::Session::ApplyScheduledUpdates(): "
                           "An error was encountered while applying the update. "
                           "Initiating teardown.";
       update_results.success = false;
       scheduled_updates_ = {};
-
-      // Tearing down a session will very probably result in changes to
-      // the global scene-graph.
-      update_results.needs_render = true;
       return update_results;
     }
+
+    for (size_t i = 0; i < fences_to_release_on_next_update_.size(); ++i) {
+      session_context_.release_fence_signaller->AddCPUReleaseFence(
+          std::move(fences_to_release_on_next_update_.at(i)));
+    }
+    fences_to_release_on_next_update_ = std::move(update.release_fences);
+
+    last_applied_update_presentation_time_ = update.presentation_time;
+    // Collect callbacks to be signalled in
+    // |Engine::SignalSuccessfulPresentCallbacks|
+    update_results.callbacks.push(std::move(update.present_callback));
+    update_results.needs_render = true;
+    scheduled_updates_.pop();
+
+    // TODO(SCN-1202): gather statistics about how close the actual
+    // presentation_time was to the requested time.
   }
 
   // TODO(SCN-1219): Unify with other session updates.
   std::unordered_map<ResourceId, ImagePipePtr> image_pipe_updates_to_upload;
   while (!scheduled_image_pipe_updates_.empty() &&
          scheduled_image_pipe_updates_.top().presentation_time <=
-             actual_presentation_time) {
-    if (scheduled_image_pipe_updates_.top().image_pipe) {
-      bool image_updated =
-          scheduled_image_pipe_updates_.top().image_pipe->Update(
-              session_context_.release_fence_signaller,
-              actual_presentation_time, presentation_interval);
+             target_presentation_time) {
+    auto& update = scheduled_image_pipe_updates_.top();
+    if (update.image_pipe) {
+      auto image_pipe_update_results = update.image_pipe->Update(
+          session_context_.release_fence_signaller, target_presentation_time);
+
+      // Collect callbacks to be signalled in
+      // |Engine::SignalSuccessfulPresentCallbacks|
+      while (!image_pipe_update_results.callbacks.empty()) {
+        update_results.image_pipe_callbacks.push(
+            std::move(image_pipe_update_results.callbacks.front()));
+        image_pipe_update_results.callbacks.pop();
+      }
+
       // Only upload images that were updated and are currently dirty, and only
       // do one upload per ImagePipe.
-      if (image_updated) {
-        image_pipe_updates_to_upload.try_emplace(
-            scheduled_image_pipe_updates_.top().image_pipe->id(),
-            std::move(scheduled_image_pipe_updates_.top().image_pipe));
+      if (image_pipe_update_results.image_updated) {
+        image_pipe_updates_to_upload.try_emplace(update.image_pipe->id(),
+                                                 std::move(update.image_pipe));
       }
     }
     scheduled_image_pipe_updates_.pop();
@@ -272,8 +259,9 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
   }
   image_pipe_updates_to_upload.clear();
 
-  if (update_results.needs_render)
+  if (update_results.needs_render) {
     TRACE_FLOW_BEGIN("gfx", "needs_render", needs_render_id);
+  }
 
   update_results.success = true;
   return update_results;

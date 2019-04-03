@@ -44,6 +44,8 @@ class View;
 class ViewHolder;
 
 using ViewLinker = ObjectLinker<ViewHolder, View>;
+using PresentationInfo = fuchsia::images::PresentationInfo;
+using OnPresentedCallback = fit::function<void(PresentationInfo)>;
 
 // Graphical context for a set of session updates.
 // The CommandContext is only valid during RenderFrame() and should not be
@@ -126,15 +128,27 @@ class Engine : public SessionUpdater, public FrameRenderer {
   //
   // Applies scheduled updates to a session. If the update fails, the session is
   // killed. Returns true if a new render is needed, false otherwise.
-  bool UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
-                      uint64_t frame_number, zx_time_t presentation_time,
-                      zx_duration_t presentation_interval) override;
+  SessionUpdater::UpdateResults UpdateSessions(
+      std::unordered_set<SessionId> sessions_to_update,
+      zx_time_t presentation_time) override;
+
+  // |SessionUpdater|
+  //
+  // Signals the start of a new frame, pushing all updates for the previous
+  // frame onto the pending callback queue.
+  void NewFrame() override;
+
+  // |SessionUpdater|
+  //
+  // Triggers the corresponding callbacks for each session that had an update in
+  // the last frame.
+  void SignalSuccessfulPresentCallbacks(PresentationInfo) override;
 
   // |FrameRenderer|
   //
   // Renders a new frame. Returns true if successful, false otherwise.
-  bool RenderFrame(const FrameTimingsPtr& frame, zx_time_t presentation_time,
-                   zx_duration_t presentation_interval) override;
+  bool RenderFrame(const FrameTimingsPtr& frame,
+                   zx_time_t presentation_time) override;
 
  protected:
   // Only used by subclasses used in testing.
@@ -150,6 +164,9 @@ class Engine : public SessionUpdater, public FrameRenderer {
 
   // Creates a command context.
   CommandContext CreateCommandContext(uint64_t frame_number_for_tracing);
+
+  // Takes care of cleanup between frames.
+  void EndCurrentFrame(uint64_t frame_number);
 
   // Used by GpuMemory to import VMOs from clients.
   uint32_t imported_memory_type_index() const {
@@ -211,6 +228,11 @@ class Engine : public SessionUpdater, public FrameRenderer {
 
   bool render_continuously_ = false;
   bool has_vulkan_ = false;
+
+  std::queue<OnPresentedCallback> callbacks_this_frame_;
+  std::queue<OnPresentedCallback> pending_callbacks_;
+
+  CommandContext command_context_;
 
   fxl::WeakPtrFactory<Engine> weak_factory_;  // must be last
 

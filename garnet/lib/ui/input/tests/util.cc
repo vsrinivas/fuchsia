@@ -8,9 +8,9 @@
 
 #include "garnet/lib/ui/gfx/displays/display_manager.h"
 #include "lib/fidl/cpp/clone.h"
-#include "src/lib/fxl/logging.h"
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/ui/input/cpp/formatting.h"
+#include "src/lib/fxl/logging.h"
 
 namespace lib_ui_input_tests {
 
@@ -40,13 +40,8 @@ void CreateTokenPair(zx::eventpair* t1, zx::eventpair* t2) {
 
 void InputSystemTest::RequestToPresent(scenic::Session* session) {
   bool scene_presented = false;
-  session->Present(
-      /*presentation time*/ 0,
-      [&scene_presented](fuchsia::images::PresentationInfo info) {
-        scene_presented = true;
-      });
+  session->Present(/*presentation time*/ 0, [](auto) {});
   RunLoopFor(zx::msec(20));  // Schedule the render task.
-  EXPECT_TRUE(scene_presented);
 }
 
 void InputSystemTest::TearDown() {

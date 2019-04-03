@@ -83,42 +83,9 @@ DefaultFrameScheduler::ComputePresentationAndWakeupTimesForTargetTime(
     wakeup_time = target_presentation_time - required_render_time;
   }
 
-  // If it's too late to start rendering, drop a frame.
-  while (wakeup_time < now) {
-    // TODO(MZ-400): This is insufficient.  It prevents Scenic from
-    // overcommitting but it doesn't prevent apparent jank.  For example,
-    // consider apps like hello_scenic that don't render the next frame
-    // until they receive the async response to the present call, which contains
-    // the actual presentation time.  Currently, it won't receive that response
-    // until the defered frame is rendered, and so the animated content will be
-    // at the wrong position.
-    //
-    // One solution is to evaluate animation inside Scenic.  However, there will
-    // probably always be apps that use the "hello_scenic pattern".  To
-    // support this, the app needs to be notified of the dropped frame so that
-    // it can make any necessary updates before the next frame is rendered.
-    //
-    // This seems simple enough, but it is tricky to specify/implement:
-    //
-    // It is critical to maintain the invariant that receiving the Present()
-    // response means that your commands enqueued before that Present() were
-    // actually applied in the session.  Currently, we only do this when
-    // rendering a frame, but we would have to do it earlier.  Also, is this
-    // even the right invariant? See discussion in session.fidl
-    //
-    // But when do we do it?  Immediately?  That might be well before the
-    // desired presentation time; is that a problem?  Do we sleep twice, once to
-    // wake up and apply commands without rendering, and again to render?
-    //
-    // If we do that, what presentation time should we return to clients, given
-    // that our only access to Vsync times is via an event signaled by Magma?
-    // (probably we could just extrapolate from the previous vsync, assuming
-    // that there is one, but this is nevertheless complexity to consider).
-    //
-    // Other complications will arise as when we try to address this.
-    // Try it and see!
-
-    // Drop a frame.
+  // If it's too late to start rendering, delay a frame until there is enough
+  // time.
+  while (wakeup_time <= now) {
     target_presentation_time += vsync_interval;
     wakeup_time += vsync_interval;
   }
@@ -131,8 +98,8 @@ DefaultFrameScheduler::ComputePresentationAndWakeupTimesForTargetTime(
 }
 
 void DefaultFrameScheduler::RequestFrame() {
-  FXL_CHECK(!updatable_sessions_.empty() || render_continuously_ ||
-            render_pending_);
+  FXL_DCHECK(!updatable_sessions_.empty() || render_continuously_ ||
+             render_pending_);
 
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < 5) {
@@ -175,61 +142,62 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*,
         << " frame_number=" << frame_number_;
   }
 
-  // TODO(MZ-400): Check whether there is enough time to render.  If not, drop
-  // a frame and reschedule.  It would be nice to simply bump the presentation
-  // time, but then there is a danger of rendering too fast, and actually
-  // presenting 1 vsync before the bumped presentation time.  The safest way to
-  // avoid this is to start rendering after the vsync that we want to skip.
-  //
-  // TODO(MZ-400): If there isn't enough time to render, why did this happen?
-  // One possiblity is that we woke up later than expected, and another is an
-  // increase in the estimated time required to render the frame (well, not
-  // currently: the estimate is a hard-coded constant.  Figure out what
-  // happened, and log it appropriately.
+  FXL_DCHECK(delegate_.frame_renderer);
+  FXL_DCHECK(delegate_.session_updater);
 
-  // TODO(SCN-124): We should derive an appropriate value from the rendering
-  // targets, in particular giving priority to couple to the display refresh
-  // (vsync).
-  auto presentation_interval = display_->GetVsyncInterval();
-  if (delegate_.frame_renderer && delegate_.session_updater) {
-    // Apply all updates
-    bool any_updates_were_applied =
-        ApplyScheduledSessionUpdates(presentation_time, presentation_interval);
+  // Apply all updates
+  bool any_updates_were_applied =
+      ApplyScheduledSessionUpdates(presentation_time);
 
-    if (!any_updates_were_applied && !render_pending_ &&
-        !render_continuously_) {
-      return;
+  if (!any_updates_were_applied && !render_pending_ && !render_continuously_) {
+    // If necessary, schedule another frame.
+    if (!updatable_sessions_.empty()) {
+      RequestFrame();
     }
+    return;
+  }
 
-    if (currently_rendering_) {
-      render_pending_ = true;
-      return;
-    }
+  // Some updates were applied; we interpret this to mean that the scene may
+  // have changed, and therefore needs to be rendered.
+  // TODO(SCN-1091): this is a very conservative approach that may result in
+  // excessive rendering.
 
-    FXL_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
+  if (currently_rendering_) {
+    render_pending_ = true;
+    return;
+  }
 
-    // Logging the first few frames to find common startup bugs.
-    if (frame_number_ < 5) {
-      FXL_LOG(INFO)
-          << "DefaultFrameScheduler: calling RenderFrame presentation_time="
-          << presentation_time << " frame_number=" << frame_number_;
-    }
+  FXL_DCHECK(outstanding_frames_.size() < kMaxOutstandingFrames);
 
-    TRACE_INSTANT("gfx", "Render start", TRACE_SCOPE_PROCESS, "Timestamp",
-                  async_now(dispatcher_), "Frame number", frame_number_);
+  // Logging the first few frames to find common startup bugs.
+  if (frame_number_ < 5) {
+    FXL_LOG(INFO)
+        << "DefaultFrameScheduler: calling RenderFrame presentation_time="
+        << presentation_time << " frame_number=" << frame_number_;
+  }
 
-    auto frame_timings = fxl::MakeRefCounted<FrameTimings>(this, frame_number_,
-                                                           presentation_time);
+  TRACE_INSTANT("gfx", "Render start", TRACE_SCOPE_PROCESS, "Timestamp",
+                async_now(dispatcher_), "Frame number", frame_number_);
 
-    ++frame_number_;
+  delegate_.session_updater->NewFrame();
 
-    // Render the frame.
-    currently_rendering_ = delegate_.frame_renderer->RenderFrame(
-        frame_timings, presentation_time, presentation_interval);
-    if (currently_rendering_) {
-      outstanding_frames_.push_back(frame_timings);
-      render_pending_ = false;
-    }
+  auto frame_timings =
+      fxl::MakeRefCounted<FrameTimings>(this, frame_number_, presentation_time);
+
+  ++frame_number_;
+
+  // Render the frame.
+  currently_rendering_ =
+      delegate_.frame_renderer->RenderFrame(frame_timings, presentation_time);
+  if (currently_rendering_) {
+    outstanding_frames_.push_back(frame_timings);
+    render_pending_ = false;
+  } else {
+    // TODO(SCN-1344): Handle failed rendering somehow.
+    FXL_LOG(WARNING)
+        << "RenderFrame failed. "
+        << "There may not be any calls to OnFrameRendered or OnFramePresented, "
+        << "and no callbacks may be invoked.";
   }
 
   // If necessary, schedule another frame.
@@ -242,11 +210,19 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(
     zx_time_t presentation_time, scenic_impl::SessionId session_id) {
   updatable_sessions_.push({.session_id = session_id,
                             .requested_presentation_time = presentation_time});
+
+  // Logging the first few frames to find common startup bugs.
+  if (frame_number_ < 5) {
+    FXL_LOG(INFO)
+        << "DefaultFrameScheduler::ScheduleUpdateForSession session_id: "
+        << session_id << " presentation_time: " << presentation_time;
+  }
+
   RequestFrame();
 }
 
 bool DefaultFrameScheduler::ApplyScheduledSessionUpdates(
-    zx_time_t presentation_time, zx_duration_t presentation_interval) {
+    zx_time_t presentation_time) {
   FXL_DCHECK(delegate_.session_updater);
 
   // Logging the first few frames to find common startup bugs.
@@ -256,28 +232,37 @@ bool DefaultFrameScheduler::ApplyScheduledSessionUpdates(
                   << presentation_time << " frame_number=" << frame_number_;
   }
   TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time",
-                 presentation_time, "interval", presentation_interval);
+                 presentation_time);
 
-  std::vector<SessionUpdate> sessions_to_update;
-  while (!updatable_sessions_.empty()) {
-    auto& top = updatable_sessions_.top();
-
-    if (top.requested_presentation_time > presentation_time) {
-      break;
-    }
-
-    sessions_to_update.push_back(std::move(top));
+  std::unordered_set<SessionId> sessions_to_update;
+  while (!updatable_sessions_.empty() &&
+         updatable_sessions_.top().requested_presentation_time <
+             presentation_time) {
+    sessions_to_update.insert(updatable_sessions_.top().session_id);
     updatable_sessions_.pop();
   }
 
-  bool needs_render = delegate_.session_updater->UpdateSessions(
-      std::move(sessions_to_update), frame_number_, presentation_time,
-      presentation_interval);
+  auto update_results = delegate_.session_updater->UpdateSessions(
+      std::move(sessions_to_update), presentation_time);
 
-  return needs_render;
+  // Push updates that didn't have their fences ready back onto the queue to be
+  // retried next frame.
+  for (auto session_id : update_results.sessions_to_reschedule) {
+    updatable_sessions_.push(
+        {.session_id = session_id,
+         .requested_presentation_time =
+             presentation_time + display_->GetVsyncInterval()});
+  }
+
+  return update_results.needs_render;
 }
 
 void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
+  if (frame_number_ < 5) {
+    FXL_LOG(INFO) << "DefaultFrameScheduler::OnFramePresented"
+                  << " frame_number=" << timings.frame_number();
+  }
+
   FXL_DCHECK(!outstanding_frames_.empty());
   // TODO(MZ-400): how should we handle this case?  It is theoretically
   // possible, but if if it happens then it means that the EventTimestamper is
@@ -306,6 +291,13 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
                   "target time missed by (usecs)", target_vs_actual_usecs,
                   "elapsed time since presentation (usecs)",
                   elapsed_since_presentation_usecs);
+
+    FXL_DCHECK(delegate_.session_updater);
+    auto presentation_info = fuchsia::images::PresentationInfo();
+    presentation_info.presentation_time = timings.actual_presentation_time();
+    presentation_info.presentation_interval = display_->GetVsyncInterval();
+    delegate_.session_updater->SignalSuccessfulPresentCallbacks(
+        std::move(presentation_info));
   }
 
   // Pop the front Frame off the queue.

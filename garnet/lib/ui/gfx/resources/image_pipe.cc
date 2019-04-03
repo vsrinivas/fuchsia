@@ -156,14 +156,14 @@ void ImagePipe::PresentImage(
       fidl::VectorPtr(std::move(release_fences)), std::move(callback)});
 };
 
-bool ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,
-                       uint64_t presentation_time,
-                       uint64_t presentation_interval) {
+ImagePipeUpdateResults ImagePipe::Update(
+    escher::ReleaseFenceSignaller* release_fence_signaller,
+    uint64_t presentation_time) {
   FXL_DCHECK(release_fence_signaller);
-
   TRACE_DURATION("gfx", "ImagePipe::Update", "session_id", session()->id(),
-                 "id", id(), "time", presentation_time, "interval",
-                 presentation_interval);
+                 "id", id(), "time", presentation_time);
+
+  ImagePipeUpdateResults results{.image_updated = false};
 
   bool present_next_image = false;
   ResourceId next_image_id = current_image_id_;
@@ -194,19 +194,16 @@ bool ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,
 
     next_release_fences = std::move(frames_.front().release_fences);
 
-    auto info = fuchsia::images::PresentationInfo();
-    info.presentation_time = presentation_time;
-    info.presentation_interval = presentation_interval;
-    if (frames_.front().present_image_callback) {
-      frames_.front().present_image_callback(std::move(info));
-    }
+    results.callbacks.push(std::move(frames_.front().present_image_callback));
     TRACE_FLOW_END("gfx", "image_pipe_present_image_to_update", next_image_id);
     frames_.pop();
     present_next_image = true;
   }
 
-  if (!present_next_image)
-    return false;
+  if (!present_next_image) {
+    results.image_updated = false;
+    return results;
+  }
 
   // TODO(SCN-151): This code, and the code below that marks an image as dirty,
   // assumes that the same image cannot be presented twice in a row on the same
@@ -214,7 +211,8 @@ bool ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,
   // needs a new test.
   if (next_image_id == current_image_id_) {
     // This ImagePipe did not change since the last frame was rendered.
-    return false;
+    results.image_updated = false;
+    return results;
   }
 
   // We're replacing a frame with a new one, so we hand off its release
@@ -234,7 +232,8 @@ bool ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,
   }
   current_image_ = std::move(next_image);
 
-  return true;
+  results.image_updated = true;
+  return results;
 }
 
 void ImagePipe::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) {
