@@ -41,8 +41,7 @@ struct pty_client {
     list_node_t node;
 };
 
-static zx_status_t pty_open_client(pty_server_t* ps, uint32_t id, zx::channel channel,
-                                   zx_device_t** out);
+static zx_status_t pty_open_client(pty_server_t* ps, uint32_t id, zx::channel channel);
 
 // pty client device operations
 
@@ -247,22 +246,6 @@ static void pty_client_release(void* ctx) {
     free(pc);
 }
 
-zx_status_t pty_client_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
-    auto pc = static_cast<pty_client_t*>(ctx);
-    auto ps = static_cast<pty_server_t*>(pc->srv);
-    uint32_t id = static_cast<uint32_t>(strtoul(path, NULL, 0));
-    zxlogf(TRACE, "PTY Client %p (id=%u) openat %u\n", pc, pc->id, id);
-    // only controlling clients may create additional clients
-    if (!(pc->flags & PTY_CLI_CONTROL)) {
-        return ZX_ERR_ACCESS_DENIED;
-    }
-    // clients may not create controlling clients
-    if (id == 0) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-    return pty_open_client(ps, id, zx::channel(), out);
-}
-
 zx_status_t pty_client_fidl_OpenClient(void* ctx, uint32_t id, zx_handle_t handle,
                                        fidl_txn_t* txn) {
     auto pc = static_cast<pty_client_t*>(ctx);
@@ -277,7 +260,7 @@ zx_status_t pty_client_fidl_OpenClient(void* ctx, uint32_t id, zx_handle_t handl
     if (id == 0) {
         return ZX_ERR_INVALID_ARGS;
     }
-    zx_status_t status = pty_open_client(ps, id, std::move(channel), nullptr);
+    zx_status_t status = pty_open_client(ps, id, std::move(channel));
     return fuchsia_hardware_pty_DeviceOpenClient_reply(txn, status);
 }
 
@@ -384,7 +367,6 @@ zx_protocol_device_t pc_ops = []() {
     zx_protocol_device_t ops = {};
     ops.version = DEVICE_OPS_VERSION;
     // ops.open = default, allow cloning
-    ops.open_at = pty_client_openat;
     ops.release = pty_client_release;
     ops.read = pty_client_read;
     ops.write = pty_client_write;
@@ -392,11 +374,13 @@ zx_protocol_device_t pc_ops = []() {
     return ops;
 }();
 
-static zx_status_t pty_open_client(pty_server_t* ps, uint32_t id, zx::channel channel,
-                                   zx_device_t** out) {
+static zx_status_t pty_open_client(pty_server_t* ps, uint32_t id, zx::channel channel) {
     auto pc = static_cast<pty_client_t*>(calloc(1, sizeof(pty_client_t)));
     if (!pc) {
         return ZX_ERR_NO_MEMORY;
+    }
+    if (!channel) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
     pc->id = id;
@@ -430,9 +414,7 @@ static zx_status_t pty_open_client(pty_server_t* ps, uint32_t id, zx::channel ch
     args.ctx = pc;
     args.ops = &pc_ops;
     args.flags = DEVICE_ADD_INSTANCE;
-    if (channel) {
-        args.client_remote = channel.release();
-    }
+    args.client_remote = channel.release();
 
     status = device_add(ps->zxdev, &args, &pc->zxdev);
     if (status < 0) {
@@ -460,9 +442,6 @@ static zx_status_t pty_open_client(pty_server_t* ps, uint32_t id, zx::channel ch
     pty_adjust_signals_locked(pc);
     mtx_unlock(&ps->lock);
 
-    if (out) {
-        *out = pc->zxdev;
-    }
     return ZX_OK;
 }
 
@@ -536,19 +515,12 @@ void pty_server_set_window_size(pty_server_t* ps, uint32_t w, uint32_t h) {
     mtx_unlock(&ps->lock);
 }
 
-zx_status_t pty_server_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
-    auto ps = static_cast<pty_server_t*>(ctx);
-    uint32_t id = static_cast<uint32_t>(strtoul(path, NULL, 0));
-    zxlogf(TRACE, "PTY Server %p openat %u\n", ps, id);
-    return pty_open_client(ps, id, zx::channel(), out);
-}
-
 zx_status_t pty_server_fidl_OpenClient(void* ctx, uint32_t id, zx_handle_t handle,
                                        fidl_txn_t* txn) {
     auto ps = static_cast<pty_server_t*>(ctx);
     zx::channel channel(handle);
     zxlogf(TRACE, "PTY Server %p OpenClient %u\n", ps, id);
-    zx_status_t status = pty_open_client(ps, id, std::move(channel), nullptr);
+    zx_status_t status = pty_open_client(ps, id, std::move(channel));
     return fuchsia_hardware_pty_DeviceOpenClient_reply(txn, status);
 }
 

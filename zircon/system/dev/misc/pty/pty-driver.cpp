@@ -144,7 +144,6 @@ static zx_protocol_device_t psd_ops = []() {
     zx_protocol_device_t ops = {};
     ops.version = DEVICE_OPS_VERSION;
     // ops.open = default, allow cloning;
-    ops.open_at = pty_server_openat;
     ops.release = pty_server_release;
     ops.read = psd_read;
     ops.write = psd_write;

@@ -75,7 +75,6 @@ void pty_server_resume_locked(pty_server_t* ps);
 void pty_server_set_window_size(pty_server_t* ps, uint32_t w, uint32_t h);
 
 // Device ops for pty_server. The |ctx| here must be the zx_device_t embedded in pty_server_t.
-zx_status_t pty_server_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags);
 zx_status_t pty_server_fidl_OpenClient(void* ctx, uint32_t id, zx_handle_t handle, fidl_txn_t* txn);
 void pty_server_release(void* ctx);
 

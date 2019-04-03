@@ -229,7 +229,8 @@ static bool pty_test(void) {
     ASSERT_EQ(events, 0u, "");
 
     // create a second client
-    int pc1_fd = openat(pc.get(), "1", O_RDWR | O_NONBLOCK);
+    int pc1_fd;
+    ASSERT_EQ(open_client(pc.get(), 1, &pc1_fd), ZX_OK);
     ASSERT_GE(pc1_fd, 0, "");
 
     fbl::unique_fd pc1(pc1_fd);
