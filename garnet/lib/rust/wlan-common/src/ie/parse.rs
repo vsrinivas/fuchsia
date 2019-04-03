@@ -4,7 +4,11 @@
 
 use {
     super::*,
-    crate::error::{FrameParseError, FrameParseResult},
+    crate::{
+        buffer_reader::BufferReader,
+        error::{FrameParseError, FrameParseResult},
+    },
+    std::mem::size_of,
     zerocopy::{ByteSlice, LayoutVerified},
 };
 
@@ -66,6 +70,55 @@ pub fn parse_ht_operation<B: ByteSlice>(
 ) -> FrameParseResult<LayoutVerified<B, HtOperation>> {
     LayoutVerified::new(raw_body)
         .ok_or(FrameParseError::new("Invalid length of HT Operation element"))
+}
+
+pub fn parse_mpm_open<B: ByteSlice>(raw_body: B) -> FrameParseResult<MpmOpenView<B>> {
+    let mut reader = BufferReader::new(raw_body);
+    let header = reader
+        .read()
+        .ok_or(FrameParseError::new("Element body is too short to include an MPM header"))?;
+    let pmk = reader.read();
+    if reader.bytes_remaining() > 0 {
+        return Err(FrameParseError::new("Extra bytes at the end of the MPM Open element"));
+    }
+    Ok(MpmOpenView { header, pmk })
+}
+
+pub fn parse_mpm_confirm<B: ByteSlice>(raw_body: B) -> FrameParseResult<MpmConfirmView<B>> {
+    let mut reader = BufferReader::new(raw_body);
+    let header = reader
+        .read()
+        .ok_or(FrameParseError::new("Element body is too short to include an MPM header"))?;
+    let peer_link_id = reader
+        .read_unaligned()
+        .ok_or(FrameParseError::new("Element body is too short to include a peer link ID"))?;
+    let pmk = reader.read();
+    if reader.bytes_remaining() > 0 {
+        return Err(FrameParseError::new("Extra bytes at the end of the MPM Confirm element"));
+    }
+    Ok(MpmConfirmView { header, peer_link_id, pmk })
+}
+
+pub fn parse_mpm_close<B: ByteSlice>(raw_body: B) -> FrameParseResult<MpmCloseView<B>> {
+    let mut reader = BufferReader::new(raw_body);
+    let header = reader
+        .read()
+        .ok_or(FrameParseError::new("Element body is too short to include an MPM header"))?;
+
+    let peer_link_id = if reader.bytes_remaining() % size_of::<MpmPmk>() == 4 {
+        reader.read_unaligned()
+    } else {
+        None
+    };
+
+    let reason_code = reader
+        .read_unaligned()
+        .ok_or(FrameParseError::new("Element body is too short to include a reason code"))?;
+    let pmk = reader.read();
+    if reader.bytes_remaining() > 0 {
+        return Err(FrameParseError::new("Extra bytes at the end of the MPM Close element"));
+    }
+    Ok(MpmCloseView { header, peer_link_id, reason_code, pmk })
 }
 
 #[cfg(test)]
@@ -252,5 +305,185 @@ mod tests {
 
         let basic_mcs_set = ht_op.basic_ht_mcs_set;
         assert_eq!(basic_mcs_set.0, 0x00000000_cdab0000_00000000_000000ff);
+    }
+
+    #[test]
+    pub fn mpm_open_ok_no_pmk() {
+        let r = parse_mpm_open(&[0x11, 0x22, 0x33, 0x44][..]).expect("expected Ok");
+        assert_eq!(0x2211, { r.header.protocol.0 });
+        assert_eq!(0x4433, { r.header.local_link_id });
+        assert!(r.pmk.is_none());
+    }
+
+    #[test]
+    pub fn mpm_open_ok_with_pmk() {
+        #[rustfmt::skip]
+        let data = [0x11, 0x22, 0x33, 0x44,
+                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+        let r = parse_mpm_open(&data[..]).expect("expected Ok");
+        assert_eq!(0x2211, { r.header.protocol.0 });
+        assert_eq!(0x4433, { r.header.local_link_id });
+        let pmk = r.pmk.expect("expected pmk to be present");
+        assert_eq!([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], pmk.0);
+    }
+
+    #[test]
+    pub fn mpm_open_too_short() {
+        let err = parse_mpm_open(&[0x11, 0x22, 0x33][..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include an MPM header", err.debug_message());
+    }
+
+    #[test]
+    pub fn mpm_open_weird_length() {
+        let err = parse_mpm_open(&[0x11, 0x22, 0x33, 0x44, 0x55][..]).err().expect("expected Err");
+        assert_eq!("Extra bytes at the end of the MPM Open element", err.debug_message());
+    }
+
+    #[test]
+    pub fn mpm_open_too_long() {
+        #[rustfmt::skip]
+        let data = [0x11, 0x22, 0x33, 0x44,
+                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+        let err = parse_mpm_open(&data[..]).err().expect("expected Err");
+        assert_eq!("Extra bytes at the end of the MPM Open element", err.debug_message());
+    }
+
+    #[test]
+    pub fn mpm_confirm_ok_no_pmk() {
+        let r = parse_mpm_confirm(&[0x11, 0x22, 0x33, 0x44, 0x55, 0x66][..]).expect("expected Ok");
+        assert_eq!(0x2211, { r.header.protocol.0 });
+        assert_eq!(0x4433, { r.header.local_link_id });
+        assert_eq!(0x6655, r.peer_link_id.get());
+        assert!(r.pmk.is_none());
+    }
+
+    #[test]
+    pub fn mpm_confirm_ok_with_pmk() {
+        #[rustfmt::skip]
+        let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+        let r = parse_mpm_confirm(&data[..]).expect("expected Ok");
+        assert_eq!(0x2211, { r.header.protocol.0 });
+        assert_eq!(0x4433, { r.header.local_link_id });
+        assert_eq!(0x6655, r.peer_link_id.get());
+        let pmk = r.pmk.expect("expected pmk to be present");
+        assert_eq!([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], pmk.0);
+    }
+
+    #[test]
+    pub fn mpm_confirm_too_short_for_header() {
+        let err = parse_mpm_confirm(&[0x11, 0x22, 0x33][..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include an MPM header", err.debug_message());
+    }
+
+    #[test]
+    pub fn mpm_confirm_too_short_for_peer_link_id() {
+        let err =
+            parse_mpm_confirm(&[0x11, 0x22, 0x33, 0x44, 0x55][..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include a peer link ID", err.debug_message());
+    }
+
+    #[test]
+    pub fn mpm_confirm_weird_length() {
+        let err = parse_mpm_confirm(&[0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77][..])
+            .err()
+            .expect("expected Err");
+        assert_eq!("Extra bytes at the end of the MPM Confirm element", err.debug_message());
+    }
+
+    #[test]
+    pub fn mpm_confirm_too_long() {
+        #[rustfmt::skip]
+        let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+        let err = parse_mpm_confirm(&data[..]).err().expect("expected Err");
+        assert_eq!("Extra bytes at the end of the MPM Confirm element", err.debug_message());
+    }
+
+    #[test]
+    pub fn mpm_close_ok_no_link_id_no_pmk() {
+        let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
+        let r = parse_mpm_close(&data[..]).expect("expected Ok");
+        assert_eq!(0x2211, { r.header.protocol.0 });
+        assert_eq!(0x4433, { r.header.local_link_id });
+        assert!(r.peer_link_id.is_none());
+        assert_eq!(0x6655, r.reason_code.get().0);
+        assert!(r.pmk.is_none());
+    }
+
+    #[test]
+    pub fn mpm_close_ok_with_link_id_no_pmk() {
+        let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88];
+        let r = parse_mpm_close(&data[..]).expect("expected Ok");
+        assert_eq!(0x4433, { r.header.local_link_id });
+        let peer_link_id = r.peer_link_id.expect("expected peer link id to be present");
+        assert_eq!(0x6655, peer_link_id.get());
+        assert_eq!(0x8877, r.reason_code.get().0);
+        assert!(r.pmk.is_none());
+    }
+
+    #[test]
+    pub fn mpm_close_ok_no_link_id_with_pmk() {
+        #[rustfmt::skip]
+        let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+        let r = parse_mpm_close(&data[..]).expect("expected Ok");
+        assert_eq!(0x2211, { r.header.protocol.0 });
+        assert_eq!(0x4433, { r.header.local_link_id });
+        assert!(r.peer_link_id.is_none());
+        assert_eq!(0x6655, r.reason_code.get().0);
+        let pmk = r.pmk.expect("expected pmk to be present");
+        assert_eq!([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], pmk.0);
+    }
+
+    #[test]
+    pub fn mpm_close_ok_with_link_id_with_pmk() {
+        #[rustfmt::skip]
+        let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
+        let r = parse_mpm_close(&data[..]).expect("expected Ok");
+        assert_eq!(0x4433, { r.header.local_link_id });
+        let peer_link_id = r.peer_link_id.expect("expected peer link id to be present");
+        assert_eq!(0x6655, peer_link_id.get());
+        assert_eq!(0x8877, r.reason_code.get().0);
+        let pmk = r.pmk.expect("expected pmk to be present");
+        assert_eq!([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16], pmk.0);
+    }
+
+    #[test]
+    pub fn mpm_close_too_short_for_header() {
+        let err = parse_mpm_close(&[0x11, 0x22, 0x33][..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include an MPM header", err.debug_message());
+    }
+
+    #[test]
+    pub fn mpm_close_too_short_for_reason_code() {
+        let err = parse_mpm_close(&[0x11, 0x22, 0x33, 0x44, 0x55][..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include a reason code", err.debug_message());
+    }
+
+    #[test]
+    pub fn mpm_close_weird_length_1() {
+        let err = parse_mpm_close(&[0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77][..])
+            .err()
+            .expect("expected Err");
+        assert_eq!("Extra bytes at the end of the MPM Close element", err.debug_message());
+    }
+
+    #[test]
+    pub fn mpm_close_weird_length_2() {
+        let err = parse_mpm_close(&[0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99][..])
+            .err()
+            .expect("expected Err");
+        assert_eq!("Extra bytes at the end of the MPM Close element", err.debug_message());
+    }
+
+    #[test]
+    pub fn mpm_close_too_long() {
+        #[rustfmt::skip]
+        let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+        let err = parse_mpm_close(&data[..]).err().expect("expected Err");
+        assert_eq!("Extra bytes at the end of the MPM Close element", err.debug_message());
     }
 }

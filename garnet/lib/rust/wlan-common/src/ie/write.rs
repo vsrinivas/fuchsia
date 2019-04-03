@@ -4,7 +4,8 @@
 
 use {
     super::{constants::*, fields::*, id},
-    crate::{appendable::Appendable, error::FrameWriteError},
+    crate::{appendable::Appendable, error::FrameWriteError, mac::ReasonCode},
+    zerocopy::AsBytes,
 };
 
 macro_rules! validate {
@@ -80,6 +81,44 @@ pub fn write_tim<B: Appendable>(
         bitmap.len()
     );
     write_ie!(buf, id::TIM, header, bitmap)
+}
+
+pub fn write_mpm_open<B: Appendable>(
+    buf: &mut B,
+    header: &MpmHeader,
+    pmk: Option<&MpmPmk>,
+) -> Result<(), FrameWriteError> {
+    write_ie!(buf, id::MESH_PEERING_MGMT, header, option_as_bytes(pmk))
+}
+
+pub fn write_mpm_confirm<B: Appendable>(
+    buf: &mut B,
+    header: &MpmHeader,
+    peer_link_id: u16,
+    pmk: Option<&MpmPmk>,
+) -> Result<(), FrameWriteError> {
+    write_ie!(buf, id::MESH_PEERING_MGMT, header, &peer_link_id, option_as_bytes(pmk))
+}
+
+pub fn write_mpm_close<B: Appendable>(
+    buf: &mut B,
+    header: &MpmHeader,
+    peer_link_id: Option<u16>,
+    reason_code: ReasonCode,
+    pmk: Option<&MpmPmk>,
+) -> Result<(), FrameWriteError> {
+    write_ie!(
+        buf,
+        id::MESH_PEERING_MGMT,
+        header,
+        option_as_bytes(peer_link_id.as_ref()),
+        &reason_code,
+        option_as_bytes(pmk)
+    )
+}
+
+fn option_as_bytes<T: AsBytes>(opt: Option<&T>) -> &[u8] {
+    opt.map_or(&[], T::as_bytes)
 }
 
 #[cfg(test)]
@@ -216,5 +255,78 @@ mod tests {
                 &[0u8; 252][..]
             )
         );
+    }
+
+    #[test]
+    pub fn mpm_open_no_pmk() {
+        let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
+        let mut buf = vec![];
+        write_mpm_open(&mut buf, &header, None).expect("expected Ok");
+        assert_eq!(&[117, 4, 0x11, 0x22, 0x33, 0x44], &buf[..]);
+    }
+
+    #[test]
+    pub fn mpm_open_with_pmk() {
+        let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
+        let pmk = MpmPmk([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+        let mut buf = vec![];
+        write_mpm_open(&mut buf, &header, Some(&pmk)).expect("expected Ok");
+
+        #[rustfmt::skip]
+        let expected = &[
+            117, 20,
+            0x11, 0x22, 0x33, 0x44,
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+        ];
+        assert_eq!(expected, &buf[..]);
+    }
+
+    #[test]
+    pub fn mpm_confirm_no_pmk() {
+        let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
+        let mut buf = vec![];
+        write_mpm_confirm(&mut buf, &header, 0x6655, None).expect("expected Ok");
+        assert_eq!(&[117, 6, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66], &buf[..]);
+    }
+
+    #[test]
+    pub fn mpm_confirm_with_pmk() {
+        let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
+        let pmk = MpmPmk([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+        let mut buf = vec![];
+        write_mpm_confirm(&mut buf, &header, 0x6655, Some(&pmk)).expect("expected Ok");
+
+        #[rustfmt::skip]
+            let expected = &[
+            117, 22,
+            0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+        ];
+        assert_eq!(expected, &buf[..]);
+    }
+
+    #[test]
+    pub fn mpm_close_minimal() {
+        let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
+        let mut buf = vec![];
+        write_mpm_close(&mut buf, &header, None, ReasonCode(0x6655), None).expect("expected Ok");
+        assert_eq!(&[117, 6, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66], &buf[..]);
+    }
+
+    #[test]
+    pub fn mpm_close_full() {
+        let header = MpmHeader { protocol: MpmProtocol(0x2211), local_link_id: 0x4433 };
+        let pmk = MpmPmk([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+        let mut buf = vec![];
+        write_mpm_close(&mut buf, &header, Some(0x6655), ReasonCode(0x8877), Some(&pmk))
+            .expect("expected Ok");
+
+        #[rustfmt::skip]
+            let expected = &[
+            117, 24,
+            0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+        ];
+        assert_eq!(expected, &buf[..]);
     }
 }

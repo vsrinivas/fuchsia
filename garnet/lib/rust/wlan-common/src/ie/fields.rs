@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::{mac::ReasonCode, unaligned_view::UnalignedView},
     failure::{ensure, format_err, Error},
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned},
@@ -432,4 +433,53 @@ pub struct PcoPhase(pub u8);
 impl PcoPhase {
     pub_const!(TWENTY_MHZ, 0);
     pub_const!(FORTY_MHZ, 1);
+}
+
+#[repr(C)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug, AsBytes, FromBytes)]
+pub struct MpmProtocol(pub u16);
+
+// IEEE Std 802.11-2016, 9.4.2.102, table 9-222
+impl MpmProtocol {
+    pub_const!(MPM, 0);
+    pub_const!(AMPE, 1);
+    // 2-254 reserved
+    pub_const!(VENDOR_SPECIFIC, 255);
+    // 255-65535 reserved
+}
+
+// IEEE Std 802.11-2016, 9.4.2.102
+// The fixed part of the Mesh Peering Management header
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+pub struct MpmHeader {
+    pub protocol: MpmProtocol,
+    pub local_link_id: u16,
+}
+
+// IEEE Std 802.11-2016, 9.4.2.102
+// The optional "PMK" part of the MPM element
+#[repr(C)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+pub struct MpmPmk(pub [u8; 16]);
+
+// MPM element in a "mesh peering open" frame
+pub struct MpmOpenView<B> {
+    pub header: LayoutVerified<B, MpmHeader>,
+    pub pmk: Option<LayoutVerified<B, MpmPmk>>,
+}
+
+// MPM element in a "mesh peering confirm" frame
+pub struct MpmConfirmView<B> {
+    pub header: LayoutVerified<B, MpmHeader>,
+    pub peer_link_id: UnalignedView<B, u16>,
+    pub pmk: Option<LayoutVerified<B, MpmPmk>>,
+}
+
+// MPM element in a "mesh peering close" frame
+pub struct MpmCloseView<B> {
+    pub header: LayoutVerified<B, MpmHeader>,
+    pub peer_link_id: Option<UnalignedView<B, u16>>,
+    pub reason_code: UnalignedView<B, ReasonCode>,
+    pub pmk: Option<LayoutVerified<B, MpmPmk>>,
 }
