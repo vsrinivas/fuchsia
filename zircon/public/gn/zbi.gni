@@ -94,11 +94,29 @@ template("zbi_input") {
     }
 
     metadata = {
+      # TODO(mcgrathr): seems to tickle a gn bug, see below
+      #zbi_barrier = []
       zbi_input_args = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      # When a zbi() target depends on this zbi_input() target, it includes
+      # other zbi_input() targets in this target's deps, but not data_deps.
+      if (defined(invoker.deps)) {
+        # TODO(mcgrathr): seems to tickle a gn bug
+        #zbi_barrier += invoker.deps
+      }
 
       # An explicit type applies only to $sources and $args.
       if (defined(invoker.type) && invoker.type != "") {
         zbi_input_args += [ "--type=${invoker.type}" ]
+      } else if (defined(invoker.args) || defined(invoker.sources)) {
+        # The implicit type is always --files, and needs to be reset in
+        # case the previous `zbi_input_args` list collected left a
+        # different `--type=...` as the last state.
+        zbi_input_args += [ "--files" ]
       }
 
       # Explicit $args come first, for e.g. "-u" or "-g" to affect inputs.
@@ -119,10 +137,6 @@ template("zbi_input") {
         "--files",
         rebase_path(manifest_file, root_build_dir),
       ]
-
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, "*", [ "zbi_input_args" ])
-      }
     }
   }
 }
@@ -220,6 +234,7 @@ template("zbi") {
       rspfile,
     ]
     data_keys = [ "zbi_input_args" ]
+    walk_keys = [ "zbi_barrier" ]
     output_conversion = "list lines"
   }
 
@@ -288,6 +303,10 @@ template("zbi") {
       # combine them without requiring an intervening zbi_input() target.
       zbi_input_args =
           [ "--type=container" ] + rebase_path(outputs, root_build_dir)
+
+      # Another zbi() target that depends on this one will include this ZBI as
+      # input, but not this ZBI's inputs.
+      zbi_barrier = []
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata,

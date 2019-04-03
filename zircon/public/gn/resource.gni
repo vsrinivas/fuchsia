@@ -15,6 +15,22 @@
 #
 # Parameters
 #
+#   data_deps
+#     Optional: Additional dependencies for the runtime image.  These are
+#     included in the image if this target is, but are not related to the
+#     $sources list.
+#     Type: list(label)
+#
+#   deps
+#     Optional: Targets that produce $sources.  Any files listed in
+#     $sources that are produced by the build should be produced by a
+#     target listed here.  This is the only thing that guarantees those
+#     files will have been built by the time the image is being packed.
+#     Targets reached only via this $deps list will *not* contribute their
+#     own contents to the image directly.  For that, list them in $data_deps.
+#     Targets listed here are used only to produce the $sources files.
+#     Type: list(label)
+#
 #   outputs
 #     Required: List of one runtime path.  This must be a relative path (no
 #     leading `/`).  It can use placeholders based on $sources; see copy()
@@ -43,10 +59,21 @@ template("resource") {
                              "sources",
                            ])
     metadata = {
+      manifest_barrier = []
       manifest_lines = []
+      zbi_barrier = []
+
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
+
+      # Stop manifest_file() and zbi() from picking up files or zbi_input()
+      # items from the deps, but let them reach the data_deps.
+      if (defined(data_deps)) {
+        manifest_barrier += data_deps
+        zbi_barrier += data_deps
+      }
+
       foreach(source, invoker.sources) {
         foreach(target, process_file_template([ source ], invoker.outputs)) {
           assert(rebase_path(target, "foo") != target,
@@ -91,10 +118,19 @@ template("generated_resource") {
 
     # Add metadata to add that file to a filesystem image.
     metadata = {
+      manifest_barrier = []
       manifest_lines = []
+      zbi_barrier = []
+
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
+
+      if (defined(data_deps)) {
+        manifest_barrier += data_deps
+        zbi_barrier += data_deps
+      }
+
       manifest_lines += [ "${outputs[0]}=" + rebase_path(file, root_build_dir) ]
     }
 
