@@ -153,9 +153,7 @@ class SuspendResumeThreadTest : public TestServer {
   bool got_unexpected_exception_ = false;
 };
 
-// TODO(FLK-121, ZX-3284): Disabled until ZX-3284 fixed.
-
-TEST_F(SuspendResumeThreadTest, DISABLED_SuspendResumeTest) {
+TEST_F(SuspendResumeThreadTest, SuspendResumeTest) {
   std::vector<std::string> argv{
     kTestHelperPath,
     "trigger-sw-bkpt-with-handler",
