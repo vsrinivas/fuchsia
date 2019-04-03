@@ -42,9 +42,8 @@ use {
     failure::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        FileObject, FileRequest, NodeAttributes, NodeInfo, NodeMarker, SeekOrigin,
-        DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_PROTECTION_MASK, MODE_TYPE_FILE, OPEN_FLAG_TRUNCATE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        FileObject, FileRequest, NodeAttributes, NodeInfo, NodeMarker, DIRENT_TYPE_FILE,
+        INO_UNKNOWN, MODE_PROTECTION_MASK, MODE_TYPE_FILE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
     },
     fuchsia_zircon::{
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
@@ -56,7 +55,7 @@ use {
         task::Waker,
         Future, Poll,
     },
-    std::{io::Write, iter, iter::ExactSizeIterator, marker::Unpin, mem, pin::Pin},
+    std::{iter, marker::Unpin, mem, pin::Pin},
     void::Void,
 };
 
@@ -364,38 +363,34 @@ where
                 responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
             }
             FileRequest::Read { count, responder } => {
-                let actual =
-                    self.handle_read(connection, connection.seek, count, |status, content| {
-                        responder.send(status.into_raw(), content)
-                    })?;
-                connection.seek += actual;
+                connection.handle_read(count, |status, content| {
+                    responder.send(status.into_raw(), content)
+                })?;
             }
             FileRequest::ReadAt { offset, count, responder } => {
-                self.handle_read(connection, offset, count, |status, content| {
+                connection.handle_read_at(offset, count, |status, content| {
                     responder.send(status.into_raw(), content)
                 })?;
             }
             FileRequest::Write { data, responder } => {
-                let actual =
-                    self.handle_write(connection, connection.seek, data, |status, actual| {
-                        responder.send(status.into_raw(), actual)
-                    })?;
-                connection.seek += actual;
+                connection.handle_write(data, self.capacity, |status, actual| {
+                    responder.send(status.into_raw(), actual)
+                })?;
             }
             FileRequest::WriteAt { offset, data, responder } => {
-                self.handle_write(connection, offset, data, |status, actual| {
+                connection.handle_write_at(offset, data, self.capacity, |status, actual| {
                     // Seems like our API is not really designed for 128 bit machines. If data
                     // contains more than 16EB, we may not be returning the correct number here.
                     responder.send(status.into_raw(), actual as u64)
                 })?;
             }
             FileRequest::Seek { offset, start, responder } => {
-                self.handle_seek(connection, offset, start, |status, offset| {
+                connection.handle_seek(offset, self.capacity, start, |status, offset| {
                     responder.send(status.into_raw(), offset)
                 })?;
             }
             FileRequest::Truncate { length, responder } => {
-                self.handle_truncate(connection, length, |status| {
+                connection.handle_truncate(length, self.capacity, |status| {
                     responder.send(status.into_raw())
                 })?;
             }
@@ -433,173 +428,6 @@ where
                     let buffer = on_read()?;
                     Ok((buffer, false))
                 }
-            }
-        }
-    }
-
-    fn handle_read<R>(
-        &mut self,
-        connection: &FileConnection,
-        offset: u64,
-        mut count: u64,
-        responder: R,
-    ) -> Result<u64, fidl::Error>
-    where
-        R: FnOnce(Status, &mut ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
-    {
-        if connection.flags & OPEN_RIGHT_READABLE == 0 {
-            responder(Status::ACCESS_DENIED, &mut iter::empty())?;
-            return Ok(0);
-        }
-
-        match self.on_read {
-            None => {
-                responder(Status::NOT_SUPPORTED, &mut iter::empty())?;
-                Ok(0)
-            }
-            Some(_) => {
-                assert_eq_size!(usize, u64);
-
-                let len = connection.buffer.len() as u64;
-
-                if offset >= len {
-                    // This should return Status::OUT_OF_RANGE but POSIX wants an OK.  See ZX-3633.
-                    responder(Status::OK, &mut iter::empty())?;
-                    return Ok(0);
-                }
-
-                count = core::cmp::min(count, len - offset);
-
-                let from = offset as usize;
-                let to = (offset + count) as usize;
-                let mut content = connection.buffer[from..to].iter().cloned();
-                responder(Status::OK, &mut content)?;
-                Ok(count)
-            }
-        }
-    }
-
-    // Strictly speaking, we do not need to use a callback here, but we do need it in the
-    // on_read() case above, so, for consistency, on_write() has the same interface.
-    // TODO: Do I need to return the number of bytes written?
-    fn handle_write<R>(
-        &mut self,
-        connection: &mut FileConnection,
-        offset: u64,
-        content: Vec<u8>,
-        responder: R,
-    ) -> Result<u64, fidl::Error>
-    where
-        R: FnOnce(Status, u64) -> Result<(), fidl::Error>,
-    {
-        if connection.flags & OPEN_RIGHT_WRITABLE == 0 {
-            responder(Status::ACCESS_DENIED, 0)?;
-            return Ok(0);
-        }
-
-        assert_eq_size!(usize, u64);
-        let effective_capacity = core::cmp::max(connection.buffer.len() as u64, self.capacity);
-
-        match self.on_write {
-            None => {
-                responder(Status::NOT_SUPPORTED, 0)?;
-                Ok(0)
-            }
-            Some(_) if offset >= effective_capacity => {
-                responder(Status::OUT_OF_RANGE, 0)?;
-                Ok(0)
-            }
-            Some(_) => {
-                assert_eq_size!(usize, u64);
-
-                let actual = core::cmp::min(effective_capacity - offset, content.len() as u64);
-
-                let buffer = &mut connection.buffer;
-
-                if buffer.len() as u64 <= offset + actual {
-                    buffer.resize((offset + actual) as usize, 0);
-                }
-
-                let from = offset as usize;
-                let to = (offset + actual) as usize;
-                let mut target = &mut buffer[from..to];
-                let source = &content[0..actual as usize];
-                target.write_all(source).unwrap();
-
-                connection.was_written = true;
-
-                responder(Status::OK, actual)?;
-                Ok(actual)
-            }
-        }
-    }
-
-    fn handle_seek<R>(
-        &mut self,
-        connection: &mut FileConnection,
-        offset: i64,
-        start: SeekOrigin,
-        responder: R,
-    ) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(Status, u64) -> Result<(), fidl::Error>,
-    {
-        let new_seek = match start {
-            SeekOrigin::Start => offset as i128,
-
-            SeekOrigin::Current => {
-                assert_eq_size!(usize, i64);
-                connection.seek as i128 + offset as i128
-            }
-
-            SeekOrigin::End => {
-                assert_eq_size!(usize, i64, u64);
-                connection.buffer.len() as i128 + offset as i128
-            }
-        };
-
-        let effective_capacity =
-            core::cmp::max(connection.buffer.len() as i128, self.capacity as i128);
-        if new_seek < 0 || new_seek >= effective_capacity {
-            responder(Status::OUT_OF_RANGE, connection.seek)?;
-            return Ok(());
-        }
-        let new_seek = new_seek as u64;
-
-        connection.seek = new_seek;
-        responder(Status::OK, new_seek)
-    }
-
-    fn handle_truncate<R>(
-        &mut self,
-        connection: &mut FileConnection,
-        length: u64,
-        responder: R,
-    ) -> Result<(), fidl::Error>
-    where
-        R: FnOnce(Status) -> Result<(), fidl::Error>,
-    {
-        if connection.flags & OPEN_RIGHT_WRITABLE == 0 {
-            return responder(Status::ACCESS_DENIED);
-        }
-
-        let effective_capacity = core::cmp::max(connection.buffer.len() as u64, self.capacity);
-
-        match self.on_write {
-            None => responder(Status::NOT_SUPPORTED),
-            Some(_) if length > effective_capacity => responder(Status::OUT_OF_RANGE),
-            Some(_) => {
-                assert_eq_size!(usize, u64);
-
-                connection.buffer.resize(length as usize, 0);
-
-                // We are not supposed to touch the seek position during truncation, but the
-                // effective_capacity may be smaller now - in which case we do need to move the
-                // seek position.
-                let new_effective_capacity = core::cmp::max(length, self.capacity);
-                connection.seek = core::cmp::min(connection.seek, new_effective_capacity);
-
-                responder(Status::OK)
             }
         }
     }
