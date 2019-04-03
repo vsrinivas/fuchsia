@@ -17,6 +17,35 @@ declare_args() {
   # slice size may lead to wasted space. The selected default size of 8mb is
   # selected for conservation of space, rather than performance.
   fvm_slice_size = "8388608"
+
+  # Users of the filesystem may know required minimum load (total number of
+  # data bytes and total number of files) on the fs. Following parameters
+  # help to reserve the space needed for the load.
+
+  # minimum_inodes is the number of inodes to reserve for the fs
+  # An empty string does not reserve any additional space than minimum
+  # required for the filesystem.
+  blobfs_minimum_inodes = ""
+  minfs_minimum_inodes = ""
+
+  # Number of bytes to reserve for data in the fs. This is in addition
+  # to what is reserved, if any, for the inodes. Data bytes constitutes
+  # "usable" space of the fs.
+  # An empty string does not reserve any additional space than minimum
+  # required for the filesystem.
+  blobfs_minimum_data_bytes = ""
+  minfs_minimum_data_bytes = ""
+
+  # In addition to reserving space for inodes and data, fs needs additional
+  # space for maintaining some internal data structures. So the
+  # space required to reserve inodes and data may exceed sum of the space
+  # needed for inodes and data.
+  # maximum_bytes puts an upper bound on the total bytes reserved for inodes,
+  # data bytes and reservation for all other internal fs metadata.
+  # An empty string does not put any upper bound. A filesystem may
+  # reserve few blocks required for its operations.
+  blobfs_maximum_bytes = ""
+  minfs_maximum_bytes = ""
 }
 
 # Build an FVM partition
@@ -65,6 +94,24 @@ template("generate_fvm") {
       deps += [ part.dep ]
       sources += get_target_outputs(part.dep)
       args += rebase_path(get_target_outputs(part.dep), root_build_dir)
+      if ("${part.minimum_inodes}" != "") {
+        args += [
+          "--minimum-inodes",
+          "${part.minimum_inodes}",
+        ]
+      }
+      if ("${part.minimum_data_bytes}" != "") {
+        args += [
+          "--minimum-data-bytes",
+          "${part.minimum_data_bytes}",
+        ]
+      }
+      if ("${part.maximum_bytes}" != "") {
+        args += [
+          "--maximum-bytes",
+          "${part.maximum_bytes}",
+        ]
+      }
     }
   }
 }
