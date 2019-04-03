@@ -375,19 +375,6 @@ Then run `fx build-zircon` as usual.
 For layers-above-Zircon, it should be sufficient to pass
 `--args clang_prefix="${CLANG_DIR}"` to `fx set`, then run `fx build` as usual.
 
-*** note
-**Note:** that since `fx full-build` implicitly builds Zircon, for a full build,
-you also need to set the environment variables necessary for Zircon.
-***
-
-To ensure the environment variables are set every time you build, you may want
-to run `fx set`, and then manually edit your `${FUCHSIA_SOURCE}/.config` file,
-adding the following line:
-
-```bash
-export USE_CLANG=true CLANG_TOOLCHAIN_PREFIX=${LLVM_OBJDIR}/bin/
-```
-
 ### Building Fuchsia with custom Clang on bots (Googlers only)
 
 Fuchsia's infrastructure has support for using a non-default version of Clang
