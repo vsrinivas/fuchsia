@@ -6,9 +6,8 @@ import os
 import sys
 import subprocess
 
-ROOT_PATH = os.path.abspath(__file__ + "/../../../../..")
+ROOT_PATH = os.environ["FUCHSIA_DIR"]
 FX_PATH = os.path.join(ROOT_PATH, "scripts", "fx")
-BUILD_DIR_PATH = os.path.join(ROOT_PATH, ".fx-build-dir")
 
 def _walk_up_path(path):
     res = set([path])
