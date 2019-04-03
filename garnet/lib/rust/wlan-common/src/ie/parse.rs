@@ -61,6 +61,13 @@ pub fn parse_ext_supported_rates<B: ByteSlice>(
     Ok(LayoutVerified::new_slice_unaligned(raw_body).unwrap())
 }
 
+pub fn parse_ht_operation<B: ByteSlice>(
+    raw_body: B,
+) -> FrameParseResult<LayoutVerified<B, HtOperation>> {
+    LayoutVerified::new(raw_body)
+        .ok_or(FrameParseError::new("Invalid length of HT Operation element"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn ht_cap_wrong_size() {
+    fn ht_capabilities_wrong_size() {
         let err = parse_ht_capabilities(&[0u8; 25][..]).err().expect("expected Err");
         assert_eq!("Invalid length of HT Capabilities element", err.debug_message());
         let err = parse_ht_capabilities(&[0u8; 27][..]).err().expect("expected Err");
@@ -142,7 +149,7 @@ mod tests {
     }
 
     #[test]
-    fn ht_cap_ok() {
+    fn ht_capabilities_ok() {
         // HtCapabilities element without Element Id and length
         #[rustfmt::skip]
         let raw_body = [
@@ -209,5 +216,41 @@ mod tests {
     pub fn ext_supported_rates_empty() {
         let err = parse_ext_supported_rates(&[][..]).expect_err("expected Err");
         assert_eq!("Empty Extended Supported Rates element", err.debug_message());
+    }
+
+    #[test]
+    fn ht_operation_wrong_size() {
+        let err = parse_ht_operation(&[0u8; 21][..]).err().expect("expected Err");
+        assert_eq!("Invalid length of HT Operation element", err.debug_message());
+        let err = parse_ht_operation(&[0u8; 23][..]).err().expect("expected Err");
+        assert_eq!("Invalid length of HT Operation element", err.debug_message());
+    }
+
+    #[test]
+    fn ht_operation_ok() {
+        // HtOperation element without Element Id and length
+        #[rustfmt::skip]
+            let raw_body = [
+            99, // primary_chan(u8)
+            0xff, // ht_op_info_head(HtOpInfoHead(u8))
+            0xfe, 0xff, 0xff, 0xff, // ht_op_info_tail(HtOpInfoTail(u8),
+            0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0xab, 0xcd, 0x00, 0x00, 0x00, 0x00,
+            // basic_ht_mcs_set(SupportedMcsSet(u128))
+        ];
+        let ht_op = parse_ht_operation(&raw_body[..]).expect("valid frame should result in OK");
+
+        assert_eq!(ht_op.primary_chan, 99);
+
+        let ht_op_info_head = ht_op.ht_op_info_head;
+        assert_eq!(ht_op_info_head.secondary_chan_offset(), SecChanOffset::SECONDARY_BELOW);
+        assert_eq!(ht_op_info_head.sta_chan_width(), StaChanWidth::ANY);
+
+        let ht_op_info_tail = ht_op.ht_op_info_tail;
+        assert_eq!(ht_op_info_tail.ht_protection(), HtProtection::TWENTY_MHZ);
+        assert_eq!(ht_op_info_tail.pco_phase(), PcoPhase::FORTY_MHZ);
+
+        let basic_mcs_set = ht_op.basic_ht_mcs_set;
+        assert_eq!(basic_mcs_set.0, 0x00000000_cdab0000_00000000_000000ff);
     }
 }

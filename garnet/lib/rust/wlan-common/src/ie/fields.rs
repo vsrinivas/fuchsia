@@ -353,3 +353,83 @@ impl NumSpaceTimeStreams {
 #[repr(C)]
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
 pub struct AselCapability(pub u8);
+
+// IEEE Std 802.11-2016, 9.4.2.57
+#[repr(C, packed)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
+pub struct HtOperation {
+    pub primary_chan: u8, // Primary 20 MHz channel.
+    // HT Operation Information is 40-bit field so it has to be split
+    pub ht_op_info_head: HtOpInfoHead,     // u8
+    pub ht_op_info_tail: HtOpInfoTail,     // u32
+    pub basic_ht_mcs_set: SupportedMcsSet, // u128
+}
+
+// IEEE Std 802.11-2016, Figure 9-339
+#[bitfield(
+    0..=1 secondary_chan_offset as SecChanOffset(u8),
+    2..=2 sta_chan_width as StaChanWidth(u8),
+    3     rifs_mode_permitted,
+    4..=7 _,    // reserved. Note: used by 802.11n-D1.10 (before 802.11n-2009)
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
+pub struct HtOpInfoHead(pub u8);
+
+#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+pub struct SecChanOffset(pub u8);
+impl SecChanOffset {
+    pub_const!(SECONDARY_NONE, 0); // No secondary channel
+    pub_const!(SECONDARY_ABOVE, 1); // Secondary channel is above the primary channel
+                                    // 2 reserved
+    pub_const!(SECONDARY_BELOW, 3); // Secondary channel is below the primary channel
+}
+
+#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+pub struct StaChanWidth(pub u8);
+impl StaChanWidth {
+    pub_const!(TWENTY_MHZ, 0);
+    pub_const!(ANY, 1); // Any in the Supported Channel Width set
+}
+
+// IEEE Std 802.11-2016, Figure 9-339, continued
+#[bitfield(
+    // bit offset in this struct starts from bit 8 in the IEEE HtOperationInformation field.
+    0..=1   ht_protection as HtProtection(u8),
+    2       nongreenfield_present,
+    3       _,                                  // reserved. Note: used in 802.11n-D1.10
+                                                // (before 802.11n-2009).
+    4       obss_non_ht_stas_present,
+    // IEEE 802.11-2016 Figure 9-339 has an inconsistency so this is Fuchsia interpretation:
+    // The channel number for the second segment in a 80+80 Mhz channel
+    5..=12  center_freq_seg2,                   // For VHT only. See Table 9-250
+    13..=15 _,                                  // reserved
+
+    16..=21 _,                                  // reserved
+    22      dual_beacon,                        // whether an STBC beacon is transmitted by the AP
+    23      dual_cts_protection,                // whether CTS protection is required
+    24      stbc_beacon,                        // 0 indicates primary beacon, 1 STBC beacon
+    25      lsig_txop_protection,               // only true if all HT STAs in the BSS support this
+    26      pco_active,
+    27..=27 pco_phase as PcoPhase(u8),
+    28..=31 _,                                  // reserved
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
+pub struct HtOpInfoTail(pub u32);
+
+#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+pub struct HtProtection(pub u8);
+impl HtProtection {
+    pub_const!(NONE, 0);
+    pub_const!(NON_MEMBER, 1);
+    pub_const!(TWENTY_MHZ, 2);
+    pub_const!(NON_HT_MIXED, 3);
+}
+
+#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+pub struct PcoPhase(pub u8);
+impl PcoPhase {
+    pub_const!(TWENTY_MHZ, 0);
+    pub_const!(FORTY_MHZ, 1);
+}
