@@ -76,12 +76,10 @@ def OutDir(args):
     return os.environ.get('FUCHSIA_BUILD_DIR')
 
   fuchsia_dir = os.environ.get('FUCHSIA_DIR', paths.FUCHSIA_ROOT)
-  fuchsia_config_file = os.path.join(fuchsia_dir, '.config')
+  fuchsia_config_file = os.path.join(fuchsia_dir, '.fx-build-dir')
   if os.path.isfile(fuchsia_config_file):
     fuchsia_config = open(fuchsia_config_file).read()
-    m = re.search(r'FUCHSIA_BUILD_DIR=[\'"]([^\s\'"]*)', fuchsia_config)
-    if m:
-      return os.path.join(fuchsia_dir, m.group(1))
+    return os.path.join(fuchsia_dir, fuchsia_config.strip())
 
   return None
 
