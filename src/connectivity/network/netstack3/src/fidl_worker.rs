@@ -7,12 +7,11 @@
 use {
     crate::eventloop::Event,
     failure::Error,
-    fidl::endpoints::{RequestStream, ServiceMarker},
-    fidl_fuchsia_net::{SocketProviderMarker, SocketProviderRequestStream},
-    fidl_fuchsia_net_stack::{StackMarker, StackRequestStream},
-    fuchsia_app::server::ServicesServer,
+    fidl_fuchsia_net::SocketProviderRequestStream,
+    fidl_fuchsia_net_stack::StackRequestStream,
     fuchsia_async as fasync,
-    futures::{channel::mpsc, TryFutureExt, TryStreamExt},
+    fuchsia_component::server::ServiceFs,
+    futures::{channel::mpsc, FutureExt, SinkExt, StreamExt, TryStreamExt},
     log::error,
 };
 
@@ -20,47 +19,28 @@ pub struct FidlWorker;
 
 impl FidlWorker {
     pub fn spawn(self, event_chan: mpsc::UnboundedSender<Event>) -> Result<(), Error> {
-        let stack_event_chan = event_chan.clone();
-        let socket_event_chan = event_chan.clone();
-        {
-            fasync::spawn_local(
-                ServicesServer::new()
-                    .add_service((StackMarker::NAME, move |chan| {
-                        Self::spawn_stack(chan, stack_event_chan.clone())
-                    }))
-                    .add_service((SocketProviderMarker::NAME, move |chan| {
-                        Self::spawn_socket_provider(chan, socket_event_chan.clone())
-                    }))
-                    .start()?
-                    .unwrap_or_else(|e: Error| error!("{:?}", e)),
-            );
-        }
+        let mut fs = ServiceFs::new_local();
+        fs.dir("public")
+            .add_fidl_service(|rs: StackRequestStream| {
+                rs.map_ok(Event::FidlStackEvent).left_stream()
+            })
+            .add_fidl_service(|rs: SocketProviderRequestStream| {
+                rs.map_ok(Event::FidlSocketProviderEvent).right_stream()
+            });
+        fs.take_and_serve_directory_handle()?;
+
+        fasync::spawn_local(
+            async move {
+                while let Some(event_stream) = await!(fs.next()) {
+                    let event_chan = event_chan.clone().sink_map_err(|e| error!("{:?}", e));
+                    let event_stream = event_stream.map_err(|e| error!("{:?}", e));
+                    fasync::spawn_local(
+                        event_stream.forward(event_chan).map(|_sink_res: Result<_, ()>| ()),
+                    );
+                }
+            },
+        );
+
         Ok(())
-    }
-
-    fn spawn_stack(chan: fasync::Channel, event_chan: mpsc::UnboundedSender<Event>) {
-        fasync::spawn_local(
-            async move {
-                let mut stream = StackRequestStream::from_channel(chan);
-                while let Some(req) = await!(stream.try_next())? {
-                    event_chan.unbounded_send(Event::FidlStackEvent(req))?;
-                }
-                Ok(())
-            }
-                .unwrap_or_else(|e: Error| error!("{:?}", e)),
-        );
-    }
-
-    fn spawn_socket_provider(chan: fasync::Channel, event_chan: mpsc::UnboundedSender<Event>) {
-        fasync::spawn_local(
-            async move {
-                let mut stream = SocketProviderRequestStream::from_channel(chan);
-                while let Some(req) = await!(stream.try_next())? {
-                    event_chan.unbounded_send(Event::FidlSocketProviderEvent(req))?;
-                }
-                Ok(())
-            }
-                .unwrap_or_else(|e: Error| error!("{:?}", e)),
-        );
     }
 }

@@ -9,7 +9,7 @@ use fdio;
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
-use fuchsia_app::client;
+use fuchsia_component::client;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use std::fs::{self, File};

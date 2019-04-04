@@ -24,9 +24,11 @@
 //!
 //! The FIDL part of the event loop implements the fuchsia.net.stack.Stack and
 //! fuchsia.net.SocketProvider interfaces. The type of the event loop message for a FIDL call is
-//! simply the generated FIDL type. When the event loop starts up, we use `fuchsia_app` to start a
-//! FIDL server that simply sends all of the events it receives to the event loop (via the sender
-//! end of the mpsc queue). When `EventLoop` receives this message, it calls the
+//! simply the generated FIDL type. When the event loop starts up, we use `fuchsia_component` to
+//! start a FIDL server that simply sends all of the events it receives to the event loop
+//! (via the sender end of the mpsc queue).
+//!
+//! When `EventLoop` receives this message, it calls the
 //! `handle_fidl_stack_request` or `handle_fidl_socket_provider_request` method, which, depending
 //! on what the request is, either:
 //!
