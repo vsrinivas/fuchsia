@@ -225,9 +225,9 @@ pub mod server {
     /// `Service` connects channels to service instances.
     ///
     /// Note that this trait is implemented by the `FidlService` type.
-    pub trait Service: 'static {
+    pub trait Service {
         /// The type of the value yielded by the `spawn_service` callback.
-        type Output: 'static;
+        type Output;
 
         /// Create a new instance of the service on the provided `zx::Channel`.
         ///
@@ -243,9 +243,8 @@ pub mod server {
     /// `RequestStream` type.
     pub struct FidlService<F, RS, Output>
     where
-        F: FnMut(RS) -> Output + 'static,
-        RS: RequestStream + 'static,
-        Output: 'static,
+        F: FnMut(RS) -> Output,
+        RS: RequestStream,
     {
         f: F,
         marker: PhantomData<fn(RS) -> Output>,
@@ -253,9 +252,8 @@ pub mod server {
 
     impl<F, RS, Output> From<F> for FidlService<F, RS, Output>
     where
-        F: FnMut(RS) -> Output + 'static,
-        RS: RequestStream + 'static,
-        Output: 'static,
+        F: FnMut(RS) -> Output,
+        RS: RequestStream,
     {
         fn from(f: F) -> Self {
             Self { f, marker: PhantomData }
@@ -264,9 +262,8 @@ pub mod server {
 
     impl<F, RS, Output> Service for FidlService<F, RS, Output>
     where
-        F: FnMut(RS) -> Output + 'static,
-        RS: RequestStream + 'static,
-        Output: 'static,
+        F: FnMut(RS) -> Output,
+        RS: RequestStream,
     {
         type Output = Output;
         fn connect(&mut self, channel: zx::Channel) -> Option<Self::Output> {
@@ -285,9 +282,9 @@ pub mod server {
     ///
     /// Types which implement the `Service` trait can be converted to objects of
     /// this type via the `From`/`Into` traits.
-    pub struct ServiceObjLocal<Output>(Box<dyn Service<Output = Output>>);
+    pub struct ServiceObjLocal<'a, Output>(Box<dyn Service<Output = Output> + 'a>);
 
-    impl<S: Service> From<S> for ServiceObjLocal<S::Output> {
+    impl<'a, S: Service + 'a> From<S> for ServiceObjLocal<'a, S::Output> {
         fn from(service: S) -> Self {
             ServiceObjLocal(Box::new(service))
         }
@@ -298,9 +295,9 @@ pub mod server {
     ///
     /// Types which implement the `Service` trait and the `Send` trait can
     /// be converted to objects of this type via the `From`/`Into` traits.
-    pub struct ServiceObj<Output>(Box<dyn Service<Output = Output> + Send>);
+    pub struct ServiceObj<'a, Output>(Box<dyn Service<Output = Output> + Send + 'a>);
 
-    impl<S: Service + Send> From<S> for ServiceObj<S::Output> {
+    impl<'a, S: Service + Send + 'a> From<S> for ServiceObj<'a, S::Output> {
         fn from(service: S) -> Self {
             ServiceObj(Box::new(service))
         }
@@ -313,15 +310,15 @@ pub mod server {
     /// multithreaded-capable, while code that uses `ServiceObjLocal` will
     /// allow non-`Send` types but will be restricted to singlethreaded
     /// executors.
-    pub trait ServiceObjTrait: 'static {
+    pub trait ServiceObjTrait {
         /// The output type of the underlying `Service`.
-        type Output: 'static;
+        type Output;
 
         /// Get a mutable reference to the underlying `Service` trait object.
         fn service(&mut self) -> &mut dyn Service<Output = Self::Output>;
     }
 
-    impl<Output: 'static> ServiceObjTrait for ServiceObjLocal<Output> {
+    impl<'a, Output> ServiceObjTrait for ServiceObjLocal<'a, Output> {
         type Output = Output;
 
         fn service(&mut self) -> &mut dyn Service<Output = Self::Output> {
@@ -329,7 +326,7 @@ pub mod server {
         }
     }
 
-    impl<Output: 'static> ServiceObjTrait for ServiceObj<Output> {
+    impl<'a, Output> ServiceObjTrait for ServiceObj<'a, Output> {
         type Output = Output;
 
         fn service(&mut self) -> &mut dyn Service<Output = Self::Output> {
@@ -392,7 +389,7 @@ pub mod server {
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_POSIX |
         OPEN_FLAG_DIRECTORY | OPEN_FLAG_NODE_REFERENCE;
 
-    impl<Output: 'static> ServiceFs<ServiceObjLocal<Output>> {
+    impl<'a, Output: 'a> ServiceFs<ServiceObjLocal<'a, Output>> {
         /// Create a new `ServiceFs` that is singlethreaded-only and does not
         /// require services to implement `Send`.
         pub fn new_local() -> Self {
@@ -403,7 +400,7 @@ pub mod server {
         }
     }
 
-    impl<Output: 'static> ServiceFs<ServiceObj<Output>> {
+    impl<'a, Output: 'a> ServiceFs<ServiceObj<'a, Output>> {
         /// Create a new `ServiceFs` that is multithreaded-capable and requires
         /// services to implement `Send`.
         pub fn new() -> Self {
@@ -474,7 +471,7 @@ pub mod server {
     #[doc(hidden)]
     pub struct Proxy<S, O>(PhantomData<(S, fn() -> O)>);
 
-    impl<S: ServiceMarker, O: 'static> Service for Proxy<S, O> {
+    impl<S: ServiceMarker, O> Service for Proxy<S, O> {
         type Output = O;
         fn connect(&mut self, channel: zx::Channel) -> Option<O> {
             if let Err(e) = crate::client::connect_channel_to_service::<S>(channel) {
@@ -502,7 +499,7 @@ pub mod server {
         _marker: PhantomData<O>,
     }
 
-    impl<O: 'static> Service for ComponentProxy<O> {
+    impl<O> Service for ComponentProxy<O> {
         type Output = O;
         fn connect(&mut self, channel: zx::Channel) -> Option<O> {
             let res = (|| {
@@ -538,8 +535,8 @@ pub mod server {
                 service: F,
             ) -> &mut Self
             where
-                F: FnMut(RS) -> ServiceObjTy::Output + 'static,
-                RS: RequestStream + 'static,
+                F: FnMut(RS) -> ServiceObjTy::Output,
+                RS: RequestStream,
                 FidlService<F, RS, ServiceObjTy::Output>: Into<ServiceObjTy>,
             {
                 self.add_service_at(
@@ -552,7 +549,7 @@ pub mod server {
             // NOTE: we'd like to be able to remove the type parameter `O` here,
             //  but unfortunately the bound `ServiceObjTy: From<Proxy<S, ServiceObjTy::Output>>`
             //  makes type checking angry.
-            pub fn add_proxy_service<S: ServiceMarker, O: 'static>(&mut self) -> &mut Self
+            pub fn add_proxy_service<S: ServiceMarker, O>(&mut self) -> &mut Self
             where
                 ServiceObjTy: From<Proxy<S, O>>,
                 ServiceObjTy: ServiceObjTrait<Output = O>,
@@ -565,7 +562,7 @@ pub mod server {
 
             /// Add a service to the `ServicesServer` that will launch a component
             /// upon request, proxying requests to the launched component.
-            pub fn add_component_proxy_service<O: 'static>(
+            pub fn add_component_proxy_service<O>(
                 &mut self,
                 service_name: &'static str,
                 component_url: String,
@@ -668,7 +665,7 @@ pub mod server {
         /// Note that the resulting `App` and `EnvironmentControllerProxy` must be kept
         /// alive for the component to continue running. Once they are dropped, the
         /// component will be destroyed.
-        pub fn launch_component_in_nested_environment<O: 'static>(
+        pub fn launch_component_in_nested_environment<O>(
             &mut self,
             url: String,
             arguments: Option<Vec<String>>,
