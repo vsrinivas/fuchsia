@@ -13,29 +13,29 @@ using zx;
 /// package resolver components.
 [Discoverable]
 protocol PackageCache {
-    /// Fetches the package using the provided |fetcher|, unless it is already
-    /// present on the local system.
+    /// Gets the package directory if it is present on the local system. If it is not, the
+    /// |missing_blobs| iterator will provide all the blobs in the package that are missing from
+    /// the system, and the ability to write those blobs to blobfs. If all the missing blobs are
+    /// downloaded and written to by the client, the |dir| directory will be resolved. This method
+    /// will return |ZX_OK| when the package has been fully resolved, or an error if the client
+    /// closes |needed_blobs| or |dir| handle before the package has been resolved.
     ///
     /// Arguments:
-    /// * |meta_far_blob_id| is the blob id for the package's meta.far.
-    /// * |meta_far_length| is the length in bytes of the package's meta.far.
+    /// * |meta_far_blob| is the blob info for the package's meta.far.
     /// * |selectors| are the package selectors (TODO: link to docs).
-    /// * |fetcher| is the fetcher that will download the blobs for this package.
+    /// * |needed_blobs| is an iterator over all the blobs in the package that
+    ///   are not present on the system.
     /// * |dir| is an optional request for a directory that will be resolved when the package has
     ///   been successfully cached.
     ///
     /// Return Values:
     /// * |ZX_OK| if the package was successfully cached.
-    /// * |ZX_ERR_ACCESS_DENIED| if the fetcher does not have permission to download a blob.
-    /// * |ZX_ERR_IO| if there is some other unspecified error during I/O.
-    /// * |ZX_ERR_NOT_FOUND| if the fetcher is not able to find a blob.
-    /// * |ZX_ERR_NO_SPACE| if there is no space available to store the package.
-    /// * |ZX_ERR_UNAVAILABLE| if the fetcher is currently unable to download a blob.
-    Fetch(
-        BlobId meta_far_blob_id,
-        uint64 meta_far_length,
+    /// * |ZX_ERR_UNAVAILABLE| if the client closed |needed_blobs| or |dir| handles before the
+    ///   all the missing blobs were downloaded to the system.
+    Get(
+        BlobInfo meta_far_blob,
         vector<string> selectors,
-        BlobFetcher fetcher,
+        request<NeededBlobs> needed_blobs,
         request<fuchsia.io.Directory>? dir
         ) -> (zx.status status);
 
@@ -57,22 +57,27 @@ protocol PackageCache {
         ) -> (zx.status status);
 };
 
-/// The |BlobFetcher| is an abstract interface that is provided by a |PackageResolver| to the
-/// |PackageCache| to fetch one or more blobs.
-protocol BlobFetcher {
-    /// Fetches a blob.
+/// The |NeededBlobs| is an abstract interface that is provided by a |PackageCache| to the
+/// |PackageResolver| to fetch one or more blobs that are not present on the local system for a
+/// given package.
+protocol NeededBlobs {
+    /// Returns a vector of blobs that are not present on the system that must be downloaded and
+    /// written to blobfs with the |Open| method before a package can be resolved. This method
+    /// should continue to be called until it returns an empty vector. This signifies all the
+    /// missing blobs have been successfully downloaded.
+    GetMissingBlobs() -> (vector<BlobInfo> blobs);
+
+    /// Open a blob for writing.
     ///
-    /// Arugments:
-    /// * |blob| is the merkle root for the blob.
-    /// * |file| is the file the blob should be written into. This file must already be truncated
-    ///   to the correct size by the caller. Implementations must not attempt to truncate the file.
+    /// Arguments:
+    /// * |blob_id| is the blob id describing this blob.
+    /// * |file| resolves to an opened writable file must be truncated to the correct size by the
+    ///   caller.
     ///
     /// Return Values:
     /// * |ZX_OK| if successful.
-    /// * |ZX_ERR_ACCESS_DENIED| if the fetcher does not have permission to download the blob.
-    /// * |ZX_ERR_IO_DATA_INTEGRITY| is returned if the blob is corrupt.
+    /// * |ZX_ERR_ACCESS_DENIED| if the package does not contain this blob.
     /// * |ZX_ERR_IO| if there is some other unspecified error during I/O.
-    /// * |ZX_ERR_NOT_FOUND| if the fetcher is not able to find the blob.
-    /// * |ZX_ERR_UNAVAILABLE| if the fetcher is currently unable to download the blob.
-    FetchBlob(BlobId blob, fuchsia.io.File file) -> (zx.status status);
+    /// * |ZX_ERR_NO_SPACE| if there is no space available to store the package.
+    Open(BlobId blob_id, request<fuchsia.io.File> file) -> (zx.status status);
 };

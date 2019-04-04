@@ -10,7 +10,7 @@
 extern crate proptest;
 
 mod types;
-pub use crate::types::BlobId;
+pub use crate::types::{BlobId, BlobInfo};
 
 mod repo;
 pub use crate::repo::{

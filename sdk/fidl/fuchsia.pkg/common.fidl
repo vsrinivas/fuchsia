@@ -9,3 +9,10 @@ library fuchsia.pkg;
 struct BlobId {
     array<uint8>:32 merkle_root;
 };
+
+/// BlobInfo is a tuple of the content-addressed merkle root for an artifact, along with that
+/// artifact's length in bytes.
+struct BlobInfo {
+    BlobId blob_id;
+    uint64 length;
+};
