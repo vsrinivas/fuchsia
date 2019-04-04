@@ -4,9 +4,9 @@
 # found in the LICENSE file.
 
 import argparse
-import subprocess
-import re
 import os
+import re
+import subprocess
 
 from host import Host
 
@@ -96,8 +96,10 @@ class Device(object):
     """Maps names to process IDs for running fuzzers.
 
     Connects to the device and checks which fuzz targets have a matching entry
-    in the component list given by 'cs'.  This matches on the component manifest
-    *only*.
+    in the component list given by 'cs'.  This matches on *only* the first 32
+    characters of the component manifest and package URL.  This is due to 'cs'
+    being limited to returning strings of length `ZX_MAX_NAME_LEN`, as defined
+    in //zircon/system/public/zircon/types.h.
 
     Returns:
       A dict mapping fuzz target names to process IDs. May be empty if no
@@ -106,8 +108,10 @@ class Device(object):
     out, _ = self._ssh(['cs'], stdout=subprocess.PIPE).communicate()
     pids = {}
     for fuzzer in self.host.fuzzers:
+      tgt = (fuzzer[1] + '.cmx')[:32]
+      url = ('fuchsia-pkg://fuchsia.com/%s#meta' % fuzzer[0])[:32]
       for line in str(out).split('\n'):
-        match = re.search(fuzzer[1] + r'\.cmx\[(\d+)\]', line)
+        match = re.search(tgt + r'\[(\d+)\]: ' + url, line)
         if match:
           pids[fuzzer[1]] = int(match.group(1))
     return pids
@@ -137,3 +141,21 @@ class Device(object):
     except subprocess.CalledProcessError:
       pass
     return results
+
+  def _scp(self, src, dst):
+    """Copies `src` to `dst`.
+
+    Don't call directly; use `fetch` or `store` instead.`
+
+    Args:
+      src: Local or remote path to copy from.
+      dst: Local or remote path to copy to.
+    """
+    scp_cmd = ' '.join(['scp', '-F', self.host.ssh_config, src, dst])
+    subprocess.check_call(scp_cmd, shell=True, stdout=None, stderr=None)
+
+  def fetch(self, data_src, host_dst):
+    """Copies `data_src` on the target to `host_dst` on the host."""
+    if not os.path.isdir(host_dst):
+      raise ValueError(host_dst + ' is not a directory')
+    self._scp('[' + self._netaddr + ']:' + data_src, host_dst)

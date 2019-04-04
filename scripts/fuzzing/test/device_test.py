@@ -7,8 +7,9 @@ import unittest
 import subprocess
 
 import test_env
-from lib.host import Host
 from lib.device import Device
+from lib.host import Host
+
 from device_mock import MockDevice
 
 
@@ -35,6 +36,7 @@ class TestDevice(unittest.TestCase):
     pids = mock.getpids()
     self.assertTrue('mock-target1' in pids)
     self.assertEqual(pids['mock-target1'], 7412221)
+    self.assertEqual(pids['an-extremely-verbose-target-name'], 7412223)
 
   def test_ls(self):
     mock = MockDevice()
@@ -44,6 +46,17 @@ class TestDevice(unittest.TestCase):
         'ssh -F ' + mock.host.ssh_config + ' ::1 ls -l path-to-some-corpus')
     self.assertTrue('feac37187e77ff60222325cf2829e2273e04f2ea' in files)
     self.assertEqual(files['feac37187e77ff60222325cf2829e2273e04f2ea'], 1796)
+
+  def test_fetch(self):
+    mock = MockDevice()
+    with self.assertRaises(ValueError):
+      mock.fetch('foo', 'not-likely-to-be-a-directory')
+    mock.fetch('remote-path', '/tmp')
+    self.assertEqual(
+        mock.last, 'scp -F ' + mock.host.ssh_config + ' [::1]:remote-path /tmp')
+    mock.fetch('corpus/*', '/tmp')
+    self.assertEqual(mock.last,
+                     'scp -F ' + mock.host.ssh_config + ' [::1]:corpus/* /tmp')
 
 
 if __name__ == '__main__':

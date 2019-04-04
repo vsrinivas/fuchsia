@@ -6,8 +6,8 @@
 import argparse
 import sys
 
-from lib.host import Host
 from lib.fuzzer import Fuzzer
+from lib.host import Host
 
 
 def main():

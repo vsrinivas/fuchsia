@@ -72,3 +72,33 @@ class Host(object):
       subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.STDOUT)
     else:
       return subprocess.check_output(cmd, stderr=Host.DEVNULL).strip()
+
+  def symbolize(self, log_in, log_out):
+    """Symbolizes backtraces in a log file using the current build."""
+    executable = Host.join('zircon', 'prebuilt', 'downloads', 'symbolize')
+    symbolizer = Host.join('buildtools', self._platform, 'clang', 'bin',
+                           'llvm-symbolizer')
+    subprocess.check_call([
+        executable, '-ids-rel', '-ids', self._ids, '-llvm-symbolizer',
+        symbolizer
+    ],
+                          stdin=log_in,
+                          stdout=log_out)
+
+  def notify_user(self, title, body):
+    """Displays a message to the user in a platform-specific way"""
+    if self._platform == 'mac-x64':
+      subprocess.call([
+          'osascript', '-e',
+          'display notification "' + body + '" with title "' + title + '"'
+      ])
+    elif subprocess.call(['which', 'notify-send'],
+                         stdout=Host.DEVNULL,
+                         stderr=Host.DEVNULL) == 0:
+      subprocess.call(['notify-send', title, body],
+                      stdout=Host.DEVNULL,
+                      stderr=Host.DEVNULL)
+    else:
+      subprocess.call(['wall', title + '; ' + body],
+                      stdout=Host.DEVNULL,
+                      stderr=Host.DEVNULL)

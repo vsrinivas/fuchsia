@@ -35,6 +35,7 @@ default.profraw
 rls*.log
 Session.vim
 tags
+test_data/
 Thumbs.db
 tools/cipd.gni
 topaz/

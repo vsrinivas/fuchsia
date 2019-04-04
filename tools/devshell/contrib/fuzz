@@ -411,11 +411,17 @@ main() {
     check)
       python ${FUZZING_DIR}/check_fuzzer.py ${name_opt}
       ;;
-    stop|repro|merge)
-      fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args}
-      ;;
     start)
-      start "${args}"
+      python ${FUZZING_DIR}/start_fuzzer.py ${name_opt} &
+      ;;
+    stop)
+      python ${FUZZING_DIR}/stop_fuzzer.py ${name_opt}
+      ;;
+    repro)
+      python ${FUZZING_DIR}/repro_units.py ${name_opt}
+      ;;
+    merge)
+      fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args}
       ;;
     fetch|store)
       set_staging

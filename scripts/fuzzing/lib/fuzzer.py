@@ -4,10 +4,15 @@
 # found in the LICENSE file.
 
 import argparse
+import datetime
+import errno
+import os
 import subprocess
+import time
 
 from device import Device
 from host import Host
+from log import Log
 
 
 class Fuzzer(object):
@@ -27,15 +32,19 @@ class Fuzzer(object):
       tgt: The GN fuzz_target name
   """
 
-  class NameError(ValueError):
-    """Indicates a supplied name is malformed or unusable."""
-    pass
-
   # Matches the prefixes in libFuzzer passed to |Fuzzer::DumpCurrentUnit| or
   # |Fuzzer::WriteUnitToFileWithPrefix|.
   ARTIFACT_PREFIXES = [
       'crash', 'leak', 'mismatch', 'oom', 'slow-unit', 'timeout'
   ]
+
+  class NameError(ValueError):
+    """Indicates a supplied name is malformed or unusable."""
+    pass
+
+  class StateError(ValueError):
+    """Indicates a command isn't valid for the fuzzer in its current state."""
+    pass
 
   @classmethod
   def make_parser(cls, description, name_required=True):
@@ -82,6 +91,15 @@ class Fuzzer(object):
         filtered.append((pkg, tgt))
     return filtered
 
+  @classmethod
+  def from_args(cls, device, args):
+    """Constructs a Fuzzer from command line arguments."""
+    fuzzers = Fuzzer.filter(device.host.fuzzers, args.name)
+    if len(fuzzers) != 1:
+      raise Fuzzer.NameError('Name did not resolve to exactly one fuzzer: \'' +
+                             args.name + '\'. Try using \'list-fuzzers\'.')
+    return cls(device, fuzzers[0][0], fuzzers[0][1])
+
   def __init__(self, device, pkg, tgt):
     self.device = device
     self.host = device.host
@@ -116,3 +134,77 @@ class Fuzzer(object):
       return artifacts
     except subprocess.CalledProcessError:
       return []
+
+  def is_running(self):
+    """Checks the device and returns whether the fuzzer is running."""
+    return self.tgt in self.device.getpids()
+
+  def require_stopped(self):
+    """Raise an exception if the fuzzer is running."""
+    if self.is_running():
+      raise Fuzzer.StateError(
+          str(self) + ' is running and must be stopped first.')
+
+  def prepare(self, base_dir=None):
+    """Prepares a local directory to hold the fuzzing results."""
+    self.require_stopped()
+    if not base_dir:
+      base_dir = Host.join()
+    target_dir = os.path.join(base_dir, 'test_data', 'fuzzing', self.pkg,
+                              self.tgt)
+    result_dir = os.path.join(target_dir,
+                              datetime.datetime.utcnow().isoformat())
+    latest_dir = os.path.join(target_dir, 'latest')
+    try:
+      os.unlink(latest_dir)
+    except OSError as e:
+      if e.errno != errno.ENOENT:
+        raise
+    try:
+      os.makedirs(result_dir)
+    except OSError as e:
+      if e.errno != errno.EEXIST:
+        raise
+    os.symlink(result_dir, latest_dir)
+    self._result_dir = result_dir
+
+  def results(self, relpath=''):
+    """Returns the path in the previously prepared results directory."""
+    return os.path.join(self._result_dir, relpath)
+
+  def start(self, fuzzer_args, verbose=False):
+    """Runs the fuzzer.
+
+      Executes a fuzzer in the "normal" fuzzing mode. It creates a log context,
+      and waits after
+      spawning the fuzzer until it completes. As a result, callers will
+      typically want to run this
+      in a background process.
+
+      Args:
+        fuzzer_args: Command line arguments to pass to libFuzzer
+        verbose: If true, tee libFuzzer output to stdout and a local log file.
+    """
+    if not self._result_dir:
+      raise Fuzzer.StateError(str(self) + ' has not been prepared')
+    with Log(self):
+      fuzzer_cmd=['fuzz', 'start', str(self)]
+      logfile=None
+      if verbose:
+        fuzzer_cmd.append('-jobs=0')
+        logfile=self.results('fuzz-0.log')
+      self.device.ssh(fuzzer_cmd + fuzzer_args, quiet=False, logfile=logfile)
+      while self.is_running():
+        time.sleep(2)
+
+  def stop(self):
+    """Stops any processes with a matching component manifest on the device."""
+    pids = self.device.getpids()
+    if self.tgt in pids:
+      self.device.ssh(['kill', str(pids[self.tgt])])
+
+  def repro(self, fuzzer_args):
+    """Runs the fuzzer on previously found test unit artifacts."""
+    self.require_stopped()
+    self.device.ssh(['fuzz', 'repro', str(self)] + fuzzer_args, quiet=False)
+
