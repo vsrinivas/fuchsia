@@ -7,8 +7,8 @@
 use failure::{err_msg, Error, ResultExt};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_mem;
-use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use futures::FutureExt;
 use std::convert::{TryFrom, TryInto};

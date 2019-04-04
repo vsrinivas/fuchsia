@@ -539,8 +539,27 @@ pub mod server {
                 RS: RequestStream,
                 FidlService<F, RS, ServiceObjTy::Output>: Into<ServiceObjTy>,
             {
-                self.add_service_at(
+                self.add_fidl_service_at(
                     RS::Service::NAME,
+                    service,
+                )
+            }
+
+            /// Adds a FIDL service to the directory at the given path.
+            ///
+            /// The path must be a single component containing no `/` characters.
+            pub fn add_fidl_service_at<F, RS>(
+                &mut self,
+                path: impl Into<String>,
+                service: F,
+            ) -> &mut Self
+            where
+                F: FnMut(RS) -> ServiceObjTy::Output,
+                RS: RequestStream,
+                FidlService<F, RS, ServiceObjTy::Output>: Into<ServiceObjTy>,
+            {
+                self.add_service_at(
+                    path,
                     FidlService::from(service),
                 )
             }

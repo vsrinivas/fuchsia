@@ -5,12 +5,11 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use failure::{Error, ResultExt};
-use fidl::endpoints::RequestStream;
 use fidl::endpoints::ServiceMarker;
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
-use futures::{TryFutureExt, TryStreamExt};
+use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use parking_lot::Mutex;
 use std::convert::{TryFrom, TryInto};
 use std::env;
@@ -77,24 +76,23 @@ fn main() -> Result<(), Error> {
                 &opts.backing_file,
             ))?));
 
-            let marker = if opts.secure_mode {
+            let name = if opts.secure_mode {
                 SecureStoreMarker::NAME
             } else {
                 StoreMarker::NAME
             };
 
-            let fut = ServicesServer::new()
-                .add_service((marker, move |chan| {
+            let mut fs = ServiceFs::new();
+            fs.dir("public")
+                .add_fidl_service_at(name, |stream| {
                     stash_server(
                         store_manager.clone(),
                         !opts.secure_mode,
-                        chan,
+                        stream,
                     )
-                })).start()
-                .context("Error starting stash server")?;
-            executor
-                .run_singlethreaded(fut)
-                .context("failed to execute stash service future")?;
+                });
+            fs.take_and_serve_directory_handle()?;
+            executor.run_singlethreaded(fs.collect::<()>());
         }
     }
     Ok(())
@@ -118,7 +116,7 @@ FLAGS:
 fn stash_server(
     store_manager: Arc<Mutex<store::StoreManager>>,
     enable_bytes: bool,
-    chan: fasync::Channel,
+    mut stream: StoreRequestStream,
 ) {
     fasync::spawn(async move {
         fx_log_info!("new connection");
@@ -128,7 +126,6 @@ fn stash_server(
             store_manager: store_manager,
         };
 
-        let mut stream = StoreRequestStream::from_channel(chan);
         while let Some(req) = await!(stream.try_next()).context("error running stash server")? {
             match req {
                 StoreRequest::Identify {
