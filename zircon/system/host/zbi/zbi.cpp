@@ -270,10 +270,51 @@ public:
         }
     }
 
+    template <typename T1, typename T2>
+    void HardLink(const T1& target, const T2& link) {
+        const auto target_path = prefix_ / target;
+        const auto link_path = prefix_ / link;
+        auto linkit =
+            [&]() {
+                std::error_code ec;
+                std::filesystem::create_hard_link(target_path, link_path, ec);
+                return ec;
+            };
+        std::error_code ec = linkit();
+        if (ec) {
+            switch (ec.value()) {
+            case ENOENT:
+                MakeDirs(link_path);
+                ec = linkit();
+                break;
+            case EEXIST:
+                std::filesystem::remove(link_path, ec);
+                ec = linkit();
+                break;
+            }
+        }
+        if (ec) {
+            fprintf(stderr, "cannot link %s to %s: %s\n",
+                    target_path.c_str(), link_path.c_str(),
+                    ec.message().c_str());
+            exit(1);
+        }
+    }
+
 private:
     std::filesystem::path prefix_;
     const char* outfile_ = nullptr;
     unsigned int files_ = 0;
+
+    void MakeDirs(std::filesystem::path path) {
+        path.remove_filename();
+        std::error_code ec;
+        if (!std::filesystem::create_directories(path, ec) && ec) {
+            fprintf(stderr, "cannot create directory %s: %s\n",
+                    path.c_str(), ec.message().c_str());
+            exit(1);
+        }
+    }
 
     OutputStream CreateFile(const char* outfile) {
         auto openit = [outfile]() {
@@ -285,14 +326,7 @@ private:
         if (!fd) {
             switch (errno) {
             case ENOENT: {
-                std::filesystem::path dir(outfile);
-                dir.remove_filename();
-                std::error_code ec;
-                if (!std::filesystem::create_directories(dir, ec) && ec) {
-                    fprintf(stderr, "cannot create directory %s: %s\n",
-                            dir.c_str(), ec.message().c_str());
-                    exit(1);
-                }
+                MakeDirs(outfile);
                 fd = openit();
                 break;
             }
@@ -2435,11 +2469,24 @@ int main(int argc, char** argv) {
                     item->ExtractItem(&writer, &name_matcher);
                 }
             } else if (extract && is_bootfs(item)) {
+                using ExtractMap =
+                    std::unordered_map<const File*,
+                                       const std::filesystem::path>;
+                auto extract_file =
+                    [&writer,
+                     files = ExtractMap()](const char* path, const File* file) mutable {
+                        auto [it, first] = files.try_emplace(file, path);
+                        if (first) {
+                            writer.RawFile(path).Write(
+                                file->AsContents()->View());
+                        } else {
+                            writer.HardLink(it->second, path);
+                        }
+                    };
                 for (auto [it, fs] = Item::ReadBootFS(std::move(item));
                      it; ++it) {
                     if (name_matcher.Matches(it->name)) {
-                        writer.RawFile(it->name).Write(
-                            it.Open(&opener, fs.get())->AsContents()->View());
+                        extract_file(it->name, it.Open(&opener, fs.get()));
                     }
                 }
             }
