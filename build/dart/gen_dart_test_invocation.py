@@ -22,8 +22,12 @@ def main():
                       help='Path to the Dart binary, relative to the working directory',
                       required=True)
   parser.add_argument('--snapshot',
-                      help='path to the binary snapshot, relative to the working directory',
+                      help='Path to the binary snapshot, relative to the working directory',
                       required=True)
+  parser.add_argument('--args',
+                      help='Command-line arguments to prepend to those passed to the script',
+                      required=False,
+                      default='')
   args = parser.parse_args()
 
   app_file = args.out
@@ -40,6 +44,7 @@ cd "$$(dirname $$0)/$wd"
 
 $dart \\
   $snapshot \\
+  $args \\
   "$$@"
 ''')
   with open(app_file, 'w') as file:

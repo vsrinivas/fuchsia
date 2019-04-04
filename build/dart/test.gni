@@ -31,6 +31,11 @@ import("//build/testing/test_spec.gni")
 #       environment (as a function of $current_os).
 #       See //build/testing/test_spec.gni for more details.
 #
+#   args
+#     Optional: Command-line arguments to pass to the Dart application. These
+#       arguments are inserted ahead of any arguments given to the invocation,
+#       like the program/args entry in a component manifest.
+#
 template("dart_test") {
   assert(defined(invoker.sources), "dart_test() must specify sources")
 
@@ -171,6 +176,21 @@ template("dart_test") {
       "--snapshot",
       rebase_path(_snapshot, root_build_dir),
     ]
+
+    # TODO(joshuaseaton): use test_spec's `command` field when fx supports
+    # running tests out of $root_build_dir/tests.json.
+    # CL to back out: https://fuchsia-review.googlesource.com/269458
+    if (defined(invoker.args)) {
+      argstr = ""
+      foreach(arg, invoker.args) {
+        argstr += "\"" + arg + "\" "
+      }
+
+      args += [
+        "--args",
+        argstr,
+      ]
+    }
 
     deps = dart_sdk_deps + [
              ":$_snapshot_target_name",
