@@ -432,12 +432,21 @@ impl<'entries> Future for Simple<'entries> {
     type Output = Void;
 
     fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
+        // This loop is needed to make sure we do not miss any activations of the futures we are
+        // managing.  For example, if a stream was activated and has several outstanding items, if
+        // we do not loop, we would only process the first item and then exit the `poll` method.
+        // And we would leave item(s) in the stream and would not process them until the next
+        // activation due to another item been added.  So we need to poll the stream while we
+        // receive Poll::Pending.
+        //
+        // This approach has a downside, as we do not give up control until if we have more items
+        // coming in.  Ideally we would want to check if there is anything else left in the stream
+        // and just set the waker to activate us again, giving the executor (and other futures
+        // sharing this task) to do work.  Unfortunately, Stream does not provide an ability to see
+        // if there are any items pending.
         loop {
-            let mut did_work = false;
-
             match self.connections.poll_next_unpin(lw) {
                 Poll::Ready(Some((maybe_request, mut connection))) => {
-                    did_work = true;
                     if let Some(Ok(request)) = maybe_request {
                         match self.handle_request(request, &mut connection) {
                             Ok(ConnectionState::Alive) => {
@@ -455,30 +464,27 @@ impl<'entries> Future for Simple<'entries> {
                 }
                 // Even when we have no connections any more we still report Pending state, as we
                 // may get more connections open in the future.  We will return Poll::Pending
-                // below, if no other items did any work and we are existing our loop.
-                Poll::Ready(None) | Poll::Pending => (),
-            }
-
-            for (name, entry) in self.entries.iter_mut() {
-                match entry.poll_unpin(lw) {
-                    Poll::Ready(result) => {
-                        panic!(
-                            "Entry futures in a pseudo directory should never complete.\n\
-                             Entry name: {}\n\
-                             Result: {:#?}",
-                            name, result
-                        );
-                    }
-                    Poll::Pending => (),
-                }
-            }
-
-            self.watchers.remove_dead(lw);
-
-            if !did_work {
-                break;
+                // below.  Getting any of these two values means that we have processed all the
+                // items that might have been triggered current waker activation.
+                Poll::Ready(None) | Poll::Pending => break,
             }
         }
+
+        for (name, entry) in self.entries.iter_mut() {
+            match entry.poll_unpin(lw) {
+                Poll::Ready(result) => {
+                    panic!(
+                        "Entry futures in a pseudo directory should never complete.\n\
+                         Entry name: {}\n\
+                         Result: {:#?}",
+                        name, result
+                    );
+                }
+                Poll::Pending => (),
+            }
+        }
+
+        self.watchers.remove_dead(lw);
 
         Poll::Pending
     }
