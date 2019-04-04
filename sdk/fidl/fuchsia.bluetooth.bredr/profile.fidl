@@ -38,6 +38,7 @@ protocol Profile {
     /// event will be produced each time a device is connected that has a service
     /// matching |service_uuid| with the additional attributes in |attr_ids|.
     /// The ProtocolDescriptor should be requested to obtain information to connect to a service.
+    /// If |attr_ids| is empty, all attributes will be requested.
     /// See the SDP Specification (Core Spec 5.0, Vol 3, Part B, Section 5) and the
     /// relevant profile specification documents.
     AddSearch(ServiceClassProfileIdentifier service_uuid, vector<uint16> attr_ids);
