@@ -20,7 +20,7 @@ macro_rules! write_ie {
     ( $buf:expr, $id:expr, $( $part:expr ),* ) => {
         {
             let body_len = 0 $( + ::std::mem::size_of_val($part) )*;
-            validate!(body_len <= 255, "Element body exceeds max length of 255");
+            validate!(body_len <= 255, "Element body length {} exceeds max of 255", body_len);
             if !$buf.can_append(2 + body_len) {
                 return Err(FrameWriteError::BufferTooSmall);
             }
@@ -59,6 +59,14 @@ pub fn write_supported_rates<B: Appendable>(
         rates.len()
     );
     write_ie!(buf, id::SUPPORTED_RATES, rates)
+}
+
+pub fn write_ext_supported_rates<B: Appendable>(
+    buf: &mut B,
+    rates: &[u8],
+) -> Result<(), FrameWriteError> {
+    validate!(!rates.is_empty(), "List of Extended Supported Rates is empty");
+    write_ie!(buf, id::EXT_SUPPORTED_RATES, rates)
 }
 
 pub fn write_dsss_param_set<B: Appendable>(
@@ -131,7 +139,7 @@ mod tests {
         let mut f = || write_ie!(&mut buf, id::SSID, &[0u8; 256][..]);
         assert_eq!(
             Err(FrameWriteError::new_invalid_data(
-                "Element body exceeds max length of 255".to_string()
+                "Element body length 256 exceeds max of 255".to_string()
             )),
             f()
         );
@@ -205,6 +213,24 @@ mod tests {
                 "Too many Supported Rates (max 8, got 9)".to_string()
             )),
             write_supported_rates(&mut buf, &[0u8; 9])
+        );
+    }
+
+    #[test]
+    pub fn ext_supported_rates_ok() {
+        let mut buf = vec![];
+        write_ext_supported_rates(&mut buf, &[1, 2, 3, 4, 5, 6, 7, 8]).expect("expected Ok");
+        assert_eq!(&[50, 8, 1, 2, 3, 4, 5, 6, 7, 8], &buf[..]);
+    }
+
+    #[test]
+    pub fn ext_supported_rates_empty() {
+        let mut buf = vec![];
+        assert_eq!(
+            Err(FrameWriteError::new_invalid_data(
+                "List of Extended Supported Rates is empty".to_string()
+            )),
+            write_ext_supported_rates(&mut buf, &[])
         );
     }
 
