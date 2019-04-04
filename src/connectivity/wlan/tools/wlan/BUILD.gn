@@ -9,7 +9,7 @@ import("//build/package.gni")
 
 go_library("wlantool_lib") {
   name = "wlantool"
-  source_dir = "wlantool"
+  source_dir = "src"
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.common($go_toolchain)",

@@ -375,8 +375,6 @@ group("all") {
     "//garnet/packages/tests:vulkan",
     "//garnet/packages/tests:wayland",
     "//garnet/packages/tests:webpki_roots_fuchsia",
-    "//garnet/packages/tests:wlan",
-    "//garnet/packages/tests:wlan-hw-sim",
     "//garnet/packages/tests:zircon",
     "//garnet/packages/tests:zxdb",
   ]
@@ -750,14 +748,6 @@ group("power_manager") {
   ]
 }
 
-group("wlan-hw-sim") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/wlan/wlan-hw-sim:wlan-hw-sim-tests",
-    "//garnet/packages/prod:wlan-hw-sim",
-  ]
-}
-
 group("fidl_compatibility_test") {
   testonly = true
   public_deps = [
@@ -829,23 +819,6 @@ group("crashpad") {
   public_deps = [
     "//src/developer/crashpad_agent/tests:crashpad_agent_tests",
     "//third_party/crashpad:crashpad_test",
-  ]
-}
-
-group("wlan") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/wlan/wlancfg:wlancfg-tests",
-    "//garnet/bin/wlan/wlanstack:wlanstack2-tests",
-    "//garnet/bin/wlan/wlantool:wlantool2-tests",
-    "//garnet/lib/rust/wlan-bitfield/wlan-bitfield-tests",
-    "//garnet/lib/rust/wlan-common:wlan-common-tests",
-    "//garnet/lib/rust/wlan-inspect:wlan-inspect-tests",
-    "//garnet/lib/rust/wlan-mlme:wlan-mlme-tests",
-    "//garnet/lib/rust/wlan-rsn:wlan-rsn-tests",
-    "//garnet/lib/rust/wlan-sme:wlan-sme-tests",
-    "//garnet/lib/wlan/mlme/tests:wlan_tests",
-    "//src/connectivity/wlan/drivers/wlan:wlan_drivers_tests",
   ]
 }
 

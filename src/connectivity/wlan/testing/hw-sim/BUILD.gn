@@ -16,7 +16,6 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/ethernet",
     "//garnet/lib/rust/wlan-common",
-    "//garnet/lib/rust/wlantap-client",
     "//garnet/lib/wlan/fidl:fidl-rustc",
     "//garnet/lib/wlan/fidl:service-rustc",
     "//garnet/lib/wlan/fidl:sme-rustc",
@@ -28,6 +27,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
+    "//src/connectivity/wlan/testing/wlantap-client",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",

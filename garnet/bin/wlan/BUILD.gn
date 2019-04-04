@@ -5,12 +5,7 @@
 group("wlan") {
   testonly = true
   deps = [
-    "wlan-ap-smoke-test",
-    "wlan-hw-sim",
-    "wlan-smoke-test",
-    "wlan-stress-test",
     "wlancfg",
     "wlanstack",
-    "wlantool",
   ]
 }

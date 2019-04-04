@@ -64,8 +64,8 @@ group("all") {
     "//garnet/packages/tools:scenic",
     "//garnet/packages/tools:sl4f",
     "//garnet/packages/tools:tiles",
-    "//garnet/packages/tools:wlan",
     "//garnet/packages/tools:zxdb",
+    "//src/connectivity/wlan:tools",
   ]
 }
 
@@ -122,13 +122,6 @@ group("tiles") {
   testonly = true
   public_deps = [
     "//garnet/bin/developer/tiles_ctl",
-  ]
-}
-
-group("wlan") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:wlan_tools",
   ]
 }
 

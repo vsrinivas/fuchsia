@@ -158,13 +158,6 @@ group("ssh") {
   ]
 }
 
-group("wlan-ap-smoke-test") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/wlan/wlan-ap-smoke-test",
-  ]
-}
-
 group("sysmgr") {
   testonly = true
   public_deps = [
@@ -308,17 +301,13 @@ group("all") {
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/prod:vim",
     "//garnet/packages/prod:wlan",
-    "//garnet/packages/prod:wlan-ap-smoke-test",
-    "//garnet/packages/prod:wlan-hw-sim",
-    "//garnet/packages/prod:wlan-smoke-test",
-    "//garnet/packages/prod:wlan-stress-test",
-    "//garnet/packages/prod:wlan_tools",
+    "//garnet/packages/prod:wlan_drivers",
     "//garnet/packages/prod:wlancfg",
     "//garnet/packages/prod:wlanif",
     "//garnet/packages/prod:wlanphy",
     "//garnet/packages/prod:wlanstack",
-    "//garnet/packages/prod:wlantap",
     "//garnet/packages/prod:xi_core",
+    "//src/connectivity/wlan:tools",
     "//src/connectivity/telephony:drivers",
   ]
 }
@@ -389,13 +378,6 @@ group("netstack") {
   public_deps = [
     "//garnet/packages/prod:netcfg",
     "//src/connectivity/network/netstack",
-  ]
-}
-
-group("wlan-stress-test") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/wlan/wlan-stress-test",
   ]
 }
 
@@ -554,14 +536,6 @@ group("scpi") {
   ]
 }
 
-group("wlan_tools") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/wlan/wlantool:wlantool2",
-    "//garnet/go/src/wlan:wlantool",
-  ]
-}
-
 group("vboot_reference") {
   testonly = true
   public_deps = [
@@ -697,7 +671,7 @@ group("power_manager") {
 group("wlan-hw-sim") {
   testonly = true
   public_deps = [
-    "//garnet/bin/wlan/wlan-hw-sim",
+    "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
   ]
 }
 
@@ -755,7 +729,7 @@ group("wlan") {
     "//garnet/packages/prod:wlan-hw-sim",
     "//garnet/packages/prod:wlancfg",
     "//garnet/packages/prod:wlanstack",
-    "//garnet/packages/tools:wlan",
+    "//src/connectivity/wlan:tools",
   ]
 }
 
@@ -792,13 +766,6 @@ group("pkg_resolver") {
   testonly = true
   public_deps = [
     "//garnet/bin/pkg_resolver",
-  ]
-}
-
-group("wlan-smoke-test") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/wlan/wlan-smoke-test",
   ]
 }
 
@@ -1095,7 +1062,6 @@ group("wlan_drivers") {
     "//garnet/packages/prod:wifi_intel",
     "//garnet/packages/prod:wlanif",
     "//garnet/packages/prod:wlanphy",
-    "//garnet/packages/prod:wlantap",
   ]
 }
 
@@ -1103,14 +1069,6 @@ group("fortune") {
   testonly = true
   public_deps = [
     "//examples/fortune",
-  ]
-}
-
-group("wlantap") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/wlan/drivers/wlan",
-    "//src/connectivity/wlan/drivers/wlantap",
   ]
 }
 

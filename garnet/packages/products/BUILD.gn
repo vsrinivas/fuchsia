@@ -55,15 +55,12 @@ group("toulouse") {
     "//garnet/packages/prod:tz-util",
     "//garnet/packages/prod:vboot_reference",
     "//garnet/packages/prod:vim",
-    "//garnet/packages/prod:wlan-hw-sim",
-    "//garnet/packages/prod:wlan-smoke-test",
-    "//garnet/packages/prod:wlan-stress-test",
     "//garnet/packages/prod:wlanif",
     "//garnet/packages/prod:wlanphy",
     "//garnet/packages/prod:wlanstack",
-    "//garnet/packages/prod:wlantap",
     "//garnet/packages/tools:netstack",
-    "//garnet/packages/tools:wlan",
+    "//src/connectivity/wlan:tests",
+    "//src/connectivity/wlan:tools",
   ]
 }
 
@@ -101,7 +98,7 @@ group("network_wifi_devtools") {
     "//garnet/packages/products:devtools",
     "//garnet/packages/products:network_wifi",
     "//garnet/packages/tools:netstack",
-    "//garnet/packages/tools:wlan",
+    "//src/connectivity/wlan:tools",
   ]
 }
 

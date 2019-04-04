@@ -26,5 +26,6 @@ group("tests") {
     "//src/connectivity/overnet/lib:overnet_tests",
     "//src/connectivity/overnet/overnetstack:overnetstack_tests",
     "//src/connectivity/telephony/lib/qmi-protocol:tests",
+    "//src/connectivity/wlan:tests",
   ]
 }
