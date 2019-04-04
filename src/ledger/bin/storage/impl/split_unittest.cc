@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/storage/impl/split.h"
 
-#include <map>
-
 #include <lib/fit/function.h>
 #include <string.h>
+
+#include <map>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -87,7 +87,7 @@ struct Call {
 struct SplitResult {
   std::vector<Call> calls;
   std::map<ObjectDigest, ObjectReferencesAndPriority> references;
-  std::map<ObjectDigest, std::unique_ptr<DataSource::DataChunk>> data;
+  std::map<ObjectDigest, std::unique_ptr<Piece>> pieces;
 };
 
 void DoSplit(DataSource* source, ObjectType object_type,
@@ -99,13 +99,13 @@ void DoSplit(DataSource* source, ObjectType object_type,
         return encryption::MakeDefaultObjectIdentifier(std::move(digest));
       },
       [result = std::move(result), callback = std::move(callback)](
-          IterationStatus status, ObjectIdentifier identifier,
-          ObjectReferencesAndPriority references,
-          std::unique_ptr<DataSource::DataChunk> data) mutable {
+          IterationStatus status, std::unique_ptr<Piece> piece,
+          ObjectReferencesAndPriority references) mutable {
         EXPECT_TRUE(result);
-        const auto& digest = identifier.object_digest();
+        const auto digest =
+            piece ? piece->GetIdentifier().object_digest() : ObjectDigest();
         if (status != IterationStatus::ERROR) {
-          EXPECT_LE(data->Get().size(), kMaxChunkSize);
+          EXPECT_LE(piece->GetData().size(), kMaxChunkSize);
           // Accumulate returned references and data in result, checking that
           // they match if we have already seen this digest.
           if (result->references.count(digest) != 0) {
@@ -121,10 +121,10 @@ void DoSplit(DataSource* source, ObjectType object_type,
             }
             result->references[digest] = std::move(references);
           }
-          if (result->data.count(digest) != 0) {
-            EXPECT_EQ(result->data[digest]->Get(), data->Get());
+          if (result->pieces.count(digest) != 0) {
+            EXPECT_EQ(result->pieces[digest]->GetData(), piece->GetData());
           } else {
-            result->data[digest] = std::move(data);
+            result->pieces[digest] = std::move(piece);
           }
         }
         result->calls.push_back({status, digest});
@@ -138,7 +138,7 @@ void DoSplit(DataSource* source, ObjectType object_type,
 
 ::testing::AssertionResult ReadFile(
     const ObjectDigest& digest,
-    const std::map<ObjectDigest, std::unique_ptr<DataSource::DataChunk>>& data,
+    const std::map<ObjectDigest, std::unique_ptr<Piece>>& pieces,
     std::string* result, size_t expected_size) {
   size_t start_size = result->size();
   ObjectDigestInfo digest_info = GetObjectDigestInfo(digest);
@@ -146,22 +146,22 @@ void DoSplit(DataSource* source, ObjectType object_type,
     auto content = ExtractObjectDigestData(digest);
     result->append(content.data(), content.size());
   } else if (digest_info.is_chunk()) {
-    if (data.count(digest) == 0) {
+    if (pieces.count(digest) == 0) {
       return ::testing::AssertionFailure() << "Unknown object.";
     }
-    auto content = data.at(digest)->Get();
+    auto content = pieces.at(digest)->GetData();
     result->append(content.data(), content.size());
   } else {
     FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
-    if (data.count(digest) == 0) {
+    if (pieces.count(digest) == 0) {
       return ::testing::AssertionFailure() << "Unknown object.";
     }
-    auto content = data.at(digest)->Get();
+    auto content = pieces.at(digest)->GetData();
     const FileIndex* file_index = GetFileIndex(content.data());
     for (const auto* child : *file_index->children()) {
       auto r =
           ReadFile(ObjectDigest(child->object_identifier()->object_digest()),
-                   data, result, child->size());
+                   pieces, result, child->size());
       if (!r) {
         return r;
       }
@@ -191,13 +191,13 @@ TEST_P(SplitSmallValueTest, SmallValue) {
 
   ASSERT_EQ(1u, split_result.calls.size());
   EXPECT_EQ(IterationStatus::DONE, split_result.calls[0].status);
-  ASSERT_EQ(1u, split_result.data.size());
-  EXPECT_EQ(content, split_result.data.begin()->second->Get());
+  ASSERT_EQ(1u, split_result.pieces.size());
+  EXPECT_EQ(content, split_result.pieces.begin()->second->GetData());
   EXPECT_EQ(split_result.calls[0].digest,
             ComputeObjectDigest(PieceType::CHUNK, object_type, content));
 
   std::string found_content;
-  ASSERT_TRUE(ReadFile(split_result.calls.back().digest, split_result.data,
+  ASSERT_TRUE(ReadFile(split_result.calls.back().digest, split_result.pieces,
                        &found_content, content.size()));
   EXPECT_EQ(content, found_content);
 }
@@ -227,22 +227,24 @@ TEST_P(SplitBigValueTest, BigValues) {
         EXPECT_THAT(split_result.references[call.digest], Not(IsEmpty()));
         for (const auto& [child, priority] :
              split_result.references[call.digest]) {
-          EXPECT_THAT(split_result.data, Contains(Key(child)));
+          EXPECT_THAT(split_result.pieces, Contains(Key(child)));
           EXPECT_EQ(priority, KeyPriority::EAGER);
         }
       }
     }
     if (call.status == IterationStatus::IN_PROGRESS &&
         GetObjectDigestInfo(call.digest).is_chunk()) {
-      EXPECT_EQ(current.substr(0, split_result.data[call.digest]->Get().size()),
-                split_result.data[call.digest]->Get());
+      EXPECT_EQ(
+          current.substr(0, split_result.pieces[call.digest]->GetData().size()),
+          split_result.pieces[call.digest]->GetData());
       // Check that object digest is always computed with object_type BLOB for
       // inner pieces (and in particular for chunks here). Only the root must
       // have it set to |object_type|.
-      EXPECT_EQ(call.digest,
-                ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB,
-                                    split_result.data[call.digest]->Get()));
-      current = current.substr(split_result.data[call.digest]->Get().size());
+      EXPECT_EQ(call.digest, ComputeObjectDigest(
+                                 PieceType::CHUNK, ObjectType::BLOB,
+                                 split_result.pieces[call.digest]->GetData()));
+      current =
+          current.substr(split_result.pieces[call.digest]->GetData().size());
     }
     if (call.status == IterationStatus::DONE) {
       EXPECT_EQ(GetObjectDigestInfo(call.digest).piece_type, PieceType::INDEX);
@@ -253,7 +255,7 @@ TEST_P(SplitBigValueTest, BigValues) {
   EXPECT_EQ(0u, current.size());
 
   std::string found_content;
-  ASSERT_TRUE(ReadFile(split_result.calls.back().digest, split_result.data,
+  ASSERT_TRUE(ReadFile(split_result.calls.back().digest, split_result.pieces,
                        &found_content, content.size()));
   EXPECT_EQ(content, found_content);
 }
@@ -285,9 +287,10 @@ TEST(SplitTest, PathologicalCase) {
   for (const auto& call : split_result.calls) {
     if (call.status == IterationStatus::IN_PROGRESS &&
         GetObjectDigestInfo(call.digest).is_chunk()) {
-      total_size += split_result.data[call.digest]->Get().size();
-      EXPECT_EQ(std::string(split_result.data[call.digest]->Get().size(), '\0'),
-                split_result.data[call.digest]->Get());
+      total_size += split_result.pieces[call.digest]->GetData().size();
+      EXPECT_EQ(
+          std::string(split_result.pieces[call.digest]->GetData().size(), '\0'),
+          split_result.pieces[call.digest]->GetData());
     }
   }
   EXPECT_EQ(kDataSize, total_size);
@@ -310,12 +313,13 @@ TEST(SplitTest, IndexToInlinePiece) {
   // First chunk.
   EXPECT_TRUE(GetObjectDigestInfo(split_result.calls[0].digest).is_chunk());
   EXPECT_FALSE(GetObjectDigestInfo(split_result.calls[0].digest).is_inlined());
-  EXPECT_EQ(split_result.data[split_result.calls[0].digest]->Get().size(),
+  EXPECT_EQ(split_result.pieces[split_result.calls[0].digest]->GetData().size(),
             kMaxChunkSize);
   // Second chunk.
   EXPECT_TRUE(GetObjectDigestInfo(split_result.calls[1].digest).is_chunk());
   EXPECT_TRUE(GetObjectDigestInfo(split_result.calls[1].digest).is_inlined());
-  EXPECT_EQ(split_result.data[split_result.calls[1].digest]->Get().size(), 1u);
+  EXPECT_EQ(split_result.pieces[split_result.calls[1].digest]->GetData().size(),
+            1u);
   // Index.
   EXPECT_FALSE(GetObjectDigestInfo(split_result.calls[2].digest).is_chunk());
   EXPECT_EQ(GetObjectDigestInfo(split_result.calls[2].digest).object_type,

@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
 
@@ -24,19 +25,18 @@ enum class IterationStatus {
 // builds a multi-level index from the content. The |source| is consumed and
 // split using a rolling hash. Each chunk and each index file is returned. On
 // each iteration, |make_object_identifier| is called first and must return the
-// |ObjectIdentifier| to use to reference the given content id. The identifier
-// of the piece (second argument) and those of its children (third argument) are
-// then passed to |callback|, along with the content itself and a status of
-// |IN_PROGRESS|, except for the last chunk which has a status of |DONE|. The
-// returned children are only children pieces of INDEX pieces; children tree
-// nodes are not included, even if |type| is TREE_NODE. |callback| is not called
-// anymore once |source| is deleted.
+// |ObjectIdentifier| to use to reference the given content id. The piece
+// (second argument) and the identifiers of its children (third argument) are
+// then passed to |callback|, along with a status of |IN_PROGRESS|, except for
+// the last piece which has a status of |DONE|. The returned children are only
+// children pieces of INDEX pieces; children tree nodes are not included, even
+// if |type| is TREE_NODE. |callback| is not called anymore once |source| is
+// deleted.
 void SplitDataSource(
     DataSource* source, ObjectType type,
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
-    fit::function<void(IterationStatus, ObjectIdentifier,
-                       ObjectReferencesAndPriority,
-                       std::unique_ptr<DataSource::DataChunk>)>
+    fit::function<void(IterationStatus, std::unique_ptr<Piece>,
+                       ObjectReferencesAndPriority)>
         callback);
 
 // Iterates over the pieces of an index object.

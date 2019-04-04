@@ -5,9 +5,9 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_IMPL_STORAGE_TEST_UTILS_H_
 #define SRC_LEDGER_BIN_STORAGE_IMPL_STORAGE_TEST_UTILS_H_
 
-#include <string>
-
 #include <lib/fsl/socket/strings.h>
+
+#include <string>
 
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
@@ -40,6 +40,7 @@ class ObjectData {
                       InlineBehavior inline_behavior);
   std::unique_ptr<DataSource> ToDataSource();
   std::unique_ptr<DataSource::DataChunk> ToChunk();
+  std::unique_ptr<Piece> ToPiece();
 
   const std::string value;
   const size_t size;

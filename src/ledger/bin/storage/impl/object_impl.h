@@ -10,6 +10,7 @@
 #include <memory>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
@@ -28,6 +29,21 @@ class InlinePiece : public Piece {
 
  private:
   const ObjectIdentifier identifier_;
+};
+
+// Piece whose data is backed by a DataChunk.
+class DataChunkPiece : public Piece {
+ public:
+  explicit DataChunkPiece(ObjectIdentifier identifier,
+                          std::unique_ptr<DataSource::DataChunk> chunk);
+
+  // Piece:
+  fxl::StringView GetData() const override;
+  ObjectIdentifier GetIdentifier() const override;
+
+ private:
+  const ObjectIdentifier identifier_;
+  std::unique_ptr<DataSource::DataChunk> chunk_;
 };
 
 // Piece whose data is backed by a value in LevelDB.

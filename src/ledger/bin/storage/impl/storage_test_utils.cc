@@ -5,17 +5,18 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 
 #include <inttypes.h>
-#include <numeric>
-
 #include <lib/callback/capture.h>
 #include <lib/callback/set_when_called.h>
 #include <src/lib/fxl/strings/string_printf.h>
 #include <zircon/syscalls.h>
 
+#include <numeric>
+
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/impl/btree/builder.h"
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/impl/split.h"
 #include "src/ledger/bin/storage/public/constants.h"
 
@@ -51,11 +52,10 @@ ObjectIdentifier GetObjectIdentifier(std::string value,
         return encryption::MakeDefaultObjectIdentifier(
             std::move(object_digest));
       },
-      [&result](IterationStatus status, ObjectIdentifier object_identifier,
-                ObjectReferencesAndPriority references,
-                std::unique_ptr<DataSource::DataChunk> chunk) {
+      [&result](IterationStatus status, std::unique_ptr<Piece> piece,
+                ObjectReferencesAndPriority references) {
         if (status == IterationStatus::DONE) {
-          result = object_identifier.object_digest();
+          result = piece->GetIdentifier().object_digest();
         }
       });
   return encryption::MakeDefaultObjectIdentifier(std::move(result));
@@ -94,6 +94,10 @@ std::unique_ptr<DataSource::DataChunk> ObjectData::ToChunk() {
   return DataSource::DataChunk::Create(value);
 }
 
+std::unique_ptr<Piece> ObjectData::ToPiece() {
+  return std::make_unique<DataChunkPiece>(object_identifier, ToChunk());
+}
+
 ObjectDigest MakeObjectDigest(std::string content,
                               InlineBehavior inline_behavior) {
   return MakeObjectIdentifier(std::move(content), inline_behavior)
@@ -119,12 +123,11 @@ ObjectIdentifier MakeSplitMap(
             std::move(object_digest));
       },
       [&result, callback = std::move(callback)](
-          IterationStatus status, ObjectIdentifier object_identifier,
-          ObjectReferencesAndPriority references,
-          std::unique_ptr<DataSource::DataChunk> chunk) {
-        callback(object_identifier, chunk->Get().ToString());
+          IterationStatus status, std::unique_ptr<Piece> piece,
+          ObjectReferencesAndPriority /*references*/) {
+        callback(piece->GetIdentifier(), piece->GetData().ToString());
         if (status == IterationStatus::DONE) {
-          result = object_identifier.object_digest();
+          result = piece->GetIdentifier().object_digest();
         }
       });
   return encryption::MakeDefaultObjectIdentifier(std::move(result));

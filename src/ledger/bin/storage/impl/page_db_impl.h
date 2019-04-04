@@ -76,9 +76,7 @@ class PageDbImpl : public PageDb {
                                const CommitId& commit_id,
                                const ObjectIdentifier& root_node,
                                fxl::StringView storage_bytes) override;
-  Status WriteObject(coroutine::CoroutineHandler* handler,
-                     const ObjectIdentifier& object_identifier,
-                     std::unique_ptr<DataSource::DataChunk> content,
+  Status WriteObject(coroutine::CoroutineHandler* handler, const Piece& piece,
                      PageDbObjectStatus object_status,
                      const ObjectReferencesAndPriority& references) override;
   Status MarkCommitIdSynced(coroutine::CoroutineHandler* handler,

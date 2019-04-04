@@ -9,6 +9,7 @@
 #include <utility>
 
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
 
 namespace storage {
@@ -27,6 +28,14 @@ fxl::StringView InlinePiece::GetData() const {
 }
 
 ObjectIdentifier InlinePiece::GetIdentifier() const { return identifier_; }
+
+DataChunkPiece::DataChunkPiece(ObjectIdentifier identifier,
+                               std::unique_ptr<DataSource::DataChunk> chunk)
+    : identifier_(std::move(identifier)), chunk_(std::move(chunk)) {}
+
+fxl::StringView DataChunkPiece::GetData() const { return chunk_->Get(); }
+
+ObjectIdentifier DataChunkPiece::GetIdentifier() const { return identifier_; }
 
 LevelDBPiece::LevelDBPiece(ObjectIdentifier identifier,
                            std::unique_ptr<leveldb::Iterator> iterator)

@@ -4,10 +4,10 @@
 
 #include "src/ledger/bin/storage/impl/page_db_batch_impl.h"
 
-#include <memory>
-
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/concatenate.h>
+
+#include <memory>
 
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/db_serialization.h"
@@ -62,19 +62,18 @@ Status PageDbBatchImpl::AddCommitStorageBytes(CoroutineHandler* handler,
 }
 
 Status PageDbBatchImpl::WriteObject(
-    CoroutineHandler* handler, const ObjectIdentifier& object_identifier,
-    std::unique_ptr<DataSource::DataChunk> content,
+    CoroutineHandler* handler, const Piece& piece,
     PageDbObjectStatus object_status,
     const ObjectReferencesAndPriority& references) {
   FXL_DCHECK(object_status > PageDbObjectStatus::UNKNOWN);
 
+  const ObjectIdentifier& object_identifier = piece.GetIdentifier();
   Status status = db_->HasObject(handler, object_identifier);
   if (status == Status::OK) {
     if (object_status == PageDbObjectStatus::TRANSIENT) {
       return Status::OK;
     }
-    return SetObjectStatus(handler, std::move(object_identifier),
-                           object_status);
+    return SetObjectStatus(handler, piece.GetIdentifier(), object_status);
   }
   if (status != Status::INTERNAL_NOT_FOUND) {
     return status;
@@ -82,7 +81,7 @@ Status PageDbBatchImpl::WriteObject(
 
   RETURN_ON_ERROR(batch_->Put(
       handler, ObjectRow::GetKeyFor(object_identifier.object_digest()),
-      content->Get()));
+      piece.GetData()));
   for (const auto& [child, priority] : references) {
     FXL_DCHECK(!GetObjectDigestInfo(child).is_inlined());
     RETURN_ON_ERROR(

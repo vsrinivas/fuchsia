@@ -22,6 +22,7 @@
 #include "src/ledger/bin/storage/impl/commit_impl.h"
 #include "src/ledger/bin/storage/impl/commit_random_impl.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
+#include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/impl/page_db_impl.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
@@ -208,12 +209,13 @@ TEST_F(PageDbTest, ObjectStorage) {
 
     EXPECT_EQ(Status::INTERNAL_NOT_FOUND,
               page_db_.ReadObject(handler, object_identifier, &piece));
-    ASSERT_EQ(
-        Status::OK,
-        page_db_.WriteObject(
-            handler, object_identifier, DataSource::DataChunk::Create(content),
-            PageDbObjectStatus::TRANSIENT,
-            {{child_identifier.object_digest(), KeyPriority::LAZY}}));
+    ASSERT_EQ(Status::OK,
+              page_db_.WriteObject(
+                  handler,
+                  DataChunkPiece(object_identifier,
+                                 DataSource::DataChunk::Create(content)),
+                  PageDbObjectStatus::TRANSIENT,
+                  {{child_identifier.object_digest(), KeyPriority::LAZY}}));
     page_db_.GetObjectStatus(handler, object_identifier, &object_status);
     EXPECT_EQ(PageDbObjectStatus::TRANSIENT, object_status);
     ASSERT_EQ(Status::OK,
@@ -230,8 +232,9 @@ TEST_F(PageDbTest, ObjectStorage) {
         RandomString(environment_.random(), 32 * 1024);
     ASSERT_EQ(Status::OK,
               page_db_.WriteObject(
-                  handler, object_identifier,
-                  DataSource::DataChunk::Create(new_content),
+                  handler,
+                  DataChunkPiece(object_identifier,
+                                 DataSource::DataChunk::Create(new_content)),
                   PageDbObjectStatus::LOCAL,
                   {{child_identifier.object_digest(), KeyPriority::EAGER}}));
     page_db_.GetObjectStatus(handler, object_identifier, &object_status);
@@ -254,7 +257,9 @@ TEST_F(PageDbTest, LazyAndEagerReferences) {
 
     ASSERT_EQ(Status::OK,
               page_db_.WriteObject(
-                  handler, object_identifier, DataSource::DataChunk::Create(""),
+                  handler,
+                  DataChunkPiece(object_identifier,
+                                 DataSource::DataChunk::Create("")),
                   PageDbObjectStatus::LOCAL,
                   {{child_identifier.object_digest(), KeyPriority::LAZY},
                    {child_identifier.object_digest(), KeyPriority::EAGER}}));
@@ -326,10 +331,11 @@ TEST_F(PageDbTest, UnsyncedPieces) {
               page_db_.GetUnsyncedPieces(handler, &object_identifiers));
     EXPECT_TRUE(object_identifiers.empty());
 
-    EXPECT_EQ(Status::OK,
-              page_db_.WriteObject(handler, object_identifier,
-                                   DataSource::DataChunk::Create(""),
-                                   PageDbObjectStatus::LOCAL, {}));
+    EXPECT_EQ(Status::OK, page_db_.WriteObject(
+                              handler,
+                              DataChunkPiece(object_identifier,
+                                             DataSource::DataChunk::Create("")),
+                              PageDbObjectStatus::LOCAL, {}));
     EXPECT_EQ(Status::OK, page_db_.SetObjectStatus(handler, object_identifier,
                                                    PageDbObjectStatus::LOCAL));
     EXPECT_EQ(Status::OK,
@@ -363,7 +369,9 @@ TEST_F(PageDbTest, Batch) {
     auto lazy_identifier = RandomObjectIdentifier(environment_.random());
     EXPECT_EQ(Status::OK,
               batch->WriteObject(
-                  handler, object_identifier, DataSource::DataChunk::Create(""),
+                  handler,
+                  DataChunkPiece(object_identifier,
+                                 DataSource::DataChunk::Create("")),
                   PageDbObjectStatus::LOCAL,
                   {{eager_identifier.object_digest(), KeyPriority::EAGER},
                    {lazy_identifier.object_digest(), KeyPriority::LAZY}}));
@@ -417,9 +425,11 @@ TEST_F(PageDbTest, PageDbObjectStatus) {
                                   handler, object_identifier, &object_status));
         EXPECT_EQ(PageDbObjectStatus::UNKNOWN, object_status);
         ASSERT_EQ(Status::OK,
-                  page_db_.WriteObject(handler, object_identifier,
-                                       DataSource::DataChunk::Create(""),
-                                       initial_status, {}));
+                  page_db_.WriteObject(
+                      handler,
+                      DataChunkPiece(object_identifier,
+                                     DataSource::DataChunk::Create("")),
+                      initial_status, {}));
         ASSERT_EQ(Status::OK, page_db_.GetObjectStatus(
                                   handler, object_identifier, &object_status));
         EXPECT_EQ(initial_status, object_status);
@@ -475,9 +485,11 @@ TEST_F(PageDbTest, PageIsOnline) {
 TEST_F(PageDbTest, LE_451_ReproductionTest) {
   auto id = RandomObjectIdentifier(environment_.random());
   RunInCoroutine([&](CoroutineHandler* handler) {
-    EXPECT_EQ(Status::OK, page_db_.WriteObject(
-                              handler, id, DataSource::DataChunk::Create(""),
-                              PageDbObjectStatus::LOCAL, {}));
+    EXPECT_EQ(
+        Status::OK,
+        page_db_.WriteObject(
+            handler, DataChunkPiece(id, DataSource::DataChunk::Create("")),
+            PageDbObjectStatus::LOCAL, {}));
   });
   CoroutineHandler* handler1 = nullptr;
   CoroutineHandler* handler2 = nullptr;

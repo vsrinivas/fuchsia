@@ -274,16 +274,13 @@ Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler,
   return batch->Execute(handler);
 }
 
-Status PageDbImpl::WriteObject(CoroutineHandler* handler,
-                               const ObjectIdentifier& object_identifier,
-                               std::unique_ptr<DataSource::DataChunk> content,
+Status PageDbImpl::WriteObject(CoroutineHandler* handler, const Piece& piece,
                                PageDbObjectStatus object_status,
                                const ObjectReferencesAndPriority& references) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
-  RETURN_ON_ERROR(batch->WriteObject(handler, object_identifier,
-                                     std::move(content), object_status,
-                                     references));
+  RETURN_ON_ERROR(
+      batch->WriteObject(handler, piece, object_status, references));
   return batch->Execute(handler);
 }
 

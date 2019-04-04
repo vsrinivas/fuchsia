@@ -4,13 +4,14 @@
 
 #include "src/ledger/bin/storage/impl/split.h"
 
-#include <limits>
-#include <sstream>
-
 #include <lib/callback/waiter.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
 #include <src/lib/fxl/memory/ref_ptr.h>
+
+#include <limits>
+#include <memory>
+#include <sstream>
 
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/file_index.h"
@@ -63,9 +64,8 @@ class SplitContext {
  public:
   explicit SplitContext(
       fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
-      fit::function<void(IterationStatus, ObjectIdentifier,
-                         ObjectReferencesAndPriority references,
-                         std::unique_ptr<DataSource::DataChunk>)>
+      fit::function<void(IterationStatus, std::unique_ptr<Piece>,
+                         ObjectReferencesAndPriority references)>
           callback,
       ObjectType object_type)
       : make_object_identifier_(std::move(make_object_identifier)),
@@ -78,7 +78,7 @@ class SplitContext {
   void AddChunk(std::unique_ptr<DataSource::DataChunk> chunk,
                 DataSource::Status status) {
     if (status == DataSource::Status::ERROR) {
-      callback_(IterationStatus::ERROR, ObjectIdentifier(), {}, nullptr);
+      callback_(IterationStatus::ERROR, nullptr, {});
       return;
     }
 
@@ -149,8 +149,10 @@ class SplitContext {
                                   std::unique_ptr<DataSource::DataChunk> data) {
     if (latest_piece_.ready()) {
       callback_(
-          IterationStatus::IN_PROGRESS, std::move(latest_piece_.identifier),
-          std::move(latest_piece_.references), std::move(latest_piece_.data));
+          IterationStatus::IN_PROGRESS,
+          std::make_unique<DataChunkPiece>(std::move(latest_piece_.identifier),
+                                           std::move(latest_piece_.data)),
+          std::move(latest_piece_.references));
     }
     auto data_view = data->Get();
     // object_type for inner (IN_PROGRESS) pieces is always BLOB, regardless of
@@ -180,9 +182,11 @@ class SplitContext {
         object_type_, data_view);
     latest_piece_.identifier =
         make_object_identifier_(std::move(object_digest));
-    callback_(IterationStatus::DONE, std::move(latest_piece_.identifier),
-              std::move(latest_piece_.references),
-              std::move(latest_piece_.data));
+    callback_(
+        IterationStatus::DONE,
+        std::make_unique<DataChunkPiece>(std::move(latest_piece_.identifier),
+                                         std::move(latest_piece_.data)),
+        std::move(latest_piece_.references));
   }
 
   std::vector<ObjectIdentifierAndSize>& GetCurrentIdentifiersAtLevel(
@@ -337,9 +341,8 @@ class SplitContext {
   }
 
   fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier_;
-  fit::function<void(IterationStatus, ObjectIdentifier,
-                     ObjectReferencesAndPriority references,
-                     std::unique_ptr<DataSource::DataChunk>)>
+  fit::function<void(IterationStatus, std::unique_ptr<Piece>,
+                     ObjectReferencesAndPriority references)>
       callback_;
   // The object encoded by DataSource.
   const ObjectType object_type_;
@@ -419,9 +422,8 @@ void CollectPiecesInternal(ObjectIdentifier root,
 void SplitDataSource(
     DataSource* source, ObjectType object_type,
     fit::function<ObjectIdentifier(ObjectDigest)> make_object_identifier,
-    fit::function<void(IterationStatus, ObjectIdentifier,
-                       ObjectReferencesAndPriority,
-                       std::unique_ptr<DataSource::DataChunk>)>
+    fit::function<void(IterationStatus, std::unique_ptr<Piece>,
+                       ObjectReferencesAndPriority)>
         callback) {
   SplitContext context(std::move(make_object_identifier), std::move(callback),
                        object_type);

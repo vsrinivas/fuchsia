@@ -12,6 +12,7 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 #include "util/env_fuchsia.h"
@@ -99,6 +100,16 @@ TEST_F(ObjectImplTest, InlinedPiece) {
       ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
 
   auto piece = std::make_unique<InlinePiece>(identifier);
+  EXPECT_TRUE(CheckPieceValue(std::move(piece), identifier, data));
+}
+
+TEST_F(ObjectImplTest, DataChunkPiece) {
+  std::string data = RandomString(12);
+  ObjectIdentifier identifier = CreateObjectIdentifier(
+      ComputeObjectDigest(PieceType::CHUNK, ObjectType::BLOB, data));
+
+  auto piece = std::make_unique<DataChunkPiece>(
+      identifier, DataSource::DataChunk::Create(data));
   EXPECT_TRUE(CheckPieceValue(std::move(piece), identifier, data));
 }
 

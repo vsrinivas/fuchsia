@@ -145,13 +145,11 @@ class PageStorageImpl : public PageStorage {
 
   bool IsFirstCommit(CommitIdView id);
 
-  // Adds the given synced object. |object_identifier| is expected to match the
-  // given |data|. |references| must contain all references, both at the
-  // tree-level and at the piece-level (unlike |AddObjectFromLocal|'s tree-only
-  // references).
-  void AddPiece(ObjectIdentifier object_identifier, ChangeSource source,
+  // Adds the given synced |piece| object.
+  // |references| must contain all references, both at the tree-level and at the
+  // piece-level (unlike |AddObjectFromLocal|'s tree-only references).
+  void AddPiece(std::unique_ptr<Piece> piece, ChangeSource source,
                 IsObjectSynced is_object_synced,
-                std::unique_ptr<DataSource::DataChunk> data,
                 ObjectReferencesAndPriority references,
                 fit::function<void(Status)> callback);
 
@@ -245,11 +243,10 @@ class PageStorageImpl : public PageStorage {
       std::vector<ObjectIdentifier> new_objects,
       std::vector<CommitId>* missing_ids);
 
-  FXL_WARN_UNUSED_RESULT Status SynchronousAddPiece(
-      coroutine::CoroutineHandler* handler, ObjectIdentifier object_identifier,
-      ChangeSource source, IsObjectSynced is_object_synced,
-      std::unique_ptr<DataSource::DataChunk> data,
-      ObjectReferencesAndPriority references);
+  FXL_WARN_UNUSED_RESULT Status
+  SynchronousAddPiece(coroutine::CoroutineHandler* handler, const Piece& piece,
+                      ChangeSource source, IsObjectSynced is_object_synced,
+                      ObjectReferencesAndPriority references);
 
   // Synchronous helper methods.
 

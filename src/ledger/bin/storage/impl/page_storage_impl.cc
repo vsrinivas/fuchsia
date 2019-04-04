@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <iterator>
 #include <map>
+#include <memory>
 #include <set>
 #include <utility>
 
@@ -413,16 +414,16 @@ void PageStorageImpl::AddObjectFromLocal(
       [this, waiter, managed_data_source = std::move(managed_data_source),
        tree_references = std::move(tree_references),
        callback = std::move(traced_callback)](
-          IterationStatus status, ObjectIdentifier identifier,
-          ObjectReferencesAndPriority piece_references,
-          std::unique_ptr<DataSource::DataChunk> chunk) mutable {
+          IterationStatus status, std::unique_ptr<Piece> piece,
+          ObjectReferencesAndPriority piece_references) mutable {
         if (status == IterationStatus::ERROR) {
           callback(Status::IO_ERROR, ObjectIdentifier());
           return;
         }
 
-        FXL_DCHECK(chunk != nullptr);
+        FXL_DCHECK(piece != nullptr);
 
+        ObjectIdentifier identifier = piece->GetIdentifier();
         auto object_info = GetObjectDigestInfo(identifier.object_digest());
         if (!object_info.is_inlined()) {
           if (object_info.object_type == ObjectType::TREE_NODE) {
@@ -433,9 +434,8 @@ void PageStorageImpl::AddObjectFromLocal(
                 std::make_move_iterator(tree_references.begin()),
                 std::make_move_iterator(tree_references.end()));
           }
-          AddPiece(identifier, ChangeSource::LOCAL, IsObjectSynced::NO,
-                   std::move(chunk), std::move(piece_references),
-                   waiter->NewCallback());
+          AddPiece(std::move(piece), ChangeSource::LOCAL, IsObjectSynced::NO,
+                   std::move(piece_references), waiter->NewCallback());
         }
         if (status == IterationStatus::IN_PROGRESS)
           return;
@@ -748,20 +748,18 @@ bool PageStorageImpl::IsFirstCommit(CommitIdView id) {
   return id == kFirstPageCommitId;
 }
 
-void PageStorageImpl::AddPiece(ObjectIdentifier object_identifier,
+void PageStorageImpl::AddPiece(std::unique_ptr<Piece> piece,
                                ChangeSource source,
                                IsObjectSynced is_object_synced,
-                               std::unique_ptr<DataSource::DataChunk> data,
                                ObjectReferencesAndPriority references,
                                fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
-      [this, object_identifier = std::move(object_identifier),
-       data = std::move(data), source, references = std::move(references),
+      [this, piece = std::move(piece), source,
+       references = std::move(references),
        is_object_synced](CoroutineHandler* handler,
                          fit::function<void(Status)> callback) mutable {
-        callback(SynchronousAddPiece(handler, std::move(object_identifier),
-                                     source, is_object_synced, std::move(data),
+        callback(SynchronousAddPiece(handler, *piece, source, is_object_synced,
                                      std::move(references)));
       });
 }
@@ -1026,9 +1024,10 @@ void PageStorageImpl::DownloadObjectPart(ObjectIdentifier object_identifier,
         if (digest_info.is_chunk()) {
           // Downloaded chunk objects are directly added to storage. They have
           // no children at all, so references are empty.
-          callback(SynchronousAddPiece(handler, std::move(object_identifier),
-                                       source, is_object_synced,
-                                       std::move(chunk), {}));
+          callback(SynchronousAddPiece(
+              handler,
+              DataChunkPiece(std::move(object_identifier), std::move(chunk)),
+              source, is_object_synced, {}));
           return;
         }
 
@@ -1110,9 +1109,10 @@ void PageStorageImpl::DownloadObjectPart(ObjectIdentifier object_identifier,
         }
 
         // TODO(kerneis): handle children.
-        callback(SynchronousAddPiece(handler, std::move(object_identifier),
-                                     source, is_object_synced, std::move(chunk),
-                                     {}));
+        callback(SynchronousAddPiece(
+            handler,
+            DataChunkPiece(std::move(object_identifier), std::move(chunk)),
+            source, is_object_synced, {}));
       });
 }
 
@@ -1505,20 +1505,19 @@ Status PageStorageImpl::SynchronousAddCommits(
 }
 
 Status PageStorageImpl::SynchronousAddPiece(
-    CoroutineHandler* handler, ObjectIdentifier object_identifier,
-    ChangeSource source, IsObjectSynced is_object_synced,
-    std::unique_ptr<DataSource::DataChunk> data,
-    ObjectReferencesAndPriority references) {
+    CoroutineHandler* handler, const Piece& piece, ChangeSource source,
+    IsObjectSynced is_object_synced, ObjectReferencesAndPriority references) {
   FXL_DCHECK(
-      !GetObjectDigestInfo(object_identifier.object_digest()).is_inlined());
+      !GetObjectDigestInfo(piece.GetIdentifier().object_digest()).is_inlined());
   FXL_DCHECK(
-      object_identifier.object_digest() ==
+      piece.GetIdentifier().object_digest() ==
       ComputeObjectDigest(
-          GetObjectDigestInfo(object_identifier.object_digest()).piece_type,
-          GetObjectDigestInfo(object_identifier.object_digest()).object_type,
-          data->Get()));
+          GetObjectDigestInfo(piece.GetIdentifier().object_digest()).piece_type,
+          GetObjectDigestInfo(piece.GetIdentifier().object_digest())
+              .object_type,
+          piece.GetData()));
 
-  Status status = db_->HasObject(handler, object_identifier);
+  Status status = db_->HasObject(handler, piece.GetIdentifier());
   if (status == Status::INTERNAL_NOT_FOUND) {
     PageDbObjectStatus object_status;
     switch (is_object_synced) {
@@ -1531,8 +1530,7 @@ Status PageStorageImpl::SynchronousAddPiece(
         object_status = PageDbObjectStatus::SYNCED;
         break;
     }
-    return db_->WriteObject(handler, object_identifier, std::move(data),
-                            object_status, references);
+    return db_->WriteObject(handler, piece, object_status, references);
   }
   return status;
 }

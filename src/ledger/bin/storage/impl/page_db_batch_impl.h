@@ -33,9 +33,7 @@ class PageDbBatchImpl : public PageDb::Batch {
                                fxl::StringView storage_bytes) override;
 
   // Object data.
-  Status WriteObject(coroutine::CoroutineHandler* handler,
-                     const ObjectIdentifier& object_identifier,
-                     std::unique_ptr<DataSource::DataChunk> content,
+  Status WriteObject(coroutine::CoroutineHandler* handler, const Piece& piece,
                      PageDbObjectStatus object_status,
                      const ObjectReferencesAndPriority& references) override;
   Status SetObjectStatus(coroutine::CoroutineHandler* handler,

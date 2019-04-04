@@ -101,9 +101,7 @@ Status PageDbEmptyImpl::AddCommitStorageBytes(
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::WriteObject(
-    CoroutineHandler* /*handler*/,
-    const ObjectIdentifier& /*object_identifier*/,
-    std::unique_ptr<DataSource::DataChunk> /*content*/,
+    CoroutineHandler* /*handler*/, const Piece& /*piece*/,
     PageDbObjectStatus /*object_status*/,
     const ObjectReferencesAndPriority& /*children*/) {
   return Status::NOT_IMPLEMENTED;

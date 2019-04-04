@@ -70,9 +70,7 @@ class PageDbMutator {
   // Writes the content of the given object, and reference information from this
   // object to its |children|.
   FXL_WARN_UNUSED_RESULT virtual Status WriteObject(
-      coroutine::CoroutineHandler* handler,
-      const ObjectIdentifier& object_identifier,
-      std::unique_ptr<DataSource::DataChunk> content,
+      coroutine::CoroutineHandler* handler, const Piece& piece,
       PageDbObjectStatus object_status,
       const ObjectReferencesAndPriority& references) = 0;
 

@@ -33,6 +33,7 @@
 #include "src/ledger/bin/storage/impl/journal_impl.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/impl/page_db_empty_impl.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/impl/split.h"
@@ -51,14 +52,12 @@ namespace storage {
 class PageStorageImplAccessorForTest {
  public:
   static void AddPiece(const std::unique_ptr<PageStorageImpl>& storage,
-                       ObjectIdentifier object_identifier, ChangeSource source,
+                       std::unique_ptr<Piece> piece, ChangeSource source,
                        IsObjectSynced is_object_synced,
-                       std::unique_ptr<DataSource::DataChunk> chunk,
                        ObjectReferencesAndPriority references,
                        fit::function<void(Status)> callback) {
-    storage->AddPiece(std::move(object_identifier), source, is_object_synced,
-                      std::move(chunk), std::move(references),
-                      std::move(callback));
+    storage->AddPiece(std::move(piece), source, is_object_synced,
+                      std::move(references), std::move(callback));
   }
 
   static PageDb& GetDb(const std::unique_ptr<PageStorageImpl>& storage) {
@@ -511,8 +510,8 @@ class PageStorageTest : public ledger::TestWithEnvironment {
       PageDbObjectStatus object_status = PageDbObjectStatus::TRANSIENT,
       const ObjectReferencesAndPriority& references = {}) {
     return PageStorageImplAccessorForTest::GetDb(storage_).WriteObject(
-        handler, data->object_identifier, data->ToChunk(), object_status,
-        references);
+        handler, DataChunkPiece(data->object_identifier, data->ToChunk()),
+        object_status, references);
   }
 
   Status ReadObject(CoroutineHandler* handler,
@@ -1264,8 +1263,7 @@ TEST_F(PageStorageTest, AddLocalPiece) {
     bool called;
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
-        storage_, data.object_identifier, ChangeSource::LOCAL,
-        IsObjectSynced::NO, data.ToChunk(),
+        storage_, data.ToPiece(), ChangeSource::LOCAL, IsObjectSynced::NO,
         {{reference.object_digest(), KeyPriority::LAZY}},
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
@@ -1293,8 +1291,7 @@ TEST_F(PageStorageTest, AddSyncPiece) {
     bool called;
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
-        storage_, data.object_identifier, ChangeSource::CLOUD,
-        IsObjectSynced::YES, data.ToChunk(),
+        storage_, data.ToPiece(), ChangeSource::CLOUD, IsObjectSynced::YES,
         {{reference.object_digest(), KeyPriority::EAGER}},
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
@@ -1320,8 +1317,7 @@ TEST_F(PageStorageTest, AddP2PPiece) {
     bool called;
     Status status;
     PageStorageImplAccessorForTest::AddPiece(
-        storage_, data.object_identifier, ChangeSource::P2P, IsObjectSynced::NO,
-        data.ToChunk(), {},
+        storage_, data.ToPiece(), ChangeSource::P2P, IsObjectSynced::NO, {},
         callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
