@@ -62,6 +62,8 @@ TEST(PlatformDevice, MapMmio)
     // Map again different policy - this is now permitted though it's a bad idea.
     auto mmio3 = platform_device->CpuMapMmio(index, magma::PlatformMmio::CACHE_POLICY_UNCACHED);
     EXPECT_NE(mmio3, nullptr);
+
+    EXPECT_NE(0u, mmio->physical_address());
 }
 
 TEST(PlatformPciDevice, MapMmio)

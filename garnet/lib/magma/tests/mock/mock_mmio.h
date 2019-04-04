@@ -14,6 +14,8 @@ public:
 
     virtual ~MockMmio() override;
 
+    uint64_t physical_address() override { return 0; }
+
 private:
     MockMmio(void* addr, uint64_t size);
 };

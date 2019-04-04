@@ -26,6 +26,9 @@ public:
         CACHE_POLICY_WRITE_COMBINING = 3,
     };
 
+    // Gets the physical address of the MMIO. Not implemented for MMIOs from PCI devices.
+    virtual uint64_t physical_address() = 0;
+
     void Write32(uint64_t offset, uint32_t val)
     {
         DASSERT(offset < size());

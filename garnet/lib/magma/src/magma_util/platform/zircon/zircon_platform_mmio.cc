@@ -24,9 +24,21 @@ ZirconPlatformMmio::ZirconPlatformMmio(mmio_buffer_t mmio)
 {
 }
 
+bool ZirconPlatformMmio::Pin(zx_handle_t bti)
+{
+    zx_status_t status = mmio_buffer_pin(&mmio_, bti, &pinned_mmio_);
+    if (status != ZX_OK) {
+        return DRETF(false, "Failed to pin mmio: %d\n", status);
+    }
+    return true;
+}
+
+uint64_t ZirconPlatformMmio::physical_address() { return pinned_mmio_.paddr; }
+
 ZirconPlatformMmio::~ZirconPlatformMmio()
 {
     DLOG("ZirconPlatformMmio dtor");
+    mmio_buffer_unpin(&pinned_mmio_);
     mmio_buffer_release(&mmio_);
 }
 

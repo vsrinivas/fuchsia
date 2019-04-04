@@ -5,6 +5,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
+#include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 #include <zircon/process.h>
 
@@ -50,6 +51,15 @@ ZirconPlatformDevice::CpuMapMmio(unsigned int index, PlatformMmio::CachePolicy c
 
     DLOG("map_mmio index %d cache_policy %d returned: 0x%x", index, static_cast<int>(cache_policy),
          mmio_buffer.vmo);
+
+    zx::bti bti_handle;
+    status = pdev_get_bti(&pdev_, 0, bti_handle.reset_and_get_address());
+    if (status != ZX_OK)
+        return DRETP(nullptr, "failed to get bus transaction initiator for pinning mmio: %d",
+                     status);
+
+    if (!mmio->Pin(bti_handle.get()))
+        return DRETP(nullptr, "Failed to pin mmio");
 
     return mmio;
 }

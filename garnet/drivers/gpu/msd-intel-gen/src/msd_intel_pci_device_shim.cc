@@ -93,6 +93,12 @@ public:
 
     ~MsdIntelPciMmio() { owner_->ops()->unmap_pci_mmio(owner_->context(), pci_bar_); }
 
+    uint64_t physical_address() override
+    {
+        DASSERT(false);
+        return 0u;
+    }
+
 private:
     Owner* owner_;
     uint32_t pci_bar_;

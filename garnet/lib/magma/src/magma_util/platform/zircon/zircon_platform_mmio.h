@@ -14,9 +14,12 @@ public:
     ZirconPlatformMmio(mmio_buffer_t mmio);
 
     ~ZirconPlatformMmio();
+    bool Pin(zx_handle_t bti);
+    uint64_t physical_address() override;
 
 private:
     mmio_buffer_t mmio_;
+    mmio_pinned_buffer_t pinned_mmio_ = {};
 };
 
 } // namespace magma
