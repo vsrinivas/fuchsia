@@ -105,7 +105,7 @@ void AmlPdmDevice::InitRegs() {
     // accessing any of the registers mapped via pdm_mmio.  Writing without sysclk
     // operating properly (and in range) will result in unknown results, reads
     // will wedge the system.
-    audio_mmio_.Write32((1 << 31) | (clk_src_ << 24) | dclk_div_, EE_AUDIO_CLK_PDMIN_CTRL0);
+    audio_mmio_.Write32((clk_src_ << 24) | dclk_div_, EE_AUDIO_CLK_PDMIN_CTRL0);
     audio_mmio_.Write32((1 << 31) | (clk_src_ << 24) | sysclk_div_, EE_AUDIO_CLK_PDMIN_CTRL1);
 
     audio_mmio_.SetBits32((1 << 31) | (1 << toddr_ch_), EE_AUDIO_ARB_CTRL);
@@ -117,6 +117,14 @@ void AmlPdmDevice::InitRegs() {
 
     //It is now safe to write to pdm registers
 
+    //Ensure system is in idle state in case we are re-initing hardware
+    //which was already running.  Keep de-inited for 100ms with no pdm_dclk to
+    //ensure pdm microphones will start reliably.
+    Stop();
+    zx::nanosleep(zx::deadline_after(zx::msec(100)));
+
+    //Start pdm_dclk
+    audio_mmio_.SetBits32(1 << 31, EE_AUDIO_CLK_PDMIN_CTRL0);
     //Enable cts_pdm_clk gate (clock gate within pdm module)
     pdm_mmio_.SetBits32(0x01, PDM_CLKG_CTRL);
 
