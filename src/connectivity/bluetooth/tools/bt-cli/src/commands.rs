@@ -89,6 +89,7 @@ gen_commands! {
     Cmd {
         Connect = ("connect", ["id|addr"], "connect to a peer"),
         Disconnect = ("disconnect", ["id|addr"], "disconnect from a peer"),
+        Forget = ("forget", ["id|addr"], "delete and disconnect a remote peer"),
         ActiveAdapter = ("adapter", [], "Show the Active Adapter"),
         SetActiveAdapter = ("set-adapter", ["id"], "Set the Active Adapter"),
         SetAdapterName = ("set-local-name", ["name"], "Set the name of the Active Adapter"),
@@ -135,7 +136,11 @@ impl Completer for CmdHelper {
             let partial_argument = components.get(1).unwrap_or(&"");
             let peers = &self.state.lock().peers;
             let mut candidates = vec![];
-            if command == "connect" || command == "disconnect" || command == "peer" {
+            if command == "connect"
+                || command == "disconnect"
+                || command == "peer"
+                || command == "forget"
+            {
                 // connect and peer have 'id|addr' arguments
                 // can match against peer identifier or address
                 for peer in peers.values() {

@@ -226,6 +226,28 @@ async fn disconnect<'a>(
     }
 }
 
+async fn forget<'a>(
+    args: &'a [&'a str],
+    state: &'a Mutex<State>,
+    control_svc: &'a ControlProxy,
+) -> Result<String, Error> {
+    if args.len() != 1 {
+        return Ok(format!("usage: {}", Cmd::Forget.cmd_help()));
+    }
+    // `args[0]` is the identifier of the remote device to connect to
+    let id = match to_identifier(state, args[0]) {
+        Some(id) => id,
+        None => return Ok(format!("Unable to forget: Unknown address {}", args[0])),
+    };
+    let response = control_svc.forget(&id).await?;
+    if response.error.is_some() {
+        Ok(Status::from(response).to_string())
+    } else {
+        println!("Peer has been removed");
+        Ok(String::new())
+    }
+}
+
 async fn set_discoverable(discoverable: bool, control_svc: &ControlProxy) -> Result<String, Error> {
     if discoverable {
         println!("Becoming discoverable..");
@@ -362,6 +384,7 @@ async fn handle_cmd(
     let res = match cmd {
         Cmd::Connect => connect(args, &state, &bt_svc).await,
         Cmd::Disconnect => disconnect(args, &state, &bt_svc).await,
+        Cmd::Forget => forget(args, &state, &bt_svc).await,
         Cmd::StartDiscovery => set_discovery(true, &bt_svc).await,
         Cmd::StopDiscovery => set_discovery(false, &bt_svc).await,
         Cmd::Discoverable => set_discoverable(true, &bt_svc).await,
@@ -690,6 +713,42 @@ mod tests {
         let (result, mock_result) = join!(cmd, mock_expect);
 
         let _ = mock_result.expect("mock FIDL expectation not satisfied");
+        assert!(result.expect("expected a result").contains(error_msg));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_forget() {
+        let peer = peer(true, false);
+        let peer_id = peer.identifier.clone();
+
+        let args = vec![peer_id.as_str()];
+        let state = Mutex::new(state_with(peer));
+        let (proxy, mut mock) = ControlMock::new(1.second()).expect("failed to create mock");
+
+        let cmd = forget(args.as_slice(), &state, &proxy);
+        let mock_expect = mock.expect_forget(peer_id.clone(), bt_fidl_status!());
+        let (result, mock_result) = join!(cmd, mock_expect);
+
+        assert!(mock_result.is_ok());
+        assert_eq!("".to_string(), result.expect("expected success"));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_forget_error() {
+        let peer = peer(true, false);
+        let peer_id = peer.identifier.clone();
+
+        let args = vec![peer_id.as_str()];
+        let state = Mutex::new(state_with(peer));
+        let (proxy, mut mock) = ControlMock::new(1.second()).expect("failed to create mock");
+
+        let error_msg = "oopsy daisy";
+        let cmd = forget(args.as_slice(), &state, &proxy);
+        let mock_expect =
+            mock.expect_forget(peer_id.clone(), bt_fidl_status!(Failed, err_msg(error_msg)));
+        let (result, mock_result) = join!(cmd, mock_expect);
+
+        assert!(mock_result.is_ok());
         assert!(result.expect("expected a result").contains(error_msg));
     }
 }
