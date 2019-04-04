@@ -57,11 +57,20 @@ group("maxwell_unittests") {
   ]
 }
 
+group("modular_test_harness") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/testing:environment_delegating_runner",
+    "//peridot/bin/modular_test_harness",
+  ]
+}
+
 group("modular_integration_tests") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:test_runner",
     "//peridot/packages/prod:integration_testing",
+    "//peridot/packages/tests:modular_test_harness",
     "//peridot/tests:modular_tests",
     "//peridot/tests/clipboard:clipboard_test_module",
     "//peridot/tests/common:common_active_module",

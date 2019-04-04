@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "bin/test_story_shell_bin"
+    },
+    "sandbox": {
+        "services": []
+    }
+}
