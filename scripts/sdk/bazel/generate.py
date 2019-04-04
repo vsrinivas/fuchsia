@@ -262,7 +262,11 @@ class BazelBuilder(Frontend):
 
 
     def install_host_tool_atom(self, atom):
-        self._copy_files(atom['files'], atom['root'], 'tools')
+        if 'files' in atom:
+            self._copy_files(atom['files'], atom['root'], 'tools')
+        if 'target_files' in atom:
+            for files in atom['target_files'].itervalues():
+                self._copy_files(files, atom['root'], 'tools')
 
 
     def install_fidl_library_atom(self, atom):
