@@ -12,60 +12,36 @@
 // implementing the locks themselves.  Without this, the header-level
 // annotations cause Clang to detect violations.
 
-// ARM-specific exclusive operations.
-
-// Load-Acquire Exclusive. Generates LDAXR.
-// Load a 64-bit value with an acquire memory barrier (DMBLD) and take the exclusive monitor.
-// Ready for matching Store Exclusive or WFE.
-static inline uint64_t arm64_load_acquire_exclusive(uint64_t* target) {
-#if __has_builtin(__builtin_arm_ldaex)
-    return __builtin_arm_ldaex(target);
-#else
-    uint64_t value;
-    __asm__ volatile("ldaxr %[value], [%[target]]"
-                     : [value] "=&r"(value) : [target] "r"(target) : "memory");
-    return value;
-#endif
-}
-
-// Store Exclusive. Generates STXR.
-// Attempt to store a 64-bit value to an address with an exclusive monitor held.
-// Return value is the status code from stxr: 0 = success, 1 = failure.
-static inline uint32_t arm64_store_exclusive(uint64_t* target, uint64_t value) {
-#if __has_builtin(__builtin_arm_strex)
-    return __builtin_arm_strex(value, target);
-#else
-    uint32_t status;
-    __asm__ volatile("stxr  %w[status], %[value], [%[target]]"
-                     : [status] "=r"(status)
-                     : [target] "r"(target), [value] "r"(value) : "cc", "memory");
-    return status;
-#endif
-}
-
 void arch_spin_lock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
     unsigned long val = arch_curr_cpu_num() + 1;
-    __sevl();
-    for ( ; ; ) {
-        __wfe();
-        uint64_t data = arm64_load_acquire_exclusive(&lock->value);
-        if (unlikely(data != 0)) {
-            continue;
-        }
-        uint32_t status = arm64_store_exclusive(&lock->value, val);
-        if (likely(status == 0)) {
-            return;
-        }
-    }
+    uint64_t temp;
+
+    __asm__ volatile(
+        "sevl;"
+        "1: wfe;"
+        "ldaxr   %[temp], [%[lock]];"
+        "cbnz    %[temp], 1b;"
+        "stxr    %w[temp], %[val], [%[lock]];"
+        "cbnz    %w[temp], 1b;"
+        : [temp] "=&r"(temp)
+        : [lock] "r"(&lock->value), [val] "r"(val)
+        : "cc", "memory");
 }
 
 int arch_spin_trylock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
     unsigned long val = arch_curr_cpu_num() + 1;
-    uint64_t data = arm64_load_acquire_exclusive(&lock->value);
-    if (unlikely(data != 0)) {
-        return (int)data;
-    }
-    return arm64_store_exclusive(&lock->value, val);
+    uint64_t out;
+
+    __asm__ volatile(
+        "ldaxr   %[out], [%[lock]];"
+        "cbnz    %[out], 1f;"
+        "stxr    %w[out], %[val], [%[lock]];"
+        "1:"
+        : [out] "=&r"(out)
+        : [lock] "r"(&lock->value), [val] "r"(val)
+        : "cc", "memory");
+
+    return (int)out;
 }
 
 void arch_spin_unlock(spin_lock_t* lock) TA_NO_THREAD_SAFETY_ANALYSIS {
