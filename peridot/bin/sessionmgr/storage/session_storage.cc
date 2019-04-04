@@ -282,7 +282,7 @@ FuturePtr<> SessionStorage::UpdateStoryOptions(
   auto ret = Future<>::Create("SessionStorage.SetOptions.ret");
   auto mutate = [story_options = std::move(story_options)](
                     fuchsia::modular::internal::StoryData* story_data) mutable {
-    if (story_data->story_options() != story_options) {
+    if (!fidl::Equals(story_data->story_options(), story_options)) {
       story_data->set_story_options(std::move(story_options));
       return true;
     }

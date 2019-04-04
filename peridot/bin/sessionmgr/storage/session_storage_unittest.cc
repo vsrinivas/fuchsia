@@ -85,7 +85,7 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
     EXPECT_TRUE(data->story_options().kind_of_proto_story);
     EXPECT_EQ(story_name, data->story_info().id);
     ASSERT_TRUE(data->has_story_page_id());
-    EXPECT_EQ(page_id, data->story_page_id());
+    EXPECT_TRUE(fidl::Equals(page_id, data->story_page_id()));
     EXPECT_TRUE(data->story_info().extra);
     EXPECT_EQ(2u, data->story_info().extra->size());
     EXPECT_EQ("key1", data->story_info().extra->at(0).key);
@@ -104,7 +104,7 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   done = false;
   future_data->Then([&](fuchsia::modular::internal::StoryDataPtr data) {
     ASSERT_TRUE(data);
-    ASSERT_EQ(cached_data, *data);
+    ASSERT_TRUE(fidl::Equals(cached_data, *data));
     done = true;
   });
   RunLoopUntil([&] { return done; });
@@ -119,7 +119,7 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   RunLoopUntil([&] { return !!all_data; });
 
   EXPECT_EQ(1u, all_data->size());
-  EXPECT_EQ(cached_data, all_data->at(0));
+  EXPECT_TRUE(fidl::Equals(cached_data, all_data->at(0)));
 }
 
 TEST_F(SessionStorageTest, CreateGetAllDelete) {
@@ -192,7 +192,7 @@ TEST_F(SessionStorageTest, CreateMultipleAndDeleteOne) {
   RunLoopUntil([&] { return done; });
 
   EXPECT_NE(story1_name, story2_name);
-  EXPECT_NE(story1_pageid, story2_pageid);
+  EXPECT_FALSE(fidl::Equals(story1_pageid, story2_pageid));
 
   auto future_all_data = storage->GetAllStoryData();
   fidl::VectorPtr<fuchsia::modular::internal::StoryData> all_data;

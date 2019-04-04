@@ -55,8 +55,12 @@ class OlderSimpleUnion {
 
   Tag Which() const { return Tag(tag_); }
 
+  friend ::fidl::Equality<::test::name::OlderSimpleUnion>;
+
  private:
+#ifdef FIDL_OPERATOR_EQUALS
   friend bool operator==(const OlderSimpleUnion& lhs, const OlderSimpleUnion& rhs);
+#endif
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
@@ -67,10 +71,12 @@ class OlderSimpleUnion {
   };
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const OlderSimpleUnion& lhs, const OlderSimpleUnion& rhs);
 inline bool operator!=(const OlderSimpleUnion& lhs, const OlderSimpleUnion& rhs) {
   return !(lhs == rhs);
 }
+#endif
 
 inline zx_status_t Clone(const ::test::name::OlderSimpleUnion& value,
                          ::test::name::OlderSimpleUnion* result) {
@@ -134,8 +140,12 @@ class NewerSimpleUnion {
 
   Tag Which() const { return Tag(tag_); }
 
+  friend ::fidl::Equality<::test::name::NewerSimpleUnion>;
+
  private:
+#ifdef FIDL_OPERATOR_EQUALS
   friend bool operator==(const NewerSimpleUnion& lhs, const NewerSimpleUnion& rhs);
+#endif
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
@@ -147,10 +157,12 @@ class NewerSimpleUnion {
   };
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const NewerSimpleUnion& lhs, const NewerSimpleUnion& rhs);
 inline bool operator!=(const NewerSimpleUnion& lhs, const NewerSimpleUnion& rhs) {
   return !(lhs == rhs);
 }
+#endif
 
 inline zx_status_t Clone(const ::test::name::NewerSimpleUnion& value,
                          ::test::name::NewerSimpleUnion* result) {
@@ -196,6 +208,26 @@ inline zx_status_t Clone(const ::test::name::OlderSimpleUnion& value,
                          ::test::name::OlderSimpleUnion* result) {
   return ::test::name::Clone(value, result);
 }
+
+template<>
+struct Equality<::test::name::OlderSimpleUnion> {
+  static inline bool Equals(const ::test::name::OlderSimpleUnion& _lhs, const ::test::name::OlderSimpleUnion& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+
+    switch (_lhs.Which()) {
+      case ::test::name::OlderSimpleUnion::Tag::kI:
+        return ::fidl::Equals(_lhs.i_, _rhs.i_);
+      case ::test::name::OlderSimpleUnion::Tag::kF:
+        return ::fidl::Equals(_lhs.f_, _rhs.f_);
+      case ::test::name::OlderSimpleUnion::Tag::Empty:
+        return true;
+      default:
+        return false;
+    }
+    }
+};
 template <>
 struct CodingTraits<::test::name::NewerSimpleUnion>
     : public EncodableCodingTraits<::test::name::NewerSimpleUnion, 24> {};
@@ -229,4 +261,26 @@ struct CodingTraits<std::unique_ptr<::test::name::NewerSimpleUnion>> {
 inline zx_status_t Clone(const ::test::name::NewerSimpleUnion& value,
                          ::test::name::NewerSimpleUnion* result) {
   return ::test::name::Clone(value, result);
-}}  // namespace fidl
+}
+
+template<>
+struct Equality<::test::name::NewerSimpleUnion> {
+  static inline bool Equals(const ::test::name::NewerSimpleUnion& _lhs, const ::test::name::NewerSimpleUnion& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+
+    switch (_lhs.Which()) {
+      case ::test::name::NewerSimpleUnion::Tag::kI:
+        return ::fidl::Equals(_lhs.i_, _rhs.i_);
+      case ::test::name::NewerSimpleUnion::Tag::kS:
+        return ::fidl::Equals(_lhs.s_, _rhs.s_);
+      case ::test::name::NewerSimpleUnion::Tag::kV:
+        return ::fidl::Equals(_lhs.v_, _rhs.v_);
+      case ::test::name::NewerSimpleUnion::Tag::Empty:
+        return true;
+      default:
+        return false;
+    }
+    }
+};}  // namespace fidl

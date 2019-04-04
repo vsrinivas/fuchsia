@@ -111,10 +111,12 @@ class Struct  {
   zx_status_t Clone(Struct* result) const;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const Struct& _lhs, const Struct& _rhs);
 inline bool operator!=(const Struct& _lhs, const Struct& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 inline zx_status_t Clone(const ::test::name::Struct& _value,
                          ::test::name::Struct* _result) {
@@ -175,16 +177,20 @@ class Union {
   }
 
  private:
+#ifdef FIDL_OPERATOR_EQUALS
   friend bool operator==(const Union& _lhs, const Union& _rhs);
+#endif
 
   using Variant = fit::internal::variant<fit::internal::monostate, int32_t>;
   Variant value_;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const Union& _lhs, const Union& _rhs);
 inline bool operator!=(const Union& _lhs, const Union& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 inline zx_status_t Clone(const ::test::name::Union& value,
                          ::test::name::Union* result) {
@@ -268,10 +274,12 @@ class Table  {
   ValueUnion_Field Field_value_;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const Table& _lhs, const Table& _rhs);
 inline bool operator!=(const Table& _lhs, const Table& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 using TablePtr = ::std::unique_ptr<Table>;
 
@@ -291,6 +299,16 @@ inline zx_status_t Clone(const ::test::name::Struct& value,
                          ::test::name::Struct* result) {
   return ::test::name::Clone(value, result);
 }
+
+template<>
+struct Equality<::test::name::Struct> {
+  static inline bool Equals(const ::test::name::Struct& _lhs, const ::test::name::Struct& _rhs) {
+    if (!::fidl::Equals(_lhs.Field, _rhs.Field)) {
+      return false;
+    }
+    return true;
+  }
+};
 template <>
 struct CodingTraits<::test::name::Union>
     : public EncodableCodingTraits<::test::name::Union, 8> {};
@@ -299,6 +317,23 @@ inline zx_status_t Clone(const ::test::name::Union& value,
                          ::test::name::Union* result) {
   return ::test::name::Clone(value, result);
 }
+
+template<>
+struct Equality<::test::name::Union> {
+  static inline bool Equals(const ::test::name::Union& _lhs, const ::test::name::Union& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+    switch (_lhs.Which()) {
+      case ::test::name::Union::Tag::kField:
+	return ::fidl::Equals(_lhs.Field(), _rhs.Field());
+      case ::test::name::Union::Tag::Invalid:
+	return true;
+      default:
+	return false;
+    }
+  }
+};
 template <>
 struct CodingTraits<::test::name::Table>
     : public EncodableCodingTraits<::test::name::Table, 16> {};
@@ -306,4 +341,20 @@ struct CodingTraits<::test::name::Table>
 inline zx_status_t Clone(const ::test::name::Table& _value,
                          ::test::name::Table* result) {
   return _value.Clone(result);
-}}  // namespace fidl
+}
+template<>
+struct Equality<::test::name::Table> {
+  static inline bool Equals(const ::test::name::Table& _lhs, const ::test::name::Table& _rhs) {
+    if (_lhs.has_Field()) {
+      if (!_rhs.has_Field()) {
+	return false;
+      }
+      if (!::fidl::Equals(_lhs.Field(), _rhs.Field())) {
+	return false;
+      }
+    } else if (_rhs.has_Field()) {
+      return false;
+    }
+    return true;
+  }
+};}  // namespace fidl

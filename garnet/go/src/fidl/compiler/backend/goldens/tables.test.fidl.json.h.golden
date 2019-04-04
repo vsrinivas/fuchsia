@@ -79,10 +79,12 @@ class OlderSimpleTable  {
   ValueUnion_x x_value_;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const OlderSimpleTable& _lhs, const OlderSimpleTable& _rhs);
 inline bool operator!=(const OlderSimpleTable& _lhs, const OlderSimpleTable& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 using OlderSimpleTablePtr = ::std::unique_ptr<OlderSimpleTable>;
 
@@ -230,10 +232,12 @@ class NewerSimpleTable  {
   ValueUnion_z z_value_;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const NewerSimpleTable& _lhs, const NewerSimpleTable& _rhs);
 inline bool operator!=(const NewerSimpleTable& _lhs, const NewerSimpleTable& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
 
@@ -342,10 +346,12 @@ class SimpleTable  {
   ValueUnion_y y_value_;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const SimpleTable& _lhs, const SimpleTable& _rhs);
 inline bool operator!=(const SimpleTable& _lhs, const SimpleTable& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
 
@@ -376,10 +382,12 @@ class EmptyTable  {
   }
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const EmptyTable& _lhs, const EmptyTable& _rhs);
 inline bool operator!=(const EmptyTable& _lhs, const EmptyTable& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 using EmptyTablePtr = ::std::unique_ptr<EmptyTable>;
 }  // namespace name
@@ -394,6 +402,22 @@ inline zx_status_t Clone(const ::test::name::OlderSimpleTable& _value,
                          ::test::name::OlderSimpleTable* result) {
   return _value.Clone(result);
 }
+template<>
+struct Equality<::test::name::OlderSimpleTable> {
+  static inline bool Equals(const ::test::name::OlderSimpleTable& _lhs, const ::test::name::OlderSimpleTable& _rhs) {
+    if (_lhs.has_x()) {
+      if (!_rhs.has_x()) {
+	return false;
+      }
+      if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
+	return false;
+      }
+    } else if (_rhs.has_x()) {
+      return false;
+    }
+    return true;
+  }
+};
 template <>
 struct CodingTraits<::test::name::NewerSimpleTable>
     : public EncodableCodingTraits<::test::name::NewerSimpleTable, 16> {};
@@ -402,6 +426,42 @@ inline zx_status_t Clone(const ::test::name::NewerSimpleTable& _value,
                          ::test::name::NewerSimpleTable* result) {
   return _value.Clone(result);
 }
+template<>
+struct Equality<::test::name::NewerSimpleTable> {
+  static inline bool Equals(const ::test::name::NewerSimpleTable& _lhs, const ::test::name::NewerSimpleTable& _rhs) {
+    if (_lhs.has_x()) {
+      if (!_rhs.has_x()) {
+	return false;
+      }
+      if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
+	return false;
+      }
+    } else if (_rhs.has_x()) {
+      return false;
+    }
+    if (_lhs.has_y()) {
+      if (!_rhs.has_y()) {
+	return false;
+      }
+      if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
+	return false;
+      }
+    } else if (_rhs.has_y()) {
+      return false;
+    }
+    if (_lhs.has_z()) {
+      if (!_rhs.has_z()) {
+	return false;
+      }
+      if (!::fidl::Equals(_lhs.z(), _rhs.z())) {
+	return false;
+      }
+    } else if (_rhs.has_z()) {
+      return false;
+    }
+    return true;
+  }
+};
 template <>
 struct CodingTraits<::test::name::SimpleTable>
     : public EncodableCodingTraits<::test::name::SimpleTable, 16> {};
@@ -410,6 +470,32 @@ inline zx_status_t Clone(const ::test::name::SimpleTable& _value,
                          ::test::name::SimpleTable* result) {
   return _value.Clone(result);
 }
+template<>
+struct Equality<::test::name::SimpleTable> {
+  static inline bool Equals(const ::test::name::SimpleTable& _lhs, const ::test::name::SimpleTable& _rhs) {
+    if (_lhs.has_x()) {
+      if (!_rhs.has_x()) {
+	return false;
+      }
+      if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
+	return false;
+      }
+    } else if (_rhs.has_x()) {
+      return false;
+    }
+    if (_lhs.has_y()) {
+      if (!_rhs.has_y()) {
+	return false;
+      }
+      if (!::fidl::Equals(_lhs.y(), _rhs.y())) {
+	return false;
+      }
+    } else if (_rhs.has_y()) {
+      return false;
+    }
+    return true;
+  }
+};
 template <>
 struct CodingTraits<::test::name::EmptyTable>
     : public EncodableCodingTraits<::test::name::EmptyTable, 16> {};
@@ -417,4 +503,10 @@ struct CodingTraits<::test::name::EmptyTable>
 inline zx_status_t Clone(const ::test::name::EmptyTable& _value,
                          ::test::name::EmptyTable* result) {
   return _value.Clone(result);
-}}  // namespace fidl
+}
+template<>
+struct Equality<::test::name::EmptyTable> {
+  static inline bool Equals(const ::test::name::EmptyTable& _lhs, const ::test::name::EmptyTable& _rhs) {
+    return true;
+  }
+};}  // namespace fidl

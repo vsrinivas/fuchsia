@@ -92,7 +92,7 @@ bool Compare(const fuchsia::camera::VideoFormat& vf, const UvcFormat& uf) {
     }
   }
 
-  if (vf.format.pixel_format == uvf.format.pixel_format &&
+  if (fidl::Equals(vf.format.pixel_format, uvf.format.pixel_format) &&
       vf.format.width == uvf.format.width &&
       vf.format.height == uvf.format.height && has_equal_frame_rate) {
     return true;

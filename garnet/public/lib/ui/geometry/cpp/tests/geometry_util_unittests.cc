@@ -41,27 +41,27 @@ TEST(RectTest, Comparisons) {
   r1.width = 2;
   r1.height = 3;
 
-  EXPECT_EQ(r1, r1);
+  EXPECT_TRUE(fidl::Equals(r1, r1));
 
   Rect r2 = r1;
   r2.x = 4;
 
-  EXPECT_NE(r1, r2);
+  EXPECT_FALSE(fidl::Equals(r1, r2));
 
   r2 = r1;
   r2.y = 5;
 
-  EXPECT_NE(r1, r2);
+  EXPECT_FALSE(fidl::Equals(r1, r2));
 
   r2 = r1;
   r2.width = 6;
 
-  EXPECT_NE(r1, r2);
+  EXPECT_FALSE(fidl::Equals(r1, r2));
 
   r2 = r1;
   r2.height = 7;
 
-  EXPECT_NE(r1, r2);
+  EXPECT_FALSE(fidl::Equals(r1, r2));
 }
 
 TEST(SizeTest, Comparisons) {
@@ -69,17 +69,17 @@ TEST(SizeTest, Comparisons) {
   s1.width = 0;
   s1.height = 1;
 
-  EXPECT_EQ(s1, s1);
+  EXPECT_TRUE(fidl::Equals(s1, s1));
 
   Size s2 = s1;
   s2.width = 2;
 
-  EXPECT_NE(s1, s2);
+  EXPECT_FALSE(fidl::Equals(s1, s2));
 
   s2 = s1;
   s2.height = 3;
 
-  EXPECT_NE(s1, s2);
+  EXPECT_FALSE(fidl::Equals(s1, s2));
 }
 
 TEST(PointTest, Comparisons) {
@@ -87,17 +87,17 @@ TEST(PointTest, Comparisons) {
   p1.x = 0;
   p1.y = 1;
 
-  EXPECT_EQ(p1, p1);
+  EXPECT_TRUE(fidl::Equals(p1, p1));
 
   Point p2 = p1;
   p2.x = 2;
 
-  EXPECT_NE(p1, p2);
+  EXPECT_FALSE(fidl::Equals(p1, p2));
 
   p2 = p1;
   p2.y = 3;
 
-  EXPECT_NE(p1, p2);
+  EXPECT_FALSE(fidl::Equals(p1, p2));
 }
 
 TEST(TransformFunctionsTest, SetIdentityTransform) {

@@ -210,11 +210,6 @@ TEST_F(TestMetadataTest, EmptyServices) {
   EXPECT_FALSE(tm.HasServices());
 }
 
-std::pair<std::string, LaunchInfo> create_pair(const std::string& s1,
-                                               LaunchInfo launch_info) {
-  return std::make_pair(s1, std::move(launch_info));
-}
-
 TEST_F(TestMetadataTest, ValidServices) {
   std::string json = CreateManifestJson(R"(
   "facets": {
@@ -231,12 +226,15 @@ TEST_F(TestMetadataTest, ValidServices) {
   EXPECT_TRUE(ParseFrom(&tm, json));
   auto services = tm.TakeServices();
   ASSERT_EQ(3u, services.size());
-  EXPECT_EQ(services[0], create_pair("1", LaunchInfo{.url = "url1"}));
+  EXPECT_EQ(services[0].first, "1");
+  EXPECT_TRUE(fidl::Equals(services[0].second, LaunchInfo{.url = "url1"}));
   LaunchInfo launch_info{.url = "url2"};
   launch_info.arguments.push_back("--a=b");
   launch_info.arguments.push_back("c");
-  EXPECT_EQ(services[1], create_pair("2", std::move(launch_info)));
-  EXPECT_EQ(services[2], create_pair("3", LaunchInfo{.url = "url3"}));
+  EXPECT_EQ(services[1].first, "2");
+  EXPECT_TRUE(fidl::Equals(services[1].second, launch_info));
+  EXPECT_EQ(services[2].first, "3");
+  EXPECT_TRUE(fidl::Equals(services[2].second, LaunchInfo{.url = "url3"}));
   EXPECT_EQ(tm.system_services().size(), 0u);
 }
 

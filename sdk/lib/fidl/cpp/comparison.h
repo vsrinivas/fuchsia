@@ -6,40 +6,82 @@
 #define LIB_FIDL_CPP_COMPARISON_H_
 
 #include <memory>
+#include <string>
 #include <vector>
+#include <type_traits>
+
+#ifdef __Fuchsia__
+#include <lib/zx/object.h>
+#endif
 
 // Comparisons that uses structure equality on on std::unique_ptr instead of
 // pointer equality.
 namespace fidl {
 
-template <class T>
-inline bool Equals(const T& lhs, const T& rhs) {
-  return lhs == rhs;
-}
+template <typename T, typename = void>
+struct Equality {};
 
 template <class T>
-inline bool Equals(const std::unique_ptr<T>& lhs,
-                   const std::unique_ptr<T>& rhs) {
-  if (lhs == nullptr || rhs == nullptr) {
-    return rhs == lhs;
+struct Equality<T, typename std::enable_if_t<std::is_integral<T>::value>> {
+  static inline bool Equals(const T& lhs, const T& rhs) {
+    return lhs == rhs;
   }
-  return Equals<T>(*lhs, *rhs);
-}
+};
 
 template <class T>
-inline bool Equals(const std::vector<std::unique_ptr<T>>& lhs,
-                   const std::vector<std::unique_ptr<T>>& rhs) {
-  if (lhs.size() != rhs.size()) {
-    return false;
+struct Equality<T, typename std::enable_if_t<std::is_floating_point<T>::value>> {
+  static inline bool Equals(const T& lhs, const T& rhs) {
+    // TODO(ianloic): do something better for floating point comparison?
+    return lhs == rhs;
   }
-  for (size_t i = 0; i < lhs.size(); i++) {
-    const std::unique_ptr<T>& lptr = lhs.at(i);
-    const std::unique_ptr<T>& rptr = rhs.at(i);
-    if (!Equals<T>(lptr, rptr)) {
+};
+
+#ifdef __Fuchsia__
+template <class T>
+struct Equality<T, typename std::enable_if_t<std::is_base_of<zx::object_base, T>::value>> {
+  static inline bool Equals(const T& lhs, const T& rhs) {
+    return lhs.get() == rhs.get();
+  }
+};
+#endif  // __Fuchsia__
+
+template <>
+struct Equality<std::string> {
+  static inline bool Equals(const std::string& lhs, const std::string& rhs) {
+    return lhs == rhs;
+  }
+};
+
+template <class T>
+struct Equality<std::vector<T>> {
+  static inline bool Equals(const std::vector<T>& lhs,
+                           const std::vector<T>& rhs) {
+    if (lhs.size() != rhs.size()) {
       return false;
     }
+    for (size_t i = 0; i < lhs.size(); i++) {
+      if (!::fidl::Equality<T>::Equals(lhs[i], rhs[i])) {
+        return false;
+      }
+    }
+    return true;
   }
-  return true;
+};
+
+template <class T>
+struct Equality<std::unique_ptr<T>> {
+  static inline bool Equals(const std::unique_ptr<T>& lhs,
+                     const std::unique_ptr<T>& rhs) {
+    if (lhs == nullptr || rhs == nullptr) {
+      return rhs == lhs;
+    }
+    return ::fidl::Equality<T>::Equals(*lhs, *rhs);
+  }
+};
+
+template <class T>
+inline bool Equals(const T& lhs, const T& rhs) {
+  return Equality<T>::Equals(lhs, rhs);
 }
 
 }  // namespace fidl

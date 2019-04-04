@@ -432,7 +432,7 @@ void ExpectEq(const Struct& a, const Struct& b) {
   EXPECT_EQ(a.structs.nullable_s, b.structs.nullable_s);
 
   // empty structs
-  EXPECT_EQ(a.structs.es, b.structs.es);
+  EXPECT_TRUE(fidl::Equals(a.structs.es, b.structs.es));
   EXPECT_EQ(a.structs.es.__reserved, 0u);
 
   // unions

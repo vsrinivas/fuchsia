@@ -68,4 +68,9 @@
 // for table accessors. See FIDL-484.
 #define FIDL_NEW_STYLE_TABLE_MEMBER_ACCESSORS
 
+// This is defined temporarily to enable comparison operators to be generated
+// for FIDL types. They should be replaced by calls to fidl::Equals.
+// See FIDL-563.
+#define FIDL_OPERATOR_EQUALS
+
 #endif  // LIB_FIDL_CPP_INTERNAL_HEADER_H_

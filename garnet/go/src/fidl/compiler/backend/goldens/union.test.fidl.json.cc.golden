@@ -106,6 +106,7 @@ zx_status_t Union::Clone(Union* _result) const {
   return _status;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const Union& _lhs, const Union& _rhs) {
   if (_lhs.Which() != _rhs.Which()) {
     return false;
@@ -123,6 +124,7 @@ bool operator==(const Union& _lhs, const Union& _rhs) {
       return false;
   }
 }
+#endif
 
 void Union::set_Primitive(int32_t value) {
   value_.emplace<static_cast<size_t>(Tag::kPrimitive) + 1>(std::move(value));
@@ -137,3 +139,4 @@ void Union::set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> va
 }
 }  // namespace name
 }  // namespace test
+

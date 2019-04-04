@@ -29,6 +29,7 @@ namespace {{ . }} {
 {{- range .LibraryReversed }}
 }  // namespace {{ . }}
 {{- end }}
+
 {{ end }}
 
 {{- define "DispatchInterfaceDefinition" -}}

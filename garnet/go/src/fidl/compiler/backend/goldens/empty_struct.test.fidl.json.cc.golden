@@ -24,11 +24,14 @@ zx_status_t Empty::Clone(Empty* _result) const {
   return ZX_OK;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const Empty& _lhs, const Empty& _rhs) {
   if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
     return false;
   }
   return true;
 }
+#endif
 }  // namespace name
 }  // namespace test
+

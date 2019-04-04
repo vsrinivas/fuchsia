@@ -137,7 +137,7 @@ TEST_F(ChannelTest, Conversion) {
 
     for (auto tv : tvs) {
         auto got_fidl = ToFidl(tv.ddk);
-        EXPECT_EQ(tv.is_same, tv.fidl == got_fidl);
+        EXPECT_EQ(tv.is_same, fidl::Equals(tv.fidl, got_fidl));
 
         auto got_ddk = FromFidl(tv.fidl);
         EXPECT_EQ(tv.is_same, tv.ddk == got_ddk);

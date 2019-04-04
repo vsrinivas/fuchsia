@@ -49,18 +49,46 @@ class Array final {
 };
 
 template <typename T, size_t N>
-bool operator==(const Array<T, N>& lhs, const Array<T, N>& rhs) {
-  for (size_t i = 0; i < N; ++i) {
-    if (!Equals(lhs[i], rhs[i])) {
-      return false;
+struct Equality<Array<T, N>> {
+  static inline bool Equals(const Array<T, N>& lhs, const Array<T, N>& rhs) {
+    for (size_t i = 0; i < N; ++i) {
+      if (!Equality<T>::Equals(lhs[i], rhs[i])) {
+        return false;
+      }
     }
+    return true;
   }
-  return true;
+};
+
+#ifndef FIDL_OPERATOR_EQUALS
+// When we replace fidl::Array with std::array equality will be defined for
+// arrays of integral types.
+template <typename T, size_t N>
+bool operator==(const Array<T, N>& lhs, const Array<T, N>& rhs) {
+  static_assert(std::is_integral<T>::value,
+                "== is only defined for arrays of integral types. "
+                "For deep comparison, use fidl::Equals");
+  return Equality<Array<T, N>>::Equals(lhs, rhs);
+}
+template <typename T, size_t N>
+bool operator!=(const Array<T, N>& lhs, const Array<T, N>& rhs) {
+  static_assert(std::is_integral<T>::value,
+                "!= is only defined for arrays of integral types. "
+                "For deep comparison, use fidl::Equals");
+  return !Equality<Array<T, N>>::Equals(lhs, rhs);
+}
+
+#endif
+
+#ifdef FIDL_OPERATOR_EQUALS
+template <typename T, size_t N>
+bool operator==(const Array<T, N>& lhs, const Array<T, N>& rhs) {
+  return Equality<Array<T, N>>::Equals(lhs, rhs);
 }
 
 template <typename T, size_t N>
 bool operator!=(const Array<T, N>& lhs, const Array<T, N>& rhs) {
-  return !(lhs == rhs);
+  return !Equality<Array<T, N>>::Equals(lhs, rhs);
 }
 
 template <typename T, size_t N>
@@ -92,6 +120,7 @@ template <typename T, size_t N>
 bool operator>=(const Array<T, N>& lhs, const Array<T, N>& rhs) {
   return !(lhs < rhs);
 }
+#endif
 
 }  // namespace fidl
 

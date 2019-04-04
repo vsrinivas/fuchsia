@@ -135,24 +135,24 @@ class VectorPtr {
 };
 
 template <class T>
-inline bool operator==(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
-  if (lhs.is_null() || rhs.is_null()) {
-    return lhs.is_null() == rhs.is_null();
-  }
-  if (lhs->size() != rhs->size()) {
-    return false;
-  }
-  for (size_t i = 0; i < lhs->size(); ++i) {
-    if (!Equals(lhs->at(i), rhs->at(i))) {
-      return false;
+struct Equality<VectorPtr<T>> {
+  static inline bool Equals(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
+    if (lhs.is_null() || rhs.is_null()) {
+      return lhs.is_null() == rhs.is_null();
     }
+    return Equality<std::vector<T>>::Equals(lhs, rhs);
   }
-  return true;
+};
+
+#ifdef FIDL_OPERATOR_EQUALS
+template <class T>
+inline bool operator==(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
+  return Equality<VectorPtr<T>>::Equals(lhs, rhs);
 }
 
 template <class T>
 inline bool operator!=(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
-  return !(lhs == rhs);
+  return !Equality<VectorPtr<T>>::Equals(lhs, rhs);
 }
 
 template <class T>
@@ -180,6 +180,7 @@ template <class T>
 inline bool operator>=(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
   return !(lhs < rhs);
 }
+#endif
 
 }  // namespace fidl
 

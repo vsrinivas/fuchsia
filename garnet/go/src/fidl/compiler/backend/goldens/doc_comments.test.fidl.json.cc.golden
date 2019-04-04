@@ -107,12 +107,14 @@ zx_status_t Struct::Clone(Struct* _result) const {
   return ZX_OK;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const Struct& _lhs, const Struct& _rhs) {
   if (!::fidl::Equals(_lhs.Field, _rhs.Field)) {
     return false;
   }
   return true;
 }
+#endif
 Union::Union() : value_() {}
 
 Union::~Union() {
@@ -175,6 +177,7 @@ zx_status_t Union::Clone(Union* _result) const {
   return _status;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const Union& _lhs, const Union& _rhs) {
   if (_lhs.Which() != _rhs.Which()) {
     return false;
@@ -188,6 +191,7 @@ bool operator==(const Union& _lhs, const Union& _rhs) {
       return false;
   }
 }
+#endif
 
 void Union::set_Field(int32_t value) {
   value_.emplace<static_cast<size_t>(Tag::kField) + 1>(std::move(value));
@@ -292,6 +296,7 @@ zx_status_t Table::Clone(Table* result) const {
   return ZX_OK;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const Table& _lhs, const Table& _rhs) {
   if (_lhs.has_Field()) {
     if (!_rhs.has_Field()) {
@@ -305,5 +310,7 @@ bool operator==(const Table& _lhs, const Table& _rhs) {
   }
   return true;
 }
+#endif
 }  // namespace name
 }  // namespace test
+

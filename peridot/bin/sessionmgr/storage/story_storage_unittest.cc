@@ -103,8 +103,8 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
       });
 
   RunLoopUntil([&] { return read1_done && read2_done; });
-  EXPECT_EQ(module_data1, read_data1);
-  EXPECT_EQ(module_data2, read_data2);
+  EXPECT_TRUE(fidl::Equals(module_data1, read_data1));
+  EXPECT_TRUE(fidl::Equals(module_data2, read_data2));
 
   // Read the same data back with ReadAllModuleData().
   fidl::VectorPtr<ModuleData> all_module_data;
@@ -113,8 +113,8 @@ TEST_F(StoryStorageTest, WriteReadModuleData) {
   });
   RunLoopUntil([&] { return !!all_module_data; });
   EXPECT_EQ(2u, all_module_data->size());
-  EXPECT_EQ(module_data1, all_module_data->at(0));
-  EXPECT_EQ(module_data2, all_module_data->at(1));
+  EXPECT_TRUE(fidl::Equals(module_data1, all_module_data->at(0)));
+  EXPECT_TRUE(fidl::Equals(module_data2, all_module_data->at(1)));
 
   // We should get a notification every time module data is updated.
   EXPECT_EQ(2, notification_count);

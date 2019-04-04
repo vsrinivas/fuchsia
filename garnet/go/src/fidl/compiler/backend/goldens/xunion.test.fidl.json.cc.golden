@@ -118,6 +118,7 @@ zx_status_t OlderSimpleUnion::Clone(OlderSimpleUnion* result) const {
   }
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const OlderSimpleUnion& lhs, const OlderSimpleUnion& rhs) {
   if (lhs.tag_ != rhs.tag_) {
     return false;
@@ -134,6 +135,7 @@ bool operator==(const OlderSimpleUnion& lhs, const OlderSimpleUnion& rhs) {
       return false;
   }
   }
+#endif
 
 void OlderSimpleUnion::set_i(int64_t value) {
   EnsureStorageInitialized(Tag::kI);
@@ -303,6 +305,7 @@ zx_status_t NewerSimpleUnion::Clone(NewerSimpleUnion* result) const {
   }
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const NewerSimpleUnion& lhs, const NewerSimpleUnion& rhs) {
   if (lhs.tag_ != rhs.tag_) {
     return false;
@@ -321,6 +324,7 @@ bool operator==(const NewerSimpleUnion& lhs, const NewerSimpleUnion& rhs) {
       return false;
   }
   }
+#endif
 
 void NewerSimpleUnion::set_i(int64_t value) {
   EnsureStorageInitialized(Tag::kI);
@@ -371,3 +375,4 @@ void NewerSimpleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 }
 }  // namespace name
 }  // namespace test
+

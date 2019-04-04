@@ -65,7 +65,9 @@ class {{ .Name }} {
   }
 
  private:
+#ifdef FIDL_OPERATOR_EQUALS
   friend bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs);
+#endif
 
   using Variant = fit::internal::variant<fit::internal::monostate
   {{- range .Members -}}
@@ -75,10 +77,12 @@ class {{ .Name }} {
   Variant value_;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs);
 inline bool operator!=(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {
@@ -157,6 +161,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
   return _status;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
   if (_lhs.Which() != _rhs.Which()) {
     return false;
@@ -172,6 +177,7 @@ bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
       return false;
   }
 }
+#endif
 
 {{- range $index, $member := .Members }}
 
@@ -192,5 +198,25 @@ inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {
   return {{ .Namespace }}::Clone(value, result);
 }
+
+template<>
+struct Equality<{{ .Namespace }}::{{ .Name }}> {
+  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+    switch (_lhs.Which()) {
+      {{- range $index, $member := .Members }}
+      case {{ $.Namespace}}::{{ $.Name }}::Tag::{{ .TagName }}:
+	return ::fidl::Equals(_lhs.{{ .Name }}(), _rhs.{{ .Name }}());
+      {{- end }}
+      case {{ .Namespace }}::{{ .Name }}::Tag::Invalid:
+	return true;
+      default:
+	return false;
+    }
+  }
+};
+
 {{- end }}
 `

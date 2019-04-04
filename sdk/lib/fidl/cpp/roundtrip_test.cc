@@ -49,7 +49,7 @@ Output RoundTrip(const Input& input) {
 
 TEST(SimpleStruct, SerializeAndDeserialize) {
   Int64Struct input{1};
-  EXPECT_EQ(input, RoundTrip<Int64Struct>(input));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<Int64Struct>(input)));
 }
 
 bool cmp_payload(const uint8_t* actual, size_t actual_size,
@@ -137,7 +137,7 @@ TEST(SimpleTable, CheckBytesWithXY) {
 TEST(SimpleTable, SerializeAndDeserialize) {
   SimpleTable input;
   input.set_x(1);
-  EXPECT_EQ(input, RoundTrip<SimpleTable>(input));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SimpleTable>(input)));
   // OlderSimpleTable is an abbreviated ('old') version of SimpleTable:
   // We should be able to decode to it.
   EXPECT_EQ(1, RoundTrip<OlderSimpleTable>(input).x());
@@ -149,7 +149,7 @@ TEST(SimpleTable, SerializeAndDeserialize) {
 TEST(SimpleTable, SerializeAndDeserializeWithReserved) {
   SimpleTable input;
   input.set_y(1);
-  EXPECT_EQ(input, RoundTrip<SimpleTable>(input));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SimpleTable>(input)));
   // OlderSimpleTable is an abbreviated ('old') version of SimpleTable:
   // We should be able to decode to it (but since it doesn't have y,
   // we can't ask for that!)
@@ -161,7 +161,7 @@ TEST(SimpleTable, SerializeAndDeserializeWithReserved) {
 
 TEST(Empty, SerializeAndDeserialize) {
   Empty input{};
-  EXPECT_EQ(input, RoundTrip<Empty>(input));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<Empty>(input)));
 }
 
 TEST(Empty, CheckBytes) {
@@ -179,7 +179,7 @@ TEST(EmptyStructSandwich, SerializeAndDeserialize) {
       .before = "before",
       .after = "after",
   };
-  EXPECT_EQ(input, RoundTrip<EmptyStructSandwich>(input));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<EmptyStructSandwich>(input)));
 }
 
 TEST(EmptyStructSandwich, CheckBytes) {
@@ -269,14 +269,14 @@ TEST(XUnion, SimpleTable) {
 TEST(XUnion, SerializeAndDeserializeEmpty) {
   SampleXUnion input;
 
-  EXPECT_EQ(input, RoundTrip<SampleXUnion>(input));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
 }
 
 TEST(XUnion, SerializeAndDeserializeInt32) {
   SampleXUnion input;
   input.set_i(0xdeadbeef);
 
-  EXPECT_EQ(input, RoundTrip<SampleXUnion>(input));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
 }
 
 TEST(XUnion, SerializeAndDeserializeSimpleUnion) {
@@ -286,7 +286,7 @@ TEST(XUnion, SerializeAndDeserializeSimpleUnion) {
   SampleXUnion input;
   input.set_su(std::move(su));
 
-  EXPECT_EQ(input, RoundTrip<SampleXUnion>(input));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
 }
 
 TEST(XUnion, SerializeAndDeserializeSimpleTable) {
@@ -297,7 +297,7 @@ TEST(XUnion, SerializeAndDeserializeSimpleTable) {
   SampleXUnion input;
   input.set_st(std::move(st));
 
-  EXPECT_EQ(input, RoundTrip<SampleXUnion>(input));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
 }
 
 TEST(InlineXUnionInStruct, VerifyWireFormatXUnionIsPresent) {
@@ -414,7 +414,7 @@ TEST(OptionalXUnionInStruct, SerializeAndDeserializePresent) {
   input.after = "after";
   input.xu = std::move(xu);
 
-  EXPECT_EQ(input, RoundTrip<OptionalXUnionInStruct>(input));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<OptionalXUnionInStruct>(input)));
 }
 
 TEST(XUnionInTable, VerifyWireFormatXUnionIsAbsent) {
@@ -514,7 +514,7 @@ TEST(XUnionInTable, SerializeAndDeserialize) {
   XUnionInTable input;
   input.set_xu(std::move(xu));
 
-  EXPECT_EQ(input, RoundTrip<XUnionInTable>(input));
+  EXPECT_TRUE(fidl::Equals(input, RoundTrip<XUnionInTable>(input)));
 }
 
 }  // namespace

@@ -369,7 +369,7 @@ TEST(Xdr, FidlRequired) {
   json_xdr_unittest::RequiredData t1;
   EXPECT_TRUE(XdrRead(json, &t1, XdrRequiredData));
 
-  EXPECT_EQ(t1, t0) << json;
+  EXPECT_TRUE(fidl::Equals(t1, t0)) << json;
 
   // Technically not needed because the equality should cover this, but makes it
   // more transparent what's going on.
@@ -412,7 +412,7 @@ TEST(Xdr, FidlOptional) {
   json_xdr_unittest::OptionalData t1;
   EXPECT_TRUE(XdrRead(json, &t1, XdrOptionalData));
 
-  EXPECT_EQ(t1, t0) << json;
+  EXPECT_TRUE(fidl::Equals(t1, t0)) << json;
 
   // See comment in FidlRequired.
   EXPECT_FALSE(t1.string.is_null());
@@ -434,7 +434,7 @@ TEST(Xdr, FidlOptional) {
   json_xdr_unittest::OptionalData t2;
   EXPECT_TRUE(XdrRead(json, &t2, XdrOptionalData));
 
-  EXPECT_EQ(t2, t1) << json;
+  EXPECT_TRUE(fidl::Equals(t2, t1)) << json;
 
   // See comment in FidlRequired.
   EXPECT_TRUE(t2.string.is_null());
@@ -477,7 +477,7 @@ TEST(Xdr, FidlRequiredRepeatedRequired) {
   json_xdr_unittest::RequiredRepeatedRequiredData t1;
   EXPECT_TRUE(XdrRead(json, &t1, XdrRequiredRepeatedRequiredData));
 
-  EXPECT_EQ(t1, t0) << json;
+  EXPECT_TRUE(fidl::Equals(t1, t0)) << json;
 
   EXPECT_EQ(1u, t1.string.size());
   EXPECT_EQ(1u, t1.bool_.size());
@@ -538,7 +538,7 @@ TEST(Xdr, FidlRequiredRepeatedOptional) {
   json_xdr_unittest::RequiredRepeatedOptionalData t1;
   EXPECT_TRUE(XdrRead(json, &t1, XdrRequiredRepeatedOptionalData));
 
-  EXPECT_EQ(t1, t0) << json;
+  EXPECT_TRUE(fidl::Equals(t1, t0)) << json;
 
   // See comment in FidlRequired.
   EXPECT_EQ(1u, t1.string.size());
@@ -564,7 +564,7 @@ TEST(Xdr, FidlRequiredRepeatedOptional) {
   json_xdr_unittest::RequiredRepeatedOptionalData t2;
   EXPECT_TRUE(XdrRead(json, &t2, XdrRequiredRepeatedOptionalData));
 
-  EXPECT_EQ(t2, t1) << json;
+  EXPECT_TRUE(fidl::Equals(t2, t1)) << json;
 
   // See comment in FidlRequired.
   EXPECT_EQ(1u, t2.string.size());
@@ -610,7 +610,7 @@ TEST(Xdr, FidlOptionalRepeatedRequired) {
   json_xdr_unittest::OptionalRepeatedRequiredData t1;
   EXPECT_TRUE(XdrRead(json, &t1, XdrOptionalRepeatedRequiredData));
 
-  EXPECT_EQ(t1, t0) << json;
+  EXPECT_TRUE(fidl::Equals(t1, t0)) << json;
 
   EXPECT_FALSE(t1.string.is_null());
   EXPECT_FALSE(t1.bool_.is_null());
@@ -682,7 +682,7 @@ TEST(Xdr, FidlOptionalRepeatedRequired) {
   json_xdr_unittest::OptionalRepeatedRequiredData t2;
   EXPECT_TRUE(XdrRead(json, &t2, XdrOptionalRepeatedRequiredData));
 
-  EXPECT_EQ(t2, t1) << json;
+  EXPECT_TRUE(fidl::Equals(t2, t1)) << json;
 
   EXPECT_TRUE(t2.string.is_null());
   EXPECT_TRUE(t2.bool_.is_null());
@@ -742,7 +742,7 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   json_xdr_unittest::OptionalRepeatedOptionalData t1;
   EXPECT_TRUE(XdrRead(json, &t1, XdrOptionalRepeatedOptionalData));
 
-  EXPECT_EQ(t1, t0) << json;
+  EXPECT_TRUE(fidl::Equals(t1, t0)) << json;
 
   // See comment in FidlRequired.
   EXPECT_FALSE(t1.string.is_null());
@@ -772,7 +772,7 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   json_xdr_unittest::OptionalRepeatedOptionalData t2;
   EXPECT_TRUE(XdrRead(json, &t2, XdrOptionalRepeatedOptionalData));
 
-  EXPECT_EQ(t2, t1) << json;
+  EXPECT_TRUE(fidl::Equals(t2, t1)) << json;
 
   // See comment in FidlRequired.
   EXPECT_FALSE(t2.string.is_null());
@@ -796,7 +796,7 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   json_xdr_unittest::OptionalRepeatedOptionalData t3;
   EXPECT_TRUE(XdrRead(json, &t3, XdrOptionalRepeatedOptionalData));
 
-  EXPECT_EQ(t3, t2) << json;
+  EXPECT_TRUE(fidl::Equals(t3, t2)) << json;
 
   // See comment in FidlRequired.
   EXPECT_TRUE(t3.string.is_null());
@@ -841,7 +841,7 @@ TEST(Xdr, FidlArray) {
   json_xdr_unittest::ArrayData t1;
   EXPECT_TRUE(XdrRead(json, &t1, XdrArrayData));
 
-  EXPECT_EQ(t1, t0) << json;
+  EXPECT_TRUE(fidl::Equals(t1, t0)) << json;
 
   // Technically not needed because the equality should cover this, but makes it
   // more transparent what's going on.

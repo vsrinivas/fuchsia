@@ -94,10 +94,12 @@ class {{ .Name }}  {
   {{- end }}
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs);
 inline bool operator!=(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
@@ -225,6 +227,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   return ZX_OK;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
   {{- range .Members }}
   if (_lhs.{{ .MethodHasName }}()) {
@@ -240,6 +243,7 @@ bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
   {{- end }}
   return true;
 }
+#endif
 {{- end }}
 
 {{- define "TableTraits" }}
@@ -251,5 +255,24 @@ inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& _value,
                          {{ .Namespace }}::{{ .Name }}* result) {
   return _value.Clone(result);
 }
+template<>
+struct Equality<{{ .Namespace }}::{{ .Name }}> {
+  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
+    {{- range .Members }}
+    if (_lhs.{{ .MethodHasName }}()) {
+      if (!_rhs.{{ .MethodHasName }}()) {
+	return false;
+      }
+      if (!::fidl::Equals(_lhs.{{ .Name }}(), _rhs.{{ .Name }}())) {
+	return false;
+      }
+    } else if (_rhs.{{ .MethodHasName }}()) {
+      return false;
+    }
+    {{- end }}
+    return true;
+  }
+};
+
 {{- end }}
 `

@@ -438,7 +438,7 @@ TEST_P(RouterEndpoint_IntegrationEnv, NodeDescriptionPropagation) {
         want_desc.mutable_services()->push_back("#ff00ff");
         if (id == env->endpoint1()->node_id()) {
           found = true;
-          EXPECT_EQ(m, want_desc);
+          EXPECT_TRUE(fidl::Equals(m, want_desc));
         }
       });
   EXPECT_TRUE(found);

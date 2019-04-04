@@ -154,3 +154,4 @@ zx_status_t SwitchingOrdinals_SyncProxy::OnlyGeneratedOrdinal() {
 
 }  // namespace name
 }  // namespace test
+

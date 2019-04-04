@@ -174,7 +174,7 @@ void StoryModelOwner::HandleObservedMutations(
   model_ = ApplyMutations(old_model, std::move(commands));
 
   // Don't notify anyone if the model didn't change.
-  if (model_ == old_model) {
+  if (fidl::Equals(model_, old_model)) {
     return;
   }
 

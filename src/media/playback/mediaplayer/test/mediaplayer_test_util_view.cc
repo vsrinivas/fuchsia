@@ -425,8 +425,8 @@ void MediaPlayerTestUtilView::HandleStatusChanged(
   }
 
   if (status.video_size && status.pixel_aspect_ratio &&
-      (video_size_ != *status.video_size ||
-       pixel_aspect_ratio_ != *status.pixel_aspect_ratio)) {
+      (!fidl::Equals(video_size_, *status.video_size) ||
+       !fidl::Equals(pixel_aspect_ratio_, *status.pixel_aspect_ratio))) {
     video_size_ = *status.video_size;
     pixel_aspect_ratio_ = *status.pixel_aspect_ratio;
     Layout();

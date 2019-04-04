@@ -24,12 +24,14 @@ zx_status_t WithErrorSyntax_ErrorAsPrimitive_Response::Clone(WithErrorSyntax_Err
   return ZX_OK;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Response& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Response& _rhs) {
   if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
     return false;
   }
   return true;
 }
+#endif
 WithErrorSyntax_ErrorAsPrimitive_Result::WithErrorSyntax_ErrorAsPrimitive_Result() : value_() {}
 
 WithErrorSyntax_ErrorAsPrimitive_Result::~WithErrorSyntax_ErrorAsPrimitive_Result() {
@@ -111,6 +113,7 @@ zx_status_t WithErrorSyntax_ErrorAsPrimitive_Result::Clone(WithErrorSyntax_Error
   return _status;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Result& _rhs) {
   if (_lhs.Which() != _rhs.Which()) {
     return false;
@@ -126,6 +129,7 @@ bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const WithE
       return false;
   }
 }
+#endif
 
 void WithErrorSyntax_ErrorAsPrimitive_Result::set_response(WithErrorSyntax_ErrorAsPrimitive_Response value) {
   value_.emplace<static_cast<size_t>(Tag::kResponse) + 1>(std::move(value));
@@ -152,12 +156,14 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Response::Clone(WithErrorSyntax_ErrorAsE
   return ZX_OK;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const WithErrorSyntax_ErrorAsEnum_Response& _lhs, const WithErrorSyntax_ErrorAsEnum_Response& _rhs) {
   if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
     return false;
   }
   return true;
 }
+#endif
 #ifdef __Fuchsia__
 namespace {
   
@@ -1523,6 +1529,7 @@ zx_status_t WithErrorSyntax_ErrorAsEnum_Result::Clone(WithErrorSyntax_ErrorAsEnu
   return _status;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const WithErrorSyntax_ErrorAsEnum_Result& _lhs, const WithErrorSyntax_ErrorAsEnum_Result& _rhs) {
   if (_lhs.Which() != _rhs.Which()) {
     return false;
@@ -1538,6 +1545,7 @@ bool operator==(const WithErrorSyntax_ErrorAsEnum_Result& _lhs, const WithErrorS
       return false;
   }
 }
+#endif
 
 void WithErrorSyntax_ErrorAsEnum_Result::set_response(WithErrorSyntax_ErrorAsEnum_Response value) {
   value_.emplace<static_cast<size_t>(Tag::kResponse) + 1>(std::move(value));
@@ -1764,3 +1772,4 @@ zx_status_t WithErrorSyntax_SyncProxy::ErrorAsEnum(WithErrorSyntax_ErrorAsEnum_R
 
 }  // namespace name
 }  // namespace test
+

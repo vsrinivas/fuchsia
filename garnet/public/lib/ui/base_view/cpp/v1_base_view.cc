@@ -135,7 +135,7 @@ void V1BaseView::HandleSessionEvents(
     }
   }
 
-  if (new_metrics && original_metrics_ != *new_metrics) {
+  if (new_metrics && !fidl::Equals(original_metrics_, *new_metrics)) {
     original_metrics_ = *new_metrics;
     AdjustMetricsAndPhysicalSize();
   }
@@ -190,7 +190,7 @@ void V1BaseView::OnPropertiesChanged(
       std::move(properties_);
   properties_ = std::move(properties);
 
-  if (logical_size_ != properties_.view_layout->size) {
+  if (!fidl::Equals(logical_size_, properties_.view_layout->size)) {
     logical_size_ = properties_.view_layout->size;
     AdjustMetricsAndPhysicalSize();
   }

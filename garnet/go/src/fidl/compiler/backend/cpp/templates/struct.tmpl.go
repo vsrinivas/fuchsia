@@ -30,10 +30,12 @@ class {{ .Name }}  {
   zx_status_t Clone({{ .Name }}* result) const;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs);
 inline bool operator!=(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& _value,
                          {{ .Namespace }}::{{ .Name }}* _result) {
@@ -69,6 +71,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
   return ZX_OK;
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
   {{- range $index, $member := .Members }}
   if (!::fidl::Equals(_lhs.{{ .Name }}, _rhs.{{ .Name }})) {
@@ -77,6 +80,7 @@ bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
   {{- end }}
   return true;
 }
+#endif
 {{- end }}
 
 {{- define "StructTraits" }}
@@ -88,5 +92,18 @@ inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {
   return {{ .Namespace }}::Clone(value, result);
 }
+
+template<>
+struct Equality<{{ .Namespace }}::{{ .Name }}> {
+  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
+    {{- range $index, $member := .Members }}
+    if (!::fidl::Equals(_lhs.{{ .Name }}, _rhs.{{ .Name }})) {
+      return false;
+    }
+    {{- end }}
+    return true;
+  }
+};
+
 {{- end }}
 `

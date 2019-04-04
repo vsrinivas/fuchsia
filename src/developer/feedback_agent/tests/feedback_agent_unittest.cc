@@ -143,8 +143,8 @@ bool DoGetScreenshotResponseMatch(const GetScreenshotResponse& actual,
   }
   // actual.screenshot and expected.screenshot are now valid.
 
-  if (actual.screenshot->dimensions_in_px !=
-      expected.screenshot->dimensions_in_px) {
+  if (!fidl::Equals(actual.screenshot->dimensions_in_px,
+      expected.screenshot->dimensions_in_px)) {
     *result_listener << "Expected screenshot dimensions "
                      << expected.screenshot->dimensions_in_px << ", got "
                      << actual.screenshot->dimensions_in_px;

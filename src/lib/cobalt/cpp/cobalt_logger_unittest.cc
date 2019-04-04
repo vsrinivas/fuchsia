@@ -75,12 +75,12 @@ bool Equals(const IntHistogramEvent* e1, const IntHistogramEvent* e2) {
   return e1->metric_id() == e2->metric_id() &&
          e1->event_code() == e2->event_code() &&
          e1->component() == e2->component() &&
-         e1->histogram() == e2->histogram();
+         fidl::Equals(e1->histogram(), e2->histogram());
 }
 
 bool Equals(const CustomEvent* e1, const CustomEvent* e2) {
   return e1->metric_id() == e2->metric_id() &&
-         e1->event_values() == e2->event_values();
+         fidl::Equals(e1->event_values(), e2->event_values());
 }
 
 enum EventType {

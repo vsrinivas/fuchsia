@@ -105,6 +105,16 @@ class StringPtr {
   bool is_null_if_empty_;
 };
 
+template<>
+struct Equality<StringPtr> {
+  static inline bool Equals(const StringPtr& a, const StringPtr& b) {
+    if (a.is_null()) {
+      return b.is_null();
+    }
+    return !b.is_null() && a.get() == b.get();
+  }
+};
+
 inline bool operator==(const StringPtr& a, const StringPtr& b) {
   if (a.is_null()) {
     return b.is_null();

@@ -169,9 +169,10 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   fuchsia::pkg::UpdatePolicy policy;
   policy.fetch_if_absent = true;
   constexpr char kResolvedUrl[] = "fuchsia-pkg://fuchsia.com/echo_server_cpp/0";
-  EXPECT_EQ(resolver_service.args(),
-            std::make_tuple(std::string(kResolvedUrl),
-                            std::vector<std::string>{}, std::move(policy)));
+  const auto& args = resolver_service.args();
+  EXPECT_EQ(std::get<0>(args), std::string(kResolvedUrl));
+  EXPECT_EQ(std::get<1>(args), std::vector<std::string>{});
+  EXPECT_TRUE(fidl::Equals(std::get<2>(args), policy));
 }
 
 TEST_F(PackageUpdatingLoaderTest, Failure) {

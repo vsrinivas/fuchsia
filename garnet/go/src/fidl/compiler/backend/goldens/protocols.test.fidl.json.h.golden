@@ -97,10 +97,12 @@ class WithErrorSyntax_ErrorAsPrimitive_Response  {
   zx_status_t Clone(WithErrorSyntax_ErrorAsPrimitive_Response* result) const;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Response& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Response& _rhs);
 inline bool operator!=(const WithErrorSyntax_ErrorAsPrimitive_Response& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Response& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _value,
                          ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* _result) {
@@ -165,16 +167,20 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   }
 
  private:
+#ifdef FIDL_OPERATOR_EQUALS
   friend bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Result& _rhs);
+#endif
 
   using Variant = fit::internal::variant<fit::internal::monostate, WithErrorSyntax_ErrorAsPrimitive_Response, uint32_t>;
   Variant value_;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Result& _rhs);
 inline bool operator!=(const WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const WithErrorSyntax_ErrorAsPrimitive_Result& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& value,
                          ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
@@ -196,10 +202,12 @@ class WithErrorSyntax_ErrorAsEnum_Response  {
   zx_status_t Clone(WithErrorSyntax_ErrorAsEnum_Response* result) const;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const WithErrorSyntax_ErrorAsEnum_Response& _lhs, const WithErrorSyntax_ErrorAsEnum_Response& _rhs);
 inline bool operator!=(const WithErrorSyntax_ErrorAsEnum_Response& _lhs, const WithErrorSyntax_ErrorAsEnum_Response& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _value,
                          ::test::name::WithErrorSyntax_ErrorAsEnum_Response* _result) {
@@ -675,16 +683,20 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   }
 
  private:
+#ifdef FIDL_OPERATOR_EQUALS
   friend bool operator==(const WithErrorSyntax_ErrorAsEnum_Result& _lhs, const WithErrorSyntax_ErrorAsEnum_Result& _rhs);
+#endif
 
   using Variant = fit::internal::variant<fit::internal::monostate, WithErrorSyntax_ErrorAsEnum_Response, ErrorEnun>;
   Variant value_;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const WithErrorSyntax_ErrorAsEnum_Result& _lhs, const WithErrorSyntax_ErrorAsEnum_Result& _rhs);
 inline bool operator!=(const WithErrorSyntax_ErrorAsEnum_Result& _lhs, const WithErrorSyntax_ErrorAsEnum_Result& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& value,
                          ::test::name::WithErrorSyntax_ErrorAsEnum_Result* result) {
@@ -777,6 +789,16 @@ inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Re
                          ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* result) {
   return ::test::name::Clone(value, result);
 }
+
+template<>
+struct Equality<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> {
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _lhs, const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _rhs) {
+    if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
+      return false;
+    }
+    return true;
+  }
+};
 template <>
 struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>
     : public EncodableCodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result, 8> {};
@@ -785,6 +807,25 @@ inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Re
                          ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result* result) {
   return ::test::name::Clone(value, result);
 }
+
+template<>
+struct Equality<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result> {
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+    switch (_lhs.Which()) {
+      case ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::kResponse:
+	return ::fidl::Equals(_lhs.response(), _rhs.response());
+      case ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::kErr:
+	return ::fidl::Equals(_lhs.err(), _rhs.err());
+      case ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::Tag::Invalid:
+	return true;
+      default:
+	return false;
+    }
+  }
+};
 template <>
 struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Response>
     : public EncodableCodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Response, 1> {};
@@ -793,6 +834,16 @@ inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsEnum_Respons
                          ::test::name::WithErrorSyntax_ErrorAsEnum_Response* result) {
   return ::test::name::Clone(value, result);
 }
+
+template<>
+struct Equality<::test::name::WithErrorSyntax_ErrorAsEnum_Response> {
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _lhs, const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _rhs) {
+    if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
+      return false;
+    }
+    return true;
+  }
+};
 template <>
 struct CodingTraits<::test::name::ErrorEnun> {
   static constexpr size_t encoded_size = sizeof(::test::name::ErrorEnun);
@@ -811,6 +862,14 @@ inline zx_status_t Clone(::test::name::ErrorEnun value,
                          ::test::name::ErrorEnun* result) {
   return ::test::name::Clone(value, result);
 }
+template<>
+struct Equality<::test::name::ErrorEnun> {
+  static inline bool Equals(const ::test::name::ErrorEnun& _lhs, const ::test::name::ErrorEnun& _rhs) {
+    return _lhs == _rhs;
+  }
+};
+
+
 template <>
 struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Result>
     : public EncodableCodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Result, 8> {};
@@ -818,4 +877,23 @@ struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Result>
 inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& value,
                          ::test::name::WithErrorSyntax_ErrorAsEnum_Result* result) {
   return ::test::name::Clone(value, result);
-}}  // namespace fidl
+}
+
+template<>
+struct Equality<::test::name::WithErrorSyntax_ErrorAsEnum_Result> {
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& _lhs, const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+    switch (_lhs.Which()) {
+      case ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Tag::kResponse:
+	return ::fidl::Equals(_lhs.response(), _rhs.response());
+      case ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Tag::kErr:
+	return ::fidl::Equals(_lhs.err(), _rhs.err());
+      case ::test::name::WithErrorSyntax_ErrorAsEnum_Result::Tag::Invalid:
+	return true;
+      default:
+	return false;
+    }
+  }
+};}  // namespace fidl

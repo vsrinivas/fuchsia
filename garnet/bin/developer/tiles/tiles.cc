@@ -255,7 +255,7 @@ void Tiles::Layout() {
           ::fuchsia::ui::viewsv1::CustomFocusBehavior::New();
       view_properties.custom_focus_behavior->allow_focus = tile->allow_focus;
 
-      if (tile->view_properties != view_properties) {
+      if (!fidl::Equals(tile->view_properties, view_properties)) {
         fuchsia::ui::viewsv1::ViewProperties view_properties_clone;
         view_properties.Clone(&view_properties_clone);
         tile->view_properties = std::move(view_properties_clone);

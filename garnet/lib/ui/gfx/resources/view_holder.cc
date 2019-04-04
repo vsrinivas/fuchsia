@@ -63,7 +63,7 @@ void ViewHolder::LinkDisconnected() {
 }
 
 void ViewHolder::SetViewProperties(fuchsia::ui::gfx::ViewProperties props) {
-  if (props != view_properties_) {
+  if (!fidl::Equals(props, view_properties_)) {
     view_properties_ = std::move(props);
     // TODO(SCN-1180) Set the BoundingBox bounds as ClipPlanes on this node.
     if (view_) {

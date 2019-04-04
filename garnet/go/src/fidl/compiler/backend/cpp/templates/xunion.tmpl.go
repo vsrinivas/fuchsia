@@ -55,8 +55,12 @@ class {{ .Name }} {
 
   Tag Which() const { return Tag(tag_); }
 
+  friend ::fidl::Equality<{{ .Namespace }}::{{ .Name }}>;
+
  private:
+#ifdef FIDL_OPERATOR_EQUALS
   friend bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
+#endif
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
@@ -68,10 +72,12 @@ class {{ .Name }} {
   };
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
 inline bool operator!=(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
   return !(lhs == rhs);
 }
+#endif
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {
@@ -208,6 +214,7 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   }
 }
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
   if (lhs.tag_ != rhs.tag_) {
     return false;
@@ -226,6 +233,7 @@ bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
   }
   {{end -}}
 }
+#endif
 
 {{- range $member := .Members }}
 
@@ -312,5 +320,28 @@ inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
                          {{ .Namespace }}::{{ .Name }}* result) {
   return {{ .Namespace }}::Clone(value, result);
 }
+
+template<>
+struct Equality<{{ .Namespace }}::{{ .Name }}> {
+  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+
+    {{ with $xunion := . -}}
+    switch (_lhs.Which()) {
+      {{- range .Members }}
+      case {{ $xunion.Namespace}}::{{ $xunion.Name }}::Tag::{{ .TagName }}:
+        return ::fidl::Equals(_lhs.{{ .StorageName }}, _rhs.{{ .StorageName }});
+      {{- end }}
+      case {{ $xunion.Namespace}}::{{ $xunion.Name }}::Tag::Empty:
+        return true;
+      default:
+        return false;
+    }
+    {{end -}}
+  }
+};
+
 {{- end }}
 `

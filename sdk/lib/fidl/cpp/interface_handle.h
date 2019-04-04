@@ -171,13 +171,22 @@ class InterfaceHandle final {
 
 // Equality.
 template <typename T>
+struct Equality<InterfaceHandle<T>> {
+  static bool Equals(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
+    return lhs.channel() == rhs.channel();
+  }
+};
+
+#ifdef FIDL_OPERATOR_EQUALS
+template <typename T>
 bool operator==(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
-  return lhs.channel() == rhs.channel();
+  return fidl::Equality<InterfaceHandle<T>>::Equals(lhs, rhs);
 }
 template <typename T>
 bool operator!=(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
-  return !(lhs == rhs);
+  return !fidl::Equality<InterfaceHandle<T>>::Equals(lhs, rhs);
 }
+
 
 // Comparisons.
 template <typename T>
@@ -196,6 +205,7 @@ template <typename T>
 bool operator>=(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
   return !(lhs < rhs);
 }
+#endif
 
 template <typename T>
 struct CodingTraits<InterfaceHandle<T>>

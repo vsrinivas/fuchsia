@@ -135,14 +135,27 @@ using InterfaceRequestHandler =
 
 // Equality.
 template <typename T>
+struct Equality<InterfaceRequest<T>> {
+  static bool Equals(const InterfaceRequest<T>& lhs, const InterfaceRequest<T>& rhs) {
+    return lhs.channel() == rhs.channel();
+  }
+};
+
+#ifdef FIDL_OPERATOR_EQUALS
+template <typename T>
 bool operator==(const InterfaceRequest<T>& lhs,
                 const InterfaceRequest<T>& rhs) {
-  return lhs.channel() == rhs.channel();
+  return fidl::Equality<InterfaceRequest<T>>::Equals(lhs, rhs);
 }
 template <typename T>
 bool operator!=(const InterfaceRequest<T>& lhs,
                 const InterfaceRequest<T>& rhs) {
-  return !(lhs == rhs);
+  return !fidl::Equality<InterfaceRequest<T>>::Equals(lhs, rhs);
+}
+template <typename T>
+bool Equals(const InterfaceRequest<T>& lhs,
+                const InterfaceRequest<T>& rhs) {
+  return lhs.channel() == rhs.channel();
 }
 
 // Comparaisons.
@@ -164,6 +177,7 @@ bool operator>=(const InterfaceRequest<T>& lhs,
                 const InterfaceRequest<T>& rhs) {
   return !(lhs < rhs);
 }
+#endif
 
 template <typename T>
 struct CodingTraits<InterfaceRequest<T>>

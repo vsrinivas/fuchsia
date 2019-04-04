@@ -23,10 +23,12 @@ class Empty  {
   zx_status_t Clone(Empty* result) const;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const Empty& _lhs, const Empty& _rhs);
 inline bool operator!=(const Empty& _lhs, const Empty& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 inline zx_status_t Clone(const ::test::name::Empty& _value,
                          ::test::name::Empty* _result) {
@@ -45,4 +47,14 @@ struct CodingTraits<::test::name::Empty>
 inline zx_status_t Clone(const ::test::name::Empty& value,
                          ::test::name::Empty* result) {
   return ::test::name::Clone(value, result);
-}}  // namespace fidl
+}
+
+template<>
+struct Equality<::test::name::Empty> {
+  static inline bool Equals(const ::test::name::Empty& _lhs, const ::test::name::Empty& _rhs) {
+    if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
+      return false;
+    }
+    return true;
+  }
+};}  // namespace fidl

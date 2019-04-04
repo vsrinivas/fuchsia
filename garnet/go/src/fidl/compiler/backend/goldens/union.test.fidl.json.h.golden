@@ -79,16 +79,20 @@ class Union {
   }
 
  private:
+#ifdef FIDL_OPERATOR_EQUALS
   friend bool operator==(const Union& _lhs, const Union& _rhs);
+#endif
 
   using Variant = fit::internal::variant<fit::internal::monostate, int32_t, ::std::string, ::std::vector<::std::string>>;
   Variant value_;
 };
 
+#ifdef FIDL_OPERATOR_EQUALS
 bool operator==(const Union& _lhs, const Union& _rhs);
 inline bool operator!=(const Union& _lhs, const Union& _rhs) {
   return !(_lhs == _rhs);
 }
+#endif
 
 inline zx_status_t Clone(const ::test::name::Union& value,
                          ::test::name::Union* result) {
@@ -107,4 +111,25 @@ struct CodingTraits<::test::name::Union>
 inline zx_status_t Clone(const ::test::name::Union& value,
                          ::test::name::Union* result) {
   return ::test::name::Clone(value, result);
-}}  // namespace fidl
+}
+
+template<>
+struct Equality<::test::name::Union> {
+  static inline bool Equals(const ::test::name::Union& _lhs, const ::test::name::Union& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+    switch (_lhs.Which()) {
+      case ::test::name::Union::Tag::kPrimitive:
+	return ::fidl::Equals(_lhs.Primitive(), _rhs.Primitive());
+      case ::test::name::Union::Tag::kStringNeedsConstructor:
+	return ::fidl::Equals(_lhs.StringNeedsConstructor(), _rhs.StringNeedsConstructor());
+      case ::test::name::Union::Tag::kVectorStringAlsoNeedsConstructor:
+	return ::fidl::Equals(_lhs.VectorStringAlsoNeedsConstructor(), _rhs.VectorStringAlsoNeedsConstructor());
+      case ::test::name::Union::Tag::Invalid:
+	return true;
+      default:
+	return false;
+    }
+  }
+};}  // namespace fidl

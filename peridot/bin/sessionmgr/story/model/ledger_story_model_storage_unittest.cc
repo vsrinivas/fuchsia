@@ -207,7 +207,7 @@ TEST_F(LedgerStoryModelStorageTest, Load) {
   executor.schedule_task(
       storage->Load().then([&](fit::result<>&) { done = true; }));
   RunLoopUntil([&] { return done; });
-  EXPECT_EQ(expected_model, *observed_model);
+  EXPECT_TRUE(fidl::Equals(expected_model, *observed_model));
 }
 
 }  // namespace
