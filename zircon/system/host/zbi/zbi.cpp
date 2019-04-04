@@ -32,14 +32,17 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
+#include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fbl/unique_fd.h>
 #include <lib/cksum.h>
 #include <lz4/lz4frame.h>
 #include <zircon/boot/bootfs.h>
 #include <zircon/boot/image.h>
+#include <zstd/zstd.h>
 
 namespace {
 
@@ -48,9 +51,6 @@ const char* const kCmdlineWS = " \t\r\n";
 bool Aligned(uint32_t length) {
     return length % ZBI_ALIGNMENT == 0;
 }
-
-// It's not clear where this magic number comes from.
-constexpr size_t kLZ4FMaxHeaderFrameSize = 128;
 
 // iovec.iov_base is void* but we only use pointers to const.
 template <typename T>
@@ -450,23 +450,114 @@ private:
     uint32_t crc_ = 0;
 };
 
-// This tells LZ4f_compressUpdate it can keep a pointer to data.
-constexpr const LZ4F_compressOptions_t kCompressOpt = {1, {}};
+template <typename Func, typename... Args>
+auto Lz4Call(Func f, Args... args) {
+    auto result = f(args...);
+    if (LZ4F_isError(result)) {
+        fprintf(stderr, "LZ4 failure: %s\n", LZ4F_getErrorName(result));
+        exit(1);
+    }
+    return result;
+}
+
+template <typename Func, typename... Args>
+auto ZstdCall(Func f, Args... args) {
+    auto result = f(args...);
+    if (ZSTD_isError(result)) {
+        fprintf(stderr, "ZSTD failure: %s\n", ZSTD_getErrorName(result));
+        exit(1);
+    }
+    return result;
+}
 
 class Compressor final {
+    // Private forward declarations;
+    class Lz4;
+    class Zstd;
+
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Compressor);
-    Compressor() = default;
 
-#define LZ4F_CALL(func, ...)                                               \
-    [&]() {                                                                \
-        auto result = func(__VA_ARGS__);                                   \
-        if (LZ4F_isError(result)) {                                        \
-            fprintf(stderr, "%s: %s\n", #func, LZ4F_getErrorName(result)); \
-            exit(1);                                                       \
-        }                                                                  \
-        return result;                                                     \
-    }()
+    enum Algo {
+        kNone,
+        kLz4,
+        kZstd,
+        kInvalid,
+    };
+
+    struct Config {
+        // Default for -c with no argument (or no switches at all).
+        using Default = Lz4;
+
+        Algo algo_ = Default::kAlgo;
+        int level_ = Default::DefaultLevel();
+
+        static constexpr Config None() { return Config{kNone, 0}; }
+
+        operator bool() const {
+            return algo_ != kNone;
+        }
+
+        void clear() { algo_ = kNone; }
+
+        template <typename T>
+        void Set(int level = T::DefaultLevel()) {
+            algo_ = T::kAlgo;
+            level_ = level;
+        }
+
+        template <typename T>
+        void SetMax() {
+            Set<T>(T::MaxLevel());
+        }
+
+        bool Parse(const char* arg) {
+            int level;
+            if (!arg) {
+                *this = {};
+            } else if (!strcasecmp(arg, "none")) {
+                *this = None();
+            } else if (!strcasecmp(arg, "lz4,max")) {
+                SetMax<Lz4>();
+            } else if (!strcasecmp(arg, "lz4")) {
+                Set<Lz4>();
+            } else if (!strcasecmp(arg, "lz4,max")) {
+                SetMax<Lz4>();
+            } else if (sscanf(arg, "%*1[lL]%*1[zZ]4,%i", &level) == 1) {
+                Set<Lz4>(level);
+            } else if (!strcasecmp(arg, "zstd")) {
+                Set<Zstd>();
+            } else if (!strcasecmp(arg, "zstd,max")) {
+                SetMax<Zstd>();
+            } else if (!strcasecmp(arg, "zstd,overclock")) {
+                Set<Zstd>(Zstd::OverclockLevel());
+            } else if (sscanf(arg, "%*1[Zz]%*1[Ss]%*1[Tt]%*1[Dd],%i",
+                              &level) == 1) {
+                Set<Zstd>(level);
+            } else if (!strcasecmp(arg, "max")) {
+                SetMax<Default>();
+            } else if (sscanf(arg, "%i", &level) == 1) {
+                Set<Default>(level);
+            } else {
+                return false;
+            }
+            return true;
+        }
+    };
+
+    explicit Compressor(const Config& config)
+        : config_(config) {
+        switch (config_.algo_) {
+        case kLz4:
+            algo_.emplace<Lz4>();
+            break;
+        case kZstd:
+            algo_.emplace<Zstd>();
+            break;
+        default:
+            abort();
+        }
+    }
 
     void Init(OutputStream* out, const zbi_header_t& header) {
         header_ = header;
@@ -477,54 +568,41 @@ public:
         // and fill in once we know the payload length and CRC.
         header_pos_ = out->PlaceHeader();
 
-        prefs_.frameInfo.contentSize = header_.length;
-
-        prefs_.frameInfo.blockSizeID = LZ4F_max64KB;
-        prefs_.frameInfo.blockMode = LZ4F_blockIndependent;
-
-        // LZ4 compression levels 1-3 are for "fast" compression, and 4-16
-        // are for higher compression. The additional compression going from
-        // 4 to 16 is not worth the extra time needed during compression.
-        prefs_.compressionLevel = 4;
-
-        LZ4F_CALL(LZ4F_createCompressionContext, &ctx_, LZ4F_VERSION);
-
         // Record the original uncompressed size in header_.extra.
         // WriteBuffer will accumulate the compressed size in header_.length.
         header_.extra = header_.length;
         header_.length = 0;
 
-        // This might start writing compression format headers before it
-        // receives any data.
-        auto buffer = GetBuffer(kLZ4FMaxHeaderFrameSize);
-        size_t size = LZ4F_CALL(LZ4F_compressBegin, ctx_,
-                                buffer.data.get(), buffer.size, &prefs_);
-        assert(size <= buffer.size);
-        WriteBuffer(out, std::move(buffer), size);
-    }
-
-    ~Compressor() {
-        LZ4F_CALL(LZ4F_freeCompressionContext, ctx_);
+        std::visit(
+            [&](auto&& v) {
+                auto buffer = GetBuffer(v.InitBufferSize());
+                size_t size = v.Init(config_.level_, &buffer, header_.extra);
+                assert(size <= buffer.size);
+                WriteBuffer(out, std::move(buffer), size);
+            },
+            algo_);
     }
 
     // NOTE: Input buffer may be referenced for the life of the Compressor!
     void Write(OutputStream* out, const iovec& input) {
-        auto buffer = GetBuffer(LZ4F_compressBound(input.iov_len, &prefs_));
-        size_t actual_size = LZ4F_CALL(LZ4F_compressUpdate,
-                                       ctx_, buffer.data.get(), buffer.size,
-                                       input.iov_base, input.iov_len,
-                                       &kCompressOpt);
-        WriteBuffer(out, std::move(buffer), actual_size);
+        std::visit(
+            [&](auto&& v) {
+                auto buffer = GetBuffer(v.UpdateBufferSize(input.iov_len));
+                size_t actual_size = v.Update(&buffer, input);
+                WriteBuffer(out, std::move(buffer), actual_size);
+            },
+            algo_);
     }
 
     uint32_t Finish(OutputStream* out) {
         // Write the closing chunk from the compressor.
-        auto buffer = GetBuffer(LZ4F_compressBound(0, &prefs_));
-        size_t actual_size = LZ4F_CALL(LZ4F_compressEnd,
-                                       ctx_, buffer.data.get(), buffer.size,
-                                       &kCompressOpt);
-
-        WriteBuffer(out, std::move(buffer), actual_size);
+        std::visit(
+            [&](auto&& v) {
+                auto buffer = GetBuffer(v.FinishBufferSize());
+                size_t actual_size = v.Finish(&buffer);
+                WriteBuffer(out, std::move(buffer), actual_size);
+            },
+            algo_);
 
         // Complete the checksum.
         crc_.FinalizeHeader(&header_);
@@ -552,14 +630,162 @@ private:
         }
         std::unique_ptr<std::byte[]> data;
         size_t size = 0;
-    } unused_buffer_;
+    };
+
+    class Lz4 {
+    public:
+        static constexpr Algo kAlgo = kLz4;
+
+        Lz4() = default;
+
+        // LZ4 compression levels 1-3 are for "fast" compression, and 4-16 are
+        // for higher compression.  The additional compression going from 4 to
+        // 16 is not worth the extra time needed during compression.
+        static constexpr int DefaultLevel() { return 4; }
+
+        static constexpr int MaxLevel() { return 16; }
+
+        ~Lz4() {
+            Lz4Call(LZ4F_freeCompressionContext, ctx_);
+        }
+
+        size_t InitBufferSize() {
+            return kLz4FMaxHeaderFrameSize;
+        }
+
+        size_t UpdateBufferSize(size_t input_chunk_size) {
+            return LZ4F_compressBound(input_chunk_size, &prefs_);
+        }
+
+        size_t FinishBufferSize() {
+            return LZ4F_compressBound(0, &prefs_);
+        }
+
+        size_t Init(int level, Buffer* buffer, size_t uncompressed_size) {
+            prefs_.frameInfo.contentSize = uncompressed_size;
+
+            prefs_.frameInfo.blockSizeID = LZ4F_max64KB;
+            prefs_.frameInfo.blockMode = LZ4F_blockIndependent;
+            prefs_.compressionLevel = level;
+
+            Lz4Call(LZ4F_createCompressionContext, &ctx_, LZ4F_VERSION);
+
+            // This might start writing compression format headers before it
+            // receives any data.
+            return Lz4Call(LZ4F_compressBegin, ctx_,
+                           buffer->data.get(), buffer->size, &prefs_);
+        }
+
+        size_t Update(Buffer* buffer, const iovec& input) {
+            return Lz4Call(LZ4F_compressUpdate,
+                           ctx_, buffer->data.get(), buffer->size,
+                           input.iov_base, input.iov_len,
+                           &kCompressOpt);
+        }
+
+        size_t Finish(Buffer* buffer) {
+            return Lz4Call(LZ4F_compressEnd,
+                           ctx_, buffer->data.get(), buffer->size,
+                           &kCompressOpt);
+        }
+
+    private:
+        LZ4F_compressionContext_t ctx_{};
+        LZ4F_preferences_t prefs_{};
+
+        // It's not clear where this magic number comes from.
+        static constexpr size_t kLz4FMaxHeaderFrameSize = 128;
+    };
+
+    class Zstd {
+    public:
+        static constexpr Algo kAlgo = kZstd;
+
+        // Quite good compression, quite fast.  Compression gets better up to
+        // 10 or so, but slower.  Level 19 is quite slow but best compression,
+        // substantially better than level 5 or 10.
+        static constexpr int DefaultLevel() { return 4; }
+
+        // "The library supports regular compression levels from 1 up to
+        // ZSTD_maxCLevel()."
+        static int OverclockLevel() { return ZSTD_maxCLevel(); }
+
+        // "Levels >= 20, labeled `--ultra`, should be used with caution, as
+        // they require more memory."  So sayeth <zstd/zstd.h>.
+        static constexpr int MaxLevel() { return 19; }
+
+        Zstd() = default;
+
+        ~Zstd() {
+            ZstdCall(ZSTD_freeCStream, stream_);
+        }
+
+        size_t InitBufferSize() {
+            return 0;
+        }
+
+        size_t UpdateBufferSize(size_t input_chunk_size) {
+            return ZSTD_compressBound(input_chunk_size);
+        }
+
+        size_t FinishBufferSize() {
+            return ZSTD_CStreamOutSize();
+        }
+
+        size_t Init(int level, Buffer*, size_t) {
+            stream_ = ZSTD_createCStream();
+            if (!stream_) {
+                fprintf(stderr, "out of memory\n");
+                exit(1);
+            }
+            ZstdCall(ZSTD_initCStream, stream_, level);
+            return 0;
+        }
+
+        size_t Update(Buffer* buffer, const iovec& input) {
+            ZSTD_outBuffer out = {
+                buffer->data.get(),
+                buffer->size,
+                0,
+            };
+            ZSTD_inBuffer in = {
+                input.iov_base,
+                input.iov_len,
+                0,
+            };
+            ZstdCall(ZSTD_compressStream, stream_, &out, &in);
+            assert(in.pos == in.size);
+            return out.pos;
+        }
+
+        size_t Finish(Buffer* buffer) {
+            ZSTD_outBuffer out = {
+                buffer->data.get(),
+                buffer->size,
+                0,
+            };
+            ZstdCall(ZSTD_endStream, stream_, &out);
+            return out.pos;
+        }
+
+    private:
+        ZSTD_CStream* stream_ = nullptr;
+    };
+
+    using AlgoData = std::variant<Lz4, Zstd>;
+
+    Config config_;
+    AlgoData algo_{};
+    Buffer unused_buffer_;
     zbi_header_t header_;
     Checksummer crc_;
-    LZ4F_compressionContext_t ctx_;
-    LZ4F_preferences_t prefs_{};
     uint32_t header_pos_ = 0;
+
     // IOV_MAX buffers might be live at once.
     static constexpr const size_t kMinBufferSize = (128 << 20) / IOV_MAX;
+
+    // This tells LZ4f_compressUpdate it can keep a pointer to data.
+    static constexpr const LZ4F_compressOptions_t kCompressOpt = {1, {}};
 
     Buffer GetBuffer(size_t max_size) {
         if (unused_buffer_.size >= max_size) {
@@ -587,16 +813,51 @@ private:
     }
 };
 
-const size_t Compressor::kMinBufferSize;
+struct Decompressor {
+    using Function =
+        std::unique_ptr<std::byte[]>(const std::list<const iovec>& payload,
+                                     uint32_t decompressed_length);
 
-constexpr const LZ4F_decompressOptions_t kDecompressOpt{};
+    Function* decompress;
+    uint32_t magic;
+};
+
+Decompressor::Function DecompressLz4, DecompressZstd;
+
+constexpr Decompressor kDecompressors[] = {
+    {DecompressLz4, 0x184D2204},
+    {DecompressZstd, 0xFD2FB528},
+};
 
 std::unique_ptr<std::byte[]> Decompress(const std::list<const iovec>& payload,
                                         uint32_t decompressed_length) {
+    if (payload.empty() || payload.front().iov_len < sizeof(uint32_t)) {
+        fprintf(stderr, "compressed payload too small for header\n");
+        exit(1);
+    }
+
+    const uint32_t magic =
+        *static_cast<const uint32_t*>(payload.front().iov_base);
+
+    for (const auto d : kDecompressors) {
+        if (d.magic == magic) {
+            return d.decompress(payload, decompressed_length);
+        }
+    }
+
+    fprintf(stderr, "compressed payload magic number %#x not recognized\n",
+            magic);
+    exit(1);
+}
+
+std::unique_ptr<std::byte[]> DecompressLz4(
+    const std::list<const iovec>& payload, uint32_t decompressed_length) {
     auto buffer = std::make_unique<std::byte[]>(decompressed_length);
 
     LZ4F_decompressionContext_t ctx;
-    LZ4F_CALL(LZ4F_createDecompressionContext, &ctx, LZ4F_VERSION);
+    Lz4Call(LZ4F_createDecompressionContext, &ctx, LZ4F_VERSION);
+    auto cleanup = fbl::MakeAutoCall(
+        [&]() { Lz4Call(LZ4F_freeDecompressionContext, ctx); });
 
     std::byte* dst = buffer.get();
     size_t dst_size = decompressed_length;
@@ -610,8 +871,9 @@ std::unique_ptr<std::byte[]> Decompress(const std::list<const iovec>& payload,
             }
 
             size_t nwritten = dst_size, nread = src_size;
-            LZ4F_CALL(LZ4F_decompress, ctx, dst, &nwritten, src, &nread,
-                      &kDecompressOpt);
+            static constexpr const LZ4F_decompressOptions_t kDecompressOpt{};
+            Lz4Call(LZ4F_decompress, ctx, dst, &nwritten, src, &nread,
+                    &kDecompressOpt);
 
             assert(nread <= src_size);
             src += nread;
@@ -629,12 +891,51 @@ std::unique_ptr<std::byte[]> Decompress(const std::list<const iovec>& payload,
         exit(1);
     }
 
-    LZ4F_CALL(LZ4F_freeDecompressionContext, ctx);
-
     return buffer;
 }
 
-#undef LZ4F_CALL
+std::unique_ptr<std::byte[]> DecompressZstd(
+    const std::list<const iovec>& payload, uint32_t decompressed_length) {
+    auto buffer = std::make_unique<std::byte[]>(decompressed_length);
+
+    auto stream = ZSTD_createDStream();
+    if (!stream) {
+        fprintf(stderr, "out of memory\n");
+        exit(1);
+    }
+    auto cleanup =
+        fbl::MakeAutoCall([&]() { ZstdCall(ZSTD_freeDStream, stream); });
+
+    ZstdCall(ZSTD_initDStream, stream);
+
+    ZSTD_outBuffer out = {
+        buffer.get(),
+        decompressed_length,
+        0,
+    };
+    for (const auto& iov : payload) {
+        ZSTD_inBuffer in = {
+            iov.iov_base,
+            iov.iov_len,
+            0,
+        };
+        while (in.pos < in.size) {
+            if (out.pos == out.size) {
+                fprintf(stderr, "decompression produced too much data\n");
+                exit(1);
+            }
+            ZstdCall(ZSTD_decompressStream, stream, &out, &in);
+        }
+    }
+    if (out.pos < out.size) {
+        fprintf(stderr,
+                "decompression produced too little data by %zu bytes\n",
+                out.size - out.pos);
+        exit(1);
+    }
+
+    return buffer;
+}
 
 template <typename T>
 std::size_t HashValue(const T& x) {
@@ -1275,9 +1576,11 @@ Extracted items use the file names shown below:\n\
 
     // Create from raw file contents.
     static ItemPtr CreateFromFile(
-        const File* filenode, uint32_t type, bool compress) {
+        const File* filenode, uint32_t type, Compressor::Config compress) {
         bool null_terminate = type == ZBI_TYPE_CMDLINE;
-        compress = compress && TypeIsStorage(type);
+        if (!TypeIsStorage(type)) {
+            compress.clear();
+        }
 
         const auto file = filenode->AsContents();
         size_t size = file->exact_size() + (null_terminate ? 1 : 0);
@@ -1357,7 +1660,7 @@ Extracted items use the file names shown below:\n\
     }
 
     // Create a BOOTFS item.
-    static ItemPtr CreateBootFS(Directory* root, bool compress) {
+    static ItemPtr CreateBootFS(Directory* root, Compressor::Config compress) {
         auto item = MakeItem(NewHeader(ZBI_TYPE_STORAGE_BOOTFS, 0), compress);
 
         // Collect the names and contents, calculating the final directory size.
@@ -1533,7 +1836,7 @@ private:
     // The payload_ items might point into these buffers.  They're just
     // stored here to own the buffers until the payload is exhausted.
     std::forward_list<std::unique_ptr<std::byte[]>> buffers_;
-    const bool compress_;
+    const Compressor::Config compress_;
 
     struct ItemTypeInfo {
         uint32_t type;
@@ -1568,7 +1871,7 @@ private:
         };
     }
 
-    Item(const zbi_header_t& header, bool compress)
+    Item(const zbi_header_t& header, Compressor::Config compress)
         : header_(header), compress_(compress) {
         if (compress_) {
             // We'll compress and checksum on the way out.
@@ -1576,8 +1879,9 @@ private:
         }
     }
 
-    static ItemPtr MakeItem(const zbi_header_t& header,
-                            bool compress = false) {
+    static ItemPtr MakeItem(
+        const zbi_header_t& header,
+        Compressor::Config compress = Compressor::Config::None()) {
         return ItemPtr(new Item(header, compress));
     }
 
@@ -1598,7 +1902,7 @@ private:
 
     uint32_t StreamCompressed(OutputStream* out) {
         // Compress and checksum the payload.
-        Compressor compressor;
+        Compressor compressor(compress_);
         compressor.Init(out, header_);
         do {
             // The compressor streams the header and compressed payload out.
@@ -2045,10 +2349,10 @@ bool ImportFile(const FileContents* file, const char* filename,
     return true;
 }
 
-constexpr const char kOptString[] = "-B:cC:d:D:e:FxXRhto:p:T:uv";
+constexpr const char kOptString[] = "-B:c::C:d:D:e:FxXRhto:p:T:uv";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
-    {"compressed", no_argument, nullptr, 'c'},
+    {"compressed", optional_argument, nullptr, 'c'},
     {"directory", required_argument, nullptr, 'C'},
     {"depfile", required_argument, nullptr, 'd'},
     {"entry", required_argument, nullptr, 'e'},
@@ -2094,8 +2398,8 @@ Input control switches apply to subsequent input arguments:\n\
     --prefix=PREFIX, -p PREFIX     prepend PREFIX/ to target file names\n\
     --replace, -r                  duplicate target file name OK (see below)\n\
     --type=TYPE, -T TYPE           input files are TYPE items (see below)\n\
-    --compressed, -c               compress RAMDISK images (default)\n\
-    --uncompressed, -u             do not compress RAMDISK images\n\
+    --compressed[=HOW], -c [HOW]   compress storage images (see below)\n\
+    --uncompressed, -u             do not compress storage images\n\
 \n\
 Input arguments:\n\
     --entry=TEXT, -e TEXT          like an input file containing only TEXT\n\
@@ -2118,8 +2422,17 @@ files, and directories are not permitted.  See below for the TYPE strings.\n\
 \n\
 Format control switches (last switch affects all output):\n\
     --complete=ARCH, -B ARCH       verify result is a complete boot image\n\
-    --compressed, -c               compress BOOTFS images (default)\n\
+    --compressed[=HOW], -c [HOW]   compress BOOTFS images (see below)\n\
     --uncompressed, -u             do not compress BOOTFS images\n\
+\n\
+HOW defaults to `lz4` and can be one of (case-insensitive):\n\
+ * `none` (same as `--uncompressed`)\n\
+ * `LEVEL` (an integer) or `max` (default algorithm, currently `lz4`)\n\
+ * `lz4` or `lz4,LEVEL` (an integer) or `lz4,max`\n\
+ * `zstd` or `zstd,LEVEL` (an integer) or `zstd,max` or `zstd,overclock`\n\
+The meaning of LEVEL depends on the algorithm.  The default is chosen for\n\
+good compression ratios with fast compression time.  `max` is for the best\n\
+compression ratios but much slower compression time (e.g. release builds).\n\
 \n\
 If there are no PATTERN arguments and no files named to add to the BOOTFS\n\
 (via manifest file entries, nonempty directories, or `--entry` switches)\n\
@@ -2172,7 +2485,7 @@ int main(int argc, char** argv) {
     uint32_t complete_arch = kImageArchUndefined;
     bool input_manifest = true;
     uint32_t input_type = ZBI_TYPE_DISCARD;
-    bool compressed = true;
+    Compressor::Config compressed;
     bool extract = false;
     bool extract_items = false;
     bool extract_raw = false;
@@ -2249,11 +2562,16 @@ int main(int argc, char** argv) {
             continue;
 
         case 'c':
-            compressed = true;
+            if (!compressed.Parse(optarg)) {
+                fprintf(stderr,
+                        "unrecognized compression algorithm syntax: %s\n",
+                        optarg);
+                exit(1);
+            }
             continue;
 
         case 'u':
-            compressed = false;
+            compressed.clear();
             continue;
 
         case 'x':
