@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::super::Cohort;
 use super::*;
+use pretty_assertions::assert_eq;
 use serde_json::json;
 
 #[test]
@@ -38,14 +40,7 @@ fn test_minimal() {
         daystart: None,
         apps: vec![App {
             id: "{00000000-0000-0000-0000-000000000001}".to_string(),
-            status: OmahaStatus::Ok,
-            cohort: None,
-            cohort_hint: None,
-            cohort_name: None,
-            ping: None,
-            update_check: None,
-            events: None,
-            extra_attributes: Map::new(),
+            ..App::default()
         }],
     };
     assert_eq!(response, expected);
@@ -137,9 +132,11 @@ fn test_all_fields() {
             App {
                 id: "{00000000-0000-0000-0000-000000000001}".to_string(),
                 status: OmahaStatus::Ok,
-                cohort: Some("".to_string()),
-                cohort_hint: Some("".to_string()),
-                cohort_name: Some("".to_string()),
+                cohort: Cohort {
+                    id: Some("".to_string()),
+                    hint: Some("".to_string()),
+                    name: Some("".to_string())
+                },
                 ping: Some(Ping { status: OmahaStatus::Ok }),
                 update_check: Some(UpdateCheck {
                     status: OmahaStatus::NoUpdate,
@@ -164,25 +161,19 @@ fn test_all_fields() {
             App {
                 id: "{11111111-1111-1111-1111-111111111111}".to_string(),
                 status: OmahaStatus::Ok,
-                cohort: Some("".to_string()),
-                cohort_hint: None,
-                cohort_name: Some("".to_string()),
+                cohort: Cohort {
+                    id: Some("".to_string()),
+                    hint: None,
+                    name: Some("".to_string())
+                },
                 ping: Some(Ping { status: OmahaStatus::Ok }),
                 update_check: Some(UpdateCheck {
                     status: OmahaStatus::Ok,
                     info: None,
-                    urls: Some(URLs {
-                        url: vec![
-                            URL {
-                                codebase: "http://url/base/"
-                                    .to_string(),
-                            },
-                            URL {
-                                codebase: "https://url/base/"
-                                    .to_string(),
-                            },
-                        ],
-                    }),
+                    urls: Some(URLs::new(vec![
+                        "http://url/base/".to_string(),
+                        "https://url/base/".to_string()
+                    ])),
                     manifest: Some(Manifest {
                         version: "1.3.33.17".to_string(),
                         actions: Actions{action:vec![
@@ -254,18 +245,14 @@ fn test_new_cohort() {
         apps: vec![App {
             id: "{00000000-0000-0000-0000-000000000001}".to_string(),
             status: OmahaStatus::Ok,
-            cohort: Some("1:3:".to_string()),
-            cohort_hint: None,
-            cohort_name: Some("stable".to_string()),
+            cohort: Cohort {
+                id: Some("1:3:".to_string()),
+                hint: None,
+                name: Some("stable".to_string()),
+            },
             ping: Some(Ping { status: OmahaStatus::Ok }),
-            update_check: Some(UpdateCheck {
-                status: OmahaStatus::NoUpdate,
-                info: None,
-                urls: None,
-                manifest: None,
-            }),
-            events: None,
-            extra_attributes: Map::new(),
+            update_check: Some(UpdateCheck::no_update()),
+            ..App::default()
         }],
     };
     assert_eq!(response, expected);
@@ -295,13 +282,7 @@ fn test_unknown_app_id() {
         apps: vec![App {
             id: "{00000000-0000-0000-0000-000000000001}".to_string(),
             status: OmahaStatus::Error("error-unknownApplication".to_string()),
-            cohort: None,
-            cohort_hint: None,
-            cohort_name: None,
-            ping: None,
-            update_check: None,
-            events: None,
-            extra_attributes: Map::new(),
+            ..App::default()
         }],
     };
     assert_eq!(response, expected);
@@ -360,14 +341,10 @@ fn test_single_url() {
         apps: vec![App {
             id: "single-url-appid".to_string(),
             status: OmahaStatus::Ok,
-            cohort: None,
-            cohort_hint: None,
-            cohort_name: None,
-            ping: None,
             update_check: Some(UpdateCheck {
                 status: OmahaStatus::Ok,
                 info: None,
-                urls: Some(URLs { url: vec![URL { codebase: "http://url/base/".to_string() }] }),
+                urls: Some(URLs::new(vec!["http://url/base/".to_string()])),
                 manifest: Some(Manifest {
                     version: "1.0".to_string(),
                     actions: Actions {
@@ -395,8 +372,7 @@ fn test_single_url() {
                     },
                 }),
             }),
-            events: None,
-            extra_attributes: Map::new(),
+            ..App::default()
         }],
     };
     assert_eq!(response, expected);
@@ -428,19 +404,8 @@ fn test_no_update() {
         daystart: None,
         apps: vec![App {
             id: "no-update-appid".to_string(),
-            status: OmahaStatus::Ok,
-            cohort: None,
-            cohort_hint: None,
-            cohort_name: None,
-            ping: None,
-            update_check: Some(UpdateCheck {
-                status: OmahaStatus::NoUpdate,
-                info: None,
-                urls: None,
-                manifest: None,
-            }),
-            events: None,
-            extra_attributes: Map::new(),
+            update_check: Some(UpdateCheck::no_update()),
+            ..App::default()
         }],
     };
     assert_eq!(response, expected);
@@ -469,14 +434,7 @@ fn test_unsupported_protocol_version() {
         daystart: None,
         apps: vec![App {
             id: "{00000000-0000-0000-0000-000000000001}".to_string(),
-            status: OmahaStatus::Ok,
-            cohort: None,
-            cohort_hint: None,
-            cohort_name: None,
-            ping: None,
-            update_check: None,
-            events: None,
-            extra_attributes: Map::new(),
+            ..App::default()
         }],
     };
     assert_eq!(response, expected);

@@ -5,6 +5,7 @@
 #[cfg(test)]
 mod tests;
 
+use super::Cohort;
 use serde_derive::Deserialize;
 use serde_json::{Map, Value};
 
@@ -53,27 +54,12 @@ pub struct App {
     /// The state of the product on the server.
     pub status: OmahaStatus,
 
-    /// This is the cohort id, as previously assigned by the Omaha service.  This is a machine-
-    /// readable string, not meant for user display.
-    ///
-    /// This is the 'cohort' field of the app object.
-    pub cohort: Option<String>,
-
-    /// The cohort hint is a machine-readable enum indicating that the client desires to switch to a
-    /// different release cohort.  These are application-specific values, coordinated with the Omaha
-    /// service rules for a given application.
-    ///
-    /// This is the 'cohorthint' attribute of the app object.
-    #[serde(rename = "cohorthint")]
-    pub cohort_hint: Option<String>,
-
-    /// The cohort name is a stable, non-localized, human-readable string indicating which update
-    /// cohort or channel that the application is on.  These are application-specific values,
-    /// coordinated with the Omaha service rules for a given application.
-    ///
-    /// This is the 'cohortname' attribute of the app object.
-    #[serde(rename = "cohortname")]
-    pub cohort_name: Option<String>,
+    /// This holds the following fields of the app object:
+    ///   cohort
+    ///   cohorthint
+    ///   cohortname
+    #[serde(flatten)]
+    pub cohort: Cohort,
 
     /// Optional ping, used for user counting.
     pub ping: Option<Ping>,
