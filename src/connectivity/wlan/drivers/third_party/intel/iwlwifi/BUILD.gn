@@ -33,11 +33,13 @@ driver_module("iwlwifi_driver") {
     "iwl-drv.c",
     "iwl-drv.h",
     "iwl-fh.h",
+    "iwl-trans.h",
     "pcie/drv.c",
     "pcie/internal.h",
   ]
 
   deps = [
+    "//garnet/lib/wlan/protocol",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/driver",
   ]

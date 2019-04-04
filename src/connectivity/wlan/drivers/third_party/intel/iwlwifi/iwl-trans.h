@@ -36,20 +36,20 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TRANS_H_
 
-#include "fw/img.h"
-#include "iwl-config.h"
-#include "iwl-debug.h"
-#include "iwl-op-mode.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-op-mode.h"
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-#include "iwl-dbg-cfg.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dbg-cfg.h"
 #endif
-#include "fw/api/cmdhdr.h"
-#include "fw/api/txq.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/cmdhdr.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/txq.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-#include "fw/testmode.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/testmode.h"
 #endif
-#include "fw/api/dbg-tlv.h"
-#include "iwl-dbg-tlv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/dbg-tlv.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dbg-tlv.h"
 
 /**
  * DOC: Transport layer - what is it ?
@@ -169,7 +169,7 @@ struct iwl_device_cmd {
         struct {
             struct iwl_cmd_header_wide hdr_wide;
             uint8_t payload_wide[DEF_CMD_PAYLOAD_SIZE - sizeof(struct iwl_cmd_header_wide) +
-                            sizeof(struct iwl_cmd_header)];
+                                 sizeof(struct iwl_cmd_header)];
         };
     };
 } __packed;
@@ -536,8 +536,8 @@ struct iwl_trans_ops {
                        const struct iwl_trans_txq_scd_cfg* cfg, unsigned int queue_wdg_timeout);
     void (*txq_disable)(struct iwl_trans* trans, int queue, bool configure_scd);
     /* 22000 functions */
-    int (*txq_alloc)(struct iwl_trans* trans, __le16 flags, uint8_t sta_id, uint8_t tid, int cmd_id, int size,
-                     unsigned int queue_wdg_timeout);
+    int (*txq_alloc)(struct iwl_trans* trans, __le16 flags, uint8_t sta_id, uint8_t tid, int cmd_id,
+                     int size, unsigned int queue_wdg_timeout);
     void (*txq_free)(struct iwl_trans* trans, int queue);
     int (*rxq_dma_data)(struct iwl_trans* trans, int queue, struct iwl_trans_rxq_dma_data* data);
 
@@ -708,6 +708,7 @@ struct iwl_trans {
     enum iwl_trans_state state;
     unsigned long status;
 
+    zx_device_t* zxdev;
     struct device* dev;
     uint32_t max_skb_frags;
     uint32_t hw_rev;
@@ -1099,8 +1100,8 @@ static inline int iwl_trans_read_mem(struct iwl_trans* trans, uint32_t addr,
     return trans->ops->read_mem(trans, addr, buf, dwords);
 }
 
-#define iwl_trans_read_mem_bytes(trans, addr, buf, bufsize)                       \
-    do {                                                                          \
+#define iwl_trans_read_mem_bytes(trans, addr, buf, bufsize)                            \
+    do {                                                                               \
         if (__builtin_constant_p(bufsize)) BUILD_BUG_ON((bufsize) % sizeof(uint32_t)); \
         iwl_trans_read_mem(trans, addr, buf, (bufsize) / sizeof(uint32_t));            \
     } while (0)

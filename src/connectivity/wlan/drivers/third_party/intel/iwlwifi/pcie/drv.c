@@ -34,29 +34,37 @@
  *
  *****************************************************************************/
 
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+#include <stdlib.h>
 
 #include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
 #include <ddk/driver.h>
-
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
-
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
+#include <ddk/protocol/pci-lib.h>
+#include <ddk/protocol/pci.h>
+#include <wlan/protocol/mac.h>
+#include <wlan/protocol/phy-impl.h>
+#include <zircon/status.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-drv.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
 #if 0  // NEEDS_PORTING
-#include "internal.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/acpi.h"
 #endif  // NEEDS_PORTING
 
-#if 0  // NEEDS_PORTING
-#define IWL_PCI_DEVICE(dev, subdev, cfg)                                     \
-    .vendor = PCI_VENDOR_ID_INTEL, .device = (dev), .subvendor = PCI_ANY_ID, \
-    .subdevice = (subdev), .driver_data = (kernel_ulong_t) & (cfg)
+struct iwl_pci_device {
+    uint16_t device_id;
+    uint16_t subsystem_device_id;
+    const struct iwl_cfg* config;
+};
+
+#define IWL_PCI_DEVICE(dev, subdev, cfg) \
+    .device_id = (dev), .subsystem_device_id = (subdev), .config = &(cfg)
 
 /* Hardware specific file defines the PCI IDs table for that hardware module */
-static const struct pci_device_id iwl_hw_card_ids[] = {
-#if IS_ENABLED(CPTCFG_IWLDVM)
+static const struct iwl_pci_device iwl_devices[] = {
+#if CPTCFG_IWLDVM
     {IWL_PCI_DEVICE(0x4232, 0x1201, iwl5100_agn_cfg)}, /* Mini Card */
     {IWL_PCI_DEVICE(0x4232, 0x1301, iwl5100_agn_cfg)}, /* Half Mini Card */
     {IWL_PCI_DEVICE(0x4232, 0x1204, iwl5100_agn_cfg)}, /* Mini Card */
@@ -145,8 +153,8 @@ static const struct pci_device_id iwl_hw_card_ids[] = {
     {IWL_PCI_DEVICE(0x0085, 0xC220, iwl6005_2agn_sff_cfg)},
     {IWL_PCI_DEVICE(0x0085, 0xC228, iwl6005_2agn_sff_cfg)},
     {IWL_PCI_DEVICE(0x0082, 0x4820, iwl6005_2agn_d_cfg)},
-    {IWL_PCI_DEVICE(0x0082, 0x1304, iwl6005_2agn_mow1_cfg)},/* low 5GHz active */
-    {IWL_PCI_DEVICE(0x0082, 0x1305, iwl6005_2agn_mow2_cfg)},/* high 5GHz active */
+    {IWL_PCI_DEVICE(0x0082, 0x1304, iwl6005_2agn_mow1_cfg)}, /* low 5GHz active */
+    {IWL_PCI_DEVICE(0x0082, 0x1305, iwl6005_2agn_mow2_cfg)}, /* high 5GHz active */
 
     /* 6x30 Series */
     {IWL_PCI_DEVICE(0x008A, 0x5305, iwl1030_bgn_cfg)},
@@ -243,9 +251,9 @@ static const struct pci_device_id iwl_hw_card_ids[] = {
     {IWL_PCI_DEVICE(0x0892, 0x0062, iwl135_bgn_cfg)},
     {IWL_PCI_DEVICE(0x0893, 0x0262, iwl135_bgn_cfg)},
     {IWL_PCI_DEVICE(0x0892, 0x0462, iwl135_bgn_cfg)},
-#endif /* CPTCFG_IWLDVM */
+#endif  // CPTCFG_IWLDVM
 
-#if IS_ENABLED(CPTCFG_IWLMVM)
+#if CPTCFG_IWLMVM
     /* 7260 Series */
     {IWL_PCI_DEVICE(0x08B1, 0x4070, iwl7260_2ac_cfg)},
     {IWL_PCI_DEVICE(0x08B1, 0x4072, iwl7260_2ac_cfg)},
@@ -314,6 +322,7 @@ static const struct pci_device_id iwl_hw_card_ids[] = {
     {IWL_PCI_DEVICE(0x08B2, 0xC220, iwl7260_2n_cfg)},
     {IWL_PCI_DEVICE(0x08B1, 0xC420, iwl7260_2n_cfg)},
 
+#if 0   // NEEDS_PORTING
     /* 3160 Series */
     {IWL_PCI_DEVICE(0x08B3, 0x0070, iwl3160_2ac_cfg)},
     {IWL_PCI_DEVICE(0x08B3, 0x0072, iwl3160_2ac_cfg)},
@@ -358,6 +367,7 @@ static const struct pci_device_id iwl_hw_card_ids[] = {
     {IWL_PCI_DEVICE(0x24FB, 0x2050, iwl3168_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FB, 0x2150, iwl3168_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FB, 0x0000, iwl3168_2ac_cfg)},
+#endif  // NEEDS_PORTING
 
     /* 7265 Series */
     {IWL_PCI_DEVICE(0x095A, 0x5010, iwl7265_2ac_cfg)},
@@ -404,6 +414,7 @@ static const struct pci_device_id iwl_hw_card_ids[] = {
     {IWL_PCI_DEVICE(0x095A, 0x9400, iwl7265_2ac_cfg)},
     {IWL_PCI_DEVICE(0x095A, 0x9E10, iwl7265_2ac_cfg)},
 
+#if 0   // NEEDS_PORTING
     /* 8000 Series */
     {IWL_PCI_DEVICE(0x24F3, 0x0010, iwl8260_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24F3, 0x1010, iwl8260_2ac_cfg)},
@@ -485,9 +496,11 @@ static const struct pci_device_id iwl_hw_card_ids[] = {
     {IWL_PCI_DEVICE(0x24FD, 0x0012, iwl8275_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FD, 0x0014, iwl8265_2ac_cfg)},
     {IWL_PCI_DEVICE(0x24FD, 0x9074, iwl8265_2ac_cfg)},
-#endif /* IS_ENABLED(CPTCFG_IWLMVM) */
+#endif  // NEEDS_PORTING
+#endif  // CPTCFG_IWLMVM
 
-#if IS_ENABLED(CPTCFG_IWLMVM) || IS_ENABLED(CPTCFG_IWLFMAC)
+#if CPTCFG_IWLMVM || CPTCFG_IWLFMAC
+#if 0   // NEEDS_PORTING
     /* 9000 Series */
     {IWL_PCI_DEVICE(0x02F0, 0x0030, iwl9560_2ac_cfg_soc)},
     {IWL_PCI_DEVICE(0x02F0, 0x0034, iwl9560_2ac_cfg_soc)},
@@ -929,32 +942,107 @@ static const struct pci_device_id iwl_hw_card_ids[] = {
 
     {IWL_PCI_DEVICE(0x1a56, 0x1653, killer1650w_2ax_cfg)},
     {IWL_PCI_DEVICE(0x1a56, 0x1654, killer1650x_2ax_cfg)},
-
-#endif /* CPTCFG_IWLMVM || CPTCFG_IWLFMAC */
-
-    {0}
+#endif  // NEEDS_PORTING
+#endif  // CPTCFG_IWLMVM || CPTCFG_IWLFMAC
+    {0},
 };
-MODULE_DEVICE_TABLE(pci, iwl_hw_card_ids);
 
-/* PCI registers */
-#define PCI_CFG_RETRY_TIMEOUT 0x041
+static zx_status_t iwl_pci_config(uint16_t device_id, uint16_t subsystem_device_id,
+                                  const struct iwl_cfg** out_cfg) {
+    const struct iwl_pci_device* device = iwl_devices;
+    for (size_t i = 0; i != ARRAY_SIZE(iwl_devices); ++i) {
+        if (iwl_devices[i].device_id == device_id &&
+            iwl_devices[i].subsystem_device_id == subsystem_device_id) {
+            *out_cfg = iwl_devices[i].config;
+            return ZX_OK;
+        }
+        device++;
+    }
+    return ZX_ERR_NOT_FOUND;
+}
 
-static int iwl_pci_probe(struct pci_dev* pdev, const struct pci_device_id* ent) {
-    const struct iwl_cfg* cfg = (struct iwl_cfg*)(ent->driver_data);
-    const struct iwl_cfg* cfg_7265d __maybe_unused = NULL;
+static void iwl_pci_unbind(void* ctx) {
+    struct iwl_trans* trans = (struct iwl_trans*)ctx;
+    device_remove(trans->zxdev);
+}
+
+static void iwl_pci_release(void* ctx) {
+    struct iwl_trans* trans = (struct iwl_trans*)ctx;
+
+#if 0   // NEEDS_PORTING
+    /* if RTPM was in use, restore it to the state before probe */
+    if (trans->runtime_pm_mode != IWL_PLAT_PM_MODE_DISABLED) {
+        /* We should not call forbid here, but we do for now.
+         * Check the comment to pm_runtime_allow() in
+         * iwl_pci_probe().
+         */
+        pm_runtime_forbid(trans->dev);
+    }
+#endif  // NEEDS_PORTING
+
+    iwl_drv_stop(trans->drv);
+
+#if 0   // NEEDS_PORTING
+    iwl_trans_pcie_free(trans);
+#endif  // NEEDS_PORTING
+    free(trans);
+}
+
+static zx_protocol_device_t device_ops = {
+    .version = DEVICE_OPS_VERSION,
+    .unbind = iwl_pci_unbind,
+    .release = iwl_pci_release,
+};
+
+static wlanphy_impl_protocol_ops_t wlanphy_ops = {
+    .query = NULL,
+    .create_iface = NULL,
+    .destroy_iface = NULL,
+};
+
+static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
     struct iwl_trans* iwl_trans;
-    int ret;
+    zx_status_t status;
 
-    if (WARN_ONCE(!cfg->csr, "CSR addresses aren't configured\n")) {
-        return -EINVAL;
+    pci_protocol_t pci;
+    status = device_get_protocol(dev, ZX_PROTOCOL_PCI, &pci);
+    if (status != ZX_OK) {
+        return status;
     }
 
-    iwl_trans = iwl_trans_pcie_alloc(pdev, ent, cfg);
-    if (IS_ERR(iwl_trans)) {
-        return PTR_ERR(iwl_trans);
+    zx_pcie_device_info_t pci_info;
+    status = pci_get_device_info(&pci, &pci_info);
+    if (status != ZX_OK) {
+        return status;
     }
 
-#if IS_ENABLED(CPTCFG_IWLMVM)
+    uint16_t subsystem_device_id;
+    status = pci_config_read16(&pci, PCI_CFG_SUBSYSTEM_ID, &subsystem_device_id);
+    if (status != ZX_OK) {
+        IWL_ERR(iwl_trans, "Failed to read PCI subsystem device ID: %s\n",
+                zx_status_get_string(status));
+        return status;
+    }
+
+    IWL_INFO(iwl_trans, "Device ID: %x Subsystem Device ID: %x", pci_info.device_id,
+             subsystem_device_id);
+
+    iwl_trans = calloc(1, sizeof(struct iwl_trans));
+    if (!iwl_trans) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    status = iwl_pci_config(pci_info.device_id, subsystem_device_id, &iwl_trans->cfg);
+    if (status != ZX_OK) {
+        IWL_ERR(iwl_trans, "Failed to find PCI config: %s\n", zx_status_get_string(status));
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    if (!iwl_trans->cfg->csr) {
+        IWL_ERR(iwl_trans, "CSR addresses aren't configured\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
     /*
      * special-case 7265D, it has the same PCI IDs.
      *
@@ -962,22 +1050,21 @@ static int iwl_pci_probe(struct pci_dev* pdev, const struct pci_device_id* ent) 
      * all the parameters that the transport uses must, until that is
      * changed, be identical to the ones in the 7265D configuration.
      */
-    if (cfg == &iwl7265_2ac_cfg) {
+    const struct iwl_cfg* cfg_7265d = NULL;
+    if (iwl_trans->cfg == &iwl7265_2ac_cfg) {
         cfg_7265d = &iwl7265d_2ac_cfg;
-    } else if (cfg == &iwl7265_2n_cfg) {
+    } else if (iwl_trans->cfg == &iwl7265_2n_cfg) {
         cfg_7265d = &iwl7265d_2n_cfg;
-    } else if (cfg == &iwl7265_n_cfg) {
+    } else if (iwl_trans->cfg == &iwl7265_n_cfg) {
         cfg_7265d = &iwl7265d_n_cfg;
     }
-    if (cfg_7265d &&
-            (iwl_trans->hw_rev & CSR_HW_REV_TYPE_MSK) == CSR_HW_REV_TYPE_7265D) {
-        cfg = cfg_7265d;
+    if (cfg_7265d && (iwl_trans->hw_rev & CSR_HW_REV_TYPE_MSK) == CSR_HW_REV_TYPE_7265D) {
         iwl_trans->cfg = cfg_7265d;
     }
-#endif
 
-#if IS_ENABLED(CPTCFG_IWLMVM) || IS_ENABLED(CPTCFG_IWLFMAC)
-    if (iwl_trans->cfg->rf_id && cfg == &iwl22000_2ac_cfg_hr_cdb &&
+#if 0  // NEEDS_PORTING
+#if CPTCFG_IWLMVM || CPTCFG_IWLFMAC
+    if (iwl_trans->cfg->rf_id && iwl_trans->cfg == &iwl22000_2ac_cfg_hr_cdb &&
             iwl_trans->hw_rev != CSR_HW_REV_TYPE_HR_CDB) {
         uint32_t rf_id_chp = CSR_HW_RF_ID_TYPE_CHIP_ID(iwl_trans->hw_rf_id);
         uint32_t jf_chp_id = CSR_HW_RF_ID_TYPE_CHIP_ID(CSR_HW_RF_ID_TYPE_JF);
@@ -985,39 +1072,55 @@ static int iwl_pci_probe(struct pci_dev* pdev, const struct pci_device_id* ent) 
 
         if (rf_id_chp == jf_chp_id) {
             if (iwl_trans->hw_rev == CSR_HW_REV_TYPE_QNJ) {
-                cfg = &iwl22000_2ax_cfg_qnj_jf_b0;
+                iwl_trans->cfg = &iwl22000_2ax_cfg_qnj_jf_b0;
             } else {
-                cfg = &iwl22000_2ac_cfg_jf;
+                iwl_trans->cfg = &iwl22000_2ac_cfg_jf;
             }
         } else if (rf_id_chp == hr_chp_id) {
             if (iwl_trans->hw_rev == CSR_HW_REV_TYPE_QNJ) {
-                cfg = &iwl22000_2ax_cfg_qnj_hr_a0;
+                iwl_trans->cfg = &iwl22000_2ax_cfg_qnj_hr_a0;
             } else if (iwl_trans->hw_rev == CSR_HW_REV_TYPE_QNJ_B0) {
-                cfg = &iwl22000_2ax_cfg_qnj_hr_b0;
+                iwl_trans->cfg = &iwl22000_2ax_cfg_qnj_hr_b0;
             } else if (iwl_trans->hw_rev == CSR_HW_REV_TYPE_QU_B0) {
-                cfg = &iwl22000_2ax_cfg_qnj_hr_b0_f0;
+                iwl_trans->cfg = &iwl22000_2ax_cfg_qnj_hr_b0_f0;
             } else {
-                cfg = &iwl22000_2ac_cfg_hr;
+                iwl_trans->cfg = &iwl22000_2ac_cfg_hr;
             }
         }
-        iwl_trans->cfg = cfg;
     }
-#endif
+#endif  // CPTCFG_IWLMVM || CPTCFG_IWLFMAC
+#endif  // NEEDS_PORTING
 
-    pci_set_drvdata(pdev, iwl_trans);
-    iwl_trans->drv = iwl_drv_start(iwl_trans);
+    device_add_args_t args = {
+        .version = DEVICE_ADD_ARGS_VERSION,
+        .name = "iwlwifi-wlanphy",
+        .ctx = iwl_trans,
+        .ops = &device_ops,
+        .proto_id = ZX_PROTOCOL_WLANPHY_IMPL,
+        .proto_ops = &wlanphy_ops,
+        .flags = DEVICE_ADD_INVISIBLE,
+    };
 
-    if (IS_ERR(iwl_trans->drv)) {
-        ret = PTR_ERR(iwl_trans->drv);
-        goto out_free_trans;
+    status = device_add(dev, &args, &iwl_trans->zxdev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Failed to create device: %s\n", zx_status_get_string(status));
+        free(iwl_trans);
+        return status;
+    }
+
+    status = iwl_drv_start(iwl_trans);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Failed to start driver: %s\n", zx_status_get_string(status));
+        goto fail_remove_device;
     }
 
     /* register transport layer debugfs here */
-    ret = iwl_trans_pcie_dbgfs_register(iwl_trans);
-    if (ret) {
-        goto out_free_drv;
+    status = iwl_trans_pcie_dbgfs_register(iwl_trans);
+    if (status != ZX_OK) {
+        goto fail_stop_device;
     }
 
+#if 0   // NEEDS_PORTING
     /* if RTPM is in use, enable it in our device */
     if (iwl_trans->runtime_pm_mode != IWL_PLAT_PM_MODE_DISABLED) {
         /* We explicitly set the device to active here to
@@ -1036,38 +1139,39 @@ static int iwl_pci_probe(struct pci_dev* pdev, const struct pci_device_id* ent) 
         */
         pm_runtime_allow(&pdev->dev);
     }
+#endif  // NEEDS_PORTING
 
-    /* The PCI device starts with a reference taken and we are
-     * supposed to release it here.  But to simplify the
-     * interaction with the opmode, we don't do it now, but let
-     * the opmode release it when it's ready.
-     */
+    return ZX_OK;
 
-    return 0;
-
-out_free_drv:
+fail_stop_device:
     iwl_drv_stop(iwl_trans->drv);
-out_free_trans:
-    iwl_trans_pcie_free(iwl_trans);
-    return ret;
+fail_remove_device:
+    device_remove(iwl_trans->zxdev);
+    return status;
 }
 
-static void iwl_pci_remove(struct pci_dev* pdev) {
-    struct iwl_trans* trans = pci_get_drvdata(pdev);
+static zx_driver_ops_t iwlwifi_pci_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = iwl_pci_bind,
+};
 
-    /* if RTPM was in use, restore it to the state before probe */
-    if (trans->runtime_pm_mode != IWL_PLAT_PM_MODE_DISABLED) {
-        /* We should not call forbid here, but we do for now.
-         * Check the comment to pm_runtime_allow() in
-         * iwl_pci_probe().
-         */
-        pm_runtime_forbid(trans->dev);
-    }
+#define INTEL_VID 0x8086
 
-    iwl_drv_stop(trans->drv);
+// clang-format off
+ZIRCON_DRIVER_BEGIN(iwlwifi_pci, iwlwifi_pci_driver_ops, "zircon", "0.1", 1)
+    // BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
+    // BI_ABORT_IF(NE, BIND_PCI_VID, INTEL_VID),
+    // BI_MATCH_IF(EQ, BIND_PCI_DID, 0x095A),
+    // BI_MATCH_IF(EQ, BIND_PCI_DID, 0x095B),
+    // TODO: Replace BI_ABORT with the above when the driver is ready.
+    BI_ABORT(),
+ZIRCON_DRIVER_END(iwlwifi_pci)
+// clang-format on
 
-    iwl_trans_pcie_free(trans);
-}
+#if 0  // NEEDS_PORTING
+
+/* PCI registers */
+#define PCI_CFG_RETRY_TIMEOUT 0x041
 
 #ifdef CONFIG_PM_SLEEP
 
@@ -1288,35 +1392,4 @@ static const struct dev_pm_ops iwl_dev_pm_ops = {
 #define IWL_PM_OPS NULL
 
 #endif  /* CONFIG_PM_SLEEP */
-
-static struct pci_driver iwl_pci_driver = {
-    .name = DRV_NAME,
-    .id_table = iwl_hw_card_ids,
-    .probe = iwl_pci_probe,
-    .remove = iwl_pci_remove,
-    .driver.pm = IWL_PM_OPS,
-};
-
-int __must_check iwl_pci_register_driver(void) {
-    int ret;
-    ret = pci_register_driver(&iwl_pci_driver);
-    if (ret) {
-        pr_err("Unable to initialize PCI module\n");
-    }
-
-    return ret;
-}
-
-void iwl_pci_unregister_driver(void) {
-    pci_unregister_driver(&iwl_pci_driver);
-}
 #endif  // NEEDS_PORTING
-
-// TODO(yjlou@): temporarily add here for zxlogf. Will remove once the real one is created.
-static zx_driver_ops_t iwlwifi_pci_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = NULL,
-};
-ZIRCON_DRIVER_BEGIN(iwlwifi_pci, iwlwifi_pci_driver_ops, "zircon", "0.1", 1)
-BI_ABORT(),  // Never bind this driver.
-ZIRCON_DRIVER_END(iwlwifi_pci)
