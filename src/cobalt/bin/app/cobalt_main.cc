@@ -23,7 +23,6 @@
 #include <zircon/boot/image.h>
 
 #include "src/cobalt/bin/app/cobalt_app.h"
-#include "src/cobalt/bin/app/product_hack.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
@@ -114,6 +113,17 @@ std::string ReadBoardName() {
   }
 
   return std::string(board_name, actual_size);
+}
+
+std::string ReadBuildInfo(std::string value) {
+  std::ifstream file("/config/build-info/" + value);
+  if (file.is_open()) {
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+  } else {
+    return "";
+  }
 }
 
 int main(int argc, const char** argv) {
@@ -220,7 +230,7 @@ int main(int argc, const char** argv) {
       loop.dispatcher(), schedule_interval, min_interval, initial_interval,
       event_aggregator_backfill_days, start_event_aggregator_worker,
       use_memory_observation_store, max_bytes_per_observation_store,
-      cobalt::hack::GetLayer(), ReadBoardName());
+      ReadBuildInfo("product"), ReadBoardName(), ReadBuildInfo("version"));
   loop.Run();
   return 0;
 }

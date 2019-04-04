@@ -70,11 +70,20 @@ class CobaltApp {
   // |max_bytes_per_observation_store| The maximum number of bytes to store for
   //                                   each of the observation_stores.
   //
-  // |product_name| A product name used in the ObservationMetadata sent with
-  //                every upload to the Cobalt server.
+  // |product_name| A product name included in the SystemProfile that is
+  //                implicitly part of every Cobalt metric.
   //
-  // |board_name| A board name that may be used in the ObservationMetadata sent
-  //              with every upload to the Cobalt server.
+  //                Example: products/core.gni
+  //
+  // |board_name| A board name that may be included in the SystemProfile that is
+  //              implicitly part of every Cobalt metric.
+  //
+  //              Examples: astro, vim2, qemu
+  //
+  // |version| The version of the running system included in the SystemProfile
+  //           that is implicitly part of every Cobalt metric.
+  //
+  //           Example: 20190220_01_RC00
   //
   // REQUIRED:
   //   0 <= min_interval <= target_interval <= kMaxSeconds
@@ -84,7 +93,8 @@ class CobaltApp {
       std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
       size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
       bool use_memory_observation_store, size_t max_bytes_per_observation_store,
-      const std::string& product_name, const std::string& board_name);
+      const std::string& product_name, const std::string& board_name,
+      const std::string& version);
 
  private:
   static encoder::ClientSecret getClientSecret();

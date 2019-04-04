@@ -24,7 +24,6 @@ source_set("lib") {
     "logger_factory_impl.h",
     "logger_impl.cc",
     "logger_impl.h",
-    "product_hack.h",
     "system_data_updater_impl.cc",
     "system_data_updater_impl.h",
     "timer_manager.cc",
@@ -36,10 +35,10 @@ source_set("lib") {
   public_deps = [
     "//garnet/lib/wlan/mlme:mlme",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/network_wrapper",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/utils:fuchsia_http_client",
+    "//src/lib/fxl",
     "//third_party/cobalt/encoder",
     "//third_party/cobalt/logger",
     "//third_party/cobalt/logger:event_aggregator",
@@ -122,9 +121,9 @@ executable("cobalt_app_unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }

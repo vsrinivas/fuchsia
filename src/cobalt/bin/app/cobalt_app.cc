@@ -78,8 +78,9 @@ CobaltApp::CobaltApp(
     std::chrono::seconds min_interval, std::chrono::seconds initial_interval,
     size_t event_aggregator_backfill_days, bool start_event_aggregator_worker,
     bool use_memory_observation_store, size_t max_bytes_per_observation_store,
-    const std::string& product_name, const std::string& board_name)
-    : system_data_(product_name, board_name),
+    const std::string& product_name, const std::string& board_name,
+    const std::string& version)
+    : system_data_(product_name, board_name, version),
       context_(sys::ComponentContext::Create()),
       shuffler_client_(kCloudShufflerUri, true),
       send_retryer_(&shuffler_client_),
