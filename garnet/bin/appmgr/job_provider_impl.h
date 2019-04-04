@@ -5,10 +5,10 @@
 #ifndef GARNET_BIN_APPMGR_JOB_PROVIDER_IMPL_H_
 #define GARNET_BIN_APPMGR_JOB_PROVIDER_IMPL_H_
 
-#include <fs/vnode.h>
+#include <fbl/ref_counted.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
 
-#include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
 
 namespace component {
@@ -17,7 +17,8 @@ class Realm;
 
 // An implementation of |JobProvider|, which implements a method to return
 // a realm's job handle.
-class JobProviderImpl : public fuchsia::sys::JobProvider, public fs::Vnode {
+class JobProviderImpl : public fuchsia::sys::JobProvider,
+                        public fbl::RefCounted<JobProviderImpl> {
  public:
   // Constructs a job provider which will return the job of the given realm.
   explicit JobProviderImpl(Realm* realm);
@@ -25,10 +26,6 @@ class JobProviderImpl : public fuchsia::sys::JobProvider, public fs::Vnode {
   void GetJob(GetJobCallback callback) override;
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::sys::JobProvider> request);
-
-  bool IsDirectory() const final;
-
-  zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
  private:
   fidl::BindingSet<fuchsia::sys::JobProvider> bindings_;

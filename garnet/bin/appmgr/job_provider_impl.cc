@@ -19,12 +19,4 @@ void JobProviderImpl::AddBinding(
   bindings_.AddBinding(this, std::move(request));
 }
 
-bool JobProviderImpl::IsDirectory() const { return false; }
-
-zx_status_t JobProviderImpl::GetNodeInfo(uint32_t flags,
-                                         fuchsia_io_NodeInfo* info) {
-  info->tag = fuchsia_io_NodeInfoTag_service;
-  return ZX_OK;
-}
-
 }  // namespace component
