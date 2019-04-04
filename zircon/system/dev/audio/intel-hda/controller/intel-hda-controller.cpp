@@ -34,16 +34,18 @@ std::atomic_uint32_t IntelHDAController::device_id_gen_(0u);
 
 #define DEV(_ctx)  static_cast<IntelHDAController*>(_ctx)
 // Device FIDL thunks
-fuchsia_hardware_intel_hda_ControllerDevice_ops_t IntelHDAController::CONTROLLER_FIDL_THUNKS {
-    .GetChannel = [](void* ctx, fidl_txn_t* txn) -> zx_status_t {
-                        return DEV(ctx)->GetChannel(txn);
-                   },
+fuchsia_hardware_intel_hda_ControllerDevice_ops_t IntelHDAController::CONTROLLER_FIDL_THUNKS = {
+    .GetChannel = [](void* ctx, fidl_txn_t* txn) {
+        return DEV(ctx)->GetChannel(txn);
+    },
 };
 
 // Device interface thunks
 zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
     .version      = DEVICE_OPS_VERSION,
-    .get_protocol = nullptr,
+    .get_protocol = [](void* ctx, uint32_t proto_id, void* protocol) {
+        return DEV(ctx)->DeviceGetProtocol(proto_id, protocol);
+    },
     .open         = nullptr,
     .open_at      = nullptr,
     .close        = nullptr,
@@ -56,10 +58,16 @@ zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
     .suspend      = nullptr,
     .resume       = nullptr,
     .rxrpc        = nullptr,
-    .message      = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
-                        return fuchsia_hardware_intel_hda_ControllerDevice_dispatch(
-                                ctx, txn, msg, &IntelHDAController::CONTROLLER_FIDL_THUNKS);
-                   },
+    .message      = [](void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
+        return fuchsia_hardware_intel_hda_ControllerDevice_dispatch(
+            ctx, txn, msg, &IntelHDAController::CONTROLLER_FIDL_THUNKS);
+    },
+};
+
+ihda_codec_protocol_ops_t IntelHDAController::CODEC_PROTO_THUNKS = {
+    .get_driver_channel = [](void* ctx, zx_handle_t* channel_out) {
+        return DEV(ctx)->dsp_->CodecGetDispatcherChannel(channel_out);
+    },
 };
 #undef DEV
 
@@ -176,6 +184,20 @@ void IntelHDAController::ReleaseStreamTagLocked(bool input, uint8_t tag) {
     ZX_DEBUG_ASSERT((tag_pool & (1u << tag)) == 0);
 
     tag_pool = static_cast<uint16_t>((tag_pool | (1u << tag)));
+}
+
+zx_status_t IntelHDAController::DeviceGetProtocol(uint32_t proto_id, void* protocol) {
+    switch (proto_id) {
+    case ZX_PROTOCOL_IHDA_CODEC: {
+        auto proto = static_cast<ihda_codec_protocol_t*>(protocol);
+        proto->ops = &CODEC_PROTO_THUNKS;
+        proto->ctx = this;
+        return ZX_OK;
+    }
+    default:
+        LOG(ERROR, "Unsupported protocol 0x%08x\n", proto_id);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
 void IntelHDAController::DeviceShutdown() {

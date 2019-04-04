@@ -7,6 +7,5 @@ group("intel-hda") {
     "codecs/qemu",
     "codecs/realtek",
     "controller",
-    "dsp",
   ]
 }

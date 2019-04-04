@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <endian.h>
-#include <zircon/assert.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <string.h>
+#include <zircon/assert.h>
 
 #include <intel-hda/utils/intel-hda-registers.h>
 
@@ -359,7 +359,7 @@ zx_status_t IntelHDAController::HandleIrq() {
         ProcessControllerIRQ();
 
     if (dsp_ != nullptr) {
-        dsp_->ProcessIRQ();
+        dsp_->ProcessIrq();
     }
 
     ProcessRIRB();

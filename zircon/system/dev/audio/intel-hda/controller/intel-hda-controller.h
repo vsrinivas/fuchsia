@@ -7,7 +7,6 @@
 #include <atomic>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/intelhda/dsp.h>
 #include <ddk/protocol/pci.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/recycler.h>
@@ -24,14 +23,14 @@
 #include <dispatcher-pool/dispatcher-interrupt.h>
 #include <dispatcher-pool/dispatcher-wakeup-event.h>
 #include <intel-hda/utils/codec-commands.h>
-#include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/intel-hda-proto.h>
+#include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/utils.h>
 
 #include "codec-cmd-job.h"
 #include "debug-logging.h"
+#include "intel-dsp.h"
 #include "intel-hda-codec.h"
-#include "intel-hda-dsp.h"
 #include "utils.h"
 
 namespace audio {
@@ -86,6 +85,7 @@ private:
     void    ReleaseStreamTagLocked (bool input, uint8_t tag_num)     TA_REQ (stream_pool_lock_);
 
     // Device interface implementation
+    zx_status_t DeviceGetProtocol(uint32_t proto_id, void* protocol);
     void        DeviceShutdown();
     void        DeviceRelease();
     zx_status_t GetChannel(fidl_txn_t* txn);
@@ -108,7 +108,7 @@ private:
     zx_status_t SetupStreamDescriptors() TA_EXCL(stream_pool_lock_);
     zx_status_t SetupCommandBufferSize(uint8_t* size_reg, unsigned int* entry_count);
     zx_status_t SetupCommandBuffer() TA_EXCL(corb_lock_, rirb_lock_);
-    void        ProbeAudioDSP();
+    void        ProbeAudioDSP(zx_device_t* dsp_dev);
 
     zx_status_t ResetCORBRdPtrLocked() TA_REQ(corb_lock_);
 
@@ -199,11 +199,12 @@ private:
     fbl::Mutex codec_lock_;
     fbl::RefPtr<IntelHDACodec> codecs_[HDA_MAX_CODECS];
 
-    fbl::RefPtr<IntelHDADSP> dsp_;
+    fbl::RefPtr<IntelDsp> dsp_;
 
     static std::atomic_uint32_t device_id_gen_;
     static fuchsia_hardware_intel_hda_ControllerDevice_ops_t CONTROLLER_FIDL_THUNKS;
     static zx_protocol_device_t CONTROLLER_DEVICE_THUNKS;
+    static ihda_codec_protocol_ops_t CODEC_PROTO_THUNKS;
 };
 
 }  // namespace intel_hda

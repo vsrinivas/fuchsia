@@ -178,7 +178,6 @@ if (current_toolchain == default_toolchain) {
         "$zx/system/banjo/ddk-protocol-acpi",
         "$zx/system/banjo/ddk-protocol-intelgpucore",
         "$zx/system/banjo/ddk-protocol-intelhda-codec",
-        "$zx/system/banjo/ddk-protocol-intelhda-dsp",
 
         # Separately listed because they're not reached by any dependencies.
         "$zx/system/fidl/fuchsia-inspect",

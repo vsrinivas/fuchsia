@@ -10,8 +10,8 @@
 
 #include <utility>
 
-#include "intel-audio-dsp.h"
 #include "intel-dsp-stream.h"
+#include "intel-dsp.h"
 
 namespace audio {
 namespace intel_hda {
@@ -202,7 +202,7 @@ zx_status_t IntelDspStream::ProcessRbRequest(dispatcher::Channel* channel) {
     switch (req.hdr.cmd) {
     case AUDIO_RB_CMD_START:
     {
-        auto dsp = fbl::RefPtr<IntelAudioDsp>::Downcast(parent_codec());
+        auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
         zx_status_t st = dsp->StartPipeline(pipeline_);
         if (st != ZX_OK) {
             audio_proto::RingBufStartResp resp = { };
@@ -266,7 +266,7 @@ zx_status_t IntelDspStream::ProcessClientRbRequest(dispatcher::Channel* channel)
     switch (req.hdr.cmd) {
     case AUDIO_RB_CMD_STOP:
     {
-        auto dsp = fbl::RefPtr<IntelAudioDsp>::Downcast(parent_codec());
+        auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
         zx_status_t st = dsp->PausePipeline(pipeline_);
         if (st != ZX_OK) {
             audio_proto::RingBufStopResp resp = { };

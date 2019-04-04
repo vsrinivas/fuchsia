@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/assert.h>
-#include <zircon/thread_annotations.h>
 #include <fbl/auto_lock.h>
 #include <string.h>
+#include <zircon/assert.h>
+#include <zircon/thread_annotations.h>
 
 #include <intel-hda/utils/intel-hda-registers.h>
 
@@ -19,7 +19,7 @@ namespace intel_hda {
 namespace {
 fbl::Mutex snapshot_regs_buffer_lock;
 ihda_controller_snapshot_regs_resp_t snapshot_regs_buffer TA_GUARDED(snapshot_regs_buffer_lock);
-}  // anon namespace
+} // namespace
 
 zx_status_t IntelHDAController::SnapshotRegs(dispatcher::Channel* channel,
                                              const ihda_controller_snapshot_regs_req_t& req) {
@@ -34,7 +34,7 @@ zx_status_t IntelHDAController::SnapshotRegs(dispatcher::Channel* channel,
     // cycles on the PCI bus.
     fbl::AutoLock lock(&snapshot_regs_buffer_lock);
 
-    auto  regs_ptr = reinterpret_cast<hda_registers_t*>(snapshot_regs_buffer.snapshot);
+    auto regs_ptr = reinterpret_cast<hda_registers_t*>(snapshot_regs_buffer.snapshot);
     auto& out_regs = *regs_ptr;
 
     static_assert(sizeof(snapshot_regs_buffer.snapshot) == sizeof(hda_registers_t),

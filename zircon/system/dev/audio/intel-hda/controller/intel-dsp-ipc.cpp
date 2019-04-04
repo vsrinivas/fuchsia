@@ -7,15 +7,13 @@
 #include <fbl/auto_lock.h>
 #include <string.h>
 
-#include <pretty/hexdump.h>
-
-#include "intel-audio-dsp.h"
 #include "intel-dsp-ipc.h"
+#include "intel-dsp.h"
 
 namespace audio {
 namespace intel_hda {
 
-IntelDspIpc::IntelDspIpc(IntelAudioDsp& dsp) : dsp_(dsp) {
+IntelDspIpc::IntelDspIpc(IntelDsp* dsp) : dsp_(dsp) {
     snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP IPC (unknown BDF)");
 }
 
@@ -34,9 +32,9 @@ void IntelDspIpc::Shutdown() {
 void IntelDspIpc::SendIpc(const Txn& txn) {
     // Copy tx data to outbox
     if (txn.tx_size > 0) {
-        dsp_.IpcMailboxWrite(txn.tx_data, txn.tx_size);
+        dsp_->IpcMailboxWrite(txn.tx_data, txn.tx_size);
     }
-    dsp_.SendIpcMessage(txn.request);
+    dsp_->SendIpcMessage(txn.request);
 }
 
 zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
@@ -52,7 +50,7 @@ zx_status_t IntelDspIpc::SendIpcWait(Txn* txn) {
     // Wait for completion
     zx_status_t res = sync_completion_wait(&txn->completion, ZX_MSEC(300));
     if (res != ZX_OK) {
-        dsp_.DeviceShutdown();
+        dsp_->DeviceShutdown();
     }
     // TODO(yky): ZX-2261: Figure out why this is needed and eliminate it.
     zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
@@ -202,7 +200,7 @@ void IntelDspIpc::ProcessIpcNotification(const IpcMessage& notif) {
         break;
     case NotificationType::RESOURCE_EVENT: {
         ResourceEventData data;
-        dsp_.IpcMailboxRead(&data, sizeof(data));
+        dsp_->IpcMailboxRead(&data, sizeof(data));
 #if 0
         LOG(INFO, "resource event type %u id %u event %u\n",
                   data.resource_type, data.resource_id, data.event_type);
@@ -275,7 +273,7 @@ void IntelDspIpc::ProcessLargeConfigGetReply(Txn* txn) {
         ZX_DEBUG_ASSERT(size > 0);
         ZX_DEBUG_ASSERT(size <= txn->rx_size);
 
-        dsp_.IpcMailboxRead(txn->rx_data, size);
+        dsp_->IpcMailboxRead(txn->rx_data, size);
         txn->rx_actual = size;
     } else {
         txn->rx_actual = 0;

@@ -7,7 +7,6 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/protocol/intelhda/codec.h>
-#include <ddk/protocol/intelhda/dsp.h>
 #include <fbl/mutex.h>
 #include <lib/fzl/vmo-mapper.h>
 
@@ -27,15 +26,25 @@
 #include "intel-dsp-ipc.h"
 #include "intel-dsp-stream.h"
 #include "intel-dsp-topology.h"
+#include "intel-hda-stream.h"
 
 namespace audio {
 namespace intel_hda {
 
-class IntelAudioDsp : public codecs::IntelHDACodecDriverBase {
-public:
-    static fbl::RefPtr<IntelAudioDsp> Create();
+class IntelHDAController;
 
-    const char*  log_prefix() const { return log_prefix_; }
+class IntelDsp : public codecs::IntelHDACodecDriverBase {
+public:
+    IntelDsp(IntelHDAController* controller, hda_pp_registers_t* pp_regs,
+             const fbl::RefPtr<RefCountedBti>& pci_bti);
+    ~IntelDsp();
+
+    zx_status_t Init(zx_device_t* dsp_dev);
+
+    const char* log_prefix() const { return log_prefix_; }
+
+    // Interrupt handler.
+    void ProcessIrq();
 
     // Mailbox constants
     static constexpr size_t MAILBOX_SIZE = 0x1000;
@@ -56,21 +65,15 @@ public:
     zx_status_t StartPipeline(const DspPipeline& pipeline);
     zx_status_t PausePipeline(const DspPipeline& pipeline);
 
-    zx_status_t DriverBind(zx_device_t* hda_dev) __WARN_UNUSED_RESULT;
     void        DeviceShutdown();
-
     zx_status_t Suspend(uint32_t flags) override final;
 
+    // ZX_PROTOCOL_IHDA_CODEC Interface
+    zx_status_t CodecGetDispatcherChannel(zx_handle_t* channel_out);
+
 private:
-    friend class fbl::RefPtr<IntelAudioDsp>;
-
-    IntelAudioDsp();
-    ~IntelAudioDsp() { }
-
     // Accessor for our mapped registers
-    adsp_registers_t* regs() const {
-        return reinterpret_cast<adsp_registers_t*>(mapped_regs_.start());
-    }
+    adsp_registers_t*    regs() const;
     adsp_fw_registers_t* fw_regs() const;
 
     zx_status_t SetupDspDevice();
@@ -108,8 +111,22 @@ private:
 
     void EnableInterrupts();
 
-    // Interrupt handler.
-    void ProcessIrq();
+    zx_status_t GetMmio(zx_handle_t* out_vmo, size_t* out_size);
+    zx_status_t GetBti(zx_handle_t* out_handle);
+    void        Enable();
+    void        Disable();
+    void        IrqEnable();
+    void        IrqDisable();
+
+    // Thunks for interacting with clients and codec drivers.
+    zx_status_t ProcessClientRequest(dispatcher::Channel* channel, bool is_driver_channel);
+    void        ProcessClientDeactivate(const dispatcher::Channel* channel);
+    zx_status_t ProcessRequestStream(dispatcher::Channel* channel,
+                                     const ihda_proto::RequestStreamReq& req);
+    zx_status_t ProcessReleaseStream(dispatcher::Channel* channel,
+                                     const ihda_proto::ReleaseStreamReq& req);
+    zx_status_t ProcessSetStreamFmt(dispatcher::Channel* channel,
+                                    const ihda_proto::SetStreamFmtReq& req);
 
     zx_status_t CreateAndStartStreams();
 
@@ -131,8 +148,14 @@ private:
     };
     State state_ = State::START;
 
+    // Pointer to our owner.
+    IntelHDAController* controller_ = nullptr;
+
+    // Pipe processintg registers
+    hda_pp_registers_t* pp_regs_ = nullptr;
+
     // IPC
-    IntelDspIpc ipc_;
+    IntelDspIpc ipc_{this};
 
     // IPC Mailboxes
     class Mailbox {
@@ -154,6 +177,7 @@ private:
             ZX_DEBUG_ASSERT(size <= size_);
             memcpy(data, base_, size);
         }
+
     private:
         void*  base_;
         size_t size_;
@@ -195,14 +219,22 @@ private:
     // Log prefix storage
     char log_prefix_[LOG_PREFIX_STORAGE] = { 0 };
 
-    // Upstream HDA DSP protocol interface.
-    ihda_dsp_protocol_t ihda_dsp_;
-
     // PCI registers
     fzl::VmoMapper mapped_regs_;
 
     // A reference to our controller's BTI. This is needed to load firmware to the DSP.
-    fbl::RefPtr<RefCountedBti> hda_bti_;
+    fbl::RefPtr<RefCountedBti> pci_bti_;
+
+    // Dispatcher framework state.
+    fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
+
+    // Driver connection state
+    fbl::Mutex codec_driver_channel_lock_;
+    fbl::RefPtr<dispatcher::Channel> codec_driver_channel_ TA_GUARDED(codec_driver_channel_lock_);
+
+    // Active DMA streams
+    fbl::Mutex active_streams_lock_;
+    IntelHDAStream::Tree active_streams_ TA_GUARDED(active_streams_lock_);
 };
 
 }  // namespace intel_hda

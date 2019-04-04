@@ -9,8 +9,9 @@
 
 #include <utility>
 
-#include "intel-audio-dsp.h"
 #include "intel-dsp-code-loader.h"
+#include "intel-dsp.h"
+#include "intel-hda-controller.h"
 
 namespace audio {
 namespace intel_hda {
@@ -43,30 +44,44 @@ struct skl_adspfw_ext_manifest_hdr_t {
     uint32_t entries;
 } __PACKED;
 
-fbl::RefPtr<IntelAudioDsp> IntelAudioDsp::Create() {
-    fbl::AllocChecker ac;
-    auto ret = fbl::AdoptRef(new (&ac) IntelAudioDsp());
-    if (!ac.check()) {
-        GLOBAL_LOG(ERROR, "Out of memory attempting to allocate IHDA DSP\n");
-        return nullptr;
+IntelDsp::IntelDsp(IntelHDAController* controller, hda_pp_registers_t* pp_regs,
+                   const fbl::RefPtr<RefCountedBti>& pci_bti)
+    : controller_(controller), pp_regs_(pp_regs), pci_bti_(pci_bti) {
+    for (auto& id : module_ids_) {
+        id = MODULE_ID_INVALID;
     }
-    return ret;
+    const auto& info = controller_->dev_info();
+    snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %02x:%02x.%01x",
+             info.bus_id, info.dev_id, info.func_id);
 }
 
-IntelAudioDsp::IntelAudioDsp()
-    : ipc_(*this) {
-    for (auto& id : module_ids_) { id = MODULE_ID_INVALID; }
-    snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP (unknown BDF)");
+IntelDsp::~IntelDsp() {
+    // Close all existing connections and synchronize with any client threads
+    // who are currently processing requests.
+    default_domain_->Deactivate();
+
+    // Give any active streams we had back to our controller.
+    IntelHDAStream::Tree streams;
+    {
+        fbl::AutoLock lock(&active_streams_lock_);
+        streams.swap(active_streams_);
+    }
+
+    while (!streams.is_empty()) {
+        controller_->ReturnStream(streams.pop_front());
+    }
 }
 
-adsp_fw_registers_t* IntelAudioDsp::fw_regs() const {
-    return reinterpret_cast<adsp_fw_registers_t*>(static_cast<uint8_t*>(mapped_regs_.start()) +
-                                                  SKL_ADSP_SRAM0_OFFSET);
-}
+zx_status_t IntelDsp::Init(zx_device_t* dsp_dev) {
+    default_domain_ = dispatcher::ExecutionDomain::Create();
+    if (!default_domain_) {
+        return ZX_ERR_NO_MEMORY;
+    }
 
-zx_status_t IntelAudioDsp::DriverBind(zx_device_t* hda_dev) {
-    // IntelHDACodecDriverBase initialization. Do first so the parent reference is set.
-    zx_status_t res = Bind(hda_dev, "intel-sst-dsp");
+    zx_status_t res = Bind(dsp_dev, "intel-sst-dsp");
+    if (res != ZX_OK) {
+        return res;
+    }
 
     res = SetupDspDevice();
     if (res != ZX_OK) {
@@ -78,12 +93,11 @@ zx_status_t IntelAudioDsp::DriverBind(zx_device_t* hda_dev) {
         return res;
     }
 
+    // Perform hardware initialization in a thread.
     state_ = State::INITIALIZING;
-
-    // Perform hardware initializastion in a thread.
     int c11_res = thrd_create(
             &init_thread_,
-            [](void* ctx) -> int { return static_cast<IntelAudioDsp*>(ctx)->InitThread(); },
+            [](void* ctx) { return static_cast<IntelDsp*>(ctx)->InitThread(); },
             this);
     if (c11_res < 0) {
         LOG(ERROR, "Failed to create init thread (res = %d)\n", c11_res);
@@ -94,27 +108,283 @@ zx_status_t IntelAudioDsp::DriverBind(zx_device_t* hda_dev) {
     return ZX_OK;
 }
 
-zx_status_t IntelAudioDsp::SetupDspDevice() {
-    zx_status_t res = device_get_protocol(codec_device(), ZX_PROTOCOL_IHDA_DSP,
-                                          reinterpret_cast<void*>(&ihda_dsp_));
+adsp_registers_t* IntelDsp::regs() const {
+    return reinterpret_cast<adsp_registers_t*>(mapped_regs_.start());
+}
+
+adsp_fw_registers_t* IntelDsp::fw_regs() const {
+    return reinterpret_cast<adsp_fw_registers_t*>(static_cast<uint8_t*>(mapped_regs_.start()) +
+                                                  SKL_ADSP_SRAM0_OFFSET);
+}
+
+zx_status_t IntelDsp::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out) {
+    if (!remote_endpoint_out)
+        return ZX_ERR_INVALID_ARGS;
+
+    dispatcher::Channel::ProcessHandler phandler(
+        [codec = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
+            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
+            return codec->ProcessClientRequest(channel, true);
+        });
+
+    dispatcher::Channel::ChannelClosedHandler chandler(
+        [codec = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
+            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
+            codec->ProcessClientDeactivate(channel);
+        });
+
+    // Enter the driver channel lock.  If we have already connected to a codec
+    // driver, simply fail the request.  Otherwise, attempt to build a driver channel
+    // and activate it.
+    fbl::AutoLock lock(&codec_driver_channel_lock_);
+
+    if (codec_driver_channel_ != nullptr)
+        return ZX_ERR_BAD_STATE;
+
+    zx::channel client_channel;
+    zx_status_t res;
+    res = CreateAndActivateChannel(default_domain_,
+                                   std::move(phandler),
+                                   std::move(chandler),
+                                   &codec_driver_channel_,
+                                   &client_channel);
+    if (res == ZX_OK) {
+        // If things went well, release the reference to the remote endpoint
+        // from the zx::channel instance into the unmanaged world of DDK
+        // protocols.
+        *remote_endpoint_out = client_channel.release();
+    }
+
+    return res;
+}
+
+#define PROCESS_CMD(_req_ack, _req_driver_chan, _ioctl, _payload, _handler) \
+    case _ioctl:                                                            \
+        if (req_size != sizeof(req._payload)) {                             \
+            LOG(TRACE, "Bad " #_payload " request length (%u != %zu)\n",    \
+                req_size, sizeof(req._payload));                            \
+            return ZX_ERR_INVALID_ARGS;                                     \
+        }                                                                   \
+        if (_req_ack && (req.hdr.cmd & IHDA_NOACK_FLAG)) {                  \
+            LOG(TRACE, "Cmd " #_payload                                     \
+                       " requires acknowledgement, but the "                \
+                       "NOACK flag was set!\n");                            \
+            return ZX_ERR_INVALID_ARGS;                                     \
+        }                                                                   \
+        if (_req_driver_chan && !is_driver_channel) {                       \
+            LOG(TRACE, "Cmd " #_payload                                     \
+                       " requires a privileged driver channel.\n");         \
+            return ZX_ERR_ACCESS_DENIED;                                    \
+        }                                                                   \
+        return _handler(channel, req._payload)
+zx_status_t IntelDsp::ProcessClientRequest(dispatcher::Channel* channel,
+                                           bool is_driver_channel) {
+    zx_status_t res;
+    uint32_t req_size;
+    union {
+        ihda_proto::CmdHdr hdr;
+        ihda_proto::RequestStreamReq request_stream;
+        ihda_proto::ReleaseStreamReq release_stream;
+        ihda_proto::SetStreamFmtReq set_stream_fmt;
+    } req;
+    // TODO(johngro) : How large is too large?
+    static_assert(sizeof(req) <= 256, "Request buffer is too large to hold on the stack!");
+
+    // Read the client request.
+    ZX_DEBUG_ASSERT(channel != nullptr);
+    res = channel->Read(&req, sizeof(req), &req_size);
     if (res != ZX_OK) {
-        LOG(ERROR, "IHDA DSP device does not support IHDA DSP protocol (err %d)\n", res);
+        LOG(TRACE, "Failed to read client request (res %d)\n", res);
         return res;
     }
 
-    zx_pcie_device_info_t hda_dev_info;
-    ihda_dsp_get_dev_info(&ihda_dsp_, &hda_dev_info);
+    // Sanity checks.
+    if (req_size < sizeof(req.hdr)) {
+        LOG(TRACE, "Client request too small to contain header (%u < %zu)\n",
+            req_size, sizeof(req.hdr));
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    auto cmd_id = static_cast<ihda_cmd_t>(req.hdr.cmd & ~IHDA_NOACK_FLAG);
+    if (req.hdr.transaction_id == IHDA_INVALID_TRANSACTION_ID) {
+        LOG(TRACE, "Invalid transaction ID in client request 0x%04x\n", cmd_id);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Dispatch
+    LOG(SPEW, "Client Request (cmd 0x%04x tid %u) len %u\n",
+        req.hdr.cmd,
+        req.hdr.transaction_id,
+        req_size);
+
+    switch (cmd_id) {
+        PROCESS_CMD(true, true, IHDA_CODEC_REQUEST_STREAM, request_stream, ProcessRequestStream);
+        PROCESS_CMD(false, true, IHDA_CODEC_RELEASE_STREAM, release_stream, ProcessReleaseStream);
+        PROCESS_CMD(false, true, IHDA_CODEC_SET_STREAM_FORMAT, set_stream_fmt, ProcessSetStreamFmt);
+    default:
+        LOG(TRACE, "Unrecognized command ID 0x%04x\n", req.hdr.cmd);
+        return ZX_ERR_INVALID_ARGS;
+    }
+}
+#undef PROCESS_CMD
+
+void IntelDsp::ProcessClientDeactivate(const dispatcher::Channel* channel) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
+
+    // This should be the driver channel (client channels created with IOCTL do
+    // not register a deactivate handler).  Start by releasing the internal
+    // channel reference from within the codec_driver_channel_lock.
+    {
+        fbl::AutoLock lock(&codec_driver_channel_lock_);
+        ZX_DEBUG_ASSERT(channel == codec_driver_channel_.get());
+        codec_driver_channel_.reset();
+    }
+
+    // Return any DMA streams the codec driver had owned back to the controller.
+    IntelHDAStream::Tree tmp;
+    {
+        fbl::AutoLock lock(&active_streams_lock_);
+        tmp = std::move(active_streams_);
+    }
+
+    while (!tmp.is_empty()) {
+        auto stream = tmp.pop_front();
+        stream->Deactivate();
+        controller_->ReturnStream(std::move(stream));
+    }
+}
+
+zx_status_t IntelDsp::ProcessRequestStream(dispatcher::Channel* channel,
+                                           const ihda_proto::RequestStreamReq& req) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
+
+    ihda_proto::RequestStreamResp resp;
+    resp.hdr = req.hdr;
+
+    // Attempt to get a stream of the proper type.
+    auto type = req.input
+                    ? IntelHDAStream::Type::INPUT
+                    : IntelHDAStream::Type::OUTPUT;
+    auto stream = controller_->AllocateStream(type);
+
+    if (stream != nullptr) {
+        LOG(TRACE, "Decouple stream #%u\n", stream->id());
+        // Decouple stream
+        REG_SET_BITS<uint32_t>(&pp_regs_->ppctl, (1 << stream->dma_id()));
+
+        // Success, send its ID and its tag back to the codec and add it to the
+        // set of active streams owned by this codec.
+        resp.result = ZX_OK;
+        resp.stream_id = stream->id();
+        resp.stream_tag = stream->tag();
+
+        fbl::AutoLock lock(&active_streams_lock_);
+        active_streams_.insert(std::move(stream));
+    } else {
+        // Failure; tell the codec that we are out of streams.
+        resp.result = ZX_ERR_NO_MEMORY;
+        resp.stream_id = 0;
+        resp.stream_tag = 0;
+    }
+
+    return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t IntelDsp::ProcessReleaseStream(dispatcher::Channel* channel,
+                                           const ihda_proto::ReleaseStreamReq& req) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
+
+    // Remove the stream from the active set.
+    fbl::RefPtr<IntelHDAStream> stream;
+    {
+        fbl::AutoLock lock(&active_streams_lock_);
+        stream = active_streams_.erase(req.stream_id);
+    }
+
+    // If the stream was not active, our codec driver has some sort of internal
+    // inconsistency.  Hang up the phone on it.
+    if (stream == nullptr)
+        return ZX_ERR_BAD_STATE;
+
+    LOG(TRACE, "Couple stream #%u\n", stream->id());
+
+    // Couple stream
+    REG_CLR_BITS<uint32_t>(&pp_regs_->ppctl, (1 << stream->dma_id()));
+
+    // Give the stream back to the controller and (if an ack was requested) tell
+    // our codec driver that things went well.
+    stream->Deactivate();
+    controller_->ReturnStream(std::move(stream));
+
+    if (req.hdr.cmd & IHDA_NOACK_FLAG)
+        return ZX_OK;
+
+    ihda_proto::RequestStreamResp resp;
+    resp.hdr = req.hdr;
+    return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t IntelDsp::ProcessSetStreamFmt(dispatcher::Channel* channel,
+                                          const ihda_proto::SetStreamFmtReq& req) {
+    ZX_DEBUG_ASSERT(channel != nullptr);
+
+    // Sanity check the requested format.
+    if (!StreamFormat(req.format).SanityCheck()) {
+        LOG(TRACE, "Invalid encoded stream format 0x%04hx!\n", req.format);
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    // Grab a reference to the stream from the active set.
+    fbl::RefPtr<IntelHDAStream> stream;
+    {
+        fbl::AutoLock lock(&active_streams_lock_);
+        auto iter = active_streams_.find(req.stream_id);
+        if (iter.IsValid())
+            stream = iter.CopyPointer();
+    }
+
+    // If the stream was not active, our codec driver has some sort of internal
+    // inconsistency.  Hang up the phone on it.
+    if (stream == nullptr)
+        return ZX_ERR_BAD_STATE;
+
+    // Set the stream format and assign the client channel to the stream.  If
+    // this stream is already bound to a client, this will cause that connection
+    // to be closed.
+    zx::channel client_channel;
+    zx_status_t res = stream->SetStreamFormat(default_domain_,
+                                              req.format,
+                                              &client_channel);
+    if (res != ZX_OK) {
+        LOG(TRACE, "Failed to set stream format 0x%04hx for stream %hu (res %d)\n",
+            req.format, req.stream_id, res);
+        return res;
+    }
+
+    // Send the channel back to the codec driver.
+    ZX_DEBUG_ASSERT(client_channel.is_valid());
+    ihda_proto::SetStreamFmtResp resp;
+    resp.hdr = req.hdr;
+    res = channel->Write(&resp, sizeof(resp), std::move(client_channel));
+
+    if (res != ZX_OK)
+        LOG(TRACE, "Failed to send stream channel back to codec driver (res %d)\n", res);
+
+    return res;
+}
+
+zx_status_t IntelDsp::SetupDspDevice() {
+    const zx_pcie_device_info_t& hda_dev_info = controller_->dev_info();
     snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %02x:%02x.%01x",
              hda_dev_info.bus_id,
              hda_dev_info.dev_id,
              hda_dev_info.func_id);
-
     ipc_.SetLogPrefix(log_prefix_);
 
     // Fetch the bar which holds the Audio DSP registers.
     zx::vmo bar_vmo;
     size_t bar_size;
-    res = ihda_dsp_get_mmio(&ihda_dsp_, bar_vmo.reset_and_get_address(), &bar_size);
+    zx_status_t res = GetMmio(bar_vmo.reset_and_get_address(), &bar_size);
     if (res != ZX_OK) {
         LOG(ERROR, "Failed to fetch DSP register VMO (err %u)\n", res);
         return res;
@@ -152,41 +422,27 @@ zx_status_t IntelAudioDsp::SetupDspDevice() {
 
     // Get bus transaction initiator
     zx::bti bti;
-    res = ihda_dsp_get_bti(&ihda_dsp_, bti.reset_and_get_address());
+    res = GetBti(bti.reset_and_get_address());
     if (res != ZX_OK) {
         LOG(ERROR, "Failed to get BTI handle for IHDA DSP (res %d)\n", res);
         return res;
     }
 
-    hda_bti_ = RefCountedBti::Create(std::move(bti));
-    if (hda_bti_ == nullptr) {
+    pci_bti_ = RefCountedBti::Create(std::move(bti));
+    if (pci_bti_ == nullptr) {
         LOG(ERROR, "Out of memory while attempting to allocate BTI wrapper for IHDA DSP\n");
         return ZX_ERR_NO_MEMORY;
     }
 
-    // Set IRQ handler and enable HDA interrupt.
-    // Interrupts are still masked at the DSP level.
-
-    ihda_dsp_irq_t callback = {
-        [](void* cookie) {
-            auto thiz = static_cast<IntelAudioDsp*>(cookie);
-            thiz->ProcessIrq();
-        },
-        this,
-    };
-    res = ihda_dsp_irq_enable(&ihda_dsp_, &callback);
-    if (res != ZX_OK) {
-        LOG(ERROR, "Failed to set DSP interrupt callback (res %d)\n", res);
-        return res;
-    }
-
+    // Enable HDA interrupt. Interrupts are still masked at the DSP level.
+    IrqEnable();
     return ZX_OK;
 }
 
-zx_status_t IntelAudioDsp::ParseNhlt() {
+zx_status_t IntelDsp::ParseNhlt() {
     size_t size = 0;
     zx_status_t res = device_get_metadata(codec_device(),
-                                          *reinterpret_cast<const uint32_t*>(MD_KEY_NHLT),
+                                          *reinterpret_cast<const uint32_t*>(ACPI_NHLT_SIGNATURE),
                                           nhlt_buf_, sizeof(nhlt_buf_), &size);
     if (res != ZX_OK) {
         LOG(ERROR, "Failed to fetch NHLT (res %d)\n", res);
@@ -284,16 +540,15 @@ zx_status_t IntelAudioDsp::ParseNhlt() {
     return ZX_OK;
 }
 
-void IntelAudioDsp::DeviceShutdown() {
+void IntelDsp::DeviceShutdown() {
     if (state_ == State::INITIALIZING) {
         thrd_join(init_thread_, NULL);
     }
 
     // Order is important below.
     // Disable Audio DSP and interrupt
-    ihda_dsp_irq_disable(&ihda_dsp_);
-    ihda_dsp_disable(&ihda_dsp_);
-
+    IrqDisable();
+    Disable();
 
     // Reset and power down the DSP.
     ResetCore(ADSP_REG_ADSPCS_CORE0_MASK);
@@ -304,7 +559,7 @@ void IntelAudioDsp::DeviceShutdown() {
     state_ = State::SHUT_DOWN;
 }
 
-zx_status_t IntelAudioDsp::Suspend(uint32_t flags) {
+zx_status_t IntelDsp::Suspend(uint32_t flags) {
     switch (flags & DEVICE_SUSPEND_REASON_MASK) {
     case DEVICE_SUSPEND_FLAG_POWEROFF:
         DeviceShutdown();
@@ -314,18 +569,17 @@ zx_status_t IntelAudioDsp::Suspend(uint32_t flags) {
     }
 }
 
-int IntelAudioDsp::InitThread() {
-    zx_status_t st = ZX_OK;
+int IntelDsp::InitThread() {
     auto cleanup = fbl::MakeAutoCall([this]() {
         DeviceShutdown();
     });
 
     // Enable Audio DSP
-    ihda_dsp_enable(&ihda_dsp_);
+    Enable();
 
     // The HW loads the DSP base firmware from ROM during the initialization,
     // when the Tensilica Core is out of reset, but halted.
-    st = Boot();
+    zx_status_t st = Boot();
     if (st != ZX_OK) {
         LOG(ERROR, "Error in DSP boot (err %d)\n", st);
         return -1;
@@ -379,7 +633,7 @@ int IntelAudioDsp::InitThread() {
     return 0;
 }
 
-zx_status_t IntelAudioDsp::Boot() {
+zx_status_t IntelDsp::Boot() {
     zx_status_t st = ZX_OK;
 
     // Put core into reset
@@ -418,7 +672,7 @@ zx_status_t IntelAudioDsp::Boot() {
     return ZX_OK;
 }
 
-zx_status_t IntelAudioDsp::GetModulesInfo() {
+zx_status_t IntelDsp::GetModulesInfo() {
     uint8_t data[MAILBOX_SIZE];
     IntelDspIpc::Txn txn(nullptr, 0, data, sizeof(data));
     ipc_.LargeConfigGet(&txn, 0, 0, to_underlying(BaseFWParamType::MODULES_INFO), sizeof(data));
@@ -451,11 +705,10 @@ zx_status_t IntelAudioDsp::GetModulesInfo() {
         }
     }
 
-
     return txn.success() ? ZX_OK : ZX_ERR_INTERNAL;
 }
 
-zx_status_t IntelAudioDsp::StripFirmware(const zx::vmo& fw, void* out, size_t* size_inout) {
+zx_status_t IntelDsp::StripFirmware(const zx::vmo& fw, void* out, size_t* size_inout) {
     ZX_DEBUG_ASSERT(out != nullptr);
     ZX_DEBUG_ASSERT(size_inout != nullptr);
 
@@ -483,8 +736,8 @@ zx_status_t IntelAudioDsp::StripFirmware(const zx::vmo& fw, void* out, size_t* s
     return fw.read(out, offset, bytes);
 }
 
-zx_status_t IntelAudioDsp::LoadFirmware() {
-    IntelDspCodeLoader loader(&regs()->cldma, hda_bti_);
+zx_status_t IntelDsp::LoadFirmware() {
+    IntelDspCodeLoader loader(&regs()->cldma, pci_bti_);
     zx_status_t st = loader.Initialize();
     if (st != ZX_OK) {
         LOG(ERROR, "Error initializing firmware code loader (err %d)\n", st);
@@ -533,7 +786,7 @@ zx_status_t IntelAudioDsp::LoadFirmware() {
     // should only need read access to the firmware.
     constexpr uint32_t DSP_MAP_FLAGS = ZX_BTI_PERM_READ;
     fzl::PinnedVmo pinned_fw;
-    st = pinned_fw.Pin(stripped_vmo, hda_bti_->initiator(), DSP_MAP_FLAGS);
+    st = pinned_fw.Pin(stripped_vmo, pci_bti_->initiator(), DSP_MAP_FLAGS);
     if (st != ZX_OK) {
         LOG(ERROR, "Failed to pin pages for DSP firmware (res %d)\n", st);
         return st;
@@ -579,7 +832,7 @@ zx_status_t IntelAudioDsp::LoadFirmware() {
     return ZX_OK;
 }
 
-zx_status_t IntelAudioDsp::RunPipeline(uint8_t pipeline_id) {
+zx_status_t IntelDsp::RunPipeline(uint8_t pipeline_id) {
     // Pipeline must be paused before starting
     zx_status_t st = ipc_.SetPipelineState(pipeline_id, PipelineState::PAUSED, true);
     if (st != ZX_OK) {
@@ -588,7 +841,7 @@ zx_status_t IntelAudioDsp::RunPipeline(uint8_t pipeline_id) {
     return ipc_.SetPipelineState(pipeline_id, PipelineState::RUNNING, true);
 }
 
-bool IntelAudioDsp::IsCoreEnabled(uint8_t core_mask) {
+bool IntelDsp::IsCoreEnabled(uint8_t core_mask) {
     uint32_t val = REG_RD(&regs()->adspcs);
     bool enabled = (val & ADSP_REG_ADSPCS_CPA(core_mask)) &&
                    (val & ADSP_REG_ADSPCS_SPA(core_mask)) &&
@@ -597,7 +850,7 @@ bool IntelAudioDsp::IsCoreEnabled(uint8_t core_mask) {
     return enabled;
 }
 
-zx_status_t IntelAudioDsp::ResetCore(uint8_t core_mask) {
+zx_status_t IntelDsp::ResetCore(uint8_t core_mask) {
     // Stall cores
     REG_SET_BITS(&regs()->adspcs, ADSP_REG_ADSPCS_CSTALL(core_mask));
 
@@ -613,7 +866,7 @@ zx_status_t IntelAudioDsp::ResetCore(uint8_t core_mask) {
                          });
 }
 
-zx_status_t IntelAudioDsp::UnResetCore(uint8_t core_mask) {
+zx_status_t IntelDsp::UnResetCore(uint8_t core_mask) {
     REG_CLR_BITS(&regs()->adspcs, ADSP_REG_ADSPCS_CRST(core_mask));
     return WaitCondition(INTEL_ADSP_TIMEOUT_NSEC,
                          INTEL_ADSP_POLL_NSEC,
@@ -623,7 +876,7 @@ zx_status_t IntelAudioDsp::UnResetCore(uint8_t core_mask) {
                          });
 }
 
-zx_status_t IntelAudioDsp::PowerDownCore(uint8_t core_mask) {
+zx_status_t IntelDsp::PowerDownCore(uint8_t core_mask) {
     REG_CLR_BITS(&regs()->adspcs, ADSP_REG_ADSPCS_SPA(core_mask));
     return WaitCondition(INTEL_ADSP_TIMEOUT_NSEC,
                          INTEL_ADSP_POLL_NSEC,
@@ -633,7 +886,7 @@ zx_status_t IntelAudioDsp::PowerDownCore(uint8_t core_mask) {
                          });
 }
 
-zx_status_t IntelAudioDsp::PowerUpCore(uint8_t core_mask) {
+zx_status_t IntelDsp::PowerUpCore(uint8_t core_mask) {
     REG_SET_BITS(&regs()->adspcs, ADSP_REG_ADSPCS_SPA(core_mask));
     return WaitCondition(INTEL_ADSP_TIMEOUT_NSEC,
                          INTEL_ADSP_POLL_NSEC,
@@ -642,16 +895,20 @@ zx_status_t IntelAudioDsp::PowerUpCore(uint8_t core_mask) {
                          });
 }
 
-void IntelAudioDsp::RunCore(uint8_t core_mask) {
+void IntelDsp::RunCore(uint8_t core_mask) {
     REG_CLR_BITS(&regs()->adspcs, ADSP_REG_ADSPCS_CSTALL(core_mask));
 }
 
-void IntelAudioDsp::EnableInterrupts() {
+void IntelDsp::EnableInterrupts() {
     REG_SET_BITS(&regs()->adspic, ADSP_REG_ADSPIC_CLDMA | ADSP_REG_ADSPIC_IPC);
     REG_SET_BITS(&regs()->hipcctl, ADSP_REG_HIPCCTL_IPCTDIE | ADSP_REG_HIPCCTL_IPCTBIE);
 }
 
-void IntelAudioDsp::ProcessIrq() {
+void IntelDsp::ProcessIrq() {
+    uint32_t ppsts = REG_RD(&pp_regs_->ppsts);
+    if (!(ppsts & HDA_PPSTS_PIS)) {
+        return;
+    }
     uint32_t adspis = REG_RD(&regs()->adspis);
     if (adspis & ADSP_REG_ADSPIC_CLDMA) {
         LOG(TRACE, "Got CLDMA irq\n");
@@ -680,27 +937,60 @@ void IntelAudioDsp::ProcessIrq() {
     }
 }
 
-}  // namespace intel_hda
-}  // namespace audio
+zx_status_t IntelDsp::GetMmio(zx_handle_t* out_vmo, size_t* out_size) {
+    // Fetch the BAR which the Audio DSP registers (BAR 4), then sanity check the type
+    // and size.
+    zx_pci_bar_t bar_info;
+    zx_status_t res = pci_get_bar(controller_->pci(), 4u, &bar_info);
+    if (res != ZX_OK) {
+        LOG(ERROR, "Error attempting to fetch registers from PCI (res %d)\n", res);
+        return res;
+    }
 
-extern "C" {
-zx_status_t ihda_dsp_init_hook(void** out_ctx) {
+    if (bar_info.type != ZX_PCI_BAR_TYPE_MMIO) {
+        LOG(ERROR, "Bad register window type (expected %u got %u)\n",
+            ZX_PCI_BAR_TYPE_MMIO, bar_info.type);
+        return ZX_ERR_INTERNAL;
+    }
+
+    *out_vmo = bar_info.handle;
+    *out_size = bar_info.size;
     return ZX_OK;
 }
 
-zx_status_t ihda_dsp_bind_hook(void* ctx, zx_device_t* hda_dev) {
-    auto dev = ::audio::intel_hda::IntelAudioDsp::Create();
-    if (!dev) {
-        return ZX_ERR_NO_MEMORY;
+zx_status_t IntelDsp::GetBti(zx_handle_t* out_handle) {
+    ZX_DEBUG_ASSERT(pci_bti_ != nullptr);
+    zx::bti bti;
+    zx_status_t res = pci_bti_->initiator().duplicate(ZX_RIGHT_SAME_RIGHTS, &bti);
+    if (res != ZX_OK) {
+        LOG(ERROR, "Error duplicating BTI for DSP (res %d)\n", res);
+        return res;
     }
-    zx_status_t st = dev->DriverBind(hda_dev);
-    if (st == ZX_OK) {
-        // devmgr is now in charge of the memory for dev
-        void* ptr __UNUSED = dev.leak_ref();
-    }
-    return st;
+    *out_handle = bti.release();
+    return ZX_OK;
 }
 
-void ihda_dsp_release_hook(void* ctx) {
+void IntelDsp::Enable() {
+    // Note: The GPROCEN bit does not really enable or disable the Audio DSP
+    // operation, but mainly to work around some legacy Intel HD Audio driver
+    // software such that if GPROCEN = 0, ADSPxBA (BAR2) is mapped to the Intel
+    // HD Audio memory mapped configuration registers, for compliancy with some
+    // legacy SW implementation. If GPROCEN = 1, only then ADSPxBA (BAR2) is
+    // mapped to the actual Audio DSP memory mapped configuration registers.
+    REG_SET_BITS<uint32_t>(&pp_regs_->ppctl, HDA_PPCTL_GPROCEN);
 }
-}  // extern "C"
+
+void IntelDsp::Disable() {
+    REG_WR(&pp_regs_->ppctl, 0u);
+}
+
+void IntelDsp::IrqEnable() {
+    REG_SET_BITS<uint32_t>(&pp_regs_->ppctl, HDA_PPCTL_PIE);
+}
+
+void IntelDsp::IrqDisable() {
+    REG_CLR_BITS<uint32_t>(&pp_regs_->ppctl, HDA_PPCTL_PIE);
+}
+
+}  // namespace intel_hda
+}  // namespace audio

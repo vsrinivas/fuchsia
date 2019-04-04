@@ -15,11 +15,11 @@
 namespace audio {
 namespace intel_hda {
 
-class IntelAudioDsp;
+class IntelDsp;
 
 class IntelDspIpc {
 public:
-    IntelDspIpc(IntelAudioDsp& dsp);
+    IntelDspIpc(IntelDsp* dsp);
 
     const char*  log_prefix() const { return log_prefix_; }
 
@@ -95,7 +95,7 @@ private:
     fbl::DoublyLinkedList<Txn*> ipc_queue_ TA_GUARDED(ipc_lock_);
 
     // A reference to the owning DSP
-    IntelAudioDsp& dsp_;
+    IntelDsp* dsp_;
 
     // Used to wait for firmware ready
     sync_completion_t fw_ready_completion_;

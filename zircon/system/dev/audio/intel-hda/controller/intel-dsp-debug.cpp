@@ -1,11 +1,11 @@
 // found in the LICENSE file.
 
-#include "intel-audio-dsp.h"
+#include "intel-dsp.h"
 
 namespace audio {
 namespace intel_hda {
 
-void IntelAudioDsp::DumpRegs() {
+void IntelDsp::DumpRegs() {
     LOG(INFO, "ADSP registers\n");
     LOG(INFO, "ADSPCS   0x%08x\n", REG_RD(&regs()->adspcs));
     LOG(INFO, "ADSPIC   0x%08x\n", REG_RD(&regs()->adspic));
@@ -36,7 +36,7 @@ void IntelAudioDsp::DumpRegs() {
     LOG(INFO, "ROM_INFO      0x%08x\n", REG_RD(&fw_regs()->rom_info));
 }
 
-void IntelAudioDsp::DumpNhlt(const nhlt_table_t* table, size_t length) {
+void IntelDsp::DumpNhlt(const nhlt_table_t* table, size_t length) {
     if (length < sizeof(*table)) {
         LOG(ERROR, "NHLT too small (%zu bytes)\n", length);
         return;
@@ -82,7 +82,7 @@ void IntelAudioDsp::DumpNhlt(const nhlt_table_t* table, size_t length) {
     }
 }
 
-void IntelAudioDsp::DumpFirmwareConfig(const TLVHeader* config, size_t length) {
+void IntelDsp::DumpFirmwareConfig(const TLVHeader* config, size_t length) {
     LOG(INFO, "===== Firmware Config =====\n");
     size_t bytes = 0;
     while (bytes < length) {
@@ -221,7 +221,7 @@ void IntelAudioDsp::DumpFirmwareConfig(const TLVHeader* config, size_t length) {
     }
 }
 
-void IntelAudioDsp::DumpHardwareConfig(const TLVHeader* config, size_t length) {
+void IntelDsp::DumpHardwareConfig(const TLVHeader* config, size_t length) {
     LOG(INFO, "===== Hardware Config =====\n");
     size_t bytes = 0;
     while (bytes < length) {
@@ -301,7 +301,7 @@ void IntelAudioDsp::DumpHardwareConfig(const TLVHeader* config, size_t length) {
     }
 }
 
-void IntelAudioDsp::DumpModulesInfo(const ModuleEntry* info, uint32_t count) {
+void IntelDsp::DumpModulesInfo(const ModuleEntry* info, uint32_t count) {
     LOG(INFO, "num modules: %u\n", count);
     for (uint32_t i = 0; i < count; i++) {
         LOG(INFO, "[%02u]:\n", i);
@@ -324,14 +324,14 @@ void IntelAudioDsp::DumpModulesInfo(const ModuleEntry* info, uint32_t count) {
     }
 }
 
-void IntelAudioDsp::DumpPipelineListInfo(const PipelineListInfo* info) {
+void IntelDsp::DumpPipelineListInfo(const PipelineListInfo* info) {
     LOG(INFO, "num pipelines: %u\n", info->ppl_count);
     for (uint32_t i = 0; i < info->ppl_count; i++) {
         LOG(INFO, "[%02u]: id %u\n", i, info->ppl_id[i]);
     }
 }
 
-void IntelAudioDsp::DumpPipelineProps(const PipelineProps* props) {
+void IntelDsp::DumpPipelineProps(const PipelineProps* props) {
     LOG(INFO, "                   id: %u\n", props->id);
     LOG(INFO, "             priority: %u\n", props->priority);
     LOG(INFO, "                state: %u\n", props->state);

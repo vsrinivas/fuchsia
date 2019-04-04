@@ -69,7 +69,6 @@ sdk("ddk") {
     "//zircon/public/banjo/ddk-protocol-i2cimpl:ddk-protocol-i2cimpl_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-intelgpucore:ddk-protocol-intelgpucore_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-intelhda-codec:ddk-protocol-intelhda-codec_sdk($banjo_toolchain)",
-    "//zircon/public/banjo/ddk-protocol-intelhda-dsp:ddk-protocol-intelhda-dsp_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-iommu:ddk-protocol-iommu_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-mailbox:ddk-protocol-mailbox_sdk($banjo_toolchain)",
     "//zircon/public/banjo/ddk-protocol-mipicsi:ddk-protocol-mipicsi_sdk($banjo_toolchain)",

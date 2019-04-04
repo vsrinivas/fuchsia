@@ -63,7 +63,6 @@ driver("platform-bus-x86") {
   deps = [
     "$zx/system/banjo/ddk-protocol-acpi",
     "$zx/system/banjo/ddk-protocol-hidbus",
-    "$zx/system/banjo/ddk-protocol-intelhda-dsp",
     "$zx/system/banjo/ddk-protocol-pciroot",
     "$zx/system/banjo/ddk-protocol-platform-bus",
     "$zx/system/banjo/ddk-protocol-platform-device",

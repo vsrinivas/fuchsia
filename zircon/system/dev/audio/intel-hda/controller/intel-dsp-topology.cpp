@@ -4,8 +4,8 @@
 
 #include <zircon/device/audio.h>
 
-#include "intel-audio-dsp.h"
 #include "intel-dsp-topology.h"
+#include "intel-dsp.h"
 
 namespace audio {
 namespace intel_hda {
@@ -281,9 +281,9 @@ const BaseModuleCfg MIXER_CFG = {
 
 }  // anon namespace
 
-zx_status_t IntelAudioDsp::GetI2SBlob(uint8_t bus_id, uint8_t direction,
-                                      const AudioDataFormat& format,
-                                      const void** out_blob, size_t* out_size) {
+zx_status_t IntelDsp::GetI2SBlob(uint8_t bus_id, uint8_t direction,
+                                 const AudioDataFormat& format,
+                                 const void** out_blob, size_t* out_size) {
     zx_status_t st = ZX_ERR_NOT_FOUND;
     for (const auto& cfg : i2s_configs_) {
         if (!cfg.valid) {
@@ -313,8 +313,8 @@ zx_status_t IntelAudioDsp::GetI2SBlob(uint8_t bus_id, uint8_t direction,
     return st;
 }
 
-zx_status_t IntelAudioDsp::CreateHostDmaModule(uint8_t instance_id, uint8_t pipeline_id,
-                                               const CopierCfg& cfg) {
+zx_status_t IntelDsp::CreateHostDmaModule(uint8_t instance_id, uint8_t pipeline_id,
+                                          const CopierCfg& cfg) {
     return ipc_.InitInstance(module_ids_[Module::COPIER],
                              instance_id,
                              ProcDomain::LOW_LATENCY,
@@ -324,9 +324,9 @@ zx_status_t IntelAudioDsp::CreateHostDmaModule(uint8_t instance_id, uint8_t pipe
                              &cfg);
 }
 
-zx_status_t IntelAudioDsp::CreateI2SModule(uint8_t instance_id, uint8_t pipeline_id,
-                                           uint8_t i2s_instance_id, uint8_t direction,
-                                           const CopierCfg& cfg) {
+zx_status_t IntelDsp::CreateI2SModule(uint8_t instance_id, uint8_t pipeline_id,
+                                      uint8_t i2s_instance_id, uint8_t direction,
+                                      const CopierCfg& cfg) {
     const void* blob;
     size_t blob_size;
     zx_status_t st = GetI2SBlob(i2s_instance_id, direction,
@@ -365,8 +365,8 @@ zx_status_t IntelAudioDsp::CreateI2SModule(uint8_t instance_id, uint8_t pipeline
                              cfg_buf.get());
 }
 
-zx_status_t IntelAudioDsp::CreateMixinModule(uint8_t instance_id, uint8_t pipeline_id,
-                                             const BaseModuleCfg& cfg) {
+zx_status_t IntelDsp::CreateMixinModule(uint8_t instance_id, uint8_t pipeline_id,
+                                        const BaseModuleCfg& cfg) {
     return ipc_.InitInstance(module_ids_[Module::MIXIN],
                              instance_id,
                              ProcDomain::LOW_LATENCY,
@@ -376,8 +376,8 @@ zx_status_t IntelAudioDsp::CreateMixinModule(uint8_t instance_id, uint8_t pipeli
                              &cfg);
 }
 
-zx_status_t IntelAudioDsp::CreateMixoutModule(uint8_t instance_id, uint8_t pipeline_id,
-                                              const BaseModuleCfg& cfg) {
+zx_status_t IntelDsp::CreateMixoutModule(uint8_t instance_id, uint8_t pipeline_id,
+                                         const BaseModuleCfg& cfg) {
     return ipc_.InitInstance(module_ids_[Module::MIXOUT],
                              instance_id,
                              ProcDomain::LOW_LATENCY,
@@ -387,7 +387,7 @@ zx_status_t IntelAudioDsp::CreateMixoutModule(uint8_t instance_id, uint8_t pipel
                              &cfg);
 }
 
-zx_status_t IntelAudioDsp::SetupPipelines() {
+zx_status_t IntelDsp::SetupPipelines() {
     ZX_DEBUG_ASSERT(module_ids_[Module::COPIER] != 0);
     ZX_DEBUG_ASSERT(module_ids_[Module::MIXIN] != 0);
     ZX_DEBUG_ASSERT(module_ids_[Module::MIXOUT] != 0);
@@ -493,7 +493,7 @@ zx_status_t IntelAudioDsp::SetupPipelines() {
     return ZX_OK;
 }
 
-zx_status_t IntelAudioDsp::StartPipeline(const DspPipeline& pipeline) {
+zx_status_t IntelDsp::StartPipeline(const DspPipeline& pipeline) {
     // Sink first and then source
     zx_status_t st = RunPipeline(pipeline.pl_sink);
     if (st != ZX_OK) {
@@ -503,7 +503,7 @@ zx_status_t IntelAudioDsp::StartPipeline(const DspPipeline& pipeline) {
     // TODO Error recovery
 }
 
-zx_status_t IntelAudioDsp::PausePipeline(const DspPipeline& pipeline) {
+zx_status_t IntelDsp::PausePipeline(const DspPipeline& pipeline) {
     zx_status_t st = ipc_.SetPipelineState(pipeline.pl_source, PipelineState::PAUSED, true);
     if (st != ZX_OK) {
         return st;
@@ -521,7 +521,7 @@ zx_status_t IntelAudioDsp::PausePipeline(const DspPipeline& pipeline) {
     // TODO Error recovery
 }
 
-zx_status_t IntelAudioDsp::CreateAndStartStreams() {
+zx_status_t IntelDsp::CreateAndStartStreams() {
     zx_status_t res = ZX_OK;
 
     // Create and publish the streams we will use.

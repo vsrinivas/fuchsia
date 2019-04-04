@@ -8,13 +8,11 @@
 
 #include <intel-hda/codec-utils/stream-base.h>
 
-#include "intel-dsp-topology.h"
 #include "debug-logging.h"
+#include "intel-dsp-topology.h"
 
 namespace audio {
 namespace intel_hda {
-
-class IntelAudioDsp;
 
 class IntelDspStream : public codecs::IntelHDAStreamBase {
 public:
