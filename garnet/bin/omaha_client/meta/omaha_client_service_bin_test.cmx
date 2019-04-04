@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/omaha_client_service_bin_test"
+    }
+}

@@ -1166,6 +1166,7 @@ group("sysmem_connector") {
 group("omaha_client") {
   testonly = true
   public_deps = [
+    "//garnet/bin/omaha_client:omaha_client_service_bin_tests",
     "//garnet/lib/rust/omaha_client:omaha_client_lib_tests",
     "//garnet/packages/prod:omaha_client",
   ]

@@ -9,6 +9,8 @@ use hyper::{Body, Request};
 use log::info;
 use omaha_client::http_request::{fuchsia_hyper::FuchsiaHyperHttpRequest, HttpRequest};
 
+mod install_plan;
+
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init().expect("Can't init logger");
     info!("Starting omaha client...");

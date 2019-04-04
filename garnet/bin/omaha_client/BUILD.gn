@@ -13,6 +13,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//garnet/lib/rust/fuchsia_uri",
     "//garnet/lib/rust/omaha_client",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
@@ -38,6 +39,19 @@ package("omaha_client") {
     {
       path = rebase_path("meta/omaha_client_service.cmx")
       dest = "omaha_client_service.cmx"
+    },
+  ]
+}
+
+test_package("omaha_client_service_bin_tests") {
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "omaha_client_service_bin_test"
+      environments = basic_envs
     },
   ]
 }

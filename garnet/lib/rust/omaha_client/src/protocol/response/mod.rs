@@ -13,7 +13,7 @@ use serde_json::{Map, Value};
 /// This holds the data for a response from the Omaha service.
 ///
 /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#response
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct Response {
     /// The current Omaha protocol version (which this is meant to be used with, is 3.0.  This
     /// should always be set to "3.0".
@@ -45,7 +45,7 @@ pub struct DayStart {
     pub elapsed_seconds: Option<i32>,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct App {
     #[serde(rename = "appid")]
     pub id: String,
@@ -103,6 +103,12 @@ pub enum OmahaStatus {
     Error(String),
 }
 
+impl Default for OmahaStatus {
+    fn default() -> Self {
+        OmahaStatus::Ok
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct Ping {
     /// Should be "ok".
@@ -115,7 +121,7 @@ pub struct Event {
     pub status: OmahaStatus,
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
 pub struct UpdateCheck {
     /// Whether there's an update available.
     pub status: OmahaStatus,
@@ -129,10 +135,25 @@ pub struct UpdateCheck {
     pub manifest: Option<Manifest>,
 }
 
+impl UpdateCheck {
+    pub fn ok(urls: Vec<String>) -> Self {
+        UpdateCheck { urls: Some(URLs::new(urls)), ..UpdateCheck::default() }
+    }
+    pub fn no_update() -> Self {
+        UpdateCheck { status: OmahaStatus::NoUpdate, ..UpdateCheck::default() }
+    }
+}
+
 /// Wrapper for a list of URL.
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct URLs {
     pub url: Vec<URL>,
+}
+
+impl URLs {
+    pub fn new(urls: Vec<String>) -> Self {
+        URLs { url: urls.into_iter().map(|url| URL { codebase: url }).collect() }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
