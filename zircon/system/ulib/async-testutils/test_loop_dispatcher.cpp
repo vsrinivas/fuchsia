@@ -117,9 +117,12 @@ zx::time TestLoopDispatcher::Now() {
     return time_keeper_->Now();
 }
 
-// TODO(ZX-2390): Return ZX_ERR_CANCELED if dispatcher is shutting down.
 zx_status_t TestLoopDispatcher::BeginWait(async_wait_t* wait) {
     ZX_DEBUG_ASSERT(wait);
+
+    if (in_shutdown_) {
+      return ZX_ERR_CANCELED;
+    }
 
     activables_.push_back(fbl::make_unique<WaitActivable>(this, wait));
     return ZX_OK;
@@ -131,9 +134,12 @@ zx_status_t TestLoopDispatcher::CancelWait(async_wait_t* wait) {
     return CancelTaskOrWait(wait);
 }
 
-// TODO(ZX-2390): Return ZX_ERR_CANCELED if dispatcher is shutting down.
 zx_status_t TestLoopDispatcher::PostTask(async_task_t* task) {
     ZX_DEBUG_ASSERT(task);
+
+    if (in_shutdown_) {
+      return ZX_ERR_CANCELED;
+    }
 
     future_tasks_.insert(task);
     return ZX_OK;
@@ -214,13 +220,21 @@ void TestLoopDispatcher::ExtractActivated() {
 }
 
 void TestLoopDispatcher::Shutdown() {
-    for (async_task_t* task : future_tasks_) {
+    in_shutdown_ = true;
+
+    while (!future_tasks_.empty()) {
+        auto task = *future_tasks_.begin();
+        future_tasks_.erase(future_tasks_.begin());
         task->handler(this, task, ZX_ERR_CANCELED);
     }
-    for (const auto& activable : activables_) {
+    while (!activables_.empty()) {
+        auto activable = std::move(activables_.front());
+        activables_.erase(activables_.begin());
         activable->Cancel();
     }
-    for (const auto& activated : activated_) {
+    while (!activated_.empty()) {
+        auto activated = std::move(activated_.front());
+        activated_.erase(activated_.begin());
         activated.first->Cancel();
     }
 }

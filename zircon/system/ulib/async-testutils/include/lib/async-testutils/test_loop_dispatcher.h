@@ -73,6 +73,8 @@ private:
     // A reference to an external object that manages the current time.
     TimeKeeper* const time_keeper_;
 
+    // Whether the loop is shutting down.
+    bool in_shutdown_ = false;
     // Pending tasks activable in the future.
     // The ordering of the set is based on the task timeline. Multiple tasks
     // with the same deadline will be equivalent, and be ordered by order of
