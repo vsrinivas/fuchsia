@@ -39,7 +39,9 @@ pub use crate::device::{
     ethernet::Mac, get_ip_addr_subnet, receive_frame, DeviceId, DeviceLayerEventDispatcher,
 };
 pub use crate::error::NetstackError;
-pub use crate::ip::{AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, Subnet, SubnetEither};
+pub use crate::ip::{
+    AddrSubnet, AddrSubnetEither, EntryDest, EntryEither, IpStateBuilder, Subnet, SubnetEither,
+};
 pub use crate::transport::udp::UdpEventDispatcher;
 pub use crate::transport::TransportLayerEventDispatcher;
 
@@ -77,6 +79,30 @@ macro_rules! map_addr_version {
     };
 }
 
+/// A builder for [`StackState`].
+#[derive(Default)]
+pub struct StackStateBuilder {
+    ip: IpStateBuilder,
+}
+
+impl StackStateBuilder {
+    /// Get the builder for the IP state.
+    pub fn ip_builder(&mut self) -> &mut IpStateBuilder {
+        &mut self.ip
+    }
+
+    /// Consume this builder and produce a `StackState`.
+    pub fn build<D: EventDispatcher>(self) -> StackState<D> {
+        StackState {
+            transport: TransportLayerState::default(),
+            ip: self.ip.build(),
+            device: DeviceLayerState::default(),
+            #[cfg(test)]
+            test_counters: testutil::TestCounters::default(),
+        }
+    }
+}
+
 /// The state associated with the network stack.
 pub struct StackState<D: EventDispatcher> {
     transport: TransportLayerState<D>,
@@ -88,13 +114,7 @@ pub struct StackState<D: EventDispatcher> {
 
 impl<D: EventDispatcher> Default for StackState<D> {
     fn default() -> StackState<D> {
-        StackState {
-            transport: TransportLayerState::default(),
-            ip: IpLayerState::default(),
-            device: DeviceLayerState::default(),
-            #[cfg(test)]
-            test_counters: testutil::TestCounters::default(),
-        }
+        StackStateBuilder::default().build()
     }
 }
 
@@ -122,6 +142,11 @@ impl<D: EventDispatcher> Context<D> {
         Context { state, dispatcher }
     }
 
+    /// Construct a new `Context` using the default `StackState`.
+    pub fn with_default_state(dispatcher: D) -> Context<D> {
+        Context { state: StackState::default(), dispatcher }
+    }
+
     /// Get the stack state immutably.
     pub fn state(&self) -> &StackState<D> {
         &self.state
@@ -144,6 +169,13 @@ impl<D: EventDispatcher> Context<D> {
     /// methods.
     pub fn state_and_dispatcher(&mut self) -> (&mut StackState<D>, &mut D) {
         (&mut self.state, &mut self.dispatcher)
+    }
+}
+
+impl<D: EventDispatcher + Default> Context<D> {
+    /// Construct a new `Context` using the default dispatcher.
+    pub fn with_default_dispatcher(state: StackState<D>) -> Context<D> {
+        Context { state, dispatcher: D::default() }
     }
 }
 

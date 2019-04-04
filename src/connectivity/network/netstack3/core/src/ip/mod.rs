@@ -22,7 +22,7 @@ use packet::{
     BufferMut, BufferSerializer, MtuError, ParsablePacket, ParseBufferMut, ParseMetadata,
     Serializer,
 };
-use specialize_ip_macro::{specialize_ip, specialize_ip_address};
+use specialize_ip_macro::specialize_ip_address;
 
 use crate::device::{DeviceId, FrameDestination};
 use crate::error::ExistsError;
@@ -36,14 +36,37 @@ const DEFAULT_TTL: u8 = 64;
 // Minimum MTU required by all IPv6 devices.
 pub(crate) const IPV6_MIN_MTU: u32 = 1280;
 
-/// The state associated with the IP layer.
+/// A builder for IP layer state.
 #[derive(Default)]
+pub struct IpStateBuilder {
+    forward_v4: bool,
+    forward_v6: bool,
+}
+
+impl IpStateBuilder {
+    /// Enable or disable IP packet forwarding (default: disabled).
+    ///
+    /// If `forward` is true, then an incoming IP packet whose destination
+    /// address identifies a remote host will be forwarded to that host.
+    pub fn forward(&mut self, forward: bool) {
+        self.forward_v4 = forward;
+        self.forward_v6 = forward;
+    }
+
+    pub(crate) fn build(self) -> IpLayerState {
+        IpLayerState {
+            v4: IpLayerStateInner { forward: self.forward_v4, table: ForwardingTable::default() },
+            v6: IpLayerStateInner { forward: self.forward_v6, table: ForwardingTable::default() },
+        }
+    }
+}
+
+/// The state associated with the IP layer.
 pub(crate) struct IpLayerState {
     v4: IpLayerStateInner<Ipv4>,
     v6: IpLayerStateInner<Ipv6>,
 }
 
-#[derive(Default)]
 struct IpLayerStateInner<I: Ip> {
     forward: bool,
     table: ForwardingTable<I>,
@@ -453,15 +476,6 @@ pub(crate) fn iter_routes<D: EventDispatcher, I: IpAddress>(
     return state.v4.table.iter_routes();
     #[ipv6addr]
     return state.v6.table.iter_routes();
-}
-
-/// Enable or disable forwarding for a particular IP version.
-#[specialize_ip]
-pub(crate) fn set_forward<D: EventDispatcher, I: Ip>(ctx: &mut Context<D>, forward: bool) {
-    #[ipv4]
-    ctx.state_mut().ip.v4.forward = forward;
-    #[ipv6]
-    ctx.state_mut().ip.v6.forward = forward;
 }
 
 /// Is this one of our local addresses?

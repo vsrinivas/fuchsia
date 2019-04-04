@@ -5,6 +5,7 @@
 //! Testing-related utilities.
 
 use std::collections::{BinaryHeap, HashMap};
+use std::hash::Hash;
 use std::sync::Once;
 use std::time::{Duration, Instant};
 
@@ -25,8 +26,7 @@ use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::EthernetFrame;
 use crate::wire::icmp::{IcmpMessage, IcmpPacket, IcmpParseArgs};
-use crate::{handle_timeout, Context, EventDispatcher, TimerId};
-use std::hash::Hash;
+use crate::{handle_timeout, Context, EventDispatcher, StackStateBuilder, TimerId};
 
 use specialize_ip_macro::specialize_ip_address;
 
@@ -400,9 +400,23 @@ impl DummyEventDispatcherBuilder {
         self.device_routes.push((subnet.into(), device));
     }
 
-    /// Build a `Context<DummyEventDispatcher>` from the present configuration.
+    /// Build a `Context` from the present configuration with a default state
+    /// and dispatcher.
+    ///
+    /// `b.build()` is equivalent to `b.build_with(StackStateBuilder::default(),
+    /// D::default())`.
     pub(crate) fn build<D: EventDispatcher + Default>(self) -> Context<D> {
-        let mut ctx = Context::default();
+        self.build_with(StackStateBuilder::default(), D::default())
+    }
+
+    /// Build a `Context` from the present configuration with a caller-provided
+    /// dispatcher and `StackStateBuilder`.
+    pub(crate) fn build_with<D: EventDispatcher>(
+        self,
+        state_builder: StackStateBuilder,
+        dispatcher: D,
+    ) -> Context<D> {
+        let mut ctx = Context::new(state_builder.build(), dispatcher);
 
         let DummyEventDispatcherBuilder {
             devices,

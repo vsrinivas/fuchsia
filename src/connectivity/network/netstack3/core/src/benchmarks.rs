@@ -13,7 +13,7 @@ use test::{black_box, Bencher};
 
 use crate::device::ethernet::EtherType;
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
-use crate::ip::{set_forward, IpProto, Ipv4};
+use crate::ip::IpProto;
 use crate::testutil::{DummyEventDispatcherBuilder, DUMMY_CONFIG_V4};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
@@ -24,7 +24,7 @@ use crate::wire::ethernet::{
 use crate::wire::ipv4::{
     Ipv4PacketBuilder, IPV4_CHECKSUM_OFFSET, IPV4_MIN_HDR_LEN, IPV4_TTL_OFFSET,
 };
-use crate::{EventDispatcher, TimerId};
+use crate::{EventDispatcher, StackStateBuilder, TimerId};
 
 #[derive(Default)]
 struct BenchmarkEventDispatcher;
@@ -66,9 +66,10 @@ impl EventDispatcher for BenchmarkEventDispatcher {
 // Pro, this benchmark takes in the neighborhood of 96ns - 100ns for all frame
 // sizes.
 fn bench_forward_minimum(b: &mut Bencher, frame_size: usize) {
+    let mut state_builder = StackStateBuilder::default();
+    state_builder.ip_builder().forward(true);
     let mut ctx = DummyEventDispatcherBuilder::from_config(DUMMY_CONFIG_V4)
-        .build::<BenchmarkEventDispatcher>();
-    set_forward::<_, Ipv4>(&mut ctx, true);
+        .build_with::<BenchmarkEventDispatcher>(state_builder, BenchmarkEventDispatcher);
 
     assert!(
         frame_size
