@@ -56,13 +56,20 @@ static constexpr const char* kStatefulImagePath = "/data/stateful.img";
 
 static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition() {
   TRACE_DURATION("linux_runner", "GetOrCreateStatefulPartition");
-  int fd = open(kStatefulImagePath, O_RDWR | O_CREAT);
+  int fd = open(kStatefulImagePath, O_RDWR);
+  if (fd < 0 && errno == ENOENT) {
+    fd = open(kStatefulImagePath, O_RDWR | O_CREAT);
+    if (fd < 0) {
+          FXL_LOG(ERROR) << "Failed to create stateful image: " << strerror(errno);
+          return nullptr;
+    }
+    if (ftruncate(fd, kStatefulImageSize) < 0) {
+      FXL_LOG(ERROR) << "Failed to truncate image: " << strerror(errno);
+      return nullptr;
+    }
+  }
   if (fd < 0) {
     FXL_LOG(ERROR) << "Failed to open image: " << strerror(errno);
-    return nullptr;
-  }
-  if (ftruncate(fd, kStatefulImageSize) < 0) {
-    FXL_LOG(ERROR) << "Failed to truncate image: " << strerror(errno);
     return nullptr;
   }
 
