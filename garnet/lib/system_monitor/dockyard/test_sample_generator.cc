@@ -73,7 +73,7 @@ void GenerateRandomSamples(const RandomSampleGenerator& gen,
             gen.value_min + value_range * (1 + sin(PI_DIV_16 * sample_n)) / 2;
         break;
     }
-    dockyard->AddSample(gen.stream_id, Sample(time, value));
+    dockyard->AddSample(gen.dockyard_id, Sample(time, value));
     // Make sure time advances by at least one nanosecond.
     ++time;
     switch (gen.time_style) {

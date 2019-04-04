@@ -16,28 +16,26 @@ class SystemMonitorDockyardTest : public ::testing::Test {
     // Initialize to distinct values for testing.
     name_call_count_ = 100;  // Arbitrary.
     sets_call_count_ = 200;  // Arbitrary.
-    EXPECT_EQ(nullptr,
-              dockyard_.SetStreamNamesHandler(std::bind(
-                  &SystemMonitorDockyardTest::TestStreamNamesCallback, this,
-                  std::placeholders::_1, std::placeholders::_2)));
+    EXPECT_EQ(nullptr, dockyard_.SetDockyardPathsHandler(std::bind(
+                           &SystemMonitorDockyardTest::TestPathsCallback, this,
+                           std::placeholders::_1, std::placeholders::_2)));
     EXPECT_EQ(nullptr, dockyard_.SetStreamSetsHandler(std::bind(
                            &SystemMonitorDockyardTest::TestStreamSetsCallback,
                            this, std::placeholders::_1)));
     // Add some samples.
-    dockyard_.AddSamples(dockyard_.GetSampleStreamId("cpu0"),
+    dockyard_.AddSamples(dockyard_.GetDockyardId("cpu0"),
                          {{10ULL, 8ULL}, {200ULL, 10ULL}, {300ULL, 20ULL}});
-    dockyard_.AddSamples(dockyard_.GetSampleStreamId("cpu1"),
-                         {{10ULL, 3ULL},
-                          {20ULL, 4ULL},
-                          {80ULL, 5ULL},
-                          {81ULL, 50ULL},
-                          {100ULL, 10ULL},
-                          {200ULL, 100ULL},
-                          {300ULL, 80ULL},
-                          {400ULL, 100ULL},
-                          {500ULL, 50ULL}});
+    dockyard_.AddSamples(dockyard_.GetDockyardId("cpu1"), {{10ULL, 3ULL},
+                                                           {20ULL, 4ULL},
+                                                           {80ULL, 5ULL},
+                                                           {81ULL, 50ULL},
+                                                           {100ULL, 10ULL},
+                                                           {200ULL, 100ULL},
+                                                           {300ULL, 80ULL},
+                                                           {400ULL, 100ULL},
+                                                           {500ULL, 50ULL}});
     dockyard_.AddSamples(
-        dockyard_.GetSampleStreamId("cpu2"),
+        dockyard_.GetDockyardId("cpu2"),
         {
             {100ULL, 3ULL},  {105ULL, 4ULL},   {110ULL, 5ULL},  {115ULL, 50ULL},
             {120ULL, 90ULL}, {125ULL, 100ULL}, {130ULL, 80ULL}, {135ULL, 45ULL},
@@ -45,27 +43,26 @@ class SystemMonitorDockyardTest : public ::testing::Test {
             {165ULL, 10ULL}, {170ULL, 8ULL},   {175ULL, 5ULL},  {180ULL, 3ULL},
             {185ULL, 5ULL},  {190ULL, 15ULL},  {195ULL, 50ULL},
         });
-    dockyard_.AddSamples(dockyard_.GetSampleStreamId("cpu3"),
-                         {{100ULL, 103ULL},
-                          {105ULL, 104ULL},
-                          {110ULL, 107ULL},
-                          {115ULL, 112ULL},
-                          {120ULL, 112ULL},
-                          {130ULL, 122ULL},
-                          {135ULL, 127ULL},
-                          {140ULL, 130ULL},
-                          {150ULL, 132ULL},
-                          {165ULL, 132ULL},
-                          {170ULL, 133ULL},
-                          {175ULL, 135ULL},
-                          {180ULL, 138ULL},
-                          {185ULL, 142ULL},
-                          {190ULL, 147ULL},
-                          {195ULL, 148ULL}});
+    dockyard_.AddSamples(dockyard_.GetDockyardId("cpu3"), {{100ULL, 103ULL},
+                                                           {105ULL, 104ULL},
+                                                           {110ULL, 107ULL},
+                                                           {115ULL, 112ULL},
+                                                           {120ULL, 112ULL},
+                                                           {130ULL, 122ULL},
+                                                           {135ULL, 127ULL},
+                                                           {140ULL, 130ULL},
+                                                           {150ULL, 132ULL},
+                                                           {165ULL, 132ULL},
+                                                           {170ULL, 133ULL},
+                                                           {175ULL, 135ULL},
+                                                           {180ULL, 138ULL},
+                                                           {185ULL, 142ULL},
+                                                           {190ULL, 147ULL},
+                                                           {195ULL, 148ULL}});
   }
 
-  void TestStreamNamesCallback(const std::vector<StreamInfo>& add,
-                               const std::vector<uint32_t>& remove) {
+  void TestPathsCallback(const std::vector<PathInfo>& add,
+                         const std::vector<uint32_t>& remove) {
     ++name_call_count_;
   }
 
@@ -96,7 +93,7 @@ TEST_F(SystemMonitorDockyardTest, SetsCallback) {
 TEST_F(SystemMonitorDockyardTest, SlopeValuesMono) {
   constexpr uint64_t SAMPLE_COUNT = 20;
   RandomSampleGenerator gen;
-  gen.stream_id = dockyard_.GetSampleStreamId("fake0");
+  gen.dockyard_id = dockyard_.GetDockyardId("fake0");
   gen.seed = 1234;
   gen.time_style = RandomSampleGenerator::TIME_STYLE_LINEAR;
   gen.start = 100;
@@ -114,7 +111,7 @@ TEST_F(SystemMonitorDockyardTest, SlopeValuesMono) {
   request.flags = StreamSetsRequest::SLOPE;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::HIGHEST_PER_COLUMN;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("fake0"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("fake0"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -144,7 +141,7 @@ TEST_F(SystemMonitorDockyardTest, SlopeCpu3Highest) {
   request.flags = StreamSetsRequest::SLOPE;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::HIGHEST_PER_COLUMN;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu3"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu3"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -188,7 +185,7 @@ TEST_F(SystemMonitorDockyardTest, SlopeCpu3Average) {
   request.flags = StreamSetsRequest::SLOPE;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu3"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu3"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -218,7 +215,7 @@ TEST_F(SystemMonitorDockyardTest, RawPastEndResponse) {
   request.end_time_ns = 1000;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu0"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu0"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -249,7 +246,7 @@ TEST_F(SystemMonitorDockyardTest, RawSparseResponse) {
   request.end_time_ns = 300;
   request.sample_count = 10;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu0"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu0"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -281,7 +278,7 @@ TEST_F(SystemMonitorDockyardTest, RawDataSetsCpu1) {
   request.end_time_ns = 450;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu1"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -313,7 +310,7 @@ TEST_F(SystemMonitorDockyardTest, RawDataSetsCpu2) {
   request.end_time_ns = 200;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu2"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -340,9 +337,9 @@ TEST_F(SystemMonitorDockyardTest, RawDataSetsCpus012) {
   request.end_time_ns = 200;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu0"));
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu1"));
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu2"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu0"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -375,8 +372,8 @@ TEST_F(SystemMonitorDockyardTest, HighDataSetsCpus12) {
   request.end_time_ns = 150;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::HIGHEST_PER_COLUMN;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu1"));
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu2"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -404,8 +401,8 @@ TEST_F(SystemMonitorDockyardTest, LowDataSetsCpus12) {
   request.end_time_ns = 150;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::LOWEST_PER_COLUMN;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu1"));
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu2"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu1"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -434,7 +431,7 @@ TEST_F(SystemMonitorDockyardTest, NormalizedDataSetsCpu2) {
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
   request.flags = StreamSetsRequest::NORMALIZE;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu2"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -461,7 +458,7 @@ TEST_F(SystemMonitorDockyardTest, SmoothDataSetsCpu2) {
   request.end_time_ns = 200;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::WIDE_SMOOTHING;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu2"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -488,7 +485,7 @@ TEST_F(SystemMonitorDockyardTest, SculptedDataSetsCpu2) {
   request.end_time_ns = 200;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::SCULPTING;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("cpu2"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("cpu2"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.
@@ -510,7 +507,7 @@ TEST_F(SystemMonitorDockyardTest, SculptedDataSetsCpu2) {
 TEST_F(SystemMonitorDockyardTest, RandomSamples) {
   constexpr uint64_t SAMPLE_COUNT = 40;
   RandomSampleGenerator gen;
-  gen.stream_id = dockyard_.GetSampleStreamId("fake0");
+  gen.dockyard_id = dockyard_.GetDockyardId("fake0");
   gen.seed = 1234;
   gen.time_style = RandomSampleGenerator::TIME_STYLE_LINEAR;
   gen.start = 100;
@@ -527,7 +524,7 @@ TEST_F(SystemMonitorDockyardTest, RandomSamples) {
   request.end_time_ns = 500;
   request.sample_count = SAMPLE_COUNT;
   request.render_style = StreamSetsRequest::AVERAGE_PER_COLUMN;
-  request.stream_ids.push_back(dockyard_.GetSampleStreamId("fake0"));
+  request.dockyard_ids.push_back(dockyard_.GetDockyardId("fake0"));
   dockyard_.GetStreamSets(&request);
 
   // Kick a process call.

@@ -22,11 +22,11 @@ class DockyardProxyGrpc : public DockyardProxy {
   virtual DockyardProxyStatus Init() override;
 
   // |DockyardProxy|.
-  virtual DockyardProxyStatus SendInspectJson(const std::string& stream_name,
+  virtual DockyardProxyStatus SendInspectJson(const std::string& dockyard_path,
                                               const std::string& json) override;
 
   // |DockyardProxy|.
-  virtual DockyardProxyStatus SendSample(const std::string& stream_name,
+  virtual DockyardProxyStatus SendSample(const std::string& dockyard_path,
                                          uint64_t value) override;
 
   // |DockyardProxy|.
@@ -35,20 +35,20 @@ class DockyardProxyGrpc : public DockyardProxy {
  private:
   // A local stub for the remote Dockyard instance.
   std::unique_ptr<dockyard_proto::Dockyard::Stub> stub_;
-  // For looking up the ID of a stream name.
-  std::map<std::string, dockyard::SampleStreamId> stream_ids_;
+  // For looking up the ID of a Dockyard path.
+  std::map<std::string, dockyard::DockyardId> dockyard_path_to_id_;
 
   // Actually send data to the Dockyard.
   // |time| is in nanoseconds.
   // See also: SendInspectJson().
   grpc::Status SendInspectJsonById(uint64_t time,
-                                   dockyard::SampleStreamId stream_id,
+                                   dockyard::DockyardId dockyard_id,
                                    const std::string& json);
 
   // Actually send a single sample to the Dockyard.
   // |time| is in nanoseconds.
   // See also: SendSample().
-  grpc::Status SendSampleById(uint64_t time, dockyard::SampleStreamId stream_id,
+  grpc::Status SendSampleById(uint64_t time, dockyard::DockyardId dockyard_id,
                               uint64_t value);
 
   // Actually send a list of samples with the same timestamp to the Dockyard.
@@ -58,8 +58,8 @@ class DockyardProxyGrpc : public DockyardProxy {
 
   // Get the ID from the local cache or from the remote Dockyard if it's not in
   // the cache.
-  grpc::Status GetStreamIdForName(dockyard::SampleStreamId* stream_id,
-                                  const std::string& stream_name);
+  grpc::Status GetDockyardIdForPath(dockyard::DockyardId* dockyard_id,
+                                    const std::string& dockyard_path);
 };
 
 }  // namespace harvester

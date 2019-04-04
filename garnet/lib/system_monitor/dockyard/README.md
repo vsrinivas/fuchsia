@@ -17,8 +17,8 @@ If something is unclear or if you prefer examples, consider looking in
 ./dockyard_unittests.cc to get an idea of how the pieces work together.
 
 - Create a Dockyard instance.
-- Add handlers for new stream names and stream sets:
-  - dockyard.SetStreamNamesHandler(MyStreamNameHandler);
+- Add handlers for new dockyard paths and stream sets:
+  - dockyard.SetDockyardPathsHandler(MyDockyardPathHandler);
   - dockyard.SetStreamSetsHandler(MyStreamSetHandler);
 - For testing, create some pseudo-random samples
   - Create a RandomSampleGenerator

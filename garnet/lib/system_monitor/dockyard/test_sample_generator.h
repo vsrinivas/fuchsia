@@ -12,7 +12,7 @@ namespace dockyard {
 // Settings for calling GenerateRandomSamples() to create test samples.
 struct RandomSampleGenerator {
   RandomSampleGenerator()
-      : stream_id(0),
+      : dockyard_id(0),
         seed(0),
         time_style(TIME_STYLE_LINEAR),
         start(0),
@@ -53,8 +53,8 @@ struct RandomSampleGenerator {
     VALUE_STYLE_SINE_WAVE,
   };
 
-  // E.g. as provided by |GetSampleStreamId()| to get an ID value.
-  SampleStreamId stream_id;
+  // E.g. as provided by |GetDockyardId()| to get an ID value.
+  DockyardId dockyard_id;
   // Value used for srand(). Using a consistent seed value will yield
   // predictable samples.
   unsigned int seed;

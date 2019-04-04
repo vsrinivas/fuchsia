@@ -57,14 +57,14 @@ The logical, named idea of where Samples come from. E.g. "cpu", "memory",
 An ordered set of Samples for a given Sample Category. E.g. all the Samples for
 "cpu0".
 
-#### Sample Stream ID
-A number used to uniquely refer to a Sample Stream. The Sample Stream ID is 1:1
-with a specific Sample Stream Name.
+#### Dockyard ID
+A number used to uniquely refer to a Sample Stream or other named entity. The
+Dockyard ID is 1:1 with a specific Dockyard Path.
 
-#### Sample Stream Name
-A text string referring to a Sample Stream. The Name value is primarily used in
-the GUI (for humans), internally the Sample Stream ID is used. E.g. "cpu0",
-"physMem", "procCount" are Sample Stream Names.
+#### Dockyard Path
+A UTF-8, case sensitive text string referring to a Sample Stream or other named
+entity. The path value is primarily used in the GUI (for humans), internally the
+Dockyard ID is used. E.g. "cpu:0", "physMem", "procCount" are Dockyard Paths.
 
 #### Smooth
 A graph rendering filter.

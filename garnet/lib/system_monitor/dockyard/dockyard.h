@@ -16,8 +16,8 @@
 
 namespace dockyard {
 
-// An integer value representing a sample stream name.
-typedef uint32_t SampleStreamId;
+// An integer value representing a dockyard path.
+typedef uint32_t DockyardId;
 // Sample time stamp in nanoseconds.
 typedef uint64_t SampleTimeNs;
 // The data type of a sample value.
@@ -64,14 +64,18 @@ struct Sample {
   SampleValue value;
 };
 
-// Mapping between IDs and name strings.
-struct StreamInfo {
-  // The ID that corresponds to |name|, below.
-  SampleStreamId id;
-  // The name that corresponds to |id|, above.
-  std::string name;
+// Mapping between IDs and path strings.
+struct PathInfo {
+  // The dockyard ID that corresponds to |path|, below.
+  DockyardId id;
+  // The dockyard path that corresponds to |id|, above.
+  std::string path;
 };
 
+// A stream set is a portion of a sample stream. This request allows for
+// requesting multiple stream sets in a single request. There results will
+// arrive in the form of a |StreamSetsResponse|.
+// See: StreamSetsResponse.
 struct StreamSetsRequest {
   enum RenderStyle {
     // When smoothing across samples, use a wider set of samples, including
@@ -112,7 +116,8 @@ struct StreamSetsRequest {
         render_style(AVERAGE_PER_COLUMN),
         flags(0) {}
 
-  // For matching against a StreamSetsResponse::request_id.
+  // For matching against a StreamSetsResponse::request_id. Be sure to retain
+  // this request to properly interpret the |StreamSetsResponse|.
   uint64_t request_id;
 
   // Request graph data for time range |start_time..end_time| that has
@@ -130,8 +135,9 @@ struct StreamSetsRequest {
   RenderStyle render_style;
   uint64_t flags;
 
-  // A StreamInfo::id for each stream of interest.
-  std::vector<SampleStreamId> stream_ids;
+  // Each stream is identified by a Dockyard ID. Multiple streams can be
+  // requested. Include a DockyardId for each stream of interest.
+  std::vector<DockyardId> dockyard_ids;
 
   bool HasFlag(StreamSetsRequestFlags flag) const;
 
@@ -139,6 +145,8 @@ struct StreamSetsRequest {
                                   const StreamSetsRequest& request);
 };
 
+// A |StreamSetsResponse| is a replay for an individual |StreamSetsRequest|.
+// See: StreamSetsRequest.
 struct StreamSetsResponse {
   // For matching against a StreamSetsRequest::request_id.
   uint64_t request_id;
@@ -151,9 +159,10 @@ struct StreamSetsResponse {
   SampleValue highest_value;
 
   // Each data set will correspond to a stream requested in the
-  // StreamSetsRequest::stream_ids. The value for each sample is normally in
+  // StreamSetsRequest::dockyard_ids. The value for each sample is normally in
   // the range [0 to SAMPLE_MAX_VALUE]. If no value exists for the column, the
-  // value NO_DATA is used. If the StreamSetsRequest::stream_id was not found,
+  // value NO_DATA is used.
+  // For any DockyardId from StreamSetsRequest::dockyard_ids that isn't found,
   // the resulting sample will have the value NO_STREAM.
   std::vector<std::vector<SampleValue>> data_sets;
 
@@ -162,19 +171,19 @@ struct StreamSetsResponse {
 };
 
 // Lookup for a sample stream name string, given the sample stream ID.
-typedef std::map<SampleStreamId, std::string> StreamIdNameMap;
-typedef std::map<std::string, SampleStreamId> StreamNameIdMap;
+typedef std::map<DockyardId, std::string> DockyardIdToPathMap;
+typedef std::map<std::string, DockyardId> DockyardPathToIdMap;
 
 // Called when new streams are added or removed. Added values include their ID
-// and string name. Removed values only have the ID.
-// Intended to inform clients of StreamInfoMap changes (so they may keep their
-// equivalent map in sync). The racy nature of this update is not an issue
+// and string path. Removed values only have the ID.
+// Intended to inform clients of PathInfoMap changes (so they may keep
+// their equivalent map in sync). The racy nature of this update is not an issue
 // because the rest of the API will cope with invalid stream IDs, so 'eventually
 // consistent' is acceptable).
-// Use SetStreamNamesHandler() to install a StreamNamesCallback callback.
-typedef std::function<void(const std::vector<StreamInfo>& add,
-                           const std::vector<SampleStreamId>& remove)>
-    StreamNamesCallback;
+// Use SetDockyardPathsHandler() to install a StreamCallback callback.
+typedef std::function<void(const std::vector<PathInfo>& add,
+                           const std::vector<DockyardId>& remove)>
+    PathsCallback;
 
 // Called after (and in response to) a request is sent to |GetStreamSets()|.
 // Use SetStreamSetsHandler() to install a StreamSetsCallback callback.
@@ -186,13 +195,13 @@ class Dockyard {
   Dockyard();
   ~Dockyard();
 
-  // Insert sample information for a given stream_id. Not intended for use by
+  // Insert sample information for a given dockyard_id. Not intended for use by
   // the GUI.
-  void AddSample(SampleStreamId stream_id, Sample sample);
+  void AddSample(DockyardId dockyard_id, Sample sample);
 
-  // Insert sample information for a given stream_id. Not intended for use by
+  // Insert sample information for a given dockyard_id. Not intended for use by
   // the GUI.
-  void AddSamples(SampleStreamId stream_id, std::vector<Sample> samples);
+  void AddSamples(DockyardId dockyard_id, std::vector<Sample> samples);
 
   // The *approximate* difference between host time and device time. This value
   // is negotiated at connection time and not reevaluated. If either clock is
@@ -221,11 +230,11 @@ class Dockyard {
   // See: DeviceDeltaTimeNs()
   SampleTimeNs LatestSampleTimeNs() const;
 
-  // Get sample stream identifier for a given name. The ID values are stable
+  // Get Dockyard identifier for a given path. The ID values are stable
   // throughout execution, so they may be cached.
   //
-  // Returns an ID that corresponds to |name|.
-  SampleStreamId GetSampleStreamId(const std::string& name);
+  // Returns a Dockyard ID that corresponds to |dockyard_path|.
+  DockyardId GetDockyardId(const std::string& dockyard_path);
 
   // Request graph data for time range |start_time..end_time| that has
   // |sample_count| values for each set. If the sample stream has more or less
@@ -249,7 +258,7 @@ class Dockyard {
   // nullptr as |callback| to stop receiving calls.
   //
   // Returns prior callback or nullptr.
-  StreamNamesCallback SetStreamNamesHandler(StreamNamesCallback callback);
+  PathsCallback SetDockyardPathsHandler(PathsCallback callback);
 
   // Sets the function called when sample stream data arrives in response to a
   // call to GetStreamSets(). So, first set a handler with
@@ -273,20 +282,20 @@ class Dockyard {
   SampleTimeNs latest_sample_time_ns_;
 
   // Communication with the GUI.
-  StreamNamesCallback stream_name_handler_;
+  PathsCallback paths_handler_;
   StreamSetsCallback stream_sets_handler_;
   std::vector<StreamSetsRequest*> pending_requests_;
 
   // Storage of sample data.
-  typedef std::map<SampleStreamId, SampleStream*> SampleStreamMap;
+  typedef std::map<DockyardId, SampleStream*> SampleStreamMap;
   SampleStreamMap sample_streams_;
-  std::map<SampleStreamId, std::pair<SampleValue, SampleValue>>
+  std::map<DockyardId, std::pair<SampleValue, SampleValue>>
       sample_stream_low_high_;
 
-  // Name <--> ID look up.
+  // Dockyard path <--> ID look up.
   uint64_t next_context_id_;
-  StreamNameIdMap stream_ids_;
-  StreamIdNameMap stream_names_;
+  DockyardPathToIdMap dockyard_path_to_id_;
+  DockyardIdToPathMap dockyard_id_to_path_;
 
   // Listen for incoming samples.
   bool Initialize();
@@ -295,30 +304,30 @@ class Dockyard {
   // There's no single 'true' way to represent aggregated data, so the choice
   // is left to the caller. Which of these is used depends on the
   // |StreamSetsRequestFlags| in the |StreamSetsRequest.flags| field.
-  void ComputeAveragePerColumn(SampleStreamId stream_id,
+  void ComputeAveragePerColumn(DockyardId dockyard_id,
                                const SampleStream& sample_stream,
                                const StreamSetsRequest& request,
                                std::vector<SampleValue>* samples) const;
-  void ComputeHighestPerColumn(SampleStreamId stream_id,
+  void ComputeHighestPerColumn(DockyardId dockyard_id,
                                const SampleStream& sample_stream,
                                const StreamSetsRequest& request,
                                std::vector<SampleValue>* samples) const;
-  void ComputeLowestPerColumn(SampleStreamId stream_id,
+  void ComputeLowestPerColumn(DockyardId dockyard_id,
                               const SampleStream& sample_stream,
                               const StreamSetsRequest& request,
                               std::vector<SampleValue>* samples) const;
-  void ComputeSculpted(SampleStreamId stream_id,
+  void ComputeSculpted(DockyardId dockyard_id,
                        const SampleStream& sample_stream,
                        const StreamSetsRequest& request,
                        std::vector<SampleValue>* samples) const;
-  void ComputeSmoothed(SampleStreamId stream_id,
+  void ComputeSmoothed(DockyardId dockyard_id,
                        const SampleStream& sample_stream,
                        const StreamSetsRequest& request,
                        std::vector<SampleValue>* samples) const;
 
   // Rework the response so that all values are in the range 0 to one million.
   // This represents a 0.0 to 1.0 value, scaled up.
-  void NormalizeResponse(SampleStreamId stream_id,
+  void NormalizeResponse(DockyardId dockyard_id,
                          const SampleStream& sample_stream,
                          const StreamSetsRequest& request,
                          std::vector<SampleValue>* samples) const;
@@ -327,7 +336,7 @@ class Dockyard {
                                       StreamSetsResponse* response) const;
 
   // The average of the lowest and highest value in the stream.
-  SampleValue OverallAverageForStream(SampleStreamId stream_id) const;
+  SampleValue OverallAverageForStream(DockyardId dockyard_id) const;
 
   // Gather the overall lowest and highest values encountered.
   void ProcessSingleRequest(const StreamSetsRequest& request,

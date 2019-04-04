@@ -69,7 +69,7 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
     dockyard_proto::InspectJson inspect;
     while (stream->Read(&inspect)) {
       FXL_LOG(INFO) << "Received inspect at " << inspect.time() << ", key "
-                    << inspect.id() << ": " << inspect.json();
+                    << inspect.dockyard_id() << ": " << inspect.json();
       // TODO(dschuyler): interpret the data.
     }
     return grpc::Status::OK;
@@ -110,14 +110,14 @@ class DockyardServiceImpl final : public dockyard_proto::Dockyard::Service {
     return grpc::Status::OK;
   }
 
-  grpc::Status GetStreamIdForName(
+  grpc::Status GetDockyardIdForPath(
       grpc::ServerContext* context,
-      const dockyard_proto::StreamNameMessage* request,
-      dockyard_proto::StreamIdMessage* reply) override {
-    SampleStreamId stream_id = dockyard_->GetSampleStreamId(request->name());
-    reply->set_id(stream_id);
-    FXL_LOG(INFO) << "Received StreamNameMessage "
-                  << ": " << request->name() << ", id " << stream_id;
+      const dockyard_proto::DockyardPathMessage* request,
+      dockyard_proto::DockyardIdMessage* reply) override {
+    DockyardId id = dockyard_->GetDockyardId(request->path());
+    reply->set_id(id);
+    FXL_LOG(INFO) << "Received DockyardIdMessage "
+                  << ": " << request->path() << ", id " << id;
     return grpc::Status::OK;
   }
 };
@@ -173,9 +173,9 @@ std::ostream& operator<<(std::ostream& out, const StreamSetsRequest& request) {
   out << "  reserved: " << request.reserved << std::endl;
   out << "  render_style: " << request.render_style;
   out << "  flags: " << request.flags << std::endl;
-  out << "  stream_ids (" << request.stream_ids.size() << "): [";
-  for (auto iter = request.stream_ids.begin(); iter != request.stream_ids.end();
-       ++iter) {
+  out << "  ids (" << request.dockyard_ids.size() << "): [";
+  for (auto iter = request.dockyard_ids.begin();
+       iter != request.dockyard_ids.end(); ++iter) {
     out << " " << *iter;
   }
   out << " ]" << std::endl;
@@ -206,7 +206,7 @@ std::ostream& operator<<(std::ostream& out,
 Dockyard::Dockyard()
     : device_time_delta_ns_(0ULL),
       latest_sample_time_ns_(0ULL),
-      stream_name_handler_(nullptr),
+      paths_handler_(nullptr),
       stream_sets_handler_(nullptr),
       next_context_id_(0ULL) {}
 
@@ -234,14 +234,14 @@ SampleTimeNs Dockyard::LatestSampleTimeNs() const {
   return latest_sample_time_ns_;
 }
 
-void Dockyard::AddSample(SampleStreamId stream_id, Sample sample) {
+void Dockyard::AddSample(DockyardId dockyard_id, Sample sample) {
   std::lock_guard<std::mutex> guard(mutex_);
-  // Find or create a sample_stream for this stream_id.
+  // Find or create a sample_stream for this dockyard_id.
   SampleStream* sample_stream;
-  auto search = sample_streams_.find(stream_id);
+  auto search = sample_streams_.find(dockyard_id);
   if (search == sample_streams_.end()) {
     sample_stream = new SampleStream();
-    sample_streams_.emplace(stream_id, sample_stream);
+    sample_streams_.emplace(dockyard_id, sample_stream);
   } else {
     sample_stream = search->second;
   }
@@ -249,9 +249,9 @@ void Dockyard::AddSample(SampleStreamId stream_id, Sample sample) {
   sample_stream->emplace(sample.time, sample.value);
 
   // Track the overall lowest and highest values encountered.
-  sample_stream_low_high_.try_emplace(stream_id,
+  sample_stream_low_high_.try_emplace(dockyard_id,
                                       std::make_pair(SAMPLE_MAX_VALUE, 0ULL));
-  auto low_high = sample_stream_low_high_.find(stream_id);
+  auto low_high = sample_stream_low_high_.find(dockyard_id);
   SampleValue lowest = low_high->second.first;
   SampleValue highest = low_high->second.second;
   bool change = false;
@@ -264,27 +264,26 @@ void Dockyard::AddSample(SampleStreamId stream_id, Sample sample) {
     change = true;
   }
   if (change) {
-    sample_stream_low_high_[stream_id] = std::make_pair(lowest, highest);
+    sample_stream_low_high_[dockyard_id] = std::make_pair(lowest, highest);
   }
 }
 
-void Dockyard::AddSamples(SampleStreamId stream_id,
-                          std::vector<Sample> samples) {
+void Dockyard::AddSamples(DockyardId dockyard_id, std::vector<Sample> samples) {
   std::lock_guard<std::mutex> guard(mutex_);
-  // Find or create a sample_stream for this stream_id.
+  // Find or create a sample_stream for this dockyard_id.
   SampleStream* sample_stream;
-  auto search = sample_streams_.find(stream_id);
+  auto search = sample_streams_.find(dockyard_id);
   if (search == sample_streams_.end()) {
     sample_stream = new SampleStream();
-    sample_streams_.emplace(stream_id, sample_stream);
+    sample_streams_.emplace(dockyard_id, sample_stream);
   } else {
     sample_stream = search->second;
   }
 
   // Track the overall lowest and highest values encountered.
-  sample_stream_low_high_.try_emplace(stream_id,
+  sample_stream_low_high_.try_emplace(dockyard_id,
                                       std::make_pair(SAMPLE_MAX_VALUE, 0ULL));
-  auto low_high = sample_stream_low_high_.find(stream_id);
+  auto low_high = sample_stream_low_high_.find(dockyard_id);
   SampleValue lowest = low_high->second.first;
   SampleValue highest = low_high->second.second;
   for (auto i = samples.begin(); i != samples.end(); ++i) {
@@ -296,20 +295,21 @@ void Dockyard::AddSamples(SampleStreamId stream_id,
     }
     sample_stream->emplace(i->time, i->value);
   }
-  sample_stream_low_high_[stream_id] = std::make_pair(lowest, highest);
+  sample_stream_low_high_[dockyard_id] = std::make_pair(lowest, highest);
 }
 
-SampleStreamId Dockyard::GetSampleStreamId(const std::string& name) {
+DockyardId Dockyard::GetDockyardId(const std::string& dockyard_path) {
   std::lock_guard<std::mutex> guard(mutex_);
-  auto search = stream_ids_.find(name);
-  if (search != stream_ids_.end()) {
+  auto search = dockyard_path_to_id_.find(dockyard_path);
+  if (search != dockyard_path_to_id_.end()) {
     return search->second;
   }
-  SampleStreamId id = stream_ids_.size();
-  stream_ids_.emplace(name, id);
-  stream_names_.emplace(id, name);
-  FXL_LOG(INFO) << "SampleStreamId " << name << ": " << id;
-  assert(stream_ids_.find(name) != stream_ids_.end());
+  DockyardId id = dockyard_path_to_id_.size();
+  dockyard_path_to_id_.emplace(dockyard_path, id);
+  dockyard_id_to_path_.emplace(id, dockyard_path);
+  FXL_LOG(INFO) << "Path " << dockyard_path << ": ID " << id;
+  assert(dockyard_path_to_id_.find(dockyard_path) !=
+         dockyard_path_to_id_.end());
   return id;
 }
 
@@ -342,11 +342,10 @@ bool Dockyard::Initialize() {
   return server_thread_.joinable();
 }
 
-StreamNamesCallback Dockyard::SetStreamNamesHandler(
-    StreamNamesCallback callback) {
+PathsCallback Dockyard::SetDockyardPathsHandler(PathsCallback callback) {
   assert(!server_thread_.joinable());
-  auto old_handler = stream_name_handler_;
-  stream_name_handler_ = callback;
+  auto old_handler = paths_handler_;
+  paths_handler_ = callback;
   return old_handler;
 }
 
@@ -360,35 +359,38 @@ void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
                                     StreamSetsResponse* response) const {
   std::lock_guard<std::mutex> guard(mutex_);
   response->request_id = request.request_id;
-  for (auto stream_id = request.stream_ids.begin();
-       stream_id != request.stream_ids.end(); ++stream_id) {
+  for (auto dockyard_id = request.dockyard_ids.begin();
+       dockyard_id != request.dockyard_ids.end(); ++dockyard_id) {
     std::vector<SampleValue> samples;
-    auto search = sample_streams_.find(*stream_id);
+    auto search = sample_streams_.find(*dockyard_id);
     if (search == sample_streams_.end()) {
       samples.push_back(NO_STREAM);
     } else {
       auto sample_stream = *search->second;
       switch (request.render_style) {
         case StreamSetsRequest::SCULPTING:
-          ComputeSculpted(*stream_id, sample_stream, request, &samples);
+          ComputeSculpted(*dockyard_id, sample_stream, request, &samples);
           break;
         case StreamSetsRequest::WIDE_SMOOTHING:
-          ComputeSmoothed(*stream_id, sample_stream, request, &samples);
+          ComputeSmoothed(*dockyard_id, sample_stream, request, &samples);
           break;
         case StreamSetsRequest::LOWEST_PER_COLUMN:
-          ComputeLowestPerColumn(*stream_id, sample_stream, request, &samples);
+          ComputeLowestPerColumn(*dockyard_id, sample_stream, request,
+                                 &samples);
           break;
         case StreamSetsRequest::HIGHEST_PER_COLUMN:
-          ComputeHighestPerColumn(*stream_id, sample_stream, request, &samples);
+          ComputeHighestPerColumn(*dockyard_id, sample_stream, request,
+                                  &samples);
           break;
         case StreamSetsRequest::AVERAGE_PER_COLUMN:
-          ComputeAveragePerColumn(*stream_id, sample_stream, request, &samples);
+          ComputeAveragePerColumn(*dockyard_id, sample_stream, request,
+                                  &samples);
           break;
         default:
           break;
       }
       if (request.HasFlag(StreamSetsRequest::NORMALIZE)) {
-        NormalizeResponse(*stream_id, sample_stream, request, &samples);
+        NormalizeResponse(*dockyard_id, sample_stream, request, &samples);
       }
     }
     response->data_sets.push_back(samples);
@@ -397,7 +399,7 @@ void Dockyard::ProcessSingleRequest(const StreamSetsRequest& request,
 }
 
 void Dockyard::ComputeAveragePerColumn(
-    SampleStreamId stream_id, const SampleStream& sample_stream,
+    DockyardId dockyard_id, const SampleStream& sample_stream,
     const StreamSetsRequest& request, std::vector<SampleValue>* samples) const {
   SampleTimeNs prior_time = CalcTimeForStride(request, -1);
   SampleValue prior_value = 0ULL;
@@ -437,7 +439,7 @@ void Dockyard::ComputeAveragePerColumn(
 }
 
 void Dockyard::ComputeHighestPerColumn(
-    SampleStreamId stream_id, const SampleStream& sample_stream,
+    DockyardId dockyard_id, const SampleStream& sample_stream,
     const StreamSetsRequest& request, std::vector<SampleValue>* samples) const {
   // const SampleTimeNs stride = CalcStride(request);
   SampleTimeNs prior_time = CalcTimeForStride(request, -1);
@@ -479,7 +481,7 @@ void Dockyard::ComputeHighestPerColumn(
   }
 }
 
-void Dockyard::ComputeLowestPerColumn(SampleStreamId stream_id,
+void Dockyard::ComputeLowestPerColumn(DockyardId dockyard_id,
                                       const SampleStream& sample_stream,
                                       const StreamSetsRequest& request,
                                       std::vector<SampleValue>* samples) const {
@@ -521,11 +523,11 @@ void Dockyard::ComputeLowestPerColumn(SampleStreamId stream_id,
   }
 }
 
-void Dockyard::NormalizeResponse(SampleStreamId stream_id,
+void Dockyard::NormalizeResponse(DockyardId dockyard_id,
                                  const SampleStream& sample_stream,
                                  const StreamSetsRequest& request,
                                  std::vector<SampleValue>* samples) const {
-  auto low_high = sample_stream_low_high_.find(stream_id);
+  auto low_high = sample_stream_low_high_.find(dockyard_id);
   SampleValue lowest = low_high->second.first;
   SampleValue highest = low_high->second.second;
   SampleValue value_range = highest - lowest;
@@ -542,13 +544,13 @@ void Dockyard::NormalizeResponse(SampleStreamId stream_id,
   }
 }
 
-void Dockyard::ComputeSculpted(SampleStreamId stream_id,
+void Dockyard::ComputeSculpted(DockyardId dockyard_id,
                                const SampleStream& sample_stream,
                                const StreamSetsRequest& request,
                                std::vector<SampleValue>* samples) const {
   SampleTimeNs prior_time = CalcTimeForStride(request, -1);
   SampleValue prior_value = 0ULL;
-  auto overall_average = OverallAverageForStream(stream_id);
+  auto overall_average = OverallAverageForStream(dockyard_id);
   const int64_t limit = request.sample_count;
   for (int64_t sample_n = -1; sample_n < limit; ++sample_n) {
     SampleTimeNs start_time = CalcTimeForStride(request, sample_n);
@@ -592,7 +594,7 @@ void Dockyard::ComputeSculpted(SampleStreamId stream_id,
   }
 }
 
-void Dockyard::ComputeSmoothed(SampleStreamId stream_id,
+void Dockyard::ComputeSmoothed(DockyardId dockyard_id,
                                const SampleStream& sample_stream,
                                const StreamSetsRequest& request,
                                std::vector<SampleValue>* samples) const {
@@ -629,8 +631,8 @@ void Dockyard::ComputeSmoothed(SampleStreamId stream_id,
   }
 }
 
-SampleValue Dockyard::OverallAverageForStream(SampleStreamId stream_id) const {
-  auto low_high = sample_stream_low_high_.find(stream_id);
+SampleValue Dockyard::OverallAverageForStream(DockyardId dockyard_id) const {
+  auto low_high = sample_stream_low_high_.find(dockyard_id);
   if (low_high == sample_stream_low_high_.end()) {
     return NO_DATA;
   }
@@ -648,9 +650,9 @@ void Dockyard::ComputeLowestHighestForRequest(
   // Gather the overall lowest and highest values encountered.
   SampleValue lowest = SAMPLE_MAX_VALUE;
   SampleValue highest = 0ULL;
-  for (auto stream_id = request.stream_ids.begin();
-       stream_id != request.stream_ids.end(); ++stream_id) {
-    auto low_high = sample_stream_low_high_.find(*stream_id);
+  for (auto dockyard_id = request.dockyard_ids.begin();
+       dockyard_id != request.dockyard_ids.end(); ++dockyard_id) {
+    auto low_high = sample_stream_low_high_.find(*dockyard_id);
     if (low_high == sample_stream_low_high_.end()) {
       continue;
     }

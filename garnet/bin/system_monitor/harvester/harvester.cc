@@ -19,12 +19,12 @@ namespace harvester {
 namespace {
 
 // Utility function to label and append a cpu sample to the |list|. |cpu| is the
-// index returned from the kernel. |name| is the kind of sample, e.g.
+// index returned from the kernel. |path| is the kind of sample, e.g.
 // "interrupt_count".
-void AddCpuValue(SampleList* list, size_t cpu, const std::string name,
+void AddCpuValue(SampleList* list, size_t cpu, const std::string path,
                  dockyard::SampleValue value) {
   std::ostringstream label;
-  label << "cpu:" << cpu << ":" << name;
+  label << "cpu:" << cpu << ":" << path;
   list->emplace_back(label.str(), value);
 }
 
@@ -44,10 +44,10 @@ class TaskHarvester final : public TaskEnumerator {
   SampleList list_;
 
   // Helper to add a value to the sample |list|.
-  void AddKoidValue(zx_koid_t koid, const std::string name,
+  void AddKoidValue(zx_koid_t koid, const std::string path,
                     dockyard::SampleValue value) {
     std::ostringstream label;
-    label << "koid:" << koid << ":" << name;
+    label << "koid:" << koid << ":" << path;
     list_.emplace_back(label.str(), value);
   }
 
