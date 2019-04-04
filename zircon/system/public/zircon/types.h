@@ -34,7 +34,8 @@ __BEGIN_CDECLS
 
 typedef uint32_t zx_handle_t;
 
-#define ZX_HANDLE_INVALID         ((zx_handle_t)0)
+#define ZX_HANDLE_INVALID           ((zx_handle_t)0)
+#define ZX_HANDLE_FIXED_BITS_MASK   ((zx_handle_t)0x3)
 
 // See errors.h for the values zx_status_t can take.
 typedef int32_t zx_status_t;

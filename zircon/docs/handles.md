@@ -23,8 +23,12 @@ process. The same number in another process might not map to any
 handle or it might map to a handle pointing to a completely
 different kernel object.
 
-The integer value for a handle is any 32-bit number except
-the value corresponding to **ZX_HANDLE_INVALID**.
+The integer value for a handle is any 32-bit number except the value
+corresponding to **ZX_HANDLE_INVALID** which will always have the
+value of 0.  In addition to this, the integer value of a valid handle
+will always have two least significant bits of the handle set.  The
+mask representing these bits may be accessed using
+**ZX_HANDLE_FIXED_BITS_MASK**
 
 For kernel-mode, a handle is a C++ object that contains three
 logical fields:
