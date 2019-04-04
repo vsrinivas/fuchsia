@@ -8,8 +8,8 @@
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_net_oldhttp as http,
-    fuchsia_app as component,
     fuchsia_async as fasync,
+    fuchsia_component as component,
     fuchsia_zircon as zx,
     futures::io::{AllowStdIo, AsyncReadExt},
 };
