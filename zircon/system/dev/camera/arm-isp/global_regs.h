@@ -148,6 +148,17 @@ public:
     //  Multi-context control mode (0=default mode, this is for single
     //   context, 1=multi-context mode)
     DEF_BIT(8, multi_context_mode);
+
+    IspGlobal_Config3& select_config_ping() {
+        set_mcu_ping_pong_config_select(1);
+        return *this;
+    }
+
+    IspGlobal_Config3& select_config_pong() {
+        set_mcu_ping_pong_config_select(0);
+        return *this;
+    }
+
     static auto Get() {
         return hwreg::RegisterAddr<IspGlobal_Config3>(0x20);
     }
@@ -186,6 +197,15 @@ public:
     //      0: pong in use by ISP
     //     1: ping in use by ISP
     DEF_BIT(2, ping_pong_config_select);
+
+    bool is_ping() const {
+        return ping_pong_config_select() == 1;
+    }
+
+    bool is_pong() const {
+        return ping_pong_config_select() == 0;
+    }
+
     static auto Get() {
         return hwreg::RegisterAddr<IspGlobal_Config4>(0x24);
     }
@@ -382,6 +402,12 @@ public:
     DEF_BIT(21, luma_variance_done);
     DEF_BIT(22, dma_error_interrupt);
     DEF_BIT(23, input_port_safely_stopped);
+
+    bool has_errors() const {
+        return (broken_frame_error() || frame_collision_error() || dma_error_interrupt() ||
+                ctx_management_error() || wdg_timer_timed_out());
+    }
+
     static auto Get() {
         return hwreg::RegisterAddr<IspGlobalInterrupt_StatusVector>(0x44);
     }

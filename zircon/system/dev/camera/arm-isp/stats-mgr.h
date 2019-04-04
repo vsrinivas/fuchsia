@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 #include "modules/sensor.h"
+#include <atomic>
 #include <ddktl/protocol/ispimpl.h>
 #include <fbl/unique_ptr.h>
 #include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
+#include <threads.h>
 
 namespace camera {
 
@@ -18,16 +21,24 @@ namespace camera {
 class StatsManager {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(StatsManager);
-    StatsManager(fbl::unique_ptr<camera::Sensor> sensor)
-        : sensor_(std::move(sensor)) {}
+    StatsManager(fbl::unique_ptr<camera::Sensor> sensor,
+                 sync_completion_t frame_processing_signal)
+        : sensor_(std::move(sensor)),
+          frame_processing_signal_(frame_processing_signal) {}
 
     static fbl::unique_ptr<StatsManager> Create(ddk::MmioView isp_mmio,
                                                 ddk::MmioView isp_mmio_local,
-                                                isp_callbacks_protocol_t sensor_callbakcs);
-    ~StatsManager() {}
+                                                isp_callbacks_protocol_t sensor_callbacks,
+                                                sync_completion_t frame_processing_signal);
+    ~StatsManager();
 
 private:
+    int FrameProcessingThread();
+
     fbl::unique_ptr<camera::Sensor> sensor_;
+    sync_completion_t frame_processing_signal_;
+    thrd_t frame_processing_thread_;
+    std::atomic<bool> running_;
 };
 
 } // namespace camera

@@ -83,6 +83,7 @@ private:
                          uint8_t direction);
     void CopyMeteringInfo(uint8_t config_space,
                           uint8_t direction);
+    bool IsFrameProcessingInProgress();
 
     ddk::PDev pdev_;
 
@@ -105,6 +106,8 @@ private:
     isp_callbacks_protocol_t sensor_callbacks_;
 
     fbl::unique_ptr<camera::StatsManager> statsMgr_;
+
+    sync_completion_t frame_processing_signal_;
 };
 
 } // namespace camera

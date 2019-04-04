@@ -98,9 +98,76 @@ int ArmIspDevice::IspIrqHandler() {
             return status;
         }
 
-        // Handle the Interrupt here.
+        auto irq_status = IspGlobalInterrupt_StatusVector::Get().ReadFrom(&isp_mmio_);
+
+        // Clear IRQ Vector
+        IspGlobalInterrupt_Clear::Get()
+            .ReadFrom(&isp_mmio_)
+            .set_value(0)
+            .WriteTo(&isp_mmio_);
+
+        IspGlobalInterrupt_Clear::Get()
+            .ReadFrom(&isp_mmio_)
+            .set_value(1)
+            .WriteTo(&isp_mmio_);
+
+        if (irq_status.has_errors()) {
+            zxlogf(ERROR, "%s ISP Error Occured, resetting ISP", __func__);
+            // TODO(braval) : Handle error case here
+            continue;
+        }
+
+        // Currently only handling Frame Start Interrupt.
+        if (irq_status.isp_start()) {
+            // Frame Start Interrupt
+            auto current_config = IspGlobal_Config4::Get().ReadFrom(&isp_mmio_);
+            if (current_config.is_pong()) {
+                // Use PING for next frame
+                IspGlobal_Config3::Get()
+                    .ReadFrom(&isp_mmio_)
+                    .select_config_ping()
+                    .WriteTo(&isp_mmio_);
+
+
+                if (IsFrameProcessingInProgress()) {
+                    // TODO: (braval): Handle dropped frame
+
+                } else {
+                    // Copy Config from local memory to ISP PING Config space
+                    CopyContextInfo(kPing, kCopyToIsp);
+                    // Copy Metering Info from ISP to Local Memory
+                    CopyMeteringInfo(kPing, kCopyFromIsp);
+                    // Start processing this new frame.
+                    sync_completion_signal(&frame_processing_signal_);
+                }
+
+            } else {
+                // CURRENT CONFIG IS PING
+                // Use PONG for next frame
+                IspGlobal_Config3::Get()
+                    .ReadFrom(&isp_mmio_)
+                    .select_config_pong()
+                    .WriteTo(&isp_mmio_);
+
+                if (IsFrameProcessingInProgress()) {
+                    // TODO: (braval): Handle dropped frame
+
+                } else {
+                    // Copy Config from local memory to ISP PING Config space
+                    CopyContextInfo(kPong, kCopyToIsp);
+                    // Copy Metering Info from ISP to Local Memory
+                    CopyMeteringInfo(kPong, kCopyFromIsp);
+                    // Start processing this new frame.
+                    sync_completion_signal(&frame_processing_signal_);
+                }
+            }
+        }
     }
     return status;
+}
+
+bool ArmIspDevice::IsFrameProcessingInProgress() {
+    return sync_completion_signaled(&frame_processing_signal_);
 }
 
 void ArmIspDevice::CopyContextInfo(uint8_t config_space,
@@ -167,7 +234,8 @@ zx_status_t ArmIspDevice::IspContextInit() {
 
     statsMgr_ = camera::StatsManager::Create(isp_mmio_.View(0),
                                              isp_mmio_local_,
-                                             sensor_callbacks_);
+                                             sensor_callbacks_,
+                                             frame_processing_signal_);
     if (statsMgr_ == nullptr) {
         zxlogf(ERROR, "%s: Unable to start StatsManager \n", __func__);
         return ZX_ERR_NO_MEMORY;
@@ -201,6 +269,7 @@ zx_status_t ArmIspDevice::InitIsp() {
         return static_cast<ArmIspDevice*>(arg)->IspIrqHandler();
     };
 
+    sync_completion_reset(&frame_processing_signal_);
     running_.store(true);
     int rc = thrd_create_with_name(&irq_thread_,
                                    start_thread,
