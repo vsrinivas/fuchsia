@@ -66,6 +66,7 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kVolatile,        "volatile"},
     {ExprTokenType::kRestrict,        "restrict"},
     {ExprTokenType::kReinterpretCast, "reinterpret_cast"},
+    {ExprTokenType::kStaticCast,      "static_cast"},
     // clang-format on
 };
 

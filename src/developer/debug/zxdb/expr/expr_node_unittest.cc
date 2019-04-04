@@ -9,6 +9,7 @@
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
+#include "src/developer/debug/zxdb/expr/eval_test_support.h"
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
@@ -422,6 +423,75 @@ TEST_F(ExprNodeTest, MemberAccess) {
   EXPECT_FALSE(out_err.has_error()) << out_err.msg();
   EXPECT_EQ(sizeof(int32_t), out_value.data().size());
   EXPECT_EQ(0x55667788, out_value.GetAs<int32_t>());
+}
+
+// The casting tests cover most casting-related functionality. This acts as a
+// smoketest that it's hooked up, and specifically tests the tricky
+// special-casing of casting references to references (which shouldn't expand
+// the reference value).
+TEST_F(ExprNodeTest, Cast) {
+  DerivedClassTestSetup d;
+  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
+
+  // Base2& base2_ref_value = base2_value;
+  // static_cast<Derived&>(base2_ref_value);  // <- cast_ref_ref_node
+  auto base2_ref_node =
+      fxl::MakeRefCounted<MockExprNode>(true, d.base2_ref_value);
+  auto derived_ref_type_node =
+      fxl::MakeRefCounted<TypeExprNode>(d.derived_ref_type);
+  auto cast_ref_ref_node = fxl::MakeRefCounted<CastExprNode>(
+      CastType::kStatic, std::move(derived_ref_type_node),
+      std::move(base2_ref_node));
+
+  // Do the call.
+  bool called = false;
+  Err out_err;
+  ExprValue out_value;
+  cast_ref_ref_node->Eval(context, [&called, &out_err, &out_value](
+                                       const Err& err, ExprValue value) {
+    called = true;
+    out_err = err;
+    out_value = value;
+  });
+
+  // Should have run synchronously.
+  EXPECT_TRUE(called);
+  EXPECT_FALSE(out_err.has_error());
+  EXPECT_EQ(d.derived_ref_value, out_value);
+
+  // Now cast a ref to an object. This should dereference the object and
+  // find the base class inside of it.
+  // static_cast<Base2>(derived_ref_value)
+  auto derived_ref_node =
+      fxl::MakeRefCounted<MockExprNode>(true, d.derived_ref_value);
+  auto base2_type_node = fxl::MakeRefCounted<TypeExprNode>(d.base2_type);
+  auto cast_node = fxl::MakeRefCounted<CastExprNode>(
+      CastType::kStatic, std::move(base2_type_node),
+      std::move(derived_ref_node));
+
+  // Provide the memory for the derived type for when we dereference the ref.
+  context->data_provider()->AddMemory(d.kDerivedAddr, d.derived_value.data());
+
+  called = false;
+  out_err = Err();
+  out_value = ExprValue();
+  cast_node->Eval(context, [&called, &out_err, &out_value](const Err& err,
+                                                           ExprValue value) {
+    called = true;
+    out_err = err;
+    out_value = value;
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
+
+  // Dereferencing will be an asynchronous memory request so it will not have
+  // completed yet.
+  EXPECT_FALSE(called);
+  loop().Run();
+  EXPECT_TRUE(called);
+
+  // Should have converted to the Base2 value.
+  EXPECT_FALSE(out_err.has_error()) << out_err.msg();
+  EXPECT_EQ(d.base2_value, out_value);
 }
 
 }  // namespace zxdb

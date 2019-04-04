@@ -312,13 +312,23 @@ Err MakeCastError(const Type* from, const Type* to) {
              to->GetFullName().c_str());
 }
 
+// Flag that indicates whether a base class' pointer or reference can be
+// converted to a derived class' pointer or reference. Implicit casts don't
+// do this, but if the user explicitly asks (e.g. "static_cast<Derived>") we
+// allow it.
+enum CastPointer { kAllowBaseToDerived, kDisallowBaseToDerived };
+
 // Converts a pointer/reference to a pointer/reference to a different type
 // according to approximate static_cast rules.
 Err StaticCastPointerOrRef(const ExprValue& source,
                            const fxl::RefPtr<Type>& dest_type,
                            const Type* concrete_from, const Type* concrete_to,
                            const ExprValueSource& dest_source,
-                           ExprValue* result) {
+                           CastPointer cast_pointer, ExprValue* result) {
+  if (!DwarfTagIsPointerOrReference(concrete_from->tag()) ||
+      !DwarfTagIsPointerOrReference(concrete_to->tag()))
+    return MakeCastError(concrete_from, concrete_to);
+
   // The pointer/ref-ness must match from the source to the dest. This code
   // treats rvalue references and regular references the same.
   if ((concrete_from->tag() == DwarfTag::kPointerType) !=
@@ -376,6 +386,16 @@ Err StaticCastPointerOrRef(const ExprValue& source,
     return CreateValue(ptr_value, dest_type, dest_source, result);
   }
 
+  if (cast_pointer == kAllowBaseToDerived) {
+    // The reverse of the above case. This is used when the user knows a base
+    // class pointer/reference actually points to a specific derived class.
+    if (auto found_offset = GetDerivedClassOffset(refed_from, refed_to)) {
+      uint64_t ptr_value = source.GetAs<uint64_t>();
+      ptr_value -= *found_offset;
+      return CreateValue(ptr_value, dest_type, dest_source, result);
+    }
+  }
+
   return Err("Can't convert '%s' to unrelated type '%s'.",
              concrete_from->GetFullName().c_str(),
              concrete_to->GetFullName().c_str());
@@ -410,7 +430,7 @@ Err ImplicitCast(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
                             result);
   }
 
-  // Pointer-to-pointer conversions. Allow anything that can be static_casted
+  // Pointer-to-pointer conversions. Allow anything that can be static_cast-ed
   // which is permissive but a little more strict than in other conversions: if
   // you have two unrelated pointers, converting magically between them is
   // error prone. LLDB does this extra checking, while GDB always allows the
@@ -423,7 +443,7 @@ Err ImplicitCast(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
     // function is used for static casting where static_cast<A&>(b) refers to
     // the reference address and not the referenced object.
     return StaticCastPointerOrRef(source, dest_type, concrete_from, concrete_to,
-                                  dest_source, result);
+                                  dest_source, kDisallowBaseToDerived, result);
   }
 
   // Conversions between different types of ints, including pointers (truncate
@@ -490,6 +510,23 @@ Err ReinterpretCast(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
   return Err();
 }
 
+Err StaticCast(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
+               const ExprValueSource& dest_source, ExprValue* result) {
+  // Our implicit cast is permissive enough to handle most cases including all
+  // number conversions, and casts to base types.
+  if (!ImplicitCast(source, dest_type, dest_source, result).has_error())
+    return Err();
+
+  // Get the types without "const", etc. modifiers.
+  const Type* concrete_from = source.type()->GetConcreteType();
+  const Type* concrete_to = dest_type->GetConcreteType();
+
+  // Static casts explicitly allow conversion of pointers to a derived class
+  // my modifying the address being pointed to.
+  return StaticCastPointerOrRef(source, dest_type, concrete_from, concrete_to,
+                                dest_source, kAllowBaseToDerived, result);
+}
+
 }  // namespace
 
 const char* CastTypeToString(CastType type) {
@@ -500,6 +537,8 @@ const char* CastTypeToString(CastType type) {
       return "C";
     case CastType::kReinterpret:
       return "reinterpret_cast";
+    case CastType::kStatic:
+      return "static_cast";
   }
   return "<invalid>";
 }
@@ -520,19 +559,33 @@ Err CastExprValue(CastType cast_type, const ExprValue& source,
       //
       // Since the debugger ignores const in debugging, this ends up being
       // a static cast falling back to a reinterpret cast.
-      if (!ImplicitCast(source, dest_type, dest_source, result).has_error())
+      if (!StaticCast(source, dest_type, dest_source, result).has_error())
         return Err();
       return ReinterpretCast(source, dest_type, dest_source, result);
     }
     case CastType::kReinterpret:
       return ReinterpretCast(source, dest_type, dest_source, result);
+    case CastType::kStatic:
+      return StaticCast(source, dest_type, dest_source, result);
   }
   FXL_NOTREACHED();
   return Err("Internal error.");
 }
 
-bool CastShouldFollowReferences(const ExprValue& source,
+bool CastShouldFollowReferences(CastType cast_type, const ExprValue& source,
                                 const fxl::RefPtr<Type>& dest_type) {
+  // Implicit casts never follow references. If you have two references:
+  //   A& a;
+  //   B& b;
+  // and do:
+  //   a = b;
+  // This ends up being an implicit cast, but should assign the values, not
+  // convert references. This is different than an explicit cast:
+  //   (B&)a;
+  // Which converts the reference itself.
+  if (cast_type == CastType::kImplicit)
+    return true;
+
   // Casting a reference to a reference needs to keep the reference
   // information. Casting a reference to anything else means the reference
   // should be stripped.

@@ -588,12 +588,18 @@ TEST_F(ExprParserTest, C_Cast) {
             parser().err().msg());
 }
 
-TEST_F(ExprParserTest, ReinterpretCast) {
+TEST_F(ExprParserTest, CppCast) {
   EXPECT_EQ(
       "CAST(reinterpret_cast)\n"
       " TYPE(Type*)\n"
       " IDENTIFIER(\"a\")\n",
       GetParseString("reinterpret_cast<Type*>(a)", &TestLookupName));
+
+  EXPECT_EQ(
+      "CAST(static_cast)\n"
+      " TYPE(Type*)\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("static_cast<Type*>(a)", &TestLookupName));
 
   EXPECT_EQ(
       "CAST(reinterpret_cast)\n"

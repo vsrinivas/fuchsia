@@ -8,12 +8,10 @@
 
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/template_type_extractor.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/developer/debug/zxdb/expr/name_lookup.h"
-#include "src/developer/debug/zxdb/expr/template_type_extractor.h"
-#include "src/developer/debug/zxdb/symbols/modified_type.h"
 
 // The parser is a Pratt parser. The basic idea there is to have the
 // precedences (and associativities) encoded relative to each other and only
@@ -120,6 +118,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kVolatile
     {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kRestrict
     {&ExprParser::CastPrefix,      nullptr,                      -1},                     // kReinterpretCast
+    {&ExprParser::CastPrefix,      nullptr,                      -1},                     // kStaticCast
 };
 // clang-format on
 
@@ -730,8 +729,9 @@ fxl::RefPtr<ExprNode> ExprParser::StarPrefix(const ExprToken& token) {
 }
 
 fxl::RefPtr<ExprNode> ExprParser::CastPrefix(const ExprToken& token) {
-  FXL_DCHECK(token.type() == ExprTokenType::kReinterpretCast);
-  CastType cast_type = CastType::kReinterpret;
+  CastType cast_type = token.type() == ExprTokenType::kReinterpretCast
+                           ? CastType::kReinterpret
+                           : CastType::kStatic;
 
   // "<" after reinterpret_cast.
   ExprToken left_angle =

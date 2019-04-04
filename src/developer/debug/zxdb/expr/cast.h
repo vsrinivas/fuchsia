@@ -42,8 +42,10 @@ enum class CastType {
   // execute.
   kReinterpret,
 
-  // TODO(DX-1178) write static cast.
-  // kStatic
+  // Compared to C++, the debugger's implicit cast is so powerful that the only
+  // thing that static_cast adds is conversions to derived classes for pointers
+  // and references.
+  kStatic
 
   // We don't bother implementing const_cast and dynamic_cast yet because
   // they're less useful in a debugger.
@@ -73,7 +75,7 @@ Err CastExprValue(CastType cast_type, const ExprValue& source,
 // See comment for CastExprValue. This determines whether the source should
 // have references expanded to the referenced data before executing the given
 // cast.
-bool CastShouldFollowReferences(const ExprValue& source,
+bool CastShouldFollowReferences(CastType cast_type, const ExprValue& source,
                                 const fxl::RefPtr<Type>& dest_type);
 
 }  // namespace zxdb

@@ -41,6 +41,7 @@ enum class ExprTokenType : size_t {
   kVolatile,         // volatile
   kRestrict,         // restrict
   kReinterpretCast,  // reinterpret_cast
+  kStaticCast,       // static_cast
 
   // Keep last. Not a token, but the count of tokens.
   kNumTypes

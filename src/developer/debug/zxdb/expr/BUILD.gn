@@ -66,6 +66,8 @@ source_set("tests") {
     "builtin_types_unittest.cc",
     "cast_unittest.cc",
     "eval_operators_unittest.cc",
+    "eval_test_support.cc",
+    "eval_test_support.h",
     "expr_node_unittest.cc",
     "expr_parser_unittest.cc",
     "expr_tokenizer_unittest.cc",

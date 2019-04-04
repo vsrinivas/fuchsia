@@ -245,18 +245,20 @@ void CastExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
     }
   };
 
-  from_->Eval(context, [context, to_type = to_type_->type(),
-                        exec_cast = std::move(exec_cast)](const Err& err,
-                                                          ExprValue value) {
-    // This lambda optionally follows the reference on the value according
-    // to the requirements of the cast.
-    if (err.has_error() || !CastShouldFollowReferences(value, to_type)) {
-      exec_cast(err, value);  // Also handles the error cases.
-    } else {
-      EnsureResolveReference(context->GetDataProvider(), std::move(value),
-                             std::move(exec_cast));
-    }
-  });
+  from_->Eval(
+      context,
+      [context, cast_type = cast_type_, to_type = to_type_->type(),
+       exec_cast = std::move(exec_cast)](const Err& err, ExprValue value) {
+        // This lambda optionally follows the reference on the value according
+        // to the requirements of the cast.
+        if (err.has_error() ||
+            !CastShouldFollowReferences(cast_type, value, to_type)) {
+          exec_cast(err, value);  // Also handles the error cases.
+        } else {
+          EnsureResolveReference(context->GetDataProvider(), std::move(value),
+                                 std::move(exec_cast));
+        }
+      });
 }
 
 void CastExprNode::Print(std::ostream& out, int indent) const {
