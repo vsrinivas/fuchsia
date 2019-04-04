@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <fbl/function.h>
+#include <fbl/mutex.h>
 #include <zircon/types.h>
 
 #include <io-scheduler/stream.h>
@@ -223,19 +224,21 @@ public:
     void AsyncComplete(SchedulerOp* sop);
 
 private:
+    using StreamIdMap = Stream::WAVLTreeSortById;
     using StreamList = Stream::ListUnsorted;
 
-    zx_status_t GetStreamForId(uint32_t id, StreamRef* out, bool remove);
-    zx_status_t FindStreamForId(uint32_t id, StreamRef* out) {
-        return GetStreamForId(id, out, false);
-    }
-    zx_status_t RemoveStreamForId(uint32_t id, StreamRef* out = nullptr) {
-        return GetStreamForId(id, out, true);
-    }
+    SchedulerClient* client_ = nullptr; // Client-supplied callback interface.
+    uint32_t options_ = 0;              // Ordering options.
 
-    SchedulerClient* client_ = nullptr;
-    uint32_t options_ = 0;
-    StreamList streams_;
+    fbl::Mutex stream_lock_;
+    // Number of existing streams.
+    uint32_t num_streams_ __TA_GUARDED(stream_lock_) = 0;
+    // Number of streams that have ops that need to be issued or completed.
+    uint32_t active_streams_ __TA_GUARDED(stream_lock_) = 0;
+    // Map of id to stream. Contains all streams.
+    StreamIdMap stream_map_ __TA_GUARDED(stream_lock_);
+    // List of streams that have ops ready to be scheduled.
+    StreamList active_list_ __TA_GUARDED(stream_lock_);
 };
 
 } // namespace ioscheduler

@@ -4,6 +4,8 @@
 
 #include <io-scheduler/io-scheduler.h>
 
+#include <fbl/auto_lock.h>
+
 namespace ioscheduler {
 
 zx_status_t Scheduler::Init(SchedulerClient* client, uint32_t options) {
@@ -12,30 +14,61 @@ zx_status_t Scheduler::Init(SchedulerClient* client, uint32_t options) {
     return ZX_OK;
 }
 
-void Scheduler::Shutdown() { }
+void Scheduler::Shutdown() {
+    if (client_ == nullptr) {
+        return; // Not initialized or already shut down.
+    }
+
+    // Close all streams.
+    fbl::AutoLock lock(&stream_lock_);
+    for (auto& stream : stream_map_) {
+        stream.Close();
+    }
+
+    // TODO: Wait for completion.
+    // For now, remove erase the streams until there are worker threads to do so.
+    while (stream_map_.pop_front() != nullptr) {};
+
+    client_ = nullptr;
+}
 
 zx_status_t Scheduler::StreamOpen(uint32_t id, uint32_t priority) {
     if (priority > kMaxPriority) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    StreamRef stream;
-    zx_status_t status = FindStreamForId(id, &stream);
-    if (status != ZX_ERR_NOT_FOUND) {
+    fbl::AutoLock lock(&stream_lock_);
+    auto iter = stream_map_.find(id);
+    if (iter.IsValid()) {
         return ZX_ERR_ALREADY_EXISTS;
     }
 
     fbl::AllocChecker ac;
-    stream = fbl::AdoptRef(new (&ac) Stream(id, priority));
+    StreamRef stream = fbl::AdoptRef(new (&ac) Stream(id, priority));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    streams_.push_back(std::move(stream));
+    stream_map_.insert(std::move(stream));
+    num_streams_++;
     return ZX_OK;
 }
 
 zx_status_t Scheduler::StreamClose(uint32_t id) {
-    return RemoveStreamForId(id);
+    fbl::AutoLock lock(&stream_lock_);
+    auto iter = stream_map_.find(id);
+    if (!iter.IsValid()) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    StreamRef stream = iter.CopyPointer();
+    stream->Close();
+    // Once closed, the stream cannot transition from idle to active.
+    if (!stream->IsActive()) {
+        // Stream is inactive, delete here.
+        // Otherwise, it will be deleted by the worker that drains it.
+        stream_map_.erase(*stream);
+    }
+
+    return ZX_OK;
 }
 
 zx_status_t Scheduler::Serve() {
@@ -48,21 +81,8 @@ void Scheduler::AsyncComplete(SchedulerOp* sop) {
 
 Scheduler::~Scheduler() {
     Shutdown();
-}
-
-zx_status_t Scheduler::GetStreamForId(uint32_t id, StreamRef* out, bool remove) {
-    for (auto iter = streams_.begin(); iter.IsValid(); ++iter) {
-        if (iter->Id() == id) {
-            if (out) {
-                *out = iter.CopyPointer();
-            }
-            if (remove) {
-                streams_.erase(iter);
-            }
-            return ZX_OK;
-        }
-    }
-    return ZX_ERR_NOT_FOUND;
+    ZX_DEBUG_ASSERT(num_streams_ == 0);
+    ZX_DEBUG_ASSERT(active_streams_ == 0);
 }
 
 } // namespace ioscheduler

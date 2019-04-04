@@ -9,4 +9,8 @@ namespace ioscheduler {
 Stream::Stream(uint32_t id, uint32_t pri) : id_(id), priority_(pri) {}
 Stream::~Stream() {}
 
+void Stream::Close() {
+    open_ = false;
+}
+
 } // namespace ioscheduler
