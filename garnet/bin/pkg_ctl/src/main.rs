@@ -7,7 +7,7 @@
 
 use failure::{Error, ResultExt};
 use files_async;
-use fuchsia_app::client::Launcher;
+use fuchsia_component::client::{launcher, launch};
 use fuchsia_async as fasync;
 use fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker, UpdatePolicy};
 use fidl_fuchsia_pkg_ext::BlobId;
@@ -65,13 +65,12 @@ fn main() -> Result<(), Error> {
     } = Options::from_args();
 
     // Launch the server and connect to the resolver service.
-    let launcher = Launcher::new().context("Failed to open launcher service")?;
+    let launcher = launcher().context("Failed to open launcher service")?;
 
     let fut = async {
         match cmd {
             Command::Resolve { pkg_uri, selectors } => {
-                let app = launcher
-                    .launch(pkg_resolver_uri, None)
+                let app = launch(&launcher, pkg_resolver_uri, None)
                     .context("Failed to launch resolver service")?;
                 let resolver = app
                     .connect_to_service(PackageResolverMarker)
@@ -103,8 +102,7 @@ fn main() -> Result<(), Error> {
                 meta_far_blob_id,
                 selectors,
             } => {
-                let app = launcher
-                    .launch(pkg_cache_uri, None)
+                let app = launch(&launcher, pkg_cache_uri, None)
                     .context("Failed to launch cache service")?;
                 let cache = app
                     .connect_to_service(PackageCacheMarker)
