@@ -13,12 +13,12 @@ default rights for each object type, which can be reduced via
 | ----- | -------------------- |
 | **ZX_RIGHT_DUPLICATE**      | Allows handle duplication via [`zx_handle_duplicate()`] |
 | **ZX_RIGHT_TRANSFER**       | Allows handle transfer via [`zx_channel_write()`] |
-| **ZX_RIGHT_READ**           | **TO BE REMOVED** Allows inspection of object state |
-|                             | Allows reading of data from containers (channels, sockets, VM objects, etc) |
+| **ZX_RIGHT_READ**           | Allows reading of data from containers (channels, sockets, VM objects, etc) |
 |                             | Allows mapping as readable if **ZX_RIGHT_MAP** is also present |
-| **ZX_RIGHT_WRITE**          | **TO BE REMOVED** Allows modification of object state |
-|                             | Allows writing of data to containers (channels, sockets, VM objects, etc) |
+|                             | **TO BE REMOVED** Allows inspection of object state |
+| **ZX_RIGHT_WRITE**          | Allows writing of data to containers (channels, sockets, VM objects, etc) |
 |                             | Allows mapping as writeable if **ZX_RIGHT_MAP** is also present |
+|                             | **TO BE REMOVED** Allows modification of object state |
 | **ZX_RIGHT_EXECUTE**        | Allows mapping as executable if **ZX_RIGHT_MAP** is also present |
 | **ZX_RIGHT_MAP**            | Allows mapping of a VM object into an address space. |
 | **ZX_RIGHT_GET_PROPERTY**   | Allows property inspection via [`zx_object_get_property()`] |
