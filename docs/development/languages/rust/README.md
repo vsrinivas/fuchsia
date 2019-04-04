@@ -70,6 +70,21 @@ We don't currently have a style guide for Rust, but you should run `fx rustfmt`
 or `fx format-code` before submitting. We mostly use the rustfmt defaults, but
 have a couple [custom settings][rustfmt-toml].
 
+## Rust Idiomatic Usage Review
+
+If you're new to Rust, and would like someone to review your changes to
+validate that your usage of Rust is idiomatic, contact one of the following
+(or add them as a reviewer to your change.)
+- adamperry@google.com
+- belgum@google.com
+- bwb@google.com
+- cramertj@google.com
+- nickpollard@google.com
+- turnage@google.com
+
+(To volunteer for this, please add yourself to the list above and upload the
+change with one of the above as the reviewer).
+
 ## Communication channels
 
 Public discussion happens on the [rust@fuchsia.com] mailing list. For
