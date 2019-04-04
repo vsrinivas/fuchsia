@@ -6,8 +6,8 @@
 
 use failure::{Error, ResultExt};
 use fidl_fidl_examples_echo::EchoMarker;
-use fuchsia_app::client::Launcher;
 use fuchsia_async as fasync;
+use fuchsia_component::client::{launcher, launch};
 use structopt::StructOpt;
 
 #[fasync::run_singlethreaded]
@@ -23,8 +23,8 @@ async fn main() -> Result<(), Error> {
     // Launch the server and connect to the echo service.
     let Opt { server_url } = Opt::from_args();
 
-    let launcher = Launcher::new().context("Failed to open launcher service")?;
-    let app = launcher.launch(server_url, None)
+    let launcher = launcher().context("Failed to open launcher service")?;
+    let app = launch(&launcher, server_url, None)
                       .context("Failed to launch echo service")?;
 
     let echo = app.connect_to_service(EchoMarker)
