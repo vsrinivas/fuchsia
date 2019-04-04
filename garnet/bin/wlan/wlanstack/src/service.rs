@@ -2,78 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{bail, format_err};
+use failure::ResultExt;
 use fidl::encoding::OutOfLine;
-use fidl::endpoints::RequestStream;
 use fidl_fuchsia_wlan_device as fidl_wlan_dev;
 use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceServiceRequest};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MinstrelStatsResponse};
-use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::channel::mpsc::UnboundedReceiver;
 use futures::prelude::*;
-use futures::select;
-use futures::stream::FuturesUnordered;
 use log::{error, info};
-use pin_utils::pin_mut;
-use std::marker::Unpin;
 use std::sync::Arc;
-use void::Void;
 
 use crate::device::{self, IfaceDevice, IfaceMap, PhyDevice, PhyMap};
 use crate::station;
 use crate::stats_scheduler::StatsRef;
-use crate::watchable_map::MapEvent;
-use crate::watcher_service::{self, WatcherService};
+use crate::watcher_service::WatcherService;
 
-const CONCURRENT_LIMIT: usize = 1000;
-
-pub async fn device_service<S>(
-    phys: Arc<PhyMap>,
-    ifaces: Arc<IfaceMap>,
-    phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
-    iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
-    new_clients: S,
-) -> Result<Void, failure::Error>
-where
-    S: Stream<Item = fasync::Channel> + Unpin,
-{
-    let (watcher_service, watcher_fut) =
-        watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
-    pin_mut!(watcher_fut);
-    let mut watcher_fut = watcher_fut.fuse();
-    let mut active_clients = FuturesUnordered::new();
-    let mut new_clients = new_clients.fuse();
-    loop {
-        select! {
-            watcher_res = watcher_fut => match watcher_res
-                .map_err(|e| format_err!("watcher service has failed: {}", e))? {},
-            () = active_clients.select_next_some() => {},
-            new_client = new_clients.next() => match new_client {
-                Some(channel) => {
-                    active_clients.push(serve_channel(
-                        Arc::clone(&phys), Arc::clone(&ifaces), watcher_service.clone(), channel));
-                }
-                None => bail!("stream of new FIDL clients has ended unexpectedly"),
-            },
-        }
-    }
-}
-
-async fn serve_channel(
+pub async fn serve_device_requests(
     phys: Arc<PhyMap>,
     ifaces: Arc<IfaceMap>,
     watcher_service: WatcherService<PhyDevice, IfaceDevice>,
-    channel: fasync::Channel,
-) {
-    let r = await!(fidl_svc::DeviceServiceRequestStream::from_channel(channel)
-        .try_for_each_concurrent(CONCURRENT_LIMIT, move |request| handle_fidl_request(
-            request,
-            Arc::clone(&phys),
-            Arc::clone(&ifaces),
-            watcher_service.clone()
-        )));
-    r.unwrap_or_else(|e| error!("error serving a DeviceService client: {}", e))
+    mut req_stream: fidl_svc::DeviceServiceRequestStream,
+) -> Result<(), failure::Error> {
+    while let Some(req) = await!(req_stream.try_next()).context("error running DeviceService")? {
+        await!(handle_fidl_request(req, phys.clone(), ifaces.clone(), watcher_service.clone()))?;
+    }
+    Ok(())
 }
 
 async fn handle_fidl_request(
@@ -321,6 +274,7 @@ mod tests {
     use fidl_fuchsia_wlan_device_service::{IfaceListItem, PhyListItem};
     use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker};
     use fidl_fuchsia_wlan_sme as fidl_sme;
+    use fuchsia_async as fasync;
     use fuchsia_wlan_dev as wlan_dev;
     use futures::channel::mpsc;
     use futures::task::Poll;

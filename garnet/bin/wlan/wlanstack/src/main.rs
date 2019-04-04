@@ -22,37 +22,36 @@ mod telemetry;
 mod watchable_map;
 mod watcher_service;
 
-use failure::{format_err, Error, ResultExt};
-use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_inspect as fidl_inspect;
-use fidl_fuchsia_wlan_device_service::DeviceServiceMarker;
-use fuchsia_app::server::ServicesServer;
+use failure::Error;
+use fidl_fuchsia_inspect::InspectRequestStream;
+use fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_cobalt;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect as finspect;
-use futures::channel::mpsc::{self, UnboundedReceiver};
 use futures::prelude::*;
 use log::info;
 use std::sync::Arc;
-use void::Void;
 use wlan_inspect;
 
 use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
-use crate::watchable_map::MapEvent;
+use crate::watcher_service::WatcherService;
 
 const COBALT_CONFIG_PATH: &'static str = "/pkg/data/wlan_metrics_registry.pb";
 const COBALT_BUFFER_SIZE: usize = 100;
 const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
+const CONCURRENT_LIMIT: usize = 1000;
+
 static LOGGER: logger::Logger = logger::Logger;
 
-fn main() -> Result<(), Error> {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
     log::set_logger(&LOGGER)?;
     log::set_max_level(MAX_LOG_LEVEL);
 
     info!("Starting");
 
-    let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let inspect_root = finspect::ObjectTreeNode::new_root();
     let (phys, phy_events) = device::PhyMap::new();
     let (ifaces, iface_events) = device::IfaceMap::new();
@@ -66,39 +65,56 @@ fn main() -> Result<(), Error> {
         telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
     let iface_server = device::serve_ifaces(ifaces.clone(), cobalt_sender, inspect_root.clone())
         .map_ok(|x| match x {});
-    let services_server = serve_fidl(phys, ifaces, phy_events, iface_events, inspect_root)?
-        .map_ok(|void| match void {});
+    let (watcher_service, watcher_fut) =
+        watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
+    let services_server =
+        serve_fidl(phys, ifaces, watcher_service, inspect_root).try_join(watcher_fut);
 
-    exec.run_singlethreaded(services_server.try_join5(
+    await!(services_server.try_join5(
         phy_server,
         iface_server,
         cobalt_reporter.map(Ok),
         telemetry_server.map(Ok),
-    ))
-    .map(|((), (), (), (), ())| ())
+    ))?;
+    Ok(())
 }
 
-fn serve_fidl(
+enum IncomingServices {
+    Device(DeviceServiceRequestStream),
+    Inspect(InspectRequestStream),
+}
+
+async fn serve_fidl(
     phys: Arc<PhyMap>,
     ifaces: Arc<IfaceMap>,
-    phy_events: UnboundedReceiver<MapEvent<u16, PhyDevice>>,
-    iface_events: UnboundedReceiver<MapEvent<u16, IfaceDevice>>,
+    watcher_service: WatcherService<PhyDevice, IfaceDevice>,
     inspect_root: wlan_inspect::SharedNodePtr,
-) -> Result<impl Future<Output = Result<Void, Error>>, Error> {
-    let (sender, receiver) = mpsc::unbounded();
-    let fdio_server = ServicesServer::new()
-        .add_service((DeviceServiceMarker::NAME, move |channel| {
-            sender
-                .unbounded_send(channel)
-                .expect("Failed to send a new client to the server future");
-        }))
-        .add_service((fidl_inspect::InspectMarker::NAME, move |channel| {
-            finspect::InspectService::new(inspect_root.clone(), channel)
-        }))
-        .start()
-        .context("error configuring device service")?
-        .and_then(|()| future::ready(Err(format_err!("fdio server future exited unexpectedly"))))
-        .map_err(|e| e.context("fdio server terminated with error").into());
-    let device_service = service::device_service(phys, ifaces, phy_events, iface_events, receiver);
-    Ok(fdio_server.try_join(device_service).map_ok(|x: (Void, Void)| x.0))
+) -> Result<(), Error> {
+    let mut fs = ServiceFs::new_local();
+    fs.dir("public")
+        .add_fidl_service(IncomingServices::Device)
+        .add_fidl_service(IncomingServices::Inspect);
+
+    fs.take_and_serve_directory_handle()?;
+
+    let fdio_server = fs.for_each_concurrent(CONCURRENT_LIMIT, move |s| {
+        let phys = phys.clone();
+        let ifaces = ifaces.clone();
+        let watcher_service = watcher_service.clone();
+        let inspect_root = inspect_root.clone();
+        async move {
+            match s {
+                IncomingServices::Device(stream) => {
+                    await!(service::serve_device_requests(phys, ifaces, watcher_service, stream)
+                        .unwrap_or_else(|e| println!("{:?}", e)))
+                }
+                IncomingServices::Inspect(stream) => {
+                    await!(finspect::serve_request_stream(inspect_root, stream)
+                        .unwrap_or_else(|e| println!("{:?}", e)))
+                }
+            }
+        }
+    });
+    await!(fdio_server);
+    Ok(())
 }
