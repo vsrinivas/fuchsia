@@ -57,7 +57,7 @@ metadata = {
   } else if (target_cpu == "x64") {
     versions.x64 = version_content
   } else {
-    assert(false, "Unknown CPU type: %target_cpu")
+    assert(false, "Unknown CPU type: $target_cpu")
   }
 }
 

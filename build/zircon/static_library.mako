@@ -74,7 +74,7 @@ metadata = {
   } else if (target_cpu == "x64") {
     binaries.x64 = binaries_content
   } else {
-    assert(false, "Unknown CPU type: %target_cpu")
+    assert(false, "Unknown CPU type: $target_cpu")
   }
 
   deps = []
