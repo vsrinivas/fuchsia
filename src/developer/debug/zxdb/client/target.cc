@@ -11,11 +11,20 @@ namespace zxdb {
 
 // Schema Definition -----------------------------------------------------------
 
+static const char* kShowStdoutDescription =
+    R"(  Whether this process should pipe its stdout/stderr to zxdb.
+  If not set for a particular process, it will default to the system-wide
+  setting.)";
+
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
   auto schema =
       fxl::MakeRefCounted<SettingSchema>(SettingSchema::Level::kTarget);
+
+  schema->AddBool(ClientSettings::System::kShowStdout,
+                  kShowStdoutDescription, true);
+
   return schema;
 }
 

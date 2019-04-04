@@ -19,6 +19,7 @@ class SessionObserver {
   // debug agent and the fact the the cli console has special states for the
   // terminal state.
   enum class NotificationType {
+    kNone,      // Meant to signal a no-op.
     kError,
     kProcessStderr,
     kProcessStdout,

@@ -335,6 +335,8 @@ void ConsoleContext::HandleNotification(NotificationType type,
     case NotificationType::kProcessStdout:
     case NotificationType::kProcessStderr:
       break;
+    case NotificationType::kNone:  // None is a no-op.
+      return;
   }
 
   out.Append(msg);

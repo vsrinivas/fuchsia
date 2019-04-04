@@ -23,6 +23,7 @@ struct ClientSettings {
     static const char* kSymbolPaths;
     static const char* kPauseNewProcesses;
     static const char* kQuitAgentOnExit;
+    static const char* kShowStdout;
   };
 
   struct Job {

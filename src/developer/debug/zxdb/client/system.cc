@@ -29,6 +29,13 @@ const char* ClientSettings::System::kPauseNewProcesses = "pause-new-processes";
 static const char* kPauseNewProcessDescription =
     R"(  Whether a process should pause the initial thread on startup.)";
 
+const char* ClientSettings::System::kShowStdout =
+    "show-stdout";
+static const char* kShowStdoutDescription =
+    R"(  Whether newly debugged process (either launched or attached) should
+  output it's stdout/stderr to zxdb. This setting is global but can be overriden
+  by each individual process.)";
+
 const char* ClientSettings::System::kQuitAgentOnExit = "quit-agent-on-exit";
 static const char* kQuitAgentOnExitDescription =
     R"(  Whether the client will shutdown the connected agent upon exiting.")";
@@ -45,6 +52,8 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
                   {});
   schema->AddBool(ClientSettings::System::kPauseNewProcesses,
                   kPauseNewProcessDescription, true);
+  schema->AddBool(ClientSettings::System::kShowStdout,
+                  kShowStdoutDescription, true);
   schema->AddBool(ClientSettings::System::kQuitAgentOnExit,
                   kQuitAgentOnExitDescription, false);
 

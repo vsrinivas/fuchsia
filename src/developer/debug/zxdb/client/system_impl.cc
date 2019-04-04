@@ -260,8 +260,6 @@ void SystemImpl::AddNewJobContext(std::unique_ptr<JobContextImpl> job_context) {
 void SystemImpl::OnSettingChanged(const SettingStore& store,
                                   const std::string& setting_name) {
   if (setting_name == ClientSettings::System::kSymbolPaths) {
-    // TODO(donosoc): Eventually we should consider some way of unloading
-    //                symbols if on-host memory usage starts being a concern.
     auto paths = store.GetList(ClientSettings::System::kSymbolPaths);
     BuildIDIndex& build_id_index = GetSymbols()->build_id_index();
     for (const std::string& path : paths) {

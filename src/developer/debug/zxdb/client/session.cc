@@ -638,12 +638,19 @@ void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
   }
 
   FXL_DCHECK(notify.type != debug_ipc::NotifyIO::Type::kLast);
-  auto notification_type =
-      notify.type == debug_ipc::NotifyIO::Type::kStdout
-          ? SessionObserver::NotificationType::kProcessStdout
-          : SessionObserver::NotificationType::kProcessStderr;
 
-  SendSessionNotification(notification_type, notify.data);
+  switch (notify.type) {
+    case debug_ipc::NotifyIO::Type::kStdout:
+    case debug_ipc::NotifyIO::Type::kStderr: {
+      auto notification_type = HandleProcessIO(process, notify);
+      if (notification_type != SessionObserver::NotificationType::kNone)
+        SendSessionNotification(notification_type, notify.data);
+      break;
+    }
+    case debug_ipc::NotifyIO::Type::kLast:
+      FXL_NOTREACHED() << "Invalid notification type";
+  }
+
 }
 
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
@@ -781,6 +788,18 @@ void Session::SendSessionNotification(SessionObserver::NotificationType type,
                                       const std::string& msg) {
   for (auto& observer : observers_)
     observer.HandleNotification(type, msg);
+}
+
+SessionObserver::NotificationType Session::HandleProcessIO(
+    ProcessImpl* process, const debug_ipc::NotifyIO& notify) {
+  if (!process->target()->settings().GetBool(
+          ClientSettings::System::kShowStdout)) {
+    return SessionObserver::NotificationType::kNone;
+  }
+
+  return notify.type == debug_ipc::NotifyIO::Type::kStdout
+             ? SessionObserver::NotificationType::kProcessStdout
+             : SessionObserver::NotificationType::kProcessStderr;
 }
 
 void Session::ExpectComponent(uint32_t component_id) {

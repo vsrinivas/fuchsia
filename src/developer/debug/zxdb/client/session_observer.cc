@@ -18,6 +18,8 @@ const char* SessionObserver::NotificationTypeToString(NotificationType type) {
       return "kProcessStdout";
     case NotificationType::kWarning:
       return "Warning";
+    case NotificationType::kNone:
+      return "None";
   }
 
   FXL_NOTREACHED();

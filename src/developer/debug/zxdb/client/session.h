@@ -171,6 +171,9 @@ class Session {
   void SendSessionNotification(SessionObserver::NotificationType,
                                const std::string& msg);
 
+  SessionObserver::NotificationType HandleProcessIO(ProcessImpl*,
+                                                    const debug_ipc::NotifyIO&);
+
   // Whether we have opened a core dump. Makes much of the connection-related
   // stuff obsolete.
   bool is_minidump_ = false;
