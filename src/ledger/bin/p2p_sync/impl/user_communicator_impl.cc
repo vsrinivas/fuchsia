@@ -116,12 +116,18 @@ void UserCommunicatorImpl::OnNewMessage(fxl::StringView source,
 void UserCommunicatorImpl::OnDeviceChange(
     fxl::StringView remote_device, p2p_provider::DeviceChangeType change_type) {
   switch (change_type) {
-    case p2p_provider::DeviceChangeType::NEW:
+    case p2p_provider::DeviceChangeType::NEW: {
       devices_.insert(remote_device.ToString());
       break;
-    case p2p_provider::DeviceChangeType::DELETED:
-      devices_.erase(devices_.find(remote_device));
+    }
+    case p2p_provider::DeviceChangeType::DELETED: {
+      auto it = devices_.find(remote_device);
+      if (it == devices_.end()) {
+        return;
+      }
+      devices_.erase(it);
       break;
+    }
   }
   for (const auto& it : ledgers_) {
     it.second->OnDeviceChange(remote_device, change_type);
