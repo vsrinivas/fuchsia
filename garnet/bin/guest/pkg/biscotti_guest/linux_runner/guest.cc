@@ -55,6 +55,7 @@ static constexpr off_t kStatefulImageSize = 4000ul * 1024 * 1024;
 static constexpr const char* kStatefulImagePath = "/data/stateful.img";
 
 static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition() {
+  TRACE_DURATION("linux_runner", "GetOrCreateStatefulPartition");
   int fd = open(kStatefulImagePath, O_RDWR | O_CREAT);
   if (fd < 0) {
     FXL_LOG(ERROR) << "Failed to open image: " << strerror(errno);
@@ -75,6 +76,7 @@ static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition() {
 }
 
 static fidl::VectorPtr<fuchsia::guest::BlockDevice> GetBlockDevices() {
+  TRACE_DURATION("linux_runner", "GetBlockDevices");
   auto file_handle = GetOrCreateStatefulPartition();
   FXL_CHECK(file_handle) << "Failed to open stateful file";
   fidl::VectorPtr<fuchsia::guest::BlockDevice> devices;
@@ -112,6 +114,7 @@ static int convert_socket_to_fd(zx::socket socket) {
 zx_status_t Guest::CreateAndStart(component::StartupContext* context,
                                   fxl::CommandLine cl,
                                   std::unique_ptr<Guest>* guest) {
+  TRACE_DURATION("linux_runner", "Guest::CreateAndStart");
   FXL_LOG(INFO) << "Creating Guest Environment...";
   fuchsia::guest::EnvironmentManagerPtr guestmgr;
   context->ConnectToEnvironmentService(guestmgr.NewRequest());
@@ -134,6 +137,7 @@ Guest::Guest(component::StartupContext* context,
 }
 
 void Guest::Start() {
+  TRACE_DURATION("linux_runner", "Guest::Start");
   StartGrpcServer();
   StartGuest();
 }
@@ -183,6 +187,7 @@ class GrpcServerBuilder {
 };
 
 void Guest::StartGrpcServer() {
+  TRACE_DURATION("linux_runner", "Guest::StartGrpcServer");
   FXL_LOG(INFO) << "Starting GRPC server...";
   zx_status_t status;
   GrpcServerBuilder builder(socket_endpoint_, [this]() {
@@ -211,6 +216,7 @@ void Guest::StartGrpcServer() {
 }
 
 void Guest::StartGuest() {
+  TRACE_DURATION("linux_runner", "Guest::StartGuest");
   FXL_CHECK(!guest_controller_)
       << "Called StartGuest with an existing instance";
   FXL_LOG(INFO) << "Launching guest...";
@@ -222,15 +228,22 @@ void Guest::StartGuest() {
   launch_info.block_devices = GetBlockDevices();
   launch_info.wayland_device = fuchsia::guest::WaylandDevice::New();
   launch_info.wayland_device->dispatcher = wayland_dispatcher_.NewBinding();
+
+  auto vm_create_nonce = TRACE_NONCE();
+  TRACE_FLOW_BEGIN("linux_runner", "LaunchInstance", vm_create_nonce);
   guest_env_->LaunchInstance(
       std::move(launch_info), guest_controller_.NewRequest(),
-      [this](uint32_t cid) {
+      [this, vm_create_nonce](uint32_t cid) {
+        TRACE_DURATION("linux_runner", "LaunchInstance Callback");
+        TRACE_FLOW_END("linux_runner", "LaunchInstance", vm_create_nonce);
         FXL_LOG(INFO) << "Guest launched with CID " << cid;
         guest_cid_ = cid;
+        TRACE_FLOW_BEGIN("linux_runner", "TerminaBoot", vm_ready_nonce_);
       });
 }
 
 void Guest::ConfigureNetwork() {
+  TRACE_DURATION("linux_runner", "Guest::ConfigureNetwork");
   FXL_CHECK(maitred_)
       << "Called ConfigureNetwork without a maitre'd connection";
   std::string arg;
@@ -273,13 +286,17 @@ void Guest::ConfigureNetwork() {
   config->set_gateway(gateway);
   config->set_netmask(netmask);
 
-  auto grpc_status = maitred_->ConfigureNetwork(&context, request, &response);
-  FXL_CHECK(grpc_status.ok())
-      << "Failed to configure guest network: " << grpc_status.error_message();
+  {
+    TRACE_DURATION("linux_runner", "ConfigureNetworkRPC");
+    auto grpc_status = maitred_->ConfigureNetwork(&context, request, &response);
+    FXL_CHECK(grpc_status.ok())
+        << "Failed to configure guest network: " << grpc_status.error_message();
+  }
   FXL_LOG(INFO) << "Network configured.";
 }
 
 void Guest::StartTermina() {
+  TRACE_DURATION("linux_runner", "Guest::StartTermina");
   FXL_CHECK(maitred_) << "Called StartTermina without a maitre'd connection";
   FXL_LOG(INFO) << "Starting Termina...";
 
@@ -289,9 +306,12 @@ void Guest::StartTermina() {
   std::string lxd_subnet = "100.115.92.1/24";
   request.mutable_lxd_ipv4_subnet()->swap(lxd_subnet);
 
-  auto grpc_status = maitred_->StartTermina(&context, request, &response);
-  FXL_CHECK(grpc_status.ok())
-      << "Failed to start Termina: " << grpc_status.error_message();
+  {
+    TRACE_DURATION("linux_runner", "StartTerminaRPC");
+    auto grpc_status = maitred_->StartTermina(&context, request, &response);
+    FXL_CHECK(grpc_status.ok())
+        << "Failed to start Termina: " << grpc_status.error_message();
+  }
 }
 
 // This exposes a shell on /dev/hvc0 that can be used to interact with the
@@ -316,9 +336,12 @@ void Guest::LaunchVmShell() {
     env->insert({"LXD_UNPRIVILEGED_ONLY", "true"});
   }
 
-  auto status = maitred_->LaunchProcess(&context, request, &response);
-  FXL_CHECK(status.ok()) << "Failed to launch '" << kVmShellCommand
-                         << "': " << status.error_message();
+  {
+    TRACE_DURATION("linux_runner", "LaunchProcessRPC");
+    auto status = maitred_->LaunchProcess(&context, request, &response);
+    FXL_CHECK(status.ok()) << "Failed to launch '" << kVmShellCommand
+                           << "': " << status.error_message();
+  }
 }
 
 // This exposes a shell on /dev/hvc0 that can be used to interact with the
@@ -349,12 +372,16 @@ void Guest::LaunchContainerShell() {
     env->insert({"LXD_UNPRIVILEGED_ONLY", "true"});
   }
 
-  auto status = maitred_->LaunchProcess(&context, request, &response);
-  FXL_CHECK(status.ok()) << "Failed to launch container shell: "
-                         << status.error_message();
+  {
+    TRACE_DURATION("linux_runner", "LaunchProcessRPC");
+    auto status = maitred_->LaunchProcess(&context, request, &response);
+    FXL_CHECK(status.ok()) << "Failed to launch container shell: "
+                           << status.error_message();
+  }
 }
 
 void Guest::CreateContainer() {
+  TRACE_DURATION("linux_runner", "Guest::CreateContainer");
   FXL_CHECK(tremplin_)
       << "CreateContainer called without a Tremplin connection";
   FXL_LOG(INFO) << "Creating Container...";
@@ -367,9 +394,12 @@ void Guest::CreateContainer() {
   request.mutable_image_alias()->assign(kContainerImageAlias);
   request.mutable_image_server()->assign(kContainerImageServer);
 
-  auto status = tremplin_->CreateContainer(&context, request, &response);
-  FXL_CHECK(status.ok()) << "Failed to create container: "
-                         << status.error_message();
+  {
+    TRACE_DURATION("linux_runner", "CreateContainerRPC");
+    auto status = tremplin_->CreateContainer(&context, request, &response);
+    FXL_CHECK(status.ok()) << "Failed to create container: "
+                           << status.error_message();
+  }
   switch (response.status()) {
     case vm_tools::tremplin::CreateContainerResponse::CREATING:
       break;
@@ -389,6 +419,7 @@ void Guest::CreateContainer() {
 }
 
 void Guest::StartContainer() {
+  TRACE_DURATION("linux_runner", "Guest::StartContainer");
   FXL_CHECK(tremplin_) << "StartContainer called without a Tremplin connection";
   FXL_LOG(INFO) << "Starting Container...";
 
@@ -401,9 +432,12 @@ void Guest::StartContainer() {
   request.mutable_container_private_key()->assign("");
   request.mutable_token()->assign("container_token");
 
-  auto status = tremplin_->StartContainer(&context, request, &response);
-  FXL_CHECK(status.ok()) << "Failed to start container: "
-                         << status.error_message();
+  {
+    TRACE_DURATION("linux_runner", "StartContainerRPC");
+    auto status = tremplin_->StartContainer(&context, request, &response);
+    FXL_CHECK(status.ok()) << "Failed to start container: "
+                           << status.error_message();
+  }
 
   switch (response.status()) {
     case vm_tools::tremplin::StartContainerResponse::RUNNING:
@@ -432,9 +466,12 @@ void Guest::SetupUser() {
 
   request.mutable_container_name()->assign(kContainerName);
   request.mutable_container_username()->assign(kDefaultContainerUser);
-  auto status = tremplin_->SetUpUser(&context, request, &response);
-  FXL_CHECK(status.ok()) << "Failed to setup user '" << kDefaultContainerUser
-                         << "': " << status.error_message();
+  {
+    TRACE_DURATION("linux_runner", "SetUpUserRPC");
+    auto status = tremplin_->SetUpUser(&context, request, &response);
+    FXL_CHECK(status.ok()) << "Failed to setup user '" << kDefaultContainerUser
+                           << "': " << status.error_message();
+  }
 
   switch (response.status()) {
     case vm_tools::tremplin::SetUpUserResponse::EXISTS:
@@ -458,6 +495,7 @@ void Guest::SetupUser() {
 // socket for this client and hand one end over to the |grpc::Server|.
 void Guest::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
                    AcceptCallback callback) {
+  TRACE_DURATION("linux_runner", "Guest::Accept");
   FXL_CHECK(grpc_server_);
   FXL_LOG(INFO) << "Inbound connection request from CID " << src_cid
                 << " on port " << src_port;
@@ -482,6 +520,7 @@ void Guest::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port,
 template <typename T>
 std::unique_ptr<typename T::Stub> Guest::NewVsockStub(uint32_t cid,
                                                       uint32_t port) {
+  TRACE_DURATION("linux_runner", "Guest::NewVsockStub");
   // Create the socket for the connection.
   zx::socket h1, h2;
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &h1, &h2);
@@ -518,6 +557,8 @@ std::unique_ptr<typename T::Stub> Guest::NewVsockStub(uint32_t cid,
 grpc::Status Guest::VmReady(grpc::ServerContext* context,
                             const vm_tools::EmptyMessage* request,
                             vm_tools::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::VmReady");
+  TRACE_FLOW_END("linux_runner", "TerminaBoot", vm_ready_nonce_);
   FXL_LOG(INFO) << "VM Ready -- Connecting to Maitre'd...";
   maitred_ = NewVsockStub<vm_tools::Maitred>(guest_cid_, kMaitredPort);
   FXL_CHECK(maitred_) << "Failed to connect to Maitre'd";
@@ -545,6 +586,7 @@ grpc::Status Guest::TremplinReady(
     grpc::ServerContext* context,
     const ::vm_tools::tremplin::TremplinStartupInfo* request,
     vm_tools::tremplin::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::TremplinReady");
   FXL_LOG(INFO) << "Tremplin Ready.";
   tremplin_ =
       NewVsockStub<vm_tools::tremplin::Tremplin>(guest_cid_, kTremplinPort);
@@ -559,6 +601,7 @@ grpc::Status Guest::UpdateCreateStatus(
     grpc::ServerContext* context,
     const vm_tools::tremplin::ContainerCreationProgress* request,
     vm_tools::tremplin::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::UpdateCreateStatus");
   switch (request->status()) {
     case vm_tools::tremplin::ContainerCreationProgress::CREATED:
       FXL_LOG(INFO) << "Container created: " << request->container_name();
@@ -590,6 +633,7 @@ grpc::Status Guest::ContainerReady(
     grpc::ServerContext* context,
     const vm_tools::container::ContainerStartupInfo* request,
     vm_tools::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::ContainerReady");
   // TODO(tjdetwiler): validate token.
   auto garcon_port = request->garcon_port();
   FXL_LOG(INFO) << "Container Ready; Garcon listening on port " << garcon_port;
@@ -617,6 +661,7 @@ grpc::Status Guest::UpdateApplicationList(
     grpc::ServerContext* context,
     const vm_tools::container::UpdateApplicationListRequest* request,
     vm_tools::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::UpdateApplicationList");
   FXL_LOG(INFO) << "Update Application List";
   for (const auto& application : request->application()) {
     FXL_LOG(INFO) << "ID: " << application.desktop_file_id();
@@ -639,6 +684,7 @@ grpc::Status Guest::UpdateApplicationList(
 grpc::Status Guest::OpenUrl(grpc::ServerContext* context,
                             const vm_tools::container::OpenUrlRequest* request,
                             vm_tools::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::OpenUrl");
   FXL_LOG(INFO) << "Open URL";
   return grpc::Status::OK;
 }
@@ -647,6 +693,7 @@ grpc::Status Guest::InstallLinuxPackageProgress(
     grpc::ServerContext* context,
     const vm_tools::container::InstallLinuxPackageProgressInfo* request,
     vm_tools::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::InstallLinuxPackageProgress");
   FXL_LOG(INFO) << "Install Linux Package Progress";
   return grpc::Status::OK;
 }
@@ -655,6 +702,7 @@ grpc::Status Guest::UninstallPackageProgress(
     grpc::ServerContext* context,
     const vm_tools::container::UninstallPackageProgressInfo* request,
     vm_tools::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::UninstallPackageProgress");
   FXL_LOG(INFO) << "Uninstall Package Progress";
   return grpc::Status::OK;
 }
@@ -663,6 +711,7 @@ grpc::Status Guest::OpenTerminal(
     grpc::ServerContext* context,
     const vm_tools::container::OpenTerminalRequest* request,
     vm_tools::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::OpenTerminal");
   FXL_LOG(INFO) << "Open Terminal";
   return grpc::Status::OK;
 }
@@ -671,6 +720,7 @@ grpc::Status Guest::UpdateMimeTypes(
     grpc::ServerContext* context,
     const vm_tools::container::UpdateMimeTypesRequest* request,
     vm_tools::EmptyMessage* response) {
+  TRACE_DURATION("linux_runner", "Guest::UpdateMimeTypes");
   FXL_LOG(INFO) << "Update Mime Types";
   size_t i = 0;
   for (const auto& pair : request->mime_type_mappings()) {
@@ -705,6 +755,7 @@ void Guest::DumpContainerDebugInfo() {
 }
 
 void Guest::Launch(AppLaunchRequest request) {
+  TRACE_DURATION("linux_runner", "Guest::Launch");
   // If we have a garcon connection we can request the launch immediately.
   // Otherwise we just retain the request and forward it along once the
   // container is started.
@@ -716,6 +767,7 @@ void Guest::Launch(AppLaunchRequest request) {
 }
 
 void Guest::LaunchApplication(AppLaunchRequest app) {
+  TRACE_DURATION("linux_runner", "Guest::LaunchApplication");
   FXL_CHECK(garcon_) << "Called LaunchApplication without a garcon connection";
   std::string desktop_file_id = app.application.resolved_url;
   if (desktop_file_id.rfind(kLinuxUriScheme, 0) == std::string::npos) {
@@ -747,12 +799,15 @@ void Guest::LaunchApplication(AppLaunchRequest app) {
   vm_tools::container::LaunchApplicationResponse response;
 
   request.set_desktop_file_id(std::move(desktop_file_id));
-  auto grpc_status = garcon_->LaunchApplication(&context, request, &response);
-  if (!grpc_status.ok() || !response.success()) {
-    FXL_LOG(ERROR) << "Failed to launch application: "
-                   << grpc_status.error_message() << ", "
-                   << response.failure_reason();
-    return;
+  {
+    TRACE_DURATION("linux_runner", "LaunchApplicationRPC");
+    auto grpc_status = garcon_->LaunchApplication(&context, request, &response);
+    if (!grpc_status.ok() || !response.success()) {
+      FXL_LOG(ERROR) << "Failed to launch application: "
+                     << grpc_status.error_message() << ", "
+                     << response.failure_reason();
+      return;
+    }
   }
 
   FXL_LOG(INFO) << "Application launched successfully";
@@ -761,6 +816,7 @@ void Guest::LaunchApplication(AppLaunchRequest app) {
 
 void Guest::OnNewView(
     fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view_provider) {
+  TRACE_DURATION("linux_runner", "Guest::OnNewView");
   // TODO: This currently just pops a component request off the queue to
   // associate with the new view. This is obviously racy but will work until
   // we can pipe though a startup id to provide a more accurate correlation.
@@ -776,6 +832,7 @@ void Guest::OnNewView(
 void Guest::CreateComponent(
     AppLaunchRequest request,
     fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view_provider) {
+  TRACE_DURATION("linux_runner", "Guest::CreateComponent");
   auto component = LinuxComponent::Create(
       fit::bind_member(this, &Guest::OnComponentTerminated),
       std::move(request.application), std::move(request.startup_info),

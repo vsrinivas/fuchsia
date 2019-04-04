@@ -6,6 +6,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/logging.h>
+#include <trace-provider/provider.h>
 
 #include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/linux_runner.h"
 
@@ -19,6 +20,8 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  trace::TraceProvider trace_provider(loop.dispatcher());
+
   linux_runner::LinuxRunner runner;
   zx_status_t status = runner.Init(std::move(cl));
   if (status != ZX_OK) {

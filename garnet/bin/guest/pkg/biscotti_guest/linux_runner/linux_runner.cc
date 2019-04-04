@@ -17,12 +17,14 @@ LinuxRunner::LinuxRunner()
 }
 
 zx_status_t LinuxRunner::Init(fxl::CommandLine cl) {
+  TRACE_DURATION("linux_runner", "LinuxRunner::Init");
   return Guest::CreateAndStart(context_.get(), std::move(cl), &guest_);
 }
 
 void LinuxRunner::StartComponent(
     fuchsia::sys::Package application, fuchsia::sys::StartupInfo startup_info,
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
+  TRACE_DURATION("linux_runner", "LinuxRunner::StartComponent");
   AppLaunchRequest request = {
       std::move(application),
       std::move(startup_info),

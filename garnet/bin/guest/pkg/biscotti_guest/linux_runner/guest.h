@@ -15,6 +15,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <src/lib/fxl/command_line.h>
 #include <lib/guest/scenic_wayland_dispatcher.h>
+#include <trace/event.h>
 
 #include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/linux_component.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/linux_runner/log_collector.h"
@@ -155,6 +156,11 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
       background_views_;
   std::unordered_map<const LinuxComponent*, std::unique_ptr<LinuxComponent>>
       components_;
+
+  // A flow ID used to track the time from the time the VM is created until
+  // the time the guest has reported itself as ready via the VmReady RPC in the
+  // vm_tools::StartupListener::Service.
+  const trace_async_id_t vm_ready_nonce_ = TRACE_NONCE();
 };
 }  // namespace linux_runner
 
