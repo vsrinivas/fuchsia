@@ -86,6 +86,10 @@ table NavigationState {
 
     /// Indicates if there is a previous navigation.
     5: bool can_go_back;
+
+    /// Indicates that the main document's statically declared resources have
+    /// been loaded.
+    6: bool is_main_document_loaded;
 };
 
 /// Characterizes the type of reload.
