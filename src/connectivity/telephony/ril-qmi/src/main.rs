@@ -10,14 +10,14 @@ use {
     crate::errors::QmuxError,
     crate::transport::QmiTransport,
     failure::{Error, ResultExt},
-    fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
+    fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_telephony_ril::*,
-    fuchsia_app::server::ServicesServer,
+    fuchsia_component::server::ServiceFs,
     fuchsia_async as fasync,
     fuchsia_syslog::{self as syslog, macros::*},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    futures::{TryFutureExt, TryStreamExt},
+    futures::{StreamExt, TryFutureExt, TryStreamExt},
     qmi_protocol::QmiResult,
     qmi_protocol::*,
     std::sync::Arc,
@@ -99,9 +99,9 @@ async fn setup_client<'a>(modem: QmiModemPtr, client_ptr: ClientPtr) {
 
 struct FrilService;
 impl FrilService {
-    pub fn spawn(modem: QmiModemPtr, chan: fasync::Channel) {
+    pub fn spawn(modem: QmiModemPtr, stream: RadioInterfaceLayerRequestStream) {
         let client = Arc::new(Mutex::new(None));
-        let server = RadioInterfaceLayerRequestStream::from_channel(chan)
+        let server = stream
             .try_for_each(move |req| Self::handle_request(modem.clone(), client.clone(), req))
             .unwrap_or_else(|e| fx_log_err!("Error running {:?}", e));
         fasync::spawn(server);
@@ -231,13 +231,14 @@ fn main() -> Result<(), Error> {
 
     let modem = Arc::new(Mutex::new(QmiModem::new()));
 
-    let server = ServicesServer::new()
-        .add_service((RadioInterfaceLayerMarker::NAME, move |chan: fasync::Channel| {
+    let mut fs = ServiceFs::new_local();
+    fs.dir("public")
+        .add_fidl_service(move |stream| {
             fx_log_info!("New client connecting to the Fuchsia RIL");
-            FrilService::spawn(modem.clone(), chan)
-        }))
-        .start()
-        .context("Error starting QMI modem service")?;
+            FrilService::spawn(modem.clone(), stream)
+        });
+    fs.take_and_serve_directory_handle()?;
 
-    executor.run_singlethreaded(server)
+    executor.run_singlethreaded(fs.collect::<()>());
+    Ok(())
 }
