@@ -7,7 +7,6 @@
 
 use {
     failure::{format_err, Error, ResultExt},
-    fidl::endpoints::{RequestStream, ServiceMarker},
     fidl_fidl_test_compatibility::{
         EchoEvent,
         EchoMarker,
@@ -15,23 +14,22 @@ use {
         EchoRequest,
         EchoRequestStream,
     },
-    fuchsia_app::{
-        client::Launcher,
-        client::App,
-        server::ServicesServer,
-    },
+    fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async as fasync,
-    futures::TryStreamExt,
+    fuchsia_component::{
+        client::{App, launcher, launch},
+        server::ServiceFs,
+    },
+    futures::{StreamExt, TryStreamExt},
 };
 
-fn launch_and_connect_to_echo(launcher: &Launcher, url: String) -> Result<(EchoProxy, App), Error> {
-    let app = launcher.launch(url, None)?;
+fn launch_and_connect_to_echo(launcher: &LauncherProxy, url: String) -> Result<(EchoProxy, App), Error> {
+    let app = launch(&launcher, url, None)?;
     let echo = app.connect_to_service(EchoMarker)?;
     Ok((echo, app))
 }
 
-async fn echo_server(chan: fasync::Channel, launcher: &Launcher) -> Result<(), Error> {
-    const CONCURRENT_REQ_LIMIT: Option<usize> = None;
+async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Result<(), Error> {
     let handler = move |request| Box::pin(async move {
         match request {
             EchoRequest::EchoStruct { mut value, forward_to_server, responder } => {
@@ -66,29 +64,28 @@ async fn echo_server(chan: fasync::Channel, launcher: &Launcher) -> Result<(), E
         Ok(())
     });
 
-    let handle_requests_fut = EchoRequestStream::from_channel(chan)
+    let handle_requests_fut = stream
         .err_into() // change error type from fidl::Error to failure::Error
-        .try_for_each_concurrent(CONCURRENT_REQ_LIMIT, handler);
+        .try_for_each_concurrent(None /* max concurrent requests per connection */, handler);
 
     await!(handle_requests_fut)
 }
 
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let launcher = Launcher::new().context("Error connecting to application launcher")?;
+    let launcher = launcher().context("Error connecting to application launcher")?;
 
-    let fut = ServicesServer::new()
-        .add_service((EchoMarker::NAME, move |chan| {
-            let launcher = launcher.clone();
-            fasync::spawn(async move {
-                if let Err(e) = await!(echo_server(chan, &launcher)) {
-                    eprintln!("Closing echo server {:?}", e);
-                }
-            })
-        }))
-        .start()
-        .context("Error starting compatibility echo ServicesServer")?;
+    let mut fs = ServiceFs::new_local();
+    fs.dir("public")
+        .add_fidl_service(|stream| stream);
+    fs.take_and_serve_directory_handle().context("Error serving directory handle")?;
 
-    executor.run_singlethreaded(fut).context("failed to execute echo future")?;
+    let serve_fut = fs.for_each_concurrent(None /* max concurrent connections */, |stream| async {
+        if let Err(e) = await!(echo_server(stream, &launcher)) {
+            eprintln!("Closing echo server {:?}", e);
+        }
+    });
+
+    executor.run_singlethreaded(serve_fut);
     Ok(())
 }

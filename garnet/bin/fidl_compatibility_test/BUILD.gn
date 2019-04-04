@@ -51,8 +51,9 @@ rustc_binary("compatibility_test_server_rust_bin") {
   deps = [
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]
