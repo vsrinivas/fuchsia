@@ -32,8 +32,8 @@ executable("root_presenter") {
     "//garnet/bin/ui/input_reader",
     "//garnet/bin/ui/presentation_mode",
     "//garnet/lib/ui/scenic/util:rk4_spring_simulation",
+    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/component/cpp",
-    "//src/lib/fxl",
     "//garnet/public/lib/ui/input",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
@@ -41,14 +41,13 @@ executable("root_presenter") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-provider",
   ]
-
-  include_dirs = [ "//third_party/glm" ]
 
   defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
 }
@@ -60,7 +59,7 @@ source_set("renderer_params") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.ui.gfx",
+    "//src/lib/fxl",
   ]
 }

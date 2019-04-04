@@ -4,20 +4,11 @@
 
 #include "garnet/examples/ui/video_display/simple_camera_view.h"
 
-#include <src/lib/fxl/log_level.h>
 #include <lib/ui/scenic/cpp/commands.h>
+#include <src/lib/fxl/log_level.h>
 
-#if defined(countof)
-// TODO(ZX-377): Workaround for compiler error due to Zircon defining countof()
-// as a macro.  Redefines countof() using GLM_COUNTOF(), which currently
-// provides a more sophisticated implementation anyway.
-#undef countof
-#include <glm/glm.hpp>
-#define countof(X) GLM_COUNTOF(X)
-#else
-// No workaround required.
-#include <glm/glm.hpp>
-#endif
+#include "garnet/lib/ui/util/glm_workaround.h"
+
 #include <glm/gtc/type_ptr.hpp>
 
 namespace video_display {

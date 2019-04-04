@@ -10,7 +10,6 @@ executable("service") {
     "app.h",
     "compiler.cc",
     "compiler.h",
-    "glm_hack.h",
     "imagepipe_shadertoy.cc",
     "imagepipe_shadertoy.h",
     "main.cc",
@@ -28,6 +27,7 @@ executable("service") {
 
   deps = [
     "services",
+    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/examples/escher/common",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/component/cpp",
@@ -44,6 +44,5 @@ executable("service") {
   include_dirs = [
     "//lib",
     "//garnet/public/lib/escher",
-    "//third_party/glm",
   ]
 }

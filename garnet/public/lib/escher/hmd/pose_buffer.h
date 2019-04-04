@@ -7,17 +7,7 @@
 
 #include "lib/escher/vk/buffer.h"
 
-#if defined(countof)
-// Workaround for compiler error due to Zircon defining countof() as a macro.
-// Redefines countof() using GLM_COUNTOF(), which currently provides a more
-// sophisticated implementation anyway.
-#undef countof
-#include <glm/glm.hpp>
-#define countof(X) GLM_COUNTOF(X)
-#else
-// No workaround required.
-#include <glm/glm.hpp>
-#endif
+#include "garnet/lib/ui/util/glm_workaround.h"
 
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>

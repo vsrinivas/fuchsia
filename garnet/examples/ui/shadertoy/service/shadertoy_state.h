@@ -10,7 +10,7 @@
 
 #include <lib/zx/eventpair.h>
 
-#include "garnet/examples/ui/shadertoy/service/glm_hack.h"
+#include "garnet/lib/ui/util/glm_workaround.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/resources/resource.h"
 #include "lib/escher/util/stopwatch.h"

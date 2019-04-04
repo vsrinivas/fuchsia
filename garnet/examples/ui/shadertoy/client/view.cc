@@ -3,23 +3,13 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/ui/shadertoy/client/view.h"
+#include "garnet/lib/ui/util/glm_workaround.h"
 
-#if defined(countof)
-// TODO(ZX-377): Workaround for compiler error due to Zircon defining countof()
-// as a macro.  Redefines countof() using GLM_COUNTOF(), which currently
-// provides a more sophisticated implementation anyway.
-#undef countof
-#include <glm/glm.hpp>
-#define countof(X) GLM_COUNTOF(X)
-#else
-// No workaround required.
-#include <glm/glm.hpp>
-#endif
 #include <glm/gtc/type_ptr.hpp>
 
 #include "garnet/examples/ui/shadertoy/client/glsl_strings.h"
-#include "src/lib/fxl/logging.h"
 #include "lib/ui/scenic/cpp/commands.h"
+#include "src/lib/fxl/logging.h"
 
 namespace shadertoy_client {
 

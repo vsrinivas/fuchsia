@@ -202,6 +202,7 @@ source_set("escher") {
   ]
 
   deps = [
+    "//garnet/lib/ui/util:glm_workaround",
     "//third_party/shaderc/libshaderc",
     "//third_party/shaderc/third_party/glslang",
     "//third_party/shaderc/third_party/glslang:SPIRV",

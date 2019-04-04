@@ -38,6 +38,7 @@ source_set("testing_deps") {
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic/tests:testing_deps",
     "//garnet/lib/ui/scenic/util",
+    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/escher/test:gtest_escher",
@@ -60,9 +61,10 @@ source_set("util") {
   ]
   public_deps = [
     "//garnet/lib/ui/scenic/util",
+    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
+    "//src/lib/fxl",
   ]
 }
 
@@ -100,11 +102,9 @@ executable("unittests") {
   deps = [
     ":testing_deps",
     "//garnet/lib/ui/gfx:object_linker",
+    "//garnet/lib/ui/util:glm_workaround",
   ]
-  include_dirs = [
-    "//garnet/public/lib/escher",
-    "//third_party/glm",
-  ]
+  include_dirs = [ "//garnet/public/lib/escher" ]
 }
 
 executable("apptests") {
@@ -126,14 +126,11 @@ executable("pixeltests") {
   sources = [
     "scenic_pixel_test.cc",
   ]
-  include_dirs = [
-    "//garnet/public/lib/escher",
-    "//third_party/glm",
-  ]
+  include_dirs = [ "//garnet/public/lib/escher" ]
   deps = [
+    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/testing/views",
     "//sdk/fidl/fuchsia.sys",
@@ -143,6 +140,7 @@ executable("pixeltests") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/async-cpp",
   ]
@@ -155,12 +153,9 @@ executable("viewstate_apptests") {
   sources = [
     "gfx_viewstate_apptest.cc",
   ]
-  include_dirs = [
-    "//garnet/public/lib/escher",
-    "//third_party/glm",
-  ]
+  include_dirs = [ "//garnet/public/lib/escher" ]
   deps = [
-    "//src/lib/fxl",
+    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/testing/views",
@@ -170,6 +165,7 @@ executable("viewstate_apptests") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp/testing:integration",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -183,6 +179,7 @@ executable("mock_pose_buffer_provider_cc") {
   ]
 
   deps = [
+    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",

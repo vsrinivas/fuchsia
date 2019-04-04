@@ -5,24 +5,12 @@
 #ifndef GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_ROTATER_H_
 #define GARNET_BIN_UI_ROOT_PRESENTER_DISPLAY_ROTATER_H_
 
-#if defined(countof)
-// Workaround for compiler error due to Zircon defining countof() as a macro.
-// Redefines countof() using GLM_COUNTOF(), which currently provides a more
-// sophisticated implementation anyway.
-#undef countof
-#include <glm/glm.hpp>
-#define countof(X) GLM_COUNTOF(X)
-#else
-// No workaround required.
-#include <glm/glm.hpp>
-#endif
-#include <glm/ext.hpp>
-
 #include <fuchsia/ui/input/cpp/fidl.h>
-
+#include "garnet/lib/ui/util/glm_workaround.h"
+#include <glm/ext.hpp>
 #include "garnet/lib/ui/scenic/util/rk4_spring_simulation.h"
-#include "src/lib/fxl/macros.h"
 #include "lib/ui/scenic/cpp/resources.h"
+#include "src/lib/fxl/macros.h"
 
 namespace root_presenter {
 

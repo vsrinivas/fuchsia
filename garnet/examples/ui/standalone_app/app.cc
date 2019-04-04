@@ -3,18 +3,8 @@
 // found in the LICENSE file.
 
 #include "garnet/examples/ui/standalone_app/app.h"
+#include "garnet/lib/ui/util/glm_workaround.h"
 
-#if defined(countof)
-// Workaround for compiler error due to Zircon defining countof() as a macro.
-// Redefines countof() using GLM_COUNTOF(), which currently provides a more
-// sophisticated implementation anyway.
-#undef countof
-#include <glm/glm.hpp>
-#define countof(X) GLM_COUNTOF(X)
-#else
-// No workaround required.
-#include <glm/glm.hpp>
-#endif
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/quaternion.hpp>
 
@@ -260,9 +250,9 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 
   // Wait kSessionDuration seconds, and close the session.
   constexpr int kSessionDuration = 40;
-  async::PostDelayedTask(loop_->dispatcher(),
-                         [this] { ReleaseSessionResources(); },
-                         zx::sec(kSessionDuration));
+  async::PostDelayedTask(
+      loop_->dispatcher(), [this] { ReleaseSessionResources(); },
+      zx::sec(kSessionDuration));
 
   // Set up initial scene.
   const float display_width = static_cast<float>(display_info.width_in_px);

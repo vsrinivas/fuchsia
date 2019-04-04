@@ -7,7 +7,7 @@
 
 #include <fuchsia/ui/sketchy/cpp/fidl.h>
 
-#include "lib/ui/sketchy/client/glm_hack.h"
+#include "garnet/lib/ui/util/glm_workaround.h"
 
 namespace sketchy_lib {
 
