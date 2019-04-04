@@ -71,10 +71,10 @@ void ViewHost::UpdateScene() {
             fuchsia::ui::gfx::BoundingBox{
                 .min =
                     fuchsia::ui::gfx::vec3{
-                        .x = offset, .y = 0.f, .z = -logical_size().z},
+                        .x = 0.f, .y = 0.f, .z = -logical_size().z},
                 .max =
                     fuchsia::ui::gfx::vec3{
-                        .x = offset + width, .y = logical_size().y, .z = 0.f},
+                        .x = width, .y = logical_size().y, .z = 0.f},
             },
         .inset_from_min = fuchsia::ui::gfx::vec3{.x = 0.f, .y = 0.f, .z = 0.f},
         .inset_from_max = fuchsia::ui::gfx::vec3{.x = 0.f, .y = 0.f, .z = 0.f},
