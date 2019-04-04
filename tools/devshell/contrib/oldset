@@ -3,7 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### set up a build directory
+### set up a build directory (DEPRECATED)
 
 ## usage: fx oldset TARGET [OUTDIR]
 ##                  [--board NAME|PATH]
