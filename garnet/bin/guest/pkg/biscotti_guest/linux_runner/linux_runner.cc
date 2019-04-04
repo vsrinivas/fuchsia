@@ -6,8 +6,8 @@
 
 #include <memory>
 
-#include "src/lib/fxl/logging.h"
 #include "lib/svc/cpp/service_provider_bridge.h"
+#include "src/lib/fxl/logging.h"
 
 namespace linux_runner {
 
