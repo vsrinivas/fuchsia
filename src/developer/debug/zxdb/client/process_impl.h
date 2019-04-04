@@ -53,7 +53,7 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
                            std::function<void(const Err&)> callback) override;
 
   // Notifications from the agent that a thread has started or exited.
-  void OnThreadStarting(const debug_ipc::ThreadRecord& record);
+  void OnThreadStarting(const debug_ipc::ThreadRecord& record, bool resume);
   void OnThreadExiting(const debug_ipc::ThreadRecord& record);
 
   // Notification that the list of loaded modules may have been updated.

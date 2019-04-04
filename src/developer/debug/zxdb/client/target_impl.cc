@@ -60,7 +60,7 @@ void TargetImpl::ProcessCreatedAsComponent(uint64_t koid,
 
   state_ = State::kRunning;
   process_ = std::make_unique<ProcessImpl>(this, koid, process_name,
-                                           Process::StartType::kLaunch);
+                                           Process::StartType::kComponent);
   system_->NotifyDidCreateProcess(process_.get());
   for (auto& observer : observers())
     observer.DidCreateProcess(this, process_.get(), false);

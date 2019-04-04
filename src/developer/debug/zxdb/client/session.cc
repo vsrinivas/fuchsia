@@ -34,6 +34,7 @@
 #include "src/developer/debug/zxdb/client/thread_impl.h"
 #include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/shared/logging/debug.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -501,29 +502,56 @@ bool Session::ClearConnectionData() {
   return true;
 }
 
-void Session::DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
-                                   const debug_ipc::NotifyThread& notify) {
+void Session::DispatchNotifyThreadStarting(
+    const debug_ipc::NotifyThread& notify) {
   ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
-  if (process) {
-    if (type == debug_ipc::MsgHeader::Type::kNotifyThreadStarting) {
-      process->OnThreadStarting(notify.record);
-
-      // If this is the initial thread, we need to check if we need to resume it
-      // depending on the user defined setting for new processes.
-      auto threads = process->GetThreads();
-      bool pause_new_process = process->target()->system()->settings().GetBool(
-          ClientSettings::System::kPauseNewProcesses);
-      if (threads.size() == 1u && !pause_new_process)
-        threads.front()->Continue();
-    } else {
-      process->OnThreadExiting(notify.record);
-    }
-  } else {
+  if (!process) {
     SendSessionNotification(SessionObserver::NotificationType::kWarning,
-                            "Received thread notification for an "
+                            "Received thread starting notification for an "
                             "unexpected process %" PRIu64 ".\n",
                             notify.process_koid);
+    return;
   }
+
+  // If this is the initial thread, we need to check if we need to resume it
+  // depending on the user defined setting for new processes.
+  auto threads = process->GetThreads();
+
+  bool resume_thread = false;
+  if (!threads.empty()) {
+    resume_thread = true;
+  } else {
+    // Depending on how the process was started, we need to see what setting
+    // is the one that determines the behaviour.
+    switch (process->start_type()) {
+      case Process::StartType::kComponent:
+      case Process::StartType::kLaunch:
+        resume_thread =
+            !system_.settings().GetBool(ClientSettings::System::kPauseOnLaunch);
+        DEBUG_LOG(Process) << "Resuming thread: " << resume_thread;
+        break;
+      case Process::StartType::kAttach:
+        resume_thread =
+            !system_.settings().GetBool(ClientSettings::System::kPauseOnAttach);
+        break;
+    }
+  }
+
+  process->OnThreadStarting(notify.record, resume_thread);
+}
+
+void Session::DispatchNotifyThreadExiting(
+    const debug_ipc::NotifyThread& notify) {
+  ProcessImpl* process = system_.ProcessImplFromKoid(notify.process_koid);
+  if (!process) {
+    SendSessionNotification(SessionObserver::NotificationType::kWarning,
+                            "Received thread exiting notification for an "
+                            "unexpected process %" PRIu64 ".\n",
+                            notify.process_koid);
+    return;
+  }
+
+  process->OnThreadExiting(notify.record);
 }
 
 // This is the main entrypoint for all thread stops notifications in the client.
@@ -677,8 +705,13 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header,
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
     case debug_ipc::MsgHeader::Type::kNotifyThreadExiting: {
       debug_ipc::NotifyThread thread;
-      if (debug_ipc::ReadNotifyThread(&reader, &thread))
-        DispatchNotifyThread(header.type, thread);
+      if (!debug_ipc::ReadNotifyThread(&reader, &thread))
+        break;
+      if (header.type == debug_ipc::MsgHeader::Type::kNotifyThreadStarting) {
+        DispatchNotifyThreadStarting(thread);
+      } else {
+        DispatchNotifyThreadExiting(thread);
+      }
       break;
     }
     case debug_ipc::MsgHeader::Type::kNotifyException: {

@@ -55,10 +55,6 @@ SystemImpl::~SystemImpl() {
       observer.WillDestroyTarget(target.get());
   }
   targets_.clear();
-
-  // Attempt to quit the agent.
-  if (!quit_agent_on_exit_)
-    session()->QuitAgent(nullptr);
 }
 
 ProcessImpl* SystemImpl::ProcessImplFromKoid(uint64_t koid) const {

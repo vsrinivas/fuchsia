@@ -703,8 +703,7 @@ void MinidumpRemoteAPI::Attach(
         cb(e, a);
 
         for (const auto& notification : notifications) {
-          session->DispatchNotifyThread(
-              debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notification);
+          session->DispatchNotifyThreadStarting(notification);
         }
 
         session->DispatchNotifyModules(mod_notification);

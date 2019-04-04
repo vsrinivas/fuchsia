@@ -44,7 +44,7 @@ class Session {
   // Creates with a previously-allocated connection. The pointer must outlive
   // this class. In this mode, the stream can not be disconnected.
   explicit Session(debug_ipc::StreamBuffer* stream);
-  ~Session();
+  virtual ~Session();
 
   fxl::WeakPtr<Session> GetWeakPtr();
 
@@ -122,8 +122,8 @@ class Session {
   // state manually before issuing an exception. Production code should always
   // set the set_metadata flag to populate the thread's state from the data
   // in the exception.
-  void DispatchNotifyThread(debug_ipc::MsgHeader::Type type,
-                            const debug_ipc::NotifyThread& notify);
+  void DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify);
+  void DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify);
   void DispatchNotifyException(const debug_ipc::NotifyException& notify,
                                bool set_metadata = true);
   void DispatchNotifyModules(const debug_ipc::NotifyModules& notify);

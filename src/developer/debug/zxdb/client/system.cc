@@ -25,9 +25,15 @@ static const char* kSymbolPathsDescription =
   database from build ID to file path. Otherwise, the path will be loaded as an
   ELF file.)";
 
-const char* ClientSettings::System::kPauseNewProcesses = "pause-new-processes";
-static const char* kPauseNewProcessDescription =
-    R"(  Whether a process should pause the initial thread on startup.)";
+const char* ClientSettings::System::kPauseOnLaunch = "pause-on-launch";
+static const char* kPauseOnLaunchDescription =
+    R"(  Whether a process launched through zxdb should be stopped on startup.
+  This will also affect components launched through zxdb.)";
+
+const char* ClientSettings::System::kPauseOnAttach = "pause-on-attach";
+static const char* kPauseOnAttachDescription =
+    R"(  Whether the process should be paused when zxdb attached to it.
+  This will also affect when zxdb attached a process through a filter.)";
 
 const char* ClientSettings::System::kShowStdout =
     "show-stdout";
@@ -50,12 +56,14 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
                   false);
   schema->AddList(ClientSettings::System::kSymbolPaths, kSymbolPathsDescription,
                   {});
-  schema->AddBool(ClientSettings::System::kPauseNewProcesses,
-                  kPauseNewProcessDescription, true);
-  schema->AddBool(ClientSettings::System::kShowStdout,
-                  kShowStdoutDescription, true);
+  schema->AddBool(ClientSettings::System::kPauseOnLaunch,
+                  kPauseOnLaunchDescription, false);
+  schema->AddBool(ClientSettings::System::kPauseOnAttach,
+                  kPauseOnAttachDescription, false);
   schema->AddBool(ClientSettings::System::kQuitAgentOnExit,
                   kQuitAgentOnExitDescription, false);
+  schema->AddBool(ClientSettings::System::kShowStdout,
+                  kShowStdoutDescription, true);
 
   return schema;
 }

@@ -24,9 +24,11 @@ fxl::WeakPtr<Process> Process::GetWeakPtr() {
 
 const char* Process::StartTypeToString(Process::StartType start_type) {
   switch (start_type) {
-    case Process::StartType::kAttach:
+    case StartType::kAttach:
       return "Attach";
-    case Process::StartType::kLaunch:
+    case StartType::kComponent:
+      return "Component";
+    case StartType::kLaunch:
       return "Launch";
   }
   FXL_NOTREACHED();

@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/console/command.h"
@@ -457,13 +458,18 @@ void ConsoleContext::DidCreateProcess(Target* target, Process* process,
     case Process::StartType::kAttach:
       out.Append("Attached ");
       break;
+    case Process::StartType::kComponent:
+      out.Append("Launched");
+      break;
     case Process::StartType::kLaunch:
       out.Append("Launched ");
       break;
   }
   out.Append(DescribeTarget(this, target));
 
-  if (autoattached_to_new_process) {
+  bool pause_on_attach = session()->system().settings().GetBool(
+      ClientSettings::System::kPauseOnAttach);
+  if (autoattached_to_new_process && pause_on_attach) {
     out.Append(Syntax::kComment,
                "\n  The process is currently in an initializing state. You can "
                "set pending\n  breakpoints (symbols haven't been loaded yet) "

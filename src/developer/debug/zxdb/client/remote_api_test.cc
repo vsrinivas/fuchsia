@@ -9,6 +9,7 @@
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/system_impl.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/client/thread_impl.h"
@@ -22,6 +23,10 @@ RemoteAPITest::~RemoteAPITest() { loop_.Cleanup(); }
 
 void RemoteAPITest::SetUp() {
   session_ = std::make_unique<Session>(GetRemoteAPIImpl(), GetArch());
+  session_->system().settings().SetBool(ClientSettings::System::kPauseOnAttach,
+                                        true);
+  session_->system().settings().SetBool(ClientSettings::System::kPauseOnLaunch,
+                                        true);
 }
 
 void RemoteAPITest::TearDown() { session_.reset(); }
@@ -48,9 +53,7 @@ Thread* RemoteAPITest::InjectThread(uint64_t process_koid,
   notify.record.name = fxl::StringPrintf("test %" PRIu64, thread_koid);
   notify.record.state = debug_ipc::ThreadRecord::State::kRunning;
 
-  session_->DispatchNotifyThread(
-      debug_ipc::MsgHeader::Type::kNotifyThreadStarting, notify);
-
+  session_->DispatchNotifyThreadStarting(notify);
   return session_->ThreadImplFromKoid(process_koid, thread_koid);
 }
 

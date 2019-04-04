@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/target_impl.h"
 #include "src/developer/debug/zxdb/client/thread_impl.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
@@ -163,7 +164,8 @@ void ProcessImpl::WriteMemory(uint64_t address, std::vector<uint8_t> data,
       });
 }
 
-void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record) {
+void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record,
+                                   bool resume) {
   TIME_BLOCK();
   if (threads_.find(record.koid) != threads_.end()) {
     // Duplicate new thread notification. Some legitimate cases could cause
@@ -178,6 +180,9 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record) {
 
   for (auto& observer : observers())
     observer.DidCreateThread(this, thread_ptr);
+
+  if (resume)
+    thread_ptr->Continue();
 }
 
 void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
@@ -199,6 +204,16 @@ void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
                             const std::vector<uint64_t>& stopped_thread_koids) {
   TIME_BLOCK();
   symbols_.SetModules(modules);
+
+  // If this is the first thread, we see if we need to restart.
+  if (start_type() == StartType::kLaunch ||
+      start_type() == StartType::kComponent) {
+    bool pause_on_launch = session()->system().settings().GetBool(
+        ClientSettings::System::kPauseOnLaunch);
+    if (stopped_thread_koids.size() == 1u && pause_on_launch) {
+      return;
+    }
+  }
 
   // The threads loading the library will be stopped so we have time to load
   // symbols and enable any pending breakpoints. Now that the notification is
@@ -222,7 +237,7 @@ void ProcessImpl::UpdateThreads(
     auto found_existing = threads_.find(record.koid);
     if (found_existing == threads_.end()) {
       // New thread added.
-      OnThreadStarting(record);
+      OnThreadStarting(record, false);
     } else {
       // Existing one, update everything. Thread list updates don't include
       // full stack frames for performance reasons.
