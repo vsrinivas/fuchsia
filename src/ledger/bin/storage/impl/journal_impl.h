@@ -76,8 +76,7 @@ class JournalImpl : public Journal {
   // |root_identifier|.
   void CreateCommitFromChanges(
       std::vector<std::unique_ptr<const storage::Commit>> parents,
-      ObjectIdentifier root_identifier,
-      std::unique_ptr<Iterator<const EntryChange>> changes,
+      ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
       fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
           callback);
 

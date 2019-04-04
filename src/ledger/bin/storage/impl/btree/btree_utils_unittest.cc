@@ -19,7 +19,6 @@
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/storage/impl/btree/builder.h"
 #include "src/ledger/bin/storage/impl/btree/diff.h"
-#include "src/ledger/bin/storage/impl/btree/entry_change_iterator.h"
 #include "src/ledger/bin/storage/impl/btree/iterator.h"
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
@@ -141,12 +140,11 @@ TEST_F(BTreeUtilsTest, ApplyChangesFromEmpty) {
   std::set<ObjectIdentifier> new_nodes;
   // Expected layout (X is key "keyX"):
   // [00, 01, 02]
-  ApplyChanges(
-      environment_.coroutine_service(), &fake_storage_, root_identifier,
-      std::make_unique<EntryChangeIterator>(changes.begin(), changes.end()),
-      callback::Capture(callback::SetWhenCalled(&called), &status,
-                        &new_root_identifier, &new_nodes),
-      &kTestNodeLevelCalculator);
+  ApplyChanges(environment_.coroutine_service(), &fake_storage_,
+               root_identifier, changes,
+               callback::Capture(callback::SetWhenCalled(&called), &status,
+                                 &new_root_identifier, &new_nodes),
+               &kTestNodeLevelCalculator);
   RunLoopFor(kSufficientDelay);
   EXPECT_TRUE(called);
   ASSERT_EQ(Status::OK, status);
@@ -174,9 +172,7 @@ TEST_F(BTreeUtilsTest, ApplyChangeSingleLevel1Entry) {
   // [03]
 
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               root_identifier,
-               std::make_unique<EntryChangeIterator>(golden_entries.begin(),
-                                                     golden_entries.end()),
+               root_identifier, golden_entries,
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -208,9 +204,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [08, 09, 10]
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               root_identifier,
-               std::make_unique<EntryChangeIterator>(golden_entries.begin(),
-                                                     golden_entries.end()),
+               root_identifier, golden_entries,
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -239,9 +233,7 @@ TEST_F(BTreeUtilsTest, ApplyChangesManyEntries) {
   //            /       |            \
   // [00, 01, 02]  [04, 05, 06] [071, 08, 09, 10]
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               new_root_identifier,
-               std::make_unique<EntryChangeIterator>(new_change.begin(),
-                                                     new_change.end()),
+               new_root_identifier, std::move(new_change),
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier2, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -286,9 +278,7 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
   ObjectIdentifier new_root_identifier;
   std::set<ObjectIdentifier> new_nodes;
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               root_identifier,
-               std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                                     update_changes.end()),
+               root_identifier, std::move(update_changes),
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -341,9 +331,7 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   ObjectIdentifier new_root_identifier;
   std::set<ObjectIdentifier> new_nodes;
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               root_identifier,
-               std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                                     update_changes.end()),
+               root_identifier, std::move(update_changes),
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -395,9 +383,7 @@ TEST_F(BTreeUtilsTest, UpdateValueSplitChange) {
   ObjectIdentifier new_root_identifier;
   std::set<ObjectIdentifier> new_nodes;
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               root_identifier,
-               std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                                     update_changes.end()),
+               root_identifier, update_changes,
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -439,9 +425,7 @@ TEST_F(BTreeUtilsTest, NoOpUpdateChange) {
   ObjectIdentifier new_root_identifier;
   std::set<ObjectIdentifier> new_nodes;
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               root_identifier,
-               std::make_unique<EntryChangeIterator>(golden_entries.begin(),
-                                                     golden_entries.end()),
+               root_identifier, std::move(golden_entries),
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -476,9 +460,7 @@ TEST_F(BTreeUtilsTest, DeleteChanges) {
   ObjectIdentifier new_root_identifier;
   std::set<ObjectIdentifier> new_nodes;
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               root_identifier,
-               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                                     delete_changes.end()),
+               root_identifier, delete_changes,
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -529,9 +511,7 @@ TEST_F(BTreeUtilsTest, DeleteLevel1Changes) {
   ObjectIdentifier new_root_identifier;
   std::set<ObjectIdentifier> new_nodes;
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               root_identifier,
-               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                                     delete_changes.end()),
+               root_identifier, delete_changes,
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -579,9 +559,7 @@ TEST_F(BTreeUtilsTest, NoOpDeleteChange) {
   ObjectIdentifier new_root_identifier;
   std::set<ObjectIdentifier> new_nodes;
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               root_identifier,
-               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                                     delete_changes.end()),
+               root_identifier, std::move(delete_changes),
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -622,9 +600,7 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
   ObjectIdentifier new_root_identifier;
   std::set<ObjectIdentifier> new_nodes;
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               root_identifier,
-               std::make_unique<EntryChangeIterator>(update_changes.begin(),
-                                                     update_changes.end()),
+               root_identifier, update_changes,
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -657,9 +633,7 @@ TEST_F(BTreeUtilsTest, SplitMergeUpdate) {
 
   ObjectIdentifier final_node_identifier;
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               new_root_identifier,
-               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                                     delete_changes.end()),
+               new_root_identifier, std::move(delete_changes),
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &final_node_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -685,9 +659,7 @@ TEST_F(BTreeUtilsTest, DeleteAll) {
   ObjectIdentifier new_root_identifier;
   std::set<ObjectIdentifier> new_nodes;
   ApplyChanges(environment_.coroutine_service(), &fake_storage_,
-               root_identifier,
-               std::make_unique<EntryChangeIterator>(delete_changes.begin(),
-                                                     delete_changes.end()),
+               root_identifier, std::move(delete_changes),
                callback::Capture(callback::SetWhenCalled(&called), &status,
                                  &new_root_identifier, &new_nodes),
                &kTestNodeLevelCalculator);
@@ -737,7 +709,7 @@ TEST_F(BTreeUtilsTest, GetObjectOneNodeTree) {
   EXPECT_EQ(6u, object_identifiers.size());
   EXPECT_TRUE(object_identifiers.find(root_identifier) !=
               object_identifiers.end());
-  for (EntryChange& e : entries) {
+  for (const EntryChange& e : entries) {
     EXPECT_TRUE(object_identifiers.find(e.entry.object_identifier) !=
                 object_identifiers.end());
   }

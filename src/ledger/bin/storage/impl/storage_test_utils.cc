@@ -14,7 +14,6 @@
 
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/impl/btree/builder.h"
-#include "src/ledger/bin/storage/impl/btree/entry_change_iterator.h"
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/impl/split.h"
@@ -326,8 +325,7 @@ StorageTest::~StorageTest() {}
   std::set<ObjectIdentifier> new_nodes;
   btree::ApplyChanges(
       environment_.coroutine_service(), GetStorage(), base_node_identifier,
-      std::make_unique<btree::EntryChangeIterator>(entries.begin(),
-                                                   entries.end()),
+      entries,
       callback::Capture(callback::SetWhenCalled(&called), &status,
                         new_root_identifier, &new_nodes),
       &kTestNodeLevelCalculator);

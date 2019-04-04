@@ -20,37 +20,6 @@
 
 namespace storage {
 
-namespace {
-class JournalEntriesIterator : public Iterator<const storage::EntryChange> {
- public:
-  JournalEntriesIterator(std::map<std::string, EntryChange>& journal_entries)
-      : it_(journal_entries.begin()), end_(journal_entries.end()) {}
-
-  ~JournalEntriesIterator() override {}
-
-  Iterator<const storage::EntryChange>& Next() override {
-    FXL_DCHECK(Valid()) << "Iterator::Next iterator not valid";
-    ++it_;
-    return *this;
-  }
-
-  bool Valid() const override { return it_ != end_; }
-
-  Status GetStatus() const override { return Status::OK; }
-
-  const storage::EntryChange& operator*() const override { return it_->second; }
-  const storage::EntryChange* operator->() const override {
-    return &(it_->second);
-  }
-
- private:
-  std::map<std::string, EntryChange>::const_iterator it_;
-  std::map<std::string, EntryChange>::const_iterator end_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(JournalEntriesIterator);
-};
-}  // namespace
-
 JournalImpl::JournalImpl(Token /* token */, ledger::Environment* environment,
                          PageStorageImpl* page_storage,
                          std::unique_ptr<const storage::Commit> base)
@@ -98,7 +67,10 @@ void JournalImpl::Commit(
     parents.push_back(std::move(base_));
   }
 
-  auto changes = std::make_unique<JournalEntriesIterator>(journal_entries_);
+  std::vector<storage::EntryChange> changes;
+  for (auto [key, entry_change] : journal_entries_) {
+    changes.push_back(std::move(entry_change));
+  }
 
   if (cleared_ == JournalContainsClearOperation::NO) {
     // The journal doesn't contain the clear operation. The changes
@@ -152,8 +124,7 @@ void JournalImpl::Clear() {
 
 void JournalImpl::CreateCommitFromChanges(
     std::vector<std::unique_ptr<const storage::Commit>> parents,
-    ObjectIdentifier root_identifier,
-    std::unique_ptr<Iterator<const EntryChange>> changes,
+    ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
     fit::function<void(Status, std::unique_ptr<const storage::Commit>)>
         callback) {
   btree::ApplyChanges(

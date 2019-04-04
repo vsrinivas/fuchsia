@@ -21,7 +21,6 @@ source_set("lib") {
     "diff.h",
     "encoding.cc",
     "encoding.h",
-    "entry_change_iterator.h",
     "iterator.cc",
     "iterator.h",
     "synchronous_storage.cc",
@@ -38,11 +37,11 @@ source_set("lib") {
     ":internal",
     ":tree_node_storage",
     "//garnet/public/lib/callback",
-    "//src/lib/fxl",
     "//peridot/lib/convert",
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/storage/impl:object_identifier_lib",
     "//src/ledger/bin/storage/public",
+    "//src/lib/fxl",
     "//third_party/murmurhash",
   ]
 
@@ -88,7 +87,6 @@ source_set("unittests") {
     ":lib",
     ":tree_node_storage",
     "//garnet/public/lib/callback",
-    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/encryption/fake",
     "//src/ledger/bin/encryption/primitives",
@@ -98,6 +96,7 @@ source_set("unittests") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 

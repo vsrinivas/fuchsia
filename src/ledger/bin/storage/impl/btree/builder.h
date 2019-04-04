@@ -33,8 +33,7 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator();
 // the new root and the list of ids of all new nodes created after the changes.
 void ApplyChanges(
     coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-    ObjectIdentifier root_identifier,
-    std::unique_ptr<Iterator<const EntryChange>> changes,
+    ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
     fit::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>
         callback,
     const NodeLevelCalculator* node_level_calculator =

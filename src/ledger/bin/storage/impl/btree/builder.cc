@@ -592,24 +592,17 @@ void NodeBuilder::ExtractContent(const TreeNode& node,
 // valid anymore. At this point, build is called on |root|.
 Status ApplyChangesOnRoot(const NodeLevelCalculator* node_level_calculator,
                           SynchronousStorage* page_storage, NodeBuilder root,
-                          std::unique_ptr<Iterator<const EntryChange>> changes,
+                          std::vector<EntryChange> changes,
                           ObjectIdentifier* object_identifier,
                           std::set<ObjectIdentifier>* new_identifiers) {
   Status status;
-  while (changes->Valid()) {
-    EntryChange change = **changes;
-    changes->Next();
-
+  for (auto& change : changes) {
     bool did_mutate;
     status = root.Apply(node_level_calculator, page_storage, std::move(change),
                         &did_mutate);
     if (status != Status::OK) {
       return status;
     }
-  }
-
-  if (changes->GetStatus() != Status::OK) {
-    return changes->GetStatus();
   }
   return root.Build(page_storage, object_identifier, new_identifiers);
 }
@@ -622,8 +615,7 @@ const NodeLevelCalculator* GetDefaultNodeLevelCalculator() {
 
 void ApplyChanges(
     coroutine::CoroutineService* coroutine_service, PageStorage* page_storage,
-    ObjectIdentifier root_identifier,
-    std::unique_ptr<Iterator<const EntryChange>> changes,
+    ObjectIdentifier root_identifier, std::vector<EntryChange> changes,
     fit::function<void(Status, ObjectIdentifier, std::set<ObjectIdentifier>)>
         callback,
     const NodeLevelCalculator* node_level_calculator) {
