@@ -1,0 +1,22 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.intl;
+
+/// Provides internationalization properties.
+///
+/// Components that need to change their behavior in response to the user's internationalization
+/// profile may request an instance of this service from their namespace, if available. A component
+/// may choose to pass along the service that it received from its parent to its own children, or to
+/// override it and apply additional customizations.
+///
+/// See also |fuchsia.ui.views.View|.
+[Discoverable]
+protocol PropertyProvider {
+    /// Gets the user's internationalization profile.
+    GetProfile() -> (Profile profile);
+
+    /// Indicates that the properties may have changed and the client should query them again.
+    -> OnChange();
+};

@@ -9,5 +9,6 @@ fidl("fuchsia.intl") {
 
   sources = [
     "intl.fidl",
+    "property_provider.fidl"
   ]
 }
