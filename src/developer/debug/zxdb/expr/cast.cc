@@ -4,10 +4,15 @@
 
 #include "src/developer/debug/zxdb/expr/cast.h"
 
+#include <optional>
+
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 
 namespace zxdb {
 
@@ -99,6 +104,16 @@ std::vector<uint8_t> CastToIntegerOfSize(const std::vector<uint8_t>& source,
     return result;
   }
   return source;  // No change.
+}
+
+ExprValue CastIntToInt(const ExprValue& source, const Type* source_type,
+                       const fxl::RefPtr<Type>& dest_type,
+                       const ExprValueSource& dest_source) {
+  return ExprValue(
+      dest_type,
+      CastToIntegerOfSize(source.data(), IsSignedBaseType(source_type),
+                          dest_type->byte_size()),
+      dest_source);
 }
 
 // The "Int64" parameter is either "uint64_t" or "int64_t" depending on the
@@ -252,9 +267,118 @@ bool TypesAreBinaryCoercable(const Type* a, const Type* b) {
   if (a->GetFullName() == b->GetFullName())
     return true;  // Names match, assume same type.
 
-  // Allow all integers and pointers of the same size to be converted by
-  // copying.
+  // Allow integers and pointers of the same size to be converted by copying.
+  if (a->tag() == DwarfTag::kPointerType &&
+      b->tag() == DwarfTag::kPointerType) {
+    // Don't allow pointer-to-pointer conversions because those might need to
+    // be adjusted according to base/derived classes.
+    return false;
+  }
   return IsIntegerLike(a) && IsIntegerLike(b);
+}
+
+// Checks whether the two input types have the specified base/derived
+// relationship (this does not check for a relationship going in the opposite
+// direction). If so, returns the offset of the base class in the derived
+// class. If not, returns an empty optional.
+//
+// The two types must have c-v qualifiers stripped.
+std::optional<uint64_t> GetDerivedClassOffset(const Type* base,
+                                              const Type* derived) {
+  const Collection* derived_collection = derived->AsCollection();
+  if (!derived_collection)
+    return std::nullopt;
+
+  const Collection* base_collection = base->AsCollection();
+  if (!base_collection)
+    return std::nullopt;
+  std::string base_name = base_collection->GetFullName();
+
+  std::optional<uint64_t> result;
+  VisitClassHierarchy(
+      derived_collection,
+      [&result, &base_name](const Collection* cur, uint64_t offset) {
+        if (cur->GetFullName() == base_name) {
+          result = offset;
+          return VisitResult::kDone;
+        }
+        return VisitResult::kNotFound;
+      });
+  return result;
+}
+
+Err MakeCastError(const Type* from, const Type* to) {
+  return Err("Can't cast '%s' to '%s'.", from->GetFullName().c_str(),
+             to->GetFullName().c_str());
+}
+
+// Converts a pointer/reference to a pointer/reference to a different type
+// according to approximate static_cast rules.
+Err StaticCastPointerOrRef(const ExprValue& source,
+                           const fxl::RefPtr<Type>& dest_type,
+                           const Type* concrete_from, const Type* concrete_to,
+                           const ExprValueSource& dest_source,
+                           ExprValue* result) {
+  // The pointer/ref-ness must match from the source to the dest. This code
+  // treats rvalue references and regular references the same.
+  if ((concrete_from->tag() == DwarfTag::kPointerType) !=
+          (concrete_to->tag() == DwarfTag::kPointerType) ||
+      DwarfTagIsEitherReference(concrete_from->tag()) !=
+          DwarfTagIsEitherReference(concrete_to->tag()))
+    return MakeCastError(concrete_from, concrete_to);
+
+  // Can assume they're ModifiedTypes due to tag checks above.
+  const ModifiedType* modified_from = concrete_from->AsModifiedType();
+  const ModifiedType* modified_to = concrete_to->AsModifiedType();
+  if (modified_from->ModifiesVoid() || modified_to->ModifiesVoid()) {
+    // Always allow conversions to and from void*. This technically handles
+    // void& which isn't expressible C++, but should be fine.
+    *result = CastIntToInt(source, concrete_from, dest_type, dest_source);
+    return Err();
+  }
+
+  // Currently we assume all pointers and references are 64-bit.
+  if (modified_from->byte_size() != sizeof(uint64_t) ||
+      modified_to->byte_size() != sizeof(uint64_t)) {
+    return Err(
+        "Can only cast 64-bit pointers and references: "
+        "'%s' is %u bytes and '%s' is %u bytes.",
+        concrete_from->GetFullName().c_str(), concrete_from->byte_size(),
+        concrete_to->GetFullName().c_str(), concrete_to->byte_size());
+  }
+
+  // Get the pointed-to or referenced types.
+  const Type* refed_from = modified_from->modified().Get()->AsType();
+  const Type* refed_to = modified_to->modified().Get()->AsType();
+  if (!refed_from || !refed_to) {
+    // Error decoding (not void* because that was already checked above).
+    return MakeCastError(concrete_from, concrete_to);
+  }
+
+  // Strip qualifiers to handle things like "pointer to const int".
+  refed_from = refed_from->GetConcreteType();
+  refed_to = refed_to->GetConcreteType();
+
+  if (refed_from->GetFullName() == refed_to->GetFullName()) {
+    // Source and dest are the same type.
+    *result = CastIntToInt(source, concrete_from, dest_type, dest_source);
+    return Err();
+  }
+
+  if (auto found_offset = GetDerivedClassOffset(refed_to, refed_from)) {
+    // Convert derived class ref/ptr to base class ref/ptr. This requires
+    // adjusting the pointer to point to where the base class is inside of the
+    // derived class.
+
+    // The 64-bit-edness of both pointers was checked above.
+    uint64_t ptr_value = source.GetAs<uint64_t>();
+    ptr_value += *found_offset;
+    return CreateValue(ptr_value, dest_type, dest_source, result);
+  }
+
+  return Err("Can't convert '%s' to unrelated type '%s'.",
+             concrete_from->GetFullName().c_str(),
+             concrete_to->GetFullName().c_str());
 }
 
 Err ImplicitCast(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
@@ -286,13 +410,27 @@ Err ImplicitCast(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
                             result);
   }
 
-  // Conversions between different types of ints (truncate or extend).
+  // Pointer-to-pointer conversions. Allow anything that can be static_casted
+  // which is permissive but a little more strict than in other conversions: if
+  // you have two unrelated pointers, converting magically between them is
+  // error prone. LLDB does this extra checking, while GDB always allows the
+  // conversions.
+  if (concrete_from->tag() == DwarfTag::kPointerType &&
+      concrete_to->tag() == DwarfTag::kPointerType) {
+    // Note that implicit cast does not do this for references. If "a" and "b"
+    // are both references, we want "a = b" to copy the referenced objects, not
+    // the reference pointers. The reference conversion feature of this
+    // function is used for static casting where static_cast<A&>(b) refers to
+    // the reference address and not the referenced object.
+    return StaticCastPointerOrRef(source, dest_type, concrete_from, concrete_to,
+                                  dest_source, result);
+  }
+
+  // Conversions between different types of ints, including pointers (truncate
+  // or extend). This lets us evaluate things like "ptr = 0x2a3512635" without
+  // elaborate casts. Pointer-to-pointer conversions were handled above.
   if (IsIntegerLike(concrete_from) && IsIntegerLike(concrete_to)) {
-    *result = ExprValue(
-        dest_type,
-        CastToIntegerOfSize(source.data(), IsSignedBaseType(concrete_from),
-                            concrete_to->byte_size()),
-        dest_source);
+    *result = CastIntToInt(source, concrete_from, dest_type, dest_source);
     return Err();
   }
 
@@ -307,6 +445,15 @@ Err ImplicitCast(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
   if (IsFloatingPointBaseType(concrete_to) && IsIntegerLike(concrete_from)) {
     return CastIntToFloat(source, IsSignedBaseType(concrete_from), dest_type,
                           dest_source, result);
+  }
+
+  // Conversions to base classes (on objects, not on pointers or references).
+  // e.g. "foo = bar" where foo's type is a base class of bar's.
+  if (auto found_offset = GetDerivedClassOffset(concrete_to, concrete_from)) {
+    // Ignore the dest_source. ResolveInherited is extracting data from inside
+    // the source object which has a well-defined source location (unlike for
+    // all other casts that change the data so there isn't so clear a source).
+    return ResolveInherited(source, dest_type, *found_offset, result);
   }
 
   return Err("Can't cast from '%s' to '%s'.",
@@ -325,9 +472,8 @@ Err ReinterpretCast(const ExprValue& source, const fxl::RefPtr<Type>& dest_type,
   // pointers). This check is more restrictive than the "coerce" rules above
   // because we don't want to support things like integer-to-double conversion.
   const Type* concrete_source = source.type()->GetConcreteType();
-  if (!IsIntegerLike(concrete_source)) {
+  if (!IsIntegerLike(concrete_source))
     return Err("Can't cast from a '%s'.", source.type()->GetFullName().c_str());
-  }
 
   const Type* concrete_dest = dest_type->GetConcreteType();
   if (!IsIntegerLike(concrete_dest))
@@ -374,10 +520,6 @@ Err CastExprValue(CastType cast_type, const ExprValue& source,
       //
       // Since the debugger ignores const in debugging, this ends up being
       // a static cast falling back to a reinterpret cast.
-      //
-      // TODO(DX-1178) this should be a static cast when it exists. Currently
-      // "coerce" implements the things we're willing to implicitly cast
-      // and doesn't handle things like derived type conversions.
       if (!ImplicitCast(source, dest_type, dest_source, result).has_error())
         return Err();
       return ReinterpretCast(source, dest_type, dest_source, result);
@@ -387,6 +529,24 @@ Err CastExprValue(CastType cast_type, const ExprValue& source,
   }
   FXL_NOTREACHED();
   return Err("Internal error.");
+}
+
+bool CastShouldFollowReferences(const ExprValue& source,
+                                const fxl::RefPtr<Type>& dest_type) {
+  // Casting a reference to a reference needs to keep the reference
+  // information. Casting a reference to anything else means the reference
+  // should be stripped.
+  const Type* concrete_from = source.type()->GetConcreteType();
+  const Type* concrete_to = dest_type->GetConcreteType();
+
+  // Count rvalue references as references. This isn't always strictly valid
+  // since you can't static cast a Base&& to a Derived&&, but from a debugger
+  // perspective there's no reason not to allow this.
+  if (DwarfTagIsEitherReference(concrete_from->tag()) &&
+      DwarfTagIsEitherReference(concrete_to->tag()))
+    return false;  // Keep reference on source for casting.
+
+  return true;  // Follow reference.
 }
 
 }  // namespace zxdb

@@ -13,8 +13,8 @@ namespace zxdb {
 namespace {
 
 VisitResult DoVisitClassHierarchy(
-    const Collection* current, uint32_t offset,
-    std::function<VisitResult(const Collection*, uint32_t offset)>& cb) {
+    const Collection* current, uint64_t offset,
+    std::function<VisitResult(const Collection*, uint64_t offset)>& cb) {
   VisitResult result = cb(current, offset);
   if (result != VisitResult::kNotFound)
     return result;
@@ -42,7 +42,7 @@ VisitResult DoVisitClassHierarchy(
 
 VisitResult VisitClassHierarchy(
     const Collection* starting,
-    std::function<VisitResult(const Collection*, uint32_t offset)> cb) {
+    std::function<VisitResult(const Collection*, uint64_t offset)> cb) {
   return DoVisitClassHierarchy(starting, 0, cb);
 }
 

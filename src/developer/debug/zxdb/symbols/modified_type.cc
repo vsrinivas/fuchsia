@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 
 #include "src/developer/debug/zxdb/symbols/arch.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/function_type.h"
 
 namespace zxdb {
@@ -51,6 +52,25 @@ const Type* ModifiedType::GetConcreteType() const {
       return mod->GetConcreteType();
   }
   return this;
+}
+
+bool ModifiedType::ModifiesVoid() const {
+  // Void can be represented two ways, via a null modified type, or via a
+  // base type that's a "none" type.
+  if (!modified_)
+    return true;
+
+  const Type* type = modified_.Get()->AsType();
+  if (!type) {
+    // Corrupted symbols as this references a non-type or there was an error
+    // decoding. Say it's non-void for the caller to handle when it tries to
+    // figure out what the type is.
+    return false;
+  }
+
+  if (const BaseType* base = type->GetConcreteType()->AsBaseType())
+    return base->base_type() == BaseType::kBaseTypeNone;
+  return false;
 }
 
 std::string ModifiedType::ComputeFullName() const {

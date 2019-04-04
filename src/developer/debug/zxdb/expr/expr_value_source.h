@@ -39,6 +39,13 @@ class ExprValueSource {
     return ExprValueSource();
   }
 
+  bool operator==(const ExprValueSource& other) const {
+    return type_ == other.type_ && address_ == other.address_;
+  }
+  bool operator!=(const ExprValueSource& other) const {
+    return !operator==(other);
+  }
+
  private:
   Type type_ = Type::kTemporary;
   uint64_t address_ = 0;

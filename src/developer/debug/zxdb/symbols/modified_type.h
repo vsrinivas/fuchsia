@@ -35,6 +35,10 @@ class ModifiedType final : public Type {
   // void).
   const LazySymbol& modified() const { return modified_; }
 
+  // Returns true if this modified type is a modification of "void", e.g.
+  // "void*".
+  bool ModifiesVoid() const;
+
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(ModifiedType);
   FRIEND_MAKE_REF_COUNTED(ModifiedType);

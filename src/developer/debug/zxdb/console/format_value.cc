@@ -367,8 +367,8 @@ void FormatValue::FormatCollection(
 
     // Some base classes are empty. Only show if this base class or any of
     // its base classes have member values.
-    VisitResult has_members_result = VisitClassHierarchy(
-        from, [](const Collection* cur, uint32_t) -> VisitResult {
+    VisitResult has_members_result =
+        VisitClassHierarchy(from, [](const Collection* cur, uint64_t) {
           if (cur->data_members().empty())
             return VisitResult::kNotFound;
           return VisitResult::kDone;

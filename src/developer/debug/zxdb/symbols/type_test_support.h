@@ -18,6 +18,7 @@ class Type;
 using NameAndType = std::pair<std::string, fxl::RefPtr<Type>>;
 
 // Returns a type that can hold 4/8-byte [un]signed integers.
+fxl::RefPtr<BaseType> MakeInt16Type();
 fxl::RefPtr<BaseType> MakeInt32Type();
 fxl::RefPtr<BaseType> MakeUint32Type();
 fxl::RefPtr<BaseType> MakeInt64Type();

@@ -30,4 +30,13 @@ bool DwarfTagIsTypeModifier(DwarfTag tag) {
          tag == DwarfTag::kImportedDeclaration;
 }
 
+bool DwarfTagIsEitherReference(DwarfTag tag) {
+  return tag == DwarfTag::kReferenceType ||
+         tag == DwarfTag::kRvalueReferenceType;
+}
+
+bool DwarfTagIsPointerOrReference(DwarfTag tag) {
+  return DwarfTagIsEitherReference(tag) || tag == DwarfTag::kPointerType;
+}
+
 }  // namespace zxdb

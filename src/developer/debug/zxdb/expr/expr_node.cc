@@ -8,7 +8,6 @@
 
 #include <ostream>
 
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/cast.h"
 #include "src/developer/debug/zxdb/expr/eval_operators.h"
@@ -25,6 +24,7 @@
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -230,8 +230,9 @@ void BinaryOpExprNode::Print(std::ostream& out, int indent) const {
 
 void CastExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                         EvalCallback cb) const {
-  from_->Eval(context, [cast_type = cast_type_, to_type = to_type_->type(),
-                        cb = std::move(cb)](const Err& err, ExprValue value) {
+  // Callback that does the cast given the right type of value.
+  auto exec_cast = [cast_type = cast_type_, to_type = to_type_->type(),
+                    cb = std::move(cb)](const Err& err, ExprValue value) {
     if (err.has_error()) {
       cb(err, value);
     } else {
@@ -241,6 +242,19 @@ void CastExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
         cb(cast_err, ExprValue());
       else
         cb(Err(), std::move(cast_result));
+    }
+  };
+
+  from_->Eval(context, [context, to_type = to_type_->type(),
+                        exec_cast = std::move(exec_cast)](const Err& err,
+                                                          ExprValue value) {
+    // This lambda optionally follows the reference on the value according
+    // to the requirements of the cast.
+    if (err.has_error() || !CastShouldFollowReferences(value, to_type)) {
+      exec_cast(err, value);  // Also handles the error cases.
+    } else {
+      EnsureResolveReference(context->GetDataProvider(), std::move(value),
+                             std::move(exec_cast));
     }
   });
 }

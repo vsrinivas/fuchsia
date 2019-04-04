@@ -16,13 +16,12 @@ TEST(VisitScopes, ClassHierarchy) {
   auto derived = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
 
   // Stores the collections and their offsets visited.
-  using VisitLog = std::vector<std::pair<const Collection*, uint32_t>>;
+  using VisitLog = std::vector<std::pair<const Collection*, uint64_t>>;
   VisitLog visited;
 
   // A single class with no hierarchy.
   VisitResult result = VisitClassHierarchy(
-      derived.get(),
-      [&visited](const Collection* c, uint32_t o) -> VisitResult {
+      derived.get(), [&visited](const Collection* c, uint64_t o) {
         visited.emplace_back(c, o);
         return VisitResult::kNotFound;
       });
@@ -34,9 +33,9 @@ TEST(VisitScopes, ClassHierarchy) {
   //   base1 -- mid1 --
   //                   \
   //            mid2 ------ derived
-  uint32_t mid1_offset = 8;
-  uint32_t mid2_offset = 0;
-  uint32_t base1_offset = 32;
+  uint64_t mid1_offset = 8;
+  uint64_t mid2_offset = 0;
+  uint64_t base1_offset = 32;
   auto mid1_inh =
       fxl::MakeRefCounted<InheritedFrom>(LazySymbol(mid1), mid1_offset);
   auto mid2_inh =
@@ -50,12 +49,11 @@ TEST(VisitScopes, ClassHierarchy) {
   // ordering was most convenient for the implementation, it can be changed
   // in the future if there's a reason for a specific different order).
   visited = VisitLog();
-  result = VisitClassHierarchy(
-      derived.get(),
-      [&visited](const Collection* c, uint32_t o) -> VisitResult {
-        visited.emplace_back(c, o);
-        return VisitResult::kNotFound;
-      });
+  result = VisitClassHierarchy(derived.get(),
+                               [&visited](const Collection* c, uint64_t o) {
+                                 visited.emplace_back(c, o);
+                                 return VisitResult::kNotFound;
+                               });
   EXPECT_EQ(VisitResult::kNotFound, result);
   expected = VisitLog{{derived.get(), 0},
                       {mid1.get(), mid1_offset},
@@ -66,8 +64,7 @@ TEST(VisitScopes, ClassHierarchy) {
   // Test early termination at mid1.
   visited = VisitLog();
   result = VisitClassHierarchy(
-      derived.get(),
-      [&visited, mid1](const Collection* c, uint32_t o) -> VisitResult {
+      derived.get(), [&visited, mid1](const Collection* c, uint64_t o) {
         visited.emplace_back(c, o);
         return c == mid1.get() ? VisitResult::kDone : VisitResult::kNotFound;
       });

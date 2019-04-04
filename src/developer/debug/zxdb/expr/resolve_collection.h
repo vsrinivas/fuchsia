@@ -56,9 +56,18 @@ void ResolveMemberByPointer(
     std::function<void(const Err&, fxl::RefPtr<DataMember>, ExprValue)> cb);
 
 // Takes a Collection value and a base class inside of it, computes the value
-// of the base class and puts it in *out. The base class must be a direct base
-// class of the "value" collection, not an indirect base.
+// of the base class and puts it in *out.
+//
+// For the version that takes an InheritedFrom, the base class must be a direct
+// base class of the "value" collection, not an indirect base.
+//
+// For the version that takes a type and an offset, the type must already have
+// been computed as some type of base class that lives at the given offset. It
+// need not be a direct base and no type checking is done as long as the
+// offsets and sizes are valid.
 Err ResolveInherited(const ExprValue& value, const InheritedFrom* from,
                      ExprValue* out);
+Err ResolveInherited(const ExprValue& value, fxl::RefPtr<Type> base_type,
+                     uint64_t offset, ExprValue* out);
 
 }  // namespace zxdb

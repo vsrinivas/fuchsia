@@ -228,7 +228,7 @@ FoundName FindMember(const ProcessSymbols* optional_process_symbols,
       object,
       [optional_process_symbols, optional_block_symbol_context, identifier,
        optional_object_ptr, &result](const Collection* cur_collection,
-                                     uint32_t cur_offset) -> VisitResult {
+                                     uint64_t cur_offset) -> VisitResult {
         // Called for each collection in the hierarchy.
 
         // Data lookup.

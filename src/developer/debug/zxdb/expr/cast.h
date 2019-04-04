@@ -53,15 +53,27 @@ const char* CastTypeToString(CastType);
 
 // Casts to a given type using a specific set of casting rules.
 //
-// The source type should not be a reference type since this function is
-// synchronous and will not follow references to get the referenced value.
-// Calling code should use ExprNode::EvalFollowReferences() to compute the
-// value or have called EnsureResolveReference().
+// This function is synchronous so can not follow references to evaluate the
+// referenced data for casting. This means that the source data must already
+// be in the correct form.
+//
+// Some types of casts requires that references be followed (e.g.
+// int& -> long), while others require that they not be followed (e.g.
+// BaseClass& -> DerivedClass&). Calling code should use
+// CastShouldFollowReferences to determine if the source should have references
+// followed (ExprNode::EvalFollowReferences) or not (ExprNode::Eval) before
+// calling this function.
 //
 // The dest_source is an optional specification of what "source location" the
 // returned value should have.
 Err CastExprValue(CastType cast_type, const ExprValue& source,
                   const fxl::RefPtr<Type>& dest_type, ExprValue* result,
                   const ExprValueSource& dest_source = ExprValueSource());
+
+// See comment for CastExprValue. This determines whether the source should
+// have references expanded to the referenced data before executing the given
+// cast.
+bool CastShouldFollowReferences(const ExprValue& source,
+                                const fxl::RefPtr<Type>& dest_type);
 
 }  // namespace zxdb

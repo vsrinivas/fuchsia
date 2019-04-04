@@ -29,6 +29,6 @@ enum class VisitResult {
 // VisitClassHierarchy() will be that of the last executed callback.
 VisitResult VisitClassHierarchy(
     const Collection* starting,
-    std::function<VisitResult(const Collection*, uint32_t offset)> cb);
+    std::function<VisitResult(const Collection*, uint64_t offset)> cb);
 
 }  // namespace zxdb

@@ -176,9 +176,16 @@ TEST(ResolveCollection, DerivedClass) {
   err = ResolveInherited(value, inherited.get(), &base_value);
   EXPECT_FALSE(err.has_error());
 
-  EXPECT_EQ(ExprValue(base, {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
-                      ExprValueSource(kBaseAddr + base_offset)),
-            base_value);
+  ExprValue expected_base(base,
+                          {0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00},
+                          ExprValueSource(kBaseAddr + base_offset));
+  EXPECT_EQ(expected_base, base_value);
+
+  // Test the other variant of ResolveInherited.
+  base_value = ExprValue();
+  err = ResolveInherited(value, base, base_offset, &base_value);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(expected_base, base_value);
 }
 
 }  // namespace zxdb

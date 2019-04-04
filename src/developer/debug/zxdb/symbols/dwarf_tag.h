@@ -188,4 +188,10 @@ bool DwarfTagIsType(DwarfTag tag);
 // references, etc.).
 bool DwarfTagIsTypeModifier(DwarfTag tag);
 
+// Returns true if the dwarf tag is a reference or rvalue reference.
+bool DwarfTagIsEitherReference(DwarfTag tag);
+
+// Returns true if the tag is any reference type or a pointer.
+bool DwarfTagIsPointerOrReference(DwarfTag tag);
+
 }  // namespace zxdb

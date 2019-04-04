@@ -11,6 +11,10 @@
 
 namespace zxdb {
 
+fxl::RefPtr<BaseType> MakeInt16Type() {
+  return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 2, "int16_t");
+}
+
 fxl::RefPtr<BaseType> MakeInt32Type() {
   return fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t");
 }

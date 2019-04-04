@@ -213,4 +213,9 @@ Err ResolveInherited(const ExprValue& value, const InheritedFrom* from,
                         from->offset(), out);
 }
 
+Err ResolveInherited(const ExprValue& value, fxl::RefPtr<Type> base_type,
+                     uint64_t offset, ExprValue* out) {
+  return ExtractSubType(value, std::move(base_type), offset, out);
+}
+
 }  // namespace zxdb
