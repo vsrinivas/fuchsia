@@ -5,12 +5,16 @@
 import 'dart:convert';
 import 'dart:io' show File;
 import 'dart:typed_data' show Uint8List;
+import 'dump.dart';
 import 'sl4f_client.dart';
 
 class Audio {
   final Sl4f _sl4f;
+  final Dump _dump;
 
-  Audio([Sl4f sl4f]) : _sl4f = sl4f ?? Sl4f.fromEnvironment();
+  Audio([Sl4f sl4f, Dump dump]) :
+      _sl4f = sl4f ?? Sl4f.fromEnvironment(),
+      _dump = dump ?? Dump();
 
   /// Closes the underlying HTTP client. This need not be called if the
   /// Sl4f client is closed instead.
@@ -56,7 +60,7 @@ class Audio {
     await _sl4f.request('audio_facade.StopOutputSave');
   }
 
-  Future<AudioTrack> getOutputAudio() async {
+  Future<AudioTrack> getOutputAudio({String dumpName}) async {
     // The response body is just base64encoded audio
     final String response = await _sl4f.request('audio_facade.GetOutputAudio');
     final Uint8List bytes = base64Decode(response);
@@ -72,6 +76,11 @@ class Audio {
         break;
       }
     }
+
+    if (dumpName != null) {
+      _dump.writeAsBytes(dumpName, 'wav', bytes);
+    }
+
     return AudioTrack()
       ..audioData = bytes
       ..isSilence = silence;
