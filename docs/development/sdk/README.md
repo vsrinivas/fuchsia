@@ -99,21 +99,20 @@ allows for this kind of processing.
 
 ### Generating an SDK archive
 
-Build packages for SDK definitions are located under `//<layer>/packages/sdk`.
-Use the normal build process using this build package, adding an extra GN build
-argument: `build_sdk_archives=true`. The resulting archive will be available
-under `//out/<build-type>/sdk/archive/<sdk-name>.tar.gz`.
+The various targets representing SDKs are always included in the build graph,
+but they are not built by default. In order to build the contents of an SDK,
+[build one of the following targets][fx-build-target]:
+- `sdk:core`
+- `sdk:images`
+- `topaz/public/sdk:fuchsia_dart`
+- `topaz/public/sdk:topaz`
 
-For example, to build the topaz SDK for x64:
-
-```sh
-$ fx set sdk_image.x64 --with //topaz/packages/sdk:topaz \
-  --args build_sdk_archives=true
-$ fx build-zircon
-$ fx build topaz/public/sdk:topaz
-```
-
-Then the archive file will be in `out/default/sdk/archive/topaz.tar.gz`.
+Note that this will generate and verify SDK contents, but won't actually build
+an archive with these contents.
+To build the archive, add the GN argument `build_sdk_archives=true` [to your
+build configuration][fx-config] and run the build command again.
+The resulting archive will be located under
+`<outdir>/sdk/archive/<name>.tar.gz`.
 
 ### Adding content to an SDK
 
@@ -149,3 +148,5 @@ for more details.
 [backend]: /build/sdk/README.md
 [frontends]: /scripts/sdk/README.md
 [bazel]: https://bazel.build/
+[fx-config]: /docs/development/workflows/fx.md#configure-a-build
+[fx-build-target]: /docs/development/workflows/fx.md#building-a-specific-target

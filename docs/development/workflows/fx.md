@@ -82,7 +82,7 @@ $ fx set workstation.x64 --with //bundles:tools,//bundles:tests
 ```
 
 This command stores the configuration in an `args.gn` file in the build
-directory (which is`out/default` by default). You can edit this file using the
+directory (which is `out/default` by default). You can edit this file using the
 `fx args` command to create more elaborate configurations.
 
 ### What just happened?
@@ -116,7 +116,7 @@ repositories). The three axes are called "base", "cache", and "universe"
   [Paving](#what-is-paving) images, but they are not included in over-the-air
   system updates, and are allowed to be evicted from the system in response
   to resource demands, such as disk-space pressure. Packages in preinstall
-  can be updated at any time that updates are available, each and each of
+  can be updated at any time that updates are available, and each of
   these packages may be updated independently. This is software that is
   "optional", but is good to have available instantly "out of the box".
 * *Universe* (*Available*): Packages in available are additional optional
@@ -158,7 +158,8 @@ important configurations to be familiar with:
 
 ### Key bundles
 
-As with products, there are many more, but the following bundles are most important to be familiar with:
+As with products, there are many more, but the following bundles are most
+important to be familiar with:
 
 * `tools` contains a broad array of the most common developer tools. This
   includes tools for spawning components from command-line shells, tools for
@@ -192,6 +193,18 @@ more granular control:
 * `fx gen` repeat the `gn gen` process that `fx set` performed. Users making
   fine grained build argument changes (e.g. by editing `args.gn` directly) can
   run `fx gen` to reconfigure their build.
+
+### Building a specific target
+
+`fx build` can be given the name of a specific target or file to build. For
+example, a target with the label `//foo/bar:blah` can be built with
+`fx build foo/bar:blah`.
+
+Note that this only works for targets declared in the default GN toolchain. For
+targets in other toolchains, the path of an output file may be used instead. For
+example, an executable target with the label
+`//foo/bar:blah(//build/toolchain:host_x64)` can be built with
+`fx build <output_dir>/host_x64/blah`.
 
 ## Flash a board / Prepare Zedboot
 
