@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import unittest
+import subprocess
+
+import test_env
+from lib.host import Host
+from lib.device import Device
+from device_mock import MockDevice
+
+
+class TestDevice(unittest.TestCase):
+  """ Tests lib.Device. See MockDevice for additional details."""
+
+  def test_from_args(self):
+    host = Host()
+    parser = Device.make_parser('description')
+    # netaddr should get called with 'just-four-random-words', and fail
+    with self.assertRaises(subprocess.CalledProcessError):
+      args = parser.parse_args(['--device', 'just-four-random-words'])
+      device = Device.from_args(host, args)
+
+  def test_ssh(self):
+    mock = MockDevice()
+    mock.ssh(['some-command', '--with', 'some-argument'])
+    self.assertEqual(
+        mock.last, 'ssh -F ' + mock.host.ssh_config +
+        ' ::1 some-command --with some-argument')
+
+  def test_getpids(self):
+    mock = MockDevice()
+    pids = mock.getpids()
+    self.assertTrue('mock-target1' in pids)
+    self.assertEqual(pids['mock-target1'], 7412221)
+
+  def test_ls(self):
+    mock = MockDevice()
+    files = mock.ls('path-to-some-corpus')
+    self.assertEqual(
+        mock.last,
+        'ssh -F ' + mock.host.ssh_config + ' ::1 ls -l path-to-some-corpus')
+    self.assertTrue('feac37187e77ff60222325cf2829e2273e04f2ea' in files)
+    self.assertEqual(files['feac37187e77ff60222325cf2829e2273e04f2ea'], 1796)
+
+
+if __name__ == '__main__':
+  unittest.main()

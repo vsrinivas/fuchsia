@@ -7,6 +7,7 @@ import errno
 import json
 import os
 import re
+import subprocess
 
 
 class Host(object):
@@ -19,6 +20,9 @@ class Host(object):
       fuchsia: The root directory of the Fuchsia repository
       ssh_config: Location of the SSH configuration used to connect to device.
   """
+
+  # Convenience file descriptor for silencing subprocess output
+  DEVNULL = open(os.devnull, 'w')
 
   class ConfigError(RuntimeError):
     """Indicates the host is not configured for building Fuchsia."""
@@ -60,3 +64,11 @@ class Host(object):
     except IOError as e:
       if e.errno != errno.ENOENT:
         raise
+
+  def zircon_tool(self, cmd, logfile=None):
+    """Executes a tool found in the ZIROCN_BUILD_DIR."""
+    cmd = [Host.join('out', 'build-zircon', 'tools', cmd[0])] + cmd[1:]
+    if logfile:
+      subprocess.Popen(cmd, stdout=logfile, stderr=subprocess.STDOUT)
+    else:
+      return subprocess.check_output(cmd, stderr=Host.DEVNULL).strip()

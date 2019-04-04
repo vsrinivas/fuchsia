@@ -4,7 +4,9 @@
 # found in the LICENSE file.
 
 import argparse
+import subprocess
 
+from device import Device
 from host import Host
 
 
@@ -29,11 +31,16 @@ class Fuzzer(object):
     """Indicates a supplied name is malformed or unusable."""
     pass
 
+  # Matches the prefixes in libFuzzer passed to |Fuzzer::DumpCurrentUnit| or
+  # |Fuzzer::WriteUnitToFileWithPrefix|.
+  ARTIFACT_PREFIXES = [
+      'crash', 'leak', 'mismatch', 'oom', 'slow-unit', 'timeout'
+  ]
+
   @classmethod
   def make_parser(cls, description, name_required=True):
     """Registers the command line arguments understood by Fuzzer."""
-    parser = argparse.ArgumentParser(
-        description=description, conflict_handler='resolve')
+    parser = Device.make_parser(description)
     parser.add_argument(
         '-n',
         '--name',
@@ -74,3 +81,38 @@ class Fuzzer(object):
       if names[0] in pkg and names[1] in tgt:
         filtered.append((pkg, tgt))
     return filtered
+
+  def __init__(self, device, pkg, tgt):
+    self.device = device
+    self.host = device.host
+    self.pkg = pkg
+    self.tgt = tgt
+    self._result_dir = None
+
+  def __str__(self):
+    return self.pkg + '/' + self.tgt
+
+  def data_path(self, relpath=''):
+    """Canonicalizes the location of mutable data for this fuzzer."""
+    return '/data/r/sys/fuchsia.com:%s:0#meta:%s.cmx/%s' % (self.pkg, self.tgt,
+                                                            relpath)
+
+  def measure_corpus(self):
+    """Returns the number of corpus elements and corpus size as a pair."""
+    try:
+      sizes = self.device.ls(self.data_path('corpus'))
+      return (len(sizes), sum(sizes.values()))
+    except subprocess.CalledProcessError:
+      return (0, 0)
+
+  def list_artifacts(self):
+    """Returns a list of test unit artifacts, i.e. fuzzing crashes."""
+    artifacts = []
+    try:
+      for file in [line[0] for line in self.device.ls(self.data_path())]:
+        for prefix in Fuzzer.ARTIFACT_PREFIXES:
+          if file.startswith(prefix):
+            artifacts.append(file)
+      return artifacts
+    except subprocess.CalledProcessError:
+      return []

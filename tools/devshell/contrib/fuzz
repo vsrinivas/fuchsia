@@ -34,8 +34,8 @@
 ##                           a corpus for the fuzzer, and the metadata lists one
 ##                           available, this will fetch the corpus first.
 ##   check   <name>          Reports information about the named fuzzer, such as
-##                           execution status, corpus location and size, and
-##                           number of crashes.
+##                           execution status, corpus size, and number of
+##                           crashes.
 ##   stop    <name>          Stops all instances of the named fuzzer.
 ##   repro   <name> [...]    Runs the named fuzzer on specific inputs. If no
 ##                           additional inputs are provided, uses all previously
@@ -408,7 +408,10 @@ main() {
     list)
       python ${FUZZING_DIR}/list_fuzzers.py ${name_opt}
       ;;
-    check|stop|repro|merge)
+    check)
+      python ${FUZZING_DIR}/check_fuzzer.py ${name_opt}
+      ;;
+    stop|repro|merge)
       fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args}
       ;;
     start)
