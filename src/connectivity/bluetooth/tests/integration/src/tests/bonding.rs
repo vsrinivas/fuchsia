@@ -6,7 +6,9 @@ use {
     failure::Error,
     fidl_fuchsia_bluetooth::Status,
     fidl_fuchsia_bluetooth_control::TechnologyType,
-    fidl_fuchsia_bluetooth_host::{AddressType, BondingData, Key, LeData, Ltk, SecurityProperties},
+    fidl_fuchsia_bluetooth_host::{
+        AddressType, BondingData, LeData, Ltk, RemoteKey, SecurityProperties,
+    },
     fuchsia_bluetooth::expectation,
     futures::TryFutureExt,
 };
@@ -27,7 +29,7 @@ fn new_le_bond_data(id: &str, address: &str, has_ltk: bool) -> BondingData {
             services: vec![],
             ltk: if has_ltk {
                 Some(Box::new(Ltk {
-                    key: Key {
+                    key: RemoteKey {
                         security_properties: SecurityProperties {
                             authenticated: true,
                             secure_connections: false,

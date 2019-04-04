@@ -10,6 +10,20 @@ using fuchsia.bluetooth.gatt;
 using fuchsia.bluetooth.le;
 using fuchsia.bluetooth.bredr;
 
+// TODO(BT-814): Convert all comments below to doc-comments.
+
+/// Represents persistent local host data.
+// TODO(BT-813): Consider using a table instead of struct.
+struct HostData {
+    /// The local Identity Resolving Key used by a bt-host device to generate Resolvable Private
+    /// Addresses when privacy is enabled.
+    ///
+    /// NOTE: This key is distributed to LE peers during pairing procedures. The client must take
+    /// care to assign an IRK that consistent with the local bt-host identity.
+    // TODO(BT-815): Document behavior once there is a better privacy policy when |irk| is null.
+    LocalKey? irk;
+};
+
 // Interface for interacting with a Bluetooth host device (bt-host)
 protocol Host {
     // The following methods fulfill a given interface request. bt-host device
@@ -86,7 +100,7 @@ protocol Host {
 
     // Establish a BR/EDR and/or LE connection to the remote device with identifier |device_id|:
     //
-    //   - If the device is known to support the BR/EDR transport then a logical link over that 
+    //   - If the device is known to support the BR/EDR transport then a logical link over that
     //     transport will be established to the device. If the connection attempt is successful,
     //     local services registered using "RequestProfile()" will be available to the peer.
     //     Traditional services discovered on the peer will be notified to local services

@@ -10,18 +10,24 @@ struct SecurityProperties {
     uint8 encryption_key_size;
 };
 
-struct Key {
-    // The security properties of this link under which this key was exchanged.
+// Represents a key that was received from a peer.
+struct RemoteKey {
+    // The security properties of this link under which this key was received.
     SecurityProperties security_properties;
 
     // 128 bit key
     array<uint8>:16 value;
 };
 
-// Represents a LE Long-Term Key. The |ediv| and |rand| fields are zero if
+// Represents a locally assigned key that is reused across bonds.
+struct LocalKey {
+    array<uint8>:16 value;
+};
+
+// Represents a LE Long-Term RemoteKey. The |ediv| and |rand| fields are zero if
 // distributed using LE Secure Connections pairing.
 struct LTK {
-    Key key;
+    RemoteKey key;
     uint8 key_size;
     uint16 ediv;
     uint64 rand;
@@ -55,30 +61,31 @@ struct LEData {
     // The LE long-term key. Present if the link was encrypted.
     LTK? ltk;
 
-    // Identity Resolving Key used to generate and resolve random addresses.
-    Key? irk;
+    // Identity Resolving RemoteKey used to generate and resolve random addresses.
+    RemoteKey? irk;
 
-    // Connection Signature Resolving Key used for data signing without encryption.
-    Key? csrk;
+    // Connection Signature Resolving RemoteKey used for data signing without encryption.
+    RemoteKey? csrk;
 };
 
 struct BREDRData {
-  // The public device address of the peer.
-  string address;
+    // The public device address of the peer.
+    string address;
 
-  // True if the peer prefers to lead the piconet. This is determined by role
-  // switch procedures. Paging and connecting from a peer does not automatically
-  // set this flag.
-  bool piconet_leader;
+    // True if the peer prefers to lead the piconet. This is determined by role
+    // switch procedures. Paging and connecting from a peer does not automatically
+    // set this flag.
+    bool piconet_leader;
 
-  // Known SDP service UUIDs.
-  vector<string:36> services;
+    // Known SDP service UUIDs.
+    vector<string:36> services;
 
-  // The semi-permanent BR/EDR key. Present if link was paired with Secure
-  // Simple Pairing or stronger.
-  LTK? link_key;
+    // The semi-permanent BR/EDR key. Present if link was paired with Secure
+    // Simple Pairing or stronger.
+    LTK? link_key;
 };
 
+// Represents the bonding data for a single peer.
 struct BondingData {
     // The identifier that uniquely identifies this device.
     string identifier;

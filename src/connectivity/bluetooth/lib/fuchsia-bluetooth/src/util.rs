@@ -6,7 +6,8 @@ use {
     fidl_fuchsia_bluetooth::{self, Int8},
     fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice},
     fidl_fuchsia_bluetooth_host::{
-        BondingData, BredrData, Key, LeConnectionParameters, LeData, Ltk, SecurityProperties,
+        BondingData, BredrData, HostData, LeConnectionParameters, LeData, LocalKey, Ltk, RemoteKey,
+        SecurityProperties,
     },
 };
 
@@ -102,6 +103,11 @@ pub fn clone_bonding_data(bd: &BondingData) -> BondingData {
     }
 }
 
+/// Clone HostData
+pub fn clone_host_data(hd: &HostData) -> HostData {
+    HostData { irk: hd.irk.as_ref().map(|v| Box::new(clone_local_key(&v))) }
+}
+
 fn clone_le_conn_params(cp: &LeConnectionParameters) -> LeConnectionParameters {
     LeConnectionParameters { ..*cp }
 }
@@ -110,12 +116,16 @@ fn clone_security_props(sp: &SecurityProperties) -> SecurityProperties {
     SecurityProperties { ..*sp }
 }
 
-fn clone_key(key: &Key) -> Key {
-    Key { security_properties: clone_security_props(&key.security_properties), ..*key }
+fn clone_remote_key(key: &RemoteKey) -> RemoteKey {
+    RemoteKey { security_properties: clone_security_props(&key.security_properties), ..*key }
+}
+
+fn clone_local_key(key: &LocalKey) -> LocalKey {
+    LocalKey { ..*key }
 }
 
 fn clone_ltk(ltk: &Ltk) -> Ltk {
-    Ltk { key: clone_key(&ltk.key), ..*ltk }
+    Ltk { key: clone_remote_key(&ltk.key), ..*ltk }
 }
 
 fn clone_le_data(le: &LeData) -> LeData {
@@ -127,8 +137,8 @@ fn clone_le_data(le: &LeData) -> LeData {
             .map(|v| Box::new(clone_le_conn_params(&v))),
         services: le.services.clone(),
         ltk: le.ltk.as_ref().map(|v| Box::new(clone_ltk(&v))),
-        irk: le.irk.as_ref().map(|v| Box::new(clone_key(&v))),
-        csrk: le.csrk.as_ref().map(|v| Box::new(clone_key(&v))),
+        irk: le.irk.as_ref().map(|v| Box::new(clone_remote_key(&v))),
+        csrk: le.csrk.as_ref().map(|v| Box::new(clone_remote_key(&v))),
         ..*le
     }
 }

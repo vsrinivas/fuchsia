@@ -10,8 +10,8 @@
 
 use {
     fidl_fuchsia_bluetooth_host::{
-        AddressType, BondingData, BredrData, Key, LeConnectionParameters, LeData, Ltk,
-        SecurityProperties,
+        AddressType, BondingData, BredrData, HostData, LeConnectionParameters, LeData, LocalKey,
+        Ltk, RemoteKey, SecurityProperties,
     },
     serde_derive::{Deserialize, Serialize},
 };
@@ -26,11 +26,18 @@ struct LeConnectionParametersDef {
 }
 
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "Key")]
+#[serde(remote = "RemoteKey")]
 #[serde(rename_all = "camelCase")]
-struct KeyDef {
+struct RemoteKeyDef {
     #[serde(with = "SecurityPropertiesDef")]
     pub security_properties: SecurityProperties,
+    pub value: [u8; 16],
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "LocalKey")]
+#[serde(rename_all = "camelCase")]
+struct LocalKeyDef {
     pub value: [u8; 16],
 }
 
@@ -57,8 +64,8 @@ enum AddressTypeDef {
 #[serde(remote = "Ltk")]
 #[serde(rename_all = "camelCase")]
 struct LtkDef {
-    #[serde(with = "KeyDef")]
-    pub key: Key,
+    #[serde(with = "RemoteKeyDef")]
+    pub key: RemoteKey,
     pub key_size: u8,
     pub ediv: u16,
     pub rand: u64,
@@ -77,9 +84,9 @@ struct LeDataDef {
     #[serde(with = "OptBoxLtk")]
     pub ltk: Option<Box<Ltk>>,
     #[serde(with = "OptBoxKey")]
-    pub irk: Option<Box<Key>>,
+    pub irk: Option<Box<RemoteKey>>,
     #[serde(with = "OptBoxKey")]
-    pub csrk: Option<Box<Key>>,
+    pub csrk: Option<Box<RemoteKey>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -107,6 +114,14 @@ struct BondingDataDef {
     pub bredr: Option<Box<BredrData>>,
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "HostData")]
+#[serde(rename_all = "camelCase")]
+struct HostDataDef {
+    #[serde(with = "OptBoxLocalKey")]
+    pub irk: Option<Box<LocalKey>>,
+}
+
 #[derive(Serialize)]
 pub struct BondingDataSerializer<'a>(#[serde(with = "BondingDataDef")] pub &'a BondingData);
 
@@ -115,6 +130,18 @@ pub struct BondingDataDeserializer(#[serde(with = "BondingDataDef")] BondingData
 
 impl BondingDataDeserializer {
     pub fn contents(self) -> BondingData {
+        self.0
+    }
+}
+
+#[derive(Serialize)]
+pub struct HostDataSerializer<'a>(#[serde(with = "HostDataDef")] pub &'a HostData);
+
+#[derive(Deserialize)]
+pub struct HostDataDeserializer(#[serde(with = "HostDataDef")] HostData);
+
+impl HostDataDeserializer {
+    pub fn contents(self) -> HostData {
         self.0
     }
 }
@@ -156,7 +183,7 @@ macro_rules! derive_opt_box {
     };
 }
 
-derive_opt_box!(OptBoxKey, Key, KeyDef, "KeyDef");
+derive_opt_box!(OptBoxKey, RemoteKey, RemoteKeyDef, "RemoteKeyDef");
 derive_opt_box!(OptBoxLeData, LeData, LeDataDef, "LeDataDef");
 derive_opt_box!(OptBoxBredrData, BredrData, BredrDataDef, "BredrDataDef");
 derive_opt_box!(
@@ -166,6 +193,7 @@ derive_opt_box!(
     "LeConnectionParametersDef"
 );
 derive_opt_box!(OptBoxLtk, Ltk, LtkDef, "LtkDef");
+derive_opt_box!(OptBoxLocalKey, LocalKey, LocalKeyDef, "LocalKeyDef");
 
 #[cfg(test)]
 mod tests {
@@ -189,7 +217,7 @@ mod tests {
                 })),
                 services: vec!["1800".to_string(), "1801".to_string()],
                 ltk: Some(Box::new(Ltk {
-                    key: Key {
+                    key: RemoteKey {
                         security_properties: SecurityProperties {
                             authenticated: true,
                             secure_connections: false,
@@ -201,7 +229,7 @@ mod tests {
                     ediv: 1,
                     rand: 2,
                 })),
-                irk: Some(Box::new(Key {
+                irk: Some(Box::new(RemoteKey {
                     security_properties: SecurityProperties {
                         authenticated: true,
                         secure_connections: false,
@@ -216,7 +244,7 @@ mod tests {
                 piconet_leader: false,
                 services: vec!["1101".to_string(), "110A".to_string()],
                 link_key: Some(Box::new(Ltk {
-                    key: Key {
+                    key: RemoteKey {
                         security_properties: SecurityProperties {
                             authenticated: true,
                             secure_connections: true,
@@ -233,7 +261,7 @@ mod tests {
     }
 
     #[test]
-    fn serialize() {
+    fn serialize_bonding_data() {
         let serialized =
             serde_json::to_string(&BondingDataSerializer(&build_bonding_data())).unwrap();
         #[rustfmt::skip]
@@ -296,7 +324,7 @@ mod tests {
     }
 
     #[test]
-    fn deserialize() {
+    fn deserialize_bonding_data() {
         let json_input = r#"{
              "identifier": "1234",
              "localAddress": "AA:BB:CC:DD:EE:FF",
@@ -355,6 +383,52 @@ mod tests {
 
         let deserialized: BondingDataDeserializer = serde_json::from_str(json_input).unwrap();
         let expected = build_bonding_data();
+        assert_eq!(expected, deserialized.0);
+    }
+
+    #[test]
+    fn serialize_empty_host_data() {
+        let host_data = HostData { irk: None };
+        let serialized = serde_json::to_string(&HostDataSerializer(&host_data)).unwrap();
+        let expected = "{\"irk\":null}";
+        assert_eq!(expected, serialized);
+    }
+
+    #[test]
+    fn serialize_host_data_with_irk() {
+        let host_data = HostData {
+            irk: Some(Box::new(LocalKey {
+                value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            })),
+        };
+        let serialized = serde_json::to_string(&HostDataSerializer(&host_data)).unwrap();
+        let expected = "{\
+                        \"irk\":{\"value\":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}\
+                        }";
+        assert_eq!(expected, serialized);
+    }
+
+    #[test]
+    fn deserialize_empty_host_data() {
+        let json_input = "{\"irk\":null}";
+        let deserialized: HostDataDeserializer = serde_json::from_str(json_input).unwrap();
+        let expected = HostData { irk: None };
+        assert_eq!(expected, deserialized.0);
+    }
+
+    #[test]
+    fn deserialize_host_data_with_irk() {
+        let json_input = r#"{
+            "irk": {
+                "value": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+            }
+        }"#;
+        let deserialized: HostDataDeserializer = serde_json::from_str(json_input).unwrap();
+        let expected = HostData {
+            irk: Some(Box::new(LocalKey {
+                value: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            })),
+        };
         assert_eq!(expected, deserialized.0);
     }
 }
