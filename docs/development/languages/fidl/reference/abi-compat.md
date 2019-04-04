@@ -479,5 +479,4 @@ protocol P {       protocol P {
 Follow the same rules as [structs](#structs).
 
 <!-- xrefs -->
-[ftp021]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-021.md
-
+[ftp021]: /docs/development/languages/fidl/reference/ftp/ftp-021.md

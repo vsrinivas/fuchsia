@@ -114,7 +114,7 @@ The file supports the following top level-parameters:
 ### Benchmarking
 
 Benchmarking docs moved to a [separate doc](
-http://fuchsia.googlesource.com/fuchsia/+/master/docs/development/benchmarking/trace_based_benchmarking.md).
+/docs/development/benchmarking/trace_based_benchmarking.md).
 
 ## Configuration
 
