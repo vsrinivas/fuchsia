@@ -16,6 +16,7 @@
 #include <sys/param.h>
 #include <virtio/scsi.h>
 #include <zircon/compiler.h>
+#include <netinet/in.h>
 
 #include <utility>
 
@@ -47,7 +48,7 @@ zx_status_t ScsiDevice::ExecuteCommandSync(uint8_t target, uint16_t lun,
     const auto response_offset = data_out_offset + data_out.iov_len;
     const auto data_in_offset = response_offset + sizeof(struct virtio_scsi_resp_cmd);
     // If data_in fits within request_buffers_, all the regions of this request will fit.
-    if (data_in_offset + data_in.iov_len >= request_buffers_.size) {
+    if (data_in_offset + data_in.iov_len > request_buffers_.size) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -150,15 +151,60 @@ zx_status_t ScsiDevice::ExecuteCommandSync(uint8_t target, uint16_t lun,
     return ZX_OK;
 }
 
+constexpr uint32_t SCSI_SECTOR_SIZE = 512;
+constexpr uint32_t SCSI_MAX_XFER_SIZE = 1024; // 512K clamp
+
+// Read Block Limits VPD Page (0xB0), if supported and return the max xfer size
+// (in blocks) supported by the target.
+zx_status_t ScsiDevice::TargetMaxXferSize(uint8_t target, uint16_t lun,
+                                          uint32_t& xfer_size_sectors) {
+    scsi::InquiryCDB inquiry_cdb = {};
+    scsi::VPDPageList vpd_pagelist = {};
+    inquiry_cdb.opcode = scsi::Opcode::INQUIRY;
+    // Query for all supported VPD pages.
+    inquiry_cdb.reserved_and_evpd = 0x1;
+    inquiry_cdb.page_code = 0x00;
+    inquiry_cdb.allocation_length = ntohs(sizeof(vpd_pagelist));
+    auto status = ExecuteCommandSync(/*target=*/target, /*lun=*/lun,
+                                     /*cdb=*/{&inquiry_cdb, sizeof(inquiry_cdb)},
+                                     /*data_out=*/{nullptr, 0},
+                                     /*data_in=*/{&vpd_pagelist,
+                                     sizeof(vpd_pagelist)});
+    if (status != ZX_OK)
+        return status;
+    uint8_t i;
+    for (i = 0 ; i < vpd_pagelist.page_length ; i++) {
+        if (vpd_pagelist.pages[i] == 0xB0)
+            break;
+    }
+    if (i == vpd_pagelist.page_length)
+        return ZX_ERR_NOT_SUPPORTED;
+    // The Block Limits VPD page is supported, fetch it.
+    scsi::VPDBlockLimits block_limits = {};
+    inquiry_cdb.page_code = 0xB0;
+    inquiry_cdb.allocation_length = ntohs(sizeof(block_limits));
+    status = ExecuteCommandSync(/*target=*/target, /*lun=*/lun,
+                                /*cdb=*/{&inquiry_cdb, sizeof(inquiry_cdb)},
+                                /*data_out=*/{nullptr, 0},
+                                /*data_in=*/{&block_limits,
+                                sizeof(block_limits)});
+    if (status != ZX_OK)
+        return status;
+    xfer_size_sectors = block_limits.max_xfer_length_blocks;
+    return ZX_OK;
+}
+
 zx_status_t ScsiDevice::WorkerThread() {
     uint16_t max_target;
     uint32_t max_lun;
+    uint32_t max_sectors; // controller's max sectors.
     {
         fbl::AutoLock lock(&lock_);
         // virtio-scsi has a 16-bit max_target field, but the encoding we use limits us to one byte
         // target identifiers.
         max_target = fbl::min(config_.max_target, static_cast<uint16_t>(UINT8_MAX - 1));
         max_lun = config_.max_lun;
+        max_sectors = config_.max_sectors;
     }
 
     // Execute TEST UNIT READY on every possible target to find potential disks.
@@ -181,6 +227,7 @@ zx_status_t ScsiDevice::WorkerThread() {
         }
 
         uint16_t luns_found = 0;
+        uint32_t max_xfer_size_sectors = 0;
         for (uint16_t lun = 0u; lun <= max_lun; lun++) {
             scsi::TestUnitReadyCDB cdb = {};
             cdb.opcode = scsi::Opcode::TEST_UNIT_READY;
@@ -188,8 +235,23 @@ zx_status_t ScsiDevice::WorkerThread() {
             auto status = ExecuteCommandSync(
                 /*target=*/target,
                 /*lun=*/lun, {&cdb, sizeof(cdb)}, {}, {});
-            if (status == ZX_OK) {
-                scsi::Disk::Create(this, device_, /*target=*/target, /*lun=*/lun);
+            if ((status == ZX_OK) && (max_xfer_size_sectors == 0)) {
+                // If we haven't queried the VPD pages for the target's xfer size
+                // yet, do it now. We only query this once per target.
+                status = TargetMaxXferSize(target, lun, max_xfer_size_sectors);
+                if (status == ZX_OK) {
+                    // smaller of controller and target max_xfer_sizes
+                    max_xfer_size_sectors = fbl::min(max_xfer_size_sectors,
+                                                     max_sectors);
+                    // and the 512K clamp
+                    max_xfer_size_sectors = fbl::min(max_xfer_size_sectors,
+                                                     SCSI_MAX_XFER_SIZE);
+                } else {
+                    max_xfer_size_sectors = fbl::min(max_sectors,
+                                                     SCSI_MAX_XFER_SIZE);
+                }
+                scsi::Disk::Create(this, device_, /*target=*/target, /*lun=*/lun,
+                                   max_xfer_size_sectors);
                 luns_found++;
             }
             // If we've found all the LUNs present on this target, move on.
@@ -254,14 +316,21 @@ zx_status_t ScsiDevice::Init() {
             return err;
         }
 
-        // Allocate one virtio_scsi_req_cmd / virtio_scsi_resp_cmd per request
-        // queue entry.
+        // We only queue up 1 command at a time, so we only need space in the io
+        // buffer for just 1 scsi req, 1 scsi resp and either data in or out.
+        // TODO: The allocation of the IO buffer region for data will go away
+        // once we initiate DMA in/out of pages. Then we would need to allocate
+        // IO buffer regions for the indirect scatter-gather list of paddrs (we
+        // would need as many of those as the # of concurrent IOs).
         const size_t request_buffers_size =
-            Device::GetRingSize(Queue::REQUEST) *
-            (sizeof(struct virtio_scsi_req_cmd) + sizeof(struct virtio_scsi_resp_cmd));
+            (SCSI_SECTOR_SIZE *
+             fbl::min(config_.max_sectors, SCSI_MAX_XFER_SIZE)) +
+            (sizeof(struct virtio_scsi_req_cmd) +
+             sizeof(struct virtio_scsi_resp_cmd));
         auto status =
             io_buffer_init(&request_buffers_, bti().get(),
-                           /*size=*/request_buffers_size, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+                           /*size=*/request_buffers_size,
+                           IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (status) {
             zxlogf(ERROR, "failed to allocate queue working memory\n");
             return status;

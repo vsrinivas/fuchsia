@@ -31,12 +31,13 @@ uint32_t CountLuns(Controller* controller, uint8_t target) {
 }
 
 zx_status_t Disk::Create(Controller* controller, zx_device_t* parent, uint8_t target,
-                         uint16_t lun) {
+                         uint16_t lun, uint32_t max_xfer_size) {
     fbl::AllocChecker ac;
     auto* const disk = new (&ac) scsi::Disk(controller, parent, /*target=*/target, /*lun=*/lun);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
+    disk->max_xfer_size_ = max_xfer_size;
     auto status = disk->Bind();
     if (status != ZX_OK) {
         delete disk;

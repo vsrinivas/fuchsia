@@ -46,6 +46,9 @@ public:
     static void FillLUNStructure(struct virtio_scsi_req_cmd* req, uint8_t target, uint16_t lun);
 
 private:
+    zx_status_t TargetMaxXferSize(uint8_t target, uint16_t lun,
+                                  uint32_t& xfer_size_sectors);
+
     zx_status_t ExecuteCommandSync(uint8_t target, uint16_t lun, struct iovec cdb,
                                    struct iovec data_out, struct iovec data_in) override
         TA_EXCL(lock_);

@@ -69,6 +69,27 @@ struct InquiryData {
 static_assert(offsetof(InquiryData, t10_vendor_id) == 8, "T10 Vendor ID is at offset 8");
 static_assert(offsetof(InquiryData, product_id) == 16, "Product ID is at offset 16");
 
+struct VPDBlockLimits {
+    uint8_t peripheral_qualifier_device_type;
+    uint8_t page_code;
+    uint8_t reserved1;
+    uint8_t page_length;
+    uint8_t reserved2[2];
+    uint16_t optimal_xfer_granularity;
+    uint32_t max_xfer_length_blocks;
+    uint32_t optimal_xfer_length;
+} __PACKED;
+
+static_assert(sizeof(VPDBlockLimits) == 16, "BlockLimits Page must be 16 bytes");
+
+struct VPDPageList {
+    uint8_t peripheral_qualifier_device_type;
+    uint8_t page_code;
+    uint8_t reserved;
+    uint8_t page_length;
+    uint8_t pages[255];
+};
+
 struct ModeSense6CDB {
     Opcode opcode;
     // If disable_block_descriptors(4) is '1', device will not return Block Descriptors.
@@ -186,7 +207,7 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
     // |controller| must outlast Disk.
     // This disk does not take ownership of or any references on |controller|.
     static zx_status_t Create(Controller* controller, zx_device_t* parent, uint8_t target,
-                              uint16_t lun);
+                              uint16_t lun, uint32_t max_xfer_size);
 
     const char* tag() const { return tag_; }
 
@@ -201,7 +222,7 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
     void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
         info_out->block_size = block_size_;
         info_out->block_count = blocks_;
-        info_out->max_transfer_size = block_size_ * 32;  // TODO(ZX-2314): Correct this size.
+        info_out->max_transfer_size = block_size_ * max_xfer_size_;
         info_out->flags = (removable_) ? BLOCK_FLAG_REMOVABLE : 0;
         *block_op_size_out = sizeof(block_op_t);
     }
@@ -222,6 +243,7 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
     bool removable_;
     uint64_t blocks_;
     uint32_t block_size_;
+    uint32_t max_xfer_size_;    // In block_size_ units.
 };
 
 } // namespace scsi
