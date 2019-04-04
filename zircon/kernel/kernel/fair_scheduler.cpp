@@ -703,14 +703,27 @@ void FairScheduler::Yield() {
 
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-    thread_t* current_thread = get_current_thread();
+    thread_t* const current_thread = get_current_thread();
+    FairTaskState* const current_state = &current_thread->fair_task_state;
     DEBUG_ASSERT(!thread_is_idle(current_thread));
 
     const SchedTime now = CurrentTime();
     SCHED_LTRACEF("current=%s now=%ld\n", current_thread->name, now.raw_value());
 
+    // Update the virtual timeline in preparation for snapping the thread's
+    // virtual finish time to the current virtual time.
+    FairScheduler* const current = Get();
+    current->UpdateTimeline(now);
+
+    // Set the time slice to expire now. The thread is re-evaluated with with
+    // zero lag against other competing threads and may skip lower priority
+    // threads with similar arrival times.
     current_thread->state = THREAD_READY;
-    Get()->RescheduleCommon(now);
+    current_state->virtual_finish_time_ = current->virtual_time_;
+    current_state->time_slice_ns_ = now - current->start_of_current_time_slice_ns_;
+    DEBUG_ASSERT(current_state->time_slice_ns_ >= 0);
+
+    current->RescheduleCommon(now);
 }
 
 void FairScheduler::Preempt() {

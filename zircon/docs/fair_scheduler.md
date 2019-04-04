@@ -5,7 +5,7 @@
 As part of the overall scheduler development effort, Zircon is moving to a new
 fair scheduler as the primary scheduler for the system. This document discusses
 the properties of the scheduler and how to enable it for testing prior to
-rollout.
+roll-out.
 
 ## Enabling the Fair Scheduler
 
@@ -33,7 +33,7 @@ gn gen build-zircon --args='enable_fair_scheduler=true detailed_scheduler_tracin
 
 Use the `kernel:sched` trace category to include the detailed scheduler
 information in your trace session. It's a good idea to also include the
-'kernel:irq' category because interrupts can cause scheduler activity that might
+`kernel:irq` category because interrupts can cause scheduler activity that might
 otherwise appear unconnected to other events.
 
 ```
@@ -42,7 +42,7 @@ fx traceutil record -categories kernel:sched,kernel:irq,<other categories> -stre
 
 ### Summary of Scheduler Events
 
-The detailed scheduler events are primarily durations and flow events. The
+The detailed scheduler events are primarily duration and flow events. The
 events appear in Chromium Trace Viewer in the timelines labeled `cpu-0`
 through `cpu-N`, where `N` is the number of CPUs in the system. These timelines
 represent per-CPU activity in the kernel, which includes interrupts and
@@ -66,11 +66,10 @@ The fair scheduler emits duration events including the following:
 
 The fair scheduler emits flow events including the following:
 * **sched_latency**: A flow that connects the point in time right after a thread
-  enters the run queue, due to an action on one CPU, to the point in time right
-  before the (potentially different) target CPU context switches to the thread.
-  This flow event is useful for visualizing cross-CPU scheduling activity and
-  observing the runnable-to-running scheduler latency of a thread at any point
-  in time.
+  enters the run queue to the point in time right before the (potentially
+  different) target CPU context switches to the thread. This flow event is
+  useful for visualizing cross-CPU scheduling activity and observing the
+  runnable-to-running scheduler latency of a thread at any point in time.
 
 A NOTE ABOUT FLOW EVENTS: Sometimes displaying flow events is not enabled by
 default in Chromium Trace Viewer. Use the `View Options` menu in the upper right
@@ -118,7 +117,7 @@ development cycle.
 
 ## Fair Scheduling in Zircon
 
-The Zircon fair scheduler is based primarily on the Weighted Fair Queueing (WFQ)
+The Zircon fair scheduler is based primarily on the Weighted Fair Queuing (WFQ)
 discipline, with insights from other similar queuing and scheduling disciplines.
 Adopting aspects of the Worst-Case Fair Weighted Fair Queuing (WF2Q) discipline,
 a modification of WFQ, is planned to improve control over tuning of latency
@@ -263,3 +262,11 @@ Let **R** be the relative rate of thread **P[i]**.
 This definition ensures that **t[i]** is an integer multiple of the _minimum
 granularity_ **M**, while remaining approximately proportional to the relative
 rate of the thread.
+
+### Yield
+
+Yielding immediately expires the thread's time slice and returns it to the run
+queue. This behavior is similar to yielding in **O(1)** scheduling: the yielding
+thread is guaranteed to queue behind threads of the same or greater weight.
+However, the yielding thread may or may not skip ahead of lower weight threads,
+depending on how long other threads have been waiting to run.
