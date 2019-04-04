@@ -250,13 +250,10 @@ static zx_status_t hisi_ufs_bind(void* ctx, zx_device_t* parent) {
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 
-    status = pdev_device_add(&dev->pdev, 0, &args, &dev->zxdev);
+    status = device_add(parent, &args, &dev->zxdev);
     if (status != ZX_OK) {
-        status = device_add(parent, &args, &dev->zxdev);
-        if (status != ZX_OK) {
-            UFS_ERROR("hisi UFS device pdev_add status: %d\n", status);
-            goto fail;
-        }
+        UFS_ERROR("hisi UFS device pdev_add status: %d\n", status);
+        goto fail;
     }
 
     status = ufs_create_worker_thread(dev);
