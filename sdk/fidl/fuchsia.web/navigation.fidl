@@ -16,7 +16,7 @@ protocol NavigationEventListener {
     /// |change|.
     /// Implementer must call the acknowledgement callback to receive new
     /// navigation events.
-    OnNavigationStateChanged(NavigationEntry change) -> ();
+    OnNavigationStateChanged(NavigationState change) -> ();
 };
 
 /// Represents the return status of a NavigationController method.
@@ -49,7 +49,7 @@ protocol NavigationController {
 
     /// Returns information for the currently visible content regardless of
     /// loading state, or an empty entry if no content is being displayed.
-    GetVisibleEntry() -> (NavigationEntry entry);
+    GetVisibleEntry() -> (NavigationState entry);
 };
 
 /// Additional parameters for modifying the behavior of LoadUrl().
@@ -71,7 +71,7 @@ table LoadUrlParams {
 };
 
 /// Contains information about the Frame's navigation state.
-table NavigationEntry {
+table NavigationState {
     /// The page's URL.
     1: Url url;
 
@@ -80,6 +80,12 @@ table NavigationEntry {
 
     /// Indicates whether this was a navigation to an error page.
     3: PageType page_type;
+
+    /// Indicates if there is a following navigation.
+    4: bool can_go_forward;
+
+    /// Indicates if there is a previous navigation.
+    5: bool can_go_back;
 };
 
 /// Characterizes the type of reload.
@@ -100,7 +106,7 @@ enum LoadUrlReason : uint32 {
     TYPED = 1;
 };
 
-/// Characterizes the page type in a NavigationEntry.
+/// Characterizes the page type in a NavigationState.
 enum PageType {
     /// Regular web page.
     NORMAL = 0;
