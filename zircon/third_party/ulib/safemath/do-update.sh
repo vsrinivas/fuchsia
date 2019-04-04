@@ -49,6 +49,22 @@ cat <<END
 # found in the LICENSE file.
 
 library("safemath") {
+  sdk = "source"
+  sdk_headers = [
+    "safemath/checked_math.h",
+    "safemath/checked_math_impl.h",
+    "safemath/clamped_math.h",
+    "safemath/clamped_math_impl.h",
+    "safemath/math_constants.h",
+    "safemath/ranges.h",
+    "safemath/safe_conversions.h",
+    "safemath/safe_conversions_arm_impl.h",
+    "safemath/safe_conversions_impl.h",
+    "safemath/safe_math.h",
+    "safemath/safe_math_arm_impl.h",
+    "safemath/safe_math_clang_gcc_impl.h",
+    "safemath/safe_math_shared_impl.h",
+  ]
   sources = []
   host = true
   kernel = false
