@@ -70,6 +70,7 @@ library("x86") {
   kernel = true
   sources = [
     "acpi.S",
+    "amd.cpp",
     "arch.cpp",
     "asm.S",
     "bootstrap16.cpp",
@@ -83,6 +84,7 @@ library("x86") {
     "gdt.S",
     "hwp.cpp",
     "idt.cpp",
+    "intel.cpp",
     "ioapic.cpp",
     "ioport.cpp",
     "lapic.cpp",

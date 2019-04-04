@@ -225,15 +225,15 @@ void x86_init_percpu(cpu_num_t cpu_num) {
     }
     x86_set_cr4(cr4);
 
-    // Some intel cpus support auto-entering C1E state when all cores are at C1. In
-    // C1E state the voltage is reduced on all cores as well as clock gated. There is
-    // a latency associated with ramping the voltage on wake. Disable this feature here
-    // to save time on the irq path from idle. (5-10us on skylake nuc from kernel irq
-    // handler to user space handler).
-    if (!x86_feature_test(X86_FEATURE_HYPERVISOR) &&
-        x86_get_microarch_config()->disable_c1e) {
-        uint64_t power_ctl_msr = read_msr(0x1fc);
-        write_msr(0x1fc, power_ctl_msr & ~0x2);
+    switch (x86_vendor) {
+    case X86_VENDOR_INTEL:
+        x86_intel_init_percpu();
+        break;
+    case X86_VENDOR_AMD:
+        x86_amd_init_percpu();
+        break;
+    default:
+        break;
     }
 
     mp_set_curr_cpu_online(true);
