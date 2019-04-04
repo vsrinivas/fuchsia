@@ -14,7 +14,7 @@ namespace testing {
 
 ComponentContextProvider::ComponentContextProvider(
     async_dispatcher_t* dispatcher)
-    : svc_provider_(std::make_shared<ServiceDirectoryProvider>()) {
+    : svc_provider_(std::make_shared<ServiceDirectoryProvider>(dispatcher)) {
   // remove this handle from namespace so that no one is using it.
   zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
