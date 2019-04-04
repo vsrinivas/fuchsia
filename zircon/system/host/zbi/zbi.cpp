@@ -1326,28 +1326,24 @@ Extracted items use the file names shown below:\n\
     static ItemPtr CreateBootFS(Directory* root, bool compress) {
         auto item = MakeItem(NewHeader(ZBI_TYPE_STORAGE_BOOTFS, 0), compress);
 
-        // Collect the names and contents pointers here.
-        struct Entry {
-            std::string name;
-            const FileContents* contents;
-        };
-        std::deque<Entry> entries;
-        size_t dirsize = 0, bodysize = 0;
+        // Collect the names and contents, calculating the final directory size.
+        std::vector<std::pair<std::string, const FileContents*>> entries;
+        std::unordered_map<const FileContents*, uint32_t> files;
+        size_t dirsize = 0;
 
         for (const auto& [path, file] : DirectoryTree{root}) {
-            Entry entry{path.generic_string(), file->AsContents()};
+            auto name = path.generic_string();
+            const auto contents = file->AsContents();
+
             // Accumulate the space needed for each zbi_bootfs_dirent_t.
-            dirsize += ZBI_BOOTFS_DIRENT_SIZE(entry.name.size() + 1);
-            if (entry.contents->exact_size() > std::numeric_limits<uint32_t>::max()) {
-                fprintf(stderr, "input file size exceeds format maximum\n");
-                exit(1);
-            }
-            uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(entry.contents->exact_size());
-            bodysize += size;
-            entries.push_back(std::move(entry));
+            dirsize += ZBI_BOOTFS_DIRENT_SIZE(name.size() + 1);
+
+            entries.emplace_back(std::move(name), contents);
+            files.emplace(contents, 0);
         }
 
-        // Now we can calculate the final sizes.
+        // Now fill a buffer with the BOOTFS header and directory entries,
+        // appending each unique file to the payload.
         const zbi_bootfs_header_t header = {
             ZBI_BOOTFS_MAGIC,               // magic
             static_cast<uint32_t>(dirsize), // dirsize
@@ -1355,36 +1351,50 @@ Extracted items use the file names shown below:\n\
             0,                              // reserved1
         };
         size_t header_size = ZBI_BOOTFS_PAGE_ALIGN(sizeof(header) + dirsize);
-        item->header_.length = static_cast<uint32_t>(header_size + bodysize);
-        if (item->header_.length != header_size + bodysize) {
-            fprintf(stderr, "BOOTFS image size exceeds format maximum\n");
-            exit(1);
-        }
-
-        // Now fill a buffer with the BOOTFS header and directory entries.
-        // At the same time collect the file contents in item->payload_.
         AppendBuffer buffer(header_size);
         buffer.Append(&header);
         uint32_t data_off = static_cast<uint32_t>(header_size);
-        for (const auto& entry : entries) {
+        for (const auto& [name, contents] : entries) {
+            // Place the file contents if this is the first name for them.
+            uint32_t* location = &files[contents];
+            if (*location == 0) {
+                size_t layout_size =
+                    ((contents->exact_size() + ZBI_BOOTFS_PAGE_SIZE - 1) &
+                     -size_t{ZBI_BOOTFS_PAGE_SIZE});
+                if (layout_size > std::numeric_limits<uint32_t>::max()) {
+                    fprintf(stderr,
+                            "input file size exceeds format maximum\n");
+                    exit(1);
+                }
+                if (data_off + layout_size >
+                    std::numeric_limits<uint32_t>::max()) {
+                    fprintf(stderr,
+                            "BOOTFS image size exceeds format maximum\n");
+                    exit(1);
+                }
+                *location = data_off;
+                data_off += layout_size;
+                item->payload_.emplace_back(
+                    contents->PageRoundedView(0, layout_size));
+            }
+
+            // Emit the directory entry.
             const zbi_bootfs_dirent_t entry_hdr = {
-                static_cast<uint32_t>(entry.name.size() + 1),        // name_len
-                static_cast<uint32_t>(entry.contents->exact_size()), // data_len
-                data_off,                                            // data_off
+                static_cast<uint32_t>(name.size() + 1),        // name_len
+                static_cast<uint32_t>(contents->exact_size()), // data_len
+                *location,                                     // data_off
             };
-            uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(entry.contents->exact_size());
-            data_off += size;
-            item->payload_.emplace_back(
-                entry.contents->PageRoundedView(0, size));
             buffer.Append(&entry_hdr);
-            buffer.Append(entry.name.c_str(), entry_hdr.name_len);
+            buffer.Append(name.c_str(), entry_hdr.name_len);
             buffer.Pad(
                 ZBI_BOOTFS_DIRENT_SIZE(entry_hdr.name_len) -
                 offsetof(zbi_bootfs_dirent_t, name[entry_hdr.name_len]));
         }
-        assert(data_off == item->header_.length);
         // Zero fill to the end of the page.
         buffer.Pad(header_size - buffer.size());
+
+        // Only now do we know the total size of the image.
+        item->header_.length = data_off;
 
         if (!compress) {
             // Checksum the BOOTFS image right now: header and then payload.
