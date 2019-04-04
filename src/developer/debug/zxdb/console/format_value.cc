@@ -7,13 +7,12 @@
 #include <ctype.h>
 #include <string.h>
 
+#include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/resolve_array.h"
 #include "src/developer/debug/zxdb/expr/resolve_collection.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
 #include "src/developer/debug/zxdb/expr/symbol_variable_resolver.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
@@ -28,6 +27,8 @@
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/developer/debug/zxdb/symbols/visit_scopes.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -203,6 +204,16 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
         output_key,
         OutputBuffer(Syntax::kComment,
                      fxl::StringPrintf("(%s) ", type->GetFullName().c_str())));
+  }
+
+  // Special-case zx_status_t. Long-term this should be removed and replaced
+  // with a pretty-printing system where this can be expressed generically.
+  // This code needs to go here because zx_status_t is a typedef that will be
+  // expanded away by GetConcreteType().
+  if (type->GetFullName() == "zx_status_t" &&
+      type->byte_size() == sizeof(debug_ipc::zx_status_t)) {
+    FormatZxStatusT(value, options, output_key);
+    return;
   }
 
   // Trim "const", "volatile", etc. and follow typedef and using for the type
@@ -862,6 +873,20 @@ void FormatValue::FormatMemberPtr(const ExprValue& value, const MemberPtr* type,
     // Pointers to everything else can be handled like normal pointers.
     FormatPointer(value, options, out);
   }
+}
+
+void FormatValue::FormatZxStatusT(const ExprValue& value,
+                                  const FormatExprValueOptions& options,
+                                  OutputKey output_key) {
+  OutputBuffer out;
+  FormatNumeric(value, options, &out);
+
+  // Caller should have checked this is the right size.
+  debug_ipc::zx_status_t int_val = value.GetAs<debug_ipc::zx_status_t>();
+  out.Append(
+      Syntax::kComment,
+      fxl::StringPrintf(" (%s)", debug_ipc::ZxStatusToString(int_val)));
+  OutputKeyComplete(output_key, std::move(out));
 }
 
 FormatValue::OutputKey FormatValue::GetRootOutputKey() {

@@ -777,4 +777,35 @@ TEST_F(FormatValueTest, NullptrT) {
   EXPECT_EQ("(nullptr_t) 0x0", SyncFormatValue(null_value, opts));
 }
 
+TEST_F(FormatValueTest, ZxStatusT) {
+  // Types in the global namespace named "zs_status_t" of the right size should
+  // get the enum name expanded (Zircon special-case).
+  auto int32_type = GetInt32Type();
+  auto status_t_type = fxl::MakeRefCounted<ModifiedType>(
+      DwarfTag::kTypedef, LazySymbol(int32_type));
+  status_t_type->set_assigned_name("zx_status_t");
+
+  ExprValue status_ok(status_t_type, {0, 0, 0, 0});
+  FormatExprValueOptions opts;
+  EXPECT_EQ("0 (ZX_OK)", SyncFormatValue(status_ok, opts));
+
+  // -15 = ZX_ERR_BUFFER_TOO_SMALL
+  ExprValue status_too_small(status_t_type, {0xf1, 0xff, 0xff, 0xff});
+  EXPECT_EQ("-15 (ZX_ERR_BUFFER_TOO_SMALL)",
+            SyncFormatValue(status_too_small, opts));
+
+  // Invalid negative number.
+  ExprValue status_invalid(status_t_type, {0xf0, 0xd8, 0xff, 0xff});
+  EXPECT_EQ("-10000 (<unknown>)", SyncFormatValue(status_invalid, opts));
+
+  // Positive values.
+  ExprValue status_one(status_t_type, {1, 0, 0, 0});
+  EXPECT_EQ("1 (<unknown>)", SyncFormatValue(status_one, opts));
+
+  // Hex formatting should be applied if requested.
+  opts.num_format = FormatExprValueOptions::NumFormat::kHex;
+  EXPECT_EQ("0xfffffff1 (ZX_ERR_BUFFER_TOO_SMALL)",
+            SyncFormatValue(status_too_small, opts));
+}
+
 }  // namespace zxdb

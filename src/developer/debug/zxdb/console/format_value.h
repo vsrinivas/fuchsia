@@ -232,6 +232,9 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   void FormatMemberPtr(const ExprValue& value, const MemberPtr* type,
                        const FormatExprValueOptions& options,
                        OutputBuffer* out);
+  void FormatZxStatusT(const ExprValue& value,
+                       const FormatExprValueOptions& options,
+                       OutputKey output_key);
 
   OutputKey GetRootOutputKey();
 
