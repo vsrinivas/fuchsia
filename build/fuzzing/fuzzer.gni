@@ -231,6 +231,20 @@ template("fuzz_package") {
   # Assemble the Fuchsia package
   if (selected_targets != []) {
     package(target_name) {
+      metadata = {
+        fuzz_spec = [
+          {
+            fuzz_package = target_name
+            fuzz_targets = []
+            foreach(selected_target, selected_targets) {
+              fuzz_targets += [ get_label_info(selected_target, "name") ]
+            }
+          },
+        ]
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*", [ "fuzz_spec" ])
+        }
+      }
       components = []
       forward_variables_from(invoker, [ "visibility" ])
       forward_variables_from(invoker,

@@ -140,6 +140,19 @@ generated_file("pseudo_tests") {
   ]
 }
 
+# Aggregates metadata about all fuzz targets within the build graph to create a
+# top-level manifest.
+generated_file("fuzzers") {
+  outputs = [
+    "$root_build_dir/fuzzers.json",
+  ]
+  data_keys = [ "fuzz_spec" ]
+  output_conversion = "json"
+  deps = [
+    "//build/images:packages",
+  ]
+}
+
 # Copy host test binaries to $root_build_dir/host_tests.
 # TODO(IN-819): Delete this copy target once host tests are no longer run out
 # of a single directory.

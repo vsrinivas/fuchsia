@@ -86,6 +86,7 @@ fx-config-read
 # Constants
 CIPD="${FUCHSIA_DIR}/buildtools/cipd"
 CIPD_PREFIX="fuchsia/test_data/fuzzing"
+FUZZING_DIR=${FUCHSIA_DIR}/scripts//fuzzing
 
 # Global variables
 device=""
@@ -394,12 +395,20 @@ main() {
   local command=$1
   local fuzzer=$2
   local args="${@:3}"
+  # Construct argparse flags
+  local name_opt=
+  if [ -n "$2" ] ; then
+    name_opt="-n $2"
+  fi
   case ${command} in
     help)
       fx-command-help
       exit 0
       ;;
-    list|check|stop|repro|merge)
+    list)
+      python ${FUZZING_DIR}/list_fuzzers.py ${name_opt}
+      ;;
+    check|stop|repro|merge)
       fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args}
       ;;
     start)
