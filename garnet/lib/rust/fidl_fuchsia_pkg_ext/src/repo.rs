@@ -40,43 +40,6 @@ pub struct RepositoryConfig {
     update_package_uri: Option<String>,
 }
 
-/// Convenience wrapper for generating [RepositoryConfig] values.
-pub struct RepositoryConfigBuilder {
-    config: RepositoryConfig,
-}
-
-impl RepositoryConfigBuilder {
-    pub fn new(repo_url: FuchsiaPkgUri) -> Self {
-        RepositoryConfigBuilder {
-            config: RepositoryConfig {
-                repo_url: repo_url,
-                root_keys: vec![],
-                mirrors: vec![],
-                update_package_uri: None,
-            },
-        }
-    }
-
-    pub fn add_root_key(mut self, key: RepositoryKey) -> Self {
-        self.config.root_keys.push(key);
-        self
-    }
-
-    pub fn add_mirror(mut self, mirror: MirrorConfig) -> Self {
-        self.config.mirrors.push(mirror);
-        self
-    }
-
-    pub fn update_package_uri(mut self, uri: FuchsiaPkgUri) -> Self {
-        self.config.update_package_uri = Some(uri);
-        self
-    }
-
-    pub fn build(self) -> RepositoryConfig {
-        self.config
-    }
-}
-
 /// Wraper for serializing repository configs to the on-disk JSON format.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(tag = "version", content = "content", deny_unknown_fields)]
