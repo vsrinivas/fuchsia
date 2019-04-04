@@ -15,6 +15,7 @@ source_set("tests") {
     "lock_dep_tests.cpp",
     "mem_tests.cpp",
     "mp_hotplug_tests.cpp",
+    "pi_tests.cpp",
     "popcount.cpp",
     "preempt_disable_tests.cpp",
     "printf_tests.cpp",

@@ -174,6 +174,10 @@ public:
         return wait_queue_wake_one(this, reschedule, wait_queue_error);
     }
 
+    int WakeAll(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
+        return wait_queue_wake_all(this, reschedule, wait_queue_error);
+    }
+
     bool IsEmpty() const TA_REQ(thread_lock) { return (this->count == 0); }
 
     struct thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock) {
