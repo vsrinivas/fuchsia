@@ -75,6 +75,16 @@ generate_manifest("zedboot.manifest") {
   foreach(pattern, zedboot_binary_patterns) {
     args += [ "--binary=" + pattern ]
   }
+
+  # The --binary switch only matches binaries, not other files.
+  # Get the non-binary files from the manifest directly.
+  args += [ "--include=lib/firmware/*" ]
+  foreach(manifest, zircon_boot_manifests) {
+    args += [
+      "--cwd=" + rebase_path(zircon_root_build_dir, root_build_dir),
+      "--manifest=" + rebase_path(manifest, root_build_dir),
+    ]
+  }
 }
 manifest_outputs = get_target_outputs(":zedboot.manifest")
 manifest_file = manifest_outputs[0]
@@ -93,10 +103,13 @@ action("devmgr_config.txt") {
   }
 }
 
-component_manager_label = "//garnet/bin/sys/component_manager:component_manager.bootfs"
-component_manager_target_dir = get_label_info(component_manager_label, "target_out_dir")
+component_manager_label =
+    "//garnet/bin/sys/component_manager:component_manager.bootfs"
+component_manager_target_dir =
+    get_label_info(component_manager_label, "target_out_dir")
 component_manager_target_name = get_label_info(component_manager_label, "name")
-component_manager_manifest = component_manager_target_dir + "/" + component_manager_target_name
+component_manager_manifest =
+    component_manager_target_dir + "/" + component_manager_target_name
 
 zbi("zbi") {
   output_name = "zedboot"
