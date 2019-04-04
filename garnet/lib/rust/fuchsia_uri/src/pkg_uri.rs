@@ -4,7 +4,11 @@
 
 pub use crate::errors::ParseError;
 pub use crate::parse::{check_resource, HASH_RE, NAME_RE};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::convert::TryFrom;
+use std::error::Error;
 use std::fmt;
+use std::str;
 use url::percent_encoding::percent_decode;
 use url::Url;
 
@@ -208,6 +212,38 @@ impl fmt::Display for FuchsiaPkgUri {
         }
 
         Ok(())
+    }
+}
+
+impl str::FromStr for FuchsiaPkgUri {
+    type Err = ParseError;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        FuchsiaPkgUri::parse(value)
+    }
+}
+
+impl TryFrom<&str> for FuchsiaPkgUri {
+    type Error = ParseError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        FuchsiaPkgUri::parse(value)
+    }
+}
+
+impl Serialize for FuchsiaPkgUri {
+    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        self.to_string().serialize(ser)
+    }
+}
+
+impl<'de> Deserialize<'de> for FuchsiaPkgUri {
+    fn deserialize<D>(de: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let uri = String::deserialize(de)?;
+        Ok(FuchsiaPkgUri::parse(&uri).map_err(|err| serde::de::Error::custom(err.description()))?)
     }
 }
 
