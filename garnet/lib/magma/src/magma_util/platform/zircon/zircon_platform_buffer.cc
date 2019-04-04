@@ -61,6 +61,7 @@ bool ZirconPlatformBuffer::MapCpuWithFlags(uint64_t offset, uint64_t length, uin
 
 bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length)
 {
+    DASSERT(!vmar_);
     if (!magma::is_page_aligned(addr))
         return DRETF(false, "addr %lx isn't page aligned", addr);
     if (!magma::is_page_aligned(offset))
@@ -77,21 +78,23 @@ bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t
         return DRETF(false, "addr %lx below vmar base %lx", addr, minimum_mappable);
 
     uint64_t child_addr;
+    zx::vmar child_vmar;
     zx_status_t status = zx::vmar::root_self()->allocate(
         addr - minimum_mappable, length,
-        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC, &vmar_,
-        &child_addr);
+        ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC,
+        &child_vmar, &child_addr);
     if (status != ZX_OK)
         return DRETF(false, "Failed to create vmar, status %d", status);
     DASSERT(child_addr == addr);
 
     uintptr_t ptr;
-    status = vmar_.map(0, vmo_, offset, length, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC,
-                       &ptr);
+    status = child_vmar.map(0, vmo_, offset, length,
+                            ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC, &ptr);
     if (status != ZX_OK)
         return DRETF(false, "failed to map vmo");
     DASSERT(ptr == addr);
     virt_addr_ = reinterpret_cast<void*>(ptr);
+    vmar_ = std::move(child_vmar);
 
     map_count_++;
 
@@ -107,23 +110,26 @@ bool ZirconPlatformBuffer::MapCpu(void** addr_out, uint64_t alignment)
         return DRETF(false, "alignment 0x%lx isn't power of 2", alignment);
     if (map_count_ == 0) {
         DASSERT(!virt_addr_);
+        DASSERT(!vmar_);
         uintptr_t ptr;
         uintptr_t child_addr;
         // If alignment is needed, allocate a vmar that's large enough so that
         // the buffer will fit at an aligned address inside it.
         uintptr_t vmar_size = alignment ? size() + alignment : size();
+        zx::vmar child_vmar;
         zx_status_t status = zx::vmar::root_self()->allocate(
-            0, vmar_size, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, &vmar_,
-            &child_addr);
+            0, vmar_size, ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC,
+            &child_vmar, &child_addr);
         if (status != ZX_OK)
             return DRETF(false, "failed to make vmar");
         uintptr_t offset = alignment ? magma::round_up(child_addr, alignment) - child_addr : 0;
-        status = vmar_.map(offset, vmo_, 0, size(),
-                           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC, &ptr);
+        status = child_vmar.map(offset, vmo_, 0, size(),
+                                ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC, &ptr);
         if (status != ZX_OK)
             return DRETF(false, "failed to map vmo");
 
         virt_addr_ = reinterpret_cast<void*>(ptr);
+        vmar_ = std::move(child_vmar);
     }
 
     DASSERT(!alignment || (reinterpret_cast<uintptr_t>(virt_addr_) & (alignment - 1)) == 0);
