@@ -319,8 +319,11 @@ fn start(
                     register_new_client(connection, &mut client_requests, id_gen.next());
                 },
                 request = client_requests.select_next_some() => {
-                    handle_client_request(request, &mut client_requests, &mut subscribers,
-                        &mut packet_logs)?;
+                    if let Err(e) = handle_client_request(request, &mut client_requests,
+                        &mut subscribers, &mut packet_logs)
+                    {
+                        fx_vlog!(1, "Unable to handle client request: {:?}", e);
+                    }
                 },
                 (packet, snooper) = snoopers.select_next_some() => {
                     handle_packet(packet, snooper, &mut snoopers, &mut subscribers,

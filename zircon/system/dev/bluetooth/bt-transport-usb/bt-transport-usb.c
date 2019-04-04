@@ -125,7 +125,9 @@ static void snoop_channel_write_locked(hci_t* hci, uint8_t flags, uint8_t* bytes
     memcpy(snoop_buffer + 1, bytes, length);
     zx_status_t status = zx_channel_write(hci->snoop_channel, 0, snoop_buffer, length + 1, NULL, 0);
     if (status < 0) {
-        zxlogf(ERROR, "bt-transport-usb: failed to write to snoop channel: %s\n", zx_status_get_string(status));
+        if (status != ZX_ERR_PEER_CLOSED) {
+            zxlogf(ERROR, "bt-transport-usb: failed to write to snoop channel: %s\n", zx_status_get_string(status));
+        }
         channel_cleanup_locked(hci, &hci->snoop_channel);
     }
 }
