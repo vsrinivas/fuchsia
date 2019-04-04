@@ -11,6 +11,9 @@ set cpo&vim
 augroup fidl.vim
   autocmd!
 
+  " Set some recommended formatting options defined in
+  " https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md#organization
+
   setlocal comments=sr1:/*,mb:*,ex:*/,:///,://
   setlocal commentstring=//%s
   setlocal formatoptions-=t formatoptions+=croqnlj
@@ -18,7 +21,7 @@ augroup fidl.vim
   if get(g:, 'fidl_recommended_style', 1)
     let b:fidl_set_style = 1
     setlocal tabstop=4 shiftwidth=4 softtabstop=4 expandtab
-    setlocal textwidth=99
+    setlocal textwidth=80
   endif
 
   let b:undo_ftplugin = "
