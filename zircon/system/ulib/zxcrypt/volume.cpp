@@ -248,6 +248,7 @@ zx_status_t Volume::DeriveSlotKeys(const crypto::Secret& key, key_slot_t slot) {
     crypto::HKDF hkdf;
     char label[kMaxLabelLen];
     if ((rc = hkdf.Init(digest_, key, guid_)) != ZX_OK) {
+        xprintf("failed to init HKDF: %s\n", zx_status_get_string(rc));
         return rc;
     }
     snprintf(label, kMaxLabelLen, kWrapKeyLabel, slot);
@@ -361,12 +362,28 @@ zx_status_t Volume::SealBlock(const crypto::Secret& key, key_slot_t slot) {
     zx_off_t off;
     zx_off_t data_key_off = 0;
     zx_off_t data_iv_off = data_key_.len();
-    if ((rc = GetSlotOffset(slot, &off)) != ZX_OK ||
-        (rc = ptext.Copy(data_key_.get(), data_key_.len(), data_key_off)) != ZX_OK ||
-        (rc = ptext.Copy(data_iv_.get(), data_iv_.len(), data_iv_off)) != ZX_OK ||
-        (rc = DeriveSlotKeys(key, slot)) != ZX_OK ||
-        (rc = aead.InitSeal(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
-        (rc = aead.Seal(ptext, header_, &nonce, &ctext)) != ZX_OK) {
+    if ((rc = GetSlotOffset(slot, &off)) != ZX_OK) {
+        xprintf("GetSlotOffset for slot %" PRIu64 " failed: %s\n", slot, zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = ptext.Copy(data_key_.get(), data_key_.len(), data_key_off)) != ZX_OK) {
+        xprintf("ptext.Copy (key) failed: %s", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = ptext.Copy(data_iv_.get(), data_iv_.len(), data_iv_off)) != ZX_OK) {
+        xprintf("ptext.Copy (iv) failed: %s", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = DeriveSlotKeys(key, slot)) != ZX_OK) {
+        xprintf("DeriveSlotKeys failed: %s", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = aead.InitSeal(aead_, wrap_key_, wrap_iv_)) != ZX_OK) {
+        xprintf("aead.InitSeal failed: %s", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = aead.Seal(ptext, header_, &nonce, &ctext)) != ZX_OK) {
+        xprintf("aead.Seal failed: %s", zx_status_get_string(rc));
         return rc;
     }
     // Check that we'll be able to unseal.
@@ -407,22 +424,52 @@ zx_status_t Volume::UnsealBlock(const crypto::Secret& key, key_slot_t slot) {
     uint8_t* key_buf;
     crypto::AEAD aead;
     crypto::Bytes ctext, ptext;
-    if ((rc = Configure(Version(ntohl(version)))) != ZX_OK ||
-        (rc = GetSlotOffset(slot, &off)) != ZX_OK || (rc = DeriveSlotKeys(key, slot)) != ZX_OK ||
-        (rc = crypto::Cipher::GetKeyLen(cipher_, &key_len)) != ZX_OK ||
-        (rc = crypto::Cipher::GetIVLen(cipher_, &iv_len)) != ZX_OK ||
-        (rc = data_key_.Allocate(key_len, &key_buf)) != ZX_OK ||
-        (rc = ctext.Copy(block_.get() + off, slot_len_)) != ZX_OK ||
-        (rc = aead.InitOpen(aead_, wrap_key_, wrap_iv_)) != ZX_OK ||
-        (rc = header_.Copy(block_.get(), kHeaderLen)) != ZX_OK) {
+    if ((rc = Configure(Version(ntohl(version)))) != ZX_OK) {
+        xprintf("Configure failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = GetSlotOffset(slot, &off)) != ZX_OK) {
+        xprintf("GetSlotOffset failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = DeriveSlotKeys(key, slot)) != ZX_OK) {
+        xprintf("DeriveSlotKeys failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = crypto::Cipher::GetKeyLen(cipher_, &key_len)) != ZX_OK) {
+        xprintf("Cipher::GetKeyLen failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = crypto::Cipher::GetIVLen(cipher_, &iv_len)) != ZX_OK) {
+        xprintf("Cipher::GetIVLen failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = data_key_.Allocate(key_len, &key_buf)) != ZX_OK) {
+        xprintf("Secret::Allocate failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = ctext.Copy(block_.get() + off, slot_len_)) != ZX_OK) {
+        xprintf("ctext.Copy failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = aead.InitOpen(aead_, wrap_key_, wrap_iv_)) != ZX_OK) {
+        xprintf("aead.InitOpen failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = header_.Copy(block_.get(), kHeaderLen)) != ZX_OK) {
+        xprintf("header_.Copy failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
     // Extract nonce from IV.
     zx_off_t nonce;
     memcpy(&nonce, wrap_iv_.get(), sizeof(nonce));
-    if ((rc = aead.Open(nonce, ctext, header_, &ptext)) != ZX_OK ||
-        (rc = data_iv_.Copy(ptext.get() + key_len, iv_len)) != ZX_OK) {
+    if ((rc = aead.Open(nonce, ctext, header_, &ptext)) != ZX_OK) {
+        xprintf("aead.Open failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = data_iv_.Copy(ptext.get() + key_len, iv_len)) != ZX_OK) {
+        xprintf("data_iv_.Copy failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
     memcpy(key_buf, ptext.get(), key_len);

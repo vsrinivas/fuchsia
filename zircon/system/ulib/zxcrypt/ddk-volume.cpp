@@ -136,7 +136,12 @@ zx_status_t DdkVolume::Unlock(zx_device_t* dev, const crypto::Secret& key, key_s
         xprintf("allocation failed: %zu bytes\n", sizeof(DdkVolume));
         return ZX_ERR_NO_MEMORY;
     }
-    if ((rc = volume->Init()) != ZX_OK || (rc = volume->Unlock(key, slot)) != ZX_OK) {
+    if ((rc = volume->Init()) != ZX_OK) {
+        xprintf("volume->Init() failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = volume->Unlock(key, slot)) != ZX_OK) {
+        xprintf("volume->Unlock() failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
 

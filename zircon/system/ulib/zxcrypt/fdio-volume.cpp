@@ -91,9 +91,21 @@ zx_status_t FdioVolume::Create(fbl::unique_fd fd, const crypto::Secret& key,
     zx_status_t rc;
 
     fbl::unique_ptr<FdioVolume> volume;
-    if ((rc = FdioVolume::Init(std::move(fd), &volume)) != ZX_OK ||
-        (rc = volume->CreateBlock()) != ZX_OK || (rc = volume->SealBlock(key, 0)) != ZX_OK ||
-        (rc = volume->CommitBlock()) != ZX_OK) {
+
+    if ((rc = FdioVolume::Init(std::move(fd), &volume)) != ZX_OK) {
+        xprintf("Init failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = volume->CreateBlock()) != ZX_OK) {
+        xprintf("CreateBlock failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = volume->SealBlock(key, 0)) != ZX_OK) {
+        xprintf("SealBlock failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = volume->CommitBlock()) != ZX_OK) {
+        xprintf("CommitBlock failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
@@ -108,8 +120,12 @@ zx_status_t FdioVolume::Unlock(fbl::unique_fd fd, const crypto::Secret& key, key
     zx_status_t rc;
 
     fbl::unique_ptr<FdioVolume> volume;
-    if ((rc = FdioVolume::Init(std::move(fd), &volume)) != ZX_OK ||
-        (rc = volume->Unlock(key, slot)) != ZX_OK) {
+    if ((rc = FdioVolume::Init(std::move(fd), &volume)) != ZX_OK) {
+        xprintf("Init failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = volume->Unlock(key, slot)) != ZX_OK) {
+        xprintf("Unlock failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
@@ -125,7 +141,12 @@ zx_status_t FdioVolume::Unlock(const crypto::Secret& key, key_slot_t slot) {
 zx_status_t FdioVolume::Enroll(const crypto::Secret& key, key_slot_t slot) {
     zx_status_t rc;
 
-    if ((rc = SealBlock(key, slot)) != ZX_OK || (rc = CommitBlock()) != ZX_OK) {
+    if ((rc = SealBlock(key, slot)) != ZX_OK) {
+        xprintf("SealBlock failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = CommitBlock()) != ZX_OK) {
+        xprintf("CommitBlock failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
@@ -137,8 +158,20 @@ zx_status_t FdioVolume::Revoke(key_slot_t slot) {
 
     zx_off_t off;
     crypto::Bytes invalid;
-    if ((rc = GetSlotOffset(slot, &off)) != ZX_OK || (rc = invalid.Randomize(slot_len_)) != ZX_OK ||
-        (rc = block_.Copy(invalid, off)) != ZX_OK || (rc = CommitBlock()) != ZX_OK) {
+    if ((rc = GetSlotOffset(slot, &off)) != ZX_OK) {
+        xprintf("GetSlotOffset failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = invalid.Randomize(slot_len_)) != ZX_OK) {
+        xprintf("Randomize failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = block_.Copy(invalid, off)) != ZX_OK) {
+        xprintf("Copy failed: %s\n", zx_status_get_string(rc));
+        return rc;
+    }
+    if ((rc = CommitBlock()) != ZX_OK) {
+        xprintf("CommitBlock failed: %s\n", zx_status_get_string(rc));
         return rc;
     }
 
