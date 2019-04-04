@@ -180,10 +180,9 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
     if (!update.acquire_fences->ready()) {
       TRACE_INSTANT("gfx", "Session missed frame", TRACE_SCOPE_PROCESS,
                     "session_id", id(), "session_debug_name", debug_name_,
-                    "target presentation time (usecs)",
-                    target_presentation_time / 1000,
-                    "session target presentation time (usecs)",
-                    update.presentation_time / 1000);
+                    "target presentation time", target_presentation_time,
+                    "session target presentation time",
+                    scheduled_updates_.front().presentation_time);
       update_results.all_fences_ready = false;
       break;
     }

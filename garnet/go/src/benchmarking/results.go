@@ -35,6 +35,9 @@ const (
 
 	// Percentage-based units.
 	Percent = "percent"
+
+	// Count-based units.
+	Count = "count"
 )
 
 // TestCaseResults represents the results for a single test case.

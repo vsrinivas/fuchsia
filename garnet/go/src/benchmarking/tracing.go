@@ -27,10 +27,10 @@ func (a ByStartTime) Less(i, j int) bool { return a[i].Ts < a[j].Ts }
 // Example instance:
 // {
 //   "args": {
-//     "elapsed time since presentation (usecs)": 1,
+//     "elapsed time since presentation": 1,
 //     "frame_number": 919,
-//     "presentation time (usecs)": 96695880,
-//     "target time missed by (usecs)": -3
+//     "presentation time": 96695880,
+//     "target time missed by": -3
 //   }
 //   "cat": "gfx,
 //   "name": "FramePresented",
@@ -173,7 +173,7 @@ type Model struct {
 }
 
 func (m Model) getProcessById(pid uint64) *Process {
-	for i, _ := range m.Processes {
+	for i := range m.Processes {
 		if m.Processes[i].Pid == pid {
 			return &m.Processes[i]
 		}
@@ -192,7 +192,7 @@ func (m *Model) getOrCreateProcessById(pid uint64) *Process {
 }
 
 func (p Process) getThreadById(tid uint64) *Thread {
-	for i, _ := range p.Threads {
+	for i := range p.Threads {
 		if p.Threads[i].Tid == tid {
 			return &p.Threads[i]
 		}

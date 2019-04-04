@@ -22,6 +22,8 @@ func reportScenicFps(model benchmarking.Model, testSuite string, testResultsFile
 	fps, fpsPerTimeWindow := calculateFps(model, "gfx", "FramePresented")
 	fmt.Printf("%.4g FPS\nFPS per one-second window: %v\n", fps, fpsPerTimeWindow)
 
+	reportFrameStats(model, testSuite, testResultsFile)
+
 	reportAverageEventTimes(model, testSuite, testResultsFile)
 	if allApps || (len(appDebugNames) > 0 && appDebugNames[0] != "") {
 		reportScenicPerSessionLatencies(model, testSuite, testResultsFile, allApps, appDebugNames)
@@ -71,9 +73,9 @@ func reportAverageEventTimes(model benchmarking.Model, testSuite string, testRes
 	// Find a way to deal with this.
 
 	// List the events we want to include in output. Events are described with:
-	//   Indentation level in output
-	//   Event name in trace
-	//   Event name in output (blank if same as event name in trace)
+	//   Indentation level in output.
+	//   Event name in trace.
+	//   Event name in output (blank if same as event name in trace).
 	averageEvents := []AverageEvent{
 		{0, "RenderFrame", ""},
 		{1, "ApplyScheduledSessionUpdates", ""},
@@ -331,4 +333,165 @@ func calculateSessionLatency(scheduleEvents []*benchmarking.Event, applyEvents [
 		schedToApplyLatencies,
 		applyToDisplayLatencies,
 	}
+}
+
+func reportFrameStats(model benchmarking.Model, testSuite string, testResultsFile *benchmarking.TestResultsFile) {
+	cat := "gfx"
+	renderStartedEventName := "Render start"
+	renderStartedEvents := model.FindEvents(benchmarking.EventsFilter{Cat: &cat, Name: &renderStartedEventName})
+	framePresentedEventName := "FramePresented"
+	framePresentedEvents := model.FindEvents(benchmarking.EventsFilter{Cat: &cat, Name: &framePresentedEventName})
+	frameDroppedEventName := "FrameDropped"
+	frameDroppedEvents := model.FindEvents(benchmarking.EventsFilter{Cat: &cat, Name: &frameDroppedEventName})
+	timestampedVsyncEventName := "Display::OnVsync"
+	timestampedVsyncEvents := model.FindEvents(benchmarking.EventsFilter{Cat: &cat, Name: &timestampedVsyncEventName})
+
+	sort.Sort(ByStartTime(renderStartedEvents))
+	sort.Sort(ByStartTime(framePresentedEvents))
+	sort.Sort(ByStartTime(timestampedVsyncEvents))
+
+	framePresentedIndex := 0
+
+	missedPredictions := 0
+	const thresholdInNanos = 2000000.0
+
+	frameNumberString := "frame_number"
+	expectedPresentationTimeString := "Expected presentation time"
+	presentedTimeString := "presentation time"
+	timestampString := "Timestamp"
+
+	// Check that events are well formed.
+	if len(renderStartedEvents) == 0 {
+		panic("No render started events found")
+	}
+	_, ok := renderStartedEvents[0].Args[frameNumberString].(float64)
+	if !ok {
+		panic("No frame number argument found for render started event")
+	}
+	_, ok = renderStartedEvents[0].Args[expectedPresentationTimeString].(float64)
+	if !ok {
+		panic("No expected presentation time argument found")
+	}
+
+	if len(framePresentedEvents) == 0 {
+		panic("No frame presented events found")
+	}
+	_, ok = framePresentedEvents[0].Args[frameNumberString].(float64)
+	if !ok {
+		panic("No frame number argument found for frame presented event")
+	}
+	_, ok = framePresentedEvents[0].Args[presentedTimeString].(float64)
+	if !ok {
+		panic("No time presented argument found")
+	}
+
+	if len(timestampedVsyncEvents) == 0 {
+		panic("No timestamped vsync events found")
+	}
+	_, ok = timestampedVsyncEvents[0].Args[timestampString].(float64)
+	if !ok {
+		panic("No timestamp argument found")
+	}
+
+	for _, renderStartEvent := range renderStartedEvents {
+		frameNumber := renderStartEvent.Args[frameNumberString].(float64)
+		renderStartTime := renderStartEvent.Start
+
+		// Find the corresponding frame presented event.
+		for framePresentedIndex < len(framePresentedEvents) &&
+			framePresentedEvents[framePresentedIndex].Args[frameNumberString].(float64) < frameNumber {
+			framePresentedIndex++
+		}
+
+		// If no more presents, we're done.
+		if framePresentedIndex >= len(framePresentedEvents) {
+			break
+		}
+
+		// Check for delayed frames.
+		expectedTime := renderStartEvent.Args[expectedPresentationTimeString].(float64)
+		presentedTime := framePresentedEvents[framePresentedIndex].Args[presentedTimeString].(float64)
+		if presentedTime-expectedTime > thresholdInNanos {
+			// Find first vsync after render start.
+			vsyncIndex := 0
+			for vsyncIndex < len(timestampedVsyncEvents) && timestampedVsyncEvents[vsyncIndex].Start < renderStartTime {
+				vsyncIndex++
+			}
+
+			// Find vsync actually presented on.
+			vsyncCount := 0
+			for vsyncIndex < len(timestampedVsyncEvents) && timestampedVsyncEvents[vsyncIndex].Args[timestampString].(float64) != presentedTime {
+				vsyncCount++
+				vsyncIndex++
+			}
+			if vsyncIndex > len(timestampedVsyncEvents) {
+				break
+			}
+
+			missedPredictions += vsyncCount
+		}
+	}
+
+	framesDrawn := len(framePresentedEvents)
+	framesDropped := len(frameDroppedEvents)
+
+	vsyncCount := 0
+	firstRenderStartedTime := renderStartedEvents[0].Start
+	lastPresentedTime := framePresentedEvents[len(framePresentedEvents)-1].Start
+	if len(frameDroppedEvents) > 0 {
+		lastPresentedTime = math.Max(lastPresentedTime, frameDroppedEvents[len(frameDroppedEvents)-1].Start)
+	}
+	for _, vsync := range timestampedVsyncEvents {
+		if vsync.Start >= lastPresentedTime {
+			break
+		}
+		if vsync.Start > firstRenderStartedTime {
+			vsyncCount++
+		}
+	}
+
+	emptyVsyncs := vsyncCount - (framesDrawn + framesDropped)
+	framesDelayed := missedPredictions - framesDropped
+
+	fmt.Printf(`
+Frames drawn: %d
+Frames mispredicted: %d
+Frames dropped: %d
+Frames delayed: %d
+Vsync intervals with no render started: %d
+`,
+		framesDrawn, missedPredictions, framesDropped, framesDelayed, emptyVsyncs)
+
+	testResultsFile.Add(&benchmarking.TestCaseResults{
+		Label:     "scenic_total_frames_drawn",
+		TestSuite: testSuite,
+		Unit:      benchmarking.Count,
+		Values:    []float64{jsonFloat(float64(framesDrawn))},
+	})
+	testResultsFile.Add(&benchmarking.TestCaseResults{
+		Label:     "scenic_total_mispredicted_frames",
+		TestSuite: testSuite,
+		Unit:      benchmarking.Count,
+		Values:    []float64{jsonFloat(float64(missedPredictions))},
+	})
+	testResultsFile.Add(&benchmarking.TestCaseResults{
+		Label:     "scenic_total_frames_dropped",
+		TestSuite: testSuite,
+		Unit:      benchmarking.Count,
+		Values:    []float64{jsonFloat(float64(framesDropped))},
+	})
+	testResultsFile.Add(&benchmarking.TestCaseResults{
+		Label:     "scenic_total_frames_delayed",
+		TestSuite: testSuite,
+		Unit:      benchmarking.Count,
+		Values:    []float64{jsonFloat(float64(framesDelayed))},
+	})
+
+	testResultsFile.Add(&benchmarking.TestCaseResults{
+		Label:     "scenic_total_empty_vsync_intervals",
+		TestSuite: testSuite,
+		Unit:      benchmarking.Count,
+		Values:    []float64{jsonFloat(float64(emptyVsyncs))},
+	})
+
 }

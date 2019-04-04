@@ -17,6 +17,7 @@ import (
 
 const OneSecInUsecs float64 = 1000000
 const OneMsecInUsecs float64 = 1000
+const OneMsecInNsecs float64 = 1000000
 
 // ByStartTime sorting helpers
 type ByStartTime []*benchmarking.Event
@@ -50,6 +51,15 @@ func convertMicrosToMillis(array []float64) []float64 {
 	result := make([]float64, len(array))
 	for i, item := range array {
 		result[i] = item / OneMsecInUsecs
+	}
+	return result
+}
+
+// Convert an array of values in nanoseconds to milliseconds.
+func convertNanosToMillis(array []float64) []float64 {
+	result := make([]float64, len(array))
+	for i, item := range array {
+		result[i] = item / OneMsecInNsecs
 	}
 	return result
 }

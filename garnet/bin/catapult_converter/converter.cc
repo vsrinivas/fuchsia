@@ -11,14 +11,14 @@
 #include <numeric>
 #include <vector>
 
-#include "src/lib/fxl/logging.h"
-#include "src/lib/uuid/uuid.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "rapidjson/document.h"
 #include "rapidjson/error/en.h"
 #include "rapidjson/filereadstream.h"
 #include "rapidjson/filewritestream.h"
 #include "rapidjson/prettywriter.h"
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace {
 
@@ -120,7 +120,8 @@ void ComputeStatistics(const std::vector<double>& vals,
 // unit string that should be used in the Catapult Histogram JSON file.
 // Converts the data as necessary.
 //
-// The list of valid unit strings for the Catapult Histogram JSON format is available at:
+// The list of valid unit strings for the Catapult Histogram JSON format is
+// available at:
 // https://github.com/catapult-project/catapult/blob/8dc09eb0703647db9ca37b26f2d01a0a4dc0285c/tracing/tracing/value/histogram.py#L478
 std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
   std::string catapult_unit;
@@ -150,6 +151,8 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
     return "Hz_biggerIsBetter";
   } else if (strcmp(input_unit, "percent") == 0) {
     return "n%";
+  } else if (strcmp(input_unit, "count") == 0) {
+    return "count";
   } else {
     fprintf(stderr, "Units not recognized: %s\n", input_unit);
     exit(1);
