@@ -36,9 +36,13 @@
 #include <stdio.h>
 #include <threads.h>
 
+#include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <lib/sync/completion.h>
 #include <zircon/listnode.h>
+#include <zircon/process.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-agn-hw.h"
@@ -57,12 +61,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-tm-gnl.h"
 #endif
 
-/******************************************************************************
- *
- * module boiler plate
- *
- ******************************************************************************/
-
+#define FIRMWARE_DIR "iwlwifi"
 #define DRV_DESCRIPTION "Intel(R) Wireless WiFi driver for Fuchsia"
 
 #ifdef CPTCFG_IWLWIFI_DEBUGFS
@@ -87,6 +86,7 @@ struct iwl_drv {
     struct iwl_op_mode* op_mode;
     struct iwl_trans* trans;
     struct device* dev;
+    zx_device_t* zxdev;
 #if IS_ENABLED(CPTCFG_IWLXVT)
     bool xvt_mode_on;
 #endif
@@ -331,7 +331,7 @@ static void iwl_remove_sysfs_file(struct iwl_drv* drv) {
 struct fw_sec {
     const void* data; /* the sec data */
     size_t size;      /* section size */
-    uint32_t offset;       /* offset of writing in the device */
+    uint32_t offset;  /* offset of writing in the device */
 };
 
 static void iwl_free_fw_desc(struct iwl_drv* drv, struct fw_desc* desc) {
@@ -385,11 +385,16 @@ static zx_status_t iwl_alloc_fw_desc(struct iwl_drv* drv, struct fw_desc* desc,
     return 0;
 }
 
-static inline void release_firmware(const struct firmware* fw) {
-    // NEEDS_PORTING: implement me
+static inline void release_firmware(struct firmware* fw) {
+    if (fw->vmo != ZX_HANDLE_INVALID) {
+        zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)fw->data, fw->size);
+        fw->data = NULL;
+        zx_handle_close(fw->vmo);
+        fw->vmo = ZX_HANDLE_INVALID;
+    }
 }
 
-static void iwl_req_fw_callback(const struct firmware* ucode_raw, void* context);
+static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv);
 
 static zx_status_t iwl_request_firmware(struct iwl_drv* drv, bool first) {
     const struct iwl_cfg* cfg = drv->trans->cfg;
@@ -442,7 +447,8 @@ static zx_status_t iwl_request_firmware(struct iwl_drv* drv, bool first) {
         return ZX_ERR_NOT_FOUND;
     }
 
-    snprintf(drv->firmware_name, sizeof(drv->firmware_name), "%s%s.ucode", cfg->fw_name_pre, tag);
+    snprintf(drv->firmware_name, sizeof(drv->firmware_name), "%s/%s%s.ucode", FIRMWARE_DIR,
+             cfg->fw_name_pre, tag);
 
 #ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
     if (drv->trans->dbg_cfg.fw_file_pre) {
@@ -454,26 +460,26 @@ static zx_status_t iwl_request_firmware(struct iwl_drv* drv, bool first) {
 
     IWL_DEBUG_INFO(drv, "attempting to load firmware '%s'\n", drv->firmware_name);
 
-#if 0   // NEEDS_PORTING
-    zx_status_t ret;
-    ret = load_firmware(drv->zxdrv, drv->firmware_name, &firmware->vmo, &firmware->size);
-    if (ret != ZX_OK) {
-        return ret;
+    struct firmware firmware;
+    zx_status_t status;
+    status = load_firmware(drv->zxdev, drv->firmware_name, &firmware.vmo, &firmware.size);
+    if (status != ZX_OK) {
+        IWL_ERR(drv, "Failed to load firmware: %s", zx_status_get_string(status));
+        return status;
     }
 
     uintptr_t vaddr;
-    ret = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, firmware->vmo, 0,
-                      firmware->size, &vaddr);
-    if (ret != ZX_OK) {
-        zx_handle_close(firmware->vmo);
-        return ret;
+    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ, 0, firmware.vmo, 0, firmware.size,
+                         &vaddr);
+    if (status != ZX_OK) {
+        IWL_ERR(drv, "Failed to map firmware VMO: %s", zx_status_get_string(status));
+        zx_handle_close(firmware.vmo);
+        return status;
     }
 
-    firmware->data = (uint8_t*)vaddr;
-#endif  // NEEDS_PORTING
+    firmware.data = (uint8_t*)vaddr;
 
-    // To make compilation passing, NEEDS_PORTING
-    iwl_req_fw_callback(NULL, NULL);
+    iwl_req_fw_callback(&firmware, drv);
 
     return ZX_OK;
 }
@@ -1025,8 +1031,8 @@ fw_dbg_conf:
                 snprintf(drv->fw.fw_version, sizeof(drv->fw.fw_version), "%u.%08x.%hhu", major,
                          minor, local_comp);
             else
-                snprintf(drv->fw.fw_version, sizeof(drv->fw.fw_version), "%u.%u.%hhu", major,
-                         minor, local_comp);
+                snprintf(drv->fw.fw_version, sizeof(drv->fw.fw_version), "%u.%u.%hhu", major, minor,
+                         local_comp);
             break;
         }
         case IWL_UCODE_TLV_FW_DBG_DEST: {
@@ -1345,8 +1351,7 @@ static void _iwl_op_mode_stop(struct iwl_drv* drv) {
  * If loaded successfully, copies the firmware into buffers
  * for the card to fetch (via DMA).
  */
-static void iwl_req_fw_callback(const struct firmware* ucode_raw, void* context) {
-    struct iwl_drv* drv = context;
+static void iwl_req_fw_callback(struct firmware* ucode_raw, struct iwl_drv* drv) {
     struct iwl_fw* fw = &drv->fw;
     struct iwl_ucode_header* ucode;
     struct iwlwifi_opmode_table* op;
@@ -1663,6 +1668,7 @@ zx_status_t iwl_drv_start(struct iwl_trans* trans) {
     }
 
     drv->trans = trans;
+    drv->zxdev = trans->zxdev;
     drv->dev = trans->dev;
 
     drv->request_firmware_complete = SYNC_COMPLETION_INIT;

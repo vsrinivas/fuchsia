@@ -21,6 +21,7 @@
 
 #include <netinet/if_ether.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 typedef uint64_t __le64;
 typedef uint32_t __le32;
@@ -98,13 +99,11 @@ struct dentry {};
 struct napi_struct {};
 struct sk_buff_head {};
 struct mutex {};
-struct firmware {
-    size_t size;
-    const uint8_t* data;
-    // NEEDS_PORTING struct page **pages;
 
-    /* firmware loader private fields */
-    void* priv;
+struct firmware {
+    zx_handle_t vmo;
+    uint8_t* data;
+    size_t size;
 };
 
 static inline int test_bit(int nbits, const volatile unsigned long* addr) {
