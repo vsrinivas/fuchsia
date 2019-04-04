@@ -24,15 +24,14 @@ source_set("fidl") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.mediacodec",
     "//sdk/fidl/fuchsia.mediaplayer",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
     "//src/media/playback/mediaplayer_tmp/decode",
     "//src/media/playback/mediaplayer_tmp/demux",
     "//src/media/playback/mediaplayer_tmp/graph",
@@ -41,5 +40,9 @@ source_set("fidl") {
     "//src/media/playback/mediaplayer_tmp/util",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/zx",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.mediacodec",
   ]
 }

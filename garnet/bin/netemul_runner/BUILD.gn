@@ -60,7 +60,6 @@ source_set("src") {
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//src/lib/fxl",
     "//third_party/rapidjson",
-    "//zircon/public/fidl/fuchsia-logger:fuchsia-logger",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
@@ -73,6 +72,7 @@ source_set("src") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/netemul/network:network_service",
     "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/fidl/fuchsia-logger:fuchsia-logger",
   ]
 }
 

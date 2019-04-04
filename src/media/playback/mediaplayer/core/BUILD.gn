@@ -24,12 +24,15 @@ source_set("core") {
     "source_segment.h",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-    "//garnet/public/lib/media/timeline",
+  public_deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.playback",
+  ]
+
+  deps = [
+    "//garnet/public/lib/media/timeline",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//src/media/playback/mediaplayer/decode",
     "//src/media/playback/mediaplayer/demux",
     "//src/media/playback/mediaplayer/graph",
@@ -59,8 +62,8 @@ test("tests") {
   deps = [
     ":core",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
+    "//src/lib/fxl",
     "//src/media/playback/mediaplayer/decode",
     "//src/media/playback/mediaplayer/demux",
     "//src/media/playback/mediaplayer/graph",
