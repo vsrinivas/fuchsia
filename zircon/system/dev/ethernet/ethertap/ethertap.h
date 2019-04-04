@@ -42,7 +42,7 @@ public:
 
     zx_status_t EthmacQuery(uint32_t options, ethmac_info_t* info);
     void EthmacStop();
-    zx_status_t EthmacStart(const ethmac_ifc_t* ifc);
+    zx_status_t EthmacStart(const ethmac_ifc_protocol_t* ifc);
     zx_status_t EthmacQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
     zx_status_t EthmacSetParam(uint32_t param, int32_t value, const void* data,
                                size_t data_size);
@@ -65,7 +65,7 @@ private:
 
     fbl::Mutex lock_;
     bool dead_ = false;
-    ddk::EthmacIfcClient ethmac_client_ __TA_GUARDED(lock_);
+    ddk::EthmacIfcProtocolClient ethmac_client_ __TA_GUARDED(lock_);
 
     // Only accessed from Thread, so not locked.
     bool online_ = false;

@@ -19,14 +19,14 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Sensor);
     Sensor(ddk::MmioView isp_mmio,
            ddk::MmioView isp_mmio_local,
-           isp_callbacks_t sensor_callbacks)
+           isp_callbacks_protocol_t sensor_callbacks)
         : isp_mmio_(isp_mmio),
           isp_mmio_local_(isp_mmio_local),
           sensor_callbacks_(&sensor_callbacks) {}
 
     static fbl::unique_ptr<Sensor> Create(ddk::MmioView isp_mmio,
                                           ddk::MmioView isp_mmio_local,
-                                          isp_callbacks_t sensor_callbacks);
+                                          isp_callbacks_protocol_t sensor_callbacks);
     zx_status_t Init();
 
     // Sensor APIs for Camera manager to use
@@ -49,7 +49,7 @@ private:
 
     ddk::MmioView isp_mmio_;
     ddk::MmioView isp_mmio_local_;
-    ddk::IspCallbacksClient sensor_callbacks_;
+    ddk::IspCallbacksProtocolClient sensor_callbacks_;
 
     uint8_t current_sensor_mode_;
     sensor_mode_t sensor_modes_[kNumModes];

@@ -62,7 +62,7 @@ public:
     zx_status_t Bind();
 
     // Required functions needed to implement Display Controller Protocol
-    void DisplayControllerImplSetDisplayControllerInterface(const display_controller_interface_t* intf);
+    void DisplayControllerImplSetDisplayControllerInterface(const display_controller_interface_protocol_t* intf);
     zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
     zx_status_t DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t handle,
                                                  uint32_t index);
@@ -142,7 +142,7 @@ private:
     fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_images_ TA_GUARDED(image_lock_);
 
     // Display controller related data
-    ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);
+    ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(display_lock_);
 
     // SMI
     fbl::unique_ptr<ddk::MmioBuffer> smi_mmio_;

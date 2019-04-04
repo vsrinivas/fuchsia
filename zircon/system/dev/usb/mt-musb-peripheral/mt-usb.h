@@ -36,7 +36,7 @@ public:
 
     // USB DCI protocol implementation.
      void UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t* cb);
-     zx_status_t UsbDciSetInterface(const usb_dci_interface_t* interface);
+     zx_status_t UsbDciSetInterface(const usb_dci_interface_protocol_t* interface);
      zx_status_t UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc, const
                                 usb_ss_ep_comp_descriptor_t* ss_comp_desc);
      zx_status_t UsbDciDisableEp(uint8_t ep_address);
@@ -117,7 +117,7 @@ private:
     }
 
     ddk::PDev pdev_;
-    std::optional<ddk::UsbDciInterfaceClient> dci_intf_;
+    std::optional<ddk::UsbDciInterfaceProtocolClient> dci_intf_;
 
     std::optional<ddk::MmioBuffer> usb_mmio_;
     std::optional<ddk::MmioBuffer> phy_mmio_;

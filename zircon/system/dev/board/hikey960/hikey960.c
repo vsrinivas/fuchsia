@@ -188,7 +188,7 @@ static zx_status_t hikey960_bind(void* ctx, zx_device_t* parent) {
         .ctx = hikey,
         .ops = &hikey960_device_protocol,
         // nothing should bind to this device
-        // all interaction will be done via the pbus_interface_t
+        // all interaction will be done via the pbus_interface_protocol_t
         .flags = DEVICE_ADD_NON_BINDABLE,
     };
 

@@ -32,7 +32,7 @@ void UsbVirtualHost::UsbHciRequestQueue(usb_request_t* req,
     return bus_->UsbHciRequestQueue(req, complete_cb);
 }
 
-void UsbVirtualHost::UsbHciSetBusInterface(const usb_bus_interface_t* bus_intf) {
+void UsbVirtualHost::UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf) {
     return bus_->UsbHciSetBusInterface(bus_intf);
 }
 

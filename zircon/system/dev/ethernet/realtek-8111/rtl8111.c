@@ -63,7 +63,7 @@ typedef struct ethernet_device {
     uint8_t mac[6];
     bool online;
 
-    ethmac_ifc_t ifc;
+    ethmac_ifc_protocol_t ifc;
 } ethernet_device_t;
 
 static void rtl8111_init_buffers(ethernet_device_t* edev) {
@@ -226,7 +226,7 @@ static void rtl8111_stop(void* ctx) {
     mtx_unlock(&edev->lock);
 }
 
-static zx_status_t rtl8111_start(void* ctx, const ethmac_ifc_t* ifc) {
+static zx_status_t rtl8111_start(void* ctx, const ethmac_ifc_protocol_t* ifc) {
     ethernet_device_t* edev = ctx;
     zx_status_t status = ZX_OK;
 

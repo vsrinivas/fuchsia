@@ -335,7 +335,7 @@ zx_status_t Imx227Device::Create(zx_device_t* parent) {
 
     // sensor_device intentionally leaked as it is now held by DevMgr.
     auto* dev = sensor_device.release();
-    return dev->ispimpl_.RegisterCallbacks(dev, &dev->isp_callbacks_ops_);
+    return dev->ispimpl_.RegisterCallbacks(dev, &dev->isp_callbacks_protocol_ops_);
 }
 
 void Imx227Device::ShutDown() {

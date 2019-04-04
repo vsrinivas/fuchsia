@@ -322,7 +322,7 @@ static void dwc3_request_queue(void* ctx, usb_request_t* req, const usb_request_
     dwc3_ep_queue(dwc, ep_num, req);
 }
 
-static zx_status_t dwc3_set_interface(void* ctx, const usb_dci_interface_t* dci_intf) {
+static zx_status_t dwc3_set_interface(void* ctx, const usb_dci_interface_protocol_t* dci_intf) {
     auto* dwc = static_cast<dwc3_t*>(ctx);
     memcpy(&dwc->dci_intf, dci_intf, sizeof(dwc->dci_intf));
     return ZX_OK;

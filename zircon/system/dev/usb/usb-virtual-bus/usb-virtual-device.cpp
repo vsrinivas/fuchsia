@@ -32,7 +32,7 @@ void UsbVirtualDevice::UsbDciRequestQueue(usb_request_t* req,
     bus_->UsbDciRequestQueue(req, complete_cb);
 }
 
-zx_status_t UsbVirtualDevice::UsbDciSetInterface(const usb_dci_interface_t* dci_intf) {
+zx_status_t UsbVirtualDevice::UsbDciSetInterface(const usb_dci_interface_protocol_t* dci_intf) {
     return bus_->UsbDciSetInterface(dci_intf);
 }
 

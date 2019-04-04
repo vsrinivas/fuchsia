@@ -68,7 +68,7 @@ typedef struct qmi_ctx {
   zx_device_t* eth_zxdev;
 
   mtx_t ethmac_mutex;
-  ethmac_ifc_t ethmac_ifc;
+  ethmac_ifc_protocol_t ethmac_ifc;
 
   // Device attributes
   uint8_t mac_addr[ETH_MAC_SIZE];
@@ -325,7 +325,7 @@ static zx_status_t qmi_ethmac_query(void* ctx, uint32_t options,
   return ZX_OK;
 }
 
-static zx_status_t qmi_ethmac_start(void* ctx_cookie, const ethmac_ifc_t* ifc) {
+static zx_status_t qmi_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_t* ifc) {
   zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
   qmi_ctx_t* ctx = ctx_cookie;
   zx_status_t status = ZX_OK;

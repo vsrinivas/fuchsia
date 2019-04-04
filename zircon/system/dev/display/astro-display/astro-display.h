@@ -57,7 +57,7 @@ public:
 
     // Required functions needed to implement Display Controller Protocol
     void DisplayControllerImplSetDisplayControllerInterface(
-            const display_controller_interface_t* intf);
+            const display_controller_interface_protocol_t* intf);
     zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
     zx_status_t DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t handle,
                                                  uint32_t index);
@@ -145,7 +145,7 @@ private:
     display_setting_t disp_setting_;
 
     // Display controller related data
-    ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);
+    ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(display_lock_);
 
     // Simple hashtable
     ImportedImageBitmap imported_images_ TA_GUARDED(image_lock_);

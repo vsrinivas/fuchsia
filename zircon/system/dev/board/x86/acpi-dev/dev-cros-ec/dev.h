@@ -57,7 +57,7 @@ public:
 
     // hidbus protocol implementation
     zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
-    zx_status_t HidbusStart(const hidbus_ifc_t* ifc);
+    zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc);
     void HidbusStop();
     zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
     zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
@@ -121,7 +121,7 @@ private:
     const ACPI_HANDLE acpi_handle_;
 
     // Interface the driver is currently bound to
-    ddk::HidbusIfcClient client_;
+    ddk::HidbusIfcProtocolClient client_;
 
     fbl::Vector<SensorInfo> sensors_;
 

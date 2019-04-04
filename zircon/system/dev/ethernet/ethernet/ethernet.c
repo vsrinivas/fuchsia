@@ -404,7 +404,7 @@ static void eth0_complete_tx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t 
     tx_fifo_write(edev, &entry, 1);
 }
 
-static ethmac_ifc_ops_t ethmac_ifc = {
+static ethmac_ifc_protocol_ops_t ethmac_ifc = {
     .status = eth0_status,
     .recv = eth0_recv,
     .complete_tx = eth0_complete_tx,

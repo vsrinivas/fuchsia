@@ -49,7 +49,7 @@ typedef struct {
     uint8_t mac_addr[ETH_MAC_SIZE];
 
     mtx_t ethmac_mutex;
-    ethmac_ifc_t ethmac_ifc;
+    ethmac_ifc_protocol_t ethmac_ifc;
     bool online;
     usb_speed_t speed;
 
@@ -210,7 +210,7 @@ static void cdc_ethmac_stop(void* cookie) {
     mtx_unlock(&cdc->ethmac_mutex);
 }
 
-static zx_status_t cdc_ethmac_start(void* ctx_cookie, const ethmac_ifc_t* ifc) {
+static zx_status_t cdc_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_t* ifc) {
     zxlogf(TRACE, "%s:\n", __func__);
     auto* cdc = static_cast<usb_cdc_t*>(ctx_cookie);
     zx_status_t status = ZX_OK;
@@ -554,7 +554,7 @@ static zx_status_t cdc_set_interface(void* ctx, uint8_t interface, uint8_t alt_s
     return status;
 }
 
-usb_function_interface_ops_t device_ops = {
+usb_function_interface_protocol_ops_t device_ops = {
     .get_descriptors_size = cdc_get_descriptors_size,
     .get_descriptors = cdc_get_descriptors,
     .control = cdc_control,

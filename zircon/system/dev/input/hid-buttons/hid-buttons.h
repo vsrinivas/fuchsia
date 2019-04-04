@@ -36,7 +36,7 @@ public:
     zx_status_t Bind();
 
     // Methods required by the ddk mixins.
-    zx_status_t HidbusStart(const hidbus_ifc_t* ifc) TA_EXCL(client_lock_);
+    zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) TA_EXCL(client_lock_);
     zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
     void HidbusStop() TA_EXCL(client_lock_);
     zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
@@ -67,7 +67,7 @@ private:
     thrd_t thread_;
     zx::port port_;
     fbl::Mutex client_lock_;
-    ddk::HidbusIfcClient client_ TA_GUARDED(client_lock_);
+    ddk::HidbusIfcProtocolClient client_ TA_GUARDED(client_lock_);
     fbl::Array<buttons_button_config_t> buttons_;
     fbl::Array<Gpio> gpios_;
     std::optional<uint8_t> fdr_gpio_;

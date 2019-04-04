@@ -52,8 +52,8 @@ bool TestNoReports() {
     SimpleHid<TestReport> test(std::move(port), std::move(get_input_report));
 
     TestContext ctx;
-    hidbus_ifc_ops_t ifc_ops = {IoQueueMock};
-    hidbus_ifc_t ifc = {&ifc_ops, &ctx};
+    hidbus_ifc_protocol_ops_t ifc_ops = {IoQueueMock};
+    hidbus_ifc_protocol_t ifc = {&ifc_ops, &ctx};
 
     ASSERT_EQ(ZX_OK, test.HidbusStart(&ifc));
     EXPECT_EQ(ZX_OK, test.SetReportInterval(0));
@@ -85,8 +85,8 @@ bool TestReports() {
     SimpleHid<TestReport> test(std::move(port), std::move(get_input_report));
 
     TestContext ctx;
-    hidbus_ifc_ops_t ifc_ops = {IoQueueMock};
-    hidbus_ifc_t ifc = {&ifc_ops, &ctx};
+    hidbus_ifc_protocol_ops_t ifc_ops = {IoQueueMock};
+    hidbus_ifc_protocol_t ifc = {&ifc_ops, &ctx};
 
     ASSERT_EQ(ZX_OK, test.HidbusStart(&ifc));
     EXPECT_EQ(ZX_OK, test.SetReportInterval(1000));

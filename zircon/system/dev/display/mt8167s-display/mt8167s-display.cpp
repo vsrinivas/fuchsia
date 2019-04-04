@@ -84,9 +84,9 @@ uint32_t Mt8167sDisplay::DisplayControllerImplComputeLinearStride(uint32_t width
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 void Mt8167sDisplay::DisplayControllerImplSetDisplayControllerInterface(
-    const display_controller_interface_t* intf) {
+    const display_controller_interface_protocol_t* intf) {
     fbl::AutoLock lock(&display_lock_);
-    dc_intf_ = ddk::DisplayControllerInterfaceClient(intf);
+    dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient(intf);
     added_display_args_t args;
     PopulateAddedDisplayArgs(&args);
     dc_intf_.OnDisplaysChanged(&args, 1, NULL, 0, NULL, 0, NULL);

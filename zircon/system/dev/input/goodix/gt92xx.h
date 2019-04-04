@@ -64,7 +64,7 @@ public:
     zx_status_t HidbusSetIdle(uint8_t rpt_id, uint8_t duration);
     zx_status_t HidbusGetProtocol(uint8_t* protocol);
     zx_status_t HidbusSetProtocol(uint8_t protocol);
-    zx_status_t HidbusStart(const hidbus_ifc_t* ifc) __TA_EXCLUDES(client_lock_);
+    zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) __TA_EXCLUDES(client_lock_);
     zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(client_lock_);
 
 private:
@@ -99,6 +99,6 @@ private:
     thrd_t thread_;
     std::atomic<bool> running_;
     fbl::Mutex client_lock_;
-    ddk::HidbusIfcClient client_ __TA_GUARDED(client_lock_);
+    ddk::HidbusIfcProtocolClient client_ __TA_GUARDED(client_lock_);
 };
 }

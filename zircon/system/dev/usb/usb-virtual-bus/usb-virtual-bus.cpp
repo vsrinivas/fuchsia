@@ -361,9 +361,9 @@ void UsbVirtualBus::UsbDciRequestQueue(usb_request_t* req,
     device_signal_.Signal();
 }
 
-zx_status_t UsbVirtualBus::UsbDciSetInterface(const usb_dci_interface_t* dci_intf) {
+zx_status_t UsbVirtualBus::UsbDciSetInterface(const usb_dci_interface_protocol_t* dci_intf) {
     if (dci_intf) {
-        dci_intf_ = ddk::UsbDciInterfaceClient(dci_intf);
+        dci_intf_ = ddk::UsbDciInterfaceProtocolClient(dci_intf);
     } else {
         dci_intf_.clear();
     }
@@ -437,9 +437,9 @@ void UsbVirtualBus::UsbHciRequestQueue(usb_request_t* req,
     }
 }
 
-void UsbVirtualBus::UsbHciSetBusInterface(const usb_bus_interface_t* bus_intf) {
+void UsbVirtualBus::UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf) {
     if (bus_intf) {
-        bus_intf_ = ddk::UsbBusInterfaceClient(bus_intf);
+        bus_intf_ = ddk::UsbBusInterfaceProtocolClient(bus_intf);
 
         bool connected;
         {

@@ -38,8 +38,8 @@ void UsbHci::UsbHciRequestQueue(usb_request_t* usb_request,
     device_[usb_request->header.device_id]->HandleRequest(std::move(req));
 }
 
-void UsbHci::UsbHciSetBusInterface(const usb_bus_interface_t* bus_intf) {
-    bus_ = ddk::UsbBusInterfaceClient(bus_intf);
+void UsbHci::UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf) {
+    bus_ = ddk::UsbBusInterfaceProtocolClient(bus_intf);
     auto status = bus_.AddDevice(root_hub()->id(), 0, root_hub()->speed());
     if (status != ZX_OK) {
         zxlogf(ERROR, "adding device to bus error: %s\n", zx_status_get_string(status));

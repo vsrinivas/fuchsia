@@ -46,7 +46,7 @@ typedef struct imported_image {
 } imported_image_t;
 
 void GpuDevice::virtio_gpu_set_display_controller_interface(
-    void* ctx, const display_controller_interface_t* intf) {
+    void* ctx, const display_controller_interface_protocol_t* intf) {
     GpuDevice* gd = static_cast<GpuDevice*>(ctx);
     {
         fbl::AutoLock al(&gd->flush_lock_);

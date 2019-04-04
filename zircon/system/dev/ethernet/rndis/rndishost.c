@@ -52,7 +52,7 @@ typedef struct {
     uint64_t tx_endpoint_delay; // wait time between 2 transmit requests
 
     // Interface to the ethernet layer.
-    ethmac_ifc_t ifc;
+    ethmac_ifc_protocol_t ifc;
 
     thrd_t thread;
     bool thread_started;
@@ -252,7 +252,7 @@ static void rndishost_stop(void* ctx) {
     mtx_unlock(&eth->mutex);
 }
 
-static zx_status_t rndishost_start(void* ctx, const ethmac_ifc_t* ifc) {
+static zx_status_t rndishost_start(void* ctx, const ethmac_ifc_protocol_t* ifc) {
     rndishost_t* eth = (rndishost_t*)ctx;
     zx_status_t status = ZX_OK;
 

@@ -31,7 +31,7 @@ public:
     void DdkRelease();
 
     // UsbFunctionProtocol implementation.
-    zx_status_t UsbFunctionSetInterface(const usb_function_interface_t* interface);
+    zx_status_t UsbFunctionSetInterface(const usb_function_interface_protocol_t* interface);
     zx_status_t UsbFunctionAllocInterface(uint8_t* out_intf_num);
     zx_status_t UsbFunctionAllocEp(uint8_t direction, uint8_t* out_address);
     zx_status_t UsbFunctionConfigEp(const usb_endpoint_descriptor_t* ep_desc,
@@ -64,7 +64,7 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(UsbFunction);
 
     UsbPeripheral* peripheral_;
-    ddk::UsbFunctionInterfaceClient function_intf_;
+    ddk::UsbFunctionInterfaceProtocolClient function_intf_;
     thrd_t thread_;
     int CompletionThread();
     const FunctionDescriptor function_descriptor_;

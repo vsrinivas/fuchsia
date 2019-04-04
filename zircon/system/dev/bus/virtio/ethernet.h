@@ -37,7 +37,7 @@ public:
     // DDK protocol hooks; see ddk/protocol/ethernet.h
     zx_status_t Query(uint32_t options, ethmac_info_t* info) TA_EXCL(state_lock_);
     void Stop() TA_EXCL(state_lock_);
-    zx_status_t Start(const ethmac_ifc_t* ifc) TA_EXCL(state_lock_);
+    zx_status_t Start(const ethmac_ifc_protocol_t* ifc) TA_EXCL(state_lock_);
     zx_status_t QueueTx(uint32_t options, ethmac_netbuf_t* netbuf) TA_EXCL(state_lock_);
 
     const char* tag() const override { return "virtio-net"; }
@@ -66,7 +66,7 @@ private:
     size_t virtio_hdr_len_;
 
     // Ethmac callback interface; see ddk/protocol/ethernet.h
-    ethmac_ifc_t ifc_ TA_GUARDED(state_lock_);
+    ethmac_ifc_protocol_t ifc_ TA_GUARDED(state_lock_);
 };
 
 } // namespace virtio

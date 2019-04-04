@@ -754,7 +754,7 @@ void MtUsb::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t*
     EpQueueNextLocked(ep);
 }
 
-zx_status_t MtUsb::UsbDciSetInterface(const usb_dci_interface_t* interface) {
+zx_status_t MtUsb::UsbDciSetInterface(const usb_dci_interface_protocol_t* interface) {
     // TODO - handle interface == nullptr for tear down path?
 
     if (dci_intf_.has_value()) {
@@ -762,7 +762,7 @@ zx_status_t MtUsb::UsbDciSetInterface(const usb_dci_interface_t* interface) {
         return ZX_ERR_BAD_STATE;
     }
 
-    dci_intf_ = ddk::UsbDciInterfaceClient(interface);
+    dci_intf_ = ddk::UsbDciInterfaceProtocolClient(interface);
 
     // Now that the usb-peripheral driver has bound, we can start things up.
     int rc = thrd_create_with_name(&irq_thread_,

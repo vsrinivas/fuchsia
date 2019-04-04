@@ -8,7 +8,7 @@ namespace camera {
 
 fbl::unique_ptr<StatsManager> StatsManager::Create(ddk::MmioView isp_mmio,
                                                    ddk::MmioView isp_mmio_local,
-                                                   isp_callbacks_t sensor_callbacks) {
+                                                   isp_callbacks_protocol_t sensor_callbacks) {
     // First initialize all the modules
     fbl::AllocChecker ac;
     auto sensor = camera::Sensor::Create(isp_mmio, isp_mmio_local, sensor_callbacks);

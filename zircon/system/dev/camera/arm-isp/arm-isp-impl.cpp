@@ -35,7 +35,7 @@ void ArmISPImplDevice::DdkRelease() {
 void ArmISPImplDevice::ShutDown() {
 }
 
-zx_status_t ArmISPImplDevice::IspImplRegisterCallbacks(const isp_callbacks_t* cbs) {
+zx_status_t ArmISPImplDevice::IspImplRegisterCallbacks(const isp_callbacks_protocol_t* cbs) {
     if (cbs == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }

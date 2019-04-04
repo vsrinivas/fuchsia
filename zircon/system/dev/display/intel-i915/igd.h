@@ -62,9 +62,9 @@ typedef struct sci_interface {
     uint32_t additional_params;
     uint32_t driver_sleep_timeout;
     uint8_t rsvd[240];
-} sci_interface_t;
+} sci_interface_protocol_t;
 
-static_assert(sizeof(sci_interface_t) == 252, "Bad sci_interface_t size");
+static_assert(sizeof(sci_interface_protocol_t) == 252, "Bad sci_interface_protocol_t size");
 
 // Header for each bios data block.
 typedef struct block_header {

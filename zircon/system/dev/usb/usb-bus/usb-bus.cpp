@@ -52,7 +52,7 @@ zx_status_t UsbBus::Init() {
         return status;
     }
 
-    hci_.SetBusInterface(this, &usb_bus_interface_ops_);
+    hci_.SetBusInterface(this, &usb_bus_interface_protocol_ops_);
 
     return ZX_OK;
 }
@@ -199,7 +199,7 @@ zx_status_t UsbBus::UsbBusDeviceRemoved(zx_device_t* hub_device, uint32_t port) 
     return hci_.HubDeviceRemoved(hub_id, port);
 }
 
-zx_status_t UsbBus::UsbBusSetHubInterface(zx_device_t* usb_device, const usb_hub_interface_t* hub) {
+zx_status_t UsbBus::UsbBusSetHubInterface(zx_device_t* usb_device, const usb_hub_interface_protocol_t* hub) {
     uint32_t usb_device_id;
     auto status = GetDeviceId(usb_device, &usb_device_id);
     if (status != ZX_OK) {

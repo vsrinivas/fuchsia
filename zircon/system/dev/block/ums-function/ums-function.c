@@ -528,7 +528,7 @@ static zx_status_t ums_set_interface(void* ctx, uint8_t interface, uint8_t alt_s
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-usb_function_interface_ops_t ums_device_ops = {
+usb_function_interface_protocol_ops_t ums_device_ops = {
     .get_descriptors_size = ums_get_descriptors_size,
     .get_descriptors = ums_get_descriptors,
     .control = ums_control,

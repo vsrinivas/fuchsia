@@ -261,7 +261,7 @@ zx_status_t ArmIspDevice::InitIsp() {
 }
 
 // static
-zx_status_t ArmIspDevice::Create(zx_device_t* parent, isp_callbacks_t sensor_callbacks) {
+zx_status_t ArmIspDevice::Create(zx_device_t* parent, isp_callbacks_protocol_t sensor_callbacks) {
 
     ddk::PDev pdev(parent);
     if (!pdev.is_valid()) {

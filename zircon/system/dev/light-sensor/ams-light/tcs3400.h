@@ -39,7 +39,7 @@ public:
     // Methods required by the ddk mixins
     zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
 
-    zx_status_t HidbusStart(const hidbus_ifc_t* ifc) TA_EXCL(client_input_lock_);
+    zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) TA_EXCL(client_input_lock_);
     zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
     void HidbusStop();
     zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
@@ -65,7 +65,7 @@ private:
     fbl::Mutex client_input_lock_ TA_ACQ_BEFORE(i2c_lock_);
     fbl::Mutex feature_lock_;
     fbl::Mutex i2c_lock_;
-    ddk::HidbusIfcClient client_ TA_GUARDED(client_input_lock_);
+    ddk::HidbusIfcProtocolClient client_ TA_GUARDED(client_input_lock_);
     ambient_light_input_rpt_t input_rpt_ TA_GUARDED(client_input_lock_);
     ambient_light_feature_rpt_t feature_rpt_ TA_GUARDED(feature_lock_);
     zx_status_t FillInputRpt() TA_REQ(client_input_lock_);

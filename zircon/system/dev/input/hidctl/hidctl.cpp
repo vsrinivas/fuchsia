@@ -108,14 +108,14 @@ zx_status_t HidDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
     return ZX_OK;
 }
 
-zx_status_t HidDevice::HidbusStart(const hidbus_ifc_t* ifc) {
+zx_status_t HidDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
     zxlogf(TRACE, "hidctl: start\n");
 
     fbl::AutoLock lock(&lock_);
     if (client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     }
-    client_ = ddk::HidbusIfcClient(ifc);
+    client_ = ddk::HidbusIfcProtocolClient(ifc);
     return ZX_OK;
 }
 

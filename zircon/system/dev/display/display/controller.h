@@ -67,7 +67,7 @@ public:
 
 using ControllerParent = ddk::Device<Controller, ddk::Unbindable, ddk::Openable, ddk::OpenAtable>;
 class Controller : public ControllerParent,
-                   public ddk::DisplayControllerInterface<Controller>,
+                   public ddk::DisplayControllerInterfaceProtocol<Controller>,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER> {
 public:
     Controller(zx_device_t* parent);

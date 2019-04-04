@@ -23,7 +23,7 @@ public:
 
     static fbl::unique_ptr<StatsManager> Create(ddk::MmioView isp_mmio,
                                                 ddk::MmioView isp_mmio_local,
-                                                isp_callbacks_t sensor_callbakcs);
+                                                isp_callbacks_protocol_t sensor_callbakcs);
     ~StatsManager() {}
 
 private:

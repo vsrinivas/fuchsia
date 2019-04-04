@@ -242,9 +242,9 @@ uint32_t AstroDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 void AstroDisplay::DisplayControllerImplSetDisplayControllerInterface(
-    const display_controller_interface_t* intf) {
+    const display_controller_interface_protocol_t* intf) {
     fbl::AutoLock lock(&display_lock_);
-    dc_intf_ = ddk::DisplayControllerInterfaceClient(intf);
+    dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient(intf);
     added_display_args_t args;
     PopulateAddedDisplayArgs(&args);
     dc_intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);

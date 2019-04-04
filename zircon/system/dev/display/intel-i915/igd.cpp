@@ -226,7 +226,7 @@ bool IgdOpRegion::Swsci(pci_protocol_t* pci,
         return false;
     }
 
-    sci_interface_t* sci_interface = reinterpret_cast<sci_interface_t*>(igd_opregion_->mailbox2);
+    sci_interface_protocol_t* sci_interface = reinterpret_cast<sci_interface_protocol_t*>(igd_opregion_->mailbox2);
 
     auto sci_entry_param = SciEntryParam::Get().FromValue(0);
     sci_entry_param.set_function(function);

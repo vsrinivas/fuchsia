@@ -55,7 +55,7 @@ struct hogd_device_t {
   bool is_initialized;
   zx_device_t* dev;
   mtx_t lock;
-  hidbus_ifc_t ifc;
+  hidbus_ifc_protocol_t ifc;
 
   // Reference to owner.
   hogd_t* parent;

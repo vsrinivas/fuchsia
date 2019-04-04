@@ -243,7 +243,7 @@ zx_status_t InputDevice::virtio_input_set_protocol(void* ctx, uint8_t protocol) 
     return ZX_OK;
 }
 
-zx_status_t InputDevice::virtio_input_start(void* ctx, const hidbus_ifc_t* ifc) {
+zx_status_t InputDevice::virtio_input_start(void* ctx, const hidbus_ifc_protocol_t* ifc) {
     virtio::InputDevice* inp = static_cast<virtio::InputDevice*>(ctx);
     return inp->Start(ifc);
 }
@@ -383,7 +383,7 @@ zx_status_t InputDevice::Init() {
     return ZX_OK;
 }
 
-zx_status_t InputDevice::Start(const hidbus_ifc_t* ifc) {
+zx_status_t InputDevice::Start(const hidbus_ifc_protocol_t* ifc) {
     fbl::AutoLock lock(&lock_);
     if (hidbus_ifc_.ops != nullptr) {
         return ZX_ERR_ALREADY_BOUND;

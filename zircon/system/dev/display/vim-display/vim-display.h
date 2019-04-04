@@ -125,7 +125,7 @@ typedef struct vim2_display {
     struct hdmi_param*                  p;
     display_mode_t                      cur_display_mode;
 
-    display_controller_interface_t      dc_intf;
+    display_controller_interface_protocol_t      dc_intf;
     list_node_t                         imported_images;
 
     // A reference to the object which controls the VIM2 DAIs used to feed audio

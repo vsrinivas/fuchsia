@@ -785,10 +785,10 @@ void Controller::CallOnDisplaysChanged(DisplayDevice** added, size_t added_count
 // DisplayControllerImpl methods
 
 void Controller::DisplayControllerImplSetDisplayControllerInterface(
-    const display_controller_interface_t* intf) {
+    const display_controller_interface_protocol_t* intf) {
 
     fbl::AutoLock lock(&display_lock_);
-    dc_intf_ = ddk::DisplayControllerInterfaceClient(intf);
+    dc_intf_ = ddk::DisplayControllerInterfaceProtocolClient(intf);
 
     if (ready_for_callback_ && display_devices_.size()) {
         DisplayDevice* added_displays[registers::kDdiCount];

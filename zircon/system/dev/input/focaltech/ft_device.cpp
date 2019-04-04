@@ -234,13 +234,13 @@ void FtDevice::HidbusStop() {
     client_.clear();
 }
 
-zx_status_t FtDevice::HidbusStart(const hidbus_ifc_t* ifc) {
+zx_status_t FtDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
     fbl::AutoLock lock(&client_lock_);
     if (client_.is_valid()) {
         zxlogf(ERROR, "focaltouch: Already bound!\n");
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        client_ = ddk::HidbusIfcClient(ifc);
+        client_ = ddk::HidbusIfcProtocolClient(ifc);
         zxlogf(INFO, "focaltouch: started\n");
     }
     return ZX_OK;

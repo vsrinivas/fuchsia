@@ -99,7 +99,7 @@ void virtio_net_stop(void* ctx) {
     eth->Stop();
 }
 
-zx_status_t virtio_net_start(void* ctx, const ethmac_ifc_t* ifc) {
+zx_status_t virtio_net_start(void* ctx, const ethmac_ifc_protocol_t* ifc) {
     virtio::EthernetDevice* eth = static_cast<virtio::EthernetDevice*>(ctx);
     return eth->Start(ifc);
 }
@@ -395,7 +395,7 @@ void EthernetDevice::Stop() {
     ifc_.ops = nullptr;
 }
 
-zx_status_t EthernetDevice::Start(const ethmac_ifc_t* ifc) {
+zx_status_t EthernetDevice::Start(const ethmac_ifc_protocol_t* ifc) {
     LTRACE_ENTRY;
     if (!ifc) {
         return ZX_ERR_INVALID_ARGS;

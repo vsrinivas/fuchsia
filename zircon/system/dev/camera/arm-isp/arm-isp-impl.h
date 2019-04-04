@@ -40,7 +40,7 @@ public:
     void DdkUnbind();
 
     // ZX_PROTOCOL_ISP_IMPL ops.
-    zx_status_t IspImplRegisterCallbacks(const isp_callbacks_t* cb);
+    zx_status_t IspImplRegisterCallbacks(const isp_callbacks_protocol_t* cb);
     zx_status_t IspImplDeRegisterCallbacks();
 
 private:
@@ -53,7 +53,7 @@ private:
 
     thrd_t worker_thread_;
 
-    isp_callbacks_t sensor_callbacks_;
+    isp_callbacks_protocol_t sensor_callbacks_;
 
     sync_completion_t cb_registered_signal_;
 

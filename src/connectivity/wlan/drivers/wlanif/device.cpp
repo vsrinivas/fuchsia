@@ -100,7 +100,7 @@ static ethmac_protocol_ops_t ethmac_ops = {
                  { return DEV(ctx)->EthQuery(options, info); },
     .stop = [](void* ctx)
                 { DEV(ctx)->EthStop(); },
-    .start = [](void* ctx, const ethmac_ifc_t* ifc) -> zx_status_t
+    .start = [](void* ctx, const ethmac_ifc_protocol_t* ifc) -> zx_status_t
                  { return DEV(ctx)->EthStart(ifc); },
     .queue_tx = [](void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) -> zx_status_t
                     { return DEV(ctx)->EthQueueTx(options, netbuf); },
@@ -937,7 +937,7 @@ void Device::StatsQueryResp(wlanif_stats_query_response_t* resp) {
     binding_.events().StatsQueryResp(std::move(fidl_resp));
 }
 
-zx_status_t Device::EthStart(const ethmac_ifc_t* ifc) {
+zx_status_t Device::EthStart(const ethmac_ifc_protocol_t* ifc) {
     std::lock_guard<std::mutex> lock(lock_);
     ethmac_ifc_ = *ifc;
     eth_started_ = true;

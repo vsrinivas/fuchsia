@@ -279,13 +279,13 @@ void Gt92xxDevice::HidbusStop() {
     client_.clear();
 }
 
-zx_status_t Gt92xxDevice::HidbusStart(const hidbus_ifc_t* ifc) {
+zx_status_t Gt92xxDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
     fbl::AutoLock lock(&client_lock_);
     if (client_.is_valid()) {
         zxlogf(ERROR, "gt92xx: Already bound!\n");
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        client_ = ddk::HidbusIfcClient(ifc);
+        client_ = ddk::HidbusIfcProtocolClient(ifc);
         zxlogf(INFO, "gt92xx: started\n");
     }
     return ZX_OK;

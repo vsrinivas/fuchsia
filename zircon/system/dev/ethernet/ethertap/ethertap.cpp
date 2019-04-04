@@ -149,13 +149,13 @@ void TapDevice::EthmacStop() {
     ethmac_client_.clear();
 }
 
-zx_status_t TapDevice::EthmacStart(const ethmac_ifc_t* ifc) {
+zx_status_t TapDevice::EthmacStart(const ethmac_ifc_protocol_t* ifc) {
     ethertap_trace("EthmacStart\n");
     fbl::AutoLock lock(&lock_);
     if (ethmac_client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        ethmac_client_ = ddk::EthmacIfcClient(ifc);
+        ethmac_client_ = ddk::EthmacIfcProtocolClient(ifc);
         ethmac_client_.Status(online_ ? ETHMAC_STATUS_ONLINE : 0u);
     }
     return ZX_OK;

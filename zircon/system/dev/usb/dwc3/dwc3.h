@@ -87,7 +87,7 @@ typedef struct {
     zx_device_t* parent = nullptr;
     pdev_protocol_t pdev;
     usb_mode_switch_protocol_t ums;
-    usb_dci_interface_t dci_intf;
+    usb_dci_interface_protocol_t dci_intf;
     std::optional<ddk::MmioBuffer> mmio;
     zx::handle bti_handle;
 

@@ -48,7 +48,7 @@
     and functions_bound_ is true, then we are ready to start USB in peripheral role.
     At this point, we create DDK devices for our list of functions.
     When the function drivers bind to these functions, they register an interface of type
-    usb_function_interface_t with this driver via the usb_function_register() API.
+    usb_function_interface_protocol_t with this driver via the usb_function_register() API.
     Once all of the function drivers have registered themselves this way,
     UsbPeripheral.functions_registered_ is set to true.
 
@@ -81,7 +81,7 @@ using UsbPeripheralType = ddk::Device<UsbPeripheral, ddk::Unbindable, ddk::Messa
 // one for each USB function in the peripheral role configuration.
 class UsbPeripheral : public UsbPeripheralType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PERIPHERAL>,
-                      public ddk::UsbDciInterface<UsbPeripheral> {
+                      public ddk::UsbDciInterfaceProtocol<UsbPeripheral> {
 public:
     UsbPeripheral(zx_device_t* parent) : UsbPeripheralType(parent), dci_(parent), ums_(parent) {}
 
@@ -109,7 +109,7 @@ public:
     zx_status_t MsgSetMode(uint32_t mode, fidl_txn_t* txn);
 
     zx_status_t SetFunctionInterface(fbl::RefPtr<UsbFunction> function,
-                                     const usb_function_interface_t* interface);
+                                     const usb_function_interface_protocol_t* interface);
     zx_status_t AllocInterface(fbl::RefPtr<UsbFunction> function, uint8_t* out_intf_num);
     zx_status_t AllocEndpoint(fbl::RefPtr<UsbFunction> function, uint8_t direction,
                               uint8_t* out_address);
@@ -184,7 +184,7 @@ private:
     // Set if ioctl_usb_peripheral_bind_functions() has been called
     // and we have a complete list of our function.
     bool functions_bound_ __TA_GUARDED(lock_) = false;
-    // True if all our functions have registered their usb_function_interface_t.
+    // True if all our functions have registered their usb_function_interface_protocol_t.
     bool functions_registered_ __TA_GUARDED(lock_) = false;
     // True if we have added child devices for our functions.
     bool function_devs_added_ __TA_GUARDED(lock_) = false;

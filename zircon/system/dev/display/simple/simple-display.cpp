@@ -30,8 +30,8 @@ static constexpr uint64_t kDisplayId = 1;
 static constexpr uint64_t kImageHandle = 0xdecafc0ffee;
 
 void SimpleDisplay::DisplayControllerImplSetDisplayControllerInterface(
-    const display_controller_interface_t* intf) {
-    intf_ = ddk::DisplayControllerInterfaceClient(intf);
+    const display_controller_interface_protocol_t* intf) {
+    intf_ = ddk::DisplayControllerInterfaceProtocolClient(intf);
 
     added_display_args_t args = {};
     args.display_id = kDisplayId;

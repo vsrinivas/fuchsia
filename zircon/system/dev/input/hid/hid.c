@@ -91,7 +91,7 @@ static inline zx_status_t hid_op_query(hid_device_t* hid, uint32_t options, hid_
     return hid->hid.ops->query(hid->hid.ctx, options, info);
 }
 
-static inline zx_status_t hid_op_start(hid_device_t* hid, void* ctx, hidbus_ifc_ops_t* ops) {
+static inline zx_status_t hid_op_start(hid_device_t* hid, void* ctx, hidbus_ifc_protocol_ops_t* ops) {
     return hidbus_start(&hid->hid, ctx, ops);
 }
 
@@ -608,7 +608,7 @@ void hid_io_queue(void* cookie, const void* _buf, size_t len) {
     mtx_unlock(&hid->instance_lock);
 }
 
-hidbus_ifc_ops_t hid_ifc_ops = {
+hidbus_ifc_protocol_ops_t hid_ifc_ops = {
     .io_queue = hid_io_queue,
 };
 

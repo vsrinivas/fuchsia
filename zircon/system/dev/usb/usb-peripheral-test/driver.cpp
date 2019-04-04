@@ -271,7 +271,7 @@ static zx_status_t test_set_interface(void* ctx, uint8_t interface, uint8_t alt_
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-static usb_function_interface_ops_t device_ops = {
+static usb_function_interface_protocol_ops_t device_ops = {
     .get_descriptors_size = test_get_descriptors_size,
     .get_descriptors = test_get_descriptors,
     .control = test_control,

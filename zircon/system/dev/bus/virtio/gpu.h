@@ -39,7 +39,7 @@ public:
 private:
     // DDK driver hooks
     static void virtio_gpu_set_display_controller_interface(
-            void* ctx, const display_controller_interface_t* intf);
+            void* ctx, const display_controller_interface_protocol_t* intf);
     static zx_status_t virtio_gpu_import_vmo_image(
             void* ctx, image_t* image, zx_handle_t vmo, size_t offset);
     static void virtio_gpu_release_image(void* ctx, image_t* image);
@@ -93,7 +93,7 @@ private:
     cnd_t flush_cond_ = {};
     bool flush_pending_ = false;
 
-    display_controller_interface_t dc_intf_;
+    display_controller_interface_protocol_t dc_intf_;
 
     struct imported_image* current_fb_;
     struct imported_image* displayed_fb_;

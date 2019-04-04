@@ -42,7 +42,7 @@ class HidDevice : public ddk::Device<HidDevice, ddk::Unbindable>,
     void DdkUnbind();
 
     zx_status_t HidbusQuery(uint32_t options, hid_info_t* info);
-    zx_status_t HidbusStart(const hidbus_ifc_t* ifc);
+    zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc);
     void HidbusStop();
     zx_status_t HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len);
     zx_status_t HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data, size_t len,
@@ -65,7 +65,7 @@ class HidDevice : public ddk::Device<HidDevice, ddk::Unbindable>,
     uint32_t mtu_ = 256;  // TODO: set this based on report_desc_
 
     fbl::Mutex lock_;
-    ddk::HidbusIfcClient client_ __TA_GUARDED(lock_);
+    ddk::HidbusIfcProtocolClient client_ __TA_GUARDED(lock_);
     zx::socket data_;
     thrd_t thread_;
 };

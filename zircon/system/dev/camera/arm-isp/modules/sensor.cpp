@@ -248,7 +248,7 @@ zx_status_t Sensor::GetInfo(sensor_info_t* out_info) {
 // static
 fbl::unique_ptr<Sensor> Sensor::Create(ddk::MmioView isp_mmio,
                                        ddk::MmioView isp_mmio_local,
-                                       isp_callbacks_t sensor_callbacks) {
+                                       isp_callbacks_protocol_t sensor_callbacks) {
     fbl::AllocChecker ac;
     auto sensor = fbl::make_unique_checked<Sensor>(&ac,
                                                    isp_mmio,

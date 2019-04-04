@@ -86,7 +86,7 @@ static ethmac_protocol_ops_t ethmac_ops = {
         return DEV(ctx)->EthmacQuery(options, info);
     },
     .stop = [](void* ctx) { DEV(ctx)->EthmacStop(); },
-    .start = [](void* ctx, const ethmac_ifc_t* ifc) -> zx_status_t {
+    .start = [](void* ctx, const ethmac_ifc_protocol_t* ifc) -> zx_status_t {
         return DEV(ctx)->EthmacStart(ifc);
     },
     .queue_tx = [](void* ctx, uint32_t options, ethmac_netbuf_t* netbuf) -> zx_status_t {
@@ -329,13 +329,13 @@ zx_status_t Device::EthmacQuery(uint32_t options, ethmac_info_t* info) {
     return ZX_OK;
 }
 
-zx_status_t Device::EthmacStart(const ethmac_ifc_t* ifc) {
+zx_status_t Device::EthmacStart(const ethmac_ifc_protocol_t* ifc) {
     debugfn();
     ZX_DEBUG_ASSERT(ifc != nullptr);
 
     std::lock_guard<std::mutex> lock(lock_);
     if (ethmac_proxy_ != nullptr) { return ZX_ERR_ALREADY_BOUND; }
-    ethmac_proxy_.reset(new ddk::EthmacIfcClient(ifc));
+    ethmac_proxy_.reset(new ddk::EthmacIfcProtocolClient(ifc));
     return ZX_OK;
 }
 

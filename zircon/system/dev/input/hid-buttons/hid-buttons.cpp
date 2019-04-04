@@ -77,12 +77,12 @@ int HidButtonsDevice::Thread() {
     return thrd_success;
 }
 
-zx_status_t HidButtonsDevice::HidbusStart(const hidbus_ifc_t* ifc) {
+zx_status_t HidButtonsDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
     fbl::AutoLock lock(&client_lock_);
     if (client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        client_ = ddk::HidbusIfcClient(ifc);
+        client_ = ddk::HidbusIfcProtocolClient(ifc);
     }
     return ZX_OK;
 }

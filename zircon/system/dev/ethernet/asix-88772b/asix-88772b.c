@@ -65,7 +65,7 @@ typedef struct {
     uint64_t tx_endpoint_delay;    // wait time between 2 transmit requests
 
     // callback interface to attached ethernet layer
-    ethmac_ifc_t ifc;
+    ethmac_ifc_protocol_t ifc;
 
     size_t parent_req_size;
 
@@ -454,7 +454,7 @@ static void ax88772b_stop(void* ctx) {
     mtx_unlock(&eth->mutex);
 }
 
-static zx_status_t ax88772b_start(void* ctx, const ethmac_ifc_t* ifc) {
+static zx_status_t ax88772b_start(void* ctx, const ethmac_ifc_protocol_t* ifc) {
     ax88772b_t* eth = ctx;
     zx_status_t status = ZX_OK;
 

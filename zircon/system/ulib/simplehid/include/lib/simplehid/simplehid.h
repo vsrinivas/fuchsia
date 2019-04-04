@@ -43,7 +43,7 @@ public:
         return *this;
     }
 
-    zx_status_t HidbusStart(const hidbus_ifc_t* ifc) {
+    zx_status_t HidbusStart(const hidbus_ifc_protocol_t* ifc) {
         {
             fbl::AutoLock lock(&client_lock_);
 
@@ -51,7 +51,7 @@ public:
                 return ZX_ERR_ALREADY_BOUND;
             }
 
-            client_ = ddk::HidbusIfcClient(ifc);
+            client_ = ddk::HidbusIfcProtocolClient(ifc);
         }
 
         return thrd_status_to_zx_status(thrd_create_with_name(
@@ -149,7 +149,7 @@ private:
     fbl::Mutex interval_lock_;
 
     zx::port port_;
-    ddk::HidbusIfcClient client_ TA_GUARDED(client_lock_);
+    ddk::HidbusIfcProtocolClient client_ TA_GUARDED(client_lock_);
     thrd_t thread_;
     uint32_t interval_ms_ TA_GUARDED(interval_lock_);
 

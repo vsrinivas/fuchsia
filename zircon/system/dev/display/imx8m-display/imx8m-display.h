@@ -38,6 +38,6 @@ typedef struct {
     mmio_buffer_t                       mmio_dc;
     io_buffer_t                         fbuffer;
 
-    display_controller_interface_t      dc_intf;
+    display_controller_interface_protocol_t      dc_intf;
     list_node_t                         imported_images;
 } imx8m_display_t;

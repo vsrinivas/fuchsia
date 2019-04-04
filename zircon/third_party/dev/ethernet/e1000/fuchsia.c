@@ -130,7 +130,7 @@ struct adapter {
     eth_state state;
 
     // callback interface to attached ethernet layer
-    ethmac_ifc_t ifc;
+    ethmac_ifc_protocol_t ifc;
 
     uint32_t tx_wr_ptr;
     uint32_t tx_rd_ptr;
@@ -441,7 +441,7 @@ static void e1000_stop(void* ctx) {
     mtx_unlock(&adapter->lock);
 }
 
-static zx_status_t e1000_start(void* ctx, const ethmac_ifc_t* ifc) {
+static zx_status_t e1000_start(void* ctx, const ethmac_ifc_protocol_t* ifc) {
     struct adapter* adapter = ctx;
     zx_status_t status = ZX_OK;
 

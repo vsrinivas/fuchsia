@@ -48,7 +48,7 @@ class Imx227Device;
 using DeviceType = ddk::Device<Imx227Device, ddk::Unbindable>;
 
 class Imx227Device : public DeviceType,
-                     public ddk::IspCallbacks<Imx227Device> {
+                     public ddk::IspCallbacksProtocol<Imx227Device> {
 public:
     // GPIO Indexes.
     enum {

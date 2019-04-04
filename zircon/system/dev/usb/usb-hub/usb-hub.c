@@ -230,7 +230,7 @@ static zx_status_t usb_hub_port_reset(void* ctx, uint32_t port) {
     return status;
 }
 
-static usb_hub_interface_ops_t _hub_interface = {
+static usb_hub_interface_protocol_ops_t _hub_interface = {
     .reset_port = usb_hub_port_reset,
 };
 

@@ -66,7 +66,7 @@ void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
     xhci_request_queue(xhci_.get(), usb_request, complete_cb);
 }
 
-void UsbXhci::UsbHciSetBusInterface(const usb_bus_interface_t* bus_intf) {
+void UsbXhci::UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf) {
     if (bus_intf) {
         memcpy(&xhci_->bus, bus_intf, sizeof(xhci_->bus));
         // wait until bus driver has started before doing this

@@ -14,7 +14,7 @@
 
 namespace mock_hidbus_ifc {
 
-// This class provides a mock a hidbus_ifc_t that can be passed to the HidbusStart method of HID
+// This class provides a mock a hidbus_ifc_protocol_t that can be passed to the HidbusStart method of HID
 // drivers. The template parameter is used to interpret and save reports. See the following example
 // test:
 //
@@ -29,11 +29,11 @@ namespace mock_hidbus_ifc {
 // }
 
 template <typename T>
-class MockHidbusIfc : public ddk::HidbusIfc<MockHidbusIfc<T>> {
+class MockHidbusIfc : public ddk::HidbusIfcProtocol<MockHidbusIfc<T>> {
 public:
-    MockHidbusIfc() : ifc_{&this->hidbus_ifc_ops_, this} {}
+    MockHidbusIfc() : ifc_{&this->hidbus_ifc_protocol_ops_, this} {}
 
-    const hidbus_ifc_t* proto() const { return &ifc_; }
+    const hidbus_ifc_protocol_t* proto() const { return &ifc_; }
 
     // Waits for count reports to be received by IoQueue.
     zx_status_t WaitForReports(size_t count) {
@@ -75,7 +75,7 @@ private:
         sync_completion_signal(&signal_);
     }
 
-    const hidbus_ifc_t ifc_;
+    const hidbus_ifc_protocol_t ifc_;
     fbl::Vector<T> reports_ TA_GUARDED(reports_lock_);
     sync_completion_t signal_;
     fbl::Mutex reports_lock_;

@@ -36,7 +36,7 @@ typedef struct usb_hid_device {
     bool req_queued;
 
     mtx_t lock;
-    hidbus_ifc_t ifc;
+    hidbus_ifc_protocol_t ifc;
     void* cookie;
 
     uint8_t interface;
@@ -100,7 +100,7 @@ static zx_status_t usb_hid_query(void* ctx, uint32_t options, hid_info_t* info) 
     return ZX_OK;
 }
 
-static zx_status_t usb_hid_start(void* ctx, const hidbus_ifc_t* ifc) {
+static zx_status_t usb_hid_start(void* ctx, const hidbus_ifc_protocol_t* ifc) {
     usb_hid_device_t* hid = ctx;
     mtx_lock(&hid->lock);
     if (hid->ifc.ops) {

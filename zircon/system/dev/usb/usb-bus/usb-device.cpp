@@ -185,7 +185,7 @@ void UsbDevice::QueueCallback(usb_request_t* req) {
     sync_completion_signal(&callback_thread_completion_);
 }
 
-void UsbDevice::SetHubInterface(const usb_hub_interface_t* hub_intf) {
+void UsbDevice::SetHubInterface(const usb_hub_interface_protocol_t* hub_intf) {
     if (hub_intf) {
         hub_intf_ = hub_intf;
     } else {

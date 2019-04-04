@@ -87,7 +87,7 @@ class UsbDevice : public UsbDeviceType,
     zx_status_t MsgSetConfiguration(uint8_t configuration, fidl_txn_t* txn);
 
     // Hub support.
-    void SetHubInterface(const usb_hub_interface_t* hub_intf);
+    void SetHubInterface(const usb_hub_interface_protocol_t* hub_intf);
     zx_status_t HubResetPort(uint32_t port);
 
     zx_status_t GetDescriptor(uint16_t type, uint16_t index, uint16_t language, void* data,
@@ -150,7 +150,7 @@ private:
     ddk::UsbHciProtocolClient hci_;
 
     // Hub interface, for devices that are hubs.
-    ddk::UsbHubInterfaceClient hub_intf_;
+    ddk::UsbHubInterfaceProtocolClient hub_intf_;
 
     usb_device_descriptor_t device_desc_;
 

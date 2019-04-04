@@ -42,7 +42,7 @@ public:
 
     // USB device controller protocol implementation.
     void UsbDciRequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb);
-    zx_status_t UsbDciSetInterface(const usb_dci_interface_t* interface);
+    zx_status_t UsbDciSetInterface(const usb_dci_interface_protocol_t* interface);
     zx_status_t UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
                                const usb_ss_ep_comp_descriptor_t* ss_comp_desc);
     zx_status_t UsbDciDisableEp(uint8_t ep_address);
@@ -53,7 +53,7 @@ public:
 
     // USB host controller protocol implementation.
     void UsbHciRequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb);
-    void UsbHciSetBusInterface(const usb_bus_interface_t* bus_intf);
+    void UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf);
     size_t UsbHciGetMaxDeviceCount();
     zx_status_t UsbHciEnableEndpoint(uint32_t device_id, const usb_endpoint_descriptor_t* ep_desc,
                                      const usb_ss_ep_comp_descriptor_t* ss_com_desc, bool enable);
@@ -106,9 +106,9 @@ private:
     fbl::unique_ptr<UsbVirtualHost> host_;
 
     // Callbacks to the USB peripheral driver.
-    ddk::UsbDciInterfaceClient dci_intf_;
+    ddk::UsbDciInterfaceProtocolClient dci_intf_;
     // Callbacks to the USB bus driver.
-    ddk::UsbBusInterfaceClient bus_intf_;
+    ddk::UsbBusInterfaceProtocolClient bus_intf_;
 
     usb_virtual_ep_t eps_[USB_MAX_EPS];
 

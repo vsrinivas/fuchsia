@@ -16,12 +16,12 @@ void UsbFunction::DdkRelease() {
 }
 
 // UsbFunctionProtocol implementation.
-zx_status_t UsbFunction::UsbFunctionSetInterface(const usb_function_interface_t* function_intf) {
+zx_status_t UsbFunction::UsbFunctionSetInterface(const usb_function_interface_protocol_t* function_intf) {
     if (function_intf == nullptr) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    function_intf_ = ddk::UsbFunctionInterfaceClient(function_intf);
+    function_intf_ = ddk::UsbFunctionInterfaceProtocolClient(function_intf);
 
     size_t length = function_intf_.GetDescriptorsSize();
     fbl::AllocChecker ac;

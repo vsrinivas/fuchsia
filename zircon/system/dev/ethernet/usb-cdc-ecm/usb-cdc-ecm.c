@@ -46,7 +46,7 @@ typedef struct {
     usb_protocol_t usb;
 
     mtx_t ethmac_mutex;
-    ethmac_ifc_t ethmac_ifc;
+    ethmac_ifc_protocol_t ethmac_ifc;
 
     // Device attributes
     uint8_t mac_addr[ETH_MAC_SIZE];
@@ -185,7 +185,7 @@ static void ecm_ethmac_stop(void* cookie) {
     mtx_unlock(&ctx->ethmac_mutex);
 }
 
-static zx_status_t ecm_ethmac_start(void* ctx_cookie, const ethmac_ifc_t* ifc) {
+static zx_status_t ecm_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_t* ifc) {
     zxlogf(TRACE, "%s: %s called\n", module_name, __FUNCTION__);
     ecm_ctx_t* ctx = ctx_cookie;
     zx_status_t status = ZX_OK;

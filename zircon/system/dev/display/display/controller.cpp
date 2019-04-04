@@ -853,7 +853,7 @@ zx_status_t Controller::Bind(fbl::unique_ptr<display::Controller>* device_ptr) {
     }
     __UNUSED auto ptr = device_ptr->release();
 
-    dc_.SetDisplayControllerInterface(this, &display_controller_interface_ops_);
+    dc_.SetDisplayControllerInterface(this, &display_controller_interface_protocol_ops_);
 
     return ZX_OK;
 }

@@ -50,7 +50,7 @@ typedef struct i2c_hid_device {
     zx_device_t* i2cdev;
 
     mtx_t ifc_lock;
-    hidbus_ifc_t ifc;
+    hidbus_ifc_protocol_t ifc;
     void* cookie;
 
     i2c_hid_desc_t* hiddesc;
@@ -111,7 +111,7 @@ static zx_status_t i2c_hid_query(void* ctx, uint32_t options, hid_info_t* info) 
     return ZX_OK;
 }
 
-static zx_status_t i2c_hid_start(void* ctx, const hidbus_ifc_t* ifc) {
+static zx_status_t i2c_hid_start(void* ctx, const hidbus_ifc_protocol_t* ifc) {
     i2c_hid_device_t* hid = ctx;
     mtx_lock(&hid->ifc_lock);
     if (hid->ifc.ops) {

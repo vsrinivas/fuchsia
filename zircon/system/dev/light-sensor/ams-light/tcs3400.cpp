@@ -233,12 +233,12 @@ zx_status_t Tcs3400Device::DdkRead(void* buf, size_t count, zx_off_t off, size_t
     return ZX_OK;
 }
 
-zx_status_t Tcs3400Device::HidbusStart(const hidbus_ifc_t* ifc) {
+zx_status_t Tcs3400Device::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
     fbl::AutoLock lock(&client_input_lock_);
     if (client_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        client_ = ddk::HidbusIfcClient(ifc);
+        client_ = ddk::HidbusIfcProtocolClient(ifc);
     }
     return ZX_OK;
 }

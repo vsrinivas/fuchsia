@@ -81,7 +81,7 @@ public:
 
     // display controller protocol ops
     void DisplayControllerImplSetDisplayControllerInterface(
-            const display_controller_interface* intf);
+            const display_controller_interface_protocol* intf);
     zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
     zx_status_t DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t handle,
                                                  uint32_t index) {
@@ -207,7 +207,7 @@ private:
 
     sysmem_protocol_t sysmem_;
 
-    ddk::DisplayControllerInterfaceClient dc_intf_ __TA_GUARDED(display_lock_);
+    ddk::DisplayControllerInterfaceProtocolClient dc_intf_ __TA_GUARDED(display_lock_);
     bool ready_for_callback_ __TA_GUARDED(display_lock_) = false;
 
     Gtt gtt_ __TA_GUARDED(gtt_lock_);

@@ -52,7 +52,7 @@ static void populate_added_display_args(imx8m_display_t* display, added_display_
 }
 
 static void imx8m_set_display_controller_interface(void* ctx,
-                                                   const display_controller_interface_t* intf) {
+                                                   const display_controller_interface_protocol_t* intf) {
     imx8m_display_t* display = ctx;
 
     mtx_lock(&display->display_lock);

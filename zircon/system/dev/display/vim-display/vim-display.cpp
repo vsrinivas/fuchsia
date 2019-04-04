@@ -62,7 +62,7 @@ static uint32_t vim_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_fo
 }
 
 static void vim_set_display_controller_interface(void* ctx,
-                                                 const display_controller_interface_t* intf) {
+                                                 const display_controller_interface_protocol_t* intf) {
     vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
     mtx_lock(&display->display_lock);
 

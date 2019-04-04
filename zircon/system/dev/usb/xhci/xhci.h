@@ -119,7 +119,7 @@ static constexpr uint32_t INTERRUPTER_COUNT = 2;
 
 struct xhci_t {
     // interface for calling back to usb bus driver
-    usb_bus_interface_t bus = {};
+    usb_bus_interface_protocol_t bus = {};
 
     xhci_mode_t mode;
     std::atomic<bool> suspended;

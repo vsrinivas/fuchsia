@@ -80,7 +80,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
     void StatsQueryResp(wlanif_stats_query_response_t* resp);
 
     // wlanif_protocol_t (ethmac_protocol -> wlanif_impl_protocol)
-    zx_status_t EthStart(const ethmac_ifc_t* ifc);
+    zx_status_t EthStart(const ethmac_ifc_protocol_t* ifc);
     void EthStop();
     zx_status_t EthQuery(uint32_t options, ethmac_info_t* info);
     zx_status_t EthQueueTx(uint32_t options, ethmac_netbuf_t* netbuf);
@@ -108,7 +108,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
     bool protected_bss_ __TA_GUARDED(lock_) = false;
 
     bool eth_started_ __TA_GUARDED(lock_) = false;
-    ethmac_ifc_t ethmac_ifc_ __TA_GUARDED(lock_);
+    ethmac_ifc_protocol_t ethmac_ifc_ __TA_GUARDED(lock_);
 
     bool have_query_info_ __TA_GUARDED(lock_) = false;
     wlanif_query_info query_info_ __TA_GUARDED(lock_);

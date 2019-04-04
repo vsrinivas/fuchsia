@@ -103,7 +103,7 @@ zx_status_t UsbPeripheral::Init() {
         return status;
     }
 
-    dci_.SetInterface(this, &usb_dci_interface_ops_);
+    dci_.SetInterface(this, &usb_dci_interface_protocol_ops_);
     size_t metasize = 0;
     status = device_get_metadata_size(parent(), DEVICE_METADATA_USB_CONFIG, &metasize);
     if (status != ZX_OK) {

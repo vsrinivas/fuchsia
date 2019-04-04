@@ -434,14 +434,14 @@ void DWMacDevice::EthmacStop() {
     ethmac_client_.clear();
 }
 
-zx_status_t DWMacDevice::EthmacStart(const ethmac_ifc_t* ifc) {
+zx_status_t DWMacDevice::EthmacStart(const ethmac_ifc_protocol_t* ifc) {
     fbl::AutoLock lock(&lock_);
 
     if (ethmac_client_.is_valid()) {
         zxlogf(ERROR, "dwmac:  Already bound!!!");
         return ZX_ERR_ALREADY_BOUND;
     } else {
-        ethmac_client_ = ddk::EthmacIfcClient(ifc);
+        ethmac_client_ = ddk::EthmacIfcProtocolClient(ifc);
         UpdateLinkStatus();
         zxlogf(INFO, "dwmac: Started\n");
     }

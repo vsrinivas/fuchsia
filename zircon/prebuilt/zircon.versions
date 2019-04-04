@@ -42,12 +42,12 @@ fuchsia/third_party/qemu/mac-amd64
 	PWYIo8mW5T21MA0l4lRPahWJqGLqhgXK2Jwev2rpTuYC
 
 fuchsia/tools/banjo_bin/linux-amd64
-	git_revision:fac1168026ca865571adf139d8cb00ab1f5cc9c9
-	tCUi2_XAXme053GDhYPwphS6TzRopRGlJN7ybhdzMGQC
+	git_revision:ceda67109c8ef6ad4c8069b0774061a0407a3512
+	NmgB7twUqGhxtoxoG3L_5Q-6kGUEwp6ZUcmvwbLWBWMC
 
 fuchsia/tools/banjo_bin/mac-amd64
-	git_revision:fac1168026ca865571adf139d8cb00ab1f5cc9c9
-	SzncikIi9AnfpP7DOtFu74OWFSf9cGoBk4fiitbqwDsC
+	git_revision:ceda67109c8ef6ad4c8069b0774061a0407a3512
+	gw5AC6cUc2zSe763oXtZMHcJksmaUvbk4uFNd7R9n2wC
 
 fuchsia/tools/symbolize/linux-amd64
 	git_revision:b22d440c081f0c8a75936621df9ca7e6bc018a43

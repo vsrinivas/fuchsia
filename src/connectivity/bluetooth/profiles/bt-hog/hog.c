@@ -43,7 +43,7 @@ static zx_status_t hogd_hid_query(void* ctx, uint32_t options,
   return ZX_OK;
 }
 
-static zx_status_t hogd_hid_start(void* ctx, const hidbus_ifc_t* ifc) {
+static zx_status_t hogd_hid_start(void* ctx, const hidbus_ifc_protocol_t* ifc) {
   zxlogf(TRACE, "bt_hog hog_hid_start, ctx: %p, cookie: %p\n", ctx, ifc->ctx);
   hogd_device_t* child = (hogd_device_t*)ctx;
   mtx_lock(&child->lock);

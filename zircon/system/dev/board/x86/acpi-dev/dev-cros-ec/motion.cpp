@@ -113,7 +113,7 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusQuery(uint32_t options, hid_info_t* in
     return ZX_OK;
 }
 
-zx_status_t AcpiCrOsEcMotionDevice::HidbusStart(const hidbus_ifc_t* ifc) {
+zx_status_t AcpiCrOsEcMotionDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
     zxlogf(TRACE, "acpi-cros-ec-motion: hid bus start\n");
 
     fbl::AutoLock guard(&hid_lock_);
@@ -121,7 +121,7 @@ zx_status_t AcpiCrOsEcMotionDevice::HidbusStart(const hidbus_ifc_t* ifc) {
         return ZX_ERR_ALREADY_BOUND;
     }
 
-    client_ = ddk::HidbusIfcClient(ifc);
+    client_ = ddk::HidbusIfcProtocolClient(ifc);
 
     zx_status_t status = FifoInterruptEnable(true);
     if (status != ZX_OK) {
