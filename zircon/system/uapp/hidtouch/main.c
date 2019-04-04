@@ -17,6 +17,7 @@
 #include <hid/egalax.h>
 #include <hid/eyoyo.h>
 #include <hid/ft3x27.h>
+#include <hid/ft5726.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
 #include <lib/fdio/unsafe.h>
@@ -38,6 +39,7 @@ enum touch_panel_type {
     TOUCH_PANEL_EGALAX,
     TOUCH_PANEL_EYOYO,
     TOUCH_PANEL_FT3X27,
+    TOUCH_PANEL_FT5726,
 };
 
 typedef struct display_info {
@@ -264,8 +266,9 @@ static void process_acer12_touchscreen_input(void* buf, size_t len, uint32_t* pi
 }
 
 
-static void process_ft3x27_touchscreen_input(void* buf, size_t len, uint32_t* pixels,
-                                             display_info_t* info) {
+static void process_ft3x27_ft5726_touchscreen_input(void* buf, size_t len,
+                                                    uint32_t* pixels,
+                                                    display_info_t* info) {
     ft3x27_touch_t* rpt = buf;
     if (len < sizeof(*rpt)) {
         printf("bad report size: %zd < %zd\n", len, sizeof(*rpt));
@@ -606,6 +609,12 @@ int main(int argc, char* argv[]) {
             break;
         }
 
+        if (is_ft5726_touch_report_desc(rpt_desc, rpt_desc_len)) {
+            panel = TOUCH_PANEL_FT5726;
+            printf("touchscreen: %s is ft5726\n", devname);
+            break;
+        }
+
 next_node:
         rpt_desc_len = 0;
 
@@ -681,7 +690,11 @@ next_node:
             }
         } else if (panel == TOUCH_PANEL_FT3X27) {
             if (*(uint8_t*)buf == FT3X27_RPT_ID_TOUCH) {
-                process_ft3x27_touchscreen_input(buf, r, pixels32, &info);
+                process_ft3x27_ft5726_touchscreen_input(buf, r, pixels32, &info);
+            }
+        } else if (panel == TOUCH_PANEL_FT5726) {
+            if (*(uint8_t*)buf == FT5726_RPT_ID_TOUCH) {
+                process_ft3x27_ft5726_touchscreen_input(buf, r, pixels32, &info);
             }
         }
         zx_cache_flush(pixels32, size, ZX_CACHE_FLUSH_DATA);

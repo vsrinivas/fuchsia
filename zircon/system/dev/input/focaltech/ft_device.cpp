@@ -112,6 +112,8 @@ zx_status_t FtDevice::InitPdev() {
         descriptor_len_ = get_ft3x27_report_desc(&descriptor_);
     } else if (device_id == FOCALTECH_DEVICE_FT6336) {
         descriptor_len_ = get_ft6336_report_desc(&descriptor_);
+    } else if (device_id == FOCALTECH_DEVICE_FT5726) {
+        descriptor_len_ = get_ft5726_report_desc(&descriptor_);
     } else {
         zxlogf(ERROR, "focaltouch: unknown device ID %u\n", device_id);
         return ZX_ERR_INTERNAL;
