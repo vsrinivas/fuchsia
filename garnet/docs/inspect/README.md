@@ -17,18 +17,18 @@ that expose information.
 
 # Concepts
 
-Components may expose a tree of **Objects**, each of which has a set of
+Components may expose a tree of **Nodes** (formerly Objects), each of which has a set of
 string-valued **Properties** and numeric **Metrics**.
 
-![Figure: A tree of **Object**s](tree.png)
+![Figure: A tree of **Nodes**s](tree.png)
 
-## Object
+## Node 
 
-An object is an exported entity within a component that may have 0 or
-more children. Each object has a name, and each child of an object
+A node is an exported entity within a component that may have 0 or
+more children. Each node has a name, and each child of a node
 must have a unique name among the children.
 
-![Figure: An **Object**](object.png)
+![Figure: An **Node**](object.png)
 
 ## Property
 
@@ -37,7 +37,7 @@ value which are both strings.
 
 ## Metric
 
-Objects may have any number of metrics. A metric has a string key and numeric value.
+Nodes may have any number of metrics. A metric has a string key and numeric value.
 
 There are three types of metric values:
 
@@ -55,20 +55,45 @@ the future.
 ## Filesystem Interface
 
 Components by default obtain a reference to their `out/` directory in
-their hub. It is customary to expose a root-level object called `objects`
-at `out/objects/`.
+their hub.
 
-*Top-level* objects are exposed as a tree in the filesystem. Each directory is
-named with the object's name, and must contain a node named
-`fuchsia.inspect.Inspect` that allows binding to an implementation of
-[`fuchsia.inspect.Inspect`](/zircon/system/fidl/fuchsia-inspect/inspect.fidl).
-Nested objects are discovered via this implementation.
+*Top-level* nodes are exposed as VmoFiles in the Hub ending in the extension `.inspect`.
+It is customary for components to expose their primary or root tree as 
+`out/objects/root.inspect`.
+
+For the deprecated FIDL interface, a component exposes its root tree as a 
+`fuchsia.inspect.Inspect` service file at `out/objects`. Both FIDL and VMO
+reading are currently supported by the `iquery` tool.
 
 The manager for a component's environment may expose its own information
 about the component to the hub. For instance, appmgr exposes
 `system_objects` for each component.
 
-# C++ Interface
+# [C++ Interface](/garnet/public/lib/inspect/inspect.h)
+
+Class `Inspector` is the main entrypoint into using the Inspect API.
+Method `CreateTree` returns a new `Tree` object that wraps a VMO.
+
+Each `Tree` has a root `Object` (`Node`) that can be obtained with `GetRoot`.
+
+New children can be created underneath the root node, and each node may
+contain any number of metrics and properties. Creation methods return
+an RAII wrapper around the value. This wrapper owns the value stored in
+the VMO, and it automatically removes the wrapped value when deleted.
+
+## FIDL Compatibility Mode
+
+The C++ interface supports wrapping the deprecated FIDL interface using
+a compatibility mode.
+
+Instead of using `CreateTree` and `Inspector`, you may instead construct
+an object directly with a name to retrieve an exposable object using FIDL.
+
+# Deprecated C++ Interface
+
+This interface supports exposing objects using the fuchsia.inspect.Inspect
+FIDL interface. The main feature this supports over the VMO solution is
+dynamic children and values, though these features are planned for VMO.
 
 ## [Object Wrapper](/garnet/public/lib/component/cpp/expose.h)
 
