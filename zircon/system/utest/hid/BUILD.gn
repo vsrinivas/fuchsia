@@ -4,9 +4,29 @@
 
 test("hid") {
   sources = [
+    "hid-driver.cpp",
+  ]
+  deps = [
+    "$zx/system/fidl/fuchsia-hardware-hidctl:c",
+    "$zx/system/fidl/fuchsia-hardware-input:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/devmgr-launcher",
+    "$zx/system/ulib/driver-integration-test",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/hid",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+test("hid-parse-size") {
+  sources = [
     "$zx/system/dev/input/hid/hid-parser-lib.cpp",
     "$zx/system/utest/hid-parser/hid-report-data.cpp",
-    "hid-test.cpp",
+    "hid-parse-test.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-hidbus",

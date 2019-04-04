@@ -186,6 +186,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_PBUS_TEST          1
 #define PDEV_PID_INTEGRATION_TEST   2
 #define PDEV_PID_USB_VBUS_TEST      3
+#define PDEV_PID_HIDCTL_TEST        4
 
 #define PDEV_DID_TEST_PARENT        1
 #define PDEV_DID_TEST_CHILD_1       2
