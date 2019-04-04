@@ -10,9 +10,9 @@
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/types/type_converters.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/eventpair.h>
+#include <src/lib/fxl/logging.h>
 
 #include "peridot/bin/basemgr/basemgr_settings.h"
 #include "peridot/bin/basemgr/session_provider.h"
@@ -120,8 +120,11 @@ void BasemgrImpl::StartBaseShell() {
 
   presentation_container_ = std::make_unique<PresentationContainer>(
       presenter_.get(), std::move(view_holder_token),
+
       /* shell_config= */ GetActiveSessionShellConfig(),
-      /* on_swap_session_shell= */ [this] { SwapSessionShell(); });
+      /* on_swap_session_shell= */ [this] {
+        SelectNextSessionShell(/* callback= */ [] {});
+      });
 
   // TODO(alexmin): Remove BaseShellParams.
   fuchsia::modular::BaseShellParams params;
@@ -317,34 +320,46 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
         presenter_.get(),
         scenic::ToViewHolderToken(
             zx::eventpair(view_owner.TakeChannel().release())),
+
         /* shell_config= */ GetActiveSessionShellConfig(),
-        /* on_swap_session_shell= */ [this] { SwapSessionShell(); });
+        /* on_swap_session_shell= */ [this] {
+          SelectNextSessionShell(/* callback= */ [] {});
+        });
   }
 }
 
-void BasemgrImpl::SwapSessionShell() {
+void BasemgrImpl::SelectNextSessionShell(
+    SelectNextSessionShellCallback callback) {
   if (state_ == State::SHUTTING_DOWN) {
-    FXL_DLOG(INFO) << "SwapSessionShell() not supported while shutting down";
+    FXL_DLOG(INFO)
+        << "SelectNextSessionShell() not supported while shutting down";
+    callback();
     return;
   }
 
   if (session_shell_configs_.empty()) {
     FXL_DLOG(INFO) << "No session shells has been defined";
+    callback();
     return;
   }
   auto shell_count = session_shell_configs_.size();
   if (shell_count <= 1) {
     FXL_DLOG(INFO)
         << "Only one session shell has been defined so switch is disabled";
+    callback();
     return;
   }
+
   active_session_shell_configs_index_ =
       (active_session_shell_configs_index_ + 1) % shell_count;
 
   UpdateSessionShellConfig();
 
   session_provider_->SwapSessionShell(CloneStruct(session_shell_config_))
-      ->Then([] { FXL_DLOG(INFO) << "Swapped session shell"; });
+      ->Then([callback = std::move(callback)] {
+        FXL_LOG(INFO) << "Swapped session shell";
+        callback();
+      });
 }
 
 fuchsia::modular::internal::SessionShellConfig

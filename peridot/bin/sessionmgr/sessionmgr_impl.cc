@@ -170,7 +170,8 @@ SessionmgrImpl::SessionmgrImpl(
     : startup_context_(startup_context),
       config_(std::move(config)),
       story_provider_impl_("StoryProviderImpl"),
-      agent_runner_("AgentRunner") {
+      agent_runner_("AgentRunner"),
+      weak_ptr_factory_(this) {
   startup_context_->outgoing()
       .AddPublicService<fuchsia::modular::internal::Sessionmgr>(
           [this](fidl::InterfaceRequest<fuchsia::modular::internal::Sessionmgr>
@@ -794,11 +795,15 @@ void SessionmgrImpl::RunSessionShell(
   session_shell_view_host_->ConnectView(std::move(view_holder_token));
 }
 
-void SessionmgrImpl::TerminateSessionShell(fit::function<void()> done) {
-  session_shell_app_->Teardown(kBasicTimeout, [this, done = std::move(done)] {
-    done();
-    session_shell_app_.reset();
-  });
+void SessionmgrImpl::TerminateSessionShell(fit::function<void()> callback) {
+  session_shell_app_->Teardown(kBasicTimeout,
+                               [weak_ptr = weak_ptr_factory_.GetWeakPtr(),
+                                callback = std::move(callback)] {
+                                 callback();
+                                 if (weak_ptr) {
+                                   weak_ptr->session_shell_app_.reset();
+                                 }
+                               });
 }
 
 class SessionmgrImpl::SwapSessionShellOperation : public Operation<> {

@@ -64,7 +64,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   ~SessionmgrImpl() override;
 
   // |AppDriver| calls this.
-  void Terminate(fit::function<void()> done);
+  void Terminate(fit::function<void()> callback);
 
  private:
   // |Sessionmgr|
@@ -308,6 +308,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   bool terminating_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionmgrImpl);
+
+  fxl::WeakPtrFactory<SessionmgrImpl> weak_ptr_factory_;
 };
 
 }  // namespace modular

@@ -52,6 +52,8 @@ class SessionCtlApp {
   std::string ExecuteDeleteAllStoriesCommand();
   std::string ExecuteListStoriesCommand();
   std::string ExecuteRestartSessionCommand();
+  std::string ExecuteSelectNextSessionShellCommand(
+      const fxl::CommandLine& command_line);
 
   // Focus the story to which the mod we are adding belongs.
   fuchsia::modular::StoryCommand MakeFocusStoryCommand();

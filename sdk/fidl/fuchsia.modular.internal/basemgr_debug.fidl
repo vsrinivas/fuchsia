@@ -4,15 +4,18 @@
 
 library fuchsia.modular.internal;
 
-// A debug interface exposed by `basemgr` to allow developer tools to control
-// state within the `basemgr` process.
+/// A debug interface exposed by `basemgr` to allow developer tools to control
+/// state within the `basemgr` process.
 [Discoverable]
 protocol BasemgrDebug {
-    // Restarts the current session. If a user was logged in, this will return
-    // when the same user is logged back in. Otherwise, this will return when
-    // sessionmgr has been torn down.
+    /// Restarts the current session. If a user was logged in, this will return
+    /// when the same user is logged back in. Otherwise, this will return when
+    /// sessionmgr has been torn down.
     RestartSession() -> ();
 
-    // Logs in as a guest user.
+    /// Toggles to the next session defined in the basemgr.config file.
+    SelectNextSessionShell() -> ();
+
+    /// Logs in as a guest user.
     LoginAsGuest();
 };

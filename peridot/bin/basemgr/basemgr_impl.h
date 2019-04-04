@@ -92,7 +92,10 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
       fidl::InterfaceRequest<fuchsia::auth::AuthenticationUIContext> request)
       override;
 
-  void SwapSessionShell();
+  // |fuchsia::modular::internal::BasemgrDebug|
+  // Toggles to the next session shell in basemgr.config if one exists.
+  // |callback| resolves once session shell has been swapped.
+  void SelectNextSessionShell(SelectNextSessionShellCallback callback) override;
 
   void ShowSetupOrLogin();
 

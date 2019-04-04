@@ -34,6 +34,8 @@ std::string SessionCtlApp::ExecuteCommand(
     return ExecuteListStoriesCommand();
   } else if (cmd == kRestartSessionCommandString) {
     return ExecuteRestartSessionCommand();
+  } else if (cmd == kSelectNextSessionCommandString) {
+    return ExecuteSelectNextSessionShellCommand(command_line);
   } else {
     return kGetUsageErrorString;
   }
@@ -89,7 +91,7 @@ std::string SessionCtlApp::ExecuteAddModCommand(
 
   if (command_line.HasOption(kStoryNameFlagString)) {
     command_line.GetOptionValue(kStoryNameFlagString, &story_name);
-    // https://tools.ietf.org/html/rfc3986#section-3.1
+    // regex from garnet/bin/appmgr/realm.cc:168
     std::regex story_name_regex("[0-9a-zA-Z\\.\\-_:#]+");
     std::smatch story_name_match;
     if (!std::regex_search(story_name, story_name_match, story_name_regex)) {
@@ -188,6 +190,16 @@ std::string SessionCtlApp::ExecuteListStoriesCommand() {
 std::string SessionCtlApp::ExecuteRestartSessionCommand() {
   basemgr_->RestartSession([this]() {
     logger_.Log(kRestartSessionCommandString, std::vector<std::string>());
+    on_command_executed_();
+  });
+
+  return "";
+}
+
+std::string SessionCtlApp::ExecuteSelectNextSessionShellCommand(
+    const fxl::CommandLine& command_line) {
+  basemgr_->SelectNextSessionShell([this]() {
+    logger_.Log(kSelectNextSessionCommandString, std::vector<std::string>());
     on_command_executed_();
   });
 
