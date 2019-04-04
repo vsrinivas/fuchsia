@@ -33,6 +33,7 @@ static struct x86_model_info model_info;
 
 bool g_x86_feature_fsgsbase;
 bool g_x86_feature_pcid_good;
+bool g_has_meltdown;
 
 enum x86_hypervisor_list x86_hypervisor;
 
@@ -132,6 +133,9 @@ void x86_feature_init(void) {
         x86_feature_test(X86_FEATURE_INVPCID);
 
     x86_hypervisor = get_hypervisor();
+
+    if (x86_vendor == X86_VENDOR_INTEL)
+        g_has_meltdown = x86_intel_cpu_has_meltdown();
 }
 
 static enum x86_microarch_list get_microarch(struct x86_model_info* info) {
@@ -372,6 +376,13 @@ void x86_feature_debug(void) {
     }
     if (col > 0)
         printf("\n");
+    // Print synthetic 'features'/properties
+    printf("Properties: ");
+    if (g_has_meltdown)
+        printf("meltdown ");
+    if (g_x86_feature_pcid_good)
+        printf("pcid_good ");
+    printf("\n");
 }
 
 static uint64_t default_apic_freq() {

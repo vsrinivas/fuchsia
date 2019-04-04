@@ -6,6 +6,21 @@
 
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
+#include <bits.h>
+
+bool x86_intel_cpu_has_meltdown(void) {
+    // IA32_ARCH_CAPABILITIES MSR enumerates fixes for Meltdown and other speculation-related side
+    // channels, where available.
+    const auto* leaf = x86_get_cpuid_leaf(X86_CPUID_EXTENDED_FEATURE_FLAGS);
+    if (leaf && BIT(leaf->d, 29)) {
+        uint64_t arch_capabilities = read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
+        if (BIT(arch_capabilities, X86_ARCH_CAPABILITIES_RDCL_NO)) {
+            return false;
+        }
+    }
+
+    return true;
+}
 
 void x86_intel_init_percpu(void) {
     // Some intel cpus support auto-entering C1E state when all cores are at C1. In

@@ -313,5 +313,6 @@ static inline const x86_microarch_config_t* x86_get_microarch_config(void) {
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
 void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);
+bool x86_intel_cpu_has_meltdown(void);
 
 __END_CDECLS
