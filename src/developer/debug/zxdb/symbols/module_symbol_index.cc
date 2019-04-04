@@ -428,6 +428,19 @@ std::vector<std::string> ModuleSymbolIndex::FindFileMatches(
   return result;
 }
 
+std::vector<std::string> ModuleSymbolIndex::FindFilePrefixes(
+    const std::string& prefix) const {
+  std::vector<std::string> result;
+
+  auto found = file_name_index_.lower_bound(prefix);
+  while (found != file_name_index_.end() &&
+         StringBeginsWith(found->first, prefix)) {
+    result.push_back(std::string(found->first));
+    ++found;
+  }
+  return result;
+}
+
 const std::vector<unsigned>* ModuleSymbolIndex::FindFileUnitIndices(
     const std::string& name) const {
   auto found = files_.find(name);

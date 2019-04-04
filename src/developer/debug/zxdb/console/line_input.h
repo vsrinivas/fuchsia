@@ -5,6 +5,7 @@
 #pragma once
 
 #include <deque>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -53,7 +54,8 @@ struct SpecialCharacters {
 class LineInputBase {
  public:
   // Given some typing, returns a prioritized list of completions.
-  using CompletionCallback = std::vector<std::string> (*)(const std::string&);
+  using CompletionCallback =
+      std::function<std::vector<std::string>(const std::string&)>;
 
   explicit LineInputBase(const std::string& prompt);
   virtual ~LineInputBase();
@@ -148,7 +150,7 @@ class LineInputBase {
 
   const std::string prompt_;
   size_t max_cols_ = 0;
-  CompletionCallback completion_callback_ = nullptr;
+  CompletionCallback completion_callback_;
 
   // Indicates whether the line is currently visible (as controlled by
   // Show()/Hide()).

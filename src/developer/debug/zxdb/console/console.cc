@@ -41,7 +41,16 @@ Console::Console(Session* session)
   FXL_DCHECK(!singleton_);
   singleton_ = this;
 
-  line_input_.set_completion_callback(&GetCommandCompletions);
+  // Set the line input completion callback that can know about our context.
+  // OK to bind |this| since we own the line_input object.
+  auto fill_command_context = [this](Command* cmd) {
+    context_.FillOutCommand(cmd);  // Ignore errors, this is for autocomplete.
+  };
+  line_input_.set_completion_callback(
+      [fill_command_context](
+          const std::string& prefix) -> std::vector<std::string> {
+        return GetCommandCompletions(prefix, fill_command_context);
+      });
 
   // Set stdin to async mode or OnStdinReadable will block.
   fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);

@@ -4,7 +4,6 @@
 
 #include <inttypes.h>
 
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/finish_thread_controller.h"
 #include "src/developer/debug/zxdb/client/frame.h"
@@ -33,6 +32,7 @@
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -1264,8 +1264,9 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kFinish] =
       VerbRecord(&DoFinish, {"finish", "fi"}, kFinishShortHelp, kFinishHelp,
                  CommandGroup::kStep);
-  (*verbs)[Verb::kJump] = VerbRecord(&DoJump, {"jump", "jmp"}, kJumpShortHelp,
-                                     kJumpHelp, CommandGroup::kStep);
+  (*verbs)[Verb::kJump] =
+      VerbRecord(&DoJump, &CompleteInputLocation, {"jump", "jmp"},
+                 kJumpShortHelp, kJumpHelp, CommandGroup::kStep);
 
   // locals
   VerbRecord locals(&DoLocals, {"locals"}, kLocalsShortHelp, kLocalsHelp,
@@ -1308,8 +1309,9 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kStepi] =
       VerbRecord(&DoStepi, {"stepi", "si"}, kStepiShortHelp, kStepiHelp,
                  CommandGroup::kAssembly, SourceAffinity::kAssembly);
-  (*verbs)[Verb::kUntil] = VerbRecord(&DoUntil, {"until", "u"}, kUntilShortHelp,
-                                      kUntilHelp, CommandGroup::kStep);
+  (*verbs)[Verb::kUntil] =
+      VerbRecord(&DoUntil, &CompleteInputLocation, {"until", "u"},
+                 kUntilShortHelp, kUntilHelp, CommandGroup::kStep);
 
   // Stack navigation
   (*verbs)[Verb::kDown] = VerbRecord(&DoDown, {"down"}, kDownShortHelp,

@@ -81,7 +81,8 @@ bool IsIndexToken(const std::string& token) {
 
 class Parser {
  public:
-  Parser(Command* command) : command_(command) {}
+  Parser(Command* command, const FillCommandContextCallback& fill_context)
+      : fill_context_(fill_context), command_(command) {}
 
   const Err& Parse(const std::string& input) {
     if (!Tokenize(input)) {
@@ -233,6 +234,10 @@ class Parser {
     err_ = TokenizeCommand(input, &tokens_);
     return !err_.has_error();
   }
+
+  // Used for completions. Optionally set to fill in the noun information for
+  // a given command so the completion code can use them.
+  const FillCommandContextCallback& fill_context_;
 
   Command* command_ = nullptr;
   const State* state_ = &kNounState;
@@ -525,6 +530,9 @@ void Parser::DoCompleteVerb(const std::string& to_complete,
 void Parser::DoCompleteArgs(const std::string& to_complete,
                             std::vector<std::string>* result) {
   if (verb_record_ && verb_record_->complete) {
+    // Fill in the noun context if possible for the completion routine.
+    if (fill_context_)
+      fill_context_(command_);
     verb_record_->complete(*command_, to_complete, result);
   }
 }
@@ -565,7 +573,7 @@ Err TokenizeCommand(const std::string& input,
 Err ParseCommand(const std::string& input, Command* output) {
   *output = Command();
 
-  Parser parser(output);
+  Parser parser(output, FillCommandContextCallback());
   parser.Parse(input);
 
   FXL_DCHECK(parser.err().has_error() || parser.at_end());
@@ -575,9 +583,10 @@ Err ParseCommand(const std::string& input, Command* output) {
 
 // It would be nice to do more context-aware completions. For now, just
 // complete based on all known nouns and verbs.
-std::vector<std::string> GetCommandCompletions(const std::string& input) {
+std::vector<std::string> GetCommandCompletions(
+    const std::string& input, const FillCommandContextCallback& fill_context) {
   Command temp;
-  Parser parser(&temp);
+  Parser parser(&temp, fill_context);
 
   std::vector<std::string> result;
   parser.Complete(input, &result);

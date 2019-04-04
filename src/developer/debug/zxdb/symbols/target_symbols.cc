@@ -47,6 +47,13 @@ void TargetSymbols::RemoveModule(
 
 void TargetSymbols::RemoveAllModules() { modules_.clear(); }
 
+std::vector<const ModuleSymbols*> TargetSymbols::GetModuleSymbols() const {
+  std::vector<const ModuleSymbols*> result;
+  for (const auto& module : modules_)
+    result.push_back(module->module_symbols());
+  return result;
+}
+
 std::vector<Location> TargetSymbols::ResolveInputLocation(
     const InputLocation& input_location, const ResolveOptions& options) const {
   FXL_DCHECK(input_location.type != InputLocation::Type::kNone);

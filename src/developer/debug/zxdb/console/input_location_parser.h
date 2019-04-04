@@ -55,6 +55,11 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
                                const std::string& input, bool symbolize,
                                Location* location);
 
+// Autocomplete for input locations.
+void CompleteInputLocation(const Command& command,
+                           const std::string& prefix,
+                           std::vector<std::string>* completions);
+
 // Generates help for a command describing the parsing of locations. The
 // parameter is a string containing the name of the command.
 #define LOCATION_ARG_HELP(cmd)                                            \

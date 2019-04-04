@@ -15,8 +15,8 @@
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -433,7 +433,8 @@ void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   SwitchRecord stop_switch(kStopSwitch, true, "stop", 's');
   SwitchRecord type_switch(kTypeSwitch, true, "type", 't');
 
-  VerbRecord break_record(&DoBreak, {"break", "b"}, kBreakShortHelp, kBreakHelp,
+  VerbRecord break_record(&DoBreak, &CompleteInputLocation, {"break", "b"},
+                          kBreakShortHelp, kBreakHelp,
                           CommandGroup::kBreakpoint);
   break_record.switches.push_back(enable_switch);
   break_record.switches.push_back(stop_switch);

@@ -25,9 +25,9 @@
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -520,9 +520,10 @@ void AppendMemoryVerbs(std::map<Verb, VerbRecord>* verbs) {
   SwitchRecord num_switch(kNumSwitch, true, "num", 'n');
 
   // Disassemble.
-  VerbRecord disass(&DoDisassemble, {"disassemble", "di"},
-                    kDisassembleShortHelp, kDisassembleHelp,
-                    CommandGroup::kAssembly, SourceAffinity::kAssembly);
+  VerbRecord disass(&DoDisassemble, &CompleteInputLocation,
+                    {"disassemble", "di"}, kDisassembleShortHelp,
+                    kDisassembleHelp, CommandGroup::kAssembly,
+                    SourceAffinity::kAssembly);
   disass.switches.push_back(num_switch);
   disass.switches.push_back(SwitchRecord(kRawSwitch, false, "raw", 'r'));
   (*verbs)[Verb::kDisassemble] = std::move(disass);
@@ -536,8 +537,8 @@ void AppendMemoryVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kMemAnalyze] = std::move(mem_analyze);
 
   // Mem-read. Note: "x" is the GDB command to read memory.
-  VerbRecord mem_read(&DoMemRead, {"mem-read", "x"}, kMemReadShortHelp,
-                      kMemReadHelp, CommandGroup::kQuery);
+  VerbRecord mem_read(&DoMemRead, &CompleteInputLocation, {"mem-read", "x"},
+                      kMemReadShortHelp, kMemReadHelp, CommandGroup::kQuery);
   mem_read.switches.push_back(size_switch);
   (*verbs)[Verb::kMemRead] = std::move(mem_read);
 

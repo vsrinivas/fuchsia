@@ -143,6 +143,23 @@ TEST(ModuleSymbolIndex, FindFileMatches) {
   EXPECT_EQ(0u, result.size());
 }
 
+TEST(ModuleSymbolIndex, FindFilePrefixes) {
+  TestSymbolModule module;
+  std::string err;
+  ASSERT_TRUE(module.Load(&err)) << err;
+
+  ModuleSymbolIndex index;
+  index.CreateIndex(module.object_file());
+
+  // Should find both files. Order not guaranteed.
+  std::vector<std::string> result = index.FindFilePrefixes("z");
+  ASSERT_EQ(2u, result.size());
+  EXPECT_NE(result.end(),
+            std::find(result.begin(), result.end(), "zxdb_symbol_test.cc"));
+  EXPECT_NE(result.end(),
+            std::find(result.begin(), result.end(), "zxdb_symbol_test2.cc"));
+}
+
 TEST(ModuleSymbolIndex, FindTypeAndNamespace) {
   TestSymbolModule module;
   std::string err;

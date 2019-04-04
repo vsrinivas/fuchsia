@@ -791,8 +791,9 @@ Err DoSymSearch(ConsoleContext* context, const Command& cmd) {
 }  // namespace
 
 void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
-  VerbRecord list(&DoList, {"list", "l"}, kListShortHelp, kListHelp,
-                  CommandGroup::kQuery, SourceAffinity::kSource);
+  VerbRecord list(&DoList, &CompleteInputLocation, {"list", "l"},
+                  kListShortHelp, kListHelp, CommandGroup::kQuery,
+                  SourceAffinity::kSource);
   list.switches.emplace_back(kListAllSwitch, false, "all", 'a');
   list.switches.emplace_back(kListContextSwitch, true, "context", 'c');
 

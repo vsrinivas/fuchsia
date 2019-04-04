@@ -53,6 +53,9 @@ class TargetSymbols {
   void RemoveModule(fxl::RefPtr<SystemSymbols::ModuleRef>& module);
   void RemoveAllModules();
 
+  // Returns the symbol information for all the modules known for this target.
+  std::vector<const ModuleSymbols*> GetModuleSymbols() const;
+
   // Converts the given InputLocation into one or more locations. The input
   // can match zero, one, or many locations.
   //

@@ -90,6 +90,12 @@ class ModuleSymbolIndex {
   // and the caller is left to decide which one(s) it wants.
   std::vector<std::string> FindFileMatches(const std::string& name) const;
 
+  // Same as FindFileMatches but does a prefix search. This only matches the
+  // file name component (not directory paths).
+  //
+  // In the future it would be nice to match directories if there was a "/".
+  std::vector<std::string> FindFilePrefixes(const std::string& prefix) const;
+
   // Looks up the given exact file path and returns all compile units it
   // appears in. The file must be an exact match (normally it's one of the
   // results from FindFileMatches).

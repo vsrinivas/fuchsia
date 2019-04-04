@@ -221,24 +221,24 @@ TEST(CommandParser, Completions) {
   std::vector<std::string> comp;
 
   // Noun completion.
-  comp = GetCommandCompletions("t");
+  comp = GetCommandCompletions("t", FillCommandContextCallback());
   EXPECT_TRUE(CompletionContains(comp, "thread"));
 
   // Verb completion.
-  comp = GetCommandCompletions("h");
+  comp = GetCommandCompletions("h", FillCommandContextCallback());
   EXPECT_TRUE(CompletionContains(comp, "help"));
 
   // Noun + Verb completion.
-  comp = GetCommandCompletions("process 2 p");
+  comp = GetCommandCompletions("process 2 p", FillCommandContextCallback());
   EXPECT_TRUE(CompletionContains(comp, "process 2 pause"));
 
   // Ending in a space gives everything.
-  comp = GetCommandCompletions("process ");
+  comp = GetCommandCompletions("process ", FillCommandContextCallback());
   EXPECT_TRUE(CompletionContains(comp, "process quit"));
   EXPECT_TRUE(CompletionContains(comp, "process run"));
 
   // No input should give everything
-  comp = GetCommandCompletions("");
+  comp = GetCommandCompletions("", FillCommandContextCallback());
   EXPECT_TRUE(CompletionContains(comp, "run"));
   EXPECT_TRUE(CompletionContains(comp, "quit"));
 }

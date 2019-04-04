@@ -6,13 +6,20 @@
 
 #include <inttypes.h>
 
+#include <algorithm>
+
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/target.h"
+#include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
 #include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/module_symbol_index.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/developer/debug/zxdb/symbols/target_symbols.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -177,6 +184,31 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
     return err;
   return ResolveUniqueInputLocation(process_symbols, input_location, symbolize,
                                     location);
+}
+
+void CompleteInputLocation(const Command& command,
+                           const std::string& prefix,
+                           std::vector<std::string>* completions) {
+  if (!command.target())
+    return;
+
+  // TODO(brettw) prioritize the current module when it's known (when there is
+  // a current frame with symbol information). Factor priotization code from
+  // find_name.cc
+  for (const ModuleSymbols* mod : command.target()->GetSymbols()->GetModuleSymbols()) {
+    const ModuleSymbolIndex& index = mod->GetIndex();
+    auto files = index.FindFilePrefixes(prefix);
+
+    // Files get colons at the end for the user to type a line number next.
+    for (auto& file : files)
+      file.push_back(':');
+
+    completions->insert(completions->end(), files.begin(), files.end());
+
+    // TODO(brettw) do a prefix search for identifier names.
+  }
+
+  std::sort(completions->begin(), completions->end());
 }
 
 }  // namespace zxdb
