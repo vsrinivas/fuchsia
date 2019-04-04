@@ -54,6 +54,10 @@
 #define __has_feature(x) 0
 #endif
 
+#ifndef __has_builtin
+#define __has_builtin(x) 0
+#endif
+
 #define __ALWAYS_INLINE __attribute__((__always_inline__))
 #define __MAY_ALIAS __attribute__((__may_alias__))
 #define __NONNULL(x) __attribute__((__nonnull__ x))
