@@ -9,19 +9,18 @@
 
 use {
     failure::{Error, ResultExt},
-    fidl::endpoints::{RequestStream, ServiceMarker},
-    fidl_fuchsia_telephony_manager::{ManagerMarker, ManagerRequest, ManagerRequestStream},
+    fidl_fuchsia_telephony_manager::{ManagerRequest, ManagerRequestStream},
     fidl_fuchsia_telephony_ril::{RadioInterfaceLayerMarker, RadioInterfaceLayerProxy},
-    fuchsia_app::{
-        client::{App, Launcher},
+    fuchsia_component::{
+        client::{App, launcher, launch},
         fuchsia_single_component_package_url,
-        server::ServicesServer,
+        server::ServiceFs,
     },
     fuchsia_async as fasync,
     fuchsia_syslog::{self as syslog, macros::*},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon as zx,
-    futures::{future, Future, TryFutureExt, TryStreamExt},
+    futures::{future, Future, FutureExt, TryFutureExt, StreamExt, TryStreamExt},
     parking_lot::RwLock,
     qmi::connect_transport_device,
     std::fs::File,
@@ -39,9 +38,9 @@ pub async fn connect_qmi_transport(path: PathBuf) -> Result<fasync::Channel, Err
 }
 
 pub async fn start_qmi_modem(chan: zx::Channel) -> Result<Radio, Error> {
-    let launcher = Launcher::new().context("Failed to open launcher service")?;
+    let launcher = launcher().context("Failed to open launcher service")?;
     let app =
-        launcher.launch(RIL_URI.to_string(), None).context("Failed to launch qmi-modem service")?;
+        launch(&launcher, RIL_URI.to_string(), None).context("Failed to launch qmi-modem service")?;
     let ril = app.connect_to_service(RadioInterfaceLayerMarker)?;
     let _success = await!(ril.connect_transport(chan.into()))?;
     Ok(Radio::new(app, ril))
@@ -49,9 +48,8 @@ pub async fn start_qmi_modem(chan: zx::Channel) -> Result<Radio, Error> {
 
 pub fn start_service(
     mgr: Arc<Manager>,
-    channel: fasync::Channel,
+    stream: ManagerRequestStream,
 ) -> impl Future<Output = Result<(), Error>> {
-    let stream = ManagerRequestStream::from_channel(channel);
     stream
         .try_for_each(move |evt| {
             let _ = match evt {
@@ -131,17 +129,20 @@ fn main() -> Result<(), Error> {
 
     let manager = Arc::new(Manager::new());
     let mgr = manager.clone();
-    let device_watcher = manager.watch_new_devices();
+    let device_watcher = manager.watch_new_devices()
+        .unwrap_or_else(|e| fx_log_err!("Failed to watch new devices: {:?}", e));
 
-    let server = ServicesServer::new()
-        .add_service((ManagerMarker::NAME, move |chan: fasync::Channel| {
+    let mut fs = ServiceFs::new();
+    fs.dir("public")
+        .add_fidl_service(move |stream| {
             fx_log_info!("Spawning Management Interface");
             fasync::spawn(
-                start_service(mgr.clone(), chan)
+                start_service(mgr.clone(), stream)
                     .unwrap_or_else(|e| fx_log_err!("Failed to spawn {:?}", e)),
             )
-        }))
-        .start()?;
+        });
+    fs.take_and_serve_directory_handle()?;
 
-    executor.run_singlethreaded(device_watcher.try_join(server)).map(|_| ())
+    let ((), ()) = executor.run_singlethreaded(device_watcher.join(fs.collect::<()>()));
+    Ok(())
 }
