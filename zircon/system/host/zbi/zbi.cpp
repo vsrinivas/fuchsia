@@ -58,7 +58,7 @@ iovec Iovec(const T* buffer, size_t size = sizeof(T)) {
     return {const_cast<void*>(static_cast<const void*>(buffer)), size};
 }
 
-class AppendBuffer {
+class AppendBuffer final {
 public:
     explicit AppendBuffer(size_t size)
         : buffer_(std::make_unique<std::byte[]>(size)), ptr_(buffer_.get()) {
@@ -99,7 +99,7 @@ private:
 class Item;
 using ItemPtr = std::unique_ptr<Item>;
 
-class OutputStream {
+class OutputStream final {
 public:
     OutputStream() = delete;
 
@@ -241,10 +241,13 @@ private:
     }
 };
 
-class FileWriter {
+class FileWriter final {
 public:
     FileWriter(const char* outfile, std::filesystem::path prefix)
         : prefix_(std::move(prefix)), outfile_(outfile) {
+        if (prefix_.empty()) {
+            prefix_ = ".";
+        }
     }
 
     unsigned int NextFileNumber() const {
@@ -314,7 +317,7 @@ private:
     }
 };
 
-class NameMatcher {
+class NameMatcher final {
 public:
     NameMatcher(const char* const* patterns, int count)
         : begin_(patterns), end_(&patterns[count]) {
@@ -369,8 +372,9 @@ private:
             if (ptn[0] == '!' || ptn[0] == '^') {
                 excludes = true;
             } else {
-                included = (included || fnmatch(
-                                            ptn, name, casefold ? FNM_CASEFOLD : 0) == 0);
+                included =
+                    (included ||
+                     fnmatch(ptn, name, casefold ? FNM_CASEFOLD : 0) == 0);
             }
         }
         if (included && excludes) {
@@ -384,11 +388,11 @@ private:
                 }
             }
         }
-        return false;
+        return included;
     }
 };
 
-class Checksummer {
+class Checksummer final {
 public:
     void Write(const iovec& buffer) {
         crc_ = crc32(crc_, static_cast<const uint8_t*>(buffer.iov_base),
@@ -415,7 +419,7 @@ private:
 // This tells LZ4f_compressUpdate it can keep a pointer to data.
 constexpr const LZ4F_compressOptions_t kCompressOpt = {1, {}};
 
-class Compressor {
+class Compressor final {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(Compressor);
     Compressor() = default;
@@ -603,7 +607,7 @@ std::size_t HashValue(const T& x) {
     return std::hash<std::decay_t<T>>()(x);
 }
 
-class FileContents {
+class FileContents final {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(FileContents);
     FileContents() = default;
@@ -654,6 +658,10 @@ public:
                 mapped_ == other.mapped_);
     }
 
+    bool operator!=(const FileContents& other) const {
+        return !(*this == other);
+    }
+
     struct Hash {
         std::size_t operator()(const FileContents& file) const {
             return HashValue(file.mapped_);
@@ -695,6 +703,7 @@ public:
         return result;
     }
 
+    const iovec View() const { return View(0, exact_size()); }
     const iovec View(size_t offset, size_t length) const {
         assert(offset <= exact_size_);
         assert(exact_size_ - offset >= length);
@@ -726,15 +735,32 @@ class File final {
 public:
     File() = default;
 
-    explicit File(std::unique_ptr<const FileContents> file) :
-        file_(std::move(file)) {}
+    explicit File(std::unique_ptr<const FileContents> file)
+        : file_(std::move(file)) {}
 
-    explicit File(std::unique_ptr<const Directory> dir) :
-        dir_(std::move(dir)) {}
+    explicit File(std::unique_ptr<Directory> dir)
+        : dir_(std::move(dir)) {}
 
     operator bool() const {
         return dir_ || file_;
     }
+
+    bool operator==(const File& other) const {
+        assert(!dir_);
+        assert(!other.dir_);
+        return *file_ == *other.file_;
+    }
+
+    bool operator!=(const File& other) const {
+        return !(*this == other);
+    }
+
+    struct Hash {
+        std::size_t operator()(const File& file) const {
+            assert(!file.dir_);
+            return FileContents::Hash()(*file.file_);
+        }
+    };
 
     bool IsDir() const {
         return bool(dir_);
@@ -750,10 +776,107 @@ public:
 
 private:
     std::unique_ptr<const FileContents> file_;
-    std::unique_ptr<const Directory> dir_;
+    std::unique_ptr<Directory> dir_;
 };
 
-struct PathHash {
+// Treat a Directory tree like a list of leaves.
+class DirectoryTree final {
+public:
+    DirectoryTree(Directory* root)
+        : root_(root) {}
+
+    class const_iterator {
+    public:
+        using value_type = std::pair<std::filesystem::path, const File*>;
+
+        const_iterator() = default;
+
+        bool operator==(const const_iterator& other) const {
+            if (other.pos_.empty()) {
+                return pos_.empty();
+            }
+            return !pos_.empty() && pos_.front().pos == other.pos_.front().pos;
+        }
+
+        bool operator!=(const const_iterator& other) const {
+            return !(*this == other);
+        }
+
+        value_type operator*() const {
+            return {std::accumulate(pos_.crbegin(), pos_.crend(),
+                                    std::filesystem::path(),
+                                    [](const auto& acc, const auto& elt) {
+                                        return acc / elt.pos->first;
+                                    }),
+                    pos_.front().pos->second};
+        }
+
+        const_iterator& operator++() {
+            ++pos_.front().pos;
+            AfterAdvance();
+            return *this;
+        }
+
+        // Remove the current entry from its directory and advance past it.
+        void Remove() {
+            pos_.front().pos = pos_.front().dir->erase(pos_.front().pos);
+            AfterAdvance();
+        }
+
+    private:
+        struct DirectoryPosition {
+            Directory* dir = nullptr;
+            Directory::iterator pos;
+        };
+        std::list<DirectoryPosition> pos_;
+
+        // Only DirectoryTree can use the non-default constructor.
+        friend DirectoryTree;
+        explicit const_iterator(Directory* dir) {
+            Descend(dir);
+            AfterAdvance();
+        }
+
+        void Descend(Directory* dir) {
+            pos_.push_front({dir, dir->begin()});
+        }
+
+        // If the current entry is a directory, go down a level.
+        // The iterator never yields a directory, only a leaf file.
+        bool DescendIfDirectory() {
+            const File* current_entry = pos_.front().pos->second;
+            if (current_entry->IsDir()) {
+                Descend(current_entry->AsDir());
+                return true;
+            }
+            return false;
+        }
+
+        void AfterAdvance() {
+            do {
+                // While the current position is at the end of its directory,
+                // go up a level and advance.
+                while (pos_.front().pos == pos_.front().dir->end()) {
+                    pos_.pop_front();
+                    if (pos_.empty()) {
+                        return;
+                    }
+                    ++pos_.front().pos;
+                }
+                // Descend and iterate if now at a directory.
+            } while (DescendIfDirectory());
+        }
+    };
+    using iterator = const_iterator;
+
+    const_iterator begin() const { return const_iterator(root_); }
+    const_iterator end() const { return {}; }
+
+private:
+    Directory* root_;
+};
+
+struct PathHash final {
     std::size_t operator()(const std::filesystem::path& file) const {
         return HashValue(file.native());
     }
@@ -774,10 +897,15 @@ struct PathHash {
 //    unnormalized paths or links) reuse the same mapped contents
 //  * directories read are cached fully
 //  * TODO(mcgrathr): identical contents from disparate sources
-class FileOpener {
+class FileOpener final {
 public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(FileOpener);
     FileOpener() = default;
+
+    template <typename T>
+    void ChangeDirectory(const T& dir) {
+        cwd_ /= dir;
+    }
 
     // The returned FileContents is cached and lives forever (for the lifetime
     // of the FileOpener).
@@ -815,8 +943,10 @@ public:
     // true owner of the data this FileContents points to must be kept
     // alive for the lifetime of the FileOpener.
     template <typename... Args>
-    const FileContents* Emplace(Args&&... args) {
-        return &*memory_cache_.emplace(std::forward<Args>(args)...).first;
+    const File* Emplace(Args&&... args) {
+        auto [it, fresh] = memory_cache_.emplace(
+            std::make_unique<FileContents>(std::forward<Args>(args)...));
+        return &*it;
     }
 
     void WriteDepfile(const char* output_file, const char* depfile) {
@@ -836,13 +966,17 @@ public:
     }
 
 private:
-    class FileId {
+    class FileId final {
     public:
         explicit FileId(const struct stat& st)
             : dev_(st.st_dev), ino_(st.st_ino) {}
 
         bool operator==(const FileId& other) const {
             return dev_ == other.dev_ && ino_ == other.ino_;
+        }
+
+        bool operator!=(const FileId& other) const {
+            return !(*this == other);
         }
 
         bool operator<(const FileId& other) const {
@@ -862,7 +996,8 @@ private:
 
     // Cache of contents by file name.  These point into the file_cache_.
     std::unordered_map<std::filesystem::path, const File*,
-                       PathHash> name_cache_;
+                       PathHash>
+        name_cache_;
 
     // These are created by Emplace() and kept here both to de-duplicate them
     // and to tie their lifetimes to the FileOpener (to parallel file_cache_).
@@ -870,11 +1005,15 @@ private:
     // input BOOTFS in Item::ReadBootFS in case the input filesystem used
     // "hard links" (i.e. multiple directory entries pointing to the same
     // region of the image).
-    std::unordered_set<FileContents, FileContents::Hash> memory_cache_;
+    std::unordered_set<File, File::Hash> memory_cache_;
+
+    // State of -C switches.
+    std::filesystem::path cwd_{"."};
 
     std::pair<File*, fbl::unique_fd> Open(const std::filesystem::path& file,
                                           struct stat* st) {
-        fbl::unique_fd fd(open(file.c_str(), O_RDONLY));
+        auto path = cwd_ / file;
+        fbl::unique_fd fd(open(path.c_str(), O_RDONLY));
         if (!fd) {
             perror(file.c_str());
             exit(1);
@@ -895,7 +1034,7 @@ private:
         }
         *cached =
             File(std::make_unique<const FileContents>(
-                     FileContents::Map(std::move(fd), st, file.c_str())));
+                FileContents::Map(std::move(fd), st, file.c_str())));
     }
 
     void OpenDirectory(File* cached, fbl::unique_fd fd,
@@ -912,7 +1051,7 @@ private:
                 continue;
             }
             file /= d->d_name;
-            (*dirmap)[d->d_name] = OpenFileOrDir(file.c_str());
+            (*dirmap)[d->d_name] = OpenFileOrDir(file);
             file.remove_filename();
         }
         closedir(dir);
@@ -920,133 +1059,7 @@ private:
     }
 };
 
-// Base class for ManifestInputFileGenerator and DirectoryInputFileGenerator.
-// These both deliver target name -> file contents mappings until they don't.
-struct InputFileGenerator {
-    struct value_type {
-        std::filesystem::path target;
-        const FileContents* file;
-    };
-    virtual ~InputFileGenerator() = default;
-    virtual bool Next(FileOpener*,
-                      const std::filesystem::path& prefix,
-                      value_type*) = 0;
-};
-
-using InputFileGeneratorList =
-    std::deque<std::unique_ptr<InputFileGenerator>>;
-
-class ManifestInputFileGenerator : public InputFileGenerator {
-public:
-    ManifestInputFileGenerator(const FileContents* file,
-                               std::filesystem::path prefix)
-        : prefix_(std::move(prefix)) {
-        read_ptr_ = static_cast<const char*>(
-            file->View(0, file->exact_size()).iov_base);
-        eof_ = read_ptr_ + file->exact_size();
-    }
-
-    ~ManifestInputFileGenerator() override = default;
-
-    bool Next(FileOpener* opener, const std::filesystem::path& prefix,
-              value_type* value) override {
-        while (read_ptr_ != eof_) {
-            auto eol = static_cast<const char*>(
-                memchr(read_ptr_, '\n', eof_ - read_ptr_));
-            auto line = read_ptr_;
-            if (eol) {
-                read_ptr_ = eol + 1;
-            } else {
-                read_ptr_ = eol = eof_;
-            }
-            auto eq = static_cast<const char*>(memchr(line, '=', eol - line));
-            if (!eq) {
-                fprintf(stderr, "manifest entry has no '=' separator: %.*s\n",
-                        static_cast<int>(eol - line), line);
-                exit(1);
-            }
-
-            value->target = prefix_ / prefix / "";
-            value->target.concat(line, eq);
-            value->target = value->target.lexically_normal();
-
-            value->file = opener->OpenFile({eq + 1, eol});
-
-            return true;
-        }
-        return false;
-    }
-
-private:
-    const std::filesystem::path prefix_;
-    const char* read_ptr_ = nullptr;
-    const char* eof_ = nullptr;
-};
-
-class DirectoryInputFileGenerator : public InputFileGenerator {
-public:
-    DirectoryInputFileGenerator(const Directory* dir,
-                                std::filesystem::path prefix)
-        : source_prefix_(std::move(prefix)) {
-        walk_pos_.emplace_front(dir, 0);
-    }
-
-    ~DirectoryInputFileGenerator() override = default;
-
-    bool Next(FileOpener* opener, const std::filesystem::path& prefix,
-              value_type* value) override {
-        do {
-            auto& it = walk_pos_.front().it;
-            if (it == walk_pos_.front().end) {
-                Ascend();
-                continue;
-            }
-            if (it->second->IsDir()) {
-                Descend(it->second->AsDir(), it->first);
-                ++it;
-            } else {
-                value->target =
-                    (prefix / walk_prefix_ / it->first).lexically_normal();
-                value->file = it->second->AsContents();
-                ++it;
-                return true;
-            }
-        } while (!walk_pos_.empty());
-        return false;
-    }
-
-private:
-    using DirIterator = Directory::const_iterator;
-
-    // State of our depth-first directory tree walk.
-    struct WalkState {
-        WalkState(const Directory *dir, size_t len)
-            : it(dir->begin()), end(dir->end()), parent_prefix_len(len) {
-        }
-        DirIterator it;
-        const DirIterator end;
-        size_t parent_prefix_len;
-    };
-
-    const std::string source_prefix_;
-    std::forward_list<WalkState> walk_pos_;
-    std::string walk_prefix_;
-
-    void Descend(const Directory* dir, const std::string& name) {
-        size_t parent = walk_prefix_.size();
-        walk_prefix_ += name;
-        walk_prefix_ += "/";
-        walk_pos_.emplace_front(dir, parent);
-    }
-
-    void Ascend() {
-        assert(walk_pos_.front().it == walk_pos_.front().end);
-        walk_prefix_.resize(walk_pos_.front().parent_prefix_len);
-        walk_pos_.pop_front();
-    }
-};
-
-class Item {
+class Item final {
 public:
     // Only the static methods below can create an Item.
     Item() = delete;
@@ -1228,10 +1241,11 @@ Extracted items use the file names shown below:\n\
 
     // Create from raw file contents.
     static ItemPtr CreateFromFile(
-        const FileContents* file, uint32_t type, bool compress) {
+        const File* filenode, uint32_t type, bool compress) {
         bool null_terminate = type == ZBI_TYPE_CMDLINE;
         compress = compress && TypeIsStorage(type);
 
+        const auto file = filenode->AsContents();
         size_t size = file->exact_size() + (null_terminate ? 1 : 0);
         if (size > UINT32_MAX) {
             fprintf(stderr, "input file too large\n");
@@ -1250,13 +1264,13 @@ Extracted items use the file names shown below:\n\
             if (null_terminate) {
                 item->payload_.emplace_front(Iovec("", 1));
             }
-            item->payload_.emplace_front(file->View(0, file->exact_size()));
+            item->payload_.emplace_front(file->View());
         }
 
         if (!compress) {
             // Compute the checksum now so the item is ready to write out.
             Checksummer crc;
-            crc.Write(file->View(0, file->exact_size()));
+            crc.Write(file->View());
             if (null_terminate) {
                 crc.Write(Iovec("", 1));
             }
@@ -1309,46 +1323,29 @@ Extracted items use the file names shown below:\n\
     }
 
     // Create a BOOTFS item.
-    template <typename Filter>
-    static ItemPtr CreateBootFS(FileOpener* opener,
-                                const InputFileGeneratorList& input,
-                                const Filter& include_file,
-                                const std::filesystem::path& prefix,
-                                bool compress) {
+    static ItemPtr CreateBootFS(Directory* root, bool compress) {
         auto item = MakeItem(NewHeader(ZBI_TYPE_STORAGE_BOOTFS, 0), compress);
 
         // Collect the names and contents pointers here.
         struct Entry {
             std::string name;
             const FileContents* contents;
-
-            bool operator<(const Entry& other) const {
-                return name < other.name;
-            }
         };
         std::deque<Entry> entries;
         size_t dirsize = 0, bodysize = 0;
-        for (const auto& generator : input) {
-            InputFileGenerator::value_type next;
-            while (generator->Next(opener, prefix, &next)) {
-                Entry entry{next.target.generic_string(), next.file};
-                if (!include_file(entry.name.c_str())) {
-                    continue;
-                }
-                // Accumulate the space needed for each zbi_bootfs_dirent_t.
-                dirsize += ZBI_BOOTFS_DIRENT_SIZE(entry.name.size() + 1);
-                if (next.file->exact_size() > std::numeric_limits<uint32_t>::max()) {
-                    fprintf(stderr,
-                            "input file size exceeds format maximum\n");
-                    exit(1);
-                }
-                uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(next.file->exact_size());
-                bodysize += size;
-                entries.push_back(std::move(entry));
-            }
-        }
 
-        std::sort(entries.begin(), entries.end());
+        for (const auto& [path, file] : DirectoryTree{root}) {
+            Entry entry{path.generic_string(), file->AsContents()};
+            // Accumulate the space needed for each zbi_bootfs_dirent_t.
+            dirsize += ZBI_BOOTFS_DIRENT_SIZE(entry.name.size() + 1);
+            if (entry.contents->exact_size() > std::numeric_limits<uint32_t>::max()) {
+                fprintf(stderr, "input file size exceeds format maximum\n");
+                exit(1);
+            }
+            uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(entry.contents->exact_size());
+            bodysize += size;
+            entries.push_back(std::move(entry));
+        }
 
         // Now we can calculate the final sizes.
         const zbi_bootfs_header_t header = {
@@ -1371,9 +1368,9 @@ Extracted items use the file names shown below:\n\
         uint32_t data_off = static_cast<uint32_t>(header_size);
         for (const auto& entry : entries) {
             const zbi_bootfs_dirent_t entry_hdr = {
-                static_cast<uint32_t>(entry.name.size() + 1), // name_len
+                static_cast<uint32_t>(entry.name.size() + 1),        // name_len
                 static_cast<uint32_t>(entry.contents->exact_size()), // data_len
-                data_off,                                     // data_off
+                data_off,                                            // data_off
             };
             uint32_t size = ZBI_BOOTFS_PAGE_ALIGN(entry.contents->exact_size());
             data_off += size;
@@ -1404,17 +1401,23 @@ Extracted items use the file names shown below:\n\
         return item;
     }
 
-    // The generator consumes the Item.  The FileContents it generates
-    // point into the Item's storage, so the generator must be kept
-    // alive as long as any of those FileContents is alive.
+    // Returns [iterator, owner] where `owner` must be kept alive as long as
+    // any of the FileContents generated by the iterator is alive.
     static auto ReadBootFS(ItemPtr item) {
-        return std::unique_ptr<InputFileGenerator>(
-            new BootFSInputFileGenerator(std::move(item)));
+        if (item->AlreadyCompressed()) {
+            item = CreateFromCompressed(std::move(item));
+        }
+        BootFSDirectoryIterator it;
+        int status = BootFSDirectoryIterator::Create(item.get(), &it);
+        if (status) {
+            exit(status);
+        }
+        return std::make_pair(std::move(it), std::move(item));
     }
 
     void ExtractItem(FileWriter* writer, NameMatcher* matcher) {
         auto path = ExtractedFileName(writer->NextFileNumber(),
-                                         type(), false);
+                                      type(), false);
         auto name = path.c_str();
         if (matcher->Matches(name, true)) {
             WriteZBI(writer, name, (Item* const[]){this});
@@ -1603,7 +1606,7 @@ private:
         return static_cast<const std::byte*>(payload_.front().iov_base);
     }
 
-    class BootFSDirectoryIterator {
+    class BootFSDirectoryIterator final {
     public:
         operator bool() const {
             return left_ > 0;
@@ -1617,6 +1620,13 @@ private:
 
         const zbi_bootfs_dirent_t* operator->() const {
             return &**this;
+        }
+
+        auto Open(FileOpener* opener, Item* fs) const {
+            if (!fs->CheckBootFSDirent(**this, false)) {
+                exit(1);
+            }
+            return opener->Emplace(**this, fs->payload_data());
         }
 
         BootFSDirectoryIterator& operator++() {
@@ -1707,76 +1717,11 @@ private:
         }
         return status;
     }
-
-    class BootFSInputFileGenerator : public InputFileGenerator {
-    public:
-        explicit BootFSInputFileGenerator(ItemPtr item)
-            : item_(std::move(item)) {
-            if (item_->AlreadyCompressed()) {
-                item_ = CreateFromCompressed(std::move(item_));
-            }
-            int status = BootFSDirectoryIterator::Create(item_.get(), &dir_);
-            if (status != 0) {
-                exit(status);
-            }
-        }
-
-        ~BootFSInputFileGenerator() override = default;
-
-        // Copying from an existing BOOTFS ignores the --prefix setting.
-        bool Next(FileOpener* opener, const std::filesystem::path&,
-                  value_type* value) override {
-            if (!dir_) {
-                return false;
-            }
-            if (!item_->CheckBootFSDirent(*dir_, false)) {
-                exit(1);
-            }
-            value->target = dir_->name;
-            value->file = opener->Emplace(*dir_, item_->payload_data());
-            ++dir_;
-            return true;
-        }
-
-    private:
-        ItemPtr item_;
-        BootFSDirectoryIterator dir_;
-    };
 };
 
 constexpr decltype(Item::kItemTypes_) Item::kItemTypes_;
 
 using ItemList = std::vector<ItemPtr>;
-
-bool ImportFile(const FileContents* file, const char* filename,
-                ItemList* items) {
-    if (file->exact_size() <= (sizeof(zbi_header_t) * 2)) {
-        return false;
-    }
-    const zbi_header_t* header = static_cast<const zbi_header_t*>(
-        file->View(0, sizeof(zbi_header_t)).iov_base);
-    if (!(header->type == ZBI_TYPE_CONTAINER &&
-          header->extra == ZBI_CONTAINER_MAGIC &&
-          header->magic == ZBI_ITEM_MAGIC)) {
-        return false;
-    }
-    size_t file_size = file->exact_size() - sizeof(zbi_header_t);
-    if (file_size != header->length) {
-        fprintf(stderr, "%s: header size doesn't match file size\n", filename);
-        exit(1);
-    }
-    if (!Aligned(header->length)) {
-        fprintf(stderr, "ZBI item misaligned\n");
-        exit(1);
-    }
-    uint32_t pos = sizeof(zbi_header_t);
-    do {
-        auto item = Item::CreateFromItem(file, pos);
-        pos += item->TotalSize();
-        items->push_back(std::move(item));
-    } while (pos < file->exact_size());
-    return true;
-}
 
 const uint32_t kImageArchUndefined = ZBI_TYPE_DISCARD;
 
@@ -1805,23 +1750,277 @@ const char* IncompleteImage(const ItemList& items, const uint32_t image_arch) {
     return nullptr;
 }
 
-constexpr const char kOptString[] = "-B:cd:e:FxXRhto:p:T:uv";
+class DirectoryTreeBuilder final {
+public:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(DirectoryTreeBuilder);
+    DirectoryTreeBuilder() = delete;
+
+    explicit DirectoryTreeBuilder(FileOpener* opener)
+        : opener_(opener) {}
+
+    Directory* tree() { return &tree_; }
+
+    void ReplaceFiles() { replace_ = true; }
+
+    const std::filesystem::path& SetPrefix(const std::filesystem::path& arg) {
+        if (arg.empty()) {
+            // Normalize to a nonempty prefix so /= works right.
+            // We'll normalize the concatenation before using it anyway.
+            prefix_ = ".";
+        } else {
+            prefix_ = arg.lexically_normal();
+        }
+        return prefix_;
+    }
+
+    // Note an input ZBI item in BOOTFS format.  The argument is a stable
+    // pointer to an element in the caller's ItemList.  We can freely null out
+    // the element now or on any later push_back or Insert call if we start
+    // building a directory tree.
+    void push_back(ItemPtr* item) {
+        const InputItem input{item, replace_};
+        if (tree_.empty()) {
+            // Just save the item for later.
+            items_.push_back(input);
+        } else {
+            // Already building a tree, so merge this right now.
+            Merge(input);
+        }
+    }
+
+    // Insert a file with complete target path, e.g. from a manifest entry.
+    void Insert(std::filesystem::path at, const File* file) {
+        Insert(std::move(at), file, replace_);
+    }
+
+    void ImportManifest(const FileContents& file, const char* manifest_name) {
+        auto root = std::make_unique<Directory>();
+
+        auto read_ptr = static_cast<const char*>(file.View().iov_base);
+        const auto eof = read_ptr + file.exact_size();
+        for (unsigned int ln = 1; read_ptr != eof; ++ln) {
+            auto eol = static_cast<const char*>(
+                memchr(read_ptr, '\n', eof - read_ptr));
+            auto line = read_ptr;
+            if (eol) {
+                read_ptr = eol + 1;
+            } else {
+                read_ptr = eol = eof;
+            }
+            auto eq = static_cast<const char*>(memchr(line, '=', eol - line));
+            if (!eq) {
+                fprintf(stderr,
+                        "%s:%u: manifest entry has no '=' separator: %.*s\n",
+                        manifest_name, ln, static_cast<int>(eol - line), line);
+                exit(1);
+            }
+            Insert({line, eq}, opener_->OpenFileOrDir({eq + 1, eol}),
+                   replace_);
+        }
+    }
+
+    void MergeRootDirectory(const Directory& dir) {
+        MergeDirectory(&tree_, ".", dir, replace_);
+    }
+
+private:
+    Directory tree_;
+    std::deque<File> built_dirs_;
+
+    struct InputItem {
+        // This points into the input items list and can be nulled out
+        // to elide the item when it gets merged into the tree.
+        ItemPtr* item;
+        // True if --replace preceded the item.
+        bool replace;
+    };
+    std::deque<InputItem> items_;
+
+    // This holds items that have been merged in.  They need to be kept
+    // alive here since the FileOpener now points into their contents.
+    std::forward_list<ItemPtr> merged_items_;
+
+    std::filesystem::path prefix_ = ".";
+    FileOpener* opener_;
+    bool replace_ = false;
+
+    static auto SubPath(const std::filesystem::path::const_iterator& first,
+                        const std::filesystem::path::const_iterator& last) {
+        return std::accumulate(first, last, std::filesystem::path(),
+                               std::divides<std::filesystem::path>());
+    }
+
+    // Insert a single node in a given directory.  Inserting a directory
+    // where one already exists recurses to merge the new directory into
+    // the existing one.  If file is nullptr then a new directory is
+    // created if needed.  Returns the file inserted (passed or new directory).
+    const File* Insert(Directory* dir, std::filesystem::path path,
+                       const std::string& name, const File* file,
+                       bool replace) {
+        if (name == "." || name == "..") {
+            fprintf(stderr, "%s: no . or .. allowed\n", (path / name).c_str());
+            exit(1);
+        }
+
+        if (!items_.empty()) {
+            // The new tree is being built, so old BOOTFS items must be merged.
+            Merge();
+        }
+
+        auto it = dir->try_emplace(name, file).first;
+        const auto old = it->second;
+        if (old != file) {
+            // There is already a different node at this name.
+            path /= name;
+            path = path.lexically_normal();
+            if (old->IsDir()) {
+                if (!file) {
+                    // Just creating an intermediate directory, so the
+                    // existing one is fine.
+                    return old;
+                } else if (file->IsDir()) {
+                    // Recurse on each entry in the incoming directory.
+                    MergeDirectory(old->AsDir(), path,
+                                   *file->AsDir(), replace);
+                    return old;
+                } else if (!replace) {
+                    fprintf(stderr, "\
+duplicate target path (directory vs file) without --replace: %s\n",
+                            path.c_str());
+                    exit(1);
+                }
+            } else if (!replace) {
+                fprintf(stderr,
+                        "duplicate target path without --replace: %s\n",
+                        path.c_str());
+                exit(1);
+            }
+        }
+
+        if (!file) {
+            // Make a new directory.
+            built_dirs_.emplace_back(std::make_unique<Directory>());
+            file = &built_dirs_.back();
+        }
+
+        // Replace the old file with the new one.
+        it->second = file;
+        return file;
+    }
+
+    void MergeDirectory(Directory* old, std::filesystem::path path,
+                        const Directory& dir, bool replace) {
+        for (const auto& [child, entry] : dir) {
+            Insert(old, path, child, entry, replace);
+        }
+    }
+
+    // Insert a file with complete target path, e.g. from a manifest entry.
+    void Insert(const std::filesystem::path& at, const File* file,
+                bool replace) {
+
+        Directory* dir = &tree_;
+        std::filesystem::path dirpath = ".";
+
+        const auto path = (prefix_ / at).lexically_normal();
+        auto it = path.begin();
+        while (true) {
+            const auto component = *it;
+            ++it;
+            if (it == path.end()) {
+                Insert(dir, dirpath, component, file, replace);
+                break;
+            }
+            dir = Insert(dir, dirpath, component, nullptr, replace)->AsDir();
+            dirpath /= component;
+        }
+    }
+
+    // Merge a single old BOOTFS item into the new directory tree.
+    void Merge(const InputItem& input) {
+        // Null out the list entry.
+        ItemPtr old;
+        input.item->swap(old);
+
+        // Iterate through individual files in the BOOTFS in whatever order.
+        auto [it, fs] = Item::ReadBootFS(std::move(old));
+        while (it) {
+            Insert(it->name, it.Open(opener_, fs.get()), input.replace);
+            ++it;
+        }
+
+        // Hold onto the item (original or decompressed version), since
+        // opener_->memory_cache_ now points into it.
+        merged_items_.push_front(std::move(fs));
+    }
+
+    // Merge all the old BOOTFS items into the new directory tree.
+    void Merge() {
+        // Clear the old list before any Insert calls reenter.
+        decltype(items_) items;
+        items_.swap(items);
+
+        // Merge each item;
+        while (!items.empty()) {
+            Merge(items.front());
+            items.pop_front();
+        }
+    }
+};
+
+bool ImportFile(const FileContents* file, const char* filename,
+                ItemList* items, DirectoryTreeBuilder* bootfs) {
+    if (file->exact_size() <= (sizeof(zbi_header_t) * 2)) {
+        return false;
+    }
+    const zbi_header_t* header = static_cast<const zbi_header_t*>(
+        file->View(0, sizeof(zbi_header_t)).iov_base);
+    if (!(header->type == ZBI_TYPE_CONTAINER &&
+          header->extra == ZBI_CONTAINER_MAGIC &&
+          header->magic == ZBI_ITEM_MAGIC)) {
+        return false;
+    }
+    size_t file_size = file->exact_size() - sizeof(zbi_header_t);
+    if (file_size != header->length) {
+        fprintf(stderr, "%s: header size doesn't match file size\n", filename);
+        exit(1);
+    }
+    if (!Aligned(header->length)) {
+        fprintf(stderr, "ZBI item misaligned\n");
+        exit(1);
+    }
+    uint32_t pos = sizeof(zbi_header_t);
+    do {
+        auto item = Item::CreateFromItem(file, pos);
+        pos += item->TotalSize();
+        items->push_back(std::move(item));
+        if (items->back()->type() == ZBI_TYPE_STORAGE_BOOTFS) {
+            bootfs->push_back(&items->back());
+        }
+    } while (pos < file->exact_size());
+    return true;
+}
+
+constexpr const char kOptString[] = "-B:cC:d:D:e:FxXRhto:p:T:uv";
 constexpr const option kLongOpts[] = {
     {"complete", required_argument, nullptr, 'B'},
     {"compressed", no_argument, nullptr, 'c'},
+    {"directory", required_argument, nullptr, 'C'},
     {"depfile", required_argument, nullptr, 'd'},
     {"entry", required_argument, nullptr, 'e'},
-    {"files", no_argument, nullptr, 'F'},
     {"extract", no_argument, nullptr, 'x'},
     {"extract-items", no_argument, nullptr, 'X'},
     {"extract-raw", no_argument, nullptr, 'R'},
+    {"files", no_argument, nullptr, 'F'},
     {"help", no_argument, nullptr, 'h'},
     {"list", no_argument, nullptr, 't'},
     {"output", required_argument, nullptr, 'o'},
+    {"output-dir", required_argument, nullptr, 'D'},
     {"prefix", required_argument, nullptr, 'p'},
     {"type", required_argument, nullptr, 'T'},
     {"uncompressed", no_argument, nullptr, 'u'},
     {"verbose", no_argument, nullptr, 'v'},
+    {"replace", no_argument, nullptr, 'r'},
     {nullptr, no_argument, nullptr, 0},
 };
 
@@ -1836,32 +2035,39 @@ Diagnostic switches:\n\
     --extract-items, -X            extract items as pseudo-files (see below)\n\
     --extract-raw, -R              extract original payloads, not ZBI format\n\
 \n\
-Output file switches must come before input arguments:\n\
+Output file switches:\n\
     --output=FILE, -o FILE         output file name\n\
     --depfile=FILE, -d FILE        makefile dependency output file name\n\
+    --output-dir=DIR, -D FILE      extracted files go under DIR (default: .)\n\
 \n\
 The `--output` FILE is always removed and created fresh after all input\n\
 files have been opened.  So it is safe to use the same file name as an input\n\
 file and the `--output` FILE, to append more items.\n\
 \n\
 Input control switches apply to subsequent input arguments:\n\
+    --directory=DIR, -C DIR        change directory to DIR\n\
     --files, -F                    read BOOTFS manifest files (default)\n\
     --prefix=PREFIX, -p PREFIX     prepend PREFIX/ to target file names\n\
+    --replace, -r                  duplicate target file name OK (see below)\n\
     --type=TYPE, -T TYPE           input files are TYPE items (see below)\n\
     --compressed, -c               compress RAMDISK images (default)\n\
     --uncompressed, -u             do not compress RAMDISK images\n\
 \n\
 Input arguments:\n\
-    --entry=TEXT, -e  TEXT         like an input file containing only TEXT\n\
+    --entry=TEXT, -e TEXT          like an input file containing only TEXT\n\
     FILE                           input or manifest file\n\
     DIRECTORY                      directory tree copied to BOOTFS PREFIX/\n\
+\n\
+The `--directory` or `-C` switch affects subsequent input arguments but\n\
+it never affects output arguments, which are always relative to the original\n\
+current working directory (`zbi` doesn't actually do `chdir()` at all).\n\
 \n\
 With `--files` or `-F` (the default state), files with ZBI_TYPE_CONTAINER\n\
 headers are incomplete boot files and other files are BOOTFS manifest files.\n\
 Each DIRECTORY is listed recursively and handled just like a manifest file\n\
 using the path relative to DIRECTORY as the target name (before any PREFIX).\n\
-Each `--prefix` or `-p` switch affects each file from a\n\
-manifest or directory in subsequent FILE or DIRECTORY arguments.\n\
+Each `--prefix` or `-p` switch affects each file from a manifest or\n\
+directory in subsequent FILE, DIRECTORY, or TEXT arguments.\n\
 \n\
 With `--type` or `-T`, input files are treated as TYPE instead of manifest\n\
 files, and directories are not permitted.  See below for the TYPE strings.\n\
@@ -1871,19 +2077,34 @@ Format control switches (last switch affects all output):\n\
     --compressed, -c               compress BOOTFS images (default)\n\
     --uncompressed, -u             do not compress BOOTFS images\n\
 \n\
-In all cases there is only a single BOOTFS item (if any) written out.\n\
+If there are no PATTERN arguments and no files named to add to the BOOTFS\n\
+(via manifest file entries, nonempty directories, or `--entry` switches)\n\
+then any ZBI input items of BOOTFS type are passed through as they are,\n\
+except for possibly compressing raw `--type=bootfs` input items.\n\
+In all other cases there is only a single BOOTFS item (if any) written out.\n\
+So `-- \\*` will force merging when no individual files are being added.\n\
+\n\
 The BOOTFS image contains all files from BOOTFS items in ZBI input files,\n\
 manifest files, directories, and `--entry` switches.  The BOOTFS directory\n\
-table is always sorted.\n\
+table is always sorted.  By default it's an error to have duplicate target\n\
+file names in the input (even with the same source).  `--replace` or `-r`\n\
+allows it: the last entry in input order wins.\n\
+**TODO(mcgrathr):** not quite true yet\n\
 \n\
-Each argument after -- is shell filename PATTERN (* matches even /)\n\
+Each argument after -- is a shell filename PATTERN (`*` matches even `/`)\n\
 to filter the files that will be packed into BOOTFS, extracted, or listed.\n\
-For a PATTERN that starts with ! or ^ matching names are excluded after\n\
-including matches for all positive PATTERN arguments.\n\
+For a PATTERN that starts with `!` or `^` matching names are excluded after\n\
+including matches for all positive PATTERN arguments.  Note that PATTERN\n\
+is compared to the final BOOTFS target file name with any PREFIX applied.\n\
 \n\
 When extracting a single file, `--output` or `-o` can be used.\n\
 Otherwise multiple files are created with their BOOTFS file names\n\
 relative to PREFIX (default empty, so in the current directory).\n\
+Note that the last PREFIX on the command line affects extraction,\n\
+though each PREFIX also (first) affects BOOTFS files added due to arguments\n\
+that follow it.  So if any PREFIX appears before such input arguments when\n\
+extracting, the extracted file names will have a doubled PREFIX unless a\n\
+`--prefix=.` or other PREFIX value follows the input arguments.\n\
 \n\
 With `--extract-items` or `-X`, instead of BOOTFS files the names are\n\
 synthesized as shown below, numbered in the order items appear in the input\n\
@@ -1891,7 +2112,6 @@ starting with 001.  Output files are ZBI files that can be input later.\n\
 \n\
 With `--extract-raw` or `-R`, each file is written with just the\n\
 uncompressed payload of the item and no ZBI headers.\n\
-\n\
 ";
 
 void usage(const char* progname) {
@@ -1915,8 +2135,8 @@ int main(int argc, char** argv) {
     bool list_contents = false;
     bool verbose = false;
     ItemList items;
-    InputFileGeneratorList bootfs_input;
-    std::filesystem::path prefix;
+    DirectoryTreeBuilder bootfs(&opener);
+    std::filesystem::path outdir;
     int opt;
     while ((opt = getopt_long(argc, argv,
                               kOptString, kLongOpts, nullptr)) != -1) {
@@ -1927,23 +2147,19 @@ int main(int argc, char** argv) {
             break;
 
         case 'o':
-            if (outfile) {
-                fprintf(stderr, "only one output file\n");
-                exit(1);
-            }
-            if (!items.empty()) {
-                fprintf(stderr, "--output or -o must precede inputs\n");
-                exit(1);
-            }
             outfile = optarg;
             continue;
 
         case 'd':
-            if (depfile) {
-                fprintf(stderr, "only one depfile\n");
-                exit(1);
-            }
             depfile = optarg;
+            continue;
+
+        case 'D':
+            outdir = optarg;
+            continue;
+
+        case 'C':
+            opener.ChangeDirectory(optarg);
             continue;
 
         case 'F':
@@ -1961,18 +2177,11 @@ int main(int argc, char** argv) {
 
         case 'p':
             // The directory prefix must be a relative path.
-            prefix = optarg;
-            if (prefix.is_absolute()) {
+            if (bootfs.SetPrefix(optarg).is_absolute()) {
                 fprintf(stderr,
-                        "--prefix should be relative (no leading slash)\n");
+                        "--prefix must be relative (no leading slash)\n");
                 exit(1);
             }
-            if (prefix.empty()) {
-                // Normalize to a nonempty prefix so /= works right.
-                // We'll normalize the concatenation before using it anyway.
-                prefix = ".";
-            }
-            prefix = prefix.lexically_normal();
             continue;
 
         case 't':
@@ -1994,6 +2203,7 @@ int main(int argc, char** argv) {
                 exit(1);
             }
             continue;
+
         case 'c':
             compressed = true;
             continue;
@@ -2011,6 +2221,10 @@ int main(int argc, char** argv) {
             extract_items = true;
             continue;
 
+        case 'r':
+            bootfs.ReplaceFiles();
+            continue;
+
         case 'R':
             extract = true;
             extract_items = true;
@@ -2019,10 +2233,7 @@ int main(int argc, char** argv) {
 
         case 'e':
             if (input_manifest) {
-                bootfs_input.emplace_back(
-                    new ManifestInputFileGenerator(
-                        opener.Emplace(optarg, false),
-                        prefix));
+                bootfs.ImportManifest({optarg, false}, "<command-line>");
             } else if (input_type == ZBI_TYPE_CONTAINER) {
                 fprintf(stderr,
                         "cannot use --entry (-e) with --target=CONTAINER\n");
@@ -2032,6 +2243,9 @@ int main(int argc, char** argv) {
                     Item::CreateFromFile(
                         opener.Emplace(optarg, input_type == ZBI_TYPE_CMDLINE),
                         input_type, compressed));
+                if (input_type == ZBI_TYPE_STORAGE_BOOTFS) {
+                    bootfs.push_back(&items.back());
+                }
             }
             continue;
 
@@ -2044,33 +2258,27 @@ int main(int argc, char** argv) {
 
         auto input = opener.OpenFileOrDir(optarg);
 
-        // A directory populates the BOOTFS.
         if (input->IsDir()) {
-            // Calculate the prefix for opening files within the directory.
-            // This won't be part of the BOOTFS file name.
-            std::filesystem::path dir_prefix(optarg);
-            bootfs_input.emplace_back(
-                new DirectoryInputFileGenerator(
-                    input->AsDir(), dir_prefix.lexically_normal()));
-            continue;
-        }
-
-        auto file = input->AsContents();
-
-        if (input_manifest || input_type == ZBI_TYPE_CONTAINER) {
-            if (ImportFile(file, optarg, &items)) {
+            // A directory populates the BOOTFS.
+            if (!input_manifest) {
+                fprintf(stderr, "%s: %s\n", optarg, strerror(EISDIR));
+                exit(1);
+            }
+            bootfs.MergeRootDirectory(*input->AsDir());
+        } else if (input_manifest || input_type == ZBI_TYPE_CONTAINER) {
+            if (ImportFile(input->AsContents(), optarg, &items, &bootfs)) {
                 // It's another file in ZBI format.
             } else if (input_manifest) {
                 // It must be a manifest file.
-                bootfs_input.emplace_back(
-                    new ManifestInputFileGenerator(file, prefix));
+                bootfs.ImportManifest(*input->AsContents(), optarg);
             } else {
-                fprintf(stderr, "%s: not a Zircon Boot container\n", optarg);
+                fprintf(stderr, "%s: not a Zircon Boot Image file\n", optarg);
                 exit(1);
             }
         } else {
-            items.push_back(Item::CreateFromFile(file,
-                                                 input_type, compressed));
+            // --type told us how to pack it.
+            items.push_back(
+                Item::CreateFromFile(input, input_type, compressed));
         }
     }
 
@@ -2096,26 +2304,6 @@ int main(int argc, char** argv) {
     auto is_bootfs = [](const ItemPtr& item) {
         return item->type() == ZBI_TYPE_STORAGE_BOOTFS;
     };
-
-    // If there are multiple BOOTFS input items, or any BOOTFS items when
-    // we're also creating a fresh BOOTFS, merge them all into the new one.
-    const bool merge_bootfs =
-        ((!extract_items && !name_matcher.MatchesAll()) ||
-         ((merge || !bootfs_input.empty()) &&
-          ((bootfs_input.empty() ? 0 : 1) +
-           std::count_if(items.begin(), items.end(), is_bootfs)) > 1));
-
-    if (merge_bootfs) {
-        for (auto& item : items) {
-            if (is_bootfs(item)) {
-                // Null out the list entry.
-                ItemPtr old;
-                item.swap(old);
-                // The generator consumes the old item.
-                bootfs_input.push_back(Item::ReadBootFS(std::move(old)));
-            }
-        }
-    }
 
     ItemPtr keepalive;
     if (merge) {
@@ -2158,13 +2346,22 @@ int main(int argc, char** argv) {
     // Compact out the null entries.
     items.erase(std::remove(items.begin(), items.end(), nullptr), items.end());
 
-    if (!bootfs_input.empty()) {
+    if (!extract && !extract_items && !name_matcher.MatchesAll()) {
+        // Apply the filter to the directory tree collected.
+        DirectoryTree tree{bootfs.tree()};
+        auto it = tree.begin();
+        while (it != tree.end()) {
+            if (name_matcher.Matches((*it).first.c_str())) {
+                ++it;
+            } else {
+                it.Remove();
+            }
+        }
+    }
+
+    if (!bootfs.tree()->empty()) {
         // Pack up the BOOTFS.
-        auto filter = [&](const char* name) {
-                          return extract_items || name_matcher.Matches(name);
-                      };
-        items.push_back(Item::CreateBootFS(&opener, bootfs_input,
-                                           filter, prefix, compressed));
+        items.push_back(Item::CreateBootFS(bootfs.tree(), compressed));
     }
 
     if (items.empty()) {
@@ -2198,7 +2395,7 @@ int main(int argc, char** argv) {
 
     // Now we're ready to start writing output!
     opener.WriteDepfile(outfile, depfile);
-    FileWriter writer(outfile, std::move(prefix));
+    FileWriter writer(outfile, std::move(outdir));
 
     if (list_contents || verbose || extract) {
         if (list_contents || verbose) {
@@ -2228,14 +2425,11 @@ int main(int argc, char** argv) {
                     item->ExtractItem(&writer, &name_matcher);
                 }
             } else if (extract && is_bootfs(item)) {
-                auto generator = Item::ReadBootFS(std::move(item));
-                InputFileGenerator::value_type next;
-                while (generator->Next(&opener, prefix, &next)) {
-                    if (name_matcher.Matches(
-                            next.target.generic_string().c_str())) {
-                        writer.RawFile(next.target.c_str())
-                            .Write(next.file->View(
-                                       0, next.file->exact_size()));
+                for (auto [it, fs] = Item::ReadBootFS(std::move(item));
+                     it; ++it) {
+                    if (name_matcher.Matches(it->name)) {
+                        writer.RawFile(it->name).Write(
+                            it.Open(&opener, fs.get())->AsContents()->View());
                     }
                 }
             }
