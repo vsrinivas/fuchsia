@@ -25,18 +25,23 @@ namespace fidl {
 // the second state, operations that return an std::string return the empty
 // std::string. The null and empty states can be distinguished using the
 // |is_null| and |operator bool| methods.
-class StringPtr {
+class StringPtr final {
  public:
-  StringPtr();
-  StringPtr(const StringPtr& other);
-  StringPtr(StringPtr&& other) noexcept;
-  StringPtr(std::string str);
-  StringPtr(const char* str);
-  StringPtr(const char* str, size_t length);
-  ~StringPtr();
+  StringPtr() = default;
+  StringPtr(const StringPtr& other) = default;
+  StringPtr(StringPtr&& other) noexcept = default;
+  ~StringPtr() = default;
 
-  StringPtr& operator=(const StringPtr&);
-  StringPtr& operator=(StringPtr&& other);
+  StringPtr& operator=(const StringPtr&) = default;
+  StringPtr& operator=(StringPtr&& other) = default;
+
+  StringPtr(std::string str) : str_(std::move(str)), is_null_if_empty_(false) {}
+  StringPtr(const char* str)
+      : str_(str ? std::string(str) : std::string()), is_null_if_empty_(!str) {}
+  StringPtr(const char* str, size_t length)
+      : str_(str ? std::string(str, length) : std::string()),
+        is_null_if_empty_(!str) {}
+
 
   // Accesses the underlying std::string object.
   const std::string& get() const { return str_; }
@@ -102,7 +107,7 @@ class StringPtr {
 
  private:
   std::string str_;
-  bool is_null_if_empty_;
+  bool is_null_if_empty_ = true;
 };
 
 template<>
