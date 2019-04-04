@@ -33,7 +33,7 @@ void DisplayRotater::SetDisplayRotation(Presentation* p,
     float animation_start_time;
 
     if (spring_.is_done()) {
-      animation_start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+      animation_start_time = zx_clock_get_monotonic();
     } else {
       animation_start_time = last_animation_update_time_;
     }

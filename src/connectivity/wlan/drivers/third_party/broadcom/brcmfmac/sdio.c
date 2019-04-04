@@ -757,10 +757,10 @@ static zx_status_t brcmf_sdio_htclk(struct brcmf_sdio* bus, bool on, bool pendok
         }
 
         /* Otherwise, wait here (polling) for HT Avail */
-        timeout = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_USEC(PMU_MAX_TRANSITION_DLY_USEC);
+        timeout = zx_clock_get_monotonic() + ZX_USEC(PMU_MAX_TRANSITION_DLY_USEC);
         while (!SBSDIO_CLKAV(clkctl, bus->alp_only)) {
             clkctl = brcmf_sdiod_func1_rb(bus->sdiodev, SBSDIO_FUNC1_CHIPCLKCSR, &err);
-            if (zx_clock_get(ZX_CLOCK_MONOTONIC) > timeout) {
+            if (zx_clock_get_monotonic() > timeout) {
                 break;
             } else {
                 usleep_range(5000, 10000);

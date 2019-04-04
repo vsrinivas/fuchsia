@@ -57,7 +57,7 @@ void View::OnPropertiesChanged(
   scenic::Rectangle background_shape(session(), width, height);
   background_node_.SetShape(background_shape);
   background_node_.SetTranslation(width * .5f, height * .5f, -.1f);
-  canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
+  canvas_.Present(zx_clock_get_monotonic(),
                   [](fuchsia::images::PresentationInfo info) {});
 }
 
@@ -74,7 +74,7 @@ void View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
         pointer_id_to_stroke_map_.insert({pointer.pointer_id, stroke});
         scratch_group_.AddStroke(*stroke);
         stroke->Begin({pointer.x, pointer.y});
-        canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
+        canvas_.Present(zx_clock_get_monotonic(),
                         [](fuchsia::images::PresentationInfo info) {});
         return;
       }
@@ -85,7 +85,7 @@ void View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
           return;
         }
         stroke->Extend({{pointer.x, pointer.y}});
-        canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
+        canvas_.Present(zx_clock_get_monotonic(),
                         [](fuchsia::images::PresentationInfo info) {});
         return;
       }
@@ -99,7 +99,7 @@ void View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
         scratch_group_.RemoveStroke(*stroke);
         stable_group_.AddStroke(*stroke);
         pointer_id_to_stroke_map_.erase(it);
-        canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
+        canvas_.Present(zx_clock_get_monotonic(),
                         [](fuchsia::images::PresentationInfo info) {});
         return;
       }
@@ -113,7 +113,7 @@ void View::OnInputEvent(fuchsia::ui::input::InputEvent event) {
     if (keyboard.phase == fuchsia::ui::input::KeyboardEventPhase::PRESSED &&
         keyboard.hid_usage == 6 /* c */) {
       stable_group_.Clear();
-      canvas_.Present(zx_clock_get(ZX_CLOCK_MONOTONIC),
+      canvas_.Present(zx_clock_get_monotonic(),
                       [](fuchsia::images::PresentationInfo info) {});
       return;
     }

@@ -1965,7 +1965,7 @@ static void brcmf_fws_rollback_toq(struct brcmf_fws_info* fws, struct brcmf_netb
 static zx_status_t brcmf_fws_borrow_credit(struct brcmf_fws_info* fws) {
     int lender_ac;
 
-    if (fws->borrow_defer_timestamp > zx_clock_get(ZX_CLOCK_MONOTONIC)) {
+    if (fws->borrow_defer_timestamp > zx_clock_get_monotonic()) {
         fws->fifo_credit_map &= ~(1 << BRCMF_FWS_FIFO_AC_BE);
         return ZX_ERR_UNAVAILABLE;
     }
@@ -2073,7 +2073,7 @@ zx_status_t brcmf_fws_process_netbuf(struct brcmf_if* ifp, struct brcmf_netbuf* 
 
     brcmf_fws_lock(fws);
     if (fifo != BRCMF_FWS_FIFO_AC_BE && fifo < BRCMF_FWS_FIFO_BCMC) {
-        fws->borrow_defer_timestamp = zx_clock_get(ZX_CLOCK_MONOTONIC) +
+        fws->borrow_defer_timestamp = zx_clock_get_monotonic() +
                                       ZX_MSEC(BRCMF_FWS_BORROW_DEFER_PERIOD_MSEC);
     }
 

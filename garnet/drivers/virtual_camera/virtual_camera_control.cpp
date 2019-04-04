@@ -71,7 +71,7 @@ void VirtualCameraControlImpl::PostNextCaptureTask() {
   task_.PostForTime(async_get_default_dispatcher(), zx::time(next_frame_time));
   FXL_VLOG(4) << "VirtualCameraSource: setting next frame to: "
               << next_frame_time << "   "
-              << next_frame_time - (int64_t)zx_clock_get(ZX_CLOCK_MONOTONIC)
+              << next_frame_time - (int64_t)zx_clock_get_monotonic()
               << " nsec from now";
 }
 
@@ -186,7 +186,7 @@ void VirtualCameraControlImpl::VirtualCameraStreamImpl::Start() {
   // conversion function from frame to time is:
   // frames_per_sec_denominator * 1e9 * num_frames) / frames_per_sec_numerator
   owner_.frame_to_timestamp_ =
-      media::TimelineFunction(zx_clock_get(ZX_CLOCK_MONOTONIC), 0,
+      media::TimelineFunction(zx_clock_get_monotonic(), 0,
                               owner_.rate_.frames_per_sec_denominator * 1e9,
                               owner_.rate_.frames_per_sec_numerator);
 

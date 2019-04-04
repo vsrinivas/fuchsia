@@ -10,7 +10,7 @@ namespace simple_camera {
 
 uint64_t SimpleFrameScheduler::GetPresentationTimeNs(uint64_t capture_time_ns) {
   std::lock_guard<std::mutex> lck(times_lock_);
-  uint64_t now_ns = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  uint64_t now_ns = zx_clock_get_monotonic();
 
   if (now_ns < capture_time_ns) {
       FXL_LOG(WARNING) << "Capture time is in the future!"

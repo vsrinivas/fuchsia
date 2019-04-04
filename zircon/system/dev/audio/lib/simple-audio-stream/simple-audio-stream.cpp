@@ -51,7 +51,7 @@ zx_status_t SimpleAudioStream::CreateInternal() {
             return res;
         }
         // If no subclass has set this, we need to do so here.
-        if (plug_time_ == 0) { plug_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC); }
+        if (plug_time_ == 0) { plug_time_ = zx_clock_get_monotonic(); }
     }
 
     domain_ = dispatcher::ExecutionDomain::Create();
@@ -101,7 +101,7 @@ void SimpleAudioStream::SetInitialPlugState(audio_pd_notify_flags_t initial_stat
     ZX_DEBUG_ASSERT((initial_state & known_flags) == initial_state);
 
     pd_flags_ = initial_state;
-    plug_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    plug_time_ = zx_clock_get_monotonic();
 }
 
 // Called by a child subclass when a dynamic plug state change occurs.
@@ -113,7 +113,7 @@ zx_status_t SimpleAudioStream::SetPlugState(bool plugged) {
 
     if (plugged) { pd_flags_ |=  AUDIO_PDNF_PLUGGED; }
     else         { pd_flags_ &= ~AUDIO_PDNF_PLUGGED; }
-    plug_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    plug_time_ = zx_clock_get_monotonic();
 
     if (pd_flags_ & AUDIO_PDNF_CAN_NOTIFY) { return NotifyPlugDetect(); }
 

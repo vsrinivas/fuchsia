@@ -283,12 +283,12 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
   CreateExampleScene(display_width, display_height);
   ConfigurePoseBuffer();
 
-  start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  start_time_ = zx_clock_get_monotonic();
   Update(start_time_);
 }
 
 void App::Update(uint64_t next_presentation_time) {
-  float secs = zx_clock_get(ZX_CLOCK_MONOTONIC) * kSecondsPerNanosecond;
+  float secs = zx_clock_get_monotonic() * kSecondsPerNanosecond;
 
   glm::quat quaternion =
       glm::angleAxis(secs / 2.0f, glm::normalize(glm::vec3(0, 1, 0)));

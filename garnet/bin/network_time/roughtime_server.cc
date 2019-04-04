@@ -101,7 +101,7 @@ RoughTimeServer::GetTimeFromServer() const {
 
   // clock_get returns ns since start of clock. See
   // zircon/docs/syscalls/clock_get.md.
-  const zx::time start{zx_clock_get(ZX_CLOCK_MONOTONIC)};
+  const zx::time start{zx_clock_get_monotonic()};
 
   if (r < 0 || static_cast<size_t>(r) != request.size()) {
     FX_LOGS(ERROR) << "send on UDP socket" << strerror(errno);
@@ -130,7 +130,7 @@ RoughTimeServer::GetTimeFromServer() const {
   }
   buf_len = recv(sock_fd, recv_buf, sizeof(recv_buf), 0 /* flags */);
 
-  const zx::time end{zx_clock_get(ZX_CLOCK_MONOTONIC)};
+  const zx::time end{zx_clock_get_monotonic()};
   const zx::duration drift = (end - start) / 2;
 
   if (buf_len == -1) {

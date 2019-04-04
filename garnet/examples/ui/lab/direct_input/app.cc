@@ -52,7 +52,7 @@ App::App(async::Loop* loop)
 
   scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
     CreateScene(display_info.width_in_px, display_info.height_in_px);
-    UpdateScene(zx_clock_get(ZX_CLOCK_MONOTONIC));
+    UpdateScene(zx_clock_get_monotonic());
   });
 
   {

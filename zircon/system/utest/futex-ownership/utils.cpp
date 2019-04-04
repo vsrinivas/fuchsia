@@ -21,7 +21,7 @@ bool WaitFor(zx_duration_t timeout, WaitFn wait_fn) {
     zx_time_t deadline = zx_deadline_after(timeout);
 
     while (!wait_fn()) {
-        if (zx_clock_get(ZX_CLOCK_MONOTONIC) > deadline) {
+        if (zx_clock_get_monotonic() > deadline) {
             return false;
         }
         zx_nanosleep(WAIT_POLL_INTERVAL);
@@ -127,7 +127,7 @@ zx_status_t Thread::Stop() {
 
     zx_time_t deadline = zx_deadline_after(THREAD_TIMEOUT);
     while (state() != State::STOPPED) {
-        if (zx_clock_get(ZX_CLOCK_MONOTONIC) > deadline) {
+        if (zx_clock_get_monotonic() > deadline) {
             return ZX_ERR_TIMED_OUT;
         }
         zx_nanosleep(THREAD_POLL_INTERVAL);

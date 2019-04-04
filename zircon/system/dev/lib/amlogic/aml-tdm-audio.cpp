@@ -265,9 +265,9 @@ uint64_t AmlTdmDevice::Start() {
 
     Sync();
     FRDDREnable();
-    a = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    a = zx_clock_get_monotonic();
     TdmOutEnable();
-    b = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    b = zx_clock_get_monotonic();
     return ((b - a) >> 1) + a;
 }
 

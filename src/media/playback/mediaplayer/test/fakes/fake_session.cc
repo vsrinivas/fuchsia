@@ -296,7 +296,7 @@ void FakeSession::HandleSetTexture(uint32_t material_id, uint32_t texture_id) {
 }
 
 void FakeSession::PresentScene() {
-  auto now = zx::time(zx_clock_get(ZX_CLOCK_MONOTONIC));
+  auto now = zx::time(zx_clock_get_monotonic());
 
   next_presentation_time_ = now + kPresentationInterval;
 

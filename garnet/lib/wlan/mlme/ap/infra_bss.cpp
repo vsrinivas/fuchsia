@@ -81,7 +81,7 @@ void InfraBss::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
     req.body()->Clone(&start_req_);
 
     // Start sending Beacon frames.
-    started_at_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    started_at_ = zx_clock_get_monotonic();
     bcn_sender_->Start(this, ps_cfg_, req);
 
     device_->SetStatus(ETHMAC_STATUS_ONLINE);
@@ -477,7 +477,7 @@ const common::MacAddr& InfraBss::bssid() const {
 }
 
 uint64_t InfraBss::timestamp() {
-    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t now = zx_clock_get_monotonic();
     zx_duration_t uptime_ns = now - started_at_;
     return uptime_ns / 1000;  // as microseconds
 }

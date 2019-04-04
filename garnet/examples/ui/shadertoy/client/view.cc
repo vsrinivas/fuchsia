@@ -28,7 +28,7 @@ ViewImpl::ViewImpl(component::StartupContext* startup_context,
       // achieve this?
       shadertoy_factory_(startup_context_->ConnectToEnvironmentService<
                          fuchsia::examples::shadertoy::ShadertoyFactory>()),
-      start_time_(zx_clock_get(ZX_CLOCK_MONOTONIC)) {
+      start_time_(zx_clock_get_monotonic()) {
   shadertoy_factory_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to ShadertoyFactory.";
     QuitLoop();
@@ -141,11 +141,11 @@ bool ViewImpl::PointerDown() {
   switch (animation_state_) {
     case kFourCorners:
       animation_state_ = kChangingToSwirling;
-      transition_start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+      transition_start_time_ = zx_clock_get_monotonic();
       break;
     case kSwirling:
       animation_state_ = kChangingToFourCorners;
-      transition_start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+      transition_start_time_ = zx_clock_get_monotonic();
       break;
     default:
       // This will never happen, because we checked above that we're not

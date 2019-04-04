@@ -167,7 +167,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterAdd(bool is_input) {
 // received_old_token_ contains the second-newest device.
 void VirtualAudioDeviceTest::AddTwoDevices(bool is_input, bool is_plugged) {
   fidl::Array<uint8_t, 16> unique_id;
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now = zx_clock_get_monotonic();
   uint64_t old_token, new_token;
 
   PopulateUniqueIdArr(is_input, unique_id.data());
@@ -318,7 +318,7 @@ void VirtualAudioDeviceTest::TestGetDevicesAfterUnplug(bool is_input,
       (most_recent ? received_old_token_ : received_default_token_);
 
   SetOnDefaultDeviceChangedEvent();
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now = zx_clock_get_monotonic();
   if (most_recent) {
     if (is_input) {
       input_2_->ChangePlugState(now, false);
@@ -445,7 +445,7 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnpluggedAdd(
   fidl::Array<uint8_t, 16> unique_id;
   PopulateUniqueIdArr(is_input, unique_id.data());
 
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now = zx_clock_get_monotonic();
   if (is_input) {
     input_->SetUniqueId(unique_id);
     input_->SetPlugProperties(now, false, false, true);
@@ -510,7 +510,7 @@ void VirtualAudioDeviceTest::TestGetDefaultDeviceAfterUnplug(bool is_input,
   uint64_t expect_default_token =
       (most_recent ? received_old_token_ : received_default_token_);
 
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now = zx_clock_get_monotonic();
   SetOnDefaultDeviceChangedEvent();
   if (most_recent) {
     if (is_input) {
@@ -805,7 +805,7 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input,
     input_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
                               cur_gain_db, can_mute, cur_mute, can_agc,
                               cur_agc);
-    input_->SetPlugProperties(zx_clock_get(ZX_CLOCK_MONOTONIC), is_plugged,
+    input_->SetPlugProperties(zx_clock_get_monotonic(), is_plugged,
                               false, true);
 
     input_->Add();
@@ -817,7 +817,7 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterAdd(bool is_input,
     output_->SetGainProperties(min_gain_db, max_gain_db, gain_step_db,
                                cur_gain_db, can_mute, cur_mute, can_agc,
                                cur_agc);
-    output_->SetPlugProperties(zx_clock_get(ZX_CLOCK_MONOTONIC), is_plugged,
+    output_->SetPlugProperties(zx_clock_get_monotonic(), is_plugged,
                                false, true);
 
     output_->Add();
@@ -846,7 +846,7 @@ void VirtualAudioDeviceTest::TestOnDeviceAddedAfterPlug(bool is_input) {
   fidl::Array<uint8_t, 16> unique_id;
   PopulateUniqueIdArr(is_input, unique_id.data());
 
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now = zx_clock_get_monotonic();
   if (is_input) {
     input_->SetUniqueId(unique_id);
     input_->SetPlugProperties(now - 1, false, false, true);
@@ -879,7 +879,7 @@ void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterRemove(bool is_input,
   if (is_input) {
     input_->SetUniqueId(unique_id);
     if (!is_plugged) {
-      input_->SetPlugProperties(zx_clock_get(ZX_CLOCK_MONOTONIC), false, false,
+      input_->SetPlugProperties(zx_clock_get_monotonic(), false, false,
                                 true);
     }
 
@@ -887,7 +887,7 @@ void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterRemove(bool is_input,
   } else {
     output_->SetUniqueId(unique_id);
     if (!is_plugged) {
-      output_->SetPlugProperties(zx_clock_get(ZX_CLOCK_MONOTONIC), false, false,
+      output_->SetPlugProperties(zx_clock_get_monotonic(), false, false,
                                  true);
     }
 
@@ -918,13 +918,13 @@ void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterUnplug(bool is_input) {
 
   if (is_input) {
     input_->SetUniqueId(unique_id);
-    input_->SetPlugProperties(zx_clock_get(ZX_CLOCK_MONOTONIC), true, false,
+    input_->SetPlugProperties(zx_clock_get_monotonic(), true, false,
                               true);
 
     input_->Add();
   } else {
     output_->SetUniqueId(unique_id);
-    output_->SetPlugProperties(zx_clock_get(ZX_CLOCK_MONOTONIC), true, false,
+    output_->SetPlugProperties(zx_clock_get_monotonic(), true, false,
                                true);
 
     output_->Add();
@@ -935,7 +935,7 @@ void VirtualAudioDeviceTest::TestOnDeviceRemovedAfterUnplug(bool is_input) {
 
   SetOnDeviceRemovedEvent();
 
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now = zx_clock_get_monotonic();
   if (is_input) {
     input_->ChangePlugState(now, false);
   } else {
@@ -1015,7 +1015,7 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterPlug(
   RetrieveTokenUsingGetDefault(is_input);
   uint64_t default_token = received_default_token_;
 
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now = zx_clock_get_monotonic();
   SetOnDefaultDeviceChangedEvent();
 
   // We'll say that this first device was plugged just 1 ns ago...
@@ -1084,7 +1084,7 @@ void VirtualAudioDeviceTest::TestOnDefaultDeviceChangedAfterUnplug(
   uint64_t expect_default_token =
       (most_recent ? received_old_token_ : received_default_token_);
 
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now = zx_clock_get_monotonic();
   SetOnDefaultDeviceChangedEvent();
   if (most_recent) {
     if (is_input) {

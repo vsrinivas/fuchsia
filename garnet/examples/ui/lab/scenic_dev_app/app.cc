@@ -255,7 +255,7 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
   const float display_height = static_cast<float>(display_info.height_in_px);
   CreateExampleScene(display_width, display_height);
 
-  start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  start_time_ = zx_clock_get_monotonic();
   camera_anim_start_time_ = start_time_;
   Update(start_time_);
 }

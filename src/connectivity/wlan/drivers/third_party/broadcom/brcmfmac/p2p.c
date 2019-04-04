@@ -957,7 +957,7 @@ static zx_status_t brcmf_p2p_tx_action_frame(struct brcmf_p2p_info* p2p,
     }
 
     p2p->af_sent_channel = af_params->channel;
-    p2p->af_tx_sent_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    p2p->af_tx_sent_time = zx_clock_get_monotonic();
 
     sync_completion_wait(&p2p->send_af_done, ZX_MSEC(P2P_AF_MAX_WAIT_TIME_MSEC));
 
@@ -1219,7 +1219,7 @@ exit:
     if (ack && config_af_params.extra_listen && !p2p->block_gon_req_tx &&
             brcmf_test_bit_in_array(BRCMF_P2P_STATUS_WAITING_NEXT_ACT_FRAME, &p2p->status) &&
             p2p->af_sent_channel == afx_hdl->my_listen_chan) {
-        delta_ms = (zx_clock_get(ZX_CLOCK_MONOTONIC) - p2p->af_tx_sent_time) / 1000000;
+        delta_ms = (zx_clock_get_monotonic() - p2p->af_tx_sent_time) / 1000000;
         if (af_params->dwell_time > delta_ms) {
             extra_listen_time = af_params->dwell_time - delta_ms;
         } else {

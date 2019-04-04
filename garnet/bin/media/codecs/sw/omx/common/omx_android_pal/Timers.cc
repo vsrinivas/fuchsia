@@ -13,5 +13,5 @@ nsecs_t systemTime(int clock) {
     assert(clock == SYSTEM_TIME_MONOTONIC);
     return 0;
   }
-  return zx_clock_get(ZX_CLOCK_MONOTONIC);
+  return zx_clock_get_monotonic();
 }

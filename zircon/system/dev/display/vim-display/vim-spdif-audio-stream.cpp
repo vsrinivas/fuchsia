@@ -176,9 +176,9 @@ zx_status_t Vim2SpdifAudioStream::Start(uint64_t* out_start_time) {
     uint64_t a, b;
 
     Mute(cur_gain_state_.cur_mute);
-    a = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    a = zx_clock_get_monotonic();
     Enable();
-    b = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    b = zx_clock_get_monotonic();
     *out_start_time = ((b - a) >> 1) + a;
 
     return ZX_OK;

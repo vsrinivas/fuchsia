@@ -28,7 +28,7 @@ void LogImporter::Start() {
     return;
   }
 
-  start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  start_time_ = zx_clock_get_monotonic();
   time_scale_ = zx_ticks_per_second() / 1'000'000'000.0;
 
   wait_.set_object(log_.get());

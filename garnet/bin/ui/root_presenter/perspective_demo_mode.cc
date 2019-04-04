@@ -89,15 +89,15 @@ void PerspectiveDemoMode::HandleAltBackspace(Presentation* presenter) {
       target_camera_pan_ = 0.0f;
       target_camera_zoom_ = 0.0f;
       animation_state_ = kAnimateToThreeQuarters;
-      animation_start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+      animation_start_time_ = zx_clock_get_monotonic();
       break;
     case kThreeQuarters:
       animation_state_ = kAnimateToPerspective;
-      animation_start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+      animation_start_time_ = zx_clock_get_monotonic();
       break;
     case kPerspective:
       animation_state_ = kAnimateToOrthographic;
-      animation_start_time_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
+      animation_start_time_ = zx_clock_get_monotonic();
     default:
       return;
   }

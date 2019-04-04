@@ -1696,7 +1696,7 @@ static void ath10k_pci_bmi_recv_data(struct ath10k_ce_pipe* ce_state) {
 
 static zx_status_t ath10k_pci_bmi_wait(struct ath10k* ar, struct ath10k_ce_pipe* tx_pipe,
                                        struct ath10k_ce_pipe* rx_pipe, struct bmi_xfer* xfer) {
-    zx_time_t started = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t started = zx_clock_get_monotonic();
     zx_time_t timeout = started + BMI_COMMUNICATION_TIMEOUT;
     zx_time_t now, dur;
     zx_status_t ret;
@@ -1712,7 +1712,7 @@ static zx_status_t ath10k_pci_bmi_wait(struct ath10k* ar, struct ath10k_ce_pipe*
 
         thrd_yield();
 
-        now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        now = zx_clock_get_monotonic();
     } while (now < timeout);
 
     ret = ZX_ERR_TIMED_OUT;
@@ -2588,7 +2588,7 @@ zx_status_t ath10k_pci_wait_for_target_init(struct ath10k* ar) {
 
     ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot waiting target to initialise\n");
 
-    timeout = zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(ATH10K_PCI_TARGET_WAIT);
+    timeout = zx_clock_get_monotonic() + ZX_MSEC(ATH10K_PCI_TARGET_WAIT);
 
     do {
         val = ath10k_pci_read32(ar, FW_INDICATOR_ADDRESS);
@@ -2609,7 +2609,7 @@ zx_status_t ath10k_pci_wait_for_target_init(struct ath10k* ar) {
         }
 
         zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-    } while (zx_clock_get(ZX_CLOCK_MONOTONIC) < timeout);
+    } while (zx_clock_get_monotonic() < timeout);
 
     ath10k_pci_disable_and_clear_legacy_irq(ar);
     ath10k_pci_irq_msi_fw_mask(ar);

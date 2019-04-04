@@ -672,7 +672,7 @@ zx_status_t AudioCapturerImpl::Process() {
     // TODO(johngro) : If we have only one capture source, and our frame rate
     // matches their frame rate, align our start time exactly with one of their
     // sample boundaries.
-    int64_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    int64_t now = zx_clock_get_monotonic();
     if (!frames_to_clock_mono_.invertible()) {
       // TODO(johngro) : It would be nice if we could alter the offsets in a
       // timeline function without needing to change the scale factor. This
@@ -889,7 +889,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     // (split across the ring boundary). Figure out the starting PTSs of these
     // regions (expressed in fractional start frames) in the process.
     const auto& rb = rb_snap.ring_buffer;
-    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t now = zx_clock_get_monotonic();
 
     int64_t end_fence_frames =
         (info->clock_mono_to_frac_source_frames.Apply(now)) >>

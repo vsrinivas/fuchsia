@@ -222,7 +222,7 @@ bool apply_config() {
 
 zx_status_t wait_for_vsync(const fbl::Vector<fbl::unique_ptr<VirtualLayer>>& layers) {
     zx_time_t deadline = has_ownership
-            ? zx_clock_get(ZX_CLOCK_MONOTONIC) + ZX_MSEC(100) : ZX_TIME_INFINITE;
+            ? zx_clock_get_monotonic() + ZX_MSEC(100) : ZX_TIME_INFINITE;
     if (!wait_for_driver_event(deadline)) {
         return ZX_ERR_STOP;
     }

@@ -976,7 +976,7 @@ zx_status_t AudioDriver::ProcessStopResponse(
 zx_status_t AudioDriver::ProcessPositionNotify(
     const audio_rb_position_notify_t& notify) {
   FXL_DLOG(INFO) << "Unsolicited ring buffer position notification!  Time:"
-                 << zx_clock_get(ZX_CLOCK_MONOTONIC)
+                 << zx_clock_get_monotonic()
                  << " Pos:" << notify.ring_buffer_pos;
 
   // Although this notification was unsolicited and unexpected, we only complain

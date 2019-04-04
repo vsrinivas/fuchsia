@@ -119,7 +119,7 @@ TimestampProfiler::ProcessTraceEvents(
 
   static const double kTicksPerNanosecond =
       zx_ticks_per_second() / 1000000000.0;
-  const zx_time_t now_nanos = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t now_nanos = zx_clock_get_monotonic();
   const uint64_t now_ticks = zx_ticks_get();
 
   // start_ticks is the starting tick value for our current event.

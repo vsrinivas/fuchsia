@@ -45,7 +45,7 @@ TimePoint TimePoint::Now() {
 
 // static
 TimePoint TimePoint::Now() {
-  return TimePoint(zx_clock_get(ZX_CLOCK_MONOTONIC));
+  return TimePoint(zx_clock_get_monotonic());
 }
 
 #else

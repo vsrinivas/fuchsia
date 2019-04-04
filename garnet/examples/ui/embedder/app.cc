@@ -128,7 +128,7 @@ App::App(async::Loop* loop, AppType type)
     const float display_height = static_cast<float>(display_info.height_in_px);
     CreateScene(display_width, display_height);
 
-    Update(zx_clock_get(ZX_CLOCK_MONOTONIC));
+    Update(zx_clock_get_monotonic());
   });
 }
 

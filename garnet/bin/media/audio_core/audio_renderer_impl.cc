@@ -530,7 +530,7 @@ void AudioRendererImpl::Play(int64_t reference_time, int64_t media_time,
     // usually be pretty small since internal requirements for lead times tend
     // to be small, (while external requirements can be huge).
     constexpr int64_t lead_time_padding = ZX_MSEC(20);
-    reference_time = zx_clock_get(ZX_CLOCK_MONOTONIC) + lead_time_padding +
+    reference_time = zx_clock_get_monotonic() + lead_time_padding +
                      min_clock_lead_nsec_;
   }
 
@@ -610,7 +610,7 @@ void AudioRendererImpl::Pause(PauseCallback callback) {
 
     // TODO(johngro): query the actual reference clock, do not assume that
     // CLOCK_MONO is the reference clock.
-    ref_clock_now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    ref_clock_now = zx_clock_get_monotonic();
     pause_time_frac_frames_ = ref_clock_to_frac_frames_.Apply(ref_clock_now);
     pause_time_frac_frames_valid_ = true;
 

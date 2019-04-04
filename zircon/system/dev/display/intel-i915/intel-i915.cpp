@@ -1610,7 +1610,7 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
     }
 
     if (dc_intf_.is_valid()) {
-        zx_time_t now = fake_vsync_count ? zx_clock_get(ZX_CLOCK_MONOTONIC) : 0;
+        zx_time_t now = fake_vsync_count ? zx_clock_get_monotonic() : 0;
         for (unsigned i = 0; i < fake_vsync_count; i++) {
             dc_intf_.OnDisplayVsync(fake_vsyncs[i], now, nullptr, 0);
         }

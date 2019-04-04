@@ -238,7 +238,7 @@ TEST_F(AudioLoopbackTest, SingleStream) {
   // Start playing right now, so that after we've delayed at least 1 leadtime,
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
-  audio_renderer_[0]->Play(zx_clock_get(ZX_CLOCK_MONOTONIC), 0,
+  audio_renderer_[0]->Play(zx_clock_get_monotonic(), 0,
                            [this, &ref_time_received, &media_time_received](
                                int64_t ref_time, int64_t media_time) {
                              ref_time_received = ref_time;
@@ -258,7 +258,7 @@ TEST_F(AudioLoopbackTest, SingleStream) {
   EXPECT_GE(ref_time_received, 0);
 
   // Give the playback some time to get mixed.
-  zx_nanosleep(zx_clock_get(ZX_CLOCK_MONOTONIC) + sleep_duration);
+  zx_nanosleep(zx_clock_get_monotonic() + sleep_duration);
 
   // Capture 10 samples of audio.
   audio_capturer_[0]->StartAsyncCapture(10);
@@ -340,7 +340,7 @@ TEST_F(AudioLoopbackTest, DualStream) {
   // Start playing right now, so that after we've delayed at least 1 leadtime,
   // we should have mixed audio available for capture.  Our playback is sized
   // to be much much larger than our capture to prevent test flakes.
-  auto playat = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  auto playat = zx_clock_get_monotonic();
   audio_renderer_[0]->PlayNoReply(playat, 0);
   // Only get the callback for the second renderer.
   audio_renderer_[1]->Play(playat, 0,

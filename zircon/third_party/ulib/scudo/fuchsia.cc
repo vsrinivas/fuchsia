@@ -188,7 +188,7 @@ void BlockingMutex::wake() {
   CHECK_EQ(Status, ZX_OK);
 }
 
-u64 getMonotonicTime() { return _zx_clock_get(ZX_CLOCK_MONOTONIC); }
+u64 getMonotonicTime() { return _zx_clock_get_monotonic(); }
 
 u32 getNumberOfCPUs() { return _zx_system_get_num_cpus(); }
 

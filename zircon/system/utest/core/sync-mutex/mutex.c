@@ -18,7 +18,7 @@
 static sync_mutex_t g_mutex = SYNC_MUTEX_INIT;
 
 static void xlog(const char* str) {
-    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t now = zx_clock_get_monotonic();
     unittest_printf("[%08" PRIu64 ".%08" PRIu64 "]: %s",
                     now / 1000000000, now % 1000000000, str);
 }
@@ -186,10 +186,10 @@ static bool test_timeout_elapsed(void) {
               ZX_OK, "failed to wait");
 
     for (int i = 0; i < 5; ++i) {
-        zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+        zx_time_t now = zx_clock_get_monotonic();
         zx_status_t status = sync_mutex_timedlock(&args.mutex, now + kRelativeDeadline);
         ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "wait should time out");
-        zx_duration_t elapsed = zx_time_sub_time(zx_clock_get(ZX_CLOCK_MONOTONIC), now);
+        zx_duration_t elapsed = zx_time_sub_time(zx_clock_get_monotonic(), now);
         EXPECT_GE(elapsed, kRelativeDeadline, "wait returned early");
     }
 

@@ -115,7 +115,7 @@ void YuvView::StartYuv() {
 
   ::std::vector<::zx::event> acquire_fences;
   ::std::vector<::zx::event> release_fences;
-  uint64_t now_ns = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  uint64_t now_ns = zx_clock_get_monotonic();
   image_pipe_->PresentImage(
       kImageId, now_ns, std::move(acquire_fences), std::move(release_fences),
       [this](fuchsia::images::PresentationInfo presentation_info) {

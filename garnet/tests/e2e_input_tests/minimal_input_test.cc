@@ -149,7 +149,7 @@ class MinimalInputTest : public gtest::RealLoopFixture {
           << ", " << display_height_ << ").";
 
       view_->CreateScene(display_width_, display_height_);
-      view_->Update(zx_clock_get(ZX_CLOCK_MONOTONIC));
+      view_->Update(zx_clock_get_monotonic());
 
       inject_input_();  // Display up, content ready. Send in input.
 

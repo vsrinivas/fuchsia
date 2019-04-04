@@ -302,7 +302,7 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
     if (!full_init_done_) {
         if (dc_intf_.is_valid()) {
             if (display_count == 0 || display_configs[0]->layer_count == 0) {
-                dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get(ZX_CLOCK_MONOTONIC), nullptr, 0);
+                dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(), nullptr, 0);
             }
         }
         full_init_done_ = true;

@@ -222,7 +222,7 @@ bool MediaApp::SendAudioPacket(fuchsia::media::StreamPacket packet) {
   if (verbose_) {
     const float delay =
         (start_time_known_
-             ? (float)zx_clock_get(ZX_CLOCK_MONOTONIC) - clock_start_time_
+             ? (float)zx_clock_get_monotonic() - clock_start_time_
              : 0) /
         1000000;
     printf("SendAudioPacket num %zu time %.2f\n", num_packets_sent_, delay);
@@ -239,7 +239,7 @@ bool MediaApp::SendAudioPacket(fuchsia::media::StreamPacket packet) {
 // For more fine-grained awareness/control of buffers, clients should use the
 // (asynchronous) AudioRenderer interface and process callbacks from SendPacket.
 bool MediaApp::RefillBuffer() {
-  const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t now = zx_clock_get_monotonic();
   const zx_duration_t time_data_needed =
       now - std::min(now, clock_start_time_) + high_water_mark_;
   size_t num_payloads_needed =
@@ -272,7 +272,7 @@ void MediaApp::WaitForPackets(size_t num_packets) {
     wake_time -= low_water_mark_;
   }
 
-  const zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t now = zx_clock_get_monotonic();
   if (wake_time > now) {
     if (verbose_) {
       const zx_duration_t nap_duration = wake_time - now;

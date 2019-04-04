@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  zx_time_t start = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t start = zx_clock_get_monotonic();
 
   zx_handle_t proc = ZX_HANDLE_INVALID;
   zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
   status =
       zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
 
-  zx_time_t stop = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t stop = zx_clock_get_monotonic();
 
   if (status != ZX_OK) {
     fprintf(stderr, "error: Failed to wait for process termination: %d (%s)\n",

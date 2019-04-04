@@ -228,7 +228,7 @@ int DummyDisplay::VSyncThread() {
         uint64_t live[] = {current_image_};
         bool current_image_valid = current_image_valid_;
         if (dc_intf_.is_valid()) {
-            dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get(ZX_CLOCK_MONOTONIC),
+            dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(),
                                     live, current_image_valid);
         }
     }

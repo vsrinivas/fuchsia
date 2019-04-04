@@ -335,7 +335,7 @@ void FxProcessor::OnMinLeadTimeChanged(int64_t new_min_lead_time_nsec) {
 
     // Set up our concept of the input read pointer so that it one
     // PROCESS_CHUNK_TIME behind the current write pointer.
-    zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t now = zx_clock_get_monotonic();
     input_rp_ = clock_mono_to_input_wr_ptr_.Apply(now - PROCESS_CHUNK_TIME);
 
     // Process the input to produce some output, then start the clock. Note:
@@ -509,7 +509,7 @@ void FxProcessor::ProcessInput() {
 void FxProcessor::ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,
                                        fuchsia::media::StreamPacket* out_pkt2) {
   // Figure out how much input data we have to process.
-  zx_time_t now = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t now = zx_clock_get_monotonic();
   int64_t input_wp = clock_mono_to_input_wr_ptr_.Apply(now);
   if (input_wp <= input_rp_) {
     printf("input wp <= rp (wp %" PRId64 " rp %" PRId64 " now %" PRIu64 ")\n",

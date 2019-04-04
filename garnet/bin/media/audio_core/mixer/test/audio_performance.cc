@@ -22,7 +22,7 @@ void AudioPerformance::Profile() {
 }
 
 void AudioPerformance::ProfileMixers() {
-  zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t start_time = zx_clock_get_monotonic();
 
   DisplayMixerConfigLegend();
   DisplayMixerColumnHeader();
@@ -34,7 +34,7 @@ void AudioPerformance::ProfileMixers() {
   DisplayMixerConfigLegend();
 
   printf("   Total time to profile Mixers: %lu ms\n   --------\n\n",
-         (zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time) / 1000000);
+         (zx_clock_get_monotonic() - start_time) / 1000000);
 }
 
 void AudioPerformance::DisplayMixerColumnHeader() {
@@ -230,7 +230,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
     }
 
     zx_duration_t elapsed;
-    zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    zx_time_t start_time = zx_clock_get_monotonic();
 
     dest_offset = 0;
     frac_src_offset = 0;
@@ -246,7 +246,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
                         TimelineRate(source_rate, ZX_SEC(1)));
     }
 
-    elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time;
+    elapsed = zx_clock_get_monotonic() - start_time;
 
     if (i > 0) {
       worst = std::max(worst, elapsed);
@@ -284,7 +284,7 @@ void AudioPerformance::DisplayOutputConfigLegend() {
 }
 
 void AudioPerformance::ProfileOutputProducers() {
-  zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t start_time = zx_clock_get_monotonic();
 
   DisplayOutputConfigLegend();
   DisplayOutputColumnHeader();
@@ -299,7 +299,7 @@ void AudioPerformance::ProfileOutputProducers() {
   DisplayOutputConfigLegend();
 
   printf("   Total time to profile OutputProducers: %lu ms\n   --------\n\n",
-         (zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time) / 1000000);
+         (zx_clock_get_monotonic() - start_time) / 1000000);
 }
 
 void AudioPerformance::ProfileOutputChans(uint32_t num_chans) {
@@ -374,10 +374,10 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans,
   if (data_range == OutputDataRange::Silence) {
     for (uint32_t i = 0; i < kNumOutputProfilerRuns; ++i) {
       zx_duration_t elapsed;
-      zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+      zx_time_t start_time = zx_clock_get_monotonic();
 
       output_producer->FillWithSilence(dest.get(), kFreqTestBufSize);
-      elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time;
+      elapsed = zx_clock_get_monotonic() - start_time;
 
       if (i > 0) {
         worst = std::max(worst, elapsed);
@@ -392,10 +392,10 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans,
   } else {
     for (uint32_t i = 0; i < kNumOutputProfilerRuns; ++i) {
       zx_duration_t elapsed;
-      zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+      zx_time_t start_time = zx_clock_get_monotonic();
 
       output_producer->ProduceOutput(accum.get(), dest.get(), kFreqTestBufSize);
-      elapsed = zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time;
+      elapsed = zx_clock_get_monotonic() - start_time;
 
       if (i > 0) {
         worst = std::max(worst, elapsed);

@@ -829,7 +829,7 @@ bool VirtualAudioUtil::SetPlugProperties(const std::string& plug_props_str) {
   }
 
   zx_time_t plug_change_time =
-      (kPlugTime[plug_props_option] == -1 ? zx_clock_get(ZX_CLOCK_MONOTONIC)
+      (kPlugTime[plug_props_option] == -1 ? zx_clock_get_monotonic()
                                           : kPlugTime[plug_props_option]);
   bool plugged = (kPlugFlags[plug_props_option] & AUDIO_PDNF_PLUGGED);
   bool hardwired = (kPlugFlags[plug_props_option] & AUDIO_PDNF_HARDWIRED);
@@ -894,7 +894,7 @@ bool VirtualAudioUtil::ChangePlugState(const std::string& plug_time_str,
   }
 
   zx_time_t plug_change_time =
-      (plug_time_str == "" ? zx_clock_get(ZX_CLOCK_MONOTONIC)
+      (plug_time_str == "" ? zx_clock_get_monotonic()
                            : fxl::StringToNumber<zx_time_t>(plug_time_str));
 
   if (configuring_output_) {

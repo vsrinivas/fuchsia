@@ -441,7 +441,7 @@ void AstroDisplay::DisplayControllerImplApplyConfiguration(const display_config_
     if (!full_init_done_) {
         if (dc_intf_.is_valid()) {
             if (display_count == 0 || display_configs[0]->layer_count == 0) {
-                dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get(ZX_CLOCK_MONOTONIC), nullptr, 0);
+                dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(), nullptr, 0);
             }
         }
     }
@@ -593,7 +593,7 @@ int AstroDisplay::VSyncThread() {
         uint64_t live[] = { current_image_ };
         bool current_image_valid = current_image_valid_;
         if (dc_intf_.is_valid()) {
-            dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get(ZX_CLOCK_MONOTONIC),
+            dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(),
                                     live, current_image_valid);
         }
     }

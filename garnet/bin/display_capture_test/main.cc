@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
   uint32_t pass_count = 0;
   uint32_t skip_count = 0;
   uint32_t fail_count = 0;
-  zx_time_t start_time = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  zx_time_t start_time = zx_clock_get_monotonic();
   auto iter = display_test::tests->begin();
   while (iter != display_test::tests->end()) {
     auto& test = *iter;
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
   runner.Stop();
 
   printf("Test took %ld ms\n",
-         (zx_clock_get(ZX_CLOCK_MONOTONIC) - start_time) / 1000000);
+         (zx_clock_get_monotonic() - start_time) / 1000000);
   printf("Pass: %d Skip: %d Fail: %d\n", pass_count, skip_count, fail_count);
   return fail_count;
 }

@@ -258,9 +258,9 @@ uint64_t AmlPdmDevice::Start() {
 
     Sync();
     TODDREnable();
-    a = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    a = zx_clock_get_monotonic();
     PdmInEnable();
-    b = zx_clock_get(ZX_CLOCK_MONOTONIC);
+    b = zx_clock_get_monotonic();
     return ((b - a) >> 1) + a;
 }
 
