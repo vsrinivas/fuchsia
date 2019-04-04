@@ -13,7 +13,9 @@ mod types;
 pub use crate::types::BlobId;
 
 mod repo;
-pub use crate::repo::{MirrorConfig, RepositoryBlobKey, RepositoryConfig, RepositoryKey};
+pub use crate::repo::{
+    MirrorConfig, RepositoryBlobKey, RepositoryConfig, RepositoryConfigBuilder, RepositoryKey,
+};
 
 mod errors;
 pub use crate::errors::{BlobIdParseError, RepositoryParseError};
