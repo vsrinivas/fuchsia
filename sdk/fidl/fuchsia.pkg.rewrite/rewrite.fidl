@@ -1,0 +1,141 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+library fuchsia.pkg.rewrite;
+
+using zx;
+
+/// A literal match and replacement rule.
+///
+/// # Examples
+///
+/// Replaces example.com with test.example.com for all packages
+/// ```
+/// {
+///     host_match: "example.com"
+///     host_replacement: "test.example.com"
+///     path_prefix_match: "/"
+///     path_prefix_replacement: "/"
+/// }
+/// ```
+///
+/// Replaces example.com with test.example.com for
+/// fuchsia-pkg://example.com/rolldice. A package called "rolldice" in another
+/// repo would not be rewritten.
+/// ```
+/// {
+///     host_match: "example.com"
+///     host_replacement: "test.example.com"
+///     path_prefix_match: "/rolldice"
+///     path_prefix_replacement: "/rolldice"
+/// }
+/// ```
+///
+/// Redirects all packages under "fuchsia-pkg://example.com/examples/" to
+/// "fuchsia-pkg://example.com/examples/beta/".
+/// ```
+/// {
+///     host_match: "example.com"
+///     host_replacement: "example.com"
+///     path_prefix_match: "/examples/"
+///     path_prefix_replacement: "/examples/beta/"
+/// }
+/// ```
+struct LiteralRule {
+    /// The exact hostname to match.
+    string host_match;
+
+    /// The new hostname to replace the matched |host_match| with.
+    string host_replacement;
+
+    /// The absolute path to a package or directory to match against.
+    ///
+    /// If |path_prefix_match| ends with '/', it will match any packages or
+    /// subdirectories below the matched path.
+    /// If |path_prefix_match| does not end with '/', it will be interpreted as
+    /// as an exact match.
+    ///
+    /// # Examples
+    ///
+    /// "/example" only matches a package called "example" at the root of the
+    /// repo. "/parent/examples" and "/examples" would not match.
+    ///
+    /// "/example/" would match any package under the "example" path at the root
+    /// of the repo.  For example, "/example/", "/example/package" would both
+    /// match.
+    string path_prefix_match;
+
+    /// The absolute path to a single package or a directory to replace the
+    /// matched |path_prefix_match| with.
+    ///
+    /// |path_prefix_match| and |path_prefix_replacement| must both match
+    /// directories or both match exact packages. Mixing the two forms is not
+    /// allowed.
+    string path_prefix_replacement;
+};
+
+/// A rewrite rule, represented as an xunion for future compatibility.
+xunion Rule {
+    LiteralRule literal;
+};
+
+/// Manages fuchsia-pkg:// rewrite rules.
+///
+/// When a package resolver is asked to resolve a fuchsia-pkg URI, it must first
+/// iterate through its sequence of rewrite rules (given by
+/// |Engine::List|). The rewrite engine will rewrite the given URI with
+/// the first rule that:
+/// * matches the given URI
+/// * produces a valid URI when applied to the given URI
+/// If no rules match, the URI is resolved as-is.
+///
+/// This interface is intended to be implemented by package resolver components,
+/// and used by repository administration tools.
+[Discoverable]
+protocol Engine {
+    /// Begins a rule edit transaction.
+    StartEditTransaction(request<EditTransaction> transaction);
+
+    /// Return an iterator over all rewrite rules.
+    ///
+    /// Arguments:
+    /// |iterator| is a request for an iterator.
+    List(request<RuleIterator> iterator);
+};
+
+protocol EditTransaction {
+    /// Removes all dynamically configured rewrite rules, leaving only any
+    /// statically configured rules.
+    ResetAll();
+
+    /// Add a rewrite rule with highest priority. If |rule| already exists, this
+    /// API will prioritize it over other rules.
+    ///
+    /// Arguments:
+    /// * |rule| the rewrite rule to persist.
+    ///
+    /// Return Values:
+    /// * |ZX_OK| if the rule was staged to be added.
+    /// * |ZX_ERR_INVALID_ARGS| if the |rule| is malformed.
+    Add(Rule rule) -> (zx.status status);
+
+    /// Commit this transaction, or detect another transaction that committed
+    /// before this one.
+    ///
+    /// Return Values:
+    /// * |ZX_OK| the staged edits were successfully committed.
+    /// * |ZX_ERR_UNAVAILABLE|  another transaction committed before this one.
+    Commit() -> (zx.status status);
+
+};
+
+/// The iterator over all the rewrite rules defined in a |Engine|.
+protocol RuleIterator {
+    /// Advance the iterator and return the next batch of rules.
+    ///
+    /// Return Values:
+    /// * a vector of |Rule| rules. Will return an empty vector when
+    ///   there are no more rules.
+    Next() -> (vector<Rule> rules);
+};
