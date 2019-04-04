@@ -21,6 +21,11 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
+
+#include <lib/zx/channel.h>
+#include <lib/zx/process.h>
+#include <lib/zx/thread.h>
+#include <lib/zx/time.h>
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
@@ -1851,6 +1856,417 @@ static bool full_queue_sending_exception_packet_test()
     END_TEST;
 }
 
+namespace {
+
+// C++ wrapper for our testing message loop to remove common boilerplate.
+class TestLoop {
+public:
+    // Creates the main test loop process/thread as well as an aux thread.
+    TestLoop(zx_handle_t job) {
+        start_test_child(job, test_child_name, process_.reset_and_get_address(),
+                         process_channel_.reset_and_get_address());
+        send_msg(process_channel_.get(), MSG_CREATE_AUX_THREAD);
+        recv_msg_new_thread_handle(process_channel_.get(), aux_thread_.reset_and_get_address());
+    }
+
+    // Closes the aux thread, unless it was already crashed.
+    ~TestLoop() {
+        if (!aux_thread_crashed_) {
+            send_msg(process_channel_.get(), MSG_SHUTDOWN_AUX_THREAD);
+        }
+
+        send_msg(process_channel_.get(), MSG_DONE);
+        tu_process_wait_signaled(process_.get());
+    }
+
+    const zx::process& process() const { return process_; }
+    const zx::thread& aux_thread() const { return aux_thread_; }
+
+    void CrashAuxThread() {
+        send_msg(process_channel_.get(), MSG_CRASH_AUX_THREAD);
+        aux_thread_crashed_ = true;
+    }
+
+private:
+    zx::process process_;
+    zx::channel process_channel_;
+    zx::thread aux_thread_;
+    bool aux_thread_crashed_ = false;
+};
+
+// Reads an exception handle for the given exception type.
+// If |info| is non-null, fills it in with the received struct.
+//
+// Returns an invalid handle if reading fails or the type doesn't match.
+zx::handle ReadException(const zx::channel& channel, zx_excp_type_t type,
+                         zx_exception_info_t* info_out = nullptr) {
+    zx::handle exception;
+    zx_exception_info_t info;
+    uint32_t num_handles = 1;
+    uint32_t num_bytes = sizeof(info);
+
+    if (!tu_channel_wait_readable(channel.get())) {
+        return zx::handle();
+    }
+    tu_channel_read(channel.get(), 0, &info, &num_bytes, exception.reset_and_get_address(),
+                    &num_handles);
+    EXPECT_TRUE(exception.is_valid());
+
+    if (info_out != nullptr) {
+        *info_out = info;
+    }
+
+    EXPECT_EQ(type, info.type);
+    if (type != info.type) {
+        return zx::handle();
+    }
+    return exception;
+}
+
+uint32_t GetExceptionStateProperty(const zx::handle& exception) {
+    uint32_t state = ~0;
+    EXPECT_EQ(exception.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
+              ZX_OK, "");
+    return state;
+}
+
+void SetExceptionStateProperty(const zx::handle& exception, uint32_t state) {
+    EXPECT_EQ(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
+              ZX_OK, "");
+}
+
+bool create_exception_channel_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+    EXPECT_TRUE(exception_channel.is_valid(), "");
+
+    END_TEST;
+}
+
+bool create_exception_channel_rights_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+
+    zx::channel exception_channel;
+    ASSERT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    zx_info_handle_basic_t info;
+    ASSERT_EQ(exception_channel.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                                         nullptr, nullptr),
+              ZX_OK, "");
+
+    // If this set of rights ever changes make sure to adjust the
+    // task_create_exception_channel() documentation as well.
+    EXPECT_EQ(info.rights, ZX_RIGHT_TRANSFER | ZX_RIGHT_WAIT | ZX_RIGHT_READ, "");
+
+    END_TEST;
+}
+
+bool create_exception_channel_invalid_args_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), ZX_EXCEPTION_PORT_DEBUGGER,
+                                               exception_channel.reset_and_get_address()),
+              ZX_ERR_INVALID_ARGS, "");
+
+    END_TEST;
+}
+
+bool create_second_exception_channel_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    // Trying to register a second channel should fail.
+    zx::channel exception_channel2;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel2.reset_and_get_address()),
+              ZX_ERR_ALREADY_BOUND, "");
+    EXPECT_FALSE(exception_channel2.is_valid(), "");
+
+    END_TEST;
+}
+
+bool overwrite_closed_exception_channel_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    // If we close the existing channel, registering a new one should succeed.
+    exception_channel.reset();
+    zx::channel exception_channel2;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel2.reset_and_get_address()),
+              ZX_OK, "");
+    EXPECT_TRUE(exception_channel2.is_valid(), "");
+
+    END_TEST;
+}
+
+bool exception_receive_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    loop.CrashAuxThread();
+    zx_exception_info_t exception_info;
+    zx::handle exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT,
+                                         &exception_info);
+
+    // Make sure exception info is correct.
+    EXPECT_EQ(exception_info.tid, tu_get_koid(loop.aux_thread().get()), "");
+    EXPECT_EQ(exception_info.pid, tu_get_koid(loop.process().get()), "");
+
+    // Make sure the thread state is correct.
+    zx_info_thread_t thread_info = tu_thread_get_info(loop.aux_thread().get());
+    EXPECT_EQ(thread_info.state, ZX_THREAD_STATE_BLOCKED_EXCEPTION, "");
+    EXPECT_EQ(thread_info.wait_exception_port_type, ZX_EXCEPTION_PORT_TYPE_THREAD, "");
+
+    REGISTER_CRASH(loop.aux_thread().get());
+
+    END_TEST;
+}
+
+bool exception_resume_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    loop.CrashAuxThread();
+    zx::handle exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
+
+    // If we tell this exception to resume the thread, it should fault
+    // again and return another exception back to us rather than
+    // bubbling up the chain.
+    SetExceptionStateProperty(exception, ZX_EXCEPTION_STATE_HANDLED);
+    exception.reset();
+    exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
+
+    // Close the new exception without marking it handled so it bubbles up.
+    REGISTER_CRASH(loop.aux_thread().get());
+
+    END_TEST;
+}
+
+bool exception_state_property_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    loop.CrashAuxThread();
+    zx::handle exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
+
+    // By default exceptions should be unhandled.
+    EXPECT_EQ(GetExceptionStateProperty(exception), ZX_EXCEPTION_STATE_TRY_NEXT, "");
+
+    SetExceptionStateProperty(exception, ZX_EXCEPTION_STATE_HANDLED);
+    EXPECT_EQ(GetExceptionStateProperty(exception), ZX_EXCEPTION_STATE_HANDLED, "");
+
+    SetExceptionStateProperty(exception, ZX_EXCEPTION_STATE_TRY_NEXT);
+    EXPECT_EQ(GetExceptionStateProperty(exception), ZX_EXCEPTION_STATE_TRY_NEXT, "");
+
+    REGISTER_CRASH(loop.aux_thread().get());
+
+    END_TEST;
+}
+
+bool exception_state_property_bad_args_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    loop.CrashAuxThread();
+    zx::handle exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
+
+    // Wrong handle type.
+    uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+    EXPECT_EQ(loop.aux_thread().set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
+              ZX_ERR_WRONG_TYPE, "");
+    EXPECT_EQ(loop.aux_thread().get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
+              ZX_ERR_WRONG_TYPE, "");
+
+    // Illegal state value.
+    state = ~0;
+    EXPECT_EQ(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
+              ZX_ERR_INVALID_ARGS, "");
+
+    // Buffer too short.
+    state = ZX_EXCEPTION_STATE_HANDLED;
+    EXPECT_EQ(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state) - 1),
+              ZX_ERR_BUFFER_TOO_SMALL, "");
+    EXPECT_EQ(exception.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state) - 1),
+              ZX_ERR_BUFFER_TOO_SMALL, "");
+
+    REGISTER_CRASH(loop.aux_thread().get());
+
+    END_TEST;
+}
+
+bool close_channel_with_exception_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    loop.CrashAuxThread();
+    EXPECT_EQ(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr),
+              ZX_OK, "");
+
+    // Closing the channel while it still contains the exception should pass
+    // control to the next handler.
+    REGISTER_CRASH(loop.aux_thread().get());
+
+    END_TEST;
+}
+
+bool close_channel_without_exception_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    loop.CrashAuxThread();
+    zx::handle exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
+
+    // Closing the channel after the exception object has been read out has no
+    // effect since the exception object now controls the exception lifecycle.
+    exception_channel.reset();
+
+    // Wait a little bit to make sure the thread really is still blocked on our
+    // exception object. If it wasn't, the exception would filter up now and
+    // REGISTER_CRASH() would trigger a test failure later when it fails to
+    // see the exception.
+    zx::nanosleep(zx::deadline_after(zx::msec(100)));
+
+    REGISTER_CRASH(loop.aux_thread().get());
+
+    END_TEST;
+}
+
+bool thread_death_closes_exception_channel_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    // Killing the thread should close the exception channel peer.
+    ASSERT_EQ(loop.aux_thread().kill(), ZX_OK, "");
+    EXPECT_EQ(exception_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr),
+              ZX_OK, "");
+
+    END_TEST;
+}
+
+bool thread_death_with_exception_in_channel_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    // Crash the thread and wait for the exception to be in the channel.
+    loop.CrashAuxThread();
+    EXPECT_EQ(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr),
+              ZX_OK, "");
+
+    // Killing the thread doesn't remove the exception from the channel, but
+    // it does signal PEER_CLOSED.
+    zx_signals_t observed;
+    ASSERT_EQ(loop.aux_thread().kill(), ZX_OK, "");
+    EXPECT_EQ(exception_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed),
+              ZX_OK, "");
+    EXPECT_TRUE(observed & ZX_CHANNEL_READABLE);
+
+    // Receiving and closing the exception has no effect. Operations on the
+    // exception should still succeed.
+    zx::handle exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
+    uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+    EXPECT_EQ(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
+              ZX_OK, "");
+    EXPECT_EQ(exception.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
+              ZX_OK, "");
+
+    END_TEST;
+}
+
+// Similar to the above test, but pull the exception out of the channel before
+// killing the thread and make sure behavior is consistent.
+bool thread_death_with_exception_received_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(zx_job_default());
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0u,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    loop.CrashAuxThread();
+    zx::handle exception = ReadException(exception_channel, ZX_EXCP_FATAL_PAGE_FAULT);
+
+    zx_signals_t observed;
+    ASSERT_EQ(loop.aux_thread().kill(), ZX_OK, "");
+    EXPECT_EQ(exception_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed),
+              ZX_OK, "");
+    EXPECT_FALSE(observed & ZX_CHANNEL_READABLE);
+
+    uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+    EXPECT_EQ(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
+              ZX_OK, "");
+    EXPECT_EQ(exception.get_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
+              ZX_OK, "");
+
+    END_TEST;
+}
+
+} // namespace
+
 BEGIN_TEST_CASE(exceptions_tests)
 RUN_TEST(job_set_close_set_test);
 RUN_TEST(process_set_close_set_test);
@@ -1887,6 +2303,20 @@ RUN_TEST_ENABLE_CRASH_HANDLER(self_death_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(multiple_threads_registered_death_test);
 RUN_TEST(exit_closing_excp_handle_test);
 RUN_TEST(full_queue_sending_exception_packet_test);
+RUN_TEST(create_exception_channel_test);
+RUN_TEST(create_exception_channel_rights_test);
+RUN_TEST(create_exception_channel_invalid_args_test);
+RUN_TEST(create_second_exception_channel_test);
+RUN_TEST(overwrite_closed_exception_channel_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(exception_receive_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(exception_resume_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(exception_state_property_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(exception_state_property_bad_args_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(close_channel_with_exception_test);
+RUN_TEST_ENABLE_CRASH_HANDLER(close_channel_without_exception_test);
+RUN_TEST(thread_death_closes_exception_channel_test);
+RUN_TEST(thread_death_with_exception_in_channel_test);
+RUN_TEST(thread_death_with_exception_received_test);
 END_TEST_CASE(exceptions_tests)
 
 static void scan_argv(int argc, char** argv)

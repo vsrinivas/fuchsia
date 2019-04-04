@@ -52,6 +52,13 @@ void ExceptionDispatcher::on_zero_handles() {
     response_event_.Signal();
 }
 
+void ExceptionDispatcher::GetResumeThreadOnClose(bool* resume_on_close) const {
+    canary_.Assert();
+
+    Guard<fbl::Mutex> guard{get_lock()};
+    *resume_on_close = resume_on_close_;
+}
+
 void ExceptionDispatcher::SetResumeThreadOnClose(bool resume_on_close) {
     canary_.Assert();
 

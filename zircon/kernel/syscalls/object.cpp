@@ -20,11 +20,12 @@
 
 #include <object/bus_transaction_initiator_dispatcher.h>
 #include <object/diagnostics.h>
+#include <object/exception_dispatcher.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
-#include <object/resource_dispatcher.h>
 #include <object/resource.h>
+#include <object/resource_dispatcher.h>
 #include <object/socket_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
@@ -705,6 +706,20 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
         size_t value = socket->GetWriteThreshold();
         return _value.reinterpret<size_t>().copy_to_user(value);
     }
+    case ZX_PROP_EXCEPTION_STATE: {
+        if (size < sizeof(uint32_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        auto exception = DownCastDispatcher<ExceptionDispatcher>(&dispatcher);
+        if (!exception) {
+            return ZX_ERR_WRONG_TYPE;
+        }
+
+        bool resume_on_close;
+        exception->GetResumeThreadOnClose(&resume_on_close);
+        return _value.reinterpret<uint32_t>().copy_to_user(
+            resume_on_close ? ZX_EXCEPTION_STATE_HANDLED : ZX_EXCEPTION_STATE_TRY_NEXT);
+    }
     default:
         return ZX_ERR_INVALID_ARGS;
     }
@@ -827,6 +842,28 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
             job->set_kill_on_oom(false);
         } else if (value == 1u) {
             job->set_kill_on_oom(true);
+        } else {
+            return ZX_ERR_INVALID_ARGS;
+        }
+        return ZX_OK;
+    }
+    case ZX_PROP_EXCEPTION_STATE: {
+        if (size < sizeof(uint32_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        auto exception = DownCastDispatcher<ExceptionDispatcher>(&dispatcher);
+        if (!exception) {
+            return ZX_ERR_WRONG_TYPE;
+        }
+        uint32_t value = 0;
+        zx_status_t status = _value.reinterpret<const uint32_t>().copy_from_user(&value);
+        if (status != ZX_OK) {
+            return status;
+        }
+        if (value == ZX_EXCEPTION_STATE_HANDLED) {
+            exception->SetResumeThreadOnClose(true);
+        } else if (value == ZX_EXCEPTION_STATE_TRY_NEXT) {
+            exception->SetResumeThreadOnClose(false);
         } else {
             return ZX_ERR_INVALID_ARGS;
         }

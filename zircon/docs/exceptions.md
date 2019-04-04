@@ -16,6 +16,16 @@ segmentation faults, etc. are, as well as Posix signals.
 This document does not explain what a segfault is, nor what "exception
 handling" is at a high level (though it certainly can if there is a need).
 
+## Current state
+
+Exceptions are in the process of switching from port-based handling (described
+in this doc) to channel-based handling.
+
+If possible, new code should prefer to use channels (see
+[`zx_task_create_exception_channel()`]). As channels come online and get the
+necessary features we will begin switching over existing usage. Once ports are
+fully deprecated this documentation will be updated with new instructions.
+
 ## The basics
 
 Exceptions are handled from userspace by binding a Zircon Port to the
@@ -455,5 +465,6 @@ This is tracked as ZX-1216.
 [`zx_object_wait_async()`]: syscalls/object_wait_async.md
 [`zx_port_wait()`]: syscalls/port_wait.md
 [`zx_task_bind_exception_port()`]: syscalls/task_bind_exception_port.md
+[`zx_task_create_exception_channel()`]: syscalls/task_create_exception_channel.md
 [`zx_task_kill()`]: syscalls/task_kill.md
 [`zx_task_resume_from_exception()`]: syscalls/task_resume_from_exception.md

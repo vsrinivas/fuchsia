@@ -21,6 +21,10 @@ zx_status_t zx_task_bind_exception_port(zx_handle_t handle,
 
 ## DESCRIPTION
 
+**Note:** exception ports are being phased out in favor of channels. New code
+should use [`zx_task_create_exception_channel()`] instead if possible
+and existing code will be ported over shortly.
+
 `zx_task_bind_exception_port()` is used to bind (or unbind) a port to
 the exception port of a job, process, or thread.
 
@@ -88,4 +92,5 @@ In a future build this error will no longer occur.
 
 [`zx_port_create()`]: port_create.md
 [`zx_port_wait()`]: port_wait.md
+[`zx_task_create_exception_channel()`]: task_create_exception_channel.md
 [`zx_task_resume_from_exception()`]: task_resume_from_exception.md

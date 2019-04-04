@@ -43,8 +43,9 @@ public:
     fbl::RefPtr<ThreadDispatcher> thread() const { return thread_; }
     zx_excp_type_t exception_type() const { return exception_type_; }
 
-    // Sets whether to resume the thread on exception close or pass it to
-    // the next handler in line.
+    // Whether to resume the thread on exception close or pass it to the
+    // next handler in line.
+    void GetResumeThreadOnClose(bool* resume_on_close) const;
     void SetResumeThreadOnClose(bool resume_on_close);
 
     // Blocks until the exception handler is done processing.

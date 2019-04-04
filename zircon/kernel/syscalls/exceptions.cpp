@@ -167,3 +167,53 @@ zx_status_t sys_task_resume_from_exception(zx_handle_t handle, zx_handle_t port,
         return thread->MarkExceptionHandled(eport.get());
     }
 }
+
+// zx_status_t zx_task_create_exception_channel
+zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t options,
+                                              user_out_handle* out) {
+    LTRACE_ENTRY;
+
+    if (options & ~ZX_EXCEPTION_PORT_DEBUGGER)
+        return ZX_ERR_INVALID_ARGS;
+
+    auto up = ProcessDispatcher::GetCurrent();
+    zx_status_t status = up->QueryBasicPolicy(ZX_POL_NEW_CHANNEL);
+    if (status != ZX_OK)
+        return status;
+
+    fbl::RefPtr<Dispatcher> task;
+    status = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &task);
+    if (status != ZX_OK)
+        return status;
+
+    fbl::RefPtr<ChannelDispatcher> kernel_channel, user_channel;
+    zx_rights_t rights;
+    status = ChannelDispatcher::Create(&kernel_channel, &user_channel, &rights);
+    if (status != ZX_OK)
+        return status;
+
+    // TODO(ZX-3072): implement job/process/debugger exception channels.
+    if (auto job = DownCastDispatcher<JobDispatcher>(&task)) {
+        return ZX_ERR_NOT_SUPPORTED;
+    } else if (auto process = DownCastDispatcher<ProcessDispatcher>(&task)) {
+        return ZX_ERR_NOT_SUPPORTED;
+    } else if (auto thread = DownCastDispatcher<ThreadDispatcher>(&task)) {
+        if (options & ZX_EXCEPTION_PORT_DEBUGGER)
+            return ZX_ERR_INVALID_ARGS;
+        status = thread->SetExceptionChannel(ktl::move(kernel_channel));
+    } else {
+        return ZX_ERR_WRONG_TYPE;
+    }
+
+    if (status != ZX_OK)
+        return status;
+
+    // Strip unwanted rights from the user endpoint, exception channels are
+    // read-only from userspace.
+    //
+    // We don't need to remove the task channel if this fails. Exception
+    // channels are built to handle the userspace peer closing so it will just
+    // follow that path if we fail to copy the userspace endpoint out.
+    return out->make(ktl::move(user_channel),
+                     rights & (ZX_RIGHT_TRANSFER | ZX_RIGHT_WAIT | ZX_RIGHT_READ));
+}

@@ -459,6 +459,9 @@ typedef struct zx_info_resource {
 // Terminate this job if the system is low on memory.
 #define ZX_PROP_JOB_KILL_ON_OOM             15u
 
+// Exception close behavior.
+#define ZX_PROP_EXCEPTION_STATE             16u
+
 // Basic thread states, in zx_info_thread_t.state.
 #define ZX_THREAD_STATE_NEW                 ((zx_thread_state_t) 0x0000u)
 #define ZX_THREAD_STATE_RUNNING             ((zx_thread_state_t) 0x0001u)
@@ -484,6 +487,10 @@ typedef struct zx_info_resource {
 // Reduce possibly-more-precise state to a basic state.
 // Useful if, for example, you want to check for BLOCKED on anything.
 #define ZX_THREAD_STATE_BASIC(n) ((n) & 0xff)
+
+// How a thread should behave when the current exception is closed.
+#define ZX_EXCEPTION_STATE_TRY_NEXT         0u
+#define ZX_EXCEPTION_STATE_HANDLED          1u
 
 __END_CDECLS
 

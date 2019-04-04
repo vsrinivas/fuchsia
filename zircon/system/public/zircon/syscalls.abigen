@@ -454,6 +454,12 @@ syscall task_resume_from_exception
     (handle: zx_handle_t, port: zx_handle_t, options: uint32_t)
     returns (zx_status_t);
 
+#^ Create an exception channel for a given job, process, or thread.
+#! handle must have ZX_RIGHT_INSPECT.
+syscall task_create_exception_channel
+    (handle: zx_handle_t, options: uint32_t)
+    returns (zx_status_t, out: zx_handle_t handle_acquire);
+
 #^ Kill the provided task (job, process, or thread).
 #! handle must have ZX_RIGHT_DESTROY.
 syscall task_kill

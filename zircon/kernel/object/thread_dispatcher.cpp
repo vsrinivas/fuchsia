@@ -968,6 +968,8 @@ zx_status_t ThreadDispatcher::HandleException(fbl::RefPtr<ExceptionDispatcher> e
                                               bool* sent) {
     canary_.Assert();
 
+    LTRACE_ENTRY_OBJ;
+
     *sent = false;
 
     // Mark as blocked before sending the exception, otherwise a handler could
@@ -992,7 +994,11 @@ zx_status_t ThreadDispatcher::HandleException(fbl::RefPtr<ExceptionDispatcher> e
         state_.set(ThreadState::Exception::UNPROCESSED);
     }
 
+    LTRACEF("blocking on exception response\n");
+
     zx_status_t status = exception->WaitForResponse();
+
+    LTRACEF("received exception response %d\n", status);
 
     Guard<fbl::Mutex> guard{get_lock()};
     in_channel_exception_ = false;

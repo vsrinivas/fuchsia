@@ -11,5 +11,6 @@ test("exception") {
     "$zx/system/ulib/test-utils",
     "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
   ]
 }
