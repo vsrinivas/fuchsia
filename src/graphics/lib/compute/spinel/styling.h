@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "spinel_result.h"
+
 //
 // STYLING
 //

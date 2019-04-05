@@ -176,11 +176,11 @@ spn_styling_group_range_hi(spn_styling_t styling,
 }
 
 spn_result
-spn_styling_group_layer(spn_styling_t styling,
-                        spn_group_id  const group_id,
-                        spn_layer_id  const layer_id,
-                        uint32_t      const n,
-                        uint32_t  * * const cmds)
+spn_styling_group_layer(spn_styling_t               styling,
+                        spn_group_id          const group_id,
+                        spn_layer_id          const layer_id,
+                        uint32_t              const n,
+                        spn_styling_cmd_t * * const cmds)
 {
   assert(layer_id < styling->layers.count);
   assert(styling->dwords.next + n <= styling->dwords.count);

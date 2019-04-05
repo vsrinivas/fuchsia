@@ -8,13 +8,13 @@
 
 #include <memory.h>
 
-#include "raster_builder.h"
+#include "raster_builder_impl.h"
 #include "path_builder.h"
 #include "device.h"
+#include "target.h"
 #include "handle_pool.h"
 #include "semaphore_pool.h"
-#include "cb_pool.h"
-#include "target.h"
+#include "queue_pool.h"
 #include "block_pool.h"
 #include "weakref.h"
 #include "ring.h"
@@ -187,9 +187,6 @@ struct spn_raster_builder_impl
 
   struct spn_target_config const * config;
 
-  //
-  // buffers used by rasterization sub-pipeline
-  //
   struct spn_rbi_vk                vk;
 
   //
@@ -198,7 +195,6 @@ struct spn_raster_builder_impl
   // we use simpler accounting for tcs.
   //
   struct {
-
     struct {
       struct spn_cmd_fill        * extent;     // uint32_t[4]
       struct spn_ring              ring;
@@ -217,7 +213,6 @@ struct spn_raster_builder_impl
     struct {
       uint32_t                   * extent;
     } cb; // ttrk key count copyback indexed by dispatch idx
-
   } mapped;
 
   //
@@ -460,11 +455,6 @@ struct spn_rbi_complete_payload_2
   struct spn_raster_builder_impl        * impl;
 
   struct {
-    VkCommandBuffer                       sort;
-    VkCommandBuffer                       rp;
-  } cb;
-
-  struct {
     VkSemaphore                           sort;
   } semaphore;
 
@@ -489,8 +479,6 @@ struct spn_rbi_complete_payload_2
 struct spn_rbi_complete_payload_1
 {
   struct spn_rbi_complete_payload_2       p_2;
-
-  VkCommandBuffer                         cb;
 
   struct {
     VkSemaphore                           copy;
@@ -530,10 +518,6 @@ spn_rbi_complete_p_2(void * pfn_payload)
   struct spn_device                       * const device = impl->device;
   struct spn_target                       * const target = device->target;
 
-  // release the command buffers
-  spn_device_cb_pool_release(device,p_2->cb.sort);
-  spn_device_cb_pool_release(device,p_2->cb.rp);
-
   // release the copy semaphore
   spn_device_semaphore_pool_release(device,p_2->semaphore.sort);
 
@@ -550,18 +534,17 @@ spn_rbi_complete_p_2(void * pfn_payload)
   uint32_t const            dispatch_idx = p_2->dispatch_idx;
   struct spn_rbi_dispatch * dispatch     = spn_rbi_dispatch_idx(impl,dispatch_idx);
 
-  spn_device_release_rasters(device,
-                             impl->rasters.extent,
-                             impl->rasters.next.size,
-                             dispatch->rc.span,
-                             dispatch->rc.head);
+  spn_device_handle_pool_release_ring_d_rasters(device,
+                                                impl->rasters.extent,
+                                                impl->rasters.next.size,
+                                                dispatch->rc.span,
+                                                dispatch->rc.head);
   //
-  // try to release dispatch records
+  // If the dispatch is the tail of the ring then try to release as
+  // many dispatch records as possible...
   //
   // Note that kernels can complete in any order so the release
   // records need to add to the mapped.ring.tail in order.
-  //
-  // Walk the release records, releasing unreleased spans of blocks.
   //
   if (spn_ring_is_tail(&impl->dispatches.ring,dispatch_idx))
     {
@@ -580,8 +563,11 @@ spn_rbi_complete_p_2(void * pfn_payload)
     {
       dispatch->unreleased = true;
     }
-
 }
+
+//
+//
+//
 
 static
 void
@@ -604,9 +590,6 @@ spn_rbi_complete_p_1(void * pfn_payload)
   //
   // Release resources
   //
-
-  // release the command buffer
-  spn_device_cb_pool_release(device,p_1->cb);
 
   // release the copy semaphore
   spn_device_semaphore_pool_release(device,p_1->semaphore.copy);
@@ -641,18 +624,18 @@ spn_rbi_complete_p_1(void * pfn_payload)
   struct spn_rbi_complete_payload_2 p_2 = p_1->p_2;
 
   // acquire another cb
-  p_2.cb.rp = spn_device_cb_pool_acquire(device);
+  VkCommandBuffer cb_3 = spn_device_cb_acquire_begin(device);
 
   //
   // DS: BLOCK_POOL
   //
   // bind the global BLOCK_POOL descriptor set
-  spn_target_ds_bind_segment_ttrk_block_pool(target,p_2.cb.rp,spn_device_block_pool_get_ds(device));
+  spn_target_ds_bind_segment_ttrk_block_pool(target,cb_3,spn_device_block_pool_get_ds(device));
 
   //
   // DS: RASTERIZE_POST
   //
-  spn_target_ds_bind_segment_ttrk_rasterize_post(target,p_2.cb.rp,p_2.ds.rp);
+  spn_target_ds_bind_segment_ttrk_rasterize_post(target,cb_3,p_2.ds.rp);
 
   //
   // 2.1) MERGE TTRK KEYS
@@ -661,7 +644,7 @@ spn_rbi_complete_p_1(void * pfn_payload)
   // Launch HotSort merging phase dependent on the sort semaphore
   //
 #if 0
-  hs_vk_merge(p_2.cb.rp,
+  hs_vk_merge(cb_3,
               p_2.temp.rp.offset + SPN_TARGET_BUFFER_OFFSETOF(rasterize_post,ttrks,ttrks_keys),
               impl->mapped.cb[p2.dispatch_idx], // copyback key count
               1,
@@ -670,7 +653,7 @@ spn_rbi_complete_p_1(void * pfn_payload)
               NULL);
 #endif
 
-  vk_barrier_compute_w_to_compute_r(p_2.cb.rp);
+  vk_barrier_compute_w_to_compute_r(cb_3);
 
   //
   //   2.2) SEGMENT_TTRK
@@ -688,13 +671,13 @@ spn_rbi_complete_p_1(void * pfn_payload)
   ////////////////////////////////////////////////////////////////
 
   // bind the pipeline
-  spn_target_p_bind_segment_ttrk(target,p_2.cb.rp);
+  spn_target_p_bind_segment_ttrk(target,cb_3);
 
   // dispatch one workgroup per fill command
-  vkCmdDispatch(p_2.cb.rp,99999,1,1); // FIXME -- calculate slab count
+  vkCmdDispatch(cb_3,99999,1,1); // FIXME -- calculate slab count
 
   // compute barrier
-  vk_barrier_compute_w_to_compute_r(p_2.cb.rp);
+  vk_barrier_compute_w_to_compute_r(cb_3);
 
   ////////////////////////////////////////////////////////////////
   //
@@ -709,16 +692,16 @@ spn_rbi_complete_p_1(void * pfn_payload)
     };
 
   // bind the push constants
-  spn_target_p_push_rasters_alloc(target,p_2.cb.rp,&push_rasters_alloc);
+  spn_target_p_push_rasters_alloc(target,cb_3,&push_rasters_alloc);
 
   // bind the pipeline
-  spn_target_p_bind_rasters_alloc(target,p_2.cb.rp);
+  spn_target_p_bind_rasters_alloc(target,cb_3);
 
   // dispatch one subgroup (workgroup) per raster
-  vkCmdDispatch(p_2.cb.rp,dispatch->rc.span,1,1);
+  vkCmdDispatch(cb_3,dispatch->rc.span,1,1);
 
   // compute barrier
-  vk_barrier_compute_w_to_compute_r(p_2.cb.rp);
+  vk_barrier_compute_w_to_compute_r(cb_3);
 
   ////////////////////////////////////////////////////////////////
   //
@@ -729,32 +712,44 @@ spn_rbi_complete_p_1(void * pfn_payload)
   // push constants remain the same
 
   // bind the pipeline
-  spn_target_p_bind_rasters_prefix(target,p_2.cb.rp);
+  spn_target_p_bind_rasters_prefix(target,cb_3);
 
   // dispatch one subgroup (workgroup) per raster
-  vkCmdDispatch(p_2.cb.rp,dispatch->rc.span,1,1);
+  vkCmdDispatch(cb_3,dispatch->rc.span,1,1);
 
   //
   // wait for sort to complete before executing
   //
-  spn_device_cb_submit_wait_1(device,
-                              p_2.cb.rp,
-                              spn_rbi_complete_p_2,
-                              &p_2,
-                              sizeof(p_2),
-                              p_2.semaphore.sort,
-                              VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+  VkFence const fence = spn_device_cb_end_fence_acquire(device,
+                                                        cb_3,
+                                                        spn_rbi_complete_p_2,
+                                                        &p_2,
+                                                        sizeof(p_2));
+  // boilerplate submit
+  struct VkSubmitInfo const si = {
+    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pNext                = NULL,
+    .waitSemaphoreCount   = 1,
+    .pWaitSemaphores      = &p_2.semaphore.sort,
+    .pWaitDstStageMask    = &(VkPipelineStageFlags){VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT},
+    .commandBufferCount   = 1,
+    .pCommandBuffers      = &cb_3,
+    .signalSemaphoreCount = 0,
+    .pSignalSemaphores    = NULL
+  };
+
+  vk(QueueSubmit(spn_device_queue_next(device),1,&si,fence));
 
   //
   // Release paths after submitting the phase 2 command buffer to
   // reduce latency since this might result in many PATHS_RELEASE
   // shaders being launched.
   //
-  spn_device_release_paths(device,
-                           impl->paths.extent,
-                           impl->paths.next.size,
-                           dispatch->cf.span,
-                           dispatch->cf.head);
+  spn_device_handle_pool_release_ring_d_paths(device,
+                                              impl->paths.extent,
+                                              impl->paths.next.size,
+                                              dispatch->cf.span,
+                                              dispatch->cf.head);
 }
 
 //
@@ -840,15 +835,17 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
     .p_2            = {
       .impl         = impl,
       .dispatch_idx = impl->dispatches.ring.head
-    },
-    .cb             = spn_device_cb_pool_acquire(device)
+    }
   };
+
+  //
+  VkCommandBuffer cb_1 = spn_device_cb_acquire_begin(device);
 
   //
   // DS: BLOCK_POOL
   //
   // bind the global BLOCK_POOL descriptor set
-  spn_target_ds_bind_fills_scan_block_pool(target,p_1.cb,spn_device_block_pool_get_ds(device));
+  spn_target_ds_bind_fills_scan_block_pool(target,cb_1,spn_device_block_pool_get_ds(device));
 
   //
   // DS: RASTERIZE
@@ -877,7 +874,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
                                   device,
                                   spn_device_wait,
                                   SPN_TARGET_BUFFER_OFFSETOF(rasterize,rast_cmds,rast_cmds) +
-                                  config->raster_builder.size.rast_cmds * sizeof(SPN_TYPE_UVEC4),
+                                  config->raster_builder.size.cmds * sizeof(SPN_TYPE_UVEC4),
                                   &p_1.temp.r.rast_cmds,
                                   spn_target_ds_get_rasterize_rast_cmds(target,p_1.ds.r));
 
@@ -885,7 +882,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   spn_target_ds_update_rasterize(target,device->vk,p_1.ds.r);
 
   // bind rasterize ds
-  spn_target_ds_bind_fills_scan_rasterize(target,p_1.cb,p_1.ds.r);
+  spn_target_ds_bind_fills_scan_rasterize(target,cb_1,p_1.ds.r);
 
   //
   // DS: RASTERIZE_POST
@@ -909,7 +906,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   spn_target_ds_update_rasterize_post(target,device->vk,p_1.p_2.ds.rp);
 
   // bind rasterize_post ds
-  spn_target_ds_bind_rasterize_line_rasterize_post(target,p_1.cb,p_1.p_2.ds.rp);
+  spn_target_ds_bind_rasterize_line_rasterize_post(target,cb_1,p_1.p_2.ds.rp);
 
   ////////////////////////////////////////////////////////////////
   //
@@ -924,16 +921,16 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
     };
 
   // bind the push constants
-  spn_target_p_push_fills_scan(target,p_1.cb,&push_fills_scan);
+  spn_target_p_push_fills_scan(target,cb_1,&push_fills_scan);
 
   // bind the pipeline
-  spn_target_p_bind_fills_scan(target,p_1.cb);
+  spn_target_p_bind_fills_scan(target,cb_1);
 
   // dispatch one workgroup per fill command
-  vkCmdDispatch(p_1.cb,dispatch->cf.span,1,1);
+  vkCmdDispatch(cb_1,dispatch->cf.span,1,1);
 
   // compute barrier
-  vk_barrier_compute_w_to_compute_r(p_1.cb);
+  vk_barrier_compute_w_to_compute_r(cb_1);
 
   ////////////////////////////////////////////////////////////////
   //
@@ -944,13 +941,13 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   // no need to set up push constants since they're identical to FILLS_SCAN
 
   // bind the pipeline
-  spn_target_p_bind_fills_expand(target,p_1.cb);
+  spn_target_p_bind_fills_expand(target,cb_1);
 
   // dispatch one workgroup per fill command
-  vkCmdDispatch(p_1.cb,dispatch->cf.span,1,1);
+  vkCmdDispatch(cb_1,dispatch->cf.span,1,1);
 
   // compute barrier
-  vk_barrier_compute_w_to_compute_r(p_1.cb);
+  vk_barrier_compute_w_to_compute_r(cb_1);
 
   ////////////////////////////////////////////////////////////////
   //
@@ -961,13 +958,13 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   // no push constants
 
   // bind the pipeline
-  spn_target_p_bind_fills_dispatch(target,p_1.cb);
+  spn_target_p_bind_fills_dispatch(target,cb_1);
 
   // dispatch one workgroup per fill command
-  vkCmdDispatch(p_1.cb,1,1,1);
+  vkCmdDispatch(cb_1,1,1,1);
 
   // compute barrier
-  vk_barrier_compute_w_to_compute_r(p_1.cb);
+  vk_barrier_compute_w_to_compute_r(cb_1);
 
   ////////////////////////////////////////////////////////////////
   //
@@ -979,9 +976,9 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   spn_target_p_bind_rasterize_##_p
 
 #undef  SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
-#define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p,_i,_n)                                   \
-  SPN_TARGET_P_BIND_RASTERIZE_NAME(_p)(target,p_1.cb);                                  \
-  vkCmdDispatchIndirect(p_1.cb,dbi_fill_scan->buffer,sizeof(SPN_TYPE_UVEC4)*_i);
+#define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p,_i,_n)                                \
+  SPN_TARGET_P_BIND_RASTERIZE_NAME(_p)(target,cb_1);                                  \
+  vkCmdDispatchIndirect(cb_1,dbi_fill_scan->buffer,sizeof(SPN_TYPE_UVEC4)*_i);
 
   SPN_PATH_BUILDER_PRIM_TYPE_EXPAND()
 
@@ -991,7 +988,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   ////////////////////////////////////////////////////////////////
 
-  vk_barrier_compute_w_to_transfer_r(p_1.cb);
+  vk_barrier_compute_w_to_transfer_r(cb_1);
 
   //
   // COPYBACK
@@ -1002,7 +999,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
     .size      = sizeof(*impl->mapped.cb.extent)
   };
 
-  vkCmdCopyBuffer(p_1.cb,
+  vkCmdCopyBuffer(cb_1,
                   dbi_ttrks->buffer,
                   impl->vk.copyback.dbi.buffer,
                   1,
@@ -1015,37 +1012,64 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   p_1.p_2.semaphore.sort = spn_device_semaphore_pool_acquire(device);
 
   //
-  // acquire sort command buffer
-  //
-  p_1.p_2.cb.sort        = spn_device_cb_pool_acquire(device);
-
-  //
   // submit the command buffer
   //
-  spn_device_cb_submit_signal_1(device,
-                                p_1.cb,
-                                spn_rbi_complete_p_1,
-                                &p_1,
-                                sizeof(p_1),
-                                p_1.semaphore.copy);
+
+  {
+    VkFence const fence = spn_device_cb_end_fence_acquire(device,
+                                                          cb_1,
+                                                          spn_rbi_complete_p_1,
+                                                          &p_1,
+                                                          sizeof(p_1));
+    // boilerplate submit
+    struct VkSubmitInfo const si = {
+      .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .pNext                = NULL,
+      .waitSemaphoreCount   = 0,
+      .pWaitSemaphores      = NULL,
+      .pWaitDstStageMask    = NULL,
+      .commandBufferCount   = 1,
+      .pCommandBuffers      = &cb_1,
+      .signalSemaphoreCount = 1,
+      .pSignalSemaphores    = &p_1.semaphore.copy
+    };
+
+    vk(QueueSubmit(spn_device_queue_next(device),1,&si,fence));
+  }
+
 
 #if 0
   //
   // Launch HotSort indirect sorting phase as soon as the copy completes
   //
-  hs_vk_sort_indirect(p_1.p_2.cb.sort,
-                      dbi_ttrks->buffer,
-                      p_1.p_2.temp.rp.offset + SPN_TARGET_BUFFER_OFFSETOF(rasterize_post,ttrks,ttrks_keys),
-                      ttrks_count_offset);
+  {
+    VkCommandBuffer cb_2 = spn_device_cb_acquire_begin(device);
 
-  spn_device_cb_submit_wait_1_signal_1(device,
-                                       p_1.p_2.cb,
-                                       NULL,
-                                       NULL,
-                                       0UL,
-                                       p_1.semaphore.copy,
-                                       VK_PIPELINE_STAGE_TRANSFER_BIT,
-                                       p_1.semaphore.sort);
+    hs_vk_sort_indirect(cb_2,
+                        dbi_ttrks->buffer,
+                        p_1.p_2.temp.rp.offset + SPN_TARGET_BUFFER_OFFSETOF(rasterize_post,ttrks,ttrks_keys),
+                        ttrks_count_offset);
+
+    VkFence const fence = spn_device_cb_end_fence_acquire(device,
+                                                          cb_2,
+                                                          NULL,
+                                                          NULL,
+                                                          0UL);
+    // boilerplate submit
+    struct VkSubmitInfo const si = {
+      .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+      .pNext                = NULL,
+      .waitSemaphoreCount   = 1,
+      .pWaitSemaphores      = &p_1.semaphore.copy,
+      .pWaitDstStageMask    = &(VkPipelineStageFlags){VK_PIPELINE_STAGE_TRANSFER_BIT},
+      .commandBufferCount   = 1,
+      .pCommandBuffers      = &cb_2,
+      .signalSemaphoreCount = 1,
+      .pSignalSemaphores    = &p_1.semaphore.sort
+    };
+
+    vk(QueueSubmit(spn_device_queue_next(device),1,&si,fence));
+  }
 #endif
 
   //
@@ -1161,6 +1185,9 @@ spn_rbi_fill(struct spn_raster_builder_impl  * const impl,
       } while (cf_ring->rem < count);
     }
 
+  // validate and retain the paths
+  spn_device_handle_pool_validate_retain_h_paths(impl->device,paths,count);
+
   // increment the cf span
   impl->wip.cf.span += count;
 
@@ -1183,7 +1210,11 @@ spn_rbi_fill(struct spn_raster_builder_impl  * const impl,
 
     for (uint32_t ii=0; ii<cf_rem; ii++)
       {
-        cf.path_h = paths[ii];
+        spn_handle_t const path = SPN_TYPED_HANDLE_TO_HANDLE(paths[ii]);
+
+        spn_rbi_path_append(impl,path);
+
+        cf.path_h = path;
 
         spn_transform_weakref_t * const tw = transform_weakrefs + ii;
 
@@ -1264,13 +1295,15 @@ spn_rbi_release(struct spn_raster_builder_impl * const impl)
   //
 
   //
-  // free device allocations
+  // free copyback
   //
   spn_allocator_device_perm_free(&device->allocator.device.perm.copyback,
                                  device->vk,
                                  &impl->vk.copyback.dbi,
                                  impl->vk.copyback.dm);
-
+  //
+  // free ring
+  //
   struct spn_target_config const * const config = spn_target_get_config(device->target);
 
   if (config->raster_builder.vk.rings.d != 0)
@@ -1285,7 +1318,6 @@ spn_rbi_release(struct spn_raster_builder_impl * const impl)
                                  device->vk,
                                  &impl->vk.rings.h.dbi,
                                  impl->vk.rings.h.dm);
-
   //
   // free host allocations
   //
@@ -1339,6 +1371,25 @@ spn_raster_builder_impl_create(struct spn_device  * const device,
 
   impl->config                   = config;
 
+  //
+  // init raster builder pfns
+  //
+  rb->begin   = spn_rbi_begin;
+  rb->end     = spn_rbi_end;
+  rb->release = spn_rbi_release;
+  rb->flush   = spn_rbi_flush;
+  rb->fill    = spn_rbi_fill;
+
+  //
+  // init refcount & state
+  //
+  rb->refcount  = 1;
+
+  SPN_ASSERT_STATE_INIT(rb,SPN_RASTER_BUILDER_STATE_READY);
+
+  //
+  // init ring/next/next
+  //
   spn_ring_init(&impl->mapped.cf.ring,config->raster_builder.size.ring); // number of commands
   spn_next_init(&impl->mapped.rc.next,config->raster_builder.size.ring); // worst case 1:1 (cmds:rasters)
 
@@ -1430,7 +1481,6 @@ spn_raster_builder_impl_create(struct spn_device  * const device,
   size_t const dispatches_size = max_in_flight                    * sizeof(*impl->dispatches.extent);
   size_t const paths_size      = config->raster_builder.size.ring * sizeof(*impl->paths.extent);
   size_t const rasters_size    = config->raster_builder.size.ring * sizeof(*impl->rasters.extent);
-
   size_t const h_extent_size   = dispatches_size + paths_size + rasters_size;
 
   impl->dispatches.extent      = spn_allocator_host_perm_alloc(perm,
@@ -1449,22 +1499,6 @@ spn_raster_builder_impl_create(struct spn_device  * const device,
   spn_rbi_dispatch_init(impl,impl->dispatches.extent);
 
   spn_weakref_epoch_init(&impl->epoch);
-
-  //
-  // init raster builder pfns
-  //
-  rb->begin   = spn_rbi_begin;
-  rb->end     = spn_rbi_end;
-  rb->release = spn_rbi_release;
-  rb->flush   = spn_rbi_flush;
-  rb->fill    = spn_rbi_fill;
-
-  //
-  // init refcount & state
-  //
-  rb->refcount  = 1;
-
-  SPN_ASSERT_STATE_INIT(rb,SPN_RASTER_BUILDER_STATE_READY);
 
   return SPN_SUCCESS;
 }

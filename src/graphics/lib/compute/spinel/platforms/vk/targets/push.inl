@@ -9,12 +9,14 @@
 #undef  SPN_TARGET_PUSH_UINT
 #undef  SPN_TARGET_PUSH_UVEC4
 #undef  SPN_TARGET_PUSH_IVEC4
-#undef  SPN_TARGET_PUSH_UINT_ARRAY
+#undef  SPN_TARGET_PUSH_UINT_FARRAY
+#undef  SPN_TARGET_PUSH_UINT_VARRAY
 
-#define SPN_TARGET_PUSH_UINT(name)           + sizeof(SPN_TYPE_UINT)
-#define SPN_TARGET_PUSH_UVEC4(name)          + sizeof(SPN_TYPE_UVEC4)
-#define SPN_TARGET_PUSH_IVEC4(name)          + sizeof(SPN_TYPE_IVEC4)
-#define SPN_TARGET_PUSH_UINT_ARRAY(name,len) + sizeof(SPN_TYPE_UINT) * len
+#define SPN_TARGET_PUSH_UINT(name)            + sizeof(SPN_TYPE_UINT)
+#define SPN_TARGET_PUSH_UVEC4(name)           + sizeof(SPN_TYPE_UVEC4)
+#define SPN_TARGET_PUSH_IVEC4(name)           + sizeof(SPN_TYPE_IVEC4)
+#define SPN_TARGET_PUSH_UINT_FARRAY(name,len) + sizeof(SPN_TYPE_UINT) * len
+#define SPN_TARGET_PUSH_UINT_VARRAY(name,len) + sizeof(SPN_TYPE_UINT) * len
 
 #undef  SPN_TARGET_VK_DS
 #define SPN_TARGET_VK_DS(_p_id,_ds_idx,_ds_id)

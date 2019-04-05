@@ -44,7 +44,6 @@ spn_device_fence_pool_dispose(struct spn_device * const device);
 
 VkFence
 spn_device_fence_pool_acquire(struct spn_device    * const device,
-                              VkQueue                const queue,
                               VkCommandBuffer        const cb,
                               spn_fence_complete_pfn const pfn,
                               void                 * const pfn_payload,

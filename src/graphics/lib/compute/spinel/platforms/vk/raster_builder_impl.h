@@ -8,7 +8,13 @@
 //
 //
 
-#include "spinel_result.h"
+#include "raster_builder.h"
+
+//
+//
+//
+
+struct spn_device;
 
 //
 //

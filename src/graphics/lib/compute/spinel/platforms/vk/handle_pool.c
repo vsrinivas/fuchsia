@@ -12,12 +12,15 @@
 #include "core_c.h"
 #include "device.h"
 #include "extent.h"
-#include "cb_pool.h"
 #include "fence_pool.h"
+#include "queue_pool.h"
 #include "block_pool.h"
 #include "target.h"
 #include "target_config.h"
+
 #include "common/macros.h"
+#include "common/vk/vk_assert.h"
+
 
 //
 // FIXME -- THIS DOCUMENTATION IS STALE NOW THAT A REFERENCE COUNT REP
@@ -388,8 +391,8 @@ spn_device_bind_paths_reclaim(struct spn_device * const device,
                               spn_handle_t      * const handles,
                               VkCommandBuffer           cb)
 {
-  struct spn_target_ds_block_pool_t const ds     = spn_device_block_pool_get_ds(device);
   struct spn_target               * const target = device->target;
+  struct spn_target_ds_block_pool_t const ds     = spn_device_block_pool_get_ds(device);
 
   spn_target_ds_bind_paths_reclaim_block_pool(target,cb,ds);
 
@@ -418,8 +421,8 @@ spn_device_bind_rasters_reclaim(struct spn_device * const device,
                                 spn_handle_t      * const handles,
                                 VkCommandBuffer           cb)
 {
-  struct spn_target_ds_block_pool_t const ds     = spn_device_block_pool_get_ds(device);
   struct spn_target               * const target = device->target;
+  struct spn_target_ds_block_pool_t const ds     = spn_device_block_pool_get_ds(device);
 
   spn_target_ds_bind_rasters_reclaim_block_pool(target,cb,ds);
 
@@ -470,7 +473,7 @@ spn_device_handle_pool_reclaim(struct spn_device              * const device,
 
   if (reclaim->rem == 0)
     {
-      VkCommandBuffer cb = spn_device_cb_pool_acquire(device);
+      VkCommandBuffer cb = spn_device_cb_acquire_begin(device);
 
       //
       // bind descriptor set, push constants and pipeline
@@ -499,11 +502,25 @@ spn_device_handle_pool_reclaim(struct spn_device              * const device,
       //
       // submit the command buffer
       //
-      spn_device_cb_submit(device,
-                           cb,
-                           spn_handle_pool_reclaim_complete,
-                           &payload,
-                           sizeof(payload));
+      VkFence const fence = spn_device_cb_end_fence_acquire(device,
+                                                            cb,
+                                                            spn_handle_pool_reclaim_complete,
+                                                            &payload,
+                                                            sizeof(payload));
+      // boilerplate submit
+      struct VkSubmitInfo const si = {
+        .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext                = NULL,
+        .waitSemaphoreCount   = 0,
+        .pWaitSemaphores      = NULL,
+        .pWaitDstStageMask    = NULL,
+        .commandBufferCount   = 1,
+        .pCommandBuffers      = &cb,
+        .signalSemaphoreCount = 0,
+        .pSignalSemaphores    = NULL
+      };
+
+      vk(QueueSubmit(spn_device_queue_next(device),1,&si,fence));
     }
 }
 
@@ -865,9 +882,9 @@ spn_device_handle_pool_release_d(struct spn_device              * const device,
 //
 
 void
-spn_device_handle_pool_release_d_paths(struct spn_device * const device,
-                                       spn_path_t  const * const handles,
-                                       uint32_t            const count)
+spn_device_handle_pool_release_d_paths(struct spn_device  * const device,
+                                       spn_handle_t const * const handles,
+                                       uint32_t             const count)
 {
   spn_device_handle_pool_release_d(device,
                                    SPN_HANDLE_POOL_RECLAIM_TYPE_PATH,
@@ -877,13 +894,61 @@ spn_device_handle_pool_release_d_paths(struct spn_device * const device,
 
 void
 spn_device_handle_pool_release_d_rasters(struct spn_device  * const device,
-                                         spn_raster_t const * const handles,
+                                         spn_handle_t const * const handles,
                                          uint32_t             const count)
 {
   spn_device_handle_pool_release_d(device,
                                    SPN_HANDLE_POOL_RECLAIM_TYPE_RASTER,
                                    handles,
                                    count);
+}
+
+//
+//
+//
+
+void
+spn_device_handle_pool_release_ring_d_paths(struct spn_device  * const device,
+                                            spn_handle_t const * const paths,
+                                            uint32_t             const size,
+                                            uint32_t             const span,
+                                            uint32_t             const head)
+{
+  uint32_t const count_lo = MIN_MACRO(uint32_t,head + span,size) - head;
+
+  spn_device_handle_pool_release_d_paths(device,
+                                         paths + head,
+                                         count_lo);
+  if (span > count_lo)
+    {
+      uint32_t const count_hi = span - count_lo;
+
+      spn_device_handle_pool_release_d_paths(device,
+                                             paths,
+                                             count_hi);
+    }
+}
+
+void
+spn_device_handle_pool_release_ring_d_rasters(struct spn_device  * const device,
+                                              spn_handle_t const * const rasters,
+                                              uint32_t             const size,
+                                              uint32_t             const span,
+                                              uint32_t             const head)
+{
+  uint32_t const count_lo = MIN_MACRO(uint32_t,head + span,size) - head;
+
+  spn_device_handle_pool_release_d_rasters(device,
+                                           rasters + head,
+                                           count_lo);
+  if (span > count_lo)
+    {
+      uint32_t const count_hi = span - count_lo;
+
+      spn_device_handle_pool_release_d_rasters(device,
+                                               rasters,
+                                               count_hi);
+    }
 }
 
 //

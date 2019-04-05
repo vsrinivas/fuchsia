@@ -9,11 +9,11 @@
 #include <memory.h>
 #include <float.h>
 
-#include "path_builder.h"
+#include "path_builder_impl.h"
 #include "device.h"
 #include "target.h"
 #include "handle_pool.h"
-#include "cb_pool.h"
+#include "queue_pool.h"
 #include "block_pool.h"
 #include "ring.h"
 
@@ -86,12 +86,29 @@ struct spn_pbi_dispatch
     uint32_t rolling;
   } blocks;
 
-  bool       unreleased;
-
   struct {
     uint32_t span;
     uint32_t head;
   } paths;
+
+  bool       unreleased;
+};
+
+//
+//
+//
+
+struct spn_pbi_vk
+{
+  struct {
+    VkDescriptorBufferInfo      dbi;
+    VkDeviceMemory              dm;
+  } alloc;
+
+  struct {
+    VkDescriptorBufferInfo      dbi;
+    VkDeviceMemory              dm;
+  } ring;
 };
 
 //
@@ -104,20 +121,7 @@ struct spn_path_builder_impl
 
   struct spn_device             * device;
 
-  //
-  // buffers used by paths_alloc and paths_copy shaders
-  //
-  struct {
-    struct {
-      VkDescriptorBufferInfo      dbi;
-      VkDeviceMemory              dm;
-    } alloc;
-
-    struct {
-      VkDescriptorBufferInfo      dbi;
-      VkDeviceMemory              dm;
-    } ring;
-  } vk;
+  struct spn_pbi_vk               vk;
 
   struct {
 
@@ -153,7 +157,6 @@ struct spn_path_builder_impl
     } blocks;
 
     uint32_t                    * cmds;
-
   } mapped;
 
   //
@@ -344,10 +347,10 @@ spn_pbi_dispatch_init(struct spn_path_builder_impl * const impl,
   dispatch->blocks.head    = impl->wip.head.idx;
   dispatch->blocks.rolling = impl->wip.head.rolling;
 
-  dispatch->unreleased     = false;
-
   dispatch->paths.span     = 0;
   dispatch->paths.head     = impl->paths.next.head;
+
+  dispatch->unreleased     = false;
 }
 
 static
@@ -393,10 +396,9 @@ spn_pbi_is_wip_dispatch_empty(struct spn_pbi_dispatch const * const dispatch)
 
 struct spn_pbi_complete_payload
 {
-  struct spn_path_builder_impl      * impl;
-  VkCommandBuffer                     cb;
-  struct spn_target_ds_paths_copy_t   ds;
-  uint32_t                            idx; // dispatch idx
+  struct spn_path_builder_impl *    impl;
+  struct spn_target_ds_paths_copy_t ds;
+  uint32_t                          dispatch_idx;
 };
 
 static
@@ -414,30 +416,26 @@ spn_pbi_complete(void * pfn_payload)
   struct spn_device                     * const device  = impl->device;
   struct spn_target                     * const target  = device->target;
 
-  // release cb
-  spn_device_cb_pool_release(device,payload->cb);
-
   // release descriptor set -- simple increment
   spn_target_ds_release_paths_copy(target,payload->ds);
 
   //
   // release paths -- may invoke wait()
   //
-  uint32_t const            dispatch_idx = payload->idx;
+  uint32_t const            dispatch_idx = payload->dispatch_idx;
   struct spn_pbi_dispatch * dispatch     = spn_pbi_dispatch_idx(impl,dispatch_idx);
 
-  spn_device_release_paths(device,
-                           impl->paths.extent,
-                           impl->paths.next.size,
-                           dispatch->paths.span,
-                           dispatch->paths.head);
+  spn_device_handle_pool_release_ring_d_paths(device,
+                                              impl->paths.extent,
+                                              impl->paths.next.size,
+                                              dispatch->paths.span,
+                                              dispatch->paths.head);
   //
-  // try to release dispatch records
+  // If the dispatch is the tail of the ring then try to release as
+  // many dispatch records as possible...
   //
   // Note that kernels can complete in any order so the release
   // records need to add to the mapped.ring.tail in order.
-  //
-  // Walk the release records, releasing unreleased spans of blocks.
   //
   if (spn_ring_is_tail(&impl->dispatches.ring,dispatch_idx))
     {
@@ -479,12 +477,12 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   struct spn_target * const target = device->target;
 
   // get a cb
-  VkCommandBuffer cb = spn_device_cb_pool_acquire(device);
+  VkCommandBuffer cb = spn_device_cb_acquire_begin(device);
 
-  // bind the global BLOCK_POOL descriptor set
+  // bind global BLOCK_POOL descriptor set
   spn_target_ds_bind_paths_copy_block_pool(target,cb,spn_device_block_pool_get_ds(device));
 
-  // acquire the PATHS_COPY descriptor set
+  // acquire PATHS_COPY descriptor set
   struct spn_target_ds_paths_copy_t ds_pc;
 
   spn_target_ds_acquire_paths_copy(target,device,&ds_pc);
@@ -493,10 +491,10 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   *spn_target_ds_get_paths_copy_pc_alloc(target,ds_pc) = impl->vk.alloc.dbi;
   *spn_target_ds_get_paths_copy_pc_ring(target,ds_pc)  = impl->vk.ring.dbi;
 
-  // update the PATHS_COPY descriptor set
+  // update PATHS_COPY descriptor set
   spn_target_ds_update_paths_copy(target,device->vk,ds_pc);
 
-  // bind the PATHS_COPY descriptor set
+  // bind PATHS_COPY descriptor set
   spn_target_ds_bind_paths_copy_paths_copy(target,cb,ds_pc);
 
   //
@@ -539,17 +537,30 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   //
   struct spn_pbi_complete_payload payload =
     {
-      .impl   = impl,
-      .cb     = cb,
-      .ds.idx = ds_pc.idx,
-      .idx    = impl->dispatches.ring.head,
+      .impl         = impl,
+      .ds.idx       = ds_pc.idx,
+      .dispatch_idx = impl->dispatches.ring.head,
     };
 
-  spn_device_cb_submit(device,
-                       cb,
-                       spn_pbi_complete,
-                       &payload,
-                       sizeof(payload));
+  VkFence const fence = spn_device_cb_end_fence_acquire(device,
+                                                        cb,
+                                                        spn_pbi_complete,
+                                                        &payload,
+                                                        sizeof(payload));
+  // boilerplate submit
+  struct VkSubmitInfo const si = {
+    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pNext                = NULL,
+    .waitSemaphoreCount   = 0,
+    .pWaitSemaphores      = NULL,
+    .pWaitDstStageMask    = NULL,
+    .commandBufferCount   = 1,
+    .pCommandBuffers      = &cb,
+    .signalSemaphoreCount = 0,
+    .pSignalSemaphores    = NULL
+  };
+
+  vk(QueueSubmit(spn_device_queue_next(device),1,&si,fence));
 
   //
   // the current dispatch is now "in flight" so drop it and try to
@@ -1062,8 +1073,8 @@ spn_pbi_release(struct spn_path_builder_impl * const impl)
 //
 
 spn_result
-spn_path_builder_impl_create(struct spn_device  * const device,
-                             spn_path_builder_t * const path_builder)
+spn_path_builder_impl_create(struct spn_device         * const device,
+                             struct spn_path_builder * * const path_builder)
 {
   //
   // retain the context

@@ -4,6 +4,7 @@
 
 #include "block_pool.h"
 #include "cb_pool.h"
+#include "queue_pool.h"
 #include "device.h"
 #include "target.h"
 #include "handle.h"
@@ -131,7 +132,7 @@ spn_device_block_pool_create(struct spn_device * const device,
                                   block_pool->ds_block_pool);
 
   // get a cb
-  VkCommandBuffer cb = spn_device_cb_pool_acquire(device);
+  VkCommandBuffer cb = spn_device_cb_acquire_begin(device);
 
   // bind the global block pool
   spn_target_ds_bind_block_pool_init_block_pool(target,cb,block_pool->ds_block_pool);
@@ -150,8 +151,23 @@ spn_device_block_pool_create(struct spn_device * const device,
   // dispatch the pipeline
   vkCmdDispatch(cb,workgroups,1,1);
 
-  // submit the command buffer with no callback
-  spn_device_cb_submit(device,cb,NULL,NULL,0);
+  // end the cb and acquire a fence
+  VkFence const fence = spn_device_cb_end_fence_acquire(device,cb,NULL,NULL,0UL);
+
+  // boilerplate submit
+  struct VkSubmitInfo const si = {
+    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pNext                = NULL,
+    .waitSemaphoreCount   = 0,
+    .pWaitSemaphores      = NULL,
+    .pWaitDstStageMask    = NULL,
+    .commandBufferCount   = 1,
+    .pCommandBuffers      = &cb,
+    .signalSemaphoreCount = 0,
+    .pSignalSemaphores    = NULL
+  };
+
+  vk(QueueSubmit(spn_device_queue_next(device),1,&si,fence));
 
   //
   // FIXME -- continue intializing and drain later

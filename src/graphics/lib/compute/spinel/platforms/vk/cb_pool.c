@@ -81,15 +81,6 @@ spn_device_cb_pool_acquire(struct spn_device * const device)
                             &cbai,
                             &cb));
 
-  VkCommandBufferBeginInfo const cbbi = {
-    .sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-    .pNext            = NULL,
-    .flags            = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    .pInheritanceInfo = NULL
-  };
-
-  vk(BeginCommandBuffer(cb,&cbbi));
-
   return cb;
 }
 

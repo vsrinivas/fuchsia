@@ -14,7 +14,6 @@
 #include "fence_pool.h"
 #include "device.h"
 
-#include "queue_pool.h"
 #include "cb_pool.h"
 
 #include "common/macros.h"
@@ -27,7 +26,6 @@
 struct spn_fence_cb
 {
   struct spn_fence_cb  * next;
-  VkQueue                queue;
   VkCommandBuffer        cb;
   VkFence                fence;
   spn_fence_complete_pfn pfn;
@@ -185,10 +183,9 @@ spn_device_fence_pool_drain(struct spn_device     * const device,
   //
   do {
 
-    // release the queue
-    spn_device_queue_pool_release(device,signaled->queue);
     // release the cb
     spn_device_cb_pool_release(device,signaled->cb);
+
     // reset the fence
     vk(ResetFences(device->vk->d,1,&signaled->fence));
 
@@ -377,7 +374,6 @@ spn_device_drain(struct spn_device * const device)
 
 VkFence
 spn_device_fence_pool_acquire(struct spn_device    * const device,
-                              VkQueue                const queue,
                               VkCommandBuffer        const cb,
                               spn_fence_complete_pfn const pfn,
                               void                 * const pfn_payload,
@@ -403,8 +399,7 @@ spn_device_fence_pool_acquire(struct spn_device    * const device,
   head->next             = fence_pool->unsignaled;
   fence_pool->unsignaled = head;
 
-  // save queue and cb
-  head->queue            = queue;
+  // save cb
   head->cb               = cb;
 
   // save the head pfn

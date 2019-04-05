@@ -145,11 +145,11 @@ spn_ttsk_translate_and_clip(const spn_cmd_place cmd, inout uvec2 ttsk)
   //
   // place_clip: { x0, y0, x1, y1 }
   //
-  const int x = SPN_TTXK_GET_X(ttsk) + cmd.tx;
+  const int x = SPN_TTXK_GET_X(ttsk) + cmd.txty[0];
 
   if (x >= place_clip[0] && x < place_clip[2])
     {
-      const int y0   = max(place_clip[1],SPN_TTXK_GET_Y(ttsk) + cmd.ty);
+      const int y0   = max(place_clip[1],SPN_TTXK_GET_Y(ttsk) + cmd.txty[1]);
       const int span = SPN_TTXK_GET_SPAN(ttsk);
       const int y1   = min(place_clip[3],y0 + abs(span));
 
@@ -187,7 +187,7 @@ spn_ttsk_to_ttck(const uvec2 ttik, const uint span, inout uint ttck_base)
   ttck_base              += subgroupBallotBitCount(ttsk_ballot);
 
   if (is_ttsk)
-    ttcks.keys[ttck_idx] = ttik;
+    ttcks[ttck_idx] = ttik;
 }
 
 //
@@ -198,15 +198,15 @@ spn_ttsk_to_ttck(const uvec2 ttik, const uint span, inout uint ttck_base)
 shared uint smem[SPN_KERNEL_PLACE_SUBGROUP_SIZE];
 
 // encode { span_exc : src } into a uint
-#define SPN_PLACE_MAKE_EXC_SRC(exc)                                     \
+#define SPN_PLACE_MAKE_EXC_SRC(exc)                                                     \
   ((exc) | (gl_SubgroupInvocationID << (32-SPN_KERNEL_PLACE_SUBGROUP_SIZE_LOG2)))
 
 // get exc_src.exc
-#define SPN_PLACE_EXC_SRC_GET_EXC(exc_src)      \
+#define SPN_PLACE_EXC_SRC_GET_EXC(exc_src)                              \
   bitfieldExtract(exc_src,0,(32-SPN_KERNEL_PLACE_SUBGROUP_SIZE_LOG2))
 
 // get exc_src.src
-#define SPN_PLACE_EXC_SRC_GET_SRC(exc_src)      \
+#define SPN_PLACE_EXC_SRC_GET_SRC(exc_src)                                                              \
   bitfieldExtract(exc_src,(32-SPN_KERNEL_PLACE_SUBGROUP_SIZE_LOG2),SPN_KERNEL_PLACE_SUBGROUP_SIZE_LOG2)
 
 void
@@ -248,7 +248,7 @@ spn_ttxk_to_ttck(const uvec2 ttik, const uint span, inout uint ttck_base)
       SPN_TTCK_ADD_Y(ttck_src,delta);
 
       if (ttck_idx < ttck_base)
-        ttcks.keys[ttck_idx] = ttck_src;
+        ttcks[ttck_idx] = ttck_src;
 
       ttck_idx += SPN_KERNEL_PLACE_SUBGROUP_SIZE;
 
@@ -342,8 +342,8 @@ void main()
   // in the top and bottom of the block
   //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-  uvec2 t##I = uvec2(bp_blocks[h_idx + SPN_KERNEL_PLACE_SUBGROUP_SIZE *  I], \
+#define SPN_EXPAND_X(I,N,P,L)                                                                                           \
+  uvec2 t##I = uvec2(bp_blocks[h_idx + SPN_KERNEL_PLACE_SUBGROUP_SIZE *  I],                                            \
                      bp_blocks[h_idx + SPN_KERNEL_PLACE_SUBGROUP_SIZE * (I + SPN_KERNEL_PLACE_BLOCK_EXPAND_SIZE)]);
 
   SPN_KERNEL_PLACE_BLOCK_EXPAND();
@@ -354,9 +354,9 @@ void main()
   SPN_SUBGROUP_UNIFORM uint count_nodes = 0;
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-  if (SPN_RASTER_HEAD_ELEM_IN_RANGE(SPN_KERNEL_PLACE_SUBGROUP_SIZE,SPN_RASTER_HEAD_LO_OFFSET_NODES,I)) { \
-    count_nodes = SPN_PLACE_BROADCAST(t##I[0],SPN_RASTER_HEAD_LO_OFFSET_NODES,I); \
+#define SPN_EXPAND_X(I,N,P,L)                                                                                   \
+  if (SPN_RASTER_HEAD_ELEM_IN_RANGE(SPN_KERNEL_PLACE_SUBGROUP_SIZE,SPN_RASTER_HEAD_LO_OFFSET_NODES,I)) {        \
+    count_nodes = SPN_PLACE_BROADCAST(t##I[0],SPN_RASTER_HEAD_LO_OFFSET_NODES,I);                               \
   }
 
   SPN_KERNEL_PLACE_BLOCK_EXPAND();
@@ -365,21 +365,21 @@ void main()
   // invalidate the header with span=0 -- just use a uvec2(0,0)
   //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-  if (!SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) { \
-    if (SPN_RASTER_HEAD_PARTIALLY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) { \
-      if (SPN_RASTER_HEAD_IS_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) { \
-        t##I = uvec2(0,0);                                              \
-      }                                                                 \
-    }                                                                   \
+#define SPN_EXPAND_X(I,N,P,L)                                                   \
+  if (!SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) {     \
+    if (SPN_RASTER_HEAD_PARTIALLY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) {   \
+      if (SPN_RASTER_HEAD_IS_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) {        \
+        t##I = uvec2(0,0);                                                      \
+      }                                                                         \
+    }                                                                           \
 
   //
   // translate and clip the keys in the node
   //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-  if (!SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) { \
-    spn_ttsk_translate_and_clip(cmd,t##I);                              \
+#define SPN_EXPAND_X(I,N,P,L)                                                   \
+  if (!SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) {     \
+    spn_ttsk_translate_and_clip(cmd,t##I);                                      \
   }
 
   SPN_KERNEL_PLACE_BLOCK_EXPAND();
@@ -390,9 +390,9 @@ void main()
   uint h_lane_keys = 0;
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-  if (!SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) { \
-    h_lane_keys += abs(SPN_TTXK_GET_SPAN(t##I));                        \
+#define SPN_EXPAND_X(I,N,P,L)                                                   \
+  if (!SPN_RASTER_HEAD_ENTIRELY_HEADER(SPN_KERNEL_PLACE_SUBGROUP_SIZE,I)) {     \
+    h_lane_keys += abs(SPN_TTXK_GET_SPAN(t##I));                                \
   }
 
   SPN_KERNEL_PLACE_BLOCK_EXPAND();
@@ -404,7 +404,7 @@ void main()
   uint       h_ttck_base  = 0;
 
   if (gl_SubgroupInvocationID == 0)
-    h_ttck_base = atomicAdd(ttcks.atomics[0],h_block_keys);
+    h_ttck_base = atomicAdd(ttcks_count[0],h_block_keys);
 
   h_ttck_base = subgroupBroadcastFirst(h_ttck_base);
 
@@ -442,8 +442,8 @@ void main()
       uint n_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
 
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L)                                           \
-      t##I = uvec2(bp_blocks[n_idx + SPN_KERNEL_PLACE_SUBGROUP_SIZE *  I], \
+#define SPN_EXPAND_X(I,N,P,L)                                                                                           \
+      t##I = uvec2(bp_blocks[n_idx + SPN_KERNEL_PLACE_SUBGROUP_SIZE *  I],                                              \
                    bp_blocks[n_idx + SPN_KERNEL_PLACE_SUBGROUP_SIZE * (I + SPN_KERNEL_PLACE_BLOCK_EXPAND_SIZE)]);
 
       SPN_KERNEL_PLACE_BLOCK_EXPAND();
@@ -475,7 +475,7 @@ void main()
       uint       n_ttck_base  = 0;
 
       if (gl_SubgroupInvocationID == 0)
-        n_ttck_base = atomicAdd(ttcks.atomics[0],n_block_keys);
+        n_ttck_base = atomicAdd(ttcks_count[0],n_block_keys);
 
       n_ttck_base = subgroupBroadcastFirst(n_ttck_base);
 
@@ -487,17 +487,17 @@ void main()
       //   - otherwise, it's a mix of TTSK and TTPK and invalid keys
       //
 #undef  SPN_EXPAND_X
-#define SPN_EXPAND_X(I,N,P,L) {                                 \
-        int span = SPN_TTXK_GET_SPAN(t##I);                     \
-        if (subgroupAny(span != 0))                             \
-          {                                                     \
-            span = abs(span);                                   \
-            SPN_TTCK_SET_LAYER(t##I,cmd.layer_id);              \
-            if (subgroupAll(span >= 0))                         \
-              spn_ttsk_to_ttck(t##I,span,n_ttck_base);          \
-            else                                                \
-              spn_ttxk_to_ttck(t##I,span,n_ttck_base);          \
-          }                                                     \
+#define SPN_EXPAND_X(I,N,P,L) {                         \
+        int span = SPN_TTXK_GET_SPAN(t##I);             \
+        if (subgroupAny(span != 0))                     \
+          {                                             \
+            span = abs(span);                           \
+            SPN_TTCK_SET_LAYER(t##I,cmd.layer_id);      \
+            if (subgroupAll(span >= 0))                 \
+              spn_ttsk_to_ttck(t##I,span,n_ttck_base);  \
+            else                                        \
+              spn_ttxk_to_ttck(t##I,span,n_ttck_base);  \
+          }                                             \
       }
 
       SPN_KERNEL_PLACE_BLOCK_EXPAND();

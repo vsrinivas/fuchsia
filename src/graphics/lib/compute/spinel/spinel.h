@@ -185,7 +185,13 @@ spn_raster_fill(spn_raster_builder_t         raster_builder,
 //
 
 spn_result
-spn_composition_create(spn_context_t context, spn_composition_t * composition);
+spn_composition_create(spn_context_t       context,
+                       spn_composition_t * composition);
+
+spn_result
+spn_composition_clone(spn_context_t       context,
+                      spn_composition_t   composition,
+                      spn_composition_t * clone);
 
 spn_result
 spn_composition_retain(spn_composition_t composition);
@@ -198,18 +204,20 @@ spn_composition_release(spn_composition_t composition);
 //
 
 spn_result
-spn_composition_place(spn_composition_t    composition,
-                      spn_raster_t const * rasters,
-                      spn_layer_id const * layer_ids,
-                      float        const * txs,
-                      float        const * tys,
-                      uint32_t             count);
+spn_composition_place(spn_composition_t     composition,
+                      spn_raster_t const  * rasters,
+                      spn_layer_id const  * layer_ids,
+                      int32_t      const (* txtys)[2],
+                      uint32_t              count);
 
 spn_result
 spn_composition_seal(spn_composition_t composition);
 
 spn_result
-spn_composition_unseal(spn_composition_t composition, bool reset);
+spn_composition_unseal(spn_composition_t composition);
+
+spn_result
+spn_composition_reset(spn_composition_t composition);
 
 spn_result
 spn_composition_get_bounds(spn_composition_t composition, int32_t bounds[4]);
@@ -239,7 +247,6 @@ spn_composition_set_clip(spn_composition_t composition, int32_t const clip[4]);
 // Report which layers and tiles are intersected by one or more
 // device-space (x,y) points
 //
-
 
 //
 // STYLING STATE
@@ -313,20 +320,16 @@ spn_styling_group_range_hi(spn_styling_t       styling,
                            spn_layer_id  const layer_hi);
 
 spn_result
-spn_styling_group_layer(spn_styling_t       styling,
-                        spn_group_id  const group_id,
-                        spn_layer_id  const layer_id,
-                        uint32_t      const n,
-                        uint32_t  * * const cmds);
-
-//
-// STYLING ENCODERS -- FIXME -- WILL EVENTUALLY BE OPAQUE
-//
+spn_styling_group_layer(spn_styling_t               styling,
+                        spn_group_id          const group_id,
+                        spn_layer_id          const layer_id,
+                        uint32_t              const n,
+                        spn_styling_cmd_t * * const cmds);
 
 #if 0
 
 //
-// All command encoders will be opaque
+// FIXME -- styling command encoders will be opaque
 //
 
 void

@@ -6,168 +6,184 @@
 //
 //
 
-#if 0
-#include <stdlib.h>
-#include <stdio.h>
+#include "composition_impl.h"
+#include "device.h"
+#include "ring.h"
+#include "target.h"
+#include "core_c.h"
+#include "state_assert.h"
+#include "handle_pool.h"
+#include "queue_pool.h"
+#include "block_pool.h"
+#include "semaphore_pool.h"
+#include "queue_pool.h"
 
-#include "hs/cl/hs_cl.h"
-
-#include "common/cl/assert_cl.h"
-
-#include "composition_cl_12.h"
-#include "config_cl.h"
-
-#include "context.h"
-#include "raster.h"
-#include "handle.h"
-
-#include "runtime_cl_12.h"
-
-#include "common.h"
-#include "tile.h"
-#endif
-
-//
-// COMPOSITION PLACE
-//
-// This is a snapshot of the host-side command queue.
-//
-// Note that the composition command extent could be implemented as
-// either a mapped buffer or simply copied to an ephemeral extent.
-//
-// This implementation may vary between compute platforms.
-//
-
-struct spn_composition_place
-{
-  struct spn_composition_impl      * impl;
-
-  cl_command_queue                   cq;
-
-  struct spn_extent_phw1g_tdrNs_snap cmds;
-
-  spn_subbuf_id_t                    id;
-};
+#include "common/vk/vk_assert.h"
+#include "common/vk/vk_barrier.h"
 
 //
 // composition states
 //
 
-typedef enum spn_composition_state_e {
+typedef enum spn_ci_state_e {
 
-  SPN_COMPOSITION_STATE_UNSEALING,
-  SPN_COMPOSITION_STATE_UNSEALED,
-  SPN_COMPOSITION_STATE_SEALING,
-  SPN_COMPOSITION_STATE_SEALED
+  SPN_CI_STATE_RESETTING, // unsealed, but waiting for reset to complete
+  SPN_CI_STATE_UNSEALED,  // ready to place rasters
+  SPN_CI_STATE_SEALING,   // waiting for PLACE and TTCK_SORT
+  SPN_CI_STATE_SEALED     // sort & segment complete
 
-} spn_composition_state_e;
+} spn_ci_state_e;
 
 //
-// IMPL
+// There are always as many dispatch records as there are fences in
+// the fence pool.  This simplifies reasoning about concurrency.
+//
+// The dispatch record in the composition tracks resources associated
+// with wip and in-flight PLACE submissions.
 //
 
-struct spn_composition_impl
+struct spn_ci_dispatch
 {
-  struct spn_composition        * composition;
-  struct spn_runtime            * runtime;
-
-  SPN_ASSERT_STATE_DECLARE(spn_composition_state_e);
-
-  spn_int                         lock_count; // wip renders
+  struct {
+    uint32_t    span;
+    uint32_t    head;
+  } cp;
 
   struct {
-    spn_grid_t                    place;
-    spn_grid_t                    sort;
-  } grids;
+    VkSemaphore place;
+  } semaphore;
 
-  cl_command_queue                cq;
-
-  struct {
-    cl_kernel                     place;
-    cl_kernel                     segment;
-  } kernels;
-
-  // raster ids must be held until the composition is reset or
-  // released and then their refcounts can be decremented
-  struct {
-    struct spn_extent_phrw        extent;
-    uint32_t                      count;
-  } saved;
-
-  struct {
-    struct spn_extent_ring        ring;   // how many slots left?
-    struct spn_extent_phw1g_tdrNs extent; // wip command extent
-  } cmds;
-
-  // composition extent length
-  struct spn_extent_phr_pdrw      atomics;
-
-  // composition ttck extent
-  struct spn_extent_pdrw          keys;
-
-  // key offsets in sealed and sorted ttck extent
-  struct spn_extent_pdrw          offsets;
+  bool          unreleased;
 };
 
 //
-// ATOMICS
+//
 //
 
-struct spn_place_atomics
+struct spn_ci_vk
 {
-  uint32_t keys;
+  struct {
+    struct {
+      VkDescriptorBufferInfo  dbi;
+      VkDeviceMemory          dm;
+    } h;
+
+    struct {
+      VkDescriptorBufferInfo  dbi;
+      VkDeviceMemory          dm;
+    } d;
+  } rings;
+
+  struct {
+    VkDescriptorBufferInfo    dbi;
+    VkDeviceMemory            dm;
+  } ttcks;
+
+  struct {
+    VkDescriptorBufferInfo    dbi;
+    VkDeviceMemory            dm;
+  } copyback;
+
+  struct {
+    VkSemaphore               resetting;
+    VkSemaphore               sealing;
+  } semaphore;
+};
+
+//
+//
+//
+
+struct spn_ci_copyback
+{
+  uint32_t ttcks;
   uint32_t offsets;
 };
 
 //
-// Forward declarations
-//
-
-static
-void
-spn_composition_unseal_block(struct spn_composition_impl * const impl,
-                             spn_bool                      const block);
-
-//
 //
 //
 
-static
-void
-spn_composition_pfn_release(struct spn_composition_impl * const impl)
+struct spn_composition_impl
 {
-  if (--impl->composition->ref_count != 0)
-    return;
+  struct spn_composition         * composition;
+
+  struct spn_device              * device;
+
+  struct spn_target_config const * config;
+
+  struct spn_ci_vk                 vk;
 
   //
-  // otherwise, dispose of all resources
+  // mapped command ring and copyback counts
   //
+  struct {
+    struct {
+      struct spn_cmd_place       * extent;
+      struct spn_ring              ring;
+    } cp; // place commands
 
-  // the unsealed state is a safe state to dispose of resources
-  spn_composition_unseal_block(impl,true); // block
+    struct {
+      struct spn_ci_copyback     * extent;
+    } cb;
+  } mapped;
 
-  struct spn_runtime * const runtime = impl->runtime;
+  //
+  // records of work-in-progress and work-in-flight
+  //
+  struct {
+    struct spn_ci_dispatch       * extent;
+    struct spn_ring                ring;
+  } dispatches;
 
-  // free host composition
-  spn_runtime_host_perm_free(runtime,impl->composition);
+  //
+  // scratchpad for semaphores instead of using C99/VLA
+  //
+  struct {
+    VkSemaphore                  * semaphores;
+    VkPipelineStageFlags         * psfs;
+    uint32_t                       count;
+  } place;
 
-  // release the cq
-  spn_runtime_release_cq_in_order(runtime,impl->cq);
+  //
+  // all rasters are retained until reset or release
+  //
+  struct {
+    spn_handle_t                 * extent;
+    uint32_t                       count;
+    uint32_t                       size;
+  } rasters;
 
-  // release kernels
-  cl(ReleaseKernel(impl->kernels.place));
-  cl(ReleaseKernel(impl->kernels.segment));
+  SPN_ASSERT_STATE_DECLARE(spn_ci_state_e);
 
-  // release extents
-  spn_extent_phw1g_tdrNs_free(runtime,&impl->cmds.extent);
-  spn_extent_phrw_free       (runtime,&impl->saved.extent);
-  spn_extent_phr_pdrw_free   (runtime,&impl->atomics);
+  uint32_t                         lock_count; // # of wip renders
+};
 
-  spn_extent_pdrw_free       (runtime,&impl->keys);
-  spn_extent_pdrw_free       (runtime,&impl->offsets);
+//
+// A dispatch captures how many paths and blocks are in a dispatched or
+// the work-in-progress compute grid.
+//
 
-  // free composition impl
-  spn_runtime_host_perm_free(runtime,impl);
+static
+struct spn_ci_dispatch *
+spn_ci_dispatch_idx(struct spn_composition_impl * const impl,
+                    uint32_t                      const idx)
+{
+  return impl->dispatches.extent + idx;
+}
+
+static
+struct spn_ci_dispatch *
+spn_ci_dispatch_head(struct spn_composition_impl * const impl)
+{
+  return spn_ci_dispatch_idx(impl,impl->dispatches.ring.head);
+}
+
+static
+struct spn_ci_dispatch *
+spn_ci_dispatch_tail(struct spn_composition_impl * const impl)
+{
+  return spn_ci_dispatch_idx(impl,impl->dispatches.ring.tail);
 }
 
 //
@@ -175,270 +191,448 @@ spn_composition_pfn_release(struct spn_composition_impl * const impl)
 //
 
 static
-void
-spn_composition_place_grid_pfn_dispose(spn_grid_t const grid)
+bool
+spn_ci_dispatch_is_empty(struct spn_ci_dispatch const  * const dispatch)
 {
-  struct spn_composition_place * const place   = spn_grid_get_data(grid);
-  struct spn_composition_impl  * const impl    = place->impl;
-  struct spn_runtime           * const runtime = impl->runtime;
-
-  // release cq
-  spn_runtime_release_cq_in_order(runtime,place->cq);
-
-  // unmap the snapshot (could be a copy)
-  spn_extent_phw1g_tdrNs_snap_free(runtime,&place->cmds);
-
-  // release place struct
-  spn_runtime_host_temp_free(runtime,place,place->id);
-
-  // release impl
-  spn_composition_pfn_release(impl);
-}
-
-//
-//
-//
-
-static
-void
-spn_composition_place_read_complete(spn_grid_t const grid)
-{
-  spn_grid_complete(grid);
+  return dispatch->cp.span == 0;
 }
 
 static
 void
-spn_composition_place_read_cb(cl_event event, cl_int status, spn_grid_t const grid)
+spn_ci_dispatch_init(struct spn_composition_impl * const impl,
+                     struct spn_ci_dispatch      * const dispatch)
 {
-  SPN_CL_CB(status);
+  dispatch->cp.span    = 0;
+  dispatch->cp.head    = impl->mapped.cp.ring.head;
 
-  struct spn_composition_place * const place     = spn_grid_get_data(grid);
-  struct spn_composition_impl  * const impl      = place->impl;
-  struct spn_runtime           * const runtime   = impl->runtime;
-  struct spn_scheduler         * const scheduler = runtime->scheduler;
+  // don't care about semaphore
 
-  // as quickly as possible, enqueue next stage in pipeline to context command scheduler
-  SPN_SCHEDULER_SCHEDULE(scheduler,spn_composition_place_read_complete,grid);
+  dispatch->unreleased = false;
 }
 
 static
 void
-spn_composition_place_grid_pfn_execute(spn_grid_t const grid)
+spn_ci_dispatch_drop(struct spn_composition_impl * const impl)
 {
-  //
-  // FILLS EXPAND
-  //
-  // need result of cmd counts before launching RASTERIZE grids
-  //
-  // - OpenCL 1.2: copy atomic counters back to host and launch RASTERIZE grids from host
-  // - OpenCL 2.x: have a kernel size and launch RASTERIZE grids from device
-  // - or launch a device-wide grid that feeds itself but that's unsatisfying
-  //
-  struct spn_composition_place * const place   = spn_grid_get_data(grid);
-  struct spn_composition_impl  * const impl    = place->impl;
-  struct spn_runtime           * const runtime = impl->runtime;
+  struct spn_ring * const ring = &impl->dispatches.ring;
 
-  uint32_t  const work_size = spn_extent_ring_snap_count(place->cmds.snap);
-  uint32_t4 const clip      = { 0, 0, UINT32_T_MAX, UINT32_T_MAX };
+  spn_ring_drop_1(ring);
 
-  // initialize kernel args
-  cl(SetKernelArg(impl->kernels.place,0,SPN_CL_ARG(impl->runtime->block_pool.blocks.drw)));
-  cl(SetKernelArg(impl->kernels.place,1,SPN_CL_ARG(impl->atomics.drw)));
-  cl(SetKernelArg(impl->kernels.place,2,SPN_CL_ARG(impl->keys.drw)));
-  cl(SetKernelArg(impl->kernels.place,3,SPN_CL_ARG(place->cmds.drN)));
-  cl(SetKernelArg(impl->kernels.place,4,SPN_CL_ARG(runtime->handle_pool.map.drw)));
-  cl(SetKernelArg(impl->kernels.place,5,SPN_CL_ARG(clip))); // FIXME -- convert the clip to yx0/yx1 format
-  cl(SetKernelArg(impl->kernels.place,6,SPN_CL_ARG(work_size)));
+  while (spn_ring_is_empty(ring)) {
+    spn_device_wait(impl->device);
+  }
 
-  // launch kernel
-  spn_device_enqueue_kernel(runtime->device,
-                            SPN_DEVICE_KERNEL_ID_PLACE,
-                            place->cq,
-                            impl->kernels.place,
-                            work_size,
-                            0,NULL,NULL);
-  //
-  // copy atomics back after every place launch
-  //
-  cl_event complete;
+  struct spn_ci_dispatch * const dispatch = spn_ci_dispatch_idx(impl,ring->head);
 
-  spn_extent_phr_pdrw_read(&impl->atomics,place->cq,&complete);
-
-  cl(SetEventCallback(complete,CL_COMPLETE,spn_composition_place_read_cb,grid));
-  cl(ReleaseEvent(complete));
-
-  // flush command queue
-  cl(Flush(place->cq));
+  spn_ci_dispatch_init(impl,dispatch);
 }
 
 //
-//
+// We are avoiding use of VLA/alloca() but need to provide pipeline
+// stage flags along with the semaphore wait list.
 //
 
 static
 void
-spn_composition_snap(struct spn_composition_impl * const impl)
+spn_ci_psfs_init(struct spn_composition_impl * const impl)
 {
-  spn_composition_retain(impl->composition);
+  uint32_t               const size = impl->dispatches.ring.size;
+  VkPipelineStageFlags * const psfs = impl->place.psfs;
 
-  spn_subbuf_id_t id;
-
-  struct spn_composition_place * const place = spn_runtime_host_temp_alloc(impl->runtime,
-                                                                           SPN_MEM_FLAGS_READ_WRITE,
-                                                                           sizeof(*place),&id,NULL);
-
-  // save the subbuf id
-  place->id = id;
-
-  // save backpointer
-  place->impl = impl;
-
-  // set grid data
-  spn_grid_set_data(impl->grids.place,place);
-
-  // acquire command queue
-  place->cq = spn_runtime_acquire_cq_in_order(impl->runtime);
-
-  // checkpoint the ring
-  spn_extent_ring_checkpoint(&impl->cmds.ring);
-
-  // make a snapshot
-  spn_extent_phw1g_tdrNs_snap_init(impl->runtime,&impl->cmds.ring,&place->cmds);
-
-  // unmap the snapshot (could be a copy)
-  spn_extent_phw1g_tdrNs_snap_alloc(impl->runtime,
-                                    &impl->cmds.extent,
-                                    &place->cmds,
-                                    place->cq,
-                                    NULL);
-
-  spn_grid_force(impl->grids.place);
-}
-
-//
-//
-//
-
-static
-void
-spn_composition_pfn_seal(struct spn_composition_impl * const impl)
-{
-  // return if sealing or sealed
-  if (impl->state >= SPN_COMPOSITION_STATE_SEALING)
-    return;
-
-  struct spn_runtime   * const runtime   = impl->runtime;
-  struct spn_scheduler * const scheduler = runtime->scheduler;
-
-  //
-  // otherwise, wait for UNSEALING > UNSEALED transition
-  //
-  if (impl->state == SPN_COMPOSITION_STATE_UNSEALING)
+  for (uint32_t ii=0; ii<size; ii++)
     {
-      SPN_SCHEDULER_WAIT_WHILE(scheduler,impl->state != SPN_COMPOSITION_STATE_UNSEALED);
+      psfs[ii] = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     }
-  else // or we were already unsealed
-    {
-      // flush is there is work in progress
-      uint32_t const count = spn_extent_ring_wip_count(&impl->cmds.ring);
+}
 
-      if (count > 0) {
-        spn_composition_snap(impl);
+//
+// Gather the semaphores for all in-flight PLACE dispatches.
+//
+
+static
+void
+spn_ci_gather_place_semaphores(struct spn_composition_impl * const impl)
+{
+  struct spn_ring * const ring = &impl->dispatches.ring;
+  uint32_t                rem  = ring->rem;
+
+  if (rem == 0) {
+    return;
+  }
+
+  uint32_t                             tail       = ring->tail;
+  uint32_t                       const size       = ring->size;
+  struct spn_ci_dispatch const * const dispatches = impl->dispatches.extent;
+
+  VkSemaphore                  * const semaphores = impl->place.semaphores;
+  uint32_t                             count      = 0;
+
+  while (true)
+    {
+      VkSemaphore const sp = dispatches[tail++].semaphore.place;
+
+      if (sp != VK_NULL_HANDLE) {
+        semaphores[count++] = sp;
       }
+
+      if (--rem == 0)
+        break;
+
+      if (tail == size)
+        tail = 0;
     }
 
+  impl->place.count = count;
+}
+
+//
+// COMPLETION: PLACE
+//
+
+struct spn_ci_complete_payload_1
+{
+  struct spn_composition_impl *  impl;
+
+  struct {
+    struct spn_target_ds_ttcks_t ttcks;
+    struct spn_target_ds_place_t place;
+  } ds;
+
+  uint32_t                       dispatch_idx; // dispatch idx
+};
+
+//
+// COMPLETION: INDIRECT SORT
+//
+
+struct spn_ci_complete_payload_2
+{
+  struct spn_composition_impl *  impl;
+
+  struct {
+    struct spn_target_ds_ttcks_t ttcks;
+  } ds;
+
+  struct {
+    VkSemaphore                  sort;
+  } semaphore;
+};
+
+
+//
+// COMPLETION: MERGE & SEGMENT
+//
+
+struct spn_ci_complete_payload_3
+{
+  struct spn_composition_impl *  impl;
+
+  struct {
+    struct spn_target_ds_ttcks_t ttcks;
+  } ds;
+};
+
+//
+//
+//
+
+static
+void
+spn_ci_complete_p_1(void * pfn_payload)
+{
   //
-  // now unsealed so we need to start sealing...
+  // FENCE_POOL INVARIANT:
   //
-  impl->state = SPN_COMPOSITION_STATE_SEALING;
+  // COMPLETION ROUTINE MUST MAKE LOCAL COPIES OF PAYLOAD BEFORE ANY
+  // POTENTIAL INVOCATION OF SPN_DEVICE_YIELD/WAIT/DRAIN()
+  //
+  struct spn_ci_complete_payload_1 const * const payload = pfn_payload;
+  struct spn_composition_impl            * const impl    = payload->impl;
+  struct spn_device                      * const device  = impl->device;
+  struct spn_target                      * const target  = device->target;
+
+  // release descriptor sets
+  spn_target_ds_release_ttcks(target,payload->ds.ttcks);
+  spn_target_ds_release_place(target,payload->ds.place);
 
   //
-  // the seal operation implies we should force start all dependencies
-  // that are still in a ready state
+  // If the dispatch is the tail of the ring then try to release as
+  // many dispatch records as possible...
   //
-  spn_grid_force(impl->grids.sort);
+  // Note that kernels can complete in any order so the release
+  // records need to add to the mapped.ring.tail in order.
+  //
+  uint32_t const           dispatch_idx = payload->dispatch_idx;
+  struct spn_ci_dispatch * dispatch     = spn_ci_dispatch_idx(impl,dispatch_idx);
+
+  // immediately release the semaphore
+  spn_device_semaphore_pool_release(device,dispatch->semaphore.place);
+
+  // implies dispatch is complete
+  dispatch->semaphore.place = VK_NULL_HANDLE;
+
+  if (spn_ring_is_tail(&impl->dispatches.ring,dispatch_idx))
+    {
+      do {
+
+        spn_ring_release_n(&impl->mapped.cp.ring,dispatch->cp.span);
+        spn_ring_release_n(&impl->dispatches.ring,1);
+
+        dispatch->unreleased = false;
+        dispatch             = spn_ci_dispatch_tail(impl);
+
+      } while (dispatch->unreleased);
+    }
+  else
+    {
+      dispatch->unreleased = true;
+    }
 }
 
 //
 //
 //
 
+static
 void
-spn_composition_sort_execute_complete(struct spn_composition_impl * const impl)
+spn_ci_flush(struct spn_composition_impl * const impl)
 {
-  // we're sealed
-  impl->state = SPN_COMPOSITION_STATE_SEALED;
+  struct spn_ci_dispatch * const dispatch = spn_ci_dispatch_head(impl);
 
-  // this grid is done
-  spn_grid_complete(impl->grids.sort);
+  // anything to launch?
+  if (spn_ci_dispatch_is_empty(dispatch)) {
+    return;
+  }
+
+  //
+  // We're go for launch...
+  //
+  struct spn_device * const device = impl->device;
+  struct spn_target * const target = device->target;
+
+  // get a cb
+  VkCommandBuffer cb = spn_device_cb_acquire_begin(device);
+
+  //
+  // BLOCK POOL
+  //
+  // bind global BLOCK_POOL descriptor set
+  spn_target_ds_bind_place_block_pool(target,cb,spn_device_block_pool_get_ds(device));
+
+  //
+  // TTCKS
+  //
+  // acquire TTCKS descriptor set
+  struct spn_target_ds_ttcks_t ds_ttcks;
+
+  spn_target_ds_acquire_ttcks(target,device,&ds_ttcks);
+
+  // copy the dbi structs
+  *spn_target_ds_get_ttcks_ttcks(target,ds_ttcks) = impl->vk.ttcks.dbi;
+
+  // update TTCKS descriptor set
+  spn_target_ds_update_ttcks(target,device->vk,ds_ttcks);
+
+  // bind the TTCKS descriptor set
+  spn_target_ds_bind_place_ttcks(target,cb,ds_ttcks);
+
+  //
+  // PLACE
+  //
+  // acquire PLACE descriptor set
+  struct spn_target_ds_place_t ds_place;
+
+  spn_target_ds_acquire_place(target,device,&ds_place);
+
+  // copy the dbi struct
+  *spn_target_ds_get_place_place(target,ds_place) = impl->vk.rings.d.dbi;
+
+  // update PLACE descriptor set
+  spn_target_ds_update_place(target,device->vk,ds_place);
+
+  // bind PLACE descriptor set
+  spn_target_ds_bind_place_place(target,cb,ds_place);
+
+  //
+  // Set up push constants -- note that for now the paths_copy push
+  // constants are an extension of the paths_alloc constants.
+  //
+  // This means we can push the constants once.
+  //
+  struct spn_target_push_place const push =
+    {
+      .place_clip = { 0, 0, INT32_MAX, INT32_MAX }
+    };
+
+  spn_target_p_push_place(target,cb,&push);
+
+  // bind PLACE pipeline
+  spn_target_p_bind_place(target,cb);
+
+  // dispatch the pipeline
+  vkCmdDispatch(cb,dispatch->cp.span,1,1);
+
+  //
+  // submit the command buffer
+  //
+  struct spn_ci_complete_payload_1 p_1 =
+    {
+      .impl         = impl,
+      .ds = {
+        .ttcks.idx  = ds_ttcks.idx,
+        .place.idx  = ds_place.idx
+      },
+      .dispatch_idx = impl->dispatches.ring.head,
+    };
+
+  dispatch->semaphore.place = spn_device_semaphore_pool_acquire(device);
+
+  VkFence const fence = spn_device_cb_end_fence_acquire(device,
+                                                        cb,
+                                                        spn_ci_complete_p_1,
+                                                        &p_1,
+                                                        sizeof(p_1));
+  // boilerplate submit
+  struct VkSubmitInfo const si = {
+    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pNext                = NULL,
+    .waitSemaphoreCount   = 0,
+    .pWaitSemaphores      = NULL,
+    .pWaitDstStageMask    = NULL,
+    .commandBufferCount   = 1,
+    .pCommandBuffers      = &cb,
+    .signalSemaphoreCount = 1,
+    .pSignalSemaphores    = &dispatch->semaphore.place
+  };
+
+  vk(QueueSubmit(spn_device_queue_next(device),1,&si,fence));
+
+  //
+  // the current dispatch is now "in flight" so drop it and try to
+  // acquire and initialize the next
+  //
+  spn_ci_dispatch_drop(impl);
+}
+
+//
+//
+//
+
+#if 0
+
+static
+void
+spn_ci_init(struct spn_composition_impl * const impl)
+{
+  ;
+}
+
+//
+//
+//
+
+static
+void
+spn_ci_reset_when_unsealed(struct spn_composition_impl * const impl)
+{
+  impl->reset_when_unsealed = true;
 }
 
 static
 void
-spn_composition_sort_execute_cb(cl_event event, cl_int status, struct spn_composition_impl * const impl)
+spn_ci_reset_while_unsealed(struct spn_composition_impl * const impl)
 {
-  SPN_CL_CB(status);
+  impl->reset_when_unsealed = false;
 
-  // as quickly as possible, enqueue next stage in pipeline to context command scheduler
-  SPN_SCHEDULER_SCHEDULE(impl->runtime->scheduler,spn_composition_sort_execute_complete,impl);
+  spn_ci_init(impl);
 }
+
+//
+//
+//
 
 static
 void
-spn_composition_sort_grid_pfn_execute(spn_grid_t const grid)
+spn_ci_seal_after_unsealed(struct spn_composition_impl * const impl)
 {
-  struct spn_composition_impl * const impl    = spn_grid_get_data(grid);
-  struct spn_runtime          * const runtime = impl->runtime;
+  // nothing has changed so relock
+  impl->state = SPN_CI_STATE_SEALED;
+}
 
-  // we should be sealing
-  assert(impl->state == SPN_COMPOSITION_STATE_SEALING);
+//
+//
+//
 
-  struct spn_place_atomics * const atomics = impl->atomics.hr;
+static
+void
+spn_ci_unseal_after_sealed(struct spn_composition_impl * const impl)
+{
+  // nothing has changed
+  impl->state = SPN_CI_STATE_UNSEALED;
+}
 
-#ifndef NDEBUG
-  fprintf(stderr,"composition sort: %u\n",atomics->keys);
+//
+//
+//
+
+static
+void
+spn_ci_unseal_after_sealed_and_reset(struct spn_composition_impl * const impl)
+{
+  // nothing has changed
+  impl->state = SPN_CI_STATE_UNSEALED;
+
+  spn_ci_reset_while_unsealed(impl);
+}
+
+//
+//
+//
+
+static
+void
+spn_ci_block_until_unsealed_and_reseal(struct spn_composition_impl * const impl)
+{
+#if 0
+  if (impl->reset_when_unsealed)
+    {
+      spn_ci_reset_while_unsealed(impl);
+    }
+#endif
+}
+
 #endif
 
-  if (atomics->keys > 0)
-    {
-      uint32_t keys_padded_in, keys_padded_out;
+//
+//
+//
 
-      hs_cl_pad(runtime->hs,atomics->keys,&keys_padded_in,&keys_padded_out);
+static
+void
+spn_ci_complete_p_3(void * pfn_payload)
+{
+  //
+  // FENCE_POOL INVARIANT:
+  //
+  // COMPLETION ROUTINE MUST MAKE LOCAL COPIES OF PAYLOAD BEFORE ANY
+  // POTENTIAL INVOCATION OF SPN_DEVICE_YIELD/WAIT/DRAIN()
+  //
+  // The safest approach is to create a copy of payload struct on the
+  // stack if you don't understand where the wait()'s might occur.
+  //
+  struct spn_ci_complete_payload_3 const * const p_3    = pfn_payload;
+  struct spn_composition_impl            * const impl   = p_3->impl;
+  struct spn_device                      * const device = impl->device;
+  struct spn_target                      * const target = device->target;
 
-      hs_cl_sort(impl->runtime->hs,
-                 impl->cq,
-                 0,NULL,NULL,
-                 impl->keys.drw,
-                 NULL,
-                 atomics->keys,
-                 keys_padded_in,
-                 keys_padded_out,
-                 false);
+  // release the ttcks ds -- will never wait()
+  spn_target_ds_release_ttcks(target,p_3->ds.ttcks); // FIXME -- reuse
 
-      cl(SetKernelArg(impl->kernels.segment,0,SPN_CL_ARG(impl->keys.drw)));
-      cl(SetKernelArg(impl->kernels.segment,1,SPN_CL_ARG(impl->offsets.drw)));
-      cl(SetKernelArg(impl->kernels.segment,2,SPN_CL_ARG(impl->atomics.drw)));
+  // release the sealing semaphore
+  spn_device_semaphore_pool_release(device,impl->vk.semaphore.sealing);
 
-      // find start of each tile
-      spn_device_enqueue_kernel(runtime->device,
-                                SPN_DEVICE_KERNEL_ID_SEGMENT_TTCK,
-                                impl->cq,
-                                impl->kernels.segment,
-                                atomics->keys,
-                                0,NULL,NULL);
-    }
-
-  cl_event complete;
-
-  // next stage needs to know number of key segments
-  spn_extent_phr_pdrw_read(&impl->atomics,impl->cq,&complete);
-
-  // register a callback
-  cl(SetEventCallback(complete,CL_COMPLETE,spn_composition_sort_execute_cb,impl));
-  cl(ReleaseEvent(complete));
-
-  // flush cq
-  cl(Flush(impl->cq));
+  // move to sealed state
+  impl->state = SPN_CI_STATE_SEALED;
 }
 
 //
@@ -447,17 +641,58 @@ spn_composition_sort_grid_pfn_execute(spn_grid_t const grid)
 
 static
 void
-spn_composition_raster_release(struct spn_composition_impl * const impl)
+spn_ci_complete_p_2(void * pfn_payload)
 {
   //
-  // reference counts to rasters can only be released when the
-  // composition is unsealed and the atomics are reset.
+  // FENCE_POOL INVARIANT:
   //
-  spn_runtime_raster_device_release(impl->runtime,
-                                    impl->saved.extent.hrw,
-                                    impl->saved.count);
-  // reset count
-  impl->saved.count = 0;
+  // COMPLETION ROUTINE MUST MAKE LOCAL COPIES OF PAYLOAD BEFORE ANY
+  // POTENTIAL INVOCATION OF SPN_DEVICE_YIELD/WAIT/DRAIN()
+  //
+  // The safest approach is to create a copy of payload struct on the
+  // stack if you don't understand where the wait()'s might occur.
+  //
+  struct spn_ci_complete_payload_2 const * const p_2    = pfn_payload;
+  struct spn_composition_impl            * const impl   = p_2->impl;
+  struct spn_device                      * const device = impl->device;
+  struct spn_target                      * const target = device->target;
+
+  // release the copy semaphore
+  spn_device_semaphore_pool_release(device,p_2->semaphore.sort);
+
+  //
+  // PHASE 3:
+  //
+
+  // launch sort dependent upon in-flight PLACE invocations
+  VkCommandBuffer cb = spn_device_cb_acquire_begin(device);
+
+  //
+  // DS: TTCKS
+  //
+  spn_target_ds_bind_segment_ttck_ttcks(target,cb,p_2->ds.ttcks);
+
+#if 0
+  hs_vk_merge();
+#endif
+
+  vk_barrier_compute_w_to_compute_r(cb);
+
+  ////////////////////////////////////////////////////////////////
+  //
+  // SHADER: TTCK_SEGMENT
+  //
+  ////////////////////////////////////////////////////////////////
+
+  // bind the pipeline
+  spn_target_p_bind_segment_ttck(target,cb);
+
+#if 0
+  // dispatch one workgroup per fill command
+  vkCmdDispatch(cb,count_ru/slab_size,1,1);
+#endif
+
+  // signal completion with a semaphore
 }
 
 //
@@ -466,253 +701,484 @@ spn_composition_raster_release(struct spn_composition_impl * const impl)
 
 static
 void
-spn_composition_unseal_block(struct spn_composition_impl * const impl,
-                             spn_bool                      const block)
+spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
 {
-  // return if already unsealed
-  if (impl->state == SPN_COMPOSITION_STATE_UNSEALED)
-    return;
+  //
+  struct spn_device * const device = impl->device;
+  struct spn_target * const target = device->target;
+
+  // semaphore will be signaled once segmenting is complete
+  impl->vk.semaphore.sealing = spn_device_semaphore_pool_acquire(device);
+
+  // flush current dispatch
+  spn_ci_flush(impl);
+
+  // launch sort dependent upon in-flight PLACE invocations
+  VkCommandBuffer cb = spn_device_cb_acquire_begin(device);
 
   //
-  // otherwise, we're going to need to pump the scheduler
+  // COPYBACK
   //
-  struct spn_scheduler * const scheduler = impl->runtime->scheduler;
+  VkBufferCopy const bc = {
+    .srcOffset = SPN_TARGET_BUFFER_OFFSETOF(ttcks,ttcks,ttcks_count),
+    .dstOffset = OFFSET_OF_MACRO(struct spn_ci_copyback,ttcks),
+    .size      = sizeof(impl->mapped.cb.extent->ttcks)
+  };
+
+  VkBuffer ttcks = impl->vk.ttcks.dbi.buffer;
+
+  vkCmdCopyBuffer(cb,
+                  ttcks,
+                  impl->vk.copyback.dbi.buffer,
+                  1,
+                  &bc);
 
   //
-  // wait for UNSEALING > UNSEALED transition
+  // TTCKS
   //
-  if (impl->state == SPN_COMPOSITION_STATE_UNSEALING)
+
+  // acquire TTCKS descriptor set
+  struct spn_target_ds_ttcks_t ds_ttcks;
+
+  spn_target_ds_acquire_ttcks(target,device,&ds_ttcks);
+
+  // copy the dbi structs
+  *spn_target_ds_get_ttcks_ttcks(target,ds_ttcks) = impl->vk.ttcks.dbi;
+
+  // update TTCKS descriptor set
+  spn_target_ds_update_ttcks(target,device->vk,ds_ttcks);
+
+  // bind the TTCKS descriptor set
+  spn_target_ds_bind_segment_ttck_ttcks(target,cb,ds_ttcks);
+
+  //
+  // SORT
+  //
+#if 0
+  hs_vk_sort_indirect(cb,
+                      ttcks,
+                      SPN_TARGET_BUFFER_OFFSETOF(ttcks,ttcks,ttcks),
+                      SPN_TARGET_BUFFER_OFFSETOF(ttcks,ttcks,ttcks_count));
+#endif
+
+  //
+  //
+  //
+  struct spn_ci_complete_payload_2 p_2 =
     {
-      if (block) {
-        SPN_SCHEDULER_WAIT_WHILE(scheduler,impl->state != SPN_COMPOSITION_STATE_UNSEALED);
+      .impl          = impl,
+      .ds = {
+        .ttcks.idx   = ds_ttcks.idx,
+      },
+      .semaphore = {
+        .sort        = spn_device_semaphore_pool_acquire(device)
       }
-      return;
-    }
+    };
 
-  //
-  // wait for SEALING > SEALED transition ...
-  //
-  if (impl->state == SPN_COMPOSITION_STATE_SEALING)
-    {
-      // wait if sealing
-      SPN_SCHEDULER_WAIT_WHILE(scheduler,impl->state != SPN_COMPOSITION_STATE_SEALED);
-    }
+  // may wait()
+  VkFence const fence = spn_device_cb_end_fence_acquire(device,
+                                                        cb,
+                                                        spn_ci_complete_p_2,
+                                                        &p_2,
+                                                        sizeof(p_2));
 
-  // wait for rendering locks to be released
-  SPN_SCHEDULER_WAIT_WHILE(scheduler,impl->lock_count > 0);
+  // delay gathering PLACE semaphores until the last moment
+  spn_ci_gather_place_semaphores(impl);
 
-  //
-  // no need to visit UNSEALING state with this implementation
-  //
+  // boilerplate submit
+  struct VkSubmitInfo const si = {
+    .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    .pNext                = NULL,
+    .waitSemaphoreCount   = impl->place.count,
+    .pWaitSemaphores      = impl->place.semaphores,
+    .pWaitDstStageMask    = impl->place.psfs,
+    .commandBufferCount   = 1,
+    .pCommandBuffers      = &cb,
+    .signalSemaphoreCount = 1,
+    .pSignalSemaphores    = &p_2.semaphore.sort
+  };
 
-  // acquire a new grid
-  impl->grids.sort = SPN_GRID_DEPS_ATTACH(impl->runtime->deps,
-                                          NULL,  // the composition state guards this
-                                          impl,
-                                          NULL,  // no waiting
-                                          spn_composition_sort_grid_pfn_execute,
-                                          NULL); // no dispose
-
-  // mark composition as unsealed
-  impl->state = SPN_COMPOSITION_STATE_UNSEALED;
+  vk(QueueSubmit(spn_device_queue_next(device),1,&si,fence));
 }
 
 //
-// can only be called on a composition that was just unsealed
 //
+//
+
 static
 void
-spn_composition_reset(struct spn_composition_impl * const impl)
+spn_ci_resetting_reset(struct spn_composition_impl * const impl)
 {
-  // zero the atomics
-  spn_extent_phr_pdrw_zero(&impl->atomics,impl->cq,NULL);
-
-  // flush it
-  cl(Flush(impl->cq));
-
-  // release all the rasters
-  spn_composition_raster_release(impl);
+  // double reset simply resets host-side counters
 }
 
 static
 void
-spn_composition_unseal_block_reset(struct spn_composition_impl * const impl,
-                                   spn_bool                      const block,
-                                   spn_bool                      const reset)
+spn_ci_unsealed_reset(struct spn_composition_impl * const impl)
 {
-  spn_composition_unseal_block(impl,block);
+  ;
+}
 
-  if (reset) {
-    spn_composition_reset(impl);
+//
+//
+//
+
+static
+void
+spn_ci_block_until_sealed(struct spn_composition_impl * const impl)
+{
+  struct spn_device * const device = impl->device;
+
+  while (impl->state != SPN_CI_STATE_SEALED) {
+    spn_device_wait(device);
   }
 }
 
-//
-//
-//
-
 static
 void
-spn_composition_pfn_unseal(struct spn_composition_impl * const impl, spn_bool const reset)
+spn_ci_sealed_unseal(struct spn_composition_impl * const impl)
 {
-  spn_composition_unseal_block_reset(impl,false,reset);
+  //
+  // wait for any in-flight renders to complete
+  //
+  struct spn_device * const device = impl->device;
+
+  while (impl->lock_count > 0) {
+    spn_device_wait(device);
+  }
+
+  impl->state = SPN_CI_STATE_UNSEALED;
 }
 
 //
-// only needs to create a grid
+//
 //
 
 static
-void
-spn_composition_place_create(struct spn_composition_impl * const impl)
+spn_result
+spn_ci_seal(struct spn_composition_impl * const impl)
 {
-  // acquire a grid
-  impl->grids.place = SPN_GRID_DEPS_ATTACH(impl->runtime->deps,
-                                           &impl->grids.place,
-                                           NULL,
-                                           NULL, // no waiting
-                                           spn_composition_place_grid_pfn_execute,
-                                           spn_composition_place_grid_pfn_dispose);
+  switch (impl->state)
+    {
+    case SPN_CI_STATE_RESETTING:
+    case SPN_CI_STATE_UNSEALED:
+      spn_ci_unsealed_to_sealing(impl);
+      return SPN_SUCCESS;
 
-  // assign happens-after relationship
-  spn_grid_happens_after_grid(impl->grids.sort,impl->grids.place);
+    case SPN_CI_STATE_SEALING:
+      return SPN_SUCCESS;
+
+    case SPN_CI_STATE_SEALED:
+    default:
+      return SPN_SUCCESS;
+    }
 }
 
 
 static
 spn_result
-spn_composition_pfn_place(struct spn_composition_impl * const impl,
-                          spn_raster_t          const *       rasters,
-                          spn_layer_id          const *       layer_ids,
-                          float                 const *       txs,
-                          float                 const *       tys,
-                          uint32_t                         count)
+spn_ci_unseal(struct spn_composition_impl * const impl)
 {
-  // block and yield if not unsealed
-  spn_composition_unseal_block(impl,true);
+  switch (impl->state)
+    {
+    case SPN_CI_STATE_RESETTING:
+      return SPN_SUCCESS;
+
+    case SPN_CI_STATE_UNSEALED:
+      return SPN_SUCCESS;
+
+    case SPN_CI_STATE_SEALING:
+      spn_ci_block_until_sealed(impl);
+      // fall-through
+    case SPN_CI_STATE_SEALED:
+    default:
+      spn_ci_sealed_unseal(impl);
+      return SPN_SUCCESS;
+    }
+}
+
+static
+spn_result
+spn_ci_reset(struct spn_composition_impl * const impl)
+{
+  switch (impl->state)
+    {
+    case SPN_CI_STATE_RESETTING:
+      spn_ci_resetting_reset(impl); // double-reset
+      return SPN_SUCCESS;
+
+    case SPN_CI_STATE_UNSEALED:
+      spn_ci_unsealed_reset(impl);
+      return SPN_SUCCESS;
+
+    case SPN_CI_STATE_SEALING:
+      return SPN_ERROR_RASTER_BUILDER_SEALED;
+
+    case SPN_CI_STATE_SEALED:
+    default:
+      return SPN_ERROR_RASTER_BUILDER_SEALED;
+    }
+}
+
+//
+//
+//
+
+static
+spn_result
+spn_ci_clone(struct spn_composition_impl * const impl, struct spn_composition * * const clone)
+{
+  return SPN_ERROR_NOT_IMPLEMENTED;
+}
+
+//
+//
+//
+
+static
+spn_result
+spn_ci_get_bounds(struct spn_composition_impl * const impl, int32_t bounds[4])
+{
+  return SPN_ERROR_NOT_IMPLEMENTED;
+}
+
+//
+//
+//
+
+static
+spn_result
+spn_ci_place(struct spn_composition_impl * const impl,
+             spn_raster_t         const  *       rasters,
+             spn_layer_id         const  *       layer_ids,
+             int32_t              const (*       txtys)[2],
+             uint32_t                            count)
+{
+  switch (impl->state)
+    {
+    case SPN_CI_STATE_RESETTING:
+    case SPN_CI_STATE_UNSEALED:
+      break;
+
+    case SPN_CI_STATE_SEALING:
+    case SPN_CI_STATE_SEALED:
+    default:
+      return SPN_ERROR_RASTER_BUILDER_SEALED;
+    }
+
+  // nothing to do?
+  if (count == 0) {
+    return SPN_SUCCESS;
+  }
+
+  // validate there is enough room for rasters
+  if (impl->rasters.count + count > impl->rasters.size) {
+    return SPN_ERROR_RASTER_BUILDER_TOO_MANY_RASTERS;
+  }
+
+#if 0
+  //
+  // FIXME -- No, we should NEVER need to do this.  The layer invoking
+  // Spinel should ensure that layer ids remain in range.  Do not
+  // enable this.
+  //
+  // validate layer ids
+  //
+  for (uint_32_t ii=0; ii<count; ii++) {
+    if (layer_ids[ii] > SPN_TTCK_LAYER_MAX) {
+      return SPN_ERROR_LAYER_ID_INVALID;
+    }
+  }
+#endif
 
   //
   // validate and retain all rasters
   //
-  spn_result err;
+  struct spn_device * const device = impl->device;
 
-  err = spn_runtime_handle_device_validate_retain(impl->runtime,
-                                                  SPN_TYPED_HANDLE_TYPE_IS_RASTER,
-                                                  rasters,
-                                                  count);
-  if (err)
-    return err;
-
-  spn_runtime_handle_device_retain(impl->runtime,rasters,count);
-
-  //
-  // save the stripped handles
-  //
-  spn_raster_t * saved = impl->saved.extent.hrw;
-
-  saved             += impl->saved.count;
-  impl->saved.count += count;
-
-  for (uint32_t ii=0; ii<count; ii++) {
-    saved[ii] = SPN_TYPED_HANDLE_TO_HANDLE(*rasters++);
+  {
+    spn_result const err = spn_device_handle_pool_validate_retain_h_rasters(device,
+                                                                            rasters,
+                                                                            count);
+    if (err)
+      return err;
   }
 
   //
-  // - declare the place grid happens after the raster
-  // - copy place commands into ring
+  // No survivable errors from here onward... any failure beyond here
+  // will be fatal to the context -- most likely too many ttcks.
   //
-  do {
-    uint32_t rem;
 
-    // find out how much room is left in then ring's snap
-    // if the place ring is full -- let it drain
-    SPN_SCHEDULER_WAIT_WHILE(impl->runtime->scheduler,(rem = spn_extent_ring_wip_rem(&impl->cmds.ring)) == 0);
+#if 0
+  //
+  // block if resetting...
+  //
+  while (impl->state != SPN_CI_STATE_UNSEALED) {
+    spn_device_wait(device);
+  }
 
-    // append commands
-    uint32_t avail = min(rem,count);
+  //
+  // FIXME -- use the vk.semaphore.resetting before submitting a place
+  //
 
-    // decrement count
-    count -= avail;
+#endif
 
-    // launch a place kernel after copying commands?
-    spn_bool const is_wip_full = (avail == rem);
+  //
+  // save the untyped raster handles
+  //
+  spn_raster_t * saved = impl->rasters.extent + impl->rasters.count;
 
-    // if there is no place grid then create one
-    if (impl->grids.place == NULL)
-      {
-        spn_composition_place_create(impl);
+  impl->rasters.count += count;
+
+  for (uint32_t ii=0; ii<count; ii++) {
+    saved[ii] = SPN_TYPED_HANDLE_TO_HANDLE(rasters[ii]);
+  }
+
+  //
+  // copy place commands into the ring
+  //
+  struct spn_ring * const ring = &impl->mapped.cp.ring;
+
+  while (true)
+    {
+      //
+      // how many slots left in ring?
+      //
+      uint32_t avail = MIN_MACRO(uint32_t,count,spn_ring_rem_nowrap(ring));
+
+      //
+      // if ring is full then this implies we're already waiting on
+      // dispatches because an eager launch would've occurred
+      //
+      if (avail == 0)
+        {
+          spn_device_wait(device);
+
+          continue;
+        }
+
+      //
+      // increment dispatch span
+      //
+      struct spn_ci_dispatch * const dispatch = spn_ci_dispatch_head(impl);
+
+      dispatch->cp.span += avail;
+
+      //
+      // otherwise, append commands
+      //
+      struct spn_cmd_place * cmds = impl->mapped.cp.extent + impl->mapped.cp.ring.head;
+
+      spn_ring_drop_n(ring,avail);
+
+      count -= avail;
+
+      while (avail-- > 0)
+        {
+          *cmds++ = (struct spn_cmd_place)
+            {
+              .raster_h = *rasters++,
+              .layer_id = *layer_ids++,
+              .txty     = { *(*txtys++) }
+            };
+        }
+
+      //
+      // launch place kernel?
+      //
+      if (dispatch->cp.span >= impl->config->composition.size.eager)
+        {
+          spn_ci_flush(impl);
+        }
+
+      //
+      // anything left?
+      //
+      if (count == 0) {
+        return SPN_SUCCESS;
       }
-
-    //
-    // FIXME -- OPTIMIZATION? -- the ring_wip_index_inc() test can
-    // be avoided by splitting into at most two intervals. It should
-    // be plenty fast as is though so leave for now.
-    //
-    union spn_cmd_place * const cmds = impl->cmds.extent.hw1;
-
-    if ((txs == NULL) && (tys == NULL))
-      {
-        while (avail-- > 0)
-          {
-            spn_raster_t const raster = *saved++;
-
-            spn_grid_happens_after_handle(impl->grids.place,raster);
-
-            cmds[spn_extent_ring_wip_index_inc(&impl->cmds.ring)] =
-              (union spn_cmd_place){ raster, *layer_ids++, 0, 0 };
-          }
-      }
-    else if (txs == NULL)
-      {
-        while (avail-- > 0)
-          {
-            spn_raster_t const raster = *saved++;
-
-            spn_grid_happens_after_handle(impl->grids.place,raster);
-
-            cmds[spn_extent_ring_wip_index_inc(&impl->cmds.ring)] =
-              (union spn_cmd_place){ raster,
-                                     *layer_ids++,
-                                     0,
-                                     SPN_PLACE_CMD_TY_CONVERT(*tys++) };
-          }
-      }
-    else if (tys == NULL)
-      {
-        while (avail-- > 0)
-          {
-            spn_raster_t const raster = *saved++;
-
-            spn_grid_happens_after_handle(impl->grids.place,raster);
-
-            cmds[spn_extent_ring_wip_index_inc(&impl->cmds.ring)] =
-              (union spn_cmd_place){ raster,
-                                     *layer_ids++,
-                                     SPN_PLACE_CMD_TX_CONVERT(*txs++),
-                                     0 };
-          }
-      }
-    else
-      {
-        while (avail-- > 0)
-          {
-            spn_raster_t const raster = *saved++;
-
-            spn_grid_happens_after_handle(impl->grids.place,raster);
-
-            cmds[spn_extent_ring_wip_index_inc(&impl->cmds.ring)] =
-              (union spn_cmd_place){ raster,
-                                     *layer_ids++,
-                                     SPN_PLACE_CMD_TX_CONVERT(*txs++),
-                                     SPN_PLACE_CMD_TY_CONVERT(*tys++) };
-          }
-      }
-
-    // launch place kernel?
-    if (is_wip_full) {
-      spn_composition_snap(impl);
     }
-  } while (count > 0);
+}
+
+//
+//
+//
+
+static
+spn_result
+spn_ci_release(struct spn_composition_impl * const impl)
+{
+  //
+  // was this the last reference?
+  //
+  if (--impl->composition->ref_count != 0) {
+    return SPN_SUCCESS;
+  }
+
+  struct spn_device * const device = impl->device;
+
+  //
+  // wait for any in-flight PLACE dispatches to complete
+  //
+  while (!spn_ring_is_empty(&impl->dispatches.ring)) {
+    spn_device_wait(device);
+  }
+
+  //
+  // wait for any in-flight renders to complete
+  //
+  while (impl->lock_count > 0) {
+    spn_device_wait(device);
+  }
+
+  //
+  // release retained rasters
+  //
+  spn_device_handle_pool_release_d_rasters(impl->device,
+                                           impl->rasters.extent,
+                                           impl->rasters.count);
+
+  //
+  // Note that we don't have to unmap before freeing
+  //
+
+  //
+  // free copyback
+  //
+  spn_allocator_device_perm_free(&device->allocator.device.perm.copyback,
+                                 device->vk,
+                                 &impl->vk.copyback.dbi,
+                                 impl->vk.copyback.dm);
+  //
+  // free ttcks
+  //
+  spn_allocator_device_perm_free(&device->allocator.device.perm.local,
+                                 device->vk,
+                                 &impl->vk.ttcks.dbi,
+                                 impl->vk.ttcks.dm);
+  //
+  // free ring
+  //
+  if (impl->config->composition.vk.rings.d != 0)
+    {
+      spn_allocator_device_perm_free(&device->allocator.device.perm.local,
+                                     device->vk,
+                                     &impl->vk.rings.d.dbi,
+                                     impl->vk.rings.d.dm);
+    }
+
+  spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
+                                 device->vk,
+                                 &impl->vk.rings.h.dbi,
+                                 impl->vk.rings.h.dm);
+  //
+  // free host allocations
+  //
+  struct spn_allocator_host_perm * const perm = &impl->device->allocator.host.perm;
+
+  spn_allocator_host_perm_free(perm,impl->dispatches.extent);
+  spn_allocator_host_perm_free(perm,impl->composition);
+  spn_allocator_host_perm_free(perm,impl);
 
   return SPN_SUCCESS;
 }
@@ -723,37 +1189,20 @@ spn_composition_pfn_place(struct spn_composition_impl * const impl,
 
 static
 void
-spn_composition_get_bounds(struct spn_composition_impl * const impl, spn_int bounds[4])
+spn_ci_retain_and_lock(struct spn_composition_impl * const impl)
 {
-  //
-  // FIXME -- not implemented yet
-  //
-  // impl bounds will be copied back after sealing
-  //
-  bounds[0] = SPN_INT_MIN;
-  bounds[1] = SPN_INT_MIN;
-  bounds[2] = SPN_INT_MAX;
-  bounds[3] = SPN_INT_MAX;
+  impl->composition->ref_count += 1;
+
+  impl->lock_count             += 1;
 }
 
-//
-//
-//
-
+static
 void
-spn_composition_retain_and_lock(struct spn_composition * const composition)
+spn_composition_unlock_and_release(struct spn_composition_impl * const impl)
 {
-  spn_composition_retain(composition);
+  impl->lock_count -= 1;
 
-  composition->impl->lock_count += 1;
-}
-
-void
-spn_composition_unlock_and_release(struct spn_composition * const composition)
-{
-  composition->impl->lock_count -= 1;
-
-  spn_composition_pfn_release(composition->impl);
+  spn_ci_release(impl);
 }
 
 //
@@ -761,8 +1210,8 @@ spn_composition_unlock_and_release(struct spn_composition * const composition)
 //
 
 spn_result
-spn_composition_impl_create(struct spn_device * const device,
-                            spn_composition_t * const composition)
+spn_composition_impl_create(struct spn_device        * const device,
+                            struct spn_composition * * const composition)
 {
   //
   // retain the context
@@ -774,60 +1223,212 @@ spn_composition_impl_create(struct spn_device * const device,
   // allocate impl
   //
   struct spn_composition_impl * const impl =
-    spnallocator_host_perm_alloc(perm,
-                                 SPN_MEM_FLAGS_READ_WRITE,
-                                 sizeof(*impl));
-
+    spn_allocator_host_perm_alloc(perm,
+                                  SPN_MEM_FLAGS_READ_WRITE,
+                                  sizeof(*impl));
   //
   // allocate composition
   //
-  struct spn_composition * const comp =
+  struct spn_composition * const c =
     spn_allocator_host_perm_alloc(perm,
                                   SPN_MEM_FLAGS_READ_WRITE,
-                                  sizeof(*comp));
+                                  sizeof(*c));
 
-  *composition      = comp;
-  impl->composition = comp;
-  comp->impl        = impl;
+  // init impl and pb back-pointers
+  *composition      = c;
+  impl->composition = c;
+  c->impl           = impl;
 
-  comp->place       = spn_ci_place;
-  comp->seal        = spn_ci_seal;
-  comp->unseal      = spn_ci_unseal;
-  comp->bounds      = spn_ci_get_bounds;
-  comp->release     = spn_ci_release;
+  // save device
+  impl->device      = device;
+
+  struct spn_target_config const * const config = spn_target_get_config(device->target);
+
+  impl->config      = config;
 
   impl->lock_count  = 0;
 
-  // get config
-  struct spn_config const * const config = runtime->config;
+  //
+  // initialize composition
+  //
+  c->release       = spn_ci_release;
+  c->seal          = spn_ci_seal;
+  c->unseal        = spn_ci_unseal;
+  c->reset         = spn_ci_reset;
+  c->clone         = spn_ci_clone;
+  c->get_bounds    = spn_ci_get_bounds;
+  c->place         = spn_ci_place;
 
-  // initialize ring size with config values
-  spn_extent_ring_init(&impl->cmds.ring,
-                       config->composition.cmds.elem_count,
-                       config->composition.cmds.snap_count,
-                       sizeof(union spn_cmd_place));
+  c->ref_count     = 1;
 
-  spn_extent_phw1g_tdrNs_alloc(runtime,&impl->cmds.extent ,sizeof(union spn_cmd_place) * config->composition.cmds.elem_count);
-  spn_extent_phrw_alloc       (runtime,&impl->saved.extent,sizeof(spn_raster_t)        * config->composition.raster_ids.elem_count);
-  spn_extent_phr_pdrw_alloc   (runtime,&impl->atomics     ,sizeof(struct spn_place_atomics));
-
-  spn_extent_pdrw_alloc       (runtime,&impl->keys        ,sizeof(spn_ttxk_t)          * config->composition.keys.elem_count);
-  spn_extent_pdrw_alloc       (runtime,&impl->offsets     ,sizeof(uint32_t)            * (1u << SPN_TTCK_HI_BITS_YX)); // 1MB
-
-  // nothing saved
-  impl->saved.count = 0;
+  // the composition impl starts out unsealed
+  SPN_ASSERT_STATE_INIT(impl,SPN_CI_STATE_UNSEALED);
 
   //
-  // init refcount & state
+  // allocate and map ring
   //
-  comp->ref_count = 1;
+  size_t const ring_size = config->composition.size.ring * sizeof(*impl->mapped.cp.extent);
 
-  SPN_ASSERT_STATE_INIT(impl,SPN_COMPOSITION_STATE_SEALED);
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
+                                  device->vk,
+                                  ring_size,
+                                  NULL,
+                                  &impl->vk.rings.h.dbi,
+                                  &impl->vk.rings.h.dm);
 
-  // unseal the composition, zero the atomics, etc.
-  spn_composition_unseal_block_reset(impl,false,true);
+  vk(MapMemory(device->vk->d,
+               impl->vk.rings.h.dm,
+               0,
+               VK_WHOLE_SIZE,
+               0,
+               (void**)&impl->mapped.cp.extent));
+
+  if (config->composition.vk.rings.d != 0)
+    {
+      spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
+                                      device->vk,
+                                      ring_size,
+                                      NULL,
+                                      &impl->vk.rings.d.dbi,
+                                      &impl->vk.rings.d.dm);
+    }
+  else
+    {
+      impl->vk.rings.d.dbi = (VkDescriptorBufferInfo){ .buffer = VK_NULL_HANDLE, .offset = 0, .range = 0 };
+      impl->vk.rings.d.dm  = VK_NULL_HANDLE;
+    }
+
+  //
+  // allocate ttck descriptor
+  //
+  size_t const ttcks_size =
+    SPN_TARGET_BUFFER_OFFSETOF(ttcks,ttcks,ttcks) +
+    config->composition.size.ttcks * sizeof(SPN_TYPE_UVEC2);
+
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
+                                  device->vk,
+                                  ttcks_size,
+                                  NULL,
+                                  &impl->vk.ttcks.dbi,
+                                  &impl->vk.ttcks.dm);
+
+  //
+  // allocate and map copyback
+  //
+  size_t const copyback_size = sizeof(*impl->mapped.cb.extent);
+
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.copyback,
+                                  device->vk,
+                                  copyback_size,
+                                  NULL,
+                                  &impl->vk.copyback.dbi,
+                                  &impl->vk.copyback.dm);
+
+  vk(MapMemory(device->vk->d,
+               impl->vk.copyback.dm,
+               0,
+               VK_WHOLE_SIZE,
+               0,
+               (void**)&impl->mapped.cb.extent));
+
+  //
+  // allocate release resources
+  //
+
+  uint32_t const max_in_flight   = config->fence_pool.size;
+
+  size_t   const dispatches_size = max_in_flight                    * sizeof(*impl->dispatches.extent);
+  size_t   const semaphores_size = max_in_flight                    * sizeof(*impl->place.semaphores);
+  size_t   const psfs_size       = max_in_flight                    * sizeof(*impl->place.psfs);
+  size_t   const rasters_size    = config->composition.size.rasters * sizeof(*impl->rasters.extent);
+
+  size_t   const h_extent_size   = dispatches_size + semaphores_size + psfs_size + rasters_size;
+
+  impl->dispatches.extent        = spn_allocator_host_perm_alloc(perm,
+                                                                 SPN_MEM_FLAGS_READ_WRITE,
+                                                                 h_extent_size);
+
+  impl->place.semaphores         = (void*)(impl->dispatches.extent + max_in_flight);
+  impl->place.psfs               = (void*)(impl->place.semaphores  + max_in_flight);
+
+  impl->rasters.extent           = (void*)(impl->place.psfs        + max_in_flight);
+  impl->rasters.size             = config->composition.size.rasters;
+
+  spn_ring_init(&impl->dispatches.ring,max_in_flight);
+
+  spn_ci_dispatch_init(impl,impl->dispatches.extent);
+
+  spn_ci_psfs_init(impl);
 
   return SPN_SUCCESS;
+}
+
+//
+//
+//
+
+void
+spn_composition_impl_pre_render_ds(struct spn_composition       * const composition,
+                                   struct spn_target_ds_ttcks_t * const ds,
+                                   VkCommandBuffer                      cb)
+{
+  struct spn_composition_impl * const impl   = composition->impl;
+  struct spn_device           * const device = impl->device;
+  struct spn_target           * const target = device->target;
+
+  assert(impl->state >= SPN_CI_STATE_SEALING);
+
+  //
+  // acquire TTCKS descriptor set
+  //
+  spn_target_ds_acquire_ttcks(target,device,ds);
+
+  // copy the dbi structs
+  *spn_target_ds_get_ttcks_ttcks(target,*ds) = impl->vk.ttcks.dbi;
+
+  // update ds
+  spn_target_ds_update_ttcks(target,device->vk,*ds);
+
+  // bind
+  spn_target_ds_bind_render_ttcks(target,cb,*ds);
+}
+
+//
+//
+//
+
+void
+spn_composition_impl_pre_render_dispatch(struct spn_composition * const composition,
+                                         VkCommandBuffer                cb)
+{
+  struct spn_composition_impl * const impl = composition->impl;
+
+  vkCmdDispatchIndirect(cb,
+                        impl->vk.ttcks.dbi.buffer,
+                        SPN_TARGET_BUFFER_OFFSETOF(ttcks,ttcks,offsets_count));
+}
+
+//
+//
+//
+
+void
+spn_composition_impl_pre_render_wait(struct spn_composition * const composition,
+                                     uint32_t               * const waitSemaphoreCount,
+                                     VkSemaphore            * const pWaitSemaphores,
+                                     VkPipelineStageFlags   * const pWaitDstStageMask)
+{
+  struct spn_composition_impl * const impl = composition->impl;
+
+  assert(impl->state >= SPN_CI_STATE_SEALING);
+
+  if (impl->state == SPN_CI_STATE_SEALING)
+    {
+      uint32_t const idx = (*waitSemaphoreCount)++;
+
+      pWaitSemaphores  [idx] = impl->vk.semaphore.sealing;
+      pWaitDstStageMask[idx] = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
 }
 
 //

@@ -129,61 +129,23 @@ uint32_t
 spn_device_block_pool_get_mask(struct spn_device * const device);
 
 //
-// submit          - simplest submit
-// submit_signal_1 - submit and signal one semaphore
-// submit_wait_1   - submit and wait on one semaphore
+// Acquire and begin a command buffer
 //
 
-void
-spn_device_cb_submit(struct spn_device    * const device,
-                     VkCommandBuffer        const cb,
-                     spn_fence_complete_pfn const pfn,
-                     void                 * const pfn_payload,
-                     size_t                 const pfn_payload_size);
+VkCommandBuffer
+spn_device_cb_acquire_begin(struct spn_device * const device);
 
-void
-spn_device_cb_submit_signal_1(struct spn_device    * const device,
-                              VkCommandBuffer        const cb,
-                              spn_fence_complete_pfn const pfn,
-                              void                 * const pfn_payload,
-                              size_t                 const pfn_payload_size,
-                              VkSemaphore            const signal);
-
-void
-spn_device_cb_submit_wait_1(struct spn_device      * const device,
-                            VkCommandBuffer          const cb,
-                            spn_fence_complete_pfn   const pfn,
-                            void                   * const pfn_payload,
-                            size_t                   const pfn_payload_size,
-                            VkSemaphore              const wait,
-                            VkPipelineStageFlags     const wait_stages);
-void
-spn_device_cb_submit_wait_1_signal_1(struct spn_device      * const device,
-                                     VkCommandBuffer          const cb,
-                                     spn_fence_complete_pfn   const pfn,
-                                     void                   * const pfn_payload,
-                                     size_t                   const pfn_payload_size,
-                                     VkSemaphore              const wait,
-                                     VkPipelineStageFlags     const wait_stages,
-                                     VkSemaphore              const signal);
 
 //
-//
+// End a command buffer and acquire a fence
 //
 
-void
-spn_device_release_paths(struct spn_device * const device,
-                         spn_path_t  const * const paths,
-                         uint32_t            const size,
-                         uint32_t            const span,
-                         uint32_t            const head);
-
-void
-spn_device_release_rasters(struct spn_device  * const device,
-                           spn_raster_t const * const rasters,
-                           uint32_t             const size,
-                           uint32_t             const span,
-                           uint32_t             const head);
+VkFence
+spn_device_cb_end_fence_acquire(struct spn_device    * const device,
+                                VkCommandBuffer        const cb,
+                                spn_fence_complete_pfn const pfn,
+                                void                 * const pfn_payload,
+                                size_t                 const pfn_payload_size);
 
 //
 // yield : if there are unsignaled fences, test if at least one fence is signaled
@@ -199,149 +161,6 @@ spn_device_wait(struct spn_device * const device);
 
 spn_result
 spn_device_drain(struct spn_device * const device);
-
-//
-//
-//
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#if 0
-
-//
-// HOST HANDLE RETAIN/RELEASE/FLUSH
-//
-
-spn_result
-spn_device_path_host_retain(struct spn_device * const platform,
-                            spn_path_t  const *       paths,
-                            uint32_t                  count);
-
-spn_result
-spn_device_raster_host_retain(struct spn_device  * const platform,
-                              spn_raster_t const *       rasters,
-                              uint32_t                   count);
-
-
-spn_result
-spn_device_path_host_release(struct spn_device * const platform,
-                             spn_path_t  const *       paths,
-                             uint32_t                  count);
-
-spn_result
-spn_device_raster_host_release(struct spn_device  * const platform,
-                               spn_raster_t const *       rasters,
-                               uint32_t                   count);
-
-
-spn_result
-spn_device_path_host_flush(struct spn_device * const platform,
-                           spn_path_t  const *       paths,
-                           uint32_t                  count);
-
-spn_result
-spn_device_raster_host_flush(struct spn_device  * const platform,
-                             spn_raster_t const *       rasters,
-                             uint32_t                   count);
-
-//
-// DEVICE/PIPELINE HANDLE ACQUIRE/RETAIN/RELEASE
-//
-// The retain operations pre-validate handles
-//
-
-spn_handle_t
-spn_device_handle_device_acquire(struct spn_device * const platform);
-
-spn_result
-spn_device_handle_device_validate_retain(struct spn_device        * const platform,
-                                         spn_typed_handle_type_e    const handle_type,
-                                         spn_typed_handle_t const *       typed_handles,
-                                         uint32_t                         count);
-
-void
-spn_device_handle_device_retain(struct spn_device  * const platform,
-                                spn_handle_t const *       handles,
-                                uint32_t                   count);
-
-void
-spn_device_path_device_release(struct spn_device  * const platform,
-                               spn_handle_t const *       handles,
-                               uint32_t                   count);
-
-void
-spn_device_raster_device_release(struct spn_device  * const platform,
-                                 spn_handle_t const *       handles,
-                                 uint32_t                   count);
-
-//
-// We only use in-order command queues in the pipeline
-//
-
-cl_command_queue
-spn_device_acquire_cq_in_order(struct spn_device * const platform);
-
-void
-spn_device_release_cq_in_order(struct spn_device * const platform,
-                               cl_command_queue          cq);
-
-//
-// DEVICE MEMORY ALLOCATION
-//
-
-cl_mem
-spn_device_device_perm_alloc(struct spn_device * const platform,
-                             cl_mem_flags        const flags,
-                             size_t              const size);
-
-void
-spn_device_device_perm_free(struct spn_device * const platform,
-                            cl_mem              const mem);
-
-cl_mem
-spn_device_device_temp_alloc(struct spn_device * const platform,
-                             cl_mem_flags        const flags,
-                             size_t              const size,
-                             spn_subbuf_id_t   * const subbuf_id,
-                             size_t            * const subbuf_size);
-
-void
-spn_device_device_temp_free(struct spn_device * const platform,
-                            cl_mem              const mem,
-                            spn_subbuf_id_t     const subbuf_id);
-
-//
-//
-//
-
-#endif
-
-//
-//
-//
-
-#if 1
-
-void
-spn_device_debug(struct spn_context * const context);
-
-#endif
 
 //
 //

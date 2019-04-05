@@ -28,15 +28,11 @@ void
 spn_device_queue_pool_dispose(struct spn_device * const device);
 
 //
-//
+// FIXME -- move this to device.h
 //
 
 VkQueue
-spn_device_queue_pool_acquire(struct spn_device * const device);
-
-void
-spn_device_queue_pool_release(struct spn_device * const device,
-                              VkQueue             const queue);
+spn_device_queue_next(struct spn_device * const device);
 
 //
 //

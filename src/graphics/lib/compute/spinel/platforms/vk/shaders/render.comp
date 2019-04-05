@@ -1739,9 +1739,11 @@ void main()
   //
   SPN_SUBGROUP_UNIFORM const uint ttck_offset_idx = gl_WorkGroupID.x * gl_NumSubgroups + gl_SubgroupID;
 
-  if (ttck_offset_idx >= ttck_offset_count)
+  if (ttck_offset_idx >= offsets_count[3])
     return;
 #endif
+
+  SPN_SUBGROUP_UNIFORM const uint ttcks_count_minus_1 = ttcks_count[3] - 1;
 
   //
   // load the starting ttck for this offset and get a bound on the max
@@ -1753,7 +1755,7 @@ void main()
   //
   // SHUFFLE
   //
-  SPN_SUBGROUP_UNIFORM const uint ttck_base = segs.offsets[ttck_offset_idx];
+  SPN_SUBGROUP_UNIFORM const uint ttck_base = offsets[ttck_offset_idx];
 
   uvec2 ttck_sg; // row of TTCK keys in registers
   uint  ttck_idx_next = (ttck_base & ~SPN_KERNEL_RENDER_SUBGROUP_MASK) + gl_SubgroupInvocationID;
@@ -1761,10 +1763,10 @@ void main()
   {
     SPN_SUBGROUP_UNIFORM const uint ttck_lane = (ttck_base & SPN_KERNEL_RENDER_SUBGROUP_MASK);
 
-    const bool is_valid = (gl_SubgroupInvocationID >= ttck_lane) && (ttck_idx_next <= ttck_key_count_minus_1);
+    const bool is_valid = (gl_SubgroupInvocationID >= ttck_lane) && (ttck_idx_next <= ttcks_count_minus_1);
 
     if (is_valid)
-      ttck_sg = ttcks.keys[ttck_idx_next];
+      ttck_sg = ttcks[ttck_idx_next];
 
     ttck_idx_next += SPN_KERNEL_RENDER_SUBGROUP_SIZE;
 
@@ -1779,19 +1781,19 @@ void main()
   //
   // SHARED
   //
-  SPN_SUBGROUP_UNIFORM uint ttck_idx_next = segs.offsets[ttck_offset_idx];
+  SPN_SUBGROUP_UNIFORM uint ttck_idx_next = offsets[ttck_offset_idx];
 
   {
     const uint ttck_idx_aligned = (ttck_idx_next & ~SPN_KERNEL_RENDER_SUBGROUP_MASK) + gl_SubgroupInvocationID;
 
     SPN_SUBGROUP_UNIFORM const uint ttck_lane = (ttck_idx_next & SPN_KERNEL_RENDER_SUBGROUP_MASK);
 
-    const bool is_valid = (gl_SubgroupInvocationID >= ttck_lane) && (ttck_idx_aligned <= ttck_key_count_minus_1);
+    const bool is_valid = (gl_SubgroupInvocationID >= ttck_lane) && (ttck_idx_aligned <= ttcks_count_minus_1);
 
     uvec2 ttck_new = { 0, 0 };
 
     if (is_valid)
-      ttck_new = ttcks.keys[ttck_idx_aligned];
+      ttck_new = ttcks[ttck_idx_aligned];
 
     ttck_smem[gl_SubgroupInvocationID] = ttck_new;
 
@@ -1810,10 +1812,10 @@ void main()
   //
   // NO SHARED
   //
-  SPN_SUBGROUP_UNIFORM uint  ttck_idx_next = segs.offsets[ttck_offset_idx];
+  SPN_SUBGROUP_UNIFORM uint  ttck_idx_next = offsets[ttck_offset_idx];
   SPN_SUBGROUP_UNIFORM uvec2 ttck_sgu; // subgroup uniform TTCK key
   {
-    ttck_sgu   = ttcks.keys[ttck_idx_next++];
+    ttck_sgu   = ttcks[ttck_idx_next++];
     lgf_yxl[0] = ttck_sgu[0] & SPN_TTCK_LO_MASK_LAYER;
     lgf_yxl[1] = ttck_sgu[1];
   }
@@ -1932,8 +1934,8 @@ void main()
             last       = 0;
             ttck_sg[1] = ~lgf_yxl[1]; // mark all keys invalid
 
-            if (ttck_idx_next <= ttck_key_count_minus_1)
-              ttck_sg = ttcks.keys[ttck_idx_next];
+            if (ttck_idx_next <= ttcks_count_minus_1)
+              ttck_sg = ttcks[ttck_idx_next];
 
             ttck_idx_next += SPN_KERNEL_RENDER_SUBGROUP_SIZE;
           }
@@ -2002,12 +2004,12 @@ void main()
         if ((++ttck_idx_next & SPN_KERNEL_RENDER_SUBGROUP_MASK) == 0)
           {
             const uint ttck_idx_aligned = ttck_idx_next + gl_SubgroupInvocationID;
-            const bool is_valid         = (ttck_idx_aligned <= ttck_key_count_minus_1);
+            const bool is_valid         = (ttck_idx_aligned <= ttcks_count_minus_1);
 
             uvec2 ttck_new = { 0, ~lgf_yxl[1] };
 
             if (is_valid)
-              ttck_new = ttcks.keys[ttck_idx_aligned];
+              ttck_new = ttcks[ttck_idx_aligned];
 
             ttck_smem[gl_SubgroupInvocationID] = ttck_new;
 

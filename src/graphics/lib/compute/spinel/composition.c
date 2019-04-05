@@ -44,12 +44,37 @@ spn_composition_seal(spn_composition_t composition)
 //
 
 spn_result
-spn_composition_unseal(spn_composition_t composition, bool reset)
+spn_composition_unseal(spn_composition_t composition)
 {
   //
   // unseal the composition
   //
-  return composition->unseal(composition->impl,reset);
+  return composition->unseal(composition->impl);
+}
+
+//
+//
+//
+
+spn_result
+spn_composition_reset(spn_composition_t composition)
+{
+  //
+  // unseal the composition
+  //
+  return composition->reset(composition->impl);
+}
+
+//
+//
+//
+
+spn_result
+spn_composition_clone(spn_context_t       context,
+                      spn_composition_t   composition,
+                      spn_composition_t * clone)
+{
+  return composition->clone(composition->impl,clone);
 }
 
 //
@@ -67,14 +92,13 @@ spn_composition_get_bounds(spn_composition_t composition, int32_t bounds[4])
 //
 
 spn_result
-spn_composition_place(spn_composition_t    composition,
-                      spn_raster_t const * rasters,
-                      spn_layer_id const * layer_ids,
-                      float        const * txs,
-                      float        const * tys,
-                      uint32_t             count) // NOTE: A PER-PLACE CLIP IS POSSIBLE
+spn_composition_place(spn_composition_t     composition,
+                      spn_raster_t const  * rasters,
+                      spn_layer_id const  * layer_ids,
+                      int32_t      const (* txtys)[2],
+                      uint32_t              count)
 {
-  return composition->place(composition->impl,rasters,layer_ids,txs,tys,count);
+  return composition->place(composition->impl,rasters,layer_ids,txtys,count);
 }
 
 //

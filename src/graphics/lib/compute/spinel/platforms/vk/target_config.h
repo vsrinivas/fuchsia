@@ -66,8 +66,7 @@ struct spn_target_config
     uint32_t     ids_per_workgroup;
   } block_pool;
 
-  struct {
-    // FIXME -- put ring host_coherent allocation flags here
+  struct {                    // FIXME -- put ring host_coherent allocation flags here
     uint32_t     ring_size;   // number of blocks & cmds in ring
     uint32_t     eager_size;  // number of blocks that will force an eager launch
   } path_builder;
@@ -75,30 +74,44 @@ struct spn_target_config
   struct {
     struct {
       struct {
+                              // FIXME -- put ring host_coherent and device_local allocation flags here
         uint32_t h;           // index of host   vk allocator
         uint32_t d;           // index of device vk allocator
       } rings;
-
-      // copyback
-
     } vk;
 
-    // FIXME -- put ring host_coherent and device_local allocation flags here
     struct {
       uint32_t   ring;        // number of commands in ring
       uint32_t   eager;       // number of commands that will force an eager launch
       uint32_t   cohort;      // max number of rasters in ring
-      uint32_t   rast_cmds;   // max number of rast_cmds that can be emitted by FILLS_EXPAND
+      uint32_t   cmds;        // max number of rast cmds that can be emitted by FILLS_EXPAND
       uint32_t   ttrks;       // max number of ttrks that can be emitted by RASTERIZE_XXX
     } size;
   } raster_builder;
 
   struct {
     struct {
-      uint32_t h;             // index of host   vk allocator
-      uint32_t d;             // index of device vk allocator
+      uint32_t   h;           // index of host   vk allocator
+      uint32_t   d;           // index of device vk allocator
     } vk;
   } styling;
+
+  struct {
+    struct {
+      struct {                // FIXME -- put ring host_coherent and device_local allocation flags here
+        uint32_t h;           // index of host   vk allocator
+        uint32_t d;           // index of device vk allocator
+      } rings;
+    } vk;
+
+    struct {
+      uint32_t   ring;        // number of commands in ring
+      uint32_t   eager;       // number of commands that will force an eager launch
+      uint32_t   cmds;        // max number of place cmds in the composition
+      uint32_t   ttcks;       // max number of ttcks that can be emitted by successive PLACE shaders
+      uint32_t   rasters;     // max number of retained rasters
+    } size;
+  } composition;
 
   //
   // descriptors

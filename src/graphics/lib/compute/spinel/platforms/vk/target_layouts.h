@@ -81,7 +81,7 @@
 #define SPN_TARGET_DS_ID_RASTERIZE      rasterize      // fill/alloc/raster cmds
 #define SPN_TARGET_DS_ID_RASTERIZE_POST rasterize_post // ttrks + metas
 #define SPN_TARGET_DS_ID_TTCKS          ttcks
-#define SPN_TARGET_DS_ID_PLACE_CMDS     place_cmds
+#define SPN_TARGET_DS_ID_PLACE          place
 #define SPN_TARGET_DS_ID_STYLING        styling
 #define SPN_TARGET_DS_ID_SURFACE        surface
 
@@ -90,8 +90,8 @@
   SPN_TARGET_GLSL_DS_PATHS_COPY    (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);                           \
   SPN_TARGET_GLSL_DS_RASTERIZE     (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);       \
   SPN_TARGET_GLSL_DS_RASTERIZE_POST(SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);                           \
-  SPN_TARGET_GLSL_DS_TTCKS         (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);                           \
-  SPN_TARGET_GLSL_DS_PLACE_CMDS    (SPN_EMPTY,SPN_EMPTY);                                               \
+  SPN_TARGET_GLSL_DS_TTCKS         (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);                                     \
+  SPN_TARGET_GLSL_DS_PLACE         (SPN_EMPTY,SPN_EMPTY);                                               \
   SPN_TARGET_GLSL_DS_STYLING       (SPN_EMPTY,SPN_EMPTY);                                               \
   SPN_TARGET_GLSL_DS_SURFACE       (SPN_EMPTY,SPN_EMPTY,SPN_EMPTY);
 
@@ -101,7 +101,7 @@
   SPN_TARGET_DS_EXPAND_X(2 ,SPN_TARGET_DS_ID_RASTERIZE,     SPN_TARGET_DS_RASTERIZE())          \
   SPN_TARGET_DS_EXPAND_X(3 ,SPN_TARGET_DS_ID_RASTERIZE_POST,SPN_TARGET_DS_RASTERIZE_POST())     \
   SPN_TARGET_DS_EXPAND_X(4 ,SPN_TARGET_DS_ID_TTCKS,         SPN_TARGET_DS_TTCKS())              \
-  SPN_TARGET_DS_EXPAND_X(5 ,SPN_TARGET_DS_ID_PLACE_CMDS,    SPN_TARGET_DS_PLACE_CMDS())         \
+  SPN_TARGET_DS_EXPAND_X(5 ,SPN_TARGET_DS_ID_PLACE,         SPN_TARGET_DS_PLACE())              \
   SPN_TARGET_DS_EXPAND_X(6 ,SPN_TARGET_DS_ID_STYLING,       SPN_TARGET_DS_STYLING())            \
   SPN_TARGET_DS_EXPAND_X(7 ,SPN_TARGET_DS_ID_SURFACE,       SPN_TARGET_DS_SURFACE())
 
@@ -295,29 +295,24 @@
   };
 
 //
-// DESCRIPTOR: TTCK KEYS
+// DESCRIPTOR: TTCKS
 //
 
-#define SPN_TARGET_BINDING_TTCKS_TTCKS    0
-#define SPN_TARGET_BINDING_TTCKS_SEGS     1
+#define SPN_TARGET_BINDING_TTCKS          0
 
-#define SPN_TARGET_DS_TTCKS()                                                                                                   \
-  SPN_TARGET_DESC_TYPE_STORAGE_BUFFER(SPN_TARGET_DS_ID_TTCKS, SPN_TARGET_BINDING_TTCKS_TTCKS, SPN_TARGET_EXTENT_PDRW, ttcks)    \
-  SPN_TARGET_DESC_TYPE_STORAGE_BUFFER(SPN_TARGET_DS_ID_TTCKS, SPN_TARGET_BINDING_TTCKS_SEGS,  SPN_TARGET_EXTENT_PDRW, segs)
+#define SPN_TARGET_DS_TTCKS()                                                                                             \
+  SPN_TARGET_DESC_TYPE_STORAGE_BUFFER(SPN_TARGET_DS_ID_TTCKS, SPN_TARGET_BINDING_TTCKS, SPN_TARGET_EXTENT_PDRW, ttcks)
 
-#define SPN_TARGET_GLSL_DS_TTCKS(idx,mq_atomics,mq_keys,mq_segs)        \
+#define SPN_TARGET_GLSL_DS_TTCKS(idx,mq_keys,mq_offsets)                \
   SPN_TARGET_GLSL_LAYOUT_BUFFER(SPN_TARGET_DS_ID_TTCKS,idx,             \
-                                SPN_TARGET_BINDING_TTCKS_TTCKS,ttcks) { \
-    mq_atomics SPN_MEMBER_FARRAY_UINT(atomics,2);                       \
+                                SPN_TARGET_BINDING_TTCKS,ttcks) {       \
+    mq_keys    SPN_MEMBER_FARRAY_UINT(ttcks_count,  4);                 \
+    mq_offsets SPN_MEMBER_FARRAY_UINT(offsets_count,4);                 \
     SPN_TARGET_GLSL_ALIGN()                                             \
-    mq_keys    SPN_MEMBER_VARRAY_UVEC2(keys);                           \
-  } SPN_TARGET_GLSL_BUFFER_INSTANCE(ttcks);                             \
-  SPN_TARGET_GLSL_LAYOUT_BUFFER(SPN_TARGET_DS_ID_TTCKS,idx,             \
-                                SPN_TARGET_BINDING_TTCKS_SEGS,segs) {   \
-    mq_segs    SPN_MEMBER_UINT(count);                                  \
-    SPN_TARGET_GLSL_ALIGN()                                             \
-    mq_segs    SPN_MEMBER_VARRAY_UINT(offsets);                         \
-  } SPN_TARGET_GLSL_BUFFER_INSTANCE(segs);
+    mq_offsets SPN_MEMBER_FARRAY_UINT(offsets,1<<SPN_TTCK_HI_BITS_YX);  \
+    mq_keys    SPN_MEMBER_VARRAY_UVEC2(ttcks);                          \
+  };
+
 
 //
 // DESCRIPTOR: PLACE COMMANDS
@@ -325,15 +320,15 @@
 // Implemented as a ring buffer.
 //
 
-#define SPN_TARGET_BINDING_PLACE_CMDS     0
+#define SPN_TARGET_BINDING_PLACE          0
 
-#define SPN_TARGET_DS_PLACE_CMDS()                                                                                                              \
-  SPN_TARGET_DESC_TYPE_STORAGE_BUFFER(SPN_TARGET_DS_ID_PLACE_CMDS, SPN_TARGET_BINDING_PLACE_CMDS, SPN_TARGET_EXTENT_PHW1G_TDRNS, place_cmds)
+#define SPN_TARGET_DS_PLACE()                                                                                                   \
+  SPN_TARGET_DESC_TYPE_STORAGE_BUFFER(SPN_TARGET_DS_ID_PLACE, SPN_TARGET_BINDING_PLACE, SPN_TARGET_EXTENT_PHW1G_TDRNS, place)
 
-#define SPN_TARGET_GLSL_DS_PLACE_CMDS(idx,mq_cmds)                      \
-  SPN_TARGET_GLSL_LAYOUT_BUFFER(SPN_TARGET_DS_ID_PLACE_CMDS,idx,        \
-                                SPN_TARGET_BINDING_PLACE_CMDS,cmds) {   \
-    mq_cmds SPN_MEMBER_VARRAY_STRUCT(spn_cmd_place,cmds);               \
+#define SPN_TARGET_GLSL_DS_PLACE(idx,mq_cmds)                      \
+  SPN_TARGET_GLSL_LAYOUT_BUFFER(SPN_TARGET_DS_ID_PLACE,idx,        \
+                                SPN_TARGET_BINDING_PLACE,cmds) {   \
+    mq_cmds SPN_MEMBER_VARRAY_STRUCT(spn_cmd_place,cmds);          \
   };
 
 //
@@ -452,15 +447,16 @@
 
 #define SPN_TARGET_GLSL_DECL_KERNEL_FILLS_SCAN()                              \
   SPN_TARGET_GLSL_DS_BLOCK_POOL(0,readonly,readonly,readonly,readonly);       \
-  SPN_TARGET_GLSL_DS_RASTERIZE(1,                                             \
+  SPN_TARGET_GLSL_DS_RASTERIZE(2,                                             \
                                readwrite,noaccess,                            \
                                noaccess,noaccess,                             \
                                noaccess);                                     \
   SPN_TARGET_GLSL_PUSH(SPN_TARGET_GLSL_PUSH_KERNEL_FILLS_SCAN());
 
-#define SPN_TARGET_VK_DECL_KERNEL_FILLS_SCAN()                                 \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_SCAN,0,SPN_TARGET_DS_ID_BLOCK_POOL)   \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_SCAN,1,SPN_TARGET_DS_ID_RASTERIZE)    \
+#define SPN_TARGET_VK_DECL_KERNEL_FILLS_SCAN()                                                \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_SCAN,0,SPN_TARGET_DS_ID_BLOCK_POOL)                  \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_SCAN,1,SPN_TARGET_DS_ID_RASTERIZE_POST)              \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_SCAN,2,SPN_TARGET_DS_ID_RASTERIZE)                   \
   SPN_TARGET_VK_PUSH(SPN_TARGET_P_ID_FILLS_SCAN,SPN_TARGET_GLSL_PUSH_KERNEL_FILLS_SCAN())
 
 //
@@ -472,7 +468,7 @@
 
 #define SPN_TARGET_GLSL_DECL_KERNEL_FILLS_EXPAND()                      \
   SPN_TARGET_GLSL_DS_BLOCK_POOL(0,readonly,readonly,readonly,readonly); \
-  SPN_TARGET_GLSL_DS_RASTERIZE(1,                                       \
+  SPN_TARGET_GLSL_DS_RASTERIZE(2,                                       \
                                readonly,noaccess,                       \
                                readonly,readonly,                       \
                                writeonly);                              \
@@ -480,7 +476,8 @@
 
 #define SPN_TARGET_VK_DECL_KERNEL_FILLS_EXPAND()                                              \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_EXPAND,0,SPN_TARGET_DS_ID_BLOCK_POOL)                \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_EXPAND,1,SPN_TARGET_DS_ID_RASTERIZE)                 \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_EXPAND,1,SPN_TARGET_DS_ID_RASTERIZE_POST)            \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_EXPAND,2,SPN_TARGET_DS_ID_RASTERIZE)                 \
   SPN_TARGET_VK_PUSH(SPN_TARGET_P_ID_FILLS_EXPAND,SPN_TARGET_GLSL_PUSH_KERNEL_FILLS_EXPAND())
 
 //
@@ -494,14 +491,15 @@
 #define SPN_TARGET_GLSL_PUSH_KERNEL_FILLS_DISPATCH()
 
 #define SPN_TARGET_GLSL_DECL_KERNEL_FILLS_DISPATCH()    \
-  SPN_TARGET_GLSL_DS_RASTERIZE(1,                       \
+  SPN_TARGET_GLSL_DS_RASTERIZE(2,                       \
                                noaccess,noaccess,       \
                                readwrite,noaccess,      \
                                noaccess);
 
 #define SPN_TARGET_VK_DECL_KERNEL_FILLS_DISPATCH()                                    \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_DISPATCH,0,SPN_TARGET_DS_ID_BLOCK_POOL)      \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_DISPATCH,1,SPN_TARGET_DS_ID_RASTERIZE)
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_DISPATCH,1,SPN_TARGET_DS_ID_RASTERIZE_POST)  \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_FILLS_DISPATCH,2,SPN_TARGET_DS_ID_RASTERIZE)
 
 
 //
@@ -512,12 +510,12 @@
   SPN_TARGET_GLSL_PUSH_KERNEL_FILLS_SCAN()
 
 #define SPN_TARGET_GLSL_DECL_KERNEL_RASTERIZE_XXX()                             \
-  SPN_TARGET_GLSL_DS_BLOCK_POOL(0,readwrite,readwrite,readwrite,noaccess);      \
-  SPN_TARGET_GLSL_DS_RASTERIZE(1,                                               \
-                               noaccess,readonly,                               \
-                               noaccess,noaccess,                               \
-                               readonly);                                       \
-  SPN_TARGET_GLSL_DS_RASTERIZE_POST(2,noaccess,readwrite,writeonly);            \
+  SPN_TARGET_GLSL_DS_BLOCK_POOL    (0,readwrite,readwrite,readwrite,noaccess);  \
+  SPN_TARGET_GLSL_DS_RASTERIZE_POST(1,noaccess,readwrite,writeonly);            \
+  SPN_TARGET_GLSL_DS_RASTERIZE     (2,                                          \
+                                    noaccess,readonly,                          \
+                                    noaccess,noaccess,                          \
+                                    readonly);                                  \
   SPN_TARGET_GLSL_PUSH(SPN_TARGET_GLSL_PUSH_KERNEL_RASTERIZE_XXX());
 
 //
@@ -532,8 +530,8 @@
 
 #define SPN_TARGET_VK_DECL_KERNEL_RASTERIZE_LINE()                                                    \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_LINE,0,SPN_TARGET_DS_ID_BLOCK_POOL)                      \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_LINE,1,SPN_TARGET_DS_ID_RASTERIZE)                       \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_LINE,2,SPN_TARGET_DS_ID_RASTERIZE_POST)                  \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_LINE,1,SPN_TARGET_DS_ID_RASTERIZE_POST)                  \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_LINE,2,SPN_TARGET_DS_ID_RASTERIZE)                       \
   SPN_TARGET_VK_PUSH(SPN_TARGET_P_ID_RASTERIZE_LINE,SPN_TARGET_GLSL_PUSH_KERNEL_RASTERIZE_LINE())
 
 //
@@ -548,8 +546,8 @@
 
 #define SPN_TARGET_VK_DECL_KERNEL_RASTERIZE_CUBIC()                                                 \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_CUBIC,0,SPN_TARGET_DS_ID_BLOCK_POOL)                   \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_CUBIC,1,SPN_TARGET_DS_ID_RASTERIZE)                    \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_CUBIC,2,SPN_TARGET_DS_ID_RASTERIZE_POST)               \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_CUBIC,1,SPN_TARGET_DS_ID_RASTERIZE_POST)               \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_CUBIC,2,SPN_TARGET_DS_ID_RASTERIZE)                    \
   SPN_TARGET_VK_PUSH(SPN_TARGET_P_ID_RASTERIZE_CUBIC,SPN_TARGET_GLSL_PUSH_KERNEL_RASTERIZE_CUBIC())
 
 //
@@ -564,8 +562,8 @@
 
 #define SPN_TARGET_VK_DECL_KERNEL_RASTERIZE_QUAD()                                                  \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_QUAD,0,SPN_TARGET_DS_ID_BLOCK_POOL)                    \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_QUAD,1,SPN_TARGET_DS_ID_RASTERIZE)                     \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_QUAD,2,SPN_TARGET_DS_ID_RASTERIZE_POST)                \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_QUAD,1,SPN_TARGET_DS_ID_RASTERIZE_POST)                \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_QUAD,2,SPN_TARGET_DS_ID_RASTERIZE)                     \
   SPN_TARGET_VK_PUSH(SPN_TARGET_P_ID_RASTERIZE_QUAD,SPN_TARGET_GLSL_PUSH_KERNEL_RASTERIZE_QUAD())
 
 //
@@ -580,8 +578,8 @@
 
 #define SPN_TARGET_VK_DECL_KERNEL_RASTERIZE_RAT_CUBIC()                                                     \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_RAT_CUBIC,0,SPN_TARGET_DS_ID_BLOCK_POOL)                       \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_RAT_CUBIC,1,SPN_TARGET_DS_ID_RASTERIZE)                        \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_RAT_CUBIC,2,SPN_TARGET_DS_ID_RASTERIZE_POST)                   \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_RAT_CUBIC,1,SPN_TARGET_DS_ID_RASTERIZE_POST)                   \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_RAT_CUBIC,2,SPN_TARGET_DS_ID_RASTERIZE)                        \
   SPN_TARGET_VK_PUSH(SPN_TARGET_P_ID_RASTERIZE_RAT_CUBIC,SPN_TARGET_GLSL_PUSH_KERNEL_RASTERIZE_RAT_CUBIC())
 
 //
@@ -596,8 +594,8 @@
 
 #define SPN_TARGET_VK_DECL_KERNEL_RASTERIZE_RAT_QUAD()                                                      \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_RAT_QUAD,0,SPN_TARGET_DS_ID_BLOCK_POOL)                        \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_RAT_QUAD,1,SPN_TARGET_DS_ID_RASTERIZE)                         \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_RAT_QUAD,2,SPN_TARGET_DS_ID_RASTERIZE_POST)                    \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_RAT_QUAD,1,SPN_TARGET_DS_ID_RASTERIZE_POST)                    \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERIZE_RAT_QUAD,2,SPN_TARGET_DS_ID_RASTERIZE)                         \
   SPN_TARGET_VK_PUSH(SPN_TARGET_P_ID_RASTERIZE_RAT_QUAD,SPN_TARGET_GLSL_PUSH_KERNEL_RASTERIZE_RAT_QUAD())
 
 //
@@ -616,9 +614,10 @@
 #define SPN_TARGET_GLSL_DECL_KERNEL_SEGMENT_TTRK()                      \
   SPN_TARGET_GLSL_DS_RASTERIZE_POST(1,readwrite,noaccess,readwrite);
 
-#define SPN_TARGET_VK_DECL_KERNEL_SEGMENT_TTRK()                                           \
- SPN_TARGET_VK_DS(SPN_TARGET_P_ID_SEGMENT_TTRK,0,SPN_TARGET_DS_ID_BLOCK_POOL)              \
- SPN_TARGET_VK_DS(SPN_TARGET_P_ID_SEGMENT_TTRK,2,SPN_TARGET_DS_ID_RASTERIZE_POST)
+#define SPN_TARGET_VK_DECL_KERNEL_SEGMENT_TTRK()                                        \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_SEGMENT_TTRK,0,SPN_TARGET_DS_ID_BLOCK_POOL)          \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_SEGMENT_TTRK,1,SPN_TARGET_DS_ID_RASTERIZE_POST)      \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_SEGMENT_TTRK,2,SPN_TARGET_DS_ID_RASTERIZE)
 
 //
 // KERNEL: RASTERS ALLOC
@@ -631,12 +630,12 @@
 // skips 1
 #define SPN_TARGET_GLSL_DECL_KERNEL_RASTERS_ALLOC()                             \
   SPN_TARGET_GLSL_DS_BLOCK_POOL(0,readwrite,readonly,noaccess,writeonly);       \
-  SPN_TARGET_GLSL_DS_RASTERIZE_POST(2,readwrite,noaccess,noaccess);             \
+  SPN_TARGET_GLSL_DS_RASTERIZE_POST(1,readwrite,noaccess,noaccess);             \
   SPN_TARGET_GLSL_PUSH(SPN_TARGET_GLSL_PUSH_KERNEL_RASTERS_ALLOC());
 
 #define SPN_TARGET_VK_DECL_KERNEL_RASTERS_ALLOC()                                                     \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERS_ALLOC,0,SPN_TARGET_DS_ID_BLOCK_POOL)                       \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERS_ALLOC,2,SPN_TARGET_DS_ID_RASTERIZE_POST)                   \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERS_ALLOC,1,SPN_TARGET_DS_ID_RASTERIZE_POST)                   \
   SPN_TARGET_VK_PUSH(SPN_TARGET_P_ID_RASTERS_ALLOC,SPN_TARGET_GLSL_PUSH_KERNEL_RASTERS_ALLOC())
 
 //
@@ -649,12 +648,12 @@
 // skips 1
 #define SPN_TARGET_GLSL_DECL_KERNEL_RASTERS_PREFIX()                            \
   SPN_TARGET_GLSL_DS_BLOCK_POOL(0,readonly,readonly,readwrite,noaccess);        \
-  SPN_TARGET_GLSL_DS_RASTERIZE_POST(2,readonly,readonly,readonly);              \
+  SPN_TARGET_GLSL_DS_RASTERIZE_POST(1,readonly,readonly,readonly);              \
   SPN_TARGET_GLSL_PUSH(SPN_TARGET_GLSL_PUSH_KERNEL_RASTERS_PREFIX());
 
 #define SPN_TARGET_VK_DECL_KERNEL_RASTERS_PREFIX()                                                    \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERS_PREFIX,0,SPN_TARGET_DS_ID_BLOCK_POOL)                      \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERS_PREFIX,2,SPN_TARGET_DS_ID_RASTERIZE_POST)                  \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_RASTERS_PREFIX,1,SPN_TARGET_DS_ID_RASTERIZE_POST)                  \
   SPN_TARGET_VK_PUSH(SPN_TARGET_P_ID_RASTERS_PREFIX,SPN_TARGET_GLSL_PUSH_KERNEL_RASTERS_PREFIX())
 
 //
@@ -666,14 +665,14 @@
 
 #define SPN_TARGET_GLSL_DECL_KERNEL_PLACE()                             \
   SPN_TARGET_GLSL_DS_BLOCK_POOL(0,noaccess,noaccess,readonly,readonly); \
-  SPN_TARGET_GLSL_DS_TTCKS     (1,readwrite,writeonly,noaccess);        \
-  SPN_TARGET_GLSL_DS_PLACE_CMDS(2,readonly);                            \
+  SPN_TARGET_GLSL_DS_TTCKS     (1,readwrite,noaccess);                  \
+  SPN_TARGET_GLSL_DS_PLACE     (2,readonly);                            \
   SPN_TARGET_GLSL_PUSH(SPN_TARGET_GLSL_PUSH_KERNEL_PLACE());
 
 #define SPN_TARGET_VK_DECL_KERNEL_PLACE()                                      \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_PLACE,0,SPN_TARGET_DS_ID_BLOCK_POOL)        \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_PLACE,1,SPN_TARGET_DS_ID_TTCKS)             \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_PLACE,2,SPN_TARGET_DS_ID_PLACE_CMDS)        \
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_PLACE,2,SPN_TARGET_DS_ID_PLACE)             \
   SPN_TARGET_VK_PUSH(SPN_TARGET_P_ID_PLACE,SPN_TARGET_GLSL_PUSH_KERNEL_PLACE())
 
 //
@@ -685,27 +684,13 @@
 
 #define SPN_TARGET_GLSL_PUSH_KERNEL_SEGMENT_TTCK()
 
-#define SPN_TARGET_GLSL_DS_TTCKS_VOUT(idx,mq_atomics,mq_keys,mq_segs)           \
-  SPN_TARGET_GLSL_LAYOUT_BUFFER(SPN_TARGET_DS_ID_TTCKS,idx,                     \
-                                SPN_TARGET_BINDING_TTCKS_TTCKS,ttcks) {         \
-    mq_atomics SPN_TYPE_UINT  na[2];                                            \
-    SPN_TARGET_GLSL_ALIGN()                                                     \
-    mq_keys    HS_KEY_TYPE    vout[];                                           \
-  };                                                                            \
-  SPN_TARGET_GLSL_LAYOUT_BUFFER(SPN_TARGET_DS_ID_TTCKS,idx,                     \
-                                SPN_TARGET_BINDING_TTCKS_SEGS,segs) {           \
-    mq_segs    SPN_TYPE_UINT  count;                                            \
-    SPN_TARGET_GLSL_ALIGN()                                                     \
-    mq_segs    SPN_TYPE_UINT  offsets[];                                        \
-  } SPN_TARGET_GLSL_BUFFER_INSTANCE(segs);
-
-#define SPN_TARGET_GLSL_DECL_KERNEL_SEGMENT_TTCK()                      \
-  SPN_TARGET_GLSL_DS_TTCKS_VOUT(1,noaccess,readwrite,readwrite);
+#define SPN_TARGET_GLSL_DECL_KERNEL_SEGMENT_TTCK()      \
+  SPN_TARGET_GLSL_DS_TTCKS(1,readwrite,readwrite);
 
 #define SPN_TARGET_VK_DECL_KERNEL_SEGMENT_TTCK()                                   \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_SEGMENT_TTCK,0,SPN_TARGET_DS_ID_BLOCK_POOL)     \
   SPN_TARGET_VK_DS(SPN_TARGET_P_ID_SEGMENT_TTCK,1,SPN_TARGET_DS_ID_TTCKS)          \
-  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_SEGMENT_TTCK,2,SPN_TARGET_DS_ID_PLACE_CMDS)
+  SPN_TARGET_VK_DS(SPN_TARGET_P_ID_SEGMENT_TTCK,2,SPN_TARGET_DS_ID_PLACE)
 
 //
 // KERNEL: RENDER
@@ -713,27 +698,25 @@
 
 #ifdef SPN_KERNEL_RENDER_SURFACE_IS_IMAGE
 
-#define SPN_TARGET_GLSL_PUSH_KERNEL_RENDER()          \
-  SPN_TARGET_PUSH_UVEC4(tile_clip)                    \
-  SPN_TARGET_PUSH_UINT (ttck_key_count_minus_1)
+#define SPN_TARGET_GLSL_PUSH_KERNEL_RENDER()            \
+  SPN_TARGET_PUSH_UINT_FARRAY(tile_clip,4)
 
 #define SPN_TARGET_GLSL_DECL_KERNEL_RENDER()                                  \
   SPN_TARGET_GLSL_DS_BLOCK_POOL(0,noaccess,noaccess,readonly,readonly);       \
-  SPN_TARGET_GLSL_DS_TTCKS     (1,readonly,readonly,readonly);                \
+  SPN_TARGET_GLSL_DS_TTCKS     (1,readonly,readonly);                         \
   SPN_TARGET_GLSL_DS_STYLING   (2,readonly);                                  \
   SPN_TARGET_GLSL_DS_SURFACE   (3,writeonly,SPN_KERNEL_RENDER_SURFACE_TYPE);  \
   SPN_TARGET_GLSL_PUSH(SPN_TARGET_GLSL_PUSH_KERNEL_RENDER());
 
 #else
 
-#define SPN_TARGET_GLSL_PUSH_KERNEL_RENDER()      \
-  SPN_TARGET_PUSH_UVEC4(tile_clip)                \
-  SPN_TARGET_PUSH_UINT (ttck_key_count_minus_1)   \
-  SPN_TARGET_PUSH_UINT (surface_pitch)
+#define SPN_TARGET_GLSL_PUSH_KERNEL_RENDER()         \
+  SPN_TARGET_PUSH_UINT_FARRAY(tile_clip,4)           \
+  SPN_TARGET_PUSH_UINT       (surface_pitch)
 
 #define SPN_TARGET_GLSL_DECL_KERNEL_RENDER()                                    \
   SPN_TARGET_GLSL_DS_BLOCK_POOL(0,noaccess,noaccess,readonly,readonly);         \
-  SPN_TARGET_GLSL_DS_TTCKS     (1,readonly,readonly,readonly);                  \
+  SPN_TARGET_GLSL_DS_TTCKS     (1,readonly,readonly);                           \
   SPN_TARGET_GLSL_DS_STYLING   (2,readonly);                                    \
   SPN_TARGET_GLSL_DS_SURFACE   (3,writeonly,SPN_KERNEL_RENDER_SURFACE_TYPE);    \
   SPN_TARGET_GLSL_PUSH(SPN_TARGET_GLSL_PUSH_KERNEL_RENDER());
@@ -752,7 +735,7 @@
 
 #define SPN_TARGET_GLSL_PUSH_KERNEL_PATHS_RECLAIM()                                 \
   SPN_TARGET_PUSH_UINT(bp_mask)                                                     \
-  SPN_TARGET_PUSH_UINT_ARRAY(path_ids,SPN_KERNEL_PATHS_RECLAIM_MAX_RECLAIM_IDS)
+  SPN_TARGET_PUSH_UINT_VARRAY(path_ids,SPN_KERNEL_PATHS_RECLAIM_MAX_RECLAIM_IDS)
 
 #define SPN_TARGET_GLSL_DECL_KERNEL_PATHS_RECLAIM()                           \
   SPN_TARGET_GLSL_DS_BLOCK_POOL(0,readwrite,readwrite,readonly,readonly);     \
@@ -768,7 +751,7 @@
 
 #define SPN_TARGET_GLSL_PUSH_KERNEL_RASTERS_RECLAIM()                                 \
   SPN_TARGET_PUSH_UINT(bp_mask)                                                       \
-  SPN_TARGET_PUSH_UINT_ARRAY(raster_ids,SPN_KERNEL_RASTERS_RECLAIM_MAX_RECLAIM_IDS)
+  SPN_TARGET_PUSH_UINT_VARRAY(raster_ids,SPN_KERNEL_RASTERS_RECLAIM_MAX_RECLAIM_IDS)
 
 #define SPN_TARGET_GLSL_DECL_KERNEL_RASTERS_RECLAIM()                         \
   SPN_TARGET_GLSL_DS_BLOCK_POOL(0,readwrite,readwrite,readonly,readonly);     \

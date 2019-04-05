@@ -19,7 +19,7 @@
 
 struct spn_queue_pool
 {
-  uint32_t qc;
+  VkQueue q;
 };
 
 //
@@ -34,8 +34,11 @@ spn_device_queue_pool_create(struct spn_device * const device,
     spn_allocator_host_perm_alloc(&device->allocator.host.perm,
                                   SPN_MEM_FLAGS_READ_WRITE,
                                   sizeof(*device->queue_pool));
+  vkGetDeviceQueue(device->vk->d,
+                   device->vk->qfi,
+                   0, // for now just return queue 0
+                   &device->queue_pool->q);
 
-  device->queue_pool->qc = queue_count;
 }
 
 void
@@ -47,25 +50,12 @@ spn_device_queue_pool_dispose(struct spn_device * const device)
 
 //
 //
-
+//
 
 VkQueue
-spn_device_queue_pool_acquire(struct spn_device * const device)
+spn_device_queue_next(struct spn_device * const device)
 {
-  VkQueue q;
-
-  vkGetDeviceQueue(device->vk->d,
-                   device->vk->qfi,
-                   0, // for now just return queue 0
-                   &q);
-  return q;
-}
-
-void
-spn_device_queue_pool_release(struct spn_device * const device,
-                              VkQueue             const queue)
-{
-  ; // NO-OP for now
+  return device->queue_pool->q;
 }
 
 //

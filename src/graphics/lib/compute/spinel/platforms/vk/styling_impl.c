@@ -7,11 +7,11 @@
 //
 
 #include "styling_impl.h"
-#include "styling.h"
 #include "device.h"
 #include "state_assert.h"
 #include "target.h"
 #include "cb_pool.h"
+#include "queue_pool.h"
 #include "semaphore_pool.h"
 
 #include "common/vk/vk_assert.h"
@@ -44,7 +44,9 @@ struct spn_si_vk
     VkDeviceMemory          dm;
   } d;
 
-  VkSemaphore               semaphore;
+  struct {
+    VkSemaphore             sealing;
+  } semaphore;
 };
 
 //
@@ -61,9 +63,9 @@ struct spn_styling_impl
 
   struct spn_si_vk                 vk;
 
-  uint32_t                         lock_count; // # of wip renders
-
   SPN_ASSERT_STATE_DECLARE(spn_si_state_e);
+
+  uint32_t                         lock_count; // # of wip renders
 };
 
 //
@@ -90,7 +92,7 @@ spn_si_complete(void * pfn_payload)
   struct spn_styling_impl              * const impl    = payload->impl;
 
   // release the copy semaphore
-  spn_device_semaphore_pool_release(impl->device,impl->vk.semaphore);
+  spn_device_semaphore_pool_release(impl->device,impl->vk.semaphore.sealing);
 
   // and we're sealed...
   impl->state = SPN_SI_STATE_SEALED;
@@ -122,13 +124,13 @@ spn_si_seal(struct spn_styling_impl * const impl)
       //
 
       // move to SEALING state
-      impl->state        = SPN_SI_STATE_SEALING;
+      impl->state                = SPN_SI_STATE_SEALING;
 
       // acquire the semaphore associated with the copy
-      impl->vk.semaphore = spn_device_semaphore_pool_acquire(device);
+      impl->vk.semaphore.sealing = spn_device_semaphore_pool_acquire(device);
 
       // get a cb
-      VkCommandBuffer cb = spn_device_cb_pool_acquire(device);
+      VkCommandBuffer cb         = spn_device_cb_acquire_begin(device);
 
       //
       // launch a copy and record a semaphore
@@ -151,12 +153,28 @@ spn_si_seal(struct spn_styling_impl * const impl)
           .cb   = cb
         };
 
-      spn_device_cb_submit_signal_1(device,
-                                    cb,
-                                    spn_si_complete,
-                                    &payload,
-                                    sizeof(payload),
-                                    impl->vk.semaphore);
+      VkFence const fence = spn_device_cb_end_fence_acquire(device,
+                                                            cb,
+                                                            spn_si_complete,
+                                                            &payload,
+                                                            sizeof(payload));
+      // boilerplate submit
+      struct VkSubmitInfo const si = {
+        .sType                = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pNext                = NULL,
+        .waitSemaphoreCount   = 0,
+        .pWaitSemaphores      = NULL,
+        .pWaitDstStageMask    = NULL,
+        .commandBufferCount   = 1,
+        .pCommandBuffers      = &cb,
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores    = &impl->vk.semaphore.sealing
+      };
+
+      vk(QueueSubmit(spn_device_queue_next(device),
+                     1,
+                     &si,
+                     fence));
     }
   else
     {
@@ -350,7 +368,7 @@ spn_styling_impl_create(struct spn_device    * const device,
   //
   // initialize styling extent
   //
-  size_t const vk_extent_size = dwords_count * sizeof(uint32_t);
+  size_t const styling_size = dwords_count * sizeof(uint32_t);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
                                   device->vk,
@@ -370,7 +388,7 @@ spn_styling_impl_create(struct spn_device    * const device,
     {
       spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
                                       device->vk,
-                                      vk_extent_size,
+                                      styling_size,
                                       NULL,
                                       &impl->vk.d.dbi,
                                       &impl->vk.d.dm);
@@ -385,6 +403,60 @@ spn_styling_impl_create(struct spn_device    * const device,
   SPN_ASSERT_STATE_INIT(impl,SPN_SI_STATE_UNSEALED);
 
   return SPN_SUCCESS;
+}
+
+//
+//
+//
+
+void
+spn_styling_impl_pre_render_ds(struct spn_styling             * const styling,
+                               struct spn_target_ds_styling_t * const ds,
+                               VkCommandBuffer                        cb)
+{
+  struct spn_styling_impl * const impl   = styling->impl;
+  struct spn_device       * const device = impl->device;
+  struct spn_target       * const target = device->target;
+
+  assert(impl->state >= SPN_SI_STATE_SEALING);
+
+  //
+  // acquire STYLING descriptor set
+  //
+
+  spn_target_ds_acquire_styling(target,device,ds);
+
+  // copy the dbi structs
+  *spn_target_ds_get_styling_styling(target,*ds) = impl->vk.d.dbi;
+
+  // update ds
+  spn_target_ds_update_styling(target,device->vk,*ds);
+
+  // bind
+  spn_target_ds_bind_render_styling(target,cb,*ds);
+}
+
+//
+//
+//
+
+void
+spn_styling_impl_pre_render_wait(struct spn_styling   * const styling,
+                                 uint32_t             * const waitSemaphoreCount,
+                                 VkSemaphore          * const pWaitSemaphores,
+                                 VkPipelineStageFlags * const pWaitDstStageMask)
+{
+  struct spn_styling_impl * const impl = styling->impl;
+
+  assert(impl->state >= SPN_SI_STATE_SEALING);
+
+  if (impl->state == SPN_SI_STATE_SEALING)
+    {
+      uint32_t const idx = (*waitSemaphoreCount)++;
+
+      pWaitSemaphores  [idx] = impl->vk.semaphore.sealing;
+      pWaitDstStageMask[idx] = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
 }
 
 //

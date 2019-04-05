@@ -8,7 +8,7 @@
 //
 //
 
-#include "path_builder.h"
+#include "context.h"
 
 //
 //
@@ -21,8 +21,8 @@ struct spn_device;
 //
 
 spn_result
-spn_path_builder_impl_create(struct spn_device         * const device,
-                             struct spn_path_builder * * const path_builder);
+spn_render_impl(struct spn_device         * const device,
+                spn_render_submit_t const * const submit);
 
 //
 //

@@ -557,8 +557,7 @@ struct spn_cmd_place
 {
   SPN_TYPE_UINT raster_h;
   SPN_TYPE_UINT layer_id;
-  SPN_TYPE_INT  tx;
-  SPN_TYPE_INT  ty;
+  SPN_TYPE_INT  txty[2];
 };
 
 //
@@ -621,6 +620,8 @@ struct spn_cmd_place
 #define SPN_TTCK_GET_X(t)                        SPN_BITFIELD_EXTRACT(t[1],SPN_TTCK_HI_OFFSET_X,SPN_TTCK_HI_BITS_X)
 
 #define SPN_TTCK_ADD_Y(t,d)                      (t[1] += ((d) << SPN_TTCK_HI_OFFSET_Y))
+
+#define SPN_TTCK_LAYER_MAX                       SPN_BITS_TO_MASK(SPN_TTCK_LO_HI_BITS_LAYER)
 
 //
 // TILE TRACE SUBPIXEL

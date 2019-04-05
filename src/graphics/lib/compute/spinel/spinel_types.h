@@ -37,8 +37,6 @@ typedef        uint64_t             spn_weakref_t;
 typedef        spn_weakref_t        spn_transform_weakref_t;
 typedef        spn_weakref_t        spn_clip_weakref_t;
 
-typedef        void               * spn_framebuffer_t;
-
 //
 //
 //
@@ -68,47 +66,10 @@ typedef        void               * spn_framebuffer_t;
 typedef struct spn_render_submit
 {
   void              * ext;
-  spn_composition_t   composition;
   spn_styling_t       styling;
-  uint32_t            clip[4];
+  spn_composition_t   composition;
+  uint32_t            tile_clip[4];
 } spn_render_submit_t;
-
-//
-// RENDER EXTENSIONS
-//
-
-typedef enum spn_render_submit_ext_type_e
-{
-  SPN_RENDER_SUBMIT_EXT_TYPE_WAIT,
-  SPN_RENDER_SUBMIT_EXT_TYPE_VK_BUFFER,
-  SPN_RENDER_SUBMIT_EXT_TYPE_VK_IMAGE,
-
-} spn_render_submit_ext_type_e;
-
-//
-// If wait is true then block until the render completes.
-//
-
-struct spn_render_submit_ext_wait
-{
-  void                         * ext;
-  spn_render_submit_ext_type_e   type;
-  bool                           wait;
-};
-
-//
-//
-//
-
-#if 0 // FIXME -- make this private
-
-struct spn_render_submit_ext_base_in
-{
-  struct spn_render_submit_ext_base_in const * next;
-  spn_render_submit_ext_type_e                 type;
-};
-
-#endif
 
 //
 //

@@ -11,7 +11,7 @@
 #include "ring.h"
 
 //
-// Note that this ring implementation leaves one slot empty
+// A barebones ring
 //
 
 void
