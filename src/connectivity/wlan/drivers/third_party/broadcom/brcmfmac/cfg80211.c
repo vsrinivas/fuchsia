@@ -35,6 +35,7 @@
 #include "feature.h"
 #include "fwil.h"
 #include "fwil_types.h"
+#include "ieee80211.h"
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "p2p.h"
@@ -112,10 +113,6 @@ static bool check_vif_up(struct brcmf_cfg80211_vif* vif) {
     return true;
 }
 
-#define RATE_TO_BASE100KBPS(rate) (((rate)*10) / 2)
-#define RATETAB_ENT(_rateid, _flags) \
-    { .bitrate = RATE_TO_BASE100KBPS(_rateid), .hw_value = (_rateid), .flags = (_flags), }
-
 static uint16_t __wl_rates[] = {
     BRCM_RATE_1M,
     BRCM_RATE_2M,
@@ -135,27 +132,6 @@ static uint16_t __wl_rates[] = {
 #define wl_g_rates_size countof(__wl_rates)
 #define wl_a_rates (__wl_rates + 4)
 #define wl_a_rates_size (wl_g_rates_size - 4)
-
-#define CHAN2G(_channel, _freq)                                                    \
-    {                                                                              \
-        .band = NL80211_BAND_2GHZ, .center_freq = (_freq), .hw_value = (_channel), \
-        .max_antenna_gain = 0, .max_power = 30,                                    \
-    }
-
-#define CHAN5G(_channel)                                                                           \
-    {                                                                                              \
-        .band = NL80211_BAND_5GHZ, .center_freq = 5000 + (5 * (_channel)), .hw_value = (_channel), \
-        .max_antenna_gain = 0, .max_power = 30,                                                    \
-    }
-
-static uint8_t __wl_2ghz_channels[] = {
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14
-};
-
-static uint8_t __wl_5ghz_channels[] = {
-    34, 36, 38, 40, 42, 44, 46, 48, 52, 56, 60, 64,
-    100, 104, 108, 112, 116, 120, 124, 128, 132, 136, 140, 144, 149, 153, 157, 161, 165
-};
 
 /* This is to override regulatory domains defined in cfg80211 module (reg.c)
  * By default world regulatory domain defined in reg.c puts the flags
@@ -4041,8 +4017,6 @@ static struct cfg80211_ops brcmf_cfg80211_ops = {
     .del_pmk = brcmf_cfg80211_del_pmk,
 };
 
-static zx_status_t brcmf_setup_wiphybands(struct wiphy* wiphy);
-
 static void brcmf_cfg80211_set_country(struct wiphy* wiphy, char code[3]) {
     struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
     struct brcmf_if* ifp = cfg_to_if(cfg);
@@ -4073,7 +4047,6 @@ static void brcmf_cfg80211_set_country(struct wiphy* wiphy, char code[3]) {
         brcmf_err("Firmware rejected country setting\n");
         return;
     }
-    brcmf_setup_wiphybands(wiphy);
 }
 
 static zx_status_t brcmf_if_start(void* ctx, wlanif_impl_ifc_t* ifc, void* cookie) {
@@ -4355,37 +4328,198 @@ void brcmf_hook_eapol_req(void* ctx, wlanif_eapol_req_t* req) {
     ndev->if_callbacks->eapol_conf(ndev->if_callback_cookie, &confirm);
 }
 
-wlan_ht_caps_t brcmf_get_ht_cap() {
-    // TODO(NET-1987): Query the chipset capabilities
-    // Following values are read from AssociationRequest over-the-air.
-    wlan_ht_caps_t ht_caps =                 {
-        .ht_capability_info = 0x0063,
-        .ampdu_params = 0x17,
-        .supported_mcs_set =
-            {
-                // Rx MCS bitmask
-                // Supported MCS values: 0-7
-                0xff, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x00, 0x00,
-                // Tx parameters
-                0x01, 0x00, 0x00, 0x00,
-            },
-        .ht_ext_capabilities = 0x0000,
-        .tx_beamforming_capabilities = 0x00000000,
-        .asel_capabilities = 0x00,
-    };
-    return ht_caps;
+static void brcmf_get_bwcap(struct brcmf_if *ifp, uint32_t bw_cap[]) {
+    // 2.4 GHz
+    uint32_t val = WLC_BAND_2G;
+    zx_status_t status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val);
+    if (status == ZX_OK) {
+        bw_cap[WLAN_BAND_2GHZ] = val;
+
+        // 5 GHz
+        val = WLC_BAND_5G;
+        status = brcmf_fil_iovar_int_get(ifp, "bw_cap", &val);
+        if (status == ZX_OK) {
+            bw_cap[WLAN_BAND_5GHZ] = val;
+            return;
+        }
+        brcmf_err("Unable to get bw_cap for 5GHz bands\n");
+        return;
+    }
+
+    // bw_cap not supported in this version of fw
+    brcmf_dbg(INFO, "fallback to mimo_bw_cap info\n");
+    uint32_t mimo_bwcap = 0;
+    status = brcmf_fil_iovar_int_get(ifp, "mimo_bw_cap", &mimo_bwcap);
+    if (status != ZX_OK) {
+        /* assume 20MHz if firmware does not give a clue */
+        mimo_bwcap = WLC_N_BW_20ALL;
+    }
+
+    switch (mimo_bwcap) {
+    case WLC_N_BW_40ALL:
+        bw_cap[WLAN_BAND_2GHZ] |= WLC_BW_40MHZ_BIT;
+        /* fall-thru */
+    case WLC_N_BW_20IN2G_40IN5G:
+        bw_cap[WLAN_BAND_5GHZ] |= WLC_BW_40MHZ_BIT;
+        /* fall-thru */
+    case WLC_N_BW_20ALL:
+        bw_cap[WLAN_BAND_2GHZ] |= WLC_BW_20MHZ_BIT;
+        bw_cap[WLAN_BAND_5GHZ] |= WLC_BW_20MHZ_BIT;
+        break;
+    default:
+        brcmf_err("invalid mimo_bw_cap value\n");
+    }
 }
 
-wlan_vht_caps_t brcmf_get_vht_cap() {
-    // TODO(NET-1987): Query the chipset capabilities
-    // Following values are read from AssociationRequest over-the-air.
-    wlan_vht_caps_t vht_caps = {
-        .vht_capability_info = 0x0f805032,
-        .supported_vht_mcs_and_nss_set = 0x0000fffe0000fffe,
-    };
-    return vht_caps;
+static uint16_t brcmf_get_mcs_map(uint32_t nchain, enum ieee80211_vht_mcs_support supp) {
+    uint16_t mcs_map = 0xffff;
+    for (uint32_t i = 0; i < nchain; i++) {
+        mcs_map = (mcs_map << 2) | supp;
+    }
+
+    return mcs_map;
+}
+
+static void brcmf_update_ht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_t* band,
+                                uint32_t bw_cap[2], uint32_t ldpc_cap, uint32_t nchain,
+                                uint32_t max_ampdu_len_exp) {
+    zx_status_t status;
+
+    band->ht_supported = true;
+
+    // LDPC Support
+    if (ldpc_cap) {
+        band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_LDPC;
+    }
+
+    // Bandwidth-related flags
+    if (bw_cap[band->band_id] & WLC_BW_40MHZ_BIT) {
+        band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_CHAN_WIDTH;
+        band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SGI_40;
+    }
+    band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SGI_20;
+    band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_DSSS_CCK_40;
+
+    // SM Power Save
+    // At present SMPS appears to never be enabled in firmware (see WLAN-1030)
+    band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_SMPS_DISABLED;
+
+    // Rx STBC
+    uint32_t rx_stbc = 0;
+    (void)brcmf_fil_iovar_int_get(ifp, "stbc_rx", &rx_stbc);
+    band->ht_caps.ht_capability_info |= ((rx_stbc & 0x3) << IEEE80211_HT_CAPS_RX_STBC_SHIFT);
+
+    // Tx STBC
+    // According to Broadcom, Tx STBC capability should be induced from the value of the
+    // "stbc_rx" iovar and not "stbc_tx".
+    if (rx_stbc != 0) {
+        band->ht_caps.ht_capability_info |= IEEE80211_HT_CAPS_TX_STBC;
+    }
+
+    // AMPDU Parameters
+    uint32_t ampdu_rx_density = 0;
+    status = brcmf_fil_iovar_int_get(ifp, "ampdu_rx_density", &ampdu_rx_density);
+    if (status != ZX_OK) {
+        brcmf_err("Unable to retrieve value for AMPDU Rx density from firmware, using 16 us\n");
+        ampdu_rx_density = 7;
+    }
+    band->ht_caps.ampdu_params |= ((ampdu_rx_density & 0x7) << IEEE80211_AMPDU_DENSITY_SHIFT);
+    if (max_ampdu_len_exp > 3) {
+        // Cap A-MPDU length at 64K
+        max_ampdu_len_exp = 3;
+    }
+    band->ht_caps.ampdu_params |= (max_ampdu_len_exp << IEEE80211_AMPDU_RX_LEN_SHIFT);
+
+    // Supported MCS Set
+    ZX_ASSERT(nchain <= sizeof(band->ht_caps.supported_mcs_set));
+    memset(band->ht_caps.supported_mcs_set, 0xff, nchain);
+}
+
+static void brcmf_update_vht_cap(struct brcmf_if* ifp, wlanif_band_capabilities_t* band,
+                                 uint32_t bw_cap[2], uint32_t nchain, uint32_t ldpc_cap,
+                                 uint32_t max_ampdu_len_exp) {
+    uint16_t mcs_map;
+
+    band->vht_supported = true;
+
+    // Set Max MPDU length to 11454
+    // TODO (WLAN-485): Value hardcoded from firmware behavior of the BCM4356 and BCM4359 chips.
+    band->vht_caps.vht_capability_info |= (2 << IEEE80211_VHT_CAPS_MAX_MPDU_LEN_SHIFT);
+
+    /* 80MHz is mandatory */
+    band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SGI_80;
+    if (bw_cap[band->band_id] & WLC_BW_160MHZ_BIT) {
+        band->vht_caps.vht_capability_info |= (1 << IEEE80211_VHT_CAPS_SUPP_CHAN_WIDTH_SHIFT);
+        band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SGI_160;
+    }
+
+    if (ldpc_cap) {
+        band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_RX_LDPC;
+    }
+
+    // Tx STBC
+    // TODO (WLAN-485): Value is hardcoded for now
+    if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_IS_4359)) {
+        band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_TX_STBC;
+    }
+
+    /* all support 256-QAM */
+    mcs_map = brcmf_get_mcs_map(nchain, IEEE80211_VHT_MCS_0_9);
+    /* Rx MCS map (B0:15) */
+    band->vht_caps.supported_vht_mcs_and_nss_set = (uint64_t)mcs_map;
+    /* Tx MCS map (B0:15) */
+    band->vht_caps.supported_vht_mcs_and_nss_set |= ((uint64_t)mcs_map << 32);
+
+    /* Beamforming support information */
+    uint32_t txbf_bfe_cap = 0;
+    uint32_t txbf_bfr_cap = 0;
+
+    // Use the *_cap_hw value when possible, since the reflects the capabilities of the device
+    // regardless of current operating mode.
+    zx_status_t status;
+    status = brcmf_fil_iovar_int_get(ifp, "txbf_bfe_cap_hw", &txbf_bfe_cap);
+    if (status != ZX_OK) {
+        (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfe_cap", &txbf_bfe_cap);
+    }
+    status = brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap_hw", &txbf_bfr_cap);
+    if (status != ZX_OK) {
+        (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap", &txbf_bfr_cap);
+    }
+
+    if (txbf_bfe_cap & BRCMF_TXBF_SU_BFE_CAP) {
+        band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SU_BEAMFORMEE;
+    }
+    if (txbf_bfe_cap & BRCMF_TXBF_MU_BFE_CAP) {
+        band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_MU_BEAMFORMEE;
+    }
+    if (txbf_bfr_cap & BRCMF_TXBF_SU_BFR_CAP) {
+        band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_SU_BEAMFORMER;
+    }
+    if (txbf_bfr_cap & BRCMF_TXBF_MU_BFR_CAP) {
+        band->vht_caps.vht_capability_info |= IEEE80211_VHT_CAPS_MU_BEAMFORMER;
+    }
+
+    uint32_t txstreams = 0;
+    // txstreams_cap is not supported in all firmware versions, but when it is supported it
+    // provides capability info regardless of current operating state.
+    status = brcmf_fil_iovar_int_get(ifp, "txstreams_cap", &txstreams);
+    if (status != ZX_OK) {
+        (void)brcmf_fil_iovar_int_get(ifp, "txstreams", &txstreams);
+    }
+
+    if ((txbf_bfe_cap || txbf_bfr_cap) && (txstreams > 1)) {
+        band->vht_caps.vht_capability_info |= (2 << IEEE80211_VHT_CAPS_BEAMFORMEE_STS_SHIFT);
+        band->vht_caps.vht_capability_info |= (((txstreams - 1) <<
+                                                IEEE80211_VHT_CAPS_SOUND_DIM_SHIFT) &
+                                               IEEE80211_VHT_CAPS_SOUND_DIM);
+        // Link adapt = Both
+        band->vht_caps.vht_capability_info |= (3 << IEEE80211_VHT_CAPS_VHT_LINK_ADAPT_SHIFT);
+    }
+
+    // Maximum A-MPDU Length Exponent
+    band->vht_caps.vht_capability_info |=((max_ampdu_len_exp & 0x7) <<
+                                          IEEE80211_VHT_CAPS_MAX_AMPDU_LEN_SHIFT);
+
 }
 
 static void brcmf_dump_ht_caps(wlan_ht_caps_t* caps) {
@@ -4474,6 +4608,9 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     struct net_device* ndev = ctx;
     struct brcmf_if* ifp = ndev_to_if(ndev);
     struct wireless_dev* wdev = ndev_to_wdev(ndev);
+    struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+
+    zx_status_t status;
 
     brcmf_dbg(TRACE, "Enter");
 
@@ -4485,42 +4622,167 @@ void brcmf_hook_query(void* ctx, wlanif_query_info_t* info) {
     // role
     info->role = wdev->iftype;
 
-    // features (none)
+    // features
+    info->driver_features |= WLAN_DRIVER_FEATURE_DFS;
 
     // bands
-    info->num_bands = 2;
+    uint32_t bandlist[3];
+    status = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BANDLIST, &bandlist, sizeof(bandlist));
+    if (status != ZX_OK) {
+        brcmf_err("could not obtain band info: %s\n", zx_status_get_string(status));
+        return;
+    }
 
-    // 2 GHz band
-    wlanif_band_capabilities_t* band = &info->bands[0];
-    band->band_id = WLAN_BAND_2GHZ;
-    band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_g_rates_size);
-    memcpy(band->basic_rates, wl_g_rates, band->num_basic_rates * sizeof(uint16_t));
-    band->base_frequency = 2407;
-    band->num_channels = min(WLAN_CHANNELS_MAX_LEN, countof(__wl_2ghz_channels));
-    memcpy(band->channels, __wl_2ghz_channels, band->num_channels);
-    band->ht_supported = true;
-    band->ht_caps = brcmf_get_ht_cap();
-    band->vht_supported = false;
+    wlanif_band_capabilities_t* band_2ghz = NULL;
+    wlanif_band_capabilities_t* band_5ghz = NULL;
 
-    // 5 GHz band
-    band = &info->bands[1];
-    band->band_id = WLAN_BAND_5GHZ;
-    band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_a_rates_size);
-    memcpy(band->basic_rates, wl_a_rates, band->num_basic_rates * sizeof(uint16_t));
-    band->base_frequency = 5000;
-    band->num_channels = min(WLAN_CHANNELS_MAX_LEN, countof(__wl_5ghz_channels));
-    memcpy(band->channels, __wl_5ghz_channels, band->num_channels);
-    band->ht_supported = true;
-    band->ht_caps = brcmf_get_ht_cap();
-    band->vht_supported = true;
-    band->vht_caps = brcmf_get_vht_cap();
+    /* first entry in bandlist is number of bands */
+    info->num_bands = bandlist[0];
+    for (unsigned i = 1; i <= info->num_bands && i < countof(bandlist); i++) {
+        if (i > countof(info->bands)) {
+            brcmf_err("insufficient space in query response for all bands, truncating\n");
+            continue;
+        }
+        wlanif_band_capabilities_t* band = &info->bands[i - 1];
+        if (bandlist[i] == WLC_BAND_2G) {
+            band->band_id = WLAN_BAND_2GHZ;
+            band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_g_rates_size);
+            memcpy(band->basic_rates, wl_g_rates, band->num_basic_rates * sizeof(uint16_t));
+            band->base_frequency = 2407;
+            band_2ghz = band;
+        } else if (bandlist[i] == WLC_BAND_5G) {
+            band->band_id = WLAN_BAND_5GHZ;
+            band->num_basic_rates = min(WLAN_BASIC_RATES_MAX_LEN, wl_a_rates_size);
+            memcpy(band->basic_rates, wl_a_rates, band->num_basic_rates * sizeof(uint16_t));
+            band->base_frequency = 5000;
+            band_5ghz = band;
+        }
+    }
 
-    // driver features
-    info->driver_features |= WLAN_DRIVER_FEATURE_DFS;
+    // channels
+    uint8_t* pbuf = calloc(BRCMF_DCMD_MEDLEN, 1);
+    if (pbuf == NULL) {
+        brcmf_err("unable to allocate memory for channel information\n");
+        return;
+    }
+
+    status = brcmf_fil_iovar_data_get(ifp, "chanspecs", pbuf, BRCMF_DCMD_MEDLEN);
+    if (status != ZX_OK) {
+        brcmf_err("get chanspecs error (%s)\n", zx_status_get_string(status));
+        goto fail_pbuf;
+    }
+    struct brcmf_chanspec_list *list = (struct brcmf_chanspec_list*)pbuf;
+    uint32_t total = list->count;
+    for (uint32_t i = 0; i < total; i++) {
+        struct brcmu_chan ch;
+        ch.chspec = list->element[i];
+        cfg->d11inf.decchspec(&ch);
+
+        // Find the appropriate band
+        wlanif_band_capabilities_t* band = NULL;
+        if (ch.band == BRCMU_CHAN_BAND_2G) {
+            band = band_2ghz;
+        } else if (ch.band == BRCMU_CHAN_BAND_5G) {
+            band = band_5ghz;
+        } else {
+            brcmf_err("unrecognized band for channel %d\n", ch.control_ch_num);
+            continue;
+        }
+        if (band == NULL) {
+            continue;
+        }
+
+        // Fuchsia's wlan channels are simply the control channel (for now), whereas
+        // brcm specifies each channel + bw + sb configuration individually. Until we
+        // offer that level of resolution, just filter out duplicates.
+        uint32_t j;
+        for (j = 0; j < band->num_channels; j++) {
+            if (band->channels[j] == ch.control_ch_num) {
+                break;
+            }
+        }
+        if (j != band->num_channels) {
+            continue;
+        }
+
+        if (band->num_channels + 1 >= sizeof(band->channels)) {
+            brcmf_err("insufficient space for channel %d, skipping\n", ch.control_ch_num);
+            continue;
+        }
+        band->channels[band->num_channels++] = ch.control_ch_num;
+    }
+
+    // Parse HT/VHT information
+    uint32_t nmode = 0;
+    uint32_t vhtmode = 0;
+    uint32_t rxchain, nchain;
+    uint32_t bw_cap[2] = { WLC_BW_20MHZ_BIT, WLC_BW_20MHZ_BIT };
+    (void) brcmf_fil_iovar_int_get(ifp, "vhtmode", &vhtmode);
+    status = brcmf_fil_iovar_int_get(ifp, "nmode", &nmode);
+    if (status != ZX_OK) {
+        brcmf_err("nmode error (%s)\n", zx_status_get_string(status));
+        // VHT requires HT support
+        vhtmode = 0;
+    } else {
+        brcmf_get_bwcap(ifp, bw_cap);
+    }
+    brcmf_dbg(INFO, "nmode=%d, vhtmode=%d, bw_cap=(%d, %d)\n",
+              nmode, vhtmode, bw_cap[WLAN_BAND_2GHZ],
+              bw_cap[WLAN_BAND_5GHZ]);
+
+    // LDPC support, applies to both HT and VHT
+    uint32_t ldpc_cap = 0;
+    (void)brcmf_fil_iovar_int_get(ifp, "ldpc_cap", &ldpc_cap);
+
+    // Max AMPDU length
+    uint32_t max_ampdu_len_exp = 0;
+    status = brcmf_fil_iovar_int_get(ifp, "ampdu_rx_factor", &max_ampdu_len_exp);
+    if (status != ZX_OK) {
+        brcmf_err("Unable to retrieve value for AMPDU maximum Rx length, using 8191 bytes\n");
+    }
+
+    // Rx chains (and streams)
+    // The "rxstreams_cap" iovar, when present, indicates the maximum number of Rx streams
+    // possible, encoded as one bit per stream (i.e., a value of 0x3 indicates 2 streams/chains).
+    if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_IS_4359)) {
+         // TODO (WLAN-485): The BCM4359 firmware supports rxstreams_cap, but it returns 0x2
+         // instead of 0x3, which is incorrect.
+         rxchain = 0x3;
+    } else {
+        // According to Broadcom, rxstreams_cap, when available, is an accurate representation of
+        // the number of rx chains.
+        status = brcmf_fil_iovar_int_get(ifp, "rxstreams_cap", &rxchain);
+        if (status != ZX_OK) {
+            // TODO (WLAN-485): The rxstreams_cap iovar isn't yet supported in the BCM4356
+            // firmware. For now we use a hard-coded value (another option would be to parse the
+            // nvram contents ourselves (looking for the value associated with the key "rxchain").
+            rxchain = 0x3;
+        }
+    }
+
+    for (nchain = 0; rxchain; nchain++) {
+        rxchain = rxchain & (rxchain - 1);
+    }
+    brcmf_dbg(INFO, "nchain=%d\n", nchain);
+
+    if (nmode) {
+        if (band_2ghz) {
+            brcmf_update_ht_cap(ifp, band_2ghz, bw_cap, ldpc_cap, nchain, max_ampdu_len_exp);
+        }
+        if (band_5ghz) {
+            brcmf_update_ht_cap(ifp, band_5ghz, bw_cap, ldpc_cap, nchain, max_ampdu_len_exp);
+        }
+    }
+    if (vhtmode && band_5ghz) {
+        brcmf_update_vht_cap(ifp, band_5ghz, bw_cap, nchain, ldpc_cap, max_ampdu_len_exp);
+    }
 
     if (BRCMF_INFO_ON()) {
         brcmf_dump_query_info(info);
     }
+
+fail_pbuf:
+    free(pbuf);
 }
 
 void brcmf_hook_stats_query_req(void* ctx) {
@@ -5244,153 +5506,11 @@ dongle_scantime_out:
     return err;
 }
 
-static void brcmf_update_bw40_channel_flag(struct ieee80211_channel* channel,
-                                           struct brcmu_chan* ch) {
-    uint32_t ht40_flag;
-
-    ht40_flag = channel->flags & IEEE80211_CHAN_NO_HT40;
-    if (ch->sb == BRCMU_CHAN_SB_U) {
-        if (ht40_flag == IEEE80211_CHAN_NO_HT40) {
-            channel->flags &= ~IEEE80211_CHAN_NO_HT40;
-        }
-        channel->flags |= IEEE80211_CHAN_NO_HT40PLUS;
-    } else {
-        /* It should be one of
-         * IEEE80211_CHAN_NO_HT40 or
-         * IEEE80211_CHAN_NO_HT40PLUS
-         */
-        channel->flags &= ~IEEE80211_CHAN_NO_HT40;
-        if (ht40_flag == IEEE80211_CHAN_NO_HT40) {
-            channel->flags |= IEEE80211_CHAN_NO_HT40MINUS;
-        }
-    }
-}
-
-static zx_status_t brcmf_construct_chaninfo(struct brcmf_cfg80211_info* cfg, uint32_t bw_cap[]) {
-    struct brcmf_if* ifp = cfg_to_if(cfg);
-    struct ieee80211_supported_band* band;
-    struct ieee80211_channel* channel;
-    struct wiphy* wiphy;
-    struct brcmf_chanspec_list* list;
-    struct brcmu_chan ch;
-    zx_status_t err;
-    uint8_t* pbuf;
-    uint32_t i, j;
-    uint32_t total;
-    uint32_t chaninfo;
-
-    pbuf = calloc(1, BRCMF_DCMD_MEDLEN);
-
-    if (pbuf == NULL) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
-    list = (struct brcmf_chanspec_list*)pbuf;
-
-    err = brcmf_fil_iovar_data_get(ifp, "chanspecs", pbuf, BRCMF_DCMD_MEDLEN);
-    if (err != ZX_OK) {
-        brcmf_err("get chanspecs error (%d)\n", err);
-        goto fail_pbuf;
-    }
-
-    wiphy = cfg_to_wiphy(cfg);
-    band = wiphy->bands[NL80211_BAND_2GHZ];
-    if (band)
-        for (i = 0; i < band->n_channels; i++) {
-            band->channels[i].flags = IEEE80211_CHAN_DISABLED;
-        }
-    band = wiphy->bands[NL80211_BAND_5GHZ];
-    if (band)
-        for (i = 0; i < band->n_channels; i++) {
-            band->channels[i].flags = IEEE80211_CHAN_DISABLED;
-        }
-
-    total = list->count;
-    for (i = 0; i < total; i++) {
-        ch.chspec = (uint16_t)list->element[i];
-        cfg->d11inf.decchspec(&ch);
-
-        if (ch.band == BRCMU_CHAN_BAND_2G) {
-            band = wiphy->bands[NL80211_BAND_2GHZ];
-        } else if (ch.band == BRCMU_CHAN_BAND_5G) {
-            band = wiphy->bands[NL80211_BAND_5GHZ];
-        } else {
-            brcmf_err("Invalid channel Spec. 0x%x.\n", ch.chspec);
-            continue;
-        }
-        if (!band) {
-            continue;
-        }
-        if (!(bw_cap[band->band] & WLC_BW_40MHZ_BIT) && ch.bw == BRCMU_CHAN_BW_40) {
-            continue;
-        }
-        if (!(bw_cap[band->band] & WLC_BW_80MHZ_BIT) && ch.bw == BRCMU_CHAN_BW_80) {
-            continue;
-        }
-
-        channel = NULL;
-        for (j = 0; j < band->n_channels; j++) {
-            if (band->channels[j].hw_value == ch.control_ch_num) {
-                channel = &band->channels[j];
-                break;
-            }
-        }
-        if (!channel) {
-            /* It seems firmware supports some channel we never
-             * considered. Something new in IEEE standard?
-             */
-            brcmf_err("Ignoring unexpected firmware channel %d\n", ch.control_ch_num);
-            continue;
-        }
-
-        if (channel->orig_flags & IEEE80211_CHAN_DISABLED) {
-            continue;
-        }
-
-        /* assuming the chanspecs order is HT20,
-         * HT40 upper, HT40 lower, and VHT80.
-         */
-        if (ch.bw == BRCMU_CHAN_BW_80) {
-            channel->flags &= ~IEEE80211_CHAN_NO_80MHZ;
-        } else if (ch.bw == BRCMU_CHAN_BW_40) {
-            brcmf_update_bw40_channel_flag(channel, &ch);
-        } else {
-            /* enable the channel and disable other bandwidths
-             * for now as mentioned order assure they are enabled
-             * for subsequent chanspecs.
-             */
-            channel->flags = IEEE80211_CHAN_NO_HT40 | IEEE80211_CHAN_NO_80MHZ;
-            ch.bw = BRCMU_CHAN_BW_20;
-            cfg->d11inf.encchspec(&ch);
-            chaninfo = ch.chspec;
-            err = brcmf_fil_bsscfg_int_get(ifp, "per_chan_info", &chaninfo);
-            if (err == ZX_OK) {
-                if (chaninfo & WL_CHAN_RADAR) {
-                    channel->flags |= (IEEE80211_CHAN_RADAR | IEEE80211_CHAN_NO_IR);
-                }
-                if (chaninfo & WL_CHAN_PASSIVE) {
-                    channel->flags |= IEEE80211_CHAN_NO_IR;
-                }
-            }
-        }
-    }
-
-fail_pbuf:
-    free(pbuf);
-    return err;
-}
-
 static zx_status_t brcmf_enable_bw40_2g(struct brcmf_cfg80211_info* cfg) {
     struct brcmf_if* ifp = cfg_to_if(cfg);
-    struct ieee80211_supported_band* band;
     struct brcmf_fil_bwcap_le band_bwcap;
-    struct brcmf_chanspec_list* list;
-    uint8_t* pbuf;
     uint32_t val;
     zx_status_t err;
-    struct brcmu_chan ch;
-    uint32_t num_chan;
-    int i, j;
 
     /* verify support for bw_cap command */
     val = WLC_BAND_5G;
@@ -5407,229 +5527,7 @@ static zx_status_t brcmf_enable_bw40_2g(struct brcmf_cfg80211_info* cfg) {
         err = brcmf_fil_iovar_int_set(ifp, "mimo_bw_cap", val);
     }
 
-    if (err == ZX_OK) {
-        /* update channel info in 2G band */
-        pbuf = calloc(1, BRCMF_DCMD_MEDLEN);
-
-        if (pbuf == NULL) {
-            return ZX_ERR_NO_MEMORY;
-        }
-
-        ch.band = BRCMU_CHAN_BAND_2G;
-        ch.bw = BRCMU_CHAN_BW_40;
-        ch.sb = BRCMU_CHAN_SB_NONE;
-        ch.chnum = 0;
-        cfg->d11inf.encchspec(&ch);
-
-        /* pass encoded chanspec in query */
-        *(uint16_t*)pbuf = ch.chspec;
-
-        err = brcmf_fil_iovar_data_get(ifp, "chanspecs", pbuf, BRCMF_DCMD_MEDLEN);
-        if (err != ZX_OK) {
-            brcmf_err("get chanspecs error (%d)\n", err);
-            free(pbuf);
-            return err;
-        }
-
-        band = cfg_to_wiphy(cfg)->bands[NL80211_BAND_2GHZ];
-        list = (struct brcmf_chanspec_list*)pbuf;
-        num_chan = list->count;
-        for (i = 0; i < (int)num_chan; i++) {
-            ch.chspec = (uint16_t)list->element[i];
-            cfg->d11inf.decchspec(&ch);
-            if (WARN_ON(ch.band != BRCMU_CHAN_BAND_2G)) {
-                continue;
-            }
-            if (WARN_ON(ch.bw != BRCMU_CHAN_BW_40)) {
-                continue;
-            }
-            for (j = 0; j < (int)band->n_channels; j++) {
-                if (band->channels[j].hw_value == ch.control_ch_num) {
-                    break;
-                }
-            }
-            if (WARN_ON(j == (int)band->n_channels)) {
-                continue;
-            }
-
-            brcmf_update_bw40_channel_flag(&band->channels[j], &ch);
-        }
-        free(pbuf);
-    }
     return err;
-}
-
-static void brcmf_get_bwcap(struct brcmf_if* ifp, uint32_t bw_cap[]) {
-    uint32_t band, mimo_bwcap;
-    zx_status_t err;
-
-    band = WLC_BAND_2G;
-    err = brcmf_fil_iovar_int_get(ifp, "bw_cap", &band);
-    if (err == ZX_OK) {
-        bw_cap[NL80211_BAND_2GHZ] = band;
-        band = WLC_BAND_5G;
-        err = brcmf_fil_iovar_int_get(ifp, "bw_cap", &band);
-        if (err == ZX_OK) {
-            bw_cap[NL80211_BAND_5GHZ] = band;
-            return;
-        }
-        WARN_ON(1);
-        return;
-    }
-    brcmf_dbg(INFO, "fallback to mimo_bw_cap info\n");
-    mimo_bwcap = 0;
-    err = brcmf_fil_iovar_int_get(ifp, "mimo_bw_cap", &mimo_bwcap);
-    if (err != ZX_OK) { /* assume 20MHz if firmware does not give a clue */
-        mimo_bwcap = WLC_N_BW_20ALL;
-    }
-
-    switch (mimo_bwcap) {
-    case WLC_N_BW_40ALL:
-        bw_cap[NL80211_BAND_2GHZ] |= WLC_BW_40MHZ_BIT;
-        /* fall-thru */
-    case WLC_N_BW_20IN2G_40IN5G:
-        bw_cap[NL80211_BAND_5GHZ] |= WLC_BW_40MHZ_BIT;
-        /* fall-thru */
-    case WLC_N_BW_20ALL:
-        bw_cap[NL80211_BAND_2GHZ] |= WLC_BW_20MHZ_BIT;
-        bw_cap[NL80211_BAND_5GHZ] |= WLC_BW_20MHZ_BIT;
-        break;
-    default:
-        brcmf_err("invalid mimo_bw_cap value\n");
-    }
-}
-
-static void brcmf_update_ht_cap(struct ieee80211_supported_band* band, uint32_t bw_cap[2],
-                                uint32_t nchain) {
-    band->ht_cap.ht_supported = true;
-    if (bw_cap[band->band] & WLC_BW_40MHZ_BIT) {
-        band->ht_cap.cap |= IEEE80211_HT_CAP_SGI_40;
-        band->ht_cap.cap |= IEEE80211_HT_CAP_SUP_WIDTH_20_40;
-    }
-    band->ht_cap.cap |= IEEE80211_HT_CAP_SGI_20;
-    band->ht_cap.cap |= IEEE80211_HT_CAP_DSSSCCK40;
-    band->ht_cap.ampdu_factor = IEEE80211_HT_MAX_AMPDU_64K;
-    band->ht_cap.ampdu_density = IEEE80211_HT_MPDU_DENSITY_16;
-    memset(band->ht_cap.mcs.rx_mask, 0xff, nchain);
-    band->ht_cap.mcs.tx_params = IEEE80211_HT_MCS_TX_DEFINED;
-}
-
-static uint16_t brcmf_get_mcs_map(uint32_t nchain, enum ieee80211_vht_mcs_support supp) {
-    uint16_t mcs_map;
-    int i;
-
-    for (i = 0, mcs_map = 0xFFFF; i < (int)nchain; i++) {
-        mcs_map = (mcs_map << 2) | supp;
-    }
-
-    return mcs_map;
-}
-
-static void brcmf_update_vht_cap(struct ieee80211_supported_band* band, uint32_t bw_cap[2],
-                                 uint32_t nchain, uint32_t txstreams, uint32_t txbf_bfe_cap,
-                                 uint32_t txbf_bfr_cap) {
-    uint16_t mcs_map;
-
-    /* not allowed in 2.4G band */
-    if (band->band == NL80211_BAND_2GHZ) {
-        return;
-    }
-
-    band->vht_cap.vht_supported = true;
-    /* 80MHz is mandatory */
-    band->vht_cap.cap |= IEEE80211_VHT_CAP_SHORT_GI_80;
-    if (bw_cap[band->band] & WLC_BW_160MHZ_BIT) {
-        band->vht_cap.cap |= IEEE80211_VHT_CAP_SUPP_CHAN_WIDTH_160MHZ;
-        band->vht_cap.cap |= IEEE80211_VHT_CAP_SHORT_GI_160;
-    }
-    /* all support 256-QAM */
-    mcs_map = brcmf_get_mcs_map(nchain, IEEE80211_VHT_MCS_SUPPORT_0_9);
-    band->vht_cap.vht_mcs.rx_mcs_map = mcs_map;
-    band->vht_cap.vht_mcs.tx_mcs_map = mcs_map;
-
-    /* Beamforming support information */
-    if (txbf_bfe_cap & BRCMF_TXBF_SU_BFE_CAP) {
-        band->vht_cap.cap |= IEEE80211_VHT_CAP_SU_BEAMFORMEE_CAPABLE;
-    }
-    if (txbf_bfe_cap & BRCMF_TXBF_MU_BFE_CAP) {
-        band->vht_cap.cap |= IEEE80211_VHT_CAP_MU_BEAMFORMEE_CAPABLE;
-    }
-    if (txbf_bfr_cap & BRCMF_TXBF_SU_BFR_CAP) {
-        band->vht_cap.cap |= IEEE80211_VHT_CAP_SU_BEAMFORMER_CAPABLE;
-    }
-    if (txbf_bfr_cap & BRCMF_TXBF_MU_BFR_CAP) {
-        band->vht_cap.cap |= IEEE80211_VHT_CAP_MU_BEAMFORMER_CAPABLE;
-    }
-
-    if ((txbf_bfe_cap || txbf_bfr_cap) && (txstreams > 1)) {
-        band->vht_cap.cap |= (2 << IEEE80211_VHT_CAP_BEAMFORMEE_STS_SHIFT);
-        band->vht_cap.cap |= ((txstreams - 1) << IEEE80211_VHT_CAP_SOUNDING_DIMENSIONS_SHIFT);
-        band->vht_cap.cap |= IEEE80211_VHT_CAP_VHT_LINK_ADAPTATION_VHT_MRQ_MFB;
-    }
-}
-
-static zx_status_t brcmf_setup_wiphybands(struct wiphy* wiphy) {
-    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct brcmf_if* ifp = cfg_to_if(cfg);
-    uint32_t nmode = 0;
-    uint32_t vhtmode = 0;
-    uint32_t bw_cap[2] = {WLC_BW_20MHZ_BIT, WLC_BW_20MHZ_BIT};
-    uint32_t rxchain;
-    uint32_t nchain;
-    zx_status_t err;
-    int32_t i;
-    struct ieee80211_supported_band* band;
-    uint32_t txstreams = 0;
-    uint32_t txbf_bfe_cap = 0;
-    uint32_t txbf_bfr_cap = 0;
-
-    brcmf_dbg(TEMP, "Enter");
-
-    (void)brcmf_fil_iovar_int_get(ifp, "vhtmode", &vhtmode);
-    err = brcmf_fil_iovar_int_get(ifp, "nmode", &nmode);
-    if (err != ZX_OK) {
-        brcmf_err("nmode error (%d)\n", err);
-    } else {
-        brcmf_get_bwcap(ifp, bw_cap);
-    }
-    brcmf_dbg(INFO, "nmode=%d, vhtmode=%d, bw_cap=(%d, %d)\n", nmode, vhtmode,
-              bw_cap[NL80211_BAND_2GHZ], bw_cap[NL80211_BAND_5GHZ]);
-    err = brcmf_fil_iovar_int_get(ifp, "rxchain", &rxchain);
-    if (err != ZX_OK) {
-        brcmf_err("rxchain error (%d)\n", err);
-        nchain = 1;
-    } else {
-        for (nchain = 0; rxchain; nchain++) {
-            rxchain = rxchain & (rxchain - 1);
-        }
-    }
-    brcmf_dbg(INFO, "nchain=%d\n", nchain);
-
-    err = brcmf_construct_chaninfo(cfg, bw_cap);
-    if (err != ZX_OK) {
-        brcmf_err("brcmf_construct_chaninfo failed (%d)\n", err);
-        return err;
-    }
-
-    if (vhtmode) {
-        (void)brcmf_fil_iovar_int_get(ifp, "txstreams", &txstreams);
-        (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfe_cap", &txbf_bfe_cap);
-        (void)brcmf_fil_iovar_int_get(ifp, "txbf_bfr_cap", &txbf_bfr_cap);
-    }
-
-    for (i = 0; i < (int32_t)countof(wiphy->bands); i++) {
-        band = wiphy->bands[i];
-        if (band == NULL) {
-            continue;
-        }
-        if (nmode) {
-            brcmf_update_ht_cap(band, bw_cap, nchain);
-        }
-        if (vhtmode) {
-            brcmf_update_vht_cap(band, bw_cap, nchain, txstreams, txbf_bfe_cap, txbf_bfr_cap);
-        }
-    }
-    return ZX_OK;
 }
 
 static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
@@ -5868,7 +5766,6 @@ static void brcmf_cfg80211_reg_notifier(struct wiphy* wiphy, struct regulatory_r
         brcmf_err("Firmware rejected country setting\n");
         return;
     }
-    brcmf_setup_wiphybands(wiphy);
 }
 
 static void brcmf_free_wiphy(struct wiphy* wiphy) {
@@ -5912,7 +5809,6 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     struct brcmf_if* ifp;
     zx_status_t err = ZX_OK;
     int32_t io_type;
-    uint16_t* cap = NULL;
 
     brcmf_dbg(TEMP, "Enter");
     if (!ndev) {
@@ -5982,36 +5878,13 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
     wiphy->reg_notifier = brcmf_cfg80211_reg_notifier;
     wiphy->regulatory_flags |= REGULATORY_CUSTOM_REG;
     brcmf_dbg(TEMP, "* * Wanted to wiphy_apply_custom_regulatory(wiphy, &brcmf_regdom);");
-    /* firmware defaults to 40MHz disabled in 2G band. We signal
-     * cfg80211 here that we do and have it decide we can enable
-     * it. But first check if device does support 2G operation.
-     */
-    if (wiphy->bands[NL80211_BAND_2GHZ]) {
-        cap = &wiphy->bands[NL80211_BAND_2GHZ]->ht_cap.cap;
-        *cap |= IEEE80211_HT_CAP_SUP_WIDTH_20_40;
-    }
-    err = wiphy_register(wiphy);
-    if (err != ZX_OK) {
-        brcmf_err("Could not register wiphy device (%d)\n", err);
-        goto priv_out;
-    }
-    err = brcmf_setup_wiphybands(wiphy);
-    if (err != ZX_OK) {
-        brcmf_err("Setting wiphy bands failed (%d)\n", err);
-        goto wiphy_unreg_out;
+
+    // NOTE: linux first verifies that 40 MHz operation is enabled in 2.4 GHz channels.
+    err = brcmf_enable_bw40_2g(cfg);
+    if (err == ZX_OK) {
+        err = brcmf_fil_iovar_int_set(ifp, "obss_coex", BRCMF_OBSS_COEX_AUTO);
     }
 
-    /* If cfg80211 didn't disable 40MHz HT CAP in wiphy_register(),
-     * setup 40MHz in 2GHz band and enable OBSS scanning.
-     */
-    if (cap && (*cap & IEEE80211_HT_CAP_SUP_WIDTH_20_40)) {
-        err = brcmf_enable_bw40_2g(cfg);
-        if (err == ZX_OK) {
-            err = brcmf_fil_iovar_int_set(ifp, "obss_coex", BRCMF_OBSS_COEX_AUTO);
-        } else {
-            *cap &= ~IEEE80211_HT_CAP_SUP_WIDTH_20_40;
-        }
-    }
     /* p2p might require that "if-events" get processed by fweh. So
      * activate the already registered event handlers now and activate
      * the rest when initialization has completed. drvr->config needs to
