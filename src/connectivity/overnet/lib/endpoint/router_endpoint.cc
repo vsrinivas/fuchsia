@@ -28,7 +28,6 @@ void RouterEndpoint::StartGossipTimer() {
   Timer* timer = this->timer();
   gossip_timer_.Reset(
       timer, timer->Now() + gossip_interval_, [this](const Status& status) {
-        OVERNET_TRACE(DEBUG) << node_id() << " gossip timer: " << status;
         if (status.is_error())
           return;
         auto node = SelectGossipPeer();
