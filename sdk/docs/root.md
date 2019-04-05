@@ -102,3 +102,13 @@ automated.
 JSON schemas may even be used to generate code representing the metadata
 containers and let the ingestion program handle idiomatic data structures
 instead of raw JSON representations.
+
+The metadata schemas will evolve over time.
+In order to allow consumers of that metadata to adjust to schema changes, the
+main metadata file contains a property named `schema_version` which is an opaque
+version identifier for these schemas.
+This version identifier will be modified every time the metadata schemas evolve
+in a way that requires the attention of a developer.
+SDK consumers may record the version identifier of the metadata they used to last
+ingest an SDK and compare that version identifier to next SDK's version
+identifier in order to detect when developer action may be required.

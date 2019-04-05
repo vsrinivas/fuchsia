@@ -27,6 +27,9 @@ def main():
     parser.add_argument('--id',
                         help='Opaque identifier for the SDK',
                         required=True)
+    parser.add_argument('--schema-version',
+                        help='Opaque identifier for the metadata schemas',
+                        required=True)
     args = parser.parse_args()
 
     with open(args.manifest, 'r') as manifest_file:
@@ -42,6 +45,7 @@ def main():
         },
         'id': args.id,
         'parts': sorted(filter(lambda m: m, [a.metadata for a in atoms])),
+        'schema_version': args.schema_version,
     }
 
     with open(args.meta, 'w') as meta_file:

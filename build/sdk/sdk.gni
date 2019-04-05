@@ -5,6 +5,7 @@
 import("//build/compiled_action.gni")
 import("//build/json/validate_json.gni")
 import("config.gni")
+import("meta/version.gni")
 import("sdk_molecule.gni")
 
 declare_args() {
@@ -42,6 +43,7 @@ declare_args() {
 
 template("sdk") {
   assert(defined(invoker.category), "Must define an SDK category")
+
   # TODO(DX-685): enforce that the "api" attribute is set.
 
   main_target_name = target_name
@@ -88,10 +90,12 @@ template("sdk") {
 
   # Generates the manifest.
   sdk_molecule(generation_target_name) {
-    forward_variables_from(invoker, "*", [
-      "api",
-      "export",
-    ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "api",
+                             "export",
+                           ])
 
     if (!defined(deps)) {
       deps = []
@@ -128,9 +132,7 @@ template("sdk") {
 
     # TODO(DX-685): always set this argument.
     if (defined(invoker.api)) {
-      inputs += [
-        invoker.api,
-      ]
+      inputs += [ invoker.api ]
       args += [
         "--reference",
         rebase_path(invoker.api),
@@ -205,6 +207,8 @@ template("sdk") {
       host_triple,
       "--id",
       sdk_id,
+      "--schema-version",
+      sdk_metadata_schema_version,
     ]
 
     public_deps = [
