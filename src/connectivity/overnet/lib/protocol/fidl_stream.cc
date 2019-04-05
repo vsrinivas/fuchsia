@@ -43,7 +43,7 @@ zx_txid_t FidlStream::AllocateCallback(
     // No need to worry about user space txid spaces - FidlStream messages
     // are never carried over channels.
     id = next_txid_++;
-  } while (callbacks_.count(id));
+  } while (id == 0 || callbacks_.count(id));
   callbacks_.emplace(id, std::move(callback));
   return id;
 }
