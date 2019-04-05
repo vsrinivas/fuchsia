@@ -24,7 +24,7 @@ macro_rules! frame_len {
     };
 }
 
-type MacAddr = [u8; 6];
+pub type MacAddr = [u8; 6];
 pub const BCAST_ADDR: MacAddr = [0xFF; 6];
 
 pub enum MacFrame<B> {

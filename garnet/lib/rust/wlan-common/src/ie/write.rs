@@ -4,7 +4,11 @@
 
 use {
     super::{constants::*, fields::*, id},
-    crate::{appendable::Appendable, error::FrameWriteError, mac::ReasonCode},
+    crate::{
+        appendable::Appendable,
+        error::FrameWriteError,
+        mac::{MacAddr, ReasonCode},
+    },
     zerocopy::AsBytes,
 };
 
@@ -123,6 +127,33 @@ pub fn write_mpm_close<B: Appendable>(
         &reason_code,
         option_as_bytes(pmk)
     )
+}
+
+pub fn write_preq<B: Appendable>(
+    buf: &mut B,
+    header: &PreqHeader,
+    originator_external_addr: Option<&MacAddr>,
+    middle: &PreqMiddle,
+    targets: &[PreqPerTarget],
+) -> Result<(), FrameWriteError> {
+    if header.flags.addr_ext() {
+        validate!(
+            originator_external_addr.is_some(),
+            "Address extension flag is set in PREQ but no external address supplied"
+        );
+    } else {
+        validate!(
+            originator_external_addr.is_none(),
+            "External address is present but address extension flag is not set in PREQ"
+        );
+    }
+    validate!(
+        middle.target_count as usize == targets.len(),
+        "target_count in PREQ ({}) does not match the number of supplied targets ({})",
+        middle.target_count,
+        targets.len()
+    );
+    write_ie!(buf, id::PREQ, header, option_as_bytes(originator_external_addr), middle, targets)
 }
 
 fn option_as_bytes<T: AsBytes>(opt: Option<&T>) -> &[u8] {
@@ -323,7 +354,7 @@ mod tests {
         write_mpm_confirm(&mut buf, &header, 0x6655, Some(&pmk)).expect("expected Ok");
 
         #[rustfmt::skip]
-            let expected = &[
+        let expected = &[
             117, 22,
             0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
@@ -348,11 +379,144 @@ mod tests {
             .expect("expected Ok");
 
         #[rustfmt::skip]
-            let expected = &[
+        let expected = &[
             117, 24,
             0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
         ];
         assert_eq!(expected, &buf[..]);
+    }
+
+    #[test]
+    pub fn preq_minimal() {
+        let header = PreqHeader {
+            flags: PreqFlags(0),
+            hop_count: 0x01,
+            element_ttl: 0x02,
+            path_discovery_id: 0x06050403,
+            originator_addr: [0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c],
+            originator_hwmp_seqno: 0x100f0e0d,
+        };
+        let middle = PreqMiddle { lifetime: 0x1a191817, metric: 0x1e1d1c1b, target_count: 0 };
+        let mut buf = vec![];
+        write_preq(&mut buf, &header, None, &middle, &[]).expect("expected Ok");
+
+        #[rustfmt::skip]
+        let expected = [
+            130, 17 + 9,
+            0x00, // flags
+            0x01, // hop count
+            0x02, // element ttl
+            0x03, 0x04, 0x05, 0x06, // path discovery ID
+            0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, // originator addr
+            0x0d, 0x0e, 0x0f, 0x10, // originator hwmp seqno
+            0x17, 0x18, 0x19, 0x1a, // lifetime
+            0x1b, 0x1c, 0x1d, 0x1e, // metric
+            // Target count
+            0,
+        ];
+        assert_eq!(expected, &buf[..]);
+    }
+
+    #[test]
+    pub fn preq_full() {
+        let header = PreqHeader {
+            flags: PreqFlags(0).with_addr_ext(true),
+            hop_count: 0x01,
+            element_ttl: 0x02,
+            path_discovery_id: 0x06050403,
+            originator_addr: [0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c],
+            originator_hwmp_seqno: 0x100f0e0d,
+        };
+        let ext_addr = [0x11, 0x12, 0x13, 0x14, 0x15, 0x16];
+        let middle = PreqMiddle { lifetime: 0x1a191817, metric: 0x1e1d1c1b, target_count: 1 };
+        let target = PreqPerTarget {
+            flags: PreqPerTargetFlags(0),
+            target_addr: [0x21, 0x22, 0x23, 0x24, 0x25, 0x26],
+            target_hwmp_seqno: 0x2a292827,
+        };
+        let mut buf = vec![];
+        write_preq(&mut buf, &header, Some(&ext_addr), &middle, &[target]).expect("expected Ok");
+
+        #[rustfmt::skip]
+        let expected = [
+            130, 17 + 6 + 9 + 11,
+            0x40, // flags: ext addr present
+            0x01, // hop count
+            0x02, // element ttl
+            0x03, 0x04, 0x05, 0x06, // path discovery ID
+            0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, // originator addr
+            0x0d, 0x0e, 0x0f, 0x10, // originator hwmp seqno
+            0x11, 0x12, 0x13, 0x14, 0x15, 0x16, // ext addr
+            0x17, 0x18, 0x19, 0x1a, // lifetime
+            0x1b, 0x1c, 0x1d, 0x1e, // metric
+            // Target count
+            1,
+            0x00, // target 1 flags
+            0x21, 0x22, 0x23, 0x24, 0x25, 0x26, // target 1 address
+            0x27, 0x28, 0x29, 0x2a, // target 1 hwmp seqno
+        ];
+        assert_eq!(&expected[..], &buf[..]);
+    }
+
+    #[test]
+    pub fn preq_addr_ext_flag_set_but_no_addr_given() {
+        let header = PreqHeader {
+            flags: PreqFlags(0).with_addr_ext(true),
+            hop_count: 0x01,
+            element_ttl: 0x02,
+            path_discovery_id: 0x06050403,
+            originator_addr: [0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c],
+            originator_hwmp_seqno: 0x100f0e0d,
+        };
+        let middle = PreqMiddle { lifetime: 0x1a191817, metric: 0x1e1d1c1b, target_count: 0 };
+        assert_eq!(
+            Err(FrameWriteError::new_invalid_data(
+                "Address extension flag is set in PREQ but no external address supplied"
+                    .to_string()
+            )),
+            write_preq(&mut vec![], &header, None, &middle, &[])
+        );
+    }
+
+    #[test]
+    pub fn preq_ext_addr_given_but_no_flag_set() {
+        let header = PreqHeader {
+            flags: PreqFlags(0),
+            hop_count: 0x01,
+            element_ttl: 0x02,
+            path_discovery_id: 0x06050403,
+            originator_addr: [0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c],
+            originator_hwmp_seqno: 0x100f0e0d,
+        };
+        let ext_addr = [0x11, 0x12, 0x13, 0x14, 0x15, 0x16];
+        let middle = PreqMiddle { lifetime: 0x1a191817, metric: 0x1e1d1c1b, target_count: 0 };
+        assert_eq!(
+            Err(FrameWriteError::new_invalid_data(
+                "External address is present but address extension flag is not set in PREQ"
+                    .to_string()
+            )),
+            write_preq(&mut vec![], &header, Some(&ext_addr), &middle, &[])
+        );
+    }
+
+    #[test]
+    pub fn preq_target_count_mismatch() {
+        let header = PreqHeader {
+            flags: PreqFlags(0),
+            hop_count: 0x01,
+            element_ttl: 0x02,
+            path_discovery_id: 0x06050403,
+            originator_addr: [0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c],
+            originator_hwmp_seqno: 0x100f0e0d,
+        };
+        let middle = PreqMiddle { lifetime: 0x1a191817, metric: 0x1e1d1c1b, target_count: 1 };
+        assert_eq!(
+            Err(FrameWriteError::new_invalid_data(
+                "target_count in PREQ (1) does not match the number of supplied targets (0)"
+                    .to_string()
+            )),
+            write_preq(&mut vec![], &header, None, &middle, &[])
+        );
     }
 }

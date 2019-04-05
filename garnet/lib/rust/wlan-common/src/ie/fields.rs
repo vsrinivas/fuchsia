@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{mac::ReasonCode, unaligned_view::UnalignedView},
+    crate::{mac::MacAddr, mac::ReasonCode, unaligned_view::UnalignedView},
     failure::{ensure, format_err, Error},
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned},
@@ -482,4 +482,70 @@ pub struct MpmCloseView<B> {
     pub peer_link_id: Option<UnalignedView<B, u16>>,
     pub reason_code: UnalignedView<B, ReasonCode>,
     pub pmk: Option<LayoutVerified<B, MpmPmk>>,
+}
+
+// IEEE Std 802.11-2016, 9.4.2.113, Figure 9-478
+#[bitfield(
+    0       gate_announcement,
+    1       addressing_mode,
+    2       proactive,
+    3..=5   _, // reserved
+    6       addr_ext,
+    7       _, // reserved
+)]
+#[repr(C)]
+#[derive(Clone, Copy, AsBytes, FromBytes, Unaligned)]
+pub struct PreqFlags(pub u8);
+
+// Fixed-length fields of the PREQ element that precede
+// the optional Originator External Address field.
+// IEEE Std 802.11-2016, 9.4.2.113, Figure 9-477
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+pub struct PreqHeader {
+    pub flags: PreqFlags,
+    pub hop_count: u8,
+    pub element_ttl: u8,
+    pub path_discovery_id: u32,
+    pub originator_addr: MacAddr,
+    pub originator_hwmp_seqno: u32,
+}
+
+// Fixed-length fields of the PREQ elements that follow the optional Originator External Address
+// field and precede the variable length per-target fields.
+// IEEE Std 802.11-2016, 9.4.2.113, Figure 9-477
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+pub struct PreqMiddle {
+    pub lifetime: u32,
+    pub metric: u32,
+    pub target_count: u8,
+}
+
+// IEEE Std 802.11-2016, 9.4.2.113, Figure 9-479
+#[bitfield(
+    0       target_only,
+    1       _, // reserved
+    2       usn,
+    3..=7   _, // reserved
+)]
+#[repr(C)]
+#[derive(Clone, Copy, AsBytes, FromBytes, Unaligned)]
+pub struct PreqPerTargetFlags(pub u8);
+
+// An entry of the variable-length part of PREQ
+// IEEE Std 802.11-2016, 9.4.2.113, Figure 9-477
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+pub struct PreqPerTarget {
+    pub flags: PreqPerTargetFlags,
+    pub target_addr: MacAddr,
+    pub target_hwmp_seqno: u32,
+}
+
+pub struct PreqView<B> {
+    pub header: LayoutVerified<B, PreqHeader>,
+    pub originator_external_addr: Option<LayoutVerified<B, MacAddr>>,
+    pub middle: LayoutVerified<B, PreqMiddle>,
+    pub targets: LayoutVerified<B, [PreqPerTarget]>,
 }

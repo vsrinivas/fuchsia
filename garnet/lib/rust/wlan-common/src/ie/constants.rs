@@ -5,3 +5,4 @@
 pub const SSID_MAX_LEN: usize = 32;
 pub const TIM_MAX_BITMAP_LEN: usize = 251;
 pub const SUPPORTED_RATES_MAX_LEN: usize = 8;
+pub const PREQ_MAX_TARGETS: usize = 20;

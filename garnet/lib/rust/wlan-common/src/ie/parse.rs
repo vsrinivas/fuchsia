@@ -121,6 +121,31 @@ pub fn parse_mpm_close<B: ByteSlice>(raw_body: B) -> FrameParseResult<MpmCloseVi
     Ok(MpmCloseView { header, peer_link_id, reason_code, pmk })
 }
 
+pub fn parse_preq<B: ByteSlice>(raw_body: B) -> FrameParseResult<PreqView<B>> {
+    let mut reader = BufferReader::new(raw_body);
+    let header = reader
+        .read::<PreqHeader>()
+        .ok_or(FrameParseError::new("Element body is too short to include a PREQ header"))?;
+    let originator_external_addr = if header.flags.addr_ext() {
+        let addr = reader.read().ok_or(FrameParseError::new(
+            "Element body is too short to include an external address",
+        ))?;
+        Some(addr)
+    } else {
+        None
+    };
+    let middle = reader
+        .read::<PreqMiddle>()
+        .ok_or(FrameParseError::new("Element body is too short to include middle PREQ fields"))?;
+    let targets = reader
+        .read_array(middle.target_count as usize)
+        .ok_or(FrameParseError::new("Element body is too short to include all PREQ targets"))?;
+    if reader.bytes_remaining() > 0 {
+        return Err(FrameParseError::new("Extra bytes at the end of the PREQ element"));
+    }
+    Ok(PreqView { header, originator_external_addr, middle, targets })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -485,5 +510,155 @@ mod tests {
                     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
         let err = parse_mpm_close(&data[..]).err().expect("expected Err");
         assert_eq!("Extra bytes at the end of the MPM Close element", err.debug_message());
+    }
+
+    #[test]
+    pub fn preq_ok_minimal() {
+        #[rustfmt::skip]
+        let data = [
+            0x00, // flags
+            0x02, // hop count
+            0x03, // element ttl
+            0x04, 0x05, 0x06, 0x07, // path discovery ID
+            0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+            0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+            0x18, 0x19, 0x1a, 0x1b, // lifetime
+            0x1c, 0x1d, 0x1e, 0x1f, // metric
+            // Target count. Having no targets probably doesn't make sense,
+            // but we test this code path anyway.
+            0,
+        ];
+        let r = parse_preq(&data[..]).expect("expected Ok");
+        assert_eq!(0x02, r.header.hop_count);
+        assert!(r.originator_external_addr.is_none());
+        assert_eq!(0x1b1a1918, { r.middle.lifetime });
+        assert_eq!(0, r.targets.len());
+    }
+
+    #[test]
+    pub fn preq_ok_full() {
+        #[rustfmt::skip]
+        let data = [
+            0x40, // flags: address extension = true
+            0x02, // hop count
+            0x03, // element ttl
+            0x04, 0x05, 0x06, 0x07, // path discovery ID
+            0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+            0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+            0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, // originator external address
+            0x18, 0x19, 0x1a, 0x1b, // lifetime
+            0x1c, 0x1d, 0x1e, 0x1f, // metric
+            2, // target count
+            // Target 1
+            0x00, // target flags
+            0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // target address
+            0xa1, 0xa2, 0xa3, 0xa4, // target hwmp seqno
+            // Target 2
+            0x00, // target flags
+            0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, // target address
+            0xb1, 0xb2, 0xb3, 0xb4, // target hwmp seqno
+        ];
+        let r = parse_preq(&data[..]).expect("expected Ok");
+        assert_eq!(0x02, r.header.hop_count);
+        let ext_addr = r.originator_external_addr.expect("expected ext addr to be present");
+        assert_eq!([0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b], *ext_addr);
+        assert_eq!(0x1b1a1918, { r.middle.lifetime });
+        assert_eq!(2, r.targets.len());
+        assert_eq!([0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb], r.targets[1].target_addr);
+    }
+
+    #[test]
+    pub fn preq_too_short_for_header() {
+        #[rustfmt::skip]
+        let data = [
+            0x00, // flags
+            0x02, // hop count
+            0x03, // element ttl
+            0x04, 0x05, 0x06, 0x07, // path discovery ID
+            0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+            0x0e, 0x0f, 0x10, // one byte missing from originator hwmp seqno
+        ];
+        let err = parse_preq(&data[..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include a PREQ header", err.debug_message());
+    }
+
+    #[test]
+    pub fn preq_too_short_for_ext_addr() {
+        #[rustfmt::skip]
+        let data = [
+            0x40, // flags: address extension = true
+            0x02, // hop count
+            0x03, // element ttl
+            0x04, 0x05, 0x06, 0x07, // path discovery ID
+            0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+            0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+            0x16, 0x17, 0x18, 0x19, 0x1a, // one byte missing from originator external address
+        ];
+        let err = parse_preq(&data[..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include an external address", err.debug_message());
+    }
+
+    #[test]
+    pub fn preq_too_short_for_middle() {
+        #[rustfmt::skip]
+        let data = [
+            0x00, // flags
+            0x02, // hop count
+            0x03, // element ttl
+            0x04, 0x05, 0x06, 0x07, // path discovery ID
+            0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+            0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+            0x18, 0x19, 0x1a, 0x1b, // lifetime
+            0x1c, 0x1d, 0x1e, 0x1f, // metric
+            // Target count missing
+        ];
+        let err = parse_preq(&data[..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include middle PREQ fields", err.debug_message());
+    }
+
+    #[test]
+    pub fn preq_too_short_for_targets() {
+        #[rustfmt::skip]
+        let data = [
+            0x40, // flags: address extension = true
+            0x02, // hop count
+            0x03, // element ttl
+            0x04, 0x05, 0x06, 0x07, // path discovery ID
+            0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+            0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+            0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, // originator external address
+            0x18, 0x19, 0x1a, 0x1b, // lifetime
+            0x1c, 0x1d, 0x1e, 0x1f, // metric
+            2, // target count
+            // Target 1
+            0x00, // target flags
+            0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // target address
+            0xa1, 0xa2, 0xa3, 0xa4, // target hwmp seqno
+            // Target 2
+            0x00, // target flags
+            0xbb, 0xbb, 0xbb, 0xbb, 0xbb, 0xbb, // target address
+            0xb1, 0xb2, 0xb3, // one byte missing from target hwmp seqno
+        ];
+        let err = parse_preq(&data[..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include all PREQ targets", err.debug_message());
+    }
+
+    #[test]
+    pub fn preq_too_long() {
+        #[rustfmt::skip]
+        let data = [
+            0x00, // flags
+            0x02, // hop count
+            0x03, // element ttl
+            0x04, 0x05, 0x06, 0x07, // path discovery ID
+            0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+            0x0e, 0x0f, 0x10, 0x11, // originator hwmp seqno
+            0x18, 0x19, 0x1a, 0x1b, // lifetime
+            0x1c, 0x1d, 0x1e, 0x1f, // metric
+            0, // target count
+            1 // extra byte
+        ];
+        let err = parse_preq(&data[..]).err().expect("expected Err");
+        assert_eq!("Extra bytes at the end of the PREQ element", err.debug_message());
     }
 }
