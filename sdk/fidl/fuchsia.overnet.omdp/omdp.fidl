@@ -1,0 +1,19 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.overnet.omdp;
+
+/// This protocol is sent on UDP packets to announce Overnet nodes to the world.
+
+/// A beacon announces one node to the world.
+struct Beacon {
+    /// Overnet node id of the beacon's source.
+    uint64 node_id;
+    /// Extra data about this node.
+    BeaconDetail detail;
+};
+
+/// Placeholder for extra details about a node.
+table BeaconDetail {
+};
