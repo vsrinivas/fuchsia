@@ -19,21 +19,6 @@ protocol ModuleResolver {
     // TODO(thatguy): Offer some kind of fallback instruction/option to clients
     // in the case of no results.
     FindModules(FindModulesQuery query) -> (FindModulesResponse response);
-
-    // Find modules that satisfy the constraints specified in |query|. Module
-    // resolution for this method is done by matching only the requested types
-    // specified in |query.parameter_constriants|. This type of query is useful
-    // for finding possible actions that satisfy a set of parameter types.
-    //
-    // Each module result in the response will provide a mapping from the
-    // constraint names in |query| to the parameter names of a module result. If
-    // no results could be found, |response.results| will be empty.
-    FindModulesByTypes(FindModulesByTypesQuery query)
-        -> (FindModulesByTypesResponse response);
-
-    // If |module_id| could not be found or does not have a manifest, returns a
-    // null |contents|.
-    GetModuleManifest(string module_id) -> (ModuleManifest? contents);
 };
 
 // Mirrors the information present in a Intent. Where a Intent is meant to
@@ -42,7 +27,6 @@ protocol ModuleResolver {
 //
 // In that role, it has references to structures and concepts that are only
 // visible within the abstraction layer of the Framework.
-// TODO(thatguy): Add scoring info here.
 struct FindModulesQuery {
     // The handler is a module URL; if the handler is specified, the search for
     // (action, parameter_constraints) is scoped within the specified handler.
@@ -75,49 +59,4 @@ struct FindModulesResult {
 
     // The Module's manifest file (see docs/manifests/module.md).
     ModuleManifest? manifest;
-    // TODO(thatguy): Add debug info.
-};
-
-struct FindModulesByTypesQuery {
-    // Even though only |param_types| are used to search for possible modules,
-    // each module result comes with a mapping from constraint_name =>
-    // param_name.
-    vector<FindModulesByTypesParameterConstraint> parameter_constraints;
-};
-
-struct FindModulesByTypesParameterConstraint {
-    // This |constraint_name| is associated with a module result's |param_name|;
-    string constraint_name;
-    vector<string> param_types;
-};
-
-struct FindModulesByTypesResponse {
-    // One result per (module_id, action, param mapping) tuple.
-    // TODO(vardhan): For efficiency, consider grouping the results differently so
-    // there aren't repeated transmissions of a manifest.
-    vector<FindModulesByTypesResult> results;
-};
-
-struct FindModulesByTypesResult {
-    float64 score;
-
-    // The ID of the Module. For now, this is the URL of the Module package.
-    string module_id;
-    string action;
-
-    // The Module's manifest file (see docs/manifests/module.md)
-    ModuleManifest? manifest;
-
-    // A list of mappings from query_constraint_name => result_param_name
-    vector<FindModulesByTypesParameterMapping> parameter_mappings;
-};
-
-// Defines a single mapping entry from a specified constraint name to a module
-// result's parameter name.
-struct FindModulesByTypesParameterMapping {
-    // This is the constraint name as specified in
-    // |FindModulesByTypesParameterConstraint.constraint_name|.
-    string query_constraint_name;
-    // This is the associated parameter name from a module result.
-    string result_param_name;
 };

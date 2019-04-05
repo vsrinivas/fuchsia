@@ -19,8 +19,7 @@
 
 namespace modular {
 
-class LocalModuleResolver : fuchsia::modular::ModuleResolver,
-                            fuchsia::modular::QueryHandler {
+class LocalModuleResolver : fuchsia::modular::ModuleResolver {
  public:
   LocalModuleResolver();
   ~LocalModuleResolver() override;
@@ -32,18 +31,9 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
   void Connect(
       fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request);
 
-  void BindQueryHandler(
-      fidl::InterfaceRequest<fuchsia::modular::QueryHandler> request);
-
   // |ModuleResolver|
   void FindModules(fuchsia::modular::FindModulesQuery query,
                    FindModulesCallback callback) override;
-  // |ModuleResolver|
-  void FindModulesByTypes(fuchsia::modular::FindModulesByTypesQuery query,
-                          FindModulesByTypesCallback callback) override;
-  // |ModuleResolver|
-  void GetModuleManifest(std::string module_id,
-                         GetModuleManifestCallback callback) override;
 
  private:
   class FindModulesCall;
@@ -58,10 +48,6 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
   using Action = std::string;
 
   std::set<ManifestId> FindHandlers(ModuleUri handler);
-
-  // |fuchsia::modular::QueryHandler|
-  void OnQuery(fuchsia::modular::UserInput query,
-               OnQueryCallback done) override;
 
   void OnSourceIdle(const std::string& source_name);
   void OnNewManifestEntry(const std::string& source_name, std::string id_in,
@@ -94,7 +80,6 @@ class LocalModuleResolver : fuchsia::modular::ModuleResolver,
   std::map<ParameterType, std::set<ManifestId>> parameter_type_to_manifests_;
 
   fidl::BindingSet<fuchsia::modular::ModuleResolver> bindings_;
-  fidl::Binding<fuchsia::modular::QueryHandler> query_handler_binding_;
   // These are buffered until AllSourcesAreReady() == true.
   std::vector<fidl::InterfaceRequest<fuchsia::modular::ModuleResolver>>
       pending_bindings_;

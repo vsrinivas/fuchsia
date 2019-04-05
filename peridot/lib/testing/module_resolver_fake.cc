@@ -24,18 +24,6 @@ void ModuleResolverFake::FindModules(fuchsia::modular::FindModulesQuery query,
   callback(std::move(find_modules_response_));
 }
 
-void ModuleResolverFake::GetModuleManifest(std::string module_id,
-                                           GetModuleManifestCallback callback) {
-  if (get_module_manifest_validate_fn_) {
-    get_module_manifest_validate_fn_(module_id);
-  }
-  callback(std::move(manifest_));
-}
-
-void ModuleResolverFake::FindModulesByTypes(
-    fuchsia::modular::FindModulesByTypesQuery query,
-    FindModulesByTypesCallback callback) {}
-
 void ModuleResolverFake::Connect(
     fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request) {
   bindings_.AddBinding(this, std::move(request));

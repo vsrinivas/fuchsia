@@ -19,14 +19,6 @@ class ModuleResolverFake : fuchsia::modular::ModuleResolver {
   void FindModules(fuchsia::modular::FindModulesQuery query,
                    FindModulesCallback callback) override;
 
-  // |ModuleResolver|
-  void GetModuleManifest(std::string module_id,
-                         GetModuleManifestCallback callback) override;
-
-  // |ModuleResolver|
-  void FindModulesByTypes(fuchsia::modular::FindModulesByTypesQuery query,
-                          FindModulesByTypesCallback callback) override;
-
   void Connect(
       fidl::InterfaceRequest<fuchsia::modular::ModuleResolver> request);
 
