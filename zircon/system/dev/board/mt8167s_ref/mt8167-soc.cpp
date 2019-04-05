@@ -46,7 +46,7 @@ zx_status_t Mt8167::SocInit() {
         L, L, L, L, L, H, H, L, L, L, L, L, L, L, L, L, // 160.
         L, L, L, L, R, L, L, L, L, L, L, L, L, L, L, L, // 176.
         L, R, L, L, L, L, L, L, L, L, R, L, L, L, L, L, // 192.
-        L, L, L, L, L, L, L, L, L, H, L, L, L, L, L, R, // 208.
+        L, L, L, L, L, L, L, L, L, L, L, L, L, L, L, R, // 208.
         R, R, L, L, L, L, L, L, L, L, L, R, L, H, H, H, // 224.
         H, L, L, L, R, R, L, H, H, H, H                 // 240 (first is 240, last is 250).
     };

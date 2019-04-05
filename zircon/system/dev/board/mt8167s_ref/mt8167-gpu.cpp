@@ -41,7 +41,7 @@ zx_status_t Mt8167::GpuInit() {
     const pbus_irq_t gpu_irqs[] = {
         {
             .irq = MT8167_IRQ_RGX,
-            .mode = ZX_INTERRUPT_MODE_LEVEL_LOW,
+            .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
         }};
 
     const pbus_clk_t gpu_clks[] = {
