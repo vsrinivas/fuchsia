@@ -29,12 +29,12 @@ executable("integration_tests") {
   ]
 
   deps = [
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
     "//src/developer/debug/debug_agent:lib",
     "//src/developer/debug/ipc:client",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]

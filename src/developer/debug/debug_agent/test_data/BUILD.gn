@@ -8,18 +8,12 @@ import("//build/package.gni")
 
 # Test .so ---------------------------------------------------------------------
 
-group("test_data") {
+group("debug_so") {
   testonly = true
-  deps = [
-    ":breakpoint_test_exe",
+
+  public_deps = [
     ":debug_agent_test_loadable_module",
     ":debug_agent_test_so",
-    ":debug_agent_test_so_lib",
-    ":debug_test_false",
-    ":debug_test_true",
-    ":printer",
-    ":process_loop",
-    ":process_spawner",
   ]
 }
 
@@ -41,6 +35,7 @@ source_set("debug_agent_test_so_lib") {
 
 shared_library("debug_agent_test_so") {
   testonly = true
+
   public_deps = [
     ":debug_agent_test_so_lib",
   ]
@@ -49,12 +44,28 @@ shared_library("debug_agent_test_so") {
 loadable_module("debug_agent_test_loadable_module") {
   testonly = true
   output_name = "debug_agent_test_so"
-  public_deps = [
+
+  deps = [
     ":debug_agent_test_so_lib",
   ]
 }
 
 # Text Executables -------------------------------------------------------------
+
+group("test_executables") {
+  testonly = true
+
+  public_deps = [
+    ":breakpoint_test_exe",
+  ]
+
+  if (current_cpu == "x64") {
+    public_deps += [
+      # TODO(donosoc): This test should suport both archs inherently.
+      ":write_register_test_exe",
+    ]
+  }
+}
 
 executable("breakpoint_test_exe") {
   testonly = true
@@ -71,54 +82,34 @@ if (current_cpu == "x64") {
   executable("write_register_test_exe") {
     testonly = true
     output_name = "write_register_test_exe"
+
     sources = [
       "x64_write_register_test_exe.cc",
     ]
-    deps = [
+
+    public_deps = [
       ":debug_agent_test_so",
     ]
   }
 }
 
-# Helper utilities -------------------------------------------------------------
+# Helper Executables -----------------------------------------------------------
 
-executable("process_spawner") {
+group("helper_executables") {
   testonly = true
-  output_name = "process_spawner"
 
-  sources = [
-    "process_spawner.cc",
+  public_deps = [
+    ":debug_test_false",
+    ":debug_test_true",
+    ":printer",
+    ":process_loop",
+    ":process_spawner",
   ]
 
-  deps = [
-    "//src/lib/fxl",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-executable("process_loop") {
-  testonly = true
-  output_name = "process_loop"
-
-  sources = [
-    "process_loop.cc",
-  ]
-}
-
-if (current_cpu == "arm64") {
-  executable("hw_breakpointer") {
-    testonly = true
-    output_name = "hw_breakpointer"
-
-    sources = [
-      "hw_breakpointer.cc",
-    ]
-
-    deps = [
-      "//src/lib/fxl",
-      "//src/developer/debug/shared",
-      "//zircon/public/lib/zx",
+  if (current_cpu == "arm64") {
+    public_deps += [
+      # TODO(donosoc): This file should support both architectures inherently.
+      ":arm64_hw_breakpointer",
     ]
   }
 }
@@ -139,4 +130,45 @@ executable("printer") {
   sources = [
     "printer.cc",
   ]
+}
+
+executable("process_loop") {
+  testonly = true
+  output_name = "process_loop"
+
+  sources = [
+    "process_loop.cc",
+  ]
+}
+
+executable("process_spawner") {
+  testonly = true
+  output_name = "process_spawner"
+
+  sources = [
+    "process_spawner.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+if (current_cpu == "arm64") {
+  executable("arm64_hw_breakpointer") {
+    testonly = true
+    output_name = "hw_breakpointer"
+
+    sources = [
+      "hw_breakpointer.cc",
+    ]
+
+    deps = [
+      "//src/developer/debug/shared",
+      "//src/lib/fxl",
+      "//zircon/public/lib/zx",
+    ]
+  }
 }

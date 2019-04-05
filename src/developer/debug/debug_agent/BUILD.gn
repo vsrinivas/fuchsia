@@ -67,11 +67,11 @@ static_library("lib") {
 
   public_deps = [
     "//garnet/lib/process",
-    "//src/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//garnet/third_party/libunwindstack",
     "//src/developer/debug/ipc:agent",
     "//src/developer/debug/shared",
+    "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/ngunwind",
@@ -149,8 +149,8 @@ executable("unit_tests") {
 
   deps = [
     ":lib",
-    "//src/lib/fxl/test:gtest_main",
     "//src/developer/debug/ipc:tests",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -160,18 +160,10 @@ package("debug_agent_tests") {
   testonly = true
 
   package_name = "debug_agent_tests"
+  deps = []
+  binaries = []
 
-  # TODO(donosoc): Move this to it's own package, this is getting pretty
-  #                annoyingly big.
-  deps = [
-    "//src/developer/debug/debug_agent/test_data:breakpoint_test_exe",
-    "//src/developer/debug/debug_agent/test_data:debug_agent_test_loadable_module",
-    "//src/developer/debug/debug_agent/test_data:debug_test_false",
-    "//src/developer/debug/debug_agent/test_data:debug_test_true",
-    "//src/developer/debug/debug_agent/test_data:printer",
-    "//src/developer/debug/debug_agent/test_data:process_loop",
-    "//src/developer/debug/debug_agent/test_data:process_spawner",
-  ]
+  # Tests ----------------------------------------------------------------------
 
   # Unit tests.
   deps += [ ":unit_tests" ]
@@ -182,7 +174,8 @@ package("debug_agent_tests") {
     },
   ]
 
-  # Integration tests.
+  # Integration tests ----------------------------------------------------------
+
   deps += [ "//src/developer/debug/debug_agent/integration_tests" ]
   tests += [
     {
@@ -191,55 +184,78 @@ package("debug_agent_tests") {
     },
   ]
 
-  # Test binaries
-  binaries = [
-    {
-      name = "breakpoint_test_exe"
-    },
-    {
-      name = "debug_test_true"
-    },
-    {
-      name = "debug_test_false"
-    },
-    {
-      name = "process_loop"
-    },
-    {
-      name = "process_spawner"
-    },
-    {
-      name = "printer"
-    },
-  ]
+  # This .so will be used by some test to verify actual symbols.
 
-  # Add the platform specific test binaries
-  if (current_cpu == "x64") {
-    deps += [
-      "//src/developer/debug/debug_agent/test_data:write_register_test_exe",
-    ]
-
-    binaries += [
-      {
-        name = "write_register_test_exe"
-      },
-    ]
-  } else if (current_cpu == "arm64") {
-    deps += [ "//src/developer/debug/debug_agent/test_data:hw_breakpointer" ]
-
-    binaries += [
-      {
-        shell = true
-        name = "hw_breakpointer"
-      },
-    ]
-  }
-
+  deps += [ "//src/developer/debug/debug_agent/test_data:debug_so" ]
   loadable_modules = [
     {
       name = "debug_agent_test_so.so"
     },
   ]
+
+  # These are executables that integration tests will need in order to test
+  # actual behaviour against zircon.
+
+  deps += [ "//src/developer/debug/debug_agent/test_data:test_executables" ]
+  binaries += [
+    {
+      name = "breakpoint_test_exe"
+    },
+  ]
+
+  if (current_cpu == "x64") {
+    binaries += [
+      {
+        name = "write_register_test_exe"
+      },
+    ]
+  }
+
+  # Helper Executables ---------------------------------------------------------
+  #
+  # These executables are not used by tests or the agent, but are useful for
+  # replicating behaviour in development.
+
+  deps += [ "//src/developer/debug/debug_agent/test_data:helper_executables" ]
+
+  # Test binaries
+  binaries += [
+    {
+      name = "debug_test_false"
+    },
+    {
+      name = "debug_test_true"
+    },
+    {
+      name = "printer"
+    },
+    {
+      name = "process_spawner"
+    },
+    {
+      name = "process_loop"
+    },
+  ]
+
+  if (current_cpu == "arm64") {
+    binaries += [
+      {
+        name = "hw_breakpointer"
+      },
+    ]
+  }
+
+  if (include_test_app) {
+    deps += [ ":zxdb_test_app" ]
+
+    binaries += [
+      {
+        name = "zxdb_test_app"
+      },
+    ]
+  }
+
+  # Component Meta Files -------------------------------------------------------
 
   meta = [
     {
@@ -251,14 +267,4 @@ package("debug_agent_tests") {
       dest = "debug_agent_integration_tests.cmx"
     },
   ]
-
-  if (include_test_app) {
-    deps += [ ":zxdb_test_app" ]
-
-    binaries += [
-      {
-        name = "zxdb_test_app"
-      },
-    ]
-  }
 }

@@ -179,9 +179,8 @@ TEST(BreakpointIntegration, SWBreakpoint) {
 //               fail or even crash QEMU.
 //               The tests will be re-enabled when there is way to express
 //               that these test must not run on QEMU.
-#if 0
 
-TEST(BreakpointIntegration, HWBreakpoint) {
+TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
   // We attempt to load the pre-made .so.
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
@@ -201,6 +200,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
 
     // We launch the test binary.
     debug_ipc::LaunchRequest launch_request = {};
+    launch_request.inferior_type = debug_ipc::InferiorType::kBinary;
     launch_request.argv.push_back(kTestExecutablePath);
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
@@ -223,7 +223,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     // We add a breakpoint in that address.
     constexpr uint32_t kBreakpointId = 1234u;
     debug_ipc::ProcessBreakpointSettings location = {};
-    location.process_koid = launch_reply.process_koid;
+    location.process_koid = launch_reply.process_id;
     location.address = module_function;
 
     debug_ipc::AddOrChangeBreakpointRequest breakpoint_request = {};
@@ -238,7 +238,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
 
     // Resume the process now that the breakpoint is installed.
     debug_ipc::ResumeRequest resume_request;
-    resume_request.process_koid = launch_reply.process_koid;
+    resume_request.process_koid = launch_reply.process_id;
     debug_ipc::ResumeReply resume_reply;
     remote_api->OnResume(resume_request, &resume_reply);
 
@@ -248,7 +248,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
 
     // We should have received an exception now.
     debug_ipc::NotifyException exception = mock_stream_backend.exception();
-    EXPECT_EQ(exception.process_koid, launch_reply.process_koid);
+    EXPECT_EQ(exception.process_koid, launch_reply.process_id);
     EXPECT_EQ(exception.type, debug_ipc::NotifyException::Type::kHardware);
     ASSERT_EQ(exception.hit_breakpoints.size(), 1u);
 
@@ -264,13 +264,11 @@ TEST(BreakpointIntegration, HWBreakpoint) {
 
     // We verify that the thread exited.
     auto& thread_notification = mock_stream_backend.thread_notification();
-    ASSERT_EQ(thread_notification.process_koid, launch_reply.process_koid);
+    ASSERT_EQ(thread_notification.process_koid, launch_reply.process_id);
     auto& record = thread_notification.record;
     ASSERT_EQ(record.state, debug_ipc::ThreadRecord::State::kDead)
         << "Got: " << debug_ipc::ThreadRecord::StateToString(record.state);
   }
 }
-
-#endif
 
 }  // namespace debug_agent
