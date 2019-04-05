@@ -16,11 +16,10 @@ int main(int argc, const char** argv) {
   syslog::InitLogger({"feedback_agent"});
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = sys::ComponentContext::Create();
-  fuchsia::feedback::FeedbackAgent feedback_agent(startup_context.get());
+  auto context = sys::ComponentContext::Create();
+  fuchsia::feedback::FeedbackAgent feedback_agent(context->svc());
   fidl::BindingSet<fuchsia::feedback::DataProvider> bindings;
-  startup_context->outgoing()->AddPublicService(
-      bindings.GetHandler(&feedback_agent));
+  context->outgoing()->AddPublicService(bindings.GetHandler(&feedback_agent));
 
   loop.Run();
 
