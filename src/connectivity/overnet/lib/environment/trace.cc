@@ -59,6 +59,27 @@ std::ostream& operator<<(std::ostream& out, Severity type) {
   }
 }
 
+Optional<Severity> SeverityFromString(const std::string& value) {
+  std::string lower(value);
+  std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+  if (lower == "debug") {
+    return Severity::DEBUG;
+  }
+  if (lower == "trace") {
+    return Severity::TRACE;
+  }
+  if (lower == "info") {
+    return Severity::INFO;
+  }
+  if (lower == "warning") {
+    return Severity::WARNING;
+  }
+  if (lower == "error") {
+    return Severity::ERROR;
+  }
+  return Nothing;
+}
+
 std::ostream& operator<<(std::ostream& out, OpType type) {
   switch (type) {
     case OpType::INVALID:

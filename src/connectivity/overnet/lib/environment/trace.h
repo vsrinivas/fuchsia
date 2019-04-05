@@ -5,6 +5,7 @@
 #include <functional>
 #include <sstream>
 #include <string>
+#include "src/connectivity/overnet/lib/vocabulary/optional.h"
 
 #pragma once
 
@@ -74,6 +75,8 @@ enum class Severity : uint8_t {
 };
 
 std::ostream& operator<<(std::ostream& out, Severity type);
+
+Optional<Severity> SeverityFromString(const std::string& value);
 
 enum class OpType : uint8_t {
   INVALID,

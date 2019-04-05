@@ -40,6 +40,9 @@ source_set("trace") {
     "trace.cc",
     "trace.h",
   ]
+  deps = [
+    "//src/connectivity/overnet/lib/vocabulary:optional",
+  ]
 }
 
 source_set("trace_test") {
