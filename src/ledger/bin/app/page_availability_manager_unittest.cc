@@ -58,7 +58,7 @@ TEST_F(PageAvailabilityManagerTest, MultiplePages) {
   // The number of callbacks per page to be registered with the
   // PageAvailabilityManager.
   int dimension_count = std::uniform_int_distribution(2, 10)(bit_generator);
-  bool page_available_called[page_count][2];
+  bool page_available_called[page_count][dimension_count];
   std::vector<storage::PageId> page_ids;
   std::map<storage::PageId, size_t> indices;
   for (uint8_t i = 0; i < page_count; i++) {
