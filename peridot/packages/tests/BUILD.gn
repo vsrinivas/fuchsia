@@ -137,6 +137,7 @@ group("modular_unittests") {
     "//peridot/bin/sessionmgr/story/model:story_model_unittests",
     "//peridot/bin/sessionmgr/story/systems:story_systems_unittests",
     "//peridot/bin/sessionmgr/story_runner:story_runner_unittests",
+    "//peridot/lib/sequential_futures:sequential_futures_tests",
   ]
 }
 
