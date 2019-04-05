@@ -11,7 +11,9 @@
 #include <fuchsia/memory/cpp/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <grpc++/grpc++.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fdio.h>
+#include <lib/zx/time.h>
 #include <zircon/status.h>
 
 #include "dockyard_proxy.h"
@@ -65,16 +67,16 @@ int main(int argc, char** argv) {
 
   // The wip number is incremented arbitrarily.
   // TODO(dschuyler) replace wip number with real version number.
-  constexpr char VERSION_OUTPUT[] = "System Monitor Harvester - wip 9";
+  constexpr char VERSION_OUTPUT[] = "System Monitor Harvester - wip 10";
 
   // Command line options.
   constexpr char COMMAND_INSPECT[] = "inspect";
-  constexpr char COMMAND_RATE[] = "msec-rate";
+  constexpr char COMMAND_UPDATE_PERIOD[] = "msec-update-period";
   constexpr char COMMAND_LOCAL[] = "local";
   constexpr char COMMAND_VERSION[] = "version";
 
   bool use_grpc = true;
-  int cycle_msec_rate = 100;
+  int cycle_msec_period = 100;
 
   // Parse command line.
   FXL_LOG(INFO) << VERSION_OUTPUT;
@@ -94,16 +96,16 @@ int main(int argc, char** argv) {
     FXL_LOG(INFO) << "Enabled component framework inspection (wip)";
     // TODO(dschuyler): actually do component framework inspection.
   }
-  if (command_line.HasOption(COMMAND_RATE)) {
-    std::string rate;
-    command_line.GetOptionValue(COMMAND_RATE, &rate);
-    if (fxl::StringToNumberWithError(rate, &cycle_msec_rate)) {
-      FXL_LOG(INFO) << "Gathering data at a cycle rate of " << cycle_msec_rate;
-    } else {
-      std::cerr << "Error: Unable to parse `--rate` value." << std::endl;
+  if (command_line.HasOption(COMMAND_UPDATE_PERIOD)) {
+    std::string update_period;
+    command_line.GetOptionValue(COMMAND_UPDATE_PERIOD, &update_period);
+    if (!fxl::StringToNumberWithError(update_period, &cycle_msec_period)) {
+      std::cerr << "Error: Unable to parse `--" << COMMAND_UPDATE_PERIOD
+                << "` value of \"" << update_period << "\"" << std::endl;
       exit(EXIT_CODE_GENERAL_ERROR);
     }
   }
+  FXL_LOG(INFO) << "Gathering data every " << cycle_msec_period << " msec.";
 
   // Set up.
   std::unique_ptr<harvester::DockyardProxy> dockyard_proxy;
@@ -136,16 +138,13 @@ int main(int argc, char** argv) {
     exit(EXIT_CODE_GENERAL_ERROR);
   }
 
-  // The main loop.
-  while (true) {
-    harvester::GatherCpuSamples(root_resource, dockyard_proxy);
-    harvester::GatherMemorySamples(root_resource, dockyard_proxy);
-    harvester::GatherThreadSamples(root_resource, dockyard_proxy);
-    harvester::GatherComponentIntrospection(root_resource, dockyard_proxy);
-    // TODO(dschuyler): make this actually run at rate (i.e. remove drift from
-    // execution time).
-    std::this_thread::sleep_for(std::chrono::milliseconds(cycle_msec_rate));
-  }
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+
+  harvester::Harvester harvester(zx::msec(cycle_msec_period), root_resource,
+                                 loop.dispatcher(), dockyard_proxy.release());
+  harvester.GatherData();
+  loop.Run();
+
   FXL_LOG(INFO) << "System Monitor Harvester - exiting";
   return 0;
 }

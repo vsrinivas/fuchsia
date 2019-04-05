@@ -9,6 +9,9 @@
 #include <string>
 
 #include <fuchsia/memory/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
+#include <lib/async/dispatcher.h>
+#include <lib/zx/time.h>
 #include <task-utils/walker.h>
 #include <zircon/status.h>
 
@@ -97,14 +100,31 @@ std::ostream& operator<<(std::ostream& out, const DockyardProxyStatus& status) {
   return out;
 }
 
-void GatherCpuSamples(
-    zx_handle_t root_resource,
-    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy) {
+Harvester::Harvester(zx::duration cycle_period, zx_handle_t root_resource,
+                     async_dispatcher_t* dispatcher,
+                     harvester::DockyardProxy* dockyard_proxy)
+    : cycle_period_(cycle_period),
+      root_resource_(root_resource),
+      dispatcher_(dispatcher),
+      dockyard_proxy_(dockyard_proxy) {}
+
+void Harvester::GatherData() {
+  GatherCpuSamples();
+  GatherMemorySamples();
+  GatherThreadSamples();
+  GatherComponentIntrospection();
+  // TODO(smbug.com/18): make this actually run at rate (i.e. remove drift from
+  // execution time).
+  async::PostDelayedTask(
+      dispatcher_, [this] { GatherData(); }, cycle_period_);
+}
+
+void Harvester::GatherCpuSamples() {
   // TODO(dschuyler): Determine the array size at runtime (32 is arbitrary).
   zx_info_cpu_stats_t stats[32];
   size_t actual, avail;
-  zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_CPU_STATS, &stats,
-                                       sizeof(stats), &actual, &avail);
+  zx_status_t err = zx_object_get_info(root_resource_, ZX_INFO_CPU_STATS,
+                                       &stats, sizeof(stats), &actual, &avail);
   if (err != ZX_OK) {
     FXL_LOG(ERROR) << "ZX_INFO_CPU_STATS returned " << err << "("
                    << zx_status_get_string(err) << ")";
@@ -139,17 +159,15 @@ void GatherCpuSamples(
     AddCpuValue(&list, i, "reschedule_ipis", stats[i].reschedule_ipis);
     AddCpuValue(&list, i, "generic_ipis", stats[i].generic_ipis);
   }
-  DockyardProxyStatus status = dockyard_proxy->SendSampleList(list);
+  DockyardProxyStatus status = dockyard_proxy_->SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
     FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
   }
 }
 
-void GatherMemorySamples(
-    zx_handle_t root_resource,
-    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy) {
+void Harvester::GatherMemorySamples() {
   zx_info_kmem_stats_t stats;
-  zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_KMEM_STATS,
+  zx_status_t err = zx_object_get_info(root_resource_, ZX_INFO_KMEM_STATS,
                                        &stats, sizeof(stats), NULL, NULL);
   if (err != ZX_OK) {
     FXL_LOG(ERROR) << "ZX_INFO_KMEM_STATS error " << zx_status_get_string(err);
@@ -173,24 +191,20 @@ void GatherMemorySamples(
   list.push_back(std::make_pair(FREE_HEAP_BYTES, stats.free_heap_bytes));
   list.push_back(std::make_pair(VMO_BYTES, stats.vmo_bytes));
   list.push_back(std::make_pair(IPC_BYTES, stats.ipc_bytes));
-  DockyardProxyStatus status = dockyard_proxy->SendSampleList(list);
+  DockyardProxyStatus status = dockyard_proxy_->SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
     FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
   }
 }
 
-void GatherThreadSamples(
-    zx_handle_t root_resource,
-    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy) {
+void Harvester::GatherThreadSamples() {
   TaskHarvester task_harvester;
-  task_harvester.UploadTaskInfo(dockyard_proxy);
+  task_harvester.UploadTaskInfo(dockyard_proxy_);
 }
 
-void GatherComponentIntrospection(
-    zx_handle_t root_resource,
-    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy) {
+void Harvester::GatherComponentIntrospection() {
   std::string fake_json_data = "{ \"test\": 5 }";
-  DockyardProxyStatus status = dockyard_proxy->SendInspectJson(
+  DockyardProxyStatus status = dockyard_proxy_->SendInspectJson(
       "inspect:/hub/fake/234/faux.Inspect", fake_json_data);
   if (status != DockyardProxyStatus::OK) {
     FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";

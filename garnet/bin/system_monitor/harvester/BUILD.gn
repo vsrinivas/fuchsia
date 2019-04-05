@@ -33,6 +33,7 @@ executable("bin") {
     "//src/lib/fxl",
     "//third_party/grpc:grpc++",
     "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/task-utils",
   ]
 }

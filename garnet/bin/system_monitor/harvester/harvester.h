@@ -12,23 +12,32 @@
 #include "dockyard_proxy.h"
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
 
+#include <lib/async/default.h>
+#include <lib/zx/time.h>
+
 namespace harvester {
 
-// Gather Samples collect samples for a given subject. They are grouped to make
-// the code more manageable and for enabling/disabling categories in the future.
-void GatherCpuSamples(
-    zx_handle_t root_resource,
-    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy);
-void GatherMemorySamples(
-    zx_handle_t root_resource,
-    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy);
-void GatherThreadSamples(
-    zx_handle_t root_resource,
-    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy);
+class Harvester {
+ public:
+  Harvester(zx::duration cycle_msec_rate, zx_handle_t root_resource,
+            async_dispatcher_t* dispatcher,
+            harvester::DockyardProxy* dockyard_proxy);
+  void GatherData();
 
-void GatherComponentIntrospection(
-    zx_handle_t root_resource,
-    const std::unique_ptr<harvester::DockyardProxy>& dockyard_proxy);
+ private:
+  zx::duration cycle_period_;
+  zx_handle_t root_resource_;
+  async_dispatcher_t* dispatcher_;
+  std::unique_ptr<harvester::DockyardProxy> dockyard_proxy_;
+
+  // Gather Samples for a given subject. These are grouped to make the code more
+  // manageable and enabling/disabling categories in the future.
+  void GatherCpuSamples();
+  void GatherMemorySamples();
+  void GatherThreadSamples();
+
+  void GatherComponentIntrospection();
+};
 
 }  // namespace harvester
 
