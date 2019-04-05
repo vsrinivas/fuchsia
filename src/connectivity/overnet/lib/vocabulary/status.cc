@@ -6,6 +6,12 @@
 #include <zircon/types.h>
 #include <sstream>
 
+#ifdef __Fuchsia__
+extern "C" {
+const char* zx_status_get_string(zx_status_t status);
+}
+#endif
+
 namespace overnet {
 
 namespace status_impl {
@@ -52,6 +58,20 @@ const char* StatusCodeString(StatusCode code) {
   return "UNKNOWN_STATUS_CODE";
 }
 
+struct ZxStatusWrapper {
+  zx_status_t status;
+};
+
+#ifdef __Fuchsia__
+std::ostream& operator<<(std::ostream& out, ZxStatusWrapper w) {
+  return out << zx_status_get_string(w.status) << "[" << w.status << "]";
+}
+#else
+std::ostream& operator<<(std::ostream& out, ZxStatusWrapper w) {
+  return out << w.status;
+}
+#endif
+
 Status Status::FromZx(zx_status_t status) {
   switch (status) {
     case ZX_OK:
@@ -60,7 +80,7 @@ Status Status::FromZx(zx_status_t status) {
       return overnet::Status::Cancelled();
     default: {
       std::ostringstream out;
-      out << "zx_status:" << status;
+      out << "zx_status:" << ZxStatusWrapper{status};
       return overnet::Status(overnet::StatusCode::UNKNOWN, out.str());
     }
   }
@@ -74,7 +94,7 @@ Status Status::FromZx(zx_status_t status, const char* desc) {
       return Status(StatusCode::CANCELLED, desc);
     default: {
       std::ostringstream out;
-      out << "zx_status:" << status << " '" << desc << "'";
+      out << "zx_status:" << ZxStatusWrapper{status} << " '" << desc << "'";
       return Status(overnet::StatusCode::UNKNOWN, out.str());
     }
   }
