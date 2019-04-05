@@ -220,6 +220,13 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
             ZX_OK)
       << err_msg;
 
+  // Wait up to 1s for the exception to be thrown. We need the process and
+  // thread to be blocked in the exception for Crashpad to analyze them.
+  zx_port_packet_t packet;
+  ASSERT_EQ(exception_port.wait(zx::deadline_after(zx::sec(1)), &packet),
+            ZX_OK);
+  ASSERT_TRUE(ZX_PKT_IS_EXCEPTION(packet.type));
+
   // Get the one thread from the child process.
   zx_koid_t thread_ids[1];
   size_t num_ids;
