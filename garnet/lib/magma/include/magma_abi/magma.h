@@ -74,6 +74,11 @@ magma_status_t magma_set_cache_policy(magma_buffer_t buffer, magma_cache_policy_
 magma_status_t magma_get_buffer_cache_policy(magma_buffer_t buffer,
                                              magma_cache_policy_t* cache_policy_out);
 
+// |is_mappable_out| is set to true if and only if the buffer is mappable with
+// magma_map or magma_map_aligned. |flags| must be 0.
+magma_status_t magma_get_buffer_is_mappable(magma_buffer_t buffer, uint32_t flags,
+                                            magma_bool_t* is_mappable_out);
+
 // Creates a mapping for the given |buffer| on the cpu.
 // The cpu virtual address is returned in |addr_out|.
 // May be called multiple times.

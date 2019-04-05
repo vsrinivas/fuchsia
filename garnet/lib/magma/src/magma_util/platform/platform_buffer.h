@@ -61,6 +61,10 @@ public:
 
     virtual magma_status_t GetCachePolicy(magma_cache_policy_t* cache_policy_out) = 0;
 
+    // Returns true if MapCpu should be able to return true. The buffer must be
+    // readable and writable.
+    virtual magma_status_t GetIsMappable(magma_bool_t* is_mappable_out) = 0;
+
     static bool IdFromHandle(uint32_t handle, uint64_t* id_out);
 
     static uint64_t MinimumMappableAddress();

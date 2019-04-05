@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 #include "platform_buffer.h"
+
 #include "gtest/gtest.h"
 #include <vector>
+#include <zircon/rights.h>
+#include <zircon/syscalls.h>
+
+#include "magma_util/macros.h"
 
 class TestPlatformBuffer {
 public:
@@ -349,6 +354,33 @@ public:
         // entire buffer again
         EXPECT_TRUE(buffer->CleanCache(0, kBufferSize, invalidate));
     }
+
+    static void NotMappable()
+    {
+        const uint64_t kNumPages = 100;
+        const uint64_t kBufferSize = kNumPages * magma::page_size();
+        std::unique_ptr<magma::PlatformBuffer> buffer =
+            magma::PlatformBuffer::Create(kBufferSize, "test");
+        uint32_t start_handle;
+        EXPECT_TRUE(buffer->duplicate_handle(&start_handle));
+
+        constexpr uint32_t kRightsToRemove[] = {0u, ZX_RIGHT_WRITE, ZX_RIGHT_READ, ZX_RIGHT_MAP};
+
+        for (uint32_t right : kRightsToRemove) {
+            zx_handle_t try_handle;
+            EXPECT_EQ(ZX_OK, zx_handle_duplicate(start_handle, ZX_DEFAULT_VMO_RIGHTS & ~right,
+                                                 &try_handle));
+            auto try_buffer = magma::PlatformBuffer::Import(try_handle);
+            EXPECT_NE(nullptr, try_buffer);
+            magma_bool_t is_mappable;
+            EXPECT_EQ(MAGMA_STATUS_OK, try_buffer->GetIsMappable(&is_mappable));
+            if (right == 0) {
+                EXPECT_TRUE(is_mappable);
+            } else {
+                EXPECT_FALSE(is_mappable);
+            }
+        }
+    }
 };
 
 TEST(PlatformBuffer, Basic)
@@ -394,3 +426,5 @@ TEST(PlatformBuffer, CleanCacheMapped)
     TestPlatformBuffer::CleanCache(true, false);
     TestPlatformBuffer::CleanCache(true, true);
 }
+
+TEST(PlatformBuffer, NotMappable) { TestPlatformBuffer::NotMappable(); }

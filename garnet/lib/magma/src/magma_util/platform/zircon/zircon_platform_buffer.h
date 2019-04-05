@@ -61,6 +61,7 @@ public:
     bool CleanCache(uint64_t offset, uint64_t size, bool invalidate) override;
     bool SetCachePolicy(magma_cache_policy_t cache_policy) override;
     magma_status_t GetCachePolicy(magma_cache_policy_t* cache_policy_out) override;
+    magma_status_t GetIsMappable(magma_bool_t* is_mappable_out) override;
 
     uint32_t num_pages() { return size_ / PAGE_SIZE; }
 

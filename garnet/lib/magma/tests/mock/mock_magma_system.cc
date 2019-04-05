@@ -324,3 +324,20 @@ magma_status_t magma_get_buffer_is_secure(magma_buffer_format_description_t desc
 {
     return MAGMA_STATUS_UNIMPLEMENTED;
 }
+
+magma_status_t magma_get_buffer_cache_policy(magma_buffer_t buffer,
+                                             magma_cache_policy_t* cache_policy_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_get_buffer_is_mappable(magma_buffer_t buffer, uint32_t flags,
+                                            magma_bool_t* is_mappable_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_duplicate_handle(uint32_t buffer_handle, uint32_t* buffer_handle_out)
+{
+    return MAGMA_STATUS_UNIMPLEMENTED;
+}

@@ -256,6 +256,19 @@ magma_status_t ZirconPlatformBuffer::GetCachePolicy(magma_cache_policy_t* cache_
     }
 }
 
+magma_status_t ZirconPlatformBuffer::GetIsMappable(magma_bool_t* is_mappable_out)
+{
+    zx_info_handle_basic handle_info;
+    zx_status_t status =
+        vmo_.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), nullptr, nullptr);
+    if (status != ZX_OK)
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to get mappability: %d", status);
+
+    constexpr uint32_t kNeededFlags = ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE;
+    *is_mappable_out = (handle_info.rights & kNeededFlags) == kNeededFlags;
+    return MAGMA_STATUS_OK;
+}
+
 std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char* name)
 {
     size = magma::round_up(size, PAGE_SIZE);
