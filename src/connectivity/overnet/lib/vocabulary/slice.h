@@ -232,6 +232,19 @@ class Slice final {
         });
   }
 
+  static Slice Aligned(Slice input) {
+    const uint8_t* begin = input.begin();
+    if (IsAligned(begin)) {
+      return input;
+    }
+    const size_t length = input.length();
+    return Slice::WithInitializerAndBorders(length, Border::None(),
+                                            [begin, length](uint8_t* out) {
+                                              assert(IsAligned(out));
+                                              memcpy(out, begin, length);
+                                            });
+  }
+
   template <class F>
   Slice WithPrefix(size_t length, F initializer) const {
     return WithBorders(Border::Prefix(length), initializer);
