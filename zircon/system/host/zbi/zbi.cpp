@@ -1658,22 +1658,30 @@ Extracted items use the file names shown below:\n\
     }
 
     // Create by decompressing a fully-baked item that is compressed.
-    static ItemPtr CreateFromCompressed(const Item& compressed) {
+    static ItemPtr CreateFromCompressed(
+        const Item& compressed,
+        Compressor::Config compress = Compressor::Config::None()) {
         assert(compressed.AlreadyCompressed());
-        auto item = MakeItem(compressed.header_);
+        auto item = MakeItem(compressed.header_, compress);
         item->header_.flags &= ~ZBI_FLAG_STORAGE_COMPRESSED;
         item->header_.length = item->header_.extra;
         auto buffer = Decompress(compressed.payload_, item->header_.length);
         item->payload_.emplace_front(
             Iovec(buffer.get(), item->header_.length));
         item->OwnBuffer(std::move(buffer));
+        if (compress) {
+            // This item will be compressed afresh on output.
+            item->header_.flags |= ZBI_FLAG_STORAGE_COMPRESSED;
+        }
         return item;
     }
 
     // Same, but consumes the compressed item while keeping its
     // owned buffers alive in the new uncompressed item.
-    static ItemPtr CreateFromCompressed(ItemPtr compressed) {
-        auto uncompressed = CreateFromCompressed(*compressed);
+    static ItemPtr CreateFromCompressed(
+        ItemPtr compressed,
+        Compressor::Config compress = Compressor::Config::None()) {
+        auto uncompressed = CreateFromCompressed(*compressed, compress);
         uncompressed->TakeOwned(std::move(compressed));
         return uncompressed;
     }
@@ -1847,6 +1855,20 @@ Extracted items use the file names shown below:\n\
                                iov.iov_len);
             }
         }
+    }
+
+    static ItemPtr Recompress(ItemPtr item, Compressor::Config how) {
+        if (TypeIsStorage(item->type())) {
+            if (item->AlreadyCompressed()) {
+                item = CreateFromCompressed(std::move(item), how);
+            } else if (how) {
+                auto old = std::move(item);
+                item = MakeItem(old->header_, how);
+                std::swap(old->payload_, item->payload_);
+                std::swap(old->buffers_, item->buffers_);
+            }
+        }
+        return item;
     }
 
 private:
@@ -2338,7 +2360,8 @@ duplicate target path (directory vs file) without --replace: %s\n",
 };
 
 bool ImportFile(const FileContents* file, const char* filename,
-                ItemList* items, DirectoryTreeBuilder* bootfs) {
+                ItemList* items, DirectoryTreeBuilder* bootfs,
+                std::optional<Compressor::Config> recompress) {
     if (file->exact_size() <= (sizeof(zbi_header_t) * 2)) {
         return false;
     }
@@ -2362,6 +2385,9 @@ bool ImportFile(const FileContents* file, const char* filename,
     do {
         auto item = Item::CreateFromItem(file, pos);
         pos += item->TotalSize();
+        if (recompress) {
+            item = Item::Recompress(std::move(item), *recompress);
+        }
         items->push_back(std::move(item));
         if (items->back()->type() == ZBI_TYPE_STORAGE_BOOTFS) {
             bootfs->push_back(&items->back());
@@ -2369,6 +2395,10 @@ bool ImportFile(const FileContents* file, const char* filename,
     } while (pos < file->exact_size());
     return true;
 }
+
+enum LongOnlyOpt : int {
+    kOptRecompress = 0x100,
+};
 
 constexpr const char kOptString[] = "-B:c::C:d:D:e:FxXRhto:p:T:uv";
 constexpr const option kLongOpts[] = {
@@ -2389,6 +2419,7 @@ constexpr const option kLongOpts[] = {
     {"type", required_argument, nullptr, 'T'},
     {"uncompressed", no_argument, nullptr, 'u'},
     {"verbose", no_argument, nullptr, 'v'},
+    {"recompress", no_argument, nullptr, kOptRecompress},
     {"replace", no_argument, nullptr, 'r'},
     {nullptr, no_argument, nullptr, 0},
 };
@@ -2421,6 +2452,7 @@ Input control switches apply to subsequent input arguments:\n\
     --type=TYPE, -T TYPE           input files are TYPE items (see below)\n\
     --compressed[=HOW], -c [HOW]   compress storage images (see below)\n\
     --uncompressed, -u             do not compress storage images\n\
+    --recompress                   recompress input items already compressed\n\
 \n\
 Input arguments:\n\
     --entry=TEXT, -e TEXT          like an input file containing only TEXT\n\
@@ -2440,6 +2472,11 @@ directory in subsequent FILE, DIRECTORY, or TEXT arguments.\n\
 \n\
 With `--type` or `-T`, input files are treated as TYPE instead of manifest\n\
 files, and directories are not permitted.  See below for the TYPE strings.\n\
+\n\
+ZBI items from input ZBI files are normally emitted unchanged.  (However,\n\
+see below about BOOTFS items.)  With `--recompress`, input items of storage\n\
+types well be decompressed (if needed) on input and then freshly compressed\n\
+(or not) according to the preceding `--compressed=...` or `--uncompressed`.\n\
 \n\
 Format control switches (last switch affects all output):\n\
     --complete=ARCH, -B ARCH       verify result is a complete boot image\n\
@@ -2512,6 +2549,7 @@ int main(int argc, char** argv) {
     bool extract_raw = false;
     bool list_contents = false;
     bool verbose = false;
+    bool recompress = false;
     ItemList items;
     DirectoryTreeBuilder bootfs(&opener);
     std::filesystem::path outdir;
@@ -2595,6 +2633,10 @@ int main(int argc, char** argv) {
             compressed.clear();
             continue;
 
+        case kOptRecompress:
+            recompress = true;
+            continue;
+
         case 'x':
             extract = true;
             continue;
@@ -2649,7 +2691,9 @@ int main(int argc, char** argv) {
             }
             bootfs.MergeRootDirectory(*input->AsDir());
         } else if (input_manifest || input_type == ZBI_TYPE_CONTAINER) {
-            if (ImportFile(input->AsContents(), optarg, &items, &bootfs)) {
+            if (ImportFile(input->AsContents(), optarg, &items, &bootfs,
+                           recompress ? compressed :
+                           Compressor::Config::None())) {
                 // It's another file in ZBI format.
             } else if (input_manifest) {
                 // It must be a manifest file.
