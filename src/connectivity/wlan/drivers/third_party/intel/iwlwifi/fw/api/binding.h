@@ -33,8 +33,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_binding_h__
-#define __iwl_fw_api_binding_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_BINDING_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_BINDING_H_
 
 #define MAX_MACS_IN_BINDING (3)
 #define MAX_BINDINGS (4)
@@ -148,4 +148,4 @@ struct iwl_time_quota_cmd {
     struct iwl_time_quota_data quotas[MAX_BINDINGS];
 } __packed; /* TIME_QUOTA_ALLOCATION_CMD_API_S_VER_2 */
 
-#endif /* __iwl_fw_api_binding_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_BINDING_H_

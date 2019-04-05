@@ -31,8 +31,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_led_h__
-#define __iwl_fw_api_led_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_LED_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_LED_H_
 
 /**
  * struct iwl_led_cmd - LED switching command
@@ -43,4 +43,4 @@ struct iwl_led_cmd {
     __le32 status;
 } __packed; /* LEDS_CMD_API_S_VER_2 */
 
-#endif /* __iwl_fw_api_led_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_LED_H_

@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_fw_api_tof_h__
-#define __iwl_fw_api_tof_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TOF_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TOF_H_
 
 /* ToF sub-group command IDs */
 enum iwl_mvm_tof_sub_grp_ids {
@@ -370,4 +370,4 @@ struct iwl_tof_range_abort_cmd {
     uint8_t reserved[3];
 } __packed;
 
-#endif
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TOF_H_

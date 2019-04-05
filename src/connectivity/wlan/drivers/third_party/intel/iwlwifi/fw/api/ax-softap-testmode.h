@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef __fw_api_ax_softap_testmode_h__
-#define __fw_api_ax_softap_testmode_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_AX_SOFTAP_TESTMODE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_AX_SOFTAP_TESTMODE_H_
 
 #include "mac.h"
 
@@ -336,4 +336,4 @@ struct ax_softap_client_testmode_cmd {
     __le16 reserved2;
 } __packed; /* AX_SOFTAP_CLIENT_TESTMODE_API_S_VER_1 */
 
-#endif /* __fw_api_ax_softap_testmode_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_AX_SOFTAP_TESTMODE_H_

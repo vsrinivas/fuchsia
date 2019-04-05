@@ -33,8 +33,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_soc_h__
-#define __iwl_fw_api_soc_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_SOC_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_SOC_H_
 
 /* type of devices for defining SOC latency */
 enum iwl_soc_device_types {
@@ -53,4 +53,4 @@ struct iwl_soc_configuration_cmd {
     __le32 soc_latency;
 } __packed; /* SOC_CONFIGURATION_CMD_S_VER_1 */
 
-#endif /* __iwl_fw_api_soc_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_SOC_H_

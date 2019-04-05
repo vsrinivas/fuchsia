@@ -119,7 +119,8 @@ static inline bool iwl_fw_dbg_trigger_stop_conf_match(struct iwl_fw_runtime* fwr
              (BIT(fwrt->dump.conf) & le32_to_cpu(trig->stop_conf_ids))));
 }
 
-static inline bool iwl_fw_dbg_no_trig_window(struct iwl_fw_runtime* fwrt, uint32_t id, uint32_t dis_ms) {
+static inline bool iwl_fw_dbg_no_trig_window(struct iwl_fw_runtime* fwrt, uint32_t id,
+                                             uint32_t dis_ms) {
     unsigned long wind_jiff = msecs_to_jiffies(dis_ms);
 
     /* If this is the first event checked, jump to update start ts */

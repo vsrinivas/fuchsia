@@ -62,8 +62,8 @@ enum ext_nvm_offsets {
  * prepare the NVM host command w/ the pointers to the nvm buffer
  * and send it to fw
  */
-static int iwl_nvm_write_chunk(struct iwl_xvt* xvt, uint16_t section, uint16_t offset, uint16_t length,
-                               const uint8_t* data) {
+static int iwl_nvm_write_chunk(struct iwl_xvt* xvt, uint16_t section, uint16_t offset,
+                               uint16_t length, const uint8_t* data) {
     struct iwl_nvm_access_cmd nvm_access_cmd = {
         .offset = cpu_to_le16(offset),
         .length = cpu_to_le16(length),
@@ -82,7 +82,8 @@ static int iwl_nvm_write_chunk(struct iwl_xvt* xvt, uint16_t section, uint16_t o
     return iwl_xvt_send_cmd(xvt, &cmd);
 }
 
-static int iwl_nvm_write_section(struct iwl_xvt* xvt, uint16_t section, const uint8_t* data, uint16_t length) {
+static int iwl_nvm_write_section(struct iwl_xvt* xvt, uint16_t section, const uint8_t* data,
+                                 uint16_t length) {
     int offset = 0;
 
     /* copy data in chunks of 2k (and remainder if any) */
@@ -234,7 +235,8 @@ static int iwl_xvt_load_external_nvm(struct iwl_xvt* xvt) {
         }
         if (section_id == NVM_SECTION_TYPE_MAC_OVERRIDE) {
             xvt->is_nvm_mac_override = true;
-            hw_addr = (const uint8_t*)((const __le16*)file_sec->data + MAC_ADDRESS_OVERRIDE_EXT_NVM);
+            hw_addr =
+                (const uint8_t*)((const __le16*)file_sec->data + MAC_ADDRESS_OVERRIDE_EXT_NVM);
 
             /*
              * Store the MAC address from MAO section.

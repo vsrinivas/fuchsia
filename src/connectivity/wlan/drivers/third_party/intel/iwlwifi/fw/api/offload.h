@@ -33,8 +33,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_offload_h__
-#define __iwl_fw_api_offload_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_OFFLOAD_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_OFFLOAD_H_
 
 /**
  * enum iwl_prot_offload_subcmd_ids - protocol offload commands
@@ -71,4 +71,4 @@ struct iwl_stored_beacon_notif {
     uint8_t data[MAX_STORED_BEACON_SIZE];
 } __packed; /* WOWLAN_STROED_BEACON_INFO_S_VER_2 */
 
-#endif /* __iwl_fw_api_offload_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_OFFLOAD_H_

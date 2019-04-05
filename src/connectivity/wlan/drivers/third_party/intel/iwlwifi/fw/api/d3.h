@@ -33,8 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_d3_h__
-#define __iwl_fw_api_d3_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_D3_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_D3_H_
 
 /**
  * enum iwl_d3_wakeup_flags - D3 manager wakeup flags
@@ -437,7 +437,7 @@ struct iwl_wowlan_status_v6 {
     __le32 wake_packet_length;
     __le32 wake_packet_bufsize;
     uint8_t wake_packet[]; /* can be truncated from _length to _bufsize */
-} __packed;           /* WOWLAN_STATUSES_API_S_VER_6 */
+} __packed;                /* WOWLAN_STATUSES_API_S_VER_6 */
 
 /**
  * struct iwl_wowlan_status - WoWLAN status
@@ -469,7 +469,7 @@ struct iwl_wowlan_status {
     __le32 wake_packet_length;
     __le32 wake_packet_bufsize;
     uint8_t wake_packet[]; /* can be truncated from _length to _bufsize */
-} __packed;           /* WOWLAN_STATUSES_API_S_VER_7 */
+} __packed;                /* WOWLAN_STATUSES_API_S_VER_7 */
 
 static inline uint8_t iwlmvm_wowlan_gtk_idx(struct iwl_wowlan_gtk_status* gtk) {
     return gtk->key_flags & IWL_WOWLAN_GTK_IDX_MASK;
@@ -526,4 +526,4 @@ struct iwl_wowlan_remote_wake_config {
 
 /* TODO: NetDetect API */
 
-#endif /* __iwl_fw_api_d3_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_D3_H_

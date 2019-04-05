@@ -98,8 +98,9 @@ static void iwl_mvm_convert_p1k(uint16_t* p1k, __le16* out) {
     }
 }
 
-static const uint8_t* iwl_mvm_find_max_pn(struct ieee80211_key_conf* key, struct iwl_mvm_key_pn* ptk_pn,
-                                     struct ieee80211_key_seq* seq, int tid, int queues) {
+static const uint8_t* iwl_mvm_find_max_pn(struct ieee80211_key_conf* key,
+                                          struct iwl_mvm_key_pn* ptk_pn,
+                                          struct ieee80211_key_seq* seq, int tid, int queues) {
     const uint8_t* ret = seq->ccmp.pn;
     int i;
 
@@ -276,18 +277,18 @@ static void iwl_mvm_wowlan_program_keys(struct ieee80211_hw* hw, struct ieee8021
 
             for (i = 0; i < IWL_MAX_TID_COUNT; i++) {
                 pn = iwl_mvm_find_max_pn(key, ptk_pn, &seq, i, mvm->trans->num_rx_queues);
-                aes_sc[i].pn =
-                    cpu_to_le64((uint64_t)pn[5] | ((uint64_t)pn[4] << 8) | ((uint64_t)pn[3] << 16) |
-                                ((uint64_t)pn[2] << 24) | ((uint64_t)pn[1] << 32) | ((uint64_t)pn[0] << 40));
+                aes_sc[i].pn = cpu_to_le64((uint64_t)pn[5] | ((uint64_t)pn[4] << 8) |
+                                           ((uint64_t)pn[3] << 16) | ((uint64_t)pn[2] << 24) |
+                                           ((uint64_t)pn[1] << 32) | ((uint64_t)pn[0] << 40));
             }
         } else {
             for (i = 0; i < IWL_NUM_RSC; i++) {
                 uint8_t* pn = seq.ccmp.pn;
 
                 ieee80211_get_key_rx_seq(key, i, &seq);
-                aes_sc[i].pn =
-                    cpu_to_le64((uint64_t)pn[5] | ((uint64_t)pn[4] << 8) | ((uint64_t)pn[3] << 16) |
-                                ((uint64_t)pn[2] << 24) | ((uint64_t)pn[1] << 32) | ((uint64_t)pn[0] << 40));
+                aes_sc[i].pn = cpu_to_le64((uint64_t)pn[5] | ((uint64_t)pn[4] << 8) |
+                                           ((uint64_t)pn[3] << 16) | ((uint64_t)pn[2] << 24) |
+                                           ((uint64_t)pn[1] << 32) | ((uint64_t)pn[0] << 40));
             }
         }
         data->use_rsc_tsc = true;
@@ -1239,7 +1240,7 @@ static bool iwl_mvm_setup_connection_keep(struct iwl_mvm* mvm, struct ieee80211_
         .status = status,
     };
     uint32_t disconnection_reasons = IWL_WOWLAN_WAKEUP_BY_DISCONNECTION_ON_MISSED_BEACON |
-                                IWL_WOWLAN_WAKEUP_BY_DISCONNECTION_ON_DEAUTH;
+                                     IWL_WOWLAN_WAKEUP_BY_DISCONNECTION_ON_DEAUTH;
 
     if (!status || !vif->bss_conf.bssid) { return false; }
 
@@ -1866,7 +1867,8 @@ static ssize_t iwl_mvm_d3_test_read(struct file* file, char __user* user_buf, si
     return 0;
 }
 
-static void iwl_mvm_d3_test_disconn_work_iter(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
+static void iwl_mvm_d3_test_disconn_work_iter(void* _data, uint8_t* mac,
+                                              struct ieee80211_vif* vif) {
     /* skip the one we keep connection on */
     if (_data == vif) { return; }
 

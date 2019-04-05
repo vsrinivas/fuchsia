@@ -487,8 +487,8 @@ static struct iwl_tm_gnl_dev* iwl_tm_gnl_get_dev(const char* dev_name) {
  * @cmd_data:   Message's data
  * @flags:  Resources allocation flags
  */
-static struct sk_buff* iwl_tm_gnl_create_msg(uint32_t pid, uint32_t seq, struct iwl_tm_gnl_cmd cmd_data,
-                                             gfp_t flags) {
+static struct sk_buff* iwl_tm_gnl_create_msg(uint32_t pid, uint32_t seq,
+                                             struct iwl_tm_gnl_cmd cmd_data, gfp_t flags) {
     void* nlmsg_head;
     struct sk_buff* skb;
     int ret;

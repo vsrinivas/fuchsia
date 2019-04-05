@@ -32,8 +32,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_fw_api_txq_h__
-#define __iwl_fw_api_txq_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TXQ_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TXQ_H_
 
 /*
  * DQA queue numbers
@@ -139,4 +139,4 @@ struct iwl_tx_queue_cfg_rsp {
     __le16 reserved;
 } __packed; /* TX_QUEUE_CFG_RSP_API_S_VER_2 */
 
-#endif /* __iwl_fw_api_txq_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TXQ_H_

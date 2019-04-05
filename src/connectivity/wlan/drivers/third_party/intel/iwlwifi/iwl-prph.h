@@ -33,8 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef __iwl_prph_h__
-#define __iwl_prph_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PRPH_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PRPH_H_
 #include <linux/bitfield.h>
 
 /*
@@ -404,4 +404,4 @@ enum {
 #define HPM_DEBUG 0xA03440
 #define PERSISTENCE_BIT BIT(12)
 #define PREG_WFPM_ACCESS BIT(12)
-#endif /* __iwl_prph_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PRPH_H_

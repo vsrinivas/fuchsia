@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_dnt_dev_if_h__
-#define __iwl_dnt_dev_if_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DNT_DEV_IF_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DNT_DEV_IF_H_
 
 #include "iwl-config.h"
 #include "iwl-drv.h"
@@ -66,8 +66,8 @@ int iwl_dnt_dev_if_configure_monitor(struct iwl_dnt* dnt, struct iwl_trans* tran
  * retrieve monitor data - depends on the monitor mode.
  * Note: monitor must be stopped in order to retrieve data.
  */
-int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt* dnt, struct iwl_trans* trans, uint8_t* buffer,
-                                         uint32_t buffer_size);
+int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt* dnt, struct iwl_trans* trans,
+                                         uint8_t* buffer, uint32_t buffer_size);
 /**
  * iwl_dnt_dev_if_start_monitor - start monitor data.
  *
@@ -83,4 +83,4 @@ int iwl_dnt_dev_if_read_sram(struct iwl_dnt* dnt, struct iwl_trans* trans);
 
 int iwl_dnt_dev_if_read_rx(struct iwl_dnt* dnt, struct iwl_trans* trans);
 
-#endif
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DNT_DEV_IF_H_

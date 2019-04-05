@@ -47,7 +47,8 @@ int iwl_xvt_send_cmd(struct iwl_xvt* xvt, struct iwl_host_cmd* cmd) {
     return iwl_trans_send_cmd(xvt->trans, cmd);
 }
 
-int iwl_xvt_send_cmd_pdu(struct iwl_xvt* xvt, uint32_t id, uint32_t flags, uint16_t len, const void* data) {
+int iwl_xvt_send_cmd_pdu(struct iwl_xvt* xvt, uint32_t id, uint32_t flags, uint16_t len,
+                         const void* data) {
     struct iwl_host_cmd cmd = {
         .id = id,
         .len =

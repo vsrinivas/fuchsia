@@ -169,7 +169,8 @@ static int iwl_mvm_phy_ctxt_apply(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* 
  * Send a command to add a PHY context based on the current HW configuration.
  */
 int iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                         struct cfg80211_chan_def* chandef, uint8_t chains_static, uint8_t chains_dynamic) {
+                         struct cfg80211_chan_def* chandef, uint8_t chains_static,
+                         uint8_t chains_dynamic) {
     WARN_ON(!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) && ctxt->ref);
     lockdep_assert_held(&mvm->mutex);
 

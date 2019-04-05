@@ -33,8 +33,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_filter_h__
-#define __iwl_fw_api_filter_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FILTER_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FILTER_H_
 
 #include "fw/api/mac.h"
 
@@ -153,4 +153,4 @@ struct iwl_bcast_filter_cmd {
     struct iwl_fw_bcast_mac macs[NUM_MAC_INDEX_DRIVER];
 } __packed; /* BCAST_FILTERING_HCMD_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_filter_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FILTER_H_

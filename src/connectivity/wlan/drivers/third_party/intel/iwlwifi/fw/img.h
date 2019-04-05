@@ -98,8 +98,8 @@ static inline bool fw_has_capa(const struct iwl_ucode_capabilities* capabilities
 /* one for each uCode image (inst/data, init/runtime/wowlan) */
 struct fw_desc {
     const void* data; /* vmalloc'ed data */
-    uint32_t len;          /* size in bytes */
-    uint32_t offset;       /* offset in the device */
+    uint32_t len;     /* size in bytes */
+    uint32_t offset;  /* offset in the device */
 };
 
 struct fw_img {

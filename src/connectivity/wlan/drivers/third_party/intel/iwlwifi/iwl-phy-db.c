@@ -262,8 +262,8 @@ static uint16_t channel_id_to_txp(struct iwl_phy_db* phy_db, uint16_t ch_id) {
 static
 #endif
     int
-    iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, uint32_t type, uint8_t** data, uint16_t* size,
-                                uint16_t ch_id) {
+    iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, uint32_t type, uint8_t** data,
+                                uint16_t* size, uint16_t ch_id) {
     struct iwl_phy_db_entry* entry;
     uint16_t ch_group_id = 0;
 
@@ -291,7 +291,8 @@ static
 IWL_EXPORT_SYMBOL(iwl_phy_db_get_section_data);
 #endif
 
-static int iwl_send_phy_db_cmd(struct iwl_phy_db* phy_db, uint16_t type, uint16_t length, void* data) {
+static int iwl_send_phy_db_cmd(struct iwl_phy_db* phy_db, uint16_t type, uint16_t length,
+                               void* data) {
     struct iwl_phy_db_cmd phy_db_cmd;
     struct iwl_host_cmd cmd = {
         .id = PHY_DB_CMD,
@@ -314,7 +315,8 @@ static int iwl_send_phy_db_cmd(struct iwl_phy_db* phy_db, uint16_t type, uint16_
 }
 
 static int iwl_phy_db_send_all_channel_groups(struct iwl_phy_db* phy_db,
-                                              enum iwl_phy_db_section_type type, uint8_t max_ch_groups) {
+                                              enum iwl_phy_db_section_type type,
+                                              uint8_t max_ch_groups) {
     uint16_t i;
     int err;
     struct iwl_phy_db_entry* entry;

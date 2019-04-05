@@ -31,8 +31,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#ifndef __iwl_eeprom_parse_h__
-#define __iwl_eeprom_parse_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_EEPROM_PARSE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_EEPROM_PARSE_H_
 
 #include <linux/if_ether.h>
 #include <linux/types.h>
@@ -98,4 +98,4 @@ void iwl_init_ht_hw_capab(const struct iwl_cfg* cfg, struct iwl_nvm_data* data,
                           struct ieee80211_sta_ht_cap* ht_info, enum nl80211_band band,
                           uint8_t tx_chains, uint8_t rx_chains);
 
-#endif /* __iwl_eeprom_parse_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_EEPROM_PARSE_H_

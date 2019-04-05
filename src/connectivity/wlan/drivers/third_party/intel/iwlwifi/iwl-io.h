@@ -29,8 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_io_h__
-#define __iwl_io_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_IO_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_IO_H_
 
 #include "iwl-devtrace.h"
 #include "iwl-trans.h"
@@ -60,7 +60,8 @@ uint32_t iwl_read_prph(struct iwl_trans* trans, uint32_t ofs);
 void iwl_write_prph_no_grab(struct iwl_trans* trans, uint32_t ofs, uint32_t val);
 void iwl_write_prph64_no_grab(struct iwl_trans* trans, uint64_t ofs, uint64_t val);
 void iwl_write_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t val);
-int iwl_poll_prph_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask, int timeout);
+int iwl_poll_prph_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
+                      int timeout);
 void iwl_set_bits_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t mask);
 void iwl_set_bits_mask_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t bits, uint32_t mask);
 void iwl_clear_bits_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t mask);
@@ -69,4 +70,4 @@ void iwl_force_nmi(struct iwl_trans* trans);
 /* Error handling */
 int iwl_dump_fh(struct iwl_trans* trans, char** buf);
 
-#endif
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_IO_H_

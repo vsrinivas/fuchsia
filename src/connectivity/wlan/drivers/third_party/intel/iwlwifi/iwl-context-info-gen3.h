@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_context_info_file_gen3_h__
-#define __iwl_context_info_file_gen3_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONTEXT_INFO_GEN3_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONTEXT_INFO_GEN3_H_
 
 #include "iwl-context-info.h"
 
@@ -264,4 +264,4 @@ struct iwl_context_info_gen3 {
 int iwl_pcie_ctxt_info_gen3_init(struct iwl_trans* trans, const struct fw_img* fw);
 void iwl_pcie_ctxt_info_gen3_free(struct iwl_trans* trans);
 
-#endif /* __iwl_context_info_file_gen3_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONTEXT_INFO_GEN3_H_

@@ -205,7 +205,8 @@ static enum iwl_fw_nan_func_type iwl_fw_nan_func_type(enum nl80211_nan_function_
     }
 }
 
-static uint8_t iwl_mvm_get_match_filter_len(struct cfg80211_nan_func_filter* filters, uint8_t num_filters) {
+static uint8_t iwl_mvm_get_match_filter_len(struct cfg80211_nan_func_filter* filters,
+                                            uint8_t num_filters) {
     int i;
     unsigned int len = 0;
 
@@ -244,7 +245,8 @@ static inline struct iwl_nan_add_func_common* iwl_mvm_nan_get_add_func_common(
                                    : &((struct iwl_nan_add_func_cmd*)nan_add_func_cmd)->cmn;
 }
 
-static inline uint8_t* iwl_mvm_nan_get_add_func_data(struct ieee80211_hw* hw, void* nan_add_func_cmd) {
+static inline uint8_t* iwl_mvm_nan_get_add_func_data(struct ieee80211_hw* hw,
+                                                     void* nan_add_func_cmd) {
     return iwl_mvm_nan_is_ver2(hw) ? ((struct iwl_nan_add_func_cmd_v2*)nan_add_func_cmd)->data
                                    : ((struct iwl_nan_add_func_cmd*)nan_add_func_cmd)->data;
 }

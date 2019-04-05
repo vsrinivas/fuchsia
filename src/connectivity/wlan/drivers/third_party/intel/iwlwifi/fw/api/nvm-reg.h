@@ -34,8 +34,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_nvm_reg_h__
-#define __iwl_fw_api_nvm_reg_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_NVM_REG_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_NVM_REG_H_
 
 /**
  * enum iwl_regulatory_and_nvm_subcmd_ids - regulatory/NVM commands
@@ -376,4 +376,4 @@ enum iwl_mcc_source {
     MCC_SOURCE_GETTING_MCC_TEST_MODE = 0x11,
 };
 
-#endif /* __iwl_fw_api_nvm_reg_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_NVM_REG_H_

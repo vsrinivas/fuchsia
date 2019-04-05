@@ -107,8 +107,8 @@ void iwl_xvt_destroy_reorder_buffer(struct iwl_xvt* xvt, struct iwl_xvt_reorder_
     spin_unlock_bh(&buf->lock);
 }
 
-static bool iwl_xvt_init_reorder_buffer(struct iwl_xvt_reorder_buffer* buf, uint8_t sta_id, uint8_t tid,
-                                        uint16_t ssn, uint8_t buf_size) {
+static bool iwl_xvt_init_reorder_buffer(struct iwl_xvt_reorder_buffer* buf, uint8_t sta_id,
+                                        uint8_t tid, uint16_t ssn, uint8_t buf_size) {
     int j;
 
     if (WARN_ON(buf_size > ARRAY_SIZE(buf->entries))) { return false; }

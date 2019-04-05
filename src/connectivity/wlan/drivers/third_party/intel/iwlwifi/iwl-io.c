@@ -71,7 +71,8 @@ IWL_EXPORT_SYMBOL(iwl_read32);
 
 #define IWL_POLL_INTERVAL 10 /* microseconds */
 
-int iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask, int timeout) {
+int iwl_poll_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
+                 int timeout) {
     int t = 0;
 
     do {
@@ -171,7 +172,8 @@ void iwl_write_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {
 }
 IWL_EXPORT_SYMBOL(iwl_write_prph);
 
-int iwl_poll_prph_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask, int timeout) {
+int iwl_poll_prph_bit(struct iwl_trans* trans, uint32_t addr, uint32_t bits, uint32_t mask,
+                      int timeout) {
     int t = 0;
 
     do {

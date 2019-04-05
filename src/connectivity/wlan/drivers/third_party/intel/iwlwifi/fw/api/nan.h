@@ -32,8 +32,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_nan_h__
-#define __iwl_fw_api_nan_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_NAN_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_NAN_H_
 
 /* TODO: read it from tlv */
 #define NAN_MAX_SUPPORTED_DE_ENTRIES 10
@@ -478,4 +478,4 @@ struct iwl_nan_faw_config {
     uint8_t op_class;
 } __packed; /* _NAN_DISCO_FAW_CMD_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_nan_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_NAN_H_

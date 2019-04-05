@@ -32,8 +32,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_context_info_file_h__
-#define __iwl_context_info_file_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONTEXT_INFO_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONTEXT_INFO_H_
 
 /* maximmum number of DRAM map entries supported by FW */
 #define IWL_MAX_DRAM_ENTRY 64
@@ -206,4 +206,4 @@ void iwl_pcie_ctxt_info_free_paging(struct iwl_trans* trans);
 int iwl_pcie_init_fw_sec(struct iwl_trans* trans, const struct fw_img* fw,
                          struct iwl_context_info_dram* ctxt_dram);
 
-#endif /* __iwl_context_info_file_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_CONTEXT_INFO_H_

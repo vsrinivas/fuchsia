@@ -33,8 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_sta_h__
-#define __iwl_fw_api_sta_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_STA_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_STA_H_
 
 /**
  * enum iwl_sta_flags - flags for the ADD_STA host command
@@ -540,4 +540,4 @@ struct iwl_mvm_eosp_notification {
     __le32 sta_id;
 } __packed; /* UAPSD_EOSP_NTFY_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_sta_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_STA_H_

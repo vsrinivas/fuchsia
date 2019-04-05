@@ -34,8 +34,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_mac_cfg_h__
-#define __iwl_fw_api_mac_cfg_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_MAC_CFG_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_MAC_CFG_H_
 
 /**
  * enum iwl_mac_conf_subcmd_ids - mac configuration command IDs
@@ -122,4 +122,4 @@ struct iwl_mac_low_latency_cmd {
     __le16 reserved;
 } __packed; /* MAC_LOW_LATENCY_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_mac_cfg_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_MAC_CFG_H_

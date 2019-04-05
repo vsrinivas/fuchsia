@@ -31,8 +31,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
-#ifndef __iwl_nvm_parse_h__
-#define __iwl_nvm_parse_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_NVM_PARSE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_NVM_PARSE_H_
 
 #include <net/cfg80211.h>
 #include "iwl-eeprom-parse.h"
@@ -60,7 +60,8 @@ struct iwl_nvm_data* iwl_parse_nvm_data(struct iwl_trans* trans, const struct iw
                                         const __be16* nvm_hw, const __le16* nvm_sw,
                                         const __le16* nvm_calib, const __le16* regulatory,
                                         const __le16* mac_override, const __le16* phy_sku,
-                                        uint8_t tx_chains, uint8_t rx_chains, bool lar_fw_supported);
+                                        uint8_t tx_chains, uint8_t rx_chains,
+                                        bool lar_fw_supported);
 
 /**
  * iwl_parse_mcc_info - parse MCC (mobile country code) info coming from FW
@@ -102,4 +103,4 @@ void iwl_nvm_fixups(uint32_t hw_id, unsigned int section, uint8_t* data, unsigne
  * NVM data, and returns it to caller.
  */
 struct iwl_nvm_data* iwl_get_nvm(struct iwl_trans* trans, const struct iwl_fw* fw);
-#endif /* __iwl_nvm_parse_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_NVM_PARSE_H_

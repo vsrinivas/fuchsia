@@ -34,8 +34,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_alive_h__
-#define __iwl_fw_api_alive_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_ALIVE_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_ALIVE_H_
 
 /* alive response is_valid values */
 #define ALIVE_RESP_UCODE_OK BIT(0)
@@ -161,4 +161,4 @@ struct iwl_card_state_notif {
     __le32 flags;
 } __packed; /* CARD_STATE_NTFY_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_alive_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_ALIVE_H_

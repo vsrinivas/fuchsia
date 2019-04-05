@@ -466,8 +466,8 @@ void iwl_mvm_update_tkip_key(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
 void iwl_mvm_rx_eosp_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 
 /* AMPDU */
-int iwl_mvm_sta_rx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, uint16_t ssn, bool start,
-                       uint16_t buf_size, uint16_t timeout);
+int iwl_mvm_sta_rx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, uint16_t ssn,
+                       bool start, uint16_t buf_size, uint16_t timeout);
 int iwl_mvm_sta_tx_agg_start(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                              struct ieee80211_sta* sta, uint16_t tid, uint16_t* ssn);
 int iwl_mvm_sta_tx_agg_oper(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
@@ -500,8 +500,8 @@ void iwl_mvm_dealloc_snif_sta(struct iwl_mvm* mvm);
 
 void iwl_mvm_sta_modify_ps_wake(struct iwl_mvm* mvm, struct ieee80211_sta* sta);
 void iwl_mvm_sta_modify_sleep_tx_count(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
-                                       enum ieee80211_frame_release_type reason, uint16_t cnt, uint16_t tids,
-                                       bool more_data, bool single_sta_queue);
+                                       enum ieee80211_frame_release_type reason, uint16_t cnt,
+                                       uint16_t tids, bool more_data, bool single_sta_queue);
 int iwl_mvm_drain_sta(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool drain);
 void iwl_mvm_sta_modify_disable_tx(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvmsta, bool disable);
 void iwl_mvm_sta_modify_disable_tx_ap(struct iwl_mvm* mvm, struct ieee80211_sta* sta, bool disable);

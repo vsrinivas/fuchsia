@@ -380,7 +380,8 @@ static const struct iwl_prph_range iwl_prph_dump_addr_22000[] = {
     {.start = 0x00a0c1a0, .end = 0x00a0c1a8}, {.start = 0x00a0c1b0, .end = 0x00a0c1b8},
 };
 
-static void iwl_read_prph_block(struct iwl_trans* trans, uint32_t start, uint32_t len_bytes, __le32* data) {
+static void iwl_read_prph_block(struct iwl_trans* trans, uint32_t start, uint32_t len_bytes,
+                                __le32* data) {
     uint32_t i;
 
     for (i = 0; i < len_bytes; i += 4) {
@@ -511,8 +512,8 @@ static void iwl_fw_dump_mem(struct iwl_fw_runtime* fwrt, struct iwl_fw_error_dum
 }
 
 static void iwl_fw_dump_named_mem(struct iwl_fw_runtime* fwrt,
-                                  struct iwl_fw_error_dump_data** dump_data, uint32_t len, uint32_t ofs,
-                                  uint8_t* name, uint8_t name_len) {
+                                  struct iwl_fw_error_dump_data** dump_data, uint32_t len,
+                                  uint32_t ofs, uint8_t* name, uint8_t name_len) {
     struct iwl_fw_error_dump_named_mem* dump_mem;
 
     if (!len) { return; }
@@ -892,7 +893,8 @@ static int iwl_fw_ini_get_trigger_len(struct iwl_fw_runtime* fwrt,
         case IWL_FW_INI_REGION_PERIPHERY_MAC:
         case IWL_FW_INI_REGION_PERIPHERY_PHY:
         case IWL_FW_INI_REGION_PERIPHERY_AUX:
-            size += num_entries * (hdr_len + sizeof(struct iwl_fw_error_dump_prph) + sizeof(uint32_t));
+            size +=
+                num_entries * (hdr_len + sizeof(struct iwl_fw_error_dump_prph) + sizeof(uint32_t));
             break;
         case IWL_FW_INI_REGION_TXF:
             size += iwl_fw_txf_len(fwrt, &fwrt->smem_cfg);

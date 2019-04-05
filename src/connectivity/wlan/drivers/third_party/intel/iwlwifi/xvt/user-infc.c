@@ -693,7 +693,8 @@ static struct iwl_device_cmd* iwl_xvt_set_tx_params_gen2(struct iwl_xvt* xvt, st
  * Allocates and sets the Tx cmd the driver data pointers in the skb
  */
 static struct iwl_device_cmd* iwl_xvt_set_mod_tx_params(struct iwl_xvt* xvt, struct sk_buff* skb,
-                                                        uint8_t sta_id, uint32_t rate_flags, uint32_t flags) {
+                                                        uint8_t sta_id, uint32_t rate_flags,
+                                                        uint32_t flags) {
     struct iwl_device_cmd* dev_cmd;
     struct iwl_xvt_skb_info* skb_info = (void*)skb->cb;
     struct iwl_tx_cmd* tx_cmd;
@@ -896,8 +897,8 @@ static struct sk_buff* iwl_xvt_set_skb(struct iwl_xvt* xvt, struct ieee80211_hdr
 }
 
 static struct sk_buff* iwl_xvt_create_fragment_skb(struct iwl_xvt* xvt, struct ieee80211_hdr* hdr,
-                                                   struct tx_payload* payload, uint32_t fragment_size,
-                                                   uint8_t frag_num) {
+                                                   struct tx_payload* payload,
+                                                   uint32_t fragment_size, uint8_t frag_num) {
     struct sk_buff* skb;
     const __le16 morefrags = cpu_to_le16(IEEE80211_FCTL_MOREFRAGS);
     uint32_t header_size = ieee80211_hdrlen(hdr->frame_control);
@@ -936,7 +937,8 @@ static struct sk_buff* iwl_xvt_create_fragment_skb(struct iwl_xvt* xvt, struct i
 }
 
 static struct sk_buff* iwl_xvt_get_skb(struct iwl_xvt* xvt, struct ieee80211_hdr* hdr,
-                                       struct tx_payload* payload, uint32_t fragment_size, uint8_t frag_num) {
+                                       struct tx_payload* payload, uint32_t fragment_size,
+                                       uint8_t frag_num) {
     if (fragment_size == 0) { /* no framgmentation */
         return iwl_xvt_set_skb(xvt, hdr, payload);
     }
@@ -945,8 +947,8 @@ static struct sk_buff* iwl_xvt_get_skb(struct iwl_xvt* xvt, struct ieee80211_hdr
 }
 
 static int iwl_xvt_transmit_packet(struct iwl_xvt* xvt, struct sk_buff* skb,
-                                   struct iwl_xvt_tx_start* tx_start, uint8_t packet_index, uint8_t frag_num,
-                                   uint32_t* status) {
+                                   struct iwl_xvt_tx_start* tx_start, uint8_t packet_index,
+                                   uint8_t frag_num, uint32_t* status) {
     struct iwl_device_cmd* dev_cmd;
     int time_remain, err = 0;
     uint8_t queue = tx_start->frames_data[packet_index].queue;
@@ -1503,8 +1505,8 @@ static int iwl_xvt_get_mac_addr_info(struct iwl_xvt* xvt, struct iwl_tm_data* da
     return 0;
 }
 
-static int iwl_xvt_add_txq(struct iwl_xvt* xvt, struct iwl_scd_txq_cfg_cmd* cmd, uint16_t ssn, uint16_t flags,
-                           int size) {
+static int iwl_xvt_add_txq(struct iwl_xvt* xvt, struct iwl_scd_txq_cfg_cmd* cmd, uint16_t ssn,
+                           uint16_t flags, int size) {
     int queue_id = cmd->scd_queue, ret;
 
     if (iwl_xvt_is_unified_fw(xvt)) {
@@ -1686,8 +1688,9 @@ out_free:
     return err;
 }
 
-int iwl_xvt_user_cmd_execute(struct iwl_testmode* testmode, uint32_t cmd, struct iwl_tm_data* data_in,
-                             struct iwl_tm_data* data_out, bool* supported_cmd) {
+int iwl_xvt_user_cmd_execute(struct iwl_testmode* testmode, uint32_t cmd,
+                             struct iwl_tm_data* data_in, struct iwl_tm_data* data_out,
+                             bool* supported_cmd) {
     struct iwl_xvt* xvt = testmode->op_mode;
     int ret = 0;
 

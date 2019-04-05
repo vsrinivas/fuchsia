@@ -31,8 +31,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_version_fmac_h__
-#define __iwl_fw_api_version_fmac_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FMAC_VERSION_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FMAC_VERSION_H_
 
 /* This API Version number should be incremented anytime
  * backward compatibility is broken on BSS only commands.
@@ -40,4 +40,4 @@
 #define FMAC_MIN_API_VERSION 7
 #define FMAC_MAX_API_VERSION 8
 
-#endif /* __iwl_fw_api_version_fmac_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FMAC_VERSION_H_

@@ -32,8 +32,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_mac_h__
-#define __iwl_fw_api_mac_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_MAC_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_MAC_H_
 
 /*
  * The first MAC indices (starting from 0) are available to the driver,
@@ -571,4 +571,4 @@ struct iwl_he_monitor_cmd {
     uint8_t reserved2[6];
 } __packed; /* HE_AIR_SNIFFER_CONFIG_CMD_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_mac_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_MAC_H_

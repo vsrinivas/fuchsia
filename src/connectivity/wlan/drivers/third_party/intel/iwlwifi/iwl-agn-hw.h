@@ -34,8 +34,8 @@
  * Please use this file (iwl-agn-hw.h) only for hardware-related definitions.
  */
 
-#ifndef __iwl_agn_hw_h__
-#define __iwl_agn_hw_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_AGN_HW_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_AGN_HW_H_
 
 #define IWLAGN_RTC_INST_LOWER_BOUND (0x000000)
 #define IWLAGN_RTC_INST_UPPER_BOUND (0x020000)
@@ -72,11 +72,11 @@
 /* high blocks contain PAPD data */
 #define OTP_HIGH_IMAGE_SIZE_6x00 (6 * 512 * sizeof(uint16_t)) /* 6 KB */
 #define OTP_HIGH_IMAGE_SIZE_1000 (0x200 * sizeof(uint16_t))   /* 1024 bytes */
-#define OTP_MAX_LL_ITEMS_1000 (3)                        /* OTP blocks for 1000 */
-#define OTP_MAX_LL_ITEMS_6x00 (4)                        /* OTP blocks for 6x00 */
-#define OTP_MAX_LL_ITEMS_6x50 (7)                        /* OTP blocks for 6x50 */
-#define OTP_MAX_LL_ITEMS_2x00 (4)                        /* OTP blocks for 2x00 */
+#define OTP_MAX_LL_ITEMS_1000 (3)                             /* OTP blocks for 1000 */
+#define OTP_MAX_LL_ITEMS_6x00 (4)                             /* OTP blocks for 6x00 */
+#define OTP_MAX_LL_ITEMS_6x50 (7)                             /* OTP blocks for 6x50 */
+#define OTP_MAX_LL_ITEMS_2x00 (4)                             /* OTP blocks for 2x00 */
 
 #define IWLAGN_NUM_QUEUES 20
 
-#endif /* __iwl_agn_hw_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_AGN_HW_H_

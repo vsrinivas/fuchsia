@@ -1687,7 +1687,8 @@ static
                                                iwl_mvm_mc_iface_iterator, &iter_data);
 }
 
-static uint64_t iwl_mvm_prepare_multicast(struct ieee80211_hw* hw, struct netdev_hw_addr_list* mc_list) {
+static uint64_t iwl_mvm_prepare_multicast(struct ieee80211_hw* hw,
+                                          struct netdev_hw_addr_list* mc_list) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
     struct iwl_mcast_filter_cmd* cmd;
     struct netdev_hw_addr* addr;
@@ -1915,7 +1916,8 @@ static void iwl_mvm_mu_mimo_iface_iterator(void* _data, uint8_t* mac, struct iee
          * the data received from firmware as if it came from the
          * action frame, so no conversion is needed.
          */
-        ieee80211_update_mu_groups(vif, (uint8_t*)&notif->membership_status, (uint8_t*)&notif->user_position);
+        ieee80211_update_mu_groups(vif, (uint8_t*)&notif->membership_status,
+                                   (uint8_t*)&notif->user_position);
     }
 }
 
@@ -2105,7 +2107,8 @@ static void iwl_mvm_cfg_he_sta(struct iwl_mvm* mvm, struct ieee80211_vif* vif, u
 }
 
 static void iwl_mvm_bss_info_changed_station(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                             struct ieee80211_bss_conf* bss_conf, uint32_t changes) {
+                                             struct ieee80211_bss_conf* bss_conf,
+                                             uint32_t changes) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     int ret;
 
@@ -2466,7 +2469,8 @@ static void iwl_mvm_stop_ap_ibss(struct ieee80211_hw* hw, struct ieee80211_vif* 
 }
 
 static void iwl_mvm_bss_info_changed_ap_ibss(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                             struct ieee80211_bss_conf* bss_conf, uint32_t changes) {
+                                             struct ieee80211_bss_conf* bss_conf,
+                                             uint32_t changes) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
     /* Changes will be applied when the AP/IBSS is started */
@@ -2708,7 +2712,8 @@ static void iwl_mvm_sta_pre_rcu_remove(struct ieee80211_hw* hw, struct ieee80211
     mutex_unlock(&mvm->mutex);
 }
 
-static void iwl_mvm_check_uapsd(struct iwl_mvm* mvm, struct ieee80211_vif* vif, const uint8_t* bssid) {
+static void iwl_mvm_check_uapsd(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                                const uint8_t* bssid) {
     int i;
 
     if (!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
@@ -3175,7 +3180,8 @@ static int iwl_mvm_mac_set_key(struct ieee80211_hw* hw, enum set_key_cmd cmd,
 
 static void iwl_mvm_mac_update_tkip_key(struct ieee80211_hw* hw, struct ieee80211_vif* vif,
                                         struct ieee80211_key_conf* keyconf,
-                                        struct ieee80211_sta* sta, uint32_t iv32, uint16_t* phase1key) {
+                                        struct ieee80211_sta* sta, uint32_t iv32,
+                                        uint16_t* phase1key) {
     struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
 
     if (keyconf->hw_key_idx == STA_KEY_IDX_INVALID) { return; }
@@ -4272,7 +4278,8 @@ static void iwl_mvm_event_bar_rx_callback(struct iwl_mvm* mvm, struct ieee80211_
 #define MARKER_CMD_TX_LAT_DEFAULT_WIN 1000
 #define MARKER_CMD_TX_LAT_UNKNOWN 0xffffffff
 
-static uint32_t iwl_mvm_send_latency_marker_cmd(struct iwl_mvm* mvm, uint32_t msrmnt, uint16_t seq, uint16_t tid) {
+static uint32_t iwl_mvm_send_latency_marker_cmd(struct iwl_mvm* mvm, uint32_t msrmnt, uint16_t seq,
+                                                uint16_t tid) {
     struct timespec ts;
     int ret;
     struct iwl_mvm_marker_rsp* rsp;
@@ -4281,7 +4288,8 @@ static uint32_t iwl_mvm_send_latency_marker_cmd(struct iwl_mvm* mvm, uint32_t ms
         .id = MARKER_CMD,
         .flags = CMD_WANT_SKB,
     };
-    uint32_t cmd_size = sizeof(struct iwl_mvm_marker) + MARKER_CMD_TX_LAT_PAYLOAD_SIZE * sizeof(uint32_t);
+    uint32_t cmd_size =
+        sizeof(struct iwl_mvm_marker) + MARKER_CMD_TX_LAT_PAYLOAD_SIZE * sizeof(uint32_t);
 
     getnstimeofday(&ts);
 

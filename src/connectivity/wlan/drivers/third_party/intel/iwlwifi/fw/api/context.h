@@ -33,8 +33,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_context_h__
-#define __iwl_fw_api_context_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CONTEXT_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CONTEXT_H_
 
 /**
  * enum iwl_ctxt_id_and_color - ID and color fields in context dword
@@ -64,4 +64,4 @@ enum iwl_ctxt_action {
     FW_CTXT_ACTION_NUM
 }; /* COMMON_CONTEXT_ACTION_API_E_VER_1 */
 
-#endif /* __iwl_fw_api_context_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CONTEXT_H_

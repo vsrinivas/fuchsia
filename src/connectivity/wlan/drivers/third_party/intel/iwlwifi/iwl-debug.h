@@ -51,7 +51,8 @@ static inline bool iwl_have_debug_level(uint32_t level) {
 
 struct device;
 
-#define __iwl_err(dev, rfkill_prefix, only_trace, fmt, ...) zxlogf(ERROR, "iwlwifi: " fmt, ##__VA_ARGS__)
+#define __iwl_err(dev, rfkill_prefix, only_trace, fmt, ...) \
+    zxlogf(ERROR, "iwlwifi: " fmt, ##__VA_ARGS__)
 #define __iwl_warn(dev, fmt, args...) zxlogf(WARN, "iwlwifi: " fmt, args)
 #define __iwl_info(dev, fmt, args...) zxlogf(INFO, "iwlwifi: " fmt, args)
 #define __iwl_crit(dev, fmt, args...) zxlogf(ERROR, "iwlwifi: " fmt, args)
@@ -87,8 +88,8 @@ struct device;
         __iwl_crit((m)->dev, f, ##a); \
     } while (0)
 
-#define __iwl_dbg(dev, level, limit, function, fmt, args...)  \
-            zxlogf(DEBUG1, "iwlwifi (%s): " fmt, function, args)
+#define __iwl_dbg(dev, level, limit, function, fmt, args...) \
+    zxlogf(DEBUG1, "iwlwifi (%s): " fmt, function, args)
 
 #define iwl_print_hex_error(m, p, len)                                                \
     do {                                                                              \

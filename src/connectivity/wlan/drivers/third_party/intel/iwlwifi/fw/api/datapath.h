@@ -34,8 +34,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_datapath_h__
-#define __iwl_fw_api_datapath_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DATAPATH_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DATAPATH_H_
 
 /**
  * enum iwl_data_path_subcmd_ids - data path group commands
@@ -151,4 +151,4 @@ struct iwl_mu_group_mgmt_notif {
     __le32 user_position[4];
 } __packed; /* MU_GROUP_MNG_NTFY_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_datapath_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DATAPATH_H_

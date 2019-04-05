@@ -33,8 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_tm_infc__
-#define __iwl_tm_infc__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TM_INFC_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TM_INFC_H_
 
 #include <linux/if_ether.h>
 #include <linux/types.h>
@@ -794,4 +794,4 @@ struct iwl_xvt_config_rx_mpdu_req {
     uint8_t reserved[3];
 } __packed __aligned(4);
 
-#endif
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TM_INFC_H_

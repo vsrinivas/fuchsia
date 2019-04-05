@@ -34,8 +34,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_power_h__
-#define __iwl_fw_api_power_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_POWER_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_POWER_H_
 
 /* Power Management Commands, Responses, Notifications */
 
@@ -520,4 +520,4 @@ struct iwl_beacon_filter_cmd {
 
 #define IWL_BF_CMD_CONFIG_DEFAULTS IWL_BF_CMD_CONFIG(_DEFAULT)
 #define IWL_BF_CMD_CONFIG_D0I3 IWL_BF_CMD_CONFIG(_D0I3)
-#endif /* __iwl_fw_api_power_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_POWER_H_

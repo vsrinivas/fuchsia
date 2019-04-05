@@ -33,8 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_fw_api_debug_h__
-#define __iwl_fw_api_debug_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DEBUG_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DEBUG_H_
 
 /**
  * enum iwl_debug_cmds - debug commands
@@ -365,4 +365,4 @@ struct iwl_buffer_allocation_cmd {
     struct iwl_fragment_data fragments[IWL_BUFFER_LOCATION_MAX_FRAGS];
 } __packed; /* BUFFER_ALLOCATION_CMD_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_debug_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DEBUG_H_

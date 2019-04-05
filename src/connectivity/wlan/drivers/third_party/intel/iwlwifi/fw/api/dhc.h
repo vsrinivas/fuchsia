@@ -32,8 +32,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_dhc_h__
-#define __iwl_fw_api_dhc_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DHC_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DHC_H_
 #include "mac.h"
 #include "scan.h"
 
@@ -639,4 +639,4 @@ struct iwl_dhc_twt_operation {
     uint8_t reserved;
 }; /* DHC_TWT_OPERATION_API_S */
 
-#endif /* __iwl_fw_api_dhc_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_DHC_H_

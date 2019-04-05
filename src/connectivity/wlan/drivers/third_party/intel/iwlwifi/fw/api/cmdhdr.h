@@ -32,8 +32,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_fw_api_cmdhdr_h__
-#define __iwl_fw_api_cmdhdr_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CMDHDR_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CMDHDR_H_
 
 /**
  * DOC: Host command section
@@ -177,4 +177,4 @@ struct iwl_cmd_response {
     __le32 status;
 };
 
-#endif /* __iwl_fw_api_cmdhdr_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CMDHDR_H_

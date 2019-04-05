@@ -612,7 +612,7 @@ static void iwl_mvm_lmac_scan_cfg_channels(struct iwl_mvm* mvm, struct ieee80211
 }
 
 static uint8_t* iwl_mvm_copy_and_insert_ds_elem(struct iwl_mvm* mvm, const uint8_t* ies, size_t len,
-                                           uint8_t* const pos) {
+                                                uint8_t* const pos) {
     static const uint8_t before_ds_params[] = {
         WLAN_EID_SSID,
         WLAN_EID_SUPP_RATES,
@@ -663,7 +663,8 @@ static void iwl_mvm_build_scan_probe(struct iwl_mvm* mvm, struct ieee80211_vif* 
                                      struct iwl_mvm_scan_params* params) {
     struct ieee80211_mgmt* frame = (void*)params->preq.buf;
     uint8_t *pos, *newpos;
-    const uint8_t* mac_addr = params->flags & NL80211_SCAN_FLAG_RANDOM_ADDR ? params->mac_addr : NULL;
+    const uint8_t* mac_addr =
+        params->flags & NL80211_SCAN_FLAG_RANDOM_ADDR ? params->mac_addr : NULL;
 
     /*
      * Unfortunately, right now the offload scan doesn't support randomising
@@ -1156,7 +1157,7 @@ static void iwl_mvm_umac_scan_cfg_channels(struct iwl_mvm* mvm, struct ieee80211
 }
 
 static uint16_t iwl_mvm_scan_umac_flags(struct iwl_mvm* mvm, struct iwl_mvm_scan_params* params,
-                                   struct ieee80211_vif* vif) {
+                                        struct ieee80211_vif* vif) {
     uint16_t flags = 0;
 
     if (params->n_ssids == 0) { flags = IWL_UMAC_SCAN_GEN_FLAGS_PASSIVE; }

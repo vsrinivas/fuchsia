@@ -31,8 +31,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_dnt_cfg_h__
-#define __iwl_dnt_cfg_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DNT_CFG_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DNT_CFG_H_
 
 #include <linux/kthread.h>
 #include <linux/sched.h>
@@ -234,4 +234,4 @@ void iwl_dnt_configure(struct iwl_trans* trans, const struct fw_img* image);
  */
 void iwl_dnt_start(struct iwl_trans* trans);
 
-#endif
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DNT_CFG_H_

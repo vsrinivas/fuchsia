@@ -66,8 +66,8 @@ void iwl_mvm_rx_rx_phy_cmd(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
  */
 static void iwl_mvm_pass_packet_to_mac80211(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
                                             struct napi_struct* napi, struct sk_buff* skb,
-                                            struct ieee80211_hdr* hdr, uint16_t len, uint8_t crypt_len,
-                                            struct iwl_rx_cmd_buffer* rxb) {
+                                            struct ieee80211_hdr* hdr, uint16_t len,
+                                            uint8_t crypt_len, struct iwl_rx_cmd_buffer* rxb) {
     unsigned int hdrlen = ieee80211_hdrlen(hdr->frame_control);
     unsigned int fraglen;
 
@@ -151,8 +151,8 @@ static void iwl_mvm_get_signal_strength(struct iwl_mvm* mvm, struct iwl_rx_phy_i
  * returns non 0 value if the packet should be dropped
  */
 static uint32_t iwl_mvm_set_mac80211_rx_flag(struct iwl_mvm* mvm, struct ieee80211_hdr* hdr,
-                                        struct ieee80211_rx_status* stats, uint32_t rx_pkt_status,
-                                        uint8_t* crypt_len) {
+                                             struct ieee80211_rx_status* stats,
+                                             uint32_t rx_pkt_status, uint8_t* crypt_len) {
     if (!ieee80211_has_protected(hdr->frame_control) ||
         (rx_pkt_status & RX_MPDU_RES_STATUS_SEC_ENC_MSK) == RX_MPDU_RES_STATUS_SEC_NO_ENC) {
         return 0;

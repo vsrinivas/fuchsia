@@ -282,7 +282,8 @@ void iwl_pcie_txq_check_wrptrs(struct iwl_trans* trans) {
     }
 }
 
-static inline dma_addr_t iwl_pcie_tfd_tb_get_addr(struct iwl_trans* trans, void* _tfd, uint8_t idx) {
+static inline dma_addr_t iwl_pcie_tfd_tb_get_addr(struct iwl_trans* trans, void* _tfd,
+                                                  uint8_t idx) {
     if (trans->cfg->use_tfh) {
         struct iwl_tfh_tfd* tfd = _tfd;
         struct iwl_tfh_tb* tb = &tfd->tbs[idx];
@@ -307,8 +308,8 @@ static inline dma_addr_t iwl_pcie_tfd_tb_get_addr(struct iwl_trans* trans, void*
     }
 }
 
-static inline void iwl_pcie_tfd_set_tb(struct iwl_trans* trans, void* tfd, uint8_t idx, dma_addr_t addr,
-                                       uint16_t len) {
+static inline void iwl_pcie_tfd_set_tb(struct iwl_trans* trans, void* tfd, uint8_t idx,
+                                       dma_addr_t addr, uint16_t len) {
     struct iwl_tfd* tfd_fh = (void*)tfd;
     struct iwl_tfd_tb* tb = &tfd_fh->tbs[idx];
 
@@ -646,7 +647,8 @@ void iwl_pcie_tx_start(struct iwl_trans* trans, uint32_t scd_base_addr) {
     int nq = trans->cfg->base_params->num_of_queues;
     int chan;
     uint32_t reg_val;
-    int clear_dwords = (SCD_TRANS_TBL_OFFSET_QUEUE(nq) - SCD_CONTEXT_MEM_LOWER_BOUND) / sizeof(uint32_t);
+    int clear_dwords =
+        (SCD_TRANS_TBL_OFFSET_QUEUE(nq) - SCD_CONTEXT_MEM_LOWER_BOUND) / sizeof(uint32_t);
 
     /* make sure all queue are not stopped/used */
     memset(trans_pcie->queue_stopped, 0, sizeof(trans_pcie->queue_stopped));
@@ -1265,7 +1267,8 @@ bool iwl_trans_pcie_txq_enable(struct iwl_trans* trans, int txq_id, uint16_t ssn
     return scd_bug;
 }
 
-void iwl_trans_pcie_txq_set_shared_mode(struct iwl_trans* trans, uint32_t txq_id, bool shared_mode) {
+void iwl_trans_pcie_txq_set_shared_mode(struct iwl_trans* trans, uint32_t txq_id,
+                                        bool shared_mode) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_txq* txq = trans_pcie->txq[txq_id];
 
@@ -1856,8 +1859,9 @@ static void iwl_compute_pseudo_hdr_csum(void* iph, struct tcphdr* tcph, bool ipv
 }
 
 static int iwl_fill_data_tbs_amsdu(struct iwl_trans* trans, struct sk_buff* skb,
-                                   struct iwl_txq* txq, uint8_t hdr_len, struct iwl_cmd_meta* out_meta,
-                                   struct iwl_device_cmd* dev_cmd, uint16_t tb1_len) {
+                                   struct iwl_txq* txq, uint8_t hdr_len,
+                                   struct iwl_cmd_meta* out_meta, struct iwl_device_cmd* dev_cmd,
+                                   uint16_t tb1_len) {
     struct iwl_tx_cmd* tx_cmd = (void*)dev_cmd->payload;
     struct iwl_trans_pcie* trans_pcie = txq->trans_pcie;
     struct ieee80211_hdr* hdr = (void*)skb->data;
@@ -2010,8 +2014,9 @@ static int iwl_fill_data_tbs_amsdu(struct iwl_trans* trans, struct sk_buff* skb,
 }
 #else  /* CONFIG_INET */
 static int iwl_fill_data_tbs_amsdu(struct iwl_trans* trans, struct sk_buff* skb,
-                                   struct iwl_txq* txq, uint8_t hdr_len, struct iwl_cmd_meta* out_meta,
-                                   struct iwl_device_cmd* dev_cmd, uint16_t tb1_len) {
+                                   struct iwl_txq* txq, uint8_t hdr_len,
+                                   struct iwl_cmd_meta* out_meta, struct iwl_device_cmd* dev_cmd,
+                                   uint16_t tb1_len) {
     /* No A-MSDU without CONFIG_INET */
     WARN_ON(1);
 
@@ -2099,7 +2104,8 @@ int iwl_trans_pcie_tx(struct iwl_trans* trans, struct sk_buff* skb, struct iwl_d
     txq->entries[txq->write_ptr].skb = skb;
     txq->entries[txq->write_ptr].cmd = dev_cmd;
 
-    dev_cmd->hdr.sequence = cpu_to_le16((uint16_t)(QUEUE_TO_SEQ(txq_id) | INDEX_TO_SEQ(txq->write_ptr)));
+    dev_cmd->hdr.sequence =
+        cpu_to_le16((uint16_t)(QUEUE_TO_SEQ(txq_id) | INDEX_TO_SEQ(txq->write_ptr)));
 
     tb0_phys = iwl_pcie_get_first_tb_dma(txq, txq->write_ptr);
     scratch_phys = tb0_phys + sizeof(struct iwl_cmd_header) + offsetof(struct iwl_tx_cmd, scratch);

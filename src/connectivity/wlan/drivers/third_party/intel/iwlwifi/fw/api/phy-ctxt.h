@@ -33,8 +33,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_phy_ctxt_h__
-#define __iwl_fw_api_phy_ctxt_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_PHY_CTXT_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_PHY_CTXT_H_
 
 /* Supported bands */
 #define PHY_BAND_5 (0)
@@ -127,4 +127,4 @@ struct iwl_phy_context_cmd {
     __le32 dsp_cfg_flags;
 } __packed; /* PHY_CONTEXT_CMD_API_VER_1 */
 
-#endif /* __iwl_fw_api_phy_ctxt_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_PHY_CTXT_H_

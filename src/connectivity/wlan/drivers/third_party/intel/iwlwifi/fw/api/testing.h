@@ -31,8 +31,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_testing_h__
-#define __iwl_fw_api_testing_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TESTING_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TESTING_H_
 
 #define FIPS_KEY_LEN_128 16
 #define FIPS_KEY_LEN_256 32
@@ -110,4 +110,4 @@ struct iwl_fips_test_resp {
     uint8_t payload[0];
 } __packed; /* AES_SEC_TEST_VECTOR_RESP_API_S_VER_1 */
 
-#endif
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TESTING_H_

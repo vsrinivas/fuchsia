@@ -224,7 +224,8 @@ enum iwl_nvm_channel_flags {
     NVM_CHANNEL_DC_HIGH = BIT(12),
 };
 
-static inline void iwl_nvm_print_channel_flags(struct device* dev, uint32_t level, int chan, uint16_t flags) {
+static inline void iwl_nvm_print_channel_flags(struct device* dev, uint32_t level, int chan,
+                                               uint16_t flags) {
 #define CHECK_AND_PRINT_I(x) ((flags & NVM_CHANNEL_##x) ? " " #x : "")
 
     if (!(flags & NVM_CHANNEL_VALID)) {
@@ -243,7 +244,7 @@ static inline void iwl_nvm_print_channel_flags(struct device* dev, uint32_t leve
 }
 
 static uint32_t iwl_get_channel_flags(uint8_t ch_num, int ch_idx, bool is_5ghz, uint16_t nvm_flags,
-                                 const struct iwl_cfg* cfg) {
+                                      const struct iwl_cfg* cfg) {
     uint32_t flags = IEEE80211_CHAN_NO_HT40;
     uint32_t last_5ghz_ht = LAST_5GHZ_HT;
 
@@ -802,7 +803,8 @@ static int iwl_get_n_hw_addrs(const struct iwl_cfg* cfg, const __le16* nvm_sw) {
     return n_hw_addr & N_HW_ADDR_MASK;
 }
 
-static void iwl_set_radio_cfg(const struct iwl_cfg* cfg, struct iwl_nvm_data* data, uint32_t radio_cfg) {
+static void iwl_set_radio_cfg(const struct iwl_cfg* cfg, struct iwl_nvm_data* data,
+                              uint32_t radio_cfg) {
     if (cfg->nvm_type != IWL_NVM_EXT) {
         data->radio_cfg_type = NVM_RF_CFG_TYPE_MSK(radio_cfg);
         data->radio_cfg_step = NVM_RF_CFG_STEP_MSK(radio_cfg);
@@ -964,7 +966,8 @@ struct iwl_nvm_data* iwl_parse_nvm_data(struct iwl_trans* trans, const struct iw
                                         const __be16* nvm_hw, const __le16* nvm_sw,
                                         const __le16* nvm_calib, const __le16* regulatory,
                                         const __le16* mac_override, const __le16* phy_sku,
-                                        uint8_t tx_chains, uint8_t rx_chains, bool lar_fw_supported) {
+                                        uint8_t tx_chains, uint8_t rx_chains,
+                                        bool lar_fw_supported) {
     struct device* dev = trans->dev;
     struct iwl_nvm_data* data;
     bool lar_enabled;
@@ -1053,7 +1056,7 @@ struct iwl_nvm_data* iwl_parse_nvm_data(struct iwl_trans* trans, const struct iw
 IWL_EXPORT_SYMBOL(iwl_parse_nvm_data);
 
 static uint32_t iwl_nvm_get_regdom_bw_flags(const uint8_t* nvm_chan, int ch_idx, uint16_t nvm_flags,
-                                       const struct iwl_cfg* cfg) {
+                                            const struct iwl_cfg* cfg) {
     uint32_t flags = NL80211_RRF_NO_HT40;
     uint32_t last_5ghz_ht = LAST_5GHZ_HT;
 
@@ -1100,7 +1103,8 @@ struct ieee80211_regdomain* iwl_parse_nvm_mcc_info(struct device* dev, const str
     int ch_idx;
     uint16_t ch_flags;
     uint32_t reg_rule_flags, prev_reg_rule_flags = 0;
-    const uint8_t* nvm_chan = cfg->nvm_type == IWL_NVM_EXT ? iwl_ext_nvm_channels : iwl_nvm_channels;
+    const uint8_t* nvm_chan =
+        cfg->nvm_type == IWL_NVM_EXT ? iwl_ext_nvm_channels : iwl_nvm_channels;
     struct ieee80211_regdomain *regd, *copy_rd;
     int size_of_regd, regd_to_copy;
     struct ieee80211_reg_rule* rule;

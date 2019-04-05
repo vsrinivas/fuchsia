@@ -160,7 +160,8 @@ static void iwl_pcie_free_fw_monitor(struct iwl_trans* trans) {
     }
 }
 
-static void iwl_pcie_alloc_fw_monitor_block(struct iwl_trans* trans, uint8_t max_power, uint8_t min_power) {
+static void iwl_pcie_alloc_fw_monitor_block(struct iwl_trans* trans, uint8_t max_power,
+                                            uint8_t min_power) {
     void* cpu_addr = NULL;
     dma_addr_t phys = 0;
     uint32_t size = 0;
@@ -614,8 +615,8 @@ static void iwl_pcie_load_firmware_chunk_fh(struct iwl_trans* trans, uint32_t ds
                     FH_TCSR_TX_CONFIG_REG_VAL_CIRQ_HOST_ENDTFD);
 }
 
-static int iwl_pcie_load_firmware_chunk(struct iwl_trans* trans, uint32_t dst_addr, dma_addr_t phy_addr,
-                                        uint32_t byte_cnt) {
+static int iwl_pcie_load_firmware_chunk(struct iwl_trans* trans, uint32_t dst_addr,
+                                        dma_addr_t phy_addr, uint32_t byte_cnt) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     unsigned long flags;
     int ret;
@@ -2089,7 +2090,8 @@ static int iwl_trans_pcie_wait_txqs_empty(struct iwl_trans* trans, uint32_t txq_
     return ret;
 }
 
-static void iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask, uint32_t value) {
+static void iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask,
+                                         uint32_t value) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     unsigned long flags;
 
@@ -2167,29 +2169,29 @@ static const char* get_csr_string(int cmd) {
 void iwl_pcie_dump_csr(struct iwl_trans* trans) {
     int i;
     static const uint32_t csr_tbl[] = {CSR_HW_IF_CONFIG_REG,
-                                  CSR_INT_COALESCING,
-                                  CSR_INT,
-                                  CSR_INT_MASK,
-                                  CSR_FH_INT_STATUS,
-                                  CSR_GPIO_IN,
-                                  CSR_RESET,
-                                  CSR_GP_CNTRL,
-                                  CSR_HW_REV,
-                                  CSR_EEPROM_REG,
-                                  CSR_EEPROM_GP,
-                                  CSR_OTP_GP_REG,
-                                  CSR_GIO_REG,
-                                  CSR_GP_UCODE_REG,
-                                  CSR_GP_DRIVER_REG,
-                                  CSR_UCODE_DRV_GP1,
-                                  CSR_UCODE_DRV_GP2,
-                                  CSR_LED_REG,
-                                  CSR_DRAM_INT_TBL_REG,
-                                  CSR_GIO_CHICKEN_BITS,
-                                  CSR_ANA_PLL_CFG,
-                                  CSR_MONITOR_STATUS_REG,
-                                  CSR_HW_REV_WA_REG,
-                                  CSR_DBG_HPET_MEM_REG};
+                                       CSR_INT_COALESCING,
+                                       CSR_INT,
+                                       CSR_INT_MASK,
+                                       CSR_FH_INT_STATUS,
+                                       CSR_GPIO_IN,
+                                       CSR_RESET,
+                                       CSR_GP_CNTRL,
+                                       CSR_HW_REV,
+                                       CSR_EEPROM_REG,
+                                       CSR_EEPROM_GP,
+                                       CSR_OTP_GP_REG,
+                                       CSR_GIO_REG,
+                                       CSR_GP_UCODE_REG,
+                                       CSR_GP_DRIVER_REG,
+                                       CSR_UCODE_DRV_GP1,
+                                       CSR_UCODE_DRV_GP2,
+                                       CSR_LED_REG,
+                                       CSR_DRAM_INT_TBL_REG,
+                                       CSR_GIO_CHICKEN_BITS,
+                                       CSR_ANA_PLL_CFG,
+                                       CSR_MONITOR_STATUS_REG,
+                                       CSR_HW_REV_WA_REG,
+                                       CSR_DBG_HPET_MEM_REG};
     IWL_ERR(trans, "CSR values:\n");
     IWL_ERR(trans,
             "(2nd byte of CSR_INT_COALESCING is "
@@ -2569,8 +2571,9 @@ static uint32_t iwl_trans_pcie_get_cmdlen(struct iwl_trans* trans, void* tfd) {
     return cmdlen;
 }
 
-static uint32_t iwl_trans_pcie_dump_rbs(struct iwl_trans* trans, struct iwl_fw_error_dump_data** data,
-                                   int allocated_rb_nums) {
+static uint32_t iwl_trans_pcie_dump_rbs(struct iwl_trans* trans,
+                                        struct iwl_fw_error_dump_data** data,
+                                        int allocated_rb_nums) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     int max_len = PAGE_SIZE << trans_pcie->rx_page_order;
     /* Dump RBs is supported only for pre-9000 devices (1 queue) */
@@ -2606,7 +2609,8 @@ static uint32_t iwl_trans_pcie_dump_rbs(struct iwl_trans* trans, struct iwl_fw_e
 }
 #define IWL_CSR_TO_DUMP (0x250)
 
-static uint32_t iwl_trans_pcie_dump_csr(struct iwl_trans* trans, struct iwl_fw_error_dump_data** data) {
+static uint32_t iwl_trans_pcie_dump_csr(struct iwl_trans* trans,
+                                        struct iwl_fw_error_dump_data** data) {
     uint32_t csr_len = sizeof(**data) + IWL_CSR_TO_DUMP;
     __le32* val;
     int i;
@@ -2625,7 +2629,7 @@ static uint32_t iwl_trans_pcie_dump_csr(struct iwl_trans* trans, struct iwl_fw_e
 }
 
 static uint32_t iwl_trans_pcie_fh_regs_dump(struct iwl_trans* trans,
-                                       struct iwl_fw_error_dump_data** data) {
+                                            struct iwl_fw_error_dump_data** data) {
     uint32_t fh_regs_len = FH_MEM_UPPER_BOUND - FH_MEM_LOWER_BOUND;
     unsigned long flags;
     __le32* val;
@@ -2654,8 +2658,8 @@ static uint32_t iwl_trans_pcie_fh_regs_dump(struct iwl_trans* trans,
 }
 
 static uint32_t iwl_trans_pci_dump_marbh_monitor(struct iwl_trans* trans,
-                                            struct iwl_fw_error_dump_fw_mon* fw_mon_data,
-                                            uint32_t monitor_len) {
+                                                 struct iwl_fw_error_dump_fw_mon* fw_mon_data,
+                                                 uint32_t monitor_len) {
     uint32_t buf_size_in_dwords = (monitor_len >> 2);
     uint32_t* buffer = (uint32_t*)fw_mon_data->data;
     unsigned long flags;
@@ -2698,7 +2702,8 @@ static void iwl_trans_pcie_dump_pointers(struct iwl_trans* trans,
 }
 
 static uint32_t iwl_trans_pcie_dump_monitor(struct iwl_trans* trans,
-                                       struct iwl_fw_error_dump_data** data, uint32_t monitor_len) {
+                                            struct iwl_fw_error_dump_data** data,
+                                            uint32_t monitor_len) {
     uint32_t len = 0;
 
     if ((trans->num_blocks && trans->cfg->device_family == IWL_DEVICE_FAMILY_7000) ||

@@ -386,7 +386,8 @@ static INLINE U08 rsMngGetDualAntMsk(void) {
     return TLC_MNG_CHAIN_A_MSK | TLC_MNG_CHAIN_B_MSK;
 }
 
-static INLINE U08 _rsMngGetSingleAntMsk(U08 chainsEnabled, uint8_t non_shared_ant, uint8_t valid_tx_ant) {
+static INLINE U08 _rsMngGetSingleAntMsk(U08 chainsEnabled, uint8_t non_shared_ant,
+                                        uint8_t valid_tx_ant) {
     BUILD_BUG_ON(TLC_MNG_CHAIN_A_MSK != ANT_A);
     BUILD_BUG_ON(TLC_MNG_CHAIN_B_MSK != ANT_B);
     // Since TLC offload only supports 2 chains, if the non-shared antenna isn't enabled,

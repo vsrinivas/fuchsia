@@ -249,8 +249,8 @@ static void iwl_pcie_restock_bd(struct iwl_trans* trans, struct iwl_rxq* rxq,
         bd[rxq->write] = cpu_to_le64(rxb->page_dma | rxb->vid);
     }
 
-    IWL_DEBUG_RX(trans, "Assigned virtual RB ID %u to queue %d index %d\n", (uint32_t)rxb->vid, rxq->id,
-                 rxq->write);
+    IWL_DEBUG_RX(trans, "Assigned virtual RB ID %u to queue %d index %d\n", (uint32_t)rxb->vid,
+                 rxq->id, rxq->write);
 }
 
 /*

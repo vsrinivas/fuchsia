@@ -113,7 +113,8 @@ out:
     if (num_active_macs == data->num_active_macs) { mvmvif->pct_quota = 0; }
 }
 
-static uint32_t iwl_mvm_next_quota(struct iwl_mvm* mvm, uint32_t usage, uint32_t alloc, uint32_t unused, uint32_t n_vifs) {
+static uint32_t iwl_mvm_next_quota(struct iwl_mvm* mvm, uint32_t usage, uint32_t alloc,
+                                   uint32_t unused, uint32_t n_vifs) {
     uint32_t result;
     uint32_t m;
 
@@ -299,7 +300,8 @@ enum iwl_mvm_quota_result iwl_mvm_calculate_advanced_quotas(struct iwl_mvm* mvm,
     for (i = 0; i < data.num_active_macs; i++) {
         struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(data.vifs[i]);
 
-        if (abs((int32_t)new_quota[mvmvif->id] - (int32_t)mvmvif->pct_quota) > IWL_MVM_QUOTA_THRESHOLD) {
+        if (abs((int32_t)new_quota[mvmvif->id] - (int32_t)mvmvif->pct_quota) >
+            IWL_MVM_QUOTA_THRESHOLD) {
             significant_change = true;
             mvmvif->pct_quota = new_quota[mvmvif->id];
         }

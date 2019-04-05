@@ -33,8 +33,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_stats_h__
-#define __iwl_fw_api_stats_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_STATS_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_STATS_H_
 #include "mac.h"
 
 struct mvm_statistics_dbg {
@@ -437,4 +437,4 @@ struct iwl_statistics_cmd {
     __le32 flags;
 } __packed; /* STATISTICS_CMD_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_stats_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_STATS_H_

@@ -33,8 +33,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_coex_h__
-#define __iwl_fw_api_coex_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_COEX_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_COEX_H_
 
 #include <linux/bitops.h>
 #include <linux/types.h>
@@ -331,4 +331,4 @@ struct iwl_lte_coex_statistic_ntfy {
 } __packed; /* LTE_COEX_STATISTIC_NTFY_API_S_VER_1 */
 #endif      /* CPTCFG_IWLWIFI_LTE_COEX */
 
-#endif /* __iwl_fw_api_coex_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_COEX_H_

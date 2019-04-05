@@ -32,8 +32,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __IWL_TM_GNL_H__
-#define __IWL_TM_GNL_H__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TM_GNL_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TM_GNL_H_
 
 #include <linux/types.h>
 
@@ -79,4 +79,4 @@ void iwl_tm_gnl_remove(struct iwl_trans* trans);
 int iwl_tm_gnl_init(void);
 int iwl_tm_gnl_exit(void);
 void iwl_tm_gnl_send_rx(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* rxb);
-#endif
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_TM_GNL_H_

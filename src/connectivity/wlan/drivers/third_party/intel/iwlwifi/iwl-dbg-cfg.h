@@ -32,9 +32,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#if !defined(__IWL_DBG_CFG_H__) || defined(DBG_CFG_REINCLUDE)
-#undef __IWL_DBG_CFG_H__ /* avoid warning */
-#define __IWL_DBG_CFG_H__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DBG_CFG_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DBG_CFG_H_
+
 /*
  * with DBG_CFG_REINCLUDE set this file should contain nothing
  * but IWL_DBG_CFG() macro invocations so it can be used in
@@ -289,4 +289,4 @@ void iwl_dbg_cfg_free(struct iwl_dbg_cfg* dbgcfg);
 void iwl_dbg_cfg_load_ini(struct device* dev, struct iwl_dbg_cfg* dbgcfg);
 #endif /* DBG_CFG_REINCLUDE */
 
-#endif /* __IWL_DBG_CFG_H__ || DBG_CFG_REINCLUDE */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DBG_CFG_H_

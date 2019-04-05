@@ -612,7 +612,7 @@ uint8_t iwl_mvm_bt_coex_get_single_ant_msk(struct iwl_mvm* mvm, uint8_t enabled_
 }
 
 uint8_t iwl_mvm_bt_coex_tx_prio(struct iwl_mvm* mvm, struct ieee80211_hdr* hdr,
-                           struct ieee80211_tx_info* info, uint8_t ac) {
+                                struct ieee80211_tx_info* info, uint8_t ac) {
     __le16 fc = hdr->frame_control;
     bool mplut_enabled = iwl_mvm_is_mplut_supported(mvm);
 

@@ -32,8 +32,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_rs_h__
-#define __iwl_fw_api_rs_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_RS_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_RS_H_
 
 #include "mac.h"
 
@@ -611,4 +611,4 @@ struct iwl_lq_cmd {
     __le32 ss_params;
 }; /* LINK_QUALITY_CMD_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_rs_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_RS_H_

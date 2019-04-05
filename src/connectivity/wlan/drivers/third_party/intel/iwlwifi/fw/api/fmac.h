@@ -32,8 +32,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_fmac_h__
-#define __iwl_fw_api_fmac_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FMAC_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FMAC_H_
 
 #define FMAC_GROUP 0x10
 
@@ -2436,4 +2436,4 @@ struct iwl_fmac_recovery_complete {
     uint8_t reserved[2];
 } __packed;
 
-#endif /* __iwl_fw_api_fmac_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_FMAC_H_

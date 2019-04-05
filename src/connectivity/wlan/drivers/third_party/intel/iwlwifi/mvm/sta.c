@@ -41,9 +41,10 @@
 
 static int iwl_mvm_set_fw_key_idx(struct iwl_mvm* mvm);
 
-static int iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id, struct ieee80211_key_conf* key,
-                                bool mcast, uint32_t tkip_iv32, uint16_t* tkip_p1k, uint32_t cmd_flags,
-                                uint8_t key_offset, bool mfp);
+static int iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
+                                struct ieee80211_key_conf* key, bool mcast, uint32_t tkip_iv32,
+                                uint16_t* tkip_p1k, uint32_t cmd_flags, uint8_t key_offset,
+                                bool mfp);
 
 /*
  * New version of ADD_STA_sta command added new fields at the end of the
@@ -303,8 +304,8 @@ static int iwl_mvm_invalidate_sta_queue(struct iwl_mvm* mvm, int queue,
     return ret;
 }
 
-static int iwl_mvm_disable_txq(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int queue, uint8_t tid,
-                               uint8_t flags) {
+static int iwl_mvm_disable_txq(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int queue,
+                               uint8_t tid, uint8_t flags) {
     struct iwl_scd_txq_cfg_cmd cmd = {
         .scd_queue = queue,
         .action = SCD_CFG_DISABLE_QUEUE,
@@ -634,7 +635,8 @@ out:
     return ret;
 }
 
-static int iwl_mvm_find_free_queue(struct iwl_mvm* mvm, uint8_t sta_id, uint8_t minq, uint8_t maxq) {
+static int iwl_mvm_find_free_queue(struct iwl_mvm* mvm, uint8_t sta_id, uint8_t minq,
+                                   uint8_t maxq) {
     int i;
 
     lockdep_assert_held(&mvm->mutex);
@@ -651,7 +653,8 @@ static int iwl_mvm_find_free_queue(struct iwl_mvm* mvm, uint8_t sta_id, uint8_t 
     return -ENOSPC;
 }
 
-static int iwl_mvm_tvqm_enable_txq(struct iwl_mvm* mvm, uint8_t sta_id, uint8_t tid, unsigned int timeout) {
+static int iwl_mvm_tvqm_enable_txq(struct iwl_mvm* mvm, uint8_t sta_id, uint8_t tid,
+                                   unsigned int timeout) {
     int queue, size = IWL_DEFAULT_QUEUE_SIZE;
 
     if (tid == IWL_MAX_TID_COUNT) {
@@ -739,8 +742,9 @@ static bool iwl_mvm_update_txq_mapping(struct iwl_mvm* mvm, struct ieee80211_sta
     return enable_queue;
 }
 
-static bool iwl_mvm_enable_txq(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int queue, uint16_t ssn,
-                               const struct iwl_trans_txq_scd_cfg* cfg, unsigned int wdg_timeout) {
+static bool iwl_mvm_enable_txq(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int queue,
+                               uint16_t ssn, const struct iwl_trans_txq_scd_cfg* cfg,
+                               unsigned int wdg_timeout) {
     struct iwl_scd_txq_cfg_cmd cmd = {
         .scd_queue = queue,
         .action = SCD_CFG_ENABLE_QUEUE,
@@ -1048,7 +1052,8 @@ static int iwl_mvm_inactivity_check(struct iwl_mvm* mvm, uint8_t alloc_for_sta) 
     return free_queue;
 }
 
-static int iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct ieee80211_sta* sta, uint8_t ac, int tid) {
+static int iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct ieee80211_sta* sta, uint8_t ac,
+                                   int tid) {
     struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
     struct iwl_trans_txq_scd_cfg cfg = {
         .fifo = iwl_mvm_mac_ac_to_tx_fifo(mvm, ac),
@@ -1703,7 +1708,8 @@ void iwl_mvm_dealloc_int_sta(struct iwl_mvm* mvm, struct iwl_mvm_int_sta* sta) {
     sta->sta_id = IWL_MVM_INVALID_STA;
 }
 
-static void iwl_mvm_enable_aux_snif_queue(struct iwl_mvm* mvm, uint16_t* queue, uint8_t sta_id, uint8_t fifo) {
+static void iwl_mvm_enable_aux_snif_queue(struct iwl_mvm* mvm, uint16_t* queue, uint8_t sta_id,
+                                          uint8_t fifo) {
     unsigned int wdg_timeout = iwlmvm_mod_params.tfd_q_hang_detect
                                    ? mvm->cfg->base_params->wd_timeout
                                    : IWL_WATCHDOG_DISABLED;
@@ -2149,8 +2155,8 @@ static void iwl_mvm_init_reorder_buffer(struct iwl_mvm* mvm, struct iwl_mvm_baid
     }
 }
 
-int iwl_mvm_sta_rx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, uint16_t ssn, bool start,
-                       uint16_t buf_size, uint16_t timeout) {
+int iwl_mvm_sta_rx_agg(struct iwl_mvm* mvm, struct ieee80211_sta* sta, int tid, uint16_t ssn,
+                       bool start, uint16_t buf_size, uint16_t timeout) {
     struct iwl_mvm_sta* mvm_sta = iwl_mvm_sta_from_mac80211(sta);
     struct iwl_mvm_add_sta_cmd cmd = {};
     struct iwl_mvm_baid_data* baid_data = NULL;
@@ -2445,7 +2451,8 @@ out:
 }
 
 int iwl_mvm_sta_tx_agg_oper(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                            struct ieee80211_sta* sta, uint16_t tid, uint16_t buf_size, bool amsdu) {
+                            struct ieee80211_sta* sta, uint16_t tid, uint16_t buf_size,
+                            bool amsdu) {
     struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
     struct iwl_mvm_tid_data* tid_data = &mvmsta->tid_data[tid];
     unsigned int wdg_timeout = iwl_mvm_get_wd_timeout(mvm, vif, sta->tdls, false);
@@ -2740,9 +2747,10 @@ static struct iwl_mvm_sta* iwl_mvm_get_key_sta(struct iwl_mvm* mvm, struct ieee8
     return NULL;
 }
 
-static int iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id, struct ieee80211_key_conf* key,
-                                bool mcast, uint32_t tkip_iv32, uint16_t* tkip_p1k, uint32_t cmd_flags,
-                                uint8_t key_offset, bool mfp) {
+static int iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id,
+                                struct ieee80211_key_conf* key, bool mcast, uint32_t tkip_iv32,
+                                uint16_t* tkip_p1k, uint32_t cmd_flags, uint8_t key_offset,
+                                bool mfp) {
     union {
         struct iwl_mvm_add_sta_key_cmd_v1 cmd_v1;
         struct iwl_mvm_add_sta_key_cmd cmd;
@@ -2839,8 +2847,8 @@ static int iwl_mvm_send_sta_key(struct iwl_mvm* mvm, uint32_t sta_id, struct iee
     return ret;
 }
 
-static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, struct ieee80211_key_conf* keyconf, uint8_t sta_id,
-                                 bool remove_key) {
+static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, struct ieee80211_key_conf* keyconf,
+                                 uint8_t sta_id, bool remove_key) {
     struct iwl_mvm_mgmt_mcast_key_cmd igtk_cmd = {};
 
     /* verify the key details match the required command's expectations */
@@ -2883,9 +2891,9 @@ static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, struct ieee80211_key_conf*
         }
         ieee80211_get_key_rx_seq(keyconf, 0, &seq);
         pn = seq.aes_cmac.pn;
-        igtk_cmd.receive_seq_cnt =
-            cpu_to_le64(((uint64_t)pn[5] << 0) | ((uint64_t)pn[4] << 8) | ((uint64_t)pn[3] << 16) |
-                        ((uint64_t)pn[2] << 24) | ((uint64_t)pn[1] << 32) | ((uint64_t)pn[0] << 40));
+        igtk_cmd.receive_seq_cnt = cpu_to_le64(((uint64_t)pn[5] << 0) | ((uint64_t)pn[4] << 8) |
+                                               ((uint64_t)pn[3] << 16) | ((uint64_t)pn[2] << 24) |
+                                               ((uint64_t)pn[1] << 32) | ((uint64_t)pn[0] << 40));
     }
 
     IWL_DEBUG_INFO(mvm, "%s igtk for sta %u\n", remove_key ? "removing" : "installing",
@@ -2905,7 +2913,7 @@ static int iwl_mvm_send_sta_igtk(struct iwl_mvm* mvm, struct ieee80211_key_conf*
 }
 
 static inline uint8_t* iwl_mvm_get_mac_addr(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
-                                       struct ieee80211_sta* sta) {
+                                            struct ieee80211_sta* sta) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
     if (sta) { return sta->addr; }
@@ -3188,8 +3196,8 @@ void iwl_mvm_sta_modify_ps_wake(struct iwl_mvm* mvm, struct ieee80211_sta* sta) 
 }
 
 void iwl_mvm_sta_modify_sleep_tx_count(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
-                                       enum ieee80211_frame_release_type reason, uint16_t cnt, uint16_t tids,
-                                       bool more_data, bool single_sta_queue) {
+                                       enum ieee80211_frame_release_type reason, uint16_t cnt,
+                                       uint16_t tids, bool more_data, bool single_sta_queue) {
     struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
     struct iwl_mvm_add_sta_cmd cmd = {
         .add_modify = STA_MODE_MODIFY,

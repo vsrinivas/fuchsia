@@ -1122,7 +1122,7 @@ static inline int iwl_trans_write_mem(struct iwl_trans* trans, uint32_t addr,
 }
 
 static inline uint32_t iwl_trans_write_mem32(struct iwl_trans* trans, uint32_t addr,
-                                        uint32_t val) {
+        uint32_t val) {
     return iwl_trans_write_mem(trans, addr, &val, 1);
 }
 

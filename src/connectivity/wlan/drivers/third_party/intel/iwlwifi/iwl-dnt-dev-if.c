@@ -464,8 +464,8 @@ int iwl_dnt_dev_if_set_log_level(struct iwl_dnt* dnt, struct iwl_trans* trans) {
     return ret;
 }
 
-int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt* dnt, struct iwl_trans* trans, uint8_t* buffer,
-                                         uint32_t buffer_size) {
+int iwl_dnt_dev_if_retrieve_monitor_data(struct iwl_dnt* dnt, struct iwl_trans* trans,
+                                         uint8_t* buffer, uint32_t buffer_size) {
     switch (dnt->cur_mon_type) {
     case DMA:
         return iwl_dnt_dev_if_retrieve_dma_monitor_data(dnt, trans, buffer, buffer_size);

@@ -274,8 +274,8 @@ void iwl_dbg_cfg_load_ini(struct device* dev, struct iwl_dbg_cfg* dbgcfg) {
             l = &iwl_dbg_cfg_loaders[idx];
 
             if (strncmp(l->name, line, strlen(l->name)) == 0 && line[strlen(l->name)] == '=') {
-                l->loader(l->name, line + strlen(l->name) + 1, (void*)((uint8_t*)dbgcfg + l->offset),
-                          l->min, l->max);
+                l->loader(l->name, line + strlen(l->name) + 1,
+                          (void*)((uint8_t*)dbgcfg + l->offset), l->min, l->max);
                 loaded = true;
             }
         }

@@ -31,8 +31,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_scd_h__
-#define __iwl_scd_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_SCD_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_SCD_H_
 
 #include "iwl-io.h"
 #include "iwl-prph.h"
@@ -89,4 +89,4 @@ static inline void iwl_scd_txq_set_inactive(struct iwl_trans* trans, uint16_t tx
                    (0 << SCD_QUEUE_STTS_REG_POS_ACTIVE) | (1 << SCD_QUEUE_STTS_REG_POS_SCD_ACT_EN));
 }
 
-#endif
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_SCD_H_

@@ -34,8 +34,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_commands_h__
-#define __iwl_fw_api_commands_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_COMMANDS_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_COMMANDS_H_
 
 /**
  * enum iwl_mvm_command_groups - command groups for the firmware
@@ -692,4 +692,4 @@ enum iwl_xvt_subcmd_ids {
     IQ_CALIB_CONFIG_NOTIF = 0xFF,
 };
 
-#endif /* __iwl_fw_api_commands_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_COMMANDS_H_

@@ -81,7 +81,8 @@ int iwl_mvm_send_cmd(struct iwl_mvm* mvm, struct iwl_host_cmd* cmd) {
     return ret;
 }
 
-int iwl_mvm_send_cmd_pdu(struct iwl_mvm* mvm, uint32_t id, uint32_t flags, uint16_t len, const void* data) {
+int iwl_mvm_send_cmd_pdu(struct iwl_mvm* mvm, uint32_t id, uint32_t flags, uint16_t len,
+                         const void* data) {
     struct iwl_host_cmd cmd = {
         .id = id,
         .len =
@@ -309,15 +310,15 @@ struct iwl_error_event_table_v1 {
     uint32_t stack_ptr;      /* stack pointer */
     uint32_t hcmd;           /* last host command header */
     uint32_t isr0;           /* isr status register LMPM_NIC_ISR0:
-                         * rxtx_flag */
+                              * rxtx_flag */
     uint32_t isr1;           /* isr status register LMPM_NIC_ISR1:
-                         * host_flag */
+                              * host_flag */
     uint32_t isr2;           /* isr status register LMPM_NIC_ISR2:
-                         * enc_flag */
+                              * enc_flag */
     uint32_t isr3;           /* isr status register LMPM_NIC_ISR3:
-                         * time_flag */
+                              * time_flag */
     uint32_t isr4;           /* isr status register LMPM_NIC_ISR4:
-                         * wico interrupt */
+                              * wico interrupt */
     uint32_t isr_pref;       /* isr status register LMPM_NIC_PREF_STAT */
     uint32_t wait_event;     /* wait event() caller address */
     uint32_t l2p_control;    /* L2pControlField */
@@ -325,9 +326,9 @@ struct iwl_error_event_table_v1 {
     uint32_t l2p_mhvalid;    /* L2pMhValidBits */
     uint32_t l2p_addr_match; /* L2pAddrMatchStat */
     uint32_t lmpm_pmg_sel;   /* indicate which clocks are turned on
-                         * (LMPM_PMG_SEL) */
+                              * (LMPM_PMG_SEL) */
     uint32_t u_timestamp;    /* indicate when the date and time of the
-                         * compilation */
+                              * compilation */
     uint32_t flow_handler;   /* FH read/write pointers, RX credit */
 } __packed /* LOG_ERROR_TABLE_API_S_VER_1 */;
 
@@ -357,15 +358,15 @@ struct iwl_error_event_table {
     uint32_t stack_ptr;      /* stack pointer */
     uint32_t hcmd;           /* last host command header */
     uint32_t isr0;           /* isr status register LMPM_NIC_ISR0:
-                         * rxtx_flag */
+                              * rxtx_flag */
     uint32_t isr1;           /* isr status register LMPM_NIC_ISR1:
-                         * host_flag */
+                              * host_flag */
     uint32_t isr2;           /* isr status register LMPM_NIC_ISR2:
-                         * enc_flag */
+                              * enc_flag */
     uint32_t isr3;           /* isr status register LMPM_NIC_ISR3:
-                         * time_flag */
+                              * time_flag */
     uint32_t isr4;           /* isr status register LMPM_NIC_ISR4:
-                         * wico interrupt */
+                              * wico interrupt */
     uint32_t last_cmd_id;    /* last HCMD id handled by the firmware */
     uint32_t wait_event;     /* wait event() caller address */
     uint32_t l2p_control;    /* L2pControlField */
@@ -373,9 +374,9 @@ struct iwl_error_event_table {
     uint32_t l2p_mhvalid;    /* L2pMhValidBits */
     uint32_t l2p_addr_match; /* L2pAddrMatchStat */
     uint32_t lmpm_pmg_sel;   /* indicate which clocks are turned on
-                         * (LMPM_PMG_SEL) */
+                              * (LMPM_PMG_SEL) */
     uint32_t u_timestamp;    /* indicate when the date and time of the
-                         * compilation */
+                              * compilation */
     uint32_t flow_handler;   /* FH read/write pointers, RX credit */
 } __packed /* LOG_ERROR_TABLE_API_S_VER_3 */;
 

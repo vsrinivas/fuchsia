@@ -335,7 +335,8 @@ static bool iwl_mvm_is_dup(struct ieee80211_sta* sta, int queue,
     return false;
 }
 
-int iwl_mvm_notify_rx_queue(struct iwl_mvm* mvm, uint32_t rxq_mask, const uint8_t* data, uint32_t count) {
+int iwl_mvm_notify_rx_queue(struct iwl_mvm* mvm, uint32_t rxq_mask, const uint8_t* data,
+                            uint32_t count) {
     struct iwl_rxq_sync_cmd* cmd;
     uint32_t data_size = sizeof(*cmd) + count;
     int ret;
@@ -764,7 +765,8 @@ struct iwl_mvm_rx_phy_data {
 };
 
 static void iwl_mvm_decode_he_mu_ext(struct iwl_mvm* mvm, struct iwl_mvm_rx_phy_data* phy_data,
-                                     uint32_t rate_n_flags, struct ieee80211_radiotap_he_mu* he_mu) {
+                                     uint32_t rate_n_flags,
+                                     struct ieee80211_radiotap_he_mu* he_mu) {
     uint32_t phy_data2 = le32_to_cpu(phy_data->d2);
     uint32_t phy_data3 = le32_to_cpu(phy_data->d3);
     uint16_t phy_data4 = le16_to_cpu(phy_data->d4);
@@ -799,8 +801,8 @@ static void iwl_mvm_decode_he_mu_ext(struct iwl_mvm* mvm, struct iwl_mvm_rx_phy_
     }
 }
 
-static void iwl_mvm_decode_he_phy_ru_alloc(struct iwl_mvm_rx_phy_data* phy_data, uint32_t rate_n_flags,
-                                           struct ieee80211_radiotap_he* he,
+static void iwl_mvm_decode_he_phy_ru_alloc(struct iwl_mvm_rx_phy_data* phy_data,
+                                           uint32_t rate_n_flags, struct ieee80211_radiotap_he* he,
                                            struct ieee80211_radiotap_he_mu* he_mu,
                                            struct ieee80211_rx_status* rx_status) {
     /*
@@ -976,8 +978,8 @@ static void iwl_mvm_decode_he_phy_data(struct iwl_mvm* mvm, struct iwl_mvm_rx_ph
 }
 
 static void iwl_mvm_rx_he(struct iwl_mvm* mvm, struct sk_buff* skb,
-                          struct iwl_mvm_rx_phy_data* phy_data, uint32_t rate_n_flags, uint16_t phy_info,
-                          int queue) {
+                          struct iwl_mvm_rx_phy_data* phy_data, uint32_t rate_n_flags,
+                          uint16_t phy_info, int queue) {
     struct ieee80211_rx_status* rx_status = IEEE80211_SKB_RXCB(skb);
     struct ieee80211_radiotap_he* he = NULL;
     struct ieee80211_radiotap_he_mu* he_mu = NULL;
@@ -1308,8 +1310,9 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     if (sta) {
         struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
         struct ieee80211_vif* tx_blocked_vif = rcu_dereference(mvm->csa_tx_blocked_vif);
-        uint8_t baid = (uint8_t)((le32_to_cpu(desc->reorder_data) & IWL_RX_MPDU_REORDER_BAID_MASK) >>
-                       IWL_RX_MPDU_REORDER_BAID_SHIFT);
+        uint8_t baid =
+            (uint8_t)((le32_to_cpu(desc->reorder_data) & IWL_RX_MPDU_REORDER_BAID_MASK) >>
+                      IWL_RX_MPDU_REORDER_BAID_SHIFT);
         struct iwl_fw_dbg_trigger_tlv* trig;
         struct ieee80211_vif* vif = mvmsta->vif;
 

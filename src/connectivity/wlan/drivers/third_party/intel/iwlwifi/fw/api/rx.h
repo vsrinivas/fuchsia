@@ -34,8 +34,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_rx_h__
-#define __iwl_fw_api_rx_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_RX_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_RX_H_
 
 /* API for pre-9000 hardware */
 
@@ -947,4 +947,4 @@ struct iwl_rfh_queue_config {
     struct iwl_rfh_queue_data data[];
 } __packed; /* RFH_QUEUE_CONFIG_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_rx_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_RX_H_

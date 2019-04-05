@@ -1837,7 +1837,7 @@ static ssize_t iwl_dbgfs_enable_adwell_fine_tune_report_write(struct iwl_mvm* mv
                                                               size_t count, loff_t* ppos) {
     int ret;
     uint32_t index_and_mask = DHC_AUTO_UMAC_ADAPTIVE_DWELL_SCAN_FINE_TUNE_ENABLE_REPORT |
-                         DHC_TABLE_AUTOMATION | DHC_TARGET_UMAC;
+                              DHC_TABLE_AUTOMATION | DHC_TARGET_UMAC;
 
     ret = iwl_dbgfs_send_dhc(mvm, buf, index_and_mask);
 

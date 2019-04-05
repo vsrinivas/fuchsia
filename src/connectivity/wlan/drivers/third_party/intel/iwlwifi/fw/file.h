@@ -46,7 +46,7 @@ struct iwl_ucode_header {
             __le32 init_size;      /* bytes of init code */
             __le32 init_data_size; /* bytes of init data */
             __le32 boot_size;      /* bytes of bootstrap code */
-            uint8_t data[0];            /* in same order as sizes */
+            uint8_t data[0];       /* in same order as sizes */
         } v1;
         struct {
             __le32 build;          /* build number */
@@ -55,7 +55,7 @@ struct iwl_ucode_header {
             __le32 init_size;      /* bytes of init code */
             __le32 init_data_size; /* bytes of init data */
             __le32 boot_size;      /* bytes of bootstrap code */
-            uint8_t data[0];            /* in same order as sizes */
+            uint8_t data[0];       /* in same order as sizes */
         } v2;
     } u;
 };

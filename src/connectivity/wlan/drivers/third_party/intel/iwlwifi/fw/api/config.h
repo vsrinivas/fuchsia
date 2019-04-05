@@ -34,8 +34,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_config_h__
-#define __iwl_fw_api_config_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CONFIG_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CONFIG_H_
 
 /*
  * struct iwl_dqa_enable_cmd
@@ -144,4 +144,4 @@ struct iwl_dc2dc_config_resp {
     __le32 dc2dc_freq_tune1;
 } __packed; /* DC2DC_CONFIG_RESP_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_config_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_CONFIG_H_

@@ -666,7 +666,8 @@ static int iwl_mvm_mac_ctxt_cmd_listener(struct iwl_mvm* mvm, struct ieee80211_v
     return iwl_mvm_mac_ctxt_send_cmd(mvm, &cmd);
 }
 
-static int iwl_mvm_mac_ctxt_cmd_ibss(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t action) {
+static int iwl_mvm_mac_ctxt_cmd_ibss(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                                     uint32_t action) {
     struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
     struct iwl_mac_ctx_cmd cmd = {};
 
@@ -763,7 +764,7 @@ static uint32_t iwl_mvm_find_ie_offset(uint8_t* beacon, uint8_t eid, uint32_t fr
 }
 
 static uint8_t iwl_mvm_mac_ctxt_get_lowest_rate(struct ieee80211_tx_info* info,
-                                           struct ieee80211_vif* vif) {
+                                                struct ieee80211_vif* vif) {
     uint8_t rate;
 
     if (info->band == NL80211_BAND_5GHZ || vif->p2p) {
@@ -1013,7 +1014,8 @@ static void iwl_mvm_mac_ctxt_cmd_fill_ap(struct iwl_mvm* mvm, struct ieee80211_v
     ctxt_ap->beacon_template = cpu_to_le32(mvmvif->id);
 }
 
-static int iwl_mvm_mac_ctxt_cmd_ap(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t action) {
+static int iwl_mvm_mac_ctxt_cmd_ap(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                                   uint32_t action) {
     struct iwl_mac_ctx_cmd cmd = {};
 
     WARN_ON(vif->type != NL80211_IFTYPE_AP || vif->p2p);
@@ -1027,7 +1029,8 @@ static int iwl_mvm_mac_ctxt_cmd_ap(struct iwl_mvm* mvm, struct ieee80211_vif* vi
     return iwl_mvm_mac_ctxt_send_cmd(mvm, &cmd);
 }
 
-static int iwl_mvm_mac_ctxt_cmd_go(struct iwl_mvm* mvm, struct ieee80211_vif* vif, uint32_t action) {
+static int iwl_mvm_mac_ctxt_cmd_go(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
+                                   uint32_t action) {
     struct iwl_mac_ctx_cmd cmd = {};
     struct ieee80211_p2p_noa_attr* noa = &vif->bss_conf.p2p_noa_attr;
 
@@ -1153,7 +1156,8 @@ static void iwl_mvm_csa_count_down(struct iwl_mvm* mvm, struct ieee80211_vif* cs
 
         iwl_mvm_mac_ctxt_beacon_changed(mvm, csa_vif);
         if (csa_vif->p2p && !iwl_mvm_te_scheduled(&mvmvif->time_event_data) && gp2 && tx_success) {
-            uint32_t rel_time = (c + 1) * csa_vif->bss_conf.beacon_int - IWL_MVM_CHANNEL_SWITCH_TIME_GO;
+            uint32_t rel_time =
+                (c + 1) * csa_vif->bss_conf.beacon_int - IWL_MVM_CHANNEL_SWITCH_TIME_GO;
             uint32_t apply_time = gp2 + rel_time * 1024;
 
             iwl_mvm_schedule_csa_period(

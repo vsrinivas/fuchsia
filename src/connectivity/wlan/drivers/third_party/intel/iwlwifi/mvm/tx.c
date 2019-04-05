@@ -44,7 +44,8 @@
 #include "mvm.h"
 #include "sta.h"
 
-static void iwl_mvm_bar_check_trigger(struct iwl_mvm* mvm, const uint8_t* addr, uint16_t tid, uint16_t ssn) {
+static void iwl_mvm_bar_check_trigger(struct iwl_mvm* mvm, const uint8_t* addr, uint16_t tid,
+                                      uint16_t ssn) {
     struct iwl_fw_dbg_trigger_tlv* trig;
     struct iwl_fw_dbg_trigger_ba* ba_trig;
 
@@ -61,7 +62,7 @@ static void iwl_mvm_bar_check_trigger(struct iwl_mvm* mvm, const uint8_t* addr, 
 #define OPT_HDR(type, skb, off) (type*)(skb_network_header(skb) + (off))
 
 static uint16_t iwl_mvm_tx_csum(struct iwl_mvm* mvm, struct sk_buff* skb, struct ieee80211_hdr* hdr,
-                           struct ieee80211_tx_info* info, uint16_t offload_assist) {
+                                struct ieee80211_tx_info* info, uint16_t offload_assist) {
 #if IS_ENABLED(CONFIG_INET)
     uint16_t mh_len = ieee80211_hdrlen(hdr->frame_control);
     uint8_t protocol = 0;
@@ -257,7 +258,7 @@ void iwl_mvm_set_tx_cmd(struct iwl_mvm* mvm, struct sk_buff* skb, struct iwl_tx_
 }
 
 static uint32_t iwl_mvm_get_tx_ant(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
-                              struct ieee80211_sta* sta, __le16 fc) {
+                                   struct ieee80211_sta* sta, __le16 fc) {
     if (info->band == NL80211_BAND_2GHZ && !iwl_mvm_bt_coex_is_shared_ant_avail(mvm)) {
         return mvm->cfg->non_shared_ant << RATE_MCS_ANT_POS;
     }
@@ -272,7 +273,7 @@ static uint32_t iwl_mvm_get_tx_ant(struct iwl_mvm* mvm, struct ieee80211_tx_info
 }
 
 static uint32_t iwl_mvm_get_tx_rate(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
-                               struct ieee80211_sta* sta) {
+                                    struct ieee80211_sta* sta) {
     int rate_idx;
     uint8_t rate_plcp;
     uint32_t rate_flags = 0;
@@ -310,7 +311,7 @@ static uint32_t iwl_mvm_get_tx_rate(struct iwl_mvm* mvm, struct ieee80211_tx_inf
 }
 
 static uint32_t iwl_mvm_get_tx_rate_n_flags(struct iwl_mvm* mvm, struct ieee80211_tx_info* info,
-                                       struct ieee80211_sta* sta, __le16 fc) {
+                                            struct ieee80211_sta* sta, __le16 fc) {
     return iwl_mvm_get_tx_rate(mvm, info, sta) | iwl_mvm_get_tx_ant(mvm, info, sta, fc);
 }
 
@@ -600,7 +601,7 @@ static void iwl_mvm_probe_resp_set_noa(struct iwl_mvm* mvm, struct sk_buff* skb)
     if (!resp_data->notif.noa_active) { goto out; }
 
     ie = (uint8_t*)cfg80211_find_ie_match(WLAN_EID_VENDOR_SPECIFIC, mgmt->u.probe_resp.variable,
-                                     skb->len - base_len, match, 4, 2);
+                                          skb->len - base_len, match, 4, 2);
     if (!ie) {
         IWL_DEBUG_TX(mvm, "probe resp doesn't have P2P IE\n");
         goto out;

@@ -31,8 +31,8 @@
  *
  *****************************************************************************/
 
-#ifndef __IWL_PHYDB_H__
-#define __IWL_PHYDB_H__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PHY_DB_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PHY_DB_H_
 
 #include <linux/types.h>
 
@@ -46,10 +46,10 @@ void iwl_phy_db_free(struct iwl_phy_db* phy_db);
 int iwl_phy_db_set_section(struct iwl_phy_db* phy_db, struct iwl_rx_packet* pkt);
 
 #if IS_ENABLED(CPTCFG_IWLXVT)
-int iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, uint32_t type, uint8_t** data, uint16_t* size,
-                                uint16_t ch_id);
+int iwl_phy_db_get_section_data(struct iwl_phy_db* phy_db, uint32_t type, uint8_t** data,
+                                uint16_t* size, uint16_t ch_id);
 #endif
 
 int iwl_send_phy_db_data(struct iwl_phy_db* phy_db);
 
-#endif /* __IWL_PHYDB_H__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_PHY_DB_H_

@@ -33,8 +33,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_phy_h__
-#define __iwl_fw_api_phy_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_PHY_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_PHY_H_
 
 /**
  * enum iwl_phy_ops_subcmd_ids - PHY group commands
@@ -228,4 +228,4 @@ struct temp_report_ths_cmd {
     __le16 thresholds[IWL_MAX_DTS_TRIPS];
 } __packed; /* GRP_PHY_TEMP_REPORTING_THRESHOLDS_CMD */
 
-#endif /* __iwl_fw_api_phy_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_PHY_H_

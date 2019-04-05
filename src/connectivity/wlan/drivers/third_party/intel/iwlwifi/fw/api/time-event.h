@@ -33,8 +33,8 @@
  *
  *****************************************************************************/
 
-#ifndef __iwl_fw_api_time_event_h__
-#define __iwl_fw_api_time_event_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TIME_EVENT_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TIME_EVENT_H_
 
 #include "fw/api/phy-ctxt.h"
 
@@ -356,4 +356,4 @@ struct iwl_hs20_roc_res {
     __le32 status;
 } __packed; /* HOT_SPOT_RSP_API_S_VER_1 */
 
-#endif /* __iwl_fw_api_time_event_h__ */
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_FW_API_TIME_EVENT_H_

@@ -754,7 +754,7 @@ static inline int iwl_pcie_get_num_sections(const struct fw_img* fw, int start) 
     int i = 0;
 
     while (start < fw->num_sec && fw->sec[start].offset != CPU1_CPU2_SEPARATOR_SECTION &&
-           fw->sec[start].offset != PAGING_SEPARATOR_SECTION) {
+            fw->sec[start].offset != PAGING_SEPARATOR_SECTION) {
         start++;
         i++;
     }
@@ -763,9 +763,11 @@ static inline int iwl_pcie_get_num_sections(const struct fw_img* fw, int start) 
 }
 
 static inline int iwl_pcie_ctxt_info_alloc_dma(struct iwl_trans* trans, const struct fw_desc* sec,
-                                               struct iwl_dram_data* dram) {
+        struct iwl_dram_data* dram) {
     dram->block = dma_alloc_coherent(trans->dev, sec->len, &dram->physical, GFP_KERNEL);
-    if (!dram->block) { return -ENOMEM; }
+    if (!dram->block) {
+        return -ENOMEM;
+    }
 
     dram->size = sec->len;
     memcpy(dram->block, sec->data, sec->len);
@@ -861,7 +863,9 @@ static inline uint16_t iwl_pcie_get_cmd_index(const struct iwl_txq* q, uint32_t 
 static inline void* iwl_pcie_get_tfd(struct iwl_trans* trans, struct iwl_txq* txq, int idx) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 
-    if (trans->cfg->use_tfh) { idx = iwl_pcie_get_cmd_index(txq, idx); }
+    if (trans->cfg->use_tfh) {
+        idx = iwl_pcie_get_cmd_index(txq, idx);
+    }
 
     return txq->tfds + trans_pcie->tfd_size * idx;
 }
@@ -870,13 +874,19 @@ static inline const char* queue_name(struct device* dev, struct iwl_trans_pcie* 
     if (trans_p->shared_vec_mask) {
         int vec = trans_p->shared_vec_mask & IWL_SHARED_IRQ_FIRST_RSS ? 1 : 0;
 
-        if (i == 0) { return DRV_NAME ": shared IRQ"; }
+        if (i == 0) {
+            return DRV_NAME ": shared IRQ";
+        }
 
         return devm_kasprintf(dev, GFP_KERNEL, DRV_NAME ": queue %d", i + vec);
     }
-    if (i == 0) { return DRV_NAME ": default queue"; }
+    if (i == 0) {
+        return DRV_NAME ": default queue";
+    }
 
-    if (i == trans_p->alloc_vecs - 1) { return DRV_NAME ": exception"; }
+    if (i == trans_p->alloc_vecs - 1) {
+        return DRV_NAME ": exception";
+    }
 
     return devm_kasprintf(dev, GFP_KERNEL, DRV_NAME ": queue %d", i);
 }
@@ -938,13 +948,15 @@ static inline bool iwl_is_rfkill_set(struct iwl_trans* trans) {
 
     lockdep_assert_held(&trans_pcie->mutex);
 
-    if (trans_pcie->debug_rfkill) { return true; }
+    if (trans_pcie->debug_rfkill) {
+        return true;
+    }
 
     return !(iwl_read32(trans, CSR_GP_CNTRL) & CSR_GP_CNTRL_REG_FLAG_HW_RF_KILL_SW);
 }
 
 static inline void __iwl_trans_pcie_set_bits_mask(struct iwl_trans* trans, uint32_t reg, uint32_t mask,
-                                                  uint32_t value) {
+        uint32_t value) {
     uint32_t v;
 
 #ifdef CPTCFG_IWLWIFI_DEBUG

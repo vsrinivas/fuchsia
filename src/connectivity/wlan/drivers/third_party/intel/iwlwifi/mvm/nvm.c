@@ -57,8 +57,8 @@ enum { READ_NVM_CHUNK_SUCCEED = 0, READ_NVM_CHUNK_NOT_VALID_ADDRESS = 1 };
  * prepare the NVM host command w/ the pointers to the nvm buffer
  * and send it to fw
  */
-static int iwl_nvm_write_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t offset, uint16_t length,
-                               const uint8_t* data) {
+static int iwl_nvm_write_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t offset,
+                               uint16_t length, const uint8_t* data) {
     struct iwl_nvm_access_cmd nvm_access_cmd = {
         .offset = cpu_to_le16(offset),
         .length = cpu_to_le16(length),
@@ -93,7 +93,8 @@ static int iwl_nvm_write_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t o
     return ret;
 }
 
-static int iwl_nvm_read_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t offset, uint16_t length, uint8_t* data) {
+static int iwl_nvm_read_chunk(struct iwl_mvm* mvm, uint16_t section, uint16_t offset,
+                              uint16_t length, uint8_t* data) {
     struct iwl_nvm_access_cmd nvm_access_cmd = {
         .offset = cpu_to_le16(offset),
         .length = cpu_to_le16(length),
@@ -165,7 +166,8 @@ exit:
     return ret;
 }
 
-static int iwl_nvm_write_section(struct iwl_mvm* mvm, uint16_t section, const uint8_t* data, uint16_t length) {
+static int iwl_nvm_write_section(struct iwl_mvm* mvm, uint16_t section, const uint8_t* data,
+                                 uint16_t length) {
     int offset = 0;
 
     /* copy data in chunks of 2k (and remainder if any) */
@@ -194,7 +196,8 @@ static int iwl_nvm_write_section(struct iwl_mvm* mvm, uint16_t section, const ui
  * the uCode fills the response with as much data as we can,
  * without overflowing, so no check is needed.
  */
-static int iwl_nvm_read_section(struct iwl_mvm* mvm, uint16_t section, uint8_t* data, uint32_t size_read) {
+static int iwl_nvm_read_section(struct iwl_mvm* mvm, uint16_t section, uint8_t* data,
+                                uint32_t size_read) {
     uint16_t length, offset = 0;
     int ret;
 

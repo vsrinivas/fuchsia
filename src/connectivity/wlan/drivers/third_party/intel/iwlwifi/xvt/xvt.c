@@ -331,8 +331,8 @@ static void iwl_xvt_stop(struct iwl_op_mode* op_mode) {
     kfree(op_mode);
 }
 
-static void iwl_xvt_reclaim_and_free(struct iwl_xvt* xvt, struct tx_meta_data* tx_data, uint16_t txq_id,
-                                     uint16_t ssn) {
+static void iwl_xvt_reclaim_and_free(struct iwl_xvt* xvt, struct tx_meta_data* tx_data,
+                                     uint16_t txq_id, uint16_t ssn) {
     struct sk_buff_head skbs;
     struct sk_buff* skb;
     struct iwl_xvt_skb_info* skb_info;

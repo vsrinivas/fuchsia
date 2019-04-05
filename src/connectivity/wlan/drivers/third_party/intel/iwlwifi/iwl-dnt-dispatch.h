@@ -30,8 +30,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
-#ifndef __iwl_dnt_dispatch_h__
-#define __iwl_dnt_dispatch_h__
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DNT_DISPATCH_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DNT_DISPATCH_H_
 
 #include "iwl-config.h"
 #include "iwl-debug.h"
@@ -42,7 +42,8 @@
 /**
  * iwl_dnt_dispatch_pull - pulling debug data.
  */
-int iwl_dnt_dispatch_pull(struct iwl_trans* trans, uint8_t* buffer, uint32_t buffer_size, uint32_t input);
+int iwl_dnt_dispatch_pull(struct iwl_trans* trans, uint8_t* buffer, uint32_t buffer_size,
+                          uint32_t input);
 
 int iwl_dnt_dispatch_collect_ucode_message(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* rxb);
 
@@ -51,4 +52,4 @@ void iwl_dnt_dispatch_free(struct iwl_dnt* dnt, struct iwl_trans* trans);
 struct dnt_collect_db* iwl_dnt_dispatch_allocate_collect_db(struct iwl_dnt* dnt);
 
 void iwl_dnt_dispatch_handle_nic_err(struct iwl_trans* trans);
-#endif
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DNT_DISPATCH_H_

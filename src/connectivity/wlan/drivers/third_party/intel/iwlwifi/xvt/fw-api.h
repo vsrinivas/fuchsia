@@ -93,8 +93,8 @@ struct xvt_alive_resp_ver2 {
     __le32 scd_base_ptr; /* SRAM address for SCD */
     __le32 st_fwrd_addr; /* pointer to Store and forward */
     __le32 st_fwrd_size;
-    uint8_t umac_minor;          /* UMAC version: minor */
-    uint8_t umac_major;          /* UMAC version: major */
+    uint8_t umac_minor;     /* UMAC version: minor */
+    uint8_t umac_major;     /* UMAC version: major */
     __le16 umac_id;         /* UMAC version: id */
     __le32 error_info_addr; /* SRAM address for UMAC error log */
     __le32 dbg_print_buff_addr;
