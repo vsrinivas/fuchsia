@@ -4,7 +4,7 @@
 
 library fuchsia.ui.input;
 
-// The service provided by an IME
+/// The service provided by an IME
 [Discoverable]
 protocol ImeService {
     GetInputMethodEditor(KeyboardType keyboard_type,
@@ -17,8 +17,8 @@ protocol ImeService {
     InjectInput(InputEvent event);
 };
 
-// Onscreen keyboard containers connect to this to know when a keyboard
-// should be shown or hidden.
+/// Onscreen keyboard containers connect to this to know when a keyboard
+/// should be shown or hidden.
 [Discoverable]
 protocol ImeVisibilityService {
     -> OnKeyboardVisibilityChanged(bool visible);

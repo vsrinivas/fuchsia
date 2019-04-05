@@ -22,22 +22,22 @@ enum InputMethodAction {
     PREVIOUS = 7;
 };
 
-// The current text, selection, and composing state for editing a run of text.
+/// The current text, selection, and composing state for editing a run of text.
 struct TextInputState {
-    // Current state revision to avoid race conditions.
+    /// Current state revision to avoid race conditions.
     uint32 revision;
 
-    // The current text being edited.
+    /// The current text being edited.
     string text;
 
-    // The range of text that is currently selected.
+    /// The range of text that is currently selected.
     TextSelection selection;
 
-    // The range of text that is still being composed.
+    /// The range of text that is still being composed.
     TextRange composing;
 };
 
-// A interface for interacting with a text input control.
+/// A interface for interacting with a text input control.
 protocol InputMethodEditor {
     SetKeyboardType(KeyboardType keyboard_type);
     SetState(TextInputState state);
@@ -49,7 +49,7 @@ protocol InputMethodEditor {
     Hide();
 };
 
-// An interface to receive information from |TextInputService|.
+/// An interface to receive information from |TextInputService|.
 protocol InputMethodEditorClient {
     DidUpdateState(TextInputState state, InputEvent? event);
     OnAction(InputMethodAction action);
