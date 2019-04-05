@@ -163,7 +163,7 @@ impl Surface {
             self.node.set_translation(width * 0.5, height * 0.5, 0.0);
 
             let material = scenic::Material::new(self.scenic.clone());
-            material.set_texture(&image);
+            material.set_texture(Some(&image));
             self.node.set_material(&material);
         }
         Ok(())

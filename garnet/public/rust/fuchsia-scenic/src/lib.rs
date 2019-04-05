@@ -293,8 +293,8 @@ impl Material {
         self.resource.enqueue(cmd::set_color(self.id(), color));
     }
 
-    pub fn set_texture(&self, image: &Image) {
-        self.resource.enqueue(cmd::set_texture(self.id(), image.id()));
+    pub fn set_texture(&self, texture: Option<&Image>) {
+        self.resource.enqueue(cmd::set_texture(self.id(), texture.map(|t| t.id()).unwrap_or(0)));
     }
 }
 
@@ -596,7 +596,7 @@ impl HostImageCycler {
     }
 
     fn release(&mut self, image: HostImage) {
-        self.content_material.set_texture(&image);
+        self.content_material.set_texture(Some(&image));
         let rectangle = Rectangle::new(
             self.node.resource.session.clone(),
             image.info.width as f32,
