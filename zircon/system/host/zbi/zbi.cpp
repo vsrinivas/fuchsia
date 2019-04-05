@@ -2088,7 +2088,9 @@ private:
 
 constexpr decltype(Item::kItemTypes_) Item::kItemTypes_;
 
-using ItemList = std::vector<ItemPtr>;
+// DirectoryTreeBuilder keeps pointers to elements, so this must be a
+// container with stable element pointers across insertions.
+using ItemList = std::deque<ItemPtr>;
 
 const uint32_t kImageArchUndefined = ZBI_TYPE_DISCARD;
 
