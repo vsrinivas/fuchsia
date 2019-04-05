@@ -74,8 +74,9 @@ SymbolEvalContext::~SymbolEvalContext() = default;
 
 void SymbolEvalContext::GetNamedValue(const Identifier& identifier,
                                       ValueCallback cb) {
-  if (FoundName found = FindName(process_symbols_.get(), block_.get(),
-                                 &symbol_context_, identifier)) {
+  if (FoundName found = FindName(FindNameContext(process_symbols_.get(),
+                                                 symbol_context_, block_.get()),
+                                 identifier)) {
     switch (found.kind()) {
       case FoundName::kVariable:
       case FoundName::kMemberVariable:
@@ -179,8 +180,9 @@ void SymbolEvalContext::DoResolve(FoundName found, ValueCallback cb) const {
 
 FoundName SymbolEvalContext::DoTargetSymbolsNameLookup(
     const Identifier& ident) {
-  return FindName(process_symbols_.get(), block_.get(), &symbol_context_,
-                  ident);
+  return FindName(
+      FindNameContext(process_symbols_.get(), symbol_context_, block_.get()),
+      ident);
 }
 
 }  // namespace zxdb

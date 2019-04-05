@@ -9,7 +9,6 @@
 #include "src/developer/debug/zxdb/expr/find_name.h"
 #include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/expr/resolve_ptr_ref.h"
-#include "src/lib/fxl/strings/string_printf.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
@@ -19,6 +18,7 @@
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/type_utils.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -34,7 +34,8 @@ Err FindMemberWithErr(const Collection* base, const Identifier& identifier,
                identifier.GetFullName().c_str());
   }
 
-  if (FoundName found = FindMember(nullptr, nullptr, base, identifier, nullptr)) {
+  if (FoundName found =
+          FindMember(FindNameContext(), base, identifier, nullptr)) {
     if (found.kind() == FoundName::kMemberVariable) {
       *out = found.member();
       return Err();

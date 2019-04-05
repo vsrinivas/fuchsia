@@ -60,6 +60,7 @@ class ProcessSymbols {
   fxl::WeakPtr<const ProcessSymbols> GetWeakPtr() const;
 
   TargetSymbols* target_symbols() { return target_symbols_; }
+  const TargetSymbols* target_symbols() const { return target_symbols_; }
 
   // Replaces all modules with the given list.
   void SetModules(const std::vector<debug_ipc::Module>& modules);

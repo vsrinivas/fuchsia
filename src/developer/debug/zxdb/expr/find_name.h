@@ -17,7 +17,49 @@ class Location;
 class ModuleSymbols;
 class ProcessSymbols;
 class SymbolContext;
+class TargetSymbols;
 class Variable;
+
+// FindName can search for different levels of things depending on how much
+// context it's given. This class encapsulates all of these variants.
+struct FindNameContext {
+  // No symbol context. This can be useful when searching for names on
+  // structures where there is no environmental state needed.
+  FindNameContext() = default;
+
+  // Search everything given a live context. The current module is extracted
+  // from the given symbol context if possible.
+  //
+  // Note that this tolerates a null ProcessSymbols which sets no symbol
+  // paths. This is useful for some tests.
+  FindNameContext(const ProcessSymbols* ps, const SymbolContext& symbol_context,
+                  const CodeBlock* cb = nullptr);
+
+  // Searches a target's symbols. This is used to search for symbols in a
+  // non-running program.
+  explicit FindNameContext(const TargetSymbols* ts);
+
+  // Together TargetSymbols and ModuleSymbols control what is searched. They
+  // are both optional, producing this behavior:
+  //
+  // - Both TargetSymbols and ModuleSymbols: All modules will be searched with
+  //   the given one searched first. This is to give preference to the current
+  //   module in the case of multiple matches.
+  //
+  // - TargetSymbols but not ModuleSymbols: All modules will be searched in an
+  //   arbitrary order.
+  //
+  // - ModuleSymbols but not TargetSymbols: Only the given module will be
+  //   searched for symbols.
+  //
+  // - Neither TargetSymbols nor ModuleSymbols: No symbol lookups are done.
+  const TargetSymbols* target_symbols = nullptr;
+  const ModuleSymbols* module_symbols = nullptr;
+
+  // If given, local variables, local types, and |this| will be searched.
+  // Otherwise, only global symbols will be searched.
+  const CodeBlock* block = nullptr;
+};
 
 // Main variable and type name finding function. Searches the local, "this",
 // and global scopes for a variable with the given identifier name.
@@ -32,9 +74,7 @@ class Variable;
 // The optional_process_symbols is used to search for global variables and
 // all type names (including local and |this| member types), it can be null in
 // which case only local variables will be searched.
-FoundName FindName(const ProcessSymbols* optional_process_symbols,
-                   const CodeBlock* block,
-                   const SymbolContext* optional_block_symbol_context,
+FoundName FindName(const FindNameContext& context,
                    const Identifier& identifier);
 
 // Type-specific finding -------------------------------------------------------
@@ -60,9 +100,8 @@ FoundName FindLocalVariable(const CodeBlock* block,
 // If the result is a member variable, the optional_object_ptr will be used to
 // construct the FoundName object. It can be null if the caller does not have
 // a variable for the object it's looking up (just doing a type query).
-FoundName FindMember(const ProcessSymbols* optional_process_symbols,
-                     const SymbolContext* optional_block_symbol_context,
-                     const Collection* object, const Identifier& identifier,
+FoundName FindMember(const FindNameContext& context, const Collection* object,
+                     const Identifier& identifier,
                      const Variable* optional_object_ptr);
 
 // Attempts the resolve the given named member variable or type on the "this"
@@ -75,9 +114,7 @@ FoundName FindMember(const ProcessSymbols* optional_process_symbols,
 //
 // The optional symbol context is the symbol context for the current code. it
 // will be used to prioritize symbol searching to the current module if given.
-FoundName FindMemberOnThis(const ProcessSymbols* optional_process_symbols,
-                           const CodeBlock* block,
-                           const SymbolContext* optional_block_symbol_context,
+FoundName FindMemberOnThis(const FindNameContext& context,
                            const Identifier& identifier);
 
 // Attempts to resolve the named variable or type in the global namespace and
@@ -85,9 +122,8 @@ FoundName FindMemberOnThis(const ProcessSymbols* optional_process_symbols,
 //
 // The symbol_context is used to prioritize the current module. It can be null
 // to search in a non-guaranteed order.
-FoundName FindGlobalName(const ProcessSymbols* process_symbols,
+FoundName FindGlobalName(const FindNameContext& context,
                          const Identifier& current_scope,
-                         const SymbolContext* symbol_context,
                          const Identifier& identifier);
 
 // Searches a specific index and current namespace for a global variable or
@@ -107,8 +143,7 @@ FoundName FindGlobalNameInModule(const ModuleSymbols* module_symbols,
 //
 // The symbol_context is used to prioritize the current module. It can be null
 // to search in a non-guaranteed order.
-FoundName FindExactNameInIndex(const ProcessSymbols* process_symbols,
-                               const SymbolContext* symbol_context,
+FoundName FindExactNameInIndex(const FindNameContext& context,
                                const Identifier& identifier);
 
 // Per-module version of FindExactNameInIndex().

@@ -155,6 +155,8 @@ TEST(FindName, FindLocalVariable) {
       MakeVariableForTest("function_local", int32_type, kFunctionBeginAddr,
                           kFunctionEndAddr, var_loc);
   function->set_variables({LazySymbol(var_value), LazySymbol(var_other)});
+  FindNameContext function_context(&setup.process(), symbol_context,
+                                   function.get());
 
   // Inner block.
   uint64_t kBlockBeginAddr = 0x1100;
@@ -171,17 +173,17 @@ TEST(FindName, FindLocalVariable) {
   auto block_other = MakeVariableForTest(
       "block_local", int32_type, kBlockBeginAddr, kBlockEndAddr, var_loc);
   block->set_variables({LazySymbol(block_value), LazySymbol(block_other)});
+  FindNameContext block_context(&setup.process(), symbol_context, block.get());
 
   // Find "value" in the nested block should give the block's one.
   Identifier value_ident(
       ExprToken(ExprTokenType::kName, var_value->GetAssignedName(), 0));
-  FoundName found =
-      FindName(nullptr, block.get(), &symbol_context, value_ident);
+  FoundName found = FindName(block_context, value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_value.get(), found.variable());
 
   // Find "value" in the function block should give the function's one.
-  found = FindName(nullptr, function.get(), &symbol_context, value_ident);
+  found = FindName(function_context, value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(var_value.get(), found.variable());
 
@@ -189,24 +191,23 @@ TEST(FindName, FindLocalVariable) {
   Identifier value_global_ident(Identifier::Component(
       ExprToken(ExprTokenType::kColonColon, "::", 0),
       ExprToken(ExprTokenType::kName, var_value->GetAssignedName(), 0)));
-  found =
-      FindName(nullptr, function.get(), &symbol_context, value_global_ident);
+  found = FindName(function_context, value_global_ident);
   EXPECT_FALSE(found);
 
   // Find "block_local" in the block should be found, but in the function it
   // should not be.
   Identifier block_local_ident(
       ExprToken(ExprTokenType::kName, block_other->GetAssignedName(), 0));
-  found = FindName(nullptr, block.get(), &symbol_context, block_local_ident);
+  found = FindName(block_context, block_local_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(block_other.get(), found.variable());
-  found = FindName(nullptr, function.get(), &symbol_context, block_local_ident);
+  found = FindName(function_context, block_local_ident);
   EXPECT_FALSE(found);
 
   // Finding the other function parameter in the block should work.
   Identifier other_param_ident(
       ExprToken(ExprTokenType::kName, param_other->GetAssignedName(), 0));
-  found = FindName(nullptr, block.get(), &symbol_context, other_param_ident);
+  found = FindName(block_context, other_param_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(param_other.get(), found.variable());
 
@@ -214,14 +215,15 @@ TEST(FindName, FindLocalVariable) {
   // namespace) from within the context of the "ns::function()" function.
   // The namespace of the function should be implicitly picked up.
   Identifier ns_value_ident(ExprToken(ExprTokenType::kName, kNsVarName, 0));
-  found =
-      FindName(&setup.process(), block.get(), &symbol_context, ns_value_ident);
+  found = FindName(block_context, ns_value_ident);
   EXPECT_TRUE(found);
   EXPECT_EQ(ns_value.var.get(), found.variable());
 
   // Loop up the global "ns_value" var with no global symbol context. This
   // should fail and not crash.
-  found = FindName(nullptr, block.get(), &symbol_context, ns_value_ident);
+  FindNameContext block_no_modules_context;
+  block_no_modules_context.block = block.get();
+  found = FindName(block_no_modules_context, ns_value_ident);
   EXPECT_FALSE(found);
 
   // Break reference cycle for test teardown.
@@ -264,27 +266,27 @@ TEST(FindName, FindGlobalName) {
 
   // Searching for "global" in module1's context should give the global in that
   // module.
-  auto found = FindGlobalName(&setup.process(), Identifier(), &symbol_context1,
-                              global_ident);
+  FindNameContext mod1_context(&setup.process(), symbol_context1);
+  auto found = FindGlobalName(mod1_context, Identifier(), global_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global1.var.get(), found.variable());
 
   // Searching for "global" in module2's context should give the global in that
   // module.
-  found = FindGlobalName(&setup.process(), Identifier(), &symbol_context2,
-                         global_ident);
+  FindNameContext mod2_context(&setup.process(), symbol_context2);
+  found = FindGlobalName(mod2_context, Identifier(), global_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(global2.var.get(), found.variable());
 
   // Searching for "var1" in module2's context should still find it even though
   // its in the other module.
-  found = FindGlobalName(&setup.process(), Identifier(), &symbol_context2,
-                         var1_ident);
+  found = FindGlobalName(mod2_context, Identifier(), var1_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(var1.var.get(), found.variable());
 
-  // Searching for "var2" with no context should still find it.
-  found = FindGlobalName(&setup.process(), Identifier(), nullptr, var2_ident);
+  // Searching for "var2" with only target-level symbols should still find it.
+  found = FindGlobalName(FindNameContext(&setup.target()), Identifier(),
+                         var2_ident);
   ASSERT_TRUE(found);
   EXPECT_EQ(var2.var.get(), found.variable());
 }
@@ -380,6 +382,14 @@ TEST(FindName, FindTypeName) {
       AddressRanges(AddressRange(kFunctionBeginAddr, kFunctionEndAddr)));
   function->set_object_pointer(LazySymbol(this_var));
 
+  // This context declares a target and a block but no current module, which
+  // means the block and all modules should be searched with no particular
+  // preference (most other code sets a preference so this tests that less
+  // common case).
+  FindNameContext function_context;
+  function_context.target_symbols = &setup.target();
+  function_context.block = function.get();
+
   // Warning: this moves out the "mod" variable so all variable setup needs to
   // go before here.
   constexpr uint64_t kLoadAddress = 0x1000;
@@ -387,15 +397,13 @@ TEST(FindName, FindTypeName) {
   setup.InjectModule("mod", "1234", kLoadAddress, std::move(mod));
 
   // Look up the global function.
-  FoundName found = FindName(&setup.process(), function.get(), &symbol_context,
-                             global_type_name);
+  FoundName found = FindName(function_context, global_type_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kType, found.kind());
   EXPECT_EQ(global_type.get(), found.type().get());
 
   // Look up the child function by full name.
-  found = FindName(&setup.process(), function.get(), &symbol_context,
-                   full_child_type_name);
+  found = FindName(function_context, full_child_type_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kType, found.kind());
   EXPECT_EQ(child_type.get(), found.type().get());
@@ -403,8 +411,7 @@ TEST(FindName, FindTypeName) {
   // Look up the child function by just the child name. Since the function is
   // a member of GlobalType, ChildType is a member of "this" so it should be
   // found.
-  found = FindName(&setup.process(), function.get(), &symbol_context,
-                   child_type_name);
+  found = FindName(function_context, child_type_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kType, found.kind());
   EXPECT_EQ(child_type.get(), found.type().get());
@@ -435,6 +442,9 @@ TEST(FindName, FindTemplateName) {
   TestIndexedSymbol template_not_indexed(mod.get(), &root, kTemplateNotName,
                                          template_not);
 
+  // Search for names globally within the target.
+  FindNameContext context(&setup.target());
+
   // Warning: this moves out the "mod" variable so all variable setup needs to
   // go before here.
   constexpr uint64_t kLoadAddress = 0x1000;
@@ -443,12 +453,12 @@ TEST(FindName, FindTemplateName) {
 
   // The string "Template" should be identified as one.
   Identifier template_name(ExprToken(ExprTokenType::kName, "Template", 0));
-  auto found = FindName(&setup.process(), nullptr, nullptr, template_name);
+  auto found = FindName(context, template_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kTemplate, found.kind());
 
   // The string "TemplateNot" is a
-  found = FindName(&setup.process(), nullptr, nullptr, template_not_name);
+  found = FindName(context, template_not_name);
   EXPECT_TRUE(found);
   EXPECT_EQ(FoundName::kType, found.kind());
 }

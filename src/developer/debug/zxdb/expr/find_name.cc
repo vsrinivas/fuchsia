@@ -17,6 +17,7 @@
 #include "src/developer/debug/zxdb/symbols/module_symbol_index_node.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
+#include "src/developer/debug/zxdb/symbols/target_symbols.h"
 #include "src/developer/debug/zxdb/symbols/type_utils.h"
 #include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 
@@ -59,51 +60,27 @@ FoundName GetNameFromDieList(
   return FoundName();
 }
 
-// Dispatcher for doing a find operation on each module in a process. This
-// will attempt to prioritize the current module if the symbol context is
-// non-null and will fall back to other modules if there's not a match in the
-// current one.
-//
-// If the symbol context is null, the modules will be iterated in arbitrary
-// order.
+// Dispatcher for doing a find operation on each module in a context. See
+// FindNameContext for how module searching is priorized.
 FoundName FindPerModule(
-    const ProcessSymbols* process_symbols,
-    const SymbolContext* optional_symbol_context,
+    const FindNameContext& context,
     std::function<FoundName(const ModuleSymbols*)> per_module) {
-  std::vector<const LoadedModuleSymbols*> modules =
-      process_symbols->GetLoadedModuleSymbols();
-  if (modules.empty())
-    return FoundName();
+  if (context.module_symbols) {
+    // Search in the current module.
+    if (FoundName found = per_module(context.module_symbols))
+      return found;
+  }
 
-  // When we're given a block to start searching from, always search
-  // that module for symbol matches first. If there are duplicates in other
-  // modules, one normally wants the current one.
-  const LoadedModuleSymbols* current_module = nullptr;
-  if (optional_symbol_context) {
-    // Find the module that corresponds to the symbol context.
-    uint64_t module_load_address =
-        optional_symbol_context->RelativeToAbsolute(0);
-    for (const LoadedModuleSymbols* mod : modules) {
-      if (mod->load_address() == module_load_address) {
-        current_module = mod;
-        break;
+  // Search in all other modules as a fallback, if any.
+  if (context.target_symbols) {
+    for (const ModuleSymbols* m : context.target_symbols->GetModuleSymbols()) {
+      if (m != context.module_symbols) {  // Don't re-search current one.
+        if (FoundName found = per_module(m))
+          return found;
       }
     }
-
-    if (current_module) {
-      // Search the current module.
-      if (FoundName found = per_module(current_module->module_symbols()))
-        return found;
-    }
   }
 
-  // Search all non-current modules.
-  for (const LoadedModuleSymbols* loaded_mod : modules) {
-    if (loaded_mod != current_module) {
-      if (FoundName found = per_module(loaded_mod->module_symbols()))
-        return found;
-    }
-  }
   return FoundName();
 }
 
@@ -153,37 +130,54 @@ FoundName FindPerIndexNode(const ModuleSymbols* module_symbols,
 
 }  // namespace
 
-FoundName FindName(const ProcessSymbols* optional_process_symbols,
-                   const CodeBlock* block,
-                   const SymbolContext* optional_block_symbol_context,
+FindNameContext::FindNameContext(const ProcessSymbols* ps,
+                                 const SymbolContext& symbol_context,
+                                 const CodeBlock* b)
+    : block(b) {
+  if (ps) {
+    target_symbols = ps->target_symbols();
+
+    // Find the module that corresponds to the symbol context.
+    uint64_t module_load_address = symbol_context.RelativeToAbsolute(0);
+    for (const LoadedModuleSymbols* mod : ps->GetLoadedModuleSymbols()) {
+      if (mod->load_address() == module_load_address) {
+        module_symbols = mod->module_symbols();
+        break;
+      }
+    }
+  }
+}
+
+FindNameContext::FindNameContext(const TargetSymbols* ts)
+    : target_symbols(ts) {}
+
+FoundName FindName(const FindNameContext& context,
                    const Identifier& identifier) {
-  if (block && !identifier.InGlobalNamespace()) {
+  if (context.block && !identifier.InGlobalNamespace()) {
     // Search for local variables and function parameters.
-    if (FoundName found = FindLocalVariable(block, identifier))
+    if (FoundName found = FindLocalVariable(context.block, identifier))
       return found;
 
     // Search the "this" object.
-    if (FoundName found =
-            FindMemberOnThis(optional_process_symbols, block,
-                             optional_block_symbol_context, identifier))
+    if (FoundName found = FindMemberOnThis(context, identifier))
       return found;
   }
 
   // Fall back to searching global vars.
-  if (optional_process_symbols) {
+  if (context.module_symbols || context.target_symbols) {
     // Get the scope for the current function. This may fail in which case
     // we'll be left with an empty current scope. This is non-fatal: it just
     // means we won't implicitly search the current namespace and will search
     // only the global one.
     Identifier current_scope;
-    if (const Function* function = block->GetContainingFunction()) {
-      auto [err, func_name] = Identifier::FromString(function->GetFullName());
-      if (!err.has_error())
-        current_scope = func_name.GetScope();
+    if (context.block) {
+      if (const Function* function = context.block->GetContainingFunction()) {
+        auto [err, func_name] = Identifier::FromString(function->GetFullName());
+        if (!err.has_error())
+          current_scope = func_name.GetScope();
+      }
     }
-
-    return FindGlobalName(optional_process_symbols, current_scope,
-                          optional_block_symbol_context, identifier);
+    return FindGlobalName(context, current_scope, identifier);
   }
   return FoundName();
 }
@@ -218,17 +212,16 @@ FoundName FindLocalVariable(const CodeBlock* block,
   return FoundName();
 }
 
-FoundName FindMember(const ProcessSymbols* optional_process_symbols,
-                     const SymbolContext* optional_block_symbol_context,
-                     const Collection* object, const Identifier& identifier,
+FoundName FindMember(const FindNameContext& context, const Collection* object,
+                     const Identifier& identifier,
                      const Variable* optional_object_ptr) {
   // This code will check the object and all base classes.
   FoundName result;
   VisitClassHierarchy(
       object,
-      [optional_process_symbols, optional_block_symbol_context, identifier,
-       optional_object_ptr, &result](const Collection* cur_collection,
-                                     uint64_t cur_offset) -> VisitResult {
+      [&context, identifier, optional_object_ptr, &result](
+          const Collection* cur_collection,
+          uint64_t cur_offset) -> VisitResult {
         // Called for each collection in the hierarchy.
 
         // Data lookup.
@@ -248,18 +241,15 @@ FoundName FindMember(const ProcessSymbols* optional_process_symbols,
           }
         }
 
-        // Type lookup if the caller gave us symbols.
-        if (optional_process_symbols) {
-          auto [err, to_look_up] =
-              Identifier::FromString(cur_collection->GetFullName());
-          if (!err.has_error()) {
-            to_look_up.Append(identifier);
-            if (FoundName found_type = FindExactNameInIndex(
-                    optional_process_symbols, optional_block_symbol_context,
-                    to_look_up)) {
-              result = found_type;
-              return VisitResult::kDone;
-            }
+        // Type lookup (will be a nop-op if the context specifies no symbols).
+        auto [err, to_look_up] =
+            Identifier::FromString(cur_collection->GetFullName());
+        if (!err.has_error()) {
+          to_look_up.Append(identifier);
+          if (FoundName found_type =
+                  FindExactNameInIndex(context, to_look_up)) {
+            result = found_type;
+            return VisitResult::kDone;
           }
         }
 
@@ -268,11 +258,11 @@ FoundName FindMember(const ProcessSymbols* optional_process_symbols,
   return result;
 }
 
-FoundName FindMemberOnThis(const ProcessSymbols* optional_process_symbols,
-                           const CodeBlock* block,
-                           const SymbolContext* optional_block_symbol_context,
+FoundName FindMemberOnThis(const FindNameContext& context,
                            const Identifier& identifier) {
-  const Function* function = block->GetContainingFunction();
+  if (!context.block)
+    return FoundName();  // No current code.
+  const Function* function = context.block->GetContainingFunction();
   if (!function)
     return FoundName();
   const Variable* this_var = function->GetObjectPointerVariable();
@@ -285,22 +275,18 @@ FoundName FindMemberOnThis(const ProcessSymbols* optional_process_symbols,
           .has_error())
     return FoundName();  // Symbols likely corrupt.
 
-  if (FoundName member =
-          FindMember(optional_process_symbols, optional_block_symbol_context,
-                     collection, identifier, this_var))
+  if (FoundName member = FindMember(context, collection, identifier, this_var))
     return member;
   return FoundName();
 }
 
-FoundName FindGlobalName(const ProcessSymbols* process_symbols,
+FoundName FindGlobalName(const FindNameContext& context,
                          const Identifier& current_scope,
-                         const SymbolContext* symbol_context,
                          const Identifier& identifier) {
-  return FindPerModule(process_symbols, symbol_context,
-                       [&current_scope, &identifier](const ModuleSymbols* ms) {
-                         return FindGlobalNameInModule(ms, current_scope,
-                                                       identifier);
-                       });
+  return FindPerModule(
+      context, [&current_scope, &identifier](const ModuleSymbols* ms) {
+        return FindGlobalNameInModule(ms, current_scope, identifier);
+      });
 }
 
 FoundName FindGlobalNameInModule(const ModuleSymbols* module_symbols,
@@ -323,13 +309,11 @@ FoundName FindGlobalNameInModule(const ModuleSymbols* module_symbols,
   return FoundName();
 }
 
-FoundName FindExactNameInIndex(const ProcessSymbols* process_symbols,
-                               const SymbolContext* symbol_context,
+FoundName FindExactNameInIndex(const FindNameContext& context,
                                const Identifier& identifier) {
-  return FindPerModule(process_symbols, symbol_context,
-                       [&identifier](const ModuleSymbols* ms) {
-                         return FindExactNameInModuleIndex(ms, identifier);
-                       });
+  return FindPerModule(context, [&identifier](const ModuleSymbols* ms) {
+    return FindExactNameInModuleIndex(ms, identifier);
+  });
 }
 
 FoundName FindExactNameInModuleIndex(const ModuleSymbols* module_symbols,
