@@ -8,19 +8,18 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#include <string>
-
+#include <fuchsia/developer/tiles/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
-
-#include "fuchsia/developer/tiles/cpp/fidl.h"
-#include "lib/fsl/io/fd.h"
-#include "src/lib/fxl/command_line.h"
-#include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/memory/unique_object.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
-#include "lib/sys/cpp/service_directory.h"
+#include <lib/fsl/io/fd.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <src/lib/files/unique_fd.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/memory/unique_object.h>
+#include <src/lib/fxl/strings/string_number_conversions.h>
+#include <string>
 
 using ControllerPtr = fuchsia::developer::tiles::ControllerSyncPtr;
 
@@ -146,8 +145,8 @@ bool List() {
     return false;
 
   std::vector<uint32_t> keys;
-  std::vector<::std::string> urls;
-  std::vector<::fuchsia::math::SizeF> sizes;
+  std::vector<std::string> urls;
+  std::vector<fuchsia::ui::gfx::vec3> sizes;
   std::vector<bool> focusabilities;
 
   if (tiles->ListTiles(&keys, &urls, &sizes, &focusabilities) != ZX_OK)
@@ -155,8 +154,8 @@ bool List() {
 
   printf("Found %lu tiles:\n", keys.size());
   for (size_t i = 0u; i < keys.size(); ++i) {
-    printf("Tile key %u url %s size %.1fx%.1f%s\n", keys.at(i),
-           (urls.at(i)).c_str(), sizes.at(i).width, sizes.at(i).height,
+    printf("Tile key %u url %s size %.1fx%.1fx%.1f%s\n", keys.at(i),
+           (urls.at(i)).c_str(), sizes.at(i).x, sizes.at(i).y, sizes.at(i).z,
            focusabilities.at(i) ? " (unfocusable)" : "");
   }
   return true;

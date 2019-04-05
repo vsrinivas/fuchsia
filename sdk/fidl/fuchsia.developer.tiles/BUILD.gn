@@ -12,7 +12,7 @@ fidl("fuchsia.developer.tiles") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.gfx",
   ]
 }

@@ -4,56 +4,30 @@
 
 #include "garnet/bin/developer/tiles/tiles.h"
 
-#include <lib/async/default.h>
-#include <lib/fidl/cpp/optional.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/svc/cpp/services.h>
+#include <lib/ui/gfx/cpp/math.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
-#include <lib/zx/eventpair.h>
-#include <src/lib/pkg_url/fuchsia_pkg_url.h>
+#include <src/lib/fxl/logging.h>
 #include <cmath>
 
 constexpr float kTileElevation = 5.f;
 
 namespace tiles {
 
-Tiles::Tiles(sys::ComponentContext* startup_context,
-             fuchsia::ui::views::ViewToken view_token,
-             std::vector<std::string> urls, int border)
-    : startup_context_(startup_context),
-      root_view_listener_binding_(this),
-      root_view_container_listener_binding_(this),
-      session_(scenic::CreateScenicSessionPtrAndListenerRequest(
-          startup_context_->svc()
-              ->Connect<fuchsia::ui::scenic::Scenic>()
-              .get())),
-      root_node_(&session_),
-      background_node_(&session_),
-      container_node_(&session_),
-      launcher_(startup_context_->svc()->Connect<fuchsia::sys::Launcher>()),
-      present_scene_task_([this]() { PresentScene(); }),
+Tiles::Tiles(scenic::ViewContext view_context, std::vector<std::string> urls,
+             int border)
+    : scenic::BaseView(std::move(view_context), "Tiles"),
+      launcher_(startup_context()
+                    ->ConnectToEnvironmentService<fuchsia::sys::Launcher>()),
+      background_node_(session()),
+      container_node_(session()),
       border_(border) {
   // Create a simple background scene.
-  zx::eventpair root_export_token;
-  scenic::Material background_material(&session_);
+  scenic::Material background_material(session());
   background_material.SetColor(0xFF, 0xE4, 0xE1, 0xFF);  // Misty Rose
   background_node_.SetMaterial(background_material);
-  root_node_.BindAsRequest(&root_export_token);
-  root_node_.AddChild(background_node_);
-  root_node_.AddChild(container_node_);
-
-  // Create a View and export our scene from it.
-  auto view_manager =
-      startup_context_->svc()->Connect<fuchsia::ui::viewsv1::ViewManager>();
-  view_manager->CreateView2(root_view_.NewRequest(),
-                            std::move(view_token.value),
-                            root_view_listener_binding_.NewBinding(),
-                            std::move(root_export_token), "Tiles Root");
-
-  // Listen for events from the View.
-  root_view_->GetContainer(root_view_container_.NewRequest());
-  root_view_container_->SetListener(
-      root_view_container_listener_binding_.NewBinding());
+  root_node().AddChild(background_node_);
+  root_node().AddChild(container_node_);
 
   // Add initial tiles.
   for (const auto& url : urls) {
@@ -61,7 +35,7 @@ Tiles::Tiles(sys::ComponentContext* startup_context,
   }
 
   // Make ourselves available as a |fuchsia.developer.TilesController|.
-  startup_context_->outgoing()->AddPublicService(
+  startup_context()->outgoing().AddPublicService(
       tiles_binding_.GetHandler(this));
 }
 
@@ -78,16 +52,15 @@ void Tiles::AddTileFromURL(std::string url, bool allow_focus,
 
   launcher_->CreateComponent(std::move(launch_info), controller.NewRequest());
 
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
-
   // Create a View from the launched component.
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
   auto view_provider =
       services.ConnectToService<fuchsia::ui::app::ViewProvider>();
   view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
-  uint32_t child_key = next_child_view_key_++;
-  AddChildView(child_key, std::move(view_holder_token), url,
-               std::move(controller), allow_focus);
+  uint32_t child_key = ++next_child_view_key_;
+  AddTile(child_key, std::move(view_holder_token), url, std::move(controller),
+          allow_focus);
 
   if (callback)
     callback(child_key);
@@ -99,15 +72,14 @@ void Tiles::AddTileFromViewProvider(
     AddTileFromViewProviderCallback callback) {
   FXL_VLOG(2) << "AddTile " << url;
 
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
-
   // Create a View from the ViewProvider.
+  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
   auto view_provider = provider.Bind();
   view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
 
-  uint32_t child_key = next_child_view_key_++;
-  AddChildView(child_key, std::move(view_holder_token), url,
-               nullptr /* controller */, true /* allow_focus */);
+  uint32_t child_key = ++next_child_view_key_;
+  AddTile(child_key, std::move(view_holder_token), url,
+          nullptr /* controller */, true /* allow_focus */);
 
   if (callback)
     callback(child_key);
@@ -121,175 +93,153 @@ void Tiles::RemoveTile(uint32_t child_key) {
   it->second->host_node.Detach();
   views_.erase(it);
 
-  root_view_container_->RemoveChild2(child_key, zx::eventpair());
+  Layout();
   InvalidateScene();
 }
 
 void Tiles::ListTiles(ListTilesCallback callback) {
   std::vector<uint32_t> child_keys;
   std::vector<std::string> child_urls;
-  std::vector<fuchsia::math::SizeF> child_sizes;
+  std::vector<fuchsia::ui::gfx::vec3> child_sizes;
   std::vector<bool> focusabilities;
 
   for (const auto& it : views_) {
     child_keys.push_back(it.first);
     child_urls.push_back(it.second->url);
-    focusabilities.push_back(it.second->allow_focus);
-    // We may not know every tile's size if we haven't laid everything out yet.
-    if (it.second->view_properties.view_layout != nullptr) {
-      child_sizes.push_back(it.second->view_properties.view_layout->size);
-    } else {
-      child_sizes.push_back(fuchsia::math::SizeF{});
-    }
-  }
+    child_sizes.push_back(it.second->view_properties.bounding_box.max -
+                          it.second->view_properties.bounding_box.min);
+    focusabilities.push_back(it.second->view_properties.focus_change);
+  };
   callback(fidl::VectorPtr<uint32_t>(std::move(child_keys)),
            fidl::VectorPtr<std::string>(std::move(child_urls)),
-           fidl::VectorPtr<fuchsia::math::SizeF>(std::move(child_sizes)),
+           fidl::VectorPtr<fuchsia::ui::gfx::vec3>(std::move(child_sizes)),
            fidl::VectorPtr<bool>(std::move(focusabilities)));
 }
 
 void Tiles::Quit() { exit(0); }
 
-void Tiles::OnPropertiesChanged(fuchsia::ui::viewsv1::ViewProperties properties,
-                                OnPropertiesChangedCallback callback) {
-  size_ = properties.view_layout->size;
-  scenic::Rectangle background_shape(&session_, size_.width, size_.height);
+void Tiles::OnScenicError(std::string error) {
+  FXL_LOG(ERROR) << "Scenic Error " << error;
+}
+
+void Tiles::OnPropertiesChanged(
+    fuchsia::ui::gfx::ViewProperties /*old_properties*/) {
+  scenic::Rectangle background_shape(session(), logical_size().x,
+                                     logical_size().y);
   background_node_.SetShape(background_shape);
-  float center_x = size_.width / 2.f;
-  float center_y = size_.height / 2.f;
-  background_node_.SetTranslation(center_x, center_y, 0.f);
-  callback();
-  InvalidateScene();
+  background_node_.SetTranslation(logical_size().x / 2.f,
+                                  logical_size().y / 2.f, 0.f);
+
+  Layout();
 }
 
-void Tiles::OnChildAttached(uint32_t child_key,
-                            fuchsia::ui::viewsv1::ViewInfo child_view_info,
-                            OnChildAttachedCallback callback) {
-  auto it = views_.find(child_key);
-  FXL_DCHECK(it != views_.end());
+void Tiles::OnScenicEvent(fuchsia::ui::scenic::Event event) {
+  switch (event.Which()) {
+    case fuchsia::ui::scenic::Event::Tag::kGfx:
+      switch (event.gfx().Which()) {
+        case fuchsia::ui::gfx::Event::Tag::kViewDisconnected: {
+          uint32_t view_holder_id =
+              event.gfx().view_disconnected().view_holder_id;
+          auto it = view_id_to_keys_.find(view_holder_id);
+          FXL_DCHECK(it != view_id_to_keys_.end());
+          FXL_LOG(ERROR) << "Tiles::OnScenicEvent: View died unexpectedly, id="
+                         << view_holder_id;
 
-  ViewData* view_data = it->second.get();
-  view_data->view_info = std::move(child_view_info);
-  callback();
-  InvalidateScene();
+          RemoveTile(it->second);
+          break;
+        }
+        default:
+          break;
+      }
+      break;
+    default:
+      FXL_DCHECK(false) << "Tiles::OnScenicEvent: Got an unhandled Scenic "
+                           "event.";
+      break;
+  }
 }
 
-void Tiles::OnChildUnavailable(uint32_t child_key,
-                               OnChildUnavailableCallback callback) {
-  FXL_LOG(ERROR) << "View died unexpectedly: " << child_key;
-
-  RemoveTile(child_key);
-  callback();
-  InvalidateScene();
-}
-
-void Tiles::AddChildView(uint32_t child_key,
-                         fuchsia::ui::views::ViewHolderToken view_holder_token,
-                         const std::string& url,
-                         fuchsia::sys::ComponentControllerPtr controller,
-                         bool allow_focus) {
+void Tiles::AddTile(uint32_t child_key,
+                    fuchsia::ui::views::ViewHolderToken view_holder_token,
+                    const std::string& url,
+                    fuchsia::sys::ComponentControllerPtr controller,
+                    bool allow_focus) {
   auto view_data = std::make_unique<ViewData>(
-      url, child_key, std::move(controller), &session_, allow_focus);
+      url, allow_focus, std::move(controller), scenic::EntityNode(session()),
+      scenic::ViewHolder(session(), std::move(view_holder_token),
+                         "Tiles Embedder"));
 
-  zx::eventpair host_import_token;
-  view_data->host_node.ExportAsRequest(&host_import_token);
   container_node_.AddChild(view_data->host_node);
+  view_id_to_keys_.emplace(view_data->host_view_holder.id(), child_key);
   views_.emplace(child_key, std::move(view_data));
 
-  root_view_container_->AddChild2(child_key, std::move(view_holder_token.value),
-                                  std::move(host_import_token));
+  Layout();
   InvalidateScene();
-}
-
-void Tiles::InvalidateScene() {
-  if (present_scene_task_.is_pending())
-    return;
-  present_scene_task_.Post(async_get_default_dispatcher());
-}
-
-static void Inset(fuchsia::math::RectF* rect, int border) {
-  float inset = std::min(
-      {static_cast<float>(border), rect->width / 3.f, rect->height / 3.f});
-  rect->x += inset;
-  rect->y += inset;
-  rect->width -= 2 * inset;
-  rect->height -= 2 * inset;
 }
 
 void Tiles::Layout() {
-  if (views_.empty())
+  if (views_.empty() || !has_logical_size())
     return;
 
   int num_tiles = views_.size();
-
   int columns = std::ceil(std::sqrt(num_tiles));
   int rows = (columns + num_tiles - 1) / columns;
-  float tile_height = size_.height / rows;
+  float tile_height = logical_size().y / rows;
 
   auto view_it = views_.begin();
-
   for (int r = 0; r < rows; ++r) {
     // Each row has a tile per column, except possibly the last one.
     int tiles_in_row = columns;
     if (r == rows - 1 && (num_tiles % columns) != 0)
       tiles_in_row = num_tiles % columns;
 
-    float tile_width = size_.width / tiles_in_row;
+    float tile_width = logical_size().x / tiles_in_row;
+    float inset = std::min(
+        {static_cast<float>(border_), tile_width / 3.f, tile_height / 3.f});
 
     for (int c = 0; c < tiles_in_row; ++c) {
-      fuchsia::math::RectF tile_bounds;
-      tile_bounds.x = c * tile_width;
-      tile_bounds.y = r * tile_height;
-      tile_bounds.width = tile_width;
-      tile_bounds.height = tile_height;
-
-      Inset(&tile_bounds, border_);
-
       ViewData* tile = view_it->second.get();
 
-      fuchsia::ui::viewsv1::ViewProperties view_properties;
-      view_properties.view_layout = ::fuchsia::ui::viewsv1::ViewLayout::New();
-      view_properties.view_layout->size.width = tile_bounds.width;
-      view_properties.view_layout->size.height = tile_bounds.height;
-      view_properties.custom_focus_behavior =
-          ::fuchsia::ui::viewsv1::CustomFocusBehavior::New();
-      view_properties.custom_focus_behavior->allow_focus = tile->allow_focus;
-
+      fuchsia::ui::gfx::ViewProperties view_properties =
+          fuchsia::ui::gfx::ViewProperties{
+              .bounding_box =
+                  fuchsia::ui::gfx::BoundingBox{
+                      .min =
+                          fuchsia::ui::gfx::vec3{
+                              .x = 0.f, .y = 0.f, .z = -logical_size().z},
+                      .max =
+                          fuchsia::ui::gfx::vec3{.x = tile_width - 2 * inset,
+                                                 .y = tile_height - 2 * inset,
+                                                 .z = 0.f},
+                  },
+              .inset_from_min =
+                  fuchsia::ui::gfx::vec3{.x = 0.f, .y = 0.f, .z = 0.f},
+              .inset_from_max =
+                  fuchsia::ui::gfx::vec3{.x = 0.f, .y = 0.f, .z = 0.f},
+              // Preserve this across |Layout| calls.
+              .focus_change = tile->view_properties.focus_change,
+          };
+      tile->host_node.SetTranslation(c * tile_width + inset,
+                                     r * tile_height + inset, -kTileElevation);
       if (!fidl::Equals(tile->view_properties, view_properties)) {
-        fuchsia::ui::viewsv1::ViewProperties view_properties_clone;
-        view_properties.Clone(&view_properties_clone);
-        tile->view_properties = std::move(view_properties_clone);
-        root_view_container_->SetChildProperties(
-            view_it->first, fidl::MakeOptional(std::move(view_properties)));
+        tile->host_view_holder.SetViewProperties(view_properties);
+        tile->view_properties = std::move(view_properties);
       }
-
-      tile->host_node.SetTranslation(tile_bounds.x, tile_bounds.y,
-                                     -kTileElevation);
       ++view_it;
     }
   }
 }
 
-void Tiles::PresentScene() {
-  if (!size_.width || !size_.height)
-    return;
-
-  Layout();
-
-  zx_time_t presentation_time = 0;
-  session_.Present(presentation_time,
-                   [](fuchsia::images::PresentationInfo info) {});
-}
-
-Tiles::ViewData::ViewData(const std::string& url, uint32_t key,
+Tiles::ViewData::ViewData(const std::string& url, bool allow_focus,
                           fuchsia::sys::ComponentControllerPtr controller,
-                          scenic::Session* session, bool allow_focus)
+                          scenic::EntityNode node,
+                          scenic::ViewHolder view_holder)
     : url(url),
-      key(key),
-      allow_focus(allow_focus),
       controller(std::move(controller)),
-      host_node(session) {}
-
-Tiles::ViewData::~ViewData() {}
+      host_node(std::move(node)),
+      host_view_holder(std::move(view_holder)) {
+  view_properties.focus_change = allow_focus;
+  host_node.Attach(host_view_holder);
+}
 
 }  // namespace tiles

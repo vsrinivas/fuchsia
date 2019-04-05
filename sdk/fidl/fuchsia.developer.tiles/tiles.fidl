@@ -4,8 +4,8 @@
 
 library fuchsia.developer.tiles;
 
-using fuchsia.math;
 using fuchsia.ui.app;
+using fuchsia.ui.gfx;
 
 [Discoverable]
 protocol Controller {
@@ -21,7 +21,7 @@ protocol Controller {
     RemoveTile(uint32 key);
 
     // Returns a list of tiles.
-    ListTiles() -> (vector<uint32> keys, vector<string> urls, vector<fuchsia.math.SizeF> sizes, vector<bool> focusabilities);
+    ListTiles() -> (vector<uint32> keys, vector<string> urls, vector<fuchsia.ui.gfx.vec3> sizes, vector<bool> focusabilities);
 
     // Asks the tiles component to quit.
     Quit();

@@ -8,106 +8,73 @@
 #include <fuchsia/developer/tiles/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/gfx/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include "lib/async/cpp/task.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/sys/cpp/component_context.h"
-#include "lib/ui/scenic/cpp/resources.h"
-#include "lib/ui/scenic/cpp/session.h"
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/scenic/cpp/id.h>
+#include <lib/ui/scenic/cpp/resources.h>
 
 namespace tiles {
 
-class Tiles : public fuchsia::ui::viewsv1::ViewListener,
-              public fuchsia::ui::viewsv1::ViewContainerListener,
-              public fuchsia::developer::tiles::Controller {
+class Tiles : public fuchsia::developer::tiles::Controller,
+              public scenic::BaseView {
  public:
-  Tiles(sys::ComponentContext* startup_context,
-        fuchsia::ui::views::ViewToken view_token, std::vector<std::string> urls,
-        int border);
-  ~Tiles() final = default;
+  Tiles(scenic::ViewContext view_context, std::vector<std::string> urls,
+        int border = 0);
+  ~Tiles() override = default;
 
  private:
   struct ViewData {
-    explicit ViewData(const std::string& url, uint32_t key,
+    explicit ViewData(const std::string& url, bool allow_focus,
                       fuchsia::sys::ComponentControllerPtr controller,
-                      scenic::Session* session, bool allow_focus);
-    ~ViewData();
+                      scenic::EntityNode node, scenic::ViewHolder view_holder);
+    ~ViewData() = default;
 
     const std::string url;
-    const uint32_t key;
-    bool allow_focus;
     fuchsia::sys::ComponentControllerPtr controller;
+    fuchsia::ui::gfx::ViewProperties view_properties;
     scenic::EntityNode host_node;
-
-    fuchsia::ui::viewsv1::ViewProperties view_properties;
-    fuchsia::ui::viewsv1::ViewInfo view_info;
+    scenic::ViewHolder host_view_holder;
   };
 
-  // |fuchsia::ui::viewsv1::ViewListener|:
-  void OnPropertiesChanged(fuchsia::ui::viewsv1::ViewProperties properties,
-                           OnPropertiesChangedCallback callback) final;
-
-  // |fuchsia::ui::viewsv1::ViewContainerListener|:
-  void OnChildAttached(uint32_t child_key,
-                       fuchsia::ui::viewsv1::ViewInfo child_view_info,
-                       OnChildAttachedCallback) final;
-  void OnChildUnavailable(uint32_t child_key,
-                          OnChildUnavailableCallback callback) final;
-
-  // |fuchsia::developer::tiles::Controller|:
+  // |fuchsia::developer::tiles::Controller|
   void AddTileFromURL(std::string url, bool allow_focus,
                       fidl::VectorPtr<std::string> args,
                       AddTileFromURLCallback callback) final;
   void AddTileFromViewProvider(
       std::string url,
-      fidl::InterfaceHandle<::fuchsia::ui::app::ViewProvider> provider,
+      fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> provider,
       AddTileFromViewProviderCallback callback) final;
   void RemoveTile(uint32_t key) final;
   void ListTiles(ListTilesCallback callback) final;
   void Quit() final;
 
-  // Launches initial list of views, passed as command line parameters.
+  // |scenic::SessionListener|
+  void OnScenicError(std::string error) final;
 
-  void AddChildView(uint32_t child_key,
-                    fuchsia::ui::views::ViewHolderToken view_holder_token,
-                    const std::string& url,
-                    fuchsia::sys::ComponentControllerPtr, bool allow_focus);
+  // |scenic::BaseView|
+  void OnPropertiesChanged(
+      fuchsia::ui::gfx::ViewProperties old_properties) final;
+  void OnScenicEvent(fuchsia::ui::scenic::Event) final;
 
-  void InvalidateScene();
+  void AddTile(uint32_t child_key,
+               fuchsia::ui::views::ViewHolderToken view_holder_token,
+               const std::string& url, fuchsia::sys::ComponentControllerPtr,
+               bool allow_focus);
   void Layout();
-  void PresentScene();
 
-  // Context inherited when TileView is launched.
-  sys::ComponentContext* startup_context_;
+  fidl::BindingSet<fuchsia::developer::tiles::Controller> tiles_binding_;
+  fuchsia::sys::LauncherPtr launcher_;
 
-  // Connection to the root view.
-  fidl::Binding<fuchsia::ui::viewsv1::ViewListener> root_view_listener_binding_;
-  fidl::Binding<fuchsia::ui::viewsv1::ViewContainerListener>
-      root_view_container_listener_binding_;
-  fuchsia::ui::viewsv1::ViewPtr root_view_;
-  fuchsia::ui::viewsv1::ViewContainerPtr root_view_container_;
-  scenic::Session session_;
-
-  scenic::ImportNode root_node_;
+  std::unordered_map<uint32_t, std::unique_ptr<ViewData>> views_;
+  std::unordered_map<scenic::ResourceId, uint32_t> view_id_to_keys_;
   scenic::ShapeNode background_node_;
   scenic::EntityNode container_node_;
 
-  fuchsia::sys::LauncherPtr launcher_;
-  fidl::BindingSet<fuchsia::developer::tiles::Controller> tiles_binding_;
-
-  fuchsia::math::SizeF size_;
-
-  // The key we will assigned to the next child view which is added.
-  uint32_t next_child_view_key_ = 1u;
-
-  async::TaskClosure present_scene_task_;
-
-  // Map from keys to |ViewData|
-  std::map<uint32_t, std::unique_ptr<ViewData>> views_;
-
-  // Border in logical pixels for each tile.
-  int border_;
+  uint32_t next_child_view_key_ = 0;
+  int border_ = 0;  // Border in logical pixels for each tile.
 };
 
 }  // namespace tiles
