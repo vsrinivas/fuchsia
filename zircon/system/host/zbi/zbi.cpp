@@ -28,6 +28,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
+#include <thread>
 #include <unistd.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -461,10 +462,11 @@ auto Lz4Call(Func f, Args... args) {
 }
 
 template <typename Func, typename... Args>
-auto ZstdCall(Func f, Args... args) {
+auto ZstdCall(const char* what, Func f, Args... args) {
     auto result = f(args...);
     if (ZSTD_isError(result)) {
-        fprintf(stderr, "ZSTD failure: %s\n", ZSTD_getErrorName(result));
+        fprintf(stderr, "ZSTD %s failure: %s\n",
+                what, ZSTD_getErrorName(result));
         exit(1);
     }
     return result;
@@ -559,58 +561,9 @@ public:
         }
     }
 
-    void Init(OutputStream* out, const zbi_header_t& header) {
-        header_ = header;
-        assert(header_.flags & ZBI_FLAG_STORAGE_COMPRESSED);
-        assert(header_.flags & ZBI_FLAG_CRC32);
-
-        // Write a place-holder for the header, which we will go back
-        // and fill in once we know the payload length and CRC.
-        header_pos_ = out->PlaceHeader();
-
-        // Record the original uncompressed size in header_.extra.
-        // WriteBuffer will accumulate the compressed size in header_.length.
-        header_.extra = header_.length;
-        header_.length = 0;
-
-        std::visit(
-            [&](auto&& v) {
-                auto buffer = GetBuffer(v.InitBufferSize());
-                size_t size = v.Init(config_.level_, &buffer, header_.extra);
-                assert(size <= buffer.size);
-                WriteBuffer(out, std::move(buffer), size);
-            },
-            algo_);
-    }
-
-    // NOTE: Input buffer may be referenced for the life of the Compressor!
-    void Write(OutputStream* out, const iovec& input) {
-        std::visit(
-            [&](auto&& v) {
-                auto buffer = GetBuffer(v.UpdateBufferSize(input.iov_len));
-                size_t actual_size = v.Update(&buffer, input);
-                WriteBuffer(out, std::move(buffer), actual_size);
-            },
-            algo_);
-    }
-
-    uint32_t Finish(OutputStream* out) {
-        // Write the closing chunk from the compressor.
-        std::visit(
-            [&](auto&& v) {
-                auto buffer = GetBuffer(v.FinishBufferSize());
-                size_t actual_size = v.Finish(&buffer);
-                WriteBuffer(out, std::move(buffer), actual_size);
-            },
-            algo_);
-
-        // Complete the checksum.
-        crc_.FinalizeHeader(&header_);
-
-        // Write the header back where its place was held.
-        out->PatchHeader(header_, header_pos_);
-        return header_.length;
-    }
+    void Init(OutputStream* out, const zbi_header_t& header);
+    void Write(OutputStream* out, const iovec& input);
+    uint32_t Finish(OutputStream* out);
 
 private:
     struct Buffer {
@@ -632,6 +585,17 @@ private:
         size_t size = 0;
     };
 
+    auto BufferGetter() {
+        return [this](size_t x) { return GetBuffer(x); };
+    }
+
+    auto BufferPutter(OutputStream* out) {
+        return [out, this](auto buffer, size_t size) {
+            assert(size <= buffer.size);
+            WriteBuffer(out, std::move(buffer), size);
+        };
+    }
+
     class Lz4 {
     public:
         static constexpr Algo kAlgo = kLz4;
@@ -649,19 +613,9 @@ private:
             Lz4Call(LZ4F_freeCompressionContext, ctx_);
         }
 
-        size_t InitBufferSize() {
-            return kLz4FMaxHeaderFrameSize;
-        }
-
-        size_t UpdateBufferSize(size_t input_chunk_size) {
-            return LZ4F_compressBound(input_chunk_size, &prefs_);
-        }
-
-        size_t FinishBufferSize() {
-            return LZ4F_compressBound(0, &prefs_);
-        }
-
-        size_t Init(int level, Buffer* buffer, size_t uncompressed_size) {
+        template <typename T1, typename T2>
+        void Init(T1 get_buffer, T2 put_buffer,
+                  int level, size_t uncompressed_size) {
             prefs_.frameInfo.contentSize = uncompressed_size;
 
             prefs_.frameInfo.blockSizeID = LZ4F_max64KB;
@@ -672,21 +626,30 @@ private:
 
             // This might start writing compression format headers before it
             // receives any data.
-            return Lz4Call(LZ4F_compressBegin, ctx_,
-                           buffer->data.get(), buffer->size, &prefs_);
+            auto buffer = get_buffer(kLz4FMaxHeaderFrameSize);
+            size_t wrote = Lz4Call(LZ4F_compressBegin, ctx_,
+                                   buffer.data.get(), buffer.size, &prefs_);
+            put_buffer(std::move(buffer), wrote);
         }
 
-        size_t Update(Buffer* buffer, const iovec& input) {
-            return Lz4Call(LZ4F_compressUpdate,
-                           ctx_, buffer->data.get(), buffer->size,
-                           input.iov_base, input.iov_len,
-                           &kCompressOpt);
+        template <typename T1, typename T2>
+        void Update(T1 get_buffer, T2 put_buffer, const iovec& input) {
+            auto buffer = get_buffer(
+                LZ4F_compressBound(input.iov_len, &prefs_));
+            size_t wrote = Lz4Call(LZ4F_compressUpdate,
+                                   ctx_, buffer.data.get(), buffer.size,
+                                   input.iov_base, input.iov_len,
+                                   &kCompressOpt);
+            put_buffer(std::move(buffer), wrote);
         }
 
-        size_t Finish(Buffer* buffer) {
-            return Lz4Call(LZ4F_compressEnd,
-                           ctx_, buffer->data.get(), buffer->size,
-                           &kCompressOpt);
+        template <typename T1, typename T2>
+        void Finish(T1 get_buffer, T2 put_buffer) {
+            auto buffer = get_buffer(LZ4F_compressBound(0, &prefs_));
+            size_t wrote = Lz4Call(LZ4F_compressEnd,
+                                   ctx_, buffer.data.get(), buffer.size,
+                                   &kCompressOpt);
+            put_buffer(std::move(buffer), wrote);
         }
 
     private:
@@ -717,35 +680,33 @@ private:
         Zstd() = default;
 
         ~Zstd() {
-            ZstdCall(ZSTD_freeCStream, stream_);
+            ZstdCall("free", ZSTD_freeCCtx, ctx_);
         }
 
-        size_t InitBufferSize() {
-            return 0;
-        }
-
-        size_t UpdateBufferSize(size_t input_chunk_size) {
-            return ZSTD_compressBound(input_chunk_size);
-        }
-
-        size_t FinishBufferSize() {
-            return ZSTD_CStreamOutSize();
-        }
-
-        size_t Init(int level, Buffer*, size_t) {
-            stream_ = ZSTD_createCStream();
-            if (!stream_) {
+        template <typename T1, typename T2>
+        void Init(T1 get_buffer, T2 put_buffer,
+                  int level, size_t uncompressed_size) {
+            ctx_ = ZSTD_createCCtx();
+            if (!ctx_) {
                 fprintf(stderr, "out of memory\n");
                 exit(1);
             }
-            ZstdCall(ZSTD_initCStream, stream_, level);
-            return 0;
+            ZstdCall("nbWorkers",
+                     ZSTD_CCtx_setParameter, ctx_, ZSTD_c_nbWorkers,
+                     std::thread::hardware_concurrency());
+            ZstdCall("compressionLevel",
+                     ZSTD_CCtx_setParameter, ctx_, ZSTD_c_compressionLevel,
+                     level);
+            ZstdCall("PledgedSrcSize",
+                     ZSTD_CCtx_setPledgedSrcSize, ctx_, uncompressed_size);
         }
 
-        size_t Update(Buffer* buffer, const iovec& input) {
+        template <typename T1, typename T2>
+        void Update(T1 get_buffer, T2 put_buffer, const iovec& input) {
+            auto buffer = get_buffer(ZSTD_compressBound(input.iov_len));
             ZSTD_outBuffer out = {
-                buffer->data.get(),
-                buffer->size,
+                buffer.data.get(),
+                buffer.size,
                 0,
             };
             ZSTD_inBuffer in = {
@@ -753,23 +714,32 @@ private:
                 input.iov_len,
                 0,
             };
-            ZstdCall(ZSTD_compressStream, stream_, &out, &in);
-            assert(in.pos == in.size);
-            return out.pos;
+            do {
+                ZstdCall("compress", ZSTD_compressStream2, ctx_,
+                         &out, &in, ZSTD_e_continue);
+            } while (in.pos < in.size);
+            put_buffer(std::move(buffer), out.pos);
         }
 
-        size_t Finish(Buffer* buffer) {
-            ZSTD_outBuffer out = {
-                buffer->data.get(),
-                buffer->size,
-                0,
-            };
-            ZstdCall(ZSTD_endStream, stream_, &out);
-            return out.pos;
+        template <typename T1, typename T2>
+        void Finish(T1 get_buffer, T2 put_buffer) {
+            size_t left;
+            do {
+                auto buffer = get_buffer(ZSTD_CStreamOutSize());
+                ZSTD_outBuffer out = {
+                    buffer.data.get(),
+                    buffer.size,
+                    0,
+                };
+                ZSTD_inBuffer in = {};
+                left = ZstdCall("finish", ZSTD_compressStream2, ctx_,
+                                &out, &in, ZSTD_e_end);
+                put_buffer(std::move(buffer), out.pos);
+            } while (left > 0);
         }
 
     private:
-        ZSTD_CStream* stream_ = nullptr;
+        ZSTD_CCtx* ctx_ = nullptr;
     };
 
     using AlgoData = std::variant<Lz4, Zstd>;
@@ -812,6 +782,53 @@ private:
         }
     }
 };
+
+void Compressor::Init(OutputStream* out, const zbi_header_t& header) {
+    header_ = header;
+    assert(header_.flags & ZBI_FLAG_STORAGE_COMPRESSED);
+    assert(header_.flags & ZBI_FLAG_CRC32);
+
+    // Write a place-holder for the header, which we will go back
+    // and fill in once we know the payload length and CRC.
+    header_pos_ = out->PlaceHeader();
+
+    // Record the original uncompressed size in header_.extra.
+    // WriteBuffer will accumulate the compressed size in header_.length.
+    header_.extra = header_.length;
+    header_.length = 0;
+
+    std::visit(
+        [&](auto&& v) {
+            v.Init(BufferGetter(), BufferPutter(out),
+                   config_.level_, header_.extra);
+        },
+        algo_);
+}
+
+// NOTE: Input buffer may be referenced for the life of the Compressor!
+void Compressor::Write(OutputStream* out, const iovec& input) {
+    std::visit(
+        [&](auto&& v) {
+            v.Update(BufferGetter(), BufferPutter(out), input);
+        },
+        algo_);
+}
+
+uint32_t Compressor::Finish(OutputStream* out) {
+    // Write the closing chunk from the compressor.
+    std::visit(
+        [&](auto&& v) {
+            v.Finish(BufferGetter(), BufferPutter(out));
+        },
+        algo_);
+
+    // Complete the checksum.
+    crc_.FinalizeHeader(&header_);
+
+    // Write the header back where its place was held.
+    out->PatchHeader(header_, header_pos_);
+    return header_.length;
+}
 
 struct Decompressor {
     using Function =
@@ -904,9 +921,11 @@ std::unique_ptr<std::byte[]> DecompressZstd(
         exit(1);
     }
     auto cleanup =
-        fbl::MakeAutoCall([&]() { ZstdCall(ZSTD_freeDStream, stream); });
+        fbl::MakeAutoCall([&]() {
+            ZstdCall("free", ZSTD_freeDStream, stream);
+        });
 
-    ZstdCall(ZSTD_initDStream, stream);
+    ZstdCall("init", ZSTD_initDStream, stream);
 
     ZSTD_outBuffer out = {
         buffer.get(),
@@ -924,7 +943,7 @@ std::unique_ptr<std::byte[]> DecompressZstd(
                 fprintf(stderr, "decompression produced too much data\n");
                 exit(1);
             }
-            ZstdCall(ZSTD_decompressStream, stream, &out, &in);
+            ZstdCall("decompress", ZSTD_decompressStream, stream, &out, &in);
         }
     }
     if (out.pos < out.size) {

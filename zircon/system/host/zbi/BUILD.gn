@@ -13,4 +13,5 @@ host_tool("zbi") {
     "$zx/third_party/ulib/lz4",
     "$zx/third_party/ulib/zstd",
   ]
+  defines = [ "ZSTD_STATIC_LINKING_ONLY" ]
 }

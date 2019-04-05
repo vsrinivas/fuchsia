@@ -37,6 +37,9 @@ library("zstd") {
     "lib/common",
     "lib/dictBuilder",
   ]
+  if (is_host) {
+    defines = [ "ZSTD_MULTITHREAD" ]
+  }
 }
 
 executable("zstdcli") {
