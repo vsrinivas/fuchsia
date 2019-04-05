@@ -126,7 +126,7 @@ protocol Page {
     /// Change notifications will only contain the entries matching |key_prefix|.
     /// To receive all changes, use an empty |key_prefix|.
     GetSnapshot(request<PageSnapshot> snapshot_request,
-                bytes:256 key_prefix, PageWatcher? watcher) -> (Status status);
+                bytes:256 key_prefix, PageWatcher? watcher);
     GetSnapshotNew(request<PageSnapshot> snapshot_request,
                    bytes:256 key_prefix, PageWatcher? watcher);
 
@@ -150,16 +150,15 @@ protocol Page {
     /// parameter managing the synchronization policy for this value. |Put()| uses
     /// a default priority of |Priority.EAGER|. For the list of available
     /// priorities and their definition, see |Priority|.
-    Put(bytes:256 key, bytes value) -> (Status status);
+    Put(bytes:256 key, bytes value);
     PutNew(bytes:256 key, bytes value);
     PutWithPriority(bytes:256 key, bytes value,
-                    Priority priority) -> (Status status);
+                    Priority priority);
     PutWithPriorityNew(bytes:256 key, bytes value,
                        Priority priority);
-    PutReference(bytes:256 key, Reference reference, Priority priority)
-        -> (Status status);
+    PutReference(bytes:256 key, Reference reference, Priority priority);
     PutReferenceNew(bytes:256 key, Reference reference, Priority priority);
-    Delete(bytes:256 key) -> (Status status);
+    Delete(bytes:256 key);
     DeleteNew(bytes:256 key);
 
     // Page level operations.
@@ -170,7 +169,7 @@ protocol Page {
     /// In a transaction, this operation is equivalent to deleting every key
     /// present in the page before the transaction, as well as any new key added
     /// since the transaction started.
-    Clear() -> (Status status);
+    Clear();
     ClearNew();
 
     // References.
@@ -179,14 +178,14 @@ protocol Page {
     /// will be the content of the socket. The content size must be equal to
     /// |size|, otherwise the call will fail.
     CreateReferenceFromSocket(uint64 size, handle<socket> data)
-        -> (Status status, Reference? reference);
+        -> (CreateReferenceStatus status, Reference? reference);
     CreateReferenceFromSocketNew(uint64 size, handle<socket> data)
         -> (CreateReferenceStatus status, Reference? reference);
     /// Creates a new reference. The object is not part of any commit. It must be
     /// associated with a key using |PutReference()|. The content of the reference
     /// will be the content of the buffer.
     CreateReferenceFromBuffer(fuchsia.mem.Buffer buffer)
-        -> (Status status, Reference? reference);
+        -> (CreateReferenceStatus status, Reference? reference);
     CreateReferenceFromBufferNew(fuchsia.mem.Buffer buffer)
         -> (CreateReferenceStatus status, Reference? reference);
 
@@ -219,17 +218,17 @@ protocol Page {
     /// will be used as the base of the transaction. Put (with all its variants)
     /// and Delete calls may be pipelined while StartTransaction() is pending and
     /// will be taken into account in the transaction while it is pending.
-    StartTransaction() -> (Status status);
+    StartTransaction();
     StartTransactionNew();
-    Commit() -> (Status status);
+    Commit();
     CommitNew();
-    Rollback() -> (Status status);
+    Rollback();
     RollbackNew();
 
     /// Sets a watcher to track the synchronisation state of this page. The
     /// current state is immediately sent to the watcher when this method is
     /// called.
-    SetSyncStateWatcher(SyncWatcher watcher) -> (Status status);
+    SetSyncStateWatcher(SyncWatcher watcher);
     SetSyncStateWatcherNew(SyncWatcher watcher);
 
     // Conflict resolution.
