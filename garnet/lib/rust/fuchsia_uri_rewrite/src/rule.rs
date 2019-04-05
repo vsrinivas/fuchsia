@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//TODO remove once re-write rules are used by the resolver
-#![allow(dead_code)]
-
 use {
     failure::Fail,
     fuchsia_uri::pkg_uri::{FuchsiaPkgUri, ParseError},

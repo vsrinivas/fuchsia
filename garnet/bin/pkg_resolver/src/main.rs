@@ -16,7 +16,6 @@ use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use futures::TryFutureExt;
 
 mod resolver_service;
-mod rewrite;
 
 const SERVER_THREADS: usize = 2;
 
