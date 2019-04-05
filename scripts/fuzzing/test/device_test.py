@@ -58,6 +58,13 @@ class TestDevice(unittest.TestCase):
     self.assertEqual(mock.last,
                      'scp -F ' + mock.host.ssh_config + ' [::1]:corpus/* /tmp')
 
+  def test_store(self):
+    mock = MockDevice()
+    mock.store('local-path', 'remote-path')
+    self.assertEqual(
+        mock.last,
+        'scp -F ' + mock.host.ssh_config + ' local-path [::1]:remote-path')
+
 
 if __name__ == '__main__':
   unittest.main()

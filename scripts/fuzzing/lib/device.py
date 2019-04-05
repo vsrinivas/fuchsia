@@ -159,3 +159,8 @@ class Device(object):
     if not os.path.isdir(host_dst):
       raise ValueError(host_dst + ' is not a directory')
     self._scp('[' + self._netaddr + ']:' + data_src, host_dst)
+
+  def store(self, host_src, data_dst):
+    """Copies `host_src` on the host to `data_dst` on the target."""
+    self.ssh(['mkdir', '-p', data_dst])
+    self._scp(host_src, '[' + self._netaddr + ']:' + data_dst)

@@ -208,3 +208,8 @@ class Fuzzer(object):
     self.require_stopped()
     self.device.ssh(['fuzz', 'repro', str(self)] + fuzzer_args, quiet=False)
 
+  def merge(self, fuzzer_args):
+    """Attempts to minimizes the fuzzer's corpus."""
+    self.require_stopped()
+    self.device.ssh(['fuzz', 'merge', str(self)] + fuzzer_args, quiet=False)
+

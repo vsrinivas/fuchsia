@@ -121,5 +121,13 @@ class TestFuzzer(unittest.TestCase):
         mock_device.last, 'ssh -F ' + mock_device.host.ssh_config +
         ' ::1 fuzz repro ' + str(fuzzer) + ' -some-lf-arg=value')
 
+  def test_merge(self):
+    mock_device = MockDevice()
+    fuzzer = Fuzzer(mock_device, u'mock-package1', u'mock-target2')
+    fuzzer.merge(['-some-lf-arg=value'])
+    self.assertEqual(
+        mock_device.last, 'ssh -F ' + mock_device.host.ssh_config +
+        ' ::1 fuzz merge ' + str(fuzzer) + ' -some-lf-arg=value')
+
 if __name__ == '__main__':
   unittest.main()

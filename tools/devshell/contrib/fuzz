@@ -3,8 +3,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Keep the usage info below in sync with //zircon/ulib/fuzz-utils/fuzzer.cpp!
-
 ### run a fuzz test on target a device
 
 ##
@@ -26,9 +24,13 @@
 ##   help                    Prints this message and exits.
 ##   list    [name]          Lists fuzzers matching 'name' if provided, or all
 ##                           fuzzers.
-##   fetch   <name> [digest] Retrieves the corpus for the named fuzzer and
-##                           version given by 'digest'. Defaults to the latest
-##                           if 'digest' is omitted.
+##   corpus  [name]          Lists the corpus instances in CIPD for the named
+##                           fuzzer.
+##   fetch   <name> [label]  Retrieves the corpus for the named fuzzer.  If
+##                           'label' is a directory, installs the corpus from
+##                           that location.  Otherwise fetches and installs the
+##                           corpus from CIPD given by 'label' or the latest
+##                           corpus if 'label' is omitted.
 ##   start   <name> [...]    Starts the named fuzzer. Additional arguments are
 ##                           passed to the fuzzer.  If the target does not have
 ##                           a corpus for the fuzzer, and the metadata lists one
@@ -47,13 +49,12 @@
 ##                           and publishes it. Requires a pristine repository,
 ##                           as it will updates the build files with the new
 ##                           corpus location.
-##   zbi                     Adds Zircon fuzzers to 'fuchsia.zbi'
 ##
 ## The RECOMMENDED way to run a fuzzer is to omit 'command', which will use
 ## "automatic" mode.  In this mode, 'fx fuzz' will check if a corpus is already
 ## present, and if not it will fetch the latest.  It will then start the fuzzer
 ## and watch it to see when it stops.  Each of these steps respects the options
-## above.
+## above.  **NOTE** Automatic mode is temporarily disabled.
 ##
 ## Example workflow:
 ##   1. Shows available fuzzers:
@@ -80,301 +81,30 @@
 ##   8. Save the new, minimized corpus in CIPD:
 ##         fx fuzz store foo/bar
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
-fx-config-read
+FUZZING_DIR=${FUCHSIA_DIR}/scripts/fuzzing
 
-# Constants
-CIPD="${FUCHSIA_DIR}/buildtools/cipd"
-CIPD_PREFIX="fuchsia/test_data/fuzzing"
-FUZZING_DIR=${FUCHSIA_DIR}/scripts//fuzzing
-
-# Global variables
-device=""
-fg=0
-output="."
-staging=""
-keep=0
-
-host=$(uname)
-fuzzer=""
-status=""
-data_path=""
-corpus_size="0"
-cipd_path=""
-
-# Utility functions
-fatal() {
-  fx-error "$@"
-  exit 1
-}
-
-abspath() {
-  if [[ ${host} == "Darwin" ]] ; then
-    # Ugh, Mac OSX, why can't you have decent utilities?
-    if [[ -d "$1" ]] ; then
-      cd $1 && pwd -P
-    else
-      cd $(dirname $1) && echo "$(pwd -P)/$(basename $1)"
-    fi
-  else
-    realpath $1
-  fi
-}
-
-set_staging() {
-  if [[ -z "${staging}" ]] ; then
-    staging=$(mktemp -d)
-    [[ $? -eq 0 ]] || fatal "failed to make staging directory"
-  fi
-}
-
-# Ensure the temporary directory is removed as needed
-cleanup() {
-  if [[ -n "${staging}" ]] && [[ ${keep} -eq 0 ]] ; then
-    rm -rf "${staging}"
-  fi
-}
-trap cleanup EXIT
-
-# Commands
-query() {
-  local tmp
-  tmp="$(fx-command-run ssh "${device}" fuzz check "$1" | tr -s '\n' ' ')"
-  [[ -n "${tmp}" ]] || fatal "Use 'fx fuzz list' to see available fuzzers."
-  [[ $? -eq 0 ]] || fatal "failed to query fuzzer"
-  tmp="$(echo "${tmp}" | tr -d ':' | cut -d' ' -f1,2,8,11)"
-  read fuzzer status data_path corpus_size <<< "${tmp}"
-  cipd_path="${CIPD_PREFIX}/${fuzzer}"
-}
-
-fetch() {
-  [[ "${status}" == "STOPPED" ]] || fatal "fuzzer must be stopped to run this command"
-
-  local version="${1:-latest}"
-  # "latest" is a ref, but digests are tags that are prefixed with "version:"
-  if [[ "${version}" != "latest" ]] ; then
-    version="version:${version}"
-  fi
-
-  local corpus="${staging}/${fuzzer}/corpus"
-  mkdir -p "${corpus}"
-  [[ $? -eq 0 ]] || fatal "failed to create local directory: ${corpus}"
-
-  # Get corpus from CIPD
-  if ${CIPD} ls -r "${CIPD_PREFIX}" | grep -q "${fuzzer}" ; then
-    ${CIPD} install "${cipd_path}" ${version} --root "${corpus}"
-    [[ $? -eq 0 ]] || fatal "failed to retrieve corpus"
-  fi
-
-  # Add any upstream third-party corpora
-  if [[ "${version}" == "latest" ]] ; then
-    local seed_corpora=$(fx-command-run ssh ${device} fuzz seeds ${fuzzer})
-    for seed in ${seed_corpora} ; do
-      if echo "${seed}" | grep -q "^//third_party" ; then
-        rsync -a ${FUCHSIA_DIR}/${seed}/ ${corpus}/
-      fi
-    done
-  fi
-
-  # Fuchsia's scp doesn't like to glob
-  fx-command-run scp -r ${corpus} "[${device}]:${data_path}"
-}
-
-store() {
-  [[ "${status}" == "STOPPED" ]] || fatal "fuzzer must be stopped to run this command"
-  [[ "${corpus_size}" != "0" ]] || fatal "refusing to store empty corpus"
-
-  local corpus="${staging}/${fuzzer}/corpus"
-  mkdir -p "${corpus}"
-  [[ $? -eq 0 ]] || fatal "failed to create local directory: ${corpus}"
-
-  # Fuchsia's scp doesn't like to glob
-  fx-command-run scp -r "[${device}]:${data_path}corpus" $(dirname "${corpus}")
-  echo "***"
-  echo "This script may prompt for credentials."
-  echo "This is to allow it to add POSIX-style ACLs to corpus files."
-  echo "***"
-  sudo chmod +x ${corpus}
-  [[ $? -eq 0 ]] || fatal "failed to grant access"
-
-  pushd ${corpus}
-  local version
-  version=$(tar c * | sha256sum | cut -d' ' -f1)
-  [[ $? -eq 0 ]] || fatal "failed to calculate digest"
-
-  cat >cipd.yaml <<EOF
-package: ${cipd_path}
-description: Auto-generated fuzzing corpus for ${fuzzer}.
-install_mode: copy
-data:
-$(ls -1 | grep -v cipd | sed 's/^/  - file: /')
-EOF
-  # TODO: catch the error and tell user to do this
-  # $ cipd auth-login  # One-time auth.
-  ${CIPD} create --pkg-def cipd.yaml -tag version:${version} -ref latest
-  echo "***"
-  echo "Successfully stored package for ${fuzzer}, version ${version}."
-  # cipd creates a .cipd directory in corpus that misses +x so it cannot be
-  # cleaned up properly in cleanup().
-  sudo chmod -R +x ${corpus}
-  popd
-}
-
-start() {
-  # Get fuzzer info and check status
-  query "${fuzzer}"
-  [[ ${status} != "RUNNING" ]] || fatal "${fuzzer} is already running"
-
-  # Ensure we have a directory for this target
-  mkdir -p "${output}/${fuzzer}"
-  [[ $? -eq 0 ]] || fatal "failed to make directory: ${output}/${fuzzer}"
-  pushd "${output}/${fuzzer}" >/dev/null
-
-  # Clear all old logs
-  fx-command-run ssh ${device} rm "${data_path}/fuzz-*.log"
-  killall loglistener 2>/dev/null
-
-  # Create a directory for this run
-  local results="$(date +%F-%T)"
-  mkdir ${results}
-  [[ $? -eq 0 ]] || fatal "failed to make directory: ${results}"
-  rm -f latest
-  ln -s ${results} latest
-  pushd latest >/dev/null
-
-  # Start logging
-  ${ZIRCON_TOOLS_DIR}/loglistener >zircon.log  &
-  echo $! >.loglistener.pid
-
-  # Start the fuzzer
-  if [[ ${fg} -eq 0 ]] ; then
-    fx-command-run ssh ${device} fuzz start ${fuzzer} "$@" &
-  else
-    fx-command-run ssh ${device} fuzz start ${fuzzer} -jobs=0 "$@" 2>&1 | tee "fuzz-0.log"
-  fi
-
-  query "${fuzzer}"
-  if [[ ${status} == "RUNNING" ]] ; then
-    echo "'${fuzzer}' started; you should be notified when it stops."
-    echo "To check its progress, use 'fx fuzz check ${fuzzer}'."
-    echo "To stop it manually, use 'fx fuzz stop ${fuzzer}'."
-  elif [[ ${fg} -ne 0 ]] ; then
-    echo "Test units written to $(pwd -P)"
-  fi
-  monitor &
-
-  # Undo pushds
-  popd >/dev/null
-  popd >/dev/null
-}
-
-monitor() {
-  # Wait for completion
-  query "${fuzzer}"
-  while [[ "${status}" == "RUNNING" ]] ; do
-    sleep 2
-    query "${fuzzer}"
-  done
-  if [[ ${fg} -eq 0 ]] ; then
-    fx-command-run scp "[${device}]:${data_path}/fuzz-*.log" .
-  fi
-
-  # Stop log collection and symbolize
-  if [[ -f .loglistener.pid ]] ; then
-    kill $(cat .loglistener.pid)
-    rm -f .loglistener.pid
-  fi
-  if [[ -f zircon.log ]] ; then
-    ${FUCHSIA_DIR}/zircon/scripts/symbolize \
-      -i ${FUCHSIA_BUILD_DIR}/ids.txt <zircon.log >symbolized.log
-  fi
-
-  # Transfer the fuzz logs
-  local units=0
-  for log in * ; do
-    for unit in $(grep 'Test unit written to ' ${log} | sed 's/.* //') ; do
-      fx-command-run scp "[${device}]:${unit}" .
-      units=$((${units} + 1))
-    done
-  done
-
-  # Notify user
-  local title="${fuzzer} has stopped"
-  local body="${units} test units written to $(pwd -P)"
-  if [[ ${host} == "Linux" ]] ; then
-    if [[ -x /usr/bin/notify-send ]] ; then
-      /usr/bin/notify-send "${title}." "${body}"
-    else
-      wall "${title}; ${body}"
-    fi
-  elif [[ ${host} == "Darwin" ]] ; then
-    osascript -e "display notification \"${body}\" with title \"${title}.\""
-  fi
-}
-
-add_to_zbi() {
-  local image="${FUCHSIA_BUILD_DIR}/fuchsia.zbi"
-  if [[ ! -f "${image}" ]] ; then
-    fatal "No such ZBI file: ${image}"
-  elif [[ -f "${image}.orig" ]] ; then
-    fatal "Cowardly refusing to overwrite existing ${image}.orig"
-  fi
-
-  # Build zircon with instrumentation
-  echo "Building Zircon fuzzers..."
-  pushd "${FUCHSIA_DIR}/zircon"
-  USE_ASAN=1 USE_SANCOV=1 scripts/build-zircon-${FUCHSIA_ARCH} -C
-
-  # Find the lines in the bootfs manifest that are relevant to fuzzing, and create a new fuzz
-  # manifest that we can use to inject this objects into a ZBI.
-  local bootfs_manifest="build-${FUCHSIA_ARCH}-asan/bootfs.manifest"
-  local fuzz_manifest="build-${FUCHSIA_ARCH}-asan/fuzz.manifest"
-  grep '{core}lib.*asan.*=' "${bootfs_manifest}" > "${fuzz_manifest}"
-  grep '^{libs}lib/asan' "${bootfs_manifest}" >> "${fuzz_manifest}"
-  grep '^{test}test/fuzz' "${bootfs_manifest}" >> "${fuzz_manifest}"
-
-  # Check that all fuzzers listed in the zircon_fuzzers package are present in the build
-  # The `targets` regex looks at the resources under the data/ directory to find the fuzz target
-  # name, i.e. "data/some_fuzz_target/corpora" => "some_fuzz_target".
-  local zircon_manifest="${FUCHSIA_BUILD_DIR}/obj/garnet/tests/zircon/zircon_fuzzers.manifest"
-  local targets="$(sed -n 's/^data\/\([^\/]*\)\/.*/\1/p' "${zircon_manifest}" | sort | uniq )"
-  for target in $targets ; do
-    grep -q "$target" "${fuzz_manifest}" || \
-      fatal "target not found in ${fuzz_manifest}: ${target}"
-  done
-
-  # Copy fuzzers into Fuchsia
-  mv "${image}" "${image}.orig"
-  if ! ${ZIRCON_TOOLS_DIR}/zbi -o "${image}" "${image}.orig" "${fuzz_manifest}" ; then
-    mv "${image}.orig" "${image}"
-    fatal "Could not create ${image}"
-  fi
-  popd
-  echo "Zircon fuzzers added to ${image}"
-  rm -f "${image}.orig"
-}
-
-# Main
 main() {
-  fx-config-read
-  # Parse options
+  local flags=""
   while [[ "$1" == "-"* ]] ; do
     local opt="$1"
     shift
 
     local has_optval
     case "${opt}" in
+      -d|--device)
+        flags="${flags} -d $1"
+        has_optval=1
+        ;;
       -f|--foreground)
-        fg=1
+        flags="${flags} -v"
         has_optval=0
         ;;
       -o|--output)
-        output="$1"
+        flags="${flags} -o $1"
         has_optval=1
         ;;
       -s|--staging)
-        keep=1
-        staging="$1"
+        flags="${flags} -s $1"
         has_optval=1
         ;;
       *)
@@ -388,67 +118,54 @@ main() {
       shift
     fi
   done
-  output=$(abspath "${output}")
 
-  # Parse command
-  local device="$(get-fuchsia-device-addr)"
-  local command=$1
-  local fuzzer=$2
-  local args="${@:3}"
-  # Construct argparse flags
-  local name_opt=
-  if [ -n "$2" ] ; then
-    name_opt="-n $2"
+  local command="$1"
+  shift
+
+  if [ -n "$1" ] ; then
+    flags="${flags} -n $1"
+    shift
   fi
+
   case ${command} in
     help)
       fx-command-help
       exit 0
       ;;
     list)
-      python ${FUZZING_DIR}/list_fuzzers.py ${name_opt}
+      python ${FUZZING_DIR}/list_fuzzers.py ${flags}
       ;;
     check)
-      python ${FUZZING_DIR}/check_fuzzer.py ${name_opt}
+      python ${FUZZING_DIR}/check_fuzzer.py ${flags}
       ;;
     start)
-      python ${FUZZING_DIR}/start_fuzzer.py ${name_opt} &
+      python ${FUZZING_DIR}/start_fuzzer.py ${flags} "$@" &
       ;;
     stop)
-      python ${FUZZING_DIR}/stop_fuzzer.py ${name_opt}
+      python ${FUZZING_DIR}/stop_fuzzer.py ${flags}
       ;;
     repro)
-      python ${FUZZING_DIR}/repro_units.py ${name_opt}
+      python ${FUZZING_DIR}/repro_units.py ${flags} "$@"
+      ;;
+    corpus)
+      python ${FUZZING_DIR}/list_corpora.py ${flags}
+      ;;
+    fetch)
+      if [[ -d "$1" ]] ; then
+        flags="${flags} -c $1"
+      elif [[ -n "$1" ]] ; then
+        flags="${flags} -l $1"
+      fi
+      python ${FUZZING_DIR}/fetch_corpus.py ${flags}
       ;;
     merge)
-      fx-command-run ssh ${device} fuzz ${command} ${fuzzer} ${args}
+      python ${FUZZING_DIR}/merge_corpus.py ${flags} "$@"
       ;;
-    fetch|store)
-      set_staging
-      query "${fuzzer}"
-      ${command} ${args}
-      ;;
-    zbi)
-      # TODO(security): SEC-141. This command should be replaced by something using //build/images
-      # once vanilla drivers in instrumented devhosts are fixed and/or partial Zircon
-      # instrumentation is implemented.
-      echo "NOTE: This command is subject to change. Check the documentation at"
-      echo "//docs/development/workflows/libfuzzer.md for the currently supported way of"
-      echo "running Zircon fuzzers in a Fuchsia environment."
-      add_to_zbi
+    store)
+      python ${FUZZING_DIR}/store_corpus.py ${flags}
       ;;
     *)
-      # "Automatic" mode
-      fuzzer="${command}"
-      args="${@:2}"
-      echo "Command omitted; starting fuzzer '${fuzzer}' in automatic mode."
-      echo "If this isn't what you intended, try 'fx fuzz help'."
-      set_staging
-      query "${fuzzer}"
-      if [[ ${corpus_size} == "0" ]] ; then
-        fetch
-      fi
-      start "${args}"
+      echo "Automatic mode disabled."
       ;;
   esac
 }
