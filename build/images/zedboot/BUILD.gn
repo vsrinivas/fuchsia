@@ -7,6 +7,7 @@ import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/json.gni")
 import("//build/images/manifest.gni")
+import("//build/images/zxcrypt.gni")
 
 declare_args() {
   # List of kernel command line arguments to bake into the Zedboot image.
@@ -103,6 +104,13 @@ action("devmgr_config.txt") {
   }
 }
 
+generated_file("zxcrypt_config.txt") {
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  contents = zxcrypt_key_source
+}
+
 component_manager_label =
     "//garnet/bin/sys/component_manager:component_manager.bootfs"
 component_manager_target_dir =
@@ -116,6 +124,7 @@ zbi("zbi") {
   deps = [
     ":devmgr_config.txt",
     ":zedboot.manifest",
+    ":zxcrypt_config.txt",
     component_manager_label,
   ]
   inputs = [
@@ -130,6 +139,8 @@ zbi("zbi") {
       ]
       sources = get_target_outputs(":devmgr_config.txt")
     },
+    "config/zxcrypt=" +
+        rebase_path("$target_out_dir/zxcrypt_config.txt", root_build_dir),
   ]
   cmdline = zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files

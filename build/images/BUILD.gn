@@ -16,6 +16,7 @@ import("//build/images/json.gni")
 import("//build/images/manifest.gni")
 import("//build/images/max_fvm_size.gni")
 import("//build/images/shell_commands.gni")
+import("//build/images/zxcrypt.gni")
 import("//build/package.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_molecule.gni")
@@ -578,6 +579,13 @@ action("devmgr_config.txt") {
   ]
 }
 
+generated_file("zxcrypt_config.txt") {
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  contents = zxcrypt_key_source
+}
+
 component_manager_label =
     "//garnet/bin/sys/component_manager:component_manager.bootfs"
 component_manager_target_dir =
@@ -594,6 +602,7 @@ zbi("fuchsia") {
   deps = [
     ":devmgr_config.txt",
     ":system_image.manifest",
+    ":zxcrypt_config.txt",
     component_manager_label,
   ]
   inputs = [
@@ -608,6 +617,8 @@ zbi("fuchsia") {
       ]
       sources = get_target_outputs(":devmgr_config.txt")
     },
+    "config/zxcrypt=" +
+        rebase_path("$target_out_dir/zxcrypt_config.txt", root_build_dir),
   ]
   cmdline = kernel_cmdline_args
   cmdline_inputs = kernel_cmdline_files
