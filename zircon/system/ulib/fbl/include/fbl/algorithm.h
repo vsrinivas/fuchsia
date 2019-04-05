@@ -6,24 +6,15 @@
 #define FBL_ALGORITHM_H_
 
 #include <stdlib.h>
+
+#include <algorithm>
 #include <type_traits>
 
 namespace fbl {
 
-template<class T>
-constexpr const T& min(const T& a, const T& b) {
-    return (b < a) ? b : a;
-}
-
-template<class T>
-constexpr const T& max(const T& a, const T& b) {
-    return (a < b) ? b : a;
-}
-
-template<class T>
-constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
-    return (v < lo) ? lo : (hi < v) ? hi : v;
-}
+using std::min;
+using std::max;
+using std::clamp;
 
 // is_pow2
 //

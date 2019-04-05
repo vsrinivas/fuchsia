@@ -241,10 +241,6 @@ bool lower_bound_test() {
     EXPECT_EQ(*fbl::lower_bound(first, last, 7), 7);
     EXPECT_EQ(fbl::lower_bound(first, last, 8), last);
 
-    last = first - 1;
-    EXPECT_EQ(fbl::lower_bound(first, first, 0), first);
-    EXPECT_EQ(fbl::lower_bound(first, last, 0), last);
-
     END_TEST;
 }
 
@@ -285,10 +281,6 @@ bool lower_bound_compare_test() {
     EXPECT_EQ(*fbl::lower_bound(first, last, 6, lessThan), 7);
     EXPECT_EQ(*fbl::lower_bound(first, last, 7, lessThan), 7);
     EXPECT_EQ(fbl::lower_bound(first, last, 8, lessThan), last);
-
-    last = first - 1;
-    EXPECT_EQ(fbl::lower_bound(first, first, 0, lessThan), first);
-    EXPECT_EQ(fbl::lower_bound(first, last, 0, lessThan), last);
 
     END_TEST;
 }
