@@ -53,7 +53,8 @@ class MockImagePipeSurface : public image_pipe_swapchain::ImagePipeSurface {
       VkExportMemoryAllocateInfoKHR export_allocate_info = {
           .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
           .pNext = nullptr,
-          .handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR};
+          .handleTypes =
+              VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
 
       VkMemoryAllocateInfo alloc_info{
           .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,

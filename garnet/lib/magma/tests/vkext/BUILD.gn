@@ -10,8 +10,6 @@ executable("vkext") {
   sources = [
     "main.cc",
     "vk_ext_buffer_collection.cc",
-    "vk_external_memory_fuchsia_khr.cc",
-    "vk_external_semaphore_fuchsia_khr.cc",
     "vk_fuchsia_external_memory.cc",
     "vk_fuchsia_external_semaphore.cc",
   ]

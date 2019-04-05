@@ -100,9 +100,6 @@ bool VkReadbackTest::InitVulkan()
 
     std::vector<const char*> enabled_extension_names;
     switch (ext_) {
-        case VK_KHR_EXTERNAL_MEMORY_FUCHSIA:
-            enabled_extension_names.push_back(VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME);
-            break;
         case VK_FUCHSIA_EXTERNAL_MEMORY:
             enabled_extension_names.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
             break;
@@ -128,19 +125,6 @@ bool VkReadbackTest::InitVulkan()
         return DRETF(false, "vkCreateDevice failed: %d", result);
 
     switch (ext_) {
-        case VK_KHR_EXTERNAL_MEMORY_FUCHSIA:
-            vk_get_memory_fuchsia_handle_khr_ = reinterpret_cast<PFN_vkGetMemoryFuchsiaHandleKHR>(
-                vkGetInstanceProcAddr(instance, "vkGetMemoryFuchsiaHandleKHR"));
-            if (!vk_get_memory_fuchsia_handle_khr_)
-                return DRETF(false, "Couldn't find vkGetMemoryFuchsiaHandleKHR");
-
-            vk_get_memory_fuchsia_handle_properties_khr_ =
-                reinterpret_cast<PFN_vkGetMemoryFuchsiaHandlePropertiesKHR>(
-                    vkGetInstanceProcAddr(instance, "vkGetMemoryFuchsiaHandlePropertiesKHR"));
-            if (!vk_get_memory_fuchsia_handle_properties_khr_)
-                return DRETF(false, "Couldn't find vkGetMemoryFuchsiaHandlePropertiesKHR");
-            break;
-
         case VK_FUCHSIA_EXTERNAL_MEMORY:
             vkGetMemoryZirconHandleFUCHSIA_ = reinterpret_cast<PFN_vkGetMemoryZirconHandleFUCHSIA>(
                 vkGetInstanceProcAddr(instance, "vkGetMemoryZirconHandleFUCHSIA"));
@@ -225,45 +209,7 @@ bool VkReadbackTest::InitImage()
         VK_SUCCESS)
         return DRETF(false, "vkAllocateMemory failed");
 
-    if (ext_ == VK_KHR_EXTERNAL_MEMORY_FUCHSIA && device_memory_handle_) {
-        size_t vmo_size;
-        zx_vmo_get_size(device_memory_handle_, &vmo_size);
-        VkImportMemoryFuchsiaHandleInfoKHR magma_info = {
-            VK_STRUCTURE_TYPE_IMPORT_MEMORY_FUCHSIA_HANDLE_INFO_KHR, nullptr,
-            VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR, device_memory_handle_};
-
-        VkMemoryAllocateInfo info;
-        info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        info.pNext = &magma_info;
-        info.allocationSize = vmo_size;
-        info.memoryTypeIndex = 0;
-
-        if ((result = vkAllocateMemory(vk_device_, &info, nullptr, &vk_imported_device_memory_)) !=
-            VK_SUCCESS)
-            return DRETF(false, "vkAllocateMemory failed");
-    } else if (ext_ == VK_KHR_EXTERNAL_MEMORY_FUCHSIA) {
-        uint32_t handle;
-        VkMemoryGetFuchsiaHandleInfoKHR get_handle_info = {
-            VK_STRUCTURE_TYPE_MEMORY_GET_FUCHSIA_HANDLE_INFO_KHR, nullptr, vk_device_memory_,
-            VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR};
-        if ((result = vk_get_memory_fuchsia_handle_khr_(vk_device_, &get_handle_info, &handle)) !=
-            VK_SUCCESS)
-            return DRETF(false, "vkGetMemoryFuchsiaHandleKHR failed");
-
-        VkMemoryFuchsiaHandlePropertiesKHR properties{
-            .sType = VK_STRUCTURE_TYPE_MEMORY_FUCHSIA_HANDLE_PROPERTIES_KHR,
-            .pNext = nullptr,
-        };
-        result = vk_get_memory_fuchsia_handle_properties_khr_(
-            vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_FUCHSIA_VMO_BIT_KHR, handle, &properties);
-        if (result != VK_SUCCESS)
-            return DRETF(false, "vkGetMemoryFuchsiaHandlePropertiesKHR returned %d", result);
-
-        device_memory_handle_ = handle;
-        DLOG("got device_memory_handle_ 0x%x memoryTypeBits 0x%x", device_memory_handle_,
-             properties.memoryTypeBits);
-
-    } else if (ext_ == VK_FUCHSIA_EXTERNAL_MEMORY && device_memory_handle_) {
+    if (ext_ == VK_FUCHSIA_EXTERNAL_MEMORY && device_memory_handle_) {
         size_t vmo_size;
         zx_vmo_get_size(device_memory_handle_, &vmo_size);
 
@@ -291,16 +237,17 @@ bool VkReadbackTest::InitImage()
             .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
         if ((result = vkGetMemoryZirconHandleFUCHSIA_(vk_device_, &get_handle_info, &handle)) !=
             VK_SUCCESS)
-            return DRETF(false, "vkGetMemoryFuchsiaHandleKHR failed");
+            return DRETF(false, "vkGetMemoryZirconHandleFUCHSIA failed");
 
         VkMemoryZirconHandlePropertiesFUCHSIA properties{
             .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA,
             .pNext = nullptr,
         };
         result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
-            vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, handle, &properties);
+            vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, handle,
+            &properties);
         if (result != VK_SUCCESS)
-            return DRETF(false, "vkGetMemoryFuchsiaHandlePropertiesKHR returned %d", result);
+            return DRETF(false, "vkGetMemoryZirconHandlePropertiesFUCHSIA returned %d", result);
 
         device_memory_handle_ = handle;
         DLOG("got device_memory_handle_ 0x%x memoryTypeBits 0x%x", device_memory_handle_,

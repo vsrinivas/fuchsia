@@ -28,7 +28,7 @@ public:
     static constexpr uint32_t kWidth = 64;
     static constexpr uint32_t kHeight = 64;
 
-    enum Extension { NONE, VK_KHR_EXTERNAL_MEMORY_FUCHSIA, VK_FUCHSIA_EXTERNAL_MEMORY };
+    enum Extension { NONE, VK_FUCHSIA_EXTERNAL_MEMORY };
 
     VkReadbackTest(Extension ext = NONE) : ext_(ext) {}
 
@@ -54,8 +54,6 @@ private:
     // Import/export
     VkDeviceMemory vk_imported_device_memory_ = VK_NULL_HANDLE;
     uint32_t device_memory_handle_ = 0;
-    PFN_vkGetMemoryFuchsiaHandleKHR vk_get_memory_fuchsia_handle_khr_{};
-    PFN_vkGetMemoryFuchsiaHandlePropertiesKHR vk_get_memory_fuchsia_handle_properties_khr_{};
     PFN_vkGetMemoryZirconHandleFUCHSIA vkGetMemoryZirconHandleFUCHSIA_{};
     PFN_vkGetMemoryZirconHandlePropertiesFUCHSIA vkGetMemoryZirconHandlePropertiesFUCHSIA_{};
 
