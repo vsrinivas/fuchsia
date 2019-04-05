@@ -42,19 +42,41 @@
 KCOUNTER(dispatcher_process_create_count, "dispatcher.process.create")
 KCOUNTER(dispatcher_process_destroy_count, "dispatcher.process.destroy")
 
-static zx_handle_t map_handle_to_value(const Handle* handle, uint32_t mixer) {
-    // Ensure that the last bit of the result is not zero, and make sure
-    // we don't lose any base_value bits or make the result negative
-    // when shifting.
-    DEBUG_ASSERT((mixer & ((1<<31) | 0x1)) == 0);
-    DEBUG_ASSERT((handle->base_value() & 0xc0000000) == 0);
+// TODO(johngro): move this into handle.h one we have updated externals to no
+// longer depend on the MSB of the handle being 0.  See WEB-33
+constexpr uint32_t kHandleReservedBits = 2;
+constexpr uint32_t kHandleMustBeOneMask = ((0x1u << kHandleReservedBits) - 1);
+static_assert(kHandleMustBeOneMask == ZX_HANDLE_FIXED_BITS_MASK,
+              "kHandleMustBeOneMask must match ZX_HANDLE_FIXED_BITS_MASK!");
 
-    auto handle_id = (handle->base_value() << 1) | 0x1;
+static zx_handle_t map_handle_to_value(const Handle* handle, uint32_t mixer) {
+    // Ensure that the last two bits of the result is not zero, and make sure we
+    // don't lose any base_value bits when shifting.
+    constexpr uint32_t kBaseValueMustBeZeroMask =
+        (kHandleMustBeOneMask << ((sizeof(handle->base_value()) * 8) - kHandleReservedBits));
+
+    DEBUG_ASSERT((mixer & kHandleMustBeOneMask) == 0);
+    DEBUG_ASSERT((handle->base_value() & kBaseValueMustBeZeroMask) == 0);
+
+    auto handle_id = (handle->base_value() << kHandleReservedBits) | kHandleMustBeOneMask;
+
+    // TODO(johngro): remove this when we can, See WEB-33
+#if 0
     return static_cast<zx_handle_t>(mixer ^ handle_id);
+#else
+    zx_handle_t ret = static_cast<zx_handle_t>(mixer ^ handle_id);
+    DEBUG_ASSERT((ret & 0x80000000) == 0);
+    return ret;
+#endif
 }
 
 static Handle* map_value_to_handle(zx_handle_t value, uint32_t mixer) {
-    auto handle_id = (static_cast<uint32_t>(value) ^ mixer) >> 1;
+    // Validate that the "must be one" bits are actually one.
+    if ((value & kHandleMustBeOneMask) != kHandleMustBeOneMask) {
+        return nullptr;
+    }
+
+    uint32_t handle_id = (static_cast<uint32_t>(value) ^ mixer) >> kHandleReservedBits;
     return Handle::FromU32(handle_id);
 }
 
@@ -110,8 +132,13 @@ ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job,
     auto prng = crypto::GlobalPRNG::GetInstance();
     prng->Draw(&secret, sizeof(secret));
 
-    // Handle values cannot be negative values, so we mask the high bit.
-    handle_rand_ = (secret << 2) & INT_MAX;
+    // Handle values must always have the low kHandleReservedBits set.  Do not
+    // ever attempt to toggle these bits using the handle_rand_ xor mask.
+    handle_rand_ = secret << kHandleReservedBits;
+
+    // TODO(johngro): remove this once we have updated externals to no longer
+    // depend on the MSB of the handle being 0.  See WEB-33
+    handle_rand_ &= ~0x80000000U;
 }
 
 ProcessDispatcher::~ProcessDispatcher() {

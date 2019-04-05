@@ -29,24 +29,34 @@ KCOUNTER(handle_count_live, "handles.live")
 // uses to create zx_handle_t values.
 //
 // base_value bit fields:
-//   [31..30]: Must be zero
-//   [29..kHandleGenerationShift]: Generation number
-//                                 Masked by kHandleGenerationMask
-//   [kHandleGenerationShift-1..0]: Index into handle_arena
-//                                  Masked by kHandleIndexMask
+//   [31..(32 - kHandleReservedBits)]                     : Must be zero
+//   [(31 - kHandleReservedBits)..kHandleGenerationShift] : Generation number
+//                                                          Masked by kHandleGenerationMask
+//   [kHandleGenerationShift-1..0]                        : Index into handle_arena
+//                                                          Masked by kHandleIndexMask
 constexpr uint32_t kHandleIndexMask = kMaxHandleCount - 1;
 static_assert((kHandleIndexMask & kMaxHandleCount) == 0,
               "kMaxHandleCount must be a power of 2");
-constexpr uint32_t kHandleGenerationMask = ~kHandleIndexMask & ~(3 << 30);
+
+// TODO(johngro): remove this and use the one in handle.h once we have updated
+// externals to no longer depend on the MSB of the handle being 0.  See WEB-33
+constexpr uint32_t kHandleReservedBits = 3;
+// END TODO
+constexpr uint32_t kHandleReservedBitsMask = ((1 << kHandleReservedBits) - 1)
+                                           << (32 - kHandleReservedBits);
+constexpr uint32_t kHandleGenerationMask = ~kHandleIndexMask & ~kHandleReservedBitsMask;
 constexpr uint32_t kHandleGenerationShift = log2_uint_floor(kMaxHandleCount);
 static_assert(((3 << (kHandleGenerationShift - 1)) & kHandleGenerationMask) ==
                   1 << kHandleGenerationShift,
               "Shift is wrong");
 static_assert((kHandleGenerationMask >> kHandleGenerationShift) >= 255,
               "Not enough room for a useful generation count");
-static_assert(((3 << 30) ^ kHandleGenerationMask ^ kHandleIndexMask) ==
-                  0xffffffffu,
-              "Masks do not agree");
+
+static_assert((kHandleReservedBitsMask & kHandleGenerationMask) == 0, "Handle Mask Overlap!");
+static_assert((kHandleReservedBitsMask & kHandleIndexMask) == 0, "Handle Mask Overlap!");
+static_assert((kHandleGenerationMask & kHandleIndexMask) == 0, "Handle Mask Overlap!");
+static_assert((kHandleReservedBitsMask | kHandleGenerationMask | kHandleIndexMask) == 0xffffffffu,
+              "Handle masks do not cover all bits!");
 
 }  // namespace
 
