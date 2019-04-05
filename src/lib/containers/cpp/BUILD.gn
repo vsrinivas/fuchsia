@@ -1,0 +1,55 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+source_set("cpp") {
+  public = [
+    "circular_deque.h",
+    "vector_buffer.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/safemath",
+  ]
+}
+
+test("containers_cpp_unittests") {
+  testonly = true
+  output_name = "containers_cpp_unittests"
+
+  sources = [
+    "circular_deque_unittest.cc",
+    "vector_buffer_unittest.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+test_package("containers_cpp_tests") {
+  tests = [
+    {
+      name = "containers_cpp_unittests"
+      environments = basic_envs
+    },
+  ]
+
+  deps = [
+    ":containers_cpp_unittests",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  data_deps = [
+    ":containers_cpp_tests",
+  ]
+}

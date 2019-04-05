@@ -29,6 +29,14 @@ group("broadcom") {
   ]
 }
 
+group("containers_cpp") {
+  testonly = true
+  public_deps = [
+    "//src/lib/containers/cpp:containers_cpp_unittests($host_toolchain)",
+    "//src/lib/containers/cpp:containers_cpp_tests",
+  ]
+}
+
 group("fidlext_tests") {
   testonly = true
   public_deps = [
@@ -273,6 +281,7 @@ group("all") {
     "//garnet/packages/tests:cobalt_client",
     "//garnet/packages/tests:component_cpp",
     "//garnet/packages/tests:components_binary_test",
+    "//garnet/packages/tests:containers_cpp",
     "//garnet/packages/tests:cpuperf",
     "//garnet/packages/tests:crashpad",
     "//garnet/packages/tests:debug_agent",
