@@ -78,6 +78,19 @@ class Optional {
     Swap(&other);
     return *this;
   }
+  Optional& operator=(const T& other) {
+    Optional(other).Swap(this);
+    return *this;
+  }
+  Optional& operator=(T&& other) {
+    if (set_) {
+      *storage_.get() = std::move(other);
+    } else {
+      set_ = true;
+      storage_.Init(std::forward<T>(other));
+    }
+    return *this;
+  }
   T* operator->() {
     assert(set_);
     return storage_.get();
