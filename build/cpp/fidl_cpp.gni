@@ -31,20 +31,17 @@ template("fidl_cpp_codegen") {
     library_name = invoker.name
   }
 
-  fidl_root_gen_dir =
-      get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
+  fidl_target_gen_dir =
+      get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
 
   include_stem = string_replace(library_name, ".", "/") + "/" +
                  invoker.generated_source_base
-  file_stem = "$fidl_root_gen_dir/$include_stem"
+  file_stem = "$fidl_target_gen_dir/$include_stem"
 
   fidl_target_name = invoker.root_target
   fidl_target_gen_dir =
       get_label_info(":${fidl_target_name}($fidl_toolchain)", "target_gen_dir")
   json_representation = "$fidl_target_gen_dir/$fidl_target_name.fidl.json"
-
-  fidl_root_gen_dir =
-      get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
 
   compiled_action(generation_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
@@ -68,7 +65,7 @@ template("fidl_cpp_codegen") {
       "--output-base",
       rebase_path(file_stem, root_build_dir),
       "--include-base",
-      rebase_path(fidl_root_gen_dir, root_build_dir),
+      rebase_path(fidl_target_gen_dir, root_build_dir),
       "--generators",
       invoker.generator,
     ]
@@ -83,6 +80,7 @@ template("fidl_cpp_library") {
   not_needed(invoker, "*")
 
   main_target_name = target_name
+  config_target_name = main_target_name + "__config"
   generation_target_name =
       "${invoker.root_target}_${invoker.generator}_generate"
 
@@ -91,16 +89,20 @@ template("fidl_cpp_library") {
     library_name = invoker.name
   }
 
-  fidl_root_gen_dir =
-      get_label_info(":$target_name($fidl_toolchain)", "root_gen_dir")
+  fidl_target_gen_dir =
+      get_label_info(":$target_name($fidl_toolchain)", "target_gen_dir")
 
   include_stem = string_replace(library_name, ".", "/") + "/" +
                  invoker.generated_source_base
-  file_stem = "$fidl_root_gen_dir/$include_stem"
+  file_stem = "$fidl_target_gen_dir/$include_stem"
+
+  config(config_target_name) {
+    include_dirs = [ fidl_target_gen_dir ]
+  }
+
   source_set(main_target_name) {
     forward_variables_from(invoker,
                            [
-                             "deps",
                              "testonly",
                              "visibility",
                            ])
@@ -111,7 +113,7 @@ template("fidl_cpp_library") {
     ]
 
     # Let dependencies use `#include "$file_stem.h"`.
-    public_configs = [ "//build/cpp:fidl_gen_config" ]
+    public_configs = [ ":$config_target_name" ]
 
     public_deps = [
       ":$generation_target_name($fidl_toolchain)",
@@ -121,6 +123,10 @@ template("fidl_cpp_library") {
 
     if (defined(invoker.library_public_deps)) {
       public_deps += invoker.library_public_deps
+    }
+
+    if (defined(invoker.deps)) {
+      public_deps += invoker.deps
     }
   }
 }
