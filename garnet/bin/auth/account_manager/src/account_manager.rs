@@ -18,7 +18,6 @@ use fidl_fuchsia_auth_account::{
 };
 use futures::lock::Mutex;
 use futures::prelude::*;
-use lazy_static::lazy_static;
 use log::{info, warn};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -32,19 +31,6 @@ use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
 /// (Temporary) A fixed AuthState that is used for all accounts until authenticators are
 /// available.
 const DEFAULT_AUTH_STATE: AuthState = AuthState { summary: AuthStateSummary::Unknown };
-
-lazy_static! {
-    /// (Temporary) Configuration for a fixed set of auth providers used until file-based
-    /// configuration is available.
-    static ref DEFAULT_AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {
-        vec![AuthProviderConfig {
-            auth_provider_type: "google".to_string(),
-            url: "fuchsia-pkg://fuchsia.com/google_auth_provider#meta/google_auth_provider.cmx"
-                .to_string(),
-            params: None
-        }]
-    };
-}
 
 type AccountMap = BTreeMap<LocalAccountId, Option<Arc<AccountHandlerConnection>>>;
 
@@ -71,10 +57,13 @@ pub struct AccountManager {
 }
 
 impl AccountManager {
-    /// Constructs a new AccountManager, loading existing set of accounts from `data_dir`. This
-    /// directory must exist at construction.
-    pub fn new(data_dir: PathBuf) -> Result<AccountManager, Error> {
-        let context = Arc::new(AccountHandlerContext::new(&DEFAULT_AUTH_PROVIDER_CONFIG));
+    /// Constructs a new AccountManager, loading existing set of accounts from `data_dir`, and an
+    /// auth provider configuration. The directory must exist at construction.
+    pub fn new(
+        data_dir: PathBuf,
+        auth_provider_config: &[AuthProviderConfig],
+    ) -> Result<AccountManager, Error> {
+        let context = Arc::new(AccountHandlerContext::new(auth_provider_config));
         let mut ids_to_handlers = AccountMap::new();
         let account_list = StoredAccountList::load(&data_dir)?;
         for account in account_list.accounts().into_iter() {
@@ -312,8 +301,15 @@ mod tests {
     };
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
+    use lazy_static::lazy_static;
     use std::path::Path;
     use tempfile::TempDir;
+
+    lazy_static! {
+        /// Configuration for a set of fake auth providers used for testing.
+        /// This can be populated later if needed.
+        static ref AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {vec![]};
+    }
 
     fn request_stream_test<TestFn, Fut>(test_object: AccountManager, test_fn: TestFn)
     where
@@ -368,7 +364,7 @@ mod tests {
     fn test_initially_empty() {
         let data_dir = TempDir::new().unwrap();
         request_stream_test(
-            AccountManager::new(data_dir.path().into()).unwrap(),
+            AccountManager::new(data_dir.path().into(), &AUTH_PROVIDER_CONFIG).unwrap(),
             async move |proxy| {
                 assert_eq!(await!(proxy.get_account_ids())?, vec![]);
                 assert_eq!(await!(proxy.get_account_auth_states())?, (Status::Ok, vec![]));
@@ -401,7 +397,8 @@ mod tests {
         ]);
         stored_account_list.save(data_dir.path()).unwrap();
         // Manually create an account manager from an account_list_dir with two pre-populated dirs.
-        let account_manager = AccountManager::new(data_dir.path().to_owned()).unwrap();
+        let account_manager =
+            AccountManager::new(data_dir.path().to_owned(), &AUTH_PROVIDER_CONFIG).unwrap();
 
         request_stream_test(account_manager, async move |proxy| {
             // Try to remove the first account.
@@ -413,7 +410,8 @@ mod tests {
         });
         // Now create another account manager using the same directory, which should pick up the new
         // state from the operations of the first account manager.
-        let account_manager = AccountManager::new(data_dir.path().to_owned()).unwrap();
+        let account_manager =
+            AccountManager::new(data_dir.path().to_owned(), &AUTH_PROVIDER_CONFIG).unwrap();
         request_stream_test(account_manager, async move |proxy| {
             // Verify the only the second account is present.
             assert_eq!(await!(proxy.get_account_ids())?, fidl_local_id_vec(vec![2]));

@@ -21,35 +21,12 @@ package("token_manager_integration_tests") {
 
   deps = [
     ":e2e_dev",
-    "//garnet/bin/auth/testing/dev_auth_provider:dev_auth_provider",
-    "//garnet/bin/auth/testing/dev_auth_provider_iotid:dev_auth_provider_iotid",
-  ]
-
-  binaries = [
-    {
-      name = "dev_auth_provider"
-    },
-    {
-      name = "dev_auth_provider_iotid"
-    },
   ]
 
   tests = [
     {
       name = "dev_token_mgr_e2e_test"
       environments = basic_envs
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("//garnet/bin/auth/testing/meta/dev_auth_provider.cmx")
-      dest = "dev_auth_provider.cmx"
-    },
-    {
-      path = rebase_path(
-              "//garnet/bin/auth/testing/meta/dev_auth_provider_iotid.cmx")
-      dest = "dev_auth_provider_iotid.cmx"
     },
   ]
 }
@@ -70,10 +47,10 @@ executable("e2e_dev") {
   deps = [
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/test_runner/cpp/reporting",
     "//sdk/fidl/fuchsia.auth",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

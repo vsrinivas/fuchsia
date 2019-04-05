@@ -23,26 +23,71 @@ mod stored_account_list;
 use crate::account_manager::AccountManager;
 use failure::{Error, ResultExt};
 use fidl::endpoints::{RequestStream, ServiceMarker};
+use fidl_fuchsia_auth::AuthProviderConfig;
 use fidl_fuchsia_auth_account::{AccountManagerMarker, AccountManagerRequestStream};
+use fuchsia_app::fuchsia_single_component_package_url;
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use getopts;
+use lazy_static::lazy_static;
 use log::{error, info};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+// This flag (prefixed with `--`) results in a set of hermetic auth providers.
+const DEV_AUTH_PROVIDERS_FLAG: &str = "dev-auth-providers";
+
 // Default data directory for the AccountManager.
 const DATA_DIR: &str = "/data";
 
+lazy_static! {
+    /// (Temporary) Configuration for a fixed set of auth providers used until file-based
+    /// configuration is available.
+    static ref DEFAULT_AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {
+        vec![AuthProviderConfig {
+            auth_provider_type: "google".to_string(),
+            url: fuchsia_single_component_package_url!("google_auth_provider").to_string(),
+            params: None
+        }]
+    };
+
+    /// Configuration for a set of fake auth providers used for testing.
+    static ref DEV_AUTH_PROVIDER_CONFIG: Vec<AuthProviderConfig> = {
+        vec![AuthProviderConfig {
+            auth_provider_type: "dev_auth_provider".to_string(),
+            url: "fuchsia-pkg://fuchsia.com/dev_auth_providers#meta/dev_auth_provider.cmx"
+            .to_string(),
+            params: None
+        }]
+    };
+}
+
 fn main() -> Result<(), Error> {
+    // Parse CLI args
+    let mut opts = getopts::Options::new();
+    opts.optflag(
+        "",
+        DEV_AUTH_PROVIDERS_FLAG,
+        "use dev auth providers instead of the default set, for tests",
+    );
+    let args: Vec<String> = std::env::args().collect();
+    let options = opts.parse(args)?;
+    let auth_provider_config: &Vec<_> = if options.opt_present(DEV_AUTH_PROVIDERS_FLAG) {
+        &DEV_AUTH_PROVIDER_CONFIG
+    } else {
+        &DEFAULT_AUTH_PROVIDER_CONFIG
+    };
+
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting account manager");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
-    let account_manager = AccountManager::new(PathBuf::from(DATA_DIR)).map_err(|e| {
-        error!("Error initializing AccountManager {:?}", e);
-        e
-    })?;
+    let account_manager = AccountManager::new(PathBuf::from(DATA_DIR), &auth_provider_config)
+        .map_err(|e| {
+            error!("Error initializing AccountManager {:?}", e);
+            e
+        })?;
     let account_manager = Arc::new(account_manager);
 
     let fut = ServicesServer::new()
