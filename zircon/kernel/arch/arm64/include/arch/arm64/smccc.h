@@ -19,6 +19,7 @@ typedef struct arm_smccc_result {
     uint64_t x1;
     uint64_t x2;
     uint64_t x3;
+    uint64_t x6; // at least one implementation uses it as a way to return session_id.
 } arm_smccc_result_t;
 
 arm_smccc_result_t arm_smccc_smc(uint32_t w0,              // Function Identifier

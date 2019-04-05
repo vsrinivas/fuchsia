@@ -22,7 +22,7 @@
 // is greater than 16 bytes, so the indirect result location register (x8) must be used to
 // populate the result. Since this register is not preserved across the SMC call, it must be
 // stored on the stack. For the purposes of AAPCS64 compatibility, the frame pointer (x29) is
-// also stored on the stack.
+// also stored on the stack. Returns x0-x3,x6.
 
 // arm_smccc_result_t arm_smccc_smc(uint32_t w0, uint64_t x1, uint64_t x2, uint64_t x3,
 //                                  uint64_t x4, uint64_t x5, uint64_t x6, uint32_t w7);
@@ -32,6 +32,7 @@ FUNCTION(arm_smccc_smc)
     pop_regs  x8, x29
     stp       x0, x1, [x8]
     stp       x2, x3, [x8, #16]
+    str       x6, [x8, #32]
     ret
 END_FUNCTION(arm_smccc_smc)
 

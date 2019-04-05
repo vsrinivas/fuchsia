@@ -19,6 +19,7 @@ zx_status_t arch_smc_call(const zx_smc_parameters_t* params, zx_smc_result_t* re
     result->arg1 = arm_result.x1;
     result->arg2 = arm_result.x2;
     result->arg3 = arm_result.x3;
+    result->arg6 = arm_result.x6;
 
     return ZX_OK;
 }

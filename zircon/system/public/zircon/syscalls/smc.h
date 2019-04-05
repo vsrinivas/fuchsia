@@ -37,6 +37,7 @@ typedef struct zx_smc_result {
     uint64_t arg1;
     uint64_t arg2;
     uint64_t arg3;
+    uint64_t arg6; // at least one implementation uses it as a way to return session_id.
 } zx_smc_result_t;
 
 __END_CDECLS
