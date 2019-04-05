@@ -32,7 +32,6 @@ SCUDO_FLAG(bool, delete_size_mismatch, true,
            "Terminate on a size mismatch between a sized-delete and the actual "
            "size of a chunk (as provided to new/new[]).")
 
-// go/initialize
 SCUDO_FLAG(bool, zero_contents, false, "Zero chunk contents on allocation.")
 
 SCUDO_FLAG(int, rss_limit_mb, -1,

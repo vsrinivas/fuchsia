@@ -148,16 +148,16 @@ bool getRandom(void *Buffer, uptr Length, bool Blocking = false);
 // platform specific data to the function.
 // Returns nullptr on error or dies if MAP_ALLOWNOMEM is not specified.
 void *map(void *Addr, uptr Size, const char *Name, uptr Flags = 0,
-          u64 *Extra = nullptr);
+          uptr *Extra = nullptr);
 
 // Indicates that we are getting rid of the whole mapping, which might have
 // further consequences on Extra, depending on the platform.
 #define UNMAP_ALL (1U << 0)
 
-void unmap(void *Addr, uptr Size, uptr Flags = 0, u64 *Extra = nullptr);
+void unmap(void *Addr, uptr Size, uptr Flags = 0, uptr *Extra = nullptr);
 
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
-                      u64 *Extra = nullptr);
+                      uptr *Extra = nullptr);
 
 // Internal map & unmap fatal error. This must not call map().
 void NORETURN dieOnMapUnmapError(bool OutOfMemory = false);

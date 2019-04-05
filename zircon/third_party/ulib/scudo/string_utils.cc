@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "string_utils.h"
+
 #include "common.h"
 
-#include <ctype.h>
 #include <stdarg.h>
 #include <string.h>
 

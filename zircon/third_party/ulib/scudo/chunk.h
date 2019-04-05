@@ -131,7 +131,7 @@ void loadHeader(u32 Cookie, const void *Ptr,
   *NewUnpackedHeader = bit_cast<UnpackedHeader>(NewPackedHeader);
   if (UNLIKELY(NewUnpackedHeader->Checksum !=
                computeHeaderChecksum(Cookie, Ptr, NewUnpackedHeader)))
-    reportHeaderCorruption(Ptr);
+    reportHeaderCorruption(const_cast<void *>(Ptr));
 }
 
 INLINE void compareExchangeHeader(u32 Cookie, void *Ptr,

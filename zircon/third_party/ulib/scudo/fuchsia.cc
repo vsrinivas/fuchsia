@@ -38,44 +38,29 @@ COMPILER_CHECK(ZX_HANDLE_INVALID == 0);
 struct MapInfo {
   zx_handle_t Vmar;
   zx_handle_t Vmo;
+  uintptr_t VmarBase;
+  uint64_t VmoSize;
 };
-COMPILER_CHECK(sizeof(MapInfo) == sizeof(u64));
+COMPILER_CHECK(sizeof(MapInfo) <= 4 * sizeof(uptr));
 
 static void *allocateVmar(uptr Size, MapInfo *Info, bool AllowNoMem) {
   // Only scenario so far.
   DCHECK(Info);
   DCHECK_EQ(Info->Vmar, ZX_HANDLE_INVALID);
 
-  uintptr_t P;
   const zx_status_t Status = _zx_vmar_allocate(
       _zx_vmar_root_self(),
       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0,
-      Size, &Info->Vmar, &P);
+      Size, &Info->Vmar, &Info->VmarBase);
   if (Status != ZX_OK) {
     if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
       dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);
     return nullptr;
   }
-  return reinterpret_cast<void *>(P);
+  return reinterpret_cast<void *>(Info->VmarBase);
 }
 
-// Returns the offset of an address range in a Vmar, while checking that said
-// range fully belongs to the Vmar. An alternative would be to keep track of
-// both the base & length to avoid calling this. The tradeoff being a system
-// call vs two extra uptr of storage.
-// TODO(kostyak): revisit the implications of both options.
-static uint64_t getOffsetInVmar(zx_handle_t Vmar, void *Addr, uintptr_t Size) {
-  zx_info_vmar_t Info;
-  const zx_status_t Status = _zx_object_get_info(
-      Vmar, ZX_INFO_VMAR, &Info, sizeof(Info), nullptr, nullptr);
-  CHECK_EQ(Status, ZX_OK);
-  const uint64_t Offset = reinterpret_cast<uintptr_t>(Addr) - Info.base;
-  CHECK_LE(Offset, Info.base + Info.len);
-  CHECK_LE(Offset + Size, Info.base + Info.len);
-  return Offset;
-}
-
-void *map(void *Addr, uptr Size, const char *Name, uptr Flags, u64 *Extra) {
+void *map(void *Addr, uptr Size, const char *Name, uptr Flags, uptr *Extra) {
   DCHECK_EQ(Size % PAGE_SIZE, 0);
   const bool AllowNoMem = !!(Flags & MAP_ALLOWNOMEM);
   MapInfo *Info = reinterpret_cast<MapInfo *>(Extra);
@@ -95,9 +80,8 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags, u64 *Extra) {
     CHECK(Addr);
     DCHECK(Flags & MAP_RESIZABLE);
     Vmo = Info->Vmo;
-    Status = _zx_vmo_get_size(Vmo, &VmoSize);
-    if (Status == ZX_OK)
-      Status = _zx_vmo_set_size(Vmo, VmoSize + Size);
+    VmoSize = Info->VmoSize;
+    Status = _zx_vmo_set_size(Vmo, VmoSize + Size);
     if (Status != ZX_OK) {
       if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
         dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);
@@ -116,7 +100,8 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags, u64 *Extra) {
 
   uintptr_t P;
   zx_vm_option_t MapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
-  const uint64_t Offset = Addr ? getOffsetInVmar(Vmar, Addr, Size) : 0;
+  const uint64_t Offset =
+      Addr ? reinterpret_cast<uintptr_t>(Addr) - Info->VmarBase : 0;
   if (Offset)
     MapFlags |= ZX_VM_SPECIFIC;
   Status = _zx_vmar_map(Vmar, MapFlags, Offset, Vmo, VmoSize, Size, &P);
@@ -133,11 +118,13 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags, u64 *Extra) {
       dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);
     return nullptr;
   }
+  if (Info)
+    Info->VmoSize += Size;
 
   return reinterpret_cast<void *>(P);
 }
 
-void unmap(void *Addr, uptr Size, uptr Flags, u64 *Extra) {
+void unmap(void *Addr, uptr Size, uptr Flags, uptr *Extra) {
   MapInfo *Info = reinterpret_cast<MapInfo *>(Extra);
   if (Flags & UNMAP_ALL) {
     DCHECK_NE(Info, nullptr);
@@ -156,13 +143,12 @@ void unmap(void *Addr, uptr Size, uptr Flags, u64 *Extra) {
   if (Info) {
     if (Info->Vmo != ZX_HANDLE_INVALID)
       CHECK_EQ(_zx_handle_close(Info->Vmo), ZX_OK);
-    Info->Vmo = ZX_HANDLE_INVALID;
-    Info->Vmar = ZX_HANDLE_INVALID;
+    memset(Info, 0, sizeof(*Info));
   }
 }
 
 void releasePagesToOS(UNUSED uptr BaseAddress, uptr Offset, uptr Size,
-                      u64 *Extra) {
+                      uptr *Extra) {
   MapInfo *Info = reinterpret_cast<MapInfo *>(Extra);
   DCHECK(Info);
   DCHECK_NE(Info->Vmar, ZX_HANDLE_INVALID);

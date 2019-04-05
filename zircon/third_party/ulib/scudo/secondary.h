@@ -21,10 +21,8 @@ namespace LargeBlock {
 struct Header {
   LargeBlock::Header *Prev;
   LargeBlock::Header *Next;
-  uptr MapBase;
-  uptr MapSize;
-  u64 PlatformData;
   uptr BlockEnd;
+  uptr PlatformData[4];
 };
 
 constexpr uptr getHeaderSize() {
@@ -59,10 +57,10 @@ public:
     const uptr PageSize = getPageSizeCached();
     const uptr MapSize =
         roundUpTo(Size + LargeBlock::getHeaderSize(), PageSize) + 2 * PageSize;
-    u64 PlatformData = 0;
+    uptr PlatformData[4] = {};
     uptr MapBase = reinterpret_cast<uptr>(
-        map(nullptr, MapSize, "ScudoSecondary", MAP_NOACCESS | MAP_ALLOWNOMEM,
-            &PlatformData));
+        map(nullptr, MapSize, "scudo:secondary", MAP_NOACCESS | MAP_ALLOWNOMEM,
+            PlatformData));
     if (UNLIKELY(!MapBase))
       return nullptr;
     uptr CommitBase = MapBase + PageSize;
@@ -76,14 +74,14 @@ public:
       DCHECK_GE(NewMapBase, MapBase);
       // We only trim the extra memory on 32-bit platforms.
       if (SCUDO_WORDSIZE == 32U && NewMapBase != MapBase) {
-        unmap((void *)MapBase, NewMapBase - MapBase, 0, &PlatformData);
+        unmap((void *)MapBase, NewMapBase - MapBase, 0, PlatformData);
         MapBase = NewMapBase;
       }
       const uptr NewMapEnd =
           roundUpTo(MapBase + 2 * PageSize + Size, PageSize) + PageSize;
       DCHECK_LE(NewMapEnd, MapEnd);
       if (SCUDO_WORDSIZE == 32U && NewMapEnd != MapEnd) {
-        unmap((void *)NewMapEnd, MapEnd - NewMapEnd, 0, &PlatformData);
+        unmap((void *)NewMapEnd, MapEnd - NewMapEnd, 0, PlatformData);
         MapEnd = NewMapEnd;
       }
     }
@@ -91,14 +89,12 @@ public:
     const uptr CommitSize = MapEnd - PageSize - CommitBase;
     const uptr Ptr = reinterpret_cast<uptr>(
         map(reinterpret_cast<void *>(CommitBase), CommitSize, "scudo:secondary",
-            0, &PlatformData));
+            0, PlatformData));
     LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(Ptr);
-    H->MapBase = MapBase;
-    H->MapSize = MapSize;
     H->BlockEnd = CommitBase + CommitSize;
-    H->PlatformData = PlatformData;
+    memcpy(H->PlatformData, PlatformData, sizeof(PlatformData));
     {
-      SpinMutexLock l(&Mutex);
+      SpinMutexLock L(&Mutex);
       if (!Tail) {
         Tail = H;
       } else {
@@ -119,9 +115,12 @@ public:
   }
 
   void deallocate(void *Ptr) {
+    uptr PlatformData[4];
     LargeBlock::Header *H = LargeBlock::getHeader(Ptr);
+    memcpy(PlatformData, H->PlatformData, sizeof(PlatformData));
+    const uptr CommitSize = H->BlockEnd - reinterpret_cast<uptr>(H);
     {
-      SpinMutexLock l(&Mutex);
+      SpinMutexLock L(&Mutex);
       LargeBlock::Header *Prev = H->Prev;
       LargeBlock::Header *Next = H->Next;
       if (Prev) {
@@ -138,16 +137,12 @@ public:
       } else {
         CHECK(Next);
       }
-      const uptr CommitSize = H->BlockEnd - reinterpret_cast<uptr>(H);
       FreedBytes += CommitSize;
       NumberOfFrees++;
       Stats.sub(StatAllocated, CommitSize);
       Stats.sub(StatMapped, CommitSize);
     }
-    void *Addr = reinterpret_cast<void *>(H->MapBase);
-    const uptr Size = H->MapSize;
-    u64 PlatformData = H->PlatformData;
-    unmap(Addr, Size, UNMAP_ALL, &PlatformData);
+    unmap(reinterpret_cast<void *>(H), CommitSize, UNMAP_ALL, PlatformData);
   }
 
   static uptr getBlockEnd(void *Ptr) {

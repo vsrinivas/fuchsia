@@ -39,7 +39,7 @@ public:
       UnpackedHeader Header;
       Chunk::loadHeader(Allocator.Cookie, Ptr, &Header);
       if (UNLIKELY(Header.State != ChunkQuarantine))
-        reportInvalidChunkState(Recycling, Ptr);
+        reportInvalidChunkState(AllocatorAction::Recycling, Ptr);
 
       UnpackedHeader NewHeader = Header;
       NewHeader.State = ChunkAvailable;
@@ -82,7 +82,7 @@ public:
       Chunk::loadHeader(Allocator.Cookie, Ptr, &Header);
 
       if (UNLIKELY(Header.State != ChunkAllocated))
-        reportInvalidChunkState(Deallocating, Ptr);
+        reportInvalidChunkState(AllocatorAction::Deallocating, Ptr);
       DCHECK_EQ(Header.ClassId, QuarantineClassId);
       DCHECK_EQ(Header.Offset, 0);
       DCHECK_EQ(Header.SizeOrUnusedBytes, sizeof(QuarantineBatch));
@@ -251,18 +251,19 @@ public:
     if (UNLIKELY(!Ptr))
       return;
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(Ptr), MinAlignment)))
-      reportMisalignedPointer(Deallocating, Ptr);
+      reportMisalignedPointer(AllocatorAction::Deallocating, Ptr);
 
     UnpackedHeader Header;
     Chunk::loadHeader(Cookie, Ptr, &Header);
 
     if (UNLIKELY(Header.State != ChunkAllocated))
-      reportInvalidChunkState(Deallocating, Ptr);
+      reportInvalidChunkState(AllocatorAction::Deallocating, Ptr);
     if (Options.DeallocTypeMismatch) {
       if (Header.AllocType != Type) {
         // With the exception of memalign'd Chunks, that can be still be free'd.
         if (UNLIKELY(Header.AllocType != FromMemalign || Type != FromMalloc))
-          reportDeallocTypeMismatch(Deallocating, Ptr, Header.AllocType, Type);
+          reportDeallocTypeMismatch(AllocatorAction::Deallocating, Ptr,
+                                    Header.AllocType, Type);
       }
     }
 
@@ -283,21 +284,21 @@ public:
     DCHECK_NE(NewSize, 0);
 
     if (UNLIKELY(!isAligned(reinterpret_cast<uptr>(OldPtr), MinAlignment)))
-      reportMisalignedPointer(Reallocating, OldPtr);
+      reportMisalignedPointer(AllocatorAction::Reallocating, OldPtr);
 
     UnpackedHeader OldHeader;
     Chunk::loadHeader(Cookie, OldPtr, &OldHeader);
 
     if (UNLIKELY(OldHeader.State != ChunkAllocated))
-      reportInvalidChunkState(Reallocating, OldPtr);
+      reportInvalidChunkState(AllocatorAction::Reallocating, OldPtr);
 
     // Pointer has to be allocated with a malloc-type function. Some
     // applications think that it is ok to realloc a memalign'ed pointer, which
     // will trigger this check.
     if (Options.DeallocTypeMismatch) {
       if (UNLIKELY(OldHeader.AllocType != FromMalloc))
-        reportDeallocTypeMismatch(Reallocating, OldPtr, OldHeader.AllocType,
-                                  FromMalloc);
+        reportDeallocTypeMismatch(AllocatorAction::Reallocating, OldPtr,
+                                  OldHeader.AllocType, FromMalloc);
     }
 
     const uptr OldSize = getSize(OldPtr, &OldHeader);
@@ -392,7 +393,7 @@ public:
     Chunk::loadHeader(Cookie, Ptr, &Header);
     // Getting the usable size of a chunk only makes sense if it's allocated.
     if (UNLIKELY(Header.State != ChunkAllocated))
-      reportInvalidChunkState(Sizing, const_cast<void *>(Ptr));
+      reportInvalidChunkState(AllocatorAction::Sizing, const_cast<void *>(Ptr));
     return getSize(Ptr, &Header);
   }
 

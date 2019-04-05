@@ -313,7 +313,8 @@ private:
 
     if (!Force) {
       const s32 IntervalMs = ReleaseToOsIntervalMs;
-      DCHECK_GE(IntervalMs, 0);
+      if (IntervalMs < 0)
+        return;
       if (Sci->ReleaseInfo.LastReleaseAtNs + IntervalMs * 1000000ULL >
           getMonotonicTime()) {
         return; // Memory was returned recently.

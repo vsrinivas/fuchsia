@@ -22,7 +22,7 @@ void NORETURN reportError(const char *Message);
 void NORETURN reportInvalidFlag(const char *FlagType, const char *Value);
 
 // Chunk header related errors.
-void NORETURN reportHeaderCorruption(const void *Ptr);
+void NORETURN reportHeaderCorruption(void *Ptr);
 void NORETURN reportHeaderRace(void *Ptr);
 
 // Sanity checks related error.
@@ -33,17 +33,16 @@ void NORETURN reportAlignmentTooBig(uptr Alignment, uptr MaxAlignment);
 void NORETURN reportAllocationSizeTooBig(uptr UserSize, uptr TotalSize,
                                          uptr MaxSize);
 void NORETURN reportOutOfMemory(uptr RequestedSize);
-enum : u8 {
+enum class AllocatorAction : u8 {
   Recycling,
   Deallocating,
   Reallocating,
   Sizing,
-  ActionsCount,
 };
-void NORETURN reportInvalidChunkState(u8 Action, void *Ptr);
-void NORETURN reportMisalignedPointer(u8 Action, void *Ptr);
-void NORETURN reportDeallocTypeMismatch(u8 Action, void *Ptr, u8 TypeA,
-                                        u8 TypeB);
+void NORETURN reportInvalidChunkState(AllocatorAction Action, void *Ptr);
+void NORETURN reportMisalignedPointer(AllocatorAction Action, void *Ptr);
+void NORETURN reportDeallocTypeMismatch(AllocatorAction Action, void *Ptr,
+                                        u8 TypeA, u8 TypeB);
 void NORETURN reportDeleteSizeMismatch(void *Ptr, uptr Size, uptr ExpectedSize);
 
 // C wrappers errors.

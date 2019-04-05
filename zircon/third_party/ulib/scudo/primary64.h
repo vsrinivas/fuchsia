@@ -36,12 +36,13 @@ public:
 
   void initLinkerInitialized(s32 ReleaseToOsInterval) {
     // Reserve the space required for the Primary.
-    PrimaryBase = reinterpret_cast<uptr>(map(
-        nullptr, PrimarySize, "scudo:primary", MAP_NOACCESS, &PlatformData));
+    PrimaryBase = reinterpret_cast<uptr>(
+        map(nullptr, PrimarySize, "scudo:primary", MAP_NOACCESS, PlatformData));
 
     RegionInfoArray = reinterpret_cast<RegionInfo *>(
         map(nullptr, sizeof(RegionInfo) * NumClasses, "scudo:regioninfo"));
-    DCHECK_EQ((uptr)RegionInfoArray % SCUDO_CACHE_LINE_SIZE, 0);
+    DCHECK_EQ(reinterpret_cast<uptr>(RegionInfoArray) % SCUDO_CACHE_LINE_SIZE,
+              0);
 
     u32 Seed;
     if (UNLIKELY(!getRandom(reinterpret_cast<void *>(&Seed), sizeof(Seed))))
@@ -186,19 +187,19 @@ private:
     IntrusiveList<TransferBatch> FreeList;
     RegionStats Stats;
     bool CanRelease;
+    bool Exhausted;
+    u32 RandState;
     uptr RegionBeg;
     uptr MappedUser;    // Bytes mapped for user memory.
     uptr AllocatedUser; // Bytes allocated for user memory.
-    u64 PlatformData;
-    u32 RandState;
-    bool Exhausted;
+    uptr PlatformData[4];
     ReleaseToOsInfo ReleaseInfo;
   };
   COMPILER_CHECK(sizeof(RegionInfo) % SCUDO_CACHE_LINE_SIZE == 0);
 
   uptr PrimaryBase;
   RegionInfo *RegionInfoArray;
-  u64 PlatformData;
+  uptr PlatformData[4];
   s32 ReleaseToOsIntervalMs;
 
   RegionInfo *getRegionInfo(uptr ClassId) const {
@@ -255,17 +256,17 @@ private:
         return nullptr;
       }
       if (MappedUser == 0)
-        Region->PlatformData = PlatformData;
+        memcpy(Region->PlatformData, PlatformData, sizeof(PlatformData));
       if (UNLIKELY(!map(reinterpret_cast<void *>(RegionBeg + MappedUser),
                         UserMapSize, "scudo:primary",
-                        MAP_ALLOWNOMEM | MAP_RESIZABLE, &Region->PlatformData)))
+                        MAP_ALLOWNOMEM | MAP_RESIZABLE, Region->PlatformData)))
         return nullptr;
       Region->MappedUser += UserMapSize;
       Stat->add(StatMapped, UserMapSize);
     }
 
-    const uptr NumberOfBlocks =
-        (Region->MappedUser - Region->AllocatedUser) / Size;
+    const uptr NumberOfBlocks = Min(
+        8UL * MaxCount, (Region->MappedUser - Region->AllocatedUser) / Size);
     DCHECK_GT(NumberOfBlocks, 0);
 
     TransferBatch *B = nullptr;
@@ -317,14 +318,15 @@ private:
 
     if (!Force) {
       const s32 IntervalMs = ReleaseToOsIntervalMs;
-      DCHECK_GE(IntervalMs, 0);
+      if (IntervalMs < 0)
+        return;
       if (Region->ReleaseInfo.LastReleaseAtNs + IntervalMs * 1000000ULL >
           getMonotonicTime()) {
         return; // Memory was returned recently.
       }
     }
 
-    MemoryMapper Mapper(Region->RegionBeg, &Region->PlatformData);
+    MemoryMapper Mapper(Region->RegionBeg, Region->PlatformData);
     releaseFreeMemoryToOS(&Region->FreeList, Region->RegionBeg,
                           roundUpTo(Region->AllocatedUser, PageSize) / PageSize,
                           BlockSize, &Mapper);

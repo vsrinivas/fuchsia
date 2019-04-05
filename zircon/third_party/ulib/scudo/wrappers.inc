@@ -137,7 +137,7 @@ INTERFACE void *SCUDO_PREFIX(aligned_alloc)(size_t alignment, size_t size) {
     errno = EINVAL;
     if (SCUDO_ALLOCATOR.canReturnNull())
       return nullptr;
-    scudo::reportInvalidAlignedAllocAlignment(size, alignment);
+    scudo::reportInvalidAlignedAllocAlignment(alignment, size);
   }
   return scudo::setErrnoOnNull(
       SCUDO_ALLOCATOR.allocate(size, scudo::FromMalloc, alignment));

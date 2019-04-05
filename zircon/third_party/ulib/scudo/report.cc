@@ -7,19 +7,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "report.h"
+
 #include "atomic_helpers.h"
 #include "string_utils.h"
 
+#include <stdarg.h>
+
 namespace scudo {
 
-class ScopedErrorReport : public ScopedString {
+class ScopedErrorReport {
 public:
-  ScopedErrorReport() : ScopedString(256) { append("Scudo ERROR: "); }
+  ScopedErrorReport() : Message(512) { Message.append("Scudo ERROR: "); }
+  void append(const char *Format, ...) {
+    va_list Args;
+    va_start(Args, Format);
+    Message.append(Format, Args);
+    va_end(Args);
+  }
   NORETURN ~ScopedErrorReport() {
-    outputRaw(data());
-    setAbortMessage(data());
+    outputRaw(Message.data());
+    setAbortMessage(Message.data());
     die();
   }
+
+private:
+  ScopedString Message;
 };
 
 INLINE void NORETURN trap() { __builtin_trap(); }
@@ -33,14 +45,14 @@ void NORETURN reportCheckFailed(const char *File, int Line,
     trap();
   }
   ScopedErrorReport Report;
-  Report.append("CHECK failed @ %s:%d %s (%lld, %lld)\n", File, Line, Condition,
+  Report.append("CHECK failed @ %s:%d %s (%llu, %llu)\n", File, Line, Condition,
                 Value1, Value2);
 }
 
 // Generic string fatal error message.
 void NORETURN reportError(const char *Message) {
   ScopedErrorReport Report;
-  Report.append(Message);
+  Report.append("%s", Message);
 }
 
 void NORETURN reportInvalidFlag(const char *FlagType, const char *Value) {
@@ -50,7 +62,7 @@ void NORETURN reportInvalidFlag(const char *FlagType, const char *Value) {
 
 // The checksum of a chunk header is invalid. This could be cause by an
 // {over,under}write of the header, a pointer than is not an actual chunk.
-void NORETURN reportHeaderCorruption(const void *Ptr) {
+void NORETURN reportHeaderCorruption(void *Ptr) {
   ScopedErrorReport Report;
   Report.append("corrupted chunk header at address %p\n", Ptr);
 }
@@ -74,48 +86,48 @@ void NORETURN reportSanityCheckError(const char *Field) {
 // integer overflows, or unexpected corner cases.
 void NORETURN reportAlignmentTooBig(uptr Alignment, uptr MaxAlignment) {
   ScopedErrorReport Report;
-  Report.append(
-      "invalid allocation alignment: %zd exceeds maximum supported alignment "
-      "of %zd\n",
-      Alignment, MaxAlignment);
+  Report.append("invalid allocation alignment: %zu exceeds maximum supported "
+                "alignment of %zu\n",
+                Alignment, MaxAlignment);
 }
 
 // See above, we also enforce a maximum size.
 void NORETURN reportAllocationSizeTooBig(uptr UserSize, uptr TotalSize,
                                          uptr MaxSize) {
   ScopedErrorReport Report;
-  Report.append(
-      "requested allocation size 0x%zx (0x%zx after adjustments) exceeds "
-      "maximum supported size of 0x%zx\n",
-      UserSize, TotalSize, MaxSize);
+  Report.append("requested allocation size %zu (%zu after adjustments) exceeds "
+                "maximum supported size of %zu\n",
+                UserSize, TotalSize, MaxSize);
 }
 
 void NORETURN reportOutOfMemory(uptr RequestedSize) {
   ScopedErrorReport Report;
-  Report.append("out of memory trying to allocate 0x%zx bytes\n",
-                RequestedSize);
+  Report.append("out of memory trying to allocate %zu bytes\n", RequestedSize);
 }
 
-static const char *stringifyAction(u8 Action) {
-  static const char *ActionString[] = {
-      "recycling",
-      "deallocating",
-      "reallocating",
-      "sizing",
-  };
-  CHECK_LE(Action, ActionsCount);
-  return ActionString[Action];
+static const char *stringifyAction(AllocatorAction Action) {
+  switch (Action) {
+  case AllocatorAction::Recycling:
+    return "recycling";
+  case AllocatorAction::Deallocating:
+    return "deallocating";
+  case AllocatorAction::Reallocating:
+    return "reallocating";
+  case AllocatorAction::Sizing:
+    return "sizing";
+  }
+  return "<invalid action>";
 }
 
 // The chunk is not in a state congruent with the operation we want to perform.
 // This is usually the case with a double-free, a realloc of a freed pointer.
-void NORETURN reportInvalidChunkState(u8 Action, void *Ptr) {
+void NORETURN reportInvalidChunkState(AllocatorAction Action, void *Ptr) {
   ScopedErrorReport Report;
   Report.append("invalid chunk state when %s address %p\n",
                 stringifyAction(Action), Ptr);
 }
 
-void NORETURN reportMisalignedPointer(u8 Action, void *Ptr) {
+void NORETURN reportMisalignedPointer(AllocatorAction Action, void *Ptr) {
   ScopedErrorReport Report;
   Report.append("misaligned pointer when %s address %p\n",
                 stringifyAction(Action), Ptr);
@@ -123,8 +135,8 @@ void NORETURN reportMisalignedPointer(u8 Action, void *Ptr) {
 
 // The deallocation function used is at odds with the one used to allocate the
 // chunk (eg: new[]/delete or malloc/delete, and so on).
-void NORETURN reportDeallocTypeMismatch(u8 Action, void *Ptr, u8 TypeA,
-                                        u8 TypeB) {
+void NORETURN reportDeallocTypeMismatch(AllocatorAction Action, void *Ptr,
+                                        u8 TypeA, u8 TypeB) {
   ScopedErrorReport Report;
   Report.append("allocation type mismatch when %s address %p (%d vs %d)\n",
                 stringifyAction(Action), Ptr, TypeA, TypeB);
@@ -136,48 +148,45 @@ void NORETURN reportDeleteSizeMismatch(void *Ptr, uptr Size,
                                        uptr ExpectedSize) {
   ScopedErrorReport Report;
   Report.append(
-      "invalid sized delete when deallocating address %p (%d vs %d)\n", Ptr,
+      "invalid sized delete when deallocating address %p (%zu vs %zu)\n", Ptr,
       Size, ExpectedSize);
 }
 
 void NORETURN reportAlignmentNotPowerOfTwo(uptr Alignment) {
   ScopedErrorReport Report;
   Report.append(
-      "invalid allocation alignment: %zd, alignment must be a power of two\n",
+      "invalid allocation alignment: %zu, alignment must be a power of two\n",
       Alignment);
 }
 
 void NORETURN reportCallocOverflow(uptr Count, uptr Size) {
   ScopedErrorReport Report;
-  Report.append(
-      "calloc parameters overflow: count * size (%zd * %zd) cannot be "
-      "represented with type size_t\n",
-      Count, Size);
+  Report.append("calloc parameters overflow: count * size (%zu * %zu) cannot "
+                "be represented with type size_t\n",
+                Count, Size);
 }
 
 void NORETURN reportInvalidPosixMemalignAlignment(uptr Alignment) {
   ScopedErrorReport Report;
   Report.append(
-      "invalid alignment requested in posix_memalign: %zd, alignment must be a "
-      "power of two and a multiple of sizeof(void *) == %zd\n",
+      "invalid alignment requested in posix_memalign: %zu, alignment must be a "
+      "power of two and a multiple of sizeof(void *) == %zu\n",
       Alignment, sizeof(void *));
 }
 
 void NORETURN reportPvallocOverflow(uptr Size) {
   ScopedErrorReport Report;
-  Report.append(
-      "pvalloc parameters overflow: size 0x%zx rounded up to system page size "
-      "0x%zx cannot be represented in type size_t\n",
-      Size, getPageSizeCached());
+  Report.append("pvalloc parameters overflow: size %zu rounded up to system "
+                "page size %zu cannot be represented in type size_t\n",
+                Size, getPageSizeCached());
 }
 
-void NORETURN reportInvalidAlignedAllocAlignment(uptr Size, uptr Alignment) {
+void NORETURN reportInvalidAlignedAllocAlignment(uptr Alignment, uptr Size) {
   ScopedErrorReport Report;
-  Report.append(
-      "invalid alignment requested in aligned_alloc: %zd, alignment must be a "
-      "power of two and the requested size 0x%zx must be a multiple of "
-      "alignment\n",
-      Alignment, Size);
+  Report.append("invalid alignment requested in aligned_alloc: %zu, alignment "
+                "must be a power of two and the requested size %zu must be a "
+                "multiple of alignment\n",
+                Alignment, Size);
 }
 
 } // namespace scudo

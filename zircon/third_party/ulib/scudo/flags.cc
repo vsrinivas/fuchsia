@@ -12,7 +12,10 @@
 #include "interface.h"
 
 namespace scudo {
+
 static Flags FlagsDoNotUse; // Use via getFlags().
+
+Flags *getFlags() { return &FlagsDoNotUse; }
 
 void Flags::setDefaults() {
 #define SCUDO_FLAG(Type, Name, DefaultValue, Description) Name = DefaultValue;
@@ -22,7 +25,8 @@ void Flags::setDefaults() {
 
 static void registerFlags(FlagParser *Parser, Flags *F) {
 #define SCUDO_FLAG(Type, Name, DefaultValue, Description)                      \
-  registerFlag(Parser, #Name, Description, &F->Name);
+  Parser->registerFlag(#Name, Description, FlagType::FT_##Type,                \
+                       reinterpret_cast<void *>(&F->Name));
 #include "flags.inc"
 #undef SCUDO_FLAG
 }
@@ -48,7 +52,5 @@ void initFlags() {
   Parser.parseString(getScudoDefaultOptions());
   Parser.parseString(getEnv("SCUDO_OPTIONS"));
 }
-
-Flags *getFlags() { return &FlagsDoNotUse; }
 
 } // namespace scudo

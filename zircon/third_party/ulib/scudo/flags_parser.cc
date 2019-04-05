@@ -15,9 +15,9 @@
 namespace scudo {
 
 class UnknownFlagsRegistry {
-  static const uptr MaxUnknownFlags = 16;
+  static const u32 MaxUnknownFlags = 16;
   const char *UnknownFlagsNames[MaxUnknownFlags];
-  uptr NumberOfUnknownFlags;
+  u32 NumberOfUnknownFlags;
 
 public:
   void add(const char *Name) {
@@ -30,7 +30,7 @@ public:
       return;
     Printf("Scudo WARNING: found %d unrecognized flag(s):\n",
            NumberOfUnknownFlags);
-    for (uptr I = 0; I < NumberOfUnknownFlags; ++I)
+    for (u32 I = 0; I < NumberOfUnknownFlags; ++I)
       Printf("    %s\n", UnknownFlagsNames[I]);
     NumberOfUnknownFlags = 0;
   }
@@ -39,33 +39,11 @@ static UnknownFlagsRegistry UnknownFlags;
 
 void reportUnrecognizedFlags() { UnknownFlags.report(); }
 
-FlagsAllocator FlagParser::Alloc;
-
-void *FlagsAllocator::allocate(uptr Size) {
-  Size = roundUpTo(Size, 8);
-  if (AllocatedEnd - AllocatedCurrent < Size) {
-    const uptr SizeToAllocate = Max(Size, getPageSizeCached());
-    AllocatedCurrent =
-        reinterpret_cast<uptr>(map(nullptr, SizeToAllocate, "scudo:flags"));
-    AllocatedEnd = AllocatedCurrent + SizeToAllocate;
-  }
-  DCHECK(AllocatedEnd - AllocatedCurrent >= Size);
-  void *P = reinterpret_cast<void *>(AllocatedCurrent);
-  AllocatedCurrent += Size;
-  return P;
+void FlagParser::printFlagDescriptions() {
+  Printf("Available flags for Scudo:\n");
+  for (u32 I = 0; I < NumberOfFlags; ++I)
+    Printf("\t%s\n\t\t- %s\n", Flags[I].Name, Flags[I].Desc);
 }
-
-char *FlagParser::duplicateString(const char *S, uptr N) {
-  const uptr Length = strnlen(S, N);
-  char *NewS = reinterpret_cast<char *>(Alloc.allocate(Length + 1));
-  memcpy(NewS, S, Length);
-  NewS[Length] = 0;
-  return NewS;
-}
-
-void FlagParser::printFlagDescriptions() {}
-
-void FlagParser::reportFatalError(const char *Error) { reportError(Error); }
 
 bool FlagParser::isSpace(char C) {
   return C == ' ' || C == ',' || C == ':' || C == '\n' || C == '\t' ||
@@ -82,29 +60,27 @@ void FlagParser::parseFlag() {
   while (Buffer[Pos] != 0 && Buffer[Pos] != '=' && !isSpace(Buffer[Pos]))
     ++Pos;
   if (Buffer[Pos] != '=')
-    reportFatalError("expected '='");
-  char *Name = duplicateString(Buffer + NameStart, Pos - NameStart);
-
+    reportError("expected '='");
+  const char *Name = Buffer + NameStart;
   const uptr ValueStart = ++Pos;
-  char *Value;
+  const char *Value;
   if (Buffer[Pos] == '\'' || Buffer[Pos] == '"') {
-    char quote = Buffer[Pos++];
-    while (Buffer[Pos] != 0 && Buffer[Pos] != quote)
+    const char Quote = Buffer[Pos++];
+    while (Buffer[Pos] != 0 && Buffer[Pos] != Quote)
       ++Pos;
     if (Buffer[Pos] == 0)
-      reportFatalError("unterminated string");
-    Value = duplicateString(Buffer + ValueStart + 1, Pos - ValueStart - 1);
+      reportError("unterminated string");
+    Value = Buffer + ValueStart + 1;
     ++Pos; // consume the closing quote
   } else {
     while (Buffer[Pos] != 0 && !isSpace(Buffer[Pos]))
       ++Pos;
     if (Buffer[Pos] != 0 && !isSpace(Buffer[Pos]))
-      reportFatalError("expected separator or eol");
-    Value = duplicateString(Buffer + ValueStart, Pos - ValueStart);
+      reportError("expected separator or eol");
+    Value = Buffer + ValueStart;
   }
-
   if (!runHandler(Name, Value))
-    reportFatalError("Flag parsing failed.");
+    reportError("flag parsing failed.");
 }
 
 void FlagParser::parseFlags() {
@@ -131,27 +107,59 @@ void FlagParser::parseString(const char *S) {
   Pos = OldPos;
 }
 
+INLINE bool parseBool(const char *Value, bool *b) {
+  if (strncmp(Value, "0", 1) == 0 || strncmp(Value, "no", 2) == 0 ||
+      strncmp(Value, "false", 5) == 0) {
+    *b = false;
+    return true;
+  }
+  if (strncmp(Value, "1", 1) == 0 || strncmp(Value, "yes", 3) == 0 ||
+      strncmp(Value, "true", 4) == 0) {
+    *b = true;
+    return true;
+  }
+  return false;
+}
+
 bool FlagParser::runHandler(const char *Name, const char *Value) {
-  for (u32 i = 0; i < NumberOfFlags; ++i) {
-    if (strcmp(Name, Flags[i].Name) == 0)
-      return Flags[i].Handler->parse(Value);
+  for (u32 I = 0; I < NumberOfFlags; ++I) {
+    const uptr Len = strlen(Flags[I].Name);
+    if (strncmp(Name, Flags[I].Name, Len) == 0 && Name[Len] == '=') {
+      bool Ok = false;
+      switch (Flags[I].Type) {
+      case FlagType::FT_bool:
+        Ok = parseBool(Value, reinterpret_cast<bool *>(Flags[I].Var));
+        if (!Ok)
+          reportInvalidFlag("bool", Value);
+        break;
+      case FlagType::FT_int:
+        char *ValueEnd;
+        *reinterpret_cast<int *>(Flags[I].Var) =
+            static_cast<int>(strtol(Value, &ValueEnd, 10));
+        Ok = *ValueEnd == 0 || *ValueEnd == '"' || *ValueEnd == '\'' ||
+             isSpace(*ValueEnd);
+        if (!Ok)
+          reportInvalidFlag("int", Value);
+        break;
+      default:
+        reportError("unknown flag type");
+      }
+      return Ok;
+    }
   }
   // Unrecognized flag. This is not a fatal error, we may print a warning later.
   UnknownFlags.add(Name);
   return true;
 }
 
-void FlagParser::registerHandler(const char *Name, FlagHandlerBase *Handler,
-                                 const char *Desc) {
+void FlagParser::registerFlag(const char *Name, const char *Desc, FlagType Type,
+                              void *Var) {
   CHECK_LT(NumberOfFlags, MaxFlags);
   Flags[NumberOfFlags].Name = Name;
   Flags[NumberOfFlags].Desc = Desc;
-  Flags[NumberOfFlags].Handler = Handler;
+  Flags[NumberOfFlags].Type = Type;
+  Flags[NumberOfFlags].Var = Var;
   ++NumberOfFlags;
-}
-
-FlagParser::FlagParser() : NumberOfFlags(0), Buffer(nullptr), Pos(0) {
-  Flags = reinterpret_cast<Flag *>(Alloc.allocate(sizeof(Flag) * MaxFlags));
 }
 
 } // namespace scudo

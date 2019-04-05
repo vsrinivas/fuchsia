@@ -21,8 +21,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     static const u32 MaxNumCached = SizeClassMap::MaxNumCachedHint;
     void setFromArray(void **Array, u32 N) {
       DCHECK_LE(N, MaxNumCached);
-      for (u32 I = 0; I < N; I++)
-        Batch[I] = Array[I];
+      memcpy(Batch, Array, N * sizeof(void *));
       Count = N;
     }
     void clear() { Count = 0; }
@@ -31,8 +30,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
       DCHECK_LE(Count, MaxNumCached);
     }
     void copyToArray(void **Array) const {
-      for (u32 I = 0, N = Count; I < N; I++)
-        Array[I] = Batch[I];
+      memcpy(Array, Batch, Count * sizeof(void *));
     }
     u32 getCount() const { return Count; }
     void *get(u32 I) const {
@@ -130,13 +128,17 @@ private:
   void initCacheMaybe(PerClass *C) {
     if (LIKELY(C->MaxCount))
       return;
+    initCache();
+    DCHECK_NE(C->MaxCount, 0UL);
+  }
+
+  NOINLINE void initCache() {
     for (uptr I = 0; I < NumClasses; I++) {
       PerClass *P = &PerClassArray[I];
       const uptr Size = SizeClassAllocator::getSizeByClassId(I);
       P->MaxCount = 2 * TransferBatch::MaxCached(Size);
       P->ClassSize = Size;
     }
-    DCHECK_NE(C->MaxCount, 0UL);
   }
 
   NOINLINE bool refill(PerClass *C, SizeClassAllocator *Allocator,

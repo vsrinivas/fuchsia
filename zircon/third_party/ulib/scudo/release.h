@@ -16,7 +16,7 @@ namespace scudo {
 
 class MemoryMapper {
 public:
-  MemoryMapper(uptr Addr = 0, u64 *Extra = nullptr)
+  MemoryMapper(uptr Addr = 0, uptr *Extra = nullptr)
       : ReleasedRangesCount(0), ReleasedBytes(0), BaseAddress(Addr),
         PlatformData(Extra) {}
 
@@ -37,7 +37,7 @@ private:
   uptr ReleasedRangesCount;
   uptr ReleasedBytes;
   uptr BaseAddress;
-  u64 *PlatformData;
+  uptr *PlatformData;
 };
 
 // A packed array of Counters. Each counter occupies 2^N bits, enough to store

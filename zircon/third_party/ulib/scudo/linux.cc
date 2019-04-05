@@ -43,8 +43,14 @@ uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
 
 void NORETURN die() { abort(); }
 
+struct MapInfo {
+  void *Base;
+  size_t Size;
+};
+COMPILER_CHECK(sizeof(MapInfo) <= 4 * sizeof(uptr));
+
 void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
-          UNUSED u64 *Extra) {
+          uptr *Extra) {
   int MmapFlags = MAP_PRIVATE | MAP_ANON;
   if (Flags & MAP_NOACCESS)
     MmapFlags |= MAP_NORESERVE;
@@ -61,6 +67,11 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
       dieOnMapUnmapError(errno == ENOMEM);
     return nullptr;
   }
+  if ((Flags & MAP_NOACCESS) && Extra) {
+    MapInfo *Info = reinterpret_cast<MapInfo *>(Extra);
+    Info->Base = P;
+    Info->Size = Size;
+  }
 #if SCUDO_ANDROID
   if (!(Flags & MAP_NOACCESS))
     prctl(ANDROID_PR_SET_VMA, ANDROID_PR_SET_VMA_ANON_NAME, P, Size, Name);
@@ -68,13 +79,20 @@ void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
   return P;
 }
 
-void unmap(void *Addr, uptr Size, UNUSED uptr Flags, UNUSED u64 *Extra) {
+void unmap(void *Addr, uptr Size, uptr Flags, uptr *Extra) {
+  if (Flags & UNMAP_ALL) {
+    DCHECK(Extra);
+    MapInfo *Info = reinterpret_cast<MapInfo *>(Extra);
+    if (munmap(Info->Base, Info->Size) != 0)
+      dieOnMapUnmapError();
+    return;
+  }
   if (munmap(Addr, Size) != 0)
     dieOnMapUnmapError();
 }
 
 void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
-                      UNUSED u64 *Extra) {
+                      UNUSED uptr *Extra) {
   void *Addr = reinterpret_cast<void *>(BaseAddress + Offset);
   while (madvise(Addr, Size, MADV_DONTNEED) == -1 && errno == EAGAIN) {
   }
