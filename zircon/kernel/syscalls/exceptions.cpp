@@ -12,6 +12,7 @@
 #include <string.h>
 #include <trace.h>
 
+#include <object/exceptionate.h>
 #include <object/excp_port.h>
 #include <object/job_dispatcher.h>
 #include <object/port_dispatcher.h>
@@ -192,19 +193,24 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
     if (status != ZX_OK)
         return status;
 
-    // TODO(ZX-3072): implement job/process/debugger exception channels.
+    Exceptionate::Type type =
+        (options & ZX_EXCEPTION_PORT_DEBUGGER) ? Exceptionate::Type::kDebug
+                                               : Exceptionate::Type::kStandard;
+
+    Exceptionate* exceptionate = nullptr;
     if (auto job = DownCastDispatcher<JobDispatcher>(&task)) {
-        return ZX_ERR_NOT_SUPPORTED;
+        exceptionate = job->exceptionate(type);
     } else if (auto process = DownCastDispatcher<ProcessDispatcher>(&task)) {
-        return ZX_ERR_NOT_SUPPORTED;
+        exceptionate = process->exceptionate(type);
     } else if (auto thread = DownCastDispatcher<ThreadDispatcher>(&task)) {
-        if (options & ZX_EXCEPTION_PORT_DEBUGGER)
+        if (type == Exceptionate::Type::kDebug)
             return ZX_ERR_INVALID_ARGS;
-        status = thread->SetExceptionChannel(ktl::move(kernel_channel));
+        exceptionate = thread->exceptionate();
     } else {
         return ZX_ERR_WRONG_TYPE;
     }
 
+    status = exceptionate->SetChannel(ktl::move(kernel_channel));
     if (status != ZX_OK)
         return status;
 

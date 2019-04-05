@@ -14,12 +14,19 @@
 #include <zircon/errors.h>
 #include <zircon/syscalls/exception.h>
 
+Exceptionate::Exceptionate(ExceptionPort::Type port_type)
+    : port_type_(port_type) {}
+
 zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel) {
     if (!channel) {
         return ZX_ERR_INVALID_ARGS;
     }
 
     Guard<fbl::Mutex> guard{&lock_};
+
+    if (is_shutdown_) {
+        return ZX_ERR_BAD_STATE;
+    }
 
     if (channel_ && !channel_->PeerHasClosed()) {
         return ZX_ERR_ALREADY_BOUND;
@@ -33,12 +40,13 @@ zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel) {
     return ZX_OK;
 }
 
-void Exceptionate::ClearChannel() {
+void Exceptionate::Shutdown() {
     Guard<fbl::Mutex> guard{&lock_};
     if (channel_) {
         channel_->on_zero_handles();
         channel_.reset();
     }
+    is_shutdown_ = true;
 }
 
 zx_status_t Exceptionate::SendException(fbl::RefPtr<ExceptionDispatcher> exception) {

@@ -77,7 +77,7 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
 
 ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process,
                                    uint32_t flags)
-    : process_(ktl::move(process)) {
+    : process_(ktl::move(process)), exceptionate_(ExceptionPort::Type::THREAD) {
     LTRACE_ENTRY_OBJ;
 
     kcounter_add(dispatcher_thread_create_count, 1);
@@ -399,11 +399,11 @@ void ThreadDispatcher::Exiting() {
 
         // put ourselves into the dead state
         SetStateLocked(ThreadState::Lifecycle::DEAD);
-
-        // Drop our exception channel endpoint so any userspace listener
-        // gets the PEER_CLOSED signal.
-        exceptionate_.ClearChannel();
     }
+
+    // Drop our exception channel endpoint so any userspace listener
+    // gets the PEER_CLOSED signal.
+    exceptionate_.Shutdown();
 
     // remove ourselves from our parent process's view
     process_->RemoveThread(this);
@@ -953,18 +953,13 @@ zx_status_t ThreadDispatcher::GetExceptionReport(zx_exception_report_t* report) 
     return ZX_OK;
 }
 
-zx_status_t ThreadDispatcher::SetExceptionChannel(fbl::RefPtr<ChannelDispatcher> channel) {
+Exceptionate* ThreadDispatcher::exceptionate() {
     canary_.Assert();
-
-    Guard<fbl::Mutex> guard{get_lock()};
-
-    if (IsDyingOrDeadLocked()) {
-        return ZX_ERR_BAD_STATE;
-    }
-    return exceptionate_.SetChannel(ktl::move(channel));
+    return &exceptionate_;
 }
 
-zx_status_t ThreadDispatcher::HandleException(fbl::RefPtr<ExceptionDispatcher> exception,
+zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
+                                              fbl::RefPtr<ExceptionDispatcher> exception,
                                               bool* sent) {
     canary_.Assert();
 
@@ -981,16 +976,15 @@ zx_status_t ThreadDispatcher::HandleException(fbl::RefPtr<ExceptionDispatcher> e
 
         // We send the exception while locked so that if it succeeds we can
         // atomically update our state.
-        zx_status_t status = exceptionate_.SendException(exception);
+        zx_status_t status = exceptionate->SendException(exception);
         if (status != ZX_OK) {
             return status;
         }
         *sent = true;
 
         // This state is needed by GetInfoForUserspace().
-        // TODO(ZX-3072): add support for job/process/debug exception handling.
         in_channel_exception_ = true;
-        channel_exception_wait_type_ = ExceptionPort::Type::THREAD;
+        channel_exception_wait_type_ = exceptionate->port_type();
         state_.set(ThreadState::Exception::UNPROCESSED);
     }
 

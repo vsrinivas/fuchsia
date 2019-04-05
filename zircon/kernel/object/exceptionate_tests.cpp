@@ -7,6 +7,7 @@
 #include <object/exceptionate.h>
 
 #include <object/channel_dispatcher.h>
+#include <object/excp_port.h>
 #include <object/handle.h>
 #include <zircon/rights.h>
 
@@ -23,7 +24,7 @@ bool overwrite_valid_channel_fails() {
     ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[0], &channels[1], &rights), "");
     ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[2], &channels[3], &rights), "");
 
-    Exceptionate exceptionate;
+    Exceptionate exceptionate(ExceptionPort::Type::THREAD);
     ASSERT_EQ(ZX_OK, exceptionate.SetChannel(channels[0]), "");
 
     EXPECT_EQ(ZX_ERR_ALREADY_BOUND, exceptionate.SetChannel(channels[2]), "");
@@ -39,7 +40,7 @@ bool overwrite_invalid_channel_succeeds() {
     ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[0], &channels[1], &rights), "");
     ASSERT_EQ(ZX_OK, ChannelDispatcher::Create(&channels[2], &channels[3], &rights), "");
 
-    Exceptionate exceptionate;
+    Exceptionate exceptionate(ExceptionPort::Type::THREAD);
     ASSERT_EQ(ZX_OK, exceptionate.SetChannel(channels[0]), "");
 
     // Use HandleOwner destructor to tear down the external endpoint.

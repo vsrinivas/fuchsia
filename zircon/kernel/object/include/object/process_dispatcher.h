@@ -10,6 +10,7 @@
 #include <kernel/event.h>
 #include <kernel/thread.h>
 #include <object/dispatcher.h>
+#include <object/exceptionate.h>
 #include <object/futex_context.h>
 #include <object/handle.h>
 #include <object/job_policy.h>
@@ -250,6 +251,10 @@ public:
     // |eport| can either be the process's eport or that of any parent job.
     void OnExceptionPortRemoval(const fbl::RefPtr<ExceptionPort>& eport);
 
+    // TODO(ZX-3072): remove the port-based exception code once everyone is
+    // switched over to channels.
+    Exceptionate* exceptionate(Exceptionate::Type type);
+
     // The following two methods can be slow and inaccurate and should only be
     // called from diagnostics code.
     uint32_t ThreadCount() const;
@@ -375,6 +380,8 @@ private:
     // Exception ports bound to the process.
     fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
     fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(get_lock());
+    Exceptionate exceptionate_;
+    Exceptionate debug_exceptionate_;
 
     // This is the value of _dl_debug_addr from ld.so.
     // See third_party/ulib/musl/ldso/dynlink.c.

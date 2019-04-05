@@ -67,11 +67,15 @@ public:
     enum class Type {
         NONE,
         JOB_DEBUGGER,
+        JOB_DEBUGGER_CHANNEL,
         DEBUGGER,
+        DEBUGGER_CHANNEL,
         THREAD,
         THREAD_CHANNEL,
         PROCESS,
-        JOB
+        PROCESS_CHANNEL,
+        JOB,
+        JOB_CHANNEL
     };
 
     explicit ExceptionPortIterator(ThreadDispatcher* thread,
@@ -94,11 +98,18 @@ public:
                     previous_type_ = Type::DEBUGGER;
                     break;
                 case Type::DEBUGGER:
+                    *channel_result = thread_->HandleException(
+                        thread_->process()->exceptionate(Exceptionate::Type::kDebug),
+                        exception_, &sent_to_channel);
+                    previous_type_ = Type::DEBUGGER_CHANNEL;
+                    break;
+                case Type::DEBUGGER_CHANNEL:
                     *eport = thread_->exception_port();
                     previous_type_ = Type::THREAD;
                     break;
                 case Type::THREAD:
-                    *channel_result = thread_->HandleException(exception_, &sent_to_channel);
+                    *channel_result = thread_->HandleException(
+                        thread_->exceptionate(), exception_, &sent_to_channel);
                     previous_type_ = Type::THREAD_CHANNEL;
                     break;
                 case Type::THREAD_CHANNEL:
@@ -106,11 +117,23 @@ public:
                     previous_type_ = Type::PROCESS;
                     break;
                 case Type::PROCESS:
+                    *channel_result = thread_->HandleException(
+                        thread_->process()->exceptionate(Exceptionate::Type::kStandard),
+                        exception_, &sent_to_channel);
+                    previous_type_ = Type::PROCESS_CHANNEL;
+                    break;
+                case Type::PROCESS_CHANNEL:
                     previous_job_ = thread_->process()->job();
                     *eport = previous_job_->exception_port();
                     previous_type_ = Type::JOB;
                     break;
                 case Type::JOB:
+                    *channel_result = thread_->HandleException(
+                        previous_job_->exceptionate(Exceptionate::Type::kStandard),
+                        exception_, &sent_to_channel);
+                    previous_type_ = Type::JOB_CHANNEL;
+                    break;
+                case Type::JOB_CHANNEL:
                     previous_job_ = previous_job_->parent();
                     if (previous_job_) {
                         *eport = previous_job_->exception_port();
@@ -118,6 +141,7 @@ public:
                         // Reached the root job and there was no handler.
                        return false;
                     }
+                    previous_type_ = Type::JOB;
                     break;
                 default:
                     ASSERT_MSG(0, "unexpected exception type %d",

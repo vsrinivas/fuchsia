@@ -152,12 +152,12 @@ public:
 
     // TODO(ZX-3072): remove the port-based exception code once everyone is
     // switched over to channels.
-    zx_status_t SetExceptionChannel(fbl::RefPtr<ChannelDispatcher> channel);
+    Exceptionate* exceptionate();
 
     // Sends an exception over the exception channel and blocks for a response.
     //
     // |sent| will indicate whether the exception was successfully sent over
-    // this thread's exceptionate channel. This can be used in the ZX_ERR_NEXT
+    // the given |exceptionate| channel. This can be used in the ZX_ERR_NEXT
     // case to determine whether the exception channel didn't exist or it did
     // exist but the receiver opted not to handle the exception.
     //
@@ -167,7 +167,8 @@ public:
     //   ZX_ERR_NO_MEMORY on allocation failure.
     //   ZX_ERR_INTERNAL_INTR_KILLED if the thread was killed before
     //       receiving a response.
-    zx_status_t HandleException(fbl::RefPtr<ExceptionDispatcher> exception,
+    zx_status_t HandleException(Exceptionate* exceptionate,
+                                fbl::RefPtr<ExceptionDispatcher> exception,
                                 bool* sent);
 
     // Fetch the state of the thread for userspace tools.

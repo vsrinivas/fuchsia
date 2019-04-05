@@ -99,8 +99,8 @@ zx_status_t ProcessDispatcher::Create(
 ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<JobDispatcher> job,
                                      fbl::StringPiece name,
                                      uint32_t flags)
-  : job_(ktl::move(job)), policy_(job_->GetPolicy()),
-    name_(name.data(), name.length()) {
+    : job_(ktl::move(job)), policy_(job_->GetPolicy()), exceptionate_(ExceptionPort::Type::PROCESS),
+      debug_exceptionate_(ExceptionPort::Type::DEBUGGER), name_(name.data(), name.length()) {
     LTRACE_ENTRY_OBJ;
 
     kcounter_add(dispatcher_process_create_count, 1);
@@ -394,6 +394,11 @@ void ProcessDispatcher::SetStateLocked(State s) {
 void ProcessDispatcher::FinishDeadTransition() {
     DEBUG_ASSERT(!completely_dead_);
     completely_dead_ = true;
+
+    // It doesn't matter whether the lock is held or not while shutting down
+    // the exceptionates, this is just the most convenient place to do it.
+    exceptionate_.Shutdown();
+    debug_exceptionate_.Shutdown();
 
     // clean up the handle table
     LTRACEF_LEVEL(2, "cleaning up handle table on proc %p\n", this);
@@ -742,6 +747,11 @@ void ProcessDispatcher::OnExceptionPortRemoval(
     for (auto& thread : thread_list_) {
         thread.OnExceptionPortRemoval(eport);
     }
+}
+
+Exceptionate* ProcessDispatcher::exceptionate(Exceptionate::Type type) {
+    canary_.Assert();
+    return type == Exceptionate::Type::kDebug ? &debug_exceptionate_ : &exceptionate_;
 }
 
 uint32_t ProcessDispatcher::ThreadCount() const {

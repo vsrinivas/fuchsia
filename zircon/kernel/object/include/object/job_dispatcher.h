@@ -9,6 +9,7 @@
 #include <stdint.h>
 
 #include <object/dispatcher.h>
+#include <object/exceptionate.h>
 #include <object/excp_port.h>
 #include <object/job_policy.h>
 #include <object/process_dispatcher.h>
@@ -151,6 +152,10 @@ public:
     fbl::RefPtr<ExceptionPort> exception_port();
     fbl::RefPtr<ExceptionPort> debugger_exception_port();
 
+    // TODO(ZX-3072): remove the port-based exception code once everyone is
+    // switched over to channels.
+    Exceptionate* exceptionate(Exceptionate::Type type);
+
     void set_kill_on_oom(bool kill);
     bool get_kill_on_oom() const;
 
@@ -221,6 +226,8 @@ private:
 
     fbl::RefPtr<ExceptionPort> exception_port_ TA_GUARDED(get_lock());
     fbl::RefPtr<ExceptionPort> debugger_exception_port_ TA_GUARDED(get_lock());
+    Exceptionate exceptionate_;
+    Exceptionate debug_exceptionate_;
 
     // Global list of JobDispatchers, ordered by hierarchy and
     // creation order. Used to find victims in low-resource

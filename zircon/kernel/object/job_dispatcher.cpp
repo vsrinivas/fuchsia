@@ -153,7 +153,9 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
       job_count_(0u),
       return_code_(0),
       kill_on_oom_(false),
-      policy_(policy) {
+      policy_(policy),
+      exceptionate_(ExceptionPort::Type::JOB),
+      debug_exceptionate_(ExceptionPort::Type::JOB_DEBUGGER) {
 
     kcounter_add(dispatcher_job_create_count, 1);
 
@@ -277,8 +279,11 @@ void JobDispatcher::UpdateSignalsDecrementLocked() {
     }
 
     if ((job_count_ == 0) && (process_count_ == 0)) {
-        if (state_ == State::KILLING)
+        if (state_ == State::KILLING) {
             state_ = State::DEAD;
+            exceptionate_.Shutdown();
+            debug_exceptionate_.Shutdown();
+        }
 
         if (!parent_) {
             // There are no userspace process left. From here, there's
@@ -610,6 +615,11 @@ fbl::RefPtr<ExceptionPort> JobDispatcher::exception_port() {
 fbl::RefPtr<ExceptionPort> JobDispatcher::debugger_exception_port() {
     Guard<fbl::Mutex> guard{get_lock()};
     return debugger_exception_port_;
+}
+
+Exceptionate* JobDispatcher::exceptionate(Exceptionate::Type type) {
+    canary_.Assert();
+    return type == Exceptionate::Type::kDebug ? &debug_exceptionate_ : &exceptionate_;
 }
 
 void JobDispatcher::set_kill_on_oom(bool value) {

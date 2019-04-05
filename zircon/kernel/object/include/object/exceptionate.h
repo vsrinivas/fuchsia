@@ -8,6 +8,7 @@
 
 #include <kernel/mutex.h>
 #include <object/channel_dispatcher.h>
+#include <object/excp_port.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -20,7 +21,18 @@ class ExceptionDispatcher;
 // This class is thread-safe, does not require external synchronization.
 class Exceptionate {
 public:
-    Exceptionate() = default;
+    // Jobs and processes need to distinguish between standard or debug
+    // exception handlers.
+    enum class Type {
+        kStandard,
+        kDebug
+    };
+
+    // Once ports are removed we can switch to using the userspace exception
+    // constants directly, but for now this keeps the code cleaner.
+    Exceptionate(ExceptionPort::Type port_type);
+
+    ExceptionPort::Type port_type() const { return port_type_; }
 
     // Sets the backing ChannelDispatcher endpoint.
     //
@@ -31,11 +43,14 @@ public:
     // Returns:
     //   ZX_ERR_INVALID_ARGS if |channel| is null.
     //   ZX_ERR_ALREADY_BOUND is there is already a valid channel.
+    //   ZX_ERR_BAD_STATE if Shutdown() has already been called.
     zx_status_t SetChannel(fbl::RefPtr<ChannelDispatcher> channel);
 
     // Removes any exception channel, which will signal PEER_CLOSED for the
     // userspace endpoint.
-    void ClearChannel();
+    //
+    // Any further attempt to set a new channel will return ZX_ERR_BAD_STATE.
+    void Shutdown();
 
     // Sends an exception to userspace.
     //
@@ -49,6 +64,8 @@ public:
     zx_status_t SendException(fbl::RefPtr<ExceptionDispatcher> exception);
 
 private:
+    const ExceptionPort::Type port_type_;
     mutable DECLARE_MUTEX(Exceptionate) lock_;
     fbl::RefPtr<ChannelDispatcher> channel_ TA_GUARDED(lock_);
+    bool is_shutdown_ TA_GUARDED(lock_) = false;
 };
