@@ -248,12 +248,14 @@ RoutingTable::SelectedLinks RoutingTable::BuildForwardingTable() {
           fuchsia::overnet::protocol::METRIC_VERSION_TOMBSTONE)
         continue;
       TimeDelta rtt =
-          src->best_rtt + (src->status.metrics.has_forwarding_time()
-              ? TimeDelta::FromMicroseconds(
-                    src->status.metrics.forwarding_time())
-              : TimeDelta::PositiveInf()) + (link->status.metrics.has_rtt()
-                    ? TimeDelta::FromMicroseconds(link->status.metrics.rtt())
-                    : TimeDelta::PositiveInf());
+          src->best_rtt +
+          (src->status.metrics.has_forwarding_time()
+               ? TimeDelta::FromMicroseconds(
+                     src->status.metrics.forwarding_time())
+               : TimeDelta::PositiveInf()) +
+          (link->status.metrics.has_rtt()
+               ? TimeDelta::FromMicroseconds(link->status.metrics.rtt())
+               : TimeDelta::PositiveInf());
       Node* dst = link->to_node;
       // For now we order by RTT.
       if (dst->last_path_finding_run != path_finding_run_ ||
