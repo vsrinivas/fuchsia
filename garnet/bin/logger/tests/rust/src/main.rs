@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro, futures_api)]
+
 #![deny(warnings)]
 
 // dummy main. We do not copy this binary to fuchsia, only tests.
@@ -14,7 +16,6 @@ mod tests {
     use fuchsia_syslog::{self as syslog, fx_log_info};
     use fuchsia_syslog_listener::{self as syslog_listener, LogProcessor};
     use fuchsia_zircon::DurationNum;
-    use futures::TryFutureExt;
     use log::warn;
     use parking_lot::Mutex;
 
@@ -49,11 +50,14 @@ mod tests {
         let l = Listener {
             log_messages: logs.clone(),
         };
-        let listener_fut = syslog_listener::run_log_listener(l, Some(&mut options), false)
-            .expect("failed to register listener");
-        fasync::spawn(listener_fut.unwrap_or_else(|e| {
-            panic!("test fail {:?}", e);
-        }));
+        fasync::spawn(
+            async move {
+                let fut = syslog_listener::run_log_listener(l, Some(&mut options), false);
+                if let Err(e) = await!(fut) {
+                    panic!("test fail {:?}", e);
+                }
+            }
+        );
         return logs;
     }
 

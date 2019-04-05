@@ -736,8 +736,9 @@ fn run_log_listener(options: Option<&mut LogListenerOptions>) -> Result<(), Erro
     );
 
     let l = new_listener(local_options)?;
-    let listener_fut = syslog_listener::run_log_listener(l, filter_options, false)?;
-    executor.run_singlethreaded(listener_fut).map_err(Into::into)
+    let listener_fut = syslog_listener::run_log_listener(l, filter_options, false);
+    executor.run_singlethreaded(listener_fut)?;
+    Ok(())
 }
 
 fn fmt_regex_icase(capture_name: &str, search_key: &str) -> String {
