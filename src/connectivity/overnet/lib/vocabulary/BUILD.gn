@@ -107,6 +107,17 @@ fuzz_target("internal_list_fuzzer") {
   ]
 }
 
+# ip_addr
+source_set("ip_addr") {
+  sources = [
+    "ip_addr.cc",
+    "ip_addr.h",
+  ]
+  deps = [
+    ":optional",
+  ]
+}
+
 # lazy_slice
 source_set("lazy_slice") {
   sources = [
