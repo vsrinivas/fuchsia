@@ -93,7 +93,7 @@ void PageDataGenerator::PutInTransaction(
     ReferenceStrategy ref_strategy, Priority priority,
     fit::function<void(Status)> callback) {
   if (current_key_index >= keys.size()) {
-    callback(Status::OK);
+    (*page)->Sync([callback = std::move(callback)] { callback(Status::OK); });
     return;
   }
   size_t this_transaction_size =
