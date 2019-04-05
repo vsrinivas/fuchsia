@@ -61,7 +61,6 @@ bool ZirconPlatformBuffer::MapCpuWithFlags(uint64_t offset, uint64_t length, uin
 
 bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t length)
 {
-    DASSERT(!vmar_);
     if (!magma::is_page_aligned(addr))
         return DRETF(false, "addr %lx isn't page aligned", addr);
     if (!magma::is_page_aligned(offset))
@@ -72,6 +71,7 @@ bool ZirconPlatformBuffer::MapAtCpuAddr(uint64_t addr, uint64_t offset, uint64_t
         return DRETF(false, "offset %lx + length %lx > size %lx", offset, length, size());
     if (map_count_ > 0)
         return DRETF(false, "buffer is already mapped");
+    DASSERT(!vmar_);
 
     uint64_t minimum_mappable = MinimumMappableAddress();
     if (addr < minimum_mappable)

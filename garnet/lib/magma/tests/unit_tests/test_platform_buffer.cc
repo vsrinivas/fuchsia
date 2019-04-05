@@ -82,6 +82,7 @@ public:
         EXPECT_TRUE(buffer->MapCpu(&new_addr));
         EXPECT_EQ(reinterpret_cast<uint64_t>(new_addr), addr);
 
+        // Should fail, because it's already mapped.
         for (i = 0; i < 100; i++) {
             addr += PAGE_SIZE * 100;
             if (buffer->MapAtCpuAddr(addr, 0, PAGE_SIZE))
