@@ -55,7 +55,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
         return status;
     }
     aml_audio_ = AmlTdmDevice::Create(*std::move(mmio),
-                                      HIFI_PLL, TDM_OUT_B, FRDDR_B, MCLK_A);
+                                      HIFI_PLL, TDM_OUT_B, FRDDR_B, MCLK_B);
     if (aml_audio_ == nullptr) {
         zxlogf(ERROR, "%s failed to create tdm device\n", __func__);
         return ZX_ERR_NO_MEMORY;
