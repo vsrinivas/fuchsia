@@ -15,7 +15,6 @@
 #include <lib/zircon-internal/default_stack_size.h>
 #include <runtime/thread.h>
 #include <runtime/tls.h>
-#include <zircon/assert.h>
 #include <zircon/tls.h>
 
 #define pthread __pthread
@@ -114,63 +113,9 @@ static inline struct pthread* tp_to_pthread(void* tp) {
 #define SIGALL_SET ((sigset_t*)(const unsigned long long[2]){-1, -1})
 
 #define PTHREAD_MUTEX_MASK (PTHREAD_MUTEX_RECURSIVE | PTHREAD_MUTEX_ERRORCHECK)
-
-// Contested state tracking bits.  Note; all users are required to use the
-// static inline functions for manipulating and checking state.  This
-// centralizes the operations and makes it easier to adapt code if/when the
-// reserve handle bit(s) change.
-//
-// Note; currently valid handles are always expected to have the contested bit
-// *set*.  A uncontested-and-owned mutex state is turned into a
-// contested-and-owned mutex state by clearing the contested bit, not setting
-// it.
-
-#define _PTHREAD_MUTEX_CONTESTED_BIT ((int)0x00000001)
-#define _PTHREAD_MUTEX_CONTESTED_MASK ((int)(~_PTHREAD_MUTEX_CONTESTED_BIT))
-
-static inline int pthread_mutex_tid_to_uncontested_state(pid_t h) {
-    // We rely on the fact that the reserved must-be-one bits are always set.
-    // For now, let's incur the cost of this sanity check, but consider relaxing
-    // it so that it is only performed in debug builds.
-    if ((h & ZX_HANDLE_FIXED_BITS_MASK) != ZX_HANDLE_FIXED_BITS_MASK) {
-        __builtin_trap();
-    }
-    return ((int)h);
-}
-
-static inline int pthread_mutex_tid_to_contested_state(pid_t h) {
-    return ((int)(h & _PTHREAD_MUTEX_CONTESTED_MASK));
-}
-
-static inline int pthread_mutex_uncontested_to_contested_state(int state) {
-    return (state & _PTHREAD_MUTEX_CONTESTED_MASK);
-}
-
-static inline pid_t pthread_mutex_state_to_tid(int state) {
-    return ((pid_t)(state | _PTHREAD_MUTEX_CONTESTED_BIT));
-}
-
-static inline bool pthread_mutex_is_state_contested(int state) {
-    return ((state & _PTHREAD_MUTEX_CONTESTED_BIT) == 0);
-}
-
-#undef _PTHREAD_MUTEX_CONTESTED_BIT
-#undef _PTHREAD_MUTEX_CONTESTED_MASK
-
-// Bits used by pthreads R/W locks for tracking locked vs. unlocked state, as
-// well as reader count.
-//
-// Notes about pthreads R/W lock state...
-// 1) (state == 0)               => "unlocked"
-// 2) (state in [1, 0x7ffffffe]) => locked-for-read.
-// 3) (state == 0x7fffffff)      => locked-for-write.
-// 4) #2 and #3 above may also have the CONTESTED bit set to indicate that there
-//    are waiters.
-#define PTHREAD_MUTEX_RWLOCK_CONTESTED_BIT  ((int)0x80000000)
-#define PTHREAD_MUTEX_RWLOCK_COUNT_MASK     ((int)(~PTHREAD_MUTEX_RWLOCK_CONTESTED_BIT))
-#define PTHREAD_MUTEX_RWLOCK_UNLOCKED       ((int)0)
-#define PTHREAD_MUTEX_RWLOCK_LOCKED_FOR_WR  (PTHREAD_MUTEX_RWLOCK_COUNT_MASK)
-#define PTHREAD_MUTEX_RWLOCK_MAX_RD_COUNT   ((int)(PTHREAD_MUTEX_RWLOCK_COUNT_MASK - 1))
+// The bit used in the recursive and errorchecking cases, which track thread owners.
+#define PTHREAD_MUTEX_OWNED_LOCK_BIT 0x80000000
+#define PTHREAD_MUTEX_OWNED_LOCK_MASK 0x7fffffff
 
 extern void* __pthread_tsd_main[];
 extern volatile size_t __pthread_tsd_size;
@@ -186,7 +131,14 @@ static inline thrd_t __thrd_current(void) {
 }
 
 static inline pid_t __thread_get_tid(void) {
-    return zxr_thread_get_handle(&__pthread_self()->zxr_thread);
+    // We rely on the fact that the high bit is not set. For now,
+    // let's incur the cost of this check, until we consider the
+    // userspace handle value representation completely baked.
+    pid_t id = zxr_thread_get_handle(&__pthread_self()->zxr_thread);
+    if (id & PTHREAD_MUTEX_OWNED_LOCK_BIT) {
+        __builtin_trap();
+    }
+    return id;
 }
 
 int __pthread_create(pthread_t* __restrict, const pthread_attr_t* __restrict,

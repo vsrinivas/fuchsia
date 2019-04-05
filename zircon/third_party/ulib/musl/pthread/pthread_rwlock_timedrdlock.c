@@ -12,12 +12,9 @@ int pthread_rwlock_timedrdlock(pthread_rwlock_t* restrict rw, const struct times
         a_spin();
 
     while ((r = pthread_rwlock_tryrdlock(rw)) == EBUSY) {
-        if (!(r = atomic_load(&rw->_rw_lock)) ||
-            ((r & PTHREAD_MUTEX_RWLOCK_COUNT_MASK) != PTHREAD_MUTEX_RWLOCK_LOCKED_FOR_WR)) {
+        if (!(r = atomic_load(&rw->_rw_lock)) || (r & PTHREAD_MUTEX_OWNED_LOCK_MASK) != PTHREAD_MUTEX_OWNED_LOCK_MASK)
             continue;
-        }
-
-        t = r | PTHREAD_MUTEX_RWLOCK_CONTESTED_BIT;
+        t = r | PTHREAD_MUTEX_OWNED_LOCK_BIT;
         atomic_fetch_add(&rw->_rw_waiters, 1);
         a_cas_shim(&rw->_rw_lock, r, t);
         r = __timedwait(&rw->_rw_lock, t, CLOCK_REALTIME, at);
