@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "pave-utils.h"
+
 #include <stdio.h>
 
 #include <block-client/cpp/client.h>
@@ -13,7 +15,6 @@
 
 #include <utility>
 
-#include "pave-utils.h"
 #include "pave-logging.h"
 
 zx_status_t FlushClient(const block_client::Client& client) {

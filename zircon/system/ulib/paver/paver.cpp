@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/paver/paver.h>
+
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -14,7 +16,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
@@ -40,9 +42,9 @@
 
 #include <utility>
 
-#include "fvm/fvm-sparse.h"
+#include "device-partitioner.h"
 #include "fvm/format.h"
-#include "pave-lib.h"
+#include "fvm/fvm-sparse.h"
 #include "pave-logging.h"
 #include "pave-utils.h"
 
@@ -96,7 +98,7 @@ zx_status_t GetTopoPathFromFd(const fbl::unique_fd& fd, char* buf, size_t buf_le
     zx_status_t call_status;
     size_t path_len;
     zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
-            fdio_unsafe_borrow_channel(io), &call_status, buf, buf_len - 1, &path_len);
+        fdio_unsafe_borrow_channel(io), &call_status, buf, buf_len - 1, &path_len);
     fdio_unsafe_release(io);
     if (status != ZX_OK) {
         return status;
@@ -149,8 +151,10 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo,
     zx_status_t status;
     zx_status_t io_status = fuchsia_hardware_block_BlockGetFifo(channel->get(), &status,
                                                                 fifo.reset_and_get_address());
-    if (io_status != ZX_OK) return io_status;
-    if (status != ZX_OK) return status;
+    if (io_status != ZX_OK)
+        return io_status;
+    if (status != ZX_OK)
+        return status;
 
     zx::vmo dup;
     if (vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
@@ -161,8 +165,10 @@ zx_status_t RegisterFastBlockIo(const fbl::unique_fd& fd, const zx::vmo& vmo,
     fuchsia_hardware_block_VmoID vmoid;
     io_status = fuchsia_hardware_block_BlockAttachVmo(channel->get(), dup.release(), &status,
                                                       &vmoid);
-    if (io_status != ZX_OK) return io_status;
-    if (status != ZX_OK) return status;
+    if (io_status != ZX_OK)
+        return io_status;
+    if (status != ZX_OK)
+        return status;
 
     *out_vmoid = vmoid.id;
     return block_client::Client::Create(std::move(fifo), out_client);
@@ -494,7 +500,6 @@ fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size
         return fbl::unique_fd();
     }
 
-
     {
         fzl::UnownedFdioCaller partition_connection(partition_fd.get());
         zx::unowned_channel partition(partition_connection.borrow_channel());
@@ -534,7 +539,7 @@ zx_status_t ZxcryptCreate(PartitionInfo* part) {
     memset(tmp, 0, key.len());
 
     fbl::unique_ptr<zxcrypt::FdioVolume> volume;
-    if ((status = zxcrypt::FdioVolume::Create(std::move(part->new_part), key, &volume)) != ZX_OK ) {
+    if ((status = zxcrypt::FdioVolume::Create(std::move(part->new_part), key, &volume)) != ZX_OK) {
         ERROR("Could not create zxcrypt volume\n");
         return status;
     }
@@ -937,8 +942,8 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
         // inactive) so the new partition persists.
         fuchsia_hardware_block_partition_GUID guid;
         zx_status_t io_status =
-                fuchsia_hardware_block_partition_PartitionGetInstanceGuid(partition->get(), &status,
-                                                                          &guid);
+            fuchsia_hardware_block_partition_PartitionGetInstanceGuid(partition->get(), &status,
+                                                                      &guid);
         if (io_status != ZX_OK || status != ZX_OK) {
             ERROR("Failed to get unique GUID of new partition\n");
             return ZX_ERR_BAD_STATE;
@@ -946,7 +951,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
 
         zx_status_t status;
         io_status = fuchsia_hardware_block_volume_VolumeManagerActivate(
-                volume_manager.borrow_channel(), &guid, &guid, &status);
+            volume_manager.borrow_channel(), &guid, &guid, &status);
         if (io_status != ZX_OK || status != ZX_OK) {
             ERROR("Failed to upgrade partition\n");
             return ZX_ERR_IO;
@@ -956,8 +961,7 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
     return ZX_OK;
 }
 
-} // namespace
-
+// Paves an image onto the disk.
 zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
                           fbl::unique_fd payload_fd, Partition partition_type, Arch arch) {
     LOG("Paving partition.\n");
@@ -1044,68 +1048,16 @@ zx_status_t PartitionPave(fbl::unique_ptr<DevicePartitioner> partitioner,
     return ZX_OK;
 }
 
+// Reads the entire file from supplied file descriptor. This is necessary due to
+// implementation of streaming protocol which forces entire file to be
+// transferred.
 void Drain(fbl::unique_fd fd) {
     char buf[8192];
     while (read(fd.get(), &buf, sizeof(buf)) > 0)
         continue;
 }
 
-zx_status_t RealMain(Flags flags) {
-    auto device_partitioner = DevicePartitioner::Create();
-    if (!device_partitioner) {
-        ERROR("Unable to initialize a partitioner.");
-        return ZX_ERR_BAD_STATE;
-    }
-    const bool is_cros_device = device_partitioner->IsCros();
-
-    switch (flags.cmd) {
-    case Command::kWipe:
-        return device_partitioner->WipePartitions();
-    case Command::kInstallFvm:
-    case Command::kInstallVbMetaA:
-    case Command::kInstallVbMetaB:
-       break;
-    case Command::kInstallBootloader:
-        if (flags.arch == Arch::X64 && !flags.force) {
-            LOG("SKIPPING BOOTLOADER install on x64 device, pass --force if desired.\n");
-            Drain(std::move(flags.payload_fd));
-            return ZX_OK;
-        }
-        break;
-    case Command::kInstallEfi:
-        if ((is_cros_device || flags.arch == Arch::ARM64) && !flags.force) {
-            LOG("SKIPPING EFI install on ARM64/CROS device, pass --force if desired.\n");
-            Drain(std::move(flags.payload_fd));
-            return ZX_OK;
-        }
-        break;
-    case Command::kInstallKernc:
-        if (!is_cros_device && !flags.force) {
-            LOG("SKIPPING KERNC install on non-CROS device, pass --force if desired.\n");
-            Drain(std::move(flags.payload_fd));
-            return ZX_OK;
-        }
-        break;
-    case Command::kInstallZirconA:
-    case Command::kInstallZirconB:
-    case Command::kInstallZirconR:
-        if (is_cros_device && !flags.force) {
-            LOG("SKIPPING Zircon-{A/B/R} install on CROS device, pass --force if desired.\n");
-            Drain(std::move(flags.payload_fd));
-            return ZX_OK;
-        }
-        break;
-    case Command::kInstallDataFile:
-        return DataFilePave(std::move(device_partitioner), std::move(flags.payload_fd), flags.path);
-
-    default:
-        ERROR("Unsupported command.");
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-    return PartitionPave(std::move(device_partitioner), std::move(flags.payload_fd),
-                         PartitionType(flags.cmd), flags.arch);
-}
-
+// Paves |fd| to a target |data_path| within the /data partition.
 zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
                          fbl::unique_fd payload_fd, char* data_path) {
 
@@ -1134,56 +1086,54 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
         mountpoint_dev_fd.reset(open(minfs_path, O_RDWR));
         break;
 
-    case DISK_FORMAT_ZXCRYPT:
-        {
-            crypto::Secret key;
-            uint8_t* tmp;
-            if ((status = key.Allocate(zxcrypt::kZx1130KeyLen, &tmp)) != ZX_OK) {
-                return status;
-            }
-            memset(tmp, 0, key.len());
-            zxcrypt::key_slot_t key_slot = 0;
+    case DISK_FORMAT_ZXCRYPT: {
+        crypto::Secret key;
+        uint8_t* tmp;
+        if ((status = key.Allocate(zxcrypt::kZx1130KeyLen, &tmp)) != ZX_OK) {
+            return status;
+        }
+        memset(tmp, 0, key.len());
+        zxcrypt::key_slot_t key_slot = 0;
 
-            fbl::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
-            if ((status = zxcrypt::FdioVolume::Unlock(std::move(part_fd), key,
-                                                      key_slot, &zxc_volume)) != ZX_OK) {
-              ERROR("Couldn't unlock zxcrypt volume: %s\n", zx_status_get_string(status));
-              return status;
-            }
+        fbl::unique_ptr<zxcrypt::FdioVolume> zxc_volume;
+        if ((status = zxcrypt::FdioVolume::Unlock(std::move(part_fd), key,
+                                                  key_slot, &zxc_volume)) != ZX_OK) {
+            ERROR("Couldn't unlock zxcrypt volume: %s\n", zx_status_get_string(status));
+            return status;
+        }
 
-            // Most of the time we'll expect the volume to actually already be
-            // unsealed, because we created it and unsealed it moments ago to
-            // format minfs.
-            if ((status = zxc_volume->Open(zx::sec(0), &mountpoint_dev_fd)) == ZX_OK) {
-              // Already unsealed, great, early exit.
-              break;
-            }
+        // Most of the time we'll expect the volume to actually already be
+        // unsealed, because we created it and unsealed it moments ago to
+        // format minfs.
+        if ((status = zxc_volume->Open(zx::sec(0), &mountpoint_dev_fd)) == ZX_OK) {
+            // Already unsealed, great, early exit.
+            break;
+        }
 
-            // Ensure zxcrypt volume manager is bound.
-            zx::channel zxc_manager_chan;
-            if ((status =
+        // Ensure zxcrypt volume manager is bound.
+        zx::channel zxc_manager_chan;
+        if ((status =
                  zxc_volume->OpenManager(zx::sec(5),
                                          zxc_manager_chan.reset_and_get_address())) != ZX_OK) {
-              ERROR("Couldn't open zxcrypt volume manager: %s\n", zx_status_get_string(status));
-              return status;
-            }
-
-            // Unseal.
-            // TODO(security): ZX-2670 call an external binary to unseal the volume instead
-            uint8_t slot = 0;
-            zxcrypt::FdioVolumeManager zxc_volume_manager(std::move(zxc_manager_chan));
-            if ((status = zxc_volume_manager.Unseal(key.get(), key.len(), slot)) != ZX_OK) {
-              ERROR("Couldn't unseal zxcrypt volume: %s\n", zx_status_get_string(status));
-              return status;
-            }
-
-            // Wait for the device to appear, and open it.
-            if ((status = zxc_volume->Open(zx::sec(5), &mountpoint_dev_fd)) != ZX_OK) {
-              ERROR("Couldn't open block device atop unsealed zxcrypt volume: %s\n", zx_status_get_string(status));
-              return status;
-            }
+            ERROR("Couldn't open zxcrypt volume manager: %s\n", zx_status_get_string(status));
+            return status;
         }
-        break;
+
+        // Unseal.
+        // TODO(security): ZX-2670 call an external binary to unseal the volume instead
+        uint8_t slot = 0;
+        zxcrypt::FdioVolumeManager zxc_volume_manager(std::move(zxc_manager_chan));
+        if ((status = zxc_volume_manager.Unseal(key.get(), key.len(), slot)) != ZX_OK) {
+            ERROR("Couldn't unseal zxcrypt volume: %s\n", zx_status_get_string(status));
+            return status;
+        }
+
+        // Wait for the device to appear, and open it.
+        if ((status = zxc_volume->Open(zx::sec(5), &mountpoint_dev_fd)) != ZX_OK) {
+            ERROR("Couldn't open block device atop unsealed zxcrypt volume: %s\n", zx_status_get_string(status));
+            return status;
+        }
+    } break;
 
     default:
         ERROR("unsupported disk format at %s\n", path);
@@ -1241,12 +1191,70 @@ zx_status_t DataFilePave(fbl::unique_ptr<DevicePartitioner> partitioner,
 
     if ((status = umount(mount_path)) != ZX_OK) {
         ERROR("unmount %s failed: %s\n", mount_path,
-            zx_status_get_string(status));
+              zx_status_get_string(status));
         return status;
     }
 
     LOG("Wrote %s\n", data_path);
     return ZX_OK;
+}
+
+} // namespace
+
+zx_status_t RealMain(Flags flags) {
+    auto device_partitioner = DevicePartitioner::Create();
+    if (!device_partitioner) {
+        ERROR("Unable to initialize a partitioner.");
+        return ZX_ERR_BAD_STATE;
+    }
+    const bool is_cros_device = device_partitioner->IsCros();
+
+    switch (flags.cmd) {
+    case Command::kWipe:
+        return device_partitioner->WipePartitions();
+    case Command::kInstallFvm:
+    case Command::kInstallVbMetaA:
+    case Command::kInstallVbMetaB:
+        break;
+    case Command::kInstallBootloader:
+        if (flags.arch == Arch::X64 && !flags.force) {
+            LOG("SKIPPING BOOTLOADER install on x64 device, pass --force if desired.\n");
+            Drain(std::move(flags.payload_fd));
+            return ZX_OK;
+        }
+        break;
+    case Command::kInstallEfi:
+        if ((is_cros_device || flags.arch == Arch::ARM64) && !flags.force) {
+            LOG("SKIPPING EFI install on ARM64/CROS device, pass --force if desired.\n");
+            Drain(std::move(flags.payload_fd));
+            return ZX_OK;
+        }
+        break;
+    case Command::kInstallKernc:
+        if (!is_cros_device && !flags.force) {
+            LOG("SKIPPING KERNC install on non-CROS device, pass --force if desired.\n");
+            Drain(std::move(flags.payload_fd));
+            return ZX_OK;
+        }
+        break;
+    case Command::kInstallZirconA:
+    case Command::kInstallZirconB:
+    case Command::kInstallZirconR:
+        if (is_cros_device && !flags.force) {
+            LOG("SKIPPING Zircon-{A/B/R} install on CROS device, pass --force if desired.\n");
+            Drain(std::move(flags.payload_fd));
+            return ZX_OK;
+        }
+        break;
+    case Command::kInstallDataFile:
+        return DataFilePave(std::move(device_partitioner), std::move(flags.payload_fd), flags.path);
+
+    default:
+        ERROR("Unsupported command.");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return PartitionPave(std::move(device_partitioner), std::move(flags.payload_fd),
+                         PartitionType(flags.cmd), flags.arch);
 }
 
 } //  namespace paver

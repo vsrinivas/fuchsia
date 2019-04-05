@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "device-partitioner.h"
+
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -15,10 +17,10 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <gpt/cros.h>
-#include <lib/fdio/unsafe.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
 #include <zircon/status.h>
@@ -26,7 +28,6 @@
 
 #include <utility>
 
-#include "device-partitioner.h"
 #include "pave-logging.h"
 #include "pave-utils.h"
 
@@ -80,7 +81,7 @@ bool WipeFilterCallback(const gpt_partition_t& part) {
         return true;
     }
 
-    for (const auto &type : efi_removable_types) {
+    for (const auto& type : efi_removable_types) {
         if (memcmp(part.type, type, GPT_GUID_LEN) == 0) {
             return true;
         }
@@ -268,20 +269,34 @@ zx_status_t WipeBlockPartition(const fbl::unique_fd& devfs_root, const uint8_t* 
 
 const char* PartitionName(Partition type) {
     switch (type) {
-    case Partition::kBootloader: return "Bootloader";
-    case Partition::kKernelC: return "Kernel C";
-    case Partition::kEfi: return "EFI";
-    case Partition::kZirconA: return "Zircon A";
-    case Partition::kZirconB: return "Zircon B";
-    case Partition::kZirconR: return "Zircon R";
-    case Partition::kVbMetaA: return "VBMeta A";
-    case Partition::kVbMetaB: return "VBMeta B";
-    case Partition::kFuchsiaVolumeManager: return "Fuchsia Volume Manager";
-    case Partition::kInstallType: return "Install";
-    case Partition::kSystem: return "System";
-    case Partition::kBlob: return "Blob";
-    case Partition::kData: return "Data";
-    default: return "Unknown";
+    case Partition::kBootloader:
+        return "Bootloader";
+    case Partition::kKernelC:
+        return "Kernel C";
+    case Partition::kEfi:
+        return "EFI";
+    case Partition::kZirconA:
+        return "Zircon A";
+    case Partition::kZirconB:
+        return "Zircon B";
+    case Partition::kZirconR:
+        return "Zircon R";
+    case Partition::kVbMetaA:
+        return "VBMeta A";
+    case Partition::kVbMetaB:
+        return "VBMeta B";
+    case Partition::kFuchsiaVolumeManager:
+        return "Fuchsia Volume Manager";
+    case Partition::kInstallType:
+        return "Install";
+    case Partition::kSystem:
+        return "System";
+    case Partition::kBlob:
+        return "Blob";
+    case Partition::kData:
+        return "Data";
+    default:
+        return "Unknown";
     }
 }
 
@@ -417,8 +432,8 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
         // Manually re-bind the GPT driver, since it is almost certainly
         // too late to be noticed by the block watcher.
         io_status = fuchsia_device_ControllerBind(
-                caller.borrow_channel(), kGptDriverName, strlen(kGptDriverName),
-                &status);
+            caller.borrow_channel(), kGptDriverName, strlen(kGptDriverName),
+            &status);
         if (io_status != ZX_OK || status != ZX_OK) {
             ERROR("Failed to bind GPT\n");
             return ZX_ERR_BAD_STATE;
@@ -873,7 +888,7 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
 
     const uint8_t kern_type[GPT_GUID_LEN] = GUID_CROS_KERNEL_VALUE;
     constexpr char kPrefix[] = "ZIRCON-";
-    uint16_t zircon_prefix[strlen(kPrefix)*2];
+    uint16_t zircon_prefix[strlen(kPrefix) * 2];
     cstring_to_utf16(&zircon_prefix[0], kPrefix, strlen(kPrefix));
 
     for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
@@ -884,7 +899,7 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
         if (memcmp(part->type, kern_type, GPT_GUID_LEN)) {
             continue;
         }
-        if (memcmp(part->name, zircon_prefix, strlen(kPrefix)*2)) {
+        if (memcmp(part->name, zircon_prefix, strlen(kPrefix) * 2)) {
             const uint8_t priority = gpt_cros_attr_get_priority(part->flags);
             if (priority > top_priority) {
                 top_priority = priority;
@@ -938,7 +953,7 @@ zx_status_t CrosDevicePartitioner::WipePartitions() {
 }
 
 zx_status_t CrosDevicePartitioner::GetBlockSize(const fbl::unique_fd& device_fd,
-                                               uint32_t* block_size) const {
+                                                uint32_t* block_size) const {
     fuchsia_hardware_block_BlockInfo info;
     zx_status_t status = gpt_->GetBlockInfo(&info);
     if (status == ZX_OK) {

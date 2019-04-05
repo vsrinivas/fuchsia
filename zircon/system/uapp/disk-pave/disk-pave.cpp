@@ -10,10 +10,12 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <lib/paver/paver.h>
+
+#include <cstdio>
 #include <utility>
 
-#include "pave-lib.h"
-#include "pave-logging.h"
+#define ERROR(fmt, ...) fprintf(stderr, "disk-pave:[%s] " fmt, __FUNCTION__, ##__VA_ARGS__);
 
 namespace {
 

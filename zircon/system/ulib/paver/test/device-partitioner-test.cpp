@@ -17,8 +17,8 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <ramdevice-client/ramnand.h>
 #include <ramdevice-client/ramdisk.h>
+#include <ramdevice-client/ramnand.h>
 #include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/hw/gpt.h>
@@ -159,8 +159,8 @@ bool FilterRealBlockDevices(const fbl::unique_fd& fd) {
     zx_status_t call_status;
     size_t path_len;
     zx_status_t status = fuchsia_device_ControllerGetTopologicalPath(
-            fdio_unsafe_borrow_channel(io), &call_status, topo_path, sizeof(topo_path) - 1 ,
-            &path_len);
+        fdio_unsafe_borrow_channel(io), &call_status, topo_path, sizeof(topo_path) - 1,
+        &path_len);
     fdio_unsafe_release(io);
     if (status != ZX_OK || call_status != ZX_OK) {
         return false;
