@@ -48,7 +48,7 @@ Scenic's responsibilities are:
 
 ## Scenic and Fuchsia
 
-![Diagram of Scenic within Fuchsia](scenic_within_fuchsia_diagram.png)
+![Diagram of Scenic within Fuchsia](meta/scenic_within_fuchsia_diagram.png)
 
 Scenic's API allows any client to insert its UI into the global scene graph.
 Processes using the UI framework [_Flutter_](https://flutter.io/) are one
@@ -172,7 +172,7 @@ indefinitely to incrementally update resources within a session.
 A `Node` resource represents a graphical object which can be assembled into
 a hierarchy called a `node tree` for rendering.
 
-[Here](resource_lifecycle.md) is a walk-through on how Scenic internally manages
+[Here](scenic_resource_lifecycle.md) is a walk-through on how Scenic internally manages
 the lifecycle of Node-like resources and embedded Views.
 
 TODO: Discuss this in more detail, especially hierarchical modeling concepts
@@ -206,7 +206,7 @@ can contain either an `Image` (perhaps transformed by a matrix), or a
 
 ### Scenic Resource Graph
 
-![Scenic Resource Graph](scenic_resource_graph.png)
+![Scenic Resource Graph](meta/scenic_resource_graph.png)
 
 ### TODO: More Resources
 
@@ -218,7 +218,7 @@ Scenic manages a global scene graph in a three dimensional space. Some of the ch
 this space are defined by Scenic itself, whereas some are defined by the root presenter or even
 other clients.
 
-![Scenic Axes](scenic_axes.png)
+![Scenic Axes](meta/scenic_axes.png)
 
 ### Units
 Units are configured by the root presenter. The default root presenter uses a device-independent
@@ -240,7 +240,7 @@ presenter and the handedness will match.
 
 The bounds of the root view are defined by a min and a max point as follows:
 
-![Scenic Root View Bounds](scenic_root_view_bounds.png)
+![Scenic Root View Bounds](meta/scenic_root_view_bounds.png)
 
 ## Timing Model
 

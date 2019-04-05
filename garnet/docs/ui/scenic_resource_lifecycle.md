@@ -58,7 +58,7 @@ link to its child entity node. The entity node has a strong link to is child,
 a shape node with a triangle shape. Client A's ResourceMap also has a strong
 reference to all the nodes in the scene. There is a second image to the right,
 labeled "projected scene", that shows a triangle on the bottom half of the
-screen.](scene_graph_lifecycle_node_scene.png)
+screen.](meta/scene_graph_lifecycle_node_scene.png)
 
 ### Removing a Node
 
@@ -73,7 +73,7 @@ ReleaseResource(entity_node_id);
 
 ![Image of the scene graph in the image above. Client A's ResourceMap no longer
 has a strong reference to the entity node. The "projected scene" image is
-unchanged.](scene_graph_lifecycle_node_scene_2.png)
+unchanged.](meta/scene_graph_lifecycle_node_scene_2.png)
 
 To remove the triangle from the screen, the client would have to explicitly
 detach the nodes from the scene graph. When the `Resource` is removed from both
@@ -86,7 +86,7 @@ DetachChildren(root_id);
 ![Image of the scene graph. Its only node is the root scene node. The
 ResourceMap has a strong reference to the root node and the shape node
 containing the triangle shape. There is no entity node. The "projected scene"
-image is a blank screen](scene_graph_lifecycle_node_scene_detach.png)
+image is a blank screen](meta/scene_graph_lifecycle_node_scene_detach.png)
 
 ## Embedding a View
 
@@ -105,7 +105,7 @@ AddChild(entity_node_id, view_holder_id);
 
 ![Image of the scene graph containing a scene root node with a child EntityNode.
 The EntityNode has a ViewHolder child. Client A's ResourceMap has a strong
-reference to the Scene, EntityNode, and the ViewHolder.](scene_graph_lifecycle_viewholder.png)
+reference to the Scene, EntityNode, and the ViewHolder.](meta/scene_graph_lifecycle_viewholder.png)
 
 The ViewHolder follows the same lifecycle rules as a Node, [described above](#node-lifecycle).
 It will remain part of the scene graph as long as it is connected to something in
@@ -130,7 +130,7 @@ reference to the ViewHolder, EntityNode, and Scene, all added to the scene
 graph. Client B's View and ViewNode are also added to the scene graph: the
 ViewHolder maintains a strong reference to the ViewNode, and a weak reference to
 the View. The View also maintains a strong reference to the ViewNode. Client B's
-ResourceMap only points to the View.](scene_graph_lifecycle_embedded_view.png)
+ResourceMap only points to the View.](meta/scene_graph_lifecycle_embedded_view.png)
 
 Client B can then add children to the View, just like it can to Nodes. Under the
 hood, the ViewNode maintains the children's connections to the scene graph:
@@ -144,7 +144,7 @@ AddChild(view_id, shape_node_id);
 ![Image of the scene graph above. A ShapeNode containing a rectangle is added to
 the scene graph as the child of the ViewNode. Client B's ResourceMap also has a
 strong reference to the ShapeNode. The "projected scene" image shows a rectangle
-on the screen.](scene_graph_lifecycle_embedded_view_with_nodes.png)
+on the screen.](meta/scene_graph_lifecycle_embedded_view_with_nodes.png)
 
 ### Removing a View
 
@@ -162,7 +162,7 @@ ReleaseResource(view_id);
 
 ![Image of the scene graph with Client A's nodes still attached. Client B's View
 and ViewNode are destroyed, but its ResourceMap maintains a strong reference to
-the ShapeNode.](scene_graph_lifecycle_embedded_view_detach.png)
+the ShapeNode.](meta/scene_graph_lifecycle_embedded_view_detach.png)
 
 > Note: if either the View or ViewHolder is destroyed, its pair is delivered a
 disconnected event (i.e. `fuchsia.ui.gfx.ViewHolderDisconnected` or
@@ -188,7 +188,7 @@ ReleaseResource(view_holder_id);
 maintains a strong reference to the Scene node. There is no ViewHolder. Client
 B's subtree maintains the strong reference between the ViewNode and its child
 ShapeNode, and Client B's ResourceMap maintains its links to the View and the
-ShapeNode. The "projected scene" image is a blank screen.](scene_graph_lifecycle_destroyed_viewholder.png)
+ShapeNode. The "projected scene" image is a blank screen.](meta/scene_graph_lifecycle_destroyed_viewholder.png)
 
 > Note: Any embedded Sessions are notified if they are detached from the scene via
 the `fuchsia.ui.gfx.ViewDetachedFromSceneEvent`.
