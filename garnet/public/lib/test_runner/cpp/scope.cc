@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async/default.h>
 #include "lib/test_runner/cpp/scope.h"
+#include <lib/async/default.h>
 
 namespace test_runner {
 
@@ -29,7 +29,8 @@ Scope::Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
   service_list->host_directory = services_->OpenAsDirectory();
   parent_env->CreateNestedEnvironment(
       env_.NewRequest(), env_controller_.NewRequest(), label,
-      std::move(service_list), {.inherit_parent_services=true});
+      std::move(service_list),
+      {.inherit_parent_services = true, .delete_storage_on_death = true});
 }
 
 fuchsia::sys::Launcher* Scope::GetLauncher() {

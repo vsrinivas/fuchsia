@@ -51,12 +51,12 @@ class ScopeServices {
 };
 
 // Provides fate separation of sets of applications run by one application. The
-// environment services are delegated to the parent environment.
+// environment services are delegated to the parent environment. The storage
+// backing this environment is deleted when this instance goes out of scope.
 class Scope {
  public:
   Scope(const fuchsia::sys::EnvironmentPtr& parent_env,
-        const std::string& label,
-        std::unique_ptr<ScopeServices> services);
+        const std::string& label, std::unique_ptr<ScopeServices> services);
 
   fuchsia::sys::Launcher* GetLauncher();
 
