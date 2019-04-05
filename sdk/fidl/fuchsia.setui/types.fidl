@@ -6,6 +6,7 @@ enum SettingType {
     CONNECTIVITY = 2;
     WIRELESS = 3;
     INTL = 4;
+    ACCOUNT = 5;
 };
 
 union SettingData {
@@ -23,6 +24,19 @@ union SettingData {
 
     /// Internationalization settings.
     IntlSettings intl;
+
+    AccountSettings account;
+};
+
+enum LoginOverride {
+    NONE = 0;
+    /// Do not require an account and login always as guest.
+    AUTOLOGIN_GUEST = 1;
+};
+
+table AccountSettings {
+    /// If set, indicates a login behavior specified at runtime.
+    1: LoginOverride mode;
 };
 
 struct TimeZoneInfo {
