@@ -33,7 +33,13 @@ protocol SetUiService {
     // for a given type are closed.
     // The service will call the listener with the current state immediately on
     // initialization.
+    // DEPRECATED: To be removed in favor of Watch
     Listen(SettingType settingType, SettingListener listener);
+
+    // Returns immediately on first call. Subsequent calls will be delayed until
+    // there is an updated value available.
+    [Transitional]
+    Watch(SettingType settingType) -> (SettingsObject setting);
 
     // Sets the value of a given settings object. Returns once operation
     // has completed.
@@ -44,6 +50,8 @@ protocol SetUiService {
     InteractiveMutate(SettingType settingType, Mutation mutation, MutationHandles mutation_handles) -> (MutationResponse response);
 };
 
+
+// DEPRECATED: To be removed in favor of Watch
 protocol SettingListener {
     Notify(SettingsObject object);
 };
