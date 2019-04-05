@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <atomic>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -210,6 +211,15 @@ class [[nodiscard]] Status final {
     if (is_ok())
       return *this;
     return Status(code(), std::string(context) + ": " + reason());
+  }
+
+  template <class F>
+  Status WithLazyContext(F generator) const {
+    if (is_ok())
+      return *this;
+    std::ostringstream msg;
+    msg << generator() << ": " << reason();
+    return Status(code(), msg.str());
   }
 
   template <class T>
