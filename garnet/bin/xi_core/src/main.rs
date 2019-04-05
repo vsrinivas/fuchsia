@@ -4,16 +4,15 @@
 
 //! Main process for Fuchsia builds - uses fidl rather than stdin / stdout
 
-#![deny(warnings)]
+#![feature(async_await, await_macro, futures_api)]
 
 use {
     failure::{Error, ResultExt},
-    fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_xi::JsonMarker,
-    fuchsia_app::server::ServicesServer,
+    fidl_fuchsia_xi::{JsonRequest, JsonRequestStream},
     fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{AsHandleRef, Signals, Socket, Status, Time},
-    futures::{TryFutureExt, future},
+    futures::{StreamExt, TryFutureExt, TryStreamExt},
     std::{
         io,
         sync::Arc,
@@ -22,8 +21,6 @@ use {
     xi_core_lib::XiCore,
     xi_rpc::RpcLoop,
 };
-#[allow(deprecated)]
-use fidl_fuchsia_xi::{Json, JsonImpl};
 
 // TODO: this should be moved into fuchsia_zircon.
 pub struct BlockingSocket(Arc<Socket>);
@@ -68,19 +65,18 @@ fn editor_main(sock: Socket) {
 }
 
 #[allow(deprecated)]
-fn spawn_json_server(chan: fasync::Channel) {
+fn spawn_json_server(mut stream: JsonRequestStream) {
     fasync::spawn(
-    JsonImpl {
-        state: (),
-        on_open: |_, _| future::ready(()),
-        connect_socket: |_state, socket, _controller| {
-            eprintln!("connect_socket");
-            let _ = thread::spawn(move || editor_main(socket));
-            future::ready(())
+        async move {
+            while let Some(request) = await!(stream.try_next())? {
+                let JsonRequest::ConnectSocket { sock, control_handle: _ } = request;
+                eprintln!("connect_socket");
+                let _ = thread::spawn(move || editor_main(sock));
+            }
+            Ok(())
         }
-    }
-    .serve(chan)
-    .unwrap_or_else(|e| eprintln!("error running xi Json server {:?}", e)))
+            .unwrap_or_else(|e: fidl::Error| eprintln!("error running xi Json server {:?}", e))
+    )
 }
 
 fn main() {
@@ -92,11 +88,11 @@ fn main() {
 fn main_xi() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("unable to create executor")?;
 
-    let server = ServicesServer::new()
-        .add_service((JsonMarker::NAME, spawn_json_server))
-        .start()
-        .map_err(|e| e.context("error starting service server"))?;
+    let mut server = ServiceFs::new();
+    server.dir("public").add_fidl_service(|stream| spawn_json_server(stream));
+    server.take_and_serve_directory_handle()?;
 
     let n_threads = 2;
-    executor.run(server, n_threads)
+    executor.run(server.collect::<()>(), n_threads);
+    Ok(())
 }
