@@ -166,6 +166,11 @@ config("language") {
     # system libc++ doesn't support.  But we use our own toolchain's static
     # libc++ anyway.
     cflags_cc += [ "-faligned-allocation" ]
+
+    # libc++ headers mark some symbols as unavailable on macOS by default
+    # because the system libc++ doesn't support them.  But we use our own
+    # toolchain's static libc++ anyway.
+    defines = [ "_LIBCPP_DISABLE_AVAILABILITY" ]
   }
 }
 

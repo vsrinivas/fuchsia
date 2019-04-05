@@ -33,7 +33,7 @@ zx_status_t do_stat(fbl::RefPtr<fs::Vnode> vn, struct stat* s) {
     zx_status_t status = vn->Getattr(&a);
     if (status == ZX_OK) {
         memset(s, 0, sizeof(struct stat));
-        s->st_mode = a.mode;
+        s->st_mode = static_cast<mode_t>(a.mode);
         s->st_size = a.size;
         s->st_ino = a.inode;
         s->st_ctime = a.create_time;
