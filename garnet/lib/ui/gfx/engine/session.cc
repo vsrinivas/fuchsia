@@ -166,6 +166,9 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
     CommandContext* command_context, uint64_t target_presentation_time,
     uint64_t needs_render_id) {
   FXL_DCHECK(target_presentation_time >= last_presentation_time_);
+  TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "session_id", id_,
+                 "session_debug_name", debug_name_, "target_presentation_time",
+                 target_presentation_time);
 
   ApplyUpdateResult update_results{
       .success = false, .needs_render = false, .all_fences_ready = true};
@@ -186,9 +189,6 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
       update_results.all_fences_ready = false;
       break;
     }
-    TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "session_id", id_,
-                   "session_debug_name", debug_name_, "requested time",
-                   update.presentation_time, "time", target_presentation_time);
 
     ++applied_update_count_;
     TRACE_FLOW_END("gfx", "scheduled_update",
