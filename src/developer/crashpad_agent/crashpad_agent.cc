@@ -5,12 +5,14 @@
 #include "src/developer/crashpad_agent/crashpad_agent.h"
 
 #include <stdio.h>
+#include <unistd.h>
 
 #include <map>
 #include <string>
 #include <utility>
 
 #include <fuchsia/crash/cpp/fidl.h>
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -24,6 +26,7 @@
 #include "src/developer/crashpad_agent/scoped_unlink.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
+#include "src/lib/files/unique_fd.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/client/prune_crash_reports.h"
 #include "third_party/crashpad/client/settings.h"
@@ -46,19 +49,22 @@ namespace fuchsia {
 namespace crash {
 namespace {
 
+using fuchsia::feedback::Data;
+
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] =
     "/config/data/crashpad_agent/override_config.json";
 
 }  // namespace
 
-std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate() {
+std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
+    std::shared_ptr<::sys::ServiceDirectory> services) {
   Config config;
 
   if (files::IsFile(kOverrideConfigPath)) {
     const zx_status_t status = ParseConfig(kOverrideConfigPath, &config);
     if (status == ZX_OK) {
-      return CrashpadAgent::TryCreate(std::move(config));
+      return CrashpadAgent::TryCreate(std::move(services), std::move(config));
     }
     FX_LOGS(ERROR) << "failed to read override config file at "
                    << kOverrideConfigPath << ": " << status << " ("
@@ -70,7 +76,7 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate() {
   // config was specified or we failed to parse it.
   const zx_status_t status = ParseConfig(kDefaultConfigPath, &config);
   if (status == ZX_OK) {
-    return CrashpadAgent::TryCreate(std::move(config));
+    return CrashpadAgent::TryCreate(std::move(services), std::move(config));
   }
   FX_LOGS(ERROR) << "failed to read default config file at "
                  << kDefaultConfigPath << ": " << status << " ("
@@ -80,16 +86,19 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate() {
   return nullptr;
 }
 
-std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(Config config) {
+std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
+    std::shared_ptr<::sys::ServiceDirectory> services, Config config) {
   std::unique_ptr<CrashServer> crash_server;
   if (config.enable_upload_to_crash_server && config.crash_server_url) {
     crash_server = std::make_unique<CrashServer>(*config.crash_server_url);
   }
-  return CrashpadAgent::TryCreate(std::move(config), std::move(crash_server));
+  return CrashpadAgent::TryCreate(std::move(services), std::move(config),
+                                  std::move(crash_server));
 }
 
 std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
-    Config config, std::unique_ptr<CrashServer> crash_server) {
+    std::shared_ptr<::sys::ServiceDirectory> services, Config config,
+    std::unique_ptr<CrashServer> crash_server) {
   if (!files::IsDirectory(config.local_crashpad_database_path)) {
     files::CreateDirectory(config.local_crashpad_database_path);
   }
@@ -109,16 +118,20 @@ std::unique_ptr<CrashpadAgent> CrashpadAgent::TryCreate(
   database->GetSettings()->SetUploadsEnabled(
       config.enable_upload_to_crash_server);
 
-  return std::unique_ptr<CrashpadAgent>(new CrashpadAgent(
-      std::move(config), std::move(database), std::move(crash_server)));
+  return std::unique_ptr<CrashpadAgent>(
+      new CrashpadAgent(std::move(services), std::move(config),
+                        std::move(database), std::move(crash_server)));
 }
 
 CrashpadAgent::CrashpadAgent(
-    Config config, std::unique_ptr<crashpad::CrashReportDatabase> database,
+    std::shared_ptr<::sys::ServiceDirectory> services, Config config,
+    std::unique_ptr<crashpad::CrashReportDatabase> database,
     std::unique_ptr<CrashServer> crash_server)
-    : config_(std::move(config)),
+    : services_(services),
+      config_(std::move(config)),
       database_(std::move(database)),
       crash_server_(std::move(crash_server)) {
+  FXL_DCHECK(services_);
   FXL_DCHECK(database_);
   if (config.enable_upload_to_crash_server) {
     FXL_DCHECK(crash_server_);
@@ -175,6 +188,34 @@ void CrashpadAgent::OnKernelPanicCrashLog(
   PruneDatabase();
 }
 
+zx_status_t CrashpadAgent::GetFeedbackData(Data* data) {
+  if (!feedback_data_provider_) {
+    services_->Connect(feedback_data_provider_.NewRequest());
+  }
+
+  fuchsia::feedback::DataProvider_GetData_Result out_result;
+  const zx_status_t status = feedback_data_provider_->GetData(&out_result);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (out_result.is_err()) {
+    return out_result.err();
+  }
+
+  *data = std::move(out_result.response().data);
+  return ZX_OK;
+}
+
+Data CrashpadAgent::GetFeedbackData() {
+  Data data;
+  const zx_status_t get_status = GetFeedbackData(&data);
+  if (get_status != ZX_OK) {
+    FX_LOGS(WARNING) << "error fetching feedback data: " << get_status << " ("
+                     << zx_status_get_string(get_status) << ")";
+  }
+  return data;
+}
+
 namespace {
 
 std::string GetPackageName(const zx::process& process) {
@@ -183,6 +224,32 @@ std::string GetPackageName(const zx::process& process) {
     return std::string(name);
   }
   return std::string("unknown-package");
+}
+
+// Returns the filename the VMO was written to, empty in case of failure.
+std::string WriteVmoToFile(const fuchsia::mem::Buffer& vmo) {
+  // mkstemp will fill the XXXXXX with random characters.
+  std::string filename = "/data/tmp_file.XXXXXX";
+  fxl::UniqueFD fd(mkstemp(filename.data()));
+  if (!fd.is_valid()) {
+    FX_LOGS(ERROR) << "could not create temp file for VMO";
+    return std::string();
+  }
+
+  auto data = std::make_unique<uint8_t[]>(vmo.size);
+  const zx_status_t read_status =
+      vmo.vmo.read(data.get(), /*offset=*/0u, vmo.size);
+  if (read_status != ZX_OK) {
+    FX_LOGS(ERROR) << "could not read VMO: " << read_status << " ("
+                   << zx_status_get_string(read_status) << ")";
+    return std::string();
+  }
+  if (write(fd.get(), data.get(), vmo.size) != static_cast<ssize_t>(vmo.size)) {
+    FX_LOGS(ERROR) << "could not write VMO to temp file";
+    return std::string();
+  }
+
+  return filename;
 }
 
 }  // namespace
@@ -195,21 +262,28 @@ zx_status_t CrashpadAgent::OnNativeException(zx::process process,
                 << package_name;
 
   // Prepare annotations and attachments.
+  const Data feedback_data = GetFeedbackData();
   const std::map<std::string, std::string> annotations =
-      MakeDefaultAnnotations(package_name);
+      MakeDefaultAnnotations(feedback_data, package_name);
   // The Crashpad exception handler expects filepaths for the passed
   // attachments, not file objects, but we need the underlying files
-  // to still be there.
+  // to still be there so we wrap the filepaths in ScopedUnlink objects.
+  //
+  // TODO(frousseau): switch Crashpad to use VMOs instead of filepaths to avoid
+  // these temporary files.
   std::map<std::string, base::FilePath> attachments;
-  const ScopedUnlink tmp_kernel_log_file(
-      WriteKernelLogToFile(config_.local_crashpad_database_path));
-  if (tmp_kernel_log_file.is_valid()) {
-    attachments[kAttachmentKernelLog] =
-        base::FilePath(tmp_kernel_log_file.get());
+  std::vector<ScopedUnlink> attachment_files;
+  if (feedback_data.has_attachments()) {
+    for (const auto& attachment : feedback_data.attachments()) {
+      attachment_files.emplace_back(WriteVmoToFile(attachment.value));
+      const ScopedUnlink& tmp_file = attachment_files.back();
+      if (tmp_file.is_valid()) {
+        attachments[attachment.key] = base::FilePath(tmp_file.get());
+      } else {
+        FX_LOGS(WARNING) << "skipping attachment " << attachment.key;
+      }
+    }
   }
-  attachments[kAttachmentBuildInfoSnapshot] =
-      base::FilePath("/config/build-info/snapshot");
-  // TODO(DX-581): attach syslog as well.
 
   // Set minidump and create local crash report.
   //   * The annotations will be stored in the minidump of the report and
@@ -256,12 +330,12 @@ zx_status_t CrashpadAgent::OnManagedRuntimeException(
   }
 
   // Prepare annotations and attachments.
+  const Data feedback_data = GetFeedbackData();
   const std::map<std::string, std::string> annotations =
-      MakeManagedRuntimeExceptionAnnotations(component_url, &exception);
-  if (AddManagedRuntimeExceptionAttachments(report.get(), &exception) !=
-      ZX_OK) {
-    FX_LOGS(WARNING) << "error adding attachments to local crash report";
-  }
+      MakeManagedRuntimeExceptionAnnotations(feedback_data, component_url,
+                                             &exception);
+  AddManagedRuntimeExceptionAttachments(report.get(), feedback_data,
+                                        &exception);
 
   // Finish new local crash report.
   crashpad::UUID local_report_id;
@@ -293,11 +367,10 @@ zx_status_t CrashpadAgent::OnKernelPanicCrashLog(
   }
 
   // Prepare annotations and attachments.
+  const Data feedback_data = GetFeedbackData();
   const std::map<std::string, std::string> annotations =
-      MakeDefaultAnnotations(/*package_name=*/"kernel");
-  if (AddKernelPanicAttachments(report.get(), std::move(crash_log)) != ZX_OK) {
-    FX_LOGS(WARNING) << "error adding attachments to local crash report";
-  }
+      MakeDefaultAnnotations(feedback_data, /*package_name=*/"kernel");
+  AddKernelPanicAttachments(report.get(), feedback_data, std::move(crash_log));
 
   // Finish new local crash report.
   crashpad::UUID local_report_id;

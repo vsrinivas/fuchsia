@@ -9,8 +9,10 @@
 #include <utility>
 
 #include <fuchsia/crash/cpp/fidl.h>
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fidl/cpp/string.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
@@ -30,10 +32,13 @@ class CrashpadAgent : public Analyzer {
   // Static factory methods.
   // Returns nullptr if the agent cannot be instantiated, e.g., because the
   // local report database cannot be accessed.
-  static std::unique_ptr<CrashpadAgent> TryCreate();
-  static std::unique_ptr<CrashpadAgent> TryCreate(Config config);
   static std::unique_ptr<CrashpadAgent> TryCreate(
-      Config config, std::unique_ptr<CrashServer> crash_server);
+      std::shared_ptr<::sys::ServiceDirectory> services);
+  static std::unique_ptr<CrashpadAgent> TryCreate(
+      std::shared_ptr<::sys::ServiceDirectory> services, Config config);
+  static std::unique_ptr<CrashpadAgent> TryCreate(
+      std::shared_ptr<::sys::ServiceDirectory> services, Config config,
+      std::unique_ptr<CrashServer> crash_server);
 
   void OnNativeException(zx::process process, zx::thread thread,
                          zx::port exception_port,
@@ -47,7 +52,8 @@ class CrashpadAgent : public Analyzer {
                              OnKernelPanicCrashLogCallback callback) override;
 
  private:
-  CrashpadAgent(Config config,
+  CrashpadAgent(std::shared_ptr<::sys::ServiceDirectory> services,
+                Config config,
                 std::unique_ptr<crashpad::CrashReportDatabase> database,
                 std::unique_ptr<CrashServer> crash_server);
 
@@ -56,6 +62,9 @@ class CrashpadAgent : public Analyzer {
   zx_status_t OnManagedRuntimeException(std::string component_url,
                                         ManagedRuntimeException exception);
   zx_status_t OnKernelPanicCrashLog(fuchsia::mem::Buffer crash_log);
+
+  zx_status_t GetFeedbackData(fuchsia::feedback::Data* data);
+  fuchsia::feedback::Data GetFeedbackData();
 
   // Uploads local crash report of ID |local_report_id|, attaching either the
   // passed |annotations| or reading the annotations from its minidump.
@@ -74,9 +83,12 @@ class CrashpadAgent : public Analyzer {
   // crashpad::CrashReportDatabase::Report::creation_time.
   void PruneDatabase();
 
+  const std::shared_ptr<::sys::ServiceDirectory> services_;
   const Config config_;
   const std::unique_ptr<crashpad::CrashReportDatabase> database_;
   const std::unique_ptr<CrashServer> crash_server_;
+
+  fuchsia::feedback::DataProviderSyncPtr feedback_data_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CrashpadAgent);
 };

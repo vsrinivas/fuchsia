@@ -15,17 +15,15 @@
 int main(int argc, const char** argv) {
   syslog::InitLogger({"crash"});
 
+  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  auto context = sys::ComponentContext::Create();
   std::unique_ptr<fuchsia::crash::CrashpadAgent> agent =
-      fuchsia::crash::CrashpadAgent::TryCreate();
+      fuchsia::crash::CrashpadAgent::TryCreate(context->svc());
   if (!agent) {
     return EXIT_FAILURE;
   }
-
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context = sys::ComponentContext::Create();
   fidl::BindingSet<fuchsia::crash::Analyzer> bindings;
-  startup_context->outgoing()->AddPublicService(
-      bindings.GetHandler(agent.get()));
+  context->outgoing()->AddPublicService(bindings.GetHandler(agent.get()));
 
   loop.Run();
 

@@ -12,9 +12,15 @@
 #include <vector>
 
 #include <fuchsia/crash/cpp/fidl.h>
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fdio/spawn.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>
 #include <lib/zx/port.h>
@@ -29,12 +35,19 @@
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/fxl/logging.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace fuchsia {
 namespace crash {
 namespace {
+
+using fuchsia::feedback::Annotation;
+using fuchsia::feedback::Attachment;
+using fuchsia::feedback::DataProvider;
+using fuchsia::feedback::DataProvider_GetData_Response;
+using fuchsia::feedback::DataProvider_GetData_Result;
 
 // We keep the local Crashpad database size under a certain value. As we want to
 // check the produced attachments in the database, we should set the size to be
@@ -47,6 +60,86 @@ const char kStubCrashServerUrl[] = "localhost:1234";
 
 constexpr bool alwaysReturnSuccess = true;
 constexpr bool alwaysReturnFailure = false;
+
+Annotation BuildAnnotation(const std::string& key) {
+  Annotation annotation;
+  annotation.key = key;
+  annotation.value = "unused";
+  return annotation;
+}
+
+Attachment BuildAttachment(const std::string& key) {
+  Attachment attachment;
+  attachment.key = key;
+  FXL_CHECK(fsl::VmoFromString("unused", &attachment.value));
+  return attachment;
+}
+
+// Stub fuchsia.feedback.DataProvider service that returns canned responses for
+// DataProvider::GetData().
+class StubFeedbackDataProvider : public DataProvider {
+ public:
+  // Returns a request handler for binding to this stub service.
+  // We pass a dispatcher to run it on a different loop than the agent.
+  fidl::InterfaceRequestHandler<DataProvider> GetHandler(
+      async_dispatcher_t* dispatcher) {
+    return bindings_.GetHandler(this, dispatcher);
+  }
+
+  // DataProvider methods.
+  void GetData(GetDataCallback callback) override {
+    DataProvider_GetData_Result result;
+
+    if (!next_annotation_keys_ && !next_attachment_keys_) {
+      result.set_err(ZX_ERR_INTERNAL);
+    } else {
+      DataProvider_GetData_Response response;
+
+      if (next_annotation_keys_) {
+        std::vector<Annotation> annotations;
+        for (const auto& key : *next_annotation_keys_.get()) {
+          annotations.push_back(BuildAnnotation(key));
+        }
+        response.data.set_annotations(annotations);
+        reset_annotation_keys();
+      }
+
+      if (next_attachment_keys_) {
+        std::vector<Attachment> attachments;
+        for (const auto& key : *next_attachment_keys_.get()) {
+          attachments.push_back(BuildAttachment(key));
+        }
+        response.data.set_attachments(std::move(attachments));
+        reset_attachment_keys();
+      }
+
+      result.set_response(std::move(response));
+    }
+
+    callback(std::move(result));
+  }
+  void GetScreenshot(fuchsia::feedback::ImageEncoding encoding,
+                     GetScreenshotCallback callback) override {
+    FXL_NOTIMPLEMENTED();
+  }
+
+  // Stub injection methods.
+  void set_annotation_keys(const std::vector<std::string>& annotation_keys) {
+    next_annotation_keys_ =
+        std::make_unique<std::vector<std::string>>(annotation_keys);
+  }
+  void set_attachment_keys(const std::vector<std::string>& attachment_keys) {
+    next_attachment_keys_ =
+        std::make_unique<std::vector<std::string>>(attachment_keys);
+  }
+  void reset_annotation_keys() { next_annotation_keys_.reset(); }
+  void reset_attachment_keys() { next_attachment_keys_.reset(); }
+
+ private:
+  fidl::BindingSet<fuchsia::feedback::DataProvider> bindings_;
+  std::unique_ptr<std::vector<std::string>> next_annotation_keys_;
+  std::unique_ptr<std::vector<std::string>> next_attachment_keys_;
+};
 
 class StubCrashServer : public CrashServer {
  public:
@@ -71,11 +164,29 @@ class StubCrashServer : public CrashServer {
 //
 // This does not test the environment service. It directly instantiates the
 // class, without connecting through FIDL.
-class CrashpadAgentTest : public ::testing::Test {
+class CrashpadAgentTest : public gtest::RealLoopFixture {
  public:
-  // The underlying agent is initialized with a default config, but can
-  // be reset via ResetAgent() if a different config is necessary.
+  CrashpadAgentTest()
+      : service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToThread),
+        service_directory_provider_(
+            service_directory_provider_loop_.dispatcher()) {
+    // We run the service directory provider in a different loop so that it can
+    // serve the requests to and responses from the stub feedback data provider
+    // as the agent connects it synchronously.
+    FXL_CHECK(service_directory_provider_loop_.StartThread(
+                  "service directory provider thread") == ZX_OK);
+  }
+
+  ~CrashpadAgentTest() { service_directory_provider_loop_.Shutdown(); }
+
   void SetUp() override {
+    stub_feedback_data_provider_.reset(new StubFeedbackDataProvider());
+    FXL_CHECK(service_directory_provider_.AddService(
+                  stub_feedback_data_provider_->GetHandler(
+                      service_directory_provider_loop_.dispatcher())) == ZX_OK);
+
+    // The underlying agent is initialized with a default config, but can
+    // be reset via ResetAgent() if a different config is necessary.
     ResetAgent(Config{/*local_crashpad_database_path=*/database_path_.path(),
                       /*max_crashpad_database_size_in_kb=*/
                       kMaxTotalReportSizeInKb,
@@ -92,12 +203,19 @@ class CrashpadAgentTest : public ::testing::Test {
     FXL_CHECK(config.enable_upload_to_crash_server ^ !crash_server);
     crash_server_ = std::move(crash_server);
 
+    ResetFeedbackDataProvider(
+        // TODO(frousseau): check the annotations just like the attachments.
+        // This is trickier because they are stored in the minidump at best.
+        /*annotation.keys=*/{"unused.annotation.1", "unused.annotation.2"},
+        /*attachment.keys=*/{"build.snapshot", "log.kernel"});
+
     // "attachments" should be kept in sync with the value defined in
     // //crashpad/client/crash_report_database_generic.cc
     attachments_dir_ =
         files::JoinPath(config.local_crashpad_database_path, "attachments");
-    agent_ =
-        CrashpadAgent::TryCreate(std::move(config), std::move(crash_server_));
+    agent_ = CrashpadAgent::TryCreate(
+        service_directory_provider_.service_directory(), std::move(config),
+        std::move(crash_server_));
     FXL_CHECK(agent_);
   }
 
@@ -107,15 +225,44 @@ class CrashpadAgentTest : public ::testing::Test {
     return ResetAgent(std::move(config), /*crash_server=*/nullptr);
   }
 
+  // Resets the annotations and attachments returned by the underlying stub
+  // feedback data provider.
+  void ResetFeedbackDataProvider(
+      const std::vector<std::string>& annotation_keys,
+      const std::vector<std::string>& attachment_keys) {
+    stub_feedback_data_provider_->set_annotation_keys(annotation_keys);
+    stub_feedback_data_provider_->set_attachment_keys(attachment_keys);
+    feedback_attachment_keys_ = attachment_keys;
+  }
+
+  // Tells the stub feedback::DataProvider to return no annotation or
+  // attachment.
+  void FlushFeedbackDataAnnotationKeys() {
+    stub_feedback_data_provider_->reset_annotation_keys();
+  }
+  void FlushFeedbackDataAttachmentKeys() {
+    stub_feedback_data_provider_->reset_attachment_keys();
+    feedback_attachment_keys_.clear();
+  }
+
   // Checks that there is:
   //   * only one set of attachments
-  //   * the set of attachment filenames match the |expected_attachments|
+  //   * the set of attachment filenames matches the concatenation of
+  //   |expected_extra_attachments| and feedback_attachment_keys_
   //   * no attachment is empty
   // in the local Crashpad database.
-  void CheckAttachments(const std::vector<std::string>& expected_attachments) {
+  void CheckAttachments(
+      const std::vector<std::string>& expected_extra_attachments = {}) {
     const std::vector<std::string> subdirs = GetAttachmentSubdirs();
     // We expect a single crash report to have been generated.
     ASSERT_EQ(subdirs.size(), 1u);
+
+    // We expect as attachments the ones returned by the feedback::DataProvider
+    // and the extra ones specific to the crash analysis flow under test.
+    std::vector<std::string> expected_attachments = expected_extra_attachments;
+    expected_attachments.insert(expected_attachments.begin(),
+                                feedback_attachment_keys_.begin(),
+                                feedback_attachment_keys_.end());
 
     std::vector<std::string> attachments;
     const std::string report_attachments_dir =
@@ -180,7 +327,11 @@ class CrashpadAgentTest : public ::testing::Test {
     dirs->erase(std::remove(dirs->begin(), dirs->end(), "."), dirs->end());
   }
 
+  async::Loop service_directory_provider_loop_;
+  ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
+  std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider_;
   std::string attachments_dir_;
+  std::vector<std::string> feedback_attachment_keys_;
 };
 
 TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
@@ -245,7 +396,7 @@ TEST_F(CrashpadAgentTest, OnNativeException_C_Basic) {
         out_result = std::move(result);
       });
   EXPECT_TRUE(out_result.is_response());
-  CheckAttachments({"build.snapshot", "kernel_log"});
+  CheckAttachments();
 
   // The parent job just swallows the exception, i.e. not RESUME_TRY_NEXT it,
   // to not trigger the real agent attached to the root job.
@@ -277,7 +428,7 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_Dart_Basic) {
         out_result = std::move(result);
       });
   EXPECT_TRUE(out_result.is_response());
-  CheckAttachments({"build.snapshot", "DartError"});
+  CheckAttachments({"DartError"});
 }
 
 TEST_F(CrashpadAgentTest, OnManagedRuntimeException_UnknownLanguage_Basic) {
@@ -293,7 +444,7 @@ TEST_F(CrashpadAgentTest, OnManagedRuntimeException_UnknownLanguage_Basic) {
         out_result = std::move(result);
       });
   EXPECT_TRUE(out_result.is_response());
-  CheckAttachments({"build.snapshot", "data"});
+  CheckAttachments({"data"});
 }
 
 TEST_F(CrashpadAgentTest, OnKernelPanicCrashLog_Basic) {
@@ -306,7 +457,7 @@ TEST_F(CrashpadAgentTest, OnKernelPanicCrashLog_Basic) {
         out_result = std::move(result);
       });
   EXPECT_TRUE(out_result.is_response());
-  CheckAttachments({"build.snapshot", "log"});
+  CheckAttachments({"kernel_panic_crash_log"});
 }
 
 TEST_F(CrashpadAgentTest, PruneDatabase_ZeroSize) {
@@ -389,6 +540,24 @@ TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoUpload) {
                     /*crash_server_url=*/nullptr});
 
   EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+}
+
+TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackAttachments) {
+  FlushFeedbackDataAttachmentKeys();
+  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+  CheckAttachments({"kernel_panic_crash_log"});
+}
+
+TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackAnnotations) {
+  FlushFeedbackDataAnnotationKeys();
+  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+}
+
+TEST_F(CrashpadAgentTest, AnalysisSucceedOnNoFeedbackData) {
+  FlushFeedbackDataAnnotationKeys();
+  FlushFeedbackDataAttachmentKeys();
+  EXPECT_TRUE(RunOneCrashAnalysis().is_response());
+  CheckAttachments({"kernel_panic_crash_log"});
 }
 
 }  // namespace

@@ -826,6 +826,8 @@ group("timezone") {
 group("crashpad") {
   testonly = true
   public_deps = [
+    "//garnet/packages/prod:crashpad_agent",
+    "//garnet/packages/prod:feedback_agent",
     "//src/developer/crashpad_agent/tests:crashpad_agent_tests",
     "//third_party/crashpad:crashpad_test",
   ]

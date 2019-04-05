@@ -3,11 +3,9 @@
         "binary": "test/crashpad_agent_unittest"
     },
     "sandbox": {
-        "dev": [
-            "misc/sysinfo"
-        ],
         "features": [
             "build-info",
+            "isolated-persistent-storage",
             "system-temp"
         ],
         "services": [

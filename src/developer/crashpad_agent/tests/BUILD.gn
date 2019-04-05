@@ -116,13 +116,18 @@ executable("crashpad_agent_unittest") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
+    "//garnet/public/lib/gtest",
     "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/crashpad_agent:src",
+    "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
     "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
   ]
 }

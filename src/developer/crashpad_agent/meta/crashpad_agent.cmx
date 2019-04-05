@@ -13,6 +13,7 @@
             "root-ssl-certificates"
         ],
         "services": [
+            "fuchsia.feedback.DataProvider",
             "fuchsia.logger.LogSink",
             "fuchsia.net.SocketProvider"
         ]

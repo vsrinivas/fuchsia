@@ -14,12 +14,12 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <src/lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/image.h>
 
 #include "src/lib/files/file.h"
+#include "src/lib/fxl/strings/trim.h"
 
 namespace fuchsia {
 namespace crash {
@@ -31,33 +31,6 @@ const char kDartTypeKey[] = "type";
 const char kDartTypeValue[] = "DartError";
 const char kDartErrorMessageKey[] = "error_message";
 const char kDartErrorRuntimeTypeKey[] = "error_runtime_type";
-
-std::string GetBoardName() {
-  const char kSysInfoPath[] = "/dev/misc/sysinfo";
-  const int fd = open(kSysInfoPath, O_RDWR);
-  if (fd < 0) {
-    FX_LOGS(ERROR) << "failed to open " << kSysInfoPath;
-    return "unknown";
-  }
-
-  zx::channel channel;
-  zx_status_t status =
-      fdio_get_service_handle(fd, channel.reset_and_get_address());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to get board name";
-    return "unknown";
-  }
-
-  char board_name[ZBI_BOARD_NAME_LEN];
-  size_t actual_size = 0;
-  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardName(
-      channel.get(), &status, board_name, sizeof(board_name), &actual_size);
-  if (fidl_status != ZX_OK || status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to get board name";
-    return "unknown";
-  }
-  return std::string(board_name, actual_size);
-}
 
 std::string ReadStringFromFile(const std::string& filepath) {
   std::string content;
@@ -71,27 +44,30 @@ std::string ReadStringFromFile(const std::string& filepath) {
 }  // namespace
 
 std::map<std::string, std::string> MakeDefaultAnnotations(
+    const fuchsia::feedback::Data& feedback_data,
     const std::string& package_name) {
-  const std::string version = ReadStringFromFile("/config/build-info/version");
-  return {
+  std::map<std::string, std::string> annotations = {
       {"product", "Fuchsia"},
-      {"version", version},
+      {"version", ReadStringFromFile("/config/build-info/version")},
       // We use ptype to benefit from Chrome's "Process type" handling in
-      // the UI.
+      // the crash server UI.
       {"ptype", package_name},
-      {"board_name", GetBoardName()},
-      {"build.product", ReadStringFromFile("/config/build-info/product")},
-      {"build.board", ReadStringFromFile("/config/build-info/board")},
-      {"build.version", version},
-      {"build.latest-commit-date",
-       ReadStringFromFile("/config/build-info/latest-commit-date")},
   };
+
+  if (feedback_data.has_annotations()) {
+    for (const auto& annotation : feedback_data.annotations()) {
+      annotations[annotation.key] = annotation.value;
+    }
+  }
+
+  return annotations;
 }
 
 std::map<std::string, std::string> MakeManagedRuntimeExceptionAnnotations(
+    const fuchsia::feedback::Data& feedback_data,
     const std::string& component_url, ManagedRuntimeException* exception) {
   std::map<std::string, std::string> annotations =
-      MakeDefaultAnnotations(component_url);
+      MakeDefaultAnnotations(feedback_data, component_url);
   switch (exception->Which()) {
     case ManagedRuntimeException::Tag::Invalid:
       FX_LOGS(ERROR) << "invalid ManagedRuntimeException";
