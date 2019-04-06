@@ -44,7 +44,7 @@ class Settings {
     // device_name will be set to the device's hostname if it is empty or null
     device_name = command_line.GetOptionValueWithDefault("device_name", "");
 
-    // default user is incognito
+    // default user is guest
     user = command_line.GetOptionValueWithDefault("user", "");
 
     // If passed, runs as a test harness.
@@ -149,13 +149,19 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
   }
 
   void Connect() {
-    // If we are using account manager for authentication, we provision a new
-    // auth account with the expectation that basemgr is subscribed as an
-    // account listener.
-    if (kUseAccountManager) {
-      // Ignore settings_user and always create a Fuchsia account if there isn't
-      // one already.
-      if (view_owner_request_) {
+    if (user_provider_ && view_owner_request_) {
+      if (settings_.user.empty()) {
+        // Login as a guest user.
+        Login("");
+        return;
+      }
+
+      // If we are using account manager for authentication, we provision a new
+      // auth account with the expectation that basemgr is subscribed as an
+      // account listener.
+      if (kUseAccountManager) {
+        // Ignore settings_user and always create a Fuchsia account if there
+        // isn't one already.
         account_manager_->GetAccountIds(
             [this](
                 std::vector<fuchsia::auth::account::LocalAccountId> accounts) {
@@ -171,44 +177,34 @@ class DevBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseShell> {
                                      "fuchsia::modular::auth::Account.";
                   });
             });
-      }
-      return;
-    }
+      } else {
+        user_provider_->PreviousUsers(
+            [this](std::vector<fuchsia::modular::auth::Account> accounts) {
+              FXL_LOG(INFO)
+                  << "Found " << accounts.size() << " users in the user "
+                  << "database";
 
-    if (user_provider_ && view_owner_request_) {
-      if (settings_.user.empty()) {
-        // Incognito mode.
-        Login("");
-        return;
-      }
-
-      user_provider_->PreviousUsers(
-          [this](std::vector<fuchsia::modular::auth::Account> accounts) {
-            FXL_LOG(INFO) << "Found " << accounts.size()
-                          << " users in the user "
-                          << "database";
-
-            // Not running in incognito mode. Add the user if not already
-            // added.
-            std::string account_id;
-            for (const auto& account : accounts) {
-              FXL_LOG(INFO) << "Found user " << account.display_name;
-              if (account.display_name.size() >= settings_.user.size() &&
-                  account.display_name.substr(0, settings_.user.size()) ==
-                      settings_.user) {
-                account_id = account.id;
-                break;
+              // Add the user if not already added.
+              std::string account_id;
+              for (const auto& account : accounts) {
+                FXL_LOG(INFO) << "Found user " << account.display_name;
+                if (account.display_name.size() >= settings_.user.size() &&
+                    account.display_name.substr(0, settings_.user.size()) ==
+                        settings_.user) {
+                  account_id = account.id;
+                  break;
+                }
+                if (account_id.empty()) {
+                  user_provider_->AddUser(
+                      fuchsia::modular::auth::IdentityProvider::DEV,
+                      [this](fuchsia::modular::auth::AccountPtr account,
+                             fidl::StringPtr status) { Login(account->id); });
+                } else {
+                  Login(account_id);
+                }
               }
-            }
-            if (account_id.empty()) {
-              user_provider_->AddUser(
-                  fuchsia::modular::auth::IdentityProvider::DEV,
-                  [this](fuchsia::modular::auth::AccountPtr account,
-                         fidl::StringPtr status) { Login(account->id); });
-            } else {
-              Login(account_id);
-            }
-          });
+            });
+      }
     }
   }
 

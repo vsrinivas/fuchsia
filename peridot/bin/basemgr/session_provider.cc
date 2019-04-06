@@ -51,8 +51,7 @@ bool SessionProvider::StartSession(
   };
 
   // TODO(MF-280): Currently, session_id maps to account ID. We should generate
-  // unique session ID's and store the mapping of session ID to session once we
-  // support multiple sessions.
+  // unique session ID's and store the mapping of session ID to session.
   std::string session_id;
   if (!account) {
     // Guest user. Generate a random number to be used in this case.

@@ -115,6 +115,8 @@ source_set("lib") {
     "session_context_impl.h",
     "session_provider.cc",
     "session_provider.h",
+    "session_user_provider_impl.cc",
+    "session_user_provider_impl.h",
     "user_provider_impl.cc",
     "user_provider_impl.h",
   ]

@@ -26,6 +26,7 @@
 #include "peridot/bin/basemgr/cobalt/cobalt.h"
 #include "peridot/bin/basemgr/presentation_container.h"
 #include "peridot/bin/basemgr/session_provider.h"
+#include "peridot/bin/basemgr/session_user_provider_impl.h"
 #include "peridot/bin/basemgr/user_provider_impl.h"
 #include "peridot/lib/fidl/clone.h"
 
@@ -78,7 +79,17 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
 
   FuturePtr<> StopTokenManagerFactoryApp();
 
+  // Starts the basemgr functionalities in the following order:
+  // 1. Initialize session provider.
+  // 2. Initialize user provider.
+  // 3. Show setup or launch a session.
   void Start();
+
+  // Initializes either the |session_user_provider_impl_| or the
+  // |user_provider_impl_| depending on |kUseAccountManager| flag in
+  // basemgr_impl.cc. These classes provide modular framework the ability to
+  // add/remove/list users and control their participation in sessions.
+  void InitializeUserProvider();
 
   // |fuchsia::modular::BaseShellContext|
   void GetUserProvider(
@@ -156,7 +167,11 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // Holds the presentation service.
   std::unique_ptr<PresentationContainer> presentation_container_;
 
+  // Depending on kUseAccountManager, basemgr_impl.cc will use either
+  // |user_provider_impl_| or |session_user_provider_impl_| for session user
+  // management.
   std::unique_ptr<UserProviderImpl> user_provider_impl_;
+  std::unique_ptr<SessionUserProviderImpl> session_user_provider_impl_;
 
   fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_bindings_;
   fidl::Binding<fuchsia::modular::BaseShellContext> base_shell_context_binding_;

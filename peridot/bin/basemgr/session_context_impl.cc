@@ -35,7 +35,7 @@ SessionContextImpl::SessionContextImpl(
   FXL_CHECK(on_session_shutdown_);
 
   // TODO(MF-280): We should replace USER* with SESSION* below. However, this
-  // will force users to re-authenticate, so the timing needs to be considered.
+  // will lose existing user data, so the timing needs to be considered.
   // 0. Generate the path to map '/data' for the sessionmgr we are starting.
   std::string data_origin = std::string("/data/modular/USER_") + session_id;
 
