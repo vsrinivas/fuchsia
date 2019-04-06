@@ -5,19 +5,25 @@
 extern crate tempfile;
 
 use account_common::{
-    AccountAuthState, AccountManagerError, FidlAccountAuthState, FidlLocalAccountId, LocalAccountId,
+    AccountAuthState, AccountManagerError, FidlAccountAuthState, FidlLocalAccountId,
+    LocalAccountId, ResultExt,
 };
-use failure::Error;
+use failure::{format_err, Error};
 use fidl::encoding::OutOfLine;
-use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::AuthProviderConfig;
-use fidl_fuchsia_auth::{AuthState, AuthStateSummary, AuthenticationContextProviderMarker};
+use fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd};
+use fidl_fuchsia_auth::{
+    AppConfig, AuthState, AuthStateSummary, AuthenticationContextProviderMarker,
+    Status as AuthStatus,
+};
+use fidl_fuchsia_auth::{AuthProviderConfig, UserProfileInfo};
 use fidl_fuchsia_auth_account::{
     AccountListenerMarker, AccountListenerOptions, AccountManagerRequest,
     AccountManagerRequestStream, AccountMarker, Status,
 };
+use fuchsia_app::fuchsia_single_component_package_url;
 use futures::lock::Mutex;
 use futures::prelude::*;
+use lazy_static::lazy_static;
 use log::{info, warn};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -27,6 +33,15 @@ use crate::account_event_emitter::{AccountEvent, AccountEventEmitter};
 use crate::account_handler_connection::AccountHandlerConnection;
 use crate::account_handler_context::AccountHandlerContext;
 use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
+
+const SELF_URL: &str = fuchsia_single_component_package_url!("account_manager");
+
+lazy_static! {
+
+    /// The Auth scopes used for authorization during service provider-based account provisioning.
+    /// An empty vector means that the auth provider should use its default scopes.
+    static ref APP_SCOPES: Vec<String> = Vec::default();
+}
 
 /// (Temporary) A fixed AuthState that is used for all accounts until authenticators are
 /// available.
@@ -113,7 +128,8 @@ impl AccountManager {
                 responder,
             } => {
                 let mut response =
-                    self.provision_from_auth_provider(auth_context_provider, auth_provider_type);
+                    await!(self
+                        .provision_from_auth_provider(auth_context_provider, auth_provider_type));
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))
             }
             AccountManagerRequest::ProvisionNewAccount { responder } => {
@@ -243,6 +259,7 @@ impl AccountManager {
     }
 
     async fn provision_new_account(&self) -> (Status, Option<FidlLocalAccountId>) {
+        // Create an account
         let (account_handler, account_id) =
             match await!(AccountHandlerConnection::create_account(Arc::clone(&self.context))) {
                 Ok((connection, account_id)) => (Arc::new(connection), account_id),
@@ -252,41 +269,144 @@ impl AccountManager {
                 }
             };
 
-        info!("Adding new local account {:?}", account_id);
+        // Persist the account both in memory and on disk
+        if let Err(err) = await!(self.add_account(account_handler.clone(), account_id.clone())) {
+            warn!("Failure adding account: {:?}", err);
+            await!(account_handler.terminate());
+            (err.status, None)
+        } else {
+            info!("Adding new local account {:?}", &account_id);
+            (Status::Ok, Some(account_id.into()))
+        }
+    }
 
-        // TODO(jsankey): Persist the change in installed accounts, ensuring this has succeeded
-        // before adding to our in-memory state.
+    async fn provision_from_auth_provider(
+        &self,
+        auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
+        auth_provider_type: String,
+    ) -> (Status, Option<FidlLocalAccountId>) {
+        // Create an account
+        let (account_handler, account_id) =
+            match await!(AccountHandlerConnection::create_account(Arc::clone(&self.context))) {
+                Ok((connection, account_id)) => (Arc::new(connection), account_id),
+                Err(err) => {
+                    warn!("Failure adding account: {:?}", err);
+                    return (err.status, None);
+                }
+            };
 
+        // Add a service provider to the account
+        let _user_profile = match await!(Self::add_service_provider_account(
+            auth_context_provider,
+            auth_provider_type,
+            account_handler.clone()
+        )) {
+            Ok(user_profile) => user_profile,
+            Err(err) => {
+                // TODO(dnordstrom): Remove the newly created account handler as a cleanup.
+                warn!("Failure adding service provider account: {:?}", err);
+                await!(account_handler.terminate());
+                return (err.status, None);
+            }
+        };
+
+        // Persist the account both in memory and on disk
+        if let Err(err) = await!(self.add_account(account_handler.clone(), account_id.clone())) {
+            warn!("Failure adding service provider account: {:?}", err);
+            await!(account_handler.terminate());
+            (err.status, None)
+        } else {
+            info!("Adding new account {:?}", &account_id);
+            (Status::Ok, Some(account_id.into()))
+        }
+    }
+
+    // Attach a service provider account to this Fuchsia account
+    async fn add_service_provider_account(
+        auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
+        auth_provider_type: String,
+        account_handler: Arc<AccountHandlerConnection>,
+    ) -> Result<UserProfileInfo, AccountManagerError> {
+        // Use account handler to get a channel to the account
+        let (account_client_end, account_server_end) =
+            create_endpoints().account_manager_status(Status::IoError)?;
+        match await!(account_handler.proxy().get_account(auth_context_provider, account_server_end))
+        {
+            Ok(Status::Ok) => Ok(()),
+            Ok(status) => Err(AccountManagerError::new(status)),
+            Err(err) => Err(AccountManagerError::new(Status::IoError).with_cause(err)),
+        }?;
+        let account_proxy =
+            account_client_end.into_proxy().account_manager_status(Status::IoError)?;
+
+        // Use the account to get the persona
+        let (persona_client_end, persona_server_end) =
+            create_endpoints().account_manager_status(Status::IoError)?;
+        match await!(account_proxy.get_default_persona(persona_server_end)) {
+            Ok((Status::Ok, _)) => Ok(()),
+            Ok((status, _)) => Err(AccountManagerError::new(status)),
+            Err(err) => Err(AccountManagerError::new(Status::IoError).with_cause(err)),
+        }?;
+        let persona_proxy =
+            persona_client_end.into_proxy().account_manager_status(Status::IoError)?;
+
+        // Use the persona to get the token manager
+        let (tm_client_end, tm_server_end) =
+            create_endpoints().account_manager_status(Status::IoError)?;
+        match await!(persona_proxy.get_token_manager(SELF_URL, tm_server_end)) {
+            Ok(Status::Ok) => Ok(()),
+            Ok(status) => Err(AccountManagerError::new(status)),
+            Err(err) => Err(AccountManagerError::new(Status::IoError).with_cause(err)),
+        }?;
+        let tm_proxy = tm_client_end.into_proxy().account_manager_status(Status::IoError)?;
+
+        // Use the token manager to authorize
+        let mut app_config = AppConfig {
+            auth_provider_type,
+            client_id: None,
+            client_secret: None,
+            redirect_uri: None,
+        };
+        match await!(tm_proxy.authorize(
+            &mut app_config,
+            None, /* auth_ui_context */
+            &mut APP_SCOPES.iter().map(|x| &**x),
+            None, /* user_profile_id */
+            None, /* auth_code */
+        )) {
+            Ok((AuthStatus::Ok, None)) => Err(AccountManagerError::new(Status::InternalError)
+                .with_cause(format_err!("Invalid response from token manager"))),
+            Ok((AuthStatus::Ok, Some(user_profile))) => Ok(*user_profile),
+            Ok((status, _)) => Err(AccountManagerError::from(status)),
+            Err(err) => Err(AccountManagerError::new(Status::IoError).with_cause(err)),
+        }
+    }
+
+    // Add the account to the AccountManager, including persistent state.
+    async fn add_account(
+        &self,
+        account_handler: Arc<AccountHandlerConnection>,
+        account_id: LocalAccountId,
+    ) -> Result<(), AccountManagerError> {
         let mut ids_to_handlers_lock = await!(self.ids_to_handlers.lock());
         if ids_to_handlers_lock.get(&account_id).is_some() {
             // IDs are 64 bit integers that are meant to be random. Its very unlikely we'll create
             // the same one twice but not impossible.
-            // TODO(jsankey): Once account handler is handling persistent state it may be able to
-            // detect this condition itself, if not it needs to be told to delete any state it has
-            // created for this user we're not going to add.
-            warn!("Duplicate ID creating new account");
-            return (Status::UnknownError, None);
+            // TODO(dnordstrom): Avoid collision higher up the call chain.
+            return Err(AccountManagerError::new(Status::UnknownError)
+                .with_cause(format_err!("Duplicate ID {:?} creating new account", &account_id)));
         }
         let mut account_ids: Vec<StoredAccountMetadata> =
             ids_to_handlers_lock.keys().map(|id| StoredAccountMetadata::new(id.clone())).collect();
         account_ids.push(StoredAccountMetadata::new(account_id.clone()));
         if let Err(err) = StoredAccountList::new(account_ids).save(&self.data_dir) {
             // TODO(dnordstrom): When AccountHandler uses persistent storage, clean up its state.
-            return (err.status, None);
+            return Err(err);
         }
         ids_to_handlers_lock.insert(account_id.clone(), Some(account_handler));
         let event = AccountEvent::AccountAdded(account_id.clone());
         await!(self.event_emitter.publish(&event));
-        (Status::Ok, Some(account_id.into()))
-    }
-
-    fn provision_from_auth_provider(
-        &self,
-        _auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
-        _auth_provider_type: String,
-    ) -> (Status, Option<FidlLocalAccountId>) {
-        // TODO(jsankey): Implement this method
-        (Status::InternalError, None)
+        Ok(())
     }
 }
 

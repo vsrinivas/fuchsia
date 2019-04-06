@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 use failure::{format_err, Error};
-use fidl::endpoints::create_endpoints;
-use fidl_fuchsia_auth::AuthStateSummary;
+use fidl::endpoints::{create_endpoints, create_request_stream};
+use fidl_fuchsia_auth::{
+    AuthStateSummary, AuthenticationContextProviderMarker, AuthenticationContextProviderRequest,
+};
 use fidl_fuchsia_auth_account::{
     AccountManagerMarker, AccountManagerProxy, LocalAccountId, Status,
 };
+use futures::prelude::*;
 
 /// Calls provision_new_account on the supplied account_manager, returning an error on any
 /// non-OK responses, or the account ID on success.
@@ -17,6 +20,37 @@ async fn provision_new_account(
     match await!(account_manager.provision_new_account())? {
         (Status::Ok, Some(new_account_id)) => Ok(*new_account_id),
         (status, _) => Err(format_err!("ProvisionNewAccount returned status: {:?}", status)),
+    }
+}
+
+/// Calls provision_from_auth_provider on the supplied account_manager using "dev_auth_provider",
+/// mocks out the UI context, returning an error on any non-OK responses, or the account ID on
+/// success. This requires the account manager to run the dev_auth_provider. See the
+/// `account_manager` package for more information on how that is configured.
+async fn provision_account_from_dev_auth_provider(
+    account_manager: &AccountManagerProxy,
+) -> Result<LocalAccountId, Error> {
+    let (acp_client_end, mut acp_request_stream) =
+        create_request_stream::<AuthenticationContextProviderMarker>()
+            .expect("failed opening channel");
+
+    // This async function mocks out the auth context provider channel, although it supplies no data
+    // for the test.
+    let serve_fn = async move {
+        let request = await!(acp_request_stream.try_next())
+            .expect("AuthenticationContextProvider failed receiving message");
+        match request {
+            Some(AuthenticationContextProviderRequest::GetAuthenticationUiContext { .. }) => Ok(()),
+            None => Err(format_err!("AuthenticationContextProvider channel closed unexpectedly")),
+        }
+    };
+
+    let (serve_result, provision_result) = await!(serve_fn
+        .join(account_manager.provision_from_auth_provider(acp_client_end, "dev_auth_provider")));
+    serve_result?;
+    match provision_result? {
+        (Status::Ok, Some(new_account_id)) => Ok(*new_account_id),
+        (status, _) => Err(format_err!("ProvisionFromAuthProvider returned status: {:?}", status)),
     }
 }
 
@@ -39,7 +73,7 @@ async fn test_account_functionality() -> Result<(), Error> {
     );
 
     // Provision a second new account and verify it has a different ID.
-    let account_2 = await!(provision_new_account(&account_manager))?;
+    let account_2 = await!(provision_account_from_dev_auth_provider(&account_manager))?;
     assert_ne!(account_1.id, account_2.id);
 
     // Connect a channel to one of these accounts and verify it's usable.

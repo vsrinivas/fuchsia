@@ -5,6 +5,7 @@
     "sandbox": {
         "features": [ "isolated-persistent-storage" ],
         "services": [
+            "fuchsia.auth.AuthProviderFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

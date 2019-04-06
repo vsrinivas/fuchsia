@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::{Error, Fail};
+use failure::{format_err, Error, Fail};
+use fidl_fuchsia_auth::Status::{self as TokenManagerStatus, *};
 use fidl_fuchsia_auth_account::Status;
 
 /// An extension trait to simplify conversion of results based on general errors to
@@ -52,6 +53,30 @@ impl AccountManagerError {
 impl From<Status> for AccountManagerError {
     fn from(status: Status) -> Self {
         AccountManagerError::new(status)
+    }
+}
+
+impl From<TokenManagerStatus> for AccountManagerError {
+    fn from(token_manager_status: TokenManagerStatus) -> Self {
+        AccountManagerError {
+            status: match token_manager_status {
+                Ok => Status::Ok, // It is not adviced to create an error with an "ok" status
+                InternalError => Status::InternalError,
+                InvalidAuthContext => Status::InvalidRequest,
+                InvalidRequest => Status::InvalidRequest,
+                IoError => Status::IoError,
+                NetworkError => Status::NetworkError,
+
+                AuthProviderServiceUnavailable
+                | AuthProviderServerError
+                | UserNotFound
+                | ReauthRequired
+                | UserCancelled
+                | UnknownError => Status::UnknownError,
+            },
+            fatal: false,
+            cause: Some(format_err!("Token manager error: {:?}", token_manager_status)),
+        }
     }
 }
 
