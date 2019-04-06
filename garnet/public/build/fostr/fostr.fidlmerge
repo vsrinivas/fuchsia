@@ -137,6 +137,7 @@ namespace {{ . }} {
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& value) {
+  using fidl::operator<<;
   if (!value) {
     return os << "<null>";
   }
@@ -151,6 +152,7 @@ std::ostream& operator<<(std::ostream& os, const std::unique_ptr<T>& value) {
     {{- range .Enums }}
         {{- $type_name := .Name.Parts.Name }}
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+  using fidl::operator<<;
   switch (value) {
         {{- range .Members }}
     case {{ $type_name }}::{{ .Name }}:
@@ -168,6 +170,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     {{- range .Structs }}
 
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+  using fidl::operator<<;
   os << fostr::Indent;
         {{- range .Members }}
           {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
@@ -186,6 +189,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     {{- range .Tables }}
 
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+  using fidl::operator<<;
   os << fostr::Indent;
         {{- range .Members }}
   if (value.has_{{ .Name }}()) {
@@ -206,6 +210,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     {{- range .Unions }}
 
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+  using fidl::operator<<;
   switch (value.Which()) {
         {{- $type_name := .Name.Parts.Name }}
         {{- range .Members }}
@@ -230,6 +235,7 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
     {{- range .XUnions }}
 
 std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) {
+  using fidl::operator<<;
   switch (value.Which()) {
         {{- $type_name := .Name.Parts.Name }}
         {{- range .Members }}

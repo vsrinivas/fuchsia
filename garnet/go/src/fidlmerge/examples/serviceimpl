@@ -112,7 +112,7 @@ fidlmerge -template serviceimpl \
 {{/* Produces a C++ expression for a types.Type. */}}
 {{- define "Type" }}
     {{- if eq .Kind "array" -}}
-        ::fidl::Array<{{ template "Type" .ElementType }}, {{ .ElementCount }}>
+        ::std::array<{{ template "Type" .ElementType }}, {{ .ElementCount }}>
     {{- else if eq .Kind "vector" -}}
         ::fidl::VectorPtr<{{ template "Type" .ElementType }}>
     {{- else if eq .Kind "string" -}}

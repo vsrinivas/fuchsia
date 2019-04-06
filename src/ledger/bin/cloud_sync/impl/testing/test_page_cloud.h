@@ -6,7 +6,6 @@
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_TESTING_TEST_PAGE_CLOUD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>

@@ -5,12 +5,12 @@
 #ifndef PERIDOT_LIB_FIDL_JSON_XDR_H_
 #define PERIDOT_LIB_FIDL_JSON_XDR_H_
 
+#include <array>
 #include <map>
 #include <string>
 #include <type_traits>
 #include <vector>
 
-#include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/string.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/macros.h>
@@ -480,7 +480,7 @@ class XdrContext {
   // A fidl array is mapped to JSON null and JSON Array with a custom
   // filter for the elements.
   template <typename D, size_t N, typename V>
-  void Value(fidl::Array<D, N>* const data, const XdrFilterType<V> filter) {
+  void Value(std::array<D, N>* const data, const XdrFilterType<V> filter) {
     switch (op_) {
       case XdrOp::TO_JSON: {
         value_->SetArray();
@@ -515,7 +515,7 @@ class XdrContext {
   // A fidl array with a simple element type can infer its element
   // value filter from the type parameters of the array.
   template <typename V, size_t N>
-  void Value(fidl::Array<V, N>* const data) {
+  void Value(std::array<V, N>* const data) {
     Value(data, XdrFilter<V>);
   }
 

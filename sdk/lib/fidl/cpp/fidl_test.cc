@@ -7,7 +7,6 @@
 #include <list>
 
 #include "gtest/gtest.h"
-#include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 
@@ -16,7 +15,7 @@ namespace test {
 namespace misc {
 namespace {
 
-// Takes a collection of distincts elements, and checks that the comparison
+// Takes a collection of distinct elements, and checks that the comparison
 // operators are correct.
 template <typename A>
 ::testing::AssertionResult CheckComparison(const std::vector<A>& v) {
@@ -174,14 +173,14 @@ TEST(FidlTest, VectorOfOptionalStructComparison) {
   EXPECT_TRUE(CheckComparison(vectors));
 }
 
-// Build a vector of arrays containing distincts values.
+// Build a vector of arrays containing distinct values.
 template <typename A>
-std::vector<fidl::Array<A, 3>> BuildArray(fit::function<A(int32_t)> generator) {
-  std::vector<fidl::Array<A, 3>> arrays;
+std::vector<std::array<A, 3>> BuildArray(fit::function<A(int32_t)> generator) {
+  std::vector<std::array<A, 3>> arrays;
   for (int32_t i = 0; i < 3; ++i) {
     for (int32_t j = 0; j < 3; ++j) {
       for (int32_t k = 0; k < 3; ++k) {
-        fidl::Array<A, 3> array;
+        std::array<A, 3> array;
         array[0] = generator(i);
         array[1] = generator(j);
         array[2] = generator(k);

@@ -403,7 +403,7 @@ func TestCompileXUnion(t *testing.T) {
 						Attributes: types.Attributes{},
 						Ordinal: 0x11111111,
 						Type: Type{
-							Decl:     "::fidl::Array<int64_t, 10>",
+							Decl:     "::std::array<int64_t, 10>",
 							LLDecl:   "::fidl::ArrayWrapper<int64_t, 10>",
 							Dtor:     "~Array",
 							LLDtor:   "~ArrayWrapper",
@@ -418,7 +418,7 @@ func TestCompileXUnion(t *testing.T) {
 						Attributes: types.Attributes{},
 						Ordinal: 0x22222222,
 						Type: Type{
-							Decl:     "::fidl::Array<int64_t, 20>",
+							Decl:     "::std::array<int64_t, 20>",
 							LLDecl:   "::fidl::ArrayWrapper<int64_t, 20>",
 							Dtor:     "~Array",
 							LLDtor:   "~ArrayWrapper",

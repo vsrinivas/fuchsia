@@ -66,7 +66,7 @@ std::ostream& operator<<(std::ostream& os, const InsetF& value) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Transform& value) {
-  ZX_DEBUG_ASSERT(value.matrix.count() == 16);
+  ZX_DEBUG_ASSERT(value.matrix.size() == 16);
   os << "[";
   for (size_t i = 0; i < 4; i++) {
     if (i != 0)

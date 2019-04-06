@@ -30,10 +30,11 @@ std::istream& operator>>(std::istream& is, const std::string& value) {
   return is;
 }
 
-// Tests fidl::Array formatting.
+// Tests std::array formatting.
 TEST(FidlTypes, Array) {
+  using fidl::operator<<;
   std::ostringstream os;
-  fidl::Array<std::string, 2> utensil_array;
+  std::array<std::string, 2> utensil_array;
   utensil_array[0] = "knife";
   utensil_array[1] = "spork";
 
@@ -46,12 +47,13 @@ TEST(FidlTypes, Array) {
       os.str());
 }
 
-// Tests fidl::Array<uint8_t> formatting.
+// Tests std::array<uint8_t> formatting.
 TEST(FidlTypes, ArrayOfUint8) {
+  using fidl::operator<<;
   std::ostringstream os;
-  fidl::Array<uint8_t, 10> small_array;
-  fidl::Array<uint8_t, 255> medium_array;
-  fidl::Array<uint8_t, 265> large_array;
+  std::array<uint8_t, 10> small_array;
+  std::array<uint8_t, 255> medium_array;
+  std::array<uint8_t, 265> large_array;
   for (uint8_t i = 0; i < 10; ++i) {
     small_array[i] = i;
     large_array[i] = i;
@@ -115,12 +117,13 @@ TEST(FidlTypes, ArrayOfUint8) {
       os.str());
 }
 
-// Tests fidl::Array<int8_t> formatting.
+// Tests std::Array<int8_t> formatting.
 TEST(FidlTypes, ArrayOfInt8) {
+  using fidl::operator<<;
   std::ostringstream os;
-  fidl::Array<int8_t, 10> small_array;
-  fidl::Array<int8_t, 255> medium_array;
-  fidl::Array<int8_t, 265> large_array;
+  std::array<int8_t, 10> small_array;
+  std::array<int8_t, 255> medium_array;
+  std::array<int8_t, 265> large_array;
   for (uint8_t i = 0; i < 10; ++i) {
     small_array[i] = static_cast<int8_t>(i);
     large_array[i] = static_cast<int8_t>(i);

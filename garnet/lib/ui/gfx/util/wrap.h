@@ -13,8 +13,8 @@ namespace gfx {
 
 inline ::fuchsia::ui::gfx::mat4 Wrap(const escher::mat4& args) {
   ::fuchsia::ui::gfx::mat4 value;
-  FXL_DCHECK(value.matrix.count() == 16);
-  float* m = value.matrix.mutable_data();
+  FXL_DCHECK(value.matrix.size() == 16);
+  float* m = value.matrix.data();
   m[0] = args[0][0];
   m[1] = args[0][1];
   m[2] = args[0][2];

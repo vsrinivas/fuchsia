@@ -10,7 +10,6 @@
 #include <string>
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/string.h>
 
 namespace modular {

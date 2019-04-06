@@ -88,7 +88,7 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   void SetDeviceName(std::string device_name) override;
   void SetManufacturer(std::string manufacturer_name) override;
   void SetProduct(std::string product_name) override;
-  void SetUniqueId(fidl::Array<uint8_t, 16> unique_id) override;
+  void SetUniqueId(std::array<uint8_t, 16> unique_id) override;
 
   void AddFormatRange(uint32_t format_flags, uint32_t min_rate,
                       uint32_t max_rate, uint8_t min_chans, uint8_t max_chans,

@@ -233,7 +233,7 @@ void ConvertRateSets(::std::vector<uint8_t>* basic, ::std::vector<uint8_t>* op,
 void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
                            const wlanif_bss_description_t& wlanif_desc) {
     // bssid
-    std::memcpy(fidl_desc->bssid.mutable_data(), wlanif_desc.bssid, ETH_ALEN);
+    std::memcpy(fidl_desc->bssid.data(), wlanif_desc.bssid, ETH_ALEN);
 
     // ssid
     auto in_ssid = &wlanif_desc.ssid;

@@ -6,10 +6,10 @@
 #define LIB_FOSTR_FIDL_TYPES_H_
 
 #include "garnet/public/lib/fostr/hex_dump.h"
-#include "lib/fidl/cpp/array.h"
 #include "lib/fidl/cpp/vector.h"
 #include "lib/fostr/indent.h"
 
+#include <array>
 #include <sstream>
 
 #ifdef __Fuchsia__
@@ -47,13 +47,13 @@ namespace fidl {
 // convention described in indent.h.
 
 template <typename T, size_t N>
-std::ostream& operator<<(std::ostream& os, const Array<T, N>& value) {
+std::ostream& operator<<(std::ostream& os, const std::array<T, N>& value) {
   fostr::internal::insert_sequence_container(os, value.cbegin(), value.cend());
   return os;
 }
 
 template <size_t N>
-std::ostream& operator<<(std::ostream& os, const Array<uint8_t, N>& value) {
+std::ostream& operator<<(std::ostream& os, const std::array<uint8_t, N>& value) {
   if (N <= fostr::internal::kMaxBytesToDump) {
     return os << fostr::HexDump(value.data(), N, 0);
   }
@@ -64,7 +64,7 @@ std::ostream& operator<<(std::ostream& os, const Array<uint8_t, N>& value) {
 }
 
 template <size_t N>
-std::ostream& operator<<(std::ostream& os, const Array<int8_t, N>& value) {
+std::ostream& operator<<(std::ostream& os, const std::array<int8_t, N>& value) {
   if (N <= fostr::internal::kMaxBytesToDump) {
     return os << fostr::HexDump(value.data(), N, 0);
   }

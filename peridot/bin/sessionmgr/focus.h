@@ -5,13 +5,13 @@
 #ifndef PERIDOT_BIN_SESSIONMGR_FOCUS_H_
 #define PERIDOT_BIN_SESSIONMGR_FOCUS_H_
 
+#include <array>
 #include <string>
 #include <vector>
 
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
-#include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/string.h>

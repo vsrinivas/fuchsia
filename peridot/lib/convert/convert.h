@@ -5,11 +5,11 @@
 #ifndef PERIDOT_LIB_CONVERT_CONVERT_H_
 #define PERIDOT_LIB_CONVERT_CONVERT_H_
 
+#include <array>
 #include <string>
 
 #include <flatbuffers/flatbuffers.h>
 #include <leveldb/db.h>
-#include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/vector.h>
 #include <src/lib/fxl/strings/string_view.h>
 #include <rapidjson/document.h>
@@ -35,7 +35,7 @@ class ExtendedStringView : public fxl::StringView {
       : fxl::StringView(reinterpret_cast<const char*>(array->data()),
                         array->size()) {}
   template <size_t N>
-  constexpr ExtendedStringView(const fidl::Array<uint8_t, N>& array)  // NOLINT
+  constexpr ExtendedStringView(const std::array<uint8_t, N>& array)  // NOLINT
       : fxl::StringView(reinterpret_cast<const char*>(array.data()), N) {}
   ExtendedStringView(const leveldb::Slice& slice)  // NOLINT
       : fxl::StringView(slice.data(), slice.size()) {}
@@ -83,11 +83,11 @@ inline leveldb::Slice ToSlice(ExtendedStringView value) { return value; }
 // Returns the std::vector representation of the given value.
 std::vector<uint8_t> ToArray(ExtendedStringView value);
 
-// Returns the fidl::Array representation of the given value.
+// Returns the std::array representation of the given value.
 template <size_t N>
-void ToArray(ExtendedStringView value, fidl::Array<uint8_t, N>* out) {
+void ToArray(ExtendedStringView value, std::array<uint8_t, N>* out) {
   ZX_ASSERT(value.size() == N);
-  memcpy(out->mutable_data(), value.data(), N);
+  memcpy(out->data(), value.data(), N);
 }
 
 // Returns the std::string representation of the given value.

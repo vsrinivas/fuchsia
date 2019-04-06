@@ -4,7 +4,6 @@
 
 #include "peridot/bin/sessionmgr/focus.h"
 
-#include <lib/fidl/cpp/array.h>
 #include <lib/fsl/vmo/strings.h>
 #include <src/lib/fxl/time/time_point.h>
 

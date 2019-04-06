@@ -5,7 +5,7 @@
 #ifndef LIB_FSL_TYPES_TYPE_CONVERTERS_H_
 #define LIB_FSL_TYPES_TYPE_CONVERTERS_H_
 
-#include <lib/fidl/cpp/array.h>
+#include <array>
 
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/type_converter.h"
@@ -47,10 +47,10 @@ struct TypeConverter<std::vector<T>, fidl::VectorPtr<U>> {
 
 // Converts a FIDL Array to a FIDL VectorPtr.
 template <typename T, typename U, size_t N>
-struct TypeConverter<fidl::VectorPtr<T>, fidl::Array<U, N>> {
-  static fidl::VectorPtr<T> Convert(const fidl::Array<U, N>& value) {
-    fidl::VectorPtr<T> result(value.count());
-    for (size_t i = 0; i < value.count(); ++i) {
+struct TypeConverter<fidl::VectorPtr<T>, std::array<U, N>> {
+  static fidl::VectorPtr<T> Convert(const std::array<U, N>& value) {
+    fidl::VectorPtr<T> result(value.size());
+    for (size_t i = 0; i < value.size(); ++i) {
       result->at(i) = To<T>(value[i]);
     }
     return result;
@@ -59,10 +59,10 @@ struct TypeConverter<fidl::VectorPtr<T>, fidl::Array<U, N>> {
 
 // Converts a FIDL Array to a vector.
 template <typename T, typename U, size_t N>
-struct TypeConverter<std::vector<T>, fidl::Array<U, N>> {
-  static std::vector<T> Convert(const fidl::Array<U, N>& value) {
-    std::vector<T> result(value.count());
-    for (size_t i = 0; i < value.count(); ++i) {
+struct TypeConverter<std::vector<T>, std::array<U, N>> {
+  static std::vector<T> Convert(const std::array<U, N>& value) {
+    std::vector<T> result(value.size());
+    for (size_t i = 0; i < value.size(); ++i) {
       result[i] = To<T>(value[i]);
     }
     return result;

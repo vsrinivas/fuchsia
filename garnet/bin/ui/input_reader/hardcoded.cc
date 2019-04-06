@@ -715,7 +715,7 @@ bool Hardcoded::ParseParadiseSensorReport(
     case kParadiseAccBase: {
       const auto& report =
           *(reinterpret_cast<paradise_sensor_vector_data_t*>(r));
-      fidl::Array<int16_t, 3> data;
+      std::array<int16_t, 3> data;
       data[0] = report.vector[0];
       data[1] = report.vector[1];
       data[2] = report.vector[2];

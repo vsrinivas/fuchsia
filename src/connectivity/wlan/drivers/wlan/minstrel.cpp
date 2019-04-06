@@ -525,7 +525,7 @@ zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_add
     const auto* peer = GetPeer(peer_addr);
     if (peer == nullptr) { return ZX_ERR_NOT_FOUND; }
 
-    peer_addr.CopyTo(peer_fidl->mac_addr.mutable_data());
+    peer_addr.CopyTo(peer_fidl->mac_addr.data());
 
     std::lock_guard<std::mutex> guard(*peer->update_lock);
     peer_fidl->entries.resize(peer->tx_stats_map.size());

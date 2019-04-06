@@ -5,6 +5,7 @@
 #ifndef PERIDOT_LIB_FIDL_ARRAY_TO_STRING_H_
 #define PERIDOT_LIB_FIDL_ARRAY_TO_STRING_H_
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -13,8 +14,8 @@
 
 namespace modular {
 
-inline std::string to_string(const fidl::Array<uint8_t, 16>& data) {
-  return std::string(reinterpret_cast<const char*>(data.data()), data.count());
+inline std::string to_string(const std::array<uint8_t, 16>& data) {
+  return std::string(reinterpret_cast<const char*>(data.data()), data.size());
 }
 
 inline std::string to_string(const fidl::VectorPtr<uint8_t>& data) {
@@ -35,11 +36,6 @@ inline std::string to_hex_string(const uint8_t* data, size_t size) {
     ret.push_back(kHexadecimalCharacters[c & 0xf]);
   }
   return ret;
-}
-
-template <size_t N>
-inline std::string to_hex_string(const fidl::Array<uint8_t, N>& data) {
-  return to_hex_string(data.data(), N);
 }
 
 template <size_t N>

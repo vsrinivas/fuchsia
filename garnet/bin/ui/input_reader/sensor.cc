@@ -193,7 +193,7 @@ bool Sensor::ParseReport(const uint8_t* data, size_t len,
       << "Z sensor value is truncated.";
 
   if (capabilities_ & (Capabilities::X | Capabilities::Y | Capabilities::Z)) {
-    fidl::Array<int16_t, 3> axis;
+    std::array<int16_t, 3> axis;
     axis[0] = x;
     axis[1] = y;
     axis[2] = z;

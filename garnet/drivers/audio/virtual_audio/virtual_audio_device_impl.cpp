@@ -137,7 +137,7 @@ void VirtualAudioDeviceImpl::SetProduct(std::string product_name) {
   prod_name_ = product_name;
 };
 
-void VirtualAudioDeviceImpl::SetUniqueId(fidl::Array<uint8_t, 16> unique_id) {
+void VirtualAudioDeviceImpl::SetUniqueId(std::array<uint8_t, 16> unique_id) {
   memcpy(unique_id_, unique_id.data(), sizeof(unique_id_));
 };
 

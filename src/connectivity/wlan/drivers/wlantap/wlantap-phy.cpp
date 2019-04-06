@@ -56,8 +56,8 @@ zx_status_t SendFidlMessage(uint32_t ordinal, T* message, fidl::Encoder* encoder
     return ZX_OK;
 }
 
-template <typename T, size_t N>::fidl::Array<T, N> ToFidlArray(const T (&c_array)[N]) {
-    ::fidl::Array<T, N> ret;
+template <typename T, size_t N>::std::array<T, N> ToFidlArray(const T (&c_array)[N]) {
+    ::std::array<T, N> ret;
     std::copy_n(&c_array[0], N, ret.begin());
     return ret;
 }

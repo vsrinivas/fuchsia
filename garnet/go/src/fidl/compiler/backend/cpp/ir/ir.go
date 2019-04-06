@@ -504,7 +504,7 @@ func (c *compiler) compileType(val types.Type) Type {
 	switch val.Kind {
 	case types.ArrayType:
 		t := c.compileType(*val.ElementType)
-		r.Decl = fmt.Sprintf("::fidl::Array<%s, %v>", t.Decl, *val.ElementCount)
+		r.Decl = fmt.Sprintf("::std::array<%s, %v>", t.Decl, *val.ElementCount)
 		r.LLDecl = fmt.Sprintf("::fidl::ArrayWrapper<%s, %v>", t.LLDecl, *val.ElementCount)
 		r.Dtor = fmt.Sprintf("~Array")
 		r.LLDtor = fmt.Sprintf("~ArrayWrapper")

@@ -5,8 +5,7 @@
 #ifndef LIB_FIDL_CPP_CODING_TRAITS_H_
 #define LIB_FIDL_CPP_CODING_TRAITS_H_
 
-#include <lib/fidl/cpp/array.h>
-
+#include <array>
 #include <memory>
 
 #include "lib/fidl/cpp/decoder.h"
@@ -158,16 +157,16 @@ struct CodingTraits<::std::vector<T>> {
 };
 
 template <typename T, size_t N>
-struct CodingTraits<Array<T, N>> {
+struct CodingTraits<::std::array<T, N>> {
   static constexpr size_t encoded_size = CodingTraits<T>::encoded_size * N;
   template <class EncoderImpl>
-  static void Encode(EncoderImpl* encoder, Array<T, N>* value, size_t offset) {
+  static void Encode(EncoderImpl* encoder, std::array<T, N>* value, size_t offset) {
     size_t stride = CodingTraits<T>::encoded_size;
     for (size_t i = 0; i < N; ++i)
       CodingTraits<T>::Encode(encoder, &value->at(i), offset + i * stride);
   }
   template <class DecoderImpl>
-  static void Decode(DecoderImpl* decoder, Array<T, N>* value, size_t offset) {
+  static void Decode(DecoderImpl* decoder, std::array<T, N>* value, size_t offset) {
     size_t stride = CodingTraits<T>::encoded_size;
     for (size_t i = 0; i < N; ++i)
       CodingTraits<T>::Decode(decoder, &value->at(i), offset + i * stride);

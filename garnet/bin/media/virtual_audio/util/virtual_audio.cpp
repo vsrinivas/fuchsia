@@ -537,7 +537,7 @@ bool VirtualAudioUtil::SetUniqueId(const std::string& unique_id_str) {
     return false;
   }
 
-  fidl::Array<uint8_t, 16> unique_id;
+  std::array<uint8_t, 16> unique_id;
   bool use_default = (unique_id_str == "");
 
   for (uint8_t index = 0; index < 16; ++index) {

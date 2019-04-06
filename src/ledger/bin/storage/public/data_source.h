@@ -5,11 +5,11 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_PUBLIC_DATA_SOURCE_H_
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_DATA_SOURCE_H_
 
+#include <array>
 #include <stdint.h>
 #include <functional>
 #include <memory>
 
-#include <lib/fidl/cpp/array.h>
 #include <lib/fit/function.h>
 #include <lib/fsl/vmo/sized_vmo.h>
 #include <src/lib/fxl/macros.h>

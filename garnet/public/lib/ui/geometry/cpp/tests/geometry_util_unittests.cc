@@ -14,7 +14,7 @@ namespace {
 
 Transform CreateTransformFromData(const std::array<float, 16>& data) {
   Transform transform;
-  memcpy(transform.matrix.mutable_data(), &data.front(), 16 * sizeof(float));
+  memcpy(transform.matrix.data(), &data.front(), 16 * sizeof(float));
   return transform;
 }
 

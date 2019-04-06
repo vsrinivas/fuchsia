@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/cpp/array.h>
+#include <array>
 #include <zircon/compiler.h>
 
 #include "gtest/gtest.h"
@@ -73,8 +73,8 @@ TEST(TypeConversionTest, Vector_Null) {
 TEST(TypeConversionTest, Array_Vector) {
   constexpr size_t kSize = 3;
   const int kOriginal[kSize] = {1, 2, 3};
-  fidl::Array<int, kSize> array;
-  for (size_t i = 0; i < array.count(); ++i) {
+  std::array<int, kSize> array;
+  for (size_t i = 0; i < array.size(); ++i) {
     array[i] = kOriginal[i];
   }
 
@@ -92,8 +92,8 @@ TEST(TypeConversionTest, Array_Vector) {
 TEST(TypeConversionTest, Array_Vector_DifferentTypes) {
   constexpr size_t kSize = 3;
   const int kOriginal[kSize] = {1, 2, 3};
-  fidl::Array<int, kSize> array;
-  for (size_t i = 0; i < array.count(); ++i) {
+  std::array<int, kSize> array;
+  for (size_t i = 0; i < array.size(); ++i) {
     array[i] = kOriginal[i];
   }
 

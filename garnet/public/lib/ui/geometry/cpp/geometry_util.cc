@@ -19,8 +19,8 @@ static const float kIdentityMatrix[]{
     0.f, 0.f, 0.f, 1.f};
 
 void SetIdentityTransform(fuchsia::math::Transform* transform) {
-  ZX_DEBUG_ASSERT(transform->matrix.count() == 16);
-  memcpy(static_cast<void*>(transform->matrix.mutable_data()), kIdentityMatrix,
+  ZX_DEBUG_ASSERT(transform->matrix.size() == 16);
+  memcpy(static_cast<void*>(transform->matrix.data()), kIdentityMatrix,
          sizeof(kIdentityMatrix));
 }
 
@@ -50,7 +50,7 @@ void Scale(fuchsia::math::Transform* transform, float x, float y, float z) {
 
 fuchsia::math::TransformPtr CreateIdentityTransform() {
   fuchsia::math::TransformPtr result = fuchsia::math::Transform::New();
-  result->matrix = fidl::Array<float, 16>();
+  result->matrix = std::array<float, 16>();
   SetIdentityTransform(result.get());
   return result;
 }

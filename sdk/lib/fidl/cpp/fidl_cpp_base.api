@@ -1,13 +1,12 @@
 {
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/array.h": "047c604a3d2c2922c7ba86c9d51ba8c7",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/clone.h": "ed11bdeb65276f1a06fedb1d8ca4fb72",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/coding_traits.h": "cceb65038fe3625eedde829f7186213c",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/comparison.h": "2d9daecd918cae36f34befc690d1d303",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/clone.h": "8fa7f95211545e125043caefb7d48412",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/coding_traits.h": "b5e3a2af36c71198f409a7241b8d6d63",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/comparison.h": "ba9a632f9222c836a1c4c93bff912f15",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/decoder.h": "34b0c1f352301a2e375aa1a7c6d947e1",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/encoder.h": "a7cb4e0fa326f9e23fcac51aaa7497af",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/internal/logging.h": "43720fc1e024ee167d4eded662f08bdb",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/object_coding.h": "cd4cbb458a137a65e5e0674080a37125",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/string.h": "b2daaf85e7075f8146585617a8735446",
-  "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "35d6f33f6365d393ec32ff44314fa94f",
+  "pkg/fidl_cpp_base/include/lib/fidl/cpp/traits.h": "b612628078cecd4bf45e3e6a77d696c6",
   "pkg/fidl_cpp_base/include/lib/fidl/cpp/vector.h": "bceb19351083095de8f67cdd6f0ac78f"
 }

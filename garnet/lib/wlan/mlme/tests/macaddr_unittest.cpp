@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <array>
 #include <gtest/gtest.h>
 
-#include <lib/fidl/cpp/array.h>
 #include <wlan/common/macaddr.h>
 
 namespace wlan {
@@ -62,8 +62,8 @@ TEST_F(MacAddrTest, Constructors) {
     MacAddr addr9;
     addr9 = addr8;
 
-    ::fidl::Array<uint8_t, 6> fidl_addr;
-    memcpy(fidl_addr.mutable_data(), addr8.byte, kMacAddrLen);
+    ::std::array<uint8_t, 6> fidl_addr;
+    memcpy(fidl_addr.data(), addr8.byte, kMacAddrLen);
     MacAddr addr10(fidl_addr);
 
     EXPECT_EQ(true, addr1 == addr2);

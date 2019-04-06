@@ -260,8 +260,8 @@ int32_t one_param[1] = {1};
 int32_t two_params[2] = {1, 2};
 
 template <class T, size_t N>
-fidl::Array<T, N> ToArray(T ts[N]) {
-  ::fidl::Array<T, N> ret;
+std::array<T, N> ToArray(T ts[N]) {
+  ::std::array<T, N> ret;
   std::copy_n(&ts[0], N, ret.begin());
   return ret;
 }
@@ -295,9 +295,9 @@ TEST_WIRE_TO_JSON(NullVector, Vector, R"({"v_1": null})", nullptr)
 
 namespace {
 
-fidl::Array<std::string, 2> TwoStringArrayFromVals(std::string v1,
+std::array<std::string, 2> TwoStringArrayFromVals(std::string v1,
                                                    std::string v2) {
-  fidl::Array<std::string, 2> brother_array;
+  std::array<std::string, 2> brother_array;
   brother_array[0] = v1;
   brother_array[1] = v2;
   return brother_array;

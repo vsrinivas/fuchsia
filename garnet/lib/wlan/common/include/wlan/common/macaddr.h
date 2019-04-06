@@ -5,11 +5,11 @@
 #ifndef GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_MACADDR_H_
 #define GARNET_LIB_WLAN_COMMON_INCLUDE_WLAN_COMMON_MACADDR_H_
 
-#include <lib/fidl/cpp/array.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <string>
 
@@ -31,7 +31,7 @@ struct MacAddr {
     MacAddr(const MacAddr& addr) { Set(addr); }
     explicit MacAddr(const std::string& addr) { Set(addr); }
     explicit MacAddr(const uint8_t addr[kMacAddrLen]) { Set(addr); }
-    explicit MacAddr(::fidl::Array<uint8_t, 6> addr) { Set(addr.data()); }
+    explicit MacAddr(::std::array<uint8_t, 6> addr) { Set(addr.data()); }
     explicit MacAddr(std::initializer_list<uint8_t> addr) { Set(addr); }
     explicit MacAddr(uint64_t val) {
         for (size_t i = 0; i < kMacAddrLen; i++) {

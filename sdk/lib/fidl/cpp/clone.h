@@ -5,9 +5,9 @@
 #ifndef LIB_FIDL_CPP_CLONE_H_
 #define LIB_FIDL_CPP_CLONE_H_
 
-#include <lib/fidl/cpp/array.h>
-#include <zircon/assert.h>
+#include <array>
 #include <memory>
+#include <zircon/assert.h>
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/traits.h"
 #include "lib/fidl/cpp/vector.h"
@@ -143,7 +143,18 @@ Clone(const VectorPtr<T>& value, VectorPtr<T>* result) {
 }
 
 template <typename T, size_t N>
-inline zx_status_t Clone(const Array<T, N>& value, Array<T, N>* result) {
+inline typename std::enable_if<IsPrimitive<T>::value || IsStdString<T>::value,
+                               zx_status_t>::type
+Clone(const ::std::array<T, N>& value, ::std::array<T, N>* result) {
+  *result = value;
+  return ZX_OK;
+}
+
+template <typename T, size_t N>
+inline typename std::enable_if<!IsPrimitive<T>::value &&
+                                   !IsStdString<T>::value,
+                               zx_status_t>::type
+Clone(const std::array<T, N>& value, std::array<T, N>* result) {
   for (size_t i = 0; i < N; ++i) {
     zx_status_t status = Clone(value[i], &result->at(i));
     if (status != ZX_OK)

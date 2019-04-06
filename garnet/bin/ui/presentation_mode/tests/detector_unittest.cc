@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/cpp/array.h>
+#include <array>
 #include <limits>
 
 #include "garnet/bin/ui/presentation_mode/detector.h"
@@ -70,7 +70,7 @@ TEST(NegativeData, MovingAverage) {
 fuchsia::ui::input::InputReport CreateVector(int16_t x, int16_t y, int16_t z) {
   fuchsia::ui::input::InputReport report;
   report.sensor = fuchsia::ui::input::SensorReport::New();
-  fidl::Array<int16_t, 3> data;
+  std::array<int16_t, 3> data;
   data[0] = x;
   data[1] = y;
   data[2] = z;

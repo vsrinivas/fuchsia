@@ -89,7 +89,6 @@ sdk_source_set("cpp_base") {
   sdk_name = "fidl_cpp_base"
 
   sources = [
-    "array.h",
     "clone.cc",
     "clone.h",
     "coding_traits.h",

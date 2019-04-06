@@ -25,17 +25,17 @@ fuchsia::ledger::PageId PageIdFromBase64(const std::string& base64) {
 
   if (base64url::Base64UrlDecode(base64, &decoded)) {
     size_t size;
-    if (decoded.length() != page_id.id.count()) {
+    if (decoded.length() != page_id.id.size()) {
       FXL_LOG(ERROR) << "Unexpected page ID length for " << base64
                      << " (decodes to " << decoded.length() << " bytes; "
-                     << page_id.id.count() << " expected)";
-      size = std::min(decoded.length(), page_id.id.count());
-      memset(page_id.id.mutable_data(), 0, page_id.id.count());
+                     << page_id.id.size() << " expected)";
+      size = std::min(decoded.length(), page_id.id.size());
+      memset(page_id.id.data(), 0, page_id.id.size());
     } else {
-      size = page_id.id.count();
+      size = page_id.id.size();
     }
 
-    memcpy(page_id.id.mutable_data(), decoded.data(), size);
+    memcpy(page_id.id.data(), decoded.data(), size);
   } else {
     FXL_LOG(ERROR) << "Unable to decode page ID " << base64;
   }
@@ -45,7 +45,7 @@ fuchsia::ledger::PageId PageIdFromBase64(const std::string& base64) {
 
 std::string PageIdToBase64(const fuchsia::ledger::PageId& page_id) {
   return base64url::Base64UrlEncode(
-      {reinterpret_cast<const char*>(page_id.id.data()), page_id.id.count()});
+      {reinterpret_cast<const char*>(page_id.id.data()), page_id.id.size()});
 }
 
 // Serialization and deserialization of fuchsia::modular::internal::StoryData

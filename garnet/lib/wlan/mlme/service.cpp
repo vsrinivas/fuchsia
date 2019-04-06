@@ -43,7 +43,7 @@ zx_status_t SendAuthConfirm(DeviceInterface* device, const common::MacAddr& peer
                             wlan_mlme::AuthenticateResultCodes code) {
     debugfn();
     wlan_mlme::AuthenticateConfirm conf;
-    peer_sta.CopyTo(conf.peer_sta_address.mutable_data());
+    peer_sta.CopyTo(conf.peer_sta_address.data());
     // TODO(tkilbourn): set this based on the actual auth type
     conf.auth_type = wlan_mlme::AuthenticationTypes::OPEN_SYSTEM;
     conf.result_code = code;
@@ -54,7 +54,7 @@ zx_status_t SendAuthIndication(DeviceInterface* device, const common::MacAddr& p
                                wlan_mlme::AuthenticationTypes auth_type) {
     debugfn();
     wlan_mlme::AuthenticateIndication ind;
-    peer_sta.CopyTo(ind.peer_sta_address.mutable_data());
+    peer_sta.CopyTo(ind.peer_sta_address.data());
     ind.auth_type = auth_type;
     return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEAuthenticateIndOrdinal);
 }
@@ -62,7 +62,7 @@ zx_status_t SendAuthIndication(DeviceInterface* device, const common::MacAddr& p
 zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& peer_sta) {
     debugfn();
     wlan_mlme::DeauthenticateConfirm conf;
-    peer_sta.CopyTo(conf.peer_sta_address.mutable_data());
+    peer_sta.CopyTo(conf.peer_sta_address.data());
     return SendServiceMsg(device, &conf, fuchsia_wlan_mlme_MLMEDeauthenticateConfOrdinal);
 }
 
@@ -70,7 +70,7 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
                                  wlan_mlme::ReasonCode code) {
     debugfn();
     wlan_mlme::DeauthenticateIndication ind;
-    peer_sta.CopyTo(ind.peer_sta_address.mutable_data());
+    peer_sta.CopyTo(ind.peer_sta_address.data());
     ind.reason_code = code;
     return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEDeauthenticateIndOrdinal);
 }
@@ -91,7 +91,7 @@ zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& 
                                 std::optional<Span<const uint8_t>> rsn_body) {
     debugfn();
     wlan_mlme::AssociateIndication ind;
-    peer_sta.CopyTo(ind.peer_sta_address.mutable_data());
+    peer_sta.CopyTo(ind.peer_sta_address.data());
     ind.listen_interval = listen_interval;
     ind.ssid.resize(0);
     ind.ssid->assign(ssid.begin(), ssid.end());
@@ -108,7 +108,7 @@ zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::Ma
                                        uint16_t code) {
     debugfn();
     wlan_mlme::DisassociateIndication ind;
-    peer_sta.CopyTo(ind.peer_sta_address.mutable_data());
+    peer_sta.CopyTo(ind.peer_sta_address.data());
     ind.reason_code = code;
     return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEDisassociateIndOrdinal);
 }
@@ -141,8 +141,8 @@ zx_status_t SendEapolIndication(DeviceInterface* device, const EapolHdr& eapol,
     wlan_mlme::EapolIndication ind;
     ind.data = ::std::vector<uint8_t>(frame_len);
     std::memcpy(ind.data.data(), &eapol, frame_len);
-    src.CopyTo(ind.src_addr.mutable_data());
-    dst.CopyTo(ind.dst_addr.mutable_data());
+    src.CopyTo(ind.src_addr.data());
+    dst.CopyTo(ind.dst_addr.data());
     return SendServiceMsg(device, &ind, fuchsia_wlan_mlme_MLMEEapolIndOrdinal);
 }
 

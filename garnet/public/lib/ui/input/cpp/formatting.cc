@@ -335,10 +335,10 @@ std::ostream& operator<<(std::ostream& os,
   std::ios::fmtflags settings = os.flags();
   os << "{SensorReport: [" << std::hex << std::setfill('0');
   if (value.is_vector()) {
-    const fidl::Array<int16_t, 3>& data = value.vector();
-    for (size_t i = 0; i < data.count(); ++i) {
+    const std::array<int16_t, 3>& data = value.vector();
+    for (size_t i = 0; i < data.size(); ++i) {
       os << "0x" << std::setw(4) << data[i];
-      if (i + 1 < data.count())
+      if (i + 1 < data.size())
         os << ",";
     }
   } else {

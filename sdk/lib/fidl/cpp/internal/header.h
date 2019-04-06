@@ -5,10 +5,10 @@
 #ifndef LIB_FIDL_CPP_INTERNAL_HEADER_H_
 #define LIB_FIDL_CPP_INTERNAL_HEADER_H_
 
+#include <array>
 #include <functional>
 #include <ostream>
 
-#include <lib/fidl/cpp/array.h>
 #include <lib/fit/function.h>
 #include <lib/fit/variant.h>
 
@@ -51,6 +51,7 @@
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #endif
 
+#include "lib/fidl/cpp/comparison.h"
 #include "lib/fidl/cpp/string.h"
 #include "lib/fidl/cpp/vector.h"
 
@@ -72,5 +73,14 @@
 // for FIDL types. They should be replaced by calls to fidl::Equals.
 // See FIDL-563.
 #define FIDL_OPERATOR_EQUALS
+
+// This is defined temporarily to allow a soft transition from fidl::Array
+// to std::array. See FIDL-245.
+#define FIDL_USE_STD_ARRAY
+// Similarly, this is defined temporarily to ease the transition.
+namespace fidl {
+template <typename T, size_t N>
+using Array = ::std::array<T, N>;
+}
 
 #endif  // LIB_FIDL_CPP_INTERNAL_HEADER_H_

@@ -221,7 +221,7 @@ static void ConvertPhyBandInfo(::std::vector<wlan_device::BandInfo>* BandInfo,
 
 static void ConvertPhyInfo(wlan_device::PhyInfo* info, const wlan_info_t* phy_info) {
     // mac
-    memcpy(info->hw_mac_address.mutable_data(), phy_info->mac_addr, ETH_ALEN);
+    memcpy(info->hw_mac_address.data(), phy_info->mac_addr, ETH_ALEN);
 
     // supported_phys
     ConvertPhySupportedPhyInfo(&info->supported_phys, phy_info->supported_phys);

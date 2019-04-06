@@ -63,7 +63,7 @@ wlan_mlme::BSSDescription CreateBssDescription(bool rsn, wlan_channel_t chan) {
     common::MacAddr bssid(kBssid1);
 
     wlan_mlme::BSSDescription bss_desc;
-    std::memcpy(bss_desc.bssid.mutable_data(), bssid.byte, common::kMacAddrLen);
+    std::memcpy(bss_desc.bssid.data(), bssid.byte, common::kMacAddrLen);
     std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
     bss_desc.ssid = std::move(ssid);
     bss_desc.bss_type = wlan_mlme::BSSTypes::INFRASTRUCTURE;
@@ -105,7 +105,7 @@ MlmeMsg<wlan_mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time) {
     auto req = wlan_mlme::ScanRequest::New();
     req->txn_id = 0;
     req->bss_type = wlan_mlme::BSSTypes::ANY_BSS;
-    std::memcpy(req->bssid.mutable_data(), kBroadcastBssid, sizeof(kBroadcastBssid));
+    std::memcpy(req->bssid.data(), kBroadcastBssid, sizeof(kBroadcastBssid));
     req->ssid = {0};
     req->scan_type = wlan_mlme::ScanTypes::PASSIVE;
     req->channel_list.reset({11});
@@ -151,7 +151,7 @@ MlmeMsg<wlan_mlme::AuthenticateRequest> CreateAuthRequest() {
     common::MacAddr bssid(kBssid1);
 
     auto req = wlan_mlme::AuthenticateRequest::New();
-    std::memcpy(req->peer_sta_address.mutable_data(), bssid.byte, common::kMacAddrLen);
+    std::memcpy(req->peer_sta_address.data(), bssid.byte, common::kMacAddrLen);
     req->auth_failure_timeout = kAuthTimeout;
     req->auth_type = wlan_mlme::AuthenticationTypes::OPEN_SYSTEM;
 
@@ -161,7 +161,7 @@ MlmeMsg<wlan_mlme::AuthenticateRequest> CreateAuthRequest() {
 MlmeMsg<wlan_mlme::DeauthenticateRequest> CreateDeauthRequest(common::MacAddr peer_addr,
                                                               wlan_mlme::ReasonCode reason_code) {
     auto req = wlan_mlme::DeauthenticateRequest::New();
-    std::memcpy(req->peer_sta_address.mutable_data(), peer_addr.byte, common::kMacAddrLen);
+    std::memcpy(req->peer_sta_address.data(), peer_addr.byte, common::kMacAddrLen);
     req->reason_code = reason_code;
     return {std::move(*req), fuchsia_wlan_mlme_MLMEDeauthenticateReqOrdinal};
 }
@@ -169,7 +169,7 @@ MlmeMsg<wlan_mlme::DeauthenticateRequest> CreateDeauthRequest(common::MacAddr pe
 MlmeMsg<wlan_mlme::AuthenticateResponse> CreateAuthResponse(
     common::MacAddr client_addr, wlan_mlme::AuthenticateResultCodes result_code) {
     auto resp = wlan_mlme::AuthenticateResponse::New();
-    std::memcpy(resp->peer_sta_address.mutable_data(), client_addr.byte, common::kMacAddrLen);
+    std::memcpy(resp->peer_sta_address.data(), client_addr.byte, common::kMacAddrLen);
     resp->result_code = result_code;
 
     return {std::move(*resp), fuchsia_wlan_mlme_MLMEAuthenticateRespOrdinal};
@@ -179,7 +179,7 @@ MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest(bool rsn) {
     common::MacAddr bssid(kBssid1);
 
     auto req = wlan_mlme::AssociateRequest::New();
-    std::memcpy(req->peer_sta_address.mutable_data(), bssid.byte, common::kMacAddrLen);
+    std::memcpy(req->peer_sta_address.data(), bssid.byte, common::kMacAddrLen);
     if (rsn) {
         req->rsn.reset(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
     } else {
@@ -192,7 +192,7 @@ MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest(bool rsn) {
 MlmeMsg<wlan_mlme::AssociateResponse> CreateAssocResponse(
     common::MacAddr client_addr, wlan_mlme::AssociateResultCodes result_code, uint16_t aid) {
     auto resp = wlan_mlme::AssociateResponse::New();
-    std::memcpy(resp->peer_sta_address.mutable_data(), client_addr.byte, common::kMacAddrLen);
+    std::memcpy(resp->peer_sta_address.data(), client_addr.byte, common::kMacAddrLen);
     resp->result_code = result_code;
     resp->association_id = aid;
 
@@ -202,8 +202,8 @@ MlmeMsg<wlan_mlme::AssociateResponse> CreateAssocResponse(
 MlmeMsg<wlan_mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
                                                     common::MacAddr dst_addr) {
     auto req = wlan_mlme::EapolRequest::New();
-    std::memcpy(req->src_addr.mutable_data(), src_addr.byte, common::kMacAddrLen);
-    std::memcpy(req->dst_addr.mutable_data(), dst_addr.byte, common::kMacAddrLen);
+    std::memcpy(req->src_addr.data(), src_addr.byte, common::kMacAddrLen);
+    std::memcpy(req->dst_addr.data(), dst_addr.byte, common::kMacAddrLen);
     std::vector<uint8_t> eapol_pdu(kEapolPdu, kEapolPdu + sizeof(kEapolPdu));
     req->data = std::move(eapol_pdu);
 
@@ -217,8 +217,8 @@ MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
     key.key = key_data;
     key.key_id = 1;
     key.key_type = key_type;
-    std::memcpy(key.address.mutable_data(), addr.byte, sizeof(addr));
-    std::memcpy(key.cipher_suite_oui.mutable_data(), kCipherOui, sizeof(kCipherOui));
+    std::memcpy(key.address.data(), addr.byte, sizeof(addr));
+    std::memcpy(key.cipher_suite_oui.data(), kCipherOui, sizeof(kCipherOui));
     key.cipher_suite_type = kCipherSuiteType;
 
     std::vector<wlan_mlme::SetKeyDescriptor> keylist;
@@ -232,7 +232,7 @@ MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
 MlmeMsg<wlan_mlme::SetControlledPortRequest> CreateSetCtrlPortRequest(
     common::MacAddr peer_addr, wlan_mlme::ControlledPortState state) {
     auto req = wlan_mlme::SetControlledPortRequest::New();
-    std::memcpy(req->peer_sta_address.mutable_data(), peer_addr.byte, sizeof(peer_addr));
+    std::memcpy(req->peer_sta_address.data(), peer_addr.byte, sizeof(peer_addr));
     req->state = state;
 
     return {std::move(*req), fuchsia_wlan_mlme_MLMESetKeysReqOrdinal};

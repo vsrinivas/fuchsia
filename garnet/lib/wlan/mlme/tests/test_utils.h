@@ -6,11 +6,11 @@
 #define GARNET_LIB_WLAN_MLME_TESTS_TEST_UTILS_H_
 
 #include <gtest/gtest.h>
-#include <lib/fidl/cpp/array.h>
 #include <wlan/common/buffer_writer.h>
 #include <wlan/mlme/assoc_context.h>
 #include <wlan/mlme/packet.h>
 #include <wlan/protocol/info.h>
+#include <array>
 #include <algorithm>
 #include <vector>
 
@@ -27,7 +27,7 @@ template <typename T, size_t N> struct IteratorTypes<T[N]> {
     typedef const T* const_iterator;
 };
 
-template <typename T, size_t N> struct IteratorTypes<fidl::Array<T, N>> {
+template <typename T, size_t N> struct IteratorTypes<std::array<T, N>> {
     typedef T* iterator;
     typedef const T* const_iterator;
 };

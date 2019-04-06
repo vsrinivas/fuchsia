@@ -7,7 +7,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
 #include <lib/entity/cpp/json.h>
-#include <lib/fidl/cpp/array.h>
 #include <lib/fsl/vmo/strings.h>
 
 #include "gtest/gtest.h"

@@ -7,7 +7,6 @@
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
-#include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>

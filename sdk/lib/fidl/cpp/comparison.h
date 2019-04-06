@@ -5,6 +5,8 @@
 #ifndef LIB_FIDL_CPP_COMPARISON_H_
 #define LIB_FIDL_CPP_COMPARISON_H_
 
+#include <array>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -44,6 +46,18 @@ struct Equality<T, typename std::enable_if_t<std::is_base_of<zx::object_base, T>
   }
 };
 #endif  // __Fuchsia__
+
+template <typename T, size_t N>
+struct Equality<std::array<T, N>> {
+  static inline bool Equals(const std::array<T, N>& lhs, const std::array<T, N>& rhs) {
+    for (size_t i = 0; i < N; ++i) {
+      if (!Equality<T>::Equals(lhs[i], rhs[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
 
 template <>
 struct Equality<std::string> {

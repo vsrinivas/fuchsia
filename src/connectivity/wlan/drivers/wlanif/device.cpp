@@ -546,7 +546,7 @@ void Device::QueryDeviceInfo(QueryDeviceInfoCallback cb) {
     wlan_mlme::DeviceInfo fidl_resp;
 
     // mac_addr
-    std::memcpy(fidl_resp.mac_addr.mutable_data(), query_info_.mac_addr, ETH_ALEN);
+    std::memcpy(fidl_resp.mac_addr.data(), query_info_.mac_addr, ETH_ALEN);
 
     // role
     fidl_resp.role = ConvertMacRole(query_info_.role);
@@ -694,7 +694,7 @@ void Device::AuthenticateConf(wlanif_auth_confirm_t* resp) {
     wlan_mlme::AuthenticateConfirm fidl_resp;
 
     // peer_sta_address
-    std::memcpy(fidl_resp.peer_sta_address.mutable_data(), resp->peer_sta_address, ETH_ALEN);
+    std::memcpy(fidl_resp.peer_sta_address.data(), resp->peer_sta_address, ETH_ALEN);
 
     // auth_type
     fidl_resp.auth_type = ConvertAuthType(resp->auth_type);
@@ -713,7 +713,7 @@ void Device::AuthenticateInd(wlanif_auth_ind_t* ind) {
     wlan_mlme::AuthenticateIndication fidl_ind;
 
     // peer_sta_address
-    std::memcpy(fidl_ind.peer_sta_address.mutable_data(), ind->peer_sta_address, ETH_ALEN);
+    std::memcpy(fidl_ind.peer_sta_address.data(), ind->peer_sta_address, ETH_ALEN);
 
     // auth_type
     fidl_ind.auth_type = ConvertAuthType(ind->auth_type);
@@ -733,7 +733,7 @@ void Device::DeauthenticateConf(wlanif_deauth_confirm_t* resp) {
     wlan_mlme::DeauthenticateConfirm fidl_resp;
 
     // peer_sta_address
-    std::memcpy(fidl_resp.peer_sta_address.mutable_data(), resp->peer_sta_address, ETH_ALEN);
+    std::memcpy(fidl_resp.peer_sta_address.data(), resp->peer_sta_address, ETH_ALEN);
 
     binding_.events().DeauthenticateConf(std::move(fidl_resp));
 }
@@ -750,7 +750,7 @@ void Device::DeauthenticateInd(wlanif_deauth_indication_t* ind) {
     wlan_mlme::DeauthenticateIndication fidl_ind;
 
     // peer_sta_address
-    std::memcpy(fidl_ind.peer_sta_address.mutable_data(), ind->peer_sta_address, ETH_ALEN);
+    std::memcpy(fidl_ind.peer_sta_address.data(), ind->peer_sta_address, ETH_ALEN);
 
     // reason_code
     fidl_ind.reason_code = ConvertDeauthReasonCode(ind->reason_code);
@@ -791,7 +791,7 @@ void Device::AssociateInd(wlanif_assoc_ind_t* ind) {
     wlan_mlme::AssociateIndication fidl_ind;
 
     // peer_sta_address
-    std::memcpy(fidl_ind.peer_sta_address.mutable_data(), ind->peer_sta_address, ETH_ALEN);
+    std::memcpy(fidl_ind.peer_sta_address.data(), ind->peer_sta_address, ETH_ALEN);
 
     // listen_interval
     fidl_ind.listen_interval = ind->listen_interval;
@@ -837,7 +837,7 @@ void Device::DisassociateInd(wlanif_disassoc_indication_t* ind) {
     wlan_mlme::DisassociateIndication fidl_ind;
 
     // peer_sta_address
-    std::memcpy(fidl_ind.peer_sta_address.mutable_data(), ind->peer_sta_address, ETH_ALEN);
+    std::memcpy(fidl_ind.peer_sta_address.data(), ind->peer_sta_address, ETH_ALEN);
 
     // reason_code
     fidl_ind.reason_code = ind->reason_code;
@@ -914,10 +914,10 @@ void Device::EapolInd(wlanif_eapol_indication_t* ind) {
     wlan_mlme::EapolIndication fidl_ind;
 
     // src_addr
-    std::memcpy(fidl_ind.src_addr.mutable_data(), ind->src_addr, ETH_ALEN);
+    std::memcpy(fidl_ind.src_addr.data(), ind->src_addr, ETH_ALEN);
 
     // dst_addr
-    std::memcpy(fidl_ind.dst_addr.mutable_data(), ind->dst_addr, ETH_ALEN);
+    std::memcpy(fidl_ind.dst_addr.data(), ind->dst_addr, ETH_ALEN);
 
     // data
     fidl_ind.data.resize(ind->data_len);

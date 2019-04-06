@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "lib/fidl/cpp/array.h"
+#include <array>
 #include "gtest/gtest.h"
 #include "lib/fidl/cpp/builder.h"
 
@@ -13,7 +13,7 @@ TEST(Array, BuilderTest) {
   char buffer[ZX_CHANNEL_MAX_MSG_BYTES];
   fidl::Builder builder(buffer, ZX_CHANNEL_MAX_MSG_BYTES);
 
-  fidl::Array<int, 3>* view = builder.New<fidl::Array<int, 3>>();
+  std::array<int, 3>* view = builder.New<std::array<int, 3>>();
   EXPECT_EQ(3u, view->size());
 
   (*view)[0] = 0;

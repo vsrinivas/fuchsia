@@ -28,7 +28,7 @@ std::pair<bool, fuchsia::ui::policy::PresentationMode> Detector::Update(
   FXL_CHECK(event.sensor);
   FXL_CHECK(event.sensor->is_vector());
 
-  const fidl::Array<int16_t, 3>& vector = event.sensor->vector();
+  const std::array<int16_t, 3>& vector = event.sensor->vector();
   AccelerometerData data{vector[0], vector[1], vector[2]};
 
   switch (sensor.loc) {

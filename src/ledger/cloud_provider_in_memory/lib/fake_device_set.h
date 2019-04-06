@@ -9,7 +9,6 @@
 #include <string>
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <lib/fidl/cpp/array.h>
 #include <lib/fit/function.h>
 #include <src/lib/fxl/macros.h>
 

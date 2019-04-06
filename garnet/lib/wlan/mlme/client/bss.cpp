@@ -113,7 +113,7 @@ zx_status_t Bss::Update(const Beacon& beacon, Span<const uint8_t> ie_chain) {
     last_bcn_signature_ = GetBeaconSignature(beacon, ie_chain);
 
     // Fields that are always present.
-    bssid_.CopyTo(bss_desc_.bssid.mutable_data());
+    bssid_.CopyTo(bss_desc_.bssid.data());
 
     bss_desc_.beacon_period = beacon.beacon_interval;  // name mismatch is spec-compliant.
     bss_desc_.cap = beacon.cap.ToFidl();

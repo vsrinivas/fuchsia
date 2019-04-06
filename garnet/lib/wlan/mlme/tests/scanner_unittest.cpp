@@ -128,7 +128,7 @@ wlan_mlme::ScanRequest FakeScanRequest() {
     req.channel_list->push_back(1);
     req.max_channel_time = 1u;
     req.ssid.resize(0);
-    std::memcpy(req.bssid.mutable_data(), kBssid1, 6);
+    std::memcpy(req.bssid.data(), kBssid1, 6);
     req.probe_delay = 0;
     return req;
 }

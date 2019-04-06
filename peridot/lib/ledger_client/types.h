@@ -8,7 +8,6 @@
 #include <algorithm>
 
 #include <fuchsia/ledger/cpp/fidl.h>
-#include <lib/fidl/cpp/array.h>
 #include <lib/fidl/cpp/vector.h>
 
 namespace modular {

@@ -201,7 +201,7 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
     wlan_mlme::DeviceInfo resp;
     const wlan_info_t& info = device_->GetWlanInfo().ifc_info;
 
-    memcpy(resp.mac_addr.mutable_data(), info.mac_addr, ETH_MAC_SIZE);
+    memcpy(resp.mac_addr.data(), info.mac_addr, ETH_MAC_SIZE);
 
     // mac_role is a bitfield, but only a single value is supported for an interface
     switch (info.mac_role) {
