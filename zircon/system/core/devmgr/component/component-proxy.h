@@ -10,6 +10,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/clock.h>
+#include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
@@ -26,6 +27,7 @@ using ComponentProxyBase = ddk::Device<ComponentProxy, ddk::Unbindable, ddk::Get
 class ComponentProxy : public ComponentProxyBase,
                        public ddk::AmlogicCanvasProtocol<ComponentProxy>,
                        public ddk::ClockProtocol<ComponentProxy>,
+                       public ddk::EthBoardProtocol<ComponentProxy>,
                        public ddk::GpioProtocol<ComponentProxy>,
                        public ddk::PDevProtocol<ComponentProxy>,
                        public ddk::PowerProtocol<ComponentProxy>,
@@ -55,6 +57,7 @@ public:
     zx_status_t AmlogicCanvasFree(uint8_t canvas_idx);
     zx_status_t ClockEnable(uint32_t index);
     zx_status_t ClockDisable(uint32_t index);
+    zx_status_t EthBoardResetPhy();
     zx_status_t GpioConfigIn(uint32_t flags);
     zx_status_t GpioConfigOut(uint8_t initial_value);
     zx_status_t GpioSetAltFunction(uint64_t function);

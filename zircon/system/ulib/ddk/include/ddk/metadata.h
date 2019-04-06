@@ -78,6 +78,12 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // type: vendor specific Wifi configuration
 #define DEVICE_METADATA_WIFI_CONFIG               0x49464957 // WIFI
 
+// type: eth_dev_metadata_t
+#define DEVICE_METADATA_ETH_MAC_DEVICE            0x43414D45 // EMAC
+
+// type: eth_dev_metadata_t
+#define DEVICE_METADATA_ETH_PHY_DEVICE            0x59485045 // EPHY
+
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
 // This allows creating metadata types to be defined local to a particular

@@ -33,6 +33,9 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_CLOCK:
         proto->ops = &clock_protocol_ops_;
         return ZX_OK;
+    case ZX_PROTOCOL_ETH_BOARD:
+        proto->ops = &eth_board_protocol_ops_;
+        return ZX_OK;
     case ZX_PROTOCOL_GPIO:
         proto->ops = &gpio_protocol_ops_;
         return ZX_OK;
@@ -46,6 +49,7 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
         proto->ops = &sysmem_protocol_ops_;
         return ZX_OK;
     default:
+        zxlogf(ERROR, "%s unsupported protocol \'%u\'\n", __func__, proto_id);
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
@@ -151,6 +155,15 @@ zx_status_t ComponentProxy::ClockDisable(uint32_t index) {
     req.header.proto_id = ZX_PROTOCOL_CLOCK;
     req.op = ClockOp::DISABLE;
     req.index = index;
+
+    return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
+}
+
+zx_status_t ComponentProxy::EthBoardResetPhy() {
+    EthBoardProxyRequest req = {};
+    ProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_ETH_BOARD;
+    req.op = EthBoardOp::RESET_PHY;
 
     return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
 }

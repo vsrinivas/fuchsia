@@ -86,9 +86,9 @@ class DWMacDevice : public ddk::Device<DWMacDevice, ddk::Unbindable>,
                     public ddk::EthmacProtocol<DWMacDevice, ddk::base_protocol>,
                     public ddk::EthMacProtocol<DWMacDevice> {
 public:
-    DWMacDevice(zx_device_t* device);
+    DWMacDevice(zx_device_t* device, pdev_protocol_t* pdev, eth_board_protocol_t* eth_board);
 
-    static zx_status_t Create(zx_device_t* device);
+    static zx_status_t Create(void* ctx, zx_device_t* device);
 
     void DdkRelease();
     void DdkUnbind();

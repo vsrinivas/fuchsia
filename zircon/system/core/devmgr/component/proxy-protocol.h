@@ -140,4 +140,14 @@ struct AmlogicCanvasProxyResponse {
     uint8_t canvas_idx;
 };
 
+// ZX_PROTOCOL_ETH_BOARD proxy support.
+enum class EthBoardOp {
+    RESET_PHY,
+};
+
+struct EthBoardProxyRequest {
+    ProxyRequest header;
+    EthBoardOp op;
+};
+
 } // namespace component

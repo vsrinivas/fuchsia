@@ -33,7 +33,7 @@ public:
     void DdkUnbind();
 
     // ETH_BOARD protocol.
-    void EthBoardResetPhy();
+    zx_status_t EthBoardResetPhy();
 
 private:
     // GPIO Indexes.

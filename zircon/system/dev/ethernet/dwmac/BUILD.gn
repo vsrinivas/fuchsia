@@ -4,13 +4,13 @@
 
 driver("dwmac") {
   sources = [
-    "binding.c",
     "dwmac-debug.cpp",
     "dwmac.cpp",
     "pinned-buffer.cpp",
   ]
   deps = [
     "$zx/system/banjo/ddk-protocol-clock",
+    "$zx/system/banjo/ddk-protocol-composite",
     "$zx/system/banjo/ddk-protocol-ethernet",
     "$zx/system/banjo/ddk-protocol-ethernet-board",
     "$zx/system/banjo/ddk-protocol-ethernet-mac",

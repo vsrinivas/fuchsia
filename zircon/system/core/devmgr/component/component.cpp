@@ -19,6 +19,7 @@ Component::Component(zx_device_t* parent)
     // These protocols are all optional, so no error checking is necessary here.
     device_get_protocol(parent, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
     device_get_protocol(parent, ZX_PROTOCOL_CLOCK, &clock_);
+    device_get_protocol(parent, ZX_PROTOCOL_ETH_BOARD, &eth_board_);
     device_get_protocol(parent, ZX_PROTOCOL_GPIO, &gpio_);
     device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
     device_get_protocol(parent, ZX_PROTOCOL_POWER, &power_);
@@ -93,6 +94,30 @@ zx_status_t Component::RpcClock(const uint8_t* req_buf, uint32_t req_size, uint8
         return clock_disable(&clock_, req->index);
     default:
         zxlogf(ERROR, "%s: unknown clk op %u\n", __func__, static_cast<uint32_t>(req->op));
+        return ZX_ERR_INTERNAL;
+    }
+}
+
+zx_status_t Component::RpcEthBoard(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                                   uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                                   uint32_t req_handle_count, zx_handle_t* resp_handles,
+                                   uint32_t* resp_handle_count) {
+    if (eth_board_.ops == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    auto* req = reinterpret_cast<const EthBoardProxyRequest*>(req_buf);
+    if (req_size < sizeof(*req)) {
+        zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+        return ZX_ERR_INTERNAL;
+    }
+    auto* resp = reinterpret_cast<GpioProxyResponse*>(resp_buf);
+    *out_resp_size = sizeof(*resp);
+
+    switch (req->op) {
+    case EthBoardOp::RESET_PHY:
+        return eth_board_reset_phy(&eth_board_);
+    default:
+        zxlogf(ERROR, "%s: unknown ETH_BOARD op %u\n", __func__, static_cast<uint32_t>(req->op));
         return ZX_ERR_INTERNAL;
     }
 }
@@ -289,6 +314,10 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_CLOCK:
         status = RpcClock(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                           resp_handles, &resp_handle_count);
+        break;
+    case ZX_PROTOCOL_ETH_BOARD:
+        status = RpcEthBoard(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                             resp_handles, &resp_handle_count);
         break;
     case ZX_PROTOCOL_GPIO:
         status = RpcGpio(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,

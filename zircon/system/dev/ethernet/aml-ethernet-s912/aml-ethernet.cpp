@@ -13,6 +13,7 @@
 #include <ddk/protocol/ethernet.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
@@ -27,11 +28,12 @@ namespace eth {
 #define MCU_I2C_REG_BOOT_EN_WOL 0x21
 #define MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE 0x03
 
-void AmlEthernet::EthBoardResetPhy() {
+zx_status_t AmlEthernet::EthBoardResetPhy() {
     gpios_[PHY_RESET].Write(0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
     gpios_[PHY_RESET].Write(1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    return ZX_OK;
 }
 
 zx_status_t AmlEthernet::InitPdev() {
@@ -101,7 +103,7 @@ zx_status_t AmlEthernet::Bind() {
     // Populate board specific information
     eth_dev_metadata_t mac_info;
     size_t actual;
-    status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &mac_info,
+    status = device_get_metadata(parent(), DEVICE_METADATA_ETH_MAC_DEVICE, &mac_info,
                                  sizeof(eth_dev_metadata_t), &actual);
     if (status != ZX_OK || actual != sizeof(eth_dev_metadata_t)) {
         zxlogf(ERROR, "aml-ethernet: Could not get MAC metadata %d\n", status);
@@ -113,17 +115,7 @@ zx_status_t AmlEthernet::Bind() {
         {BIND_PLATFORM_DEV_DID, 0, mac_info.did},
     };
 
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "aml-ethernet";
-    args.ctx = this;
-    args.ops = &ddk_device_proto_;
-    args.proto_id = ddk_proto_id_;
-    args.proto_ops = ddk_proto_ops_;
-    args.props = props;
-    args.prop_count = countof(props);
-
-    return pdev_.DeviceAdd(0, &args, &zxdev_);
+    return DdkAdd("aml-ethernet", 0, props, fbl::count_of(props));
 }
 
 void AmlEthernet::DdkUnbind() {
