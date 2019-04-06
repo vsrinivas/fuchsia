@@ -22,8 +22,8 @@
 ## working directory that winds up in `FUCHSIA_DIR/out`.
 ## It defaults to `out/default`.
 ##
-## This command store the location of the build directory in the //.config file,
-## which causes subsequent `fx` commands to use that build directory. Use
+## This command stores the location of the build directory in the //.fx-build-dir
+## file, which causes subsequent `fx` commands to use that build directory. Use
 ## `fx use` to switch build directories.
 ##
 ## Ensures Goma is ready (if Goma is enabled).
