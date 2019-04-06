@@ -113,9 +113,9 @@ inline lockdep::ThreadLockState* ToThreadLockState(lockdep_state_t* state) {
 
 STATIC_COMMAND_START
 STATIC_COMMAND("lockdep", "kernel lock diagnostics", &CommandLockDep)
-STATIC_COMMAND_END(lockdep);
+STATIC_COMMAND_END(lockdep)
 
-LK_INIT_HOOK(lockdep, LockDepInit, LK_INIT_LEVEL_THREADING);
+LK_INIT_HOOK(lockdep, LockDepInit, LK_INIT_LEVEL_THREADING)
 
 namespace lockdep {
 
