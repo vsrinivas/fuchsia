@@ -317,6 +317,7 @@ group("all") {
     "//garnet/packages/tests:go_merkle_tests",
     "//garnet/packages/tests:go_stdlib_tests",
     "//garnet/packages/tests:guest",
+    "//garnet/packages/tests:httpdate_hyper",
     "//garnet/packages/tests:image_pipe_swapchain",
     "//garnet/packages/tests:inspect_unittests",
     "//garnet/packages/tests:iquery_golden_test",
@@ -1162,6 +1163,13 @@ group("webpki_roots_fuchsia") {
   testonly = true
   public_deps = [
     "//garnet/lib/rust/webpki-roots-fuchsia:webpki-roots-fuchsia_tests",
+  ]
+}
+
+group("httpdate_hyper") {
+  testonly = true
+  public_deps = [
+    "//garnet/lib/rust/httpdate-hyper:httpdate-hyper-tests",
   ]
 }
 

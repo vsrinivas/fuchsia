@@ -1,0 +1,41 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("httpdate-hyper") {
+  name = "httpdate-hyper"
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/lib/rust/webpki-roots-fuchsia",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-hyper",
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:ct-logs",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures-preview",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:rustls",
+    "//third_party/rust_crates:untrusted",
+    "//third_party/rust_crates:webpki",
+  ]
+}
+
+test_package("httpdate-hyper-tests") {
+  deps = [
+    ":httpdate-hyper",
+  ]
+
+  tests = [
+    {
+      name = "httpdate_hyper_lib_test"
+    },
+  ]
+}

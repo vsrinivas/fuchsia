@@ -81,13 +81,18 @@ pub fn new_client() -> Client<HyperConnector, Body> {
     Client::builder().executor(EHandle::local().compat()).build(HyperConnector)
 }
 
+pub fn new_https_client_dangerous(
+    tls: rustls::ClientConfig,
+) -> Client<hyper_rustls::HttpsConnector<HyperConnector>, Body> {
+    let https = hyper_rustls::HttpsConnector::from((HyperConnector, tls));
+    Client::builder().executor(EHandle::local().compat()).build(https)
+}
+
 pub fn new_https_client() -> Client<hyper_rustls::HttpsConnector<HyperConnector>, Body> {
     let mut tls = rustls::ClientConfig::new();
     tls.root_store.add_server_trust_anchors(&webpki_roots_fuchsia::TLS_SERVER_ROOTS);
     tls.ct_logs = Some(&ct_logs::LOGS);
-
-    let https = hyper_rustls::HttpsConnector::from((HyperConnector, tls));
-    Client::builder().executor(EHandle::local().compat()).build(https)
+    new_https_client_dangerous(tls)
 }
 
 #[cfg(test)]

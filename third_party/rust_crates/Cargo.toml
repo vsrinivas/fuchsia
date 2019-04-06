@@ -72,7 +72,7 @@ ring = "0.14"
 rouille = "3.0.0"
 rust-crypto = "0.2"
 rustc-serialize = "0.3"
-rustls = "0.15"
+rustls = { version = "0.15", features = ["dangerous_configuration"] }
 rusttype = "0.7.3"
 serde = "1"
 serde_derive = "1"
