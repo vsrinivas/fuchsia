@@ -106,7 +106,11 @@ void AddGraphicsBenchmarks(benchmarking::BenchmarksRunner* benchmarks_runner) {
     //
     // hello_scenic
     //
-    {"fuchsia.scenic.hello_scenic", "fuchsia-pkg://fuchsia.com/hello_scenic#meta/hello_scenic.cmx", ""},
+    // Note: "hello_scenic" was renamed "standalone_app" at some point.  We use
+    // its original name as the benchmark name so that it shows up on the same
+    // dashboard graph.
+    //
+    {"fuchsia.scenic.hello_scenic", "fuchsia-pkg://fuchsia.com/standalone_app#meta/standalone_app.cmx", ""},
     //
     // image_grid_cpp
     //
