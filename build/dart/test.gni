@@ -180,7 +180,7 @@ template("dart_test") {
     # TODO(joshuaseaton): use test_spec's `command` field when fx supports
     # running tests out of $root_build_dir/tests.json.
     # CL to back out: https://fuchsia-review.googlesource.com/269458
-    if (defined(invoker.args)) {
+    if (defined(invoker.args) && invoker.args != []) {
       argstr = ""
       foreach(arg, invoker.args) {
         argstr += "\"" + arg + "\" "
