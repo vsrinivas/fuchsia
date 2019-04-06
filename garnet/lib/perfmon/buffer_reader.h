@@ -27,7 +27,7 @@ class BufferReader {
                              size_t buffer_size,
                              std::unique_ptr<BufferReader>* out_reader);
 
-  static ReaderStatus AnalyzeHeader(const perfmon_buffer_header_t* header,
+  static ReaderStatus AnalyzeHeader(const BufferHeader* header,
                                     size_t buffer_size);
 
   ReaderStatus status() const { return status_; }
@@ -81,7 +81,7 @@ class BufferReader {
   const std::string name_;
   const uint8_t* const buffer_;
 
-  const perfmon_buffer_header_t* const header_;
+  const BufferHeader* const header_;
   const uint8_t* next_record_ = nullptr;
   const uint8_t* last_record_ = nullptr;
   const uint8_t* buffer_end_ = nullptr;

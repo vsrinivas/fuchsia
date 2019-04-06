@@ -519,10 +519,10 @@ static void x86_perfmon_init_once(uint level)
     unsigned lbr_stack_size = x86_perfmon_lbr_stack_size();
     if (lbr_stack_size != 0) {
         // Don't crash if the h/w supports more than we do, just clip it.
-        if (lbr_stack_size > PERFMON_MAX_NUM_LAST_BRANCH) {
+        if (lbr_stack_size > perfmon::LastBranchRecord::kMaxNumLastBranch) {
             TRACEF("WARNING: H/W LBR stack size is %u, clipping to %u\n",
-                   lbr_stack_size, PERFMON_MAX_NUM_LAST_BRANCH);
-            lbr_stack_size = PERFMON_MAX_NUM_LAST_BRANCH;
+                   lbr_stack_size, perfmon::LastBranchRecord::kMaxNumLastBranch);
+            lbr_stack_size = perfmon::LastBranchRecord::kMaxNumLastBranch;
         }
         x86_perfmon_init_lbr(lbr_stack_size);
     }
@@ -566,10 +566,10 @@ size_t get_max_space_needed_for_all_records(PerfmonState* state) {
     size_t num_events = (state->num_used_programmable +
                          state->num_used_fixed +
                          state->num_used_misc);
-    size_t space_needed = (sizeof(perfmon_time_record_t) +
+    size_t space_needed = (sizeof(perfmon::TimeRecord) +
                            num_events * kMaxEventRecordSize);
     if (state->request_lbr_record)
-        space_needed += sizeof(perfmon_last_branch_record_t);
+        space_needed += sizeof(perfmon::LastBranchRecord);
     return space_needed;
 }
 
@@ -625,9 +625,9 @@ zx_status_t arch_perfmon_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo) 
         return ZX_ERR_INVALID_ARGS;
 
     // A simple safe approximation of the minimum size needed.
-    size_t min_size_needed = sizeof(perfmon_buffer_header_t);
-    min_size_needed += sizeof(perfmon_time_record_t);
-    min_size_needed += PERFMON_MAX_EVENTS * kMaxEventRecordSize;
+    size_t min_size_needed = sizeof(perfmon::BufferHeader);
+    min_size_needed += sizeof(perfmon::TimeRecord);
+    min_size_needed += perfmon::kMaxNumEvents * kMaxEventRecordSize;
     if (vmo->size() < min_size_needed)
         return ZX_ERR_INVALID_ARGS;
 
@@ -1040,8 +1040,8 @@ zx_status_t arch_perfmon_stage_config(ArchPmuConfig* config) {
 struct ReadMiscResult {
     // The value of the register.
     uint64_t value;
-    // The record type to use, either PERFMON_RECORD_COUNT or
-    // PERFMON_RECORD_VALUE.
+    // The record type to use, either |perfmon::kRecordTypeCount| or
+    // |perfmon::kRecordTypeValue|.
     uint8_t type;
 };
 
@@ -1088,18 +1088,18 @@ static uint32_t read_mc_value32(volatile uint32_t* addr) {
 static ReadMiscResult read_mc_typed_counter32(volatile uint32_t* addr,
                                               uint32_t* last_value_addr) {
     return ReadMiscResult{
-        read_mc_counter32(addr, last_value_addr), PERFMON_RECORD_COUNT};
+        read_mc_counter32(addr, last_value_addr), perfmon::kRecordTypeCount};
 }
 
 static ReadMiscResult read_mc_typed_counter64(volatile uint64_t* addr,
                                               uint64_t* last_value_addr) {
     return ReadMiscResult{
-        read_mc_counter64(addr, last_value_addr), PERFMON_RECORD_COUNT};
+        read_mc_counter64(addr, last_value_addr), perfmon::kRecordTypeCount};
 }
 
 static ReadMiscResult read_mc_typed_value32(volatile uint32_t* addr) {
     return ReadMiscResult{
-        read_mc_value32(addr), PERFMON_RECORD_VALUE};
+        read_mc_value32(addr), perfmon::kRecordTypeValue};
 }
 
 static volatile uint32_t* get_mc_addr32(PerfmonState* state,
@@ -1122,7 +1122,7 @@ static ReadMiscResult read_mc_bytes_read(PerfmonState* state) {
         &state->mchbar_data.last_mem.bytes_read);
     // Return the value in bytes, easier for human readers of the
     // resulting report.
-    return ReadMiscResult{value * 64ul, PERFMON_RECORD_COUNT};
+    return ReadMiscResult{value * 64ul, perfmon::kRecordTypeCount};
 }
 
 static ReadMiscResult read_mc_bytes_written(PerfmonState* state) {
@@ -1131,7 +1131,7 @@ static ReadMiscResult read_mc_bytes_written(PerfmonState* state) {
         &state->mchbar_data.last_mem.bytes_written);
     // Return the value in bytes, easier for human readers of the
     // resulting report.
-    return ReadMiscResult{value * 64ul, PERFMON_RECORD_COUNT};
+    return ReadMiscResult{value * 64ul, perfmon::kRecordTypeCount};
 }
 
 static ReadMiscResult read_mc_gt_requests(PerfmonState* state) {
@@ -1191,7 +1191,7 @@ static ReadMiscResult read_mc_active_gt_engine_cycles(PerfmonState* state) {
 static ReadMiscResult read_mc_peci_therm_margin(PerfmonState* state) {
     uint32_t value = read_mc_value32(
                 get_mc_addr32(state, MISC_PKG_PECI_THERM_MARGIN_OFFSET));
-    return ReadMiscResult{value & 0xffff, PERFMON_RECORD_VALUE};
+    return ReadMiscResult{value & 0xffff, perfmon::kRecordTypeValue};
 }
 
 static ReadMiscResult read_mc_rapl_perf_status(PerfmonState* state) {
@@ -1207,7 +1207,7 @@ static ReadMiscResult read_mc_ia_freq_clamping_reasons(PerfmonState* state) {
         (1u << 15) | (1u << 14) | (1u << 9)  | (1u << 3)  | (1u << 2);
     uint32_t value = read_mc_value32(
         get_mc_addr32(state, MISC_PKG_IA_FREQ_CLAMPING_REASONS_OFFSET));
-    return ReadMiscResult{value & ~kReserved, PERFMON_RECORD_VALUE};
+    return ReadMiscResult{value & ~kReserved, perfmon::kRecordTypeValue};
 }
 
 static ReadMiscResult read_mc_gt_freq_clamping_reasons(PerfmonState* state) {
@@ -1219,7 +1219,7 @@ static ReadMiscResult read_mc_gt_freq_clamping_reasons(PerfmonState* state) {
         (1u << 9)  | (1u << 4)  | (1u << 3)  | (1u << 2);
     uint32_t value = read_mc_value32(
         get_mc_addr32(state, MISC_PKG_GT_FREQ_CLAMPING_REASONS_OFFSET));
-    return ReadMiscResult{value & ~kReserved, PERFMON_RECORD_VALUE};
+    return ReadMiscResult{value & ~kReserved, perfmon::kRecordTypeValue};
 }
 
 static ReadMiscResult read_mc_rp_slice_freq(PerfmonState* state) {
@@ -1229,7 +1229,7 @@ static ReadMiscResult read_mc_rp_slice_freq(PerfmonState* state) {
     // Convert the value to Mhz.
     // We can't do floating point, and this doesn't have to be perfect.
     uint64_t scaled_value = value * 16667ul / 1000 /*16.667*/;
-    return ReadMiscResult{scaled_value, PERFMON_RECORD_VALUE};
+    return ReadMiscResult{scaled_value, perfmon::kRecordTypeValue};
 }
 
 static ReadMiscResult read_mc_rp_unslice_freq(PerfmonState* state) {
@@ -1239,37 +1239,37 @@ static ReadMiscResult read_mc_rp_unslice_freq(PerfmonState* state) {
     // Convert the value to Mhz.
     // We can't do floating point, and this doesn't have to be perfect.
     uint64_t scaled_value = value * 16667ul / 1000 /*16.667*/;
-    return ReadMiscResult{scaled_value, PERFMON_RECORD_VALUE};
+    return ReadMiscResult{scaled_value, perfmon::kRecordTypeValue};
 }
 
 static ReadMiscResult read_mc_rp_gt_volt(PerfmonState* state) {
     uint32_t value = read_mc_value32(
         get_mc_addr32(state, MISC_PKG_RP_GT_VOLT_OFFSET));
-    return ReadMiscResult{value & 0xff, PERFMON_RECORD_VALUE};
+    return ReadMiscResult{value & 0xff, perfmon::kRecordTypeValue};
 }
 
 static ReadMiscResult read_mc_edram_temp(PerfmonState* state) {
     uint32_t value = read_mc_value32(
         get_mc_addr32(state, MISC_PKG_EDRAM_TEMP_OFFSET));
-    return ReadMiscResult{value & 0xff, PERFMON_RECORD_VALUE};
+    return ReadMiscResult{value & 0xff, perfmon::kRecordTypeValue};
 }
 
 static ReadMiscResult read_mc_pkg_temp(PerfmonState* state) {
     uint32_t value = read_mc_value32(
         get_mc_addr32(state, MISC_PKG_PKG_TEMP_OFFSET));
-    return ReadMiscResult{value & 0xff, PERFMON_RECORD_VALUE};
+    return ReadMiscResult{value & 0xff, perfmon::kRecordTypeValue};
 }
 
 static ReadMiscResult read_mc_ia_temp(PerfmonState* state) {
     uint32_t value = read_mc_value32(
         get_mc_addr32(state, MISC_PKG_IA_TEMP_OFFSET));
-    return ReadMiscResult{value & 0xff, PERFMON_RECORD_VALUE};
+    return ReadMiscResult{value & 0xff, perfmon::kRecordTypeValue};
 }
 
 static ReadMiscResult read_mc_gt_temp(PerfmonState* state) {
     uint32_t value = read_mc_value32(
         get_mc_addr32(state, MISC_PKG_GT_TEMP_OFFSET));
-    return ReadMiscResult{value & 0xff, PERFMON_RECORD_VALUE};
+    return ReadMiscResult{value & 0xff, perfmon::kRecordTypeValue};
 }
 
 static ReadMiscResult read_misc_event(PerfmonState* state,
@@ -1444,19 +1444,19 @@ static zx_status_t x86_perfmon_map_buffers_locked(PerfmonState* state) {
             data->buffer_mapping.reset();
             break;
         }
-        data->buffer_start = reinterpret_cast<perfmon_buffer_header_t*>(
+        data->buffer_start = reinterpret_cast<perfmon::BufferHeader*>(
             data->buffer_mapping->base() + vmo_offset);
         data->buffer_end = reinterpret_cast<char*>(data->buffer_start) + size;
         LTRACEF("buffer mapped: cpu %u, start %p, end %p\n",
                 cpu, data->buffer_start, data->buffer_end);
 
         auto hdr = data->buffer_start;
-        hdr->version = PERFMON_BUFFER_VERSION;
-        hdr->arch = PERFMON_BUFFER_ARCH_X86_64;
+        hdr->version = perfmon::kBufferVersion;
+        hdr->arch = perfmon::kArchX64;
         hdr->flags = 0;
         hdr->ticks_per_second = ticks_per_second();
         hdr->capture_end = sizeof(*hdr);
-        data->buffer_next = reinterpret_cast<perfmon_record_header_t*>(
+        data->buffer_next = reinterpret_cast<perfmon::RecordHeader*>(
             reinterpret_cast<char*>(data->buffer_start) + hdr->capture_end);
     }
 
@@ -1559,7 +1559,7 @@ zx_status_t arch_perfmon_start() {
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
 static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) TA_NO_THREAD_SAFETY_ANALYSIS {
     PerfmonCpuData* data = &state->cpu_data[cpu];
-    perfmon_record_header_t* next = data->buffer_next;
+    perfmon::RecordHeader* next = data->buffer_next;
 
     zx_time_t now = rdtsc();
     next = arch_perfmon_write_time_record(next, perfmon::kEventIdNone, now);
@@ -1612,10 +1612,10 @@ static void x86_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) TA
             PmuEventId id = state->misc_events[i];
             ReadMiscResult typed_value = read_misc_event(state, id);
             switch (typed_value.type) {
-            case PERFMON_RECORD_COUNT:
+            case perfmon::kRecordTypeCount:
                 next = arch_perfmon_write_count_record(next, id, typed_value.value);
                 break;
-            case PERFMON_RECORD_VALUE:
+            case perfmon::kRecordTypeValue:
                 next = arch_perfmon_write_value_record(next, id, typed_value.value);
                 break;
             default:
@@ -1632,14 +1632,14 @@ static void x86_perfmon_finalize_buffer(PerfmonState* state, uint32_t cpu) TA_NO
     LTRACEF("Collecting last data for cpu %u\n", cpu);
 
     PerfmonCpuData* data = &state->cpu_data[cpu];
-    perfmon_buffer_header_t* hdr = data->buffer_start;
+    perfmon::BufferHeader* hdr = data->buffer_start;
 
     // KISS. There may be enough space to write some of what we want to write
     // here, but don't try. Just use the same simple check that
     // |pmi_interrupt_handler()| does.
     size_t space_needed = get_max_space_needed_for_all_records(state);
     if (reinterpret_cast<char*>(data->buffer_next) + space_needed > data->buffer_end) {
-        hdr->flags |= PERFMON_BUFFER_FLAG_FULL;
+        hdr->flags |= perfmon::BufferHeader::kBufferFlagFull;
         LTRACEF("Buffer overflow on cpu %u\n", cpu);
     } else {
         x86_perfmon_write_last_records(state, cpu);
@@ -1749,16 +1749,17 @@ zx_status_t arch_perfmon_fini() {
 
 // Interrupt handling.
 
-// Write out a |perfmon_last_branch_record_t| record.
-static perfmon_record_header_t* x86_perfmon_write_last_branches(
-        PerfmonState* state, uint64_t cr3, perfmon_record_header_t* hdr,
+// Write out a |perfmon::LastBranchRecord| record.
+static perfmon::RecordHeader* x86_perfmon_write_last_branches(
+        PerfmonState* state, uint64_t cr3, perfmon::RecordHeader* hdr,
         PmuEventId id) {
-    auto rec = reinterpret_cast<perfmon_last_branch_record_t*>(hdr);
+    auto rec = reinterpret_cast<perfmon::LastBranchRecord*>(hdr);
     auto num_entries = perfmon_lbr_stack_size;
-    static_assert(PERFMON_MAX_NUM_LAST_BRANCH ==
-                  countof(perfmon_last_branch_record_t::branches), "");
-    DEBUG_ASSERT(num_entries > 0 && num_entries <= PERFMON_MAX_NUM_LAST_BRANCH);
-    arch_perfmon_write_header(&rec->header, PERFMON_RECORD_LAST_BRANCH, id);
+    static_assert(perfmon::LastBranchRecord::kMaxNumLastBranch ==
+                  countof(perfmon::LastBranchRecord::branches), "");
+    DEBUG_ASSERT(num_entries > 0 &&
+                 num_entries <= perfmon::LastBranchRecord::kMaxNumLastBranch);
+    arch_perfmon_write_header(&rec->header, perfmon::kRecordTypeLastBranch, id);
     rec->num_branches = num_entries;
     rec->aspace = cr3;
 
@@ -1777,8 +1778,8 @@ static perfmon_record_header_t* x86_perfmon_write_last_branches(
 
     // Get a pointer to the end of this record. Since this record is
     // variable length it's more complicated than just "rec + 1".
-    auto next = reinterpret_cast<perfmon_record_header_t*>(
-        reinterpret_cast<char*>(rec) + PERFMON_LAST_BRANCH_RECORD_SIZE(rec));
+    auto next = reinterpret_cast<perfmon::RecordHeader*>(
+        reinterpret_cast<char*>(rec) + perfmon::LastBranchRecordSize(rec));
     LTRACEF("LBR record: num branches %u, @%p, next @%p\n",
             num_entries, hdr, next);
     return next;
@@ -1801,7 +1802,7 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
     size_t space_needed = get_max_space_needed_for_all_records(state);
     if (reinterpret_cast<char*>(data->buffer_next) + space_needed > data->buffer_end) {
         TRACEF("cpu %u: @%" PRIi64 " pmi buffer full\n", cpu, now);
-        data->buffer_start->flags |= PERFMON_BUFFER_FLAG_FULL;
+        data->buffer_start->flags |= perfmon::BufferHeader::kBufferFlagFull;
         return false;
     }
 
@@ -1934,10 +1935,10 @@ static bool pmi_interrupt_handler(x86_iframe_t *frame, PerfmonState* state) {
                     PmuEventId id = state->misc_events[i];
                     ReadMiscResult typed_value = read_misc_event(state, id);
                     switch (typed_value.type) {
-                    case PERFMON_RECORD_COUNT:
+                    case perfmon::kRecordTypeCount:
                         next = arch_perfmon_write_count_record(next, id, typed_value.value);
                         break;
-                    case PERFMON_RECORD_VALUE:
+                    case perfmon::kRecordTypeValue:
                         next = arch_perfmon_write_value_record(next, id, typed_value.value);
                         break;
                     default:

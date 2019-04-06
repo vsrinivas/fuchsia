@@ -8,37 +8,37 @@
 
 namespace perfmon {
 
-perfmon_record_type_t RecordType(const perfmon_record_header_t* hdr) {
+RecordType GetRecordType(const RecordHeader* hdr) {
   switch (hdr->type) {
-    case PERFMON_RECORD_TIME:
-    case PERFMON_RECORD_TICK:
-    case PERFMON_RECORD_COUNT:
-    case PERFMON_RECORD_VALUE:
-    case PERFMON_RECORD_PC:
-    case PERFMON_RECORD_LAST_BRANCH:
-      return static_cast<perfmon_record_type_t>(hdr->type);
+    case kRecordTypeTime:
+    case kRecordTypeTick:
+    case kRecordTypeCount:
+    case kRecordTypeValue:
+    case kRecordTypePc:
+    case kRecordTypeLastBranch:
+      return static_cast<RecordType>(hdr->type);
     default:
-      return PERFMON_RECORD_RESERVED;
+      return kRecordTypeInvalid;
   }
 }
 
-size_t RecordSize(const perfmon_record_header_t* hdr) {
+size_t GetRecordSize(const RecordHeader* hdr) {
   switch (hdr->type) {
-    case PERFMON_RECORD_TIME:
-      return sizeof(perfmon_time_record_t);
-    case PERFMON_RECORD_TICK:
-      return sizeof(perfmon_tick_record_t);
-    case PERFMON_RECORD_COUNT:
-      return sizeof(perfmon_count_record_t);
-    case PERFMON_RECORD_VALUE:
-      return sizeof(perfmon_value_record_t);
-    case PERFMON_RECORD_PC:
-      return sizeof(perfmon_pc_record_t);
-    case PERFMON_RECORD_LAST_BRANCH: {
-      auto rec = reinterpret_cast<const perfmon_last_branch_record_t*>(hdr);
+    case kRecordTypeTime:
+      return sizeof(TimeRecord);
+    case kRecordTypeTick:
+      return sizeof(TickRecord);
+    case kRecordTypeCount:
+      return sizeof(CountRecord);
+    case kRecordTypeValue:
+      return sizeof(ValueRecord);
+    case kRecordTypePc:
+      return sizeof(PcRecord);
+    case kRecordTypeLastBranch: {
+      auto rec = reinterpret_cast<const LastBranchRecord*>(hdr);
       if (rec->num_branches > arraysize(rec->branches))
         return 0;
-      return PERFMON_LAST_BRANCH_RECORD_SIZE(rec);
+      return LastBranchRecordSize(rec);
     }
     default:
       return 0;

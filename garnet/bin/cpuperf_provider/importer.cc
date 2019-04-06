@@ -119,7 +119,7 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
         "Import: cpu=%u, event=0x%x, time=%" PRIu64, cpu, event_id,
         current_time);
 
-    if (record.type() == PERFMON_RECORD_TIME) {
+    if (record.type() == perfmon::kRecordTypeTime) {
       current_time = reader.time();
       if (event_id == perfmon::kEventIdNone) {
         // This is just a time update, not a combined time+tick record.
@@ -153,10 +153,10 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
       ++printed_late_record_warning_count;
     } else {
       switch (record.type()) {
-        case PERFMON_RECORD_TIME:
+        case perfmon::kRecordTypeTime:
           FXL_DCHECK(event_id != perfmon::kEventIdNone);
           // fall through
-        case PERFMON_RECORD_TICK:
+        case perfmon::kRecordTypeTick:
           if (is_tally_mode) {
             event_data.AccumulateCount(cpu, event_id, sample_rate);
           } else {
@@ -164,7 +164,7 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
                                ticks_per_second, sample_rate);
           }
           break;
-        case PERFMON_RECORD_COUNT:
+        case perfmon::kRecordTypeCount:
           if (is_tally_mode) {
             event_data.AccumulateCount(cpu, event_id, record.count->count);
           } else {
@@ -172,7 +172,7 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
                                ticks_per_second, record.count->count);
           }
           break;
-        case PERFMON_RECORD_VALUE:
+        case perfmon::kRecordTypeValue:
           if (is_tally_mode) {
             event_data.UpdateValue(cpu, event_id, record.value->value);
           } else {
@@ -180,15 +180,15 @@ uint64_t Importer::ImportRecords(perfmon::DeviceReader& reader,
                                ticks_per_second, record.value->value);
           }
           break;
-        case PERFMON_RECORD_PC:
+        case perfmon::kRecordTypePc:
           if (!is_tally_mode) {
             ImportSampleRecord(cpu, config, record, prev_time, current_time,
                                ticks_per_second, sample_rate);
           }
           break;
-        case PERFMON_RECORD_LAST_BRANCH:
+        case perfmon::kRecordTypeLastBranch:
           if (!is_tally_mode) {
-            EmitLastBranchRecord(cpu, config, record, current_time);
+            EmitLastBranchRecordBlob(cpu, config, record, current_time);
           }
           break;
         default:
@@ -281,17 +281,17 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
   trace_arg_t args[3];
   size_t n_args;
   switch (record.type()) {
-    case PERFMON_RECORD_TICK:
+    case perfmon::kRecordTypeTick:
       args[0] = {trace_make_arg(rate_name_ref_,
                                 trace_make_double_arg_value(rate_per_second))};
       n_args = 1;
       break;
-    case PERFMON_RECORD_COUNT:
+    case perfmon::kRecordTypeCount:
       args[0] = {trace_make_arg(rate_name_ref_,
                                 trace_make_double_arg_value(rate_per_second))};
       n_args = 1;
       break;
-    case PERFMON_RECORD_VALUE:
+    case perfmon::kRecordTypeValue:
       // We somehow need to mark the value as not being a count. This is
       // important for some consumers to guide how to print the value.
       // Do this by using a different name for the value.
@@ -299,7 +299,7 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
           trace_make_arg(value_name_ref_, trace_make_uint64_arg_value(value))};
       n_args = 1;
       break;
-    case PERFMON_RECORD_PC:
+    case perfmon::kRecordTypePc:
       args[1] = {trace_make_arg(
           aspace_name_ref_, trace_make_uint64_arg_value(record.pc->aspace))};
       args[2] = {trace_make_arg(pc_name_ref_,
@@ -333,18 +333,18 @@ void Importer::EmitSampleRecord(trace_cpu_number_t cpu,
 #endif
 }
 
-void Importer::EmitLastBranchRecord(trace_cpu_number_t cpu,
-                                    const perfmon_ioctl_config_t& config,
-                                    const perfmon::SampleRecord& record,
-                                    trace_ticks_t time) {
+void Importer::EmitLastBranchRecordBlob(trace_cpu_number_t cpu,
+                                        const perfmon_ioctl_config_t& config,
+                                        const perfmon::SampleRecord& record,
+                                        trace_ticks_t time) {
   // Use the cpu's name as the blob's name.
   auto cpu_name_ref{GetCpuNameRef(cpu)};
   uint16_t num_branches = record.last_branch->num_branches;
-  size_t size = perfmon::LastBranchRecordSize(num_branches);
+  size_t size = perfmon::LastBranchRecordBlobSize(num_branches);
   void* ptr = trace_context_begin_write_blob_record(
       context_, TRACE_BLOB_TYPE_LAST_BRANCH, &cpu_name_ref, size);
   if (ptr) {
-    auto rec = reinterpret_cast<perfmon::LastBranchRecord*>(ptr);
+    auto rec = reinterpret_cast<perfmon::LastBranchRecordBlob*>(ptr);
     rec->cpu = cpu;
     rec->num_branches = record.last_branch->num_branches;
     rec->reserved = 0;

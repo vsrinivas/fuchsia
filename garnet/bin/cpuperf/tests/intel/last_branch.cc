@@ -31,22 +31,22 @@ class LastBranchVerifier : public Verifier {
     if (record.header->event == instructions_retired_id_) {
       ++instructions_retired_count_;
     }
-    if (record.type() == PERFMON_RECORD_LAST_BRANCH) {
+    if (record.type() == perfmon::kRecordTypeLastBranch) {
       ++last_branch_record_count_;
       if (record.header->event != instructions_retired_id_) {
         FXL_LOG(ERROR) << "Last branch record has wrong event id: "
                        << record.header->event;
         return false;
       }
-      const perfmon_last_branch_record_t* lbr = record.last_branch;
-      uint64_t valid_info_mask = (PERFMON_LAST_BRANCH_INFO_CYCLES_MASK |
-                                  PERFMON_LAST_BRANCH_INFO_MISPRED_MASK);
+      const perfmon::LastBranchRecord* lbr = record.last_branch;
+      uint64_t valid_info_mask = (perfmon::kLastBranchInfoCyclesMask |
+                                  perfmon::kLastBranchInfoMispredMask);
       for (size_t i = 0; i < lbr->num_branches; ++i) {
         if (lbr->aspace == 0) {
           FXL_LOG(ERROR) << "Last branch record has zero aspace";
           return false;
         }
-        if (lbr->num_branches > PERFMON_MAX_NUM_LAST_BRANCH) {
+        if (lbr->num_branches > perfmon::LastBranchRecord::kMaxNumLastBranch) {
           FXL_LOG(ERROR) << "Last branch record has too many branches";
           return false;
         }

@@ -26,7 +26,7 @@ void Config::Reset() {
 
 Config::Status Config::AddEvent(
     EventId event, EventRate rate, uint32_t flags) {
-  if (events_.size() == PERFMON_MAX_EVENTS) {
+  if (events_.size() == kMaxNumEvents) {
     return Status::MAX_EVENTS;
   }
   if (rate == 0 && (flags & Config::kNonZeroRateOnlyFlags) != 0) {
@@ -98,7 +98,7 @@ namespace internal {
 Config::Status PerfmonToIoctlConfig(const Config& config,
                                     perfmon_ioctl_config_t* out_config) {
   *out_config = {};
-  FXL_DCHECK(config.GetEventCount() <= PERFMON_MAX_EVENTS);
+  FXL_DCHECK(config.GetEventCount() <= kMaxNumEvents);
 
   // There can be only one timebase event.
   bool have_timebase_event = false;

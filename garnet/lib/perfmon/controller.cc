@@ -35,9 +35,9 @@ static uint32_t GetBufferSizeInPages(CollectionMode mode,
   case CollectionMode::kTally: {
     // For tally mode we just need something large enough to hold
     // the header + records for each event.
-    unsigned num_events = PERFMON_MAX_EVENTS;
-    uint32_t size = (sizeof(perfmon_buffer_header_t) +
-                     num_events * sizeof(perfmon_value_record_t));
+    unsigned num_events = kMaxNumEvents;
+    uint32_t size = (sizeof(BufferHeader) +
+                     num_events * sizeof(ValueRecord));
     return RoundUpToPages(size);
   }
   default:

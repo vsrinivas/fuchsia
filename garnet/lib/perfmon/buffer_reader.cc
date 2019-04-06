@@ -16,7 +16,7 @@ namespace perfmon {
 ReaderStatus BufferReader::Create(const std::string& name, const void* buffer,
                                   size_t buffer_size,
                                   std::unique_ptr<BufferReader>* out_reader) {
-  auto header = reinterpret_cast<const perfmon_buffer_header_t*>(buffer);
+  auto header = reinterpret_cast<const BufferHeader*>(buffer);
   ReaderStatus status = AnalyzeHeader(header, buffer_size);
   if (status != ReaderStatus::kOk) {
     return status;
@@ -29,20 +29,20 @@ BufferReader::BufferReader(const std::string& name, const void* buffer,
                            size_t capture_end)
     : name_(name),
       buffer_(reinterpret_cast<const uint8_t*>(buffer)),
-      header_(reinterpret_cast<const perfmon_buffer_header_t*>(buffer)),
+      header_(reinterpret_cast<const BufferHeader*>(buffer)),
       next_record_(buffer_ + sizeof(*header_)),
       buffer_end_(buffer_ + capture_end),
       ticks_per_second_(header_->ticks_per_second) {
 }
 
-ReaderStatus BufferReader::AnalyzeHeader(const perfmon_buffer_header_t* header,
+ReaderStatus BufferReader::AnalyzeHeader(const BufferHeader* header,
                                          size_t buffer_size) {
   FXL_VLOG(2) << "Reading header, buffer version "
               << header->version << ", " << header->capture_end << " bytes";
 
   // TODO(dje): check magic
 
-  uint32_t expected_version = PERFMON_BUFFER_VERSION;
+  uint32_t expected_version = perfmon::kBufferVersion;
   if (header->version != expected_version) {
     FXL_LOG(ERROR) << "Unsupported buffer version, got " << header->version
                    << " instead of " << expected_version;
@@ -79,16 +79,16 @@ ReaderStatus BufferReader::ReadNextRecord(SampleRecord* record) {
     return set_status(ReaderStatus::kNoMoreRecords);
   }
 
-  const perfmon_record_header_t* hdr =
-    reinterpret_cast<const perfmon_record_header_t*>(next_record_);
+  const RecordHeader* hdr =
+    reinterpret_cast<const RecordHeader*>(next_record_);
   if (next_record_ + sizeof(*hdr) > buffer_end_) {
     FXL_LOG(ERROR) << name_ << ": Bad trace data"
                    << ", no space for final record header";
     return set_status(ReaderStatus::kRecordError);
   }
 
-  auto record_type = RecordType(hdr);
-  auto record_size = RecordSize(hdr);
+  auto record_type = GetRecordType(hdr);
+  auto record_size = GetRecordSize(hdr);
   if (record_size == 0) {
     FXL_LOG(ERROR) << name_ << ": Bad trace data, bad record type: "
                    << static_cast<unsigned>(hdr->type);
@@ -106,29 +106,29 @@ ReaderStatus BufferReader::ReadNextRecord(SampleRecord* record) {
   FXL_VLOG(10) << "ReadNextRecord: offset=" << (next_record_ - buffer_);
 
   switch (record_type) {
-  case PERFMON_RECORD_TIME:
+  case kRecordTypeTime:
     record->time =
-      reinterpret_cast<const perfmon_time_record_t*>(next_record_);
+      reinterpret_cast<const TimeRecord*>(next_record_);
     time_ = record->time->time;
     break;
-  case PERFMON_RECORD_TICK:
+  case kRecordTypeTick:
     record->tick =
-      reinterpret_cast<const perfmon_tick_record_t*>(next_record_);
+      reinterpret_cast<const TickRecord*>(next_record_);
     break;
-  case PERFMON_RECORD_COUNT:
+  case kRecordTypeCount:
     record->count =
-      reinterpret_cast<const perfmon_count_record_t*>(next_record_);
+      reinterpret_cast<const CountRecord*>(next_record_);
     break;
-  case PERFMON_RECORD_VALUE:
+  case kRecordTypeValue:
     record->value =
-      reinterpret_cast<const perfmon_value_record_t*>(next_record_);
+      reinterpret_cast<const ValueRecord*>(next_record_);
     break;
-  case PERFMON_RECORD_PC:
-    record->pc = reinterpret_cast<const perfmon_pc_record_t*>(next_record_);
+  case kRecordTypePc:
+    record->pc = reinterpret_cast<const PcRecord*>(next_record_);
     break;
-  case PERFMON_RECORD_LAST_BRANCH:
+  case kRecordTypeLastBranch:
     record->last_branch =
-      reinterpret_cast<const perfmon_last_branch_record_t*>(next_record_);
+      reinterpret_cast<const LastBranchRecord*>(next_record_);
     break;
   default:
     // We shouldn't get here because RecordSize() should have returned

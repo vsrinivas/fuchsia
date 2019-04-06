@@ -31,7 +31,7 @@ class ChromiumExporter {
   void Start();
   void Stop();
   void ExportEvent(const trace::Record::Event& event);
-  void ExportLastBranchBlob(const perfmon::LastBranchRecord& lbr);
+  void ExportLastBranchBlob(const perfmon::LastBranchRecordBlob& lbr);
   void ExportKernelObject(const trace::Record::KernelObject& kernel_object);
   void ExportLog(const trace::Record::Log& log);
   void ExportMetadata(const trace::Record::Metadata& metadata);
@@ -61,7 +61,7 @@ class ChromiumExporter {
   // The chromium/catapult trace file format doesn't support random blobs,
   // so we can't emit them inline. Save them for later emission.
   // LastBranch records will go to the lastBranch section.
-  std::vector<perfmon::LastBranchRecord> last_branch_records_;
+  std::vector<perfmon::LastBranchRecordBlob> last_branch_records_;
 };
 
 }  // namespace tracing

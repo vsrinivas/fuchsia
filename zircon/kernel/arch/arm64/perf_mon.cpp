@@ -198,7 +198,7 @@ static void arm64_perfmon_clear_overflow_indicators() {
 size_t get_max_space_needed_for_all_records(PerfmonState* state) {
     size_t num_events = (state->num_used_programmable +
                          state->num_used_fixed);
-    return (sizeof(perfmon_time_record_t) +
+    return (sizeof(perfmon::TimeRecord) +
             num_events * kMaxEventRecordSize);
 }
 
@@ -259,9 +259,9 @@ zx_status_t arch_perfmon_assign_buffer(uint32_t cpu, fbl::RefPtr<VmObject> vmo) 
     }
 
     // A simple safe approximation of the minimum size needed.
-    size_t min_size_needed = sizeof(perfmon_buffer_header_t);
-    min_size_needed += sizeof(perfmon_time_record_t);
-    min_size_needed += PERFMON_MAX_EVENTS * kMaxEventRecordSize;
+    size_t min_size_needed = sizeof(perfmon::BufferHeader);
+    min_size_needed += sizeof(perfmon::TimeRecord);
+    min_size_needed += perfmon::kMaxNumEvents * kMaxEventRecordSize;
     if (vmo->size() < min_size_needed) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -559,19 +559,19 @@ static zx_status_t arm64_perfmon_map_buffers_locked(PerfmonState* state) {
             data->buffer_mapping.reset();
             break;
         }
-        data->buffer_start = reinterpret_cast<perfmon_buffer_header_t*>(
+        data->buffer_start = reinterpret_cast<perfmon::BufferHeader*>(
             data->buffer_mapping->base() + vmo_offset);
         data->buffer_end = reinterpret_cast<char*>(data->buffer_start) + size;
         LTRACEF("buffer mapped: cpu %u, start %p, end %p\n",
                 cpu, data->buffer_start, data->buffer_end);
 
         auto hdr = data->buffer_start;
-        hdr->version = PERFMON_BUFFER_VERSION;
-        hdr->arch = PERFMON_BUFFER_ARCH_ARM64;
+        hdr->version = perfmon::kBufferVersion;
+        hdr->arch = perfmon::kArchArm64;
         hdr->flags = 0;
         hdr->ticks_per_second = ticks_per_second();
         hdr->capture_end = sizeof(*hdr);
-        data->buffer_next = reinterpret_cast<perfmon_record_header_t*>(
+        data->buffer_next = reinterpret_cast<perfmon::RecordHeader*>(
             reinterpret_cast<char*>(data->buffer_start) + hdr->capture_end);
     }
 
@@ -669,7 +669,7 @@ zx_status_t arch_perfmon_start() {
 // This is invoked via mp_sync_exec which thread safety analysis cannot follow.
 static void arm64_perfmon_write_last_records(PerfmonState* state, uint32_t cpu) TA_NO_THREAD_SAFETY_ANALYSIS {
     PerfmonCpuData* data = &state->cpu_data[cpu];
-    perfmon_record_header_t* next = data->buffer_next;
+    perfmon::RecordHeader* next = data->buffer_next;
 
     zx_ticks_t now = current_ticks();
     next = arch_perfmon_write_time_record(next, perfmon::kEventIdNone, now);
@@ -721,14 +721,14 @@ static void arm64_perfmon_finalize_buffer(PerfmonState* state, uint32_t cpu) TA_
     TRACEF("Collecting last data for cpu %u\n", cpu);
 
     PerfmonCpuData* data = &state->cpu_data[cpu];
-    perfmon_buffer_header_t* hdr = data->buffer_start;
+    perfmon::BufferHeader* hdr = data->buffer_start;
 
     // KISS. There may be enough space to write some of what we want to write
     // here, but don't try. Just use the same simple check that
     // |pmi_interrupt_handler()| does.
     size_t space_needed = get_max_space_needed_for_all_records(state);
     if (reinterpret_cast<char*>(data->buffer_next) + space_needed > data->buffer_end) {
-        hdr->flags |= PERFMON_BUFFER_FLAG_FULL;
+        hdr->flags |= perfmon::BufferHeader::kBufferFlagFull;
         LTRACEF("Buffer overflow on cpu %u\n", cpu);
     } else {
         arm64_perfmon_write_last_records(state, cpu);
@@ -857,7 +857,7 @@ static bool pmi_interrupt_handler(const iframe_short_t *frame, PerfmonState* sta
     size_t space_needed = get_max_space_needed_for_all_records(state);
     if (reinterpret_cast<char*>(data->buffer_next) + space_needed > data->buffer_end) {
         TRACEF("cpu %u: @%lu pmi buffer full\n", cpu, now);
-        data->buffer_start->flags |= PERFMON_BUFFER_FLAG_FULL;
+        data->buffer_start->flags |= perfmon::BufferHeader::kBufferFlagFull;
         return false;
     }
 

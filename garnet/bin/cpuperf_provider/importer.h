@@ -88,12 +88,12 @@ class Importer {
     using Key = uint32_t;
     struct Data {
       trace_ticks_t time = 0;
-      // false -> count (PERFMON_RECORD_COUNT),
-      // true -> value (PERFMON_RECORD_VALUE).
+      // false -> count (perfmon::kRecordTypeCount),
+      // true -> value (perfmon::kRecordTypeValue).
       bool is_value;
       // This is either a count or a value.
       // Records for any particular event should only be using one
-      // of PERFMON_RECORD_{COUNT,VALUE}.
+      // of |perfmon::kRecordType{Count,Value}|.
       uint64_t count_or_value = 0;
     };
     using EventData = std::unordered_map<Key, Data>;
@@ -125,10 +125,10 @@ class Importer {
                         trace_ticks_t start_time, trace_ticks_t end_time,
                         uint64_t ticks_per_second, uint64_t value);
 
-  void EmitLastBranchRecord(trace_cpu_number_t cpu,
-                            const perfmon_ioctl_config_t& config,
-                            const perfmon::SampleRecord& record,
-                            trace_ticks_t time);
+  void EmitLastBranchRecordBlob(trace_cpu_number_t cpu,
+                                const perfmon_ioctl_config_t& config,
+                                const perfmon::SampleRecord& record,
+                                trace_ticks_t time);
 
   void EmitTallyCounts(const perfmon_ioctl_config_t& config,
                        const EventTracker* event_data);

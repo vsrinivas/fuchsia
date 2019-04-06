@@ -128,9 +128,9 @@ zx_status_t PerfmonDevice::PmuGetProperties(void* reply, size_t replymax,
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
-    props.api_version = PERFMON_API_VERSION;
+    props.api_version = kApiVersion;
     props.pm_version = pmu_hw_properties_.pm_version;
-    props.max_num_events = PERFMON_MAX_EVENTS;
+    props.max_num_events = perfmon::kMaxNumEvents;
 
     // These numbers are for informational/debug purposes. There can be
     // further restrictions and limitations.

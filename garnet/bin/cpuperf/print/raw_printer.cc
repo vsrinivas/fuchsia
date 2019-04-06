@@ -133,22 +133,22 @@ uint64_t RawPrinter::PrintOneTrace(uint32_t iter_num) {
     Printf("%04zx: ", reader->GetLastRecordOffset());
 
     switch (record.type()) {
-    case PERFMON_RECORD_TIME:
+    case perfmon::kRecordTypeTime:
       PrintTimeRecord(record);
       break;
-    case PERFMON_RECORD_TICK:
+    case perfmon::kRecordTypeTick:
       PrintTickRecord(record);
       break;
-    case PERFMON_RECORD_COUNT:
+    case perfmon::kRecordTypeCount:
       PrintCountRecord(record);
       break;
-    case PERFMON_RECORD_VALUE:
+    case perfmon::kRecordTypeValue:
       PrintValueRecord(record);
       break;
-    case PERFMON_RECORD_PC:
+    case perfmon::kRecordTypePc:
       PrintPcRecord(record);
       break;
-    case PERFMON_RECORD_LAST_BRANCH:
+    case perfmon::kRecordTypeLastBranch:
       PrintLastBranchRecord(record);
       break;
     default:

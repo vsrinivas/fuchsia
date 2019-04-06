@@ -53,22 +53,22 @@ bool Verifier::VerifyIteration(uint32_t iter) {
     }
 
     switch (record.type()) {
-    case PERFMON_RECORD_TIME:
+    case perfmon::kRecordTypeTime:
       ++counts.time_records;
       break;
-    case PERFMON_RECORD_TICK:
+    case perfmon::kRecordTypeTick:
       ++counts.tick_records;
       break;
-    case PERFMON_RECORD_COUNT:
+    case perfmon::kRecordTypeCount:
       ++counts.count_records;
       break;
-    case PERFMON_RECORD_VALUE:
+    case perfmon::kRecordTypeValue:
       ++counts.value_records;
       break;
-    case PERFMON_RECORD_PC:
+    case perfmon::kRecordTypePc:
       ++counts.pc_records;
       break;
-    case PERFMON_RECORD_LAST_BRANCH:
+    case perfmon::kRecordTypeLastBranch:
       ++counts.last_branch_records;
       break;
     default:

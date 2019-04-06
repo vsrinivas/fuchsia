@@ -112,7 +112,7 @@ template <typename T>
 bool DecodeEvents(T events,
                   const perfmon::ModelEventManager* model_event_manager,
                   SessionSpec* out_spec) {
-  FXL_DCHECK(events.Size() < PERFMON_MAX_EVENTS);
+  FXL_DCHECK(events.Size() < perfmon::kMaxNumEvents);
 
   FXL_VLOG(1) << "Processing " << events.Size() << " events";
 
@@ -227,8 +227,8 @@ bool DecodeSessionSpec(const std::string& json, SessionSpec* out_spec) {
       FXL_LOG(ERROR) << "Need at least one event";
       return false;
     }
-    if (events.Size() > PERFMON_MAX_EVENTS) {
-      FXL_LOG(ERROR) << "Too many events, max " << PERFMON_MAX_EVENTS;
+    if (events.Size() > perfmon::kMaxNumEvents) {
+      FXL_LOG(ERROR) << "Too many events, max " << perfmon::kMaxNumEvents;
       return false;
     }
     if (!DecodeEvents(events, model_event_manager.get(), &result)) {

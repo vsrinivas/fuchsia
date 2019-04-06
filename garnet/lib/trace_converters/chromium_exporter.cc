@@ -164,7 +164,7 @@ void ChromiumExporter::ExportRecord(const trace::Record& record) {
       const auto& blob = record.GetBlob();
       if (blob.type == TRACE_BLOB_TYPE_LAST_BRANCH) {
         auto lbr =
-            reinterpret_cast<const perfmon::LastBranchRecord*>(blob.blob);
+            reinterpret_cast<const perfmon::LastBranchRecordBlob*>(blob.blob);
         last_branch_records_.push_back(*lbr);
       }
       break;
@@ -389,7 +389,7 @@ void ChromiumExporter::ExportKernelObject(
 }
 
 void ChromiumExporter::ExportLastBranchBlob(
-    const perfmon::LastBranchRecord& lbr) {
+    const perfmon::LastBranchRecordBlob& lbr) {
   writer_.StartObject();
   writer_.Key("cpu");
   writer_.Uint(lbr.cpu);

@@ -191,10 +191,10 @@ void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
     }
 
     switch (record.type()) {
-    case PERFMON_RECORD_COUNT:
+    case perfmon::kRecordTypeCount:
       results[current_trace][id] = EventResult{record.count->count};
       break;
-    case PERFMON_RECORD_VALUE:
+    case perfmon::kRecordTypeValue:
       results[current_trace][id] = EventResult{record.value->value};
       break;
     default:
