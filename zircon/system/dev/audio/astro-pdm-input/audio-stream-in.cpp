@@ -178,6 +178,10 @@ zx_status_t AstroAudioStreamIn::InitPost() {
     return notify_timer_->Activate(domain_, std::move(thandler));
 }
 
+void AstroAudioStreamIn::ShutdownHook(){
+    Stop();
+}
+
 zx_status_t AstroAudioStreamIn::Stop() {
     notify_timer_->Cancel();
     us_per_notification_ = 0;

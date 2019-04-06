@@ -227,6 +227,7 @@ zx_status_t AmlPdmDevice::SetBuffer(zx_paddr_t buf, size_t len) {
 
 // Stops the pdm from clocking
 void AmlPdmDevice::PdmInDisable() {
+    audio_mmio_.ClearBits32(1 << 31, EE_AUDIO_CLK_PDMIN_CTRL0);
     pdm_mmio_.ClearBits32((1 << 31) | (1 << 16), PDM_CTRL);
 }
 
