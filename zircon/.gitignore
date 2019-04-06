@@ -30,7 +30,6 @@ json_generator_tests_*.txt
 /prebuilt/config.mk.bak
 /AnalysisResult/
 /public/banjo/
-/public/config/
 /public/fidl/
 /public/lib/
 /public/sysroot/

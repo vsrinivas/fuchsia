@@ -457,14 +457,6 @@ def generate_banjo_library(package, context):
     generate_build_file(build_path, 'banjo.mako', data, context)
 
 
-def generate_board_list(package, context):
-    '''Generates a configuration file with the list of target boards.'''
-    build_path = os.path.join(context.out_dir, 'config', 'boards.gni')
-    generate_build_file(build_path, 'boards.mako', package, context)
-    build_path = os.path.join(context.out_dir, 'config', 'BUILD.gn')
-    generate_build_file(build_path, 'main.mako', package, context)
-
-
 class GenerationContext(object):
     '''Describes the context in which GN rules should be generated.'''
 
@@ -492,7 +484,6 @@ def main():
     args = parser.parse_args()
 
     out_dir = os.path.abspath(args.out)
-    shutil.rmtree(os.path.join(out_dir, 'config'), True)
     shutil.rmtree(os.path.join(out_dir, 'fidl'), True)
     shutil.rmtree(os.path.join(out_dir, 'banjo'), True)
     shutil.rmtree(os.path.join(out_dir, 'lib'), True)
@@ -550,15 +541,6 @@ def main():
             continue
         if debug:
             print('Processed %s (%s)' % (name, type))
-
-    board_file_lines = []
-    for cpu in ['arm64', 'x64']:
-        board_path = os.path.join(args.zircon_build, 'export',
-                                  'boards-%s.list' % cpu)
-        with open(board_path, 'r') as board_file:
-            board_file_lines += [ '[%s]' % cpu ] + board_file.readlines()
-    package = parse_package(board_file_lines)
-    generate_board_list(package, context)
 
 
 if __name__ == '__main__':

@@ -43,10 +43,4 @@ driver("vim") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
   ]
-
-  # TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
-  # GN build.
-  metadata = {
-    legacy_pkg_boards = [ "vim2" ]
-  }
 }

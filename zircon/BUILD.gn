@@ -185,17 +185,6 @@ if (current_toolchain == default_toolchain) {
       ]
     }
 
-    generated_file("boards-$cpu.list") {
-      testonly = true
-      outputs = [
-        "$root_build_dir/export/$target_name",
-      ]
-      data_keys = [ "legacy_pkg_boards" ]
-      deps = [
-        ":$cpu",
-      ]
-    }
-
     # This lists just the one file to link against to get fdio.
     build_api_module("legacy-fdio-$cpu") {
       data_keys = [ "link_output" ]

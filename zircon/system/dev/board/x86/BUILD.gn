@@ -82,10 +82,4 @@ driver("platform-bus-x86") {
     "$zx/third_party/lib/acpica",
     "$zx/third_party/ulib/chromiumos-platform-ec",
   ]
-
-  # TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
-  # GN build.
-  metadata = {
-    legacy_pkg_boards = [ "pc" ]
-  }
 }

@@ -38,10 +38,8 @@ zircon_files =
     exec_script("//build/zircon/list_source_files.py", [], "list lines")
 
 supporting_templates = [
-  "//build/zircon/boards.mako",
   "//build/zircon/header.mako",
   "//build/zircon/host_tool.mako",
-  "//build/zircon/main.mako",
   "//build/zircon/shared_library.mako",
   "//build/zircon/source_library.mako",
   "//build/zircon/static_library.mako",

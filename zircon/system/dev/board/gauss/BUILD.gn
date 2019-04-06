@@ -29,12 +29,6 @@ driver("gauss") {
   data_deps = [
     ":gauss-i2c-test",
   ]
-
-  # TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
-  # GN build.
-  metadata = {
-    legacy_pkg_boards = [ target_name ]
-  }
 }
 
 driver("gauss-i2c-test") {
