@@ -56,6 +56,9 @@ public:
     zx_status_t PBusRegisterProtocol(uint32_t proto_id, const void* protocol, size_t protocol_size);
     zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info);
     zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info);
+    zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
+                                       const device_component_t* components_list,
+                                       size_t components_count);
 
     zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin);
 

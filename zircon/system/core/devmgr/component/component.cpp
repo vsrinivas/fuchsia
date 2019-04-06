@@ -20,6 +20,7 @@ Component::Component(zx_device_t* parent)
     device_get_protocol(parent, ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
     device_get_protocol(parent, ZX_PROTOCOL_CLOCK, &clock_);
     device_get_protocol(parent, ZX_PROTOCOL_GPIO, &gpio_);
+    device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
     device_get_protocol(parent, ZX_PROTOCOL_POWER, &power_);
     device_get_protocol(parent, ZX_PROTOCOL_SYSMEM, &sysmem_);
 }
@@ -139,6 +140,64 @@ zx_status_t Component::RpcGpio(const uint8_t* req_buf, uint32_t req_size, uint8_
     }
 }
 
+zx_status_t Component::RpcPdev(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
+                               uint32_t* out_resp_size, const zx_handle_t* req_handles,
+                               uint32_t req_handle_count, zx_handle_t* resp_handles,
+                               uint32_t* resp_handle_count) {
+    if (pdev_.ops == nullptr) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    auto* req = reinterpret_cast<const PdevProxyRequest*>(req_buf);
+    if (req_size < sizeof(*req)) {
+        zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
+        return ZX_ERR_INTERNAL;
+    }
+    auto* resp = reinterpret_cast<PdevProxyResponse*>(resp_buf);
+    *out_resp_size = sizeof(*resp);
+
+    switch (req->op) {
+    case PdevOp::GET_MMIO: {
+        pdev_mmio_t mmio;
+        auto status = pdev_get_mmio(&pdev_, req->index, &mmio);
+        if (status == ZX_OK) {
+            resp->offset = mmio.offset;
+            resp->size = mmio.size;
+            resp_handles[0] = mmio.vmo;
+            *resp_handle_count = 1;
+        }
+        return status;
+    }
+    case PdevOp::GET_INTERRUPT: {
+        auto status = pdev_get_interrupt(&pdev_, req->index, req->flags, &resp_handles[0]);
+        if (status == ZX_OK) {
+            *resp_handle_count = 1;
+        }
+        return status;
+    }
+    case PdevOp::GET_BTI: {
+        auto status = pdev_get_bti(&pdev_, req->index, &resp_handles[0]);
+        if (status == ZX_OK) {
+            *resp_handle_count = 1;
+        }
+        return status;
+    }
+    case PdevOp::GET_SMC: {
+        auto status = pdev_get_smc(&pdev_, req->index, &resp_handles[0]);
+        if (status == ZX_OK) {
+            *resp_handle_count = 1;
+        }
+        return status;
+    }
+    case PdevOp::GET_DEVICE_INFO:
+        return pdev_get_device_info(&pdev_, &resp->device_info);
+    case PdevOp::GET_BOARD_INFO:
+        return pdev_get_board_info(&pdev_, &resp->board_info);
+    default:
+        zxlogf(ERROR, "%s: unknown pdev op %u\n", __func__, static_cast<uint32_t>(req->op));
+        return ZX_ERR_INTERNAL;
+    }
+}
+
 zx_status_t Component::RpcPower(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                                 uint32_t* out_resp_size, const zx_handle_t* req_handles,
                                 uint32_t req_handle_count, zx_handle_t* resp_handles,
@@ -233,6 +292,10 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
         break;
     case ZX_PROTOCOL_GPIO:
         status = RpcGpio(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
+                         resp_handles, &resp_handle_count);
+        break;
+    case ZX_PROTOCOL_PDEV:
+        status = RpcPdev(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                          resp_handles, &resp_handle_count);
         break;
     case ZX_PROTOCOL_POWER:

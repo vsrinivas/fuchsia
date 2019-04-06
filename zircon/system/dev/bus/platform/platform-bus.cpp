@@ -26,6 +26,7 @@
 #include <zircon/syscalls/iommu.h>
 
 #include "cpu-trace.h"
+#include "platform-composite-device.h"
 
 namespace platform_bus {
 
@@ -170,6 +171,57 @@ zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
 zx_status_t PlatformBus::PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin) {
     suspend_cb_ = *suspend_cbin;
     return ZX_OK;
+}
+
+zx_status_t PlatformBus::PBusCompositeDeviceAdd(const pbus_dev_t* pdev,
+                                                const device_component_t* components_list,
+                                                size_t components_count) {
+    if (!pdev || !pdev->name) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fbl::unique_ptr<platform_bus::CompositeDevice> dev;
+    auto status = CompositeDevice::Create(pdev, zxdev(), this, &dev);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    status = dev->Start();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // devmgr is now in charge of the device.
+    __UNUSED auto* dummy = dev.release();
+
+    device_component_t components[components_count + 1];
+    memcpy(&components[1], components_list, components_count * sizeof(components[1]));
+
+    constexpr zx_bind_inst_t root_match[] = {
+        BI_MATCH(),
+    };
+    const zx_bind_inst_t pdev_match[]  = {
+        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+        BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, pdev->vid),
+        BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, pdev->pid),
+        BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, pdev->did),
+    };
+    const device_component_part_t pdev_component[] = {
+        { countof(root_match), root_match },
+        { countof(pdev_match), pdev_match },
+    };
+
+    components[0].parts_count = fbl::count_of(pdev_component);
+    components[0].parts = pdev_component;
+
+    const zx_device_prop_t props[] = {
+        { BIND_PLATFORM_DEV_VID, 0, pdev->vid },
+        { BIND_PLATFORM_DEV_PID, 0, pdev->pid },
+        { BIND_PLATFORM_DEV_DID, 0, pdev->did },
+    };
+
+    return DdkAddComposite(pdev->name, props, fbl::count_of(props), components,
+                           components_count + 1, UINT32_MAX);
 }
 
 zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {

@@ -103,6 +103,10 @@ bool enumeration_test() {
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);
     EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
+                                   "sys/platform/11:01:6/component",
+                                   zx::deadline_after(zx::sec(5)), &fd),
+              ZX_OK);
+    EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(),
                                    "composite-dev/composite",
                                    zx::deadline_after(zx::sec(5)), &fd),
               ZX_OK);

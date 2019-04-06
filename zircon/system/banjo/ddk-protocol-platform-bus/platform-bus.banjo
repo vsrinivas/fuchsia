@@ -4,6 +4,7 @@
 
 library ddk.protocol.platform.bus;
 
+using ddk.driver;
 using ddk.protocol.platform.device;
 using zx;
 
@@ -118,8 +119,7 @@ protocol PBus {
     ProtocolDeviceAdd(uint32 proto_id, PbusDev dev) -> (zx.status s);
     /// Called by protocol implementation drivers to register their protocol
     /// with the platform bus.
-    RegisterProtocol(uint32 proto_id, vector<voidptr> protocol)
--> (zx.status s);
+    RegisterProtocol(uint32 proto_id, vector<voidptr> protocol) -> (zx.status s);
     /// Board drivers may use this to get information about the board, and to
     /// differentiate between multiple boards that they support.
     GetBoardInfo() -> (zx.status s, ddk.protocol.platform.device.PdevBoardInfo info);
@@ -128,4 +128,8 @@ protocol PBus {
     /// Platform device drivers can access this via `pdev_get_board_info()`.
     SetBoardInfo(PbusBoardInfo info) -> (zx.status s);
     RegisterSysSuspendCallback(PbusSysSuspend suspend_cb) -> (zx.status s);
+    /// Adds a composite platform device to the bus. The platform device specified by "dev"
+    /// is the first component and components contains the remaining components.
+    /// The composite device is started in a new devhost.
+    CompositeDeviceAdd(PbusDev dev, vector<ddk.driver.DeviceComponent> components) -> (zx.status s);
 };

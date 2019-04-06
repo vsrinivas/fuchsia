@@ -14,6 +14,7 @@ driver("platform-bus") {
     "cpu-trace.cpp",
     "device-resources.cpp",
     "platform-bus.cpp",
+    "platform-composite-device.cpp",
     "platform-device.cpp",
     "platform-i2c.cpp",
     "platform-protocol-device.cpp",

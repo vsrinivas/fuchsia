@@ -20,37 +20,8 @@ struct ZxDeviceProp {
 
 [repr = "C"]
 struct DeviceAddArgs {
-    /// DEVICE_ADD_ARGS_VERSION
-    uint64 version;
+};
 
-    /// Driver name is copied to internal structure
-    /// max length is ZX_DEVICE_NAME_MAX
-    string name;
-
-    /// Context pointer for use by the driver
-    /// and passed to driver in all zx_protocol_device_t callbacks
-    voidptr ctx;
-
-    /// Pointer to device's device protocol operations
-    ZxProtocolDevice? ops;
-
-    /// Optional list of device properties
-    ZxDeviceProp? props;
-
-    /// Number of device properties
-    uint32 prop_count;
-
-    /// Optional custom protocol for this device
-    uint32 proto_id;
-
-    /// Optional custom protocol operations for this device
-    voidptr proto_ops;
-
-    /// Arguments used with DEVICE_ADD_MUST_ISOLATE
-    /// these will be passed to the create() driver op of
-    /// the proxy device in the new devhost
-    string proxy_args;
-
-    /// One or more of DEVICE_ADD_*
-    uint32 flags;
+[repr = "C"]
+struct DeviceComponent {
 };

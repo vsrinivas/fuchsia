@@ -86,18 +86,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
     const zx_bind_inst_t root_match[] = {
         BI_MATCH(),
     };
-    const zx_bind_inst_t gpio_impl_match[]  = {
-        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-        BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-        BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-        BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_GPIO),
-    };
-    const zx_bind_inst_t clock_impl_match[]  = {
-        BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
-        BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
-        BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_PBUS_TEST),
-        BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_TEST_CLOCK),
-    };
     const zx_bind_inst_t gpio_match[] = {
         BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
         BI_MATCH_IF(EQ, BIND_GPIO_PIN, 3),
@@ -106,31 +94,28 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
         BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
         BI_MATCH_IF(EQ, BIND_CHILD_INDEX, 1),
     };
-    device_component_part_t composite1_1[] = {
+    device_component_part_t gpio_component[] = {
         { fbl::count_of(root_match), root_match },
-        { fbl::count_of(gpio_impl_match), gpio_impl_match },
         { fbl::count_of(gpio_match), gpio_match },
     };
-    device_component_part_t composite1_2[] = {
+    device_component_part_t clock_component[] = {
         { fbl::count_of(root_match), root_match },
-        { fbl::count_of(clock_impl_match), clock_impl_match },
         { fbl::count_of(clock_match), clock_match },
     };
-    device_component_t composite1[] = {
-        { fbl::count_of(composite1_1), composite1_1 },
-        { fbl::count_of(composite1_2), composite1_2 },
+    device_component_t composite[] = {
+        { fbl::count_of(gpio_component), gpio_component },
+        { fbl::count_of(clock_component), clock_component },
     };
-    zx_device_prop_t props[] = {
-        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TEST },
-        { BIND_PLATFORM_DEV_PID, 0, PDEV_PID_PBUS_TEST },
-        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TEST_COMPOSITE },
-    };
-    // UINT32_MAX forces composite device to run in new devhost.
-    // Do this to force testing the protocol proxying support in the devmgr component driver.
-    status = device_add_composite(parent, "composite-dev", props, fbl::count_of(props), composite1,
-                                  fbl::count_of(composite1), UINT32_MAX);
+
+    pbus_dev_t pdev = {};
+    pdev.name = "composite-dev";
+    pdev.vid = PDEV_VID_TEST;
+    pdev.pid = PDEV_PID_PBUS_TEST;
+    pdev.did = PDEV_DID_TEST_COMPOSITE;
+
+    status = pbus_composite_device_add(&pbus, &pdev, composite, fbl::count_of(composite));
     if (status != ZX_OK) {
-        zxlogf(ERROR, "TestBoard::Create: device_add_composite failed: %d\n", status);
+        zxlogf(ERROR, "TestBoard::Create: pbus_composite_device_add failed: %d\n", status);
     }
 
     return status;

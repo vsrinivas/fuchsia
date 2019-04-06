@@ -21,6 +21,41 @@ struct ProxyResponse {
     zx_status_t status;
 };
 
+// ZX_PROTOCOL_PDEV proxy support.
+enum class PdevOp {
+    GET_MMIO,
+    GET_INTERRUPT,
+    GET_BTI,
+    GET_SMC,
+    GET_DEVICE_INFO,
+    GET_BOARD_INFO,
+};
+
+struct PdevProxyRequest {
+    ProxyRequest header;
+    PdevOp op;
+    uint32_t index;
+    uint32_t flags;
+};
+
+struct PdevProxyResponse {
+    ProxyResponse header;
+    zx_off_t offset;
+    size_t size;
+    uint32_t flags;
+    pdev_device_info_t device_info;
+    pdev_board_info_t board_info;
+};
+
+// Maximum metadata size that can be returned via PDEV_DEVICE_GET_METADATA.
+static constexpr uint32_t PROXY_MAX_METADATA_SIZE =
+    (kProxyMaxTransferSize - sizeof(PdevProxyResponse));
+
+struct rpc_pdev_metadata_rsp_t {
+    PdevProxyResponse pdev;
+    uint8_t metadata[PROXY_MAX_METADATA_SIZE];
+};
+
 // ZX_PROTOCOL_GPIO proxy support.
 enum class GpioOp {
     CONFIG_IN,

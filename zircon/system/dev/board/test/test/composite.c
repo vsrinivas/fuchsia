@@ -12,11 +12,17 @@
 #include <ddk/protocol/clock.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/platform/device.h>
 #include <zircon/assert.h>
 
 #define DRIVER_NAME "test-composite"
 
-#define COMPONENT_COUNT 2
+enum {
+    COMPONENT_PDEV,
+    COMPONENT_GPIO,
+    COMPONENT_CLOCK,
+    COMPONENT_COUNT,
+};
 
 typedef struct {
     zx_device_t* zxdev;
@@ -96,15 +102,21 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
         return ZX_ERR_BAD_STATE;
     }
 
+    pdev_protocol_t pdev;
     gpio_protocol_t gpio;
     clock_protocol_t clock;
 
-    status = device_get_protocol(components[0], ZX_PROTOCOL_GPIO, &gpio);
+    status = device_get_protocol(components[COMPONENT_PDEV], ZX_PROTOCOL_PDEV, &pdev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PDEV\n", DRIVER_NAME);
+        return status;
+    }
+    status = device_get_protocol(components[COMPONENT_GPIO], ZX_PROTOCOL_GPIO, &gpio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_GPIO\n", DRIVER_NAME);
         return status;
     }
-    status = device_get_protocol(components[1], ZX_PROTOCOL_CLOCK, &clock);
+    status = device_get_protocol(components[COMPONENT_CLOCK], ZX_PROTOCOL_CLOCK, &clock);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_CLOCK\n", DRIVER_NAME);
         return status;

@@ -11,6 +11,7 @@
 #include <ddktl/protocol/amlogiccanvas.h>
 #include <ddktl/protocol/clock.h>
 #include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/sysmem.h>
 #include <lib/zx/channel.h>
@@ -26,6 +27,7 @@ class ComponentProxy : public ComponentProxyBase,
                        public ddk::AmlogicCanvasProtocol<ComponentProxy>,
                        public ddk::ClockProtocol<ComponentProxy>,
                        public ddk::GpioProtocol<ComponentProxy>,
+                       public ddk::PDevProtocol<ComponentProxy>,
                        public ddk::PowerProtocol<ComponentProxy>,
                        public ddk::SysmemProtocol<ComponentProxy> {
 public:
@@ -61,6 +63,16 @@ public:
     zx_status_t GpioGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
     zx_status_t GpioReleaseInterrupt();
     zx_status_t GpioSetPolarity(gpio_polarity_t polarity);
+    zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio);
+    zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq);
+    zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti);
+    zx_status_t PDevGetSmc(uint32_t index, zx::resource* out_smc);
+    zx_status_t PDevGetDeviceInfo(pdev_device_info_t* out_info);
+    zx_status_t PDevGetBoardInfo(pdev_board_info_t* out_info);
+    zx_status_t PDevDeviceAdd(uint32_t index, const device_add_args_t* args,
+                              zx_device_t** out_device);
+    zx_status_t PDevGetProtocol(uint32_t proto_id, uint32_t index, void* out_out_protocol_buffer,
+                                size_t out_protocol_size, size_t* out_out_protocol_actual);
     zx_status_t PowerEnablePowerDomain();
     zx_status_t PowerDisablePowerDomain();
     zx_status_t PowerGetPowerDomainStatus(power_domain_status_t* out_status);
