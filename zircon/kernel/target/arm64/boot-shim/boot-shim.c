@@ -79,12 +79,12 @@ static int node_callback(int depth, const char *name, void *cookie) {
 
     if (!strcmp(name, "chosen")) {
         ctx->node = NODE_CHOSEN;
-    } else if (!strcmp(name, "memory") || !strcmp(name, "memory@00000000")) {
+    } else if (!strcmp(name, "memory") || !strncmp(name, "memory@", 7)) {
         ctx->node = NODE_MEMORY;
     } else if (!strncmp(name, "cpu@", 4)) {
         ctx->node = NODE_CPU;
         ctx->cpu_count++;
-    } else if (!strcmp(name, "intc")) {
+    } else if (!strcmp(name, "intc") || !strncmp(name, "intc@", 5)) {
         ctx->node = NODE_INTC;
     } else {
         ctx->node = NODE_NONE;
