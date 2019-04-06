@@ -5,6 +5,7 @@
 #include "aml-mailbox.h"
 #include "aml-mailbox-hw.h"
 #include <ddk/binding.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <stdint.h>
@@ -89,24 +90,12 @@ zx_status_t AmlMailbox::MailboxSendCommand(const mailbox_channel_t* channel,
 }
 
 zx_status_t AmlMailbox::Bind() {
-
     zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
-        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_S912},
-        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_SCPI},
+        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC },
+        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_MAILBOX },
     };
 
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "aml-mailbox";
-    args.ctx = this;
-    args.ops = &ddk_device_proto_;
-    args.proto_id = ddk_proto_id_;
-    args.proto_ops = ddk_proto_ops_;
-    args.props = props;
-    args.prop_count = countof(props);
-
-    return pdev_.DeviceAdd(0, &args, &zxdev_);
+    return DdkAdd("aml-mailbox", 0, props, fbl::count_of(props));
 }
 
 zx_status_t AmlMailbox::InitPdev() {

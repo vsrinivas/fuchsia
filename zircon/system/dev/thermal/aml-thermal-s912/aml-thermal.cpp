@@ -7,6 +7,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/protocol/composite.h>
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-thermal.h>
@@ -19,39 +20,53 @@ namespace {
 // Worker-thread's internal loop deadline in seconds.
 constexpr int kDeadline = 5;
 
+enum {
+    COMPONENT_SCPI,
+    COMPONENT_GPIO_FAN_0,
+    COMPONENT_GPIO_FAN_1,
+    COMPONENT_COUNT,
+};
+
 } // namespace
 
 zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     zxlogf(INFO, "aml_thermal: driver begin...\n");
     zx_status_t status;
 
-    ddk::PDevProtocolClient pdev(device);
-    if (!pdev.is_valid()) {
-        THERMAL_ERROR("could not get platform device protocol\n");
-        return ZX_ERR_NO_RESOURCES;
+    ddk::CompositeProtocolClient composite(device);
+    if (!composite.is_valid()) {
+        THERMAL_ERROR("could not get composite protocol\n");
+        return ZX_ERR_NOT_SUPPORTED;
     }
 
+    zx_device_t* components[COMPONENT_COUNT];
     size_t actual;
+    composite.GetComponents(components, COMPONENT_COUNT, &actual);
+    if (actual != COMPONENT_COUNT) {
+        THERMAL_ERROR("could not get components\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    scpi_protocol_t scpi_proto;
+    status = device_get_protocol(components[COMPONENT_SCPI], ZX_PROTOCOL_SCPI, &scpi_proto);
+    if (status != ZX_OK) {
+        THERMAL_ERROR("could not get scpi protocol: %d\n", status);
+        return status;
+    }
+
     gpio_protocol_t fan0_gpio_proto;
-    status = pdev.GetProtocol(ZX_PROTOCOL_GPIO, FAN_CTL0, &fan0_gpio_proto, sizeof(fan0_gpio_proto),
-                              &actual);
+    status = device_get_protocol(components[COMPONENT_GPIO_FAN_0], ZX_PROTOCOL_GPIO,
+                                 &fan0_gpio_proto);
     if (status != ZX_OK) {
         THERMAL_ERROR("could not get fan0 gpio protocol: %d\n", status);
         return status;
     }
 
     gpio_protocol_t fan1_gpio_proto;
-    status = pdev.GetProtocol(ZX_PROTOCOL_GPIO, FAN_CTL1, &fan1_gpio_proto, sizeof(fan1_gpio_proto),
-                              &actual);
+    status = device_get_protocol(components[COMPONENT_GPIO_FAN_1], ZX_PROTOCOL_GPIO,
+                                 &fan1_gpio_proto);
     if (status != ZX_OK) {
         THERMAL_ERROR("could not get fan1 gpio protocol: %d\n", status);
-        return status;
-    }
-
-    scpi_protocol_t scpi_proto;
-    status = pdev.GetProtocol(ZX_PROTOCOL_SCPI, 0, &scpi_proto, sizeof(scpi_proto), &actual);
-    if (status != ZX_OK) {
-        THERMAL_ERROR("could not get scpi protocol: %d\n", status);
         return status;
     }
 
@@ -70,8 +85,8 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
         return status;
     }
 
-    auto thermal = fbl::make_unique<AmlThermal>(device, pdev, fan0_gpio_proto,
-                                                fan1_gpio_proto, scpi_proto, sensor_id, port);
+    auto thermal = fbl::make_unique<AmlThermal>(device, fan0_gpio_proto, fan1_gpio_proto,
+                                                scpi_proto, sensor_id, port);
 
     status = thermal->DdkAdd("vim-thermal", DEVICE_ADD_INVISIBLE);
     if (status != ZX_OK) {
@@ -80,7 +95,7 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
     }
 
     // Perform post-construction initialization before device is made visible.
-    status = thermal->Init();
+    status = thermal->Init(components[COMPONENT_SCPI]);
     if (status != ZX_OK) {
         THERMAL_ERROR("could not initialize thermal driver: %d\n", status);
         thermal->DdkRemove();
@@ -196,7 +211,7 @@ void AmlThermal::DdkUnbind() {
     sync_completion_signal(&quit_);
 }
 
-zx_status_t AmlThermal::Init() {
+zx_status_t AmlThermal::Init(zx_device_t* dev) {
     auto status = fan0_gpio_.ConfigOut(0);
     if (status != ZX_OK) {
         THERMAL_ERROR("could not configure FAN_CTL0 gpio: %d\n", status);
@@ -210,8 +225,8 @@ zx_status_t AmlThermal::Init() {
     }
 
     size_t read;
-    status = DdkGetMetadata(DEVICE_METADATA_PRIVATE, &info_,
-                            sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo), &read);
+    status = device_get_metadata(dev, DEVICE_METADATA_THERMAL_CONFIG, &info_,
+                                 sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo), &read);
     if (status != ZX_OK) {
         THERMAL_ERROR("could not read device metadata: %d\n", status);
         return status;
@@ -360,17 +375,16 @@ int AmlThermal::Worker() {
     return ZX_OK;
 }
 
-} // namespace thermal
-
-static zx_driver_ops_t aml_thermal_driver_ops = []() {
+static zx_driver_ops_t driver_ops = []() {
     zx_driver_ops_t ops;
     ops.version = DRIVER_OPS_VERSION;
-    ops.bind = thermal::AmlThermal::Create;
+    ops.bind = AmlThermal::Create;
     return ops;
 }();
 
-ZIRCON_DRIVER_BEGIN(aml_thermal, aml_thermal_driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SCPI),
+} // namespace thermal
+
+ZIRCON_DRIVER_BEGIN(aml_thermal, thermal::driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_THERMAL),

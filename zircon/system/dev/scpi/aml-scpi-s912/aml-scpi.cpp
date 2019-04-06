@@ -9,6 +9,7 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/mailbox.h>
 #include <ddk/protocol/platform/device.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <stdint.h>
@@ -257,22 +258,11 @@ void AmlSCPI::DdkRelease() {
 
 zx_status_t AmlSCPI::Bind() {
     zx_device_prop_t props[] = {
-        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
-        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_S912},
-        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_THERMAL},
+        { BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC },
+        { BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_SCPI },
     };
 
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "aml-scpi";
-    args.ctx = this;
-    args.ops = &ddk_device_proto_;
-    args.proto_id = ddk_proto_id_;
-    args.proto_ops = ddk_proto_ops_;
-    args.props = props;
-    args.prop_count = countof(props);
-
-    return pdev_.DeviceAdd(0, &args, &zxdev_);
+    return DdkAdd("aml-scpi", 0, props, fbl::count_of(props));
 }
 
 zx_status_t AmlSCPI::Create(zx_device_t* parent) {
@@ -319,9 +309,7 @@ static zx_driver_ops_t driver_ops = []() {
 } // namespace scpi
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(aml_scpi, scpi::driver_ops, "zircon", "0.1", 4)
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_MAILBOX),
+ZIRCON_DRIVER_BEGIN(aml_scpi, scpi::driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_AMLOGIC_S912),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_SCPI),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_MAILBOX),
 ZIRCON_DRIVER_END(aml_scpi)

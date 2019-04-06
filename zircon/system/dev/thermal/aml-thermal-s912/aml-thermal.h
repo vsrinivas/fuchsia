@@ -6,7 +6,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gpio.h>
-#include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/scpi.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
@@ -34,14 +33,12 @@ using DeviceType = ddk::Device<AmlThermal, ddk::Messageable, ddk::Unbindable>;
 class AmlThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THERMAL> {
 public:
     AmlThermal(zx_device_t* device,
-               const ddk::PDevProtocolClient& pdev,
                const gpio_protocol_t& fan0_gpio_proto,
                const gpio_protocol_t& fan1_gpio_proto,
                const scpi_protocol_t& scpi_proto,
                const uint32_t& sensor_id,
                zx::port& port)
         : DeviceType(device),
-          pdev_(pdev),
           fan0_gpio_(&fan0_gpio_proto),
           fan1_gpio_(&fan1_gpio_proto),
           scpi_(&scpi_proto),
@@ -52,7 +49,7 @@ public:
     static zx_status_t Create(void* ctx, zx_device_t* device);
 
     // Perform post-construction runtime initialization.
-    zx_status_t Init();
+    zx_status_t Init(zx_device_t* dev);
 
     // Ddk-required methods.
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
@@ -101,7 +98,6 @@ private:
     // Notify the thermal daemon of the current settings.
     zx_status_t NotifyThermalDaemon(uint32_t trip_point) const;
 
-    ddk::PDevProtocolClient pdev_;
     ddk::GpioProtocolClient fan0_gpio_;
     ddk::GpioProtocolClient fan1_gpio_;
     ddk::ScpiProtocolClient scpi_;

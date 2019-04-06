@@ -36,14 +36,8 @@ driver("scpi") {
     "aml-scpi.cpp",
   ]
   deps = [
-    "$zx/system/banjo/ddk-protocol-clock",
-    "$zx/system/banjo/ddk-protocol-gpio",
-    "$zx/system/banjo/ddk-protocol-i2c",
     "$zx/system/banjo/ddk-protocol-mailbox",
-    "$zx/system/banjo/ddk-protocol-platform-bus",
-    "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/banjo/ddk-protocol-scpi",
-    "$zx/system/dev/lib/mmio",
     "$zx/system/fidl/fuchsia-hardware-thermal:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",

@@ -16,6 +16,7 @@
 #include <limits.h>
 
 #include "vim.h"
+#include "vim-gpios.h"
 
 namespace vim {
 
@@ -83,7 +84,10 @@ static const pbus_irq_t gpio_irqs[] = {
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
     { S912_WIFI_SDIO_WAKE_HOST },
-    { S912_GPIODV(13) },
+    { GPIO_WIFI_DEBUG },
+    // For thermal.
+    { GPIO_THERMAL_FAN_O },
+    { GPIO_THERMAL_FAN_1 },    
 };
 
 static const pbus_metadata_t gpio_metadata[] = {

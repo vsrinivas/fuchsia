@@ -15,6 +15,7 @@
 #include <wifi/wifi-config.h>
 
 #include "vim.h"
+#include "vim-gpios.h"
 
 namespace vim {
 
@@ -107,7 +108,7 @@ static const zx_bind_inst_t oob_gpio_match[] = {
 };
 static const zx_bind_inst_t debug_gpio_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, S912_GPIODV(13)),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_WIFI_DEBUG),
 };
 static const device_component_part_t sdio_component[] = {
     { fbl::count_of(root_match), root_match },
