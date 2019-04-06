@@ -6,6 +6,8 @@
 
 #include <cstdlib>
 
+#include <cmdline/args_parser.h>
+
 #include "src/developer/debug/shared/buffered_fd.h"
 #include "src/developer/debug/shared/logging/debug.h"
 #include "src/developer/debug/shared/message_loop_poll.h"
@@ -34,7 +36,7 @@ Err SetupActions(const CommandLineOptions& options,
 
     std::string cmd = VerbToString(Verb::kOpenDump) + " " + *options.core;
     actions->push_back(Action("Open Dump", [cmd](const Action&, const Session&,
-                                               Console* console) {
+                                                 Console* console) {
       console->ProcessInputLine(cmd.c_str(), ActionFlow::PostActionCallback);
     }));
   }
@@ -91,14 +93,14 @@ void ScheduleActions(zxdb::Session& session, zxdb::Console& console,
 int ConsoleMain(int argc, const char* argv[]) {
   CommandLineOptions options;
   std::vector<std::string> params;
-  Err err = ParseCommandLine(argc, argv, &options, &params);
-  if (err.has_error()) {
-    fprintf(stderr, "%s\n", err.msg().c_str());
+  cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);
+  if (status.has_error()) {
+    fprintf(stderr, "%s", status.error_message().c_str());
     return 1;
   }
 
   std::vector<zxdb::Action> actions;
-  err = SetupActions(options, &actions);
+  Err err = SetupActions(options, &actions);
   if (err.has_error()) {
     fprintf(stderr, "%s\n", err.msg().c_str());
     return 1;

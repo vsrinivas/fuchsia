@@ -20,10 +20,11 @@
 // on CQ in a way I can't repro locally.
 #undef __TA_REQUIRES
 
+#include <cmdline/args_parser.h>
+
 #include "lib/fidl/cpp/message.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
-#include "src/developer/debug/zxdb/common/command_line_parser.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "tools/fidlcat/lib/library_loader.h"
 #include "tools/fidlcat/lib/wire_parser.h"
@@ -63,10 +64,10 @@ const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
       as a mapping database from build ID to file path. Otherwise, the path
       will be loaded as an ELF file (if possible).)";
 
-zxdb::Err ParseCommandLine(int argc, const char* argv[],
-                           CommandLineOptions* options,
-                           std::vector<std::string>* params) {
-  zxdb::CommandLineParser<CommandLineOptions> parser;
+cmdline::Status ParseCommandLine(int argc, const char* argv[],
+                                 CommandLineOptions* options,
+                                 std::vector<std::string>* params) {
+  cmdline::ArgsParser<CommandLineOptions> parser;
 
   parser.AddSwitch("connect", 'r', kRemoteHostHelp,
                    &CommandLineOptions::connect);
@@ -76,12 +77,12 @@ zxdb::Err ParseCommandLine(int argc, const char* argv[],
                    &CommandLineOptions::fidl_ir_paths);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp,
                    &CommandLineOptions::symbol_paths);
-  zxdb::Err err = parser.Parse(argc, argv, options, params);
-  if (err.has_error()) {
-    return err;
+  cmdline::Status status = parser.Parse(argc, argv, options, params);
+  if (status.has_error()) {
+    return status;
   }
 
-  return zxdb::Err();
+  return cmdline::Status::Ok();
 }
 
 static bool called_onexit_once_ = false;
@@ -244,9 +245,9 @@ void ExpandFidlPathsFromOptions(
 int ConsoleMain(int argc, const char* argv[]) {
   CommandLineOptions options;
   std::vector<std::string> params;
-  zxdb::Err err = ParseCommandLine(argc, argv, &options, &params);
-  if (err.has_error()) {
-    FXL_LOG(ERROR) << err.msg();
+  cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);
+  if (status.has_error()) {
+    FXL_LOG(ERROR) << status.error_message();
     return 1;
   }
 

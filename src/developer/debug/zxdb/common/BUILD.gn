@@ -9,7 +9,6 @@ static_library("common") {
   public = [
     "address_range.h",
     "address_ranges.h",
-    "command_line_parser.h",
     "err.h",
     "file_util.h",
     "host_util.h",
@@ -19,7 +18,6 @@ static_library("common") {
   sources = [
     "address_range.cc",
     "address_ranges.cc",
-    "command_line_parser.cc",
     "err.cc",
     "file_util.cc",
     "host_util.cc",
@@ -45,7 +43,6 @@ source_set("tests") {
 
   sources = [
     "address_ranges_unittest.cc",
-    "command_line_parser_unittest.cc",
     "file_util_unittest.cc",
   ]
 

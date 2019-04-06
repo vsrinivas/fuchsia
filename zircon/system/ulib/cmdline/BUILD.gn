@@ -1,0 +1,16 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("cmdline") {
+  sdk = "source"
+  sdk_headers = [
+    "cmdline/args_parser.h",
+    "cmdline/status.h",
+  ]
+  host = true
+
+  sources = [
+    "args_parser.cpp",
+  ]
+}

@@ -4,7 +4,7 @@
 
 #include "src/developer/debug/zxdb/console/command_line_options.h"
 
-#include "src/developer/debug/zxdb/common/command_line_parser.h"
+#include <cmdline/args_parser.h>
 
 namespace zxdb {
 
@@ -64,9 +64,10 @@ const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
 
 }  // namespace
 
-Err ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
-                     std::vector<std::string>* params) {
-  CommandLineParser<CommandLineOptions> parser;
+cmdline::Status ParseCommandLine(int argc, const char* argv[],
+                                 CommandLineOptions* options,
+                                 std::vector<std::string>* params) {
+  cmdline::ArgsParser<CommandLineOptions> parser;
 
   parser.AddSwitch("connect", 'c', kConnectHelp, &CommandLineOptions::connect);
   parser.AddSwitch("core", 0, kCoreHelp, &CommandLineOptions::core);
@@ -85,15 +86,15 @@ Err ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
   parser.AddGeneralSwitch("help", 'h', kHelpHelp,
                           [&requested_help]() { requested_help = true; });
 
-  Err err = parser.Parse(argc, argv, options, params);
-  if (err.has_error())
-    return err;
+  cmdline::Status status = parser.Parse(argc, argv, options, params);
+  if (status.has_error())
+    return status;
 
   // Handle --help switch since we're the one that knows about the switches.
   if (requested_help)
-    return Err(kHelpIntro + parser.GetHelp());
+    return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
 
-  return Err();
+  return cmdline::Status::Ok();
 }
 
 }  // namespace zxdb

@@ -73,9 +73,10 @@ static_library("console") {
 
   deps = []
   public_deps = [
-    "//src/lib/fxl",
     "//src/developer/debug/zxdb/client",
     "//src/developer/debug/zxdb/expr",
+    "//src/lib/fxl",
+    "//zircon/public/lib/cmdline",
     "//zircon/public/lib/fit",
   ]
 

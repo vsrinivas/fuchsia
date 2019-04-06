@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_LINE_OPTIONS_H_
+#define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_LINE_OPTIONS_H_
 
 #include <optional>
 #include <string>
 #include <vector>
 
-#include "src/developer/debug/zxdb/common/err.h"
+#include <cmdline/status.h>
 
 namespace zxdb {
 
@@ -28,7 +29,10 @@ struct CommandLineOptions {
 //
 // Returns an error if the command-line is badly formed. In addition, --help
 // text will be returned as an error.
-Err ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
-                     std::vector<std::string>* params);
+cmdline::Status ParseCommandLine(int argc, const char* argv[],
+                                 CommandLineOptions* options,
+                                 std::vector<std::string>* params);
 
 }  // namespace zxdb
+
+#endif  // SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_LINE_OPTIONS_H_

@@ -195,6 +195,7 @@ if (current_cpu != "") {
     deps = [
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/zxtest/test",
+      "cmdline",
       "fbl",
       "ffl",
       "fidl-compiler",

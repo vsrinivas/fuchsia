@@ -66,6 +66,7 @@ if (current_cpu != "") {
       "bootfs",
       "c",
       "chromeos-disk-setup",
+      "cmdline",
       "cobalt-client",
       "crypto",
       "ddk",
