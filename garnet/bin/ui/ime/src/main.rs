@@ -6,6 +6,7 @@
 mod fidl_helpers;
 mod ime;
 mod ime_service;
+mod index_convert;
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::ServiceMarker;

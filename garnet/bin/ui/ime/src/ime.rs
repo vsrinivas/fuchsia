@@ -4,6 +4,7 @@
 
 use crate::fidl_helpers::clone_state;
 use crate::ime_service::ImeService;
+use crate::index_convert as idx;
 use failure::ResultExt;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::RequestStream;
@@ -171,29 +172,21 @@ impl Ime {
                     return responder
                         .send(&mut txt::TextPoint { id: 0 }, txt::TextError::BadRevision);
                 }
-                let old_byte_index =
-                    if let Some(old_byte_index) = get_point(&ime_state.text_points, &old_point) {
-                        old_byte_index
-                    } else {
-                        return responder
-                            .send(&mut txt::TextPoint { id: 0 }, txt::TextError::BadRequest);
-                    };
-                let char_to_byte = ime_state.char_to_byte();
-                let old_char_index = if let Ok(v) = char_to_byte.binary_search(&old_byte_index) {
+                let old_char_index = if let Some(v) = get_point(&ime_state.text_points, &old_point)
+                    .and_then(|old_byte_index| {
+                        idx::byte_to_char(&ime_state.text_state.text, old_byte_index)
+                    }) {
                     v
                 } else {
-                    fx_log_err!(
-                        "was unable to find char index for byte index {:?} from {:?}",
-                        &old_byte_index,
-                        &old_point
-                    );
                     return responder
                         .send(&mut txt::TextPoint { id: 0 }, txt::TextError::BadRequest);
                 };
-                let new_char_index =
-                    (old_char_index as i64 + offset).max(0).min(char_to_byte.len() as i64 - 1)
-                        as usize;
-                let new_byte_index = char_to_byte[new_char_index];
+                let new_char_index = (old_char_index as i64 + offset)
+                    .max(0)
+                    .min(ime_state.text_state.text.chars().count() as i64);
+                // ok to .expect() here, since char_to_byte can only fail if new_char_index is out of the char indices
+                let new_byte_index = idx::char_to_byte(&ime_state.text_state.text, new_char_index)
+                    .expect("did not expect character to fail");
                 let mut new_point = ime_state.new_point(new_byte_index);
                 return responder.send(&mut new_point, txt::TextError::Ok);
             }
@@ -201,36 +194,23 @@ impl Ime {
                 if revision != ime_state.revision {
                     return responder.send(0, txt::TextError::BadRevision);
                 }
-                match get_range(&ime_state.text_points, &range, false) {
-                    Some((byte_start, byte_end)) => {
-                        let char_to_byte = ime_state.char_to_byte();
-                        let char_start = if let Ok(v) = char_to_byte.binary_search(&byte_start) {
-                            v
-                        } else {
-                            fx_log_err!(
-                                "was unable to find char index for byte index {:?} in range {:?}",
-                                &byte_start,
-                                &range
-                            );
-                            return responder.send(0, txt::TextError::BadRequest);
-                        };
-                        let char_end = if let Ok(v) = char_to_byte.binary_search(&byte_end) {
-                            v
-                        } else {
-                            fx_log_err!(
-                                "was unable to find char index for byte index {:?} in range {:?}",
-                                &byte_end,
-                                &range
-                            );
-                            return responder.send(0, txt::TextError::BadRequest);
-                        };
-                        return responder
-                            .send(char_end as i64 - char_start as i64, txt::TextError::Ok);
-                    }
+                let (byte_start, byte_end) = match get_range(&ime_state.text_points, &range, false)
+                {
+                    Some(v) => v,
                     None => {
                         return responder.send(0, txt::TextError::BadRequest);
                     }
-                }
+                };
+                let (char_start, char_end) = match (
+                    idx::byte_to_char(&ime_state.text_state.text, byte_start),
+                    idx::byte_to_char(&ime_state.text_state.text, byte_end),
+                ) {
+                    (Some(a), Some(b)) => (a, b),
+                    _ => {
+                        return responder.send(0, txt::TextError::BadRequest);
+                    }
+                };
+                return responder.send(char_end as i64 - char_start as i64, txt::TextError::Ok);
             }
             txt::TextFieldRequest::Contents { range, revision, responder } => {
                 if revision != ime_state.revision {
@@ -315,7 +295,7 @@ impl Ime {
                 state.keyboard_type = keyboard_type;
             }
             ImeReq::SetState { state, .. } => {
-                self.set_state(state);
+                self.set_state(idx::text_state_codeunit_to_byte(state));
             }
             ImeReq::InjectInput { event, .. } => {
                 self.inject_input(event);
@@ -333,9 +313,11 @@ impl Ime {
         }
     }
 
+    /// Sets the internal state. Expects input_state to use codeunits; automatically
+    /// converts to byte indices before storing.
     fn set_state(&self, input_state: uii::TextInputState) {
         let mut state = self.0.lock();
-        state.text_state = input_state;
+        state.text_state = idx::text_state_codeunit_to_byte(input_state);
         // the old C++ IME implementation didn't call did_update_state here, so this second argument is false.
         state.increment_revision(None, false);
     }
@@ -459,31 +441,22 @@ impl ImeState {
         }
 
         if call_did_update_state {
+            let mut state = idx::text_state_byte_to_codeunit(clone_state(&self.text_state));
             if let Some(ev) = e {
                 self.client
                     .did_update_state(
-                        &mut self.text_state,
+                        &mut state,
                         Some(OutOfLine(&mut uii::InputEvent::Keyboard(ev))),
                     )
                     .unwrap_or_else(|e| {
                         fx_log_warn!("error sending state update to ImeClient: {:?}", e)
                     });
             } else {
-                self.client.did_update_state(&mut self.text_state, None).unwrap_or_else(|e| {
+                self.client.did_update_state(&mut state, None).unwrap_or_else(|e| {
                     fx_log_warn!("error sending state update to ImeClient: {:?}", e)
                 });
             }
         }
-    }
-
-    /// Generates a map of char indices to byte indices for the current text. Definitely would not be ~very performant
-    /// on large strings, but this is on legacy state objects, which crash if they get larger than the max FIDL message
-    /// size anyway.
-    fn char_to_byte(&self) -> Vec<usize> {
-        let mut char_to_byte: Vec<usize> =
-            self.text_state.text.char_indices().map(|(i, _)| i).collect();
-        char_to_byte.push(self.text_state.text.len()); // Add final valid code point position at end of string
-        char_to_byte
     }
 
     /// Converts the current self.text_state (the IME API v1 representation of the text field's state)
@@ -914,18 +887,24 @@ mod test {
         extent: i64,
     ) -> (Ime, Receiver<uii::TextInputState>, Receiver<uii::InputMethodAction>) {
         let (client, statechan, actionchan) = MockImeClient::new();
+        let ime = Ime::new(
+            uii::KeyboardType::Text,
+            uii::InputMethodAction::Search,
+            default_state(),
+            client,
+            ImeService::new(),
+        );
         let mut state = default_state();
         state.text = text.to_string();
         state.selection.base = base;
         state.selection.extent = extent;
-        let ime = Ime::new(
-            uii::KeyboardType::Text,
-            uii::InputMethodAction::Search,
-            state,
-            client,
-            ImeService::new(),
-        );
+        // set state through set_state fn, so we can test codeunit->byte transaction works as expected
+        ime.set_state(state);
         (ime, statechan, actionchan)
+    }
+
+    fn measure_utf16(s: &str) -> usize {
+        s.chars().map(|c| c.len_utf16()).sum::<usize>()
     }
 
     fn simulate_keypress<K: Into<u32> + Copy>(
@@ -1115,7 +1094,9 @@ mod test {
     #[test]
     fn test_delete_backward_combining_diacritic() {
         // U+0301: combining acute accent. 2 bytes.
-        let (mut ime, statechan, _actionchan) = set_up("abcdefghi\u{0301}", 11, 11);
+        let text = "abcdefghi\u{0301}";
+        let len = measure_utf16(text) as i64;
+        let (mut ime, statechan, _actionchan) = set_up(text, len, len);
 
         simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, uii::MODIFIER_NONE);
         let state = statechan.try_recv().unwrap();
@@ -1142,7 +1123,7 @@ mod test {
     fn test_delete_backward_emoji() {
         // Emoji with a color modifier.
         let text = "abcdefghi👦🏻";
-        let len = text.len() as i64;
+        let len = measure_utf16(text) as i64;
         let (mut ime, statechan, _actionchan) = set_up(text, len, len);
 
         simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, uii::MODIFIER_NONE);
@@ -1172,7 +1153,7 @@ mod test {
     fn test_delete_backward_flag() {
         // French flag
         let text = "abcdefghi🇫🇷";
-        let len = text.len() as i64;
+        let len = measure_utf16(text) as i64;
         let (mut ime, statechan, _actionchan) = set_up(text, len, len);
 
         simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, uii::MODIFIER_NONE);
@@ -1264,9 +1245,9 @@ mod test {
         simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, uii::MODIFIER_NONE);
         let state = statechan.try_recv().unwrap();
         assert_eq!(2, state.revision);
-        assert_eq!("abcdefgh", state.text);
-        assert_eq!(8, state.selection.base);
-        assert_eq!(8, state.selection.extent);
+        assert_eq!("abcdefghi", state.text);
+        assert_eq!(0, state.selection.base);
+        assert_eq!(0, state.selection.extent);
     }
 
     #[test]
@@ -1371,14 +1352,16 @@ mod test {
 
     #[test]
     fn test_cursor_word_right_no_words() {
-        let (mut ime, statechan, _actionchan) = set_up("¿ - _ - ?", 5, 5);
+        let text = "¿ - _ - ?";
+        let text_len = measure_utf16(text) as i64;
+        let (mut ime, statechan, _actionchan) = set_up(text, 5, 5);
 
         // right with control
         simulate_keypress(&mut ime, HID_USAGE_KEY_RIGHT, true, uii::MODIFIER_CONTROL);
         let state = statechan.try_recv().unwrap();
         assert_eq!(2, state.revision);
-        assert_eq!(10, state.selection.base);
-        assert_eq!(10, state.selection.extent);
+        assert_eq!(text_len, state.selection.base);
+        assert_eq!(text_len, state.selection.extent);
     }
 
     #[test]
@@ -1436,7 +1419,8 @@ mod test {
 
     #[test]
     fn test_cursor_word() {
-        let (mut ime, statechan, _actionchan) = set_up("a.c   2.2 ¿? x yz", 8, 8);
+        let start_idx = measure_utf16("a.c   2.") as i64;
+        let (mut ime, statechan, _actionchan) = set_up("a.c   2.2 ¿? x yz", start_idx, start_idx);
 
         simulate_keypress(
             &mut ime,
@@ -1446,8 +1430,8 @@ mod test {
         );
         let state = statechan.try_recv().unwrap();
         assert_eq!(2, state.revision);
-        assert_eq!(8, state.selection.base);
-        assert_eq!(9, state.selection.extent);
+        assert_eq!(start_idx, state.selection.base);
+        assert_eq!(measure_utf16("a.c   2.2") as i64, state.selection.extent);
 
         simulate_keypress(
             &mut ime,
@@ -1457,14 +1441,14 @@ mod test {
         );
         let state = statechan.try_recv().unwrap();
         assert_eq!(3, state.revision);
-        assert_eq!(8, state.selection.base);
-        assert_eq!(15, state.selection.extent);
+        assert_eq!(start_idx, state.selection.base);
+        assert_eq!(measure_utf16("a.c   2.2 ¿? x") as i64, state.selection.extent);
 
         simulate_keypress(&mut ime, HID_USAGE_KEY_LEFT, true, uii::MODIFIER_CONTROL);
         let state = statechan.try_recv().unwrap();
         assert_eq!(4, state.revision);
-        assert_eq!(6, state.selection.base);
-        assert_eq!(6, state.selection.extent);
+        assert_eq!(measure_utf16("a.c   ") as i64, state.selection.base);
+        assert_eq!(measure_utf16("a.c   ") as i64, state.selection.extent);
 
         simulate_keypress(
             &mut ime,
@@ -1474,7 +1458,7 @@ mod test {
         );
         let state = statechan.try_recv().unwrap();
         assert_eq!(5, state.revision);
-        assert_eq!(6, state.selection.base);
+        assert_eq!(measure_utf16("a.c   ") as i64, state.selection.base);
         assert_eq!(0, state.selection.extent);
     }
 
@@ -1595,7 +1579,7 @@ mod test {
 
     #[test]
     fn test_unicode_backspace() {
-        let base: i64 = "m😸".len() as i64;
+        let base: i64 = measure_utf16("m😸") as i64;
         let (mut ime, statechan, _actionchan) = set_up("m😸eow", base, base);
 
         simulate_keypress(&mut ime, HID_USAGE_KEY_BACKSPACE, true, uii::MODIFIER_SHIFT);
