@@ -7,6 +7,18 @@
 
 #include <lib/fit/function.h>
 
+#if defined(__APPLE__)
+
+#include <libkern/OSByteOrder.h>
+
+#define le16toh(x) OSSwapLittleToHostInt16(x)
+#define le32toh(x) OSSwapLittleToHostInt32(x)
+#define le64toh(x) OSSwapLittleToHostInt64(x)
+
+#else
+#include <endian.h>
+#endif
+
 #ifdef __Fuchsia__
 #include <zircon/types.h>
 #else
@@ -176,17 +188,22 @@ class LeToHost {
   static T le_to_host(const T* ts);
 };
 
-template <>
-uint8_t LeToHost<uint8_t>::le_to_host(const uint8_t* bytes);
-
-template <>
-uint16_t LeToHost<uint16_t>::le_to_host(const uint16_t* bytes);
-
-template <>
-uint32_t LeToHost<uint32_t>::le_to_host(const uint32_t* bytes);
-
-template <>
-uint64_t LeToHost<uint64_t>::le_to_host(const uint64_t* bytes);
+template <typename T>
+T LeToHost<T>::le_to_host(const T* bytes) {
+  if constexpr (std::is_same<T, uint8_t>::value) {
+    return *bytes;
+  } else if constexpr (std::is_same<T, uint16_t>::value) {
+    return le16toh(*bytes);
+  } else if constexpr (std::is_same<T, uint32_t>::value) {
+    return le32toh(*bytes);
+  } else if constexpr (std::is_same<T, uint64_t>::value) {
+    return le64toh(*bytes);
+  } else if constexpr (std::is_same<T, uintptr_t>::value &&
+                       sizeof(T) == sizeof(uint64_t)) {
+    // NB: On Darwin, uintptr_t and uint64_t are different things.
+    return le64toh(*bytes);
+  }
+}
 
 template <typename T>
 struct GetUnsigned {

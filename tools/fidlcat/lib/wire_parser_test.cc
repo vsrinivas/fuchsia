@@ -418,6 +418,8 @@ TEST_WIRE_TO_JSON(TwoStringNullableStructInt, TwoStringNullableStructInt,
                   R"({"s":{"value1":"harpo", "value2":"chico"}, "i32":"1"})",
                   TwoStringStructFromValsPtr("harpo", "chico"), 1)
 
+TEST_WIRE_TO_JSON(NullableStruct, NullableStruct, R"({"p":null})", nullptr);
+
 // TODO: Add the following struct tests:
 // struct{uint8 f1; uint32 f2;}
 // struct{struct{uint8 f1; uint32 f2;} inner; uint8 f3;}

@@ -10,20 +10,6 @@
 #include "rapidjson/error/en.h"
 #include "tools/fidlcat/lib/library_loader.h"
 
-#if defined(__APPLE__)
-
-#include <libkern/OSByteOrder.h>
-
-#define le16toh(x) OSSwapLittleToHostInt16(x)
-#define le32toh(x) OSSwapLittleToHostInt32(x)
-#define le64toh(x) OSSwapLittleToHostInt64(x)
-
-#else
-
-#include <endian.h>
-
-#endif
-
 // See wire_types.h for details.
 
 namespace fidlcat {
@@ -78,30 +64,6 @@ void ObjectTracker::ArrayEnqueue(
         return m;
       });
 }
-
-namespace internal {
-
-template <>
-uint8_t LeToHost<uint8_t>::le_to_host(const uint8_t* bytes) {
-  return *bytes;
-}
-
-template <>
-uint16_t LeToHost<uint16_t>::le_to_host(const uint16_t* bytes) {
-  return le16toh(*bytes);
-}
-
-template <>
-uint32_t LeToHost<uint32_t>::le_to_host(const uint32_t* bytes) {
-  return le32toh(*bytes);
-}
-
-template <>
-uint64_t LeToHost<uint64_t>::le_to_host(const uint64_t* bytes) {
-  return le64toh(*bytes);
-}
-
-}  // namespace internal
 
 // Prints out raw bytes as a C string of hex pairs ("af b0 1e...").  Useful for
 // debugging / unknown data.
@@ -223,6 +185,23 @@ Marker StructType::GetValueCallback(Marker marker, size_t length,
                                     ValueGeneratingCallback& callback) const {
   bool is_nullable = is_nullable_;
   const Struct& str = struct_;
+  uintptr_t val = internal::MemoryFrom<uintptr_t>(marker.byte_pos);
+  if (is_nullable_) {
+    if (val == 0) {
+      callback = [](Marker marker, rapidjson::Value& value,
+                    rapidjson::Document::AllocatorType& allocator) {
+        value.SetNull();
+        return marker;
+      };
+
+      marker.byte_pos += length;
+      return marker;
+    }
+
+    if (val != UINTPTR_MAX) {
+      FXL_LOG(INFO) << "Illegally encoded struct.";
+    }
+  }
   callback = [inline_marker = marker, str, is_nullable, tracker](
                  Marker outline_marker, rapidjson::Value& value,
                  rapidjson::Document::AllocatorType& allocator) {

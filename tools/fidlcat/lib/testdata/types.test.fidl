@@ -18,6 +18,7 @@ protocol this_is_an_interface {
     Float32(float32 f32);
     Float64(float64 f64);
     Struct(primitive_types p);
+    NullableStruct(primitive_types? p);
     Array1(array<int32>:1 b_1);
     Array2(array<int32>:2 b_2);
     Vector(vector<int32>? v_1);
