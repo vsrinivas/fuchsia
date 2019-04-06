@@ -64,14 +64,18 @@ using ffl::Round;
 
 namespace {
 
-constexpr SchedWeight kMinWeight = FromRatio(LOWEST_PRIORITY + 1, NUM_PRIORITIES);
+// Converts from kernel priority value in the range [0, 31] to weight.
+constexpr SchedWeight PriorityToWeight(int priority) {
+    return FromRatio(priority + 1, NUM_PRIORITIES);
+}
+
+// The minimum possible weight and its reciprocal.
+constexpr SchedWeight kMinWeight = PriorityToWeight(LOWEST_PRIORITY);
 constexpr SchedWeight kReciprocalMinWeight = 1 / kMinWeight;
 
-constexpr SchedWeight PriorityToWeight(int priority) {
-    return FromRatio(priority, NUM_PRIORITIES);
-}
+// Converts from weight to kernel priority value in the range [0, 31].
 constexpr int WeightToPriority(SchedWeight weight) {
-    return Round<int>(kReciprocalMinWeight * weight);
+    return Round<int>(kReciprocalMinWeight * weight) - 1;
 }
 
 // Utility operator to make expressions more succinct that update thread times
