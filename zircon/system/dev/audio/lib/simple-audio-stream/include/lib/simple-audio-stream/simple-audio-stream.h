@@ -36,6 +36,7 @@ struct SimpleAudioStreamProtocol : public ddk::internal::base_protocol {
 class SimpleAudioStream;
 using SimpleAudioStreamBase = ddk::Device<SimpleAudioStream,
                                           ddk::Messageable,
+                                          ddk::Suspendable,
                                           ddk::Unbindable>;
 
 class SimpleAudioStream : public SimpleAudioStreamBase,
@@ -85,6 +86,9 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // DDK device implementation
     void DdkUnbind();
     void DdkRelease();
+
+    zx_status_t DdkSuspend(uint32_t flags);
+
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
         return fuchsia_hardware_audio_Device_dispatch(this, txn, msg, &AUDIO_FIDL_THUNKS);
     }
@@ -389,6 +393,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
     // State used for protocol enforcement.
     bool rb_started_ __TA_GUARDED(domain_->token()) = false;
     bool rb_fetched_ __TA_GUARDED(domain_->token()) = false;
+    bool is_shutdown_ = false;
     std::atomic<uint32_t> expected_notifications_per_ring_{0};
 };
 

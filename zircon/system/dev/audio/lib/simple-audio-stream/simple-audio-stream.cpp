@@ -19,20 +19,23 @@ fuchsia_hardware_audio_Device_ops_t SimpleAudioStream::AUDIO_FIDL_THUNKS {
 };
 
 void SimpleAudioStream::Shutdown() {
-    if (domain_ != nullptr) {
-        domain_->Deactivate();
-    }
+    if (!is_shutdown_) {
+        if (domain_ != nullptr) {
+            domain_->Deactivate();
+        }
 
-    {
-        // Now that we know our domain has been deactivated, it should be safe to
-        // assert that we are holding the domain token (assuming that users of
-        // Shutdown behave in a single threaded fashion)
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
+        {
+            // Now that we know our domain has been deactivated, it should be safe to
+            // assert that we are holding the domain token (assuming that users of
+            // Shutdown behave in a single threaded fashion)
+            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, domain_);
 
-        // Channels-to-notify should already be empty. Explicitly clear it, to be safe.
-        plug_notify_channels_.clear();
+            // Channels-to-notify should already be empty. Explicitly clear it, to be safe.
+            plug_notify_channels_.clear();
 
-        ShutdownHook();
+            ShutdownHook();
+        }
+        is_shutdown_ = true;
     }
 }
 
@@ -160,6 +163,14 @@ void SimpleAudioStream::DdkUnbind() {
 void SimpleAudioStream::DdkRelease() {
     // Recover our ref from the DDK, then let it fall out of scope.
     auto thiz = fbl::internal::MakeRefPtrNoAdopt(this);
+}
+
+zx_status_t SimpleAudioStream::DdkSuspend(uint32_t flags) {
+    // TODO(voydanoff) do different things based on the flags.
+    // for now we shutdown the driver in preparation for mexec
+    Shutdown();
+    DdkRemove();
+    return ZX_OK;
 }
 
 zx_status_t SimpleAudioStream::GetChannel(fidl_txn_t* txn) {
