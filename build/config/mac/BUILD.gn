@@ -2,12 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")
 
 config("compiler") {
   cflags_objcc = [
     "-std=c++14",
     "-stdlib=libc++",
+  ]
+  defines = [
+    # libc++ headers mark some symbols as unavailable on macOS by default
+    # because the system libc++ doesn't support them.  But we use our own
+    # toolchain's static libc++ anyway.
+    "_LIBCPP_DISABLE_AVAILABILITY",
+  ]
+  ldflags = [
+    "-nostdlib++",
+    "${clang_prefix}/../lib/libc++abi.a",
+    "${clang_prefix}/../lib/libc++.a",
   ]
   configs = [ ":sysroot" ]
 }
