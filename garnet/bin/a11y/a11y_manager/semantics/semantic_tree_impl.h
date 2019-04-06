@@ -9,9 +9,13 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/math/cpp/fidl.h>
-#include <garnet/lib/ui/gfx/util/unwrap.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/vfs/cpp/pseudo_file.h>
 #include <src/lib/fxl/macros.h>
+
+#include "garnet/bin/a11y/a11y_manager/util.h"
+#include "garnet/lib/ui/gfx/util/unwrap.h"
 
 namespace a11y_manager {
 
@@ -21,9 +25,24 @@ class SemanticTreeImpl
   explicit SemanticTreeImpl(
       zx::event view_ref,
       fuchsia::accessibility::semantics::SemanticActionListenerPtr
-          client_action_listener)
+          client_action_listener,
+      vfs::PseudoDir* debug_dir)
       : view_ref_(std::move(view_ref)),
-        client_action_listener_(std::move(client_action_listener)) {}
+        client_action_listener_(std::move(client_action_listener)),
+        debug_dir_(debug_dir) {
+    if (debug_dir_) {
+      // Add Semantic Tree log file in Hub-Debug directory.
+      debug_dir_->AddEntry(std::to_string(GetKoid(view_ref_)),
+                           std::make_unique<vfs::BufferedPseudoFile>(
+                               [this](std::vector<uint8_t>* output) {
+                                 std::string buffer = LogSemanticTree();
+                                 output->resize(buffer.length());
+                                 std::copy(buffer.begin(), buffer.end(),
+                                           output->begin());
+                                 return ZX_OK;
+                               }));
+    }
+  }
 
   ~SemanticTreeImpl() override = default;
 
@@ -63,8 +82,8 @@ class SemanticTreeImpl
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void DeleteSemanticNodes(std::vector<uint32_t> node_ids) override;
 
-  // Function for logging semantic tree.
-  void LogSemanticTree();
+  // Create semantic tree logs in a human readable form.
+  std::string LogSemanticTree();
 
   // Helper function to traverse semantic tree with a root node, and for
   // creating string with tree information.
@@ -103,6 +122,7 @@ class SemanticTreeImpl
   zx::event view_ref_;
   fuchsia::accessibility::semantics::SemanticActionListenerPtr
       client_action_listener_;
+  vfs::PseudoDir* const debug_dir_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SemanticTreeImpl);
 };

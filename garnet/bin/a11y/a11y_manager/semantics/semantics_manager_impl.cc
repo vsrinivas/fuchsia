@@ -9,6 +9,10 @@
 
 namespace a11y_manager {
 
+void SemanticsManagerImpl::SetDebugDirectory(vfs::PseudoDir* debug_dir) {
+  debug_dir_ = debug_dir;
+}
+
 void SemanticsManagerImpl::AddBinding(
     fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticsManager>
         request) {
@@ -32,7 +36,7 @@ void SemanticsManagerImpl::RegisterView(
   });
 
   auto semantic_tree_impl = std::make_unique<SemanticTreeImpl>(
-      std::move(view_ref), std::move(action_listener));
+      std::move(view_ref), std::move(action_listener), debug_dir_);
 
   semantic_tree_bindings_.AddBinding(std::move(semantic_tree_impl),
                                      std::move(semantic_tree_request));

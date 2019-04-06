@@ -48,6 +48,8 @@ App::App()
             settings_manager_impl_->AddBinding(std::move(request));
           });
 
+  semantics_manager_impl_->SetDebugDirectory(
+      startup_context_->outgoing()->debug_dir());
   startup_context_->outgoing()
       ->AddPublicService<fuchsia::accessibility::semantics::SemanticsManager>(
           [this](fidl::InterfaceRequest<

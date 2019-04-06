@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "semantic_tree_impl.h"
-
-#include <src/lib/fxl/logging.h>
+#include <lib/fsl/handles/object_info.h>
 #include <lib/syslog/cpp/logger.h>
+#include <src/lib/fxl/logging.h>
+
+#include "garnet/bin/a11y/a11y_manager/semantics/semantic_tree_impl.h"
 
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
@@ -133,20 +134,21 @@ void SemanticTreeImpl::LogSemanticTreeHelper(
   }
 }
 
-void SemanticTreeImpl::LogSemanticTree() {
+std::string SemanticTreeImpl::LogSemanticTree() {
   // Get the root node.
   fuchsia::accessibility::semantics::NodePtr node_ptr =
       GetAccessibilityNode(kRootNode);
+  std::string tree_log;
   if (!node_ptr) {
-    FX_LOGS(ERROR) << "Root Node not found.";
+    tree_log = "Root Node not found.";
+    FX_LOGS(ERROR) << tree_log;
+    return tree_log;
   }
 
-  std::string tree_log;
   // Start with the root node(i.e: Node - 0).
   LogSemanticTreeHelper(std::move(node_ptr), kRootNode, &tree_log);
-  // TODO(MI4-1828): Replace logging of semantic tree with a file write in
-  // hub/debug directory.
-  FX_LOGS(INFO) << "Semantic Tree:" << std::endl << tree_log;
+  FX_VLOGS(1) << "Semantic Tree:" << std::endl << tree_log;
+  return tree_log;
 }
 
 }  // namespace a11y_manager

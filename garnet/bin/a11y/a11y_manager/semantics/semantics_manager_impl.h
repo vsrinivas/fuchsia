@@ -5,8 +5,11 @@
 #ifndef GARNET_BIN_A11Y_A11Y_MANAGER_SEMANTICS_SEMANTICS_MANAGER_IMPL_H_
 #define GARNET_BIN_A11Y_A11Y_MANAGER_SEMANTICS_SEMANTICS_MANAGER_IMPL_H_
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
-#include "lib/fidl/cpp/binding_set.h"
-#include "semantic_tree_impl.h"
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/vfs/cpp/pseudo_file.h>
+
+#include "garnet/bin/a11y/a11y_manager/semantics/semantic_tree_impl.h"
 
 namespace a11y_manager {
 class SemanticsManagerImpl
@@ -18,6 +21,8 @@ class SemanticsManagerImpl
   void AddBinding(fidl::InterfaceRequest<
                   fuchsia::accessibility::semantics::SemanticsManager>
                       request);
+
+  void SetDebugDirectory(vfs::PseudoDir* debug_dir);
 
  private:
   // |fuchsia::accessibility::semantics::SemanticsManager|:
@@ -35,6 +40,8 @@ class SemanticsManagerImpl
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree,
                    std::unique_ptr<SemanticTreeImpl>>
       semantic_tree_bindings_;
+
+  vfs::PseudoDir* debug_dir_ = nullptr;
 };
 }  // namespace a11y_manager
 

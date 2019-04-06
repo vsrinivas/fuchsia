@@ -57,15 +57,17 @@ source_set("lib") {
     "settings_manager.h",
     "toggler_impl.cc",
     "toggler_impl.h",
+    "util.cc",
+    "util.h",
   ]
 
   public_deps = [
-    "//garnet/lib/ui/gfx",
-    "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.accessibility",
+    "//sdk/fidl/fuchsia.accessibility.semantics",
   ]
 
   deps = [
+    "//garnet/lib/ui/gfx",
     "//garnet/public/lib/fsl",
     "//src/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
