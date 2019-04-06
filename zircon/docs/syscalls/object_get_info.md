@@ -701,6 +701,8 @@ typedef struct zx_info_bti {
 
 If *topic* is **ZX_INFO_PROCESS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
+If *topic* is **ZX_INFO_JOB**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_INSPECT**.
+
 If *topic* is **ZX_INFO_PROCESS_THREADS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_ENUMERATE**.
 
 If *topic* is **ZX_INFO_JOB_CHILDREN**, *handle* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_ENUMERATE**.

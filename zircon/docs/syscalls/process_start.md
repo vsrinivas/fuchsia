@@ -102,6 +102,8 @@ does not belong to *process*, or the handle *process* lacks **ZX_RIGHT_WRITE** o
 [`zx_object_wait_many()`]: object_wait_many.md
 [`zx_object_wait_one()`]: object_wait_one.md
 [`zx_process_create()`]: process_create.md
+[`zx_process_exit()`]: process_exit.md
 [`zx_thread_create()`]: thread_create.md
 [`zx_thread_exit()`]: thread_exit.md
 [`zx_thread_start()`]: thread_start.md
+[`zx_vmo_create()`]: vmo_create.md

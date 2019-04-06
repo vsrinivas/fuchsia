@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-Queue a packet to an port.
+Queue a packet to a port.
 
 ## SYNOPSIS
 
