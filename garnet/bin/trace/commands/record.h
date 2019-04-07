@@ -22,7 +22,7 @@
 
 namespace tracing {
 
-class Record : public CommandWithTraceController {
+class Record : public CommandWithController {
  public:
   struct Options {
     bool Setup(const fxl::CommandLine&);
@@ -37,8 +37,8 @@ class Record : public CommandWithTraceController {
     bool spawn = false;
     uint32_t buffer_size_megabytes = 4;
     std::vector<ProviderSpec> provider_specs;
-    fuchsia::tracing::BufferingMode buffering_mode =
-        fuchsia::tracing::BufferingMode::ONESHOT;
+    fuchsia::tracing::controller::BufferingMode buffering_mode =
+        fuchsia::tracing::controller::BufferingMode::ONESHOT;
     bool binary = false;
     bool compress = false;
     std::string output_file_name = "/data/trace.json";

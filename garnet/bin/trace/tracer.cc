@@ -14,7 +14,7 @@
 
 namespace tracing {
 
-Tracer::Tracer(fuchsia::tracing::TraceController* controller)
+Tracer::Tracer(fuchsia::tracing::controller::Controller* controller)
     : controller_(controller), dispatcher_(nullptr), wait_(this) {
   FXL_DCHECK(controller_);
   wait_.set_trigger(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED);
@@ -22,7 +22,8 @@ Tracer::Tracer(fuchsia::tracing::TraceController* controller)
 
 Tracer::~Tracer() { CloseSocket(); }
 
-void Tracer::Start(fuchsia::tracing::TraceOptions options, bool binary,
+void Tracer::Start(fuchsia::tracing::controller::TraceOptions options,
+                   bool binary,
                    BytesConsumer bytes_consumer, RecordConsumer record_consumer,
                    ErrorHandler error_handler, fit::closure start_callback,
                    fit::closure done_callback) {

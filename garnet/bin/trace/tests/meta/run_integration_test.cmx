@@ -10,7 +10,7 @@
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
-            "fuchsia.tracing.TraceController"
+            "fuchsia.tracing.controller.Controller"
         ],
         "system": [
             "bin"

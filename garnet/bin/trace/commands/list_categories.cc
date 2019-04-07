@@ -20,7 +20,7 @@ Command::Info ListCategories::Describe() {
 }
 
 ListCategories::ListCategories(component::StartupContext* context)
-    : CommandWithTraceController(context) {}
+    : CommandWithController(context) {}
 
 void ListCategories::Start(const fxl::CommandLine& command_line) {
   if (!(command_line.options().empty() &&
@@ -32,12 +32,11 @@ void ListCategories::Start(const fxl::CommandLine& command_line) {
   }
 
   trace_controller()->GetKnownCategories(
-      [this](
-          std::vector<fuchsia::tracing::KnownCategory> known_categories) {
+      [this](std::vector<fuchsia::tracing::controller::KnownCategory>
+                 known_categories) {
         out() << "Known categories" << std::endl;
         for (const auto& it : known_categories) {
-          out() << "  " << it.name << ": " << it.description
-                << std::endl;
+          out() << "  " << it.name << ": " << it.description << std::endl;
         }
         Done(0);
       });

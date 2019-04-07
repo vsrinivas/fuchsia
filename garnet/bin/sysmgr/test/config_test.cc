@@ -97,7 +97,7 @@ TEST_F(ConfigTest, Parse) {
       "fuchsia.Debug": ["debug", "arg1"]
     },
     "startup_services": ["fuchsia.logger.Log"],
-    "optional_services": ["fuchsia.tracing.TraceController"]
+    "optional_services": ["fuchsia.tracing.controller.Controller"]
   })json";
   constexpr char kApps[] = R"json({
     "apps": [
@@ -131,7 +131,7 @@ TEST_F(ConfigTest, Parse) {
 
   auto optional_services = config.TakeOptionalServices();
   EXPECT_THAT(optional_services,
-              ElementsAre("fuchsia.tracing.TraceController"));
+              ElementsAre("fuchsia.tracing.controller.Controller"));
 }
 
 }  // namespace

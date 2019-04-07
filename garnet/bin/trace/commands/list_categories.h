@@ -9,7 +9,7 @@
 
 namespace tracing {
 
-class ListCategories : public CommandWithTraceController {
+class ListCategories : public CommandWithController {
  public:
   static Info Describe();
 

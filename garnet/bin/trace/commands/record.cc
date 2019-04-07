@@ -58,11 +58,11 @@ const char kTcpPrefix[] = "tcp:";
 
 const struct {
   const char* name;
-  fuchsia::tracing::BufferingMode mode;
+  fuchsia::tracing::controller::BufferingMode mode;
 } kBufferingModes[] = {
-    {"oneshot", fuchsia::tracing::BufferingMode::ONESHOT},
-    {"circular", fuchsia::tracing::BufferingMode::CIRCULAR},
-    {"streaming", fuchsia::tracing::BufferingMode::STREAMING},
+    {"oneshot", fuchsia::tracing::controller::BufferingMode::ONESHOT},
+    {"circular", fuchsia::tracing::controller::BufferingMode::CIRCULAR},
+    {"streaming", fuchsia::tracing::controller::BufferingMode::STREAMING},
 };
 
 static bool BeginsWith(fxl::StringView str, fxl::StringView prefix,
@@ -120,8 +120,9 @@ bool WaitForExit(zx_handle_t process, int* exit_code) {
   return true;
 }
 
-bool LookupBufferingMode(const std::string& mode_name,
-                         fuchsia::tracing::BufferingMode* out_mode) {
+bool LookupBufferingMode(
+    const std::string& mode_name,
+    fuchsia::tracing::controller::BufferingMode* out_mode) {
   for (const auto& mode : kBufferingModes) {
     if (mode_name == mode.name) {
       *out_mode = mode.mode;
@@ -457,7 +458,7 @@ Command::Info Record::Describe() {
 }
 
 Record::Record(component::StartupContext* context)
-    : CommandWithTraceController(context), weak_ptr_factory_(this) {}
+    : CommandWithController(context), weak_ptr_factory_(this) {}
 
 static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port,
                               addrinfo* out_addr) {
@@ -609,7 +610,7 @@ void Record::Start(const fxl::CommandLine& command_line) {
 
   tracing_ = true;
 
-  fuchsia::tracing::TraceOptions trace_options;
+  fuchsia::tracing::controller::TraceOptions trace_options;
   trace_options.set_categories(options_.categories);
   trace_options.set_buffer_size_megabytes_hint(options_.buffer_size_megabytes);
   // TODO(dje): start_timeout_milliseconds
@@ -620,9 +621,10 @@ void Record::Start(const fxl::CommandLine& command_line) {
   for (const auto& it : options_.provider_specs) {
     provider_specs[it.name] = it.buffer_size_in_mb;
   }
-  std::vector<fuchsia::tracing::ProviderSpec> uniquified_provider_specs;
+  std::vector<fuchsia::tracing::controller::ProviderSpec>
+      uniquified_provider_specs;
   for (const auto& it : provider_specs) {
-    fuchsia::tracing::ProviderSpec spec;
+    fuchsia::tracing::controller::ProviderSpec spec;
     spec.set_name(it.first);
     spec.set_buffer_size_megabytes_hint(it.second);
     uniquified_provider_specs.push_back(std::move(spec));

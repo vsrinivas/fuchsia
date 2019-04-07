@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.tracing;
+library fuchsia.tracing.controller;
 
 // The controller interface used by the trace tool to start/stop tracing.
 [Discoverable]
-protocol TraceController {
+protocol Controller {
     // Requests to start tracing with the specified |options|.
     //
     // The trace controller acknowledges the request when all

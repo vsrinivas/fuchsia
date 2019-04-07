@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/tracing/cpp/fidl.h>
+#include <fuchsia/tracing/controller/cpp/fidl.h>
 #include <lib/fit/function.h>
 
 #include "lib/component/cpp/startup_context.h"
@@ -60,18 +60,18 @@ class Command {
   FXL_DISALLOW_COPY_AND_ASSIGN(Command);
 };
 
-class CommandWithTraceController : public Command {
+class CommandWithController : public Command {
  protected:
-  explicit CommandWithTraceController(component::StartupContext* context);
+  explicit CommandWithController(component::StartupContext* context);
 
-  fuchsia::tracing::TraceControllerPtr& trace_controller();
-  const fuchsia::tracing::TraceControllerPtr& trace_controller() const;
+  fuchsia::tracing::controller::ControllerPtr& trace_controller();
+  const fuchsia::tracing::controller::ControllerPtr& trace_controller() const;
 
  private:
   std::unique_ptr<component::StartupContext> context_;
-  fuchsia::tracing::TraceControllerPtr trace_controller_;
+  fuchsia::tracing::controller::ControllerPtr trace_controller_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(CommandWithTraceController);
+  FXL_DISALLOW_COPY_AND_ASSIGN(CommandWithController);
 };
 
 }  // namespace tracing

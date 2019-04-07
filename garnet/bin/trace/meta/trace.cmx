@@ -14,7 +14,7 @@
             "fuchsia.process.Resolver",
             "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry",
-            "fuchsia.tracing.TraceController"
+            "fuchsia.tracing.controller.Controller"
         ],
         "system": [
             "bin"

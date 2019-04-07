@@ -4,7 +4,7 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.tracing") {
+fidl("fuchsia.tracing.controller") {
   sources = [
     "trace_controller.fidl",
   ]

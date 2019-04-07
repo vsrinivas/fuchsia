@@ -22,8 +22,8 @@ constexpr uint32_t kMaxBufferSizeMegabytes = 64;
 // These defaults are copied from fuchsia.tracing/trace_controller.fidl.
 constexpr uint32_t kDefaultBufferSizeMegabytesHint = 4;
 constexpr uint32_t kDefaultStartTimeoutMilliseconds = 5000;
-constexpr fuchsia::tracing::BufferingMode kDefaultBufferingMode =
-  fuchsia::tracing::BufferingMode::ONESHOT;
+constexpr fuchsia::tracing::controller::BufferingMode kDefaultBufferingMode =
+  fuchsia::tracing::controller::BufferingMode::ONESHOT;
 
 uint32_t ConstrainBufferSize(uint32_t buffer_size_megabytes) {
   return std::min(
@@ -45,9 +45,9 @@ TraceManager::TraceManager(component::StartupContext* context,
 
 TraceManager::~TraceManager() = default;
 
-void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
-                                zx::socket output,
-                                StartTracingCallback start_callback) {
+void TraceManager::StartTracing(
+    fuchsia::tracing::controller::TraceOptions options, zx::socket output,
+    StartTracingCallback start_callback) {
   if (session_) {
     FXL_LOG(ERROR) << "Trace already in progress";
     return;
@@ -69,7 +69,7 @@ void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
     }
   }
 
-  fuchsia::tracing::BufferingMode tracing_buffering_mode =
+  fuchsia::tracing::controller::BufferingMode tracing_buffering_mode =
     kDefaultBufferingMode;
   if (options.has_buffering_mode()) {
     tracing_buffering_mode = options.buffering_mode();
@@ -77,15 +77,15 @@ void TraceManager::StartTracing(fuchsia::tracing::TraceOptions options,
   fuchsia::tracelink::BufferingMode tracelink_buffering_mode;
   const char* mode_name;
   switch (tracing_buffering_mode) {
-    case fuchsia::tracing::BufferingMode::ONESHOT:
+    case fuchsia::tracing::controller::BufferingMode::ONESHOT:
       tracelink_buffering_mode = fuchsia::tracelink::BufferingMode::ONESHOT;
       mode_name = "oneshot";
       break;
-    case fuchsia::tracing::BufferingMode::CIRCULAR:
+    case fuchsia::tracing::controller::BufferingMode::CIRCULAR:
       tracelink_buffering_mode = fuchsia::tracelink::BufferingMode::CIRCULAR;
       mode_name = "circular";
       break;
-    case fuchsia::tracing::BufferingMode::STREAMING:
+    case fuchsia::tracing::controller::BufferingMode::STREAMING:
       tracelink_buffering_mode = fuchsia::tracelink::BufferingMode::STREAMING;
       mode_name = "streaming";
       break;
@@ -145,10 +145,10 @@ void TraceManager::StopTracing() {
 }
 
 void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
-  fidl::VectorPtr<fuchsia::tracing::KnownCategory> known_categories;
+  fidl::VectorPtr<fuchsia::tracing::controller::KnownCategory> known_categories;
   for (const auto& it : config_.known_categories()) {
     known_categories.push_back(
-        fuchsia::tracing::KnownCategory{it.first, it.second});
+        fuchsia::tracing::controller::KnownCategory{it.first, it.second});
   }
   callback(std::move(known_categories));
 }

@@ -24,7 +24,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.tracing",
+    "//sdk/fidl/fuchsia.tracing.controller",
     "//garnet/public/lib/component/cpp",
     "//src/lib/fxl",
     "//third_party/rapidjson",

@@ -8,7 +8,7 @@
 #include <memory>
 
 #include <fuchsia/tracelink/cpp/fidl.h>
-#include <fuchsia/tracing/cpp/fidl.h>
+#include <fuchsia/tracing/controller/cpp/fidl.h>
 
 #include "garnet/bin/trace_manager/trace_manager.h"
 #include "lib/component/cpp/startup_context.h"
@@ -26,7 +26,7 @@ class TraceManagerApp {
   std::unique_ptr<component::StartupContext> context_;
   TraceManager trace_manager_;
   fidl::BindingSet<fuchsia::tracelink::Registry> trace_registry_bindings_;
-  fidl::BindingSet<fuchsia::tracing::TraceController>
+  fidl::BindingSet<fuchsia::tracing::controller::Controller>
       trace_controller_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TraceManagerApp);

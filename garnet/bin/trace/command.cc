@@ -44,24 +44,24 @@ void Command::Done(int32_t return_code) {
   }
 }
 
-CommandWithTraceController::CommandWithTraceController(
+CommandWithController::CommandWithController(
     component::StartupContext* context)
     : Command(context),
       trace_controller_(context->ConnectToEnvironmentService<
-                        fuchsia::tracing::TraceController>()) {
+                        fuchsia::tracing::controller::Controller>()) {
   trace_controller_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Trace controller disconnected unexpectedly";
     Done(1);
   });
 }
 
-fuchsia::tracing::TraceControllerPtr&
-CommandWithTraceController::trace_controller() {
+fuchsia::tracing::controller::ControllerPtr&
+CommandWithController::trace_controller() {
   return trace_controller_;
 }
 
-const fuchsia::tracing::TraceControllerPtr&
-CommandWithTraceController::trace_controller() const {
+const fuchsia::tracing::controller::ControllerPtr&
+CommandWithController::trace_controller() const {
   return trace_controller_;
 }
 

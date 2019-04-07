@@ -14,7 +14,7 @@
             "fuchsia.sys.Loader",
             "fuchsia.tracelink.Registry",
             "fuchsia.tracelink.Provider",
-            "fuchsia.tracing.TraceController",
+            "fuchsia.tracing.controller.Controller",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.input.InputDispatcher"

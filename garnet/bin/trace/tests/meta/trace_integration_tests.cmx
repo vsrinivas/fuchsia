@@ -6,7 +6,7 @@
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                     "--verbose=2"
                 ],
-                "fuchsia.tracing.TraceController": [
+                "fuchsia.tracing.controller.Controller": [
                     "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                     "--verbose=2"
                 ]
@@ -27,7 +27,7 @@
             "fuchsia.process.Resolver",
             "fuchsia.sys.Launcher",
             "fuchsia.tracelink.Registry",
-            "fuchsia.tracing.TraceController"
+            "fuchsia.tracing.controller.Controller"
         ]
     }
 }

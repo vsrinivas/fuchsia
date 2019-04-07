@@ -8,7 +8,7 @@
 #include <list>
 
 #include <fuchsia/tracelink/cpp/fidl.h>
-#include <fuchsia/tracing/cpp/fidl.h>
+#include <fuchsia/tracing/controller/cpp/fidl.h>
 
 #include "garnet/bin/trace_manager/config.h"
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
@@ -22,14 +22,15 @@
 namespace tracing {
 
 class TraceManager : public fuchsia::tracelink::Registry,
-                     public fuchsia::tracing::TraceController {
+                     public fuchsia::tracing::controller::Controller {
  public:
   TraceManager(component::StartupContext* context, const Config& config);
   ~TraceManager() override;
 
  private:
-  // |TraceController| implementation.
-  void StartTracing(fuchsia::tracing::TraceOptions options, zx::socket output,
+  // |Controller| implementation.
+  void StartTracing(fuchsia::tracing::controller::TraceOptions options,
+                    zx::socket output,
                     StartTracingCallback cb) override;
   void StopTracing() override;
   void GetKnownCategories(GetKnownCategoriesCallback callback) override;

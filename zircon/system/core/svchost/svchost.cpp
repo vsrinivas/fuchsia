@@ -131,7 +131,7 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.sys.Launcher",
     "fuchsia.wlan.service.Wlan",
     // TODO(PT-88): This entry is temporary, until PT-88 is resolved.
-    "fuchsia.tracing.TraceController",
+    "fuchsia.tracing.controller.Controller",
     nullptr,
     // DO NOT ADD MORE ENTRIES TO THIS LIST.
     // Tests should not be accessing services from the environment. Instead,

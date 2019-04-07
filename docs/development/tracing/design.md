@@ -48,7 +48,7 @@ and isolates components which offer trace providers from trace clients.
 
 The trace manager implements two FIDL protocols:
 
-- `TraceController`: Provides trace clients with the ability to enumerate
+- `Controller`: Provides trace clients with the ability to enumerate
   trace providers and collect trace data.
 - `TraceRegistry`: Provides trace providers with the ability to register
   themselves at runtime so that they can be discovered by the tracing system.
@@ -78,7 +78,7 @@ other formats, such as Catapult JSON records which can be visualized
 using Catapult (aka. chrome:://tracing).
 
 Trace information can also be collected programmatically by using the
-`TraceController` FIDL protocol directly.
+`Controller` FIDL protocol directly.
 
 ## Libraries
 
