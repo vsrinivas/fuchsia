@@ -114,6 +114,9 @@ zx_status_t Launch(Args args, zx::channel bootsvc_client, zx::job* devmgr_job,
     if (args.disable_block_watcher) {
         argv.push_back("--disable-block-watcher");
     }
+    if (args.disable_netsvc) {
+        argv.push_back("--disable-netsvc");
+    }
     argv.push_back(nullptr);
 
     fbl::Vector<fdio_spawn_action_t> actions;

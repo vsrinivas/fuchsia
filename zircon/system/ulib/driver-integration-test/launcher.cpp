@@ -82,10 +82,11 @@ zx_status_t IsolatedDevmgr::Create(IsolatedDevmgr::Args* args, IsolatedDevmgr* o
     devmgr_args.driver_search_paths.swap(args->driver_search_paths);
     devmgr_args.load_drivers.swap(args->load_drivers);
     devmgr_args.disable_block_watcher = args->disable_block_watcher;
-    devmgr_args.get_boot_item =
-        [args](uint32_t type, uint32_t extra, zx::vmo* out, uint32_t* length) {
-            return GetBootItem(args->device_list, type, extra, out, length);
-        };
+    devmgr_args.disable_netsvc = args->disable_netsvc;
+    devmgr_args.get_boot_item = [args](uint32_t type, uint32_t extra, zx::vmo* out,
+                                       uint32_t* length) {
+        return GetBootItem(args->device_list, type, extra, out, length);
+    };
 
     zx_status_t status =
         devmgr_integration_test::IsolatedDevmgr::Create(std::move(devmgr_args), &devmgr.devmgr_);

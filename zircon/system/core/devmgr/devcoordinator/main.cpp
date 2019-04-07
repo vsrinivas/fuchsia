@@ -629,9 +629,10 @@ int service_starter(void* arg) {
     bool netboot = false;
     bool vruncmd = false;
     fbl::String vcmd;
-    if (!coordinator->boot_args().GetBool("netsvc.disable", false)) {
-        const char* args[] = {"/boot/bin/netsvc", nullptr, nullptr, nullptr, nullptr, nullptr,
-                              nullptr};
+    if (!(coordinator->boot_args().GetBool("netsvc.disable", false) ||
+          coordinator->disable_netsvc())) {
+        const char* args[] = {
+            "/boot/bin/netsvc", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr};
         int argc = 1;
 
         if (coordinator->boot_args().GetBool("netsvc.netboot", false)) {
@@ -735,6 +736,7 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
         kSysDeviceDriver,
         kUseSystemSvchost,
         kDisableBlockWatcher,
+        kDisableNetsvc,
     };
     option options[] = {
         {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
@@ -742,6 +744,7 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
         {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
         {"use-system-svchost", no_argument, nullptr, kUseSystemSvchost},
         {"disable-block-watcher", no_argument, nullptr, kDisableBlockWatcher},
+        {"disable-netsvc", no_argument, nullptr, kDisableNetsvc},
     };
 
     auto print_usage_and_exit = [options]() {
@@ -780,6 +783,9 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
             break;
         case kDisableBlockWatcher:
             out->disable_block_watcher = true;
+            break;
+        case kDisableNetsvc:
+            out->disable_netsvc = true;
             break;
         default:
             print_usage_and_exit();
@@ -890,6 +896,7 @@ int main(int argc, char** argv) {
     config.asan_drivers = boot_args.GetBool("devmgr.devhost.asan", false);
     config.suspend_fallback = boot_args.GetBool("devmgr.suspend-timeout-fallback", false);
     config.suspend_debug = boot_args.GetBool("devmgr.suspend-timeout-debug", false);
+    config.disable_netsvc = devmgr_args.disable_netsvc;
 
     status = get_root_resource(&config.root_resource);
     if (status != ZX_OK) {

@@ -124,6 +124,9 @@ struct DevmgrArgs {
     // Disables the block watcher if set to true. This can be used for testing purposes,
     // where it is not necessary to have the block watcher running.
     bool disable_block_watcher = false;
+    // Disables the netsvc if set to true. This can be used for testing purposes,
+    // where it is not necessary to have the netsvc running.
+    bool disable_netsvc = false;
 };
 
 struct CoordinatorConfig {
@@ -139,6 +142,8 @@ struct CoordinatorConfig {
     async_dispatcher_t* dispatcher;
     // Boot arguments from the Arguments service.
     const devmgr::BootArgs* boot_args;
+    // If true, netsvc is disabled and will not start.
+    bool disable_netsvc;
     // Whether we require /system.
     bool require_system;
     // Whether we require ASan drivers.
@@ -217,6 +222,7 @@ public:
     const zx::event& fshost_event() const { return config_.fshost_event; }
     async_dispatcher_t* dispatcher() const { return config_.dispatcher; }
     const devmgr::BootArgs& boot_args() const { return *config_.boot_args; }
+    bool disable_netsvc() const { return config_.disable_netsvc; }
     bool require_system() const { return config_.require_system; }
     bool suspend_fallback() const { return config_.suspend_fallback; }
     bool suspend_debug() const { return config_.suspend_debug; }

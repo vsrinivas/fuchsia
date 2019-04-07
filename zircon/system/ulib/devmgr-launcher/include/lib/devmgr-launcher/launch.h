@@ -37,6 +37,8 @@ struct Args {
     bool use_system_svchost = false;
     // If true, the block watcher will be disabled and will not start.
     bool disable_block_watcher = false;
+    // If true, the netsvc will be disabled and will not start.
+    bool disable_netsvc = false;
     // Function to handle requests for boot items.
     GetBootItemFunction get_boot_item;
 };

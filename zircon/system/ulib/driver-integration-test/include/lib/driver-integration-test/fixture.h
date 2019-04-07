@@ -26,6 +26,8 @@ public:
         fbl::Vector<board_test::DeviceEntry> device_list;
         // If set to true, the block watcher will be disabled.
         bool disable_block_watcher = true;
+        // If set to true, the netsvc will be disabled.
+        bool disable_netsvc = true;
     };
 
     // Launch a new isolated devmgr.  The instance will be destroyed when
