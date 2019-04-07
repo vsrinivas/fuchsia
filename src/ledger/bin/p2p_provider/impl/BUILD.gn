@@ -18,13 +18,13 @@ source_set("impl") {
 
   public_deps = [
     "//garnet/public/lib/component/cpp",
-    "//src/lib/fxl",
     "//garnet/public/lib/netconnector/cpp",
     "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.netconnector",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/filesystem",
     "//src/ledger/bin/p2p_provider/public",
+    "//src/lib/fxl",
   ]
 
   deps = [
@@ -55,10 +55,10 @@ source_set("unittests") {
     ":impl",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/bin/testing/netconnector",
+    "//src/lib/fxl",
 
     # gtest matchers are in gmock.
     "//third_party/googletest:gmock",

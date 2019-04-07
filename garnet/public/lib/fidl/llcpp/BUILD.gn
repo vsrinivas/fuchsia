@@ -15,8 +15,8 @@ executable("fidl_llcpp_conformance_test_bin") {
   ]
 
   deps = [
-    "//src/lib/fxl/test:gtest_main",
     "//sdk/lib/fidl/cpp:fidl_test_llcpp",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",

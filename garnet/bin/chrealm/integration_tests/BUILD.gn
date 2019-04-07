@@ -29,10 +29,10 @@ executable("tests") {
   deps = [
     "fidl/fuchsia.testing.chrealm",
     "//garnet/bin/appmgr:lib",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
   ]
@@ -46,10 +46,10 @@ executable("get_message_client_bin") {
   ]
 
   deps = [
-    "//sdk/lib/sys/cpp/",
     "fidl/fuchsia.testing.chrealm",
     "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp/",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
   ]

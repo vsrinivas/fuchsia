@@ -12,8 +12,8 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/media/camera/simple_camera_lib",
-    "//sdk/fidl/fuchsia.simplecamera",
     "//garnet/public/lib/component/cpp",
+    "//sdk/fidl/fuchsia.simplecamera",
     "//sdk/lib/fidl/cpp",
   ]
 }

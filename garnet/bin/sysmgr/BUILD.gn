@@ -24,11 +24,11 @@ source_set("lib") {
     "//garnet/lib/loader",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/json",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.pkg",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
   ]

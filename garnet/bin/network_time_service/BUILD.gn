@@ -12,10 +12,10 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/bin/network_time:lib",
-    "//sdk/fidl/fuchsia.timezone",
     "//garnet/public/lib/component/cpp",
-    "//src/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
+    "//sdk/fidl/fuchsia.timezone",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

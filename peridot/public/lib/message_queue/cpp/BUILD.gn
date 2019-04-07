@@ -17,8 +17,8 @@ source_set("message_queue_client") {
 
   public_deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
   ]
 }
 
@@ -33,7 +33,7 @@ source_set("message_sender_client") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
   ]
 }

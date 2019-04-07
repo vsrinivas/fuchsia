@@ -19,5 +19,4 @@ static_library("libmagma_linux") {
     "virtio_magma_connection.h",
     "virtmagma.h",
   ]
-
 }

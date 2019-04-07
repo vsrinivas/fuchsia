@@ -48,10 +48,10 @@ template("banjo_c_target") {
     public_configs = [ "//build/c:banjo_gen_config" ]
 
     deps += [
-              ":${main_target_name}_c_compile($banjo_toolchain)",
-              ":${main_target_name}_cpp_compile($banjo_toolchain)",
-              ":${main_target_name}_cpp_i_compile($banjo_toolchain)",
-   ]
+      ":${main_target_name}_c_compile($banjo_toolchain)",
+      ":${main_target_name}_cpp_compile($banjo_toolchain)",
+      ":${main_target_name}_cpp_i_compile($banjo_toolchain)",
+    ]
 
     libs = [ "zircon" ]
   }

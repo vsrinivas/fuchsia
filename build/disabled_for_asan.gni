@@ -1,2 +1,1 @@
-disabled_for_asan = [
-]
+disabled_for_asan = []

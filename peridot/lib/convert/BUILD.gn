@@ -17,8 +17,8 @@ source_set("convert") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//third_party/flatbuffers",
     "//third_party/leveldb",
     "//third_party/rapidjson",

@@ -113,9 +113,7 @@ test_package("cmc_integration_test") {
   deps = [
     ":cmc_integration_test_bin",
   ]
-  components = [
-    ":example_component",
-  ]
+  components = [ ":example_component" ]
 
   resources = [
     {

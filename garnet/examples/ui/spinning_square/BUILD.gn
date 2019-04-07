@@ -12,13 +12,13 @@ executable("spinning_square") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
-    "//garnet/public/lib/fsl",
     "//src/lib/fxl",
-    "//garnet/public/lib/ui/base_view/cpp",
-    "//garnet/public/lib/ui/scenic/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

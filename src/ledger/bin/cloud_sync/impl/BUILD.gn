@@ -63,7 +63,6 @@ source_set("unittests") {
     ":impl",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/cloud_sync/impl/testing",
     "//src/ledger/bin/cloud_sync/testing",
@@ -71,6 +70,7 @@ source_set("unittests") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",
+    "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

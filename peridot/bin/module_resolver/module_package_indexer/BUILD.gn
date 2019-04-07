@@ -10,9 +10,9 @@ executable_package("module_package_indexer") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//peridot/lib:maxwell_internal",
     "//peridot/lib/module_manifest_source:package_util",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
   ]

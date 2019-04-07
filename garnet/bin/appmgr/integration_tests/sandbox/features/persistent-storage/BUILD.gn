@@ -68,9 +68,9 @@ executable("isolated_persistent_storage_bin") {
   deps = [
     "//garnet/bin/appmgr/integration_tests/util:data_file_reader_writer",
     "//garnet/bin/appmgr/integration_tests/util:data_file_reader_writer_util",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

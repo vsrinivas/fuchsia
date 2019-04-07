@@ -27,8 +27,8 @@ executable("tests") {
 
   deps = [
     ":rapidjson_utils",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/rapidjson",
   ]
 }

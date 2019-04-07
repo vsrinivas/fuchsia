@@ -10,8 +10,8 @@ source_set("module_manifest_source") {
 
   public_deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
   ]
 }
 
@@ -39,11 +39,11 @@ source_set("firebase_source") {
   public_deps = [
     ":module_manifest_source",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/firebase",
     "//peridot/lib/module_manifest:json_xdr",
     "//sdk/fidl/fuchsia.net.oldhttp",
+    "//src/lib/fxl",
     "//third_party/rapidjson",
   ]
 }
@@ -70,7 +70,7 @@ source_set("module_package_source") {
     ":module_manifest_source",
     ":package_util",
     "//garnet/public/lib/component/cpp",
-    "//src/lib/fxl",
     "//peridot/lib:maxwell_internal",
+    "//src/lib/fxl",
   ]
 }

@@ -16,10 +16,10 @@ source_set("render") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.media",
+    "//src/lib/fxl",
     "//src/media/playback/mediaplayer_tmp/graph",
   ]
 }

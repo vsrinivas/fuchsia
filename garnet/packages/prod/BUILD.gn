@@ -307,8 +307,8 @@ group("all") {
     "//garnet/packages/prod:wlanphy",
     "//garnet/packages/prod:wlanstack",
     "//garnet/packages/prod:xi_core",
-    "//src/connectivity/wlan:tools",
     "//src/connectivity/telephony:drivers",
+    "//src/connectivity/wlan:tools",
   ]
 }
 

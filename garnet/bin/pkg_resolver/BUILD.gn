@@ -22,6 +22,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+
     # "//garnet/public/rust/tuf", FIXME re-enable once tuf is on futures alpha 13
     "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",

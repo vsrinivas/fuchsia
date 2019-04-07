@@ -32,9 +32,9 @@ executable("test_with_environment_example_test_bin") {
 
   deps = [
     "//garnet/examples/fidl/services:echo",
-    "//src/lib/fxl/test:gtest_main",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 

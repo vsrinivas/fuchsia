@@ -9,8 +9,6 @@ rustc_binary("svc_list") {
   name = "svc_list"
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/lib/netemul/fidl:environment-rustc",
     "//garnet/public/lib/netemul/fidl:network-rustc",
@@ -18,6 +16,8 @@ rustc_binary("svc_list") {
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:structopt",

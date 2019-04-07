@@ -8,4 +8,3 @@ group("system_monitor") {
     "harvester",
   ]
 }
-

@@ -43,8 +43,8 @@ executable("virtual_audio_bin") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.virtualaudio",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

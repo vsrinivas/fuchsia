@@ -75,8 +75,8 @@ source_set("operation_unittest") {
 
   deps = [
     ":operation",
-    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

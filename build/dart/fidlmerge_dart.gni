@@ -60,7 +60,8 @@ template("fidlmerge_dart") {
 
   # Subtle: rebase dance, so that we allow paths up to and including the build
   # dir to contain periods:
-  include_stem = string_replace(rebase_path(target_gen_dir, root_build_dir), ".", "/")
+  include_stem =
+      string_replace(rebase_path(target_gen_dir, root_build_dir), ".", "/")
   file_stem = "$root_build_dir/$include_stem/$source_base"
 
   compiled_action(generation_target_name) {

@@ -16,10 +16,10 @@ executable("fidl_compatibility_test") {
   deps = [
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
     "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
-    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/files",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",

@@ -28,8 +28,8 @@ static_library("shared") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//src/developer/debug/shared/logging",
+    "//src/lib/fxl",
   ]
 
   deps = [

@@ -3,30 +3,31 @@
 # found in the LICENSE file.
 
 import("//build/config/clang/clang.gni")
-import("//build/rust/rustc_artifact.gni") # for rustc_third_party_artifact
-import("//build/rust/config.gni") # for rust_build_{args,deps,inputs}
+import("//build/rust/config.gni")  # for rust_build_{args,deps,inputs}
+import("//build/rust/rustc_artifact.gni")  # for rustc_third_party_artifact
 
 third_party_lock = "//third_party/rust_crates/Cargo.lock"
 third_party_toml = "//third_party/rust_crates/Cargo.toml"
 
 fuchsia_cprng_dir = "//garnet/public/rust/fuchsia-cprng"
 
-fuchsia_cprng_src = exec_script(
-  "//build/rust/list_files_in_dir.py",
-  ["--dir", rebase_path("${fuchsia_cprng_dir}/src")],
-  "list lines",
-  # lib.rs will contain `mod` statements for all top-level files
-  [rebase_path("${fuchsia_cprng_dir}/src/lib.rs")]
-)
+fuchsia_cprng_src =
+    exec_script("//build/rust/list_files_in_dir.py",
+                [
+                  "--dir",
+                  rebase_path("${fuchsia_cprng_dir}/src"),
+                ],
+                "list lines",
+                # lib.rs will contain `mod` statements for all top-level files
+                [ rebase_path("${fuchsia_cprng_dir}/src/lib.rs") ])
 
-third_party_crate_names = exec_script(
-  "//build/rust/list_3p_crates.py",
-  [
-    "--cargo-toml", rebase_path(third_party_toml),
-  ],
-  "list lines",
-  [third_party_toml]
-)
+third_party_crate_names = exec_script("//build/rust/list_3p_crates.py",
+                                      [
+                                        "--cargo-toml",
+                                        rebase_path(third_party_toml),
+                                      ],
+                                      "list lines",
+                                      [ third_party_toml ])
 
 foreach(crate_name, third_party_crate_names) {
   rustc_third_party_artifact(crate_name) {
@@ -39,21 +40,30 @@ foreach(crate_name, third_party_crate_names) {
 action("build-third-party") {
   script = "//build/rust/compile_3p_crates.py"
 
-  inputs = [ third_party_lock, third_party_toml ]
+  inputs = [
+    third_party_lock,
+    third_party_toml,
+  ]
   inputs += fuchsia_cprng_src
 
   out_dir = "${root_out_dir}/rust_third_party_crates"
   out_deps_data = "${out_dir}/deps_data.json"
   args = [
-    "--cargo", rebase_path("${rustc_prefix}/cargo"),
-    "--crate-root", rebase_path("//third_party/rust_crates"),
-    "--out-dir", rebase_path(out_dir),
-    "--out-deps-data", rebase_path(out_deps_data),
+    "--cargo",
+    rebase_path("${rustc_prefix}/cargo"),
+    "--crate-root",
+    rebase_path("//third_party/rust_crates"),
+    "--out-dir",
+    rebase_path(out_dir),
+    "--out-deps-data",
+    rebase_path(out_deps_data),
   ]
 
   args += rust_build_args
   deps = rust_build_deps
   inputs += rust_build_inputs
 
-  outputs = [ out_deps_data ]
+  outputs = [
+    out_deps_data,
+  ]
 }

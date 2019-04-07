@@ -27,16 +27,16 @@ executable("service") {
 
   deps = [
     "services",
-    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/examples/escher/common",
-    "//sdk/fidl/fuchsia.ui.gfx",
+    "//garnet/lib/ui/util:glm_workaround",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/escher",
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/vulkan",
+    "//sdk/fidl/fuchsia.ui.gfx",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/trace-provider",
   ]

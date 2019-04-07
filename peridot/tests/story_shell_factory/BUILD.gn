@@ -31,7 +31,6 @@ executable_package("story_shell_factory_test_session_shell") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/fidl:clone",
     "//peridot/lib/rapidjson",
@@ -44,5 +43,6 @@ executable_package("story_shell_factory_test_session_shell") {
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 }

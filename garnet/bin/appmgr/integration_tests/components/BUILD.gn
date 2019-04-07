@@ -48,9 +48,9 @@ executable("components_binary_argv_test") {
   ]
 
   deps = [
+    "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//sdk/lib/sys/cpp/testing:integration",
   ]
 }
 

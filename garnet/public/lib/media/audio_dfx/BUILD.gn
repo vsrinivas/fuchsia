@@ -25,9 +25,7 @@ loadable_module("audio_dfx") {
     "//zircon/public/lib/fbl",
   ]
 
-  public_configs = [
-    "//garnet/public:config",
-  ]
+  public_configs = [ "//garnet/public:config" ]
 }
 
 # This standalone test expects to find a audio_dfx.so in this package.

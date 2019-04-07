@@ -44,6 +44,7 @@ test_platforms = [
     device_type = "Astro"
     cpu = "arm64"
   },
+
   # See IN-571.
   {
     device_type = "Khadas Vim2 Max"

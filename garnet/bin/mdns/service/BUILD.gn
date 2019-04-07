@@ -95,11 +95,11 @@ source_set("source_set") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.mdns",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",
+    "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 }

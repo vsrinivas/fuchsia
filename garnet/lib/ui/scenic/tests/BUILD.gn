@@ -23,9 +23,9 @@ source_set("testing_deps") {
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic",
     "//garnet/public/lib/component/cpp",
-    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
   ]
 }

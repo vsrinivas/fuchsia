@@ -18,7 +18,6 @@ executable("app") {
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.net.oldhttp",
     "//sdk/fidl/fuchsia.netconnector",
@@ -31,6 +30,7 @@ executable("app") {
     "//src/ledger/bin/p2p_sync/impl",
     "//src/ledger/bin/storage/impl:lib",
     "//src/ledger/bin/storage/public",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -108,7 +108,6 @@ source_set("lib") {
     ":serialization_version",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/inspect:inspect",
     "//peridot/lib/base64url:base64url",
     "//peridot/lib/convert",
@@ -132,6 +131,7 @@ source_set("lib") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/sync_coordinator/impl",
     "//src/ledger/bin/sync_coordinator/public",
+    "//src/lib/fxl",
     "//zircon/public/lib/trace",
   ]
 
@@ -185,7 +185,6 @@ source_set("unittests") {
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/component/cpp:cpp",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/inspect:inspect",
     "//garnet/public/lib/inspect:reader",
     "//garnet/public/lib/inspect/testing:testing",
@@ -205,6 +204,7 @@ source_set("unittests") {
     "//src/ledger/bin/sync_coordinator/public",
     "//src/ledger/bin/sync_coordinator/testing",
     "//src/ledger/bin/testing:lib",
+    "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

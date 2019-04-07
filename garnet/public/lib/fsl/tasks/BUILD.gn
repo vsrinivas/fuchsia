@@ -19,7 +19,5 @@ source_set("tasks") {
     "//zircon/public/lib/fdio",
   ]
 
-  public_configs = [
-    "//garnet/public:config",
-  ]
+  public_configs = [ "//garnet/public:config" ]
 }

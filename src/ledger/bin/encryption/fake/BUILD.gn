@@ -15,8 +15,8 @@ source_set("fake") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//src/ledger/bin/encryption/public",
+    "//src/lib/fxl",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

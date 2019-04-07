@@ -27,31 +27,40 @@ template("collect_blob_manifest") {
   list_name = target_name + ".list"
   list_path = target_gen_dir + "/" + list_name
   package_metadata_list(list_name) {
-    forward_variables_from(invoker, [
-      "data_deps",
-      "deps",
-      "public_deps",
-      "testonly",
-      "data_keys",
-    ])
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "data_keys",
+                           ])
 
-    data_keys = ["blob_manifests"]
+    data_keys = [ "blob_manifests" ]
 
-    outputs = [list_path]
+    outputs = [
+      list_path,
+    ]
   }
 
   action(target_name) {
-    forward_variables_from(invoker, [
-      "inputs",
-      "outputs",
-      "testonly",
-      "visibility",
-    ])
+    forward_variables_from(invoker,
+                           [
+                             "inputs",
+                             "outputs",
+                             "testonly",
+                             "visibility",
+                           ])
 
-    assert([outputs[0]] == outputs, "collect_blob_manifest requires exactly one output")
+    assert([ outputs[0] ] == outputs,
+           "collect_blob_manifest requires exactly one output")
 
-    inputs = [list_path]
-    deps = [":" + list_name]
+    inputs = [
+      list_path,
+    ]
+    deps = [
+      ":" + list_name,
+    ]
 
     script = "//build/images/manifest_list_collect_unique_blobs.sh"
     args = [

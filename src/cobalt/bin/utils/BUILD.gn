@@ -43,9 +43,9 @@ executable("cobalt_utils_unittests") {
 
   deps = [
     ":fuchsia_http_client",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/network_wrapper:fake",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
 }

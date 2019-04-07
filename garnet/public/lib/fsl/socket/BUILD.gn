@@ -23,7 +23,5 @@ source_set("socket") {
     "//zircon/public/lib/zx",
   ]
 
-  public_configs = [
-    "//garnet/public:config",
-  ]
+  public_configs = [ "//garnet/public:config" ]
 }

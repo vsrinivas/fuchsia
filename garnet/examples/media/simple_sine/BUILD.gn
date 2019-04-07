@@ -9,9 +9,9 @@ executable("simple_sine") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/sys/cpp",
-    "//garnet/public/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fzl",

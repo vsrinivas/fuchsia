@@ -23,10 +23,10 @@ group("tests") {
 group("buildbot") {
   testonly = true
   public_deps = [
-    "//src:tests",
     "//bundles:tools",
     "//garnet/packages:all",
     "//peridot/packages:all",
+    "//src:tests",
   ]
 }
 

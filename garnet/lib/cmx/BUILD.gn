@@ -19,8 +19,8 @@ source_set("cmx") {
 
   deps = [
     "//garnet/public/lib/cmx_facet_parser",
-    "//src/lib/fxl",
     "//garnet/public/lib/json",
+    "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
     "//zircon/public/lib/fit",
@@ -42,9 +42,9 @@ executable("tests") {
 
   deps = [
     ":cmx",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
+    "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",

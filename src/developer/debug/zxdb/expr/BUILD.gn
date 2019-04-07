@@ -53,9 +53,9 @@ static_library("expr") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//src/developer/debug/zxdb/common",
     "//src/developer/debug/zxdb/symbols",
+    "//src/lib/fxl",
   ]
 }
 

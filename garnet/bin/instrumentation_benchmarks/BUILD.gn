@@ -16,12 +16,12 @@ executable("bin") {
   ]
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//zircon/public/lib/inspect-vmo",
     "//garnet/public/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fs",
+    "//zircon/public/lib/inspect-vmo",
     "//zircon/public/lib/zx",
   ]
   public_deps = [

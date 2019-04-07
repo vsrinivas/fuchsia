@@ -28,9 +28,9 @@ executable("sig_gen_bin") {
 
   deps = [
     "//garnet/lib/media/wav_writer",
-    "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.media",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fzl",

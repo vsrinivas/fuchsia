@@ -19,12 +19,14 @@ template("verify_pragma_once") {
 
     inputs = invoker.headers
 
-    outputs = [ stamp_file ]
+    outputs = [
+      stamp_file,
+    ]
 
     args = [
-      "--stamp",
-      rebase_path(stamp_file),
-      "--headers",
-    ] + rebase_path(invoker.headers)
+             "--stamp",
+             rebase_path(stamp_file),
+             "--headers",
+           ] + rebase_path(invoker.headers)
   }
 }

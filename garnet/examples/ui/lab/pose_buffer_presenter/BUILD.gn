@@ -15,10 +15,10 @@ executable("pose_buffer_presenter") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/escher",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 
   include_dirs = [

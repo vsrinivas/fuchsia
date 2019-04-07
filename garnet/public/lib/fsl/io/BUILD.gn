@@ -22,8 +22,8 @@ source_set("io") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//src/lib/files",
+    "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io_c_client",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -32,7 +32,5 @@ source_set("io") {
     "//zircon/public/lib/zx",
   ]
 
-  public_configs = [
-    "//garnet/public:config",
-  ]
+  public_configs = [ "//garnet/public:config" ]
 }

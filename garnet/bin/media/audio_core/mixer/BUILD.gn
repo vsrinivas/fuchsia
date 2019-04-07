@@ -42,8 +42,8 @@ source_set("audio_mixer_lib") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//garnet/public/lib/media/timeline:no_converters",
+    "//src/lib/fxl",
     "//zircon/public/lib/fbl",
   ]
 }

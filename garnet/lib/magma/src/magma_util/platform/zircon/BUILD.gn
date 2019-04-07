@@ -130,13 +130,13 @@ source_set("client_connection") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
-    "//sdk/fidl/fuchsia.gpu.magma",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/fdio",
     "$zircon_build_root/public/lib/zx",
     "..:connection_header",
+    "//sdk/fidl/fuchsia.gpu.magma",
+    "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
   ]
 }
 
@@ -148,12 +148,12 @@ source_set("connection") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.gpu.magma",
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/zx",
     "..:connection_header",
+    "//sdk/fidl/fuchsia.gpu.magma",
   ]
 }
 

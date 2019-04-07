@@ -100,7 +100,6 @@ source_set("lib") {
     ":file_index",
     ":object_identifier_lib",
     "//garnet/public/lib/callback",
-    "//src/lib/fxl",
     "//peridot/lib/base64url",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/cobalt",
@@ -112,6 +111,7 @@ source_set("lib") {
     "//src/ledger/bin/lock",
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/storage/public",
+    "//src/lib/fxl",
     "//zircon/public/lib/trace",
   ]
 
@@ -143,11 +143,11 @@ source_set("test_utils") {
 
   public_deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/lib/rng",
     "//src/ledger/bin/storage/impl/btree:lib",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/testing:lib",
+    "//src/lib/fxl",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
@@ -179,7 +179,6 @@ source_set("unittests") {
     ":lib",
     ":test_utils",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/lib/rng",
     "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/cloud_sync/impl",
@@ -190,6 +189,7 @@ source_set("unittests") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/testing",
     "//src/ledger/bin/testing:lib",
+    "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

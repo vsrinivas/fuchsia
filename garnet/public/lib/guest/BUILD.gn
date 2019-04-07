@@ -10,11 +10,11 @@ source_set("guest") {
     "scenic_wayland_dispatcher.h",
   ]
   public_deps = [
+    "//garnet/public/lib/component/cpp",
     "//sdk/fidl/fuchsia.guest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.wayland",
-    "//garnet/public/lib/component/cpp",
     "//src/lib/fxl",
   ]
 }

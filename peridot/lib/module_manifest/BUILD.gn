@@ -57,10 +57,10 @@ source_set("module_facet_reader_impl_unittest") {
   deps = [
     ":module_facet_reader_impl",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

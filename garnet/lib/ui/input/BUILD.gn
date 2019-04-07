@@ -14,10 +14,10 @@ source_set("input") {
     "//garnet/lib/ui/gfx",
     "//garnet/lib/ui/scenic",
     "//garnet/public/lib/escher",
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/fxl",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/input/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/trace",
   ]
 }

@@ -15,7 +15,6 @@ executable("tile") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//garnet/public/lib/ui/base_view/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
@@ -24,6 +23,7 @@ executable("tile") {
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
     "//zircon/public/lib/zx",

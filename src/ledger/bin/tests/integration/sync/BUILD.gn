@@ -18,13 +18,13 @@ source_set("sync") {
   deps = [
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/lib/convert",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/fidl_helpers",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/firebase_auth/testing",
+    "//src/lib/fxl",
   ]
 
   public_deps = [

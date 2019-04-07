@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
 import("//build/banjo/toolchain.gni")
+import("//build/compiled_action.gni")
 import("//build/rust/toolchain.gni")
 
 # Generates some Rust bindings for a banjo library.
@@ -41,7 +41,9 @@ template("banjo_rust") {
 
     tool = "//tools/banjo/banjo:banjo_bin"
 
-    inputs = [ "//tools/banjo/banjo/zx.banjo" ]
+    inputs = [
+      "//tools/banjo/banjo/zx.banjo",
+    ]
     inputs += invoker.sources
 
     outputs = [

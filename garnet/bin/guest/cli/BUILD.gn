@@ -30,11 +30,11 @@ executable("bin") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.guest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
-    "//garnet/public/lib/fsl",
-    "//garnet/public/lib/svc/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/virtio",

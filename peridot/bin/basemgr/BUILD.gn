@@ -45,7 +45,6 @@ executable_package("basemgr") {
     ":lib",
     ":wait_for_minfs",
     "//garnet/public/lib/component/cpp",
-    "//src/lib/fxl",
     "//peridot/bin/basemgr/cobalt",
     "//peridot/bin/basemgr/session_shell_settings",
     "//peridot/lib/common:async_holder",
@@ -68,6 +67,7 @@ executable_package("basemgr") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.wlan.service",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]
@@ -125,7 +125,6 @@ source_set("lib") {
     ":users",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/bin/basemgr/session_shell_settings",
     "//peridot/lib/common:async_holder",
     "//peridot/lib/common:teardown",
@@ -140,6 +139,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.ui.viewsv1token",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/trace",
   ]
 
@@ -183,13 +183,13 @@ source_set("dev_base_shell_source_set") {
 
   deps = [
     "//garnet/public/lib/callback",
-    "//src/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/public/lib/app_driver/cpp",
     "//peridot/public/lib/integration_testing/cpp",
     "//sdk/fidl/fuchsia.auth.account",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
 
@@ -210,9 +210,9 @@ executable("session_context_impl_unittest") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing:fake_launcher",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//peridot/lib/fidl:clone",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
   ]
 }

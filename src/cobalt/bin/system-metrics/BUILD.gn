@@ -76,12 +76,12 @@ executable("cobalt_system_metrics_unittests") {
   deps = [
     ":system_metrics_daemon_lib",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/cobalt/bin/testing:fake_clock_lib",
     "//src/cobalt/bin/testing:fake_logger_lib",
     "//src/cobalt/bin/utils:clock",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/fidl/fuchsia-cobalt",
   ]
 }

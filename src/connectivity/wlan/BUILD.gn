@@ -27,15 +27,15 @@ group("tests") {
     "//src/connectivity/wlan/testing/ap-smoke-test:wlan-ap-smoke-test",
     "//src/connectivity/wlan/testing/client-smoke-test:wlan-smoke-test",
     "//src/connectivity/wlan/testing/client-stress-test:wlan-stress-test",
-    "//src/connectivity/wlan/testing/wlantap-client",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim-tests",
+    "//src/connectivity/wlan/testing/wlantap-client",
     "//src/connectivity/wlan/tools/wlantool:wlantool2-tests",
   ]
 }
 
 group("tools") {
   public_deps = [
-    "//src/connectivity/wlan/tools/wlantool:wlantool2",
     "//src/connectivity/wlan/tools/wlan:wlantool",
+    "//src/connectivity/wlan/tools/wlantool:wlantool2",
   ]
 }

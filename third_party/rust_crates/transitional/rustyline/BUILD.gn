@@ -15,9 +15,8 @@ rustc_library("rustyline") {
   deps = [
     "//garnet/public/rust/fuchsia-device",
     "//garnet/public/rust/fuchsia-zircon",
-
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:memchr",
     "//third_party/rust_crates:unicode-segmentation",
     "//third_party/rust_crates:unicode-width",

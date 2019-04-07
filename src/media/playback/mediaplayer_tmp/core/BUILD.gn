@@ -25,11 +25,11 @@ source_set("core") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//garnet/public/lib/media/timeline",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.mediaplayer",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//src/media/playback/mediaplayer_tmp/decode",
     "//src/media/playback/mediaplayer_tmp/demux",
     "//src/media/playback/mediaplayer_tmp/graph",

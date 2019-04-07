@@ -44,7 +44,6 @@ executable("ledger_unittests") {
   testonly = true
 
   deps = [
-    "//src/lib/fxl:printers",
     "//src/ledger/bin/app:unittests",
     "//src/ledger/bin/cache:unittests",
     "//src/ledger/bin/cloud_sync/impl:unittests",
@@ -64,6 +63,7 @@ executable("ledger_unittests") {
     "//src/ledger/bin/sync_helper:unittests",
     "//src/ledger/bin/testing:unittests",
     "//src/ledger/bin/testing/netconnector:unittests",
+    "//src/lib/fxl:printers",
     "//third_party/googletest:gtest_main",
   ]
 

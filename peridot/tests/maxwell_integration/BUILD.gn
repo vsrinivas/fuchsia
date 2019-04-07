@@ -133,9 +133,9 @@ source_set("test_suggestion_listener") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//peridot/public/lib/fostr/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
   ]
 
   public_deps = [

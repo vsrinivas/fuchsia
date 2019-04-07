@@ -8,9 +8,9 @@ executable("tts") {
   ]
 
   deps = [
+    "//garnet/public/lib/fsl",
     "//sdk/fidl/fuchsia.tts",
     "//sdk/lib/sys/cpp",
-    "//garnet/public/lib/fsl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
   ]

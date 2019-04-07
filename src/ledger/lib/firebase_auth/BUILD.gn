@@ -25,10 +25,10 @@ source_set("firebase_auth") {
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
     "//garnet/public/lib/cobalt/cpp:deprecated_cobalt_logger",
-    "//src/lib/fxl",
     "//peridot/lib/rng",
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.modular.auth",
+    "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 }

@@ -28,9 +28,9 @@ executable("intl_wisdom_client") {
   deps = [
     ":lib",
     "//garnet/examples/intl/fidl:wisdom",
-    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//src/lib/icu_data/cpp",
     "//third_party/icu:icu",
     "//zircon/public/lib/async-default",

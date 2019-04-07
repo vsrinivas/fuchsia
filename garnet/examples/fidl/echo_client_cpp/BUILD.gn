@@ -12,8 +12,8 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/examples/fidl/services:echo",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
   ]
 }
 
@@ -27,8 +27,8 @@ executable("bin") {
   deps = [
     ":lib",
     "//garnet/examples/fidl/services:echo",
-    "//sdk/lib/sys/cpp",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
   ]

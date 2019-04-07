@@ -18,9 +18,9 @@ source_set("lifecycle_impl") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 }

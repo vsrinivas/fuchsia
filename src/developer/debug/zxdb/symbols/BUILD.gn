@@ -109,11 +109,11 @@ static_library("symbols") {
   # This library can not use any part of the debugger other than the "common"
   # base helpers.
   public_deps = [
-    "//src/lib/fxl",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
     "//src/developer/debug/zxdb/common",
     "//src/lib/elflib",
+    "//src/lib/fxl",
   ]
 
   deps = [

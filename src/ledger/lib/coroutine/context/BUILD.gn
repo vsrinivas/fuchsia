@@ -13,8 +13,8 @@ source_set("context") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//src/ledger/lib/coroutine/context/$target_cpu",
+    "//src/lib/fxl",
   ]
 
   public_deps = [

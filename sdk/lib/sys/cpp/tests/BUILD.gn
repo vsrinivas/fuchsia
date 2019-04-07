@@ -68,9 +68,9 @@ executable("helper_proc") {
 
   deps = [
     "//garnet/examples/fidl/services:echo",
-    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

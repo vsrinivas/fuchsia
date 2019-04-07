@@ -32,8 +32,8 @@ group("broadcom") {
 group("containers_cpp") {
   testonly = true
   public_deps = [
-    "//src/lib/containers/cpp:containers_cpp_unittests($host_toolchain)",
     "//src/lib/containers/cpp:containers_cpp_tests",
+    "//src/lib/containers/cpp:containers_cpp_unittests($host_toolchain)",
   ]
 }
 

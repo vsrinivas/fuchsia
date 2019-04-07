@@ -10,9 +10,9 @@ source_set("network_wrapper") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.net.oldhttp",
     "//garnet/public/lib/backoff",
     "//garnet/public/lib/callback",
+    "//sdk/fidl/fuchsia.net.oldhttp",
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
@@ -32,8 +32,8 @@ source_set("fake") {
   ]
 
   deps = [
-    "//sdk/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 
@@ -46,10 +46,10 @@ source_set("unittests") {
 
   deps = [
     ":network_wrapper",
-    "//sdk/fidl/fuchsia.netstack",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.netstack",
     "//third_party/googletest:gtest",
   ]
 }

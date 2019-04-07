@@ -43,8 +43,6 @@ executable("minimal_input_test") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/input/cpp",
@@ -53,6 +51,8 @@ executable("minimal_input_test") {
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",

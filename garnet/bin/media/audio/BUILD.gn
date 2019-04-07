@@ -11,8 +11,8 @@ source_set("audio_core_client_lib") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp",
+    "//sdk/fidl/fuchsia.media",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",

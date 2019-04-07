@@ -22,10 +22,10 @@ executable("bin") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//garnet/public/lib/inspect:component",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -39,9 +39,9 @@ executable("test") {
   ]
 
   deps = [
+    "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gmock",
     "//zircon/public/fidl/fuchsia-inspect",
   ]

@@ -13,7 +13,7 @@ executable("install-disk-image") {
     "disk-pave.cpp",
   ]
   deps = [
-    "$zx/system/ulib/paver",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/paver",
   ]
 }

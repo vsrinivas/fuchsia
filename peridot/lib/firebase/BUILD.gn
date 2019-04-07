@@ -30,9 +30,9 @@ source_set("firebase") {
   deps = [
     "//garnet/public/lib/callback",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/lib/base64url",
     "//peridot/lib/socket",
+    "//src/lib/fxl",
   ]
 }
 
@@ -47,11 +47,11 @@ source_set("unittests") {
 
   deps = [
     ":firebase",
-    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/network_wrapper:fake",
     "//peridot/lib/convert",
     "//peridot/lib/socket",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

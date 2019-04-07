@@ -9,10 +9,10 @@ source_set("presentation_mode") {
   ]
 
   deps = [
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/fxl",
     "//garnet/public/lib/ui/input",
     "//garnet/public/lib/ui/input/cpp",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 
   public_deps = [

@@ -117,7 +117,6 @@ executable_package("embed_shell_test_story_shell") {
 
   deps = [
     ":defs",
-    "//src/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_base",
@@ -127,6 +126,7 @@ executable_package("embed_shell_test_story_shell") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

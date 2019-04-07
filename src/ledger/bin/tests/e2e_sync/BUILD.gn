@@ -21,7 +21,6 @@ executable("e2e_sync") {
     "//garnet/public/lib/callback",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/lib/convert",
     "//peridot/lib/rng:system",
     "//sdk/lib/fidl/cpp",
@@ -32,6 +31,7 @@ executable("e2e_sync") {
     "//src/ledger/cloud_provider_firestore/bin/fidl",
     "//src/ledger/cloud_provider_firestore/bin/testing",
     "//src/ledger/lib/firebase_auth/testing",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 

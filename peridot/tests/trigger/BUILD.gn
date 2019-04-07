@@ -41,7 +41,6 @@ executable_package("trigger_test_session_shell") {
   deps = [
     ":defs",
     "//garnet/public/lib/callback",
-    "//src/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",
     "//peridot/lib/testing:session_shell_base",
@@ -50,6 +49,7 @@ executable_package("trigger_test_session_shell") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 }
 

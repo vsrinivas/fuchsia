@@ -47,7 +47,6 @@ executable_package("modular_benchmark_story_session_shell") {
   deps = [
     ":tracing_waiter",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/lib/fidl:single_service_app",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",
@@ -56,6 +55,7 @@ executable_package("modular_benchmark_story_session_shell") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 
   sources = [

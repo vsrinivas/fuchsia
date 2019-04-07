@@ -13,12 +13,12 @@ executable("child") {
 
   deps = [
     "//garnet/public/lib/component/cpp",
-    "//src/lib/fxl",
     "//garnet/public/lib/ui/input",
     "//garnet/public/lib/ui/input/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

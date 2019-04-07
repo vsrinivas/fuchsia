@@ -213,12 +213,12 @@ source_set("gfx") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/vulkan",
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-hardware-display",
     "//zircon/public/lib/fit",
   ]

@@ -31,8 +31,8 @@ source_set("unittests") {
 
   deps = [
     ":filesystem",
-    "//src/lib/fxl",
     "//peridot/lib/scoped_tmpfs",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 

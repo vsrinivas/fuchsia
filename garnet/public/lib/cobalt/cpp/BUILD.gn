@@ -14,8 +14,8 @@ source_set("deprecated_cobalt_logger") {
 
   public_deps = [
     "//garnet/public/lib/component/cpp",
-    "//src/lib/fxl",
     "//src/lib/cobalt/cpp:cobalt_logger",
+    "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
 

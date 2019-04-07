@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 
 rustc_binary("test_suite") {
@@ -12,21 +12,21 @@ rustc_binary("test_suite") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
-    "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/mundane",
+    "//sdk/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
+    "//sdk/fidl/fuchsia.ui.text.testing:fuchsia.ui.text.testing-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:unicode-segmentation",
-    "//third_party/rust_crates:pin-utils",
-    "//garnet/public/rust/mundane",
   ]
 }
 

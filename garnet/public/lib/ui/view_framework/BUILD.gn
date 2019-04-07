@@ -8,11 +8,11 @@ source_set("view_framework") {
     "base_view.h",
   ]
   public_deps = [
-    "//src/lib/fxl",
     "//garnet/public/lib/ui/scenic/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]
   deps = [

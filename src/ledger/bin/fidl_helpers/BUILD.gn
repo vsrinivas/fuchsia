@@ -2,9 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-visibility = [
-  "//src/ledger/*",
-]
+visibility = [ "//src/ledger/*" ]
 
 source_set("fidl_helpers") {
   sources = [
@@ -13,8 +11,8 @@ source_set("fidl_helpers") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

@@ -12,9 +12,9 @@ source_set("lib") {
     "test_sample_generator.h",
   ]
   public_deps = [
+    ":protos",
     "//src/lib/fxl",
     "//third_party/grpc:grpc++",
-    ":protos",
   ]
 }
 

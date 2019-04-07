@@ -9,10 +9,10 @@ executable("fx") {
 
   deps = [
     "//garnet/lib/media/wav_writer",
-    "//sdk/lib/sys/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/timeline",
     "//sdk/fidl/fuchsia.media",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/fidl/fuchsia-scheduler",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/audio-utils",

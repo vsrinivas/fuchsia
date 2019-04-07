@@ -89,9 +89,9 @@ executable("network_test_bin") {
     ":ethertap",
     ":netdump",
     ":network_service",
+    "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//sdk/lib/sys/cpp/testing:integration",
     "//zircon/public/lib/fzl",
   ]
 

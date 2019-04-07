@@ -26,10 +26,10 @@ executable("bin") {
   ]
 
   deps = [
-    "//src/lib/fxl/test:gtest_main",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",

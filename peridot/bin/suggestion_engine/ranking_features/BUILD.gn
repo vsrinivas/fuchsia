@@ -25,8 +25,8 @@ source_set("ranking_feature") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 
   public_deps = [
@@ -71,8 +71,8 @@ source_set("affinity_ranking_feature") {
   public_deps = [
     ":ranking_feature",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
   ]
 }
 
@@ -154,8 +154,8 @@ source_set("mod_pair_ranking_feature") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//peridot/public/lib/context/cpp:context_helper",
+    "//src/lib/fxl",
     "//third_party/rapidjson",
   ]
 }

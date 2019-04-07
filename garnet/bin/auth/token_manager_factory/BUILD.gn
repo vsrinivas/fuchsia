@@ -9,12 +9,12 @@ rustc_binary("token_manager_factory") {
 
   deps = [
     "//garnet/lib/auth/token_manager",
-    "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
     "//third_party/rust_crates:log",

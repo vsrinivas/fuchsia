@@ -42,8 +42,8 @@ source_set("set_link_value_command_runner") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:set_link_value_call",
+    "//src/lib/fxl",
   ]
 
   public_deps = [
@@ -76,9 +76,9 @@ source_set("add_mod_command_runner") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
     "//peridot/lib/module_manifest:module_facet_reader",
+    "//src/lib/fxl",
   ]
 
   public_deps = [
@@ -97,13 +97,13 @@ executable("add_mod_command_runner_unittest") {
   deps = [
     ":add_mod_command_runner",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/gtest",
     "//peridot/lib/testing:entity_resolver_fake",
     "//peridot/lib/testing:module_facet_reader_fake",
     "//peridot/lib/testing:module_resolver_fake",
     "//peridot/lib/testing:test_with_session_storage",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
   ]
 }

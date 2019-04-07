@@ -18,7 +18,6 @@ executable_package("test_driver_module") {
     "test_driver_module.cc",
   ]
   deps = [
-    "//src/lib/fxl",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:test_driver",
     "//peridot/public/lib/app_driver/cpp",
@@ -27,6 +26,7 @@ executable_package("test_driver_module") {
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
 

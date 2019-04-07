@@ -16,8 +16,8 @@ source_set("sync_service") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//garnet/public/lib/netemul/fidl:sync",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -38,8 +38,8 @@ executable("sync_test_bin") {
 
   deps = [
     ":sync_service",
-    "//src/lib/fxl/test:gtest_main",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fzl",
   ]
 }

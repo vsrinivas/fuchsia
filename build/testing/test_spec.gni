@@ -220,16 +220,14 @@ template("test_spec") {
 
     # TODO(IN-876): Delete this block once astros are ready to be targeted.
     if (defined(dims.device_type) && dims.device_type == "Astro") {
-      assert(
-          defined(env.tags) && [ "astro" ] + env.tags - env.tags == [],
-          "astros may not yet be targeted.")
+      assert(defined(env.tags) && [ "astro" ] + env.tags - env.tags == [],
+             "astros may not yet be targeted.")
     }
 
     # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
     if (defined(dims.device_type) && dims.device_type == "Khadas Vim2 Max") {
-      assert(
-          defined(env.tags) && [ "vim2" ] + env.tags - env.tags == [],
-          "vim2s may not yet be targeted.")
+      assert(defined(env.tags) && [ "vim2" ] + env.tags - env.tags == [],
+             "vim2s may not yet be targeted.")
     }
   }
 

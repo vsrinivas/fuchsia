@@ -10,6 +10,7 @@ group("examples") {
     "camera",
     "components",
     "escher",
+
     # TODO: Add more.
   ]
 }

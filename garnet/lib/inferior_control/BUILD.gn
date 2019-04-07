@@ -48,8 +48,8 @@ static_library("inferior_control") {
   deps = [
     "//garnet/lib/debugger_utils",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//src/lib/files",
+    "//src/lib/fxl",
     "//zircon/public/lib/zx",
   ]
 
@@ -80,8 +80,8 @@ executable("tests") {
     ":inferior_control",
     "//garnet/lib/debugger_utils",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest",
   ]
 }

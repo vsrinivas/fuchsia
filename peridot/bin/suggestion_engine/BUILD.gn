@@ -120,11 +120,11 @@ source_set("state") {
 
   deps = [
     ":models",
-    "//src/lib/fxl",
     "//peridot/bin/suggestion_engine/filters:base",
     "//peridot/bin/suggestion_engine/rankers:ranker",
     "//peridot/public/lib/context/cpp:context_helper",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
   ]
   public_deps = [
     "//peridot/bin/suggestion_engine/ranking_features:ranking_feature",
@@ -157,8 +157,8 @@ source_set("debug") {
   deps = [
     ":models",
     ":state",
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
   ]
 
   public_deps = [

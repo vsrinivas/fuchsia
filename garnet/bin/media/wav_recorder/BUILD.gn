@@ -28,10 +28,10 @@ executable("wav_rec_bin") {
 
   deps = [
     "//garnet/lib/media/wav_writer",
-    "//sdk/fidl/fuchsia.media",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/media/audio",
+    "//sdk/fidl/fuchsia.media",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fit",
   ]

@@ -52,11 +52,11 @@ source_set("pave-utils") {
     "$zx/third_party/ulib/uboringssl",
   ]
   public_deps = [
-    "$zx/system/ulib/block-client",
     "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/ulib/gpt",
+    "$zx/system/ulib/block-client",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fzl",
+    "$zx/system/ulib/gpt",
     "$zx/system/ulib/zx",
   ]
 }

@@ -12,9 +12,9 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.timezone",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
+    "//sdk/fidl/fuchsia.timezone",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]

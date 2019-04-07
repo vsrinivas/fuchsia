@@ -60,9 +60,7 @@ test_package("wlan-hw-sim-tests") {
   tests = [
     {
       name = "wlan_hw_sim_bin_test"
-      environments = [
-        nuc_env,
-      ]
+      environments = [ nuc_env ]
     },
   ]
 }

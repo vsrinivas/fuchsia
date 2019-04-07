@@ -24,8 +24,8 @@ source_set("input_reader") {
 
   public_deps = [
     ":device",
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.ui.input",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
@@ -88,9 +88,9 @@ source_set("device") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//garnet/public/lib/ui/input/cpp",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-hardware-input:fuchsia-hardware-input_c",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",

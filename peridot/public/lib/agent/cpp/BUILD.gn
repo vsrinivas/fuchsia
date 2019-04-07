@@ -17,9 +17,9 @@ source_set("agent_impl") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 }

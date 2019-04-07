@@ -5,9 +5,7 @@
 import("//build/test.gni")
 
 config("config") {
-  include_dirs = [
-    "include",
-  ]
+  include_dirs = [ "include" ]
 }
 
 static_library("demangle") {

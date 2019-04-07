@@ -33,7 +33,7 @@ template("sandbox_test_package") {
   }
 
   package(target_name) {
-    forward_variables_from(invoker, ["deprecated_global_persistent_storage"])
+    forward_variables_from(invoker, [ "deprecated_global_persistent_storage" ])
     testonly = true
     meta = [
       {

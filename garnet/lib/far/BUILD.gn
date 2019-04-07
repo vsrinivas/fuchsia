@@ -21,7 +21,7 @@ source_set("far") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//src/lib/files",
+    "//src/lib/fxl",
   ]
 }

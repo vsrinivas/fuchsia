@@ -12,9 +12,9 @@ executable("bin") {
   ]
 
   deps = [
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",

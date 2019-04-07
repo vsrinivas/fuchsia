@@ -20,10 +20,10 @@ source_set("lib") {
 
   public_deps = [
     "//garnet/lib/cmx",
-    "//src/lib/fxl",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
     "//zircon/public/fidl/fuchsia-net",

@@ -22,15 +22,15 @@ executable("vkcube_on_scenic") {
     "$magma_build_root/src/magma_util/platform:trace",
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/trace-provider",
-    "//sdk/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/geometry/cpp",
     "//garnet/public/lib/ui/scenic",
     "//garnet/public/lib/ui/scenic/cpp",
     "//garnet/public/lib/vulkan",
+    "//sdk/fidl/fuchsia.ui.viewsv1",
+    "//src/lib/fxl",
   ]
   public_deps = [
     "//zircon/public/lib/fit",
@@ -49,8 +49,8 @@ executable("vkcube_on_fb") {
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
     "$zircon_build_root/public/lib/trace-provider",
-    "//src/lib/fxl",
     "//garnet/public/lib/vulkan",
+    "//src/lib/fxl",
   ]
   public_deps = [
     "//zircon/public/lib/fit",

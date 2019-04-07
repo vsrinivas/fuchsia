@@ -18,12 +18,12 @@ source_set("entity_provider_runner") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/lib/fidl:json_xdr",
     "//peridot/lib/util",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 }
 
@@ -46,7 +46,6 @@ executable("entity_provider_runner_unittest") {
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/component/cpp/testing:fake_launcher",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/bin/sessionmgr/agent_runner",
     "//peridot/bin/sessionmgr/message_queue",
     "//peridot/lib/fidl:array_to_string",
@@ -57,6 +56,7 @@ executable("entity_provider_runner_unittest") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/fidl/fuchsia.sys",
+    "//src/lib/fxl",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/trace",
   ]

@@ -69,13 +69,13 @@ source_set("lib") {
   deps = [
     "//garnet/lib/ui/gfx",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.viewsv1",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//third_party/abseil-cpp/absl",
   ]
 }

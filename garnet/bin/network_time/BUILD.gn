@@ -54,8 +54,8 @@ source_set("lib") {
 
   deps = [
     ":time_util_lib",
-    "//src/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
+    "//src/lib/fxl",
     "//third_party/boringssl",
     "//third_party/rapidjson",
     "//third_party/roughtime:client_lib",
@@ -103,8 +103,8 @@ executable("tests") {
 
   deps = [
     ":lib",
-    "//src/lib/fxl",
     "//src/lib/files",
+    "//src/lib/fxl",
     "//third_party/boringssl",
     "//third_party/googletest:gtest_main",
     "//third_party/roughtime:client_lib",

@@ -33,10 +33,10 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/storage/testing",
+    "//src/lib/fxl",
   ]
 
   deps = [

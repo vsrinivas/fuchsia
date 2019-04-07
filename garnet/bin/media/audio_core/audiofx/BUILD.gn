@@ -14,7 +14,5 @@ loadable_module("audiofx") {
     "//src/lib/fxl",
   ]
 
-  public_configs = [
-    "//garnet/public:config",
-  ]
+  public_configs = [ "//garnet/public:config" ]
 }

@@ -37,7 +37,6 @@ executable_package("last_focus_time_test_session_shell") {
   deps = [
     ":defs",
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/rapidjson",
     "//peridot/lib/testing:component_main",
@@ -47,5 +46,6 @@ executable_package("last_focus_time_test_session_shell") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
   ]
 }

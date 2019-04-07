@@ -27,9 +27,7 @@ source_set("json") {
     "//third_party/rapidjson",
   ]
 
-  public_configs = [
-    "//peridot/public:config",
-  ]
+  public_configs = [ "//peridot/public:config" ]
 }
 
 source_set("json_unittest") {

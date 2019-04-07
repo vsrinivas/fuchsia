@@ -17,7 +17,8 @@ zircon_tools_dir = "$zircon_root_build_dir/tools"
 zircon_images = read_file("$zircon_root_build_dir/images.json", "json")
 
 foreach(image, zircon_images) {
-  if (image.name == "kernel" && image.type == "zbi" && image.cpu == target_cpu) {
+  if (image.name == "kernel" && image.type == "zbi" &&
+      image.cpu == target_cpu) {
     zircon_kernel_zbi = "$zircon_root_build_dir/${image.path}"
   }
 }

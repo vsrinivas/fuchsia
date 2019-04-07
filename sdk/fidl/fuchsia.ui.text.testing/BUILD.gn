@@ -10,6 +10,6 @@ fidl("fuchsia.ui.text.testing") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.text"
+    "//sdk/fidl/fuchsia.ui.text",
   ]
 }

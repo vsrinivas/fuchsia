@@ -15,10 +15,10 @@ source_set("camera_client") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.camera:fuchsia.camera",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
   ]
 }
 

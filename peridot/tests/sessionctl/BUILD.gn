@@ -22,8 +22,6 @@ executable("sessionctl_test") {
   ]
 
   deps = [
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
     "//garnet/public/lib/test_runner/cpp",
     "//peridot/bin/sessionctl:lib",
     "//peridot/public/lib/integration_testing/cpp",
@@ -32,6 +30,8 @@ executable("sessionctl_test") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
 }

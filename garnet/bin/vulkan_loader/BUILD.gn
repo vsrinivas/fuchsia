@@ -12,8 +12,8 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.vulkan.loader",
     "//garnet/public/lib/component/cpp",
+    "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",

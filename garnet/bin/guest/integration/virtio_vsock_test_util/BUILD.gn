@@ -10,11 +10,11 @@ rustc_binary("virtio_vsock_test_util") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.vsock:fuchsia.vsock-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.vsock:fuchsia.vsock-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures-preview",
   ]

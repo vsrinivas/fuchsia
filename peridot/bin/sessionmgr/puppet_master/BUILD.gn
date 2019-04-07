@@ -79,8 +79,8 @@ source_set("story_command_executor") {
   ]
 
   public_deps = [
-    "//src/lib/fxl",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/fxl",
   ]
 }
 

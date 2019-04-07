@@ -9,9 +9,9 @@ executable("print_input") {
 
   deps = [
     "//garnet/bin/ui/input_reader",
-    "//src/lib/fxl",
     "//garnet/public/lib/ui/input",
     "//garnet/public/lib/ui/input/cpp",
+    "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

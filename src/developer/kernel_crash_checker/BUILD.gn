@@ -29,9 +29,9 @@ executable("main") {
 
   deps = [
     "//garnet/public/lib/fsl",
-    "//src/lib/fxl",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-crash",
     "//zircon/public/fidl/fuchsia-net",
     "//zircon/public/lib/async-loop-cpp",
