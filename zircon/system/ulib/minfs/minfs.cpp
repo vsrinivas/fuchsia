@@ -70,6 +70,13 @@ void minfs_free_slices(Bcache* bc, const Superblock* info) {
 
 } // namespace
 
+zx_time_t GetTimeUTC() {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    zx_time_t time = zx_time_add_duration(ZX_SEC(ts.tv_sec), ts.tv_nsec);
+    return time;
+}
+
 void DumpInfo(const Superblock* info) {
     FS_TRACE_DEBUG("minfs: data blocks:  %10u (size %u)\n", info->block_count, info->block_size);
     FS_TRACE_DEBUG("minfs: inodes:  %10u (size %u)\n", info->inode_count, info->inode_size);
@@ -1209,6 +1216,7 @@ zx_status_t Mkfs(const MountOptions& options, fbl::unique_ptr<Bcache> bc) {
     ino[kMinfsRootIno].link_count = 2;
     ino[kMinfsRootIno].dirent_count = 2;
     ino[kMinfsRootIno].dnum[0] = 1;
+    ino[kMinfsRootIno].create_time = GetTimeUTC();
     bc->Writeblk(info.ino_block, blk);
 
     memset(blk, 0, sizeof(blk));

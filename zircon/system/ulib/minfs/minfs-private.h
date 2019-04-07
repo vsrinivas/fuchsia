@@ -828,6 +828,7 @@ constexpr size_t GetVmoSizeForDoublyIndirect() {
 void SyncVnode(fbl::RefPtr<VnodeMinfs> vn, uint32_t flags);
 void DumpInfo(const Superblock* info);
 void DumpInode(const Inode* inode, ino_t ino);
+zx_time_t GetTimeUTC();
 void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent);
 
 // Given an input bcache, initialize the filesystem and return a reference to the

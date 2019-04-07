@@ -38,13 +38,6 @@ constexpr zx_status_t kDirIteratorNext = 1;
 // Identify that the direntry record was modified. Stop iterating.
 constexpr zx_status_t kDirIteratorSaveSync = 2;
 
-zx_time_t GetTimeUTC() {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    zx_time_t time = zx_time_add_duration(ZX_SEC(ts.tv_sec), ts.tv_nsec);
-    return time;
-}
-
 zx_status_t ValidateDirent(Dirent* de, size_t bytes_read, size_t off) {
     uint32_t reclen = static_cast<uint32_t>(MinfsReclen(de, off));
     if ((bytes_read < MINFS_DIRENT_SIZE) || (reclen < MINFS_DIRENT_SIZE)) {
