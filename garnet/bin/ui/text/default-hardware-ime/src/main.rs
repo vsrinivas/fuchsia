@@ -10,8 +10,8 @@ use fidl_fuchsia_ui_text as txt;
 use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
+use futures::lock::Mutex;
 use futures::prelude::*;
-use parking_lot::Mutex;
 use serde_json::{self as json, Map, Value};
 use std::collections::HashMap;
 use std::fs;
@@ -64,11 +64,11 @@ impl DefaultHardwareIme {
         fasync::spawn(
             async move {
                 let mut evt_stream = text_field.take_event_stream();
-                this.0.lock().text_field = Some(text_field);
+                await!(this.0.lock()).text_field = Some(text_field);
                 while let Some(evt) = await!(evt_stream.next()) {
                     match evt {
                         Ok(txt::TextFieldEvent::OnUpdate { state }) => {
-                            this.0.lock().on_update(state);
+                            await!(this.0.lock()).on_update(state);
                         }
                         Err(e) => {
                             fx_log_err!(
@@ -321,7 +321,7 @@ async fn main() -> Result<(), Error> {
             }
             Ok(txt::TextInputContextEvent::OnInputEvent { event }) => match event {
                 uii::InputEvent::Keyboard(ke) => {
-                    let mut lock = ime.0.lock();
+                    let mut lock = await!(ime.0.lock());
                     await!(lock.on_input_event(ke));
                 }
                 _ => {
