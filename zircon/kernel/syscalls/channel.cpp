@@ -325,6 +325,14 @@ zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
     return ZX_OK;
 }
 
+zx_status_t sys_channel_write_etc(zx_handle_t handle_value, uint32_t options,
+                                 user_in_ptr<const void> user_bytes, uint32_t num_bytes,
+                                 user_inout_ptr<zx_handle_disposition_t> user_handles,
+                                 uint32_t num_handles) {
+    // TODO(cpu): Implement.
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 // zx_status_t zx_channel_call_noretry
 zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
                                      zx_time_t deadline,

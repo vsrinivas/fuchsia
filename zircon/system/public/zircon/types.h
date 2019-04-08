@@ -167,20 +167,6 @@ typedef uint64_t zx_koid_t;
 // The first non-reserved koid. The first 1024 are reserved.
 #define ZX_KOID_FIRST   ((uint64_t) 1024)
 
-// Transaction ID and argument types for zx_channel_call.
-typedef uint32_t zx_txid_t;
-
-typedef struct zx_channel_call_args {
-    const void* wr_bytes;
-    const zx_handle_t* wr_handles;
-    void *rd_bytes;
-    zx_handle_t* rd_handles;
-    uint32_t wr_num_bytes;
-    uint32_t wr_num_handles;
-    uint32_t rd_num_bytes;
-    uint32_t rd_num_handles;
-} zx_channel_call_args_t;
-
 // Maximum number of wait items allowed for zx_object_wait_many()
 // TODO(ZX-1349) Re-lower this.
 #define ZX_WAIT_MANY_MAX_ITEMS ((size_t)16)
@@ -349,12 +335,41 @@ typedef uint32_t zx_obj_type_t;
 // depends on having an upper bound for the number of object types.
 #define ZX_OBJ_TYPE_UPPER_BOUND     ((zx_obj_type_t)64u)
 
+// Used in channel_read_etc.
 typedef struct zx_handle_info {
     zx_handle_t handle;
     zx_obj_type_t type;
     zx_rights_t rights;
     uint32_t unused;
 } zx_handle_info_t;
+
+typedef uint32_t zx_handle_op_t;
+
+#define ZX_HANDLE_OP_MOVE           ((zx_handle_op_t)0u)
+#define ZX_HANDLE_OP_DUPLICATE      ((zx_handle_op_t)1u)
+
+// Used in channel_write_etc.
+typedef struct zx_handle_disposition {
+    zx_handle_op_t operation;
+    zx_handle_t handle;
+    zx_obj_type_t type;
+    zx_rights_t rights;
+    zx_status_t result;
+} zx_handle_disposition_t;
+
+// Transaction ID and argument types for zx_channel_call.
+typedef uint32_t zx_txid_t;
+
+typedef struct zx_channel_call_args {
+    const void* wr_bytes;
+    const zx_handle_t* wr_handles;
+    void *rd_bytes;
+    zx_handle_t* rd_handles;
+    uint32_t wr_num_bytes;
+    uint32_t wr_num_handles;
+    uint32_t rd_num_bytes;
+    uint32_t rd_num_handles;
+} zx_channel_call_args_t;
 
 // The ZX_VM_FLAG_* constants are to be deprecated in favor of the ZX_VM_*
 // versions.

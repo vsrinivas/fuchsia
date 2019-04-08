@@ -280,6 +280,15 @@ syscall channel_write
         handles: zx_handle_t[num_handles] IN, num_handles: uint32_t)
     returns (zx_status_t);
 
+#^ Write a message to a channel.
+#! handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_WRITE.
+#! Every entry of handles must have ZX_RIGHT_TRANSFER.
+syscall channel_write_etc
+    (handle: zx_handle_t, options: uint32_t,
+        bytes: any[num_bytes] IN, num_bytes: uint32_t,
+        handles: zx_handle_disposition_t[num_handles] INOUT, num_handles: uint32_t)
+    returns (zx_status_t);
+
 #! handle must be of type ZX_OBJ_TYPE_CHANNEL and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
 #! All wr_handles of args must have ZX_RIGHT_TRANSFER.
 syscall channel_call_noretry internal
