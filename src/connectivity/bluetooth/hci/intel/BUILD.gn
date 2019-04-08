@@ -10,7 +10,6 @@ driver_module("driver") {
   output_name = "bt-hci-intel"
 
   sources = [
-    "binding.c",
     "device.cc",
     "device.h",
     "driver.cc",

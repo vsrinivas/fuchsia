@@ -4,6 +4,7 @@
 
 #include "fake-device.h"
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/test.h>
@@ -15,7 +16,7 @@
 #include <memory>
 #include <thread>
 
-extern "C" zx_status_t bthci_fake_bind(void* ctx, zx_device_t* device) {
+zx_status_t bthci_fake_bind(void* ctx, zx_device_t* device) {
   std::printf("%s\n", __func__);
 
   test_protocol_t proto;
@@ -37,3 +38,16 @@ extern "C" zx_status_t bthci_fake_bind(void* ctx, zx_device_t* device) {
 
   return status;
 }
+
+static zx_driver_ops_t bthci_fake_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = bthci_fake_bind;
+    return ops;
+}();
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(bt_hci_fake, bthci_fake_driver_ops, "zircon", "0.1", 2)
+  BI_ABORT_IF_AUTOBIND,
+  BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
+ZIRCON_DRIVER_END(bt_hci_fake)

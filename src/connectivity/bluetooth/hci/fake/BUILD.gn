@@ -10,7 +10,6 @@ driver_module("driver") {
   testonly = true
 
   sources = [
-    "binding.c",
     "driver.cpp",
     "fake-device.cpp",
     "fake-device.h",

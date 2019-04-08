@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/bt/hci.h>
@@ -19,7 +20,7 @@
 // USB Product IDs that use the "secure" firmware method.
 constexpr uint16_t sfi_product_ids[] = {0x0025, 0x0a2b, 0x0aaa};
 
-extern "C" zx_status_t btintel_bind(void* ctx, zx_device_t* device) {
+zx_status_t btintel_bind(void* ctx, zx_device_t* device) {
   tracef("bind\n");
 
   usb_protocol_t usb;
@@ -60,3 +61,23 @@ extern "C" zx_status_t btintel_bind(void* ctx, zx_device_t* device) {
                       [btdev, secure]() { btdev->LoadFirmware(secure); });
   return ZX_OK;
 }
+
+static zx_driver_ops_t btintel_driver_ops = []() {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = btintel_bind;
+    return ops;
+}();
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(bt_hci_intel, btintel_driver_ops, "fuchsia", "0.1", 8)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_BT_TRANSPORT),
+    BI_ABORT_IF(NE, BIND_USB_VID, 0x8087), // Intel Corp.
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x07dc), // Intel 7260
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0a2a), // Intel 7265
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0aa7), // Sandy Peak (3168)
+    // Devices below use the "secure" method
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0025), // Thunder Peak (9160/9260)
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0a2b), // Snowfield Peak (8260)
+    BI_MATCH_IF(EQ, BIND_USB_PID, 0x0aaa), // Jefferson Peak (9460/9560)
+ZIRCON_DRIVER_END(bt_hci_intel)
