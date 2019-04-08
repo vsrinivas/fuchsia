@@ -9,6 +9,8 @@ import (
 	"io"
 	"os/exec"
 	"syscall"
+
+	"fuchsia.googlesource.com/tools/logger"
 )
 
 // SubprocessRunner is a Runner that runs commands as local subprocesses.
@@ -35,6 +37,7 @@ func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.
 		Env:         r.Env,
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 	}
+	logger.Infof(ctx, "environment of subprocess:\n%v", cmd.Env)
 	if err := cmd.Start(); err != nil {
 		return err
 	}
