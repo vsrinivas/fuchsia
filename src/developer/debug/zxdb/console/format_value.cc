@@ -370,10 +370,10 @@ void FormatValue::FormatCollection(
     VisitResult has_members_result =
         VisitClassHierarchy(from, [](const Collection* cur, uint64_t) {
           if (cur->data_members().empty())
-            return VisitResult::kNotFound;
+            return VisitResult::kContinue;
           return VisitResult::kDone;
         });
-    if (has_members_result == VisitResult::kNotFound)
+    if (has_members_result == VisitResult::kContinue)
       continue;
 
     if (needs_comma)

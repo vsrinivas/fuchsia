@@ -185,31 +185,32 @@ FoundName FindName(const FindNameContext& context,
 FoundName FindLocalVariable(const CodeBlock* block,
                             const Identifier& identifier) {
   // TODO(DX-1214) lookup type names defined locally in this function.
+  FoundName result;
 
   // Local variables can only be simple names.
   const std::string* name = identifier.GetSingleComponentName();
   if (!name)
-    return FoundName();
+    return result;
 
-  // Search backwards in the nested lexical scopes searching for the first
-  // variable or function parameter with the given name.
-  const CodeBlock* cur_block = block;
-  while (cur_block) {
-    // Check for variables in this block.
-    if (auto* var = SearchVariableVector(cur_block->variables(), *name))
-      return FoundName(var);
+  VisitLocalBlocks(block, [name, &result](const CodeBlock* cur_block) {
+    // Local variables in this block.
+    if (auto* var = SearchVariableVector(cur_block->variables(), *name)) {
+      result = FoundName(var);
+      return VisitResult::kDone;
+    }
 
+    // Function parameters.
     if (const Function* function = cur_block->AsFunction()) {
       // Found a function, check for a match in its parameters.
-      if (auto* var = SearchVariableVector(function->parameters(), *name))
-        return FoundName(var);
-      break;  // Don't recurse into higher levels of nesting than a function.
+      if (auto* var = SearchVariableVector(function->parameters(), *name)) {
+        result = FoundName(var);
+        return VisitResult::kDone;
+      }
     }
-    if (!cur_block->parent())
-      break;
-    cur_block = cur_block->parent().Get()->AsCodeBlock();
-  }
-  return FoundName();
+    return VisitResult::kContinue;
+  });
+
+  return result;
 }
 
 FoundName FindMember(const FindNameContext& context, const Collection* object,
@@ -253,7 +254,7 @@ FoundName FindMember(const FindNameContext& context, const Collection* object,
           }
         }
 
-        return VisitResult::kNotFound;  // Continue search.
+        return VisitResult::kContinue;
       });
   return result;
 }

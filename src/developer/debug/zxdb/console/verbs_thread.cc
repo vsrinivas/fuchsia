@@ -32,6 +32,7 @@
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
+#include "src/developer/debug/zxdb/symbols/visit_scopes.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -504,30 +505,23 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
   if (!function)
     return Err("Symbols are corrupt.");
 
-  // Find the innermost lexical block for the current IP.
-  const CodeBlock* block = function->GetMostSpecificChild(
-      location.symbol_context(), location.address());
-  if (!block)
-    return Err("There is no symbol information for the current IP.");
-
-  // Walk upward in the hierarchy to collect local variables until hitting a
-  // function. Using the map allows collecting only the innermost version of
-  // a given name, and sorts them as we go.
+  // Walk upward from the innermost lexical block for the current IP to collect
+  // local variables. Using the map allows collecting only the innermost
+  // version of a given name, and sorts them as we go.
   std::map<std::string, const Variable*> vars;
-  while (block) {
-    for (const auto& lazy_var : block->variables()) {
-      const Variable* var = lazy_var.Get()->AsVariable();
-      if (!var)
-        continue;  // Symbols are corrupt.
-      const std::string& name = var->GetAssignedName();
-      if (vars.find(name) == vars.end())
-        vars[name] = var;  // New one.
-    }
-
-    if (block == function)
-      break;
-    block = block->parent().Get()->AsCodeBlock();
-  }
+  VisitLocalBlocks(function->GetMostSpecificChild(location.symbol_context(),
+                                                  location.address()),
+                   [&vars](const CodeBlock* block) {
+                     for (const auto& lazy_var : block->variables()) {
+                       const Variable* var = lazy_var.Get()->AsVariable();
+                       if (!var)
+                         continue;  // Symbols are corrupt.
+                       const std::string& name = var->GetAssignedName();
+                       if (vars.find(name) == vars.end())
+                         vars[name] = var;  // New one.
+                     }
+                     return VisitResult::kContinue;
+                   });
 
   // Add function parameters. Don't overwrite existing names in case of
   // duplicates to duplicate the shadowing rules of the language.

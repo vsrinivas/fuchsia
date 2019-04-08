@@ -16,7 +16,7 @@ VisitResult DoVisitClassHierarchy(
     const Collection* current, uint64_t offset,
     std::function<VisitResult(const Collection*, uint64_t offset)>& cb) {
   VisitResult result = cb(current, offset);
-  if (result != VisitResult::kNotFound)
+  if (result != VisitResult::kContinue)
     return result;
 
   // Iterate through base classes.
@@ -31,14 +31,29 @@ VisitResult DoVisitClassHierarchy(
 
     result =
         DoVisitClassHierarchy(from_coll, offset + inherited_from->offset(), cb);
-    if (result != VisitResult::kNotFound)
+    if (result != VisitResult::kContinue)
       return result;
   }
 
-  return VisitResult::kNotFound;
+  return VisitResult::kContinue;
 }
 
 }  // namespace
+
+VisitResult VisitLocalBlocks(const CodeBlock* starting,
+                             std::function<VisitResult(const CodeBlock*)> cb) {
+  const CodeBlock* cur_block = starting;
+  while (cur_block) {
+    VisitResult result = cb(cur_block);
+    if (result != VisitResult::kContinue)
+      return result;
+
+    if (cur_block->AsFunction() || !cur_block->parent())
+      break;  // Don't iterate above functions.
+    cur_block = cur_block->parent().Get()->AsCodeBlock();
+  }
+  return VisitResult::kContinue;
+}
 
 VisitResult VisitClassHierarchy(
     const Collection* starting,

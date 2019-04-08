@@ -302,7 +302,7 @@ std::optional<uint64_t> GetDerivedClassOffset(const Type* base,
           result = offset;
           return VisitResult::kDone;
         }
-        return VisitResult::kNotFound;
+        return VisitResult::kContinue;
       });
   return result;
 }

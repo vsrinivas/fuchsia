@@ -8,14 +8,23 @@
 
 namespace zxdb {
 
+class CodeBlock;
 class Collection;
 class Symbol;
 
+// Return value for the callback for visiting the different scopes. The return
+// for the whole function will be that of the last executed callback.
 enum class VisitResult {
   kDone,     // Stops iterating and indicates success.
   kAbort,    // Stops iterating and indicates failure.
-  kNotFound  // Search failed at this level, continues iterating if possible.
+  kContinue  // Continues iterating if possible.
 };
+
+// Calls the callback for all code blocks, going backwards in the hierarchy.
+// The starting block is called first. Stops iterating when it hits a function
+// boundary.
+VisitResult VisitLocalBlocks(const CodeBlock* starting,
+                             std::function<VisitResult(const CodeBlock*)> cb);
 
 // Calls the callback for all classes in the inheritance hierarchy of the given
 // collection. This works backwards, first calling the callback with the
@@ -23,10 +32,6 @@ enum class VisitResult {
 //
 // The callback takes the current collection being iterated, as well as the
 // offset of that collection from the beginning of the starting collection.
-//
-// The callback returns a completion flag. It should return false to keep
-// iterating, or true to stop iteration. The return value of
-// VisitClassHierarchy() will be that of the last executed callback.
 VisitResult VisitClassHierarchy(
     const Collection* starting,
     std::function<VisitResult(const Collection*, uint64_t offset)> cb);

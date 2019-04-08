@@ -23,9 +23,9 @@ TEST(VisitScopes, ClassHierarchy) {
   VisitResult result = VisitClassHierarchy(
       derived.get(), [&visited](const Collection* c, uint64_t o) {
         visited.emplace_back(c, o);
-        return VisitResult::kNotFound;
+        return VisitResult::kContinue;
       });
-  EXPECT_EQ(VisitResult::kNotFound, result);
+  EXPECT_EQ(VisitResult::kContinue, result);
   VisitLog expected{{derived.get(), 0}};
   EXPECT_EQ(expected, visited);
 
@@ -52,9 +52,9 @@ TEST(VisitScopes, ClassHierarchy) {
   result = VisitClassHierarchy(derived.get(),
                                [&visited](const Collection* c, uint64_t o) {
                                  visited.emplace_back(c, o);
-                                 return VisitResult::kNotFound;
+                                 return VisitResult::kContinue;
                                });
-  EXPECT_EQ(VisitResult::kNotFound, result);
+  EXPECT_EQ(VisitResult::kContinue, result);
   expected = VisitLog{{derived.get(), 0},
                       {mid1.get(), mid1_offset},
                       {base1.get(), mid1_offset + base1_offset},
@@ -66,7 +66,7 @@ TEST(VisitScopes, ClassHierarchy) {
   result = VisitClassHierarchy(
       derived.get(), [&visited, mid1](const Collection* c, uint64_t o) {
         visited.emplace_back(c, o);
-        return c == mid1.get() ? VisitResult::kDone : VisitResult::kNotFound;
+        return c == mid1.get() ? VisitResult::kDone : VisitResult::kContinue;
       });
   EXPECT_EQ(VisitResult::kDone, result);  // Should have found mid1.
   expected = VisitLog{{derived.get(), 0}, {mid1.get(), mid1_offset}};
