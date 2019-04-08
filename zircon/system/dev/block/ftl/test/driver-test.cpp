@@ -151,7 +151,10 @@ TEST(DriverTest, ReAttach) {
 TEST(DriverTest, WriteBadBlock) {
     ASSERT_TRUE(ftl::InitModules());
 
-    NdmRamDriver driver(kDefaultOptions);
+    TestOptions driver_options = kDefaultTestOptions;
+    driver_options.bad_block_interval = 80;
+
+    NdmRamDriver driver(kDefaultOptions, driver_options);
     ASSERT_EQ(nullptr, driver.Init());
 
     fbl::Array<uint8_t> data(new uint8_t[kPageSize], kPageSize);
@@ -160,7 +163,7 @@ TEST(DriverTest, WriteBadBlock) {
     memset(data.get(), 0, data.size());
     memset(oob.get(), 0, oob.size());
 
-    for (int i = 0; i < kBadBlockInterval; i++) {
+    for (int i = 0; i < driver_options.bad_block_interval; i++) {
         ASSERT_EQ(ftl::kNdmOk, driver.NandErase(0));
     }
 
@@ -172,7 +175,10 @@ TEST(DriverTest, WriteBadBlock) {
 TEST(DriverTest, ReadUnsafeEcc) {
     ASSERT_TRUE(ftl::InitModules());
 
-    NdmRamDriver driver(kDefaultOptions);
+    TestOptions driver_options = kDefaultTestOptions;
+    driver_options.ecc_error_interval = 80;
+
+    NdmRamDriver driver(kDefaultOptions, driver_options);
     ASSERT_EQ(nullptr, driver.Init());
 
     fbl::Array<uint8_t> data(new uint8_t[kPageSize], kPageSize);
@@ -182,7 +188,7 @@ TEST(DriverTest, ReadUnsafeEcc) {
     memset(oob.get(), 0, oob.size());
     ASSERT_EQ(ftl::kNdmOk, driver.NandWrite(0, 1, data.get(), oob.get()));
 
-    for (int i = 0; i < kEccErrorInterval; i++) {
+    for (int i = 0; i < driver_options.ecc_error_interval; i++) {
         ASSERT_EQ(ftl::kNdmOk, driver.NandRead(0, 1, data.get(), oob.get()));
     }
 

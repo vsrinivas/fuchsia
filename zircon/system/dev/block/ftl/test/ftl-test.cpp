@@ -308,11 +308,12 @@ void FtlExtendTest::SetUpBaseTest() {
 
 TEST_F(FtlExtendTest, ExtendVolume) {
     ftl::VolumeOptions options = kDefaultOptions;
-    auto driver_to_pass = std::make_unique<NdmRamDriver>(options);
+    TestOptions driver_options = kDefaultTestOptions;
+    driver_options.use_half_size = true;
+    auto driver_to_pass = std::make_unique<NdmRamDriver>(options, driver_options);
 
     // Retain a pointer. The driver's lifetime is tied to ftl_.
     NdmRamDriver* driver = driver_to_pass.get();
-    driver->set_use_half_size(true);
     ASSERT_EQ(driver->Init(), nullptr);
     ASSERT_TRUE(ftl_.InitWithDriver(std::move(driver_to_pass)));
     SetUpBaseTest();

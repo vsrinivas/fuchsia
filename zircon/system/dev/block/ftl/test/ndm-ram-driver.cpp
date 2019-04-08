@@ -29,7 +29,7 @@ bool IsFlagSet(uint8_t flag, const uint8_t* where) {
 }  // namespace
 
 bool NdmRamDriver::DoubleSize() {
-    ZX_ASSERT(use_half_size_);
+    ZX_ASSERT(test_options_.use_half_size);
 
     // This mimics the code of NandDriverImpl::HandleAlternateConfig with the
     // exceptions of not having to confirm the existence of a small device, and
@@ -46,7 +46,7 @@ bool NdmRamDriver::DoubleSize() {
     RemoveNdmVolume();
 
     options_.num_blocks *= 2;
-    use_half_size_ = false;
+    test_options_.use_half_size = false;
     if (!IsNdmDataPresent(options_)) {
         return false;
     }
@@ -64,7 +64,7 @@ const char* NdmRamDriver::Init() {
     flags_ = fbl::Array<uint8_t>(new uint8_t[num_pages], num_pages);
     memset(volume_.get(), 0xff, volume_size);
     memset(flags_.get(), 0, num_pages);
-    if (use_half_size_) {
+    if (test_options_.use_half_size) {
         options_.num_blocks /= 2;
     }
 
@@ -192,7 +192,7 @@ int NdmRamDriver::ReadPage(uint32_t page_num, uint8_t* data, uint8_t* spare) {
     }
 
     // Return an occasional kNdmUnsafeEcc.
-    if (ecc_error_interval_++ == kEccErrorInterval) {
+    if (ecc_error_interval_++ == test_options_.ecc_error_interval) {
         ecc_error_interval_ = 0;
         return ftl::kNdmUnsafeEcc;
     }
@@ -222,7 +222,7 @@ int NdmRamDriver::WritePage(uint32_t page_num, const uint8_t* data, const uint8_
 
 bool NdmRamDriver::SimulateBadBlock(uint32_t page_num) {
     if (num_bad_blocks_ < options_.max_bad_blocks) {
-        if (bad_block_interval_++ == kBadBlockInterval) {
+        if (bad_block_interval_++ == test_options_.bad_block_interval) {
               SetBadBlock(page_num, true);
               bad_block_interval_ = 0;
               ++num_bad_blocks_;

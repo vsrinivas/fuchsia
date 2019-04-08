@@ -10,18 +10,20 @@
 #include <lib/ftl/ndm-driver.h>
 #include <zircon/types.h>
 
-// How often to inject errors.
-constexpr int kEccErrorInterval = 900;
-constexpr int kBadBlockInterval = 50;
+struct TestOptions {
+    int ecc_error_interval;  // Controls simulation of ECC errors.
+    int bad_block_interval;  // Controls simulation of bad blocks.
+    bool use_half_size;      // Makes only half of the space visible.
+};
+constexpr TestOptions kDefaultTestOptions = { 900, 50, false };
 
 // Ram-backed driver for testing purposes.
 class NdmRamDriver : public ftl::NdmBaseDriver {
   public:
-    NdmRamDriver(const ftl::VolumeOptions& options) : options_(options) {}
+    NdmRamDriver(const ftl::VolumeOptions& options) : NdmRamDriver(options, kDefaultTestOptions) {}
+    NdmRamDriver(const ftl::VolumeOptions& options, const TestOptions& test_options)
+            : options_(options), test_options_(test_options) {}
     ~NdmRamDriver() final {}
-
-    // Makes only half of the space visible.
-    void set_use_half_size(bool value) { use_half_size_ = value; }
 
     // Extends the visible volume to the whole size of the storage.
     bool DoubleSize();
@@ -62,9 +64,8 @@ class NdmRamDriver : public ftl::NdmBaseDriver {
     fbl::Array<uint8_t> volume_;
     fbl::Array<uint8_t> flags_;
     ftl::VolumeOptions options_;
+    TestOptions test_options_;
     int ecc_error_interval_ = 0;  // Controls simulation of ECC errors.
     int bad_block_interval_ = 0;  // Controls simulation of bad blocks.
     uint32_t num_bad_blocks_ = 0;
-
-    bool use_half_size_ = false;  // Allows testing of volume extension.
 };
