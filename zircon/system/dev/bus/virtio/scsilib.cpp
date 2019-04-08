@@ -8,6 +8,7 @@
 #include <ddk/protocol/block.h>
 #include <fbl/alloc_checker.h>
 #include <netinet/in.h>
+#include <zircon/process.h>
 
 namespace scsi {
 
@@ -100,51 +101,66 @@ zx_status_t Disk::Bind() {
 void Disk::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_cb,
                           void* cookie) {
     auto op_type = op->command & BLOCK_OP_MASK;
-    switch (op_type) {
-    case BLOCK_OP_READ: {
-        void* data = calloc(op->rw.length, block_size_);
+    if (!(op_type == BLOCK_OP_READ || op_type == BLOCK_OP_WRITE)) {
+        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, op);
+        return;
+    }
+    // To use zx_vmar_map, offset, length must be page aligned. If it isn't (uncommon),
+    // allocate a temp buffer and do a copy.
+    uint64_t length = op->rw.length * block_size_;
+    uint64_t vmo_offset = op->rw.offset_vmo * block_size_;
+    zx_vaddr_t mapped_addr = reinterpret_cast<zx_vaddr_t>(nullptr);
+    void *data = nullptr;       // Quiet compiler.
+    zx_status_t status;
+    if (((length % PAGE_SIZE) == 0) && ((vmo_offset % PAGE_SIZE) == 0)) {
+        status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                             0, op->rw.vmo, vmo_offset, length, &mapped_addr);
+        if (status != ZX_OK) {
+            completion_cb(cookie, status, op);
+            return;
+        }
+        data = reinterpret_cast<void*>(mapped_addr);
+    } else {
+        data = calloc(op->rw.length, block_size_);
+        if (op_type == BLOCK_OP_WRITE) {
+            status = zx_vmo_read(op->rw.vmo, data, vmo_offset, length);
+            if (status != ZX_OK) {
+                free(data);
+                completion_cb(cookie, status, op);
+                return;
+            }
+        }
+    }
+    if (op_type == BLOCK_OP_READ) {
         Read16CDB cdb = {};
         cdb.opcode = Opcode::READ_16;
         cdb.logical_block_address = htobe64(op->rw.offset_dev);
         cdb.transfer_length = htonl(op->rw.length);
-
-        auto status = controller_->ExecuteCommandSync(/*target=*/target_, /*lun=*/lun_,
-            /*cdb=*/{&cdb, sizeof(cdb)},
-            /*data_out=*/{nullptr, 0},
-            /*data_in=*/{data, op->rw.length * block_size_});
-        // TODO(ZX-2314): Pass VMO directly to ExecuteCommandSync to skip this copy.
-        if (status == ZX_OK) {
-            status = zx_vmo_write(op->rw.vmo, data, op->rw.offset_vmo * block_size_,
-                                  op->rw.length * block_size_);
-        }
-        free(data);
-        completion_cb(cookie, status, op);
-        break;
-    }
-    case BLOCK_OP_WRITE: {
-        void* data = calloc(op->rw.length, block_size_);
+        status = controller_->ExecuteCommandSync(/*target=*/target_, /*lun=*/lun_,
+                                                 /*cdb=*/{&cdb, sizeof(cdb)},
+                                                 /*data_out=*/{nullptr, 0},
+                                                 /*data_in=*/{data, length});
+    } else {
         Write16CDB cdb = {};
         cdb.opcode = Opcode::WRITE_16;
         cdb.logical_block_address = htobe64(op->rw.offset_dev);
         cdb.transfer_length = htonl(op->rw.length);
-        // Copy data from VMO to temporary buffer for writing.
-        // TODO(ZX-2314): Eliminate this copy by passing the VMO/offset to the controller.
-        auto status = zx_vmo_read(op->rw.vmo, data, op->rw.offset_vmo * block_size_,
-                                  op->rw.length * block_size_);
-        if (status == ZX_OK) {
-            status = controller_->ExecuteCommandSync(/*target=*/target_, /*lun=*/lun_,
-                /*cdb=*/{&cdb, sizeof(cdb)},
-                /*data_out=*/{data, op->rw.length * block_size_},
-                /*data_in=*/{nullptr, 0});
+        status = controller_->ExecuteCommandSync(/*target=*/target_, /*lun=*/lun_,
+                                                 /*cdb=*/{&cdb, sizeof(cdb)},
+                                                 /*data_out=*/{data, length},
+                                                 /*data_in=*/{nullptr, 0});
+    }
+    if (mapped_addr != reinterpret_cast<zx_vaddr_t>(nullptr)) {
+        status = zx_vmar_unmap(zx_vmar_root_self(), mapped_addr, length);
+    } else {
+        if (op_type == BLOCK_OP_READ) {
+            if (status == ZX_OK) {
+                status = zx_vmo_write(op->rw.vmo, data, vmo_offset, length);
+            }
         }
         free(data);
-        completion_cb(cookie, status, op);
-        break;
     }
-    default:
-        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, op);
-        break;
-    }
+    completion_cb(cookie, status, op);
 }
 
 Disk::Disk(Controller* controller, zx_device_t* parent, uint8_t target, uint16_t lun)
