@@ -88,7 +88,6 @@ rustc_binary("mediasession_cli_tool_bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//sdk/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
     "//sdk/fidl/fuchsia.mediasession:fuchsia.mediasession-rustc",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",

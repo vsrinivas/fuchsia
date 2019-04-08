@@ -6,6 +6,5 @@ group("playback") {
   testonly = true
   deps = [
     "mediaplayer",
-    "mediaplayer_tmp",
   ]
 }

@@ -15,6 +15,5 @@ fidl("fuchsia.mediasession") {
   public_deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.audio",
-    "//sdk/fidl/fuchsia.mediaplayer",
   ]
 }

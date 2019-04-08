@@ -13,7 +13,7 @@ source_set("timeline") {
 
   public_deps = [
     ":no_converters",
-    "//sdk/fidl/fuchsia.mediaplayer",
+    "//sdk/fidl/fuchsia.media",
   ]
 }
 

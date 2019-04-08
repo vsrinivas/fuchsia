@@ -23,7 +23,6 @@ sdk://fidl/fuchsia.media
 sdk://fidl/fuchsia.media.audio
 sdk://fidl/fuchsia.media.playback
 sdk://fidl/fuchsia.mediacodec
-sdk://fidl/fuchsia.mediaplayer
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.net
 sdk://fidl/fuchsia.net.http
