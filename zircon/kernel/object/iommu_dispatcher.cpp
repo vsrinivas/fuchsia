@@ -24,7 +24,7 @@
 #define LOCAL_TRACE 0
 
 zx_status_t IommuDispatcher::Create(uint32_t type, ktl::unique_ptr<const uint8_t[]> desc,
-                                    size_t desc_len, fbl::RefPtr<Dispatcher>* dispatcher,
+                                    size_t desc_len, KernelHandle<IommuDispatcher>* handle,
                                     zx_rights_t* rights) {
 
     fbl::RefPtr<Iommu> iommu;
@@ -46,12 +46,12 @@ zx_status_t IommuDispatcher::Create(uint32_t type, ktl::unique_ptr<const uint8_t
     }
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) IommuDispatcher(ktl::move(iommu));
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) IommuDispatcher(ktl::move(iommu))));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
     *rights = default_rights();
-    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+    *handle = ktl::move(new_handle);
     return ZX_OK;
 }
 

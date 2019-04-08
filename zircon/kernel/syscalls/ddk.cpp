@@ -211,7 +211,7 @@ zx_status_t sys_iommu_create(zx_handle_t resource, uint32_t type,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    fbl::RefPtr<Dispatcher> dispatcher;
+    KernelHandle<IommuDispatcher> handle;
     zx_rights_t rights;
 
     {
@@ -227,13 +227,13 @@ zx_status_t sys_iommu_create(zx_handle_t resource, uint32_t type,
         }
         status = IommuDispatcher::Create(type,
                                          ktl::unique_ptr<const uint8_t[]>(copied_desc.release()),
-                                         desc_size, &dispatcher, &rights);
+                                         desc_size, &handle, &rights);
         if (status != ZX_OK) {
             return status;
         }
     }
 
-    return out->make(ktl::move(dispatcher), rights);
+    return out->make(ktl::move(handle), rights);
 }
 
 #if ARCH_X86
