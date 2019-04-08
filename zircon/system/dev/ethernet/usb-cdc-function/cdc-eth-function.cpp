@@ -47,12 +47,14 @@ typedef struct {
 
     // Device attributes
     uint8_t mac_addr[ETH_MAC_SIZE];
-
+    // Ethmac lock -- must be acquired after tx_mutex
+    // when both locks are held.
     mtx_t ethmac_mutex;
     ethmac_ifc_protocol_t ethmac_ifc;
     bool online;
     usb_speed_t speed;
-
+    // TX lock -- Must be acquired before ethmac_mutex
+    // when both locks are held.
     mtx_t tx_mutex;
     mtx_t rx_mutex;
     mtx_t intr_mutex;
@@ -204,10 +206,11 @@ static zx_status_t cdc_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* 
 static void cdc_ethmac_stop(void* cookie) {
     zxlogf(TRACE, "%s:\n", __func__);
     auto* cdc = static_cast<usb_cdc_t*>(cookie);
-
+    mtx_lock(&cdc->tx_mutex);
     mtx_lock(&cdc->ethmac_mutex);
     cdc->ethmac_ifc.ops = NULL;
     mtx_unlock(&cdc->ethmac_mutex);
+    mtx_unlock(&cdc->tx_mutex);
 }
 
 static zx_status_t cdc_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_t* ifc) {
@@ -228,6 +231,9 @@ static zx_status_t cdc_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_
 }
 
 static zx_status_t cdc_send_locked(usb_cdc_t* cdc, ethmac_netbuf_t* netbuf) {
+    if (!cdc->ethmac_ifc.ops) {
+        return ZX_ERR_BAD_STATE;
+    }
     const auto* byte_data = static_cast<const uint8_t*>(netbuf->data_buffer);
     size_t length = netbuf->data_size;
 
@@ -611,7 +617,6 @@ static zx_protocol_device_t usb_cdc_proto = [](){
 
 zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     zxlogf(INFO, "%s\n", __func__);
-
     device_add_args_t args = {};
 
     auto* cdc = static_cast<usb_cdc_t*>(calloc(1, sizeof(usb_cdc_t)));
@@ -725,9 +730,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "%s: add_device failed %d\n", __func__, status);
         goto fail;
     }
-
     usb_function_set_interface(&cdc->function, cdc, &device_ops);
-
     return ZX_OK;
 
 fail:
