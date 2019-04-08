@@ -9,7 +9,6 @@ test("usb-virtual-bus") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-hardware-block:c",
-    "$zx/system/fidl/fuchsia-hardware-ethernet:c",
     "$zx/system/fidl/fuchsia-hardware-nand:c",
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral:c",
     "$zx/system/fidl/fuchsia-hardware-usb-peripheral-block:c",
@@ -25,7 +24,6 @@ test("usb-virtual-bus") {
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async",
-    "$zx/system/ulib/fzl",
     "$zx/system/ulib/launchpad",
     "$zx/system/ulib/ramdevice-client",
     "$zx/system/ulib/sync",

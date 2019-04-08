@@ -44,8 +44,7 @@ typedef struct {
     zx_device_t* zxdev;
     zx_device_t* usb_device;
     usb_protocol_t usb;
-    // Ethmac lock -- must be acquired after tx_mutex
-    // when both locks are held.
+
     mtx_t ethmac_mutex;
     ethmac_ifc_protocol_t ethmac_ifc;
 
@@ -65,8 +64,6 @@ typedef struct {
     thrd_t int_thread;
 
     // Send context
-    // TX lock -- Must be acquired before ethmac_mutex
-    // when both locks are held.
     mtx_t tx_mutex;
     ecm_endpoint_t tx_endpoint;
     list_node_t tx_txn_bufs;        // list of usb_request_t
@@ -183,11 +180,9 @@ static zx_status_t ecm_ethmac_query(void* ctx, uint32_t options, ethmac_info_t* 
 static void ecm_ethmac_stop(void* cookie) {
     zxlogf(TRACE, "%s: %s called\n", module_name, __FUNCTION__);
     ecm_ctx_t* ctx = cookie;
-    mtx_lock(&ctx->tx_mutex);
     mtx_lock(&ctx->ethmac_mutex);
     ctx->ethmac_ifc.ops = NULL;
     mtx_unlock(&ctx->ethmac_mutex);
-    mtx_unlock(&ctx->tx_mutex);
 }
 
 static zx_status_t ecm_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_t* ifc) {
@@ -210,13 +205,9 @@ static zx_status_t ecm_ethmac_start(void* ctx_cookie, const ethmac_ifc_protocol_
 static zx_status_t queue_request(ecm_ctx_t* ctx, const uint8_t* data, size_t length,
                                  usb_request_t* req) {
     req->header.length = length;
-    if (!ctx->ethmac_ifc.ops) {
-        return ZX_ERR_BAD_STATE;
-    }
     ssize_t bytes_copied = usb_request_copy_to(req, data, length, 0);
     if (bytes_copied < 0) {
-        zxlogf(ERROR, "%s: failed to copy data into send txn (error %zd)\n", module_name,
-               bytes_copied);
+        zxlogf(ERROR, "%s: failed to copy data into send txn (error %zd)\n", module_name, bytes_copied);
         return ZX_ERR_IO;
     }
     usb_request_complete_t complete = {

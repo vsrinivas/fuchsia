@@ -898,8 +898,8 @@ static void eth_kill_locked(ethdev_t* edev) {
         return;
     }
 
-    zxlogf(TRACE, "eth [%s]: kill: tearing down%s\n", edev->name,
-           (edev->state & ETHDEV_TX_THREAD) ? " tx thread" : "");
+    zxlogf(TRACE, "eth [%s]: kill: tearing down%s\n",
+           edev->name, (edev->state & ETHDEV_TX_THREAD) ? " tx thread" : "");
     eth_set_promisc_locked(edev, false);
 
     // make sure any future ioctls or other ops will fail
@@ -1052,7 +1052,7 @@ static void eth0_unbind(void* ctx) {
     ethdev0_t* edev0 = ctx;
 
     mtx_lock(&edev0->lock);
-    ethmac_stop(&edev0->mac);
+
     // tear down shared memory, fifos, and threads
     // to encourage any open instances to close
     ethdev_t* edev;
