@@ -7,10 +7,12 @@ use {
     wlan_common::mac,
 };
 
-pub fn write_client_req(auth_hdr: &mut mac::AuthHdr) {
-    auth_hdr.auth_alg_num = mac::AuthAlgorithmNumber::OPEN;
-    auth_hdr.auth_txn_seq_num = 1;
-    auth_hdr.status_code = mac::StatusCode::SUCCESS;
+pub fn make_open_client_req() -> mac::AuthHdr {
+    mac::AuthHdr {
+        auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
+        auth_txn_seq_num: 1,
+        status_code: mac::StatusCode::SUCCESS,
+    }
 }
 
 /// Validates whether a given authentication header is a valid response to an open authentication

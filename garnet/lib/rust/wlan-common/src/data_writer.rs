@@ -5,6 +5,7 @@
 use {
     crate::{
         appendable::Appendable,
+        big_endian::BigEndianU16,
         error::FrameWriteError,
         mac::{self, FixedDataHdrFields, FrameControl, OptionalDataHdrFields, SequenceControl},
     },
@@ -82,12 +83,13 @@ pub fn write_data_hdr<B: Appendable>(
 }
 
 pub fn write_snap_llc_hdr<B: Appendable>(w: &mut B, protocol_id: u16) -> Result<(), Error> {
-    let mut llc_hdr = w.append_value_zeroed::<mac::LlcHdr>()?;
-    llc_hdr.dsap = mac::LLC_SNAP_EXTENSION;
-    llc_hdr.ssap = mac::LLC_SNAP_EXTENSION;
-    llc_hdr.control = mac::LLC_SNAP_UNNUMBERED_INFO;
-    llc_hdr.oui = mac::LLC_SNAP_OUI;
-    llc_hdr.protocol_id.set_from_native(protocol_id);
+    w.append_value(&mac::LlcHdr {
+        dsap: mac::LLC_SNAP_EXTENSION,
+        ssap: mac::LLC_SNAP_EXTENSION,
+        control: mac::LLC_SNAP_UNNUMBERED_INFO,
+        oui: mac::LLC_SNAP_OUI,
+        protocol_id: BigEndianU16::from_native(protocol_id),
+    })?;
     Ok(())
 }
 

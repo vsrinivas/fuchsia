@@ -9,6 +9,7 @@ use {
     std::{ops::Deref, ops::DerefMut},
     wlan_common::{
         appendable::Appendable,
+        big_endian::BigEndianU16,
         buffer_writer::BufferWriter,
         data_writer,
         mac::{self, OptionalField},
@@ -36,8 +37,7 @@ pub fn write_open_auth_frame<B: Appendable>(
         None,
     )?;
 
-    let mut auth_hdr = buf.append_value_zeroed::<mac::AuthHdr>()?;
-    auth::write_client_req(&mut auth_hdr);
+    buf.append_value(&auth::make_open_client_req())?;
     Ok(())
 }
 
@@ -122,10 +122,11 @@ pub fn write_eth_frame<B: Appendable>(
     protocol_id: u16,
     body: &[u8],
 ) -> Result<(), Error> {
-    let mut eth_hdr = buf.append_value_zeroed::<mac::EthernetIIHdr>()?;
-    eth_hdr.da = dst_addr;
-    eth_hdr.sa = src_addr;
-    eth_hdr.ether_type.set_from_native(protocol_id);
+    buf.append_value(&mac::EthernetIIHdr {
+        da: dst_addr,
+        sa: src_addr,
+        ether_type: BigEndianU16::from_native(protocol_id),
+    })?;
 
     buf.append_bytes(body)?;
     Ok(())
