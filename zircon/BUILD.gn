@@ -180,6 +180,7 @@ if (current_toolchain == default_toolchain) {
         "$zx/system/banjo/ddk-protocol-intelhda-codec",
 
         # Separately listed because they're not reached by any dependencies.
+        "$zx/system/fidl/fuchsia-debugdata",
         "$zx/system/fidl/fuchsia-inspect",
         "$zx/system/fidl/fuchsia-tracelink",
       ]
