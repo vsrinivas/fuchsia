@@ -500,7 +500,6 @@ struct wiphy {
     uint32_t regulatory_flags;
     uint32_t features;
     struct brcmf_cfg80211_info* cfg80211_info;
-    struct cfg80211_ops* ops;
     struct brcmf_device* dev;
 };
 
@@ -672,50 +671,6 @@ struct cfg80211_mgmt_tx_params {
 struct cfg80211_pmk_conf {
     void* pmk;
     int pmk_len;
-};
-
-struct cfg80211_ops { // Most of these return zx_status_t
-    void* add_virtual_intf;
-    void* del_virtual_intf;
-    void* change_virtual_intf;
-    void* scan;
-    void* set_wiphy_params;
-    void* get_station;
-    void* dump_station;
-    void* set_tx_power;
-    void* get_tx_power;
-    void* add_key;
-    void* del_key;
-    void* get_key;
-    void* set_default_key;
-    void* set_default_mgmt_key;
-    void* set_power_mgmt;
-    void* connect;
-    void* disconnect;
-    void* suspend;
-    void* resume;
-    void* set_pmksa;
-    void* del_pmksa;
-    void* flush_pmksa;
-    void* start_ap;
-    void* stop_ap;
-    void* change_beacon;
-    void* del_station;
-    void* change_station;
-    void* sched_scan_start;
-    void* sched_scan_stop;
-    void* mgmt_frame_register;
-    void* mgmt_tx;
-    void* remain_on_channel;
-    void* cancel_remain_on_channel;
-    void* start_p2p_device;
-    void* stop_p2p_device;
-    void* crit_proto_start;
-    void* crit_proto_stop;
-    void* tdls_oper;
-    void* update_connect_params;
-    void* set_pmk;
-    void* del_pmk;
 };
 
 struct ieee80211_iface_combination {
