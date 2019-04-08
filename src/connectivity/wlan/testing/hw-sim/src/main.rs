@@ -7,24 +7,20 @@
 #![recursion_limit = "128"]
 
 use {
-    byteorder::{LittleEndian, ReadBytesExt},
-    fidl_fuchsia_wlan_common as wlan_common, fidl_fuchsia_wlan_device as wlan_device,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device as fidl_device,
     fidl_fuchsia_wlan_tap as wlantap, fuchsia_async as fasync,
     fuchsia_zircon::prelude::*,
     futures::prelude::*,
-    std::io,
     std::sync::{Arc, Mutex},
+    wlan_common::{appendable::Appendable, ie, mac, mgmt_writer},
     wlantap_client::Wlantap,
 };
 
 mod ap;
 mod config;
-mod mac_frames;
-#[cfg(test)]
-mod minstrel;
 
 #[cfg(test)]
-mod eth_frames;
+mod minstrel;
 #[cfg(test)]
 mod test_utils;
 
@@ -32,11 +28,11 @@ const HW_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
 const BSSID: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x73, 0x73];
 
 fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
-    config::create_wlantap_config(HW_MAC_ADDR, wlan_device::MacRole::Client)
+    config::create_wlantap_config(HW_MAC_ADDR, fidl_device::MacRole::Client)
 }
 
 struct State {
-    current_channel: wlan_common::WlanChan,
+    current_channel: fidl_common::WlanChan,
     frame_buf: Vec<u8>,
     is_associated: bool,
 }
@@ -44,9 +40,9 @@ struct State {
 impl State {
     fn new() -> Self {
         Self {
-            current_channel: wlan_common::WlanChan {
+            current_channel: fidl_common::WlanChan {
                 primary: 0,
-                cbw: wlan_common::Cbw::Cbw20,
+                cbw: fidl_common::Cbw::Cbw20,
                 secondary80: 0,
             },
             frame_buf: vec![],
@@ -57,112 +53,108 @@ impl State {
 
 fn send_beacon(
     frame_buf: &mut Vec<u8>,
-    channel: &wlan_common::WlanChan,
+    channel: &fidl_common::WlanChan,
     bss_id: &[u8; 6],
     ssid: &[u8],
     proxy: &wlantap::WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
-    mac_frames::MacFrameWriter::<&mut Vec<u8>>::new(frame_buf)
-        .beacon(
-            &mac_frames::MgmtHeader {
-                frame_control: mac_frames::FrameControl(0), // will be filled automatically
-                duration: 0,
-                addr1: mac_frames::BROADCAST_ADDR.clone(),
-                addr2: bss_id.clone(),
-                addr3: bss_id.clone(),
-                seq_control: mac_frames::SeqControl { frag_num: 0, seq_num: 123 },
-                ht_control: None,
-            },
-            &mac_frames::BeaconFields {
-                timestamp: 0,
-                beacon_interval: 100,
-                capability_info: mac_frames::CapabilityInfo(0),
-            },
-        )?
-        .ssid(ssid)?
-        .supported_rates(&[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?
-        .dsss_parameter_set(channel.primary)?;
 
-    let rx_info = &mut create_rx_info(channel);
-    proxy.rx(0, &mut frame_buf.iter().cloned(), rx_info)?;
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::BEACON);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(123);
+    const BROADCAST_ADDR: mac::MacAddr = [0xff; 6];
+    mgmt_writer::write_mgmt_hdr(
+        frame_buf,
+        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, BROADCAST_ADDR, *bss_id, seq_ctrl),
+        None,
+    )?;
+
+    frame_buf.append_value(&mac::BeaconHdr {
+        timestamp: 0,
+        beacon_interval: 100,
+        capabilities: mac::CapabilityInfo(0),
+    })?;
+
+    ie::write_ssid(frame_buf, ssid)?;
+    ie::write_supported_rates(frame_buf, &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?;
+    ie::write_dsss_param_set(frame_buf, &ie::DsssParamSet { current_chan: channel.primary })?;
+
+    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel))?;
     Ok(())
 }
 
 fn send_authentication(
     frame_buf: &mut Vec<u8>,
-    channel: &wlan_common::WlanChan,
+    channel: &fidl_common::WlanChan,
     bss_id: &[u8; 6],
     proxy: &wlantap::WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
-    mac_frames::MacFrameWriter::<&mut Vec<u8>>::new(frame_buf).authentication(
-        &mac_frames::MgmtHeader {
-            frame_control: mac_frames::FrameControl(0), // will be filled automatically
-            duration: 0,
-            addr1: HW_MAC_ADDR,
-            addr2: bss_id.clone(),
-            addr3: bss_id.clone(),
-            seq_control: mac_frames::SeqControl { frag_num: 0, seq_num: 123 },
-            ht_control: None,
-        },
-        &mac_frames::AuthenticationFields {
-            auth_algorithm_number: mac_frames::AuthAlgorithm::OpenSystem as u16,
-            auth_txn_seq_number: 2, // Always 2 for successful authentication
-            status_code: mac_frames::StatusCode::Success as u16,
-        },
+
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::AUTH);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(123);
+    mgmt_writer::write_mgmt_hdr(
+        frame_buf,
+        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, HW_MAC_ADDR, *bss_id, seq_ctrl),
+        None,
     )?;
 
-    let rx_info = &mut create_rx_info(channel);
-    proxy.rx(0, &mut frame_buf.iter().cloned(), rx_info)?;
+    frame_buf.append_value(&mac::AuthHdr {
+        auth_alg_num: mac::AuthAlgorithmNumber::OPEN,
+        auth_txn_seq_num: 2,
+        status_code: mac::StatusCode::SUCCESS,
+    })?;
+
+    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel))?;
     Ok(())
 }
 
 fn send_association_response(
     frame_buf: &mut Vec<u8>,
-    channel: &wlan_common::WlanChan,
+    channel: &fidl_common::WlanChan,
     bss_id: &[u8; 6],
     proxy: &wlantap::WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
-    let mut cap_info = mac_frames::CapabilityInfo(0);
-    cap_info.set_ess(true);
-    cap_info.set_short_preamble(true);
-    mac_frames::MacFrameWriter::<&mut Vec<u8>>::new(frame_buf)
-        .association_response(
-            &mac_frames::MgmtHeader {
-                frame_control: mac_frames::FrameControl(0), // will be filled automatically
-                duration: 0,
-                addr1: HW_MAC_ADDR,
-                addr2: bss_id.clone(),
-                addr3: bss_id.clone(),
-                seq_control: mac_frames::SeqControl { frag_num: 0, seq_num: 123 },
-                ht_control: None,
-            },
-            &mac_frames::AssociationResponseFields {
-                capability_info: cap_info,
-                status_code: 0,    // Success
-                association_id: 2, // Can be any
-            },
-        )?
-        // These elements will be captured in assoc_ctx to initialize Minstrel
-        // tx_vec_idx:                        129   130         131   132
-        .supported_rates(&[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?
-        // tx_vec_idx:             133 134 (basic)135 136
-        .extended_supported_rates(&[48, 72, 128 + 96, 108])?;
 
-    let rx_info = &mut create_rx_info(channel);
-    proxy.rx(0, &mut frame_buf.iter().cloned(), rx_info)?;
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_RESP);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(123);
+    mgmt_writer::write_mgmt_hdr(
+        frame_buf,
+        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, HW_MAC_ADDR, *bss_id, seq_ctrl),
+        None,
+    )?;
+
+    let cap_info = mac::CapabilityInfo(0).with_ess(true).with_short_preamble(true);
+    frame_buf.append_value(&mac::AssocRespHdr {
+        capabilities: cap_info,
+        status_code: mac::StatusCode::SUCCESS,
+        aid: 2, // does not matter
+    })?;
+
+    // These rates will be captured in assoc_ctx to initialize Minstrel. 11b rates are ignored.
+    // tx_vec_idx:                            _     _     _   129   130     _   131   132
+    ie::write_supported_rates(frame_buf, &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24])?;
+    // tx_vec_idx:                            133 134 basic_135  136
+    ie::write_ext_supported_rates(frame_buf, &[48, 72, 128 + 96, 108])?;
+
+    proxy.rx(0, &mut frame_buf.iter().cloned(), &mut create_rx_info(channel))?;
     Ok(())
 }
 
-fn create_rx_info(channel: &wlan_common::WlanChan) -> wlantap::WlanRxInfo {
+fn create_rx_info(channel: &fidl_common::WlanChan) -> wlantap::WlanRxInfo {
     wlantap::WlanRxInfo {
         rx_flags: 0,
         valid_fields: 0,
         phy: 0,
         data_rate: 0,
-        chan: wlan_common::WlanChan {
+        chan: fidl_common::WlanChan {
             // TODO(FIDL-54): use clone()
             primary: channel.primary,
             cbw: channel.cbw,
@@ -175,31 +167,31 @@ fn create_rx_info(channel: &wlan_common::WlanChan) -> wlantap::WlanRxInfo {
     }
 }
 
-fn get_frame_ctrl(packet_data: &Vec<u8>) -> mac_frames::FrameControl {
-    let mut reader = io::Cursor::new(packet_data);
-    let frame_ctrl = reader.read_u16::<LittleEndian>().unwrap();
-    mac_frames::FrameControl(frame_ctrl)
-}
-
 fn handle_tx(args: wlantap::TxArgs, state: &mut State, proxy: &wlantap::WlantapPhyProxy) {
-    let frame_ctrl = get_frame_ctrl(&args.packet.data);
-    if frame_ctrl.typ() == mac_frames::FrameControlType::Mgmt as u16 {
-        handle_mgmt_tx(frame_ctrl.subtype(), state, proxy);
-    }
-}
-
-fn handle_mgmt_tx(subtype: u16, state: &mut State, proxy: &wlantap::WlantapPhyProxy) {
-    if subtype == mac_frames::MgmtSubtype::Authentication as u16 {
-        println!("Authentication received.");
-        send_authentication(&mut state.frame_buf, &state.current_channel, &BSSID, proxy)
-            .expect("Error sending fake authentication frame.");
-        println!("Authentication sent.");
-    } else if subtype == mac_frames::MgmtSubtype::AssociationRequest as u16 {
-        println!("Association Request received.");
-        send_association_response(&mut state.frame_buf, &state.current_channel, &BSSID, proxy)
-            .expect("Error sending fake association response frame.");
-        println!("Association Response sent.");
-        state.is_associated = true;
+    if let Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) =
+        mac::MacFrame::parse(&args.packet.data[..], false)
+    {
+        match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
+            Some(mac::MgmtBody::Authentication { .. }) => {
+                println!("authentication received.");
+                send_authentication(&mut state.frame_buf, &state.current_channel, &BSSID, proxy)
+                    .expect("Error sending fake authentication frame.");
+                println!("Authentication sent.");
+            }
+            Some(mac::MgmtBody::AssociationReq { .. }) => {
+                println!("Association Request received.");
+                send_association_response(
+                    &mut state.frame_buf,
+                    &state.current_channel,
+                    &BSSID,
+                    proxy,
+                )
+                .expect("Error sending fake association response frame.");
+                println!("Association Response sent.");
+                state.is_associated = true;
+            }
+            _ => {}
+        }
     }
 }
 
@@ -267,6 +259,7 @@ mod simulation_tests {
             fs::{self, File},
             panic,
         },
+        wlan_common::{big_endian::BigEndianU16, buffer_reader::BufferReader, data_writer},
     };
 
     const BSS_FOO: [u8; 6] = [0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f];
@@ -276,8 +269,8 @@ mod simulation_tests {
     const BSS_BAZ: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x7a];
     const SSID_BAZ: &[u8] = b"baz";
 
-    pub const CHANNEL: wlan_common::WlanChan =
-        wlan_common::WlanChan { primary: 1, secondary80: 0, cbw: wlan_common::Cbw::Cbw20 };
+    pub const CHANNEL: fidl_common::WlanChan =
+        fidl_common::WlanChan { primary: 1, secondary80: 0, cbw: fidl_common::Cbw::Cbw20 };
 
     // Temporary workaround to run tests synchronously. This is because wlan service only works with
     // one PHY, so having tests with multiple PHYs running in parallel make them flaky.
@@ -509,15 +502,19 @@ mod simulation_tests {
                 }
             }
             wlantap::WlantapPhyEvent::Tx { args } => {
-                let frame_ctrl = get_frame_ctrl(&args.packet.data);
-                if frame_ctrl.typ() == mac_frames::FrameControlType::Mgmt as u16 {
-                    let subtyp = frame_ctrl.subtype();
-                    if subtyp == mac_frames::MgmtSubtype::Authentication as u16 {
-                        send_authentication(&mut vec![], &CHANNEL, bssid, &phy)
-                            .expect("Error sending fake authentication frame.");
-                    } else if subtyp == mac_frames::MgmtSubtype::AssociationRequest as u16 {
-                        send_association_response(&mut vec![], &CHANNEL, bssid, &phy)
-                            .expect("Error sending fake association response frame.");
+                if let Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) =
+                    mac::MacFrame::parse(&args.packet.data[..], false)
+                {
+                    match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
+                        Some(mac::MgmtBody::Authentication { .. }) => {
+                            send_authentication(&mut vec![], &CHANNEL, bssid, &phy)
+                                .expect("Error sending fake authentication frame.");
+                        }
+                        Some(mac::MgmtBody::AssociationReq { .. }) => {
+                            send_association_response(&mut vec![], &CHANNEL, bssid, &phy)
+                                .expect("Error sending fake association response frame.");
+                        }
+                        _ => {}
                     }
                 }
             }
@@ -594,16 +591,13 @@ mod simulation_tests {
         helper: &mut test_utils::TestHelper,
     ) {
         let mut buf: Vec<u8> = Vec::new();
-        eth_frames::write_eth_header(
-            &mut buf,
-            &eth_frames::EthHeader {
-                dst: BSSID,
-                src: HW_MAC_ADDR,
-                eth_type: eth_frames::EtherType::Ipv4 as u16,
-            },
-        )
-        .expect("Error creating fake ethernet frame");
-        buf.extend_from_slice(PAYLOAD);
+        buf.append_value(&mac::EthernetIIHdr {
+            da: BSSID,
+            sa: HW_MAC_ADDR,
+            ether_type: BigEndianU16::from_native(mac::ETHER_TYPE_IPV4),
+        })
+        .expect("error creating fake ethernet header");
+        buf.append_bytes(PAYLOAD).expect("buffer too small for ethernet payload");
 
         let eth_tx_rx_fut = send_and_receive(client, &buf);
         pin_mut!(eth_tx_rx_fut);
@@ -622,16 +616,16 @@ mod simulation_tests {
             )
             .expect("send and receive eth");
         assert_eq!(&actual[..], PAYLOAD);
-        assert_eq!(header.dst, HW_MAC_ADDR);
-        assert_eq!(header.src, BSSID);
-        assert_eq!(header.eth_type, eth_frames::EtherType::Ipv4 as u16);
+        assert_eq!(header.da, HW_MAC_ADDR);
+        assert_eq!(header.sa, BSSID);
+        assert_eq!(header.ether_type.to_native(), mac::ETHER_TYPE_IPV4);
         assert_eq!(&payload[..], PAYLOAD);
     }
 
     async fn send_and_receive<'a>(
         client: &'a mut ethernet::Client,
         buf: &'a Vec<u8>,
-    ) -> Result<(eth_frames::EthHeader, Vec<u8>), failure::Error> {
+    ) -> Result<(mac::EthernetIIHdr, Vec<u8>), failure::Error> {
         let mut client_stream = client.get_stream();
         client.send(&buf);
         loop {
@@ -640,14 +634,16 @@ mod simulation_tests {
                 ethernet::Event::StatusChanged => {
                     await!(client.get_status()).expect("getting status");
                 }
-                ethernet::Event::Receive(buffer, flags) => {
+                ethernet::Event::Receive(rx_buffer, flags) => {
                     ensure!(flags.intersects(ethernet::EthernetQueueFlags::RX_OK), "RX_OK not set");
-                    let mut eth_frame = vec![0u8; buffer.len()];
-                    buffer.read(&mut eth_frame);
-                    let mut cursor = io::Cursor::new(&eth_frame);
-                    let header = eth_frames::EthHeader::from_reader(&mut cursor)?;
-                    let payload = eth_frame.split_off(cursor.position() as usize);
-                    return Ok((header, payload));
+                    let mut buf = vec![0; rx_buffer.len()];
+                    rx_buffer.read(&mut buf);
+                    let mut buf_reader = BufferReader::new(&buf[..]);
+                    let header = buf_reader
+                        .read::<mac::EthernetIIHdr>()
+                        .expect("bytes received too short for ethernet header");
+                    let payload = buf_reader.into_remaining().to_vec();
+                    return Ok((*header, payload));
                 }
             }
         }
@@ -659,22 +655,17 @@ mod simulation_tests {
         phy: &wlantap::WlantapPhyProxy,
     ) {
         if let wlantap::WlantapPhyEvent::Tx { args } = event {
-            let frame_ctrl = get_frame_ctrl(&args.packet.data);
-            if frame_ctrl.typ() == mac_frames::FrameControlType::Data as u16 {
-                let mut cursor = io::Cursor::new(args.packet.data);
-                let data_header = mac_frames::DataHeader::from_reader(&mut cursor)
-                    .expect("Getting data frame header");
-                // Ignore DHCP packets sent by netstack.
-                if data_header.addr1 == BSS_ETHNET
-                    && data_header.addr2 == HW_MAC_ADDR
-                    && data_header.addr3 == BSSID
-                {
-                    let llc_header = mac_frames::LlcHeader::from_reader(&mut cursor)
-                        .expect("skipping llc header");
-                    assert_eq!(llc_header.protocol_id, eth_frames::EtherType::Ipv4 as u16);
-                    io::Read::read_to_end(&mut cursor, actual).expect("reading payload");
-                    rx_wlan_data_frame(&HW_MAC_ADDR, &BSS_ETHNET, &BSSID, &PAYLOAD, phy)
-                        .expect("sending wlan data frame");
+            if let Some(msdus) =
+                mac::MsduIterator::from_raw_data_frame(&args.packet.data[..], false)
+            {
+                for mac::Msdu { dst_addr, src_addr, llc_frame } in msdus {
+                    if dst_addr == BSSID && src_addr == HW_MAC_ADDR {
+                        assert_eq!(llc_frame.hdr.protocol_id.to_native(), mac::ETHER_TYPE_IPV4);
+                        actual.clear();
+                        actual.extend_from_slice(llc_frame.body);
+                        rx_wlan_data_frame(&HW_MAC_ADDR, &BSS_ETHNET, &BSSID, &PAYLOAD, phy)
+                            .expect("sending wlan data frame");
+                    }
                 }
             }
         }
@@ -687,31 +678,31 @@ mod simulation_tests {
         payload: &[u8],
         phy: &wlantap::WlantapPhyProxy,
     ) -> Result<(), failure::Error> {
-        let mut buf: Vec<u8> = vec![];
-        mac_frames::MacFrameWriter::<&mut Vec<u8>>::new(&mut buf).data(
-            &mac_frames::DataHeader {
-                frame_control: mac_frames::FrameControl(0), // will be filled automatically
+        let buf: &mut Vec<u8> = &mut vec![];
+
+        let frame_ctrl = mac::FrameControl(0)
+            .with_frame_type(mac::FrameType::DATA)
+            .with_data_subtype(mac::DataSubtype(0))
+            .with_from_ds(true);
+        let seq_ctrl = mac::SequenceControl(0).with_seq_num(3);
+
+        data_writer::write_data_hdr(
+            buf,
+            mac::FixedDataHdrFields {
+                frame_ctrl,
                 duration: 0,
-                addr1: addr1.clone(),
-                addr2: addr2.clone(),
-                addr3: addr3.clone(),
-                seq_control: mac_frames::SeqControl { frag_num: 0, seq_num: 3 },
-                addr4: None,
-                qos_control: None,
-                ht_control: None,
+                addr1: *addr1,
+                addr2: *addr2,
+                addr3: *addr3,
+                seq_ctrl,
             },
-            &mac_frames::LlcHeader {
-                dsap: 170,
-                ssap: 170,
-                control: 3,
-                oui: [0; 3],
-                protocol_id: eth_frames::EtherType::Ipv4 as u16,
-            },
-            payload,
+            mac::OptionalDataHdrFields::none(),
         )?;
 
-        let rx_info = &mut create_rx_info(&CHANNEL);
-        phy.rx(0, &mut buf.iter().cloned(), rx_info)?;
+        data_writer::write_snap_llc_hdr(buf, mac::ETHER_TYPE_IPV4)?;
+        buf.append_bytes(payload)?;
+
+        phy.rx(0, &mut buf.iter().cloned(), &mut create_rx_info(&CHANNEL))?;
         Ok(())
     }
 

@@ -20,7 +20,6 @@ pub const LLC_SNAP_OUI: [u8; 3] = [0, 0, 0];
 // IETF RFC 1042
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C, packed)]
-#[derive(Default)]
 pub struct LlcHdr {
     pub dsap: u8,
     pub ssap: u8,

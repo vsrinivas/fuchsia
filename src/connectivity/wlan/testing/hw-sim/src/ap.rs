@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 pub mod tests {
-    use crate::{config, mac_frames, test_utils};
+    use crate::{config, test_utils};
     use {
         fidl, fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device as wlan_device,
         fidl_fuchsia_wlan_device_service as fidl_wlan_service, fidl_fuchsia_wlan_sme as fidl_sme,
@@ -14,11 +14,10 @@ pub mod tests {
         futures::channel::mpsc,
         futures::prelude::*,
         hex,
-        std::io::Cursor,
         std::panic,
         wlan_common::{
             channel::{Cbw, Phy},
-            RadioConfig,
+            mac, RadioConfig,
         },
     };
 
@@ -97,24 +96,19 @@ pub mod tests {
         let (mut sender, receiver) = mpsc::channel::<()>(1);
         let event_handler = move |event| match event {
             wlantap::WlantapPhyEvent::Tx { args } => {
-                // ignore any stray data frame (likely some multicast frames by netstack)
-                if args.packet.data.len() < 2
-                    || args.packet.data[1] == mac_frames::FrameControlType::Data as u8
+                if let Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) =
+                    mac::MacFrame::parse(&args.packet.data[..], false)
                 {
-                    return;
+                    match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
+                        Some(mac::MgmtBody::Authentication { auth_hdr, .. }) => {
+                            assert_eq!({ auth_hdr.status_code }, mac::StatusCode::SUCCESS);
+                            sender.try_send(()).unwrap();
+                        }
+                        other => {
+                            panic!("expected authentication frame, got {:?}", other);
+                        }
+                    }
                 }
-                let mut reader = Cursor::new(&args.packet.data);
-                let header = mac_frames::MgmtHeader::from_reader(&mut reader)
-                    .expect("frame does not have valid mgmt header");
-                assert_eq!(header.frame_control.typ(), mac_frames::FrameControlType::Mgmt as u16);
-                assert_eq!(
-                    header.frame_control.subtype(),
-                    mac_frames::MgmtSubtype::Authentication as u16
-                );
-                let body = mac_frames::AuthenticationFields::from_reader(&mut reader)
-                    .expect("not a valid auth frame");
-                assert_eq!(body.status_code, mac_frames::StatusCode::Success as u16);
-                sender.try_send(()).unwrap();
             }
             _ => {}
         };
@@ -133,27 +127,21 @@ pub mod tests {
         let (mut sender, receiver) = mpsc::channel::<()>(1);
         let event_handler = move |event| match event {
             wlantap::WlantapPhyEvent::Tx { args } => {
-                // ignore any stray data frame (likely some multicast frames by netstack)
-                if args.packet.data.len() < 2
-                    || args.packet.data[1] == mac_frames::FrameControlType::Data as u8
+                if let Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) =
+                    mac::MacFrame::parse(&args.packet.data[..], false)
                 {
-                    return;
+                    match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
+                        Some(mac::MgmtBody::AssociationResp { assoc_resp_hdr, .. }) => {
+                            assert_eq!({ assoc_resp_hdr.status_code }, mac::StatusCode::SUCCESS);
+                            sender.try_send(()).unwrap();
+                        }
+                        Some(mac::MgmtBody::Unsupported { subtype })
+                            if subtype == mac::MgmtSubtype::ACTION => {}
+                        other => {
+                            panic!("expected association response frame, got {:?}", other);
+                        }
+                    }
                 }
-                let mut reader = Cursor::new(&args.packet.data);
-                let header = mac_frames::MgmtHeader::from_reader(&mut reader)
-                    .expect("frame does not have valid mgmt header");
-                assert_eq!(header.frame_control.typ(), mac_frames::FrameControlType::Mgmt as u16);
-                if header.frame_control.subtype() == mac_frames::MgmtSubtype::Action as u16 {
-                    return;
-                }
-                assert_eq!(
-                    header.frame_control.subtype(),
-                    mac_frames::MgmtSubtype::AssociationResponse as u16
-                );
-                let body = mac_frames::AssociationResponseFields::from_reader(&mut reader)
-                    .expect("not a valid assoc frame");
-                assert_eq!(body.status_code, mac_frames::StatusCode::Success as u16);
-                sender.try_send(()).unwrap();
             }
             _ => {}
         };

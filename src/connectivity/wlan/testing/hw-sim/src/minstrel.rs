@@ -11,6 +11,7 @@ use {
     pin_utils::pin_mut,
     std::collections::HashMap,
     std::task::Poll,
+    wlan_common::{appendable::Appendable, big_endian::BigEndianU16, mac},
 };
 
 // Remedy for FLK-24 (DNO-389)
@@ -134,8 +135,9 @@ fn handle_rate_selection_event<F, G>(
 {
     match event {
         wlantap::WlantapPhyEvent::Tx { args } => {
-            let frame_ctrl = get_frame_ctrl(&args.packet.data);
-            if frame_ctrl.typ() == mac_frames::FrameControlType::Data as u16 {
+            if let Some(mac::MacFrame::Data { .. }) =
+                mac::MacFrame::parse(&args.packet.data[..], false)
+            {
                 let tx_vec_idx = args.packet.info.tx_vector_idx;
                 send_tx_status_report(*bssid, tx_vec_idx, should_succeed(tx_vec_idx), phy)
                     .expect("Error sending tx_status report");
@@ -157,15 +159,12 @@ async fn eth_sender(receiver: &mut mpsc::Receiver<bool>) -> Result<(), failure::
         .expect(&format!("ethernet client not found {:?}", &HW_MAC_ADDR));
 
     let mut buf: Vec<u8> = vec![];
-    eth_frames::write_eth_header(
-        &mut buf,
-        &eth_frames::EthHeader {
-            dst: BSSID,
-            src: HW_MAC_ADDR,
-            eth_type: eth_frames::EtherType::Ipv4 as u16,
-        },
-    )
-    .expect("Error creating fake ethernet frame");
+    buf.append_value(&mac::EthernetIIHdr {
+        da: BSSID,
+        sa: HW_MAC_ADDR,
+        ether_type: BigEndianU16::from_native(mac::ETHER_TYPE_IPV4),
+    })
+    .expect("error creating fake ethernet header");
 
     let mut timer_stream = fasync::Interval::new(MINSTREL_DATA_FRAME_INTERVAL_NANOS.nanos());
     let mut client_stream = client.get_stream();

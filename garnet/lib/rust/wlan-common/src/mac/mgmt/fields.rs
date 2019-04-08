@@ -73,7 +73,7 @@ impl AuthAlgorithmNumber {
 }
 
 // IEEE Std 802.11-2016, 9.3.3.3
-#[derive(FromBytes, AsBytes, Unaligned)]
+#[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct BeaconHdr {
     pub timestamp: u64,
@@ -83,7 +83,7 @@ pub struct BeaconHdr {
 }
 
 // IEEE Std 802.11-2016, 9.3.3.12
-#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[derive(Default, FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct AuthHdr {
     pub auth_alg_num: AuthAlgorithmNumber,
@@ -92,14 +92,23 @@ pub struct AuthHdr {
 }
 
 // IEEE Std 802.11-2016, 9.3.3.13
-#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[derive(Default, FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct DeauthHdr {
     pub reason_code: ReasonCode,
 }
 
 // IEEE Std 802.11-2016, 9.3.3.6
-#[derive(FromBytes, AsBytes, Unaligned)]
+#[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
+#[repr(C, packed)]
+pub struct AssocReqHdr {
+    // IEEE Std 802.11-2016, 9.4.1.4
+    pub capabilities: CapabilityInfo,
+    pub listen_interval: u16,
+}
+
+// IEEE Std 802.11-2016, 9.3.3.7
+#[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct AssocRespHdr {
     // IEEE Std 802.11-2016, 9.4.1.4

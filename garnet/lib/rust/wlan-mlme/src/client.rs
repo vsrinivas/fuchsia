@@ -32,7 +32,7 @@ pub fn write_open_auth_frame<B: Appendable>(
     let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid) as u16);
     mgmt_writer::write_mgmt_hdr(
         buf,
-        mgmt_writer::mgmt_hdr_client_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
+        mgmt_writer::mgmt_hdr_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
         None,
     )?;
 
@@ -54,7 +54,7 @@ pub fn write_deauth_frame<B: Appendable>(
     let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bssid) as u16);
     mgmt_writer::write_mgmt_hdr(
         buf,
-        mgmt_writer::mgmt_hdr_client_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
+        mgmt_writer::mgmt_hdr_to_ap(frame_ctrl, bssid, client_addr, seq_ctrl),
         None,
     )?;
 

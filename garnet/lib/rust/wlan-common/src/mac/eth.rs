@@ -10,11 +10,12 @@ use {
 // RFC 704, Appendix B.2
 // https://www.iana.org/assignments/ieee-802-numbers/ieee-802-numbers.xhtml
 pub const ETHER_TYPE_EAPOL: u16 = 0x888E;
+pub const ETHER_TYPE_IPV4: u16 = 0x0800;
 
 pub const MAX_ETH_FRAME_LEN: usize = 2048;
 
 // IEEE Std 802.3-2015, 3.1.1
-#[derive(FromBytes, AsBytes, Unaligned)]
+#[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct EthernetIIHdr {
     pub da: MacAddr,

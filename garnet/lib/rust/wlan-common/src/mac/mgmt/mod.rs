@@ -13,9 +13,11 @@ mod status;
 
 pub use {fields::*, reason::*, status::*};
 
-pub enum MgmtBody<B> {
+#[derive(Debug)]
+pub enum MgmtBody<B: ByteSlice> {
     Beacon { bcn_hdr: LayoutVerified<B, BeaconHdr>, elements: B },
     Authentication { auth_hdr: LayoutVerified<B, AuthHdr>, elements: B },
+    AssociationReq { assoc_req_hdr: LayoutVerified<B, AssocReqHdr>, elements: B },
     AssociationResp { assoc_resp_hdr: LayoutVerified<B, AssocRespHdr>, elements: B },
     Unsupported { subtype: MgmtSubtype },
 }
@@ -30,6 +32,10 @@ impl<B: ByteSlice> MgmtBody<B> {
             MgmtSubtype::AUTH => {
                 let (auth_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
                 Some(MgmtBody::Authentication { auth_hdr, elements })
+            }
+            MgmtSubtype::ASSOC_REQ => {
+                let (assoc_req_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                Some(MgmtBody::AssociationReq { assoc_req_hdr, elements })
             }
             MgmtSubtype::ASSOC_RESP => {
                 let (assoc_resp_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
