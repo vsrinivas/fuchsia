@@ -5,9 +5,9 @@
 #include "src/media/playback/mediaplayer/fidl/fidl_audio_renderer.h"
 
 #include <lib/async/default.h>
-#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
@@ -46,6 +46,8 @@ FidlAudioRenderer::FidlAudioRenderer(
   audio_renderer_.events().OnMinLeadTimeChanged =
       [this](int64_t min_lead_time_ns) {
         FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
+        renderer_responding_ = true;
+
         if (min_lead_time_ns == 0) {
           // Ignore the zero we get during warmup.
           // TODO(dalesat): Remove check when MTWN-244 is fixed.
@@ -163,6 +165,12 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   UpdateTimeline(now);
 
   if (packet->pts() == Packet::kNoPts) {
+    if (!renderer_responding_) {
+      // Discard this packet.
+      SignalCurrentDemand();
+      return;
+    }
+
     // The packet has no PTS. We need to assign one. We prefer to use frame
     // units, so first make sure the PTS rate is set to frames.
     // TODO(dalesat): Remove this code when MTWN-243 is fixed.
