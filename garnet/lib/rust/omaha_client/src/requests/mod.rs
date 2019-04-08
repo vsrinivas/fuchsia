@@ -16,7 +16,7 @@ use log::*;
 type ProtocolApp = super::protocol::request::App;
 
 /// These are the parameters that describe how the request should be performed.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RequestParams {
     /// The install source for a request changes a number of properties of the request, including
     /// the HTTP request headers, and influences how Omaha services the request (e.g. throttling)
@@ -197,7 +197,7 @@ mod tests {
     use super::super::{
         common::Version,
         configuration::Updater,
-        protocol::request::{EventResult, EventType, InstallSource, UpdateCheck, OS},
+        protocol::request::{EventResult, EventType, OS},
     };
 
     use super::*;

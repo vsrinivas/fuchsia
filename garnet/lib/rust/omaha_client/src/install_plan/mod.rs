@@ -9,3 +9,13 @@ use super::protocol::response::Response;
 pub trait InstallPlan: std::marker::Sized {
     fn from_response(resp: &Response) -> Option<Self>;
 }
+
+#[cfg(test)]
+pub struct StubInstallPlan;
+
+#[cfg(test)]
+impl InstallPlan for StubInstallPlan {
+    fn from_response(_resp: &Response) -> Option<Self> {
+        Some(StubInstallPlan)
+    }
+}

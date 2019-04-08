@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::protocol::request::InstallSource;
 use std::fmt;
+use std::time::SystemTime;
 
 /// The omaha_client::common module contains those types that are common to many parts of the
 /// library.  Many of these don't belong to a specific sub-module.
@@ -50,6 +52,48 @@ pub struct App {
     ///
     /// See https://github.com/google/omaha/blob/master/doc/ServerProtocolV3.md#packages--fingerprints
     pub fingerprint: Option<String>,
+}
+
+/// Options controlling a single update check
+#[derive(Clone, Debug)]
+pub struct CheckOptions {
+    /// Was this check initiated by a person that's waiting for an answer?
+    ///  This is used to ignore the background poll rate, and to be aggressive about
+    ///  failing fast, so as not to hang on not receiving a response.
+    pub source: InstallSource,
+}
+
+/// This describes the data around the scheduling of update checks
+#[derive(Clone, Debug, PartialEq)]
+pub struct UpdateCheckSchedule {
+    /// When the last update check was attempted (start time of the check process).
+    pub last_update_time: SystemTime,
+
+    /// When the next periodic update window starts.
+    pub next_update_window_start: SystemTime,
+
+    /// When the update should happen (in the update window).
+    pub next_update_time: SystemTime,
+}
+
+/// These hold the data maintained request-to-request so that the requirements for
+/// backoffs, throttling, proxy use, etc. can all be properly maintained.  This is
+/// NOT the state machine's internal state.
+#[derive(Clone, Debug, Default)]
+pub struct ProtocolState {
+    /// If the server has dictated the next poll interval, this holds what that
+    /// interval is.
+    pub server_dictated_poll_interval: Option<std::time::Duration>,
+
+    /// The number of consecutive failed update attempts.
+    pub consecutive_failed_update_attempts: u32,
+
+    /// The number of consecutive failed update checks.  Used to perform backoffs.
+    pub consecutive_failed_update_checks: u32,
+
+    /// The number of consecutive proxied requests.  Used to periodically not use
+    /// proxies, in the case of an invalid proxy configuration.
+    pub consecutive_proxied_requests: u32,
 }
 
 #[cfg(test)]
