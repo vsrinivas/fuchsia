@@ -62,6 +62,13 @@ class EnclosedGuest {
     environment_controller_->GetHostVsockEndpoint(std::move(endpoint));
   }
 
+  void ConnectToBalloon(
+      fidl::InterfaceRequest<fuchsia::guest::BalloonController>
+          balloon_controller) {
+    environment_controller_->ConnectToBalloon(guest_cid_,
+                                              std::move(balloon_controller));
+  }
+
   uint32_t GetGuestCid() const { return guest_cid_; }
 
   MockNetstack* GetNetstack() { return &mock_netstack_; }

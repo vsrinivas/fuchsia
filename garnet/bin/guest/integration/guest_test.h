@@ -5,10 +5,10 @@
 #ifndef GARNET_BIN_GUEST_INTEGRATION_GUEST_TEST_H_
 #define GARNET_BIN_GUEST_INTEGRATION_GUEST_TEST_H_
 
-#include "garnet/bin/guest/integration/enclosed_guest.h"
-
 #include <fbl/type_info.h>
 #include <src/lib/fxl/logging.h>
+
+#include "garnet/bin/guest/integration/enclosed_guest.h"
 
 // GuestTest creates a static EnclosedGuest to be shared across all tests in a
 // test fixture. Each translation unit that uses GuestTest must instantiate
@@ -53,6 +53,12 @@ class GuestTest : public ::testing::Test {
   void GetHostVsockEndpoint(
       fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint) {
     enclosed_guest_->GetHostVsockEndpoint(std::move(endpoint));
+  }
+
+  void ConnectToBalloon(
+      fidl::InterfaceRequest<fuchsia::guest::BalloonController>
+          balloon_controller) {
+    enclosed_guest_->ConnectToBalloon(std::move(balloon_controller));
   }
 
   T* GetEnclosedGuest() { return enclosed_guest_; }
