@@ -23,16 +23,24 @@ static fuchsia::mdns::ControllerPtr Connect(
   return svc;
 }
 
-class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
+class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
+                             public fuchsia::mdns::ServiceSubscriber {
  public:
-  Impl(UdpNub* nub) : nub_(nub) {}
+  Impl(UdpNub* nub) : nub_(nub), subscriber_binding_(this) {}
 
   void Begin(component::StartupContext* startup_context) {
     std::cerr << "Querying mDNS for overnet services [" << kServiceName
               << "]\n";
     auto svc = Connect(startup_context, "Introducer");
-    svc->SubscribeToService(kServiceName, subscription_.NewRequest());
-    RunLoop(0);
+    fidl::InterfaceHandle<fuchsia::mdns::ServiceSubscriber> subscriber_handle;
+
+    subscriber_binding_.Bind(subscriber_handle.NewRequest());
+    subscriber_binding_.set_error_handler([this](zx_status_t status) {
+      subscriber_binding_.set_error_handler(nullptr);
+      subscriber_binding_.Unbind();
+    });
+
+    svc->SubscribeToService(kServiceName, std::move(subscriber_handle));
   }
 
  private:
@@ -45,95 +53,66 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
   };
   using ServiceMap = std::map<overnet::NodeId, ServiceInstance>;
 
-  void RunLoop(uint64_t version) {
-    subscription_->GetInstances(
-        version, [self = fbl::RefPtr<Impl>(this)](
-                     uint64_t new_version,
-                     std::vector<fuchsia::mdns::ServiceInstance> services) {
-          // Convert list of services into a service map.
-          ServiceMap new_service_map;
-          for (const auto& svc : services) {
-            if (svc.service_name != kServiceName) {
-              std::cout << "Unexpected service name (ignored): "
-                        << svc.service_name << "\n";
-              continue;
-            }
-            auto parsed_instance_name =
-                overnet::NodeId::FromString(svc.instance_name);
-            if (parsed_instance_name.is_error()) {
-              std::cout << "Failed to parse instance name: "
-                        << parsed_instance_name.AsStatus() << "\n";
-              continue;
-            }
-            auto instance_id = *parsed_instance_name.get();
-            if (new_service_map.count(instance_id) != 0) {
-              std::cout << "WARNING: Duplicate mdns definition for "
-                        << instance_id << "; only using first\n";
-              continue;
-            }
-            std::vector<fuchsia::netstack::SocketAddress> addresses;
-            if (svc.v4_address) {
-              addresses.emplace_back();
-              auto result = overnet::Status::FromZx(
-                  svc.v4_address->Clone(&addresses.back()));
-              if (result.is_error()) {
-                std::cout << "Failed to clone v4_address: " << result << "\n";
-                addresses.pop_back();
-              }
-            }
-            if (svc.v6_address) {
-              addresses.emplace_back();
-              auto result = overnet::Status::FromZx(
-                  svc.v6_address->Clone(&addresses.back()));
-              if (result.is_error()) {
-                std::cout << "Failed to clone v6_address: " << result << "\n";
-                addresses.pop_back();
-              }
-            }
-            std::vector<std::string> text;
-            if (!svc.text.is_null()) {
-              for (const auto& line : svc.text.get()) {
-                text.push_back(line);
-              }
-            }
-            new_service_map.emplace(
-                std::piecewise_construct, std::forward_as_tuple(instance_id),
-                std::forward_as_tuple(std::move(text), std::move(addresses)));
-          }
+  void HandleDiscoverOrUpdate(const fuchsia::mdns::ServiceInstance& svc,
+                              bool update) {
+    if (svc.service_name != kServiceName) {
+      std::cout << "Unexpected service name (ignored): " << svc.service_name
+                << "\n";
+      return;
+    }
+    auto parsed_instance_name = overnet::NodeId::FromString(svc.instance_name);
+    if (parsed_instance_name.is_error()) {
+      std::cout << "Failed to parse instance name: "
+                << parsed_instance_name.AsStatus() << "\n";
+      return;
+    }
+    auto instance_id = *parsed_instance_name.get();
+    auto it = service_map_.find(instance_id);
+    if ((it != service_map_.end()) != update) {
+      if (update) {
+        std::cout << "WARNING: Update for unknown instance " << instance_id
+                  << "; ignoring\n";
+      } else {
+        std::cout << "WARNING: Discovery of known instance " << instance_id
+                  << "; ignoring\n";
+      }
+      return;
+    }
+    std::vector<fuchsia::netstack::SocketAddress> addresses;
+    if (svc.v4_address) {
+      addresses.emplace_back();
+      auto result =
+          overnet::Status::FromZx(svc.v4_address->Clone(&addresses.back()));
+      if (result.is_error()) {
+        std::cout << "Failed to clone v4_address: " << result << "\n";
+        addresses.pop_back();
+      }
+    }
+    if (svc.v6_address) {
+      addresses.emplace_back();
+      auto result =
+          overnet::Status::FromZx(svc.v6_address->Clone(&addresses.back()));
+      if (result.is_error()) {
+        std::cout << "Failed to clone v6_address: " << result << "\n";
+        addresses.pop_back();
+      }
+    }
+    std::vector<std::string> text;
+    if (!svc.text.is_null()) {
+      for (const auto& line : svc.text.get()) {
+        text.push_back(line);
+      }
+    }
 
-          // Compare new and old service maps and form new connections for any
-          // newly advertised (or differently advertised) nodes.
-          auto it_new = new_service_map.begin();
-          auto it_old = self->last_result_.begin();
-          const auto end_new = new_service_map.end();
-          const auto end_old = self->last_result_.end();
-
-          while (it_new != end_new && it_old != end_old) {
-            if (it_new->first == it_old->first) {
-              if (it_new->second.addresses != it_old->second.addresses) {
-                self->NewConnection(it_new->first, it_new->second.addresses);
-              }
-              ++it_new;
-              ++it_old;
-            } else if (it_new->first < it_old->first) {
-              self->NewConnection(it_new->first, it_new->second.addresses);
-              ++it_new;
-            } else {
-              assert(it_old->first < it_new->first);
-              ++it_old;
-            }
-          }
-          while (it_new != end_new) {
-            self->NewConnection(it_new->first, it_new->second.addresses);
-            ++it_new;
-          }
-
-          // Record the current latest.
-          self->last_result_.swap(new_service_map);
-
-          // Check again.
-          self->RunLoop(new_version);
-        });
+    if (it == service_map_.end()) {
+      NewConnection(instance_id, addresses);
+      service_map_.emplace(
+          std::piecewise_construct, std::forward_as_tuple(instance_id),
+          std::forward_as_tuple(std::move(text), std::move(addresses)));
+    } else if (it->second.addresses != addresses) {
+      NewConnection(instance_id, addresses);
+      it->second.addresses = std::move(addresses);
+    }
   }
 
   void NewConnection(
@@ -187,9 +166,27 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
                            "bad address family");
   }
 
+  // fuchsia::mdns::ServiceSubscriber implementation.
+  void InstanceDiscovered(fuchsia::mdns::ServiceInstance instance,
+                          InstanceDiscoveredCallback callback) {
+    HandleDiscoverOrUpdate(instance, false);
+    callback();
+  }
+
+  void InstanceChanged(fuchsia::mdns::ServiceInstance instance,
+                       InstanceChangedCallback callback) {
+    HandleDiscoverOrUpdate(instance, true);
+    callback();
+  }
+
+  void InstanceLost(std::string service_name, std::string instance_name,
+                    InstanceLostCallback callback) {
+    callback();
+  }
+
   UdpNub* const nub_;
-  fuchsia::mdns::ServiceSubscriptionPtr subscription_;
-  ServiceMap last_result_;
+  fidl::Binding<fuchsia::mdns::ServiceSubscriber> subscriber_binding_;
+  ServiceMap service_map_;
 };
 
 MdnsIntroducer::MdnsIntroducer(OvernetApp* app, UdpNub* udp_nub)
@@ -212,7 +209,7 @@ class MdnsAdvertisement::Impl {
     std::cerr << "Requesting mDNS advertisement for " << node_id_ << " on port "
               << nub->port() << "\n";
     controller_->PublishServiceInstance(
-        kServiceName, node_id_.ToString(), nub->port(), {},
+        kServiceName, node_id_.ToString(), nub->port(), {}, true,
         [node_id = node_id_, port = nub->port()](fuchsia::mdns::Result result) {
           std::cout << "Advertising " << node_id << " on port " << port
                     << " via mdns gets: " << result << "\n";

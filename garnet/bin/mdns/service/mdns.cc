@@ -4,11 +4,11 @@
 
 #include "garnet/bin/mdns/service/mdns.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/async/default.h>
 #include <iostream>
 #include <limits>
 #include <unordered_set>
-#include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 #include "garnet/bin/mdns/service/address_prober.h"
 #include "garnet/bin/mdns/service/address_responder.h"
 #include "garnet/bin/mdns/service/dns_formatting.h"
@@ -31,7 +31,7 @@ Mdns::~Mdns() {}
 void Mdns::SetVerbose(bool verbose) {
 #ifndef NDEBUG
   verbose_ = verbose;
-#endif // ifndef NDEBUG
+#endif  // ifndef NDEBUG
 }
 
 void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
@@ -79,7 +79,7 @@ void Mdns::Start(fuchsia::netstack::NetstackPtr netstack,
           FXL_LOG(INFO) << "Inbound message from " << reply_address << ":"
                         << *message;
         }
-#endif // ifndef NDEBUG
+#endif  // ifndef NDEBUG
 
         for (auto& question : message->questions_) {
           // We reply to questions using unicast if specifically requested in
@@ -159,7 +159,7 @@ void Mdns::SubscribeToService(const std::string& service_name,
 
 bool Mdns::PublishServiceInstance(const std::string& service_name,
                                   const std::string& instance_name,
-                                  Publisher* publisher) {
+                                  bool perform_probe, Publisher* publisher) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
   FXL_DCHECK(publisher);
@@ -172,8 +172,9 @@ bool Mdns::PublishServiceInstance(const std::string& service_name,
 
   // We're using a bogus port number here, which is OK, because the 'proposed'
   // resource created from it is only used for collision resolution.
-  return ProbeAndAddInstanceResponder(service_name, instance_name,
-                                      inet::IpPort::From_uint16_t(0), agent);
+  return AddInstanceResponder(service_name, instance_name,
+                              inet::IpPort::From_uint16_t(0), agent,
+                              perform_probe);
 }
 
 void Mdns::LogTraffic() { transceiver_.LogTraffic(); }
@@ -338,9 +339,11 @@ void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
   }
 }
 
-bool Mdns::ProbeAndAddInstanceResponder(
-    const std::string& service_name, const std::string& instance_name,
-    inet::IpPort port, std::shared_ptr<InstanceResponder> agent) {
+bool Mdns::AddInstanceResponder(const std::string& service_name,
+                                const std::string& instance_name,
+                                inet::IpPort port,
+                                std::shared_ptr<InstanceResponder> agent,
+                                bool perform_probe) {
   FXL_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FXL_DCHECK(MdnsNames::IsValidInstanceName(instance_name));
 
@@ -354,20 +357,24 @@ bool Mdns::ProbeAndAddInstanceResponder(
 
   instance_publishers_by_instance_full_name_.emplace(instance_full_name, agent);
 
-  auto prober = std::make_shared<InstanceProber>(
-      this, service_name, instance_name, port,
-      [this, instance_full_name, agent](bool successful) {
-        if (!successful) {
-          agent->ReportSuccess(false);
-          return;
-        }
+  if (perform_probe) {
+    auto prober = std::make_shared<InstanceProber>(
+        this, service_name, instance_name, port,
+        [this, instance_full_name, agent](bool successful) {
+          if (!successful) {
+            agent->ReportSuccess(false);
+            return;
+          }
 
-        agent->ReportSuccess(true);
+          agent->ReportSuccess(true);
+          AddAgent(agent);
+        });
 
-        AddAgent(agent);
-      });
-
-  AddAgent(prober);
+    AddAgent(prober);
+  } else {
+    agent->ReportSuccess(true);
+    AddAgent(agent);
+  }
 
   return true;
 }
@@ -393,7 +400,7 @@ void Mdns::SendMessages() {
                       << message;
       }
     }
-#endif // ifndef NDEBUG
+#endif  // ifndef NDEBUG
 
     transceiver_.SendMessage(&message, reply_address);
   }

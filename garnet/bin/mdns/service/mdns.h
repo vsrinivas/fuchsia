@@ -70,9 +70,6 @@ class Mdns : public MdnsAgent::Host {
     virtual void InstanceLost(const std::string& service,
                               const std::string& instance) = 0;
 
-    // Called to indicate that instance changes are complete for now.
-    virtual void UpdatesComplete() = 0;
-
    protected:
     Subscriber() {}
 
@@ -170,7 +167,7 @@ class Mdns : public MdnsAgent::Host {
   // |Start|'s ready callback is called.
   bool PublishServiceInstance(const std::string& service_name,
                               const std::string& instance_name,
-                              Publisher* publisher);
+                              bool perform_probe, Publisher* publisher);
 
   // Writes log messages describing lifetime traffic.
   void LogTraffic();
@@ -238,11 +235,11 @@ class Mdns : public MdnsAgent::Host {
   // Adds an agent and, if |started_|, starts it.
   void AddAgent(std::shared_ptr<MdnsAgent> agent);
 
-  // Adds an instance responder.
-  bool ProbeAndAddInstanceResponder(const std::string& service_name,
-                                    const std::string& instance_name,
-                                    inet::IpPort port,
-                                    std::shared_ptr<InstanceResponder> agent);
+  // Adds an instance responder after performing optional probe for conflicts.
+  bool AddInstanceResponder(const std::string& service_name,
+                            const std::string& instance_name, inet::IpPort port,
+                            std::shared_ptr<InstanceResponder> agent,
+                            bool perform_probe);
 
   // Sends any messages found in |outbound_messages_by_reply_address_| and
   // clears |outbound_messages_by_reply_address_|.

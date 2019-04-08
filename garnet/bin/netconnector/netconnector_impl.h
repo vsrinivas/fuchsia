@@ -26,11 +26,11 @@
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
-#include "lib/mdns/cpp/service_subscriber.h"
 
 namespace netconnector {
 
-class NetConnectorImpl : public fuchsia::netconnector::NetConnector {
+class NetConnectorImpl : public fuchsia::netconnector::NetConnector,
+                         public fuchsia::mdns::ServiceSubscriber {
  public:
   NetConnectorImpl(NetConnectorParams* params, fit::closure quit_callback);
 
@@ -81,6 +81,16 @@ class NetConnectorImpl : public fuchsia::netconnector::NetConnector {
 
   void AddServiceAgent(std::unique_ptr<ServiceAgent> service_agent);
 
+  // fuchsia::mdns::ServiceSubscriber implementation.
+  void InstanceDiscovered(fuchsia::mdns::ServiceInstance instance,
+                          InstanceDiscoveredCallback callback) override;
+
+  void InstanceChanged(fuchsia::mdns::ServiceInstance instance,
+                       InstanceChangedCallback callback) override;
+
+  void InstanceLost(std::string service_name, std::string instance_name,
+                    InstanceLostCallback callback) override;
+
   NetConnectorParams* params_;
   fit::closure quit_callback_;
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -97,7 +107,7 @@ class NetConnectorImpl : public fuchsia::netconnector::NetConnector {
       service_agents_;
 
   fuchsia::mdns::ControllerPtr mdns_controller_;
-  mdns::ServiceSubscriber mdns_subscriber_;
+  fidl::Binding<fuchsia::mdns::ServiceSubscriber> mdns_subscriber_binding_;
 
   media::FidlPublisher<GetKnownDeviceNamesCallback> device_names_publisher_;
 

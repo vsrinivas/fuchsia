@@ -5,13 +5,10 @@
 #ifndef GARNET_BIN_MDNS_SERVICE_MDNS_SERVICE_IMPL_H_
 #define GARNET_BIN_MDNS_SERVICE_MDNS_SERVICE_IMPL_H_
 
-#include <unordered_map>
-
 #include <fuchsia/mdns/cpp/fidl.h>
 #include <lib/fit/function.h>
-
+#include <unordered_map>
 #include "garnet/bin/mdns/service/mdns.h"
-#include "garnet/bin/media/util/fidl_publisher.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding.h"
 #include "src/lib/fxl/macros.h"
@@ -30,18 +27,20 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
 
   void SubscribeToService(
       std::string service_name,
-      fidl::InterfaceRequest<fuchsia::mdns::ServiceSubscription>
-          subscription_request) override;
+      fidl::InterfaceHandle<fuchsia::mdns::ServiceSubscriber> subscriber)
+      override;
 
   void PublishServiceInstance(std::string service_name,
                               std::string instance_name, uint16_t port,
                               fidl::VectorPtr<std::string> text,
+                              bool perform_probe,
                               PublishServiceInstanceCallback callback) override;
 
   void UnpublishServiceInstance(std::string service_name,
                                 std::string instance_name) override;
 
   void AddResponder(std::string service_name, std::string instance_name,
+                    bool perform_probe,
                     fidl::InterfaceHandle<fuchsia::mdns::Responder>
                         responder_handle) override;
 
@@ -54,12 +53,10 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
   void SetVerbose(bool value) override;
 
  private:
-  class Subscriber : public Mdns::Subscriber,
-                     public fuchsia::mdns::ServiceSubscription {
+  class Subscriber : public Mdns::Subscriber {
    public:
-    Subscriber(
-        fidl::InterfaceRequest<fuchsia::mdns::ServiceSubscription> request,
-        fit::closure deleter);
+    Subscriber(fidl::InterfaceHandle<fuchsia::mdns::ServiceSubscriber> handle,
+               fit::closure deleter);
 
     ~Subscriber() override;
 
@@ -79,19 +76,36 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
     void InstanceLost(const std::string& service,
                       const std::string& instance) override;
 
-    void UpdatesComplete() override;
-
-    // ServiceSubscription implementation.
-    void GetInstances(uint64_t version_last_seen,
-                      GetInstancesCallback callback) override;
-
    private:
-    fidl::Binding<fuchsia::mdns::ServiceSubscription> binding_;
-    media::FidlPublisher<GetInstancesCallback> instances_publisher_;
-    std::unordered_map<std::string, fuchsia::mdns::ServiceInstancePtr>
-        instances_by_name_;
+    static constexpr size_t kMaxPipelineDepth = 16;
 
-    FXL_DISALLOW_COPY_AND_ASSIGN(Subscriber);
+    enum class EntryType {
+      kInstanceDiscovered,
+      kInstanceChanged,
+      kInstanceLost,
+    };
+
+    struct Entry {
+      EntryType type;
+      fuchsia::mdns::ServiceInstance service_instance;
+    };
+
+    // Sends the entry at the head of the queue, if there is one and if
+    // |pipeline_depth_| is less than |kMaxPipelineDepth|.
+    void MaybeSendNextEntry();
+
+    // Decrements |pipeline_depth_| and calls |MaybeSendNextEntry|.
+    void ReplyReceived();
+
+    fuchsia::mdns::ServiceSubscriberPtr client_;
+    std::queue<Entry> entries_;
+    size_t pipeline_depth_ = 0;
+
+    // Disallow copy, assign and move.
+    Subscriber(const Subscriber&) = delete;
+    Subscriber(Subscriber&&) = delete;
+    Subscriber& operator=(const Subscriber&) = delete;
+    Subscriber& operator=(Subscriber&&) = delete;
   };
 
   // Publisher for PublishServiceInstance.
@@ -112,7 +126,11 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
     std::vector<std::string> text_;
     PublishServiceInstanceCallback callback_;
 
-    FXL_DISALLOW_COPY_AND_ASSIGN(SimplePublisher);
+    // Disallow copy, assign and move.
+    SimplePublisher(const SimplePublisher&) = delete;
+    SimplePublisher(SimplePublisher&&) = delete;
+    SimplePublisher& operator=(const SimplePublisher&) = delete;
+    SimplePublisher& operator=(SimplePublisher&&) = delete;
   };
 
   // Publisher for AddResponder.
@@ -130,7 +148,11 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
 
     fuchsia::mdns::ResponderPtr responder_;
 
-    FXL_DISALLOW_COPY_AND_ASSIGN(ResponderPublisher);
+    // Disallow copy, assign and move.
+    ResponderPublisher(const ResponderPublisher&) = delete;
+    ResponderPublisher(ResponderPublisher&&) = delete;
+    ResponderPublisher& operator=(const ResponderPublisher&) = delete;
+    ResponderPublisher& operator=(ResponderPublisher&&) = delete;
   };
 
   // Starts the service.

@@ -145,10 +145,6 @@ void InstanceRequestor::EndOfMessage() {
       iter = target_infos_by_full_name_.erase(iter);
     }
   }
-
-  for (auto subscriber : subscribers_) {
-    subscriber->UpdatesComplete();
-  }
 }
 
 void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
@@ -177,10 +173,6 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
         inet::SocketAddress(target_info.v4_address_, instance_info.port_),
         inet::SocketAddress(target_info.v6_address_, instance_info.port_),
         instance_info.text_);
-  }
-
-  if (updates_happened) {
-    subscriber->UpdatesComplete();
   }
 }
 

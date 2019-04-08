@@ -21,7 +21,9 @@ namespace mdns {
 
 MdnsImpl::MdnsImpl(component::StartupContext* startup_context,
                    MdnsParams* params, fit::closure quit_callback)
-    : quit_callback_(std::move(quit_callback)), binding_(this) {
+    : quit_callback_(std::move(quit_callback)),
+      responder_binding_(this),
+      subscriber_binding_(this) {
   FXL_DCHECK(startup_context);
   FXL_DCHECK(params);
   FXL_DCHECK(quit_callback_);
@@ -32,7 +34,8 @@ MdnsImpl::MdnsImpl(component::StartupContext* startup_context,
   controller_.set_error_handler([this](zx_status_t status) {
     controller_.set_error_handler(nullptr);
     controller_.Unbind();
-    subscriber_.Reset();
+    responder_binding_.Unbind();
+    subscriber_binding_.Unbind();
     std::cout << "mDNS service disconnected unexpectedly\n";
     quit_callback_();
   });
@@ -113,25 +116,17 @@ void MdnsImpl::Resolve(const std::string& host_name, uint32_t timeout_seconds) {
 void MdnsImpl::Subscribe(const std::string& service_name) {
   std::cout << "subscribing to service " << service_name << "\n";
   std::cout << "press escape key to quit\n";
-  fuchsia::mdns::ServiceSubscriptionPtr subscription;
-  controller_->SubscribeToService(service_name, subscription.NewRequest());
-  subscriber_.Init(std::move(subscription),
-                   [this](const fuchsia::mdns::ServiceInstance* from,
-                          const fuchsia::mdns::ServiceInstance* to) {
-                     if (from == nullptr) {
-                       FXL_DCHECK(to != nullptr);
-                       std::cout << "added:" << fostr::Indent << fostr::NewLine
-                                 << *to << fostr::Outdent << "\n";
-                     } else if (to == nullptr) {
-                       std::cout << "removed:" << fostr::Indent
-                                 << fostr::NewLine << *from << fostr::Outdent
-                                 << "\n";
-                     } else {
-                       std::cout << "changed:" << fostr::Indent
-                                 << fostr::NewLine << *to << fostr::Outdent
-                                 << "\n";
-                     }
-                   });
+  fidl::InterfaceHandle<fuchsia::mdns::ServiceSubscriber> subscriber_handle;
+
+  subscriber_binding_.Bind(subscriber_handle.NewRequest());
+  subscriber_binding_.set_error_handler([this](zx_status_t status) {
+    subscriber_binding_.set_error_handler(nullptr);
+    subscriber_binding_.Unbind();
+    std::cout << "mDNS service disconnected from subscriber unexpectedly\n";
+    quit_callback_();
+  });
+
+  controller_->SubscribeToService(service_name, std::move(subscriber_handle));
 
   WaitForKeystroke();
 }
@@ -143,7 +138,7 @@ void MdnsImpl::Publish(const std::string& service_name,
             << service_name << "\n";
   controller_->PublishServiceInstance(
       service_name, instance_name, port,
-      fidl::To<fidl::VectorPtr<std::string>>(text),
+      fidl::To<fidl::VectorPtr<std::string>>(text), true,
       [this](fuchsia::mdns::Result result) {
         UpdateStatus(result);
         quit_callback_();
@@ -167,10 +162,10 @@ void MdnsImpl::Respond(const std::string& service_name,
   std::cout << "press escape key to quit\n";
   fidl::InterfaceHandle<fuchsia::mdns::Responder> responder_handle;
 
-  binding_.Bind(responder_handle.NewRequest());
-  binding_.set_error_handler([this](zx_status_t status) {
-    binding_.set_error_handler(nullptr);
-    binding_.Unbind();
+  responder_binding_.Bind(responder_handle.NewRequest());
+  responder_binding_.set_error_handler([this](zx_status_t status) {
+    responder_binding_.set_error_handler(nullptr);
+    responder_binding_.Unbind();
     std::cout << "mDNS service disconnected from responder unexpectedly\n";
     quit_callback_();
   });
@@ -178,7 +173,7 @@ void MdnsImpl::Respond(const std::string& service_name,
   publication_port_ = port;
   publication_text_ = text;
 
-  controller_->AddResponder(service_name, instance_name,
+  controller_->AddResponder(service_name, instance_name, true,
                             std::move(responder_handle));
 
   if (!announce.empty()) {
@@ -228,6 +223,27 @@ void MdnsImpl::GetPublication(bool query, fidl::StringPtr subtype,
   publication->text = fidl::To<fidl::VectorPtr<std::string>>(publication_text_);
 
   callback(std::move(publication));
+}
+
+void MdnsImpl::InstanceDiscovered(fuchsia::mdns::ServiceInstance instance,
+                                  InstanceDiscoveredCallback callback) {
+  std::cout << "discovered:" << fostr::Indent << fostr::NewLine << instance
+            << fostr::Outdent << "\n";
+  callback();
+}
+
+void MdnsImpl::InstanceChanged(fuchsia::mdns::ServiceInstance instance,
+                               InstanceChangedCallback callback) {
+  std::cout << "changed:" << fostr::Indent << fostr::NewLine << instance
+            << fostr::Outdent << "\n";
+  callback();
+}
+
+void MdnsImpl::InstanceLost(std::string service_name, std::string instance_name,
+                            InstanceLostCallback callback) {
+  std::cout << "lost:" << fostr::Indent << fostr::NewLine << service_name << " "
+            << instance_name << fostr::Outdent << "\n";
+  callback();
 }
 
 }  // namespace mdns
