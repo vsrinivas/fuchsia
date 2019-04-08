@@ -6,9 +6,11 @@
 #include <stdio.h>
 #include <threads.h>
 
+#include <fbl/algorithm.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
-#include <fbl/algorithm.h>
+#include <zircon/types.h>
 
 #include <unittest/unittest.h>
 
@@ -764,6 +766,100 @@ static bool signal_close_stress() {
     END_TEST;
 }
 
+// A stress test designed to create a race where one thread is closing the port as another thread is
+// performing an object_wait_async using the same port handle.
+static bool port_close_wait_race_stress() {
+    BEGIN_TEST;
+
+    constexpr zx_duration_t kTestDuration = ZX_SEC(1);
+    srand(4);
+
+    struct args_t {
+        std::atomic<bool>* keep_running;
+        std::atomic<zx_handle_t>* port;
+        zx_handle_t event;
+    };
+
+    // Repeatedly asynchronously wait on an event.
+    auto waiter_thread = [](void* arg) -> int {
+        auto args = reinterpret_cast<args_t*>(arg);
+        auto keep_running = args->keep_running;
+        auto port = args->port;
+        auto event = args->event;
+
+        while (keep_running->load()) {
+            zx_status_t status =
+                zx_object_wait_async(event, port->load(), 0, ZX_EVENT_SIGNALED, ZX_WAIT_ASYNC_ONCE);
+            if (status != ZX_OK && status != ZX_ERR_BAD_HANDLE) {
+                return status;
+            }
+        }
+
+        return ZX_OK;
+    };
+
+    // Repeatedly create and close a port.
+    auto closer_thread = [](void* arg) -> int {
+        auto args = reinterpret_cast<args_t*>(arg);
+        auto port = args->port;
+        auto keep_running = args->keep_running;
+
+        while (keep_running->load()) {
+            zx_handle_t handle;
+            zx_status_t status = zx_port_create(0, &handle);
+            if (status != ZX_OK) {
+                return status;
+            }
+            port->store(handle);
+
+            // Give the waiter threads an opportunity to get the handle and wait_async on it.
+            zx_nanosleep(ZX_MSEC(10));
+
+            // Then close it out from under them.
+            status = zx_handle_close(handle);
+            port->store(ZX_HANDLE_INVALID);
+            if (status != ZX_OK) {
+                return status;
+            }
+        }
+        return ZX_OK;
+    };
+
+    std::atomic<bool> keep_running(true);
+    std::atomic<zx_handle_t> port(ZX_HANDLE_INVALID);
+    args_t args{&keep_running, &port, ZX_HANDLE_INVALID};
+
+    zx_status_t status = zx_event_create(0u, &args.event);
+    ASSERT_EQ(status, ZX_OK);
+
+    constexpr unsigned kNumWaiters = 4;
+    thrd_t waiters[kNumWaiters];
+    for (auto& t : waiters) {
+        ASSERT_EQ(thrd_create(&t, waiter_thread, &args), thrd_success);
+    }
+
+    thrd_t closer;
+    ASSERT_EQ(thrd_create(&closer, closer_thread, &args), thrd_success);
+
+    zx_nanosleep(zx_deadline_after(kTestDuration));
+    keep_running.store(false);
+
+    for (auto& t : waiters) {
+        int res;
+        ASSERT_EQ(thrd_join(t, &res), thrd_success);
+        ASSERT_EQ(res, ZX_OK);
+    }
+
+    int res;
+    ASSERT_EQ(thrd_join(closer, &res), thrd_success);
+    ASSERT_EQ(res, ZX_OK);
+
+    zx_handle_close(args.event);
+    zx_handle_close(args.port->load());
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(port_tests)
 RUN_TEST(basic_test)
 RUN_TEST(queue_and_close_test)
@@ -784,4 +880,5 @@ RUN_TEST(cancel_event_key_after)
 RUN_TEST(threads_event)
 RUN_TEST_LARGE(cancel_stress)
 RUN_TEST_LARGE(signal_close_stress)
+RUN_TEST_LARGE(port_close_wait_race_stress)
 END_TEST_CASE(port_tests)

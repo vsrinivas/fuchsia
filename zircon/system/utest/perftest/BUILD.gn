@@ -11,6 +11,7 @@ test("perftest") {
     "memcpy-test.cpp",
     "mutex-test.cpp",
     "null-test.cpp",
+    "object-wait-test.cpp",
     "process-test.cpp",
     "results-test.cpp",
     "runner-test.cpp",

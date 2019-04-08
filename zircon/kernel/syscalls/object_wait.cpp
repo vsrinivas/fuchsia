@@ -16,6 +16,7 @@
 #include <lib/ktrace.h>
 #include <lib/user_copy/user_ptr.h>
 
+#include <object/dispatcher.h>
 #include <object/handle.h>
 #include <object/port_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -177,24 +178,44 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
 }
 
 // zx_status_t zx_object_wait_async
-zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_handle,
+zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_handle_value,
                                   uint64_t key, zx_signals_t signals, uint32_t options) {
     LTRACEF("handle %x\n", handle_value);
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    fbl::RefPtr<PortDispatcher> port;
-    auto status = up->GetDispatcherWithRights(port_handle, ZX_RIGHT_WRITE, &port);
-    if (status != ZX_OK)
-        return status;
-
     {
         Guard<BrwLock, BrwLock::Reader> guard{up->handle_table_lock()};
-        Handle* handle = up->GetHandleLocked(handle_value);
-        if (!handle)
+
+        // Note, we're doing this all while holding the handle table lock for two reasons.
+        //
+        // First, this thread may be racing with another thread that's closing the last handle to
+        // the port. By holding the lock we can ensure that this syscall behaves as if the port was
+        // closed just *before* the syscall started or closed just *after* it has completed.
+        //
+        // Second, MakeObserver takes a Handle. By holding the lock we ensure the Handle isn't
+        // destroyed out from under it.
+
+        Handle* port_handle = up->GetHandleLocked(port_handle_value);
+        if (!port_handle) {
             return ZX_ERR_BAD_HANDLE;
-        if (!handle->HasRights(ZX_RIGHT_WAIT))
+        }
+        fbl::RefPtr<Dispatcher> disp = port_handle->dispatcher();
+        fbl::RefPtr<PortDispatcher> port = DownCastDispatcher<PortDispatcher>(&disp);
+        if (!port) {
+            return ZX_ERR_WRONG_TYPE;
+        }
+        if (!port_handle->HasRights(ZX_RIGHT_WRITE)) {
             return ZX_ERR_ACCESS_DENIED;
+        }
+
+        Handle* handle = up->GetHandleLocked(handle_value);
+        if (!handle) {
+            return ZX_ERR_BAD_HANDLE;
+        }
+        if (!handle->HasRights(ZX_RIGHT_WAIT)) {
+            return ZX_ERR_ACCESS_DENIED;
+        }
 
         return port->MakeObserver(options, handle, key, signals);
     }
