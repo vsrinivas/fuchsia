@@ -37,19 +37,9 @@ bool CommandBuffer::Initialize()
     magma_system_exec_resource* resource_base = reinterpret_cast<magma_system_exec_resource*>(
         signal_semaphore_ids + signal_semaphore_count());
 
-    magma_system_relocation_entry* relocations_base =
-        reinterpret_cast<magma_system_relocation_entry*>(resource_base + num_resources());
-
     for (uint32_t i = 0; i < num_resources(); i++) {
-        auto num_relocations = resource_base->num_relocations;
-        total_size += sizeof(magma_system_relocation_entry) * num_relocations;
-        if (total_size > max_size)
-            return DRETF(false, "Platform Buffer backing CommandBuffer is not large enough");
-
-        resources_.emplace_back(ExecResource(resource_base, relocations_base));
-
-        relocations_base += num_relocations;
-        resource_base++;
+        resources_.emplace_back(ExecResource(resource_base));
+        ++resource_base;
     }
 
     initialized_ = true;

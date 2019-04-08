@@ -59,26 +59,33 @@ public:
 
     static constexpr bool kUseGlobalGtt = false;
     static constexpr int64_t kOneSecondInNs = 1000000000;
+    static constexpr uint64_t kUnmappedBufferGpuAddress = 0x1000000; // arbitrary
 
     void SubmitCommandBuffer(How how)
     {
         ASSERT_NE(connection_, nullptr);
 
-        uint64_t size;
+        uint64_t buffer_size;
         magma_buffer_t batch_buffer;
 
-        ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer), 0);
+        ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &buffer_size, &batch_buffer), 0);
         void* vaddr;
         ASSERT_EQ(MAGMA_STATUS_OK, magma_map(connection_, batch_buffer, &vaddr));
 
         magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, 0);
+
+        // Write to the last dword
+        InitBatchBuffer(vaddr, buffer_size, how == HANG,
+                                    how == FAULT ? kUnmappedBufferGpuAddress
+                                                 : gpu_addr_ + buffer_size - sizeof(uint32_t));
+
+        // Increment gpu address for next iteration
         gpu_addr_ += (1 + extra_page_count_) * PAGE_SIZE;
 
-        ASSERT_TRUE(InitBatchBuffer(vaddr, size, how == HANG));
-
         magma_buffer_t command_buffer;
-        ASSERT_EQ(magma_create_command_buffer(connection_, PAGE_SIZE, &command_buffer), 0);
-        EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size, how == FAULT));
+        ASSERT_EQ(magma_create_command_buffer(connection_, PAGE_SIZE, &command_buffer),
+                  MAGMA_STATUS_OK);
+        EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, buffer_size));
         magma_submit_command_buffer(connection_, command_buffer, context_id_);
 
         magma::InflightList list;
@@ -87,7 +94,7 @@ public:
             case NORMAL:
                 EXPECT_TRUE(list.WaitForCompletion(connection_, kOneSecondInNs));
                 EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
-                EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
+                EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[buffer_size / 4 - 1]);
                 break;
             case FAULT: {
                 // Intel won't actually fault because bad gpu addresses are valid
@@ -101,7 +108,7 @@ public:
                 }
                 EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
                 EXPECT_TRUE(list.WaitForCompletion(connection_, kOneSecondInNs));
-                EXPECT_EQ(0xdeadbeef, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
+                EXPECT_EQ(0xdeadbeef, reinterpret_cast<uint32_t*>(vaddr)[buffer_size / 4 - 1]);
                 break;
             }
             case HANG: {
@@ -115,7 +122,7 @@ public:
                 }
                 EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, magma_get_error(connection_));
                 EXPECT_TRUE(list.WaitForCompletion(connection_, kOneSecondInNs));
-                EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1]);
+                EXPECT_EQ(kValue, reinterpret_cast<uint32_t*>(vaddr)[buffer_size / 4 - 1]);
                 break;
             }
         }
@@ -125,34 +132,36 @@ public:
         magma_release_buffer(connection_, batch_buffer);
     }
 
-    bool InitBatchBuffer(void* vaddr, uint64_t size, bool hang)
+    void InitBatchBuffer(void* vaddr, uint64_t size, bool hang, uint64_t gpu_addr)
     {
         memset(vaddr, 0, size);
 
-        // store dword
+        constexpr uint32_t kStoreDwordOp = 0x20 << 23;
+        constexpr uint32_t kStoreDwordCount = 4 - 2; // always -2
         reinterpret_cast<uint32_t*>(vaddr)[0] =
-            (0x20 << 23) | (4 - 2) | (kUseGlobalGtt ? 1 << 22 : 0);
-        reinterpret_cast<uint32_t*>(vaddr)[1] =
-            0x1000000; // gpu address - overwritten by relocation (or not)
+            kStoreDwordOp | kStoreDwordCount | (kUseGlobalGtt ? 1 << 22 : 0);
+        reinterpret_cast<uint32_t*>(vaddr)[1] = gpu_addr;
         reinterpret_cast<uint32_t*>(vaddr)[2] = 0;
         reinterpret_cast<uint32_t*>(vaddr)[3] = kValue;
 
+        constexpr uint32_t kWaitForSemaphoreOp = 0x1C << 23;
+        constexpr uint32_t kWaitForSemaphoreCount = 4 - 2; // always -2
         // wait for semaphore - proceed if dword at given address > dword given
         reinterpret_cast<uint32_t*>(vaddr)[4] =
-            (0x1C << 23) | (4 - 2) | (kUseGlobalGtt ? 1 << 22 : 0);
+            kWaitForSemaphoreOp | kWaitForSemaphoreCount | (kUseGlobalGtt ? 1 << 22 : 0);
         reinterpret_cast<uint32_t*>(vaddr)[5] = hang ? ~0 : 0;
-        reinterpret_cast<uint32_t*>(vaddr)[6] =
-            0x1000000; // gpu address - overwritten by relocation (or not)
+        reinterpret_cast<uint32_t*>(vaddr)[6] = gpu_addr;
         reinterpret_cast<uint32_t*>(vaddr)[7] = 0;
 
-        reinterpret_cast<uint32_t*>(vaddr)[8] = 0xA << 23;
-        reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1] = 0xdeadbeef;
+        constexpr uint32_t kEndBatchOp = 0xA << 23;
+        reinterpret_cast<uint32_t*>(vaddr)[8] = kEndBatchOp;
 
-        return true;
+        // initialize scratch memory location
+        reinterpret_cast<uint32_t*>(vaddr)[size / 4 - 1] = 0xdeadbeef;
     }
 
     bool InitCommandBuffer(magma_buffer_t buffer, magma_buffer_t batch_buffer,
-                           uint64_t batch_buffer_length, bool fault)
+                           uint64_t batch_buffer_length)
     {
         void* vaddr;
         if (magma_map(connection_, buffer, &vaddr) != 0)
@@ -166,19 +175,8 @@ public:
         auto exec_resource =
             reinterpret_cast<struct magma_system_exec_resource*>(command_buffer + 1);
         exec_resource->buffer_id = magma_get_buffer_id(batch_buffer);
-        exec_resource->num_relocations = fault ? 0 : 2;
         exec_resource->offset = 0;
         exec_resource->length = batch_buffer_length;
-
-        auto reloc = reinterpret_cast<struct magma_system_relocation_entry*>(exec_resource + 1);
-        reloc->offset = 1 * 4;
-        reloc->target_resource_index = 0;
-        reloc->target_offset = batch_buffer_length - 4;
-
-        reloc++;
-        reloc->offset = 6 * 4;
-        reloc->target_resource_index = 0;
-        reloc->target_offset = batch_buffer_length - 4;
 
         EXPECT_EQ(magma_unmap(connection_, buffer), 0);
 
@@ -225,11 +223,11 @@ public:
         void* vaddr;
         ASSERT_EQ(0, magma_map(connection_, batch_buffer, &vaddr));
 
-        ASSERT_TRUE(InitBatchBuffer(vaddr, size, true));
+        InitBatchBuffer(vaddr, size, true, kUnmappedBufferGpuAddress);
 
         magma_buffer_t command_buffer;
         ASSERT_EQ(magma_create_command_buffer(connection_, PAGE_SIZE, &command_buffer), 0);
-        EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size, false));
+        EXPECT_TRUE(InitCommandBuffer(command_buffer, batch_buffer, size));
         magma_submit_command_buffer(connection_, command_buffer, context_id_);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));

@@ -64,12 +64,6 @@ public:
         return command_buffer->resource(resource_index);
     }
 
-    static bool PatchRelocations(CommandBuffer* command_buffer,
-                                 std::vector<std::shared_ptr<GpuMapping>>& mappings)
-    {
-        return command_buffer->PatchRelocations(mappings);
-    }
-
     // TODO(MA-208) - move this
     static RenderEngineCommandStreamer* render_engine(MsdIntelDevice* device)
     {

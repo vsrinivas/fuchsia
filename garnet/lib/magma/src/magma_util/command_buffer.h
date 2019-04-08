@@ -17,7 +17,6 @@ namespace magma {
 //  2) array of wait semaphore ids
 //  3) array of signal semaphore ids
 //  4) array of exec resources
-//  5) array of relocations (per resource)
 //
 class CommandBuffer {
 public:
@@ -53,29 +52,16 @@ public:
 
     class ExecResource {
     public:
-        ExecResource(magma_system_exec_resource* resource,
-                     magma_system_relocation_entry* relocations)
-            : resource_(resource), relocations_(relocations)
-        {
-        }
+        ExecResource(magma_system_exec_resource* resource) : resource_(resource) {}
 
         uint64_t buffer_id() const { return resource_->buffer_id; }
-
-        uint32_t num_relocations() const { return resource_->num_relocations; }
 
         uint64_t offset() const { return resource_->offset; }
 
         uint64_t length() const { return resource_->length; }
 
-        magma_system_relocation_entry* relocation(uint32_t relocation_index) const
-        {
-            DASSERT(relocation_index < num_relocations());
-            return relocations_ + relocation_index;
-        }
-
     private:
         magma_system_exec_resource* resource_;
-        magma_system_relocation_entry* relocations_;
     };
 
     const ExecResource& resource(uint32_t resource_index) const

@@ -123,7 +123,6 @@ public:
         auto exec_resource =
             reinterpret_cast<struct magma_system_exec_resource*>(command_buffer + 1);
         exec_resource->buffer_id = magma_get_buffer_id(batch_buffer);
-        exec_resource->num_relocations = 0;
         exec_resource->offset = 0;
         exec_resource->length = batch_buffer_length;
 

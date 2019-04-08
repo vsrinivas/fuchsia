@@ -185,9 +185,6 @@ bool CommandBuffer::PrepareForExecution()
     if (!MapResourcesGpu(locked_context_->exec_address_space(), exec_resource_mappings_))
         return DRETF(false, "failed to map execution resources");
 
-    if (!PatchRelocations(exec_resource_mappings_))
-        return DRETF(false, "failed to patch relocations");
-
     batch_buffer_index_ = batch_buffer_resource_index();
     batch_start_offset_ = batch_start_offset();
 
@@ -212,58 +209,6 @@ bool CommandBuffer::MapResourcesGpu(std::shared_ptr<AddressSpace> address_space,
              address_space.get(), res.buffer->platform_buffer()->id(), res.offset, res.length,
              mapping->gpu_addr());
         mappings.push_back(mapping);
-    }
-
-    return true;
-}
-
-bool CommandBuffer::PatchRelocation(magma_system_relocation_entry* relocation,
-                                    ExecResource* exec_resource, gpu_addr_t target_gpu_address)
-{
-    DLOG("PatchRelocation offset 0x%x exec_resource offset 0x%lx target_gpu_address 0x%lx "
-         "target_offset 0x%x",
-         relocation->offset, exec_resource->offset, target_gpu_address, relocation->target_offset);
-
-    TRACE_DURATION("magma", "PatchRelocation");
-
-    uint64_t dst_offset = exec_resource->offset + relocation->offset;
-
-    uint32_t reloc_page_index = dst_offset >> PAGE_SHIFT;
-    uint32_t offset_in_page = dst_offset & (PAGE_SIZE - 1);
-
-    DLOG("reloc_page_index 0x%x offset_in_page 0x%x", reloc_page_index, offset_in_page);
-
-    void* buffer_cpu_addr;
-    if (!exec_resource->buffer->platform_buffer()->MapCpu(&buffer_cpu_addr))
-        return DRETF(false, "failed to map buffer into CPU address space");
-    DASSERT(buffer_cpu_addr);
-
-    uint8_t* reloc_page_cpu_addr =
-        static_cast<uint8_t*>(buffer_cpu_addr) + reloc_page_index * PAGE_SIZE;
-
-    gpu_addr_t address_to_patch = target_gpu_address + relocation->target_offset;
-    static_assert(sizeof(gpu_addr_t) == sizeof(uint64_t), "gpu addr size mismatch");
-
-    memcpy(reloc_page_cpu_addr + offset_in_page, &address_to_patch, sizeof(uint64_t));
-    return true;
-}
-
-bool CommandBuffer::PatchRelocations(std::vector<std::shared_ptr<GpuMapping>>& mappings)
-{
-    DASSERT(mappings.size() == num_resources());
-
-    TRACE_DURATION("magma", "PatchRelocations");
-
-    for (uint32_t res_index = 0; res_index < num_resources(); res_index++) {
-        auto resource = this->resource(res_index);
-        for (uint32_t reloc_index = 0; reloc_index < resource.num_relocations(); reloc_index++) {
-            auto reloc = resource.relocation(reloc_index);
-            DLOG("Patching relocation res_index %u reloc_index %u target_resource_index %u",
-                 res_index, reloc_index, reloc->target_resource_index);
-            auto& mapping = mappings[reloc->target_resource_index];
-            if (!PatchRelocation(reloc, &exec_resources_[res_index], mapping->gpu_addr()))
-                return DRETF(false, "failed to patch relocation");
-        }
     }
 
     return true;

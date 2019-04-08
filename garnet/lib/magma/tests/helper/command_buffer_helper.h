@@ -84,11 +84,6 @@ public:
                                                              kSignalSemaphoreCount);
     }
 
-    magma_system_relocation_entry* abi_relocations()
-    {
-        return reinterpret_cast<magma_system_relocation_entry*>(abi_resources() + kNumResources);
-    }
-
     bool Execute()
     {
         uint32_t handle;
@@ -122,8 +117,7 @@ private:
     {
         uint64_t buffer_size = sizeof(magma_system_command_buffer) +
                                sizeof(uint64_t) * kSignalSemaphoreCount +
-                               sizeof(magma_system_exec_resource) * kNumResources +
-                               sizeof(magma_system_relocation_entry) * (kNumResources - 1);
+                               sizeof(magma_system_exec_resource) * kNumResources;
 
         buffer_ = magma::PlatformBuffer::Create(buffer_size, "command-buffer-backing");
         DASSERT(buffer_);
@@ -158,24 +152,9 @@ private:
             batch_buf->buffer_id = id;
             batch_buf->offset = 0;
             batch_buf->length = buffer->platform_buffer()->size();
-            batch_buf->num_relocations = kNumResources - 1;
-            for (uint32_t i = 0; i < batch_buf->num_relocations; i++) {
-                auto relocation = &abi_relocations()[i];
-                switch (i) {
-                    case 0:
-                        // test page boundary
-                        relocation->offset = kBufferSize / 2 - sizeof(uint32_t);
-                        break;
-                    default:
-                        relocation->offset =
-                            kBufferSize - ((i + 1) * 2 * sizeof(uint32_t)); // every other dword
-                }
-                relocation->target_resource_index = i;
-                relocation->target_offset = kBufferSize / 2; // just relocate right to the middle
-            }
         }
 
-        // relocated buffers
+        // other buffers
         for (uint32_t i = 1; i < kNumResources; i++) {
             auto resource = &abi_resources()[i];
             auto buffer =
@@ -193,7 +172,6 @@ private:
             resource->buffer_id = id;
             resource->offset = 0;
             resource->length = buffer->platform_buffer()->size();
-            resource->num_relocations = 0;
         }
 
         for (auto resource : resources_)

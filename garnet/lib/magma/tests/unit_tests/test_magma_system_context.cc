@@ -53,34 +53,6 @@ TEST(MagmaSystemContext, ExecuteCommandBuffer_DuplicateExecResourceHandle)
     EXPECT_FALSE(cmd_buf->Execute());
 }
 
-TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidRelocationOffset)
-{
-    auto cmd_buf = CommandBufferHelper::Create();
-    for (uint32_t i = 0; i < cmd_buf->abi_resources()[0].num_relocations; i++) {
-        cmd_buf->abi_relocations()[i].offset =
-            CommandBufferHelper::kBufferSize - sizeof(uint32_t) + 1; // smallest invalid offset
-    }
-    EXPECT_FALSE(cmd_buf->Execute());
-}
-
-TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidRelocationTargetBufferIndex)
-{
-    auto cmd_buf = CommandBufferHelper::Create();
-    cmd_buf->abi_relocations()[0].target_resource_index =
-        CommandBufferHelper::kNumResources; // smallest invalid value
-    EXPECT_FALSE(cmd_buf->Execute());
-}
-
-TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidRelocationTargetOffset)
-{
-    auto cmd_buf = CommandBufferHelper::Create();
-    for (uint32_t i = 0; i < cmd_buf->abi_resources()[0].num_relocations; i++) {
-        cmd_buf->abi_relocations()[i].target_offset =
-            CommandBufferHelper::kBufferSize - sizeof(uint32_t) + 1; // smallest invalid offset
-    }
-    EXPECT_FALSE(cmd_buf->Execute());
-}
-
 TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidWaitSemaphore)
 {
     auto cmd_buf = CommandBufferHelper::Create();

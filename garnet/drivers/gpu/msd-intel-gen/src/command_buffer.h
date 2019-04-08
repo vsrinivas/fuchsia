@@ -32,9 +32,8 @@ public:
 
     ~CommandBuffer();
 
-    // Map all execution resources into the gpu address space, patches relocations based on the
-    // mapped addresses, and locks the weak reference to the context for the rest of the lifetime
-    // of this object.
+    // Map all execution resources into the gpu address space and locks the weak reference to the
+    // context for the rest of the lifetime of this object.
     bool PrepareForExecution();
 
     std::weak_ptr<MsdIntelContext> GetContext() override;
@@ -86,20 +85,11 @@ private:
                         std::vector<std::shared_ptr<magma::PlatformSemaphore>> wait_semaphores,
                         std::vector<std::shared_ptr<magma::PlatformSemaphore>> signal_semaphores);
 
-    // given the virtual addresses of all of the exec_resources_, walks the relocations data
-    // structure in
-    // cmd_buf_ and patches the correct virtual addresses into the corresponding buffers
-    bool PatchRelocations(std::vector<std::shared_ptr<GpuMapping>>& mappings);
-
     struct ExecResource {
         std::shared_ptr<MsdIntelBuffer> buffer;
         uint64_t offset;
         uint64_t length;
     };
-
-    // utility function used by PatchRelocations to perform the actual relocation for a single entry
-    static bool PatchRelocation(magma_system_relocation_entry* relocation,
-                                ExecResource* exec_resource, gpu_addr_t target_gpu_address);
 
     // magma::CommandBuffer implementation
     magma::PlatformBuffer* platform_buffer() override { return abi_cmd_buf_->platform_buffer(); }

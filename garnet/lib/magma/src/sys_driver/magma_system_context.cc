@@ -111,29 +111,6 @@ MagmaSystemContext::ExecuteCommandBuffer(std::unique_ptr<magma::PlatformBuffer> 
         }
     }
 
-    // validate relocations
-    for (uint32_t res_index = 0; res_index < cmd_buf->num_resources(); res_index++) {
-        auto resource = &cmd_buf->resource(res_index);
-
-        for (uint32_t reloc_index = 0; reloc_index < resource->num_relocations(); reloc_index++) {
-            auto relocation = resource->relocation(reloc_index);
-            if (relocation->offset > system_resources[res_index]->size() - sizeof(uint32_t))
-                return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
-                                "ExecuteCommandBuffer: relocation offset invalid");
-
-            uint32_t target_index = relocation->target_resource_index;
-
-            if (target_index >= cmd_buf->num_resources())
-                return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
-                                "ExecuteCommandBuffer: relocation target_resource_index invalid");
-
-            if (relocation->target_offset >
-                system_resources[target_index]->size() - sizeof(uint32_t))
-                return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
-                                "ExecuteCommandBuffer: relocation target_offset invalid");
-        }
-    }
-
     // used to keep semaphores in scope until msd_context_execute_command_buffer returns
     std::vector<msd_semaphore_t*> msd_wait_semaphores(cmd_buf->wait_semaphore_count());
     std::vector<msd_semaphore_t*> msd_signal_semaphores(cmd_buf->signal_semaphore_count());

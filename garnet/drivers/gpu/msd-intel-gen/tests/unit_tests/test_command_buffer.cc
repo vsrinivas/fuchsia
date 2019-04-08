@@ -78,56 +78,6 @@ public:
         }
     }
 
-    void TestPatchRelocations()
-    {
-        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
-        auto addr_space =
-            std::make_shared<MockAddressSpace>(address_space_owner.get(), 0, 1024 * PAGE_SIZE);
-
-        {
-            std::vector<MagmaSystemBuffer*>& resources = helper_->resources();
-            for (auto& resource : resources) {
-                std::shared_ptr<GpuMapping> mapping = addr_space->MapBufferGpu(
-                    addr_space, MsdIntelAbiBuffer::cast(resource->msd_buf())->ptr());
-                ASSERT_TRUE(mapping);
-                EXPECT_TRUE(addr_space->AddMapping(mapping));
-            }
-        }
-
-        auto batch_buf_index = TestCommandBuffer::batch_buffer_resource_index(cmd_buf_.get());
-        auto batch_res = TestCommandBuffer::exec_resources(cmd_buf_.get())[batch_buf_index];
-        void* batch_buf_virt_addr = 0;
-        ASSERT_TRUE(batch_res.buffer->platform_buffer()->MapCpu(&batch_buf_virt_addr));
-        auto batch_buf_data = (uint32_t*)batch_buf_virt_addr;
-
-        // Clear the relocations to be sure
-        auto batch_buf_resource = &TestCommandBuffer::resource(cmd_buf_.get(), batch_buf_index);
-        for (uint32_t i = 0; i < batch_buf_resource->num_relocations(); i++) {
-            auto relocation = batch_buf_resource->relocation(i);
-
-            uint32_t dword_offset = relocation->offset / sizeof(uint32_t);
-            batch_buf_data[dword_offset] = 0xdeadbeef;
-            dword_offset++;
-            batch_buf_data[dword_offset] = 0xdeadbeef;
-        }
-
-        // do the relocation foo
-        std::vector<std::shared_ptr<GpuMapping>> mappings;
-        ASSERT_TRUE(TestCommandBuffer::MapResourcesGpu(cmd_buf_.get(), addr_space, mappings));
-        ASSERT_TRUE(TestCommandBuffer::PatchRelocations(cmd_buf_.get(), mappings));
-
-        // check that we foo'd it correctly
-        for (uint32_t i = 0; i < batch_buf_resource->num_relocations(); i++) {
-            auto relocation = batch_buf_resource->relocation(i);
-            gpu_addr_t target_gpu_address = mappings[relocation->target_resource_index]->gpu_addr();
-            auto expected_gpu_addr = target_gpu_address + relocation->target_offset;
-            uint32_t dword_offset = relocation->offset / sizeof(uint32_t);
-            EXPECT_EQ(magma::lower_32_bits(expected_gpu_addr), batch_buf_data[dword_offset]);
-            dword_offset++;
-            EXPECT_EQ(magma::upper_32_bits(expected_gpu_addr), batch_buf_data[dword_offset]);
-        }
-    }
-
     void TestPrepareForExecution()
     {
         {
@@ -269,8 +219,6 @@ private:
 };
 
 TEST(CommandBuffer, MapUnmapResourcesGpu) { ::Test::Create()->TestMapUnmapResourcesGpu(); }
-
-TEST(CommandBuffer, PatchRelocations) { ::Test::Create()->TestPatchRelocations(); }
 
 TEST(CommandBuffer, PrepareForExecution) { ::Test::Create()->TestPrepareForExecution(); }
 

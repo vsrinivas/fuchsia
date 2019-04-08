@@ -92,7 +92,6 @@ public:
             // Batch buffer
             auto resources = reinterpret_cast<magma_system_exec_resource*>(semaphores + 1);
             resources[0].buffer_id = batch_buffer->platform_buffer()->id();
-            resources[0].num_relocations = 0;
             resources[0].offset = 0;
             resources[0].length = batch_buffer->platform_buffer()->size();
 
@@ -166,12 +165,10 @@ public:
             // Batch buffer
             auto resources = reinterpret_cast<magma_system_exec_resource*>(semaphores + 1);
             resources[0].buffer_id = batch_buffer->platform_buffer()->id();
-            resources[0].num_relocations = 0;
             resources[0].offset = 0;
             resources[0].length = batch_buffer->platform_buffer()->size();
             // Destination buffer
             resources[1].buffer_id = dst_buffer[0]->platform_buffer()->id();
-            resources[1].num_relocations = 0;
             resources[1].offset = 0;
             resources[1].length = dst_buffer[0]->platform_buffer()->size();
 
@@ -237,12 +234,10 @@ public:
             // Batch buffer
             auto resources = reinterpret_cast<magma_system_exec_resource*>(semaphores + 1);
             resources[0].buffer_id = batch_buffer->platform_buffer()->id();
-            resources[0].num_relocations = 0;
             resources[0].offset = 0;
             resources[0].length = batch_buffer->platform_buffer()->size();
             // Destination buffer
             resources[1].buffer_id = dst_buffer[1]->platform_buffer()->id();
-            resources[1].num_relocations = 0;
             resources[1].offset = 0;
             resources[1].length = dst_buffer[1]->platform_buffer()->size();
 
