@@ -126,6 +126,10 @@ zx_status_t HisiClock::ClockImplDisable(uint32_t clock) {
     return Toggle(clock, false);
 }
 
+zx_status_t HisiClock::ClockImplRequestRate(uint32_t id, uint64_t hz) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 void HisiClock::DdkUnbind() {
     DeInit();
     DdkRemove();

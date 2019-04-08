@@ -40,6 +40,7 @@ public:
     // CLK protocol implementation.
     zx_status_t ClockImplEnable(uint32_t clk);
     zx_status_t ClockImplDisable(uint32_t clk);
+    zx_status_t ClockImplRequestRate(uint32_t id, uint64_t hz);
 
     // CLK IOCTL implementation.
     zx_status_t ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info);

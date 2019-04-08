@@ -221,6 +221,10 @@ zx_status_t AmlClock::ClockImplDisable(uint32_t clk) {
     }
 }
 
+zx_status_t AmlClock::ClockImplRequestRate(uint32_t id, uint64_t hz) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 // Note: The clock index taken here are the index of clock
 // from the clock table and not the clock_gates index.
 // This API measures the clk frequency for clk.

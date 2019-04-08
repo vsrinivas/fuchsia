@@ -10,4 +10,6 @@ using zx;
 protocol ClockImpl {
     Enable(uint32 id) -> (zx.status s);
     Disable(uint32 id) -> (zx.status s);
+
+    RequestRate(uint32 id, uint64 rate) -> (zx.status s);
 };

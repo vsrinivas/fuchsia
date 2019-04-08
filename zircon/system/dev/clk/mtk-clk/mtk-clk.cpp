@@ -194,6 +194,10 @@ zx_status_t MtkClk::ClockImplDisable(uint32_t index) {
     return ZX_OK;
 }
 
+zx_status_t MtkClk::ClockImplRequestRate(uint32_t id, uint64_t hz) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t MtkClk::ClkMeasure(uint32_t clk, fuchsia_hardware_clock_FrequencyInfo* info) {
     if (clk >= fbl::count_of(clks)) {
         return ZX_ERR_INVALID_ARGS;

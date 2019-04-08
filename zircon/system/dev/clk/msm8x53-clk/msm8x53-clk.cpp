@@ -348,6 +348,10 @@ zx_status_t Msm8x53Clk::ClockImplDisable(uint32_t index) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t Msm8x53Clk::ClockImplRequestRate(uint32_t id, uint64_t hz) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t Msm8x53Clk::AwaitBranchClock(AwaitBranchClockStatus status,
                                          const uint32_t cbcr_reg) {
     // In case the status check register and the clock control register cross

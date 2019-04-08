@@ -31,6 +31,7 @@ public:
     // Implement the Clock Protocol
     zx_status_t ClockImplEnable(uint32_t clock);
     zx_status_t ClockImplDisable(uint32_t clock);
+    zx_status_t ClockImplRequestRate(uint32_t id, uint64_t hz);
 
     // Device Protocol Implementation.
     void DdkUnbind();

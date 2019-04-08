@@ -37,6 +37,7 @@ public:
 
     zx_status_t ClockImplEnable(uint32_t clock_id);
     zx_status_t ClockImplDisable(uint32_t clock_id);
+    zx_status_t ClockImplRequestRate(uint32_t id, uint64_t hz);
 
 private:
     static constexpr uint32_t MIN_CLOCK = 2;
@@ -101,6 +102,13 @@ zx_status_t TestClockDevice::ClockImplEnable(uint32_t clock_id) {
 }
 
 zx_status_t TestClockDevice::ClockImplDisable(uint32_t clock_id) {
+    if (clock_id < MIN_CLOCK || clock_id > MAX_CLOCK) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    return ZX_OK;
+}
+
+zx_status_t TestClockDevice::ClockImplRequestRate(uint32_t clock_id, uint64_t hz) {
     if (clock_id < MIN_CLOCK || clock_id > MAX_CLOCK) {
         return ZX_ERR_INVALID_ARGS;
     }

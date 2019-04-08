@@ -24,6 +24,7 @@ public:
 
     zx_status_t ClockImplEnable(uint32_t index);
     zx_status_t ClockImplDisable(uint32_t index);
+    zx_status_t ClockImplRequestRate(uint32_t id, uint64_t hz);
 
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 

@@ -26,6 +26,7 @@ public:
     // Clock Protocol Implementation
     zx_status_t ClockImplEnable(uint32_t index);
     zx_status_t ClockImplDisable(uint32_t index);
+    zx_status_t ClockImplRequestRate(uint32_t id, uint64_t hz);
 
     // Device Protocol Implementation.
     zx_status_t Bind();
