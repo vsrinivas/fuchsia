@@ -553,6 +553,47 @@ pub struct PreqView<B> {
     pub targets: LayoutVerified<B, [PreqPerTarget]>,
 }
 
+// IEEE Std 802.11-2016, 9.4.2.114, Figure 9-481
+#[bitfield(
+    0..=5   _, // reserved
+    6       addr_ext,
+    7       _, // reserved
+)]
+#[repr(C)]
+#[derive(Clone, Copy, AsBytes, FromBytes, Unaligned)]
+pub struct PrepFlags(pub u8);
+
+// Fixed-length fields of the PREP element that precede
+// the optional Target External Address field.
+// IEEE Std 802.11-2016, 9.4.2.114, Figure 9-480
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+pub struct PrepHeader {
+    pub flags: PrepFlags,
+    pub hop_count: u8,
+    pub element_ttl: u8,
+    pub target_addr: MacAddr,
+    pub target_hwmp_seqno: u32,
+}
+
+// Fixed-length fields of the PREP element that follow
+// the optional Target External Address field.
+// IEEE Std 802.11-2016, 9.4.2.114, Figure 9-480
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+pub struct PrepTail {
+    pub lifetime: u32,
+    pub metric: u32,
+    pub originator_addr: MacAddr,
+    pub originator_hwmp_seqno: u32,
+}
+
+pub struct PrepView<B> {
+    pub header: LayoutVerified<B, PrepHeader>,
+    pub target_external_addr: Option<LayoutVerified<B, MacAddr>>,
+    pub tail: LayoutVerified<B, PrepTail>,
+}
+
 // Fixed-length fields of the PERR element that precede the variable-length
 // per-destination fields.
 // IEEE Std 802.11-2016, 9.4.2.115

@@ -146,6 +146,28 @@ pub fn parse_preq<B: ByteSlice>(raw_body: B) -> FrameParseResult<PreqView<B>> {
     Ok(PreqView { header, originator_external_addr, middle, targets })
 }
 
+pub fn parse_prep<B: ByteSlice>(raw_body: B) -> FrameParseResult<PrepView<B>> {
+    let mut reader = BufferReader::new(raw_body);
+    let header = reader
+        .read::<PrepHeader>()
+        .ok_or(FrameParseError::new("Element body is too short to include a PREP header"))?;
+    let target_external_addr = if header.flags.addr_ext() {
+        let addr = reader.read().ok_or(FrameParseError::new(
+            "Element body is too short to include an external address",
+        ))?;
+        Some(addr)
+    } else {
+        None
+    };
+    let tail = reader
+        .read()
+        .ok_or(FrameParseError::new("Element body is too short to include a PREP tail"))?;
+    if reader.bytes_remaining() > 0 {
+        return Err(FrameParseError::new("Extra bytes at the end of the PREP element"));
+    }
+    Ok(PrepView { header, target_external_addr, tail })
+}
+
 pub fn parse_perr<B: ByteSlice>(raw_body: B) -> FrameParseResult<PerrView<B>> {
     let mut reader = BufferReader::new(raw_body);
     let header = reader
@@ -669,6 +691,102 @@ mod tests {
         ];
         let err = parse_preq(&data[..]).err().expect("expected Err");
         assert_eq!("Extra bytes at the end of the PREQ element", err.debug_message());
+    }
+
+    #[test]
+    pub fn prep_ok_no_ext() {
+        #[rustfmt::skip]
+        let data = [
+            0x00, 0x01, 0x02, // flags, hop count, elem ttl
+            0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+            0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+            0x0d, 0x0e, 0x0f, 0x10, // lifetime
+            0x11, 0x12, 0x13, 0x14, // metric
+            0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+            0x1b, 0x1c, 0x1d, 0x1e, // originator hwmp seqno
+        ];
+        let r = parse_prep(&data[..]).expect("expected Ok");
+        assert_eq!(0x0c0b0a09, { r.header.target_hwmp_seqno });
+        assert!(r.target_external_addr.is_none());
+        assert_eq!(0x14131211, { r.tail.metric });
+    }
+
+    #[test]
+    pub fn prep_ok_with_ext() {
+        #[rustfmt::skip]
+        let data = [
+            0x40, 0x01, 0x02, // flags, hop count, elem ttl
+            0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+            0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+            0x44, 0x55, 0x66, 0x77, 0x88, 0x99, // target external addr
+            0x0d, 0x0e, 0x0f, 0x10, // lifetime
+            0x11, 0x12, 0x13, 0x14, // metric
+            0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+            0x1b, 0x1c, 0x1d, 0x1e, // originator hwmp seqno
+        ];
+        let r = parse_prep(&data[..]).expect("expected Ok");
+        assert_eq!(0x0c0b0a09, { r.header.target_hwmp_seqno });
+        let ext_addr = r.target_external_addr.expect("expected an external address");
+        assert_eq!([0x44, 0x55, 0x66, 0x77, 0x88, 0x99], *ext_addr);
+        assert_eq!(0x14131211, { r.tail.metric });
+    }
+
+    #[test]
+    pub fn prep_too_short_for_header() {
+        #[rustfmt::skip]
+        let data = [
+            0x00, 0x01, 0x02, // flags, hop count, elem ttl
+            0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+            0x09, 0x0a, 0x0b, // one byte missing from target hwmp seqno
+        ];
+        let err = parse_prep(&data[..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include a PREP header", err.debug_message());
+    }
+
+    #[test]
+    pub fn prep_too_short_for_ext_addr() {
+        #[rustfmt::skip]
+        let data = [
+            0x40, 0x01, 0x02, // flags, hop count, elem ttl
+            0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+            0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+            0x44, 0x55, 0x66, 0x77, 0x88, // one byte missing from target external addr
+        ];
+        let err = parse_prep(&data[..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include an external address", err.debug_message());
+    }
+
+    #[test]
+    pub fn prep_too_short_for_tail() {
+        #[rustfmt::skip]
+        let data = [
+            0x00, 0x01, 0x02, // flags, hop count, elem ttl
+            0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+            0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+            0x0d, 0x0e, 0x0f, 0x10, // lifetime
+            0x11, 0x12, 0x13, 0x14, // metric
+            0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+            0x1b, 0x1c, 0x1d, // one byte missing from originator hwmp seqno
+        ];
+        let err = parse_prep(&data[..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include a PREP tail", err.debug_message());
+    }
+
+    #[test]
+    pub fn prep_too_long() {
+        #[rustfmt::skip]
+        let data = [
+            0x00, 0x01, 0x02, // flags, hop count, elem ttl
+            0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+            0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+            0x0d, 0x0e, 0x0f, 0x10, // lifetime
+            0x11, 0x12, 0x13, 0x14, // metric
+            0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+            0x1b, 0x1c, 0x1d, 0x1e, // originator hwmp seqno
+            0, // extra byte
+        ];
+        let err = parse_prep(&data[..]).err().expect("expected Err");
+        assert_eq!("Extra bytes at the end of the PREP element", err.debug_message());
     }
 
     #[test]

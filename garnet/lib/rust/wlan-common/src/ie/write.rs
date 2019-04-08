@@ -157,6 +157,26 @@ pub fn write_preq<B: Appendable>(
     write_ie!(buf, id::PREQ, header, option_as_bytes(originator_external_addr), middle, targets)
 }
 
+pub fn write_prep<B: Appendable>(
+    buf: &mut B,
+    header: &PrepHeader,
+    target_external_addr: Option<&MacAddr>,
+    tail: &PrepTail,
+) -> Result<(), FrameWriteError> {
+    if header.flags.addr_ext() {
+        validate!(
+            target_external_addr.is_some(),
+            "Address extension flag is set in PREP but no external address supplied"
+        );
+    } else {
+        validate!(
+            target_external_addr.is_none(),
+            "External address is present but address extension flag is not set in PREP"
+        );
+    }
+    write_ie!(buf, id::PREP, header, option_as_bytes(target_external_addr), tail)
+}
+
 /// Note that this does not write a full PERR IE, but only a single destination.
 /// The idea is to first use this function to write destinations to a separate buffer,
 /// and then pass that buffer to `write_perr()`:
@@ -577,6 +597,121 @@ mod tests {
                     .to_string()
             )),
             write_preq(&mut vec![], &header, None, &middle, &[])
+        );
+    }
+
+    #[test]
+    pub fn prep_no_ext() {
+        let mut buf = vec![];
+        let header = PrepHeader {
+            flags: PrepFlags(0),
+            hop_count: 1,
+            element_ttl: 2,
+            target_addr: [3, 4, 5, 6, 7, 8],
+            target_hwmp_seqno: 0x0c0b0a09,
+        };
+        let tail = PrepTail {
+            lifetime: 0x100f0e0d,
+            metric: 0x14131211,
+            originator_addr: [0x15, 0x16, 0x17, 0x18, 0x19, 0x1a],
+            originator_hwmp_seqno: 0x1e1d1c1b,
+        };
+        write_prep(&mut buf, &header, None, &tail).expect("expected Ok");
+
+        #[rustfmt::skip]
+        let expected = [
+            131, 31,
+            0x00, 0x01, 0x02, // flags, hop count, elem ttl
+            0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+            0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+            0x0d, 0x0e, 0x0f, 0x10, // lifetime
+            0x11, 0x12, 0x13, 0x14, // metric
+            0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+            0x1b, 0x1c, 0x1d, 0x1e, // originator hwmp seqno
+        ];
+        assert_eq!(&expected[..], &buf[..]);
+    }
+
+    #[test]
+    pub fn prep_with_ext() {
+        let mut buf = vec![];
+        let header = PrepHeader {
+            flags: PrepFlags(0).with_addr_ext(true),
+            hop_count: 1,
+            element_ttl: 2,
+            target_addr: [3, 4, 5, 6, 7, 8],
+            target_hwmp_seqno: 0x0c0b0a09,
+        };
+        let ext_addr = [0x44, 0x55, 0x66, 0x77, 0x88, 0x99];
+        let tail = PrepTail {
+            lifetime: 0x100f0e0d,
+            metric: 0x14131211,
+            originator_addr: [0x15, 0x16, 0x17, 0x18, 0x19, 0x1a],
+            originator_hwmp_seqno: 0x1e1d1c1b,
+        };
+        write_prep(&mut buf, &header, Some(&ext_addr), &tail).expect("expected Ok");
+
+        #[rustfmt::skip]
+        let expected = [
+            131, 37,
+            0x40, 0x01, 0x02, // flags, hop count, elem ttl
+            0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // target addr
+            0x09, 0x0a, 0x0b, 0x0c, // target hwmp seqno
+            0x44, 0x55, 0x66, 0x77, 0x88, 0x99, // target external addr
+            0x0d, 0x0e, 0x0f, 0x10, // lifetime
+            0x11, 0x12, 0x13, 0x14, // metric
+            0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, // originator addr
+            0x1b, 0x1c, 0x1d, 0x1e, // originator hwmp seqno
+        ];
+        assert_eq!(&expected[..], &buf[..]);
+    }
+
+    #[test]
+    pub fn prep_addr_ext_flag_set_but_no_addr_given() {
+        let header = PrepHeader {
+            flags: PrepFlags(0).with_addr_ext(true),
+            hop_count: 1,
+            element_ttl: 2,
+            target_addr: [3, 4, 5, 6, 7, 8],
+            target_hwmp_seqno: 0x0c0b0a09,
+        };
+        let tail = PrepTail {
+            lifetime: 0x100f0e0d,
+            metric: 0x14131211,
+            originator_addr: [0x15, 0x16, 0x17, 0x18, 0x19, 0x1a],
+            originator_hwmp_seqno: 0x1e1d1c1b,
+        };
+        assert_eq!(
+            Err(FrameWriteError::new_invalid_data(
+                "Address extension flag is set in PREP but no external address supplied"
+                    .to_string()
+            )),
+            write_prep(&mut vec![], &header, None, &tail)
+        );
+    }
+
+    #[test]
+    pub fn prep_ext_addr_given_but_no_flag_set() {
+        let header = PrepHeader {
+            flags: PrepFlags(0),
+            hop_count: 1,
+            element_ttl: 2,
+            target_addr: [3, 4, 5, 6, 7, 8],
+            target_hwmp_seqno: 0x0c0b0a09,
+        };
+        let ext_addr = [0x44, 0x55, 0x66, 0x77, 0x88, 0x99];
+        let tail = PrepTail {
+            lifetime: 0x100f0e0d,
+            metric: 0x14131211,
+            originator_addr: [0x15, 0x16, 0x17, 0x18, 0x19, 0x1a],
+            originator_hwmp_seqno: 0x1e1d1c1b,
+        };
+        assert_eq!(
+            Err(FrameWriteError::new_invalid_data(
+                "External address is present but address extension flag is not set in PREP"
+                    .to_string()
+            )),
+            write_prep(&mut vec![], &header, Some(&ext_addr), &tail)
         );
     }
 
