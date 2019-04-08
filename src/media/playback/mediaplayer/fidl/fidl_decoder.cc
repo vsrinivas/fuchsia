@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "src/media/playback/mediaplayer/fidl/fidl_decoder.h"
+
 #include <vector>
+
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
@@ -315,16 +317,23 @@ void FidlDecoder::MaybeConfigureInput(
   }
 
   FXL_DCHECK(input_buffers_.has_current_set());
-  FXL_DCHECK(constraints->has_very_temp_kludge_bti_handle());
+
+  const bool physically_contiguous_required =
+      constraints->has_is_physically_contiguous_required() &&
+      constraints->is_physically_contiguous_required();
+
+  FXL_DCHECK(!physically_contiguous_required ||
+             constraints->has_very_temp_kludge_bti_handle());
 
   BufferSet& current_set = input_buffers_.current_set();
   ConfigureInputToUseVmos(
       0, current_set.buffer_count(), current_set.buffer_size(),
       current_set.single_vmo() ? VmoAllocation::kSingleVmo
                                : VmoAllocation::kVmoPerBuffer,
-      (constraints->has_is_physically_contiguous_required() &&
-       constraints->is_physically_contiguous_required()),
-      std::move(*constraints->mutable_very_temp_kludge_bti_handle()),
+      physically_contiguous_required,
+      physically_contiguous_required
+          ? std::move(*constraints->mutable_very_temp_kludge_bti_handle())
+          : zx::handle(),
       [this, &current_set](uint64_t size, const PayloadVmos& payload_vmos) {
         // This callback runs on an arbitrary thread.
         return current_set.AllocateBuffer(size, payload_vmos);
