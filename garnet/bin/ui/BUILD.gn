@@ -25,7 +25,6 @@ group("ui") {
     "present_view",
     "presentation_mode",
     "print_input",
-    "recovery_ui",
     "root_presenter",
     "scenic",
     "screencap",

@@ -13,6 +13,7 @@ group("src") {
     "lib",
     "media",
     "modular",
+    "recovery",
     "speech",
     "testing",
   ]
@@ -29,6 +30,7 @@ group("tests") {
     "lib:tests",
     "media:tests",
     "modular:tests",
+    "recovery:tests",
     "speech:tests",
     "testing:tests",
   ]

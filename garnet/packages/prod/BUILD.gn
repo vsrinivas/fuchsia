@@ -272,7 +272,6 @@ group("all") {
     "//garnet/packages/prod:power_manager",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
-    "//garnet/packages/prod:recovery_ui",
     "//garnet/packages/prod:rolldice",
     "//garnet/packages/prod:root_ssl_certificates",
     "//garnet/packages/prod:run",
@@ -788,13 +787,6 @@ group("amber") {
   public_deps = [
     "//garnet/go/src/amber",
     "//garnet/go/src/amber:amber_tools",
-  ]
-}
-
-group("recovery_ui") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/ui/recovery_ui",
   ]
 }
 

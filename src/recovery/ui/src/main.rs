@@ -14,7 +14,7 @@ use futures::future;
 use std::{cell::RefCell, rc::Rc};
 
 static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
+    include_bytes!("../../../../garnet/bin/fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
 
 struct RecoveryUI<'a> {
     face: FontFace<'a>,
