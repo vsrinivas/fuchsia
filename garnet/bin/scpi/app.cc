@@ -3,26 +3,27 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/scpi/app.h"
+
 #include <ddk/protocol/scpi.h>
 #include <fbl/unique_fd.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
+#include <lib/sys/cpp/component_context.h>
 #include <stdio.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/object.h>
-#include "lib/component/cpp/startup_context.h"
 
 namespace scpi {
 
 static const char kThermalDir[] = "/dev/class/thermal";
 
-App::App() : App(component::StartupContext::CreateFromStartupInfo()) {}
+App::App() : App(sys::ComponentContext::Create()) {}
 
-App::App(std::unique_ptr<component::StartupContext> context)
+App::App(std::unique_ptr<sys::ComponentContext> context)
     : context_(std::move(context)) {}
 
 App::~App() {}
@@ -114,7 +115,7 @@ zx_status_t App::Start() {
   num_cores_ = ReadCpuCount(root_resource_handle_);
   cpu_stats_.reserve(num_cores_);
   last_cpu_stats_.reserve(num_cores_);
-  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   return ZX_OK;
 }
 

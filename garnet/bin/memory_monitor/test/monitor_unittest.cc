@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/memory_monitor/monitor.h"
+
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
+
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_with_context.h"
 
 namespace memory {
 namespace test {
@@ -12,25 +15,25 @@ namespace test {
 using namespace fuchsia::memory;
 using namespace memory;
 
-class MonitorUnitTest : public component::testing::TestWithContext {
+class MonitorUnitTest : public gtest::TestLoopFixture {
  protected:
   MonitorUnitTest()
-      : monitor_(std::make_unique<Monitor>(TakeContext(), fxl::CommandLine{},
-                                           dispatcher())) {}
+      : monitor_(std::make_unique<Monitor>(context_provider_.TakeContext(),
+                                           fxl::CommandLine{}, dispatcher())) {}
 
   void TearDown() override {
     monitor_.reset();
-    TestWithContext::TearDown();
+    TestLoopFixture::TearDown();
   }
 
   MonitorPtr monitor() {
     MonitorPtr monitor;
-    controller().outgoing_public_services().ConnectToService(
-        monitor.NewRequest());
+    context_provider_.ConnectToPublicService(monitor.NewRequest());
     return monitor;
   }
 
-private:
+ private:
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<Monitor> monitor_;
 };
 
@@ -39,24 +42,20 @@ class WatcherForTest : public Watcher {
   WatcherForTest(fit::function<void(uint64_t free_bytes)> on_change)
       : on_change_(std::move(on_change)) {}
 
-  void OnChange(Stats stats) override {
-    on_change_(stats.free_bytes);
-  }
+  void OnChange(Stats stats) override { on_change_(stats.free_bytes); }
 
   void AddBinding(fidl::InterfaceRequest<Watcher> request) {
     bindings_.AddBinding(this, std::move(request));
   }
 
-private:
+ private:
   fidl::BindingSet<Watcher> bindings_;
   fit::function<void(uint64_t free_bytes)> on_change_;
 };
 
 TEST_F(MonitorUnitTest, FreeBytes) {
   bool got_free = false;
-  WatcherForTest watcher([&got_free](uint64_t free_bytes) {
-    got_free = true;
-  });
+  WatcherForTest watcher([&got_free](uint64_t free_bytes) { got_free = true; });
   WatcherPtr watcher_ptr;
   watcher.AddBinding(watcher_ptr.NewRequest());
 

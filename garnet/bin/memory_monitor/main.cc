@@ -18,11 +18,10 @@ int main(int argc, const char** argv) {
   FXL_VLOG(2) << argv[0] << ": starting";
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  trace::TraceProvider trace_provider(
-      loop.dispatcher(), memory::Monitor::kTraceName);
+  trace::TraceProvider trace_provider(loop.dispatcher(),
+                                      memory::Monitor::kTraceName);
 
-  memory::Monitor app(component::StartupContext::CreateFromStartupInfo(),
-                      command_line,
+  memory::Monitor app(sys::ComponentContext::Create(), command_line,
                       loop.dispatcher());
   loop.Run();
 

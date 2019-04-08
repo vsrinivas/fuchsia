@@ -7,8 +7,10 @@
 
 #include <fcntl.h>
 #include <fuchsia/scpi/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include "src/lib/files/unique_fd.h"
-#include "lib/component/cpp/startup_context.h"
 
 namespace scpi {
 
@@ -16,7 +18,7 @@ class App : public fuchsia::scpi::SystemController {
  public:
   App();
   ~App() override;
-  explicit App(std::unique_ptr<component::StartupContext> context);
+  explicit App(std::unique_ptr<sys::ComponentContext> context);
   void GetDvfsInfo(uint32_t power_domain, GetDvfsInfoCallback callback) final;
   void GetSystemStatus(GetSystemStatusCallback callback) final;
   zx_status_t Start();
@@ -28,7 +30,7 @@ class App : public fuchsia::scpi::SystemController {
   size_t ReadCpuCount(const zx::handle& root_resource);
   bool ReadCpuStats();
   bool ReadMemStats();
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::scpi::SystemController> bindings_;
   zx::handle thermal_handle_;
   zx::handle root_resource_handle_;

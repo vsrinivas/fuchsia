@@ -3,28 +3,31 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/scpi/app.h"
+
+#include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
+
 #include "gtest/gtest.h"
-#include "lib/component/cpp/testing/test_with_context.h"
 
 namespace scpi {
 namespace testing {
 
 using namespace fuchsia::scpi;
 
-class AppTest : public component::testing::TestWithContext {
+class AppTest : public gtest::TestLoopFixture {
  protected:
-  AppTest() : app_(std::make_unique<App>(TakeContext())) { app_->Start(); }
-
-  void TearDown() override { TestWithContext::TearDown(); }
+  AppTest() : app_(std::make_unique<App>(context_provider_.TakeContext())) {
+    app_->Start();
+  }
 
   SystemControllerPtr GetSystemController() {
     SystemControllerPtr system_controller;
-    controller().outgoing_public_services().ConnectToService(
-        system_controller.NewRequest());
+    context_provider_.ConnectToPublicService(system_controller.NewRequest());
     return system_controller;
   }
 
  private:
+  sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<App> app_;
 };
 

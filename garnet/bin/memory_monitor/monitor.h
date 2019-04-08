@@ -5,15 +5,17 @@
 #ifndef GARNET_BIN_MEMORY_MONITOR_MONITOR_H_
 #define GARNET_BIN_MEMORY_MONITOR_MONITOR_H_
 
-#include <memory>
-
 #include <fuchsia/memory/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <lib/component/cpp/object_dir.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/vmo.h>
 #include <trace/observer.h>
 #include <zircon/types.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include <memory>
+
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
 
@@ -21,12 +23,11 @@ namespace memory {
 
 class Monitor : public fuchsia::memory::Monitor {
  public:
-  explicit Monitor(std::unique_ptr<component::StartupContext> context,
+  explicit Monitor(std::unique_ptr<sys::ComponentContext> context,
                    const fxl::CommandLine& command_line,
                    async_dispatcher_t* dispatcher);
   ~Monitor();
-  void Watch(
-      fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) override;
+  void Watch(fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) override;
   static const char kTraceName[];
 
  private:
@@ -51,10 +52,12 @@ class Monitor : public fuchsia::memory::Monitor {
   zx::duration delay_;
   zx_handle_t root_;
   async_dispatcher_t* dispatcher_;
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   fidl::BindingSet<fuchsia::memory::Monitor> bindings_;
   std::vector<fuchsia::memory::WatcherPtr> watchers_;
   trace::TraceObserver trace_observer_;
+  component::ObjectDir root_object_;
+  fidl::BindingSet<fuchsia::inspect::Inspect> inspect_bindings_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Monitor);
 };
