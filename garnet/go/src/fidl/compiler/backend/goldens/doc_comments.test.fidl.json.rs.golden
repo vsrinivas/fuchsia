@@ -230,137 +230,6 @@ impl <'a> InterfaceEventSender<'a> {
 	}
 }
 
-#[deprecated(note = "use InterfaceRequestStream instead")]
-pub trait Interface {
-	type OnOpenFut: futures::Future<Output = ()> + Send;
-	fn on_open(&mut self, control_handle: InterfaceControlHandle) -> Self::OnOpenFut;
-	type MethodFut: futures::Future<Output = ()> + Send;
-	fn method (&mut self,
-		control_handle: InterfaceControlHandle
-	) -> Self::MethodFut;
-	
-
-	fn serve(mut self, channel: ::fuchsia_async::Channel)
-		-> InterfaceServer<Self>
-	where Self: Sized
-	{
-		let inner = ::std::sync::Arc::new(fidl::ServeInner::new(channel));
-		let on_open_fut = self.on_open(
-			InterfaceControlHandle {
-				inner: inner.clone(),
-			}
-		);
-		InterfaceServer {
-			server: self,
-			inner: inner.clone(),
-			on_open_fut: Some(on_open_fut),method_futures: futures::stream::FuturesUnordered::new(),
-		}
-	}
-}
-
-pub struct InterfaceServer<T: Interface> {
-	#[allow(dead_code)] // not used if no methods are present
-	server: T,
-	inner: ::std::sync::Arc<fidl::ServeInner>,
-	on_open_fut: Option<T::OnOpenFut>,method_futures: futures::stream::FuturesUnordered<T::MethodFut>,
-}
-
-// Safety: only the OnOpen fut is held directly, so it's the only one that
-// is projected to, so it's the only one that needs to be Unpin for the Impl
-// struct to be Unpin.
-impl<T: Interface> ::std::marker::Unpin for InterfaceServer<T>
-where T::OnOpenFut: ::std::marker::Unpin,
-{}
-
-impl<T: Interface> InterfaceServer<T> {
-	pub fn control_handle(&self) -> InterfaceControlHandle {
-		InterfaceControlHandle {
-			inner: self.inner.clone(),
-		}
-	}
-}
-
-impl<T: Interface> futures::Future for InterfaceServer<T> {
-	type Output = Result<(), fidl::Error>;
-
-	fn poll(
-		mut self: ::std::pin::Pin<&mut Self>,
-		lw: &futures::task::Waker,
-	) -> futures::Poll<Self::Output> {
-		// safety: the only potentially !Unpin field is on_open_fut, which we make sure
-		// isn't moved below
-		let this = unsafe { ::std::pin::Pin::get_unchecked_mut(self) };
-		loop {
-		let mut made_progress_this_loop_iter = false;
-
-		if this.inner.poll_shutdown(lw) {
-			return futures::Poll::Ready(Ok(()));
-		}
-
-		unsafe {
-			// Safety: ensure that on_open isn't moved
-			let completed_on_open = if let Some(on_open_fut) = &mut this.on_open_fut {
-				match futures::Future::poll(::std::pin::Pin::new_unchecked(on_open_fut), lw) {
-					futures::Poll::Ready(()) => true,
-					futures::Poll::Pending => false,
-				}
-			} else {
-				false
-			};
-
-			if completed_on_open {
-				made_progress_this_loop_iter = true;
-				this.on_open_fut = None;
-			}
-		}match futures::stream::StreamExt::poll_next_unpin(
-			&mut this.method_futures, lw
-		) {
-			futures::Poll::Ready(Some(())) => made_progress_this_loop_iter = true,
-			_ => {},
-		}
-
-		let poll_done = ::fidl::encoding::with_tls_coding_bufs(|bytes, handles| {
-			match ::futures::ready!(this.inner.channel().read(bytes, handles, lw)) {
-				Ok(()) => {},
-				Err(zx::Status::PEER_CLOSED) => return futures::Poll::Ready(Ok(true)),
-				Err(e) => return futures::Poll::Ready(Err(fidl::Error::ServerRequestRead(e))),
-			}
-
-			{
-				// A message has been received from the channel
-				let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
-
-				#[allow(unreachable_patterns)] // GenOrdinal and Ordinal can overlap
-				match header.ordinal {
-						1061382220 | 1061382220 => {
-							let mut req: () = fidl::encoding::Decodable::new_empty();
-							fidl::encoding::Decoder::decode_into(_body_bytes, handles, &mut req)?;
-							let control_handle = InterfaceControlHandle {
-								inner: this.inner.clone(),
-							};
-							this.method_futures.push(
-								this.server.method(control_handle)
-							);
-							::futures::Poll::Ready(Ok(false))
-						}
-					// TODO(cramertj) handle control/fileio messages
-					_ => return futures::Poll::Ready(Err(fidl::Error::UnknownOrdinal {
-						ordinal: header.ordinal,
-						service_name: "unknown fidl", // TODO(cramertj)
-					})),
-				}
-			}
-		})?;
-
-		match poll_done {
-			::futures::Poll::Ready(true) => return ::futures::Poll::Ready(Ok(())),
-			::futures::Poll::Ready(false) => {},
-			::futures::Poll::Pending if made_progress_this_loop_iter => {}, // continue
-			::futures::Poll::Pending => return ::futures::Poll::Pending,
-		}
-	}}
-}
-
 /// A Stream of incoming requests for Interface
 pub struct InterfaceRequestStream {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
@@ -478,60 +347,6 @@ impl InterfaceEncoder {
 		Ok(())
 	}}
 
-#[deprecated(note = "use InterfaceRequestStream instead")]
-pub struct InterfaceImpl<
-	State,
-OnOpen: FnMut(&mut State, InterfaceControlHandle) -> OnOpenFut,
-OnOpenFut: futures::Future<Output = ()> + Send,
-	Method: FnMut(&mut State,InterfaceControlHandle) -> MethodFut,
-	MethodFut: futures::Future<Output = ()> + Send,
-> {
-	pub state: State,
-	pub on_open: OnOpen,
-	pub method: Method,
-}
-
-// Unpin is never projected for the Impl struct
-impl<
-	State,
-OnOpen: FnMut(&mut State, InterfaceControlHandle) -> OnOpenFut,
-OnOpenFut: futures::Future<Output = ()> + Send,
-	Method: FnMut(&mut State,InterfaceControlHandle) -> MethodFut,
-	MethodFut: futures::Future<Output = ()> + Send,
-> ::std::marker::Unpin for InterfaceImpl<State, OnOpen, OnOpenFut,
-	Method,
-	MethodFut,
->
-{}
-
-impl<
-	State,
-OnOpen: FnMut(&mut State, InterfaceControlHandle) -> OnOpenFut,
-OnOpenFut: futures::Future<Output = ()> + Send,
-	Method: FnMut(&mut State,InterfaceControlHandle) -> MethodFut,
-	MethodFut: futures::Future<Output = ()> + Send,
-> Interface for InterfaceImpl<State, OnOpen, OnOpenFut,
-	Method,
-	MethodFut,
->
-{
-	type OnOpenFut = OnOpenFut;
-	fn on_open(&mut self, response_chan: InterfaceControlHandle) -> Self::OnOpenFut {
-		(self.on_open)(&mut self.state, response_chan)
-	}
-	type MethodFut = MethodFut;
-	fn method (&mut self,
-		response_chan: InterfaceControlHandle
-	) -> Self::MethodFut
-	{
-		(self.method)(
-			&mut self.state,
-			response_chan
-		)
-	}
-	
-}
-
 #[derive(Clone)]
 pub struct InterfaceControlHandle {
 	inner: ::std::sync::Arc<fidl::ServeInner>,
@@ -544,7 +359,6 @@ impl ::std::ops::Deref for InterfaceControlHandle {
 		&self.inner
 	}
 }
-
 
 impl InterfaceControlHandle {
 	pub fn shutdown(&self) {
