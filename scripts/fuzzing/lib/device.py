@@ -23,24 +23,16 @@ class Device(object):
   """
 
   @classmethod
-  def make_parser(cls, description):
-    """Registers the command line arguments understood by Device."""
-    parser = argparse.ArgumentParser(
-        description=description, conflict_handler='resolve')
-    parser.add_argument(
-        '-d',
-        '--device',
-        action='store',
-        help='Name of device, only needed when multiple devices are present.')
-    return parser
-
-  @classmethod
   def from_args(cls, host, args):
     """Constructs a Device from command line arguments."""
     netaddr_cmd = ['netaddr', '--fuchsia', '--nowait']
     if args.device:
       netaddr_cmd.append(args.device)
-    return cls(host, host.zircon_tool(netaddr_cmd))
+    try:
+      netaddr = host.zircon_tool(netaddr_cmd)
+    except subprocess.CalledProcessError:
+      raise RuntimeError('Unable to find device')
+    return cls(host, netaddr)
 
   def __init__(self, host, netaddr):
     self.host = host

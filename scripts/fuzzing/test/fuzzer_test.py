@@ -9,6 +9,7 @@ import tempfile
 import unittest
 
 import test_env
+from lib.args import Args
 from lib.fuzzer import Fuzzer
 
 from device_mock import MockDevice
@@ -28,16 +29,16 @@ class TestFuzzer(unittest.TestCase):
     self.assertEqual(len(Fuzzer.filter(fuzzers, '1/2')), 1)
     self.assertEqual(len(Fuzzer.filter(fuzzers, 'target4')), 0)
     with self.assertRaises(Fuzzer.NameError):
-        Fuzzer.filter(fuzzers, 'a/b/c')
+      Fuzzer.filter(fuzzers, 'a/b/c')
 
   def test_from_args(self):
     mock_device = MockDevice()
-    parser = Fuzzer.make_parser('description')
+    parser = Args.make_parser('description')
     with self.assertRaises(Fuzzer.NameError):
-      args = parser.parse_args(['--name', 'target'])
+      args = parser.parse_args(['target'])
       fuzzer = Fuzzer.from_args(mock_device, args)
     with self.assertRaises(Fuzzer.NameError):
-      args = parser.parse_args(['--name', 'target4'])
+      args = parser.parse_args(['target4'])
       fuzzer = Fuzzer.from_args(mock_device, args)
 
   def test_measure_corpus(self):
@@ -72,31 +73,12 @@ class TestFuzzer(unittest.TestCase):
     fuzzer2.require_stopped()
     fuzzer3.require_stopped()
 
-  def test_prepare(self):
-    mock_device = MockDevice()
-    fuzzer1 = Fuzzer(mock_device, u'mock-package1', u'mock-target1')
-    fuzzer2 = Fuzzer(mock_device, u'mock-package1', u'mock-target2')
-    with self.assertRaises(Fuzzer.StateError):
-      fuzzer1.prepare()
-    base_dir = tempfile.mkdtemp()
-    try:
-      with self.assertRaises(Fuzzer.StateError):
-        fuzzer2.prepare(base_dir)
-      fuzzer2.prepare(base_dir)
-      latest = os.path.join(base_dir, 'test_data', 'fuzzing', fuzzer2.pkg,
-                            fuzzer2.tgt, 'latest')
-      self.assertEqual(os.readlink(latest) + os.sep, fuzzer2.results())
-    finally:
-      shutil.rmtree(base_dir)
-
   def test_start(self):
     mock_device = MockDevice()
-    fuzzer = Fuzzer(mock_device, u'mock-package1', u'mock-target2')
-    with self.assertRaises(Fuzzer.StateError):
-      fuzzer.start(['-some-lf-arg=value'])
     base_dir = tempfile.mkdtemp()
     try:
-      fuzzer.prepare(base_dir)
+      fuzzer = Fuzzer(
+          mock_device, u'mock-package1', u'mock-target2', output=base_dir)
       fuzzer.start(['-some-lf-arg=value'])
       self.assertTrue(os.path.exists(fuzzer.results('symbolized.log')))
     finally:
@@ -128,6 +110,7 @@ class TestFuzzer(unittest.TestCase):
     self.assertEqual(
         mock_device.last, 'ssh -F ' + mock_device.host.ssh_config +
         ' ::1 fuzz merge ' + str(fuzzer) + ' -some-lf-arg=value')
+
 
 if __name__ == '__main__':
   unittest.main()

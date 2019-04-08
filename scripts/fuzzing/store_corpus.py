@@ -7,6 +7,7 @@ import argparse
 import subprocess
 import sys
 
+from lib.args import Args
 from lib.cipd import Cipd
 from lib.device import Device
 from lib.fuzzer import Fuzzer
@@ -14,7 +15,7 @@ from lib.host import Host
 
 
 def main():
-  parser = Cipd.make_parser(
+  parser = Args.make_parser(
       'Transfers a fuzzing corpus for a named fuzzer from a device to CIPD')
   args = parser.parse_args()
 
@@ -24,14 +25,17 @@ def main():
 
   if fuzzer.measure_corpus()[0] == 0:
     print('Ignoring ' + str(fuzzer) + '; corpus is empty.')
+    return 0
   else:
     with Cipd.from_args(fuzzer, args) as cipd:
       device.fetch(fuzzer.data_path('corpus/*'), cipd.root)
       try:
         cipd.create()
+        return 0
       except subprocess.CalledProcessError:
         print('Failed to upload corpus for ' + str(fuzzer) +
               '; have you run \'cipd auth-login\'?')
+        return 1
 
 
 if __name__ == '__main__':

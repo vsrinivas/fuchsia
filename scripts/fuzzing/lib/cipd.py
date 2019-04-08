@@ -32,18 +32,6 @@ class Cipd(object):
   """
 
   @classmethod
-  def make_parser(cls, description):
-    """Registers the command line arguments understood by Cipd."""
-    parser = Fuzzer.make_parser(description)
-    parser.add_argument(
-        '-s',
-        '--staging',
-        action='store',
-        help='Host directory to use for un/packing corpus bundles.  Defaults to a temporary directory.'
-    )
-    return parser
-
-  @classmethod
   def from_args(cls, fuzzer, args, label=None):
     """Constructs a Cipd from command line arguments."""
     return cls(fuzzer, args.staging, label)

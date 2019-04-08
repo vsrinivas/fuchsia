@@ -6,13 +6,14 @@
 import argparse
 import sys
 
+from lib.args import Args
 from lib.host import Host
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 
 
 def main():
-  parser = Fuzzer.make_parser(
+  parser = Args.make_parser(
       'Minimizes the current corpus for the named fuzzer. This should be ' +
       'used after running the fuzzer for a while, or after incorporating a ' +
       'third-party corpus using \'fetch-corpus\'')
@@ -23,6 +24,7 @@ def main():
   fuzzer = Fuzzer.from_args(device, args)
 
   fuzzer.merge(fuzzer_args)
+  return 0
 
 
 if __name__ == '__main__':

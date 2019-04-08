@@ -6,21 +6,26 @@
 import argparse
 import sys
 
+from lib.args import Args
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
 
 
 def main():
-  parser = Fuzzer.make_parser('Stops the named fuzzer.')
+  parser = Args.make_parser('Stops the named fuzzer.')
   args = parser.parse_args()
 
   host = Host()
   device = Device.from_args(host, args)
   fuzzer = Fuzzer.from_args(device, args)
 
-  fuzzer.stop()
-  print('Stopping ' + str(fuzzer) + '.')
+  if fuzzer.is_running():
+    print('Stopping ' + str(fuzzer) + '.')
+    fuzzer.stop()
+  else:
+    print(str(fuzzer) + ' is already stopped.')
+  return 0
 
 
 if __name__ == '__main__':

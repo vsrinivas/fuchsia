@@ -7,6 +7,7 @@ import unittest
 import subprocess
 
 import test_env
+from lib.args import Args
 from lib.device import Device
 from lib.host import Host
 
@@ -18,9 +19,9 @@ class TestDevice(unittest.TestCase):
 
   def test_from_args(self):
     host = Host()
-    parser = Device.make_parser('description')
+    parser = Args.make_parser('description', name_required=False)
     # netaddr should get called with 'just-four-random-words', and fail
-    with self.assertRaises(subprocess.CalledProcessError):
+    with self.assertRaises(RuntimeError):
       args = parser.parse_args(['--device', 'just-four-random-words'])
       device = Device.from_args(host, args)
 

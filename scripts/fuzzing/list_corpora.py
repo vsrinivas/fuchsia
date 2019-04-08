@@ -7,6 +7,7 @@ import argparse
 import subprocess
 import sys
 
+from lib.args import Args
 from lib.cipd import Cipd
 from lib.device import Device
 from lib.fuzzer import Fuzzer
@@ -14,7 +15,7 @@ from lib.host import Host
 
 
 def main():
-  parser = Fuzzer.make_parser(
+  parser = Args.make_parser(
       'Lists the fuzzing corpus instances in CIPD for a named fuzzer')
   args = parser.parse_args()
 
@@ -25,6 +26,9 @@ def main():
 
   if not cipd.list():
     print 'No corpus instances found in CIPD for ' + str(fuzzer)
+    return 1
+  else:
+    return 0
 
 
 if __name__ == '__main__':

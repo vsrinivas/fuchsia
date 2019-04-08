@@ -51,10 +51,9 @@
 ##                           corpus location.
 ##
 ## The RECOMMENDED way to run a fuzzer is to omit 'command', which will use
-## "automatic" mode.  In this mode, 'fx fuzz' will check if a corpus is already
-## present, and if not it will fetch the latest.  It will then start the fuzzer
-## and watch it to see when it stops.  Each of these steps respects the options
-## above.  **NOTE** Automatic mode is temporarily disabled.
+## "automatic" mode.  In this mode, 'fx fuzz' will fetch the latest corpus,
+## start the fuzzer, and watch it to see when it stops.  Each of these steps
+## respects the options above.
 ##
 ## Example workflow:
 ##   1. Shows available fuzzers:
@@ -81,93 +80,49 @@
 ##   8. Save the new, minimized corpus in CIPD:
 ##         fx fuzz store foo/bar
 
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+
 FUZZING_DIR=${FUCHSIA_DIR}/scripts/fuzzing
 
-main() {
-  local flags=""
-  while [[ "$1" == "-"* ]] ; do
-    local opt="$1"
-    shift
-
-    local has_optval
-    case "${opt}" in
-      -d|--device)
-        flags="${flags} -d $1"
-        has_optval=1
-        ;;
-      -f|--foreground)
-        flags="${flags} -v"
-        has_optval=0
-        ;;
-      -o|--output)
-        flags="${flags} -o $1"
-        has_optval=1
-        ;;
-      -s|--staging)
-        flags="${flags} -s $1"
-        has_optval=1
-        ;;
-      *)
-        fatal "unknown option: ${opt}"
-        ;;
-    esac
-    if [[ ${has_optval} -ne 0 ]] ; then
-      if [[ -z "$1" ]] || [[ "$1" == "-"* ]] ; then
-        fatal "missing value for ${opt}"
-      fi
-      shift
-    fi
-  done
-
-  local command="$1"
-  shift
-
-  if [ -n "$1" ] ; then
-    flags="${flags} -n $1"
-    shift
-  fi
-
-  case ${command} in
-    help)
+cmd=${1:-help}
+shift
+case "${cmd}" in
+  help)
+    fx-command-help
+    ;;
+  list)
+    python ${FUZZING_DIR}/list_fuzzers.py "$@"
+    ;;
+  corpus)
+    python ${FUZZING_DIR}/list_corpora.py "$@"
+    ;;
+  fetch)
+    python ${FUZZING_DIR}/fetch_corpus.py "$@"
+    ;;
+  start)
+    python ${FUZZING_DIR}/start_fuzzer.py "$@" &
+    ;;
+  check)
+    python ${FUZZING_DIR}/check_fuzzer.py "$@"
+    ;;
+  stop)
+    python ${FUZZING_DIR}/stop_fuzzer.py "$@"
+    ;;
+  repro)
+    python ${FUZZING_DIR}/repro_units.py "$@"
+    ;;
+  merge)
+    python ${FUZZING_DIR}/merge_corpus.py "$@"
+    ;;
+  store)
+    python ${FUZZING_DIR}/store_corpus.py "$@"
+    ;;
+  *)
+    if python ${FUZZING_DIR}/list_fuzzers.py "${cmd}" ; then
+      python ${FUZZING_DIR}/fetch_corpus.py "${cmd}"
+      python ${FUZZING_DIR}/start_fuzzer.py "${cmd}" "$@" &
+    else
       fx-command-help
-      exit 0
-      ;;
-    list)
-      python ${FUZZING_DIR}/list_fuzzers.py ${flags}
-      ;;
-    check)
-      python ${FUZZING_DIR}/check_fuzzer.py ${flags}
-      ;;
-    start)
-      python ${FUZZING_DIR}/start_fuzzer.py ${flags} "$@" &
-      ;;
-    stop)
-      python ${FUZZING_DIR}/stop_fuzzer.py ${flags}
-      ;;
-    repro)
-      python ${FUZZING_DIR}/repro_units.py ${flags} "$@"
-      ;;
-    corpus)
-      python ${FUZZING_DIR}/list_corpora.py ${flags}
-      ;;
-    fetch)
-      if [[ -d "$1" ]] ; then
-        flags="${flags} -c $1"
-      elif [[ -n "$1" ]] ; then
-        flags="${flags} -l $1"
-      fi
-      python ${FUZZING_DIR}/fetch_corpus.py ${flags}
-      ;;
-    merge)
-      python ${FUZZING_DIR}/merge_corpus.py ${flags} "$@"
-      ;;
-    store)
-      python ${FUZZING_DIR}/store_corpus.py ${flags}
-      ;;
-    *)
-      echo "Automatic mode disabled."
-      ;;
-  esac
-}
-
-main "$@"
+    fi
+    ;;
+esac

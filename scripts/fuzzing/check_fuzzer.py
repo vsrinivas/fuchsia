@@ -6,13 +6,14 @@
 import argparse
 import sys
 
+from lib.args import Args
 from lib.device import Device
 from lib.fuzzer import Fuzzer
 from lib.host import Host
 
 
 def main():
-  parser = Fuzzer.make_parser(
+  parser = Args.make_parser(
       description='Reports status for the fuzzer matching NAME if provided, ' +
       'or for all running fuzzers.  Status includes execution state, corpus ' +
       'size, and number of artifacts.',
@@ -44,7 +45,11 @@ def main():
       for artifact in artifacts[1:]:
         print('                  ' + artifact)
   if silent:
-    print('No fuzzers are running.  Use \'--name\' to check specific fuzzers.')
+    print(
+        'No fuzzers are running.  Include \'name\' to check specific fuzzers.')
+    return 1
+  else:
+    return 0
 
 
 if __name__ == '__main__':

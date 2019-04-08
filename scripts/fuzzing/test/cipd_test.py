@@ -9,6 +9,7 @@ import unittest
 import tempfile
 
 import test_env
+from lib.args import Args
 from lib.cipd import Cipd
 from lib.fuzzer import Fuzzer
 
@@ -20,15 +21,15 @@ class TestCipd(unittest.TestCase):
 
   def test_from_args(self):
     host = MockHost()
-    parser = Cipd.make_parser('description')
+    parser = Args.make_parser('description')
 
-    args = parser.parse_args(['--name', '1/3'])
+    args = parser.parse_args(['1/3'])
     cipd = Cipd.from_args(host, args)
     self.assertTrue(os.path.exists(cipd.root))
 
     tmp_dir = tempfile.mkdtemp()
     try:
-      args = parser.parse_args(['--name', '1/3', '--staging', tmp_dir])
+      args = parser.parse_args(['1/3', '--staging', tmp_dir])
       cipd = Cipd.from_args(host, args)
       self.assertEqual(tmp_dir, cipd.root)
     finally:
