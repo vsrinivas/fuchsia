@@ -36,26 +36,24 @@ use {
     crate::common::send_on_open_with_error,
     crate::directory::entry::{DirectoryEntry, EntryInfo},
     crate::file::{
-        connection::FileConnection, DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
-        DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES, DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
+        connection::{ConnectionState, FileConnection},
+        DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES, DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
+        DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
     },
     failure::Error,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
-        FileObject, FileRequest, NodeAttributes, NodeInfo, NodeMarker, DIRENT_TYPE_FILE,
-        INO_UNKNOWN, MODE_PROTECTION_MASK, MODE_TYPE_FILE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
+        FileRequest, NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_PROTECTION_MASK,
+        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE,
     },
-    fuchsia_zircon::{
-        sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
-        Status,
-    },
+    fuchsia_zircon::Status,
     futures::{
         future::FusedFuture,
         stream::{FuturesUnordered, StreamExt, StreamFuture},
         task::Waker,
         Future, Poll,
     },
-    std::{iter, marker::Unpin, mem, pin::Pin},
+    std::{marker::Unpin, mem, pin::Pin},
     void::Void,
 };
 
@@ -273,12 +271,6 @@ where
     connections: FuturesUnordered<StreamFuture<FileConnection>>,
 }
 
-/// Return type for PseudoFile::handle_request().
-enum ConnectionState {
-    Alive,
-    Closed,
-}
-
 impl<OnRead, OnWrite> PseudoFile<OnRead, OnWrite>
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status> + Send,
@@ -311,10 +303,12 @@ where
         if let Some(conn) = FileConnection::connect(
             parent_flags,
             flags,
+            self.protection_attributes,
             mode,
             server_end,
             self.on_read.is_some(),
             self.on_write.is_some(),
+            self.capacity,
             |flags| self.init_buffer(flags),
         ) {
             self.connections.push(conn);
@@ -329,86 +323,17 @@ where
         match req {
             FileRequest::Clone { flags, object, control_handle: _ } => {
                 self.add_connection(connection.flags, flags, 0, object);
+                Ok(ConnectionState::Alive)
             }
             FileRequest::Close { responder } => {
                 self.handle_close(connection, |status| responder.send(status.into_raw()))?;
-                return Ok(ConnectionState::Closed);
+                Ok(ConnectionState::Closed)
             }
-            FileRequest::Describe { responder } => {
-                let mut info = NodeInfo::File(FileObject { event: None });
-                responder.send(&mut info)?;
-            }
-            FileRequest::Sync { responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-            FileRequest::GetAttr { responder } => {
-                let mut attrs = NodeAttributes {
-                    mode: MODE_TYPE_FILE | self.protection_attributes,
-                    id: INO_UNKNOWN,
-                    content_size: 0,
-                    storage_size: 0,
-                    link_count: 1,
-                    creation_time: 0,
-                    modification_time: 0,
-                };
-                responder.send(ZX_OK, &mut attrs)?;
-            }
-            FileRequest::SetAttr { flags: _, attributes: _, responder } => {
-                // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
-                // modified through this call is OPEN_FLAG_APPEND, and it is not supported by the
-                // PseudoFile.
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-            FileRequest::Ioctl { opcode: _, max_out: _, handles: _, in_: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
-            }
-            FileRequest::Read { count, responder } => {
-                connection.handle_read(count, |status, content| {
-                    responder.send(status.into_raw(), content)
-                })?;
-            }
-            FileRequest::ReadAt { offset, count, responder } => {
-                connection.handle_read_at(offset, count, |status, content| {
-                    responder.send(status.into_raw(), content)
-                })?;
-            }
-            FileRequest::Write { data, responder } => {
-                connection.handle_write(data, self.capacity, |status, actual| {
-                    responder.send(status.into_raw(), actual)
-                })?;
-            }
-            FileRequest::WriteAt { offset, data, responder } => {
-                connection.handle_write_at(offset, data, self.capacity, |status, actual| {
-                    // Seems like our API is not really designed for 128 bit machines. If data
-                    // contains more than 16EB, we may not be returning the correct number here.
-                    responder.send(status.into_raw(), actual as u64)
-                })?;
-            }
-            FileRequest::Seek { offset, start, responder } => {
-                connection.handle_seek(offset, self.capacity, start, |status, offset| {
-                    responder.send(status.into_raw(), offset)
-                })?;
-            }
-            FileRequest::Truncate { length, responder } => {
-                connection.handle_truncate(length, self.capacity, |status| {
-                    responder.send(status.into_raw())
-                })?;
-            }
-            FileRequest::GetFlags { responder } => {
-                responder.send(ZX_OK, connection.flags)?;
-            }
-            FileRequest::SetFlags { flags: _, responder } => {
-                // TODO: Support OPEN_FLAG_APPEND?  It is the only flag that is allowed to be set
-                // via this call according to the io.fidl.  It would be nice to have that
-                // explicitly encoded in the API instead, I guess.
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-            FileRequest::GetBuffer { flags: _, responder } => {
-                // There is no backing VMO.
-                responder.send(ZX_OK, None)?;
+            _ => {
+                connection.handle_request(req)?;
+                Ok(ConnectionState::Alive)
             }
         }
-        Ok(ConnectionState::Alive)
     }
 
     fn init_buffer(&mut self, flags: u32) -> Result<(Vec<u8>, bool), Status> {
@@ -548,10 +473,12 @@ mod tests {
             OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_async as fasync,
+        fuchsia_zircon::sys::ZX_OK,
         futures::channel::{mpsc, oneshot},
         futures::{future::LocalFutureObj, select, Future, FutureExt, SinkExt},
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IWGRP, S_IWOTH, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR},
         pin_utils::pin_mut,
+        std::iter,
         std::sync::atomic::{AtomicUsize, Ordering},
     };
 

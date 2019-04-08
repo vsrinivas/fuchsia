@@ -7,12 +7,17 @@
 use {
     crate::common::send_on_open_with_error,
     crate::file::common::new_connection_validate_flags,
+    failure::Error,
     fidl::{encoding::OutOfLine, endpoints::ServerEnd},
     fidl_fuchsia_io::{
-        FileMarker, FileObject, FileRequestStream, NodeInfo, NodeMarker, SeekOrigin,
-        OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        FileMarker, FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo,
+        NodeMarker, SeekOrigin, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
+        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{
+        sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
+        Status,
+    },
     futures::{
         stream::{Stream, StreamExt, StreamFuture},
         task::Waker,
@@ -21,6 +26,12 @@ use {
     std::{io::Write, iter, pin::Pin},
 };
 
+/// return type for handle_request functions
+pub enum ConnectionState {
+    Alive,
+    Closed,
+}
+
 /// FileConnection represents the buffered connection of a single client to a pseudo file. It
 /// implements Stream, which proxies file requests from the contained FileRequestStream.
 pub struct FileConnection {
@@ -28,6 +39,11 @@ pub struct FileConnection {
     /// Either the "flags" value passed into [`DirectoryEntry::open()`], or the "flags" value
     /// passed into FileRequest::Clone().
     pub flags: u32,
+    /// MODE_PROTECTION_MASK attributes returned by this file through io.fild:Node::GetAttr.  They
+    /// have no meaning for the file operation itself, but may have consequences to the POSIX
+    /// emulation layer - for example, it makes sense to remove the read flags from a read-only
+    /// file.  This field should only have set bits in the MODE_PROTECTION_MASK part.
+    protection_attributes: u32,
     /// Seek position.  Next byte to be read or written within the buffer.  This might be beyond
     /// the current size of buffer, matching POSIX:
     ///
@@ -40,6 +56,11 @@ pub struct FileConnection {
     // Should we need to port to a 128 bit platform, there are static assertions in the code that
     // would fail.
     seek: u64,
+    /// Maximum size the buffer that holds the value written into this file can grow to.  When the
+    /// buffer is populated by a the [`on_read`] handler, this restriction is not enforced.  The
+    /// maximum size of the buffer passed into [`on_write`] is the maximum of the size of the
+    /// buffer that [`on_read`] have returnd and this value.
+    capacity: u64,
     /// Per connection buffer.  See module documentation for details.
     pub buffer: Vec<u8>,
     /// Starts as false, and causes the [`on_write()`] to be called when the connection is closed
@@ -58,10 +79,12 @@ impl FileConnection {
     pub fn connect<InitBuffer>(
         parent_flags: u32,
         flags: u32,
+        protection_attributes: u32,
         mode: u32,
         server_end: ServerEnd<NodeMarker>,
         readable: bool,
         writable: bool,
+        capacity: u64,
         init_buffer: InitBuffer,
     ) -> Option<StreamFuture<FileConnection>>
     where
@@ -102,8 +125,106 @@ impl FileConnection {
             }
         }
 
-        let conn = (FileConnection { requests, flags, seek: 0, buffer, was_written }).into_future();
+        let conn = (FileConnection {
+            requests,
+            flags,
+            protection_attributes,
+            seek: 0,
+            capacity,
+            buffer,
+            was_written,
+        })
+        .into_future();
         Some(conn)
+    }
+
+    /// Handle a [`FileRequest`]. This function essentially provides a default implementation for
+    /// basic file operations that operate on the connection-specific buffer. It is expected that
+    /// implementations of pseudo files implement their own wrapping handle_request function that
+    /// implements [`FileRequest::Clone`] and [`FileRequest::Close`], as these can't be implemented
+    /// by the connection.
+    pub fn handle_request(&mut self, req: FileRequest) -> Result<(), Error> {
+        match req {
+            // these two should be handled by the file-specific handle_request functions
+            FileRequest::Clone { flags: _, object: _, control_handle: _ } => {
+                panic!("Bug: Clone can't be handled by the connection object");
+            }
+            FileRequest::Close { responder: _ } => {
+                panic!("Bug: Close can't be handled by the connection object");
+            }
+            FileRequest::Describe { responder } => {
+                let mut info = NodeInfo::File(FileObject { event: None });
+                responder.send(&mut info)?;
+            }
+            FileRequest::Sync { responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            FileRequest::GetAttr { responder } => {
+                let mut attrs = NodeAttributes {
+                    mode: MODE_TYPE_FILE | self.protection_attributes,
+                    id: INO_UNKNOWN,
+                    content_size: 0,
+                    storage_size: 0,
+                    link_count: 1,
+                    creation_time: 0,
+                    modification_time: 0,
+                };
+                responder.send(ZX_OK, &mut attrs)?;
+            }
+            FileRequest::SetAttr { flags: _, attributes: _, responder } => {
+                // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
+                // modified through this call is OPEN_FLAG_APPEND, and it is not supported by the
+                // PseudoFile.
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            FileRequest::Ioctl { opcode: _, max_out: _, handles: _, in_: _, responder } => {
+                responder.send(ZX_ERR_NOT_SUPPORTED, &mut iter::empty(), &mut iter::empty())?;
+            }
+            FileRequest::Read { count, responder } => {
+                self.handle_read(count, |status, content| {
+                    responder.send(status.into_raw(), content)
+                })?;
+            }
+            FileRequest::ReadAt { offset, count, responder } => {
+                self.handle_read_at(offset, count, |status, content| {
+                    responder.send(status.into_raw(), content)
+                })?;
+            }
+            FileRequest::Write { data, responder } => {
+                self.handle_write(data, |status, actual| {
+                    responder.send(status.into_raw(), actual)
+                })?;
+            }
+            FileRequest::WriteAt { offset, data, responder } => {
+                self.handle_write_at(offset, data, |status, actual| {
+                    // Seems like our API is not really designed for 128 bit machines. If data
+                    // contains more than 16EB, we may not be returning the correct number here.
+                    responder.send(status.into_raw(), actual as u64)
+                })?;
+            }
+            FileRequest::Seek { offset, start, responder } => {
+                self.handle_seek(offset, start, |status, offset| {
+                    responder.send(status.into_raw(), offset)
+                })?;
+            }
+            FileRequest::Truncate { length, responder } => {
+                self.handle_truncate(length, |status| responder.send(status.into_raw()))?;
+            }
+            FileRequest::GetFlags { responder } => {
+                responder.send(ZX_OK, self.flags)?;
+            }
+            FileRequest::SetFlags { flags: _, responder } => {
+                // TODO: Support OPEN_FLAG_APPEND?  It is the only flag that is allowed to be set
+                // via this call according to the io.fidl.  It would be nice to have that
+                // explicitly encoded in the API instead, I guess.
+                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            FileRequest::GetBuffer { flags: _, responder } => {
+                // There is no backing VMO.
+                responder.send(ZX_OK, None)?;
+            }
+        }
+        Ok(())
     }
 
     /// Read `count` bytes at the current seek value from the buffer associated with the connection.
@@ -112,7 +233,7 @@ impl FileConnection {
     /// the responder with an empty iterator, and this function returns `Ok(())`. If the responder
     /// returns an error when used (including in the successful case), this function returns that
     /// error directly.
-    pub fn handle_read<R>(&mut self, count: u64, responder: R) -> Result<(), fidl::Error>
+    fn handle_read<R>(&mut self, count: u64, responder: R) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status, &mut ExactSizeIterator<Item = u8>) -> Result<(), fidl::Error>,
     {
@@ -126,7 +247,7 @@ impl FileConnection {
     /// the responder with an empty iterator, and this function returns `Ok(0)`. If the responder
     /// returns an error when used (including in the successful case), this function returns that
     /// error directly.
-    pub fn handle_read_at<R>(
+    fn handle_read_at<R>(
         &mut self,
         offset: u64,
         mut count: u64,
@@ -167,16 +288,11 @@ impl FileConnection {
     /// funtion forwards that error back to the caller.
     // Strictly speaking, we do not need to use a callback here, but we do need it in the on_read()
     // case above, so, for consistency, on_write() has the same interface.
-    pub fn handle_write<R>(
-        &mut self,
-        content: Vec<u8>,
-        capacity: u64,
-        responder: R,
-    ) -> Result<(), fidl::Error>
+    fn handle_write<R>(&mut self, content: Vec<u8>, responder: R) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status, u64) -> Result<(), fidl::Error>,
     {
-        let actual = self.handle_write_at(self.seek, content, capacity, responder)?;
+        let actual = self.handle_write_at(self.seek, content, responder)?;
         self.seek += actual;
         Ok(())
     }
@@ -188,11 +304,10 @@ impl FileConnection {
     /// this funtion forwards that error back to the caller.
     // Strictly speaking, we do not need to use a callback here, but we do need it in the on_read()
     // case above, so, for consistency, on_write() has the same interface.
-    pub fn handle_write_at<R>(
+    fn handle_write_at<R>(
         &mut self,
         offset: u64,
         content: Vec<u8>,
-        capacity: u64,
         responder: R,
     ) -> Result<u64, fidl::Error>
     where
@@ -204,7 +319,7 @@ impl FileConnection {
         }
 
         assert_eq_size!(usize, u64);
-        let effective_capacity = core::cmp::max(self.buffer.len() as u64, capacity);
+        let effective_capacity = core::cmp::max(self.buffer.len() as u64, self.capacity);
 
         if offset >= effective_capacity {
             responder(Status::OUT_OF_RANGE, 0)?;
@@ -238,10 +353,9 @@ impl FileConnection {
     /// seek position is sent to `responder` and this function returns `Ok(())`. On an error, the
     /// error code is sent to `responder`, and this function returns `Ok(())`. If the responder
     /// returns an error, this funtion forwards that error back to the caller.
-    pub fn handle_seek<R>(
+    fn handle_seek<R>(
         &mut self,
         offset: i64,
-        capacity: u64,
         start: SeekOrigin,
         responder: R,
     ) -> Result<(), fidl::Error>
@@ -262,7 +376,7 @@ impl FileConnection {
             }
         };
 
-        let effective_capacity = core::cmp::max(self.buffer.len() as i128, capacity as i128);
+        let effective_capacity = core::cmp::max(self.buffer.len() as i128, self.capacity as i128);
         if new_seek < 0 || new_seek >= effective_capacity {
             responder(Status::OUT_OF_RANGE, self.seek)?;
             return Ok(());
@@ -279,12 +393,7 @@ impl FileConnection {
     /// [`Status::OK`] is sent to `responder`. On an error, the error code is sent to `responder`,
     /// and this function returns `Ok(())`. If the responder returns an error, this funtion forwards
     /// that error back to the caller.
-    pub fn handle_truncate<R>(
-        &mut self,
-        length: u64,
-        capacity: u64,
-        responder: R,
-    ) -> Result<(), fidl::Error>
+    fn handle_truncate<R>(&mut self, length: u64, responder: R) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
@@ -292,7 +401,7 @@ impl FileConnection {
             return responder(Status::ACCESS_DENIED);
         }
 
-        let effective_capacity = core::cmp::max(self.buffer.len() as u64, capacity);
+        let effective_capacity = core::cmp::max(self.buffer.len() as u64, self.capacity);
 
         if length > effective_capacity {
             return responder(Status::OUT_OF_RANGE);
@@ -305,7 +414,7 @@ impl FileConnection {
         // We are not supposed to touch the seek position during truncation, but the
         // effective_capacity may be smaller now - in which case we do need to move the seek
         // position.
-        let new_effective_capacity = core::cmp::max(length, capacity);
+        let new_effective_capacity = core::cmp::max(length, self.capacity);
         self.seek = core::cmp::min(self.seek, new_effective_capacity);
 
         responder(Status::OK)
