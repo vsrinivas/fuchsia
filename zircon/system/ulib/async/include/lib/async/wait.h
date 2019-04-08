@@ -71,4 +71,4 @@ zx_status_t async_cancel_wait(async_dispatcher_t* dispatcher, async_wait_t* wait
 
 __END_CDECLS
 
-#endif  // LIB_ASYNC_WAIT_H_
+#endif // LIB_ASYNC_WAIT_H_
