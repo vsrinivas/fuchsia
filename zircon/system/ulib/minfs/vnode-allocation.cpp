@@ -36,19 +36,32 @@ blk_t PendingAllocationData::GetLongestRange() const {
 }
 
 bool PendingAllocationData::SetPending(blk_t block_num, bool allocated) {
-    if (!allocated) {
-        new_blocks_++;
-    }
-
     size_t initial_bits = block_map_.num_bits();
     ZX_ASSERT(block_map_.SetOne(block_num) == ZX_OK);
-    return block_map_.num_bits() > initial_bits;
+    if (block_map_.num_bits() > initial_bits) {
+        if (!allocated) {
+            new_blocks_++;
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
-bool PendingAllocationData::ClearPending(blk_t block_num) {
+bool PendingAllocationData::ClearPending(blk_t block_num, bool allocated) {
     size_t initial_bits = block_map_.num_bits();
     ZX_ASSERT(block_map_.ClearOne(block_num) == ZX_OK);
-    return block_map_.num_bits() < initial_bits;
+
+    if (block_map_.num_bits() < initial_bits) {
+        if (!allocated) {
+            ZX_ASSERT(new_blocks_ > 0);
+            new_blocks_--;
+        }
+        return true;
+    }
+
+    return false;
 }
 
 } // namespace minfs

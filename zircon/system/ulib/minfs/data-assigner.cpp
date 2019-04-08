@@ -16,18 +16,13 @@ DataTask::DataTask(SyncCallback callback) : vnode_or_callback_(std::move(callbac
 }
 
 void DataTask::Process(TransactionalFs* minfs) {
-    fbl::unique_ptr<Transaction> transaction;
-    ZX_ASSERT(minfs->BeginTransaction(0, 0, &transaction) == ZX_OK);
-
     if (auto vnode = std::get_if<fbl::RefPtr<DataAssignableVnode>>(&vnode_or_callback_)) {
-        (*vnode)->AllocateData(transaction.get());
+        (*vnode)->AllocateData();
     } else if (auto callback = std::get_if<SyncCallback>(&vnode_or_callback_)) {
-        transaction->GetWork()->SetSyncCallback(std::move(*callback));
+        minfs->EnqueueCallback(std::move(*callback));
     } else {
         ZX_ASSERT(false);
     }
-
-    minfs->CommitTransaction(std::move(transaction));
 }
 
 DataBlockAssigner::~DataBlockAssigner() {

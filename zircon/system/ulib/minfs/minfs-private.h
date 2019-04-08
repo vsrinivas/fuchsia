@@ -132,10 +132,19 @@ class TransactionalFs {
 public:
 #ifdef __Fuchsia__
     virtual fbl::Mutex* GetLock() const = 0;
+
+    void EnqueueCallback(SyncCallback callback) {
+         fbl::unique_ptr<WritebackWork> work(new WritebackWork(GetMutableBcache()));
+         work->SetSyncCallback(std::move(callback));
+         EnqueueWork(std::move(work));
+    }
 #endif
     // Begin a transaction with |reserve_inodes| inodes and |reserve_blocks| blocks reserved.
     virtual zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
                                          fbl::unique_ptr<Transaction>* transaction_out) = 0;
+
+    // Enqueues a WritebackWork for processing.
+    virtual zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) = 0;
 
     // Complete a transaction by persisting its contents to disk.
     virtual zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) = 0;
@@ -220,8 +229,7 @@ public:
     zx_status_t BeginTransaction(size_t reserve_inodes, size_t reserve_blocks,
                                  fbl::unique_ptr<Transaction>* transaction) __WARN_UNUSED_RESULT;
 
-    // Enqueues a WritebackWork to the WritebackQueue.
-    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) __WARN_UNUSED_RESULT;
+    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) final __WARN_UNUSED_RESULT;
 
     void EnqueueAllocation(fbl::unique_ptr<Transaction> transaction);
 
@@ -348,6 +356,10 @@ private:
 #endif
 
     // Global information about the filesystem.
+    // While Allocator is thread-safe, it is recommended that a valid Transaction object be held
+    // while any metadata fields are modified until the time they are enqueued for writeback. This
+    // is to avoid modifications from other threads potentially jeopardizing the metadata integrity
+    // before it is safely persisted to disk.
     fbl::unique_ptr<SuperblockManager> sb_;
     fbl::unique_ptr<Allocator> block_allocator_;
     fbl::unique_ptr<InodeManager> inodes_;
@@ -401,10 +413,13 @@ public:
     virtual void fbl_recycle() = 0;
 
 #ifdef __Fuchsia__
-    // Using the provided |transaction|, allocate all pending data blocks.
-    virtual void AllocateData(Transaction* transaction) = 0;
+    // Allocate all data blocks pending in |allocation_state_|.
+    virtual void AllocateData() = 0;
 
 protected:
+    // Describes pending allocation data for the vnode. This should only be accessed while a valid
+    // Transaction object is held, as it may be modified asynchronously by the DataBlockAssigner
+    // thread.
     PendingAllocationData allocation_state_;
 #endif
 };
@@ -456,8 +471,8 @@ public:
     zx_status_t ToggleMetrics(bool enabled, fidl_txn_t* transaction);
     zx_status_t GetAllocatedRegions(fidl_txn_t* transaction) const;
 
-    // Using the provided |transaction|, allocate all data blocks pending in |allocation_state_|.
-    void AllocateData(Transaction* transaction) final;
+    // Allocate all data blocks pending in |allocation_state_|.
+    void AllocateData() final;
 #endif
 
     Minfs* Vfs() { return fs_; }
@@ -782,6 +797,8 @@ private:
     // Next kMinfsDoublyIndirect blocks                           - doubly indirect blocks
     // Next kMinfsDoublyIndirect * kMinfsDirectPerIndirect blocks - indirect blocks pointed to
     //                                                              by doubly indirect blocks
+    // DataBlockAssigner may modify this field asynchronously, so a valid Transaction object must
+    // be held before accessing it.
     fbl::unique_ptr<fzl::ResizeableVmoMapper> vmo_indirect_;
 
     fuchsia_hardware_block_VmoID vmoid_{};
@@ -792,6 +809,9 @@ private:
 #endif
 
     ino_t ino_{};
+
+    // DataBlockAssigner may modify this field asynchronously, so a valid Transaction object must
+    // be held before accessing it.
     Inode inode_{};
 
     // This field tracks the current number of file descriptors with

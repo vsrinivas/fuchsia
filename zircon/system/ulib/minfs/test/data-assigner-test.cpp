@@ -27,10 +27,16 @@ public:
                                    nullptr, out);
     }
 
-    zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> state) {
+    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work) final {
         BlockIfPaused();
-        ZX_ASSERT(state != nullptr);
-        state->GetWork()->MarkCompleted(ZX_OK);
+        work->MarkCompleted(ZX_OK);
+        return ZX_OK;
+    }
+
+    zx_status_t CommitTransaction(fbl::unique_ptr<Transaction> transaction) {
+        BlockIfPaused();
+        ZX_ASSERT(transaction != nullptr);
+        transaction->GetWork()->MarkCompleted(ZX_OK);
         return ZX_OK;
     }
 
@@ -79,7 +85,7 @@ private:
 // Mock Vnode class to be used in DataBlockAssigner tests.
 class MockVnodeMinfs : public DataAssignableVnode, public fbl::Recyclable<MockVnodeMinfs> {
 public:
-    MockVnodeMinfs() = default;
+    MockVnodeMinfs(MockMinfs* minfs) : minfs_(minfs), recycled_(nullptr) {}
     ~MockVnodeMinfs() = default;
 
     void fbl_recycle() final {
@@ -93,8 +99,11 @@ public:
         *recycled_ = false;
     }
 
-    void AllocateData(Transaction* transaction) final {
+    void AllocateData() final {
+        fbl::unique_ptr<Transaction> transaction;
+        ZX_ASSERT(minfs_->BeginTransaction(0, 0, &transaction) == ZX_OK);
         reserved_ = 0;
+        ZX_ASSERT(minfs_->CommitTransaction(std::move(transaction)) == ZX_OK);
     }
 
     void Reserve(blk_t count) {
@@ -111,6 +120,7 @@ public:
     }
 
 private:
+    MockMinfs* minfs_;
     blk_t reserved_ = 0;
     bool* recycled_;
 };
@@ -139,7 +149,7 @@ public:
 
     // Generates a new Vnode with |reserve_count| blocks reserved.
     void GenerateVnode(uint32_t reserve_count, fbl::RefPtr<MockVnodeMinfs>* out) {
-        fbl::RefPtr<MockVnodeMinfs> mock_vnode = fbl::AdoptRef(new MockVnodeMinfs());
+        fbl::RefPtr<MockVnodeMinfs> mock_vnode = fbl::AdoptRef(new MockVnodeMinfs(&minfs_));
         ASSERT_NO_FATAL_FAILURES(mock_vnode->Reserve(reserve_count));
         *out = std::move(mock_vnode);
     }
@@ -200,7 +210,10 @@ private:
 };
 
 TEST(DataAssignerTest, CheckVnodeRecycled) {
-    fbl::RefPtr<MockVnodeMinfs> mock_vnode = fbl::AdoptRef(new MockVnodeMinfs());
+    fbl::unique_ptr<DataAssignerTest> test;
+    ASSERT_OK(DataAssignerTest::Create(&test));
+    fbl::RefPtr<MockVnodeMinfs> mock_vnode;
+    ASSERT_NO_FATAL_FAILURES(test->GenerateVnode(1, &mock_vnode));
     fbl::RefPtr<DataAssignableVnode> data_vnode = fbl::WrapRefPtr(mock_vnode.get());
     bool recycled;
     mock_vnode->SetRecycled(&recycled);

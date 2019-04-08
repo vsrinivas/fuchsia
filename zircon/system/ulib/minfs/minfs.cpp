@@ -310,9 +310,9 @@ zx_status_t Minfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work) {
 }
 
 #ifdef __Fuchsia__
-void Minfs::EnqueueAllocation(fbl::unique_ptr<Transaction> state) {
-    fbl::RefPtr<DataAssignableVnode> vnode = state->TakeTargetVnode();
-    state.reset();
+void Minfs::EnqueueAllocation(fbl::unique_ptr<Transaction> transaction) {
+    fbl::RefPtr<DataAssignableVnode> vnode = transaction->TakeTargetVnode();
+    transaction.reset();
     if (vnode != nullptr) {
         assigner_->EnqueueAllocation(std::move(vnode));
     }

@@ -51,9 +51,10 @@ public:
     // set in the map initially).
     bool SetPending(blk_t block_num, bool allocated);
 
-    // Clears |block_num| from the block_map_.
-    // Returns true if the block_num was cleared from the map (i.e., it was set in the map initially).
-    bool ClearPending(blk_t block_num);
+    // Clears |block_num| from the block_map_. |allocated| indicates whether the block at
+    // |block_num| was previously allocated. Returns true if the block_num was cleared from the map
+    // (i.e., it was set in the map initially).
+    bool ClearPending(blk_t block_num, bool allocated);
 
     // Returns the count of pending blocks which are not already allocated.
     blk_t GetNewPending() const { return new_blocks_; }

@@ -236,8 +236,10 @@ bool TestZippedMaxfiles(void) {
     END_TEST;
 }
 
+// Disk must be at least this large to exceed the maximum transaction limit during delayed data
+// allocation on non-FVM-backed Minfs partitions.
 const test_disk_t disk = {
-    .block_count = 1LLU << 17,
+    .block_count = 1LLU << 20,
     .block_size = 1LLU << 9,
     .slice_size = 1LLU << 23,
 };

@@ -408,7 +408,7 @@ zx_status_t VnodeMinfs::BlockOpDirect(Transaction* transaction, DirectArgs* para
                 // Remove this block from the pending allocation map in case its set so we do not
                 // proceed to allocate a new block.
                 blk_t rel_bno = params->GetRelativeBlock() + i;
-                allocation_state_.ClearPending(rel_bno);
+                allocation_state_.ClearPending(rel_bno, assigned);
 #endif
                 break;
             }
@@ -419,7 +419,7 @@ zx_status_t VnodeMinfs::BlockOpDirect(Transaction* transaction, DirectArgs* para
                 if (!IsDirectory()) {
                     new_block = false;
                     blk_t rel_bno = params->GetRelativeBlock() + i;
-                    allocation_state_.SetPending(rel_bno, new_block);
+                    allocation_state_.SetPending(rel_bno, assigned);
                 }
 #endif
                 if (new_block) {
@@ -441,7 +441,8 @@ zx_status_t VnodeMinfs::BlockOpDirect(Transaction* transaction, DirectArgs* para
 
                 // For copy-on-write, swap the block out if it's a data block.
                 fs_->BlockSwap(transaction, bno, &bno);
-                bool cleared = allocation_state_.ClearPending(rel_bno);
+                bool cleared = allocation_state_.ClearPending(rel_bno, assigned);
+
                 ZX_DEBUG_ASSERT(cleared);
                 params->SetBno(i, bno);
                 break;
@@ -1180,88 +1181,123 @@ void VnodeMinfs::fbl_recycle() {
 }
 
 #ifdef __Fuchsia__
-void VnodeMinfs::AllocateData(Transaction* transaction) {
+void VnodeMinfs::AllocateData() {
     ZX_DEBUG_ASSERT(!IsDirectory());
 
-    blk_t expected_blocks = allocation_state_.GetTotalPending();
+    // Calculate the maximum number of data blocks we can update within one transaction. This is
+    // the smallest between half the capacity of the writeback buffer, and the number of direct
+    // blocks needed to touch the maximum allowed number of indirect blocks.
+    const uint32_t max_direct_blocks =
+        kMinfsDirect + (kMinfsDirectPerIndirect * fs_->Limits().GetMaximumMetaDataBlocks());
+    const uint32_t max_writeback_blocks = static_cast<blk_t>(fs_->WritebackCapacity() / 2);
+    const uint32_t max_blocks = fbl::min(max_direct_blocks, max_writeback_blocks);
 
-    if (expected_blocks == 0) {
-        // Return early if we have not found any data blocks to update. Since we may have pending
-        // reservations from an expected update, reset the allocation state. This may happen if the
-        // same block range is allocated and de-allocated (e.g. written and truncated) before the
-        // state is resolved.
-        allocation_state_.Reset(inode_.size);
-        return;
-    }
-
-    // Transfer reserved blocks from the vnode's allocation state to the current Transaction.
-    transaction->MergeBlockPromise(allocation_state_.GetPromise());
-
-    // Write to data blocks must be done in a separate transaction from the metadata updates to
-    // ensure that all user data goes out to disk before associated metadata.
-    transaction->InitDataWork();
-
-    // Find the longest allocation block range so we can create the swap bno array up front.
-    blk_t max_block_count = allocation_state_.GetLongestRange();
-    ZX_DEBUG_ASSERT(max_block_count > 0);
-    fbl::Array<blk_t> block_numbers(new blk_t[max_block_count], max_block_count);
-    zx_status_t status;
+    fbl::Array<blk_t> allocated_blocks(new blk_t[max_blocks], max_blocks);
 
     // Iterate through all relative block ranges and acquire absolute blocks for each of them.
     while (true) {
-        // Track start/count locally since BlocksSwap will modify the allocation_state_ block map.
-        blk_t start_block_num, block_count;
-        status = allocation_state_.GetNextRange(&start_block_num, &block_count);
+        fbl::unique_ptr<Transaction> transaction;
+        ZX_ASSERT(fs_->BeginTransaction(0, 0, &transaction) == ZX_OK);
 
-        if (status != ZX_OK) {
+        blk_t expected_blocks = allocation_state_.GetTotalPending();
+
+        if (expected_blocks == 0) {
+            // Verify that the recorded inode size has been updated to the correct size.
+            ZX_ASSERT(inode_.size == allocation_state_.GetNodeSize());
+
+            // Since we may have pending reservations from an expected update, reset the allocation
+            // state. This may happen if the same block range is allocated and de-allocated (e.g.
+            // written and truncated) before the state is resolved.
+            allocation_state_.Reset(inode_.size);
+            ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
+
+            // Stop processing if we have not found any data blocks to update.
             break;
         }
 
-        ZX_DEBUG_ASSERT(block_count <= max_block_count);
+        blk_t bno_start, bno_count;
+        ZX_ASSERT(allocation_state_.GetNextRange(&bno_start, &bno_count) == ZX_OK);
 
-        // Allow at most half the WritebackBuffer to be enqueued at a time.
-        const blk_t max_block_count = static_cast<blk_t>(fs_->WritebackCapacity() / 2);
+        // Transfer reserved blocks from the vnode's allocation state to the current Transaction.
+        transaction->MergeBlockPromise(allocation_state_.GetPromise());
 
-        if (transaction->GetDataWork()->BlockCount() + block_count > max_block_count) {
-            block_count =
-                max_block_count - static_cast<blk_t>(transaction->GetDataWork()->BlockCount());
+        // Write to data blocks must be done in a separate transaction from the metadata updates to
+        // ensure that all user data goes out to disk before associated metadata.
+        transaction->InitDataWork();
+
+        if (bno_start + bno_count >= kMinfsDirect) {
+            // Calculate the number of pre-indirect blocks. These will not factor into the number
+            // of indirect blocks being touched, and can be added back at the end.
+            blk_t pre_indirect = bno_start < kMinfsDirect ? kMinfsDirect - bno_start : 0;
+
+            // First direct block managed by an indirect block.
+            blk_t indirect_start = bno_start - fbl::min(bno_start, kMinfsDirect);
+
+            // Index of that direct block within the indirect block.
+            blk_t indirect_index = indirect_start % kMinfsDirectPerIndirect;
+
+            // The maximum number of direct blocks that can be updated without touching beyond the
+            // maximum indirect blocks. This includes any direct blocks prior to the indirect
+            // section.
+            blk_t relative_direct_max = max_direct_blocks - kMinfsDirect - indirect_index
+                                        + pre_indirect;
+
+            // Determine actual max count between the indirect and writeback constraints.
+            blk_t max_count = fbl::min(relative_direct_max, max_writeback_blocks);
+
+            // Subtract direct blocks contained within the same indirect block before our starting
+            // point to ensure that we do not go beyond the maximum number of indirect blocks.
+            bno_count = fbl::min(bno_count, max_count);
         }
+
+        ZX_ASSERT(bno_count <= max_blocks);
 
         // Since we reserved enough space ahead of time, this should not fail.
-        status = BlocksSwap(transaction, start_block_num, block_count, &block_numbers[0]);
-        ZX_DEBUG_ASSERT(status == ZX_OK);
+        ZX_ASSERT(BlocksSwap(transaction.get(), bno_start, bno_count, &allocated_blocks[0])
+                  == ZX_OK);
 
-        // Enqueue each block one at a time, as they may not be contiguous on disk.
-        for (blk_t i = 0; i < block_count; i++) {
-            transaction->GetDataWork()->Enqueue(vmo_.get(), start_block_num + i,
-                                          block_numbers[i] + fs_->Info().dat_block, 1);
+        // Enqueue each data block one at a time, as they may not be contiguous on disk.
+        for (blk_t i = 0; i < bno_count; i++) {
+            transaction->GetDataWork()->Enqueue(vmo_.get(), bno_start + i,
+                                                allocated_blocks[i] + fs_->Info().dat_block, 1);
         }
 
-        // If we have exceeded the maximum number of blocks, send the currently
-        // enqueued transactions to the buffer and start a new transaction.
-        if (transaction->GetDataWork()->BlockCount() >= max_block_count) {
-            transaction->GetDataWork()->PinVnode(fbl::WrapRefPtr(this));
-            // Enqueue may fail if we are in a readonly state, but we should continue resolving all
-            // pending allocations.
-            status = fs_->EnqueueWork(transaction->RemoveDataWork());
-            transaction->InitDataWork();
+        transaction->GetDataWork()->PinVnode(fbl::WrapRefPtr(this));
+        // Enqueue may fail if we are in a readonly state, but we should continue resolving all
+        // pending allocations.
+        __UNUSED zx_status_t status = fs_->EnqueueWork(transaction->RemoveDataWork());
+
+        // Calculate the last byte of the (currently) written file, and verify that we are not
+        // updating past the end of the allocated node size.
+        blk_t last_byte = (bno_start + bno_count) * kMinfsBlockSize;
+        ZX_ASSERT(last_byte <= fbl::round_up(allocation_state_.GetNodeSize(), kMinfsBlockSize));
+
+        if (last_byte > inode_.size && last_byte < allocation_state_.GetNodeSize()) {
+            // If we have written past the end of the recorded size but have not yet reached the
+            // allocated size, update the recorded size to the last byte written.
+            inode_.size = last_byte;
+        } else if (allocation_state_.GetNodeSize() <= last_byte) {
+            // If we have just written to the allocated inode size, update the recorded size
+            // accordingly.
+            inode_.size = allocation_state_.GetNodeSize();
         }
+
+        ValidateVmoTail(inode_.size);
+        InodeSync(transaction->GetWork(), kMxFsSyncMtime);
+
+        // In the future we could resolve on a per state (i.e. promise) basis, but since swaps are
+        // currently only made within a single thread, for now it is okay to resolve everything.
+        transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
+        transaction->Resolve();
+
+        // Return remaining reserved blocks back to the allocation state.
+        blk_t bno_remaining = expected_blocks - bno_count;
+        transaction->SplitBlockPromise(bno_remaining, allocation_state_.GetPromise());
+
+        // Commit may fail if we are in a readonly state, but we should continue resolving all
+        // pending allocations.
+        status = fs_->CommitTransaction(std::move(transaction));
     }
-
-    transaction->GetDataWork()->PinVnode(fbl::WrapRefPtr(this));
-    status = fs_->EnqueueWork(transaction->RemoveDataWork());
-
-    // Update on-disk size to the reserved size.
-    ResolveSize();
-    InodeSync(transaction->GetWork(), kMxFsSyncMtime);
-
-    // In the future we could resolve on a per transaction (i.e. promise) basis, but since swaps are
-    // currently only made within a single thread, for now it is okay to resolve everything.
-    transaction->GetWork()->PinVnode(fbl::WrapRefPtr(this));
-    transaction->Resolve();
-
-    allocation_state_.Reset(inode_.size);
-    ZX_DEBUG_ASSERT(allocation_state_.IsEmpty());
 }
 #endif // __Fuchsia__
 
