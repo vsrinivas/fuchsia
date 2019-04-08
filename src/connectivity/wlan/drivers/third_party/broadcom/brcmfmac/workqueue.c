@@ -39,7 +39,7 @@ typedef void (*work_handler_t)(struct work_struct* work);
 // name: May be used for debugging.
 // thread: The worker thread.
 struct workqueue_struct {
-    // TODO(NET-780): Convert to C++ and add locking annotations.
+    // TODO(WLAN-737): Convert to C++ and add locking annotations.
     mtx_t lock;
     list_node_t list;
     struct work_struct* current;

@@ -95,7 +95,7 @@ void brcmf_enable_tx(struct net_device* dev) {
     brcmf_dbg(INFO, " * * NOTE: brcmf_enable_tx called. Enable TX. (Was netif_wake_queue)");
 }
 
-// This is a kill-flies-with-sledgehammers, just-get-it-working version; TODO(NET-805) for
+// This is a kill-flies-with-sledgehammers, just-get-it-working version; TODO(WLAN-730) for
 // efficiency.
 
 bool brcmf_test_and_set_bit_in_array(size_t bit_number, atomic_ulong* addr) {

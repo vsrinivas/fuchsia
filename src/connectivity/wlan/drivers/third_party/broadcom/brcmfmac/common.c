@@ -437,7 +437,7 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
         settings->bus.sdio.oob_irq_supported = true;    // TODO(cphoenix): Always?
     }
 #ifdef USE_PLATFORM_DATA
-// TODO(NET-831): Do we need to do this?
+// TODO(WLAN-731): Do we need to do this?
 struct brcmfmac_pd_device {
     uint32_t bus_type;
     uint32_t id;

@@ -3760,7 +3760,7 @@ static void* brcmf_sdio_watchdog_thread(void* data) {
         if (atomic_load(&bus->watchdog_should_stop)) {
             break;
         }
-        // TODO(NET-1495): Put back the freezer-related calls once 1495 is resolved.
+        // TODO(NET-744): Put back the freezer-related calls once 744 is resolved.
         // The polling workaround tangles up the freezer logic, and freezing is just related
         // to power-saving. I don't know what would happen if we tried to freeze when
         // watchdog wasn't active, so I'm commenting them out for now.

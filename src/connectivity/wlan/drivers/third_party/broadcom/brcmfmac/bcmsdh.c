@@ -139,7 +139,7 @@ zx_status_t brcmf_sdiod_intr_register(struct brcmf_sdio_dev* sdiodev) {
         // thrd_detach. Note that the thrd_ functions don't return zx_status_t; check for
         // thrd_success and maybe thrd_nomem. See zircon/third_party/ulib/musl/include/threads.h
         pdata->oob_irq_supported = true;
-        // TODO(NET-1495): Get interrupts working.
+        // TODO(WLAN-744): Get interrupts working.
         brcmf_dbg(TEMP, "* * * NOT starting oob_irqhandler! Depending on watchdog.* * *");
         //thrd_create_with_name(&sdiodev->isr_thread, brcmf_sdiod_oob_irqhandler, sdiodev,
         //                      "brcmf-sdio-isr");

@@ -596,7 +596,7 @@ static void brcmf_net_detach(struct net_device* ndev, bool rtnl_locked) {
     struct brcmf_device* device = ndev_to_dev(ndev);
 
     // TODO(cphoenix): Make sure devices are removed and memory is freed properly. This code
-    // is probably wrong. See NET-988 comment #3.
+    // is probably wrong. See WLAN-1057.
     brcmf_free_net_device_vif(ndev);
     brcmf_free_net_device(ndev);
     if (device->phy_zxdev != NULL) {
@@ -1034,7 +1034,7 @@ zx_status_t brcmf_bus_started(struct brcmf_device* dev) {
     brcmf_dbg(TRACE, "Enter");
 
     /* add primary networking interface */
-    // TODO(NET-974): Name uniqueness
+    // TODO(WLAN-740): Name uniqueness
     err = brcmf_add_if(drvr, 0, 0, false, "wlan", NULL, &ifp);
     if (err != ZX_OK) {
         return err;

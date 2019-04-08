@@ -234,7 +234,7 @@ static inline zx_status_t brcmf_netbuf_grow_realloc(struct brcmf_netbuf* netbuf,
         netbuf->allocated_buffer = new_buffer;
     }
     if (head != 0) {
-        // TODO(NET-988): (for efficiency):
+        // TODO(WLAN-1071): (for efficiency):
         // 1) Do we have to copy the whole buffer, or just allocated_buffer..data+len?
         // 2) Is it quicker to realloc and do a second copy, or malloc/free and trash extra cache?
         memmove(netbuf->allocated_buffer + head, netbuf->allocated_buffer, netbuf->allocated_size);
