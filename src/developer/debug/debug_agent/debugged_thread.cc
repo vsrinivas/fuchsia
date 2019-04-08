@@ -19,11 +19,39 @@
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
+
+namespace {
+
+// TODO(donosoc): Move this to a more generic place (probably shared) where it
+//                can be used by other code.
+const char* ExceptionTypeToString(uint32_t type) {
+  switch (type) {
+    case ZX_EXCP_GENERAL:
+      return "ZX_EXCP_GENERAL";
+    case ZX_EXCP_FATAL_PAGE_FAULT:
+      return "ZX_EXCP_FATAL_PAGE_FAULT";
+    case ZX_EXCP_UNDEFINED_INSTRUCTION:
+      return "ZX_EXCP_UNDEFINED_INSTRUCTION";
+    case ZX_EXCP_SW_BREAKPOINT:
+      return "ZX_EXCP_SW_BREAKPOINT";
+    case ZX_EXCP_HW_BREAKPOINT:
+      return "ZX_EXCP_HW_BREAKPOINT";
+    case ZX_EXCP_UNALIGNED_ACCESS:
+      return "ZX_EXCP_UNALIGNED_ACCESS";
+    default:
+      break;
+  }
+
+  return "<unknown>";
+}
+
+}  // namespace
 
 DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
                                zx_koid_t koid, ThreadCreationOption option)
@@ -51,6 +79,10 @@ void DebuggedThread::OnException(uint32_t type) {
 
   debug_ipc::NotifyException notify;
   notify.type = arch::ArchProvider::Get().DecodeExceptionType(*this, type);
+
+  DEBUG_LOG(Thread) << "Thread " << koid_ << ": Received exception "
+                    << ExceptionTypeToString(type) << ", interpreted as "
+                    << debug_ipc::NotifyException::TypeToString(notify.type);
 
   if (current_breakpoint_) {
     // The current breakpoint is set only when stopped at a breakpoint or when

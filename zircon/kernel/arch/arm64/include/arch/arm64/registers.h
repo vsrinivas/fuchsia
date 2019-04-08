@@ -112,6 +112,7 @@ typedef struct arm64_debug_state {
     uint32_t dbgbcr;
     uint64_t dbgbvr;
   } hw_bps[ARM64_MAX_HW_BREAKPOINTS];
+  uint32_t esr;
   // TODO(donosoc): Do watchpoint integration.
 } arm64_debug_state_t;
 

@@ -153,6 +153,7 @@ zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_reg
         out->hw_bps[i].dbgbcr = thread->arch.debug_state.hw_bps[i].dbgbcr;
         out->hw_bps[i].dbgbvr = thread->arch.debug_state.hw_bps[i].dbgbvr;
     }
+    out->esr = thread->arch.debug_state.esr;
 
     return ZX_OK;
 }

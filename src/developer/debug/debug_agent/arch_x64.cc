@@ -231,13 +231,6 @@ uint64_t ArchProvider::BreakpointInstructionForHardwareExceptionAddress(
   return exception_addr;
 }
 
-uint64_t ArchProvider::NextInstructionForHardwareExceptionAddress(
-    uint64_t exception_addr) {
-  // Exception address is the one following the instruction that caused it,
-  // so nothing needs to be done.
-  return exception_addr;
-}
-
 debug_ipc::NotifyException::Type ArchProvider::DecodeExceptionType(
     const DebuggedThread& thread, uint32_t exception_type) {
   if (exception_type == ZX_EXCP_SW_BREAKPOINT) {
@@ -292,6 +285,10 @@ zx_status_t ArchProvider::InstallHWBreakpoint(zx::thread* thread,
 
 zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread,
                                                 uint64_t address) {
+  // TODO(donosoc): Will assume the thread is stopped. In order to make the
+  //                installation robust, we need to stop the thread (if it's not
+  //                currently stopped) and them resume it after the breakpoint
+  //                is installed.
   zx_thread_state_debug_regs_t debug_regs;
   zx_status_t status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS,
                                           &debug_regs, sizeof(debug_regs));
@@ -309,13 +306,13 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread,
 zx_status_t ArchProvider::InstallWatchpoint(zx::thread*,
                                             const debug_ipc::AddressRange&) {
   FXL_NOTIMPLEMENTED();
-  return ZX_OK;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t ArchProvider::UninstallWatchpoint(zx::thread*,
                                               const debug_ipc::AddressRange&) {
   FXL_NOTIMPLEMENTED();
-  return ZX_OK;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 }  // namespace arch

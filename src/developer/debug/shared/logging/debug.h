@@ -23,6 +23,9 @@ bool IsDebugModeActive();
 // Log Categories --------------------------------------------------------------
 
 enum class LogCategory {
+  // Associated with the lifetime of breakpoints.
+  kBreakpoint,
+
   // Associated with job events and filtering.
   kJob,
 
@@ -36,10 +39,16 @@ enum class LogCategory {
   // Log the received and sent remote API calls.
   kRemoteAPI,
 
+  // Associated with logging on tests.
+  kTest,
+
   // Will output all TIME_BLOCK() entries.
   // This is mostly used to profile how much time the overall functionality
   // of the debugger is taking.
   kTiming,
+
+  // Associated with threads (exception, state, etc.)
+  kThread,
 
   // All the previous categories are enabled.
   // Log statements in this category will always be outputting if debug logging

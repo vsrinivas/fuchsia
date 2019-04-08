@@ -135,6 +135,9 @@ typedef struct zx_thread_state_debug_regs {
     // Number of HW Watchpoints in the platform.
     // Will be set on read and ignored on write.
     uint8_t hw_wps_count;
+
+    // The esr value since the last exception.
+    uint32_t esr;
 } zx_thread_state_debug_regs_t;
 
 #endif

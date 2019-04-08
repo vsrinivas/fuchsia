@@ -5,11 +5,23 @@
 #pragma once
 
 #include <zircon/syscalls/exception.h>
+#include <lib/zx/thread.h>
 
 #include "src/developer/debug/debug_agent/arch_arm64.h"
+#include "src/developer/debug/ipc/protocol.h"
 
 namespace debug_agent {
 namespace arch {
+
+// The ESR register holds information about the last exception in the form of:
+// |31      26|25|24                              0|
+// |    EC    |IL|             ISS                 |
+//
+// Where:
+// - EC: Exception class field (what exception ocurred).
+// - IL: Instruction length (whether the trap was 16-bit of 32-bit instruction).
+// - ISS: Instruction Specific Syndrome. The value is specific to each EC.
+inline uint32_t Arm64ExtractECFromESR(uint32_t esr) { return esr >> 26; }
 
 // Helpers for defining arm64 specific behavior.
 
@@ -23,8 +35,15 @@ zx_status_t SetupHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 // ZX_ERR_OUT_OF_RANGE will be returned.
 zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 
+// Decodes the ESR provided by zircon for this exception.
+debug_ipc::NotifyException::Type DecodeESR(uint32_t esr);
+
+zx_status_t ReadDebugRegs(const zx::thread&, zx_thread_state_debug_regs_t*);
+zx_status_t WriteDebugRegs(const zx::thread&,
+                           const zx_thread_state_debug_regs&);
+
 // Useful function for debugging to keep around.
-void PrintDebugRegisters(const zx_thread_state_debug_regs_t&);
+std::string DebugRegistersToString(const zx_thread_state_debug_regs_t&);
 
 }  // namespace arch
 }  // namespace debug_agent

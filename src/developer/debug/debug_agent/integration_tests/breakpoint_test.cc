@@ -9,6 +9,7 @@
 #include "src/developer/debug/debug_agent/integration_tests/mock_stream_backend.h"
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
 #include "src/developer/debug/ipc/message_reader.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/zx_status.h"
 
@@ -198,6 +199,8 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
     BreakpointStreamBackend mock_stream_backend(loop);
     RemoteAPI* remote_api = mock_stream_backend.remote_api();
 
+    DEBUG_LOG(Test) << "Launching binary.";
+
     // We launch the test binary.
     debug_ipc::LaunchRequest launch_request = {};
     launch_request.inferior_type = debug_ipc::InferiorType::kBinary;
@@ -219,6 +222,9 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
     // We get the offset of the loaded function within the process space.
     uint64_t module_base = mock_stream_backend.so_test_base_addr();
     uint64_t module_function = module_base + symbol_offset;
+
+    DEBUG_LOG(Test) << "Setting breakpoint at 0x" << std::hex
+                    << module_function;
 
     // We add a breakpoint in that address.
     constexpr uint32_t kBreakpointId = 1234u;
@@ -246,6 +252,8 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
     // notification.
     loop->Run();
 
+    DEBUG_LOG(Test) << "Hit breakpoint.";
+
     // We should have received an exception now.
     debug_ipc::NotifyException exception = mock_stream_backend.exception();
     EXPECT_EQ(exception.process_koid, launch_reply.process_id);
@@ -261,6 +269,8 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
     // Resume the thread again.
     remote_api->OnResume(resume_request, &resume_reply);
     loop->Run();
+
+    DEBUG_LOG(Test) << "Verifyint thread exited correctly.";
 
     // We verify that the thread exited.
     auto& thread_notification = mock_stream_backend.thread_notification();

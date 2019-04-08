@@ -20,7 +20,10 @@ bool kDebugMode = false;
 // This marks the moment SetDebugMode was called.
 fxl::TimePoint kStartTime = fxl::TimePoint::Now();
 
-std::set<LogCategory> active_categories;
+std::set<LogCategory>& GetLogCategories() {
+  static std::set<LogCategory> categories = {LogCategory::kAll};
+  return categories;
+}
 
 }  // namespace
 
@@ -33,10 +36,12 @@ double SecondsSinceStart() {
 }
 
 const std::set<LogCategory>& GetActiveLogCategories() {
-  return active_categories;
+  return GetLogCategories();
 }
 
 void SetLogCategories(std::initializer_list<LogCategory> categories) {
+  auto& active_categories = GetLogCategories();
+  active_categories.clear();
   for (LogCategory category : categories) {
     active_categories.insert(category);
   }
@@ -46,6 +51,7 @@ bool IsLogCategoryActive(LogCategory category) {
   if (category == LogCategory::kAll)
     return true;
 
+  const auto& active_categories = GetLogCategories();
   if (active_categories.count(LogCategory::kAll) > 0)
     return true;
 
@@ -54,19 +60,31 @@ bool IsLogCategoryActive(LogCategory category) {
 
 std::string LogPreamble(LogCategory category, const FileLineFunction& origin) {
   auto basename = files::GetBaseName(origin.file());
-  return fxl::StringPrintf("[%.3fs][%8s][%s:%d][%s]", SecondsSinceStart(),
+  return fxl::StringPrintf("[%.3fs][%10s][%s:%d][%s]", SecondsSinceStart(),
                            LogCategoryToString(category), basename.c_str(),
                            origin.line(), origin.function().c_str());
 }
 
 const char* LogCategoryToString(LogCategory category) {
   switch (category) {
-    case LogCategory::kJob: return "Job";
-    case LogCategory::kMessageLoop: return "Loop";
-    case LogCategory::kProcess: return "Process";
-    case LogCategory::kRemoteAPI: return "DebugAPI";
-    case LogCategory::kTiming: return "Timing";
-    case LogCategory::kAll: return "All";
+    case LogCategory::kBreakpoint:
+      return "Breakpoint";
+    case LogCategory::kJob:
+      return "Job";
+    case LogCategory::kMessageLoop:
+      return "Loop";
+    case LogCategory::kProcess:
+      return "Process";
+    case LogCategory::kRemoteAPI:
+      return "DebugAPI";
+    case LogCategory::kTiming:
+      return "Timing";
+    case LogCategory::kTest:
+      return "Test";
+    case LogCategory::kThread:
+      return "Thread";
+    case LogCategory::kAll:
+      return "All";
   }
 
   FXL_NOTREACHED();

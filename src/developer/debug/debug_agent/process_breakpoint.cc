@@ -12,6 +12,7 @@
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
+#include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
 
@@ -397,6 +398,9 @@ zx_status_t ProcessBreakpoint::HardwareBreakpoint::Install(
     return ZX_OK;
   }
 
+  DEBUG_LOG(Breakpoint) << "Installing HW breakpoint on thread " << thread_id
+                        << " on address 0x" << std::hex << address;
+
   zx_status_t res =
       arch::ArchProvider::Get().InstallHWBreakpoint(&thread->thread(), address);
   // TODO: Do we want to remove all other locations when one fails?
@@ -433,6 +437,9 @@ zx_status_t ProcessBreakpoint::HardwareBreakpoint::Uninstall(
     // TODO: What to do in this case?
     return ZX_OK;
   }
+
+  DEBUG_LOG(Breakpoint) << "Removing HW breakpoint on thread " << thread_id
+                        << " on address 0x" << std::hex << address;
 
   zx_status_t res = arch::ArchProvider::Get().UninstallHWBreakpoint(
       &thread->thread(), address);

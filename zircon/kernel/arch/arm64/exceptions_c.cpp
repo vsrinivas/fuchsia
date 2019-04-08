@@ -478,6 +478,7 @@ void arch_install_context_regs(thread_t* thread, const arch_exception_context_t*
     if (context->frame) {
         DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
         thread->arch.suspended_general_regs = context->frame;
+        thread->arch.debug_state.esr = context->esr;
     }
 }
 

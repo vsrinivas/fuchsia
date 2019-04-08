@@ -8,6 +8,8 @@
 
 namespace debug_ipc {
 
+constexpr uint64_t kMaxArm64HWBreakpoints = 16;
+
 // Overall functionality for interpreting arm64 specific information.
 // This is defined in debug_ipc because both the client and the debug agent
 // need to access this information.

@@ -79,10 +79,6 @@ class ArchProvider {
   uint64_t BreakpointInstructionForHardwareExceptionAddress(
       uint64_t exception_addr);
 
-  // Returns the instruction address to be executed after continuing from the
-  // hardware debug exception.
-  uint64_t NextInstructionForHardwareExceptionAddress(uint64_t exception_addr);
-
   // Currently HW notifications can mean both a single step or a hardware debug
   // register exception. We need platform-specific queries to figure which one
   // is it.
