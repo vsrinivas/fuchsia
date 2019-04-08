@@ -3,10 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{mac::MacAddr, mac::ReasonCode, unaligned_view::UnalignedView},
+    crate::{
+        buffer_reader::BufferReader, mac::MacAddr, mac::ReasonCode, unaligned_view::UnalignedView,
+    },
     failure::{ensure, format_err, Error},
+    std::mem::size_of,
     wlan_bitfield::bitfield,
-    zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned},
+    zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
 macro_rules! pub_const {
@@ -548,4 +551,201 @@ pub struct PreqView<B> {
     pub originator_external_addr: Option<LayoutVerified<B, MacAddr>>,
     pub middle: LayoutVerified<B, PreqMiddle>,
     pub targets: LayoutVerified<B, [PreqPerTarget]>,
+}
+
+// Fixed-length fields of the PERR element that precede the variable-length
+// per-destination fields.
+// IEEE Std 802.11-2016, 9.4.2.115
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+pub struct PerrHeader {
+    pub element_ttl: u8,
+    pub num_destinations: u8,
+}
+
+// IEEE Std 802.11-2016, 9.4.2.115, Figure 9-483
+#[bitfield(
+    0..=5   _, // reserved
+    6       addr_ext,
+    7       _, // reserved
+)]
+#[repr(C)]
+#[derive(Clone, Copy, AsBytes, FromBytes, Unaligned)]
+pub struct PerrDestinationFlags(pub u8);
+
+// Fixed-length fields of the per-destination chunk of the PERR element
+// that precede the optional "Destination External Address" field.
+// IEEE Std 802.11-2016, 9.4.2.115
+#[repr(C, packed)]
+#[derive(Clone, Copy, Debug, AsBytes, FromBytes, Unaligned)]
+pub struct PerrDestinationHeader {
+    pub flags: PerrDestinationFlags,
+    pub dest_addr: MacAddr,
+    pub hwmp_seqno: u32,
+}
+
+pub struct PerrDestinationView<B> {
+    pub header: LayoutVerified<B, PerrDestinationHeader>,
+    pub ext_addr: Option<LayoutVerified<B, MacAddr>>,
+    pub reason_code: UnalignedView<B, ReasonCode>,
+}
+
+pub struct PerrView<B> {
+    pub header: LayoutVerified<B, PerrHeader>,
+    pub destinations: PerrDestinationListView<B>,
+}
+
+pub struct PerrDestinationListView<B>(pub B);
+
+impl<B: ByteSlice> IntoIterator for PerrDestinationListView<B> {
+    type Item = PerrDestinationView<B>;
+    type IntoIter = PerrDestinationIter<B>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        PerrDestinationIter(BufferReader::new(self.0))
+    }
+}
+
+impl<'a, B: ByteSlice> IntoIterator for &'a PerrDestinationListView<B> {
+    type Item = PerrDestinationView<&'a [u8]>;
+    type IntoIter = PerrDestinationIter<&'a [u8]>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        PerrDestinationIter(BufferReader::new(&self.0[..]))
+    }
+}
+
+impl<B: ByteSlice> PerrDestinationListView<B> {
+    pub fn iter(&self) -> PerrDestinationIter<&[u8]> {
+        self.into_iter()
+    }
+}
+
+pub struct PerrDestinationIter<B>(BufferReader<B>);
+
+impl<B: ByteSlice> Iterator for PerrDestinationIter<B> {
+    type Item = PerrDestinationView<B>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let have_ext_addr = self.0.peek::<PerrDestinationHeader>()?.flags.addr_ext();
+        let dest_len = size_of::<PerrDestinationHeader>()
+            + if have_ext_addr { size_of::<MacAddr>() } else { 0 }
+            + size_of::<ReasonCode>();
+        if self.0.bytes_remaining() < dest_len {
+            None
+        } else {
+            // Unwraps are OK because we checked the length above
+            let header = self.0.read().unwrap();
+            let ext_addr = if have_ext_addr { Some(self.0.read().unwrap()) } else { None };
+            let reason_code = self.0.read_unaligned().unwrap();
+            Some(PerrDestinationView { header, ext_addr, reason_code })
+        }
+    }
+}
+
+impl<B: ByteSlice> PerrDestinationIter<B> {
+    pub fn bytes_remaining(&self) -> usize {
+        self.0.bytes_remaining()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn perr_iter_empty() {
+        let empty: [u8; 0] = [];
+        let mut iter = PerrDestinationListView(&empty[..]).into_iter();
+        assert!(iter.next().is_none());
+        assert_eq!(0, iter.bytes_remaining());
+    }
+
+    #[test]
+    fn perr_iter_two_destinations() {
+        #[rustfmt::skip]
+        let data = [
+            // Destination 1
+            0x40, // flags: address extension
+            0x10, 0x20, 0x30, 0x40, 0x50, 0x60, // dest addr
+            0x11, 0x22, 0x33, 0x44, // HWMP seqno
+            0x1a, 0x2a, 0x3a, 0x4a, 0x5a, 0x6a,  // ext addr
+            0x55, 0x66, // reason code
+            // Destination 2
+            0, // flags
+            0xa0, 0xb0, 0xc0, 0xd0, 0xe0, 0xf0, // dest addr
+            0x77, 0x88, 0x99, 0xaa, // HWMP seqno
+            0xbb, 0xcc, // reason code
+        ];
+        let mut iter = PerrDestinationListView(&data[..]).into_iter();
+        assert!(iter.bytes_remaining() > 0);
+
+        {
+            let target = iter.next().expect("expected first target");
+            assert_eq!(0x44332211, { target.header.hwmp_seqno });
+            let ext_addr = target.ext_addr.expect("expected external addr");
+            assert_eq!([0x1a, 0x2a, 0x3a, 0x4a, 0x5a, 0x6a], *ext_addr);
+            assert_eq!(0x6655, target.reason_code.get().0);
+        }
+
+        assert!(iter.bytes_remaining() > 0);
+
+        {
+            let target = iter.next().expect("expected second target");
+            assert_eq!(0xaa998877, { target.header.hwmp_seqno });
+            assert!(target.ext_addr.is_none());
+            assert_eq!(0xccbb, target.reason_code.get().0);
+        }
+
+        assert_eq!(0, iter.bytes_remaining());
+        assert!(iter.next().is_none());
+        assert_eq!(0, iter.bytes_remaining());
+    }
+
+    #[test]
+    fn perr_iter_too_short_for_header() {
+        #[rustfmt::skip]
+        let data = [
+            0x00, // flags: no address extension
+            0x10, 0x20, 0x30, 0x40, 0x50, 0x60, // dest addr
+            0x11, 0x22, 0x33, // one byte missing from HWMP seqno
+        ];
+        let mut iter = PerrDestinationListView(&data[..]).into_iter();
+        assert_eq!(data.len(), iter.bytes_remaining());
+        assert!(iter.next().is_none());
+        assert_eq!(data.len(), iter.bytes_remaining());
+    }
+
+    #[test]
+    fn perr_iter_too_short_for_ext_addr() {
+        #[rustfmt::skip]
+        let data = [
+            // Destination 1
+            0x40, // flags: address extension
+            0x10, 0x20, 0x30, 0x40, 0x50, 0x60, // dest addr
+            0x11, 0x22, 0x33, 0x44, // HWMP seqno
+            0x1a, 0x2a, 0x3a, 0x4a, 0x5a, // one byte missing from ext addr
+        ];
+        let mut iter = PerrDestinationListView(&data[..]).into_iter();
+        assert_eq!(data.len(), iter.bytes_remaining());
+        assert!(iter.next().is_none());
+        assert_eq!(data.len(), iter.bytes_remaining());
+    }
+
+    #[test]
+    fn perr_iter_too_short_for_reason_code() {
+        #[rustfmt::skip]
+        let data = [
+            // Target 1
+            0x40, // flags: address extension
+            0x10, 0x20, 0x30, 0x40, 0x50, 0x60, // dest addr
+            0x11, 0x22, 0x33, 0x44, // HWMP seqno
+            0x1a, 0x2a, 0x3a, 0x4a, 0x5a, 0x6a,  // ext addr
+            0x55, // one byte missing from the reason code
+        ];
+        let mut iter = PerrDestinationListView(&data[..]).into_iter();
+        assert_eq!(data.len(), iter.bytes_remaining());
+        assert!(iter.next().is_none());
+        assert_eq!(data.len(), iter.bytes_remaining());
+    }
 }

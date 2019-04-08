@@ -9,6 +9,7 @@ use {
         error::FrameWriteError,
         mac::{MacAddr, ReasonCode},
     },
+    std::mem::size_of,
     zerocopy::AsBytes,
 };
 
@@ -154,6 +155,65 @@ pub fn write_preq<B: Appendable>(
         targets.len()
     );
     write_ie!(buf, id::PREQ, header, option_as_bytes(originator_external_addr), middle, targets)
+}
+
+/// Note that this does not write a full PERR IE, but only a single destination.
+/// The idea is to first use this function to write destinations to a separate buffer,
+/// and then pass that buffer to `write_perr()`:
+///
+/// ```
+/// let mut destinations_buf = [0u8; PERR_MAX_DESTINATIONS * PERR_MAX_DESTINATION_SIZE];
+/// let mut destinations = BufferWriter::new(&mut destinations_buf[..]);
+/// let mut num_destinations = 0;
+///
+/// for each destination {
+///     let dest_header = PerrDestinationHeader { ... };
+///     write_perr_destination(&mut destinations, &dest_header,
+///                            ReasonCode::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION)?;
+///     num_destinations += 1;
+/// }
+///
+/// let perr_header = PerrHeader { element_ttl: ..., num_destinations };
+/// write_perr(&mut buf, &perr_header, destinations.into_written())?;
+/// ```
+///
+pub fn write_perr_destination<B: Appendable>(
+    buf: &mut B,
+    header: &PerrDestinationHeader,
+    ext_addr: Option<&MacAddr>,
+    reason_code: ReasonCode,
+) -> Result<(), FrameWriteError> {
+    if header.flags.addr_ext() {
+        validate!(
+            ext_addr.is_some(),
+            "Address extension flag is set in PERR destination but no external address supplied"
+        );
+    } else {
+        validate!(
+            ext_addr.is_none(),
+            "External address is present but address extension flag is not set in PERR destination"
+        );
+    }
+    let len = size_of::<PerrDestinationHeader>()
+        + option_as_bytes(ext_addr).len()
+        + size_of::<ReasonCode>();
+    if !buf.can_append(len) {
+        return Err(FrameWriteError::BufferTooSmall);
+    }
+    buf.append_value(header).expect("expected enough room for PERR destination header");
+    if let Some(addr) = ext_addr {
+        buf.append_value(addr).expect("expected enough room for PERR external address");
+    }
+    buf.append_value(&reason_code).expect("expected enough room for PERR reason code");
+    Ok(())
+}
+
+pub fn write_perr<B: Appendable>(
+    buf: &mut B,
+    header: &PerrHeader,
+    destinations: &[u8],
+) -> Result<(), FrameWriteError> {
+    write_ie!(buf, id::PERR, header, destinations)
 }
 
 fn option_as_bytes<T: AsBytes>(opt: Option<&T>) -> &[u8] {
@@ -518,5 +578,106 @@ mod tests {
             )),
             write_preq(&mut vec![], &header, None, &middle, &[])
         );
+    }
+
+    #[test]
+    pub fn perr_destination_ok_no_ext() {
+        let mut buf = vec![];
+        let header = PerrDestinationHeader {
+            flags: PerrDestinationFlags(0),
+            dest_addr: [1, 2, 3, 4, 5, 6],
+            hwmp_seqno: 0x0a090807,
+        };
+        write_perr_destination(&mut buf, &header, None, ReasonCode(0x0c0b)).expect("expected Ok");
+        #[rustfmt::skip]
+        let expected = [
+            0, // flags
+            1, 2, 3, 4, 5, 6, // dest addr
+            0x7, 0x8, 0x9, 0xa, // hwmp seqno
+            0xb, 0xc, // reason code
+        ];
+        assert_eq!(&expected[..], &buf[..]);
+    }
+
+    #[test]
+    pub fn perr_destination_ok_with_ext() {
+        let mut buf = vec![];
+        let header = PerrDestinationHeader {
+            flags: PerrDestinationFlags(0).with_addr_ext(true),
+            dest_addr: [1, 2, 3, 4, 5, 6],
+            hwmp_seqno: 0x0a090807,
+        };
+        let ext_addr = [0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10];
+        write_perr_destination(&mut buf, &header, Some(&ext_addr), ReasonCode(0x1211))
+            .expect("expected Ok");
+        #[rustfmt::skip]
+        let expected = [
+            0x40, // flags
+            1, 2, 3, 4, 5, 6, // dest addr
+            0x7, 0x8, 0x9, 0xa, // hwmp seqno
+            0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, // ext addr
+            0x11, 0x12, // reason code
+        ];
+        assert_eq!(&expected[..], &buf[..]);
+    }
+
+    #[test]
+    pub fn perr_destination_addr_ext_flag_set_but_no_addr_given() {
+        let header = PerrDestinationHeader {
+            flags: PerrDestinationFlags(0).with_addr_ext(true),
+            dest_addr: [1, 2, 3, 4, 5, 6],
+            hwmp_seqno: 0x0a090807,
+        };
+        assert_eq!(
+            Err(FrameWriteError::new_invalid_data(
+                "Address extension flag is set in PERR destination but no external address supplied"
+                    .to_string()
+            )),
+            write_perr_destination(&mut vec![], &header, None, ReasonCode(0x1211))
+        );
+    }
+
+    #[test]
+    pub fn perr_destination_ext_addr_given_but_no_flag_set() {
+        let header = PerrDestinationHeader {
+            flags: PerrDestinationFlags(0),
+            dest_addr: [1, 2, 3, 4, 5, 6],
+            hwmp_seqno: 0x0a090807,
+        };
+        let ext_addr = [0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10];
+        assert_eq!(
+            Err(FrameWriteError::new_invalid_data(
+                "External address is present but address extension flag \
+                 is not set in PERR destination"
+                    .to_string()
+            )),
+            write_perr_destination(&mut vec![], &header, Some(&ext_addr), ReasonCode(0x1211))
+        );
+    }
+
+    #[test]
+    pub fn perr_destination_buffer_too_small() {
+        let mut buf = [0u8; 12]; // 1 byte short
+        let mut writer = BufferWriter::new(&mut buf[..]);
+        let header = PerrDestinationHeader {
+            flags: PerrDestinationFlags(0),
+            dest_addr: [1, 2, 3, 4, 5, 6],
+            hwmp_seqno: 0x0a090807,
+        };
+        assert_eq!(
+            Err(FrameWriteError::BufferTooSmall),
+            write_perr_destination(&mut writer, &header, None, ReasonCode(0x0c0b))
+        );
+        // Assert that nothing has been written
+        assert_eq!(0, writer.bytes_written());
+    }
+
+    #[test]
+    pub fn perr() {
+        let header = PerrHeader { element_ttl: 11, num_destinations: 7 };
+        let mut buf = vec![];
+        write_perr(&mut buf, &header, &[1, 2, 3]).expect("expected Ok");
+        let expected = [132, 5, 11, 7, 1, 2, 3];
+        assert_eq!(&expected[..], &buf[..]);
     }
 }

@@ -146,6 +146,15 @@ pub fn parse_preq<B: ByteSlice>(raw_body: B) -> FrameParseResult<PreqView<B>> {
     Ok(PreqView { header, originator_external_addr, middle, targets })
 }
 
+pub fn parse_perr<B: ByteSlice>(raw_body: B) -> FrameParseResult<PerrView<B>> {
+    let mut reader = BufferReader::new(raw_body);
+    let header = reader
+        .read::<PerrHeader>()
+        .ok_or(FrameParseError::new("Element body is too short to include a PERR header"))?;
+    let destinations = PerrDestinationListView(reader.into_remaining());
+    Ok(PerrView { header, destinations })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -660,5 +669,32 @@ mod tests {
         ];
         let err = parse_preq(&data[..]).err().expect("expected Err");
         assert_eq!("Extra bytes at the end of the PREQ element", err.debug_message());
+    }
+
+    #[test]
+    pub fn perr_ok() {
+        #[rustfmt::skip]
+        let data = [
+            11, // TTL
+            1, // number of destinations
+            // Destination 1
+            0, // flags
+            0xa0, 0xb0, 0xc0, 0xd0, 0xe0, 0xf0, // dest addr
+            0x77, 0x88, 0x99, 0xaa, // HWMP seqno
+            0xbb, 0xcc, // reason code
+        ];
+        let r = parse_perr(&data[..]).expect("expected Ok");
+        assert_eq!(11, r.header.element_ttl);
+
+        let destinations = r.destinations.iter().collect::<Vec<_>>();
+        assert_eq!(1, destinations.len());
+        assert_eq!(0xaa998877, { destinations[0].header.hwmp_seqno });
+    }
+
+    #[test]
+    pub fn perr_too_short_for_header() {
+        let data = [11];
+        let err = parse_perr(&data[..]).err().expect("expected Err");
+        assert_eq!("Element body is too short to include a PERR header", err.debug_message());
     }
 }

@@ -14,3 +14,4 @@ pub const EXT_SUPPORTED_RATES: Id = Id(50);
 pub const HT_OPERATION: Id = Id(61);
 pub const MESH_PEERING_MGMT: Id = Id(117);
 pub const PREQ: Id = Id(130);
+pub const PERR: Id = Id(132);
