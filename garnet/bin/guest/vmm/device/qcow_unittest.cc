@@ -4,12 +4,11 @@
 
 #include "garnet/bin/guest/vmm/device/qcow.h"
 
-#include <sys/stat.h>
-
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/logging.h>
+#include <sys/stat.h>
 
 #include "garnet/bin/guest/vmm/device/qcow_test_data.h"
 
@@ -164,6 +163,13 @@ TEST_F(QcowTest, V2IgnoreExtendedAttributes) {
   EXPECT_EQ(0u, file_.header().autoclear_features);
   EXPECT_EQ(4u, file_.header().refcount_order);
   EXPECT_EQ(72u, file_.header().header_length);
+}
+
+TEST_F(QcowTest, RejectInvalidL1Size) {
+  QcowHeader header = kDefaultHeaderV2;
+  header.l1_size = 0;
+  WriteQcowHeader(header);
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, Load());
 }
 
 TEST_F(QcowTest, V3Load) {

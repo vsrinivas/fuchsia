@@ -4,14 +4,13 @@
 
 #include "garnet/bin/guest/vmm/device/qcow.h"
 
+#include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <fcntl.h>
+#include <src/lib/fxl/logging.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
-
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-#include <src/lib/fxl/logging.h>
 
 // Implementation based on the spec located at:
 //
@@ -53,6 +52,13 @@ class QcowFile::LookupTable {
 
     auto io_guard = fbl::MakeRefCounted<IoGuard>(std::move(callback));
     uint32_t l1_size = header.l1_size;
+    if (l1_size < l1_size_) {
+      FXL_LOG(ERROR)
+          << "Invalid QCOW header: L1 table is too small. Image size requires "
+          << l1_size_ << " entries but the header specifies " << l1_size << ".";
+      io_guard->SetStatus(ZX_ERR_INVALID_ARGS);
+      return;
+    }
     std::vector<L1Entry> l1_entries(l1_size);
     auto l1_entries_ptr = l1_entries.data();
     size_t l2_size = 1 << (header.cluster_bits - 3);

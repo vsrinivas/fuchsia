@@ -8,17 +8,16 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <limits.h>
 #include <src/lib/fxl/arraysize.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <limits.h>
 #include <stdlib.h>
-#include <string>
+#include <string.h>
 
 #include "garnet/bin/guest/vmm/device/block.h"
 #include "garnet/bin/guest/vmm/device/qcow.h"
 #include "garnet/bin/guest/vmm/device/qcow_test_data.h"
-
 #include "guest_test.h"
 
 using namespace qcow_test_data;
@@ -209,15 +208,13 @@ using RawGuestTypes = ::testing::Types<
     VirtioBlockZirconGuest<fuchsia::guest::BlockMode::READ_WRITE,
                            fuchsia::guest::BlockFormat::RAW>,
     VirtioBlockZirconGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
+                           fuchsia::guest::BlockFormat::RAW>,
+    VirtioBlockDebianGuest<fuchsia::guest::BlockMode::READ_ONLY,
+                           fuchsia::guest::BlockFormat::RAW>,
+    VirtioBlockDebianGuest<fuchsia::guest::BlockMode::READ_WRITE,
+                           fuchsia::guest::BlockFormat::RAW>,
+    VirtioBlockDebianGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
                            fuchsia::guest::BlockFormat::RAW>>;
-    // TODO(FLK-142): Debian guest virtio-block are disabled until a flake is
-    // resolved.
-    // VirtioBlockDebianGuest<fuchsia::guest::BlockMode::READ_ONLY,
-    //                        fuchsia::guest::BlockFormat::RAW>,
-    // VirtioBlockDebianGuest<fuchsia::guest::BlockMode::READ_WRITE,
-    //                        fuchsia::guest::BlockFormat::RAW>,
-    // VirtioBlockDebianGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
-    //                        fuchsia::guest::BlockFormat::RAW>>;
 TYPED_TEST_SUITE(RawVirtioBlockGuestTest, RawGuestTypes);
 
 TYPED_TEST(RawVirtioBlockGuestTest, BlockDeviceExists) {
@@ -317,13 +314,11 @@ using QcowGuestTypes = ::testing::Types<
     VirtioBlockZirconGuest<fuchsia::guest::BlockMode::READ_ONLY,
                            fuchsia::guest::BlockFormat::QCOW>,
     VirtioBlockZirconGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
+                           fuchsia::guest::BlockFormat::QCOW>,
+    VirtioBlockDebianGuest<fuchsia::guest::BlockMode::READ_ONLY,
+                           fuchsia::guest::BlockFormat::QCOW>,
+    VirtioBlockDebianGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
                            fuchsia::guest::BlockFormat::QCOW>>;
-    // TODO(FLK-142): Debian guest virtio-block are disabled until a flake is
-    // resolved.
-    // VirtioBlockDebianGuest<fuchsia::guest::BlockMode::READ_ONLY,
-    //                        fuchsia::guest::BlockFormat::QCOW>,
-    // VirtioBlockDebianGuest<fuchsia::guest::BlockMode::VOLATILE_WRITE,
-    //                        fuchsia::guest::BlockFormat::QCOW>>;
 TYPED_TEST_SUITE(QcowVirtioBlockGuestTest, QcowGuestTypes);
 
 TYPED_TEST(QcowVirtioBlockGuestTest, BlockDeviceExists) {
