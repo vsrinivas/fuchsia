@@ -619,7 +619,6 @@ static int ahci_watchdog_thread(void* arg) {
     ahci_device_t* dev = (ahci_device_t*)arg;
     for (;;) {
         bool idle = true;
-        zx_time_t now = zx_clock_get_monotonic();
         for (int i = 0; i < AHCI_MAX_PORTS; i++) {
             ahci_port_t* port = &dev->ports[i];
             if (!ahci_port_valid(dev, i)) {
@@ -627,10 +626,15 @@ static int ahci_watchdog_thread(void* arg) {
             }
 
             mtx_lock(&port->lock);
+            zx_time_t now = zx_clock_get_monotonic();
             uint32_t pending = port->running & ~port->completed;
+            sata_txn_t* failed_txn[AHCI_MAX_COMMANDS];
+            static_assert(AHCI_MAX_COMMANDS >= 32,
+                          "Failed TXN insufficiently sized to handle all commmand");
             while (pending) {
                 idle = false;
                 unsigned slot = 32 - __builtin_clz(pending) - 1;
+                failed_txn[slot] = NULL;
                 sata_txn_t* txn = port->commands[slot];
                 pending &= ~(1u << slot);
                 if (!txn) {
@@ -647,24 +651,25 @@ static int ahci_watchdog_thread(void* arg) {
                     // IRQ thread. Get the time this event happened, compare to time
                     // watchdog loop started to determine whether it has blocked for too
                     // long.
-                    zx_time_t watchtime = zx_clock_get_monotonic() - now;
+                    zx_time_t looptime = zx_clock_get_monotonic() - now;
                     zxlogf(ERROR,
                            "ahci: spurious watchdog timeout port %u txn %p, time in watchdog = %lu\n",
-                           port->nr, txn, watchtime);
-                    // Assert if we've been blocked for more than 100ms.
-                    ZX_DEBUG_ASSERT(watchtime < ZX_MSEC(100));
+                           port->nr, txn, looptime);
                 } else {
                     // time out
                     zxlogf(ERROR, "ahci: txn time out on port %d txn %p\n", port->nr, txn);
                     port->running &= ~(1u << slot);
                     port->completed |= (1u << slot);
                     port->commands[slot] = NULL;
-                    mtx_unlock(&port->lock);
-                    block_complete(txn, ZX_ERR_TIMED_OUT);
-                    mtx_lock(&port->lock);
+                    failed_txn[slot] = txn;
                 }
             }
             mtx_unlock(&port->lock);
+            for (uint32_t i = 0; i < countof(failed_txn); i++) {
+                if (failed_txn[i] != NULL) {
+                    block_complete(failed_txn[i], ZX_ERR_TIMED_OUT);
+                }
+            }
         }
 
         // no need to run the watchdog if there are no active xfers
