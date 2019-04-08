@@ -53,7 +53,7 @@ use {
         task::Waker,
         Future, Poll,
     },
-    std::{marker::Unpin, mem, pin::Pin},
+    std::{marker::Unpin, pin::Pin},
     void::Void,
 };
 
@@ -365,18 +365,12 @@ where
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
-        if !connection.was_written {
-            return responder(Status::OK);
-        }
-
-        match self.on_write {
+        match &mut self.on_write {
             None => responder(Status::OK),
-            Some(ref mut on_write) => {
-                match on_write(mem::replace(&mut connection.buffer, vec![])) {
-                    Ok(()) => responder(Status::OK),
-                    Err(status) => responder(status),
-                }
-            }
+            Some(on_write) => match connection.handle_close(on_write, Ok(())) {
+                Ok(()) => responder(Status::OK),
+                Err(status) => responder(status),
+            },
         }
     }
 }

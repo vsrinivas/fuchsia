@@ -23,7 +23,7 @@ use {
         task::Waker,
         Poll,
     },
-    std::{io::Write, iter, pin::Pin},
+    std::{io::Write, iter, mem, pin::Pin},
 };
 
 /// return type for handle_request functions
@@ -62,10 +62,10 @@ pub struct FileConnection {
     /// buffer that [`on_read`] have returnd and this value.
     capacity: u64,
     /// Per connection buffer.  See module documentation for details.
-    pub buffer: Vec<u8>,
+    buffer: Vec<u8>,
     /// Starts as false, and causes the [`on_write()`] to be called when the connection is closed
     /// if set to true during the lifetime of the connection.
-    pub was_written: bool,
+    was_written: bool,
 }
 
 impl FileConnection {
@@ -418,6 +418,20 @@ impl FileConnection {
         self.seek = core::cmp::min(self.seek, new_effective_capacity);
 
         responder(Status::OK)
+    }
+
+    /// Prepare for closing the connection. Takes a function to pass the connection buffer to.
+    /// Returns the result of the function if it was called, or `when_unmodified` when the buffer
+    /// wasn't modified.
+    pub fn handle_close<Write, R>(&mut self, write: Write, when_unmodified: R) -> R
+    where
+        Write: FnOnce(Vec<u8>) -> R,
+    {
+        if !self.was_written {
+            return when_unmodified;
+        }
+
+        write(mem::replace(&mut self.buffer, vec![]))
     }
 }
 
