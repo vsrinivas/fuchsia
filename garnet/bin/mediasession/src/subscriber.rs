@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{Result, MAX_EVENTS_SENT_WITHOUT_ACK};
+use crate::MAX_EVENTS_SENT_WITHOUT_ACK;
 use fidl_fuchsia_mediasession::{ActiveSession, RegistryControlHandle, SessionsChange};
-use fuchsia_zircon as zx;
-use zx::AsHandleRef;
 
 pub trait SubscriberEvent: Sized {
     fn send(self, handle: &RegistryControlHandle) -> bool;
@@ -32,10 +30,6 @@ pub struct Subscriber {
 impl Subscriber {
     pub fn new(control_handle: RegistryControlHandle) -> Self {
         Self { control_handle, events_sent_without_ack: 0 }
-    }
-
-    pub fn koid(&self) -> Result<zx::Koid> {
-        Ok(self.control_handle.channel().as_handle_ref().get_koid()?)
     }
 
     pub fn ack(&mut self) {

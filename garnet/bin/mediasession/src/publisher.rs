@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::service::ServiceEvent;
-use crate::session::Session;
-use crate::session_id_rights;
-use crate::Result;
+use crate::{
+    active_session_queue::ActiveSessionQueue,
+    clone_session_id_handle, mpmc,
+    session_list::SessionList,
+    session_proxy::{Session, SessionCollectionEvent, SessionRegistration},
+    Result,
+};
 use failure::ResultExt;
 use fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker};
 use fidl_fuchsia_mediasession::{
@@ -14,21 +17,32 @@ use fidl_fuchsia_mediasession::{
 use fuchsia_app::server::ServiceFactory;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use futures::{
-    channel::mpsc::Sender,
-    {SinkExt, TryFutureExt, TryStreamExt},
-};
+use futures::{lock::Mutex, TryFutureExt, TryStreamExt};
+use std::{ops::DerefMut, sync::Arc};
 use zx::AsHandleRef;
 
 /// `Publisher` implements fuchsia.media.session.Publisher.
 #[derive(Clone)]
 pub struct Publisher {
-    fidl_sink: Sender<ServiceEvent>,
+    session_list: Arc<Mutex<SessionList>>,
+    active_session_queue: Arc<Mutex<ActiveSessionQueue>>,
+    collection_event_sink: mpmc::Sender<(SessionRegistration, SessionCollectionEvent)>,
+    active_session_sink: mpmc::Sender<Option<SessionRegistration>>,
 }
 
 impl Publisher {
-    pub fn factory(fidl_sink: Sender<ServiceEvent>) -> impl ServiceFactory {
-        let publisher = Publisher { fidl_sink };
+    pub fn factory(
+        session_list: Arc<Mutex<SessionList>>,
+        active_session_queue: Arc<Mutex<ActiveSessionQueue>>,
+        collection_event_sink: mpmc::Sender<(SessionRegistration, SessionCollectionEvent)>,
+        active_session_sink: mpmc::Sender<Option<SessionRegistration>>,
+    ) -> impl ServiceFactory {
+        let publisher = Publisher {
+            session_list,
+            active_session_queue,
+            collection_event_sink,
+            active_session_sink,
+        };
         (PublisherMarker::NAME, move |channel| {
             fasync::spawn(publisher.clone().serve(channel).unwrap_or_else(|e| eprintln!("{}", e)))
         })
@@ -42,13 +56,13 @@ impl Publisher {
             match request {
                 PublisherRequest::Publish { responder, session } => {
                     responder
-                        .send(await!(self.publish(session, /*is_local=*/ true))?)
-                        .context("Giving session id to client")?;
+                        .send(await!(self.publish(session, true))?)
+                        .context("Giving id to client")?;
                 }
                 PublisherRequest::PublishRemote { responder, session } => {
                     responder
-                        .send(await!(self.publish(session, /*is_local=*/ false))?)
-                        .context("Giving session id to client")?;
+                        .send(await!(self.publish(session, false))?)
+                        .context("Giving id to client")?;
                 }
             };
         }
@@ -57,22 +71,27 @@ impl Publisher {
 
     async fn publish(
         &mut self,
-        controller: ClientEnd<SessionMarker>,
+        session: ClientEnd<SessionMarker>,
         is_local: bool,
     ) -> Result<zx::Event> {
         let session_id_handle = zx::Event::create()?;
-        await!(self.fidl_sink.send(ServiceEvent::NewSession {
-            session: Session::new(
-                session_id_handle.as_handle_ref().get_koid()?,
-                controller.into_proxy().context("Making controller client end into proxy.")?,
-                self.fidl_sink.clone(),
-            )?,
-            session_id_handle: session_id_handle
-                .as_handle_ref()
-                .duplicate(session_id_rights())?
-                .into(),
-            is_local,
-        }))?;
-        Ok(session_id_handle)
+        let koid = session_id_handle.as_handle_ref().get_koid()?;
+        let handle_for_client = clone_session_id_handle(&session_id_handle)?;
+        let registration = SessionRegistration { id: Arc::new(session_id_handle), koid, is_local };
+        await!(self.session_list.lock()).deref_mut().push(
+            registration.clone(),
+            await!(Session::serve(
+                session,
+                registration.clone(),
+                self.active_session_queue.clone(),
+                self.session_list.clone(),
+                self.collection_event_sink.clone(),
+                self.active_session_sink.clone(),
+            ))?,
+        );
+        await!(self
+            .collection_event_sink
+            .send((registration.clone(), SessionCollectionEvent::Added)));
+        Ok(handle_for_client)
     }
 }

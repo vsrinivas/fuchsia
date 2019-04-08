@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{clone_session_entry, clone_session_id_handle, MAX_EVENTS_SENT_WITHOUT_ACK};
+use crate::{clone_session_id_handle, MAX_EVENTS_SENT_WITHOUT_ACK};
 use failure::{Error, ResultExt};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_media::TimelineFunction;
@@ -23,6 +23,13 @@ use futures::{
 use zx::AsHandleRef;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
+
+fn clone_session_entry(entry: &SessionEntry) -> Result<SessionEntry, Error> {
+    Ok(SessionEntry {
+        session_id: entry.session_id.as_ref().map(clone_session_id_handle).transpose()?,
+        local: entry.local.clone(),
+    })
+}
 
 fn default_playback_status() -> PlaybackStatus {
     PlaybackStatus {
@@ -416,7 +423,6 @@ async fn service_reports_changed_active_session() {
             .control_handle
             .send_on_playback_status_changed(default_playback_status())
             .expect("To update playback status");
-        println!("expecting a round...{}", i);
         await!(test_service.expect_update_events(
             Some(session_id.as_handle_ref().get_koid().expect("Handle expected KOID")),
             SessionsChange {
@@ -511,9 +517,11 @@ async fn service_broadcasts_events() {
 #[fasync::run_singlethreaded]
 #[test]
 async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
-    let test_service = TestService::new().expect("Test service");
+    let mut test_service = TestService::new().expect("Test service");
+    await!(test_service.expect_active_session(None));
+    await!(test_service.expect_session_list(vec![]));
 
-    // Publish 100 sessions and have each of them post a playback status.
+    // Publish many sessions and have each of them post a playback status.
     let count = 100;
     let mut test_sessions = Vec::new();
     let numbered_playback_status =
@@ -526,7 +534,24 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
             .control_handle
             .send_on_playback_status_changed(numbered_playback_status(i as i64))
             .expect(&format!("To broadcast playback status {}.", i));
-        test_sessions.push((session_id, test_session.control_handle));
+        test_sessions.push((
+            clone_session_id_handle(&session_id).expect("Cloned id handle"),
+            test_session.control_handle,
+        ));
+
+        await!(test_service.expect_update_events(
+            Some(session_id.as_handle_ref().get_koid().expect("New active session koid")),
+            SessionsChange {
+                session: SessionEntry {
+                    session_id: Some(
+                        clone_session_id_handle(&session_id).expect("Cloned id handle"),
+                    ),
+                    local: Some(true),
+                },
+                delta: SessionDelta::Added,
+            },
+        ));
+        test_service.notify_events_handled();
     }
 
     enum Expectation {
@@ -540,7 +565,6 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
     for (i, (session_id, control_handle)) in test_sessions.into_iter().enumerate() {
         let should_drop = i % 3 == 0;
         expectations.push(if should_drop {
-            control_handle.shutdown();
             (Expectation::SessionIsDropped, session_id)
         } else {
             control_handles_to_keep_sessions_alive.push(control_handle);
@@ -549,6 +573,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
                 session_id,
             )
         });
+        test_service.notify_events_handled();
     }
 
     // Check all expectations.
@@ -619,8 +644,9 @@ async fn service_stops_sending_sessions_change_events_to_inactive_clients() {
     }
 
     select! {
-        _ = test_service.registry_events.select_next_some() => {
-            panic!("Received event from service even though we didn't ack");
+        e = test_service.registry_events.select_next_some() => {
+            panic!("Received event even though we didn't ack: {:?}, sessions registered: {:?}",
+                   e, expected_sessions);
         }
         _ = fasync::Timer::new(zx::Time::after(zx::Duration::from_millis(2))).fuse() => {
             return;
@@ -658,14 +684,18 @@ async fn service_stops_sending_active_session_change_events_to_inactive_clients(
             clone_session_entry(&entry).expect(&format!("Clone of test session entry {}.", i)),
         );
 
-        await!(test_service
-            .expect_sessions_change(SessionsChange { session: entry, delta: SessionDelta::Added }));
-        test_service.notify_sessions_change_handled();
         if i < MAX_EVENTS_SENT_WITHOUT_ACK {
-            await!(test_service.expect_active_session(Some(
-                session_id.as_handle_ref().get_koid().expect("New active session koid")
-            )));
+            await!(test_service.expect_update_events(
+                Some(session_id.as_handle_ref().get_koid().expect("New active session koid")),
+                SessionsChange { session: entry, delta: SessionDelta::Added }
+            ));
+        } else {
+            await!(test_service.expect_sessions_change(SessionsChange {
+                session: entry,
+                delta: SessionDelta::Added
+            }));
         }
+        test_service.notify_sessions_change_handled();
     }
 
     select! {
@@ -688,7 +718,7 @@ async fn service_maintains_session_list() {
 
     // Publish many sessions and check at each point that the session list is
     // accurate.
-    let count = 100;
+    let count = 30;
     let mut test_sessions = Vec::new();
     let mut expected_sessions = Vec::new();
     for i in 0..count {
@@ -700,6 +730,9 @@ async fn service_maintains_session_list() {
             clone_session_entry(&entry).expect(&format!("Clone of test session entry {}.", i)),
         );
         test_sessions.push(test_session.control_handle);
+        await!(test_service
+            .expect_sessions_change(SessionsChange { session: entry, delta: SessionDelta::Added }));
+        test_service.notify_events_handled();
         await!(test_service.expect_session_list(
             expected_sessions
                 .iter()
@@ -707,14 +740,11 @@ async fn service_maintains_session_list() {
                 .collect::<Result<Vec<SessionEntry>, _>>()
                 .expect("Clone of expected sessions")
         ));
-        await!(test_service
-            .expect_sessions_change(SessionsChange { session: entry, delta: SessionDelta::Added }));
-        test_service.notify_events_handled();
     }
 
     // Remove sessions in an odd pattern and ensure the list remains accurate.
     let mut removed = 0;
-    for i in 0..50 {
+    for i in 0..(count / 2 - 1) {
         test_sessions.swap_remove(i * 2 - removed);
         let entry = expected_sessions.swap_remove(i * 2 - removed);
         removed += 1;
