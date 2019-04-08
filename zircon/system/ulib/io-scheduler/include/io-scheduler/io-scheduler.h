@@ -6,12 +6,16 @@
 
 #include <memory>
 #include <stdint.h>
+#include <vector>
 
+#include <fbl/condition_variable.h>
 #include <fbl/function.h>
 #include <fbl/mutex.h>
+#include <fbl/vector.h>
 #include <zircon/types.h>
 
 #include <io-scheduler/stream.h>
+#include <io-scheduler/worker.h>
 
 namespace ioscheduler {
 
@@ -103,7 +107,10 @@ struct SchedulerOp {
 
 // Callback interface from Scheduler to client. Callbacks are made from within
 // the Scheduler library to the client implementation. All callbacks are made
-// with no locks held and are allowed to block.
+// with no locks held and are allowed to block. Any callbacks may be invoked
+// simultanously, and one may be called multiple times concurrently, but never
+// with the same data. Notably, Acquire(), Issue(), and Release() may be called
+// multiple times after CancelAcquire() has been called.
 class SchedulerClient {
 public:
     // CanReorder
@@ -223,6 +230,10 @@ public:
     // safe to call from an interrupt handler context.
     void AsyncComplete(SchedulerOp* sop);
 
+    // API invoked by worker threads.
+    // --------------------------------
+    SchedulerClient* client() { return client_; }
+
 private:
     using StreamIdMap = Stream::WAVLTreeSortById;
     using StreamList = Stream::ListUnsorted;
@@ -239,6 +250,8 @@ private:
     StreamIdMap stream_map_ __TA_GUARDED(stream_lock_);
     // List of streams that have ops ready to be scheduled.
     StreamList active_list_ __TA_GUARDED(stream_lock_);
+
+    fbl::Vector<fbl::unique_ptr<Worker>> workers_;
 };
 
 } // namespace ioscheduler

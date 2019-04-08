@@ -19,15 +19,29 @@ void Scheduler::Shutdown() {
         return; // Not initialized or already shut down.
     }
 
-    // Close all streams.
-    fbl::AutoLock lock(&stream_lock_);
-    for (auto& stream : stream_map_) {
-        stream.Close();
+    // Wake threads blocking on incoming ops.
+    // Threads will complete outstanding work and exit.
+    client_->CancelAcquire();
+
+    {
+        // Close all streams.
+        fbl::AutoLock lock(&stream_lock_);
+        for (auto& stream : stream_map_) {
+            stream.Close();
+        }
     }
 
-    // TODO: Wait for completion.
-    // For now, remove erase the streams until there are worker threads to do so.
-    while (stream_map_.pop_front() != nullptr) {};
+    // Block until all worker threads exit.
+    workers_.reset();
+
+    {
+        // All workers are done.
+        fbl::AutoLock lock(&stream_lock_);
+        ZX_DEBUG_ASSERT(active_list_.is_empty());
+        // Delete any existing stream in the case where no worker threads were launched.
+        stream_map_.clear();
+        ZX_DEBUG_ASSERT(stream_map_.is_empty());
+    }
 
     client_ = nullptr;
 }
@@ -72,6 +86,21 @@ zx_status_t Scheduler::StreamClose(uint32_t id) {
 }
 
 zx_status_t Scheduler::Serve() {
+    ZX_DEBUG_ASSERT(client_ != nullptr);
+
+    // Create a single thread for now.
+    const uint32_t num_workers = 1;
+
+    for (uint32_t i = 0; i < num_workers; i++) {
+        fbl::unique_ptr<Worker> worker;
+        zx_status_t status = Worker::Create(this, i, &worker);
+        if (status != ZX_OK) {
+            fprintf(stderr, "Scheduler: Failed to create worker thread\n");
+            Shutdown();
+            return status;
+        }
+        workers_.push_back(std::move(worker));
+    }
     return ZX_OK;
 }
 
