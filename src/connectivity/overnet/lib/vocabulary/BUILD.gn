@@ -200,6 +200,20 @@ source_set("slice_test") {
   ]
 }
 
+# socket
+source_set("socket") {
+  sources = [
+    "socket.cc",
+    "socket.h",
+  ]
+  deps = [
+    ":ip_addr",
+    ":optional",
+    ":slice",
+    ":status",
+  ]
+}
+
 # status
 source_set("status") {
   sources = [
