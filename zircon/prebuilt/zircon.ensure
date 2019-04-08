@@ -49,7 +49,7 @@ fuchsia/third_party/qemu/${platform} git_revision:533bf2563d0213a7e002d9fcde7551
 # GN
 # TODO(BLD-341): replace ${os}-${arch=amd64} with ${platform}
 @Subdir
-gn/gn/${os}-${arch=amd64} git_revision:b5a2ac6ede22611212c4368eb8ff374944e1a3aa
+gn/gn/${os}-${arch=amd64} git_revision:64b846c96daeb3eaf08e26d8a84d8451c6cb712b
 
 # Ninja
 # TODO(BLD-341): replace ${os}-${arch=amd64} with ${platform}
