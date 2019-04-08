@@ -447,8 +447,8 @@ mod tests {
             let expected_res = expected_res.map(|r| r.parse().expect("could not parse blob"));
 
             let path = match variant {
-                None => name.to_string(),
-                Some(variant) => format!("{}/{}", name, variant),
+                None => format!("/{}", name),
+                Some(variant) => format!("/{}/{}", name, variant),
             };
 
             let uri = FuchsiaPkgUri::new_package(
