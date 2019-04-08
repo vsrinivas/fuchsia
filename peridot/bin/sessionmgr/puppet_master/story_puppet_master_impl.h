@@ -12,6 +12,8 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <src/lib/fxl/memory/weak_ptr.h>
 
+#include "peridot/bin/sessionmgr/puppet_master/story_command_executor.h"
+
 namespace modular {
 
 class SessionStorage;
@@ -36,6 +38,11 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
   // |StoryPuppetMaster|
   void SetCreateOptions(fuchsia::modular::StoryOptions story_options) override;
 
+  // |StoryPuppetMaster|
+  void SetStoryInfoExtra(
+      std::vector<fuchsia::modular::StoryInfoExtraEntry> story_info_extra,
+      SetStoryInfoExtraCallback callback) override;
+
   std::string story_name_;
   SessionStorage* const session_storage_;  // Not owned.
   StoryCommandExecutor* const executor_;   // Not owned.
@@ -44,7 +51,17 @@ class StoryPuppetMasterImpl : public fuchsia::modular::StoryPuppetMaster {
 
   OperationContainer* const operations_;  // Not owned.
 
+  // Story options passed to |session_storage_.CreateStory|, set
+  // by |SetCreateOptions|. This value is reset after the story is created
+  // in the first call to |Execute|, and subsequent values are ignored.
   fuchsia::modular::StoryOptions story_options_;
+
+  // StoryInfo extra entries passed to |session_storage_.CreateStory|, set
+  // by |SetStoryInfoExtra|. This value is reset after the story is created
+  // in the first call to |Execute|, and subsequent values are ignored.
+  fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> story_info_extra_;
+
+  fxl::WeakPtrFactory<StoryPuppetMasterImpl> weak_ptr_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryPuppetMasterImpl);
 };

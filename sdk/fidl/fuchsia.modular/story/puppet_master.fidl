@@ -29,6 +29,11 @@ enum ExecuteStatus {
     INTERNAL_ERROR = 6;
 };
 
+enum ConfigureStoryError : int32 {
+    /// The story cannot be (re)configured because it was already created.
+    ERR_STORY_ALREADY_CREATED = 1;
+};
+
 struct ExecuteResult {
     ExecuteStatus status;
     string? story_id;
@@ -90,4 +95,12 @@ protocol StoryPuppetMaster {
     // ignored. Some StoryOptions can be changed through specific story commands.
     // See story_command.fidl for details.
     SetCreateOptions(StoryOptions story_options);
+
+    // Set the |StoryInfo| extra field for a story that is to be
+    // created. This should be called before the first call to Execute().
+    // Any subsequent calls (either on the same channel or on a new
+    // StoryPuppetMaster for an existing story) are ignored.
+    // See story_info.fidl for details.
+    SetStoryInfoExtra(vector<StoryInfoExtraEntry> story_info_extra)
+        -> () error ConfigureStoryError;
 };

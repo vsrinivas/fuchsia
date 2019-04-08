@@ -4,6 +4,7 @@
 
 #include "peridot/bin/sessionmgr/puppet_master/story_puppet_master_impl.h"
 
+#include <lib/fsl/types/type_converters.h>
 #include <src/lib/fxl/logging.h>
 
 #include "peridot/bin/sessionmgr/puppet_master/story_command_executor.h"
@@ -15,16 +16,18 @@ namespace {
 
 class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
  public:
-  ExecuteOperation(SessionStorage* const session_storage,
-                   StoryCommandExecutor* const executor, std::string story_name,
-                   fuchsia::modular::StoryOptions story_options,
-                   std::vector<fuchsia::modular::StoryCommand> commands,
-                   ResultCall done)
-      : Operation("StoryPuppetMasterImpl.ExecuteOpreation", std::move(done)),
+  ExecuteOperation(
+      SessionStorage* const session_storage,
+      StoryCommandExecutor* const executor, std::string story_name,
+      fuchsia::modular::StoryOptions story_options,
+      fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info_,
+      std::vector<fuchsia::modular::StoryCommand> commands, ResultCall done)
+      : Operation("StoryPuppetMasterImpl.ExecuteOperation", std::move(done)),
         session_storage_(session_storage),
         executor_(executor),
         story_name_(std::move(story_name)),
         story_options_(std::move(story_options)),
+        extra_info_(std::move(extra_info_)),
         commands_(std::move(commands)) {}
 
  private:
@@ -44,7 +47,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
 
   void CreateStory() {
     session_storage_
-        ->CreateStory(story_name_, nullptr /* extra_info */,
+        ->CreateStory(story_name_, std::move(extra_info_),
                       std::move(story_options_))
         ->WeakThen(GetWeakPtr(),
                    [this](fidl::StringPtr story_id, auto /* ignored */) {
@@ -65,6 +68,7 @@ class ExecuteOperation : public Operation<fuchsia::modular::ExecuteResult> {
   StoryCommandExecutor* const executor_;
   std::string story_name_;
   fuchsia::modular::StoryOptions story_options_;
+  fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry> extra_info_;
   std::vector<fuchsia::modular::StoryCommand> commands_;
 
   fidl::StringPtr story_id_;
@@ -78,7 +82,9 @@ StoryPuppetMasterImpl::StoryPuppetMasterImpl(
     : story_name_(story_name),
       session_storage_(session_storage),
       executor_(executor),
-      operations_(operations) {
+      operations_(operations),
+      story_info_extra_(nullptr),
+      weak_ptr_factory_(this) {
   FXL_DCHECK(session_storage != nullptr);
   FXL_DCHECK(executor != nullptr);
 }
@@ -93,15 +99,46 @@ void StoryPuppetMasterImpl::Enqueue(
 }
 
 void StoryPuppetMasterImpl::Execute(ExecuteCallback done) {
-  // First ensure that the story is created.
   operations_->Add(std::make_unique<ExecuteOperation>(
       session_storage_, executor_, story_name_, std::move(story_options_),
-      std::move(enqueued_commands_), std::move(done)));
+      std::move(story_info_extra_), std::move(enqueued_commands_),
+      std::move(done)));
 }
 
 void StoryPuppetMasterImpl::SetCreateOptions(
     fuchsia::modular::StoryOptions story_options) {
   story_options_ = std::move(story_options);
+}
+
+void StoryPuppetMasterImpl::SetStoryInfoExtra(
+    std::vector<fuchsia::modular::StoryInfoExtraEntry> story_info_extra,
+    SetStoryInfoExtraCallback callback) {
+  session_storage_->GetStoryData(story_name_)
+      ->WeakThen(weak_ptr_factory_.GetWeakPtr(), [this,
+                                                  story_info_extra = std::move(
+                                                      story_info_extra),
+                                                  callback =
+                                                      std::move(callback)](
+                                                     fuchsia::modular::
+                                                         internal::StoryDataPtr
+                                                             story_data) {
+        fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Result result;
+        fuchsia::modular::StoryPuppetMaster_SetStoryInfoExtra_Response response;
+
+        // StoryInfo can only be set before a story is created, and StoryData
+        // does not exist until it has been created.
+        if (!story_data) {
+          story_info_extra_ =
+              fidl::To<fidl::VectorPtr<fuchsia::modular::StoryInfoExtraEntry>>(
+                  std::move(story_info_extra));
+          result.set_response(response);
+        } else {
+          result.set_err(
+              fuchsia::modular::ConfigureStoryError::ERR_STORY_ALREADY_CREATED);
+        }
+
+        callback(std::move(result));
+      });
 }
 
 }  // namespace modular
