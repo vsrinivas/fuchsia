@@ -51,8 +51,8 @@ bytes written to *buffer* is undefined.
 
 **ZX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer or NULL.
 
-**ZX_ERR_OUT_OF_RANGE**  *offset* starts at or beyond the end of the VMO,
-                         or VMO is shorter than *buffer_size*.
+**ZX_ERR_OUT_OF_RANGE**  *offset* + *buffer_size* is greater than the size of
+                         the VMO.
 
 **ZX_ERR_BAD_STATE**  VMO has been marked uncached and is not directly readable.
 

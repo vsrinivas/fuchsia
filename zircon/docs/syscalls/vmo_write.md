@@ -52,8 +52,8 @@ bytes written from *buffer* is undefined.
 
 **ZX_ERR_NO_MEMORY**  Failure to allocate system memory to complete write.
 
-**ZX_ERR_OUT_OF_RANGE**  *offset* starts at or beyond the end of the VMO,
-                         or VMO is shorter than *buffer_size*.
+**ZX_ERR_OUT_OF_RANGE**  *offset* + *buffer_size* is greater than the size of
+                         the VMO.
 
 **ZX_ERR_BAD_STATE**  VMO has been marked uncached and is not directly writable.
 
