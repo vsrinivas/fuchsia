@@ -90,8 +90,6 @@ gen_commands! {
         Connect = ("connect", ["id|addr"], "connect to a remote device"),
         ActiveAdapter = ("adapter", [], "Show the Active Adapter"),
         SetActiveAdapter = ("set-adapter", ["id"], "Set the Active Adapter"),
-        SetAdapterName = ("set-local-name", ["name"], "Set the name of the Active Adapter"),
-        SetAdapterDeviceClass = ("set-device-class", ["Major Class", "Minor Class", "Service Classes..."], "Set the device class of the Active Adapter"),
         GetAdapters = ("list-adapters", [], "Show all known bluetooth adapters"),
         GetDevices = ("list-devices", [], "Show all known remote devices"),
         GetDevice = ("device", ["id|addr"], "Show details for a known remote device"),

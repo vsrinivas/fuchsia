@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_bluetooth,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
-        AdapterInfo, ControlControlHandle, DeviceClass, InputCapabilityType, OutputCapabilityType,
+        AdapterInfo, ControlControlHandle, InputCapabilityType, OutputCapabilityType,
         PairingDelegateMarker, PairingDelegateProxy, RemoteDevice,
     },
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
@@ -279,16 +279,6 @@ impl HostDispatcher {
 
         match await!(self.get_active_adapter())? {
             Some(adapter) => await!(adapter.write().set_name(self.state.read().name.clone())),
-            None => Ok(bt_fidl_status!(BluetoothNotAvailable, "No Adapter found")),
-        }
-    }
-
-    pub async fn set_device_class(
-        &mut self,
-        class: DeviceClass,
-    ) -> fidl::Result<fidl_fuchsia_bluetooth::Status> {
-        match await!(self.get_active_adapter())? {
-            Some(adapter) => await!(adapter.write().set_device_class(class)),
             None => Ok(bt_fidl_status!(BluetoothNotAvailable, "No Adapter found")),
         }
     }

@@ -25,7 +25,7 @@ use {
 
 use crate::{
     commands::{Cmd, CmdHelper, ReplControl},
-    types::{AdapterInfo, DeviceClass, MajorClass, MinorClass, RemoteDevice, TryInto},
+    types::{AdapterInfo, RemoteDevice},
 };
 
 mod commands;
@@ -68,47 +68,6 @@ async fn set_active_adapter<'a>(
         Ok(Status::from(response).to_string())
     } else {
         Ok(String::new())
-    }
-}
-
-async fn set_adapter_name<'a>(
-    args: &'a [&'a str],
-    control_svc: &'a ControlProxy,
-) -> Result<String, Error> {
-    if args.len() > 1 {
-        bail!("usage: {}", Cmd::SetAdapterName.cmd_help());
-    }
-    println!("Setting local name of the active adapter");
-    // `args[0]` is the value to set as the name of the adapter
-    let response = await!(control_svc.set_name(args.get(0).map(|&name| name)))?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
-        Ok(String::new())
-    }
-}
-
-/// Set the class of device for the currently active adapter. Arguments are optional, and defaults
-/// will be used if arguments aren't provided.
-///
-/// Returns an error if the input is not recognized as a valid device class .
-async fn set_adapter_device_class<'a>(
-    args: &'a [&'a str],
-    control_svc: &'a ControlProxy,
-) -> Result<String, Error> {
-    let mut args = args.iter();
-    println!("Setting device class of the active adapter");
-    let mut cod = DeviceClass {
-        major: args.next().map(|arg| arg.try_into()).unwrap_or(Ok(MajorClass::Uncategorized))?,
-        minor: args.next().map(|arg| arg.try_into()).unwrap_or(Ok(MinorClass::not_set()))?,
-        service: args.try_into()?,
-    }
-    .into();
-    let response = await!(control_svc.set_device_class(&mut cod))?;
-    if response.error.is_some() {
-        Ok(Status::from(response).to_string())
-    } else {
-        Ok(format!("Set device class to 0x{:x}", cod.value))
     }
 }
 
@@ -261,8 +220,6 @@ async fn handle_cmd(
             Ok(Cmd::GetDevice) => Ok(get_device(args, &state)),
             Ok(Cmd::GetAdapters) => await!(get_adapters(&bt_svc)),
             Ok(Cmd::SetActiveAdapter) => await!(set_active_adapter(args, &bt_svc)),
-            Ok(Cmd::SetAdapterName) => await!(set_adapter_name(args, &bt_svc)),
-            Ok(Cmd::SetAdapterDeviceClass) => await!(set_adapter_device_class(args, &bt_svc)),
             Ok(Cmd::ActiveAdapter) => await!(get_active_adapter(&bt_svc)),
             Ok(Cmd::Help) => Ok(Cmd::help_msg().to_string()),
             Ok(Cmd::Exit) | Ok(Cmd::Quit) => return Ok(ReplControl::Break),

@@ -6,7 +6,7 @@ use {
     fidl::{self, endpoints::ClientEnd},
     fidl_fuchsia_bluetooth::{self, Status},
     fidl_fuchsia_bluetooth_control::{
-        AdapterInfo, DeviceClass, InputCapabilityType, OutputCapabilityType, PairingDelegateMarker,
+        AdapterInfo, InputCapabilityType, OutputCapabilityType, PairingDelegateMarker,
     },
     fidl_fuchsia_bluetooth_gatt::ClientProxy,
     fidl_fuchsia_bluetooth_host::{BondingData, HostEvent, HostProxy},
@@ -69,13 +69,6 @@ impl HostDevice {
 
     pub fn set_name(&self, mut name: String) -> impl Future<Output = fidl::Result<Status>> {
         self.host.set_local_name(&mut name)
-    }
-
-    pub fn set_device_class(
-        &self,
-        mut cod: DeviceClass,
-    ) -> impl Future<Output = fidl::Result<Status>> {
-        self.host.set_device_class(&mut cod)
     }
 
     pub fn start_discovery(&mut self) -> impl Future<Output = fidl::Result<Status>> {
