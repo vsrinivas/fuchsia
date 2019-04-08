@@ -84,15 +84,32 @@ spn_device_handle_pool_validate_retain_d(struct spn_device        * const device
 //
 
 void
-spn_device_handle_pool_release_d_paths(struct spn_device * const device,
-                                       spn_path_t  const * const handles,
-                                       uint32_t            const count);
+spn_device_handle_pool_release_d_paths(struct spn_device  * const device,
+                                       spn_handle_t const * const handles,
+                                       uint32_t             const count);
 
 void
 spn_device_handle_pool_release_d_rasters(struct spn_device  * const device,
-                                         spn_raster_t const * const handles,
+                                         spn_handle_t const * const handles,
                                          uint32_t             const count);
 
+//
+//
+//
+
+void
+spn_device_handle_pool_release_ring_d_paths(struct spn_device  * const device,
+                                            spn_handle_t const * const paths,
+                                            uint32_t             const size,
+                                            uint32_t             const span,
+                                            uint32_t             const head);
+
+void
+spn_device_handle_pool_release_ring_d_rasters(struct spn_device  * const device,
+                                              spn_handle_t const * const rasters,
+                                              uint32_t             const size,
+                                              uint32_t             const span,
+                                              uint32_t             const head);
 //
 //
 //

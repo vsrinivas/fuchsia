@@ -110,14 +110,13 @@ SPN_TARGET_GLSL_DECL_KERNEL_SEGMENT_TTRK();
 //
 
 #undef  HS_VOUT
-#define HS_VOUT ttrks_keys
+#define HS_VOUT               ttrks_keys
 
 #undef  HS_VOUT_LOAD
 #define HS_VOUT_LOAD(idx)     packUint2x32(HS_VOUT[idx])
 
 #undef  HS_VOUT_STORE
 #define HS_VOUT_STORE(idx,kv) HS_VOUT[idx] = unpackUint2x32(kv)
-
 
 //
 //

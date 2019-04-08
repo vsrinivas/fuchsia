@@ -79,7 +79,7 @@ struct spn_target_image const SPN_TARGET_IMAGE_NAME =
         .ring               = 8192,
         .eager              = 1024,
         .cohort             = SPN_KERNEL_RASTERS_ALLOC_METAS_SIZE, // FIXME -- change name
-        .rast_cmds          = 1 << 18,
+        .cmds               = 1 << 18,
         .ttrks              = 1 << 20
       }
     },
@@ -88,6 +88,22 @@ struct spn_target_image const SPN_TARGET_IMAGE_NAME =
       .vk = {
         .h                  = 0,   // FIXME -- replace with extent type
         .d                  = 0
+      }
+    },
+
+    .composition = {
+      .vk = {
+        .rings = {
+          .h                = 0,   // FIXME -- replace with extent type
+          .d                = 1
+        }
+      },
+      .size = {
+        .ring               = 8192,
+        .eager              = 1024,
+        .cmds               = 1 << 18,
+        .ttcks              = 1 << 20,
+        .rasters            = 1 << 17
       }
     },
 
@@ -110,7 +126,7 @@ struct spn_target_image const SPN_TARGET_IMAGE_NAME =
       .ttcks = {
         .sets = 1
       },
-      .place_cmds = {
+      .place = {
         .sets = 1
       },
       .styling = {
