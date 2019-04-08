@@ -4,6 +4,7 @@
 
 #include <lib/sys/cpp/testing/enclosing_environment.h>
 
+#include <fuchsia/debugdata/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/clone.h>
@@ -145,6 +146,9 @@ EnclosingEnvironment::EnclosingEnvironment(
     std::unique_ptr<EnvironmentServices> services,
     const fuchsia::sys::EnvironmentOptions& options)
     : label_(label), services_(std::move(services)) {
+  // Plumb DebugData service here rather than in |EnvironmentServices| so that
+  // user can override it if they want.
+  services_->AllowParentService(fuchsia::debugdata::DebugData::Name_);
   services_->set_enclosing_env(this);
 
   // Start environment with services.

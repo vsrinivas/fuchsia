@@ -54,6 +54,7 @@ test("component_cpp_testing_tests") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest_main",
+    "//zircon/public/fidl/fuchsia-debugdata",
     "//zircon/public/fidl/fuchsia-io",
     "//zircon/public/lib/fidl",
   ]

@@ -2,14 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/sys/cpp/testing/enclosing_environment.h>
+
+#include <fidl/examples/echo/cpp/fidl.h>
+#include <fuchsia/debugdata/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/testing/test_with_environment.h>
+#include <lib/zx/vmo.h>
 #include <zircon/processargs.h>
 
-#include "fidl/examples/echo/cpp/fidl.h"
-#include "lib/async-loop/cpp/loop.h"
-#include "lib/async/cpp/wait.h"
-#include "lib/async/dispatcher.h"
-#include "lib/sys/cpp/testing/enclosing_environment.h"
-#include "lib/sys/cpp/testing/test_with_environment.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 using namespace fuchsia::sys;
@@ -312,6 +316,64 @@ TEST_F(EnclosingEnvTest, CanLaunchMoreThanOneService) {
     return loader.component_urls().size() == 3;
   })) << loader.component_urls().size();
   ASSERT_EQ(loader.component_urls(), urls);
+}
+
+class FakeDebugData : public fuchsia::debugdata::DebugData {
+ public:
+  void Publish(std::string data_sink, ::zx::vmo data) override {
+    call_count_++;
+  }
+
+  void LoadConfig(std::string config_name,
+                  LoadConfigCallback callback) override {
+    // not implemented
+  }
+
+  fidl::InterfaceRequestHandler<fuchsia::debugdata::DebugData> GetHandler(
+      async_dispatcher_t* dispatcher = nullptr) {
+    return bindings_.GetHandler(this, dispatcher);
+  }
+
+  uint64_t call_count() const { return call_count_; }
+
+ private:
+  fidl::BindingSet<fuchsia::debugdata::DebugData> bindings_;
+  uint64_t call_count_ = 0;
+};
+
+TEST_F(EnclosingEnvTest, DebugDataServicePlumbedCorrectly) {
+  zx::vmo data;
+  fuchsia::debugdata::DebugDataPtr ptr;
+  FakeDebugData debug_data;
+  auto svc = CreateServices();
+  // Add to first enclosing env and override plumbing
+  svc->AddService(debug_data.GetHandler());
+  auto env = CreateNewEnclosingEnvironment("test-env1", std::move(svc));
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+  // make sure count was 0
+  ASSERT_EQ(0u, debug_data.call_count());
+
+  // make sure out fake servcie can be called.
+  env->ConnectToService(ptr.NewRequest());
+  ASSERT_EQ(ZX_OK, zx::vmo::create(8, 0, &data));
+  ptr->Publish("data_sink", std::move(data));
+
+  ASSERT_TRUE(RunLoopUntil([&debug_data]() {
+    return debug_data.call_count() == 1;
+  })) << debug_data.call_count();
+
+  // make sure service is automatically plumbed to sub environments
+  auto sub_env = env->CreateNestedEnclosingEnvironment("test-env2");
+
+  ptr.Unbind();
+
+  sub_env->ConnectToService(ptr.NewRequest());
+  ASSERT_EQ(ZX_OK, zx::vmo::create(8, 0, &data));
+  ptr->Publish("data_sink", std::move(data));
+
+  ASSERT_TRUE(RunLoopUntil([&debug_data]() {
+    return debug_data.call_count() == 2;
+  })) << debug_data.call_count();
 }
 
 }  // namespace sys::testing::test
