@@ -57,7 +57,7 @@ config("musl_internal.config") {
   cflags += [ "-ffreestanding" ]
 }
 
-if (toolchain.environment == "user") {
+if (toolchain.base_environment == "user") {
   group("musl") {
     visibility = [ "$zx/system/ulib/c:*" ]
     deps = [

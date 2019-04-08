@@ -24,7 +24,8 @@ library("c") {
   # Suppress the ${toolchain.implicit_deps} that points back to here.
   no_implicit_deps = true
 
-  if (toolchain.environment == "user" && current_toolchain == toolchain.shlib &&
+  if (toolchain.base_environment == "user" &&
+      current_toolchain == toolchain.shlib &&
       toolchain.tags + [ "gcc" ] - [ "gcc" ] == []) {
     deps += [ ":c-$current_cpu.pkg" ]
   }
@@ -46,7 +47,8 @@ source_set("crt1") {
 
 # TODO(BLD-353): The generic kludgery can't handle the weirdness here.
 # So emit the pkg file directly.
-if (toolchain.environment == "user" && current_toolchain == toolchain.shlib &&
+if (toolchain.base_environment == "user" &&
+    current_toolchain == toolchain.shlib &&
     toolchain.tags + [ "gcc" ] - [ "gcc" ] == []) {
   legacy_pkg("c-$current_cpu.pkg") {
     contents = [

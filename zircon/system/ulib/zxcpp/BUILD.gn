@@ -12,7 +12,7 @@ library("zxcpp") {
     "pure_virtual.cpp",
     "thread_atexit.cpp",
   ]
-  if (toolchain.environment == "kernel") {
+  if (toolchain.base_environment == "kernel") {
     # Avoid circularity.
     configs -= [ "$zx/kernel/vm:headers.config" ]
   }

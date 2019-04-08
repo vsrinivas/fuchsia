@@ -12,7 +12,7 @@ library("ldmsg") {
     "$zx/system/ulib/zircon",
   ]
 
-  if (toolchain.environment == "user") {
+  if (toolchain.base_environment == "user") {
     # This library is used by libc, so suppress the circularity.
     configs -= [ "$zx/public/gn/config:user" ]
   }

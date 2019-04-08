@@ -9,7 +9,7 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 exclude_tags = [ "instrumented" ]
 
 if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
-    toolchain.environment != "user") {
+    toolchain.base_environment != "user") {
   # References from other toolchains just redirect.  This prevents extra
   # abigen runs in other toolchains just to get identical generated headers.
   foreach(target,
@@ -104,7 +104,7 @@ if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
       ":generate",
       "$zx/kernel/syscalls:syscall-abi",
     ]
-    if (toolchain.environment == "user") {
+    if (toolchain.base_environment == "user") {
       configs -= [ "$zx/public/gn/config:user" ]
     }
   }

@@ -21,7 +21,7 @@ library("sync") {
     "$zx/system/ulib/zircon-internal",
   ]
 
-  if (toolchain.environment == "user") {
+  if (toolchain.base_environment == "user") {
     # This code is used in early startup, where safe-stack setup is not
     # ready yet.
     configs += [ "$zx/public/gn/config:no_sanitizers" ]
