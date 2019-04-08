@@ -23,6 +23,7 @@ DDK_PROTOCOL_DEF(DISPLAY_CONTROLLER_IMPL, 'pDCI', "display-controller-impl", PF_
 DDK_PROTOCOL_DEF(ETHERNET,       'pETH', "ethernet", 0)
 DDK_PROTOCOL_DEF(ETHMAC,         'pEMA', "ethmac", 0)
 DDK_PROTOCOL_DEF(FRAMEBUFFER,    'pFRB', "framebuffer", 0)
+DDK_PROTOCOL_DEF(GOLDFISH_PIPE,  'pGFP', "goldfish-pipe", 0)
 DDK_PROTOCOL_DEF(GPIO,           'pGPO', "gpio", PF_NOPUB)
 DDK_PROTOCOL_DEF(GPIO_IMPL,      'pGPI', "gpio-impl", PF_NOPUB)
 DDK_PROTOCOL_DEF(HIDBUS,         'pHID', "hidbus", 0)

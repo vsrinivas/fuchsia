@@ -109,6 +109,7 @@ if (current_cpu != "") {
       "fvm",
       "fzl",
       "getentropy",
+      "goldfish",
       "handle-alias",
       "hid",
       "hid-parser",

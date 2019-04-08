@@ -18,4 +18,5 @@ struct AcpiMmio {
 protocol Acpi {
     GetMmio(uint32 index) -> (zx.status s, AcpiMmio mmio);
     MapInterrupt(int64 index) -> (zx.status s, handle<interrupt> @handle);
+    GetBti(uint32 bdf, uint32 index) -> (zx.status s, handle<bti> bti);
 };

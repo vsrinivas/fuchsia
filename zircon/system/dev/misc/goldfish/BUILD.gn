@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+driver("goldfish") {
+  sources = [
+    "instance.cpp",
+    "pipe-device.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-acpi",
+    "$zx/system/banjo/ddk-protocol-goldfish-pipe",
+    "$zx/system/dev/lib/mmio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/trace:headers",
+    "$zx/system/ulib/trace:trace-driver",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+  ]
+}

@@ -337,9 +337,25 @@ unlock:
     return st;
 }
 
-static acpi_protocol_ops_t acpi_proto = {
+static zx_status_t acpi_op_get_bti(void* ctx, uint32_t bdf, uint32_t index, zx_handle_t* bti) {
+    // The x86 IOMMU world uses PCI BDFs as the hardware identifiers, so there
+    // will only be one BTI per device.
+    ZX_ASSERT(index == 0);
+    // For dummy IOMMUs, the bti_id just needs to be unique.  For Intel IOMMUs,
+    // the bti_ids correspond to PCI BDFs.
+    zx_handle_t iommu_handle;
+    zx_status_t status = iommu_manager_iommu_for_bdf(bdf, &iommu_handle);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return zx_bti_create(iommu_handle, 0, bdf, bti);
+}
+
+// TODO marking unused until we publish some devices
+static __attribute__ ((unused)) acpi_protocol_ops_t acpi_proto = {
     .get_mmio = acpi_op_get_mmio,
     .map_interrupt = acpi_op_map_interrupt,
+    .get_bti = acpi_op_get_bti,
 };
 
 static const char* hid_from_acpi_devinfo(ACPI_DEVICE_INFO* info) {
@@ -521,6 +537,8 @@ static ACPI_STATUS acpi_ns_walk_callback(ACPI_HANDLE object, uint32_t nesting_le
     } else if (!memcmp(hid, RTC_HID_STRING, HID_LENGTH) ||
                (cid && !memcmp(cid, RTC_HID_STRING, HID_LENGTH))) {
         publish_device(acpi_root, platform_bus, object, info, "rtc", ZX_PROTOCOL_ACPI, &acpi_proto);
+    } else if (!memcmp(hid, GOLDFISH_PIPE_HID_STRING, HID_LENGTH)) {
+        publish_device(acpi_root, platform_bus, object, info, "goldfish", ZX_PROTOCOL_ACPI, &acpi_proto);
     }
 
 out:

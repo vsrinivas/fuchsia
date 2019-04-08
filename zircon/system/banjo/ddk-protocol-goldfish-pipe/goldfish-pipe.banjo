@@ -1,0 +1,92 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.goldfish.pipe;
+
+using zx;
+
+/// Maximum number of buffers that can be used for read/write commands.
+const uint32 MAX_BUFFERS_PER_COMMAND = 336;
+
+/// Codes for supported pipe commands.
+enum PipeCmdCode : int32 {
+    OPEN = 1;
+    CLOSE = 2;
+    POLL = 3;
+    WRITE = 4;
+    WAKE_ON_WRITE = 5;
+    READ = 6;
+    WAKE_ON_READ = 7;
+};
+
+/// Wake flags received through signal callback.
+enum PipeWakeFlag : int32 {
+    CLOSED = 1;
+    READ = 2;
+    WRITE = 4;
+};
+
+/// Pipe command errors. 0 is success.
+enum PipeError : int32 {
+    INVAL = -1;
+    AGAIN = -2;
+    NOMEM = -3;
+    IO = -4;
+};
+
+/// Additional command parameters used for read/write commands.
+/// Note: This structure is known to both the virtual device and driver.
+[Packed, repr="C"]
+struct PipeCmdReadWriteParams {
+    uint32 buffers_count;
+    int32 consumed_size;
+    array<uint64>:MAX_BUFFERS_PER_COMMAND ptrs;
+    array<uint32>:MAX_BUFFERS_PER_COMMAND sizes;
+};
+
+/// Pipe command structure used for all commands.
+/// Note: This structure is known to both the virtual device and driver.
+[Packed, repr="C"]
+struct PipeCmdBuffer {
+    int32 cmd;
+    int32 id;
+    int32 status;
+    int32 reserved;
+    PipeCmdReadWriteParams rw_params;
+};
+
+/// Signal callback interface used for notifications.
+[Layout = "ddk-callback"]
+protocol GoldfishPipeSignalValue {
+    Callback(int32 flags) -> ();
+};
+
+/// This interface can be used to establish a goldfish pipe connection. The
+/// client is responsible for managing the command structure associated with
+/// the pipe and should issue a 'close' command before destroying a previously
+/// opened pipe. Failure to do so may result in host side resources that are
+/// not cleaned up properly.
+[Layout = "ddk-protocol"]
+protocol GoldfishPipe {
+    /// Create a new pipe connection. The |id| identifies the pipe and must
+    /// be used for all subsequent commands. The memory that will be used
+    /// as command structure is returned in |vmo|.
+    Create(GoldfishPipeSignalValue cb_value) -> (zx.status s, int32 id, handle<vmo> vmo);
+
+    /// Destroy a previously created pipe connection.
+    Destroy(int32 id);
+
+    /// Open pipe connection. This must be called before any other
+    /// commands are issued and will cause the physical address of the
+    /// command structure to be a associated with the pipe. The command
+    /// structure must contain {.cmd = OPEN, .id = id} at the time this
+    /// request is issued.
+    Open(int32 id);
+
+    /// Execute pipe command stored in associated command structure.
+    Exec(int32 id);
+
+    /// Get BTI that can be used create IO buffers for read/write commands.
+    GetBti() -> (zx.status s, handle<bti> bti);
+};

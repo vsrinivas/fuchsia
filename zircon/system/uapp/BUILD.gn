@@ -33,6 +33,7 @@ group("uapp") {
     "fvm-check",
     "gfxfractal",
     "gfxtest",
+    "goldfish-benchmark",
     "gpt",
     "hid",
     "hidsensor",
