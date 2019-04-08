@@ -229,7 +229,8 @@ int Spawn(const std::vector<std::string>& command) {
   zx_status_t status =
       fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, raw_command[0],
                  raw_command.data(), subprocess.reset_and_get_address());
-  FXL_CHECK(status == ZX_OK);
+  FXL_CHECK(status == ZX_OK) << "Error spawning " << raw_command[0] << ": "
+                             << zx_status_get_string(status);
 
   zx_signals_t signals_observed = 0;
   status = subprocess.wait_one(ZX_TASK_TERMINATED, zx::time(ZX_TIME_INFINITE),
