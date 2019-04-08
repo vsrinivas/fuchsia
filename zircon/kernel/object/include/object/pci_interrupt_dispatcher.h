@@ -8,6 +8,7 @@
 #if WITH_KERNEL_PCIE
 
 #include <fbl/canary.h>
+#include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
 #include <object/pci_device_dispatcher.h>
 #include <sys/types.h>
@@ -20,7 +21,7 @@ public:
                               uint32_t irq_id,
                               bool maskable,
                               zx_rights_t* out_rights,
-                              fbl::RefPtr<Dispatcher>* out_interrupt);
+                              KernelHandle<InterruptDispatcher>* out_interrupt);
 
     ~PciInterruptDispatcher() final;
 

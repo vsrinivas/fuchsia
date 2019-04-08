@@ -9,16 +9,19 @@
 #include <fbl/canary.h>
 #include <fbl/vector.h>
 #include <kernel/mp.h>
+#include <object/handle.h>
 #include <object/interrupt_dispatcher.h>
 #include <sys/types.h>
 #include <zircon/types.h>
 
 class InterruptEventDispatcher final : public InterruptDispatcher {
 public:
-    static zx_status_t Create(fbl::RefPtr<Dispatcher>* dispatcher,
+    static zx_status_t Create(KernelHandle<InterruptDispatcher>* handle,
                               zx_rights_t* rights,
                               uint32_t vector,
                               uint32_t options);
+
+    ~InterruptEventDispatcher() final;
 
     InterruptEventDispatcher(const InterruptDispatcher &) = delete;
     InterruptEventDispatcher& operator=(const InterruptDispatcher &) = delete;
@@ -27,7 +30,6 @@ public:
 
 private:
     explicit InterruptEventDispatcher(uint32_t vector);
-    ~InterruptEventDispatcher() final;
 
     void MaskInterrupt() final;
     void UnmaskInterrupt() final;

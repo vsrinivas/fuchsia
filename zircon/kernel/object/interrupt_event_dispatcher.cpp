@@ -18,7 +18,7 @@
 KCOUNTER(dispatcher_interrupt_event_create_count, "dispatcher.interrupt_event.create")
 KCOUNTER(dispatcher_interrupt_event_destroy_count, "dispatcher.interrupt_event.destroy")
 
-zx_status_t InterruptEventDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher,
+zx_status_t InterruptEventDispatcher::Create(KernelHandle<InterruptDispatcher>* handle,
                                              zx_rights_t* rights,
                                              uint32_t vector,
                                              uint32_t options) {
@@ -27,15 +27,13 @@ zx_status_t InterruptEventDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher
         return ZX_ERR_INVALID_ARGS;
 
     // Attempt to construct the dispatcher.
+    // Do not create a KernelHandle until all initialization has succeeded;
+    // if an interrupt already exists on |vector| our on_zero_handles() would
+    // tear down the existing interrupt when creation fails.
     fbl::AllocChecker ac;
-    InterruptEventDispatcher* disp = new (&ac) InterruptEventDispatcher(vector);
+    auto disp = fbl::AdoptRef(new (&ac) InterruptEventDispatcher(vector));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
-
-    // Hold a ref while we check to see if someone else owns this vector or not.
-    // If things go wrong, this ref will be released and the IED will get
-    // cleaned up automatically.
-    auto disp_ref = fbl::AdoptRef<Dispatcher>(disp);
 
     Guard<fbl::Mutex> guard{disp->get_lock()};
 
@@ -97,7 +95,7 @@ zx_status_t InterruptEventDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher
 
     // Transfer control of the new dispatcher to the creator and we are done.
     *rights = default_rights();
-    *dispatcher = ktl::move(disp_ref);
+    handle->reset(ktl::move(disp));
 
     return ZX_OK;
 }

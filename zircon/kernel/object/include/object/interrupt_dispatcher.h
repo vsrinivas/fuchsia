@@ -43,6 +43,8 @@ public:
         return ZX_ERR_NOT_SUPPORTED;
     }
 
+    void on_zero_handles() final;
+
 protected:
     virtual void MaskInterrupt() = 0;
     virtual void UnmaskInterrupt() = 0;
@@ -50,7 +52,6 @@ protected:
     virtual bool HasVcpu() const TA_REQ(spinlock_) { return false; }
 
     InterruptDispatcher();
-    void on_zero_handles() final;
     void Signal() {
         event_signal_etc(&event_, true, ZX_OK);
     }

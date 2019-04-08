@@ -158,7 +158,7 @@ zx_status_t PciDeviceDispatcher::ResetDevice() {
 }
 
 zx_status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
-                                              fbl::RefPtr<Dispatcher>* interrupt_dispatcher,
+                                              KernelHandle<InterruptDispatcher>* interrupt_handle,
                                               zx_rights_t* rights) {
     canary_.Assert();
 
@@ -175,7 +175,7 @@ zx_status_t PciDeviceDispatcher::MapInterrupt(int32_t which_irq,
                                           which_irq,
                                           irqs_maskable_,
                                           rights,
-                                          interrupt_dispatcher);
+                                          interrupt_handle);
 }
 
 static_assert(static_cast<uint>(ZX_PCIE_IRQ_MODE_DISABLED) ==

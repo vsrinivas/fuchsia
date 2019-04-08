@@ -456,18 +456,18 @@ zx_status_t sys_interrupt_create(zx_handle_t src_obj, uint32_t src_num,
         }
     }
 
-    fbl::RefPtr<Dispatcher> dispatcher;
+    KernelHandle<InterruptDispatcher> handle;
     zx_rights_t rights;
     zx_status_t result;
     if (options & ZX_INTERRUPT_VIRTUAL) {
-        result = VirtualInterruptDispatcher::Create(&dispatcher, &rights, options);
+        result = VirtualInterruptDispatcher::Create(&handle, &rights, options);
     } else {
-        result = InterruptEventDispatcher::Create(&dispatcher, &rights, src_num, options);
+        result = InterruptEventDispatcher::Create(&handle, &rights, src_num, options);
     }
     if (result != ZX_OK)
         return result;
 
-    return out_handle->make(ktl::move(dispatcher), rights);
+    return out_handle->make(ktl::move(handle), rights);
 }
 
 // zx_status_t zx_interrupt_bind

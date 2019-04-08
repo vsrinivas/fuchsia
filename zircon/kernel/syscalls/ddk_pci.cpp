@@ -699,13 +699,13 @@ zx_status_t sys_pci_map_interrupt(zx_handle_t dev_handle,
     if (status != ZX_OK)
         return status;
 
-    fbl::RefPtr<Dispatcher> interrupt_dispatcher;
+    KernelHandle<InterruptDispatcher> interrupt_handle;
     zx_rights_t rights;
-    zx_status_t result = pci_device->MapInterrupt(which_irq, &interrupt_dispatcher, &rights);
+    zx_status_t result = pci_device->MapInterrupt(which_irq, &interrupt_handle, &rights);
     if (result != ZX_OK)
         return result;
 
-    return out_handle->make(ktl::move(interrupt_dispatcher), rights);
+    return out_handle->make(ktl::move(interrupt_handle), rights);
 }
 
 /**

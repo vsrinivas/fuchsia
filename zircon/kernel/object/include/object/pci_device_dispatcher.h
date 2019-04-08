@@ -23,6 +23,8 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <object/dispatcher.h>
+#include <object/handle.h>
+#include <object/interrupt_dispatcher.h>
 #include <sys/types.h>
 
 class PciInterruptDispatcher;
@@ -50,7 +52,7 @@ public:
     zx_status_t GetConfig(pci_config_info_t* out);
     zx_status_t ResetDevice();
     zx_status_t MapInterrupt(int32_t which_irq,
-                             fbl::RefPtr<Dispatcher>* interrupt_dispatcher,
+                             KernelHandle<InterruptDispatcher>* interrupt_handle,
                              zx_rights_t* rights);
     zx_status_t QueryIrqModeCaps(zx_pci_irq_mode_t mode, uint32_t* out_max_irqs);
     zx_status_t SetIrqMode(zx_pci_irq_mode_t mode, uint32_t requested_irq_count);
