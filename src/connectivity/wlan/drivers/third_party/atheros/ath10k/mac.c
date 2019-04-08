@@ -146,7 +146,7 @@ static const struct ath10k_band ath10k_supported_bands[] = {
         .band_id = WLAN_BAND_2GHZ,
         .ht_supported = true,
         .vht_supported = false,
-        // TODO(NET-1375):
+        // TODO(WLAN-269):
         // Unmark the "BasicRate" bit for the first 4 rates.
         // Rename ".basic_rates" to ".supported_rates"
         // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
@@ -160,7 +160,7 @@ static const struct ath10k_band ath10k_supported_bands[] = {
         .band_id = WLAN_BAND_5GHZ,
         .ht_supported = true,
         .vht_supported = true,
-        // TODO(NET-1375):
+        // TODO(WLAN-269):
         // Unmark the "BasicRate" bit for the first 4 rates.
         // Rename ".basic_rates" to ".supported_rates"
         // See IEEE Std 802.11-2016, 9.4.2.3 for encoding
@@ -2309,7 +2309,7 @@ static void ath10k_peer_assoc_h_basic(struct ath10k* ar,
 static void ath10k_peer_assoc_h_crypto(struct ath10k* ar,
                                        wlan_assoc_ctx_t* assoc,
                                        struct wmi_peer_assoc_complete_arg* arg) {
-    // TODO(NET-1661): Come back later when we want to enable the security feature on AP mode.
+    // TODO(WLAN-493): Come back later when we want to enable the security feature on AP mode.
 #if 0  // NEEDS PORTING
     struct ieee80211_bss_conf* info = &vif->bss_conf;
     struct cfg80211_chan_def def;
@@ -3648,7 +3648,7 @@ static bool ath10k_tx_h_use_hwcrypto(struct ath10k* ar, struct ath10k_msg_buf* t
 /* HTT Tx uses Native Wifi tx mode which expects 802.11 frames without QoS
  * Control in the header. We would prefer that wlanmac allow us to specify
  * that we don't want this information in the header so that we don't have
- * to change frames on-the-fly (see NET-903).
+ * to change frames on-the-fly (see WLAN-653).
  */
 static void ath10k_tx_h_nwifi(struct ath10k_msg_buf* tx_buf) {
     void* pkt = ath10k_msg_buf_get_payload(tx_buf);

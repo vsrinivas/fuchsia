@@ -2078,7 +2078,7 @@ void ath10k_core_stop(struct ath10k* ar) {
 /* In order to know what hw capabilities should be advertised, we have to load the
  * firmware. Rather than tear it down immediately and re-load it when wlanmac's
  * start() is invoked, we just keep it running. Note that this behavior is subject
- * to change in the future (see NET-919).
+ * to change in the future (see WLAN-652).
  */
 static zx_status_t ath10k_core_probe_fw(struct ath10k* ar) {
     struct bmi_target_info target_info;
@@ -2194,7 +2194,7 @@ err_power_down:
 
 // When the parent (PHY) is removed, this is called to remove MAC itself from the device list.
 static void ath10k_core_mac_unbind(void* ctx) {
-    // TODO(NET-1285): for support multiple.
+    // TODO(WLAN-641): for support multiple.
     struct ath10k* ar = ctx;
     zx_status_t status;
 
@@ -2212,7 +2212,7 @@ static void ath10k_core_mac_release(void* ctx) {
 
     // The MAC interface has been released, advance the ID so that next creating interface we can
     // assign a different number.
-    // TODO(NET-1285): for support multiple.
+    // TODO(WLAN-641): for support multiple.
     ar->iface_id++;
 }
 
@@ -2257,7 +2257,7 @@ static zx_status_t ath10k_core_create_iface(void* ctx, uint16_t mac_role, uint16
 
     mtx_lock(&ar->iface_lock);
 
-    // Currently we only support one interface. TODO(NET-1285): for support multiple.
+    // Currently we only support one interface. TODO(WLAN-641): for support multiple.
     if (ar->num_mac_ifaces) {
         ath10k_err("MAC interface had been created. num_mac_ifaces=%d\n", ar->num_mac_ifaces);
         status = ZX_ERR_ALREADY_BOUND;
@@ -2270,7 +2270,7 @@ static zx_status_t ath10k_core_create_iface(void* ctx, uint16_t mac_role, uint16
     //
     // Currently we only support one interface, so that it is okay to save MAC role in *ar*.
     // We have to review this when we want to support mulitple interfaces.
-    // TODO(NET-1285): for support multiple.
+    // TODO(WLAN-641): for support multiple.
     ar->mac_role = mac_role;
 
     // Add MAC interface

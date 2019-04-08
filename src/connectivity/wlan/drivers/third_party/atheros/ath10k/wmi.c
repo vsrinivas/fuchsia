@@ -18,7 +18,7 @@
 // The way how macros in wmi.h and wmi-tlv.h are working (read carefully how MSG() is defined before
 // ath10k_msg_type and how ATH10K_MSG_TYPE_WMI is *referred* in wmi.h) is that the .c code must
 // include the msg_buf.h. Then the msg_buf.h will include wmi.h and wmi-tlv.h to expand the macros
-// properly. TODO(NET-1237): Cleanup ath10k msg_buf
+// properly. TODO(WLAN-606): Cleanup ath10k msg_buf
 #include "msg_buf.h"
 
 #include <ddk/driver.h>
@@ -1622,7 +1622,7 @@ static void ath10k_wmi_tx_beacon_nowait(struct ath10k_vif* arvif) {
         arvif->beacon_state = ATH10K_BEACON_SENDING;
         mtx_unlock(&arvif->ar->data_lock);
 
-        // TODO(NET-1680): populate this from the corresponding flags calculated
+        // TODO(WLAN-413): populate this from the corresponding flags calculated
         // by ath10k_wmi_update_tim()
         bool dtim_zero = false;
         bool deliver_cab = false;
@@ -1648,7 +1648,7 @@ static void ath10k_wmi_tx_beacon_nowait(struct ath10k_vif* arvif) {
 }
 
 static void ath10k_wmi_tx_beacons_nowait(struct ath10k* ar) {
-    // TODO(NET-1681): iterate over all interfaces
+    // TODO(WLAN-414): iterate over all interfaces
     if (ar->arvif_created) {
         ath10k_wmi_tx_beacon_nowait(&ar->arvif);
     }
@@ -4640,7 +4640,7 @@ skip_mem_alloc:
 void ath10k_wmi_event_service_ready(struct ath10k* ar, struct ath10k_msg_buf* buf) {
     thrd_t wmi_rdy_thrd;
     ar->svc_rdy_buf = buf;
-    // TODO: Optimize thread handling (NET-708)
+    // TODO: Optimize thread handling (WLAN-580)
     thrd_create_with_name(&wmi_rdy_thrd, ath10k_wmi_event_service_ready_work, ar,
                           "ath10k-wmi-ready");
     thrd_detach(wmi_rdy_thrd);

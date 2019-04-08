@@ -462,7 +462,7 @@ static zx_status_t ath10k_htc_wait_ctl_resp(struct ath10k_htc* htc) {
          * even if the buffer was completed. It is suspected
          * iomap writes unmasking PCI CE irqs aren't propagated
          * properly in KVM PCI-passthrough sometimes.
-         * Some symptoms are described in NET-992.
+         * Some symptoms are described in WLAN-111.
          */
         ath10k_warn("failed to receive control response completion, polling..\n");
 

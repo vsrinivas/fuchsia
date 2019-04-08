@@ -771,7 +771,7 @@ struct ath10k {
     } wlanmac;
 
     // Now we only support one interface. Need to review the below variables when supporting
-    // multiple interfaces. TODO(NET-1285)
+    // multiple interfaces. TODO(WLAN-641)
     uint16_t mac_role;        // Either WLAN_MAC_ROLE_CLIENT or WLAN_MAC_ROLE_AP passed from MLME
     uint16_t num_mac_ifaces;  // Number of MAC interfaces created.
     uint16_t iface_id;        // The ID being in use.
