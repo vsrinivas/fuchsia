@@ -190,9 +190,16 @@ The set of currently known features are as follows:
 - `introspection`, which requests access to introspect the system. The
   introspection namespace will be located at `/info_experimental`.
 
-- `persistent-storage`, which requests access to persistent storage for the
-  device, located in `/data` in the package's namespace. (Future work will
-  likely make this access more fine-grained than just the `/data` directory.)
+- `isolated-persistent-storage`, which requests access to persistent storage for
+  the device, located in `/data` in the package's namespace. This storage is
+  isolated from the storage provided to other components.
+
+- `isolated-cache-storage`, which requests access to persistent storage for the
+  device, located in `/cache` in the package's namespace. This storage is
+  isolated from the storage provided to other components. Unlike
+  `isolated-persistent-storage`, items placed in the storage provided by this
+  feature will be deleted by the system to reclaim space when disk usage is
+  nearing capacity.
 
 - `root-ssl-certificates`, which requests access to the root SSL certificates
   for the device. These certificates are provided in the `/config/ssl` directory

@@ -21,7 +21,7 @@ constexpr char kTestFileName[] = "some-test-file";
 // Each of these component manifests have the same content (same test util
 // binary, same sandbox definition), but we have two so we can test storage
 // isolation based on component URL
-// Note that the test_unil manifest includes both the new isolated and old
+// Note that the test_util manifest includes both the new isolated and old
 // features to validate that the isolated feature is prioritized if both are
 // included. (This is mentioned here since the manifests are JSON and can't have
 // comments)

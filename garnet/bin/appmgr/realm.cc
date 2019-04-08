@@ -203,12 +203,13 @@ std::string StableComponentID(const FuchsiaPkgUrl& fp) {
 
 // static
 RealmArgs RealmArgs::Make(
-    Realm* parent, std::string label, std::string data_path,
+    Realm* parent, std::string label, std::string data_path, std::string cache_path,
     const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::EnvironmentOptions options) {
   return {.parent = parent,
           .label = label,
           .data_path = data_path,
+          .cache_path = cache_path,
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = nullptr,
@@ -216,13 +217,14 @@ RealmArgs RealmArgs::Make(
 }
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
-    Realm* parent, std::string label, std::string data_path,
+    Realm* parent, std::string label, std::string data_path, std::string cache_path,
     const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
     fuchsia::sys::EnvironmentOptions options) {
   return {.parent = parent,
           .label = label,
           .data_path = data_path,
+          .cache_path = cache_path,
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = std::move(additional_services),
@@ -232,6 +234,7 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
 Realm::Realm(RealmArgs args)
     : parent_(args.parent),
       data_path_(args.data_path),
+      cache_path_(args.cache_path),
       run_virtual_console_(args.run_virtual_console),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
       info_vfs_(async_get_default_dispatcher()),
@@ -318,8 +321,12 @@ Realm::~Realm() {
 
   if (delete_storage_on_death_) {
     if (!files::DeletePath(data_path(), true)) {
-      FXL_LOG(ERROR) << "Failed to delete storage for environment '" << label()
-                     << "' on death";
+      FXL_LOG(ERROR) << "Failed to delete persistent storage for environment '"
+                    << label() << "' on death";
+    }
+    if (!files::DeletePath(cache_path(), true)) {
+      FXL_LOG(ERROR) << "Failed to delete cache storage for environment '"
+                     << label() << "' on death";
     }
   }
 }
@@ -386,14 +393,16 @@ void Realm::CreateNestedEnvironment(
 
   RealmArgs args;
   std::string nested_data_path = files::JoinPath(data_path(), "r/" + label);
+  std::string nested_cache_path = files::JoinPath(cache_path(), "r/" + label);
   if (additional_services) {
     args = RealmArgs::MakeWithAdditionalServices(
-        this, label, nested_data_path, environment_services_,
+        this, label, nested_data_path, nested_cache_path, environment_services_,
         /*run_virtual_console=*/false, std::move(additional_services),
         std::move(options));
   } else {
-    args = RealmArgs::Make(this, label, nested_data_path, environment_services_,
-                           /*run_virtual_console=*/false, std::move(options));
+    args = RealmArgs::Make(
+        this, label, nested_data_path, nested_cache_path, environment_services_,
+        /*run_virtual_console=*/false, std::move(options));
   }
   auto controller = std::make_unique<EnvironmentControllerImpl>(
       std::move(controller_request), std::make_unique<Realm>(std::move(args)));
@@ -817,7 +826,8 @@ void Realm::CreateComponentFromPackage(
         sandbox,
         /*hub_directory_factory=*/[this] { return OpenInfoDir(); },
         /*isolated_data_path_factory=*/
-        [&] { return IsolatedDataPathForPackage(fp); });
+        [&] { return IsolatedPathForPackage(data_path(), fp); },
+        [&] { return IsolatedPathForPackage(cache_path(), fp); });
   }
 
   fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
@@ -975,12 +985,13 @@ zx_status_t Realm::BindFirstNestedRealmSvc(zx::channel channel) {
                                channel.release());
 }
 
-std::string Realm::IsolatedDataPathForPackage(const FuchsiaPkgUrl& fp) {
+std::string Realm::IsolatedPathForPackage(
+    std::string path_prefix, const FuchsiaPkgUrl& fp) {
   // Create a unique path for this combination of Realm and Component
-  // identities. The Realm part comes from data_path(), which includes all Realm
-  // labels from the root Realm to this Realm. The Component part comes from
-  // combining the Component URL.
-  std::string path = files::JoinPath(data_path(), StableComponentID(fp));
+  // identities. The Realm part comes from path_prefix, which should include all
+  // Realm labels from the root Realm to this Realm. The Component part comes
+  // from combining the Component URL.
+  std::string path = files::JoinPath(path_prefix, StableComponentID(fp));
   if (!files::IsDirectory(path) && !files::CreateDirectory(path)) {
     FXL_LOG(ERROR) << "Failed to create data directory " << path;
     return "";

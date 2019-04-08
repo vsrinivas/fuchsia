@@ -114,13 +114,17 @@ void NamespaceBuilder::AddSandbox(
   AddSandbox(sandbox, hub_directory_factory, [] {
     FXL_NOTREACHED() << "IsolatedDataPathFactory unexpectedly used";
     return "";
+  }, [] {
+    FXL_NOTREACHED() << "IsolatedCachePathFactory unexpectedly used";
+    return "";
   });
 }
 
 void NamespaceBuilder::AddSandbox(
     const SandboxMetadata& sandbox,
     const HubDirectoryFactory& hub_directory_factory,
-    const IsolatedDataPathFactory& isolated_data_path_factory) {
+    const IsolatedDataPathFactory& isolated_data_path_factory,
+    const IsolatedCachePathFactory& isolated_cache_path_factory) {
   for (const auto& path : sandbox.dev()) {
     if (path == "class") {
       FXL_LOG(WARNING) << "Ignoring request for all device classes";
@@ -143,6 +147,10 @@ void NamespaceBuilder::AddSandbox(
     // TODO(bryanhenry,CF-28): Remove this feature once users have migrated to
     // isolated storage.
     PushDirectoryFromPathAs(MigratedGlobalPersistentDataPath(), "/data");
+  }
+
+  if (sandbox.HasFeature("isolated-cache-storage")) {
+    PushDirectoryFromPathAs(isolated_cache_path_factory(), "/cache");
   }
 
   for (const auto& feature : sandbox.features()) {

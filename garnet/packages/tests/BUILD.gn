@@ -969,6 +969,7 @@ group("runtime") {
     "//garnet/bin/appmgr/integration_tests/mock_runner:appmgr_mock_runner",
     "//garnet/bin/appmgr/integration_tests/mock_runner:fake_component_for_runner",
     "//garnet/bin/appmgr/integration_tests/sandbox/features/build-info:build_info_tests",
+    "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_isolated_cache_storage",
     "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_isolated_persistent_storage",
     "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:has_persistent_storage",
     "//garnet/bin/appmgr/integration_tests/sandbox/features/persistent-storage:isolated_persistent_storage",

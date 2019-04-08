@@ -26,7 +26,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       sysmgr_permanently_failed_(false) {
   // 1. Create root realm.
   RealmArgs realm_args = RealmArgs::Make(
-      nullptr, kRootLabel, "/data", args.environment_services,
+      nullptr, kRootLabel, "/data", "/data/cache", args.environment_services,
       args.run_virtual_console, fuchsia::sys::EnvironmentOptions{});
 
   root_realm_ = std::make_unique<Realm>(std::move(realm_args));

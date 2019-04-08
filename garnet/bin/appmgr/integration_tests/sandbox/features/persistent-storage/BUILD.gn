@@ -9,6 +9,7 @@ import("//garnet/bin/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 group("persistent-storage") {
   testonly = true
   deps = [
+    ":has_isolated_cache_storage",
     ":has_isolated_persistent_storage",
     ":has_persistent_storage",
     ":isolated_persistent_storage",
@@ -48,6 +49,18 @@ sandbox_test_package("has_isolated_persistent_storage") {
   # different sandbox.
   sources = [
     "has_persistent_storage.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/appmgr/integration_tests/sandbox:namespace_test",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+  environments = basic_envs
+}
+
+sandbox_test_package("has_isolated_cache_storage") {
+  sources = [
+    "has_isolated_cache_storage.cc",
   ]
 
   deps = [

@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/has_isolated_cache_storage"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-cache-storage"
+        ],
+        "services": ["fuchsia.sys.Environment", "fuchsia.logger.LogSink"]
+    }
+}
+

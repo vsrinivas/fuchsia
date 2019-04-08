@@ -75,6 +75,7 @@
               "build-info",
               "config-data",
               "deprecated-global-persistent-storage",
+              "isolated-cache-storage",
               "isolated-persistent-storage",
               "shell",
               "shell-commands",

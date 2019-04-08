@@ -35,11 +35,15 @@ class NamespaceBuilder {
   // A factory function that returns a new path for /data to point to when it
   // should be isolated from other components and realms
   using IsolatedDataPathFactory = fit::function<std::string()>;
+  // A factory function that returns a new path for /cache to point to when it
+  // should be isolated from other components and realms
+  using IsolatedCachePathFactory = fit::function<std::string()>;
   void AddSandbox(const SandboxMetadata& sandbox,
                   const HubDirectoryFactory& hub_directory_factory);
   void AddSandbox(const SandboxMetadata& sandbox,
                   const HubDirectoryFactory& hub_directory_factory,
-                  const IsolatedDataPathFactory& isolated_data_path_factory);
+                  const IsolatedDataPathFactory& isolated_data_path_factory,
+                  const IsolatedCachePathFactory& isolated_cache_path_factory);
 
   // Returns an fdio_flat_namespace_t representing the built namespace.
   //
