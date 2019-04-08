@@ -23,6 +23,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/ieee80211.h"
+
 typedef uint64_t __le64;
 typedef uint32_t __le32;
 typedef uint16_t __le16;
@@ -33,32 +35,6 @@ typedef uint32_t netdev_features_t;
 typedef uint64_t dma_addr_t;
 
 typedef char* acpi_string;
-
-enum nl80211_iftype {
-    NL80211_IFTYPE_UNSPECIFIED,
-    NL80211_IFTYPE_ADHOC,
-    NL80211_IFTYPE_STATION,
-    NL80211_IFTYPE_AP,
-    NL80211_IFTYPE_AP_VLAN,
-    NL80211_IFTYPE_WDS,
-    NL80211_IFTYPE_MONITOR,
-    NL80211_IFTYPE_MESH_POINT,
-    NL80211_IFTYPE_P2P_CLIENT,
-    NL80211_IFTYPE_P2P_GO,
-    NL80211_IFTYPE_P2P_DEVICE,
-    NL80211_IFTYPE_OCB,
-    NL80211_IFTYPE_NAN,
-
-    /* keep last */
-    NUM_NL80211_IFTYPES,
-    NL80211_IFTYPE_MAX = NUM_NL80211_IFTYPES - 1
-};
-
-enum nl80211_band {
-    NL80211_BAND_2GHZ,
-    NL80211_BAND_5GHZ,
-    NL80211_BAND_60GHZ,
-};
 
 #define BIT(x) (1 << x)
 
