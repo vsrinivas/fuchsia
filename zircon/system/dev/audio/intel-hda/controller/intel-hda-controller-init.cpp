@@ -535,7 +535,7 @@ void IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
     }
 
     fbl::AllocChecker ac;
-    dsp_ = fbl::AdoptRef(new (&ac) IntelDsp(this, pp_regs, pci_bti_));
+    dsp_ = fbl::AdoptRef(new (&ac) IntelDsp(this, pp_regs));
     if (!ac.check()) {
         LOG(ERROR, "Out of memory attempting to allocate DSP device\n");
         return;

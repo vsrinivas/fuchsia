@@ -15,7 +15,6 @@
 #include <string.h>
 #include <threads.h>
 
-#include <dispatcher-pool/dispatcher-channel.h>
 #include <intel-hda/codec-utils/codec-driver-base.h>
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/intel-hda-registers.h>
@@ -35,8 +34,7 @@ class IntelHDAController;
 
 class IntelDsp : public codecs::IntelHDACodecDriverBase {
 public:
-    IntelDsp(IntelHDAController* controller, hda_pp_registers_t* pp_regs,
-             const fbl::RefPtr<RefCountedBti>& pci_bti);
+    IntelDsp(IntelHDAController* controller, hda_pp_registers_t* pp_regs);
     ~IntelDsp();
 
     zx_status_t Init(zx_device_t* dsp_dev);
@@ -112,7 +110,6 @@ private:
     void EnableInterrupts();
 
     zx_status_t GetMmio(zx_handle_t* out_vmo, size_t* out_size);
-    zx_status_t GetBti(zx_handle_t* out_handle);
     void        Enable();
     void        Disable();
     void        IrqEnable();
@@ -221,12 +218,6 @@ private:
 
     // PCI registers
     fzl::VmoMapper mapped_regs_;
-
-    // A reference to our controller's BTI. This is needed to load firmware to the DSP.
-    fbl::RefPtr<RefCountedBti> pci_bti_;
-
-    // Dispatcher framework state.
-    fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
     // Driver connection state
     fbl::Mutex codec_driver_channel_lock_;

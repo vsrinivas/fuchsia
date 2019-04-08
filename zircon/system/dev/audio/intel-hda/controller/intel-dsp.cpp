@@ -44,9 +44,8 @@ struct skl_adspfw_ext_manifest_hdr_t {
     uint32_t entries;
 } __PACKED;
 
-IntelDsp::IntelDsp(IntelHDAController* controller, hda_pp_registers_t* pp_regs,
-                   const fbl::RefPtr<RefCountedBti>& pci_bti)
-    : controller_(controller), pp_regs_(pp_regs), pci_bti_(pci_bti) {
+IntelDsp::IntelDsp(IntelHDAController* controller, hda_pp_registers_t* pp_regs)
+    : controller_(controller), pp_regs_(pp_regs) {
     for (auto& id : module_ids_) {
         id = MODULE_ID_INVALID;
     }
@@ -56,10 +55,6 @@ IntelDsp::IntelDsp(IntelHDAController* controller, hda_pp_registers_t* pp_regs,
 }
 
 IntelDsp::~IntelDsp() {
-    // Close all existing connections and synchronize with any client threads
-    // who are currently processing requests.
-    default_domain_->Deactivate();
-
     // Give any active streams we had back to our controller.
     IntelHDAStream::Tree streams;
     {
@@ -73,11 +68,6 @@ IntelDsp::~IntelDsp() {
 }
 
 zx_status_t IntelDsp::Init(zx_device_t* dsp_dev) {
-    default_domain_ = dispatcher::ExecutionDomain::Create();
-    if (!default_domain_) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
     zx_status_t res = Bind(dsp_dev, "intel-sst-dsp");
     if (res != ZX_OK) {
         return res;
@@ -123,13 +113,13 @@ zx_status_t IntelDsp::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out
 
     dispatcher::Channel::ProcessHandler phandler(
         [codec = fbl::WrapRefPtr(this)](dispatcher::Channel* channel) -> zx_status_t {
-            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
+            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->controller_->default_domain());
             return codec->ProcessClientRequest(channel, true);
         });
 
     dispatcher::Channel::ChannelClosedHandler chandler(
         [codec = fbl::WrapRefPtr(this)](const dispatcher::Channel* channel) -> void {
-            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->default_domain_);
+            OBTAIN_EXECUTION_DOMAIN_TOKEN(t, codec->controller_->default_domain());
             codec->ProcessClientDeactivate(channel);
         });
 
@@ -143,7 +133,7 @@ zx_status_t IntelDsp::CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out
 
     zx::channel client_channel;
     zx_status_t res;
-    res = CreateAndActivateChannel(default_domain_,
+    res = CreateAndActivateChannel(controller_->default_domain(),
                                    std::move(phandler),
                                    std::move(chandler),
                                    &codec_driver_channel_,
@@ -352,7 +342,7 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(dispatcher::Channel* channel,
     // this stream is already bound to a client, this will cause that connection
     // to be closed.
     zx::channel client_channel;
-    zx_status_t res = stream->SetStreamFormat(default_domain_,
+    zx_status_t res = stream->SetStreamFormat(controller_->default_domain(),
                                               req.format,
                                               &client_channel);
     if (res != ZX_OK) {
@@ -419,20 +409,6 @@ zx_status_t IntelDsp::SetupDspDevice() {
                                               ADSP_MAILBOX_IN_OFFSET), MAILBOX_SIZE);
     mailbox_out_.Initialize(static_cast<void*>(mapped_base + SKL_ADSP_SRAM1_OFFSET),
                             MAILBOX_SIZE);
-
-    // Get bus transaction initiator
-    zx::bti bti;
-    res = GetBti(bti.reset_and_get_address());
-    if (res != ZX_OK) {
-        LOG(ERROR, "Failed to get BTI handle for IHDA DSP (res %d)\n", res);
-        return res;
-    }
-
-    pci_bti_ = RefCountedBti::Create(std::move(bti));
-    if (pci_bti_ == nullptr) {
-        LOG(ERROR, "Out of memory while attempting to allocate BTI wrapper for IHDA DSP\n");
-        return ZX_ERR_NO_MEMORY;
-    }
 
     // Enable HDA interrupt. Interrupts are still masked at the DSP level.
     IrqEnable();
@@ -737,7 +713,7 @@ zx_status_t IntelDsp::StripFirmware(const zx::vmo& fw, void* out, size_t* size_i
 }
 
 zx_status_t IntelDsp::LoadFirmware() {
-    IntelDspCodeLoader loader(&regs()->cldma, pci_bti_);
+    IntelDspCodeLoader loader(&regs()->cldma, controller_->pci_bti());
     zx_status_t st = loader.Initialize();
     if (st != ZX_OK) {
         LOG(ERROR, "Error initializing firmware code loader (err %d)\n", st);
@@ -786,7 +762,7 @@ zx_status_t IntelDsp::LoadFirmware() {
     // should only need read access to the firmware.
     constexpr uint32_t DSP_MAP_FLAGS = ZX_BTI_PERM_READ;
     fzl::PinnedVmo pinned_fw;
-    st = pinned_fw.Pin(stripped_vmo, pci_bti_->initiator(), DSP_MAP_FLAGS);
+    st = pinned_fw.Pin(stripped_vmo, controller_->pci_bti()->initiator(), DSP_MAP_FLAGS);
     if (st != ZX_OK) {
         LOG(ERROR, "Failed to pin pages for DSP firmware (res %d)\n", st);
         return st;
@@ -955,18 +931,6 @@ zx_status_t IntelDsp::GetMmio(zx_handle_t* out_vmo, size_t* out_size) {
 
     *out_vmo = bar_info.handle;
     *out_size = bar_info.size;
-    return ZX_OK;
-}
-
-zx_status_t IntelDsp::GetBti(zx_handle_t* out_handle) {
-    ZX_DEBUG_ASSERT(pci_bti_ != nullptr);
-    zx::bti bti;
-    zx_status_t res = pci_bti_->initiator().duplicate(ZX_RIGHT_SAME_RIGHTS, &bti);
-    if (res != ZX_OK) {
-        LOG(ERROR, "Error duplicating BTI for DSP (res %d)\n", res);
-        return res;
-    }
-    *out_handle = bti.release();
     return ZX_OK;
 }
 
