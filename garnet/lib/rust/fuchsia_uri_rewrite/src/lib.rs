@@ -3,4 +3,7 @@
 // found in the LICENSE file.
 
 mod rule;
-pub use rule::{Rule, RuleParseError};
+pub use crate::rule::{Rule, RuleConfig};
+
+mod errors;
+pub use crate::errors::{RuleDecodeError, RuleParseError};
