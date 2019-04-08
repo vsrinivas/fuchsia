@@ -191,7 +191,7 @@ impl<'entries> Simple<'entries> {
                 } else {
                     let channel = Channel::from_channel(watcher)?;
 
-                    let mut names = self.entries.keys().map(|k| k.as_str());
+                    let mut names = self.entries.keys();
                     let status = self
                         .watchers
                         .add(&mut names, mask, channel)

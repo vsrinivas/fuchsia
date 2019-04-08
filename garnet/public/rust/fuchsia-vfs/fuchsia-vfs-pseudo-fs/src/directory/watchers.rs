@@ -51,12 +51,42 @@ impl Watchers {
         Watchers { connections: Vec::new() }
     }
 
-    pub fn add(
+    /// Connects a new watcher (connected over the `channel`) to the list of watchers.  This
+    /// watcher will receive WATCH_EVENT_EXISTING event with all the names provided by the `names`
+    /// argument.  `mask` is the event mask this watcher has requested.
+    // NOTE Initially I have used `&mut Iterator<Item = &str>` as a type for `names`.  But that
+    // effectively says that names of all the entries should exist for the lifetime of the
+    // iterator.  As one may store those references for the duration of the lifetime of the
+    // iterator reference.
+    //
+    // When entry names are dynamically generated, as in the "lazy" directory this could be
+    // inefficient.  I would not want the iterator to own all the entry names.  At the same time,
+    // `add()` does not really need for those names to exist all the time, it only processes one
+    // name at a time and never returns to the previous name.
+    //
+    // One way to be precise about the actual usage pattern that `add` is following is to use a
+    // "sink" instead of an iterator, controlled by the producer.  `names` then becomes:
+    //
+    //   names: FnMut(&mut FnMut(&str) -> bool),
+    //
+    // `add()` will call `names()` providing a "sink" that will see entry names one at time.  Sink
+    // may stop the iteration if it returns `false`.  Calling `names` again will continue the
+    // iteration.  But, this interface is quite unusual, as most people will probably expect to see
+    // an `Iterator` here.
+    //
+    // Switching to `AsRef<str>` allows `add` to accept both `Iterator<Item = &str>`, for the case
+    // when all the entry names exist for the lifetime of the iterator, as well as `Iterator<Item =
+    // String>` for the case, when ownership of the entry names need to be passed on to the `add()`
+    // method itself.
+    pub fn add<Name>(
         &mut self,
-        names: &mut Iterator<Item = &str>,
+        names: &mut Iterator<Item = Name>,
         mask: u32,
         channel: Channel,
-    ) -> Result<(), WatchersAddError> {
+    ) -> Result<(), WatchersAddError>
+    where
+        Name: AsRef<str>,
+    {
         let conn = WatcherConnection::new(mask, channel);
 
         conn.send_events_existing(names)?;
@@ -75,12 +105,17 @@ impl Watchers {
     ///
     /// In case of a communication error with any of the watchers, connection to this watcher is
     /// closed.
-    pub fn send_event(
+    pub fn send_event<Name>(
         &mut self,
         mask: u32,
         event: u8,
-        name: &str,
-    ) -> Result<(), WatchersSendError> {
+        name: Name,
+    ) -> Result<(), WatchersSendError>
+    where
+        Name: AsRef<str>,
+    {
+        let name = name.as_ref();
+
         if name.len() >= MAX_FILENAME as usize {
             return Err(WatchersSendError::NameTooLong);
         }
@@ -106,12 +141,63 @@ impl Watchers {
         Ok(())
     }
 
-    pub fn remove_dead(&mut self, lw: &Waker) {
-        self.connections.retain(|watcher| !watcher.is_dead(lw));
+    /// Informs all the connected watchers about the specified event.  While `mask` and `event`
+    /// carry the same information, as they are represented by `WATCH_MASK_*` and `WATCH_EVENT_*`
+    /// constants in io.fidl, it is easier when both forms are provided.  `mask` is used to filter
+    /// out those watchers that did not request for observation of this event and `event` is used
+    /// to construct the event object.  The method will operate correctly only if `mask` and
+    /// `event` match.
+    ///
+    /// In case of a communication error with any of the watchers, connection to this watcher is
+    /// closed.
+    #[allow(unused)]
+    pub fn send_events<GetNames, Names, Name>(
+        &mut self,
+        mask: u32,
+        event: u8,
+        mut get_names: GetNames,
+    ) -> Result<(), WatchersSendError>
+    where
+        GetNames: FnMut() -> Names,
+        Names: Iterator<Item = Name>,
+        Name: AsRef<str>,
+    {
+        let mut res = Ok(());
+
+        self.connections.retain(|watcher| {
+            let mut names = get_names();
+            match watcher.send_events_check_mask(mask, event, &mut names) {
+                Ok(()) => true,
+                Err(ConnectionSendError::NameTooLong) => {
+                    // This is not a connection failure, so we are still keeping the connection
+                    // alive.
+                    res = Err(WatchersSendError::NameTooLong);
+                    true
+                }
+                Err(ConnectionSendError::FIDL(_)) => false,
+            }
+        });
+
+        res
     }
 
+    /// Checks if there are any connections in the list of watcher connections that has been
+    /// closed.  Removes them and setup up the waker to wake up when any of the live connections is
+    /// closed.
+    pub fn remove_dead(&mut self, waker: &Waker) {
+        self.connections.retain(|watcher| !watcher.is_dead(waker));
+    }
+
+    /// Returns true if there are any active watcher connections.
     pub fn has_connections(&self) -> bool {
         self.connections.len() != 0
+    }
+
+    /// Closes all the currently connected watcher connections.  New connections may still be added
+    /// via add().
+    #[allow(unused)]
+    pub fn close_all(&mut self) {
+        self.connections.clear();
     }
 }
 
@@ -154,10 +240,10 @@ impl WatcherConnection {
     /// Will skip those entries where `name` exceeds the [`MAX_FILENAME`] bytes and will return
     /// [`ConnectionSendError::NameTooLong`] error in that case.
     /// `len` field should be `0`, it will be set to be equal to the length of the `name` field.
-    fn send_event_structs(
-        &self,
-        events: &mut Iterator<Item = WatchedEvent>,
-    ) -> Result<(), ConnectionSendError> {
+    fn send_event_structs<Events>(&self, events: Events) -> Result<(), ConnectionSendError>
+    where
+        Events: Iterator<Item = WatchedEvent>,
+    {
         // Unfortunately, io.fidl currently does not provide encoding for the watcher events.
         // Seems to be due to
         //
@@ -222,23 +308,50 @@ impl WatcherConnection {
     ///
     /// `event` is one of the WATCH_EVENT_* constants, with the values used to populate the `event`
     /// field.
-    fn send_event(&self, event: u8, name: &str) -> Result<(), ConnectionSendError> {
+    fn send_event<Name>(&self, event: u8, name: Name) -> Result<(), ConnectionSendError>
+    where
+        Name: AsRef<str>,
+    {
         self.send_event_structs(&mut iter::once(WatchedEvent {
             event,
             len: 0,
-            name: name.as_bytes().to_vec(),
+            name: name.as_ref().as_bytes().to_vec(),
+        }))
+    }
+
+    /// Constructs and sends a fidl_fuchsia_io::WatchEvent instance over the watcher connection.
+    ///
+    /// `event` is one of the WATCH_EVENT_* constants, with the values used to populate the `event`
+    /// field.
+    #[allow(unused)]
+    fn send_events<Name>(
+        &self,
+        event: u8,
+        names: &mut Iterator<Item = Name>,
+    ) -> Result<(), ConnectionSendError>
+    where
+        Name: AsRef<str>,
+    {
+        self.send_event_structs(&mut names.map(|name| WatchedEvent {
+            event,
+            len: 0,
+            name: name.as_ref().as_bytes().to_vec(),
         }))
     }
 
     /// Constructs and sends a fidl_fuchsia_io::WatchEvent instance over the watcher connection,
     /// skipping the operation if the watcher did not request this kind of events to be delivered -
     /// filtered by the mask value.
-    fn send_event_check_mask(
+    #[allow(unused)]
+    fn send_event_check_mask<Name>(
         &self,
         mask: u32,
         event: u8,
-        name: &str,
-    ) -> Result<(), ConnectionSendError> {
+        name: Name,
+    ) -> Result<(), ConnectionSendError>
+    where
+        Name: AsRef<str>,
+    {
         if self.mask & mask == 0 {
             return Ok(());
         }
@@ -246,13 +359,35 @@ impl WatcherConnection {
         self.send_event(event, name)
     }
 
+    /// Constructs and sends multiple fidl_fuchsia_io::WatchEvent instances over the watcher
+    /// connection, skipping the operation if the watcher did not request this kind of events to be
+    /// delivered - filtered by the mask value.
+    fn send_events_check_mask<Name>(
+        &self,
+        mask: u32,
+        event: u8,
+        names: &mut Iterator<Item = Name>,
+    ) -> Result<(), ConnectionSendError>
+    where
+        Name: AsRef<str>,
+    {
+        if self.mask & mask == 0 {
+            return Ok(());
+        }
+
+        self.send_events(event, names)
+    }
+
     /// Sends one fidl_fuchsia_io::WatchEvent instance of type WATCH_EVENT_EXISTING, for every name
     /// in the list.  If the watcher has requested this kind of events - similar to to
     /// [`send_event_check_mask`] above, but with a predefined mask and event type.
-    fn send_events_existing(
+    fn send_events_existing<Name>(
         &self,
-        names: &mut Iterator<Item = &str>,
-    ) -> Result<(), ConnectionSendError> {
+        names: &mut Iterator<Item = Name>,
+    ) -> Result<(), ConnectionSendError>
+    where
+        Name: AsRef<str>,
+    {
         if self.mask & WATCH_MASK_EXISTING == 0 {
             return Ok(());
         }
@@ -260,7 +395,7 @@ impl WatcherConnection {
         self.send_event_structs(&mut names.map(|name| WatchedEvent {
             event: WATCH_EVENT_EXISTING,
             len: 0,
-            name: name.as_bytes().to_vec(),
+            name: name.as_ref().as_bytes().to_vec(),
         }))
     }
 
