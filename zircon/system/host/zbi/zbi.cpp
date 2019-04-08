@@ -2693,7 +2693,7 @@ int main(int argc, char** argv) {
         } else if (input_manifest || input_type == ZBI_TYPE_CONTAINER) {
             if (ImportFile(input->AsContents(), optarg, &items, &bootfs,
                            recompress ? compressed :
-                           Compressor::Config::None())) {
+                           std::optional<Compressor::Config>())) {
                 // It's another file in ZBI format.
             } else if (input_manifest) {
                 // It must be a manifest file.
