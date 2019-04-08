@@ -46,7 +46,8 @@ class PageSync {
   // most once and only before calling Start().
   virtual void SetOnBacklogDownloaded(fit::closure on_backlog_downloaded) = 0;
 
-  // Sets a watcher for the synchronization state of this page.
+  // Sets a watcher for the synchronization state of this page. Calling the
+  // watcher must not destruct the PageSync object.
   virtual void SetSyncWatcher(SyncStateWatcher* watcher) = 0;
 
  private:

@@ -115,6 +115,7 @@ void PageSyncImpl::HandleError() {
 
   if (on_unrecoverable_error_) {
     error_callback_already_called_ = true;
+    // This may destruct the object.
     on_unrecoverable_error_();
   }
 }
@@ -138,10 +139,6 @@ void PageSyncImpl::NotifyStateWatcher() {
 }
 
 void PageSyncImpl::SetDownloadState(DownloadSyncState next_download_state) {
-  if (next_download_state == DOWNLOAD_PERMANENT_ERROR) {
-    HandleError();
-  }
-
   if (download_state_ == DOWNLOAD_BACKLOG &&
       next_download_state != DOWNLOAD_PERMANENT_ERROR &&
       on_backlog_downloaded_) {
@@ -155,15 +152,23 @@ void PageSyncImpl::SetDownloadState(DownloadSyncState next_download_state) {
 
   download_state_ = next_download_state;
   NotifyStateWatcher();
+
+  if (next_download_state == DOWNLOAD_PERMANENT_ERROR) {
+    // This may destruct the object.
+    HandleError();
+    return;
+  }
 }
 
 void PageSyncImpl::SetUploadState(UploadSyncState next_upload_state) {
-  if (next_upload_state == UPLOAD_PERMANENT_ERROR) {
-    HandleError();
-  }
-
   upload_state_ = next_upload_state;
   NotifyStateWatcher();
+
+  if (next_upload_state == UPLOAD_PERMANENT_ERROR) {
+    // This may destruct the object.
+    HandleError();
+    return;
+  }
 }
 
 bool PageSyncImpl::IsDownloadIdle() { return page_download_->IsIdle(); }
