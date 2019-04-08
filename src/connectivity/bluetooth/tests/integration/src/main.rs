@@ -38,7 +38,7 @@ fn main() -> Result<(), Error> {
     println!("TEST BEGIN");
 
     collect_results(vec![
-        lifecycle_test(),
+        run_test!(lifecycle_test),
         run_test!(test_bd_addr),
         run_test!(test_set_local_name),
         run_test!(test_discoverable),

@@ -11,6 +11,8 @@ First, include the bluetooth tests in your package configuration:
     --available=garnet/packages/tests/bluetooth,garnet/packages/testing/run_test_component
 ```
 
+NOTE: Before you run the tests, ensure that bt-gap is **not** running. Due to a limit with our current sandboxing, the tests will not execute correctly if a system bt-gap is running as it will bind to our test hosts. See fxb/BT-802.
+
 You can run the tests from your development host via fx:
 
 ```

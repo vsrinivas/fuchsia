@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {failure::Error, futures::Future};
+use {
+    failure::{Error, ResultExt},
+    fuchsia_async as fasync,
+    futures::Future,
+};
 
 #[macro_use]
 pub mod control;
@@ -35,6 +39,18 @@ where
         println!("\x1b[32mPASSED\x1b[0m");
     }
     result
+}
+
+/// Trait for a Harness that we can run tests with
+impl TestHarness for () {
+    fn run_with_harness<F, Fut>(test_func: F) -> Result<(), Error>
+    where
+        F: FnOnce(Self) -> Fut,
+        Fut: Future<Output = Result<(), Error>>,
+    {
+        let mut executor = fasync::Executor::new().context("error creating event loop")?;
+        executor.run_singlethreaded(test_func(()))
+    }
 }
 
 // Prints out the test name and runs the test.

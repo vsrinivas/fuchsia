@@ -12,9 +12,11 @@ use {
     },
 };
 
+pub static BT_HOST_DIR: &str = "/dev/class/bt-host";
+
 /// Returns the filesystem paths to the all bt-host devices.
 pub fn list_host_devices() -> Vec<PathBuf> {
-    let paths = read_dir("/dev/class/bt-host/").unwrap();
+    let paths = read_dir(BT_HOST_DIR).unwrap();
     paths.filter_map(|entry| entry.ok().and_then(|e| Some(e.path()))).collect::<Vec<PathBuf>>()
 }
 
