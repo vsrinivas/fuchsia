@@ -44,6 +44,13 @@ struct AdapterState {
     vector<string>? local_service_uuids;
 };
 
+/// Device Class represents the Major and Minor Device Class and Service Class of an adapter
+/// Values are defined in https://www.bluetooth.com/specifications/assigned-numbers/baseband
+[MaxHandles = "0"]
+struct DeviceClass {
+    uint32 value;
+};
+
 /// Primary Bluetooth control service to access bluetooth
 [Discoverable]
 protocol Control {
@@ -85,6 +92,10 @@ protocol Control {
     /// Sets the public Bluetooth name for this device, or resets to the default
     /// name if |name| is not present.
     SetName(string? name) -> (fuchsia.bluetooth.Status status);
+
+    /// Set the Device Class for the active Bluetooth adapter.
+    /// Values are defined in https://www.bluetooth.com/specifications/assigned-numbers/baseband
+    SetDeviceClass(DeviceClass device_class) -> (fuchsia.bluetooth.Status status);
 
     /// Set the discoverability of this device.
     SetDiscoverable(bool discoverable) -> (fuchsia.bluetooth.Status status);

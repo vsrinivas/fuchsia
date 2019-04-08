@@ -71,6 +71,10 @@ protocol Host {
     // Sets the local name for this adapter.
     SetLocalName(string local_name) -> (fuchsia.bluetooth.Status status);
 
+    // Sets the device class for this adapter.
+    SetDeviceClass(fuchsia.bluetooth.control.DeviceClass device_class)
+        -> (fuchsia.bluetooth.Status status);
+
     // Initiates a general discovery procedure for BR/EDR and LE devices. On success, discovered
     // devices will be reported via AdapterDelegate.OnDeviceDiscovered().
     //
