@@ -49,7 +49,12 @@ class TestFuzzer(unittest.TestCase):
 
   def test_list_artifacts(self):
     fuzzer = Fuzzer(MockDevice(), u'mock-package1', u'mock-target1')
-    artifacts = fuzzer.list_artifacts
+    artifacts = fuzzer.list_artifacts()
+    self.assertEqual(len(artifacts), 3)
+    self.assertTrue('crash-deadbeef' in artifacts)
+    self.assertTrue('leak-deadfa11' in artifacts)
+    self.assertTrue('oom-feedface' in artifacts)
+    self.assertFalse('fuzz-0.log' in artifacts)
 
   def test_is_running(self):
     mock_device = MockDevice()
@@ -72,6 +77,15 @@ class TestFuzzer(unittest.TestCase):
       fuzzer2.require_stopped()
     fuzzer2.require_stopped()
     fuzzer3.require_stopped()
+
+  def test_run(self):
+    mock_device = MockDevice()
+    fuzzer = Fuzzer(mock_device, u'mock-package1', u'mock-target2')
+    fuzzer.run(['-some-lf-arg=value'])
+    self.assertEqual(
+        mock_device.last,
+        'ssh -F ' + mock_device.host.ssh_config + ' ::1 run ' + fuzzer.url() +
+        ' -artifact_prefix=data -some-lf-arg=value')
 
   def test_start(self):
     mock_device = MockDevice()
@@ -98,10 +112,12 @@ class TestFuzzer(unittest.TestCase):
   def test_repro(self):
     mock_device = MockDevice()
     fuzzer = Fuzzer(mock_device, u'mock-package1', u'mock-target2')
+    artifacts = ['data/' + artifact for artifact in fuzzer.list_artifacts()]
     fuzzer.repro(['-some-lf-arg=value'])
     self.assertEqual(
-        mock_device.last, 'ssh -F ' + mock_device.host.ssh_config +
-        ' ::1 fuzz repro ' + str(fuzzer) + ' -some-lf-arg=value')
+        mock_device.last,
+        'ssh -F ' + mock_device.host.ssh_config + ' ::1 run ' + fuzzer.url() +
+        ' -artifact_prefix=data ' + '-some-lf-arg=value ' + ' '.join(artifacts))
 
   def test_merge(self):
     mock_device = MockDevice()
@@ -109,7 +125,9 @@ class TestFuzzer(unittest.TestCase):
     fuzzer.merge(['-some-lf-arg=value'])
     self.assertEqual(
         mock_device.last, 'ssh -F ' + mock_device.host.ssh_config +
-        ' ::1 fuzz merge ' + str(fuzzer) + ' -some-lf-arg=value')
+        ' ::1 run ' + fuzzer.url() + ' -artifact_prefix=data -merge=1' +
+        ' -merge_control_file=data/.mergefile -some-lf-arg=value data/corpus' +
+        ' data/corpus.prev')
 
 
 if __name__ == '__main__':

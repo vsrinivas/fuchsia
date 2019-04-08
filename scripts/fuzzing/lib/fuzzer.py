@@ -116,7 +116,8 @@ class Fuzzer(object):
     """Returns a list of test unit artifacts, i.e. fuzzing crashes."""
     artifacts = []
     try:
-      for file in [line[0] for line in self.device.ls(self.data_path())]:
+      lines = self.device.ls(self.data_path())
+      for file, _ in lines.iteritems():
         for prefix in Fuzzer.ARTIFACT_PREFIXES:
           if file.startswith(prefix):
             artifacts.append(file)
@@ -141,12 +142,26 @@ class Fuzzer(object):
     else:
       return os.path.join(self._output, 'latest')
 
+  def url(self):
+    return 'fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx' % (self.pkg, self.tgt)
+
+  def run(self, fuzzer_args, logfile=None):
+    fuzz_cmd = ['run', self.url(), '-artifact_prefix=data'] + fuzzer_args
+    print('+ ' + ' '.join(fuzz_cmd))
+    self.device.ssh(fuzz_cmd, quiet=False, logfile=logfile)
+
   def start(self, fuzzer_args):
     """Runs the fuzzer.
 
       Executes a fuzzer in the "normal" fuzzing mode. It creates a log context,
       and waits after spawning the fuzzer until it completes. As a result,
       callers will typically want to run this in a background process.
+
+      The command will be like:
+      run fuchsia-pkg://fuchsia.com/<pkg>#meta/<tgt>.cmx \
+        -artifact_prefix=data -jobs=1 data/corpus
+
+      See also: https://llvm.org/docs/LibFuzzer.html#running
 
       Args:
         fuzzer_args: Command line arguments to pass to libFuzzer
@@ -164,13 +179,21 @@ class Fuzzer(object):
       if e.errno != errno.EEXIST:
         raise
     os.symlink(results, self.results())
-    with Log(self):
-      fuzzer_cmd = ['fuzz', 'start', str(self)]
-      logfile = None
+
+    if len(filter(lambda x: x.startswith('-jobs='), fuzzer_args)) == 0:
       if self._foreground:
-        fuzzer_cmd.append('-jobs=0')
-        logfile = self.results('fuzz-0.log')
-      self.device.ssh(fuzzer_cmd + fuzzer_args, quiet=False, logfile=logfile)
+        fuzzer_args.append('-jobs=0')
+      else:
+        fuzzer_args.append('-jobs=1')
+    self.device.ssh(['mkdir', '-p', self.data_path('corpus')])
+    if len(filter(lambda x: not x.startswith('-'), fuzzer_args)) == 0:
+      fuzzer_args.append('data/corpus')
+
+    with Log(self):
+      if self._foreground:
+        self.run(fuzzer_args, logfile=self.results('fuzz-0.log'))
+      else:
+        self.run(fuzzer_args)
       while self.is_running():
         time.sleep(2)
 
@@ -181,11 +204,40 @@ class Fuzzer(object):
       self.device.ssh(['kill', str(pids[self.tgt])])
 
   def repro(self, fuzzer_args):
-    """Runs the fuzzer on previously found test unit artifacts."""
-    self.require_stopped()
-    self.device.ssh(['fuzz', 'repro', str(self)] + fuzzer_args, quiet=False)
+    """Runs the fuzzer with test input artifacts.
+
+      Executes a command like:
+      run fuchsia-pkg://fuchsia.com/<pkg>#meta/<tgt>.cmx \
+        -artifact_prefix=data -jobs=1 data/<artifact>...
+
+      See also: https://llvm.org/docs/LibFuzzer.html#options
+
+      Returns: Number of test input artifacts found.
+    """
+    artifacts = self.list_artifacts()
+    if len(artifacts) != 0:
+      self.run(fuzzer_args + ['data/' + a for a in artifacts])
+    return len(artifacts)
 
   def merge(self, fuzzer_args):
-    """Attempts to minimizes the fuzzer's corpus."""
+    """Attempts to minimizes the fuzzer's corpus.
+
+      Executes a command like:
+      run fuchsia-pkg://fuchsia.com/<pkg>#meta/<tgt>.cmx \
+        -artifact_prefix=data -jobs=1 \
+        -merge=1 -merge_control_file=data/.mergefile \
+        data/corpus data/corpus.prev'
+
+      See also: https://llvm.org/docs/LibFuzzer.html#corpus
+    """
     self.require_stopped()
-    self.device.ssh(['fuzz', 'merge', str(self)] + fuzzer_args, quiet=False)
+    self.device.ssh(['mkdir', '-p', self.data_path('corpus')])
+    self.device.ssh(
+        ['mv', self.data_path('corpus'),
+         self.data_path('corpus.prev')])
+    self.device.ssh(['mkdir', '-p', self.data_path('corpus')])
+    fuzzer_args = ['-merge=1', '-merge_control_file=data/.mergefile'
+                  ] + fuzzer_args
+    fuzzer_args.append('data/corpus')
+    fuzzer_args.append('data/corpus.prev')
+    self.run(fuzzer_args)

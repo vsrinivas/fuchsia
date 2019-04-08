@@ -22,8 +22,11 @@ def main():
   device = Device.from_args(host, args)
   fuzzer = Fuzzer.from_args(device, args)
 
-  fuzzer.repro(fuzzer_args)
-  return 0
+  if fuzzer.repro(fuzzer_args) == 0:
+    print('No matching artifacts found.')
+    return 1
+  else:
+    return 0
 
 
 if __name__ == '__main__':
