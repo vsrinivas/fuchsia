@@ -779,41 +779,21 @@ Examples
       Print a variable with types in the context of a specific stack frame.
 )";
 Err DoPrint(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadCommand(context, cmd, false, "print");
-  if (err.has_error())
-    return err;
-  err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
-  if (err.has_error())
-    return err;
-  if (!cmd.frame())
-    return Err("There isn't a current frame for printing context.");
+  // This will work in any context, but the data that's available will vary
+  // depending on whether there's a stopped thread, a process, or nothing.
+  fxl::RefPtr<ExprEvalContext> eval_context = GetEvalContextForCommand(cmd);
 
-  // This takes one expression that may have spaces, so concatenate everything
-  // the command parser has split apart back into one thing.
-  //
-  // If we run into limitations of this, we should add a "don't parse the args"
-  // flag to the command record.
-  std::string expr;
-  for (const auto& cur : cmd.args()) {
-    if (!expr.empty())
-      expr.push_back(' ');
-    expr += cur;
-  }
-
-  if (expr.empty())
-    return Err("Usage: print <expression>\nSee \"help print\" for more.");
-
-  FormatExprValueOptions options;
-  err = GetFormatExprValueOptions(cmd, &options);
-  if (err.has_error())
-    return err;
-
-  auto data_provider = cmd.frame()->GetSymbolDataProvider();
   auto formatter = fxl::MakeRefCounted<FormatValue>(
       std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
 
-  EvalExpression(
-      expr, cmd.frame()->GetExprEvalContext(),
+  FormatExprValueOptions options;
+  Err err = GetFormatExprValueOptions(cmd, &options);
+  if (err.has_error())
+    return err;
+
+  auto data_provider = eval_context->GetDataProvider();
+  return EvalCommandExpression(
+      cmd, "print", eval_context, false,
       [formatter, options, data_provider](const Err& err, ExprValue value) {
         if (err.has_error()) {
           Console::get()->Output(err);
@@ -825,8 +805,6 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
               [formatter](OutputBuffer out) { Console::get()->Output(out); });
         }
       });
-
-  return Err();
 }
 
 // step ------------------------------------------------------------------------

@@ -33,6 +33,7 @@ class MockProcess : public Process {
   void Continue() override;
   void ContinueUntil(const InputLocation& location,
                      std::function<void(const Err&)> cb) override;
+  fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
   void ReadMemory(
       uint64_t address, uint32_t size,
       std::function<void(const Err&, MemoryDump)> callback) override;

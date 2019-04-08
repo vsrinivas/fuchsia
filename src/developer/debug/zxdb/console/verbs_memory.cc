@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/verbs.h"
-
 #include <iomanip>
 #include <sstream>
 
@@ -25,6 +23,7 @@
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -44,24 +43,24 @@ constexpr uint32_t kDefaultAnalyzeByteSize = 160;
 
 // Shared for commands that take both a num (lines, 8 bytes each), or a byte
 // size.
-Err ReadNumAndSize(const Command& cmd, uint32_t default_size,
-                   uint32_t* out_size) {
+Err ReadNumAndSize(const Command& cmd, std::optional<uint32_t>* out_size) {
   if (cmd.HasSwitch(kNumSwitch) && cmd.HasSwitch(kSizeSwitch))
     return Err("Can't specify both --num and --size.");
 
   if (cmd.HasSwitch(kSizeSwitch)) {
     // Size argument.
-    Err err = StringToUint32(cmd.GetSwitchValue(kSizeSwitch), out_size);
+    uint32_t parsed;
+    Err err = StringToUint32(cmd.GetSwitchValue(kSizeSwitch), &parsed);
     if (err.has_error())
       return err;
+    *out_size = parsed;
   } else if (cmd.HasSwitch(kNumSwitch)) {
     // Num lines argument.
-    Err err = StringToUint32(cmd.GetSwitchValue(kNumSwitch), out_size);
+    uint32_t num_lines;
+    Err err = StringToUint32(cmd.GetSwitchValue(kNumSwitch), &num_lines);
     if (err.has_error())
       return err;
-    *out_size *= sizeof(uint64_t);  // Convert pointer count to size.
-  } else {
-    *out_size = default_size;
+    *out_size = num_lines * sizeof(uint64_t);  // Convert pointer count to size.
   }
   return Err();
 }
@@ -108,7 +107,7 @@ Err ReadLocation(const Command& cmd, const char* command_name,
 const char kStackShortHelp[] = "stack / st: Analyze the stack.";
 const char kStackHelp[] =
     R"(stack [ --offset=<offset> ] [ --num=<lines> ] [ --size=<bytes> ]
-           [ <address> ]
+           [ <address-expression> ]
 
   Alias: "st"
 
@@ -118,8 +117,9 @@ const char kStackHelp[] =
   stack frames.
 
   An explicit address can optionally be provided to begin dumping to dump at
-  somewhere other than the current frame's stack pointer, or you can provide an
-  --offset from the current stack position.
+  somewhere other than the current frame's stack pointer (this address can be
+  any expression that evaluates to an address, see "help print"), or you can
+  provide an --offset from the current stack position.
 
 Arguments
 
@@ -173,9 +173,12 @@ Err DoStack(ConsoleContext* context, const Command& cmd) {
   }
 
   // Length parameters.
-  Err err = ReadNumAndSize(cmd, kDefaultAnalyzeByteSize, &opts.bytes_to_read);
+  std::optional<uint32_t> input_size;
+  Err err = ReadNumAndSize(cmd, &input_size);
   if (err.has_error())
     return err;
+  if (!input_size)
+    input_size = kDefaultAnalyzeByteSize;
 
   AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read](const Err& err,
                                                            OutputBuffer output,
@@ -200,20 +203,22 @@ Err DoStack(ConsoleContext* context, const Command& cmd) {
 const char kMemAnalyzeShortHelp[] =
     "mem-analyze / ma: Analyze a memory region.";
 const char kMemAnalyzeHelp[] =
-    R"(mem-analyze [ --num=<lines> ] [ --size=<size> ] <location>
+    R"(mem-analyze [ --num=<lines> ] [ --size=<size> ] <address-expression>
 
   Alias: "ma"
 
   Prints a memory analysis. A memory analysis attempts to find pointers to
   code in pointer-aligned locations and annotates those values.
 
+  The address can be an explicit number or any expression ("help print") that
+  evaluates to a memory address.
+
+  When no size is given, the size will be the object size if a typed expression
+  is given, otherwise 20 lines will be output.
+
   See also "stack" which is specialized more for stacks (it includes the
   current thread's registers), and "mem-read" to display a simple hex dump.
 
-Location arguments
-
-)" LOCATION_ARG_HELP("mem-analyze")
-        R"(
 Arguments
 
   --num=<lines> | -n <lines>
@@ -240,44 +245,65 @@ Err DoMemAnalyze(ConsoleContext* context, const Command& cmd) {
   Err err = cmd.ValidateNouns({Noun::kProcess});
   if (err.has_error())
     return err;
-  err = AssertRunningTarget(context, "mem-analyze", cmd.target());
-  if (err.has_error())
-    return err;
-
-  AnalyzeMemoryOptions opts;
-  opts.process = cmd.target()->GetProcess();
-
-  // Begin address.
-  if (cmd.args().size() == 1) {
-    // Explicitly provided start address.
-    err = StringToUint64(cmd.args()[0], &opts.begin_address);
-    if (err.has_error())
-      return err;
-  } else if (cmd.args().size() > 1) {
-    return Err("mam-analyze requires exactly one arg for the start address.");
-  }
 
   // Length parameters.
-  err = ReadNumAndSize(cmd, kDefaultAnalyzeByteSize, &opts.bytes_to_read);
+  std::optional<uint32_t> input_size;
+  err = ReadNumAndSize(cmd, &input_size);
   if (err.has_error())
     return err;
 
-  AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read](const Err& err,
-                                                           OutputBuffer output,
-                                                           uint64_t next_addr) {
-    if (err.has_error()) {
-      output.Append(err);
-    } else {
-      // Help text for continuation.
-      output.Append(
-          Syntax::kComment,
-          fxl::StringPrintf("↓ For more lines: ma -n %d 0x%" PRIx64,
-                            static_cast<int>(bytes_to_read / sizeof(uint64_t)),
-                            next_addr));
-    }
-    Console::get()->Output(output);
-  });
-  return Err();
+  return EvalCommandAddressExpression(
+      cmd, "mem-analyze", GetEvalContextForCommand(cmd),
+      [weak_target = cmd.target()->GetWeakPtr(), input_size](
+          const Err& err, uint64_t address,
+          std::optional<uint64_t> object_size) {
+        Console* console = Console::get();
+        if (err.has_error()) {
+          console->Output(err);  // Evaluation error.
+          return;
+        }
+        if (!weak_target) {
+          // Target has been destroyed during evaluation. Normally a message
+          // will be printed when that happens so we can skip reporting the
+          // error.
+          return;
+        }
+
+        Err run_err = AssertRunningTarget(&console->context(), "mem-read",
+                                          weak_target.get());
+        if (run_err.has_error()) {
+          console->Output(run_err);
+          return;
+        }
+
+        AnalyzeMemoryOptions opts;
+        opts.process = weak_target->GetProcess();
+        opts.begin_address = address;
+
+        if (input_size)
+          opts.bytes_to_read = *input_size;
+        else if (object_size)
+          opts.bytes_to_read = *object_size;
+        else
+          opts.bytes_to_read = kDefaultAnalyzeByteSize;
+
+        AnalyzeMemory(
+            opts, [bytes_to_read = opts.bytes_to_read](
+                      const Err& err, OutputBuffer output, uint64_t next_addr) {
+              if (err.has_error()) {
+                output.Append(err);
+              } else {
+                // Help text for continuation.
+                output.Append(
+                    Syntax::kComment,
+                    fxl::StringPrintf(
+                        "↓ For more lines: ma -n %d 0x%" PRIx64,
+                        static_cast<int>(bytes_to_read / sizeof(uint64_t)),
+                        next_addr));
+              }
+              Console::get()->Output(output);
+            });
+      });
 }
 
 // mem-read --------------------------------------------------------------------
@@ -301,20 +327,22 @@ void MemoryReadComplete(const Err& err, MemoryDump dump) {
 const char kMemReadShortHelp[] =
     R"(mem-read / x: Read memory from debugged process.)";
 const char kMemReadHelp[] =
-    R"(mem-read [ --size=<bytes> ] <location>
+    R"(mem-read [ --size=<bytes> ] <address-expression>
 
   Alias: "x"
 
   Reads memory from the process at the given address and prints it to the
   screen. Currently, only a byte-oriented hex dump format is supported.
 
+  The address can be an explicit number or any expression ("help print") that
+  evaluates to a memory address.
+
+  When no size is given, the size will be the object size if a typed expression
+  is given, otherwise 20 lines will be output.
+
   See also "a-mem" to print a memory analysis and "a-stack" to print a more
   useful dump of the raw stack.
 
-Location arguments
-
-)" LOCATION_ARG_HELP("mem-analyze")
-        R"(
 Arguments
 
   --size=<bytes> | -s <bytes>
@@ -324,6 +352,7 @@ Arguments
 Examples
 
   x --size=128 0x75f19ba
+  x &foo->bar
   mem-read --size=16 0x8f1763a7
   process 3 mem-read 83242384560
   process 3 mem-read main
@@ -334,30 +363,52 @@ Err DoMemRead(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  err = AssertRunningTarget(context, "mem-read", cmd.target());
-  if (err.has_error())
-    return err;
-
-  // Address (required).
-  Location location;
-  uint64_t location_size = 0;
-  err = ReadLocation(cmd, "mem-read", &location, &location_size);
-  if (err.has_error())
-    return err;
-
   // Size argument (optional).
-  uint64_t size = 64;
+  std::optional<uint64_t> input_size;
   if (cmd.HasSwitch(kSizeSwitch)) {
-    err = StringToUint64(cmd.GetSwitchValue(kSizeSwitch), &size);
+    uint64_t read_size = 0;
+    err = StringToUint64(cmd.GetSwitchValue(kSizeSwitch), &read_size);
     if (err.has_error())
       return err;
-  } else if (location_size) {
-    // Default to the size of the symbol.
-    size = static_cast<uint32_t>(location_size);
+    input_size = read_size;
   }
 
-  cmd.target()->GetProcess()->ReadMemory(location.address(), size,
-                                         &MemoryReadComplete);
+  return EvalCommandAddressExpression(
+      cmd, "mem-read", GetEvalContextForCommand(cmd),
+      [weak_target = cmd.target()->GetWeakPtr(), input_size](
+          const Err& err, uint64_t address,
+          std::optional<uint64_t> object_size) {
+        Console* console = Console::get();
+        if (err.has_error()) {
+          console->Output(err);  // Evaluation error.
+          return;
+        }
+        if (!weak_target) {
+          // Target has been destroyed during evaluation. Normally a message
+          // will be printed when that happens so we can skip reporting the
+          // error.
+          return;
+        }
+
+        Err run_err = AssertRunningTarget(&console->context(), "mem-read",
+                                          weak_target.get());
+        if (run_err.has_error()) {
+          console->Output(run_err);
+          return;
+        }
+
+        uint64_t read_size;
+        if (input_size)
+          read_size = *input_size;
+        else if (object_size)
+          read_size = *object_size;
+        else
+          read_size = 64;
+
+        weak_target->GetProcess()->ReadMemory(address, read_size,
+                                              &MemoryReadComplete);
+      });
+
   return Err();
 }
 

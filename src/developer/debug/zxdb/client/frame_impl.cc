@@ -27,7 +27,7 @@ FrameImpl::FrameImpl(Thread* thread, const debug_ipc::StackFrame& stack_frame,
 
 FrameImpl::~FrameImpl() {
   if (symbol_data_provider_)
-    symbol_data_provider_->DisownFrame();
+    symbol_data_provider_->Disown();
 }
 
 Thread* FrameImpl::GetThread() const { return thread_; }

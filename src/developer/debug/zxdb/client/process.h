@@ -28,6 +28,7 @@ class Err;
 struct InputLocation;
 class MemoryDump;
 class ProcessSymbols;
+class SymbolDataProvider;
 class Target;
 class Thread;
 
@@ -111,6 +112,14 @@ class Process : public ClientObject {
   // asynchronous failures.
   virtual void ContinueUntil(const InputLocation& location,
                              std::function<void(const Err&)> cb) = 0;
+
+  // Returns the SymbolDataProvider that can be used to evaluate symbols
+  // in the context of this process. This will not have any frame information
+  // so the available operations will be limited.
+  //
+  // If the caller has a Frame, prefer Frame::GetSymbolDataProvider() which
+  // does have access to registers and other frame data.
+  virtual fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const = 0;
 
   // Reads memory from the debugged process.
   virtual void ReadMemory(

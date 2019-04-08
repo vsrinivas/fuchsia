@@ -39,7 +39,7 @@ class Variable;
 // any invalid context.
 class SymbolEvalContext : public ExprEvalContext {
  public:
-  // The ProcessSymbols can be a null weak pointer in which case, globals will
+  // The ProcessSymbols can be a null weak pointer in which case globals will
   // not be resolved (this can make testing easier).
   SymbolEvalContext(fxl::WeakPtr<const ProcessSymbols> process_symbols,
                     const SymbolContext& symbol_context,

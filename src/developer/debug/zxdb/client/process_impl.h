@@ -15,6 +15,7 @@
 
 namespace zxdb {
 
+class ProcessSymbolDataProvider;
 class TargetImpl;
 class ThreadImpl;
 
@@ -46,6 +47,7 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   void Continue() override;
   void ContinueUntil(const InputLocation& location,
                      std::function<void(const Err&)> cb) override;
+  fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const override;
   void ReadMemory(
       uint64_t address, uint32_t size,
       std::function<void(const Err&, MemoryDump)> callback) override;
@@ -77,6 +79,9 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
   std::map<uint64_t, std::unique_ptr<ThreadImpl>> threads_;
 
   ProcessSymbols symbols_;
+
+  // Lazily-populated.
+  mutable fxl::RefPtr<ProcessSymbolDataProvider> symbol_data_provider_;
 
   fxl::WeakPtrFactory<ProcessImpl> weak_factory_;
 

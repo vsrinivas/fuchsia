@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <stdio.h>
+
 #include <limits>
 
 #include "src/developer/debug/zxdb/client/breakpoint.h"
@@ -20,12 +21,16 @@
 #include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/developer/debug/zxdb/console/string_util.h"
+#include "src/developer/debug/zxdb/expr/expr.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/identifier.h"
 #include "src/developer/debug/zxdb/expr/number_parser.h"
+#include "src/developer/debug/zxdb/expr/symbol_eval_context.h"
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 #include "src/lib/fxl/logging.h"
@@ -613,6 +618,92 @@ const char* AssignTypeToString(AssignType assign_type) {
 
   FXL_NOTREACHED();
   return "";
+}
+
+fxl::RefPtr<ExprEvalContext> GetEvalContextForCommand(const Command& cmd) {
+  if (cmd.frame())
+    return cmd.frame()->GetExprEvalContext();
+
+  if (Process* process = cmd.target()->GetProcess()) {
+    // Process context only.
+    return fxl::MakeRefCounted<SymbolEvalContext>(
+        process->GetSymbols()->GetWeakPtr(), process->GetSymbolDataProvider(),
+        Location());
+  }
+
+  // No context.
+  return fxl::MakeRefCounted<SymbolEvalContext>(
+      fxl::WeakPtr<ProcessSymbols>(), fxl::MakeRefCounted<SymbolDataProvider>(),
+      Location());
+}
+
+Err EvalCommandExpression(
+    const Command& cmd, const char* verb,
+    fxl::RefPtr<ExprEvalContext> eval_context, bool follow_references,
+    std::function<void(const Err& err, ExprValue value)> cb) {
+  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
+  if (err.has_error())
+    return err;
+
+  // This takes one expression that may have spaces, so concatenate everything
+  // the command parser has split apart back into one thing.
+  //
+  // If we run into limitations of this, we should add a "don't parse the args"
+  // flag to the command record.
+  std::string expr;
+  for (const auto& cur : cmd.args()) {
+    if (!expr.empty())
+      expr.push_back(' ');
+    expr += cur;
+  }
+
+  if (expr.empty())
+    return Err("Usage: %s <expression>\nSee \"help %s\" for more.", verb, verb);
+
+  EvalExpression(expr, std::move(eval_context), follow_references,
+                 std::move(cb));
+  return Err();
+}
+
+Err EvalCommandAddressExpression(
+    const Command& cmd, const char* verb,
+    fxl::RefPtr<ExprEvalContext> eval_context,
+    std::function<void(const Err& err, uint64_t address,
+                       std::optional<uint32_t> size)>
+        cb) {
+  return EvalCommandExpression(
+      cmd, verb, std::move(eval_context), true,
+      [cb = std::move(cb)](const Err& err, ExprValue value) {
+        if (err.has_error()) {
+          cb(err, 0, std::nullopt);
+          return;
+        }
+
+        const Type* concrete_type = value.type()->GetConcreteType();
+        if (concrete_type->AsCollection()) {
+          // Don't allow structs and classes that are <= 64 bits to be converted
+          // to addresses.
+          cb(Err("Can't convert '%s' to an address.",
+                 concrete_type->GetFullName().c_str()),
+             0, std::nullopt);
+          return;
+        }
+
+        // See if there's an intrinsic size to the object being pointed to. This
+        // is true for pointers. References should have been followed and
+        // stripped before here.
+        std::optional<uint32_t> size;
+        if (auto modified = concrete_type->AsModifiedType();
+            modified && modified->tag() == DwarfTag::kPointerType) {
+          if (auto modified_type = modified->modified().Get()->AsType())
+            size = modified_type->byte_size();
+        }
+
+        // Convert anything else <= 64 bits to a number.
+        uint64_t address = 0;
+        Err conversion_err = value.PromoteTo64(&address);
+        cb(conversion_err, address, size);
+      });
 }
 
 }  // namespace zxdb

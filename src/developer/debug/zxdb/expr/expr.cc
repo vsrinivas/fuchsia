@@ -13,6 +13,7 @@ namespace zxdb {
 
 void EvalExpression(const std::string& input,
                     fxl::RefPtr<ExprEvalContext> context,
+                    bool follow_references,
                     std::function<void(const Err& err, ExprValue value)> cb) {
   ExprTokenizer tokenizer(input);
   if (!tokenizer.Tokenize()) {
@@ -39,7 +40,10 @@ void EvalExpression(const std::string& input,
     return;
   }
 
-  node->Eval(context, std::move(cb));
+  if (follow_references)
+    node->Eval(context, std::move(cb));
+  else
+    node->EvalFollowReferences(context, std::move(cb));
 }
 
 }  // namespace zxdb

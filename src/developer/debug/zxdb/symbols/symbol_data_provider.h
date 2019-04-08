@@ -20,6 +20,11 @@ class Err;
 // This interface is how the debugger backend provides memory and register data
 // to the symbol system to evaluate expressions.
 //
+// By default, this class returns no information. In this form it can be used
+// to evaluate expressions in contexts without a running process. To access
+// data, most callers will want to use the implementation associated with a
+// frame or a process.
+//
 // Registers are the most commonly accessed data type and they are often
 // available synchronously. So the interface provides a synchronous main
 // register getter function and a fallback asynchronous one. They are separated
@@ -35,11 +40,12 @@ class SymbolDataProvider
       std::function<void(const Err&, std::vector<uint8_t>)>;
   using GetRegisterCallback = std::function<void(const Err&, uint64_t)>;
 
-  virtual debug_ipc::Arch GetArch() = 0;
+  virtual debug_ipc::Arch GetArch();
+
   // Request for synchronous register data. If the register data can be provided
   // synchronously, the data will be returned. If synchronous data is not
   // available, the caller should call GetRegisterAsync().
-  virtual std::optional<uint64_t> GetRegister(debug_ipc::RegisterID id) = 0;
+  virtual std::optional<uint64_t> GetRegister(debug_ipc::RegisterID id);
 
   // Request for register data with an asynchronous callback. The callback will
   // be issued when the register data is available.
@@ -49,7 +55,7 @@ class SymbolDataProvider
   // will be set to false. When the register value contains valid data, success
   // will indicate true.
   virtual void GetRegisterAsync(debug_ipc::RegisterID id,
-                                GetRegisterCallback callback) = 0;
+                                GetRegisterCallback callback);
 
   // Synchronously returns the frame base pointer if possible. As with
   // GetRegister, if this is not available the implementation should call
@@ -60,10 +66,10 @@ class SymbolDataProvider
   // registers, especially if compiled without full stack frames. Getting this
   // value may involve evaluating another DWARF expression which may or may not
   // be asynchronous.
-  virtual std::optional<uint64_t> GetFrameBase() = 0;
+  virtual std::optional<uint64_t> GetFrameBase();
 
   // Asynchronous version of GetFrameBase.
-  virtual void GetFrameBaseAsync(GetRegisterCallback callback) = 0;
+  virtual void GetFrameBaseAsync(GetRegisterCallback callback);
 
   // Request to retrieve a memory block from the debugged process. On success,
   // the implementation will call the callback with the retrieved data pointer.
@@ -72,15 +78,18 @@ class SymbolDataProvider
   // encounters invalid memory, so the result may be shorter than requested
   // or empty (if the first byte is invalid).
   virtual void GetMemoryAsync(uint64_t address, uint32_t size,
-                              GetMemoryCallback callback) = 0;
+                              GetMemoryCallback callback);
 
   // Asynchronously writes to the given memory. The callback will be issued
   // when the write is complete.
   virtual void WriteMemory(uint64_t address, std::vector<uint8_t> data,
-                           std::function<void(const Err&)> cb) = 0;
+                           std::function<void(const Err&)> cb);
 
  protected:
+  FRIEND_MAKE_REF_COUNTED(SymbolDataProvider);
   FRIEND_REF_COUNTED_THREAD_SAFE(SymbolDataProvider);
+
+  SymbolDataProvider() = default;
   virtual ~SymbolDataProvider() = default;
 };
 

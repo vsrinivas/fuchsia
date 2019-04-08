@@ -8,6 +8,7 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 
 namespace zxdb {
 
@@ -60,6 +61,10 @@ void MockProcess::Continue() {}
 void MockProcess::ContinueUntil(const InputLocation& location,
                                 std::function<void(const Err&)> cb) {
   MessageLoop::Current()->PostTask(FROM_HERE, [cb]() { cb(Err()); });
+}
+
+fxl::RefPtr<SymbolDataProvider> MockProcess::GetSymbolDataProvider() const {
+  return fxl::MakeRefCounted<SymbolDataProvider>();
 }
 
 void MockProcess::ReadMemory(uint64_t address, uint32_t size,

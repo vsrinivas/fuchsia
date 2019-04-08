@@ -23,22 +23,18 @@ namespace {
 
 Err CallFrameDestroyedErr() { return Err("Call frame destroyed."); }
 
-debug_ipc::Arch ArchForFrame(Frame* frame) {
-  if (!frame)
-    return debug_ipc::Arch::kUnknown;
-  return frame->GetThread()->session()->arch();
-}
-
 }  // namespace
 
 FrameSymbolDataProvider::FrameSymbolDataProvider(Frame* frame)
-    : frame_(frame), arch_(ArchForFrame(frame)) {}
+    : ProcessSymbolDataProvider(frame->GetThread()->GetProcess()),
+      frame_(frame) {}
 
 FrameSymbolDataProvider::~FrameSymbolDataProvider() = default;
 
-void FrameSymbolDataProvider::DisownFrame() { frame_ = nullptr; }
-
-debug_ipc::Arch FrameSymbolDataProvider::GetArch() { return arch_; }
+void FrameSymbolDataProvider::Disown() {
+  ProcessSymbolDataProvider::Disown();
+  frame_ = nullptr;
+}
 
 std::optional<uint64_t> FrameSymbolDataProvider::GetRegister(
     debug_ipc::RegisterID id) {
@@ -116,77 +112,6 @@ void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
 
   frame_->GetBasePointerAsync(
       [cb = std::move(cb)](uint64_t value) { cb(Err(), value); });
-}
-
-void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
-                                             GetMemoryCallback callback) {
-  if (!frame_) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(callback)]() {
-          cb(CallFrameDestroyedErr(), std::vector<uint8_t>());
-        });
-    return;
-  }
-
-  // Mistakes may make extremely large memory requests which can OOM the
-  // system. Prevent those.
-  if (size > 1024 * 1024) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [address, size, cb = std::move(callback)]() {
-          cb(Err(fxl::StringPrintf("Memory request for %u bytes at 0x%" PRIx64
-                                   " is too large.",
-                                   size, address)),
-             std::vector<uint8_t>());
-        });
-    return;
-  }
-
-  frame_->GetThread()->GetProcess()->ReadMemory(
-      address, size,
-      [address, size, cb = std::move(callback)](const Err& err,
-                                                MemoryDump dump) {
-        if (err.has_error()) {
-          cb(err, std::vector<uint8_t>());
-          return;
-        }
-
-        FXL_DCHECK(size == 0 || dump.address() == address);
-        FXL_DCHECK(dump.size() == size);
-        if (dump.blocks().size() == 1 ||
-            (dump.blocks().size() > 1 && !dump.blocks()[1].valid)) {
-          // Common case: came back as one block OR it read until an invalid
-          // memory boundary and the second block is invalid.
-          //
-          // In both these cases we can directly return the first data block.
-          // We don't have to check the first block's valid flag since if it's
-          // not valid it will be empty, which is what our API specifies.
-          cb(Err(), std::move(dump.blocks()[0].data));
-        } else {
-          // The debug agent doesn't guarantee that a memory dump will exist in
-          // only one block even if the memory is all valid. Flatten all
-          // contiguous valid regions to a single buffer.
-          std::vector<uint8_t> flat;
-          flat.reserve(dump.size());
-          for (const auto block : dump.blocks()) {
-            if (!block.valid)
-              break;
-            flat.insert(flat.end(), block.data.begin(), block.data.end());
-          }
-          cb(Err(), std::move(flat));
-        }
-      });
-}
-
-void FrameSymbolDataProvider::WriteMemory(uint64_t address,
-                                          std::vector<uint8_t> data,
-                                          std::function<void(const Err&)> cb) {
-  if (!frame_) {
-    debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(cb)]() { cb(CallFrameDestroyedErr()); });
-    return;
-  }
-  frame_->GetThread()->GetProcess()->WriteMemory(address, std::move(data),
-                                                 std::move(cb));
 }
 
 bool FrameSymbolDataProvider::IsInTopPhysicalFrame() const {

@@ -17,10 +17,16 @@ class ExprEvalContext;
 // execute the result with the given context, and call the callback when
 // complete.
 //
+// If follow_references is set, expressions that result in a reference will
+// have the value of the referenced data computed. This is useful when the
+// caller wants the result value of an expression but doesn't care about the
+// exact type.
+//
 // The callback may get issued asynchronously in the future or it may get
 // called synchronously in a reentrant fashion from this function.
 void EvalExpression(const std::string& input,
                     fxl::RefPtr<ExprEvalContext> context,
+                    bool follow_references,
                     std::function<void(const Err& err, ExprValue value)> cb);
 
 }  // namespace zxdb

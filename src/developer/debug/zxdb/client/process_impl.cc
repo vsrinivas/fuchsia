@@ -10,6 +10,7 @@
 
 #include "src/developer/debug/shared/logging/block_timer.h"
 #include "src/developer/debug/zxdb/client/memory_dump.h"
+#include "src/developer/debug/zxdb/client/process_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -31,6 +32,9 @@ ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid,
       weak_factory_(this) {}
 
 ProcessImpl::~ProcessImpl() {
+  if (symbol_data_provider_)
+    symbol_data_provider_->Disown();
+
   // Send notifications for all destroyed threads.
   for (const auto& thread : threads_) {
     for (auto& observer : observers())
@@ -127,6 +131,14 @@ void ProcessImpl::ContinueUntil(const InputLocation& location,
   cb(
       Err("Process-wide 'Until' is temporarily closed for construction. "
           "Please try again in a few days."));
+}
+
+fxl::RefPtr<SymbolDataProvider> ProcessImpl::GetSymbolDataProvider() const {
+  if (!symbol_data_provider_) {
+    symbol_data_provider_ = fxl::MakeRefCounted<ProcessSymbolDataProvider>(
+        const_cast<ProcessImpl*>(this));
+  }
+  return symbol_data_provider_;
 }
 
 void ProcessImpl::ReadMemory(

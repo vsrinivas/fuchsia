@@ -6,6 +6,7 @@
 #define GARNET_BIN_ZXDB_CONSOLE_COMMAND_UTILS_H_
 
 #include <initializer_list>
+#include <optional>
 #include <string>
 
 #include "src/developer/debug/ipc/protocol.h"
@@ -14,6 +15,7 @@
 #include "src/developer/debug/zxdb/client/job_context.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/expr/expr_eval_context.h"
 
 namespace zxdb {
 
@@ -137,6 +139,42 @@ const char* AssignTypeToString(AssignType);
 Err SetElementsToAdd(const std::vector<std::string>& args,
                      AssignType* assign_type,
                      std::vector<std::string>* elements_to_set);
+
+// Returns the best ExprEvalContext for the given command. If there is an
+// available frame, uses that to registers and local variables can be read.
+// Otherwise falls back to process (read/write memory and globals only) or
+// generic (calculator-like mode only) contexts.
+fxl::RefPtr<ExprEvalContext> GetEvalContextForCommand(const Command& cmd);
+
+// Evaluates all args in the given command as an expression and calls the
+// callback with the result. The callback will be called from within the
+// stack of the caller if the expression can be evaluated synchronously.
+//
+// When there is an error during setup, the error will be returned and the
+// callback will not be called. After setup, all evaluation errors will come
+// via the callback.
+//
+// The |verb| string is used to format error messages showing command examples.
+Err EvalCommandExpression(
+    const Command& cmd, const char* verb,
+    fxl::RefPtr<ExprEvalContext> eval_context, bool follow_references,
+    std::function<void(const Err& err, ExprValue value)> cb);
+
+// Like EvalCommandExpression but attempts to convert the result to an address.
+// This is used for commands that want to support expressions to compute
+// addresses.
+//
+// Some expressions may evaluate to a pointer where the intrinsic size of the
+// pointed-to thing is known. In this case, the size will be passed to the
+// callback. Untyped results will have a null size.
+//
+// If the command doesn't evaluate to an address, the Err will be set.
+Err EvalCommandAddressExpression(
+    const Command& cmd, const char* verb,
+    fxl::RefPtr<ExprEvalContext> eval_context,
+    std::function<void(const Err& err, uint64_t address,
+                       std::optional<uint32_t> size)>
+        cb);
 
 }  // namespace zxdb
 
