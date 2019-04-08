@@ -14,7 +14,7 @@ on (`imports`) and the Fuchsia packages it adds to the build (`packages`):
 ```json
 {
     "imports": [
-        "garnet/packages/prod/network”,
+        "garnet/packages/prod/network",
     ],
     "packages": [
         "//garnet/examples/http/wget"

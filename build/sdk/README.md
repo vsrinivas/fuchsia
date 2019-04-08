@@ -67,7 +67,7 @@ only takes a few steps:
 2. Create a new SDK `//some/place:my_sdk` with the `sdk` template, regrouping
    the atoms and molecules that should be included;
 3. Add a new
-   [package](https://fuchsia.googlesource.com/fuchsia/+/master/docs/build_packages.md)
+   [package](https://fuchsia.googlesource.com/fuchsia/+/master/docs/build/packages.md)
    file for the molecule:
 ```
 {
