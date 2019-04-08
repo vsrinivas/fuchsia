@@ -273,7 +273,8 @@ class Dockyard {
   void ProcessRequests();
 
  private:
-  // TODO(dschuyler): avoid having a global mutex. Use a queue to update data.
+  // TODO(smbug.com/38): avoid having a global mutex. Use a queue to update
+  // data.
   mutable std::mutex mutex_;
   std::thread server_thread_;
 

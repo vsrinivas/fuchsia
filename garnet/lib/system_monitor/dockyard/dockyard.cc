@@ -324,12 +324,12 @@ uint64_t Dockyard::GetStreamSets(StreamSetsRequest* request) {
 void Dockyard::StartCollectingFrom(const std::string& device) {
   Initialize();
   FXL_LOG(INFO) << "Starting collecting from " << device;
-  // TODO(dschuyler): Connect to the device and start the harvester.
+  // TODO(smbug.com/39): Connect to the device and start the harvester.
 }
 
 void Dockyard::StopCollectingFrom(const std::string& device) {
   FXL_LOG(INFO) << "Stop collecting from " << device;
-  // TODO(dschuyler): Stop the harvester.
+  // TODO(smbug.com/40): Stop the harvester.
 }
 
 bool Dockyard::Initialize() {

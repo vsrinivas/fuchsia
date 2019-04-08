@@ -112,13 +112,13 @@ int main(int argc, char** argv) {
   if (use_grpc) {
     const auto& positional_args = command_line.positional_args();
     if (positional_args.size() < 1) {
-      // TODO(dschuyler): Adhere to CLI tool requirements for --help.
+      // TODO(smbug.com/30): Adhere to CLI tool requirements for --help.
       std::cerr << "Please specify an IP:Port, such as localhost:50051"
                 << std::endl;
       exit(EXIT_CODE_GENERAL_ERROR);
     }
 
-    // TODO(dschuyler): This channel isn't authenticated
+    // TODO(smbug.com/32): This channel isn't authenticated
     // (InsecureChannelCredentials()).
     dockyard_proxy =
         std::make_unique<harvester::DockyardProxyGrpc>(grpc::CreateChannel(

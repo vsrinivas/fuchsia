@@ -36,7 +36,7 @@ class TaskHarvester final : public TaskEnumerator {
 
   // After gathering the data, upload it to |dockyard|.
   void UploadTaskInfo(const std::unique_ptr<DockyardProxy>& dockyard_proxy) {
-    // TODO(dschuyler): Send data to dockyard.
+    // TODO(smbug.com/20): Send data to dockyard.
     for (auto iter = list_.begin(); iter != list_.end(); ++iter) {
       FXL_LOG(INFO) << iter->first << ": " << iter->second;
     }
@@ -58,7 +58,7 @@ class TaskHarvester final : public TaskEnumerator {
                     zx_koid_t parent_koid) override {
     AddKoidValue(koid, "type", dockyard::KoidType::JOB);
     AddKoidValue(koid, "parent_koid", parent_koid);
-    // TODO(dschuyler): gather more info.
+    // TODO(smbug.com/20): gather more info.
     return ZX_OK;
   }
 
@@ -67,7 +67,7 @@ class TaskHarvester final : public TaskEnumerator {
                         zx_koid_t parent_koid) override {
     AddKoidValue(koid, "type", dockyard::KoidType::PROCESS);
     AddKoidValue(koid, "parent_koid", parent_koid);
-    // TODO(dschuyler): gather more info.
+    // TODO(smbug.com/20): gather more info.
     return ZX_OK;
   }
 
@@ -76,7 +76,7 @@ class TaskHarvester final : public TaskEnumerator {
                        zx_koid_t parent_koid) override {
     AddKoidValue(koid, "type", dockyard::KoidType::THREAD);
     AddKoidValue(koid, "parent_koid", parent_koid);
-    // TODO(dschuyler): gather more info.
+    // TODO(smbug.com/20): gather more info.
     return ZX_OK;
   }
 
@@ -119,7 +119,7 @@ void Harvester::GatherData() {
 }
 
 void Harvester::GatherCpuSamples() {
-  // TODO(dschuyler): Determine the array size at runtime (32 is arbitrary).
+  // TODO(smbug.com/34): Determine the array size at runtime (32 is arbitrary).
   zx_info_cpu_stats_t stats[32];
   size_t actual, avail;
   zx_status_t err = zx_object_get_info(root_resource_, ZX_INFO_CPU_STATS,
