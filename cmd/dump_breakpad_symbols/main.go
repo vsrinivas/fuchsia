@@ -35,6 +35,12 @@ var (
 	depFilepath  string
 	dumpSymsPath string
 	tarFilepath  string
+
+	// Flag to switch to using .build-id directory paths as input instead of ids.txt
+	// files.
+	//
+	// TODO(1068): Make this the default and delete support for ids.txt.
+	useBuildIDInput bool
 )
 
 func init() {
@@ -49,6 +55,7 @@ func init() {
 	flag.StringVar(&dumpSymsPath, "dump-syms-path", "", "Path to the breakpad tools `dump_syms` executable")
 	flag.StringVar(&depFilepath, "depfile", "", "Path to the ninja depfile to generate")
 	flag.StringVar(&tarFilepath, "tar-file", "", "Path where the tar archive containing symbol files is written")
+	flag.BoolVar(&useBuildIDInput, "use-build-id", false, "Use .build-id dir inputs instead of ids.txt")
 }
 
 func main() {
@@ -58,21 +65,23 @@ func main() {
 	}
 }
 
-func execute(ctx context.Context, dirs ...string) error {
+func execute(ctx context.Context, paths ...string) error {
 	// Collect all binary file refs from each directory
 	var bfrs []elflib.BinaryFileRef
-	for _, dir := range dirs {
-		newbfrs, err := elflib.WalkBuildIDDir(dir)
-		if err != nil {
-			return err
-		}
-		bfrs = append(bfrs, newbfrs...)
+	var err error
+	if useBuildIDInput {
+		bfrs, err = bfrsFromBuildIDs(paths...)
+	} else {
+		bfrs, err = bfrsFromIdsTxt(paths...)
+	}
+	if err != nil {
+		return err
 	}
 
 	// Generate all symbol files.
 	path, err := generator.Generate(bfrs, dumpSymsPath)
 	if err != nil {
-		log.Fatalf("failed to generate symbols: %v", err)
+		return fmt.Errorf("failed to generate symbols: %v", err)
 	}
 
 	// Write all files to the specified tar archive.
@@ -91,7 +100,7 @@ func execute(ctx context.Context, dirs ...string) error {
 	}
 
 	// Write the Ninja dep file.
-	depfile := depfile{outputPath: tarFilepath, inputPaths: dirs}
+	depfile := depfile{outputPath: tarFilepath, inputPaths: paths}
 	depfd, err := os.Create(depFilepath)
 	if err != nil {
 		return fmt.Errorf("failed to create %q: %v", depFilepath, err)
@@ -104,4 +113,34 @@ func execute(ctx context.Context, dirs ...string) error {
 		return fmt.Errorf("wrote 0 bytes to %q", depFilepath)
 	}
 	return nil
+}
+
+// TODO(1068): Delete this after updating the build to use .build-id directories.
+func bfrsFromIdsTxt(paths ...string) ([]elflib.BinaryFileRef, error) {
+	var bfrs []elflib.BinaryFileRef
+	for _, path := range paths {
+		fd, err := os.Open(path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open %q: %v", path, err)
+		}
+		defer fd.Close()
+		newbfrs, err := elflib.ReadIDsFile(fd)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read %q: %v", path, err)
+		}
+		bfrs = append(bfrs, newbfrs...)
+	}
+	return bfrs, nil
+}
+
+func bfrsFromBuildIDs(dirs ...string) ([]elflib.BinaryFileRef, error) {
+	var bfrs []elflib.BinaryFileRef
+	for _, dir := range dirs {
+		newbfrs, err := elflib.WalkBuildIDDir(dir)
+		if err != nil {
+			return nil, err
+		}
+		bfrs = append(bfrs, newbfrs...)
+	}
+	return bfrs, nil
 }
