@@ -10,6 +10,7 @@
 
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
+#include <object/user_handles.h>
 
 #include "priv.h"
 
@@ -35,7 +36,7 @@ zx_status_t sys_handle_close_many(user_in_ptr<const zx_handle_t> handles, size_t
     LTRACEF("handles %p, num_handles %zu\n", handles.get(), num_handles);
 
     auto up = ProcessDispatcher::GetCurrent();
-    return up->RemoveHandles(handles, num_handles);
+    return RemoveUserHandles(handles, num_handles, up);
 }
 
 static zx_status_t handle_dup_replace(

@@ -15,6 +15,8 @@
 #include <object/handle.h>
 #include <object/message_packet.h>
 #include <object/process_dispatcher.h>
+#include <object/user_handles.h>
+
 #include <zircon/syscalls/policy.h>
 #include <zircon/types.h>
 
@@ -286,7 +288,7 @@ zx_status_t sys_channel_write(zx_handle_t handle_value, uint32_t options,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    auto cleanup = fbl::MakeAutoCall([&]() { up->RemoveHandles(user_handles, num_handles); });
+    auto cleanup = fbl::MakeAutoCall([&]() { RemoveUserHandles(user_handles, num_handles, up); });
 
     if (options != 0u) {
         return ZX_ERR_INVALID_ARGS;
@@ -343,7 +345,7 @@ zx_status_t sys_channel_call_noretry(zx_handle_t handle_value, uint32_t options,
 
     auto up = ProcessDispatcher::GetCurrent();
 
-    auto cleanup = fbl::MakeAutoCall([&]() { up->RemoveHandles(user_handles, num_handles); });
+    auto cleanup = fbl::MakeAutoCall([&]() { RemoveUserHandles(user_handles, num_handles, up); });
 
     if (options || num_bytes < sizeof(zx_txid_t)) {
         return ZX_ERR_INVALID_ARGS;

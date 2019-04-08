@@ -43,6 +43,7 @@ library("object") {
     "suspend_token_dispatcher.cpp",
     "thread_dispatcher.cpp",
     "timer_dispatcher.cpp",
+    "user_handles.cpp",
     "vcpu_dispatcher.cpp",
     "virtual_interrupt_dispatcher.cpp",
     "vm_address_region_dispatcher.cpp",

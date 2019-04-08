@@ -524,38 +524,17 @@ HandleOwner ProcessDispatcher::RemoveHandleLocked(zx_handle_t handle_value) {
     return HandleOwner(handle);
 }
 
-
-zx_status_t ProcessDispatcher::RemoveHandles(user_in_ptr<const zx_handle_t> user_handles,
-                                             size_t num_handles) {
+zx_status_t ProcessDispatcher::RemoveHandles(const zx_handle_t* handles, size_t num_handles) {
     zx_status_t status = ZX_OK;
-    size_t offset = 0;
-    while (offset < num_handles) {
-        // We process |num_handles| in chunks of |kMaxMessageHandles|
-        // because we don't have a limit on how large |num_handles|
-        // can be.
-        auto chunk_size = fbl::min<size_t>(num_handles - offset, kMaxMessageHandles);
+    Guard<BrwLock, BrwLock::Writer> guard{handle_table_lock()};
 
-        zx_handle_t handles[kMaxMessageHandles];
-
-        // If we fail |copy_array_from_user|, then we might discard some, but
-        // not all, of the handles |user_handles| specified.
-        if (user_handles.copy_array_from_user(handles, chunk_size, offset) != ZX_OK)
-            return status;
-
-        {
-            Guard<BrwLock, BrwLock::Writer> guard{handle_table_lock()};
-            for (size_t ix = 0; ix != chunk_size; ++ix) {
-                if (handles[ix] == ZX_HANDLE_INVALID)
-                    continue;
-                auto handle = RemoveHandleLocked(handles[ix]);
-                if (!handle)
-                    status = ZX_ERR_BAD_HANDLE;
-            }
-        }
-
-        offset += chunk_size;
+    for (size_t ix = 0; ix != num_handles; ++ix) {
+        if (handles[ix] == ZX_HANDLE_INVALID)
+            continue;
+        auto handle = RemoveHandleLocked(handles[ix]);
+        if (!handle)
+            status = ZX_ERR_BAD_HANDLE;
     }
-
     return status;
 }
 
