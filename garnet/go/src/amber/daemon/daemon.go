@@ -433,12 +433,27 @@ func (d *Daemon) fetchInto(merkle string, length int64, outputDir string) error 
 			if err == nil || os.IsExist(err) {
 				return err
 			}
-			if e, ok := err.(zx.Error); ok && e.Status == zx.ErrNoSpace {
-				for _, key := range d.events.BindingKeys() {
-					if p, ok := d.events.EventProxyFor(key); ok {
-						log.Printf("daemon: blobfs is out of space")
-						if err := p.OnOutOfSpace(); err != nil {
-							log.Printf("daemon: OnOutOfSpace failed: %v", err)
+			switch err := err.(type) {
+			case zx.Error:
+				if err.Status == zx.ErrNoSpace {
+					for _, key := range d.events.BindingKeys() {
+						if p, ok := d.events.EventProxyFor(key); ok {
+							log.Printf("daemon: blobfs is out of space")
+							if err := p.OnOutOfSpace(); err != nil {
+								log.Printf("daemon: OnOutOfSpace failed: %v", err)
+							}
+						}
+					}
+				}
+				return err
+			case *zx.Error:
+				if err.Status == zx.ErrNoSpace {
+					for _, key := range d.events.BindingKeys() {
+						if p, ok := d.events.EventProxyFor(key); ok {
+							log.Printf("daemon: blobfs is out of space")
+							if err := p.OnOutOfSpace(); err != nil {
+								log.Printf("daemon: OnOutOfSpace failed: %v", err)
+							}
 						}
 					}
 				}
@@ -458,7 +473,7 @@ func (d *Daemon) Activated(merkle string) {
 }
 
 func (d *Daemon) Failed(merkle string, status zx.Status) {
-	d.aw.update(merkle, zx.Error{Status: status})
+	d.aw.update(merkle, &zx.Error{Status: status})
 }
 
 func (d *Daemon) GC() error {

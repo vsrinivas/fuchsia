@@ -155,17 +155,20 @@ func (idx *DynamicIndex) InstallingFailedForBlob(blobRoot string, err error) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
-	pkgRoots := []string{}
-	for p := range idx.needs[blobRoot] {
+	ps := idx.needs[blobRoot]
+	pkgRoots := make([]string, 0, len(ps))
+	for p := range ps {
 		pkgRoots = append(pkgRoots, p)
 	}
-	var status zx.Status
-	if e, ok := err.(zx.Error); ok {
-		status = e.Status
-	} else {
-		// "err" should be a zx.Error, but fall back to a generic error code
-		// in case it's not.
-		status = zx.ErrInternal
+
+	// `err` should be a zx.Error, but fall back to a generic error code
+	// in case it's not.
+	status := zx.ErrInternal
+	switch err := err.(type) {
+	case zx.Error:
+		status = err.Status
+	case *zx.Error:
+		status = err.Status
 	}
 	idx.amberClient.PackagesFailed(pkgRoots, status, blobRoot)
 }
@@ -198,7 +201,7 @@ func (idx *DynamicIndex) AddNeeds(root string, needs map[string]struct{}) error 
 		if _, found := idx.needs[blob]; found {
 			idx.needs[blob][root] = struct{}{}
 		} else {
-			idx.needs[blob] = map[string]struct{}{root: struct{}{}}
+			idx.needs[blob] = map[string]struct{}{root: {}}
 		}
 	}
 	// We wait on all of the "needs", that is, all blobs that were not found on the

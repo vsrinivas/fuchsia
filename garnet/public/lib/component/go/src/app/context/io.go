@@ -32,6 +32,8 @@ func respond(flags uint32, req fidlio.NodeInterfaceRequest, err error, node fidl
 			return proxy.OnOpen(int32(zx.ErrOk), &info)
 		case zx.Error:
 			return proxy.OnOpen(int32(err.Status), nil)
+		case *zx.Error:
+			return proxy.OnOpen(int32(err.Status), nil)
 		default:
 			panic(err)
 		}
@@ -209,13 +211,13 @@ func (dirState *directoryState) Open(flags, mode uint32, path string, req fidlio
 			if dir, ok := node.(fidlio.Directory); ok {
 				return dir.Open(flags, mode, path[i+len(slash):], req)
 			}
-			return respond(flags, req, zx.Error{Status: zx.ErrNotDir}, node)
+			return respond(flags, req, &zx.Error{Status: zx.ErrNotDir}, node)
 		}
 	} else if node, ok := dirState.Get(path); ok {
 		return node.addConnection(flags, mode, req)
 	}
 
-	return respond(flags, req, zx.Error{Status: zx.ErrNotFound}, dirState)
+	return respond(flags, req, &zx.Error{Status: zx.ErrNotFound}, dirState)
 }
 
 func (dirState *directoryState) Unlink(path string) (int32, error) {

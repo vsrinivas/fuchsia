@@ -300,7 +300,21 @@ func goErrToFSErr(err error) error {
 		case zx.ErrInvalidArgs:
 			return fs.ErrInvalidArgs
 		default:
-			debugLog("pkgfs: unmapped os err to fs err: %T %v", err, err)
+			debugLog("pkgfs: unmapped zx status to fs err: %s", e.Status)
+			return err
+		}
+	case *zx.Error:
+		switch e.Status {
+		case zx.ErrNotFound:
+			return fs.ErrNotFound
+		case zx.ErrNoSpace:
+			return fs.ErrNoSpace
+		case zx.ErrNotSupported:
+			return fs.ErrNotSupported
+		case zx.ErrInvalidArgs:
+			return fs.ErrInvalidArgs
+		default:
+			debugLog("pkgfs: unmapped zx status to fs err: %s", e.Status)
 			return err
 		}
 	}

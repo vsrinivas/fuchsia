@@ -69,21 +69,29 @@ func (m *Manager) HasBlob(root string) bool {
 	// non-exclusively. That will be rejected if the blob has already been fully
 	// written.
 	f, err := syscall.Open(m.bpath(root), syscall.O_WRONLY|syscall.O_APPEND, 0400)
-	if os.IsNotExist(err) {
-		return false
-	}
-	syscall.Close(f)
+	switch err := err.(type) {
+	case nil:
+		if err := syscall.Close(f); err != nil {
+			panic(err)
+		}
 
-	// if there was no error, then we opened the file for writing and the file was
-	// writable, which means it exists and is being written by someone.
-	if err == nil {
+		// if there was no error, then we opened the file for writing and the file was
+		// writable, which means it exists and is being written by someone.
 		return false
-	}
-
-	// Access denied indicates we explicitly know that we have opened a blob that
-	// already exists and it is not writable - meaning it's already written.
-	if e, ok := err.(zx.Error); ok && e.Status == zx.ErrAccessDenied {
-		return true
+	case zx.Error:
+		if err.Status == zx.ErrAccessDenied {
+			return true
+		}
+	case *zx.Error:
+		// Access denied indicates we explicitly know that we have opened a blob that
+		// already exists and it is not writable - meaning it's already written.
+		if err.Status == zx.ErrAccessDenied {
+			return true
+		}
+	default:
+		if os.IsNotExist(err) {
+			return false
+		}
 	}
 
 	log.Printf("blobfs: unknown error asserting blob existence: %s", err)

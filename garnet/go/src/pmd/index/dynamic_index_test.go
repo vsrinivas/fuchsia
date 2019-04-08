@@ -172,23 +172,23 @@ func TestFulfill(t *testing.T) {
 	{
 		// Start installing package.
 		neededBlobs := map[string]struct{}{
-			"blob1": struct{}{},
-			"blob2": struct{}{},
+			"blob1": {},
+			"blob2": {},
 		}
 		idx.Installing("root1")
 		idx.UpdateInstalling("root1", pkg.Package{Name: "foo", Version: "1"})
 		idx.AddNeeds("root1", neededBlobs)
 
 		wantWaiting := map[string]struct{}{
-			"blob1": struct{}{},
-			"blob2": struct{}{},
+			"blob1": {},
+			"blob2": {},
 		}
 		if !reflect.DeepEqual(idx.waiting["root1"], wantWaiting) {
 			t.Errorf("got %q, want %q", idx.waiting["root1"], wantWaiting)
 		}
 		wantNeeds := map[string]map[string]struct{}{
-			"blob1": map[string]struct{}{"root1": struct{}{}},
-			"blob2": map[string]struct{}{"root1": struct{}{}},
+			"blob1": {"root1": {}},
+			"blob2": {"root1": {}},
 		}
 		if !reflect.DeepEqual(idx.needs, wantNeeds) {
 			t.Errorf("got %q, want %q", idx.needs, wantNeeds)
@@ -208,7 +208,7 @@ func TestFulfill(t *testing.T) {
 			t.Errorf("got %q, want %q", idx.waiting["root1"], wantWaiting)
 		}
 		wantNeeds = map[string]map[string]struct{}{
-			"blob2": map[string]struct{}{"root1": struct{}{}},
+			"blob2": {"root1": {}},
 		}
 		if !reflect.DeepEqual(idx.needs, wantNeeds) {
 			t.Errorf("got %q, want %q", idx.needs, wantNeeds)
@@ -253,20 +253,20 @@ func TestFulfill(t *testing.T) {
 	{
 		// Start installing package.
 		neededBlobs := map[string]struct{}{
-			"blob4": struct{}{},
+			"blob4": {},
 		}
 		idx.Installing("root2")
 		idx.UpdateInstalling("root2", pkg.Package{Name: "bar", Version: "2"})
 		idx.AddNeeds("root2", neededBlobs)
 
 		wantWaiting := map[string]struct{}{
-			"blob4": struct{}{},
+			"blob4": {},
 		}
 		if !reflect.DeepEqual(idx.waiting["root2"], wantWaiting) {
 			t.Errorf("got %q, want %q", idx.waiting, wantWaiting)
 		}
 		wantNeeds := map[string]map[string]struct{}{
-			"blob4": map[string]struct{}{"root2": struct{}{}},
+			"blob4": {"root2": {}},
 		}
 		if !reflect.DeepEqual(idx.needs, wantNeeds) {
 			t.Errorf("got %q, want %q", idx.needs, wantNeeds)
@@ -278,10 +278,10 @@ func TestFulfill(t *testing.T) {
 		}
 
 		// Fail blob with error. Causes package failure to be signaled.
-		idx.InstallingFailedForBlob("blob4", zx.Error{Status: zx.ErrNoSpace})
+		idx.InstallingFailedForBlob("blob4", &zx.Error{Status: zx.ErrNoSpace})
 
 		wantFailed := []packageFailure{
-			packageFailure{
+			{
 				merkles:    []string{"root2"},
 				status:     zx.ErrNoSpace,
 				blobMerkle: "blob4",

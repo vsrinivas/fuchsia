@@ -183,8 +183,15 @@ type installFile struct {
 
 func (f *installFile) reportBlobError(err error) {
 	// Out-of-space is the only error we care to report.
-	if e, ok := err.(zx.Error); ok && e.Status == zx.ErrNoSpace {
-		f.fs.index.InstallingFailedForBlob(f.name, err)
+	switch err := err.(type) {
+	case zx.Error:
+		if err.Status == zx.ErrNoSpace {
+			f.fs.index.InstallingFailedForBlob(f.name, err)
+		}
+	case *zx.Error:
+		if err.Status == zx.ErrNoSpace {
+			f.fs.index.InstallingFailedForBlob(f.name, err)
+		}
 	}
 }
 
@@ -225,13 +232,13 @@ func (f *installFile) Write(p []byte, off int64, whence int) (int, error) {
 	n := 0
 
 	if whence != fs.WhenceFromCurrent || off != 0 {
-		err = zx.Error{Status: zx.ErrNotSupported}
+		err = &zx.Error{Status: zx.ErrNotSupported}
 		goto blob_install_failed
 	}
 
 	// It is illegal to write past the truncated size of a blob.
 	if f.written > f.size {
-		err = zx.Error{Status: zx.ErrInvalidArgs}
+		err = &zx.Error{Status: zx.ErrInvalidArgs}
 		goto blob_install_failed
 	}
 

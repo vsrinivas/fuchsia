@@ -92,7 +92,7 @@ type Client struct {
 
 func checkStatus(status int32, text string) error {
 	if status := zx.Status(status); status != zx.ErrOk {
-		return zx.Error{Status: status, Text: text}
+		return &zx.Error{Status: status, Text: text}
 	}
 	return nil
 }
@@ -297,7 +297,7 @@ func (c *Client) Send(b Buffer) error {
 		c.sendbuf = c.sendbuf[:n]
 	case zx.ErrShouldWait:
 	default:
-		return zx.Error{Status: status, Text: "eth.Client.RX"}
+		return &zx.Error{Status: status, Text: "eth.Client.RX"}
 	}
 
 	return nil
@@ -340,7 +340,7 @@ func (c *Client) txCompleteLocked() error {
 		}
 	case zx.ErrShouldWait:
 	default:
-		return zx.Error{Status: status, Text: "eth.Client.TX"}
+		return &zx.Error{Status: status, Text: "eth.Client.TX"}
 	}
 
 	return nil
@@ -358,7 +358,7 @@ func (c *Client) Recv() (Buffer, error) {
 	if len(c.recvbuf) == 0 {
 		status, count := fifoRead(c.fifos.Rx, c.recvbuf[:cap(c.recvbuf)])
 		if status != zx.ErrOk {
-			return nil, zx.Error{Status: status, Text: "eth.Client.Recv"}
+			return nil, &zx.Error{Status: status, Text: "eth.Client.Recv"}
 		}
 
 		c.recvbuf = c.recvbuf[:count]
@@ -388,7 +388,7 @@ func (c *Client) rxCompleteLocked() error {
 	}
 	status, count := fifoWrite(c.fifos.Rx, buf)
 	if status != zx.ErrOk {
-		return zx.Error{Status: status, Text: "eth.Client.RX"}
+		return &zx.Error{Status: status, Text: "eth.Client.RX"}
 	}
 
 	c.rxInFlight += count

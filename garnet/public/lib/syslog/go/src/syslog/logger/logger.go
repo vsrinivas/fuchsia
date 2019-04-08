@@ -285,8 +285,19 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 		return l.logToWriter(w.(io.Writer), time, logLevel, tag, msg)
 	} else {
 		if err := l.logToSocket(time, logLevel, tag, msg); err != nil {
-			if status, ok := err.(zx.Error); ok {
-				if status.Status == zx.ErrPeerClosed || status.Status == zx.ErrBadState {
+			switch err := err.(type) {
+			case zx.Error:
+				switch err.Status {
+				case zx.ErrPeerClosed, zx.ErrBadState:
+					l.ActivateFallbackMode()
+					w = l.writer.Load()
+					if w != nil {
+						return l.logToWriter(w.(io.Writer), time, logLevel, tag, msg)
+					}
+				}
+			case *zx.Error:
+				switch err.Status {
+				case zx.ErrPeerClosed, zx.ErrBadState:
 					l.ActivateFallbackMode()
 					w = l.writer.Load()
 					if w != nil {

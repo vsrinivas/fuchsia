@@ -76,7 +76,7 @@ func visit(node *io.NodeInterface, name string, indent int) error {
 			return errors.Wrapf(err, "fuchsia.io.File.Read(%s)", name)
 		}
 		if zx.Status(status) != zx.ErrOk {
-			return errors.Wrapf(zx.Error{Status: zx.Status(status)}, "fuchsia.io.File.Read(%s)", name)
+			return errors.Wrapf(&zx.Error{Status: zx.Status(status)}, "fuchsia.io.File.Read(%s)", name)
 		}
 		for i := 0; i < indent; i++ {
 			fmt.Print(" ")
@@ -89,7 +89,7 @@ func visit(node *io.NodeInterface, name string, indent int) error {
 			return errors.Wrapf(err, "fuchsia.io.Directory.ReadDirents(%s)", name)
 		}
 		if zx.Status(status) != zx.ErrOk {
-			return errors.Wrapf(zx.Error{Status: zx.Status(status)}, "fuchsia.io.Directory.ReadDirents(%s)", name)
+			return errors.Wrapf(&zx.Error{Status: zx.Status(status)}, "fuchsia.io.Directory.ReadDirents(%s)", name)
 		}
 		n, _, names := syscall.ParseDirent(dirents, -1, nil)
 		if l := len(dirents); n != l {
