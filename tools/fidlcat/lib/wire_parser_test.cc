@@ -155,44 +155,77 @@ TEST_F(WireParserTest, ParseSingleString) {
 
 // This is a general-purpose macro for calling InterceptRequest and checking its
 // results.  It can be generalized to a wide variety of types (and is, below).
+// It checks for successful parsing, as well as failure when parsing truncated
+// values.
 // _iface is the interface method name on examples::this_is_an_interface
 //    (TODO: generalize which interface to use)
 // _json_value is a JSON representation of the value in the previous parameter.
 // The remaining parameters are the parameters to _iface to generate the
 // _json_value.
-#define TEST_WIRE_TO_JSON_BODY(_iface, _json_value, ...)                    \
-  do {                                                                      \
-    fidl::MessageBuffer buffer;                                             \
-    fidl::Message message = buffer.CreateEmptyMessage();                    \
-    using test::fidlcat::examples::this_is_an_interface;                    \
-    InterceptRequest<this_is_an_interface>(                                 \
-        message, [&](fidl::InterfacePtr<this_is_an_interface>& ptr) {       \
-          ptr->_iface(__VA_ARGS__);                                         \
-        });                                                                 \
-                                                                            \
-    fidl_message_header_t header = message.header();                        \
-                                                                            \
-    const InterfaceMethod* method;                                          \
-    ASSERT_TRUE(loader_->GetByOrdinal(header.ordinal, &method));            \
-    ASSERT_STREQ(#_iface, method->name().c_str());                          \
-    rapidjson::Document actual;                                             \
-    fidlcat::RequestToJSON(method, message, actual);                        \
-    rapidjson::StringBuffer actual_string;                                  \
-    rapidjson::Writer<rapidjson::StringBuffer> actual_w(actual_string);     \
-    actual.Accept(actual_w);                                                \
-                                                                            \
-    rapidjson::Document expected;                                           \
-    std::string expected_source = _json_value;                              \
-    expected.Parse<rapidjson::kParseNumbersAsStringsFlag>(                  \
-        expected_source.c_str());                                           \
-    rapidjson::StringBuffer expected_string;                                \
-    rapidjson::Writer<rapidjson::StringBuffer> expected_w(expected_string); \
-    expected.Accept(expected_w);                                            \
-                                                                            \
-    ASSERT_EQ(expected, actual)                                             \
-        << "expected = " << expected_string.GetString() << " ("             \
-        << expected_source << ")"                                           \
-        << " and actual = " << actual_string.GetString();                   \
+#define TEST_WIRE_TO_JSON_BODY(_iface, _json_value, ...)                       \
+  do {                                                                         \
+    fidl::MessageBuffer buffer;                                                \
+    fidl::Message message = buffer.CreateEmptyMessage();                       \
+    using test::fidlcat::examples::this_is_an_interface;                       \
+    InterceptRequest<this_is_an_interface>(                                    \
+        message, [&](fidl::InterfacePtr<this_is_an_interface>& ptr) {          \
+          ptr->_iface(__VA_ARGS__);                                            \
+        });                                                                    \
+                                                                               \
+    fidl_message_header_t header = message.header();                           \
+                                                                               \
+    const InterfaceMethod* method;                                             \
+    ASSERT_TRUE(loader_->GetByOrdinal(header.ordinal, &method));               \
+    ASSERT_STREQ(#_iface, method->name().c_str());                             \
+                                                                               \
+    rapidjson::Document actual;                                                \
+    ASSERT_TRUE(fidlcat::RequestToJSON(method, message, actual))               \
+        << "Could not convert message to json";                                \
+    rapidjson::StringBuffer actual_string;                                     \
+    rapidjson::Writer<rapidjson::StringBuffer> actual_w(actual_string);        \
+    actual.Accept(actual_w);                                                   \
+                                                                               \
+    rapidjson::Document expected;                                              \
+    std::string expected_source = _json_value;                                 \
+    expected.Parse<rapidjson::kParseNumbersAsStringsFlag>(                     \
+        expected_source.c_str());                                              \
+    rapidjson::StringBuffer expected_string;                                   \
+    rapidjson::Writer<rapidjson::StringBuffer> expected_w(expected_string);    \
+    expected.Accept(expected_w);                                               \
+                                                                               \
+    ASSERT_EQ(expected, actual)                                                \
+        << "expected = " << expected_string.GetString() << " ("                \
+        << expected_source << ")"                                              \
+        << " and actual = " << actual_string.GetString();                      \
+                                                                               \
+    /* Note we do might not check the last few bytes - we could be done */     \
+    /* parsing before end of the word-boundary aligned amount that was sent */ \
+    /* over the wire. */                                                       \
+    for (uint32_t actual = 0;                                                  \
+         message.bytes().actual() > ((actual + 7) & (~7)); actual++) {         \
+      fidl::HandlePart handles(message.handles().data(),                       \
+                               message.handles().capacity(),                   \
+                               message.handles().actual());                    \
+      fidl::BytePart bytes(message.bytes().data(), message.bytes().capacity(), \
+                           actual);                                            \
+      fidl::Message message_copy(std::move(bytes), std::move(handles));        \
+      rapidjson::Document doc;                                                 \
+      ASSERT_FALSE(fidlcat::RequestToJSON(method, message_copy, doc))          \
+          << "bytes storage = " << message.bytes().actual()                    \
+          << " and succeeded when truncating to " << actual;                   \
+    }                                                                          \
+                                                                               \
+    for (uint32_t actual = 0; message.handles().actual() > actual; actual++) { \
+      fidl::HandlePart handles(message.handles().data(),                       \
+                               message.handles().capacity(), actual);          \
+      fidl::BytePart bytes(message.bytes().data(), message.bytes().capacity(), \
+                           message.bytes().actual());                          \
+      fidl::Message message_copy(std::move(bytes), std::move(handles));        \
+      rapidjson::Document doc;                                                 \
+      ASSERT_FALSE(fidlcat::RequestToJSON(method, message_copy, doc))          \
+          << "handle storage = " << message.handles().actual()                 \
+          << " and succeeded when truncating to " << actual;                   \
+    }                                                                          \
   } while (0)
 
 // This is a convenience wrapper for calling TEST_WIRE_TO_JSON_BODY that simply
@@ -296,7 +329,7 @@ TEST_WIRE_TO_JSON(NullVector, Vector, R"({"v_1": null})", nullptr)
 namespace {
 
 std::array<std::string, 2> TwoStringArrayFromVals(std::string v1,
-                                                   std::string v2) {
+                                                  std::string v2) {
   std::array<std::string, 2> brother_array;
   brother_array[0] = v1;
   brother_array[1] = v2;
@@ -327,62 +360,56 @@ TEST_WIRE_TO_JSON(TwoStringVectorInt, TwoStringVectorInt,
 
 // Struct Tests
 
-TEST_F(WireParserTest, ParseSingleStruct) {
-  fidl::MessageBuffer buffer;
-  fidl::Message message = buffer.CreateEmptyMessage();
+namespace {
 
+class StructSupport {
+ public:
+  StructSupport() {
+    pt.b = true;
+    pt.i8 = std::numeric_limits<int8_t>::min();
+    pt.i16 = std::numeric_limits<int16_t>::min();
+    pt.i32 = std::numeric_limits<int32_t>::min();
+    pt.i64 = std::numeric_limits<int64_t>::min();
+    pt.u8 = std::numeric_limits<uint8_t>::max();
+    pt.u16 = std::numeric_limits<uint16_t>::max();
+    pt.u32 = std::numeric_limits<uint32_t>::max();
+    pt.u64 = std::numeric_limits<uint64_t>::max();
+    pt.f32 = 0.25;
+    pt.f64 = 9007199254740992.0;
+  }
+
+  // TODO: It might be nice to have a more readable strategy for generating
+  // JSON, e.g.,:
+  // return GenerateObject([&]() {
+  //  GenerateObjectMember("b", "true");
+  //  GenerateObjectMember("i8", "-128");
+  //  ...
+  // });
+  // Ideally, we'd also harmonize StructSupport and HandleStructSupport.
+  std::string GetJSON() {
+    std::ostringstream es;
+    es << R"JSON({"p":{)JSON"
+       << R"JSON("b":")JSON" << (pt.b ? "true" : "false") << R"JSON(",)JSON"
+       << R"JSON("i8":")JSON" << std::to_string(pt.i8)
+       << R"JSON(", "i16":")JSON" << std::to_string(pt.i16)
+       << R"JSON(", "i32":")JSON" << std::to_string(pt.i32)
+       << R"JSON(", "i64":")JSON" << std::to_string(pt.i64)
+       << R"JSON(", "u8":")JSON" << std::to_string(pt.u8)
+       << R"JSON(", "u16":")JSON" << std::to_string(pt.u16)
+       << R"JSON(", "u32":")JSON" << std::to_string(pt.u32)
+       << R"JSON(", "u64":")JSON" << std::to_string(pt.u64)
+       << R"JSON(", "f32":")JSON" << std::to_string(pt.f32)
+       << R"JSON(", "f64":")JSON" << std::to_string(pt.f64) << "\"}}";
+    return es.str();
+  }
   test::fidlcat::examples::primitive_types pt;
-  pt.b = true;
-  pt.i8 = std::numeric_limits<int8_t>::min();
-  pt.i16 = std::numeric_limits<int16_t>::min();
-  pt.i32 = std::numeric_limits<int32_t>::min();
-  pt.i64 = std::numeric_limits<int64_t>::min();
-  pt.u8 = std::numeric_limits<uint8_t>::max();
-  pt.u16 = std::numeric_limits<uint16_t>::max();
-  pt.u32 = std::numeric_limits<uint32_t>::max();
-  pt.u64 = std::numeric_limits<uint64_t>::max();
-  pt.f32 = 0.25;
-  pt.f64 = 9007199254740992.0;
+};
 
-  InterceptRequest<test::fidlcat::examples::this_is_an_interface>(
-      message,
-      [pt](fidl::InterfacePtr<test::fidlcat::examples::this_is_an_interface>&
-               ptr) { ptr->Struct(pt); });
-  fidl_message_header_t header = message.header();
-  const InterfaceMethod* method;
-  ASSERT_TRUE(loader_->GetByOrdinal(header.ordinal, &method));
-  ASSERT_STREQ("Struct", method->name().c_str());
-  rapidjson::Document actual;
-  fidlcat::RequestToJSON(method, message, actual);
-  rapidjson::StringBuffer actual_string;
-  rapidjson::Writer<rapidjson::StringBuffer> actual_w(actual_string);
-  actual.Accept(actual_w);
+}  // namespace
 
-  rapidjson::Document expected;
-  std::ostringstream es;
-  es << R"JSON({"p":{)JSON"
-     << R"JSON("b":"true",)JSON"
-     << R"JSON("i8":")JSON"
-     << std::to_string(std::numeric_limits<int8_t>::min())
-     << R"JSON(", "i16":")JSON"
-     << std::to_string(std::numeric_limits<int16_t>::min())
-     << R"JSON(", "i32":")JSON"
-     << std::to_string(std::numeric_limits<int32_t>::min())
-     << R"JSON(", "i64":")JSON"
-     << std::to_string(std::numeric_limits<int64_t>::min())
-     << R"JSON(", "u8":")JSON"
-     << std::to_string(std::numeric_limits<uint8_t>::max())
-     << R"JSON(", "u16":")JSON"
-     << std::to_string(std::numeric_limits<uint16_t>::max())
-     << R"JSON(", "u32":")JSON"
-     << std::to_string(std::numeric_limits<uint32_t>::max())
-     << R"JSON(", "u64":")JSON"
-     << std::to_string(std::numeric_limits<uint64_t>::max())
-     << R"JSON(", "f32":")JSON" << std::to_string(0.25)
-     << R"JSON(", "f64":")JSON" << std::to_string(9007199254740992.0) << "\"}}";
-  expected.Parse<rapidjson::kParseNumbersAsStringsFlag>(es.str().c_str());
-  ASSERT_TRUE(expected == actual) << "expected = " << es.str() << " and actual "
-                                  << actual_string.GetString();
+TEST_F(WireParserTest, ParseStruct) {
+  StructSupport sd;
+  TEST_WIRE_TO_JSON_BODY(Struct, sd.GetJSON(), sd.pt);
 }
 
 namespace {
@@ -506,6 +533,8 @@ TEST_F(WireParserTest, ParseHandleStruct) {
   TEST_WIRE_TO_JSON_BODY(HandleStruct, support.GetJSON(),
                          support.handle_struct());
 }
+
+// Corrupt data tests
 
 TEST_F(WireParserTest, BadSchemaPrintHex) {
   std::vector<std::unique_ptr<std::istream>> library_files;

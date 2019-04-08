@@ -135,7 +135,11 @@ void OnZxChannelWrite(LibraryLoader* loader, const zxdb::Err& err,
     return;
   }
   rapidjson::Document actual;
-  fidlcat::RequestToJSON(method, message, actual);
+  if (!fidlcat::RequestToJSON(method, message, actual)) {
+    FXL_LOG(WARNING) << "Could not parse data with type " << method->name()
+                     << ", best effort displayed";
+  }
+
   rapidjson::StringBuffer output;
   rapidjson::Writer<rapidjson::StringBuffer> writer(output);
   actual.Accept(writer);

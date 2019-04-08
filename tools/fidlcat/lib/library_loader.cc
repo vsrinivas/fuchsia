@@ -47,8 +47,8 @@ const std::unique_ptr<Type> Enum::GetType() const {
 std::string Enum::GetNameFromBytes(const uint8_t* bytes, size_t length) const {
   std::unique_ptr<Type> type = GetType();
   for (auto& member : value_["members"].GetArray()) {
-    Marker marker;
-    marker.byte_pos = bytes;
+    Marker end(bytes + length, nullptr);
+    Marker marker(bytes, nullptr, end);
     if (type->ValueEquals(marker, length, member["value"]["literal"])) {
       return member["name"].GetString();
     }

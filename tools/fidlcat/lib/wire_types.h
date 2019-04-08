@@ -40,18 +40,55 @@ namespace fidlcat {
 // Indicates a position in the FIDL message, which is a combination of current
 // location in the byte part |byte_pos| and current location in the handle part
 // |handle_pos|.
-struct Marker {
-  const uint8_t* byte_pos;
-  const zx_handle_t* handle_pos;
+class Marker {
+ public:
+  Marker() = delete;
+
+  Marker(const uint8_t* bytes, const zx_handle_t* handles)
+      : byte_pos_(bytes),
+        handle_pos_(handles),
+        end_byte_pos_(nullptr),
+        end_handle_pos_(nullptr) {}
+
+  Marker(const uint8_t* bytes, const zx_handle_t* handles, const Marker& end)
+      : byte_pos_(bytes),
+        handle_pos_(handles),
+        end_byte_pos_(end.byte_pos()),
+        end_handle_pos_(end.handle_pos()) {}
+
+  const uint8_t* byte_pos() const { return byte_pos_; }
+  const zx_handle_t* handle_pos() const { return handle_pos_; }
+  bool is_valid() const;
+
+  // Advances the bytes in the given |marker| by the given |amount| (or to the
+  // given |pos|).  Sets marker.is_valid to false if the new position would be
+  // off the end of the tracked message.
+  //
+  // TODO(DX-1260): Consider folding all marker tracking into this class, so
+  // that Markers and ObjectTrackers don't have to be passed around everywhere.
+  void AdvanceBytesBy(size_t amount);
+  void AdvanceBytesTo(const uint8_t* pos);
+  void AdvanceHandlesBy(size_t amount);
+  void AdvanceHandlesTo(const zx_handle_t* pos);
+
+ private:
+  const uint8_t* byte_pos_;
+  const zx_handle_t* handle_pos_;
+
+  const uint8_t* end_byte_pos_;
+  const zx_handle_t* end_handle_pos_;
 };
+
+class ObjectTracker;
 
 // A function that, given the location |marker| of an object (in-line or
 // out-of-line), generates a JSON representation into |value| using |allocator|.
 //
-// Returns a Marker advanced by the out-of-line size of the object (which may be
+// The |marker| is set to the out-of-line size of the object (which may be
 // 0).
-typedef fit::function<Marker(Marker marker, rapidjson::Value& value,
-                             rapidjson::Document::AllocatorType& allocator)>
+typedef fit::function<void(ObjectTracker*, Marker& marker,
+                           rapidjson::Value& value,
+                           rapidjson::Document::AllocatorType& allocator)>
     ValueGeneratingCallback;
 
 // Encapsulates state when parsing wire format encoded FIDL objects.
@@ -64,11 +101,11 @@ typedef fit::function<Marker(Marker marker, rapidjson::Value& value,
 class ObjectTracker {
  public:
   // Creates a tracker for the given array of bytes.
-  explicit ObjectTracker() {}
+  ObjectTracker(const Marker& end) : end_(end) {}
 
   // Executes all of the callbacks, starting at bytes (as passed to the
   // constructor) + the given offset.
-  Marker RunCallbacksFrom(Marker marker);
+  bool RunCallbacksFrom(Marker& marker);
 
   // Enqueues a callback to be executed when running RunCallbacksFrom.
   // |key| is the JSON key it will construct.
@@ -90,8 +127,11 @@ class ObjectTracker {
   ObjectTracker(const ObjectTracker&) = delete;
   ObjectTracker& operator=(const ObjectTracker&) = delete;
 
+  const Marker& end() { return end_; }
+
  private:
-  std::vector<fit::function<Marker(const Marker& marker)>> callbacks_;
+  const Marker end_;
+  std::vector<fit::function<void(Marker& marker)>> callbacks_;
 };
 
 // A FIDL type.  Provides methods for generating instances of this type.
@@ -116,6 +156,9 @@ class Type {
   // not refer to anything in the containing type, as that might get deleted.
   //
   // Returns a Marker pointing to the next element inline in this type.
+  // marker.is_valid is set to false and otherwise unchanged from |marker| if
+  // there was something wrong with the data (e.g., this method would have had
+  // to read off the end of the data to parse it).
   virtual Marker GetValueCallback(Marker marker, size_t length,
                                   ObjectTracker* tracker,
                                   ValueGeneratingCallback& callback) const = 0;
@@ -239,19 +282,19 @@ class NumericType : public Type {
   virtual Marker GetValueCallback(
       Marker marker, size_t length, ObjectTracker* tracker,
       ValueGeneratingCallback& callback) const override {
-    T val = internal::MemoryFrom<T, const uint8_t*>(marker.byte_pos);
-    callback = [val](Marker marker, rapidjson::Value& value,
+    T val = internal::MemoryFrom<T, const uint8_t*>(marker.byte_pos());
+    callback = [val](ObjectTracker* tracker, Marker& marker,
+                     rapidjson::Value& value,
                      rapidjson::Document::AllocatorType& allocator) {
       value.SetString(std::to_string(val).c_str(), allocator);
-      return marker;
     };
-    marker.byte_pos += sizeof(T);
+    marker.AdvanceBytesBy(sizeof(T));
     return marker;
   }
 
   virtual bool ValueEquals(Marker marker, size_t length,
                            const rapidjson::Value& value) const override {
-    T lhs = internal::MemoryFrom<T, const uint8_t*>(marker.byte_pos);
+    T lhs = internal::MemoryFrom<T, const uint8_t*>(marker.byte_pos());
     std::istringstream input(value["value"].GetString());
     // Because int8_t is really char, and we don't want to read that.
     using R =

@@ -70,23 +70,30 @@ bool ParamsToJSON(const std::optional<std::vector<InterfaceMethodParameter>>& p,
         return l->get_offset() < r->get_offset();
       });
 
-  Marker marker;
-  ObjectTracker tracker;
-  marker.handle_pos = handles.data();
+  // TODO: This should be exactly the same logic as we use for Struct.  Unite
+  // them.
+  Marker end(bytes.end(), handles.end());
+  ObjectTracker tracker(end);
+  Marker marker(bytes.begin(), handles.begin(), tracker.end());
   for (const InterfaceMethodParameter* param : params) {
-    marker.byte_pos = bytes.data() + param->get_offset();
+    marker.AdvanceBytesTo(bytes.begin() + param->get_offset());
+    if (!marker.is_valid()) {
+      return marker.is_valid();
+    }
     std::unique_ptr<Type> type = param->GetType();
     ValueGeneratingCallback value_callback;
     marker = type->GetValueCallback(marker, param->get_size(), &tracker,
                                     value_callback);
+    if (!marker.is_valid()) {
+      return marker.is_valid();
+    }
 
     tracker.ObjectEnqueue(param->name(), std::move(value_callback), result,
                           result.GetAllocator());
 
     current_offset += param->get_size();
   }
-  tracker.RunCallbacksFrom(marker);
-  return true;
+  return tracker.RunCallbacksFrom(marker);
 }
 
 }  // anonymous namespace
