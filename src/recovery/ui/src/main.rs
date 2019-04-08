@@ -5,13 +5,10 @@
 use carnelian::{
     measure_text, Canvas, Color, FontDescription, FontFace, Paint, PixelSink, Point, Rect, Size,
 };
-use failure::{bail, Error, Fail, ResultExt};
-use fidl_fuchsia_amber as amber;
-use fuchsia_app as app;
-use fuchsia_async::{self as fasync, futures::TryFutureExt};
+use failure::{bail, Error, ResultExt};
+use fuchsia_async as fasync;
 use fuchsia_framebuffer::{Config, Frame, FrameBuffer, PixelFormat};
 use futures::future;
-use std::{cell::RefCell, rc::Rc};
 
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../garnet/bin/fonts/third_party/robotoslab/RobotoSlab-Regular.ttf");
@@ -103,34 +100,6 @@ fn main() -> Result<(), Error> {
     let mut ui = RecoveryUI { face: face, canvas, config, text_size: config.height / 12 };
 
     ui.draw("Verification URL", "User Code");
-
-    let ui_login = Rc::new(RefCell::new(ui));
-    let ui_fail = ui_login.clone();
-
-    let amber_control = app::client::connect_to_service::<amber::ControlMarker>()?;
-
-    let list_srcs = amber_control
-        .list_srcs()
-        .map_err(|e| e.context("listlist_srcs failed"))
-        .map_ok(move |src_list| {
-            if src_list.len() > 0 {
-                let login = amber_control
-                    .login(&src_list[0].id)
-                    .map_err(|e| e.context("login failed"))
-                    .map_ok(move |device_code| println!("device_code = {:#?}", device_code));
-                fasync::spawn_local(login.unwrap_or_else(move |err| {
-                    println!("in login recover {:#?}", err);
-                    let mut ui_local = ui_login.borrow_mut();
-                    ui_local.draw(&src_list[0].id, "Login failed")
-                }));
-            } else {
-                ui_fail.borrow_mut().draw("Could not get", "source list from Amber")
-            }
-        });
-
-    fasync::spawn_local(
-        list_srcs.unwrap_or_else(|err| println!("in list_srcs recover {:#?}", err)),
-    );
 
     executor.run_singlethreaded(future::empty::<()>());
     unreachable!();
