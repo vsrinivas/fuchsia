@@ -48,7 +48,7 @@ void x86_intel_init_percpu(void) {
     // handler to user space handler).
     if (!x86_feature_test(X86_FEATURE_HYPERVISOR) &&
         x86_get_microarch_config()->disable_c1e) {
-        uint64_t power_ctl_msr = read_msr(0x1fc);
+        uint64_t power_ctl_msr = read_msr(X86_MSR_POWER_CTL);
         write_msr(0x1fc, power_ctl_msr & ~0x2);
     }
 }

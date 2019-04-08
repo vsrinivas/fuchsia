@@ -73,6 +73,7 @@
 #define X86_CR4_PSE                     0xffffffef /* Disabling PSE bit in the CR4 */
 
 // Non-architectural MSRs
+#define X86_MSR_POWER_CTL               0x000001fc /* Power Control Register */
 #define X86_MSR_RAPL_POWER_UNIT         0x00000606 /* RAPL unit multipliers */
 #define X86_MSR_PKG_POWER_LIMIT         0x00000610 /* Package power limits */
 #define X86_MSR_PKG_POWER_LIMIT_PL1_CLAMP   (1 << 16)
