@@ -30,6 +30,7 @@ driver("intel-i915") {
     "$zx/system/ulib/edid",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/image-format",
     "$zx/system/ulib/region-alloc",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",

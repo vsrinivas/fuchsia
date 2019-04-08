@@ -22,10 +22,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
+#include <fbl/vector.h>
+#include <lib/image-format/image_format.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <utility>
 
@@ -847,6 +849,127 @@ zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx::
     }
 
     status = gtt_region->PopulateRegion(vmo.get(), offset / PAGE_SIZE, length);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    image->handle = gtt_region->base();
+    imported_images_.push_back(std::move(gtt_region));
+    return ZX_OK;
+}
+
+static bool ConvertPixelFormatToType(fuchsia_sysmem_PixelFormat format, uint32_t* type_out) {
+    if (format.type != fuchsia_sysmem_PixelFormatType_BGRA32) {
+        return false;
+    }
+
+    if (!format.has_format_modifier) {
+        *type_out = IMAGE_TYPE_SIMPLE;
+        return true;
+    }
+
+    switch (format.format_modifier.value) {
+    case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED:
+        *type_out = IMAGE_TYPE_X_TILED;
+        return true;
+
+    case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED:
+        *type_out = IMAGE_TYPE_Y_LEGACY_TILED;
+        return true;
+
+    case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED:
+        *type_out = IMAGE_TYPE_YF_TILED;
+        return true;
+
+    default:
+        return false;
+    }
+}
+
+zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t handle,
+                                                         uint32_t index) {
+    if (!(image->type == IMAGE_TYPE_SIMPLE || image->type == IMAGE_TYPE_X_TILED ||
+          image->type == IMAGE_TYPE_Y_LEGACY_TILED || image->type == IMAGE_TYPE_YF_TILED)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    zx_status_t status, status2;
+    fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
+    status =
+        fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(handle, &status2, &collection_info);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (status2 != ZX_OK) {
+        return status2;
+    }
+
+    zx::vmo vmo;
+    if (index < collection_info.buffer_count) {
+        vmo = zx::vmo(collection_info.buffers[index].vmo);
+        collection_info.buffers[index].vmo = ZX_HANDLE_INVALID;
+    }
+    for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
+        zx_handle_close(collection_info.buffers[i].vmo);
+    }
+
+    if (!collection_info.settings.has_image_format_constraints || !vmo) {
+        LOG_ERROR("Invalid image format or index\n");
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    uint64_t offset = collection_info.buffers[index].vmo_usable_start;
+    if (offset % PAGE_SIZE != 0) {
+        LOG_ERROR("Invalid offset\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    uint32_t type;
+    if (!ConvertPixelFormatToType(collection_info.settings.image_format_constraints.pixel_format,
+                                  &type)) {
+        LOG_ERROR("Invalid pixel format modifier\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (image->type != type) {
+        LOG_ERROR("Incompatible image type\n");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    fbl::AutoLock lock(&gtt_lock_);
+    fbl::AllocChecker ac;
+    imported_images_.reserve(imported_images_.size() + 1, &ac);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    uint32_t length = width_in_tiles(image->type, image->width, image->pixel_format) *
+                      height_in_tiles(image->type, image->height, image->pixel_format) *
+                      get_tile_byte_size(image->type);
+
+    uint32_t align;
+    if (image->type == IMAGE_TYPE_SIMPLE) {
+        align = registers::PlaneSurface::kLinearAlignment;
+    } else if (image->type == IMAGE_TYPE_X_TILED) {
+        align = registers::PlaneSurface::kXTilingAlignment;
+    } else {
+        align = registers::PlaneSurface::kYTilingAlignment;
+    }
+    fbl::unique_ptr<GttRegion> gtt_region;
+    status = gtt_.AllocRegion(length, align, &gtt_region);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // The vsync logic requires that images not have base == 0
+    if (gtt_region->base() == 0) {
+        fbl::unique_ptr<GttRegion> alt_gtt_region;
+        zx_status_t status = gtt_.AllocRegion(length, align, &alt_gtt_region);
+        if (status != ZX_OK) {
+            return status;
+        }
+        gtt_region = std::move(alt_gtt_region);
+    }
+
+    status = gtt_region->PopulateRegion(vmo.release(), offset / PAGE_SIZE, length);
     if (status != ZX_OK) {
         return status;
     }
