@@ -183,9 +183,9 @@ zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options,
     }
 
     // create a Log dispatcher
-    fbl::RefPtr<Dispatcher> dispatcher;
+    KernelHandle<LogDispatcher> handle;
     zx_rights_t rights;
-    zx_status_t result = LogDispatcher::Create(options, &dispatcher, &rights);
+    zx_status_t result = LogDispatcher::Create(options, &handle, &rights);
     if (result != ZX_OK)
         return result;
 
@@ -196,7 +196,7 @@ zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options,
     }
 
     // create a handle and attach the dispatcher to it
-    return out->make(ktl::move(dispatcher), rights);
+    return out->make(ktl::move(handle), rights);
 }
 
 // zx_status_t zx_debuglog_write

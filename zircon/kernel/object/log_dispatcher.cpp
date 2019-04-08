@@ -18,18 +18,19 @@
 KCOUNTER(dispatcher_log_create_count, "dispatcher.log.create")
 KCOUNTER(dispatcher_log_destroy_count, "dispatcher.log.destroy")
 
-zx_status_t LogDispatcher::Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher,
+zx_status_t LogDispatcher::Create(uint32_t flags, KernelHandle<LogDispatcher>* handle,
                                   zx_rights_t* rights) {
     fbl::AllocChecker ac;
-    auto disp = new (&ac) LogDispatcher(flags);
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) LogDispatcher(flags)));
     if (!ac.check()) return ZX_ERR_NO_MEMORY;
 
     if (flags & ZX_LOG_FLAG_READABLE) {
-        dlog_reader_init(&disp->reader_, &LogDispatcher::Notify, disp);
+        dlog_reader_init(&new_handle.dispatcher()->reader_, &LogDispatcher::Notify,
+                         new_handle.dispatcher().get());
     }
 
     *rights = default_rights();
-    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+    *handle = ktl::move(new_handle);
     return ZX_OK;
 }
 
