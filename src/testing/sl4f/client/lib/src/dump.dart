@@ -15,23 +15,53 @@ class Dump {
   /// passed nor set in the environment, in which case no dumps are written.
   final String _dumpDirectory;
 
+  /// Not supplying a dumpDirectory parameter, or supplying null, or
+  /// supplying an empty string, means the dump directory specification
+  /// is taken from the environment. If that's not specified, or is
+  /// specified to be the empty string, dump is disabled.
+  ///
+  /// If dump is not disabled, then the dump directory specification
+  /// must be valid in that it designates a directory that exists by an
+  /// absolute path name. It's asserted below; invalid specification
+  /// causes to crash.
+  ///
+  /// The dump directory must be given by an absolute path. A relative
+  /// path is ambiguous, because it's not clear relative to what. It
+  /// would normally be the current working directory, but other
+  /// relative paths in this library are resolved relative to the
+  /// location of the binary.
+  ///
+  /// To easily supply a path relative to the current working directory
+  /// on the command line, use $(pwd).
   Dump([String dumpDirectory]) : _dumpDirectory =
-      dumpDirectory ?? Platform.environment[_dumpDirectoryEnvVar] {
-    // Has to be sync because this is a constructor.
-    if (_dumpDirectory != null && !Directory(_dumpDirectory).existsSync()) {
-      throw FileSystemException('Not found or not a directory', _dumpDirectory);
-    }
+      _notEmptyString(dumpDirectory) ? dumpDirectory :
+      Platform.environment[_dumpDirectoryEnvVar] {
+        if (_hasDumpDirectory) {
+          // See explanation above. Relative path would be ambiguous.
+          if (!_dumpDirectory.startsWith('/')) {
+            throw ArgumentError.value(_dumpDirectory, 'Must be absolute path');
+          }
+
+          // Has to be sync because this is a constructor.
+          if (!Directory(_dumpDirectory).existsSync()) {
+            throw FileSystemException('Not found or not a directory', _dumpDirectory);
+          }
+        }
   }
 
   /// Writes the bytes to the dump directory under a timestamp, the
   /// given topic name and the given file type suffix. Does nothing if
   /// no dump directory is configured.
   void writeAsBytes(String name, String suffix, List<int> bytes) {
-    if (_dumpDirectory != null) {
+    if (_hasDumpDirectory) {
       final filename = '${DateTime.now().toIso8601String()}-$name.$suffix';
 
       // Writes to the file asynchronously so the test can continue.
       File([_dumpDirectory, filename].join('/')).writeAsBytes(bytes);
     }
   }
+
+  bool get _hasDumpDirectory => _notEmptyString(_dumpDirectory);
+
+  static bool _notEmptyString(final String value) => value != null && value.isNotEmpty;
 }
