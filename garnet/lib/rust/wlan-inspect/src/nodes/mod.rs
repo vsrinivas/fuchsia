@@ -6,6 +6,8 @@ mod list;
 
 pub use list::BoundedListNode;
 
+use crate::{InspectValue, ToInspectValue};
+
 use fidl_fuchsia_inspect as fidl_inspect;
 use fuchsia_inspect::{self as finspect, object::ObjectUtil};
 use fuchsia_zircon as zx;
@@ -24,6 +26,7 @@ pub trait NodeExt {
     fn set_time_at(&mut self, timestamp: zx::Time) -> &mut Self;
     fn insert_str<S: Into<String>>(&mut self, key: &str, value: S) -> &mut Self;
     fn insert_debug<D: std::fmt::Debug>(&mut self, key: &str, value: D) -> &mut Self;
+    fn insert<V: ToInspectValue>(&mut self, key: &str, value: V) -> &mut Self;
 }
 
 impl NodeExt for finspect::ObjectTreeNode {
@@ -45,7 +48,7 @@ impl NodeExt for finspect::ObjectTreeNode {
         let seconds = timestamp.nanos() / 1000_000_000;
         let millis = (timestamp.nanos() % 1000_000_000) / 1000_000;
         self.add_property(fidl_inspect::Property {
-            key: "time".to_string(),
+            key: "@time".to_string(),
             value: fidl_inspect::PropertyValue::Str(format!("{}.{}", seconds, millis)),
         });
         self
@@ -62,13 +65,31 @@ impl NodeExt for finspect::ObjectTreeNode {
     fn insert_debug<D: std::fmt::Debug>(&mut self, key: &str, value: D) -> &mut Self {
         self.insert_str(key, format!("{:?}", value))
     }
+
+    fn insert<V: ToInspectValue>(&mut self, key: &str, value: V) -> &mut Self {
+        let key = key.to_string();
+        match value.to_inspect_value() {
+            InspectValue::Property(value) => {
+                self.add_property(fidl_inspect::Property { key, value });
+            }
+            InspectValue::Metric(value) => {
+                self.add_metric(fidl_inspect::Metric { key, value });
+            }
+            InspectValue::Object(mut value) => {
+                value.name = key;
+                self.add_child_tree(finspect::ObjectTreeNode::new(value));
+            }
+        }
+        self
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use fuchsia_inspect::{self as finspect, object::ObjectUtil};
+    use crate::test_utils;
+    use fuchsia_inspect as finspect;
 
     #[test]
     fn test_time_metadata_format() {
@@ -76,13 +97,6 @@ mod tests {
         let timestamp = zx::Time::from_nanos(123_456700000);
         node.lock().set_time_at(timestamp);
         let object = node.lock().evaluate();
-        let time_property = object.get_property("time").expect("expect time property");
-        assert_eq!(
-            time_property,
-            &fidl_inspect::Property {
-                key: "time".to_string(),
-                value: fidl_inspect::PropertyValue::Str("123.456".to_string()),
-            }
-        );
+        test_utils::assert_str_prop(&object, "@time", "123.456");
     }
 }
