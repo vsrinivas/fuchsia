@@ -13,7 +13,14 @@ enum PowerDomainStatus : uint8 {
 
 [Layout = "ddk-protocol"]
 protocol Power {
+    /// Enable power domain
     EnablePowerDomain() -> (zx.status s);
+    /// Disable power domain
     DisablePowerDomain() -> (zx.status s);
+    /// Get power domain status
     GetPowerDomainStatus() -> (zx.status s, PowerDomainStatus status);
+    /// Write to ctrl register of PMIC
+    WritePmicCtrlReg(uint32 reg_addr, uint32 value) -> (zx.status s);
+    /// Read ctrl register of PMIC
+    ReadPmicCtrlReg(uint32 reg_addr) -> (zx.status s, uint32 value);
 };

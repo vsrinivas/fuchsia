@@ -95,6 +95,10 @@ private:
     zx_status_t RpcPowerDomainDisable(const DeviceResources* dr, uint32_t index);
     zx_status_t RpcPowerDomainGetStatus(const DeviceResources* dr, uint32_t index,
                                         power_domain_status_t* status);
+    zx_status_t RpcPowerDomainWritePmicCtrlReg(const DeviceResources* dr, uint32_t index,
+                                               uint32_t addr, uint32_t value);
+    zx_status_t RpcPowerDomainReadPmicCtrlReg(const DeviceResources* dr, uint32_t index,
+                                               uint32_t addr, uint32_t* value);
     PlatformBus* bus_;
     char name_[ZX_DEVICE_NAME_MAX + 1];
     const uint32_t vid_;

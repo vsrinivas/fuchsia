@@ -36,6 +36,7 @@ private:
     zx_status_t Start();
     zx_status_t GpioInit();
     zx_status_t PilInit();
+    zx_status_t PowerInit();
     zx_status_t Sdc1Init();
     zx_status_t ClockInit();
     int Thread();

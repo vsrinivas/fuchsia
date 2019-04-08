@@ -287,6 +287,40 @@ zx_status_t ProxyPower::PowerGetPowerDomainStatus(power_domain_status_t* out_sta
     return status;
 }
 
+zx_status_t ProxyPower::PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value) {
+    rpc_power_req_t req = {};
+    rpc_power_rsp_t resp = {};
+    req.header.proto_id = ZX_PROTOCOL_POWER;
+    req.header.op = POWER_WRITE_PMIC_CTRL_REG;
+    req.index = index_;
+    req.reg_addr = reg_addr;
+    req.reg_value = value;
+
+    zx_status_t status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header,
+                                     sizeof(resp));
+    if (status != ZX_OK) {
+        return status;
+    }
+    return status;
+}
+
+zx_status_t ProxyPower::PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value) {
+    rpc_power_req_t req = {};
+    rpc_power_rsp_t resp = {};
+    req.header.proto_id = ZX_PROTOCOL_POWER;
+    req.header.op = POWER_READ_PMIC_CTRL_REG;
+    req.index = index_;
+    req.reg_addr = reg_addr;
+
+    zx_status_t status = proxy_->Rpc(device_id_, &req.header, sizeof(req), &resp.header,
+                                     sizeof(resp));
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_value = resp.reg_value;
+    return status;
+}
+
 zx_status_t ProxySysmem::SysmemConnect(zx::channel allocator2_request) {
     platform_proxy_req_t req = {};
     platform_proxy_rsp_t resp = {};

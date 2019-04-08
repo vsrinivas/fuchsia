@@ -79,6 +79,8 @@ public:
     zx_status_t PowerEnablePowerDomain();
     zx_status_t PowerDisablePowerDomain();
     zx_status_t PowerGetPowerDomainStatus(power_domain_status_t* out_status);
+    zx_status_t PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value);
+    zx_status_t PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value);
     zx_status_t SysmemConnect(zx::channel allocator2_request);
 
 private:

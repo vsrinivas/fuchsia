@@ -153,6 +153,15 @@ zx_status_t MtkPower::PowerImplGetPowerDomainStatus(uint32_t index,
     return ZX_OK;
 }
 
+zx_status_t MtkPower::PowerImplWritePmicCtrlReg(uint32_t index, uint32_t reg_addr,
+                                                uint32_t value) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MtkPower::PowerImplReadPmicCtrlReg(uint32_t index, uint32_t addr, uint32_t* value) {
+    return ZX_ERR_NOT_SUPPORTED;
+}
+
 void MtkPower::DdkRelease() {
     delete this;
 }

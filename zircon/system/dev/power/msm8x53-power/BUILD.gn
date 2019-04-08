@@ -2,24 +2,26 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-driver("msm8x53-som") {
+driver("msm8x53-power") {
   sources = [
-    "msm8x53-clock.cpp",
-    "msm8x53-gpio.cpp",
-    "msm8x53-pil.cpp",
     "msm8x53-power.cpp",
-    "msm8x53-sdc1.cpp",
-    "msm8x53.cpp",
   ]
   deps = [
+    "$zx/system/banjo/ddk-protocol-gpio",
+    "$zx/system/banjo/ddk-protocol-i2c",
     "$zx/system/banjo/ddk-protocol-platform-bus",
+    "$zx/system/banjo/ddk-protocol-platform-device",
+    "$zx/system/banjo/ddk-protocol-powerimpl",
+    "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/msm8x53",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
     "$zx/system/ulib/hwreg",
-  ]
-  data_deps = [
-    "$zx/kernel/target/arm64/boot-shim:msm8x53-som",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
   ]
 }

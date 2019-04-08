@@ -99,16 +99,21 @@ enum class PowerOp {
     ENABLE,
     DISABLE,
     GET_STATUS,
+    WRITE_PMIC_CTRL_REG,
+    READ_PMIC_CTRL_REG,
 };
 
 struct PowerProxyRequest {
     ProxyRequest header;
     PowerOp op;
+    uint32_t reg_addr;
+    uint32_t reg_value;
 };
 
 struct PowerProxyResponse {
     ProxyResponse header;
     power_domain_status_t status;
+    uint32_t reg_value;
 };
 
 // ZX_PROTOCOL_SYSMEM proxy support.

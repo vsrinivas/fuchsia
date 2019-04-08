@@ -54,18 +54,8 @@ zx_status_t Msm8x53::Create(zx_device_t* parent) {
 }
 
 int Msm8x53::Thread() {
-
     if (GpioInit() != ZX_OK) {
         zxlogf(ERROR, "GpioInit() failed\n");
-        return -1;
-    }
-    if (Sdc1Init() != ZX_OK) {
-        zxlogf(ERROR, "Sdc1Init() failed\n");
-        return -1;
-    }
-
-    if (PilInit() != ZX_OK) {
-        zxlogf(ERROR, "PilInit() failed\n");
         return -1;
     }
 
@@ -74,6 +64,20 @@ int Msm8x53::Thread() {
         return -1;
     }
 
+    if (PowerInit() != ZX_OK) {
+        zxlogf(ERROR, "PowerInit() failed\n");
+        return -1;
+    }
+
+    if (PilInit() != ZX_OK) {
+        zxlogf(ERROR, "PilInit() failed\n");
+        return -1;
+    }
+
+    if (Sdc1Init() != ZX_OK) {
+        zxlogf(ERROR, "Sdc1Init() failed\n");
+        return -1;
+    }
     return 0;
 }
 

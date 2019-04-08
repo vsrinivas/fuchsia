@@ -373,6 +373,36 @@ zx_status_t ComponentProxy::PowerGetPowerDomainStatus(power_domain_status_t* out
     return status;
 }
 
+zx_status_t ComponentProxy::PowerWritePmicCtrlReg(uint32_t reg_addr, uint32_t value) {
+    PowerProxyRequest req = {};
+    PowerProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_POWER;
+    req.op = PowerOp::WRITE_PMIC_CTRL_REG;
+    req.reg_addr = reg_addr;
+    req.reg_value = value;
+
+    auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    if (status != ZX_OK) {
+        return status;
+    }
+    return status;
+}
+
+zx_status_t ComponentProxy::PowerReadPmicCtrlReg(uint32_t reg_addr, uint32_t* out_value) {
+    PowerProxyRequest req = {};
+    PowerProxyResponse resp = {};
+    req.header.proto_id = ZX_PROTOCOL_POWER;
+    req.op = PowerOp::READ_PMIC_CTRL_REG;
+    req.reg_addr = reg_addr;
+
+    auto status = Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp));
+    if (status != ZX_OK) {
+        return status;
+    }
+    *out_value = resp.reg_value;
+    return status;
+}
+
 zx_status_t ComponentProxy::SysmemConnect(zx::channel allocator2_request) {
     SysmemProxyRequest req = {};
     ProxyResponse resp = {};
