@@ -197,7 +197,8 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
     // implementation.
     fidl::InterfaceHandle<fuchsia::io::Directory> fake_dev_io_dir;
     status = fake_dev_vfs_dir_->Serve(
-        0, fake_dev_io_dir.NewRequest().TakeChannel(), dispatcher());
+        fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+        fake_dev_io_dir.NewRequest().TakeChannel(), dispatcher());
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Couldn't Serve() fake dev dir";
     }

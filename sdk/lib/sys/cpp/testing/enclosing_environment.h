@@ -115,16 +115,19 @@ class EnvironmentServices {
   // Serve service directory using |flags| and returns a new |InterfaceHandle|;
   // Will cause exception if serving fails.
   fidl::InterfaceHandle<fuchsia::io::Directory> ServeServiceDir(
-      uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE);
+      uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE |
+                           fuchsia::io::OPEN_RIGHT_WRITABLE);
 
   // Serves service directory using passed |request| and returns status.
   zx_status_t ServeServiceDir(
       fidl::InterfaceRequest<fuchsia::io::Directory> request,
-      uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE);
+      uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE |
+                           fuchsia::io::OPEN_RIGHT_WRITABLE);
 
   // Serves service directory using passed |request| and returns status.
   zx_status_t ServeServiceDir(
-      zx::channel request, uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE);
+      zx::channel request, uint32_t flags =
+          fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE);
 
  private:
   friend class EnclosingEnvironment;

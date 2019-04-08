@@ -567,8 +567,9 @@ TEST_F(BufferedPseudoFileTest, CanCloneFileConnectionAndReadAndWrite) {
   auto file = OpenReadWrite(file_wrapper.file(), file_wrapper.dispatcher());
 
   fuchsia::io::FileSyncPtr cloned_file;
-  file->Clone(0, fidl::InterfaceRequest<fuchsia::io::Node>(
-                     cloned_file.NewRequest().TakeChannel()));
+  file->Clone(fuchsia::io::CLONE_FLAG_SAME_RIGHTS,
+              fidl::InterfaceRequest<fuchsia::io::Node>(
+                  cloned_file.NewRequest().TakeChannel()));
 
   CloseFile(file);
 
@@ -578,7 +579,7 @@ TEST_F(BufferedPseudoFileTest, CanCloneFileConnectionAndReadAndWrite) {
 
   AssertReadAt(cloned_file, 0, 100, updated_str);
 
-  // make sure file was not updated before conenction was closed.
+  // make sure file was not updated before connection was closed.
   ASSERT_EQ(file_wrapper.buffer(), str);
 
   CloseFile(cloned_file);
@@ -595,9 +596,9 @@ TEST_F(BufferedPseudoFileTest, NodeReferenceIsClonedAsNodeReference) {
                file_wrapper.dispatcher());
 
   fuchsia::io::FileSyncPtr cloned_file;
-  file->Clone(0, fidl::InterfaceRequest<fuchsia::io::Node>(
-                     cloned_file.NewRequest().TakeChannel()));
-
+  file->Clone(fuchsia::io::CLONE_FLAG_SAME_RIGHTS,
+              fidl::InterfaceRequest<fuchsia::io::Node>(
+                  cloned_file.NewRequest().TakeChannel()));
   CloseFile(file);
 
   // make sure node reference was opened

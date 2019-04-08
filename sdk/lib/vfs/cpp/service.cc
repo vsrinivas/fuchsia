@@ -29,7 +29,7 @@ uint32_t Service::GetAdditionalAllowedFlags() const {
 
 zx_status_t Service::Connect(uint32_t flags, zx::channel request,
                              async_dispatcher_t* dispatcher) {
-  if (Flags::IsPathOnly(flags)) {
+  if (Flags::IsNodeReference(flags)) {
     return Node::Connect(flags, std::move(request), dispatcher);
   }
   if (connector_ == nullptr) {

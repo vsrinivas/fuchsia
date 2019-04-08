@@ -58,11 +58,13 @@ class DirConnection : public gtest::RealLoopFixture {
                     zx_status_t expected_status = ZX_OK);
 
   template <typename T>
-  void AssertOpenPath(fuchsia::io::DirectorySyncPtr& dir_ptr,
-                      const std::string& path,
-                      ::fidl::SynchronousInterfacePtr<T>& out_sync_ptr,
-                      uint32_t flags = 0, uint32_t mode = 0,
-                      zx_status_t expected_status = ZX_OK) {
+  void AssertOpenPathImpl(std::string caller_file,
+                          int caller_line,
+                          fuchsia::io::DirectorySyncPtr& dir_ptr,
+                          const std::string& path,
+                          ::fidl::SynchronousInterfacePtr<T>& out_sync_ptr,
+                          uint32_t flags, uint32_t mode = 0,
+                          zx_status_t expected_status = ZX_OK) {
     ::fidl::InterfacePtr<fuchsia::io::Node> node_ptr;
     dir_ptr->Open(flags | fuchsia::io::OPEN_FLAG_DESCRIBE, mode, path,
                   node_ptr.NewRequest());
@@ -71,7 +73,8 @@ class DirConnection : public gtest::RealLoopFixture {
         [&](zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> unused) {
           EXPECT_FALSE(on_open_called);  // should be called only once
           on_open_called = true;
-          EXPECT_EQ(expected_status, status);
+          EXPECT_EQ(expected_status, status) << "from file " << caller_file
+                                             << ", line " << caller_line;
         };
 
     ASSERT_TRUE(RunLoopUntil([&]() { return on_open_called; }, zx::msec(1)));
@@ -86,5 +89,7 @@ class DirConnection : public gtest::RealLoopFixture {
 };
 
 }  // namespace vfs_tests
+
+#define AssertOpenPath(...) AssertOpenPathImpl(__FILE__, __LINE__, __VA_ARGS__)
 
 #endif  // LIB_VFS_CPP_TESTING_DIR_TEST_UTIL_H_

@@ -24,7 +24,9 @@ class ServiceTest : public gtest::RealLoopFixture,
     auto service = std::make_unique<vfs::Service>(
         bindings_.GetHandler(this, second_loop_.dispatcher()));
 
-    dir_.Serve(0, dir_ptr_.NewRequest().TakeChannel(),
+    dir_.Serve(fuchsia::io::OPEN_RIGHT_READABLE |
+                   fuchsia::io::OPEN_RIGHT_WRITABLE,
+               dir_ptr_.NewRequest().TakeChannel(),
                second_loop_.dispatcher());
     dir_.AddEntry(service_name_, std::move(service));
     second_loop_.StartThread("vfs test thread");
@@ -34,7 +36,7 @@ class ServiceTest : public gtest::RealLoopFixture,
 
   const std::string& service_name() const { return service_name_; }
 
-  void AssertInValidOpen(uint32_t flag, uint32_t mode,
+  void AssertInvalidOpen(uint32_t flag, uint32_t mode,
                          zx_status_t expected_status) {
     SCOPED_TRACE("flag: " + std::to_string(flag) +
                  ", mode: " + std::to_string(mode));
@@ -107,7 +109,7 @@ TEST_F(ServiceTest, TestDescribe) {
 }
 
 TEST_F(ServiceTest, CanOpenAsAService) {
-  uint32_t flags[] = {0, fuchsia::io::OPEN_RIGHT_READABLE,
+  uint32_t flags[] = {fuchsia::io::OPEN_RIGHT_READABLE,
                       fuchsia::io::OPEN_RIGHT_WRITABLE};
   uint32_t modes[] = {
       0, fuchsia::io::MODE_TYPE_SERVICE, V_IRWXU, V_IRUSR, V_IWUSR, V_IXUSR};
@@ -129,17 +131,26 @@ TEST_F(ServiceTest, CanOpenAsAService) {
 }
 
 TEST_F(ServiceTest, CannotOpenServiceWithInvalidFlags) {
-  uint32_t flags[] = {fuchsia::io::OPEN_RIGHT_ADMIN,
-                      fuchsia::io::OPEN_FLAG_CREATE,
+  uint32_t flags[] = {fuchsia::io::OPEN_FLAG_CREATE,
                       fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT,
                       fuchsia::io::OPEN_FLAG_TRUNCATE,
                       fuchsia::io::OPEN_FLAG_APPEND,
                       fuchsia::io::OPEN_FLAG_NO_REMOTE};
 
   for (uint32_t flag : flags) {
-    AssertInValidOpen(flag, 0, ZX_ERR_NOT_SUPPORTED);
+    AssertInvalidOpen(flag |
+                          fuchsia::io::OPEN_RIGHT_READABLE |
+                          fuchsia::io::OPEN_RIGHT_WRITABLE,
+                      0,
+                      ZX_ERR_NOT_SUPPORTED);
   }
-  AssertInValidOpen(fuchsia::io::OPEN_FLAG_DIRECTORY, 0, ZX_ERR_NOT_DIR);
+  AssertInvalidOpen(fuchsia::io::OPEN_RIGHT_ADMIN,
+                    0,
+                    ZX_ERR_ACCESS_DENIED);
+  AssertInvalidOpen(fuchsia::io::OPEN_RIGHT_READABLE |
+                        fuchsia::io::OPEN_FLAG_DIRECTORY,
+                    0,
+                    ZX_ERR_NOT_DIR);
 }
 
 TEST_F(ServiceTest, CannotOpenServiceWithInvalidMode) {
@@ -148,6 +159,8 @@ TEST_F(ServiceTest, CannotOpenServiceWithInvalidMode) {
       fuchsia::io::MODE_TYPE_FILE, fuchsia::io::MODE_TYPE_SOCKET};
 
   for (uint32_t mode : modes) {
-    AssertInValidOpen(0, mode, ZX_ERR_INVALID_ARGS);
+    AssertInvalidOpen(fuchsia::io::OPEN_RIGHT_READABLE,
+                      mode,
+                      ZX_ERR_INVALID_ARGS);
   }
 }

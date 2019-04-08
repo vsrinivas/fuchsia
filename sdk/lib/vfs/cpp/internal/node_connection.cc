@@ -29,7 +29,7 @@ zx_status_t NodeConnection::Bind(zx::channel request,
 
 void NodeConnection::Clone(uint32_t flags,
                            fidl::InterfaceRequest<fuchsia::io::Node> object) {
-  Connection::Clone(vn_, flags, std::move(object), binding_.dispatcher());
+  Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }
 
 void NodeConnection::Close(CloseCallback callback) {

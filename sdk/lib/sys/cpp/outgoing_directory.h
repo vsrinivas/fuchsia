@@ -21,7 +21,7 @@ namespace sys {
 // that can be consumed by either the component manager itself or by other
 // components in the system.
 //
-// The root directory contains serveral directories with well-known names:
+// The root directory contains several directories with well-known names:
 //
 //  * public. This directory contains the services offered by this component to
 //    other components.

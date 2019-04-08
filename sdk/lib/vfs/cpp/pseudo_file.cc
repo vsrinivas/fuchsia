@@ -194,9 +194,9 @@ std::unique_ptr<Connection> BufferedPseudoFile::Content::Close(
 
 void BufferedPseudoFile::Content::Clone(
     uint32_t flags, uint32_t parent_flags,
-    fidl::InterfaceRequest<fuchsia::io::Node> object,
+    zx::channel request,
     async_dispatcher_t* dispatcher) {
-  file_->Clone(flags, parent_flags, std::move(object), dispatcher);
+  file_->Clone(flags, parent_flags, std::move(request), dispatcher);
 }
 
 void BufferedPseudoFile::Content::SendOnOpenEvent(zx_status_t status) {

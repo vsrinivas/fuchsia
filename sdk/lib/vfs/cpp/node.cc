@@ -5,6 +5,7 @@
 #include <lib/vfs/cpp/node.h>
 
 #include <algorithm>
+#include <mutex>
 
 #include <fuchsia/io/c/fidl.h>
 #include <lib/vfs/cpp/connection.h>
@@ -19,7 +20,6 @@ constexpr uint32_t kCommonAllowedFlags =
     fuchsia::io::OPEN_FLAG_DESCRIBE | fuchsia::io::OPEN_FLAG_NODE_REFERENCE |
     fuchsia::io::OPEN_FLAG_POSIX | fuchsia::io::CLONE_FLAG_SAME_RIGHTS;
 
-constexpr uint32_t FS_RIGHTS = 0x0000FFFF;
 
 }  // namespace
 
@@ -53,19 +53,45 @@ zx_status_t Node::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {
 }
 
 void Node::Clone(uint32_t flags, uint32_t parent_flags,
-                 fidl::InterfaceRequest<fuchsia::io::Node> object,
+                 zx::channel request,
                  async_dispatcher_t* dispatcher) {
-  // TODO(ZX-3417): This is how libfs clones a node, we should fix this once we
-  // have clear picture what clone should do.
-  flags |= (parent_flags & (FS_RIGHTS | fuchsia::io::OPEN_FLAG_NODE_REFERENCE |
-                            fuchsia::io::OPEN_FLAG_APPEND));
-  Serve(flags, object.TakeChannel(), dispatcher);
+  if (!Flags::InputPrecondition(flags)) {
+    SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  // If SAME_RIGHTS is specified, the client cannot request any specific rights.
+  // TODO(yifeit): Start enforcing this after soft transition
+  // if (Flags::ShouldCloneWithSameRights(flags) && (flags & Flags::kFsRights)) {
+  //   SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_INVALID_ARGS);
+  //   return;
+  // }
+  flags |= (parent_flags & Flags::kStatusFlags);
+  // If SAME_RIGHTS is requested, cloned connection will inherit the same rights
+  // as those from the originating connection.
+  if (Flags::ShouldCloneWithSameRights(flags)) {
+    flags &= (~Flags::kFsRights);
+    flags |= (parent_flags & Flags::kFsRights);
+    flags &= ~fuchsia::io::CLONE_FLAG_SAME_RIGHTS;
+  }
+  // TODO(yifeit): Start enforcing hierarchical rights during clone
+  // after soft transition
+  // if (!Flags::StricterOrSameRights(flags, parent_flags)) {
+  //   SendOnOpenEventOnError(flags, std::move(request), ZX_ERR_ACCESS_DENIED);
+  //   return;
+  // }
+  Serve(flags, std::move(request), dispatcher);
 }
 
 zx_status_t Node::ValidateFlags(uint32_t flags) const {
+  if (!Flags::InputPrecondition(flags)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   bool is_directory = IsDirectory();
   if (!is_directory && Flags::IsDirectory(flags)) {
     return ZX_ERR_NOT_DIR;
+  }
+  if (is_directory && Flags::IsNotDirectory(flags)) {
+    return ZX_ERR_NOT_FILE;
   }
 
   uint32_t allowed_flags = kCommonAllowedFlags | GetAdditionalAllowedFlags();
@@ -113,7 +139,7 @@ zx_status_t Node::SetAttr(uint32_t flags,
 }
 
 uint32_t Node::FilterRefFlags(uint32_t flags) {
-  if (Flags::IsPathOnly(flags)) {
+  if (Flags::IsNodeReference(flags)) {
     return flags & (kCommonAllowedFlags | fuchsia::io::OPEN_FLAG_DIRECTORY);
   }
   return flags;
@@ -134,7 +160,7 @@ zx_status_t Node::Connect(uint32_t flags, zx::channel request,
                           async_dispatcher_t* dispatcher) {
   zx_status_t status;
   std::unique_ptr<Connection> connection;
-  if (Flags::IsPathOnly(flags)) {
+  if (Flags::IsNodeReference(flags)) {
     status = Node::CreateConnection(flags, &connection);
   } else {
     status = CreateConnection(flags, &connection);

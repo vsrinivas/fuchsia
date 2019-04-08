@@ -319,7 +319,8 @@ TEST_F(RealmRunnerTest, ComponentCanPublishServices) {
       runner_registry_.runner()->components()[0].unique_id,
       component_ptr.NewRequest());
   fidl::InterfaceHandle<fuchsia::io::Directory> dir_handle;
-  fake_service_dir.Serve(fuchsia::io::OPEN_RIGHT_READABLE,
+  fake_service_dir.Serve(fuchsia::io::OPEN_RIGHT_READABLE |
+                             fuchsia::io::OPEN_RIGHT_WRITABLE,
                          dir_handle.NewRequest().TakeChannel());
   ASSERT_EQ(ZX_OK,
             component_ptr->SetServiceDirectory(dir_handle.TakeChannel()));

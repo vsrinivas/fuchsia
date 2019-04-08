@@ -11,7 +11,8 @@ ServiceDirectoryProvider::ServiceDirectoryProvider(
     async_dispatcher_t* dispatcher)
     : svc_dir_(std::make_unique<vfs::PseudoDir>()) {
   fidl::InterfaceHandle<fuchsia::io::Directory> directory_ptr;
-  svc_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE,
+  svc_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE |
+                      fuchsia::io::OPEN_RIGHT_WRITABLE,
                   directory_ptr.NewRequest().TakeChannel(), dispatcher);
   service_directory_ =
       std::make_shared<sys::ServiceDirectory>(directory_ptr.TakeChannel());

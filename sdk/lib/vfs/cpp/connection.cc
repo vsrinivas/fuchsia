@@ -14,9 +14,9 @@ Connection::Connection(uint32_t flags) : flags_(flags) {}
 Connection::~Connection() = default;
 
 void Connection::Clone(Node* vn, uint32_t flags,
-                       fidl::InterfaceRequest<fuchsia::io::Node> object,
+                       zx::channel request,
                        async_dispatcher_t* dispatcher) {
-  vn->Clone(flags, flags_, std::move(object), dispatcher);
+  vn->Clone(flags, flags_, std::move(request), dispatcher);
 }
 
 void Connection::Close(Node* vn, fuchsia::io::Node::CloseCallback callback) {

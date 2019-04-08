@@ -20,7 +20,7 @@ void FakeComponent::Register(std::string url, FakeLauncher& fake_launcher,
                fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
         ctrls_.push_back(std::move(ctrl));
         zx_status_t status = directory_.Serve(
-            fuchsia::io::OPEN_RIGHT_READABLE,
+            fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
             std::move(launch_info.directory_request), dispatcher);
         ZX_ASSERT(status == ZX_OK);
       });

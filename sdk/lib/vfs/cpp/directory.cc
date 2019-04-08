@@ -4,6 +4,7 @@
 // found in the LICENSE file.
 
 #include <lib/vfs/cpp/directory.h>
+#include <lib/vfs/cpp/flags.h>
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/vfs/cpp/internal/directory_connection.h>
@@ -30,7 +31,7 @@ zx_status_t Directory::CreateConnection(
 }
 
 uint32_t Directory::GetAdditionalAllowedFlags() const {
-  // TODO(ZX-3251): overide this in PseudoDir and Lazydir and remove
+  // TODO(ZX-3251): override this in PseudoDir and Lazydir and remove
   // OPEN_RIGHT_WRITABLE flag.
   return fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
          fuchsia::io::OPEN_FLAG_DIRECTORY;
@@ -145,38 +146,83 @@ zx_status_t Directory::LookupPath(const char* path, size_t path_len,
   return ZX_OK;
 }
 
-void Directory::Open(uint32_t flags, uint32_t mode, const char* path,
+void Directory::Open(uint32_t open_flags, uint32_t parent_flags,
+                     uint32_t mode, const char* path,
                      size_t path_len, zx::channel request,
                      async_dispatcher_t* dispatcher) {
+  if (!Flags::InputPrecondition(open_flags)) {
+    Node::SendOnOpenEventOnError(open_flags, std::move(request),
+                                 ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  if (Flags::ShouldCloneWithSameRights(open_flags)) {
+    Node::SendOnOpenEventOnError(open_flags, std::move(request),
+                                 ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  if (!Flags::IsNodeReference(open_flags) && !(open_flags & Flags::kFsRights)) {
+    Node::SendOnOpenEventOnError(open_flags, std::move(request),
+                                 ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  if (!Flags::StricterOrSameRights(open_flags, parent_flags)) {
+    Node::SendOnOpenEventOnError(open_flags, std::move(request),
+                                 ZX_ERR_ACCESS_DENIED);
+    return;
+  }
+
   Node* n = nullptr;
-  bool is_dir = false;
+  bool path_is_dir = false;
   size_t new_path_len = path_len;
   const char* new_path = path;
   zx_status_t status =
-      LookupPath(path, path_len, &is_dir, &n, &new_path, &new_path_len);
+      LookupPath(path, path_len, &path_is_dir, &n, &new_path, &new_path_len);
   if (status != ZX_OK) {
-    return SendOnOpenEventOnError(flags, std::move(request), status);
+    return SendOnOpenEventOnError(open_flags, std::move(request), status);
   }
+  bool node_is_dir = n->IsDirectory();
+
+  if (Flags::IsPosix(open_flags) &&
+      !Flags::IsWritable(open_flags) &&
+      !Flags::IsWritable(parent_flags)) {
+    // Posix compatibility flag allows the child dir connection to inherit
+    // every right from its immediate parent. Here we know there exists
+    // a read-only directory somewhere along the Open() chain, so remove
+    // this flag to rid the child connection the ability to inherit read-write
+    // right from e.g. crossing a read-write mount point down the line.
+    open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX;
+  }
+
   if (n->IsRemote() && new_path_len > 0) {
     fuchsia::io::DirectoryPtr temp_dir;
-    zx_status_t status = n->Serve(fuchsia::io::OPEN_RIGHT_READABLE |
-                                      fuchsia::io::OPEN_RIGHT_WRITABLE |
-                                      fuchsia::io::OPEN_FLAG_DIRECTORY,
+    zx_status_t status = n->Serve(open_flags | fuchsia::io::OPEN_FLAG_DIRECTORY,
                                   temp_dir.NewRequest().TakeChannel());
     if (status != ZX_OK) {
-      return SendOnOpenEventOnError(flags, std::move(request), status);
+      return SendOnOpenEventOnError(open_flags, std::move(request), status);
     }
     temp_dir->Open(
-        flags, mode, std::string(new_path, new_path_len),
+        open_flags, mode, std::string(new_path, new_path_len),
         fidl::InterfaceRequest<fuchsia::io::Node>(std::move(request)));
     return;
   }
 
-  if (is_dir) {
-    // append directory flag
-    flags = flags | fuchsia::io::OPEN_FLAG_DIRECTORY;
+  if (node_is_dir) {
+    // grant POSIX clients additional rights
+    if (Flags::IsPosix(open_flags)) {
+      uint32_t parent_rights = parent_flags & Flags::kFsRights;
+      bool admin = Flags::IsAdminable(open_flags);
+      open_flags |= parent_rights;
+      open_flags &= ~fuchsia::io::OPEN_RIGHT_ADMIN;
+      if (admin) {
+        open_flags |= fuchsia::io::OPEN_RIGHT_ADMIN;
+      }
+      open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX;
+    }
   }
-  n->ServeWithMode(flags, mode, std::move(request), dispatcher);
+  if (path_is_dir) {
+    open_flags |= fuchsia::io::OPEN_FLAG_DIRECTORY;
+  }
+  n->ServeWithMode(open_flags, mode, std::move(request), dispatcher);
 }
 
 }  // namespace vfs

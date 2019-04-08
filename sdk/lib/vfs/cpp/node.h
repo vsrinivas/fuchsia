@@ -59,10 +59,13 @@ class Node {
 
   // Implementation of |fuchsia.io.Node/Clone|.
   virtual void Clone(uint32_t flags, uint32_t parent_flags,
-                     fidl::InterfaceRequest<fuchsia::io::Node> object,
+                     zx::channel request,
                      async_dispatcher_t* dispatcher);
 
   // Validate flags on |Serve|.
+  //
+  // If the caller specified an invalid combination of flags as per io.fidl,
+  // returns |ZX_ERR_INVALID_ARGS|.
   //
   // Returns |ZX_ERR_NOT_DIR| if |OPEN_FLAG_DIRECTORY| is set and |IsDirectory|
   // returns false.
@@ -119,6 +122,13 @@ class Node {
   // nodes.
   virtual bool IsRemote() const;
 
+  // Return true if |Node| is a directory.
+  // This function is used in |ValidateFlags| and |Lookup| to return correct
+  // error.
+  //
+  // This should be overridden by every implementation.
+  virtual bool IsDirectory() const = 0;
+
  protected:
   // Called by |Serve| after validating flags and modes.
   // This should be implemented by sub classes which doesn't create a
@@ -136,8 +146,8 @@ class Node {
   uint32_t FilterRefFlags(uint32_t flags);
 
   // Sends OnOpen event on error status if |OPEN_FLAG_DESCRIBE| is set.
-  void SendOnOpenEventOnError(uint32_t flags, zx::channel request,
-                              zx_status_t status);
+  static void SendOnOpenEventOnError(uint32_t flags, zx::channel request,
+                                     zx_status_t status);
 
   // Store given connection.
   void AddConnection(std::unique_ptr<Connection> connection);
@@ -150,13 +160,6 @@ class Node {
   // Typically called by |Serve|.
   virtual zx_status_t CreateConnection(
       uint32_t flags, std::unique_ptr<Connection>* connection) = 0;
-
-  // Return true if |Node| is a directory.
-  // This function is used in |ValidateFlags| and |Lookup| to return correct
-  // error.
-  //
-  // This should be overridden by every implementation.
-  virtual bool IsDirectory() const = 0;
 
   // Additional Allowed flags for use in |ValidateFlags|.
   //

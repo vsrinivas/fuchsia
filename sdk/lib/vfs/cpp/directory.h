@@ -40,7 +40,7 @@ class Directory : public Node {
   // |offset| will start with 0 and then implementation can set offset as it
   // pleases.
   //
-  // Returns |ZX_OK| if able to read atleast one dentry else returns
+  // Returns |ZX_OK| if able to read at least one dentry else returns
   // |ZX_ERR_INVALID_ARGS| with |out_actual| as 0 and |out_offset| as |offset|.
   virtual zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,
                               uint64_t* out_offset, uint64_t* out_actual) = 0;
@@ -48,7 +48,8 @@ class Directory : public Node {
   // Parses path and opens correct node.
   //
   // Called from |fuchsia.io.Directory#Open|.
-  void Open(uint32_t flags, uint32_t mode, const char* path, size_t path_len,
+  void Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode,
+            const char* path, size_t path_len,
             zx::channel request, async_dispatcher_t* dispatcher);
 
   // Validates passed path
@@ -58,8 +59,8 @@ class Directory : public Node {
   // Returns |ZX_OK| on valid path.
   static zx_status_t ValidatePath(const char* path, size_t path_len);
 
-  // Walks provided path to find first node name in from path and then
-  // sets |out_path| and |out_len| to correct position in path beyond current
+  // Walks provided path to find the first node name in |path| and then
+  // sets |out_path| and |out_len| to correct position in |path| beyond current
   // node name and sets |out_key| to node name.
   //
   // Calls |ValidatePath| and returns |status| on error.
@@ -82,23 +83,23 @@ class Directory : public Node {
   zx_status_t CreateConnection(
       uint32_t flags, std::unique_ptr<Connection>* connection) override;
 
-  // Walks path and returns correct |node| inside this and containing directory
-  // if found.
-  // Sets |out_is_dir| to true if path has '/' or '/.' at the end.
+  // Walks |path| until the node corresponding to |path| is found, or a remote
+  // filesystem was encountered during traversal. In the latter case,
+  // this function will return an intermediate node, on which |IsRemote| returns
+  // true, and will set |out_path| and |out_len| to be the remaining path.
   //
-  // This function will return intermidiate node if |IsRemote| on that node is
-  // true and will sets |out_path| and |out_len| as rest of the remaining path.
   // For example: if path is /a/b/c/d/f/g and c is a remote node, it will return
   // c in |out_node|, "d/f/g" in |out_path| and |out_len|.
   //
+  // Sets |out_is_dir| to true if path has '/' or '/.' at the end.
+  //
   // Calls |WalkPath| in loop and returns status on error. Returns
-  // |ZX_ERR_NOT_DIR| if path tries to search for node within a non-directory
-  // node type.
+  // |ZX_ERR_NOT_DIR| if an intermediate component of |path| is not a directory.
   zx_status_t LookupPath(const char* path, size_t path_len, bool* out_is_dir,
                          Node** out_node, const char** out_path,
                          size_t* out_len);
 
-  bool IsDirectory() const override;
+  bool IsDirectory() const final;
 
   uint32_t GetAdditionalAllowedFlags() const override;
 

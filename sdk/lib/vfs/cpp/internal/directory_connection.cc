@@ -29,7 +29,7 @@ zx_status_t DirectoryConnection::Bind(zx::channel request,
 
 void DirectoryConnection::Clone(
     uint32_t flags, fidl::InterfaceRequest<fuchsia::io::Node> object) {
-  Connection::Clone(vn_, flags, std::move(object), binding_.dispatcher());
+  Connection::Clone(vn_, flags, object.TakeChannel(), binding_.dispatcher());
 }
 
 void DirectoryConnection::Close(CloseCallback callback) {
@@ -65,8 +65,8 @@ void DirectoryConnection::Ioctl(uint32_t opcode, uint64_t max_out,
 void DirectoryConnection::Open(
     uint32_t flags, uint32_t mode, std::string path,
     fidl::InterfaceRequest<fuchsia::io::Node> object) {
-  vn_->Open(flags, mode, path.data(), path.length(), object.TakeChannel(),
-            binding_.dispatcher());
+  vn_->Open(flags, this->flags(), mode, path.data(), path.length(),
+            object.TakeChannel(), binding_.dispatcher());
 }
 
 void DirectoryConnection::Unlink(::std::string path, UnlinkCallback callback) {

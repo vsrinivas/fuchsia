@@ -65,7 +65,7 @@ class Connection {
   // to avoid code duplication.
 
   void Clone(Node* vn, uint32_t flags,
-             fidl::InterfaceRequest<fuchsia::io::Node> object,
+             zx::channel request,
              async_dispatcher_t* dispatcher);
   void Close(Node* vn, fuchsia::io::Node::CloseCallback callback);
   void Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback);
