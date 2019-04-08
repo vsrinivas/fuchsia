@@ -110,7 +110,7 @@ xunion RepositoryBlobKey {
     bytes aes_key;
 };
 
-/// Descibes the configuration necessary to connect to a mirror.
+/// Describes the configuration necessary to connect to a mirror.
 table MirrorConfig {
     /// The base URL of the TUF metadata on this mirror. Required.
     1: string mirror_url;
