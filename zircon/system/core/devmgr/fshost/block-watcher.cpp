@@ -10,8 +10,8 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <fbl/unique_fd.h>
 #include <fbl/string_buffer.h>
+#include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
@@ -104,21 +104,21 @@ void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_roo
         return;
     }
     // re-export /pkgfs/system as /system
-    zx::channel systemChan, systemReq;
-    if (zx::channel::create(0, &systemChan, &systemReq) != ZX_OK) {
+    zx::channel system_channel, system_req;
+    if (zx::channel::create(0, &system_channel, &system_req) != ZX_OK) {
         return;
     }
     if (fdio_open_at(pkgfs_root.get(), "system", FS_READONLY_DIR_FLAGS,
-                     systemReq.release()) != ZX_OK) {
+                     system_req.release()) != ZX_OK) {
         return;
     }
     // re-export /pkgfs/packages/shell-commands/0/bin as /bin
-    zx::channel binChan, binReq;
-    if (zx::channel::create(0, &binChan, &binReq) != ZX_OK) {
+    zx::channel bin_chan, bin_req;
+    if (zx::channel::create(0, &bin_chan, &bin_req) != ZX_OK) {
         return;
     }
     if (fdio_open_at(pkgfs_root.get(), "packages/shell-commands/0/bin", FS_READONLY_DIR_FLAGS,
-                     binReq.release()) != ZX_OK) {
+                     bin_req.release()) != ZX_OK) {
         // non-fatal.
         printf("fshost: failed to install /bin (could not open shell-commands)\n");
     }
@@ -128,13 +128,13 @@ void pkgfs_finish(BlockWatcher* watcher, zx::process proc, zx::channel pkgfs_roo
         return;
     }
 
-    if (watcher->InstallFs("/system", std::move(systemChan)) != ZX_OK) {
+    if (watcher->InstallFs("/system", std::move(system_channel)) != ZX_OK) {
         printf("fshost: failed to install /system\n");
         return;
     }
 
     // as above, failure of /bin export is non-fatal.
-    if (watcher->InstallFs("/bin", std::move(binChan)) != ZX_OK) {
+    if (watcher->InstallFs("/bin", std::move(bin_chan)) != ZX_OK) {
         printf("fshost: failed to install /bin\n");
     }
 
@@ -362,7 +362,7 @@ zx_status_t BlockWatcher::CheckFilesystem(const char* device_path, disk_format_t
     auto timer = fbl::MakeAutoCall([before]() {
         auto after = zx::ticks::now();
         auto duration = fzl::TicksToNs(after - before);
-        printf("fshost: fsck took %" PRId64".%" PRId64 " seconds\n", duration.to_secs(),
+        printf("fshost: fsck took %" PRId64 ".%" PRId64 " seconds\n", duration.to_secs(),
                duration.to_msecs() % 1000);
     });
 
@@ -437,8 +437,10 @@ zx_status_t mount_minfs(BlockWatcher* watcher, fbl::unique_fd fd, mount_options_
         zx_status_t io_status, status;
         io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel->get(), &status,
                                                                           &type_guid);
-        if (io_status != ZX_OK) return io_status;
-        if (status != ZX_OK) return status;
+        if (io_status != ZX_OK)
+            return io_status;
+        if (status != ZX_OK)
+            return status;
     }
 
     if (gpt_is_sys_guid(type_guid.value, GPT_GUID_LEN)) {
