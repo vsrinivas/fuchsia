@@ -7,7 +7,7 @@ use std::default::Default;
 /// Seek position inside a directory.  This traversal expect the directory to store entries in
 /// alphabetical order, a traversal position is then a name of the entry that was returned last.
 /// Dot is a special entry that is considered to sort before all the other entries.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum AlphabeticalTraversal {
     /// Position before the very first element.  Traversal should continue from the "." entry.
     Start,

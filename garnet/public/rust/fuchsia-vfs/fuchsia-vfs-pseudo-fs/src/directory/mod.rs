@@ -19,6 +19,7 @@ use libc::S_IRUSR;
 pub mod controllable;
 pub mod controlled;
 pub mod entry;
+pub mod lazy;
 pub mod simple;
 
 /// POSIX emulation layer access attributes set by default for directories created with empty().
