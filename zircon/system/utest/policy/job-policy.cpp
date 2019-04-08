@@ -303,12 +303,22 @@ static uint64_t get_syscall_result(zx_thread_state_general_regs_t* regs) {
 # error Unsupported architecture
 #endif
 
+namespace {
+
+enum class ExceptionTestType {
+    kPorts,
+    kChannels
+};
+
+} // namespace
+
 // Like TestInvokingPolicy(), this tests that executing the given
 // mini-process.h command produces the given result when the given policy
 // is in force.  In addition, it tests that a debug port exception gets
 // generated.
 static bool TestInvokingPolicyWithException(
-    zx_policy_basic_t* policy, uint32_t policy_count, uint32_t minip_cmd,
+    ExceptionTestType test_type, const zx_policy_basic_t* policy,
+    uint32_t policy_count, uint32_t minip_cmd,
     zx_status_t expected_syscall_result) {
     auto job = make_job();
     ASSERT_EQ(job.set_policy(ZX_JOB_POL_ABSOLUTE, ZX_JOB_POL_BASIC, policy,
@@ -320,12 +330,19 @@ static bool TestInvokingPolicyWithException(
     ASSERT_TRUE(proc.is_valid());
     ASSERT_NE(ctrl, ZX_HANDLE_INVALID);
 
-    zx_handle_t exc_port;
-    ASSERT_EQ(zx_port_create(0, &exc_port), ZX_OK);
-    ASSERT_EQ(zx_task_bind_exception_port(
-                  proc.get(), exc_port, kExceptionPortKey,
-                  ZX_EXCEPTION_PORT_DEBUGGER),
-              ZX_OK);
+    zx_handle_t exc_port = ZX_HANDLE_INVALID;
+    zx_handle_t exc_channel = ZX_HANDLE_INVALID;
+    if (test_type == ExceptionTestType::kPorts) {
+        ASSERT_EQ(zx_port_create(0, &exc_port), ZX_OK);
+        ASSERT_EQ(zx_task_bind_exception_port(
+                      proc.get(), exc_port, kExceptionPortKey,
+                      ZX_EXCEPTION_PORT_DEBUGGER),
+                  ZX_OK);
+    } else {
+        ASSERT_EQ(zx_task_create_exception_channel(
+                      proc.get(), ZX_EXCEPTION_PORT_DEBUGGER, &exc_channel),
+                  ZX_OK);
+    }
 
     EXPECT_EQ(mini_process_cmd_send(ctrl, minip_cmd), ZX_OK);
 
@@ -335,33 +352,63 @@ static bool TestInvokingPolicyWithException(
                                  zx_deadline_after(ZX_MSEC(1)), nullptr),
               ZX_ERR_TIMED_OUT);
 
-    // Check that we receive an exception message.
-    zx_port_packet_t packet;
-    ASSERT_EQ(zx_port_wait(exc_port, ZX_TIME_INFINITE, &packet), ZX_OK);
-
-    // Check the exception message contents.
-    ASSERT_EQ(packet.key, kExceptionPortKey);
-    ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_POLICY_ERROR);
-
     zx_koid_t pid;
     zx_koid_t tid;
     ASSERT_TRUE(get_koid(proc.get(), &pid));
     ASSERT_TRUE(get_koid(thread.get(), &tid));
-    ASSERT_EQ(packet.exception.pid, pid);
-    ASSERT_EQ(packet.exception.tid, tid);
 
-    // Check that we can read the thread's register state.
-    zx_thread_state_general_regs_t regs;
-    ASSERT_EQ(zx_thread_read_state(thread.get(), ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
-              ZX_OK);
-    ASSERT_EQ(get_syscall_result(&regs), (uint64_t)expected_syscall_result);
-    // TODO(mseaborn): Check the values of other registers.  We could check
-    // that rip/pc is within the VDSO, which will require figuring out
-    // where the VDSO is mapped.  We could check that unwinding the stack
-    // using crashlogger gives a correct backtrace.
+    // Check that we receive an exception message.
+    if (test_type == ExceptionTestType::kPorts) {
+        zx_port_packet_t packet;
+        ASSERT_EQ(zx_port_wait(exc_port, ZX_TIME_INFINITE, &packet), ZX_OK);
 
-    // Resume the thread.
-    ASSERT_EQ(zx_task_resume_from_exception(thread.get(), exc_port, 0), ZX_OK);
+        // Check the exception message contents.
+        ASSERT_EQ(packet.key, kExceptionPortKey);
+        ASSERT_EQ(packet.type, (uint32_t)ZX_EXCP_POLICY_ERROR);
+        ASSERT_EQ(packet.exception.pid, pid);
+        ASSERT_EQ(packet.exception.tid, tid);
+
+        // Check that we can read the thread's register state.
+        zx_thread_state_general_regs_t regs;
+        ASSERT_EQ(zx_thread_read_state(thread.get(),
+                                       ZX_THREAD_STATE_GENERAL_REGS, &regs,
+                                       sizeof(regs)),
+                  ZX_OK);
+        ASSERT_EQ(get_syscall_result(&regs), (uint64_t)expected_syscall_result);
+        // TODO(mseaborn): Check the values of other registers.  We could check
+        // that rip/pc is within the VDSO, which will require figuring out
+        // where the VDSO is mapped.  We could check that unwinding the stack
+        // using crashlogger gives a correct backtrace.
+
+        // Resume the thread.
+        ASSERT_EQ(zx_task_resume_from_exception(thread.get(), exc_port, 0), ZX_OK);
+    } else {
+        ASSERT_EQ(zx_object_wait_one(exc_channel, ZX_CHANNEL_READABLE,
+                                     ZX_TIME_INFINITE, nullptr),
+                  ZX_OK);
+
+        zx_handle_t exception = ZX_HANDLE_INVALID;
+        zx_exception_info_t info;
+        uint32_t num_handles = 1;
+        uint32_t num_bytes = sizeof(info);
+        ASSERT_EQ(zx_channel_read(exc_channel, 0, &info, &exception,
+                                  num_bytes, num_handles, nullptr, nullptr),
+                  ZX_OK);
+
+        ASSERT_EQ(info.type, ZX_EXCP_POLICY_ERROR);
+        ASSERT_EQ(info.tid, tid);
+        ASSERT_EQ(info.pid, pid);
+
+        // TODO(ZX-3072): check the registers once they are available.
+
+        // Resume the thread.
+        uint32_t state = ZX_EXCEPTION_STATE_HANDLED;
+        ASSERT_EQ(zx_object_set_property(exception, ZX_PROP_EXCEPTION_STATE,
+                                         &state, sizeof(state)),
+                  ZX_OK);
+        ASSERT_EQ(zx_handle_close(exception), ZX_OK);
+    }
+
     // Check that the read-ready state of the channel changed compared with
     // the earlier check.
     EXPECT_EQ(zx_object_wait_one(ctrl, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE,
@@ -382,6 +429,19 @@ static bool TestInvokingPolicyWithException(
     zx_handle_close(ctrl);
 
     return true;
+}
+
+// Invokes a policy exception test using both port and channel exceptions.
+static void TestInvokingPolicyWithException(
+    const zx_policy_basic_t* policy, uint32_t policy_count, uint32_t minip_cmd,
+    zx_status_t expected_syscall_result) {
+    EXPECT_TRUE(TestInvokingPolicyWithException(
+        ExceptionTestType::kPorts, policy, policy_count, minip_cmd,
+        expected_syscall_result));
+
+    EXPECT_TRUE(TestInvokingPolicyWithException(
+        ExceptionTestType::kChannels, policy, policy_count, minip_cmd,
+        expected_syscall_result));
 }
 
 static bool TestExceptionOnNewEventAndDeny() {

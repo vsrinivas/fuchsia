@@ -389,6 +389,10 @@ void ThreadDispatcher::Exiting() {
             eport->OnThreadExitForDebugger(this);
         }
     }
+    // Thread exit exceptions don't currently provide an iframe.
+    arch_exception_context_t context{};
+    HandleSingleShotException(process_->exceptionate(Exceptionate::Type::kDebug),
+                              ZX_EXCP_THREAD_EXITING, context);
 
     // Mark the thread as dead. Do this before removing the thread from the
     // process because if this is the last thread then the process will be
@@ -526,6 +530,8 @@ int ThreadDispatcher::StartRoutine(void* arg) {
             debugger_port->OnThreadStartForDebugger(t, &context);
         }
     }
+    t->HandleSingleShotException(t->process_->exceptionate(Exceptionate::Type::kDebug),
+                                 ZX_EXCP_THREAD_STARTING, context);
 
     thread_process_pending_signals();
 
@@ -1000,6 +1006,43 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
     state_.set(ThreadState::Exception::IDLE);
 
     return status;
+}
+
+bool ThreadDispatcher::HandleSingleShotException(Exceptionate* exceptionate,
+                                                 zx_excp_type_t exception_type,
+                                                 const arch_exception_context_t& context) {
+    canary_.Assert();
+
+    LTRACE_ENTRY_OBJ;
+
+    // Do a quick check for valid channel first. It's still possible that the
+    // channel will become invalid immediately after this check, but that will
+    // be caught when we try to send the exception. This is just an
+    // optimization to avoid unnecessary setup/teardown in the common case.
+    if (!exceptionate->HasValidChannel()) {
+        return false;
+    }
+
+    arch_install_context_regs(&thread_, &context);
+    auto auto_call = fbl::MakeAutoCall([this]() { arch_remove_context_regs(&thread_); });
+
+    zx_exception_report_t report;
+    ExceptionPort::BuildArchReport(&report, exception_type, &context);
+
+    fbl::RefPtr<ExceptionDispatcher> exception = ExceptionDispatcher::Create(
+        fbl::WrapRefPtr(this), exception_type, &report, &context);
+    if (!exception) {
+        printf("KERN: failed to allocate memory for exception type %u in thread %lu.%lu\n",
+               exception_type, process_->get_koid(), get_koid());
+        return false;
+    }
+
+    bool sent = false;
+    HandleException(exceptionate, exception, &sent);
+
+    exception->Clear();
+
+    return sent;
 }
 
 // Note: buffer must be sufficiently aligned

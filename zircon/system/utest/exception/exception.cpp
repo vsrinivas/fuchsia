@@ -31,6 +31,8 @@
 #include <test-utils/test-utils.h>
 #include <unittest/unittest.h>
 
+#include <launchpad/launchpad.h>
+
 static int thread_func(void* arg);
 
 // argv[0]
@@ -1880,23 +1882,78 @@ static void SendMessageOrPeerClosed(const zx::channel& channel, message msg) {
 //         - aux thread
 class TestLoop {
 public:
-    // Creates the main test loop process/thread as well as an aux thread.
-    TestLoop() {
+    enum class Control {
+        kAutomatic,
+        kManual
+    };
+
+    // TestLoop can operate in two different modes:
+    //
+    // Automatic control will take care of all the setup/teardown so that when
+    // this constructor returns the test threads will be running, and when
+    // the destructor is called they will be stopped and closed down.
+    //
+    // Manual control requires the caller to make the following calls in order:
+    //   - Step1CreateProcess()
+    //   - Step2StartThreads()
+    //   - Step3FinishSetup()
+    //   - Step4ShutdownAuxThread()
+    //   - Step5ShutdownMainThread()
+    // This is necessary to give the caller a chance to install exception
+    // handlers in between each step, e.g. in order to catch THREAD_STARTING
+    // synthetic exceptions.
+    TestLoop(Control control = Control::kAutomatic) {
         EXPECT_EQ(zx::job::create(*zx::job::default_job(), 0, &parent_job_), ZX_OK, "");
         EXPECT_EQ(zx::job::create(parent_job_, 0, &job_), ZX_OK, "");
-        start_test_child(job_.get(), test_child_name, process_.reset_and_get_address(),
-                         process_channel_.reset_and_get_address());
+
+        if (control == Control::kAutomatic) {
+            Step1CreateProcess();
+            Step2StartThreads();
+            Step3ReadAuxThreadHandle();
+        }
+    }
+
+    void Step1CreateProcess() {
+        launchpad_ = setup_test_child(job_.get(), test_child_name,
+                                      process_channel_.reset_and_get_address());
+        EXPECT_NONNULL(launchpad_, "");
+        process_.reset(launchpad_get_process_handle(launchpad_));
+    }
+
+    void Step2StartThreads() {
+        // The initial process handle we got is invalidated by this call
+        // and we're given the new one to use instead.
+        process_.reset(tu_launch_fdio_fini(launchpad_));
+        EXPECT_TRUE(process_.is_valid(), "");
         send_msg(process_channel_.get(), MSG_CREATE_AUX_THREAD);
+    }
+
+    // If there are any debugger handlers attached, the task start exceptions
+    // must be handled before calling this or it will block forever.
+    void Step3ReadAuxThreadHandle() {
         recv_msg_new_thread_handle(process_channel_.get(), aux_thread_.reset_and_get_address());
     }
 
-    ~TestLoop() {
-        // Close down the process gracefully if it wasn't already killed
-        // during the test. We can't use zx_task_kill() here because it
-        // can kill the task before exception handling finishes, causing
-        // REGISTER_CRASH() to miss expected exceptions.
+    void Step4ShutdownAuxThread() {
+        // Don't use use zx_task_kill() here, it stops exception processing
+        // immediately so we may miss expected exceptions.
         SendMessageOrPeerClosed(process_channel_, MSG_SHUTDOWN_AUX_THREAD);
+    }
+
+    void Step5ShutdownMainThread() {
         SendMessageOrPeerClosed(process_channel_, MSG_DONE);
+    }
+
+    // Closes the test tasks and blocks until everything has cleaned up.
+    //
+    // If there is an active debug handler, the process must be closed first
+    // via zx_task_kill() or Shutdown(), or else this can block forever waiting
+    // for the thread exit exceptions to be handled.
+    ~TestLoop() {
+        // It's OK to call these multiple times so we can just unconditionally
+        // call them in both automatic or manual control mode.
+        Step4ShutdownAuxThread();
+        Step5ShutdownMainThread();
 
         EXPECT_EQ(process_.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr), ZX_OK, "");
     }
@@ -1911,6 +1968,7 @@ public:
     }
 
 private:
+    launchpad_t* launchpad_ = nullptr;
     zx::job parent_job_;
     zx::job job_;
     zx::process process_;
@@ -1921,7 +1979,7 @@ private:
 // Reads an exception handle for the given exception type.
 // If |info| is non-null, fills it in with the received struct.
 //
-// Returns an invalid handle if reading fails or the type doesn't match.
+// Returns ZX_HANDLE_INVALID if the type doesn't match.
 zx::handle ReadException(const zx::channel& channel, zx_excp_type_t type,
                          zx_exception_info_t* info_out = nullptr) {
     zx::handle exception;
@@ -1929,9 +1987,7 @@ zx::handle ReadException(const zx::channel& channel, zx_excp_type_t type,
     uint32_t num_handles = 1;
     uint32_t num_bytes = sizeof(info);
 
-    if (!tu_channel_wait_readable(channel.get())) {
-        return zx::handle();
-    }
+    EXPECT_EQ(channel.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), nullptr), ZX_OK, "");
     tu_channel_read(channel.get(), 0, &info, &num_bytes, exception.reset_and_get_address(),
                     &num_handles);
     EXPECT_TRUE(exception.is_valid());
@@ -1958,6 +2014,10 @@ void SetExceptionStateProperty(const zx::handle& exception, uint32_t state) {
     EXPECT_EQ(exception.set_property(ZX_PROP_EXCEPTION_STATE, &state, sizeof(state)),
               ZX_OK, "");
 }
+
+// A finite timeout to use when you want to make sure something isn't happening
+// e.g. a certain signal isn't going to be asserted.
+auto constexpr kTestTimeout = zx::msec(100);
 
 bool create_exception_channel_test() {
     BEGIN_TEST;
@@ -2209,7 +2269,7 @@ bool close_channel_without_exception_test() {
     // exception object. If it wasn't, the exception would filter up now and
     // REGISTER_CRASH() would trigger a test failure later when it fails to
     // see the exception.
-    zx::nanosleep(zx::deadline_after(zx::msec(100)));
+    zx::nanosleep(zx::deadline_after(kTestTimeout));
 
     REGISTER_CRASH(loop.aux_thread().get());
 
@@ -2332,6 +2392,169 @@ bool exception_channel_order_test() {
     END_TEST;
 }
 
+bool thread_lifecycle_channel_exception_test() {
+    BEGIN_TEST;
+
+    TestLoop loop(TestLoop::Control::kManual);
+
+    loop.Step1CreateProcess();
+    zx::channel exception_channel;
+    EXPECT_EQ(zx_task_create_exception_channel(loop.process().get(), ZX_EXCEPTION_PORT_DEBUGGER,
+                                               exception_channel.reset_and_get_address()),
+              ZX_OK, "");
+
+    // We should get both primary and aux thread exceptions.
+    loop.Step2StartThreads();
+
+    zx_exception_info_t primary_start_info;
+    ReadException(exception_channel, ZX_EXCP_THREAD_STARTING, &primary_start_info);
+    EXPECT_EQ(primary_start_info.pid, tu_get_koid(loop.process().get()), "");
+
+    zx_exception_info_t aux_start_info;
+    ReadException(exception_channel, ZX_EXCP_THREAD_STARTING, &aux_start_info);
+    EXPECT_EQ(aux_start_info.pid, tu_get_koid(loop.process().get()), "");
+
+    // We don't have access to the primary thread handle so just check the aux
+    // thread TID to make sure it's correct.
+    loop.Step3ReadAuxThreadHandle();
+    EXPECT_EQ(aux_start_info.tid, tu_get_koid(loop.aux_thread().get()), "");
+
+    loop.Step4ShutdownAuxThread();
+    zx_exception_info_t aux_exit_info;
+    ReadException(exception_channel, ZX_EXCP_THREAD_EXITING, &aux_exit_info);
+    EXPECT_EQ(aux_exit_info.tid, aux_start_info.tid, "");
+    EXPECT_EQ(aux_exit_info.pid, aux_start_info.pid, "");
+
+    loop.Step5ShutdownMainThread();
+    zx_exception_info_t primary_exit_info;
+    ReadException(exception_channel, ZX_EXCP_THREAD_EXITING, &primary_exit_info);
+    EXPECT_EQ(primary_exit_info.tid, primary_start_info.tid, "");
+    EXPECT_EQ(primary_exit_info.pid, primary_start_info.pid, "");
+
+    END_TEST;
+}
+
+// Parameterized to run against either the TestLoop job or parent job.
+template <auto task_func>
+bool process_lifecycle_channel_exception_test() {
+    BEGIN_TEST;
+
+    zx::channel exception_channel;
+    {
+        TestLoop loop(TestLoop::Control::kManual);
+
+        ASSERT_EQ(zx_task_create_exception_channel((loop.*task_func)().get(),
+                                                   ZX_EXCEPTION_PORT_DEBUGGER,
+                                                   exception_channel.reset_and_get_address()),
+                  ZX_OK, "");
+
+        // ZX_EXCP_PROCESS_STARTING shouldn't be sent until step 2 when we
+        // actually start the first thread on the process.
+        loop.Step1CreateProcess();
+        EXPECT_EQ(exception_channel.wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(kTestTimeout),
+                                             nullptr),
+                  ZX_ERR_TIMED_OUT, "");
+
+        loop.Step2StartThreads();
+        zx_exception_info_t info;
+        ReadException(exception_channel, ZX_EXCP_PROCESS_STARTING, &info);
+        EXPECT_EQ(info.pid, tu_get_koid(loop.process().get()), "");
+
+        loop.Step3ReadAuxThreadHandle();
+        loop.Step4ShutdownAuxThread();
+        loop.Step5ShutdownMainThread();
+    }
+
+    // There is no PROCESS_EXITING exception, make sure the kernel finishes
+    // closing the channel without putting anything else in it.
+    //
+    // Unlike processes, jobs don't automatically die with their last child,
+    // so the TestLoop handles must be fully closed at this point to get the
+    // PEER_CLOSED signal.
+    zx_signals_t signals;
+    EXPECT_EQ(exception_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals),
+              ZX_OK, "");
+    EXPECT_FALSE(signals & ZX_CHANNEL_READABLE, "");
+
+    END_TEST;
+}
+
+bool process_start_channel_exception_does_not_bubble_up_test() {
+    BEGIN_TEST;
+
+    zx::channel parent_exception_channel;
+    zx::channel exception_channel;
+    {
+        TestLoop loop(TestLoop::Control::kManual);
+
+        ASSERT_EQ(zx_task_create_exception_channel(
+                      loop.parent_job().get(), ZX_EXCEPTION_PORT_DEBUGGER,
+                      parent_exception_channel.reset_and_get_address()),
+                  ZX_OK, "");
+        ASSERT_EQ(zx_task_create_exception_channel(loop.job().get(), ZX_EXCEPTION_PORT_DEBUGGER,
+                                                   exception_channel.reset_and_get_address()),
+                  ZX_OK, "");
+
+        loop.Step1CreateProcess();
+        loop.Step2StartThreads();
+        ReadException(exception_channel, ZX_EXCP_PROCESS_STARTING);
+
+        loop.Step3ReadAuxThreadHandle();
+        loop.Step4ShutdownAuxThread();
+        loop.Step5ShutdownMainThread();
+    }
+
+    // The parent job channel should never have seen anything since synthetic
+    // PROCESS_STARTING exceptions do not bubble up the job chain.
+    zx_signals_t signals;
+    EXPECT_EQ(parent_exception_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                                                &signals),
+              ZX_OK, "");
+    EXPECT_FALSE(signals & ZX_CHANNEL_READABLE, "");
+
+    END_TEST;
+}
+
+// Lifecycle exceptions should not be seen by normal (non-debug) handlers.
+bool lifecycle_channel_exception_debug_handlers_only_test() {
+    BEGIN_TEST;
+
+    zx::channel exception_channels[4];
+    {
+        TestLoop loop(TestLoop::Control::kManual);
+        ASSERT_EQ(zx_task_create_exception_channel(loop.parent_job().get(), 0,
+                                                   exception_channels[0].reset_and_get_address()),
+                  ZX_OK, "");
+        ASSERT_EQ(zx_task_create_exception_channel(loop.job().get(), 0,
+                                                   exception_channels[1].reset_and_get_address()),
+                  ZX_OK, "");
+
+        loop.Step1CreateProcess();
+        ASSERT_EQ(zx_task_create_exception_channel(loop.process().get(), 0,
+                                                   exception_channels[2].reset_and_get_address()),
+                  ZX_OK, "");
+
+        loop.Step2StartThreads();
+        loop.Step3ReadAuxThreadHandle();
+        ASSERT_EQ(zx_task_create_exception_channel(loop.aux_thread().get(), 0,
+                                                   exception_channels[3].reset_and_get_address()),
+                  ZX_OK, "");
+
+        loop.Step4ShutdownAuxThread();
+        loop.Step5ShutdownMainThread();
+    }
+
+    // None of the normal handlers should have seen any exceptions.
+    for (const zx::channel& channel : exception_channels) {
+        zx_signals_t signals;
+        EXPECT_EQ(channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals),
+                  ZX_OK, "");
+        EXPECT_FALSE(signals & ZX_CHANNEL_READABLE, "");
+    }
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(exceptions_tests)
@@ -2399,6 +2622,11 @@ RUN_TEST((task_death_closes_exception_channel_test<&TestLoop::job,
 RUN_TEST(thread_death_with_exception_in_channel_test);
 RUN_TEST(thread_death_with_exception_received_test);
 RUN_TEST_ENABLE_CRASH_HANDLER(exception_channel_order_test);
+RUN_TEST(thread_lifecycle_channel_exception_test);
+RUN_TEST(process_lifecycle_channel_exception_test<&TestLoop::job>);
+RUN_TEST(process_lifecycle_channel_exception_test<&TestLoop::parent_job>);
+RUN_TEST(process_start_channel_exception_does_not_bubble_up_test);
+RUN_TEST(lifecycle_channel_exception_debug_handlers_only_test);
 END_TEST_CASE(exceptions_tests)
 
 static void scan_argv(int argc, char** argv)

@@ -34,6 +34,14 @@ public:
 
     ExceptionPort::Type port_type() const { return port_type_; }
 
+    // Shuts the underlying channel down if it's still connected to be sure the
+    // userspace endpoint gets the PEER_CLOSED signal.
+    //
+    // In most cases the task wants to manually shutdown the exceptionate when
+    // transitioning to a dead state, but in some cases tasks can be destroyed
+    // without registering the dead state e.g. childless jobs.
+    ~Exceptionate();
+
     // Sets the backing ChannelDispatcher endpoint.
     //
     // The exception channel is first-come-first-served, so if there is
@@ -52,6 +60,9 @@ public:
     // Any further attempt to set a new channel will return ZX_ERR_BAD_STATE.
     void Shutdown();
 
+    // Returns true if the channel exists and has a valid userspace peer.
+    bool HasValidChannel() const;
+
     // Sends an exception to userspace.
     //
     // The exception message contains:
@@ -64,6 +75,8 @@ public:
     zx_status_t SendException(fbl::RefPtr<ExceptionDispatcher> exception);
 
 private:
+    bool HasValidChannelLocked() const TA_REQ(lock_);
+
     const ExceptionPort::Type port_type_;
     mutable DECLARE_MUTEX(Exceptionate) lock_;
     fbl::RefPtr<ChannelDispatcher> channel_ TA_GUARDED(lock_);

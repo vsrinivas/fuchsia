@@ -905,8 +905,13 @@ void ProcessDispatcher::OnProcessStartForJobDebugger(ThreadDispatcher *t,
       if (port) {
         port->OnProcessStartForDebugger(t, context);
         break;
-      } else {
-        job = job->parent();
       }
+
+      if (t->HandleSingleShotException(job->exceptionate(Exceptionate::Type::kDebug),
+                                       ZX_EXCP_PROCESS_STARTING, *context)) {
+          break;
+      }
+
+      job = job->parent();
     }
 }

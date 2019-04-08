@@ -17,6 +17,10 @@
 Exceptionate::Exceptionate(ExceptionPort::Type port_type)
     : port_type_(port_type) {}
 
+Exceptionate::~Exceptionate() {
+    Shutdown();
+}
+
 zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel) {
     if (!channel) {
         return ZX_ERR_INVALID_ARGS;
@@ -28,7 +32,7 @@ zx_status_t Exceptionate::SetChannel(fbl::RefPtr<ChannelDispatcher> channel) {
         return ZX_ERR_BAD_STATE;
     }
 
-    if (channel_ && !channel_->PeerHasClosed()) {
+    if (HasValidChannelLocked()) {
         return ZX_ERR_ALREADY_BOUND;
     }
 
@@ -47,6 +51,15 @@ void Exceptionate::Shutdown() {
         channel_.reset();
     }
     is_shutdown_ = true;
+}
+
+bool Exceptionate::HasValidChannel() const {
+    Guard<fbl::Mutex> guard{&lock_};
+    return HasValidChannelLocked();
+}
+
+bool Exceptionate::HasValidChannelLocked() const {
+    return channel_ && !channel_->PeerHasClosed();
 }
 
 zx_status_t Exceptionate::SendException(fbl::RefPtr<ExceptionDispatcher> exception) {

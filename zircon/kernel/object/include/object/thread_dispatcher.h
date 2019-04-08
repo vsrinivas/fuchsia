@@ -171,6 +171,18 @@ public:
                                 fbl::RefPtr<ExceptionDispatcher> exception,
                                 bool* sent);
 
+    // Similar to HandleException(), but for single-shot exceptions which are
+    // sent to at most one handler, e.g. ZX_EXCP_THREAD_STARTING.
+    //
+    // The main difference is that this takes |exception_type| and |context|
+    // rather than a full exception object, and internally sets up the required
+    // state and creates the exception object.
+    //
+    // Returns true if the exception was sent.
+    bool HandleSingleShotException(Exceptionate* exceptionate,
+                                   zx_excp_type_t exception_type,
+                                   const arch_exception_context_t& context);
+
     // Fetch the state of the thread for userspace tools.
     zx_status_t GetInfoForUserspace(zx_info_thread_t* info);
 
