@@ -6,7 +6,6 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/memory/cpp/fidl.h>
 #include <zircon/status.h>
 
 #include "dockyard_proxy.h"

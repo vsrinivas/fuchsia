@@ -8,7 +8,6 @@
 #include <memory>
 #include <string>
 
-#include <fuchsia/memory/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/time.h>

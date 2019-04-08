@@ -8,11 +8,11 @@
 #include <string>
 #include <thread>
 
-#include <fuchsia/memory/cpp/fidl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <grpc++/grpc++.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/fdio.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
