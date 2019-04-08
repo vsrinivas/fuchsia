@@ -16,7 +16,52 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
+struct percpu;
+
+// Static collection of the percpu objects for each cpu on the system.
+class Percpus {
+ public:
+    // Pure static class.
+    Percpus() = delete;
+
+    // Get the |cpu_num|th percpu entry.
+    static inline percpu& Get(cpu_num_t cpu_num) {
+        DEBUG_ASSERT(cpu_num < count_);
+        return *index_[cpu_num];
+    }
+
+    // Number of percpu entries.
+    static size_t Count() {
+        return count_;
+    }
+
+    // Called once after the heap is up to initialize the secondary percpu
+    // entries.
+    // Unused argument is so this can be passed to LK_INIT_HOOK() directly.
+    static void HeapInit(uint32_t);
+
+ private:
+    // Number of percpu entries.
+    static size_t count_;
+
+    // The percpu for the boot core, lives in static memory.
+    static percpu boot_percpu_ __CPU_ALIGN_EXCLUSIVE;
+
+    // Pointer to heap memory allocated for additional percpus.
+    static percpu* other_percpus_;
+
+    // Index that points to all available percpus by cpu_num.
+    static percpu** index_;
+
+    // Index used in early boot when only the boot core's percpu is available.
+    static percpu* boot_index_[1];
+};
+
 struct percpu {
+    percpu() = default;
+    percpu(const percpu &) = delete;
+    percpu operator=(const percpu&) = delete;
+
     // per cpu timer queue
     struct list_node timer_queue;
 
@@ -55,14 +100,30 @@ struct percpu {
     bool dpc_stop;
     // each cpu has a dedicated thread for processing dpcs
     thread_t* dpc_thread;
+
+    // Initialize this percpu object, |cpu_num| will be used to initialize
+    // embedded objects.
+    void Init(cpu_num_t cpu_num);
+
+    // Get the |cpu_num|th percpu entry, this is a conveinence method for
+    // interfacing with Percpus directly.
+    static inline percpu& Get(cpu_num_t cpu_num) {
+        return Percpus::Get(cpu_num);
+    }
+
+    // Number of percpu entries.
+    static size_t Count() {
+        return Percpus::Count();
+    }
+
 } __CPU_ALIGN;
 
-// the kernel per-cpu structure
-extern struct percpu percpu[SMP_MAX_CPUS];
-
 // make sure the bitmap is large enough to cover our number of priorities
-static_assert(NUM_PRIORITIES <= sizeof(percpu[0].run_queue_bitmap) * CHAR_BIT, "");
+static_assert(NUM_PRIORITIES <= sizeof(((percpu*)0)->run_queue_bitmap) * CHAR_BIT, "");
 
+// TODO(edcoyne): rename this to c++, or wait for travis's work to integrate
+// into arch percpus.
 static inline struct percpu* get_local_percpu(void) {
-    return &percpu[arch_curr_cpu_num()];
+    return &Percpus::Get(arch_curr_cpu_num());
 }
+

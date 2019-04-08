@@ -71,19 +71,20 @@ void dpc_shutdown(uint cpu_id) {
     spin_lock_saved_state_t state;
     spin_lock_irqsave(&dpc_lock, state);
 
-    DEBUG_ASSERT(!percpu[cpu_id].dpc_stop);
+    auto& percpu = percpu::Get(cpu_id);
+    DEBUG_ASSERT(!percpu.dpc_stop);
 
     // Ask the DPC thread to terminate.
-    percpu[cpu_id].dpc_stop = true;
+    percpu.dpc_stop = true;
 
     // Take the thread pointer so we can join outside the spinlock.
-    thread_t* t = percpu[cpu_id].dpc_thread;
-    percpu[cpu_id].dpc_thread = nullptr;
+    thread_t* t = percpu.dpc_thread;
+    percpu.dpc_thread = nullptr;
 
     spin_unlock_irqrestore(&dpc_lock, state);
 
     // Wake it.
-    event_signal(&percpu[cpu_id].dpc_event, false);
+    event_signal(&percpu.dpc_event, false);
 
     // Wait for it to terminate.
     int ret = 0;
@@ -101,12 +102,13 @@ void dpc_shutdown_transition_off_cpu(uint cpu_id) {
     uint cur_cpu = arch_curr_cpu_num();
     DEBUG_ASSERT(cpu_id != cur_cpu);
 
+    auto& percpu = percpu::Get(cpu_id);
     // The DPC thread should already be stopped.
-    DEBUG_ASSERT(percpu[cpu_id].dpc_stop);
-    DEBUG_ASSERT(percpu[cpu_id].dpc_thread == nullptr);
+    DEBUG_ASSERT(percpu.dpc_stop);
+    DEBUG_ASSERT(percpu.dpc_thread == nullptr);
 
-    list_node_t* src_list = &percpu[cpu_id].dpc_list;
-    list_node_t* dst_list = &percpu[cur_cpu].dpc_list;
+    list_node_t* src_list = &percpu.dpc_list;
+    list_node_t* dst_list = &percpu::Get(cur_cpu).dpc_list;
 
     dpc_t* dpc;
     while ((dpc = list_remove_head_type(src_list, dpc_t, node))) {
@@ -114,9 +116,9 @@ void dpc_shutdown_transition_off_cpu(uint cpu_id) {
     }
 
     // Reset the state so we can restart DPC processing if the CPU comes back online.
-    DEBUG_ASSERT(list_is_empty(&percpu[cpu_id].dpc_list));
-    percpu[cpu_id].dpc_stop = false;
-    event_destroy(&percpu[cpu_id].dpc_event);
+    DEBUG_ASSERT(list_is_empty(&percpu.dpc_list));
+    percpu.dpc_stop = false;
+    event_destroy(&percpu.dpc_event);
 
     spin_unlock_irqrestore(&dpc_lock, state);
 }

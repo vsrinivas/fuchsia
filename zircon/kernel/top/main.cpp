@@ -16,6 +16,7 @@
 #include <kernel/init.h>
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
+#include <kernel/percpu.h>
 #include <lib/heap.h>
 #include <lib/debuglog.h>
 #include <lk/init.h>
@@ -42,6 +43,9 @@ static void call_constructors() {
 void lk_main() {
     // serial prints to console based on compile time switch
     dlog_bypass_init_early();
+
+    // Init the boot percpu data.
+    percpu::Get(0).Init(0);
 
     // get us into some sort of thread context
     thread_init_early();

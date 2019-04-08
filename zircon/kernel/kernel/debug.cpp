@@ -119,25 +119,26 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
 #endif
 
 static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
-    for (uint i = 0; i < SMP_MAX_CPUS; i++) {
+    for (uint i = 0; i < percpu::Count(); i++) {
         if (!mp_is_cpu_active(i)) {
             continue;
         }
+        const auto& percpu = percpu::Get(i);
 
         printf("thread stats (cpu %u):\n", i);
-        printf("\ttotal idle time: %" PRIi64 "\n", percpu[i].stats.idle_time);
+        printf("\ttotal idle time: %" PRIi64 "\n", percpu.stats.idle_time);
         printf("\ttotal busy time: %" PRIi64 "\n",
-               zx_time_sub_duration(current_time(), percpu[i].stats.idle_time));
-        printf("\treschedules: %lu\n", percpu[i].stats.reschedules);
-        printf("\treschedule_ipis: %lu\n", percpu[i].stats.reschedule_ipis);
-        printf("\tcontext_switches: %lu\n", percpu[i].stats.context_switches);
-        printf("\tpreempts: %lu\n", percpu[i].stats.preempts);
-        printf("\tyields: %lu\n", percpu[i].stats.yields);
-        printf("\ttimer interrupts: %lu\n", percpu[i].stats.timer_ints);
-        printf("\ttimers: %lu\n", percpu[i].stats.timers);
+               zx_time_sub_duration(current_time(), percpu.stats.idle_time));
+        printf("\treschedules: %lu\n", percpu.stats.reschedules);
+        printf("\treschedule_ipis: %lu\n", percpu.stats.reschedule_ipis);
+        printf("\tcontext_switches: %lu\n", percpu.stats.context_switches);
+        printf("\tpreempts: %lu\n", percpu.stats.preempts);
+        printf("\tyields: %lu\n", percpu.stats.yields);
+        printf("\ttimer interrupts: %lu\n", percpu.stats.timer_ints);
+        printf("\ttimers: %lu\n", percpu.stats.timers);
 #if WITH_FAIR_SCHEDULER
-        printf("\ttotal weight: %d\n", percpu[i].fair_runqueue.GetTotalWeight().raw_value());
-        printf("\trunnable tasks: %zu\n", percpu[i].fair_runqueue.GetRunnableTasks());
+        printf("\ttotal weight: %d\n", percpu.fair_runqueue.GetTotalWeight().raw_value());
+        printf("\trunnable tasks: %zu\n", percpu.fair_runqueue.GetRunnableTasks());
 #endif
     }
 
@@ -211,21 +212,22 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
                "  sysc"
                " ints (hw  tmr tmr_cb)"
                " ipi (rs  gen)\n");
-        for (uint i = 0; i < SMP_MAX_CPUS; i++) {
+        for (uint i = 0; i < percpu::Count(); i++) {
             Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
 
             // dont display time for inactive cpus
             if (!mp_is_cpu_active(i)) {
                 continue;
             }
+            const auto& percpu = percpu::Get(i);
 
-            zx_duration_t idle_time = percpu[i].stats.idle_time;
+            zx_duration_t idle_time = percpu.stats.idle_time;
 
             // if the cpu is currently idle, add the time since it went idle up until now to the idle counter
             bool is_idle = !!mp_is_cpu_idle(i);
             if (is_idle) {
                 zx_duration_t recent_idle_time =
-                    zx_time_sub_time(current_time(), percpu[i].idle_thread.last_started_running);
+                    zx_time_sub_time(current_time(), percpu.idle_thread.last_started_running);
                 idle_time = zx_duration_add_duration(idle_time, recent_idle_time);
             }
 
@@ -247,18 +249,18 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
                    "\n",
                    i,
                    static_cast<uint>(busypercent / 100), static_cast<uint>(busypercent % 100),
-                   percpu[i].stats.context_switches - old_stats[i].context_switches,
-                   percpu[i].stats.yields - old_stats[i].yields,
-                   percpu[i].stats.preempts - old_stats[i].preempts,
-                   percpu[i].stats.irq_preempts - old_stats[i].irq_preempts,
-                   percpu[i].stats.syscalls - old_stats[i].syscalls,
-                   percpu[i].stats.interrupts - old_stats[i].interrupts,
-                   percpu[i].stats.timer_ints - old_stats[i].timer_ints,
-                   percpu[i].stats.timers - old_stats[i].timers,
-                   percpu[i].stats.reschedule_ipis - old_stats[i].reschedule_ipis,
-                   percpu[i].stats.generic_ipis - old_stats[i].generic_ipis);
+                   percpu.stats.context_switches - old_stats[i].context_switches,
+                   percpu.stats.yields - old_stats[i].yields,
+                   percpu.stats.preempts - old_stats[i].preempts,
+                   percpu.stats.irq_preempts - old_stats[i].irq_preempts,
+                   percpu.stats.syscalls - old_stats[i].syscalls,
+                   percpu.stats.interrupts - old_stats[i].interrupts,
+                   percpu.stats.timer_ints - old_stats[i].timer_ints,
+                   percpu.stats.timers - old_stats[i].timers,
+                   percpu.stats.reschedule_ipis - old_stats[i].reschedule_ipis,
+                   percpu.stats.generic_ipis - old_stats[i].generic_ipis);
 
-            old_stats[i] = percpu[i].stats;
+            old_stats[i] = percpu.stats;
             last_idle_time[i] = idle_time;
         }
     });
@@ -272,7 +274,7 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
     static RecurringCallback callback([]() {
         printf("----------------------------------------------------\n");
-        for (uint i = 0; i < SMP_MAX_CPUS; i++) {
+        for (uint i = 0; i < percpu::Count(); i++) {
             Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
 
             if (!mp_is_cpu_active(i)) {
@@ -280,7 +282,7 @@ static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
             }
 
             printf("thread queue cpu %2u:\n", i);
-            percpu[i].fair_runqueue.Dump();
+            percpu::Get(i).fair_runqueue.Dump();
         }
         printf("\n");
     });
@@ -292,7 +294,7 @@ static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
 #else
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
     static RecurringCallback cb([]() {
-        for (uint i = 0; i < SMP_MAX_CPUS; i++) {
+        for (uint i = 0; i < percpu::Count(); i++) {
             Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
 
             // dont display time for inactive cpus
@@ -300,11 +302,9 @@ static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
                 continue;
             }
 
-            const struct percpu* cpu = &percpu[i];
-
             printf("cpu %2u:", i);
             for (uint p = 0; p < NUM_PRIORITIES; p++) {
-                printf(" %2zu", list_length(&cpu->run_queue[p]));
+                printf(" %2zu", list_length(&percpu::Get(i).run_queue[p]));
             }
             printf("\n");
         }

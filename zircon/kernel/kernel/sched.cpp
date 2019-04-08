@@ -240,8 +240,8 @@ static cpu_mask_t find_cpu_mask(thread_t* t) TA_REQ(thread_lock) {
 static void insert_in_run_queue_head(cpu_num_t cpu, thread_t* t) TA_REQ(thread_lock) {
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
-    list_add_head(&percpu[cpu].run_queue[t->effec_priority], &t->queue_node);
-    percpu[cpu].run_queue_bitmap |= (1u << t->effec_priority);
+    list_add_head(&percpu::Get(cpu).run_queue[t->effec_priority], &t->queue_node);
+    percpu::Get(cpu).run_queue_bitmap |= (1u << t->effec_priority);
 
     // mark the cpu as busy since the run queue now has at least one item in it
     mp_set_cpu_busy(cpu);
@@ -250,8 +250,8 @@ static void insert_in_run_queue_head(cpu_num_t cpu, thread_t* t) TA_REQ(thread_l
 static void insert_in_run_queue_tail(cpu_num_t cpu, thread_t* t) TA_REQ(thread_lock) {
     DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
-    list_add_tail(&percpu[cpu].run_queue[t->effec_priority], &t->queue_node);
-    percpu[cpu].run_queue_bitmap |= (1u << t->effec_priority);
+    list_add_tail(&percpu::Get(cpu).run_queue[t->effec_priority], &t->queue_node);
+    percpu::Get(cpu).run_queue_bitmap |= (1u << t->effec_priority);
 
     // mark the cpu as busy since the run queue now has at least one item in it
     mp_set_cpu_busy(cpu);
@@ -265,9 +265,9 @@ static void remove_from_run_queue(thread_t* t, int prio_queue) TA_REQ(thread_loc
     list_delete(&t->queue_node);
 
     // clear the old cpu's queue bitmap if that was the last entry
-    struct percpu* c = &percpu[t->curr_cpu];
-    if (list_is_empty(&c->run_queue[prio_queue])) {
-        c->run_queue_bitmap &= ~(1u << prio_queue);
+    struct percpu& c = percpu::Get(t->curr_cpu);
+    if (list_is_empty(&c.run_queue[prio_queue])) {
+        c.run_queue_bitmap &= ~(1u << prio_queue);
     }
 }
 
@@ -281,7 +281,7 @@ static thread_t* sched_get_top_thread(cpu_num_t cpu) TA_REQ(thread_lock) {
     // pop the head of the highest priority queue with any threads
     // queued up on the passed in cpu.
 
-    struct percpu* c = &percpu[cpu];
+    struct percpu* c = &percpu::Get(cpu);
     if (likely(c->run_queue_bitmap)) {
         uint highest_queue = highest_run_queue(c);
 
@@ -866,7 +866,8 @@ void sched_resched_internal() {
 
     if (thread_is_idle(oldthread)) {
         zx_duration_t delta = zx_time_sub_time(now, oldthread->last_started_running);
-        percpu[cpu].stats.idle_time = zx_duration_add_duration(percpu[cpu].stats.idle_time, delta);
+        percpu::Get(cpu).stats.idle_time =
+            zx_duration_add_duration(percpu::Get(cpu).stats.idle_time, delta);
     }
 
     LOCAL_KTRACE("CS timeslice old", (uint32_t)oldthread->user_tid, (uint32_t)oldthread->remaining_time_slice);
@@ -914,13 +915,4 @@ void sched_resched_internal() {
 
     // do the low level context switch
     final_context_switch(oldthread, newthread);
-}
-
-void sched_init_early() {
-    // initialize the run queues
-    for (unsigned int cpu = 0; cpu < SMP_MAX_CPUS; cpu++) {
-        for (unsigned int i = 0; i < NUM_PRIORITIES; i++) {
-            list_initialize(&percpu[cpu].run_queue[i]);
-        }
-    }
 }

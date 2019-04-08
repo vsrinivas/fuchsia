@@ -26,7 +26,6 @@
 #include <kernel/dpc.h>
 #include <kernel/lockdep.h>
 #include <kernel/mp.h>
-#include <kernel/owned_wait_queue.h>
 #include <kernel/percpu.h>
 #include <kernel/sched.h>
 #include <kernel/stats.h>
@@ -1054,7 +1053,7 @@ void thread_init_early(void) {
     DEBUG_ASSERT(arch_curr_cpu_num() == 0);
 
     // create a thread to cover the current running state
-    thread_t* t = &percpu[0].idle_thread;
+    thread_t* t = &percpu::Get(0).idle_thread;
     thread_construct_first(t, "bootstrap");
 
 #if WITH_LOCK_DEP
@@ -1064,8 +1063,6 @@ void thread_init_early(void) {
         lockdep::SystemInitThreadLockState(state);
     }
 #endif
-
-    sched_init_early();
 }
 
 /**
@@ -1193,9 +1190,9 @@ thread_t* thread_create_idle_thread(cpu_num_t cpu_num) {
     // Shouldn't be initialized yet
     // ZX-3672: if the idle thread appears initialized, dump some data
     // around it
-    if (unlikely(percpu[cpu_num].idle_thread.magic != 0)) {
+    if (unlikely(percpu::Get(cpu_num).idle_thread.magic != 0)) {
         platform_panic_start();
-        hexdump(&percpu[cpu_num].idle_thread, 256);
+        hexdump(&percpu::Get(cpu_num).idle_thread, 256);
         panic("ZX-3672: detected non zeroed idle thread for core %u\n", cpu_num);
     }
 
@@ -1203,7 +1200,7 @@ thread_t* thread_create_idle_thread(cpu_num_t cpu_num) {
     snprintf(name, sizeof(name), "idle %u", cpu_num);
 
     thread_t* t = thread_create_etc(
-        &percpu[cpu_num].idle_thread, name,
+        &percpu::Get(cpu_num).idle_thread, name,
         arch_idle_thread_routine, NULL,
         IDLE_PRIORITY, NULL);
     if (t == NULL) {

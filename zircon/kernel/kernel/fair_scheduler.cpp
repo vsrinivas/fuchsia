@@ -165,7 +165,7 @@ FairScheduler* FairScheduler::Get() {
 }
 
 FairScheduler* FairScheduler::Get(cpu_num_t cpu) {
-    return &percpu[cpu].fair_runqueue;
+    return &percpu::Get(cpu).fair_runqueue;
 }
 
 void FairScheduler::InitializeThread(thread_t* thread, SchedWeight weight) {
@@ -221,7 +221,7 @@ thread_t* FairScheduler::EvaluateNextThread(SchedTime now, thread_t* current_thr
         return DequeueThread();
     } else {
         const cpu_num_t current_cpu = arch_curr_cpu_num();
-        return &percpu[current_cpu].idle_thread;
+        return &percpu::Get(current_cpu).idle_thread;
     }
 }
 
@@ -375,7 +375,7 @@ void FairScheduler::RescheduleCommon(SchedTime now) {
     mp_set_cpu_non_realtime(current_cpu);
 
     if (thread_is_idle(current_thread)) {
-        percpu[current_cpu].stats.idle_time += actual_runtime_ns;
+        percpu::Get(current_cpu).stats.idle_time += actual_runtime_ns;
     }
 
     if (thread_is_idle(next_thread) /*|| runnable_task_count_ == 1*/) {
@@ -1073,10 +1073,4 @@ void sched_change_priority(thread_t* thread, int priority) {
 
 void sched_preempt_timer_tick(zx_time_t now) {
     FairScheduler::TimerTick(SchedTime{now});
-}
-
-void sched_init_early() {
-    for (cpu_num_t cpu = 0; cpu < SMP_MAX_CPUS; cpu++) {
-        percpu[cpu].fair_runqueue.this_cpu_ = cpu;
-    }
 }

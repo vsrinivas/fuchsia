@@ -27,10 +27,6 @@ static_assert(sizeof(vmo_header) ==
 KCOUNTER(magic, "counters.magic")
 
 static void counters_init(unsigned level) {
-    // Wire the memory defined in the .bss section to the counters.
-    for (size_t ix = 0; ix != SMP_MAX_CPUS; ++ix) {
-        percpu[ix].counters = CounterArena().CpuData(ix);
-    }
     magic.Add(counters::DescriptorVmo::kMagic);
 }
 

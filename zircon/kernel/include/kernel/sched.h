@@ -13,10 +13,6 @@
 
 __BEGIN_CDECLS
 
-// scheduler interface, used internally by thread.c
-// not intended to be used by regular kernel code
-void sched_init_early(void);
-
 void sched_init_thread(thread_t* t, int priority);
 void sched_block(void) TA_REQ(thread_lock);
 void sched_yield(void) TA_REQ(thread_lock);

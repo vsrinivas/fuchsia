@@ -24,6 +24,8 @@
 // disabled.
 #if WITH_FAIR_SCHEDULER
 
+struct percpu;
+
 // Implements a fair scheduling algorithm with weight-based relative bandwidth
 // allocation and manages the associated per-CPU state.
 class FairScheduler {
@@ -54,9 +56,11 @@ public:
     cpu_num_t this_cpu() const { return this_cpu_; }
 
 private:
+    // Allow percpu to init our cpu number.
+    friend struct percpu;
+
     // Befriend the sched API wrappers to enable calling the static methods
     // below.
-    friend void sched_init_early(void);
     friend void sched_init_thread(thread_t* t, int priority);
     friend void sched_block(void);
     friend void sched_yield(void);
@@ -74,7 +78,6 @@ private:
     friend bool sched_unblock_list(struct list_node* list);
     friend void sched_transition_off_cpu(cpu_num_t old_cpu);
     friend void sched_preempt_timer_tick(zx_time_t now);
-    friend void sched_init_early();
 
     // Static scheduler methods called by the wrapper API above.
     static void InitializeThread(thread_t* thread, SchedWeight weight);

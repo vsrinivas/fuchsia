@@ -16,7 +16,4 @@
 void kernel_init(void) {
     dprintf(SPEW, "initializing mp\n");
     mp_init();
-
-    dprintf(SPEW, "initializing timers\n");
-    timer_queue_init();
 }

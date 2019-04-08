@@ -446,7 +446,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
         user_out_ptr<zx_info_cpu_stats_t> cpu_buf = _buffer.reinterpret<zx_info_cpu_stats_t>();
 
         for (unsigned int i = 0; i < static_cast<unsigned int>(num_to_copy); i++) {
-            const auto cpu = &percpu[i];
+            const auto* cpu = &percpu::Get(i);
 
             // copy the per cpu stats from the kernel percpu structure
             // NOTE: it's technically racy to read this without grabbing a lock
@@ -464,7 +464,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
                 bool is_idle = mp_is_cpu_idle(i);
                 if (is_idle) {
                     zx_duration_t recent_idle = zx_time_sub_time(
-                        current_time(), percpu[i].idle_thread.last_started_running);
+                        current_time(), cpu->idle_thread.last_started_running);
                     idle_time = zx_duration_add_duration(idle_time, recent_idle);
                 }
                 stats.idle_time = idle_time;
