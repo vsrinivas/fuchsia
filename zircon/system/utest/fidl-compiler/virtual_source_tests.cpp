@@ -4,8 +4,8 @@
 
 #include <unittest/unittest.h>
 
-#include "test_library.h"
 #include "fidl/source_location.h"
+#include "test_library.h"
 
 namespace {
 
@@ -37,7 +37,7 @@ bool LineContaining() {
     fidl::SourceFile::Position pos{};
     file.LineContaining(two.data(), &pos);
     EXPECT_EQ(pos.line, 2);
-    EXPECT_EQ(pos.column, 0);
+    EXPECT_EQ(pos.column, 1);
 
     END_TEST;
 }

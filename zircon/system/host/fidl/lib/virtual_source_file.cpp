@@ -18,7 +18,7 @@ StringView VirtualSourceFile::LineContaining(StringView view, Position* position
         if (view.data() < line_begin || view.data() + view.size() > line_end)
             continue;
         if (position_out != nullptr) {
-            auto column = view.data() - line_begin;
+            auto column = (view.data() - line_begin) + 1;
             assert(column < std::numeric_limits<int>::max());
             *position_out = {i + 1, static_cast<int>(column)};
         }

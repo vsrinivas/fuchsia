@@ -88,7 +88,7 @@ struct Simple {
       "location": {
         "filename": "json.fidl",
         "line": 4,
-        "column": 7
+        "column": 8
       },
       "anonymous": false,
       "members": [
@@ -101,7 +101,7 @@ struct Simple {
           "location": {
             "filename": "json.fidl",
             "line": 5,
-            "column": 10
+            "column": 11
           },
           "size": 1,
           "max_out_of_line": 0,
@@ -118,7 +118,7 @@ struct Simple {
           "location": {
             "filename": "json.fidl",
             "line": 6,
-            "column": 9
+            "column": 10
           },
           "size": 1,
           "max_out_of_line": 0,
@@ -179,7 +179,7 @@ protocol EmptyInterface {
       "location": {
         "filename": "json.fidl",
         "line": 7,
-        "column": 9
+        "column": 10
       },
       "methods": [
         {
@@ -189,7 +189,7 @@ protocol EmptyInterface {
           "location": {
             "filename": "json.fidl",
             "line": 8,
-            "column": 2
+            "column": 3
           },
           "has_request": true,
           "maybe_request": [
@@ -203,7 +203,7 @@ protocol EmptyInterface {
               "location": {
                 "filename": "json.fidl",
                 "line": 8,
-                "column": 13
+                "column": 14
               },
               "size": 1,
               "max_out_of_line": 0,
@@ -223,7 +223,7 @@ protocol EmptyInterface {
           "location": {
             "filename": "json.fidl",
             "line": 9,
-            "column": 5
+            "column": 6
           },
           "has_request": false,
           "has_response": true,
@@ -238,7 +238,7 @@ protocol EmptyInterface {
               "location": {
                 "filename": "json.fidl",
                 "line": 9,
-                "column": 20
+                "column": 21
               },
               "size": 1,
               "max_out_of_line": 0,
@@ -257,7 +257,7 @@ protocol EmptyInterface {
           "location": {
             "filename": "json.fidl",
             "line": 10,
-            "column": 2
+            "column": 3
           },
           "has_request": true,
           "maybe_request": [
@@ -271,7 +271,7 @@ protocol EmptyInterface {
               "location": {
                 "filename": "json.fidl",
                 "line": 10,
-                "column": 23
+                "column": 24
               },
               "size": 1,
               "max_out_of_line": 0,
@@ -294,7 +294,7 @@ protocol EmptyInterface {
               "location": {
                 "filename": "json.fidl",
                 "line": 10,
-                "column": 36
+                "column": 37
               },
               "size": 1,
               "max_out_of_line": 0,
@@ -315,7 +315,7 @@ protocol EmptyInterface {
       "location": {
         "filename": "json.fidl",
         "line": 4,
-        "column": 7
+        "column": 8
       },
       "anonymous": false,
       "members": [],
@@ -373,7 +373,7 @@ table Simple {
       "location": {
         "filename": "json.fidl",
         "line": 4,
-        "column": 6
+        "column": 7
       },
       "members": [
         {
@@ -387,7 +387,7 @@ table Simple {
           "location": {
             "filename": "json.fidl",
             "line": 5,
-            "column": 13
+            "column": 14
           },
           "size": 1,
           "max_out_of_line": 0,
@@ -405,7 +405,7 @@ table Simple {
           "location": {
             "filename": "json.fidl",
             "line": 6,
-            "column": 12
+            "column": 13
           },
           "size": 1,
           "max_out_of_line": 0,
@@ -474,7 +474,7 @@ union PizzaOrPasta {
       "location": {
         "filename": "json.fidl",
         "line": 4,
-        "column": 7
+        "column": 8
       },
       "anonymous": false,
       "members": [
@@ -492,7 +492,7 @@ union PizzaOrPasta {
           "location": {
             "filename": "json.fidl",
             "line": 5,
-            "column": 22
+            "column": 23
           },
           "size": 16,
           "max_out_of_line": 4294967295,
@@ -511,7 +511,7 @@ union PizzaOrPasta {
       "location": {
         "filename": "json.fidl",
         "line": 8,
-        "column": 7
+        "column": 8
       },
       "anonymous": false,
       "members": [
@@ -525,7 +525,7 @@ union PizzaOrPasta {
           "location": {
             "filename": "json.fidl",
             "line": 9,
-            "column": 14
+            "column": 15
           },
           "size": 16,
           "max_out_of_line": 16,
@@ -547,7 +547,7 @@ union PizzaOrPasta {
       "location": {
         "filename": "json.fidl",
         "line": 12,
-        "column": 6
+        "column": 7
       },
       "members": [
         {
@@ -560,7 +560,7 @@ union PizzaOrPasta {
           "location": {
             "filename": "json.fidl",
             "line": 13,
-            "column": 10
+            "column": 11
           },
           "size": 16,
           "max_out_of_line": 4294967295,
@@ -577,7 +577,7 @@ union PizzaOrPasta {
           "location": {
             "filename": "json.fidl",
             "line": 14,
-            "column": 10
+            "column": 11
           },
           "size": 16,
           "max_out_of_line": 16,
@@ -640,7 +640,7 @@ xunion xu {
       "location": {
         "filename": "json.fidl",
         "line": 4,
-        "column": 7
+        "column": 8
       },
       "members": [
         {
@@ -653,7 +653,7 @@ xunion xu {
           "location": {
             "filename": "json.fidl",
             "line": 5,
-            "column": 9
+            "column": 10
           },
           "size": 16,
           "max_out_of_line": 4294967295,
@@ -670,7 +670,7 @@ xunion xu {
           "location": {
             "filename": "json.fidl",
             "line": 6,
-            "column": 8
+            "column": 9
           },
           "size": 4,
           "max_out_of_line": 0,
@@ -729,7 +729,7 @@ protocol sub {
       "location": {
         "filename": "json.fidl",
         "line": 5,
-        "column": 9
+        "column": 10
       },
       "maybe_attributes": [
         {
@@ -745,7 +745,7 @@ protocol sub {
           "location": {
             "filename": "json.fidl",
             "line": 6,
-            "column": 3
+            "column": 4
           },
           "has_request": true,
           "maybe_request": [
@@ -758,7 +758,7 @@ protocol sub {
               "location": {
                 "filename": "json.fidl",
                 "line": 6,
-                "column": 14
+                "column": 15
               },
               "size": 16,
               "max_out_of_line": 4294967295,
@@ -780,7 +780,7 @@ protocol sub {
               "location": {
                 "filename": "json.fidl",
                 "line": 6,
-                "column": 27
+                "column": 28
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -799,7 +799,7 @@ protocol sub {
       "location": {
         "filename": "json.fidl",
         "line": 9,
-        "column": 9
+        "column": 10
       },
       "methods": [
         {
@@ -809,7 +809,7 @@ protocol sub {
           "location": {
             "filename": "json.fidl",
             "line": 6,
-            "column": 3
+            "column": 4
           },
           "has_request": true,
           "maybe_request": [
@@ -822,7 +822,7 @@ protocol sub {
               "location": {
                 "filename": "json.fidl",
                 "line": 6,
-                "column": 14
+                "column": 15
               },
               "size": 16,
               "max_out_of_line": 4294967295,
@@ -844,7 +844,7 @@ protocol sub {
               "location": {
                 "filename": "json.fidl",
                 "line": 6,
-                "column": 27
+                "column": 28
               },
               "size": 8,
               "max_out_of_line": 0,
@@ -908,7 +908,7 @@ protocol Child {
       "location": {
         "filename": "json.fidl",
         "line": 5,
-        "column": 9
+        "column": 10
       },
       "maybe_attributes": [
         {
@@ -924,7 +924,7 @@ protocol Child {
           "location": {
             "filename": "json.fidl",
             "line": 6,
-            "column": 2
+            "column": 3
           },
           "has_request": true,
           "maybe_request": [
@@ -938,7 +938,7 @@ protocol Child {
               "location": {
                 "filename": "json.fidl",
                 "line": 6,
-                "column": 24
+                "column": 25
               },
               "size": 4,
               "max_out_of_line": 0,
@@ -958,7 +958,7 @@ protocol Child {
       "location": {
         "filename": "json.fidl",
         "line": 9,
-        "column": 9
+        "column": 10
       },
       "methods": [
         {
@@ -968,7 +968,7 @@ protocol Child {
           "location": {
             "filename": "json.fidl",
             "line": 6,
-            "column": 2
+            "column": 3
           },
           "has_request": true,
           "maybe_request": [
@@ -982,7 +982,7 @@ protocol Child {
               "location": {
                 "filename": "json.fidl",
                 "line": 6,
-                "column": 24
+                "column": 25
               },
               "size": 4,
               "max_out_of_line": 0,
@@ -1002,7 +1002,7 @@ protocol Child {
           "location": {
             "filename": "json.fidl",
             "line": 11,
-            "column": 2
+            "column": 3
           },
           "has_request": true,
           "maybe_request": [
@@ -1016,7 +1016,7 @@ protocol Child {
               "location": {
                 "filename": "json.fidl",
                 "line": 11,
-                "column": 25
+                "column": 26
               },
               "size": 4,
               "max_out_of_line": 0,
@@ -1075,7 +1075,7 @@ protocol Example {
       "location": {
         "filename": "json.fidl",
         "line": 4,
-        "column": 9
+        "column": 10
       },
       "methods": [
         {
@@ -1085,7 +1085,7 @@ protocol Example {
           "location": {
             "filename": "json.fidl",
             "line": 5,
-            "column": 3
+            "column": 4
           },
           "has_request": true,
           "maybe_request": [
@@ -1098,7 +1098,7 @@ protocol Example {
               "location": {
                 "filename": "json.fidl",
                 "line": 5,
-                "column": 14
+                "column": 15
               },
               "size": 16,
               "max_out_of_line": 4294967295,
@@ -1121,7 +1121,7 @@ protocol Example {
               "location": {
                 "filename": "generated",
                 "line": 6,
-                "column": 0
+                "column": 1
               },
               "size": 16,
               "max_out_of_line": 0,
@@ -1142,7 +1142,7 @@ protocol Example {
       "location": {
         "filename": "generated",
         "line": 2,
-        "column": 0
+        "column": 1
       },
       "anonymous": false,
       "members": [
@@ -1155,7 +1155,7 @@ protocol Example {
           "location": {
             "filename": "json.fidl",
             "line": 5,
-            "column": 27
+            "column": 28
           },
           "size": 8,
           "max_out_of_line": 0,
@@ -1177,7 +1177,7 @@ protocol Example {
       "location": {
         "filename": "generated",
         "line": 5,
-        "column": 0
+        "column": 1
       },
       "maybe_attributes": [
         {
@@ -1196,7 +1196,7 @@ protocol Example {
           "location": {
             "filename": "generated",
             "line": 3,
-            "column": 0
+            "column": 1
           },
           "size": 8,
           "max_out_of_line": 0,
@@ -1212,7 +1212,7 @@ protocol Example {
           "location": {
             "filename": "generated",
             "line": 4,
-            "column": 0
+            "column": 1
           },
           "size": 4,
           "max_out_of_line": 0,
@@ -1272,7 +1272,7 @@ struct ByteAndBytes {
       "location": {
         "filename": "json.fidl",
         "line": 4,
-        "column": 7
+        "column": 8
       },
       "anonymous": false,
       "members": [
@@ -1285,7 +1285,7 @@ struct ByteAndBytes {
           "location": {
             "filename": "json.fidl",
             "line": 5,
-            "column": 7
+            "column": 8
           },
           "size": 1,
           "max_out_of_line": 0,
@@ -1306,7 +1306,7 @@ struct ByteAndBytes {
           "location": {
             "filename": "json.fidl",
             "line": 6,
-            "column": 8
+            "column": 9
           },
           "size": 16,
           "max_out_of_line": 4294967295,
@@ -1328,7 +1328,7 @@ struct ByteAndBytes {
           "location": {
             "filename": "json.fidl",
             "line": 7,
-            "column": 13
+            "column": 14
           },
           "size": 16,
           "max_out_of_line": 1024,
@@ -1350,7 +1350,7 @@ struct ByteAndBytes {
           "location": {
             "filename": "json.fidl",
             "line": 8,
-            "column": 14
+            "column": 15
           },
           "size": 16,
           "max_out_of_line": 1024,
@@ -1461,8 +1461,8 @@ struct DocCommentWithQuotes {};
     ASSERT_TRUE(library.Compile());
     auto json = library.GenerateJSON();
     ASSERT_STR_STR(
-      json.c_str(),
-      R"JSON("value": " \"pleaseescapethisdocommentproperly\"\n")JSON");
+        json.c_str(),
+        R"JSON("value": " \"pleaseescapethisdocommentproperly\"\n")JSON");
 
     END_TEST;
 }

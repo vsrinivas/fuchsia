@@ -301,7 +301,7 @@ protocol cv {
     ASSERT_EQ(errors.size(), 1);
     ASSERT_STR_STR(errors[0].c_str(),
                    "Multiple methods with the same ordinal in an interface; "
-                   "previous was at example.fidl:9:3. If these were automatically generated, "
+                   "previous was at example.fidl:9:4. If these were automatically generated, "
                    "consider using attribute [Selector=\"f_\"] to change the name used to "
                    "calculate the ordinal.");
 
