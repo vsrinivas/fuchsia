@@ -258,6 +258,8 @@ struct x86_model_info {
 
     uint32_t display_family;
     uint32_t display_model;
+
+    uint32_t patch_level;
 };
 
 const struct x86_model_info * x86_get_model(void);
@@ -315,5 +317,7 @@ void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);
 bool x86_intel_cpu_has_meltdown(void);
 bool x86_intel_cpu_has_l1tf(void);
+uint32_t x86_amd_get_patch_level(void);
+uint32_t x86_intel_get_patch_level(void);
 
 __END_CDECLS

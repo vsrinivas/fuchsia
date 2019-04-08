@@ -8,6 +8,30 @@
 #include <arch/x86/feature.h>
 #include <bits.h>
 
+uint32_t x86_intel_get_patch_level(void) {
+    uint32_t patch_level = 0;
+    if (!x86_feature_test(X86_FEATURE_HYPERVISOR)) {
+        uint32_t dummy;
+        // Invoking CPUID for leaf 1h fills in the microcode patch level into the high half of
+        // X86_MSR_IA32_BIOS_SIGN_ID MSR. Operations between CPUID and RDMSR may clear the MSR;
+        // write this sequence in assembly to ensure that there are none.
+        asm volatile(
+            "xorl %%eax, %%eax\n"
+            "xorl %%edx, %%edx\n"
+            "movl $0x8b, %%ecx\n"
+            "wrmsr\n"  // Clear X86_MSR_IA32_BIOS_SIGN_ID before reading the patch level, per SDM.
+            "movq $0x1, %%rax\n"
+            "cpuid\n"
+            "movl $0x8b, %%ecx\n"
+            "rdmsr\n"
+            : "=a"(dummy), "=d"(patch_level)
+            :
+            : "ebx", "ecx", "memory"
+        );
+    }
+    return patch_level;
+}
+
 bool x86_intel_cpu_has_meltdown(void) {
     // IA32_ARCH_CAPABILITIES MSR enumerates fixes for Meltdown and other speculation-related side
     // channels, where available.

@@ -127,6 +127,17 @@ void x86_feature_init(void) {
 
         x86_microarch = get_microarch(&model_info);
     }
+    // Get microcode patch level
+    switch (x86_vendor) {
+    case X86_VENDOR_INTEL:
+        model_info.patch_level = x86_intel_get_patch_level();
+        break;
+    case X86_VENDOR_AMD:
+        model_info.patch_level = x86_amd_get_patch_level();
+        break;
+    default:
+        break;
+    }
     x86_microarch_config = select_microarch_config(x86_microarch);
 
     g_x86_feature_fsgsbase = x86_feature_test(X86_FEATURE_FSGSBASE);
@@ -350,6 +361,7 @@ void x86_feature_debug(void) {
     printf("Microarch: %s\n", microarch_string);
     printf("F/M/S: %x/%x/%x\n", model_info.display_family, model_info.display_model,
            model_info.stepping);
+    printf("patch_level: %x\n", model_info.patch_level);
 
     char brand_string[50];
     memset(brand_string, 0, sizeof(brand_string));
