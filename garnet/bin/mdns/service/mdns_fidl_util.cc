@@ -170,9 +170,12 @@ std::unique_ptr<Mdns::Publication> MdnsFidlUtil::Convert(
   auto publication = Mdns::Publication::Create(
       inet::IpPort::From_uint16_t(publication_ptr->port),
       fidl::To<std::vector<std::string>>(publication_ptr->text));
-  publication->ptr_ttl_seconds = publication_ptr->ptr_ttl_seconds;
-  publication->srv_ttl_seconds = publication_ptr->srv_ttl_seconds;
-  publication->txt_ttl_seconds = publication_ptr->txt_ttl_seconds;
+  publication->ptr_ttl_seconds =
+      zx::duration(publication_ptr->ptr_ttl).to_secs();
+  publication->srv_ttl_seconds =
+      zx::duration(publication_ptr->srv_ttl).to_secs();
+  publication->txt_ttl_seconds =
+      zx::duration(publication_ptr->txt_ttl).to_secs();
 
   return publication;
 }

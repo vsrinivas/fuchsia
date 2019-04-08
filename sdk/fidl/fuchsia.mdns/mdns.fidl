@@ -5,82 +5,74 @@
 library fuchsia.mdns;
 
 using fuchsia.netstack;
+using zx;
 
 /// Primary mDNS service interface.
+///
+/// In mDNS, all strings are UTF-8 encoded and limited to 255 bytes, not
+/// including null termination. Host, service and instance names consist of
+/// labels separated by '.'. Labels are limited to 63 bytes not including the
+/// separator.
 [Discoverable]
 protocol Controller {
-    /// Gets the addresses for the specified host name. `host_name` may not end in
-    /// a '.'.
-    ResolveHostName(string host_name, uint32 timeout_ms)
+    /// Gets the addresses for the specified host name. `host_name` may not end
+    /// in a '.'. `timeout` specifies how long the service should wait before
+    /// giving up when waiting for a response to a resolution query. In typical
+    /// use, a timeout of two or three seconds is recommended.
+    ///
+    /// A successful resolution may return one or both addresses. An
+    /// unsuccessful resolution is indicated when both addresses are null.
+    ResolveHostName(string:255 host_name, zx.duration timeout)
         -> (fuchsia.netstack.SocketAddress? v4_address,
             fuchsia.netstack.SocketAddress? v6_address);
 
     /// Subscribes to a service. The subscription lasts until `subscriber` is
     /// unbound. `service_name` must end in '._tcp.' or '._udp.'.
-    SubscribeToService(string service_name, ServiceSubscriber subscriber);
+    SubscribeToService(string:255 service_name, ServiceSubscriber subscriber);
 
-    /// Publishes a service instance available at the specified port. The service
-    /// is published until it is unpublished via `UnpublishServiceInstance`.
-    /// `service_name` must end in '._tcp.' or '._udp.'. `instance_name` must not
-    /// end in a '.'. `port` is host-endian. `text` contains metadata strings that
-    /// describe the instance. No subtypes are published unless the `SetSubtypes`
-    /// method is called. `perform_probe` indicates whether a probe for a
+    /// Publishes a service instance. `service_name` must end in '._tcp.' or
+    /// '._udp.'. `instance_name` must not end in a '.'. `responder` is
+    /// consulted via its `GetPublication` method for initial announcements and
+    /// to answer queries. The service is published until the `responder`
+    /// channel closes. In addition to announcements and queries for the service
+    /// type, all queries for subtypes are answered subject to filtering through
+    /// the `Responder`. `perform_probe` indicates whether a probe for a
     /// conflicting instance should be performed before publishing the instance.
     /// This value should be `true` unless the instance name is known to be
     /// unique.
-    PublishServiceInstance(string service_name,
-                           string instance_name,
-                           uint16 port,
-                           vector<string>? text,
-                           bool perform_probe) -> (Result result);
+    PublishServiceInstance(string:255 service_name,
+                           string:255 instance_name,
+                           bool perform_probe,
+                           Responder responder) -> (Result result);
 
-    /// Ends publication started with `PublishServiceInstance`. `service_name` must
-    /// end in '._tcp.' or '._udp.'. `instance_name` must not end in a '.'.
-    UnpublishServiceInstance(string service_name, string instance_name);
+    /// Publishes a service instance available at the specified port. The
+    /// service instance is published until it is unpublished via
+    /// `UnpublishServiceInstance`. `service_name` must end in '._tcp.' or
+    /// '._udp.'. `instance_name` must not end in a '.'. `port` is host-endian.
+    /// `text` contains metadata strings that describe the instance.
+    /// `perform_probe` indicates whether a probe for a conflicting instance
+    /// should be performed before publishing the instance. This value should
+    /// be `true` unless the instance name is known to be unique.
+    // TODO(NET-2188): Remove this after implementing config files.
+    DEPRECATEDPublishServiceInstance(string:255 service_name,
+                                     string:255 instance_name,
+                                     uint16 port,
+                                     vector<string:255> text,
+                                     bool perform_probe) -> (Result result);
 
-    /// Publishes a service instance with support for subtypes. `service_name` must
-    /// end in '._tcp.' or '._udp.'. `instance_name` must not end in a '.'.
-    /// `responder` is consulted for initial announcements and to answer queries.
-    /// The service is published until the `responder` channel closes. In addition
-    /// to announcements and queries for the service type, all queries for subtypes
-    /// are answered subject to filtering through the `Responder`. If subtype
-    /// announcement is desired, a call to `SetSubtypes` is required to set the
-    /// list of announced subtypes. `perform_probe` indicates whether a probe for
-    /// a conflicting instance should be performed before publishing the instance.
-    /// This value should be `true` unless the instance name is known to be
-    /// unique.
-    AddResponder(string service_name,
-                 string instance_name,
-                 bool perform_probe,
-                 Responder responder);
-
-    /// Sets the subtypes for a service instance currently being published due to
-    /// a call to `PublishServiceInstance` or `AddResponder`.  `service_name` must
-    /// end in '._tcp.' or '._udp.'. `instance_name` must not end in a '.'. For an
-    /// instance published with `PublishServiceInstance`, the specified subtypes
-    /// will be announced, and queries for the subtypes will be answered. For an
-    /// instance published with `AddResponder`, the specified subtypes will be
-    /// announced subject to filtering through the `Responder`. All subtype
-    /// queries are forwarded to the `Responder`, so this method has no effect
-    /// in that regard.
-    SetSubtypes(string service_name,
-                string instance_name,
-                vector<string> subtypes);
-
-    /// Initiates announcement of a service instance currently being published due
-    /// to a call to `PublishServiceInstance` or `AddResponder`. This is generally
-    /// not needed for the `PublishServiceInstance` case. For instances published
-    /// with `AddResponder`, this method is typically used when the port or text
-    /// associated with the instance changes. All announcements are filtered
-    /// through the `Responder`, which can reply with the new port and text
-    /// values.
-    ReannounceInstance(string service_name, string instance_name);
+    /// Ends publication started with `PublishServiceInstance`. `service_name`
+    /// must end in '._tcp.' or '._udp.'. `instance_name` must not end in a '.'.
+    // TODO(NET-2188): Remove this after implementing config files.
+    DEPRECATEDUnpublishServiceInstance(string:255 service_name,
+                                       string:255 instance_name);
 
     /// Specifies whether mDNS traffic should be logged.
-    SetVerbose(bool value);
+    // TODO(NET-2189): Move to /hub.
+    DEPRECATEDSetVerbose(bool value);
 };
 
 /// Result values for instance publishing.
+// TODO(dalesat): Rename 'Error' and use error syntax when generally available.
 enum Result : int32 {
     /// Operation succeeded.
     OK = 0;
@@ -113,40 +105,52 @@ protocol ServiceSubscriber {
     InstanceChanged(ServiceInstance instance) -> ();
 
     /// Notifies the subscriber that a known service instance has been lost.
-    InstanceLost(string service_name, string instance_name) -> ();
+    InstanceLost(string:255 service_name, string:255 instance_name) -> ();
 };
 
 /// Describes a service instance.
 struct ServiceInstance {
-    string service_name;
-    string instance_name;
+    string:255 service_name;
+    string:255 instance_name;
     fuchsia.netstack.SocketAddress? v4_address;
     fuchsia.netstack.SocketAddress? v6_address;
-    vector<string>? text;
+    vector<string:255> text;
 };
 
 /// Client-supplied responder interface.
 protocol Responder {
-    /// Updates the status of the instance publication.
-    UpdateStatus(Result result);
-
-    /// Provides instance information for initial announcements and query responses
-    /// relating to the service instance specified in `Service.AddResponder`.
-    /// `query` indicates whether data is requested for an initial announcement
-    /// (false) or in response to a query (true). If the publication relates to a
-    /// subtype of the service, `subtype` contains the subtype, otherwise it is
-    /// null. If `publication` is null, no announcement or response is transmitted.
-    /// Strings in `text` are transmitted in the TXT record.
-    GetPublication(bool query, string? subtype)
+    /// Provides instance information for initial announcements and query
+    /// responses relating to the service instance specified in
+    /// `Controller.AddResponder`. `query` indicates whether data is requested
+    /// for an initial announcement (false) or in response to a query (true).
+    /// If the publication relates to a subtype of the service, `subtype`
+    /// contains the subtype, otherwise it is null. If `publication` is null,
+    /// no announcement or response is transmitted. Strings in `text` are
+    /// transmitted in the TXT record.
+    GetPublication(bool query, string:255? subtype)
         -> (Publication? publication);
+
+    /// Sets the subtypes for the service instance. The specified subtypes will
+    /// be announced subject to filtering through the `Responder`. The initial
+    /// subtype collection is empty.
+    -> OnSubtypesChanged(vector<string:255> subtypes);
+
+    /// Initiates reannouncement of the service instance due to a change in the
+    /// instance's port number or text strings. All announcements are filtered
+    /// through `GetPublication`, which replies with the new port and text
+    /// values.
+    -> OnPublicationChanged();
 };
 
-/// Describes an initial instance publication or query response. `port` is host-
-/// endian.
+/// Describes an initial instance announcement or query response. `port` is
+/// host-endian. In typical use, the default TTL values should be used. TTL
+/// values are rounded down to the nearest second. TTL values less than one
+/// second are not permitted and will result in the `Responder` channel being
+/// closed.
 struct Publication {
     uint16 port;
-    vector<string>? text;
-    uint32 ptr_ttl_seconds = 4500; // default 75 minutes
-    uint32 srv_ttl_seconds = 120; // default 2 minutes
-    uint32 txt_ttl_seconds = 4500; // default 75 minutes
+    vector<string:255> text;
+    zx.duration ptr_ttl = 4500000000000; // default 75 minutes
+    zx.duration srv_ttl = 120000000000; // default 2 minutes
+    zx.duration txt_ttl = 4500000000000; // default 75 minutes
 };

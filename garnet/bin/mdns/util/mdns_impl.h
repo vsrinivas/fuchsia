@@ -44,9 +44,9 @@ class MdnsImpl : public fuchsia::mdns::Responder,
                const std::vector<std::string>& announce,
                const std::vector<std::string>& text);
 
-  // fuchsia::mdns::Responder implementation.
-  void UpdateStatus(fuchsia::mdns::Result result) override;
+  void UpdateStatus(fuchsia::mdns::Result result);
 
+  // fuchsia::mdns::Responder implementation.
   void GetPublication(bool query, fidl::StringPtr subtype,
                       GetPublicationCallback callback) override;
 

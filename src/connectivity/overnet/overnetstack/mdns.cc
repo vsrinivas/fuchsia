@@ -98,10 +98,8 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer>,
       }
     }
     std::vector<std::string> text;
-    if (!svc.text.is_null()) {
-      for (const auto& line : svc.text.get()) {
-        text.push_back(line);
-      }
+    for (const auto& line : svc.text) {
+      text.push_back(line);
     }
 
     if (it == service_map_.end()) {
@@ -208,7 +206,7 @@ class MdnsAdvertisement::Impl {
         node_id_(nub->node_id()) {
     std::cerr << "Requesting mDNS advertisement for " << node_id_ << " on port "
               << nub->port() << "\n";
-    controller_->PublishServiceInstance(
+    controller_->DEPRECATEDPublishServiceInstance(
         kServiceName, node_id_.ToString(), nub->port(), {}, true,
         [node_id = node_id_, port = nub->port()](fuchsia::mdns::Result result) {
           std::cout << "Advertising " << node_id << " on port " << port
@@ -216,7 +214,8 @@ class MdnsAdvertisement::Impl {
         });
   }
   ~Impl() {
-    controller_->UnpublishServiceInstance(kServiceName, node_id_.ToString());
+    controller_->DEPRECATEDUnpublishServiceInstance(kServiceName,
+                                                    node_id_.ToString());
   }
 
  private:

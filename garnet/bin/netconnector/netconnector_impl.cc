@@ -48,7 +48,7 @@ NetConnectorImpl::NetConnectorImpl(NetConnectorParams* params,
             ->ConnectToEnvironmentService<fuchsia::mdns::Controller>();
 
     if (params_->mdns_verbose()) {
-      mdns_service->SetVerbose(true);
+      mdns_service->DEPRECATEDSetVerbose(true);
     }
 
     if (params_->show_devices()) {
@@ -115,7 +115,7 @@ void NetConnectorImpl::StartListener() {
 
   host_name_ = GetHostName();
 
-  mdns_controller_->PublishServiceInstance(
+  mdns_controller_->DEPRECATEDPublishServiceInstance(
       kFuchsiaServiceName, host_name_, kPort.as_uint16_t(),
       fidl::VectorPtr<std::string>(), true,
       [this](fuchsia::mdns::Result result) {

@@ -10,6 +10,20 @@
 
 namespace mdns {
 
+template <typename T>
+std::ostream& operator<<(std::ostream& os, const std::vector<T>& value) {
+  if (value.empty()) {
+    return os << "<empty>";
+  }
+
+  int index = 0;
+  for (auto& element : value) {
+    os << fostr::NewLine << "[" << index++ << "] " << element;
+  }
+
+  return os;
+}
+
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::mdns::ServiceInstance& value) {
   os << value.service_name << " " << value.instance_name;
@@ -23,7 +37,7 @@ std::ostream& operator<<(std::ostream& os,
     os << fostr::NewLine << "IPv6 address: " << *value.v6_address;
   }
 
-  if (value.text) {
+  if (!value.text.empty()) {
     os << fostr::NewLine << "text: " << value.text;
   }
 

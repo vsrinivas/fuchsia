@@ -43,12 +43,12 @@ MdnsImpl::MdnsImpl(component::StartupContext* startup_context,
   switch (params->command_verb()) {
     case MdnsParams::CommandVerb::kVerbose:
       std::cout << "verbose: logging mDNS traffic\n";
-      controller_->SetVerbose(true);
+      controller_->DEPRECATEDSetVerbose(true);
       quit_callback_();
       break;
     case MdnsParams::CommandVerb::kQuiet:
       std::cout << "verbose: not logging mDNS traffic\n";
-      controller_->SetVerbose(false);
+      controller_->DEPRECATEDSetVerbose(false);
       quit_callback_();
       break;
     case MdnsParams::CommandVerb::kResolve:
@@ -136,7 +136,7 @@ void MdnsImpl::Publish(const std::string& service_name,
                        const std::vector<std::string>& text) {
   std::cout << "publishing instance " << instance_name << " of service "
             << service_name << "\n";
-  controller_->PublishServiceInstance(
+  controller_->DEPRECATEDPublishServiceInstance(
       service_name, instance_name, port,
       fidl::To<fidl::VectorPtr<std::string>>(text), true,
       [this](fuchsia::mdns::Result result) {
@@ -149,7 +149,7 @@ void MdnsImpl::Unpublish(const std::string& service_name,
                          const std::string& instance_name) {
   std::cout << "unpublishing instance " << instance_name << " of service "
             << service_name << "\n";
-  controller_->UnpublishServiceInstance(service_name, instance_name);
+  controller_->DEPRECATEDUnpublishServiceInstance(service_name, instance_name);
   quit_callback_();
 }
 
@@ -173,12 +173,12 @@ void MdnsImpl::Respond(const std::string& service_name,
   publication_port_ = port;
   publication_text_ = text;
 
-  controller_->AddResponder(service_name, instance_name, true,
-                            std::move(responder_handle));
+  controller_->PublishServiceInstance(
+      service_name, instance_name, true, std::move(responder_handle),
+      [this](fuchsia::mdns::Result result) { UpdateStatus(result); });
 
   if (!announce.empty()) {
-    controller_->SetSubtypes(service_name, instance_name,
-                             fidl::To<fidl::VectorPtr<std::string>>(announce));
+    responder_binding_.events().OnSubtypesChanged(announce);
   }
 
   WaitForKeystroke();

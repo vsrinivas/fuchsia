@@ -22,7 +22,7 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
   ~MdnsServiceImpl() override;
 
   // Controller implementation.
-  void ResolveHostName(std::string host_name, uint32_t timeout_ms,
+  void ResolveHostName(std::string host_name, int64_t timeout_ns,
                        ResolveHostNameCallback callback) override;
 
   void SubscribeToService(
@@ -30,27 +30,20 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
       fidl::InterfaceHandle<fuchsia::mdns::ServiceSubscriber> subscriber)
       override;
 
-  void PublishServiceInstance(std::string service_name,
-                              std::string instance_name, uint16_t port,
-                              fidl::VectorPtr<std::string> text,
-                              bool perform_probe,
-                              PublishServiceInstanceCallback callback) override;
+  void PublishServiceInstance(
+      std::string service_name, std::string instance_name, bool perform_probe,
+      fidl::InterfaceHandle<fuchsia::mdns::Responder> responder_handle,
+      PublishServiceInstanceCallback callback) override;
 
-  void UnpublishServiceInstance(std::string service_name,
-                                std::string instance_name) override;
+  void DEPRECATEDPublishServiceInstance(
+      std::string service_name, std::string instance_name, uint16_t port,
+      std::vector<std::string> text, bool perform_probe,
+      PublishServiceInstanceCallback callback) override;
 
-  void AddResponder(std::string service_name, std::string instance_name,
-                    bool perform_probe,
-                    fidl::InterfaceHandle<fuchsia::mdns::Responder>
-                        responder_handle) override;
+  void DEPRECATEDUnpublishServiceInstance(std::string service_name,
+                                          std::string instance_name) override;
 
-  void SetSubtypes(std::string service_name, std::string instance_name,
-                   std::vector<std::string> subtypes) override;
-
-  void ReannounceInstance(std::string service_name,
-                          std::string instance_name) override;
-
-  void SetVerbose(bool value) override;
+  void DEPRECATEDSetVerbose(bool value) override;
 
  private:
   class Subscriber : public Mdns::Subscriber {
@@ -111,7 +104,7 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
   // Publisher for PublishServiceInstance.
   class SimplePublisher : public Mdns::Publisher {
    public:
-    SimplePublisher(inet::IpPort port, fidl::VectorPtr<std::string> text,
+    SimplePublisher(inet::IpPort port, std::vector<std::string> text,
                     PublishServiceInstanceCallback callback);
 
    private:
@@ -137,6 +130,7 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
   class ResponderPublisher : public Mdns::Publisher {
    public:
     ResponderPublisher(fuchsia::mdns::ResponderPtr responder,
+                       PublishServiceInstanceCallback callback,
                        fit::closure deleter);
 
     // Mdns::Publisher implementation.
@@ -147,6 +141,7 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
                             callback) override;
 
     fuchsia::mdns::ResponderPtr responder_;
+    PublishServiceInstanceCallback callback_;
 
     // Disallow copy, assign and move.
     ResponderPublisher(const ResponderPublisher&) = delete;
