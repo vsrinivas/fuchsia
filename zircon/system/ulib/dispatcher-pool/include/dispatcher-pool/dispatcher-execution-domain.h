@@ -8,6 +8,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <lib/zx/event.h>
+#include <lib/zx/profile.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
@@ -97,8 +98,7 @@ public:
         ~ScopedToken() __TA_RELEASE() { }
     };
 
-    static constexpr uint32_t DEFAULT_PRIORITY = 16;
-    static fbl::RefPtr<ExecutionDomain> Create(uint32_t priority = DEFAULT_PRIORITY);
+    static fbl::RefPtr<ExecutionDomain> Create(zx::profile profile = {});
 
     void Deactivate() __TA_EXCLUDES(domain_token_) { Deactivate(true); }
     void DeactivateFromWithinDomain() __TA_REQUIRES(domain_token_) { Deactivate(false); }

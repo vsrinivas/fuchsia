@@ -7,6 +7,7 @@
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
 #include "garnet/bin/media/audio_core/audio_link.h"
 #include "garnet/bin/media/audio_core/audio_output.h"
+#include "garnet/bin/media/audio_core/utils.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/time/time_delta.h"
 
@@ -84,9 +85,16 @@ void AudioDevice::SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
 }
 
 zx_status_t AudioDevice::Init() {
-  // TODO(johngro) : See MG-940.  Eliminate this priority boost as soon as we
+  // TODO(johngro) : See ZX-940.  Eliminate this priority boost as soon as we
   // have a more official way of meeting real-time latency requirements.
-  mix_domain_ = ::dispatcher::ExecutionDomain::Create(24);
+
+  zx::profile profile;
+  zx_status_t res = AcquireHighPriorityProfile(&profile);
+  if (res != ZX_OK) {
+    return res;
+  }
+
+  mix_domain_ = ::dispatcher::ExecutionDomain::Create(std::move(profile));
   mix_wakeup_ = ::dispatcher::WakeupEvent::Create();
 
   if ((mix_domain_ == nullptr) || (mix_wakeup_ == nullptr)) {
@@ -101,8 +109,7 @@ zx_status_t AudioDevice::Init() {
         return ZX_OK;
       });
 
-  zx_status_t res =
-      mix_wakeup_->Activate(mix_domain_, std::move(process_handler));
+  res = mix_wakeup_->Activate(mix_domain_, std::move(process_handler));
   if (res != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to activate wakeup event for AudioDevice!  "
                    << "(res " << res << ")";

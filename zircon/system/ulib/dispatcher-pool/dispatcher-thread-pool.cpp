@@ -17,14 +17,30 @@
 namespace dispatcher {
 
 fbl::Mutex ThreadPool::active_pools_lock_;
-fbl::WAVLTree<uint32_t, fbl::RefPtr<ThreadPool>> ThreadPool::active_pools_;
+fbl::WAVLTree<zx_koid_t, fbl::RefPtr<ThreadPool>> ThreadPool::active_pools_;
 bool ThreadPool::system_shutdown_ = false;
 
-static constexpr uint32_t MAX_THREAD_PRIORITY = 31;
+namespace {
+
+zx_koid_t GetKoid(const zx::profile& profile) {
+    // A null profile is valid and results in the default priority thread pool,
+    // which is keyed by the 0-koid.
+    if (!profile.is_valid())
+        return ZX_KOID_INVALID;
+
+    zx_info_handle_basic_t profile_info = {};
+    if (profile.get_info(ZX_INFO_HANDLE_BASIC, &profile_info, sizeof(profile_info), nullptr,
+                         nullptr) != ZX_OK) {
+        return ZX_KOID_INVALID;
+    }
+    return profile_info.koid;
+}
+
+} // namespace
 
 // static
-zx_status_t ThreadPool::Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority) {
-    if ((pool_out == nullptr) || (priority > MAX_THREAD_PRIORITY))
+zx_status_t ThreadPool::Get(fbl::RefPtr<ThreadPool>* pool_out, zx::profile profile) {
+    if (pool_out == nullptr)
         return ZX_ERR_INVALID_ARGS;
 
     // From here on out, we need to be inside of the active pools lock.
@@ -37,7 +53,7 @@ zx_status_t ThreadPool::Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority
 
     // Do we already have a pool running at the desired priority?  If so, just
     // return a reference to it.
-    auto iter = active_pools_.find(priority);
+    auto iter = active_pools_.find(GetKoid(profile));
     if (iter.IsValid()) {
         *pool_out = iter.CopyPointer();
         return ZX_OK;
@@ -46,15 +62,15 @@ zx_status_t ThreadPool::Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority
     // Looks like we don't have an appropriate pool just yet.  Try to create one
     // and add it to the active set of pools.
     fbl::AllocChecker ac;
-    auto new_pool = fbl::AdoptRef(new (&ac) ThreadPool(priority));
+    auto new_pool = fbl::AdoptRef(new (&ac) ThreadPool(std::move(profile)));
     if (!ac.check()) {
-        printf("Failed to allocate new thread pool (prio %u)\n", priority);
+        printf("Failed to allocate new thread pool\n");
         return ZX_ERR_NO_MEMORY;
     }
 
     zx_status_t res = new_pool->Init();
     if (res != ZX_OK) {
-        printf("Failed to initialize new thread pool (prio %u, res %d)\n", priority, res);
+        printf("Failed to initialize new thread pool (res %d)\n", res);
         return res;
     }
 
@@ -65,7 +81,7 @@ zx_status_t ThreadPool::Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority
 
 // static
 void ThreadPool::ShutdownAll() {
-    fbl::WAVLTree<uint32_t, fbl::RefPtr<ThreadPool>> shutdown_targets;
+    fbl::WAVLTree<zx_koid_t, fbl::RefPtr<ThreadPool>> shutdown_targets;
 
     {
         fbl::AutoLock lock(&active_pools_lock_);
@@ -172,8 +188,16 @@ zx_status_t ThreadPool::BindIrqToPort(const zx::handle& irq_handle, uint64_t key
     return zx_interrupt_bind(irq_handle.get(), port_.get(), key, 0u);
 }
 
+zx_koid_t ThreadPool::GetKey() const {
+    return profile_koid_;
+}
+
+ThreadPool::ThreadPool(zx::profile profile) : profile_(std::move(profile)) {
+    profile_koid_ = GetKoid(profile_);
+}
+
 void ThreadPool::PrintDebugPrefix() {
-    printf("[ThreadPool %02u] ", priority_);
+    printf("[ThreadPool %zu] ", GetKey());
 }
 
 zx_status_t ThreadPool::Init() {
@@ -286,7 +310,7 @@ void ThreadPool::Thread::Join() {
 }
 
 void ThreadPool::Thread::PrintDebugPrefix() const {
-    printf("[Thread %03u-%02u] ", id_, pool_->priority());
+    printf("[Thread %03u-%zu] ", id_, pool_->GetKey());
 }
 
 int ThreadPool::Thread::Main() {
@@ -295,9 +319,11 @@ int ThreadPool::Thread::Main() {
     ZX_DEBUG_ASSERT(pool_ != nullptr);
     DEBUG_LOG("Thread Starting\n");
 
-    res = zx_thread_set_priority(pool_->priority());
-    if (res != ZX_OK) {
-        DEBUG_LOG("WARNING - Failed to set thread priority (res %d)\n", res);
+    if (pool_->profile().is_valid()) {
+        res = zx_object_set_profile(zx_thread_self(), pool_->profile().get(), 0);
+        if (res != ZX_OK) {
+            DEBUG_LOG("WARNING - Failed to set thread profile (res %d)\n", res);
+        }
     }
 
     while (true) {

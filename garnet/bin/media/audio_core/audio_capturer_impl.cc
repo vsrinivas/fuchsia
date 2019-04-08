@@ -7,8 +7,9 @@
 #include <lib/fit/defer.h>
 
 #include "garnet/bin/media/audio_core/audio_core_impl.h"
-#include "src/lib/fxl/logging.h"
+#include "garnet/bin/media/audio_core/utils.h"
 #include "lib/media/audio/types.h"
+#include "src/lib/fxl/logging.h"
 
 // Allow (at most) 256 slabs of pending capture buffers. At 16KB per slab, this
 // means we will deny allocations after 4MB. If we ever need more than 4MB of
@@ -44,9 +45,14 @@ AudioCapturerImpl::AudioCapturerImpl(
       loopback_(loopback),
       stream_gain_db_(kInitialCaptureGainDb),
       mute_(false) {
-  // TODO(johngro) : See MG-940. Eliminate this priority boost as soon as we
+  // TODO(johngro) : See ZX-940. Eliminate this priority boost as soon as we
   // have a more official way of meeting real-time latency requirements.
-  mix_domain_ = ::dispatcher::ExecutionDomain::Create(24);
+  zx::profile profile;
+  zx_status_t res = AcquireHighPriorityProfile(&profile);
+  if (res != ZX_OK) {
+    FXL_LOG(ERROR) << "Could not acquire profile!";
+  }
+  mix_domain_ = ::dispatcher::ExecutionDomain::Create(std::move(profile));
   mix_wakeup_ = ::dispatcher::WakeupEvent::Create();
   mix_timer_ = ::dispatcher::Timer::Create();
 

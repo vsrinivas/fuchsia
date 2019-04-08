@@ -563,7 +563,15 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
     // this system are running at boosted priority, we can come back here and
     // split the IRQ handler to run its own dedicated exeuction domain instead
     // of using the default domain.
-    default_domain_ = dispatcher::ExecutionDomain::Create(24 /* HIGH_PRIORITY in LK */);
+
+    zx_handle_t profile;
+    zx_status_t res = device_get_profile(pci_dev, 24 /* HIGH_PRIORITY */,
+                                         "zircon/system/dev/audio/intel-hda/controller", &profile);
+    if (res != ZX_OK) {
+        return ZX_ERR_INTERNAL;
+    }
+
+    default_domain_ = dispatcher::ExecutionDomain::Create(zx::profile(profile));
     if (default_domain_ == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -578,7 +586,6 @@ zx_status_t IntelHDAController::InitInternal(zx_device_t* pci_dev) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    zx_status_t res;
     res = irq_wakeup_event_->Activate(
         default_domain_,
         [controller = fbl::WrapRefPtr(this)](const dispatcher::WakeupEvent* evt) -> zx_status_t {

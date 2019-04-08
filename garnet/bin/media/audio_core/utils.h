@@ -8,6 +8,7 @@
 #include <fbl/ref_counted.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/zx/profile.h>
 #include <stdint.h>
 #include <zircon/device/audio.h>
 #include <zircon/types.h>
@@ -66,6 +67,8 @@ class RefCountedVmoMapper : public fzl::VmoMapper,
  public:
   RefCountedVmoMapper() = default;
 };
+
+zx_status_t AcquireHighPriorityProfile(zx::profile* profile);
 
 }  // namespace media::audio
 

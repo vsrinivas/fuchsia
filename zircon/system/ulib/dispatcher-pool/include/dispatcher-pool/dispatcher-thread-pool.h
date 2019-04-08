@@ -7,6 +7,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 #include <lib/zx/port.h>
+#include <lib/zx/profile.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_single_list.h>
@@ -24,7 +25,7 @@ namespace dispatcher {
 class ThreadPool : public fbl::RefCounted<ThreadPool>,
                    public fbl::WAVLTreeContainable<fbl::RefPtr<ThreadPool>> {
 public:
-    static zx_status_t Get(fbl::RefPtr<ThreadPool>* pool_out, uint32_t priority);
+    static zx_status_t Get(fbl::RefPtr<ThreadPool>* pool_out, zx::profile profile);
     static void ShutdownAll();
 
     void Shutdown();
@@ -38,7 +39,7 @@ public:
     zx_status_t CancelWaitOnPort(const zx::handle& handle, uint64_t key);
     zx_status_t BindIrqToPort(const zx::handle& irq_handle, uint64_t key);
 
-    uint32_t GetKey() const { return priority_; }
+    uint64_t GetKey() const;
 
 private:
     friend class fbl::RefPtr<ThreadPool>;
@@ -65,10 +66,10 @@ private:
         const uint32_t id_;
     };
 
-    explicit ThreadPool(uint32_t priority) : priority_(priority) { }
-    ~ThreadPool() { }
+    explicit ThreadPool(zx::profile profile);
+    ~ThreadPool() {}
 
-    uint32_t priority() const { return priority_; }
+    const zx::profile& profile() const { return profile_; }
     const zx::port& port() const { return port_; }
 
     void PrintDebugPrefix();
@@ -76,11 +77,12 @@ private:
     void InternalShutdown();
 
     static fbl::Mutex active_pools_lock_;
-    static fbl::WAVLTree<uint32_t, fbl::RefPtr<ThreadPool>> active_pools_
-        __TA_GUARDED(active_pools_lock_);
+    static fbl::WAVLTree<zx_koid_t, fbl::RefPtr<ThreadPool>>
+        active_pools_ __TA_GUARDED(active_pools_lock_);
     static bool system_shutdown_ __TA_GUARDED(active_pools_lock_);
 
-    const uint32_t priority_;
+    const zx::profile profile_;
+    zx_koid_t profile_koid_;
 
     fbl::Mutex pool_lock_ __TA_ACQUIRED_AFTER(active_pools_lock_);
     zx::port port_;

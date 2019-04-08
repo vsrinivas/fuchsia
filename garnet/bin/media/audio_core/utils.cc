@@ -5,6 +5,9 @@
 #include "garnet/bin/media/audio_core/utils.h"
 
 #include <audio-proto-utils/format-utils.h>
+#include <fuchsia/scheduler/cpp/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 
 #include "garnet/bin/media/audio_core/driver_utils.h"
 #include "src/lib/fxl/logging.h"
@@ -238,6 +241,56 @@ zx_status_t SelectBestFormat(
   *frames_per_second_inout = best_frame_rate;
 
   return ZX_OK;
+}
+
+zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
+  // Use threadsafe static initialization to get our one-and-only copy of this
+  // profile object. Each subsequent call will return a duplicate of that
+  // profile handle to ensure sharing of thread pools.
+  static zx::profile high_priority_profile;
+  static zx_status_t initial_status = [](zx::profile* profile) {
+    zx::channel ch0, ch1;
+    zx_status_t res = zx::channel::create(0u, &ch0, &ch1);
+    if (res != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create channel, res=" << res;
+      return res;
+    }
+
+    res = fdio_service_connect(
+        (std::string("/svc/") + fuchsia::scheduler::ProfileProvider::Name_)
+            .c_str(),
+        ch0.get());
+    if (res != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to connect to ProfileProvider, res=" << res;
+      return res;
+    }
+
+    fuchsia::scheduler::ProfileProvider_SyncProxy provider(std::move(ch1));
+
+    zx_status_t fidl_status;
+    zx::profile res_profile;
+    res = provider.GetProfile(24 /* HIGH_PRIORITY */,
+                              "garnet/bin/media/audio_core", &fidl_status,
+                              &res_profile);
+    if (res != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create profile, res=" << res;
+      return res;
+    }
+    if (fidl_status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to create profile, fidl_status=" << fidl_status;
+      return fidl_status;
+    }
+
+    *profile = std::move(res_profile);
+    return ZX_OK;
+  }(&high_priority_profile);
+
+  // If the initial acquisition of the profile failed, return that status.
+  if (initial_status != ZX_OK)
+    return initial_status;
+
+  // Otherwise, dupe this handle and return it.
+  return high_priority_profile.duplicate(ZX_RIGHT_SAME_RIGHTS, profile);
 }
 
 }  // namespace media::audio
