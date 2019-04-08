@@ -12,7 +12,6 @@ import (
 
 // TODO(NET-1223):This should be moved into netstack.go.
 type NIC struct {
-	ID            tcpip.NICID
 	Addr          tcpip.Address
 	IsDynamicAddr bool
 	Name          string

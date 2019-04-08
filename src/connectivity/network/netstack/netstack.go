@@ -81,9 +81,10 @@ type Netstack struct {
 
 // Each ifState tracks the state of a network interface.
 type ifState struct {
-	ns  *Netstack
-	eth link.Controller
-	mu  struct {
+	ns    *Netstack
+	eth   link.Controller
+	nicid tcpip.NICID
+	mu    struct {
 		sync.Mutex
 		state link.State
 		// TODO(NET-1223): remove and replace with refs to stack via ns
@@ -367,8 +368,8 @@ func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Con
 	ifs.mu.Unlock()
 
 	// Add a default route and a route for the local subnet.
-	rs := defaultRoutes(ifs.mu.nic.ID, config.Gateway)
-	rs = append(rs, subnetRoute(newAddr, config.SubnetMask, ifs.mu.nic.ID))
+	rs := defaultRoutes(ifs.nicid, config.Gateway)
+	rs = append(rs, subnetRoute(newAddr, config.SubnetMask, ifs.nicid))
 	logger.Infof("adding routes %+v with metric=<not-set> dynamic=true", rs)
 
 	ifs.ns.mu.Lock()
@@ -416,7 +417,7 @@ func (ifs *ifState) stateChange(s link.State) {
 	ifs.mu.Lock()
 	switch s {
 	case link.StateClosed:
-		delete(ifs.ns.mu.ifStates, ifs.mu.nic.ID)
+		delete(ifs.ns.mu.ifStates, ifs.nicid)
 		fallthrough
 	case link.StateDown:
 		logger.Infof("NIC %s: stopped", ifs.mu.nic.Name)
@@ -427,7 +428,7 @@ func (ifs *ifState) stateChange(s link.State) {
 		//	- reclaim NICID?
 
 		if ifs.mu.nic.IsDynamicAddr || s == link.StateClosed {
-			logger.Infof("removing IP from NIC %d", ifs.mu.nic.ID)
+			logger.Infof("removing IP from NIC %d", ifs.nicid)
 			ifs.mu.nic.Netmask = zeroIpMask
 			ifs.mu.nic.Addr = zeroIpAddr
 			ifs.mu.nic.DNSServers = nil
@@ -435,16 +436,16 @@ func (ifs *ifState) stateChange(s link.State) {
 
 		if s == link.StateClosed {
 			// The interface is removed, force all of its routes to be removed.
-			ifs.ns.UpdateRoutesByInterfaceLocked(ifs.mu.nic.ID, routes.ActionDeleteAll)
+			ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionDeleteAll)
 		} else {
 			// The interface is down, delete dynamic routes, disable static ones.
-			ifs.ns.UpdateRoutesByInterfaceLocked(ifs.mu.nic.ID, routes.ActionDeleteDynamicDisableStatic)
+			ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionDeleteDynamicDisableStatic)
 		}
 
 	case link.StateStarted:
 		logger.Infof("NIC %s: starting", ifs.mu.nic.Name)
 		// Re-enable static routes out this interface.
-		ifs.ns.UpdateRoutesByInterfaceLocked(ifs.mu.nic.ID, routes.ActionEnableStatic)
+		ifs.ns.UpdateRoutesByInterfaceLocked(ifs.nicid, routes.ActionEnableStatic)
 		if ifs.mu.dhcp.enabled {
 			ifs.mu.dhcp.cancel()
 			ifs.runDHCPLocked()
@@ -454,7 +455,7 @@ func (ifs *ifState) stateChange(s link.State) {
 		// this.
 		// Update the state before adding the routes, so they are properly enabled.
 		ifs.mu.state = s
-		if err := ifs.ns.AddRoutesLocked(defaultRoutes(ifs.mu.nic.ID, ""), lowPriorityRoute, true /* dynamic */); err != nil {
+		if err := ifs.ns.AddRoutesLocked(defaultRoutes(ifs.nicid, ""), lowPriorityRoute, true /* dynamic */); err != nil {
 			logger.Infof("error adding default routes: %v", err)
 		}
 	}
@@ -550,7 +551,7 @@ func (ns *Netstack) addLoopback() error {
 	ifs.mu.nic.Metric = defaultInterfaceMetric
 	ifs.mu.state = link.StateStarted
 
-	nicid := ifs.mu.nic.ID
+	nicid := ifs.nicid
 	ifs.mu.Unlock()
 
 	if err := ns.mu.stack.AddAddress(nicid, ipv4.ProtocolNumber, ipv4Loopback); err != nil {
@@ -664,18 +665,18 @@ func (ns *Netstack) addEndpoint(
 	ns.mu.Lock()
 	defer ns.mu.Unlock()
 
-	nicid := ns.mu.countNIC + 1
-	name := nameFn(nicid)
-	ns.mu.ifStates[nicid] = ifs
+	ifs.nicid = ns.mu.countNIC + 1
+	name := nameFn(ifs.nicid)
+	ns.mu.ifStates[ifs.nicid] = ifs
 	ns.mu.countNIC++
 
 	logger.Infof("NIC %s added", name)
 
-	if err := ns.mu.stack.CreateNIC(nicid, linkID); err != nil {
+	if err := ns.mu.stack.CreateNIC(ifs.nicid, linkID); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %v", ifs.mu.nic.Name, err)
 	}
 	if ep.Capabilities()&stack.CapabilityResolutionRequired > 0 {
-		if err := ns.mu.stack.AddAddress(nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
+		if err := ns.mu.stack.AddAddress(ifs.nicid, arp.ProtocolNumber, arp.ProtocolAddress); err != nil {
 			return nil, fmt.Errorf("NIC %s: adding arp address failed: %v", ifs.mu.nic.Name, err)
 		}
 	}
@@ -685,22 +686,21 @@ func (ns *Netstack) addEndpoint(
 
 	if linkAddr := ep.LinkAddress(); len(linkAddr) > 0 {
 		lladdr := header.LinkLocalAddr(linkAddr)
-		if err := ns.mu.stack.AddAddress(nicid, ipv6.ProtocolNumber, lladdr); err != nil {
+		if err := ns.mu.stack.AddAddress(ifs.nicid, ipv6.ProtocolNumber, lladdr); err != nil {
 			return nil, fmt.Errorf("NIC %s: adding link-local IPv6 %v failed: %v", ifs.mu.nic.Name, lladdr, err)
 		}
 		snaddr := header.SolicitedNodeAddr(lladdr)
-		if err := ns.mu.stack.AddAddress(nicid, ipv6.ProtocolNumber, snaddr); err != nil {
+		if err := ns.mu.stack.AddAddress(ifs.nicid, ipv6.ProtocolNumber, snaddr); err != nil {
 			return nil, fmt.Errorf("NIC %s: adding solicited-node IPv6 %v (link-local IPv6 %v) failed: %v", ifs.mu.nic.Name, snaddr, lladdr, err)
 		}
 
 		ifs.mu.nic.Ipv6addrs = append(ifs.mu.nic.Ipv6addrs[:0], lladdr)
-		ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, nicid, linkAddr, ifs.dhcpAcquired)
+		ifs.mu.dhcp.Client = dhcp.NewClient(ns.mu.stack, ifs.nicid, linkAddr, ifs.dhcpAcquired)
 
 		logger.Infof("NIC %s: link-local IPv6: %v", name, lladdr)
 	}
 
 	ifs.mu.nic.Name = name
-	ifs.mu.nic.ID = nicid
 
 	return ifs, nil
 }

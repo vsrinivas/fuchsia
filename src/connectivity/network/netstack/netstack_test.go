@@ -174,7 +174,7 @@ func TestStaticIPConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := ns.addInterfaceAddr(uint64(ifs.mu.nic.ID), ifAddr); err != nil {
+	if err := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr); err != nil {
 		t.Fatal(err)
 	}
 
@@ -240,7 +240,7 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := ns.addInterfaceAddr(uint64(ifs.mu.nic.ID), ifAddr); err != nil {
+	if err := ns.addInterfaceAddr(uint64(ifs.nicid), ifAddr); err != nil {
 		t.Fatal(err)
 	}
 

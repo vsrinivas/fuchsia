@@ -81,7 +81,7 @@ func TestRouteTableTransactions(t *testing.T) {
 			Destination: toIpAddress(destinationAddress),
 			Netmask:     toIpAddress(net.IP(destinationSubnet.Mask)),
 			Gateway:     &gateway,
-			Nicid:       uint32(ifs.mu.nic.ID),
+			Nicid:       uint32(ifs.nicid),
 			Metric:      100,
 		}
 

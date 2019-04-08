@@ -66,7 +66,7 @@ func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
 	}
 
 	return &stack.InterfaceInfo{
-		Id: uint64(ifs.mu.nic.ID),
+		Id: uint64(ifs.nicid),
 		Properties: stack.InterfaceProperties{
 			Path:                 path,
 			Mac:                  mac,
@@ -99,7 +99,7 @@ func (ns *Netstack) addInterface(topologicalPath string, device ethernet.DeviceI
 	if err != nil {
 		return &stack.Error{Type: stack.ErrorTypeInternal}, 0
 	}
-	return nil, uint64(ifs.mu.nic.ID)
+	return nil, uint64(ifs.nicid)
 }
 
 func (ns *Netstack) delInterface(id uint64) *stack.Error {

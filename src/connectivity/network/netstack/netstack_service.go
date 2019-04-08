@@ -97,7 +97,7 @@ func (ifs *ifState) toNetInterface2Locked() (netstack.NetInterface2, error) {
 	}
 
 	return netstack.NetInterface2{
-		Id:        uint32(ifs.mu.nic.ID),
+		Id:        uint32(ifs.nicid),
 		Flags:     flags,
 		Features:  ifs.mu.nic.Features,
 		Metric:    uint32(ifs.mu.nic.Metric),
@@ -353,7 +353,7 @@ func (ni *netstackImpl) BridgeInterfaces(nicids []uint32) (netstack.NetErr, uint
 	if err != nil {
 		return netstack.NetErr{Status: netstack.StatusUnknownError}, 0, nil
 	}
-	return netstack.NetErr{Status: netstack.StatusOk}, uint32(ifs.mu.nic.ID), nil
+	return netstack.NetErr{Status: netstack.StatusOk}, uint32(ifs.nicid), nil
 }
 
 func (ni *netstackImpl) GetAggregateStats(request io.NodeInterfaceRequest) error {
@@ -426,7 +426,7 @@ func (ns *netstackImpl) AddEthernetDevice(topological_path string, interfaceConf
 	if err != nil {
 		return 0, err
 	}
-	return uint32(ifs.mu.nic.ID), err
+	return uint32(ifs.nicid), err
 }
 
 type dnsImpl struct {
