@@ -27,3 +27,4 @@ pub const DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES: u32 =
 
 mod common;
 mod connection;
+mod test_utils;

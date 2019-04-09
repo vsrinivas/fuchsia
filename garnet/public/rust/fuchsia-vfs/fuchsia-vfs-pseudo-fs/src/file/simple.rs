@@ -460,120 +460,23 @@ mod tests {
     use super::*;
 
     use {
+        crate::file::test_utils::{
+            run_server_client, run_server_client_with_open_requests_channel,
+            run_server_client_with_open_requests_channel_and_executor,
+        },
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl_fuchsia_io::{
-            FileEvent, FileMarker, FileObject, FileProxy, NodeAttributes, NodeInfo, SeekOrigin,
-            INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
-            OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            FileEvent, FileMarker, FileObject, NodeAttributes, NodeInfo, SeekOrigin, INO_UNKNOWN,
+            MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE,
+            OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_async as fasync,
         fuchsia_zircon::sys::ZX_OK,
         futures::channel::{mpsc, oneshot},
-        futures::{future::LocalFutureObj, select, Future, FutureExt, SinkExt},
+        futures::{FutureExt, SinkExt},
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IWGRP, S_IWOTH, S_IWUSR, S_IXGRP, S_IXOTH, S_IXUSR},
-        pin_utils::pin_mut,
-        std::iter,
         std::sync::atomic::{AtomicUsize, Ordering},
     };
-
-    fn run_server_client<GetClientRes>(
-        flags: u32,
-        server: impl DirectoryEntry,
-        get_client: impl FnOnce(FileProxy) -> GetClientRes,
-    ) where
-        GetClientRes: Future<Output = ()>,
-    {
-        run_server_client_with_mode(flags, 0, server, get_client)
-    }
-
-    fn run_server_client_with_mode<GetClientRes>(
-        flags: u32,
-        mode: u32,
-        mut server: impl DirectoryEntry,
-        get_client: impl FnOnce(FileProxy) -> GetClientRes,
-    ) where
-        GetClientRes: Future<Output = ()>,
-    {
-        let mut exec = fasync::Executor::new().expect("Executor creation failed");
-
-        let (client_proxy, server_end) =
-            create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
-
-        server.open(flags, mode, &mut iter::empty(), ServerEnd::new(server_end.into_channel()));
-
-        let client = get_client(client_proxy);
-
-        let future = server.join(client);
-        // TODO: How to limit the execution time?  run_until_stalled() does not trigger timers, so
-        // I can not do this:
-        //
-        //   let timeout = 300.millis();
-        //   let future = future.on_timeout(
-        //       timeout.after_now(),
-        //       || panic!("Test did not finish in {}ms", timeout.millis()));
-
-        // As our clients are async generators, we need to pin this future explicitly.
-        // All async generators are !Unpin by default.
-        pin_mut!(future);
-        let _ = exec.run_until_stalled(&mut future);
-    }
-
-    fn run_server_client_with_open_requests_channel_and_executor<GetClientRes>(
-        mut exec: fasync::Executor,
-        mut server: impl DirectoryEntry,
-        get_client: impl FnOnce(mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>) -> GetClientRes,
-        executor: impl FnOnce(&mut FnMut() -> Poll<((), ())>),
-    ) where
-        GetClientRes: Future<Output = ()>,
-    {
-        let (open_requests_tx, open_requests_rx) =
-            mpsc::channel::<(u32, u32, ServerEnd<FileMarker>)>(0);
-
-        let server_wrapper = async move {
-            let mut open_requests_rx = open_requests_rx.fuse();
-            loop {
-                select! {
-                    _ = server => panic!("file should never complete"),
-                    open_req = open_requests_rx.next() => {
-                        if let Some((flags, mode, server_end)) = open_req {
-                            server
-                                .open(flags, mode, &mut iter::empty(),
-                                      ServerEnd::new(server_end.into_channel()));
-                        }
-                    },
-                    complete => return,
-                }
-            }
-        };
-
-        let client = get_client(open_requests_tx);
-
-        let future = server_wrapper.join(client);
-
-        // As our clients are async generators, we need to pin this future explicitly.
-        // All async generators are !Unpin by default.
-        pin_mut!(future);
-        let mut obj = LocalFutureObj::new(future);
-        executor(&mut || exec.run_until_stalled(&mut obj));
-    }
-
-    fn run_server_client_with_open_requests_channel<GetClientRes>(
-        server: impl DirectoryEntry,
-        get_client: impl FnOnce(mpsc::Sender<(u32, u32, ServerEnd<FileMarker>)>) -> GetClientRes,
-    ) where
-        GetClientRes: Future<Output = ()>,
-    {
-        let exec = fasync::Executor::new().expect("Executor creation failed");
-
-        run_server_client_with_open_requests_channel_and_executor(
-            exec,
-            server,
-            get_client,
-            |run_until_stalled| {
-                let _ = run_until_stalled();
-            },
-        );
-    }
 
     #[test]
     fn read_only_read() {
