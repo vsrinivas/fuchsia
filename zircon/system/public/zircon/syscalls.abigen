@@ -377,13 +377,6 @@ syscall thread_write_state
     (handle: zx_handle_t, kind: uint32_t, buffer: any[buffer_size] IN, buffer_size: size_t)
     returns (zx_status_t);
 
-# NOTE: thread_set_priority is an experimental syscall.
-# Do not use it.  It is going away very soon.  Just don't do it.  This is not
-# the syscall you are looking for.  See ZX-940
-syscall thread_set_priority
-    (prio: int32_t)
-    returns (zx_status_t);
-
 # Processes
 
 #^ Exits the currently running process.

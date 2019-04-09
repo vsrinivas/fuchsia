@@ -249,10 +249,6 @@ extern {
         buffer_size: usize
         ) -> zx_status_t;
 
-    pub fn zx_thread_set_priority(
-        prio: i32
-        ) -> zx_status_t;
-
     pub fn zx_process_exit(
         retcode: i64
         );

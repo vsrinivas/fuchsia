@@ -296,11 +296,6 @@ This option (disabled by default) turns on dynamic linker trace output.
 The output is in a form that is consumable by clients like Intel
 Processor Trace support.
 
-## thread.set.priority.disable=\<bool>
-
-This option (false by default) prevents the syscall that increases
-a thread priority (`zx_thread_set_priority`) from taking effect.
-
 ## zircon.autorun.boot=\<command>
 
 This option requests that *command* be run at boot, after devmgr starts up.

@@ -35,13 +35,6 @@
 #include "priv.h"
 
 #define LOCAL_TRACE 0
-#define THREAD_SET_PRIORITY_EXPERIMENT 1
-
-#if THREAD_SET_PRIORITY_EXPERIMENT
-#include <kernel/cmdline.h>
-#include <kernel/thread.h>
-#include <lk/init.h>
-#endif
 
 namespace {
 
@@ -50,20 +43,6 @@ constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 
 // Assume the typical set-policy call has 8 items or less.
 constexpr size_t kPolicyBasicInlineCount = 8;
-
-#if THREAD_SET_PRIORITY_EXPERIMENT
-// This was initially set to false by default. See ZX-940 for the rationale
-// for being enabled by default.
-bool thread_set_priority_allowed = true;
-void thread_set_priority_experiment_init_hook(uint) {
-    thread_set_priority_allowed = !cmdline_get_bool("thread.set.priority.disable", false);
-    printf("thread set priority experiment is : %s\n",
-           thread_set_priority_allowed ? "ENABLED" : "DISABLED");
-}
-LK_INIT_HOOK(thread_set_priority_experiment,
-             thread_set_priority_experiment_init_hook,
-             LK_INIT_LEVEL_THREADING - 1)
-#endif
 
 // TODO(ZX-1025): copy_user_string may truncate the incoming string,
 // and may copy extra data past the NUL.
@@ -268,26 +247,6 @@ zx_status_t sys_thread_write_state(zx_handle_t handle, uint32_t kind,
 
     return thread->WriteState(static_cast<zx_thread_state_topic_t>(kind), &local_buffer,
                               local_buffer_len);
-}
-
-// See ZX-940
-// zx_status_t zx_thread_set_priority
-zx_status_t sys_thread_set_priority(int32_t prio) {
-#if THREAD_SET_PRIORITY_EXPERIMENT
-    // If the experimental zx_thread_set_priority has not been enabled using the
-    // kernel command line option, simply deny this request.
-    if (!thread_set_priority_allowed)
-        return ZX_ERR_NOT_SUPPORTED;
-
-    if ((prio < LOWEST_PRIORITY) || (prio > HIGHEST_PRIORITY))
-        return ZX_ERR_INVALID_ARGS;
-
-    thread_set_priority(get_current_thread(), prio);
-
-    return ZX_OK;
-#else
-    return ZX_ERR_NOT_SUPPORTED;
-#endif
 }
 
 // zx_status_t zx_task_suspend
