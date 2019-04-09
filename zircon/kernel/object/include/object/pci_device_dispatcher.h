@@ -33,8 +33,8 @@ class PciDeviceDispatcher final
     : public SoloDispatcher<PciDeviceDispatcher, ZX_DEFAULT_PCI_DEVICE_RIGHTS> {
 public:
     static zx_status_t Create(uint32_t index,
-                              zx_pcie_device_info_t*    out_info,
-                              fbl::RefPtr<Dispatcher>* out_dispatcher,
+                              zx_pcie_device_info_t* out_info,
+                              KernelHandle<PciDeviceDispatcher>* out_handle,
                               zx_rights_t* out_rights);
 
     ~PciDeviceDispatcher() final;

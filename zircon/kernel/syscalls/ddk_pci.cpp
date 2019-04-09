@@ -441,10 +441,10 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    fbl::RefPtr<Dispatcher> dispatcher;
+    KernelHandle<PciDeviceDispatcher> handle;
     zx_rights_t rights;
     zx_pcie_device_info_t info;
-    status = PciDeviceDispatcher::Create(index, &info, &dispatcher, &rights);
+    status = PciDeviceDispatcher::Create(index, &info, &handle, &rights);
     if (status != ZX_OK) {
         return status;
     }
@@ -454,7 +454,7 @@ zx_status_t sys_pci_get_nth_device(zx_handle_t hrsrc,
     if (status != ZX_OK)
         return status;
 
-    return out_handle->make(ktl::move(dispatcher), rights);
+    return out_handle->make(ktl::move(handle), rights);
 }
 
 // zx_status_t zx_pci_config_read

@@ -24,10 +24,10 @@
 KCOUNTER(dispatcher_pci_device_create_count, "dispatcher.pci_device.create")
 KCOUNTER(dispatcher_pci_device_destroy_count, "dispatcher.pci_device.destroy")
 
-zx_status_t PciDeviceDispatcher::Create(uint32_t                  index,
-                                        zx_pcie_device_info_t*    out_info,
-                                        fbl::RefPtr<Dispatcher>* out_dispatcher,
-                                        zx_rights_t*              out_rights) {
+zx_status_t PciDeviceDispatcher::Create(uint32_t index,
+                                        zx_pcie_device_info_t* out_info,
+                                        KernelHandle<PciDeviceDispatcher>* out_handle,
+                                        zx_rights_t* out_rights) {
     auto bus_drv = PcieBusDriver::GetDriver();
     if (bus_drv == nullptr)
         return ZX_ERR_BAD_STATE;
@@ -37,12 +37,13 @@ zx_status_t PciDeviceDispatcher::Create(uint32_t                  index,
         return ZX_ERR_OUT_OF_RANGE;
 
     fbl::AllocChecker ac;
-    auto disp = new (&ac) PciDeviceDispatcher(ktl::move(device), out_info);
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) PciDeviceDispatcher(ktl::move(device),
+                                                                        out_info)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
-    *out_dispatcher = fbl::AdoptRef<Dispatcher>(disp);
-    *out_rights     = default_rights();
+    *out_handle = ktl::move(new_handle);
+    *out_rights = default_rights();
     return ZX_OK;
 }
 
