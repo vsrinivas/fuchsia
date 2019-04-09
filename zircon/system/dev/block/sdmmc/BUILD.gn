@@ -4,9 +4,9 @@
 
 driver("sdmmc") {
   sources = [
-    "mmc.c",
-    "ops.c",
-    "sd.c",
+    "mmc.cpp",
+    "ops.cpp",
+    "sd.cpp",
     "sdio.cpp",
     "sdmmc.cpp",
   ]

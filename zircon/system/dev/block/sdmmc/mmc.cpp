@@ -158,9 +158,9 @@ static zx_status_t mmc_decode_csd(sdmmc_device_t* dev, const uint8_t* raw_csd) {
     }
 
     // Only support high capacity (> 2GB) cards
-    uint16_t c_size = ((raw_csd[MMC_CSD_SIZE_START] >> 6) & 0x3) |
-                      (raw_csd[MMC_CSD_SIZE_START + 1] << 2) |
-                      ((raw_csd[MMC_CSD_SIZE_START + 2] & 0x3) << 10);
+    uint16_t c_size = static_cast<uint16_t>(((raw_csd[MMC_CSD_SIZE_START] >> 6) & 0x3) |
+                                            (raw_csd[MMC_CSD_SIZE_START + 1] << 2) |
+                                            ((raw_csd[MMC_CSD_SIZE_START + 2] & 0x3) << 10));
     if (c_size != 0xfff) {
         zxlogf(ERROR, "mmc: unsupported C_SIZE 0x%04x\n", c_size);
         return ZX_ERR_NOT_SUPPORTED;

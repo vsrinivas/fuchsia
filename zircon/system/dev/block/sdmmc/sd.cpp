@@ -130,7 +130,7 @@ zx_status_t sdmmc_probe_sd(sdmmc_device_t* dev) {
 
     // For now we only support SDHC cards. These cards must have a CSD type = 1,
     // since CSD type 0 is unable to support SDHC sized cards.
-    uint8_t csd_structure = (dev->raw_csd[3] >> 30) & 0x3;
+    uint8_t csd_structure = static_cast<uint8_t>((dev->raw_csd[3] >> 30) & 0x3);
     if (csd_structure != CSD_STRUCT_V2) {
         zxlogf(ERROR, "sd: unsupported card type, expected CSD version = %d, "
                 "got version %d\n", CSD_STRUCT_V2, csd_structure);
@@ -142,7 +142,7 @@ zx_status_t sdmmc_probe_sd(sdmmc_device_t* dev) {
     dev->block_info.block_count = (c_size + 1ul) * 1024ul;
     dev->block_info.block_size = 512ul;
     dev->capacity = dev->block_info.block_size * dev->block_info.block_count;
-    zxlogf(INFO, "sd: found card with capacity = %"PRIu64"B\n", dev->capacity);
+    zxlogf(INFO, "sd: found card with capacity = %" PRIu64 "B\n", dev->capacity);
 
     if ((st = sd_select_card(dev)) != ZX_OK) {
         zxlogf(ERROR, "sd: SELECT_CARD failed with retcode = %d\n", st);
