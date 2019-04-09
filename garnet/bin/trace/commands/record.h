@@ -5,6 +5,8 @@
 #ifndef GARNET_BIN_TRACE_COMMANDS_RECORD_H_
 #define GARNET_BIN_TRACE_COMMANDS_RECORD_H_
 
+#include <fuchsia/sys/cpp/fidl.h>
+
 #include <memory>
 #include <string>
 #include <vector>

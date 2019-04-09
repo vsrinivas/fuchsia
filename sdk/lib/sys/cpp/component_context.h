@@ -5,11 +5,10 @@
 #ifndef LIB_SYS_CPP_COMPONENT_CONTEXT_H_
 #define LIB_SYS_CPP_COMPONENT_CONTEXT_H_
 
-#include <memory>
-
-#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/service_directory.h>
+
+#include <memory>
 
 namespace sys {
 

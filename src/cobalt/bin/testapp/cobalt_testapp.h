@@ -2,23 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_COBALT_TESTAPP_COBALT_TESTAPP_H_
-#define GARNET_BIN_COBALT_TESTAPP_COBALT_TESTAPP_H_
+#ifndef SRC_COBALT_BIN_TESTAPP_COBALT_TESTAPP_H_
+#define SRC_COBALT_BIN_TESTAPP_COBALT_TESTAPP_H_
+
+#include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/synchronous_interface_ptr.h>
+#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 #include <sstream>
 #include <string>
 
-#include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/synchronous_interface_ptr.h"
+#include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_view.h"
-#include "lib/svc/cpp/services.h"
-#include "lib/sys/cpp/component_context.h"
-#include "src/cobalt/bin/testapp/cobalt_testapp_logger.h"
 
 namespace cobalt {
 namespace testapp {
@@ -91,4 +93,4 @@ class CobaltTestApp {
 }  // namespace testapp
 }  // namespace cobalt
 
-#endif  // GARNET_BIN_COBALT_TESTAPP_COBALT_TESTAPP_H_
+#endif  // SRC_COBALT_BIN_TESTAPP_COBALT_TESTAPP_H_

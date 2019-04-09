@@ -5,6 +5,7 @@
 #ifndef GARNET_EXAMPLES_INTL_CLIENT_INTL_WISDOM_CLIENT_H_
 #define GARNET_EXAMPLES_INTL_CLIENT_INTL_WISDOM_CLIENT_H_
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "fuchsia/examples/intl/wisdom/cpp/fidl.h"

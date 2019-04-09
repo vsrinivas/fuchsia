@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/examples/echo/llcpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/sys/cpp/component_context.h>

@@ -5,6 +5,7 @@
 // Token manager unit tests using DEV auth provider.
 
 #include <fuchsia/auth/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
 
