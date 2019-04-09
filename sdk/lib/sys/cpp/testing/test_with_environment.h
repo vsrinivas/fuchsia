@@ -91,10 +91,10 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
     return EnvironmentServices::Create(real_env_);
   }
 
-  std::unique_ptr<EnvironmentServices> CreateServicesWithCustomLoader(
-      const std::shared_ptr<vfs::Service>& loader_service) {
-    return EnvironmentServices::CreateWithCustomLoader(real_env_,
-                                                       loader_service);
+  std::unique_ptr<EnvironmentServices> CreateServicesWithParentOverrides(
+      EnvironmentServices::ParentOverrides parent_overrides) {
+    return EnvironmentServices::CreateWithParentOverrides(
+        real_env_, std::move(parent_overrides));
   }
 
   // Creates component in current real environment. This component will have

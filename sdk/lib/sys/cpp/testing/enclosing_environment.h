@@ -37,18 +37,30 @@ class EnclosingEnvironment;
 // created.
 class EnvironmentServices {
  public:
+  struct ParentOverrides final {
+    ParentOverrides();
+
+    ParentOverrides(const ParentOverrides&) = delete;
+    ParentOverrides& operator=(const ParentOverrides&) = delete;
+    ParentOverrides(ParentOverrides&&);
+
+    std::shared_ptr<vfs::Service> loader_service_;
+    std::shared_ptr<vfs::Service> debug_data_service_;
+  };
+
   EnvironmentServices(const EnvironmentServices&) = delete;
   EnvironmentServices& operator=(const EnvironmentServices&) = delete;
   EnvironmentServices(EnvironmentServices&&) = delete;
 
-  // Creates services with parent's loader service.
+  // Creates services with some of parent's service.
   static std::unique_ptr<EnvironmentServices> Create(
       const fuchsia::sys::EnvironmentPtr& parent_env,
       async_dispatcher_t* dispatcher = nullptr);
-  // Creates services with custom loader service.
-  static std::unique_ptr<EnvironmentServices> CreateWithCustomLoader(
+
+  // Creates services with custom parent overrides.
+  static std::unique_ptr<EnvironmentServices> CreateWithParentOverrides(
       const fuchsia::sys::EnvironmentPtr& parent_env,
-      const std::shared_ptr<vfs::Service>& loader_service,
+      ParentOverrides parent_overrides,
       async_dispatcher_t* dispatcher = nullptr);
 
   // Adds the specified interface to the set of services.
@@ -132,7 +144,7 @@ class EnvironmentServices {
  private:
   friend class EnclosingEnvironment;
   EnvironmentServices(const fuchsia::sys::EnvironmentPtr& parent_env,
-                      const std::shared_ptr<vfs::Service>& loader_service,
+                      ParentOverrides parent_overrides,
                       async_dispatcher_t* dispatcher = nullptr);
 
   void set_enclosing_env(EnclosingEnvironment* e) { enclosing_env_ = e; }

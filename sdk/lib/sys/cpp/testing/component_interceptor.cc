@@ -68,8 +68,10 @@ ComponentInterceptor ComponentInterceptor::CreateWithEnvironmentLoader(
 std::unique_ptr<EnvironmentServices>
 ComponentInterceptor::MakeEnvironmentServices(
     const fuchsia::sys::EnvironmentPtr& parent_env) {
-  auto env_services = EnvironmentServices::CreateWithCustomLoader(
-      parent_env, loader_svc_, dispatcher_);
+  sys::testing::EnvironmentServices::ParentOverrides parent_overrides;
+  parent_overrides.loader_service_ = loader_svc_;
+  auto env_services = EnvironmentServices::CreateWithParentOverrides(
+      parent_env, std::move(parent_overrides), dispatcher_);
 
   env_services->AddService(runner_bindings_.GetHandler(this, dispatcher_));
   return env_services;

@@ -13,6 +13,7 @@
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/vmo.h>
 #include <zircon/processargs.h>
+#include <memory>
 
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -290,8 +291,9 @@ class FakeLoader : public fuchsia::sys::Loader {
 
 TEST_F(EnclosingEnvTest, CanLaunchMoreThanOneService) {
   FakeLoader loader;
-  auto loader_service = loader.loader_service();
-  auto svc = CreateServicesWithCustomLoader(loader_service);
+  EnvironmentServices::ParentOverrides parent_overrides;
+  parent_overrides.loader_service_ = loader.loader_service();
+  auto svc = CreateServicesWithParentOverrides(std::move(parent_overrides));
 
   std::vector<std::string> urls;
   std::vector<std::string> svc_names;
@@ -345,9 +347,13 @@ TEST_F(EnclosingEnvTest, DebugDataServicePlumbedCorrectly) {
   zx::vmo data;
   fuchsia::debugdata::DebugDataPtr ptr;
   FakeDebugData debug_data;
-  auto svc = CreateServices();
+
   // Add to first enclosing env and override plumbing
-  svc->AddService(debug_data.GetHandler());
+  EnvironmentServices::ParentOverrides parent_overrides;
+  parent_overrides.debug_data_service_ =
+      std::make_shared<vfs::Service>(debug_data.GetHandler());
+  auto svc = CreateServicesWithParentOverrides(std::move(parent_overrides));
+
   auto env = CreateNewEnclosingEnvironment("test-env1", std::move(svc));
   ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
   // make sure count was 0

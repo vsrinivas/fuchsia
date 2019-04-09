@@ -24,10 +24,11 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/logging.h>
 #include <lib/sys/cpp/file_descriptor.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+#include <src/lib/fxl/logging.h>
 #include <test/appmgr/integration/cpp/fidl.h>
 
 #include "garnet/bin/appmgr/integration_tests/util/data_file_reader_writer_util.h"
@@ -387,14 +388,15 @@ INSTANTIATE_TEST_SUITE_P(
 class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
  protected:
   RealmFakeLoaderTest() {
-    loader_service_ = std::make_shared<vfs::Service>(
+    sys::testing::EnvironmentServices::ParentOverrides parent_overrides;
+    parent_overrides.loader_service_ = std::make_shared<vfs::Service>(
         [this](zx::channel channel, async_dispatcher_t* dispatcher) {
           bindings_.AddBinding(
               this,
               fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
         });
     enclosing_environment_ = CreateNewEnclosingEnvironment(
-        kRealm, CreateServicesWithCustomLoader(loader_service_));
+        kRealm, CreateServicesWithParentOverrides(std::move(parent_overrides)));
   }
 
   void LoadUrl(std::string url, LoadUrlCallback callback) override {

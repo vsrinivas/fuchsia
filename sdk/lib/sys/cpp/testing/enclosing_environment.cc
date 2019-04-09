@@ -19,18 +19,30 @@
 namespace sys {
 namespace testing {
 
+EnvironmentServices::ParentOverrides::ParentOverrides(ParentOverrides&&) =
+    default;
+
+EnvironmentServices::ParentOverrides::ParentOverrides() = default;
+
 EnvironmentServices::EnvironmentServices(
     const fuchsia::sys::EnvironmentPtr& parent_env,
-    const std::shared_ptr<vfs::Service>& loader_service,
-    async_dispatcher_t* dispatcher)
+    ParentOverrides parent_overrides, async_dispatcher_t* dispatcher)
     : dispatcher_(dispatcher) {
   zx::channel request;
   parent_svc_ = sys::ServiceDirectory::CreateWithRequest(&request);
   parent_env->GetDirectory(std::move(request));
-  if (loader_service) {
-    AddSharedService(loader_service, fuchsia::sys::Loader::Name_);
+  if (parent_overrides.loader_service_) {
+    AddSharedService(std::move(parent_overrides.loader_service_),
+                     fuchsia::sys::Loader::Name_);
   } else {
     AllowParentService(fuchsia::sys::Loader::Name_);
+  }
+
+  if (parent_overrides.debug_data_service_) {
+    AddSharedService(std::move(parent_overrides.debug_data_service_),
+                     fuchsia::debugdata::DebugData::Name_);
+  } else {
+    AllowParentService(fuchsia::debugdata::DebugData::Name_);
   }
 }
 
@@ -39,17 +51,16 @@ std::unique_ptr<EnvironmentServices> EnvironmentServices::Create(
     const fuchsia::sys::EnvironmentPtr& parent_env,
     async_dispatcher_t* dispatcher) {
   return std::unique_ptr<EnvironmentServices>(
-      new EnvironmentServices(parent_env, nullptr, dispatcher));
+      new EnvironmentServices(parent_env, ParentOverrides{}, dispatcher));
 }
 
 // static
 std::unique_ptr<EnvironmentServices>
-EnvironmentServices::CreateWithCustomLoader(
+EnvironmentServices::CreateWithParentOverrides(
     const fuchsia::sys::EnvironmentPtr& parent_env,
-    const std::shared_ptr<vfs::Service>& loader_service,
-    async_dispatcher_t* dispatcher) {
-  return std::unique_ptr<EnvironmentServices>(
-      new EnvironmentServices(parent_env, loader_service, dispatcher));
+    ParentOverrides parent_overrides, async_dispatcher_t* dispatcher) {
+  return std::unique_ptr<EnvironmentServices>(new EnvironmentServices(
+      parent_env, std::move(parent_overrides), dispatcher));
 }
 
 zx_status_t EnvironmentServices::AddSharedService(
@@ -146,9 +157,6 @@ EnclosingEnvironment::EnclosingEnvironment(
     std::unique_ptr<EnvironmentServices> services,
     const fuchsia::sys::EnvironmentOptions& options)
     : label_(label), services_(std::move(services)) {
-  // Plumb DebugData service here rather than in |EnvironmentServices| so that
-  // user can override it if they want.
-  services_->AllowParentService(fuchsia::debugdata::DebugData::Name_);
   services_->set_enclosing_env(this);
 
   // Start environment with services.

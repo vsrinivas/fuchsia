@@ -18,10 +18,11 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <src/lib/fxl/logging.h>
+#include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -118,7 +119,10 @@ class PackageUpdatingLoaderTest : public sys::testing::TestWithEnvironment {
           loader_->AddBinding(
               fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
         });
-    auto services = CreateServicesWithCustomLoader(loader_service_);
+    sys::testing::EnvironmentServices::ParentOverrides parent_overides;
+    parent_overides.loader_service_ = loader_service_;
+    auto services =
+        CreateServicesWithParentOverrides(std::move(parent_overides));
     env_ = CreateNewEnclosingEnvironment(kRealm, std::move(services));
   }
 
