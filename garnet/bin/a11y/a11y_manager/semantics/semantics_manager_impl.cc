@@ -42,4 +42,24 @@ void SemanticsManagerImpl::RegisterView(
                                      std::move(semantic_tree_request));
 }
 
+fuchsia::accessibility::semantics::NodePtr
+SemanticsManagerImpl::GetHitAccessibilityNode(
+    const zx::event& view_ref, const fuchsia::math::PointF point) {
+  for (auto& binding : semantic_tree_bindings_.bindings()) {
+    if (binding->impl()->IsSameView(view_ref))
+      return binding->impl()->GetHitAccessibilityNode(point);
+  }
+  return nullptr;
+}
+
+fuchsia::accessibility::semantics::NodePtr
+SemanticsManagerImpl::GetAccessibilityNode(const zx::event& view_ref,
+                                           const int32_t node_id) {
+  for (auto& binding : semantic_tree_bindings_.bindings()) {
+    if (binding->impl()->IsSameView(view_ref))
+      return binding->impl()->GetAccessibilityNode(node_id);
+  }
+  return nullptr;
+}
+
 }  // namespace a11y_manager

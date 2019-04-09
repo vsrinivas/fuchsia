@@ -24,6 +24,19 @@ class SemanticsManagerImpl
 
   void SetDebugDirectory(vfs::PseudoDir* debug_dir);
 
+  // Provides the a11y manager with a way to perform hit-testing for a
+  // front-end node when it has the view id and the local view hit
+  // coordinates from Scenic. Currently, this only supports 2D hit-tests
+  // using bounding boxes.
+  fuchsia::accessibility::semantics::NodePtr GetHitAccessibilityNode(
+      const zx::event& view_ref, const fuchsia::math::PointF point);
+
+  // Provides the manager a way to query a node if it already knows
+  // what view id and node id it wants to query for. This method returns
+  // a copy of the queried node. It may return a nullptr if no node is found.
+  fuchsia::accessibility::semantics::NodePtr GetAccessibilityNode(
+      const zx::event& view_ref, const int32_t node_id);
+
  private:
   // |fuchsia::accessibility::semantics::SemanticsManager|:
   void RegisterView(

@@ -74,6 +74,10 @@ SemanticTreeImpl::GetAccessibilityNode(uint32_t node_id) {
   return node_ptr;
 }
 
+bool SemanticTreeImpl::IsSameView(const zx::event& view_ref) {
+  return GetKoid(view_ref) == GetKoid(view_ref_);
+}
+
 void SemanticTreeImpl::Commit() {
   // TODO(MI4-2038): Update Commit method to detect cycles in tree
   // and cleanup dangling subtrees.

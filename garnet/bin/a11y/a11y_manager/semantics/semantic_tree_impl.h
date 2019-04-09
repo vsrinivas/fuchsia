@@ -64,6 +64,9 @@ class SemanticTreeImpl
       fuchsia::accessibility::semantics::SemanticActionListener::
           OnAccessibilityActionRequestedCallback callback);
 
+  // Compares a view with the current view of the semantic tree, based on KOID.
+  bool IsSameView(const zx::event& view_ref);
+
  private:
   // Semantic Tree for a particular view. Each client is responsible for
   // maintaining the state of their tree. Nodes can be added, updated or
