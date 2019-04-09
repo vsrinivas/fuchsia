@@ -37,10 +37,7 @@ pub struct MerkleTreeBuilder {
 impl MerkleTreeBuilder {
     /// Creates a new, empty `MerkleTreeBuilder`.
     pub fn new() -> Self {
-        MerkleTreeBuilder {
-            levels: vec![Vec::new()],
-            block: Vec::with_capacity(BLOCK_SIZE),
-        }
+        MerkleTreeBuilder { levels: vec![Vec::new()], block: Vec::with_capacity(BLOCK_SIZE) }
     }
 
     /// Append a buffer of bytes to the merkle tree.
@@ -206,18 +203,16 @@ mod tests {
 
         let root = tree.finish().root();
 
-        let expected = "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737"
-            .parse()
-            .unwrap();
+        let expected =
+            "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737".parse().unwrap();
         assert_eq!(root, expected);
     }
 
     #[test]
     fn test_unaligned_n_block() {
         let data = vec![0xFF; 65536];
-        let expected = "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf"
-            .parse()
-            .unwrap();
+        let expected =
+            "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf".parse().unwrap();
 
         for chunk_size in vec![1, 100, 1024, 8193] {
             let mut tree = MerkleTreeBuilder::new();
@@ -232,11 +227,8 @@ mod tests {
 
     #[test]
     fn test_fuchsia() {
-        let fuchsia: Vec<_> = vec![0xff, 0x00, 0x80]
-            .into_iter()
-            .cycle()
-            .take(3 * BLOCK_SIZE)
-            .collect();
+        let fuchsia: Vec<_> =
+            vec![0xff, 0x00, 0x80].into_iter().cycle().take(3 * BLOCK_SIZE).collect();
 
         let mut t = MerkleTreeBuilder::new();
 
@@ -247,9 +239,8 @@ mod tests {
             remaining -= n;
         }
         let actual = t.finish().root();
-        let expected: Hash = "2feb488cffc976061998ac90ce7292241dfa86883c0edc279433b5c4370d0f30"
-            .parse()
-            .unwrap();
+        let expected: Hash =
+            "2feb488cffc976061998ac90ce7292241dfa86883c0edc279433b5c4370d0f30".parse().unwrap();
         assert_eq!(expected, actual);
     }
 }

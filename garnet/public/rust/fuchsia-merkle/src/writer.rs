@@ -44,10 +44,7 @@ pub struct MerkleTreeWriter<W> {
 impl<W: Write> MerkleTreeWriter<W> {
     /// Creates a new `MerkleTreeWriter`
     pub fn new(inner: W) -> Self {
-        MerkleTreeWriter {
-            inner: inner,
-            builder: MerkleTreeBuilder::new(),
-        }
+        MerkleTreeWriter { inner: inner, builder: MerkleTreeBuilder::new() }
     }
 
     /// Finalizes all levels of the merkle tree, converting this `MerkleTreeWriter` instance into a

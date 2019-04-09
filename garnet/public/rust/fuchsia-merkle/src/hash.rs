@@ -26,11 +26,7 @@ impl str::FromStr for Hash {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let bytes = hex::decode(s)?;
         if bytes.len() != HASH_SIZE {
-            return Err(format_err!(
-                "expected {} hex bytes, got {}",
-                HASH_SIZE,
-                bytes.len()
-            ));
+            return Err(format_err!("expected {} hex bytes, got {}", HASH_SIZE, bytes.len()));
         }
         let mut res: [u8; HASH_SIZE] = [0; HASH_SIZE];
         res.copy_from_slice(&bytes[..]);

@@ -101,9 +101,8 @@ mod tests {
     fn test_hash_block_empty() {
         let block = vec![];
         let hash = hash_block(&block[..], 0);
-        let expected = "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"
-            .parse()
-            .unwrap();
+        let expected =
+            "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b".parse().unwrap();
         assert_eq!(hash, expected);
     }
 
@@ -111,9 +110,8 @@ mod tests {
     fn test_hash_block_single() {
         let block = vec![0xFF; 8192];
         let hash = hash_block(&block[..], 0);
-        let expected = "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737"
-            .parse()
-            .unwrap();
+        let expected =
+            "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737".parse().unwrap();
         assert_eq!(hash, expected);
     }
 
@@ -127,20 +125,17 @@ mod tests {
             }
         }
         let root = hash_hashes(&leafs, 1, 0);
-        let expected = "1e6e9c870e2fade25b1b0288ac7c216f6fae31c1599c0c57fb7030c15d385a8d"
-            .parse()
-            .unwrap();
+        let expected =
+            "1e6e9c870e2fade25b1b0288ac7c216f6fae31c1599c0c57fb7030c15d385a8d".parse().unwrap();
         assert_eq!(root, expected);
     }
 
     #[test]
     fn test_hash_hashes_zero_pad_same_length() {
-        let data_hash = "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"
-            .parse()
-            .unwrap();
-        let zero_hash = "0000000000000000000000000000000000000000000000000000000000000000"
-            .parse()
-            .unwrap();
+        let data_hash =
+            "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b".parse().unwrap();
+        let zero_hash =
+            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
         let hash_of_single_hash = hash_hashes(&vec![data_hash], 1, 0);
         let hash_of_single_hash_and_zero_hash = hash_hashes(&vec![data_hash, zero_hash], 1, 0);
         assert_eq!(hash_of_single_hash, hash_of_single_hash_and_zero_hash);
