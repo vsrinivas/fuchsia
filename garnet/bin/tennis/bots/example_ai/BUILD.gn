@@ -34,8 +34,8 @@ rustc_binary("tennis_example_ai_bin") {
 
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",

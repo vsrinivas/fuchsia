@@ -5,8 +5,8 @@
 use failure::{Error, ResultExt};
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_game_tennis::{PaddleRequest, TennisServiceMarker};
-use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use futures::TryStreamExt;
 use parking_lot::Mutex;
 use std::io::{self, Read};
