@@ -16,7 +16,7 @@ test("fvm-driver-unittests") {
   include_dirs = [ ".." ]
   deps = [
     "$zx/system/ulib/driver",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxtest",
     "..:shared",
   ]
 }

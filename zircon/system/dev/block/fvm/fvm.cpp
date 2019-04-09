@@ -57,12 +57,7 @@ zx_status_t VPartitionManager::Bind(zx_device_t* dev) {
     }
     bp.ops->query(bp.ctx, &block_info, &block_op_size);
 
-    fbl::AllocChecker ac;
-    auto vpm =
-        fbl::make_unique_checked<VPartitionManager>(&ac, dev, block_info, block_op_size, &bp);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    auto vpm = fbl::make_unique<VPartitionManager>(dev, block_info, block_op_size, &bp);
 
     zx_status_t status = vpm->DdkAdd("fvm", DEVICE_ADD_INVISIBLE);
     if (status != ZX_OK) {
@@ -129,13 +124,7 @@ zx_status_t VPartitionManager::DoIoLocked(zx_handle_t vmo, size_t off, size_t le
     const bool flushing = command == BLOCK_OP_WRITE;
     const size_t num_txns = num_data_txns + (flushing ? 1 : 0);
 
-    fbl::AllocChecker ac;
-    fbl::Array<uint8_t> buffer(new (&ac) uint8_t[block_op_size_ * num_txns],
-                               block_op_size_ * num_txns);
-
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    fbl::Array<uint8_t> buffer(new uint8_t[block_op_size_ * num_txns], block_op_size_ * num_txns);
 
     VpmIoCookie cookie;
     cookie.num_txns.store(num_txns);
@@ -425,19 +414,25 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
         for (size_t i = 0; i < count; i++) {
             size_t pslice;
             auto vslice = vslice_start + i;
-            if (vp->SliceGetLocked(vslice) != PSLICE_UNALLOCATED) {
+            if (vp->SliceGetLocked(vslice, &pslice)) {
                 status = ZX_ERR_INVALID_ARGS;
             }
-            if ((status != ZX_OK) || ((status = FindFreeSliceLocked(&pslice, hint)) != ZX_OK) ||
-                ((status = vp->SliceSetLocked(vslice, static_cast<uint32_t>(pslice)) != ZX_OK))) {
+
+            // If the vslice is invalid, or there are no more free physical slices, undo all
+            // previous allocations.
+            if ((status != ZX_OK) || ((status = FindFreeSliceLocked(&pslice, hint)) != ZX_OK)) {
                 for (int j = static_cast<int>(i - 1); j >= 0; j--) {
                     vslice = vslice_start + j;
-                    FreePhysicalSlice(vp, vp->SliceGetLocked(vslice));
+                    vp->SliceGetLocked(vslice, &pslice);
+                    FreePhysicalSlice(vp, pslice);
                     vp->SliceFreeLocked(vslice);
                 }
 
                 return status;
             }
+
+            // Allocate the slice in the partition then mark as allocated.
+            vp->SliceSetLocked(vslice, pslice);
             AllocatePhysicalSlice(vp, pslice, vslice);
             hint = pslice + 1;
         }
@@ -449,8 +444,12 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
         fbl::AutoLock lock(&vp->lock_);
         for (int j = static_cast<int>(count - 1); j >= 0; j--) {
             auto vslice = vslice_start + j;
-            FreePhysicalSlice(vp, vp->SliceGetLocked(vslice));
-            vp->SliceFreeLocked(vslice);
+            uint64_t pslice;
+            // Will always return true, because partition slice allocation is synchronized.
+            if (vp->SliceGetLocked(vslice, &pslice)) {
+                FreePhysicalSlice(vp, pslice);
+                vp->SliceFreeLocked(vslice);
+            }
         }
     }
 
@@ -493,15 +492,16 @@ zx_status_t VPartitionManager::Upgrade(const uint8_t* old_guid, const uint8_t* n
 
 zx_status_t VPartitionManager::FreeSlices(VPartition* vp, size_t vslice_start, size_t count) {
     fbl::AutoLock lock(&lock_);
-    return FreeSlicesLocked(vp, vslice_start, count);
+    return FreeSlicesLocked(vp, static_cast<uint64_t>(vslice_start), count);
 }
 
-zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_start, size_t count) {
+zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, uint64_t vslice_start,
+                                                size_t count) {
     if (vslice_start + count > VSliceMax() || count > VSliceMax()) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    bool freed_something = false;
+    bool valid_range = false;
     {
         fbl::AutoLock lock(&vp->lock_);
         if (vp->IsKilledLocked())
@@ -511,7 +511,9 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_st
             // Special case: Freeing entire VPartition
             for (auto extent = vp->ExtentBegin(); extent.IsValid(); extent = vp->ExtentBegin()) {
                 for (size_t i = extent->start(); i < extent->end(); i++) {
-                    FreePhysicalSlice(vp, vp->SliceGetLocked(i));
+                    uint64_t pslice;
+                    vp->SliceGetLocked(i, &pslice);
+                    FreePhysicalSlice(vp, pslice);
                 }
                 vp->ExtentDestroyLocked(extent->start());
             }
@@ -521,32 +523,25 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_st
             auto entry = GetVPartEntryLocked(vp->GetEntryIndex());
             entry->clear();
             vp->KillLocked();
-            freed_something = true;
+            valid_range = true;
         } else {
             for (int i = static_cast<int>(count - 1); i >= 0; i--) {
                 auto vslice = vslice_start + i;
                 if (vp->SliceCanFree(vslice)) {
-                    size_t pslice = vp->SliceGetLocked(vslice);
-                    if (!freed_something) {
-                        // The first 'free' is the only one which can fail -- it
-                        // has the potential to split extents, which may require
-                        // memory allocation.
-                        if (!vp->SliceFreeLocked(vslice)) {
-                            return ZX_ERR_NO_MEMORY;
-                        }
-                    } else {
-                        ZX_ASSERT(vp->SliceFreeLocked(vslice));
-                    }
+                    uint64_t pslice;
+                    vp->SliceGetLocked(vslice, &pslice);
+                    vp->SliceFreeLocked(vslice);
                     FreePhysicalSlice(vp, pslice);
-                    freed_something = true;
+                    valid_range = true;
                 }
             }
         }
     }
 
-    if (!freed_something) {
+    if (!valid_range) {
         return ZX_ERR_INVALID_ARGS;
     }
+
     return WriteFvmLocked();
 }
 
@@ -560,7 +555,7 @@ void VPartitionManager::Query(volume_info_t* info) {
     }
 }
 
-void VPartitionManager::FreePhysicalSlice(VPartition* vp, size_t pslice) {
+void VPartitionManager::FreePhysicalSlice(VPartition* vp, uint64_t pslice) {
     auto entry = GetSliceEntryLocked(pslice);
     ZX_DEBUG_ASSERT_MSG(entry->Vpart() != FVM_SLICE_ENTRY_FREE, "Freeing already-free slice");
     entry->SetVpart(FVM_SLICE_ENTRY_FREE);
@@ -568,7 +563,7 @@ void VPartitionManager::FreePhysicalSlice(VPartition* vp, size_t pslice) {
     pslice_allocated_count_--;
 }
 
-void VPartitionManager::AllocatePhysicalSlice(VPartition* vp, size_t pslice, uint64_t vslice) {
+void VPartitionManager::AllocatePhysicalSlice(VPartition* vp, uint64_t pslice, uint64_t vslice) {
     uint64_t vpart = vp->GetEntryIndex();
     ZX_DEBUG_ASSERT(vpart <= VPART_MAX);
     ZX_DEBUG_ASSERT(vslice <= VSLICE_MAX);

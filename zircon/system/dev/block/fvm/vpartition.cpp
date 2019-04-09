@@ -6,7 +6,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
@@ -30,27 +29,23 @@ zx_status_t VPartition::Create(VPartitionManager* vpm, size_t entry_index,
                                fbl::unique_ptr<VPartition>* out) {
     ZX_DEBUG_ASSERT(entry_index != 0);
 
-    fbl::AllocChecker ac;
-    auto vp = fbl::make_unique_checked<VPartition>(&ac, vpm, entry_index, vpm->BlockOpSize());
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    auto vp = fbl::make_unique<VPartition>(vpm, entry_index, vpm->BlockOpSize());
 
     *out = std::move(vp);
     return ZX_OK;
 }
 
-uint32_t VPartition::SliceGetLocked(size_t vslice) const {
+bool VPartition::SliceGetLocked(uint64_t vslice, uint64_t* out_pslice) const {
     ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
     auto extent = --slice_map_.upper_bound(vslice);
     if (!extent.IsValid()) {
-        return PSLICE_UNALLOCATED;
+        return false;
     }
     ZX_DEBUG_ASSERT(extent->start() <= vslice);
-    return extent->get(vslice);
+    return extent->find(vslice, out_pslice);
 }
 
-zx_status_t VPartition::CheckSlices(size_t vslice_start, size_t* count, bool* allocated) {
+zx_status_t VPartition::CheckSlices(uint64_t vslice_start, size_t* count, bool* allocated) {
     fbl::AutoLock lock(&lock_);
 
     if (vslice_start >= mgr_->VSliceMax()) {
@@ -86,46 +81,37 @@ zx_status_t VPartition::CheckSlices(size_t vslice_start, size_t* count, bool* al
     return ZX_OK;
 }
 
-zx_status_t VPartition::SliceSetLocked(size_t vslice, uint32_t pslice) {
+void VPartition::SliceSetLocked(uint64_t vslice, uint64_t pslice) {
     ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
     auto extent = --slice_map_.upper_bound(vslice);
-    ZX_DEBUG_ASSERT(!extent.IsValid() || extent->get(vslice) == PSLICE_UNALLOCATED);
+    ZX_DEBUG_ASSERT(!extent.IsValid() || !extent->contains(vslice));
     if (extent.IsValid() && (vslice == extent->end())) {
         // Easy case: append to existing slice
-        if (!extent->push_back(pslice)) {
-            return ZX_ERR_NO_MEMORY;
-        }
+        extent->push_back(pslice);
     } else {
         // Longer case: there is no extent for this vslice, so we should make
         // one.
-        fbl::AllocChecker ac;
-        fbl::unique_ptr<SliceExtent> new_extent(new (&ac) SliceExtent(vslice));
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        } else if (!new_extent->push_back(pslice)) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        ZX_DEBUG_ASSERT(new_extent->GetKey() == vslice);
-        ZX_DEBUG_ASSERT(new_extent->get(vslice) == pslice);
+        fbl::unique_ptr<SliceExtent> new_extent(new SliceExtent(vslice));
+        new_extent->push_back(pslice);
         slice_map_.insert(std::move(new_extent));
         extent = --slice_map_.upper_bound(vslice);
     }
 
-    ZX_DEBUG_ASSERT(SliceGetLocked(vslice) == pslice);
+    ZX_DEBUG_ASSERT(([this, vslice, pslice]() TA_NO_THREAD_SAFETY_ANALYSIS {
+        uint64_t mapped_pslice;
+        return SliceGetLocked(vslice, &mapped_pslice) && mapped_pslice == pslice;
+    }()));
     AddBlocksLocked((mgr_->SliceSize() / info_.block_size));
 
     // Merge with the next contiguous extent (if any)
-    auto nextExtent = slice_map_.upper_bound(vslice);
-    if (nextExtent.IsValid() && (vslice + 1 == nextExtent->start())) {
-        if (extent->Merge(*nextExtent)) {
-            slice_map_.erase(*nextExtent);
-        }
+    auto next_extent = slice_map_.upper_bound(vslice);
+    if (next_extent.IsValid() && (vslice + 1 == next_extent->start())) {
+        extent->Merge(*next_extent);
+        slice_map_.erase(*next_extent);
     }
-
-    return ZX_OK;
 }
 
-bool VPartition::SliceFreeLocked(size_t vslice) {
+void VPartition::SliceFreeLocked(uint64_t vslice) {
     ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
     ZX_DEBUG_ASSERT(SliceCanFree(vslice));
     auto extent = --slice_map_.upper_bound(vslice);
@@ -133,22 +119,18 @@ bool VPartition::SliceFreeLocked(size_t vslice) {
         // Removing from the middle of an extent; this splits the extent in
         // two.
         auto new_extent = extent->Split(vslice);
-        if (new_extent == nullptr) {
-            return false;
-        }
         slice_map_.insert(std::move(new_extent));
     }
     // Removing from end of extent
     extent->pop_back();
-    if (extent->is_empty()) {
+    if (extent->empty()) {
         slice_map_.erase(*extent);
     }
 
     AddBlocksLocked(-(mgr_->SliceSize() / info_.block_size));
-    return true;
 }
 
-void VPartition::ExtentDestroyLocked(size_t vslice) TA_REQ(lock_) {
+void VPartition::ExtentDestroyLocked(uint64_t vslice) TA_REQ(lock_) {
     ZX_DEBUG_ASSERT(vslice < mgr_->VSliceMax());
     ZX_DEBUG_ASSERT(SliceCanFree(vslice));
     auto extent = --slice_map_.upper_bound(vslice);
@@ -157,7 +139,8 @@ void VPartition::ExtentDestroyLocked(size_t vslice) TA_REQ(lock_) {
     AddBlocksLocked(-((length * mgr_->SliceSize()) / info_.block_size));
 }
 
-template <typename T> static zx_status_t RequestBoundCheck(const T& request, size_t vslice_max) {
+template <typename T>
+static zx_status_t RequestBoundCheck(const T& request, uint64_t vslice_max) {
     if (request.offset == 0 || request.offset > vslice_max) {
         return ZX_ERR_OUT_OF_RANGE;
     } else if (request.length > vslice_max) {
@@ -252,17 +235,17 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
     }
 
     const FormatInfo& format_info = mgr_->format_info();
-    const size_t slice_size = mgr_->SliceSize();
+    const uint64_t slice_size = mgr_->SliceSize();
     const uint64_t blocks_per_slice = slice_size / BlockSize();
     // Start, end both inclusive
-    size_t vslice_start = txn->rw.offset_dev / blocks_per_slice;
-    size_t vslice_end = (txn->rw.offset_dev + txn->rw.length - 1) / blocks_per_slice;
+    uint64_t vslice_start = txn->rw.offset_dev / blocks_per_slice;
+    uint64_t vslice_end = (txn->rw.offset_dev + txn->rw.length - 1) / blocks_per_slice;
 
     fbl::AutoLock lock(&lock_);
     if (vslice_start == vslice_end) {
         // Common case: txn occurs within one slice
-        uint32_t pslice = SliceGetLocked(vslice_start);
-        if (pslice == PSLICE_UNALLOCATED) {
+        uint64_t pslice;
+        if (!SliceGetLocked(vslice_start, &pslice)) {
             completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, txn);
             return;
         }
@@ -278,18 +261,22 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
     // If any are missing, then this txn will fail.
     bool contiguous = true;
     for (size_t vslice = vslice_start; vslice <= vslice_end; vslice++) {
-        if (SliceGetLocked(vslice) == PSLICE_UNALLOCATED) {
+        uint64_t pslice;
+        if (!SliceGetLocked(vslice, &pslice)) {
             completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, txn);
             return;
         }
-        if (vslice != vslice_start && SliceGetLocked(vslice - 1) + 1 != SliceGetLocked(vslice)) {
+        uint64_t prev_pslice;
+        if (vslice != vslice_start && SliceGetLocked(vslice - 1, &prev_pslice) &&
+            prev_pslice + 1 != pslice) {
             contiguous = false;
         }
     }
 
     // Ideal case: slices are contiguous
     if (contiguous) {
-        uint32_t pslice = SliceGetLocked(vslice_start);
+        uint64_t pslice;
+        SliceGetLocked(vslice_start, &pslice);
         txn->rw.offset_dev = format_info.GetSliceStart(pslice) / BlockSize() +
                              (txn->rw.offset_dev % blocks_per_slice);
         mgr_->Queue(txn, completion_cb, cookie);
@@ -297,22 +284,18 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
     }
 
     // Harder case: Noncontiguous slices
-    const size_t txn_count = vslice_end - vslice_start + 1;
+    const uint64_t txn_count = vslice_end - vslice_start + 1;
     fbl::Vector<block_op_t*> txns;
     txns.reserve(txn_count);
 
-    fbl::AllocChecker ac;
     fbl::unique_ptr<multi_txn_state_t> state(
-        new (&ac) multi_txn_state_t(txn_count, txn, completion_cb, cookie));
-    if (!ac.check()) {
-        completion_cb(cookie, ZX_ERR_NO_MEMORY, txn);
-        return;
-    }
+        new multi_txn_state_t(txn_count, txn, completion_cb, cookie));
 
     uint32_t length_remaining = txn->rw.length;
     for (size_t i = 0; i < txn_count; i++) {
-        size_t vslice = vslice_start + i;
-        uint32_t pslice = SliceGetLocked(vslice);
+        uint64_t vslice = vslice_start + i;
+        uint64_t pslice;
+        SliceGetLocked(vslice, &pslice);
 
         uint64_t offset_vmo = txn->rw.offset_vmo;
         uint64_t length;
@@ -329,13 +312,7 @@ void VPartition::BlockImplQueue(block_op_t* txn, block_impl_queue_callback compl
         ZX_DEBUG_ASSERT(length <= length_remaining);
 
         txns.push_back(reinterpret_cast<block_op_t*>(new uint8_t[mgr_->BlockOpSize()]));
-        if (txns[i] == nullptr) {
-            while (i-- > 0) {
-                delete[] txns[i];
-            }
-            completion_cb(cookie, ZX_ERR_NO_MEMORY, txn);
-            return;
-        }
+
         memcpy(txns[i], txn, sizeof(*txn));
         txns[i]->rw.offset_vmo = offset_vmo;
         txns[i]->rw.length = static_cast<uint32_t>(length);
