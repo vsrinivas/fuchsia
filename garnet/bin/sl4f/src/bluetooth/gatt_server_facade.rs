@@ -10,9 +10,9 @@ use fidl_fuchsia_bluetooth_gatt::{
     LocalServiceDelegateRequestStream, LocalServiceMarker, LocalServiceProxy, SecurityRequirements,
     Server_Marker, Server_Proxy, ServiceInfo,
 };
-use fuchsia_app as app;
 use fuchsia_async as fasync;
 use fuchsia_bluetooth::error::Error as BTError;
+use fuchsia_component as app;
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::stream::TryStreamExt;

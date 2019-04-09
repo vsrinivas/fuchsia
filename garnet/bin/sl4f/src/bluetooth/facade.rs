@@ -8,12 +8,12 @@ use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_gatt::{
     LocalServiceDelegateMarker, LocalServiceMarker, LocalServiceProxy, Server_Marker, Server_Proxy,
 };
-use fuchsia_app as app;
 use fuchsia_async::{
     self as fasync,
     temp::Either::{Left, Right},
 };
 use fuchsia_bluetooth::error::Error as BTError;
+use fuchsia_component as app;
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
 use futures::future::{ready as fready, Future, TryFutureExt};

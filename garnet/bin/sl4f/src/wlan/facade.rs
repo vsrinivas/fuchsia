@@ -5,7 +5,7 @@
 use connectivity_testing::wlan_service_util;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
-use fuchsia_app::client::connect_to_service;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog::fx_log_err;
 use parking_lot::RwLock;
 

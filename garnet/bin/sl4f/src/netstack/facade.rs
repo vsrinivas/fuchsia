@@ -4,7 +4,7 @@
 
 use failure::Error;
 use fidl_fuchsia_net_stack::{StackMarker, StackProxy};
-use fuchsia_app as app;
+use fuchsia_component as app;
 use serde_json::{to_value, Value};
 
 /// Perform Netstack operations.

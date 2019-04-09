@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 use crate::scenic::types::ScreenshotDataDef;
-use failure::Error;
+use failure::{Error, ResultExt};
 use fidl_fuchsia_ui_app::{ViewConfig, ViewMarker, ViewProviderMarker};
 use fidl_fuchsia_ui_policy::PresenterMarker;
 use fidl_fuchsia_ui_scenic::ScenicMarker;
-use fuchsia_app as app;
+use fuchsia_component::{
+    self as app,
+    client::{launch, launcher},
+};
 use fuchsia_scenic as scenic;
 use serde_json::{to_value, Value};
 
@@ -41,8 +44,8 @@ impl ScenicFacade {
         let presenter = app::client::connect_to_service::<PresenterMarker>()
             .expect("failed to connect to root presenter");
 
-        let launcher = app::client::Launcher::new()?;
-        let app = launcher.launch(url, None)?;
+        let launcher = launcher().context("Failed to open launcher service")?;
+        let app = launch(&launcher, url, None)?;
 
         let (view_token, mut view_holder_token) = scenic::new_view_token_pair()?;
 

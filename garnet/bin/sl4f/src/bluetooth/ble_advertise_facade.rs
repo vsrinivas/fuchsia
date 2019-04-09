@@ -4,8 +4,8 @@
 
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_bluetooth_le::{AdvertisingData, PeripheralMarker, PeripheralProxy};
-use fuchsia_app as app;
 use fuchsia_bluetooth::error::Error as BTError;
+use fuchsia_component as app;
 use fuchsia_syslog::macros::*;
 use parking_lot::RwLock;
 
