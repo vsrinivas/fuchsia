@@ -25,8 +25,8 @@ void ModuleView::OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties) {
   scenic::Rectangle background_shape(session(), logical_size().x,
                                      logical_size().y);
   background_node_.SetShape(background_shape);
-  background_node_.SetTranslationRH(logical_size().x * .5f,
-                                    logical_size().y * .5f, 0.f);
+  background_node_.SetTranslation(logical_size().x * .5f,
+                                  logical_size().y * .5f, 0.f);
 }
 
 ModuleApp::ModuleApp(component::StartupContext* const startup_context,

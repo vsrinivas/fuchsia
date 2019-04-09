@@ -188,8 +188,8 @@ void App::CreateExampleScene(float display_width, float display_height) {
   pane_bg_1.SetShape(pane_shape);
   pane_bg_1.SetMaterial(pane_material);
   pane_node_1.AddChild(pane_bg_1);
-  pane_node_1.SetTranslationRH(kPaneMargin + pane_width * 0.5,
-                               kPaneMargin + pane_height * 0.5, -20);
+  pane_node_1.SetTranslation(kPaneMargin + pane_width * 0.5,
+                             kPaneMargin + pane_height * 0.5, -20);
   root_node.AddChild(pane_node_1);
 
   EntityNode pane_node_2(session);
@@ -197,8 +197,8 @@ void App::CreateExampleScene(float display_width, float display_height) {
   pane_bg_2.SetShape(pane_shape);
   pane_bg_2.SetMaterial(pane_material);
   pane_node_2.AddChild(pane_bg_2);
-  pane_node_2.SetTranslationRH(kPaneMargin * 2 + pane_width * 1.5,
-                               kPaneMargin + pane_height * 0.5, -20);
+  pane_node_2.SetTranslation(kPaneMargin * 2 + pane_width * 1.5,
+                             kPaneMargin + pane_height * 0.5, -20);
   root_node.AddChild(pane_node_2);
 
   // Create a Material with the checkerboard image.  This will be used for
@@ -224,17 +224,17 @@ void App::CreateExampleScene(float display_width, float display_height) {
   ShapeNode clippee1(session);
   clippee1.SetShape(clippee_circle);
   clippee1.SetMaterial(green_material);
-  clippee1.SetTranslationRH(0, 300, 0);
+  clippee1.SetTranslation(0, 300, 0);
   ShapeNode clippee2(session);
   clippee2.SetShape(clippee_circle);
   clippee2.SetMaterial(checkerboard_material);
-  clippee2.SetTranslationRH(0, -300, -100);
+  clippee2.SetTranslation(0, -300, -100);
 
   pane_2_contents_->AddChild(clippee1);
   pane_2_contents_->AddChild(clippee2);
 
   pane_node_2.AddChild(*pane_2_contents_.get());
-  pane_2_contents_->SetTranslationRH(0, 0, -100);
+  pane_2_contents_->SetTranslation(0, 0, -100);
 }
 
 void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
@@ -270,8 +270,8 @@ void App::Update(uint64_t next_presentation_time) {
         static_cast<double>(next_presentation_time - start_time_) / kBillion;
 
     // Translate / rotate the rounded rect.
-    rrect_node_->SetTranslationRH(sin(secs * 0.8) * 500.f,
-                                  sin(secs * 0.6) * 570.f, -200.f);
+    rrect_node_->SetTranslation(sin(secs * 0.8) * 500.f,
+                                sin(secs * 0.6) * 570.f, -200.f);
 
     auto quaternion =
         glm::angleAxis(static_cast<float>(secs / 2.0), glm::vec3(0, 0, 1));

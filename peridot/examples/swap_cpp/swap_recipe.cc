@@ -46,7 +46,7 @@ class RecipeView : public scenic::BaseView {
       host_view_holder_ = std::make_unique<scenic::ViewHolder>(
           session(), std::move(view_holder_token), "Swap");
 
-      host_node_->SetTranslationRH(0.f, 0.f, -0.1f);
+      host_node_->SetTranslation(0.f, 0.f, -0.1f);
       host_node_->Attach(*host_view_holder_);
       root_node().AddChild(*host_node_);
     }

@@ -80,7 +80,7 @@ void ViewHost::UpdateScene() {
         .inset_from_max = fuchsia::ui::gfx::vec3{.x = 0.f, .y = 0.f, .z = 0.f},
     };
 
-    view_data->host_node.SetTranslationRH(offset, 0.f, 0.f);
+    view_data->host_node.SetTranslation(offset, 0.f, 0.f);
     view_data->host_view_holder.SetViewProperties(view_properties);
     offset += width;
   }
