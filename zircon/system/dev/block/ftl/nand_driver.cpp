@@ -77,7 +77,7 @@ const char* NandDriverImpl::Attach(const ftl::Volume* ftl_volume) {
     ftl::VolumeOptions options = {
         .num_blocks = info_.num_blocks,
         // This should be 2%, but that is of the whole device, not just this partition.
-        .max_bad_blocks = 82,
+        .max_bad_blocks = 41,
         .block_size = info_.page_size * info_.pages_per_block,
         .page_size = info_.page_size,
         .eb_size = info_.oob_size,
@@ -91,6 +91,9 @@ const char* NandDriverImpl::Attach(const ftl::Volume* ftl_volume) {
             return nullptr;
         }
         options.flags = 0;
+    } else if (BadBbtReservation()) {
+        zxlogf(WARN, "FTL: Unable to reduce bad block reservation");
+        options.max_bad_blocks *= 2;
     }
 
     const char* error = CreateNdmVolume(ftl_volume, options);
@@ -261,9 +264,7 @@ bool NandDriverImpl::HandleAlternateConfig(const ftl::Volume* ftl_volume,
     if (!num_blocks || num_blocks >= info_.num_blocks) {
         return false;
     }
-
     options.num_blocks = num_blocks;
-    options.max_bad_blocks /= 2;  // TODO(rvargas): remove this.
 
     if (!IsNdmDataPresent(options)) {
         // Nothing at the alternate location.

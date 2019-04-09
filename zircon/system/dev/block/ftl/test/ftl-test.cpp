@@ -307,10 +307,9 @@ void FtlExtendTest::SetUpBaseTest() {
 }
 
 TEST_F(FtlExtendTest, ExtendVolume) {
-    ftl::VolumeOptions options = kDefaultOptions;
     TestOptions driver_options = kDefaultTestOptions;
     driver_options.use_half_size = true;
-    auto driver_to_pass = std::make_unique<NdmRamDriver>(options, driver_options);
+    auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, driver_options);
 
     // Retain a pointer. The driver's lifetime is tied to ftl_.
     NdmRamDriver* driver = driver_to_pass.get();
@@ -323,7 +322,6 @@ TEST_F(FtlExtendTest, ExtendVolume) {
     const int kWriteSize = 5;
     uint32_t original_size = ftl_.num_pages();
     ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
-    ASSERT_NO_FATAL_FAILURES(CheckVolume(kWriteSize, original_size));
 
     // Double the volume size.
 
@@ -336,7 +334,111 @@ TEST_F(FtlExtendTest, ExtendVolume) {
 
     // Now make sure the whole volume works as expected.
     SetUpBaseTest();
+    EXPECT_GT(ftl_.num_pages(), original_size);
     ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
+}
+
+TEST_F(FtlExtendTest, ReduceReservedBlocks) {
+    TestOptions driver_options = kDefaultTestOptions;
+    driver_options.bad_block_interval = 500000;  // Large enough to avoid it.
+    auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, driver_options);
+
+    // Retain a pointer. The driver's lifetime is tied to ftl_.
+    NdmRamDriver* driver = driver_to_pass.get();
+    ASSERT_EQ(driver->Init(), nullptr);
+    ASSERT_TRUE(ftl_.InitWithDriver(std::move(driver_to_pass)));
+    SetUpBaseTest();
+
+    // Start by writing to the regular volume.
+    const int kWriteSize = 5;
+    uint32_t original_size = ftl_.num_pages();
+    ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
+
+    // Reduce the number of reserved blocks.
+    driver->set_max_bad_blocks(kDefaultOptions.max_bad_blocks / 2);
+    ASSERT_TRUE(ftl_.ReAttach());
+
+    // Verify the contents of the first part of the volume.
+    ASSERT_NO_FATAL_FAILURES(CheckVolume(kWriteSize, original_size));
+
+    // Now make sure the whole volume works as expected.
+    SetUpBaseTest();
+    EXPECT_GT(ftl_.num_pages(), original_size);
+    ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
+}
+
+TEST_F(FtlExtendTest, ReduceReservedBlocksFailure) {
+    auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions);
+
+    // Retain a pointer. The driver's lifetime is tied to ftl_.
+    NdmRamDriver* driver = driver_to_pass.get();
+    ASSERT_EQ(driver->Init(), nullptr);
+    ASSERT_TRUE(ftl_.InitWithDriver(std::move(driver_to_pass)));
+    SetUpBaseTest();
+
+    // Start by writing to the regular volume.
+    const int kWriteSize = 5;
+    ASSERT_NO_FATAL_FAILURES(SingleLoop(kWriteSize));
+
+    // Reduce the number of reserved blocks.
+    driver->set_max_bad_blocks(kDefaultOptions.max_bad_blocks / 2);
+    ASSERT_FALSE(ftl_.ReAttach());
+}
+
+// Reducing the bad block reservation should fail if it cannot hold the current
+// bad block table.
+TEST(FtlExtendTest, ReduceReservedBlocksTooSmall) {
+    TestOptions driver_options = kDefaultTestOptions;
+    driver_options.bad_block_interval = 5;
+    auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, driver_options);
+
+    // Retain a pointer. The driver's lifetime is tied to ftl_.
+    NdmRamDriver* driver = driver_to_pass.get();
+    FtlShell ftl;
+    ASSERT_EQ(driver->Init(), nullptr);
+    ASSERT_TRUE(ftl.InitWithDriver(std::move(driver_to_pass)));
+
+    // Generate enough activity to fill the bad block table.
+    for (uint32_t page = 0; page < 50; page++) {
+        ASSERT_OK(WritePage(&ftl, page));
+    }
+    ASSERT_OK(ftl.volume()->Unmount());
+    ASSERT_TRUE(driver->Detach());
+
+    // Reduce the number of reserved blocks: the table doesn't fit anymore.
+
+    ftl::VolumeOptions options = kDefaultOptions;
+    options.max_bad_blocks /= 2;
+    ASSERT_GT(driver->num_bad_blocks(), options.max_bad_blocks);
+    ASSERT_TRUE(driver->IsNdmDataPresent(options));
+    ASSERT_TRUE(driver->BadBbtReservation());
+}
+
+// Even if the new table can hold the current one, if a translated block would
+// end up in the wrong region the operation should fail.
+TEST(FtlExtendTest, ReduceReservedBlocksInvalidLocation) {
+    TestOptions driver_options = kDefaultTestOptions;
+    driver_options.bad_block_interval = 5;
+    auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions, driver_options);
+
+    // Retain a pointer. The driver's lifetime is tied to ftl_.
+    NdmRamDriver* driver = driver_to_pass.get();
+    ASSERT_EQ(driver->Init(), nullptr);
+    FtlShell ftl;
+    ASSERT_TRUE(ftl.InitWithDriver(std::move(driver_to_pass)));
+
+    // At this point a single write will be enough to generate a bad block.
+    ASSERT_OK(WritePage(&ftl, 0));
+    ASSERT_OK(ftl.volume()->Unmount());
+
+    // Reduce the number of reserved blocks.
+    ASSERT_TRUE(driver->Detach());
+
+    ftl::VolumeOptions options = kDefaultOptions;
+    options.max_bad_blocks /= 2;
+    ASSERT_LT(driver->num_bad_blocks(), options.max_bad_blocks);
+    ASSERT_TRUE(driver->IsNdmDataPresent(options));
+    ASSERT_TRUE(driver->BadBbtReservation());
 }
 
 } // namespace

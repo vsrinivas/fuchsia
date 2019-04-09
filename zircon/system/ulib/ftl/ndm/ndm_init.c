@@ -674,7 +674,7 @@ static int read_ctrl_info(NDM ndm) {
     for (ndm->num_bad_blks = i = 0;; ++i) {
         // If too many initial bad blocks, error.
         if (ndm->num_bad_blks > ndm->max_bad_blks)
-            return FsError2(NDM_BAD_META_DATA, EINVAL);
+            return FsError2(NDM_TOO_MANY_IBAD, EINVAL);
 
         // If next read spans control pages, adjust. Return -1 if error.
         if (check_next_read(ndm, &curr_loc, &p, &ctrl_pages, sizeof(ui32)))
@@ -705,7 +705,7 @@ static int read_ctrl_info(NDM ndm) {
     for (ndm->num_rbb = 0;; ++ndm->num_rbb) {
         // If too many bad blocks, error.
         if (ndm->num_bad_blks > ndm->max_bad_blks)
-            return FsError2(NDM_BAD_META_DATA, EINVAL);
+            return FsError2(NDM_TOO_MANY_RBAD, EINVAL);
 
         // If next read spans control pages, adjust. Return -1 if error.
         if (check_next_read(ndm, &curr_loc, &p, &ctrl_pages, 2 * sizeof(ui32)))
@@ -948,7 +948,7 @@ static int init_ndm(NDM ndm) {
 
     // Ensure even lowest running bad block lies in reserved area.
     if (ndm->run_bad_blk[0].val < ndm->frst_reserved)
-        return -1;
+        return FsError2(NDM_RBAD_LOCATION, EINVAL);
 
     // If in the middle of transferring a bad block, continue transfer.
     if (ndm->xfr_tblk != (ui32)-1)

@@ -122,9 +122,24 @@ bool NdmBaseDriver::IsNdmDataPresent(const VolumeOptions& options) {
     driver.erase_block = EraseBlock;
     driver.is_block_bad = IsBadBlockImpl;
 
-    SetFsErrCode(0);
+    SetFsErrCode(NDM_OK);
     ndm_ = ndmAddDev(&driver);
-    return ndm_ || (options.flags & kReadOnlyInit && GetFsErrCode() != NDM_NO_META_BLK);
+    return ndm_ || GetFsErrCode() != NDM_NO_META_BLK;
+}
+
+bool NdmBaseDriver::BadBbtReservation() const {
+    if (ndm_) {
+        return false;
+    }
+    FsErrorCode error = static_cast<FsErrorCode>(GetFsErrCode());
+    switch (error) {
+        case NDM_TOO_MANY_IBAD:
+        case NDM_TOO_MANY_RBAD:
+        case NDM_RBAD_LOCATION:
+            return true;
+        default:
+            return false;
+    }
 }
 
 const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options) {

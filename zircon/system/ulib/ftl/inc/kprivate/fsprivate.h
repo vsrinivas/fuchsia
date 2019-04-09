@@ -19,8 +19,10 @@ extern "C" {
 #define SLC_NAND_RC_LIMIT 1000000
 
 // FsErrCode Error Code Assignments.
-enum FsError
+enum FsErrorCode
 {
+    NDM_OK = 0,               // No errors.
+
     // TargetNDM Symbols.
     NDM_EIO = 1,              // Fatal I/O error.
     NDM_CFG_ERR = 2,          // NDM config error
@@ -38,6 +40,7 @@ enum FsError
     NDM_NOT_FOUND = 14,       // ndmDelDev() unknown handle.
     NDM_BAD_BLK_RECOV = 15,   // Running bad block recovery needed during RO-init.
     NDM_META_WR_REQ = 16,     // Metadata write request during RO-init.
+    NDM_RBAD_LOCATION = 17,   // Running bad block replacement in virtual location.
 
     // TargetFTL-NDM Symbols.
     FTL_CFG_ERR = 20,         // FTL config error.

@@ -28,6 +28,9 @@ class NdmRamDriver : public ftl::NdmBaseDriver {
     // Extends the visible volume to the whole size of the storage.
     bool DoubleSize();
 
+    void set_max_bad_blocks(uint32_t value) { options_.max_bad_blocks = value; }
+    uint32_t num_bad_blocks() const { return num_bad_blocks_; }
+
     // NdmDriver interface:
     const char* Init() final;
     const char* Attach(const ftl::Volume* ftl_volume) final;

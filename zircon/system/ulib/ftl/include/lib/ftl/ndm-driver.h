@@ -93,6 +93,18 @@ class NdmBaseDriver : public NdmDriver {
     // for the result to be meaningful, but calling this is not required.
     bool IsNdmDataPresent(const VolumeOptions& options);
 
+    // Returns true if the size of the bad block reservation cannot be used.
+    // The size to use (options.max_bad_blocks) may be too small to hold the
+    // current known bad blocks, or some internal value may be inconsistent if
+    // this size is used.
+    // This only makes sense when comparing the desired options with the data
+    // already stored on a volume, and in general should only be used to attempt
+    // to reduce the reserved space (increasing it would reduce the size of the
+    // visible volume, and that is not supported).
+    // This method should only be called right after calling IsNdmDataPresent(),
+    // before calling CreateNdmVolume().
+    bool BadBbtReservation() const;
+
     // Creates the underlying NDM volume, with the provided parameters.
     const char* CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options);
 

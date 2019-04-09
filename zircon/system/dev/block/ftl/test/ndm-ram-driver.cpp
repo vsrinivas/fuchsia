@@ -223,10 +223,10 @@ int NdmRamDriver::WritePage(uint32_t page_num, const uint8_t* data, const uint8_
 bool NdmRamDriver::SimulateBadBlock(uint32_t page_num) {
     if (num_bad_blocks_ < options_.max_bad_blocks) {
         if (bad_block_interval_++ == test_options_.bad_block_interval) {
-              SetBadBlock(page_num, true);
-              bad_block_interval_ = 0;
-              ++num_bad_blocks_;
-              return true;
+            SetBadBlock(page_num, true);
+            bad_block_interval_ = 0;
+            ++num_bad_blocks_;
+            return true;
         }
     }
     return false;
