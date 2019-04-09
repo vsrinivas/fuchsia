@@ -57,7 +57,7 @@
 
 ### Examples
 
-  * "pass in proto tcp from 1234:5678::/32 port 10000 to 1.2.3.4/8 port 1000;"
+  * "pass in proto tcp from 2607:f8b0:4005:80b::/64 port 10000 to 192.168.42.0/24 port 1000;"
 
     ```
     &[
@@ -68,15 +68,15 @@
             proto: net::SocketProtocol::Tcp,
             src_subnet: Some(Box::new(net::Subnet{
                 addr: net::IpAddress::Ipv6(net::Ipv6Address{
-                    addr: [0x12, 0x34, 0x56, 0x78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                    addr: [0x26, 0x07, 0xf8, 0xb0, 0x40, 0x05, 0x08, 0x0b, 0, 0, 0, 0, 0, 0, 0, 0]
                 }),
-                prefix_len: 32,
+                prefix_len: 64,
             })),
             src_subnet_invert_match: false,
             src_port: 10000,
             dst_subnet: Some(Box::new(net::Subnet{
-                addr: net::IpAddress::Ipv4(net::Ipv4Address{ addr: [1, 2, 3, 4] }),
-                prefix_len: 8,
+                addr: net::IpAddress::Ipv4(net::Ipv4Address{ addr: [192, 168, 42, 0] }),
+                prefix_len: 24,
             })),
             dst_subnet_invert_match: false,
             dst_port: 1000,
@@ -106,16 +106,16 @@
 
 ### Examples
 
-  * "nat proto tcp from 1.2.3.0/24 -> from 192.168.1.1;"
+  * "nat proto tcp from 192.168.42.0/24 -> from 10.0.0.1;"
     ```
     &[
         filter::Nat {
             proto: net::SocketProtocol::Tcp,
             src_subnet: net::Subnet{
-                addr: net::IpAddress::Ipv4(net::Ipv4Address{ addr: [1, 2, 3, 0] }),
+                addr: net::IpAddress::Ipv4(net::Ipv4Address{ addr: [192, 168, 42, 0] }),
                 prefix_len: 24,
             },
-            new_src_addr: net::IpAddress::Ipv4(net::Ipv4Address{ addr: [192, 168, 1, 1] }),
+            new_src_addr: net::IpAddress::Ipv4(net::Ipv4Address{ addr: [10, 0, 0, 1] }),
             nic: 0,
         },
     ]
@@ -140,14 +140,14 @@
 
 ### Examples
 
-  * "rdr proto tcp to 1.2.3.4 port 10000 -> to 192.168.1.1 port 20000;"
+  * "rdr proto tcp to 10.0.0.1 port 10000 -> to 192.168.42.1 port 20000;"
     ```
     &[
         filter::Rdr {
             proto: net::SocketProtocol::Tcp,
-            dst_addr: net::IpAddress::Ipv4(net::Ipv4Address{ addr: [1, 2, 3, 4] }),
+            dst_addr: net::IpAddress::Ipv4(net::Ipv4Address{ addr: [10, 0, 0, 1] }),
             dst_port: 10000,
-            new_dst_addr: net::IpAddress::Ipv4(net::Ipv4Address{ addr: [192, 168, 1, 1] }),
+            new_dst_addr: net::IpAddress::Ipv4(net::Ipv4Address{ addr: [192, 168, 42, 1] }),
             new_dst_port: 20000,
             nic: 0,
         },
