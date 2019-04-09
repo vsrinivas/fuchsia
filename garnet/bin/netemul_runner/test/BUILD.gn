@@ -37,6 +37,7 @@ group("netemul_empty_binaries") {
   write_file("$root_out_dir/easy_netstack_cfg_test", "")
   write_file("$root_out_dir/inheritance_test", "")
   write_file("$root_out_dir/dynamic_devices_test", "")
+  write_file("$root_out_dir/netstack_intermediary_test", "")
 }
 
 test_package("netemul_sandbox_test") {
@@ -50,6 +51,7 @@ test_package("netemul_sandbox_test") {
     "//garnet/bin/netemul_runner/test/easy_netstack_cfg",
     "//garnet/bin/netemul_runner/test/env_build",
     "//garnet/bin/netemul_runner/test/inheritance",
+    "//garnet/bin/netemul_runner/test/netstack_intermediary",
     "//garnet/bin/netemul_runner/test/netstack_socks",
     "//garnet/bin/netemul_runner/test/sandbox_service",
     "//garnet/bin/netemul_runner/test/svc_list",
@@ -84,6 +86,10 @@ test_package("netemul_sandbox_test") {
       path = rebase_path("meta/dynamic_devices.cmx")
       dest = "dynamic_devices.cmx"
     },
+    {
+      path = rebase_path("meta/netstack_intermediary.cmx")
+      dest = "netstack_intermediary.cmx"
+    },
   ]
 
   binaries = [
@@ -107,6 +113,9 @@ test_package("netemul_sandbox_test") {
     },
     {
       name = "dynamic_devices"
+    },
+    {
+      name = "netstack_intermediary"
     },
   ]
 
@@ -150,6 +159,10 @@ test_package("netemul_sandbox_test") {
     {
       name = "mock_device_settings_bin_test"
       dest = "mock_device_settings"
+    },
+    {
+      name = "netstack_intermediary_test"
+      environments = basic_envs
     },
   ]
 }

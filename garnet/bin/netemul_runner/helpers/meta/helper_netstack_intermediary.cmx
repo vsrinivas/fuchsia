@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/guest_netstack_intermediary"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.netemul.network.NetworkContext",
+            "fuchsia.netemul.network.FakeEndpoint"
+        ]
+    }
+}

@@ -122,6 +122,7 @@ package("netemul_sandbox") {
     ":bin",
     "//garnet/bin/netemul_runner/helpers/mock_device_settings",
     "//garnet/bin/netemul_runner/helpers/netstack_cfg",
+    "//garnet/bin/netemul_runner/helpers/netstack_intermediary:bin",
   ]
 
   binaries = [
@@ -133,6 +134,9 @@ package("netemul_sandbox") {
     },
     {
       name = "mock_device_settings"
+    },
+    {
+      name = "guest_netstack_intermediary"
     },
   ]
 
@@ -148,6 +152,10 @@ package("netemul_sandbox") {
     {
       path = rebase_path("helpers/meta/mock_device_settings.cmx")
       dest = "mock_device_settings.cmx"
+    },
+    {
+      path = rebase_path("helpers/meta/helper_netstack_intermediary.cmx")
+      dest = "helper_netstack_intermediary.cmx"
     },
   ]
 }

@@ -1,0 +1,58 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "capture": true,
+            "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/netstack_intermediary.cmx",
+            "environment": {
+                "children": [
+                    {
+                        "name": "client",
+                        "services": {
+                            "fuchsia.netstack.Netstack": {
+                                "arguments": [
+                                    "--network=net"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_intermediary.cmx"
+                            }
+                        },
+                        "test": [
+                            {
+                                "arguments": [
+                                    "--mock_guest"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "devices": [
+                            "server-ep"
+                        ],
+                        "name": "server",
+                        "test": [
+                            {
+                                "arguments": [
+                                    "--server",
+                                    "--endpoint_name=server-ep"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "server-ep"
+                        }
+                    ],
+                    "name": "net"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "bin/app"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}
