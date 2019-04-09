@@ -11,7 +11,6 @@ use fidl_fuchsia_sys::EnvironmentControllerProxy;
 use fidl_fuchsia_tracelink::RegistryMarker;
 use fidl_fuchsia_ui_input::ImeServiceMarker;
 use fidl_fuchsia_ui_scenic::ScenicMarker;
-use fidl_fuchsia_ui_viewsv1::ViewManagerMarker;
 use fidl_fuchsia_vulkan_loader::LoaderMarker;
 use fuchsia_app::{
     client::{App as LaunchedApp, LaunchOptions},
@@ -49,7 +48,6 @@ pub fn make_replica_env(
         .add_proxy_service::<LoaderMarker>()
         .add_proxy_service::<ProviderMarker>()
         .add_proxy_service::<RegistryMarker>()
-        .add_proxy_service::<ViewManagerMarker>()
         .launch_component_in_nested_environment_with_options(
             SESSIONMGR_URI.to_string(),
             Some(vec![FLAG_USE_CLOUD_PROVIDER_FROM_ENV.to_string()]),
