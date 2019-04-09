@@ -11,6 +11,7 @@
 
 #include "garnet/bin/media/audio_core/fwd_decls.h"
 #include "lib/media/timeline/timeline_rate.h"
+#include "src/lib/fxl/macros.h"
 
 namespace media::audio {
 

@@ -7,10 +7,10 @@
 #include <fcntl.h>
 #include <hid/usages.h>
 #include <lib/zx/eventpair.h>
+
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fsl/io/fd.h"
-#include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/type_converters.h"
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "src/lib/url/gurl.h"
@@ -461,7 +461,7 @@ int64_t MediaPlayerTestUtilView::progress_ns() const {
   }
 
   // Apply the timeline function to the current time.
-  int64_t position = timeline_function_(media::Timeline::local_now());
+  int64_t position = timeline_function_(zx::clock::get_monotonic().get());
 
   if (position < 0) {
     position = 0;

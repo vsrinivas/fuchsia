@@ -7,8 +7,6 @@
 #include <limits>
 #include <utility>
 
-#include "src/lib/fxl/logging.h"
-
 namespace media {
 
 // static

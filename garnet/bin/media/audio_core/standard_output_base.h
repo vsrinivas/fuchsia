@@ -15,9 +15,8 @@
 #include "garnet/bin/media/audio_core/mixer/gain.h"
 #include "garnet/bin/media/audio_core/mixer/mixer.h"
 #include "garnet/bin/media/audio_core/mixer/output_producer.h"
-#include "src/lib/fxl/time/time_delta.h"
-#include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
+#include "src/lib/fxl/time/time_delta.h"
 
 namespace media::audio {
 
