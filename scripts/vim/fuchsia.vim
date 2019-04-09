@@ -69,12 +69,17 @@ if jiri_manifest != ""
     " Use `fx full-build` to build when you type :make
     " Helper to clean up quickfix list in make.vim
     let &makeprg="fx full-build"
+
+    " The Buf* autocmds sometimes run before and sometimes after FileType.
+    if &filetype == "cpp"
+      call FuchsiaCppBuffer()
+    endif
   endfunction
 
   " This may be called twice because autocmds arrive in different orders on
   " different platforms.
   function! FuchsiaCppBuffer()
-    if !b:is_fuchsia
+    if !exists("b:is_fuchsia") || !b:is_fuchsia
       return
     endif
     if exists('g:loaded_youcompleteme')
