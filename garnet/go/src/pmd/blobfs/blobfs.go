@@ -78,10 +78,6 @@ func (m *Manager) HasBlob(root string) bool {
 		// if there was no error, then we opened the file for writing and the file was
 		// writable, which means it exists and is being written by someone.
 		return false
-	case zx.Error:
-		if err.Status == zx.ErrAccessDenied {
-			return true
-		}
 	case *zx.Error:
 		// Access denied indicates we explicitly know that we have opened a blob that
 		// already exists and it is not writable - meaning it's already written.

@@ -30,8 +30,6 @@ func respond(flags uint32, req fidlio.NodeInterfaceRequest, err error, node fidl
 				panic(err)
 			}
 			return proxy.OnOpen(int32(zx.ErrOk), &info)
-		case zx.Error:
-			return proxy.OnOpen(int32(err.Status), nil)
 		case *zx.Error:
 			return proxy.OnOpen(int32(err.Status), nil)
 		default:

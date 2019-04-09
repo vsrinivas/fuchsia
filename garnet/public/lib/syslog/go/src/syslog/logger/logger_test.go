@@ -155,10 +155,6 @@ func TestLoggerSeverity(t *testing.T) {
 	log.Infof(format, 10)
 	_, err := sin.Read(make([]byte, 0), 0)
 	switch err := err.(type) {
-	case zx.Error:
-		if err.Status != zx.ErrShouldWait {
-			t.Fatal(err)
-		}
 	case *zx.Error:
 		if err.Status != zx.ErrShouldWait {
 			t.Fatal(err)
@@ -177,10 +173,6 @@ func TestLoggerVerbosity(t *testing.T) {
 	log.VLogf(logger.TraceVerbosity, format, 10)
 	_, err := sin.Read(make([]byte, 0), 0)
 	switch err := err.(type) {
-	case zx.Error:
-		if err.Status != zx.ErrShouldWait {
-			t.Fatal(err)
-		}
 	case *zx.Error:
 		if err.Status != zx.ErrShouldWait {
 			t.Fatal(err)

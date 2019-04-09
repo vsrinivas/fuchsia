@@ -165,8 +165,6 @@ func (idx *DynamicIndex) InstallingFailedForBlob(blobRoot string, err error) {
 	// in case it's not.
 	status := zx.ErrInternal
 	switch err := err.(type) {
-	case zx.Error:
-		status = err.Status
 	case *zx.Error:
 		status = err.Status
 	}
