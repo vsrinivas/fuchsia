@@ -196,6 +196,14 @@ void DebuggedProcess::OnReadMemory(const debug_ipc::ReadMemoryRequest& request,
 
 void DebuggedProcess::OnKill(const debug_ipc::KillRequest& request,
                              debug_ipc::KillReply* reply) {
+  // Remove the watch handle before killing the process to avoid getting
+  // exceptions after we stopped listening to them.
+  process_watch_handle_ = {};
+
+  // Since we're being killed, we treat this process as not having any more
+  // threads. This makes cleanup code more straightforward, as there are no
+  // threads to resume/handle.
+  threads_.clear();
   reply->status = process_.kill();
 }
 

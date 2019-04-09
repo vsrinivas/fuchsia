@@ -8,6 +8,8 @@
 #include <lib/async/default.h>
 
 #include "src/developer/debug/shared/message_loop_async.h"
+#include "src/developer/debug/shared/logging/logging.h"
+#include "src/developer/debug/shared/zircon_utils.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/logging.h"
 
@@ -93,6 +95,9 @@ ExceptionHandler::~ExceptionHandler() {
   if (!handle_)
     return;
 
+  DEBUG_LOG(MessageLoop) << "Removing exception handler: 0x" << std::hex
+                         << handle_.get();
+
   zx_status_t status = async_unbind_exception_port(
       async_get_default_dispatcher(), handle_.get());
   FXL_DCHECK(status == ZX_OK)
@@ -130,12 +135,20 @@ void ExceptionHandler::Handler(async_dispatcher_t*,
   FXL_DCHECK(status == ZX_OK)
       << "Unexpected status: " << ZxStatusToString(status);
 
+  DEBUG_LOG(MessageLoop) << "Got exception: "
+                         << ExceptionTypeToString(packet->type);
+
   auto* loop = MessageLoopAsync::Current();
   FXL_DCHECK(loop);
 
-  // We search for the AsyncHandle that triggered this signal.
   auto handler_it = loop->exception_handlers().find(exception);
-  FXL_DCHECK(handler_it != loop->exception_handlers().end());
+  if (handler_it == loop->exception_handlers().end()) {
+    DEBUG_LOG(MessageLoop) << "Exception handler not found: 0x" << std::hex
+                           << exception;
+    FXL_NOTREACHED();
+  }
+
+
   const ExceptionHandler& exception_handler = handler_it->second;
 
   // We copy the packet in order to pass in the key.

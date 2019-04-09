@@ -72,7 +72,7 @@ DebuggedThread::DebuggedThread(DebuggedProcess* process, zx::thread thread,
   }
 }
 
-DebuggedThread::~DebuggedThread() {}
+DebuggedThread::~DebuggedThread() = default;
 
 void DebuggedThread::OnException(uint32_t type) {
   suspend_reason_ = SuspendReason::kException;

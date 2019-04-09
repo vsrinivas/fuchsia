@@ -61,6 +61,8 @@ static_library("shared") {
       # Original message loop (previously MessageLoopZircon).
       "message_loop_zircon.cc",
       "message_loop_zircon.h",
+      "zircon_utils.cc",
+      "zircon_utils.h",
     ]
 
     public_deps += [
