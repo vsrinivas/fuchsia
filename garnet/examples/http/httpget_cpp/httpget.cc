@@ -4,12 +4,12 @@
 
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-
-#include "lib/sys/cpp/component_context.h"
-#include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/macros.h"
+#include <lib/sys/cpp/component_context.h>
 
 #include <string>
+
+#include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/macros.h"
 
 namespace examples {
 
@@ -73,8 +73,7 @@ class ResponsePrinter {
 class WGetApp {
  public:
   WGetApp(async::Loop* loop)
-      : loop_(loop),
-        context_(sys::ComponentContext::Create()) {
+      : loop_(loop), context_(sys::ComponentContext::Create()) {
     http_service_ = context_->svc()->Connect<http::HttpService>();
     FXL_DCHECK(http_service_);
   }

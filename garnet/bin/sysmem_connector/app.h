@@ -6,9 +6,9 @@
 #define GARNET_BIN_SYSMEM_CONNECTOR_APP_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <lib/component/cpp/startup_context.h>
-#include <src/lib/fxl/macros.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/sysmem-connector/sysmem-connector.h>
+#include <src/lib/fxl/macros.h>
 
 #include <memory>
 
@@ -19,7 +19,7 @@ class App {
   ~App();
 
  private:
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
 
   sysmem_connector_t* sysmem_connector_ = nullptr;
 

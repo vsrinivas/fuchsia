@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <vector>
-
 #include <fuchsia/logger/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/wire_format.h>
 #include <zircon/syscalls/log.h>
 
-#include "lib/component/cpp/startup_context.h"
+#include <vector>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/gtest/real_loop_fixture.h"
 #include "lib/syslog/cpp/logger.h"
@@ -28,8 +28,7 @@ class LogListenerMock : public fuchsia::logger::LogListener {
     return log_messages_;
   }
   void CollectLogs(size_t expected_logs);
-  bool ConnectToLogger(component::StartupContext* startup_context,
-                       zx_koid_t pid);
+  bool ConnectToLogger(sys::ComponentContext* component_context, zx_koid_t pid);
 
  private:
   ::fidl::Binding<fuchsia::logger::LogListener> binding_;
@@ -43,8 +42,7 @@ LogListenerMock::LogListenerMock() : binding_(this) {
 
 LogListenerMock::~LogListenerMock() {}
 
-void LogListenerMock::LogMany(
-    ::std::vector<fuchsia::logger::LogMessage> logs) {
+void LogListenerMock::LogMany(::std::vector<fuchsia::logger::LogMessage> logs) {
   std::move(logs.begin(), logs.end(), std::back_inserter(log_messages_));
 }
 
@@ -54,13 +52,12 @@ void LogListenerMock::Log(fuchsia::logger::LogMessage log) {
 
 void LogListenerMock::Done() {}
 
-bool LogListenerMock::ConnectToLogger(
-    component::StartupContext* startup_context, zx_koid_t pid) {
+bool LogListenerMock::ConnectToLogger(sys::ComponentContext* component_context,
+                                      zx_koid_t pid) {
   if (!log_listener_) {
     return false;
   }
-  auto log_service =
-      startup_context->ConnectToEnvironmentService<fuchsia::logger::Log>();
+  auto log_service = component_context->svc()->Connect<fuchsia::logger::Log>();
   auto options = fuchsia::logger::LogFilterOptions::New();
   options->filter_by_pid = true;
   options->pid = pid;
@@ -124,9 +121,8 @@ TEST_F(LoggerTest, Integration) {
   auto tag = "logger_integration_cpp_test";
   ASSERT_EQ(syslog::InitLogger({tag}), ZX_OK);
   FX_LOGS(INFO) << "my message";
-  auto startup_context =
-      component::StartupContext::CreateFromStartupInfo();
-  ASSERT_TRUE(log_listener.ConnectToLogger(startup_context.get(), pid));
+  auto component_context = sys::ComponentContext::Create();
+  ASSERT_TRUE(log_listener.ConnectToLogger(component_context.get(), pid));
   auto& logs = log_listener.GetLogs();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&logs] { return logs.size() >= 1u; },
                                         zx::sec(5)));

@@ -7,10 +7,10 @@
 
 #include <fuchsia/mdns/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 
 #include "garnet/bin/mdns/util/mdns_params.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 
 namespace mdns {
@@ -18,7 +18,7 @@ namespace mdns {
 class MdnsImpl : public fuchsia::mdns::Responder,
                  public fuchsia::mdns::ServiceSubscriber {
  public:
-  MdnsImpl(component::StartupContext* startup_context, MdnsParams* params,
+  MdnsImpl(sys::ComponentContext* component_context, MdnsParams* params,
            fit::closure quit_callback);
 
   ~MdnsImpl() override;

@@ -5,17 +5,17 @@
 #ifndef GARNET_EXAMPLES_MEDIA_TONES_TONES_H_
 #define GARNET_EXAMPLES_MEDIA_TONES_TONES_H_
 
-#include <list>
-#include <map>
-
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include <list>
+#include <map>
 
 #include "garnet/examples/media/tones/tone_generator.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/macros.h"
-#include "lib/sys/cpp/component_context.h"
 
 namespace examples {
 

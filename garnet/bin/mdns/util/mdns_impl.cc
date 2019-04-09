@@ -4,12 +4,13 @@
 
 #include "garnet/bin/mdns/util/mdns_impl.h"
 
-#include <iostream>
-#include <unordered_set>
-
 #include <fuchsia/mdns/cpp/fidl.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/default.h>
+#include <poll.h>
+
+#include <iostream>
+#include <unordered_set>
 
 #include "garnet/bin/mdns/util/formatting.h"
 #include "garnet/bin/mdns/util/mdns_params.h"
@@ -19,17 +20,16 @@
 
 namespace mdns {
 
-MdnsImpl::MdnsImpl(component::StartupContext* startup_context,
-                   MdnsParams* params, fit::closure quit_callback)
+MdnsImpl::MdnsImpl(sys::ComponentContext* component_context, MdnsParams* params,
+                   fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)),
       responder_binding_(this),
       subscriber_binding_(this) {
-  FXL_DCHECK(startup_context);
+  FXL_DCHECK(component_context);
   FXL_DCHECK(params);
   FXL_DCHECK(quit_callback_);
 
-  controller_ =
-      startup_context->ConnectToEnvironmentService<fuchsia::mdns::Controller>();
+  controller_ = component_context->svc()->Connect<fuchsia::mdns::Controller>();
 
   controller_.set_error_handler([this](zx_status_t status) {
     controller_.set_error_handler(nullptr);

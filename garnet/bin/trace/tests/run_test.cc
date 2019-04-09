@@ -2,27 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
-#include <vector>
+#include "garnet/bin/trace/tests/run_test.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fsl/types/type_converters.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/zx/process.h>
+#include <lib/zx/time.h>
 #include <src/lib/fxl/log_settings.h>
 #include <src/lib/fxl/logging.h>
 #include <src/lib/fxl/strings/join_strings.h>
 #include <src/lib/fxl/strings/string_printf.h>
-#include <lib/zx/process.h>
-#include <lib/zx/time.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-#include "src/lib/files/file.h"
+
+#include <string>
+#include <vector>
 
 #include "garnet/bin/trace/spec.h"
-#include "garnet/bin/trace/tests/run_test.h"
+#include "src/lib/files/file.h"
 
 // The "path" of the trace program from outside the trace package.
 const char kTraceProgramUrl[] =
@@ -198,8 +199,7 @@ static bool LaunchTool(const std::vector<std::string>& argv) {
   return true;
 }
 
-static bool LaunchApp(component::StartupContext* context,
-                      const std::string& app,
+static bool LaunchApp(sys::ComponentContext* context, const std::string& app,
                       const std::vector<std::string>& args) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = std::string(app);
@@ -219,8 +219,10 @@ static bool LaunchApp(component::StartupContext* context,
   // dispatcher, which is what the component controller machinery is using.
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
-  context->launcher()->CreateComponent(std::move(launch_info),
-                                       component_controller.NewRequest());
+  fuchsia::sys::LauncherPtr launcher;
+  context->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info),
+                            component_controller.NewRequest());
   component_controller.set_error_handler(
       [&loop, &return_code](zx_status_t error) {
         // This can get run even after the app has exited, in the destructor.
@@ -259,7 +261,7 @@ static bool LaunchApp(component::StartupContext* context,
   return return_code == 0;
 }
 
-bool RunTspec(component::StartupContext* context,
+bool RunTspec(sys::ComponentContext* context,
               const std::string& relative_tspec_path,
               const std::string& output_file_path) {
   std::vector<std::string> argv;
@@ -272,7 +274,7 @@ bool RunTspec(component::StartupContext* context,
                    std::vector<std::string>(argv.begin() + 1, argv.end()));
 }
 
-bool VerifyTspec(component::StartupContext* context,
+bool VerifyTspec(sys::ComponentContext* context,
                  const std::string& relative_tspec_path,
                  const std::string& output_file_path) {
   tracing::Spec spec;

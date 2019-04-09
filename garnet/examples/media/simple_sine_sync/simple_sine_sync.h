@@ -7,7 +7,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
-#include "lib/sys/cpp/component_context.h"
+#include <lib/sys/cpp/component_context.h>
 
 namespace examples {
 

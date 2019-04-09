@@ -9,7 +9,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fzl/vmo-pool.h>
 #include <lib/media/timeline/timeline_function.h>

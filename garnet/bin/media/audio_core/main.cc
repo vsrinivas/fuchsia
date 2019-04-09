@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "garnet/bin/media/audio_core/audio_core_impl.h"
-#include "lib/sys/cpp/component_context.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  media::audio::AudioCoreImpl impl(
-      sys::ComponentContext::Create());
+  media::audio::AudioCoreImpl impl(sys::ComponentContext::Create());
   loop.Run();
   return 0;
 }

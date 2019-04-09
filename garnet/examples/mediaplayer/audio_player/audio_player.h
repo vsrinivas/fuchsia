@@ -8,12 +8,12 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include "garnet/examples/mediaplayer/audio_player/audio_player_params.h"
 #include "lib/fsl/tasks/fd_waiter.h"
-#include "src/lib/fxl/macros.h"
 #include "lib/media/timeline/timeline_function.h"
-#include "lib/sys/cpp/component_context.h"
+#include "src/lib/fxl/macros.h"
 
 namespace examples {
 

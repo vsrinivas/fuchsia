@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
-
-#include <cstdio>
-
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
+#include <lib/sys/cpp/component_context.h>
 
-#include "lib/sys/cpp/component_context.h"
+#include <cstdio>
+
 #include "lib/fsl/socket/files.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/file_descriptor.h"
@@ -74,8 +73,7 @@ class ResponsePrinter {
 class PostFileApp {
  public:
   PostFileApp(async::Loop* loop)
-      : loop_(loop),
-        context_(sys::ComponentContext::Create()) {
+      : loop_(loop), context_(sys::ComponentContext::Create()) {
     http_service_ = context_->svc()->Connect<http::HttpService>();
   }
 

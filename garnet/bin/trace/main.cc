@@ -15,7 +15,7 @@ int main(int argc, const char** argv) {
     return 1;
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
+  auto context = sys::ComponentContext::Create();
 
   tracing::App app(context.get());
   int32_t return_code = 0;

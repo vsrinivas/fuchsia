@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/component/cpp/startup_context.h>
-#include <src/lib/fxl/command_line.h>
-#include <src/lib/fxl/log_settings_command_line.h>
-#include <src/lib/fxl/logging.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
+#include <src/lib/fxl/command_line.h>
+#include <src/lib/fxl/log_settings_command_line.h>
+#include <src/lib/fxl/logging.h>
 #include <zircon/status.h>
 
 #include "garnet/bin/trace/tests/run_test.h"
@@ -18,13 +18,13 @@
 // Note: /data is no longer large enough in qemu sessions
 const char kOutputFilePath[] = "/tmp/test.trace";
 
-static std::unique_ptr<component::StartupContext> g_context;
+static std::unique_ptr<sys::ComponentContext> g_context;
 
 // |relative_tspec_path| is a relative path, from /pkg.
 static void RunAndVerify(const char* relative_tspec_path) {
   ASSERT_TRUE(RunTspec(g_context.get(), relative_tspec_path, kOutputFilePath));
-  ASSERT_TRUE(VerifyTspec(g_context.get(), relative_tspec_path,
-                          kOutputFilePath));
+  ASSERT_TRUE(
+      VerifyTspec(g_context.get(), relative_tspec_path, kOutputFilePath));
 }
 
 TEST(Oneshot, FillBuffer) { RunAndVerify("data/oneshot-spawn.tspec"); }
@@ -135,10 +135,10 @@ int main(int argc, char** argv) {
 
   testing::InitGoogleTest(&argc, argv);
 
-  // |CreateFromStartupInfo()| needs a loop, it uses the default dispatcher.
+  // |Create()| needs a loop, it uses the default dispatcher.
   {
     async::Loop loop(&kAsyncLoopConfigAttachToThread);
-    g_context = component::StartupContext::CreateFromStartupInfo();
+    g_context = sys::ComponentContext::Create();
     FXL_DCHECK(g_context);
   }
 

@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include <iostream>
 
 #include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
-#include "lib/sys/cpp/component_context.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
@@ -26,8 +27,7 @@ int main(int argc, const char** argv) {
 
   // loop is needed by StartupContext.
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  examples::MediaApp media_app(
-      sys::ComponentContext::Create());
+  examples::MediaApp media_app(sys::ComponentContext::Create());
 
   if (command_line.HasOption("v") || command_line.HasOption("verbose")) {
     media_app.set_verbose(true);

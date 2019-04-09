@@ -4,11 +4,12 @@
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/directory.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include "gtest/gtest.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "src/lib/fxl/logging.h"
 
@@ -17,26 +18,21 @@
 // to the sysmem driver.
 TEST(SysmemConnectorTest, Connect) {
   async::Loop main_loop(&kAsyncLoopConfigAttachToThread);
-  auto startup_context =
-      component::StartupContext::CreateFromStartupInfo();
+  auto component_context = sys::ComponentContext::Create();
 
   std::mutex is_sync_complete_lock;
   bool is_sync_complete = false;
 
   fuchsia::sysmem::AllocatorPtr allocator;
-  allocator.set_error_handler([](zx_status_t status){
-    ASSERT_TRUE(false);
-  });
-  startup_context->ConnectToEnvironmentService(
-    allocator.NewRequest(main_loop.dispatcher()));
+  allocator.set_error_handler([](zx_status_t status) { ASSERT_TRUE(false); });
+  component_context->svc()->Connect(
+      allocator.NewRequest(main_loop.dispatcher()));
 
   fuchsia::sysmem::BufferCollectionTokenPtr token;
-  token.set_error_handler([](zx_status_t status){
-    ASSERT_TRUE(false);
-  });
+  token.set_error_handler([](zx_status_t status) { ASSERT_TRUE(false); });
   allocator->AllocateSharedCollection(token.NewRequest(main_loop.dispatcher()));
 
-  token->Sync([&]{
+  token->Sync([&] {
     {  // scope lock
       std::lock_guard<std::mutex> lock(is_sync_complete_lock);
       is_sync_complete = true;
@@ -58,10 +54,8 @@ TEST(SysmemConnectorTest, Connect) {
   // The Sync() working means the Allocator connection was established to the
   // sysmem driver, and the driver responded.
 
-  allocator.set_error_handler([](zx_status_t status){
-    ASSERT_EQ(status, ZX_ERR_CANCELED);
-  });
-  token.set_error_handler([](zx_status_t status){
-    ASSERT_EQ(status, ZX_ERR_CANCELED);
-  });
+  allocator.set_error_handler(
+      [](zx_status_t status) { ASSERT_EQ(status, ZX_ERR_CANCELED); });
+  token.set_error_handler(
+      [](zx_status_t status) { ASSERT_EQ(status, ZX_ERR_CANCELED); });
 }

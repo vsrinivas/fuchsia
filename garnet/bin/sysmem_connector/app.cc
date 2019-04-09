@@ -6,8 +6,7 @@
 
 const char* kSysmemClassPath = "/dev/class/sysmem";
 
-App::App()
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
+App::App() : component_context_(sys::ComponentContext::Create()) {
   zx_status_t status =
       sysmem_connector_init(kSysmemClassPath, &sysmem_connector_);
   if (status != ZX_OK) {
@@ -20,7 +19,7 @@ App::App()
     exit(-1);
   }
 
-  startup_context_->outgoing().AddPublicService<fuchsia::sysmem::Allocator>(
+  component_context_->outgoing()->AddPublicService<fuchsia::sysmem::Allocator>(
       [this](fidl::InterfaceRequest<fuchsia::sysmem::Allocator> request) {
         // Normally a service would directly serve the server end of the
         // channel, but in this case we forward the service request to the

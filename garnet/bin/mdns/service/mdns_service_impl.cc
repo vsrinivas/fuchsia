@@ -7,9 +7,11 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/sys/cpp/component_context.h>
+#include <unistd.h>
+
 #include "garnet/bin/mdns/service/mdns_fidl_util.h"
 #include "garnet/bin/mdns/service/mdns_names.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/type_converter.h"
 #include "lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
@@ -40,9 +42,9 @@ std::string GetHostName() {
 
 }  // namespace
 
-MdnsServiceImpl::MdnsServiceImpl(component::StartupContext* startup_context)
-    : startup_context_(startup_context) {
-  startup_context_->outgoing().AddPublicService<fuchsia::mdns::Controller>(
+MdnsServiceImpl::MdnsServiceImpl(sys::ComponentContext* component_context)
+    : component_context_(component_context) {
+  component_context_->outgoing()->AddPublicService<fuchsia::mdns::Controller>(
       fit::bind_member(this, &MdnsServiceImpl::OnBindRequest));
   Start();
 }
@@ -60,8 +62,7 @@ void MdnsServiceImpl::Start() {
     return;
   }
 
-  mdns_.Start(startup_context_
-                  ->ConnectToEnvironmentService<fuchsia::netstack::Netstack>(),
+  mdns_.Start(component_context_->svc()->Connect<fuchsia::netstack::Netstack>(),
               host_name, fit::bind_member(this, &MdnsServiceImpl::OnReady));
 }
 

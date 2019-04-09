@@ -5,12 +5,11 @@
 #ifndef GARNET_BIN_GUEST_CLI_SERIAL_H_
 #define GARNET_BIN_GUEST_CLI_SERIAL_H_
 
-#include <memory>
-
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/socket.h>
 
-#include "lib/sys/cpp/component_context.h"
+#include <memory>
 
 class InputReader;
 class OutputWriter;

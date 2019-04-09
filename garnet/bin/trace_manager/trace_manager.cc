@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <algorithm>
-#include <iostream>
+#include "garnet/bin/trace_manager/trace_manager.h"
 
 #include <lib/zx/time.h>
 
-#include "garnet/bin/trace_manager/trace_manager.h"
+#include <algorithm>
+#include <iostream>
+
+#include "fuchsia/sys/cpp/fidl.h"
 #include "lib/fidl/cpp/clone.h"
 
 namespace tracing {
@@ -23,18 +25,16 @@ constexpr uint32_t kMaxBufferSizeMegabytes = 64;
 constexpr uint32_t kDefaultBufferSizeMegabytesHint = 4;
 constexpr uint32_t kDefaultStartTimeoutMilliseconds = 5000;
 constexpr fuchsia::tracing::controller::BufferingMode kDefaultBufferingMode =
-  fuchsia::tracing::controller::BufferingMode::ONESHOT;
+    fuchsia::tracing::controller::BufferingMode::ONESHOT;
 
 uint32_t ConstrainBufferSize(uint32_t buffer_size_megabytes) {
-  return std::min(
-      std::max(buffer_size_megabytes, kMinBufferSizeMegabytes),
-      kMaxBufferSizeMegabytes);
+  return std::min(std::max(buffer_size_megabytes, kMinBufferSizeMegabytes),
+                  kMaxBufferSizeMegabytes);
 }
 
 }  // namespace
 
-TraceManager::TraceManager(component::StartupContext* context,
-                           const Config& config)
+TraceManager::TraceManager(sys::ComponentContext* context, const Config& config)
     : context_(context), config_(config) {
   // TODO(jeffbrown): We should do this in StartTracing() and take care
   // to restart any crashed providers.  We should also wait briefly to ensure
@@ -55,22 +55,20 @@ void TraceManager::StartTracing(
 
   uint32_t default_buffer_size_megabytes = kDefaultBufferSizeMegabytesHint;
   if (options.has_buffer_size_megabytes_hint()) {
-    const uint32_t buffer_size_mb_hint =
-      options.buffer_size_megabytes_hint();
-    default_buffer_size_megabytes =
-      ConstrainBufferSize(buffer_size_mb_hint);
+    const uint32_t buffer_size_mb_hint = options.buffer_size_megabytes_hint();
+    default_buffer_size_megabytes = ConstrainBufferSize(buffer_size_mb_hint);
   }
 
   TraceProviderSpecMap provider_specs;
   if (options.has_provider_specs()) {
     for (const auto& it : options.provider_specs()) {
       provider_specs[it.name()] =
-        TraceProviderSpec{it.buffer_size_megabytes_hint()};
+          TraceProviderSpec{it.buffer_size_megabytes_hint()};
     }
   }
 
   fuchsia::tracing::controller::BufferingMode tracing_buffering_mode =
-    kDefaultBufferingMode;
+      kDefaultBufferingMode;
   if (options.has_buffering_mode()) {
     tracing_buffering_mode = options.buffering_mode();
   }
@@ -110,9 +108,8 @@ void TraceManager::StartTracing(
     categories = std::move(options.categories());
   }
   session_ = fxl::MakeRefCounted<TraceSession>(
-      std::move(output), std::move(categories),
-      default_buffer_size_megabytes, tracelink_buffering_mode,
-      std::move(provider_specs),
+      std::move(output), std::move(categories), default_buffer_size_megabytes,
+      tracelink_buffering_mode, std::move(provider_specs),
       [this]() { session_ = nullptr; });
 
   for (auto& bundle : providers_) {
@@ -123,11 +120,10 @@ void TraceManager::StartTracing(
 
   uint64_t start_timeout_milliseconds = kDefaultStartTimeoutMilliseconds;
   if (options.has_start_timeout_milliseconds()) {
-    start_timeout_milliseconds =
-      options.start_timeout_milliseconds();
+    start_timeout_milliseconds = options.start_timeout_milliseconds();
   }
-  session_->WaitForProvidersToStart(
-      std::move(start_callback), zx::msec(start_timeout_milliseconds));
+  session_->WaitForProvidersToStart(std::move(start_callback),
+                                    zx::msec(start_timeout_milliseconds));
 }
 
 void TraceManager::StopTracing() {
@@ -154,12 +150,12 @@ void TraceManager::GetKnownCategories(GetKnownCategoriesCallback callback) {
 }
 
 void TraceManager::RegisterTraceProviderWorker(
-    fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
-    uint64_t pid, fidl::StringPtr name) {
+    fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider, uint64_t pid,
+    fidl::StringPtr name) {
   auto it = providers_.emplace(
       providers_.end(),
       TraceProviderBundle{provider.Bind(), next_provider_id_++, pid,
-          name.get()});
+                          name.get()});
 
   it->provider.set_error_handler([this, it](zx_status_t status) {
     if (session_)
@@ -178,15 +174,14 @@ void TraceManager::RegisterTraceProviderDeprecated(
 }
 
 void TraceManager::RegisterTraceProvider(
-    fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
-    uint64_t pid, std::string name) {
+    fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider, uint64_t pid,
+    std::string name) {
   RegisterTraceProviderWorker(std::move(provider), pid, std::move(name));
 }
 
 void TraceManager::RegisterTraceProviderSynchronously(
-    fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider,
-    uint64_t pid, std::string name,
-    RegisterTraceProviderSynchronouslyCallback callback) {
+    fidl::InterfaceHandle<fuchsia::tracelink::Provider> provider, uint64_t pid,
+    std::string name, RegisterTraceProviderSynchronouslyCallback callback) {
   RegisterTraceProviderWorker(std::move(provider), pid, std::move(name));
   callback(ZX_OK, trace_running_);
 }
@@ -195,11 +190,8 @@ void TraceManager::LaunchConfiguredProviders() {
   if (config_.providers().empty())
     return;
 
-  if (!context_->launcher()) {
-    FXL_LOG(ERROR)
-        << "Cannot access application launcher to launch configured providers";
-    return;
-  }
+  fuchsia::sys::LauncherPtr launcher;
+  context_->svc()->Connect(launcher.NewRequest());
 
   for (const auto& pair : config_.providers()) {
     // TODO(jeffbrown): Only do this if the provider isn't already running.
@@ -218,7 +210,7 @@ void TraceManager::LaunchConfiguredProviders() {
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = pair.second->url;
     fidl::Clone(pair.second->arguments, &launch_info.arguments);
-    context_->launcher()->CreateComponent(std::move(launch_info), nullptr);
+    launcher->CreateComponent(std::move(launch_info), nullptr);
   }
 }
 

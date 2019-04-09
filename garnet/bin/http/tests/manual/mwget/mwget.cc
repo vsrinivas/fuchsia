@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdlib.h>
-
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/sys/cpp/component_context.h>
+#include <stdlib.h>
 
-#include "lib/sys/cpp/component_context.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/macros.h"
 
@@ -60,8 +59,7 @@ class MWGetApp {
   static constexpr int MAX_LOADERS = 100;
 
   MWGetApp(async::Loop* loop)
-      : context_(sys::ComponentContext::Create()),
-        loop_(loop) {
+      : context_(sys::ComponentContext::Create()), loop_(loop) {
     http_service_ = context_->svc()->Connect<http::HttpService>();
     FXL_DCHECK(loop);
     FXL_DCHECK(http_service_);

@@ -3,18 +3,19 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/network_time_service/service.h"
-#include "lib/syslog/cpp/logger.h"
 
 #include <zircon/syscalls.h>
+
 #include <fstream>
+
+#include "lib/syslog/cpp/logger.h"
 
 namespace network_time_service {
 
-TimeServiceImpl::TimeServiceImpl(
-    std::unique_ptr<component::StartupContext> context,
-    const char server_config_path[])
+TimeServiceImpl::TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
+                                 const char server_config_path[])
     : context_(std::move(context)), time_server_(server_config_path) {
-  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 TimeServiceImpl::~TimeServiceImpl() = default;

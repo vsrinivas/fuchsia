@@ -4,11 +4,12 @@
 
 #include "intl_wisdom_server_impl.h"
 
+#include <lib/sys/cpp/component_context.h>
 #include <zircon/assert.h>
+
 #include <iostream>
 #include <sstream>
 
-#include "lib/sys/cpp/component_context.h"
 #include "src/lib/icu_data/cpp/icu_data.h"
 #include "third_party/icu/source/common/unicode/unistr.h"
 #include "third_party/icu/source/i18n/unicode/calendar.h"

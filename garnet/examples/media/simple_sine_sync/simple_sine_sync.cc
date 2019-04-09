@@ -5,10 +5,11 @@
 #include "garnet/examples/media/simple_sine_sync/simple_sine_sync.h"
 
 #include <fuchsia/media/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 #include <zircon/syscalls.h>
+
 #include <cmath>
 
-#include "lib/sys/cpp/component_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "src/lib/fxl/logging.h"
 
@@ -221,9 +222,8 @@ fuchsia::media::StreamPacket MediaApp::CreateAudioPacket(size_t payload_num) {
 bool MediaApp::SendAudioPacket(fuchsia::media::StreamPacket packet) {
   if (verbose_) {
     const float delay =
-        (start_time_known_
-             ? (float)zx_clock_get_monotonic() - clock_start_time_
-             : 0) /
+        (start_time_known_ ? (float)zx_clock_get_monotonic() - clock_start_time_
+                           : 0) /
         1000000;
     printf("SendAudioPacket num %zu time %.2f\n", num_packets_sent_, delay);
   }

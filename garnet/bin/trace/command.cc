@@ -2,19 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-
 #include "garnet/bin/trace/command.h"
+
+#include <iostream>
 
 namespace tracing {
 
-Command::Command(component::StartupContext* context) : context_(context) {}
+Command::Command(sys::ComponentContext* context) : context_(context) {}
 
 Command::~Command() = default;
 
-component::StartupContext* Command::context() { return context_; }
+sys::ComponentContext* Command::context() { return context_; }
 
-component::StartupContext* Command::context() const { return context_; }
+sys::ComponentContext* Command::context() const { return context_; }
 
 std::ostream& Command::out() {
   // Returning std::cerr on purpose. std::cout is redirected and consumed
@@ -22,9 +22,7 @@ std::ostream& Command::out() {
   return std::cerr;
 }
 
-std::istream& Command::in() {
-  return std::cin;
-}
+std::istream& Command::in() { return std::cin; }
 
 void Command::Run(const fxl::CommandLine& command_line,
                   OnDoneCallback on_done) {
@@ -44,11 +42,10 @@ void Command::Done(int32_t return_code) {
   }
 }
 
-CommandWithController::CommandWithController(
-    component::StartupContext* context)
+CommandWithController::CommandWithController(sys::ComponentContext* context)
     : Command(context),
-      trace_controller_(context->ConnectToEnvironmentService<
-                        fuchsia::tracing::controller::Controller>()) {
+      trace_controller_(
+          context->svc()->Connect<fuchsia::tracing::controller::Controller>()) {
   trace_controller_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "Trace controller disconnected unexpectedly";
     Done(1);

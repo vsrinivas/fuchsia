@@ -18,9 +18,9 @@ executable("logger_integration_cpp_tests") {
     "logger_tests.cc",
   ]
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/gtest",
     "//garnet/public/lib/syslog/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/fidl/fuchsia-logger",
     "//zircon/public/lib/syslog",

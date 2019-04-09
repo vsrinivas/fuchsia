@@ -5,10 +5,11 @@
 #ifndef GARNET_BIN_HTTP_HTTP_SERVICE_DELEGATE_H_
 #define GARNET_BIN_HTTP_HTTP_SERVICE_DELEGATE_H_
 
+#include <lib/sys/cpp/component_context.h>
+
 #include <memory>
 
 #include "garnet/bin/http/http_service_impl.h"
-#include "lib/sys/cpp/component_context.h"
 
 namespace http {
 

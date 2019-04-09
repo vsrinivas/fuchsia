@@ -6,18 +6,21 @@
 #define GARNET_BIN_MDNS_SERVICE_MDNS_SERVICE_IMPL_H_
 
 #include <fuchsia/mdns/cpp/fidl.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include <unordered_map>
+
 #include "garnet/bin/mdns/service/mdns.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding.h"
 #include "src/lib/fxl/macros.h"
 
 namespace mdns {
 
 class MdnsServiceImpl : public fuchsia::mdns::Controller {
  public:
-  MdnsServiceImpl(component::StartupContext* startup_context);
+  MdnsServiceImpl(sys::ComponentContext* component_context);
 
   ~MdnsServiceImpl() override;
 
@@ -159,7 +162,7 @@ class MdnsServiceImpl : public fuchsia::mdns::Controller {
   // Handles the ready callback from |mdns_|.
   void OnReady();
 
-  component::StartupContext* startup_context_;
+  sys::ComponentContext* component_context_;
   bool ready_ = false;
   std::vector<fidl::InterfaceRequest<fuchsia::mdns::Controller>>
       pending_binding_requests_;

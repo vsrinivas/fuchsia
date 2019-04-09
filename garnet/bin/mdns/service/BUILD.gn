@@ -91,13 +91,13 @@ source_set("source_set") {
 
   public_deps = [
     "//garnet/lib/inet",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.mdns",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/fit",
   ]

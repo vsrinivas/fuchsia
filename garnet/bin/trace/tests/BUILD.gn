@@ -45,8 +45,8 @@ source_set("run_test") {
 
   public_deps = [
     "//garnet/bin/trace:spec",
-    "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fdio",
@@ -106,7 +106,7 @@ executable("trace_integration_tests") {
 
   deps = [
     ":run_test",
-    "//garnet/public/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -122,7 +122,7 @@ executable("run_integration_test") {
 
   deps = [
     ":run_test",
-    "//garnet/public/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

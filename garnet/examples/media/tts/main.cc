@@ -6,10 +6,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <utility>
 
-#include "lib/sys/cpp/component_context.h"
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "src/lib/fxl/logging.h"
 
@@ -29,8 +29,7 @@ TtsClient::TtsClient(fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
   FXL_DCHECK(quit_callback_);
   auto app_ctx = sys::ComponentContext::Create();
-  tts_service_ =
-      app_ctx->svc()->Connect<fuchsia::tts::TtsService>();
+  tts_service_ = app_ctx->svc()->Connect<fuchsia::tts::TtsService>();
   tts_service_.set_error_handler([this](zx_status_t status) {
     printf("Connection error when trying to talk to the TtsService\n");
     quit_callback_();
@@ -38,7 +37,8 @@ TtsClient::TtsClient(fit::closure quit_callback)
 }
 
 void TtsClient::Say(std::string words) {
-  tts_service_->Say(std::move(words), 0, [this](uint64_t token) { quit_callback_(); });
+  tts_service_->Say(std::move(words), 0,
+                    [this](uint64_t token) { quit_callback_(); });
 }
 
 }  // namespace

@@ -5,13 +5,13 @@
 #ifndef GARNET_BIN_TRACE_MANAGER_APP_H_
 #define GARNET_BIN_TRACE_MANAGER_APP_H_
 
-#include <memory>
-
 #include <fuchsia/tracelink/cpp/fidl.h>
 #include <fuchsia/tracing/controller/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include <memory>
 
 #include "garnet/bin/trace_manager/trace_manager.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/macros.h"
 
@@ -23,7 +23,7 @@ class TraceManagerApp {
   ~TraceManagerApp();
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   TraceManager trace_manager_;
   fidl::BindingSet<fuchsia::tracelink::Registry> trace_registry_bindings_;
   fidl::BindingSet<fuchsia::tracing::controller::Controller>

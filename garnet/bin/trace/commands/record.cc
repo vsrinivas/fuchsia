@@ -2,35 +2,35 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/bin/trace/commands/record.h"
+
+#include <errno.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/time.h>
-
-#include <errno.h>
 #include <netdb.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <third_party/zlib/contrib/iostream3/zfstream.h>
+
 #include <fstream>
 #include <string>
 #include <unordered_set>
 
-#include <third_party/zlib/contrib/iostream3/zfstream.h>
-
-#include "garnet/bin/trace/commands/record.h"
 #include "garnet/bin/trace/results_export.h"
 #include "garnet/bin/trace/results_output.h"
 #include "lib/fsl/types/type_converters.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 #include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/fxl/strings/trim.h"
-#include "src/lib/files/file.h"
-#include "src/lib/files/path.h"
-#include "src/lib/files/unique_fd.h"
 
 namespace tracing {
 
@@ -407,7 +407,7 @@ bool Record::Options::Setup(const fxl::CommandLine& command_line) {
 
 Command::Info Record::Describe() {
   return Command::Info{
-      [](component::StartupContext* context) {
+      [](sys::ComponentContext* context) {
         return std::make_unique<Record>(context);
       },
       "record",
@@ -457,7 +457,7 @@ Command::Info Record::Describe() {
         "tracing ends unless --detach is specified"}}};
 }
 
-Record::Record(component::StartupContext* context)
+Record::Record(sys::ComponentContext* context)
     : CommandWithController(context), weak_ptr_factory_(this) {}
 
 static bool TcpAddrFromString(fxl::StringView address, fxl::StringView port,
@@ -749,8 +749,11 @@ void Record::LaunchApp() {
     out() << "Launching: " << launch_info.url << std::endl;
   }
 
-  context()->launcher()->CreateComponent(std::move(launch_info),
-                                         component_controller_.NewRequest());
+  fuchsia::sys::LauncherPtr launcher;
+  context()->svc()->Connect(launcher.NewRequest());
+  launcher->CreateComponent(std::move(launch_info),
+                            component_controller_.NewRequest());
+
   component_controller_.set_error_handler([this](zx_status_t error) {
     out() << "Application terminated" << std::endl;
     if (!options_.decouple)

@@ -2,19 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-#include <string>
-#include <vector>
-
 #include <fidl/examples/echo/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
-#include "lib/sys/cpp/component_context.h"
+#include <iostream>
+#include <string>
+#include <vector>
 
 int main(int argc, const char** argv) {
   std::string server_url =
@@ -54,8 +53,7 @@ int main(int argc, const char** argv) {
   zx_status_t status = client.EchoString(
       fidl::BytePart(&request_buffer[0], request_buffer.size()),
       fidl::StringView(msg.size(), &msg[0]),
-      fidl::BytePart(&response_buffer[0], response_buffer.size()),
-      &out_str);
+      fidl::BytePart(&response_buffer[0], response_buffer.size()), &out_str);
   if (status != ZX_OK) {
     std::cerr << "Failed to call server: " << status << " ("
               << zx_status_get_string(status) << ")" << std::endl;

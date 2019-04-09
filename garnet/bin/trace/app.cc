@@ -10,7 +10,7 @@
 
 namespace tracing {
 
-App::App(component::StartupContext* context) : Command(context) {
+App::App(sys::ComponentContext* context) : Command(context) {
   RegisterCommand(ListCategories::Describe());
   RegisterCommand(Record::Describe());
 }

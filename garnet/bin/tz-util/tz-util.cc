@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-
-#include <zircon/syscalls.h>
-
 #include <fuchsia/timezone/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include "lib/component/cpp/startup_context.h"
+#include <lib/sys/cpp/component_context.h>
+#include <zircon/syscalls.h>
+
+#include <iostream>
+
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
@@ -20,9 +20,9 @@ static constexpr char kGetTimezoneIdCmd[] = "get_timezone_id";
 
 class TzUtil {
  public:
-  TzUtil(std::unique_ptr<component::StartupContext> context)
+  TzUtil(std::unique_ptr<sys::ComponentContext> context)
       : context_(std::move(context)) {
-    context_->ConnectToEnvironmentService(timezone_.NewRequest());
+    context_->svc()->Connect(timezone_.NewRequest());
   }
 
   void Run(fxl::CommandLine command_line) {
@@ -79,7 +79,7 @@ class TzUtil {
               << "--" << kGetOffsetCmd << "]" << std::endl;
     std::cout << std::endl;
   }
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::timezone::TimezoneSyncPtr timezone_;
 };
 
@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
   }
   // loop is needed by StartupContext.
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  TzUtil app(component::StartupContext::CreateFromStartupInfo());
+  TzUtil app(sys::ComponentContext::Create());
   app.Run(command_line);
   return 0;
 }

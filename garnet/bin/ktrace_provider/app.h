@@ -5,12 +5,12 @@
 #ifndef GARNET_BIN_KTRACE_PROVIDER_APP_H_
 #define GARNET_BIN_KTRACE_PROVIDER_APP_H_
 
+#include <lib/sys/cpp/component_context.h>
 #include <trace/observer.h>
 
 #include "garnet/bin/ktrace_provider/log_importer.h"
-#include "lib/component/cpp/startup_context.h"
-#include "src/lib/fxl/command_line.h"
 #include "src/lib/files/unique_fd.h"
+#include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ktrace_provider {
@@ -26,7 +26,7 @@ class App {
   void StartKTrace(uint32_t group_mask, bool retain_current_data);
   void StopKTrace();
 
-  std::unique_ptr<component::StartupContext> startup_context_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
   trace::TraceObserver trace_observer_;
   LogImporter log_importer_;
   uint32_t current_group_mask_ = 0u;

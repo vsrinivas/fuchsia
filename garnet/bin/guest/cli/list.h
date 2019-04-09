@@ -5,7 +5,7 @@
 #ifndef GARNET_BIN_GUEST_CLI_LIST_H_
 #define GARNET_BIN_GUEST_CLI_LIST_H_
 
-#include "lib/sys/cpp/component_context.h"
+#include <lib/sys/cpp/component_context.h>
 
 void handle_list(sys::ComponentContext* context);
 

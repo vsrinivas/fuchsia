@@ -13,11 +13,11 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/component/cpp",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
     "//zircon/public/fidl/fuchsia-hardware-tee",
     "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/tee-client-api",
   ]

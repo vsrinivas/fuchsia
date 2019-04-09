@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <iostream>
-
 #include "garnet/bin/trace/commands/list_categories.h"
+
+#include <iostream>
 
 #include "src/lib/fxl/logging.h"
 
 namespace tracing {
 
 Command::Info ListCategories::Describe() {
-  return Command::Info{[](component::StartupContext* context) {
+  return Command::Info{[](sys::ComponentContext* context) {
                          return std::make_unique<ListCategories>(context);
                        },
                        "list-categories",
@@ -19,7 +19,7 @@ Command::Info ListCategories::Describe() {
                        {}};
 }
 
-ListCategories::ListCategories(component::StartupContext* context)
+ListCategories::ListCategories(sys::ComponentContext* context)
     : CommandWithController(context) {}
 
 void ListCategories::Start(const fxl::CommandLine& command_line) {

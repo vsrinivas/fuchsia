@@ -5,14 +5,15 @@
 #include <fidl/examples/echo/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/process.h>
 #include <zircon/processargs.h>
 
 #include "echo_client_app.h"
-#include "lib/sys/cpp/component_context.h"
 
 int main(int argc, const char** argv) {
-  std::string server_url = "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx";
+  std::string server_url =
+      "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server_cpp.cmx";
   std::string msg = "hello world";
 
   for (int i = 1; i < argc - 1; ++i) {

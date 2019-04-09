@@ -5,14 +5,13 @@
 #include "garnet/bin/ktrace_provider/app.h"
 
 #include <fcntl.h>
-#include <unistd.h>
-
 #include <fuchsia/tracing/kernel/c/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <trace-engine/instrumentation.h>
 #include <trace-provider/provider.h>
+#include <unistd.h>
 #include <zircon/device/ktrace.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/log.h>
@@ -59,8 +58,8 @@ zx::channel OpenKTrace() {
   zx_status_t status =
       fdio_get_service_handle(fd, channel.reset_and_get_address());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get " << kKTraceDev << " channel: "
-                   << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Failed to get " << kKTraceDev
+                   << " channel: " << zx_status_get_string(status);
     return zx::channel();
   }
   return channel;
@@ -69,40 +68,39 @@ zx::channel OpenKTrace() {
 void LogFidlFailure(const char* rqst_name, zx_status_t fidl_status,
                     zx_status_t rqst_status) {
   if (fidl_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Ktrace FIDL " << rqst_name << " failed: status="
-                   << fidl_status;
+    FXL_LOG(ERROR) << "Ktrace FIDL " << rqst_name
+                   << " failed: status=" << fidl_status;
   } else if (rqst_status != ZX_OK) {
-    FXL_LOG(ERROR) << "Ktrace " << rqst_name << " failed: status="
-                   << rqst_status;
+    FXL_LOG(ERROR) << "Ktrace " << rqst_name
+                   << " failed: status=" << rqst_status;
   }
 }
 
 void RequestKtraceStop(const zx::channel& channel) {
   zx_status_t stop_status;
   zx_status_t status =
-    fuchsia_tracing_kernel_ControllerStop(channel.get(), &stop_status);
+      fuchsia_tracing_kernel_ControllerStop(channel.get(), &stop_status);
   LogFidlFailure("stop", status, stop_status);
 }
 
 void RequestKtraceRewind(const zx::channel& channel) {
   zx_status_t rewind_status;
   zx_status_t status =
-    fuchsia_tracing_kernel_ControllerRewind(channel.get(), &rewind_status);
+      fuchsia_tracing_kernel_ControllerRewind(channel.get(), &rewind_status);
   LogFidlFailure("rewind", status, rewind_status);
 }
 
 void RequestKtraceStart(const zx::channel& channel, uint32_t group_mask) {
   zx_status_t start_status;
-  zx_status_t status =
-    fuchsia_tracing_kernel_ControllerStart(channel.get(), group_mask,
-                                           &start_status);
+  zx_status_t status = fuchsia_tracing_kernel_ControllerStart(
+      channel.get(), group_mask, &start_status);
   LogFidlFailure("start", status, start_status);
 }
 
 }  // namespace
 
 App::App(const fxl::CommandLine& command_line)
-    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {
+    : component_context_(sys::ComponentContext::Create()) {
   trace_observer_.Start(async_get_default_dispatcher(),
                         [this] { UpdateState(); });
 }
@@ -130,9 +128,8 @@ void App::UpdateState() {
 
     // The default case is everything is enabled, but |kRetainCategory| must be
     // explicitly passed.
-    retain_current_data =
-        trace_is_category_enabled(kRetainCategory) &&
-        num_enabled_categories != arraysize(kGroupCategories);
+    retain_current_data = trace_is_category_enabled(kRetainCategory) &&
+                          num_enabled_categories != arraysize(kGroupCategories);
   }
 
   if (current_group_mask_ != group_mask) {

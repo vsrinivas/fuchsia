@@ -5,15 +5,15 @@
 #ifndef GARNET_BIN_TRACE_COMMAND_H_
 #define GARNET_BIN_TRACE_COMMAND_H_
 
+#include <fuchsia/tracing/controller/cpp/fidl.h>
+#include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include <iosfwd>
 #include <map>
 #include <memory>
 #include <string>
 
-#include <fuchsia/tracing/controller/cpp/fidl.h>
-#include <lib/fit/function.h>
-
-#include "lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/macros.h"
 
@@ -26,7 +26,7 @@ class Command {
   using OnDoneCallback = fit::function<void(int32_t)>;
   struct Info {
     using CommandFactory =
-        fit::function<std::unique_ptr<Command>(component::StartupContext*)>;
+        fit::function<std::unique_ptr<Command>(sys::ComponentContext*)>;
 
     CommandFactory factory;
     std::string name;
@@ -42,10 +42,10 @@ class Command {
   static std::ostream& out();
   static std::istream& in();
 
-  explicit Command(component::StartupContext* context);
+  explicit Command(sys::ComponentContext* context);
 
-  component::StartupContext* context();
-  component::StartupContext* context() const;
+  sys::ComponentContext* context();
+  sys::ComponentContext* context() const;
 
   // Starts running the command.
   // The command must invoke Done() when finished.
@@ -53,7 +53,7 @@ class Command {
   void Done(int32_t return_code);
 
  private:
-  component::StartupContext* context_;
+  sys::ComponentContext* context_;
   OnDoneCallback on_done_;
   int32_t return_code_ = -1;
 
@@ -62,13 +62,13 @@ class Command {
 
 class CommandWithController : public Command {
  protected:
-  explicit CommandWithController(component::StartupContext* context);
+  explicit CommandWithController(sys::ComponentContext* context);
 
   fuchsia::tracing::controller::ControllerPtr& trace_controller();
   const fuchsia::tracing::controller::ControllerPtr& trace_controller() const;
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::tracing::controller::ControllerPtr trace_controller_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandWithController);

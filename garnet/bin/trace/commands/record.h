@@ -50,7 +50,7 @@ class Record : public CommandWithController {
 
   static Info Describe();
 
-  explicit Record(component::StartupContext* context);
+  explicit Record(sys::ComponentContext* context);
 
  protected:
   void Start(const fxl::CommandLine& command_line) override;

@@ -6,7 +6,7 @@
 #define GARNET_EXAMPLES_CAMERA_CAMERA_CLIENT_CAMERA_CLIENT_H_
 
 #include <fuchsia/camera/cpp/fidl.h>
-#include "lib/sys/cpp/component_context.h"
+#include <lib/sys/cpp/component_context.h>
 
 namespace camera {
 
@@ -20,13 +20,13 @@ class Client {
 
   fuchsia::camera::ManagerSyncPtr& manager();
 
-  zx_status_t Open(const char *device);
+  zx_status_t Open(const char* device);
 
   // use camera manager - open connections, request device info
   zx_status_t StartManager(int device);
 
   // use camera driver - open connections, request device info
-  zx_status_t StartDriver(const char *device);
+  zx_status_t StartDriver(const char* device);
 
   zx_status_t LoadVideoFormats(
       std::function<zx_status_t(

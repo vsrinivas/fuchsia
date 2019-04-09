@@ -5,11 +5,12 @@
 #ifndef GARNET_BIN_NETWORK_TIME_SERVICE_SERVICE_H_
 #define GARNET_BIN_NETWORK_TIME_SERVICE_SERVICE_H_
 
+#include <fuchsia/timezone/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
+
 #include <vector>
 
-#include <fuchsia/timezone/cpp/fidl.h>
 #include "garnet/bin/network_time/timezone.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 
 namespace network_time_service {
@@ -23,7 +24,7 @@ namespace network_time_service {
 class TimeServiceImpl : public fuchsia::timezone::TimeService {
  public:
   // Constructs the time service with a caller-owned application context.
-  TimeServiceImpl(std::unique_ptr<component::StartupContext> context,
+  TimeServiceImpl(std::unique_ptr<sys::ComponentContext> context,
                   const char server_config_path[]);
   ~TimeServiceImpl();
 
@@ -31,7 +32,7 @@ class TimeServiceImpl : public fuchsia::timezone::TimeService {
   void Update(uint8_t num_retries, UpdateCallback callback) override;
 
  private:
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::timezone::TimeService> bindings_;
   time_server::Timezone time_server_;
 };

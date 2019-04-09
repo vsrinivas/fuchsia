@@ -5,15 +5,15 @@
 #ifndef GARNET_BIN_TRACE_MANAGER_TRACE_MANAGER_H_
 #define GARNET_BIN_TRACE_MANAGER_TRACE_MANAGER_H_
 
-#include <list>
-
 #include <fuchsia/tracelink/cpp/fidl.h>
 #include <fuchsia/tracing/controller/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
+
+#include <list>
 
 #include "garnet/bin/trace_manager/config.h"
 #include "garnet/bin/trace_manager/trace_provider_bundle.h"
 #include "garnet/bin/trace_manager/trace_session.h"
-#include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fidl/cpp/interface_ptr_set.h"
 #include "lib/fidl/cpp/interface_request.h"
@@ -24,14 +24,13 @@ namespace tracing {
 class TraceManager : public fuchsia::tracelink::Registry,
                      public fuchsia::tracing::controller::Controller {
  public:
-  TraceManager(component::StartupContext* context, const Config& config);
+  TraceManager(sys::ComponentContext* context, const Config& config);
   ~TraceManager() override;
 
  private:
   // |Controller| implementation.
   void StartTracing(fuchsia::tracing::controller::TraceOptions options,
-                    zx::socket output,
-                    StartTracingCallback cb) override;
+                    zx::socket output, StartTracingCallback cb) override;
   void StopTracing() override;
   void GetKnownCategories(GetKnownCategoriesCallback callback) override;
 
@@ -52,7 +51,7 @@ class TraceManager : public fuchsia::tracelink::Registry,
   void FinalizeTracing();
   void LaunchConfiguredProviders();
 
-  component::StartupContext* const context_;
+  sys::ComponentContext* const context_;
   const Config& config_;
 
   uint32_t next_provider_id_ = 1u;

@@ -4,8 +4,9 @@
 
 #include "intl_wisdom_client.h"
 
+#include <lib/sys/cpp/component_context.h>
+
 #include "fuchsia/examples/intl/wisdom/cpp/fidl.h"
-#include "lib/sys/cpp/component_context.h"
 #include "third_party/icu/source/common/unicode/locid.h"
 #include "third_party/icu/source/common/unicode/unistr.h"
 #include "third_party/icu/source/i18n/unicode/calendar.h"
