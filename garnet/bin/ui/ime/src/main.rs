@@ -4,9 +4,9 @@
 
 #![feature(async_await, await_macro, futures_api)]
 mod fidl_helpers;
-mod ime;
 mod ime_service;
 mod index_convert;
+mod legacy_ime;
 
 use failure::{Error, ResultExt};
 use fidl::endpoints::ServiceMarker;

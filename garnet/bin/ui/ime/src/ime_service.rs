@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::ime::{Ime, ImeState};
+use crate::legacy_ime::Ime;
+use crate::legacy_ime::ImeState;
 use failure::ResultExt;
 use fidl::endpoints::{ClientEnd, RequestStream, ServerEnd};
 use fidl_fuchsia_ui_input as uii;
@@ -246,7 +247,7 @@ pub fn bind_new_text_field(
 mod test {
     use super::*;
     use crate::fidl_helpers::default_state;
-    use crate::ime::{HID_USAGE_KEY_ENTER, HID_USAGE_KEY_LEFT};
+    use crate::legacy_ime::{HID_USAGE_KEY_ENTER, HID_USAGE_KEY_LEFT};
     use fidl;
     use fidl_fuchsia_ui_input as uii;
     use fuchsia_async as fasync;
