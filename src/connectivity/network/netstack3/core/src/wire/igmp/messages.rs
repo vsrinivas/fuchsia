@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 //! Implementation of IGMP Messages.
-
 use super::{
     make_v3_possible_floating_point, parse_v3_possible_floating_point, peek_message_type,
     IgmpMessage, IgmpResponseTimeV2, IgmpResponseTimeV3,
@@ -11,7 +10,7 @@ use super::{
 use crate::error::ParseError;
 use crate::ip::Ipv4Addr;
 use crate::wire::igmp::MessageType;
-use crate::wire::util::records::{Records, RecordsImpl, RecordsImplErr, RecordsImplLimit};
+use crate::wire::util::records::{LimitedRecords, LimitedRecordsImpl, LimitedRecordsImplLayout};
 use byteorder::{ByteOrder, NetworkEndian};
 use packet::{BufferView, ParsablePacket, ParseMetadata};
 use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
@@ -339,7 +338,7 @@ pub(crate) struct IgmpMembershipReportV3;
 
 impl<B> MessageType<B> for IgmpMembershipReportV3 {
     type FixedHeader = MembershipReportV3Data;
-    type VariableBody = Records<B, IgmpMembershipReportV3>;
+    type VariableBody = LimitedRecords<B, IgmpMembershipReportV3>;
     type MaxRespTime = ();
     const TYPE: IgmpMessageType = IgmpMessageType::MembershipReportV3;
 
@@ -350,7 +349,7 @@ impl<B> MessageType<B> for IgmpMembershipReportV3 {
     where
         B: ByteSlice,
     {
-        Records::<_, _>::parse_with_limit(
+        LimitedRecords::<_, _>::parse_with_context(
             bytes.into_rest(),
             header.number_of_group_records().into(),
         )
@@ -364,19 +363,18 @@ impl<B> MessageType<B> for IgmpMembershipReportV3 {
     }
 }
 
-impl RecordsImplLimit for IgmpMembershipReportV3 {
-    type Limit = usize;
-}
-
-impl RecordsImplErr for IgmpMembershipReportV3 {
+impl LimitedRecordsImplLayout for IgmpMembershipReportV3 {
     type Error = ParseError;
+
+    const EXACT_LIMIT_ERROR: Option<ParseError> = Some(ParseError::Format);
 }
 
-impl<'a> RecordsImpl<'a> for IgmpMembershipReportV3 {
+impl<'a> LimitedRecordsImpl<'a> for IgmpMembershipReportV3 {
     type Record = GroupRecord<&'a [u8]>;
-    const EXACT_LIMIT_ERROR: Option<Self::Error> = Some(ParseError::Format);
 
-    fn parse<BV: BufferView<&'a [u8]>>(data: &mut BV) -> Result<Option<Self::Record>, Self::Error> {
+    fn parse<BV: BufferView<&'a [u8]>>(
+        data: &mut BV,
+    ) -> Result<Option<Option<GroupRecord<&'a [u8]>>>, ParseError> {
         let header = data
             .take_obj_front::<GroupRecordHeader>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "Can't take group record header"))?;
@@ -388,7 +386,8 @@ impl<'a> RecordsImpl<'a> for IgmpMembershipReportV3 {
         let _ = data
             .take_front(usize::from(header.aux_data_len) * 4)
             .ok_or_else(debug_err_fn!(ParseError::Format, "Can't skip auxiliary data"))?;
-        Ok(Some(Self::Record { header, sources }))
+
+        Ok(Some(Some(Self::Record { header, sources })))
     }
 }
 

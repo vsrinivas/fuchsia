@@ -21,98 +21,195 @@ use zerocopy::ByteSlice;
 /// `Records` represents a pre-parsed set of records whose structure is enforced
 /// by the impl in `O`.
 #[derive(Debug)]
-pub(crate) struct Records<B, R: RecordsImplLimit> {
+pub(crate) struct Records<B, R: RecordsImplLayout> {
     bytes: B,
-    limit: R::Limit,
+    context: R::Context,
 }
 
 /// An iterator over the records contained inside a `Records` instance.
 pub(crate) struct RecordsIter<'a, R: RecordsImpl<'a>> {
     bytes: &'a [u8],
-    limit: R::Limit,
+    context: R::Context,
 }
 
-/// Trait that specifies the type of errors to emit
-/// when parsing sequential records.
-pub(crate) trait RecordsImplErr {
-    type Error;
-}
-
-/// Trait that provides a way to limit the amount of records read from a buffer.
-/// Some protocols will have some sort of header preceding the records that will
-/// indicate the number of records to follow (e.g. igmp), while others will have
-/// that information inline (e.g. IP options).
+/// The context kept while performing records parsing.
 ///
-/// This crate provides `usize` and `()` implementations for `RecordsLimit` that
-/// can be provided as the `Limit` type in the `RecordsImpl` trait. The `usize`
-/// impl will limit to `n` records read, while `()` will not impose any limit.
-pub(crate) trait RecordsLimit {
-    /// Decrements the current value held by 1. Implementers should `panic` if
-    /// `decrement` is called when `has_more` would've returned `false`.
-    fn decrement(&mut self);
-    /// Returns whether more records are available. For a simple counter
-    /// implementation, this will return if counter is > 0.
-    fn has_more(&self) -> bool;
-}
-
-impl RecordsLimit for () {
-    fn decrement(&mut self) {}
-
-    fn has_more(&self) -> bool {
-        true
+/// Types which implement `RecordsContext` can be used as the long-lived
+/// context which is kept during records parsing. This context allows
+/// parsers to keep running computations over the span of multiple records.
+pub(crate) trait RecordsContext: Sized + Clone {
+    /// Clone a context for iterator purposes.
+    ///
+    /// `clone_for_iter` is useful for cloning a context to be
+    /// used by `RecordsIter`. Since `Records::parse_with_context`
+    /// will do a full pass over all the records to check for errors,
+    /// a `RecordsIter` should never error. Thereforce, instead of doing
+    /// checks when iterating (if a context was used for checks), a
+    /// clone of a context can be made specifically for iterator purposes
+    /// that does not do checks (which may be expensive).
+    ///
+    /// By default, just do a normal clone.
+    fn clone_for_iter(&self) -> Self {
+        self.clone()
     }
 }
 
-impl RecordsLimit for usize {
-    fn decrement(&mut self) {
-        *self = self.checked_sub(1).expect("Can't decrement counter below 0");
-    }
+// Implement the `RecordsContext` trait for `usize` which will be used by
+// record limiting contexts (see [`LimitedRecordsImpl`]) and for `()`
+// which is to represent an empty/no context-type.
+impl RecordsContext for usize {}
+impl RecordsContext for () {}
 
-    fn has_more(&self) -> bool {
-        *self > 0
-    }
-}
+/// Basic associated types used by a `RecordsImpl`.
+///
+/// This trait is kept separate from `RecordsImpl` to keep the lifetimes
+/// separated.
+pub(crate) trait RecordsImplLayout {
+    /// The type of errors that may be returned by a `RecordsImpl::parse_with_context`.
+    type Error;
 
-/// Trait that provides record limiting to `RecordsImpl` implementers.
-pub(crate) trait RecordsImplLimit {
-    /// A limit type that can be used to limit record-reading. See the
-    /// `RecordsLimit` trait.
-    type Limit: Sized + RecordsLimit + Clone;
+    /// A context type that can be used to maintain state or do checks.
+    type Context: RecordsContext;
 }
 
 /// An implementation of a records parser.
 ///
 /// `RecordsImpl` provides functions to parse sequential records. It is required
 ///  in order to construct a `Records` or `RecordsIter`.
-pub(crate) trait RecordsImpl<'a>: RecordsImplErr + RecordsImplLimit {
-    /// The type of a single record; the output from the `parse` function.
+pub(crate) trait RecordsImpl<'a>: RecordsImplLayout {
+    /// The type of a single record; the output from the `parse_with_context` function.
     ///
     /// For long or variable-length data, the user is advised to make `Record` a
-    /// reference into the bytes passed to `parse`. This is achievable because
-    /// of the lifetime parameter to this trait.
+    /// reference into the bytes passed to `parse_with_context`. This is achievable
+    /// because of the lifetime parameter to this trait.
     type Record;
 
-    /// If Some(Self::Error), will emit the provided constant as an error if the
-    /// provided buffer is exhausted while `Self::Limit` still reports
-    /// `has_more` as `true`.
-    const EXACT_LIMIT_ERROR: Option<Self::Error> = None;
+    /// Parse a record with some context.
+    ///
+    /// `parse_with_context` takes a variable-length `data` and a `context` to
+    /// maintain state, and returns `Ok(Some(Some(o)))` if the the record is
+    /// successfully parsed as `o`, `Ok(Some(None))` if data is not malformed
+    /// but the implementer can't extract a concrete object (e.g. record is an
+    /// unimplemented enumeration, but we can still safely "skip" it), Ok(None)
+    /// if `parse_with_context` is unable to parse more records, and `Err(err)`
+    /// if the `data` was malformed for the attempted record parsing.
+    ///
+    /// `data` MAY be empty. It is up to the implementer to handle an exhausted
+    /// `data`.
+    ///
+    /// When returning `Ok(Some(None))` it's the implementer's responsibility to
+    /// nonetheless skip the record (which may not be possible for some
+    /// implementations, in which case it should return an `Err`).
+    ///
+    /// `parse_with_context` must be deterministic, or else
+    /// `Records::parse_with_context` cannot guarantee that future iterations
+    /// will not produce errors (and panic).
+    fn parse_with_context<BV: BufferView<&'a [u8]>>(
+        data: &mut BV,
+        context: &mut Self::Context,
+    ) -> Result<Option<Option<Self::Record>>, Self::Error>;
+}
 
-    /// Parse a record.
+/// A limited parsed set of records.
+///
+/// `LimitedRecords` represents a parsed set of records that can be limited to a
+/// certain number of records. Unlike records with accepts a `RecordsImpl`,
+/// `LimitedRecords` accepts a type that implements `LimitedRecordsImpl` for `O`.
+pub(crate) type LimitedRecords<B, O> = Records<B, LimitedRecordsImplBridge<O>>;
+
+/// Create a bridge to `RecordsImplLayout` and `RecordsImpl` from an `O` that
+/// implements `LimitedRecordsImplLayout`. This is required so we can have a single
+/// implementation of `parse_with_context` and definition of `Context` that
+/// all implementers of `LimitedRecordsImpl` will get for free.
+#[derive(Debug)]
+pub(crate) struct LimitedRecordsImplBridge<O>(PhantomData<O>);
+
+impl<O> RecordsImplLayout for LimitedRecordsImplBridge<O>
+where
+    O: LimitedRecordsImplLayout,
+{
+    type Error = O::Error;
+
+    // All LimitedRecords get a context type of usize.
+    type Context = usize;
+}
+
+impl<'a, O> RecordsImpl<'a> for LimitedRecordsImplBridge<O>
+where
+    O: LimitedRecordsImpl<'a>,
+{
+    type Record = O::Record;
+
+    /// Parse some bytes with a given `context` as a limit.
     ///
-    /// `parse` takes a kind byte and variable-length data associated and
-    /// returns `Ok(Some(o))` if the the record is successfully parsed as `o`,
-    /// `Ok(None)` if data is not malformed but the implementer can't extract a
-    /// concrete object (e.g. record is an unimplemented enumeration, but we can
-    /// still safely "skip" it), and `Err(err)` if the `data` was malformed for
-    /// the attempted record parsing.
+    /// `parse_with_context` accepts a `bytes` buffer and limit `context`
+    /// and verifies that the limit has not been reached and that bytes is not empty.
+    /// See [`EXACT_LIMIT_ERROR`] for information about exact limiting. If the limit
+    /// has not been reached and `bytes` has not been exhausted, `LimitedRecordsImpl::parse`
+    /// will be called to do the actual parsing of a record.
     ///
-    ///  When returning `Ok(None)` it's the implementer's responsibility to
-    ///  nonetheless skip the record (which may not be possible for some
-    ///  implementations, in which case it should return an `Err`).
+    /// ['EXACT_LIMIT_ERROR`]: LimitedRecordsImplLayout::EXACT_LIMIT_ERROR
+    fn parse_with_context<BV: BufferView<&'a [u8]>>(
+        bytes: &mut BV,
+        context: &mut Self::Context,
+    ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+        let limit_hit = *context <= 0;
+
+        if bytes.is_empty() || limit_hit {
+            return match O::EXACT_LIMIT_ERROR {
+                Some(_) if bytes.is_empty() ^ limit_hit => Err(O::EXACT_LIMIT_ERROR.unwrap()),
+                _ => Ok(None),
+            };
+        }
+
+        *context = context.checked_sub(1).expect("Can't decrement counter below 0");
+
+        O::parse(bytes)
+    }
+}
+
+/// Trait that provides implementations to limit the amount of records read from
+/// a buffer. Some protocols will have some sort of header preceding the records
+/// that will indicate the number of records to follow (e.g. IGMP), while others
+/// will have that information inline (e.g. IPv4 options).
+///
+/// If the implementer of this trait wishes to impose an Exact Limit constraint,
+/// they should supply a value for `EXACT_LIMIT_ERROR`.
+///
+/// Note that implementations of `LimitedRecordsImpl` cannot be used in place of
+/// implementations of `RecordsImpl` directly as this does not implement
+/// `RecordsImpl`. Implementers will need to use the `LimitedRecordsImplBridge`
+/// to create bindings to a `RecordsImpl`. Alternatively, instead of using
+/// `Records<_, O>` where `O` is a type that implements `RecordsImpl`, implementers
+/// can use `LimitedRecords<_, P>` where `P` is a type that implements
+/// `LimitedRecordsImpl`. See [`LimitedRecords`].
+pub(crate) trait LimitedRecordsImplLayout {
+    /// See `RecordsImplLayout::Error` as this will be bound to a `RecordsImplLayout::Error`
+    /// associated type directly.
+    type Error;
+
+    /// If `Some(E)`, `parse_with_context` of `LimitedRecordsImplBridge` will emit the
+    /// provided constant as an error if the provided buffer is exhausted while `context`
+    /// is not 0, or if the `context` reaches 0 but the provided buffer is not empty.
+    const EXACT_LIMIT_ERROR: Option<Self::Error> = None;
+}
+
+pub(crate) trait LimitedRecordsImpl<'a>: LimitedRecordsImplLayout {
+    /// See [`RecordsImpl::Record`] as this will be bound to a `RecordsImpl::Record`
+    /// associated type directly.
+    type Record;
+
+    /// Parse a record after limit check has completed.
     ///
-    /// `parse` must be deterministic, or else `Records::parse` cannot guarantee
-    /// that future iterations will not produce errors (and panic).
-    fn parse<BV: BufferView<&'a [u8]>>(data: &mut BV) -> Result<Option<Self::Record>, Self::Error>;
+    /// `parse` will be called by a `LimitedRecordsImpl::parse_with_context` after
+    /// doing limit checks. When this method is called, it is guaranteed by
+    /// `LimitedRecordsImpl::parse_with_context` that the limit has not been reached,
+    /// so `parse` should parse exactly one record (if possible).
+    ///
+    /// For information about return values, see [`RecordsImpl::parse_with_context`].
+    fn parse<BV: BufferView<&'a [u8]>>(
+        bytes: &mut BV,
+    ) -> Result<Option<Option<Self::Record>>, Self::Error>;
 }
 
 /// An implementation of a records serializer.
@@ -211,24 +308,19 @@ where
     B: ByteSlice,
     R: for<'a> RecordsImpl<'a>,
 {
-    /// Parse a set of records with an informed limit.
+    /// Parse a set of records with a context.
     ///
-    /// `parse_with_limit` parses `bytes` as a sequence of records. `limit` is
-    /// used to specify how many records are expected to be parsed.
+    /// `parse_with_context` parses `bytes` as a sequence of records. `context`
+    /// may be used by implementers to maintain state and do checks.
     ///
-    /// If `limit` is a `usize`, then `parse_with_limit` will stop after having
-    /// found that many records. If `R::EXACT_LIMIT_ERROR` is provided, that
-    /// error will be returned in case `bytes` is exhausted and the limit hasn't
-    /// been reached OR the limit has been reached and there are leftover bytes.
-    ///
-    /// If `limit` is a `()`, then it will be ignored, and records will be
-    /// parsed until `bytes` is exhausted.
-    ///
-    /// `parse_with_limit` performs a single pass over all of the records to
-    /// verify that they are well-formed. Once `parse_with_limit` returns
+    /// `parse_with_context` performs a single pass over all of the records to
+    /// verify that they are well-formed. Once `parse_with_context` returns
     /// successfully, the resulting `Records` can be used to construct
     /// infallible iterators.
-    pub(crate) fn parse_with_limit(bytes: B, limit: R::Limit) -> Result<Records<B, R>, R::Error> {
+    pub(crate) fn parse_with_context(
+        bytes: B,
+        context: R::Context,
+    ) -> Result<Records<B, R>, R::Error> {
         // First, do a single pass over the bytes to detect any errors up front.
         // Once this is done, since we have a reference to `bytes`, these bytes
         // can't change out from under us, and so we can treat any iterator over
@@ -237,23 +329,23 @@ where
         // would just result in a runtime panic.
         // - B could return different bytes each time
         // - R::parse could be non-deterministic
-        let mut lim = limit.clone();
+        let mut c = context.clone();
         let mut b = LongLivedBuff::new(bytes.deref());
-        while next::<_, R>(&mut b, &mut lim)?.is_some() {}
-        Ok(Records { bytes, limit })
+        while next::<_, R>(&mut b, &mut c)?.is_some() {}
+        Ok(Records { bytes, context })
     }
 }
 
 impl<B, R> Records<B, R>
 where
     B: ByteSlice,
-    R: for<'a> RecordsImpl<'a, Limit = ()>,
+    R: for<'a> RecordsImpl<'a, Context = ()>,
 {
     /// Parses a set of records.
     ///
-    /// Equivalent to calling `parse_with_limit` with `limit = ()`.
+    /// Equivalent to calling `parse_with_context` with `context = ()`.
     pub(crate) fn parse(bytes: B) -> Result<Records<B, R>, R::Error> {
-        Self::parse_with_limit(bytes, ())
+        Self::parse_with_context(bytes, ())
     }
 }
 
@@ -280,7 +372,7 @@ where
     /// validated in `parse`, then so long as `from_kind` and `from_data` are
     /// deterministic, the iterator is infallible.
     pub(crate) fn iter(&'a self) -> RecordsIter<'a, R> {
-        RecordsIter { bytes: &self.bytes, limit: self.limit.clone() }
+        RecordsIter { bytes: &self.bytes, context: self.context.clone_for_iter() }
     }
 }
 
@@ -294,7 +386,7 @@ where
         let mut bytes = LongLivedBuff::new(self.bytes);
         // use match rather than expect because expect requires that Err: Debug
         #[allow(clippy::match_wild_err_arm)]
-        let result = match next::<_, R>(&mut bytes, &mut self.limit) {
+        let result = match next::<_, R>(&mut bytes, &mut self.context) {
             Ok(o) => o,
             Err(_) => panic!("already-validated options should not fail to parse"),
         };
@@ -307,29 +399,29 @@ where
 ///
 /// On return, `bytes` will be pointing to the start of where a next record
 /// would be.
-fn next<'a, BV, R>(bytes: &mut BV, limit: &mut R::Limit) -> Result<Option<R::Record>, R::Error>
+fn next<'a, BV, R>(bytes: &mut BV, context: &mut R::Context) -> Result<Option<R::Record>, R::Error>
 where
     R: RecordsImpl<'a>,
     BV: BufferView<&'a [u8]>,
 {
     loop {
-        // if we run out of bytes or limit is exhausted, we stop the parsing
-        // here.
-        if bytes.is_empty() || !limit.has_more() {
-            // If only one of the conditions is met and R::EXACT_LIMIT_ERROR is
-            // specified, we return the exact limit error.
-            return match R::EXACT_LIMIT_ERROR {
-                Some(_) if bytes.is_empty() ^ !limit.has_more() => {
-                    Err(R::EXACT_LIMIT_ERROR.unwrap())
-                }
-                _ => Ok(None),
-            };
-        }
+        match R::parse_with_context(bytes, context) {
+            // `parse_with_context` cannot parse any more, return
+            // Ok(None) to let the caller know that we have parsed
+            // all possible records for a given `bytes`.
+            Ok(None) => return Ok(None),
 
-        limit.decrement();
-        match R::parse(bytes) {
-            Ok(Some(o)) => return Ok(Some(o)),
-            Ok(None) => {}
+            // `parse_with_context` was unable to parse a record, not
+            // because `bytes` was malformed but for other non fatal
+            // reasons, so we can skip.
+            Ok(Some(None)) => {}
+
+            // `parse_with_context` was able to parse a record, so
+            // return it.
+            Ok(Some(Some(o))) => return Ok(Some(o)),
+
+            // `parse_with_context` had an error so pass that error
+            // to the caller.
             Err(err) => return Err(err),
         }
     }
@@ -399,6 +491,21 @@ mod test {
         0x04,
     ];
 
+    /// Parse a set of records with a mutable context.
+    ///
+    /// This function is exactly the same as `RecordsImpl::parse_with_context`
+    /// except `context` is passed in as a mutable reference instead of as a
+    /// value; to verify the state of a context after parsing has completed.
+    fn parse_with_mut_context<B: ByteSlice, R: for<'a> RecordsImpl<'a>>(
+        bytes: B,
+        context: &mut R::Context,
+    ) -> Result<Records<B, R>, R::Error> {
+        let c = context.clone();
+        let mut b = LongLivedBuff::new(bytes.deref());
+        while next::<_, R>(&mut b, context)?.is_some() {}
+        Ok(Records { bytes, context: c })
+    }
+
     #[derive(Debug, AsBytes, FromBytes, Unaligned)]
     #[repr(C)]
     struct DummyRecord {
@@ -409,77 +516,213 @@ mod test {
 
     fn parse_dummy_rec<'a, BV>(
         data: &mut BV,
-    ) -> Result<Option<LayoutVerified<&'a [u8], DummyRecord>>, ()>
+    ) -> Result<Option<Option<LayoutVerified<&'a [u8], DummyRecord>>>, ()>
     where
         BV: BufferView<&'a [u8]>,
     {
+        if data.is_empty() {
+            return Ok(None);
+        }
+
         match data.take_obj_front::<DummyRecord>() {
-            Some(res) => Ok(Some(res)),
+            Some(res) => Ok(Some(Some(res))),
             None => Err(()),
         }
     }
 
+    //
+    // Context-less records
+    //
+
     #[derive(Debug)]
-    struct LimitlessRecordImpl;
+    struct ContextlessRecordImpl;
 
-    impl RecordsImplLimit for LimitlessRecordImpl {
-        type Limit = ();
-    }
-
-    impl RecordsImplErr for LimitlessRecordImpl {
+    impl RecordsImplLayout for ContextlessRecordImpl {
+        type Context = ();
         type Error = ();
     }
 
-    impl<'a> RecordsImpl<'a> for LimitlessRecordImpl {
+    impl<'a> RecordsImpl<'a> for ContextlessRecordImpl {
         type Record = LayoutVerified<&'a [u8], DummyRecord>;
 
-        fn parse<BV: BufferView<&'a [u8]>>(
+        fn parse_with_context<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-        ) -> Result<Option<Self::Record>, Self::Error> {
+            context: &mut Self::Context,
+        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
             parse_dummy_rec(data)
         }
     }
 
+    //
+    // Limit context records
+    //
+
     #[derive(Debug)]
-    struct LimitedRecordImpl;
+    struct LimitContextRecordImpl;
 
-    impl RecordsImplLimit for LimitedRecordImpl {
-        type Limit = usize;
-    }
-
-    impl RecordsImplErr for LimitedRecordImpl {
+    impl LimitedRecordsImplLayout for LimitContextRecordImpl {
         type Error = ();
     }
 
-    impl<'a> RecordsImpl<'a> for LimitedRecordImpl {
+    impl<'a> LimitedRecordsImpl<'a> for LimitContextRecordImpl {
         type Record = LayoutVerified<&'a [u8], DummyRecord>;
 
         fn parse<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-        ) -> Result<Option<Self::Record>, Self::Error> {
+        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
             parse_dummy_rec(data)
         }
     }
 
+    //
+    // Exact limit context records
+    //
+
     #[derive(Debug)]
-    struct ExactLimitRecordImpl;
+    struct ExactLimitContextRecordImpl;
 
-    impl RecordsImplLimit for ExactLimitRecordImpl {
-        type Limit = usize;
-    }
-
-    impl RecordsImplErr for ExactLimitRecordImpl {
+    impl LimitedRecordsImplLayout for ExactLimitContextRecordImpl {
         type Error = ();
+
+        const EXACT_LIMIT_ERROR: Option<()> = Some(());
     }
 
-    impl<'a> RecordsImpl<'a> for ExactLimitRecordImpl {
+    impl<'a> LimitedRecordsImpl<'a> for ExactLimitContextRecordImpl {
         type Record = LayoutVerified<&'a [u8], DummyRecord>;
-        const EXACT_LIMIT_ERROR: Option<Self::Error> = Some(());
 
         fn parse<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-        ) -> Result<Option<Self::Record>, Self::Error> {
+        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
             parse_dummy_rec(data)
+        }
+    }
+
+    //
+    // Filter context records
+    //
+
+    #[derive(Debug)]
+    struct FilterContextRecordImpl;
+
+    #[derive(Clone)]
+    struct FilterContext {
+        pub disallowed: [bool; 256],
+    }
+
+    impl RecordsContext for FilterContext {}
+
+    impl RecordsImplLayout for FilterContextRecordImpl {
+        type Context = FilterContext;
+        type Error = ();
+    }
+
+    impl std::fmt::Debug for FilterContext {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            write!(f, "FilterContext{{disallowed:{:?}}}", &self.disallowed[..])
+        }
+    }
+
+    impl<'a> RecordsImpl<'a> for FilterContextRecordImpl {
+        type Record = LayoutVerified<&'a [u8], DummyRecord>;
+
+        fn parse_with_context<BV: BufferView<&'a [u8]>>(
+            bytes: &mut BV,
+            context: &mut Self::Context,
+        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+            if bytes.len() < std::mem::size_of::<DummyRecord>() {
+                Ok(None)
+            } else if bytes.as_ref()[0..std::mem::size_of::<DummyRecord>()]
+                .iter()
+                .any(|x| context.disallowed[*x as usize])
+            {
+                Err(())
+            } else {
+                parse_dummy_rec(bytes)
+            }
+        }
+    }
+
+    //
+    // Stateful context records
+    //
+
+    #[derive(Debug)]
+    struct StatefulContextRecordImpl;
+
+    #[derive(Clone, Debug)]
+    struct StatefulContext {
+        pub pre_parse_counter: usize,
+        pub parse_counter: usize,
+        pub post_parse_counter: usize,
+        pub iter: bool,
+    }
+
+    impl RecordsImplLayout for StatefulContextRecordImpl {
+        type Context = StatefulContext;
+        type Error = ();
+    }
+
+    impl StatefulContext {
+        pub fn new() -> StatefulContext {
+            StatefulContext {
+                pre_parse_counter: 0,
+                parse_counter: 0,
+                post_parse_counter: 0,
+                iter: false,
+            }
+        }
+    }
+
+    impl RecordsContext for StatefulContext {
+        fn clone_for_iter(&self) -> Self {
+            let mut x = self.clone();
+            x.iter = true;
+            x
+        }
+    }
+
+    impl<'a> RecordsImpl<'a> for StatefulContextRecordImpl {
+        type Record = LayoutVerified<&'a [u8], DummyRecord>;
+
+        fn parse_with_context<BV: BufferView<&'a [u8]>>(
+            data: &mut BV,
+            context: &mut Self::Context,
+        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
+            if !context.iter {
+                context.pre_parse_counter += 1;
+            }
+
+            let ret = parse_dummy_rec_with_context(data, context);
+
+            match ret {
+                Ok(Some(Some(_))) if !context.iter => {
+                    context.post_parse_counter += 1;
+                }
+                _ => {}
+            }
+
+            ret
+        }
+    }
+
+    fn parse_dummy_rec_with_context<'a, BV>(
+        data: &mut BV,
+        context: &mut StatefulContext,
+    ) -> Result<Option<Option<LayoutVerified<&'a [u8], DummyRecord>>>, ()>
+    where
+        BV: BufferView<&'a [u8]>,
+    {
+        if data.is_empty() {
+            return Ok(None);
+        }
+
+        if !context.iter {
+            context.parse_counter += 1;
+        }
+
+        match data.take_obj_front::<DummyRecord>() {
+            Some(res) => Ok(Some(Some(res))),
+            None => Err(()),
         }
     }
 
@@ -491,7 +734,8 @@ mod test {
 
     #[test]
     fn all_records_parsing() {
-        let parsed = Records::<_, LimitlessRecordImpl>::parse(&DUMMY_BYTES[..]).unwrap();
+        let test = Records::<_, ContextlessRecordImpl>::parse(&DUMMY_BYTES[..]);
+        let parsed = Records::<_, ContextlessRecordImpl>::parse(&DUMMY_BYTES[..]).unwrap();
         assert_eq!(parsed.iter().count(), 4);
         for rec in parsed.iter() {
             check_parsed_record(rec.deref());
@@ -500,9 +744,12 @@ mod test {
 
     #[test]
     fn limit_records_parsing() {
-        let limit: usize = 2;
-        let parsed =
-            Records::<_, LimitedRecordImpl>::parse_with_limit(&DUMMY_BYTES[..], limit).unwrap();
+        let limit = 2;
+        let parsed = LimitedRecords::<_, LimitContextRecordImpl>::parse_with_context(
+            &DUMMY_BYTES[..],
+            limit,
+        )
+        .unwrap();
         assert_eq!(parsed.iter().count(), limit);
         for rec in parsed.iter() {
             check_parsed_record(rec.deref());
@@ -511,10 +758,71 @@ mod test {
 
     #[test]
     fn exact_limit_records_parsing() {
-        Records::<_, ExactLimitRecordImpl>::parse_with_limit(&DUMMY_BYTES[..], 2)
+        LimitedRecords::<_, ExactLimitContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], 2)
             .expect_err("fails if all the buffer hasn't been parsed");
-        Records::<_, ExactLimitRecordImpl>::parse_with_limit(&DUMMY_BYTES[..], 5)
+        LimitedRecords::<_, ExactLimitContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], 5)
             .expect_err("fails if can't extract enough records");
+    }
+
+    #[test]
+    fn context_filtering_some_byte_records_parsing() {
+        // Do not disallow any bytes
+        let context = FilterContext { disallowed: [false; 256] };
+
+        let parsed =
+            Records::<_, FilterContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], context)
+                .unwrap();
+
+        assert_eq!(parsed.iter().count(), 4);
+        for rec in parsed.iter() {
+            check_parsed_record(rec.deref());
+        }
+
+        // Do not allow byte value 0x01
+        let mut context = FilterContext { disallowed: [false; 256] };
+
+        context.disallowed[1] = true;
+
+        Records::<_, FilterContextRecordImpl>::parse_with_context(&DUMMY_BYTES[..], context)
+            .expect_err("fails if the buffer has an element with value 0x01");
+    }
+
+    #[test]
+    fn stateful_context_records_parsing() {
+        let mut context = StatefulContext::new();
+
+        let parsed =
+            parse_with_mut_context::<_, StatefulContextRecordImpl>(&DUMMY_BYTES[..], &mut context)
+                .unwrap();
+
+        // Should be 5 because on the last iteration, we should realize
+        // that we have no more bytes left and end before parsing (also
+        // explaining why `parse_counter` should only be 4.
+        assert_eq!(context.pre_parse_counter, 5);
+        assert_eq!(context.parse_counter, 4);
+        assert_eq!(context.post_parse_counter, 4);
+
+        let mut iter = parsed.iter();
+        let context = &iter.context;
+        assert_eq!(context.pre_parse_counter, 0);
+        assert_eq!(context.parse_counter, 0);
+        assert_eq!(context.post_parse_counter, 0);
+        assert_eq!(context.iter, true);
+
+        // Manually iterate over `iter` so as to not move it.
+        let mut count = 0;
+        while let Some(_) = iter.next() {
+            count += 1;
+        }
+        assert_eq!(count, 4);
+
+        // Check to see that when iterating, the context doesn't update counters
+        // as that is how we implemented our StatefulContextRecordImpl..
+        let context = &iter.context;
+        assert_eq!(context.pre_parse_counter, 0);
+        assert_eq!(context.parse_counter, 0);
+        assert_eq!(context.post_parse_counter, 0);
+        assert_eq!(context.iter, true);
     }
 }
 
@@ -533,7 +841,7 @@ pub(crate) mod options {
     /// or an NDP packet. `Options` uses [`Records`] below the surface.
     ///
     /// [`Records`]: crate::wire::util::records::Records
-    pub(crate) type Options<B, O> = Records<B, O>;
+    pub(crate) type Options<B, O> = Records<B, OptionsImplBridge<O>>;
 
     /// An instance of options serialization.
     ///
@@ -541,29 +849,31 @@ pub(crate) mod options {
     /// items to be serialized by an [`OptionsSerializerImpl`].
     pub(crate) type OptionsSerializer<'a, S, O, I> = RecordsSerializer<'a, S, O, I>;
 
-    impl<'a, O> RecordsImplErr for O
+    /// Create a bridge to `RecordsImplLayout` and `RecordsImpl` traits from an `O`
+    /// that implements `OptionsImpl`. This is required so we can have a single
+    /// implementation of `parse_with_context` and definition of `Context` that
+    /// all implementers of `OptionsImpl` will get for free.
+    #[derive(Debug)]
+    pub(crate) struct OptionsImplBridge<O>(PhantomData<O>);
+
+    impl<O> RecordsImplLayout for OptionsImplBridge<O>
     where
-        O: OptionsImpl<'a>,
+        O: OptionsImplLayout,
     {
         type Error = OptionParseErr<O::Error>;
+        type Context = ();
     }
 
-    impl<'a, O> RecordsImplLimit for O
-    where
-        O: OptionsImpl<'a>,
-    {
-        type Limit = ();
-    }
-
-    impl<'a, O> RecordsImpl<'a> for O
+    impl<'a, O> RecordsImpl<'a> for OptionsImplBridge<O>
     where
         O: OptionsImpl<'a>,
     {
         type Record = O::Option;
 
-        fn parse<BV: BufferView<&'a [u8]>>(
+        fn parse_with_context<BV: BufferView<&'a [u8]>>(
             data: &mut BV,
-        ) -> Result<Option<Self::Record>, Self::Error> {
+            context: &mut Self::Context,
+        ) -> Result<Option<Option<Self::Record>>, Self::Error> {
             next::<_, O>(data)
         }
     }
@@ -707,7 +1017,9 @@ pub(crate) mod options {
         fn serialize(data: &mut [u8], option: &Self::Option);
     }
 
-    fn next<'a, BV, O>(bytes: &mut BV) -> Result<Option<O::Option>, OptionParseErr<O::Error>>
+    fn next<'a, BV, O>(
+        bytes: &mut BV,
+    ) -> Result<Option<Option<O::Option>>, OptionParseErr<O::Error>>
     where
         BV: BufferView<&'a [u8]>,
         O: OptionsImpl<'a>,
@@ -739,7 +1051,7 @@ pub(crate) mod options {
             // we can safely unwrap here since we verified the correct length above
             let option_data = bytes.take_front(len - 2).unwrap();
             match O::parse(kind, option_data) {
-                Ok(Some(o)) => return Ok(Some(o)),
+                Ok(Some(o)) => return Ok(Some(Some(o))),
                 Ok(None) => {}
                 Err(err) => return Err(OptionParseErr::External(err)),
             }
