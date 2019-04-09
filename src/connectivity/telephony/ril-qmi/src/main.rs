@@ -12,8 +12,8 @@ use {
     failure::{Error, ResultExt},
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_telephony_ril::*,
-    fuchsia_component::server::ServiceFs,
     fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, macros::*},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
@@ -124,7 +124,11 @@ impl FrilService {
                 let mut lock = await!(modem.lock());
                 let status = lock.connect_transport(channel);
                 fx_log_info!("Connecting the service to the transport driver: {}", status);
-                return responder.send(status);
+                if status {
+                    return responder.send(&mut Ok(RadioInterfaceLayerConnectTransportResponse {}));
+                } else {
+                    return responder.send(&mut Ok(RadioInterfaceLayerConnectTransportResponse {}));
+                }
             }
             RadioInterfaceLayerRequest::GetNetworkSettings { responder } => {
                 match *await!(client_ptr.lock()) {
@@ -134,26 +138,25 @@ impl FrilService {
                             await!(client.send_msg(WDS::GetCurrentSettingsReq::new(58160)))
                                 .unwrap();
                         match resp {
-                            Ok(packet) => responder.send(
-                                &mut GetNetworkSettingsReturn::Settings(NetworkSettings {
-                                    ip_v4_addr: packet.ipv4_addr.unwrap(),
-                                    ip_v4_dns: packet.ipv4_dns.unwrap(),
-                                    ip_v4_subnet: packet.ipv4_subnet.unwrap(),
-                                    ip_v4_gateway: packet.ipv4_gateway.unwrap(),
-                                    mtu: packet.mtu.unwrap(),
-                                }),
-                            )?,
+                            Ok(packet) => responder.send(&mut Ok(
+                                RadioInterfaceLayerGetNetworkSettingsResponse {
+                                    settings: NetworkSettings {
+                                        ip_v4_addr: packet.ipv4_addr.unwrap(),
+                                        ip_v4_dns: packet.ipv4_dns.unwrap(),
+                                        ip_v4_subnet: packet.ipv4_subnet.unwrap(),
+                                        ip_v4_gateway: packet.ipv4_gateway.unwrap(),
+                                        mtu: packet.mtu.unwrap(),
+                                    },
+                                },
+                            ))?,
                             Err(e) => {
                                 fx_log_err!("Error network: {:?}", e);
                                 // TODO different error
-                                responder
-                                    .send(&mut GetNetworkSettingsReturn::Error(RilError::NoRadio))?
+                                responder.send(&mut Err(RilError::NoRadio))?
                             }
                         }
                     }
-                    None => {
-                        responder.send(&mut GetNetworkSettingsReturn::Error(RilError::NoRadio))?
-                    }
+                    None => responder.send(&mut Err(RilError::NoRadio))?,
                 }
             }
             RadioInterfaceLayerRequest::StartNetwork { apn, responder } => {
@@ -174,16 +177,18 @@ impl FrilService {
                                 });
                                 let client_end =
                                     ClientEnd::<NetworkConnectionMarker>::new(client_chan.into());
-                                responder.send(&mut StartNetworkReturn::Conn(client_end))?
+                                responder.send(&mut Ok(
+                                    RadioInterfaceLayerStartNetworkResponse { conn: client_end },
+                                ))?
                             }
                             Err(e) => {
                                 fx_log_info!("error network: {:?}", e);
                                 // TODO different error
-                                responder.send(&mut StartNetworkReturn::Error(RilError::NoRadio))?
+                                responder.send(&mut Err(RilError::NoRadio))?
                             }
                         }
                     }
-                    None => responder.send(&mut StartNetworkReturn::Error(RilError::NoRadio))?,
+                    None => responder.send(&mut Err(RilError::NoRadio))?,
                 }
             }
             RadioInterfaceLayerRequest::GetDeviceIdentity { responder } => {
@@ -191,11 +196,11 @@ impl FrilService {
                     Some(ref mut client) => {
                         let resp: QmiResult<DMS::GetDeviceSerialNumbersResp> =
                             await!(client.send_msg(DMS::GetDeviceSerialNumbersReq::new())).unwrap();
-                        responder.send(&mut GetDeviceIdentityReturn::Imei(resp.unwrap().imei))?
+                        responder.send(&mut Ok(RadioInterfaceLayerGetDeviceIdentityResponse {
+                            imei: resp.unwrap().imei,
+                        }))?
                     }
-                    None => {
-                        responder.send(&mut GetDeviceIdentityReturn::Error(RilError::NoRadio))?
-                    }
+                    None => responder.send(&mut Err(RilError::NoRadio))?,
                 }
             }
             RadioInterfaceLayerRequest::RadioPowerStatus { responder } => {
@@ -206,16 +211,20 @@ impl FrilService {
                                 .unwrap()
                                 .unwrap();
                         if resp.operating_mode == 0x00 {
-                            responder
-                                .send(&mut RadioPowerStatusReturn::Result(RadioPowerState::On))?
+                            responder.send(&mut Ok(
+                                RadioInterfaceLayerRadioPowerStatusResponse {
+                                    state: RadioPowerState::On,
+                                },
+                            ))?
                         } else {
-                            responder
-                                .send(&mut RadioPowerStatusReturn::Result(RadioPowerState::Off))?
+                            responder.send(&mut Ok(
+                                RadioInterfaceLayerRadioPowerStatusResponse {
+                                    state: RadioPowerState::Off,
+                                },
+                            ))?
                         }
                     }
-                    None => {
-                        responder.send(&mut RadioPowerStatusReturn::Error(RilError::NoRadio))?
-                    }
+                    None => responder.send(&mut Err(RilError::NoRadio))?,
                 }
             }
         }
@@ -232,11 +241,10 @@ fn main() -> Result<(), Error> {
     let modem = Arc::new(Mutex::new(QmiModem::new()));
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("public")
-        .add_fidl_service(move |stream| {
-            fx_log_info!("New client connecting to the Fuchsia RIL");
-            FrilService::spawn(modem.clone(), stream)
-        });
+    fs.dir("public").add_fidl_service(move |stream| {
+        fx_log_info!("New client connecting to the Fuchsia RIL");
+        FrilService::spawn(modem.clone(), stream)
+    });
     fs.take_and_serve_directory_handle()?;
 
     executor.run_singlethreaded(fs.collect::<()>());

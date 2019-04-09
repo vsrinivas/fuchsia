@@ -10,31 +10,15 @@ enum RadioPowerState : uint8 {
     ON = 0x01;
 };
 
-enum RilError : uint8 {
+enum RilError : uint32 {
     /// The radio on this interface is unavailable.
     NO_RADIO = 0x01;
     /// The request required a SIM card and none are unavailable.
     NO_SIM = 0x02;
 };
 
-union RadioPowerStatusReturn {
-    RadioPowerState result;
-    RilError error;
-};
-
-union GetDeviceIdentityReturn {
-    /// International Mobile Equipment Identity (14 digits)
-    string imei;
-    RilError error;
-};
-
 protocol NetworkConnection {
     Stop() -> (bool success);
-};
-
-union StartNetworkReturn {
-    NetworkConnection conn;
-    RilError error;
 };
 
 // currently only ipv4 stuff, to drastically change
@@ -44,11 +28,6 @@ struct NetworkSettings {
     uint32 ip_v4_gateway;
     uint32 ip_v4_dns;
     uint32 mtu;
-};
-
-union GetNetworkSettingsReturn {
-    NetworkSettings settings;
-    RilError error;
 };
 
 /// The Standard Fuchsia RIL (FRIL)
@@ -62,19 +41,17 @@ protocol RadioInterfaceLayer {
     ///
     /// Implementation Detail: current services speak QMI but others will most likely speak other
     /// binary formats.
-    ConnectTransport(handle<channel> channel) -> (bool success);
+    ConnectTransport(handle<channel> channel) -> () error RilError;
 
     /// Retrieve the identity of the modem (currently |imei| only).
-    // TODO(NET-1781): 200: GetDeviceIdentity() -> (string imei) error (RilError err);
-    GetDeviceIdentity() -> (GetDeviceIdentityReturn imei);
+    GetDeviceIdentity() -> (string imei) error RilError;
 
     /// Power state of the radio. Currently on On or Off.
-    // TODO(NET-1781): 201: RadioPowerStatus() -> (RadioPowerState state) error (RilError err);
-    RadioPowerStatus() -> (RadioPowerStatusReturn state);
+    RadioPowerStatus() -> (RadioPowerState state) error RilError;
 
     /// Activate a network connection.
-    StartNetwork(string apn) -> (StartNetworkReturn state);
+    StartNetwork(string apn) -> (NetworkConnection conn) error RilError;
 
     /// Network settings known to the modem.
-    GetNetworkSettings() -> (GetNetworkSettingsReturn state);
+    GetNetworkSettings() -> (NetworkSettings settings) error RilError;
 };

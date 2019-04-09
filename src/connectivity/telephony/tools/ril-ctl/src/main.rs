@@ -18,7 +18,7 @@ use {
     crate::commands::{Cmd, ReplControl},
     failure::{format_err, Error, ResultExt},
     fidl::endpoints,
-    fidl_fuchsia_net::{Ipv4Address, IpAddress, Subnet},
+    fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet},
     fidl_fuchsia_net_stack::{
         ForwardingDestination, ForwardingEntry, InterfaceAddress, StackMarker,
     },
@@ -93,8 +93,8 @@ async fn get_imei<'a>(
     ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<String, Error> {
     match await!(ril_modem.get_device_identity())? {
-        GetDeviceIdentityReturn::Imei(string) => Ok(string),
-        GetDeviceIdentityReturn::Error(_state) => Err(format_err!("error")),
+        Ok(imei) => Ok(imei.imei),
+        Err(_state) => Err(format_err!("error")),
     }
 }
 
@@ -103,14 +103,14 @@ async fn connect<'a>(
     ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<(NetworkSettings, NetworkConnectionProxy), Error> {
     match await!(ril_modem.start_network(args[0]))? {
-        StartNetworkReturn::Conn(iface) => {
+        Ok(iface) => {
             let settings = await!(ril_modem.get_network_settings())?;
-            if let GetNetworkSettingsReturn::Settings(settings) = settings {
-                return Ok((settings, iface.into_proxy()?));
+            if let Ok(settings) = settings {
+                return Ok((settings.settings, iface.conn.into_proxy()?));
             }
             Err(format_err!("error"))
         }
-        StartNetworkReturn::Error(_e) => Err(format_err!("error")),
+        Err(_e) => Err(format_err!("error")),
     }
 }
 
@@ -119,11 +119,11 @@ async fn get_power<'a>(
     ril_modem: &'a RadioInterfaceLayerProxy,
 ) -> Result<String, Error> {
     match await!(ril_modem.radio_power_status())? {
-        RadioPowerStatusReturn::Result(state) => match state {
+        Ok(state) => match state.state {
             RadioPowerState::On => Ok(String::from("radio on")),
             RadioPowerState::Off => Ok(String::from("radio off")),
         },
-        RadioPowerStatusReturn::Error(_e) => Err(format_err!("error")),
+        Err(_e) => Err(format_err!("error")),
     }
 }
 
@@ -230,7 +230,7 @@ pub fn main() -> Result<(), Error> {
                     .context("Failed to launch ril-qmi service")?;
                 let ril_modem = app.connect_to_service(RadioInterfaceLayerMarker)?;
                 let resp = await!(ril_modem.connect_transport(chan))?;
-                if !resp {
+                if resp.is_err() {
                     return Err(format_err!(
                         "Failed to connect the driver to the RIL (check telephony svc is not running?)"
                     ));

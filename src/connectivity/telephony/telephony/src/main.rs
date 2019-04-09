@@ -3,24 +3,22 @@
 // found in the LICENSE file.
 
 //! System service for managing cellular modems
-
 #![feature(async_await, await_macro, futures_api)]
-#![deny(warnings)]
 
 use {
-    failure::{Error, ResultExt},
+    failure::{Error, Fail, ResultExt},
     fidl_fuchsia_telephony_manager::{ManagerRequest, ManagerRequestStream},
     fidl_fuchsia_telephony_ril::{RadioInterfaceLayerMarker, RadioInterfaceLayerProxy},
+    fuchsia_async as fasync,
     fuchsia_component::{
-        client::{App, launcher, launch},
+        client::{launch, launcher, App},
         fuchsia_single_component_package_url,
         server::ServiceFs,
     },
-    fuchsia_async as fasync,
     fuchsia_syslog::{self as syslog, macros::*},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon as zx,
-    futures::{future, Future, FutureExt, TryFutureExt, StreamExt, TryStreamExt},
+    futures::{future, Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     parking_lot::RwLock,
     qmi::connect_transport_device,
     std::fs::File,
@@ -31,19 +29,41 @@ use {
 const QMI_TRANSPORT: &str = "/dev/class/qmi-transport";
 const RIL_URI: &str = fuchsia_single_component_package_url!("ril-qmi");
 
+#[derive(Debug, PartialEq)]
+pub enum ModemType {
+    Qmi,
+    //TODO(bwb): Other types of modem interfaces
+    At, // Ex: Mbim, AT, etc...
+}
+
+#[derive(Fail, Debug)]
+pub enum TelError {
+    #[fail(display = "telephony svc does not know how to work with {:?} yet", 0)]
+    UnknownTransport(ModemType),
+    #[fail(display = "Connection to a radio has failed")]
+    FailedConnection(),
+    #[fail(display = "The Radio Interface Layer has returned a error: {:?}", 0)]
+    RilError(fidl_fuchsia_telephony_ril::RilError),
+}
+
 pub async fn connect_qmi_transport(path: PathBuf) -> Result<fasync::Channel, Error> {
     let file = File::open(&path)?;
     let chan = await!(connect_transport_device(&file))?;
     Ok(fasync::Channel::from_channel(chan)?)
 }
 
-pub async fn start_qmi_modem(chan: zx::Channel) -> Result<Radio, Error> {
+pub async fn start_modem(ty: ModemType, chan: zx::Channel) -> Result<Radio, Error> {
     let launcher = launcher().context("Failed to open launcher service")?;
-    let app =
-        launch(&launcher, RIL_URI.to_string(), None).context("Failed to launch qmi-modem service")?;
+    let app = launch(&launcher, RIL_URI.to_string(), None)
+        .context("Failed to launch qmi-modem service")?;
     let ril = app.connect_to_service(RadioInterfaceLayerMarker)?;
-    let _success = await!(ril.connect_transport(chan.into()))?;
-    Ok(Radio::new(app, ril))
+    match ty {
+        ModemType::Qmi => match await!(ril.connect_transport(chan.into()))? {
+            Ok(_) => Ok(Radio::new(app, ril)),
+            Err(e) => Err(TelError::RilError(e).into()),
+        },
+        t => return Err(TelError::UnknownTransport(t).into()),
+    }
 }
 
 pub fn start_service(
@@ -112,7 +132,7 @@ impl Manager {
                     fx_log_info!("Connecting to {}", qmi_path.display());
                     let file = File::open(&qmi_path)?;
                     let channel = await!(qmi::connect_transport_device(&file))?;
-                    let svc = await!(start_qmi_modem(channel))?;
+                    let svc = await!(start_modem(ModemType::Qmi, channel))?;
                     self.radios.write().push(svc);
                 }
                 _ => (),
@@ -129,18 +149,18 @@ fn main() -> Result<(), Error> {
 
     let manager = Arc::new(Manager::new());
     let mgr = manager.clone();
-    let device_watcher = manager.watch_new_devices()
+    let device_watcher = manager
+        .watch_new_devices()
         .unwrap_or_else(|e| fx_log_err!("Failed to watch new devices: {:?}", e));
 
     let mut fs = ServiceFs::new();
-    fs.dir("public")
-        .add_fidl_service(move |stream| {
-            fx_log_info!("Spawning Management Interface");
-            fasync::spawn(
-                start_service(mgr.clone(), stream)
-                    .unwrap_or_else(|e| fx_log_err!("Failed to spawn {:?}", e)),
-            )
-        });
+    fs.dir("public").add_fidl_service(move |stream| {
+        fx_log_info!("Spawning Management Interface");
+        fasync::spawn(
+            start_service(mgr.clone(), stream)
+                .unwrap_or_else(|e| fx_log_err!("Failed to spawn {:?}", e)),
+        )
+    });
     fs.take_and_serve_directory_handle()?;
 
     let ((), ()) = executor.run_singlethreaded(device_watcher.join(fs.collect::<()>()));
