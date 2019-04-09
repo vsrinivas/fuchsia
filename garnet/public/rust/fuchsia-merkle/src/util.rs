@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::BufMut;
 use mundane::hash::{Digest, Hasher, Sha256};
-use std::io::Cursor;
-use std::mem::size_of;
+use std::mem::{size_of, size_of_val};
 
 use crate::hash::Hash;
 use crate::BLOCK_SIZE;
@@ -17,11 +15,13 @@ type BlockIdentity = [u8; size_of::<u64>() + size_of::<u32>()];
 
 /// Generate the bytes representing a block's identity.
 fn make_identity(length: usize, level: usize, offset: usize) -> BlockIdentity {
-    let mut identity = [0; size_of::<BlockIdentity>()];
-    let mut cursor = Cursor::new(&mut identity);
-    cursor.put_u64_le(offset as u64 | level as u64);
-    cursor.put_u32_le(length as u32);
-    identity
+    let offset_or_level = (offset as u64 | level as u64).to_le_bytes();
+    let length = (length as u32).to_le_bytes();
+    let mut ret: BlockIdentity = [0; size_of::<BlockIdentity>()];
+    let (ret_offset_or_level, ret_length) = ret.split_at_mut(size_of_val(&offset_or_level));
+    ret_offset_or_level.copy_from_slice(&offset_or_level);
+    ret_length.copy_from_slice(&length);
+    ret
 }
 
 /// Compute the merkle hash of a block of data.
