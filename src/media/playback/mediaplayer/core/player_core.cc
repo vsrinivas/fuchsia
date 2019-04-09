@@ -6,10 +6,8 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-
 #include <queue>
 #include <unordered_set>
-
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/util/callback_joiner.h"
@@ -160,7 +158,7 @@ void PlayerCore::SetTimelineFunction(media::TimelineFunction timeline_function,
 
   int64_t reference_time = timeline_function.reference_time();
   if (reference_time == Packet::kNoPts) {
-    reference_time = zx::clock::get_monotonic().get() + kMinimumLeadTime;
+    reference_time = media::Timeline::local_now() + kMinimumLeadTime;
   }
 
   int64_t subject_time = timeline_function.subject_time();

@@ -6,9 +6,10 @@
 #define LIB_MEDIA_TIMELINE_TIMELINE_RATE_H_
 
 #include <stdint.h>
-#include <zircon/assert.h>
 
 #include <limits>
+
+#include "src/lib/fxl/logging.h"
 
 namespace media {
 
@@ -76,13 +77,13 @@ class TimelineRate {
     // than kFloatFactor. kFloatFactor's value was chosen because floats have
     // a 23-bit mantissa, and operations with a larger factor would sacrifice
     // precision.
-    ZX_DEBUG_ASSERT(rate_as_float >= 0.0f);
+    FXL_DCHECK(rate_as_float >= 0.0f);
     Reduce(&subject_delta_, &reference_delta_);
   }
 
   TimelineRate(uint32_t subject_delta, uint32_t reference_delta)
       : subject_delta_(subject_delta), reference_delta_(reference_delta) {
-    ZX_DEBUG_ASSERT(reference_delta != 0);
+    FXL_DCHECK(reference_delta != 0);
     Reduce(&subject_delta_, &reference_delta_);
   }
 
@@ -92,7 +93,7 @@ class TimelineRate {
   // Returns the inverse of the rate. DCHECKs if the subject_delta of this
   // rate is zero.
   TimelineRate Inverse() const {
-    ZX_DEBUG_ASSERT(subject_delta_ != 0);
+    FXL_DCHECK(subject_delta_ != 0);
 
     // Note: TimelineRates should be always be in their reduced form.  Because
     // of this, we do not want to invoke the subject/reference constructor

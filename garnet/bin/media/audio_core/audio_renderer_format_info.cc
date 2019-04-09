@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/media/audio_core/audio_renderer_format_info.h"
-
 #include "garnet/bin/media/audio_core/audio_renderer_impl.h"
 #include "garnet/bin/media/audio_core/mixer/constants.h"
+#include "lib/media/timeline/timeline.h"
 
 namespace media::audio {
 
@@ -15,7 +15,8 @@ AudioRendererFormatInfo::AudioRendererFormatInfo(
   // Precompute some useful timing/format stuff.
   //
   // Start with the ratio between frames and nanoseconds.
-  frames_per_ns_ = TimelineRate(format_.frames_per_second, ZX_SEC(1));
+  frames_per_ns_ =
+      TimelineRate(format_.frames_per_second, Timeline::ns_from_seconds(1));
 
   // Figure out the rate we need to scale by in order to produce our fixed
   // point timestamps.

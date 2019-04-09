@@ -6,7 +6,6 @@
 
 #include <fbl/auto_lock.h>
 #include <lib/fit/defer.h>
-
 #include <limits>
 
 #include "garnet/bin/media/audio_core/audio_link.h"
@@ -514,8 +513,7 @@ void StandardOutputBase::UpdateSourceTrans(
   uint32_t gen = bk->source_trans_gen_id;
 
   audio_renderer->SnapshotCurrentTimelineFunction(
-      zx::clock::get_monotonic().get(), &bk->clock_mono_to_frac_source_frames,
-      &gen);
+      Timeline::local_now(), &bk->clock_mono_to_frac_source_frames, &gen);
 
   // If local->media transformation hasn't changed since last time, we're done.
   if (bk->source_trans_gen_id == gen) {

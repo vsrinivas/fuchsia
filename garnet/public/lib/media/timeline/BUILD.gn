@@ -15,16 +15,19 @@ source_set("timeline") {
     ":no_converters",
     "//sdk/fidl/fuchsia.media",
   ]
-
-  public_configs = [ "//garnet/public:config" ]
 }
 
 source_set("no_converters") {
   sources = [
+    "timeline.h",
     "timeline_function.cc",
     "timeline_function.h",
     "timeline_rate.cc",
     "timeline_rate.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
   ]
 
   public_configs = [ "//garnet/public:config" ]
@@ -41,6 +44,7 @@ executable("test_bin") {
 
   deps = [
     ":timeline",
+    "//garnet/public/lib/fsl",
     "//third_party/googletest:gtest_main",
   ]
 }

@@ -4,10 +4,10 @@
 
 #include "lib/media/timeline/timeline_rate.h"
 
-#include <zircon/assert.h>
-
 #include <limits>
 #include <utility>
+
+#include "src/lib/fxl/logging.h"
 
 namespace media {
 
@@ -59,9 +59,9 @@ T BinaryGcd(T a, T b) {
 // Reduces the ratio of *numerator and *denominator.
 template <typename T>
 void ReduceRatio(T* numerator, T* denominator) {
-  ZX_DEBUG_ASSERT(numerator != nullptr);
-  ZX_DEBUG_ASSERT(denominator != nullptr);
-  ZX_DEBUG_ASSERT(*denominator != 0);
+  FXL_DCHECK(numerator != nullptr);
+  FXL_DCHECK(denominator != nullptr);
+  FXL_DCHECK(*denominator != 0);
 
   T gcd = BinaryGcd(*numerator, *denominator);
 
@@ -86,8 +86,8 @@ template void ReduceRatio<uint32_t>(uint32_t* numerator, uint32_t* denominator);
 // overflow.
 uint64_t ScaleUInt64(uint64_t value, uint32_t subject_delta,
                      uint32_t reference_delta, bool round_up, bool* overflow) {
-  ZX_DEBUG_ASSERT(reference_delta != 0u);
-  ZX_DEBUG_ASSERT(overflow != nullptr);
+  FXL_DCHECK(reference_delta != 0u);
+  FXL_DCHECK(overflow != nullptr);
 
   constexpr uint64_t kLow32Bits = 0xffffffffu;
   constexpr uint64_t kHigh32Bits = kLow32Bits << 32u;
@@ -154,10 +154,10 @@ void TimelineRate::Product(uint32_t a_subject_delta, uint32_t a_reference_delta,
                            uint32_t b_subject_delta, uint32_t b_reference_delta,
                            uint32_t* product_subject_delta,
                            uint32_t* product_reference_delta, bool exact) {
-  ZX_DEBUG_ASSERT(a_reference_delta != 0);
-  ZX_DEBUG_ASSERT(b_reference_delta != 0);
-  ZX_DEBUG_ASSERT(product_subject_delta != nullptr);
-  ZX_DEBUG_ASSERT(product_reference_delta != nullptr);
+  FXL_DCHECK(a_reference_delta != 0);
+  FXL_DCHECK(b_reference_delta != 0);
+  FXL_DCHECK(product_subject_delta != nullptr);
+  FXL_DCHECK(product_reference_delta != nullptr);
 
   uint64_t subject_delta =
       static_cast<uint64_t>(a_subject_delta) * b_subject_delta;
@@ -168,7 +168,8 @@ void TimelineRate::Product(uint32_t a_subject_delta, uint32_t a_reference_delta,
 
   if (subject_delta > std::numeric_limits<uint32_t>::max() ||
       reference_delta > std::numeric_limits<uint32_t>::max()) {
-    ZX_DEBUG_ASSERT(!exact);
+    FXL_DCHECK(!exact) << "subject_delta " << subject_delta
+                       << " reference_delta " << reference_delta;
 
     do {
       subject_delta >>= 1;
@@ -195,7 +196,7 @@ int64_t TimelineRate::Scale(int64_t value, uint32_t subject_delta,
   static constexpr uint64_t abs_of_min_int64 =
       static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + 1;
 
-  ZX_DEBUG_ASSERT(reference_delta != 0u);
+  FXL_DCHECK(reference_delta != 0u);
 
   bool overflow;
 

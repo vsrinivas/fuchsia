@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 
+#include "lib/media/timeline/timeline.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {
@@ -75,7 +76,7 @@ void Renderer::SetTimelineFunction(media::TimelineFunction timeline_function,
 
 bool Renderer::end_of_stream() const {
   return end_of_stream_pts_ != Packet::kNoPts &&
-         current_timeline_function_(zx::clock::get_monotonic().get()) >=
+         current_timeline_function_(media::Timeline::local_now()) >=
              end_of_stream_pts_;
 }
 

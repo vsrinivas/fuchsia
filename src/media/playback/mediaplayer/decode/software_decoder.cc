@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 
 #include "src/lib/fxl/logging.h"
+#include "lib/media/timeline/timeline.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {
@@ -143,7 +144,7 @@ void SoftwareDecoder::HandleInputPacketOnWorker(PacketPtr input) {
   bool done = false;
   bool new_input = true;
 
-  int64_t start_time = zx::clock::get_monotonic().get();
+  int64_t start_time = media::Timeline::local_now();
 
   // |TransformPacket| always returns true or produces an output packet or both,
   // so we won't spin uselessly here.
@@ -161,7 +162,7 @@ void SoftwareDecoder::HandleInputPacketOnWorker(PacketPtr input) {
 
   {
     std::lock_guard<std::mutex> locker(decode_duration_mutex_);
-    decode_duration_.AddSample(zx::clock::get_monotonic().get() - start_time);
+    decode_duration_.AddSample(media::Timeline::local_now() - start_time);
   }
 
   PostTaskToMainThread([this]() { WorkerDoneWithInputPacket(); });
