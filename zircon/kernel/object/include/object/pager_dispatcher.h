@@ -9,9 +9,10 @@
 #include <fbl/canary.h>
 #include <fbl/ref_ptr.h>
 #include <object/dispatcher.h>
+#include <object/handle.h>
 #include <object/port_dispatcher.h>
-#include <zircon/types.h>
 #include <vm/page_source.h>
+#include <zircon/types.h>
 
 // Page source implementation that talks to a userspace pager service.
 //
@@ -96,7 +97,7 @@ private:
 
 class PagerDispatcher final : public SoloDispatcher<PagerDispatcher, ZX_DEFAULT_PAGER_RIGHTS> {
 public:
-    static zx_status_t Create(fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights);
+    static zx_status_t Create(KernelHandle<PagerDispatcher>* handle, zx_rights_t* rights);
     ~PagerDispatcher() final;
 
     zx_status_t CreateSource(fbl::RefPtr<PortDispatcher> port,

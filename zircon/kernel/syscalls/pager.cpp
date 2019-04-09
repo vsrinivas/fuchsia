@@ -18,14 +18,14 @@ zx_status_t sys_pager_create(uint32_t options, user_out_handle* out) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    fbl::RefPtr<Dispatcher> dispatcher;
+    KernelHandle<PagerDispatcher> handle;
     zx_rights_t rights;
-    zx_status_t result = PagerDispatcher::Create(&dispatcher, &rights);
+    zx_status_t result = PagerDispatcher::Create(&handle, &rights);
     if (result != ZX_OK) {
         return result;
     }
 
-    return out->make(ktl::move(dispatcher), rights);
+    return out->make(ktl::move(handle), rights);
 }
 
 // zx_status_t zx_pager_create_vmo

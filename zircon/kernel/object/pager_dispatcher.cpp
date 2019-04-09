@@ -16,15 +16,15 @@
 KCOUNTER(dispatcher_pager_create_count, "dispatcher.pager.create")
 KCOUNTER(dispatcher_pager_destroy_count, "dispatcher.pager.destroy")
 
-zx_status_t PagerDispatcher::Create(fbl::RefPtr<Dispatcher>* dispatcher, zx_rights_t* rights) {
+zx_status_t PagerDispatcher::Create(KernelHandle<PagerDispatcher>* handle, zx_rights_t* rights) {
     fbl::AllocChecker ac;
-    auto disp = new (&ac) PagerDispatcher();
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) PagerDispatcher()));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
     *rights = default_rights();
-    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+    *handle = ktl::move(new_handle);
     return ZX_OK;
 }
 
