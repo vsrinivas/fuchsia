@@ -8,8 +8,12 @@ executable("yuv_to_image_pipe") {
 
   sources = [
     "main.cc",
-    "yuv_view.cc",
-    "yuv_view.h",
+    "yuv_base_view.cc",
+    "yuv_base_view.h",
+    "yuv_cyclic_view.cc",
+    "yuv_cyclic_view.h",
+    "yuv_input_view.cc",
+    "yuv_input_view.h",
   ]
 
   deps = [

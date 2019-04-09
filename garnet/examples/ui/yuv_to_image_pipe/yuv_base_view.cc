@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "yuv_view.h"
+#include "garnet/examples/ui/yuv_to_image_pipe/yuv_base_view.h"
 
-#include <src/lib/fxl/log_level.h>
 #include <lib/images/cpp/images.h>
 #include <lib/ui/scenic/cpp/commands.h>
+#include <src/lib/fxl/log_level.h>
 
 #include <iostream>
 
 #include "garnet/lib/ui/yuv/yuv.h"
+
+namespace yuv_to_image_pipe {
 
 namespace {
 
@@ -22,9 +24,9 @@ constexpr float kInitialWindowYPos = 240;
 
 }  // namespace
 
-YuvView::YuvView(scenic::ViewContext context,
-                 fuchsia::images::PixelFormat pixel_format)
-    : BaseView(std::move(context), "YuvView Example"),
+YuvBaseView::YuvBaseView(scenic::ViewContext context,
+                         fuchsia::images::PixelFormat pixel_format)
+    : BaseView(std::move(context), "YuvBaseView Example"),
       node_(session()),
       pixel_format_(pixel_format),
       stride_(static_cast<uint32_t>(
@@ -51,48 +53,18 @@ YuvView::YuvView(scenic::ViewContext context,
   // Translation of 0, 0 is the middle of the screen
   node_.SetTranslation(kInitialWindowXPos, kInitialWindowYPos, -kDisplayHeight);
   InvalidateScene();
-
-  StartYuv();
 }
 
-YuvView::~YuvView() = default;
+uint32_t YuvBaseView::AddImage() {
+  ++next_image_id_;
 
-void YuvView::OnSceneInvalidated(
-    fuchsia::images::PresentationInfo presentation_info) {
-  if (!has_logical_size()) {
-    return;
-  }
-
-  // Compute the amount of time that has elapsed since the view was created.
-  double seconds =
-      static_cast<double>(presentation_info.presentation_time) / 1'000'000'000;
-
-  const float kHalfWidth = logical_size().x * 0.5f;
-  const float kHalfHeight = logical_size().y * 0.5f;
-
-  // Compute the translation for the window to swirl around the screen.
-  // Why do this?  Well, this is an example of what a View can do, and it helps
-  // debug to know if scenic is still running.
-  node_.SetTranslation(kHalfWidth * (1. + .1 * sin(seconds * 0.8)),
-                       kHalfHeight * (1. + .1 * sin(seconds * 0.6)),
-                       -kDisplayHeight);
-
-  // The recangle is constantly animating; invoke InvalidateScene() to guarantee
-  // that OnSceneInvalidated() will be called again.
-  InvalidateScene();
-}
-
-void YuvView::StartYuv() {
-  constexpr uint32_t kImageId = 1;
   fuchsia::images::ImageInfo image_info{
       .width = kShapeWidth,
       .height = kShapeHeight,
       .stride = stride_,
       .pixel_format = pixel_format_,
   };
-
   uint64_t image_vmo_bytes = images::ImageSize(image_info);
-
   ::zx::vmo image_vmo;
   zx_status_t status = ::zx::vmo::create(image_vmo_bytes, 0, &image_vmo);
   if (status != ZX_OK) {
@@ -105,56 +77,65 @@ void YuvView::StartYuv() {
                                       ZX_VM_PERM_WRITE | ZX_VM_PERM_READ,
                                       reinterpret_cast<uintptr_t*>(&vmo_base));
 
-  SetVmoPixels(vmo_base);
-
   constexpr uint64_t kMemoryOffset = 0;
-
-  image_pipe_->AddImage(kImageId, image_info, std::move(image_vmo),
+  image_pipe_->AddImage(next_image_id_, image_info, std::move(image_vmo),
                         kMemoryOffset, image_vmo_bytes,
                         fuchsia::images::MemoryType::HOST_MEMORY);
+  image_vmos_[next_image_id_] = vmo_base;
+  return next_image_id_;
+}
+
+void YuvBaseView::PaintImage(uint32_t image_id, uint8_t pixel_multiplier) {
+  FXL_CHECK(image_vmos_.count(image_id));
+
+  SetVmoPixels(image_vmos_[image_id], pixel_multiplier);
+}
+
+void YuvBaseView::PresentImage(uint32_t image_id) {
+  FXL_CHECK(image_vmos_.count(image_id));
 
   ::std::vector<::zx::event> acquire_fences;
   ::std::vector<::zx::event> release_fences;
   uint64_t now_ns = zx_clock_get_monotonic();
   image_pipe_->PresentImage(
-      kImageId, now_ns, std::move(acquire_fences), std::move(release_fences),
+      image_id, now_ns, std::move(acquire_fences), std::move(release_fences),
       [this](fuchsia::images::PresentationInfo presentation_info) {
         std::cout << "PresentImageCallback() called" << std::endl;
       });
 }
 
-void YuvView::SetVmoPixels(uint8_t* vmo_base) {
+void YuvBaseView::SetVmoPixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
   switch (pixel_format_) {
     case fuchsia::images::PixelFormat::BGRA_8:
-      SetBgra8Pixels(vmo_base);
+      SetBgra8Pixels(vmo_base, pixel_multiplier);
       break;
     case fuchsia::images::PixelFormat::YUY2:
-      SetYuy2Pixels(vmo_base);
+      SetYuy2Pixels(vmo_base, pixel_multiplier);
       break;
     case fuchsia::images::PixelFormat::NV12:
-      SetNv12Pixels(vmo_base);
+      SetNv12Pixels(vmo_base, pixel_multiplier);
       break;
     case fuchsia::images::PixelFormat::YV12:
-      SetYv12Pixels(vmo_base);
+      SetYv12Pixels(vmo_base, pixel_multiplier);
       break;
   }
 }
 
-void YuvView::SetBgra8Pixels(uint8_t* vmo_base) {
+void YuvBaseView::SetBgra8Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
   for (uint32_t y_iter = 0; y_iter < kShapeHeight; y_iter++) {
     double y = static_cast<double>(y_iter) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter++) {
       double x = static_cast<double>(x_iter) / kShapeWidth;
-      uint8_t y_value = GetYValue(x, y) * 255;
-      uint8_t u_value = GetUValue(x, y) * 255;
-      uint8_t v_value = GetVValue(x, y) * 255;
+      uint8_t y_value = GetYValue(x, y) * pixel_multiplier;
+      uint8_t u_value = GetUValue(x, y) * pixel_multiplier;
+      uint8_t v_value = GetVValue(x, y) * pixel_multiplier;
       yuv::YuvToBgra(y_value, u_value, v_value,
                      &vmo_base[y_iter * stride_ + x_iter * sizeof(uint32_t)]);
     }
   }
 }
 
-void YuvView::SetYuy2Pixels(uint8_t* vmo_base) {
+void YuvBaseView::SetYuy2Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
   for (uint32_t y_iter = 0; y_iter < kShapeHeight; y_iter++) {
     double y = static_cast<double>(y_iter) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter += 2) {
@@ -162,22 +143,22 @@ void YuvView::SetYuy2Pixels(uint8_t* vmo_base) {
       double x1 = static_cast<double>(x_iter + 1) / kShapeWidth;
       uint8_t* two_pixels =
           &vmo_base[y_iter * stride_ + x_iter * sizeof(uint16_t)];
-      two_pixels[0] = GetYValue(x0, y) * 255;
-      two_pixels[1] = GetUValue(x0, y) * 255;
-      two_pixels[2] = GetYValue(x1, y) * 255;
-      two_pixels[3] = GetVValue(x0, y) * 255;
+      two_pixels[0] = GetYValue(x0, y) * pixel_multiplier;
+      two_pixels[1] = GetUValue(x0, y) * pixel_multiplier;
+      two_pixels[2] = GetYValue(x1, y) * pixel_multiplier;
+      two_pixels[3] = GetVValue(x0, y) * pixel_multiplier;
     }
   }
 }
 
-void YuvView::SetNv12Pixels(uint8_t* vmo_base) {
+void YuvBaseView::SetNv12Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
   // Y plane
   uint8_t* y_base = vmo_base;
   for (uint32_t y_iter = 0; y_iter < kShapeHeight; y_iter++) {
     double y = static_cast<double>(y_iter) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter++) {
       double x = static_cast<double>(x_iter) / kShapeWidth;
-      y_base[y_iter * stride_ + x_iter] = GetYValue(x, y) * 255;
+      y_base[y_iter * stride_ + x_iter] = GetYValue(x, y) * pixel_multiplier;
     }
   }
   // UV interleaved
@@ -186,20 +167,22 @@ void YuvView::SetNv12Pixels(uint8_t* vmo_base) {
     double y = static_cast<double>(y_iter * 2) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth / 2; x_iter++) {
       double x = static_cast<double>(x_iter * 2) / kShapeWidth;
-      uv_base[y_iter * stride_ + x_iter * 2] = GetUValue(x, y) * 255;
-      uv_base[y_iter * stride_ + x_iter * 2 + 1] = GetVValue(x, y) * 255;
+      uv_base[y_iter * stride_ + x_iter * 2] =
+          GetUValue(x, y) * pixel_multiplier;
+      uv_base[y_iter * stride_ + x_iter * 2 + 1] =
+          GetVValue(x, y) * pixel_multiplier;
     }
   }
 }
 
-void YuvView::SetYv12Pixels(uint8_t* vmo_base) {
+void YuvBaseView::SetYv12Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
   // Y plane
   uint8_t* y_base = vmo_base;
   for (uint32_t y_iter = 0; y_iter < kShapeHeight; y_iter++) {
     double y = static_cast<double>(y_iter) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter++) {
       double x = static_cast<double>(x_iter) / kShapeWidth;
-      y_base[y_iter * stride_ + x_iter] = GetYValue(x, y) * 255;
+      y_base[y_iter * stride_ + x_iter] = GetYValue(x, y) * pixel_multiplier;
     }
   }
   // U and V work the same as each other, so do them together
@@ -210,14 +193,18 @@ void YuvView::SetYv12Pixels(uint8_t* vmo_base) {
     double y = static_cast<double>(y_iter * 2) / kShapeHeight;
     for (uint32_t x_iter = 0; x_iter < kShapeWidth / 2; x_iter++) {
       double x = static_cast<double>(x_iter * 2) / kShapeWidth;
-      u_base[y_iter * stride_ / 2 + x_iter] = GetUValue(x, y) * 255;
-      v_base[y_iter * stride_ / 2 + x_iter] = GetVValue(x, y) * 255;
+      u_base[y_iter * stride_ / 2 + x_iter] =
+          GetUValue(x, y) * pixel_multiplier;
+      v_base[y_iter * stride_ / 2 + x_iter] =
+          GetVValue(x, y) * pixel_multiplier;
     }
   }
 }
 
-double YuvView::GetYValue(double x, double y) { return x; }
+double YuvBaseView::GetYValue(double x, double y) { return x; }
 
-double YuvView::GetUValue(double x, double y) { return y; }
+double YuvBaseView::GetUValue(double x, double y) { return y; }
 
-double YuvView::GetVValue(double x, double y) { return 1 - y; }
+double YuvBaseView::GetVValue(double x, double y) { return 1 - y; }
+
+}  // namespace yuv_to_image_pipe

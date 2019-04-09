@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "yuv_view.h"
+#include "garnet/examples/ui/yuv_to_image_pipe/yuv_cyclic_view.h"
+#include "garnet/examples/ui/yuv_to_image_pipe/yuv_input_view.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/ui/base_view/cpp/view_provider_component.h>
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/log_settings_command_line.h>
-#include <lib/ui/base_view/cpp/view_provider_component.h>
 #include <trace-provider/provider.h>
 
 // fx shell "killall scenic; killall basemgr; killall root_presenter;
@@ -51,12 +52,19 @@ int main(int argc, const char** argv) {
     exit(-1);
   }
 
-  scenic::ViewProviderComponent component(
-      [pixel_format](scenic::ViewContext view_context) {
-        return std::make_unique<YuvView>(std::move(view_context), pixel_format);
-      },
-      &loop);
-
+  scenic::ViewFactory factory;
+  if (command_line.HasOption("input_driven")) {
+    factory = [pixel_format](scenic::ViewContext view_context) {
+      return std::make_unique<yuv_to_image_pipe::YuvInputView>(
+          std::move(view_context), pixel_format);
+    };
+  } else {
+    factory = [pixel_format](scenic::ViewContext view_context) {
+      return std::make_unique<yuv_to_image_pipe::YuvCyclicView>(
+          std::move(view_context), pixel_format);
+    };
+  }
+  scenic::ViewProviderComponent component(std::move(factory), &loop);
   loop.Run();
   return 0;
 }
