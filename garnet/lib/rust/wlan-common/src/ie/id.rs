@@ -16,3 +16,5 @@ pub const MESH_PEERING_MGMT: Id = Id(117);
 pub const PREQ: Id = Id(130);
 pub const PREP: Id = Id(131);
 pub const PERR: Id = Id(132);
+pub const VHT_CAPABILITIES: Id = Id(191);
+pub const VHT_OPERATION: Id = Id(192);

@@ -6,7 +6,6 @@ use {
     crate::{
         buffer_reader::BufferReader, mac::MacAddr, mac::ReasonCode, unaligned_view::UnalignedView,
     },
-    failure::{ensure, format_err, Error},
     std::mem::size_of,
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
@@ -110,13 +109,13 @@ impl SmPowerSave {
 #[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
 pub struct MaxAmsduLen(pub u8);
 impl MaxAmsduLen {
-    pub_const!(OCTETS3839, 0);
-    pub_const!(OCTETS7935, 1);
+    pub_const!(OCTETS_3839, 0);
+    pub_const!(OCTETS_7935, 1);
 }
 
 // IEEE Std 802.11-2016, 9.4.2.56.3
 #[bitfield(
-    0..=1 exponent,                                     // Maximum A-MPDU Length Exponent.
+    0..=1 max_ampdu_exponent as MaxAmpduExponent(u8),   // Maximum A-MPDU Length Exponent. 0-3 valid
     2..=4 min_start_spacing as MinMpduStartSpacing(u8), // Minimum MPDU Start Spacing.
     5..=7 _,                                            // reserved
 )]
@@ -124,9 +123,11 @@ impl MaxAmsduLen {
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
 pub struct AmpduParams(pub u8);
 
-impl AmpduParams {
-    pub fn max_ampdu_len(&self) -> usize {
-        (1 << (13 + self.exponent())) - 1 as usize
+#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+pub struct MaxAmpduExponent(u8);
+impl MaxAmpduExponent {
+    pub fn to_len(&self) -> usize {
+        (1 << (13 + self.0)) - 1 as usize
     }
 }
 
@@ -182,12 +183,12 @@ impl NumSpatialStreams {
     pub fn to_human(&self) -> u8 {
         1 + self.0
     }
-    pub fn from_human(val: u8) -> Result<Self, Error> {
-        ensure!(
-            Self::ONE.to_human() <= val && val <= Self::FOUR.to_human(),
-            format_err!("Number of spatial stream must be between 1 and 4. {} is invalid", val)
-        );
-        Ok(Self(val - 1))
+    pub fn from_human(val: u8) -> Result<Self, String> {
+        if Self::ONE.to_human() <= val && val <= Self::FOUR.to_human() {
+            Ok(Self(val - 1))
+        } else {
+            Err(format!("Number of spatial stream must be between 1 and 4. {} is invalid", val))
+        }
     }
 }
 
@@ -292,12 +293,12 @@ impl NumAntennas {
     pub fn to_human(&self) -> u8 {
         1 + self.0
     }
-    pub fn from_human(val: u8) -> Result<Self, Error> {
-        ensure!(
-            Self::ONE.to_human() <= val && val <= Self::FOUR.to_human(),
-            format_err!("Number of antennas must be between 1 and 4. {} is invalid", val)
-        );
-        Ok(Self(val - 1))
+    pub fn from_human(val: u8) -> Result<Self, String> {
+        if Self::ONE.to_human() <= val && val <= Self::FOUR.to_human() {
+            Ok(Self(val - 1))
+        } else {
+            Err(format!("Number of antennas must be between 1 and 4. {} is invalid", val))
+        }
     }
 }
 
@@ -313,12 +314,12 @@ impl NumCsiRows {
     pub fn to_human(&self) -> u8 {
         1 + self.0
     }
-    pub fn from_human(val: u8) -> Result<Self, Error> {
-        ensure!(
-            Self::ONE.to_human() <= val && val <= Self::FOUR.to_human(),
-            format_err!("Number of csi rows must be between 1 and 4. {} is invalid", val)
-        );
-        Ok(Self(val - 1))
+    pub fn from_human(val: u8) -> Result<Self, String> {
+        if Self::ONE.to_human() <= val && val <= Self::FOUR.to_human() {
+            Ok(Self(val - 1))
+        } else {
+            Err(format!("Number of csi rows must be between 1 and 4. {} is invalid", val))
+        }
     }
 }
 
@@ -334,12 +335,12 @@ impl NumSpaceTimeStreams {
     pub fn to_human(&self) -> u8 {
         1 + self.0
     }
-    pub fn from_human(val: u8) -> Result<Self, Error> {
-        ensure!(
-            1 <= val && val <= 4,
-            format_err!("Number of channel estimation must be between 1 and 4. {} is invalid", val)
-        );
-        Ok(Self(val - 1))
+    pub fn from_human(val: u8) -> Result<Self, String> {
+        if 1 <= val && val <= 4 {
+            Ok(Self(val - 1))
+        } else {
+            Err(format!("Number of channel estimation must be between 1 and 4. {} is invalid", val))
+        }
     }
 }
 
@@ -690,6 +691,156 @@ impl<B: ByteSlice> PerrDestinationIter<B> {
     }
 }
 
+// IEEE Std 802.11-2016, 9.4.2.57
+#[repr(C, packed)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
+pub struct VhtCapabilities {
+    pub vht_cap_info: VhtCapabilitiesInfo, // u32
+    pub vht_mcs_nss: VhtMcsNssSet,         // u64
+}
+
+// IEEE Std 802.11-2016, 9.4.2.158.2
+#[bitfield(
+    0..=1   max_mpdu_len as MaxMpduLen(u8),
+    2..=3   supported_cbw_set,                          // used with ext_nss_bw, See Table 9-250.
+    4       rx_ldpc,
+    5       sgi_cbw80,                                  // for CBW80 only
+    6       sgi_cbw160,                                 // for CBW160 and CBW80P80
+    7       tx_stbc,
+    8..=10  rx_stbc,
+    11      su_bfer,                                    // single user beamformer capable
+    12      su_bfee,                                    // single user beamformee capable
+    13..=15 bfee_sts,                                   // beamformee space-time spreading
+                                                        // capability
+
+    16..=18 num_sounding,                               // number of sounding dimensions
+    19      mu_bfer,                                    // multi user beamformer capable
+    20      mu_bfee,                                    // multi user beamformer capable
+    21      txop_ps,                                    // TXOP power save mode
+    22      htc_vht,
+    23..=25 max_ampdu_exponent as MaxAmpduExponent(u8), // valid values: 0-7
+    26..=27 link_adapt as VhtLinkAdaptation(u8),        // VHT link adapatation capable,
+                                                        // only valid if htc_vht is true
+    28      rx_ant_pattern,
+    29      tx_ant_pattern,
+    30..=31 ext_nss_bw,                                 // Extended NSS BW support, used with
+                                                        // supported_cbw_set to indicate NSS support
+                                                        // for each BW. See Table 9-250.
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
+pub struct VhtCapabilitiesInfo(pub u32);
+
+// IEEE Std 802.11-2016, Table 9-249
+#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+pub struct MaxMpduLen(pub u8);
+impl MaxMpduLen {
+    pub_const!(OCTECTS_3895, 0);
+    pub_const!(OCTECTS_7991, 1);
+    pub_const!(OCTECTS_11454, 2);
+    // 3 reserved
+}
+
+// IEEE Std 802.11-2016, Table 9-249
+#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+pub struct VhtLinkAdaptation(pub u8);
+impl VhtLinkAdaptation {
+    pub_const!(NO_FEEDBACK, 0);
+    // 1 Reserved
+    pub_const!(UNSOLICITED, 2);
+    pub_const!(BOTH, 3);
+}
+
+// IEEE Std 802.11-2016, 9.4.2.158.3
+#[bitfield(
+    0..=15  rx_max_mcs as VhtMcsNssMap(u16),
+
+    16..=28 rx_max_data_rate,               // Mbps rounded down to the nearest integer
+    29..=31 max_nsts,
+
+    32..=47 tx_max_mcs as VhtMcsNssMap(u16),
+
+    48..=60 tx_max_data_rate,               // Mbps rounded down to the nearest integer
+    61      ext_nss_bw,                     // Extended NSS BW Capable
+    62..=63 _,                              // reserved
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
+pub struct VhtMcsNssSet(pub u64);
+
+// IEEE Std 802.11-2016, Figure 9-562.
+#[bitfield(
+    0..=1   ss1 as VhtMcsSet(u8),
+    2..=3   ss2 as VhtMcsSet(u8),
+    4..=5   ss3 as VhtMcsSet(u8),
+    6..=7   ss4 as VhtMcsSet(u8),
+    8..=9   ss5 as VhtMcsSet(u8),
+    10..=11 ss6 as VhtMcsSet(u8),
+    12..=13 ss7 as VhtMcsSet(u8),
+    14..=15 ss8 as VhtMcsSet(u8),
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
+pub struct VhtMcsNssMap(pub u16);
+impl VhtMcsNssMap {
+    const BIT_WIDTH: u8 = 2;
+    const MASK: u16 = (1 << Self::BIT_WIDTH) - 1;
+
+    pub fn ss(&self, num: u8) -> Result<VhtMcsSet, String> {
+        if num >= 1 && num <= 8 {
+            Ok(VhtMcsSet((self.0 >> ((num - 1) * Self::BIT_WIDTH) & Self::MASK) as u8))
+        } else {
+            Err(format!("spatial stream number must be between 1 and 8, {} invalid", num))
+        }
+    }
+
+    pub fn set_ss(&mut self, num: u8, val: VhtMcsSet) -> Result<(), String> {
+        if num == 0 || num > 8 {
+            Err(format!("spatial stream number must be between 1 and 8, {} invalid", num))
+        } else if val.0 > 3 {
+            Err(format!("bitfield is only 2 bit wide, {} invalid", val.0))
+        } else {
+            let offset = (num - 1) * Self::BIT_WIDTH;
+            let mask = Self::MASK << offset;
+            self.0 = (self.0 & (!mask)) | (((val.0 as u16) & Self::MASK) << offset);
+            Ok(())
+        }
+    }
+}
+
+#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+pub struct VhtMcsSet(pub u8);
+impl VhtMcsSet {
+    pub_const!(UPTO_7, 0);
+    pub_const!(UPTO_8, 1);
+    pub_const!(UPTO_9, 2);
+    pub_const!(NONE, 3);
+}
+
+// IEEE Std 802.11-2016, 9.4.2.159
+#[repr(C, packed)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
+// TODO(WLAN-1051): Derive phy parameters based on Table 9-250 and 9-253.
+pub struct VhtOperation {
+    pub vht_cbw: VhtChannelBandwidth, // u8
+    pub center_freq_seg0: u8,         // Channel index
+    pub center_freq_seg1: u8,         // Channel index
+
+    pub basic_mcs_nss: VhtMcsNssMap, // u16
+}
+
+// IEEE Std 802.11-2016, Table 9-252
+#[repr(C)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
+pub struct VhtChannelBandwidth(pub u8);
+impl VhtChannelBandwidth {
+    pub_const!(CBW_20_40, 0);
+    pub_const!(CBW_80_160_80P80, 1);
+    pub_const!(CBW_160, 2); // deprecated
+    pub_const!(CBW_80P80, 3); // deprecated
+                              // 4-255 reserved
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -788,5 +939,42 @@ mod tests {
         assert_eq!(data.len(), iter.bytes_remaining());
         assert!(iter.next().is_none());
         assert_eq!(data.len(), iter.bytes_remaining());
+    }
+
+    #[test]
+    fn vht_mcs_nss_map_accessor() {
+        let mut map = VhtMcsNssMap(0x00ff);
+        assert_eq!(map.ss(1), Ok(VhtMcsSet(3)));
+        assert_eq!(map.ss(5), Ok(VhtMcsSet(0)));
+        assert_eq!(map.set_ss(1, VhtMcsSet(2)), Ok(()));
+        assert_eq!(map.set_ss(8, VhtMcsSet(3)), Ok(()));
+        assert_eq!(map.ss(1), Ok(VhtMcsSet(2)));
+        assert_eq!(map.ss(8), Ok(VhtMcsSet(3)));
+        assert_eq!(map.0, 0xc0fe);
+    }
+
+    #[test]
+    fn vht_mcs_nss_map_accssor_error() {
+        let mut map = VhtMcsNssMap(0);
+        assert_eq!(
+            map.ss(0),
+            Err("spatial stream number must be between 1 and 8, 0 invalid".to_string())
+        );
+        assert_eq!(
+            map.ss(9),
+            Err("spatial stream number must be between 1 and 8, 9 invalid".to_string())
+        );
+        assert_eq!(
+            map.set_ss(0, VhtMcsSet(3)),
+            Err("spatial stream number must be between 1 and 8, 0 invalid".to_string())
+        );
+        assert_eq!(
+            map.set_ss(9, VhtMcsSet(3)),
+            Err("spatial stream number must be between 1 and 8, 9 invalid".to_string())
+        );
+        assert_eq!(
+            map.set_ss(1, VhtMcsSet(4)),
+            Err("bitfield is only 2 bit wide, 4 invalid".to_string())
+        );
     }
 }

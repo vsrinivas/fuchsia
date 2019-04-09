@@ -177,6 +177,20 @@ pub fn parse_perr<B: ByteSlice>(raw_body: B) -> FrameParseResult<PerrView<B>> {
     Ok(PerrView { header, destinations })
 }
 
+pub fn parse_vht_capabilities<B: ByteSlice>(
+    raw_body: B,
+) -> FrameParseResult<LayoutVerified<B, VhtCapabilities>> {
+    LayoutVerified::new(raw_body)
+        .ok_or(FrameParseError::new("Invalid length of VHT Capabilities element"))
+}
+
+pub fn parse_vht_operation<B: ByteSlice>(
+    raw_body: B,
+) -> FrameParseResult<LayoutVerified<B, VhtOperation>> {
+    LayoutVerified::new(raw_body)
+        .ok_or(FrameParseError::new("Invalid length of VHT Operation element"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -276,11 +290,11 @@ mod tests {
         assert_eq!(ht_cap_info.0, 0x114e);
         assert_eq!(ht_cap_info.chan_width_set(), ChanWidthSet::TWENTY_FORTY);
         assert_eq!(ht_cap_info.sm_power_save(), SmPowerSave::DISABLED);
-        assert_eq!(ht_cap_info.max_amsdu_len(), MaxAmsduLen::OCTETS3839);
+        assert_eq!(ht_cap_info.max_amsdu_len(), MaxAmsduLen::OCTETS_3839);
 
         let ampdu_params = ht_cap.ampdu_params;
         assert_eq!(ampdu_params.0, 0x1b);
-        assert_eq!(ampdu_params.max_ampdu_len(), 65535);
+        assert_eq!(ampdu_params.max_ampdu_exponent().to_len(), 65535);
         assert_eq!(ampdu_params.min_start_spacing(), MinMpduStartSpacing::EIGHT_USEC);
 
         let mcs_set = ht_cap.mcs_set;
@@ -339,7 +353,7 @@ mod tests {
     fn ht_operation_ok() {
         // HtOperation element without Element Id and length
         #[rustfmt::skip]
-            let raw_body = [
+        let raw_body = [
             99, // primary_chan(u8)
             0xff, // ht_op_info_head(HtOpInfoHead(u8))
             0xfe, 0xff, 0xff, 0xff, // ht_op_info_tail(HtOpInfoTail(u8),
@@ -364,7 +378,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_open_ok_no_pmk() {
+    fn mpm_open_ok_no_pmk() {
         let r = parse_mpm_open(&[0x11, 0x22, 0x33, 0x44][..]).expect("expected Ok");
         assert_eq!(0x2211, { r.header.protocol.0 });
         assert_eq!(0x4433, { r.header.local_link_id });
@@ -372,7 +386,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_open_ok_with_pmk() {
+    fn mpm_open_ok_with_pmk() {
         #[rustfmt::skip]
         let data = [0x11, 0x22, 0x33, 0x44,
                     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -384,19 +398,19 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_open_too_short() {
+    fn mpm_open_too_short() {
         let err = parse_mpm_open(&[0x11, 0x22, 0x33][..]).err().expect("expected Err");
         assert_eq!("Element body is too short to include an MPM header", err.debug_message());
     }
 
     #[test]
-    pub fn mpm_open_weird_length() {
+    fn mpm_open_weird_length() {
         let err = parse_mpm_open(&[0x11, 0x22, 0x33, 0x44, 0x55][..]).err().expect("expected Err");
         assert_eq!("Extra bytes at the end of the MPM Open element", err.debug_message());
     }
 
     #[test]
-    pub fn mpm_open_too_long() {
+    fn mpm_open_too_long() {
         #[rustfmt::skip]
         let data = [0x11, 0x22, 0x33, 0x44,
                     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
@@ -405,7 +419,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_confirm_ok_no_pmk() {
+    fn mpm_confirm_ok_no_pmk() {
         let r = parse_mpm_confirm(&[0x11, 0x22, 0x33, 0x44, 0x55, 0x66][..]).expect("expected Ok");
         assert_eq!(0x2211, { r.header.protocol.0 });
         assert_eq!(0x4433, { r.header.local_link_id });
@@ -414,7 +428,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_confirm_ok_with_pmk() {
+    fn mpm_confirm_ok_with_pmk() {
         #[rustfmt::skip]
         let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -427,20 +441,20 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_confirm_too_short_for_header() {
+    fn mpm_confirm_too_short_for_header() {
         let err = parse_mpm_confirm(&[0x11, 0x22, 0x33][..]).err().expect("expected Err");
         assert_eq!("Element body is too short to include an MPM header", err.debug_message());
     }
 
     #[test]
-    pub fn mpm_confirm_too_short_for_peer_link_id() {
+    fn mpm_confirm_too_short_for_peer_link_id() {
         let err =
             parse_mpm_confirm(&[0x11, 0x22, 0x33, 0x44, 0x55][..]).err().expect("expected Err");
         assert_eq!("Element body is too short to include a peer link ID", err.debug_message());
     }
 
     #[test]
-    pub fn mpm_confirm_weird_length() {
+    fn mpm_confirm_weird_length() {
         let err = parse_mpm_confirm(&[0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77][..])
             .err()
             .expect("expected Err");
@@ -448,7 +462,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_confirm_too_long() {
+    fn mpm_confirm_too_long() {
         #[rustfmt::skip]
         let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
                     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
@@ -457,7 +471,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_close_ok_no_link_id_no_pmk() {
+    fn mpm_close_ok_no_link_id_no_pmk() {
         let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
         let r = parse_mpm_close(&data[..]).expect("expected Ok");
         assert_eq!(0x2211, { r.header.protocol.0 });
@@ -468,7 +482,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_close_ok_with_link_id_no_pmk() {
+    fn mpm_close_ok_with_link_id_no_pmk() {
         let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88];
         let r = parse_mpm_close(&data[..]).expect("expected Ok");
         assert_eq!(0x4433, { r.header.local_link_id });
@@ -479,7 +493,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_close_ok_no_link_id_with_pmk() {
+    fn mpm_close_ok_no_link_id_with_pmk() {
         #[rustfmt::skip]
         let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
                     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -493,7 +507,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_close_ok_with_link_id_with_pmk() {
+    fn mpm_close_ok_with_link_id_with_pmk() {
         #[rustfmt::skip]
         let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
                     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
@@ -507,19 +521,19 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_close_too_short_for_header() {
+    fn mpm_close_too_short_for_header() {
         let err = parse_mpm_close(&[0x11, 0x22, 0x33][..]).err().expect("expected Err");
         assert_eq!("Element body is too short to include an MPM header", err.debug_message());
     }
 
     #[test]
-    pub fn mpm_close_too_short_for_reason_code() {
+    fn mpm_close_too_short_for_reason_code() {
         let err = parse_mpm_close(&[0x11, 0x22, 0x33, 0x44, 0x55][..]).err().expect("expected Err");
         assert_eq!("Element body is too short to include a reason code", err.debug_message());
     }
 
     #[test]
-    pub fn mpm_close_weird_length_1() {
+    fn mpm_close_weird_length_1() {
         let err = parse_mpm_close(&[0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77][..])
             .err()
             .expect("expected Err");
@@ -527,7 +541,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_close_weird_length_2() {
+    fn mpm_close_weird_length_2() {
         let err = parse_mpm_close(&[0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99][..])
             .err()
             .expect("expected Err");
@@ -535,7 +549,7 @@ mod tests {
     }
 
     #[test]
-    pub fn mpm_close_too_long() {
+    fn mpm_close_too_long() {
         #[rustfmt::skip]
         let data = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
                     1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
@@ -544,7 +558,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_ok_minimal() {
+    fn preq_ok_minimal() {
         #[rustfmt::skip]
         let data = [
             0x00, // flags
@@ -567,7 +581,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_ok_full() {
+    fn preq_ok_full() {
         #[rustfmt::skip]
         let data = [
             0x40, // flags: address extension = true
@@ -599,7 +613,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_too_short_for_header() {
+    fn preq_too_short_for_header() {
         #[rustfmt::skip]
         let data = [
             0x00, // flags
@@ -614,7 +628,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_too_short_for_ext_addr() {
+    fn preq_too_short_for_ext_addr() {
         #[rustfmt::skip]
         let data = [
             0x40, // flags: address extension = true
@@ -630,7 +644,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_too_short_for_middle() {
+    fn preq_too_short_for_middle() {
         #[rustfmt::skip]
         let data = [
             0x00, // flags
@@ -648,7 +662,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_too_short_for_targets() {
+    fn preq_too_short_for_targets() {
         #[rustfmt::skip]
         let data = [
             0x40, // flags: address extension = true
@@ -675,7 +689,7 @@ mod tests {
     }
 
     #[test]
-    pub fn preq_too_long() {
+    fn preq_too_long() {
         #[rustfmt::skip]
         let data = [
             0x00, // flags
@@ -694,7 +708,7 @@ mod tests {
     }
 
     #[test]
-    pub fn prep_ok_no_ext() {
+    fn prep_ok_no_ext() {
         #[rustfmt::skip]
         let data = [
             0x00, 0x01, 0x02, // flags, hop count, elem ttl
@@ -712,7 +726,7 @@ mod tests {
     }
 
     #[test]
-    pub fn prep_ok_with_ext() {
+    fn prep_ok_with_ext() {
         #[rustfmt::skip]
         let data = [
             0x40, 0x01, 0x02, // flags, hop count, elem ttl
@@ -732,7 +746,7 @@ mod tests {
     }
 
     #[test]
-    pub fn prep_too_short_for_header() {
+    fn prep_too_short_for_header() {
         #[rustfmt::skip]
         let data = [
             0x00, 0x01, 0x02, // flags, hop count, elem ttl
@@ -744,7 +758,7 @@ mod tests {
     }
 
     #[test]
-    pub fn prep_too_short_for_ext_addr() {
+    fn prep_too_short_for_ext_addr() {
         #[rustfmt::skip]
         let data = [
             0x40, 0x01, 0x02, // flags, hop count, elem ttl
@@ -757,7 +771,7 @@ mod tests {
     }
 
     #[test]
-    pub fn prep_too_short_for_tail() {
+    fn prep_too_short_for_tail() {
         #[rustfmt::skip]
         let data = [
             0x00, 0x01, 0x02, // flags, hop count, elem ttl
@@ -773,7 +787,7 @@ mod tests {
     }
 
     #[test]
-    pub fn prep_too_long() {
+    fn prep_too_long() {
         #[rustfmt::skip]
         let data = [
             0x00, 0x01, 0x02, // flags, hop count, elem ttl
@@ -790,7 +804,7 @@ mod tests {
     }
 
     #[test]
-    pub fn perr_ok() {
+    fn perr_ok() {
         #[rustfmt::skip]
         let data = [
             11, // TTL
@@ -810,9 +824,69 @@ mod tests {
     }
 
     #[test]
-    pub fn perr_too_short_for_header() {
+    fn perr_too_short_for_header() {
         let data = [11];
         let err = parse_perr(&data[..]).err().expect("expected Err");
         assert_eq!("Element body is too short to include a PERR header", err.debug_message());
+    }
+
+    #[test]
+    fn vht_capabilities_wrong_size() {
+        let err = parse_vht_capabilities(&[0u8; 11][..]).err().expect("expected Err");
+        assert_eq!("Invalid length of VHT Capabilities element", err.debug_message());
+        let err = parse_vht_capabilities(&[0u8; 13][..]).err().expect("expected Err");
+        assert_eq!("Invalid length of VHT Capabilities element", err.debug_message());
+    }
+
+    #[test]
+    fn vht_capabilities_ok() {
+        // VhtCapabilities element without Element Id and length
+        #[rustfmt::skip]
+        let raw_body = [
+            0xfe, 0xff, 0xff, 0xff, // VhtCapabilitiesInfo(u32)
+            0xff, 0xaa, 0x00, 0x00, 0x55, 0xff, 0x00, 0x00, // VhtMcsNssSet(u64)
+        ];
+        let vht_cap = parse_vht_capabilities(&raw_body[..]).expect("expected OK from valid frames");
+
+        let cap_info = vht_cap.vht_cap_info;
+        assert_eq!(cap_info.max_mpdu_len(), MaxMpduLen::OCTECTS_11454);
+        assert_eq!(cap_info.link_adapt(), VhtLinkAdaptation::BOTH);
+        let max_ampdu_component = cap_info.max_ampdu_exponent();
+        assert_eq!(max_ampdu_component.to_len(), 1048575);
+
+        let mcs_nss = vht_cap.vht_mcs_nss;
+        assert_eq!(mcs_nss.rx_max_mcs().ss1(), VhtMcsSet::NONE);
+        assert_eq!(mcs_nss.rx_max_mcs().ss7(), VhtMcsSet::UPTO_9);
+        assert_eq!(mcs_nss.tx_max_mcs().ss1(), VhtMcsSet::UPTO_8);
+        assert_eq!(mcs_nss.tx_max_mcs().ss7(), VhtMcsSet::NONE);
+
+        assert_eq!(mcs_nss.rx_max_mcs().ss(2), Ok(VhtMcsSet::NONE));
+        assert_eq!(mcs_nss.rx_max_mcs().ss(6), Ok(VhtMcsSet::UPTO_9));
+        assert_eq!(mcs_nss.tx_max_mcs().ss(2), Ok(VhtMcsSet::UPTO_8));
+        assert_eq!(mcs_nss.tx_max_mcs().ss(6), Ok(VhtMcsSet::NONE));
+    }
+
+    #[test]
+    fn vht_operation_wrong_size() {
+        let err = parse_vht_operation(&[0u8; 4][..]).err().expect("expected Err");
+        assert_eq!("Invalid length of VHT Operation element", err.debug_message());
+        let err = parse_vht_operation(&[0u8; 6][..]).err().expect("expected Err");
+        assert_eq!("Invalid length of VHT Operation element", err.debug_message());
+    }
+
+    #[test]
+    fn vht_operation_ok() {
+        // VhtOperation element without Element Id and length
+        #[rustfmt::skip]
+        let raw_body = [
+            231, // vht_cbw(u8)
+            232, // center_freq_seg0(u8)
+            233, // center_freq_seg1(u8)
+            0xff, 0x66, // basic_mcs_nss(VhtMcsNssMap(u16))
+        ];
+        let vht_op = parse_vht_operation(&raw_body[..]).expect("expected OK from valid frames");
+        assert_eq!(231, vht_op.vht_cbw.0);
+        assert_eq!(232, vht_op.center_freq_seg0);
+        assert_eq!(233, vht_op.center_freq_seg1);
     }
 }
