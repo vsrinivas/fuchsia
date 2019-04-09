@@ -9,8 +9,8 @@ use fidl::endpoints::ServiceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
+use futures::lock::Mutex;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
-use parking_lot::Mutex;
 use std::convert::{TryFrom, TryInto};
 use std::env;
 use std::path::PathBuf;
@@ -30,10 +30,7 @@ struct StashSettings {
 
 impl Default for StashSettings {
     fn default() -> StashSettings {
-        StashSettings {
-            backing_file: "/data/stash.store".to_string(),
-            secure_mode: false,
-        }
+        StashSettings { backing_file: "/data/stash.store".to_string(), secure_mode: false }
     }
 }
 
@@ -72,25 +69,15 @@ fn main() -> Result<(), Error> {
         }
         Ok(opts) => {
             let mut executor = fasync::Executor::new().context("Error creating executor")?;
-            let store_manager = Arc::new(Mutex::new(store::StoreManager::new(PathBuf::from(
-                &opts.backing_file,
-            ))?));
+            let store_manager =
+                Arc::new(Mutex::new(store::StoreManager::new(PathBuf::from(&opts.backing_file))?));
 
-            let name = if opts.secure_mode {
-                SecureStoreMarker::NAME
-            } else {
-                StoreMarker::NAME
-            };
+            let name = if opts.secure_mode { SecureStoreMarker::NAME } else { StoreMarker::NAME };
 
             let mut fs = ServiceFs::new();
-            fs.dir("public")
-                .add_fidl_service_at(name, |stream| {
-                    stash_server(
-                        store_manager.clone(),
-                        !opts.secure_mode,
-                        stream,
-                    )
-                });
+            fs.dir("public").add_fidl_service_at(name, |stream| {
+                stash_server(store_manager.clone(), !opts.secure_mode, stream)
+            });
             fs.take_and_serve_directory_handle()?;
             executor.run_singlethreaded(fs.collect::<()>());
         }
@@ -118,39 +105,39 @@ fn stash_server(
     enable_bytes: bool,
     mut stream: StoreRequestStream,
 ) {
-    fasync::spawn(async move {
-        fx_log_info!("new connection");
-        let mut state = instance::Instance {
-            client_name: None,
-            enable_bytes: enable_bytes,
-            store_manager: store_manager,
-        };
+    fasync::spawn(
+        async move {
+            fx_log_info!("new connection");
+            let mut state = instance::Instance {
+                client_name: None,
+                enable_bytes: enable_bytes,
+                store_manager: store_manager,
+            };
 
-        while let Some(req) = await!(stream.try_next()).context("error running stash server")? {
-            match req {
-                StoreRequest::Identify {
-                    name,
-                    control_handle,
-                } => {
-                    if let Err(e) = state.identify(name.clone()) {
-                        control_handle.shutdown();
-                        return Err(e);
+            while let Some(req) = await!(stream.try_next()).context("error running stash server")? {
+                match req {
+                    StoreRequest::Identify { name, control_handle } => {
+                        if let Err(e) = state.identify(name.clone()) {
+                            control_handle.shutdown();
+                            return Err(e);
+                        }
+                        fx_log_info!("identified new client: {}", name);
                     }
-                    fx_log_info!("identified new client: {}", name);
-                }
-                StoreRequest::CreateAccessor {
-                    read_only,
-                    control_handle,
-                    accessor_request,
-                } => {
-                    if let Err(e) = state.create_accessor(read_only, accessor_request) {
-                        control_handle.shutdown();
-                        return Err(e);
+                    StoreRequest::CreateAccessor {
+                        read_only,
+                        control_handle,
+                        accessor_request,
+                    } => {
+                        if let Err(e) = state.create_accessor(read_only, accessor_request) {
+                            control_handle.shutdown();
+                            return Err(e);
+                        }
+                        fx_log_info!("created new accessor");
                     }
-                    fx_log_info!("created new accessor");
                 }
             }
+            Ok(())
         }
-        Ok(())
-    }.unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run stash service: {:?}", e)));
+            .unwrap_or_else(|e: failure::Error| fx_log_err!("couldn't run stash service: {:?}", e)),
+    );
 }

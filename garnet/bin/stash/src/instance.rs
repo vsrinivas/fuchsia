@@ -4,29 +4,17 @@
 
 use fuchsia_async as fasync;
 
-use fuchsia_syslog::fx_log_err;
 use failure::{err_msg, Error};
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{RequestStream, ServerEnd};
-use futures::{TryFutureExt, TryStreamExt};
-use parking_lot::Mutex;
-use std::sync::Arc;
 use fidl_fuchsia_stash::{StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream};
+use fuchsia_syslog::fx_log_err;
+use futures::lock::Mutex;
+use futures::{TryFutureExt, TryStreamExt};
+use std::sync::Arc;
 
 use crate::accessor;
 use crate::store;
-
-macro_rules! shutdown_on_error {
-    ($x:expr, $y:expr) => {
-        match $x {
-            Ok(_) => (),
-            Err(e) => {
-                fx_log_err!("error encountered: {:?}", e);
-                $y.shutdown();
-            }
-        }
-    };
-}
 
 /// Instance represents a single instance of the stash service, handling requests from a single
 /// client.
@@ -60,56 +48,44 @@ impl Instance {
             self.store_manager.clone(),
             self.enable_bytes,
             read_only,
-            self.client_name
-                .clone()
-                .ok_or(err_msg("identify has not been called"))?,
+            self.client_name.clone().ok_or(err_msg("identify has not been called"))?,
         );
 
         let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
 
-        fasync::spawn(async move {
-            let mut stream = StoreAccessorRequestStream::from_channel(server_chan);
-            while let Some(req) = await!(stream.try_next())? {
-                match req {
-                    StoreAccessorRequest::GetValue { key, responder } => {
-                        match acc.get_value(&key) {
-                            Ok(mut res) => responder.send(res.as_mut().map(OutOfLine))?,
-                            Err(e) => {
-                                fx_log_err!("error encountered: {:?}", e);
-                                responder.control_handle().shutdown();
-                            }
+        fasync::spawn(
+            async move {
+                let mut stream = StoreAccessorRequestStream::from_channel(server_chan);
+                while let Some(req) = await!(stream.try_next())? {
+                    match req {
+                        StoreAccessorRequest::GetValue { key, responder } => {
+                            let mut res = await!(acc.get_value(&key))?;
+                            responder.send(res.as_mut().map(OutOfLine))?;
                         }
+                        StoreAccessorRequest::SetValue { key, val, .. } => {
+                            await!(acc.set_value(key, val))?
+                        }
+                        StoreAccessorRequest::DeleteValue { key, .. } => {
+                            await!(acc.delete_value(key))?
+                        }
+                        StoreAccessorRequest::ListPrefix { prefix, it, .. } => {
+                            await!(acc.list_prefix(prefix, it))
+                        }
+                        StoreAccessorRequest::GetPrefix { prefix, it, .. } => {
+                            await!(acc.get_prefix(prefix, it))?
+                        }
+                        StoreAccessorRequest::DeletePrefix { prefix, .. } => {
+                            await!(acc.delete_prefix(prefix))?
+                        }
+                        StoreAccessorRequest::Commit { .. } => await!(acc.commit())?,
                     }
-                    StoreAccessorRequest::SetValue {
-                        key,
-                        val,
-                        control_handle,
-                    } => shutdown_on_error!(acc.set_value(key, val), control_handle),
-                    StoreAccessorRequest::DeleteValue {
-                        key,
-                        control_handle,
-                    } => shutdown_on_error!(acc.delete_value(key), control_handle),
-                    StoreAccessorRequest::ListPrefix {
-                        prefix,
-                        it,
-                        control_handle: _,
-                    } => acc.list_prefix(prefix, it),
-                    StoreAccessorRequest::GetPrefix {
-                        prefix,
-                        it,
-                        control_handle,
-                    } => shutdown_on_error!(acc.get_prefix(prefix, it), control_handle),
-                    StoreAccessorRequest::DeletePrefix {
-                        prefix,
-                        control_handle,
-                    } => shutdown_on_error!(acc.delete_prefix(prefix), control_handle),
-                    StoreAccessorRequest::Commit {
-                        control_handle
-                    } => shutdown_on_error!(acc.commit(), control_handle),
                 }
+                Ok(())
             }
-            Ok(())
-        }.unwrap_or_else(|e: failure::Error| fx_log_err!("error running accessor interface: {:?}", e)));
+                .unwrap_or_else(|e: failure::Error| {
+                    fx_log_err!("error running accessor interface: {:?}", e)
+                }),
+        );
         Ok(())
     }
 }

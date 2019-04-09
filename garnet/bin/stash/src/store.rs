@@ -42,10 +42,7 @@ pub fn clone_buffer(b: &fidl_fuchsia_mem::Buffer) -> Result<fidl_fuchsia_mem::Bu
         .vmo
         .clone(0, b.size)
         .map_err(|s| err_msg(format!("error cloning buffer, zx status: {}", s)))?;
-    Ok(fidl_fuchsia_mem::Buffer {
-        vmo: new_vmo,
-        size: b.size,
-    })
+    Ok(fidl_fuchsia_mem::Buffer { vmo: new_vmo, size: b.size })
 }
 
 /// Store is the struct representing the contents of the backing tlv file
@@ -84,12 +81,8 @@ fn value_into_bytes(v: &Value) -> Result<Vec<u8>, Error> {
 }
 fn value_from_bytes(typ: u8, bytes: Vec<u8>) -> Result<Value, Error> {
     match typ {
-        0x00 => Ok(Value::Intval(
-            Cursor::new(bytes).read_i64::<LittleEndian>()?,
-        )),
-        0x01 => Ok(Value::Floatval(
-            Cursor::new(bytes).read_f64::<LittleEndian>()?,
-        )),
+        0x00 => Ok(Value::Intval(Cursor::new(bytes).read_i64::<LittleEndian>()?)),
+        0x01 => Ok(Value::Floatval(Cursor::new(bytes).read_f64::<LittleEndian>()?)),
         0x02 => match Cursor::new(bytes).read_u8()? {
             0x00 => Ok(Value::Boolval(false)),
             0x01 => Ok(Value::Boolval(true)),
@@ -101,10 +94,7 @@ fn value_from_bytes(typ: u8, bytes: Vec<u8>) -> Result<Value, Error> {
                 .map_err(|s| err_msg(format!("error creating buffer, zx status: {}", s)))?;
             vmo.write(&bytes, 0)
                 .map_err(|s| err_msg(format!("error writing buffer, zx status: {}", s)))?;
-            Ok(Value::Bytesval(fidl_fuchsia_mem::Buffer {
-                vmo: vmo,
-                size: bytes.len() as u64,
-            }))
+            Ok(Value::Bytesval(fidl_fuchsia_mem::Buffer { vmo: vmo, size: bytes.len() as u64 }))
         }
         t => Err(err_msg(format!("unknown type: {}", t))),
     }
@@ -172,14 +162,11 @@ impl Store {
                 val_bytes.resize(val_length as usize, 0);
                 cursor.read(&mut val_bytes[..])?;
 
-                client_data.insert(
-                    String::from_utf8(key_bytes)?,
-                    value_from_bytes(val_type, val_bytes)?,
-                );
+                client_data
+                    .insert(String::from_utf8(key_bytes)?, value_from_bytes(val_type, val_bytes)?);
             }
 
-            res.data
-                .insert(String::from_utf8(client_name)?, client_data);
+            res.data.insert(String::from_utf8(client_name)?, client_data);
         }
         Ok(res)
     }
@@ -220,10 +207,7 @@ impl StoreManager {
             }
         };
 
-        Ok(StoreManager {
-            backing_file,
-            store,
-        })
+        Ok(StoreManager { backing_file, store })
     }
 
     fn save_store(&self) -> Result<(), Error> {
@@ -252,11 +236,8 @@ impl StoreManager {
 
     /// Sets a value in the store.
     pub fn set_value(&mut self, client_name: &str, key: String, field: Value) -> Result<(), Error> {
-        let client_fields = self
-            .store
-            .data
-            .entry(client_name.to_string())
-            .or_insert(HashMap::new());
+        let client_fields =
+            self.store.data.entry(client_name.to_string()).or_insert(HashMap::new());
         client_fields.insert(key, field);
         self.save_store()
     }
@@ -264,11 +245,8 @@ impl StoreManager {
     /// Delete a value from the store. Will return Ok(true) for a successful deletion, Ok(false) if
     /// the field doesn't exist, and Err(e) on any unexpected errors.
     pub fn delete_value(&mut self, client_name: &str, key: &str) -> Result<(), Error> {
-        let client_fields = self
-            .store
-            .data
-            .entry(client_name.to_string())
-            .or_insert(HashMap::new());
+        let client_fields =
+            self.store.data.entry(client_name.to_string()).or_insert(HashMap::new());
         client_fields.remove(key);
         self.save_store()
     }
@@ -283,10 +261,7 @@ impl StoreManager {
         let mut result = vec![];
         for (k, v) in client_fields.iter() {
             if k.starts_with(prefix) {
-                result.push(ListItem {
-                    key: k.clone(),
-                    type_: value_to_type(&v),
-                });
+                result.push(ListItem { key: k.clone(), type_: value_to_type(&v) });
             }
         }
         result
@@ -302,10 +277,7 @@ impl StoreManager {
         let mut res = Vec::new();
         for (k, v) in client_fields.iter() {
             if k.starts_with(prefix) {
-                res.push(KeyValue {
-                    key: k.clone(),
-                    val: clone_value(v)?,
-                });
+                res.push(KeyValue { key: k.clone(), val: clone_value(v)? });
             }
         }
         Ok(res)
@@ -362,19 +334,10 @@ mod tests {
         let test_key = "test_key".to_owned();
         let test_field = Value::Boolval(true);
 
-        sm.set_value(
-            &test_client_name,
-            test_key.clone(),
-            clone_value(&test_field).unwrap(),
-        ).unwrap();
-
-        let saved_field = sm
-            .store
-            .data
-            .get(&test_client_name)
-            .unwrap()
-            .get(&test_key)
+        sm.set_value(&test_client_name, test_key.clone(), clone_value(&test_field).unwrap())
             .unwrap();
+
+        let saved_field = sm.store.data.get(&test_client_name).unwrap().get(&test_key).unwrap();
 
         assert_eq!(saved_field, &test_field);
     }
@@ -395,10 +358,7 @@ mod tests {
         sm.save_store().unwrap();
 
         sm.delete_value(&test_client_name, &test_key).unwrap();
-        assert_eq!(
-            None,
-            sm.store.data.get(&test_client_name).unwrap().get(&test_key)
-        );
+        assert_eq!(None, sm.store.data.get(&test_client_name).unwrap().get(&test_key));
     }
 
     #[test]
@@ -421,17 +381,11 @@ mod tests {
         assert_eq!(2, res.len());
         assert_eq!(
             true,
-            res.contains(&ListItem {
-                key: "a".to_string(),
-                type_: ValueType::BoolVal
-            })
+            res.contains(&ListItem { key: "a".to_string(), type_: ValueType::BoolVal })
         );
         assert_eq!(
             true,
-            res.contains(&ListItem {
-                key: "a/a".to_string(),
-                type_: ValueType::BoolVal
-            })
+            res.contains(&ListItem { key: "a/a".to_string(), type_: ValueType::BoolVal })
         );
     }
 
@@ -455,17 +409,11 @@ mod tests {
         assert_eq!(2, res.len());
         assert_eq!(
             true,
-            res.contains(&KeyValue {
-                key: "a".to_string(),
-                val: Value::Boolval(true)
-            })
+            res.contains(&KeyValue { key: "a".to_string(), val: Value::Boolval(true) })
         );
         assert_eq!(
             true,
-            res.contains(&KeyValue {
-                key: "a/a".to_string(),
-                val: Value::Boolval(true)
-            })
+            res.contains(&KeyValue { key: "a/a".to_string(), val: Value::Boolval(true) })
         );
     }
 
@@ -501,10 +449,7 @@ mod tests {
             .data
             .get_mut(&test_client.to_string())
             .unwrap()
-            .insert(
-                "string".to_string(),
-                Value::Stringval("test string".to_string()),
-            );
+            .insert("string".to_string(), Value::Stringval("test string".to_string()));
         // Value::Bytesval can't be tested here because the vmo handle number changes during the
         // clone operation, making the assert_eq! below fail.
 
@@ -541,38 +486,23 @@ mod tests {
         let test_key = "test_key".to_owned();
         let test_field = Value::Boolval(true);
 
-        sm.set_value(
-            &test_client_name,
-            test_key.clone(),
-            clone_value(&test_field).unwrap(),
-        ).unwrap();
+        sm.set_value(&test_client_name, test_key.clone(), clone_value(&test_field).unwrap())
+            .unwrap();
 
+        assert_eq!(Some(&test_field), sm.get_value(&test_client_name, &test_key));
         assert_eq!(
-            Some(&test_field),
-            sm.get_value(&test_client_name, &test_key)
-        );
-        assert_eq!(
-            vec![ListItem {
-                key: test_key.clone(),
-                type_: ValueType::BoolVal
-            }],
+            vec![ListItem { key: test_key.clone(), type_: ValueType::BoolVal }],
             sm.list_prefix(&test_client_name, &"".to_string())
         );
         assert_eq!(
-            vec![KeyValue {
-                key: test_key.clone(),
-                val: Value::Boolval(true)
-            }],
+            vec![KeyValue { key: test_key.clone(), val: Value::Boolval(true) }],
             sm.get_prefix(&test_client_name, &"".to_string()).unwrap()
         );
 
         sm.delete_value(&test_client_name, &test_key).unwrap();
 
         assert_eq!(None, sm.get_value(&test_client_name, &test_key));
-        assert_eq!(
-            vec![] as Vec<ListItem>,
-            sm.list_prefix(&test_client_name, &"".to_string())
-        );
+        assert_eq!(vec![] as Vec<ListItem>, sm.list_prefix(&test_client_name, &"".to_string()));
         assert_eq!(
             vec![] as Vec<KeyValue>,
             sm.get_prefix(&test_client_name, &"".to_string()).unwrap()
@@ -594,11 +524,7 @@ mod tests {
         assert_eq!(fs::metadata(&file_path).unwrap_err().kind(), io::ErrorKind::NotFound);
 
         // Set a field, the file size should increase
-        sm.set_value(
-            &test_client_name,
-            "foo".to_string(),
-            Value::Boolval(true),
-        ).unwrap();
+        sm.set_value(&test_client_name, "foo".to_string(), Value::Boolval(true)).unwrap();
         sm.save_store().unwrap();
 
         new_file_size = fs::metadata(&file_path).unwrap().len();
@@ -606,11 +532,7 @@ mod tests {
         curr_file_size = new_file_size;
 
         // Set a different field, the file size should increase
-        sm.set_value(
-            &test_client_name,
-            "bar".to_string(),
-            Value::Boolval(true),
-        ).unwrap();
+        sm.set_value(&test_client_name, "bar".to_string(), Value::Boolval(true)).unwrap();
         sm.save_store().unwrap();
 
         new_file_size = fs::metadata(&file_path).unwrap().len();
@@ -618,10 +540,7 @@ mod tests {
         curr_file_size = new_file_size;
 
         // Delete a field, the file size should decrease
-        sm.delete_value(
-            &test_client_name,
-            "bar",
-        ).unwrap();
+        sm.delete_value(&test_client_name, "bar").unwrap();
         sm.save_store().unwrap();
 
         new_file_size = fs::metadata(&file_path).unwrap().len();
@@ -629,10 +548,7 @@ mod tests {
         curr_file_size = new_file_size;
 
         // Delete a field, the file size should decrease
-        sm.delete_value(
-            &test_client_name,
-            "foo",
-        ).unwrap();
+        sm.delete_value(&test_client_name, "foo").unwrap();
         sm.save_store().unwrap();
 
         new_file_size = fs::metadata(&file_path).unwrap().len();
