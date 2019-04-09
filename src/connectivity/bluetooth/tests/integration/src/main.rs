@@ -37,6 +37,13 @@ fn collect_results<T, E>(results: Vec<Result<T, E>>) -> Result<Vec<T>, E> {
 fn main() -> Result<(), Error> {
     println!("TEST BEGIN");
 
+    // TODO(BT-805): Add test cases for LE privacy
+    // TODO(BT-806): Add test cases for LE auto-connect/background-scan
+    // TODO(BT-20): Add test cases for GATT client role
+    // TODO(BT-20): Add test cases for GATT server role
+    // TODO(BT-20): Add test cases for BR/EDR and dual-mode connections
+    // TODO(BT-20): Add test cases for BR/EDR Profiles
+
     collect_results(vec![
         run_test!(lifecycle_test),
         run_test!(test_bd_addr),

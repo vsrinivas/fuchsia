@@ -52,6 +52,9 @@ protocol Host {
     // Returns information about the Bluetooth adapter managed by this host.
     GetInfo() -> (fuchsia.bluetooth.control.AdapterInfo info);
 
+    /// Assigns local data to this host.
+    SetLocalData(HostData host_data);
+
     // Returns a list of all known connectable devices, included those that are
     // currently connected and/or bonded. This list does not include
     // non-connectable devices such as LE broadcasters.
@@ -123,6 +126,11 @@ protocol Host {
     // no device discovery sessions are active and accept connection requests from
     // bonded peripherals.
     EnableBackgroundScan(bool enabled);
+
+    /// Enable or disable the LE privacy feature. When enabled, the bt-host device will use a private
+    /// device address in all LE procedures. When disabled, the public identity address will be used
+    /// instead (which is the default).
+    EnablePrivacy(bool enabled);
 
     // Assigns the pairing delegate that will respond to authentication challenges using the given
     // I/O capabilities. Setting a pairing delegate cancels any on-going pairing procedure started
