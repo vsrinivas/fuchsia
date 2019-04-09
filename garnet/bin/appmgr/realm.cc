@@ -510,14 +510,7 @@ void Realm::CreateComponent(
                  launch_info.url);
   ComponentRequestWrapper component_request(
       std::move(controller), MakeForwardingTerminationCallback());
-  if (launch_info.additional_services &&
-      launch_info.additional_services->host_directory) {
-    FXL_LOG(ERROR) << "|host_directory| is not yet supported for "
-                   << "CreateComponent. Use |provider| until it's supported.";
-    component_request.SetReturnValues(kComponentCreationFailed,
-                                      TerminationReason::UNSUPPORTED);
-    return;
-  }
+
   if (launch_info.url.empty()) {
     FXL_LOG(ERROR) << "Cannot create application because launch_info contains"
                       " an empty url";
