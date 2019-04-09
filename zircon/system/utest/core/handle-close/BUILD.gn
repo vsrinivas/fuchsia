@@ -8,8 +8,9 @@ source_set("handle-close") {
     "handle-close.cpp",
   ]
   deps = [
+    "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
