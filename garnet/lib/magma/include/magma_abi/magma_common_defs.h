@@ -97,19 +97,9 @@ typedef uintptr_t magma_sysmem_buffer_constraints_t;
 
 typedef uintptr_t magma_buffer_format_description_t;
 
-// a relocation entry that informs the system driver how to patch GPU virtual addresses
-// in an exec resource. The 32 bit word at offset in the buffer will be overwritten with
-// the GPU virtual address of the 32 bit word at target_offset in target_buffer.
-struct magma_system_relocation_entry {
-    uint32_t offset;                // offset in the batch buffer
-    uint32_t target_resource_index; // resource index of the buffer to be relocated
-    uint32_t target_offset;         // offset in the target buffer
-};
-
 // a buffer plus its associated relocations referenced by a command buffer
 struct magma_system_exec_resource {
     uint64_t buffer_id;
-    uint32_t num_relocations;
     uint64_t offset;
     uint64_t length;
 };
