@@ -31,16 +31,16 @@ zx_status_t sys_port_create(uint32_t options, user_out_handle* out) {
     if (result != ZX_OK)
         return result;
 
-    fbl::RefPtr<Dispatcher> dispatcher;
+    KernelHandle<PortDispatcher> handle;
     zx_rights_t rights;
 
-    result = PortDispatcher::Create(options, &dispatcher, &rights);
+    result = PortDispatcher::Create(options, &handle, &rights);
     if (result != ZX_OK)
         return result;
 
-    uint32_t koid = (uint32_t)dispatcher->get_koid();
+    uint32_t koid = (uint32_t)handle.dispatcher()->get_koid();
 
-    result = out->make(ktl::move(dispatcher), rights);
+    result = out->make(ktl::move(handle), rights);
 
     ktrace(TAG_PORT_CREATE, koid, 0, 0, 0);
     return result;

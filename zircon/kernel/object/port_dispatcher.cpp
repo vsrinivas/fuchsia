@@ -16,7 +16,6 @@
 #include <fbl/auto_lock.h>
 #include <lib/counters.h>
 #include <object/excp_port.h>
-#include <object/handle.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <zircon/compiler.h>
@@ -174,18 +173,18 @@ PortAllocator* PortDispatcher::DefaultPortAllocator() {
     return &port_allocator;
 }
 
-zx_status_t PortDispatcher::Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
+zx_status_t PortDispatcher::Create(uint32_t options, KernelHandle<PortDispatcher>* handle,
                                    zx_rights_t* rights) {
     if (options && options != ZX_PORT_BIND_TO_INTERRUPT) {
         return ZX_ERR_INVALID_ARGS;
     }
     fbl::AllocChecker ac;
-    auto disp = new (&ac) PortDispatcher(options);
+    KernelHandle new_handle(fbl::AdoptRef(new (&ac) PortDispatcher(options)));
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
     *rights = default_rights();
-    *dispatcher = fbl::AdoptRef<Dispatcher>(disp);
+    *handle = ktl::move(new_handle);
     return ZX_OK;
 }
 

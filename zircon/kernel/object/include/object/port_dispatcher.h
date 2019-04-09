@@ -8,6 +8,7 @@
 
 #include <object/dispatcher.h>
 #include <object/excp_port.h>
+#include <object/handle.h>
 #include <object/semaphore.h>
 #include <object/state_observer.h>
 
@@ -193,7 +194,7 @@ class PortDispatcher final : public SoloDispatcher<PortDispatcher, ZX_DEFAULT_PO
 public:
     static void Init();
     static PortAllocator* DefaultPortAllocator();
-    static zx_status_t Create(uint32_t options, fbl::RefPtr<Dispatcher>* dispatcher,
+    static zx_status_t Create(uint32_t options, KernelHandle<PortDispatcher>* handle,
                               zx_rights_t* rights);
 
     ~PortDispatcher() final;
