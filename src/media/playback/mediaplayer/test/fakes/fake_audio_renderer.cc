@@ -6,11 +6,13 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+
 #include <iomanip>
 #include <iostream>
 #include <limits>
-#include "src/lib/fxl/logging.h"
+
 #include "lib/media/timeline/timeline.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media_player {
 namespace test {

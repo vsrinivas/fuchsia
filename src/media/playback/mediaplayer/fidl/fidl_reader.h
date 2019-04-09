@@ -5,13 +5,13 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_READER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_READER_H_
 
-#include <atomic>
-#include <memory>
-
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
+
+#include <atomic>
+#include <memory>
 
 #include "src/media/playback/mediaplayer/demux/reader.h"
 #include "src/media/playback/mediaplayer/util/incident.h"

@@ -6,7 +6,9 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_SOURCE_IMPL_H_
 
 #include <fuchsia/media/playback/cpp/fidl.h>
+
 #include <vector>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"

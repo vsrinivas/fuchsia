@@ -9,8 +9,10 @@
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
+
 #include <memory>
 #include <queue>
+
 #include "lib/component/cpp/startup_context.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "lib/ui/base_view/cpp/v1_base_view.h"

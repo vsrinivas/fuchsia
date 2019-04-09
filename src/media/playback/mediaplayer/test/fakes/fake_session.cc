@@ -4,11 +4,11 @@
 
 #include "src/media/playback/mediaplayer/test/fakes/fake_session.h"
 
-#include <iomanip>
-#include <iostream>
-
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+
+#include <iomanip>
+#include <iostream>
 
 #include "lib/fidl/cpp/optional.h"
 #include "src/lib/fxl/logging.h"

@@ -8,9 +8,11 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fzl/vmo-mapper.h>
+
 #include <memory>
 #include <queue>
 #include <vector>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/media/timeline/timeline_function.h"

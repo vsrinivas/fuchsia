@@ -4,8 +4,6 @@
 
 #include "src/media/playback/mediaplayer/player_impl.h"
 
-#include <sstream>
-
 #include <fs/pseudo-file.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/playback/cpp/fidl.h>
@@ -14,13 +12,16 @@
 #include <lib/fit/function.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/vfs/cpp/pseudo_file.h>
+
+#include <sstream>
+
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fidl/cpp/type_converter.h"
-#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/type_converters.h"
 #include "lib/ui/base_view/cpp/base_view.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/core/renderer_sink_segment.h"
 #include "src/media/playback/mediaplayer/demux/file_reader.h"

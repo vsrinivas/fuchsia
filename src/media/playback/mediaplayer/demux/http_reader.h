@@ -5,10 +5,10 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DEMUX_HTTP_READER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DEMUX_HTTP_READER_H_
 
-#include <string>
-
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+
+#include <string>
 
 #include "lib/component/cpp/startup_context.h"
 #include "src/media/playback/mediaplayer/demux/reader.h"

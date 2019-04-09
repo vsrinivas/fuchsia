@@ -4,12 +4,12 @@
 
 #include "src/media/playback/mediaplayer/fidl/fidl_reader.h"
 
-#include <limits>
-#include <string>
-
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+
+#include <limits>
+#include <string>
 
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"

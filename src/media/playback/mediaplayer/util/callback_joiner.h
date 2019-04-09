@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_UTIL_CALLBACK_JOINER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_UTIL_CALLBACK_JOINER_H_
 
-#include <memory>
-
 #include <lib/fit/function.h>
+
+#include <memory>
 
 #include "src/lib/fxl/logging.h"
 

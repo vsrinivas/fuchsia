@@ -6,6 +6,7 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_DEMUX_SOURCE_SEGMENT_H_
 
 #include <memory>
+
 #include "src/media/playback/mediaplayer/core/source_segment.h"
 #include "src/media/playback/mediaplayer/demux/demux.h"
 #include "src/media/playback/mediaplayer/util/incident.h"

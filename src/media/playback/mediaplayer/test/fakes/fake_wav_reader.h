@@ -5,11 +5,11 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_FAKES_FAKE_WAV_READER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_FAKES_FAKE_WAV_READER_H_
 
-#include <vector>
-
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/socket.h>
+
+#include <vector>
 
 #include "lib/fidl/cpp/binding.h"
 #include "src/lib/fxl/logging.h"

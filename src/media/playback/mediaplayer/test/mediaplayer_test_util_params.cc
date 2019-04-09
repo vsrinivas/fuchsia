@@ -5,6 +5,7 @@
 #include "src/media/playback/mediaplayer/test/mediaplayer_test_util_params.h"
 
 #include <iostream>
+
 #include "src/lib/fxl/strings/split_string.h"
 
 namespace media_player {

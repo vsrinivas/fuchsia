@@ -5,6 +5,7 @@
 #include "src/media/playback/mediaplayer/graph/payloads/local_memory_payload_allocator.h"
 
 #include <fbl/ref_ptr.h>
+
 #include "src/media/playback/mediaplayer/graph/payloads/payload_buffer.h"
 
 namespace media_player {

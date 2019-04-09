@@ -6,8 +6,10 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+
 #include <iomanip>
 #include <iostream>
+
 #include "src/lib/fxl/logging.h"
 
 namespace media_player {

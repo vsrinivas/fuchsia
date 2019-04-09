@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_FFMPEG_DECODER_BASE_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FFMPEG_FFMPEG_DECODER_BASE_H_
 
-#include <limits>
-
 #include <lib/async-loop/cpp/loop.h>
+
+#include <limits>
 
 #include "src/media/playback/mediaplayer/decode/software_decoder.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"

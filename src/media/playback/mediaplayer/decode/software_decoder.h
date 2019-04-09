@@ -5,12 +5,12 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DECODE_SOFTWARE_DECODER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DECODE_SOFTWARE_DECODER_H_
 
-#include <mutex>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
+
+#include <mutex>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/playback/mediaplayer/decode/decoder.h"

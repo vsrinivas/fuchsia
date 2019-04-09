@@ -5,6 +5,7 @@
 #include "src/media/playback/mediaplayer/core/source_segment.h"
 
 #include <lib/async/dispatcher.h>
+
 #include "src/lib/fxl/logging.h"
 
 namespace media_player {

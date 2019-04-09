@@ -9,9 +9,11 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+
 #include <queue>
-#include "src/lib/fxl/logging.h"
+
 #include "lib/media/timeline/timeline_function.h"
+#include "src/lib/fxl/logging.h"
 
 namespace media_player {
 namespace test {

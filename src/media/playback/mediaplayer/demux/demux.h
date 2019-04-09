@@ -5,10 +5,10 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DEMUX_DEMUX_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DEMUX_DEMUX_H_
 
+#include <lib/fit/function.h>
+
 #include <memory>
 #include <vector>
-
-#include <lib/fit/function.h>
 
 #include "lib/component/cpp/startup_context.h"
 #include "src/media/playback/mediaplayer/demux/reader_cache.h"

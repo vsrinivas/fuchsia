@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_TEST_FAKE_DEMUX_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_TEST_FAKE_DEMUX_H_
 
-#include "src/media/playback/mediaplayer/demux/demux.h"
-
 #include <lib/fit/function.h>
+
+#include "src/media/playback/mediaplayer/demux/demux.h"
 
 namespace media_player {
 namespace test {

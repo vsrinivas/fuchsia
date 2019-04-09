@@ -5,6 +5,7 @@
 #include "src/media/playback/mediaplayer/graph/nodes/input.h"
 
 #include <atomic>
+
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"
 #include "src/media/playback/mediaplayer/graph/nodes/output.h"
 

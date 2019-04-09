@@ -2,24 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <condition_variable>
-#include <map>
-#include <optional>
-#include <thread>
+#include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_demux.h"
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/media/playback/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 
+#include <condition_variable>
+#include <map>
+#include <optional>
+#include <thread>
+
+#include "lib/media/timeline/timeline_rate.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "lib/media/timeline/timeline_rate.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_codec_context.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_format_context.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_io_context.h"
 #include "src/media/playback/mediaplayer/ffmpeg/av_packet.h"
-#include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_demux.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/util/incident.h"
 #include "src/media/playback/mediaplayer/util/safe_clone.h"

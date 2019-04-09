@@ -5,8 +5,10 @@
 #include "src/media/playback/mediaplayer/graph/payloads/payload_buffer.h"
 
 #include <lib/zx/vmar.h>
+
 #include <cstdlib>
 #include <memory>
+
 #include "src/lib/fxl/logging.h"
 
 namespace media_player {

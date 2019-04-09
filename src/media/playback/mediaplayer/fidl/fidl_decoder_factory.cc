@@ -5,6 +5,7 @@
 #include "src/media/playback/mediaplayer/fidl/fidl_decoder_factory.h"
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
+
 #include "lib/fidl/cpp/clone.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_decoder.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"

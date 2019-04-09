@@ -6,6 +6,7 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_NODES_INPUT_H_
 
 #include <atomic>
+
 #include "src/media/playback/mediaplayer/graph/packet.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_manager.h"
 

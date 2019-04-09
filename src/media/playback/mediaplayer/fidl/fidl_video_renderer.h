@@ -13,8 +13,10 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/ui/base_view/cpp/base_view.h>
 #include <lib/ui/scenic/cpp/resources.h>
+
 #include <queue>
 #include <unordered_map>
+
 #include "src/media/playback/mediaplayer/metrics/packet_timing_tracker.h"
 #include "src/media/playback/mediaplayer/render/video_renderer.h"
 

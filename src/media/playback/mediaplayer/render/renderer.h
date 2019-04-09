@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_RENDER_RENDERER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_RENDER_RENDERER_H_
 
-#include <limits>
-
 #include <fuchsia/media/cpp/fidl.h>
+
+#include <limits>
 
 #include "lib/media/timeline/timeline_function.h"
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"

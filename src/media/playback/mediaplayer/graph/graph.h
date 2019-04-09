@@ -6,7 +6,9 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_GRAPH_H_
 
 #include <lib/fit/function.h>
+
 #include <list>
+
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"
 #include "src/media/playback/mediaplayer/graph/refs.h"
 

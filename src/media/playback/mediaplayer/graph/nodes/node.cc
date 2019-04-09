@@ -5,6 +5,7 @@
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"
 
 #include <lib/async/cpp/task.h>
+
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {

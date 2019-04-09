@@ -5,10 +5,10 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DEMUX_READER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DEMUX_READER_H_
 
+#include <lib/fit/function.h>
+
 #include <limits>
 #include <memory>
-
-#include <lib/fit/function.h>
 
 namespace media_player {
 

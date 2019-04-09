@@ -6,8 +6,8 @@
 
 #include <lib/async/default.h>
 
-#include "src/lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "src/media/playback/mediaplayer/core/test/fake_video_renderer.h"
+
 #include "src/media/playback/mediaplayer/graph/types/video_stream_type.h"
 
 namespace media_player {

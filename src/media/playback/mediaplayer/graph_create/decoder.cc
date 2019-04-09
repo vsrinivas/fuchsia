@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <vector>
-
 #include "src/media/playback/mediaplayer/decode/decoder.h"
+
+#include <vector>
 
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_decoder_factory.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_decoder_factory.h"

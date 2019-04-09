@@ -5,11 +5,11 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_UTIL_INCIDENT_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_UTIL_INCIDENT_H_
 
-#include <mutex>
-#include <vector>
-
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+
+#include <mutex>
+#include <vector>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 

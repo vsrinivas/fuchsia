@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_DECODER_FACTORY_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_FIDL_DECODER_FACTORY_H_
 
-#include <memory>
-
 #include <fuchsia/mediacodec/cpp/fidl.h>
+
+#include <memory>
 
 #include "src/media/playback/mediaplayer/decode/decoder.h"
 

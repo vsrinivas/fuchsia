@@ -5,11 +5,11 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DEMUX_SLIDING_BUFFER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_DEMUX_SLIDING_BUFFER_H_
 
+#include <lib/fit/function.h>
+
 #include <map>
 #include <optional>
 #include <vector>
-
-#include <lib/fit/function.h>
 
 namespace media_player {
 

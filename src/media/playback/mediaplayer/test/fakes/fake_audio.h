@@ -6,9 +6,11 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_TEST_FAKES_FAKE_AUDIO_H_
 
 #include <fuchsia/media/cpp/fidl.h>
+
 #include <memory>
 #include <queue>
 #include <vector>
+
 #include "lib/fidl/cpp/binding_set.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_audio_renderer.h"

@@ -5,11 +5,11 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_PLAYER_CORE_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_CORE_PLAYER_CORE_H_
 
-#include <unordered_map>
-#include <vector>
-
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+
+#include <unordered_map>
+#include <vector>
 
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"

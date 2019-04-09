@@ -8,9 +8,11 @@
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/optional.h"
 #include "src/lib/fxl/memory/weak_ptr.h"

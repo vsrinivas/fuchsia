@@ -6,7 +6,9 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_FIDL_SIMPLE_STREAM_SINK_IMPL_H_
 
 #include <fuchsia/media/playback/cpp/fidl.h>
+
 #include <unordered_map>
+
 #include "lib/fidl/cpp/binding.h"
 #include "src/lib/fxl/synchronization/thread_checker.h"
 #include "src/media/playback/mediaplayer/graph/nodes/node.h"

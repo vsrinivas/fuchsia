@@ -6,9 +6,11 @@
 
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/ui/scenic/cpp/commands.h>
+
 #include <limits>
-#include "src/lib/fxl/logging.h"
+
 #include "lib/media/timeline/timeline.h"
+#include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 

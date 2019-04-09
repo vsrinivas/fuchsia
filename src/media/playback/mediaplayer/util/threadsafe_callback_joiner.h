@@ -5,11 +5,11 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_UTIL_THREADSAFE_CALLBACK_JOINER_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_UTIL_THREADSAFE_CALLBACK_JOINER_H_
 
-#include <memory>
-#include <mutex>
-
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
+
+#include <memory>
+#include <mutex>
 
 #include "src/lib/fxl/logging.h"
 

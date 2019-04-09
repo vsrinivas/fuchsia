@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/async/cpp/task.h>
-
 #include "src/media/playback/mediaplayer/util/incident.h"
+
+#include <lib/async/cpp/task.h>
 
 Incident::Incident(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 

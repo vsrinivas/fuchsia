@@ -8,7 +8,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <trace-provider/provider.h>
+
 #include <string>
+
 #include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
 #include "src/media/playback/mediaplayer/player_impl.h"

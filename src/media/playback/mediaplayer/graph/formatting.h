@@ -6,6 +6,7 @@
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_FORMATTING_H_
 
 #include <ostream>
+
 #include "lib/fostr/indent.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "src/media/playback/mediaplayer/graph/nodes/input.h"

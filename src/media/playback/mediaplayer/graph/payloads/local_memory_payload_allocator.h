@@ -5,10 +5,10 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_PAYLOADS_LOCAL_MEMORY_PAYLOAD_ALLOCATOR_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_GRAPH_PAYLOADS_LOCAL_MEMORY_PAYLOAD_ALLOCATOR_H_
 
-#include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
-
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+
+#include "src/media/playback/mediaplayer/graph/payloads/payload_allocator.h"
 
 namespace media_player {
 
