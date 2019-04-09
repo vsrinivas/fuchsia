@@ -459,8 +459,6 @@ void ConsoleContext::DidCreateProcess(Target* target, Process* process,
       out.Append("Attached ");
       break;
     case Process::StartType::kComponent:
-      out.Append("Launched");
-      break;
     case Process::StartType::kLaunch:
       out.Append("Launched ");
       break;

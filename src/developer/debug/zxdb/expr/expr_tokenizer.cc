@@ -20,7 +20,11 @@ bool IsNameFirstChar(char c) {
 }
 
 bool IsNameContinuingChar(char c) {
-  return IsNameFirstChar(c) || (c >= '0' && c <= '9');
+  // Note that "@" is used to annotate "PLT" breakpoints which are breakpoints
+  // set on ELF imports rather than DWARF symbols (for example,
+  // "__stack_chk_fail@plt"). So it needs to count as a name character. This
+  // can be changed in the future if we have a better way of identifying these.
+  return IsNameFirstChar(c) || (c >= '0' && c <= '9') || c == '@';
 }
 
 bool IsIntegerFirstChar(char c) { return isdigit(c); }

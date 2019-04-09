@@ -262,6 +262,25 @@ Scoping to processes and threads
   context of a process-scoped breakpoint is destroyed, the breakpoint will be
   converted to a disabled global breakpoint.
 
+ELF PLT breakpoints for system calls
+
+  Breakpoints can be set in the code in the ELF Procedure Linkage Table. This
+  code is the tiny stub that the dynamic linker fixes up to resolve each
+  function call imported from other ELF objects.
+
+  This allows is setting breakpoints on system calls without using hardware
+  breakpoints. The Zircon vDSO is mapped read-only which prevents the debugger
+  from inserting hardware breakpoints. But each library's calls to vDSO
+  functions goes through that library's PLT which is writable by the debugger.
+
+  To indicate a PLT breakpoint, append "@plt" to the name of the imported
+  function:
+
+    [zxdb] break zx_debug_write@plt
+
+  This will apply the breakpoint to every library's PLT entry for
+  "zx_debug_write".
+
 See also
 
   "help breakpoint": To list or select breakpoints.
