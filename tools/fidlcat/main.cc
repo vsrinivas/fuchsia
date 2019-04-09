@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cmdline/args_parser.h>
 #include <signal.h>
 #include <stdlib.h>
 
@@ -20,8 +21,6 @@
 // on CQ in a way I can't repro locally.
 #undef __TA_REQUIRES
 
-#include <cmdline/args_parser.h>
-
 #include "lib/fidl/cpp/message.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -39,6 +38,16 @@ struct CommandLineOptions {
   std::vector<std::string> fidl_ir_paths;
 };
 
+const char kHelpIntro[] = R"(fidlcat [ <options> ] [ command [args] ]
+
+  fidlcat will run the specified command until it exits.  It will intercept and
+  record all fidl calls invoked by the process.  The command may be of the form
+  "run <component URL>", in which case the given component will be launched.
+
+Options:
+
+)";
+
 const char kRemoteHostHelp[] = R"(--connect
       The host and port of the target Fuchsia instance, of the form
       [<ipv6_addr>]:port.)";
@@ -52,6 +61,10 @@ const char kFidlIrPathHelp[] = R"(--fidl-ir-path=<path>
       of the .fidl.json files in that directory and any directory transitively
       reachable from there. This switch can be passed multiple times to add
       multiple locations.)";
+
+const char kHelpHelp[] = R"(  --help
+  -h
+      Prints all command-line switches.)";
 
 const char kSymbolPathHelp[] = R"(  --symbol-path=<path>
   -s <path>
@@ -77,9 +90,17 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[],
                    &CommandLineOptions::fidl_ir_paths);
   parser.AddSwitch("symbol-path", 's', kSymbolPathHelp,
                    &CommandLineOptions::symbol_paths);
+  bool requested_help = false;
+  parser.AddGeneralSwitch("help", 'h', kHelpHelp,
+                          [&requested_help]() { requested_help = true; });
+
   cmdline::Status status = parser.Parse(argc, argv, options, params);
   if (status.has_error()) {
     return status;
+  }
+
+  if (requested_help) {
+    return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
   }
 
   return cmdline::Status::Ok();
@@ -153,11 +174,21 @@ void OnZxChannelWrite(LibraryLoader* loader, const zxdb::Err& err,
 
 // Add the startup actions to the loop: connect, attach to pid, set breakpoints.
 void EnqueueStartup(InterceptionWorkflow& workflow, LibraryLoader& loader,
-                    CommandLineOptions& options) {
+                    CommandLineOptions& options,
+                    std::vector<std::string>& params) {
   workflow.SetZxChannelWriteCallback(std::bind(
       OnZxChannelWrite, &loader, std::placeholders::_1, std::placeholders::_2));
-  // TODO: something if this fails to parse.
-  auto process_koid = std::stoul(*options.remote_pid);
+  unsigned long long process_koid = ULLONG_MAX;
+  if (options.remote_pid) {
+    std::string& pid_str = *options.remote_pid;
+    process_koid = strtoull(pid_str.c_str(), nullptr, 10);
+    // There is no process 0, and if there were, we probably wouldn't be able to
+    // talk with it.
+    if (process_koid == 0) {
+      fprintf(stderr, "Invalid pid %s\n", pid_str.c_str());
+      exit(1);
+    }
+  }
 
   std::string host;
   uint16_t port;
@@ -167,27 +198,21 @@ void EnqueueStartup(InterceptionWorkflow& workflow, LibraryLoader& loader,
   }
 
   auto set_breakpoints = [&workflow, process_koid](const zxdb::Err& err) {
-    if (!err.ok()) {
-      FXL_LOG(INFO) << "Unable to attach to koid " << process_koid << ": "
-                    << err.msg();
-    } else {
-      FXL_LOG(INFO) << "Attached to process with koid " << process_koid;
-    }
-    workflow.SetBreakpoints([](const zxdb::Err& err) {
-      if (!err.ok()) {
-        FXL_LOG(INFO) << "Error in setting breakpoints: " << err.msg();
-      }
-    });
+    workflow.SetBreakpoints(process_koid);
   };
 
-  auto attach = [&workflow, process_koid,
+  auto attach = [&workflow, process_koid, params,
                  set_breakpoints =
                      std::move(set_breakpoints)](const zxdb::Err& err) {
     if (!err.ok()) {
       FXL_LOG(FATAL) << "Unable to connect: " << err.msg();
     }
     FXL_LOG(INFO) << "Connected!";
-    workflow.Attach(process_koid, set_breakpoints);
+    if (process_koid != ULLONG_MAX) {
+      workflow.Attach(process_koid, set_breakpoints);
+    } else {
+      workflow.Launch(params, set_breakpoints);
+    }
   };
 
   auto connect = [&workflow, attach = std::move(attach), host, port]() {
@@ -251,7 +276,7 @@ int ConsoleMain(int argc, const char* argv[]) {
   std::vector<std::string> params;
   cmdline::Status status = ParseCommandLine(argc, argv, &options, &params);
   if (status.has_error()) {
-    FXL_LOG(ERROR) << status.error_message();
+    fprintf(stderr, "%s\n", status.error_message().c_str());
     return 1;
   }
 
@@ -268,7 +293,7 @@ int ConsoleMain(int argc, const char* argv[]) {
     return 1;
   }
 
-  EnqueueStartup(workflow, loader, options);
+  EnqueueStartup(workflow, loader, options, params);
 
   // TODO: When the attached koid terminates normally, we should exit and call
   // QuitNow() on the MessageLoop.

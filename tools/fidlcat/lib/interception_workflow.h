@@ -30,10 +30,12 @@ class InterceptingThreadObserver : public zxdb::ThreadObserver {
  public:
   explicit InterceptingThreadObserver(InterceptionWorkflow* workflow)
       : workflow_(workflow) {}
+
   virtual void OnThreadStopped(
       zxdb::Thread* thread, debug_ipc::NotifyException::Type type,
       const std::vector<fxl::WeakPtr<zxdb::Breakpoint>>& hit_breakpoints)
       override;
+
   virtual ~InterceptingThreadObserver() {}
 
  private:
@@ -44,6 +46,7 @@ class InterceptingProcessObserver : public zxdb::ProcessObserver {
  public:
   explicit InterceptingProcessObserver(InterceptionWorkflow* workflow)
       : dispatcher_(workflow) {}
+
   virtual void DidCreateThread(zxdb::Process* process,
                                zxdb::Thread* thread) override {
     thread->AddObserver(&dispatcher_);
@@ -58,17 +61,19 @@ class InterceptingProcessObserver : public zxdb::ProcessObserver {
 class InterceptingTargetObserver : public zxdb::TargetObserver {
  public:
   explicit InterceptingTargetObserver(InterceptionWorkflow* workflow)
-      : dispatcher_(workflow) {}
+      : dispatcher_(workflow), workflow_(workflow) {}
 
   virtual void DidCreateProcess(zxdb::Target* target, zxdb::Process* process,
-                                bool autoattached_to_new_process) override {
-    process->AddObserver(&dispatcher_);
-  }
+                                bool autoattached_to_new_process) override;
 
   virtual ~InterceptingTargetObserver() {}
 
+  // For testing
+  InterceptingProcessObserver* process_observer() { return &dispatcher_; }
+
  private:
   InterceptingProcessObserver dispatcher_;
+  InterceptionWorkflow* workflow_;
 };
 
 }  // namespace internal
@@ -109,10 +114,18 @@ class InterceptionWorkflow {
   // posted to the loop on completion.
   void Attach(uint64_t process_koid, SimpleErrorFunction and_then);
 
-  // Sets breakpoints for the various methods we intercept (zx_channel_*, etc).
-  // For each target for which we are attached, |and_then_each| is posted to the
-  // loop on completion.
-  void SetBreakpoints(SimpleErrorFunction and_then_each);
+  // Run the given |command| and attach to it.  Must be connected.  |and_then|
+  // is posted to the loop on completion.
+  void Launch(const std::vector<std::string>& command,
+              SimpleErrorFunction and_then);
+
+  // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
+  // for the given |target|
+  void SetBreakpoints(zxdb::Target* target = nullptr);
+
+  // Sets breakpoints for the various methods we intercept (zx_channel_*, etc)
+  // for the process with given |process_koid|.
+  void SetBreakpoints(uint64_t process_koid);
 
   // Sets the user-callback to be run when we intercept a zx_channel_write call.
   void SetZxChannelWriteCallback(ZxChannelWriteCallback&& callback) {
@@ -132,6 +145,8 @@ class InterceptionWorkflow {
   InterceptionWorkflow& operator=(const InterceptionWorkflow&) = delete;
 
  private:
+  zxdb::Target* GetTarget(uint64_t process_koid = ULLONG_MAX);
+
   void OnZxChannelWrite(zxdb::Thread* thread);
 
   debug_ipc::BufferedFD buffer_;

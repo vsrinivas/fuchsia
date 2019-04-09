@@ -8,7 +8,9 @@
 #include <thread>
 
 #include "src/developer/debug/shared/platform_message_loop.h"
+#include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
+#include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 
@@ -28,8 +30,19 @@ void InterceptingThreadObserver::OnThreadStopped(
         settings.location.symbol[0] ==
             InterceptionWorkflow::kZxChannelWriteName) {
       workflow_->OnZxChannelWrite(thread);
+      return;
     }
   }
+  FXL_LOG(INFO)
+      << "Internal error: Thread stopped on exception with no breakpoint set";
+  thread->Continue();
+}
+
+void InterceptingTargetObserver::DidCreateProcess(
+    zxdb::Target* target, zxdb::Process* process,
+    bool autoattached_to_new_process) {
+  process->AddObserver(&dispatcher_);
+  workflow_->SetBreakpoints(target);
 }
 
 }  // namespace internal
@@ -60,7 +73,7 @@ InterceptionWorkflow::~InterceptionWorkflow() {
 
 void InterceptionWorkflow::Initialize(
     const std::vector<std::string>& symbol_paths) {
-  //// Set up symbol index.
+  // 1) Set up symbol index.
 
   // Stolen from console/console_main.cc
   std::vector<std::string> paths;
@@ -84,11 +97,11 @@ void InterceptionWorkflow::Initialize(
   session_->system().settings().SetList(
       zxdb::ClientSettings::System::kSymbolPaths, std::move(paths));
 
-  //// Ensure that the session correctly reads data off of the loop.
+  // 2) Ensure that the session correctly reads data off of the loop.
   buffer_.set_data_available_callback(
       [this]() { session_->OnStreamReadable(); });
 
-  //// Provide a loop, if none exists.
+  // 3) Provide a loop, if none exists.
   if (debug_ipc::MessageLoop::Current() == nullptr) {
     loop_->Init();
   }
@@ -100,49 +113,129 @@ void InterceptionWorkflow::Connect(const std::string& host, uint16_t port,
                     [and_then](const zxdb::Err& err) { and_then(err); });
 }
 
-void InterceptionWorkflow::Attach(uint64_t process_koid,
-                                  SimpleErrorFunction and_then) {
-  zxdb::Target* target = nullptr;
-  for (zxdb::Target* t : session_->system().GetTargets()) {
-    if (t->GetProcess() && t->GetProcess()->GetKoid() == process_koid) {
-      return;
-    }
-  }
-  if (target == nullptr) {
-    for (zxdb::Target* t : session_->system().GetTargets()) {
-      if (t->GetState() == zxdb::Target::State::kNone) {
-        target = t;
+// Helper function that finds a target for fidlcat to attach itself to. The
+// target may already be running. |process_koid| should be set if you want to
+// attach to a particular given process.
+zxdb::Target* InterceptionWorkflow::GetTarget(uint64_t process_koid) {
+  if (process_koid != ULLONG_MAX) {
+    for (zxdb::Target* target : session_->system().GetTargets()) {
+      if (target->GetProcess() &&
+          target->GetProcess()->GetKoid() == process_koid) {
+        return target;
       }
     }
   }
-  if (target == nullptr) {
-    target = session_->system().CreateNewTarget(nullptr);
+
+  for (zxdb::Target* target : session_->system().GetTargets()) {
+    if (target->GetState() == zxdb::Target::State::kNone) {
+      return target;
+    }
   }
-  // TODO: Remove observer when appropriate.
-  target->AddObserver(&observer_);
-  target->Attach(process_koid, [and_then = std::move(and_then)](
-                                   fxl::WeakPtr<zxdb::Target>,
-                                   const zxdb::Err& err) { and_then(err); });
+  return session_->system().CreateNewTarget(nullptr);
 }
 
-void InterceptionWorkflow::SetBreakpoints(SimpleErrorFunction and_then_each) {
-  zxdb::Err err;
+void InterceptionWorkflow::Attach(uint64_t process_koid,
+                                  SimpleErrorFunction and_then) {
+  zxdb::Target* target = GetTarget(process_koid);
+  if (target->GetProcess() && target->GetProcess()->GetKoid() == process_koid) {
+    return;
+  }
+
+  // TODO: Remove observer when appropriate.
+  target->AddObserver(&observer_);
+  target->Attach(
+      process_koid, [process_koid, and_then = std::move(and_then)](
+                        fxl::WeakPtr<zxdb::Target>, const zxdb::Err& err) {
+        if (!err.ok()) {
+          FXL_LOG(INFO) << "Unable to attach to koid " << process_koid << ": "
+                        << err.msg();
+          return;
+        } else {
+          FXL_LOG(INFO) << "Attached to process with koid " << process_koid;
+        }
+        and_then(err);
+      });
+}
+
+void InterceptionWorkflow::Launch(const std::vector<std::string>& command,
+                                  SimpleErrorFunction and_then) {
+  zxdb::Target* target = GetTarget();
+  target->AddObserver(&observer_);
+
+  auto on_err = [command](const zxdb::Err& err) {
+    std::string cmd;
+    for (auto& param : command) {
+      cmd.append(param);
+      cmd.append(" ");
+    }
+    if (!err.ok()) {
+      FXL_LOG(INFO) << "Unable to launch " << cmd << ": " << err.msg();
+    } else {
+      FXL_LOG(INFO) << "Launched " << cmd;
+    }
+    return err.ok();
+  };
+
+  if (command[0] == "run") {
+    // The component workflow.
+    debug_ipc::LaunchRequest request;
+    request.inferior_type = debug_ipc::InferiorType::kComponent;
+    request.argv = std::vector<std::string>(command.begin() + 1, command.end());
+    session_->remote_api()->Launch(
+        std::move(request),
+        [target = target->GetWeakPtr(), on_err = std::move(on_err),
+         and_then = std::move(and_then)](const zxdb::Err& err,
+                                         debug_ipc::LaunchReply reply) {
+          if (!on_err(err)) {
+            return;
+          }
+          if (reply.status != debug_ipc::kZxOk) {
+            FXL_LOG(INFO) << "Could not start component " << reply.process_name
+                          << ": error " << reply.status;
+          }
+          target->session()->ExpectComponent(reply.component_id);
+          and_then(err);
+        });
+    return;
+  }
+
+  target->SetArgs(command);
+  target->Launch([on_err = std::move(on_err), and_then = std::move(and_then)](
+                     fxl::WeakPtr<zxdb::Target> target, const zxdb::Err& err) {
+    if (!on_err(err)) {
+      return;
+    }
+    and_then(err);
+  });
+}
+
+void InterceptionWorkflow::SetBreakpoints(zxdb::Target* target) {
+  // Set the breakpoint
+  zxdb::BreakpointSettings settings;
+  settings.enabled = true;
+  settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
+  settings.type = debug_ipc::BreakpointType::kSoftware;
+  settings.location.symbol = {kZxChannelWriteName};
+  settings.location.type = zxdb::InputLocation::Type::kSymbol;
+  settings.scope = zxdb::BreakpointSettings::Scope::kTarget;
+  settings.scope_target = target;
+
+  zxdb::Breakpoint* breakpoint = session_->system().CreateNewBreakpoint();
+
+  breakpoint->SetSettings(settings, [](const zxdb::Err& err) {
+    if (!err.ok()) {
+      FXL_LOG(INFO) << "Error in setting breakpoints: " << err.msg();
+    }
+  });
+}
+
+void InterceptionWorkflow::SetBreakpoints(uint64_t process_koid) {
   for (zxdb::Target* target : session_->system().GetTargets()) {
-    // Set the breakpoint
-    zxdb::BreakpointSettings settings;
-    settings.enabled = true;
-    settings.stop_mode = zxdb::BreakpointSettings::StopMode::kThread;
-    settings.type = debug_ipc::BreakpointType::kSoftware;
-    settings.location.symbol = {kZxChannelWriteName};
-    settings.location.type = zxdb::InputLocation::Type::kSymbol;
-    settings.scope = zxdb::BreakpointSettings::Scope::kTarget;
-    settings.scope_target = target;
-
-    zxdb::Breakpoint* breakpoint = session_->system().CreateNewBreakpoint();
-
-    breakpoint->SetSettings(
-        settings, [breakpoint = breakpoint->GetWeakPtr(), and_then_each](
-                      const zxdb::Err& err) { and_then_each(err); });
+    if (target->GetState() == zxdb::Target::State::kRunning &&
+        target->GetProcess()->GetKoid() == process_koid) {
+      SetBreakpoints(target);
+      return;
+    }
   }
 }
 

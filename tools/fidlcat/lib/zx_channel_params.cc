@@ -39,9 +39,11 @@ T GetRegisterValue(const std::vector<zxdb::Register>& regs,
 
 // Grovels through the |dump| and constructs a local copy of the bytes starting
 // at |bytes_address| and continuing for |num_bytes|.
-uint8_t* MemoryDumpToBytes(uint64_t bytes_address, uint32_t num_bytes,
-                           const zxdb::MemoryDump& dump) {
-  uint8_t* output_buffer = new uint8_t[num_bytes];
+std::unique_ptr<uint8_t[]> MemoryDumpToBytes(uint64_t bytes_address,
+                                             uint32_t num_bytes,
+                                             const zxdb::MemoryDump& dump) {
+  std::unique_ptr<uint8_t[]> output_buffer =
+      std::make_unique<uint8_t[]>(num_bytes);
   // replace with memset, or poison pattern.
   for (uint32_t i = 0; i < num_bytes; i++) {
     output_buffer[i] = 0;
@@ -137,8 +139,8 @@ void ZxChannelWriteParams::BuildX86AndContinue(
           if (err.ok()) {
             auto bytes = MemoryDumpToBytes(bytes_address, num_bytes, dump);
             zx_handle_t* handles = nullptr;
-            params = ZxChannelWriteParams(handle, options, bytes, num_bytes,
-                                          handles, num_handles);
+            params = ZxChannelWriteParams(handle, options, std::move(bytes),
+                                          num_bytes, handles, num_handles);
             fn(err, params);
           } else {
             std::string msg = "Failed to build zx_channel_write params: ";

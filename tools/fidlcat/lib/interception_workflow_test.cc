@@ -203,9 +203,12 @@ TEST_F(InterceptionWorkflowTest, ZxChannelWrite) {
   std::vector<std::string> blank;
   workflow.Initialize(blank);
 
+  bool hit_breakpoint = false;
   // This will be executed when the zx_channel_write breakpoint is triggered.
   workflow.SetZxChannelWriteCallback(
-      [this](const zxdb::Err& err, const ZxChannelWriteParams& params) {
+      [this, &hit_breakpoint](const zxdb::Err& err,
+                              const ZxChannelWriteParams& params) {
+        hit_breakpoint = true;
         ASSERT_TRUE(err.ok());
         const uint8_t* data = data_.data();
         std::string result;
@@ -221,20 +224,24 @@ TEST_F(InterceptionWorkflowTest, ZxChannelWrite) {
           result.append("bytes not equivalent");
           ASSERT_TRUE(false) << result;
         }
+        debug_ipc::MessageLoop::Current()->QuitNow();
       });
 
   // Create a fake process and thread.
   constexpr uint64_t kProcessKoid = 1234;
-  InjectProcess(kProcessKoid);
+  zxdb::Process* the_process = InjectProcess(kProcessKoid);
   constexpr uint64_t kThreadKoid = 5678;
-  zxdb::Thread* thread = InjectThread(kProcessKoid, kThreadKoid);
+  zxdb::Thread* the_thread = InjectThread(kProcessKoid, kThreadKoid);
 
   // Observe thread.  This is usually done in workflow::Attach, but
   // RemoteAPITest has its own ideas about attaching, so that method only
   // half-works (the half that registers the target with the workflow). We have
   // to register the observer manually.
-  internal::InterceptingThreadObserver thread_observer(&workflow);
-  thread->AddObserver(&thread_observer);
+  internal::InterceptingTargetObserver target_observer(&workflow);
+  zxdb::Target* target = session().system().GetTargets()[0];
+  target->AddObserver(&target_observer);
+  target_observer.DidCreateProcess(target, the_process, false);
+  target_observer.process_observer()->DidCreateThread(the_process, the_thread);
 
   // Attach to process.
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [&workflow]() {
@@ -263,15 +270,6 @@ TEST_F(InterceptionWorkflowTest, ZxChannelWrite) {
     debug_ipc::MessageLoop::Current()->Run();
   }
 
-  bool hit_breakpoint = false;
-  // Set breakpoint on zx_channel_write.
-  workflow.SetBreakpoints([&hit_breakpoint](const zxdb::Err& err) {
-    hit_breakpoint = true;
-    ASSERT_TRUE(err.ok()) << "Failure: " << err.msg();
-    debug_ipc::MessageLoop::Current()->QuitNow();
-  });
-  debug_ipc::MessageLoop::Current()->Run();
-
   // Trigger breakpoint.
   debug_ipc::NotifyException notification;
   notification.process_koid = kProcessKoid;
@@ -281,8 +279,12 @@ TEST_F(InterceptionWorkflowTest, ZxChannelWrite) {
   mock_remote_api().PopulateBreakpointIds(notification);
   InjectException(notification);
 
+  debug_ipc::MessageLoop::Current()->Run();
+
   // At this point, the ZxChannelWrite callback should have been executed.
   ASSERT_TRUE(hit_breakpoint);
+  the_process->RemoveObserver(target_observer.process_observer());
+  target->RemoveObserver(&target_observer);
 }
 
 }  // namespace fidlcat

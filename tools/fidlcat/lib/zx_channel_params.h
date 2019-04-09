@@ -41,9 +41,9 @@ class ZxChannelWriteParams {
 
   zx_handle_t GetHandle() const { return handle_; }
   uint32_t GetOptions() const { return options_; }
-  const std::unique_ptr<uint8_t>& GetBytes() const { return bytes_; }
+  const std::unique_ptr<uint8_t[]>& GetBytes() const { return bytes_; }
   uint32_t GetNumBytes() const { return num_bytes_; }
-  const std::unique_ptr<zx_handle_t>& GetHandles() const { return handles_; }
+  const std::unique_ptr<zx_handle_t[]>& GetHandles() const { return handles_; }
   uint32_t GetNumHandles() const { return num_handles_; }
 
   ZxChannelWriteParams(ZxChannelWriteParams&& from)
@@ -77,17 +77,17 @@ class ZxChannelWriteParams {
  private:
   zx_handle_t handle_;
   uint32_t options_;
-  std::unique_ptr<uint8_t> bytes_;
+  std::unique_ptr<uint8_t[]> bytes_;
   uint32_t num_bytes_;
-  std::unique_ptr<zx_handle_t> handles_;
+  std::unique_ptr<zx_handle_t[]> handles_;
   uint32_t num_handles_;
 
-  ZxChannelWriteParams(zx_handle_t handle, uint32_t options, uint8_t* bytes,
-                       uint32_t num_bytes, zx_handle_t* handles,
-                       uint32_t num_handles)
+  ZxChannelWriteParams(zx_handle_t handle, uint32_t options,
+                       std::unique_ptr<uint8_t[]>&& bytes, uint32_t num_bytes,
+                       zx_handle_t* handles, uint32_t num_handles)
       : handle_(handle),
         options_(options),
-        bytes_(bytes),
+        bytes_(std::move(bytes)),
         num_bytes_(num_bytes),
         handles_(handles),
         num_handles_(num_handles) {}
