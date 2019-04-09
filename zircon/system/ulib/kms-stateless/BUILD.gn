@@ -1,0 +1,11 @@
+library("kms-stateless") {
+  sources = [
+    "kms-stateless.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/ramdevice-client",
+    "$zx/system/ulib/tee-client-api",
+  ]
+}
