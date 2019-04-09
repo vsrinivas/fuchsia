@@ -815,7 +815,8 @@ pub mod server {
 
             let stream = DirectoryRequestStream::from_channel(chan);
             if (flags & OPEN_FLAG_DESCRIBE) != 0 {
-                let mut info = NodeInfo::Directory(DirectoryObject);
+                let mut info = self.describe_node(position)
+                    .expect("error serving connection for missing node");
                 stream.control_handle().send_on_open_(zx::sys::ZX_OK, Some(OutOfLine(&mut info)))
                     .context("fail sending OnOpen event")?;
             }
@@ -869,11 +870,9 @@ pub mod server {
                 DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _, } => {
                     handle_potentially_unsupported_flags!(object, flags, OPEN_REQ_SUPPORTED_FLAGS);
 
-                    let channel = object.into_channel();
-
                     if path == "." {
-                        if let Err(e) = self.serve_connection_at(channel, connection.position,
-                                                                 flags) {
+                        if let Err(e) = self.serve_connection_at(object.into_channel(),
+                                                                 connection.position, flags) {
                             eprintln!("ServiceFS failed to open '.': {:?}", e);
                         }
                         return Ok((None, ConnectionState::Open));
@@ -886,35 +885,64 @@ pub mod server {
                         Ok(children) => children,
                         Err(e) => {
                             eprintln!("invalid path {} - {}", path, e);
+                            if flags & OPEN_FLAG_DESCRIBE != 0 {
+                                self.send_failed_on_open(object, zx::sys::ZX_ERR_BAD_PATH)?;
+                            }
                             return Ok((None, ConnectionState::Open));
                         }
                     };
 
-                    if let Some(&target_node_position) = children.get(end_segment) {
-                        match self.nodes.get_mut(target_node_position)
+                    if let Some(&next_node_pos) = children.get(end_segment) {
+                        match self.nodes.get_mut(next_node_pos)
                             .expect("Missing child node")
                         {
                             ServiceFsNode::Directory { .. } => {
-                                if let Err(e) =
-                                    self.serve_connection_at(channel, target_node_position, flags)
+                                if let Err(e) = self.serve_connection_at(object.into_channel(),
+                                                                         next_node_pos, flags)
                                 {
                                     eprintln!("ServiceFs failed to open directory: {:?}", e);
                                 }
                             }
                             ServiceFsNode::Service(service) => {
-                                return Ok((service.service().connect(channel),
+                                if flags & OPEN_FLAG_DIRECTORY != 0 {
+                                    self.send_failed_on_open(object, zx::sys::ZX_ERR_NOT_DIR)?;
+                                    return Ok((None, ConnectionState::Open));
+                                }
+                                // Case 1: client opens node to get more metadata on it (by calling
+                                //         `Describe` or `GetAttr` later), so there's no need to
+                                //         connect to service. This is done by `find` command.
+                                if flags & OPEN_FLAG_NODE_REFERENCE != 0
+                                    || flags & OPEN_FLAG_DESCRIBE != 0
+                                {
+                                    if let Err(e) = self.serve_connection_at(object.into_channel(),
+                                                                             next_node_pos, flags)
+                                    {
+                                        eprintln!("ServiceFs failed to open service node: {:?}", e);
+                                    }
+                                    return Ok((None, ConnectionState::Open));
+                                }
+                                // Case 2: client opens node to connect to service
+                                return Ok((service.service().connect(object.into_channel()),
                                            ConnectionState::Open));
                             }
                         }
                     }
                 }
                 DirectoryRequest::Describe { responder } => {
-                    let mut info = NodeInfo::Directory(DirectoryObject);
+                    let mut info = self.describe_node(connection.position)
+                        .expect("node missing for Describe req");
                     responder.send(&mut info)?;
                 }
                 DirectoryRequest::GetAttr { responder, } => {
+                    let node = self.nodes.get(connection.position)
+                        .expect("node missing for GetAttr req");
+                    let mode_type = match node {
+                        ServiceFsNode::Directory { .. } => fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+                        ServiceFsNode::Service(..) => fidl_fuchsia_io::MODE_TYPE_SERVICE,
+                    };
+
                     let mut attrs = NodeAttributes {
-                        mode: fidl_fuchsia_io::MODE_TYPE_DIRECTORY | 0o400, /* mode R_USR */
+                        mode: mode_type | 0o400, /* mode R_USR */
                         id: fidl_fuchsia_io::INO_UNKNOWN,
                         content_size: 0,
                         storage_size: 0,
@@ -966,6 +994,13 @@ pub mod server {
             Ok(())
         }
 
+        fn describe_node(&self, pos: usize) -> Option<NodeInfo> {
+            self.nodes.get(pos).map(|node| match node {
+                ServiceFsNode::Directory { .. } => NodeInfo::Directory(DirectoryObject),
+                ServiceFsNode::Service(..) => NodeInfo::Service(fidl_fuchsia_io::Service),
+            })
+        }
+
         /// Retrieve directory listing at |path| starting from node |start_pos|. If |path| is None,
         /// simply return directory listing of node |start_pos|.
         fn descend(&self, start_pos: usize, path: Option<&str>)
@@ -990,7 +1025,7 @@ pub mod server {
         /// Retrieve directory listing of node |pos|. Return an error if |pos| is not a directory
         /// node
         fn open_dir(&self, pos: usize) -> Result<&HashMap<String, usize>, Error> {
-            let node = self.nodes.get(pos).expect("missing child");
+            let node = self.nodes.get(pos).expect(&format!("missing node {}", pos));
             match node {
                 ServiceFsNode::Directory { children } => Ok(children),
                 _ => bail!("node not a directory: {}", pos),
