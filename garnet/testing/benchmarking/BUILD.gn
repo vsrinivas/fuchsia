@@ -20,3 +20,18 @@ source_set("benchmarking") {
 
   libs = [ "zircon" ]
 }
+
+source_set("is_vulkan_supported") {
+  sources = [
+    "is_vulkan_supported.cc",
+    "is_vulkan_supported.h",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+
+  libs = [ "zircon" ]
+}

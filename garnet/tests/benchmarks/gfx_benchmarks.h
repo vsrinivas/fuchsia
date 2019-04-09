@@ -7,10 +7,6 @@
 
 #include "garnet/testing/benchmarking/benchmarking.h"
 
-// Determine whether Vulkan is supported or not by subprocessing
-// `vulkan_is_supported`.
-bool IsVulkanSupported();
-
 // Add all garnet graphics benchmarks to |benchmarks_runner|.
 void AddGraphicsBenchmarks(benchmarking::BenchmarksRunner* benchmarks_runner);
 
