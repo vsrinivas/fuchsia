@@ -497,11 +497,13 @@ DatagramStream::SendOp::SendOp(DatagramStream* stream, uint64_t payload_length)
                             std::forward_as_tuple())
                    .first),
       payload_length_(payload_length) {
+  ScopedModule<DatagramStream> in_dgs(stream);
   ScopedModule<SendOp> in_send_op(this);
   OVERNET_TRACE(DEBUG) << "SendOp created";
 }
 
 DatagramStream::SendOp::~SendOp() {
+  ScopedModule<DatagramStream> in_dgs(stream());
   ScopedModule<SendOp> in_send_op(this);
   OVERNET_TRACE(DEBUG) << "SendOp destroyed";
 }
@@ -524,6 +526,7 @@ void DatagramStream::SendError(StateRef state, const overnet::Status& status) {
 }
 
 void DatagramStream::SendOp::Close(const Status& status) {
+  ScopedModule<DatagramStream> in_dgs(stream());
   ScopedModule<SendOp> in_send_op(this);
   if (status.is_ok() && payload_length_ != push_offset_) {
     std::ostringstream out;
@@ -548,9 +551,13 @@ void DatagramStream::StateRef::SetClosed(const Status& status) {
 }
 
 void DatagramStream::SendOp::Push(Slice item, Callback<void> started) {
+  ScopedModule<DatagramStream> in_dgs(stream());
   ScopedModule<SendOp> in_send_op(this);
   assert(state() == SendState::OPEN);
   if (state() != SendState::OPEN || stream()->IsClosedForSending()) {
+    OVERNET_TRACE(DEBUG) << "Push: state=" << state()
+                         << " close_state=" << stream()->close_state_
+                         << " => ignore send: " << item;
     return;
   }
   const auto chunk_start = push_offset_;
