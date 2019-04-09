@@ -476,7 +476,6 @@ pub struct zx_packet_signal_t {
 }
 
 pub const ZX_WAIT_ASYNC_ONCE: u32 = 0;
-pub const ZX_WAIT_ASYNC_REPEATING: u32 = 1;
 
 // Actually a union of different integer types, but this should be good enough.
 pub type zx_packet_user_t = [u8; 32];

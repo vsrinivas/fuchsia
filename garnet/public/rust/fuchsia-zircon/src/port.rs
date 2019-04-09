@@ -31,8 +31,6 @@ pub enum PacketContents {
     User(UserPacket),
     /// A one-shot signal packet generated via `object_wait_async`.
     SignalOne(SignalPacket),
-    /// A repeating signal packet generated via `object_wait_async`.
-    SignalRep(SignalPacket),
     /// A guest bell packet
     GuestBell(GuestBellPacket),
     /// A guest mem packet
@@ -102,12 +100,6 @@ impl Packet {
 
             sys::zx_packet_type_t::ZX_PKT_TYPE_SIGNAL_ONE => {
                 PacketContents::SignalOne(SignalPacket(unsafe {
-                    mem::transmute_copy(&self.0.union)
-                }))
-            }
-
-            sys::zx_packet_type_t::ZX_PKT_TYPE_SIGNAL_REP => {
-                PacketContents::SignalRep(SignalPacket(unsafe {
                     mem::transmute_copy(&self.0.union)
                 }))
             }
@@ -356,7 +348,6 @@ impl Port {
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum WaitAsyncOpts {
     Once = sys::ZX_WAIT_ASYNC_ONCE,
-    Repeating = sys::ZX_WAIT_ASYNC_REPEATING,
 }
 
 #[cfg(test)]
@@ -442,82 +433,6 @@ mod tests {
         assert!(event.wait_async_handle(&port, key, Signals::USER_0, WaitAsyncOpts::Once).is_ok());
         assert!(port.cancel(&event, key).is_ok());
         assert!(event.signal_handle(Signals::NONE, Signals::USER_0).is_ok());
-        assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
-    }
-
-    #[test]
-    fn wait_async_repeating() {
-        let ten_ms = 10.millis();
-        let key = 42;
-
-        let port = Port::create().unwrap();
-        let event = Event::create().unwrap();
-
-        assert!(event.wait_async_handle(&port, key, Signals::USER_0 | Signals::USER_1,
-            WaitAsyncOpts::Repeating).is_ok());
-
-        // Waiting without setting any signal should time out.
-        assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
-
-        // If we set a signal, we should be able to wait for it.
-        assert!(event.signal_handle(Signals::NONE, Signals::USER_0).is_ok());
-        let read_packet = port.wait(ten_ms.after_now()).unwrap();
-        assert_eq!(read_packet.key(), key);
-        assert_eq!(read_packet.status(), 0);
-        match read_packet.contents() {
-            PacketContents::SignalRep(sig) => {
-                assert_eq!(sig.trigger(), Signals::USER_0 | Signals::USER_1);
-                assert_eq!(sig.observed(), Signals::USER_0);
-                assert_eq!(sig.count(), 1);
-            }
-            _ => panic!("wrong packet type"),
-        }
-
-        // Should not get any more packets, as ZX_WAIT_ASYNC_REPEATING is edge triggered rather than
-        // level triggered.
-        assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
-
-        // If we clear and resignal, we should get the same packet again,
-        // even though we didn't call event.wait_async again.
-        assert!(event.signal_handle(Signals::USER_0, Signals::NONE).is_ok());  // clear signal
-        assert!(event.signal_handle(Signals::NONE, Signals::USER_0).is_ok());
-        let read_packet = port.wait(ten_ms.after_now()).unwrap();
-        assert_eq!(read_packet.key(), key);
-        assert_eq!(read_packet.status(), 0);
-        match read_packet.contents() {
-            PacketContents::SignalRep(sig) => {
-                assert_eq!(sig.trigger(), Signals::USER_0 | Signals::USER_1);
-                assert_eq!(sig.observed(), Signals::USER_0);
-                assert_eq!(sig.count(), 1);
-            }
-            _ => panic!("wrong packet type"),
-        }
-
-        // Cancelling the wait should stop us getting packets...
-        assert!(port.cancel(&event, key).is_ok());
-        assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
-        // ... even if we clear and resignal
-        assert!(event.signal_handle(Signals::USER_0, Signals::NONE).is_ok());  // clear signal
-        assert!(event.signal_handle(Signals::NONE, Signals::USER_0).is_ok());
-        assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
-
-        // Calling wait_async again should result in another packet.
-        assert!(event.wait_async_handle(
-            &port, key, Signals::USER_0, WaitAsyncOpts::Repeating).is_ok());
-        let read_packet = port.wait(ten_ms.after_now()).unwrap();
-        assert_eq!(read_packet.key(), key);
-        assert_eq!(read_packet.status(), 0);
-        match read_packet.contents() {
-            PacketContents::SignalRep(sig) => {
-                assert_eq!(sig.trigger(), Signals::USER_0);
-                assert_eq!(sig.observed(), Signals::USER_0);
-                assert_eq!(sig.count(), 1);
-            }
-            _ => panic!("wrong packet type"),
-        }
-
-        // Closing the handle should stop us getting packets.
-        drop(event);
         assert_eq!(port.wait(ten_ms.after_now()), Err(Status::TIMED_OUT));
     }
 }
