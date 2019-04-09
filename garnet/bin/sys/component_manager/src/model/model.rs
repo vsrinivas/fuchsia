@@ -4,10 +4,10 @@
 
 use {
     crate::io_util,
-    cm_rust::CapabilityPath,
-    failure::format_err,
     crate::model::*,
     cm_rust::data,
+    cm_rust::CapabilityPath,
+    failure::format_err,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,

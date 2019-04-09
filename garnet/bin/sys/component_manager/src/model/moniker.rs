@@ -26,6 +26,18 @@ impl ChildMoniker {
     }
 }
 
+impl From<&str> for ChildMoniker {
+    fn from(name: &str) -> Self {
+        ChildMoniker::new(name.to_string())
+    }
+}
+
+impl From<String> for ChildMoniker {
+    fn from(name: String) -> Self {
+        ChildMoniker::new(name)
+    }
+}
+
 impl fmt::Display for ChildMoniker {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "#{}", self.name)
@@ -48,8 +60,11 @@ pub struct AbsoluteMoniker {
 }
 
 impl AbsoluteMoniker {
-    pub fn new(path: Vec<ChildMoniker>) -> AbsoluteMoniker {
-        AbsoluteMoniker { path }
+    pub fn new<F>(path: Vec<F>) -> AbsoluteMoniker
+    where
+        F: Into<ChildMoniker>,
+    {
+        AbsoluteMoniker { path: path.into_iter().map(|x| x.into()).collect() }
     }
 
     pub fn path(&self) -> &Vec<ChildMoniker> {
