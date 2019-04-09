@@ -6,6 +6,8 @@
   navigation within the Fuchsia tree.
 * Set path so that `:find` and `gf` know how to find files.
 * Fidl syntax highlighting (using /lib/fidl/tools/vim/).
+* Basic build system integration so that `:make` builds and populates the
+  QuickFix window.
 
 ## Installation
 
@@ -63,5 +65,4 @@ In the future it would be nice to support:
 * Fidl indentation
 * GN indentation
 * Dart, Go and Rust support
-* Build system integration
 * Navigate between generated files and fidl source

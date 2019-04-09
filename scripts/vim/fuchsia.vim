@@ -6,7 +6,7 @@
 " .jiri_manifest file
 let jiri_manifest = findfile(".jiri_manifest", ".;")
 if jiri_manifest != ""
-  let g:fuchsia_dir = fnamemodify(jiri_manifest, ":h:p")
+  let g:fuchsia_dir = fnamemodify(jiri_manifest, ":p:h")
   " Get the current build dir from fx
   let g:fuchsia_build_dir = systemlist(g:fuchsia_dir . "/scripts/fx get-build-dir")[0]
   " Get the current buildtools dir from paths.py
@@ -66,21 +66,17 @@ if jiri_manifest != ""
       set filetype=dart
     endif
 
-    " Treat files in a packages or products directory (or subdirectory) without
-    " a filetype that don't have an extension as JSON files.
-    if &filetype == "" && full_path =~ "/\\(packages\\|products\\)/" && extension == ""
-      set filetype=json sw=4
-    endif
-
-    " The Buf* autocmds sometimes run before and sometimes after FileType.
-    if &filetype == "cpp"
-      call FuchsiaCppBuffer()
-    endif
+    " Use `fx full-build` to build when you type :make
+    " Helper to clean up quickfix list in make.vim
+    let &makeprg="fx full-build"
   endfunction
 
   " This may be called twice because autocmds arrive in different orders on
   " different platforms.
   function! FuchsiaCppBuffer()
+    if !b:is_fuchsia
+      return
+    endif
     if exists('g:loaded_youcompleteme')
       " Replace the normal go to tag key with YCM when editing C/CPP.
       nnoremap <C-]> :YcmCompleter GoTo<cr>
@@ -90,8 +86,10 @@ if jiri_manifest != ""
   augroup fuchsia
     au!
     autocmd BufRead,BufNewFile * call FuchsiaBuffer()
-    autocmd FileType cpp call FuchsiaCppBuffer()
-    autocmd BufNewFile,BufRead *.cmx set syntax=json
+    autocmd Filetype cpp call FuchsiaCppBuffer()
+
+    " .cmx files are JSON files
+    autocmd BufRead,BufNewFile *.cmx set syntax=json
 
     " If this is a golden file, strip the .golden and run autocommands
     " This will allow syntax highlighting of FIDL goldens.
