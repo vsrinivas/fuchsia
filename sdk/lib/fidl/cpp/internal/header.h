@@ -74,13 +74,4 @@
 // See FIDL-563.
 #define FIDL_OPERATOR_EQUALS
 
-// This is defined temporarily to allow a soft transition from fidl::Array
-// to std::array. See FIDL-245.
-#define FIDL_USE_STD_ARRAY
-// Similarly, this is defined temporarily to ease the transition.
-namespace fidl {
-template <typename T, size_t N>
-using Array = ::std::array<T, N>;
-}
-
 #endif  // LIB_FIDL_CPP_INTERNAL_HEADER_H_
