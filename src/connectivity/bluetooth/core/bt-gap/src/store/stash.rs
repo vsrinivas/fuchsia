@@ -95,13 +95,11 @@ impl Stash {
     }
 
     /// Returns the local host data for the given local `address`.
-    #[allow(dead_code)] // TODO(BT-741): Remove this once this gets used.
     pub fn get_host_data(&self, local_address: &str) -> Option<&HostData> {
         self.host_data.get(local_address)
     }
 
     /// Updates the host data for the host with the given identity address.
-    #[allow(dead_code)] // TODO(BT-741): Remove this once this gets used.
     pub fn store_host_data(&mut self, local_addr: &str, data: HostData) -> Result<(), Error> {
         fx_log_info!("store_host_data (local address: {})", local_addr);
 

@@ -9,7 +9,7 @@ use {
         AdapterInfo, InputCapabilityType, OutputCapabilityType, PairingDelegateMarker,
     },
     fidl_fuchsia_bluetooth_gatt::ClientProxy,
-    fidl_fuchsia_bluetooth_host::{BondingData, HostEvent, HostProxy},
+    fidl_fuchsia_bluetooth_host::{BondingData, HostData, HostEvent, HostProxy},
     fidl_fuchsia_bluetooth_le::CentralProxy,
     fuchsia_bluetooth::bt_fidl_status,
     fuchsia_syslog::{fx_log_err, fx_log_info},
@@ -106,6 +106,14 @@ impl HostDevice {
         discoverable: bool,
     ) -> impl Future<Output = fidl::Result<Status>> {
         self.host.set_discoverable(discoverable)
+    }
+
+    pub fn set_local_data(&self, mut data: HostData) -> fidl::Result<()> {
+        self.host.set_local_data(&mut data)
+    }
+
+    pub fn enable_privacy(&self, enable: bool) -> fidl::Result<()> {
+        self.host.enable_privacy(enable)
     }
 
     pub fn enable_background_scan(&self, enable: bool) -> fidl::Result<()> {

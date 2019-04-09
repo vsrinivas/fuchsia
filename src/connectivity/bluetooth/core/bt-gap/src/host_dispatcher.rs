@@ -12,12 +12,13 @@ use {
         PairingDelegateMarker, PairingDelegateProxy, RemoteDevice,
     },
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
-    fidl_fuchsia_bluetooth_host::HostProxy,
+    fidl_fuchsia_bluetooth_host::{HostData, HostProxy, LocalKey},
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_bluetooth::{
-        self as bt, bt_fidl_status, error::Error as BTError, hci, util::clone_host_info,
-        util::clone_remote_device,
+        self as bt, bt_fidl_status,
+        error::Error as BTError,
+        util::{clone_host_data, clone_host_info, clone_remote_device},
     },
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog},
     fuchsia_zircon::{self as zx, Duration},
@@ -469,13 +470,29 @@ impl HostDispatcher {
     /// Adds an adapter to the host dispatcher. Called by the watch_hosts device
     /// watcher
     pub async fn add_adapter(self, host_path: &Path) -> Result<(), Error> {
-        let host_dev = hci::open_rdwr(host_path)?;
+        let host_dev = bt::hci::open_rdwr(host_path)?;
         let device_topo = fdio::device_get_topo_path(&host_dev)?;
         fx_log_info!("Adding Adapter: {:?} (topology: {:?})", host_path, device_topo);
         let host_device = await!(init_host(host_path))?;
 
+        // TODO(armansito): Make sure that the bt-host device is left in a well-known state if any
+        // of these operations fails.
+
+        // TODO(PKG-47): The following code applies a number of configurations to the bt-host by
+        // default. We should tie these to a package configuration (once it is possible), as some of these
+        // are undesirable in certain situations, e.g when running PTS tests.
+        //
+        // Currently applied settings:
+        //   - LE Privacy with IRK
+        //   - LE background scan for auto-connection
+        //   - BR/EDR connectable mode
+
         let address = host_device.read().get_info().address.clone();
+        assign_host_data(host_device.clone(), self.clone(), &address)?;
         await!(try_restore_bonds(host_device.clone(), self.clone(), &address))?;
+
+        // Enable privacy by default.
+        host_device.read().enable_privacy(true)?;
 
         // TODO(NET-1445): Only the active host should be made connectable and scanning in the background.
         await!(host_device.read().set_connectable(true))
@@ -633,6 +650,39 @@ async fn try_restore_bonds(
     } else {
         Ok(())
     }
+}
+
+fn generate_irk() -> Result<LocalKey, zx::Status> {
+    let mut buf: [u8; 16] = [0; 16];
+    zx::cprng_draw(&mut buf)?;
+    Ok(LocalKey { value: buf })
+}
+
+fn assign_host_data(
+    host_device: Arc<RwLock<HostDevice>>,
+    hd: HostDispatcher,
+    address: &str,
+) -> Result<(), Error> {
+    // Obtain an existing IRK or generate a new one if one doesn't already exists for |address|.
+    let stash = &mut hd.state.write().stash;
+    let data = match stash.get_host_data(address) {
+        Some(host_data) => {
+            fx_vlog!(1, "restored IRK");
+            clone_host_data(host_data)
+        }
+        None => {
+            // Generate a new IRK.
+            fx_vlog!(1, "generating new IRK");
+            let new_data = HostData { irk: Some(Box::new(generate_irk()?)) };
+
+            if let Err(e) = stash.store_host_data(address, clone_host_data(&new_data)) {
+                fx_log_err!("failed to persist local IRK");
+                return Err(e);
+            }
+            new_data
+        }
+    };
+    host_device.read().set_local_data(data).map_err(|e| BTError::from(e).into())
 }
 
 fn start_pairing_delegate(
