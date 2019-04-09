@@ -63,7 +63,6 @@ using thrd_cb_t = int(void*);
 template <size_t kNumThreads, size_t kSuccessCount>
 bool thread_action_test(thrd_cb_t cb, void* arg = nullptr) {
     BEGIN_HELPER;
-
     static_assert(kNumThreads >= kSuccessCount, "Need more threads or less successes");
 
     thrd_t threads[kNumThreads];
@@ -71,15 +70,22 @@ bool thread_action_test(thrd_cb_t cb, void* arg = nullptr) {
         ASSERT_EQ(thrd_create(&threads[i], cb, arg), thrd_success);
     }
 
+    // Join all threads first before checking whether they were successful. This way all threads
+    // will be cleaned up even if we encounter a failure.
+    int success[kNumThreads];
+    int result[kNumThreads];
+    for (size_t i = 0; i < kNumThreads; i++) {
+        success[i] = thrd_join(threads[i], &result[i]);
+    };
+
     size_t success_count = 0;
     for (size_t i = 0; i < kNumThreads; i++) {
-        int rc;
-        ASSERT_EQ(thrd_join(threads[i], &rc), thrd_success);
-        if (rc == kSuccess) {
+        ASSERT_EQ(success[i], thrd_success);
+        if (result[i] == kSuccess) {
             success_count++;
             ASSERT_LE(success_count, kSuccessCount, "Too many succeeding threads");
         } else {
-            ASSERT_EQ(rc, kFailure, "Unexpected return code from worker thread");
+            ASSERT_EQ(result[i], kFailure, "Unexpected return code from worker thread");
         }
     }
     ASSERT_EQ(success_count, kSuccessCount, "Not enough succeeding threads");
