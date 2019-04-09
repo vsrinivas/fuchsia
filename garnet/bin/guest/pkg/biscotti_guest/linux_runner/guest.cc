@@ -53,6 +53,7 @@ static constexpr const char* kLinuxUriScheme = "linux://";
 // Minfs max file size is currently just under 4GB.
 static constexpr off_t kStatefulImageSize = 4000ul * 1024 * 1024;
 static constexpr const char* kStatefulImagePath = "/data/stateful.img";
+static constexpr const char* kExtrasImagePath = "/pkg/data/extras.img";
 
 static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition() {
   TRACE_DURATION("linux_runner", "GetOrCreateStatefulPartition");
@@ -82,6 +83,21 @@ static fidl::InterfaceHandle<fuchsia::io::File> GetOrCreateStatefulPartition() {
   return fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
 }
 
+static fidl::InterfaceHandle<fuchsia::io::File> GetExtrasPartition() {
+  TRACE_DURATION("linux_runner", "GetExtrasPartition");
+  int fd = open(kExtrasImagePath, O_RDONLY);
+  if (fd < 0) {
+    return nullptr;
+  }
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  zx_status_t status = fdio_get_service_handle(fd, &handle);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to get service handle: " << status;
+    return nullptr;
+  }
+  return fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
+}
+
 static fidl::VectorPtr<fuchsia::guest::BlockDevice> GetBlockDevices() {
   TRACE_DURATION("linux_runner", "GetBlockDevices");
   auto file_handle = GetOrCreateStatefulPartition();
@@ -93,6 +109,15 @@ static fidl::VectorPtr<fuchsia::guest::BlockDevice> GetBlockDevices() {
       fuchsia::guest::BlockFormat::RAW,
       std::move(file_handle),
   });
+  auto extras_handle = GetExtrasPartition();
+  if (extras_handle) {
+    devices.push_back({
+        "extras",
+        fuchsia::guest::BlockMode::VOLATILE_WRITE,
+        fuchsia::guest::BlockFormat::RAW,
+        std::move(extras_handle),
+    });
+  }
   return devices;
 }
 
@@ -247,6 +272,31 @@ void Guest::StartGuest() {
         guest_cid_ = cid;
         TRACE_FLOW_BEGIN("linux_runner", "TerminaBoot", vm_ready_nonce_);
       });
+}
+
+void Guest::MountExtrasPartition() {
+  TRACE_DURATION("linux_runner", "Guest::MountExtrasPartition");
+  FXL_CHECK(maitred_)
+      << "Called MountExtrasPartition without a maitre'd connection";
+  FXL_LOG(INFO) << "Mounting Extras Partition";
+
+  grpc::ClientContext context;
+  vm_tools::MountRequest request;
+  vm_tools::MountResponse response;
+
+  request.mutable_source()->assign("/dev/vdc");
+  request.mutable_target()->assign("/mnt/shared");
+  request.mutable_fstype()->assign("ext2");
+  request.mutable_options()->assign("");
+  request.set_mountflags(0);
+
+  {
+    TRACE_DURATION("linux_runner", "MountRPC");
+    auto grpc_status = maitred_->Mount(&context, request, &response);
+    FXL_CHECK(grpc_status.ok())
+        << "Failed to mount extras filesystem: " << grpc_status.error_message();
+  }
+  FXL_LOG(INFO) << "Mounted Filesystem: " << response.error();
 }
 
 void Guest::ConfigureNetwork() {
@@ -576,6 +626,7 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context,
     LaunchVmShell();
   }
   if (!vm_only) {
+    MountExtrasPartition();
     ConfigureNetwork();
     StartTermina();
   }

@@ -5,6 +5,8 @@
 import("//build/package.gni")
 import("//third_party/protobuf/proto_library.gni")
 
+extras_image = "$target_out_dir/linux/extras.img"
+
 declare_args() {
   # Default values for the guest network configuration.
   #
@@ -15,6 +17,13 @@ declare_args() {
   linux_runner_ip = "10.0.0.2"
   linux_runner_gateway = "10.0.0.1"
   linux_runner_netmask = "255.255.255.0"
+
+  # If `true`, the extras.img will be built and mounted inside the container
+  # at /mnt/chromeos.
+  #
+  # This is useful for including some GN-built binaries into the guest image
+  # without modifying the termina images.
+  linux_runner_extras = false
 }
 
 config("linux_runner_net_config") {
@@ -80,6 +89,24 @@ proto_library("protos") {
   ]
 }
 
+action("extras") {
+  visibility = [ ":*" ]
+  script = "mkextras.sh"
+
+  deps = [
+    "//third_party/mesa/src/intel/vulkan:vulkan_intel_linux(//build/toolchain:linux_x64-shared)",
+  ]
+
+  args = [
+    rebase_path(extras_image),
+    rebase_path("${root_build_dir}/linux_x64-shared/libvulkan_intel_linux.so"),
+  ]
+
+  outputs = [
+    extras_image,
+  ]
+}
+
 executable("bin") {
   output_name = "linux_runner"
 
@@ -105,4 +132,14 @@ package("linux_runner") {
       dest = "linux_runner.cmx"
     },
   ]
+
+  if (linux_runner_extras) {
+    deps += [ ":extras" ]
+    resources = [
+      {
+        path = extras_image
+        dest = "extras.img"
+      },
+    ]
+  }
 }
