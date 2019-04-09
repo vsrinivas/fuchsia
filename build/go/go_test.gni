@@ -14,11 +14,18 @@ import("//build/testing/test_spec.gni")
 #     Type: bool
 #     Default: false
 #
+#   resources
+#     Optional: Defines the resources that the test needs as runtime
+#     dependencies.
+#     See //build/testing/test_spec.gni for more details
+#     Type: list(scope)
+#
 #   environments
 #     Optional: what environments this test should target. Only used here
 #     for linux and mac tests, with a default value of a general linux/mac
 #     environment (as a function of $current_os).
 #     See //build/testing/test_spec.gni for more details.
+#     Type: list(scope)
 #
 template("go_test") {
   _main_target_name = target_name
@@ -45,7 +52,11 @@ template("go_test") {
       if (defined(invoker.non_go_deps)) {
         deps += invoker.non_go_deps
       }
-      forward_variables_from(invoker, [ "environments" ])
+      forward_variables_from(invoker,
+                             [
+                               "environments",
+                               "resources",
+                             ])
     }
   }
 
@@ -56,6 +67,7 @@ template("go_test") {
                            [
                              "disabled",
                              "environments",
+                             "resources",
                            ])
 
     if (_include_test_metadata) {

@@ -8,11 +8,18 @@ import("//build/testing/test_spec.gni")
 #
 # The parameters are precisely those of an `executable`, along with
 #
+# resources
+#   Optional: Defines the resources that the test needs as runtime
+#   dependencies. Only used for linux and mac tests.
+#   See //build/testing/test_spec.gni for more details
+#   Type: list(scope)
+#
 # environments
 #   Optional: What environments this test should target. Only used here for
-#     linux and mac tests, with a default value of a general linux/mac
-#     environment (as a function of $current_os).
-#     See //build/testing/test_spec.gni for more details.
+#   linux and mac tests, with a default value of a general linux/mac
+#   environment (as a function of $current_os).
+#   See //build/testing/test_spec.gni for more details.
+#   Type: list(scope)
 #
 template("test") {
   if (is_linux || is_mac) {
@@ -27,11 +34,18 @@ template("test") {
       if (defined(invoker.data_deps)) {
         deps += invoker.data_deps
       }
-      forward_variables_from(invoker, [ "environments" ])
+      forward_variables_from(invoker,
+                             [
+                               "environments",
+                               "resources",
+                             ])
     }
   } else {
     if (defined(invoker.environments)) {
       not_needed(invoker, [ "environments" ])
+    }
+    if (defined(invoker.resources)) {
+      not_needed(invoker, [ "resources" ])
     }
   }
 
