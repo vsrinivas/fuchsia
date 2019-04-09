@@ -932,63 +932,54 @@ static bool path_is_child(const char* parent_path, const char* child_path) {
             (child_path[parent_length] == 0 || child_path[parent_length] == '/'));
 }
 
-zx_status_t Coordinator::GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
-                                     size_t buflen, size_t* actual) {
+zx_status_t Coordinator::GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type,
+                                            void* buffer, size_t buflen, size_t* size) {
     // search dev and its parent devices for a match
     fbl::RefPtr<Device> test = dev;
-    while (test) {
+    while (true) {
         for (const auto& md : test->metadata) {
             if (md.type == type) {
-                if (md.length > buflen) {
-                    return ZX_ERR_BUFFER_TOO_SMALL;
+                if (buffer != nullptr) {
+                    if (md.length > buflen) {
+                        return ZX_ERR_BUFFER_TOO_SMALL;
+                    }
+                    memcpy(buffer, md.Data(), md.length);
                 }
-                memcpy(buffer, md.Data(), md.length);
-                *actual = md.length;
+                *size = md.length;
                 return ZX_OK;
             }
+        }
+        if (test->parent() == nullptr) {
+            break;
         }
         test = test->parent();
     }
 
-    // if no metadata is found, check list of metadata added via device_publish_metadata()
-    char path[fuchsia_device_manager_DEVICE_PATH_MAX];
-    zx_status_t status = GetTopologicalPath(dev, path, sizeof(path));
-    if (status != ZX_OK) {
-        return status;
-    }
-
-    for (const auto& md : published_metadata_) {
-        const char* md_path = md.Data() + md.length;
-        if (md.type == type && path_is_child(md_path, path)) {
-            if (md.length > buflen) {
-                return ZX_ERR_BUFFER_TOO_SMALL;
+    // search components of composite devices
+    if (test->composite()) {
+        for (auto& component : test->composite()->bound_components()) {
+           auto dev = component.bound_device();
+            if (dev != nullptr) {
+                if (GetMetadataRecurse(dev, type, buffer, buflen, size) == ZX_OK) {
+                    return ZX_OK;
+                }
             }
-            memcpy(buffer, md.Data(), md.length);
-            *actual = md.length;
-            return ZX_OK;
         }
     }
 
     return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t Coordinator::GetMetadataSize(const fbl::RefPtr<Device>& dev, uint32_t type,
-                                         size_t* size) {
-    // search dev and its parent devices for a match
-    fbl::RefPtr<Device> test = dev;
-    while (test) {
-        for (const auto& md : test->metadata) {
-            if (md.type == type) {
-                *size = md.length;
-                return ZX_OK;
-            }
-        }
-        test = test->parent();
+zx_status_t Coordinator::GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
+                                     size_t buflen, size_t* size) {
+    auto status = GetMetadataRecurse(dev, type, buffer, buflen, size);
+    if (status == ZX_OK) {
+        return ZX_OK;
     }
 
     // if no metadata is found, check list of metadata added via device_publish_metadata()
     char path[fuchsia_device_manager_DEVICE_PATH_MAX];
-    zx_status_t status = GetTopologicalPath(dev, path, sizeof(path));
+    status = GetTopologicalPath(dev, path, sizeof(path));
     if (status != ZX_OK) {
         return status;
     }
@@ -996,6 +987,12 @@ zx_status_t Coordinator::GetMetadataSize(const fbl::RefPtr<Device>& dev, uint32_
     for (const auto& md : published_metadata_) {
         const char* md_path = md.Data() + md.length;
         if (md.type == type && path_is_child(md_path, path)) {
+            if (buffer != nullptr) {
+                if (md.length > buflen) {
+                    return ZX_ERR_BUFFER_TOO_SMALL;
+                }
+                memcpy(buffer, md.Data(), md.length);
+            }
             *size = md.length;
             return ZX_OK;
         }

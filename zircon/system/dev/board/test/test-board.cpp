@@ -13,6 +13,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <fbl/algorithm.h>
@@ -122,11 +123,23 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
         { fbl::count_of(i2c_component), i2c_component },
     };
 
+    const uint32_t test_metadata_value = 12345;
+
+    const pbus_metadata_t test_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = &test_metadata_value,
+            .data_size = sizeof(test_metadata_value),
+        }
+    };
+
     pbus_dev_t pdev = {};
     pdev.name = "composite-dev";
     pdev.vid = PDEV_VID_TEST;
     pdev.pid = PDEV_PID_PBUS_TEST;
     pdev.did = PDEV_DID_TEST_COMPOSITE;
+    pdev.metadata_list = test_metadata;
+    pdev.metadata_count = fbl::count_of(test_metadata);
 
     status = pbus_composite_device_add(&pbus, &pdev, composite, fbl::count_of(composite));
     if (status != ZX_OK) {

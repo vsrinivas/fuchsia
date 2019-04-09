@@ -9,6 +9,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/clock.h>
 #include <ddk/protocol/composite.h>
@@ -197,6 +198,23 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
         zxlogf(ERROR, "%s: device_add failed: %d\n", DRIVER_NAME, status);
         free(test);
         return status;
+    }
+
+    // Make sure we can read metadata added to a component.
+    size_t size;
+    uint32_t value;
+    status = device_get_metadata_size(test->zxdev, DEVICE_METADATA_PRIVATE, &size);
+    if (status != ZX_OK || size != sizeof(value)) {
+        zxlogf(ERROR, "%s: device_get_metadata_size failed: %d\n", DRIVER_NAME, status);
+        device_remove(test->zxdev);
+        return ZX_ERR_INTERNAL;
+    }
+    status = device_get_metadata(test->zxdev, DEVICE_METADATA_PRIVATE, &value, sizeof(value),
+                                 &size);
+    if (status != ZX_OK || size != sizeof(value) || value != 12345) {
+        zxlogf(ERROR, "%s: device_get_metadata failed: %d\n", DRIVER_NAME, status);
+        device_remove(test->zxdev);
+        return ZX_ERR_INTERNAL;
     }
 
     return ZX_OK;

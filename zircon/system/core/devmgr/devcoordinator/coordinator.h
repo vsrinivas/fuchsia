@@ -196,8 +196,10 @@ public:
                              size_t* size);
 
     zx_status_t GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
-                            size_t buflen, size_t* actual);
-    zx_status_t GetMetadataSize(const fbl::RefPtr<Device>& dev, uint32_t type, size_t* size);
+                            size_t buflen, size_t* size);
+    zx_status_t GetMetadataSize(const fbl::RefPtr<Device>& dev, uint32_t type, size_t* size) {
+        return GetMetadata(dev, type, nullptr, 0, size);
+    }
     zx_status_t AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, const void* data,
                             uint32_t length);
     zx_status_t PublishMetadata(const fbl::RefPtr<Device>& dev, const char* path, uint32_t type,
@@ -329,6 +331,9 @@ private:
     zx_status_t AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev);
     void BindSystemDrivers();
     void DriverAddedSys(Driver* drv, const char* version);
+
+    zx_status_t GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
+                                   size_t buflen, size_t* size);
 };
 
 bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,

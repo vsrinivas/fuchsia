@@ -150,10 +150,12 @@ public:
         static fbl::DoublyLinkedListNodeState<std::unique_ptr<CompositeDevice>>&
                 node_state(CompositeDevice& obj) { return obj.node_; }
     };
-private:
+
     using ComponentList = fbl::DoublyLinkedList<std::unique_ptr<CompositeDeviceComponent>,
           CompositeDeviceComponent::Node>;
+    ComponentList& bound_components() { return bound_; }
 
+private:
     const fbl::String name_;
     const fbl::Array<const zx_device_prop_t> properties_;
     const uint32_t components_count_;
