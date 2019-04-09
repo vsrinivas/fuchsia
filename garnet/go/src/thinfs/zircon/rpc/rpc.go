@@ -74,7 +74,11 @@ func (vfs *ThinVFS) addDirectory(dir fs.Directory, node io.NodeInterfaceRequest)
 	tok, err := d.vfs.DirectoryService.Add(
 		d,
 		(fidl.InterfaceRequest(node)).Channel,
-		nil,
+		func(err error) {
+			vfs.Lock()
+			defer vfs.Unlock()
+			delete(vfs.dirs, d.token)
+		},
 	)
 	if err != nil {
 		return 0, err
