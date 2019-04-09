@@ -241,7 +241,7 @@ func (s *State) updateStateTCP(dir Direction, dataLen uint16, win uint16, seq, a
 	// IV.  ack >= dstEp.seqLo - TCPMaxAckWindow
 	if !end.LessThanEq(srcEp.seqHi) ||
 		!seq.GreaterThanEq(srcEp.seqLo.Sub(uint32(dstEp.maxWin)<<dws)) ||
-		ackskew < -TCPMaxAckWindow ||
+		ackskew < -(TCPMaxAckWindow<<dws) ||
 		ackskew > (TCPMaxAckWindow<<dws) {
 		return ErrBadTCPState
 	}
