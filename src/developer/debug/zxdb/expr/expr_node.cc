@@ -362,6 +362,51 @@ void MemberAccessExprNode::Print(std::ostream& out, int indent) const {
   out << IndentFor(indent + 1) << member_.GetFullName() << "\n";
 }
 
+void SizeofExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
+                          EvalCallback cb) const {
+  if (const TypeExprNode* type_node =
+          const_cast<ExprNode*>(expr_.get())->AsType()) {
+    // Types just get used directly.
+    SizeofType(type_node->type().get(), std::move(cb));
+  } else {
+    // Everything else gets evaluated. Strictly C++ won't do this because it's
+    // statically typed, but our expression system is not. This doesn't need to
+    // follow references because we only need the type and the
+    expr_->Eval(std::move(context),
+                [cb = std::move(cb)](const Err& err, ExprValue value) {
+                  if (err.has_error())
+                    cb(err, ExprValue());
+                  else
+                    SizeofType(value.type(), std::move(cb));
+                });
+  }
+}
+
+void SizeofExprNode::Print(std::ostream& out, int indent) const {
+  out << IndentFor(indent) << "SIZEOF\n";
+  expr_->Print(out, indent + 1);
+}
+
+// static
+void SizeofExprNode::SizeofType(const Type* in_type, EvalCallback cb) {
+  // References should get stripped (sizeof(char&) = 1).
+  if (!in_type) {
+    cb(Err("Can't do sizeof on a null type."), ExprValue());
+    return;
+  }
+
+  const Type* type = in_type->GetConcreteType();
+  if (DwarfTagIsEitherReference(type->tag()))
+    type = type->AsModifiedType()->modified().Get()->AsType();
+  if (!type) {
+    cb(Err("Symbol error for '%s'.", in_type->GetFullName().c_str()),
+       ExprValue());
+    return;
+  }
+
+  cb(Err(), ExprValue(type->byte_size()));
+}
+
 void TypeExprNode::Eval(fxl::RefPtr<ExprEvalContext> context,
                         EvalCallback cb) const {
   // Doesn't make sense to evaluate a type, callers like casts that expect a

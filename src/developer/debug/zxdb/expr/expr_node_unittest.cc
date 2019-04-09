@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/expr/expr_node.h"
+
 #include <map>
 #include <type_traits>
 
@@ -11,7 +13,6 @@
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/eval_test_support.h"
 #include "src/developer/debug/zxdb/expr/expr_eval_context.h"
-#include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/mock_expr_eval_context.h"
 #include "src/developer/debug/zxdb/expr/mock_expr_node.h"
@@ -492,6 +493,56 @@ TEST_F(ExprNodeTest, Cast) {
   // Should have converted to the Base2 value.
   EXPECT_FALSE(out_err.has_error()) << out_err.msg();
   EXPECT_EQ(d.base2_value, out_value);
+}
+
+TEST_F(ExprNodeTest, Sizeof) {
+  auto context = fxl::MakeRefCounted<MockExprEvalContext>();
+
+  // References on raw types should be stripped. Make a one-byte sized type and
+  // an 8-byte reference to it.
+  auto char_type =
+      fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char");
+  auto char_ref_type = fxl::MakeRefCounted<ModifiedType>(
+      DwarfTag::kReferenceType, LazySymbol(char_type));
+  EXPECT_EQ(8u, char_ref_type->byte_size());
+
+  auto char_ref_type_node = fxl::MakeRefCounted<TypeExprNode>(char_ref_type);
+  auto sizeof_char_ref_type =
+      fxl::MakeRefCounted<SizeofExprNode>(char_ref_type_node);
+
+  bool called = false;
+  sizeof_char_ref_type->Eval(context, [&called](const Err& err, ExprValue v) {
+    EXPECT_FALSE(err.has_error());
+
+    // Should have retrieved the size of the char, not the reference itself.
+    uint64_t sizeof_value = 0;
+    EXPECT_FALSE(v.PromoteTo64(&sizeof_value).has_error());
+    EXPECT_EQ(1u, sizeof_value);
+
+    called = true;
+  });
+  EXPECT_TRUE(called);  // Make sure callback executed.
+
+  // Test sizeof() for an asynchronously-executed boolean value.
+  auto char_value_node =
+      fxl::MakeRefCounted<MockExprNode>(false, ExprValue(true));
+  auto sizeof_char = fxl::MakeRefCounted<SizeofExprNode>(char_value_node);
+
+  called = false;
+  sizeof_char->Eval(context, [&called](const Err& err, ExprValue v) {
+    EXPECT_FALSE(err.has_error());
+
+    // Should have retrieved the size of the char.
+    uint64_t sizeof_value = 0;
+    EXPECT_FALSE(v.PromoteTo64(&sizeof_value).has_error());
+    EXPECT_EQ(1u, sizeof_value);
+
+    called = true;
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
+
+  loop().Run();
+  EXPECT_TRUE(called);  // Make sure callback executed.
 }
 
 }  // namespace zxdb

@@ -115,6 +115,7 @@ class ExprParser {
   fxl::RefPtr<ExprNode> NamePrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> StarPrefix(const ExprToken& token);
   fxl::RefPtr<ExprNode> CastPrefix(const ExprToken& token);
+  fxl::RefPtr<ExprNode> SizeofPrefix(const ExprToken& token);
 
   // Returns true if the next token is the given type.
   bool LookAhead(ExprTokenType type) const;

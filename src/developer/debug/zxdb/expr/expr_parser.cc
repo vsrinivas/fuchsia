@@ -119,6 +119,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::NamePrefix,      nullptr,                      -1},                     // kRestrict
     {&ExprParser::CastPrefix,      nullptr,                      -1},                     // kReinterpretCast
     {&ExprParser::CastPrefix,      nullptr,                      -1},                     // kStaticCast
+    {&ExprParser::SizeofPrefix,    nullptr,                      -1},                     // kSizeof
 };
 // clang-format on
 
@@ -768,6 +769,26 @@ fxl::RefPtr<ExprNode> ExprParser::CastPrefix(const ExprToken& token) {
   return fxl::MakeRefCounted<CastExprNode>(
       cast_type, fxl::MakeRefCounted<TypeExprNode>(std::move(dest_type)),
       std::move(expr));
+}
+
+fxl::RefPtr<ExprNode> ExprParser::SizeofPrefix(const ExprToken& token) {
+  // "(" containing expression.
+  ExprToken left_paren =
+      Consume(ExprTokenType::kLeftParen, "Expected '(' for cast.");
+  if (has_error())
+    return nullptr;
+
+  // Expression to be sized.
+  fxl::RefPtr<ExprNode> expr = ParseExpression(0);
+  if (has_error())
+    return nullptr;
+
+  // ")" at end.
+  Consume(ExprTokenType::kRightParen, "Expected ')' to match.", left_paren);
+  if (has_error())
+    return nullptr;
+
+  return fxl::MakeRefCounted<SizeofExprNode>(std::move(expr));
 }
 
 bool ExprParser::LookAhead(ExprTokenType type) const {

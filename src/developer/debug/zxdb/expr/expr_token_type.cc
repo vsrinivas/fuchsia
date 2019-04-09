@@ -67,6 +67,7 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kRestrict,        "restrict"},
     {ExprTokenType::kReinterpretCast, "reinterpret_cast"},
     {ExprTokenType::kStaticCast,      "static_cast"},
+    {ExprTokenType::kSizeof,          "sizeof"},
     // clang-format on
 };
 

@@ -31,6 +31,7 @@ class FunctionCallExprNode;
 class IdentifierExprNode;
 class LiteralExprNode;
 class MemberAccessExprNode;
+class SizeofExprNode;
 class TypeExprNode;
 class UnaryOpExprNode;
 
@@ -51,6 +52,7 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const IdentifierExprNode* AsIdentifier() const { return nullptr; }
   virtual const LiteralExprNode* AsLiteral() const { return nullptr; }
   virtual const MemberAccessExprNode* AsMemberAccess() const { return nullptr; }
+  virtual const SizeofExprNode* AsSizeof() const { return nullptr; }
   virtual const TypeExprNode* AsType() const { return nullptr; }
   virtual const UnaryOpExprNode* AsUnaryOp() const { return nullptr; }
 
@@ -324,6 +326,26 @@ class MemberAccessExprNode : public ExprNode {
   fxl::RefPtr<ExprNode> left_;
   ExprToken accessor_;
   Identifier member_;
+};
+
+class SizeofExprNode : public ExprNode {
+ public:
+  const SizeofExprNode* AsSizeof() const override { return this; }
+  void Eval(fxl::RefPtr<ExprEvalContext> context,
+            EvalCallback cb) const override;
+  void Print(std::ostream& out, int indent) const override;
+
+ private:
+  FRIEND_REF_COUNTED_THREAD_SAFE(SizeofExprNode);
+  FRIEND_MAKE_REF_COUNTED(SizeofExprNode);
+
+  SizeofExprNode();
+  SizeofExprNode(fxl::RefPtr<ExprNode> expr) : expr_(std::move(expr)) {}
+  ~SizeofExprNode() override = default;
+
+  static void SizeofType(const Type* type, EvalCallback cb);
+
+  fxl::RefPtr<ExprNode> expr_;
 };
 
 // Implements references to type names. This mostly appears in casts.

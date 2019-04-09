@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/expr/expr_parser.h"
+
 #include <sstream>
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
-#include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 
@@ -547,11 +548,11 @@ TEST_F(ExprParserTest, Types) {
 
   // Try sizeof() with both a type and a non-type.
   EXPECT_EQ(
-      "FUNCTIONCALL(\"sizeof\")\n"
+      "SIZEOF\n"
       " TYPE(Type*)\n",
       GetParseString("sizeof(Type*)", &TestLookupName));
   EXPECT_EQ(
-      "FUNCTIONCALL(\"sizeof\")\n"
+      "SIZEOF\n"
       " IDENTIFIER(\"foo\")\n",
       GetParseString("sizeof(foo)", &TestLookupName));
 }

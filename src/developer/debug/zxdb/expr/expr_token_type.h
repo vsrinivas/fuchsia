@@ -42,6 +42,7 @@ enum class ExprTokenType : size_t {
   kRestrict,         // restrict
   kReinterpretCast,  // reinterpret_cast
   kStaticCast,       // static_cast
+  kSizeof,           // sizeof
 
   // Keep last. Not a token, but the count of tokens.
   kNumTypes
