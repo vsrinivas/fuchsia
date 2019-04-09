@@ -183,11 +183,8 @@ type installFile struct {
 
 func (f *installFile) reportBlobError(err error) {
 	// Out-of-space is the only error we care to report.
-	switch err := err.(type) {
-	case *zx.Error:
-		if err.Status == zx.ErrNoSpace {
-			f.fs.index.InstallingFailedForBlob(f.name, err)
-		}
+	if err, ok := err.(*zx.Error); ok && err.Status == zx.ErrNoSpace {
+		f.fs.index.InstallingFailedForBlob(f.name, err.Status)
 	}
 }
 

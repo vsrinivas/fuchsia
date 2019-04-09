@@ -151,7 +151,7 @@ func (idx *DynamicIndex) UpdateInstalling(root string, p pkg.Package) {
 // InstallingFailedForBlob notifies amber that blob install failed for a package.
 // It does not actually stop the package's installation for the other blobs; the choice
 // to retry the package installation is left up to amber.
-func (idx *DynamicIndex) InstallingFailedForBlob(blobRoot string, err error) {
+func (idx *DynamicIndex) InstallingFailedForBlob(blobRoot string, status zx.Status) {
 	idx.mu.Lock()
 	defer idx.mu.Unlock()
 
@@ -161,13 +161,6 @@ func (idx *DynamicIndex) InstallingFailedForBlob(blobRoot string, err error) {
 		pkgRoots = append(pkgRoots, p)
 	}
 
-	// `err` should be a zx.Error, but fall back to a generic error code
-	// in case it's not.
-	status := zx.ErrInternal
-	switch err := err.(type) {
-	case *zx.Error:
-		status = err.Status
-	}
 	idx.amberClient.PackagesFailed(pkgRoots, status, blobRoot)
 }
 

@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"syscall/zx"
 	"syscall/zx/fidl"
-	"syscall/zx/mxerror"
 	"syscall/zx/mxnet"
 	"syscall/zx/zxwait"
 
@@ -77,43 +76,48 @@ func (ios *iostate) loopWrite() error {
 		// as the lifecycle of this buffer.View starts here, and
 		// ends in nearby code we control in link.go.
 		v := make([]byte, 0, 2048)
-		switch n, err := ios.dataHandle.Read(v[:cap(v)], 0); mxerror.Status(err) {
-		case zx.ErrOk:
-			// Success. Pass the data to the endpoint and loop.
-			v = v[:n]
-		case zx.ErrBadState:
-			// Reading has been disabled for this socket endpoint.
-			if err := ios.ep.Shutdown(tcpip.ShutdownWrite); err != nil && err != tcpip.ErrNotConnected {
-				return fmt.Errorf("Endpoint.Shutdown(ShutdownWrite): %s", err)
-			}
-			return nil
-		case zx.ErrShouldWait:
-			switch obs, err := zxwait.Wait(zx.Handle(ios.dataHandle), sigs, zx.TimensecInfinite); mxerror.Status(err) {
-			case zx.ErrOk:
-				switch {
-				case obs&zx.SignalSocketReadDisabled != 0:
-					// The next Read will return zx.BadState.
-					continue
-				case obs&zx.SignalSocketReadable != 0:
-					// The client might have written some data into the socket.
-					// Always continue to the 'for' loop below and try to read them
-					// even if the signals show the client has closed the dataHandle.
-					continue
-				case obs&zx.SignalSocketPeerClosed != 0:
+		n, err := ios.dataHandle.Read(v[:cap(v)], 0)
+		if err != nil {
+			if err, ok := err.(*zx.Error); ok {
+				switch err.Status {
+				case zx.ErrPeerClosed:
 					return nil
-				case obs&localSignalClosing != 0:
+				case zx.ErrBadState:
+					// Reading has been disabled for this socket endpoint.
+					if err := ios.ep.Shutdown(tcpip.ShutdownWrite); err != nil && err != tcpip.ErrNotConnected {
+						return fmt.Errorf("Endpoint.Shutdown(ShutdownWrite): %s", err)
+					}
 					return nil
+				case zx.ErrShouldWait:
+					obs, err := zxwait.Wait(zx.Handle(ios.dataHandle), sigs, zx.TimensecInfinite)
+					if err != nil {
+						if err, ok := err.(*zx.Error); ok {
+							switch err.Status {
+							case zx.ErrCanceled:
+								return nil
+							}
+						}
+						panic(err)
+					}
+					switch {
+					case obs&zx.SignalSocketReadDisabled != 0:
+						// The next Read will return zx.BadState.
+						continue
+					case obs&zx.SignalSocketReadable != 0:
+						// The client might have written some data into the socket.
+						// Always continue to the 'for' loop below and try to read them
+						// even if the signals show the client has closed the dataHandle.
+						continue
+					case obs&zx.SignalSocketPeerClosed != 0:
+						return nil
+					case obs&localSignalClosing != 0:
+						return nil
+					}
 				}
-			case zx.ErrCanceled:
-				return nil
-			default:
-				panic(err)
 			}
-		case zx.ErrPeerClosed:
-			return nil
-		default:
 			panic(err)
 		}
+		v = v[:n]
 
 		var opts tcpip.WriteOptions
 		if ios.transProto != tcp.ProtocolNumber {
@@ -209,11 +213,13 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 					ios.incomingAssertedMu.Lock()
 					err := ios.dataHandle.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
 					ios.incomingAssertedMu.Unlock()
-					switch mxerror.Status(err) {
-					case zx.ErrOk:
-					case zx.ErrBadHandle, zx.ErrPeerClosed:
-						return nil
-					default:
+					if err != nil {
+						if err, ok := err.(*zx.Error); ok {
+							switch err.Status {
+							case zx.ErrBadHandle, zx.ErrPeerClosed:
+								return nil
+							}
+						}
 						panic(err)
 					}
 					continue
@@ -231,11 +237,13 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 					signals |= mxnet.MXSIO_SIGNAL_CONNECTED
 				}
 
-				switch err := ios.dataHandle.Handle().SignalPeer(0, signals); mxerror.Status(err) {
-				case zx.ErrOk:
-				case zx.ErrBadHandle, zx.ErrPeerClosed:
-					return nil
-				default:
+				if err := ios.dataHandle.Handle().SignalPeer(0, signals); err != nil {
+					if err, ok := err.(*zx.Error); ok {
+						switch err.Status {
+						case zx.ErrBadHandle, zx.ErrPeerClosed:
+							return nil
+						}
+					}
 					panic(err)
 				}
 			}
@@ -279,45 +287,52 @@ func (ios *iostate) loopRead(inCh <-chan struct{}) error {
 
 	writeLoop:
 		for {
-			switch n, err := ios.dataHandle.Write(v, 0); mxerror.Status(err) {
-			case zx.ErrOk:
-				if ios.transProto != tcp.ProtocolNumber {
-					if n < len(v) {
-						panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
+			n, err := ios.dataHandle.Write(v, 0)
+			if err != nil {
+				if err, ok := err.(*zx.Error); ok {
+					switch err.Status {
+					case zx.ErrBadHandle, zx.ErrPeerClosed:
+						return nil
+					case zx.ErrBadState:
+						// Writing has been disabled for this socket endpoint.
+						if err := ios.ep.Shutdown(tcpip.ShutdownRead); err != nil {
+							return fmt.Errorf("Endpoint.Shutdown(ShutdownRead): %s", err)
+						}
+						return nil
+					case zx.ErrShouldWait:
+						obs, err := zxwait.Wait(zx.Handle(ios.dataHandle), sigs, zx.TimensecInfinite)
+						if err != nil {
+							if err, ok := err.(*zx.Error); ok {
+								switch err.Status {
+								case zx.ErrBadHandle, zx.ErrCanceled:
+									return nil
+								}
+							}
+							panic(err)
+						}
+						switch {
+						case obs&zx.SignalSocketWriteDisabled != 0:
+							// The next Write will return zx.BadState.
+							continue
+						case obs&zx.SignalSocketWritable != 0:
+							continue
+						case obs&zx.SignalSocketPeerClosed != 0:
+							return nil
+						case obs&localSignalClosing != 0:
+							return nil
+						}
 					}
 				}
-				v = v[n:]
-				if len(v) == 0 {
-					break writeLoop
-				}
-			case zx.ErrBadState:
-				// Writing has been disabled for this socket endpoint.
-				if err := ios.ep.Shutdown(tcpip.ShutdownRead); err != nil {
-					return fmt.Errorf("Endpoint.Shutdown(ShutdownRead): %s", err)
-				}
-				return nil
-			case zx.ErrShouldWait:
-				switch obs, err := zxwait.Wait(zx.Handle(ios.dataHandle), sigs, zx.TimensecInfinite); mxerror.Status(err) {
-				case zx.ErrOk:
-					switch {
-					case obs&zx.SignalSocketWriteDisabled != 0:
-					// The next Write will return zx.BadState.
-					case obs&zx.SignalSocketWritable != 0:
-						continue
-					case obs&zx.SignalSocketPeerClosed != 0:
-						return nil
-					case obs&localSignalClosing != 0:
-						return nil
-					}
-				case zx.ErrBadHandle, zx.ErrCanceled:
-					return nil
-				default:
-					panic(err)
-				}
-			case zx.ErrBadHandle, zx.ErrPeerClosed:
-				return nil
-			default:
 				panic(err)
+			}
+			if ios.transProto != tcp.ProtocolNumber {
+				if n < len(v) {
+					panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
+				}
+			}
+			v = v[n:]
+			if len(v) == 0 {
+				break writeLoop
 			}
 		}
 	}
@@ -339,62 +354,94 @@ func (ios *iostate) loopControl() error {
 	stub := net.SocketControlStub{Impl: ios}
 	var respb [zx.ChannelMaxMessageBytes]byte
 	for {
-		switch err := func() error {
-			nb, err := ios.dataHandle.Read(respb[:], zx.SocketControl)
-			if err != nil {
-				return err
-			}
-
-			msg := respb[:nb]
-			var header fidl.MessageHeader
-			if err := fidl.UnmarshalHeader(msg, &header); err != nil {
-				return err
-			}
-
-			p, err := stub.Dispatch(header.Ordinal, msg[fidl.MessageHeaderSize:], nil)
-			if err != nil {
-				return err
-			}
-			cnb, _, err := fidl.MarshalMessage(&header, p, respb[:], nil)
-			if err != nil {
-				return err
-			}
-			respb := respb[:cnb]
-			for len(respb) > 0 {
-				if n, err := ios.dataHandle.Write(respb, zx.SocketControl); err != nil {
-					return err
-				} else {
-					respb = respb[n:]
+		nb, err := ios.dataHandle.Read(respb[:], zx.SocketControl)
+		if err != nil {
+			if err, ok := err.(*zx.Error); ok {
+				switch err.Status {
+				case zx.ErrBadState:
+					return nil // This side of the socket is closed.
+				case zx.ErrPeerClosed:
+					return nil
+				case zx.ErrShouldWait:
+					obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
+						zx.SignalSocketControlReadable|zx.SignalSocketPeerClosed|localSignalClosing,
+						zx.TimensecInfinite)
+					if err != nil {
+						if err, ok := err.(*zx.Error); ok {
+							switch err.Status {
+							case zx.ErrCanceled:
+								return nil
+							}
+						}
+						panic(err)
+					}
+					switch {
+					case obs&zx.SignalSocketControlReadable != 0:
+						continue
+					case obs&localSignalClosing != 0:
+						return nil
+					case obs&zx.SignalSocketPeerClosed != 0:
+						return nil
+					}
 				}
 			}
-			return nil
-		}(); mxerror.Status(err) {
-		case zx.ErrOk:
-		case zx.ErrBadState:
-			return nil // This side of the socket is closed.
-		case zx.ErrPeerClosed:
-			return nil
-		case zx.ErrShouldWait:
-			obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
-				zx.SignalSocketControlReadable|zx.SignalSocketPeerClosed|localSignalClosing,
-				zx.TimensecInfinite)
-			switch mxerror.Status(err) {
-			case zx.ErrCanceled:
-				return nil
-			case zx.ErrOk:
-				switch {
-				case obs&zx.SignalSocketControlReadable != 0:
-					continue
-				case obs&localSignalClosing != 0:
-					return nil
-				case obs&zx.SignalSocketPeerClosed != 0:
-					return nil
+			panic(err)
+		}
+
+		msg := respb[:nb]
+		var header fidl.MessageHeader
+		if err := fidl.UnmarshalHeader(msg, &header); err != nil {
+			return err
+		}
+
+		p, err := stub.Dispatch(header.Ordinal, msg[fidl.MessageHeaderSize:], nil)
+		if err != nil {
+			return err
+		}
+		cnb, _, err := fidl.MarshalMessage(&header, p, respb[:], nil)
+		if err != nil {
+			return err
+		}
+		respb := respb[:cnb]
+		for {
+			n, err := ios.dataHandle.Write(respb, zx.SocketControl)
+			if err != nil {
+				if err, ok := err.(*zx.Error); ok {
+					switch err.Status {
+					case zx.ErrBadState:
+						return nil // This side of the socket is closed.
+					case zx.ErrPeerClosed:
+						return nil
+					case zx.ErrShouldWait:
+						obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
+							zx.SignalSocketControlWriteable|zx.SignalSocketPeerClosed|localSignalClosing,
+							zx.TimensecInfinite)
+						if err != nil {
+							if err, ok := err.(*zx.Error); ok {
+								switch err.Status {
+								case zx.ErrCanceled:
+									return nil
+								}
+								panic(err)
+							}
+							switch {
+							case obs&zx.SignalSocketControlWriteable != 0:
+								continue
+							case obs&localSignalClosing != 0:
+								return nil
+							case obs&zx.SignalSocketPeerClosed != 0:
+								return nil
+							}
+						}
+						panic(err)
+					}
 				}
-			default:
 				panic(err)
 			}
-		default:
-			panic(err)
+			if l := len(respb); n < l {
+				panic(fmt.Sprintf("writes to the control plane are never short: %d/%d", n, l))
+			}
+			break
 		}
 	}
 }
@@ -437,9 +484,13 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 		if err := ios.loopRead(inCh); err != nil {
 			logger.VLogf(logger.DebugVerbosity, "%p: loopRead: %s", ios, err)
 		}
-		switch err := ios.dataHandle.Shutdown(zx.SocketShutdownWrite); mxerror.Status(err) {
-		case zx.ErrOk, zx.ErrBadHandle:
-		default:
+		if err := ios.dataHandle.Shutdown(zx.SocketShutdownWrite); err != nil {
+			if err, ok := err.(*zx.Error); ok {
+				switch err.Status {
+				case zx.ErrBadHandle:
+					return
+				}
+			}
 			logger.Warnf("%p: %s", ios, err)
 		}
 	}()
@@ -449,9 +500,13 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 		if err := ios.loopWrite(); err != nil {
 			logger.VLogf(logger.DebugVerbosity, "%p: loopWrite: %s", ios, err)
 		}
-		switch err := ios.dataHandle.Shutdown(zx.SocketShutdownRead); mxerror.Status(err) {
-		case zx.ErrOk, zx.ErrBadHandle:
-		default:
+		if err := ios.dataHandle.Shutdown(zx.SocketShutdownRead); err != nil {
+			if err, ok := err.(*zx.Error); ok {
+				switch err.Status {
+				case zx.ErrBadHandle:
+					return
+				}
+			}
 			logger.Warnf("%p: %s", ios, err)
 		}
 	}()

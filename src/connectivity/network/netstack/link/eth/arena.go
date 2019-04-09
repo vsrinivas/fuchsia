@@ -73,7 +73,7 @@ func NewArena() (*Arena, error) {
 		a.mu.freebufs[i] = i
 	}
 	*(*reflect.SliceHeader)(unsafe.Pointer(&a.iobuf)) = reflect.SliceHeader{
-		Data: data,
+		Data: uintptr(data),
 		Len:  0,
 		Cap:  ioSize,
 	}

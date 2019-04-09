@@ -285,8 +285,7 @@ func (l *Logger) logf(callDepth int, logLevel LogLevel, tag string, format strin
 		return l.logToWriter(w.(io.Writer), time, logLevel, tag, msg)
 	} else {
 		if err := l.logToSocket(time, logLevel, tag, msg); err != nil {
-			switch err := err.(type) {
-			case *zx.Error:
+			if err, ok := err.(*zx.Error); ok {
 				switch err.Status {
 				case zx.ErrPeerClosed, zx.ErrBadState:
 					l.ActivateFallbackMode()

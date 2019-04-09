@@ -6,8 +6,6 @@ package eth
 
 import (
 	"syscall/zx"
-	"syscall/zx/mxerror"
-
 	"syslog/logger"
 
 	"github.com/google/netstack/tcpip"
@@ -79,18 +77,21 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 		if err := func() error {
 			for {
 				b, err := e.client.Recv()
-				switch mxerror.Status(err) {
-				case zx.ErrOk:
-					v := append(buffer.View(nil), b...)
-					e.client.Free(b)
-					eth := header.Ethernet(v)
-					v.TrimFront(header.EthernetMinimumSize)
-					dispatcher.DeliverNetworkPacket(e, eth.SourceAddress(), eth.DestinationAddress(), eth.Type(), v.ToVectorisedView())
-				case zx.ErrShouldWait:
-					e.client.WaitRecv()
-				default:
+				if err != nil {
+					if err, ok := err.(*zx.Error); ok {
+						switch err.Status {
+						case zx.ErrShouldWait:
+							e.client.WaitRecv()
+							continue
+						}
+					}
 					return err
 				}
+				v := append(buffer.View(nil), b...)
+				e.client.Free(b)
+				eth := header.Ethernet(v)
+				v.TrimFront(header.EthernetMinimumSize)
+				dispatcher.DeliverNetworkPacket(e, eth.SourceAddress(), eth.DestinationAddress(), eth.Type(), v.ToVectorisedView())
 			}
 		}(); err != nil {
 			logger.WarnTf("eth", "dispatch error: %s", err)

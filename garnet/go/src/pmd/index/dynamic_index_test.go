@@ -278,7 +278,7 @@ func TestFulfill(t *testing.T) {
 		}
 
 		// Fail blob with error. Causes package failure to be signaled.
-		idx.InstallingFailedForBlob("blob4", &zx.Error{Status: zx.ErrNoSpace})
+		idx.InstallingFailedForBlob("blob4", zx.ErrNoSpace)
 
 		wantFailed := []packageFailure{
 			{
