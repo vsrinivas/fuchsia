@@ -9,7 +9,6 @@
 
 #include <limits>
 
-#include "lib/media/timeline/timeline.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
@@ -75,7 +74,7 @@ void FidlVideoRenderer::Dump(std::ostream& os) const {
   os << fostr::NewLine << "flushed:               " << flushed_;
   os << fostr::NewLine << "flushing:              " << !!flush_callback_;
   os << fostr::NewLine << "presentation time:     "
-     << AsNs(current_timeline_function()(media::Timeline::local_now()));
+     << AsNs(current_timeline_function()(zx::clock::get_monotonic().get()));
   os << fostr::NewLine << "video size:            " << video_size().width << "x"
      << video_size().height;
   os << fostr::NewLine
@@ -163,7 +162,7 @@ void FidlVideoRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     return;
   }
 
-  int64_t now = media::Timeline::local_now();
+  int64_t now = zx::clock::get_monotonic().get();
 
   arrivals_.AddSample(now, current_timeline_function()(now), packet_pts_ns,
                       Progressing());
@@ -359,7 +358,7 @@ void FidlVideoRenderer::UpdateImages() {
 void FidlVideoRenderer::PresentBlackImage() {
   for (auto& [view_raw_ptr, view_unique_ptr] : views_) {
     view_raw_ptr->PresentBlackImage(kBlackImageId,
-                                    media::Timeline::local_now());
+                                    zx::clock::get_monotonic().get());
   }
 }
 

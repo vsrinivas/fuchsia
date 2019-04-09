@@ -8,7 +8,6 @@
 
 #include <algorithm>
 
-#include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_formatting.h"

@@ -11,7 +11,6 @@
 #include <iostream>
 #include <limits>
 
-#include "lib/media/timeline/timeline.h"
 #include "src/lib/fxl/logging.h"
 
 namespace media_player {
@@ -120,7 +119,7 @@ void FakeAudioRenderer::DiscardAllPacketsNoReply() {
 void FakeAudioRenderer::Play(int64_t reference_time, int64_t media_time,
                              PlayCallback callback) {
   if (reference_time == fuchsia::media::NO_TIMESTAMP) {
-    reference_time = media::Timeline::local_now();
+    reference_time = zx::clock::get_monotonic().get();
   }
 
   if (media_time == fuchsia::media::NO_TIMESTAMP) {
@@ -148,7 +147,7 @@ void FakeAudioRenderer::PlayNoReply(int64_t reference_time,
 }
 
 void FakeAudioRenderer::Pause(PauseCallback callback) {
-  int64_t reference_time = media::Timeline::local_now();
+  int64_t reference_time = zx::clock::get_monotonic().get();
   int64_t media_time = timeline_function_(reference_time);
   timeline_function_ =
       media::TimelineFunction(media_time, reference_time, 0, 1);
@@ -196,7 +195,7 @@ void FakeAudioRenderer::MaybeScheduleRetirement() {
         int64_t reference_time =
             timeline_function_.ApplyInverse(packet_queue_.front().first.pts);
 
-        if (reference_time <= media::Timeline::local_now()) {
+        if (reference_time <= zx::clock::get_monotonic().get()) {
           packet_queue_.front().second();
           packet_queue_.pop();
         }

@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include "garnet/drivers/virtual_camera/virtual_camera_device.h"
+
 #include "garnet/drivers/virtual_camera/virtual_camera_control.h"
+#include "src/lib/fxl/logging.h"
 
 namespace virtual_camera {
 

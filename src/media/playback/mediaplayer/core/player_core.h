@@ -11,7 +11,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "src/media/playback/mediaplayer/core/sink_segment.h"
 #include "src/media/playback/mediaplayer/core/source_segment.h"
@@ -137,7 +136,7 @@ class PlayerCore {
   void Dump(std::ostream& os) const;
 
  private:
-  static constexpr int64_t kMinimumLeadTime = media::Timeline::ns_from_ms(30);
+  static constexpr int64_t kMinimumLeadTime = ZX_MSEC(30);
 
   struct Stream {
     std::unique_ptr<SinkSegment> sink_segment_;

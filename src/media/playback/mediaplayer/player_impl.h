@@ -14,7 +14,6 @@
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
-#include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_function.h"
 #include "src/media/playback/mediaplayer/core/player_core.h"
 #include "src/media/playback/mediaplayer/decode/decoder.h"
@@ -102,7 +101,7 @@ class PlayerImpl : public fuchsia::media::playback::Player {
           returned_source_request) override;
 
  private:
-  static constexpr int64_t kMinimumLeadTime = media::Timeline::ns_from_ms(30);
+  static constexpr int64_t kMinimumLeadTime = ZX_MSEC(30);
 
   // Internal state.
   enum class State {

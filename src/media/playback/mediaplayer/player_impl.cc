@@ -18,7 +18,6 @@
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fidl/cpp/optional.h"
 #include "lib/fidl/cpp/type_converter.h"
-#include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/type_converters.h"
 #include "lib/ui/base_view/cpp/base_view.h"
 #include "src/lib/fxl/logging.h"
@@ -262,33 +261,37 @@ void PlayerImpl::Update() {
           transform_subject_time_ = target_position;
           program_range_min_pts_ = target_position;
 
-          SetTimelineFunction(
-              0.0f, media::Timeline::local_now(), [this, target_position]() {
-                if (target_position_ == target_position) {
-                  // We've had a rendundant seek request. Ignore it.
-                  target_position_ = Packet::kNoPts;
-                } else if (target_position_ != Packet::kNoPts) {
-                  // We've had a seek request to a new position. Refrain from
-                  // seeking the source and re-enter this sequence.
-                  state_ = State::kFlushed;
-                  Update();
-                  return;
-                }
+          SetTimelineFunction(0.0f, zx::clock::get_monotonic().get(),
+                              [this, target_position]() {
+                                if (target_position_ == target_position) {
+                                  // We've had a rendundant seek request. Ignore
+                                  // it.
+                                  target_position_ = Packet::kNoPts;
+                                } else if (target_position_ != Packet::kNoPts) {
+                                  // We've had a seek request to a new position.
+                                  // Refrain from seeking the source and
+                                  // re-enter this sequence.
+                                  state_ = State::kFlushed;
+                                  Update();
+                                  return;
+                                }
 
-                if (!core_.can_seek()) {
-                  // We can't seek, so |target_position| should be zero.
-                  FXL_DCHECK(target_position == 0)
-                      << "Can't seek, target_position is " << target_position;
-                  state_ = State::kFlushed;
-                  Update();
-                } else {
-                  // Seek to the new position.
-                  core_.Seek(target_position, [this]() {
-                    state_ = State::kFlushed;
-                    Update();
-                  });
-                }
-              });
+                                if (!core_.can_seek()) {
+                                  // We can't seek, so |target_position| should
+                                  // be zero.
+                                  FXL_DCHECK(target_position == 0)
+                                      << "Can't seek, target_position is "
+                                      << target_position;
+                                  state_ = State::kFlushed;
+                                  Update();
+                                } else {
+                                  // Seek to the new position.
+                                  core_.Seek(target_position, [this]() {
+                                    state_ = State::kFlushed;
+                                    Update();
+                                  });
+                                }
+                              });
 
           // Done for now. We're in kWaiting, and the callback will call
           // Update when the Seek call is complete.
@@ -343,7 +346,8 @@ void PlayerImpl::Update() {
           state_ = State::kWaiting;
           waiting_reason_ = "for renderers to start progressing";
           SetTimelineFunction(
-              1.0f, media::Timeline::local_now() + kMinimumLeadTime, [this]() {
+              1.0f, zx::clock::get_monotonic().get() + kMinimumLeadTime,
+              [this]() {
                 state_ = State::kPlaying;
                 Update();
               });
@@ -367,7 +371,8 @@ void PlayerImpl::Update() {
           state_ = State::kWaiting;
           waiting_reason_ = "for renderers to stop progressing";
           SetTimelineFunction(
-              0.0f, media::Timeline::local_now() + kMinimumLeadTime, [this]() {
+              0.0f, zx::clock::get_monotonic().get() + kMinimumLeadTime,
+              [this]() {
                 state_ = State::kPrimed;
                 Update();
               });

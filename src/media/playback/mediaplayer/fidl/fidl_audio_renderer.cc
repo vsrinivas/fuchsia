@@ -4,9 +4,7 @@
 
 #include "src/media/playback/mediaplayer/fidl/fidl_audio_renderer.h"
 
-#include <lib/async/default.h>
-
-#include "lib/media/timeline/timeline.h"
+#include "lib/async/default.h"
 #include "lib/media/timeline/timeline_rate.h"
 #include "src/lib/fxl/logging.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
@@ -100,7 +98,7 @@ void FidlAudioRenderer::Dump(std::ostream& os) const {
   os << fostr::NewLine << "priming:               " << !!prime_callback_;
   os << fostr::NewLine << "flushed:               " << flushed_;
   os << fostr::NewLine << "presentation time:     "
-     << AsNs(current_timeline_function()(media::Timeline::local_now()));
+     << AsNs(current_timeline_function()(zx::clock::get_monotonic().get()));
   os << fostr::NewLine
      << "last supplied pts:     " << AsNs(last_supplied_pts_ns_);
   os << fostr::NewLine
@@ -162,7 +160,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 
   input_packet_request_outstanding_ = false;
 
-  int64_t now = media::Timeline::local_now();
+  int64_t now = zx::clock::get_monotonic().get();
   UpdateTimeline(now);
 
   if (packet->pts() == Packet::kNoPts) {
@@ -223,7 +221,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 
   if (packet->size() == 0) {
     packet.reset();
-    UpdateTimeline(media::Timeline::local_now());
+    UpdateTimeline(zx::clock::get_monotonic().get());
   } else {
     fuchsia::media::StreamPacket audioPacket;
     audioPacket.pts = start_pts;
@@ -235,7 +233,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 
     audio_renderer_->SendPacket(audioPacket, [this, packet]() {
       FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
-      int64_t now = media::Timeline::local_now();
+      int64_t now = zx::clock::get_monotonic().get();
 
       UpdateTimeline(now);
 
@@ -365,7 +363,7 @@ bool FidlAudioRenderer::NeedMorePackets() {
   }
 
   int64_t presentation_time_ns =
-      current_timeline_function()(media::Timeline::local_now());
+      current_timeline_function()(zx::clock::get_monotonic().get());
 
   if (last_supplied_pts_ns_ == Packet::kNoPts ||
       presentation_time_ns + target_lead_time_ns_ > last_supplied_pts_ns_) {

@@ -5,7 +5,8 @@
 #ifndef LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_
 #define LIB_MEDIA_TIMELINE_TIMELINE_FUNCTION_H_
 
-#include "src/lib/fxl/logging.h"
+#include <zircon/assert.h>
+
 #include "lib/media/timeline/timeline_rate.h"
 
 namespace media {
@@ -31,7 +32,7 @@ class TimelineFunction {
       int64_t subject_time, int64_t reference_time,
       TimelineRate rate,  // subject_delta / reference_delta
       int64_t subject_input) {
-    FXL_DCHECK(rate.reference_delta() != 0u);
+    ZX_DEBUG_ASSERT(rate.reference_delta() != 0u);
     return Apply(reference_time, subject_time, rate.Inverse(), subject_input);
   }
 
@@ -69,7 +70,7 @@ class TimelineFunction {
   // Applies the inverse of the function. Returns TimelineRate::kOverflow on
   // overflow.
   int64_t ApplyInverse(int64_t subject_input) const {
-    FXL_DCHECK(rate_.reference_delta() != 0u);
+    ZX_DEBUG_ASSERT(rate_.reference_delta() != 0u);
     return ApplyInverse(subject_time_, reference_time_, rate_, subject_input);
   }
 
@@ -80,7 +81,7 @@ class TimelineFunction {
 
   // Returns a timeline function that is the inverse if this timeline function.
   TimelineFunction Inverse() const {
-    FXL_DCHECK(rate_.reference_delta() != 0u);
+    ZX_DEBUG_ASSERT(rate_.reference_delta() != 0u);
     return TimelineFunction(reference_time_, subject_time_, rate_.Inverse());
   }
 

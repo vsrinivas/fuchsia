@@ -160,7 +160,7 @@ void PlayerCore::SetTimelineFunction(media::TimelineFunction timeline_function,
 
   int64_t reference_time = timeline_function.reference_time();
   if (reference_time == Packet::kNoPts) {
-    reference_time = media::Timeline::local_now() + kMinimumLeadTime;
+    reference_time = zx::clock::get_monotonic().get() + kMinimumLeadTime;
   }
 
   int64_t subject_time = timeline_function.subject_time();
