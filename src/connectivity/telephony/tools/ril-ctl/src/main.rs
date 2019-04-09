@@ -27,11 +27,11 @@ use {
     fidl_fuchsia_telephony_ril::{
         RadioInterfaceLayerMarker, RadioInterfaceLayerProxy, RadioPowerState, *,
     },
-    fuchsia_app::{
-        client::{connect_to_service, Launcher},
+    fuchsia_async::{self as fasync, futures::select},
+    fuchsia_component::{
+        client::{connect_to_service, launch, launcher},
         fuchsia_single_component_package_url,
     },
-    fuchsia_async::{self as fasync, futures::select},
     futures::{FutureExt, TryFutureExt},
     parking_lot::Mutex,
     pin_utils::pin_mut,
@@ -209,7 +209,7 @@ pub fn main() -> Result<(), Error> {
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let args = Opt::from_args();
 
-    let launcher = Launcher::new().context("Failed to open launcher service")?;
+    let launcher = launcher().context("Failed to open launcher service")?;
     let file = match args.device {
         Some(ref device) => Some(File::open(device)?),
         None => None,
@@ -225,8 +225,7 @@ pub fn main() -> Result<(), Error> {
                 eprintln!("Connecting with exclusive access to {}..", device.display());
                 let file = File::open(device)?;
                 let chan = await!(qmi::connect_transport_device(&file))?;
-                app = launcher
-                    .launch(RIL_URI.to_string(), None)
+                app = launch(&launcher, RIL_URI.to_string(), None)
                     .context("Failed to launch ril-qmi service")?;
                 let ril_modem = app.connect_to_service(RadioInterfaceLayerMarker)?;
                 let resp = await!(ril_modem.connect_transport(chan))?;
