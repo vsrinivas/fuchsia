@@ -10,11 +10,10 @@ mod tests;
 use crate::test_helpers::TextFieldWrapper;
 use crate::tests::*;
 use failure::{Error, ResultExt};
-use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_ui_text as txt;
 use fidl_fuchsia_ui_text_testing as txt_testing;
-use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
+use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon::{DurationNum, Time};
 use futures::future::FutureObj;
 use futures::prelude::*;
@@ -46,22 +45,17 @@ text_field_tests! {
 fn main() -> Result<(), Error> {
     let mut executor = fuchsia_async::Executor::new()
         .context("Creating fuchsia_async executor for text tests failed")?;
-    let done = ServicesServer::new()
-        .add_service((txt_testing::TextFieldTestSuiteMarker::NAME, move |chan| {
-            bind_text_tester(chan);
-        }))
-        .start()
-        .context("Creating ServicesServer for text tester service failed")?;
-    executor
-        .run_singlethreaded(done)
-        .context("Attempt to start up IME services on async::Executor failed")?;
+    let mut fs = ServiceFs::new();
+    fs.dir("public")
+        .add_fidl_service(bind_text_tester);
+    fs.take_and_serve_directory_handle()?;
+    executor.run_singlethreaded(fs.collect::<()>());
     Ok(())
 }
 
-fn bind_text_tester(chan: fuchsia_async::Channel) {
+fn bind_text_tester(mut stream: txt_testing::TextFieldTestSuiteRequestStream) {
     fasync::spawn(
         async move {
-            let mut stream = txt_testing::TextFieldTestSuiteRequestStream::from_channel(chan);
             while let Some(msg) = await!(stream.try_next())
                 .expect("error reading value from IME service request stream")
             {

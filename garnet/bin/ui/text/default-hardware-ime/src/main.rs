@@ -7,8 +7,8 @@
 use failure::Error;
 use fidl_fuchsia_ui_input as uii;
 use fidl_fuchsia_ui_text as txt;
-use fuchsia_app::client::connect_to_service;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::prelude::*;
