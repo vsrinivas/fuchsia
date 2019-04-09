@@ -20,8 +20,10 @@
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/shared/buffered_fd.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/stream_buffer.h"
+#include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/arch_info.h"
 #include "src/developer/debug/zxdb/client/breakpoint_action.h"
 #include "src/developer/debug/zxdb/client/breakpoint_impl.h"
@@ -251,7 +253,9 @@ Err Session::PendingConnection::DoConnectBackgroundThread() {
 Session::Session()
     : remote_api_(std::make_unique<RemoteAPIImpl>(this)),
       system_(this),
-      weak_factory_(this) {}
+      weak_factory_(this) {
+  ListenForSystemSettings();
+}
 
 Session::Session(std::unique_ptr<RemoteAPI> remote_api, debug_ipc::Arch arch)
     : remote_api_(std::move(remote_api)),
@@ -263,10 +267,14 @@ Session::Session(std::unique_ptr<RemoteAPI> remote_api, debug_ipc::Arch arch)
 
   // Should not fail for synthetically set-up architectures.
   FXL_DCHECK(!err.has_error());
+
+  ListenForSystemSettings();
 }
 
 Session::Session(debug_ipc::StreamBuffer* stream)
-    : stream_(stream), system_(this), weak_factory_(this) {}
+    : stream_(stream), system_(this), weak_factory_(this) {
+  ListenForSystemSettings();
+}
 
 Session::~Session() = default;
 
@@ -459,35 +467,6 @@ void Session::Disconnect(std::function<void(const Err&)> callback) {
   ClearConnectionData();
   if (callback)
     callback(Err());
-}
-
-void Session::QuitAgent(std::function<void(const Err&)> cb) {
-  bool is_connected = IsConnected();
-
-  // We call disconnect even when is_connected if false, just in case there is a
-  // pending connection going on.
-  if (!is_connected) {
-    Disconnect(nullptr);
-    if (cb) {
-      debug_ipc::MessageLoop::Current()->PostTask(
-          FROM_HERE, [cb = std::move(cb)]() {
-            cb(Err("Not connected to a debug agent."));
-          });
-    }
-    return;
-  }
-
-  debug_ipc::QuitAgentRequest request;
-  remote_api()->QuitAgent(request,
-                          [session = GetWeakPtr(), cb = std::move(cb)](
-                              const Err& err, debug_ipc::QuitAgentReply) {
-                            // If we received a response, there is a connection
-                            // to receive it, so the session should be around.
-                            FXL_DCHECK(session && session->stream_);
-                            session->Disconnect(nullptr);
-                            if (cb)
-                              cb(err);
-                          });
 }
 
 bool Session::ClearConnectionData() {
@@ -797,6 +776,9 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending,
   system_.DidConnect();
   if (callback)
     callback(Err());
+
+  // Send whatever configurations the agent should know about.
+  SendAgentConfiguration();
 }
 
 void Session::AddObserver(SessionObserver* observer) {
@@ -842,6 +824,96 @@ void Session::ExpectComponent(uint32_t component_id) {
 
 fxl::WeakPtr<Session> Session::GetWeakPtr() {
   return weak_factory_.GetWeakPtr();
+}
+
+void Session::QuitAgent(std::function<void(const Err&)> cb) {
+  bool is_connected = IsConnected();
+
+  // We call disconnect even when is_connected if false, just in case there is a
+  // pending connection going on.
+  if (!is_connected) {
+    Disconnect(nullptr);
+    if (cb) {
+      debug_ipc::MessageLoop::Current()->PostTask(
+          FROM_HERE, [cb = std::move(cb)]() {
+            cb(Err("Not connected to a debug agent."));
+          });
+    }
+    return;
+  }
+
+  debug_ipc::QuitAgentRequest request;
+  remote_api()->QuitAgent(request,
+                          [session = GetWeakPtr(), cb = std::move(cb)](
+                              const Err& err, debug_ipc::QuitAgentReply) {
+                            // If we received a response, there is a connection
+                            // to receive it, so the session should be around.
+                            FXL_DCHECK(session && session->stream_);
+                            session->Disconnect(nullptr);
+                            if (cb)
+                              cb(err);
+                          });
+}
+
+void Session::OnSettingChanged(const SettingStore& store,
+                               const std::string& setting_name) {
+  if (setting_name == ClientSettings::System::kQuitAgentOnExit) {
+    SendAgentConfiguration();
+  } else {
+    SendSessionNotification(SessionObserver::NotificationType::kWarning,
+                            "Session handling invalid setting %s",
+                            setting_name.c_str());
+  }
+}
+
+void Session::ListenForSystemSettings() {
+  system_.settings().AddObserver(ClientSettings::System::kQuitAgentOnExit,
+                                 this);
+}
+
+void Session::SendAgentConfiguration() {
+  // We bungle the actions and send them in one go.
+  std::vector<debug_ipc::ConfigAction> actions;
+
+  ConfigQuitAgent(
+      system_.settings().GetBool(ClientSettings::System::kQuitAgentOnExit),
+      &actions);
+
+  debug_ipc::ConfigAgentRequest request;
+  request.actions = std::move(actions);
+  remote_api()->ConfigAgent(
+      request, [request, session = GetWeakPtr()](
+                   const Err& err, debug_ipc::ConfigAgentReply reply) {
+        FXL_DCHECK(reply.results.size() == request.actions.size());
+
+        if (!session)
+          return;
+
+        for (size_t i = 0; i < reply.results.size(); i++) {
+          debug_ipc::zx_status_t status = reply.results[i];
+          if (status == debug_ipc::kZxOk)
+            continue;
+
+          auto& action = request.actions[i];
+          session->SendSessionNotification(
+              SessionObserver::NotificationType::kWarning,
+              "Agent configuration for %s failed with result: %s",
+              debug_ipc::ConfigAction::TypeToString(action.type),
+              debug_ipc::ZxStatusToString(status));
+        }
+      });
+}
+
+void Session::ConfigQuitAgent(bool quit,
+                              std::vector<debug_ipc::ConfigAction>* actions) {
+  DEBUG_LOG(RemoteAPI) << "Sending quit agent config: " << quit;
+
+  if (!IsConnected())
+    return;
+
+  std::string value = quit ? "true" : "false";
+  actions->push_back({debug_ipc::ConfigAction::Type::kQuitOnExit,
+                             value});
 }
 
 }  // namespace zxdb

@@ -24,6 +24,9 @@ class RemoteAPI {
   virtual void OnKill(const debug_ipc::KillRequest& request,
                       debug_ipc::KillReply* reply) = 0;
 
+  virtual void OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
+                             debug_ipc::ConfigAgentReply* reply) = 0;
+
   // Attach is special because it needs to follow the reply immediately with
   // a series of notifications about the current threads. This means it
   // can't use the automatic reply sending. It must manually deserialize and

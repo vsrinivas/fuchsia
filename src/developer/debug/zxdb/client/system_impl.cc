@@ -39,7 +39,6 @@ SystemImpl::SystemImpl(Session* session)
   // and we don't want it to have a client dependency.
   settings_.AddObserver(ClientSettings::System::kDebugMode, this);
   settings_.AddObserver(ClientSettings::System::kSymbolPaths, this);
-  settings_.AddObserver(ClientSettings::System::kQuitAgentOnExit, this);
 }
 
 SystemImpl::~SystemImpl() {
@@ -267,8 +266,6 @@ void SystemImpl::OnSettingChanged(const SettingStore& store,
     }
   } else if (setting_name == ClientSettings::System::kDebugMode) {
     debug_ipc::SetDebugMode(store.GetBool(setting_name));
-  } else if (setting_name == ClientSettings::System::kQuitAgentOnExit) {
-    quit_agent_on_exit_ = store.GetBool(setting_name);
   } else {
     FXL_LOG(WARNING) << "Unhandled setting change: " << setting_name;
   }

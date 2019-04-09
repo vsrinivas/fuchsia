@@ -136,6 +136,11 @@ void Serialize(const RegisterCategory::Type& type, MessageWriter* writer) {
   writer->WriteUint32(static_cast<uint32_t>(type));
 }
 
+void Serialize(const ConfigAction& action, MessageWriter* writer) {
+  writer->WriteUint32(static_cast<uint32_t>(action.type));
+  writer->WriteString(action.value);
+}
+
 // Hello -----------------------------------------------------------------------
 
 void WriteRequest(const HelloRequest& request, uint32_t transaction_id,
@@ -529,6 +534,24 @@ bool ReadReply(MessageReader* reader, WriteMemoryReply* reply,
   *transaction_id = header.transaction_id;
 
   return reader->ReadInt32(&reply->status);
+}
+
+// ConfigAgent -----------------------------------------------------------------
+
+void WriteRequest(const ConfigAgentRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kConfigAgent, transaction_id);
+  Serialize(request.actions, writer);
+}
+
+bool ReadReply(MessageReader* reader, ConfigAgentReply* reply,
+               uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+
+  return Deserialize(reader, &reply->results);
 }
 
 // Notifications ---------------------------------------------------------------

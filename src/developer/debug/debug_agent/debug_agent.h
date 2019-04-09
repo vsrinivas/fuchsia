@@ -13,6 +13,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "lib/sys/cpp/service_directory.h"
+#include "src/developer/debug/debug_agent/agent_configuration.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/component_launcher.h"
 #include "src/developer/debug/debug_agent/debugged_job.h"
@@ -50,10 +51,12 @@ class DebugAgent : public RemoteAPI,
 
   void OnProcessStart(const std::string& filter, zx::process) override;
 
-  bool should_quit() const { return should_quit_; }
+  bool should_quit() const { return configuration_.quit_on_exit; }
 
  private:
   // RemoteAPI implementation.
+  void OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
+                     debug_ipc::ConfigAgentReply* reply) override;
   void OnHello(const debug_ipc::HelloRequest& request,
                debug_ipc::HelloReply* reply) override;
   void OnLaunch(const debug_ipc::LaunchRequest& request,
@@ -142,10 +145,6 @@ class DebugAgent : public RemoteAPI,
   std::map<uint32_t, Breakpoint> breakpoints_;
   std::map<uint32_t, Watchpoint> watchpoints_;
 
-  // Whether the debug agent should exit.
-  // The main reason for this is receiving a QuitNow message.
-  bool should_quit_ = false;
-
   // Normally the debug agent would be attached to the base component and give
   // the client the koid. This is a job koid needed to be able to create an
   // invisible filter to catch the newly started component.
@@ -167,6 +166,8 @@ class DebugAgent : public RemoteAPI,
   // Once we caught the component, we hold on into the controller to be able
   // to detach/kill it correctly.
   std::map<uint64_t, fuchsia::sys::ComponentControllerPtr> running_components_;
+
+  AgentConfiguration configuration_;
 
   fxl::WeakPtrFactory<DebugAgent> weak_factory_;
 

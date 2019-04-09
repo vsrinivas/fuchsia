@@ -19,7 +19,7 @@
 #include "src/developer/debug/debug_agent/remote_api_adapter.h"
 #include "src/developer/debug/debug_agent/unwind.h"
 #include "src/developer/debug/shared/buffered_fd.h"
-#include "src/developer/debug/shared/logging/debug.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop_async.h"
 #include "src/developer/debug/shared/message_loop_target.h"
 #include "src/developer/debug/shared/message_loop_zircon.h"
@@ -161,6 +161,7 @@ bool SocketServer::Run(debug_ipc::MessageLoop* message_loop, int port,
     // Run the debug agent for this connection.
     message_loop->Run();
 
+    DEBUG_LOG(Agent) << "Connection lost.";
     if (connection_->agent()->should_quit())
       break;
   }

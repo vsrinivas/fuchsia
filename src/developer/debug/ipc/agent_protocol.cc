@@ -43,6 +43,18 @@ bool Deserialize(MessageReader* reader, RegisterCategory::Type* type) {
   return reader->ReadUint32(reinterpret_cast<uint32_t*>(type));
 }
 
+bool Deserialize(MessageReader* reader, ConfigAction* action) {
+  uint32_t type = 0;
+  if (!reader->ReadUint32(&type) ||
+      type >= static_cast<uint32_t>(ConfigAction::Type::kLast)) {
+    return false;
+  }
+  action->type = static_cast<ConfigAction::Type>(type);
+  if (!reader->ReadString(&action->value))
+    return false;
+  return true;
+}
+
 // Record serializers ----------------------------------------------------------
 
 void Serialize(const ProcessTreeRecord& record, MessageWriter* writer) {
@@ -493,6 +505,23 @@ void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAddressSpace, transaction_id);
   Serialize(reply.map, writer);
+}
+
+// ConfigAgent -----------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, ConfigAgentRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return Deserialize(reader, &request->actions);
+}
+
+void WriteReply(const ConfigAgentReply& reply, uint32_t transaction_id,
+    MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kConfigAgent, transaction_id);
+  Serialize(reply.results, writer);
 }
 
 // Notifications ---------------------------------------------------------------

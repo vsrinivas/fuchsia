@@ -10,6 +10,7 @@
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol_helpers.h"
 #include "src/developer/debug/ipc/register_test_support.h"
+#include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_ipc {
 
@@ -60,6 +61,41 @@ bool SerializeDeserializeNotification(
 }
 
 }  // namespace
+
+// ConfigAgent -----------------------------------------------------------------
+
+TEST(Protocol, ConfigAgentRequest) {
+  ConfigAgentRequest initial;
+  initial.actions.push_back({ConfigAction::Type::kQuitOnExit, "true"});
+  initial.actions.push_back({ConfigAction::Type::kQuitOnExit, "false"});
+  initial.actions.push_back({ConfigAction::Type::kQuitOnExit, "bla"});
+
+  ConfigAgentRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+
+  ASSERT_EQ(second.actions.size(), 3u);
+  EXPECT_EQ(second.actions[0].type, initial.actions[0].type);
+  EXPECT_EQ(second.actions[0].value, initial.actions[0].value);
+  EXPECT_EQ(second.actions[1].type, initial.actions[1].type);
+  EXPECT_EQ(second.actions[1].value, initial.actions[1].value);
+  EXPECT_EQ(second.actions[2].type, initial.actions[2].type);
+  EXPECT_EQ(second.actions[2].value, initial.actions[2].value);
+}
+
+TEST(Protocol, ConfigAgentReply) {
+  ConfigAgentReply initial;
+  initial.results.push_back(debug_ipc::kZxOk);
+  initial.results.push_back(debug_ipc::kZxErrIO);
+  initial.results.push_back(debug_ipc::kZxErrFileBig);
+
+  ConfigAgentReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  ASSERT_EQ(second.results.size(), 3u);
+  EXPECT_EQ(second.results[0], initial.results[0]);
+  EXPECT_EQ(second.results[1], initial.results[1]);
+  EXPECT_EQ(second.results[2], initial.results[2]);
+}
 
 // Hello -----------------------------------------------------------------------
 

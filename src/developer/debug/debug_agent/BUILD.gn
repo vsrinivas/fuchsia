@@ -12,6 +12,8 @@ include_test_app = false
 
 static_library("lib") {
   sources = [
+    "agent_configuration.cc",
+    "agent_configuration.h",
     "arch.cc",
     "arch.h",
     "binary_launcher.cc",

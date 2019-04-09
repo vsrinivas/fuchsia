@@ -42,6 +42,12 @@ void RemoteAPIImpl::Attach(
   Send(request, std::move(cb));
 }
 
+void RemoteAPIImpl::ConfigAgent(
+    const debug_ipc::ConfigAgentRequest& request,
+    std::function<void(const Err&, debug_ipc::ConfigAgentReply)> cb) {
+  Send(request, std::move(cb));
+}
+
 void RemoteAPIImpl::Detach(
     const debug_ipc::DetachRequest& request,
     std::function<void(const Err&, debug_ipc::DetachReply)> cb) {

@@ -31,7 +31,7 @@ class RemoteAPITest;
 class ThreadImpl;
 
 // The session object manages the connection with the remote debug agent.
-class Session {
+class Session : public SettingStoreObserver {
  public:
   // Creates a session with no connection. All sending will fail until
   // the callback associated with a Connect() call is issued.
@@ -74,10 +74,6 @@ class Session {
   // pending connection. The Connect() callback will still be issued but
   // will indicate failure.
   void Disconnect(std::function<void(const Err&)> callback);
-
-  // Quits the connected debug agent.
-  // Will issue an error if the agent is not connected.
-  void QuitAgent(std::function<void(const Err&)> callback);
 
   // Open a minidump instead of connecting to a running system. The callback
   // will be issued with an error if the file cannot be opened or if there is
@@ -130,6 +126,13 @@ class Session {
   void DispatchProcessStarting(const debug_ipc::NotifyProcessStarting&);
   void DispatchNotifyIO(const debug_ipc::NotifyIO& notify);
 
+  // Sends an explicit quit cmd to the agent.
+  void QuitAgent(std::function<void(const Err&)> callback);
+
+  // SettingStoreObserver
+  void OnSettingChanged(const SettingStore&,
+                        const std::string& setting_name) override;
+
  protected:
   fxl::ObserverList<SessionObserver> observers_;
 
@@ -173,6 +176,18 @@ class Session {
 
   SessionObserver::NotificationType HandleProcessIO(ProcessImpl*,
                                                     const debug_ipc::NotifyIO&);
+  void ListenForSystemSettings();
+
+  // Configurations ------------------------------------------------------------
+
+  // Upon connection, the sessino will tell the agent of all the configurations
+  // it should know about.
+  void SendAgentConfiguration();
+
+  // Notifies the agent that it should quit upon connection closing.
+  // Will no-op if not connected.
+  void ConfigQuitAgent(bool quit,
+                       std::vector<debug_ipc::ConfigAction>* actions);
 
   // Whether we have opened a core dump. Makes much of the connection-related
   // stuff obsolete.

@@ -132,6 +132,12 @@ bool ReadRequest(MessageReader* reader, WriteMemoryRequest* request,
 void WriteReply(const WriteMemoryReply& reply, uint32_t transaction_id,
                 MessageWriter* writer);
 
+// ConfigAgent.
+bool ReadRequest(MessageReader* reader, ConfigAgentRequest* request,
+                 uint32_t* transaction_id);
+void WriteReply(const ConfigAgentReply& reply, uint32_t transaction_id,
+                MessageWriter* writer);
+
 // Notifications ---------------------------------------------------------------
 //
 // (These don't have a "request"/"reply".)

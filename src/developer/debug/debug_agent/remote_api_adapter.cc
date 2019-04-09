@@ -9,6 +9,7 @@
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 
 namespace debug_agent {
@@ -79,7 +80,11 @@ void RemoteAPIAdapter::OnStreamReadable() {
         this, &RemoteAPI::On##msg_type, std::move(buffer), #msg_type);         \
     break
 
+    DEBUG_LOG(RemoteAPI) << "Received "
+                         << debug_ipc::MsgHeader::TypeToString(header.type);
+
     switch (header.type) {
+      DISPATCH(ConfigAgent);
       DISPATCH(Hello);
       DISPATCH(Launch);
       DISPATCH(Kill);

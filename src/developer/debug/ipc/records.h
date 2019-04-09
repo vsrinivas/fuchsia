@@ -259,6 +259,21 @@ struct RegisterCategory {
   std::vector<Register> registers;
 };
 
+struct ConfigAction {
+  enum class Type : uint32_t {
+    // Quit whenever the connection shutdowns.
+    kQuitOnExit,    // Values are "false" | "true"
+
+    kLast,  // Not valid.
+  };
+  static const char* TypeToString(Type);
+
+  Type type = Type::kLast;
+
+  // Each action uses a different set of values.
+  std::string value;
+};
+
 #pragma pack(pop)
 
 }  // namespace debug_ipc

@@ -23,6 +23,8 @@ void Serialize(const std::string& s, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, std::string* s);
 void Serialize(uint64_t data, MessageWriter* writer);
 bool Deserialize(MessageReader* reader, uint64_t* data);
+void Serialize(int32_t data, MessageWriter* writer);
+bool Deserialize(MessageReader* reader, int32_t* data);
 
 // Aggregate types that are serialized in both directions (otherwise the
 // implementations would go into the client-/agent-specific file).

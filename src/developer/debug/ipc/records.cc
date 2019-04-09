@@ -103,4 +103,16 @@ RegisterCategory::Type RegisterCategory::RegisterIDToCategory(RegisterID id) {
   return RegisterCategory::Type::kNone;
 }
 
+const char* ConfigAction::TypeToString(Type type) {
+  switch (type) {
+    case Type::kQuitOnExit:
+      return "Quit On Exit";
+    case Type::kLast:
+      return "Last";
+  }
+
+  FXL_NOTREACHED();
+  return nullptr;
+}
+
 }  // namespace debug_ipc

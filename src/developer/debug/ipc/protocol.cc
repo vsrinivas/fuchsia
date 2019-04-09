@@ -25,6 +25,8 @@ constexpr uint32_t HelloReply::kCurrentVersion;
 
 const char* MsgHeader::TypeToString(MsgHeader::Type type) {
   switch (type) {
+    case MsgHeader::Type::kConfigAgent:
+      return "ConfigAgent";
     case MsgHeader::Type::kNone:
       return "None";
     case MsgHeader::Type::kHello:

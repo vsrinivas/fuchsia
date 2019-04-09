@@ -29,6 +29,7 @@ struct MsgHeader {
 
     kAddOrChangeBreakpoint,
     kAddressSpace,
+    kConfigAgent,
     kAttach,
     kDetach,
     kJobFilter,
@@ -308,6 +309,19 @@ struct WriteRegistersRequest {
 
 struct WriteRegistersReply {
   zx_status_t status = 0;
+};
+
+// Agent Config ----------------------------------------------------------------
+//
+// The client sends a list of configurations and will receive a status result
+// for each of them in order.
+
+struct ConfigAgentRequest {
+  std::vector<ConfigAction> actions;
+};
+
+struct ConfigAgentReply {
+  std::vector<zx_status_t> results;
 };
 
 // Notifications ---------------------------------------------------------------

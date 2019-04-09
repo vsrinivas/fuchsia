@@ -36,6 +36,9 @@ class RemoteAPI {
   virtual void Attach(
       const debug_ipc::AttachRequest& request,
       std::function<void(const Err&, debug_ipc::AttachReply)> cb);
+  virtual void ConfigAgent(
+      const debug_ipc::ConfigAgentRequest& request,
+      std::function<void(const Err&, debug_ipc::ConfigAgentReply)> cb);
   virtual void Detach(
       const debug_ipc::DetachRequest& request,
       std::function<void(const Err&, debug_ipc::DetachReply)> cb);

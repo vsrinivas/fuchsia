@@ -23,6 +23,9 @@ bool IsDebugModeActive();
 // Log Categories --------------------------------------------------------------
 
 enum class LogCategory {
+  // Associated with general Debug Agent events.
+  kAgent,
+
   // Associated with the lifetime of breakpoints.
   kBreakpoint,
 

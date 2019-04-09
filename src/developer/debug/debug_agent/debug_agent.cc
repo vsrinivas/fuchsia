@@ -66,6 +66,12 @@ void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
     breakpoints_.erase(found);
 }
 
+void DebugAgent::OnConfigAgent(
+    const debug_ipc::ConfigAgentRequest& request,
+    debug_ipc::ConfigAgentReply* reply) {
+  reply->results = HandleActions(request.actions, &configuration_);
+}
+
 void DebugAgent::OnHello(const debug_ipc::HelloRequest& request,
                          debug_ipc::HelloReply* reply) {
   TIME_BLOCK();
@@ -253,8 +259,6 @@ void DebugAgent::OnPause(const debug_ipc::PauseRequest& request,
 
 void DebugAgent::OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
                              debug_ipc::QuitAgentReply* reply) {
-  TIME_BLOCK();
-  should_quit_ = true;
   debug_ipc::MessageLoop::Current()->QuitNow();
 };
 

@@ -73,6 +73,7 @@ source_set("tests") {
   ]
 
   deps = [
+    "//src/developer/debug/shared",
     "//third_party/googletest:gtest",
   ]
 

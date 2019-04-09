@@ -67,6 +67,8 @@ std::string LogPreamble(LogCategory category, const FileLineFunction& origin) {
 
 const char* LogCategoryToString(LogCategory category) {
   switch (category) {
+    case LogCategory::kAgent:
+      return "Agent";
     case LogCategory::kBreakpoint:
       return "Breakpoint";
     case LogCategory::kJob:

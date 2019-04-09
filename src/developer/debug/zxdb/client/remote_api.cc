@@ -32,6 +32,12 @@ void RemoteAPI::Attach(
   FXL_NOTREACHED();
 }
 
+void RemoteAPI::ConfigAgent(
+    const debug_ipc::ConfigAgentRequest& request,
+    std::function<void(const Err&, debug_ipc::ConfigAgentReply)> cb) {
+  FXL_NOTREACHED();
+}
+
 void RemoteAPI::Detach(
     const debug_ipc::DetachRequest& request,
     std::function<void(const Err&, debug_ipc::DetachReply)> cb) {

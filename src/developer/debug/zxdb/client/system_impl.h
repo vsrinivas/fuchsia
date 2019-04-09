@@ -81,8 +81,6 @@ class SystemImpl final : public System, public SettingStoreObserver {
 
   SystemSymbols symbols_;
 
-  bool quit_agent_on_exit_ = false;
-
   fxl::WeakPtrFactory<SystemImpl> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SystemImpl);
