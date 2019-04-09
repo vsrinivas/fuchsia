@@ -94,12 +94,12 @@ action("extras") {
   script = "mkextras.sh"
 
   deps = [
-    "//third_party/mesa/src/intel/vulkan:vulkan_intel_linux(//build/toolchain:linux_x64-shared)",
+    "//garnet/lib/magma/tests_linux/unit_tests:magma_unit_tests_linux(//build/toolchain:linux_x64)",
   ]
 
   args = [
     rebase_path(extras_image),
-    rebase_path("${root_build_dir}/linux_x64-shared/libvulkan_intel_linux.so"),
+    rebase_path("${root_build_dir}/linux_x64/magma_unit_tests_linux"),
   ]
 
   outputs = [

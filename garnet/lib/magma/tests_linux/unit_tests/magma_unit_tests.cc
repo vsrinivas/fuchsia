@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <vulkan.h>
+#include <vulkan/vulkan.h>
 
 #define CHECK(x)                                                                                   \
     do {                                                                                           \
@@ -61,8 +61,10 @@ int main(int argc, char* argv[])
     CHECK(status == MAGMA_STATUS_OK);
     printf("Device ID: 0x%016lX\n", device_id);
 
+    magma_connection_t connection{};
     printf("Create Connection\n");
-    auto connection = magma_create_connection(fd, 0);
+    status = magma_create_connection(fd, &connection);
+    CHECK(status == MAGMA_STATUS_OK);
     CHECK(connection != nullptr);
     printf("Connection Created\n");
 

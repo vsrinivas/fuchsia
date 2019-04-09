@@ -1,0 +1,34 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("unit_tests") {
+  testonly = true
+  deps = [
+    ":magma_unit_tests_linux(//build/toolchain:linux_x64)",
+  ]
+
+  resources = [
+    {
+      path = rebase_path("${root_build_dir}/linux_x64/magma_unit_tests_linux")
+      dest = "magma_unit_tests_linux"
+    },
+  ]
+}
+
+executable("magma_unit_tests_linux") {
+  # TODO(MA-586): formalize guest-targeted tests
+  # testonly = true
+
+  deps = [
+    "//garnet/lib/magma/src/libmagma_linux",
+  ]
+
+  include_dirs = [ "//third_party/vulkan_loader_and_validation_layers/include" ]
+
+  sources = [
+    "magma_unit_tests.cc",
+  ]
+}

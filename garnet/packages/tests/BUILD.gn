@@ -878,6 +878,7 @@ group("magma") {
     "//garnet/lib/magma/tests:magma_nonhardware_tests",
     "//garnet/lib/magma/tests:tests",
     "//garnet/lib/magma/tests:vulkan-tests",
+    "//garnet/lib/magma/tests_linux:tests_linux",
     "//garnet/packages/prod:vulkan",
   ]
 }
