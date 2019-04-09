@@ -12,6 +12,7 @@
 ##   -d, --device   <name>   Connect to device using Fuchsia link-local name.
 ##                           Must be specified if multiple devices are present.
 ##   -f, --foreground        Run in the foreground (default is background).
+##   -n, --no-cipd           Skip steps involving CIPD.
 ##   -o, --output   <dir>    Use the given directory for saving output files.
 ##                           Defaults to the current directory.
 ##   -s, --staging  <dir>    Use the given directory for staging temporary
@@ -31,10 +32,9 @@
 ##                           that location.  Otherwise fetches and installs the
 ##                           corpus from CIPD given by 'label' or the latest
 ##                           corpus if 'label' is omitted.
-##   start   <name> [...]    Starts the named fuzzer. Additional arguments are
-##                           passed to the fuzzer.  If the target does not have
-##                           a corpus for the fuzzer, and the metadata lists one
-##                           available, this will fetch the corpus first.
+##   start   <name> [...]    Fetches the latest corpus for a named fuzzer and
+##                           starts it. Additional arguments are passed to the
+##                           fuzzer. This is default command if not provided.
 ##   check   <name>          Reports information about the named fuzzer, such as
 ##                           execution status, corpus size, and number of
 ##                           crashes.
@@ -42,43 +42,16 @@
 ##   repro   <name> [...]    Runs the named fuzzer on specific inputs. If no
 ##                           additional inputs are provided, uses all previously
 ##                           found crashes.
-##   merge   <name> [...]    Merges the corpus for the named fuzzer. If no
-##                           additional inputs are provided, minimizes the
-##                           current corpus.
+##   merge   <name> [...]    Fetches the latest corpus in CIPD, merges and
+##                           minimizes it with the corpus on device, and stores
+##                           the result in CIPD.
 ##   store   <name>          Gathers the current corpus from the target platform
-##                           and publishes it. Requires a pristine repository,
-##                           as it will updates the build files with the new
-##                           corpus location.
+##                           and publishes it.
 ##
-## The RECOMMENDED way to run a fuzzer is to omit 'command', which will use
-## "automatic" mode.  In this mode, 'fx fuzz' will fetch the latest corpus,
-## start the fuzzer, and watch it to see when it stops.  Each of these steps
-## respects the options above.
-##
-## Example workflow:
-##   1. Shows available fuzzers:
-##         fx fuzz list
-##
-##   2. Run a fuzzer for 8 hours (e.g. overnight), fetching the initial corpus
-##      if needed:
-##         fx fuzz -o out foo_package/bar_fuzz_test -max_total_time=28800
-##
-##   3. Check if the fuzzer is still running.
-##         fx fuzz check foo/bar
-##
-##   4. Execute the fuzzer with a crashing input:
-##         fx fuzz repro foo/bar crash-deadbeef
-##
-##   5. Use the artifacts in 'out/foo_package/bar_fuzz_test/latest' to file and
-##      fix bugs. Repeat step 4 until the target doesn't crash.
-##
-##   6. Repeat steps 2-4 until no crashes found.
-##
-##   7. Minimize the resulting corpus:
-##         fx fuzz merge foo/bar
-##
-##   8. Save the new, minimized corpus in CIPD:
-##         fx fuzz store foo/bar
+## Typical workflow is one of three commands:
+##   fx fuzz <name>        # Fetches the latest corpus and starts the fuzzer
+##   fx fuzz repro <name>  # Replays any test input artifacts found
+##   fx fuzz merge <name>  # Merges the current corpus with the latest in CIPD
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
@@ -119,7 +92,6 @@ case "${cmd}" in
     ;;
   *)
     if python ${FUZZING_DIR}/list_fuzzers.py "${cmd}" ; then
-      python ${FUZZING_DIR}/fetch_corpus.py "${cmd}"
       python ${FUZZING_DIR}/start_fuzzer.py "${cmd}" "$@" &
     else
       fx-command-help

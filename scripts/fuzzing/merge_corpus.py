@@ -4,12 +4,14 @@
 # found in the LICENSE file.
 
 import argparse
+import os
 import sys
 
 from lib.args import Args
-from lib.host import Host
+from lib.cipd import Cipd
 from lib.device import Device
 from lib.fuzzer import Fuzzer
+from lib.host import Host
 
 
 def main():
@@ -23,7 +25,15 @@ def main():
   device = Device.from_args(host, args)
   fuzzer = Fuzzer.from_args(device, args)
 
-  fuzzer.merge(fuzzer_args)
+  with Cipd.from_args(fuzzer, args) as cipd:
+    if cipd.install():
+      device.store(os.path.join(cipd.root, '*'), fuzzer.data_path('corpus'))
+    if fuzzer.merge(fuzzer_args) == (0, 0):
+      print('Corpus for ' + str(fuzzer) + ' is empty.')
+      return 1
+    device.fetch(fuzzer.data_path('corpus/*'), cipd.root)
+    if not cipd.create():
+      return 1
   return 0
 
 

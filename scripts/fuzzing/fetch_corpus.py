@@ -27,12 +27,10 @@ def main():
     device.store(os.path.join(args.label, '*'), fuzzer.data_path('corpus'))
     return 0
   with Cipd.from_args(fuzzer, args, label=args.label) as cipd:
-    if not cipd.list():
-      print 'No corpus instances found in CIPD for ' + str(fuzzer)
+    if not cipd.install():
       return 1
-    cipd.install()
     device.store(os.path.join(cipd.root, '*'), fuzzer.data_path('corpus'))
-    return 0
+  return 0
 
 
 if __name__ == '__main__':

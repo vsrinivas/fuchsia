@@ -14,23 +14,23 @@ from lib.cipd import Cipd
 from lib.fuzzer import Fuzzer
 
 from cipd_mock import MockCipd
-from host_mock import MockHost
+from device_mock import MockDevice
 
 
 class TestCipd(unittest.TestCase):
 
   def test_from_args(self):
-    host = MockHost()
+    fuzzer = Fuzzer(MockDevice(), u'mock-package1', u'mock-target3')
     parser = Args.make_parser('description')
 
     args = parser.parse_args(['1/3'])
-    cipd = Cipd.from_args(host, args)
+    cipd = Cipd.from_args(fuzzer, args)
     self.assertTrue(os.path.exists(cipd.root))
 
     tmp_dir = tempfile.mkdtemp()
     try:
       args = parser.parse_args(['1/3', '--staging', tmp_dir])
-      cipd = Cipd.from_args(host, args)
+      cipd = Cipd.from_args(fuzzer, args)
       self.assertEqual(tmp_dir, cipd.root)
     finally:
       shutil.rmtree(tmp_dir)

@@ -26,16 +26,11 @@ def main():
   if fuzzer.measure_corpus()[0] == 0:
     print('Ignoring ' + str(fuzzer) + '; corpus is empty.')
     return 0
-  else:
-    with Cipd.from_args(fuzzer, args) as cipd:
-      device.fetch(fuzzer.data_path('corpus/*'), cipd.root)
-      try:
-        cipd.create()
-        return 0
-      except subprocess.CalledProcessError:
-        print('Failed to upload corpus for ' + str(fuzzer) +
-              '; have you run \'cipd auth-login\'?')
-        return 1
+  with Cipd.from_args(fuzzer, args) as cipd:
+    device.fetch(fuzzer.data_path('corpus/*'), cipd.root)
+    if not cipd.create():
+      return 1
+  return 0
 
 
 if __name__ == '__main__':

@@ -34,9 +34,13 @@ class Cipd(object):
   @classmethod
   def from_args(cls, fuzzer, args, label=None):
     """Constructs a Cipd from command line arguments."""
-    return cls(fuzzer, args.staging, label)
+    return cls(fuzzer, args.no_cipd, args.staging, label)
 
-  def __init__(self, fuzzer, root=None, label=None):
+  def __init__(self, fuzzer, disabled=False, root=None, label=None):
+    self.disabled = disabled
+    if disabled:
+      return
+    self.device = fuzzer.device
     self.fuzzer = fuzzer
     self._bin = Host.join('.jiri_root', 'bin', 'cipd')
     if root:
@@ -51,37 +55,52 @@ class Cipd(object):
     return self
 
   def __exit__(self, e_type, e_value, traceback):
-    if self._is_tmp:
+    if not self.disabled and self._is_tmp:
       shutil.rmtree(self.root)
 
   def _pkg(self):
     """Defines naming convention for Fuchsia fuzzing corpora in CIPD."""
     return 'fuchsia/test_data/fuzzing/' + str(self.fuzzer)
 
-  def _exec(self, cmd):
+  def _exec(self, cmd, quiet=False):
     """Executes a CIPD command."""
-    subprocess.check_call([self._bin] + cmd)
+    if quiet:
+      subprocess.check_call([self._bin] + cmd, stdout=Host.DEVNULL)
+    else:
+      subprocess.check_call([self._bin] + cmd)
 
-  def list(self):
+  def list(self, quiet=False):
     """Lists the instances of the corpus available for the fuzzer."""
+    if self.disabled:
+      return False
     try:
-      self._exec(['instances', self._pkg()])
+      self._exec(['instances', self._pkg()], quiet)
       return True
     except subprocess.CalledProcessError:
+      print 'No corpus instances found in CIPD for ' + str(self.fuzzer)
       return False
 
   def install(self):
     """Downloads and unpacks a CIPD package for a Fuchsia fuzzer."""
+    if self.disabled or not self.list(quiet=True):
+      return False
     self.fuzzer.require_stopped()
     cipd_cmd = ['install', self._pkg()]
     if self.label:
       cipd_cmd.append(self.label)
     cipd_cmd.extend(['--root', self.root])
     self._exec(cipd_cmd)
+    subprocess.check_call(['chmod', '-R', '+w', self.root])
+    self.device.store(
+        os.path.join(self.root, '*'), self.fuzzer.data_path('corpus'))
+    return True
 
   def create(self):
     """Bundles and uploads a CIPD package for a Fuchsia fuzzer corpus."""
+    if self.disabled:
+      return False
     self.fuzzer.require_stopped()
+    self.device.fetch(self.fuzzer.data_path('corpus/*'), self.root)
     pkg_def = os.path.join(self.root, 'cipd.yaml')
     elems = os.listdir(self.root)
     with open(pkg_def, 'w') as f:
@@ -93,4 +112,10 @@ class Cipd(object):
       for elem in elems:
         if 'cipd' not in elem:
           f.write('  - file: ' + elem + '\n')
-    self._exec(['create', '--pkg-def', pkg_def, '--ref', 'latest'])
+    try:
+      self._exec(['create', '--pkg-def', pkg_def, '--ref', 'latest'])
+      return True
+    except subprocess.CalledProcessError:
+      print('Failed to upload corpus for ' + str(self.fuzzer) +
+            '; have you run \'cipd auth-login\'?')
+      return False

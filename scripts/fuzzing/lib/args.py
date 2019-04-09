@@ -23,6 +23,11 @@ class Args:
         action='store_true',
         help='If true, display fuzzer output.')
     parser.add_argument(
+        '-n',
+        '--no-cipd',
+        action='store_true',
+        help='Skip steps which involve transferring packages to or from CIPD')
+    parser.add_argument(
         '-o', '--output', help='Path under which to store results.')
     parser.add_argument(
         '-s',

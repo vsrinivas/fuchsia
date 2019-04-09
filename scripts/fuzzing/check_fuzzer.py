@@ -48,8 +48,7 @@ def main():
     print(
         'No fuzzers are running.  Include \'name\' to check specific fuzzers.')
     return 1
-  else:
-    return 0
+  return 0
 
 
 if __name__ == '__main__':

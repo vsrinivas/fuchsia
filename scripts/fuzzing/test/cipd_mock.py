@@ -17,6 +17,6 @@ class MockCipd(Cipd):
     self.last = None
     super(MockCipd, self).__init__(self.fuzzer)
 
-  def _exec(self, cmd):
+  def _exec(self, cmd, quiet=False):
     """Overrides Cipd._exec for testing."""
     self.last = self._bin + ' ' + ' '.join(cmd)

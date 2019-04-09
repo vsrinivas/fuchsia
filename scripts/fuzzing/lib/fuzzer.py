@@ -229,8 +229,12 @@ class Fuzzer(object):
         data/corpus data/corpus.prev'
 
       See also: https://llvm.org/docs/LibFuzzer.html#corpus
+
+      Returns: Same as measure_corpus
     """
     self.require_stopped()
+    if self.measure_corpus() == (0, 0):
+      return (0, 0)
     self.device.ssh(['mkdir', '-p', self.data_path('corpus')])
     self.device.ssh(
         ['mv', self.data_path('corpus'),
@@ -241,3 +245,4 @@ class Fuzzer(object):
     fuzzer_args.append('data/corpus')
     fuzzer_args.append('data/corpus.prev')
     self.run(fuzzer_args)
+    return self.measure_corpus()

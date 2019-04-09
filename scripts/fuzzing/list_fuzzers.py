@@ -23,11 +23,10 @@ def main():
   if len(fuzzers) == 0:
     print('No matching fuzzers.')
     return 1
-  else:
-    print('Found %d matching fuzzers:' % len(fuzzers))
-    for fuzzer in fuzzers:
-      print('  %s/%s' % fuzzer)
-    return 0
+  print('Found %d matching fuzzers:' % len(fuzzers))
+  for fuzzer in fuzzers:
+    print('  %s/%s' % fuzzer)
+  return 0
 
 
 if __name__ == '__main__':

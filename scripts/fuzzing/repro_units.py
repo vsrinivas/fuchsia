@@ -25,8 +25,7 @@ def main():
   if fuzzer.repro(fuzzer_args) == 0:
     print('No matching artifacts found.')
     return 1
-  else:
-    return 0
+  return 0
 
 
 if __name__ == '__main__':
